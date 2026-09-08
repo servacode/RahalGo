@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 275,
-    "test_funcs": 1029
+    "test_files": 277,
+    "test_funcs": 1031
   },
   "flows": [
     {
@@ -187,6 +187,7 @@
         "R8"
       ],
       "tests": [
+        "TestXG41B_AuthUnavailableReachesTheReaderAsItself",
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestIDEM_AllProtectedPathsUseCoordinator",
         "TestIDEM_T10_CleanupSparesLiveClaim",
@@ -210,7 +211,8 @@
         "TestIDEM_InProgressOverlap",
         "TestIDEM_SameKeyDifferentPayload",
         "TestIDEM_SameKeySamePayloadConcurrent",
-        "TestIDEM_SameKeySamePayloadSequential"
+        "TestIDEM_SameKeySamePayloadSequential",
+        "TestXG41B_AuthUnavailableHasItsOwnMessage"
       ],
       "status": "COVERED"
     },
@@ -2697,8 +2699,12 @@
       "id": "XG-41B",
       "title": "`errors.auth_unavailable` بلا رسالةٍ عربيّة",
       "severity": "MEDIUM",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**أُصلح في دورةِ ٣٦ — نصٌّ لا عقد.** **كان المفتاحُ بلا مدخلٍ في `ar.json` فتسقط `errorText` إلى `errors.internal`**: «حدث خطأ غير متوقع، حاول مجددا» — **وذاك كذبٌ في اتّجاهين**: **يقول إنّ في المنصّة عطباً، ولا يقول لصاحب الجلسة السليمة إنّ الانتظارَ يكفي.** **والمعنى من `R16`**: الحالُ ثلاثٌ، **والثالثةُ «لا أعرف» ⇒ ٥٠٣ لا ٤٠١**، `CheckSession` سقطت ولم تُبطَل جلسة. **فصار النصُّ**: «تعذر التحقق من الجلسة الآن — حاول بعد قليل، ولا داعي لتسجيل الدخول من جديد» — **مؤقّتٌ · لا يلوم كلمةَ المرور · لا يُعلن الجلسةَ باطلة · ولا يسمّي بنيةً داخليّة.** **وقيس على السلك بالمسار الحقيقيّ** (رمزٌ بمعرّف جلسةٍ لا تقرؤه الحقيقةُ الموثوقة): **٥٠٣ · `auth_unavailable` · `errors.auth_unavailable`** — **والحالُ والرمزُ كما كانا.** **وحارسان: أحدهما على المعجم والآخرُ على السلك** — **فمدخلٌ صحيحٌ ومفتاحٌ آخرُ يصل يعطي العامّةَ نفسَها.**",
+      "tests": [
+        "TestXG41B_AuthUnavailableReachesTheReaderAsItself",
+        "TestXG41B_AuthUnavailableHasItsOwnMessage"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-41C",
@@ -7214,6 +7220,25 @@
       "file": "internal/qa/auth_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestXG41B_AuthUnavailableReachesTheReaderAsItself",
+      "file": "internal/qa/auth_unavailable_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-03"
+      ],
+      "gaps": [
+        "XG-41B"
+      ],
+      "modes": [
+        "SECURITY",
+        "WEB",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSECIDOR_Addresses",
@@ -15499,6 +15524,25 @@
       "file": "internal/server/audit_labels_test.go",
       "package": "server",
       "orphan": true
+    },
+    {
+      "name": "TestXG41B_AuthUnavailableHasItsOwnMessage",
+      "file": "internal/server/auth_unavailable_message_test.go",
+      "package": "server",
+      "level": "L4",
+      "flows": [
+        "F-03"
+      ],
+      "gaps": [
+        "XG-41B"
+      ],
+      "modes": [
+        "SECURITY",
+        "WEB",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestAutoTransfer_OffByDefault",

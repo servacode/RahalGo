@@ -694,7 +694,22 @@ var Gaps = []GapDecl{
 	//
 	// **وقياسُ الأساس مُثبتٌ في `c3a0a374`.**
 	{ID: "XG-41B", Title: "`errors.auth_unavailable` بلا رسالةٍ عربيّة",
-		Severity: "MEDIUM"},
+		Severity: "MEDIUM",
+		Fixed: "**أُصلح في دورةِ ٣٦ — نصٌّ لا عقد.** **كان المفتاحُ بلا " +
+			"مدخلٍ في `ar.json` فتسقط `errorText` إلى `errors.internal`**: " +
+			"«حدث خطأ غير متوقع، حاول مجددا» — **وذاك كذبٌ في اتّجاهين**: " +
+			"**يقول إنّ في المنصّة عطباً، ولا يقول لصاحب الجلسة السليمة " +
+			"إنّ الانتظارَ يكفي.** **والمعنى من `R16`**: الحالُ ثلاثٌ، " +
+			"**والثالثةُ «لا أعرف» ⇒ ٥٠٣ لا ٤٠١**، `CheckSession` سقطت " +
+			"ولم تُبطَل جلسة. **فصار النصُّ**: «تعذر التحقق من الجلسة " +
+			"الآن — حاول بعد قليل، ولا داعي لتسجيل الدخول من جديد» — " +
+			"**مؤقّتٌ · لا يلوم كلمةَ المرور · لا يُعلن الجلسةَ باطلة · " +
+			"ولا يسمّي بنيةً داخليّة.** **وقيس على السلك بالمسار " +
+			"الحقيقيّ** (رمزٌ بمعرّف جلسةٍ لا تقرؤه الحقيقةُ الموثوقة): " +
+			"**٥٠٣ · `auth_unavailable` · `errors.auth_unavailable`** — " +
+			"**والحالُ والرمزُ كما كانا.** **وحارسان: أحدهما على المعجم " +
+			"والآخرُ على السلك** — **فمدخلٌ صحيحٌ ومفتاحٌ آخرُ يصل يعطي " +
+			"العامّةَ نفسَها.**"},
 
 	// ══════════════════════════════════════════════════════════════
 	// **`XG-41C` — `PF09_N1`/`N2N3N8` تسقطان في الحزمة وتنجحان وحدَهما**
@@ -2054,6 +2069,10 @@ var TestMap = map[string]TestDecl{
 	"TestXQ2_F3_UnreadableSettingBlocksCreation":                snapshotTest(),
 	"TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot":   snapshotTest(),
 
+	// ── رسالةُ «تعذّر التحقّق» (دورةُ ٣٦) — `XG-41B` ──────────────
+	"TestXG41B_AuthUnavailableHasItsOwnMessage":         authMessageTest(),
+	"TestXG41B_AuthUnavailableReachesTheReaderAsItself": authMessageTest(),
+
 	// ── نطاقُ القفل والمعاملاتُ المهجورة — `XG-34` ───────────────
 	"TestXG34_DifferentKeysDoNotSerialize": xg34Test(),
 	"TestXG34_NoTransactionIsLeftOpen":     xg34Test(),
@@ -2337,6 +2356,19 @@ func snapshotTest() TestDecl {
 		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
 			"sales.commission_source", "sales.activation_orders"},
 		Modes: []string{"FINANCIAL", "CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
+// authMessageTest حارسا رسالةِ «تعذّر التحقّق» — `XG-41B` · `R16`.
+//
+// **أحدهما على المعجم والآخرُ على السلك** — **ومدخلٌ صحيحٌ ومفتاحٌ
+// آخرُ يصل يعطي الرسالةَ العامّةَ نفسَها.**
+func authMessageTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-03"},
+		Gaps:  []string{"XG-41B"},
+		Modes: []string{"SECURITY", "WEB", "FULL", "RELEASE"},
 	}
 }
 

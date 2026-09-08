@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **275** |
-| دوالُّ اختبار | **1029** |
+| ملفّاتُ اختبار | **277** |
+| دوالُّ اختبار | **1031** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1029
-MAPPED     = 329
+TOTAL      = 1031
+MAPPED     = 331
 INFRA      = 119
 ORPHAN     = 581
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 581
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 42 | 21 | 21 |
+| **فجواتُ العقد** | 42 | 22 | 20 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -131,7 +131,7 @@ ORPHAN     = 581
 | **XG-34** | `HIGH` | — | `EXPECTED_FAIL` | `TestXG34_DifferentKeysDoNotSerialize` · `TestXG34_NoTransactionIsLeftOpen` |
 | **XG-35** | `CRITICAL` | — | `COVERED` | `TestAQ4_A1_SuccessCommitsBoth` · `TestAQ4_A2_AuditFailureRollsBackMoney` · `TestAQ4_A3_BusinessFailureLeavesNoAudit` · `TestAQ4_A5_RetryGivesOneOfEach` · `TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit` · `TestAQ4_A8_UncoveredActionsRemainBestEffort` · `TestAQ4_CriticalActionsUseTransactionalAudit` · `TestXG20_A2_AuditFailureRollsBackBusiness` · `TestXG20_A3_FailedBusinessLeavesNoAudit` · `TestXG20_C1C2_ConcurrentMutationsCorrelate` · `TestXG20_S1S2_RoleMutationAudited` · `TestXG20_S3_UserStatusAudited` · `TestXG20_S4_MerchantSuspendAudited` · `TestXG20_S5_SensitiveSettingAudited` · `TestXG20_S6_OpsOrderTransitionAudited` |
 | **XG-41A** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-41B** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
+| **XG-41B** | `MEDIUM` | — | `COVERED` | `TestXG41B_AuthUnavailableReachesTheReaderAsItself` · `TestXG41B_AuthUnavailableHasItsOwnMessage` |
 | **XG-41C** | `HIGH` | — | `COVERED` | `TestXG41C_HarnessExclusivityIsEnforced` · `TestXG41C_PushQueueIsOwnedByItsProducer` |
 | **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-44** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
