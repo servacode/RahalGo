@@ -223,3 +223,74 @@ func repCommissionOf(t *testing.T, h *Harness, oid string) int64 {
 	}
 	return n
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **M7 · قيمةٌ فاسدةٌ مخزَّنة تُسقط التسوية ولا ترتدّ إلى افتراض**
+// ══════════════════════════════════════════════════════════════════════
+//
+// # وعقدان لا عقدٌ واحد
+//
+//	لا صفَّ في المخزن   ⇒ **الافتراضُ الكانونيّ** `pricing_margin`
+//	صفٌّ بقيمةٍ فاسدة   ⇒ **خطأٌ وسقوطٌ آمن**
+//
+// **ولا يُخلَط بينهما**: **غيابُ الخبر ليس خبراً بالسلامة**، **وقيمةٌ
+// فاسدةٌ تُقرأ افتراضاً تدفع مالاً لا يقصده أحد** — **ولا يُكتشَف
+// إلّا في كشفٍ شهريّ.**
+//
+// **والبابُ يحرس المدخل** (`M5`) — **وهذا يحرس المخزنَ نفسَه**:
+// هجرةٌ يدويّةٌ أو استعادةُ نسخةٍ قديمةٍ قد تضع ما لا يعرفه المعجم.
+func TestXG13_InvalidStoredValueFailsSafe(t *testing.T) {
+	h := New(t)
+	treasury(t, h)
+	h.Setting("merchants.commission_percent", "20")
+	h.Setting("sales.commission_percent", "10")
+	h.Setting("sales.activation_orders", "0")
+	h.Setting("pricing.margin_fixed", "1000")
+
+	f := h.Factory()
+	r := f.RepAccount()
+	m := f.Merchant(OwnedByRep(r.ID))
+	item := h.NewItemFor(m, 5000)
+	made := h.POSTKey("/api/v1/orders", h.Customer().Token, uniq("k"), orderBody(item, 1))
+	if made.Code >= 400 {
+		t.Fatalf("إنشاء: %s", made)
+	}
+	oid, _ := made.JSON()["id"].(string)
+
+	// **وتُكتب الفاسدةُ في المخزن للقياس وحدَه** — **ولا يُضعَّف
+	// حارسُ الباب ولا قيدُ القاعدة**، و`Setting` تستردّها بعد الفحص.
+	h.Setting("sales.commission_source", `"__invalid__"`)
+
+	drv := h.driverOf(oid)
+	last := 0
+	for _, to := range []string{"at_pickup", "picked_up", "on_the_way", "at_dropoff"} {
+		if res := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
+			map[string]any{"to": to}); res.Code >= 400 {
+			t.Fatalf("الانتقالُ إلى %q: %s", to, res)
+		}
+	}
+	_ = h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
+		map[string]any{"reason": "XG-13"})
+	last = h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
+		map[string]any{"to": "delivered"}).Code
+
+	var st string
+	var rep int64
+	_ = h.Pool.QueryRow(ctxBG(), `
+		SELECT o.status,
+		       COALESCE((SELECT sum(amount) FROM wallet_transactions
+		                 WHERE ref = o.id::text AND kind = 'commission'), 0)
+		  FROM orders o WHERE o.id = $1::uuid`, oid).Scan(&st, &rep)
+	t.Logf("M7: قيمةٌ فاسدةٌ مخزَّنة ⇒ التسليمُ %d · حالُ الطلب=%q · عمولةٌ=%d",
+		last, st, rep)
+
+	if last < 400 {
+		t.Errorf("**M7: مضت التسويةُ بوضعٍ لا يعرفه المعجم** — %d", last)
+	}
+	if st == "delivered" {
+		t.Errorf("**M7: سُلّم الطلبُ وقاعدةُ حسابه مجهولة** — %q", st)
+	}
+	if rep != 0 {
+		t.Errorf("**M7: دُفعت عمولةٌ بوضعٍ مخمَّن** — %d", rep)
+	}
+}
