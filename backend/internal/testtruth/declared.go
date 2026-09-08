@@ -1472,6 +1472,17 @@ var TestMap = map[string]TestDecl{
 		Settings: []string{"orders.auto_transfer_amount"},
 		Modes:    []string{"FULL", "REALTIME"},
 	},
+	// ── أنماطُ فشل التحويل السبعة — `R24` (دورةُ إصلاحٍ ٢٧) ──────
+	//
+	// **ودليلٌ لا يشير إلى سجلّه لا يُغلقه** — فكلُّها تحمل `R24`.
+	"TestR24_F1_SettingReadFailureLeavesPending":     r24Test(),
+	"TestR24_F2F4_TransitionRefusedLeavesPending":    r24Test(),
+	"TestR24_F3_BotNotReadyLeavesPending":            r24Test(),
+	"TestR24_F5_SendFailureAfterAccept":              r24Test(),
+	"TestR24_F6_NoMerchantPhoneAfterAccept":          r24Test(),
+	"TestR24_F7_DispatchFailureIsVisible":            r24Test(),
+	"TestR24_F5_TraceIsAdminReadableAfterTheRequest": r24Test(),
+
 	"TestEV_R22WatchdogMarkerSuppressesRetry": {
 		Level: L7, Flows: []string{"F-09"},
 		// **`R22` بقي للتتبّع** — `R22 → CONFIRMED → D26` · و`XOB-6` دليلٌ فيه.
@@ -2030,6 +2041,20 @@ func autoTrTest() TestDecl {
 		Flows: []string{"F-01", "F-07", "F-18"},
 		Risks: []string{"R21"},
 		Modes: []string{"FAILURE", "CONCURRENCY", "FULL", "RELEASE"},
+	}
+}
+
+// r24Test جردُ أنماط فشل التحويل السبعة — `R24` · `F-20`.
+//
+// **والحكمُ `HELD`**: **قيست الأنماطُ السبعةُ كلُّها وصمدت** — لا
+// نمطَ يترك فشلاً بلا أثرٍ يُقرأ.
+func r24Test() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:    []string{"F-01", "F-14", "F-20"},
+		Risks:    []string{"R24"},
+		Settings: []string{"orders.auto_transfer", "platform.orders_mode"},
+		Modes:    []string{"FAILURE", "FULL", "RELEASE"},
 	}
 }
 

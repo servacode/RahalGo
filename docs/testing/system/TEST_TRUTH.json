@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 263,
-    "test_funcs": 971
+    "test_files": 264,
+    "test_funcs": 978
   },
   "flows": [
     {
@@ -75,6 +75,13 @@
         "TestPF08_F6_TwoWorkersProgressOnce",
         "TestPF08_F7_CommunicationFailureKeepsOrderRecoverable",
         "TestPF08_FastPathHasDurableCounterpart",
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible",
         "TestEV_OrderAudience",
         "TestEV_MerchantRealtimePrivacy",
         "TestEV_MultiOrderRouting",
@@ -548,6 +555,13 @@
         "XG-26"
       ],
       "tests": [
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
         "TestFIN_MoneyTimingByStatus",
@@ -766,8 +780,16 @@
         "R21",
         "R24"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "F-21",
@@ -2115,8 +2137,16 @@
       "flows": [
         "F-20"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     }
   ],
   "gaps": [
@@ -3565,8 +3595,16 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "orders.customer_cancel_window_sec",
@@ -3834,8 +3872,16 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "pricing.margin_fixed",
@@ -7060,6 +7106,174 @@
       "modes": [
         "FAILURE",
         "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F1_SettingReadFailureLeavesPending",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F2F4_TransitionRefusedLeavesPending",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F3_BotNotReadyLeavesPending",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F5_SendFailureAfterAccept",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F6_NoMerchantPhoneAfterAccept",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR24_F7_DispatchFailureIsVisible",
+      "file": "internal/qa/auto_transfer_failure_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "risks": [
+        "R24"
+      ],
+      "settings": [
+        "orders.auto_transfer",
+        "platform.orders_mode"
+      ],
+      "modes": [
+        "FAILURE",
         "FULL",
         "RELEASE"
       ],
@@ -14698,7 +14912,6 @@
     "D9 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
-    "F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
@@ -14707,7 +14920,6 @@
     "R17 — لا اختبارَ يحسمه بعد",
     "R18 — لا اختبارَ يحسمه بعد",
     "R2 — لا اختبارَ يحسمه بعد",
-    "R24 — لا اختبارَ يحسمه بعد",
     "R3 — لا اختبارَ يحسمه بعد",
     "R5 — لا اختبارَ يحسمه بعد",
     "R6 — لا اختبارَ يحسمه بعد",

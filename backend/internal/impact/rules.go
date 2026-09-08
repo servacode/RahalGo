@@ -266,6 +266,24 @@ var domainRules = []domainRule{
 		Packages: []string{"internal/qa", "internal/orders"},
 		Why:      "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
 	},
+	// ── التحويلُ إلى المتجر ────────────────────────────────────────
+	//
+	// **و`auto_transfer.go` كان يُقرأ «ملفَّ خادمٍ عاديّاً»** —
+	// `FLOWS = []` و`RISK CLASS = LOW`. **وهو منفّذُ `F-20` بعينه**،
+	// **ويحمل `R21` و`R24`.** (مصالحةُ دورةِ ٢٧.)
+	//
+	// **وقناةُ الإبلاغ خارجيّةٌ تفشل** — فوضعُ الفشل إلزاميّ.
+	{
+		Name: "ORDER_TRANSFER",
+		Match: []string{"backend/internal/server/auto_transfer.go",
+			"backend/internal/server/merchant_dispatch.go",
+			"backend/internal/notify/whatsapp"},
+		Flows:    []string{"F-01", "F-14", "F-20"},
+		Apps:     []string{"customer", "merchant", "admin"},
+		Modes:    []Mode{ModeFailure, ModeRealtime},
+		Packages: []string{"internal/qa", "internal/orders"},
+		Why:      "التحويلُ إلى المتجر — `F-20` و`R21` و`R24`: قناةٌ خارجيّةٌ تفشل بعد قبولٍ وقع",
+	},
 	// ── المندوبُ والمرشَّح ─────────────────────────────────────────
 	{
 		Name:     "REP_LEADS",

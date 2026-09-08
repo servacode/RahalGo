@@ -71,6 +71,30 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════
+	// **والعنوانُ يُفحص قبل القبول كما تُفحص القناة** — `R24`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان الهاتفُ يُقرأ بعد القبول** — **فمتجرٌ بلا رقمٍ يُقبَل طلبُه
+	// ثمّ يُكتشَف أنّه لا يُبلَّغ**، والطلبُ عالقٌ في «مقبول».
+	//
+	// **وهو معلومٌ قبل القبول** — لا يحتاج محاولةً لتعرفه. **ومكتوبٌ
+	// في هذا الملفّ منذ يومه**: «القناةُ تُفحص قبل القبول لا بعده» —
+	// **وحالُ البوت نصفُ القناة، والعنوانُ نصفُها الآخر.**
+	//
+	// **فصار كالبوت غيرِ الجاهز**: يبقى `pending` بيد المكتب.
+	var msg *orderMessage
+	var ph merchantPhones
+	if !selfManage {
+		var err error
+		msg, ph, err = s.loadOrderMessage(ctx, orderID)
+		if err != nil || strings.TrimSpace(ph.WhatsApp) == "" {
+			s.logger.Info("التحويلُ التلقائيّ: لا هاتفَ للمتجر — يبقى بيد المكتب",
+				"order", orderID)
+			return
+		}
+	}
+
 	if _, err := s.orders.Transition(ctx, actorID, []string{"ops"},
 		orderID, "accepted", autoTransferNote); err != nil {
 		s.logger.Warn("التحويلُ التلقائيّ: تعذّر القبول", "order", orderID, "error", err)
@@ -80,21 +104,33 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 	// **وفي وضع المنصة تُرسَل الرسالةُ فعلاً** — والبوابةُ هي القناة في الوضع
 	// الآخر، فلا رسالةَ تلزم.
 	if !selfManage {
-		msg, ph, err := s.loadOrderMessage(ctx, orderID)
-		if err != nil || strings.TrimSpace(ph.WhatsApp) == "" {
-			s.logger.Warn("التحويلُ التلقائيّ: لا هاتفَ للمتجر — قُبل ولم يُبلَّغ",
-				"order", orderID)
-			return
-		}
 		// **ورقمُ واتساب لا رقمُ الرسائل** — وهما حقلان في المتجر.
 		if err := s.merchant.SendText(ctx, ph.WhatsApp,
 			buildMerchantMessage(s.settings.GetString(ctx, "whatsapp.order_template"), msg)); err != nil {
 			s.logger.Error("التحويلُ التلقائيّ: تعذّر الإبلاغ", "order", orderID, "error", err)
+			// ══════════════════════════════════════════════════════
+			// **وأثرٌ يُقرأ لا سطرٌ في سجلّ** — `R24`
+			// ══════════════════════════════════════════════════════
+			//
+			// **هذا وحدَه ما لا يُعرَف قبل المحاولة** — القناةُ
+			// كانت جاهزةً والعنوانُ موجوداً، **ثمّ سقطت الرسالة.**
+			//
+			// **فيبقى في سجلّ الطلب سطرٌ يقول ماذا جرى** — يقرؤه
+			// المكتبُ فيُرسل بيده، **ولا يُستنتَج من عمودٍ فارغ.**
+			if e := s.orders.NoteTransferFailure(ctx, orderID, actorID, err.Error()); e != nil {
+				s.logger.Error("التحويلُ التلقائيّ: تعذّر كتبُ أثر الفشل",
+					"order", orderID, "error", e)
+			}
 			return
 		}
 		if _, err := s.pg.Exec(ctx,
 			`UPDATE orders SET sent_to_merchant_at = now() WHERE id = $1`, orderID); err != nil {
 			s.logger.Error("التحويلُ التلقائيّ: تعذّر وسمُ الإرسال", "order", orderID, "error", err)
+			if e := s.orders.NoteTransferFailure(ctx, orderID, actorID,
+				"أُرسلت الرسالةُ ولم يُكتب الوسم"); e != nil {
+				s.logger.Error("التحويلُ التلقائيّ: تعذّر كتبُ أثر الفشل",
+					"order", orderID, "error", e)
+			}
 		}
 	}
 
