@@ -627,4 +627,23 @@
     <string name="battery_body">هاتفك قد يوقف التطبيق وأنت في الطريق، فيتوقف موقعك عن الوصول وتظهر واقفاً. اسمح له بالعمل دائماً.</string>
     <string name="battery_fix">اسمح الآن</string>
     <string name="battery_later">لاحقاً</string>
+
+    <!-- **رموزٌ يردّها المحرّكُ وتبلغ الهاتف** — XG-45.
+         والنصُّ هو المعتمَدُ في المعجم المركزيّ نفسِه: معنىً واحدٌ
+         للمستخدم أينما قرأه. -->
+    <string name="err_auth_unavailable">تعذر التحقق من الجلسة الآن — حاول بعد قليل، ولا داعي لتسجيل الدخول من جديد</string>
+    <string name="err_too_many_addresses">بلغت الحد الأقصى للعناوين المحفوظة. احذف عنوانا قديما أولا.</string>
+    <string name="err_already_returned">أعيدت البضاعة سلفا</string>
+    <string name="err_merchant_no_returns">هذا المتجر لا يستقبل المرتجعات</string>
+    <string name="err_order_not_returnable">الإرجاع لطلب تعذر تسليمه فقط</string>
+    <string name="err_not_readyable">لا يمكن إعلان الجاهزية في هذه الحالة.</string>
+    <string name="err_reason_required">اكتب السبب أولا</string>
+    <string name="err_never_picked_up">لم تستلم من هذا المتجر — ولا تقييم بلا وقوف عند بابه</string>
+    <string name="err_payout_below_min">المبلغ دون الحد الأدنى للسحب</string>
+    <string name="err_payout_closed">هذا الطلب مبتوت فيه مسبقا</string>
+    <string name="err_payout_not_allowed">حسابك لا يملك سحب رصيد. المحفظة عندك رصيد إنفاق لا رصيد دخل.</string>
+    <string name="err_invite_required">التسجيل بدعوة من مندوب رحال غو فقط. تواصل مع الدعم ليصلك رابط الدعوة.</string>
+    <string name="err_lead_already_converted">هذا الطلب صار متجرا يعمل — ولا يرد بعد التحويل. أوقف المتجر من صفحته إن لزم.</string>
+    <string name="err_in_progress">العملية قيد التنفيذ — انتظر قليلا ولا تعدها.</string>
+    <string name="err_bad_request">طلبٌ غير صالح — راجع ما أُرسل</string>
 </resources>

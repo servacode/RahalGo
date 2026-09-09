@@ -37,10 +37,13 @@ import java.io.IOException
  * المحفظة «مبلغٌ غير صالح»، وفي غيرها «حقلٌ ناقص». **فتُمرَّر
  * استثناءاتُها وحدَها** (`extra`)، ويبقى الباقي مركزيّا.
  *
- * # والمجهولُ يُعرض برمزه
+ * # والمجهولُ رسالةٌ عامّةٌ ويُبلَّغ عنه
  *
- * **لا يُبتلع**: من رآه أبلغ عنه، **ومن ابتلعه ترك شاشةً صامتةً لا
- * يُعرف سببُها.**
+ * **كان يُعرض برمزه ليُرى ويُبلَّغ** — **وكان يُقرأ لاتينيّةً على شاشةٍ
+ * عربيّة.** (قرارُ المالك، دورةُ ٤٢.)
+ *
+ * **ولا يُبتلع**: `Crash.soft` يرفعه كما كان — **فالبلاغُ باقٍ
+ * والمستخدمُ لا يُطالَب بقراءة رمزٍ ليخدمنا.**
  */
 fun apiError(
     context: Context,
@@ -72,13 +75,49 @@ fun apiError(
     if (e.status >= 500 || (code !in CODES && code !in extra && code.isNotEmpty())) {
         Crash.soft(e, "api " + e.status + " " + code)
     }
-    extra[code]?.let { return context.getString(it) }
-    val res = CODES[code] ?: return if (code.isEmpty()) {
-        context.getString(R.string.err_internal)
-    } else {
-        code
+    return context.getString(resolveErrorRes(code, e.body.messageKey, extra))
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مفتاحُ الرسالة قارئٌ له — والمجهولُ لا يُعرض خامّاً** — `XG-45`
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * # ما كان يقع
+ *
+ * **الخريطةُ تعرف الرمزَ ولا تعرف مفتاحَ الرسالة**، **ورمزٌ لا ترجمةَ
+ * له كان يُعرض كما هو**: `auth_unavailable` لاتينيّةً على شاشةٍ
+ * عربيّة. **وقِيس: خمسةَ عشرَ رمزاً يبلغ الهاتفَ بلا نصّ.**
+ *
+ * # والترتيبُ ثلاثةٌ لا واحد
+ *
+ *	١ استثناءُ الشاشة  — `validation` في المحفظة غيرُها في نموذج
+ *	٢ رمزُ المحرّك     — `code`
+ *	٣ مفتاحُ رسالته    — `errors.x` ثمّ ذيلُه
+ *
+ * **والثالثُ وُلد هنا**: **المحرّكُ يرسل الاثنين**، ولو تبدّل رمزٌ
+ * وبقي مفتاحُه لَبقي النصُّ يصل.
+ *
+ * # والمجهولُ رسالةٌ عامّةٌ لا رمزٌ خام
+ *
+ * **وكان يُعرض برمزه ليُبلَّغ عنه** — **والبلاغُ باقٍ في `Crash.soft`
+ * أعلاه**، **والمستخدمُ لا يُطالَب بقراءة لاتينيّةٍ ليخدمنا.**
+ *
+ * **ودالّةٌ صافيةٌ بلا سياق** — **فتُقاس على المُفسِّر بلا جهاز.**
+ */
+fun resolveErrorRes(
+    code: String,
+    messageKey: String = "",
+    extra: Map<String, Int> = emptyMap(),
+): Int {
+    extra[code]?.let { return it }
+    CODES[code]?.let { return it }
+    if (messageKey.isNotEmpty()) {
+        val tail = messageKey.substringAfterLast('.')
+        extra[tail]?.let { return it }
+        CODES[tail]?.let { return it }
     }
-    return context.getString(res)
+    return R.string.err_internal
 }
 
 /**
@@ -226,6 +265,28 @@ private val CODES: Map<String, Int> = mapOf(
     "invalid_zone" to R.string.err_invalid_zone,
     "over_settle" to R.string.err_over_settle,
     "cash_limit_exceeded" to R.string.err_cash_limit_exceeded,
+    // ── رموزٌ تولد في `internal/server` وتبلغ الهاتف — `XG-45` ────────
+    //
+    // **وحارسُ الرموز كان يتخطّى `server` كلَّها** لأنّ فيها أبوابَ
+    // الإدارة — **فسقط منها ما يمرّ به كلُّ نداءٍ من هاتف.**
+    //
+    // **وأوّلُها `auth_unavailable`**: يخرج من وسيط التوثيق نفسِه
+    // (`R16`)، **فيبلغ التطبيقاتِ الأربعةَ جميعاً.**
+    "auth_unavailable" to R.string.err_auth_unavailable,
+    "idempotency_reclaimed" to R.string.err_in_progress,
+    "too_many_addresses" to R.string.err_too_many_addresses,
+    "already_returned" to R.string.err_already_returned,
+    "merchant_no_returns" to R.string.err_merchant_no_returns,
+    "order_not_returnable" to R.string.err_order_not_returnable,
+    "not_readyable" to R.string.err_not_readyable,
+    "reason_required" to R.string.err_reason_required,
+    "never_picked_up" to R.string.err_never_picked_up,
+    "payout_below_min" to R.string.err_payout_below_min,
+    "payout_closed" to R.string.err_payout_closed,
+    "payout_not_allowed" to R.string.err_payout_not_allowed,
+    "invite_required" to R.string.err_invite_required,
+    "lead_already_converted" to R.string.err_lead_already_converted,
+    "bad_bbox" to R.string.err_bad_request,
 )
 
 /**

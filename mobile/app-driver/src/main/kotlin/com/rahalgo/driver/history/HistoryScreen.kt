@@ -45,6 +45,7 @@ import com.rahalgo.ui.money
 import com.rahalgo.shared.model.HistoryOrder
 import com.rahalgo.shared.model.ReportReason
 import com.rahalgo.shared.net.ApiClient
+import com.rahalgo.ui.apiError
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.RahalLoader
@@ -199,22 +200,24 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun describe(e: Exception): String {
-        val app = getApplication<Application>()
-        return when {
-            e is ApiClient.ApiException -> when (e.body.code) {
-                "complaint_already_open" -> app.getString(R.string.hist_already_open)
-                "already_rated" -> app.getString(R.string.hist_already_rated)
-                "not_your_order", "forbidden" -> app.getString(R.string.hist_not_yours)
-                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
-                "" -> app.getString(R.string.err_internal)
-                // **ورمزٌ لم يُترجَم يُعرض كما هو** — من رآه أبلغ عنه،
-                // **ومن ابتلعه ترك صاحبَه يظنّ العطبَ في يده.**
-                else -> e.body.code
-            }
-            else -> app.getString(R.string.err_network)
-        }
-    }
+    /**
+     * **وخريطةٌ واحدةٌ لا خريطةُ شاشة** — `XG-45`.
+     *
+     * **كانت هذه الشاشةُ تعرف رموزَها وتعرض ما سواها خامّاً** —
+     * **فيقرأ السائقُ لاتينيّةً على شاشةٍ عربيّة.**
+     *
+     * **والمركزيّةُ تعرف الأربعةَ الأُوَل بنصوصها هي**، **ويبقى ما
+     * يخصّ هذه الشاشةَ وحدَها في `extra`**: «ليس طلبَك» أدقُّ هنا من
+     * «لا تملك صلاحيّة».
+     */
+    private fun describe(e: Exception): String = apiError(
+        getApplication(),
+        e,
+        mapOf(
+            "not_your_order" to R.string.hist_not_yours,
+            "forbidden" to R.string.hist_not_yours,
+        ),
+    )
 
     fun load() {
         viewModelScope.launch {

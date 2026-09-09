@@ -58,7 +58,7 @@ ORPHAN     = 583
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 44 | 25 | 19 |
+| **فجواتُ العقد** | 45 | 25 | 20 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -135,6 +135,7 @@ ORPHAN     = 583
 | **XG-41C** | `HIGH` | — | `COVERED` | `TestXG41C_HarnessExclusivityIsEnforced` · `TestXG41C_PushQueueIsOwnedByItsProducer` |
 | **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
+| **XG-47** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-42** | `MEDIUM` | — | `COVERED` | `TestXG42_CapabilityUnionCustomRoleAndRevoke` · `TestXG42_ContactFieldsFollowCapabilityNotRoute` |

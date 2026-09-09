@@ -48,6 +48,43 @@ const known = new Set(
  */
 const PACKAGES = ["identity", "orders", "wallet", "catalog", "cashbox"];
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **و`server` ليست كلُّها إدارة** — XG-45
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كان استثناؤها كاملاً** — **فسقط منها ما يمرّ به كلُّ نداءٍ من
+ * هاتف**: `auth_unavailable` يخرج من وسيط التوثيق نفسِه، **فقُرئ
+ * لاتينيّةً على شاشةٍ عربيّة ولم يمسكه حارس.**
+ *
+ * **فصار التصنيفُ صريحاً لا ضمنيّاً**: **كلُّ رمزٍ يولد في `server`
+ * إمّا معلَنٌ أنّه يبلغ الهاتف فيُطلَب له نصّ، وإمّا معلَنٌ أنّه
+ * للإدارة وحدَها.** **ومجهولُ التصنيف يوقف الحارس** — **فلا يُضاف
+ * رمزٌ في المحرّك ويمرّ بلا قرار.**
+ */
+const SERVER_MOBILE = new Set([
+  "auth_unavailable", "idempotency_reclaimed", "too_many_addresses",
+  "already_returned", "merchant_no_returns", "order_not_returnable",
+  "not_readyable", "reason_required", "never_picked_up",
+  "payout_below_min", "payout_closed", "payout_not_allowed",
+  "invite_required", "lead_already_converted", "bad_bbox",
+]);
+
+/** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
+const SERVER_ADMIN = new Set([
+  "app_file_missing", "app_not_android", "app_too_large", "bad_json",
+  "bad_placement", "city_bad_point", "city_bad_radius", "city_bad_reach",
+  "city_has_merchants", "city_needs_name", "claim_already_settled",
+  "dispute_party_has_no_wallet", "division_in_use",
+  "division_needs_governorate", "division_needs_name",
+  "driver_already_compensated", "driver_has_open_orders", "duplicate_name",
+  "goods_already_settled", "goods_flow_changed", "goods_ledger_mismatch",
+  "order_has_no_driver", "order_not_failed", "order_still_open",
+  "step_up_invalid", "step_up_required",
+   "transfer_same_merchant",
+  "transfer_too_late", "bad_channel", "no_merchant_phone",
+]);
+
 const found = new Map();
 for (const pkg of PACKAGES) {
   const dir = join(repo, "backend/internal", pkg);
@@ -60,6 +97,33 @@ for (const pkg of PACKAGES) {
       if (!found.has(m[1])) found.set(m[1], `${pkg}/${name}`);
     }
   }
+}
+
+// ── ورموزُ `server`: مصنَّفةٌ صراحةً أو يقف الحارس ──────────────────
+const serverDir = join(repo, "backend/internal/server");
+const serverCodes = new Map();
+for (const name of readdirSync(serverDir)) {
+  if (!name.endsWith(".go") || name.endsWith("_test.go")) continue;
+  const src = readFileSync(join(serverDir, name), "utf8");
+  for (const m of src.matchAll(
+    /httpx\.NewError\([\s\S]*?"([a-z0-9_]+)"\s*,\s*"[a-z0-9_.]+"/g,
+  )) {
+    if (!serverCodes.has(m[1])) serverCodes.set(m[1], `server/${name}`);
+  }
+}
+const unclassified = [...serverCodes].filter(
+  ([code]) =>
+    !SERVER_MOBILE.has(code) && !SERVER_ADMIN.has(code) && !known.has(code),
+);
+if (unclassified.length > 0) {
+  console.error("رموزُ خطأٍ في `server` بلا تصنيف — أتبلغ الهاتفَ أم لا؟");
+  for (const [code, where] of unclassified) {
+    console.error(`  · «${code}» (${where}) — يُصنَّف في SERVER_MOBILE أو SERVER_ADMIN`);
+  }
+  process.exit(1);
+}
+for (const code of SERVER_MOBILE) {
+  if (!found.has(code)) found.set(code, serverCodes.get(code) ?? "server");
 }
 
 const missing = [...found].filter(([code]) => !known.has(code));
