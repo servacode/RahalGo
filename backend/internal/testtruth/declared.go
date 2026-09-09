@@ -1553,6 +1553,31 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
 		Evidence: []string{"payload"},
 	},
+	// ── دورةُ ٤٧ · الطلبُ الخاصُّ يصل صاحبَه ──────────────────────
+	"TestD22_CustomOrderReachesItsOwner": {
+		Level: L5, Flows: []string{"F-02"},
+		Defects:  []string{"D22"},
+		Modes:    []string{"FULL", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket"},
+	},
+	"TestD22_OwnerPayloadObeysCustomerPrivacy": {
+		Level: L5, Flows: []string{"F-02"},
+		Defects:  []string{"D22", "D20"},
+		Modes:    []string{"FULL", "REALTIME", "SECURITY", "RELEASE"},
+		Evidence: []string{"socket", "payload"},
+	},
+	"TestD22_CustomOrderRoomSetIsComplete": {
+		Level: L5, Flows: []string{"F-02"},
+		Defects:  []string{"D22"},
+		Modes:    []string{"FULL", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket"},
+	},
+	"TestD22_OwnerDeliveryUnderRepetition": {
+		Level: L5, Flows: []string{"F-02"},
+		Defects:  []string{"D22"},
+		Modes:    []string{"FULL", "REALTIME"},
+		Evidence: []string{"socket"},
+	},
 	// ── دورةُ ٤٥ · أبوابُ `REST` تُقاس بالعقد نفسِه ───────────────
 	//
 	// **ولا شيفرةَ منتَجٍ فيها**: **العقدان يتخالفان في ثلاثة حقول**
@@ -3022,6 +3047,22 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٤٧ · ٢٠٢٦-٠٩-٠٩ ─────────────────────────────
+	"D22": "**الطلبُ الخاصُّ صار يمرّ بالبابِ الذي يمرّ به العاديّ** — " +
+		"`publishOrder`. **وكانت `custom.go` لا تناديه مرّةً واحدة**: " +
+		"الإنشاءُ يبثّ `touch(\"order\",\"ops\")` والتوثيقُ " +
+		"`Publish(\"ops\", …)` — **فتعلم العملياتُ ولا يعلم من يدفع.** " +
+		"**وقيس قبلُ**: المكتبُ حمولةٌ وصاحبُ الطلب صفر، **والعاديُّ " +
+		"يصل صاحبَه في النداء نفسِه.** **وبعدُ: صاحبُه واحدةٌ والمكتبُ " +
+		"واحدة، ولا يصل غيرَه شيء.** " +
+		"**ومرّةً واحدةً بالقياس**: **المقبسُ يشترك في `customer:` " +
+		"و`user:` معاً** — **فبثٌّ فيهما حدثٌ واحدٌ يصل شاشةً واحدةً " +
+		"مرّتين**، ولم يُبَثَّ إلّا في غرفة الزبون. " +
+		"**وحمولتُه حمولةُ زبونٍ لا كائنٌ داخليّ** (`ViewFor`): خمسون " +
+		"حقلاً بلا خرق — **ولا يُصلَح توجيهٌ بتسريب.** " +
+		"**وبعد التثبيت لا داخلَه**: `CreateCustomTx` صارت تُرجع ما " +
+		"يقع بعد التثبيت كـ`CreateTx` (`R24`/`XG-44`). " +
+		"**والخاصُّ بلا متجر فلا تُنادى غرفةُ `merchant:` وحدَه.**",
 	// ── دورةُ إصلاحٍ ٤٦ · ٢٠٢٦-٠٩-٠٩ ─────────────────────────────
 	//
 	// **وتصحيحُ عقدٍ سبق الإصلاحَ.** **قيل «العقدُ يمنع والشاشةُ

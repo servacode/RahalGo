@@ -304,9 +304,12 @@ func TestD22_CustomOrderOwnerChannelContract(t *testing.T) {
 	if !hasCustomer {
 		t.Fatal("العقدُ لا يوجب غرفةَ الزبون — وهو ما يقوله XQ-4")
 	}
-	t.Logf("EXPECTED FAIL / BLOCKED BY D22 — العقدُ يوجب غرفةَ الزبون عند إنشاء الطلب الخاصّ، "+
-		"و`custom.go:213` يبثّ ops وحدَها. %s", req.Ref)
-	t.Log("الإثباتُ التشغيليُّ (مشتركُ بثٍّ حيّ) مؤجَّلٌ إلى P-7 — انظر خطّةَ التنفيذ.")
+	// **والعقدُ صار منفَّذاً** (دورةُ ٤٧): `custom.go` تنادي
+	// `publishOrder` — **بابٌ واحدٌ يبلغ المكتبَ وصاحبَ الطلب معاً.**
+	//
+	// **والإثباتُ التشغيليُّ قائمٌ لا مؤجَّل**:
+	// `TestD22_CustomOrderReachesItsOwner` بمشتركِ بثٍّ حيّ.
+	t.Logf("D22 CHANNEL CONTRACT = منفَّذ — الغرفُ %v · %s", req.Rooms, req.Ref)
 }
 
 // ══════════════════════════════════════════════════════════════════════

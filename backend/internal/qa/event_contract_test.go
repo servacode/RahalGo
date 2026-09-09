@@ -287,15 +287,16 @@ func TestEV_CustomOrderOwnerRealtime(t *testing.T) {
 	gotCustom := capC.Next(2*time.Second) != nil
 	t.Logf("الطلبُ الخاصُّ وصل صاحبَه: %v", gotCustom)
 
-	switch {
-	case gotNormal && !gotCustom:
-		t.Logf("D22 CUSTOM OWNER REALTIME = EXPECTED FAIL")
-		t.Logf("  العاديُّ يُبثّ لصاحبه والخاصُّ لا — publishOrder صفرُ نداءاتٍ في custom.go")
-	case gotCustom:
-		t.Errorf("الخاصُّ بُثّ لصاحبه — **وD22 يقول إنّه لا يُبثّ. يُراجَع.**")
-	default:
-		t.Logf("D22 = PARTIAL — ولا العاديُّ وصل، فلا مقارنةَ")
+	// **وكان يوجب الصمتَ ويسمّيه `EXPECTED FAIL`** — **وصار يوجب
+	// الوصول** (دورةُ ٤٧): **الخاصُّ يمرّ بـ`publishOrder` كالعاديّ.**
+	if !gotNormal {
+		t.Fatal("**لم يصل العاديُّ صاحبَه** — **ولا مقارنةَ بأصلٍ مكسور.**")
 	}
+	if !gotCustom {
+		t.Fatalf("**العاديُّ يصل صاحبَه والخاصُّ لا** — " +
+			"**والخاصُّ طلبُه كغيره.** (`D22`)")
+	}
+	t.Logf("D22 = مغلق — العاديُّ والخاصُّ كلاهما يصل صاحبَه")
 }
 
 // ══════════════════════════════════════════════════════════════════════

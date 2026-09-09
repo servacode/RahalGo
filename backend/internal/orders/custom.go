@@ -116,15 +116,24 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 	if err != nil {
 		return nil, err
 	}
-	return s.GetByID(ctx, id)
+	o, err := s.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	// **ويصل صاحبَه كما يصله العاديّ** — `D22`.
+	s.publishOrder(o)
+	return o, nil
 }
 
 // CreateCustomTx كـ`CreateCustom` **في معاملةٍ مُمرَّرة** — `XG-33`.
 //
 // **وهو إدخالٌ واحدٌ أصلاً** (`R11` مُنفيّة)، **لكنّه يشارك معاملةَ منع
 // التكرار** ليُثبَّت الطلبُ وعلامتُه معاً.
+// **ويُرجع ما يقع بعد التثبيت** — البثّ. **ولا يقع داخلَها**:
+// **بثٌّ خرج ثمّ ارتدّت المعاملةُ يَعِد بطلبٍ لا وجودَ له**، وهو حدُّ
+// `R24`/`XG-44` نفسُه الذي يمشي عليه `CreateTx`.
 func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID, request,
-	addressText, payment string, lat, lng float64) (*Order, error) {
+	addressText, payment string, lat, lng float64) (*Order, func(), error) {
 	// **والمحفظةُ خيارٌ** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩). **وما عداهما نقد**:
 	// قيمةٌ مجهولةٌ من العميل لا تصير طريقةَ دفع.
 	if payment != "wallet" {
@@ -132,7 +141,7 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	}
 	request = strings.TrimSpace(request)
 	if request == "" || strings.TrimSpace(addressText) == "" {
-		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+		return nil, nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 	if len([]rune(request)) > MaxCustomRequest {
 		request = string([]rune(request)[:MaxCustomRequest])
@@ -142,13 +151,13 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	//
 	// **ولو استُثني لَصار باباً يلتفّ به على السقف** — يُنشئ خاصّةً بلا حدّ.
 	if err := s.checkOpenLimit(ctx, q, customerID); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// **واللقطةُ مع الطلب في معاملته** — `XQ-2`.
 	snap, err := s.snapshotNow(ctx, q)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var id string
 	err = q.QueryRow(ctx, `
@@ -163,9 +172,13 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders).Scan(&id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return s.getByID(ctx, q, id)
+	o, err := s.getByID(ctx, q, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	return o, func() { s.publishOrder(o) }, nil
 }
 
 // AgreeCustom **يوثّق ما اتّفق عليه السائقُ والزبون.**
@@ -269,8 +282,25 @@ func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 	if err != nil {
 		return err
 	}
-	// **وتراه العملياتُ فوراً** — التوثيقُ يُقرأ لحظةَ وقوعه لا بعد ساعة.
-	s.pub.Publish("ops", map[string]any{"type": "order"})
+	// ══════════════════════════════════════════════════════════════════
+	// **ويصل صاحبَ الطلب ما وُثّق باسمه** — `D22`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان يبثّ `ops` وحدَها**: **تراه العملياتُ ولا يراه من يدفع.**
+	// **واتّفاقٌ لا يراه صاحبُه ليس اتّفاقاً** — يُقال له في المحادثة
+	// **ويبقى مكتوباً حيث يراه.**
+	//
+	// **والبابُ واحدٌ للجميع** (`publishOrder`): **هو يحلّ الأطرافَ
+	// ويبني لكلٍّ حمولتَه ويسقط مغلقاً** — **ولا تُنثَر نداءاتُ بثٍّ
+	// في المعالِجات.**
+	//
+	// **وبعد الكتابة لا داخلَها**: هذا النداءُ خارج معاملة (`s.db.Exec`
+	// أعلاه مثبَّتة) — **وبثٌّ يسبق التثبيتَ يَعِد بما قد يُلغى.**
+	o, err := s.GetByID(ctx, orderID)
+	if err != nil {
+		return err
+	}
+	s.publishOrder(o)
 	return nil
 }
 

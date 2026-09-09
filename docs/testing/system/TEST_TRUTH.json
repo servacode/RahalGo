@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 285,
-    "test_funcs": 1048
+    "test_files": 286,
+    "test_funcs": 1052
   },
   "flows": [
     {
@@ -166,6 +166,10 @@
         "R11"
       ],
       "tests": [
+        "TestD22_CustomOrderReachesItsOwner",
+        "TestD22_CustomOrderRoomSetIsComplete",
+        "TestD22_OwnerDeliveryUnderRepetition",
+        "TestD22_OwnerPayloadObeysCustomerPrivacy",
         "TestEV_CustomOrderOwnerRealtime",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
@@ -1815,6 +1819,7 @@
       "fixed": "**البثُّ صار يبني حمولتَه بالسماح** — `orders.ViewFor` مولَّدةٌ من عقد `P-1` نفسِه، **وبابُ الخروج واحدٌ** (`publishTo`). **وكان `publishOrder` يبثّ الكائنَ الداخليَّ كما هو** إلى المكتب والمتجر والسائق، **وإلى الزبون بعد محو ثلاثة حقول** — **والتنقيةُ الحقيقيّةُ في `internal/server` لا تبلغها حزمةُ `orders`.** **وقيس قبل وبعد بالمسار الحقيقيّ**: غرفةُ المتجر كانت تنال ١٩ حقلاً محظوراً وصارت صفراً، **وحمولةُ الزبون ٥٢ حقلاً بلا خرق.** **والقائمةُ سماحٌ لا منع**: حقلٌ جديدٌ في `Order` لا يخرج من نفسه — `TestD20_UnclassifiedFieldNeverReachesAnyAudience`. **ويسقط مغلقاً**: تعذّرَ بناءُ الحمولة فلا يُبثُّ شيءٌ ولا يُرسَل العريضُ بديلاً. **ولا يغلق `D21` ولا `D23`**: **جذرُهما الثاني في تنقيتَي `REST` نفسِهما** — `redactForCustomer` تمحو أربعةَ حقولٍ والعقدُ يمنع تسعةَ عشر، **وهي حمولةٌ لا تمرّ بهذا الباب.**",
       "tests": [
         "TestPublishOrderReachesEveryRoom",
+        "TestD22_OwnerPayloadObeysCustomerPrivacy",
         "TestEV_MerchantDriverAssignment",
         "TestEV_MerchantRealtimePrivacy",
         "TestD20_BroadcastViewIsNotOverNarrow",
@@ -1850,12 +1855,17 @@
       "title": "الطلبُ الخاصُّ لا يُبثّ لصاحبه",
       "domain": "لحظيّ · وظيفيّ",
       "severity": "MEDIUM",
+      "fixed": "**الطلبُ الخاصُّ صار يمرّ بالبابِ الذي يمرّ به العاديّ** — `publishOrder`. **وكانت `custom.go` لا تناديه مرّةً واحدة**: الإنشاءُ يبثّ `touch(\"order\",\"ops\")` والتوثيقُ `Publish(\"ops\", …)` — **فتعلم العملياتُ ولا يعلم من يدفع.** **وقيس قبلُ**: المكتبُ حمولةٌ وصاحبُ الطلب صفر، **والعاديُّ يصل صاحبَه في النداء نفسِه.** **وبعدُ: صاحبُه واحدةٌ والمكتبُ واحدة، ولا يصل غيرَه شيء.** **ومرّةً واحدةً بالقياس**: **المقبسُ يشترك في `customer:` و`user:` معاً** — **فبثٌّ فيهما حدثٌ واحدٌ يصل شاشةً واحدةً مرّتين**، ولم يُبَثَّ إلّا في غرفة الزبون. **وحمولتُه حمولةُ زبونٍ لا كائنٌ داخليّ** (`ViewFor`): خمسون حقلاً بلا خرق — **ولا يُصلَح توجيهٌ بتسريب.** **وبعد التثبيت لا داخلَه**: `CreateCustomTx` صارت تُرجع ما يقع بعد التثبيت كـ`CreateTx` (`R24`/`XG-44`). **والخاصُّ بلا متجر فلا تُنادى غرفةُ `merchant:` وحدَه.**",
       "tests": [
+        "TestD22_CustomOrderReachesItsOwner",
+        "TestD22_CustomOrderRoomSetIsComplete",
+        "TestD22_OwnerDeliveryUnderRepetition",
+        "TestD22_OwnerPayloadObeysCustomerPrivacy",
         "TestEV_CustomOrderOwnerRealtime",
         "TestD22_CustomOrderOwnerChannelContract",
         "TestOrderFieldsAllClassified"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D23",
@@ -8665,6 +8675,92 @@
         "CROSS_SYSTEM",
         "FULL",
         "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD22_CustomOrderReachesItsOwner",
+      "file": "internal/qa/custom_owner_realtime_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D22"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD22_CustomOrderRoomSetIsComplete",
+      "file": "internal/qa/custom_owner_realtime_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D22"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD22_OwnerDeliveryUnderRepetition",
+      "file": "internal/qa/custom_owner_realtime_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D22"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD22_OwnerPayloadObeysCustomerPrivacy",
+      "file": "internal/qa/custom_owner_realtime_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D22",
+        "D20"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket",
+        "payload"
       ],
       "orphan": false
     },

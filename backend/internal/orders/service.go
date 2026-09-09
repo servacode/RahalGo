@@ -149,7 +149,13 @@ func (s *Service) publishOrder(o *Order) {
 		return
 	}
 	s.publishTo("ops", AudienceOps, o)
-	s.publishTo("merchant:"+o.MerchantID, AudienceMerchant, o)
+
+	// **والخاصُّ بلا متجر** — **فلا تُنادى غرفةٌ اسمُها `merchant:`
+	// وحدَه**: لا مشتركَ لها، **وبثٌّ في غرفةٍ لا أحدَ فيها ضجيجٌ
+	// يُقرأ في الجرد غرفةً قائمة.**
+	if o.MerchantID != "" {
+		s.publishTo("merchant:"+o.MerchantID, AudienceMerchant, o)
+	}
 
 	// **والزبونُ لا يعرف من أين تُشترى بضاعتُه** — وهو حكمُ العقد
 	// نفسِه، **وصار في القائمة لا في محوٍ بعد البناء.**

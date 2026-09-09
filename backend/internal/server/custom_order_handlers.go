@@ -36,7 +36,7 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 	}
 	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
-		o, err := s.orders.CreateCustomTx(ctx, q, userIDFrom(r), req.Request,
+		o, after, err := s.orders.CreateCustomTx(ctx, q, userIDFrom(r), req.Request,
 			req.AddressText, req.Payment, req.Lat, req.Lng)
 		if err != nil {
 			return IdempotentBody{}, err
@@ -47,9 +47,13 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 			return IdempotentBody{}, err
 		}
 		return IdempotentBody{Status: http.StatusCreated, Payload: view, AfterCommit: func() {
-			// **والعملياتُ تُخبَر فوراً** — الطلبُ الخاصُّ ينتظر
-			// موافقتَها، **وطلبٌ ينتظر من لا يعلم أنّه ينتظره لا يُخدَم.**
-			s.touch("order", "ops")
+			// **والبثُّ بعد التثبيت** — بابٌ واحدٌ يبلغ الأطرافَ كلَّها:
+			// **العملياتِ التي تنتظر موافقتَها، وصاحبَ الطلب** —
+			// **وكان يبلغ المكتبَ وحدَه** (`D22`).
+			//
+			// **وطلبٌ ينتظر من لا يعلم أنّه ينتظره لا يُخدَم** —
+			// **وصاحبُه ينظر إلى شاشةٍ لا تتحرّك.**
+			after()
 		}}, nil
 	})
 }
@@ -88,6 +92,5 @@ func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 			Entity: "order", EntityID: orderID, Href: "/portal/orders",
 		})
 	}
-	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"agreed": true})
 }
