@@ -135,7 +135,7 @@ ORPHAN     = 583
 | **XG-41C** | `HIGH` | — | `COVERED` | `TestXG41C_HarnessExclusivityIsEnforced` · `TestXG41C_PushQueueIsOwnedByItsProducer` |
 | **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
-| **XG-46** | `MEDIUM` | — | `COVERED` | `TestXG46_OrderCreateNeedsOneConnection` |
+| **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-42** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
