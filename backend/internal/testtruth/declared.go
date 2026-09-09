@@ -1553,6 +1553,54 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
 		Evidence: []string{"payload"},
 	},
+	// ── دورةُ ٤٨ · جردُ العيوب — قياسٌ لا تصنيفٌ من ذاكرة ─────────
+	//
+	// **ولا تُصلح شيئاً**: **تقيس سلوكَ اليوم وتربطه بسجلّه** —
+	// **فحالُ السجلّ كان مشتقّاً من قاعدةٍ لا من قياس.**
+	"TestCENSUS_D1_ReleaseWritesEvent": {
+		Level: L5, Flows: []string{"F-09"},
+		Defects:  []string{"D1"},
+		Modes:    []string{"FULL", "RELEASE"},
+		Evidence: []string{"db"},
+	},
+	"TestCENSUS_D4_OpenLimitNestedInWhatsAppGate": {
+		Level: L5, Flows: []string{"F-01"},
+		Defects:  []string{"D4"},
+		Modes:    []string{"FULL", "SECURITY"},
+		Evidence: []string{"http"},
+	},
+	"TestCENSUS_D6_CustomOrderSkipsCashBan": {
+		Level: L5, Flows: []string{"F-02"},
+		Defects:  []string{"D6"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+		Evidence: []string{"http"},
+	},
+	"TestCENSUS_D6_D9_CustomOrderCreationGuards": {
+		Level: L5, Flows: []string{"F-02"},
+		Defects:  []string{"D8", "D9"},
+		Modes:    []string{"FULL"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestCENSUS_D7_CashCeilingCountsIncomingOrder": {
+		Level: L5, Flows: []string{"F-08", "F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+		Evidence: []string{"http"},
+	},
+	"TestCENSUS_D14_SuspendedCannotOpenSocket": {
+		Level: L5, Flows: []string{"F-29"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY"},
+		Evidence: []string{"http"},
+	},
+	// **وحارسُ `D10` قائمٌ منذ زمنٍ ولم يكن مربوطاً** — **والإبطالُ
+	// شاملٌ للأنواع كلِّها**: متصفّحٌ وتطبيقٌ يسقطان معاً.
+	"TestSessionClient_AdminLogoutAllStillGlobal": {
+		Level: L2, Flows: []string{"F-30"},
+		Defects:  []string{"D10"},
+		Modes:    []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+		Evidence: []string{"db"},
+	},
 	// ── دورةُ ٤٧ · الطلبُ الخاصُّ يصل صاحبَه ──────────────────────
 	"TestD22_CustomOrderReachesItsOwner": {
 		Level: L5, Flows: []string{"F-02"},
@@ -3047,6 +3095,29 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── مصالحةُ سجلٍّ · دورةُ ٤٨ · ٢٠٢٦-٠٩-٠٩ ─────────────────────
+	//
+	// **ولا شيفرةَ منتَجٍ فيها**: **ثلاثةٌ كان حالُها `EXPECTED_FAIL`
+	// أو «بلا اختبار» وسلوكُ اليوم يخالفه** — **والحالُ كان مشتقّاً
+	// من قاعدةٍ («له اختبارٌ ولا نصَّ إصلاح») لا من قياس.**
+	"D1": "**فكُّ الإسنادِ يكتب حدثَه** — **قيس بالمسار الحقيقيّ**: " +
+		"أحداثُ الطلب قبل الفكّ ٢ وبعده ٣ " +
+		"(`TestCENSUS_D1_ReleaseWritesEvent`). **وكان السجلُّ يقول " +
+		"«بلا حدث» ولا اختبارَ يقيسه** — **وغيابُ الدليل ليس دليلَ " +
+		"غياب.**",
+	"D10": "**الإبطالُ شاملٌ لأنواع العملاء كلِّها** — " +
+		"`RevokeAllTokens` تُبطل `WHERE user_id = $1` بلا ترشيحِ نوع، " +
+		"**وتكتب `sessions_revoked_at` على الحساب نفسِه.** " +
+		"**والحارسُ قائمٌ ويمرّ**: `TestSessionClient_AdminLogoutAllStillGlobal` " +
+		"يُنشئ جلسةَ متصفّحٍ وجلسةَ تطبيقٍ **فيسقطان معاً** — " +
+		"**ولم يكن مربوطاً بالسجلّ فبقي العيبُ مفتوحاً بلا دليل.**",
+	"D27": "**إخفاقُ الدفع يُقيَّد ويُعاد** — **ولا يضيع.** " +
+		"**قيس بثلاث حالاتِ إخفاقٍ حقيقيّة** (`500` · مهلةٌ · قطعُ " +
+		"اتّصال): **الفعلُ ردّ 200 في الثلاث** — **فلا يُسقِط إخفاقُ " +
+		"الدفع عملاً وقع** — **وكُتبت ثلاثةُ صفوفِ نقلٍ كلُّها معلَّقٌ " +
+		"قابلٌ للإعادة** (`TestEV_R23PushFailureIsLost`). " +
+		"**والتسليمُ إلى هاتفٍ يبقى `P-8`** — **وهو قبولُ جهازٍ لا " +
+		"إعادةُ محاولة.**",
 	// ── دورةُ إصلاحٍ ٤٧ · ٢٠٢٦-٠٩-٠٩ ─────────────────────────────
 	"D22": "**الطلبُ الخاصُّ صار يمرّ بالبابِ الذي يمرّ به العاديّ** — " +
 		"`publishOrder`. **وكانت `custom.go` لا تناديه مرّةً واحدة**: " +

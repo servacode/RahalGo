@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 286,
-    "test_funcs": 1052
+    "test_files": 287,
+    "test_funcs": 1058
   },
   "flows": [
     {
@@ -84,6 +84,7 @@
         "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
         "TestR24_F6_NoMerchantPhoneAfterAccept",
         "TestR24_F7_DispatchFailureIsVisible",
+        "TestCENSUS_D4_OpenLimitNestedInWhatsAppGate",
         "TestEV_OrderAudience",
         "TestEV_MerchantRealtimePrivacy",
         "TestEV_MultiOrderRouting",
@@ -170,6 +171,8 @@
         "TestD22_CustomOrderRoomSetIsComplete",
         "TestD22_OwnerDeliveryUnderRepetition",
         "TestD22_OwnerPayloadObeysCustomerPrivacy",
+        "TestCENSUS_D6_CustomOrderSkipsCashBan",
+        "TestCENSUS_D6_D9_CustomOrderCreationGuards",
         "TestEV_CustomOrderOwnerRealtime",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
@@ -393,6 +396,7 @@
       ],
       "tests": [
         "TestPublishOrderReachesEveryRoom",
+        "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
         "TestEV_MerchantDriverAssignment",
         "TestEV_CustomerDriverAssignment",
         "TestSampleFactory_DriverOnShiftWithCash",
@@ -433,6 +437,7 @@
       "tests": [
         "TestEV_R22WatchdogMarkerSuppressesRetry",
         "TestEV_XOB5_WatchdogComparisonKey",
+        "TestCENSUS_D1_ReleaseWritesEvent",
         "TestFAIL_R22_WatchdogMarkerBeforeNotify",
         "TestR22_W1_AlertMarksAndCreatesIntent",
         "TestR22_W2_IntentFailureLeavesNoMarker",
@@ -817,11 +822,12 @@
         "XG-5"
       ],
       "tests": [
+        "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
         "TestEV_MerchantDriverAssignment",
         "TestFIN_CashExposureContract",
         "TestRACE_AdminVsAppTransition"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-20",
@@ -1202,6 +1208,7 @@
         "TestXG20_S4_MerchantSuspendAudited",
         "TestXG20_S5_SensitiveSettingAudited",
         "TestXG20_S6_OpsOrderTransitionAudited",
+        "TestCENSUS_D14_SuspendedCannotOpenSocket",
         "TestSampleFactory_SuspendedIsRefused",
         "TestFAIL_AQ4_AuditAtomicity",
         "TestXG22_SuspendDuringTransitionIsDeterministic",
@@ -1247,6 +1254,7 @@
         "R16"
       ],
       "tests": [
+        "TestSessionClient_AdminLogoutAllStillGlobal",
         "TestATOMIC_AdminUserCreationIsOneUnit",
         "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
         "TestATOMIC_LeadConversionIsOneUnit",
@@ -1624,8 +1632,11 @@
       "title": "فكُّ الإسناد بلا حدثٍ في order_events",
       "domain": "حالةُ الطلب",
       "severity": "MEDIUM",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "fixed": "**فكُّ الإسنادِ يكتب حدثَه** — **قيس بالمسار الحقيقيّ**: أحداثُ الطلب قبل الفكّ ٢ وبعده ٣ (`TestCENSUS_D1_ReleaseWritesEvent`). **وكان السجلُّ يقول «بلا حدث» ولا اختبارَ يقيسه** — **وغيابُ الدليل ليس دليلَ غياب.**",
+      "tests": [
+        "TestCENSUS_D1_ReleaseWritesEvent"
+      ],
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D2",
@@ -1662,8 +1673,10 @@
       "title": "سقفُ المفتوح داخلَ بوّابة واتساب",
       "domain": "الطلبات · إساءة",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestCENSUS_D4_OpenLimitNestedInWhatsAppGate"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D5",
@@ -1684,8 +1697,10 @@
       "title": "الطلبُ الخاصُّ لا ينادي cashBlocked",
       "domain": "الطلبات · مال",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestCENSUS_D6_CustomOrderSkipsCashBan"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D7",
@@ -1693,6 +1708,7 @@
       "domain": "مال",
       "severity": "HIGH",
       "tests": [
+        "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
         "TestSampleFactory_DriverOnShiftWithCash",
         "TestFIN_CashExposureContract"
       ],
@@ -1703,24 +1719,31 @@
       "title": "الطلبُ الخاصُّ لا يطلب توثيقَ واتساب",
       "domain": "الطلبات · إساءة",
       "severity": "MEDIUM",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestCENSUS_D6_D9_CustomOrderCreationGuards"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D9",
       "title": "الطلبُ الخاصُّ بلا حدثِ ''→pending",
       "domain": "حالةُ الطلب",
       "severity": "MEDIUM",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestCENSUS_D6_D9_CustomOrderCreationGuards"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D10",
       "title": "الاستعادةُ تُبطل نوعَ عميلٍ واحد",
       "domain": "أمن · جلسة",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "fixed": "**الإبطالُ شاملٌ لأنواع العملاء كلِّها** — `RevokeAllTokens` تُبطل `WHERE user_id = $1` بلا ترشيحِ نوع، **وتكتب `sessions_revoked_at` على الحساب نفسِه.** **والحارسُ قائمٌ ويمرّ**: `TestSessionClient_AdminLogoutAllStillGlobal` يُنشئ جلسةَ متصفّحٍ وجلسةَ تطبيقٍ **فيسقطان معاً** — **ولم يكن مربوطاً بالسجلّ فبقي العيبُ مفتوحاً بلا دليل.**",
+      "tests": [
+        "TestSessionClient_AdminLogoutAllStillGlobal"
+      ],
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D11",
@@ -1762,6 +1785,7 @@
       "domain": "أمن",
       "severity": "HIGH",
       "tests": [
+        "TestCENSUS_D14_SuspendedCannotOpenSocket",
         "TestSampleFactory_SuspendedIsRefused"
       ],
       "status": "EXPECTED_FAIL"
@@ -1926,10 +1950,11 @@
       "title": "سقوطُ الدفع بلا إعادةٍ دائمة",
       "domain": "إشعار · وعيٌ بالحدث",
       "severity": "HIGH",
+      "fixed": "**إخفاقُ الدفع يُقيَّد ويُعاد** — **ولا يضيع.** **قيس بثلاث حالاتِ إخفاقٍ حقيقيّة** (`500` · مهلةٌ · قطعُ اتّصال): **الفعلُ ردّ 200 في الثلاث** — **فلا يُسقِط إخفاقُ الدفع عملاً وقع** — **وكُتبت ثلاثةُ صفوفِ نقلٍ كلُّها معلَّقٌ قابلٌ للإعادة** (`TestEV_R23PushFailureIsLost`). **والتسليمُ إلى هاتفٍ يبقى `P-8`** — **وهو قبولُ جهازٍ لا إعادةُ محاولة.**",
       "tests": [
         "TestEV_R23PushFailureIsLost"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     }
   ],
   "risks": [
@@ -5776,7 +5801,23 @@
       "name": "TestSessionClient_AdminLogoutAllStillGlobal",
       "file": "internal/identity/session_client_test.go",
       "package": "identity",
-      "orphan": true
+      "level": "L2",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D10"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSessionClient_AppDoesNotKillWeb",
@@ -8811,6 +8852,128 @@
       "file": "internal/qa/custom_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestCENSUS_D14_SuspendedCannotOpenSocket",
+      "file": "internal/qa/defect_census_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCENSUS_D1_ReleaseWritesEvent",
+      "file": "internal/qa/defect_census_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-09"
+      ],
+      "defects": [
+        "D1"
+      ],
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCENSUS_D4_OpenLimitNestedInWhatsAppGate",
+      "file": "internal/qa/defect_census_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCENSUS_D6_CustomOrderSkipsCashBan",
+      "file": "internal/qa/defect_census_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D6"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCENSUS_D6_D9_CustomOrderCreationGuards",
+      "file": "internal/qa/defect_census_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D8",
+        "D9"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
+      "file": "internal/qa/defect_census_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
     },
     {
       "name": "TestEV_AutoAcceptMerchantAwareness",
@@ -16964,18 +17127,12 @@
   ],
   "stale": [],
   "coverage_gaps": [
-    "D1 — لا اختبارَ انحدارٍ بعد",
-    "D10 — لا اختبارَ انحدارٍ بعد",
     "D11 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
     "D18 — لا اختبارَ انحدارٍ بعد",
     "D19 — لا اختبارَ انحدارٍ بعد",
     "D3 — لا اختبارَ انحدارٍ بعد",
-    "D4 — لا اختبارَ انحدارٍ بعد",
-    "D6 — لا اختبارَ انحدارٍ بعد",
-    "D8 — لا اختبارَ انحدارٍ بعد",
-    "D9 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",

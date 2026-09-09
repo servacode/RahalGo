@@ -19,18 +19,18 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **286** |
-| دوالُّ اختبار | **1052** |
+| ملفّاتُ اختبار | **287** |
+| دوالُّ اختبار | **1058** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1052
-MAPPED     = 349
+TOTAL      = 1058
+MAPPED     = 356
 INFRA      = 120
-ORPHAN     = 583
+ORPHAN     = 582
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -43,7 +43,7 @@ ORPHAN     = 583
 | `routing` | 76 |
 | `orders_test` | 60 |
 | `orders` | 54 |
-| `identity` | 22 |
+| `identity` | 21 |
 | `settings` | 14 |
 | `notify` | 13 |
 | `push` | 10 |
@@ -56,7 +56,7 @@ ORPHAN     = 583
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
 | **التدفّقات** | 35 | 30 | 5 |
-| **العيوب** | 27 | 15 | 12 |
+| **العيوب** | 27 | 21 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 45 | 26 | 19 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
@@ -67,20 +67,20 @@ ORPHAN     = 583
 
 | ID | العنوان | الحال | الاختبارات |
 |---|---|---|---|
-| **D1** | فكُّ الإسناد بلا حدثٍ في order_events | `NO_REGRESSION_TEST_YET` | — |
+| **D1** | فكُّ الإسناد بلا حدثٍ في order_events | `FIXED_AND_PASSING` | `TestCENSUS_D1_ReleaseWritesEvent` |
 | **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `FIXED_AND_PASSING` | `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` · `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **D3** | «تذكّرني» تنقلب دائمةً بعد أوّل تجديد | `NO_REGRESSION_TEST_YET` | — |
-| **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `NO_REGRESSION_TEST_YET` | — |
+| **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `EXPECTED_FAIL` | `TestCENSUS_D4_OpenLimitNestedInWhatsAppGate` |
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
-| **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `NO_REGRESSION_TEST_YET` | — |
-| **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `EXPECTED_FAIL` | `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` |
-| **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `NO_REGRESSION_TEST_YET` | — |
-| **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `NO_REGRESSION_TEST_YET` | — |
-| **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `NO_REGRESSION_TEST_YET` | — |
+| **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `EXPECTED_FAIL` | `TestCENSUS_D6_CustomOrderSkipsCashBan` |
+| **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `EXPECTED_FAIL` | `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` |
+| **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
+| **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
+| **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `FIXED_AND_PASSING` | `TestSessionClient_AdminLogoutAllStillGlobal` |
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
 | **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `FIXED_AND_PASSING` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` · `TestFAIL_D13_MediaDirectoryListingOpen` |
-| **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestSampleFactory_SuspendedIsRefused` |
+| **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestCENSUS_D14_SuspendedCannotOpenSocket` · `TestSampleFactory_SuspendedIsRefused` |
 | **D15** | AdminCreateUser في خطوتين | `FIXED_AND_PASSING` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
@@ -93,7 +93,7 @@ ORPHAN     = 583
 | **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `EXPECTED_FAIL` | `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
 | **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `FIXED_AND_PASSING` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
 | **D26** | إنذارُ الراصد يضيع بعد كتابة الوسم | `EXPECTED_FAIL` | `TestEV_R22WatchdogMarkerSuppressesRetry` |
-| **D27** | سقوطُ الدفع بلا إعادةٍ دائمة | `EXPECTED_FAIL` | `TestEV_R23PushFailureIsLost` |
+| **D27** | سقوطُ الدفع بلا إعادةٍ دائمة | `FIXED_AND_PASSING` | `TestEV_R23PushFailureIsLost` |
 
 ---
 
@@ -153,23 +153,17 @@ ORPHAN     = 583
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 26
+COVERAGE GAPS    = 20
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
 
-- D1 — لا اختبارَ انحدارٍ بعد
-- D10 — لا اختبارَ انحدارٍ بعد
 - D11 — لا اختبارَ انحدارٍ بعد
 - D16 — لا اختبارَ انحدارٍ بعد
 - D17 — لا اختبارَ انحدارٍ بعد
 - D18 — لا اختبارَ انحدارٍ بعد
 - D19 — لا اختبارَ انحدارٍ بعد
 - D3 — لا اختبارَ انحدارٍ بعد
-- D4 — لا اختبارَ انحدارٍ بعد
-- D6 — لا اختبارَ انحدارٍ بعد
-- D8 — لا اختبارَ انحدارٍ بعد
-- D9 — لا اختبارَ انحدارٍ بعد
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به
 - F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
