@@ -2358,6 +2358,9 @@ var TestMap = map[string]TestDecl{
 	"TestXQ2_F3_UnreadableSettingBlocksCreation":                snapshotTest(),
 	"TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot":   snapshotTest(),
 
+	// ── رموزُ الخطأ تبلغ الهاتفَ بعربيّة (دورةُ ٤٢) — `XG-45` ────
+	"TestXG45_EveryMobileReachableCodeHasArabic": mobileErrorTest(),
+
 	// ── تشكيلُ الحمولة بالقدرة (دورةُ ٤١) — `XG-42` ──────────────
 	"TestXG42_ContactFieldsFollowCapabilityNotRoute": fieldShapeTest(),
 	"TestXG42_CapabilityUnionCustomRoleAndRevoke":    fieldShapeTest(),
@@ -2655,6 +2658,18 @@ func snapshotTest() TestDecl {
 		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
 			"sales.commission_source", "sales.activation_orders"},
 		Modes: []string{"FINANCIAL", "CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
+// mobileErrorTest حارسُ وصول رموز الخطأ إلى الهاتف بعربيّة — `XG-45`.
+//
+// **ويقرأ التصنيفَ من الحارس نفسِه** — **فلا معجمان يفترقان**،
+// **ومجهولُ التصنيف يوقفه.**
+func mobileErrorTest() TestDecl {
+	return TestDecl{
+		Level: L2, Purpose: PurposeInfrastructure,
+		Gaps:  []string{"XG-45"},
+		Modes: []string{"ANDROID", "FULL", "RELEASE"},
 	}
 }
 
