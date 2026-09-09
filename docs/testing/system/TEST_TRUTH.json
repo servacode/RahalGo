@@ -2740,6 +2740,13 @@
       "status": "COVERED"
     },
     {
+      "id": "XG-46",
+      "title": "طلبٌ يمسك معاملةً ثمّ يطلب اتّصالاً ثانياً من المَسبَح",
+      "severity": "MEDIUM",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
       "id": "XG-45",
       "title": "أندرويد يستقبل `message_key` ولا يترجمه",
       "severity": "MEDIUM",
