@@ -136,34 +136,31 @@ func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wall
 	return &Service{db: db, identity: identitySvc, wallet: walletSvc, cashbox: cashboxSvc, pub: pub, logger: logger}
 }
 
-// publishOrder يبث ملخص الطلب لغرفة العمليات ولموضوع المتجر المعني.
+// publishOrder يبثّ الطلبَ لكلّ غرفةٍ بحمولتها هي — `D20` · `D21` · `D23`.
+//
+// **وكان يبثّ الكائنَ الداخليَّ نفسَه** إلى المكتب والمتجر والسائق،
+// **وإلى الزبون بعد محو ثلاثة حقول** — **والتنقيةُ الحقيقيّةُ في
+// `internal/server` ولا تبلغها هذه الحزمة.**
+//
+// **فصارت الحمولةُ تُبنى بالسماح لكلّ طرف** (`ViewFor`) —
+// **والغرفُ كما هي**: لم يُمَسّ من يصله الحدثُ، **بل ما يصله.**
 func (s *Service) publishOrder(o *Order) {
 	if o == nil {
 		return
 	}
-	event := map[string]any{"type": "order", "order": o}
-	s.pub.Publish("ops", event)
-	s.pub.Publish("merchant:"+o.MerchantID, event)
+	s.publishTo("ops", AudienceOps, o)
+	s.publishTo("merchant:"+o.MerchantID, AudienceMerchant, o)
 
-	// **وحدثُ الزبون بلا مصدر.**
-	//
-	// حُجب اسمُ المتجر في التصفّح وفي الطلبات وفي التقييمات وفي الإشعارات —
-	// **وبقي في البثّ الحيّ**: نسخةٌ كاملةٌ من الطلب تُرسَل إلى قناة الزبون
-	// في كلّ انتقال. **ولا تظهر في شاشةٍ فتُنتبَه**، بل تُقرأ في أدوات
-	// المتصفّح — وهي أهدأُ مواضع التسريب وأبقاها.
-	//
-	// **وحجبٌ في أربعة مواضعَ من خمسة ليس حجباً.** (وُجد في فحص البثّ نفسِه،
-	// ٢٠٢٦-٠٨-٠٣.)
-	cust := *o
-	cust.MerchantID, cust.MerchantName, cust.MerchantLogoThumb = "", "", nil
-	s.pub.Publish("customer:"+o.CustomerID, map[string]any{"type": "order", "order": &cust})
+	// **والزبونُ لا يعرف من أين تُشترى بضاعتُه** — وهو حكمُ العقد
+	// نفسِه، **وصار في القائمة لا في محوٍ بعد البناء.**
+	s.publishTo("customer:"+o.CustomerID, AudienceCustomer, o)
 
-	// **السائقُ الذي يحمل الطلب يعلم بما يجري فيه.**
+	// **والسائقُ الذي يحمل الطلب يعلم بما يجري فيه.**
 	//
 	// كان يُستثنى من البثّ كلِّه: تُسند إليه العملياتُ طلباً فلا يعلم حتى
 	// يُحدّث الصفحة، وتُلغيه فيمضي إلى عنوانٍ لا طلبَ فيه.
 	if o.DriverID != nil && *o.DriverID != "" {
-		s.pub.Publish("driver:"+*o.DriverID, event)
+		s.publishTo("driver:"+*o.DriverID, AudienceDriver, o)
 	}
 
 	// **وإشارةٌ للطابور — بلا حمولة.**
@@ -175,6 +172,9 @@ func (s *Service) publishOrder(o *Order) {
 	// وتُرسَل عند الدخول وعند الخروج معاً: من أخذه واحدٌ يجب أن يختفي عن
 	// شاشات الباقين، **وإلّا ضغطوا عليه فردَّهم «سبقك غيرُك»** — وهو ردٌّ صحيح
 	// يُغني عنه عرضٌ صحيح.
+	//
+	// **ولا حمولةَ فيه فلا يُشكَّل** — **إشارةٌ تقول «تبدّل الطابور»
+	// والسائقُ يقرؤه من بابه هو.**
 	if queueAffecting(o.Status) {
 		s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
 
@@ -202,6 +202,22 @@ func (s *Service) publishOrder(o *Order) {
 			}
 		}
 	}
+}
+
+// publishTo يبثّ حمولةَ طرفٍ واحد — **ويسقط مغلقاً.**
+//
+// **وإن تعذّر بناءُ الحمولة لم يُبثَّ شيء** — **ولا يُرسَل العريضُ
+// بديلاً**: **بثٌّ ناقصٌ يُصلَح بتحديثٍ، وتسريبٌ لا يُسحَب.**
+func (s *Service) publishTo(topic string, a Audience, o *Order) {
+	view := ViewFor(a, o)
+	if view == nil {
+		if s.logger != nil {
+			s.logger.Error("البثّ: تعذّر بناءُ حمولةٍ آمنة — لم يُبثَّ شيء",
+				"topic", topic, "audience", string(a))
+		}
+		return
+	}
+	s.pub.Publish(topic, map[string]any{"type": "order", "order": view})
 }
 
 // topicDriverQueue نسخةٌ محلّية من `realtime.TopicDriverQueue`.

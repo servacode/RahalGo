@@ -1553,6 +1553,46 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
 		Evidence: []string{"payload"},
 	},
+	// ── دورةُ إصلاحٍ ٤٤ · والغرفُ عهدٌ قائم ────────────────────────
+	//
+	// **بُدّل ما يصل الغرفَ لا من يصله** — **ويُقاس بمِسنَدٍ يعدّ
+	// الغرفَ لا بقراءةِ الشيفرة.**
+	"TestPublishOrderReachesEveryRoom": {
+		Level: L2, Flows: []string{"F-01", "F-04", "F-07", "F-08"},
+		Defects: []string{"D20"},
+		Modes:   []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestPublishOrderKeepsQueueQuiet": {
+		Level: L2, Flows: []string{"F-07"},
+		Modes: []string{"FAST", "FULL"},
+	},
+	// ── دورةُ إصلاحٍ ٤٤ · حارسُ مصفوفة البثّ ──────────────────────
+	//
+	// **`ViewFor` صارت البابَ الوحيدَ** — **وهذه تقيسها بالعقد
+	// حقلاً حقلاً وطرفاً طرفاً، على طلبٍ مملوءٍ بالانعكاس.**
+	"TestD20_BroadcastViewObeysContract": {
+		Level: L5, Flows: []string{"F-01", "F-04", "F-14"},
+		Defects:  []string{"D20"},
+		Modes:    []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+		Evidence: []string{"payload"},
+	},
+	"TestD20_BroadcastViewIsNotOverNarrow": {
+		Level: L5, Flows: []string{"F-01", "F-04", "F-14"},
+		Defects:  []string{"D20"},
+		Modes:    []string{"FAST", "FULL", "RELEASE"},
+		Evidence: []string{"payload"},
+	},
+	"TestD20_UnclassifiedFieldNeverReachesAnyAudience": {
+		Level: L5, Purpose: PurposeGenerator,
+		Defects:  []string{"D20"},
+		Modes:    []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+		Evidence: []string{"payload"},
+	},
+	"TestD20_UnknownAudienceGetsNothing": {
+		Level: L5, Purpose: PurposeHarnessSelf,
+		Defects: []string{"D20"},
+		Modes:   []string{"FAST", "FULL", "SECURITY"},
+	},
 	"TestD22_CustomOrderOwnerChannelContract": {
 		Level: L5, Flows: []string{"F-02"},
 		Defects: []string{"D22"},
@@ -2954,6 +2994,23 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٤٤ · ٢٠٢٦-٠٩-٠٩ ─────────────────────────────
+	"D20": "**البثُّ صار يبني حمولتَه بالسماح** — `orders.ViewFor` " +
+		"مولَّدةٌ من عقد `P-1` نفسِه، **وبابُ الخروج واحدٌ** " +
+		"(`publishTo`). **وكان `publishOrder` يبثّ الكائنَ الداخليَّ " +
+		"كما هو** إلى المكتب والمتجر والسائق، **وإلى الزبون بعد محو " +
+		"ثلاثة حقول** — **والتنقيةُ الحقيقيّةُ في `internal/server` " +
+		"لا تبلغها حزمةُ `orders`.** " +
+		"**وقيس قبل وبعد بالمسار الحقيقيّ**: غرفةُ المتجر كانت تنال " +
+		"١٩ حقلاً محظوراً وصارت صفراً، **وحمولةُ الزبون ٥٢ حقلاً بلا " +
+		"خرق.** " +
+		"**والقائمةُ سماحٌ لا منع**: حقلٌ جديدٌ في `Order` لا يخرج من " +
+		"نفسه — `TestD20_UnclassifiedFieldNeverReachesAnyAudience`. " +
+		"**ويسقط مغلقاً**: تعذّرَ بناءُ الحمولة فلا يُبثُّ شيءٌ ولا " +
+		"يُرسَل العريضُ بديلاً. " +
+		"**ولا يغلق `D21` ولا `D23`**: **جذرُهما الثاني في تنقيتَي " +
+		"`REST` نفسِهما** — `redactForCustomer` تمحو أربعةَ حقولٍ " +
+		"والعقدُ يمنع تسعةَ عشر، **وهي حمولةٌ لا تمرّ بهذا الباب.**",
 	// ── دورةُ إصلاحٍ ٤ · ٢٠٢٦-٠٩-٠٦ ──────────────────────────────
 	"D2": "**`convertLead` صارت معاملةً واحدة** تعبر أربعَ طبقات " +
 		"(`CreateMerchantTx` · `EnsureUserWithRoleTx` · " +

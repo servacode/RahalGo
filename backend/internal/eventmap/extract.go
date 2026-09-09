@@ -39,7 +39,13 @@ type Publisher struct {
 
 var (
 	reNotify = regexp.MustCompile(`\.(Notify|NotifyMany|NotifyOps|NotifyRole|NotifyWallet)\(`)
-	rePub    = regexp.MustCompile(`\.Publish\(\s*"([a-z]+)(:?)`)
+	// rePub **مواضعُ البثّ وغرفُها.**
+	//
+	// **و`publishTo` منها**: `orders` صارت تبثّ من بابٍ واحدٍ يبني
+	// الحمولةَ بالسماح (`D20`)، **فاسمُ الغرفة انتقل من نداء
+	// `Publish` إلى ندائه.** **ومستخرِجٌ يقرأ اسمَ الدالّة وحدَه يعمى
+	// عن غرفتين بلا سقوطِ شيء** — **ولذلك يُقرأ الاسمان معاً.**
+	rePub    = regexp.MustCompile(`\.(?:Publish|publishTo)\(\s*"([a-z]+)(:?)`)
 	reKind   = regexp.MustCompile(`Kind:\s*(?:notifications\.)?Kind(\w+)`)
 	reEntity = regexp.MustCompile(`Entity:\s*"([a-z_]+)"`)
 )

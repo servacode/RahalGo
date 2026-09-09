@@ -12,6 +12,7 @@ package qa
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -180,6 +181,8 @@ func TestD21_CustomerRedactionAgainstContract(t *testing.T) {
 
 func TestD20_MerchantRealtimeVsREST(t *testing.T) {
 	// **REST**: ما تفعله `redactForMerchant` — ستّةَ عشرَ حقلاً.
+	//
+	// **ونُسخت هنا لأنّ الدالّةَ غيرُ مُصدَّرةٍ من حزمة `server`.**
 	rest := fullOrder()
 	rest.CustomerID, rest.CustomerName, rest.CustomerPhone = "", "", ""
 	rest.AddressText = ""
@@ -196,43 +199,56 @@ func TestD20_MerchantRealtimeVsREST(t *testing.T) {
 
 	restBad := CheckPayload(RoleMerchant, ChannelREST, toMap(t, rest))
 
-	// **البثّ**: `orders/service.go:120-121` يبثّ الكائنَ كما هو — **بلا
-	// تنقيةٍ إطلاقاً.** (`grep redact internal/orders/` يردّ صفراً.)
+	// **والبثُّ يُقاس من بابه هو لا من محاكاة** — `orders.ViewFor`.
+	//
+	// **وكان هذا السطرُ يُسلسِل الكائنَ كما هو** لأنّ `publishOrder`
+	// كانت تبثّه كما هو. **فلمّا صارت تبني بالسماح تبدّل المقياس** —
+	// **ومحاكاةٌ تصف شيفرةً زالت تخضرّ على عدم.**
 	live := fullOrder()
-	liveBad := CheckPayload(RoleMerchant, ChannelRealtime, toMap(t, live))
+	liveBad := CheckPayload(RoleMerchant, ChannelRealtime,
+		orders.ViewFor(orders.AudienceMerchant, &live))
 
 	t.Logf("REST     : %d خرقاً", len(restBad))
 	t.Logf("REALTIME : %d خرقاً", len(liveBad))
 
-	if len(liveBad) <= len(restBad) {
-		t.Log("D20 REGRESSION = PASS — القناتان تلتقيان على العقد. احذفِ الوسم.")
-		return
-	}
+	// **والحكمُ اتّجاهان**: **لا يزيد البثُّ على `REST`** — وهو `D20` —
+	// **ولا يخرق البثُّ العقدَ أصلاً**، **فمقارنةٌ بقناةٍ مخروقةٍ
+	// تُجيز الخرقَ الموروث.**
 	for _, x := range liveBad {
-		t.Logf("  %s", x)
+		t.Errorf("  %s", x)
 	}
-	t.Logf("EXPECTED FAIL / BLOCKED BY D20 — البثُّ يسرّب %d حقلاً زيادةً على REST",
-		len(liveBad)-len(restBad))
+	if len(liveBad) > 0 {
+		t.Errorf("**%d حقلاً محظوراً وصل غرفةَ المتجر** — **والبثُّ ليس قناةً "+
+			"مميّزة.** (`D20`)", len(liveBad))
+	}
+	if len(liveBad) > len(restBad) {
+		t.Errorf("**البثُّ يسرّب %d حقلاً زيادةً على REST** — **والفرقُ بين "+
+			"القناتين هو `D23` نفسُه.**", len(liveBad)-len(restBad))
+	}
+	t.Logf("D20 MERCHANT = مغلق — والباقي في `REST` وحدَه (%d خرقاً، `D23`)",
+		len(restBad))
 }
 
-// **وحمولةُ الزبون في البثّ تُقاس كذلك** — **ثلاثةُ حقولٍ تُمحى لا أربعة.**
+// **وحمولةُ الزبون في البثّ تُقاس بالعقد لا بمحوٍ بعد البناء.**
+//
+// **وكان `publishOrder` يمحو ثلاثةَ حقولٍ ويبثّ الباقي** — **و`REST`
+// تمحو أربعة**: **فـ`offered_driver_name` يُمنع في بابٍ ويمرّ في آخر.**
 func TestD20_CustomerRealtimeVsREST(t *testing.T) {
 	live := fullOrder()
-	// `orders/service.go:132-133` — ثلاثةٌ لا غير.
-	live.MerchantID, live.MerchantName, live.MerchantLogoThumb = "", "", nil
+	view := orders.ViewFor(orders.AudienceCustomer, &live)
 
-	bad := CheckPayload(RoleCustomer, ChannelRealtime, toMap(t, live))
-	var offered bool
+	bad := CheckPayload(RoleCustomer, ChannelRealtime, view)
 	for _, x := range bad {
-		if x.Field == "offered_driver_name" {
-			offered = true
-		}
+		t.Errorf("  %s", x)
 	}
-	if !offered {
-		t.Log("تنقيةُ البثّ للزبون صارت تطابق REST. احذفِ الوسم.")
-		return
+	if len(bad) > 0 {
+		t.Errorf("**%d حقلاً محظوراً وصل الزبونَ في البثّ.** (`D20`/`D21`)", len(bad))
 	}
-	t.Logf("EXPECTED FAIL / BLOCKED BY D20 — offered_driver_name يمرّ في البثّ ويُمنع في REST")
+	if _, ok := view["offered_driver_name"]; ok {
+		t.Errorf("**`offered_driver_name` يمرّ في البثّ ويُمنع في REST** — " +
+			"**وهذا هو الانحرافُ بعينه.**")
+	}
+	t.Logf("D20/D21 CUSTOMER REALTIME = مغلق — %d حقلاً وصل الزبون", len(view))
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -346,22 +362,16 @@ func TestPushPayloadScope(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 
 // fullOrder **طلبٌ كلُّ حقلٍ فيه غيرُ صفريّ** — **فما مرّ مرّ عن قصد.**
+//
+// **وكان قائمةً مكتوبةً بيد** — **فحقلٌ يُضاف إلى `orders.Order` يبقى
+// صفريّاً فيها**، **والصفرُ لا يُعَدّ خرقاً** (`CheckPayload`): **فيمرّ
+// الجديدُ لأنّه كان فارغاً لا لأنّه مُنِع.**
+//
+// **فصار يُملأ بالانعكاس** — انظر `fillNonZero`.
 func fullOrder() orders.Order {
-	s := func(x string) *string { return &x }
-	return orders.Order{
-		ID: "ord-1", Number: 1001, Status: "delivered", Kind: "normal",
-		CustomerID: "cus-1", CustomerName: "زبون", CustomerPhone: "0911111111",
-		MerchantID: "mer-1", MerchantName: "متجر", MerchantLogoThumb: s("/media/logo.jpg"),
-		DriverID: s("drv-1"), DriverName: s("سائق"), DriverPhone: s("0922222222"),
-		OfferedDriverName: s("سائقٌ معروض"),
-		AddressText:       "الرقّة — شارع", Lat: 35.95, Lng: 39.01,
-		ZoneID: s("zon-1"), ZoneName: s("منطقة"),
-		PaymentMethod: "cash", Subtotal: 10000, DeliveryFee: 3000,
-		Discount: 500, Total: 12500, WalletPaid: 2000, CashDue: 10500,
-		PlatformCommission: 1500, MerchantNet: 8500, CommissionPct: 15,
-		PromoCode: s("PROMO"), Notes: "اطرق الباب",
-		ProofURL: s("/media/proof.jpg"), ProofMeters: 12, ProofSkipReason: "",
-	}
+	var o orders.Order
+	fillNonZero(reflect.ValueOf(&o).Elem(), 0)
+	return o
 }
 
 // toMap **الحمولةُ كما تخرج فعلاً** — عبر التسلسل نفسِه لا عبر الانعكاس.

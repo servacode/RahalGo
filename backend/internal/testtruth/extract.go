@@ -244,7 +244,12 @@ func callBlock(src string, open int) string {
 // **غرفُ البثّ**
 // ══════════════════════════════════════════════════════════════════════
 
-var rePublish = regexp.MustCompile(`\.Publish\("([a-z]+)(?::"|")`)
+// rePublish **غرفُ البثّ.**
+//
+// **و`publishTo` منها**: `orders` صارت تبثّ من بابٍ واحدٍ يبني الحمولةَ
+// بالسماح (`D20`)، **فاسمُ الغرفة انتقل إلى ندائه** — **ومستخرِجٌ يقرأ
+// `Publish` وحدَها يعمى عن غرفتين.**
+var rePublish = regexp.MustCompile(`\.(?:Publish|publishTo)\("([a-z]+)(?::"|")`)
 
 // PublishRooms يجرد أسماءَ الغرف التي يُبَثّ إليها.
 func (r Root) PublishRooms() ([]string, error) {

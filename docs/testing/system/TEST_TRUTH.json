@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 282,
-    "test_funcs": 1038
+    "test_files": 284,
+    "test_funcs": 1044
   },
   "flows": [
     {
@@ -66,6 +66,7 @@
         "XG-9"
       ],
       "tests": [
+        "TestPublishOrderReachesEveryRoom",
         "TestR21_T1_SelfManageAutoTransferInformsMerchant",
         "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
         "TestPF08_F10_DisabledMeansNoProgression",
@@ -121,6 +122,8 @@
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
+        "TestD20_BroadcastViewIsNotOverNarrow",
+        "TestD20_BroadcastViewObeysContract",
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
@@ -243,9 +246,12 @@
         "R21"
       ],
       "tests": [
+        "TestPublishOrderReachesEveryRoom",
+        "TestD20_BroadcastViewIsNotOverNarrow",
+        "TestD20_BroadcastViewObeysContract",
         "TestD20_MerchantRealtimeVsREST"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-05",
@@ -316,6 +322,8 @@
         "R23"
       ],
       "tests": [
+        "TestPublishOrderKeepsQueueQuiet",
+        "TestPublishOrderReachesEveryRoom",
         "TestR21_T1_SelfManageAutoTransferInformsMerchant",
         "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
         "TestPF08_F10_DisabledMeansNoProgression",
@@ -370,6 +378,7 @@
         "R10"
       ],
       "tests": [
+        "TestPublishOrderReachesEveryRoom",
         "TestEV_MerchantDriverAssignment",
         "TestEV_CustomerDriverAssignment",
         "TestSampleFactory_DriverOnShiftWithCash",
@@ -610,6 +619,8 @@
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
+        "TestD20_BroadcastViewIsNotOverNarrow",
+        "TestD20_BroadcastViewObeysContract",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
         "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
@@ -1785,14 +1796,20 @@
       "title": "البثُّ الحيُّ يتجاوز redactForMerchant",
       "domain": "أمن · خصوصيّة",
       "severity": "HIGH",
+      "fixed": "**البثُّ صار يبني حمولتَه بالسماح** — `orders.ViewFor` مولَّدةٌ من عقد `P-1` نفسِه، **وبابُ الخروج واحدٌ** (`publishTo`). **وكان `publishOrder` يبثّ الكائنَ الداخليَّ كما هو** إلى المكتب والمتجر والسائق، **وإلى الزبون بعد محو ثلاثة حقول** — **والتنقيةُ الحقيقيّةُ في `internal/server` لا تبلغها حزمةُ `orders`.** **وقيس قبل وبعد بالمسار الحقيقيّ**: غرفةُ المتجر كانت تنال ١٩ حقلاً محظوراً وصارت صفراً، **وحمولةُ الزبون ٥٢ حقلاً بلا خرق.** **والقائمةُ سماحٌ لا منع**: حقلٌ جديدٌ في `Order` لا يخرج من نفسه — `TestD20_UnclassifiedFieldNeverReachesAnyAudience`. **ويسقط مغلقاً**: تعذّرَ بناءُ الحمولة فلا يُبثُّ شيءٌ ولا يُرسَل العريضُ بديلاً. **ولا يغلق `D21` ولا `D23`**: **جذرُهما الثاني في تنقيتَي `REST` نفسِهما** — `redactForCustomer` تمحو أربعةَ حقولٍ والعقدُ يمنع تسعةَ عشر، **وهي حمولةٌ لا تمرّ بهذا الباب.**",
       "tests": [
+        "TestPublishOrderReachesEveryRoom",
         "TestEV_MerchantDriverAssignment",
         "TestEV_MerchantRealtimePrivacy",
+        "TestD20_BroadcastViewIsNotOverNarrow",
+        "TestD20_BroadcastViewObeysContract",
+        "TestD20_UnclassifiedFieldNeverReachesAnyAudience",
+        "TestD20_UnknownAudienceGetsNothing",
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
         "TestOrderFieldsAllClassified"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D21",
@@ -6471,6 +6488,41 @@
       "file": "internal/orders/promo_race_test.go",
       "package": "orders_test",
       "orphan": true
+    },
+    {
+      "name": "TestPublishOrderKeepsQueueQuiet",
+      "file": "internal/orders/publish_topics_test.go",
+      "package": "orders",
+      "level": "L2",
+      "flows": [
+        "F-07"
+      ],
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPublishOrderReachesEveryRoom",
+      "file": "internal/orders/publish_topics_test.go",
+      "package": "orders",
+      "level": "L2",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-07",
+        "F-08"
+      ],
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestNoBacktickInsideRawStrings",
@@ -11615,6 +11667,89 @@
         "FAILURE",
         "FULL",
         "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD20_BroadcastViewIsNotOverNarrow",
+      "file": "internal/qa/orderview_matrix_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-14"
+      ],
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD20_BroadcastViewObeysContract",
+      "file": "internal/qa/orderview_matrix_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-14"
+      ],
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD20_UnclassifiedFieldNeverReachesAnyAudience",
+      "file": "internal/qa/orderview_matrix_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "GENERATOR_TEST",
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD20_UnknownAudienceGetsNothing",
+      "file": "internal/qa/orderview_matrix_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "HARNESS_SELF_TEST",
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY"
       ],
       "orphan": false
     },

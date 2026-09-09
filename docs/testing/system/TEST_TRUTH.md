@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **282** |
-| دوالُّ اختبار | **1038** |
+| ملفّاتُ اختبار | **284** |
+| دوالُّ اختبار | **1044** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1038
-MAPPED     = 335
+TOTAL      = 1044
+MAPPED     = 341
 INFRA      = 120
 ORPHAN     = 583
 ```
@@ -86,7 +86,7 @@ ORPHAN     = 583
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
 | **D18** | START_STICKY يعيد الخدمةَ بفترةِ الافتراض | `NO_REGRESSION_TEST_YET` | — |
 | **D19** | LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ | `NO_REGRESSION_TEST_YET` | — |
-| **D20** | البثُّ الحيُّ يتجاوز redactForMerchant | `EXPECTED_FAIL` | `TestEV_MerchantDriverAssignment` · `TestEV_MerchantRealtimePrivacy` · `TestD20_CustomerRealtimeVsREST` · `TestD20_MerchantRealtimeVsREST` · `TestOrderFieldsAllClassified` |
+| **D20** | البثُّ الحيُّ يتجاوز redactForMerchant | `FIXED_AND_PASSING` | `TestPublishOrderReachesEveryRoom` · `TestEV_MerchantDriverAssignment` · `TestEV_MerchantRealtimePrivacy` · `TestD20_BroadcastViewIsNotOverNarrow` · `TestD20_BroadcastViewObeysContract` · `TestD20_UnclassifiedFieldNeverReachesAnyAudience` · `TestD20_UnknownAudienceGetsNothing` · `TestD20_CustomerRealtimeVsREST` · `TestD20_MerchantRealtimeVsREST` · `TestOrderFieldsAllClassified` |
 | **D21** | هاتفُ السائق يصل الزبون | `EXPECTED_FAIL` | `TestEV_CustomerDriverAssignment` · `TestD21_CustomerRedactionAgainstContract` · `TestForbiddenFieldGuardCatchesLeak` · `TestOrderFieldsAllClassified` |
 | **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `EXPECTED_FAIL` | `TestEV_CustomOrderOwnerRealtime` · `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
 | **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `EXPECTED_FAIL` | `TestEV_CustomerDriverAssignment` · `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` |

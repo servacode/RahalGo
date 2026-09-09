@@ -228,12 +228,23 @@ func TestEV_MerchantRealtimePrivacy(t *testing.T) {
 	t.Logf("وصل إلى غرفة المتجر: %d حقلاً", len(payload))
 
 	// **والحَكَمُ عقدُ `P-1` لا قائمةٌ ثانية** (البند ١).
+	//
+	// **وكان يقول `EXPECTED FAIL` وينتظر تسعةَ عشرَ خرقاً** — **وصار
+	// يوجب صفراً** (دورةُ ٤٤): **الغرفةُ تتلقّى حمولةً مبنيّةً
+	// بالسماح** (`orders.ViewFor`)، **لا الكائنَ الداخليَّ كلَّه.**
 	vs := CheckPayload("merchant", "realtime", payload)
-	if len(vs) == 0 {
-		t.Errorf("لا خرقَ — **وD20 يقول إنّ الغرفةَ تتلقّى الطلبَ كاملاً. يُراجَع.**")
-		return
+	for i, v := range vs {
+		if i >= 8 {
+			t.Logf("  … و%d غيرُها", len(vs)-8)
+			break
+		}
+		t.Logf("  %s", v)
 	}
-	t.Logf("D20 REALTIME PRIVACY = EXPECTED FAIL — %d حقلاً محظوراً وصل غرفةَ المتجر", len(vs))
+	if len(vs) > 0 {
+		t.Fatalf("**%d حقلاً محظوراً وصل غرفةَ المتجر** — "+
+			"**والبثُّ ليس قناةً مميّزة.** (`D20`)", len(vs))
+	}
+	t.Logf("D20 REALTIME = نظيف — %d حقلاً وصل الغرفةَ، ولا محظورَ فيها", len(payload))
 	for i, v := range vs {
 		if i >= 8 {
 			t.Logf("  … و%d غيرُها", len(vs)-8)
