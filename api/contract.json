@@ -4510,7 +4510,7 @@
       ],
       "response": [
         {
-          "name": "@o",
+          "name": "@view",
           "type": "unknown"
         }
       ],
@@ -4588,7 +4588,7 @@
       ],
       "response": [
         {
-          "name": "@o",
+          "name": "@view",
           "type": "unknown"
         }
       ],
@@ -5089,6 +5089,12 @@
       "path": "/api/v1/my/orders/{id}",
       "handler": "handleMyOrder",
       "auth": true,
+      "response": [
+        {
+          "name": "@withExtra",
+          "type": "unknown"
+        }
+      ],
       "statuses": [
         "StatusOK"
       ]
@@ -5248,7 +5254,7 @@
       ],
       "response": [
         {
-          "name": "@updated",
+          "name": "@view",
           "type": "unknown"
         }
       ],

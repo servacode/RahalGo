@@ -457,9 +457,16 @@ data class MyOrder(
      * الإسناد **فتسقط الشاشةُ كلُّها** — ولا يُقرأ طلبٌ واحد.
      */
     @SerialName("driver_name") val driverName: String? = null,
-    @SerialName("driver_phone") val driverPhone: String? = null,
+    // **ولا هاتفَ سائقٍ هنا** — **ولا شعارَ متجر.**
+    //
+    // **كانا مُعلَنين ولا يُقرآن في موضع**: `driver_phone` يمنعه عقدُ
+    // `P-1` عن الزبون، **والشعارُ يدلّ على المصدر** — «صورةٌ لمطعمٍ
+    // يعرفه أهلُ الحيّ تُعرف قبل أن تُقرأ الكلمة».
+    //
+    // **وكان المحرّكُ يرسلهما فارغين** (`null`) **فصار لا يرسلهما**
+    // (دورةُ ٤٦: الحمولةُ تُبنى بالسماح). **ونموذجٌ يُعلن ما لا يجوز
+    // أن يصله بابٌ ينتظر أن يُفتح.**
     @SerialName("promo_code") val promoCode: String? = null,
-    @SerialName("merchant_logo_thumb_url") val merchantLogoThumbUrl: String? = null,
     /** **ما في الطلب باختصار** — يرسله المحرّكُ نصّاً لا قائمة. */
     @SerialName("items_count") val itemsCount: Int = 0,
     @SerialName("items_preview") val itemsPreview: String = "",

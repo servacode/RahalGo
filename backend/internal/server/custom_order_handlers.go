@@ -9,6 +9,7 @@ package server
 import (
 	"context"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -40,7 +41,12 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			return IdempotentBody{}, err
 		}
-		return IdempotentBody{Status: http.StatusCreated, Payload: o, AfterCommit: func() {
+		// **وردُّ الخاصّ يُشكَّل كالعاديّ** — **ولا بابَ يُعفى.**
+		view, err := orderView(orders.AudienceCustomer, o)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{Status: http.StatusCreated, Payload: view, AfterCommit: func() {
 			// **والعملياتُ تُخبَر فوراً** — الطلبُ الخاصُّ ينتظر
 			// موافقتَها، **وطلبٌ ينتظر من لا يعلم أنّه ينتظره لا يُخدَم.**
 			s.touch("order", "ops")

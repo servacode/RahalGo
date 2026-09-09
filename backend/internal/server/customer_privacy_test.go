@@ -42,21 +42,24 @@ func TestRedactForCustomer_HidesSource(t *testing.T) {
 		Status:       "pending",
 		ItemsPreview: "شاورما دجاج",
 	}
-	redactForCustomer(o)
+	// **والمُقاسُ هو المرشَّحُ الذي يخرج منه الردُّ فعلاً** — **لا
+	// محوٌ على الكائن**: `redactForCustomer` رُفعت في دورةِ ٤٦.
+	v := orders.ViewFor(orders.AudienceCustomer, o)
+	if v == nil {
+		t.Fatal("تعذّر بناءُ حمولة الزبون")
+	}
 
-	if o.MerchantName != "" {
-		t.Errorf("اسمُ المتجر خرج إلى الزبون: %q", o.MerchantName)
-	}
-	if o.MerchantID != "" {
-		t.Errorf("معرّفُ المتجر خرج — ويُفتح به /public/merchants/{id}: %q", o.MerchantID)
-	}
-	if o.MerchantLogoThumb != nil {
-		t.Errorf("شعارُ المتجر خرج — والصورةُ تُعرف قبل الكلمة: %q", *o.MerchantLogoThumb)
+	for _, k := range []string{"merchant_name", "merchant_id", "merchant_logo_thumb_url"} {
+		if _, ok := v[k]; ok {
+			t.Errorf("%s خرج إلى الزبون — والمصدرُ محجوب: %v", k, v[k])
+		}
 	}
 
 	// **ولا يُمحى ما ليس مصدراً**: حراسةٌ تمحو الطلبَ نفسَه تُطفأ في أوّل شكوى.
-	if o.Total == 0 || o.Status == "" || o.ItemsPreview == "" {
-		t.Error("مُحي من الطلب ما لا يدلّ على مصدره — والحراسةُ الزائدة تُطفأ")
+	for _, k := range []string{"total", "status", "items_preview"} {
+		if _, ok := v[k]; !ok {
+			t.Errorf("مُحي %q ولا يدلّ على المصدر — والحراسةُ الزائدة تُطفأ", k)
+		}
 	}
 }
 
@@ -72,9 +75,12 @@ func TestCustomerOrderJSON_HasNoSource(t *testing.T) {
 		MerchantName: name, MerchantLogoThumb: &logo,
 		CustomerName: "سليمان الخطيب", AddressText: "شارع تل أبيض",
 	}
-	redactForCustomer(o)
+	v := orders.ViewFor(orders.AudienceCustomer, o)
+	if v == nil {
+		t.Fatal("تعذّر بناءُ حمولة الزبون")
+	}
 
-	b, err := json.Marshal(o)
+	b, err := json.Marshal(v)
 	if err != nil {
 		t.Fatalf("ترميز الطلب: %v", err)
 	}

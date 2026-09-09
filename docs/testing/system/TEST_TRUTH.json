@@ -32,7 +32,7 @@
     "behaviour_settings": 96,
     "order_fields": 75,
     "test_files": 285,
-    "test_funcs": 1046
+    "test_funcs": 1048
   },
   "flows": [
     {
@@ -57,6 +57,7 @@
       "defects": [
         "D4",
         "D20",
+        "D21",
         "D23"
       ],
       "risks": [
@@ -133,6 +134,7 @@
         "TestIDEM_SameKeySamePayloadSequential",
         "TestFIN_XG11_RefundIndependentOfMerchantBalance",
         "TestD21_RestOrderPrivacyMatrix",
+        "TestD21_RestPrivacyUnderRepetition",
         "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "COVERED"
@@ -172,6 +174,7 @@
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
         "TestD22_CustomOrderOwnerChannelContract",
+        "TestD21_RestOrderPrivacyMatrix",
         "TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless"
       ],
       "status": "COVERED"
@@ -242,7 +245,8 @@
       ],
       "defects": [
         "D19",
-        "D20"
+        "D20",
+        "D21"
       ],
       "risks": [
         "R21"
@@ -253,6 +257,7 @@
         "TestD20_BroadcastViewObeysContract",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_RestOrderPrivacyMatrix",
+        "TestD21_RestPrivacyUnderRepetition",
         "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "COVERED"
@@ -375,6 +380,7 @@
       ],
       "defects": [
         "D7",
+        "D21",
         "D24"
       ],
       "risks": [
@@ -577,6 +583,7 @@
       ],
       "defects": [
         "D20",
+        "D21",
         "D23"
       ],
       "risks": [
@@ -741,7 +748,9 @@
         "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
         "TestFIN_XG10_ConservationAcrossRefund",
         "TestFIN_XG10_DebtSettlementArithmetic",
-        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge"
+        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge",
+        "TestD21_RestOrderPrivacyMatrix",
+        "TestD21_RestPrivacyUnderRepetition"
       ],
       "status": "COVERED"
     },
@@ -1823,15 +1832,18 @@
       "title": "هاتفُ السائق يصل الزبون",
       "domain": "خصوصيّة",
       "severity": "HIGH",
+      "fixed": "**أبوابُ `REST` صارت تُشكَّل بالمرشَّح نفسِه الذي يبثّ به المحرّك** — `orders.ViewFor` من عقد `P-1`. **وكانت `redactForCustomer` تمحو أربعةَ حقولٍ ويخرج الباقي**، **وثلاثةُ أبوابٍ للزبون بلا تنقيةٍ إطلاقاً** (الإنشاءُ والإلغاءُ وإنشاءُ الخاصّ). **وقيس قبلُ**: تفصيلُ الزبون ١٦ خرقاً وقائمتُه ١٤، **وهاتفُ السائق يصله قيمةً لا اسمَ حقل.** **وبعدُ: ثمانيةُ أبوابٍ وصفرٌ في كلٍّ منها**، **ولا تسريبَ في عشٍّ.** **والاتّجاهُ الثاني مقيس**: ما يجيزه العقدُ حاضرٌ — **فحمولةٌ فارغةٌ تُخضِرّ كلَّ فحصِ تسريب.** **ولا يُسلسَل طلبٌ خامٌّ في بابٍ للزبون أو المتجر** — `TestD21_NoRawOrderSerializationRemains`.",
       "tests": [
         "TestEV_CustomerDriverAssignment",
         "TestD21_CustomerRedactionAgainstContract",
         "TestForbiddenFieldGuardCatchesLeak",
         "TestOrderFieldsAllClassified",
+        "TestD21_NoRawOrderSerializationRemains",
         "TestD21_RestOrderPrivacyMatrix",
+        "TestD21_RestPrivacyUnderRepetition",
         "TestD23_CrossChannelPrivacyParity"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D22",
@@ -1850,15 +1862,17 @@
       "title": "حمولاتُ REST تكشف اقتصاداً داخليّاً",
       "domain": "خصوصيّة · تقليلُ بيانات",
       "severity": "HIGH",
+      "fixed": "**القناتان صارتا تقرآن حكماً واحداً** — **لا قائمةَ سماحٍ للبثّ وقائمةَ منعٍ لـ`REST`.** **وقيس على طلبٍ واحدٍ وانتقالٍ حقيقيّ**: ثلاثون حقلاً محظوراً كان يخرج من `REST` وحدَه، **وصار صفراً في الطرفين.** **والغلافُ يبقى غلافاً**: `cancel_seconds_left` و`timeline` مذكوران بالاسم في `RestEnvelope` — **وما لم يُذكَر يُقرأ مجهولاً فيسقط.** **وتصحيحُ `P-1`**: **ثلاثةُ حقولِ تسويةٍ للمتجر** (`subtotal` · `platform_commission` · `commission_percent`) **صارت مأذونةً بقرارِ المالك ٢٠٢٦-٠٩-٠٩** — **وكانت تُعرض في شاشتَي تطبيقه منذ ٢٠٢٦-٠٨-٢٦ والجدولُ يمنعها.** **فالمُصحَّحُ الجدولُ لا الشاشات**، **وحدُّ الإذن ثلاثةٌ بأعيانها لا اقتصادُ المنصّة.** **والملءُ صار قبل التشكيل**: `fillMerchantMoney` كانت تجري بعد التنقية فتُعيد ما مُنع — **وتنقيةٌ يجري بعدها قلمٌ ليست تنقية.**",
       "tests": [
         "TestEV_CustomerDriverAssignment",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
         "TestOrderFieldsAllClassified",
         "TestD21_RestOrderPrivacyMatrix",
+        "TestD21_RestPrivacyUnderRepetition",
         "TestD23_CrossChannelPrivacyParity"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D24",
@@ -12941,15 +12955,34 @@
       "orphan": true
     },
     {
+      "name": "TestD21_NoRawOrderSerializationRemains",
+      "file": "internal/qa/rest_privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "GENERATOR_TEST",
+      "defects": [
+        "D21"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD21_RestOrderPrivacyMatrix",
       "file": "internal/qa/rest_privacy_test.go",
       "package": "qa",
       "level": "L5",
       "flows": [
         "F-01",
+        "F-02",
         "F-04",
         "F-08",
-        "F-13"
+        "F-13",
+        "F-17"
       ],
       "defects": [
         "D21",
@@ -12959,6 +12992,29 @@
         "FULL",
         "SECURITY",
         "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD21_RestPrivacyUnderRepetition",
+      "file": "internal/qa/rest_privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-17"
+      ],
+      "defects": [
+        "D21",
+        "D23"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
       ],
       "evidence": [
         "payload"

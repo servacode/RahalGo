@@ -147,6 +147,10 @@ private val CODES: Map<String, Int> = mapOf(
     "user_blocked" to R.string.err_user_blocked,
     "user_suspended" to R.string.err_user_suspended,
     "internal" to R.string.err_internal,
+    // **تعذّر بناءُ حمولةٍ آمنة** — والخادمُ يسقط مغلقاً بدل أن
+    // يُرسل ما لا يجوز. **ونصُّه نصُّ العطب**: لا شيءَ يفعله صاحبُ
+    // الجهاز، **ووصفُ داخلِنا يُقلق ولا يُفيد.**
+    "payload_unsafe" to R.string.err_internal,
     "too_many_requests" to R.string.err_rate_limited,
     "rate_limited" to R.string.err_rate_limited,
     "too_many_attempts" to R.string.err_rate_limited,

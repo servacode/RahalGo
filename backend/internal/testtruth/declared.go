@@ -40,20 +40,20 @@ type FlowDecl struct {
 
 // Flows الخمسةُ والثلاثون.
 var Flows = []FlowDecl{
-	{ID: "F-01", Title: "إنشاءُ طلبٍ عاديّ", Actor: "customer", Apps: []string{"customer", "merchant", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D4", "D20", "D23"}, Risks: []string{"R8"}, Gaps: []string{"XG-9"}},
+	{ID: "F-01", Title: "إنشاءُ طلبٍ عاديّ", Actor: "customer", Apps: []string{"customer", "merchant", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D4", "D20", "D21", "D23"}, Risks: []string{"R8"}, Gaps: []string{"XG-9"}},
 	{ID: "F-02", Title: "إنشاءُ طلبٍ خاصّ", Actor: "customer", Apps: []string{"customer", "admin"}, Money: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D6", "D8", "D9", "D22"}, Risks: []string{"R11"}},
 	{ID: "F-03", Title: "ردُّ إنشاءٍ ضائع", Actor: "customer", Apps: []string{"customer"}, Money: true, Partial: true, Severity: "CRITICAL", Risks: []string{"R8"}},
-	{ID: "F-04", Title: "قبولُ المتجر", Actor: "merchant", Apps: []string{"merchant", "customer"}, Realtime: true, Severity: "CRITICAL", Defects: []string{"D19", "D20"}, Risks: []string{"R21"}},
+	{ID: "F-04", Title: "قبولُ المتجر", Actor: "merchant", Apps: []string{"merchant", "customer"}, Realtime: true, Severity: "CRITICAL", Defects: []string{"D19", "D20", "D21"}, Risks: []string{"R21"}},
 	{ID: "F-05", Title: "القبولُ التلقائيّ", Actor: "watchdog", Apps: []string{"merchant", "customer"}, Realtime: true, Partial: true, Severity: "CRITICAL", Gaps: []string{"XG-7"}},
 	{ID: "F-06", Title: "رفضُ المتجر", Actor: "merchant", Apps: []string{"merchant", "customer", "admin"}, Money: true, Realtime: true, Severity: "HIGH"},
 	{ID: "F-07", Title: "عرضُ الطلب على سائق", Actor: "engine", Apps: []string{"driver"}, Realtime: true, Partial: true, Race: true, Severity: "CRITICAL", Defects: []string{"D27"}, Risks: []string{"R10", "R23"}},
-	{ID: "F-08", Title: "قبولُ السائق", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D7", "D24"}, Risks: []string{"R7", "R10"}},
+	{ID: "F-08", Title: "قبولُ السائق", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D7", "D21", "D24"}, Risks: []string{"R7", "R10"}},
 	{ID: "F-09", Title: "انقضاءُ العرض ودورانُه", Actor: "watchdog", Apps: []string{"driver", "admin"}, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D1", "D26"}, Risks: []string{"R1", "R22"}},
 	{ID: "F-10", Title: "عرضُ طلبٍ على الطريق نفسِه", Actor: "engine", Apps: []string{"driver", "customer"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D7"}, Risks: []string{"R10"}},
 	{ID: "F-11", Title: "الوصولُ للاستلام", Actor: "driver", Apps: []string{"driver", "customer"}, Realtime: true, Severity: "MEDIUM", Gaps: []string{"XG-6"}},
 	{ID: "F-12", Title: "الاستلام", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Realtime: true, Severity: "HIGH"},
 	{ID: "F-13", Title: "التسليمُ وإثباتُه", Actor: "driver", Apps: []string{"driver", "customer", "merchant", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D13"}},
-	{ID: "F-14", Title: "تسويةُ التسليم", Actor: "engine", Apps: []string{"merchant", "driver", "rep", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D20", "D23"}, Risks: []string{"R4", "R23"}, Gaps: []string{"XG-25", "XG-26"}},
+	{ID: "F-14", Title: "تسويةُ التسليم", Actor: "engine", Apps: []string{"merchant", "driver", "rep", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D20", "D21", "D23"}, Risks: []string{"R4", "R23"}, Gaps: []string{"XG-25", "XG-26"}},
 	{ID: "F-15", Title: "الاسترداد", Actor: "admin", Apps: []string{"customer", "merchant", "rep", "admin"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "BLOCKER", Gaps: []string{"XG-10", "XG-11"}},
 	{ID: "F-16", Title: "تعذّرُ التسليم", Actor: "driver", Apps: []string{"driver", "customer", "admin"}, Money: true, Realtime: true, Severity: "HIGH"},
 	{ID: "F-17", Title: "إلغاءُ الزبون", Actor: "customer", Apps: []string{"customer", "merchant", "driver"}, Money: true, Realtime: true, Race: true, Severity: "HIGH"},
@@ -1559,9 +1559,20 @@ var TestMap = map[string]TestDecl{
 	// (`subtotal` · `platform_commission` · `commission_percent`)،
 	// **وحلُّه قرارُ مالك.** **فالدليلُ يُثبَّت والإصلاحُ ينتظر.**
 	"TestD21_RestOrderPrivacyMatrix": {
-		Level: L5, Flows: []string{"F-01", "F-04", "F-08", "F-13"},
+		Level: L5, Flows: []string{"F-01", "F-02", "F-04", "F-08", "F-13", "F-17"},
 		Defects:  []string{"D21", "D23"},
 		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
+		Evidence: []string{"payload"},
+	},
+	"TestD21_NoRawOrderSerializationRemains": {
+		Level: L5, Purpose: PurposeGenerator,
+		Defects: []string{"D21"},
+		Modes:   []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+	},
+	"TestD21_RestPrivacyUnderRepetition": {
+		Level: L5, Flows: []string{"F-01", "F-04", "F-17"},
+		Defects:  []string{"D21", "D23"},
+		Modes:    []string{"FULL", "SECURITY"},
 		Evidence: []string{"payload"},
 	},
 	"TestD23_CrossChannelPrivacyParity": {
@@ -3011,6 +3022,39 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٤٦ · ٢٠٢٦-٠٩-٠٩ ─────────────────────────────
+	//
+	// **وتصحيحُ عقدٍ سبق الإصلاحَ.** **قيل «العقدُ يمنع والشاشةُ
+	// تعرض»** — **فلم تُنزَع الشاشةُ ولم يُسكَت عن العقد**: **صُحّح
+	// الجدولُ بقرارِ المالك ٢٠٢٦-٠٩-٠٩** (دورةُ ٤٥ أوقفت العملَ
+	// حتّى يُقرَّر).
+	"D21": "**أبوابُ `REST` صارت تُشكَّل بالمرشَّح نفسِه الذي يبثّ به " +
+		"المحرّك** — `orders.ViewFor` من عقد `P-1`. " +
+		"**وكانت `redactForCustomer` تمحو أربعةَ حقولٍ ويخرج الباقي**، " +
+		"**وثلاثةُ أبوابٍ للزبون بلا تنقيةٍ إطلاقاً** (الإنشاءُ " +
+		"والإلغاءُ وإنشاءُ الخاصّ). " +
+		"**وقيس قبلُ**: تفصيلُ الزبون ١٦ خرقاً وقائمتُه ١٤، **وهاتفُ " +
+		"السائق يصله قيمةً لا اسمَ حقل.** **وبعدُ: ثمانيةُ أبوابٍ " +
+		"وصفرٌ في كلٍّ منها**، **ولا تسريبَ في عشٍّ.** " +
+		"**والاتّجاهُ الثاني مقيس**: ما يجيزه العقدُ حاضرٌ — **فحمولةٌ " +
+		"فارغةٌ تُخضِرّ كلَّ فحصِ تسريب.** " +
+		"**ولا يُسلسَل طلبٌ خامٌّ في بابٍ للزبون أو المتجر** — " +
+		"`TestD21_NoRawOrderSerializationRemains`.",
+	"D23": "**القناتان صارتا تقرآن حكماً واحداً** — **لا قائمةَ سماحٍ " +
+		"للبثّ وقائمةَ منعٍ لـ`REST`.** " +
+		"**وقيس على طلبٍ واحدٍ وانتقالٍ حقيقيّ**: ثلاثون حقلاً محظوراً " +
+		"كان يخرج من `REST` وحدَه، **وصار صفراً في الطرفين.** " +
+		"**والغلافُ يبقى غلافاً**: `cancel_seconds_left` و`timeline` " +
+		"مذكوران بالاسم في `RestEnvelope` — **وما لم يُذكَر يُقرأ " +
+		"مجهولاً فيسقط.** " +
+		"**وتصحيحُ `P-1`**: **ثلاثةُ حقولِ تسويةٍ للمتجر** (`subtotal` · " +
+		"`platform_commission` · `commission_percent`) **صارت مأذونةً " +
+		"بقرارِ المالك ٢٠٢٦-٠٩-٠٩** — **وكانت تُعرض في شاشتَي تطبيقه " +
+		"منذ ٢٠٢٦-٠٨-٢٦ والجدولُ يمنعها.** **فالمُصحَّحُ الجدولُ لا " +
+		"الشاشات**، **وحدُّ الإذن ثلاثةٌ بأعيانها لا اقتصادُ المنصّة.** " +
+		"**والملءُ صار قبل التشكيل**: `fillMerchantMoney` كانت تجري " +
+		"بعد التنقية فتُعيد ما مُنع — **وتنقيةٌ يجري بعدها قلمٌ ليست " +
+		"تنقية.**",
 	// ── دورةُ إصلاحٍ ٤٤ · ٢٠٢٦-٠٩-٠٩ ─────────────────────────────
 	"D20": "**البثُّ صار يبني حمولتَه بالسماح** — `orders.ViewFor` " +
 		"مولَّدةٌ من عقد `P-1` نفسِه، **وبابُ الخروج واحدٌ** " +

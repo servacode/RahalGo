@@ -68,6 +68,10 @@ const SERVER_MOBILE = new Set([
   "not_readyable", "reason_required", "never_picked_up",
   "payout_below_min", "payout_closed", "payout_not_allowed",
   "invite_required", "lead_already_converted", "bad_bbox",
+  // **وتعذّرُ بناءِ حمولةٍ آمنة** — يبلغ الزبونَ والمتجرَ لأنّ
+  // البابَ بابُهما، **ونصُّه نصُّ العطب العامّ**: لا فعلَ لصاحب
+  // الجهاز فيه، **ورسالةٌ تصفُ داخلَنا تُقلق ولا تُفيد.**
+  "payload_unsafe",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */

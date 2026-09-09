@@ -158,18 +158,52 @@ var OrderPrivacy = map[string]FieldRule{
 	"driver_phone":        {Ref: "D21 · PC-6 · merchant_privacy.go:44", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"offered_driver_name": {Ref: "customer_privacy.go:46 · merchant_privacy.go:45", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
-	// ── المال — **والمتجرُ يُمنع من كلّه بنصّ التنقية** ─────────────
+	// ── المال — **وللمتجر منه تسويتُه هو لا سواها** ────────────────
+	//
+	// ══════════════════════════════════════════════════════════════
+	// **تصحيحُ العقد** — قرارُ المالك ٢٠٢٦-٠٩-٠٩ (دورةُ ٤٦)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان هذا الجدولُ يمنع المتجرَ من `subtotal` و
+	// `platform_commission` و`commission_percent`** — **ويعرضها
+	// تطبيقُه في شاشتَيه** («المجموع» · «خصم المنصة ١٠٪» · «المستحق
+	// لك») **بقرارِ المالك ٢٠٢٦-٠٨-٢٦**: «سجلّ الطلبات ما فيه شقد
+	// المبلغ المباع وشقد نسبة العمولة للمنصة — هيك لازم يكون
+	// بشفافية».
+	//
+	// **فليست شيفرةٌ خالفت عقداً بل عقدان تخالفا** — **والمُصحَّحُ
+	// هذا الجدولُ لا الشاشات.**
+	//
+	// # ومن أين جاء الخطأ
+	//
+	// **كُتبت هذه الصفوفُ من `redactForMerchant` وحدَها** — **وهي
+	// تُصفّر `subtotal` فعلاً.** **ثمّ يُعيد `fillMerchantMoney`
+	// ملأها بعد مئتَي سطر** — فمن قرأ التنقيةَ ولم يقرأ ما بعدها
+	// **كتب في العقد غيرَ ما يخرج من الباب.**
+	//
+	// # وحدُّ الإذن — **تسويتُه هو لا اقتصادُ المنصّة**
+	//
+	// **والمأذونُ ثلاثةٌ بأعيانها**: **ما بِيع من عنده · ما اقتُطع
+	// منه · بأيّ نسبة.** **ولا يُقاس عليها غيرُها** — أجرُ السائق
+	// وعمولةُ المندوب وهامشُ المنصّة الداخليُّ وتسوياتُها **تبقى
+	// ممنوعةً كما كانت** (`RQ-7`)، **ولا يُوسَّع العقدُ ليخضرَّ
+	// فحص.**
 	"payment_method": {Ref: "merchant_privacy.go:51", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"subtotal":       {Ref: "merchant_privacy.go:49 · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"delivery_fee":   {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"discount":       {Ref: "merchant_privacy.go:49", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"total":          {Ref: "merchant_privacy.go:49 · وRQ-7", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"wallet_paid":    {Ref: "merchant_privacy.go:50", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"cash_due":       {Ref: "merchant_privacy.go:50 · والسائقُ يقبضه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"promo_code":     {Ref: "merchant_privacy.go:52", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	// **شفافيّةُ تسوية المتجر** — قرارُ المالك ٢٠٢٦-٠٨-٢٦ و٢٠٢٦-٠٩-٠٩.
+	"subtotal":     {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
+	"delivery_fee": {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
+	"discount":     {Ref: "merchant_privacy.go:49", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"total":        {Ref: "merchant_privacy.go:49 · وRQ-7", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
+	"wallet_paid":  {Ref: "merchant_privacy.go:50", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"cash_due":     {Ref: "merchant_privacy.go:50 · والسائقُ يقبضه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"promo_code":   {Ref: "merchant_privacy.go:52", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	// **`RQ-7`**: «المندوبُ يرى استحقاقَه لا ربحَ المنصّة الداخليّ».
-	"platform_commission": {Ref: "RQ-7 · XG-16 — ربحُ المنصّة الداخليّ", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"commission_percent":  {Ref: "RQ-7 · نسبةُ المنصّة الداخليّة", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	//
+	// **والمتجرُ يرى اقتطاعَه هو** (قرارُ المالك ٢٠٢٦-٠٩-٠٩): **ما
+	// خُصم من طلبه ونسبتُه** — **ولا يرى ما اقتُطع من غيره ولا ربحَ
+	// المنصّة جملةً.** **والمندوبُ يبقى ممنوعاً** (`XG-16`).
+	"platform_commission": {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما اقتُطع من طلبه · وRQ-7/XG-16 يمنعانه عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	"commission_percent":  {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — بأيّ نسبةٍ اقتُطع · وRQ-7 يمنعها عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
 
 	// ── الطلبُ الخاصّ ──────────────────────────────────────────────
 	"custom_request":      {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
@@ -268,6 +302,30 @@ func OrderFields() []string {
 		out = append(out, name)
 	}
 	return out
+}
+
+// RestEnvelope **حقولُ الغلاف في `REST`** — ما ليس من `orders.Order`.
+//
+// **و`REST` تزيد على الحمولة ما يلزم شاشتَها**: مهلةُ الإلغاء ومسارُ
+// الطلب بأوقاته. **وهي عرضٌ لا حقولُ كائن** — **فلا مكانَ لها في
+// `OrderPrivacy`** (حارسُ الأشباح يرفض ما ليس في البنية).
+//
+// **ولا تُتخطّى بصمت**: **ما لم يُذكَر هنا يُقرأ مجهولاً فيسقط** —
+// **وغلافٌ مفتوحٌ بابٌ خلفيٌّ للتسريب.**
+//
+// # وما دخل وما لم يدخل
+//
+//   - `cancel_seconds_left` — **مهلةُ زرّ الإلغاء**، رقمٌ من الخادم
+//     لئلّا تخالفه الشاشةُ بعد أوّل تعديل
+//   - `timeline` — **مسارُه بأوقاته** (قرارُ المالك ٢٠٢٦-٠٨-١٢):
+//     **حالٌ ووقتُه ولا فاعلَ فيه** — **بخلاف `events` التي تحمل
+//     `actor_id` فتبقى ممنوعة**
+var RestEnvelope = map[string]map[string]bool{
+	RoleCustomer: {"cancel_seconds_left": true, "timeline": true},
+	RoleMerchant: {},
+	RoleDriver:   {},
+	RoleRep:      {},
+	RoleAdmin:    {},
 }
 
 // Visible حكمُ حقلٍ لدور — **والمجهولُ سقوطٌ لا إجازة.**

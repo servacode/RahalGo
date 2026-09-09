@@ -356,9 +356,16 @@ func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			return IdempotentBody{}, err
 		}
+		// **وردُّ الإنشاء يُشكَّل كسائر الأبواب** — **وكان يُسلسِل
+		// الكائنَ الداخليَّ كلَّه**، **فأوّلُ ردٍّ يراه الزبونُ كان
+		// أوسعَ ما يراه بعده.**
+		created, err := orderView(orders.AudienceCustomer, o)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
 		return IdempotentBody{
 			Status:  http.StatusCreated,
-			Payload: o,
+			Payload: created,
 			AfterCommit: func() {
 				after()
 				// **والتحويلُ التلقائيُّ بعد التثبيت** — والسياقُ بلا
@@ -384,7 +391,11 @@ func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	redactAllForCustomer(res.Orders)
+	views, err := orderViews(orders.AudienceCustomer, res.Orders)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 
 	// **ومهلةُ الإلغاء مع كلّ طلبٍ في القائمة.**
 	//
@@ -394,16 +405,11 @@ func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والرقمُ من الخادم لا من حسابٍ في الشاشة**: المهلةُ إعدادٌ يملك المالكُ
 	// تغييرَه، **ورقمٌ محسوبٌ في المتصفّح يخالفه بعد أوّل تعديل.**
-	type withWindow struct {
-		orders.Order
-		CancelSecondsLeft int `json:"cancel_seconds_left"`
-	}
-	out := make([]withWindow, len(res.Orders))
-	for i := range res.Orders {
-		out[i] = withWindow{
-			Order:             res.Orders[i],
-			CancelSecondsLeft: s.orders.CancelSecondsLeft(r.Context(), &res.Orders[i]),
-		}
+	out := make([]map[string]any, len(views))
+	for i := range views {
+		out[i] = withExtra(views[i], map[string]any{
+			"cancel_seconds_left": s.orders.CancelSecondsLeft(r.Context(), &res.Orders[i]),
+		})
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"orders": out, "total": res.Total, "page": res.Page, "per_page": res.PerPage,
@@ -420,7 +426,11 @@ func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	redactForCustomer(o)
+	view, err := orderView(orders.AudienceCustomer, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// **المهلةُ تُرسل مع الطلب لا في نداءٍ ثانٍ.**
 	//
 	// الشاشةُ تعرض عدّاداً تنازلياً لزرّ الإلغاء، **ورقمُ المهلة إعدادٌ يملك
@@ -428,17 +438,16 @@ func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
 	// **وزرٌّ يَعِد بما يرفضه الخادم أسوأُ من زرٍّ لا يظهر.**
 	//
 	// و`-1` تعني «بلا مهلة» — أي قبل قبول المتجر: يُلغي متى شاء.
-	httpx.JSON(w, http.StatusOK, struct {
-		*orders.Order
-		CancelSecondsLeft int `json:"cancel_seconds_left"`
-		// **ومسارُه بأوقاته** — (قرارُ المالك ٢٠٢٦-٠٨-١٢): يعرف متى
-		// قُبل ومتى استلمه سائقُه ومتى وصل، **بلا أن يسأل أحداً.**
-		Timeline []TimelineStep `json:"timeline"`
-	}{
-		o,
-		s.orders.CancelSecondsLeft(r.Context(), o),
-		s.timeline(r.Context(), o.ID, false),
-	})
+	//
+	// **ومسارُه بأوقاته** — (قرارُ المالك ٢٠٢٦-٠٨-١٢): يعرف متى قُبل
+	// ومتى استلمه سائقُه ومتى وصل، **بلا أن يسأل أحداً.**
+	//
+	// **وهو غلافٌ لا حقلُ طلب**: **حالٌ ووقتُه ولا فاعلَ فيه** —
+	// **بخلاف `events` التي تحمل `actor_id` فتُمنع.**
+	httpx.JSON(w, http.StatusOK, withExtra(view, map[string]any{
+		"cancel_seconds_left": s.orders.CancelSecondsLeft(r.Context(), o),
+		"timeline":            s.timeline(r.Context(), o.ID, false),
+	}))
 }
 
 // handleMyWallet رصيد الزبون وكشف حركاته.
@@ -485,7 +494,12 @@ func (s *Server) handleCustomerCancelOrder(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, updated)
+	view, err := orderView(orders.AudienceCustomer, updated)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, view)
 }
 
 // appHref وجهةُ زرّ «حمّل التطبيق» — رابطٌ أو ملفٌّ أو لا شيء.

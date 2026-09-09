@@ -151,25 +151,34 @@ func TestForbiddenFieldGuardCatchesLeak(t *testing.T) {
 
 func TestD21_CustomerRedactionAgainstContract(t *testing.T) {
 	o := fullOrder()
-	// **ما تفعله `redactForCustomer` اليومَ — أربعةُ حقول.**
-	//
-	// **ونُسخت هنا لأنّ الدالّةَ غيرُ مُصدَّرةٍ من حزمة `server`** —
-	// **والنسخُ مقصورٌ على أربعة أسطرٍ تُقرأ من مصدرها**، ولو تبدّلت
-	// هناك ولم تتبدّل هنا لسقط الاختبارُ بفرقٍ يُرى.
-	o.MerchantID = ""
-	o.MerchantName = ""
-	o.MerchantLogoThumb = nil
-	o.OfferedDriverName = nil
 
-	bad := CheckPayload(RoleCustomer, ChannelREST, toMap(t, o))
-	if len(bad) == 0 {
-		t.Log("D21 REGRESSION = PASS — التنقيةُ صارت تطابق العقد. احذفِ الوسم.")
-		return
+	// **والمُقاسُ هو المرشَّحُ الذي يخرج منه الردُّ فعلاً.**
+	//
+	// **وكانت هنا نسخةٌ من `redactForCustomer`** — أربعةُ أسطرٍ تمحو
+	// ما يدلّ على المصدر، **ثمّ يُسلسَل الباقي.** **ورُفعت الدالّةُ في
+	// دورةِ ٤٦** (`orders.ViewFor` صارت الحكم)، **ومحاكاةٌ تصف شيفرةً
+	// زالت تخضرّ على عدم.**
+	view := orders.ViewFor(orders.AudienceCustomer, &o)
+	if view == nil {
+		t.Fatal("تعذّر بناءُ حمولة الزبون — **والسقوطُ مغلقٌ فلا يُبثُّ خام**")
 	}
+
+	bad := CheckPayload(RoleCustomer, ChannelREST, view)
 	for _, x := range bad {
-		t.Logf("  %s", x)
+		t.Errorf("  %s", x)
 	}
-	t.Logf("EXPECTED FAIL / BLOCKED BY D21 — %d خرقاً في حمولة الزبون", len(bad))
+	if len(bad) > 0 {
+		t.Errorf("**%d حقلاً محظوراً في حمولة الزبون.** (`D21`)", len(bad))
+	}
+
+	// **وما يدلّ على المصدر لا يخرج** — وهو حكمُ العقد نفسِه.
+	for _, k := range []string{"merchant_id", "merchant_name",
+		"merchant_logo_thumb_url", "offered_driver_name", "driver_phone"} {
+		if _, ok := view[k]; ok {
+			t.Errorf("**%q وصل الزبونَ** — %v", k, view[k])
+		}
+	}
+	t.Logf("D21 CUSTOMER = مغلق — %d حقلاً وصل الزبون، ولا محظورَ فيها", len(view))
 }
 
 // ══════════════════════════════════════════════════════════════════════

@@ -30,21 +30,23 @@ package server
 
 import (
 	"github.com/servacode/rahalgo/backend/internal/offers"
-	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
-// redactForCustomer يمسح ما يدلّ على مصدر البضاعة.
+// ══════════════════════════════════════════════════════════════════════
+// **والتنفيذُ انتقل** — دورةُ ٤٦
+// ══════════════════════════════════════════════════════════════════════
 //
-// **وما عداه يبقى**: الأصنافُ وأسعارُها وحالةُ الطلب والسائقُ واسمُه ورقمُه —
-// **فالسائقُ يقرع بابَه، والزبونُ يحتاج أن يعرف من يفتح له.**
-func redactForCustomer(o *orders.Order) {
-	o.MerchantID = ""
-	o.MerchantName = ""
-	o.MerchantLogoThumb = nil
-	// **واسمُ من عُرض عليه الطلبُ ولم يقبل** — شأنُ توزيعٍ داخليّ، **والزبونُ
-	// يعرف سائقَه حين يصير سائقَه لا قبله.**
-	o.OfferedDriverName = nil
-}
+// **كانت هنا `redactForCustomer` تمحو أربعةَ حقولٍ ويخرج الباقي** —
+// **وقيس عليها ١٦ خرقاً في تفصيل الزبون و١٤ في قائمته** (دورةُ ٤٥).
+//
+// **فصار الحكمُ واحداً للقنوات كلِّها**: `orders.ViewFor` مولَّدةٌ من
+// عقد `P-1`، **تُبنى بالسماح** — انظر `order_view.go`.
+//
+// **وبقي هذا الملفُّ لأنّ فيه سببَ الحكم لا تنفيذَه**: **ولولا السببُ
+// لعاد أوّلُ من رأى الحقلَ ناقصاً فأضافه.**
+//
+// **والعروضُ نوعٌ آخرُ لا طلب** (`offers.Offer`) — **ولها تنقيتُها
+// حتّى يُبنى لها عقدُها.**
 
 // redactOffersForCustomer يمسح مصدرَ البضاعة من العروض.
 //
@@ -59,12 +61,5 @@ func redactOffersForCustomer(rows []offers.Offer) {
 	for i := range rows {
 		rows[i].MerchantName = ""
 		rows[i].MerchantID = nil
-	}
-}
-
-// redactAllForCustomer لقائمة الطلبات.
-func redactAllForCustomer(list []orders.Order) {
-	for i := range list {
-		redactForCustomer(&list[i])
 	}
 }

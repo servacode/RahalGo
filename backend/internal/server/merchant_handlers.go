@@ -138,11 +138,23 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// خصوصيةُ الزبون تبقى عند المنصة — والحجبُ هنا لا في الواجهة
-	for i := range res.Orders {
-		redactForMerchant(&res.Orders[i])
-	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والملءُ قبل التشكيل لا بعده**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان `redactForMerchant` يُصفّر ثمّ يُعيد `fillMerchantMoney`
+	// الملأ** — **فدالّةٌ بعد التنقية تُعيد ما مُنع**، **والتنقيةُ
+	// التي يجري بعدها قلمٌ ليست تنقية.**
+	//
+	// **فصار الترتيبُ عكسَه**: **يُملأ ما يُملأ، ثمّ يمرّ الكلُّ في
+	// مرشَّحٍ واحدٍ هو آخرُ ما يمسّ الحمولة.** **وما ملأه ولا يجيزه
+	// العقدُ يسقط في المرشَّح** — **لا يُصدَّق لأنّه مُلئ بعده.**
 	s.fillMerchantMoney(r, merchantID, res.Orders)
+	views, err := orderViews(orders.AudienceMerchant, res.Orders)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **وعددُ كلّ حالٍ مع السجلّ — لا بنداءٍ لكلّ حال**
@@ -219,7 +231,7 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"orders": res.Orders, "total": res.Total,
+		"orders": views, "total": res.Total,
 		"page": res.Page, "per_page": res.PerPage,
 		"status_counts": counts,
 		// **وما يُبلَّغ عنه قائمةٌ لا حقلٌ في الطلب** — الطلبُ بنيةٌ
@@ -251,8 +263,12 @@ func (s *Server) handleMerchantGetOrder(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	redactForMerchant(o)
-	httpx.JSON(w, http.StatusOK, o)
+	view, err := orderView(orders.AudienceMerchant, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, view)
 }
 
 // handleMerchantTransition قبول/رفض/بدء تحضير — آلة الحالات تضبط المسموح لدور المتجر.
@@ -295,8 +311,12 @@ func (s *Server) handleMerchantTransition(w http.ResponseWriter, r *http.Request
 		return
 	}
 	// وردُّ الانتقال يُعيد الطلب كاملاً — منفذُ تسريبٍ لو نُسي
-	redactForMerchant(o)
-	httpx.JSON(w, http.StatusOK, o)
+	view, err := orderView(orders.AudienceMerchant, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, view)
 }
 
 func (s *Server) handleMerchantMenu(w http.ResponseWriter, r *http.Request) {
