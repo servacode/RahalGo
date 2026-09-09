@@ -292,8 +292,11 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 		//
 		// **فمن رسم دائرةً واحدةً عاد الحدُّ يعمل** — وما خارجَها يُردّ
 		// كما كان. **ولا يُفتح بابٌ إلّا في حال الجدولِ الفارغ وحدَها.**
+		// **ومن منفّذ الوحدة لا من المَسبَح** — `XG-46`: **هذا الفرعُ
+		// يقرّر قبولاً أو رفضاً وهو داخلَ معاملةِ الإنشاء**، **فوصلةٌ
+		// ثانيةٌ هنا تُجمّد طلباً خارجَ التغطية حين يمتلئ المَسبَح.**
 		var any bool
-		if e := s.db.QueryRow(ctx,
+		if e := q.QueryRow(ctx,
 			`SELECT EXISTS(SELECT 1 FROM delivery_zones WHERE active)`).Scan(&any); e != nil {
 			return z, e
 		}

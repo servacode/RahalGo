@@ -111,3 +111,77 @@ func TestXG46_OrderCreateNeedsOneConnection(t *testing.T) {
 			st.AcquireDuration().Round(time.Millisecond))
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **وفرعُ الرفض يكفيه واحدةٌ أيضاً** — `XG-46`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`ZoneAt` فرعان**: نقطةٌ طابقت منطقةً، **ونقطةٌ لم تطابق**.
+// **والثاني يسأل «أثمّةَ مناطقُ فاعلةٌ أصلاً؟»** ليفرّق **جدولاً
+// فارغاً** (فيُقبَل بأجرةٍ ثابتة) من **نقطةٍ خارج التغطية** (فتُردّ).
+//
+// **وكان يسأل المَسبَح** — **فطلبٌ خارجَ التغطية يجمد حين يمتلئ.**
+//
+// **ولم يبلغه فحصُ المسار السويّ**: **الرفضُ طريقٌ لا يمرّ به الناجح.**
+func TestXG46_OutOfCoverageNeedsOneConnection(t *testing.T) {
+	h := oneConnHarness(t, 1)
+	treasury(t, h)
+	cust := h.Customer()
+	item := h.NewItem(1000)
+
+	// **ومنطقةُ الرقّة مزروعةٌ وفاعلة** (`seedZone`) — **فالجدولُ ليس
+	// فارغاً**، والنقطةُ في دمشق خارجَها.
+	var live bool
+	if err := h.Pool.QueryRow(ctxBG(),
+		`SELECT EXISTS(SELECT 1 FROM delivery_zones WHERE active)`).Scan(&live); err != nil {
+		t.Fatalf("قراءةُ المناطق: %v", err)
+	}
+	if !live {
+		t.Skip("لا منطقةَ فاعلة — والفرعُ لا يُقاس بجدولٍ فارغ")
+	}
+
+	body := orderBody(item, 1)
+	body["lat"] = 33.5138 // **دمشق** — خارجَ تغطية الرقّة
+	body["lng"] = 36.2765
+
+	before := h.CountOrders(cust.ID)
+	type out struct {
+		code int
+		body string
+	}
+	done := make(chan out, 1)
+	start := time.Now()
+	go func() {
+		got := h.POSTKey("/api/v1/orders", cust.Token, uniq("xg46-far"), body)
+		done <- out{got.Code, string(got.Body)}
+	}()
+
+	select {
+	case r := <-done:
+		t.Logf("XG-46 خارجَ التغطية: %d بعد %s — %s", r.code,
+			time.Since(start).Round(time.Millisecond),
+			strings.TrimSpace(r.body[:cap160(len(r.body))]))
+		if r.code != 400 || !strings.Contains(r.body, "out_of_zone") {
+			t.Errorf("**الردُّ %d** — **والعقدُ رفضٌ مفهومٌ لا عطبُ خادم**: %s",
+				r.code, r.body)
+		}
+	case <-time.After(20 * time.Second):
+		st := h.Pool.Stat()
+		t.Fatalf("**جمد الرفضُ على وصلةٍ واحدة** — "+
+			"**وفرعُ «لا منطقةَ طابقت» يطلب وصلةً ثانية.** "+
+			"(محجوزٌ=%d خاملٌ=%d سقفٌ=%d) (`XG-46`)",
+			st.AcquiredConns(), st.IdleConns(), st.MaxConns())
+	}
+
+	// **ولا طلبَ يُخلَّف من رفض.**
+	if after := h.CountOrders(cust.ID); after != before {
+		t.Errorf("**رُفض الطلبُ وبقي صفُّه**: %d ← %d", before, after)
+	}
+}
+
+func cap160(n int) int {
+	if n > 160 {
+		return 160
+	}
+	return n
+}
