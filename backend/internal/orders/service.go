@@ -86,7 +86,11 @@ func (s *Service) SetNotifier(n Notifier) { s.notify = n }
 // **وحقنُ الحزمة كلِّها يفتح باباً لقراءاتٍ لا تخصّه** — والواجهةُ الضيّقةُ
 // تقول ما يلزم بالضبط.
 type DiscountReader interface {
-	LiveDiscount(ctx context.Context, menuItemID string) (percent int, borneBy string)
+	// LiveDiscount **بمنفّذٍ يُمرَّر** — `XG-46`.
+	//
+	// **وحدةُ إنشاءِ الطلب تمسك وصلتَها**، **فقارئٌ يفتح وصلةً ثانيةً
+	// من داخلها يجمّد الطلبَ حين يمتلئ المَسبَح.**
+	LiveDiscount(ctx context.Context, q dbtx.Querier, menuItemID string) (percent int, borneBy string)
 }
 
 // SetOffers يحقن قارئَ الخصوم — **يُنادى مرّةً عند الإقلاع.**
@@ -109,6 +113,20 @@ type TargetGranter interface {
 func (s *Service) SetTargetGranter(g TargetGranter) { s.targets = g }
 
 func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
+
+// on نسخةٌ من المحرّك تقرأ إعداداتِها من منفّذٍ بعينه — `XG-46`.
+//
+// **ووحدةُ إنشاءِ الطلب تمسك وصلةً واحدة**: **فكلُّ ما تقرؤه — جداولَ
+// كان أو إعدادات — يمرّ بها.** **وإعدادٌ يُقرأ من المَسبَح داخلَ
+// معاملةٍ يطلب وصلةً ثانيةً والأولى في يده.**
+//
+// **ولا نسخةَ ثانيةً من المنطق**: الحقولُ هي هي، **والمبدَّلُ من
+// يُنفّذ القراءة.**
+func (s *Service) on(q dbtx.Querier) *Service {
+	u := *s
+	u.settings = s.settings.On(q)
+	return &u
+}
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service,
 	cashboxSvc *cashbox.Service, pub Publisher, logger *slog.Logger) *Service {
@@ -241,17 +259,21 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	//
 	// **ويبقى مقبولاً إن أُرسل**: الطلبُ الهاتفيّ تكتبه العملياتُ وهي ترى
 	// المتاجر، **وواجهةٌ تختفي فجأةً تُسقط شاشةً لم تُحدَّث بعد.**
+	// **ونسخةٌ مربوطةٌ بمعاملة الوحدة** — `XG-46`: **كلُّ قراءةٍ تشارك
+	// في تقرير هذا الطلب تمرّ بوصلته هو.**
+	unit := s.on(tx)
+
 	var sources *Sources
 	if len(in.Items) > 0 {
 		var err error
-		if sources, err = s.SourcesOf(ctx, in.Items); err != nil {
+		if sources, err = unit.SourcesOf(ctx, tx, in.Items); err != nil {
 			return nil, nil, err
 		}
 		// **والسقفُ يُفحص هنا لا في المتصفّح.**
 		//
 		// السلّةُ لا تعرف المصادر — أخفيناها عنها عمداً — **فلا تملك أن
 		// تمنع.** والخادمُ يعرف، **وهو الموضعُ الذي لا يُلتفّ عليه.**
-		if len(sources.IDs) > s.maxSources(ctx) {
+		if len(sources.IDs) > unit.maxSources(ctx) {
 			return nil, nil, ErrTooManySources
 		}
 		if in.MerchantID == "" {
@@ -315,7 +337,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// **ويُفحص هنا لا في الشاشة**: كلُّ من يعرف النقطةَ يتجاوز حارسَ
 	// الشاشة، **وحارسٌ في واجهةٍ واحدةٍ يُلتفّ عليه من الأخرى.**
 	if in.PaymentMethod == "cash" {
-		blocked, err := s.cashBlocked(ctx, customerID)
+		blocked, err := unit.cashBlocked(ctx, tx, customerID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -334,7 +356,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// البداية، **ولا يفحصها إلّا العرض.** وحارسٌ في الشاشة وحدَها ليس حارساً:
 	// كلُّ من يعرف النقطةَ يتجاوزه، **وكلُّ صفحةٍ قديمةٍ تتجاوزه بلا قصد.**
 	var openNow bool
-	err := s.db.QueryRow(ctx,
+	err := tx.QueryRow(ctx,
 		`SELECT `+OpenNowSQL+` FROM merchants m WHERE m.id = $1`,
 		in.MerchantID).Scan(&openNow)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -348,7 +370,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	}
 
 	// التسعير الخادمي للأصناف والخيارات (لقطة ثابتة)
-	items, subtotal, err := s.priceItems(ctx, in.Items)
+	items, subtotal, err := unit.priceItems(ctx, tx, in.Items)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -362,9 +384,9 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// **والتحقق هنا لا في الواجهة وحدها**: الواجهة تُخفي الزرّ، والخادم يمنع
 	// الفعل. ومن يستطيع أن ينادي النقطة مباشرةً لا يوقفه إخفاءُ زرّ.
 	// **والمفتاحُ العامُّ يعلو مفتاحَ الدور** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
-	if s.settings != nil && s.settings.RequireWhatsApp(ctx, "customers.require_whatsapp") {
+	if unit.settings != nil && unit.settings.RequireWhatsApp(ctx, "customers.require_whatsapp") {
 		var verified bool
-		if err := s.db.QueryRow(ctx,
+		if err := tx.QueryRow(ctx,
 			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
 			customerID).Scan(&verified); err != nil {
 			return nil, nil, err
@@ -385,13 +407,13 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		//
 		// **ولا يُطبَّق على من يطلب بالنيابة** (`ops` والمتجر): المكتبُ يفتح
 		// طلبات الهاتف لزبائنَ شتّى، **وسقفُ زبونٍ لا يُقاس بحسابِ من كتبه.**
-		if err := s.checkOpenLimit(ctx, customerID); err != nil {
+		if err := unit.checkOpenLimit(ctx, tx, customerID); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**
-	zone, err := s.DeliveryAt(ctx, in.Lat, in.Lng)
+	zone, err := unit.DeliveryAt(ctx, tx, in.Lat, in.Lng)
 	if errors.Is(err, ErrOutOfZone) {
 		return nil, nil, ErrOutOfZone
 	}
@@ -443,7 +465,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	//
 	// **ويُضاف قبل الخصم**: كودٌ يُصفّر التوصيلَ يُصفّره كلَّه — **وأن يبقى
 	// جزءٌ منه بعد «توصيلٌ مجّانيّ» وعدٌ يُخلَف.**
-	deliveryFee += s.extraSourceFee(ctx, sources)
+	deliveryFee += unit.extraSourceFee(ctx, sources)
 
 	// الإنشاء الذرّي
 
@@ -496,7 +518,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	//
 	// **والأربعُ تُقرأ مرّةً واحدةً قبل الكتابة** — **فلا تخرج لقطةٌ
 	// نصفُها من عقدٍ ونصفُها من آخر.**
-	snap, err := s.snapshotNow(ctx)
+	snap, err := unit.snapshotNow(ctx, tx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -579,7 +601,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	}
 
 	// **ويُقرأ بالمعاملة** — **وطلبٌ أُنشئ فيها لا يراه المَسبَح.**
-	created, err := s.getByID(ctx, tx, orderID)
+	created, err := unit.getByID(ctx, tx, orderID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -597,10 +619,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 // فيُردّ `ErrBadItems` — **ورسالةٌ تقول «صنفٌ غير صالح» عن صنفٍ صالحٍ تماماً.**
 //
 // **والحارسُ لم يسقط بل انتقل**: `SourcesOf` تفحص السقفَ قبل أن يُسعَّر شيء.
-func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderItem, int64, error) {
+func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemInput) ([]OrderItem, int64, error) {
 	items := make([]OrderItem, 0, len(inputs))
 	var subtotal int64
-	rule := pricing.RuleFrom(ctx, s.settings)
+	rule := pricing.RuleFrom(ctx, s.settings.On(q))
 
 	for _, in := range inputs {
 		if in.Qty < 1 || in.Qty > 50 {
@@ -622,7 +644,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 		// كافتيريا**. وتصنيفُ المتجر يصف بائعَه لا سلعتَه، **وهامشٌ يتبع
 		// البائعَ يجعل الصنفَ الواحد بسعرين.**
 		var itemMargin, sectionMargin *int64
-		err := s.db.QueryRow(ctx, `
+		err := q.QueryRow(ctx, `
 			SELECT mi.id, mi.name, mi.merchant_price, mi.available AND mi.approved,
 			       mi.margin_override, ps.margin_override, mi.merchant_id::text
 			FROM menu_items mi
@@ -663,7 +685,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 		// **ولا يُقرأ من ذاكرةٍ محمّلة**: عرضٌ يُنزَل وطلبٌ يُبنى في اللحظة
 		// نفسِها، **والذاكرةُ تُعطي سعراً انتهى.**
 		if s.offers != nil && it.MenuItemID != nil {
-			if pct, by := s.offers.LiveDiscount(ctx, *it.MenuItemID); pct > 0 {
+			if pct, by := s.offers.LiveDiscount(ctx, q, *it.MenuItemID); pct > 0 {
 				before := it.UnitPrice
 				it.UnitPrice = offers.AfterDiscount(before, pct)
 				if by == offers.ByMerchant {
@@ -685,7 +707,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 		// الخيارات: يجب أن تتبع مجموعات هذا الصنف وتحترم أدنى/أقصى اختيار
 		type groupRule struct{ min, max, chosen int }
 		rules := map[string]*groupRule{}
-		gRows, err := s.db.Query(ctx,
+		gRows, err := q.Query(ctx,
 			`SELECT id, min_select, max_select FROM modifier_groups WHERE item_id = $1`, in.MenuItemID)
 		if err != nil {
 			return nil, 0, err
@@ -705,7 +727,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 			var groupID, groupName, optName string
 			var delta int64
 			var optAvailable bool
-			err := s.db.QueryRow(ctx, `
+			err := q.QueryRow(ctx, `
 				SELECT g.id, g.name, o.name, o.price_delta, o.available
 				FROM modifier_options o
 				JOIN modifier_groups g ON g.id = o.group_id
@@ -1020,13 +1042,13 @@ func (s *Service) publishWalletsOf(ctx context.Context, orderID string) {
 //
 // **ولا تُطبَّق على من يطلب بالنيابة** — المكتبُ يفتح طلبات الهاتف لزبائنَ شتّى،
 // **وسقفُ زبونٍ لا يُقاس بحسابِ من كتبه.** (والمنادي هو من يقرّر ذلك.)
-func (s *Service) checkOpenLimit(ctx context.Context, customerID string) error {
+func (s *Service) checkOpenLimit(ctx context.Context, q dbtx.Querier, customerID string) error {
 	cap := s.settingInt(ctx, "orders.max_open_per_customer")
 	if cap <= 0 {
 		return nil
 	}
 	var open int64
-	if err := s.db.QueryRow(ctx, `
+	if err := q.QueryRow(ctx, `
 		SELECT count(*) FROM orders
 		WHERE customer_id = $1 AND closed_at IS NULL`, customerID).Scan(&open); err != nil {
 		return err

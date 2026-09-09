@@ -966,7 +966,29 @@ var Gaps = []GapDecl{
 	// الاختبار وحدَه.** **ولا يُصلَح بلا قرارِ مالكٍ ودورةٍ خاصّةٍ به**:
 	// تمريرُ المعاملة إلى ما تحتها يمسّ `XG-33` و`XQ-2` و`R24` معاً.
 	{ID: "XG-46", Title: "طلبٌ يمسك معاملةً ثمّ يطلب اتّصالاً ثانياً من المَسبَح",
-		Severity: "MEDIUM"},
+		Severity: "MEDIUM",
+		Fixed: "**أُصلح في دورةِ ٣٩ — وأُثبت أنّه عطبُ منتَجٍ لا بطءُ " +
+			"جهاز.** **بمَسبَحٍ سقفُه وصلةٌ واحدة كان إنشاءُ الطلب " +
+			"يجمد حتماً ثمّ يردّ `500` بعد ثلاثين ثانية** — **بلا " +
+			"`Docker` ولا ويندوز**، **وبالتوقيع نفسِه** " +
+			"(`superfluous WriteHeader … timeout.go:39`). " +
+			"**وسقفُ الإنتاج عشرون** (`database/postgres.go`) — " +
+			"**فعشرون إنشاءً متزامناً تمسك العشرين ثمّ ينتظر كلٌّ " +
+			"وصلةً لا تُفكّ.** " +
+			"**وأُحصيت المواضعُ بالمِجَسّ لا بالقراءة**: " +
+			"`SourcesOf` · `priceItems` · `DeliveryAt`/`ZoneAt` · " +
+			"`open_now` · تحقّقُ واتساب · `maxSources` · " +
+			"`checkOpenLimit` · `cashBlocked` · `extraSourceFee` · " +
+			"`LiveDiscount` · `getByID` (بنودُه وأحداثُه) · " +
+			"`ratingFor` · واللقطةُ الماليّةُ نفسُها. " +
+			"**والعلاجُ ملكيّةٌ لا سعة**: `settings.Store.On(q)` " +
+			"**نسخةٌ تقرأ من منفّذ الوحدة**، **و`Service.on(tx)` " +
+			"نسخةٌ من المحرّك مربوطةٌ بها**، **والمنفّذُ يُمرَّر إلى " +
+			"القرّاء.** **ولا نسخةَ ثانيةً من منطق ولا `…Tx` مضاعفة.** " +
+			"**ولا مَسبَحَ وُسّع ولا مهلةٌ رُفعت.** " +
+			"**وقيس بعده: وصلةٌ واحدة ⇒ `201` في ٧٣ من الألف** " +
+			"(وكان ثلاثين ثانيةً وجموداً). **وشاهدٌ سالب**: **رُدَّت " +
+			"قراءةٌ واحدةٌ إلى المَسبَح فجمد الفحصُ حتماً.**"},
 
 	// ══════════════════════════════════════════════════════════════
 	// **`XG-45` — أندرويد يستقبل `message_key` ولا يترجمه**
@@ -2226,6 +2248,9 @@ var TestMap = map[string]TestDecl{
 	"TestXQ2_F3_UnreadableSettingBlocksCreation":                snapshotTest(),
 	"TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot":   snapshotTest(),
 
+	// ── وصلةٌ واحدةٌ لوحدة الإنشاء (دورةُ ٣٩) — `XG-46` ──────────
+	"TestXG46_OrderCreateNeedsOneConnection": oneConnTest(),
+
 	// ── عقدُ انتظار التحويل (دورةُ ٣٧) — `XG-44` ─────────────────
 	"TestXG44_SettleWaitsUntilTheTransferAttemptEnds": settleContractTest(),
 
@@ -2516,6 +2541,19 @@ func snapshotTest() TestDecl {
 		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
 			"sales.commission_source", "sales.activation_orders"},
 		Modes: []string{"FINANCIAL", "CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
+// oneConnTest حارسُ ملكيّةِ الوصلة في وحدة الإنشاء — `XG-46`.
+//
+// **مَسبَحٌ سقفُه واحد**: **من طلب وصلةً ثانيةً وهو ممسكٌ بالأولى
+// جمد حتماً لا احتمالاً.**
+func oneConnTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-01"},
+		Gaps:  []string{"XG-46"},
+		Modes: []string{"CONCURRENCY", "FULL", "RELEASE"},
 	}
 }
 

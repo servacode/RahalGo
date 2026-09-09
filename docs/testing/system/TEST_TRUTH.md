@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **278** |
-| دوالُّ اختبار | **1032** |
+| ملفّاتُ اختبار | **279** |
+| دوالُّ اختبار | **1033** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1032
-MAPPED     = 332
+TOTAL      = 1033
+MAPPED     = 333
 INFRA      = 119
 ORPHAN     = 581
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 581
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 44 | 23 | 21 |
+| **فجواتُ العقد** | 44 | 24 | 20 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -135,7 +135,7 @@ ORPHAN     = 581
 | **XG-41C** | `HIGH` | — | `COVERED` | `TestXG41C_HarnessExclusivityIsEnforced` · `TestXG41C_PushQueueIsOwnedByItsProducer` |
 | **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
-| **XG-46** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
+| **XG-46** | `MEDIUM` | — | `COVERED` | `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-42** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |

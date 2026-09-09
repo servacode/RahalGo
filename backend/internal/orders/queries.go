@@ -154,7 +154,9 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		}
 	}
 
-	rows, err := s.db.Query(ctx, `
+	// **وبنودُ الطلب من منفّذِ نداءه** — `XG-46`: **كان يُمرَّر المنفّذ
+	// ثمّ تُقرأ البنودُ من المَسبَح**، **فوصلةٌ ثانيةٌ داخلَ معاملة.**
+	rows, err := db.Query(ctx, `
 		SELECT id, menu_item_id, name, unit_price, qty, note, options
 		FROM order_items WHERE order_id = $1`, id)
 	if err != nil {
@@ -177,7 +179,7 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		return nil, err
 	}
 
-	eRows, err := s.db.Query(ctx, `
+	eRows, err := db.Query(ctx, `
 		SELECT from_status, to_status, actor_id, note, created_at
 		FROM order_events WHERE order_id = $1 ORDER BY id`, id)
 	if err != nil {
@@ -195,7 +197,7 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	if err := eRows.Err(); err != nil {
 		return nil, err
 	}
-	o.Rating = s.ratingFor(ctx, id)
+	o.Rating = s.ratingFor(ctx, db, id)
 	// **ومرحلتُه تُحسب هنا لا في الشاشة** — موضعٌ واحدٌ لثلاثِ شاشات.
 	o.SetStage()
 	// **وأحداثُه محمّلةٌ فوق** — فلا استعلامَ ثانٍ لأوقاته.

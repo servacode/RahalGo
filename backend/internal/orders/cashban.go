@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -58,7 +60,7 @@ var ErrCashBlocked = httpx.NewError(http.StatusConflict,
 // # والصفرُ يُطفئ الحارسَ
 //
 // **فمن لم يُرده لم يُفرض عليه** — ولا يُكتب مفتاحٌ لا سبيلَ لإطفائه.
-func (s *Service) cashBlocked(ctx context.Context, customerID string) (bool, error) {
+func (s *Service) cashBlocked(ctx context.Context, q dbtx.Querier, customerID string) (bool, error) {
 	if s.settings == nil {
 		return false, nil
 	}
@@ -75,7 +77,7 @@ func (s *Service) cashBlocked(ctx context.Context, customerID string) (bool, err
 	// يُعالَج بعدها (استرجاعٌ أو تسويةُ بضاعة) **فيتبدّل حالُه ويضيع
 	// أثرُ الإخفاق.** والحدثُ لا يتبدّل: **وقع فقُيّد.**
 	var failures int64
-	err := s.db.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		SELECT count(*)
 		FROM order_events e
 		JOIN orders o ON o.id = e.order_id

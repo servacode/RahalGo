@@ -331,7 +331,7 @@ func (s *Server) handlePublicZone(w http.ResponseWriter, r *http.Request) {
 	// ويُخصم منه، **وهو أسوأُ ما يقع في شاشة دفع.**
 	//
 	// **و`DeliveryAt` هي مصدرُ الحقيقة** — تناديها التسعيرةُ والإنشاء معاً.
-	d, err := s.orders.DeliveryAt(r.Context(), lat, lng)
+	d, err := s.orders.DeliveryAt(r.Context(), s.pg, lat, lng)
 	if err != nil {
 		s.respondErr(w, orders.ErrOutOfZone)
 		return

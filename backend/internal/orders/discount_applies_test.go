@@ -29,6 +29,8 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 // stubDiscount قارئُ خصمٍ ثابت — **يردّ للصنف المقصود ولا شيءَ لغيره.**
@@ -38,7 +40,7 @@ type stubDiscount struct {
 	borneBy string
 }
 
-func (d stubDiscount) LiveDiscount(_ context.Context, menuItemID string) (int, string) {
+func (d stubDiscount) LiveDiscount(_ context.Context, _ dbtx.Querier, menuItemID string) (int, string) {
 	if menuItemID != d.itemID {
 		return 0, ""
 	}

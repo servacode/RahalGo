@@ -128,7 +128,7 @@ func TestSources_CapEnforced(t *testing.T) {
 	}
 
 	// **مصدران يمرّان.**
-	src, err := f.svc.SourcesOf(ctx, items(2))
+	src, err := f.svc.SourcesOf(ctx, f.pool, items(2))
 	if err != nil {
 		t.Fatalf("مصدران رُدّا: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestSources_CapEnforced(t *testing.T) {
 	}
 
 	// **وثلاثةٌ تُعرف على أنها ثلاثة** — والردُّ في `Create`.
-	src, err = f.svc.SourcesOf(ctx, items(3))
+	src, err = f.svc.SourcesOf(ctx, f.pool, items(3))
 	if err != nil {
 		t.Fatalf("ثلاثةٌ تعذّرت قراءتها: %v", err)
 	}

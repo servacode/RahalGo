@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 var (
@@ -89,9 +91,9 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 }
 
 // ratingFor يجلب تقييم الطلب إن وُجد (لتفاصيل الطلب).
-func (s *Service) ratingFor(ctx context.Context, orderID string) *Rating {
+func (s *Service) ratingFor(ctx context.Context, q dbtx.Querier, orderID string) *Rating {
 	var r Rating
-	err := s.db.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		SELECT platform_stars, driver_stars, created_at
 		FROM order_ratings WHERE order_id = $1`, orderID).
 		Scan(&r.PlatformStars, &r.DriverStars, &r.CreatedAt)

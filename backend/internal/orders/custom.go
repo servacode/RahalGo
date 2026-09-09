@@ -91,13 +91,13 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 	// **وسقفُ المفتوح يشمله** — القاعدةُ نفسُها: من بيده ثلاثةٌ لا يفتح رابعاً.
 	//
 	// **ولو استُثني لَصار باباً يلتفّ به على السقف** — يُنشئ خاصّةً بلا حدّ.
-	if err := s.checkOpenLimit(ctx, customerID); err != nil {
+	if err := s.checkOpenLimit(ctx, s.db, customerID); err != nil {
 		return nil, err
 	}
 
 	// **والطلبُ الخاصُّ يُلتقَط اقتصادُه كغيره** — `XQ-2`: **سعرُه
 	// يُتّفق عليه لاحقاً، ونسبُه تُثبَّت اليوم.**
-	snap, err := s.snapshotNow(ctx)
+	snap, err := s.snapshotNow(ctx, s.db)
 	if err != nil {
 		return nil, err
 	}
@@ -141,12 +141,12 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	// **وسقفُ المفتوح يشمله** — القاعدةُ نفسُها: من بيده ثلاثةٌ لا يفتح رابعاً.
 	//
 	// **ولو استُثني لَصار باباً يلتفّ به على السقف** — يُنشئ خاصّةً بلا حدّ.
-	if err := s.checkOpenLimit(ctx, customerID); err != nil {
+	if err := s.checkOpenLimit(ctx, q, customerID); err != nil {
 		return nil, err
 	}
 
 	// **واللقطةُ مع الطلب في معاملته** — `XQ-2`.
-	snap, err := s.snapshotNow(ctx)
+	snap, err := s.snapshotNow(ctx, q)
 	if err != nil {
 		return nil, err
 	}

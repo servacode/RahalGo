@@ -20,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/pricing"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 // Sources مصادرُ أصنافٍ، مرتّبةً بالأوّلِ ظهوراً في السلّة.
@@ -41,7 +43,7 @@ type Sources struct {
 //
 // **ويُقرأ من `menu_items` لا من السلّة**: السلّةُ في المتصفّح **ولا تعرف
 // المصادر أصلاً** — أخفيناها عنها عمداً. **والخادمُ يعرف.**
-func (s *Service) SourcesOf(ctx context.Context, items []ItemInput) (*Sources, error) {
+func (s *Service) SourcesOf(ctx context.Context, q dbtx.Querier, items []ItemInput) (*Sources, error) {
 	if len(items) == 0 {
 		return nil, ErrBadItems
 	}
@@ -64,7 +66,7 @@ func (s *Service) SourcesOf(ctx context.Context, items []ItemInput) (*Sources, e
 	//
 	// ولولاه لَتغيّرت المحطّةُ الأولى بين نداءين لنفس السلّة، **فيرى الزبونُ
 	// رسماً ثمّ رسماً آخر بلا أن يغيّر شيئاً.**
-	rows, err := s.db.Query(ctx, `
+	rows, err := q.Query(ctx, `
 		SELECT DISTINCT ON (mi.merchant_id) mi.merchant_id::text,
 		       array_position($1::uuid[], mi.id)
 		FROM menu_items mi
@@ -112,7 +114,7 @@ func (s *Service) SourcesOf(ctx context.Context, items []ItemInput) (*Sources, e
 	//
 	// ثلاثةُ مطابخَ اثنان منها متجاوران والثالثُ بعيد **رحلتان لا واحدة**،
 	// **والمتوسّطُ يخفي البعيدَ خلف القريبين.**
-	if err := s.db.QueryRow(ctx, `
+	if err := q.QueryRow(ctx, `
 		SELECT COALESCE(max(ST_Distance(a.location, b.location)), 0)
 		FROM merchants a JOIN merchants b ON b.id > a.id
 		WHERE a.id = ANY($1::uuid[]) AND b.id = ANY($1::uuid[])
@@ -177,7 +179,7 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 		return out, nil
 	}
 
-	src, err := s.SourcesOf(ctx, items)
+	src, err := s.SourcesOf(ctx, s.db, items)
 	if err != nil {
 		return nil, err
 	}
@@ -189,13 +191,13 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 	//
 	// **ولو حُسب هنا بحسبةٍ ثانية لَافترقتا يوماً**: يرى الزبونُ رقماً في
 	// السلّة ويُحاسَب بغيره، **وهو أسوأُ ما يقع في شاشة دفع.**
-	_, subtotal, err := s.priceItems(ctx, items)
+	_, subtotal, err := s.priceItems(ctx, s.db, items)
 	if err != nil {
 		return nil, err
 	}
 	out.Subtotal = subtotal
 
-	if z, err := s.DeliveryAt(ctx, lat, lng); err == nil {
+	if z, err := s.DeliveryAt(ctx, s.db, lat, lng); err == nil {
 		out.BaseFee = z.Fee
 	} else {
 		// **خارجَ التغطية ليس خطأً في التسعيرة** — الرسمُ يبقى صفراً ويُردّ
@@ -238,7 +240,7 @@ type ZoneCharge struct {
 //
 // **والرسمُ الكاملُ ليس هذا وحدَه**: يُضاف إليه رسمُ المصدر الإضافيّ
 // (`extraSourceFee`) في الموضعين. **وهذه قاعدةُ المنطقة، تلك قاعدةُ التعدّد.**
-func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, error) {
+func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) (ZoneCharge, error) {
 	var z ZoneCharge
 	// ══════════════════════════════════════════════════════════════
 	// **وكلُّ منطقةٍ تُقاس بشكلها هي** — `MAP-3`
@@ -252,7 +254,7 @@ func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, err
 	//
 	// **والمسافةُ إلى المركز تبقى ترتيباً عند التداخل** — والمضلَّعُ
 	// مركزُه مركزُ ثقله، **فيفوز أقربُهما إلى الدبّوس** كما كان.
-	err := s.db.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		SELECT id::text, name, delivery_fee, min_order,
 		       ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
 		FROM delivery_zones
@@ -330,14 +332,14 @@ type DeliveryCharge struct {
 //
 // **وعمودُ `delivery_zones.delivery_fee` لم يعد يُقرأ**: بقي في القاعدة ولا
 // يُعرض في الشاشة، **فلا حقلٌ يَعِد بأثرٍ لا يقع.**
-func (s *Service) DeliveryAt(ctx context.Context, lat, lng float64) (DeliveryCharge, error) {
+func (s *Service) DeliveryAt(ctx context.Context, q dbtx.Querier, lat, lng float64) (DeliveryCharge, error) {
 	var out DeliveryCharge
-	z, err := s.ZoneAt(ctx, lat, lng)
+	z, err := s.ZoneAt(ctx, q, lat, lng)
 	if err != nil {
 		return out, err
 	}
 	out.ZoneCharge = z
-	out.Fee = pricing.DeliveryFeeAt(ctx, s.settings, z.DistanceM)
+	out.Fee = pricing.DeliveryFeeAt(ctx, s.settings.On(q), z.DistanceM)
 	return out, nil
 }
 

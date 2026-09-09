@@ -31,6 +31,8 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 // EconomicsSnapshot المقدّماتُ الماليّةُ الملقوطةُ للطلب.
@@ -57,7 +59,7 @@ var ErrNoSnapshot = fmt.Errorf("orders: طلبٌ بلا لقطةِ اقتصاد 
 // snapshotNow يقرأ المقدّماتِ الأربعَ من صورةٍ واحدةٍ للإعدادات.
 //
 // **ومجهولُ الوضع يُردّ هنا** — **فلا تُكتب لقطةٌ لا تُقرأ.**
-func (s *Service) snapshotNow(ctx context.Context) (EconomicsSnapshot, error) {
+func (s *Service) snapshotNow(ctx context.Context, q dbtx.Querier) (EconomicsSnapshot, error) {
 	if s.settings == nil {
 		return EconomicsSnapshot{}, fmt.Errorf("orders: لا مخزنَ إعدادات — ولا لقطةَ تُقرأ")
 	}
@@ -68,7 +70,7 @@ func (s *Service) snapshotNow(ctx context.Context) (EconomicsSnapshot, error) {
 	// **وقيس بأربع قراءاتٍ مستقلّة**: **لقطةٌ خرجت `40/10`** —
 	// **نسبةُ المنصّة من الإعداد الجديد ونسبةُ المندوب من القديم**،
 	// **وذاك عقدٌ لم يوافق عليه أحد.**
-	c, err := s.settings.ReadCoherent(ctx,
+	c, err := s.settings.On(q).ReadCoherent(ctx,
 		"merchants.commission_percent", "sales.commission_percent",
 		pricing.CommissionSourceKey, "sales.activation_orders")
 	if err != nil {

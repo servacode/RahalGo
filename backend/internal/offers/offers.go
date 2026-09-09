@@ -29,6 +29,8 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 var (
@@ -262,10 +264,10 @@ func (s *Service) Get(ctx context.Context, id string, marginOf func(int64) int64
 //
 // **ويُقرأ من القاعدة لا من ذاكرةٍ محمّلة**: عرضٌ يُنزَل وطلبٌ يُبنى في اللحظة
 // نفسِها — **والذاكرةُ تُعطي سعراً انتهى.**
-func (s *Service) LiveDiscount(ctx context.Context, menuItemID string) (percent int, borneBy string) {
+func (s *Service) LiveDiscount(ctx context.Context, q dbtx.Querier, menuItemID string) (percent int, borneBy string) {
 	var p *int
 	var b *string
-	_ = s.db.QueryRow(ctx, `
+	_ = q.QueryRow(ctx, `
 		SELECT o.discount_percent, o.borne_by FROM offers o
 		WHERE o.menu_item_id = $1 AND o.kind = 'discount' AND `+LiveCond,
 		menuItemID).Scan(&p, &b)

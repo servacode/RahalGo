@@ -99,7 +99,7 @@ func TestZoneAt_EmptyTableCoversEverywhere(t *testing.T) {
 	// **الرقّة** — نقطةٌ حقيقيّةٌ لا صفران.
 	const lat, lng = 35.9506, 39.0094
 
-	z, err := svc.ZoneAt(ctx, lat, lng)
+	z, err := svc.ZoneAt(ctx, db, lat, lng)
 	if err != nil {
 		t.Fatalf("بجدولٍ فارغٍ رُدَّ الدبّوس: %v — والزبونُ يرى «خارج النطاق»", err)
 	}
@@ -114,7 +114,7 @@ func TestZoneAt_EmptyTableCoversEverywhere(t *testing.T) {
 		        3000, true, 0, 0)`); err != nil {
 		t.Fatalf("تعذّر إدراجُ منطقة: %v", err)
 	}
-	if _, err := svc.ZoneAt(ctx, lat, lng); !errors.Is(err, orders.ErrOutOfZone) {
+	if _, err := svc.ZoneAt(ctx, db, lat, lng); !errors.Is(err, orders.ErrOutOfZone) {
 		t.Fatalf("بدائرةٍ بعيدةٍ يجب أن يُردَّ الدبّوس — رُدَّ %v", err)
 	}
 }
