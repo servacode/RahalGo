@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 280,
-    "test_funcs": 1035
+    "test_files": 281,
+    "test_funcs": 1037
   },
   "flows": [
     {
@@ -87,6 +87,8 @@
         "TestEV_MultiOrderRouting",
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestFAIL_XOB7_AutoTransferFireAndForget",
+        "TestXG42_CapabilityUnionCustomRoleAndRevoke",
+        "TestXG42_ContactFieldsFollowCapabilityNotRoute",
         "TestFIN_OrderEconomicConservation",
         "TestIDEM_AllProtectedPathsUseCoordinator",
         "TestIDEM_T10_CleanupSparesLiveClaim",
@@ -584,6 +586,8 @@
         "TestXG14_ThreeModesGiveTheirContract",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
+        "TestXG42_CapabilityUnionCustomRoleAndRevoke",
+        "TestXG42_ContactFieldsFollowCapabilityNotRoute",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_TransactionBoundaries",
         "TestFIN_CommissionSourceMatrix",
@@ -2761,8 +2765,12 @@
       "id": "XG-42",
       "title": "الردودُ لا تُشكَّل بحسب قدرة قارئها — الهاتفُ يُردّ لمن لزمه الاسم",
       "severity": "MEDIUM",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**أُصلح في دورةِ ٤١ — والحكمُ بالقدرة لا بالاسم.** **وقُدّم الدليلُ قبل الشيفرة**: الماليّةُ نالت الهاتفَ في `GET /users` **ثماني قيمٍ** وفي `/users/{id}` و`/customers` قيمةً قيمةً — **ولا تتّصل بأحد.** **فوُلدت قدرةٌ للحقل لا للباب**: `users.contact.read` — **ومُنحت لمن يتّصل في عمله** (المالكُ والإداريُّ والمكتبُ والعمليّاتُ والدعمُ والتحقيقُ وتوثيقُ السائقين والمتاجر) **ومُنعت عمّن لا يتّصل** (الماليّةُ والتحليل). **ولا قدرةٌ قائمةٌ نُزعت**: إضافةٌ لا إعادةَ توزيع. **والتشكيلُ عند حدّ الخروج في وسيطٍ واحد** (`shapeResponse` على سطح الإدارة، بعد التخويل) — **فيشمل القوائمَ والتفاصيلَ والأعشاشَ معاً**: `order.customer_phone` كما `user.phone`. **ولا `if role == …` في معالِج**، **والمعجمُ في `authz.FieldPolicy` يقرؤه المنتَجُ وحارسُ `ADG-2` معاً.** **والحذفُ لا التفريغ**: **حقلٌ يُردّ فارغاً يكذب** — ولا يعرف القارئُ أمحجوبٌ هو أم لا رقمَ لصاحبه. **وقيس على الردّ الخام بفكِّ ترميزٍ ومشيٍ في الأعشاش لا بـ`grep`.** **والثلاثةُ التي تُحيي الحكمَ بالقدرة مقيسة**: **اتّحادُ دورين** (ماليّةٌ+دعمٌ ⇒ الرقمُ يصل) · **دورٌ مخصَّصٌ يصنعه الإداريُّ** (بـ`users.read` وحدَها ⇒ لا رقم، وبمنح القدرة ⇒ يصل) · **ونزعٌ يسري على الجلسة نفسِها ⇒ صفر** (`R15`). **وشاهدٌ سالب**: نُزع الوسيطُ فعادت تسعُ قيمٍ إلى الماليّة. **وما لم يُشكَّل يُقال**: **التصديرُ ملفٌّ لا JSON فيمرّ بلا احتجاز**، **وحارسُه عند الباب** (`users.export` · `finance.export`) — **وعقدُ `FinanceExport` يقول صراحةً إنّ كشفَ الطلبات فيه اسمُ الزبون وهاتفُه**، فذاك قرارٌ قائمٌ لا تسرّب. **وعنوانُ الطلب لم يُحجَب**: هو من عمل من يوزّعه، **ودفترُ عناوين المرء بابٌ آخرُ يحرسه `users.sensitive.read`.**",
+      "tests": [
+        "TestXG42_CapabilityUnionCustomRoleAndRevoke",
+        "TestXG42_ContactFieldsFollowCapabilityNotRoute"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-36",
@@ -9424,6 +9432,44 @@
       "modes": [
         "FAST",
         "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG42_CapabilityUnionCustomRoleAndRevoke",
+      "file": "internal/qa/field_matrix_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14"
+      ],
+      "gaps": [
+        "XG-42"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG42_ContactFieldsFollowCapabilityNotRoute",
+      "file": "internal/qa/field_matrix_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-14"
+      ],
+      "gaps": [
+        "XG-42"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
       ],
       "orphan": false
     },

@@ -140,12 +140,42 @@ const (
 	// يحقّق في شكوى يقرؤه. **وكانت في `orders.read` مع رقم الطلب.**
 	OrdersCommunicationsRead Capability = "orders.communications.read"
 
+	// UsersContactRead **رقمُ الاتّصال** — `XG-42`.
+	//
+	// **وهو حقلٌ في ردٍّ لا بابٌ في موجِّه**: **من ملك `users.read`
+	// ليجد حساباً لقيدٍ ماليٍّ نال هاتفَه أيضاً** — **ولا يتّصل
+	// بأحد.**
+	//
+	// **ويملكه من يتّصل**: العمليّاتُ والدعمُ والتحقيقُ وتوثيقُ
+	// السائقين. **ولا تملكه الماليّةُ ولا التحليل** — **قيدٌ لا
+	// مكالمة.**
+	//
+	// **ولا يُخلَط بـ`users.sensitive.read`**: تلك **دفترُ العناوين
+	// والأثر**، وهذه **رقمٌ يُطلَب عليه.**
+	UsersContactRead Capability = "users.contact.read"
+
 	// UsersSensitiveRead **دفترُ عناوين المرء وأثرُه.**
 	//
 	// **وعنوانُ الطلب في الطلب** — **وهذا دفترُ بيوته كلِّها.**
 	// **ومن يوزّع طلباً قائماً لا يحتاجه.**
 	UsersSensitiveRead Capability = "users.sensitive.read"
 )
+
+// FieldPolicy **معجمُ الحقول المحميّة وقدرةُ كلٍّ** — `XG-42`.
+//
+// **وقدرةٌ تحرس حقلاً لا باباً**: **`ADG-2` يحكم من يبلغ المسار،
+// وهذه تحكم ما يصل من بلغه.** **فموضعٌ واحدٌ يقرؤه المنتَجُ والحارس** —
+// **ولا سياسةٌ تُكتب مرّتين فتفترقا.**
+//
+// **ولا يُدرَج حقلٌ لاسمه**: **`address_text` في الطلب عنوانُ الطلب
+// وهو من عمل من يوزّعه** — **ودفترُ عناوين المرء بابٌ آخرُ يحرسه
+// `UsersSensitiveRead`.** **و`invite_code` رمزٌ يوزّعه المندوبُ بنفسه
+// ليُدعى به** — **فليس سرّاً.**
+var FieldPolicy = map[string]Capability{
+	"phone":          UsersContactRead,
+	"customer_phone": UsersContactRead,
+	"driver_phone":   UsersContactRead,
+}
 
 // catalog **المعجمُ المُعرَّفُ في الشيفرة** — ووصفٌ لكلٍّ يُقرأ في اللوحة.
 var catalog = map[Capability]string{
@@ -172,6 +202,7 @@ var catalog = map[Capability]string{
 	UsersExport:              "سحبُ دليل الحسابات ملفّاً",
 	FinanceExport:            "سحبُ الدفتر وكشفِ الطلبات ملفّاً",
 	OrdersCommunicationsRead: "قراءةُ محادثات الطلب ورسائله",
+	UsersContactRead:         "قراءةُ رقم الاتّصال",
 	UsersSensitiveRead:       "قراءةُ عناوين المرء وأثرِه",
 }
 

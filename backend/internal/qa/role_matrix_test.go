@@ -487,6 +487,12 @@ func TestADG2_EveryCapabilityHasARoute(t *testing.T) {
 	} {
 		used[c] = true
 	}
+	// **وقدرةٌ تحرس حقلاً لا باباً** — `XG-42`: **`ADG-2` يحكم من
+	// يبلغ المسار، وسياسةُ الحقول تحكم ما يصل من بلغه.** **ويبقى
+	// الحارسُ يمسك القدرةَ التي لا تحرس شيئاً.**
+	for _, need := range authz.FieldPolicy {
+		used[need] = true
+	}
 	var orphans []string
 	for _, c := range authz.All() {
 		if !used[c] {
@@ -495,8 +501,8 @@ func TestADG2_EveryCapabilityHasARoute(t *testing.T) {
 	}
 	t.Logf("المعجمُ=%d · بلا مسارٍ=%d", authz.Count(), len(orphans))
 	for _, c := range orphans {
-		t.Errorf("**قدرةٌ لا يحرسها مسار**: `%s` — **تُقرأ سياسةً وهي "+
-			"اسم.** (`ADG-2`)", c)
+		t.Errorf("**قدرةٌ لا تحرس باباً ولا حقلاً**: `%s` — **تُقرأ "+
+			"سياسةً وهي اسم.** (`ADG-2` · `XG-42`)", c)
 	}
 }
 

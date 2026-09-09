@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **280** |
-| دوالُّ اختبار | **1035** |
+| ملفّاتُ اختبار | **281** |
+| دوالُّ اختبار | **1037** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1035
-MAPPED     = 333
+TOTAL      = 1037
+MAPPED     = 335
 INFRA      = 119
 ORPHAN     = 583
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 583
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 44 | 24 | 20 |
+| **فجواتُ العقد** | 44 | 25 | 19 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -137,7 +137,7 @@ ORPHAN     = 583
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
 | **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
-| **XG-42** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
+| **XG-42** | `MEDIUM` | — | `COVERED` | `TestXG42_CapabilityUnionCustomRoleAndRevoke` · `TestXG42_ContactFieldsFollowCapabilityNotRoute` |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-38** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-40** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
