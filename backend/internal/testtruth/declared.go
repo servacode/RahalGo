@@ -1553,6 +1553,23 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
 		Evidence: []string{"payload"},
 	},
+	// ── دورةُ ٤٥ · أبوابُ `REST` تُقاس بالعقد نفسِه ───────────────
+	//
+	// **ولا شيفرةَ منتَجٍ فيها**: **العقدان يتخالفان في ثلاثة حقول**
+	// (`subtotal` · `platform_commission` · `commission_percent`)،
+	// **وحلُّه قرارُ مالك.** **فالدليلُ يُثبَّت والإصلاحُ ينتظر.**
+	"TestD21_RestOrderPrivacyMatrix": {
+		Level: L5, Flows: []string{"F-01", "F-04", "F-08", "F-13"},
+		Defects:  []string{"D21", "D23"},
+		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
+		Evidence: []string{"payload"},
+	},
+	"TestD23_CrossChannelPrivacyParity": {
+		Level: L5, Flows: []string{"F-01", "F-04", "F-08"},
+		Defects:  []string{"D21", "D23"},
+		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
+		Evidence: []string{"payload"},
+	},
 	// ── دورةُ إصلاحٍ ٤٤ · والغرفُ عهدٌ قائم ────────────────────────
 	//
 	// **بُدّل ما يصل الغرفَ لا من يصله** — **ويُقاس بمِسنَدٍ يعدّ

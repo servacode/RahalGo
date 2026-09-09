@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 284,
-    "test_funcs": 1044
+    "test_files": 285,
+    "test_funcs": 1046
   },
   "flows": [
     {
@@ -131,7 +131,9 @@
         "TestIDEM_SameKeyDifferentPayload",
         "TestIDEM_SameKeySamePayloadConcurrent",
         "TestIDEM_SameKeySamePayloadSequential",
-        "TestFIN_XG11_RefundIndependentOfMerchantBalance"
+        "TestFIN_XG11_RefundIndependentOfMerchantBalance",
+        "TestD21_RestOrderPrivacyMatrix",
+        "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "COVERED"
     },
@@ -249,7 +251,9 @@
         "TestPublishOrderReachesEveryRoom",
         "TestD20_BroadcastViewIsNotOverNarrow",
         "TestD20_BroadcastViewObeysContract",
-        "TestD20_MerchantRealtimeVsREST"
+        "TestD20_MerchantRealtimeVsREST",
+        "TestD21_RestOrderPrivacyMatrix",
+        "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "COVERED"
     },
@@ -385,7 +389,9 @@
         "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_AdminVsAppTransition",
         "TestRACE_MaxActiveOrders",
-        "TestRACE_TwoDriversSameOrder"
+        "TestRACE_TwoDriversSameOrder",
+        "TestD21_RestOrderPrivacyMatrix",
+        "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "COVERED"
     },
@@ -535,6 +541,7 @@
         "TestD13_SignedURLWorksAndForgeryDoesNot",
         "TestRACE_LocationQueueIsClientSide",
         "TestRACE_FinancialTruthAfterConcurrentDeliveries",
+        "TestD21_RestOrderPrivacyMatrix",
         "TestXG22_SuspendDuringTransitionIsDeterministic",
         "TestXG22_T10_EnforcementIsServerSide",
         "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
@@ -1820,7 +1827,9 @@
         "TestEV_CustomerDriverAssignment",
         "TestD21_CustomerRedactionAgainstContract",
         "TestForbiddenFieldGuardCatchesLeak",
-        "TestOrderFieldsAllClassified"
+        "TestOrderFieldsAllClassified",
+        "TestD21_RestOrderPrivacyMatrix",
+        "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "EXPECTED_FAIL"
     },
@@ -1845,7 +1854,9 @@
         "TestEV_CustomerDriverAssignment",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
-        "TestOrderFieldsAllClassified"
+        "TestOrderFieldsAllClassified",
+        "TestD21_RestOrderPrivacyMatrix",
+        "TestD23_CrossChannelPrivacyParity"
       ],
       "status": "EXPECTED_FAIL"
     },
@@ -12928,6 +12939,55 @@
       "file": "internal/qa/reroute_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestD21_RestOrderPrivacyMatrix",
+      "file": "internal/qa/rest_privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-08",
+        "F-13"
+      ],
+      "defects": [
+        "D21",
+        "D23"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD23_CrossChannelPrivacyParity",
+      "file": "internal/qa/rest_privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-08"
+      ],
+      "defects": [
+        "D21",
+        "D23"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
     },
     {
       "name": "TestRET_001_OnlyFailedIsReturnable",
