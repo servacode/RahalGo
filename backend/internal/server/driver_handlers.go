@@ -527,19 +527,19 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 
 	var onShift, offeredToMe bool
 	var active int
-	var held, limit, cashDue int64
+	var cashDue int64
+	// **ولا يُقرأ `held` هنا ولا السقف** — **صارا شأنَ `cashbox` وحدَه**
+	// (`D7`): **يُقرآن داخلَ المعاملة بعد القفل**، **وقراءةٌ قبله
+	// تشيخ قبل أن تُستعمل.**
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT u.on_shift,
-		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
-		       $3::bigint,
 		       COALESCE((SELECT cash_due FROM orders WHERE id = $2), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
 		       -- **أعُرض عليه هذا الطلبُ بعينه؟**
 		       COALESCE((SELECT o.offered_driver_id = u.id AND o.offer_expires_at > now()
 		                 FROM orders o WHERE o.id = $2), false)
-		FROM users u WHERE u.id = $1`, uid, orderID,
-		s.settings.GetInt(r.Context(), "drivers.cash_limit")).
-		Scan(&onShift, &held, &limit, &cashDue, &active, &offeredToMe); err != nil {
+		FROM users u WHERE u.id = $1`, uid, orderID).
+		Scan(&onShift, &cashDue, &active, &offeredToMe); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -574,7 +574,42 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	}
 	// السقف يُفحص **قبل** القبول لا عند التسليم: رفضٌ عند الباب أرحم من طلبٍ
 	// يحمله ثم يعجز عن إقفاله.
-	if held+cashDue > limit {
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **و`held` نصفُ التعرّض لا كلُّه** — `D7`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان الفحصُ `held + cashDue`** — **و`held` لا يرتفع إلّا عند
+	// التحصيل**: **فطلباتٌ أُسنِدت إليه ولم تُسلَّم بعدُ تُقرأ صفراً.**
+	// **قيس: ثلاثةٌ بأربعين ألفاً مرّت كلُّها والسقفُ مئة.**
+	//
+	// **والحكمُ صار من مصدرٍ واحد** — `cashbox.GuardTx`، **يناديه
+	// الإسنادُ الإداريُّ كذلك.**
+	//
+	// **والفحصُ والانتزاعُ في معاملةٍ واحدةٍ بقفلِ سائق**: **قراءةٌ
+	// ثمّ كتابةٌ بلا قفلٍ تمرّان معاً** — **وشرطُ `driver_id IS NULL`
+	// يحرس الطلبَ لا السائق**، فطلبان مختلفان لا يتزاحمان عليه.
+	// **والسقفُ يُقرأ قبل فتح المعاملة** — **وقراءتُه داخلَها تطلب
+	// اتّصالاً ثانياً والأوّلُ في اليد** (`XG-46`).
+	// **وكلُّ ما يُقرأ من المَسبَح يُقرأ قبل الفتح** — **السقفُ ونمطُ
+	// الإسناد معاً.** **ونمطُ الإسناد كان يُقرأ بينهما فجمد الباب**
+	// (`TestXG46_DriverAcceptNeedsOneConnection` أمسكه).
+	cashLimit := s.cashbox.Limit(r.Context())
+	own := `AND (offered_driver_id IS NULL OR offered_driver_id = $2)`
+	if s.orders.AssignmentMode(r.Context()) == "rotation" {
+		own = `AND offered_driver_id = $2`
+	}
+
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
+	if err := s.cashbox.GuardTx(r.Context(), tx, uid, cashDue, cashLimit); err != nil {
+		// **ورسالةُ السائق رسالتُه** — «النقد الذي بذمتك بلغ السقف»
+		// **لا رسالةَ المكتب عنه**، والعقدُ قائمٌ لا يُبدَّل هنا.
 		s.respondErr(w, errCashLimitFull)
 		return
 	}
@@ -582,11 +617,7 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	// **والحارسُ نفسُه في القبول لا في العرض وحده.**
 	//
 	// شاشةٌ لا تعرض الطلبَ لا تمنع من ينادي الواجهةَ البرمجية مباشرةً —
-	// **وحجبٌ في العرض وحدَه وعدٌ بحجب.**
-	own := `AND (offered_driver_id IS NULL OR offered_driver_id = $2)`
-	if s.orders.AssignmentMode(r.Context()) == "rotation" {
-		own = `AND offered_driver_id = $2`
-	}
+	// **وحجبٌ في العرض وحدَه وعدٌ بحجب.** (و`own` تُبنى فوق.)
 
 	// **الإسناد ذرّي**: الشرط `driver_id IS NULL` داخل التحديث نفسه. سائقان
 	// يضغطان معاً — أحدهما يُحدّث صفّاً والآخر يجد صفراً. ولو فُحص ثم حُدّث
@@ -595,7 +626,7 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	// **والدورُ شرطٌ في التحديث لا فحصٌ قبله**: سائقٌ يرى الطلبَ في لحظة
 	// انتقال الدور إليه ثم ينقضي وهو يضغط — الشرطُ هنا يمنعه، والفحصُ قبله
 	// يسمح به.
-	tag, err := s.pg.Exec(r.Context(), `
+	tag, err := tx.Exec(r.Context(), `
 		UPDATE orders SET driver_id = $2, updated_at = now(),
 		    offered_driver_id = NULL, offer_expires_at = NULL
 		WHERE id = $1 AND driver_id IS NULL AND status = 'dispatching'
@@ -606,6 +637,10 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	}
 	if tag.RowsAffected() == 0 {
 		s.respondErr(w, errOrderTaken)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 

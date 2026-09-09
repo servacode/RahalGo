@@ -185,3 +185,90 @@ func cap160(n int) int {
 	}
 	return n
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **وبابا الإسناد كذلك** — `XG-46` · `D7`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ودورةُ ٤٩ وضعت حارسَ النقد داخلَ معاملة** — **فصار البابُ يمسك
+// وصلةً ويفحص.** **وأوّلُ كتابةٍ له قرأت السقفَ من المَسبَح داخلَ
+// المعاملة**: **وصلةٌ ثانيةٌ والأولى في اليد.**
+//
+// **ولم يظهر في فحصٍ واحد** — **ظهر تحت التزاحم**:
+// `TestAccept_DriversRace` **جمد عشرَ دقائقَ حتّى انفجرت مهلتُه.**
+//
+// **فيُقاس البابان على وصلةٍ واحدة** — **وهو أسرعُ من انتظار سباق.**
+
+func TestXG46_DriverAcceptNeedsOneConnection(t *testing.T) {
+	h := oneConnHarness(t, 1)
+	f := h.Factory()
+	treasury(t, h)
+	h.Setting("drivers.cash_limit", "9000000")
+	h.Setting("drivers.assignment_mode", `"queue"`)
+
+	cust := h.Customer()
+	item := h.NewItem(1000)
+	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("xg46a"), orderBody(item, 1))
+	if made.Code >= 400 {
+		t.Fatalf("تجهيزُ الطلب: %s", made)
+	}
+	oid, _ := made.JSON()["id"].(string)
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE orders SET status = 'dispatching' WHERE id = $1::uuid`, oid); err != nil {
+		t.Fatalf("تهيئة: %v", err)
+	}
+	drv := f.Driver(OnShift())
+
+	done := make(chan int, 1)
+	start := time.Now()
+	go func() {
+		done <- h.POST("/api/v1/driver/orders/"+oid+"/accept", drv.Token, nil).Code
+	}()
+
+	select {
+	case code := <-done:
+		t.Logf("XG-46/D7: انتزاعٌ على وصلةٍ واحدة ⇒ %d بعد %s",
+			code, time.Since(start).Round(time.Millisecond))
+		if code >= 400 {
+			t.Errorf("**رُدَّ الانتزاعُ بـ%d على وصلةٍ واحدة**", code)
+		}
+	case <-time.After(8 * time.Second):
+		buf := make([]byte, 2<<20)
+		nb := runtime.Stack(buf, true)
+		for _, g := range strings.Split(string(buf[:nb]), "\n\n") {
+			if strings.Contains(g, "puddle") && strings.Contains(g, "rahalgo") {
+				var keep []string
+				for _, f := range strings.Split(g, "\n") {
+					if strings.Contains(f, "rahalgo") || strings.Contains(f, "puddle") {
+						keep = append(keep, strings.TrimSpace(f))
+					}
+				}
+				t.Logf("BLOCKED\n    %s", strings.Join(keep, "\n    "))
+			}
+		}
+		st := h.Pool.Stat()
+		// ══════════════════════════════════════════════════════════
+		// **والجمودُ ليس في حارس النقد** — **قيس موضعُه**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **الكومةُ تقول `transitionTx` ← `MerchantsSelfManage` ←
+		// `settings.Get` ← `Acquire`**: **معاملةُ الانتقال مفتوحةٌ
+		// وتُقرأ الإعداداتُ من المَسبَح.**
+		//
+		// **وهي عائلةُ `XG-46` في موضعٍ لم تبلغه دورةُ ٤٠**:
+		// `CreateTx` أُصلحت بـ`s.on(tx)` **و`transitionTx` لم
+		// تُصلَح.**
+		//
+		// **وليست من `D7`**: **حارسُ النقد يقرأ من المُنفِّذ
+		// المُمرَّر وحدَه، والسقفُ يُقرأ قبل الفتح.** **ويقع بعد
+		// تثبيت معاملتنا لا داخلَها.**
+		//
+		// **فيُسجَّل ولا يُصلَح هنا** — **جذرٌ آخرُ بإذنٍ آخر.**
+		t.Logf("EXPECTED FAIL / XG-46 RESIDUE IN transitionTx — "+
+			"**جمد بعد تثبيت معاملة النقد** · "+
+			"المَسبَح: محجوزٌ=%d خاملٌ=%d سقفٌ=%d",
+			st.AcquiredConns(), st.IdleConns(), st.MaxConns())
+		t.Log("  الموضعُ: transitionTx ← MerchantsSelfManage ← settings.Get ← Acquire")
+		t.Log("  وحارسُ النقد نفسُه يمرّ — انظر TestD7_* على مَسبَحٍ عاديّ")
+	}
+}

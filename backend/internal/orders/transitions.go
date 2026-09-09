@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -1447,20 +1446,38 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	if from != StPreparing && from != StDispatching {
 		return nil, ErrBadTransition
 	}
-	// السقف النقدي: لا طلبات نقدية لسائق تجاوز سقفه (PLAN §6.3)
-	if cashDue > 0 {
-		over, err := s.cashbox.OverLimit(ctx, driverID)
-		if err != nil {
-			return nil, err
-		}
-		if over {
-			return nil, cashbox.ErrLimitExceed
-		}
+	// ══════════════════════════════════════════════════════════════════
+	// **السقفُ النقديُّ — والفحصُ والإسنادُ في معاملةٍ واحدة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان `OverLimit` يقارن `held >= limit` وحدَه** — **فلا نقدُ
+	// الطلب الداخل يُحسَب ولا ما بيده من طلباتٍ لم تُسلَّم.**
+	// **قيس: ٢٧٠٬٠٠٠ مرّت والسقفُ ١٠٠٬٠٠٠**، **وثلاثةُ طلباتٍ
+	// بأربعين ألفاً مرّت كلُّها.**
+	//
+	// **وصار الحكمُ من مصدرٍ واحد** (`cashbox.GuardTx`) — **يناديه
+	// بابُ القبول كذلك، فلا صيغتان تنحرفان.**
+	//
+	// **والفحصُ والكتابةُ في معاملةٍ واحدةٍ بقفلِ سائق** — **وإسنادان
+	// متزامنان كانا يقرآن صفراً معاً فيمرّان معاً.**
+	// **والسقفُ يُقرأ قبل فتح المعاملة** — **وقراءتُه داخلَها تطلب
+	// اتّصالاً ثانياً والأوّلُ في اليد** (`XG-46`).
+	cashLimit := s.cashbox.Limit(ctx)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
 	}
+	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := s.db.Exec(ctx,
+	if err := s.cashbox.GuardTx(ctx, tx, driverID, cashDue, cashLimit); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx,
 		`UPDATE orders SET driver_id = $2, updated_at = now() WHERE id = $1`,
 		orderID, driverID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 	// من التحضير: نمر عبر dispatching ثم assigned لسجل أحداث سليم

@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **287** |
-| دوالُّ اختبار | **1058** |
+| ملفّاتُ اختبار | **288** |
+| دوالُّ اختبار | **1067** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1058
-MAPPED     = 356
+TOTAL      = 1067
+MAPPED     = 365
 INFRA      = 120
 ORPHAN     = 582
 ```
@@ -73,7 +73,7 @@ ORPHAN     = 582
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `EXPECTED_FAIL` | `TestCENSUS_D4_OpenLimitNestedInWhatsAppGate` |
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
 | **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `EXPECTED_FAIL` | `TestCENSUS_D6_CustomOrderSkipsCashBan` |
-| **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `EXPECTED_FAIL` | `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` |
+| **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `FIXED_AND_PASSING` | `TestD7_AtLimitExactlyIsAllowed` · `TestD7_CeilingUnderRepetition` · `TestD7_ConcurrentAssignmentsCannotOversubscribe` · `TestD7_CumulativeExposureIsCounted` · `TestD7_DriverAcceptObeysSameCeiling` · `TestD7_ExposureIsReleasedWhenOrderCloses` · `TestD7_OversizedCashOrderIsRefused` · `TestD7_WalletOrderIsNotBlocked` · `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` · `TestXG46_DriverAcceptNeedsOneConnection` |
 | **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `FIXED_AND_PASSING` | `TestSessionClient_AdminLogoutAllStillGlobal` |
@@ -136,7 +136,7 @@ ORPHAN     = 582
 | **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
 | **XG-47** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
-| **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_OrderCreateNeedsOneConnection` |
+| **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_DriverAcceptNeedsOneConnection` · `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `COVERED` | `TestXG45_EveryMobileReachableCodeHasArabic` |
 | **XG-42** | `MEDIUM` | — | `COVERED` | `TestXG42_CapabilityUnionCustomRoleAndRevoke` · `TestXG42_ContactFieldsFollowCapabilityNotRoute` |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |

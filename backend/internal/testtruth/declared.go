@@ -1553,6 +1553,64 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "SECURITY", "RELEASE"},
 		Evidence: []string{"payload"},
 	},
+	// **وحارسُ الوصلة الواحدة يشمل بابَ الانتزاع** — **ودورةُ ٤٩
+	// وضعت فيه معاملة، فلزم أن يُقاس كما يُقاس بابُ الإنشاء.**
+	"TestXG46_DriverAcceptNeedsOneConnection": {
+		Level: L5, Flows: []string{"F-08"},
+		Defects:  []string{"D7"},
+		Gaps:     []string{"XG-46"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	// ── دورةُ ٤٩ · سقفُ النقد سقفُ تعرّض ──────────────────────────
+	"TestD7_OversizedCashOrderIsRefused": {
+		Level: L5, Flows: []string{"F-08", "F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD7_CumulativeExposureIsCounted": {
+		Level: L5, Flows: []string{"F-08", "F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD7_WalletOrderIsNotBlocked": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+		Evidence: []string{"http"},
+	},
+	"TestD7_ConcurrentAssignmentsCannotOversubscribe": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "CONCURRENCY", "FINANCIAL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD7_DriverAcceptObeysSameCeiling": {
+		Level: L5, Flows: []string{"F-08"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD7_ExposureIsReleasedWhenOrderCloses": {
+		Level: L5, Flows: []string{"F-17", "F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD7_AtLimitExactlyIsAllowed": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+		Evidence: []string{"http"},
+	},
+	"TestD7_CeilingUnderRepetition": {
+		Level: L5, Flows: []string{"F-08", "F-19"},
+		Defects:  []string{"D7"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+		Evidence: []string{"http", "db"},
+	},
 	// ── دورةُ ٤٨ · جردُ العيوب — قياسٌ لا تصنيفٌ من ذاكرة ─────────
 	//
 	// **ولا تُصلح شيئاً**: **تقيس سلوكَ اليوم وتربطه بسجلّه** —
@@ -3095,6 +3153,30 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٤٩ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
+	"D7": "**السقفُ صار سقفَ تعرّضٍ لا سقفَ ما في الجيب** — " +
+		"`cashbox.GuardTx`: **محصَّلٌ + مُسنَدٌ لم يُحصَّل + الوارد " +
+		"<= السقف.** " +
+		"**وكان `OverLimit` يقارن `held >= limit` وحدَه**، **و`held` " +
+		"لا يرتفع إلّا عند التحصيل** (`CollectTx` لحظةَ التسليم): " +
+		"**فبابان مفتوحان** — **نقدُ الطلب الداخل لا يُحسَب** " +
+		"(قيس: ٢٧٠٬٠٠٠ مرّت والسقفُ ١٠٠٬٠٠٠)، **والمُسنَدُ الذي لم " +
+		"يُسلَّم لا يُرى** (ثلاثةٌ بأربعين ألفاً مرّت كلُّها و`held` " +
+		"صفرٌ في الثلاث). " +
+		"**والصيغةُ الصحيحةُ كانت في مرشَّح الطابور وفي بابِ القبول " +
+		"وغائبةً عن الإسناد اليدويّ** — **وثلاثُ نسخٍ لقاعدةٍ واحدةٍ " +
+		"تنحرف إحداها.** **فصارت في موضعٍ واحدٍ يناديه البابان.** " +
+		"**والفحصُ والكتابةُ في معاملةٍ واحدةٍ بقفلِ سائق** " +
+		"(`pg_advisory_xact_lock`): **وإسنادان متزامنان كانا يقرآن " +
+		"صفراً معاً** — **ونُزع القفلُ فتجاوزت ٩٩ جولةً من ١٠٠.** " +
+		"**والقفلُ على السائق لا على النظام**: سائقان لا ينتظر " +
+		"أحدُهما الآخر. " +
+		"**وما لا نقدَ فيه لا يُحبَس** (`incoming <= 0`)، **وعند " +
+		"السقف تماماً يُقبَل** — **وهو العقدُ القائم لا عقدٌ جديد.** " +
+		"**والسعةُ تعود بإغلاق الطلب** — **وحارسٌ يمنع ولا يُفرِج " +
+		"يشلّ السائق.** " +
+		"**وسُمّي «تعرّضاً» لا «محصَّلاً» قصداً**: **عهدةُ المكتب " +
+		"القادمةُ بندٌ ثالثٌ في الصيغة لا بنيةٌ أخرى.**",
 	// ── مصالحةُ سجلٍّ · دورةُ ٤٨ · ٢٠٢٦-٠٩-٠٩ ─────────────────────
 	//
 	// **ولا شيفرةَ منتَجٍ فيها**: **ثلاثةٌ كان حالُها `EXPECTED_FAIL`

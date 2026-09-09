@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 287,
-    "test_funcs": 1058
+    "test_files": 288,
+    "test_funcs": 1067
   },
   "flows": [
     {
@@ -396,11 +396,16 @@
       ],
       "tests": [
         "TestPublishOrderReachesEveryRoom",
+        "TestD7_CeilingUnderRepetition",
+        "TestD7_CumulativeExposureIsCounted",
+        "TestD7_DriverAcceptObeysSameCeiling",
+        "TestD7_OversizedCashOrderIsRefused",
         "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
         "TestEV_MerchantDriverAssignment",
         "TestEV_CustomerDriverAssignment",
         "TestSampleFactory_DriverOnShiftWithCash",
         "TestFAIL_R7_DriverAcceptPartialState",
+        "TestXG46_DriverAcceptNeedsOneConnection",
         "TestRACE_AdminVsAppTransition",
         "TestRACE_MaxActiveOrders",
         "TestRACE_TwoDriversSameOrder",
@@ -746,6 +751,7 @@
         "L9"
       ],
       "tests": [
+        "TestD7_ExposureIsReleasedWhenOrderCloses",
         "TestOBL_BothInsufficient_AtomicOrigins",
         "TestOBL_FutureEarningsSettleWithEvidence",
         "TestOBL_MerchantInsufficient_OriginTraceable",
@@ -822,6 +828,13 @@
         "XG-5"
       ],
       "tests": [
+        "TestD7_AtLimitExactlyIsAllowed",
+        "TestD7_CeilingUnderRepetition",
+        "TestD7_ConcurrentAssignmentsCannotOversubscribe",
+        "TestD7_CumulativeExposureIsCounted",
+        "TestD7_ExposureIsReleasedWhenOrderCloses",
+        "TestD7_OversizedCashOrderIsRefused",
+        "TestD7_WalletOrderIsNotBlocked",
         "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
         "TestEV_MerchantDriverAssignment",
         "TestFIN_CashExposureContract",
@@ -1707,12 +1720,22 @@
       "title": "سقفُ النقد يقيس المحصَّل لا المكشوف",
       "domain": "مال",
       "severity": "HIGH",
+      "fixed": "**السقفُ صار سقفَ تعرّضٍ لا سقفَ ما في الجيب** — `cashbox.GuardTx`: **محصَّلٌ + مُسنَدٌ لم يُحصَّل + الوارد \u003c= السقف.** **وكان `OverLimit` يقارن `held \u003e= limit` وحدَه**، **و`held` لا يرتفع إلّا عند التحصيل** (`CollectTx` لحظةَ التسليم): **فبابان مفتوحان** — **نقدُ الطلب الداخل لا يُحسَب** (قيس: ٢٧٠٬٠٠٠ مرّت والسقفُ ١٠٠٬٠٠٠)، **والمُسنَدُ الذي لم يُسلَّم لا يُرى** (ثلاثةٌ بأربعين ألفاً مرّت كلُّها و`held` صفرٌ في الثلاث). **والصيغةُ الصحيحةُ كانت في مرشَّح الطابور وفي بابِ القبول وغائبةً عن الإسناد اليدويّ** — **وثلاثُ نسخٍ لقاعدةٍ واحدةٍ تنحرف إحداها.** **فصارت في موضعٍ واحدٍ يناديه البابان.** **والفحصُ والكتابةُ في معاملةٍ واحدةٍ بقفلِ سائق** (`pg_advisory_xact_lock`): **وإسنادان متزامنان كانا يقرآن صفراً معاً** — **ونُزع القفلُ فتجاوزت ٩٩ جولةً من ١٠٠.** **والقفلُ على السائق لا على النظام**: سائقان لا ينتظر أحدُهما الآخر. **وما لا نقدَ فيه لا يُحبَس** (`incoming \u003c= 0`)، **وعند السقف تماماً يُقبَل** — **وهو العقدُ القائم لا عقدٌ جديد.** **والسعةُ تعود بإغلاق الطلب** — **وحارسٌ يمنع ولا يُفرِج يشلّ السائق.** **وسُمّي «تعرّضاً» لا «محصَّلاً» قصداً**: **عهدةُ المكتب القادمةُ بندٌ ثالثٌ في الصيغة لا بنيةٌ أخرى.**",
       "tests": [
+        "TestD7_AtLimitExactlyIsAllowed",
+        "TestD7_CeilingUnderRepetition",
+        "TestD7_ConcurrentAssignmentsCannotOversubscribe",
+        "TestD7_CumulativeExposureIsCounted",
+        "TestD7_DriverAcceptObeysSameCeiling",
+        "TestD7_ExposureIsReleasedWhenOrderCloses",
+        "TestD7_OversizedCashOrderIsRefused",
+        "TestD7_WalletOrderIsNotBlocked",
         "TestCENSUS_D7_CashCeilingCountsIncomingOrder",
         "TestSampleFactory_DriverOnShiftWithCash",
-        "TestFIN_CashExposureContract"
+        "TestFIN_CashExposureContract",
+        "TestXG46_DriverAcceptNeedsOneConnection"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D8",
@@ -2834,6 +2857,7 @@
       "severity": "HIGH",
       "fixed": "**أُصلح في دورةِ ٣٩ — وأُثبت أنّه عطبُ منتَجٍ لا بطءُ جهاز.** **بمَسبَحٍ سقفُه وصلةٌ واحدة كان إنشاءُ الطلب يجمد حتماً ثمّ يردّ `500` بعد ثلاثين ثانية** — **بلا `Docker` ولا ويندوز**، **وبالتوقيع نفسِه** (`superfluous WriteHeader … timeout.go:39`). **وسقفُ الإنتاج عشرون** (`database/postgres.go`) — **فعشرون إنشاءً متزامناً تمسك العشرين ثمّ ينتظر كلٌّ وصلةً لا تُفكّ.** **وأُحصيت المواضعُ بالمِجَسّ لا بالقراءة**: `SourcesOf` · `priceItems` · `DeliveryAt`/`ZoneAt` · `open_now` · تحقّقُ واتساب · `maxSources` · `checkOpenLimit` · `cashBlocked` · `extraSourceFee` · `LiveDiscount` · `getByID` (بنودُه وأحداثُه) · `ratingFor` · واللقطةُ الماليّةُ نفسُها. **والعلاجُ ملكيّةٌ لا سعة**: `settings.Store.On(q)` **نسخةٌ تقرأ من منفّذ الوحدة**، **و`Service.on(tx)` نسخةٌ من المحرّك مربوطةٌ بها**، **والمنفّذُ يُمرَّر إلى القرّاء.** **ولا نسخةَ ثانيةً من منطق ولا `…Tx` مضاعفة.** **ولا مَسبَحَ وُسّع ولا مهلةٌ رُفعت.** **وقيس بعده: وصلةٌ واحدة ⇒ `201` في ٧٣ من الألف** (وكان ثلاثين ثانيةً وجموداً). **وشاهدٌ سالب**: **رُدَّت قراءةٌ واحدةٌ إلى المَسبَح فجمد الفحصُ حتماً.** **وأُتِمّ في دورةِ ٤٠ ببندين**: **فرعُ الرفض في `ZoneAt`** («أثمّةَ مناطقُ فاعلة؟») **كان آخرَ قراءةٍ على المَسبَح داخلَ الوحدة، ولا يبلغه المسارُ السويّ** — **فصار على المنفّذ، وقيس: خارجَ التغطية ⇒ `400 out_of_zone` في ٤٨ من الألف على وصلةٍ واحدة** (وبالقديم: جمودٌ ٣٢ ثانية). **وحقنُ عطلٍ في قارئٍ صار على المعاملة**: **ولا محفّزَ قبل `SELECT` في بوستغرس، فأُخفي `order_ratings` نفسُه** — **قراءةٌ تسقط بخطإٍ حقيقيٍّ بعد أن كُتب الطلبُ وبنودُه ولقطتُه.** **وقيس الارتدادُ كلُّه**: صفرُ طلبٍ وبنودٍ وأحداثٍ ولقطةٍ وقيدٍ ماليٍّ وإشعار، **ولا علامةَ تثبيت**، **والإعادةُ تنفّذ مرّةً واحدة.** **وابتلاعُ الخطأ مُصنَّفٌ لا مُهمَل**: `ratingFor` و`LiveDiscount` وقرّاءُ الإعدادات يبتلعون — **و`ErrNoRows` لا يُفسد معاملة**، **وخطأٌ حقيقيٌّ يُفسدها فيسقط التثبيتُ ويرتدّ الكلّ**: **سقوطٌ آمنٌ لا نجاحٌ كاذب** (قيس: `500` لا `201`).",
       "tests": [
+        "TestXG46_DriverAcceptNeedsOneConnection",
         "TestXG46_OrderCreateNeedsOneConnection"
       ],
       "status": "COVERED"
@@ -8065,6 +8089,181 @@
       "orphan": false
     },
     {
+      "name": "TestD7_AtLimitExactlyIsAllowed",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_CeilingUnderRepetition",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_ConcurrentAssignmentsCannotOversubscribe",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_CumulativeExposureIsCounted",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_DriverAcceptObeysSameCeiling",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_ExposureIsReleasedWhenOrderCloses",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-17",
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_OversizedCashOrderIsRefused",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD7_WalletOrderIsNotBlocked",
+      "file": "internal/qa/cash_exposure_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestCITY_001_OtherCityHidden",
       "file": "internal/qa/city_test.go",
       "package": "qa",
@@ -11243,6 +11442,29 @@
         "FINANCIAL",
         "FULL",
         "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG46_DriverAcceptNeedsOneConnection",
+      "file": "internal/qa/one_connection_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "gaps": [
+        "XG-46"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
       ],
       "orphan": false
     },
