@@ -38,7 +38,7 @@ type FlowDecl struct {
 	Gaps     []string
 }
 
-// Flows الخمسةُ والثلاثون.
+// Flows السّتّةُ والثلاثون.
 var Flows = []FlowDecl{
 	{ID: "F-01", Title: "إنشاءُ طلبٍ عاديّ", Actor: "customer", Apps: []string{"customer", "merchant", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D4", "D20", "D21", "D23"}, Risks: []string{"R8"}, Gaps: []string{"XG-9"}},
 	{ID: "F-02", Title: "إنشاءُ طلبٍ خاصّ", Actor: "customer", Apps: []string{"customer", "admin"}, Money: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D6", "D8", "D9", "D22"}, Risks: []string{"R11"}},
@@ -92,6 +92,28 @@ var Flows = []FlowDecl{
 	{ID: "F-35", Title: "خريطةُ العمليات — قراءةُ الأرض وإدارةُ التغطية",
 		Actor: "admin", Apps: []string{"admin"},
 		Severity: "HIGH", Gaps: []string{"XG-20"}},
+
+	// ══════════════════════════════════════════════════════════════
+	// **`F-36` — حذفُ الحساب بطلب صاحبه**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **سُجّل في دورةِ ٥٧** — **لا لأنّه بُني اليوم بل لأنّه لم
+	// يُسجَّل قطّ.**
+	//
+	// **وهو مسارٌ قائمٌ في المنتَج**: رمزُ تأكيدٍ إلى هاتفه
+	// (`RequestAccountDeletion`) ⇒ **فحصُ التزامٍ ومال**
+	// (`checkDeletable`) ⇒ **تجريدٌ وإقفال** (`AnonymizeUser`)
+	// ⇒ **إبطالُ كلّ جلساته** (`revokeAllSessions`).
+	//
+	// **وليس بابَ الأدمن**: **`AdminUpdateUser` لا تقبل `deleted`
+	// أصلاً** — **وحدُّ الملكيّة هذا هو سببُ فصل `XG-49` عن
+	// `XG-39`.**
+	//
+	// **ولا اختبارَ واحدٌ في الشجرة يمرّ به** — **فيُعلَن ناقصَ
+	// الدليل بصوتٍ مسموع، لا يُسكَت عنه بعدم التسجيل.**
+	{ID: "F-36", Title: "حذفُ الحساب بطلب صاحبه",
+		Actor: "customer", Apps: []string{"customer", "driver", "merchant", "rep"},
+		Severity: "HIGH", Gaps: []string{"XG-49"}},
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1011,6 +1033,45 @@ var Gaps = []GapDecl{
 			"(`R24`/`XG-44`)."},
 
 	// ══════════════════════════════════════════════════════════════
+	// **`XG-49` — الحذفُ الذاتيُّ يُبطل الجلسات بلا حارس**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **فُصلت عن `XG-39` في دورةِ ٥٧** — **بحدّ الملكيّة لا تخفيفاً
+	// للطلب.**
+	//
+	// # لماذا فُصلت
+	//
+	// **`XG-39` تملك بابَ الأدمن**: `AdminUpdateUser` — **ومدخلاتُه
+	// `active` و`suspended` و`blocked` لا غير.** **فـ`deleted` لا
+	// تُصنع منه أصلاً** (قِيس: `400 validation`).
+	//
+	// **وتُصنع من الحذف الذاتيّ وحدَه**: `ConfirmAccountDeletion` ⇒
+	// `AnonymizeUser` — **ويُبطل جلساتِه بدالّةٍ أخرى**
+	// (`revokeAllSessions`، **وهي تكتب مفاتيحَ `Redis` أيضاً**)
+	// **لا بفرع `XG-39`.**
+	//
+	// # وهي فجوةُ دليلٍ لا عيبُ منتَج
+	//
+	// **السلوكُ قائمٌ في المصدر** — **ولا حارسَ انحدارٍ دائمٌ يمسّه**:
+	// **ولا اختبارَ واحدٌ في الشجرة يمرّ بمسار الحذف الذاتيّ.**
+	// **فمن نزع الإبطالَ غداً لم يسقط له شيء** — **وجلسةٌ تبقى بعد
+	// حذف الحساب أمرٌ أمنيّ.**
+	//
+	// # وما يجب أن يُثبته حارسُها
+	//
+	//	حذفٌ ذاتيٌّ بالمسار الحقيقيّ (رمزُ تأكيدٍ ⇒ تجريد)
+	//	كلُّ عائلةِ جلسةٍ قائمةٍ تُبطَل
+	//	رمزُ الوصول القديمُ لا يعمل
+	//	رمزُ التجديد القديمُ لا يعمل
+	//	ولا دخولَ جديدٌ بالهويّة المحذوفة
+	//	ولا يُخترَع «تفعيلٌ» ليس فعلاً في المنتَج
+	//
+	// **ولم يُبنَ مِسنَدُ رمز التأكيد في دورةِ ٥٧ بقرار المالك** —
+	// **عملُ دليلٍ ما قبل التجميد.**
+	{ID: "XG-49", Title: "الحذفُ الذاتيُّ يُبطل الجلسات ولا حارسَ دائمٌ يُثبته",
+		Severity: "HIGH"},
+
+	// ══════════════════════════════════════════════════════════════
 	// **`XG-46` — طلبٌ يمسك معاملةً ثمّ يطلب اتّصالاً ثانياً**
 	// ══════════════════════════════════════════════════════════════
 	//
@@ -1409,8 +1470,10 @@ var Gaps = []GapDecl{
 		// **دورةُ إصلاحٍ ١٧ · ٢٠٢٦-٠٩-٠٧ — بعقدِ مالكٍ صريح.**
 		Fixed: "**الإيقافُ حالُ عملٍ لا حالُ أمن.** " +
 			"`AdminUpdateUser` كانت تُبطل كلَّ التوكنات عند أيّ حالٍ " +
-			"غيرِ `active` — **وصارت تقصر ذلك على `blocked` و" +
-			"`deleted`.** **والإبطالُ الصريحُ باقٍ**: خروجٌ · إخراجٌ " +
+			"غيرِ `active` — **وصارت تقصر ذلك على `blocked`**، " +
+			"**وهو وحدَه ما يُبطل من هذا الباب**: **مدخلاتُ الباب " +
+			"`active` و`suspended` و`blocked` لا غير.** " +
+			"**والإبطالُ الصريحُ باقٍ**: خروجٌ · إخراجٌ " +
 			"شامل · إعادةُ كلمة · أحداثُ أمن. " +
 			"**ومهلةُ رمز الوصول ربعُ ساعة** — **ومنعُ التجديد يقتل " +
 			"الاستثناءَ بعدها ولو لم يُبطَل شيء**، **وأسوأُ منه أنّ " +
@@ -1428,7 +1491,15 @@ var Gaps = []GapDecl{
 			"جلسةٌ مُبطَلةٌ لموقوفٍ 401 · حظرٌ ⇒ صفوفٌ حيّةٌ=0 ورفضٌ · " +
 			"تفعيلٌ بعد حظرٍ لا يبعث ما أُبطل · " +
 			"**وسباقُ حظرٍ وتجديدٍ (تداخلٌ مقيسٌ=2): الرمزُ الذي خرج " +
-			"لا يعمل بعده.**"},
+			"لا يعمل بعده.** " +
+			"**وحدُّ الملكيّة** (دورةُ ٥٧): **`deleted` ليست من " +
+			"مدخلات هذا الباب** — **تُصنع من الحذف الذاتيّ وحدَه** " +
+			"(`AnonymizeUser`)، **وله إبطالُه الخاصّ** " +
+			"(`revokeAllSessions`) **لا هذا الفرع.** **وشرطُ " +
+			"`deleted` القائمُ في `AdminUpdateUser` لا يُبلَغ**: " +
+			"**القائمةُ تردّه بـ400 قبله، ونُزع في شاهدٍ سالبٍ فلم " +
+			"يسقط حارسٌ واحد.** **ودليلُ الحذف الذاتيّ فجوةٌ قائمةٌ " +
+			"بذاتها لا تُطوى هنا**: `XG-49`."},
 
 	// ══════════════════════════════════════════════════════════════
 	// **`XG-37` — عدّادان للموانع في تقريرٍ واحد**
@@ -2711,15 +2782,15 @@ var TestMap = map[string]TestDecl{
 	"TestR16_STG_RedisOutageAuthorityHolds":                     stagingTest([]string{"R16"}, nil),
 
 	// ── الإيقافُ والجلسة (دورةُ إصلاحٍ ١٧) — `XG-39` ──────────────
-	"TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope":       sessionTest(),
-	"TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity": sessionTest(),
-	"TestXG39_S5_SuspendedRefreshPreservesSameSession":           sessionTest(),
-	"TestXG39_S6S7_SuspendedCannotOpenNewSession":                sessionTest(),
-	"TestXG39_S8_RevokedSuspendedSessionStaysDenied":             sessionTest(),
-	"TestXG39_S9S10_BlockRevokesEverything":                      sessionTest(),
-	"TestXG39_S11S12_ReactivationDoesNotResurrect":               sessionTest(),
-	"TestXG39_C1_SuspendVsTransition":                            sessionTest(),
-	"TestXG39_C2_BlockVsRefresh":                                 sessionTest(),
+	"TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope":       xg39Test(),
+	"TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity": xg39Test(),
+	"TestXG39_S5_SuspendedRefreshPreservesSameSession":           xg39Test(),
+	"TestXG39_S6S7_SuspendedCannotOpenNewSession":                xg39Test(),
+	"TestXG39_S8_RevokedSuspendedSessionStaysDenied":             xg39Test(),
+	"TestXG39_S9S10_BlockRevokesEverything":                      xg39Test(),
+	"TestXG39_S11S12_ReactivationDoesNotResurrect":               xg39Test(),
+	"TestXG39_C1_SuspendVsTransition":                            xg39Test(),
+	"TestXG39_C2_BlockVsRefresh":                                 xg39Test(),
 	"TestXG39_WS_HandshakeFollowsStatusModel":                    sessionTest(),
 
 	// ── إعادةُ الكلمة والاسترداد (دورةُ إصلاحٍ ١٨) — `R13` ────────
@@ -3271,6 +3342,23 @@ func sessionTest() TestDecl {
 		Risks: []string{"R16"},
 		Modes: []string{"SECURITY", "FAILURE", "FULL", "RELEASE"},
 	}
+}
+
+// xg39Test **شهادةُ `XG-39`** — **بقاءُ الجلسة وتجديدُها والدخولُ
+// والإبطالُ بالحظر.**
+//
+// # ولماذا مُعينٌ ثانٍ
+//
+// **ولا تُضاف الفجوةُ إلى `sessionTest` نفسِه**: **يُعلَن به ثمانيةُ
+// فحوصِ `R16`** — **وربطُها بـ`XG-39` دليلٌ كاذبٌ لا تُثبته.**
+// **وحارسٌ يُنسَب إليه ما لم يقِسه أسوأُ من غيابه.**
+//
+// **ولا يُنسَب إليه فحصُ المصافحة** (`TestXG39_WS_…`): **ما يؤكّده
+// تخويلُ بثٍّ بحال الحساب** — **وذاك `D14`.**
+func xg39Test() TestDecl {
+	d := sessionTest()
+	d.Gaps = []string{"XG-39"}
+	return d
 }
 
 // alertTest حارسُ ديمومةِ نيّةِ الإنذار — `PF-07` · `R22`.

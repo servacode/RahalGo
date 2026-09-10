@@ -55,10 +55,10 @@ ORPHAN     = 582
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 35 | 32 | 3 |
+| **التدفّقات** | 36 | 32 | 4 |
 | **العيوب** | 27 | 21 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 46 | 27 | 19 |
+| **فجواتُ العقد** | 47 | 28 | 19 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -137,13 +137,14 @@ ORPHAN     = 582
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
 | **XG-47** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-48** | `HIGH` | — | `COVERED` | `TestXG48_CustomerCancelNeedsOneConnection` · `TestXG48_DeliverySettlementNeedsOneConnection` · `TestXG48_FailedDeliveryCompensationNeedsOneConnection` · `TestXG48_TransitionBothModesNeedOneConnection` · `TestXG48_TransitionUnderRepetitionOnOneConnection` |
+| **XG-49** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_DriverAcceptNeedsOneConnection` · `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `COVERED` | `TestXG45_EveryMobileReachableCodeHasArabic` |
 | **XG-42** | `MEDIUM` | — | `COVERED` | `TestXG42_CapabilityUnionCustomRoleAndRevoke` · `TestXG42_ContactFieldsFollowCapabilityNotRoute` |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-38** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-40** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-39** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
+| **XG-39** | `HIGH` | — | `COVERED` | `TestXG39_C1_SuspendVsTransition` · `TestXG39_C2_BlockVsRefresh` · `TestXG39_S11S12_ReactivationDoesNotResurrect` · `TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope` · `TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity` · `TestXG39_S5_SuspendedRefreshPreservesSameSession` · `TestXG39_S6S7_SuspendedCannotOpenNewSession` · `TestXG39_S8_RevokedSuspendedSessionStaysDenied` · `TestXG39_S9S10_BlockRevokesEverything` |
 | **XG-37** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-33** | `CRITICAL` | — | `COVERED` | `TestIDEM_AllProtectedPathsUseCoordinator` · `TestIDEM_T10_CleanupSparesLiveClaim` · `TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged` · `TestIDEM_T1_ConcurrentDuplicateExecutesOnce` · `TestIDEM_T2_OrphanBeforeTxIsReclaimed` · `TestIDEM_T3_StaleOwnerIsFenced` · `TestIDEM_T4_ActiveClaimCannotBeStolen` · `TestIDEM_T5_BusinessRollbackLeavesNothing` · `TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate` · `TestIDEM_T8_TwoReclaimersExecuteOnce` · `TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim` · `TestFAIL_C06_OrphanBeforeCommitBlocksOwner` · `TestFAIL_C06_TwoReclaimersExecuteNothing` · `TestIDEM_CleanupSparesLiveClaim` · `TestIDEM_CommittedBeforeResultDoesNotDuplicate` · `TestIDEM_LostResponseReplays` |
 | **XG-31** | `CRITICAL` | — | `COVERED` | `TestOBL_BothInsufficient_AtomicOrigins` · `TestOBL_FutureEarningsSettleWithEvidence` · `TestOBL_MerchantInsufficient_OriginTraceable` · `TestOBL_MerchantSufficient_NoObligation` · `TestOBL_MultipleObligationsFIFO` · `TestOBL_RepAvailable_NoObligation` · `TestOBL_RepWithdrawn_OriginTraceable` · `TestOBL_ReplayCreatesNoDuplicate` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
@@ -154,7 +155,7 @@ ORPHAN     = 582
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 18
+COVERAGE GAPS    = 19
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -168,6 +169,7 @@ COVERAGE GAPS    = 18
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
+- F-36 (حذفُ الحساب بطلب صاحبه) — لا اختبارَ مرتبطٌ به
 - R1 — لا اختبارَ يحسمه بعد
 - R12 — لا اختبارَ يحسمه بعد
 - R17 — لا اختبارَ يحسمه بعد
