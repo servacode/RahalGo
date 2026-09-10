@@ -81,7 +81,27 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	//
 	// وبلا مخزن إعدادات يُفترض «المتجر يدير»: هو الأصل، **والافتراضُ عند
 	// الجهل يجب أن يكون أقلَّ الوضعين تدخّلاً من المنصة**.
-	selfManage := s.MerchantsSelfManage(ctx)
+	// ══════════════════════════════════════════════════════════════════
+	// **وما يُقرأ داخلَ المعاملة يُقرأ منها** — `XG-48`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكانت هذه القراءاتُ تذهب إلى المَسبَح والمعاملةُ في اليد**:
+	// نمطُ الإدارة · ومهلةُ تدارُك الزبون · ونسبةُ عمولة المتجر ·
+	// ونسبةُ تعويض السائق. **فالنداءُ يمسك وصلةً ويطلب ثانية.**
+	//
+	// **وسقفُ المَسبَح في الإنتاج عشرون**: **عشرون انتقالاً متزامناً
+	// تمسك العشرين ثمّ يطلب كلٌّ منها ثانيةً** — **جمودٌ لا يفكّه
+	// إلّا انتهاءُ ما لا يستطيع أن ينتهي.**
+	//
+	// **وقيس بمَسبَحٍ سقفُه واحد**: **جمد بابُ الانتزاع حتّى انفجرت
+	// مهلتُه** (دورةُ ٤٩).
+	//
+	// **والآلةُ نفسُها التي أصلحت `CreateTx`** (دورةُ ٣٩): `s.on(tx)`
+	// **تبني وحدةً قراءتُها من المعاملة** — **ولا دالّةَ `…Tx`
+	// موازيةٌ تُكتب ولا معجمَ إعداداتٍ ثانٍ.**
+	unit := s.on(tx)
+
+	selfManage := unit.MerchantsSelfManage(ctx)
 	effRoles := rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)
 	if !canTransition(kind, from, to, effRoles) {
 		return nil, ErrBadTransition
@@ -133,7 +153,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **والسائقُ يُعوَّض عن مشواره** كما لو فشل: قاد وعاد بلا شيء، **والذنبُ
 	// ليس ذنبَه.**
 	if to == StFailed && from == StAtPickup {
-		return s.merchantBlocked(ctx, tx, orderID, actorID, from, failReason, note, driverID, deliveryFee)
+		return unit.merchantBlocked(ctx, tx, orderID, actorID, from, failReason, note, driverID, deliveryFee)
 	}
 
 	set := `status = $2, updated_at = now()`
@@ -278,7 +298,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			SELECT accepted_at IS NOT NULL
 			   AND accepted_at > now() - make_interval(secs => $2)
 			FROM orders WHERE id = $1`,
-			orderID, s.cancelWindowSec(ctx)).Scan(&withinWindow); err != nil {
+			orderID, unit.cancelWindowSec(ctx)).Scan(&withinWindow); err != nil {
 			return nil, err
 		}
 		if !withinWindow {
@@ -290,7 +310,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// أو لا يتم شيء. كانت تُنفَّذ بعد الإيداع وأخطاؤها تُبتلع في السجل، فيصير
 	// الطلب مُسلَّماً بلا عمولة ولا نقد مقيَّد — خلل مالي صامت لا أثر له.
 	var done settled
-	if err := s.settle(ctx, tx, settlement{
+	if err := unit.settle(ctx, tx, settlement{
 		orderID: orderID, from: from, to: to, actorID: actorID,
 		customerID: customerID, driverID: driverID,
 		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,

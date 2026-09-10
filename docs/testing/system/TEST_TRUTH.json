@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 288,
-    "test_funcs": 1067
+    "test_files": 289,
+    "test_funcs": 1072
   },
   "flows": [
     {
@@ -265,7 +265,8 @@
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_RestOrderPrivacyMatrix",
         "TestD21_RestPrivacyUnderRepetition",
-        "TestD23_CrossChannelPrivacyParity"
+        "TestD23_CrossChannelPrivacyParity",
+        "TestXG48_TransitionBothModesNeedOneConnection"
       ],
       "status": "COVERED"
     },
@@ -410,7 +411,9 @@
         "TestRACE_MaxActiveOrders",
         "TestRACE_TwoDriversSameOrder",
         "TestD21_RestOrderPrivacyMatrix",
-        "TestD23_CrossChannelPrivacyParity"
+        "TestD23_CrossChannelPrivacyParity",
+        "TestXG48_TransitionBothModesNeedOneConnection",
+        "TestXG48_TransitionUnderRepetitionOnOneConnection"
       ],
       "status": "COVERED"
     },
@@ -571,7 +574,8 @@
         "TestXG22_T6_NormalActorUnchanged",
         "TestXG22_T7_OpsCanStillResolveTheOrder",
         "TestXG22_T8_BlockedHasNoException",
-        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles",
+        "TestXG48_DeliverySettlementNeedsOneConnection"
       ],
       "status": "COVERED"
     },
@@ -667,6 +671,7 @@
         "TestFIN_XG10_ConservationAcrossRefund",
         "TestFIN_XG10_DebtSettlementArithmetic",
         "TestFIN_XG10_RefundReplayDoesNotDoubleCharge",
+        "TestXG48_DeliverySettlementNeedsOneConnection",
         "TestFIN_R4_TreasuryNeverWritesOutsideTransaction",
         "TestFIN_R4_TreasurySharesTheOperationTransaction"
       ],
@@ -728,8 +733,10 @@
         "L5",
         "L8"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestXG48_FailedDeliveryCompensationNeedsOneConnection"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-17",
@@ -765,7 +772,8 @@
         "TestFIN_XG10_DebtSettlementArithmetic",
         "TestFIN_XG10_RefundReplayDoesNotDoubleCharge",
         "TestD21_RestOrderPrivacyMatrix",
-        "TestD21_RestPrivacyUnderRepetition"
+        "TestD21_RestPrivacyUnderRepetition",
+        "TestXG48_CustomerCancelNeedsOneConnection"
       ],
       "status": "COVERED"
     },
@@ -2850,6 +2858,20 @@
       "severity": "MEDIUM",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-48",
+      "title": "وحدةُ الانتقال تمسك معاملةً وتقرأ الإعداداتِ من المَسبَح",
+      "severity": "HIGH",
+      "fixed": "**قراءاتُ الوحدة صارت من مُنفِّذها** — `unit := s.on(tx)` في مفتتح `transitionTx`، **وهي الآلةُ نفسُها التي أصلحت `CreateTx` في دورةِ ٣٩** (`settings.Store.On(q)`): **ولا دالّةَ `…Tx` موازيةٌ تُكتب ولا معجمَ إعداداتٍ ثانٍ.** **وثلاثةُ مواضعَ لا واحد**: نمطُ الإدارة · ومهلةُ تدارُك الزبون · ونسبةُ تعويض السائق (عبر `settle`). **وقيس بمَسبَحٍ سقفُه واحدةٌ على المسار الحقيقيّ**: **جمد بابُ الانتزاع حتّى انفجرت مهلتُه، وصار يردّ في ٤٨ جزءاً من الألف** — **ومئةُ جولةٍ بلا جمود.** **والفروعُ مُشيت كلُّها**: نمطا الإدارة، وإلغاءُ الزبون، والتسليمُ والتسوية، والتعذّرُ والتعويض. **وشاهدان سالبان**: أُعيدت قراءةُ نمط الإدارة إلى المَسبَح فجمدت الأبوابُ الثلاثة، وأُعيدت `settle` فجمد فرعُ التعويض ٣٢ ثانية. **ولا خروجَ إلى الشبكة نُقل إلى داخل المعاملة**: البثُّ والإشعارُ والتحويلُ التلقائيُّ بعد التثبيت كما كانت (`R24`/`XG-44`).",
+      "tests": [
+        "TestXG48_CustomerCancelNeedsOneConnection",
+        "TestXG48_DeliverySettlementNeedsOneConnection",
+        "TestXG48_FailedDeliveryCompensationNeedsOneConnection",
+        "TestXG48_TransitionBothModesNeedOneConnection",
+        "TestXG48_TransitionUnderRepetitionOnOneConnection"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-46",
@@ -15270,6 +15292,113 @@
       "orphan": false
     },
     {
+      "name": "TestXG48_CustomerCancelNeedsOneConnection",
+      "file": "internal/qa/transition_one_conn_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-17"
+      ],
+      "gaps": [
+        "XG-48"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG48_DeliverySettlementNeedsOneConnection",
+      "file": "internal/qa/transition_one_conn_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-13",
+        "F-14"
+      ],
+      "gaps": [
+        "XG-48"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG48_FailedDeliveryCompensationNeedsOneConnection",
+      "file": "internal/qa/transition_one_conn_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-16"
+      ],
+      "gaps": [
+        "XG-48"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG48_TransitionBothModesNeedOneConnection",
+      "file": "internal/qa/transition_one_conn_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-04",
+        "F-08"
+      ],
+      "gaps": [
+        "XG-48"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG48_TransitionUnderRepetitionOnOneConnection",
+      "file": "internal/qa/transition_one_conn_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "gaps": [
+        "XG-48"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless",
       "file": "internal/qa/treasury_boundary_test.go",
       "package": "qa",
@@ -17356,7 +17485,6 @@
     "D19 — لا اختبارَ انحدارٍ بعد",
     "D3 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
-    "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",

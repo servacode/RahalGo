@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **288** |
-| دوالُّ اختبار | **1067** |
+| ملفّاتُ اختبار | **289** |
+| دوالُّ اختبار | **1072** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1067
-MAPPED     = 365
+TOTAL      = 1072
+MAPPED     = 370
 INFRA      = 120
 ORPHAN     = 582
 ```
@@ -55,10 +55,10 @@ ORPHAN     = 582
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 35 | 30 | 5 |
+| **التدفّقات** | 35 | 31 | 4 |
 | **العيوب** | 27 | 21 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 45 | 26 | 19 |
+| **فجواتُ العقد** | 46 | 27 | 19 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -136,6 +136,7 @@ ORPHAN     = 582
 | **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
 | **XG-47** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
+| **XG-48** | `HIGH` | — | `COVERED` | `TestXG48_CustomerCancelNeedsOneConnection` · `TestXG48_DeliverySettlementNeedsOneConnection` · `TestXG48_FailedDeliveryCompensationNeedsOneConnection` · `TestXG48_TransitionBothModesNeedOneConnection` · `TestXG48_TransitionUnderRepetitionOnOneConnection` |
 | **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_DriverAcceptNeedsOneConnection` · `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `COVERED` | `TestXG45_EveryMobileReachableCodeHasArabic` |
 | **XG-42** | `MEDIUM` | — | `COVERED` | `TestXG42_CapabilityUnionCustomRoleAndRevoke` · `TestXG42_ContactFieldsFollowCapabilityNotRoute` |
@@ -153,7 +154,7 @@ ORPHAN     = 582
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 20
+COVERAGE GAPS    = 19
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -165,7 +166,6 @@ COVERAGE GAPS    = 20
 - D19 — لا اختبارَ انحدارٍ بعد
 - D3 — لا اختبارَ انحدارٍ بعد
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
-- F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به
 - F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
