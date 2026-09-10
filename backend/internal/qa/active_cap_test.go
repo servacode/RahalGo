@@ -36,6 +36,14 @@ func newCapFixture(t *testing.T, h *Harness, limit int64) capFixture {
 	f := h.Factory()
 	treasury(t, h)
 	h.Setting("drivers.max_active_orders", fmt.Sprint(limit))
+	// **وسقفُ المفتوح للزبون يُلغى هنا** — `D4` · دورةُ ٦١.
+	//
+	// **وهذه الفحوصُ تقيس سقفَ السائق لا سقفَ الزبون** — **تفتح
+	// عشراتِ الطلبات لزبونٍ واحدٍ لتُشبعه.** **وكان سقفُ الزبون
+	// معطَّلاً بإطفاء واتساب فمرّت**، **فلمّا صار حارساً قائماً
+	// بنفسه ردّها.** **وصفرٌ يُلغي الحدَّ بعقد الإعداد** — **ولا
+	// يُضعَّف الحارسُ لأجل مِسنَد.**
+	h.Setting("orders.max_open_per_customer", "0")
 	h.Setting("drivers.cash_limit", "900000000")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	return capFixture{
@@ -113,6 +121,7 @@ func TestD24_ConcurrentAcceptCannotExceedCap(t *testing.T) {
 	f := h.Factory()
 	treasury(t, h)
 	h.Setting("drivers.max_active_orders", "1")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.cash_limit", "900000000")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	cust := h.Customer()
@@ -168,6 +177,7 @@ func TestD24_MixedPathRaceCannotExceedCap(t *testing.T) {
 	f := h.Factory()
 	treasury(t, h)
 	h.Setting("drivers.max_active_orders", "1")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.cash_limit", "900000000")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	cust := h.Customer()
@@ -299,6 +309,7 @@ func TestD24_DifferentDriversAreNotSerialized(t *testing.T) {
 	f := h.Factory()
 	treasury(t, h)
 	h.Setting("drivers.max_active_orders", "1")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.cash_limit", "900000000")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	cust := h.Customer()
@@ -365,6 +376,7 @@ func TestD24_ComposesWithCashCeiling(t *testing.T) {
 
 	// ── ١ ── السعةُ تتّسع والنقدُ لا ──────────────────────────────
 	h.Setting("drivers.max_active_orders", "5")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.cash_limit", "100000")
 	drvA := f.Driver(OnShift())
 	bigCash := queuedOrder(t, h, cust, 90_000)
@@ -385,6 +397,7 @@ func TestD24_ComposesWithCashCeiling(t *testing.T) {
 
 	// ── ٢ ── والنقدُ يتّسع والسعةُ لا ─────────────────────────────
 	h.Setting("drivers.max_active_orders", "1")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.cash_limit", "900000000")
 	drvB := f.Driver(OnShift())
 	first := queuedOrder(t, h, cust, 1000)
@@ -404,6 +417,7 @@ func TestD24_ComposesWithCashCeiling(t *testing.T) {
 
 	// ── ٣ ── وكلاهما يتّسع ────────────────────────────────────────
 	h.Setting("drivers.max_active_orders", "5")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	drvC := f.Driver(OnShift())
 	fine := queuedOrder(t, h, cust, 1000)
 	code, msg = assign(fine, drvC.ID)
@@ -435,6 +449,7 @@ func TestD24_LoweringLimitBlocksNewOnly(t *testing.T) {
 
 	// **ثمّ يُنقَص السقفُ تحت العدد.**
 	h.Setting("drivers.max_active_orders", "1")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	after := activeCount(t, h, fx.Driver.ID)
 	t.Logf("D24 — نشطٌ قبل الخفض %d · بعده %d (السقفُ صار 1)", before, after)
 	if after != before {
@@ -459,6 +474,7 @@ func TestD24_ReassignmentChecksTargetCapacity(t *testing.T) {
 	f := h.Factory()
 	treasury(t, h)
 	h.Setting("drivers.max_active_orders", "1")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.cash_limit", "900000000")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	admin := h.NewUser("admin")

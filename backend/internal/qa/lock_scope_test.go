@@ -184,6 +184,15 @@ func abandoned(t *testing.T, h *Harness) []suspect {
 func TestXG34_NoTransactionIsLeftOpen(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
+	// **وسقفُ المفتوح للزبون يُلغى هنا** — `D4` · دورةُ ٦١.
+	//
+	// **وهذا الفاحصُ يقيس معاملةً مهجورةً لا سقفَ زبون** — **يفتح
+	// خمسةَ طلباتٍ لزبونٍ واحدٍ ليُشغّل مسارَ الإنشاء مرّاتٍ.**
+	// **وكان سقفُ الزبون معطَّلاً بإطفاء واتساب فمرّت** — **فلمّا
+	// صار حارساً قائماً بنفسه ردَّ الرابع.**
+	//
+	// **وصفرٌ يُلغي الحدَّ بعقد الإعداد.**
+	h.Setting("orders.max_open_per_customer", "0")
 	cust := h.Customer()
 	item := h.NewItem(1000)
 

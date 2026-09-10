@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 295,
-    "test_funcs": 1117
+    "test_files": 296,
+    "test_funcs": 1131
   },
   "flows": [
     {
@@ -84,6 +84,20 @@
         "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
         "TestR24_F6_NoMerchantPhoneAfterAccept",
         "TestR24_F7_DispatchFailureIsVisible",
+        "TestD4_BoundaryAtLimit",
+        "TestD4_CapHoldsWhenWhatsAppIsOff",
+        "TestD4_CapIndependentOfWhatsAppSetting",
+        "TestD4_ClosingAnOrderReleasesCapacity",
+        "TestD4_ConcurrentCreatesCannotExceedCap",
+        "TestD4_ConcurrentCustomCreatesCannotExceedCap",
+        "TestD4_CustomOrdersShareTheSameCap",
+        "TestD4_DifferentCustomersAreNotSerialized",
+        "TestD4_DistinctKeysAreCapped",
+        "TestD4_IdempotentRetryRecoversSameOrder",
+        "TestD4_LoweringCapKeepsExistingOrders",
+        "TestD4_RejectedCreateLeavesNothing",
+        "TestD4_StressReleaseAndIdempotency",
+        "TestD4_StressSequentialCap",
         "TestCENSUS_D4_OpenLimitNestedInWhatsAppGate",
         "TestEV_OrderAudience",
         "TestEV_MerchantRealtimePrivacy",
@@ -171,6 +185,20 @@
         "TestD22_CustomOrderRoomSetIsComplete",
         "TestD22_OwnerDeliveryUnderRepetition",
         "TestD22_OwnerPayloadObeysCustomerPrivacy",
+        "TestD4_BoundaryAtLimit",
+        "TestD4_CapHoldsWhenWhatsAppIsOff",
+        "TestD4_CapIndependentOfWhatsAppSetting",
+        "TestD4_ClosingAnOrderReleasesCapacity",
+        "TestD4_ConcurrentCreatesCannotExceedCap",
+        "TestD4_ConcurrentCustomCreatesCannotExceedCap",
+        "TestD4_CustomOrdersShareTheSameCap",
+        "TestD4_DifferentCustomersAreNotSerialized",
+        "TestD4_DistinctKeysAreCapped",
+        "TestD4_IdempotentRetryRecoversSameOrder",
+        "TestD4_LoweringCapKeepsExistingOrders",
+        "TestD4_RejectedCreateLeavesNothing",
+        "TestD4_StressReleaseAndIdempotency",
+        "TestD4_StressSequentialCap",
         "TestCENSUS_D6_CustomOrderSkipsCashBan",
         "TestCENSUS_D6_D9_CustomOrderCreationGuards",
         "TestEV_CustomOrderOwnerRealtime",
@@ -1769,10 +1797,25 @@
       "title": "سقفُ المفتوح داخلَ بوّابة واتساب",
       "domain": "الطلبات · إساءة",
       "severity": "HIGH",
+      "fixed": "**سقفُ المفتوح صار حارسَ قبولٍ قائماً بنفسه** — **وكان داخلَ `if RequireWhatsApp`**: **فإطفاءُ توثيق واتساب يُطفئ السقفَ معه.** **وقيس: السقفُ اثنان وواتساب مطفأ ⇒ خمسُ محاولاتٍ مرّت كلُّها (٢٠١×٥) والمفتوحُ خمسة.** **وهما حارسان لا حارس**: **التوثيقُ شرطٌ اختياريٌّ يُشغّله المالك، والسقفُ ثابتُ قبولٍ لا يُساوم عليه إعداد.** **وعطبٌ ثانٍ في الجذر نفسِه**: **العدُّ ثمّ الإدراج ليس ذرّيّاً** — **وقيس: السقفُ واحدٌ وطلبان متزامنان ⇒ مفتوحان.** **فأُخذ قفلُ قبولٍ للزبون وحدَه** (`customer-admit:` — **وفضاؤه غيرُ فضاء `driver-admit:`**) **داخلَ المعاملة**: **يُفكّ بالتثبيت أو بالنقض فلا خانةَ محجوزةٌ بلا طلب**، **وزبونان لا يتسلسلان.** **والقاعدةُ واحدةٌ لبابين**: **بابُ الخاصّ كان يتجاوزها بالتزامن في ثلاثين جولةً من ثلاثين** — **فأُخذ القفلُ نفسُه هناك**، **ولا يُترك بابٌ يلتفّ به على سقفٍ واحد.** **والمقيسُ بعدُ**: **٢٠١·٢٠١·٤٠٩×٣ · وواتساب مشتغلٌ يعطي السقفَ نفسَه · وغيرُ الموثَّق يُردّ ٤٠٣ `whatsapp_required` لا بعقد السقف · والإغلاقُ يردّ الخانة · وخفضُ السقف لا يُلغي قائماً · وإعادةُ المفتاح نفسِه تسترجع الطلبَ ولا تُردّ · ومفتاحٌ متمايزٌ يُردّ · والمردودُ لا يترك طلباً ولا مالاً ولا حدثاً.** **وتكرارٌ: ×١٠٠ و×٥٠ و×١٠٠ و×١٠٠ و×٣٠ بلا التفافٍ ولا ردٍّ كاذبٍ ولا ازدواج.**",
       "tests": [
+        "TestD4_BoundaryAtLimit",
+        "TestD4_CapHoldsWhenWhatsAppIsOff",
+        "TestD4_CapIndependentOfWhatsAppSetting",
+        "TestD4_ClosingAnOrderReleasesCapacity",
+        "TestD4_ConcurrentCreatesCannotExceedCap",
+        "TestD4_ConcurrentCustomCreatesCannotExceedCap",
+        "TestD4_CustomOrdersShareTheSameCap",
+        "TestD4_DifferentCustomersAreNotSerialized",
+        "TestD4_DistinctKeysAreCapped",
+        "TestD4_IdempotentRetryRecoversSameOrder",
+        "TestD4_LoweringCapKeepsExistingOrders",
+        "TestD4_RejectedCreateLeavesNothing",
+        "TestD4_StressReleaseAndIdempotency",
+        "TestD4_StressSequentialCap",
         "TestCENSUS_D4_OpenLimitNestedInWhatsAppGate"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D5",
@@ -2190,6 +2233,20 @@
         "F-24"
       ],
       "tests": [
+        "TestD4_BoundaryAtLimit",
+        "TestD4_CapHoldsWhenWhatsAppIsOff",
+        "TestD4_CapIndependentOfWhatsAppSetting",
+        "TestD4_ClosingAnOrderReleasesCapacity",
+        "TestD4_ConcurrentCreatesCannotExceedCap",
+        "TestD4_ConcurrentCustomCreatesCannotExceedCap",
+        "TestD4_CustomOrdersShareTheSameCap",
+        "TestD4_DifferentCustomersAreNotSerialized",
+        "TestD4_DistinctKeysAreCapped",
+        "TestD4_IdempotentRetryRecoversSameOrder",
+        "TestD4_LoweringCapKeepsExistingOrders",
+        "TestD4_RejectedCreateLeavesNothing",
+        "TestD4_StressReleaseAndIdempotency",
+        "TestD4_StressSequentialCap",
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestIDEM_AllProtectedPathsUseCoordinator",
         "TestIDEM_T10_CleanupSparesLiveClaim",
@@ -9883,6 +9940,384 @@
       ],
       "evidence": [
         "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_BoundaryAtLimit",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_CapHoldsWhenWhatsAppIsOff",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_CapIndependentOfWhatsAppSetting",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_ClosingAnOrderReleasesCapacity",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_ConcurrentCreatesCannotExceedCap",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_ConcurrentCustomCreatesCannotExceedCap",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_CustomOrdersShareTheSameCap",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_DifferentCustomersAreNotSerialized",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_DistinctKeysAreCapped",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_IdempotentRetryRecoversSameOrder",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_LoweringCapKeepsExistingOrders",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_RejectedCreateLeavesNothing",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_StressReleaseAndIdempotency",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD4_StressSequentialCap",
+      "file": "internal/qa/d4_open_limit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "defects": [
+        "D4"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
       ],
       "orphan": false
     },

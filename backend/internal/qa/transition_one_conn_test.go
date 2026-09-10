@@ -200,6 +200,7 @@ func TestXG48_TransitionUnderRepetitionOnOneConnection(t *testing.T) {
 	treasury(t, h)
 	h.Setting("drivers.cash_limit", "9000000")
 	h.Setting("drivers.max_active_orders", "500")
+	h.Setting("orders.max_open_per_customer", "0") // D4 · دورةُ ٦١
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	cust := h.Customer()
 	drv := f.Driver(OnShift())

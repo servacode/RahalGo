@@ -33,6 +33,14 @@ func newCashFixture(t *testing.T, h *Harness, limit int64) cashFixture {
 	treasury(t, h)
 	h.Setting("drivers.cash_limit", fmt.Sprint(limit))
 	h.Setting("drivers.max_active_orders", "50")
+	// **وسقفُ المفتوح للزبون يُلغى هنا** — `D4` · دورةُ ٦١.
+	//
+	// **وهذه الفحوصُ تقيس سقفَ السائق لا سقفَ الزبون** — **تفتح
+	// عشراتِ الطلبات لزبونٍ واحدٍ لتُشبعه.** **وكان سقفُ الزبون
+	// معطَّلاً بإطفاء واتساب فمرّت**، **فلمّا صار حارساً قائماً
+	// بنفسه ردّها.** **وصفرٌ يُلغي الحدَّ بعقد الإعداد** — **ولا
+	// يُضعَّف الحارسُ لأجل مِسنَد.**
+	h.Setting("orders.max_open_per_customer", "0")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	return cashFixture{
 		Driver: f.Driver(OnShift()),
@@ -223,6 +231,14 @@ func TestD7_ConcurrentAssignmentsCannotOversubscribe(t *testing.T) {
 	const limit = 100_000
 	h.Setting("drivers.cash_limit", fmt.Sprint(limit))
 	h.Setting("drivers.max_active_orders", "50")
+	// **وسقفُ المفتوح للزبون يُلغى هنا** — `D4` · دورةُ ٦١.
+	//
+	// **وهذه الفحوصُ تقيس سقفَ السائق لا سقفَ الزبون** — **تفتح
+	// عشراتِ الطلبات لزبونٍ واحدٍ لتُشبعه.** **وكان سقفُ الزبون
+	// معطَّلاً بإطفاء واتساب فمرّت**، **فلمّا صار حارساً قائماً
+	// بنفسه ردّها.** **وصفرٌ يُلغي الحدَّ بعقد الإعداد** — **ولا
+	// يُضعَّف الحارسُ لأجل مِسنَد.**
+	h.Setting("orders.max_open_per_customer", "0")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	admin := h.NewUser("admin")
 	cust := h.Customer()
@@ -404,6 +420,14 @@ func TestD7_CeilingUnderRepetition(t *testing.T) {
 	const limit = 100_000
 	h.Setting("drivers.cash_limit", fmt.Sprint(limit))
 	h.Setting("drivers.max_active_orders", "50")
+	// **وسقفُ المفتوح للزبون يُلغى هنا** — `D4` · دورةُ ٦١.
+	//
+	// **وهذه الفحوصُ تقيس سقفَ السائق لا سقفَ الزبون** — **تفتح
+	// عشراتِ الطلبات لزبونٍ واحدٍ لتُشبعه.** **وكان سقفُ الزبون
+	// معطَّلاً بإطفاء واتساب فمرّت**، **فلمّا صار حارساً قائماً
+	// بنفسه ردّها.** **وصفرٌ يُلغي الحدَّ بعقد الإعداد** — **ولا
+	// يُضعَّف الحارسُ لأجل مِسنَد.**
+	h.Setting("orders.max_open_per_customer", "0")
 	h.Setting("drivers.assignment_mode", `"queue"`)
 	admin := h.NewUser("admin")
 	cust := h.Customer()

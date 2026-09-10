@@ -2782,6 +2782,22 @@ var TestMap = map[string]TestDecl{
 	"TestR16_STG_RedisOutageAuthorityHolds":                     stagingTest([]string{"R16"}, nil),
 
 	// ── الإيقافُ والجلسة (دورةُ إصلاحٍ ١٧) — `XG-39` ──────────────
+	// ── سقفُ المفتوح — `D4` · دورةُ ٦١ ───────────────────────────
+	"TestD4_CapHoldsWhenWhatsAppIsOff":              d4Test(),
+	"TestD4_CapIndependentOfWhatsAppSetting":        d4Test(),
+	"TestD4_BoundaryAtLimit":                        d4Test(),
+	"TestD4_ClosingAnOrderReleasesCapacity":         d4Test(),
+	"TestD4_LoweringCapKeepsExistingOrders":         d4Test(),
+	"TestD4_IdempotentRetryRecoversSameOrder":       d4Test(),
+	"TestD4_DistinctKeysAreCapped":                  d4Test(),
+	"TestD4_RejectedCreateLeavesNothing":            d4Test(),
+	"TestD4_ConcurrentCreatesCannotExceedCap":       d4Test(),
+	"TestD4_DifferentCustomersAreNotSerialized":     d4Test(),
+	"TestD4_CustomOrdersShareTheSameCap":            d4Test(),
+	"TestD4_ConcurrentCustomCreatesCannotExceedCap": d4Test(),
+	"TestD4_StressSequentialCap":                    d4Test(),
+	"TestD4_StressReleaseAndIdempotency":            d4Test(),
+
 	// ── الخروجُ ووجهةُ الدفع — `D12` · دورةُ ٥٩ ──────────────────
 	"TestD12_LogoutRemovesThisDeviceBinding":           d12Test(),
 	"TestD12_LogoutIsDeviceScoped":                     d12Test(),
@@ -3387,6 +3403,18 @@ func sessionTest() TestDecl {
 	}
 }
 
+// d4Test **شهادةُ `D4`** — **سقفُ المفتوح حارسُ قبولٍ قائمٌ بنفسه.**
+func d4Test() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:    []string{"F-01", "F-02"},
+		Defects:  []string{"D4"},
+		Risks:    []string{"R8"},
+		Modes:    []string{"SECURITY", "CONCURRENCY", "FULL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	}
+}
+
 // d12Test **شهادةُ `D12`** — **الخروجُ يُنهي وجهةَ الدفع.**
 //
 // **وخصوصيّةٌ لا أمنٌ وحده**: **هاتفٌ في بيتٍ يُظهر أسماءَ زبائنِ
@@ -3536,6 +3564,31 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٦١ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
+	"D4": "**سقفُ المفتوح صار حارسَ قبولٍ قائماً بنفسه** — **وكان " +
+		"داخلَ `if RequireWhatsApp`**: **فإطفاءُ توثيق واتساب يُطفئ " +
+		"السقفَ معه.** **وقيس: السقفُ اثنان وواتساب مطفأ ⇒ خمسُ " +
+		"محاولاتٍ مرّت كلُّها (٢٠١×٥) والمفتوحُ خمسة.** " +
+		"**وهما حارسان لا حارس**: **التوثيقُ شرطٌ اختياريٌّ يُشغّله " +
+		"المالك، والسقفُ ثابتُ قبولٍ لا يُساوم عليه إعداد.** " +
+		"**وعطبٌ ثانٍ في الجذر نفسِه**: **العدُّ ثمّ الإدراج ليس " +
+		"ذرّيّاً** — **وقيس: السقفُ واحدٌ وطلبان متزامنان ⇒ " +
+		"مفتوحان.** **فأُخذ قفلُ قبولٍ للزبون وحدَه** " +
+		"(`customer-admit:` — **وفضاؤه غيرُ فضاء `driver-admit:`**) " +
+		"**داخلَ المعاملة**: **يُفكّ بالتثبيت أو بالنقض فلا خانةَ " +
+		"محجوزةٌ بلا طلب**، **وزبونان لا يتسلسلان.** " +
+		"**والقاعدةُ واحدةٌ لبابين**: **بابُ الخاصّ كان يتجاوزها " +
+		"بالتزامن في ثلاثين جولةً من ثلاثين** — **فأُخذ القفلُ " +
+		"نفسُه هناك**، **ولا يُترك بابٌ يلتفّ به على سقفٍ واحد.** " +
+		"**والمقيسُ بعدُ**: **٢٠١·٢٠١·٤٠٩×٣ · وواتساب مشتغلٌ " +
+		"يعطي السقفَ نفسَه · وغيرُ الموثَّق يُردّ ٤٠٣ " +
+		"`whatsapp_required` لا بعقد السقف · والإغلاقُ يردّ الخانة · " +
+		"وخفضُ السقف لا يُلغي قائماً · وإعادةُ المفتاح نفسِه تسترجع " +
+		"الطلبَ ولا تُردّ · ومفتاحٌ متمايزٌ يُردّ · والمردودُ لا " +
+		"يترك طلباً ولا مالاً ولا حدثاً.** " +
+		"**وتكرارٌ: ×١٠٠ و×٥٠ و×١٠٠ و×١٠٠ و×٣٠ بلا التفافٍ ولا ردٍّ " +
+		"كاذبٍ ولا ازدواج.**",
+
 	// ── دورةُ إصلاحٍ ٥٩ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
 	"D12": "**ومِلكيّةُ وجهةِ الدفع عائلةُ جلسةٍ لا رمزٌ يُقرأ من " +
 		"الجهاز** (دورةُ ٦٠) — **device_tokens.session_id.** " +
