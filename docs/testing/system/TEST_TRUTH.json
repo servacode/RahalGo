@@ -1230,7 +1230,8 @@
       "gaps": [
         "XG-22",
         "XG-23",
-        "XG-24"
+        "XG-24",
+        "XG-39"
       ],
       "tests": [
         "TestAQ4_A1_SuccessCommitsBoth",

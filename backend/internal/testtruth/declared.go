@@ -68,7 +68,7 @@ var Flows = []FlowDecl{
 	{ID: "F-26", Title: "مصروفٌ وخزينة", Actor: "admin", Apps: []string{"admin"}, Money: true, Partial: true, Severity: "CRITICAL", Defects: []string{"D5"}},
 	{ID: "F-27", Title: "تسويةُ نقد السائق", Actor: "admin", Apps: []string{"driver", "admin"}, Money: true, Realtime: true, Severity: "CRITICAL", Defects: []string{"D7"}},
 	{ID: "F-28", Title: "تعليقُ متجر", Actor: "admin", Apps: []string{"merchant", "customer", "admin"}, Realtime: true, Race: true, Severity: "HIGH", Defects: []string{"D14"}},
-	{ID: "F-29", Title: "تعليقُ سائقٍ أو زبون", Actor: "admin", Apps: []string{"driver", "customer", "admin"}, Realtime: true, Race: true, Severity: "CRITICAL", Defects: []string{"D14"}, Gaps: []string{"XG-22", "XG-23", "XG-24"}},
+	{ID: "F-29", Title: "تعليقُ سائقٍ أو زبون", Actor: "admin", Apps: []string{"driver", "customer", "admin"}, Realtime: true, Race: true, Severity: "CRITICAL", Defects: []string{"D14"}, Gaps: []string{"XG-22", "XG-23", "XG-24", "XG-39"}},
 	{ID: "F-30", Title: "إعادةُ كلمةِ مرورٍ وإخراجٌ شامل", Actor: "admin", Apps: []string{"customer", "driver", "merchant", "rep"}, Realtime: true, Race: true, Severity: "CRITICAL", Defects: []string{"D10", "D11", "D12"}, Risks: []string{"R13", "R15", "R16"}},
 	{ID: "F-31", Title: "شكوى أو بلاغٌ ثمّ حلٌّ بتعويض", Actor: "multi", Apps: []string{"customer", "driver", "merchant", "admin"}, Money: true, Severity: "HIGH", Gaps: []string{"XG-19"}},
 	{ID: "F-32", Title: "مراجعةُ صنفٍ معلَّق", Actor: "admin", Apps: []string{"merchant", "rep", "customer", "admin"}, Money: true, Severity: "MEDIUM"},
