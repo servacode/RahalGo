@@ -1611,6 +1611,41 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "CONCURRENCY"},
 		Evidence: []string{"http"},
 	},
+	// ── دورةُ ٥٢ · تشخيصُ سباق دفعات الموقع ───────────────────────
+	//
+	// **ولا شيفرةَ منتَجٍ فيها**: **الشاهدُ التاريخيُّ ٢ من ٤ لم
+	// يتكرّر** — **٣٣٠٠ نداءٍ بلا مهلةٍ واحدة.**
+	"TestDIAG_LocationSingle": {
+		Level: L5, Flows: []string{"F-08"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	"TestDIAG_LocationSameDriverConcurrent": {
+		Level: L5, Flows: []string{"F-08"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	"TestDIAG_LocationEightConcurrent": {
+		Level: L5, Flows: []string{"F-08"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	"TestDIAG_LocationDifferentDriversConcurrent": {
+		Level: L5, Flows: []string{"F-08"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	"TestDIAG_LocationControlNonProductPath": {
+		Level: L5, Purpose: PurposeHarnessSelf,
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"db"},
+	},
+	// **وحارسُ نهايات الأسطر أداتيٌّ لا منتَجيّ** — **أمسك تلوّثاً
+	// كلّف دورةً كاملة.**
+	"TestLineEndingsAreLF": {
+		Level: L5, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
 	// ── دورةُ ٥١ · سقفُ الطلبات النشطة ────────────────────────────
 	"TestD24_ManualAssignmentObeysCap": {
 		Level: L5, Flows: []string{"F-19"},

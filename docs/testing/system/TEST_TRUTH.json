@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 290,
-    "test_funcs": 1081
+    "test_files": 292,
+    "test_funcs": 1087
   },
   "flows": [
     {
@@ -409,6 +409,10 @@
         "TestEV_CustomerDriverAssignment",
         "TestSampleFactory_DriverOnShiftWithCash",
         "TestFAIL_R7_DriverAcceptPartialState",
+        "TestDIAG_LocationDifferentDriversConcurrent",
+        "TestDIAG_LocationEightConcurrent",
+        "TestDIAG_LocationSameDriverConcurrent",
+        "TestDIAG_LocationSingle",
         "TestXG46_DriverAcceptNeedsOneConnection",
         "TestRACE_AdminVsAppTransition",
         "TestRACE_MaxActiveOrders",
@@ -11244,6 +11248,102 @@
       "file": "internal/qa/lifecycle_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestLineEndingsAreLF",
+      "file": "internal/qa/line_endings_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDIAG_LocationControlNonProductPath",
+      "file": "internal/qa/location_race_diag_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDIAG_LocationDifferentDriversConcurrent",
+      "file": "internal/qa/location_race_diag_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDIAG_LocationEightConcurrent",
+      "file": "internal/qa/location_race_diag_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDIAG_LocationSameDriverConcurrent",
+      "file": "internal/qa/location_race_diag_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDIAG_LocationSingle",
+      "file": "internal/qa/location_race_diag_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
     },
     {
       "name": "TestXG34_DifferentKeysDoNotSerialize",
