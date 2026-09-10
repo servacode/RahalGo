@@ -102,7 +102,7 @@ func TestXG39_S5_SuspendedRefreshPreservesSameSession(t *testing.T) {
 
 	// **ورمزُ تجديدٍ حقيقيٌّ يُصدره المحرّك** — **ولا يُصطنَع**:
 	// **العقدُ أن يُقبَل هذا الرمزُ بعينه.**
-	raw, origSid := issuedRefresh(t, h, drv.ID, "driver")
+	raw, origSid := issuedRefreshStrict(t, h, drv.ID, "driver")
 	suspend(t, h, drv.ID, "suspended")
 
 	got := h.POST("/api/v1/auth/refresh", "", map[string]any{"refresh_token": raw})
@@ -150,12 +150,41 @@ func TestXG39_S5_SuspendedRefreshPreservesSameSession(t *testing.T) {
 // لا يُقبَل، ولا يُقاس به عقدُ التجديد.**
 func issuedRefresh(t *testing.T, h *Harness, userID, client string) (raw, sid string) {
 	t.Helper()
+	return issuedRefreshMode(t, h, userID, client, false)
+}
+
+// issuedRefreshStrict **المِسنَدُ نفسُه — والتخطّي فيه سقوط.**
+//
+// # ولماذا نسختان
+//
+// **رمزُ التجديد شرطٌ في عقد `XG-39` لا تمهيدٌ له**: **«التجديدُ
+// يمضي لموقوفٍ بعائلته»** — **فإن لم يخرج رمزٌ أصلاً لم يبقَ ما
+// يُقاس.** **وحارسٌ يتخطّى شرطَه يخضرُّ أبداً وهو لا يقيس شيئاً.**
+//
+// **ولا يُبدَّل `issuedRefresh` نفسُه**: **يستعمله `R13` و`R15`
+// و`XG-40`** — **وتشديدُه عليها تبديلُ عقودٍ لم تُسأل عنه هذه
+// الدورة.**
+func issuedRefreshStrict(t *testing.T, h *Harness, userID, client string) (raw, sid string) {
+	t.Helper()
+	return issuedRefreshMode(t, h, userID, client, true)
+}
+
+func issuedRefreshMode(t *testing.T, h *Harness, userID, client string, strict bool) (raw, sid string) {
+	t.Helper()
+	// **والتعذّرُ يُروى مرّةً واحدة** — **ويُحكَم عليه بحسب الطالب.**
+	give := func(format string, args ...any) {
+		t.Helper()
+		if strict {
+			t.Fatalf(format, args...)
+		}
+		t.Skipf(format, args...)
+	}
 	admin := h.NewUser("admin")
 	const pw = "Qa!Refresh-2026"
 	set := h.POST("/api/v1/admin/users/"+userID+"/password", admin.Token,
 		map[string]any{"password": pw})
 	if set.Code >= 400 {
-		t.Skipf("لا مسارَ لوضع كلمةٍ بهذا الشكل: %s", set)
+		give("لا مسارَ لوضع كلمةٍ بهذا الشكل: %s", set)
 	}
 	var phone string
 	if err := h.Pool.QueryRow(ctxBG(),
@@ -166,12 +195,12 @@ func issuedRefresh(t *testing.T, h *Harness, userID, client string) (raw, sid st
 		"phone": phone, "password": pw, "client": client,
 	})
 	if in.Code >= 400 {
-		t.Skipf("تعذّر الدخول: %s", in)
+		give("تعذّر الدخول: %s", in)
 	}
 	// **والتوكناتُ متداخلةٌ تحت `tokens`** — لا في جذر الردّ.
 	raw = tokenField(in, "refresh_token")
 	if raw == "" {
-		t.Skipf("لا رمزَ تجديدٍ في ردّ الدخول: %s", in)
+		give("لا رمزَ تجديدٍ في ردّ الدخول: %s", in)
 	}
 	if err := h.Pool.QueryRow(ctxBG(), `
 		SELECT session_id::text FROM refresh_tokens
@@ -188,7 +217,7 @@ func issuedRefresh(t *testing.T, h *Harness, userID, client string) (raw, sid st
 func TestXG39_S6S7_SuspendedCannotOpenNewSession(t *testing.T) {
 	h := New(t)
 	_, drv := activeOrderFor(t, h)
-	issuedRefresh(t, h, drv.ID, "driver")
+	issuedRefreshStrict(t, h, drv.ID, "driver")
 
 	suspend(t, h, drv.ID, "suspended")
 
@@ -333,7 +362,7 @@ func TestXG39_C1_SuspendVsTransition(t *testing.T) {
 func TestXG39_C2_BlockVsRefresh(t *testing.T) {
 	h := New(t)
 	_, drv := activeOrderFor(t, h)
-	raw, sid := issuedRefresh(t, h, drv.ID, "driver")
+	raw, sid := issuedRefreshStrict(t, h, drv.ID, "driver")
 	admin := h.NewUser("admin")
 
 	var refreshed Res
@@ -409,6 +438,16 @@ func TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 //
 // **ولا تُغلَق `R14`**: **وصلةٌ قائمةٌ عقدٌ آخرُ لم يُقَس هنا.**
+//
+// # وليست شهادةً لـ`XG-39` — دورةُ ٥٦
+//
+// **اسمُها `XG39` وما تؤكّده تخويلُ بثٍّ بحال الحساب** — **وذاك عقدُ
+// `D14` منذ دورةِ ٥٤.** **وبقاءُ الجلسة وتجديدُها ودخولُها تُقاس
+// بنداء `REST` لا بمصافحةِ مقبس** — **فلا تُربَط بـ`XG-39`.**
+//
+// **ولم تُسمَّ من جديدٍ عمداً**: **`D14` ممثَّلٌ أصلاً بـ
+// `TestD14_BlockedAndDeletedHaveNoRealtime`** — **فالتسميةُ ضجيجٌ
+// بلا دليلٍ زائد.**
 func TestXG39_WS_HandshakeFollowsStatusModel(t *testing.T) {
 	h := New(t)
 	drv := h.NewUser("driver")
