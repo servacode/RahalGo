@@ -19,17 +19,17 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **292** |
-| دوالُّ اختبار | **1087** |
+| ملفّاتُ اختبار | **293** |
+| دوالُّ اختبار | **1093** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1087
-MAPPED     = 383
-INFRA      = 122
+TOTAL      = 1093
+MAPPED     = 388
+INFRA      = 123
 ORPHAN     = 582
 ```
 
@@ -55,7 +55,7 @@ ORPHAN     = 582
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 35 | 31 | 4 |
+| **التدفّقات** | 35 | 32 | 3 |
 | **العيوب** | 27 | 21 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 46 | 27 | 19 |
@@ -80,7 +80,7 @@ ORPHAN     = 582
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
 | **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `FIXED_AND_PASSING` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` · `TestFAIL_D13_MediaDirectoryListingOpen` |
-| **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestCENSUS_D14_SuspendedCannotOpenSocket` · `TestSampleFactory_SuspendedIsRefused` |
+| **D14** | handleWS لا يفحص ActiveStatus | `FIXED_AND_PASSING` | `TestCENSUS_D14_SuspendedCannotOpenSocket` · `TestSampleFactory_SuspendedIsRefused` · `TestD14_ActiveUserRealtimeUnaffected` · `TestD14_BlockedAndDeletedHaveNoRealtime` · `TestD14_RealtimeEligibilityUnderRepetition` · `TestD14_SuspendedDriverScopedToOwnRoom` · `TestD14_SuspendedHasNoBroadRealtimeAccess` |
 | **D15** | AdminCreateUser في خطوتين | `FIXED_AND_PASSING` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
@@ -128,7 +128,7 @@ ORPHAN     = 582
 | **XG-29** | `BLOCKER` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-32** | `CRITICAL` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` · `TestXG32_ConcurrentTargetCrossingGrantsOnce` · `TestXG32_FailureRollbackThenRetryGrantsOnce` · `TestXG32_FirstConversionGrantsRewardImmediately` · `TestXG32_FurtherConversionsDoNotRepeatReward` · `TestXG32_PreviousMonthDoesNotSatisfyTarget` · `TestXG32_TargetTwoGrantsOnSecondOnly` |
-| **XG-34** | `HIGH` | — | `EXPECTED_FAIL` | `TestXG34_DifferentKeysDoNotSerialize` · `TestXG34_NoTransactionIsLeftOpen` |
+| **XG-34** | `HIGH` | — | `EXPECTED_FAIL` | `TestDIAG_LocationWiderPool` · `TestXG34_DifferentKeysDoNotSerialize` · `TestXG34_NoTransactionIsLeftOpen` |
 | **XG-35** | `CRITICAL` | — | `COVERED` | `TestAQ4_A1_SuccessCommitsBoth` · `TestAQ4_A2_AuditFailureRollsBackMoney` · `TestAQ4_A3_BusinessFailureLeavesNoAudit` · `TestAQ4_A5_RetryGivesOneOfEach` · `TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit` · `TestAQ4_A8_UncoveredActionsRemainBestEffort` · `TestAQ4_CriticalActionsUseTransactionalAudit` · `TestXG20_A2_AuditFailureRollsBackBusiness` · `TestXG20_A3_FailedBusinessLeavesNoAudit` · `TestXG20_C1C2_ConcurrentMutationsCorrelate` · `TestXG20_S1S2_RoleMutationAudited` · `TestXG20_S3_UserStatusAudited` · `TestXG20_S4_MerchantSuspendAudited` · `TestXG20_S5_SensitiveSettingAudited` · `TestXG20_S6_OpsOrderTransitionAudited` |
 | **XG-41A** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-41B** | `MEDIUM` | — | `COVERED` | `TestXG41B_AuthUnavailableReachesTheReaderAsItself` · `TestXG41B_AuthUnavailableHasItsOwnMessage` |
@@ -154,7 +154,7 @@ ORPHAN     = 582
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 19
+COVERAGE GAPS    = 18
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -166,7 +166,6 @@ COVERAGE GAPS    = 19
 - D19 — لا اختبارَ انحدارٍ بعد
 - D3 — لا اختبارَ انحدارٍ بعد
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
-- F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
 - R1 — لا اختبارَ يحسمه بعد

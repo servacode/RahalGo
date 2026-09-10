@@ -1611,6 +1611,38 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "CONCURRENCY"},
 		Evidence: []string{"http"},
 	},
+	// ── دورةُ ٥٣ · تخويلُ البثّ وحالُ الحساب ──────────────────────
+	"TestD14_SuspendedHasNoBroadRealtimeAccess": {
+		Level: L5, Flows: []string{"F-28", "F-29"},
+		Defects:  []string{"D14"},
+		Risks:    []string{"R15"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket", "http"},
+	},
+	"TestD14_BlockedAndDeletedHaveNoRealtime": {
+		Level: L5, Flows: []string{"F-29", "F-30"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket", "http"},
+	},
+	"TestD14_SuspendedDriverScopedToOwnRoom": {
+		Level: L5, Flows: []string{"F-29"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket"},
+	},
+	"TestD14_ActiveUserRealtimeUnaffected": {
+		Level: L5, Flows: []string{"F-34"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket"},
+	},
+	"TestD14_RealtimeEligibilityUnderRepetition": {
+		Level: L5, Flows: []string{"F-28", "F-29"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME"},
+		Evidence: []string{"socket"},
+	},
 	// ── دورةُ ٥٢ · تشخيصُ سباق دفعات الموقع ───────────────────────
 	//
 	// **ولا شيفرةَ منتَجٍ فيها**: **الشاهدُ التاريخيُّ ٢ من ٤ لم
@@ -1632,6 +1664,12 @@ var TestMap = map[string]TestDecl{
 	},
 	"TestDIAG_LocationDifferentDriversConcurrent": {
 		Level: L5, Flows: []string{"F-08"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	"TestDIAG_LocationWiderPool": {
+		Level: L5, Purpose: PurposeHarnessSelf,
+		Gaps:     []string{"XG-34"},
 		Modes:    []string{"FULL", "CONCURRENCY"},
 		Evidence: []string{"http"},
 	},
@@ -3327,6 +3365,25 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٥٣ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
+	"D14": "**مصافحةُ البثّ صارت تسأل عن حال الحساب كما يسأل `REST`** — " +
+		"`identity.ActiveStatus`، **وهو مصدرُ `RequireAuth` نفسُه**: " +
+		"**ولا معجمَ حالاتٍ ثانٍ يُكتب للبثّ فينحرف.** " +
+		"**وكانت تتحقّق من الجلسة وحدَها** (`CheckSession`) — **فالموقوفُ " +
+		"يُردّ ٤٠٣ في كلّ نداءٍ ويُقبَل في القناة الدائمة**، **وهي أطولُ " +
+		"عمراً من نداء.** " +
+		"**وقيس بمقبسٍ حقيقيٍّ لا بمصافحةٍ وحدَها**: **بثٌّ عامٌّ وصل " +
+		"معلَّقاً، وطابورُ العمل الجديد وصل سائقاً معلَّقاً، والمحظورُ " +
+		"والمحذوفُ قُبلا (١٠١).** " +
+		"**وبعدُ: المحظورُ والمحذوفُ ٤٠٣ · والمعلَّقُ في غرفته وحدَها.** " +
+		"**والجلسةُ ليست الامتياز**: **جلسةُ المعلَّق تبقى حيّةً وتُجدَّد " +
+		"(`XG-39`) ولم تُمَسّ** — **المتبدّلُ ما تمنحه من وصولٍ لحظيّ.** " +
+		"**واستثناءُ الإتمام محفوظٌ ومقصور** (`suspension.go`): **غرفتُه " +
+		"هو تصله فيُتمّ ما بيده**، **وطابورُ العمل الجديد وغرفةُ المكتب " +
+		"وإشارةُ اللوحة لا تصله.** " +
+		"**وبالسماح لا بالمنع**: **غرفةٌ تُضاف غداً لا تصل المعلَّقَ من " +
+		"نفسها.** " +
+		"**و`R16` كما هو**: **تعذّرُ التحقّق يبقى ٥٠٣ لا إبطالَ جلسة.**",
 	// ── دورةُ إصلاحٍ ٥١ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
 	"D24": "**سقفُ الطلبات النشطة صار حارسَ قبولٍ ذرّيّاً** — " +
 		"`orders.AdmitDriverTx`: **قفلٌ لصاحب الشأن، ثمّ عدُّ النشط، " +

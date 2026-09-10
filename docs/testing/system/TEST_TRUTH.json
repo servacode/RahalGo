@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 292,
-    "test_funcs": 1087
+    "test_files": 293,
+    "test_funcs": 1093
   },
   "flows": [
     {
@@ -1200,8 +1200,11 @@
       "defects": [
         "D14"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestD14_RealtimeEligibilityUnderRepetition",
+        "TestD14_SuspendedHasNoBroadRealtimeAccess"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-29",
@@ -1257,7 +1260,11 @@
         "TestXG22_T6_NormalActorUnchanged",
         "TestXG22_T7_OpsCanStillResolveTheOrder",
         "TestXG22_T8_BlockedHasNoException",
-        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles",
+        "TestD14_BlockedAndDeletedHaveNoRealtime",
+        "TestD14_RealtimeEligibilityUnderRepetition",
+        "TestD14_SuspendedDriverScopedToOwnRoom",
+        "TestD14_SuspendedHasNoBroadRealtimeAccess"
       ],
       "status": "COVERED"
     },
@@ -1404,7 +1411,8 @@
         "TestXG39_S6S7_SuspendedCannotOpenNewSession",
         "TestXG39_S8_RevokedSuspendedSessionStaysDenied",
         "TestXG39_S9S10_BlockRevokesEverything",
-        "TestXG39_WS_HandshakeFollowsStatusModel"
+        "TestXG39_WS_HandshakeFollowsStatusModel",
+        "TestD14_BlockedAndDeletedHaveNoRealtime"
       ],
       "status": "COVERED"
     },
@@ -1596,7 +1604,8 @@
         "TestXG39_S6S7_SuspendedCannotOpenNewSession",
         "TestXG39_S8_RevokedSuspendedSessionStaysDenied",
         "TestXG39_S9S10_BlockRevokesEverything",
-        "TestXG39_WS_HandshakeFollowsStatusModel"
+        "TestXG39_WS_HandshakeFollowsStatusModel",
+        "TestD14_ActiveUserRealtimeUnaffected"
       ],
       "status": "COVERED"
     },
@@ -1833,11 +1842,17 @@
       "title": "handleWS لا يفحص ActiveStatus",
       "domain": "أمن",
       "severity": "HIGH",
+      "fixed": "**مصافحةُ البثّ صارت تسأل عن حال الحساب كما يسأل `REST`** — `identity.ActiveStatus`، **وهو مصدرُ `RequireAuth` نفسُه**: **ولا معجمَ حالاتٍ ثانٍ يُكتب للبثّ فينحرف.** **وكانت تتحقّق من الجلسة وحدَها** (`CheckSession`) — **فالموقوفُ يُردّ ٤٠٣ في كلّ نداءٍ ويُقبَل في القناة الدائمة**، **وهي أطولُ عمراً من نداء.** **وقيس بمقبسٍ حقيقيٍّ لا بمصافحةٍ وحدَها**: **بثٌّ عامٌّ وصل معلَّقاً، وطابورُ العمل الجديد وصل سائقاً معلَّقاً، والمحظورُ والمحذوفُ قُبلا (١٠١).** **وبعدُ: المحظورُ والمحذوفُ ٤٠٣ · والمعلَّقُ في غرفته وحدَها.** **والجلسةُ ليست الامتياز**: **جلسةُ المعلَّق تبقى حيّةً وتُجدَّد (`XG-39`) ولم تُمَسّ** — **المتبدّلُ ما تمنحه من وصولٍ لحظيّ.** **واستثناءُ الإتمام محفوظٌ ومقصور** (`suspension.go`): **غرفتُه هو تصله فيُتمّ ما بيده**، **وطابورُ العمل الجديد وغرفةُ المكتب وإشارةُ اللوحة لا تصله.** **وبالسماح لا بالمنع**: **غرفةٌ تُضاف غداً لا تصل المعلَّقَ من نفسها.** **و`R16` كما هو**: **تعذّرُ التحقّق يبقى ٥٠٣ لا إبطالَ جلسة.**",
       "tests": [
         "TestCENSUS_D14_SuspendedCannotOpenSocket",
-        "TestSampleFactory_SuspendedIsRefused"
+        "TestSampleFactory_SuspendedIsRefused",
+        "TestD14_ActiveUserRealtimeUnaffected",
+        "TestD14_BlockedAndDeletedHaveNoRealtime",
+        "TestD14_RealtimeEligibilityUnderRepetition",
+        "TestD14_SuspendedDriverScopedToOwnRoom",
+        "TestD14_SuspendedHasNoBroadRealtimeAccess"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D15",
@@ -2279,7 +2294,8 @@
         "TestADG3_S5S6_ReplayAndExpiry",
         "TestADG3_S7S8_SessionAndUserBinding",
         "TestADG3_S9S10S11_ActionTargetAndParameters",
-        "TestADG3_TTLIsBounded"
+        "TestADG3_TTLIsBounded",
+        "TestD14_SuspendedHasNoBroadRealtimeAccess"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2802,6 +2818,7 @@
       "title": "تعثّرٌ متقطّعٌ بانتظار قفلٍ تحت حمل الحزمة الكاملة",
       "severity": "HIGH",
       "tests": [
+        "TestDIAG_LocationWiderPool",
         "TestXG34_DifferentKeysDoNotSerialize",
         "TestXG34_NoTransactionIsLeftOpen"
       ],
@@ -11346,6 +11363,24 @@
       "orphan": false
     },
     {
+      "name": "TestDIAG_LocationWiderPool",
+      "file": "internal/qa/location_race_diag_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "HARNESS_SELF_TEST",
+      "gaps": [
+        "XG-34"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestXG34_DifferentKeysDoNotSerialize",
       "file": "internal/qa/lock_scope_test.go",
       "package": "qa",
@@ -16195,6 +16230,122 @@
       "orphan": false
     },
     {
+      "name": "TestD14_ActiveUserRealtimeUnaffected",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-34"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD14_BlockedAndDeletedHaveNoRealtime",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-29",
+        "F-30"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket",
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD14_RealtimeEligibilityUnderRepetition",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-28",
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD14_SuspendedDriverScopedToOwnRoom",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD14_SuspendedHasNoBroadRealtimeAccess",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-28",
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket",
+        "http"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestZONE_001_NoZonesOrderPasses",
       "file": "internal/qa/zone_test.go",
       "package": "qa",
@@ -17819,7 +17970,6 @@
     "D19 — لا اختبارَ انحدارٍ بعد",
     "D3 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
-    "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
