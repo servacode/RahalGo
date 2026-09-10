@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 293,
-    "test_funcs": 1097
+    "test_files": 294,
+    "test_funcs": 1099
   },
   "flows": [
     {
@@ -260,6 +260,8 @@
       ],
       "tests": [
         "TestPublishOrderReachesEveryRoom",
+        "TestD19_ClientEvidenceIsRegistered",
+        "TestD19_ServerDeclaresAccessExpiry",
         "TestD20_BroadcastViewIsNotOverNarrow",
         "TestD20_BroadcastViewObeysContract",
         "TestD20_MerchantRealtimeVsREST",
@@ -1564,6 +1566,8 @@
         "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
         "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
         "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
+        "TestD19_ClientEvidenceIsRegistered",
+        "TestD19_ServerDeclaresAccessExpiry",
         "TestEV_RealtimeAuthorization",
         "TestRBAC_Matrix_Measured",
         "TestR15_A10_OrdinaryActionsUnaffected",
@@ -1927,8 +1931,12 @@
       "title": "LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ",
       "domain": "لحظيّ",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "fixed": "**حلقةُ إعادة الوصل صارت تطلب رمزاً من سلطته لا تقرأ المخزن** — `RealtimeAuth.tokenForConnect`. **وكانت تقرأ `session.accessToken()` عند كلّ محاولةٍ ولا تجدّد أبداً**: **فرمزُ الوصول يعيش ربعَ ساعة**، **ومن عاد من نفقٍ أو من الخلفيّة بعدها تُعاد مصافحتُه بالرمز المنتهي نفسِه أبداً** — **وعائلةُ التجديد سليمةٌ طوالَ ذلك**، **ولا مخرجَ إلّا خروجٌ ودخولٌ بيده.** **والسلطةُ هي المنتهى لا الاستثناء**: **المحرّكُ يرسل `access_expires_at` وكان التطبيقُ يرميه** — **وقيس أنّ مصافحةً فاشلةً لا تحمل رقمَها في حقل**: **٤٠١ ترمي `WebSocketException` و٤٠٣ و٥٠٣ ترميان `ProtocolException`**، **والرقمُ في نصّ الرسالة** — **فقرارُ أمنٍ على مطابقة نصٍّ يتبدّل بتبديل محرّك الشبكة.** **ولا تجديدَ عند كلّ انقطاع**: **النفقُ وتبديلُ الشبكة وإقلاعُ الخادم ليست انتهاءً** — **ولا يُجدَّد إلّا إذا قال المنتهى إنّه انتهى**، **فالمحظورُ والمُبطَلُ رمزُهما لم ينتهِ فلا يطرقان بابَ التجديد أصلاً.** **والتجديدُ من مالكه لا نسخةٌ عنه** (`ApiClient.refresh`) — **ولا نداءَ `/auth/refresh` ثانٍ يُكتب للبثّ.** **وقياسُ التزامن كشف عطباً ثانياً**: **سؤالُ المنتهى كان خارجَ القفل، فاثنتان وعشرون جولةً من مئةٍ دوّرت رمزَ التجديد مرّتين** — **فصار يُسأل ثانيةً تحت القفل.** **والمقيسُ بمقبسٍ حقيقيٍّ ومصافحةٍ حقيقيّة**: **المصافحةُ الأولى تحمل الجديدَ وحدَه · وتجديدٌ واحدٌ · وحدثٌ يصل · وانقطاعُ نقلٍ بصفرِ تجديدات · و٥٠٣ لا تمحو اعتماداً · ووصلةٌ واحدة.** **وتكرارٌ: تعافٍ×١٠٠ · وصلٌ عاديٌّ×١٠٠ · تزامنٌ×١٠٠ · ٥٠٣×٥٠ · مرفوضٌ×٥٠.** **وقبولُ الجهاز باقٍ** (`AND-31`) — **والمحلّيُّ لا يُغنيه.**",
+      "tests": [
+        "TestD19_ClientEvidenceIsRegistered",
+        "TestD19_ServerDeclaresAccessExpiry"
+      ],
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D20",
@@ -2347,6 +2355,7 @@
         "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
         "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
         "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
+        "TestD19_ServerDeclaresAccessExpiry",
         "TestRACE_SessionRevokedDuringRequest",
         "TestR16_R8_BothDownIsSafeFailure",
         "TestR16_STG_RedisOutageAuthorityHolds",
@@ -9376,6 +9385,55 @@
       "file": "internal/qa/custom_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestD19_ClientEvidenceIsRegistered",
+      "file": "internal/qa/d19_realtime_reconnect_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-04",
+        "F-34"
+      ],
+      "defects": [
+        "D19"
+      ],
+      "modes": [
+        "ANDROID",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "source"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD19_ServerDeclaresAccessExpiry",
+      "file": "internal/qa/d19_realtime_reconnect_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-04",
+        "F-34"
+      ],
+      "defects": [
+        "D19"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCENSUS_D14_SuspendedCannotOpenSocket",
@@ -18123,7 +18181,6 @@
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
     "D18 — لا اختبارَ انحدارٍ بعد",
-    "D19 — لا اختبارَ انحدارٍ بعد",
     "D3 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",

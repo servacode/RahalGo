@@ -42,8 +42,29 @@ import kotlinx.coroutines.launch
  */
 class LiveSocket(
     private val baseUrl: String,
-    private val session: SessionStore,
     private val client: String,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **وسلطةُ الرمز قبل المصافحة** — `D19`
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **وكانت الحلقةُ تقرأ المخزنَ مباشرةً ولا تجدّد** — **فرمزٌ
+     * انتهى يُعاد به الوصلُ أبداً** (`RealtimeAuth`).
+     *
+     * **ولا قيمةَ افتراضيّةَ له**: **مُعينٌ صامتٌ يُعيد العطبَ في
+     * موضعٍ يُنسى** — **والمترجِمُ يسأل عنه في كلّ موضعِ بناء.**
+     */
+    private val auth: RealtimeAuth,
+    /**
+     * **ومهلتا التراجع تُحقَنان لتُقاسا** — **وقيمتاهما في الإنتاج
+     * كما كانتا**: ثانيتان ثمّ تضاعفٌ إلى ثلاثين.
+     *
+     * **ولا يُقاس تراجعٌ بانتظاره حقيقةً**: **مئةُ جولةِ تعافٍ
+     * بثانيتين لكلٍّ ثلاثُ دقائقَ من غير فائدة** — **والمقيسُ هو
+     * الرمزُ المعروضُ وعددُ التجديدات لا طولُ النوم.**
+     */
+    private val firstRetryMs: Long = FIRST_RETRY_MS,
+    private val maxRetryMs: Long = MAX_RETRY_MS,
 ) {
 
     private val http = io.ktor.client.HttpClient {
@@ -66,16 +87,23 @@ class LiveSocket(
     ) {
         if (job?.isActive == true) return
         job = scope.launch {
-            var wait = FIRST_RETRY_MS
+            var wait = firstRetryMs
             while (isActive) {
                 try {
                     // **والتوكن في الرابط لا في ترويسة** — مقبس الويب لا
                     // يحمل ترويسة تفويض في المتصفّح، **والمحرّك يقرأه من
                     // الاستعلام** (`ws.go`).
+                    // **والرمزُ يُطلب لا يُقرأ** — **فإن انتهى جُدّد
+                    // مرّةً، ثمّ يُقرأ الجديدُ من المخزن** (`D19`).
+                    //
+                    // **وداخلَ الحلقة لا خارجَها**: **ملتقَطٌ فوقها
+                    // يبقى قديماً بعد التجديد** — **فيُجدَّد المخزنُ
+                    // وتُصافح الحلقةُ بالقديم أبداً.**
+                    val token = auth.tokenForConnect()
                     val url = baseUrl.replace("https://", "wss://").replace("http://", "ws://") +
-                        "/api/v1/ws?token=" + session.accessToken()
+                        "/api/v1/ws?token=" + token
                     http.webSocket(url) {
-                        wait = FIRST_RETRY_MS
+                        wait = firstRetryMs
                         onState(true)
                         for (frame in incoming) {
                             if (frame is Frame.Text) {
@@ -103,7 +131,7 @@ class LiveSocket(
                 }
                 onState(false)
                 delay(wait)
-                wait = (wait * 2).coerceAtMost(MAX_RETRY_MS)
+                wait = (wait * 2).coerceAtMost(maxRetryMs)
             }
         }
     }

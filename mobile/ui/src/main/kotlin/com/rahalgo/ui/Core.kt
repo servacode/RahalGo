@@ -6,6 +6,7 @@ import com.rahalgo.shared.driver.AccountApi
 import com.rahalgo.shared.driver.MeApi
 import com.rahalgo.shared.net.ApiClient
 import com.rahalgo.shared.net.LiveSocket
+import com.rahalgo.shared.net.RealtimeAuth
 import com.rahalgo.shared.push.DevicesApi
 
 /**
@@ -57,7 +58,7 @@ class Core(
     val devices = DevicesApi(api)
 
     /** **البثّ الحيّ** — واحدٌ للتطبيق كلّه، لا واحدٌ لكلّ شاشة. */
-    val live = LiveSocket(baseUrl, session, client)
+    val live = LiveSocket(baseUrl, client, RealtimeAuth(session, api::refresh))
 
     /**
      * ══════════════════════════════════════════════════════════════════

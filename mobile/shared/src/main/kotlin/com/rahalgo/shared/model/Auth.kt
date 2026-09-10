@@ -52,8 +52,38 @@ data class User(
 @Serializable
 data class Tokens(
     @SerialName("access_token") val accessToken: String = "",
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **ومتى ينتهي رمزُ الوصول — يقوله مُصدِرُه** (`D19`)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **كان المحرّكُ يرسله والتطبيقُ يرميه** (`access_expires_at` في
+     * `identity/models.go`) — **فلم يكن للجهاز طريقٌ يعرف به أنّ رمزَه
+     * انتهى إلّا أن يُردّ.**
+     *
+     * **وحلقةُ إعادة الوصل لا تُردّ ردّاً تقرؤه**: **مقبسٌ فشلت
+     * مصافحتُه يرمي استثناءً نصُّه يختلف باختلاف المحرّك** — قِيس
+     * (دورةُ ٥٨): **٤٠١ ترمي `WebSocketException` و٤٠٣ و٥٠٣ ترميان
+     * `ProtocolException`** — **ورقمُ الحال في نصّ الرسالة لا في
+     * حقل.** **فبناءُ القرار على قراءة نصٍّ هشٌّ**، **وهذا الحقلُ
+     * سلطةٌ لا تخمين.**
+     *
+     * **ونصُّه `RFC3339`** — يُقرأ بـ`accessExpiresAtMs()`.
+     */
+    @SerialName("access_expires_at") val accessExpiresAt: String = "",
     @SerialName("refresh_token") val refreshToken: String = "",
-)
+) {
+    /**
+     * **متى ينتهي بالأجزاء من الألف** — **وصفرٌ يعني «لا يُعرف».**
+     *
+     * **وما لا يُقرأ لا يُخمَّن**: **صفرٌ يمنع التجديدَ الاستباقيّ
+     * ولا يمنع الوصل** — **فالجهلُ يُبقي السلوكَ القديمَ ولا يكسره.**
+     */
+    fun accessExpiresAtMs(): Long =
+        runCatching {
+            java.time.OffsetDateTime.parse(accessExpiresAt).toInstant().toEpochMilli()
+        }.getOrDefault(0L)
+}
 
 /**
  * نتيجة الدخول.

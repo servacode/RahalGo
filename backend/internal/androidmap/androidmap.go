@@ -242,6 +242,34 @@ var Cases = []Case{
 		Result:   NotRun,
 		Evidence: "لا جهازَ متّصل", Needs: "SM-A525F"},
 
+	// ── إعادةُ الوصل برمزٍ منتهٍ — `D19` · دورةُ ٥٨ ────────────────
+	//
+	// **ووحدةٌ مشتركةٌ لا تطبيقاً بعينه**: `LiveSocket` و`RealtimeAuth`
+	// في `:shared` — **يستعملها الزبونُ والسائقُ والمتجرُ والمندوب.**
+	//
+	// **والمقيسُ بمقبسٍ حقيقيٍّ ومصافحةٍ حقيقيّة** — **يُسجَّل الرمزُ
+	// الذي عُرض على السلك**، لا نيّةُ الشيفرة.
+	{ID: "AND-60", App: "all", Area: "realtime",
+		Title: "رمزٌ منتهٍ وعائلةٌ سليمة ⇒ تجديدٌ واحدٌ ثمّ وصلٌ بالجديد",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D19"},
+		Test: "D19ReconnectTest", Result: Pass,
+		Evidence: "المصافحةُ الأولى تحمل الجديد · وتجديدٌ واحدٌ لا أكثر · وحدثٌ يصل"},
+	{ID: "AND-61", App: "all", Area: "realtime",
+		Title: "انقطاعُ نقلٍ برمزٍ صالحٍ لا يُدوّر رمزَ التجديد",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D19"},
+		Test: "D19ReconnectTest.t1", Result: Pass,
+		Evidence: "٥٠٢ ثمّ وصلٌ ناجح · وصفرُ تجديدات"},
+	{ID: "AND-62", App: "all", Area: "realtime",
+		Title: "مرفوضٌ ومتعذّرٌ لا يمحوان اعتماداً ولا يطرقان التجديد",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D19", "R16"},
+		Test: "D19StressTest.unavailable50AndRevoked50", Result: Pass,
+		Evidence: "٥٠٣×٥٠ و٤٠١×٥٠ · صفرُ اعتماداتٍ مُحيت · صفرُ تجديدات"},
+	{ID: "AND-63", App: "all", Area: "realtime",
+		Title: "تكرارُ التعافي والتزامن",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D19"},
+		Test: "D19StressTest", Result: Pass,
+		Evidence: "تعافٍ×١٠٠ · وصلٌ عاديٌّ×١٠٠ · تزامنٌ×١٠٠ · صفرُ حلقاتٍ قديمة"},
+
 	{ID: "AND-40", App: "rep", Area: "permissions",
 		Title: "لا إذنَ موقعٍ قبل الدخول",
 		Kind:  OnDevice, Automation: SemiAuto, Registers: []string{"REP-OWNER-02"},

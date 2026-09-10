@@ -186,7 +186,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     state = state.copy(busy = false, error = str(R.string.err_internal))
                     return@launch
                 }
-                backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
+                backend.session.save(
+                    result.tokens.accessToken,
+                    result.tokens.refreshToken,
+                    result.tokens.accessExpiresAtMs(),
+                )
                 onSignedIn(result.user)
                 state = state.copy(busy = false)
             } catch (e: ApiClient.ApiException) {
@@ -278,7 +282,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     state = state.copy(busy = false, error = str(R.string.err_internal))
                     return@launch
                 }
-                backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
+                backend.session.save(
+                    result.tokens.accessToken,
+                    result.tokens.refreshToken,
+                    result.tokens.accessExpiresAtMs(),
+                )
                 onSignedIn(result.user)
                 state = state.copy(busy = false)
             } catch (e: ApiClient.ApiException) {
@@ -383,7 +391,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     current.code,
                     password,
                 )
-                backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
+                backend.session.save(
+                    result.tokens.accessToken,
+                    result.tokens.refreshToken,
+                    result.tokens.accessExpiresAtMs(),
+                )
                 onSignedIn(result.user)
                 reset = null
             } catch (e: ApiClient.ApiException) {
@@ -491,7 +503,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     // تصحيحُه**، وإلّا أُرسل القديمُ وهو يرى الجديد.
                     referral.ifBlank { current.referral },
                 )
-                backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
+                backend.session.save(
+                    result.tokens.accessToken,
+                    result.tokens.refreshToken,
+                    result.tokens.accessExpiresAtMs(),
+                )
                 onSignedIn(result.user)
                 signup = null
             } catch (e: ApiClient.ApiException) {

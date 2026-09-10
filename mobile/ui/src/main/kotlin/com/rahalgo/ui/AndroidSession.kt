@@ -47,16 +47,28 @@ class AndroidSession(context: Context) : SessionStore {
 
     override fun refreshToken(): String = prefs.getString(REFRESH, "").orEmpty()
 
-    override fun save(access: String, refresh: String) {
-        prefs.edit().putString(ACCESS, access).putString(REFRESH, refresh).apply()
+    override fun accessExpiresAt(): Long = prefs.getLong(EXPIRES, 0L)
+
+    override fun save(access: String, refresh: String, accessExpiresAt: Long) {
+        prefs.edit()
+            .putString(ACCESS, access)
+            .putString(REFRESH, refresh)
+            .putLong(EXPIRES, accessExpiresAt)
+            .apply()
     }
 
     override fun clear() {
-        prefs.edit().remove(ACCESS).remove(REFRESH).apply()
+        prefs.edit().remove(ACCESS).remove(REFRESH).remove(EXPIRES).apply()
     }
 
     private companion object {
         const val ACCESS = "access"
         const val REFRESH = "refresh"
+
+        // **ومتى ينتهي رمزُ الوصول** — `D19`.
+        //
+        // **ويُمحى مع الرمزين**: **منتهىً يبقى بعد خروجٍ يصف رمزاً
+        // لم يعد موجوداً.**
+        const val EXPIRES = "access_expires_at"
     }
 }

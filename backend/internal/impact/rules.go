@@ -252,6 +252,32 @@ var domainRules = []domainRule{
 		Why:      "مسٌّ للهويّة أو الجلسة أو تخويل البثّ ⇒ أمنٌ وبثٌّ (البند ١٦)",
 		Staging:  "**`R16`** — فشلُ Redis المفتوح يحتاج طقمَ خدماتٍ حقيقيّاً",
 	},
+	// ── عميلُ البثّ والجلسة في أندرويد ────────────────────────────
+	//
+	// **قيس قبل الشيفرة (دورةُ ٥٨)**: **تبديلُ `LiveSocket.kt` أو
+	// `ApiClient.kt` كان يردّ تطبيقاتٍ وأوضاعاً ولا يردّ تدفّقاً ولا
+	// عيباً** — **فـ`D19` لا يظهر في أثر التغيير أصلاً**، **وهو
+	// عيبُ تلك الحلقة بعينها.**
+	//
+	// **وقاعدةٌ على الملفّين لا على `mobile/shared/` كلِّها**:
+	// **الوحدةُ فيها النماذجُ والخرائطُ وغيرُها** — **ومن وسّعها
+	// أيقظ البثَّ عند تبديل حقلٍ في نموذج.**
+	{
+		Name: "REALTIME_CLIENT",
+		Match: []string{
+			"mobile/shared/src/main/kotlin/com/rahalgo/shared/net/LiveSocket.kt",
+			"mobile/shared/src/main/kotlin/com/rahalgo/shared/net/RealtimeAuth.kt",
+			"mobile/shared/src/main/kotlin/com/rahalgo/shared/net/ApiClient.kt",
+		},
+		// **`F-04` تحمل `D19`** — **وقبولُ المتجر يقوم على البثّ.**
+		// **و`F-34` بثُّ الأدوار** — **وهي القناةُ التي تنقطع.**
+		Flows:    []string{"F-04", "F-34"},
+		Apps:     []string{"customer", "driver", "merchant", "rep"},
+		Modes:    []Mode{ModeAndroid, ModeRealtime, ModeSecurity},
+		Packages: []string{"internal/qa", "internal/androidmap"},
+		Why:      "مسٌّ لحلقة البثّ أو لسلطة الجلسة في الجهاز ⇒ تعافي الوصل (`D19`)",
+		Device:   "**`AND-31`** — عودةُ الوصلة بعد انقطاعٍ وانتهاءِ رمزٍ على جهازٍ حقيقيّ",
+	},
 	// ── حذفُ الحساب ───────────────────────────────────────────────
 	//
 	// **قاعدةٌ ضيّقةٌ عمداً** (دورةُ ٥٧): **ملفُّ التجريد وحدَه**،

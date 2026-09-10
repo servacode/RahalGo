@@ -304,7 +304,11 @@ class ApiClient(
                 HttpMethod.Post,
                 mapOf("refresh_token" to had),
             )
-            session.save(result.tokens.accessToken, result.tokens.refreshToken)
+            session.save(
+                result.tokens.accessToken,
+                result.tokens.refreshToken,
+                result.tokens.accessExpiresAtMs(),
+            )
         } finally {
             refreshGate.unlock()
         }
@@ -396,7 +400,24 @@ class ApiClient(
 interface SessionStore {
     fun accessToken(): String
     fun refreshToken(): String
-    fun save(access: String, refresh: String)
+
+    /**
+     * **متى ينتهي رمزُ الوصول** — **وصفرٌ يعني «لا يُعرف»** (`D19`).
+     *
+     * **ولا تُقرأ من داخل الرمز**: **المحرّكُ يقولها صراحةً**
+     * (`access_expires_at`) — **وتفكيكُ `JWT` في الجهاز معجمٌ ثانٍ
+     * يشيخ.**
+     */
+    fun accessExpiresAt(): Long
+
+    /**
+     * **ويُحفظ المنتهى مع الرمز** — **ولا يُترك اختياريّاً.**
+     *
+     * **ومن جعله وسيطاً بقيمةٍ افتراضيّةٍ صفراً** نسي موضعاً فحُفظ
+     * رمزٌ بلا منتهى، **فلا يعرف الجهازُ أنّه انتهى ويبقى العطبُ
+     * حيّاً في بابٍ واحد.**
+     */
+    fun save(access: String, refresh: String, accessExpiresAt: Long)
     fun clear()
 }
 

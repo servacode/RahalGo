@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **293** |
-| دوالُّ اختبار | **1097** |
+| ملفّاتُ اختبار | **294** |
+| دوالُّ اختبار | **1099** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1097
-MAPPED     = 392
+TOTAL      = 1099
+MAPPED     = 394
 INFRA      = 123
 ORPHAN     = 582
 ```
@@ -56,7 +56,7 @@ ORPHAN     = 582
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
 | **التدفّقات** | 36 | 32 | 4 |
-| **العيوب** | 27 | 21 | 6 |
+| **العيوب** | 27 | 22 | 5 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 47 | 28 | 19 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
@@ -85,7 +85,7 @@ ORPHAN     = 582
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
 | **D18** | START_STICKY يعيد الخدمةَ بفترةِ الافتراض | `NO_REGRESSION_TEST_YET` | — |
-| **D19** | LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ | `NO_REGRESSION_TEST_YET` | — |
+| **D19** | LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ | `FIXED_AND_PASSING` | `TestD19_ClientEvidenceIsRegistered` · `TestD19_ServerDeclaresAccessExpiry` |
 | **D20** | البثُّ الحيُّ يتجاوز redactForMerchant | `FIXED_AND_PASSING` | `TestPublishOrderReachesEveryRoom` · `TestD22_OwnerPayloadObeysCustomerPrivacy` · `TestEV_MerchantDriverAssignment` · `TestEV_MerchantRealtimePrivacy` · `TestD20_BroadcastViewIsNotOverNarrow` · `TestD20_BroadcastViewObeysContract` · `TestD20_UnclassifiedFieldNeverReachesAnyAudience` · `TestD20_UnknownAudienceGetsNothing` · `TestD20_CustomerRealtimeVsREST` · `TestD20_MerchantRealtimeVsREST` · `TestOrderFieldsAllClassified` |
 | **D21** | هاتفُ السائق يصل الزبون | `FIXED_AND_PASSING` | `TestEV_CustomerDriverAssignment` · `TestD21_CustomerRedactionAgainstContract` · `TestForbiddenFieldGuardCatchesLeak` · `TestOrderFieldsAllClassified` · `TestD21_NoRawOrderSerializationRemains` · `TestD21_RestOrderPrivacyMatrix` · `TestD21_RestPrivacyUnderRepetition` · `TestD23_CrossChannelPrivacyParity` |
 | **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `FIXED_AND_PASSING` | `TestD22_CustomOrderReachesItsOwner` · `TestD22_CustomOrderRoomSetIsComplete` · `TestD22_OwnerDeliveryUnderRepetition` · `TestD22_OwnerPayloadObeysCustomerPrivacy` · `TestEV_CustomOrderOwnerRealtime` · `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
@@ -155,7 +155,7 @@ ORPHAN     = 582
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 19
+COVERAGE GAPS    = 18
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -164,7 +164,6 @@ COVERAGE GAPS    = 19
 - D16 — لا اختبارَ انحدارٍ بعد
 - D17 — لا اختبارَ انحدارٍ بعد
 - D18 — لا اختبارَ انحدارٍ بعد
-- D19 — لا اختبارَ انحدارٍ بعد
 - D3 — لا اختبارَ انحدارٍ بعد
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
