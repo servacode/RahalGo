@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **294** |
-| دوالُّ اختبار | **1099** |
+| ملفّاتُ اختبار | **295** |
+| دوالُّ اختبار | **1110** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1099
-MAPPED     = 394
+TOTAL      = 1110
+MAPPED     = 405
 INFRA      = 123
 ORPHAN     = 582
 ```
@@ -78,7 +78,7 @@ ORPHAN     = 582
 | **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `FIXED_AND_PASSING` | `TestSessionClient_AdminLogoutAllStillGlobal` |
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
-| **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
+| **D12** | Push.unregister بلا منادٍ | `FIXED_AND_PASSING` | `TestD12_AccountSwitchOnSameDevice` · `TestD12_ClientSendsDeviceTokenOnLogout` · `TestD12_DispatcherNoLongerTargetsLoggedOutDevice` · `TestD12_LogoutIsDeviceScoped` · `TestD12_LogoutIsIdempotent` · `TestD12_LogoutRemovesThisDeviceBinding` · `TestD12_StressIdempotentLogout` · `TestD12_StressLoginRegisterLogout` · `TestD12_StressLogoutVsReRegisterRace` · `TestD12_StressTwoDevicesAndSwitch` · `TestD12_SuspensionIsNotLogout` · `TestEV_PushTokenTargeting` |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `FIXED_AND_PASSING` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` · `TestFAIL_D13_MediaDirectoryListingOpen` |
 | **D14** | handleWS لا يفحص ActiveStatus | `FIXED_AND_PASSING` | `TestCENSUS_D14_SuspendedCannotOpenSocket` · `TestSampleFactory_SuspendedIsRefused` · `TestD14_ActiveUserRealtimeUnaffected` · `TestD14_BlockedAndDeletedHaveNoRealtime` · `TestD14_EventScopeUnderRepetition` · `TestD14_ImpactSurfacesOnRealtimeAuthChange` · `TestD14_RealtimeEligibilityUnderRepetition` · `TestD14_SuspendedDriverScopedToItsOwnOrder` · `TestD14_SuspendedDriverScopedToOwnRoom` · `TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork` · `TestD14_SuspendedHasNoBroadRealtimeAccess` |
 | **D15** | AdminCreateUser في خطوتين | `FIXED_AND_PASSING` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |

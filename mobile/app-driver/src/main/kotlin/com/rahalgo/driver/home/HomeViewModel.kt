@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
+import com.rahalgo.driver.push.Push
 import com.rahalgo.ui.Refresh
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
@@ -232,7 +233,12 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         LocationService.stop(getApplication())
         val refresh = backend.session.refreshToken()
         backend.session.clear()
-        viewModelScope.launch { runCatching { backend.auth.logout(refresh) } }
+        // **ورمزُ الجهاز يُرسَل مع الخروج** — `D12`: **وإلّا بقي
+        // الهاتفُ هدفاً لطلباتِ سائقٍ خرج منه.**
+        viewModelScope.launch {
+            val device = Push.currentToken()
+            runCatching { backend.auth.logout(refresh, device) }
+        }
     }
 
     /**

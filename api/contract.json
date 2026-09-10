@@ -2966,6 +2966,10 @@
         {
           "name": "refresh_token",
           "type": "string"
+        },
+        {
+          "name": "device_token",
+          "type": "string"
         }
       ],
       "response": [

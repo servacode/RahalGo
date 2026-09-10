@@ -130,12 +130,19 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		RefreshToken string `json:"refresh_token"`
+		// **رمزُ جهازه للدفع** — **يُنهى مع الجلسة** (`D12`).
+		//
+		// **ونسخةٌ قديمةٌ لا ترسله**: **خروجُها يمضي، ووجهتُها
+		// تبقى حتّى تُصبح ميّتةً بالزمن** — **ولا يُكسَر بابُ
+		// خروجٍ لأجل حقلٍ يُضاف.**
+		DeviceToken string `json:"device_token"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.Logout(r.Context(), req.RefreshToken, clientIP(r)); err != nil {
+	if err := s.identity.Logout(r.Context(), req.RefreshToken,
+		strings.TrimSpace(req.DeviceToken), clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}

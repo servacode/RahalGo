@@ -292,6 +292,26 @@ var Cases = []Case{
 		Result:   NotRun,
 		Evidence: "لا جهازَ متّصل · **وجانبُ الخادم مُثبَتٌ في `P-7`**",
 		Needs:    "SM-A525F"},
+	// ── الخروجُ يُنهي وجهةَ الدفع — `D12` · دورةُ ٥٩ ──────────────
+	//
+	// **والسلطةُ في المحرّك**: **بابُ الخروج يحذف وجهةَ هذا الجهاز
+	// في معاملةِ إبطال العائلة نفسِها** — **ولا يُكتفى بأن يتجاهل
+	// التطبيقُ ما يصله.**
+	{ID: "AND-64", App: "all", Area: "push",
+		Title: "الخروجُ يُنهي وجهةَ هذا الجهاز ويُبقي غيرَه",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D12"},
+		Test: "TestD12_LogoutRemovesThisDeviceBinding", Result: Pass,
+		Evidence: "المُرسِلُ لا يعود يختار الجهازَ · وجهازٌ ثانٍ للحساب نفسِه باقٍ"},
+	{ID: "AND-65", App: "all", Area: "push",
+		Title: "تبديلُ الحساب على الجهاز نفسِه لا يسرق وجهةً",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D12"},
+		Test: "TestD12_AccountSwitchOnSameDevice", Result: Pass,
+		Evidence: "إلغاءُ الأوّلِ لرمزٍ يملكه الثاني لا يمسّه — والحذفُ مقيَّدٌ بصاحبه"},
+	{ID: "AND-66", App: "all", Area: "push",
+		Title: "تكرارُ الخروج والتسجيل والسباق",
+		Kind:  Structural, Automation: Automated, Registers: []string{"D12"},
+		Test: "TestD12_Stress*", Result: Pass,
+		Evidence: "خروجٌ×١٠٠ · جهازان×١٠٠ · سباقُ خروجٍ وتسجيل×١٠٠ · صفرُ وجهاتٍ ناجية"},
 	{ID: "AND-52", App: "all", Area: "realtime",
 		Title: "وصلةٌ مفتوحةٌ بعد إبطال الجلسة",
 		Kind:  OnDevice, Automation: SemiAuto, Registers: []string{"R14"},

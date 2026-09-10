@@ -252,6 +252,35 @@ var domainRules = []domainRule{
 		Why:      "مسٌّ للهويّة أو الجلسة أو تخويل البثّ ⇒ أمنٌ وبثٌّ (البند ١٦)",
 		Staging:  "**`R16`** — فشلُ Redis المفتوح يحتاج طقمَ خدماتٍ حقيقيّاً",
 	},
+	// ── ملكيّةُ وجهةِ الدفع ───────────────────────────────────────
+	//
+	// **قيس قبل الشيفرة (دورةُ ٥٩)**: **تبديلُ `push.go` أو
+	// `device_handlers.go` أو بابِ الخروج في أندرويد كان يردّ
+	// `D1 D20 D21 D23 D26 D27` ولا يردّ `D12`** — **وهو عيبُ تلك
+	// المواضع بعينها.**
+	//
+	// **والسببُ أنّ `D12` مسجَّلٌ على `F-30`** (إعادةُ كلمةٍ وإخراجٌ
+	// شامل) — **وقاعدةُ `EVENTS` تصل `F-07` و`F-09` و`F-14` و`F-34`
+	// ولا تصل `F-30`.**
+	//
+	// **وهذه الملفّاتُ تقرّر من يستقبل دفعاً باسم أيّ حساب** —
+	// **وما الذي يُنهيه الخروج.**
+	{
+		Name: "PUSH_OWNERSHIP",
+		Match: []string{
+			"backend/internal/push/push.go",
+			"backend/internal/server/device_handlers.go",
+			"mobile/ui/src/main/kotlin/com/rahalgo/ui/Push.kt",
+			"mobile/ui/src/main/kotlin/com/rahalgo/ui/AuthViewModel.kt",
+			"mobile/app-driver/src/main/kotlin/com/rahalgo/driver/push/Push.kt",
+			"mobile/app-driver/src/main/kotlin/com/rahalgo/driver/home/HomeViewModel.kt",
+		},
+		Flows:    []string{"F-30"},
+		Apps:     []string{"customer", "driver", "merchant", "rep"},
+		Modes:    []Mode{ModeSecurity, ModeAndroid},
+		Packages: []string{"internal/qa", "internal/push"},
+		Why:      "مسٌّ لملكيّة وجهةِ الدفع أو لبابِ الخروج ⇒ خصوصيّةُ الجهاز بعد الخروج (`D12`)",
+	},
 	// ── عميلُ البثّ والجلسة في أندرويد ────────────────────────────
 	//
 	// **قيس قبل الشيفرة (دورةُ ٥٨)**: **تبديلُ `LiveSocket.kt` أو

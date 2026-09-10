@@ -187,12 +187,28 @@ class AuthApi(private val api: ApiClient) {
      */
     suspend fun contact(): SiteContact = api.raw("/api/v1/public/contact")
 
-    /** خروج — **يُبطل الجلسة في المحرّك لا في الجهاز وحده.** */
-    suspend fun logout(refreshToken: String) {
+    /**
+     * خروج — **يُبطل الجلسة في المحرّك لا في الجهاز وحده.**
+     *
+     * # ويحمل رمزَ جهازه — `D12`
+     *
+     * **وكان الخروجُ يُبطل الجلسةَ ولا يمسّ وجهةَ الدفع** —
+     * **فيبقى الهاتفُ هدفاً لحسابٍ خرج منه**، **وإشعاراتُ سائقٍ
+     * تصل جوّالاً سلّمه لغيره.**
+     *
+     * **ولا يُنادى بابُ إلغاء التسجيل على حدة**: **العميلُ يمسح
+     * اعتمادَه قبل النداء**، **فنداءٌ موثَّقٌ برمز وصولٍ يُردّ.**
+     * **وهذا البابُ يوثَّق برمز التجديد**، **ويُنهي الاثنين في
+     * معاملةٍ واحدة.**
+     *
+     * **وفارغٌ يعني «لا تمسّ وجهةً»** — **فتعذّرُ قراءة رمز
+     * الجهاز لا يمنع الخروج.**
+     */
+    suspend fun logout(refreshToken: String, deviceToken: String = "") {
         api.raw<Ack>(
             "/api/v1/auth/logout",
             HttpMethod.Post,
-            mapOf("refresh_token" to refreshToken),
+            mapOf("refresh_token" to refreshToken, "device_token" to deviceToken),
         )
     }
 }

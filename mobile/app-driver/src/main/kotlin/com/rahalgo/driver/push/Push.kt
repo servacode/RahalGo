@@ -45,6 +45,15 @@ object Push {
         }
     }
 
+    /** **رمزُ هذا الجهاز الآن** — **وفارغٌ عند أيّ تعثّر** (`D12`). */
+    suspend fun currentToken(): String =
+        try {
+            FirebaseMessaging.getInstance().token.await()
+        } catch (e: Exception) {
+            Log.w(TAG, "تعذّر قراءةُ رمز الجهاز", e)
+            ""
+        }
+
     private fun version(context: Context): String =
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()

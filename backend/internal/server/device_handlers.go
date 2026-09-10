@@ -60,7 +60,11 @@ func (s *Server) handleDeviceRegister(w http.ResponseWriter, r *http.Request) {
 	if platform == "" {
 		platform = req.Platform
 	}
-	if err := s.push.Register(r.Context(), userIDFrom(r), token, platform, app, req.AppVersion); err != nil {
+	// **ومربوطٌ بحياة عائلة الجلسة** — `D12`: **تسجيلٌ يسبق خروجاً
+	// بجزءٍ من الثانية كان يترك وجهةً حيّةً لحسابٍ خرج.**
+	sid, _ := r.Context().Value(ctxSID).(string)
+	if err := s.push.RegisterForSession(r.Context(), userIDFrom(r), sid,
+		token, platform, app, req.AppVersion); err != nil {
 		s.respondErr(w, err)
 		return
 	}

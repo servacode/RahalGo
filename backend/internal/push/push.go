@@ -31,6 +31,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // المنصّاتُ المعروفة — **والقائمةُ مغلقةٌ** كما نوعُ الجلسة.
@@ -138,11 +140,74 @@ func normalizePlatform(p string) string {
 // **والرمزُ ينتقل إلى آخرِ من سجّله**: هاتفٌ يُسلَّم لسائقٍ آخرَ يجب ألّا
 // يبقى يستقبل إشعاراتِ الأوّل. **و`ON CONFLICT (token)` تفعل ذلك بنداءٍ
 // واحدٍ بلا سباق.**
+// **وتسجيلٌ بجلسةٍ أُبطلت لا يُكتب** — `D12`.
+//
+// # السباقُ الذي قِيس
+//
+// **خروجٌ يتزامن مع إعادة تسجيل**: **قِيس ١٧ من ١٠٠ تبقى فيها
+// الوجهةُ حيّةً بعد خروجٍ تامّ** — **يكتبها تسجيلٌ سبق الحذفَ
+// بجزءٍ من الثانية.** **وخروجٌ ثانٍ لا يمحوها**: **رمزُ التجديد
+// أُنفق، فيردّ البابُ نجاحاً صامتاً بلا حذف.**
+//
+// **فتبقى وجهةُ دفعٍ حيّةٌ لحسابٍ خرج** — **وهو `D12` بعينه في
+// نافذةٍ ضيّقة.**
+//
+// # والقفلُ على صفوف الجلسة نفسِها
+//
+// **`FOR UPDATE` على عائلة هذه الجلسة** — **لا قفلَ عامّ**:
+//
+//	سبق التسجيلُ ⇒ الخروجُ ينتظر ثمّ يحذف ما كُتب
+//	سبق الخروجُ  ⇒ التسجيلُ يرى `revoked_at` فيمتنع
+//
+// **وكلتا الحالتين تنتهيان بلا وجهةٍ لحسابٍ خرج.**
+//
+// **وجلسةٌ فارغةٌ تمرّ كما كانت** — **نسخةٌ قديمةٌ أو رمزٌ بلا
+// عائلة**: **ولا يُكسَر تسجيلُها لأجل حارسٍ يُضاف.**
 func (s *Service) Register(ctx context.Context, userID, token, platform, app, appVersion string) error {
+	return s.RegisterForSession(ctx, userID, "", token, platform, app, appVersion)
+}
+
+// RegisterForSession **تسجيلٌ مربوطٌ بحياة عائلة الجلسة** — `D12`.
+func (s *Service) RegisterForSession(ctx context.Context, userID, sessionID, token, platform, app, appVersion string) error {
 	if s == nil || token == "" || userID == "" {
 		return nil
 	}
-	_, err := s.db.Exec(ctx, `
+	if sessionID == "" {
+		return s.insert(ctx, s.db, userID, token, platform, app, appVersion)
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var alive int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM (
+			SELECT 1 FROM refresh_tokens
+			 WHERE session_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()
+			 FOR UPDATE
+		) t`, sessionID).Scan(&alive); err != nil {
+		return err
+	}
+	if alive == 0 {
+		// **جلسةٌ أُبطلت** — **ولا يُكتب لها هدف**، **ولا يُردّ
+		// خطأً**: النداءُ نفسُه سيُردّ ٤٠١ في مرّته التالية،
+		// **والصمتُ هنا لا يُخفي شيئاً.**
+		return tx.Commit(ctx)
+	}
+	if err := s.insert(ctx, tx, userID, token, platform, app, appVersion); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+type execer interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+func (s *Service) insert(ctx context.Context, q execer, userID, token, platform, app, appVersion string) error {
+	_, err := q.Exec(ctx, `
 		INSERT INTO device_tokens (token, user_id, platform, app, app_version)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (token) DO UPDATE

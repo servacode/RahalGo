@@ -61,6 +61,23 @@ object Push {
         }
     }
 
+    /**
+     * **رمزُ هذا الجهاز الآن** — **وفارغٌ عند أيّ تعثّر** (`D12`).
+     *
+     * **ويُقرأ عند الخروج ليُرسَل مع النداء** — **فيُنهي المحرّكُ
+     * وجهةَ الدفع مع الجلسة في معاملةٍ واحدة.**
+     *
+     * **وتعثّرُه لا يمنع الخروج**: **زرُّ خروجٍ لا يعمل أسوأُ من
+     * وجهةٍ تبقى حتّى تموت بالزمن.**
+     */
+    suspend fun currentToken(): String =
+        try {
+            FirebaseMessaging.getInstance().token.await()
+        } catch (e: Exception) {
+            Log.w(TAG, "تعذّر قراءةُ رمز الجهاز", e)
+            ""
+        }
+
     private fun version(context: Context): String =
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()

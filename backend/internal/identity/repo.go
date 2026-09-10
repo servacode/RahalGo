@@ -710,6 +710,55 @@ func (r *Repo) ActiveSessionIDs(ctx context.Context, userID string) ([]string, e
 }
 
 // RevokeRefresh يُبطل التوكن ويعيد صاحبه وعائلة جلسته — ErrNotFound إن كان غير صالح.
+// RevokeRefreshAndDevice **يُبطل العائلةَ ويُنهي وجهةَ الدفع معاً** —
+// **`D12`.**
+//
+// # ولماذا في معاملةٍ واحدة
+//
+// **الخروجُ انتقالُ سلطة**: **من نجح خروجُه لم يبقَ جهازُه هدفاً
+// لحسابه.** **ولو كانتا عمليّتين لَجاز أن تُبطَل الجلسةُ ويبقى
+// الرمزُ** — **وذاك هو العطبُ نفسُه بثوبٍ جديد**: **جلسةٌ ماتت
+// ووجهةُ دفعٍ حيّة.**
+//
+// # والحذفُ مقيَّدٌ بصاحبه
+//
+// **`token AND user_id`** — **والمعرّفُ يُقرأ من العائلة التي
+// أُبطلت توّاً لا من العميل.** **فخروجٌ متأخّرٌ من حسابٍ سبق لا
+// يسرق رمزاً سجّله غيرُه على الجهاز نفسِه** (`ON CONFLICT (token)`
+// **ينقل الملكيّة**).
+//
+// **ورمزُ جهازٍ فارغٌ يعني «لا تمسّ شيئاً»** — **ونسخةٌ قديمةٌ من
+// التطبيق لا ترسله فلا يُكسَر خروجُها.**
+func (r *Repo) RevokeRefreshAndDevice(ctx context.Context, tokenHash, deviceToken string) (userID, sessionID string, err error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	err = tx.QueryRow(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now()
+		WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
+		RETURNING user_id, session_id::text`, tokenHash).Scan(&userID, &sessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrNotFound
+	}
+	if err != nil {
+		return "", "", err
+	}
+	if deviceToken != "" {
+		if _, err = tx.Exec(ctx,
+			`DELETE FROM device_tokens WHERE token = $1 AND user_id = $2`,
+			deviceToken, userID); err != nil {
+			return "", "", err
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return "", "", err
+	}
+	return userID, sessionID, nil
+}
+
 func (r *Repo) RevokeRefresh(ctx context.Context, tokenHash string) (userID, sessionID string, err error) {
 	err = r.db.QueryRow(ctx, `
 		UPDATE refresh_tokens SET revoked_at = now()

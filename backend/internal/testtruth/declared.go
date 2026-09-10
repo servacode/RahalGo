@@ -2782,6 +2782,19 @@ var TestMap = map[string]TestDecl{
 	"TestR16_STG_RedisOutageAuthorityHolds":                     stagingTest([]string{"R16"}, nil),
 
 	// ── الإيقافُ والجلسة (دورةُ إصلاحٍ ١٧) — `XG-39` ──────────────
+	// ── الخروجُ ووجهةُ الدفع — `D12` · دورةُ ٥٩ ──────────────────
+	"TestD12_LogoutRemovesThisDeviceBinding":           d12Test(),
+	"TestD12_LogoutIsDeviceScoped":                     d12Test(),
+	"TestD12_LogoutIsIdempotent":                       d12Test(),
+	"TestD12_AccountSwitchOnSameDevice":                d12Test(),
+	"TestD12_SuspensionIsNotLogout":                    d12Test(),
+	"TestD12_DispatcherNoLongerTargetsLoggedOutDevice": d12Test(),
+	"TestD12_StressLoginRegisterLogout":                d12Test(),
+	"TestD12_StressTwoDevicesAndSwitch":                d12Test(),
+	"TestD12_StressLogoutVsReRegisterRace":             d12Test(),
+	"TestD12_StressIdempotentLogout":                   d12Test(),
+	"TestD12_ClientSendsDeviceTokenOnLogout":           d12Test(),
+
 	// ── إعادةُ الوصل برمزٍ منتهٍ — `D19` · دورةُ ٥٨ ───────────────
 	//
 	// **والسلوكُ يُقاس في `mobile/shared` بمقبسٍ حقيقيّ** — **وهذان
@@ -3365,6 +3378,20 @@ func sessionTest() TestDecl {
 	}
 }
 
+// d12Test **شهادةُ `D12`** — **الخروجُ يُنهي وجهةَ الدفع.**
+//
+// **وخصوصيّةٌ لا أمنٌ وحده**: **هاتفٌ في بيتٍ يُظهر أسماءَ زبائنِ
+// سائقٍ خرج.**
+func d12Test() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:    []string{"F-30"},
+		Defects:  []string{"D12"},
+		Modes:    []string{"SECURITY", "ANDROID", "FULL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	}
+}
+
 // xg39Test **شهادةُ `XG-39`** — **بقاءُ الجلسة وتجديدُها والدخولُ
 // والإبطالُ بالحظر.**
 //
@@ -3500,6 +3527,28 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٥٩ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
+	"D12": "**بابُ الخروج صار يُنهي وجهةَ الدفع مع الجلسة في معاملةٍ " +
+		"واحدة** — `RevokeRefreshAndDevice`. **وكان يُبطل الجلسةَ " +
+		"ولا يمسّ الوجهة**: **`Push.unregister` مكتوبةٌ بلا منادٍ** " +
+		"— **فيبقى الهاتفُ هدفاً لحسابٍ خرج منه.** " +
+		"**ولم يُنادَ بابُ إلغاء التسجيل على حدة**: **العميلُ يمسح " +
+		"اعتمادَه قبل النداء، فنداءٌ موثَّقٌ برمز وصولٍ يُردّ ٤٠١** " +
+		"— **وبابُ الخروج يوثَّق برمز التجديد نفسِه فيبقى قادراً.** " +
+		"**والنطاقُ جهازٌ لا حساب** (`token AND user_id`): **جهازٌ " +
+		"ثانٍ للحساب نفسِه لا يُمَسّ**، **ورمزٌ صار لغيره لا يُسرق.** " +
+		"**وسباقٌ كشف بقيّةَ العطب**: **خروجٌ يتزامن مع إعادة تسجيل " +
+		"ترك ١٧ من ١٠٠ وجهةً حيّةً لحسابٍ خرج**، **وخروجٌ ثانٍ لا " +
+		"يمحوها لأنّ رمزَ التجديد أُنفق.** **فصار التسجيلُ مربوطاً " +
+		"بحياة عائلة الجلسة** (`FOR UPDATE` على صفوفها لا قفلٌ " +
+		"عامّ): **سبق التسجيلُ ⇒ الخروجُ يحذف ما كُتب · وسبق " +
+		"الخروجُ ⇒ التسجيلُ يمتنع** — **فصارت صفراً من مئة.** " +
+		"**والمقيسُ بالمسار الحقيقيّ**: **تسجيلٌ من بابه · وخروجٌ " +
+		"من بابه · ثمّ إشعارٌ حقيقيٌّ يُقرأ ما وصل الناقل** — " +
+		"**والخارجُ لم يُختَر والباقي اختير.** " +
+		"**والتعليقُ ليس خروجاً** (`XG-39`): **وجهةُ المعلَّق تبقى.** " +
+		"**وقبولُ الجهاز باقٍ** (`AND-51`).",
+
 	// ── دورةُ إصلاحٍ ٥٨ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
 	"D19": "**حلقةُ إعادة الوصل صارت تطلب رمزاً من سلطته لا تقرأ " +
 		"المخزن** — `RealtimeAuth.tokenForConnect`. **وكانت تقرأ " +

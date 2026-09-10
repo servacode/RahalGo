@@ -561,7 +561,12 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         user = null
         // **والإبطال في المحرّك بعد المحلّي** — مسح الجهاز يقع مهما كانت
         // الشبكة، **وجلسة تبقى مفتوحة في الخادم أهون من زر خروج لا يعمل.**
-        viewModelScope.launch { runCatching { backend.auth.logout(refresh) } }
+        // **ورمزُ الجهاز يُقرأ ثمّ يُرسَل مع الخروج** — `D12`:
+        // **فيُنهي المحرّكُ وجهةَ الدفع مع الجلسة.**
+        viewModelScope.launch {
+            val device = Push.currentToken()
+            runCatching { backend.auth.logout(refresh, device) }
+        }
     }
 
     /**

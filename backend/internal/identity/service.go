@@ -848,8 +848,14 @@ func (s *Service) revokeAllSessions(ctx context.Context, userID string) error {
 // Logout يُنهي الجلسة على **كل تطبيقات المنصة** لا على التطبيق الذي طلب الخروج.
 // الجلسة الواحدة تمتد على الأربعة عبر عائلة session_id (هجرة 0026): إبطال توكن
 // واحد كان يترك الحساب مفتوحاً في تبويب آخر — وعلى جهاز مشترك هذا خطر حقيقي.
-func (s *Service) Logout(ctx context.Context, rawRefresh, ip string) error {
-	userID, sid, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
+func (s *Service) Logout(ctx context.Context, rawRefresh, deviceToken, ip string) error {
+	// **ووجهةُ الدفع تُنهى مع الجلسة لا بعدها** — `D12`.
+	//
+	// **والعميلُ يمسح اعتمادَه محلّيّاً قبل النداء** — **فنداءٌ
+	// موثَّقٌ برمز وصولٍ يُردّ ٤٠١.** **وهذا البابُ يوثَّق برمز
+	// التجديد نفسِه**، **فيبقى قادراً على إنهاء الوجهة.**
+	userID, sid, err := s.repo.RevokeRefreshAndDevice(
+		ctx, auth.HashToken(rawRefresh), deviceToken)
 	if errors.Is(err, ErrNotFound) {
 		return nil // خروج توكن ميت = نجاح صامت
 	}

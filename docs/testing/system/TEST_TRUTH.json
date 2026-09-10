@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 294,
-    "test_funcs": 1099
+    "test_files": 295,
+    "test_funcs": 1110
   },
   "flows": [
     {
@@ -1340,6 +1340,17 @@
         "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
         "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
         "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
+        "TestD12_AccountSwitchOnSameDevice",
+        "TestD12_ClientSendsDeviceTokenOnLogout",
+        "TestD12_DispatcherNoLongerTargetsLoggedOutDevice",
+        "TestD12_LogoutIsDeviceScoped",
+        "TestD12_LogoutIsIdempotent",
+        "TestD12_LogoutRemovesThisDeviceBinding",
+        "TestD12_StressIdempotentLogout",
+        "TestD12_StressLoginRegisterLogout",
+        "TestD12_StressLogoutVsReRegisterRace",
+        "TestD12_StressTwoDevicesAndSwitch",
+        "TestD12_SuspensionIsNotLogout",
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
@@ -1847,10 +1858,22 @@
       "title": "Push.unregister بلا منادٍ",
       "domain": "خصوصيّة",
       "severity": "MEDIUM",
+      "fixed": "**بابُ الخروج صار يُنهي وجهةَ الدفع مع الجلسة في معاملةٍ واحدة** — `RevokeRefreshAndDevice`. **وكان يُبطل الجلسةَ ولا يمسّ الوجهة**: **`Push.unregister` مكتوبةٌ بلا منادٍ** — **فيبقى الهاتفُ هدفاً لحسابٍ خرج منه.** **ولم يُنادَ بابُ إلغاء التسجيل على حدة**: **العميلُ يمسح اعتمادَه قبل النداء، فنداءٌ موثَّقٌ برمز وصولٍ يُردّ ٤٠١** — **وبابُ الخروج يوثَّق برمز التجديد نفسِه فيبقى قادراً.** **والنطاقُ جهازٌ لا حساب** (`token AND user_id`): **جهازٌ ثانٍ للحساب نفسِه لا يُمَسّ**، **ورمزٌ صار لغيره لا يُسرق.** **وسباقٌ كشف بقيّةَ العطب**: **خروجٌ يتزامن مع إعادة تسجيل ترك ١٧ من ١٠٠ وجهةً حيّةً لحسابٍ خرج**، **وخروجٌ ثانٍ لا يمحوها لأنّ رمزَ التجديد أُنفق.** **فصار التسجيلُ مربوطاً بحياة عائلة الجلسة** (`FOR UPDATE` على صفوفها لا قفلٌ عامّ): **سبق التسجيلُ ⇒ الخروجُ يحذف ما كُتب · وسبق الخروجُ ⇒ التسجيلُ يمتنع** — **فصارت صفراً من مئة.** **والمقيسُ بالمسار الحقيقيّ**: **تسجيلٌ من بابه · وخروجٌ من بابه · ثمّ إشعارٌ حقيقيٌّ يُقرأ ما وصل الناقل** — **والخارجُ لم يُختَر والباقي اختير.** **والتعليقُ ليس خروجاً** (`XG-39`): **وجهةُ المعلَّق تبقى.** **وقبولُ الجهاز باقٍ** (`AND-51`).",
       "tests": [
+        "TestD12_AccountSwitchOnSameDevice",
+        "TestD12_ClientSendsDeviceTokenOnLogout",
+        "TestD12_DispatcherNoLongerTargetsLoggedOutDevice",
+        "TestD12_LogoutIsDeviceScoped",
+        "TestD12_LogoutIsIdempotent",
+        "TestD12_LogoutRemovesThisDeviceBinding",
+        "TestD12_StressIdempotentLogout",
+        "TestD12_StressLoginRegisterLogout",
+        "TestD12_StressLogoutVsReRegisterRace",
+        "TestD12_StressTwoDevicesAndSwitch",
+        "TestD12_SuspensionIsNotLogout",
         "TestEV_PushTokenTargeting"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D13",
@@ -9385,6 +9408,259 @@
       "file": "internal/qa/custom_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestD12_AccountSwitchOnSameDevice",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_ClientSendsDeviceTokenOnLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_DispatcherNoLongerTargetsLoggedOutDevice",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_LogoutIsDeviceScoped",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_LogoutIsIdempotent",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_LogoutRemovesThisDeviceBinding",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_StressIdempotentLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_StressLoginRegisterLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_StressLogoutVsReRegisterRace",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_StressTwoDevicesAndSwitch",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_SuspensionIsNotLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
     },
     {
       "name": "TestD19_ClientEvidenceIsRegistered",
