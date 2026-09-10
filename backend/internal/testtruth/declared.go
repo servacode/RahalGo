@@ -1611,6 +1611,65 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "CONCURRENCY"},
 		Evidence: []string{"http"},
 	},
+	// ── دورةُ ٥١ · سقفُ الطلبات النشطة ────────────────────────────
+	"TestD24_ManualAssignmentObeysCap": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D24"},
+		Risks:    []string{"R10"},
+		Modes:    []string{"FULL", "CONCURRENCY", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_ConcurrentAcceptCannotExceedCap": {
+		Level: L5, Flows: []string{"F-08"},
+		Defects:  []string{"D24"},
+		Risks:    []string{"R10"},
+		Modes:    []string{"FULL", "CONCURRENCY", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_MixedPathRaceCannotExceedCap": {
+		Level: L5, Flows: []string{"F-08", "F-19"},
+		Defects:  []string{"D24"},
+		Risks:    []string{"R10"},
+		Modes:    []string{"FULL", "CONCURRENCY", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_CapacityMatrix": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D24"},
+		Modes:    []string{"FULL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_CapacityIsReleasedOnClose": {
+		Level: L5, Flows: []string{"F-13", "F-19"},
+		Defects:  []string{"D24"},
+		Modes:    []string{"FULL"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_DifferentDriversAreNotSerialized": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D24"},
+		Modes:    []string{"FULL", "CONCURRENCY"},
+		Evidence: []string{"http"},
+	},
+	"TestD24_ComposesWithCashCeiling": {
+		Level: L5, Flows: []string{"F-08", "F-19"},
+		Defects:  []string{"D24", "D7"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_LoweringLimitBlocksNewOnly": {
+		Level: L5, Flows: []string{"F-19", "F-33"},
+		Defects:  []string{"D24"},
+		Settings: []string{"drivers.max_active_orders"},
+		Modes:    []string{"FULL"},
+		Evidence: []string{"http", "db"},
+	},
+	"TestD24_ReassignmentChecksTargetCapacity": {
+		Level: L5, Flows: []string{"F-19"},
+		Defects:  []string{"D24"},
+		Modes:    []string{"FULL"},
+		Evidence: []string{"http", "db"},
+	},
 	// ── دورةُ ٥٠ · وحدةُ الانتقال تكفيها وصلةٌ واحدة ──────────────
 	"TestXG48_TransitionBothModesNeedOneConnection": {
 		Level: L5, Flows: []string{"F-04", "F-08"},
@@ -3233,6 +3292,30 @@ func riskTest(risks []string, flow string) TestDecl {
 // وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
 // بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
 var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٥١ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
+	"D24": "**سقفُ الطلبات النشطة صار حارسَ قبولٍ ذرّيّاً** — " +
+		"`orders.AdmitDriverTx`: **قفلٌ لصاحب الشأن، ثمّ عدُّ النشط، " +
+		"ثمّ الحكم، ثمّ الكتابة — في معاملةٍ واحدة.** " +
+		"**وكان بابان مفتوحين**: **إسنادُ المكتب لم يكن يسأل عن " +
+		"السقف أصلاً** (ثلاثةُ طلباتٍ والسقفُ واحدٌ وكلُّها مرّت)، " +
+		"**وانتزاعُ السائق يقرأ العددَ قبل المعاملة ثمّ يكتب** " +
+		"(مئةُ جولةٍ من مئةٍ تجاوزت السقف، والبابان معاً كذلك). " +
+		"**وقفلُ `D7` انتقل إلى مالكٍ واحد**: **حارسان يسألان عن " +
+		"السائق نفسِه في اللحظة نفسِها** — **وقفلان لهما وهمُ " +
+		"حماية**: من أخذ أحدَهما سابقَ من أخذ الآخر. **فصار قفلٌ " +
+		"واحدٌ** (`driver-admit:`) **يُؤخَذ مرّةً ويُسأل الحارسان " +
+		"تحته**، **وسلوكُ `D7` لم يتبدّل.** " +
+		"**والمصفوفةُ ثلاثيّةٌ مقيسة**: سعةٌ نعم/نقدٌ لا ⇒ " +
+		"`cash_limit_exceeded` ولا كتابة · نقدٌ نعم/سعةٌ لا ⇒ " +
+		"`too_many_active_orders` · وكلاهما نعم ⇒ إسنادٌ واحد. " +
+		"**والقفلُ على السائق لا على النظام**: خمسون زوجاً من " +
+		"سائقَين مرّوا جميعاً متزامنين. " +
+		"**وخفضُ السقف لا يُلغي ما بيده** — يمنع الجديدَ حتّى ينزل " +
+		"العدد. " +
+		"**والمكانُ يعود بإغلاق الطلب** — **وحارسٌ يمنع ولا يُفرِج " +
+		"يشلّ السائق.** " +
+		"**والاستثناءُ باقٍ**: ما عُرض عليه بعينه يُقبَل ولو بلغ " +
+		"سقفَه (قرارُ المالك ٢٠٢٦-٠٨-١٣).",
 	// ── دورةُ إصلاحٍ ٤٩ · ٢٠٢٦-٠٩-١٠ ─────────────────────────────
 	"D7": "**السقفُ صار سقفَ تعرّضٍ لا سقفَ ما في الجيب** — " +
 		"`cashbox.GuardTx`: **محصَّلٌ + مُسنَدٌ لم يُحصَّل + الوارد " +

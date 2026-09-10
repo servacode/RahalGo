@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -567,11 +568,17 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والسقفُ يبقى على ما ينتزعه من الطابور بيده** — وهو الفرق:
 	// المعروضُ اختارته المنصّةُ له، والمنتزَعُ اختاره هو.
-	if !offeredToMe &&
-		int64(active) >= s.settings.GetInt(r.Context(), "drivers.max_active_orders") {
-		s.respondErr(w, errTooManyActive)
-		return
+	// **والعددُ لا يُقرأ هنا للحكم** — **قراءةٌ قبل القفل تشيخ قبل
+	// أن تُستعمَل**: **مئةُ جولةٍ من مئةٍ تجاوزت السقف** (`D24`).
+	// **والحكمُ صار تحت القفل في `AdmitDriverTx`.**
+	//
+	// **ويبقى الاستثناءُ كما هو**: **ما عُرض عليه بعينه يُقبَل ولو
+	// بلغ سقفَه** (قرارُ المالك ٢٠٢٦-٠٨-١٣) — **ويُمرَّر سالباً.**
+	activeMax := s.settings.GetInt(r.Context(), "drivers.max_active_orders")
+	if offeredToMe {
+		activeMax = -1
 	}
+	_ = active
 	// السقف يُفحص **قبل** القبول لا عند التسليم: رفضٌ عند الباب أرحم من طلبٍ
 	// يحمله ثم يعجز عن إقفاله.
 	//
@@ -607,9 +614,18 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
-	if err := s.cashbox.GuardTx(r.Context(), tx, uid, cashDue, cashLimit); err != nil {
+	// **والحارسان تحت قفلٍ واحدٍ لصاحبهما** — `D7` و`D24`.
+	if err := s.orders.AdmitDriverTx(r.Context(), tx, uid, orders.Admission{
+		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax,
+	}); err != nil {
 		// **ورسالةُ السائق رسالتُه** — «النقد الذي بذمتك بلغ السقف»
 		// **لا رسالةَ المكتب عنه**، والعقدُ قائمٌ لا يُبدَّل هنا.
+		//
+		// **وسقفُ الطلبات رمزُه رمزُه** — `too_many_active_orders`.
+		if errors.Is(err, orders.ErrTooManyActive) {
+			s.respondErr(w, errTooManyActive)
+			return
+		}
 		s.respondErr(w, errCashLimitFull)
 		return
 	}

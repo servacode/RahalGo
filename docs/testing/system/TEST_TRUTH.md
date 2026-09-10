@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **289** |
-| دوالُّ اختبار | **1072** |
+| ملفّاتُ اختبار | **290** |
+| دوالُّ اختبار | **1081** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1072
-MAPPED     = 370
+TOTAL      = 1081
+MAPPED     = 379
 INFRA      = 120
 ORPHAN     = 582
 ```
@@ -73,7 +73,7 @@ ORPHAN     = 582
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `EXPECTED_FAIL` | `TestCENSUS_D4_OpenLimitNestedInWhatsAppGate` |
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
 | **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `EXPECTED_FAIL` | `TestCENSUS_D6_CustomOrderSkipsCashBan` |
-| **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `FIXED_AND_PASSING` | `TestD7_AtLimitExactlyIsAllowed` · `TestD7_CeilingUnderRepetition` · `TestD7_ConcurrentAssignmentsCannotOversubscribe` · `TestD7_CumulativeExposureIsCounted` · `TestD7_DriverAcceptObeysSameCeiling` · `TestD7_ExposureIsReleasedWhenOrderCloses` · `TestD7_OversizedCashOrderIsRefused` · `TestD7_WalletOrderIsNotBlocked` · `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` · `TestXG46_DriverAcceptNeedsOneConnection` |
+| **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `FIXED_AND_PASSING` | `TestD24_ComposesWithCashCeiling` · `TestD7_AtLimitExactlyIsAllowed` · `TestD7_CeilingUnderRepetition` · `TestD7_ConcurrentAssignmentsCannotOversubscribe` · `TestD7_CumulativeExposureIsCounted` · `TestD7_DriverAcceptObeysSameCeiling` · `TestD7_ExposureIsReleasedWhenOrderCloses` · `TestD7_OversizedCashOrderIsRefused` · `TestD7_WalletOrderIsNotBlocked` · `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` · `TestXG46_DriverAcceptNeedsOneConnection` |
 | **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `FIXED_AND_PASSING` | `TestSessionClient_AdminLogoutAllStillGlobal` |
@@ -90,7 +90,7 @@ ORPHAN     = 582
 | **D21** | هاتفُ السائق يصل الزبون | `FIXED_AND_PASSING` | `TestEV_CustomerDriverAssignment` · `TestD21_CustomerRedactionAgainstContract` · `TestForbiddenFieldGuardCatchesLeak` · `TestOrderFieldsAllClassified` · `TestD21_NoRawOrderSerializationRemains` · `TestD21_RestOrderPrivacyMatrix` · `TestD21_RestPrivacyUnderRepetition` · `TestD23_CrossChannelPrivacyParity` |
 | **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `FIXED_AND_PASSING` | `TestD22_CustomOrderReachesItsOwner` · `TestD22_CustomOrderRoomSetIsComplete` · `TestD22_OwnerDeliveryUnderRepetition` · `TestD22_OwnerPayloadObeysCustomerPrivacy` · `TestEV_CustomOrderOwnerRealtime` · `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
 | **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `FIXED_AND_PASSING` | `TestEV_CustomerDriverAssignment` · `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` · `TestD21_RestOrderPrivacyMatrix` · `TestD21_RestPrivacyUnderRepetition` · `TestD23_CrossChannelPrivacyParity` |
-| **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `EXPECTED_FAIL` | `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
+| **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `FIXED_AND_PASSING` | `TestD24_CapacityIsReleasedOnClose` · `TestD24_CapacityMatrix` · `TestD24_ComposesWithCashCeiling` · `TestD24_ConcurrentAcceptCannotExceedCap` · `TestD24_DifferentDriversAreNotSerialized` · `TestD24_LoweringLimitBlocksNewOnly` · `TestD24_ManualAssignmentObeysCap` · `TestD24_MixedPathRaceCannotExceedCap` · `TestD24_ReassignmentChecksTargetCapacity` · `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
 | **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `FIXED_AND_PASSING` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
 | **D26** | إنذارُ الراصد يضيع بعد كتابة الوسم | `EXPECTED_FAIL` | `TestEV_R22WatchdogMarkerSuppressesRetry` |
 | **D27** | سقوطُ الدفع بلا إعادةٍ دائمة | `FIXED_AND_PASSING` | `TestEV_R23PushFailureIsLost` |

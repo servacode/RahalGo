@@ -182,19 +182,24 @@ func TestRACE_MaxActiveOrders(t *testing.T) {
 		active := activeOf(t, h, drv.ID)
 		if active > 1 {
 			over++
-			if over == 1 {
-				t.Logf("R10 CONFIRMED — الجولة %d: النشطُ %d والسقفُ 1\n%s", i+1, active, r)
+			if over <= 2 {
+				t.Errorf("**الجولة %d: النشطُ %d والسقفُ 1**\n%s", i+1, active, r)
 			}
 		}
 	}
+	// **وكان يوجب التجاوزَ ويسمّيه `RISK CONFIRMED`** — **وصار يوجب
+	// صفراً** (دورةُ ٥١): **الحكمان تحت قفلٍ واحدٍ لصاحبهما في
+	// `AdmitDriverTx`.**
+	//
+	// **والتداخلُ ما زال مقيساً فوق** (`r.Probe.Max() >= 2`) —
+	// **فالنداءان يتزاحمان فعلاً والحارسُ هو ما يفصل بينهما**، **لا
+	// تسلسلٌ وقع صدفة.**
 	if over > 0 {
-		t.Logf("MAX_ACTIVE RACE R10 = RISK CONFIRMED — تجاوزَ السقفَ في %d من %d جولة",
+		t.Errorf("**تجاوزَ السقفَ في %d من %d جولة** — "+
+			"**قراءةٌ ثمّ مقارنةٌ ثمّ كتابةٌ بلا قفل.** (`D24`/`R10`)",
 			over, raceIterations)
-		t.Logf("والسببُ مقيس: driver_handlers.go يقرأ العددَ ثمّ يقارن ثمّ يكتب — بلا قفلٍ ولا معاملة")
-	} else {
-		t.Errorf("لم يتجاوز السقفَ في %d جولة — **وR10 يقول إنّه يتجاوزه. يُراجَع السجلُّ المجمَّد.**",
-			raceIterations)
 	}
+	t.Logf("MAX_ACTIVE RACE = مغلق — %d جولةً متزاحمةً ولا تجاوز", raceIterations)
 }
 
 // activeOf عددُ طلبات السائق المفتوحة — **كما يعدّها المسارُ نفسُه.**

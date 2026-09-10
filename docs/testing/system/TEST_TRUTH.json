@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 289,
-    "test_funcs": 1072
+    "test_files": 290,
+    "test_funcs": 1081
   },
   "flows": [
     {
@@ -397,6 +397,9 @@
       ],
       "tests": [
         "TestPublishOrderReachesEveryRoom",
+        "TestD24_ComposesWithCashCeiling",
+        "TestD24_ConcurrentAcceptCannotExceedCap",
+        "TestD24_MixedPathRaceCannotExceedCap",
         "TestD7_CeilingUnderRepetition",
         "TestD7_CumulativeExposureIsCounted",
         "TestD7_DriverAcceptObeysSameCeiling",
@@ -555,6 +558,7 @@
         "D13"
       ],
       "tests": [
+        "TestD24_CapacityIsReleasedOnClose",
         "TestEV_CustomerDriverAssignment",
         "TestFIN_MoneyTimingByStatus",
         "TestD13_AvatarNeedsSignedURL",
@@ -836,6 +840,14 @@
         "XG-5"
       ],
       "tests": [
+        "TestD24_CapacityIsReleasedOnClose",
+        "TestD24_CapacityMatrix",
+        "TestD24_ComposesWithCashCeiling",
+        "TestD24_DifferentDriversAreNotSerialized",
+        "TestD24_LoweringLimitBlocksNewOnly",
+        "TestD24_ManualAssignmentObeysCap",
+        "TestD24_MixedPathRaceCannotExceedCap",
+        "TestD24_ReassignmentChecksTargetCapacity",
         "TestD7_AtLimitExactlyIsAllowed",
         "TestD7_CeilingUnderRepetition",
         "TestD7_ConcurrentAssignmentsCannotOversubscribe",
@@ -1464,6 +1476,7 @@
         "XG-28"
       ],
       "tests": [
+        "TestD24_LoweringLimitBlocksNewOnly",
         "TestAQ4_A1_SuccessCommitsBoth",
         "TestAQ4_A2_AuditFailureRollsBackMoney",
         "TestAQ4_A3_BusinessFailureLeavesNoAudit",
@@ -1730,6 +1743,7 @@
       "severity": "HIGH",
       "fixed": "**السقفُ صار سقفَ تعرّضٍ لا سقفَ ما في الجيب** — `cashbox.GuardTx`: **محصَّلٌ + مُسنَدٌ لم يُحصَّل + الوارد \u003c= السقف.** **وكان `OverLimit` يقارن `held \u003e= limit` وحدَه**، **و`held` لا يرتفع إلّا عند التحصيل** (`CollectTx` لحظةَ التسليم): **فبابان مفتوحان** — **نقدُ الطلب الداخل لا يُحسَب** (قيس: ٢٧٠٬٠٠٠ مرّت والسقفُ ١٠٠٬٠٠٠)، **والمُسنَدُ الذي لم يُسلَّم لا يُرى** (ثلاثةٌ بأربعين ألفاً مرّت كلُّها و`held` صفرٌ في الثلاث). **والصيغةُ الصحيحةُ كانت في مرشَّح الطابور وفي بابِ القبول وغائبةً عن الإسناد اليدويّ** — **وثلاثُ نسخٍ لقاعدةٍ واحدةٍ تنحرف إحداها.** **فصارت في موضعٍ واحدٍ يناديه البابان.** **والفحصُ والكتابةُ في معاملةٍ واحدةٍ بقفلِ سائق** (`pg_advisory_xact_lock`): **وإسنادان متزامنان كانا يقرآن صفراً معاً** — **ونُزع القفلُ فتجاوزت ٩٩ جولةً من ١٠٠.** **والقفلُ على السائق لا على النظام**: سائقان لا ينتظر أحدُهما الآخر. **وما لا نقدَ فيه لا يُحبَس** (`incoming \u003c= 0`)، **وعند السقف تماماً يُقبَل** — **وهو العقدُ القائم لا عقدٌ جديد.** **والسعةُ تعود بإغلاق الطلب** — **وحارسٌ يمنع ولا يُفرِج يشلّ السائق.** **وسُمّي «تعرّضاً» لا «محصَّلاً» قصداً**: **عهدةُ المكتب القادمةُ بندٌ ثالثٌ في الصيغة لا بنيةٌ أخرى.**",
       "tests": [
+        "TestD24_ComposesWithCashCeiling",
         "TestD7_AtLimitExactlyIsAllowed",
         "TestD7_CeilingUnderRepetition",
         "TestD7_ConcurrentAssignmentsCannotOversubscribe",
@@ -1944,11 +1958,21 @@
       "title": "سقفُ الطلبات النشطة يُتجاوَز بالتزامن",
       "domain": "تزامن · مالٌ غيرُ مباشر",
       "severity": "HIGH",
+      "fixed": "**سقفُ الطلبات النشطة صار حارسَ قبولٍ ذرّيّاً** — `orders.AdmitDriverTx`: **قفلٌ لصاحب الشأن، ثمّ عدُّ النشط، ثمّ الحكم، ثمّ الكتابة — في معاملةٍ واحدة.** **وكان بابان مفتوحين**: **إسنادُ المكتب لم يكن يسأل عن السقف أصلاً** (ثلاثةُ طلباتٍ والسقفُ واحدٌ وكلُّها مرّت)، **وانتزاعُ السائق يقرأ العددَ قبل المعاملة ثمّ يكتب** (مئةُ جولةٍ من مئةٍ تجاوزت السقف، والبابان معاً كذلك). **وقفلُ `D7` انتقل إلى مالكٍ واحد**: **حارسان يسألان عن السائق نفسِه في اللحظة نفسِها** — **وقفلان لهما وهمُ حماية**: من أخذ أحدَهما سابقَ من أخذ الآخر. **فصار قفلٌ واحدٌ** (`driver-admit:`) **يُؤخَذ مرّةً ويُسأل الحارسان تحته**، **وسلوكُ `D7` لم يتبدّل.** **والمصفوفةُ ثلاثيّةٌ مقيسة**: سعةٌ نعم/نقدٌ لا ⇒ `cash_limit_exceeded` ولا كتابة · نقدٌ نعم/سعةٌ لا ⇒ `too_many_active_orders` · وكلاهما نعم ⇒ إسنادٌ واحد. **والقفلُ على السائق لا على النظام**: خمسون زوجاً من سائقَين مرّوا جميعاً متزامنين. **وخفضُ السقف لا يُلغي ما بيده** — يمنع الجديدَ حتّى ينزل العدد. **والمكانُ يعود بإغلاق الطلب** — **وحارسٌ يمنع ولا يُفرِج يشلّ السائق.** **والاستثناءُ باقٍ**: ما عُرض عليه بعينه يُقبَل ولو بلغ سقفَه (قرارُ المالك ٢٠٢٦-٠٨-١٣).",
       "tests": [
+        "TestD24_CapacityIsReleasedOnClose",
+        "TestD24_CapacityMatrix",
+        "TestD24_ComposesWithCashCeiling",
+        "TestD24_ConcurrentAcceptCannotExceedCap",
+        "TestD24_DifferentDriversAreNotSerialized",
+        "TestD24_LoweringLimitBlocksNewOnly",
+        "TestD24_ManualAssignmentObeysCap",
+        "TestD24_MixedPathRaceCannotExceedCap",
+        "TestD24_ReassignmentChecksTargetCapacity",
         "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_MaxActiveOrders"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D25",
@@ -2117,6 +2141,9 @@
         "F-10"
       ],
       "tests": [
+        "TestD24_ConcurrentAcceptCannotExceedCap",
+        "TestD24_ManualAssignmentObeysCap",
+        "TestD24_MixedPathRaceCannotExceedCap",
         "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_MaxActiveOrders",
         "TestRACE_TwoDriversSameOrder"
@@ -3530,6 +3557,7 @@
         "merchant"
       ],
       "tests": [
+        "TestD24_LoweringLimitBlocksNewOnly",
         "TestRACE_MaxActiveOrders",
         "TestRACE_TwoDriversSameOrder"
       ],
@@ -7116,6 +7144,212 @@
       "file": "internal/push/status_test.go",
       "package": "push",
       "orphan": true
+    },
+    {
+      "name": "TestD24_CapacityIsReleasedOnClose",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-13",
+        "F-19"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_CapacityMatrix",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_ComposesWithCashCeiling",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D24",
+        "D7"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_ConcurrentAcceptCannotExceedCap",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_DifferentDriversAreNotSerialized",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_LoweringLimitBlocksNewOnly",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19",
+        "F-33"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "settings": [
+        "drivers.max_active_orders"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_ManualAssignmentObeysCap",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_MixedPathRaceCannotExceedCap",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD24_ReassignmentChecksTargetCapacity",
+      "file": "internal/qa/active_cap_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
     },
     {
       "name": "TestALT_001_LegacyContractUnchanged",

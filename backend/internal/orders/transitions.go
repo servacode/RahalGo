@@ -1480,16 +1480,23 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	//
 	// **والفحصُ والكتابةُ في معاملةٍ واحدةٍ بقفلِ سائق** — **وإسنادان
 	// متزامنان كانا يقرآن صفراً معاً فيمرّان معاً.**
-	// **والسقفُ يُقرأ قبل فتح المعاملة** — **وقراءتُه داخلَها تطلب
-	// اتّصالاً ثانياً والأوّلُ في اليد** (`XG-46`).
+	// **والسقوفُ تُقرأ قبل فتح المعاملة** — **وقراءتُها داخلَها تطلب
+	// اتّصالاً ثانياً والأوّلُ في اليد** (`XG-46`/`XG-48`).
 	cashLimit := s.cashbox.Limit(ctx)
+	activeMax := s.settingInt(ctx, "drivers.max_active_orders")
+
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := s.cashbox.GuardTx(ctx, tx, driverID, cashDue, cashLimit); err != nil {
+	// **وسقفُ الطلبات النشطة لم يكن يُسأل هنا أصلاً** (`D24`):
+	// **ثلاثةُ طلباتٍ والسقفُ واحدٌ وكلُّها مرّت.** **والحكمان صارا
+	// تحت قفلٍ واحدٍ لصاحبهما.**
+	if err := s.AdmitDriverTx(ctx, tx, driverID, Admission{
+		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax,
+	}); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx,
