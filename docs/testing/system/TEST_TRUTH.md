@@ -20,15 +20,15 @@
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
 | ملفّاتُ اختبار | **293** |
-| دوالُّ اختبار | **1093** |
+| دوالُّ اختبار | **1097** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1093
-MAPPED     = 388
+TOTAL      = 1097
+MAPPED     = 392
 INFRA      = 123
 ORPHAN     = 582
 ```
@@ -80,7 +80,7 @@ ORPHAN     = 582
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
 | **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `FIXED_AND_PASSING` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` · `TestFAIL_D13_MediaDirectoryListingOpen` |
-| **D14** | handleWS لا يفحص ActiveStatus | `FIXED_AND_PASSING` | `TestCENSUS_D14_SuspendedCannotOpenSocket` · `TestSampleFactory_SuspendedIsRefused` · `TestD14_ActiveUserRealtimeUnaffected` · `TestD14_BlockedAndDeletedHaveNoRealtime` · `TestD14_RealtimeEligibilityUnderRepetition` · `TestD14_SuspendedDriverScopedToOwnRoom` · `TestD14_SuspendedHasNoBroadRealtimeAccess` |
+| **D14** | handleWS لا يفحص ActiveStatus | `FIXED_AND_PASSING` | `TestCENSUS_D14_SuspendedCannotOpenSocket` · `TestSampleFactory_SuspendedIsRefused` · `TestD14_ActiveUserRealtimeUnaffected` · `TestD14_BlockedAndDeletedHaveNoRealtime` · `TestD14_EventScopeUnderRepetition` · `TestD14_ImpactSurfacesOnRealtimeAuthChange` · `TestD14_RealtimeEligibilityUnderRepetition` · `TestD14_SuspendedDriverScopedToItsOwnOrder` · `TestD14_SuspendedDriverScopedToOwnRoom` · `TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork` · `TestD14_SuspendedHasNoBroadRealtimeAccess` |
 | **D15** | AdminCreateUser في خطوتين | `FIXED_AND_PASSING` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |

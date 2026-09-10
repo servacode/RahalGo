@@ -1643,6 +1643,32 @@ var TestMap = map[string]TestDecl{
 		Modes:    []string{"FULL", "SECURITY", "REALTIME"},
 		Evidence: []string{"socket"},
 	},
+	// ── دورةُ ٥٤ · نطاقُ الحدث للمعلَّق وتتبّعُ البثّ ──────────────
+	"TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork": {
+		Level: L5, Flows: []string{"F-29"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket"},
+	},
+	"TestD14_SuspendedDriverScopedToItsOwnOrder": {
+		Level: L5, Flows: []string{"F-29"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME", "RELEASE"},
+		Evidence: []string{"socket"},
+	},
+	"TestD14_EventScopeUnderRepetition": {
+		Level: L5, Flows: []string{"F-29"},
+		Defects:  []string{"D14"},
+		Modes:    []string{"FULL", "SECURITY", "REALTIME"},
+		Evidence: []string{"socket"},
+	},
+	// **وحارسُ التتبّع** — **أعلنت دورةُ ٥٣ «التتبّعُ كامل» وهو ليس
+	// كذلك**، **وحارسٌ يقول «كامل» بلا قياسٍ أسوأُ من غيابه.**
+	"TestD14_ImpactSurfacesOnRealtimeAuthChange": {
+		Level: L5, Purpose: PurposeGenerator,
+		Defects: []string{"D14"},
+		Modes:   []string{"FAST", "FULL", "RELEASE"},
+	},
 	// ── دورةُ ٥٢ · تشخيصُ سباق دفعات الموقع ───────────────────────
 	//
 	// **ولا شيفرةَ منتَجٍ فيها**: **الشاهدُ التاريخيُّ ٢ من ٤ لم
@@ -3381,6 +3407,16 @@ var DefectFixed = map[string]string{
 		"**واستثناءُ الإتمام محفوظٌ ومقصور** (`suspension.go`): **غرفتُه " +
 		"هو تصله فيُتمّ ما بيده**، **وطابورُ العمل الجديد وغرفةُ المكتب " +
 		"وإشارةُ اللوحة لا تصله.** " +
+		"**والغرفةُ وحدَها لم تكفِ** (دورةُ ٥٤): **`rotation.go` تبثّ " +
+		"العرضَ في `driver:<id>` كما تبثّه في الطابور** — **فمن مُنع من " +
+		"الطابور نُودي من بابه الخاصّ.** **فصار الحكمُ على الحمولة: " +
+		"طلبٌ يحمله الآنَ يصله** (`driver_id` في المرشَّح)، **وإشارةُ " +
+		"العرض الصمّاءُ وطلبُ غيره لا يصلانه** — **والمنعُ هو الأصلُ " +
+		"عند الجهل.** **ولا استعلامَ لكلّ إطار**: السلطةُ في الحمولة " +
+		"المكتوبة من الطلب المثبَّت. " +
+		"**وتتبّعُه صُحّح**: **تبديلُ `ws.go` وحدَه كان يردّ لا تدفّقاً " +
+		"ولا عيباً** — **فأُضيف بابُ المصافحة إلى قاعدة `AUTH_SESSION` " +
+		"وأُضيف تدفّقا التعليق إليها**، **فصار `D14` يظهر.** " +
 		"**وبالسماح لا بالمنع**: **غرفةٌ تُضاف غداً لا تصل المعلَّقَ من " +
 		"نفسها.** " +
 		"**و`R16` كما هو**: **تعذّرُ التحقّق يبقى ٥٠٣ لا إبطالَ جلسة.**",

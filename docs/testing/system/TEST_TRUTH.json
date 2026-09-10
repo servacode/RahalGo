@@ -32,7 +32,7 @@
     "behaviour_settings": 96,
     "order_fields": 75,
     "test_files": 293,
-    "test_funcs": 1093
+    "test_funcs": 1097
   },
   "flows": [
     {
@@ -1262,8 +1262,11 @@
         "TestXG22_T8_BlockedHasNoException",
         "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles",
         "TestD14_BlockedAndDeletedHaveNoRealtime",
+        "TestD14_EventScopeUnderRepetition",
         "TestD14_RealtimeEligibilityUnderRepetition",
+        "TestD14_SuspendedDriverScopedToItsOwnOrder",
         "TestD14_SuspendedDriverScopedToOwnRoom",
+        "TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork",
         "TestD14_SuspendedHasNoBroadRealtimeAccess"
       ],
       "status": "COVERED"
@@ -1842,14 +1845,18 @@
       "title": "handleWS لا يفحص ActiveStatus",
       "domain": "أمن",
       "severity": "HIGH",
-      "fixed": "**مصافحةُ البثّ صارت تسأل عن حال الحساب كما يسأل `REST`** — `identity.ActiveStatus`، **وهو مصدرُ `RequireAuth` نفسُه**: **ولا معجمَ حالاتٍ ثانٍ يُكتب للبثّ فينحرف.** **وكانت تتحقّق من الجلسة وحدَها** (`CheckSession`) — **فالموقوفُ يُردّ ٤٠٣ في كلّ نداءٍ ويُقبَل في القناة الدائمة**، **وهي أطولُ عمراً من نداء.** **وقيس بمقبسٍ حقيقيٍّ لا بمصافحةٍ وحدَها**: **بثٌّ عامٌّ وصل معلَّقاً، وطابورُ العمل الجديد وصل سائقاً معلَّقاً، والمحظورُ والمحذوفُ قُبلا (١٠١).** **وبعدُ: المحظورُ والمحذوفُ ٤٠٣ · والمعلَّقُ في غرفته وحدَها.** **والجلسةُ ليست الامتياز**: **جلسةُ المعلَّق تبقى حيّةً وتُجدَّد (`XG-39`) ولم تُمَسّ** — **المتبدّلُ ما تمنحه من وصولٍ لحظيّ.** **واستثناءُ الإتمام محفوظٌ ومقصور** (`suspension.go`): **غرفتُه هو تصله فيُتمّ ما بيده**، **وطابورُ العمل الجديد وغرفةُ المكتب وإشارةُ اللوحة لا تصله.** **وبالسماح لا بالمنع**: **غرفةٌ تُضاف غداً لا تصل المعلَّقَ من نفسها.** **و`R16` كما هو**: **تعذّرُ التحقّق يبقى ٥٠٣ لا إبطالَ جلسة.**",
+      "fixed": "**مصافحةُ البثّ صارت تسأل عن حال الحساب كما يسأل `REST`** — `identity.ActiveStatus`، **وهو مصدرُ `RequireAuth` نفسُه**: **ولا معجمَ حالاتٍ ثانٍ يُكتب للبثّ فينحرف.** **وكانت تتحقّق من الجلسة وحدَها** (`CheckSession`) — **فالموقوفُ يُردّ ٤٠٣ في كلّ نداءٍ ويُقبَل في القناة الدائمة**، **وهي أطولُ عمراً من نداء.** **وقيس بمقبسٍ حقيقيٍّ لا بمصافحةٍ وحدَها**: **بثٌّ عامٌّ وصل معلَّقاً، وطابورُ العمل الجديد وصل سائقاً معلَّقاً، والمحظورُ والمحذوفُ قُبلا (١٠١).** **وبعدُ: المحظورُ والمحذوفُ ٤٠٣ · والمعلَّقُ في غرفته وحدَها.** **والجلسةُ ليست الامتياز**: **جلسةُ المعلَّق تبقى حيّةً وتُجدَّد (`XG-39`) ولم تُمَسّ** — **المتبدّلُ ما تمنحه من وصولٍ لحظيّ.** **واستثناءُ الإتمام محفوظٌ ومقصور** (`suspension.go`): **غرفتُه هو تصله فيُتمّ ما بيده**، **وطابورُ العمل الجديد وغرفةُ المكتب وإشارةُ اللوحة لا تصله.** **والغرفةُ وحدَها لم تكفِ** (دورةُ ٥٤): **`rotation.go` تبثّ العرضَ في `driver:\u003cid\u003e` كما تبثّه في الطابور** — **فمن مُنع من الطابور نُودي من بابه الخاصّ.** **فصار الحكمُ على الحمولة: طلبٌ يحمله الآنَ يصله** (`driver_id` في المرشَّح)، **وإشارةُ العرض الصمّاءُ وطلبُ غيره لا يصلانه** — **والمنعُ هو الأصلُ عند الجهل.** **ولا استعلامَ لكلّ إطار**: السلطةُ في الحمولة المكتوبة من الطلب المثبَّت. **وتتبّعُه صُحّح**: **تبديلُ `ws.go` وحدَه كان يردّ لا تدفّقاً ولا عيباً** — **فأُضيف بابُ المصافحة إلى قاعدة `AUTH_SESSION` وأُضيف تدفّقا التعليق إليها**، **فصار `D14` يظهر.** **وبالسماح لا بالمنع**: **غرفةٌ تُضاف غداً لا تصل المعلَّقَ من نفسها.** **و`R16` كما هو**: **تعذّرُ التحقّق يبقى ٥٠٣ لا إبطالَ جلسة.**",
       "tests": [
         "TestCENSUS_D14_SuspendedCannotOpenSocket",
         "TestSampleFactory_SuspendedIsRefused",
         "TestD14_ActiveUserRealtimeUnaffected",
         "TestD14_BlockedAndDeletedHaveNoRealtime",
+        "TestD14_EventScopeUnderRepetition",
+        "TestD14_ImpactSurfacesOnRealtimeAuthChange",
         "TestD14_RealtimeEligibilityUnderRepetition",
+        "TestD14_SuspendedDriverScopedToItsOwnOrder",
         "TestD14_SuspendedDriverScopedToOwnRoom",
+        "TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork",
         "TestD14_SuspendedHasNoBroadRealtimeAccess"
       ],
       "status": "FIXED_AND_PASSING"
@@ -16275,6 +16282,43 @@
       "orphan": false
     },
     {
+      "name": "TestD14_EventScopeUnderRepetition",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD14_ImpactSurfacesOnRealtimeAuthChange",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "GENERATOR_TEST",
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD14_RealtimeEligibilityUnderRepetition",
       "file": "internal/qa/ws_account_status_test.go",
       "package": "qa",
@@ -16297,7 +16341,51 @@
       "orphan": false
     },
     {
+      "name": "TestD14_SuspendedDriverScopedToItsOwnOrder",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD14_SuspendedDriverScopedToOwnRoom",
+      "file": "internal/qa/ws_account_status_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "evidence": [
+        "socket"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork",
       "file": "internal/qa/ws_account_status_test.go",
       "package": "qa",
       "level": "L5",

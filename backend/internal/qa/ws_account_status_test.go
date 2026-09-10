@@ -34,6 +34,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/servacode/rahalgo/backend/internal/impact"
 )
 
 // wsDial **مصافحةٌ حقيقيّةٌ لا نداءٌ عاديّ** — وتردّ الحالَ والوصلة.
@@ -232,12 +234,23 @@ func TestD14_SuspendedDriverScopedToOwnRoom(t *testing.T) {
 		t.Logf("  طابورُ العمل الجديد لم يصله — صحيح")
 	}
 
-	// **وغرفتُه هو تصله** — وبها يُتمّ ما بيده.
-	if got := wsExpect(t, h, in, "driver:"+drv.ID, 2*time.Second); got == nil {
-		t.Errorf("**لم تصله غرفتُه** — **والمعلَّقُ يُتمّ ما بيده** " +
-			"(`suspension.go`)")
+	// ══════════════════════════════════════════════════════════════
+	// **وغرفتُه ليست كلُّها له** — تصحيحُ دورةِ ٥٤
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكان هذا الفحصُ يوجب أن تصله غرفتُه بأيّ حمولة** — **وذاك
+	// خطأٌ قام على ظنٍّ أنّ غرفةَ السائق عملُه القائمُ وحدَه.**
+	//
+	// **و`rotation.go` تبثّ العرضَ فيها** — **فالإشارةُ الصمّاءُ
+	// `{"type":"order"}` عرضُ عملٍ جديدٍ لا تحديثُ طلبٍ قائم.**
+	//
+	// **فصار يوجب منعَها** — **والقبولُ في `TestD14_SuspendedDriver
+	// ScopedToItsOwnOrder` بحمولةِ طلبٍ يحمله.**
+	if got := wsExpect(t, h, in, "driver:"+drv.ID, 1500*time.Millisecond); got != nil {
+		t.Errorf("**وصلته إشارةٌ صمّاءُ في غرفته** — %v — "+
+			"**وهي عرضُ عملٍ جديد.** (`D14`)", got)
 	} else {
-		t.Logf("  غرفتُه وصلته — %v", got)
+		t.Logf("  الإشارةُ الصمّاءُ لم تصله — والعملُ الجديدُ ممنوع")
 	}
 }
 
@@ -332,5 +345,219 @@ func TestD14_RealtimeEligibilityUnderRepetition(t *testing.T) {
 	if denied > 0 || silent > 0 {
 		t.Errorf("**نشطٌ: رُدَّ %d وصمت %d من 100** — "+
 			"**وحارسٌ يمنع الجائزَ يُطفأ في أوّل شكوى.**", denied, silent)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وغرفةُ العمل تحمل عملاً جديداً** — `D14` (دورةُ ٥٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ولم تكن الغرفةُ وحدَها كافية**: **`rotation.go` تبثّ العرضَ في
+// `driver:<id>` كما تبثّه في `drivers:queue`** — **فمن مُنع من
+// الطابور نُودي من بابه الخاصّ.**
+//
+// **فالحكمُ صار على الحمولة**: **ما يحمله السائقُ الآنَ يصله، وما
+// عُرض عليه لا يصله.**
+
+// suspendedDriverSocket سائقٌ معلَّقٌ ووصلتُه وقارئُها.
+func suspendedDriverSocket(t *testing.T, h *Harness, drv *User) <-chan map[string]any {
+	t.Helper()
+	setStatus(t, h, drv.ID, "suspended")
+	c, code := wsDial(t, h, drv.Token)
+	if code != http.StatusSwitchingProtocols {
+		t.Fatalf("**رُدَّت مصافحةُ سائقٍ معلَّق** — %d "+
+			"(والمعلَّقُ يُتمّ ما بيده)", code)
+	}
+	t.Cleanup(func() { c.CloseNow() })
+	return wsReader(c)
+}
+
+// TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork **`D14-T2`.**
+func TestD14_SuspendedDriverWithoutActiveOrderGetsNoWork(t *testing.T) {
+	h := New(t)
+	drv := h.Factory().Driver(OnShift())
+	in := suspendedDriverSocket(t, h, drv)
+
+	// **وعرضٌ يُبَثّ في غرفته** — كما تفعل `rotation.go`.
+	if got := wsExpect(t, h, in, "driver:"+drv.ID, 1500*time.Millisecond); got != nil {
+		t.Errorf("**وصلَ معلَّقاً بلا طلبٍ قائمٍ عملٌ في غرفته** — %v (`D14`)", got)
+	} else {
+		t.Logf("D14-T2 — معلَّقٌ بلا طلبٍ قائم: لا عملَ يصله")
+	}
+}
+
+// TestD14_SuspendedDriverScopedToItsOwnOrder **`D14-T3` و`D14-T4` و`D14-T5`.**
+func TestD14_SuspendedDriverScopedToItsOwnOrder(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	treasury(t, h)
+	h.Setting("drivers.assignment_mode", `"queue"`)
+	h.Setting("drivers.cash_limit", "900000000")
+	h.Setting("drivers.max_active_orders", "5")
+
+	drv := f.Driver(OnShift())
+	cust := h.Customer()
+	mine := queuedOrder(t, h, cust, 1000)
+	if got := h.POST("/api/v1/driver/orders/"+mine+"/accept", drv.Token, nil); got.Code >= 400 {
+		t.Fatalf("قبولُ الطلب قبل التعليق: %s", got)
+	}
+	other := queuedOrder(t, h, cust, 1000)
+
+	in := suspendedDriverSocket(t, h, drv)
+
+	// ── `D14-T3` ── طلبُه القائمُ يصله ─────────────────────────────
+	//
+	// **ويُبَثُّ بالحمولة كما يبثّه المحرّك** (`publishOrder`).
+	mineView := map[string]any{"type": "order",
+		"order": map[string]any{"id": mine, "driver_id": drv.ID, "status": "assigned"}}
+	got := wsExpectPayload(t, h, in, "driver:"+drv.ID, mineView, 2*time.Second)
+	if got == nil {
+		t.Errorf("**لم يصله طلبُه القائم** — **والمعلَّقُ يُتمّ ما بيده** " +
+			"(`suspension.go`)")
+	} else {
+		t.Logf("D14-T3 — طلبُه القائمُ وصله")
+	}
+
+	// ── `D14-T4` ── وطلبُ غيره لا يصله ─────────────────────────────
+	otherView := map[string]any{"type": "order",
+		"order": map[string]any{"id": other, "driver_id": f.Driver(OnShift()).ID,
+			"status": "assigned"}}
+	if got := wsExpectPayload(t, h, in, "driver:"+drv.ID, otherView,
+		1500*time.Millisecond); got != nil {
+		t.Errorf("**وصله طلبٌ ليس له** — %v (`D14`)", got)
+	} else {
+		t.Logf("D14-T4 — طلبُ غيره لم يصله")
+	}
+
+	// ── `D14-T5` ── وإشارةُ العرض الصمّاءُ لا تصله ─────────────────
+	if got := wsExpect(t, h, in, "driver:"+drv.ID, 1500*time.Millisecond); got != nil {
+		t.Errorf("**وصلته إشارةُ عرضٍ في غرفته** — %v (`D14`)", got)
+	} else {
+		t.Logf("D14-T5 — إشارةُ العرض لم تصله")
+	}
+}
+
+// wsExpectPayload **يبثّ حمولةً بعينها حتّى تصل أو تنقضي المهلة.**
+func wsExpectPayload(t *testing.T, h *Harness, in <-chan map[string]any,
+	room string, payload map[string]any, within time.Duration) map[string]any {
+	t.Helper()
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	deadline := time.After(within)
+	for {
+		h.Hub.Publish(room, payload)
+		select {
+		case m, ok := <-in:
+			if !ok {
+				return nil
+			}
+			return m
+		case <-tick.C:
+		case <-deadline:
+			return nil
+		}
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **`D14-T10` · وأثرُ التغيير يرى `D14`**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ودورةُ ٥٣ أعلنت «التتبّعُ كامل» وهو ليس كذلك**: **تبديلُ
+// `ws.go` وحدَه كان يردّ لا تدفّقاً ولا عيباً ولا وضعاً** — **فتخويلُ
+// البثّ لا يراه `P-9` أصلاً.**
+//
+// **وحارسٌ يقول «كامل» بلا قياسٍ أسوأُ من غيابه.**
+
+func TestD14_ImpactSurfacesOnRealtimeAuthChange(t *testing.T) {
+	eng, err := impact.Load("../../..")
+	if err != nil {
+		t.Fatalf("تحميلُ محرّك الأثر: %v", err)
+	}
+	res := eng.Analyze("EXPLICIT_FILES", "", "",
+		[]string{"backend/internal/server/ws.go"})
+
+	var hasD14 bool
+	for _, d := range res.Defects {
+		if d == "D14" {
+			hasD14 = true
+		}
+	}
+	t.Logf("D14-T10 — تبديلُ `ws.go`: تدفّقاتٌ=%v · عيوبٌ=%v",
+		res.Flows, res.Defects)
+
+	if len(res.Flows) == 0 {
+		t.Errorf("**تبديلُ بابِ المصافحة لا يردّ تدفّقاً واحداً** — " +
+			"**وتخويلُ البثّ خارجَ أثر التغيير.**")
+	}
+	if !hasD14 {
+		t.Errorf("**`D14` لا يظهر عند تبديل تخويل البثّ** — "+
+			"**وهو عيبُ ذلك البابِ بعينه.** (العيوبُ: %v)", res.Defects)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وتكرارُ نطاق الحدث** — `D14` (دورةُ ٥٤)
+// ══════════════════════════════════════════════════════════════════════
+
+func TestD14_EventScopeUnderRepetition(t *testing.T) {
+	if testing.Short() {
+		t.Skip("تكرارٌ — لا يُشغَّل في الوضع القصير")
+	}
+	h := New(t)
+	f := h.Factory()
+	treasury(t, h)
+	h.Setting("drivers.assignment_mode", `"queue"`)
+	h.Setting("drivers.cash_limit", "900000000")
+	h.Setting("drivers.max_active_orders", "5")
+
+	drv := f.Driver(OnShift())
+	cust := h.Customer()
+	mine := queuedOrder(t, h, cust, 1000)
+	if got := h.POST("/api/v1/driver/orders/"+mine+"/accept", drv.Token, nil); got.Code >= 400 {
+		t.Fatalf("قبولُ الطلب: %s", got)
+	}
+	in := suspendedDriverSocket(t, h, drv)
+
+	stranger := f.Driver(OnShift())
+	mineView := map[string]any{"type": "order",
+		"order": map[string]any{"id": mine, "driver_id": drv.ID, "status": "assigned"}}
+	otherView := map[string]any{"type": "order",
+		"order": map[string]any{"id": mine, "driver_id": stranger.ID, "status": "assigned"}}
+	bare := map[string]any{"type": "order"}
+
+	const rounds = 100
+	room := "driver:" + drv.ID
+
+	// **وما يحمله يصله** — ولا يُمنَع الجائز.
+	missed := 0
+	for i := 0; i < rounds; i++ {
+		if wsExpectPayload(t, h, in, room, mineView, time.Second) == nil {
+			missed++
+		}
+	}
+	t.Logf("  طلبُه القائمُ ×%d — لم يصل %d", rounds, missed)
+
+	// **وما ليس له لا يصله.**
+	leakedOther := 0
+	for i := 0; i < rounds; i++ {
+		if wsExpectPayload(t, h, in, room, otherView, 250*time.Millisecond) != nil {
+			leakedOther++
+		}
+	}
+	t.Logf("  طلبُ غيره ×%d — وصل %d", rounds, leakedOther)
+
+	// **وعرضُ العمل الجديد لا يصله.**
+	leakedBare := 0
+	for i := 0; i < rounds; i++ {
+		if wsExpectPayload(t, h, in, room, bare, 250*time.Millisecond) != nil {
+			leakedBare++
+		}
+	}
+	t.Logf("  إشارةُ العرض ×%d — وصل %d", rounds, leakedBare)
+
+	if missed > 0 || leakedOther > 0 || leakedBare > 0 {
+		t.Errorf("**تكرار: لم يصل طلبُه %d · وصل طلبُ غيره %d · "+
+			"وصلت إشارةُ العرض %d.** (`D14`)", missed, leakedOther, leakedBare)
 	}
 }

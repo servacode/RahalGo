@@ -232,10 +232,20 @@ var domainRules = []domainRule{
 	// ── الهويّةُ والجلسة ───────────────────────────────────────────
 	{
 		Name: "AUTH_SESSION",
+		// **وبابُ المصافحة منها** — `backend/internal/server/ws`.
+		//
+		// **وكان غائباً**: **تبديلُ `ws.go` وحدَه يردّ لا تدفّقاً ولا
+		// عيباً ولا وضعاً** — **فتخويلُ البثّ لا يراه أثرُ التغيير
+		// أصلاً.** (قيس في دورةِ ٥٤.)
 		Match: []string{"backend/internal/auth/", "backend/internal/identity/",
 			"backend/internal/server/middleware", "backend/internal/server/auth_handlers.go",
-			"backend/internal/realtime/"},
-		Flows:    []string{"F-30", "F-34"},
+			"backend/internal/server/ws", "backend/internal/realtime/"},
+		// **وتدفّقا التعليق منها** — `F-28` و`F-29`.
+		//
+		// **وعليهما `D14`**: **مصافحةُ البثّ لا تسأل عن حال الحساب.**
+		// **فمن بدّل توثيقاً أو تخويلَ بثٍّ مسّ إنفاذَ التعليق** —
+		// **وكان لا يُنبَّه إليه.**
+		Flows:    []string{"F-28", "F-29", "F-30", "F-34"},
 		Apps:     []string{"customer", "merchant", "driver", "rep", "admin"},
 		Modes:    []Mode{ModeSecurity, ModeRealtime},
 		Packages: []string{"internal/qa", "internal/identity"},

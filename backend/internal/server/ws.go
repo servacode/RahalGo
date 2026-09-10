@@ -90,6 +90,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والحكمُ من مصدر `REST` نفسِه** (`identity.ActiveStatus`) —
 	// **ولا معجمَ حالاتٍ ثانٍ يُكتب هنا فينحرف.**
+	var workRoom string
 	status := s.identity.ActiveStatus(r.Context(), claims.Subject)
 	if status != "active" && status != "suspended" {
 		// **والمحظورُ والمحذوفُ يقفان عند كلّ شيء** — **ولا استثناءَ
@@ -197,8 +198,27 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		topics = kept
+
+		// **وغرفةُ العمل تُفرَد بقناةٍ لتُرشَّح حمولتُها** — `D14`.
+		//
+		// **والغرفةُ وحدَها لا تكفي**: **العرضُ يُبَثّ فيها كما يُبَثّ
+		// في الطابور** (`rotation.go`) — **فيُمنَع الطابورُ ويُنادى
+		// من بابه الخاصّ.**
+		//
+		// **والمِرقاةُ لا تحمل اسمَ غرفتها** — **فتُشترَك على حدة
+		// بدل تبديل بنية البثّ لأجل حالٍ واحدة.**
+		workRoom = workRoomOf(roles, claims.Subject)
+		if workRoom != "" {
+			rest := topics[:0]
+			for _, t := range topics {
+				if t != workRoom {
+					rest = append(rest, t)
+				}
+			}
+			topics = rest
+		}
 		s.logger.Info("البثّ: حسابٌ معلَّقٌ — غرفتُه وحدَها",
-			"user", claims.Subject, "rooms", len(topics))
+			"user", claims.Subject, "rooms", len(topics), "work_room", workRoom)
 	}
 
 	// ══════════════════════════════════════════════════════════════════
@@ -226,6 +246,15 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	ch, cancel := s.hub.Subscribe(topics)
 	defer cancel()
+
+	// **وقناةُ غرفة العمل للمعلَّق وحدَه** — **وللنشط لا وجودَ لها.**
+	var workCh <-chan []byte
+	if workRoom != "" {
+		wc, wcancel := s.hub.Subscribe([]string{workRoom})
+		defer wcancel()
+		workCh = wc
+	}
+	filter := suspendedFilter{UserID: claims.Subject}
 
 	ctx := r.Context()
 	// قارئ لاكتشاف الإغلاق من الطرف الآخر
@@ -256,6 +285,17 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case msg := <-ch:
+			writeCtx, wcancel := context.WithTimeout(ctx, 5*time.Second)
+			err := conn.Write(writeCtx, websocket.MessageText, msg)
+			wcancel()
+			if err != nil {
+				return
+			}
+		case msg := <-workCh:
+			// **ولا يصل المعلَّقَ من غرفة عمله إلّا ما يحمله الآن.**
+			if !filter.allow(msg) {
+				continue
+			}
 			writeCtx, wcancel := context.WithTimeout(ctx, 5*time.Second)
 			err := conn.Write(writeCtx, websocket.MessageText, msg)
 			wcancel()
