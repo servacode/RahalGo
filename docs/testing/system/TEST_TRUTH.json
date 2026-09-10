@@ -32,7 +32,7 @@
     "behaviour_settings": 96,
     "order_fields": 75,
     "test_files": 295,
-    "test_funcs": 1110
+    "test_funcs": 1117
   },
   "flows": [
     {
@@ -1343,14 +1343,21 @@
         "TestD12_AccountSwitchOnSameDevice",
         "TestD12_ClientSendsDeviceTokenOnLogout",
         "TestD12_DispatcherNoLongerTargetsLoggedOutDevice",
+        "TestD12_DispatcherSilentAfterTokenlessLogout",
+        "TestD12_FailureBetweenRevokeAndCleanupIsAtomic",
         "TestD12_LogoutIsDeviceScoped",
         "TestD12_LogoutIsIdempotent",
         "TestD12_LogoutRemovesThisDeviceBinding",
+        "TestD12_LogoutWithoutDeviceTokenStillRemovesBinding",
+        "TestD12_SessionScopedCleanupKeepsOtherSession",
         "TestD12_StressIdempotentLogout",
         "TestD12_StressLoginRegisterLogout",
         "TestD12_StressLogoutVsReRegisterRace",
+        "TestD12_StressTokenlessLogout",
         "TestD12_StressTwoDevicesAndSwitch",
+        "TestD12_StressTwoSessionsAndClaim",
         "TestD12_SuspensionIsNotLogout",
+        "TestD12_TokenRotationWithinSessionIsFullyCleaned",
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
@@ -1858,19 +1865,26 @@
       "title": "Push.unregister بلا منادٍ",
       "domain": "خصوصيّة",
       "severity": "MEDIUM",
-      "fixed": "**بابُ الخروج صار يُنهي وجهةَ الدفع مع الجلسة في معاملةٍ واحدة** — `RevokeRefreshAndDevice`. **وكان يُبطل الجلسةَ ولا يمسّ الوجهة**: **`Push.unregister` مكتوبةٌ بلا منادٍ** — **فيبقى الهاتفُ هدفاً لحسابٍ خرج منه.** **ولم يُنادَ بابُ إلغاء التسجيل على حدة**: **العميلُ يمسح اعتمادَه قبل النداء، فنداءٌ موثَّقٌ برمز وصولٍ يُردّ ٤٠١** — **وبابُ الخروج يوثَّق برمز التجديد نفسِه فيبقى قادراً.** **والنطاقُ جهازٌ لا حساب** (`token AND user_id`): **جهازٌ ثانٍ للحساب نفسِه لا يُمَسّ**، **ورمزٌ صار لغيره لا يُسرق.** **وسباقٌ كشف بقيّةَ العطب**: **خروجٌ يتزامن مع إعادة تسجيل ترك ١٧ من ١٠٠ وجهةً حيّةً لحسابٍ خرج**، **وخروجٌ ثانٍ لا يمحوها لأنّ رمزَ التجديد أُنفق.** **فصار التسجيلُ مربوطاً بحياة عائلة الجلسة** (`FOR UPDATE` على صفوفها لا قفلٌ عامّ): **سبق التسجيلُ ⇒ الخروجُ يحذف ما كُتب · وسبق الخروجُ ⇒ التسجيلُ يمتنع** — **فصارت صفراً من مئة.** **والمقيسُ بالمسار الحقيقيّ**: **تسجيلٌ من بابه · وخروجٌ من بابه · ثمّ إشعارٌ حقيقيٌّ يُقرأ ما وصل الناقل** — **والخارجُ لم يُختَر والباقي اختير.** **والتعليقُ ليس خروجاً** (`XG-39`): **وجهةُ المعلَّق تبقى.** **وقبولُ الجهاز باقٍ** (`AND-51`).",
+      "fixed": "**ومِلكيّةُ وجهةِ الدفع عائلةُ جلسةٍ لا رمزٌ يُقرأ من الجهاز** (دورةُ ٦٠) — **device_tokens.session_id.** **وكان الحذفُ برمز `FCM` الذي يرسله العميل وحدَه**، **وقد لا يُقرأ ساعةَ الخروج**: **فيمضي الخروجُ ناجحاً وتبقى الوجهةُ حيّةً حتّى يقتلها القِدَم** — **وخروجٌ نجح لا يحتمل «سيُنظَّف لاحقاً».** **والخادمُ يعرف العائلةَ في الموضعين بلا سؤال**: **`sid` في رمز الوصول عند التسجيل، و`RETURNING session_id` عند الخروج.** **فصار الحذفُ بالمِلكيّة**: **يطال ما دُوّر من رموزٍ في الجلسة نفسِها ولا يعرفه الجهاز**، **ولا يطال عائلةً أخرى للحساب نفسِه، ولا رمزاً انتقل إلى حسابٍ آخر.** **وصفوفٌ قديمةٌ بلا مالكٍ تبقى فارغةَ المِلكيّة ولا يُختلَق لها مالك** — **ورمزُ الجهاز يبقى مقبولاً لها توافقاً لا سلطة.** **وحقنُ فشلٍ على الحذف يُسقط المعاملةَ كلَّها**: **لا جلسةٌ أُبطلت ووجهةٌ باقية.** **والمقيس**: **خروجٌ بلا رمزِ جهازٍ ⇒ صفرُ وجهات · دورانٌ×١٠٠ · جلستان×١٠٠ · مطالبةُ جلسةٍ جديدة×١٠٠.** **وبابُ الخروج صار يُنهي وجهةَ الدفع مع الجلسة في معاملةٍ واحدة** — `RevokeRefreshAndDevice`. **وكان يُبطل الجلسةَ ولا يمسّ الوجهة**: **`Push.unregister` مكتوبةٌ بلا منادٍ** — **فيبقى الهاتفُ هدفاً لحسابٍ خرج منه.** **ولم يُنادَ بابُ إلغاء التسجيل على حدة**: **العميلُ يمسح اعتمادَه قبل النداء، فنداءٌ موثَّقٌ برمز وصولٍ يُردّ ٤٠١** — **وبابُ الخروج يوثَّق برمز التجديد نفسِه فيبقى قادراً.** **والنطاقُ جهازٌ لا حساب** (`token AND user_id`): **جهازٌ ثانٍ للحساب نفسِه لا يُمَسّ**، **ورمزٌ صار لغيره لا يُسرق.** **وسباقٌ كشف بقيّةَ العطب**: **خروجٌ يتزامن مع إعادة تسجيل ترك ١٧ من ١٠٠ وجهةً حيّةً لحسابٍ خرج**، **وخروجٌ ثانٍ لا يمحوها لأنّ رمزَ التجديد أُنفق.** **فصار التسجيلُ مربوطاً بحياة عائلة الجلسة** (`FOR UPDATE` على صفوفها لا قفلٌ عامّ): **سبق التسجيلُ ⇒ الخروجُ يحذف ما كُتب · وسبق الخروجُ ⇒ التسجيلُ يمتنع** — **فصارت صفراً من مئة.** **والمقيسُ بالمسار الحقيقيّ**: **تسجيلٌ من بابه · وخروجٌ من بابه · ثمّ إشعارٌ حقيقيٌّ يُقرأ ما وصل الناقل** — **والخارجُ لم يُختَر والباقي اختير.** **والتعليقُ ليس خروجاً** (`XG-39`): **وجهةُ المعلَّق تبقى.** **وقبولُ الجهاز باقٍ** (`AND-51`).",
       "tests": [
         "TestD12_AccountSwitchOnSameDevice",
         "TestD12_ClientSendsDeviceTokenOnLogout",
         "TestD12_DispatcherNoLongerTargetsLoggedOutDevice",
+        "TestD12_DispatcherSilentAfterTokenlessLogout",
+        "TestD12_FailureBetweenRevokeAndCleanupIsAtomic",
         "TestD12_LogoutIsDeviceScoped",
         "TestD12_LogoutIsIdempotent",
         "TestD12_LogoutRemovesThisDeviceBinding",
+        "TestD12_LogoutWithoutDeviceTokenStillRemovesBinding",
+        "TestD12_SessionScopedCleanupKeepsOtherSession",
         "TestD12_StressIdempotentLogout",
         "TestD12_StressLoginRegisterLogout",
         "TestD12_StressLogoutVsReRegisterRace",
+        "TestD12_StressTokenlessLogout",
         "TestD12_StressTwoDevicesAndSwitch",
+        "TestD12_StressTwoSessionsAndClaim",
         "TestD12_SuspensionIsNotLogout",
+        "TestD12_TokenRotationWithinSessionIsFullyCleaned",
         "TestEV_PushTokenTargeting"
       ],
       "status": "FIXED_AND_PASSING"
@@ -9479,6 +9493,52 @@
       "orphan": false
     },
     {
+      "name": "TestD12_DispatcherSilentAfterTokenlessLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_FailureBetweenRevokeAndCleanupIsAtomic",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD12_LogoutIsDeviceScoped",
       "file": "internal/qa/d12_push_logout_test.go",
       "package": "qa",
@@ -9526,6 +9586,52 @@
     },
     {
       "name": "TestD12_LogoutRemovesThisDeviceBinding",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_LogoutWithoutDeviceTokenStillRemovesBinding",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_SessionScopedCleanupKeepsOtherSession",
       "file": "internal/qa/d12_push_logout_test.go",
       "package": "qa",
       "level": "L4",
@@ -9617,6 +9723,29 @@
       "orphan": false
     },
     {
+      "name": "TestD12_StressTokenlessLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD12_StressTwoDevicesAndSwitch",
       "file": "internal/qa/d12_push_logout_test.go",
       "package": "qa",
@@ -9640,7 +9769,53 @@
       "orphan": false
     },
     {
+      "name": "TestD12_StressTwoSessionsAndClaim",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD12_SuspensionIsNotLogout",
+      "file": "internal/qa/d12_push_logout_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD12_TokenRotationWithinSessionIsFullyCleaned",
       "file": "internal/qa/d12_push_logout_test.go",
       "package": "qa",
       "level": "L4",

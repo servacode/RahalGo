@@ -173,7 +173,7 @@ func (s *Service) RegisterForSession(ctx context.Context, userID, sessionID, tok
 		return nil
 	}
 	if sessionID == "" {
-		return s.insert(ctx, s.db, userID, token, platform, app, appVersion)
+		return s.insert(ctx, s.db, userID, "", token, platform, app, appVersion)
 	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -196,7 +196,7 @@ func (s *Service) RegisterForSession(ctx context.Context, userID, sessionID, tok
 		// **والصمتُ هنا لا يُخفي شيئاً.**
 		return tx.Commit(ctx)
 	}
-	if err := s.insert(ctx, tx, userID, token, platform, app, appVersion); err != nil {
+	if err := s.insert(ctx, tx, userID, sessionID, token, platform, app, appVersion); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -206,17 +206,21 @@ type execer interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-func (s *Service) insert(ctx context.Context, q execer, userID, token, platform, app, appVersion string) error {
+func (s *Service) insert(ctx context.Context, q execer, userID, sessionID, token, platform, app, appVersion string) error {
 	_, err := q.Exec(ctx, `
-		INSERT INTO device_tokens (token, user_id, platform, app, app_version)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO device_tokens (token, user_id, session_id, platform, app, app_version)
+		VALUES ($1, $2, nullif($3, '')::uuid, $4, $5, $6)
 		ON CONFLICT (token) DO UPDATE
 		SET user_id = EXCLUDED.user_id,
+		    -- والمِلكيّةُ تنتقل مع الحساب (D12): هاتفٌ سُلّم لغيره
+		    -- يُسجّله باسمٍ جديد وعائلةٍ جديدة، فلا يبقى هدفاً
+		    -- لمن سبق.
+		    session_id = EXCLUDED.session_id,
 		    platform = EXCLUDED.platform,
 		    app = EXCLUDED.app,
 		    app_version = EXCLUDED.app_version,
 		    last_seen_at = now()`,
-		token, userID, normalizePlatform(platform), app, appVersion)
+		token, userID, sessionID, normalizePlatform(platform), app, appVersion)
 	return err
 }
 
