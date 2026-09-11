@@ -73,7 +73,25 @@ func (t *Truth) Report() string {
 		for k := range byPkg {
 			keys = append(keys, k)
 		}
-		sort.Slice(keys, func(i, j int) bool { return byPkg[keys[i]] > byPkg[keys[j]] })
+		// ══════════════════════════════════════════════════════════
+		// **وترتيبٌ غيرُ تامٍّ يجعل المولَّدَ يتبدّل بلا سبب**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **ومفاتيحُ الخريطة تأتي بترتيبٍ مختلفٍ كلَّ تشغيل** —
+		// **و`sort.Slice` غيرُ مستقرّ**، **فحزمتان متساويتان في
+		// العدد تتبادلان موضعَهما.** **فيسقط `TestTruthIsCurrent`
+		// عشوائيّاً ويُقال «أعِد التوليد» فلا يُصلح شيئاً.**
+		//
+		// (قِيس في دورة ٧١و: `deploycheck_test` و`catalog` كلتاهما
+		//  تسعةٌ، فتقدّمت هذه مرّةً وتلك مرّةً.)
+		//
+		// **فالاسمُ فاصلٌ عند التساوي** — ترتيبٌ تامٌّ لا يتبدّل.
+		sort.Slice(keys, func(i, j int) bool {
+			if byPkg[keys[i]] != byPkg[keys[j]] {
+				return byPkg[keys[i]] > byPkg[keys[j]]
+			}
+			return keys[i] < keys[j]
+		})
 		w("| الحزمة | يتيمٌ |\n|---|---|\n")
 		for i, k := range keys {
 			if i >= 10 {

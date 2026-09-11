@@ -47,7 +47,7 @@ ORPHAN     = 616
 | `settings` | 14 |
 | `notify` | 13 |
 | `push` | 11 |
-| `deploycheck_test` | 9 |
+| `catalog` | 9 |
 
 ---
 
