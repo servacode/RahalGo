@@ -63,7 +63,7 @@ android {
         //
         // **والاسمُ يُقرأ ويُذكر في المتجر** (`versionName`)، **والرقمُ
         // لا يراه أحدٌ وهو ما يحكم.**
-        versionCode = 10
+        versionCode = 11
         versionName = "1.0.6"
     }
 
