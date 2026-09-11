@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/servacode/rahalgo/backend/internal/obs"
 )
 
 // versionHeader **رقمُ نسخة التطبيق** — يرسله كلُّ نداءٍ من أندرويد.
@@ -49,20 +51,34 @@ func (s *Server) minVersion(next http.Handler) http.Handler {
 			return
 		}
 
-		key := ""
+		key, kind := "", ""
 		switch {
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-customer"):
-			key = "app.min_version.customer"
+			key, kind = "app.min_version.customer", "customer"
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-driver"):
-			key = "app.min_version.driver"
+			key, kind = "app.min_version.driver", "driver"
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-merchant"):
-			key = "app.min_version.merchant"
+			key, kind = "app.min_version.merchant", "merchant"
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-rep"):
-			key = "app.min_version.rep"
+			key, kind = "app.min_version.rep", "rep"
 		default:
 			next.ServeHTTP(w, r)
 			return
 		}
+
+		// ══════════════════════════════════════════════════════════════
+		// **وأيُّ نسخةٍ تطرق البابَ — تجميعاً** (دورة ٧٠أ)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **ودورةُ ٦٩ج لم تستطع أن تقول أيُّ تطبيقٍ يُعيد الوصلَ**، لأنّ
+		// سجلَّ البوّابة يحذف الترويسات جملةً **وهو صواب**. **فحُسم
+		// الاستدلالُ من إيقاعٍ لا من قياس.**
+		//
+		// **والترويستان مقروءتان هنا أصلاً لأجل بوّابة التحديث** —
+		// **فالعدُّ لا يفتح باباً ولا يقرأ ما لم يكن مقروءاً.**
+		//
+		// **ولا جهازَ ولا إنسان**: «زبونٌ نسخةُ ١١» رقمٌ للمنصّة كلِّها.
+		obs.Client(kind, have)
 
 		want := int(s.settings.GetInt(r.Context(), key))
 		if want <= 0 || have >= want {

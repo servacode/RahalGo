@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 320,
+    "routes": 321,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 296,
-    "test_funcs": 1131
+    "test_files": 301,
+    "test_funcs": 1151
   },
   "flows": [
     {
@@ -6342,6 +6342,30 @@
       "name": "TestSMS_TextSenderCarriesNoCode",
       "file": "internal/notify/channel_test.go",
       "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "BenchmarkClient",
+      "file": "internal/obs/obs_bench_test.go",
+      "package": "obs",
+      "orphan": true
+    },
+    {
+      "name": "BenchmarkClientParallel",
+      "file": "internal/obs/obs_bench_test.go",
+      "package": "obs",
+      "orphan": true
+    },
+    {
+      "name": "BenchmarkTake",
+      "file": "internal/obs/obs_bench_test.go",
+      "package": "obs",
+      "orphan": true
+    },
+    {
+      "name": "BenchmarkWSAuth",
+      "file": "internal/obs/obs_bench_test.go",
+      "package": "obs",
       "orphan": true
     },
     {
@@ -12876,6 +12900,66 @@
       "orphan": true
     },
     {
+      "name": "TestOps70A_E1_ClientVersionIsCounted",
+      "file": "internal/qa/ops_client_version_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_E2_UnknownClientIsNotCounted",
+      "file": "internal/qa/ops_client_version_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_E3_NoDeviceOrUserIdentityInClients",
+      "file": "internal/qa/ops_client_version_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_C1_RedisDownIsReported",
+      "file": "internal/qa/ops_failure_injection_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_C2_PublicHealthAlsoFlipsButStaysSilent",
+      "file": "internal/qa/ops_failure_injection_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_A1_ProtectedByCapability",
+      "file": "internal/qa/ops_health_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_A2_AnalyticsIsNotObservability",
+      "file": "internal/qa/ops_health_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_A3_NoSecretsInBody",
+      "file": "internal/qa/ops_health_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_A4_ReportsRealPoolAndDB",
+      "file": "internal/qa/ops_health_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_A5_PublicHealthStaysMinimal",
+      "file": "internal/qa/ops_health_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDemand_LayersAreSeparateNotMerged",
       "file": "internal/qa/opsmap_analytics_test.go",
       "package": "qa",
@@ -17444,6 +17528,42 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestOps70A_B1_WSReasonsAreDistinguished",
+      "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_B2_ExpiredIsNotConfusedWithInvalid",
+      "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_B3_RevokedSessionHasItsOwnReason",
+      "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_B4_BlockedAccountIsForbiddenNotUnauthorized",
+      "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_B5_SuccessIsCountedAfterUpgrade",
+      "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOps70A_B6_RealUpgradeCountsSuccess",
+      "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestZONE_001_NoZonesOrderPasses",

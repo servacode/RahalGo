@@ -1472,6 +1472,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops/health",
+      "handler": "handleOpsHealth",
+      "auth": true,
+      "capability": "observability.read",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/orders",
       "handler": "handleListOrders",
       "auth": true,

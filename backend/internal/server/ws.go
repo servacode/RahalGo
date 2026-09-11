@@ -2,16 +2,19 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/obs"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 )
 
@@ -55,6 +58,27 @@ func pathExcepted(pats []string, path string) bool {
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.tokens.VerifyAccess(r.URL.Query().Get("token"))
 	if err != nil {
+		// ══════════════════════════════════════════════════════════════
+		// **ولماذا يُميَّز المنتهي من المشوَّه** — دورةُ ٧٠أ
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **ثلاثةُ أسبابٍ مختلفةٍ كانت تردّ ٤٠١ واحدةً**، **ولا سطرَ
+		// في سجلّ المحرّك يقول أيُّها وقع.** (قِيس في دورة ٦٩ج: صفرُ
+		// إشارةٍ في ثلاث ساعات.) **فلمّا لُوحظت حلقةُ إعادةِ وصلٍ في
+		// الإنتاج لم يُعرف سببُها إلّا باستنتاجٍ من إيقاعها.**
+		//
+		// **والفرقُ عمليٌّ لا تصنيفيّ**: **المنتهي يشفيه تجديدٌ
+		// واحد، والمشوَّهُ والمُبطَلُ لا يشفيهما شيء.** **فمن رأى
+		// عدّادَ المنتهي يصعد عرف أنّ عميلاً لا يجدّد** — **ومن رأى
+		// المُبطَلَ يصعد عرف أنّ أحداً يطرق بجلسةٍ ميّتة.**
+		//
+		// **ولا يُسجَّل نصُّ الخطأ** — **هو ما يُهرّب الرمزَ في
+		// رسالةٍ**، والمفتاحُ يكفي.
+		reason := obs.WSInvalidToken
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			reason = obs.WSExpiredAccess
+		}
+		obs.WSAuth(reason)
 		httpx.Error(w, errUnauthorized)
 		return
 	}
@@ -67,11 +91,13 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	state, dbRoles, dbCaps, err := s.identity.CheckSession(r.Context(), claims.SID)
 	switch {
 	case err != nil:
+		obs.WSAuth(obs.WSBackendUnavailable)
 		s.logger.Error("البثّ: تعذّر التحقّقُ من الجلسة",
 			"outcome", "auth_validation_unavailable", "error", err)
 		httpx.Error(w, errAuthUnavailable)
 		return
 	case state == identity.SessionRevoked:
+		obs.WSAuth(obs.WSRevokedSession)
 		httpx.Error(w, errUnauthorized)
 		return
 	}
@@ -95,6 +121,10 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if status != "active" && status != "suspended" {
 		// **والمحظورُ والمحذوفُ يقفان عند كلّ شيء** — **ولا استثناءَ
 		// فيهما** (`middleware.go`).
+		//
+		// **وردُّهما ٤٠٣ لا ٤٠١** — فيُعدّان على حدة: **حلقةُ إعادةِ
+		// وصلٍ سببُها حظرٌ غيرُ حلقةٍ سببُها رمزٌ منتهٍ.**
+		obs.WSAuth(obs.WSForbidden)
 		httpx.Error(w, errForbidden)
 		return
 	}
@@ -243,6 +273,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.CloseNow()
+
+	// **ويُعدّ النجاحُ هنا لا قبلَ الترقية** — **فمن عدّه عند اجتياز
+	// التخويل عدّ مصافحةً لم تتمّ**، **ونسبةُ الرفض تُقرأ أحسنَ ممّا
+	// هي.** **والمقامُ هو ما يجعل العدّادَ معنى لا رقماً.**
+	obs.WSAuth(obs.WSSuccess)
 
 	ch, cancel := s.hub.Subscribe(topics)
 	defer cancel()

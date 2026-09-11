@@ -33,6 +33,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/servacode/rahalgo/backend/internal/obs"
 )
 
 // المنصّاتُ المعروفة — **والقائمةُ مغلقةٌ** كما نوعُ الجلسة.
@@ -269,15 +271,38 @@ func (s *Service) SendToUser(ctx context.Context, userID string, msg Message) {
 		s.logger.Error("الدفع: تعذّرت قراءةُ الأجهزة", "user", userID, "error", err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **وإشعارٌ لا يصل لا يشتكي منه أحد** — عدُّ الحصيلة (دورة ٧٠أ)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **والسائقُ يظنّ أنّه لا طلبات، والمكتبُ يظنّه كسولاً.** **وفحصُ
+	// `Diagnose` يقول عن حسابٍ بعينه**، **ولا شيءَ يقول عن المنصّة:
+	// «كم حاولنا وكم وصل».**
+	//
+	// **وصفرُ أجهزةٍ ليس عطباً** — حسابٌ لم يُفتح تطبيقُه بعد الدخول،
+	// **فيُعدّ على حدة ولا يُخلَط بالفشل.**
+	if len(byPlatform) == 0 {
+		obs.Push(obs.PushNoDevice, 1)
+		return
+	}
 	for platform, tokens := range byPlatform {
 		t, ok := s.transports[platform]
 		if !ok {
 			continue
 		}
+		obs.Push(obs.PushAttempted, len(tokens))
 		dead, err := t.Send(ctx, tokens, msg)
 		if err != nil {
+			obs.Push(obs.PushFailed, len(tokens))
 			s.logger.Error("الدفع: تعذّر الإرسال", "platform", platform,
 				"devices", len(tokens), "error", err)
+		} else {
+			// **والمقبولُ ما لم يُردّ رمزُه** — **وغوغل تقبل الدفعةَ
+			// وتردّ فيها رموزاً بعينها.** **ولا تقول أكثرَ من ذلك**،
+			// فلا يُدَّعى «وصل إلى الجهاز»: **القبولُ عند المزوّد
+			// ليس رنيناً في جيب.**
+			obs.Push(obs.PushSent, len(tokens)-len(dead))
+			obs.Push(obs.PushDeadToken, len(dead))
 		}
 		s.dropDead(ctx, dead)
 	}

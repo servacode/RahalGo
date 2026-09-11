@@ -43,6 +43,11 @@ var adminPolicy = []Rule{
 	{"POST", "/users/{id}/roles", RolesManage},
 	{"DELETE", "/users/{id}/roles/{role}", RolesManage},
 
+	// ── صحّةُ المنصّة الداخليّة ───────────────────────────────────
+	//
+	// **وبابٌ واحدٌ يُقرأ ولا يُكتب** (دورةُ ٧٠أ).
+	{"GET", "/ops/health", ObservabilityRead},
+
 	// ── حساباتُ الموظّفين والمستخدمين ────────────────────────────
 	{"POST", "/users", UsersStatusManage},
 	{"PATCH", "/users/{id}", UsersStatusManage},
