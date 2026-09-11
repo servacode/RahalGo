@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 301,
-    "test_funcs": 1151
+    "test_files": 302,
+    "test_funcs": 1152
   },
   "flows": [
     {
@@ -2148,6 +2148,14 @@
         "TestEV_R23PushFailureIsLost"
       ],
       "status": "FIXED_AND_PASSING"
+    },
+    {
+      "id": "D28",
+      "title": "لوحةُ الويب تعيد الوصلَ بالرمز المنتهي أبداً",
+      "domain": "بثٌّ حيّ · مصادقة",
+      "severity": "MEDIUM",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
     }
   ],
   "risks": [
@@ -7279,6 +7287,12 @@
       "name": "TestSalePrice",
       "file": "internal/pricing/pricing_test.go",
       "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPushOutcome_SemanticsAreExact",
+      "file": "internal/push/outcome_test.go",
+      "package": "push",
       "orphan": true
     },
     {
@@ -19187,6 +19201,7 @@
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
     "D18 — لا اختبارَ انحدارٍ بعد",
+    "D28 — لا اختبارَ انحدارٍ بعد",
     "D3 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",

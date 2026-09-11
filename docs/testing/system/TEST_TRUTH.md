@@ -19,18 +19,18 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **301** |
-| دوالُّ اختبار | **1151** |
+| ملفّاتُ اختبار | **302** |
+| دوالُّ اختبار | **1152** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1151
+TOTAL      = 1152
 MAPPED     = 426
 INFRA      = 123
-ORPHAN     = 602
+ORPHAN     = 603
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -46,7 +46,7 @@ ORPHAN     = 602
 | `identity` | 21 |
 | `settings` | 14 |
 | `notify` | 13 |
-| `push` | 10 |
+| `push` | 11 |
 | `catalog` | 9 |
 
 ---
@@ -56,7 +56,7 @@ ORPHAN     = 602
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
 | **التدفّقات** | 36 | 32 | 4 |
-| **العيوب** | 27 | 22 | 5 |
+| **العيوب** | 28 | 22 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 47 | 28 | 19 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
@@ -94,6 +94,7 @@ ORPHAN     = 602
 | **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `FIXED_AND_PASSING` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
 | **D26** | إنذارُ الراصد يضيع بعد كتابة الوسم | `EXPECTED_FAIL` | `TestEV_R22WatchdogMarkerSuppressesRetry` |
 | **D27** | سقوطُ الدفع بلا إعادةٍ دائمة | `FIXED_AND_PASSING` | `TestEV_R23PushFailureIsLost` |
+| **D28** | لوحةُ الويب تعيد الوصلَ بالرمز المنتهي أبداً | `NO_REGRESSION_TEST_YET` | — |
 
 ---
 
@@ -155,7 +156,7 @@ ORPHAN     = 602
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 18
+COVERAGE GAPS    = 19
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -164,6 +165,7 @@ COVERAGE GAPS    = 18
 - D16 — لا اختبارَ انحدارٍ بعد
 - D17 — لا اختبارَ انحدارٍ بعد
 - D18 — لا اختبارَ انحدارٍ بعد
+- D28 — لا اختبارَ انحدارٍ بعد
 - D3 — لا اختبارَ انحدارٍ بعد
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
