@@ -2057,6 +2057,44 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/roles",
+      "handler": "handleCreateRole",
+      "auth": true,
+      "capability": "roles.manage",
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "capabilities",
+          "type": "array"
+        },
+        {
+          "name": "code",
+          "type": "unknown"
+        },
+        {
+          "name": "members",
+          "type": "int"
+        },
+        {
+          "name": "name_key",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/roles/{code}",
       "handler": "handleRoleDetail",

@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -175,4 +177,87 @@ func nilIfEmptyStr(s string) any {
 		return nil
 	}
 	return s
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **إنشاءُ دورٍ جديد** — الفعلُ الذي كان ناقصاً (دورةُ ٧٠ب-و١)
+// ══════════════════════════════════════════════════════════════════════
+//
+// # لماذا لم يكن موجوداً
+//
+// **وجدولُ السياسة يحجز `/roles` لأيّ فعلٍ منذ `ADG-2`** — **والمُوجِّهُ
+// لم يسجّل إلّا القراءة.** **فبابٌ محجوزٌ لم يُفتَح.**
+//
+// **وأثرُه عمليٌّ لا نظريّ**: **قدرةٌ تُضاف في الشيفرة لا تجد دوراً
+// ضيّقاً يحملها** — **فإمّا تُمنَح لدورٍ عريضٍ يملك خمساً وعشرين قدرةً
+// أصلاً، وإمّا يُكتب صفٌّ بيدٍ في القاعدة.** **وكلاهما نقضٌ لعقد
+// «لا تعديلَ يدويٌّ للتشغيل».**
+//
+// # والقدراتُ تُسنَد ولا تُخترَع
+//
+// **ودورٌ يُنشَأ اليومَ لا يملك شيئاً** — **وهو الافتراضُ نفسُه في
+// `ADG-1`.** **ثمّ تُمنَح قدراتُه واحدةً واحدةً بفعلٍ مؤكَّدٍ مستقلّ**،
+// فيُقرأ في السجلّ ما مُنح ومتى ولمن.
+//
+// # واسمُ الدور نصٌّ لا مفتاحُ ترجمة
+//
+// **والأدوارُ المبذورةُ تحمل مفاتيحَ** (`roles.admin`) **لأنّ لها
+// ترجماتٍ في المعجم.** **ودورٌ يُنشئه الأدمنُ اليومَ لا ترجمةَ له**،
+// **فيُحفَظ اسمُه كما كتبه** — **والواجهةُ تعرض الترجمةَ إن وُجدت
+// وإلّا عرضت النصَّ.** **ومن فرض مفتاحاً على اسمٍ حرٍّ أظهر
+// `roles.xyz` لإنسانٍ يقرأ.**
+//
+// # ورمزُ الدور ضيّقٌ عمداً
+//
+// **وهو مفتاحٌ أوّليٌّ يدخل في `user_roles` و`role_capabilities`
+// وفي كلّ سجلّ** — **فحرفٌ غريبٌ فيه يسكن الجداولَ سنين.**
+
+// errRoleExists **رمزُ الدور مأخوذ** — **ولا يُكتَب فوق دورٍ قائم**:
+// **إنشاءٌ صامتٌ فوق موجودٍ يمنح قدراتِ غيرِه لمن أنشأه.**
+var errRoleExists = httpx.NewError(http.StatusConflict,
+	"role_exists", "errors.role_exists")
+
+// roleCodeRe **حروفٌ صغيرةٌ وأرقامٌ وشرطةٌ سفليّة** — كما رموزُ الأدوار
+// القائمة كلِّها.
+var roleCodeRe = regexp.MustCompile(`^[a-z][a-z0-9_]{2,31}$`)
+
+// handleCreateRole **دورٌ جديدٌ بلا قدرة.**
+func (s *Server) handleCreateRole(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Code string `json:"code"`
+		Name string `json:"name"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	code := strings.TrimSpace(req.Code)
+	name := strings.TrimSpace(req.Name)
+	if !roleCodeRe.MatchString(code) || name == "" {
+		s.respondErr(w, errValidation)
+		return
+	}
+
+	err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		tag, err := q.Exec(ctx, `
+			INSERT INTO roles (code, name_key) VALUES ($1, $2)
+			ON CONFLICT (code) DO NOTHING`, code, name)
+		if err != nil {
+			return err
+		}
+		// **ولا يُبتلَع التصادمُ صامتاً** — **ومن ظنّ أنّه أنشأ دوراً
+		// وهو يُسنِد دورَ غيرِه منح ما لم ينوِ.**
+		if tag.RowsAffected() == 0 {
+			return errRoleExists
+		}
+		return s.auditTx(ctx, q, r, "admin.role_create", "role", code,
+			map[string]any{"name": name})
+	})
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{
+		"code": code, "name_key": name, "capabilities": []string{}, "members": 0,
+	})
 }

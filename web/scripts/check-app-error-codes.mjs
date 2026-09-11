@@ -84,7 +84,7 @@ const SERVER_ADMIN = new Set([
   "driver_already_compensated", "driver_has_open_orders", "duplicate_name",
   "goods_already_settled", "goods_flow_changed", "goods_ledger_mismatch",
   "order_has_no_driver", "order_not_failed", "order_still_open",
-  "step_up_invalid", "step_up_required",
+  "role_exists", "step_up_invalid", "step_up_required",
    "transfer_same_merchant",
   "transfer_too_late", "bad_channel", "no_merchant_phone",
 ]);

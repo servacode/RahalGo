@@ -28,12 +28,20 @@ import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
 import { Alert, Button, Chips, Input, Modal, FormActions} from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
+import { listRoles, roleLabel, type Role } from "@/lib/rbac";
 
 const m = getMessages(defaultLocale);
 
-/** **وأسماءُ الأدوار من المعجم** — لا نصَّ مكتوبٌ في شاشة. */
-const ROLE_LABELS: Record<string, string> = m.terms.roleNames;
-const ALL_ROLES = Object.keys(ROLE_LABELS);
+/**
+ * **والأدوارُ تُقرأ من المحرّك** — دورةُ ٧٠ب-و١.
+ *
+ * **وكانت `Object.keys(ROLE_LABELS)`** — **معجمَ نصوصٍ في الواجهة**:
+ * **سبعةٌ تُعرَض والقاعدةُ فيها أحدَ عشر**، **ودورٌ يُنشَأ اليومَ لا
+ * يظهر حتّى تُبنى الواجهةُ من جديد.** **وحقيقةٌ ثانيةٌ في العميل
+ * تفترق عن الأولى يوماً**، وقد افترقت.
+ *
+ * **والمعجمُ باقٍ معيناً للعرض** — انظر `roleLabel`.
+ */
 
 /** **ورسالةُ الخادم تُترجَم بمفتاحها** — كما في بقيّة الشاشات. */
 function translateKey(key: string): string {
@@ -59,12 +67,32 @@ export function ManageRolesModal({
   const [current, setCurrent] = useState<string[]>([]);
   const [pending, setPending] = useState<{ role: string; adding: boolean } | null>(null);
   const [reason, setReason] = useState("");
+  const [roles, setRoles] = useState<Role[]>([]);
 
   useEffect(() => {
     setCurrent(user?.roles ?? []);
     setError("");
     setPending(null);
     setReason("");
+  }, [user]);
+
+  // **وتُقرأ الأدوارُ عند فتح النافذة** — **فدورٌ أُنشئ قبل لحظةٍ
+  // يظهر بلا إعادةِ تحميلِ الصفحة.**
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    void listRoles()
+      .then((r) => {
+        if (alive) setRoles(r);
+      })
+      .catch(() => {
+        // **وتعذّرُ القراءة لا يُغلق الشاشة** — يبقى ما يملكه الحساب
+        // مرئيّاً، **ولا تُخترَع قائمةٌ من الواجهة بديلاً.**
+        if (alive) setRoles([]);
+      });
+    return () => {
+      alive = false;
+    };
   }, [user]);
 
   if (!user) return null;
@@ -101,14 +129,20 @@ export function ManageRolesModal({
   return (
     <Modal open onClose={onClose} title={`${m.admin.users.rolesFor}: ${user.full_name || user.phone}`}>
       <Chips
-        items={ALL_ROLES.map((r) => ({ id: r, label: ROLE_LABELS[r] ?? r }))}
+        items={roles.map((r) => ({ id: r.code, label: roleLabel(r) }))}
         value={current}
         onChange={toggle}
       />
       {pending && (
         <div className="mt-4 rounded-control border border-primary-edge bg-primary-tint p-3">
           <p className="mb-2 text-sm font-medium">
-            {m.admin.users.roleReasonTitle}: {ROLE_LABELS[pending.role]}
+            {m.admin.users.roleReasonTitle}:{" "}
+            {roleLabel(
+              roles.find((r) => r.code === pending.role) ?? {
+                code: pending.role,
+                name_key: "",
+              },
+            )}
           </p>
           <Input
             id="role-reason"

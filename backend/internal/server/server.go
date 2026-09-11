@@ -978,6 +978,10 @@ func (s *Server) Router() http.Handler {
 			// **والمعجمُ يُقرأ ولا يُحرَّر**: قدرةٌ جديدةٌ تحتاج
 			// مهندساً، **والأدمنُ يُسنِد الموجودَ.**
 			r.Get("/roles", s.handleListRoles)
+			// **وإنشاءُ الدور — الفعلُ الذي كان ناقصاً** (٧٠ب-و١):
+			// **جدولُ السياسة يحجز `/roles` لأيّ فعلٍ منذ `ADG-2`،
+			// والمُوجِّهُ لم يسجّل إلّا القراءة.**
+			r.Post("/roles", s.handleCreateRole)
 			r.Get("/roles/{code}", s.handleRoleDetail)
 			r.Get("/capabilities", s.handleListCapabilities)
 			r.Post("/roles/{code}/capabilities", s.handleGrantCapability)

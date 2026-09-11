@@ -73,6 +73,10 @@ var sensitiveActions = []Sensitive{
 	//
 	// **ومن ملك `roles.manage` ملك كلَّ شيءٍ بالتعريف** — **فتأكيدُ
 	// كلّ منحٍ هو الحدُّ الوحيدُ الباقي.**
+	// **وإنشاءُ دورٍ أخطرُ من منح قدرة** — **هو خلقُ وعاءٍ يُملأ
+	// لاحقاً**، **ومن أنشأ دوراً بلا تأكيدٍ مهّد لمنحٍ بلا تأكيد.**
+	{"POST", "/roles", "admin.role_create",
+		"role", -1, []string{"code"}, ""},
 	{"POST", "/roles/{code}/capabilities", "admin.role_capability_grant",
 		"role", 1, []string{"capability"}, ""},
 	{"DELETE", "/roles/{code}/capabilities/{cap}", "admin.role_capability_revoke",

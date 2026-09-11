@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 321,
+    "routes": 322,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 303,
-    "test_funcs": 1156
+    "test_files": 304,
+    "test_funcs": 1162
   },
   "flows": [
     {
@@ -15261,6 +15261,42 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestU1_A1_CreateRoleNeedsRolesManage",
+      "file": "internal/qa/role_create_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestU1_A2_CreateRoleAppearsInBackendList",
+      "file": "internal/qa/role_create_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestU1_A3_DuplicateCodeIsRejected",
+      "file": "internal/qa/role_create_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestU1_A4_RoleCodeIsNarrow",
+      "file": "internal/qa/role_create_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestU1_A5_NewRoleIsAssignableToUser",
+      "file": "internal/qa/role_create_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestU1_A6_CreateRoleIsAudited",
+      "file": "internal/qa/role_create_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestADG2_ConcurrentPolicyChanges",

@@ -674,7 +674,8 @@
     "update_required": "يوجد إصدار جديد — حدّث التطبيق",
     "bad_request": "طلبٌ غير صالح — راجع ما أُرسل",
     "step_up_required": "هذا فعلٌ حسّاس. أكّده بكلمةِ مرورِ حسابك.",
-    "step_up_invalid": "انتهت مهلةُ التأكيد أو استُعمل. أكّد الفعلَ ثانيةً."
+    "step_up_invalid": "انتهت مهلةُ التأكيد أو استُعمل. أكّد الفعلَ ثانيةً.",
+    "role_exists": "رمز الدور مأخوذ — اختر رمزا آخر"
   },
   "admin": {
     "profits": {
@@ -2733,8 +2734,35 @@
         "finance.expense_added": "تسجيلُ مصروف",
         "finance.expense_voided": "إلغاءُ مصروف",
         "finance.compensate_driver": "تعويضُ سائق",
-        "admin.setting_update": "تبديلُ إعدادٍ حسّاس"
+        "admin.setting_update": "تبديلُ إعدادٍ حسّاس",
+        "admin.role_create": "إنشاءُ دورٍ جديد"
       }
+    },
+    "roles": {
+      "navTitle": "الأدوار والصلاحيات",
+      "title": "الأدوار والصلاحيات",
+      "subtitle": "الدور وعاء، والصلاحية ما يملؤه. وما لا يُمنح لا يُملك.",
+      "create": "إنشاء دور",
+      "createTitle": "دور جديد",
+      "code": "رمز الدور",
+      "codeHint": "حروف إنجليزية صغيرة وأرقام وشرطة سفلية — ولا يتغير بعد الإنشاء",
+      "name": "اسم الدور",
+      "nameHint": "ما يراه الناس في اللوحة",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "capabilities": "الصلاحيات",
+      "members": "الحسابات",
+      "noCapabilities": "لا صلاحية بعد — دور أُنشئ اليوم لا يملك شيئا",
+      "addCapability": "إضافة صلاحية",
+      "removeCapability": "نزع",
+      "pickCapability": "اختر صلاحية",
+      "empty": "لا أدوار",
+      "loading": "يُقرأ من المحرك…",
+      "created": "أُنشئ الدور",
+      "granted": "مُنحت الصلاحية",
+      "revoked": "نُزعت الصلاحية",
+      "confirmRevoke": "نزع {cap} من {role}؟",
+      "backendTruth": "الأدوار والصلاحيات تُقرأ من المحرك — ولا قائمة ثانية في اللوحة"
     }
   },
   "merchant": {

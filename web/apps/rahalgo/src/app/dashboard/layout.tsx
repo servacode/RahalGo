@@ -26,6 +26,7 @@ import {
   IconBalance,
   IconWallet,
   BootScreen,
+  IconRoles,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -71,6 +72,11 @@ const ALL_NAV: NavItem[] = [
   // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون
   // والمندوبون تبويباتٌ فيه — بجداولهم كما هي.
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"] },
+  // **والأدوارُ تحت الحسابات** — **هي من يملك ماذا، لا من هو** (٧٠ب-و١).
+  //
+  // **والمنعُ في المحرّك** (`roles.manage` في جدول السياسة) — **وهذا
+  // البندُ يُخفي ما لا يخصّ صاحبَه لطفاً بالعين لا حراسةً.**
+  { href: "/dashboard/roles", label: m.admin.roles.navTitle, icon: IconRoles, roles: ["admin"] },
   // **والسوقُ يليها** — ما يُعرض وما نفد وما ينتظر المراجعة.
   { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore, roles: ["admin"] },
   // **الشكاوى والتقييماتُ بابٌ واحد** — جوابان لسؤالٍ واحد: «ما رأيُ الناس
