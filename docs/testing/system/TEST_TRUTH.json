@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 302,
-    "test_funcs": 1152
+    "test_files": 303,
+    "test_funcs": 1156
   },
   "flows": [
     {
@@ -5378,6 +5378,30 @@
       "name": "TestDevOTPProviderIsRefusedInProduction",
       "file": "internal/config/otp_provider_test.go",
       "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestC71_BackendNeverBuildsAtDeploy",
+      "file": "internal/deploycheck/artifact_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestC71_BuildIdentityIsInjectedAtBuild",
+      "file": "internal/deploycheck/artifact_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestC71_ImageFailsClosed",
+      "file": "internal/deploycheck/artifact_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestC71_PromotionToolingExists",
+      "file": "internal/deploycheck/artifact_test.go",
+      "package": "deploycheck_test",
       "orphan": true
     },
     {

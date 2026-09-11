@@ -54,13 +54,32 @@ if ! (cd "$ROOT/backend" && go run ./cmd/stagingctl guard); then
 	exit 3
 fi
 
-# ── ٣ · البناءُ بهويّةٍ محقونة ────────────────────────────────────────
-export SOURCE_COMMIT BUILD_ID
-echo "── يُبنى ${BUILD_ID} من ${SOURCE_COMMIT:0:8}"
-docker compose -f compose.staging.yml --env-file .env.staging build
+# ── ٣ · بناءُ الأثر — مرّةً، بوسمٍ ثابت ───────────────────────────────
+#
+# ══════════════════════════════════════════════════════════════════════
+# **والبناءُ صار خطوةً قائمةً بذاتها** (دورةُ ٧١)
+# ══════════════════════════════════════════════════════════════════════
+#
+# **وكان `compose build` يبني عند كلّ نشر** — **فأثرُ التجهيز غيرُ
+# أثر الإنتاج ولو كان الالتزامُ واحداً**، **ولا يُثبت اختبارٌ هنا
+# شيئاً عن هناك.**
+#
+# **والوسمُ يحمل الالتزام**، **و`build-artifact.sh` لا يُعيد بناءَ
+# وسمٍ قائم** — **فإعادةُ النشر لا تبدّل الأثر.**
+echo "── يُبنى أثرُ ${SOURCE_COMMIT:0:8}"
+ARTIFACT_OUT="$(../build-artifact.sh)"
+echo "$ARTIFACT_OUT"
+IMAGE_TAG="$(echo "$ARTIFACT_OUT" | sed -n 's/^IMAGE_TAG=//p')"
+IMAGE_ID="$(echo "$ARTIFACT_OUT"  | sed -n 's/^IMAGE_ID=//p')"
+[ -n "$IMAGE_TAG" ] || { echo "✗ لا وسمَ للأثر — **وقف.**" >&2; exit 4; }
 
-# ── ٤ · الإقلاع ───────────────────────────────────────────────────────
-docker compose -f compose.staging.yml --env-file .env.staging up -d
+# ── ٤ · بقيّةُ المكدّس ثمّ ترقيةُ المحرّك بالأثر عينِه ────────────────
+#
+# **والمحرّكُ يُرقّى بـ`promote.sh` لا بـ`up` مجرَّدةً** — **فيُقارَن
+# المنتظَرُ بالفعليّ قبلَ النشر وبعدَه.**
+export RAHALGO_API_IMAGE="$IMAGE_TAG"
+docker compose -f compose.staging.yml --env-file .env.staging up -d --no-deps caddy web postgres redis
+../promote.sh compose.staging.yml .env.staging "$IMAGE_TAG" 	http://localhost:8080/api/v1/public/identity "$IMAGE_ID"
 
 # ── ٥ · الهجرات ثمّ الصحّة ───────────────────────────────────────────
 #
