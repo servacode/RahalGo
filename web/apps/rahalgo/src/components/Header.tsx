@@ -43,6 +43,7 @@ import {
   IconUser,
   IconStore,
   IconOverview,
+  wsBase,
 } from "@rahalgo/ui";
 import { homeFor, portalFor, goTo } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -70,9 +71,11 @@ const MARKETING = [
      غوغل، **وهي التي طلبها للنشر على غوغل بلاي.** */
   { href: "/contact", label: N.contact },
 ];
-const WS_URL =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws") +
-  "/api/v1/ws";
+// **وقناةُ البثّ مُشتَقّةٌ من تهيئة التشغيل** — دورةُ ٧١و.
+//
+// **ودالّةٌ لا ثابت**: **ثابتٌ يُحسَب عند تحميل الوحدة** — **وقد
+// يسبق وصولَ `/config.js`.**
+const WS_URL = (): string => wsBase();
 
 interface Summary {
   full_name: string;

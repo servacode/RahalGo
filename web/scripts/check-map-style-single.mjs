@@ -145,12 +145,16 @@ if (!webMap) {
   problems.push('web/packages/ui/src/map.tsx غائب');
 } else if (!webCfg) {
   problems.push('web/packages/ui/src/mapconfig.ts غائب — لا مصدرَ مركزيّ');
-} else if (!webCfg.includes('NEXT_PUBLIC_MAP_STYLE_URL')) {
-  problems.push('الويبُ لا يقرأ NEXT_PUBLIC_MAP_STYLE_URL — ولا سبيلَ لضبط المصدر بالنشر');
+} else if (!webCfg.includes('mapStyleUrl')) {
+  // **والمصدرُ يُضبط وقتَ التشغيل لا وقتَ البناء** — دورةُ ٧١و:
+  // **كان `NEXT_PUBLIC_MAP_STYLE_URL` يُخبَز في الحزمة**، فصورةُ
+  // التجهيز لا تعرف خرائطَ الإنتاج. **والشرطُ قائمٌ كما هو: لا بدَّ
+  // من سبيلٍ لضبط المصدر بالنشر** — وصار السبيلُ تهيئةَ تشغيل.
+  problems.push('الويبُ لا يقرأ مصدرَ النمط من تهيئة التشغيل — ولا سبيلَ لضبطه بالنشر');
 } else if (!webMap.includes('maplibre-gl')) {
   problems.push('الويبُ ليس على المحرّك المتّجه — والنمطُ المرجعيُّ لا يُقرأ براستر');
 } else {
-  notes.push('الويب: النمطُ المرجعيُّ يُضبط بـNEXT_PUBLIC_MAP_STYLE_URL — ولا ارتدادَ عموميّ');
+  notes.push('الويب: النمطُ المرجعيُّ يُضبط بتهيئة التشغيل (RAHALGO_MAP_STYLE_URL) — ولا ارتدادَ عموميّ');
 }
 
 // ── ٥ · نسخةُ أندرويد من النمط المتّجه ──────────────────────────────

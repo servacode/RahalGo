@@ -27,6 +27,7 @@ import {
   IconWallet,
   BootScreen,
   IconRoles,
+  wsBase,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -219,7 +220,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}
-      wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
+      // **وقناةُ البثّ مُشتَقّةٌ من تهيئة التشغيل** — دورةُ ٧١و:
+      // **وكان العنوانُ يُخبَز وقتَ البناء.**
+      wsUrl={wsBase()}
       token={tokenStore.access}
       notificationsHref="/dashboard/notifications"
       phone={user?.phone}

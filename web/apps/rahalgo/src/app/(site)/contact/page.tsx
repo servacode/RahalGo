@@ -35,11 +35,13 @@ import {
   fetchPlatform,
 } from "@rahalgo/ui";
 import ContactMap from "./ContactMap";
+import { readServerConfig } from "@/lib/config";
 
 const m = getMessages(defaultLocale);
 const L = m.site.legal;
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+// **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
+const API = () => readServerConfig().apiUrl;
 
 
 /** **«عرض,طول» ← رقمان** — وفارغٌ يعني «لا خريطة». */
@@ -52,7 +54,7 @@ function geoOf(v: string): [number, number] | null {
 }
 
 export default async function Page() {
-  const p = await fetchPlatform(API);
+  const p = await fetchPlatform(API());
   const at = geoOf(p.location);
   const wa = p.social.whatsapp.replace(/\D/g, "");
 

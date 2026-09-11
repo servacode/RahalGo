@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
+import { readServerConfig } from "@/lib/config";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const SITE = () => readServerConfig().siteUrl;
+// **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
+const API = () => readServerConfig().apiUrl;
 
 /**
  * **خريطةُ الموقع** — الرئيسيةُ وأقسامُ السوق.
@@ -24,7 +26,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
-    { url: SITE, changeFrequency: "daily", priority: 1 },
+    { url: SITE(), changeFrequency: "daily", priority: 1 },
     // ══════════════════════════════════════════════════════════════════
     // **وصفحاتُ المنصّة الثابتة — تُفهرَس وتُقرأ قبل التسجيل**
     // ══════════════════════════════════════════════════════════════════
@@ -35,17 +37,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // **وغوغل بلاي يطلب رابطاً عامّاً لسياسة الخصوصيّة** — ورابطٌ لا
     // يُفهرَس يُقبل، **لكنّ المراجعَ البشريَّ يفتحه.**
     ...["shop", "about", "contact", "join", "help", "terms", "privacy", "delete-account"].map((path) => ({
-      url: `${SITE}/${path}`,
+      url: `${SITE()}/${path}`,
       changeFrequency: "monthly" as const,
       priority: 0.5,
     })),
   ];
   try {
-    const res = await fetch(`${API}/api/v1/public/home`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API()}/api/v1/public/home`, { next: { revalidate: 3600 } });
     const json = (await res.json()) as { data?: { sections?: { id: string }[] } };
     for (const s of json.data?.sections ?? []) {
       entries.push({
-        url: `${SITE}/s/${s.id}`,
+        url: `${SITE()}/s/${s.id}`,
         changeFrequency: "daily",
         priority: 0.8,
       });

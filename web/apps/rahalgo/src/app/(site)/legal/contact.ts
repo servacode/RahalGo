@@ -1,4 +1,5 @@
-/**
+
+import { readServerConfig } from "@/lib/config";/**
  * **هويّةُ المنصة ونصوصُ الصفحات — تُقرأ في الخادم لا في المتصفّح.**
  *
  * # لماذا هنا لا في المكوّن
@@ -20,7 +21,8 @@
  * **وصفحةٌ قانونيةٌ لا تُفتح أسوأُ من صفحةٍ بلا رقم.**
  */
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+// **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
+const API = () => readServerConfig().apiUrl;
 
 export interface Contact {
   legal_name: string;
@@ -38,7 +40,7 @@ export interface Contact {
 
 export async function getContact(): Promise<Contact | null> {
   try {
-    const r = await fetch(`${API}/api/v1/public/contact`, { cache: "no-store" });
+    const r = await fetch(`${API()}/api/v1/public/contact`, { cache: "no-store" });
     if (!r.ok) return null;
     const body = (await r.json()) as { data?: Contact };
     return body.data ?? null;

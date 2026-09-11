@@ -123,24 +123,17 @@ services:
         condition: service_started
 
   # ── الويب ───────────────────────────────────────────────────────────
+  # **والويبُ أثرٌ يُستهلك لا بناءٌ عند النشر** (دورةُ ٧١و) —
+  # **والفرقُ عن الإنتاج في هذه المتغيّرات لا في الصورة.**
   web:
-    build:
-      context: ../../web
-      args:
-        # **ولا يستطيع متصفّحُ التجهيز أن يبلغ الإنتاج** (البند ١١):
-        # **العنوانُ يُدفَن في حزمة المتصفّح وقتَ البناء**، **فلا يبدّله
-        # متغيّرُ تشغيلٍ ولا ملفٌّ على الخادم.**
-        NEXT_PUBLIC_API_URL: ${STAGING_API_URL:-http://localhost:8080}
-        NEXT_PUBLIC_SITE_URL: ${STAGING_SITE_URL:-http://localhost:8080}
-        NEXT_PUBLIC_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-}
-        # **ورايةُ التجهيز** (البند ٤٥) — **سلامةٌ لا زينة.**
-        NEXT_PUBLIC_ENVIRONMENT: staging
+    image: ${RAHALGO_WEB_IMAGE:?RAHALGO_WEB_IMAGE مطلوب — ابنِ الأثرَ أوّلاً بـ deploy/build-artifact.sh}
     container_name: rahalgo-staging-web
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: ${STAGING_API_URL:-http://localhost:8080}
-      NEXT_PUBLIC_SITE_URL: ${STAGING_SITE_URL:-http://localhost:8080}
-      NEXT_PUBLIC_ENVIRONMENT: staging
+      RAHALGO_API_URL: ${STAGING_API_URL:-http://localhost:8080}
+      RAHALGO_SITE_URL: ${STAGING_SITE_URL:-http://localhost:8080}
+      RAHALGO_ENVIRONMENT: staging
+      RAHALGO_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-}
     depends_on:
       - api
 

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState, type ComponentType, type ReactNode } 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
 import { BrandMark } from "./platform";
+import { isStagingEnv } from "./runtimeconfig";
 import {
   TopBar,
   TopBarChip,
@@ -88,10 +89,17 @@ interface Rep {
 /**
  * **أبيئةُ تجربة؟** — `P-0` البند ٤٥.
  *
- * **ويُقرأ وقتَ البناء لا وقتَ التشغيل** (`NEXT_PUBLIC_`) — **فلا
- * يُطفئه متغيّرٌ على الخادم ولا يظهر في الإنتاج بغلطة.**
+ * **ويُقرأ وقتَ التشغيل من تهيئةٍ مركزيّة** (دورةُ ٧١و) — **وكان
+ * يُخبَز وقتَ البناء**، **فكانت صورةُ التجهيز غيرَ صورة الإنتاج ولو
+ * من التزامٍ واحد.**
+ *
+ * **ولا يظهر في الإنتاج بغلطة**: **الرايةُ تتبع `environment` الذي
+ * يضبطه `compose`** — **وقيمةٌ ناقصةٌ لا تعني «إنتاج»، تعني فراغاً،
+ * فلا رايةَ ولا كذب.**
+ *
+ * **ودالّةٌ لا ثابت**: **ثابتٌ على مستوى الملفّ يُحسَب عند التحميل**
+ * — **وقد يسبق وصولَ التهيئة.**
  */
-const isStaging = process.env.NEXT_PUBLIC_ENVIRONMENT === "staging";
 
 /** **نصُّ الراية** — من المعجم المركزيّ لا من الشيفرة. */
 const stagingLabel = m.shared.stagingBanner;
@@ -363,7 +371,7 @@ export function DashboardChrome({
 
           **وشريطٌ ثابتٌ في أعلى الشاشة لا شارةٌ في زاوية** — **والزاويةُ
           تُنسى بعد ساعة.** */}
-      {isStaging && (
+      {isStagingEnv() && (
         <div
           role="status"
           className="fixed inset-x-0 top-0 z-50 bg-warning py-1 text-center text-xs font-bold text-on-bright"

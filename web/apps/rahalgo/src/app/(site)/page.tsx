@@ -41,6 +41,7 @@ import Link from "next/link";
 import HeroStage from "./HeroStage";
 import { pageMeta } from "@/lib/seo";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
+import { readServerConfig } from "@/lib/config";
 import {
   fetchPlatform,
   BannerSlider,
@@ -69,8 +70,9 @@ import {
   IconRoles,
 } from "@rahalgo/ui";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
+// **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
+const API = () => readServerConfig().apiUrl;
+const SITE = () => readServerConfig().siteUrl;
 const m = getMessages(defaultLocale);
 const H = m.site.homePage;
 
@@ -173,7 +175,7 @@ async function fetchBanners(): Promise<Slide[]> {
 
        **وثمنُه نداءٌ خفيفٌ في كلّ فتحة** — نقطةٌ تردّ صفّاً أو صفّين،
        **وهي على الخادم نفسِه لا عبر الشبكة.** */
-    const res = await fetch(`${API}/api/v1/public/banners?at=home`, {
+    const res = await fetch(`${API()}/api/v1/public/banners?at=home`, {
       cache: "no-store",
     });
     if (!res.ok) return [];
@@ -194,7 +196,7 @@ async function fetchBanners(): Promise<Slide[]> {
       .map((b) => ({
         id: b.id,
         title: b.title,
-        imageUrl: API + b.image_url,
+        imageUrl: API() + b.image_url,
         href: b.target || undefined,
         blur: b.blur,
         sizes: b.sizes,
@@ -561,7 +563,7 @@ export async function generateMetadata() {
 }
 
 export default async function HomePage() {
-  const [brand, slides] = await Promise.all([fetchPlatform(API), fetchBanners()]);
+  const [brand, slides] = await Promise.all([fetchPlatform(API()), fetchBanners()]);
   const name = brand.name;
 
 
@@ -586,8 +588,8 @@ export default async function HomePage() {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name,
-    url: SITE,
-    ...(brand.logo ? { logo: API + brand.logo, image: API + brand.logo } : {}),
+    url: SITE(),
+    ...(brand.logo ? { logo: API() + brand.logo, image: API() + brand.logo } : {}),
     ...(brand.supportPhone ? { telephone: brand.supportPhone } : {}),
     address: {
       "@type": "PostalAddress",

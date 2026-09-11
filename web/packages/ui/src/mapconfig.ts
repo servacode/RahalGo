@@ -19,6 +19,8 @@
  * «الخريطةُ غيرُ متاحة»** — والصفحةُ تعمل، ولا نداءَ إلى أحد.
  */
 
+import { mapStyleUrl, mapTilesUrl } from "./runtimeconfig";
+
 /** **بادئةُ PMTiles** — كما في أندرويد حرفيّاً. */
 const PMTILES = "pmtiles://";
 
@@ -29,7 +31,9 @@ const PMTILES = "pmtiles://";
  * (`maps/scripts/bind-style.mjs`) — **ولا نسخةَ ثانيةٌ للويب تنحرف
  * عن أندرويد** (البند ١٠).
  */
-export const MAP_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL ?? "";
+// **ودالّةٌ لا ثابت** — **ثابتٌ على مستوى الملفّ يُخبَز وقتَ البناء**
+// (دورةُ ٧١و)، **فتصير صورةُ التجهيز عاجزةً عن خرائط الإنتاج.**
+export const MAP_STYLE_URL = (): string => mapStyleUrl();
 
 /**
  * **مصدرُ البلاطات المتّجهة** — PMTiles واحدٌ مُصدَرٌ بنسخة.
@@ -37,7 +41,7 @@ export const MAP_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL ?? "";
  * **ويبقى فارغاً إن كان النمطُ يحمله بنفسه** — وهو الحالُ في
  * `style.online.json`.
  */
-export const MAP_TILES_URL = process.env.NEXT_PUBLIC_MAP_PMTILES_URL ?? "";
+export const MAP_TILES_URL = (): string => mapTilesUrl();
 
 /**
  * **ما لا يجوز أن يُطلَب وقتَ التشغيل أبداً** — البند ٢٦.
@@ -75,7 +79,9 @@ export type MapSourceState =
  * مضبوطة**، لا مصدراً عموميّاً.
  */
 export function resolveMapSource(
-  styleUrl: string = MAP_STYLE_URL,
+  // **والافتراضُ يُحسَب عند النداء لا عند تحميل الوحدة** — دورةُ ٧١و:
+  // **تهيئةُ التشغيل قد تصل بعد التحميل.**
+  styleUrl: string = MAP_STYLE_URL(),
 ): MapSourceState {
   const url = styleUrl.trim();
   if (!url) return { ok: false, reason: "missing" };

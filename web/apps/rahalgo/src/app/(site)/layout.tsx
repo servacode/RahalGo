@@ -3,8 +3,10 @@ import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { BottomNav, BottomNavSpacer } from "@/components/BottomNav";
+import { readServerConfig } from "@/lib/config";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+// **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
+const API = () => readServerConfig().apiUrl;
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -23,7 +25,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
  * يُركَّب لمن لا يستعمله يُحمَّل في حزمته بلا سبب.**
  */
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const brand = await fetchPlatform(API);
+  const brand = await fetchPlatform(API());
   return (
     <CartProvider>
       {/* **ولا حشوةَ يميناً ويساراً** — (قاعدةُ المالك، قالها أربعَ

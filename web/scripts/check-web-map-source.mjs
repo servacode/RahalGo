@@ -109,8 +109,10 @@ if (!mapSrc.includes("resolveMapSource")) {
 }
 
 const cfg = readFileSync(join(ROOT, "packages/ui/src/mapconfig.ts"), "utf8");
-if (!cfg.includes("NEXT_PUBLIC_MAP_STYLE_URL")) {
-  problems.push("mapconfig: لا يقرأ NEXT_PUBLIC_MAP_STYLE_URL");
+// **ويُقرأ من تهيئة التشغيل لا من متغيّرِ بناء** — دورةُ ٧١و.
+// **والشرطُ قائم**: لا بدَّ من سبيلٍ لضبط المصدر بالنشر.
+if (!cfg.includes("mapStyleUrl")) {
+  problems.push("mapconfig: لا يقرأ مصدرَ النمط من تهيئة التشغيل");
 }
 if (cfg.includes("NEXT_PUBLIC_TILE_URL")) {
   problems.push("mapconfig: ما زال يقرأ الاسمَ المضلّل NEXT_PUBLIC_TILE_URL");

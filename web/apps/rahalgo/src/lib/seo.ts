@@ -28,10 +28,12 @@
 import type { Metadata } from "next";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { fetchPlatform } from "@rahalgo/ui";
+import { readServerConfig } from "@/lib/config";
 
 const m = getMessages(defaultLocale);
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const SITE = () => readServerConfig().siteUrl;
+// **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
+const API = () => readServerConfig().apiUrl;
 
 /** **يبني بطاقةَ صفحةٍ كاملةً** — عنواناً ووصفاً ورابطاً معياريّاً وصورة. */
 export async function pageMeta(
@@ -39,14 +41,14 @@ export async function pageMeta(
   descKey: keyof typeof m.site.homePage,
   path: string,
 ): Promise<Metadata> {
-  const brand = await fetchPlatform(API);
+  const brand = await fetchPlatform(API());
   const name = brand.name || m.common.appName;
   const H = m.site.homePage as unknown as Record<string, string>;
   const title = withPlatform(H[titleKey] ?? "", name);
   const description = withPlatform(H[descKey] ?? "", name);
   /* **والصورةُ شعارُه** — **ورابطٌ يُشارَك بلا صورةٍ يظهر بمربّعٍ رماديّ**
      في واتساب وفيسبوك، وهما بابا الانتشار في الرقّة. */
-  const image = brand.logo ? API + brand.logo : undefined;
+  const image = brand.logo ? API() + brand.logo : undefined;
   return {
     // **مطلقٌ لا يمرّ بالقالب** — انظر أعلى الملفّ.
     title: { absolute: `${title} | ${name}` },
@@ -54,11 +56,11 @@ export async function pageMeta(
     /* **والرابطُ المعياريُّ يمنع تكرارَ الصفحة** — بـ`www` وبلاها،
        وبمعاملاتِ حملةٍ تُلحَق بها: **وثلاثةُ عناوينَ لصفحةٍ واحدةٍ
        تقتسم ترتيبَها.** */
-    alternates: { canonical: `${SITE}${path}` },
+    alternates: { canonical: `${SITE()}${path}` },
     openGraph: {
       title,
       description,
-      url: `${SITE}${path}`,
+      url: `${SITE()}${path}`,
       siteName: name,
       locale: "ar_SY",
       type: "website",

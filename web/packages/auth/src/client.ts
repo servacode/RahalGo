@@ -1,16 +1,31 @@
+import { apiBase } from "@rahalgo/ui";
 /**
  * عميل الـAPI المركزي — **نسخة واحدة** لكل التطبيقات (كان مكرّراً 4 مرات بنسبة 99%).
  * عميل الـAPI الموحد للوحة — يضيف التوكن تلقائياً ويجدده عند انتهاء صلاحيته.
  * صيغة الخادم الموحدة: النجاح {data} والخطأ {error:{code,message_key}}.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **وعنوانُ المحرّك يُقرأ وقتَ التشغيل** (دورةُ ٧١و)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وكان ثابتاً من `NEXT_PUBLIC_API_URL`** — **فيُخبَز في الحزمة**،
+ * **فصورةُ التجهيز لا تعرف عنوانَ الإنتاج ولو كان الالتزامُ واحداً.**
+ *
+ * **ودالّةٌ لا ثابت**: **ثابتٌ على مستوى الملفّ يُحسَب عند التحميل** —
+ * **وقد يسبق وصولَ `/config.js`.**
+ *
+ * **ولا ارتدادَ صامتاً** — **ومن ارتدّ إلى `localhost` أخفى عطباً في
+ * النشر حتّى يراه زبون.**
+ */
+const API_URL = (): string => apiBase();
 
 /**
  * عميل الـAPI المركزي — **نسخة واحدة** لكل التطبيقات (كان مكرّراً 4 مرات بنسبة 99%). يحوّل مسار وسائط نسبياً من الخادم (/media/...) إلى رابط كامل */
 export function mediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  return path.startsWith("http") ? path : `${API_URL}${path}`;
+  return path.startsWith("http") ? path : `${API_URL()}${path}`;
 }
 
 export interface ApiErrorBody {
@@ -116,7 +131,7 @@ async function rawRequest<T>(path: string, init: RequestInit = {}, token?: strin
   if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  const res = await fetch(`${API_URL()}${path}`, { ...init, headers });
   const json = (await res.json().catch(() => null)) as
     | { data?: T; error?: ApiErrorBody; step_up?: StepUpNeed }
     | null;
@@ -246,7 +261,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
  */
 export async function apiFile(path: string, init: RequestInit = {}): Promise<Response> {
   const call = (token?: string | null) =>
-    fetch(`${API_URL}${path}`, {
+    fetch(`${API_URL()}${path}`, {
       ...init,
       headers: {
         ...(init.headers ?? {}),

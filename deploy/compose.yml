@@ -127,36 +127,27 @@ services:
         condition: service_started
 
   # ── الويب ───────────────────────────────────────────────────────────
+  # ══════════════════════════════════════════════════════════════════
+  # **والويبُ يستهلك أثراً كما يستهلكه المحرّك** (دورةُ ٧١و)
+  # ══════════════════════════════════════════════════════════════════
+  #
+  # **وكان يبني هنا بوسائطَ إنتاجٍ تُخبَز في الحزمة** — **فأثرُ
+  # التجهيز لا يعرف عنوانَ الإنتاج أصلاً**، وقِيس: صفرُ ذكرٍ لـ
+  # `api.rahalgo.com` في حزمة التجهيز مقابل ستٍّ في حزمة الإنتاج.
+  # **فصورتان من التزامٍ واحدٍ ليستا أثراً واحداً.**
+  #
+  # **والبيئةُ صارت تصل وقتَ التشغيل** — `/config.js` يقرأ هذه
+  # المتغيّراتِ عند كلّ طلب، **فالصورةُ الواحدةُ تصلح للبيئتين.**
   web:
-    build:
-      context: ../web
-      args:
-        NEXT_PUBLIC_API_URL: https://api.rahalgo.com
-        NEXT_PUBLIC_SITE_URL: https://rahalgo.com
-        # ══════════════════════════════════════════════════════════
-        # **ونمطُ الخريطة من مضيفنا لا من جهاز الزائر**
-        # ══════════════════════════════════════════════════════════
-        #
-        # (بلاغُ المالك ٢٠٢٦-٠٨-٣٠: «مشكلة عامّة بالخرائط بالتطبيقات
-        #  والويب».)
-        #
-        # **وكان يُبنى بلا هذا المتغيّر** — فيقرأ Next عند البناء ما في
-        # `web/apps/rahalgo/.env.local`:
-        #
-        #     NEXT_PUBLIC_MAP_STYLE_URL=http://127.0.0.1:8791/style.json
-        #
-        # **عنوانُ خادمٍ محلّيٍّ للتطوير** — يُدفن في حزمة المتصفّح،
-        # **فيطلبه جهازُ الزائر من نفسِه** فلا يجد شيئاً.
-        #
-        # **والمتغيّرُ يُقرأ عند البناء لا عند التشغيل** (`NEXT_PUBLIC_`)
-        # — فلا يكفي وضعُه في `environment` وحدَه.
-        NEXT_PUBLIC_MAP_STYLE_URL: https://maps.rahalgo.com/map-resources/1/style.online.json
+    image: ${RAHALGO_WEB_IMAGE:?RAHALGO_WEB_IMAGE مطلوب — وسمُ إصدارٍ ثابتٌ أو معرّفُ صورة · ولا بناءَ بديلاً}
     restart: unless-stopped
-    # **وتُكرَّر وقتَ التشغيل لا وقتَ البناء وحدَه** — **`next start`
-    # يقرأ الإعدادَ من جديدٍ عند الإقلاع**، فيسقط إن لم يجدها.
     environment:
-      NEXT_PUBLIC_API_URL: https://api.rahalgo.com
-      NEXT_PUBLIC_SITE_URL: https://rahalgo.com
+      # **ولا بادئةُ `NEXT_PUBLIC_`** — **تلك تُخبَز وقتَ البناء**،
+      # **وهذه تُقرأ وقتَ التشغيل من بيئة الحاوية.**
+      RAHALGO_API_URL: https://api.rahalgo.com
+      RAHALGO_SITE_URL: https://rahalgo.com
+      RAHALGO_ENVIRONMENT: production
+      RAHALGO_MAP_STYLE_URL: https://maps.rahalgo.com/map-resources/1/style.online.json
     depends_on:
       - api
 

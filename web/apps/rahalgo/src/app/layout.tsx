@@ -1,16 +1,29 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { getMessages, getDir, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { PlatformProvider, fetchPlatform } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { AuthProvider } from "@/lib/auth";
+import { readServerConfig } from "@/lib/config";
 import { StepUpGate } from "@rahalgo/auth";
 // خط المنصة — مصدر مركزي واحد (packages/ui/src/fonts.css)
 import "@rahalgo/ui/fonts.css";
 import "./globals.css";
 
 const m = getMessages(defaultLocale);
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **والعنوانان يُقرآن عند الطلب لا عند البناء** (دورةُ ٧١و)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وكانا ثابتين على مستوى الملفّ من `NEXT_PUBLIC_*`** — **فيُخبَزان
+ * في الحزمة**، **فصورةُ التجهيز لا تعرف عنوانَ الإنتاج أصلاً** وقِيس
+ * ذلك: صفرُ ذكرٍ لـ`api.rahalgo.com` في حزمة التجهيز.
+ *
+ * **فصارا دالّتين تُنادَيان داخلَ ما يُنفَّذ عند الطلب** — والقيمةُ من
+ * بيئة الحاوية.
+ */
 
 /**
  * **وعنوانُ الصفحة من الإعدادات لا من المعجم.**
@@ -24,6 +37,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
  * الحيّ، **والثابتُ يُحسب مرّةً عند البناء فيتجمّد.**
  */
 export async function generateMetadata(): Promise<Metadata> {
+  const { apiUrl: API, siteUrl: SITE } = readServerConfig();
   const brand = await fetchPlatform(API);
   const name = brand.name || m.common.appName;
   const title = withPlatform(m.site.appTitle, name);
@@ -105,10 +119,12 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 function mediaHref(path: string | null | undefined): string | null {
   if (!path || !/^\/media\/[A-Za-z0-9/._-]+$/.test(path)) return null;
-  return API + path;
+  // **والعنوانُ يُقرأ عند النداء** — دورةُ ٧١و.
+  return readServerConfig().apiUrl + path;
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { apiUrl: API } = readServerConfig();
   const brand = await fetchPlatform(API);
 
   // ══════════════════════════════════════════════════════════════════
@@ -157,6 +173,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </head>
       )}
       <body className="flex min-h-screen flex-col">
+        {/* ══════════════════════════════════════════════════════════
+            **تهيئةُ البيئة قبل أيّ شيفرةِ عميل** (دورةُ ٧١و)
+            ══════════════════════════════════════════════════════════
+
+            **ومسارٌ لا قيمةٌ مكتوبةٌ هنا**: **هذه الصفحةُ قد تُولَّد
+            ساكنةً وقتَ البناء**، **فقيمةٌ فيها تُخبَز** — وهو عينُ
+            العطب. **والمسارُ يُنفَّذ عند كلّ طلبٍ ولا يُخزَّن.**
+
+            **و`beforeInteractive` تضمن سبقَه لكلّ مكوّنٍ يقرأه.** */}
+        <Script src="/config.js" strategy="beforeInteractive" />
         <PlatformProvider apiBase={API} initial={brand}>
           <AuthProvider>
             {/* **ولا تمسّ زائراً**: من لا حسابَ له يمرّ، ومن لا علَمَ عليه

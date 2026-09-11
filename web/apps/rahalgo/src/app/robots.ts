@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { readServerConfig } from "@/lib/config";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
+const SITE = () => readServerConfig().siteUrl;
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -20,6 +21,6 @@ export default function robots(): MetadataRoute.Robots {
       // **وأقسامُ الزبون حُذفت ٢٠٢٦-٠٨-٢٦** فلم يبقَ ما يُمنع منها.
       disallow: ["/dashboard"],
     },
-    sitemap: `${SITE}/sitemap.xml`,
+    sitemap: `${SITE()}/sitemap.xml`,
   };
 }
