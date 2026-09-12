@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 307,
-    "test_funcs": 1174
+    "test_files": 309,
+    "test_funcs": 1178
   },
   "flows": [
     {
@@ -5216,6 +5216,12 @@
       "name": "TestContract_CoversEveryRoute",
       "file": "internal/apidoc/contract_test.go",
       "package": "apidoc",
+      "orphan": true
+    },
+    {
+      "name": "TestProtectedRolesMatchWebPolicy",
+      "file": "internal/authz/protected_parity_test.go",
+      "package": "authz",
       "orphan": true
     },
     {
@@ -13799,6 +13805,24 @@
         "SECURITY"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestOWN1_RolesManageCannotGrantOwner",
+      "file": "internal/qa/owner_role_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOWN2_OwnerGrantsAndLastOwnerHeld",
+      "file": "internal/qa/owner_role_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOWN3_StepUpStillRequiredAndStaffRolesWork",
+      "file": "internal/qa/owner_role_guard_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestPAR_010_LegacyRouteUnchanged",
