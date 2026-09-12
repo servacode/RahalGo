@@ -61,6 +61,19 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 	if len(in.Roles) == 0 {
 		return nil, ErrInvalidRole
 	}
+	// **والدورُ المحميُّ لا يُخلَق به حسابٌ كذلك** — **وهذا المسلكُ
+	// يأخذ الأدوارَ من مدخل الفاعل** وقدرتُه `users.status.manage` لا
+	// `roles.manage`. **و`AllRoles` تحجبه اليومَ بالعرَض لا بقصد**
+	// (رمزُه ليس فيها)، **ومن أضاف رمزاً إليها غداً فتح باباً لا
+	// يعرف أنّه فتحه.**
+	//
+	// **والحمايةُ تُقاس قبل التحقّق الشكليّ** — **فخطأُ «دورٌ غير
+	// صالح» يخبر الفاعلَ أنّ الرمزَ مجهول، وخطأُ الحماية يخبره أنّه
+	// معروفٌ وممنوع** — **والثاني هو الحقّ، والأوّلُ يُخفي الحارسَ
+	// فيُحسَب غائباً.**
+	if err := s.guardProtectedRoles(ctx, actorID, in.Roles); err != nil {
+		return nil, err
+	}
 	for _, r := range in.Roles {
 		if !slices.Contains(AllRoles, r) {
 			return nil, ErrInvalidRole
@@ -266,6 +279,12 @@ func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, rea
 	return s.criticalRoleTx(ctx, actorID, userID, ip, "admin.role_grant",
 		map[string]any{"role": role, "reason": reason},
 		func(ctx context.Context, q dbtx.Querier) error {
+			// **والدورُ المحميُّ لا يكفيه `roles.manage`** — **فحصٌ
+			// داخلَ المعاملة قبل الكتابة**، انظر `protected_role.go`.
+			// **وقِيس قبله**: أدمنٌ رقّى نفسَه مالكاً ⇒ `200 granted`.
+			if err := guardProtectedGrant(ctx, q, actorID, role); err != nil {
+				return err
+			}
 			_, err := q.Exec(ctx, `
 				INSERT INTO user_roles (user_id, role_code, granted_by)
 				VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
@@ -287,6 +306,10 @@ func (s *Service) AdminRevokeRole(ctx context.Context, actorID, userID, role, re
 	return s.criticalRoleTx(ctx, actorID, userID, ip, "admin.role_revoke",
 		map[string]any{"role": role, "reason": reason},
 		func(ctx context.Context, q dbtx.Querier) error {
+			// **ونزعُ الدور المحميِّ من مالكٍ، وما دام يبقى مالك.**
+			if err := guardProtectedRevoke(ctx, q, actorID, role); err != nil {
+				return err
+			}
 			_, err := q.Exec(ctx,
 				`DELETE FROM user_roles WHERE user_id = $1 AND role_code = $2`,
 				userID, role)
