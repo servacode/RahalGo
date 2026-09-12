@@ -102,12 +102,15 @@ func (s *Server) requireStepUp(next http.Handler) http.Handler {
 // respondStepUpRequired **يطلب التأكيدَ ويصف الفعلَ المطلوب.**
 //
 // **ولا تُرسَل حمولةُ الطلب في الردّ** — الفعلُ والهدفُ لا غير.
+// **والظرفُ ظرفُ خطأٍ لا ظرفُ نجاح** — **و`httpx.JSON` تغلّف في
+// `data`، فيصير التحدّي مدفوناً طبقةً ولا يراه العميل.** (وقع في
+// الإنتاج ٢٠٢٦-٠٩-١٢: ٤٠٣ بجسمٍ صحيحٍ مغلَّفٍ ⇒ لم تُفتح النافذةُ
+// وقُرئ «حدث خطأ غير متوقع».)
+//
+// **والرمزُ والمفتاحُ من `errStepUpRequired` لا حروفاً تُعاد** —
+// **وكانا مكتوبين مرّتين، فشاخت إحداهما.**
 func (s *Server) respondStepUpRequired(w http.ResponseWriter, act authz.Sensitive, path string) {
-	httpx.JSON(w, http.StatusForbidden, map[string]any{
-		"error": map[string]any{
-			"code":        "step_up_required",
-			"message_key": "errors.step_up_required",
-		},
+	httpx.ErrorWith(w, errStepUpRequired, map[string]any{
 		"step_up": map[string]any{
 			"action":      act.Action,
 			"target_type": act.TargetType,

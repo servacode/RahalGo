@@ -5,6 +5,9 @@ const WEB = join(dirname(fileURLToPath(import.meta.url)), "..");
 async function exists(p) { try { await stat(p); return true; } catch { return false; } }
 export async function resolve(spec, context, next) {
   let s = spec;
+  // **وحزمةُ الواجهةِ يُقدَّم بديلُها** — **فيها JSX لا ينزعه node**،
+  // **وليست هي المفحوصة.** انظر `_uistub.mjs`.
+  if (s === "@rahalgo/ui") return next(pathToFileURL(join(WEB, "scripts", "_uistub.mjs")).href, context);
   if (s.startsWith("@/")) s = pathToFileURL(join(WEB, "apps", "rahalgo", "src", s.slice(2))).href;
   if ((s.startsWith("./") || s.startsWith("../") || s.startsWith("file:")) && !/\.(ts|tsx|json|mjs|js)$/.test(s)) {
     const base = s.startsWith("file:") ? s : new URL(s, context.parentURL).href;

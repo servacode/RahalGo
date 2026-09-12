@@ -41,9 +41,36 @@ func JSON(w http.ResponseWriter, status int, data any) {
 }
 
 func Error(w http.ResponseWriter, appErr *AppError) {
+	ErrorWith(w, appErr, nil)
+}
+
+// ErrorWith **خطأٌ يحمل معه حقولاً في أعلى الجسم.**
+//
+// # ولماذا لا `JSON`
+//
+// **و`JSON` تغلّف ما تُعطى في `{"data":…}`** — **وهي صيغةُ النجاح.**
+// **فمن كتب خطأً بها دفنه طبقةً**: العملاءُ يقرؤون `error` في الأعلى
+// فلا يجدونه، **فيصير الخطأُ المُفصَّلُ خطأً «داخليّاً» مجهولاً.**
+//
+// **ووقع هذا في الإنتاج ٢٠٢٦-٠٩-١٢**: تحدّي التأكيد رُدّ ٤٠٣ بجسمٍ
+// صحيحٍ **مغلَّفٍ في `data`** — **فلم تُفتح نافذةُ كلمةِ المرور قطُّ**،
+// وقرأ المالكُ «حدث خطأ غير متوقع». **وكلُّ فعلٍ حسّاسٍ في اللوحة كان
+// مكسوراً بذلك.**
+//
+// # والحقولُ الزائدةُ لا تزحم `error`
+//
+// **ومفتاحُ `error` محجوز** — فلا يُستبدَل بحقلٍ زائدٍ سهواً.
+func ErrorWith(w http.ResponseWriter, appErr *AppError, extra map[string]any) {
+	payload := make(map[string]any, len(extra)+1)
+	for k, v := range extra {
+		if k != "error" {
+			payload[k] = v
+		}
+	}
+	payload["error"] = appErr
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(appErr.Status)
-	if err := json.NewEncoder(w).Encode(map[string]any{"error": appErr}); err != nil {
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
 		slog.Error("httpx: encode error response", "error", err)
 	}
 }

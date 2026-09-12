@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 304,
-    "test_funcs": 1166
+    "test_files": 305,
+    "test_funcs": 1169
   },
   "flows": [
     {
@@ -16069,6 +16069,24 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestSUC1_ChallengeShapeIsTopLevel",
+      "file": "internal/qa/step_up_contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSUC2_ChallengeShapeAcrossActionClasses",
+      "file": "internal/qa/step_up_contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSUC3_EveryActionGoesThroughOnePath",
+      "file": "internal/qa/step_up_contract_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestADG3_C1_ConcurrentDoubleUse",
