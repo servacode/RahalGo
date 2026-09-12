@@ -226,6 +226,11 @@ private val CODES: Map<String, Int> = mapOf(
     // **كشفها `check-app-error-codes`** — وكانت تُعرض خامّة.
     "invalid_role" to R.string.err_invalid_role,
     "self_action" to R.string.err_self_action,
+    // **ورمزا حارسِ الدور المحميّ** (٢٠٢٦-٠٩-١٢) — **بابُهما إدارةٌ
+    // لا هاتف**، **ونصٌّ هنا ثمنُه سطران** ويمنع لاتينيّةً خامّةً على
+    // شاشةٍ عربيّةٍ إن بلغها يوماً.
+    "owner_role_protected" to R.string.err_owner_role_protected,
+    "last_owner" to R.string.err_last_owner,
     "pin_required" to R.string.err_pin_required,
     "pin_invalid" to R.string.err_pin_invalid,
     "pin_locked" to R.string.err_pin_locked,

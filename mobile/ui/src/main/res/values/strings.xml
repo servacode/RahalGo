@@ -462,6 +462,8 @@
          يفترقان يومَ يُصحَّح أحدُهما.** -->
     <string name="err_invalid_role">الدور المحدد غير صالح</string>
     <string name="err_self_action">لا يمكنك تنفيذ هذا الإجراء على حسابك</string>
+    <string name="err_owner_role_protected">دور المالك لا يمنح ولا ينزع إلا من مالك</string>
+    <string name="err_last_owner">لا تنزع دور المالك الأخير — يبقى للمنصة مالك واحد على الأقل</string>
     <string name="err_pin_required">يلزم رمز الأدمن</string>
     <string name="err_pin_invalid">الرمز غير صحيح</string>
     <string name="err_pin_locked">نفدت المحاولات — أعد المحاولة بعد عشر دقائق</string>
