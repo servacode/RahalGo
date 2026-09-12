@@ -33,10 +33,11 @@ import { DisputesView } from "@/components/admin/money/disputes";
 const m = getMessages(defaultLocale);
 
 export default function MoneyLostPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   /* **ومن لا يملك الخسائرَ لا يُرسَم له تبويبُها** — لا يُعطَّل ولا يُخفى
      بعد ظهور: **لا يوجد أصلاً.** */
-  const canSeeLosses = hasRole(user, "admin") || hasRole(user, "finance");
+  // **وتبويبُ الخسائر قراءةُ مال** — `finance.read`.
+  const canSeeLosses = can("finance.read");
   const tabs = [
     ...(canSeeLosses ? [{ key: "losses", label: m.admin.nav.losses }] : []),
     { key: "disputes", label: m.admin.nav.claims },

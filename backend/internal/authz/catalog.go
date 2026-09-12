@@ -60,7 +60,19 @@ const (
 
 	// ── المتاجر والسائقون ───────────────────────────────────────
 	MerchantsManage Capability = "merchants.manage"
-	DriversManage   Capability = "drivers.manage"
+
+	// MerchantsRead **قراءةُ سجلّ المتاجر وقوائمها وساعاتها.**
+	//
+	// **وكانت داخلَ `merchants.manage`** — **فمن أراد أن يقرأ اسمَ
+	// متجرٍ ليحوّل إليه طلباً نال إنشاءَ المتاجر وتحريرَ قوائم غيره
+	// وحذفَ أصنافها.** **وذاك بابُ كتابةٍ لقارئ.**
+	//
+	// **وقِيس**: شاشةُ الطلبات تنادي `GET /merchants` لتعرض قائمةَ
+	// التحويل — **فموظّفُ العمليّات كان يملك `merchants.manage` من
+	// أجل سطرٍ يقرؤه.**
+	MerchantsRead Capability = "merchants.read"
+
+	DriversManage Capability = "drivers.manage"
 	// DriversRead **قراءةُ سجلّ السائقين ومواضعهم** — دون تشغيلهم.
 	//
 	// **ومراجعُ السائقين يقرأ ولا ينهي وردية** — **و`drivers.manage`
@@ -68,10 +80,25 @@ const (
 	// عمله. (`ADG-2` — مصالحةُ دورةِ ٢٦.)
 	DriversRead Capability = "drivers.read"
 
-	// ── الإعدادات — ثلاثُ درجاتٍ بحسب الأثر ──────────────────────
+	// ── الإعدادات — قراءةٌ وثلاثُ درجاتِ كتابةٍ بحسب الأثر ───────
 	//
-	// **وتصنيفُها من دورةِ ٢١ لا يُخترَع ثانيةً** — انظر
+	// **وتصنيفُ الكتابة من دورةِ ٢١ لا يُخترَع ثانيةً** — انظر
 	// `server.criticalSettingKey`.
+
+	// SettingsRead **قراءةُ لوحِ الإعدادات.**
+	//
+	// **وقراءةُ مفتاحٍ ليست تبديلَه** — **و`GET /settings` كانت
+	// بـ`settings.general.manage`**، **فمن أراد أن يقرأ «بعد كم
+	// دقيقةٍ يُسنَد الطلبُ يدويّاً» نال رسمَ المناطق والمدن
+	// والمحافظات.**
+	//
+	// **وقِيس**: شاشةُ الطلبات تقرأ مفتاحين تشغيليّين
+	// (`orders.manual_assign_after_min` · `platform.orders_mode`) —
+	// **فبلا هذه القدرةِ تسقط قراءتُها بـ٤٠٣ وتعمل الشاشةُ على
+	// افتراضٍ.**
+	//
+	// **والكتابةُ تبقى ثلاثاً كما هي** — بحسب أثر المفتاح.
+	SettingsRead            Capability = "settings.read"
 	SettingsGeneralManage   Capability = "settings.general.manage"
 	SettingsFinancialManage Capability = "settings.financial.manage"
 	SettingsSecurityManage  Capability = "settings.security.manage"
@@ -200,8 +227,10 @@ var catalog = map[Capability]string{
 	FinanceManage:            "قيدُ محفظةٍ ومصروفٌ وخزينة",
 	PayoutsDecide:            "قرارُ السحب",
 	MerchantsManage:          "إدارةُ المتاجر وتعليقُها",
+	MerchantsRead:            "قراءةُ سجلّ المتاجر وقوائمها",
 	DriversManage:            "إدارةُ السائقين وتشغيلُهم",
 	DriversRead:              "قراءةُ سجلّ السائقين ومواضعهم",
+	SettingsRead:             "قراءةُ لوح الإعدادات",
 	SettingsGeneralManage:    "إعداداتٌ عامّةٌ ومحتوى",
 	SettingsFinancialManage:  "إعداداتٌ تدخل حساباً ماليّاً",
 	SettingsSecurityManage:   "إعداداتُ الأمن والجلسات",

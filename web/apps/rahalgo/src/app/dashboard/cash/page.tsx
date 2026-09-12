@@ -64,8 +64,9 @@ function daysHeld(iso: string | null): number {
 }
 
 export default function CashOutstandingPage() {
-  const { user } = useAuth();
-  const canSettle = hasRole(user, "admin") || hasRole(user, "finance");
+  const { user, can } = useAuth();
+  // **وتسويةُ نقدِ السائق قيدٌ ماليّ** — `finance.manage` لا اسمُ دور.
+  const canSettle = can("finance.manage");
   const [view, setView] = useViewMode("cash-outstanding");
   const [target, setTarget] = useState<Holder | null>(null);
 

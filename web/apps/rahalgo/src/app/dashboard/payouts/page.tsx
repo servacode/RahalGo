@@ -62,8 +62,9 @@ const VARIANT: Record<Payout["status"], "warning" | "success" | "danger"> = {
 
 
 export default function PayoutsPage() {
-  const { user } = useAuth();
-  const canDecide = hasRole(user, "admin", "finance");
+  const { user, can } = useAuth();
+  // **وقرارُ السحب قدرةٌ بذاتها** — `payouts.decide`.
+  const canDecide = can("payouts.decide");
   /** **والشحنُ اليدويُّ للأدمن والمالية** — كحارس الخادم نفسِه. */
   const canCredit = canDecide;
   const [status, setStatus] = useState("");

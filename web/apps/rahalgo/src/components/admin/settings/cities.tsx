@@ -87,8 +87,9 @@ interface Draft {
 }
 
 export default function CitiesPanel() {
-  const { user: me } = useAuth();
-  const isAdmin = !!me?.roles.includes("admin");
+  const { user: me, can } = useAuth();
+  // **ورسمُ المدن جغرافيا** — `settings.general.manage`.
+  const isAdmin = can("settings.general.manage");
 
   const [cities, setCities] = useState<City[]>([]);
   const [error, setError] = useState("");

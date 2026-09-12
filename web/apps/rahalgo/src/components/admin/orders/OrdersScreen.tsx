@@ -1349,6 +1349,9 @@ function OrderActions({
   const [target, setTarget] = useState("");
   const [unmatched, setUnmatched] = useState<string[]>([]);
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
+  // **وأزرارُ هذه البطاقة تُبوَّب بالقدرة** — **والفعلُ الماليُّ فيها
+  // ليس من عمل العمليّات** (بندُ المالك ٨).
+  const { can } = useAuth();
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   /** **حدُّ شيخوخة الموضع بالدقائق** — يأتي من المحرّك لا يُكتب هنا. */
@@ -1885,7 +1888,15 @@ function OrderActions({
                 : m.admin.ordersPage.goodsSettledPlatform}
             </span>
           )}
-          {o.driver_name && (
+          {/* ══════════════════════════════════════════════════════
+            * **وتعويضُ السائق قيدٌ ماليّ في شاشةٍ تشغيليّة**
+            * ══════════════════════════════════════════════════════
+            *
+            * **و`POST /orders/{id}/compensate-driver` بـ`finance.manage`**
+            * — **فموظّفُ العمليّات كان يرى زرّاً يُردّ ٤٠٣.**
+            * **وشرطُ المالك (بندُ ٨): العمليّاتُ تقرأ مجاميعَ الطلب
+            * ولا ترى فعلاً ماليّاً.** */}
+          {o.driver_name && can("finance.manage") && (
             <Button
               variant="secondary"
               disabled={busy !== ""}

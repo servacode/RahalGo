@@ -72,8 +72,9 @@ const KIND_LABEL: Record<Promo["kind"], string> = {
 };
 
 export default function PromosPage() {
-  const { user: me } = useAuth();
-  const isAdmin = !!me?.roles.includes("admin");
+  const { user: me, can } = useAuth();
+  // **ورموزُ الخصم واللافتاتُ محتوى** — `content.manage`.
+  const isAdmin = can("content.manage");
   const [tab, setTab] = useState<"codes" | "discounts">("codes");
 
   return (

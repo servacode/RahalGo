@@ -191,9 +191,11 @@ interface Tx {
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user: me } = useAuth();
-  const isAdmin = !!me?.roles.includes("admin");
-  const canWallet = !!me?.roles.some((r) => r === "admin" || r === "finance");
+  const { user: me, can } = useAuth();
+  // **وبابُ الأدوار في بطاقة الحساب** — `roles.manage`.
+  const isAdmin = can("roles.manage");
+  // **ولوحُ المحفظة قراءةُ مال** — `finance.read`.
+  const canWallet = can("finance.read");
 
   const [p, setP] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);

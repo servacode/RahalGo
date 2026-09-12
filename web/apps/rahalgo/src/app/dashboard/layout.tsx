@@ -32,7 +32,6 @@ import {
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
-import { PANEL_ROLES } from "@rahalgo/auth";
 
 const m = getMessages(defaultLocale);
 
@@ -59,11 +58,14 @@ const m = getMessages(defaultLocale);
 type NavItem = ChromeNavItem & { roles?: string[]; caps?: string[] };
 
 const ALL_NAV: NavItem[] = [
-  { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard },
+  { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard,
+    caps: ["analytics.read"] },
   // التشغيل اليومي — مشتركٌ بين الثلاثة
-  { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder },
+  { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder,
+    caps: ["orders.read"] },
   // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
-  { href: "/dashboard/history", label: m.admin.nav.history, icon: IconStatus },
+  { href: "/dashboard/history", label: m.admin.nav.history, icon: IconStatus,
+    caps: ["orders.read"] },
   // ══════════════════════════════════════════════════════════════════
   // **والحساباتُ ثالثاً — أهمُّ ما بعد الطلبات اليوم**
   // ══════════════════════════════════════════════════════════════════
@@ -82,21 +84,27 @@ const ALL_NAV: NavItem[] = [
   //
   // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون
   // والمندوبون تبويباتٌ فيه — بجداولهم كما هي.
-  { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"] },
+  { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers,
+    caps: ["users.read"] },
   // **والأدوارُ تحت الحسابات** — **هي من يملك ماذا، لا من هو** (٧٠ب-و١).
   //
   // **والمنعُ في المحرّك** (`roles.manage` في جدول السياسة) — **وهذا
   // البندُ يُخفي ما لا يخصّ صاحبَه لطفاً بالعين لا حراسةً.**
-  { href: "/dashboard/roles", label: m.admin.roles.navTitle, icon: IconRoles, roles: ["admin"] },
+  { href: "/dashboard/roles", label: m.admin.roles.navTitle, icon: IconRoles,
+    caps: ["roles.manage"] },
   // **والسوقُ يليها** — ما يُعرض وما نفد وما ينتظر المراجعة.
-  { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore, roles: ["admin"] },
+  { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore,
+    caps: ["content.manage"] },
   // **الشكاوى والتقييماتُ بابٌ واحد** — جوابان لسؤالٍ واحد: «ما رأيُ الناس
   // بنا؟». ومن رأى سائقاً هبط تقييمُه يقرأ شكاواه في المكان نفسِه.
   // (قرارُ المالك ٢٠٢٦-٠٨-٠٨.)
-  { href: "/dashboard/tickets", label: m.admin.nav.support, icon: IconSupport },
+  { href: "/dashboard/tickets", label: m.admin.nav.support, icon: IconSupport,
+    caps: ["support.manage"] },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
-  { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning },
-  { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
+  { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning,
+    caps: ["support.manage"] },
+  { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink,
+    caps: ["merchants.verify"] },
   // ══════════════════════════════════════════════════════════════════
   // **خريطةُ العمليات — «أين» لا «كم»**
   // ══════════════════════════════════════════════════════════════════
@@ -109,14 +117,15 @@ const ALL_NAV: NavItem[] = [
   //
   // **والصلاحيّةُ في الخادم لا هنا** — `opsmap.Perm`. **وهذا سطرُ
   // رسمٍ فقط**، ومن رآه ولا يملك شيئاً فيه رأى صفحةَ «لا صلاحية».
-  { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones },
+  { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
+    caps: ["orders.read"] },
   // **خزينةُ المنصة — أصلُ كلّ حركة.**
   //
   // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
   // المالك ٢٠٢٦-٠٨-٠٤.) وهي محفظةُ الحساب الحامل لها — فيراها صاحبُها
   // كشفاً كاملاً، **ويرى غيرُه محفظتَه هو.**
   { href: "/dashboard/wallet", label: m.admin.nav.treasury, icon: IconWallet,
-    roles: ["admin", "finance"] },
+    caps: ["finance.read"] },
   // ══════════════════════════════════════════════════════════════════
   // **ومصروفاتُ التشغيل تليها** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
   // ══════════════════════════════════════════════════════════════════
@@ -127,14 +136,14 @@ const ALL_NAV: NavItem[] = [
   // **وليست في «الخسائر»**: الخسارةُ ما لم يكن يجب أن يقع، **وهذه كلفةُ
   // تشغيلٍ مخطَّطة** — وخلطُهما يضخّم تقريرَ الخسائر بالإيجار.
   { href: "/dashboard/expenses", label: m.admin.nav.expenses, icon: IconWallet,
-    roles: ["admin", "finance"] },
+    caps: ["finance.read"] },
   // **والأرباحُ تُقرأ بعدهما** — (قرارُ المالك ٢٠٢٦-٠٨-١٦): **دخلُ الطلبات
   // ناقصَ الخسائر والمصاريف والدعوات**، ولكلِّ إنسانٍ نصيبُه في تبويبه.
   { href: "/dashboard/profits", label: m.admin.nav.profits, icon: IconWallet,
-    roles: ["admin", "finance"] },
+    caps: ["finance.read"] },
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
-    roles: ["admin", "finance", "ops"] },
+    caps: ["finance.read"] },
   // **الخسارةُ والمطالبةُ وجها واقعةٍ واحدة** — طلبٌ يفشل فيُعوَّض السائقُ
   // (خسارة) ثمّ يُفتح نزاعٌ مع المتجر (مطالبة). (قرارُ المالك ٢٠٢٦-٠٨-٠٨:
   // «النزاعات تكون مع الخسائر لأنّها هي بسبب الخسائر».)
@@ -142,19 +151,20 @@ const ALL_NAV: NavItem[] = [
   // **والصلاحيّةُ أوسعُهما** — وتبويبُ الخسائر لا يُرسَم إلّا لمن يملكه،
   // فلا يوسّع البابُ على أحدٍ ما كان يراه.
   { href: "/dashboard/losses", label: m.admin.nav.moneyLost, icon: IconBalance,
-    roles: ["admin", "finance", "ops"] },
+    caps: ["finance.read", "support.manage"] },
   { href: "/dashboard/payouts", label: m.shared.payout.title, icon: IconWallet,
-    roles: ["admin", "finance"] },
+    caps: ["finance.read"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,
-    roles: ["admin", "finance"] },
+    caps: ["audit.read"] },
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,
-    roles: ["admin", "finance"] },
+    caps: ["analytics.read"] },
   // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
   { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
-    roles: ["admin", "finance"] },
+    caps: ["finance.read"] },
   // **صفحةٌ واحدةٌ لثلاثة أشكال**: كودٌ يُكتب · ولافتةٌ تُرى · وخصمٌ
   // يُطبَّق في الدفتر. **وشاشتان لغرضٍ واحدٍ تجعلان من يبحث يفتح الاثنتين.**
-  { href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos, roles: ["admin"] },
+  { href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos,
+    caps: ["content.manage"] },
   // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
   // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده
   // ويُحرسه الخادم.
@@ -173,7 +183,8 @@ const ALL_NAV: NavItem[] = [
     icon: IconStatus,
     caps: ["observability.read"],
   },
-  { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings },
+  { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings,
+    caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"] },
 ];
 
 /**
@@ -195,28 +206,29 @@ function navFor(
   roles: string[] | undefined,
   caps: readonly string[],
 ): ChromeNavItem[] {
-  const has = (r: string) => !!roles?.includes(r);
+  void roles;
+  // ══════════════════════════════════════════════════════════════════
+  // **كلُّ بابٍ بقدرته — ولا اسمَ دورٍ في شرطِ ظهور** (٢٠٢٦-٠٩-١٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وكانت اثنتان وعشرون بنداً تُبوَّب بالاسم**: تسعةٌ بلا شرطٍ
+  // أصلاً — **يراها كلُّ من دخل اللوحة** — **وبندا «النقد» و«الخسائر»
+  // بـ`ops`**، **وهو دورٌ صفرُ حامليه في الإنتاج** (قِيس ٢٠٢٦-٠٩-١٣)،
+  // **فموظّفُ `operations` لا يراهما وهما له في الورق.**
+  //
+  // **ودورٌ مخصَّصٌ يُنشَأ غداً بالقدرة نفسِها يرى بابَها** — **ولا
+  // يُنتظَر مهندسٌ يضيف اسمَه في مصفوفة.** (وهو عقدُ المالك:
+  // `NO-CODE FOR OPERATIONS`.)
+  //
+  // **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`) — **وقِيس
+  // ثلاثةٌ منها**: سجلُّ التدقيق للماليّة، وزرُّ إغلاق التذكرة لها،
+  // **وكلاهما يُردّ ٤٠٣ من المحرّك.**
+  //
+  // **والمحرّكُ هو الحارس** — **وهذه عينٌ لا يد** (`ADG-2`).
   const can = (c: string) => caps.includes(c);
-  // ══════════════════════════════════════════════════════════════════
-  // **وصاحبُ القدرةِ يرى بابَه وحدَه** (٢٠٢٦-٠٩-١٢، بندُ ٩)
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **وبابُ اللوحة صار يُفتح بالقدرة** — **فلولا هذا لَرأى حسابُ
-  // الرصد تسعةَ أبوابٍ لا يملك فيها زرّاً**: الطلباتُ والشكاوى
-  // والطوارئُ والإعدادات. (قِيس في متصفّحٍ على التجهيز.)
-  //
-  // **وبندٌ بلا بابِ قدرةٍ يبقى لأصحاب اللوحة القدامى** — `admin` و
-  // `ops` و`finance` — **فلا يتبدّل عندهم شيء.**
-  //
-  // **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`).
-  const legacyPanel = PANEL_ROLES.some(has);
-  return ALL_NAV.filter((i) => {
-    if (i.caps) return i.caps.some(can);
-    if (!legacyPanel) return false;
-    // الأدمن يرى كل شيء بلا استثناء — لا حاجة لفحص كل سطر
-    return has("admin") || !i.roles || i.roles.some(has);
-  });
+  return ALL_NAV.filter((i) => !!i.caps && i.caps.some(can));
 }
+
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, capabilities, capsLoaded, loading, logout } = useAuth();
@@ -230,21 +242,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, capabilities, capsLoaded, loading, router]);
 
   // ══════════════════════════════════════════════════════════════════
-  // **ومن دخل بقدرةٍ وحدَها يُنزَل على بابه** (٢٠٢٦-٠٩-١٢)
+  // **ومن هبط على بابٍ لا يملكه يُنزَل على أوّلِ ما يملك**
   // ══════════════════════════════════════════════════════════════════
   //
-  // **و«الرئيسية» تنادي `/admin/stats` فتُردّ ٤٠٣** لمن لا يملكها
-  // (قِيس) — **فمن هبط عليها رأى عطباً لا شاشة.** **فيُنزَل على أوّل
-  // بابٍ يملكه.**
+  // **و«الرئيسيّة» تنادي `/admin/stats` فتُردّ ٤٠٣** لمن لا يملك
+  // `analytics.read` (قِيس) — **فمن هبط عليها رأى عطباً لا شاشة.**
+  //
+  // **والشرطُ من القائمة لا من اسم دور**: **ما ليس في قائمته لا
+  // يملكه** — **ودورٌ مخصَّصٌ يُنشَأ غداً يُنزَل على بابه بلا سطرٍ
+  // يُكتب له.**
   const landed = useRef(false);
   useEffect(() => {
     if (loading || !capsLoaded || landed.current) return;
-    if (PANEL_ROLES.some((r) => user?.roles?.includes(r))) return;
     const first = nav[0];
-    if (pathname !== "/dashboard" || !first) return;
+    if (!first || nav.some((i) => i.href === pathname)) return;
     landed.current = true;
     router.replace(first.href);
-  }, [loading, capsLoaded, user, pathname, nav, router]);
+  }, [loading, capsLoaded, pathname, nav, router]);
 
   // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
   // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**

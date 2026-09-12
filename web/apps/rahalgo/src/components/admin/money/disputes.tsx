@@ -100,8 +100,9 @@ const PARTY_TABS: { key: Party; label: string }[] = [
 ];
 
 export function DisputesView() {
-  const { user } = useAuth();
-  const canSettle = hasRole(user, "admin", "finance");
+  const { user, can } = useAuth();
+  // **وتسويةُ النزاع قيدٌ ماليّ** — `finance.manage`.
+  const canSettle = can("finance.manage");
   const [party, setParty] = useState<Party>("");
   const [status, setStatus] = useState("open");
   const [acting, setActing] = useState<{ d: Dispute; charge: boolean } | null>(null);

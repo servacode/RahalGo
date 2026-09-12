@@ -63,8 +63,9 @@ interface District {
 }
 
 export default function DivisionsPanel() {
-  const { user: me } = useAuth();
-  const isAdmin = !!me?.roles.includes("admin");
+  const { user: me, can } = useAuth();
+  // **ورسمُ المحافظات والنواحي جغرافيا** — `settings.general.manage`.
+  const isAdmin = can("settings.general.manage");
 
   const [govs, setGovs] = useState<Governorate[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);

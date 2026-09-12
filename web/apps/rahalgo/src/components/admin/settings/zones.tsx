@@ -46,8 +46,9 @@ interface Draft {
 }
 
 export default function ZonesPanel() {
-  const { user: me } = useAuth();
-  const isAdmin = !!me?.roles.includes("admin");
+  const { user: me, can } = useAuth();
+  // **ورسمُ المناطق جغرافيا** — `settings.general.manage`.
+  const isAdmin = can("settings.general.manage");
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [error, setError] = useState("");

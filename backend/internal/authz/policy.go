@@ -115,10 +115,21 @@ var adminPolicy = []Rule{
 	{"PATCH", "/menu/items/{itemID}", MerchantsManage},
 	{"DELETE", "/menu/items/{itemID}", MerchantsManage},
 	{"PUT", "/merchants/{id}/hours", MerchantsManage},
-	{"GET", "/merchants", MerchantsManage},
-	{"GET", "/merchants/{id}", MerchantsManage},
-	{"GET", "/merchants/{id}/menu", MerchantsManage},
-	{"GET", "/merchants/{id}/hours", MerchantsManage},
+	// ══════════════════════════════════════════════════════════════
+	// **وقراءةُ سجلّ المتاجر ليست إدارتَها** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكانت الأربعُ بـ`merchants.manage`** — **فشاشةُ الطلبات
+	// تنادي `GET /merchants` لتبني قائمةَ التحويل**، **فمن أراد
+	// سطراً يقرؤه نال إنشاءَ المتاجر وتحريرَ قوائم غيره وحذفَ
+	// أصنافها.**
+	//
+	// **والكتابةُ فوقها تبقى كما هي** — ومن ملك `manage` مُنح
+	// `read` في الهجرة، **فلا أحدَ فقد ما كان يراه.**
+	{"GET", "/merchants", MerchantsRead},
+	{"GET", "/merchants/{id}", MerchantsRead},
+	{"GET", "/merchants/{id}/menu", MerchantsRead},
+	{"GET", "/merchants/{id}/hours", MerchantsRead},
 
 	// ── السائقون ────────────────────────────────────────────────
 	{"POST", "/drivers/{id}/settle", FinanceManage},
@@ -231,7 +242,10 @@ var adminPolicy = []Rule{
 	// **و`PUT /settings/{key}` قدرتُه تتبع المفتاحَ لا المسار** —
 	// **يُحسَم في المعالِج** (`settingCapability`). **وهو مستثنىً
 	// هنا عمداً ومكتوب.**
-	{"GET", "/settings", SettingsGeneralManage},
+	// **وقراءةُ اللوح ليست تبديلَ مفتاح** (٢٠٢٦-٠٩-١٣): **شاشةُ
+	// الطلبات تقرأ مفتاحين تشغيليّين** — **وكانت تطلب لأجلهما رسمَ
+	// المناطق والمدن والمحافظات.**
+	{"GET", "/settings", SettingsRead},
 	{"GET", "/audit", AuditRead},
 	{"GET", "/stats", AnalyticsRead},
 	{"GET", "/reports", AnalyticsRead},

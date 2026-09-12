@@ -75,9 +75,18 @@ function translateKey(key: string): string {
 
 
 export default function AllAccountsTable() {
-  const { user: me } = useAuth();
+  const { user: me, can } = useAuth();
   const router = useRouter();
-  const isAdmin = !!me?.roles.includes("admin");
+  // ════════════════════════════════════════════════════════════════
+  // **وكلُّ زرٍّ بقدرةِ ندائه** (٢٠٢٦-٠٩-١٣)
+  // ════════════════════════════════════════════════════════════════
+  //
+  // **وكان الثلاثةُ خلفَ اسم `admin` واحدٍ** — **إنشاءُ حسابٍ
+  // وإنشاءُ متجرٍ وأفعالُ الصفّ** — **فمن ملك واحدةً لم ينلها،
+  // ومن ملك الاسمَ نالها كلَّها.**
+  const canCreateUser = can("users.status.manage");
+  const canCreateStore = can("merchants.manage");
+  const isAdmin = canCreateUser || canCreateStore;
 
   const [data, setData] = useState<UserPage | null>(null);
   const [query, setQuery] = useState("");
@@ -491,7 +500,7 @@ export default function AllAccountsTable() {
         empty={m.admin.users.noResults}
         onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
         actions={
-          isAdmin
+          canCreateUser
             ? (u) => (
                 <>
                   <Button
@@ -592,7 +601,7 @@ export default function AllAccountsTable() {
           }}
         />
       )}
-      {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={isAdmin || !!me?.roles.includes("finance")} />}
+      {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={can("finance.manage")} />}
 
       {/* **ونافذةُ السبب تُرسَم** — (شهده المالك ٢٠٢٦-٠٨-١٠: «زرُّ إيقاف
           حساب لا يعمل… وزرُّ الحظر لا يعمل»).

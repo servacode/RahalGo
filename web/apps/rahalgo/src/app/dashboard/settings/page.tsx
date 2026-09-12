@@ -209,8 +209,11 @@ const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_bac
 };
 
 export default function SettingsPage() {
-  const { user: me } = useAuth();
-  const isAdmin = !!me?.roles.includes("admin");
+  const { user: me, can } = useAuth();
+  // **وتحريرُ لوح الإعدادات العامّ** — `settings.general.manage`.
+  // **والمحرّكُ يحسم كلَّ مفتاحٍ بأثره** (`settingCapability`)،
+  // **وهذه عينٌ لا يد.**
+  const isAdmin = can("settings.general.manage");
   const [list, setList] = useState<Setting[] | null>(null);
   const [error, setError] = useState("");
   /** التبويبُ المفتوح — وفراغُه يعني «أوّلَ مجموعةٍ يرسلها الخادم». */

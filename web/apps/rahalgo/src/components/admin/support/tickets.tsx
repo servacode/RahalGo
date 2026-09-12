@@ -446,9 +446,17 @@ function TicketDetailModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { user: me } = useAuth();
+  const { user: me, can } = useAuth();
   const router = useRouter();
-  const canResolve = !!me?.roles.some((r) => r === "admin" || r === "finance");
+  // ════════════════════════════════════════════════════════════════
+  // **وإغلاقُ التذكرة قدرةُ الدعم لا قدرةُ المال** (٢٠٢٦-٠٩-١٣)
+  // ════════════════════════════════════════════════════════════════
+  //
+  // **ودورةُ ٢٥ نقلت `POST /tickets/{id}/resolve` إلى
+  // `support.manage`** — **ولم يُصحَّح الزرّ.** **فصار يُعرَض
+  // للماليّة وهي لا تملكها فيُردّ ٤٠٣**، **ويُخفى عن موظّف الدعم
+  // وهو صاحبُه.** (قِيس ٢٠٢٦-٠٩-١٣.)
+  const canResolve = can("support.manage");
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [reply, setReply] = useState("");
