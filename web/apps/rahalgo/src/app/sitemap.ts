@@ -6,6 +6,16 @@ const SITE = () => readServerConfig().siteUrl;
 const API = () => readServerConfig().apiUrl;
 
 /**
+ * **ويُولَّد عند الطلب لا عند البناء** (دورةُ ٧١و-ر٢).
+ *
+ * **و`sitemap.ts` كسابقِه لا يخضع لـ`force-dynamic` التخطيط** — فكان
+ * يُخبَز في الحزمة و`<loc>` فارغةٌ لأنّ `siteUrl` خاليةٌ وقتَ البناء.
+ * **وكان `fetch` فيه يُعيد توليدَه بعد ساعة فيُشفى** — **وشفاءٌ بعد
+ * ساعةٍ ليس صحّةً**: أوّلُ زائرٍ بعد النشر يقرأ الفارغَ.
+ */
+export const dynamic = "force-dynamic";
+
+/**
  * **خريطةُ الموقع** — الرئيسيةُ وأقسامُ السوق.
  *
  * # ولماذا لا متاجرَ فيها
@@ -43,7 +53,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
   try {
-    const res = await fetch(`${API()}/api/v1/public/home`, { next: { revalidate: 3600 } });
+    // **ولا تخزينَ للجلب** — **وخزنُ ساعةٍ يناقض توليدَ الطلب**: الأثرُ
+    // الواحدُ يخدم بيئتين، **فجسمٌ محفوظٌ من بيئةٍ قد يُخدَم في أخرى.**
+    // (وزوّارُ هذا المسار زحّافاتٌ لا بشر، فالكلفةُ لا تُذكر.)
+    const res = await fetch(`${API()}/api/v1/public/home`, { cache: "no-store" });
+    // **ولا يُحلَّل جسمٌ لم يُقَل إنّه جوابٌ** — **ومن جلب ولم يسأل أوصل
+    // لا يفرّق بين «لم أصل» و«لا أقسامَ عندي».** وجسمُ خطأٍ ليس JSON.
+    if (!res.ok) return entries;
     const json = (await res.json()) as { data?: { sections?: { id: string }[] } };
     for (const s of json.data?.sections ?? []) {
       entries.push({
@@ -53,7 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
   } catch {
-    /* الخادم غير متاح وقت البناء — الرئيسية تكفي */
+    /* المحرّكُ غيرُ متاحٍ وقتَ الطلب — الرئيسيةُ والصفحاتُ الثابتة تكفي */
   }
   return entries;
 }

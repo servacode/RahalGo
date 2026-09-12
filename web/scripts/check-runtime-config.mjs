@@ -151,6 +151,43 @@ if (bound.length > 0) {
   problems.push("عنوانُ بيئةٍ مكتوبٌ في الشيفرة:\n   " + bound.join("\n   "));
 }
 
+// ── ٧ · وملفّا SEO يُولَّدان عند الطلب ───────────────────────────────
+//
+// **و`robots.ts` و`sitemap.ts` لهما توليدُهما الخاصّ** — **لا يخضعان
+// لـ`force-dynamic` التخطيطِ الجذريّ.** فمرّا في ٧١و مخبوزين: خرج
+// `Sitemap: /sitemap.xml` نسبيّاً و`<loc>` فارغةً، **لأنّ هويّةَ
+// البيئة خاليةٌ وقتَ البناء.** (عطبُ ٧١و-ر١، أُصلح في ٧١و-ر٢.)
+//
+// **و`robots.ts` لا `fetch` فيه** — فلا إعادةَ توليدٍ تشفيه: الجسمُ
+// المخبوزُ يُخدَم إلى آخر عمر الأثر.
+for (const name of ["robots.ts", "sitemap.ts"]) {
+  const raw = read(join(web, "apps", "rahalgo", "src", "app", name));
+  if (!raw) {
+    problems.push(`ملفُّ ${name} مفقود — وخريطةُ الموقعِ وقواعدُ الزحف جزءٌ من العقد`);
+    continue;
+  }
+  // **ويُطوى التعليقُ قبل الفحص** — **وشرحُ هذا الحارسِ نفسِه يذكر
+  // `force-dynamic`**، فلولا الطيُّ لمرّ ملفٌّ لا يحمله.
+  const body = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  if (!/export\s+const\s+dynamic\s*=\s*["']force-dynamic["']/.test(body)) {
+    problems.push(`${name} قد يُولَّد ساكناً — فتُخبَز فيه هويّةُ بيئةِ البناء`);
+  }
+  if (!body.includes("readServerConfig")) {
+    problems.push(`${name} لا يقرأ العقدَ المركزيّ — وهويّةُ البيئة تُقرأ عند الطلب`);
+  }
+  if (/process\.env/.test(body)) {
+    problems.push(`${name} يقرأ بيئةَ العمليّة مباشرةً — والعقدُ المركزيُّ هو السبيل`);
+  }
+  // **وخزنُ الجلب يناقض توليدَ الطلب** — أثرٌ واحدٌ يخدم بيئتين،
+  // **فجسمٌ محفوظٌ من بيئةٍ قد يُخدَم في أخرى.**
+  if (/next\s*:\s*\{[^}]*revalidate/.test(body)) {
+    problems.push(`${name} يخزّن جلبَه بمدّة — وذاك يناقض توليدَ الطلب`);
+  }
+}
+if (problems.length === 0) {
+  notes.push("robots و sitemap يُولَّدان عند الطلب — لا هويّةَ بيئةٍ مخبوزة");
+}
+
 if (problems.length > 0) {
   console.error("تهيئةُ التشغيل — خلل:");
   for (const p of problems) console.error("  ✗ " + p);

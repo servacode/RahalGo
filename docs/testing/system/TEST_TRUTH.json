@@ -32,7 +32,7 @@
     "behaviour_settings": 96,
     "order_fields": 75,
     "test_files": 304,
-    "test_funcs": 1165
+    "test_funcs": 1166
   },
   "flows": [
     {
@@ -5378,6 +5378,12 @@
       "name": "TestDevOTPProviderIsRefusedInProduction",
       "file": "internal/config/otp_provider_test.go",
       "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestC71WR2_SeoRoutesAreRuntimeGenerated",
+      "file": "internal/deploycheck/artifact_test.go",
+      "package": "deploycheck_test",
       "orphan": true
     },
     {

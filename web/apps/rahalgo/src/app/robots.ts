@@ -3,6 +3,19 @@ import { readServerConfig } from "@/lib/config";
 
 const SITE = () => readServerConfig().siteUrl;
 
+/**
+ * **يُولَّد عند الطلب لا عند البناء** (دورةُ ٧١و-ر٢).
+ *
+ * **و`robots.ts` لا يخضع لـ`force-dynamic` التخطيطِ الجذريّ** — له
+ * توليدُه الخاصّ. **فكان يُخبَز في الحزمة وهويّةُ البيئة خاليةٌ وقتَ
+ * البناء**، فيخرج `Sitemap: /sitemap.xml` نسبيّاً.
+ *
+ * **ولا `fetch` فيه** — فلا إعادةَ توليدٍ تشفيه بعد النشر أبداً: يُخدَم
+ * الجسمُ المخبوزُ إلى آخر عمر الأثر. (قِيس في ٧١و-ر١ مقابلَ الإنتاج
+ * القائم الذي يعطي العنوانَ مطلقاً.)
+ */
+export const dynamic = "force-dynamic";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {

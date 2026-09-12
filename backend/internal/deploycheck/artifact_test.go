@@ -231,3 +231,72 @@ func TestC71W_WebArtifactTooling(t *testing.T) {
 		}
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **وملفّا SEO يُولَّدان عند الطلب — حارسٌ دائم** (دورةُ ٧١و-ر٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// # ما وقع
+//
+// **مرّ أثرُ ٧١و وفيه "robots.txt" نسبيٌّ و"sitemap.xml" فارغُ العناوين.**
+// **والسببُ أنّ "robots.ts" و"sitemap.ts" في Next لهما توليدُهما الخاصّ**
+// — **لا يخضعان لإعلان التخطيطِ الجذريّ.** فخُبزا وهويّةُ البيئة خاليةٌ
+// وقتَ البناء.
+//
+// **و"robots.ts" لا جلبَ فيه** — فلا إعادةَ توليدٍ تشفيه: الجسمُ المخبوزُ
+// يُخدَم إلى آخر عمر الأثر. **وذاك عطبٌ دائمٌ لا مؤقّت.**
+//
+// # ولماذا حارسٌ هنا أيضاً
+//
+// **وحارسُ الويب لا يعمل إلّا بـ pnpm** — **وبوّابةُ الإصدار تمشي على
+// "go test".** فمن رقّى أثراً بلا تشغيل حرّاس الويب لا يمنعه شيء.
+func TestC71WR2_SeoRoutesAreRuntimeGenerated(t *testing.T) {
+	for _, name := range []string{"robots.ts", "sitemap.ts"} {
+		path := filepath.Join("..", "..", "..", "web", "apps", "rahalgo", "src", "app", name)
+		b, err := os.ReadFile(filepath.Clean(path))
+		if err != nil {
+			t.Fatalf("**%s مفقود**: %v", name, err)
+		}
+		// **ويُطوى التعليقُ قبل الفحص** — **وشرحُ هذا الحارسِ نفسِه يذكر
+		// ما يمنعه**، ولولا الطيُّ لمرّ ملفٌّ لا يحمله.
+		body := stripComments(string(b))
+		if !strings.Contains(body, "force-dynamic") {
+			t.Errorf("**%s قد يُولَّد ساكناً** — "+
+				"**فتُخبَز فيه هويّةُ بيئةِ البناء**، "+
+				"**فيخرج عنوانٌ نسبيٌّ أو فارغٌ في كلّ بيئة.**", name)
+		}
+		if !strings.Contains(body, "readServerConfig") {
+			t.Errorf("**%s لا يقرأ العقدَ المركزيّ** — "+
+				"**وهويّةُ البيئة تُقرأ عند الطلب لا عند البناء.**", name)
+		}
+		if strings.Contains(body, "process.env") {
+			t.Errorf("**%s يقرأ بيئةَ العمليّة مباشرةً** — "+
+				"**والعقدُ المركزيُّ هو السبيل.**", name)
+		}
+	}
+}
+
+// stripComments **يطوي تعليقَ TypeScript** — السطريَّ والكتليَّ معاً.
+func stripComments(src string) string {
+	var out strings.Builder
+	for i := 0; i < len(src); i++ {
+		if src[i] == '/' && i+1 < len(src) {
+			switch src[i+1] {
+			case '/':
+				for i < len(src) && src[i] != '\n' {
+					i++
+				}
+				out.WriteByte('\n')
+				continue
+			case '*':
+				if j := strings.Index(src[i+2:], "*/"); j >= 0 {
+					i += 2 + j + 1
+					continue
+				}
+				return out.String()
+			}
+		}
+		out.WriteByte(src[i])
+	}
+	return out.String()
+}
