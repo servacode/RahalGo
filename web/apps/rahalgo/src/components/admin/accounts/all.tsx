@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtDate, errorText} from "@rahalgo/i18n";
-import { ASSIGNABLE_ROLE_CODES, roleLabelByCode } from "@/lib/rolemeta";
+import { assignmentGroups, roleLabelByCode } from "@/lib/rolemeta";
+import { listRoles, roleLabel, type Role } from "@/lib/rbac";
 import {
   Pagination,
   Alert,
@@ -50,10 +51,11 @@ const m = getMessages(defaultLocale);
 
 // **والاسمُ من `rolemeta`** — ولا معجمَ ثانياً هنا.
 //
-// **وكانت القائمةُ `Object.keys(ROLE_LABELS)`** — **فكلُّ اسمٍ يُضاف
-// للعرض كان يُغيّر صامتاً ما يُعرَض على من ينشئ حساباً.** فصارت
-// قائمةً مصرَّحاً بها في `rolemeta`.
-const ALL_ROLES = ASSIGNABLE_ROLE_CODES;
+// **ولا مصفوفةَ رموزٍ في هذه الشاشة بعد اليوم** (٢٠٢٦-٠٩-١٢، بندُ ٧):
+// **كانت `ASSIGNABLE_ROLE_CODES` سبعةَ رموزٍ مكتوبةً في الواجهة**،
+// **فدورٌ يُنشئه المالكُ من اللوحة لا يظهر في «مستخدم جديد» ولا في
+// المرشِّح حتّى تُبنى الواجهةُ من جديد.** **والأدوارُ تُقرأ من
+// المحرّك، والسياسةُ ترتّبها في `rolemeta`.**
 
 interface UserPage {
   users: AuthUser[];
@@ -83,6 +85,8 @@ export default function AllAccountsTable() {
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
+  // **والأدوارُ من المحرّك** — للمرشِّح ولنافذة الإنشاء معاً.
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -111,6 +115,22 @@ export default function AllAccountsTable() {
     const t = setTimeout(load, 250); // تهدئة البحث
     return () => clearTimeout(t);
   }, [load]);
+
+  // **والأدوارُ تُقرأ مرّةً عند فتح الشاشة** — **ولا تُخترَع قائمةٌ من
+  // الواجهة بديلاً عند التعذّر**: تبقى فارغةً فيُقال ذلك.
+  useEffect(() => {
+    let alive = true;
+    void listRoles()
+      .then((r) => {
+        if (alive) setAllRoles(r);
+      })
+      .catch(() => {
+        if (alive) setAllRoles([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useLiveRefresh(["account"], load);
 
@@ -423,11 +443,16 @@ export default function AllAccountsTable() {
             }}
           >
             <option value="">{m.admin.users.allRoles}</option>
-            {ALL_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {roleLabelByCode(r)}
-              </option>
-            ))}
+            {/* **والمرشِّحُ يعرض كلَّ ما في المحرّك** — **وترشيحٌ ليس
+                إسناداً**، فلا سياسةَ أهليّةٍ تُطبَّق هنا: **من أراد أن
+                يرى مَن يحمل دوراً محميّاً يحتاج أن يرشِّح به.** */}
+            {[...allRoles]
+              .sort((a, b) => roleLabel(a).localeCompare(roleLabel(b), "ar"))
+              .map((r) => (
+                <option key={r.code} value={r.code}>
+                  {roleLabel(r)}
+                </option>
+              ))}
           </Select>
         </div>
         <div className="w-36">
@@ -544,6 +569,7 @@ export default function AllAccountsTable() {
 
       <CreateUserModal
         open={createOpen}
+        allRoles={allRoles}
         onClose={() => setCreateOpen(false)}
         onCreated={() => {
           setCreateOpen(false);
@@ -584,10 +610,13 @@ export default function AllAccountsTable() {
 
 function CreateUserModal({
   open,
+  allRoles,
   onClose,
   onCreated,
 }: {
   open: boolean;
+  /** **أدوارُ المحرّك** — والسياسةُ ترتّبها، والواجهةُ لا تخترعها. */
+  allRoles: readonly Role[];
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -674,14 +703,35 @@ function CreateUserModal({
           <span className="mb-1 block text-sm font-medium">{m.admin.users.rolesLabel}</span>
           {/* **والحبّاتُ مركزيّة** — كانت هنا بـ`px-3 py-1` وفي نافذة الأدوار
               بـ`px-3 py-1.5` وفي صفحة الصنف بثالث. (طلبُ المالك ٢٠٢٦-٠٨-٠٧.) */}
-          {/* **وسبعةُ أدوارٍ تلتفّ ولا تنزلق** — من لم يرَ «مدير المنصة»
-              لأنّها خارج الإطار لا يعرف أنّها موجودة. (٢٠٢٦-٠٨-٠٨.) */}
-          <Chips
-            items={ALL_ROLES.map((r) => ({ id: r, label: roleLabelByCode(r) }))}
-            value={roles}
-            onChange={toggleRole}
-            wrap
-          />
+          {/* **والأدوارُ تلتفّ ولا تنزلق** — من لم يرَ «مدير المنصة»
+              لأنّها خارج الإطار لا يعرف أنّها موجودة. (٢٠٢٦-٠٨-٠٨.)
+
+              **والسياسةُ واحدةٌ مع نافذة أدوار الحساب** — `assignmentGroups`:
+              **فدورُ عملٍ يُنشَأ اليومَ يظهر في المكانين معاً، ولا
+              `owner_super_admin` في واحدٍ منهما.** (٢٠٢٦-٠٩-١٢.) */}
+          {assignmentGroups(allRoles).map((g) => (
+            <div key={g.cls} className="mb-2">
+              <p className="mb-1 text-xs text-ink-muted">{g.title}</p>
+              <Chips
+                items={g.roles.map((r) => ({
+                  id: r.code,
+                  disabled: r.locked,
+                  label: (
+                    <span className="flex items-center gap-1.5">
+                      {r.label}
+                      <span className="font-mono text-[10px] opacity-60">{r.code}</span>
+                    </span>
+                  ),
+                }))}
+                value={roles}
+                onChange={toggleRole}
+                wrap
+              />
+            </div>
+          ))}
+          {allRoles.length === 0 && (
+            <Alert className="mt-2">{m.admin.users.rolesUnavailable}</Alert>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Input

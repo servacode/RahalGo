@@ -27,8 +27,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
 import { Alert, Button, Chips, Input, Modal, FormActions} from "@rahalgo/ui";
-import { api, ApiError, type AuthUser } from "@/lib/api";
+import { api, type AuthUser } from "@/lib/api";
 import { listRoles, roleLabel, type Role } from "@/lib/rbac";
+import { assignmentGroups } from "@/lib/rolemeta";
 
 const m = getMessages(defaultLocale);
 
@@ -122,17 +123,57 @@ export function ManageRolesModal({
     }
   }
   function toggle(role: string) {
+    // **والمحميُّ لا يُبدَّل من هنا حتّى لو نُقر** — **و`disabled` في
+    // الحبّة لطفٌ بالعين، وهذا هو المنعُ في المنطق.** (والمنعُ الحقيقيُّ
+    // في المحرّك: `roles.manage` وتأكيدٌ وقيدُ تدقيق.)
+    const locked = assignmentGroups(roles, current).some((g) =>
+      g.roles.some((r) => r.code === role && r.locked),
+    );
+    if (locked) return;
     setPending({ role, adding: !current.includes(role) });
     setReason("");
   }
 
   return (
     <Modal open onClose={onClose} title={`${m.admin.users.rolesFor}: ${user.full_name || user.phone}`}>
-      <Chips
-        items={roles.map((r) => ({ id: r.code, label: roleLabel(r) }))}
-        value={current}
-        onChange={toggle}
-      />
+      {/* ══════════════════════════════════════════════════════════
+          **مجموعاتٌ تلتفّ — لا صفٌّ واحدٌ ينزلق**
+
+          **وهذا هو الإصلاح**: كان `Chips` واحداً بلا `wrap`، **فثمانيةَ
+          عشرَ دوراً في ٣٩٨ بكسل ⇒ ثلاثٌ مرئيّةٌ وخمسةَ عشرَ خارجَ
+          الإطار** — **وشريطُ التمرير مخفيٌّ بالأنماط**، فلا شيءَ يدلّ
+          على الغائب. **و«مراقبة التشغيل» كانت على `-820px`.**
+
+          **والوجودُ يبقى من المحرّك** — `roles` هي جوابُه، **والسياسةُ
+          ترتّب ما جاء ولا تخترع.** ══════════════════════════════════ */}
+      {assignmentGroups(roles, current).map((g) => (
+        <div key={g.cls} className="mb-4">
+          <p className="mb-1 text-sm font-bold">{g.title}</p>
+          <p className="mb-2 text-xs text-ink-muted">{g.note}</p>
+          <Chips
+            wrap
+            items={g.roles.map((r) => ({
+              id: r.code,
+              disabled: r.locked,
+              /* **والرمزُ التقنيُّ ظاهرٌ ثانويّاً** — **و`ops` و
+                 `operations` اسمُهما العربيُّ واحدٌ «العمليات»**،
+                 فبلا الرمز لا يعرف الموظّفُ أيَّهما يُسند. (قِيس في
+                 النافذة: حبّتان بنصٍّ واحد.) */
+              label: (
+                <span className="flex items-center gap-1.5">
+                  {r.label}
+                  <span className="font-mono text-[10px] opacity-60">{r.code}</span>
+                </span>
+              ),
+            }))}
+            value={current}
+            onChange={toggle}
+          />
+        </div>
+      ))}
+      {/* **وتعذّرُ القراءة يُقال بنصّه** — **و«حدث خطأ غير متوقع» هي
+          الرسالةُ التي أضلّت المالكَ في عطب التأكيد**، فلا تُعاد هنا. */}
+      {roles.length === 0 && <Alert className="mt-3">{m.admin.users.rolesUnavailable}</Alert>}
       {pending && (
         <div className="mt-4 rounded-control border border-primary-edge bg-primary-tint p-3">
           <p className="mb-2 text-sm font-medium">

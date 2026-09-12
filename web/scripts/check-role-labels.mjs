@@ -83,7 +83,7 @@ try {
   console.error("تعذّر تشغيلُ وحدةِ الأسماء — والحارسُ لا يقيس بلا تشغيل:\n  " + e.message);
   process.exit(1);
 }
-const { roleLabelByCode, roleLabel, roleDescription, capabilityLabel, ASSIGNABLE_ROLE_CODES } = meta;
+const { roleLabelByCode, roleLabel, roleDescription, capabilityLabel, STAFF_ASSIGNABLE_CODES } = meta;
 
 const ARABIC = /[؀-ۿ]/;
 
@@ -238,12 +238,21 @@ for (const [p, why] of [
     problems.push(`${why} لا تقرأ الأدوارَ من المحرّك — والواجهةُ لا تقول ما يوجد`);
   }
 }
-if (!Array.isArray(ASSIGNABLE_ROLE_CODES) || ASSIGNABLE_ROLE_CODES.length === 0) {
-  problems.push("قائمةُ الاختيار في شاشة الحسابات غيرُ مصرَّحٍ بها");
+// **وقائمةُ الأهليّةِ صارت سياسةً مصنَّفة** (٢٠٢٦-٠٩-١٢) —
+// **و`ASSIGNABLE_ROLE_CODES` نُزعت**: كانت سبعةَ رموزٍ مكتوبةً في
+// الواجهة، **فدورٌ يُنشئه المالكُ لا يظهر في شاشة الحسابات.**
+// **وحارسُها الخاصُّ `check-role-assignment.mjs`** — وهذا يفحص الاسمَ
+// وحدَه فيُبقي على شرطٍ واحد: **لا رمزَ في السياسةِ لا يعرفه المحرّك.**
+if (!Array.isArray(STAFF_ASSIGNABLE_CODES) || STAFF_ASSIGNABLE_CODES.length === 0) {
+  problems.push("سياسةُ أدوار العمل غيرُ مصرَّحٍ بها");
 } else {
-  const outside = ASSIGNABLE_ROLE_CODES.filter((c) => !backendRoles.has(c));
+  // **و`observability` أنشأه المالكُ من اللوحة لا هجرةٌ** — فيُستثنى
+  // من شرط «مبذورٌ في المحرّك»، **وهو مقصودٌ مسمَّى لا ثغرة.**
+  const outside = STAFF_ASSIGNABLE_CODES.filter(
+    (c) => !backendRoles.has(c) && c !== "observability",
+  );
   if (outside.length > 0) {
-    problems.push("قائمةُ الاختيار فيها رمزٌ لا يعرفه المحرّك:\n   " + outside.join(" · "));
+    problems.push("سياسةُ الأهليّة فيها رمزٌ لا يعرفه المحرّك: " + outside.join(" · "));
   }
 }
 
