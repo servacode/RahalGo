@@ -2972,6 +2972,21 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/auth/capabilities",
+      "handler": "handleMyCapabilities",
+      "auth": true,
+      "response": [
+        {
+          "name": "capabilities",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/auth/handoff",
       "handler": "handleHandoff",

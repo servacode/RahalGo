@@ -576,3 +576,19 @@ func (s *Server) handleDeleteAccountConfirm(w http.ResponseWriter, r *http.Reque
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
 }
+
+// handleMyCapabilities **قدراتُ صاحب الجلسة — وحدَه.**
+//
+// **ولا تكشف شيئاً لا يملكه**: الخادمُ يحسبها في كلّ نداءٍ من القاعدة
+// (`R15`)، **وهذا يعرضها لصاحبها ليُرسم بابُه.**
+//
+// **وليست تخويلاً**: **الحدُّ في جدول السياسة** — ومن نادى باباً لا
+// يملكه رُدَّ ولو أخفت الواجهةُ زرَّه أو أظهرته.
+func (s *Server) handleMyCapabilities(w http.ResponseWriter, r *http.Request) {
+	caps := capabilitiesFrom(r)
+	if caps == nil {
+		// **ولا `null` في جسمٍ يقرؤه عميل** — قائمةٌ فارغةٌ أوضح.
+		caps = []string{}
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"capabilities": caps})
+}
