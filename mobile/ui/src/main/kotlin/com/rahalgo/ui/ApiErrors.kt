@@ -231,6 +231,8 @@ private val CODES: Map<String, Int> = mapOf(
     // شاشةٍ عربيّةٍ إن بلغها يوماً.
     "owner_role_protected" to R.string.err_owner_role_protected,
     "last_owner" to R.string.err_last_owner,
+    "role_not_creatable" to R.string.err_role_not_creatable,
+    "role_grant_retired" to R.string.err_role_grant_retired,
     "pin_required" to R.string.err_pin_required,
     "pin_invalid" to R.string.err_pin_invalid,
     "pin_locked" to R.string.err_pin_locked,

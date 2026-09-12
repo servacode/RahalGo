@@ -69,6 +69,27 @@ func revokePath(uid, role string) string {
 	return "/api/v1/admin/users/" + uid + "/roles/" + role
 }
 
+// soleOwner **يعزل حالةَ المالك** — **ويُرجعها بعد الاختبار.**
+//
+// **واختبارٌ يقيس عدداً عامّاً في القاعدة يكسره اختبارٌ جديدٌ ينشئ
+// مالكاً** — **وقد كسره `CUB-2` فعلاً.** **فتُمحى الصفوفُ أوّلاً
+// ويُنشأ واحدٌ**، **وتُمحى بعدُ فلا يُسقط هذا الاختبارُ غيرَه.**
+func soleOwner(t *testing.T, hh *Harness, extra ...string) (*User, string) {
+	t.Helper()
+	clearOwners(t, hh)
+	t.Cleanup(func() { clearOwners(t, hh) })
+	return capUser(t, hh, append([]string{ownerRole}, extra...)...)
+}
+
+// clearOwners **يمحو صفوفَ دور المالك** — في قاعدة الفحص وحدَها.
+func clearOwners(t *testing.T, hh *Harness) {
+	t.Helper()
+	if _, err := hh.Pool.Exec(ctxBG(),
+		`DELETE FROM user_roles WHERE role_code = $1`, ownerRole); err != nil {
+		t.Fatalf("تنظيفُ صفوف المالك: %v", err)
+	}
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //
 //	**OWN-1 · `roles.manage` وحدَها لا تبلغ دورَ المالك**
@@ -81,6 +102,8 @@ func TestOWN1_RolesManageCannotGrantOwner(t *testing.T) {
 	victim, _ := capUser(t, hh, "customer")
 
 	before := auditCount(t, hh, "admin.role_grant", victim.ID)
+	// **والعدُّ فرقيٌّ لا مطلق** — **والقاعدةُ مشتركةٌ بين الاختبارات.**
+	ownersBefore := ownerCount(t, hh)
 
 	// ── ١ · منحُه لحسابٍ آخر ──────────────────────────────────────
 	res := hh.POST(grantPath(victim.ID), tok, map[string]any{
@@ -125,8 +148,8 @@ func TestOWN1_RolesManageCannotGrantOwner(t *testing.T) {
 		t.Errorf("**بابُ الإنشاء يردّ بـ%q لا بحارس الحماية** — "+
 			"**ورَدٌّ شكليٌّ يُخفي الحارسَ فيُحسَب غائباً**", got)
 	}
-	if n := ownerCount(t, hh); n != 0 {
-		t.Errorf("**مالكٌ وُجد في قاعدةٍ لم يكن فيها** — %d", n)
+	if n := ownerCount(t, hh); n != ownersBefore {
+		t.Errorf("**عددُ المالكين تبدّل بمحاولةٍ مردودة**: %d ⇒ %d", ownersBefore, n)
 	}
 }
 
@@ -138,7 +161,7 @@ func TestOWN1_RolesManageCannotGrantOwner(t *testing.T) {
 func TestOWN2_OwnerGrantsAndLastOwnerHeld(t *testing.T) {
 	hh := New(t)
 	capRole(t, hh, "qa_own_mgr2", authz.RolesManage)
-	owner, otok := capUser(t, hh, ownerRole, "qa_own_mgr2")
+	owner, otok := soleOwner(t, hh, "qa_own_mgr2")
 	victim, _ := capUser(t, hh, "customer")
 
 	if n := ownerCount(t, hh); n != 1 {

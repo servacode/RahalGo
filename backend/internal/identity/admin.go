@@ -71,7 +71,7 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 	// صالح» يخبر الفاعلَ أنّ الرمزَ مجهول، وخطأُ الحماية يخبره أنّه
 	// معروفٌ وممنوع** — **والثاني هو الحقّ، والأوّلُ يُخفي الحارسَ
 	// فيُحسَب غائباً.**
-	if err := s.guardProtectedRoles(ctx, actorID, in.Roles); err != nil {
+	if err := s.guardCreatableRoles(ctx, actorID, in.Roles); err != nil {
 		return nil, err
 	}
 	for _, r := range in.Roles {

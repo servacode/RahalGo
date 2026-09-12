@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtDate, errorText} from "@rahalgo/i18n";
-import { assignmentGroups, roleLabelByCode } from "@/lib/rolemeta";
+import { creatableAtSignup, roleLabelByCode, signupGroups } from "@/lib/rolemeta";
 import { listRoles, roleLabel, type Role } from "@/lib/rbac";
 import {
   Pagination,
@@ -622,6 +622,11 @@ function CreateUserModal({
 }) {
   // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
   const { passwordMinLength: minLen } = usePlatform();
+  // **وأدوارُ المشغّل** — **فـ«الإدارة المرتفعة» تُعرَض للمالك وحدَه**،
+  // **ولا تُعرَض نقرةٌ يردُّها المحرّك** (بندُ ط).
+  const { user: me } = useAuth();
+  const actorRoles = me?.roles ?? [];
+  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
   const [roles, setRoles] = useState<string[]>(["driver"]);
@@ -630,8 +635,48 @@ function CreateUserModal({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // ══════════════════════════════════════════════════════════════════
+  // **نصفُ عملٍ يُقال كما هو** (بندُ ط)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وتخويلُ العمل خطوتان في المحرّك بقصد** (بندُ هـ): **حسابٌ
+  // يُخلَق بصفته، ثمّ دورٌ يُمنَح بمساره المخوَّل** — `roles.manage`
+  // وتأكيدٌ وقيدُ تدقيق. **والشاشةُ تنظّمهما تدفّقاً واحداً.**
+  //
+  // **فإن نجحت الأولى وسقطت الثانية لا يُقال «تمّ»**: **يبقى
+  // الحسابُ قائماً ويُعلَن ما لم يقع**، ويُعرَض بابان — إعادةُ المنح
+  // أو ملفُّ الحساب.
+  const [partial, setPartial] = useState<{ id: string; role: string; why: string } | null>(null);
+
   function toggleRole(r: string) {
     setRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
+  }
+
+  /** **الدورُ الذي يلزمه منحٌ بعد الإنشاء** — إن اختير. */
+  const grantRole = roles.find((r) => !creatableAtSignup(r));
+  /** **وصفةُ الحساب** — وهي ما يُخلَق به. `customer` حين لا تُختار. */
+  const signupRoles = roles.filter((r) => creatableAtSignup(r));
+
+  /** grant **الخطوةُ الثانية** — بمسارها المخوَّل وحدَه. */
+  async function grant(userID: string, role: string) {
+    await api(`/api/v1/admin/users/${userID}/roles`, {
+      method: "POST",
+      body: JSON.stringify({ role, reason: m.admin.users.createTitle }),
+    });
+  }
+
+  async function retryGrant() {
+    if (!partial) return;
+    setBusy(true);
+    try {
+      await grant(partial.id, partial.role);
+      setPartial(null);
+      onCreated();
+    } catch (err) {
+      setPartial({ ...partial, why: errorText(err) });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -642,21 +687,45 @@ function CreateUserModal({
     }
     setBusy(true);
     setError("");
+    setPartial(null);
+    let created = "";
     try {
-      await api("/api/v1/admin/users", {
+      // **الخطوةُ الأولى** — **بصفةِ حسابٍ وحدَها**: بابُ الإنشاء
+      // قدرتُه `users.status.manage`، **فلو حمل دورَ عملٍ صار منحاً
+      // بقدرةٍ أخرى** — وذاك بابُ التصعيد الذي أُغلق.
+      const body = {
+        phone,
+        full_name: fullName,
+        roles: signupRoles.length > 0 ? signupRoles : ["customer"],
+        password,
+      };
+      const u = await api<{ id: string }>("/api/v1/admin/users", {
         method: "POST",
-        body: JSON.stringify({ phone, full_name: fullName, roles, password }),
+        body: JSON.stringify(body),
       });
-      setPhone("");
-      setFullName("");
-      setRoles(["driver"]);
-      setPassword("");
-      onCreated();
+      created = u.id;
     } catch (err) {
       setError(errorText(err));
-    } finally {
       setBusy(false);
+      return;
     }
+    // **والخطوةُ الثانية إن لزمت** — **وسقوطُها لا يُخفي نجاحَ الأولى.**
+    if (grantRole) {
+      try {
+        await grant(created, grantRole);
+      } catch (err) {
+        setPartial({ id: created, role: grantRole, why: errorText(err) });
+        setBusy(false);
+        void onCreated();
+        return;
+      }
+    }
+    setPhone("");
+    setFullName("");
+    setRoles(["driver"]);
+    setPassword("");
+    setBusy(false);
+    onCreated();
   }
 
   return (
@@ -709,9 +778,20 @@ function CreateUserModal({
               **والسياسةُ واحدةٌ مع نافذة أدوار الحساب** — `assignmentGroups`:
               **فدورُ عملٍ يُنشَأ اليومَ يظهر في المكانين معاً، ولا
               `owner_super_admin` في واحدٍ منهما.** (٢٠٢٦-٠٩-١٢.) */}
-          {assignmentGroups(allRoles).map((g) => (
-            <div key={g.cls} className="mb-2">
-              <p className="mb-1 text-xs text-ink-muted">{g.title}</p>
+          {signupGroups(allRoles, actorRoles).map((g) => (
+            <div key={g.cls} className="mb-3">
+              <p className="mb-0.5 text-xs font-bold">{g.title}</p>
+              {/* **والفرقُ الجوهريُّ مُعلَنٌ لا مخبوء**: صفةٌ تُخلَق
+                  مباشرةً، ودورُ عملٍ خطوتان. */}
+              <p
+                className={`mb-1.5 text-[11px] ${
+                  g.viaGrant ? "text-warning" : "text-ink-muted"
+                }`}
+              >
+                {g.viaGrant
+                  ? m.admin.users.signupViaGrantHint
+                  : m.admin.users.signupDirectHint}
+              </p>
               <Chips
                 items={g.roles.map((r) => ({
                   id: r.code,
@@ -757,6 +837,35 @@ function CreateUserModal({
             onChange={(e) => setPassword2(e.target.value)}
           />
         </div>
+        {/* ══════════════════════════════════════════════════════════
+            **نصفُ عملٍ يُقال كما هو** (بندُ ط)
+
+            **والحسابُ أُنشئ والدورُ لم يُمنَح** — **ولا يُقال «تمّ»
+            عن نصف.** ويُعرَض بابان: إعادةُ المنح، أو ملفُّ الحساب
+            حيث يُمنَح باليد. ══════════════════════════════════════ */}
+        {partial && (
+          <Alert className="mb-3">
+            <span className="block font-bold">
+              {m.admin.users.signupPartial}: {roleLabelByCode(partial.role)}
+            </span>
+            <span className="mt-1 block text-xs">{m.admin.users.signupPartialHelp}</span>
+            <span className="mt-1 block text-xs opacity-80">{partial.why}</span>
+            <span className="mt-2 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => void retryGrant()} disabled={busy}>
+                {m.admin.users.signupRetryGrant}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  onClose();
+                  router.push(`/dashboard/users/${partial.id}`);
+                }}
+              >
+                {m.admin.users.signupOpenProfile}
+              </Button>
+            </span>
+          </Alert>
+        )}
         {error && (
           <Alert>{error}</Alert>
         )}

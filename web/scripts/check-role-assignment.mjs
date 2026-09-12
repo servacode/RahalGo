@@ -83,7 +83,18 @@ try {
   console.error("تعذّر تشغيلُ وحدةِ السياسة — والحارسُ لا يقيس بلا تشغيل:\n  " + e.message);
   process.exit(1);
 }
-const { assignmentGroups, classifyRole, STAFF_ASSIGNABLE_CODES, PROTECTED_ROLE_CODES } = meta;
+const {
+  assignmentGroups,
+  signupGroups,
+  classifyRole,
+  canGrantNew,
+  creatableAtSignup,
+  isOwner,
+  STAFF_ASSIGNABLE_CODES,
+  PROTECTED_ROLE_CODES,
+  ELEVATED_ROLE_CODES,
+  LEGACY_ROLE_CODES,
+} = meta;
 
 const ARABIC = /[؀-ۿ]/;
 
@@ -234,6 +245,91 @@ const REQUIRED_STAFF = [
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  ٦ب · **والمرتفعُ للمالك وحدَه · والإرثُ لا يُمنَح** (٢٠٢٦-٠٩-١٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وقِيس في المحرّك أنّ `admin` يبلغ `roles.manage`** — **فمن منحه
+// منح سلطةَ السلطات.** **وسلسلةُ تصعيدٍ كاملةٌ مرّت منه**: موظّفٌ بلا
+// `roles.manage` أنشأ حسابَ أدمنٍ بكلمةٍ يختارها ثمّ دخل به.
+{
+  const OWNER = ["owner_super_admin"];
+  if (ELEVATED_ROLE_CODES.length === 0 || !ELEVATED_ROLE_CODES.includes("admin")) {
+    problems.push("`admin` غيرُ مصنَّفٍ مرتفعاً — **وهو يبلغ `roles.manage`**");
+  }
+  if (canGrantNew("admin", [])) {
+    problems.push("**`admin` يُعرَض لمنحٍ جديدٍ لغير المالك** — **وهو سلطةُ السلطات**");
+  }
+  if (!canGrantNew("admin", OWNER)) {
+    problems.push("**المالكُ لا يرى `admin`** — فلا يستطيع تعيينَ أدمنٍ إطلاقاً");
+  }
+  if (creatableAtSignup("admin") || creatableAtSignup("observability")) {
+    problems.push("**دورٌ غيرُ صفةِ حسابٍ يُخلَق به حسابٌ مباشرةً** — **وذاك بابُ التصعيد**");
+  }
+  if (!creatableAtSignup("customer") || !creatableAtSignup("driver")) {
+    problems.push("**صفةُ الحساب لا تُخلَق مباشرةً** — وأُغلق بابٌ مشروع");
+  }
+  if (!isOwner(OWNER) || isOwner(["admin"])) {
+    problems.push("`isOwner` تُخطئ من هو المالك");
+  }
+  // ── والإرثُ `ops` يُقرأ ولا يُمنَح (`OPS-5`) ──────────────────────
+  if (!LEGACY_ROLE_CODES.includes("ops")) {
+    problems.push("`ops` غيرُ مصنَّفٍ إرثاً — **واسمُه العربيُّ كاسم `operations` وقدراتُهما مختلفة**");
+  }
+  if (canGrantNew("ops", OWNER)) {
+    problems.push("**`ops` يُعرَض لمنحٍ جديد** — ولو للمالك");
+  }
+  const answer = [
+    { code: "admin", name_key: "roles.admin" },
+    { code: "ops", name_key: "roles.ops" },
+    { code: "observability", name_key: "مراقبة التشغيل" },
+    { code: "owner_super_admin", name_key: "roles.owner_super_admin" },
+  ];
+  // **ما لا يُمنَح جديداً لا يُعرَض إلّا مملوكاً** — فيُرى ليُنزَع.
+  const plain = codesOf(assignmentGroups(answer, [], ["admin"]));
+  for (const code of ["admin", "ops", "owner_super_admin"]) {
+    if (plain.has(code)) {
+      problems.push(`**${code} معروضٌ لمنحٍ جديدٍ على مشغّلٍ غيرِ مالك**`);
+    }
+  }
+  const heldAll = flat(assignmentGroups(answer, ["admin", "ops", "owner_super_admin"], ["admin"]));
+  for (const code of ["admin", "ops", "owner_super_admin"]) {
+    const row = heldAll.find((r) => r.code === code);
+    if (!row) {
+      problems.push(`**حسابٌ يحمل ${code} لا يُعرَض دورُه** — **فلا يُنزَع من اللوحة إطلاقاً**`);
+    }
+  }
+  // **والمحميُّ وحدَه مقفل** — و`ops` و`admin` يُنزعان.
+  for (const [code, wantLocked] of [["owner_super_admin", true], ["ops", false], ["admin", false]]) {
+    const row = heldAll.find((r) => r.code === code);
+    if (row && row.locked !== wantLocked) {
+      problems.push(`${code}: locked=${row.locked} والمنتظَرُ ${wantLocked}`);
+    }
+  }
+  // ── وشاشةُ الإنشاء: ثلاثُ فئاتٍ ولا محميَّ ولا إرث ───────────────
+  const sg = signupGroups(answer, ["owner_super_admin"]);
+  const cls = sg.map((g) => g.cls);
+  if (cls.includes("protected") || cls.includes("legacy")) {
+    problems.push("**شاشةُ الإنشاء تعرض المحميَّ أو الإرث** — ولا يُخلَق بهما حساب");
+  }
+  for (const g of sg) {
+    const want = g.cls !== "account_type";
+    if (!!g.viaGrant !== want) {
+      problems.push(`مجموعةُ ${g.cls} في الإنشاء: viaGrant=${g.viaGrant} والمنتظَرُ ${want} — ` +
+        "**والفرقُ بين «يُخلَق به» و«يُمنَح بعده» يجب أن يُعلَن**");
+    }
+  }
+  if (!sg.some((g) => g.cls === "elevated")) {
+    problems.push("**المالكُ لا يرى «الإدارة المرتفعة» في الإنشاء**");
+  }
+  if (signupGroups(answer, ["admin"]).some((g) => g.cls === "elevated")) {
+    problems.push("**غيرُ المالك يرى «الإدارة المرتفعة» في الإنشاء** — ونقرةٌ يردُّها المحرّك");
+  }
+  if (problems.length === 0) {
+    notes.push("المرتفعُ للمالك · والإرثُ لا يُمنَح · والمحميُّ مقفلٌ مرئيّاً لحامله");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  ٧ · **ومصدرُ السياسةِ واحد** — ولا مصفوفةَ رموزٍ في شاشة
 // ══════════════════════════════════════════════════════════════════════
 const SCREENS = [
@@ -246,8 +342,11 @@ for (const [name, path] of SCREENS) {
     problems.push(`${name}: الملفُّ لم يُقرأ — والحارسُ بلا مرجع`);
     continue;
   }
-  if (!/assignmentGroups\(/.test(src)) {
-    problems.push(`${name} لا تنادي \`assignmentGroups\` — **سياسةٌ ثانيةٌ تُكتب من جديد**`);
+  // **والمصدرُ واحدٌ وإن اختلف بابُه**: نافذةُ الإسناد تنادي
+  // `assignmentGroups`، **وشاشةُ الإنشاء `signupGroups` وهي تنادي
+  // الأولى داخلَها** — **ومن كتب سياسةً ثالثةً يسقط هنا.**
+  if (!/(assignmentGroups|signupGroups)\(/.test(src)) {
+    problems.push(`${name} لا تنادي سياسةَ الإسناد — **سياسةٌ ثانيةٌ تُكتب من جديد**`);
   }
   // **ومصفوفةُ رموزِ أدوارٍ مكتوبةٌ في الشاشة** — ثلاثةٌ أو أكثرُ متجاورة.
   const arr = src.match(
@@ -274,7 +373,9 @@ for (const [name, path] of SCREENS) {
 //  ٩ · **والرمزُ التقنيُّ ظاهرٌ ثانويّاً** — و`ops` و`operations` اسمُهما واحد
 // ══════════════════════════════════════════════════════════════════════
 {
-  const groups = assignmentGroups(backendAnswer, []);
+  // **و`ops` لا يُعرَض إلّا مملوكاً بعد ٢٠٢٦-٠٩-١٢** — **فيُقاس
+  // مملوكاً**، وإلّا صار فحصُ الاسمين المتطابقين لا يقيس شيئاً.
+  const groups = assignmentGroups(backendAnswer, ["ops"]);
   const byLabel = new Map();
   for (const r of flat(groups)) {
     byLabel.set(r.label, [...(byLabel.get(r.label) ?? []), r.code]);

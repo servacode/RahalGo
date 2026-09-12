@@ -28,6 +28,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
 import { Alert, Button, Chips, Input, Modal, FormActions} from "@rahalgo/ui";
 import { api, type AuthUser } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { listRoles, roleLabel, type Role } from "@/lib/rbac";
 import { assignmentGroups } from "@/lib/rolemeta";
 
@@ -69,6 +70,10 @@ export function ManageRolesModal({
   const [pending, setPending] = useState<{ role: string; adding: boolean } | null>(null);
   const [reason, setReason] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
+  // **وأدوارُ المشغّل تُقرَّر بها الأهليّةُ المعروضة** — **فنقرةٌ
+  // يردُّها المحرّكُ لا تُعرَض** (بندُ ط): `admin` للمالك وحدَه.
+  const { user: me } = useAuth();
+  const actorRoles = me?.roles ?? [];
 
   useEffect(() => {
     setCurrent(user?.roles ?? []);
@@ -126,7 +131,7 @@ export function ManageRolesModal({
     // **والمحميُّ لا يُبدَّل من هنا حتّى لو نُقر** — **و`disabled` في
     // الحبّة لطفٌ بالعين، وهذا هو المنعُ في المنطق.** (والمنعُ الحقيقيُّ
     // في المحرّك: `roles.manage` وتأكيدٌ وقيدُ تدقيق.)
-    const locked = assignmentGroups(roles, current).some((g) =>
+    const locked = assignmentGroups(roles, current, actorRoles).some((g) =>
       g.roles.some((r) => r.code === role && r.locked),
     );
     if (locked) return;
@@ -146,7 +151,7 @@ export function ManageRolesModal({
 
           **والوجودُ يبقى من المحرّك** — `roles` هي جوابُه، **والسياسةُ
           ترتّب ما جاء ولا تخترع.** ══════════════════════════════════ */}
-      {assignmentGroups(roles, current).map((g) => (
+      {assignmentGroups(roles, current, actorRoles).map((g) => (
         <div key={g.cls} className="mb-4">
           <p className="mb-1 text-sm font-bold">{g.title}</p>
           <p className="mb-2 text-xs text-ink-muted">{g.note}</p>
