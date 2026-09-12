@@ -653,7 +653,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
    */
   const [onShift, setOnShift] = useState<number | null>(null);
   // **الأدمن فوق قاعدة «عينٌ لا يد»** — تجاوزُ المالك، وكلُّ فعلٍ له مُسجَّل.
-  const { user: me } = useAuth();
+  const { user: me, can } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
 
   useEffect(() => {
@@ -697,6 +697,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       setError(errorText(err));
     }
     // **ويُقرأ مع كلّ تحديث** — سائقٌ يفتح دوامَه أو يُغلقه لا يُنتظر تحديثُ صفحة.
+    // **وعدّادُ الوردية لمن يقرأ سجلَّ السائقين** — **والماليّةُ لا
+    // تقرؤه، فكان النداءُ يُردّ ٤٠٣ في كلّ فتحةِ شاشة.** (قِيس.)
+    if (!can("drivers.read")) {
+      setOnShift(null);
+      return;
+    }
     try {
       const res = await api<
         { drivers: DriverRow[]; stale_location_minutes?: number } | DriverRow[]
@@ -1409,7 +1415,18 @@ function OrderActions({
   //
   // ولا يُعرض إلا **من هو على الدوام**: إسنادُ طلبٍ إلى منصرفٍ يُخفيه عن
   // الطابور ولا يوصله أحد.
-  const canAssign = o.status === "preparing" || o.status === "dispatching";
+  // ══════════════════════════════════════════════════════════════════
+  // **والأفعالُ التشغيليّةُ بقدرتها لا بحالِ الطلب وحدَه** (٢٠٢٦-٠٩-١٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وشرطُ المالك (بندُ ٨): الماليّةُ تقرأ الطلبَ لسياقه الماليّ
+  // ولا ترى «تعيينَ سائق» ولا «إعادةَ إسناد» ولا تبديلَ حال.**
+  //
+  // **وقِيس ٢٠٢٦-٠٩-١٣**: كان `canAssign` حالَ الطلب وحدَه —
+  // **فرأت الماليّةُ الزرَّ ولا تملك `orders.intervene`.**
+  const canIntervene = can("orders.intervene");
+  const canAssign =
+    canIntervene && (o.status === "preparing" || o.status === "dispatching");
 
   async function openAssign() {
     setAssigning(true);
@@ -2015,7 +2032,7 @@ function OrderActions({
           **وزرٌّ يُعرض ولا يفعل شيئاً أسوأُ من زرٍّ غائب**: من ضغطه في
           طارئٍ فتح قائمةَ متاجرَ لا علاقةَ لها بطلبٍ اشتراه سائقٌ من سوق،
           **فيظنّ أنّ الشاشةَ انكسرت أو أنّه أخطأ الطلب.** */}
-      {TRANSFERABLE.has(o.status) && o.kind !== "custom" && (
+      {canIntervene && TRANSFERABLE.has(o.status) && o.kind !== "custom" && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
@@ -2053,7 +2070,7 @@ function OrderActions({
 
           **وثانويٌّ في هيئته**: فعلٌ ماليٌّ يُنشئ قيداً بيد،
           **وزرٌّ بلون العلامة بين أزرار العمل يُضغط سهوا.** */}
-      {o.closed_at != null && (
+      {canIntervene && o.closed_at != null && (
         <Button
           variant="secondary"
           disabled={busy !== ""}

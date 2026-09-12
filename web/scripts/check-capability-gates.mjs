@@ -186,6 +186,14 @@ const walk = (d, out = []) => {
     ["components/admin/money/disputes.tsx", 'can("finance.manage")', "تسويةُ النزاع"],
     ["components/admin/support/tickets.tsx", 'can("support.manage")', "إغلاقُ التذكرة"],
     ["components/admin/orders/OrdersScreen.tsx", 'can("finance.manage")', "تعويضُ السائق"],
+    // **والأفعالُ التشغيليّةُ في الشاشة نفسِها** — **والماليّةُ تقرأ
+    // ولا تُسند** (بندُ المالك ٨).
+    ["components/admin/orders/OrdersScreen.tsx", 'const canIntervene = can("orders.intervene")', "التدخّلُ التشغيليّ"],
+    ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && TRANSFERABLE', "تحويلُ الطلب"],
+    ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && o.closed_at', "إعادةُ الحساب"],
+    ["components/admin/orders/OrdersScreen.tsx", 'can("drivers.read")', "عدّادُ الوردية"],
+    // **ورايةُ تحرير الإعداد من المحرّك لا من اسم الناظر.**
+    ["app/dashboard/settings/page.tsx", "s.editable ?? false", "تحريرُ مفتاح الإعداد"],
   ];
   const missing = [];
   for (const [rel, want, what] of MUST) {

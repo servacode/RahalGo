@@ -120,6 +120,14 @@ interface Setting {
   value: unknown;
   updated_at: string | null;
   updated_by: string | null;
+  /**
+   * **أيُحرَّر هذا المفتاحُ لمن يسأل؟** — **يقوله المحرّكُ لا اللوحة.**
+   *
+   * **وقدرةُ المفتاح تتبع أثرَه**: أمنيٌّ أو ماليٌّ أو عامّ. **وكان
+   * التحريرُ يُفتح باسم `admin`** — **فالماليّةُ لا تُحرّر مفتاحَها
+   * الماليّ، ومن لا يملك الأمنيَّ يرى حقلاً يُردّ ٤٠٣.**
+   */
+  editable?: boolean;
   /** **شرطُ الظهور** — مفتاحٌ آخرُ بإحدى قيمٍ بعينها. */
   /**
    * شرطُ الظهور من الفهرس.
@@ -410,7 +418,7 @@ export default function SettingsPage() {
                 <SettingRow
                   key={s.key}
                   s={s}
-                  editable={isAdmin}
+                  editable={s.editable ?? false}
                   onSaved={load}
                   marginMode={marginMode}
                 />
@@ -500,7 +508,7 @@ export default function SettingsPage() {
                         <SettingRow
                           key={s.key}
                           s={s}
-                          editable={isAdmin}
+                          editable={s.editable ?? false}
                           onSaved={load}
                           marginMode={marginMode}
                         />
@@ -553,7 +561,7 @@ export default function SettingsPage() {
                               <SettingRow
                                 key={s.key}
                                 s={s}
-                                editable={isAdmin}
+                                editable={s.editable ?? false}
                                 onSaved={load}
                                 marginMode={marginMode}
                               />
@@ -580,7 +588,7 @@ export default function SettingsPage() {
                         <SettingRow
                           key={s.key}
                           s={s}
-                          editable={isAdmin}
+                          editable={s.editable ?? false}
                           onSaved={load}
                           marginMode={marginMode}
                         />
