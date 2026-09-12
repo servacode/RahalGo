@@ -167,6 +167,49 @@ func TestOBS3_BootstrapTouchesNothingElse(t *testing.T) {
 	}
 }
 
+// TestOBS4_SuspendedAccountIsRefused **ولا يُرقّى حسابٌ غيرُ فعّال.**
+//
+// **وكشف هذا الوجهَ شاهدٌ سالب**: نُزع الشرطُ فبُني المشروعُ ومرّ
+// الفحصُ — **وحارسٌ لا يقيسه فحصٌ ليس حارساً.**
+func TestOBS4_SuspendedAccountIsRefused(t *testing.T) {
+	hh := New(t)
+	clearOwners(t, hh)
+	t.Cleanup(func() { clearOwners(t, hh) })
+	u := hh.NewUser("admin")
+	if _, err := hh.Pool.Exec(ctxBG(),
+		`UPDATE users SET status = 'suspended' WHERE id = $1::uuid`, u.ID); err != nil {
+		t.Fatalf("إيقافُ الحساب: %v", err)
+	}
+	err := identity.BootstrapFirstOwner(context.Background(), hh.Pool, u.ID, "+963900000097")
+	t.Logf("OBS-4: حسابٌ موقوفٌ ⇒ %v", err)
+	if err == nil {
+		t.Error("**رُقّي حسابٌ موقوفٌ مالكاً**")
+	}
+	if holdsRole(t, hh, u.ID, authz.RoleOwnerSuperAdmin) {
+		t.Error("**رُدَّ الفعلُ ووقع**")
+	}
+	if n := ownerCount(t, hh); n != 0 {
+		t.Errorf("**العددُ تبدّل بمحاولةٍ مردودة**: %d", n)
+	}
+
+	// ── **ولا حسابَ يُنشَأ لمعرّفٍ لا وجودَ له** ────────────────────
+	ghost := "00000000-0000-0000-0000-000000000001"
+	before := 0
+	if err := hh.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM users`).Scan(&before); err != nil {
+		t.Fatalf("عدُّ الحسابات: %v", err)
+	}
+	if err := identity.BootstrapFirstOwner(context.Background(), hh.Pool, ghost, "+963900000096"); err == nil {
+		t.Error("**مُنح دورٌ لمعرّفٍ لا حسابَ له**")
+	}
+	after := 0
+	if err := hh.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM users`).Scan(&after); err != nil {
+		t.Fatalf("عدُّ الحسابات: %v", err)
+	}
+	if after != before {
+		t.Errorf("**حسابٌ أُنشئ**: %d ⇒ %d", before, after)
+	}
+}
+
 func containsRole(csv, role string) bool {
 	for _, r := range splitCSV(csv) {
 		if r == role {
