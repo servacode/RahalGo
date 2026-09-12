@@ -216,6 +216,27 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	return srv
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**عقدُ CORS — قائمةٌ واحدةٌ يقرؤها الموجّهُ وحارسُه**
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وحارسٌ يقرأ نسخةً ثانيةً لا يحرس الأولى.** فتُعلَن هنا مرّةً،
+// ويسألها `TestCORS_WebClientHeadersAreAllowed` بفحصٍ مبدئيٍّ حقيقيّ.
+var (
+	corsMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+
+	// corsAllowedHeaders **ترويساتُ الطلب المأذونُ بها.**
+	//
+	// **وترويسةٌ يرسلها الويبُ ولا تُعلَن هنا تُحجب في المتصفّح قبل أن
+	// تُرسَل** — **ولا يظهر ذلك على التجهيز لأنّه أصلٌ واحد.**
+	corsAllowedHeaders = []string{
+		"Accept", "Authorization", "Content-Type",
+		"X-Request-ID", "X-RahalGo-Client", "X-Step-Up",
+	}
+)
+
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 
@@ -267,11 +288,23 @@ func (s *Server) Router() http.Handler {
 	r.Use(s.minVersion)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: s.allowedOrigins(),
-		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedMethods: corsMethods,
 		// **و`X-RahalGo-Client` في المسموح** — ترويسةٌ غيرُ معلَنةٍ يرفضها
 		// المتصفّحُ في الفحص المبدئيّ، **فيسقط النداءُ قبل أن يصل.**
 		// (والتطبيقُ لا يمرّ بـCORS، لكنّ الويبَ قد يُصرّح بنفسه يوماً.)
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-RahalGo-Client"},
+		//
+		// **و`X-Step-Up` نُسيت** — **وهذا التعليقُ نفسُه كان مكتوباً فوقها
+		// ولم يُقرأ.** (عطبُ إنتاجِ ٢٠٢٦-٠٩-١٢.)
+		//
+		// **والإنتاجُ عبرَ أصلين**: الموقعُ `rahalgo.com` والمحرّكُ
+		// `api.rahalgo.com`. **فالنداءُ المُعادُ بإثبات التأكيد يحمل
+		// ترويسةً مخصَّصةً**، فردَّ الفحصُ المبدئيُّ ٢٠٠ بلا إذنٍ **فحجب
+		// المتصفّحُ الإعادةَ قبل إرسالها** — **ومنحتانِ صدرتا ولم
+		// تُستهلكا.**
+		//
+		// **والتجهيزُ أصلٌ واحدٌ فلا CORS فيه** — **فصنفُ العطب هذا غيرُ
+		// مرئيٍّ عليه**، ويحرسه `TestCORS*` بفحصٍ مبدئيٍّ صريح.
+		AllowedHeaders:   corsAllowedHeaders,
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))

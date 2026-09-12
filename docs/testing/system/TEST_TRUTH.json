@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 305,
-    "test_funcs": 1169
+    "test_files": 306,
+    "test_funcs": 1172
   },
   "flows": [
     {
@@ -18401,6 +18401,24 @@
     {
       "name": "TestCompensateDriverOnlyOnce",
       "file": "internal/server/compensate_twice_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCORS_ProductionPreflightAllowsStepUp",
+      "file": "internal/server/cors_headers_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCORS_UnapprovedOriginGetsNoPermission",
+      "file": "internal/server/cors_headers_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCORS_WebClientHeadersAreAllowed",
+      "file": "internal/server/cors_headers_test.go",
       "package": "server",
       "orphan": true
     },
