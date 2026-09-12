@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 310,
-    "test_funcs": 1182
+    "test_files": 312,
+    "test_funcs": 1188
   },
   "flows": [
     {
@@ -12957,6 +12957,18 @@
       "orphan": false
     },
     {
+      "name": "TestOLP1_ObservabilityReadOpensOnlyOpsHealth",
+      "file": "internal/qa/observability_least_privilege_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOLP2_NoUIInThePath",
+      "file": "internal/qa/observability_least_privilege_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestXG46_DriverAcceptNeedsOneConnection",
       "file": "internal/qa/one_connection_test.go",
       "package": "qa",
@@ -13829,6 +13841,30 @@
         "SECURITY"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestOBS1_PhoneNormalizationIsCanonical",
+      "file": "internal/qa/owner_bootstrap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBS2_BootstrapWritesOneOwnerAndAudits",
+      "file": "internal/qa/owner_bootstrap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBS3_BootstrapTouchesNothingElse",
+      "file": "internal/qa/owner_bootstrap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBS4_SuspendedAccountIsRefused",
+      "file": "internal/qa/owner_bootstrap_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestOWN1_RolesManageCannotGrantOwner",
