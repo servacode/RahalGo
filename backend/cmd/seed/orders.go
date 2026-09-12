@@ -244,9 +244,9 @@ func seedAftermath(ctx context.Context, tx pgx.Tx, customer, owner string) {
 			break
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO order_ratings (order_id, customer_id, platform_stars, driver_stars, comment)
-			VALUES ($1, $2, $3, $4, $5) ON CONFLICT (order_id) DO NOTHING`,
-			id, customer, stars[i].platform, stars[i].driver, stars[i].comment); err != nil {
+			INSERT INTO order_ratings (order_id, customer_id, platform_stars, driver_stars)
+			VALUES ($1, $2, $3, $4) ON CONFLICT (order_id) DO NOTHING`,
+			id, customer, stars[i].platform, stars[i].driver); err != nil {
 			log.Fatalf("تقييم: %v", err)
 		}
 	}

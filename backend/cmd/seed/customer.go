@@ -85,8 +85,8 @@ func seedCustomer(ctx context.Context, tx pgx.Tx) {
 	// العناوين — والافتراضيّ محروسٌ بفهرسٍ فريد جزئيّ، فالإدراج مشروط بالغياب
 	for _, a := range customerAddresses {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO user_addresses (user_id, label, address_text, location, is_default)
-			SELECT $1, $2, $3, ST_SetSRID(ST_MakePoint($5, $4), 4326)::geography, $6
+			INSERT INTO user_addresses (user_id, label, address_text, area_building, location, is_default)
+			SELECT $1, $2, $3, $2, ST_SetSRID(ST_MakePoint($5, $4), 4326)::geography, $6
 			WHERE NOT EXISTS (
 				SELECT 1 FROM user_addresses WHERE user_id = $1 AND label = $2)`,
 			id, a.Label, a.Text, a.Lat, a.Lng, a.Default); err != nil {

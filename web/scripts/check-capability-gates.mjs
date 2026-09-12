@@ -192,6 +192,8 @@ const walk = (d, out = []) => {
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && TRANSFERABLE', "تحويلُ الطلب"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && o.closed_at', "إعادةُ الحساب"],
     ["components/admin/orders/OrdersScreen.tsx", 'can("drivers.read")', "عدّادُ الوردية"],
+    ["components/admin/orders/OrdersScreen.tsx", "canIntervene && next.map", "أزرارُ تبديل الحال"],
+    ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && (o.status === "accepted"', "إخبارُ المتجر"],
     // **ورايةُ تحرير الإعداد من المحرّك لا من اسم الناظر.**
     ["app/dashboard/settings/page.tsx", "s.editable ?? false", "تحريرُ مفتاح الإعداد"],
   ];

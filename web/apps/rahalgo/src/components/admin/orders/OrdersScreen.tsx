@@ -1847,7 +1847,17 @@ function OrderActions({
 
   return (
     <>
-      {next.map((to) => {
+      {/* ══════════════════════════════════════════════════════════════
+        * **وتبديلُ حالِ الطلب تدخّلٌ تشغيليّ** (٢٠٢٦-٠٩-١٣)
+        * ══════════════════════════════════════════════════════════════
+        *
+        * **وقِيس في متصفّحٍ على التجهيز**: **الماليّةُ رأت «قبول»
+        * و«رفض» و«فشل التوصيل»** — **وهي لا تملك `orders.intervene`،
+        * فكلُّ ضغطةٍ تُردّ ٤٠٣.** **وشرطُ المالك (بندُ ٨) ألّا تراها.**
+        *
+        * **وخارطةُ `opsNext` تقول أيَّ انتقالٍ يصلح** — **وهذه تقول
+        * من يملك أن ينتقل.** */}
+      {canIntervene && next.map((to) => {
         const destructive = DESTRUCTIVE.has(to);
         return (
           <Button
@@ -1939,7 +1949,9 @@ function OrderActions({
           حيث يعمل صاحبُه أصلاً، وهو ثانويٌّ هنا لا أساسيّ.
 
           والنافذةُ حتى `preparing`: بعد بدء الطبخ لم يعد المطبخُ يحتاج خبراً. */}
-      {(o.status === "accepted" || o.status === "preparing") && (
+      {/* **وإخبارُ المتجر يَسِم الطلبَ** (`POST /orders/{id}/whatsapp`)
+        * — **فهو تدخّلٌ لا قراءة.** */}
+      {canIntervene && (o.status === "accepted" || o.status === "preparing") && (
         <Button
           variant={
             o.sent_to_merchant_at || selfManage ? "secondary" : "primary"
