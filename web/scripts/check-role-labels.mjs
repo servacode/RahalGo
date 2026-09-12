@@ -247,6 +247,31 @@ if (!Array.isArray(ASSIGNABLE_ROLE_CODES) || ASSIGNABLE_ROLE_CODES.length === 0)
   }
 }
 
+// ── ٩ · والرمزُ التقنيُّ يبقى ظاهراً ثانويّاً ────────────────────────
+//
+// **ومن يمنح قدرةً يحتاج أن يرى ما يمنحه بالضبط** — **فالاسمُ العربيُّ
+// للقراءة والرمزُ للدقّة، ولا يُحجَب.** (طلبُ المالك.)
+{
+  const page = read(join(web, "apps", "rahalgo", "src", "app", "dashboard", "roles", "page.tsx"))
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+  // **والنمطُ يطابق نصّاً معروضاً لا خاصّيّةً** — **و`{r.code}` وحدَه
+  // يطابق `key={r.code}` كذلك، فيمرّ فحصٌ لا يقيس شيئاً.** (كشفه شاهدُه
+  // السالب.)
+  if (!/>\s*\{r\.code\}\s*</.test(page)) {
+    problems.push("شاشةُ الأدوار لا تُظهر رمزَ الدور نصّاً — ومن يمنح يحتاج الرمزَ بالضبط");
+  }
+  if (!/<code[\s\S]{0,120}\{c\}/.test(page)) {
+    problems.push("شاشةُ الأدوار لا تُظهر رمزَ القدرة");
+  }
+  if (!/capLabel\(|capabilityLabel\(/.test(page)) {
+    problems.push("شاشةُ الأدوار لا تُسمّي القدراتَ بعربيّة");
+  }
+  if (!/roleDescription\(/.test(page)) {
+    problems.push("شاشةُ الأدوار بلا وصفٍ عربيٍّ للدور");
+  }
+}
+
 if (problems.length > 0) {
   console.error("أسماءُ الأدوار — خلل:");
   for (const p of problems) console.error("  ✗ " + p);
