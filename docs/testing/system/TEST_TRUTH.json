@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 313,
-    "test_funcs": 1190
+    "test_files": 314,
+    "test_funcs": 1194
   },
   "flows": [
     {
@@ -13054,6 +13054,30 @@
     {
       "name": "TestOps70A_C2_PublicHealthAlsoFlipsButStaysSilent",
       "file": "internal/qa/ops_failure_injection_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFM1_OperationsHasNoFinancialHand",
+      "file": "internal/qa/ops_finance_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFM2_FinanceHasNoOperationalHand",
+      "file": "internal/qa/ops_finance_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFM3_ReadSplitDoesNotWiden",
+      "file": "internal/qa/ops_finance_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFM4_CapabilityNotRoleName",
+      "file": "internal/qa/ops_finance_matrix_test.go",
       "package": "qa",
       "orphan": true
     },

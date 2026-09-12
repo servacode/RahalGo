@@ -1033,7 +1033,7 @@
       "path": "/api/v1/admin/merchants",
       "handler": "handleListMerchants",
       "auth": true,
-      "capability": "merchants.manage",
+      "capability": "merchants.read",
       "response": [
         {
           "name": "@res",
@@ -1065,7 +1065,7 @@
       "path": "/api/v1/admin/merchants/{id}",
       "handler": "handleAdminGetMerchant",
       "auth": true,
-      "capability": "merchants.manage",
+      "capability": "merchants.read",
       "response": [
         {
           "name": "@mr",
@@ -1113,7 +1113,7 @@
       "path": "/api/v1/admin/merchants/{id}/hours",
       "handler": "handleGetHours",
       "auth": true,
-      "capability": "merchants.manage",
+      "capability": "merchants.read",
       "response": [
         {
           "name": "@hours",
@@ -1151,7 +1151,7 @@
       "path": "/api/v1/admin/merchants/{id}/menu",
       "handler": "handleGetMenu",
       "auth": true,
-      "capability": "merchants.manage",
+      "capability": "merchants.read",
       "response": [
         {
           "name": "@menu",
@@ -2277,7 +2277,7 @@
       "path": "/api/v1/admin/settings",
       "handler": "handleListSettings",
       "auth": true,
-      "capability": "settings.general.manage",
+      "capability": "settings.read",
       "response": [
         {
           "name": "groups",
