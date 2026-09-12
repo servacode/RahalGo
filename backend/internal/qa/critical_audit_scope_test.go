@@ -301,7 +301,7 @@ func TestXG20_C1C2_ConcurrentMutationsCorrelate(t *testing.T) {
 	var revoked, updated Res
 	r := Race(t, DefaultRaceTimeout,
 		Actor{Name: "سحبُ الدور", Do: func(context.Context) any {
-			revoked = hh.Call("DELETE", "/api/v1/admin/users/"+u.ID+"/roles/ops",
+			revoked = hh.Call("DELETE", "/api/v1/admin/users/"+u.ID+"/roles/operations",
 				admin.Token, nil, nil)
 			return revoked
 		}},
