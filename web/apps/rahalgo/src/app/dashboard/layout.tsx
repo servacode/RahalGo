@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -32,6 +32,7 @@ import {
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
+import { PANEL_ROLES } from "@rahalgo/auth";
 
 const m = getMessages(defaultLocale);
 
@@ -196,13 +197,25 @@ function navFor(
 ): ChromeNavItem[] {
   const has = (r: string) => !!roles?.includes(r);
   const can = (c: string) => caps.includes(c);
-  // **وبندُ القدرةِ يُقاس بقدرته وحدَها** — **ولا يراه الأدمنُ لأنّه
-  // أدمن**: `admin` لا يملك `observability.read` في المصفوفة
-  // الكانونيّة، **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`).
-  const byCaps = (i: NavItem) => !i.caps || i.caps.some(can);
-  // الأدمن يرى كل شيء بلا استثناء — لا حاجة لفحص كل سطر
-  if (has("admin")) return ALL_NAV.filter(byCaps);
-  return ALL_NAV.filter((i) => byCaps(i) && (!i.roles || i.roles.some(has)));
+  // ══════════════════════════════════════════════════════════════════
+  // **وصاحبُ القدرةِ يرى بابَه وحدَه** (٢٠٢٦-٠٩-١٢، بندُ ٩)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وبابُ اللوحة صار يُفتح بالقدرة** — **فلولا هذا لَرأى حسابُ
+  // الرصد تسعةَ أبوابٍ لا يملك فيها زرّاً**: الطلباتُ والشكاوى
+  // والطوارئُ والإعدادات. (قِيس في متصفّحٍ على التجهيز.)
+  //
+  // **وبندٌ بلا بابِ قدرةٍ يبقى لأصحاب اللوحة القدامى** — `admin` و
+  // `ops` و`finance` — **فلا يتبدّل عندهم شيء.**
+  //
+  // **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`).
+  const legacyPanel = PANEL_ROLES.some(has);
+  return ALL_NAV.filter((i) => {
+    if (i.caps) return i.caps.some(can);
+    if (!legacyPanel) return false;
+    // الأدمن يرى كل شيء بلا استثناء — لا حاجة لفحص كل سطر
+    return has("admin") || !i.roles || i.roles.some(has);
+  });
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -215,6 +228,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!loading && capsLoaded && !canAccessPanel(user, capabilities))
       router.replace("/adminrahalgo");
   }, [user, capabilities, capsLoaded, loading, router]);
+
+  // ══════════════════════════════════════════════════════════════════
+  // **ومن دخل بقدرةٍ وحدَها يُنزَل على بابه** (٢٠٢٦-٠٩-١٢)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **و«الرئيسية» تنادي `/admin/stats` فتُردّ ٤٠٣** لمن لا يملكها
+  // (قِيس) — **فمن هبط عليها رأى عطباً لا شاشة.** **فيُنزَل على أوّل
+  // بابٍ يملكه.**
+  const landed = useRef(false);
+  useEffect(() => {
+    if (loading || !capsLoaded || landed.current) return;
+    if (PANEL_ROLES.some((r) => user?.roles?.includes(r))) return;
+    const first = nav[0];
+    if (pathname !== "/dashboard" || !first) return;
+    landed.current = true;
+    router.replace(first.href);
+  }, [loading, capsLoaded, user, pathname, nav, router]);
 
   // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
   // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**
