@@ -571,6 +571,10 @@ export default function AllAccountsTable() {
         open={createOpen}
         allRoles={allRoles}
         onClose={() => setCreateOpen(false)}
+        /* **تحديثٌ لا يُغلق** — **و`onCreated` تُغلق النافذة**، فلو
+           نُوديت عند نصفِ العمل ضاع اللوحُ قبل أن يُقرأ. (قِيس في
+           متصفّح: الحسابُ أُنشئ والمنحُ رُدّ ولم يُعرَض شيء.) */
+        onRefresh={() => void load()}
         onCreated={() => {
           setCreateOpen(false);
           void load();
@@ -612,12 +616,15 @@ function CreateUserModal({
   open,
   allRoles,
   onClose,
+  onRefresh,
   onCreated,
 }: {
   open: boolean;
   /** **أدوارُ المحرّك** — والسياسةُ ترتّبها، والواجهةُ لا تخترعها. */
   allRoles: readonly Role[];
   onClose: () => void;
+  /** **يُحدّث الجدولَ ولا يُغلق** — لحالة نصفِ العمل. */
+  onRefresh: () => void;
   onCreated: () => void;
 }) {
   // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
@@ -671,6 +678,10 @@ function CreateUserModal({
     try {
       await grant(partial.id, partial.role);
       setPartial(null);
+      setPhone("");
+      setFullName("");
+      setRoles(["driver"]);
+      setPassword("");
       onCreated();
     } catch (err) {
       setPartial({ ...partial, why: errorText(err) });
@@ -714,9 +725,11 @@ function CreateUserModal({
       try {
         await grant(created, grantRole);
       } catch (err) {
+        // **ولا يُنادى `onCreated` هنا** — **هي تُغلق النافذة**،
+        // **فيضيع اللوحُ قبل أن يُقرأ.** (قِيس، ٢٠٢٦-٠٩-١٢.)
         setPartial({ id: created, role: grantRole, why: errorText(err) });
         setBusy(false);
-        void onCreated();
+        onRefresh();
         return;
       }
     }
