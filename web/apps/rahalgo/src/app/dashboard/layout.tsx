@@ -206,16 +206,19 @@ function navFor(
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, capabilities, loading, logout } = useAuth();
+  const { user, capabilities, capsLoaded, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const nav = useMemo(() => navFor(user?.roles, capabilities), [user?.roles, capabilities]);
 
   useEffect(() => {
-    if (!loading && !canAccessPanel(user)) router.replace("/adminrahalgo");
-  }, [user, loading, router]);
+    if (!loading && capsLoaded && !canAccessPanel(user, capabilities))
+      router.replace("/adminrahalgo");
+  }, [user, capabilities, capsLoaded, loading, router]);
 
-  if (loading || !canAccessPanel(user)) {
+  // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
+  // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**
+  if (loading || !capsLoaded || !canAccessPanel(user, capabilities)) {
     return (
       <BootScreen />
     );

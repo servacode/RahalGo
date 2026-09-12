@@ -19,9 +19,35 @@ import { hasRole, PANEL_ROLES, type AuthUser } from "@rahalgo/auth";
 
 export { AuthProvider, useAuth, isLoggedIn, hasRole } from "@rahalgo/auth";
 
-/** لوحةُ الإدارة — الأدمنُ والعملياتُ والمالية. */
-export function canAccessPanel(user: AuthUser | null): boolean {
-  return hasRole(user, ...PANEL_ROLES);
+/**
+ * **بابُ اللوحة — قدرةٌ أو دورٌ من القائمة القديمة.**
+ *
+ * # ما وقع (٢٠٢٦-٠٩-١٢، قِيس في متصفّحٍ على التجهيز)
+ *
+ * **حسابُ الرصد `customer + observability` رُدَّ إلى `/app`** برسالة
+ * «حسابك يُفتح من التطبيق» — **فبابُ القائمة بالقدرة عديمُ الأثر ما
+ * دام بابُ اللوحة نفسِه باسم الدور.**
+ *
+ * `PANEL_ROLES` = `admin · ops · finance` — **ثلاثةُ أسماءٍ مُصرَّفة**،
+ * **ودورٌ يُمنَح قدرةً اليومَ لا يدخل حتّى يُكتب اسمُه هنا.**
+ *
+ * # والقاعدةُ الجامعة
+ *
+ * **من ملك قدرةً إداريّةً واحدةً دخل القشرةَ** — **وما يراه فيها
+ * قدراتُه**، وكلُّ صفحةٍ محروسةٌ في المحرّك على كلّ حال.
+ *
+ * **ولا يفتح هذا باباً لأحدٍ جديد**: قِيس أنّ `customer` و`driver`
+ * و`merchant` و`sales` **صفرُ قدرات** — **والقدرةُ لا تُمنَح إلّا
+ * بمسارٍ مخوَّلٍ بتأكيدٍ وقيدِ تدقيق.**
+ *
+ * **والقائمةُ القديمةُ تبقى شبكةَ أمان**: لو تعذّرت قراءةُ القدرات
+ * لم يُحبَس الأدمنُ خارجَ لوحته.
+ */
+export function canAccessPanel(
+  user: AuthUser | null,
+  capabilities: readonly string[] = [],
+): boolean {
+  return hasRole(user, ...PANEL_ROLES) || capabilities.length > 0;
 }
 
 /** لوحةُ المتجر — لصاحبه وحدَه. */
