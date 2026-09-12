@@ -183,6 +183,12 @@ for (const name of ["robots.ts", "sitemap.ts"]) {
   if (/next\s*:\s*\{[^}]*revalidate/.test(body)) {
     problems.push(`${name} يخزّن جلبَه بمدّة — وذاك يناقض توليدَ الطلب`);
   }
+  // **وجلبٌ عند الطلب بلا مهلةٍ يورث كلفةَ المحرّك لكلّ زائر** —
+  // **والافتراضيّةُ عشرُ ثوانٍ.** (قِيس ١٠٫٥ ثانيةً لـ`/sitemap.xml`
+  // على التجهيز قبل أن تُحَدّ المهلة.)
+  if (/await fetch\(/.test(body) && !/AbortSignal\.timeout|signal\s*:/.test(body)) {
+    problems.push(`${name} يجلب عند الطلب بلا مهلةٍ — ومحرّكٌ لا يُجاب يكلّف عشرَ ثوانٍ لكلّ زائر`);
+  }
 }
 if (problems.length === 0) {
   notes.push("robots و sitemap يُولَّدان عند الطلب — لا هويّةَ بيئةٍ مخبوزة");
