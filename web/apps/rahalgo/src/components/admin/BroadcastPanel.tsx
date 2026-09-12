@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { roleLabelByCode } from "@/lib/rolemeta";
 import {
   Alert, Button, Input, Modal, FormSection, Checkbox, IconWhatsApp,
   FormActions,
@@ -27,7 +28,7 @@ import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const B = m.admin.broadcast;
-const ROLE_LABELS: Record<string, string> = m.terms.roleNames;
+// **والاسمُ من `rolemeta`** — ولا معجمَ ثانياً في هذه الشاشة.
 
 const ROLES = ["customer", "driver", "merchant", "sales"] as const;
 
@@ -105,7 +106,7 @@ export default function BroadcastPanel() {
             key={r}
             checked={roles.includes(r)}
             onChange={() => toggle(r)}
-            label={ROLE_LABELS[r] ?? r}
+            label={roleLabelByCode(r)}
           />
         ))}
       </div>

@@ -56,10 +56,11 @@ import {
   listCapabilities,
   listRoles,
   revokeCapability,
-  roleLabel,
   type Capability,
   type Role,
 } from "@/lib/rbac";
+// **واسمُ العرضِ من مصدره الواحد** — `rolemeta`.
+import { capabilityLabel, roleDescription, roleLabel } from "@/lib/rolemeta";
 
 const m = getMessages(defaultLocale);
 const t = m.admin.roles;
@@ -116,6 +117,12 @@ export default function RolesPage() {
   }
 
   const current = roles?.find((r) => r.code === openRole) ?? null;
+  /**
+   * capLabel **اسمُ قدرةٍ ممنوحةٍ** — والمحرّكُ يرسل وصفَها في معجمه،
+   * **فيُوصَل الرمزُ بوصفه من المعجم المقروء لا يُخترَع له اسم.**
+   */
+  const capLabel = (code: string) =>
+    capabilityLabel(code, caps.find((x) => x.code === code)?.description);
   const available = current
     ? caps.filter((c) => !current.capabilities.includes(c.code))
     : [];
@@ -148,9 +155,17 @@ export default function RolesPage() {
               }}
               className="flex items-center justify-between gap-3 rounded-card border p-3 text-start"
             >
-              <span className="flex flex-col gap-1">
+              {/* **والاسمُ أوّلاً والرمزُ آخراً باهتاً** — **ورمزٌ
+                  إنجليزيٌّ في الصدارة يقرؤه موظّفٌ عربيٌّ فلا يعرف ما
+                  يمنح.** (طلبُ المالك.) */}
+              <span className="flex min-w-0 flex-col gap-0.5 text-start">
                 <span className="font-medium">{roleLabel(r)}</span>
-                <span className="text-xs opacity-60">{r.code}</span>
+                {roleDescription(r.code) ? (
+                  <span className="text-xs text-ink-muted">{roleDescription(r.code)}</span>
+                ) : null}
+                <span className="text-[11px] opacity-50" dir="ltr">
+                  {r.code}
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 <Badge>
@@ -221,9 +236,15 @@ export default function RolesPage() {
               <ul className="grid gap-2">
                 {current.capabilities.map((c) => (
                   <li key={c} className="flex items-center justify-between gap-2">
-                    <code className="text-sm" dir="ltr">
-                      {c}
-                    </code>
+                    {/* **والرمزُ يبقى ظاهراً ثانويّاً** — **فمن ينزع
+                        قدرةً يحتاج أن يرى ما ينزعه بالضبط**، والاسمُ
+                        العربيُّ لمن يقرأ. */}
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm">{capLabel(c)}</span>
+                      <code className="text-[11px] opacity-50" dir="ltr">
+                        {c}
+                      </code>
+                    </span>
                     <Button
                       variant="secondary"
                       disabled={busy}
@@ -241,15 +262,13 @@ export default function RolesPage() {
                 label={t.addCapability}
                 id="cap-pick"
                 className="flex-1"
-                dir="ltr"
                 value={pick}
                 onChange={(e) => setPick(e.target.value)}
               >
                 <option value="">{t.pickCapability}</option>
                 {available.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.code}
-                    {c.description ? ` — ${c.description}` : ""}
+                    {capabilityLabel(c.code, c.description)} — {c.code}
                   </option>
                 ))}
               </Select>

@@ -16,6 +16,7 @@
  */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { roleLabelByCode } from "@/lib/rolemeta";
 import {
   Badge,
   IconRoles,
@@ -28,7 +29,7 @@ import {
 } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
-const ROLE_LABELS: Record<string, string> = m.terms.roleNames;
+// **والاسمُ من `rolemeta` لا من معجمٍ محلّيّ** — مصدرٌ واحد.
 
 interface RoleStyle {
   /** نغمةُ الشارة المركزيّة. */
@@ -55,7 +56,7 @@ export default function RoleBadge({ role }: { role: string }) {
   return (
     <Badge variant={s.variant} className="gap-1 px-2">
       <s.Icon size={12} />
-      {ROLE_LABELS[role] ?? role}
+      {roleLabelByCode(role)}
     </Badge>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtDate, errorText} from "@rahalgo/i18n";
+import { ASSIGNABLE_ROLE_CODES, roleLabelByCode } from "@/lib/rolemeta";
 import {
   Pagination,
   Alert,
@@ -47,8 +48,12 @@ import { MediaThumb } from "@/components/admin/ImageUpload";
 
 const m = getMessages(defaultLocale);
 
-const ROLE_LABELS: Record<string, string> = m.terms.roleNames;
-const ALL_ROLES = Object.keys(ROLE_LABELS);
+// **والاسمُ من `rolemeta`** — ولا معجمَ ثانياً هنا.
+//
+// **وكانت القائمةُ `Object.keys(ROLE_LABELS)`** — **فكلُّ اسمٍ يُضاف
+// للعرض كان يُغيّر صامتاً ما يُعرَض على من ينشئ حساباً.** فصارت
+// قائمةً مصرَّحاً بها في `rolemeta`.
+const ALL_ROLES = ASSIGNABLE_ROLE_CODES;
 
 interface UserPage {
   users: AuthUser[];
@@ -367,10 +372,10 @@ export default function AllAccountsTable() {
           </button>
           {([
             { key: "staff", label: m.admin.users.staffCard, style: ROLE_STYLES.ops },
-            { key: "sales", label: ROLE_LABELS.sales, style: ROLE_STYLES.sales },
-            { key: "driver", label: ROLE_LABELS.driver, style: ROLE_STYLES.driver },
-            { key: "merchant", label: ROLE_LABELS.merchant, style: ROLE_STYLES.merchant },
-            { key: "customer", label: ROLE_LABELS.customer, style: ROLE_STYLES.customer },
+            { key: "sales", label: roleLabelByCode("sales"), style: ROLE_STYLES.sales },
+            { key: "driver", label: roleLabelByCode("driver"), style: ROLE_STYLES.driver },
+            { key: "merchant", label: roleLabelByCode("merchant"), style: ROLE_STYLES.merchant },
+            { key: "customer", label: roleLabelByCode("customer"), style: ROLE_STYLES.customer },
           ] as const).map(({ key, label, style }) => (
             <button
               key={key}
@@ -420,7 +425,7 @@ export default function AllAccountsTable() {
             <option value="">{m.admin.users.allRoles}</option>
             {ALL_ROLES.map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABELS[r]}
+                {roleLabelByCode(r)}
               </option>
             ))}
           </Select>
@@ -672,7 +677,7 @@ function CreateUserModal({
           {/* **وسبعةُ أدوارٍ تلتفّ ولا تنزلق** — من لم يرَ «مدير المنصة»
               لأنّها خارج الإطار لا يعرف أنّها موجودة. (٢٠٢٦-٠٨-٠٨.) */}
           <Chips
-            items={ALL_ROLES.map((r) => ({ id: r, label: ROLE_LABELS[r] ?? r }))}
+            items={ALL_ROLES.map((r) => ({ id: r, label: roleLabelByCode(r) }))}
             value={roles}
             onChange={toggleRole}
             wrap

@@ -30,13 +30,11 @@
  * بابَ بيتٍ بستارة.**
  */
 
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { api } from "@/lib/api";
 
-const m = getMessages(defaultLocale);
-
-/** **معجمُ الأسماء المعروفة** — للعرض وحدَه. */
-const KNOWN_ROLE_LABELS: Record<string, string> = m.terms.roleNames;
+// **واسمُ العرضِ في `rolemeta` وحدَه** — **وخمسُ شاشاتٍ كانت تقرأ
+// المعجمَ كلُّ واحدةٍ بنفسها فتكتب `LABELS[r] ?? r` من جديد.**
+export { roleLabel, roleLabelByCode, roleDescription, capabilityLabel } from "@/lib/rolemeta";
 
 /** Role **دورٌ كما يقوله المحرّك.** */
 export interface Role {
@@ -51,21 +49,6 @@ export interface Role {
 export interface Capability {
   code: string;
   description?: string;
-}
-
-/**
- * roleLabel **الاسمُ الذي يُعرَض.**
- *
- * **وثلاثُ محاولاتٍ بترتيب**: معجمُ الأسماء المعروفة بالرمز · ثمّ
- * `name_key` إن لم يكن مفتاحاً · ثمّ الرمزُ نفسُه. **ولا يُعرَض
- * `roles.xyz` لإنسان.**
- */
-export function roleLabel(role: Pick<Role, "code" | "name_key">): string {
-  const known = KNOWN_ROLE_LABELS[role.code];
-  if (known) return known;
-  const name = (role.name_key ?? "").trim();
-  if (name && !name.startsWith("roles.")) return name;
-  return role.code;
 }
 
 /** listRoles **كلُّ الأدوار وقدراتُها وعددُ أصحابها.** */

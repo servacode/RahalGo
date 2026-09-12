@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
+import { roleLabelByCode } from "@/lib/rolemeta";
 import {
   Tabs,
   Alert,
@@ -1544,7 +1545,7 @@ function NotesEditor({
 
 
 const DETAIL_KEYS: Record<string, string> = P.detailKeys;
-const ROLE_NAMES: Record<string, string> = m.terms.roleNames;
+// **والاسمُ من `rolemeta`** — مصدرٌ واحدٌ لكلّ شاشة.
 /** **وأسبابُ الإنذار معجمٌ ثانٍ** — يُقرأ منه ما لا تعرفه أسبابُ الشكوى. */
 const WARN_REASONS: Record<string, string> = m.admin.warnings.reasons;
 
@@ -1574,11 +1575,11 @@ function detailPairs(raw: string): { k: string; v: string }[] {
     if (val === null || val === "" || (Array.isArray(val) && val.length === 0)) continue;
     let v: string;
     if (Array.isArray(val)) {
-      v = val.map((x) => ROLE_NAMES[String(x)] ?? String(x)).join(m.common.listSep);
+      v = val.map((x) => roleLabelByCode(String(x))).join(m.common.listSep);
     } else if (k === "reason") {
       v = REASONS[String(val)] ?? WARN_REASONS[String(val)] ?? String(val);
     } else if (k === "role") {
-      v = ROLE_NAMES[String(val)] ?? String(val);
+      v = roleLabelByCode(String(val));
     } else if (typeof val === "object") {
       v = JSON.stringify(val);
     } else {
