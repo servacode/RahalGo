@@ -46,7 +46,16 @@ const m = getMessages(defaultLocale);
  * والقاعدة مسجّلة في هذا المشروع نفسه منذ R-34 — طُبّقت على شارة المحفظة
  * ونُسيت هنا. وهذا تطبيقها حيث تنتمي أصلاً.
  */
-type NavItem = ChromeNavItem & { roles?: string[] };
+// ══════════════════════════════════════════════════════════════════════
+// **وبابٌ يُفتح بقدرةٍ لا باسم دور** (٢٠٢٦-٠٩-١٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`roles` باقيةٌ لما لم يُصنَّف بعد** — **و`caps` هي الوجهةُ**:
+// **دورٌ جديدٌ يحمل قدرةً يرى بابَها بلا أن يُكتب اسمُه هنا.**
+//
+// **وذاك `ADG-1` في العرض**: اسمُ الدور حقيقةٌ ثانيةٌ في العميل تفترق
+// يوماً — **وقد افترقت في الوجود من قبل.**
+type NavItem = ChromeNavItem & { roles?: string[]; caps?: string[] };
 
 const ALL_NAV: NavItem[] = [
   { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard },
@@ -148,6 +157,21 @@ const ALL_NAV: NavItem[] = [
   // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
   // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده
   // ويُحرسه الخادم.
+  // ══════════════════════════════════════════════════════════════════
+  // **مراقبةُ التشغيل — «هل النظام يعمل؟»**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وبابُها القدرةُ لا اسمُ الدور** (`observability.read`): **فأيُّ
+  // دورٍ يُمنَح القدرةَ غداً يرى البابَ**، ولا يُكتب اسمُه هنا.
+  //
+  // **وموضعُها قبل الإعدادات**: سؤالُ صحّةٍ لا سؤالُ تهيئة — **ويُفتح
+  // عند الشكوى لا كلَّ يوم.**
+  {
+    href: "/dashboard/ops",
+    label: m.admin.ops.navTitle,
+    icon: IconStatus,
+    caps: ["observability.read"],
+  },
   { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings },
 ];
 
@@ -166,18 +190,26 @@ const ALL_NAV: NavItem[] = [
  * فإن حُجب البندُ عن دورٍ **ضاع العنوانُ وبقي ما تحته معلَّقاً بلا رأس** —
  * فكان يُنقل إلى أوّل من نجا. **ولا عنوانَ اليومَ فلا فخّ**، والترشيحُ سطرٌ.
  */
-function navFor(roles: string[] | undefined): ChromeNavItem[] {
+function navFor(
+  roles: string[] | undefined,
+  caps: readonly string[],
+): ChromeNavItem[] {
   const has = (r: string) => !!roles?.includes(r);
+  const can = (c: string) => caps.includes(c);
+  // **وبندُ القدرةِ يُقاس بقدرته وحدَها** — **ولا يراه الأدمنُ لأنّه
+  // أدمن**: `admin` لا يملك `observability.read` في المصفوفة
+  // الكانونيّة، **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`).
+  const byCaps = (i: NavItem) => !i.caps || i.caps.some(can);
   // الأدمن يرى كل شيء بلا استثناء — لا حاجة لفحص كل سطر
-  if (has("admin")) return ALL_NAV;
-  return ALL_NAV.filter((i) => !i.roles || i.roles.some(has));
+  if (has("admin")) return ALL_NAV.filter(byCaps);
+  return ALL_NAV.filter((i) => byCaps(i) && (!i.roles || i.roles.some(has)));
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, capabilities, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const nav = useMemo(() => navFor(user?.roles), [user?.roles]);
+  const nav = useMemo(() => navFor(user?.roles, capabilities), [user?.roles, capabilities]);
 
   useEffect(() => {
     if (!loading && !canAccessPanel(user)) router.replace("/adminrahalgo");

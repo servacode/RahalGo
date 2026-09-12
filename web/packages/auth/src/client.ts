@@ -382,6 +382,17 @@ export const authApi = {
       body: JSON.stringify({ code }),
     }),
   me: () => api<AuthUser>("/api/v1/auth/me"),
+  /**
+   * **قدراتُ صاحب الجلسة** — لِبابِ القائمة لا للتخويل.
+   *
+   * **والحدُّ في المحرّك** (جدولُ السياسة): من نادى باباً لا يملكه رُدّ
+   * **ولو أظهرت الواجهةُ زرَّه.** **وهذا يمنع العكس**: بابٌ يملكه
+   * صاحبُه ولا يراه لأنّ اسمَ دورِه ليس مكتوباً في الواجهة.
+   */
+  capabilities: () =>
+    api<{ capabilities: string[] }>("/api/v1/auth/capabilities").then(
+      (r) => r.capabilities ?? [],
+    ),
   logout: () => {
     const refresh = tokenStore.refresh;
     tokenStore.clear();

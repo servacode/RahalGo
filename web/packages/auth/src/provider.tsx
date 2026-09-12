@@ -11,6 +11,17 @@ import { authApi, tokenStore, type AuthUser } from "./client";
 
 interface AuthState {
   user: AuthUser | null;
+  /**
+   * **قدراتُ صاحب الجلسة كما يقولها المحرّك** — لا مشتقّةً من اسم دور.
+   *
+   * **وفارغةٌ حتّى تصل** — **ومن رسم باباً على فراغٍ أظهره ثمّ أخفاه**،
+   * فيُنتظَر `capsLoaded` قبل الحكم بالغياب.
+   */
+  capabilities: string[];
+  /** **أوصلت القدراتُ؟** — فراغٌ قبل الوصول ليس غياباً. */
+  capsLoaded: boolean;
+  /** **أيملك صاحبُ الجلسة هذه القدرة؟** */
+  can: (capability: string) => boolean;
   loading: boolean;
   setUser: (u: AuthUser | null) => void;
   login: (phone: string, password: string) => Promise<AuthUser>;
@@ -32,6 +43,8 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [capabilities, setCapabilities] = useState<string[]>([]);
+  const [capsLoaded, setCapsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   /**
    * **الطبقةُ الانتقاليّة — وتنطفئ وحدَها.**
@@ -66,6 +79,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(setUser)
       .catch(() => tokenStore.clear())
       .finally(() => setLoading(false));
+    // **والقدراتُ بابٌ ثانٍ** — **ولا تُجمَع مع `me` في نداءٍ واحد**:
+    // **عقدُ `me` تقرؤه أربعةُ تطبيقاتٍ ولوحة**، وإضافةُ حقلٍ فيه تمسّ
+    // ما يعمل. **وسقوطُها لا يُخرِج أحداً**: يبقى الفراغُ ويُعلَن أنّه
+    // لم يُقرَأ، فلا بابَ يُخفى على مالكه بلا خبر.
+    authApi
+      .capabilities()
+      .then(setCapabilities)
+      // **والفراغُ ليس غياباً** — `capsLoaded` يقول إن وصلت،
+      // **والصفحةُ نفسُها تعرض عطبَها بنصّه** (٤٠٣ · ٤٠١ · انقطاع).
+      // @empty-ok **وتنبيهٌ في كلّ صفحةٍ لأجل بندِ قائمةٍ واحدٍ ضجيج.**
+      .catch(() => setCapabilities([]))
+      .finally(() => setCapsLoaded(true));
   }, []);
 
   const login = useCallback(async (phone: string, password: string) => {
@@ -75,12 +100,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.user;
   }, []);
 
+  const can = useCallback(
+    (capability: string) => capabilities.includes(capability),
+    [capabilities],
+  );
+
   const logout = useCallback(() => {
     // **الطبقةُ تُرفع قبل المسح** — لو رُفعت بعده لَأُعيد رسمُ الصفحة زائراً
     // **فتُرى شاشةُ الضيف لحظةً قبل الغطاء**، وهي الوميضةُ التي تُقرأ عطباً.
     flash("out");
     authApi.logout();
     setUser(null);
+    setCapabilities([]);
+    setCapsLoaded(false);
   }, [flash]);
 
   const enter = useCallback(
@@ -92,7 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, login, logout, enter }}>
+    <AuthContext.Provider
+      value={{ user, capabilities, capsLoaded, can, loading, setUser, login, logout, enter }}
+    >
       {children}
       {/* **والعلامةُ تُقرأ من `PlatformProvider` داخلَ الطبقة** — فلا تُمرَّر
           عبر أربعِ طبقاتٍ من الوسائط. */}
