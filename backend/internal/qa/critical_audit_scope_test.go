@@ -48,11 +48,11 @@ func TestXG20_S1S2_RoleMutationAudited(t *testing.T) {
 	hh := New(t)
 	u := hh.NewUser("customer")
 
-	if got := grantRole(t, hh, u.ID, "ops"); got.Code >= 400 {
+	if got := grantRole(t, hh, u.ID, "operations"); got.Code >= 400 {
 		t.Fatalf("منحُ الدور: %s", got)
 	}
 	grants := auditCount(t, hh, "admin.role_grant", u.ID)
-	if got := revokeRole(t, hh, u.ID, "ops"); got.Code >= 400 {
+	if got := revokeRole(t, hh, u.ID, "operations"); got.Code >= 400 {
 		t.Fatalf("سحبُ الدور: %s", got)
 	}
 	revokes := auditCount(t, hh, "admin.role_revoke", u.ID)
@@ -74,18 +74,18 @@ func TestXG20_S1S2_RoleMutationAudited(t *testing.T) {
 func TestXG20_A2_AuditFailureRollsBackBusiness(t *testing.T) {
 	hh := New(t)
 	u := hh.NewUser("customer")
-	if got := grantRole(t, hh, u.ID, "ops"); got.Code >= 400 {
+	if got := grantRole(t, hh, u.ID, "operations"); got.Code >= 400 {
 		t.Fatalf("منحُ الدور: %s", got)
 	}
 
 	fp := hh.ArmAny("XG20/audit-write", "audit_log", "INSERT")
-	got := revokeRole(t, hh, u.ID, "ops")
+	got := revokeRole(t, hh, u.ID, "operations")
 	fp.MustFire(t)
 
 	var stillHas bool
 	if err := hh.Pool.QueryRow(ctxBG(), `
 		SELECT EXISTS (SELECT 1 FROM user_roles
-		                WHERE user_id = $1::uuid AND role_code = 'ops')`,
+		                WHERE user_id = $1::uuid AND role_code = 'operations')`,
 		u.ID).Scan(&stillHas); err != nil {
 		t.Fatalf("قراءةُ الأدوار: %v", err)
 	}
@@ -100,11 +100,11 @@ func TestXG20_A2_AuditFailureRollsBackBusiness(t *testing.T) {
 	}
 
 	// ── A5 · والإعادةُ تُنجز الفعلَ وأثرَه معاً ────────────────────
-	again := revokeRole(t, hh, u.ID, "ops")
+	again := revokeRole(t, hh, u.ID, "operations")
 	var gone bool
 	if err := hh.Pool.QueryRow(ctxBG(), `
 		SELECT NOT EXISTS (SELECT 1 FROM user_roles
-		                    WHERE user_id = $1::uuid AND role_code = 'ops')`,
+		                    WHERE user_id = $1::uuid AND role_code = 'operations')`,
 		u.ID).Scan(&gone); err != nil {
 		t.Fatalf("قراءةُ الأدوار: %v", err)
 	}
@@ -294,7 +294,7 @@ func TestXG20_C1C2_ConcurrentMutationsCorrelate(t *testing.T) {
 	hh := New(t)
 	u := hh.NewUser("customer")
 	admin := hh.NewUser("admin")
-	if got := grantRole(t, hh, u.ID, "ops"); got.Code >= 400 {
+	if got := grantRole(t, hh, u.ID, "operations"); got.Code >= 400 {
 		t.Fatalf("منحُ الدور: %s", got)
 	}
 
@@ -319,7 +319,7 @@ func TestXG20_C1C2_ConcurrentMutationsCorrelate(t *testing.T) {
 	var status string
 	if err := hh.Pool.QueryRow(ctxBG(), `
 		SELECT EXISTS (SELECT 1 FROM user_roles
-		                WHERE user_id = $1::uuid AND role_code = 'ops'),
+		                WHERE user_id = $1::uuid AND role_code = 'operations'),
 		       (SELECT status FROM users WHERE id = $1::uuid)`,
 		u.ID).Scan(&hasRole, &status); err != nil {
 		t.Fatalf("الحالُ بعد السباق: %v", err)

@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 309,
-    "test_funcs": 1178
+    "test_files": 310,
+    "test_funcs": 1182
   },
   "flows": [
     {
@@ -5225,6 +5225,12 @@
       "orphan": true
     },
     {
+      "name": "TestRoleClassesMatchWebPolicy",
+      "file": "internal/authz/protected_parity_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
       "name": "TestRoleAssignmentIsSensitive",
       "file": "internal/authz/role_assignment_test.go",
       "package": "authz",
@@ -9051,6 +9057,24 @@
     {
       "name": "TestCONTRACT_ModelsAreParsed",
       "file": "internal/qa/contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUB1_StaffCannotCreateAdmin",
+      "file": "internal/qa/create_user_boundary_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUB2_OwnerGrantsElevatedThroughGrantPath",
+      "file": "internal/qa/create_user_boundary_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUB3_AccountTypesCreateAndStaffGrantFlow",
+      "file": "internal/qa/create_user_boundary_test.go",
       "package": "qa",
       "orphan": true
     },

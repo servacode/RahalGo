@@ -495,9 +495,17 @@ func TestFAIL_D15_Reconciliation(t *testing.T) {
 		t.Cleanup(func() {
 			_, _ = h.Pool.Exec(context.Background(), `DELETE FROM users WHERE phone = $1`, phone)
 		})
-		// **دورٌ أوّلُ ينجح · وثانٍ يسقط** — النقطةُ تتخطّى الأوّلَ وتصيب الثاني.
-		fp := h.Arm("D15/grant-second-role", "user_roles", "INSERT", 1, "role_code", "ops")
-		got := create(phone, "driver", "ops")
+		// **دورٌ أوّلُ ينجح · وثانٍ يسقط** — النقطةُ تصيب الثاني.
+		//
+		// **وكان الثاني `ops` يُطلَب في جسم الإنشاء** — **وبابُ الإنشاء
+		// صار لصفةِ الحساب وحدَها** (٢٠٢٦-٠٩-١٢)، **فالنداءُ يُردّ قبل
+		// أيّ كتابةٍ فلا تُصيب النقطةُ ويصير الفحصُ تخطّياً أبديّاً.**
+		//
+		// **والنافذةُ نفسُها باقيةٌ بغير طلب**: **`driver` يُمنَح معه
+		// `customer` تلقائيّاً** (قرارُ المالك ٢٠٢٦-٠٨-١٠) — **فصفّان
+		// يُكتبان، والنقطةُ على الثاني.**
+		fp := h.Arm("D15/grant-second-role", "user_roles", "INSERT", 1, "role_code", "customer")
+		got := create(phone, "driver")
 		users, roles, pwSet := read(phone)
 		t.Logf("الردّ %d %s · النقطةُ أصابت %d", got.Code, got.Err(), fp.Fired())
 		t.Logf("مستخدمون=%d · أدوارٌ=%d · كلمةٌ=%v", users, roles, pwSet)

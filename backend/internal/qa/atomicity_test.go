@@ -150,7 +150,10 @@ func TestATOMIC_AdminUserCreationIsOneUnit(t *testing.T) {
 	// ثانيةً** — `phone_taken`. **والتعافي مسدود.**
 	fp := h.Arm("D15/set-temp-password", "users", "UPDATE", 1, "must_change_password", "true")
 	got := h.POST("/api/v1/admin/users", admin.Token, map[string]any{
-		"phone": phone, "full_name": "ذرّيّةُ الإنشاء", "roles": []string{"ops"},
+		// **والدورُ عارضٌ في هذا الفحص لا مقصود** — يقيس ذرّيّةَ
+		// الإنشاء لا سياسةَ الأدوار. **و`ops` صار إرثاً لا يُمنَح**
+		// (٢٠٢٦-٠٩-١٢)، **فبقاؤه يُسقط الفحصَ بسببٍ ليس سببَه.**
+		"phone": phone, "full_name": "ذرّيّةُ الإنشاء", "roles": []string{"driver"},
 		"password": "Qwerty!2345",
 	})
 	t.Logf("ردُّ الإنشاء: %d %s", got.Code, got.Err())
