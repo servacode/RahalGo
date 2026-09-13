@@ -283,6 +283,12 @@ private val CODES: Map<String, Int> = mapOf(
     //
     // **وأوّلُها `auth_unavailable`**: يخرج من وسيط التوثيق نفسِه
     // (`R16`)، **فيبلغ التطبيقاتِ الأربعةَ جميعاً.**
+    // **وبابُ الإطلاق** — **يبلغ الأربعةَ كلَّها**: الزبونُ عند الطلب،
+    // والسائقُ عند بدء الدوام، والمندوبُ عند ضمّ متجر.
+    //
+    // **وهو ٥٠٣ لا ٤٠٣**: **«ليس الآن» لا «لستَ أهلاً»** — ومن خلطهما
+    // أخبر الزبونَ أنّه ممنوعٌ وهو مسموحٌ غداً.
+    "launch_closed" to R.string.err_launch_closed,
     "auth_unavailable" to R.string.err_auth_unavailable,
     "idempotency_reclaimed" to R.string.err_in_progress,
     "too_many_addresses" to R.string.err_too_many_addresses,

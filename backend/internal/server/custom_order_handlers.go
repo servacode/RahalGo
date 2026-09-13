@@ -22,6 +22,12 @@ import (
 //
 // **ولا أصنافَ ولا سعر** — ولا يُسأل عن متجر: هو يطلب ما ليس في المنصّة.
 func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request) {
+	// **والطلبُ المخصَّصُ بابٌ مستقلّ** — يُفتح ويُغلق دون العاديّ.
+	//
+	// **وقبل قراءةِ الجسم** — فلا يُستهلك مفتاحُ تفرّدٍ لبابٍ مغلق.
+	if !s.requireLaunch(w, r, launchCustomerCustomOrders) {
+		return
+	}
 	req, err := decode[struct {
 		Request     string  `json:"request"`
 		AddressText string  `json:"address_text"`

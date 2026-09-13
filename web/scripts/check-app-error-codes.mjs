@@ -63,6 +63,10 @@ const PACKAGES = ["identity", "orders", "wallet", "catalog", "cashbox"];
  * رمزٌ في المحرّك ويمرّ بلا قرار.**
  */
 const SERVER_MOBILE = new Set([
+  // **وبابٌ لم يُفتح بعد** — **يبلغ الهواتفَ الأربعةَ كلَّها**: الزبونُ
+  // يقرؤه عند الطلب، والسائقُ عند بدء الدوام، والمندوبُ عند ضمّ متجر.
+  // **وهو غيرُ «ممنوع»**: لا يقول «لستَ أهلاً» بل «ليس الآن».
+  "launch_closed",
   "auth_unavailable", "idempotency_reclaimed", "too_many_addresses",
   "already_returned", "merchant_no_returns", "order_not_returnable",
   "not_readyable", "reason_required", "never_picked_up",

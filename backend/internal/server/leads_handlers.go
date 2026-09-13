@@ -407,6 +407,12 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 const repLeadsPerHour = 30
 
 func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
+	// **وضمُّ المتاجر** — وإغلاقُه يُبقي المرشَّحين القائمين كما هم.
+	//
+	// **وقبل قراءةِ الجسم** — فلا يُستهلك مفتاحُ تفرّدٍ لبابٍ مغلق.
+	if !s.requireLaunch(w, r, launchRepAcquisition) {
+		return
+	}
 	// التحديد **بالمندوب لا بعنوانه**: المناديب يعملون من شبكات مشتركة (مقهى،
 	// مكتب) فحدُّ العنوان يوقف زملاءه معه، وهو مصادَق أصلاً فهويّته معروفة.
 	// **ولا يسجّل متجراً من لم يوثّق رقمَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).

@@ -343,6 +343,19 @@ func (s *Server) handlePublicZone(w http.ResponseWriter, r *http.Request) {
 
 // handleCustomerCreateOrder إنشاء طلب بحساب الزبون نفسه — التسعير خادمي بالكامل.
 func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Request) {
+	// **واستقبالُ الطلبات** — **وزرٌّ مخفيٌّ في أندرويد ليس منعاً**، فالمنعُ هنا.
+	//
+	// **وقبل قراءةِ الجسم** — فلا يُستهلك مفتاحُ تفرّدٍ لبابٍ مغلق.
+	if !s.requireLaunch(w, r, launchCustomerOrders) {
+		return
+	}
+	// **والطلبُ العاديُّ يقصد متجراً** — فيحتاج بابَيه.
+	//
+	// **وبابُ المتاجر يعني أن يُفتح المخصَّصُ ويبقى الطلبُ من متجرٍ
+	// مغلقاً**: **المكتبُ يعمل والسوقُ لم تمتلئ بعد.**
+	if !s.requireLaunch(w, r, launchMerchantOrders) {
+		return
+	}
 	in, err := decode[orders.CreateInput](r)
 	if err != nil {
 		s.respondErr(w, err)

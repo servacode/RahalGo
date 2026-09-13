@@ -398,10 +398,23 @@ func (s *Server) Router() http.Handler {
 			})
 		})
 
-		// واجهة التصفح العامة — بلا حساب
+		// ══════════════════════════════════════════════════════════
+		// **واجهةُ التصفّح — وبابُها وضعُ الإطلاق** (٢٠٢٦-٠٩-١٣)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **والمنصّةُ تُنزَّل قبل أن تُفتح السوق**: **يُسجّل الناسُ
+		// ويدخلون**، **والتصفّحُ يُفتح حين يكون فيه ما يُتصفَّح.**
+		//
+		// **ولا يُحرَس معها ما يحتاجه التطبيقُ ليقول الحال**: هويّةُ
+		// المنصّة والبيئةُ والمدنُ والتنزيلُ تبقى مفتوحة — **وإلّا لم
+		// يستطع أن يعرض رسالةَ الإطلاق أصلاً.**
+		//
 		// **والعروضُ عامّةٌ كالتصفّح** — تُرى قبل الدخول، **ومن رأى عرضاً سجّل.**
-		r.Get("/public/offers", s.handlePublicOffers)
-		r.Get("/public/home", s.handlePublicHome)
+		r.Group(func(r chi.Router) {
+			r.Use(s.launchGate(launchCustomerBrowse))
+			r.Get("/public/offers", s.handlePublicOffers)
+			r.Get("/public/home", s.handlePublicHome)
+		})
 		// **هويّةُ المنصة** — خفيفةٌ ومفتوحة، تناديها الخمسةُ وشاشةُ الدخول.
 		r.Get("/public/platform", s.handlePublicPlatform)
 		// **وأسلوبُ الخريطة** — يقرؤه العارضُ والمنزِّلُ معاً.
@@ -445,7 +458,9 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/districts", s.handlePublicDistricts)
 		r.Get("/public/sections", s.handlePublicSections)
 		r.Get("/public/sections/{id}/items", s.handlePublicSectionItems)
-		r.Get("/public/items/{id}", s.handlePublicItem)
+		// **وبطاقةُ الصنف من التصفّح** — بابُها بابُه.
+		r.With(s.launchGate(launchCustomerBrowse)).
+			Get("/public/items/{id}", s.handlePublicItem)
 		// **«يُطلب معه»** — مشروبٌ ومقبّلاتٌ تُعرض على من ملأ سلّته.
 		// (طلبُ المالك ٢٠٢٦-٠٨-٢٢. انظر `suggest_handlers.go`.)
 		r.Get("/public/suggest", s.handleSuggestWith)

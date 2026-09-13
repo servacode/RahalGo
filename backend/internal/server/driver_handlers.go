@@ -174,6 +174,12 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 
 // handleDriverShift يرفع علَم الدوام أو ينزله.
 func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
+	// **وبدءُ الدوام** — وإغلاقُه لا يقطع طلباً جارياً بيد سائق.
+	//
+	// **وقبل قراءةِ الجسم** — فلا يُستهلك مفتاحُ تفرّدٍ لبابٍ مغلق.
+	if !s.requireLaunch(w, r, launchDriverWork) {
+		return
+	}
 	req, err := decode[struct {
 		On bool `json:"on"`
 	}](r)

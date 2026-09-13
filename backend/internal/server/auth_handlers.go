@@ -291,6 +291,12 @@ func (s *Server) handleResetConfirm(w http.ResponseWriter, r *http.Request) {
 // --- إنشاء حساب زبون: رمز تأكيد ثم اسم وكلمة مرور. الزبون فقط، لا دور آخر. ---
 
 func (s *Server) handleSignupRequest(w http.ResponseWriter, r *http.Request) {
+	// **وبابُ إنشاء الحسابات** — وإغلاقُه لا يمسّ من أنشأ حسابَه قبلاً.
+	//
+	// **وقبل قراءةِ الجسم** — فلا يُستهلك مفتاحُ تفرّدٍ لبابٍ مغلق.
+	if !s.requireLaunch(w, r, launchCustomerSignup) {
+		return
+	}
 	req, err := decode[struct {
 		Phone string `json:"phone"`
 	}](r)
