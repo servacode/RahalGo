@@ -17,7 +17,7 @@
  * تعثّر أسوأُ من صفحةٍ تقول «لم يُفتح بعد».**
  */
 
-import { readServerConfig } from "@/lib/config";
+import { readServerConfig, serverApiBase } from "@/lib/config";
 
 /** مفاتيحُ التطبيقات الأربعة — **مرآةُ `release.Apps` في المحرّك.** */
 export const APP_KEYS = ["customer", "driver", "merchant", "rep"] as const;
@@ -67,7 +67,7 @@ function closed(key: AppKey): Release {
 export async function readReleases(): Promise<Release[]> {
   const fallback = APP_KEYS.map(closed);
   try {
-    const res = await fetch(`${readServerConfig().apiUrl}/api/v1/public/releases`, {
+    const res = await fetch(`${serverApiBase()}/api/v1/public/releases`, {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });

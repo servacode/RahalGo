@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
-import { readServerConfig } from "@/lib/config";
+import { readServerConfig, serverApiBase } from "@/lib/config";
 
 const SITE = () => readServerConfig().siteUrl;
 // **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
-const API = () => readServerConfig().apiUrl;
+// **والجلبُ بالعنوان الداخليّ** — **والعامُّ لا يُبلَغ من داخل
+// الحاوية**: **قِيس أنّ الخريطةَ تُولَّد بلا أقسامٍ لهذا السبب.**
+const API = () => serverApiBase();
 
 /**
  * **ويُولَّد عند الطلب لا عند البناء** (دورةُ ٧١و-ر٢).
