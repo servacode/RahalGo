@@ -157,6 +157,27 @@ if (!gate.includes("isPasswordChangeRequired"))
 if (!gate.includes("clearPasswordChangeRequired"))
   fail("الإشارةُ لا تُنسى بعد التبديل — **فتبقى البوّابةُ بعد زوال سببها**");
 
+// ══════════════════════════════════════════════════════════════════════
+// **ولا يُحكَم بالغياب قبل وصول القدرات**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ومن حوّل قبلها قرأ صاحبَ القدرةِ بلا قدرةٍ فساقه إلى `/app`** —
+// **وهو العطبُ الذي أُصلح، ويعود بسطرٍ واحدٍ ناقص.**
+const portal = readFileSync(
+  join(web, "apps/rahalgo/src/app/portal/[[...rest]]/page.tsx"),
+  "utf8",
+);
+if (!/if \(loading \|\| !capsLoaded\) return;/.test(portal))
+  fail("صفحةُ `portal` تحوّل قبل وصول القدرات — **فيُساق صاحبُ القدرة إلى `/app`**");
+for (const [file, path] of [
+  ["Header", "apps/rahalgo/src/components/Header.tsx"],
+  ["BottomNav", "apps/rahalgo/src/components/BottomNav.tsx"],
+]) {
+  const src = readFileSync(join(web, path), "utf8");
+  if (/portalFor\(user\.roles\)/.test(src) || /homeFor\(user\.roles\)/.test(src))
+    fail(`${file} يقرأ الوجهةَ بالأدوار وحدَها — **بلا قدرات**`);
+}
+
 const client = readFileSync(join(web, "packages/auth/src/client.ts"), "utf8");
 if (!client.includes("notePasswordChangeRequired"))
   fail("عميلُ الـAPI لا يلتقط الإشارةَ مركزيّاً");
