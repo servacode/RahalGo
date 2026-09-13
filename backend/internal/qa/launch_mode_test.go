@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/authz"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -244,5 +246,41 @@ func TestLM7_NotForbiddenButNotYet(t *testing.T) {
 	}
 	if r.Err() == "forbidden" {
 		t.Error("**رمزُ الخطأ `forbidden`** — ولا علاقةَ للصلاحيّة بالحال.")
+	}
+}
+
+// TestLM8_OnlySettingsOwnerMayChangeLaunch **ولا سلطةَ إعداداتٍ جديدة.**
+//
+// **وشرطُ المالك (بندُ ٥/ب)**: **لا يُعطى العمليّاتُ ولا الماليّةُ
+// سلطةَ إعداداتٍ جديدة** — **ومصفوفةُ القدرات المنشورةُ تُحترَم.**
+//
+// **وقدرةُ مفاتيح الإطلاق `settings.general.manage`** — يملكها الأدمنُ
+// والمالكُ وحدَهما.
+func TestLM8_OnlySettingsOwnerMayChangeLaunch(t *testing.T) {
+	hh := New(t)
+	const key = "/api/v1/admin/settings/launch.customer_orders"
+
+	// ── من لا يملكها يُردّ ──────────────────────────────────────
+	// **ولا `observability` هنا**: **ليس دوراً مبذوراً في قاعدة الاختبار**
+	// — **ودورٌ لا وجودَ له يسقط على قيدِ مفتاحٍ أجنبيٍّ لا على تخويل**،
+	// **فيُقرأ منعاً وهو غياب.** ويُقاس بدورٍ مصنوعٍ بقدرته وحدَها.
+	capRole(t, hh, "lm_obs", authz.ObservabilityRead)
+	for _, role := range []string{"operations", "finance", "lm_obs", "customer_support"} {
+		_, tok := roleUser(t, hh, role)
+		r := hh.Call("PUT", key, tok, map[string]any{"value": false}, nil)
+		if r.Code < 400 {
+			t.Errorf("**`%s` بدّل بابَ إطلاق** (%d) — **ولا سلطةَ إعداداتٍ جديدة له.**",
+				role, r.Code)
+		}
+	}
+
+	// ── والمالكُ يملكها ─────────────────────────────────────────
+	//
+	// **و٤٠٣ منعُ صلاحيّةٍ، وسواها جوابُ منطقٍ** — والمقيسُ التخويلُ
+	// وحدَه.
+	_, owner := roleUser(t, hh, "owner_super_admin")
+	r := hh.Call("PUT", key, owner, map[string]any{"value": true}, nil)
+	if r.Code == http.StatusForbidden {
+		t.Errorf("**المالكُ مُنع من بابِ إطلاق**: %s", r.Err())
 	}
 }

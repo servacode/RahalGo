@@ -32,7 +32,7 @@
     "behaviour_settings": 103,
     "order_fields": 75,
     "test_files": 318,
-    "test_funcs": 1216
+    "test_funcs": 1217
   },
   "flows": [
     {
@@ -12448,6 +12448,12 @@
     },
     {
       "name": "TestLM7_NotForbiddenButNotYet",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM8_OnlySettingsOwnerMayChangeLaunch",
       "file": "internal/qa/launch_mode_test.go",
       "package": "qa",
       "orphan": true
