@@ -445,6 +445,14 @@
 | `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
 {items}` |
 | `whatsapp.send_delay_ms` | المنصة | int | `6000` |
+| `launch.customer_signup` |  | bool | `false` |
+| `launch.customer_browse` |  | bool | `false` |
+| `launch.customer_orders` |  | bool | `false` |
+| `launch.customer_custom_orders` |  | bool | `false` |
+| `launch.driver_work` |  | bool | `false` |
+| `launch.merchant_orders` |  | bool | `false` |
+| `launch.rep_acquisition` |  | bool | `false` |
+| `launch.notice` |  | longtext | `` |
 | `platform.support_phone` |  | text | `` |
 | `platform.address` |  | text | `` |
 | `platform.location` |  | geo | `` |

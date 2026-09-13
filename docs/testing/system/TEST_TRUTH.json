@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 119,
-    "behaviour_settings": 96,
+    "setting_defs": 127,
+    "behaviour_settings": 103,
     "order_fields": 75,
-    "test_files": 316,
-    "test_funcs": 1202
+    "test_files": 318,
+    "test_funcs": 1216
   },
   "flows": [
     {
@@ -3990,6 +3990,132 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "launch.customer_browse",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "launch.customer_custom_orders",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "launch.customer_orders",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "launch.customer_signup",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "launch.driver_work",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "launch.merchant_orders",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "launch.rep_acquisition",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "media.max_upload_mb",
       "group": "platform",
       "kind": "int",
@@ -6100,7 +6226,19 @@
       "orphan": true
     },
     {
+      "name": "TestIsSyrianMobileAgreesWithNormalize",
+      "file": "internal/identity/phone_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestNormalizePhone",
+      "file": "internal/identity/phone_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestPhoneIdentityIsOne",
       "file": "internal/identity/phone_test.go",
       "package": "identity",
       "orphan": true
@@ -12273,6 +12411,48 @@
       "orphan": true
     },
     {
+      "name": "TestLM1_OrderingClosedWhileBrowsingOpen",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM2_EachDoorIsIndependent",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM3_MerchantDoorGatesNormalOrdersOnly",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM4_SignupAndDriverAndRepDoors",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM5_MissingConfigFailsClosed",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM6_NoticeReachesTheClient",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLM7_NotForbiddenButNotYet",
+      "file": "internal/qa/launch_mode_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestUNIQ_ConcurrentConversionWithExistingOwner",
       "file": "internal/qa/lead_uniqueness_test.go",
       "package": "qa",
@@ -14101,6 +14281,30 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestPID1_ForeignNumberRejectedBeforeOTP",
+      "file": "internal/qa/phone_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPID2_OneIdentityForBothForms",
+      "file": "internal/qa/phone_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPID3_StaffCreationRejectsForeign",
+      "file": "internal/qa/phone_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPID4_SyrianMobileIsAccepted",
+      "file": "internal/qa/phone_identity_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestD20_CustomerRealtimeVsREST",
@@ -19138,6 +19342,12 @@
     },
     {
       "name": "TestWALink",
+      "file": "internal/server/wa_link_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWALinkRejectsNonMobile",
       "file": "internal/server/wa_link_test.go",
       "package": "server",
       "orphan": true

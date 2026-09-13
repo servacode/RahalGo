@@ -340,7 +340,12 @@ var Catalog = []Def{
 	// الطلبُ يبقى معروضاً** حتّى يُبنى أثرٌ جديد.
 	//
 	// **وفارغُه لا يُعرَض** — تُعرض رسالةُ المعجم المركزيّة بدلاً منه.
-	{Key: "launch.notice", Group: GroupLaunch, Kind: KindText, Default: ""},
+	// **ونوعُه نصٌّ طويل**: **جملةٌ أو جملتان تُقرآن في شاشةِ زبون** —
+	// **وحقلُ سطرٍ واحدٍ يقصّ ما يُكتب فيه في عين من يضبطه.**
+	//
+	// **وهو عرضٌ لا سلوك** (`CONFIG_IMPACT_MAP`): **يبدّل ما يُقرأ ولا
+	// يبدّل مساراً** — والأبوابُ السبعةُ فوقَه هي التي تبدّل المسار.
+	{Key: "launch.notice", Group: GroupLaunch, Kind: KindLongText, Default: ""},
 
 	{Key: "platform.orders_mode", Group: GroupPlatform, Kind: KindChoice,
 		Options: []string{"platform", "merchants"}, Default: "platform"},
