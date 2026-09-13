@@ -305,6 +305,7 @@ private val CODES: Map<String, Int> = mapOf(
     "coverage_unavailable" to R.string.err_coverage_unavailable,
     "bad_point" to R.string.err_bad_point,
     "launch_closed" to R.string.err_launch_closed,
+    "password_change_required" to R.string.err_password_change_required,
     "auth_unavailable" to R.string.err_auth_unavailable,
     "idempotency_reclaimed" to R.string.err_in_progress,
     "too_many_addresses" to R.string.err_too_many_addresses,

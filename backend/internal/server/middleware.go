@@ -43,6 +43,29 @@ var (
 )
 
 // RequireAuth يتحقق من توكن الوصول ويحقن الهوية والأدوار في السياق.
+// errPasswordChangeRequired **بيانٌ يعرفه ثالثٌ — فلا وصولَ قبل تبديله.**
+//
+// **وهو غيرُ `forbidden`**: **ذاك «لا تملك هذا»، وهذا «بدّلْ كلمتَك
+// أوّلاً»** — **والشاشةُ تحتاج الفرقَ لتقول الخطوة.**
+var errPasswordChangeRequired = httpx.NewError(http.StatusForbidden,
+	"password_change_required", "errors.password_change_required")
+
+// passwordChangePathAllowed **المخرجُ من القيد** — ثلاثةٌ لا أكثر.
+//
+// **ولا يُفتَح `‎/auth` كلُّه**: **فيه تبديلُ الهاتف وحذفُ الحساب
+// والتسليمُ** — **ومن ملك كلمةً مؤقّتةً لا يُبدّل بها رقمَ صاحبها.**
+//
+// **و`‎/auth/capabilities` مفتوحٌ** — **قراءةُ أسماءِ قدراتِ نفسِه**:
+// **بلا هذا تُقلع لوحةُ الإدارة بلا قدراتٍ فتبدو معطوبةً لا مقيَّدة.**
+func passwordChangePathAllowed(p string) bool {
+	switch p {
+	case "/api/v1/auth/me", "/api/v1/auth/password",
+		"/api/v1/auth/logout", "/api/v1/auth/capabilities":
+		return true
+	}
+	return false
+}
+
 func (s *Server) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -90,7 +113,7 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// خبيئة.**
 		//
 		// **والحالُ ثلاثٌ لا اثنتان**، **والثالثةُ ٥٠٣.**
-		state, dbRoles, dbCaps, err := s.identity.CheckSession(r.Context(), claims.SID)
+		state, dbRoles, dbCaps, mustChange, err := s.identity.CheckSession(r.Context(), claims.SID)
 		switch {
 		case err != nil:
 			s.logger.Error("التوثيق: تعذّر التحقّقُ من الجلسة",
@@ -118,6 +141,30 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		//
 		// **وصنفُ التوكنات بلا معرّفِ جلسةٍ يبقى على ادّعاءاته** —
 		// **لا جلسةَ له تُسأل عنها**، وهو مُعلَنٌ في `CheckSession`.
+		// ══════════════════════════════════════════════════════════
+		// **وكلمةٌ يعرفها ثالثٌ لا تفتح المنصّة** — `TMP`، ٢٠٢٦-٠٩-١٣
+		// ══════════════════════════════════════════════════════════
+		//
+		// **و`must_change_password` واقعةٌ لا رأي**: **وضعها ثالثٌ** —
+		// إدارةٌ أو مندوبٌ أو إقلاعُ أوّلِ مالك. **فثمّةَ من يعرفها
+		// غيرُ صاحب الحساب.**
+		//
+		// **وكان العلَمُ إشارةَ واجهةٍ لا قيداً** — **يُقنَّع إن كان
+		// `security.force_password_change` مُطفأً، وهو مُطفأٌ افتراضاً
+		// ولا صفَّ له في الإنتاج.** **فقِيس ٢٠٢٦-٠٩-١٣: ثلاثةُ أبوابٍ
+		// تُفتح كلُّها بـ٢٠٠ بكلمةٍ مؤقّتة**، **وفي الإنتاج حسابٌ
+		// متميّزٌ فعّالٌ بكلمةٍ مؤقّتة.**
+		//
+		// **والمنعُ تخويلٌ لا توثيق**: **الرمزُ صالحٌ والجلسةُ قائمةٌ
+		// ولا تُبطَل** — **ويُردّ ٤٠٣ برمزٍ يقول الخطوةَ التالية.**
+		//
+		// **وثلاثةُ أبوابٍ تبقى مفتوحةً** — **وإلّا صار القيدُ حبساً
+		// لا مخرجَ منه**: قراءةُ نفسِه · تبديلُ الكلمة · الخروج.
+		// (**والتجديدُ خارجَ هذا الوسيط أصلاً.**)
+		if mustChange && !passwordChangePathAllowed(r.URL.Path) {
+			httpx.Error(w, errPasswordChangeRequired)
+			return
+		}
 		roles := claims.Roles
 		if claims.SID != "" {
 			roles = dbRoles

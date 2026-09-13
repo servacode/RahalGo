@@ -88,7 +88,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// قناةٍ دائمة** — **وهي أطولُ عمراً من طلب.**
 	//
 	// **والوصلةُ القائمةُ عقدٌ آخر** (`R14`) — لا تمسّها هذه.
-	state, dbRoles, dbCaps, err := s.identity.CheckSession(r.Context(), claims.SID)
+	state, dbRoles, dbCaps, _, err := s.identity.CheckSession(r.Context(), claims.SID)
 	switch {
 	case err != nil:
 		obs.WSAuth(obs.WSBackendUnavailable)

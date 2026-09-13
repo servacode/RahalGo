@@ -1034,7 +1034,14 @@ func (r *Repo) VerifiedWhatsApp(ctx context.Context, userID string) (string, err
 //
 // **وتحمل القدراتِ الفاعلةَ معها** (`ADG-1`): **اتّحادُ قدرات أدواره** —
 // **ولا استعلامَ ثالثاً ولا خبيئةَ تُخترَع.**
-func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, roles, caps []string, err error) {
+func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, roles, caps []string, mustChange bool, err error) {
+	// ══════════════════════════════════════════════════════════════
+	// **وواقعةُ الكلمة المؤقّتة تُقرأ هنا** (`TMP`، ٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **ولا استعلامَ ثانٍ في كلّ طلب**: **الصفُّ يُقرأ أصلاً لأدوارِ
+	// اللحظة وقدراتِها** (`R15`/`ADG-1`) — **فتُضاف وصلةٌ إلى
+	// `users` ويُقرأ العلَمُ معها.**
 	err = r.db.QueryRow(ctx, `
 		WITH fam AS (
 			SELECT user_id,
@@ -1050,12 +1057,14 @@ func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total i
 		       COALESCE((SELECT array_agg(DISTINCT rc.capability_code)
 		                   FROM user_roles ur
 		                   JOIN role_capabilities rc ON rc.role_code = ur.role_code
-		                  WHERE ur.user_id = fam.user_id), '{}')
+		                  WHERE ur.user_id = fam.user_id), '{}'),
+		       COALESCE((SELECT u.must_change_password
+		                   FROM users u WHERE u.id = fam.user_id), false)
 		  FROM fam`, sessionID).
-		Scan(&live, &total, &roles, &caps)
+		Scan(&live, &total, &roles, &caps, &mustChange)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// **لا عائلةَ بهذا المعرّف** — صفرٌ وصفرٌ ولا أدوارَ ولا قدرات.
-		return 0, 0, nil, nil, nil
+		return 0, 0, nil, nil, false, nil
 	}
 	return
 }
@@ -1082,9 +1091,23 @@ func (r *Repo) SetPasswordKeeping(ctx context.Context, userID, hash, keepSID str
 	if keepSID != "" {
 		keep = keepSID
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **وكلمةٌ اختارها صاحبُها تُنزل علَمَ «بدّلها»** (`TMP`، ٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكان العلَمُ يبقى مرفوعاً بعد أن يبدّلها بنفسه** — **ولم يكن
+	// لذلك أثرٌ يُرى**: **العلَمُ إشارةُ واجهةٍ مقنَّعةٌ لا قيدٌ.**
+	//
+	// **ويومَ صار قيداً في `RequireAuth` ظهر أنّه حبس**: **يبدّل
+	// كلمتَه فيبقى ممنوعاً** — **ولا مخرجَ، فبابُ التبديل هو المخرجُ
+	// وقد استعمله.** (كشفه `TestTMP2` قبل أن يقع في الميدان.)
+	//
+	// **و`SetPassword` تُنزله منذ زمن** — **وهذه كانت تفترق عنها
+	// صامتةً.**
 	if _, err := tx.Exec(ctx, `
 		UPDATE users
-		   SET password_hash = $2, sessions_revoked_at = now(),
+		   SET password_hash = $2, must_change_password = false,
+		       sessions_revoked_at = now(),
 		       sessions_kept_session_id = $3::uuid, updated_at = now()
 		 WHERE id = $1::uuid`, userID, hash, keep); err != nil {
 		return nil, err

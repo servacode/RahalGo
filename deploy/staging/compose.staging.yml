@@ -94,7 +94,20 @@ services:
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${STAGING_JWT_SECRET:?سرُّ توقيعٍ خاصٌّ بالتجهيز — ولا يُنسَخ من الإنتاج}
       ADMIN_PHONE: ${STAGING_ADMIN_PHONE:?}
-      ADMIN_PASSWORD: ${STAGING_ADMIN_PASSWORD:?}
+      # ══════════════════════════════════════════════════════════════
+      # **وكلمةُ الإقلاع لا تُشترَط بعد تمامه** (`TMP`، ٢٠٢٦-٠٩-١٣)
+      # ══════════════════════════════════════════════════════════════
+      #
+      # **وكانت `:?` تُسقط النشرَ إن غابت** — **فسرٌّ خامدٌ صار شرطاً
+      # نحويّاً لا يُستطاع حذفُه.**
+      #
+      # **و`bootstrapPassword` لا تُطبَّق إلّا لمن لا بصمةَ له** —
+      # **فبعد أوّل تبديلٍ تصير القيمةُ بلا أثر**، **وبقاؤها نصّاً
+      # صريحاً في إعدادٍ مخاطرةٌ بلا فائدة.**
+      #
+      # **والإنتاجُ لا يشترطها أصلاً** (`${ADMIN_PASSWORD}` بلا `:?`)
+      # — **فالتجهيزُ يوافقه.**
+      ADMIN_PASSWORD: ${STAGING_ADMIN_PASSWORD:-}
       WEB_ORIGINS: http://localhost:8080,https://staging.rahalgo.com
       UPLOADS_DIR: /app/uploads
       OSRM_URL: ${STAGING_OSRM_URL:-}

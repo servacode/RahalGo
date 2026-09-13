@@ -31,8 +31,8 @@
     "setting_defs": 127,
     "behaviour_settings": 103,
     "order_fields": 75,
-    "test_files": 322,
-    "test_funcs": 1247
+    "test_files": 323,
+    "test_funcs": 1251
   },
   "flows": [
     {
@@ -17616,6 +17616,30 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestTMP1_TemporaryPasswordCannotUseTheApp",
+      "file": "internal/qa/temp_password_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTMP2_TheWayOutStaysOpen",
+      "file": "internal/qa/temp_password_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTMP3_RestrictionIsNotTiedToTheUIToggle",
+      "file": "internal/qa/temp_password_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTMP4_NormalAccountUnaffected",
+      "file": "internal/qa/temp_password_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestXG44_SettleWaitsUntilTheTransferAttemptEnds",
