@@ -2,6 +2,7 @@
 //
 // (قاعدة `GROUND-RULES.md` §7.1: لا شبكة ولا منطق هنا — كلها في `shared`.)
 import java.util.Properties
+import org.gradle.api.tasks.PathSensitivity
 
 plugins {
     alias(libs.plugins.android.application)
@@ -232,4 +233,19 @@ dependencies {
     implementation(libs.compose.material3)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.ui.tooling.preview)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وملفُّ البناء مدخلٌ للفحص** (`P-8`، ٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وحارسُ قفلِ الإصدار يقرأ هذا الملفَّ في وقت التشغيل** — **وغرادل
+// لا يعلم ذلك**، فيرى مهمّةَ الفحص `UP-TO-DATE` ويتخطّاها.
+//
+// **وقِيس ٢٠٢٦-٠٩-١٤**: **فُتحت كتلةُ الإصدار لتجاوزٍ ومرّ الفحصُ** —
+// **لأنّه لم يُشغَّل أصلاً.** **وحارسٌ يُتخطّى ليس حارساً.**
+tasks.withType<Test>().configureEach {
+    inputs.file("build.gradle.kts")
+        .withPropertyName("buildScript")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }

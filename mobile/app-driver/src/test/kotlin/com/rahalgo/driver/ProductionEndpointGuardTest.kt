@@ -144,4 +144,56 @@ class ProductionEndpointGuardTest {
         runCatching { MapConfig(baseUrl = "http://192.168.0.104:8791", allowLoopbackHttp = true) }
             .onSuccess { error("قُبل مضيفٌ بعيدٌ بإذن الحلقيّ") }
     }
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **وقفلُ الإصدار يُقاس في متغيّرٍ يعمل** (`P-8`، ٢٠٢٦-٠٩-١٤)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **والتأكيدُ فوقُ يبدأ بـ`if (BuildConfig.DEBUG) return`** —
+     * **و`AGP 9` لا يولّد فحوصَ وحدةٍ للإصدار افتراضاً** (قِيس: لا
+     * مهمّةَ `testReleaseUnitTest` في أيٍّ من الأربعة). **فذاك التأكيدُ
+     * خاملٌ لا يُشغَّل** — **وحارسٌ لا يعمل ليس حارساً.**
+     *
+     * **فيُقاس القفلُ حيث يُكتب**: **كتلةُ `release` في بناء هذا
+     * التطبيق** — **عنوانان حرفيّان، ولا ذكرَ لتجاوزٍ فيها.**
+     *
+     * **ومن نقل التجاوزَ إلى `defaultConfig` أو أضافه إلى `release`
+     * أسقط هذا الفحصَ في متغيّرٍ يُشغَّل كلَّ مرّة.**
+     */
+    @Test
+    fun `كتلةُ الإصدار في البناء لا تقبل تجاوزاً`() {
+        val gradle = java.io.File("build.gradle.kts")
+        assertTrue("لم أجد ملفَّ البناء: " + gradle.absolutePath, gradle.exists())
+        val text = gradle.readText()
+
+        val start = text.indexOf("        release {")
+        assertTrue("لا كتلةَ release في البناء", start >= 0)
+        val debugAt = text.indexOf("        debug {", start)
+        val end = if (debugAt > start) debugAt else text.length
+        val release = text.substring(start, end)
+
+        assertTrue(
+            "كتلةُ الإصدار لا تكتب عنوانَ المحرّك حرفاً",
+            release.contains("quoted(\"" + PROD_API + "\")"),
+        )
+        assertTrue(
+            "كتلةُ الإصدار لا تكتب عنوانَ الخرائط حرفاً",
+            release.contains("quoted(\"" + PROD_MAPS + "\")"),
+        )
+        assertFalse(
+            "**كتلةُ الإصدار تقرأ تجاوزاً** — فقطعةُ إصدارٍ قد تشير إلى تجهيز",
+            release.contains("overrideOrNull") || release.contains("findProperty"),
+        )
+        // **ولا تجاوزَ في `defaultConfig`** — **فهو يسري على الإصدار.**
+        val dcAt = text.indexOf("    defaultConfig {")
+        if (dcAt >= 0) {
+            val dcEnd = text.indexOf("\n    }", dcAt)
+            val dc = text.substring(dcAt, if (dcEnd > dcAt) dcEnd else text.length)
+            assertFalse(
+                "**تجاوزٌ في `defaultConfig` يسري على الإصدار**",
+                dc.contains("overrideOrNull") || dc.contains("API_BASE_URL"),
+            )
+        }
+    }
+
 }

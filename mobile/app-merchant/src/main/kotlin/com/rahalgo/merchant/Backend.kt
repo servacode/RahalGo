@@ -3,7 +3,6 @@ package com.rahalgo.merchant
 import android.content.Context
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Core
-import com.rahalgo.ui.Hosts
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -15,7 +14,22 @@ import com.rahalgo.ui.Hosts
  */
 object Backend {
 
-    const val BASE_URL = Hosts.API
+    /**
+     * **عنوان المحرّك — يضعه البناءُ لا ثابتٌ مشترك** (`P-8`، ٢٠٢٦-٠٩-١٤).
+     *
+     * **والإصدارُ مقفلٌ على الإنتاج**: `release` يكتبه حرفاً ولا يقرأ
+     * خاصّيّةً — **فلا تُبنى قطعةُ إصدارٍ تشير إلى تجهيزٍ أبداً.**
+     *
+     * **والتجريبيُّ وحدَه يقبل `-Prahalgo.apiBaseUrl`** — لأجل `P-8`:
+     * **أربعةُ تطبيقاتٍ على جهازٍ واحدٍ تمشي الدورةَ على التجهيز بلا أن
+     * تكتب حرفاً في بيانات الناس.**
+     *
+     * **ولا تبديلَ في وقت التشغيل**: لا إعدادٌ ولا شاشةٌ ولا متغيّرُ
+     * بيئة — **وخادمٌ يختاره المستخدم بابٌ لا يُغلق.**
+     *
+     * **ويحرسه `ProductionEndpointGuardTest`.**
+     */
+    val BASE_URL: String = BuildConfig.API_BASE_URL
 
     /**
      * **أصلُ آثار الخرائط** — المرحلة ٦ب، البند ٣.
@@ -23,7 +37,7 @@ object Backend {
      * **ولا يُكتب مضيفٌ في منطق واجهة** — منه وحدَه تُشتقّ عناوينُ
      * الفهرس والأرشيف والموارد، **وتبديلُ المزوّد سطرٌ هنا.**
      */
-    const val MAPS_BASE_URL = Hosts.MAPS
+    val MAPS_BASE_URL: String = BuildConfig.MAPS_BASE_URL
 
     /**
      * **نوعُ العميل — كما تعرفه قائمةُ المحرّك المغلقة.**

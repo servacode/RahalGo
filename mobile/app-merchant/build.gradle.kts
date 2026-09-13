@@ -12,6 +12,7 @@
 // **وكان المتجرُ لا يعلم بطلبٍ إلّا إن كان التطبيقُ مفتوحاً** — وطلبٌ
 // لا يُنبَّه به يبرد ويُلغى.
 import java.util.Properties
+import org.gradle.api.tasks.PathSensitivity
 
 plugins {
     alias(libs.plugins.android.application)
@@ -39,6 +40,23 @@ val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **عنوانُ المحرّك: الإصدارُ حرفيٌّ والتجريبيُّ يقبل تجاوزاً** (`P-8`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **والنمطُ منقولٌ عن تطبيق السائق حرفاً** — **وهو القائمُ والمُختبَر**،
+// **ولا تُبتكَر آليّةٌ ثانيةٌ لتفترقا.**
+//
+// **والإصدارُ لا يقبل تجاوزاً البتّة**: قيمتاه مكتوبتان حرفاً بحرف في
+// `release` أدناه، **ولا تقرآن خاصّيّةً ولا متغيّرَ بيئة.** فمن مرّر
+// `-Prahalgo.apiBaseUrl` وبنى إصداراً **لم يتغيّر عنده شيء.**
+//
+// **ويحرسه `ProductionEndpointGuardTest`** في التطبيقات الأربعة.
+private fun overrideOrNull(project: org.gradle.api.Project, key: String): String? =
+    (project.findProperty(key) as String?)?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun quoted(value: String) = "\"" + value + "\""
 
 android {
     namespace = "com.rahalgo.merchant"
@@ -78,6 +96,9 @@ android {
 
     buildTypes {
         release {
+            // **العنوانان حرفيّان — ولا مدخلَ لتجاوزٍ هنا** (`P-8`).
+            buildConfigField("String", "API_BASE_URL", quoted("https://api.rahalgo.com"))
+            buildConfigField("String", "MAPS_BASE_URL", quoted("https://maps.rahalgo.com"))
             // ══════════════════════════════════════════════════════
             // **وجدولُ الرموز — مضبوطٌ ولا يُنتج شيئاً اليوم**
             // ══════════════════════════════════════════════════════
@@ -118,6 +139,16 @@ android {
             )
         }
         debug {
+            // **وهنا وحدَه يُقبل التجاوز** — وافتراضُه الإنتاجُ نفسُه،
+            // **فمن بنى تجريبيّاً بلا خاصّيّةٍ لم يتغيّر عنده شيء.**
+            buildConfigField(
+                "String", "API_BASE_URL",
+                quoted(overrideOrNull(project, "rahalgo.apiBaseUrl") ?: "https://api.rahalgo.com"),
+            )
+            buildConfigField(
+                "String", "MAPS_BASE_URL",
+                quoted(overrideOrNull(project, "rahalgo.mapsBaseUrl") ?: "https://maps.rahalgo.com"),
+            )
             // **ولاحقةٌ على المعرّف** — فيجلس التجريبيُّ والإصدارُ على
             // الجهاز نفسِه، **ولا يُحذف أحدُهما ليُثبَّت الآخر.**
             applicationIdSuffix = ".debug"
@@ -185,4 +216,28 @@ dependencies {
     implementation(libs.compose.material3)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.ui.tooling.preview)
+    // ══════════════════════════════════════════════════════════════════
+    // **وحارسُ عزل الإنتاج يحتاج مُشغّلاً** (`P-8`، ٢٠٢٦-٠٩-١٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ولم يكن لهذا التطبيق فحصُ وحدةٍ واحد** — **ولا حارسَ عنوانٍ**،
+    // لأنّ عنوانَه كان ثابتاً مشتركاً لا يُبدَّل. **ويومَ فُتح مدخلُ
+    // التجاوز للتجربة لزم الحارسُ.**
+    testImplementation(libs.junit)
+
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وملفُّ البناء مدخلٌ للفحص** (`P-8`، ٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وحارسُ قفلِ الإصدار يقرأ هذا الملفَّ في وقت التشغيل** — **وغرادل
+// لا يعلم ذلك**، فيرى مهمّةَ الفحص `UP-TO-DATE` ويتخطّاها.
+//
+// **وقِيس ٢٠٢٦-٠٩-١٤**: **فُتحت كتلةُ الإصدار لتجاوزٍ ومرّ الفحصُ** —
+// **لأنّه لم يُشغَّل أصلاً.** **وحارسٌ يُتخطّى ليس حارساً.**
+tasks.withType<Test>().configureEach {
+    inputs.file("build.gradle.kts")
+        .withPropertyName("buildScript")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
