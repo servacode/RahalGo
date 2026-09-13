@@ -159,6 +159,29 @@ func TestCFC3_MalformedZonesAreNotCoverage(t *testing.T) {
 		  VALUES ('CFC شكلٌ مجهول',
 		          ST_SetSRID(ST_MakePoint(39.01,35.95),4326)::geography, 5000, 0, 0, true, 'blob')`,
 			"شكلٌ مجهول"},
+		// ══════════════════════════════════════════════════════════
+		// **وهذه وحدَها هي التي يسمح بها المخطَّط** (قِيس ٢٠٢٦-٠٩-١٣)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **وقيودُ القاعدة تمنع أكثرَ العطب**:
+		//
+		//	center NOT NULL · radius_m NOT NULL
+		//	radius_m BETWEEN 100 AND 50000
+		//	shape IN ('radius','polygon')
+		//	shape <> 'polygon' OR area IS NOT NULL
+		//
+		// **فالقاعدةُ خطُّ الدفاع الأوّل** — **والحالاتُ فوقُ تُرفض قبل
+		// أن تُكتب، ويُسجّلها الاختبارُ ويتجاوزها.**
+		//
+		// **والباقي الممكنُ الوحيد**: **مضلَّعٌ فعّالٌ بهندسةٍ حاضرةٍ
+		// مساحتُها صفر** — **و`ST_Area > 0` هو ما يردّه.** (قِيس على
+		// التجهيز: فعّالةٌ=١ · مساحتُها=٠ ⇒ ٥٠٣.)
+		{`INSERT INTO delivery_zones (name, center, radius_m, delivery_fee, min_order, active, shape, area)
+		  VALUES ('CFC مضلَّعٌ صفريّ',
+		          ST_SetSRID(ST_MakePoint(39.01,35.95),4326)::geography, 100, 0, 0, true, 'polygon',
+		          ST_SetSRID(ST_GeomFromText(
+		            'POLYGON((39.01 35.95, 39.01 35.95, 39.01 35.95, 39.01 35.95))'),4326)::geography)`,
+			"مضلَّعٌ صفريُّ المساحة"},
 	} {
 		if _, err := hh.Pool.Exec(ctxBG(), `DELETE FROM delivery_zones`); err != nil {
 			t.Fatalf("تفريغ: %v", err)
