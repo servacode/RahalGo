@@ -264,6 +264,12 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 		out.Serviceable = false
 		out.OutOfZone = true
 		out.ServiceableReason = "out_of_zone"
+	} else if errors.Is(err, ErrCoverageUnavailable) {
+		// **ولا إعدادَ تغطيةٍ صالحاً** — **حالُ إعدادٍ لا حكمٌ جغرافيّ**،
+		// **ولا يُقال له «عنوانُك خارجَ التغطية» والعلّةُ في اللوحة.**
+		out.BaseFee = 0
+		out.Serviceable = false
+		out.ServiceableReason = "coverage_unavailable"
 	} else {
 		// **وعطبٌ في القراءة ليس حكماً** — **ولا يُقال «يُوصَّل» لمن لم
 		// يُسأل عنه أحد.**
@@ -360,19 +366,69 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 		// **ومن منفّذ الوحدة لا من المَسبَح** — `XG-46`: **هذا الفرعُ
 		// يقرّر قبولاً أو رفضاً وهو داخلَ معاملةِ الإنشاء**، **فوصلةٌ
 		// ثانيةٌ هنا تُجمّد طلباً خارجَ التغطية حين يمتلئ المَسبَح.**
-		var any bool
-		if e := q.QueryRow(ctx,
-			`SELECT EXISTS(SELECT 1 FROM delivery_zones WHERE active)`).Scan(&any); e != nil {
+		// ══════════════════════════════════════════════════════════════
+		// **ولا تغطيةَ صالحةً ليس «العالمُ كلُّه مُغطّى»** (٢٠٢٦-٠٩-١٣)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **وكان الجدولُ الفارغُ يُقرأ بابًا مفتوحاً** (قرارُ المالك
+		// ٢٠٢٦-٠٨-١٨): «لم تُرسم خريطةٌ بعد» حالُ إعدادٍ لا قرارُ سياسة،
+		// **ومنصّةٌ تُقلَع فتردّ كلَّ طلبٍ تبدو معطوبةً لا مضبوطة.**
+		//
+		// **وهو غيرُ مقبولٍ لإطلاقٍ عامّ** (نقضُ المالك ٢٠٢٦-٠٩-١٣):
+		// **إعدادُ تغطيةٍ غائبٌ أو مُطفأٌ أو معطوبٌ لا يفتح العالمَ
+		// لقبولِ الطلبات.**
+		//
+		//	لا تغطيةَ صالحةً  ⇒  coverage_unavailable — **إعدادٌ غيرُ متاح**
+		//	تغطيةٌ صالحةٌ وخارجَها ⇒  out_of_zone      — **حكمٌ جغرافيّ**
+		//
+		// **والحالان مفترقان في الرمز** — **فمن خلطهما أخبر زبوناً في
+		// قلب المدينة أنّه خارجَ التغطية، والعلّةُ في اللوحة لا في
+		// موضعه.**
+		//
+		// **و«صالحةٌ للاستعمال» تُقاس لا تُفترَض**: **دائرةٌ بلا مركزٍ
+		// أو بنصفِ قطرٍ صفرٍ لا تُغطّي شيئاً**، **ومضلَّعٌ بهندسةٍ
+		// معطوبةٍ كذلك** — **وصفٌّ فعّالٌ لا يُقرأ تغطيةً بمجرّد أنّه
+		// فعّال.**
+		//
+		// **ومن المُنفّذ المُمرَّر لا من المَسبَح** — `XG-46`.
+		ok, e := s.HasUsableCoverage(ctx, q)
+		if e != nil {
+			// **وعطبُ قراءةٍ ليس إذناً** — **ولا يُقبَل طلبٌ لأنّ
+			// السؤالَ تعذّر.**
 			return z, e
 		}
-		if any {
+		if ok {
 			return z, ErrOutOfZone
 		}
-		// **وبلا منطقةٍ لا مسافةَ ولا اسم** — والأجرةُ هي `delivery.fee`
-		// وحدَها، **وهو ما تقوله اللوحة.**
-		return z, nil
+		return z, ErrCoverageUnavailable
 	}
 	return z, err
+}
+
+// HasUsableCoverage **أثمّةَ منطقةٌ فعّالةٌ تُغطّي شيئاً فعلاً؟**
+//
+// **وموضعٌ واحدٌ يقرؤه الجميع** — **ولا فحصُ صلاحيّةٍ ثانٍ في معالِج.**
+//
+//	دائرةٌ  ⇒ فعّالةٌ · بمركزٍ · بنصفِ قطرٍ أكبرَ من صفر
+//	مضلَّعٌ ⇒ فعّالٌ · بهندسةٍ غيرِ فارغةٍ وصالحةٍ ومساحتُها فوقَ صفر
+//
+// **وشكلٌ مجهولٌ لا يُقرأ تغطيةً** — **والافتراضُ منعٌ هنا كما في
+// التخويل.**
+func (s *Service) HasUsableCoverage(ctx context.Context, q dbtx.Querier) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM delivery_zones
+		   WHERE active AND (
+		         (shape = 'radius'
+		            AND center IS NOT NULL
+		            AND coalesce(radius_m, 0) > 0)
+		      OR (shape = 'polygon'
+		            AND area IS NOT NULL
+		            AND ST_IsValid(area::geometry)
+		            AND ST_Area(area) > 0)
+		   ))`).Scan(&ok)
+	return ok, err
 }
 
 // DeliveryCharge أجرةُ التوصيل ومنطقتُها — **مصدرُ الحقيقة الواحد.**

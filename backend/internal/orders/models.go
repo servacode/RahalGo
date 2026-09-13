@@ -34,13 +34,26 @@ var (
 	//
 	// **والخياراتُ وحدَها تبقى على ErrBadItems** — فهي «بياناتٌ مدخلة»
 	// حقّاً.
-	ErrNoItems          = httpx.NewError(http.StatusBadRequest, "no_items", "errors.no_items")
-	ErrNoAddress        = httpx.NewError(http.StatusBadRequest, "no_address", "errors.no_address")
-	ErrBadMerchant      = httpx.NewError(http.StatusBadRequest, "bad_merchant", "errors.bad_merchant")
-	ErrBadPayment       = httpx.NewError(http.StatusBadRequest, "bad_payment", "errors.bad_payment")
-	ErrBadQty           = httpx.NewError(http.StatusBadRequest, "bad_qty", "errors.bad_qty")
-	ErrItemGone         = httpx.NewError(http.StatusBadRequest, "item_gone", "errors.item_gone")
-	ErrOutOfZone        = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
+	ErrNoItems     = httpx.NewError(http.StatusBadRequest, "no_items", "errors.no_items")
+	ErrNoAddress   = httpx.NewError(http.StatusBadRequest, "no_address", "errors.no_address")
+	ErrBadMerchant = httpx.NewError(http.StatusBadRequest, "bad_merchant", "errors.bad_merchant")
+	ErrBadPayment  = httpx.NewError(http.StatusBadRequest, "bad_payment", "errors.bad_payment")
+	ErrBadQty      = httpx.NewError(http.StatusBadRequest, "bad_qty", "errors.bad_qty")
+	ErrItemGone    = httpx.NewError(http.StatusBadRequest, "item_gone", "errors.item_gone")
+	ErrOutOfZone   = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
+
+	// ErrCoverageUnavailable **لا إعدادَ تغطيةٍ صالحاً — لا حكمٌ جغرافيّ.**
+	//
+	// **وهي غيرُ `out_of_zone`**: **تلك «لا نُوصّل إلى هنا» وهذه «لا
+	// نعرف إلى أين نُوصّل بعد».** **والأولى يُبدّلها الزبونُ بتبديل
+	// عنوانه، والثانية لا يفعل فيها شيئاً** — فتُقال له رسالةٌ تُطلَب
+	// إعادتُها لاحقاً.
+	//
+	// **و٥٠٣ لا ٤٠٠**: **الخدمةُ غيرُ متاحةٍ مؤقّتاً** — **ولا خطأَ في
+	// طلبه.** (وهو رمزُ `launch_closed` نفسُه في الحال، **ومفترقٌ عنه
+	// في الرمز** فتُقال رسالةٌ غيرُها.)
+	ErrCoverageUnavailable = httpx.NewError(http.StatusServiceUnavailable,
+		"coverage_unavailable", "errors.coverage_unavailable")
 	ErrBelowMinOrder    = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
 	ErrWhatsAppRequired = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
 	// ErrTooManyOpen بيده من الطلبات ما يكفي — **وسقفُه في الإعدادات.**
