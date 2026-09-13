@@ -142,17 +142,17 @@ func (s *Service) DeleteZone(ctx context.Context, actorID, id, ip string) error 
 	return nil
 }
 
-// ZoneForPoint يعيد المنطقة الفعالة التي تغطي النقطة (الأقرب مركزاً عند التداخل)
-// — تُستخدم لحساب رسوم التوصيل من دبوس الزبون.
-func (s *Service) ZoneForPoint(ctx context.Context, lat, lng float64) (*Zone, error) {
-	z, err := scanZone(s.db.QueryRow(ctx, `
-		SELECT `+zoneCols+` FROM delivery_zones
-		WHERE active
-		  AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, radius_m)
-		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography)
-		LIMIT 1`, lat, lng))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound
-	}
-	return z, err
-}
+// ══════════════════════════════════════════════════════════════════════
+// **ولا قرارَ تغطيةٍ ثانياً هنا** (٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وكانت `ZoneForPoint` هنا** — **تفحص الدائرةَ وحدَها ولا تقرأ
+// المضلَّع** (`area`/`ST_Covers`). **وبلا مستعملٍ واحدٍ في المستودع**
+// (قِيس ٢٠٢٦-٠٩-١٣).
+//
+// **وشيفرةٌ ميّتةٌ تقرّر قراراً حرجاً أخطرُ من غيابها**: **من ناداها
+// غداً ظانّاً أنّها الحاكمة لَقالت «خارجَ التغطية» لنقطةٍ داخلَ مضلَّعٍ
+// مرسوم** — **وقاعدتان تفترقان يومَ تُبدَّل إحداهما.**
+//
+// **والحاكمةُ واحدةٌ**: `orders.ZoneAt` — الدائرةُ بـ`ST_DWithin`
+// والمضلَّعُ بـ`ST_Covers`، **و`orders.RequireServiceable` بوّابتُها.**

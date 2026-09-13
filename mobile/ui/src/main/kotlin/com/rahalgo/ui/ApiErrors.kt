@@ -302,6 +302,7 @@ private val CODES: Map<String, Int> = mapOf(
     //
     // **وهو ٥٠٣ لا ٤٠٣**: **«ليس الآن» لا «لستَ أهلاً»** — ومن خلطهما
     // أخبر الزبونَ أنّه ممنوعٌ وهو مسموحٌ غداً.
+    "bad_point" to R.string.err_bad_point,
     "launch_closed" to R.string.err_launch_closed,
     "auth_unavailable" to R.string.err_auth_unavailable,
     "idempotency_reclaimed" to R.string.err_in_progress,
