@@ -125,7 +125,7 @@
         "TestIDEM_LostResponseReplays",
         "TestXG46_OrderCreateNeedsOneConnection",
         "TestCoverage_DisabledZoneDoesNotServe",
-        "TestCoverage_EmptyTableStaysOpen",
+        "TestCoverage_EmptyTableIsClosed",
         "TestCoverage_GeometryValidationRejectsBadShapes",
         "TestCoverage_LegacyRadiusUnchanged",
         "TestCoverage_LegacyScreenNeverSeesPolygons",
@@ -1709,7 +1709,7 @@
         "TestCoverageRequest_BadPointRejected",
         "TestCoverageRequest_UnknownStatusRejected",
         "TestCoverage_DisabledZoneDoesNotServe",
-        "TestCoverage_EmptyTableStaysOpen",
+        "TestCoverage_EmptyTableIsClosed",
         "TestCoverage_GeometryValidationRejectsBadShapes",
         "TestCoverage_LegacyRadiusUnchanged",
         "TestCoverage_LegacyScreenNeverSeesPolygons",
@@ -6814,7 +6814,7 @@
       "orphan": true
     },
     {
-      "name": "TestZoneAt_EmptyTableCoversEverywhere",
+      "name": "TestZoneAt_EmptyTableIsClosed",
       "file": "internal/orders/empty_zones_test.go",
       "package": "orders_test",
       "orphan": true
@@ -13638,7 +13638,7 @@
       "orphan": false
     },
     {
-      "name": "TestCoverage_EmptyTableStaysOpen",
+      "name": "TestCoverage_EmptyTableIsClosed",
       "file": "internal/qa/opsmap_coverage_test.go",
       "package": "qa",
       "level": "L4",
@@ -18180,13 +18180,13 @@
       "orphan": true
     },
     {
-      "name": "TestZONE_001_NoZonesOrderPasses",
+      "name": "TestZONE_001_NoZonesOrderIsRefused",
       "file": "internal/qa/zone_test.go",
       "package": "qa",
       "orphan": true
     },
     {
-      "name": "TestZONE_002_NoZoneSurvivesLifecycle",
+      "name": "TestZONE_002_OrderSurvivesLifecycle",
       "file": "internal/qa/zone_test.go",
       "package": "qa",
       "orphan": true

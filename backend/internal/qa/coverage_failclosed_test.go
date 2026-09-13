@@ -32,42 +32,38 @@ import (
 //
 // **ومن أطفأ المناطقَ كلَّها ليُصلح واحدةً لا يجوز أن يفتح العالم.**
 
-// wipeZones **يمحو المناطقَ كلَّها ويُرجعها** — لحالِ «لا جدولَ».
+// wipeZones **يُخلي التغطيةَ من كلِّ صالحٍ** — ويُرجعها.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولا يُحذَف صفٌّ يشير إليه طلب** (٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`orders.zone_id` مفتاحٌ أجنبيٌّ إلى `delivery_zones`** — **فمحوُ
+// الجدول يسقط على القيد بعد أوّل طلبٍ ناجحٍ في الحزمة.** (وقع في
+// مصفوفةٍ كاملةٍ ومرّ منفرداً.)
+//
+// **والمقيسُ دخلُ `HasUsableCoverage` لا عددُ الصفوف**: **ما لا يُحذَف
+// يُطفأ**، **وجدولٌ فيه صفوفٌ مُطفأةٌ كجدولٍ فارغٍ في عينه.**
+//
+// **والجدولُ الفارغُ حرفيّاً مُثبَتٌ على التجهيز** — حيث يُفَكُّ القيدُ
+// أوّلاً.
 func wipeZones(t *testing.T, hh *Harness) {
 	t.Helper()
-	type row struct{ id string }
-	rows, err := hh.Pool.Query(ctxBG(), `SELECT id::text FROM delivery_zones`)
-	if err != nil {
-		t.Fatalf("قراءةُ المناطق: %v", err)
-	}
-	var ids []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			t.Fatal(err)
-		}
-		ids = append(ids, id)
-	}
-	rows.Close()
-	// **ويُنسَخ الصفُّ كلُّه قبل محوه** — فيُرجَع كما كان.
+	isolateZones(t, hh)
+	// **وما لا يشير إليه طلبٌ يُحذَف فعلاً** — فيُقاس الحدّان.
 	if _, err := hh.Pool.Exec(ctxBG(), `
-		CREATE TEMP TABLE IF NOT EXISTS cfc_backup AS SELECT * FROM delivery_zones WHERE false`); err != nil {
-		t.Fatalf("جدولُ النسخ: %v", err)
+		DELETE FROM delivery_zones z
+		 WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.zone_id = z.id)`); err != nil {
+		t.Fatalf("محوُ غيرِ المُشارِ إليه: %v", err)
 	}
-	if _, err := hh.Pool.Exec(ctxBG(),
-		`INSERT INTO cfc_backup SELECT * FROM delivery_zones`); err != nil {
-		t.Fatalf("النسخ: %v", err)
+	var usable bool
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT EXISTS (SELECT 1 FROM delivery_zones WHERE active)`).Scan(&usable); err != nil {
+		t.Fatalf("فحصُ الشرط: %v", err)
 	}
-	if _, err := hh.Pool.Exec(ctxBG(), `DELETE FROM delivery_zones`); err != nil {
-		t.Fatalf("المحو: %v", err)
+	if usable {
+		t.Fatal("**شرطُ الإخلاء خُرق** — منطقةٌ فعّالةٌ باقية، والقياسُ بعدها لا يقول شيئاً.")
 	}
-	t.Cleanup(func() {
-		_, _ = hh.Pool.Exec(ctxBG(), `INSERT INTO delivery_zones SELECT * FROM cfc_backup
-			ON CONFLICT (id) DO NOTHING`)
-		_, _ = hh.Pool.Exec(ctxBG(), `DROP TABLE IF EXISTS cfc_backup`)
-	})
-	_ = ids
 }
 
 // disableAllZones **يُطفئ الفعّالةَ كلَّها ويُرجعها** — حادثُ اللوحة.
@@ -183,9 +179,11 @@ func TestCFC3_MalformedZonesAreNotCoverage(t *testing.T) {
 		            'POLYGON((39.01 35.95, 39.01 35.95, 39.01 35.95, 39.01 35.95))'),4326)::geography)`,
 			"مضلَّعٌ صفريُّ المساحة"},
 	} {
-		if _, err := hh.Pool.Exec(ctxBG(), `DELETE FROM delivery_zones`); err != nil {
-			t.Fatalf("تفريغ: %v", err)
-		}
+		// **والتفريغُ بالمعبر المشترك لا بمحوٍ أعمى** — **و`orders.zone_id`
+		// مفتاحٌ أجنبيّ**، **فطلبُ اختبارٍ آخرَ في المخزن نفسِه يُسقط
+		// `DELETE FROM delivery_zones` بـ`23503`.** (قِيس في المصفوفة
+		// الكاملة ٢٠٢٦-٠٩-١٣: يمرّ منفرداً ويسقط مع غيره.)
+		wipeZones(t, hh)
 		if _, err := hh.Pool.Exec(ctxBG(), c.sql); err != nil {
 			t.Logf("تعذّر زرعُ «%s» (قيدٌ في القاعدة): %v — ويُتجاوَز", c.why, err)
 			continue

@@ -2656,7 +2656,7 @@ var TestMap = map[string]TestDecl{
 	"TestCoverage_DisabledZoneDoesNotServe":               coverageTest(),
 	"TestCoverage_OverlappingZonesPickNearestCentre":      coverageTest(),
 	"TestCoverage_MultipleZonesEachMeasuredByItsOwnShape": coverageTest(),
-	"TestCoverage_EmptyTableStaysOpen":                    coverageTest(),
+	"TestCoverage_EmptyTableIsClosed":                     coverageTest(),
 	"TestCoverage_GeometryValidationRejectsBadShapes":     coverageTest(),
 	"TestCoverage_LegacyScreenNeverSeesPolygons":          coverageTest(),
 	"TestCoverage_ManagePermissionRequired":               mapTest(L2, "SECURITY"),

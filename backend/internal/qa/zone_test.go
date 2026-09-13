@@ -93,7 +93,21 @@ func (h *Harness) zoneOf(t *testing.T, orderID string) *string {
 // **وهذا هو العطبُ بعينه**: كان يردّ ٤٠٤ «غير موجود» — **ورسالةٌ تقول
 // غيرَ ما وقع أسوأُ من رسالةٍ لا تقول شيئاً**، لأنّ من يقرؤها يبحث في
 // المكان الخطأ.
-func TestZONE_001_NoZonesOrderPasses(t *testing.T) {
+// TestZONE_001_NoZonesOrderIsRefused **ونُقض القرارُ** (٢٠٢٦-٠٩-١٣).
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وكان اسمُه `NoZonesOrderPasses`** — **يشترط أن يمرّ الطلبُ بلا
+// دوائر** (قرارُ ٢٠٢٦-٠٨-١٨).
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ونقضه المالكُ لإطلاقٍ عامّ**: **إعدادُ تغطيةٍ غائبٌ لا يفتح العالمَ
+// لقبولِ الطلبات** — **وهو حالُ إعدادٍ غيرِ متاحٍ لا «كلُّ مكانٍ
+// مُغطّى».**
+//
+// **ويبقى ما كان يحرسه محروساً**: **«لا منطقةَ» تُكتب فراغاً لا نصّاً
+// فارغاً** (`ZONE-000`) — **ويُقاس في `TestZONE_000` بمنطقةٍ صالحةٍ
+// بعيدةٍ**، لا بجدولٍ فارغ.
+func TestZONE_001_NoZonesOrderIsRefused(t *testing.T) {
 	h := New(t)
 	h.noZones(t)
 	if n := h.zoneCount(t); n != 0 {
@@ -103,13 +117,18 @@ func TestZONE_001_NoZonesOrderPasses(t *testing.T) {
 	cust := h.Customer()
 	item := h.NewItem(2000)
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
-	if made.Code != 201 {
-		t.Fatalf("ZONE-001 **بلا دوائرَ لم يُنشأ الطلب**: %s", made)
+	if made.Err() != "coverage_unavailable" {
+		t.Fatalf("ZONE-001 **بلا تغطيةٍ صالحةٍ لم يُردّ بحالِ الإعداد**: %s — "+
+			"**والإخفاقُ يجب أن يُغلق.**", made)
 	}
-
-	oid, _ := made.JSON()["id"].(string)
-	if z := h.zoneOf(t, oid); z != nil {
-		t.Errorf("ZONE-001 المنطقةُ %q — والمنتظَرُ فراغٌ حقيقيّ", *z)
+	// **ولا صفَّ يُنشأ** — والرمزُ ليس كلَّ شيء.
+	var n int
+	if err := h.Pool.QueryRow(ctxBG(),
+		`SELECT count(*) FROM orders WHERE customer_id = $1`, cust.ID).Scan(&n); err != nil {
+		t.Fatalf("عدُّ الطلبات: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("ZONE-001 **%d صفّاً أُنشئ بلا تغطية**", n)
 	}
 }
 
@@ -119,10 +138,18 @@ func TestZONE_001_NoZonesOrderPasses(t *testing.T) {
 //
 // **وطلبٌ يُنشأ ثمّ ينهار عند أوّل انتقالٍ ليس طلباً** — فالفحصُ يمشي
 // به إلى التسليم، **ويقرأه من نقطة الزبون** حيث يُقرأ `zone_name`.
-func TestZONE_002_NoZoneSurvivesLifecycle(t *testing.T) {
+func TestZONE_002_OrderSurvivesLifecycle(t *testing.T) {
 	h := New(t)
-	h.noZones(t)
-
+	// ══════════════════════════════════════════════════════════════════
+	// **و«بلا مناطق» لم تعد تُنشئ طلباً** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان `h.noZones(t)` وسيلةً لصنع طلبٍ بلا منطقة** — **والبابُ
+	// المفتوحُ بجدولٍ فارغٍ نُقض بأمر المالك**، فلا طلبَ يُقبَل بلا
+	// تغطيةٍ صالحة.
+	//
+	// **وما يحرسه هذا الفحصُ باقٍ**: **دورةُ حياةٍ كاملةٍ لا تنكسر** —
+	// **وتُقاس بمنطقةٍ صالحةٍ كما تُقاس في الإنتاج.**
 	cust := h.Customer()
 	item := h.NewItem(1500)
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
@@ -136,7 +163,7 @@ func TestZONE_002_NoZoneSurvivesLifecycle(t *testing.T) {
 		got := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 			map[string]any{"to": to})
 		if got.Code >= 400 {
-			t.Fatalf("ZONE-002 **الانتقالُ إلى %s انكسر بلا منطقة**: %s", to, got)
+			t.Fatalf("ZONE-002 **الانتقالُ إلى %s انكسر**: %s", to, got)
 		}
 	}
 	// **والتسليمُ يحتاج إثباتاً** — قاعدةُ عملٍ لا علاقةَ لها بالمنطقة
@@ -147,22 +174,23 @@ func TestZONE_002_NoZoneSurvivesLifecycle(t *testing.T) {
 	}
 	if done := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 		map[string]any{"to": "delivered"}); done.Code >= 400 {
-		t.Fatalf("ZONE-002 **التسليمُ انكسر بلا منطقة**: %s", done)
+		t.Fatalf("ZONE-002 **التسليمُ انكسر**: %s", done)
 	}
 	if now := h.statusOf(oid); now != "delivered" {
 		t.Fatalf("ZONE-002 الحالُ %q — والدورةُ لم تكتمل", now)
 	}
 
-	// **والقراءةُ من نقطة الزبون** — `LEFT JOIN` على منطقةٍ فارغة.
+	// **والقراءةُ من نقطة الزبون** — **والمنطقةُ التي قُبل بها تُقرأ
+	// معه**، **فالوصلةُ لم تُسقط الصفَّ ولم تُفرغ اسمَه.**
 	seen := h.GET("/api/v1/my/orders/"+oid, cust.Token)
 	if seen.Code != 200 {
-		t.Fatalf("ZONE-002 **الطلبُ لا يُقرأ بلا منطقة**: %s", seen)
+		t.Fatalf("ZONE-002 **الطلبُ لا يُقرأ بعد التسليم**: %s", seen)
 	}
-	if z := seen.JSON()["zone_id"]; z != nil {
-		t.Errorf("ZONE-002 `zone_id` = %v — والمنتظَرُ null", z)
+	if z := seen.JSON()["zone_id"]; z == nil {
+		t.Errorf("ZONE-002 `zone_id` فارغٌ — **وطلبٌ قُبل فله منطقة**")
 	}
-	if z := seen.JSON()["zone_name"]; z != nil {
-		t.Errorf("ZONE-002 `zone_name` = %v — والمنتظَرُ null", z)
+	if z := seen.JSON()["zone_name"]; z == nil {
+		t.Errorf("ZONE-002 `zone_name` فارغٌ — **والوصلةُ لم تقرأ الاسم**")
 	}
 }
 
@@ -237,11 +265,22 @@ func TestZONE_005_NoEmptyUUIDReachesPostgres(t *testing.T) {
 	cust := h.Customer()
 	item := h.NewItem(1200)
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا `22P02` يتسلّل — والبابُ صار مغلقاً أصلاً** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان يُنتظَر ٢٠١ بجدولٍ فارغ** — **والبابُ نُقض بأمر المالك.**
+	//
+	// **والعطبُ الذي يحرسه ذهب بالبنية**: **لا طلبَ يُقبَل بلا تغطيةٍ
+	// صالحة**، **فلا معرّفَ منطقةٍ فارغٌ يُدفَع في عمود `uuid` أصلاً.**
+	//
+	// **ويبقى الفحصُ قائماً**: **٤٠٤ من هذا الباب توقيعُ `22P02`**، ولا
+	// يجوز أن يُرى. **والمنتظَرُ ٥٠٣ بحالِ الإعداد.**
 	if made.Code == 404 {
 		t.Fatalf("ZONE-005 **عاد ٤٠٤ — و`22P02` يتسلّل من جديد**: %s", made)
 	}
-	if made.Code != 201 {
-		t.Fatalf("ZONE-005 الردُّ %d — والمنتظَرُ ٢٠١: %s", made.Code, made)
+	if made.Err() != "coverage_unavailable" {
+		t.Fatalf("ZONE-005 الردُّ %d — والمنتظَرُ حالَ الإعداد: %s", made.Code, made)
 	}
 
 	// **ولا معرّفَ نصّيٌّ فارغٌ في الجدول** — والعمودُ `uuid` لا يحتمله
@@ -277,11 +316,19 @@ func TestZONE_006_BackwardCompatible(t *testing.T) {
 		t.Fatalf("ZONE-006 **الطلبُ الأوّلُ بلا منطقةٍ والدوائرُ فعّالة**")
 	}
 
-	// **ثمّ تُطفأ الدوائرُ ويُنشأ ثانٍ** — والأوّلُ يبقى كما كُتب.
+	// ══════════════════════════════════════════════════════════════════
+	// **ثمّ تُطفأ الدوائرُ — والثاني يُردّ** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان يُنتظَر ٢٠١ بعد الإطفاء** — **والبابُ نُقض بأمر المالك:
+	// إطفاءُ التغطية لا يفتح العالم.**
+	//
+	// **وما يحرسه الفحصُ باقٍ وهو الأهمّ**: **الطلبُ القديمُ يبقى كما
+	// كُتب** — **ولا يفقد منطقتَه لأنّ اللوحةَ تبدّلت بعده.**
 	h.noZones(t)
 	openOne := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
-	if openOne.Code != 201 {
-		t.Fatalf("ZONE-006 تعذّر الإنشاءُ بعد الإطفاء: %s", openOne)
+	if openOne.Err() != "coverage_unavailable" {
+		t.Fatalf("ZONE-006 **الإطفاءُ لم يُغلق البابَ**: %s", openOne)
 	}
 
 	if z := h.zoneOf(t, oldID); z == nil {
