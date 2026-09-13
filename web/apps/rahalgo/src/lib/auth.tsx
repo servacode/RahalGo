@@ -15,7 +15,7 @@
  * **والمنطقُ كلُّه في `hasRole`** — وهذه أسماءٌ تقول من يدخل أين.
  */
 
-import { hasRole, PANEL_ROLES, type AuthUser } from "@rahalgo/auth";
+import { hasRole, isWebAuthorized, type AuthUser } from "@rahalgo/auth";
 
 export { AuthProvider, useAuth, isLoggedIn, hasRole } from "@rahalgo/auth";
 
@@ -47,7 +47,15 @@ export function canAccessPanel(
   user: AuthUser | null,
   capabilities: readonly string[] = [],
 ): boolean {
-  return hasRole(user, ...PANEL_ROLES) || capabilities.length > 0;
+  // ══════════════════════════════════════════════════════════════
+  // **وموضعُ القرار واحدٌ** (`WEBA`، ٢٠٢٦-٠٩-١٣)
+  // ══════════════════════════════════════════════════════════════
+  //
+  // **وكان هذا البابُ قد صُلِّح وبقي بابُ التوجيه على الأسماء** —
+  // **فباب يُفتح وطريقٌ لا يؤدّي إليه.** **وصارا يقرآن دالّةً
+  // واحدة.**
+  if (!user) return false;
+  return isWebAuthorized(user.roles, capabilities);
 }
 
 /** لوحةُ المتجر — لصاحبه وحدَه. */

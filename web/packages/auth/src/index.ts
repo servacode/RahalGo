@@ -29,3 +29,4 @@ export { LoginCard, errText } from "./LoginCard";
 export { PanelLogin } from "./PanelLogin";
 export { SsoPage } from "./SsoPage";
 export { PasswordGate } from "./PasswordGate";
+export { isWebAuthorized, LEGACY_PANEL_ROLES } from "./webaccess";

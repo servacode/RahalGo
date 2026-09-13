@@ -125,6 +125,57 @@ export const tokenStore = {
   },
 };
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **وإشارةُ «بدّل كلمتَك» تُلتقَط مرّةً في المركز** (`WEBA`، ٢٠٢٦-٠٩-١٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * # لماذا لزمت
+ *
+ * **المحرّكُ يمنع من كلمتُه مؤقّتةٌ بـ`403 password_change_required`**
+ * (`TMP`) — **وبوّابةُ التبديل في الويب تقرأ علَمَ `must_change_password`
+ * من `‎/auth/me`.**
+ *
+ * **والعلَمُ يُقنَّع في الردّ حين يكون `security.force_password_change`
+ * مُطفأً** (قرارُ المالك ٢٠٢٦-٠٨-٠٩، **وهو مُطفأٌ في الإنتاج**) — **فلا
+ * تظهر البوّابةُ، ويرى صاحبُ الحساب منعاً بلا طريق.**
+ *
+ * # ولمَ إشارةٌ لا تحويلُ مسار
+ *
+ * **التحويلُ من داخل عميل الـAPI يسرق الملاحةَ من الصفحات** — **وطلبٌ
+ * في الخلفيّة يقذف المستخدمَ من مكانه.** **والإشارةُ تُعلن الواقعةَ
+ * وتتركُ العرضَ لمن يملكه** (`PasswordGate`).
+ *
+ * **ولا تُنقَض سياسةُ المحرّك**: **هي تقرأ ردَّه ولا تستنتج شيئاً** —
+ * **والمنعُ يبقى في المحرّك ولو أخفت الواجهةُ بوّابتَها.**
+ */
+let passwordChangeRequired = false;
+type PwListener = () => void;
+const pwListeners = new Set<PwListener>();
+
+function notePasswordChangeRequired(err: ApiError): void {
+  if (err.status !== 403 || err.body.code !== "password_change_required") return;
+  passwordChangeRequired = true;
+  pwListeners.forEach((fn) => fn());
+}
+
+/** **أقال المحرّكُ «بدّلْ كلمتَك» في هذه الجلسة؟** */
+export function isPasswordChangeRequired(): boolean {
+  return passwordChangeRequired;
+}
+
+/** **يُنسى بعد التبديل** — فتُفتَح اللوحةُ بلا إعادة تحميل. */
+export function clearPasswordChangeRequired(): void {
+  passwordChangeRequired = false;
+  pwListeners.forEach((fn) => fn());
+}
+
+/** يُشترَك ليُعاد الرسمُ عند ورود الإشارة — ويعيد فاسخَ الاشتراك. */
+export function onPasswordChangeRequired(fn: PwListener): () => void {
+  pwListeners.add(fn);
+  return () => pwListeners.delete(fn);
+}
+
 async function rawRequest<T>(path: string, init: RequestInit = {}, token?: string | null): Promise<T> {
   const headers = new Headers(init.headers);
   // FormData يضبط ترويسته بنفسه (حد الأجزاء multipart)
@@ -139,6 +190,7 @@ async function rawRequest<T>(path: string, init: RequestInit = {}, token?: strin
   if (!res.ok || !json || json.error) {
     const err = new ApiError(res.status, json?.error ?? { code: "internal", message_key: "errors.internal" });
     if (json?.step_up) err.stepUp = json.step_up;
+    notePasswordChangeRequired(err);
     throw err;
   }
   return json.data as T;
@@ -287,8 +339,10 @@ export async function apiFile(path: string, init: RequestInit = {}): Promise<Res
     } catch {
       body = undefined;
     }
-    throw new ApiError(res.status,
+    const err = new ApiError(res.status,
       body ?? { code: "internal", message_key: "errors.internal" });
+    notePasswordChangeRequired(err);
+    throw err;
   }
   return res;
 }

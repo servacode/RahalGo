@@ -59,7 +59,7 @@ const ITEMS: readonly NavItem[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, capabilities, capsLoaded } = useAuth();
   if (!user || !isLoggedIn(user)) return null;
   /* ══════════════════════════════════════════════════════════════════
      **و«الرئيسيّة» للزبون، و«لوحتي» لمن له لوحة**
@@ -82,7 +82,8 @@ export function BottomNav() {
      أصلٌ ومسار. **وكتبتُ `String(homeFor(...))` فصار الرابطُ
      `[object Object]`** — زرٌّ يقود إلى صفحةٍ غيرِ موجودة. (كشفه المالك
      ٢٠٢٦-٠٨-١١ حين سأل: «تحقّق إذا كان زرُّ لوحتي يعمل بشكلٍ صحيح».) */
-  const portal = portalFor(user.roles);
+  // **وبالقدرة لا بالاسم** (`WEBA`).
+  const portal = portalFor(user.roles, capabilities, capsLoaded);
   const base: readonly NavItem[] = portal
     ? [
         { href: portal, label: m.site.nav.backToDashboard, icon: IconOverview },

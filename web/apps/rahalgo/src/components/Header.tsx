@@ -120,7 +120,7 @@ export default function Header({
   name?: string;
   logo?: string | null;
 } = {}) {
-  const { user, logout } = useAuth();
+  const { user, logout, capabilities, capsLoaded } = useAuth();
   /* **وبابا الموقع يُقرآن من الهويّة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
      **وهي مقروءةٌ في الخادم ومُمرَّرةٌ قيمةً مبدئيّة**، فلا يظهر الزرُّ
      ثمّ يختفي أمام عين الزائر — **وومضةٌ كهذه أسوأُ من بقائه.** */
@@ -142,12 +142,14 @@ export default function Header({
   // ("profile" حدث محلي يبثّه AccountSettings عند تغيير الصورة أو الرقم)
   useLiveRefresh(["wallet", "profile"], loadSummary);
 
-  const portal = user ? portalFor(user.roles) : null;
+  // **والقدرةُ تقرّر لا اسمُ الدور** (`WEBA`) — **فمن ملك قدرةَ ويبٍ
+  // رأى زرَّ لوحته ولو كان زبوناً أيضاً.**
+  const portal = user ? portalFor(user.roles, capabilities, capsLoaded) : null;
 
   async function backToDashboard() {
     if (!user || !portal) return;
     try {
-      await goTo(homeFor(user.roles));
+      await goTo(homeFor(user.roles, capabilities, capsLoaded));
     } catch {
       /* يبقى في الموقع */
     }

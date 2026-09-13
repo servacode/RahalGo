@@ -8,6 +8,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AuthTransition, type AuthTransitionKind } from "@rahalgo/ui";
 import { authApi, tokenStore, type AuthUser } from "./client";
+import { LEGACY_PANEL_ROLES } from "./webaccess";
 
 interface AuthState {
   user: AuthUser | null;
@@ -147,8 +148,14 @@ export function useAuth(): AuthState {
 export const ROLES = ["customer", "driver", "merchant", "sales", "ops", "finance", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 
-/** أدوار لوحة الإدارة (موظفو المنصة الداخليون). */
-export const PANEL_ROLES: Role[] = ["admin", "ops", "finance"];
+/**
+ * أدوار لوحة الإدارة — **شبكةُ أمانٍ لا قاعدةَ وصول** (`WEBA`).
+ *
+ * **والوصولُ بالقدرة** (`isWebAuthorized`) — **وهذه تُقرأ فقط حين
+ * تتعذّر قراءةُ القدرات.** **والقائمةُ معرَّفةٌ في `webaccess.ts`
+ * وحدَها** — **وقائمتان بالأسماء نفسِها تفترقان.**
+ */
+export const PANEL_ROLES: Role[] = [...LEGACY_PANEL_ROLES] as Role[];
 
 /** hasRole المُتحقِّق الوحيد من الأدوار — بدل canAccessPanel/canAccessPortal/isRep. */
 export function hasRole(user: AuthUser | null, ...roles: Role[]): boolean {

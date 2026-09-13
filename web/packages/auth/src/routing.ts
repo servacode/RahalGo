@@ -3,7 +3,8 @@
  * كل اللوحات متطابقة، والفرق الوحيد بينها الصلاحيات والأقسام؛ فالتوجيه مركزي.
  */
 
-import { api, type AuthUser } from "./client";
+import { api, authApi, type AuthUser } from "./client";
+import { isWebAuthorized } from "./webaccess";
 
 /**
  * هل يحمل أصحابُ الأدوار الأخرى دورَ الزبون أيضاً؟
@@ -78,10 +79,25 @@ export interface Destination {
  * والسائق له تطبيقه منذ الآن: كان يُردّ إلى واجهة الزبون لأنه بلا بيت، فيرى
  * متاجر ولا يرى طلباته.
  */
-export function homeFor(roles: string[]): Destination {
-  const has = (r: string) => roles.includes(r);
+export function homeFor(
+  roles: string[],
+  capabilities: readonly string[] = [],
+  capsLoaded = true,
+): Destination {
+  // ══════════════════════════════════════════════════════════════════
+  // **والقدرةُ تقرّر لا اسمُ الدور** (`WEBA`، ٢٠٢٦-٠٩-١٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وكان الشرطُ ثلاثةَ أسماءٍ مُصرَّفة**: `admin · ops · finance` —
+  // **و`ops` متقاعِدٌ لا يحمله أحد**، **و`operations` و`observability`
+  // ليسا فيها.** **فحسابُ الرصد سيق إلى `/app` وقدرتُه قدرةُ ويب.**
+  //
+  // **ولا مطرحَ ثانياً للقرار**: `isWebAuthorized` هي نفسُها التي
+  // يقرؤها بابُ اللوحة (`canAccessPanel`) — **وقاعدتان تفترقان يومَ
+  // تُبدَّل إحداهما، وقد افترقتا فعلاً يوماً كاملاً.**
+  //
   // **والأصلُ فارغٌ — أي «هنا»**: اللوحاتُ أقسامٌ في التطبيق نفسِه.
-  if (has("admin") || has("ops") || has("finance"))
+  if (isWebAuthorized(roles, capabilities, capsLoaded))
     return { origin: "", path: PANEL_PATHS.admin };
   // ══════════════════════════════════════════════════════════════════
   // **ولا لوحةَ دورٍ على الويب بعد اليوم**
@@ -104,8 +120,12 @@ export function homeFor(roles: string[]): Destination {
  * **وكانت تعيد أصلاً (عنواناً كاملاً)** حين كانت اللوحاتُ تطبيقاتٍ منفصلة.
  * **وصارت مساراً** — ومن قرأها شرطاً («أله لوحة؟») لا يتبدّل عنده شيء.
  */
-export function portalFor(roles: string[]): string | null {
-  const path = homeFor(roles).path;
+export function portalFor(
+  roles: string[],
+  capabilities: readonly string[] = [],
+  capsLoaded = true,
+): string | null {
+  const path = homeFor(roles, capabilities, capsLoaded).path;
   return path === PANEL_PATHS.customer ? null : path;
 }
 
@@ -125,7 +145,27 @@ export async function goTo(dest: Destination, currentOrigin?: string): Promise<v
 
 /** يوجّه المستخدم لوجهته حسب دوره بعد تسجيل دخول ناجح. */
 export async function routeByRole(user: AuthUser, next?: string): Promise<void> {
-  const dest = homeFor(user.roles);
+  // ══════════════════════════════════════════════════════════════════
+  // **والقدراتُ تُسأل من المحرّك هنا** — `R15`/`ADG-1`
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **ولا تُقرأ من مُزوِّد الحال**: **الدخولُ توّاً وقع، والمُزوِّدُ
+  // يقرؤها عند إقلاع الصفحة** — **وهذا التوجيهُ يسبقه.**
+  //
+  // **وبابُ القدرات مفتوحٌ ولو كانت الكلمةُ مؤقّتةً** — **وهو من
+  // الأبواب الأربعة المستثناة** (`TMP`، ٢٠٢٦-٠٩-١٣)، **فلا يُساق
+  // صاحبُ الكلمة المؤقّتة إلى `/app` لأنّ نداءَه رُدّ.**
+  //
+  // **وسقوطُ النداء لا يُخرِج أحداً**: **يُقال «لم تُقرَأ»** فتعمل
+  // شبكةُ الأمان القديمة (الأسماءُ) — **ولا يُحبَس الأدمنُ بانقطاع.**
+  let caps: string[] = [];
+  let capsLoaded = true;
+  try {
+    caps = await authApi.capabilities();
+  } catch {
+    capsLoaded = false;
+  }
+  const dest = homeFor(user.roles, caps, capsLoaded);
   // `next` يُحترم فقط كمسار نسبي داخل الموقع الحالي (منعاً لإعادة توجيه مفتوحة)
   if (next && next.startsWith("/") && !next.startsWith("//")) {
     window.location.href = next;

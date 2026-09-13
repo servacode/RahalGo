@@ -10,11 +10,17 @@
  * تُلفّ حول محتوى أي بوابة: <PasswordGate>{children}</PasswordGate>
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Alert, Button, Input, PasswordMeter, IconTile, IconLock, IconWarning, IconCheck, usePlatform } from "@rahalgo/ui";
 import { useAuth } from "./provider";
-import { api, authApi } from "./client";
+import {
+  api,
+  authApi,
+  clearPasswordChangeRequired,
+  isPasswordChangeRequired,
+  onPasswordChangeRequired,
+} from "./client";
 import { errText } from "./LoginCard";
 
 const m = getMessages(defaultLocale);
@@ -32,8 +38,24 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // ══════════════════════════════════════════════════════════════════
+  // **وردُّ المحرّك سببٌ ثانٍ لفتح البوّابة** (`WEBA`، ٢٠٢٦-٠٩-١٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والعلَمُ في `‎/auth/me` يُقنَّع حين يكون إعدادُ الإلحاح مُطفأً**
+  // (قرارُ المالك ٢٠٢٦-٠٨-٠٩، **وهو مُطفأٌ في الإنتاج**) — **فكان
+  // صاحبُ الكلمة المؤقّتة يُمنَع بـ٤٠٣ ولا يرى بوّابةً تقول له ما
+  // يفعل.**
+  //
+  // **والمحرّكُ لا يُقنّع منعَه**: `403 password_change_required` —
+  // **فتُفتَح به البوّابةُ ولو أخفى الردُّ العلَم.**
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    setBlocked(isPasswordChangeRequired());
+    return onPasswordChangeRequired(() => setBlocked(isPasswordChangeRequired()));
+  }, []);
 
-  if (loading || !user?.must_change_password) return <>{children}</>;
+  if (loading || !(user?.must_change_password || blocked)) return <>{children}</>;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +69,11 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ password: next, current_password: current }),
       });
       // نعيد قراءة الحساب: الخادم رفع علامة الإجبار فتُفتح اللوحة تلقائياً
+      //
+      // **وتُنسى الإشارةُ معها** — **وإلّا بقيت البوّابةُ مفتوحةً بعد
+      // أن زال سببُها**، ولا مخرجَ إلّا بإعادة تحميل.
+      clearPasswordChangeRequired();
+      setBlocked(false);
       setUser(await authApi.me());
     } catch (err) {
       setError(errText(err));

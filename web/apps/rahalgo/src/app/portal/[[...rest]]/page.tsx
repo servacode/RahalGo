@@ -36,7 +36,7 @@ import { useAuth, portalFor, PANEL_PATHS } from "@rahalgo/auth";
 import { LoadingState } from "@rahalgo/ui";
 
 export default function PortalRedirect() {
-  const { user, loading } = useAuth();
+  const { user, loading, capabilities, capsLoaded } = useAuth();
   const router = useRouter();
   const params = useParams();
 
@@ -64,7 +64,8 @@ export default function PortalRedirect() {
 
        **وأمسك الحارسُ هذا** (`TestNotificationHrefsExist` ٢٠٢٦-٠٨-٢٧):
        سبعُ نقاطٍ في المحرّك كانت تشير إلى صفحاتٍ حُذفت. */
-    const base = portalFor(user.roles) ?? "/";
+    // **وبالقدرة لا بالاسم** (`WEBA`).
+    const base = portalFor(user.roles, capabilities, capsLoaded) ?? "/";
     if (base === PANEL_PATHS.app) {
       router.replace(PANEL_PATHS.app);
       return;
