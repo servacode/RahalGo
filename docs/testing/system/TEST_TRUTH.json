@@ -31,8 +31,8 @@
     "setting_defs": 127,
     "behaviour_settings": 103,
     "order_fields": 75,
-    "test_files": 318,
-    "test_funcs": 1217
+    "test_files": 319,
+    "test_funcs": 1227
   },
   "flows": [
     {
@@ -16192,6 +16192,66 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestSRV10_ValidOrderStillWorks",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV1_InsideAndOutsideAndBoundary",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV2_DisabledZoneRejects",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV3_MissingAndMalformedPoint",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV4_CustomOrderFollowsCoverage",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV5_LaunchAndCoverageAreDistinct",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV6_RejectedOrderLeavesNoTrace",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV7_AddressChangeIsRevalidated",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV8_PolygonZoneIsHonoured",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSRV9_PricingReadsTheSamePoint",
+      "file": "internal/qa/serviceability_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestR16_R8_BothDownIsSafeFailure",

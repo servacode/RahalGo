@@ -72,6 +72,40 @@ func srvOpenAllLaunch(hh *Harness) {
 	}
 }
 
+// onlyZone **يعزل التغطيةَ ويرسم دائرةً واحدةً، ويُثبت أنّها وحدَها.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وشرطٌ مسبقٌ يُثبَت لا يُفترَض** (٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`New(t)` يزرع «منطقة QA» بخمسةٍ وعشرين كيلومتراً مرّةً في العمليّة**
+// (`seedZone`) — **وجدولٌ فارغٌ يُغطّي كلَّ مكان** (قرارُ المالك
+// ٢٠٢٦-٠٨-١٨).
+//
+// **فمُعامَلٌ يفترض عزلَه يقرأ «دمشق داخلَ التغطية» يوماً** — **ويبدو
+// عطباً في المنتَج وهو فوضى مُعامَلات.** (وقع ٢٠٢٦-٠٩-١٣ في مصفوفةٍ
+// كاملةٍ ومرّ منفرداً.)
+//
+// **فيُقاس الشرطُ ويُسمّى عند خرقه.**
+func onlyZone(t *testing.T, hh *Harness, lat, lng float64, radius int) string {
+	t.Helper()
+	isolateZones(t, hh)
+	id := makeRadiusZone(t, hh, lat, lng, radius)
+	var n int
+	if err := hh.Pool.QueryRow(ctxBG(),
+		`SELECT count(*) FROM delivery_zones WHERE active`).Scan(&n); err != nil {
+		t.Fatalf("عدُّ المناطق الفعّالة: %v", err)
+	}
+	if n != 1 {
+		var names string
+		_ = hh.Pool.QueryRow(ctxBG(),
+			`SELECT string_agg(name || ' / ' || coalesce(radius_m,0)::text, ' · ')
+			   FROM delivery_zones WHERE active`).Scan(&names)
+		t.Fatalf("**شرطُ العزل خُرق**: %d منطقةً فعّالةً لا واحدة — %s · والقياسُ بعدها لا يقول شيئاً عن المنتَج.", n, names)
+	}
+	return id
+}
+
 // countOrders عددُ طلبات زبونٍ — **لِيُقاس أنّ المردودَ لا يُنشئ صفّاً.**
 func countOrders(t *testing.T, hh *Harness, customerID string) int {
 	t.Helper()
@@ -90,8 +124,7 @@ func countOrders(t *testing.T, hh *Harness, customerID string) int {
 func TestSRV1_InsideAndOutsideAndBoundary(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	onlyZone(t, hh, srvLat, srvLng, 1000)
 
 	u, tok := capUser(t, hh, "customer")
 
@@ -163,8 +196,7 @@ func TestSRV1_InsideAndOutsideAndBoundary(t *testing.T) {
 func TestSRV2_DisabledZoneRejects(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	id := makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	id := onlyZone(t, hh, srvLat, srvLng, 1000)
 	_, tok := capUser(t, hh, "customer")
 
 	if r := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, srvLat, srvLng)); r.Err() == "out_of_zone" {
@@ -189,8 +221,7 @@ func TestSRV2_DisabledZoneRejects(t *testing.T) {
 func TestSRV3_MissingAndMalformedPoint(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 50000)
+	onlyZone(t, hh, srvLat, srvLng, 50000)
 	u, tok := capUser(t, hh, "customer")
 	before := countOrders(t, hh, u.ID)
 
@@ -226,8 +257,7 @@ func TestSRV3_MissingAndMalformedPoint(t *testing.T) {
 func TestSRV4_CustomOrderFollowsCoverage(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	onlyZone(t, hh, srvLat, srvLng, 1000)
 	u, tok := capUser(t, hh, "customer")
 
 	if r := hh.POST("/api/v1/orders/custom", tok, srvCustomBody(srvLat, srvLng)); r.Code >= 400 {
@@ -250,8 +280,7 @@ func TestSRV4_CustomOrderFollowsCoverage(t *testing.T) {
 // خلطهما أخبر زبوناً داخلَ التغطية أنّه خارجَها.**
 func TestSRV5_LaunchAndCoverageAreDistinct(t *testing.T) {
 	hh := New(t)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	onlyZone(t, hh, srvLat, srvLng, 1000)
 	_, tok := capUser(t, hh, "customer")
 
 	// ── ١٢ · بابٌ مغلقٌ وداخلَ التغطية ⇒ ردُّ إطلاق ─────────────
@@ -283,8 +312,7 @@ func TestSRV5_LaunchAndCoverageAreDistinct(t *testing.T) {
 func TestSRV6_RejectedOrderLeavesNoTrace(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	onlyZone(t, hh, srvLat, srvLng, 1000)
 	u, tok := capUser(t, hh, "customer")
 
 	base := financialBaseline(t, hh)
@@ -322,8 +350,7 @@ func TestSRV6_RejectedOrderLeavesNoTrace(t *testing.T) {
 func TestSRV7_AddressChangeIsRevalidated(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	onlyZone(t, hh, srvLat, srvLng, 1000)
 	u, tok := capUser(t, hh, "customer")
 
 	// **والطلبُ الأوّلُ بنقطةٍ داخل** — فالسلّةُ صالحةٌ حينها.
@@ -375,8 +402,7 @@ func TestSRV8_PolygonZoneIsHonoured(t *testing.T) {
 func TestSRV9_PricingReadsTheSamePoint(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 1000)
+	onlyZone(t, hh, srvLat, srvLng, 1000)
 
 	for _, c := range []struct {
 		lat, lng float64
@@ -448,8 +474,7 @@ func TestSRV9_PricingReadsTheSamePoint(t *testing.T) {
 func TestSRV10_ValidOrderStillWorks(t *testing.T) {
 	hh := New(t)
 	srvOpenAllLaunch(hh)
-	isolateZones(t, hh)
-	makeRadiusZone(t, hh, srvLat, srvLng, 50000)
+	onlyZone(t, hh, srvLat, srvLng, 50000)
 	u, tok := capUser(t, hh, "customer")
 	before := countOrders(t, hh, u.ID)
 
