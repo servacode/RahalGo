@@ -104,7 +104,11 @@ fun ClientsScreen(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit = {
         }
 
         if (list.isEmpty() && vm.leads.isEmpty()) {
-            Empty(stringResource(R.string.cl_none))
+            // **ولا متجرَ بعد — وماذا يفعل** (٢٠٢٦-٠٩-١٣).
+            Empty(
+                text = stringResource(R.string.cl_none),
+                hint = stringResource(R.string.cl_none_hint),
+            )
             return@Screen
         }
 

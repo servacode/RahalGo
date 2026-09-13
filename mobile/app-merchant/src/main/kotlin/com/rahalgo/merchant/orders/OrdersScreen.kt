@@ -79,7 +79,14 @@ fun OrdersScreen(vm: OrdersViewModel) {
             ScreenTitle(stringResource(R.string.nav_orders_mine), stringResource(R.string.orders_hint))
 
             if (vm.orders.isEmpty()) {
-                Empty(stringResource(R.string.orders_empty))
+                // **ولا طلبَ الآن — وماذا يفعل** (٢٠٢٦-٠٩-١٣).
+                //
+                // **وصاحبُ المتجر ينظر إلى سطرٍ يقول «لا طلبات»** ولا
+                // يعرف أمفتوحٌ متجرُه أم مغلق. **فيُقال له أين يتأكّد.**
+                Empty(
+                    text = stringResource(R.string.orders_empty),
+                    hint = stringResource(R.string.orders_empty_hint),
+                )
                 return@Screen
             }
 

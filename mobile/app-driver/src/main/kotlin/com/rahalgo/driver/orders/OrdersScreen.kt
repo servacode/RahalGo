@@ -3,6 +3,7 @@ package com.rahalgo.driver.orders
 import androidx.compose.foundation.background
 import com.rahalgo.ui.CountdownButton
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.Empty
 import com.rahalgo.ui.minutes
 import com.rahalgo.ui.dist
 import androidx.compose.foundation.border
@@ -209,7 +210,19 @@ private fun WhyNoOrders(state: OrdersState) {
     }
 
     if (reason == null) {
-        Empty(stringResource(R.string.orders_no_offers))
+        // ══════════════════════════════════════════════════════════
+        // **ولا عملَ الآن — وماذا يفعل** (٢٠٢٦-٠٩-١٣، شرطُ المالك)
+        // ══════════════════════════════════════════════════════════
+        //
+        // **وسائقٌ في دوامه ينظر إلى سطرٍ يقول «لا طلبات»** ولا يعرف
+        // أيَنتظر أم يعود. **فيُقال له إنّ الطابورَ يُحدَّث وحدَه.**
+        //
+        // **والمكوّنُ المشترك لا محلّيٌّ يحجبه** — **ومكوّنان لشيءٍ
+        // واحدٍ يفترقان يومَ يُبدَّل أحدُهما.**
+        Empty(
+            text = stringResource(R.string.orders_no_offers),
+            hint = stringResource(R.string.orders_no_offers_hint),
+        )
         return
     }
 
@@ -241,14 +254,6 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-@Composable
-private fun Empty(text: String) {
-    Text(
-        text = text,
-        color = Rahal.colors.inkMuted,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-    )
-}
 
 /**
  * ══════════════════════════════════════════════════════════════════════

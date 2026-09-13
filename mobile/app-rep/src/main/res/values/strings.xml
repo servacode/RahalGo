@@ -18,6 +18,7 @@
 
     <!-- **عملائي** -->
     <string name="cl_pending">ينتظرون البت (%1$s)</string>
+    <string name="cl_none_hint">سجّل متجرك الأول من زرّ الإضافة في الأعلى</string>
     <string name="cl_none">لم تسجل عميلا بعد — ابدأ من «إضافة عميل»</string>
     <string name="cl_waiting">بانتظار موافقة الإدارة</string>
     <string name="cl_rejected">مرفوض</string>

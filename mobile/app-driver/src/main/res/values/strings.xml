@@ -76,6 +76,7 @@
     <string name="shift_off_hint">لا يمكنك استقبال الطلبات — أنت خارج العمل</string>
     <string name="shift_active_orders">معك %1$s من %2$s طلبات</string>
     <!-- الطلبات -->
+    <string name="orders_no_offers_hint">الطابور يُحدَّث وحده — أبقِ الشاشة مفتوحة</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
     <string name="order_cash_due">تقبض نقدا</string>
     <string name="order_prepaid">مدفوع سلفا</string>

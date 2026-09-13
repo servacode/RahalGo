@@ -17,6 +17,7 @@
     <string name="tab_account">حسابي</string>
 
     <string name="orders_hint">اقبل الطلب ثم حضّره ثم أعلن جاهزيته</string>
+    <string name="orders_empty_hint">يصلك الطلب بإشعار — وتأكّد أن متجرك مفتوح من «القائمة»</string>
     <string name="orders_empty">لا طلبات الآن — سنُعلمك حين يصل طلب</string>
 
     <string name="order_accept">استلمت الطلب</string>
