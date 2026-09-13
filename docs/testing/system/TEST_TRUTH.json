@@ -1403,6 +1403,12 @@
         "TestR13_T7_RevocationSurvivesCacheLoss",
         "TestRACE_SessionRevokedDuringRequest",
         "TestRBAC_Matrix_Measured",
+        "TestSEC1_CurrentLogoutTouchesOneFamilyOnly",
+        "TestSEC2_LogoutAllClearsEveryDestination",
+        "TestSEC3_AdminResetClearsEveryDestination",
+        "TestSEC4_SelfPasswordChangeKeepsItsOwnDestination",
+        "TestSEC5_BlockedAccountReceivesNothing",
+        "TestSEC8_SelfServiceResetScopeIsMeasured",
         "TestR15_A10_OrdinaryActionsUnaffected",
         "TestR15_A11_GrantSemanticsMeasured",
         "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
@@ -1746,8 +1752,11 @@
       "gaps": [
         "XG-49"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSEC6_AdminCannotMintDeletedState",
+        "TestSEC7_SelfDeleteRevokesEverything"
+      ],
+      "status": "COVERED"
     }
   ],
   "defects": [
@@ -2354,6 +2363,12 @@
         "TestR13_T5_NewPasswordStillLogsIn",
         "TestR13_T6_ResetVsRefreshRace",
         "TestR13_T7_RevocationSurvivesCacheLoss",
+        "TestSEC1_CurrentLogoutTouchesOneFamilyOnly",
+        "TestSEC2_LogoutAllClearsEveryDestination",
+        "TestSEC3_AdminResetClearsEveryDestination",
+        "TestSEC4_SelfPasswordChangeKeepsItsOwnDestination",
+        "TestSEC7_SelfDeleteRevokesEverything",
+        "TestSEC8_SelfServiceResetScopeIsMeasured",
         "TestXG40_Contract_KeepMineRevokeOthers",
         "TestXG40_X10_StrongerRevocationWins",
         "TestXG40_X10b_BlockBeatsKeptSession",
@@ -2411,6 +2426,7 @@
         "TestSampleFactory_ValidToken",
         "TestRACE_SessionRevokedDuringRequest",
         "TestRBAC_Matrix_Measured",
+        "TestSEC5_BlockedAccountReceivesNothing",
         "TestR15_A10_OrdinaryActionsUnaffected",
         "TestR15_A11_GrantSemanticsMeasured",
         "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
@@ -2459,6 +2475,10 @@
         "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
         "TestD19_ServerDeclaresAccessExpiry",
         "TestRACE_SessionRevokedDuringRequest",
+        "TestSEC1_CurrentLogoutTouchesOneFamilyOnly",
+        "TestSEC2_LogoutAllClearsEveryDestination",
+        "TestSEC5_BlockedAccountReceivesNothing",
+        "TestSEC7_SelfDeleteRevokesEverything",
         "TestR16_R8_BothDownIsSafeFailure",
         "TestR16_STG_RedisOutageAuthorityHolds",
         "TestR16_IssuedTokensAlwaysCarrySession",
@@ -3068,8 +3088,10 @@
       "title": "الحذفُ الذاتيُّ يُبطل الجلسات ولا حارسَ دائمٌ يُثبته",
       "severity": "HIGH",
       "fixed": "‏`TestSEC7_SelfDeleteRevokesEverything` — يمشي المسارَ الحقيقيَّ (طلبُ رمزٍ ⇒ تأكيدٌ برمزٍ مبصومٍ كما يبصمه المحرّك ⇒ تجريد) ويقرأ الثلاثةَ معاً لعائلتين: رمزُ الوصول يُردّ · ولا صفَّ تجديدٍ حيّ · ولا وجهةَ دفعٍ باقية · والحالُ `deleted`. وكُشف به عطبٌ حقيقيٌّ لم يكن مسجَّلاً: وجهاتُ الدفع كانت تبقى بعد الحذف، فأُصلح في الدورة نفسِها. وشاهدٌ سالبٌ: نزعُ قطعِ الوجهات يُسقط الحارسَ ويُسمّي الخرق.",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSEC7_SelfDeleteRevokesEverything"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-46",
@@ -14538,25 +14560,58 @@
       "name": "TestENVG1_ProductionRefusesStagingIdentity",
       "file": "internal/qa/promotion_env_guard_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L5",
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "process"
+      ],
+      "orphan": false
     },
     {
       "name": "TestENVG2_MatchingEnvironmentPassesTheGate",
       "file": "internal/qa/promotion_env_guard_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L5",
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "process"
+      ],
+      "orphan": false
     },
     {
       "name": "TestENVG3_MissingTargetEnvRefuses",
       "file": "internal/qa/promotion_env_guard_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L5",
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "process"
+      ],
+      "orphan": false
     },
     {
       "name": "TestENVG4_EveryCallerDeclaresItsEnvironment",
       "file": "internal/qa/promotion_env_guard_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L5",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "source"
+      ],
+      "orphan": false
     },
     {
       "name": "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
@@ -15558,49 +15613,179 @@
       "name": "TestSEC1_CurrentLogoutTouchesOneFamilyOnly",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC2_LogoutAllClearsEveryDestination",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC3_AdminResetClearsEveryDestination",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC4_SelfPasswordChangeKeepsItsOwnDestination",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC5_BlockedAccountReceivesNothing",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC6_AdminCannotMintDeletedState",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-36"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "evidence": [
+        "http"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC7_SelfDeleteRevokesEverything",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-36"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "gaps": [
+        "XG-49"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSEC8_SelfServiceResetScopeIsMeasured",
       "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "http",
+        "sql"
+      ],
+      "orphan": false
     },
     {
       "name": "TestXG29_FailureBeforeCommitLeavesNothing",
@@ -19903,7 +20088,6 @@
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
-    "F-36 (حذفُ الحساب بطلب صاحبه) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
     "R12 — لا اختبارَ يحسمه بعد",
     "R17 — لا اختبارَ يحسمه بعد",

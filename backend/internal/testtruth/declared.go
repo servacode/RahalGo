@@ -1642,6 +1642,63 @@ type TestDecl struct {
 //
 // **ويُملأ مرحلةً بعد مرحلة** — **و`P-1` أوّلُ ساكنيه.**
 var TestMap = map[string]TestDecl{
+	// ══════════════════════════════════════════════════════════════
+	// **بوّابةُ ما قبل الإطلاق — مصفوفةُ الإبطال** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وثلاثةٌ منها كشفت أعطاباً حقيقيّةً لا تحصيلَ حاصل**: وجهاتُ
+	// الدفع كانت تبقى بعد كلّ إبطالٍ شامل (`SEC2`/`SEC3`/`SEC5`/`SEC7`)،
+	// **والاستعادةُ الذاتيّةُ كانت تُبطل نوعَ العميل الطالبِ وحدَه**
+	// (`SEC8`).
+	"TestSEC1_CurrentLogoutTouchesOneFamilyOnly": {
+		Level: L4, Flows: []string{"F-30"}, Risks: []string{"R13", "R16"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+	"TestSEC2_LogoutAllClearsEveryDestination": {
+		Level: L4, Flows: []string{"F-30"}, Risks: []string{"R13", "R16"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+	"TestSEC3_AdminResetClearsEveryDestination": {
+		Level: L4, Flows: []string{"F-30"}, Risks: []string{"R13"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+	"TestSEC4_SelfPasswordChangeKeepsItsOwnDestination": {
+		Level: L4, Flows: []string{"F-30"}, Risks: []string{"R13"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+	"TestSEC5_BlockedAccountReceivesNothing": {
+		Level: L4, Flows: []string{"F-30"}, Risks: []string{"R15", "R16"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+	"TestSEC6_AdminCannotMintDeletedState": {
+		Level: L4, Flows: []string{"F-36"},
+		Modes: []string{"FULL", "SECURITY"}, Evidence: []string{"http"},
+	},
+	// **وهذا حارسُ `XG-49`** — **والفجوةُ تُغلَق به لا بعلَم.**
+	"TestSEC7_SelfDeleteRevokesEverything": {
+		Level: L4, Flows: []string{"F-36"}, Gaps: []string{"XG-49"},
+		Risks: []string{"R13", "R16"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+	"TestSEC8_SelfServiceResetScopeIsMeasured": {
+		Level: L4, Flows: []string{"F-30"}, Risks: []string{"R13"},
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}, Evidence: []string{"http", "sql"},
+	},
+
+	// ── حارسُ بيئةِ الترقية — ويُشغَّل السكربتُ ولا يُقرأ ─────────
+	"TestENVG1_ProductionRefusesStagingIdentity": {
+		Level: L5, Modes: []string{"FULL", "RELEASE"}, Evidence: []string{"process"},
+	},
+	"TestENVG2_MatchingEnvironmentPassesTheGate": {
+		Level: L5, Modes: []string{"FULL", "RELEASE"}, Evidence: []string{"process"},
+	},
+	"TestENVG3_MissingTargetEnvRefuses": {
+		Level: L5, Modes: []string{"FULL", "RELEASE"}, Evidence: []string{"process"},
+	},
+	"TestENVG4_EveryCallerDeclaresItsEnvironment": {
+		Level: L5, Modes: []string{"FAST", "FULL", "RELEASE"}, Evidence: []string{"source"},
+	},
+
 	// ── `P-1` · عقدُ الخصوصيّة ────────────────────────────────────
 	"TestOrderFieldsAllClassified": {
 		Level: L5, Purpose: PurposeGenerator,

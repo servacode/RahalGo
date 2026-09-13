@@ -28,9 +28,9 @@
 
 ```
 TOTAL      = 1247
-MAPPED     = 426
+MAPPED     = 438
 INFRA      = 123
-ORPHAN     = 698
+ORPHAN     = 686
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -38,7 +38,7 @@ ORPHAN     = 698
 
 | الحزمة | يتيمٌ |
 |---|---|
-| `qa` | 227 |
+| `qa` | 215 |
 | `server` | 120 |
 | `routing` | 76 |
 | `orders_test` | 60 |
@@ -55,10 +55,10 @@ ORPHAN     = 698
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 36 | 32 | 4 |
+| **التدفّقات** | 36 | 33 | 3 |
 | **العيوب** | 28 | 22 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 47 | 28 | 19 |
+| **فجواتُ العقد** | 47 | 29 | 18 |
 | **إعداداتُ السلوك** | 103 | 13 | 90 |
 
 ---
@@ -138,7 +138,7 @@ ORPHAN     = 698
 | **XG-44** | `MEDIUM` | — | `COVERED` | `TestXG44_SettleWaitsUntilTheTransferAttemptEnds` |
 | **XG-47** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-48** | `HIGH` | — | `COVERED` | `TestXG48_CustomerCancelNeedsOneConnection` · `TestXG48_DeliverySettlementNeedsOneConnection` · `TestXG48_FailedDeliveryCompensationNeedsOneConnection` · `TestXG48_TransitionBothModesNeedOneConnection` · `TestXG48_TransitionUnderRepetitionOnOneConnection` |
-| **XG-49** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
+| **XG-49** | `HIGH` | — | `COVERED` | `TestSEC7_SelfDeleteRevokesEverything` |
 | **XG-46** | `HIGH` | — | `COVERED` | `TestXG46_DriverAcceptNeedsOneConnection` · `TestXG46_OrderCreateNeedsOneConnection` |
 | **XG-45** | `MEDIUM` | — | `COVERED` | `TestXG45_EveryMobileReachableCodeHasArabic` |
 | **XG-42** | `MEDIUM` | — | `COVERED` | `TestXG42_CapabilityUnionCustomRoleAndRevoke` · `TestXG42_ContactFieldsFollowCapabilityNotRoute` |
@@ -156,7 +156,7 @@ ORPHAN     = 698
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 19
+COVERAGE GAPS    = 18
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -170,7 +170,6 @@ COVERAGE GAPS    = 19
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
-- F-36 (حذفُ الحساب بطلب صاحبه) — لا اختبارَ مرتبطٌ به
 - R1 — لا اختبارَ يحسمه بعد
 - R12 — لا اختبارَ يحسمه بعد
 - R17 — لا اختبارَ يحسمه بعد
