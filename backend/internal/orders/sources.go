@@ -160,6 +160,33 @@ type QuoteResult struct {
 	// SourcesFee ما زِيد لأجل المصادر الإضافية — وصفرٌ حين لا يكلّف.
 	SourcesFee int64 `json:"sources_fee"`
 	Total      int64 `json:"total"`
+
+	// ══════════════════════════════════════════════════════════════
+	// **وأيُوصَّل إلى هذه النقطة؟** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكانت التسعيرةُ تصمت**: خارجَ التغطية تضع الرسمَ صفراً وتردّ
+	// ٢٠٠ — **فالسلّةُ تُعلن سعراً لعنوانٍ لن نُوصّل إليه**، ويُردّ
+	// الطلبُ عند الإتمام. **وقِيس ٢٠٢٦-٠٩-١٣: التسعيرةُ ٢٠٠ لدمشق
+	// والإنشاءُ `out_of_zone`.**
+	//
+	// **والتسعيرةُ لا تُسقَط بخطأ** — **وسلّةٌ تنهار لأنّ الدبّوسَ لم
+	// يُوضع بعد سلّةٌ لا تُستعمل** (القرارُ القائم، ويبقى). **بل
+	// تُخبِر**: حقلٌ يقول، والشاشةُ تقرؤه.
+	//
+	// **وحقلٌ يُضاف لا عقدٌ يُكسَر** — **وعميلٌ قديمٌ لا يقرؤه يبقى
+	// يعمل كما كان**، والمحرّكُ يردّ الطلبَ عند الإنشاء كما يردّه اليوم.
+	Serviceable bool `json:"serviceable"`
+
+	// ServiceableReason **ولِمَ لا** — وفارغٌ يعني «يُوصَّل».
+	//
+	//	""            يُوصَّل
+	//	"bad_point"   لم يُحدَّد الموضعُ بعد — **ليس رفضاً**
+	//	"out_of_zone" خارجَ التغطية — **رفضٌ سيقع عند الإتمام**
+	//
+	// **والرمزُ رمزُ الخطأ نفسُه** — فتُترجمه الشاشةُ بخريطتها القائمة،
+	// **ولا نصَّ ثانٍ يُكتب.**
+	ServiceableReason string `json:"serviceable_reason,omitempty"`
 	// Sources عددُ المطابخ، وسقفُها، وهل تجاوزته.
 	Sources    int  `json:"sources"`
 	MaxSources int  `json:"max_sources"`
@@ -197,13 +224,29 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 	}
 	out.Subtotal = subtotal
 
-	if z, err := s.DeliveryAt(ctx, s.db, lat, lng); err == nil {
+	// **ونقطةٌ ليست نقطةً لا تُسأل عنها القاعدة** — **وتُقال باسمها.**
+	if !ValidPoint(lat, lng) {
+		out.BaseFee = 0
+		out.Serviceable = false
+		out.ServiceableReason = "bad_point"
+	} else if z, err := s.DeliveryAt(ctx, s.db, lat, lng); err == nil {
 		out.BaseFee = z.Fee
-	} else {
+		out.Serviceable = true
+	} else if errors.Is(err, ErrOutOfZone) {
 		// **خارجَ التغطية ليس خطأً في التسعيرة** — الرسمُ يبقى صفراً ويُردّ
 		// الطلبُ عند الإنشاء بـ`out_of_zone`. **وسلّةٌ تنهار لأن الدبوسَ لم
 		// يُوضع بعد سلّةٌ لا تُستعمل.**
+		//
+		// **لكنّها تُخبِر الآن** (٢٠٢٦-٠٩-١٣) — **فلا تُعلن سعراً لعنوانٍ
+		// لن نُوصّل إليه ثمّ يُردّ عند الإتمام.**
 		out.BaseFee = 0
+		out.Serviceable = false
+		out.ServiceableReason = "out_of_zone"
+	} else {
+		// **وعطبٌ في القراءة ليس حكماً** — **ولا يُقال «يُوصَّل» لمن لم
+		// يُسأل عنه أحد.**
+		out.BaseFee = 0
+		out.Serviceable = false
 	}
 	out.SourcesFee = s.extraSourceFee(ctx, src)
 	out.DeliveryFee = out.BaseFee + out.SourcesFee
