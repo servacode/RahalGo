@@ -31,8 +31,8 @@
     "setting_defs": 127,
     "behaviour_settings": 103,
     "order_fields": 75,
-    "test_files": 319,
-    "test_funcs": 1227
+    "test_files": 320,
+    "test_funcs": 1235
   },
   "flows": [
     {
@@ -9195,6 +9195,54 @@
     {
       "name": "TestCONTRACT_ModelsAreParsed",
       "file": "internal/qa/contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC1_NoZonesAtAllIsClosed",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC2_AllDisabledIsClosed",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC3_MalformedZonesAreNotCoverage",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC4_FourStatesAreDistinct",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC5_UsableCoverageStillWorks",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC6_UnavailableLeavesNoTrace",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC7_QuoteSaysConfigNotGeography",
+      "file": "internal/qa/coverage_failclosed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCFC8_DestinationCoherence",
+      "file": "internal/qa/coverage_failclosed_test.go",
       "package": "qa",
       "orphan": true
     },
