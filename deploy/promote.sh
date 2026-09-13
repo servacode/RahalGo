@@ -53,6 +53,28 @@ if [ -n "$EXPECT" ] && [ "$ACTUAL" != "$EXPECT" ]; then
 fi
 echo "PREFLIGHT_IMAGE_ID=$ACTUAL"
 
+# ── ٢ب · **ولا يُبدَّل الإنتاجُ إلى أثرٍ لا يقول ما هو** (٢٠٢٦-٠٩-١٣)
+#
+# **وحارسُ الهويّة كان بعدَ `up -d`** — **فيكشف العطبَ والإنتاجُ صار
+# عليه.** **وكشفٌ بعد الوقوع إنذارٌ لا منع.**
+#
+# **ويُسأل الأثرُ نفسُه قبل التبديل** — بلا قاعدةٍ ولا شبكةٍ ولا
+# إعداد: `-identity` يخرج بـ٣ إن كان الختمُ فارغاً.
+#
+# **وقِيس ٢٠٢٦-٠٩-١٣**: أثرٌ رُقّي إلى الإنتاج بهويّةٍ فارغة لأنّ
+# سكربتاً عارضاً تجاوز `build-artifact.sh`. **ولم يقف شيءٌ في وجهه
+# قبل التبديل.**
+IDOUT="$(docker run --rm --entrypoint /app/api "$IMAGE" -identity 2>&1)" || {
+	echo "$IDOUT" | sed 's/^/    /' >&2
+	fail "**أثرٌ بلا هويّةٍ مختومة**: $IMAGE — **ولا يُرقَّى ما لا يقول ما هو.**"
+}
+PREC="$(printf '%s' "$IDOUT" | grep -o '"source_commit": *"[^"]*"' | cut -d'"' -f4)"
+PREB="$(printf '%s' "$IDOUT" | grep -o '"build_id": *"[^"]*"' | cut -d'"' -f4)"
+[ "${#PREC}" -eq 40 ] || fail "**ختمُ الالتزام ليس بصمةً كاملة**: '$PREC'"
+[ -n "$PREB" ] || fail "**ختمُ البناء فارغ.**"
+echo "PREFLIGHT_SOURCE_COMMIT=$PREC"
+echo "PREFLIGHT_BUILD_ID=$PREB"
+
 # ── ٣ · النشرُ — المحرّكُ وحدَه، بلا بناءٍ وبلا تبعيّات ──────────────
 export RAHALGO_API_IMAGE="$IMAGE"
 docker compose -f "$COMPOSE" --env-file "$ENVFILE" up -d --no-build --no-deps api

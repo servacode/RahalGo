@@ -32,7 +32,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-ROOT="$(cd .. && pwd)"
+ROOT="${SRC_ROOT:-$(cd .. && pwd)}"
 FORCE=""
 [ "${1:-}" = "--force-tag" ] && FORCE="yes"
 # **والمكوّنُ افتراضُه الاثنان** — **وأثرٌ ناقصٌ يُنشَر نصفَ إصدار.**
@@ -45,9 +45,39 @@ if [ -n "$(git -C "$ROOT" status --porcelain)" ]; then
 	exit 2
 fi
 
-SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+# ── ٢ · وهويّةُ المصدر — من المستودع أو من بيانٍ صريح ────────────────
+#
+# ══════════════════════════════════════════════════════════════════════
+# **ولماذا وضعُ الأرشيف** (٢٠٢٦-٠٩-١٣)
+# ══════════════════════════════════════════════════════════════════════
+#
+# **والمستودعُ ليس على خادم الإنتاج** — يصل المصدرُ أرشيفَ `git`
+# بعينه. **فهذا الملفُّ كان لا يعمل هناك**، **فكُتبت سكربتاتٌ عارضةٌ
+# بديلةٌ بيدٍ عجلى** — **وواحدةٌ منها نسيت `--build-arg` فرُقّي إلى
+# الإنتاج أثرٌ بهويّةٍ فارغة.** (قِيس ٢٠٢٦-٠٩-١٣.)
+#
+# **وحارسٌ يُتجاوَز ليس حارساً** — **والعلاجُ أن يُستغنى عن التجاوز
+# لا أن يُضاف حارسٌ ثالث.**
+#
+#	في المستودع:  deploy/build-artifact.sh
+#	على الخادم :  SOURCE_COMMIT=<sha40> SRC_ROOT=<مجلّد> \
+#	              deploy/build-artifact.sh
+if [ -n "${SOURCE_COMMIT:-}" ]; then
+	case "$SOURCE_COMMIT" in
+		*[!0-9a-f]*|"") echo "✗ **SOURCE_COMMIT ليس بصمةً كاملة**: $SOURCE_COMMIT" >&2; exit 2 ;;
+	esac
+	[ "${#SOURCE_COMMIT}" -eq 40 ] || { echo "✗ **SOURCE_COMMIT طولُه ${#SOURCE_COMMIT} لا ٤٠**" >&2; exit 2; }
+else
+	if [ -n "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]; then
+		echo "✗ شجرةُ العمل متّسخة — **وأثرٌ من مصدرٍ لا يُعرَف محتواه لا يثبت شيئاً.**" >&2
+		git -C "$ROOT" status --short >&2
+		exit 2
+	fi
+	SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)" \
+		|| { echo "✗ **لا مستودعَ هنا ولا SOURCE_COMMIT صريح** — ولا يُبنى أثرٌ مجهولُ المصدر." >&2; exit 2; }
+fi
 SHORT="${SOURCE_COMMIT:0:8}"
-BUILD_ID="build-$(date -u +%Y%m%dT%H%M%SZ)-$SHORT"
+BUILD_ID="${BUILD_ID:-build-$(date -u +%Y%m%dT%H%M%SZ)-$SHORT}"
 
 # ── ٣ · بناءُ المحرّك — بهويّةٍ محقونةٍ وقتَ البناء ──────────────────
 #
@@ -95,7 +125,44 @@ build_one() { # <component> <context> <tag> [build-args...]
 	fi
 	echo "── يُبنى $tag من $SHORT"
 	docker build "$@" -t "$tag" "$ctx"
+	# ══════════════════════════════════════════════════════════════
+	# **ولا يُقبَل أثرٌ أجوفُ الهويّة** (٢٠٢٦-٠٩-١٣)
+	# ══════════════════════════════════════════════════════════════
+	#
+	# **ويُسأل الأثرُ نفسُه لا الوسمُ ولا البيان**: `-identity` يخرج
+	# بـ٣ إن كان الختمُ فارغاً. **وقِيس ٢٠٢٦-٠٩-١٣: أثرٌ رُقّي إلى
+	# الإنتاج بهويّةٍ فارغة** لأنّ سكربتاً عارضاً تجاوز هذا الملفَّ
+	# ولم يمرّر `--build-arg`، **ولم يمنعه شيء.**
+	if [ "$comp" = "api" ]; then
+		verify_identity "$tag" "$SOURCE_COMMIT" "$BUILD_ID"
+	fi
 	archive_and_manifest "$comp" "$tag" "$(docker image inspect "$tag" --format '{{.Id}}')"
+}
+
+# verify_identity **الأثرُ يقول التزامَه وبناءَه — أم يُرفض.**
+verify_identity() { # <tag-or-image> <want-commit> <want-build>
+	local img="$1" wantc="$2" wantb="$3" out rc
+	out="$(docker run --rm --entrypoint /app/api "$img" -identity 2>&1)" && rc=0 || rc=$?
+	if [ "${rc:-0}" -ne 0 ]; then
+		echo "✗ **أثرٌ بلا هويّة**: $img — **ولا يُرقَّى ما لا يقول ما هو.**" >&2
+		echo "$out" | sed 's/^/    /' >&2
+		exit 3
+	fi
+	local gotc gotb
+	# **ولا مجموعةَ التقاطٍ في هذا الملفّ** — **محرفُ الهروب يُؤكَل عبر
+	# طبقات التحرير فتخرج القيمةُ فارغةً والحارسُ يمرّ كاذباً.** (وقع
+	# ٢٠٢٦-٠٩-١٣ مرّتين.) **فيُقطَع النصُّ بأدواتٍ لا تحتاج هروباً.**
+	gotc="$(printf '%s' "$out" | grep -o '"source_commit": *"[^"]*"' | cut -d'"' -f4)"
+	gotb="$(printf '%s' "$out" | grep -o '"build_id": *"[^"]*"' | cut -d'"' -f4)"
+	if [ -n "$wantc" ] && [ "$gotc" != "$wantc" ]; then
+		echo "✗ **ختمُ الالتزام لا يطابق المصدر**: في الأثر=$gotc · المنتظَر=$wantc" >&2
+		exit 3
+	fi
+	if [ -n "$wantb" ] && [ "$gotb" != "$wantb" ]; then
+		echo "✗ **ختمُ البناء لا يطابق**: في الأثر=$gotb · المنتظَر=$wantb" >&2
+		exit 3
+	fi
+	echo "   ✓ الهويّةُ مختومةٌ في الأثر: ${gotc:0:8} · $gotb"
 }
 
 echo "SOURCE_COMMIT=$SOURCE_COMMIT"

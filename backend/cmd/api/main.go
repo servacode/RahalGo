@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -18,6 +19,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/database"
+	"github.com/servacode/rahalgo/backend/internal/envguard"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/migrate"
@@ -34,6 +36,34 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والأثرُ يقول هويّتَه بنفسه** (٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ووسمُ الصورة اسمٌ يُعاد إسنادُه**، **والبيانُ ملفٌّ يُكتب
+	// بجانبها** — **وكلاهما يكذب إن أخطأ البناء.** **والحقيقةُ في
+	// الثنائيّة وحدَها**: ما خُتم بـ`-ldflags` لا يُبدَّل بعدها.
+	//
+	// **وقِيس ٢٠٢٦-٠٩-١٣**: **أثرٌ رُقّي إلى الإنتاج بهويّةٍ فارغة**
+	// لأنّ سكربتاً عارضاً تجاوز `deploy/build-artifact.sh` ولم يمرّر
+	// `--build-arg`. **ولم يمنعه شيء** — **فصار الإنتاجُ لا يقول أيَّ
+	// التزامٍ يعمل.**
+	//
+	// **فبابٌ يُسأل به الأثرُ قبل أن يُرقَّى**، **بلا قاعدةٍ ولا
+	// شبكةٍ ولا إعدادٍ** — يعمل في صورةٍ عاريةٍ على أيّ آلة.
+	if len(os.Args) > 1 && (os.Args[1] == "-identity" || os.Args[1] == "--identity") {
+		commit, id := envguard.BuildInfo()
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", " ")
+		_ = enc.Encode(map[string]string{"source_commit": commit, "build_id": id})
+		// **ورمزُ خروجٍ يفرّق المختومَ من الأجوف** — **فالحارسُ لا
+		// يُحلّل نصّاً، بل يقرأ حكماً.**
+		if commit == "" || id == "" {
+			os.Exit(3)
+		}
+		os.Exit(0)
+	}
 
 	if err := run(logger); err != nil {
 		logger.Error("fatal", "error", err)
