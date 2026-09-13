@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 314,
-    "test_funcs": 1194
+    "test_files": 316,
+    "test_funcs": 1202
   },
   "flows": [
     {
@@ -13112,6 +13112,18 @@
       "orphan": true
     },
     {
+      "name": "TestOFM5_DepartmentCapabilitiesAreExactlyApproved",
+      "file": "internal/qa/ops_retirement_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFM6_OpsIsLegacyRetired",
+      "file": "internal/qa/ops_retirement_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDemand_LayersAreSeparateNotMerged",
       "file": "internal/qa/opsmap_analytics_test.go",
       "package": "qa",
@@ -14893,6 +14905,42 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestRID1_DockerfileStampsIdentity",
+      "file": "internal/qa/release_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRID2_AuthoritativeBuildPassesArgs",
+      "file": "internal/qa/release_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRID3_PromotionGateIsBeforeTheSwitch",
+      "file": "internal/qa/release_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRID4_OneIdentityMechanismOnly",
+      "file": "internal/qa/release_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRID5_BothEndpointsExposeIdentity",
+      "file": "internal/qa/release_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRID6_IdentityFlagFailsClosed",
+      "file": "internal/qa/release_identity_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestFIN_XG10_DebtOffsetFromNextCommission",
