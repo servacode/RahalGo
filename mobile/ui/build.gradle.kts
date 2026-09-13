@@ -1,4 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════
+import org.gradle.api.tasks.PathSensitivity
 //  **وحدةُ الواجهة — قطعُ الشاشات لأربعة تطبيقات**
 // ══════════════════════════════════════════════════════════════════════
 //
@@ -92,4 +93,24 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.ui.tooling.preview)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وقشورُ التطبيقات مدخلٌ لفحص السياسة المركزيّة** (`DWR`، ٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`DrawerCentralPolicyTest` يقرأ `MainActivity` في الأربعة وسطحَي
+// الخريطة** — **وغرادل لا يعلم ذلك**، فيرى المهمّةَ `UP-TO-DATE`
+// ويتخطّاها. **وحارسٌ يُتخطّى ليس حارساً** (وقع مثلُه اليومَ في حارس
+// قفلِ الإصدار).
+tasks.withType<Test>().configureEach {
+    inputs.files(
+        rootProject.file("app-customer/src/main/kotlin/com/rahalgo/customer/MainActivity.kt"),
+        rootProject.file("app-driver/src/main/kotlin/com/rahalgo/driver/MainActivity.kt"),
+        rootProject.file("app-merchant/src/main/kotlin/com/rahalgo/merchant/MainActivity.kt"),
+        rootProject.file("app-rep/src/main/kotlin/com/rahalgo/rep/MainActivity.kt"),
+        rootProject.file("map/src/main/kotlin/com/rahalgo/map/MapCanvas.kt"),
+        rootProject.file("map/src/main/kotlin/com/rahalgo/map/PickPoint.kt"),
+    ).withPropertyName("drawerPolicySources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }

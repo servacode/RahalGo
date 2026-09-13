@@ -80,6 +80,7 @@ import com.rahalgo.ui.WalletScreen
 import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.rememberOverlay
 import kotlinx.coroutines.launch
+import com.rahalgo.ui.DrawerGestures
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -234,7 +235,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         // **ولا يُفقَد باب**: زرُّ «القائمة» في الشريط العلويّ في
         // التطبيقات كلِّها — **وهو أوضحُ من إيماءةٍ لا يعرفها إلّا من
         // جرّبها.**
-        gesturesEnabled = false,
+        // ══════════════════════════════════════════════════════════════
+        // **وتُفتَح بالسحب — إلّا وخريطةٌ تفاعليّةٌ حاضرة** (`DWR`، ٢٠٢٦-٠٩-١٤)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكانت مُعطَّلةً عامّاً** بعد بلاغ المالك ٢٠٢٦-٠٩-٠١ («عند سحب
+        // الخريطة تُفتح القائمةُ الجانبيّة») — **وسببُ التعميم مكتوبٌ
+        // ومحقّ**: «شرطٌ يُكتب لكلّ شاشةٍ يُنسى في الشاشة الخامسة».
+        //
+        // **فصار الشرطُ واحداً في الوحدة المشتركة** (`DrawerGesturePolicy`)
+        // **وتُعلنه الخريطةُ نفسُها** (`MapGestureLock` في `MapCanvas`
+        // و`PickPoint`) — **فمن أضاف شاشةً سادسةً بخريطةٍ نال القفلَ بلا
+        // أن يكتب سطراً.**
+        //
+        // **والدرجُ المفتوحُ يبقى قابلاً للإغلاق بالسحب** — **فلا يُحبَس
+        // أحدٌ بدرجٍ لا يُغلَق**، **والخريطةُ خلفَ حاجبٍ حينها فلا تنازع.**
+        gesturesEnabled = DrawerGestures.enabledFor(drawer),
         drawerContent = {
             ModalDrawerSheet(Modifier.width(200.dp)) {
                 Drawer(
