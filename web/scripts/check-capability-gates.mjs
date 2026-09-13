@@ -195,6 +195,7 @@ const walk = (d, out = []) => {
     ["components/admin/orders/OrdersScreen.tsx", "canIntervene && next.map", "أزرارُ تبديل الحال"],
     ["components/admin/orders/OrdersScreen.tsx", 'o.status === "failed" && can("finance.manage")', "تسويةُ البضاعة"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && (o.status === "accepted"', "إخبارُ المتجر"],
+    ["app/dashboard/page.tsx", 'can("settings.security.manage")', "حالُ واتساب في الرئيسيّة"],
     // **ورايةُ تحرير الإعداد من المحرّك لا من اسم الناظر.**
     ["app/dashboard/settings/page.tsx", "s.editable ?? false", "تحريرُ مفتاح الإعداد"],
   ];

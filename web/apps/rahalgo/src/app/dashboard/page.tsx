@@ -69,14 +69,27 @@ interface WhatsAppStatus {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [wa, setWa] = useState<WhatsAppStatus | null>(null);
 
+  // ══════════════════════════════════════════════════════════════════
+  // **وحالُ واتساب إعدادٌ أمنيّ** — `settings.security.manage`
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وكان النداءُ يقع لكلّ من فتح الرئيسيّة** — **فالعمليّاتُ
+  // والماليّةُ تُردّان ٤٠٣ في كلّ فتحة.** (قِيس ٢٠٢٦-٠٩-١٣.)
+  //
+  // **وردٌّ مُنِعَ في كلّ فتحةِ شاشةٍ يُغرِق السجلَّ** — **فيُفقَد فيه
+  // المنعُ الذي يعني شيئاً.**
   const load = useCallback(() => {
     api<Stats>("/api/v1/admin/stats").then(setStats).catch(() => setStats(null));
+    if (!can("settings.security.manage")) {
+      setWa(null);
+      return;
+    }
     api<WhatsAppStatus>("/api/v1/admin/whatsapp").then(setWa).catch(() => setWa(null));
-  }, []);
+  }, [can]);
 
   useEffect(() => {
     load();
