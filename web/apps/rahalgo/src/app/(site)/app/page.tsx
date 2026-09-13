@@ -26,7 +26,20 @@ import { ButtonLink } from "@rahalgo/ui";
 const m = getMessages(defaultLocale);
 const A = m.site.appGate;
 
-const PLAY = "https://play.google.com/store/apps/details?id=com.rahalgo.customer";
+// ══════════════════════════════════════════════════════════════════════
+// **ولا رابطَ متجرٍ مكتوبٌ هنا** (`DLC`، ٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان هنا رابطُ `play.google.com` مكتوباً في الشيفرة** — **وإعدادُ
+// المتجر فارغٌ في الإنتاج والتجهيز معاً** (قِيس). **فكانت الصفحةُ
+// تَعِد بمتجرٍ لا يُعرَف أنّه فُتح.**
+//
+// **والوجهةُ صارت مركزَ التنزيل** — **وهو يقرأ الحالَ من المحرّك ويقول
+// «غيرُ متوفّرٍ بعد» حين لا يكون.**
+//
+// **ولا يُعاد تصميمُ هذه الصفحة** (حدُّ الدورة): **يُبدَّل مقصدُها
+// وحدَه، فلا تنتهي بالزائر إلى بابٍ مسدود.**
+const CENTER = "/download";
 
 export const metadata: Metadata = {
   title: A.metaTitle,
@@ -38,7 +51,7 @@ export default function Page() {
     <main className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-16 text-center">
       <h1 className="heading-page">{A.title}</h1>
       <p className="text-muted">{A.body}</p>
-      <ButtonLink href={PLAY} className="mx-auto">
+      <ButtonLink href={CENTER} className="mx-auto">
         {A.cta}
       </ButtonLink>
       <p className="text-muted text-sm">{A.note}</p>

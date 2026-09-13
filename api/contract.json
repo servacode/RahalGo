@@ -5445,6 +5445,12 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/app/{key}",
+      "handler": "handleDownloadAppByKey",
+      "auth": false
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/banners",
       "handler": "handlePublicBanners",
       "auth": false,
@@ -5851,6 +5857,21 @@
       "response": [
         {
           "name": "@q",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/releases",
+      "handler": "handleReleases",
+      "auth": false,
+      "response": [
+        {
+          "name": "apps",
           "type": "unknown"
         }
       ],

@@ -46,7 +46,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     //
     // **وغوغل بلاي يطلب رابطاً عامّاً لسياسة الخصوصيّة** — ورابطٌ لا
     // يُفهرَس يُقبل، **لكنّ المراجعَ البشريَّ يفتحه.**
-    ...["shop", "about", "contact", "join", "help", "terms", "privacy", "delete-account"].map((path) => ({
+    // ══════════════════════════════════════════════════════════════════
+    // **ومركزُ التنزيل يُفهرَس** (`DLC`، ٢٠٢٦-٠٩-١٣)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وهو بابُ التوزيع الرسميُّ** — **ومن بحث عن «تطبيق رحّال غو»
+    // يجب أن يجد صفحتَنا لا نسخةً مرفوعةً في موقعٍ آخر.**
+    //
+    // **ولا مجلَّدَ آثارٍ في الخريطة**: **الآثارُ تُخدَم من المحرّك
+    // بمفاتيحها** — **ولا مجلَّدَ يُعلَن ولا يُستعرَض.**
+    ...["shop", "about", "contact", "join", "help", "terms", "privacy", "delete-account",
+      "download", "download/customer", "download/driver", "download/merchant",
+      "download/rep"].map((path) => ({
       url: `${SITE()}/${path}`,
       changeFrequency: "monthly" as const,
       priority: 0.5,

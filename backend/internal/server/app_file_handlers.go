@@ -33,15 +33,18 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/release"
 )
 
 const (
@@ -68,8 +71,41 @@ var (
 // zipMagic بصمةُ أرشيف ZIP — وملفُّ أندرويد أرشيفٌ منه.
 var zipMagic = []byte{'P', 'K', 3, 4}
 
+// ══════════════════════════════════════════════════════════════════════
+// **وملفٌّ لكلّ تطبيق — لا ملفٌّ واحدٌ للأربعة** (`DLC`، ٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وكان المفتاحُ مثبَّتاً `platform.app_file`** — **يومَ كان «التطبيق»
+// واحداً.** **ورفعُ تطبيقِ السائق كان يمحو تطبيقَ الزبون.**
+//
+// **والمفتاحُ يأتي في الطلب الآن** — **وهذا مكتبُ كتابةٍ في الإعدادات،
+// فمفتاحٌ حرٌّ يعني كتابةَ أيِّ إعدادٍ بملفّ.** **فيُحلّ من قائمةٍ
+// مغلقة**: مفاتيحُ سجلِّ التوزيع وحدَها، **والقديمُ يبقى مقبولاً**
+// لبابِ الموقع القائم.
+func appFileTarget(r *http.Request) (string, bool) {
+	raw := strings.TrimSpace(r.URL.Query().Get("key"))
+	if raw == "" {
+		// **والغيابُ يعني القديمَ** — **فلا ينكسر رافعٌ منشورٌ يعمل.**
+		return appFileSetting, true
+	}
+	if raw == appFileSetting {
+		return raw, true
+	}
+	for _, a := range release.Apps {
+		if raw == release.ApkKey(a.Key) {
+			return raw, true
+		}
+	}
+	return "", false
+}
+
 // handleUploadAppFile يستقبل ملفَّ التطبيق من الإدارة ويحفظه.
 func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
+	target, ok := appFileTarget(r)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
 	lim := s.settings.GetInt(r.Context(), "app.max_file_mb") << 20
 	if lim <= 0 {
 		lim = maxAppBytes
@@ -118,8 +154,8 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 
 	// **والقديمُ يُحذف بعد نجاح الجديد** — لا قبله: رفعٌ يفشل بعد الحذف
 	// **يترك المنصّةَ بلا تطبيقٍ وبلا رسالةٍ تقول لماذا.**
-	old := s.settings.GetString(r.Context(), appFileSetting)
-	if err := s.settings.SetInternal(r.Context(), appFileSetting, name); err != nil {
+	old := s.settings.GetString(r.Context(), target)
+	if err := s.settings.SetInternal(r.Context(), target, name); err != nil {
 		_ = os.Remove(filepath.Join(dir, name))
 		s.respondErr(w, err)
 		return
@@ -128,7 +164,7 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 		_ = os.Remove(filepath.Join(dir, filepath.Base(old)))
 	}
 
-	s.audit(r, "platform.app_upload", "settings", appFileSetting, map[string]any{
+	s.audit(r, "platform.app_upload", "settings", target, map[string]any{
 		"file": header.Filename, "bytes": len(raw),
 	})
 	httpx.JSON(w, http.StatusCreated, map[string]any{
@@ -139,17 +175,22 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteAppFile يمسح الملفَّ المخزَّن ويُفرغ الإعداد.
 func (s *Server) handleDeleteAppFile(w http.ResponseWriter, r *http.Request) {
-	name := s.settings.GetString(r.Context(), appFileSetting)
+	target, ok := appFileTarget(r)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
+	name := s.settings.GetString(r.Context(), target)
 	if name == "" {
 		httpx.JSON(w, http.StatusOK, map[string]any{"removed": false})
 		return
 	}
-	if err := s.settings.SetInternal(r.Context(), appFileSetting, ""); err != nil {
+	if err := s.settings.SetInternal(r.Context(), target, ""); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	_ = os.Remove(filepath.Join(s.media.Dir(), appDir, filepath.Base(name)))
-	s.audit(r, "platform.app_delete", "settings", appFileSetting, nil)
+	s.audit(r, "platform.app_delete", "settings", target, nil)
 	httpx.JSON(w, http.StatusOK, map[string]any{"removed": true})
 }
 
@@ -178,4 +219,78 @@ func (s *Server) handleDownloadApp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
 	w.Header().Set("Content-Disposition", `attachment; filename="rahalgo.apk"`)
 	http.ServeContent(w, r, "rahalgo.apk", st.ModTime(), f)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **مركزُ التنزيل — بابان عامّان** (`DLC`، ٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+
+// handleReleases **حالُ التطبيقات الأربعة — بلا توثيق.**
+//
+// **ولا حسابَ يُشترَط لتنزيل تطبيق** (قرارُ المالك): **من يريد أن يصير
+// زبوناً لا حسابَ له بعد.**
+//
+// **وما يُرسَل محسوبٌ في `internal/release`** — **موضعٌ واحدٌ تقرؤه
+// أربعُ صفحاتٍ**، **وقاعدةُ أولويّةٍ تُكتب في كلٍّ منها تفترق في
+// الرابعة.**
+func (s *Server) handleReleases(w http.ResponseWriter, r *http.Request) {
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"apps": release.Resolve(r.Context(), s.releaseStore()),
+	})
+}
+
+// handleDownloadAppByKey **يخدم أثرَ تطبيقٍ بمفتاحه.**
+//
+// # وحدُّ الأمان في المفتاح لا في المسار
+//
+// **ولا اسمَ ملفٍّ يأتي من الطلب أبداً**: **المفتاحُ يُحلّ من قائمةٍ
+// مغلقةٍ من أربعة**، **والاسمُ يُقرأ من الإعداد ويُقصَّر إلى قاعدته.**
+// **فلا انفلاتَ من المجلَّد ولو كُتب في الإعداد مسارٌ.**
+//
+// **والحالُ المحسوبةُ هي البوّابة**: **من لا أثرَ له لا يُخدَم** —
+// **وتنزيلُ الزبون المباشرُ مقفَلٌ في الحساب نفسِه، فلا يُفتَح من هنا.**
+func (s *Server) handleDownloadAppByKey(w http.ResponseWriter, r *http.Request) {
+	app, ok := release.Find(chi.URLParam(r, "key"))
+	if !ok {
+		s.respondErr(w, errNoAppFile)
+		return
+	}
+	pub := release.ResolveOne(r.Context(), s.releaseStore(), app)
+	if pub.DownloadURL == "" {
+		s.respondErr(w, errNoAppFile)
+		return
+	}
+	name := s.settings.GetString(r.Context(), release.ApkKey(app.Key))
+	path := filepath.Join(s.media.Dir(), appDir, filepath.Base(name))
+	f, err := os.Open(path)
+	if err != nil {
+		s.respondErr(w, errNoAppFile)
+		return
+	}
+	defer func() { _ = f.Close() }()
+	st, err := f.Stat()
+	if err != nil {
+		s.respondErr(w, errNoAppFile)
+		return
+	}
+	// **واسمُ التنزيل يقول ما هو ويحمل هويّتَه** — **وأربعةُ تطبيقاتٍ
+	// باسم `rahalgo.apk` واحدٍ تختلط في مجلَّد التنزيل.**
+	out := release.FileName(pub)
+	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+out+`"`)
+	// **وأثرٌ موسومٌ بهويّته لا يتبدّل** — فيُخزَّن طويلاً.
+	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
+	http.ServeContent(w, r, out, st.ModTime(), f)
+}
+
+// releaseStore **جسرٌ إلى حزمة السجلّ** — إعداداتٌ ومجلَّدُ آثار.
+func (s *Server) releaseStore() release.Store { return releaseStore{s} }
+
+type releaseStore struct{ s *Server }
+
+func (r releaseStore) GetString(ctx context.Context, key string) string {
+	return r.s.settings.GetString(ctx, key)
+}
+func (r releaseStore) ArtifactDir() string {
+	return filepath.Join(r.s.media.Dir(), appDir)
 }

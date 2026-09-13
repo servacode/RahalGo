@@ -431,6 +431,9 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/identity", s.handleIdentity)
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)
+		// ── مركزُ التنزيل الرسميّ — عامٌّ بلا توثيق (`DLC`) ──────────
+		r.Get("/public/releases", s.handleReleases)
+		r.Get("/public/app/{key}", s.handleDownloadAppByKey)
 		r.Get("/public/zone", s.handlePublicZone)
 		// **هويّةُ المنصة للشروط والخصوصية** — عامّةٌ لأنّ من يقرؤها قد لا
 		// يكون دخل بعد، **ومن سُئل أن يوافق قبل أن يقرأ لم يوافق.**

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 323,
+    "routes": 325,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 127,
-    "behaviour_settings": 103,
+    "setting_defs": 139,
+    "behaviour_settings": 111,
     "order_fields": 75,
-    "test_files": 323,
-    "test_funcs": 1251
+    "test_files": 324,
+    "test_funcs": 1259
   },
   "flows": [
     {
@@ -4783,6 +4783,150 @@
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.customer.play_url",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.customer.version",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.driver.play_url",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.driver.version",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.merchant.play_url",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.merchant.version",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.rep.play_url",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.rep.version",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-33"
       ],
@@ -10779,6 +10923,54 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestDLC1_AllFourDeclaredAndClosedByDefault",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC2_UnknownKeyAndTraversalRefused",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC3_RegisteredArtifactIsDescribedExactly",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC4_MissingFileClosesTheDoor",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC5_CustomerDirectIsLockedByPolicy",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC6_OnlyPlayStoreLinksAreAccepted",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC7_UploadKeyIsAClosedList",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDLC8_PackageIdsMatchGradle",
+      "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestEV_AutoAcceptMerchantAwareness",

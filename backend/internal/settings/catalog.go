@@ -413,6 +413,40 @@ var Catalog = []Def{
 	// **وقيمتُه اسمُ الملفّ المخزَّن** — يكتبه الخادمُ عند الرفع.
 	{Key: "platform.app_file", Group: GroupApp, Kind: KindFile, Default: ""},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **سجلُّ التوزيع — أربعةُ تطبيقاتٍ لا واحد** (`DLC`، ٢٠٢٦-٠٩-١٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **والمفتاحان فوقُ لتطبيقٍ واحد** — **يومَ كان «التطبيق» واحداً.**
+	// **وصارت أربعة**: زبونٌ وسائقٌ ومتجرٌ ومندوب — **ومفتاحٌ واحدٌ
+	// لأربعةِ ملفّاتٍ يعني أنّ رفعَ تطبيقِ السائق يمحو تطبيقَ الزبون.**
+	//
+	// **ويبقى القديمان لبابِ الموقع القائم** (`appHref` وزرُّ «حمّل
+	// التطبيق») — **ولا يُحذَف مفتاحٌ يقرؤه منتَجٌ يعمل في دورةٍ غرضُها
+	// إضافةُ مركزِ تنزيل.** **وقيمتاهما فارغتان في الإنتاج والتجهيز
+	// معاً** (قِيس ٢٠٢٦-٠٩-١٣)، **فلا بيانَ يُهجَر.**
+	//
+	// **ولا مفتاحَ للبصمة**: **تُحسب من الملفّ نفسِه** (`release.Resolve`)
+	// — **وإعدادٌ تكتبه يدٌ يكذب، والمحسوبُ من القرص لا يكذب.**
+	//
+	// **والنسخةُ نصٌّ اختياريّ**: **تُعرض إن كُتبت ويُسكَت عنها إن لم
+	// تُكتب** — **ولا يُخترَع رقمٌ.**
+	{Key: "release.customer.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
+	{Key: "release.customer.apk", Group: GroupApp, Kind: KindFile, Default: ""},
+	{Key: "release.customer.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+
+	{Key: "release.driver.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
+	{Key: "release.driver.apk", Group: GroupApp, Kind: KindFile, Default: ""},
+	{Key: "release.driver.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+
+	{Key: "release.merchant.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
+	{Key: "release.merchant.apk", Group: GroupApp, Kind: KindFile, Default: ""},
+	{Key: "release.merchant.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+
+	{Key: "release.rep.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
+	{Key: "release.rep.apk", Group: GroupApp, Kind: KindFile, Default: ""},
+	{Key: "release.rep.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+
 	// ══════════════════════════════════════════════════════════════════════
 	// **هويّةُ المنصة — الاسمُ والشعار**
 	// ══════════════════════════════════════════════════════════════════════
