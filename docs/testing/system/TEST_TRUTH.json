@@ -31,8 +31,8 @@
     "setting_defs": 127,
     "behaviour_settings": 103,
     "order_fields": 75,
-    "test_files": 320,
-    "test_funcs": 1235
+    "test_files": 322,
+    "test_funcs": 1247
   },
   "flows": [
     {
@@ -14534,6 +14534,30 @@
       "orphan": false
     },
     {
+      "name": "TestENVG1_ProductionRefusesStagingIdentity",
+      "file": "internal/qa/promotion_env_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestENVG2_MatchingEnvironmentPassesTheGate",
+      "file": "internal/qa/promotion_env_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestENVG3_MissingTargetEnvRefuses",
+      "file": "internal/qa/promotion_env_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestENVG4_EveryCallerDeclaresItsEnvironment",
+      "file": "internal/qa/promotion_env_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
       "file": "internal/qa/push_delivery_test.go",
       "package": "qa",
@@ -15526,6 +15550,54 @@
     {
       "name": "TestRET_030_ReversesMerchantEarning",
       "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC1_CurrentLogoutTouchesOneFamilyOnly",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC2_LogoutAllClearsEveryDestination",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC3_AdminResetClearsEveryDestination",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC4_SelfPasswordChangeKeepsItsOwnDestination",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC5_BlockedAccountReceivesNothing",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC6_AdminCannotMintDeletedState",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC7_SelfDeleteRevokesEverything",
+      "file": "internal/qa/revocation_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSEC8_SelfServiceResetScopeIsMeasured",
+      "file": "internal/qa/revocation_matrix_test.go",
       "package": "qa",
       "orphan": true
     },

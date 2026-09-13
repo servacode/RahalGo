@@ -871,6 +871,52 @@ func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) 
 	return int(tag.RowsAffected()), tx.Commit(ctx)
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **ووجهاتُ الدفع تُقطَع مع ما قُطع** (`SEC`، ٢٠٢٦-٠٩-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **والدفعُ ينتقي وجهاتَه بـ`user_id` وطزاجةٍ لا غير** (`push.tokensOf`
+// و`push/delivery.go`) — **لا يسأل عن صلاحيّة جلسةٍ ولا عن حالِ حساب.**
+//
+// **فمن أُخرج إخراجاً شاملاً، أو أُعيدت كلمتُه، أو حُظر، أو حُذف حسابُه**
+// — **كان جهازُه يبقى يستقبل إشعاراتِ رحّال غو الخاصّة** (قِيس
+// ٢٠٢٦-٠٩-١٣: `SEC2` و`SEC3` و`SEC5` و`SEC7` ترى الوجهةَ حيّةً بعد
+// الإبطال). **وذاك انكشافُ خصوصيّةٍ لا إزعاج**: الإشعارُ يحمل حالَ طلبٍ
+// واسمَ متجرٍ ومبلغاً.
+//
+// **والإصلاحُ عند الإبطال لا عند الإرسال**: **لو صُفّي الإرسالُ بحالة
+// الحساب لَبقي الصفُّ في القاعدة ووصلت الوجهةُ من مسارٍ آخرَ غداً** —
+// **والحذفُ يقطع الطريقَ كلَّه.**
+
+// DeleteDeviceTokensOfUser **يقطع وجهاتِ الحساب كلَّها** — ويعيد عددَها.
+//
+// **لحالات الإبطال الشامل**: إخراجٌ شاملٌ · إعادةُ كلمةٍ · حظرٌ · حذف.
+func (r *Repo) DeleteDeviceTokensOfUser(ctx context.Context, userID string) (int, error) {
+	tag, err := r.db.Exec(ctx,
+		`DELETE FROM device_tokens WHERE user_id = $1::uuid`, userID)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
+// DeleteDeviceTokensOfSessions **يقطع وجهاتِ عائلاتٍ بعينها** لا غيرَها.
+//
+// **ولأنّ السياسةَ تُبقي عائلةً**: **تبديلُ المرء كلمتَه يُبقي عائلتَه
+// ويقطع البواقي** (`XG-40`) — **فوجهةُ الباقيةِ تبقى معها.** **ومن حذف
+// الكلَّ هنا أخرج صاحبَ الحساب من إشعاراته وهو لم يُخرَج من جلسته.**
+func (r *Repo) DeleteDeviceTokensOfSessions(ctx context.Context, sids []string) (int, error) {
+	if len(sids) == 0 {
+		return 0, nil
+	}
+	tag, err := r.db.Exec(ctx,
+		`DELETE FROM device_tokens WHERE session_id = ANY($1::uuid[])`, sids)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // ClientSessionIDs عائلاتُ الجلسات الفعّالة لحسابٍ **من نوعِ عميلٍ بعينه**.
 //
 // **والنوعُ شرطٌ لا زينة** (هجرة `0099`): دخولُ السائق من هاتفه يجب ألّا

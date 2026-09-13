@@ -233,6 +233,12 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 	// إعادةُ كلمةٍ · أحداثُ أمن. **وهذه تمسّ الحالَ وحدَها.**
 	if in.Status != nil && (*in.Status == "blocked" || *in.Status == "deleted") {
 		_, _ = s.repo.RevokeAllTokens(ctx, userID)
+		// **ووجهاتُ الدفع معها** — **وحالُ أمنٍ لا تُترَك لها وجهة**
+		// (`SEC5`). **والمحظورُ كان يبقى يستقبل إشعاراتِه الخاصّة.**
+		if _, err := s.repo.DeleteDeviceTokensOfUser(ctx, userID); err != nil {
+			s.logger.Error("تعذّر قطعُ وجهاتِ الدفع بعد تبديل الحال",
+				"user", userID, "status", *in.Status, "error", err)
+		}
 	}
 	if in.Status != nil {
 		s.invalidateStatusCache(ctx, userID)
@@ -426,6 +432,13 @@ func (s *Service) AdminResetPassword(ctx context.Context, actorID, userID, hash,
 	// **وبعد التثبيت**: مُسرِّعُ الرفض ثمّ خبيئةُ الحال ثمّ التدقيق.
 	for _, sid := range sids {
 		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	}
+	// **ووجهاتُ الدفع تُقطَع مع العائلات** — **وهو شقُّ `R13` الذي كان
+	// ناقصاً**: **من سُرق حسابُه فأُعيدت كلمتُه بقي جهازُ السارق
+	// يستقبل إشعاراتِه** (قِيس `SEC3`).
+	if _, err := s.repo.DeleteDeviceTokensOfUser(ctx, userID); err != nil {
+		s.logger.Error("تعذّر قطعُ وجهاتِ الدفع بعد إعادة الكلمة",
+			"user", userID, "error", err)
 	}
 	s.invalidateStatusCache(ctx, userID)
 	s.repo.Audit(ctx, &actorID, "admin.password_reset", "user", userID, ip,

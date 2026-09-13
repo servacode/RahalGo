@@ -400,8 +400,30 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, rawPhone, code, pass
 	if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
 		return nil, err
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **والاستعادةُ تُبطل الحسابَ كلَّه لا نوعَ عميلٍ واحداً** (`SEC8`)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكان الإبطالُ يقع ضمناً في `issueFor`** — **وهي تُبطل عائلاتِ
+	// نوعِ العميل الطالبِ وحدَها** (`revokeClientSessions`، هجرة
+	// `0099`، وهو صوابُها في الدخول العاديّ: **دخولُ السائق من هاتفه
+	// لا يُخرجه من متصفّحه**).
+	//
+	// **لكنّ الاستعادةَ ليست دخولاً عاديّاً**: **هي بابُ من فقد
+	// حسابَه** — **ومن أعاد كلمتَه ليُخرج متطفّلاً كان يُخرجه من نوعٍ
+	// واحدٍ ويُبقيه في الباقي.**
+	//
+	// **قِيس ٢٠٢٦-٠٩-١٣**: **عائلةُ تطبيقِ الزبون تنجو من استعادةٍ
+	// طُلبت من الويب** — وعقدُ `R13` و`F-30` يقول «إعادةٌ وإخراجٌ
+	// شامل».
+	//
+	// **والترتيبُ مقصود**: **الإبطالُ قبل إصدار الجلسة الجديدة** —
+	// **وإلّا أبطل نفسَه.**
+	if err := s.revokeAllSessions(ctx, user.ID); err != nil {
+		return nil, err
+	}
 	s.repo.Audit(ctx, &user.ID, "auth.password_reset", "user", user.ID, ip, nil)
-	// جلسة جديدة تُبطل كل ما سبق — من سرق الحساب يخرج فوراً
+	// جلسة جديدة بعد إبطالٍ شامل — من سرق الحساب يخرج فوراً
 	return s.issueFor(ctx, user, userAgent, ip, "auth.password_reset")
 }
 
@@ -842,6 +864,15 @@ func (s *Service) revokeAllSessions(ctx context.Context, userID string) error {
 	for _, sid := range sids {
 		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
 	}
+	// **ووجهاتُ الدفع تُقطَع معها** (`SEC`، ٢٠٢٦-٠٩-١٣) — **وإبطالٌ
+	// شاملٌ يترك جهازاً يستقبل إشعاراً خاصّاً إبطالٌ ناقص.**
+	//
+	// **وسقوطُها لا يُنقض الإبطال**: **الجلساتُ قُطعت في القاعدة
+	// وفي المُسرِّع** — **فيُسجَّل الخطأُ ولا يُردّ الفعلُ كلُّه.**
+	if _, err := s.repo.DeleteDeviceTokensOfUser(ctx, userID); err != nil {
+		s.logger.Error("تعذّر قطعُ وجهاتِ الدفع بعد إبطالٍ شامل",
+			"user", userID, "error", err)
+	}
 	return nil
 }
 
@@ -969,6 +1000,13 @@ func (s *Service) SetPassword(ctx context.Context, userID, password, currentPass
 	// **وبعد التثبيت**: مُسرِّعُ الرفض للعائلات المقطوعة.
 	for _, sid := range revoked {
 		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	}
+	// **ووجهاتُ المقطوعِ وحدَه** (`SEC4`) — **وعائلتُه باقيةٌ بعقد
+	// `XG-40`، فوجهتُها تبقى معها.** **ومن حذف الكلَّ هنا أسكت
+	// إشعاراتَ من لم يُخرَج.**
+	if _, err := s.repo.DeleteDeviceTokensOfSessions(ctx, revoked); err != nil {
+		s.logger.Error("تعذّر قطعُ وجهاتِ العائلات المقطوعة",
+			"user", userID, "error", err)
 	}
 	s.repo.Audit(ctx, &userID, "auth.set_password", "user", userID, ip,
 		map[string]any{"sessions_revoked": len(revoked), "kept": currentSID != ""})
