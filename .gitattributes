@@ -1,0 +1,48 @@
+# ══════════════════════════════════════════════════════════════════════
+#  نهاياتُ السطور — **وأرشيفُ الإصدار يُبنى على لينكس**
+# ══════════════════════════════════════════════════════════════════════
+#
+# # ما وقع (٢٠٢٦-٠٩-١٣)
+#
+# **ويُبنى الأثرُ من `git archive` على جهاز ويندوز**، **و`git` يحوّل
+# النهاياتِ إلى CRLF في الأرشيف.** **فسكربتُ الصدفة يصل الخادمَ بـ
+# `set -euo pipefail\r`** — **و`pipefail\r` ليس خياراً**، فيقف البناء:
+#
+#	deploy/build-artifact.sh: line 32: set: pipefail: invalid option name
+#
+# **وGo يترجم مصدراً بـCRLF سواءً** — فلم يُكتشف إلّا حين مسّ الصدفة.
+# **وستّمئةٌ وثمانيةُ ملفّاتٍ كانت تخرج بـCRLF بلا أن يُلاحَظ.**
+#
+# # والقاعدة
+#
+# **ما يُنفَّذ على لينكس يُخزَّن ويُؤرشَف بـLF** — لا استثناء.
+# **وما سواه يتبع عرفَ الجهاز.**
+
+* text=auto
+
+# ── ما يُنفَّذ أو يُقرأ على الخادم — LF قطعاً ────────────────────────
+*.sh        text eol=lf
+*.go        text eol=lf
+*.sql       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.mjs       text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.json      text eol=lf
+Dockerfile  text eol=lf
+Makefile    text eol=lf
+Caddyfile   text eol=lf
+
+# ── وما لا يُمَسّ ────────────────────────────────────────────────────
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.tar   binary
+*.gz    binary
+*.aab   binary
+*.apk   binary
+*.keystore binary
