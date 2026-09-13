@@ -31,6 +31,12 @@
     <!-- **وكلمةٌ تتبدّل** — (طلبُ المالك ٢٠٢٦-٠٨-١٨): تُملأ من أقسام
          السوق، **وقائمةٌ ثابتةٌ تعد بما ليس في السوق.** -->
     <string name="shop_search">ابحث عن %1$s</string>
+    <!-- **سوقٌ فارغةٌ غيرُ قسمٍ فارغ**: المنصّةُ تُنزَّل قبل أن تمتلئ،
+         فيُثبّت الزبونُ التطبيقَ ولا متجرَ بعد. **ولا يُختلَق صنفٌ
+         ليبدو عامراً** — الصدقُ سطرٌ وزرٌّ يعيد المحاولة. -->
+    <string name="shop_market_empty">لا متاجر متاحة في مدينتك بعد</string>
+    <string name="shop_market_empty_hint">نضمّ المتاجر هذه الأيام — جرّب لاحقاً أو بدّل المدينة من الأعلى</string>
+    <string name="shop_no_results_hint">جرّب كلمة أقصر أو اسم المتجر</string>
     <string name="shop_no_results">لا نتائج لبحثك</string>
     <string name="shop_closed">مغلق الآن</string>
 
@@ -103,6 +109,8 @@
     <string name="menu_invite_title">ادع صديقا</string>
     <string name="menu_tickets_title">الشكاوى والبلاغات</string>
 
+    <string name="fav_none_hint">اضغط القلب على أي صنف يعجبك ليعود إليك سريعاً</string>
+    <string name="off_none_hint">نعلن العروض في الرئيسية أولاً — تابعنا</string>
     <string name="fav_none">لم تضف أي صنف إلى المفضلة</string>
     <string name="off_none">لا عروض سارية الآن</string>
     <string name="cht_none">لا دردشات منتهية</string>

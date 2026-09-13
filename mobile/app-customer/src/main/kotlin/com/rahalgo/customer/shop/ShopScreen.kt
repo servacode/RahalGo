@@ -232,10 +232,33 @@ fun ShopScreen(
             vm.error.isNotEmpty() && vm.items.isEmpty() ->
                 LoadState(loading = false, error = vm.error, onRetry = vm::load)
 
+            // ══════════════════════════════════════════════════════
+            // **وسوقٌ فارغةٌ غيرُ قسمٍ فارغ** (٢٠٢٦-٠٩-١٣)
+            // ══════════════════════════════════════════════════════
+            //
+            // **والمنصّةُ تُنزَّل قبل أن تمتلئ**: **يُثبِّت الزبونُ
+            // التطبيقَ ولا متجرَ بعد.** **فقال له «لا أصناف في هذا
+            // القسم» وهو لا يرى قسماً أصلاً** — **فيظنّ أنّه أخطأ
+            // الطريقَ أو أنّ التطبيقَ معطوب.**
+            //
+            // **ولا يُختلَق صنفٌ ليبدو عامراً** — **الصدقُ سطرٌ وزرٌّ
+            // يعيد المحاولة.**
+            vm.items.isEmpty() && vm.sections.isEmpty() && !vm.searching -> Empty(
+                text = stringResource(R.string.shop_market_empty),
+                hint = stringResource(R.string.shop_market_empty_hint),
+                actionLabel = stringResource(R.string.act_retry),
+                onAction = vm::load,
+            )
+
             vm.items.isEmpty() -> Empty(
-                stringResource(
+                text = stringResource(
                     if (vm.searching) R.string.shop_no_results else R.string.mn_no_items,
                 ),
+                hint = stringResource(
+                    if (vm.searching) R.string.shop_no_results_hint else R.string.mn_no_items_hint,
+                ),
+                actionLabel = if (vm.searching) "" else stringResource(R.string.act_retry),
+                onAction = if (vm.searching) null else vm::load,
             )
 
             else -> LazyVerticalGrid(

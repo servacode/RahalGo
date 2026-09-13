@@ -112,7 +112,11 @@ private fun Favorites(vm: MineViewModel) {
         // **ولا سطرَ شرحٍ تحته** — **واسمُه يقول ما فيه.**
         ScreenTitle(stringResource(R.string.menu_favorites_title))
         if (list.isEmpty()) {
-            Empty(stringResource(R.string.fav_none))
+            // **والفراغُ يقول الخطوةَ التالية** (شرطُ المالك ٢٠٢٦-٠٩-١٣).
+            Empty(
+                text = stringResource(R.string.fav_none),
+                hint = stringResource(R.string.fav_none_hint),
+            )
             return@Column
         }
         // **وعددُ الأعمدة عددُ السوق** — لا رقمٌ ثانٍ يفترق عنه.
@@ -206,7 +210,10 @@ private fun Offers(vm: MineViewModel) {
             stringResource(R.string.soon_offers),
         )
         if (list.isEmpty()) {
-            Empty(stringResource(R.string.off_none))
+            Empty(
+                text = stringResource(R.string.off_none),
+                hint = stringResource(R.string.off_none_hint),
+            )
             return@Screen
         }
         list.forEach { o ->

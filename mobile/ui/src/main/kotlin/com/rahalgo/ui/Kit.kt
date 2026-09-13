@@ -212,18 +212,59 @@ fun Note(text: String, color: Color) {
 }
 
 /**
- * **فراغٌ يقول إنّه فراغ.**
+ * **فراغٌ يقول إنّه فراغ — وماذا بعد.**
  *
  * **وشاشةٌ بيضاءُ تُقرأ عطبا** — ومن فتح قسماً فلم يجد فيه شيئاً ولا
  * كلمةً ظنّ التطبيقَ لم يحمّل.
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ * **وسطرٌ واحدٌ لا يكفي** (٢٠٢٦-٠٩-١٣، شرطُ المالك)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وكلُّ فراغٍ يجيب سؤالين**: **ما وقع؟** و**ما يفعله المرءُ الآن؟**
+ *
+ * **و«لا توجد طلبات» تجيب الأوّلَ وتترك الثاني** — **فيقف صاحبُها ينظر.**
+ *
+ * **ولا يُختلَق محتوىً**: **صنفٌ وهميٌّ ليبدو القسمُ عامراً كذبٌ** —
+ * **والصدقُ سطرٌ وزرٌّ يعيد المحاولة.**
+ *
+ * **والتلميحُ والزرُّ اختياريّان** — **فما كان يُنادى بسطرٍ يبقى كما هو**،
+ * ولا تُمَسّ مئةُ موضعٍ لأجل حقلٍ أُضيف.
  */
 @Composable
-fun Empty(text: String) {
+fun Empty(
+    text: String,
+    /** **الخطوةُ التالية** — سطرٌ يقول ما يفعله، وفارغٌ يعني لا خطوة. */
+    hint: String = "",
+    /** **نصُّ الزرّ** — وفارغٌ يعني لا زرّ. */
+    actionLabel: String = "",
+    onAction: (() -> Unit)? = null,
+) {
     Box(
         Modifier.fillMaxWidth().padding(vertical = 40.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        ) {
+            Text(text, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center)
+            if (hint.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    hint,
+                    color = Rahal.colors.inkMuted,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (actionLabel.isNotBlank() && onAction != null) {
+                Spacer(Modifier.height(14.dp))
+                // **وزرٌّ ثانويٌّ لا أساسيّ** — **الفراغُ ليس دعوةً ملحّة**،
+                // وزرٌّ بلون العلامة وسط شاشةٍ فارغةٍ يُضغط سهواً.
+                RahalOutlineButton(onClick = onAction) { Text(actionLabel) }
+            }
+        }
     }
 }
 

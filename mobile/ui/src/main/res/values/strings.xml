@@ -553,6 +553,9 @@
     <string name="mn_group_name">اسم المجموعة</string>
     <string name="mn_required">إلزامي</string>
     <string name="mn_option_name">اسم الخيار</string>
+    <!-- **والفراغُ يقول ما وقع وما يفعله المرءُ بعده** (شرطُ المالك
+         ٢٠٢٦-٠٩-١٣): سطرٌ يجيب الأوّلَ وتلميحٌ يجيب الثاني. -->
+    <string name="mn_no_items_hint">اختر قسماً آخر، أو أعد المحاولة بعد قليل</string>
     <string name="mn_no_items">لا أصناف في هذا القسم بعد</string>
     <string name="mn_store_name">اسم المتجر</string>
     <string name="act_save">حفظ</string>
