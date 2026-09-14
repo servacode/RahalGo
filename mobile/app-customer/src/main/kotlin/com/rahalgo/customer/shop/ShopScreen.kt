@@ -51,7 +51,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rahalgo.customer.AddAction
 import com.rahalgo.customer.Backend
+import com.rahalgo.customer.PreCartViewModel
 import com.rahalgo.customer.cart.Cart
 import com.rahalgo.customer.R
 import com.rahalgo.design.Rahal
@@ -92,9 +94,34 @@ fun ShopScreen(
     /** **الإعجابُ يحتاج حساباً** — والضيفُ يُساق إلى الدخول لا يُردّ. */
     onLike: (Item) -> Unit,
     liked: Set<String> = emptySet(),
+    /**
+     * **عنوانُ التوصيل المختار** — **وعليه تُقرأ الإتاحة** (`PC`).
+     *
+     * **ولا يُؤخذ موقعُ الجهاز عنواناً** — **من تسوّق من عمله يُوصَّل
+     * إلى بيته.**
+     */
+    address: com.rahalgo.shared.model.Address? = null,
+    /** **يُساق إلى اختيار عنوانٍ حين لا عنوانَ له** (`PC-02`). */
+    onNeedAddress: () -> Unit = {},
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وحالُ العنوان تُقرأ قبل أن يُملأ شيء** (`PC`، ٢٠٢٦-٠٩-١٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ومفتاحُها النقطةُ نفسُها** — **فتبديلُ العنوان يُبطل ما قبله**
+    // **ولا تُقرأ حالُ عنوانٍ على عنوان.**
+    val point = com.rahalgo.customer.Orderable.pointKey(address?.lat, address?.lng)
+    val serviceVm: PreCartViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    androidx.compose.runtime.LaunchedEffect(point) { serviceVm.refresh(point, address) }
+    val availability = com.rahalgo.customer.Orderable.of(point)
+    val action = com.rahalgo.customer.addAction(address != null, availability)
+
+    // **وما يقع عند الضغط** — **موضعٌ واحدٌ للقرار**: **وبطاقةٌ تقرّر
+    // ونافذةُ خياراتٍ تقرّر تفترقان يوماً.**
+    val blocked = action == AddAction.BLOCKED
 
     // **الصنفُ الذي تُختار خياراتُه الآن** — وفارغٌ حين لا نافذة.
     var picking by androidx.compose.runtime.remember {
@@ -105,7 +132,9 @@ fun ShopScreen(
             item = target,
             api = vm.customerApi,
             onAdd = { chosen ->
-                Cart.add(target, options = chosen)
+                // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
+                // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
+                if (!blocked) Cart.add(target, options = chosen)
                 picking = null
             },
             onClose = { picking = null },
@@ -220,6 +249,22 @@ fun ShopScreen(
         )
 
         if (!vm.searching && vm.sections.isNotEmpty()) {
+            // ══════════════════════════════════════════════════════
+            // **وحالُ العنوان تُقال فوق البضاعة** (`PC`، ٢٠٢٦-٠٩-١٤)
+            // ══════════════════════════════════════════════════════
+            //
+            // **ومن قرأ «عنوانُك خارجَ النطاق» قبل أن يختار وفّر
+            // رحلةً كاملة** — **ومن قرأه في السلّة قرأه عقوبة.**
+            //
+            // **وفوق الأقسام لا تحتها** — **ولافتةٌ تحت البضاعة
+            // لا تُرى إلّا بعد أن يُملأ ما فوقها.**
+            availability?.takeIf { !it.available }?.let { av ->
+                Column(Modifier.padding(horizontal = 12.dp)) {
+                    com.rahalgo.customer.ServiceBlockNotice(av, address, serviceVm)
+                    Spacer(Modifier.height(10.dp))
+                }
+            }
+
             SectionRail(vm.sections, vm.pick, media, vm::openSection)
         }
 
@@ -288,6 +333,15 @@ fun ShopScreen(
                         media = media,
                         liked = item.id in liked,
                         onAdd = {
+                            // **ولا عنوانَ لا إضافة** — **يُسأل أوّلاً**
+                            // (`PC-02`)، **ولا يُخترَع له عنوان.**
+                            if (action == AddAction.NEED_ADDRESS) {
+                                onNeedAddress()
+                                return@ItemCard
+                            }
+                            // **وعنوانٌ لا يُخدَم لا يُملأ له سلّة** —
+                            // **والسببُ مكتوبٌ فوق القائمة** (`PC-03`…).
+                            if (blocked) return@ItemCard
                             // **ومغلقٌ لا يُضاف** — ومن أضافه ثمّ رُدّ
                             // عند الدفع أضاع وقتَه.
                             if (item.available && !item.sourceClosed) {

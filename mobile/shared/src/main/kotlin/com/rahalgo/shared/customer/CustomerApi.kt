@@ -1,5 +1,6 @@
 package com.rahalgo.shared.customer
 
+import com.rahalgo.shared.model.Availability
 import com.rahalgo.shared.model.CitiesPage
 import com.rahalgo.shared.model.HomePage
 import com.rahalgo.shared.model.ItemDetail
@@ -111,6 +112,20 @@ class CustomerApi(private val api: ApiClient) {
             HttpMethod.Post,
             QuoteInput(items, lat, lng),
         )
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **أيُقبَل طلبٌ إلى هذا العنوان؟ — قبل أن يملأ سلّة** (`PC`)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **ولا سلّةَ في السؤال** — **السؤالُ عن العنوان لا عن البضاعة**،
+     * **وبوّابةُ المتجر تُتخطّى وحدَها في المحرّك.**
+     *
+     * **ومحرّكُ الإتاحة هو هو** (الدفعةُ الثالثة) — **ولا حسبةَ في
+     * الجهاز.**
+     */
+    suspend fun availability(lat: Double, lng: Double): Availability =
+        api.raw("/api/v1/public/availability?lat=$lat&lng=$lng")
 
     /**
      * ══════════════════════════════════════════════════════════════════

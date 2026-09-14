@@ -141,6 +141,8 @@ class MainActivity : ComponentActivity() {
         // ٢٠٢٦-٠٨-١٨: «يجب أن تحتفظ به حتّى بعد الخروج أو إعادة تشغيل
         // التطبيق»). **ومن نسي هذا النداءَ لا تُحفظ ولا يظهر خطأ.**
         com.rahalgo.customer.cart.Cart.install(this)
+        // **وهويّةُ المحاولة تبقى بعد موت العمليّة** — انظر `Attempt.kt`.
+        com.rahalgo.ui.Attempt.install(this)
         // ══════════════════════════════════════════════════════════════
         // **ورمزُ الدعوة يُقرأ قبل أوّل شاشة**
         // ══════════════════════════════════════════════════════════════
@@ -912,6 +914,14 @@ private fun SignedIn(
                             if (guest) onAskLogin() else mineVm.toggleFavorite(item.id)
                         },
                         liked = mineVm.liked,
+                        // **وعنوانُ التوصيل تُقرأ عليه الإتاحة** —
+                        // **قبل أن يُملأ شيء** (`PC`).
+                        address = selectedAddress(accountVm.state.addresses),
+                        // **ومن لا عنوانَ له يُسأل** — **ولا يُخترَع
+                        // له عنوان** (`PC-02`).
+                        onNeedAddress = {
+                            if (guest) onAskLogin() else DeliveryAddress.open()
+                        },
                     )
 
                     // ══════════════════════════════════════════════

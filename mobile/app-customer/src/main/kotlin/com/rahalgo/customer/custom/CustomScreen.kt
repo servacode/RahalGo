@@ -233,7 +233,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
      * **ويُمحى بعد النجاح** — **ومفتاحٌ يبقى يجعل الطلبَ التالي يردّ
      * جوابَ الذي قبله.**
      */
-    private var attemptKey: String? = null
+    // **وصار على القرص لا في هذا النموذج** — انظر `Attempt.kt`.
 
 
     /** **يُطلب موضعُه الآن** — لا يُقرأ في الخفاء لحظةَ الإرسال. */
@@ -265,14 +265,17 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         error = ""
         done = ""
         // **ولا يُولَّد إن كان قائماً** — محاولةٌ ثانيةٌ لطلبٍ واحد.
-        val key = attemptKey ?: java.util.UUID.randomUUID().toString().also { attemptKey = it }
+        //
+        // **وخانةٌ تخصُّه** — **ومفتاحٌ واحدٌ للنوعين يجعل المخصَّصَ
+        // يردّ جوابَ العاديّ.**
+        val key = com.rahalgo.ui.Attempt.key(com.rahalgo.ui.Attempt.CUSTOM)
         viewModelScope.launch {
             try {
                 val ref = api.createCustom(
                     NewCustom(request, address, lat, lng, notes),
                     attemptKey = key,
                 )
-                attemptKey = null
+                com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.CUSTOM)
                 // **والرسالةُ تطفو فوق الشاشة** — انظر `Flash`.
                 Flash.ok(
                     getApplication<Application>()
@@ -282,6 +285,11 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                 sent += 1
                 Refresh.bump()
             } catch (e: Exception) {
+                // **وردُّ المحرّك حسمٌ** — **وانقطاعُ الشبكة ليس
+                // حسماً**: **يُحمَل المفتاحُ نفسُه فلا يُنشأ ثانٍ.**
+                if (com.rahalgo.ui.isDecided(e)) {
+                    com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.CUSTOM)
+                }
                 Flash.fail(apiError(getApplication(), e))
             }
             busy = false

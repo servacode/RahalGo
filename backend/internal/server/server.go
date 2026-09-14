@@ -443,6 +443,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/releases", s.handleReleases)
 		r.Get("/public/app/{key}", s.handleDownloadAppByKey)
 		r.Get("/public/zone", s.handlePublicZone)
+		// **وحالُ الإتاحة قبل السلّة** — انظر `quote_handlers.go`.
+		r.Get("/public/availability", s.handlePublicAvailability)
 		// **هويّةُ المنصة للشروط والخصوصية** — عامّةٌ لأنّ من يقرؤها قد لا
 		// يكون دخل بعد، **ومن سُئل أن يوافق قبل أن يقرأ لم يوافق.**
 		r.Get("/public/banners", s.handlePublicBanners)

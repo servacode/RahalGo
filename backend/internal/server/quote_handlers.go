@@ -19,7 +19,9 @@ package server
 // **ولا تُنشئ شيئاً**: قراءةٌ محضة، فمن استعرض عشرَ مرّاتٍ لم يترك أثراً.
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -61,16 +63,7 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ولا يُمنَع شيءٌ هنا**: **التسعيرةُ تُخبِر، والمنعُ عند
 	// الإنشاء.** **وسلّةٌ تنهار لأنّ الوقتَ انتهى سلّةٌ لا تُستعمل.**
-	gates := orders.Gates{
-		LaunchOpen: s.launchOpen(r.Context(), launchCustomerOrders) &&
-			s.launchOpen(r.Context(), launchMerchantOrders),
-		PlatformAvailable: true,
-	}
-	if st, err := s.platform.State(r.Context(), s.pg); err == nil {
-		gates.PlatformAvailable = st.OrderingAvailable
-		gates.PlatformReason = string(st.Reason)
-		gates.PlatformMessage = st.Message
-	}
+	gates := s.orderGates(r.Context())
 	if av, err := s.orders.AvailabilityAt(r.Context(), s.pg,
 		gates, req.Items, req.Lat, req.Lng); err == nil {
 		q.Availability = &av
@@ -106,4 +99,65 @@ func (s *Server) handlePromoPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **بوّاباتُ الطلب — تُبنى مرّةً وتُقرأ من موضعين** (`PC`، ٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **والتسعيرةُ تقرؤها والإتاحةُ قبلَ السلّة تقرؤها** — **ونسختان
+// تفترقان يوماً**: **فتقول شاشةُ السوق «مفتوح» وتقول السلّة «مغلق»
+// في اللحظة نفسِها.**
+
+// orderGates وضعُ الإطلاق وحالُ المنصّة كما يقرؤهما المنعُ نفسُه.
+func (s *Server) orderGates(ctx context.Context) orders.Gates {
+	g := orders.Gates{
+		LaunchOpen: s.launchOpen(ctx, launchCustomerOrders) &&
+			s.launchOpen(ctx, launchMerchantOrders),
+		PlatformAvailable: true,
+	}
+	if st, err := s.platform.State(ctx, s.pg); err == nil {
+		g.PlatformAvailable = st.OrderingAvailable
+		g.PlatformReason = string(st.Reason)
+		g.PlatformMessage = st.Message
+	}
+	return g
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **أيُقبَل طلبٌ إلى هذا العنوان؟ — قبل أن يملأ سلّة** (`PC`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// # المسألة
+//
+// **وكان أوّلُ خبرٍ يبلغه أنّ عنوانَه خارجَ النطاق يأتيه في السلّة** —
+// **بعد أن اختار وأضاف وقرأ الأسعار.** **ومن مشى الطريقَ كلَّه ليُردّ
+// في آخره يقرأ الردَّ عقوبةً لا خبرا.**
+//
+// **والزرُّ الذي يبدو صالحاً ثمّ يُردّ أسوأُ من زرٍّ مُعطَّلٍ بسبب.**
+//
+// # ولا سلّةَ في السؤال
+//
+// **والسؤالُ عن العنوان لا عن البضاعة** — **فلا صنفَ يُرسَل**،
+// **وبوّابةُ المتجر تُتخطّى وحدَها** (`len(items) > 0` في المحرّك).
+//
+// **ومحرّكُ الإتاحة هو هو** (`AvailabilityAt`، الدفعةُ الثالثة) —
+// **ولا محرّكَ ثانٍ يُكتب لشاشةٍ ثانية.**
+//
+// # ولا يُنشئ شيئاً
+//
+// **قراءةٌ محضة** — **فمن بدّل عنوانَه عشرَ مرّاتٍ لم يترك أثراً.**
+func (s *Server) handlePublicAvailability(w http.ResponseWriter, r *http.Request) {
+	lat, err1 := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+	lng, err2 := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
+	if err1 != nil || err2 != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	av, err := s.orders.AvailabilityAt(r.Context(), s.pg, s.orderGates(r.Context()), nil, lat, lng)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, av)
 }

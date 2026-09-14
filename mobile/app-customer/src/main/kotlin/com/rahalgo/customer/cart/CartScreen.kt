@@ -518,7 +518,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
      * **ويُمحى بعد النجاح** — **ومفتاحٌ يبقى يجعل الطلبَ التالي يردّ
      * جوابَ الذي قبله.**
      */
-    private var attemptKey: String? = null
+    // **وصار على القرص لا في هذا النموذج** — انظر `Attempt.kt`:
+    // **فمن مات تطبيقُه قبل الجواب كان ينسى مفتاحَه فيُنشئ ثانياً.**
 
 
     /** **ويُنسى الأثرُ حين يُبدَّل الكود** — نتيجةُ كودٍ على كودٍ آخرَ كذب. */
@@ -548,6 +549,15 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     var error by mutableStateOf("")
+        private set
+
+    /**
+     * **أُرسل ولا نعلم أوصل؟** (`SR-07`)
+     *
+     * **وتقرؤها الشاشةُ فتقول «تحقّق من طلباتك»** — **لا «فشل
+     * الإرسال»**: **ومن قيل له فشل وهو لم يفشل يعيد الكرّة.**
+     */
+    var uncertain by mutableStateOf(false)
         private set
 
     /**
@@ -666,7 +676,10 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         busy = true
         error = ""
         // **ولا يُولَّد إن كان قائماً** — محاولةٌ ثانيةٌ لطلبٍ واحد.
-        val key = attemptKey ?: java.util.UUID.randomUUID().toString().also { attemptKey = it }
+        //
+        // **وعلى القرص** — **فمن مات تطبيقُه قبل الجواب يحمل مفتاحَه
+        // نفسَه فيردّ المحرّكُ طلبَه الأوّل** (`Attempt`).
+        val key = com.rahalgo.ui.Attempt.key(com.rahalgo.ui.Attempt.ORDER)
         viewModelScope.launch {
             try {
                 api.createOrder(
@@ -680,13 +693,30 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                     ),
                     attemptKey = key,
                 )
-                // **والمفتاحُ يُمحى بعد النجاح** — انظر `attemptKey`.
-                attemptKey = null
+                // **والمفتاحُ يُمحى بعد النجاح** — انظر `Attempt`.
+                com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.ORDER)
+                uncertain = false
                 // **والسلّةُ تُفرَغ بعد أن يُقيَّد الطلبُ لا قبله** —
                 // **ومن فرّغها قبل الجواب خسر سلّةَ من سقط نداؤه.**
                 Cart.clear()
                 onDone()
             } catch (e: Exception) {
+                // ══════════════════════════════════════════════════════
+                // **ولا يُقال «فشل» لما لا يُدرى** (`SR-07`)
+                // ══════════════════════════════════════════════════════
+                //
+                // **وردُّ المحرّك حسمٌ**: وصل النداءُ وأجاب — **فيُمحى
+                // المفتاحُ وتبقى السلّةُ ليصحّح ما رُدّ لأجله.**
+                //
+                // **وانقطاعُ الشبكة ليس حسماً** — **قد يكون الطلبُ
+                // قُيِّد وضاع الجواب.** **فيُقال «لا ندري» ويبقى
+                // المفتاحُ**: **إعادةُ الضغط تردّ الطلبَ الأوّلَ بعينه.**
+                if (com.rahalgo.ui.isDecided(e)) {
+                    com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.ORDER)
+                    uncertain = false
+                } else {
+                    uncertain = true
+                }
                 error = apiError(getApplication(), e)
             }
             busy = false
