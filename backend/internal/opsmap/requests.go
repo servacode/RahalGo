@@ -167,35 +167,25 @@ type NewRequest struct {
 // يريد أن يعرف.** فتُستنتج المدينةُ من دائرتها، **وتُترك فارغةً إن لم
 // تقع في واحدة** — وهي إشارةٌ في ذاتها: طلبٌ خارجَ كلّ مدنِنا.
 func CreateRequest(ctx context.Context, e Execer, userID string, in NewRequest) (string, error) {
-	if in.Lat < -90 || in.Lat > 90 || in.Lng < -180 || in.Lng > 180 {
-		return "", httpx.NewError(http.StatusBadRequest, "bad_point", "errors.bad_request")
+	// ══════════════════════════════════════════════════════════════════
+	// **وكاتبٌ واحدٌ للجدول** (`CR`، ٢٠٢٦-٠٩-١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان هذا يكتب صفّاً بلا نوعٍ ولا خليّة** — **فصفٌّ لا يُفرَّد
+	// ولا يُدمَج فيه جديد**، **وهو الانقسامُ بعينه في جدولٍ واحد.**
+	//
+	// **فصار يمرّ بـ`Record`** — النوعُ والخليّةُ والمحافظةُ والتفرّد.
+	res, err := Record(ctx, e, userID, Signal{
+		Kind:    KindCoverage,
+		Lat:     in.Lat,
+		Lng:     in.Lng,
+		Address: in.Address,
+		Source:  in.Source,
+	})
+	if err != nil {
+		return "", err
 	}
-	src := strings.TrimSpace(in.Source)
-	if src == "" {
-		src = "customer_app"
-	}
-	var uid *string
-	if userID != "" {
-		uid = &userID
-	}
-	var id string
-	err := e.QueryRow(ctx, `
-		INSERT INTO coverage_requests (user_id, at, address_text, city_id, source)
-		VALUES ($1::uuid,
-		        ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		        $4,
-		        (SELECT c.id FROM cities c
-		          WHERE c.active
-		            AND ST_DWithin(c.center,
-		                           ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		                           c.radius_m)
-		          ORDER BY ST_Distance(c.center,
-		                               ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography)
-		          LIMIT 1),
-		        $5)
-		RETURNING id::text`,
-		uid, in.Lat, in.Lng, strings.TrimSpace(in.Address), src).Scan(&id)
-	return id, err
+	return res.ID, nil
 }
 
 // UpdateRequest يبدّل حالَ طلبٍ أو ملاحظتَه (البند ٣٥).

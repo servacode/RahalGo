@@ -488,9 +488,27 @@ func (s *Server) Router() http.Handler {
 		// طلبٍ عندنا.** (انظر `opsmap/requests.go`.)
 		r.Post("/public/coverage-request", s.handleCoverageRequestCreate)
 
+		// ══════════════════════════════════════════════════════════
+		// **ونيّةُ التوسّع تُسجَّل بعد أن يُعيد الخادمُ الحكم** (`CR`)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **ولا سببَ يُصدَّق من عميل** — **وعميلٌ معدَّلٌ يلوّث دفترَ
+		// الطلب بإشاراتٍ كاذبةٍ يُبنى عليها قرارُ توسّع.**
+		//
+		// **وبحسابٍ لا بلا حساب** — **والتفرّدُ يحتاج هويّةً**:
+		// **ومن لا حساب له تُعَدّ ضغطاتُه العشرُ عشرَ إشاراتٍ فيتضخّم
+		// دفترُ الطلب كذباً.**
+		//
+		// **ولا تُخترَع بصمةُ جهازٍ لتُفرِّد المجهول** (نهيُ المالك) —
+		// **والزرُّ يُعرَض للضيف ويطلب الدخولَ عند الضغط.**
+		//
+		// **والبابُ القديمُ فوقَه يبقى للمجهول** — قرارُ ٠١٢٧.
+
 		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)
 		r.Group(func(r chi.Router) {
 			r.Use(s.RequireAuth)
+			// **ونيّةُ التوسّع بحساب** — انظر أعلاه.
+			r.Post("/demand", s.handleDemandSignal)
 			// **ومحميٌّ من الإعادة** — انظر `idempotency.go`. **أهمُّ فعلٍ
 			// في تطبيق الزبون**: ضغطةٌ على شبكةٍ سيّئة تُنشئ طلبين وخصمين.
 			r.Post("/orders", s.idempotent(s.handleCustomerCreateOrder))
@@ -567,6 +585,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/tickets", s.handleMyTickets)
 			r.Get("/me/reputation", s.handleMeReputation)
 			r.Get("/me/notifications", s.handleMyNotifications)
+			// **وإلغاءُ «أخبرني» بحسابٍ** — **ولا يُحبَس أحدٌ في
+			// تسويقٍ دائم.**
+			r.Post("/me/demand/cancel", s.handleDemandCancel)
 			// **أجهزةُ الدفع — لكلّ دورٍ لا للسائق وحدَه.**
 			//
 			// **الزبونُ ينتظر «طلبُك في الطريق»، والمتجرُ ينتظر طلباً**،
@@ -853,6 +874,8 @@ func (s *Server) Router() http.Handler {
 				r.Post("/coverage/{id}/active",
 					s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapCoverageActive))
 
+				// **وكثافةُ الطلب بالمكان الإداريّ** — «كم في دمشق؟».
+				r.Get("/coverage-demand/places", s.handleDemandByPlace)
 				r.Get("/coverage-requests",
 					s.requirePerm(opsmap.PermViewDemand, s.handleOpsMapRequests))
 				r.Patch("/coverage-requests/{id}",

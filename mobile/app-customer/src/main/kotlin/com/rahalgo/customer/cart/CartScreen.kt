@@ -358,6 +358,41 @@ fun CartScreen(
             Note(stringResource(R.string.cart_out_of_zone), Rahal.colors.danger)
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **وزرُّ نيّةِ التوسّع — بالسياسة المركزيّة لا بشرطٍ هنا** (`CR`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ومن مُنع لسببٍ زمنيٍّ لا يُدعى إلى طلب منطقته** —
+        // **`ctaKind` تردّ فراغاً فلا يُرسَم شيء.**
+        val ctaReason = av?.takeIf { !it.available }?.reason.orEmpty()
+        if (com.rahalgo.ui.ServiceReason.ctaKind(ctaReason).isNotEmpty() && address != null) {
+            Spacer(Modifier.height(8.dp))
+            if (vm.demandDone) {
+                Note(
+                    com.rahalgo.ui.ServiceReason.ctaDoneText(LocalContext.current, ctaReason),
+                    Rahal.colors.brand,
+                )
+            } else {
+                RahalButton(
+                    onClick = {
+                        vm.sendDemand(ctaReason, address.text, address.lat, address.lng)
+                    },
+                    enabled = !vm.demandBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (vm.demandBusy) {
+                            stringResource(R.string.cta_sending)
+                        } else {
+                            com.rahalgo.ui.ServiceReason.ctaText(
+                                LocalContext.current, ctaReason, av?.placeName.orEmpty(),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
         // **ووقتُ المنطقة صار أحدَ أسباب السياسة أعلاه** (`AV`) —
         // **ويبقى هذا لعميلٍ يكلّم محرّكاً لا يرسل الحال.**
         if (vm.priced?.availability == null && vm.priced?.zoneClosed == true) {
@@ -545,6 +580,44 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.suggest(Cart.lines.map { it.item.id }.distinct()) }
                 .onSuccess { suggested = it.items.filter { i -> i.available && !i.sourceClosed } }
                 .onFailure { suggested = emptyList() }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **نيّةُ التوسّع — حالُ الزرّ وحدَها هنا** (`CR`، ٢٠٢٦-٠٩-١٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ومتى يُعرَض الزرُّ تقرّره `ServiceReason`** — **ولو قرّرته
+    // الشاشةُ لَعرضته يوماً لسببٍ زمنيّ.**
+
+    /** **جارٍ التسجيل.** */
+    var demandBusy by mutableStateOf(false)
+        private set
+
+    /** **سُجّل** — فيُبدَّل الزرُّ بنصِّ ما بعد التسجيل. */
+    var demandDone by mutableStateOf(false)
+        private set
+
+    /**
+     * sendDemand **يسجّل النيّةَ التي يقرّرها الخادم.**
+     *
+     * **وسقوطُ النداء يُقال** — **وزرٌّ يُضغط ولا يقع شيءٌ يُقرأ عطباً.**
+     *
+     * **و«صارت متاحة» ليست عطباً** — **بل خبرٌ سارّ**: يُحدَّث التسعير.
+     */
+    fun sendDemand(reason: String, address: String, lat: Double, lng: Double) {
+        if (demandBusy || demandDone) return
+        val kind = com.rahalgo.ui.ServiceReason.ctaKind(reason)
+        if (kind.isEmpty()) return
+        demandBusy = true
+        viewModelScope.launch {
+            runCatching { api.demand(lat, lng, kind, address) }
+                .onSuccess { demandDone = true; error = "" }
+                .onFailure {
+                    error = apiError(getApplication(), it as Exception)
+                    quote(lat, lng)
+                }
+            demandBusy = false
         }
     }
 

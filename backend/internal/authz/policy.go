@@ -219,6 +219,9 @@ var adminPolicy = []Rule{
 	{"", "/ops-map/coverage", SettingsGeneralManage},
 	{"", "/ops-map/coverage/{id}", SettingsGeneralManage},
 	{"", "/ops-map/coverage/{id}/active", SettingsGeneralManage},
+	// **وكثافةُ الطلب بالمكان الإداريّ قراءةٌ تحليليّةٌ كأختها** — `CR`.
+	// **ولا قدرةَ جديدة.**
+	{"GET", "/ops-map/coverage-demand/places", AnalyticsRead},
 	{"GET", "/ops-map/coverage-requests", AnalyticsRead},
 	{"", "/ops-map/coverage-requests/{id}", SettingsGeneralManage},
 	{"GET", "/ops-map/branches", OrdersRead},

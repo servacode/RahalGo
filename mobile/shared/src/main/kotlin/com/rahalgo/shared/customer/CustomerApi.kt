@@ -113,6 +113,30 @@ class CustomerApi(private val api: ApiClient) {
         )
 
     /**
+     * ══════════════════════════════════════════════════════════════════
+     * **نيّةُ التوسّع — «أضِف منطقتي» و«أخبرني»** (`CR`، ٢٠٢٦-٠٩-١٤)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **ولا تُرسَل النيّةُ حكماً** — **والخادمُ يُعيد قراءةَ الإتاحة
+     * ويقرّر أيَّ نيّةٍ تصلح.** **وما يُرسَل هنا يُقارَن بما يقضيه،
+     * فإن خالفه رُدّ** (`reason_mismatch`) — **ولا يُقلَب صامتاً.**
+     */
+    suspend fun demand(lat: Double, lng: Double, kind: String, addressText: String): DemandResult =
+        api.call(
+            "/api/v1/demand",
+            HttpMethod.Post,
+            DemandInput(lat, lng, kind, addressText),
+        )
+
+    /** **ويُلغى الاشتراكُ لمن أراد** — ولا يُحبَس أحدٌ في تسويقٍ دائم. */
+    suspend fun cancelDemand(lat: Double, lng: Double): DemandCancel =
+        api.call(
+            "/api/v1/me/demand/cancel",
+            HttpMethod.Post,
+            PointInput(lat, lng),
+        )
+
+    /**
      * **يقول ما يفعله كودُ الخصم بلا أن يفعله.**
      *
      * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «كودُ الخصم أضف إليه زرَّ تطبيق… بحيث
@@ -514,3 +538,30 @@ data class PromoPreview(
     val discount: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
 )
+
+/** **ما يُرسَل لتسجيل نيّةِ التوسّع.** */
+@Serializable
+data class DemandInput(
+    val lat: Double,
+    val lng: Double,
+    val kind: String,
+    @SerialName("address_text") val addressText: String,
+)
+
+/** **نقطةٌ وحدَها** — لإلغاء الاشتراك. */
+@Serializable
+data class PointInput(val lat: Double, val lng: Double)
+
+/** **ما يردّه الخادمُ بعد التسجيل.** */
+@Serializable
+data class DemandResult(
+    val kind: String = "",
+    /** `created` أو `already_registered` — **ولا عطبَ على ضغطةٍ مكرّرة.** */
+    val outcome: String = "",
+    val requests: Int = 0,
+    val reason: String = "",
+)
+
+/** **وحالُ الاشتراك بعد الإلغاء.** */
+@Serializable
+data class DemandCancel(val active: Boolean = false)

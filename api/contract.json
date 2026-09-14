@@ -1388,6 +1388,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/coverage-demand/places",
+      "handler": "handleDemandByPlace",
+      "auth": true,
+      "capability": "analytics.read",
+      "response": [
+        {
+          "name": "places",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/coverage-requests",
       "handler": "requirePerm",
       "auth": true,
@@ -3763,6 +3779,51 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/demand",
+      "handler": "handleDemandSignal",
+      "auth": true,
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        },
+        {
+          "name": "address_text",
+          "type": "string"
+        },
+        {
+          "name": "kind",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "kind",
+          "type": "unknown"
+        },
+        {
+          "name": "outcome",
+          "type": "unknown"
+        },
+        {
+          "name": "reason",
+          "type": "unknown"
+        },
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/driver/cash",
       "handler": "handleDriverCash",
@@ -4377,6 +4438,31 @@
         {
           "name": "avatar_thumb_url",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/me/demand/cancel",
+      "handler": "handleDemandCancel",
+      "auth": true,
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "active",
+          "type": "bool"
         }
       ],
       "statuses": [

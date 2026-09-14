@@ -41,6 +41,7 @@ import {
   useLiveData,
   themeColor,
 } from "@rahalgo/ui";
+import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
 import { api } from "@/lib/api";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 
@@ -1388,6 +1389,21 @@ export default function OpsMapPage() {
           )}
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          **وطلبُ التوسّع بالمكان الإداريّ** (`CR`، ٢٠٢٦-٠٩-١٤)
+          ══════════════════════════════════════════════════════════════
+
+          **والخريطةُ فوقُ تقول «أين» بالخلايا** — **وهذا يقول «في أيّ
+          مدينةٍ ومحافظة»**، وهو سؤالُ التوسّع الأوّل.
+
+          **وبالقدرة عينِها التي تحرس طلباتِ التغطية** — ولا قدرةَ
+          جديدة. */}
+      {can("VIEW_DEMAND_ANALYTICS") && (
+        <div className="mt-4">
+          <PlaceDemandPanel />
+        </div>
+      )}
     </PageContainer>
   );
 }
