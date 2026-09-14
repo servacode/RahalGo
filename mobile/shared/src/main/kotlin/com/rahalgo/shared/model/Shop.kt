@@ -179,6 +179,31 @@ data class Quote(
      * **وهو تقاطعُ المنصّةِ والمنطقة** — **لا موعدُ المنطقة وحدَها.**
      */
     @SerialName("next_available_at") val nextAvailableAt: String = "",
+    /**
+     * **حالُ الإتاحة كلُّها** (`AV`، ٢٠٢٦-٠٩-١٤) — **سببٌ واحدٌ يُعرَض.**
+     *
+     * **وتجمع ما كانت الشاشةُ تجمعه بنفسها**: وضعَ الإطلاق ودوامَ
+     * المنصّة والجغرافيا الإداريّةَ والتغطيةَ ووقتَ المنطقة ودوامَ
+     * المتجر.
+     *
+     * **وفارغٌ يعني عميلاً يكلّم محرّكاً لا يرسلها** — **فيتصرّف
+     * بالحقول القديمة كما كان.**
+     */
+    val availability: Availability? = null,
+)
+
+/** **ما يقوله المحرّكُ قبل أن يضغط الزبون.** */
+@Serializable
+data class Availability(
+    val available: Boolean = true,
+    val reason: String = "",
+    /** **رمزُ الخطأ الذي سيردّ به الإنشاء** — للمقارنة لا للعرض. */
+    @SerialName("order_code") val orderCode: String = "",
+    /** **نصُّ المالك** — يغلب نصَّ التطبيق. */
+    val message: String = "",
+    @SerialName("next_available_at") val nextAvailableAt: String = "",
+    /** **اسمُ المدينة أو المحافظة حين يُعرَف** — ولا يُسمّى ما لا يُعرَف. */
+    @SerialName("place_name") val placeName: String = "",
 )
 
 /** **معاينةُ كود الخصم** — قبل أن يُرسَل الطلب. */

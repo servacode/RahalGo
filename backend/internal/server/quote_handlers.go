@@ -52,6 +52,31 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وحالُ الإتاحة تُقرأ بالمصادر التي تمنع** (`AV`، ٢٠٢٦-٠٩-١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وبوّاباتُ الإطلاق والمنصّة تُقرآن هنا بما يقرؤه المنعُ نفسُه**
+	// — `launchOpen` و`platform.State` — **فلا يفترق الشرحُ عن الحكم.**
+	//
+	// **ولا يُمنَع شيءٌ هنا**: **التسعيرةُ تُخبِر، والمنعُ عند
+	// الإنشاء.** **وسلّةٌ تنهار لأنّ الوقتَ انتهى سلّةٌ لا تُستعمل.**
+	gates := orders.Gates{
+		LaunchOpen: s.launchOpen(r.Context(), launchCustomerOrders) &&
+			s.launchOpen(r.Context(), launchMerchantOrders),
+		PlatformAvailable: true,
+	}
+	if st, err := s.platform.State(r.Context(), s.pg); err == nil {
+		gates.PlatformAvailable = st.OrderingAvailable
+		gates.PlatformReason = string(st.Reason)
+		gates.PlatformMessage = st.Message
+	}
+	if av, err := s.orders.AvailabilityAt(r.Context(), s.pg,
+		gates, req.Items, req.Lat, req.Lng); err == nil {
+		q.Availability = &av
+	} else {
+		s.logger.Error("تعذّر حسابُ حال الإتاحة", "err", err)
+	}
 	httpx.JSON(w, http.StatusOK, q)
 }
 

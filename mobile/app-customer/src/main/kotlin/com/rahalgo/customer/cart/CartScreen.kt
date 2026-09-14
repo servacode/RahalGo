@@ -329,21 +329,38 @@ fun CartScreen(
             }
         }
 
-        // **وخارجَ النطاق يُقال قبل الضغط** — لا بعد أن يملأ كلَّ شيء.
-        if (vm.priced?.outOfZone == true) {
+        // ══════════════════════════════════════════════════════════════
+        // **وسببٌ واحدٌ يُعرَض بسياسةٍ واحدة** (`AV`، ٢٠٢٦-٠٩-١٤)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكانت الشاشةُ تفرّق الأسبابَ بنفسها** — فرعٌ لخارج النطاق
+        // وفرعٌ لوقت المنطقة وثالثٌ لحال المنصّة. **ومن أضاف سبباً
+        // رابعاً يضيفه هنا وينساه في شاشةٍ أخرى.**
+        //
+        // **فصار المحرّكُ يقول السببَ و`ServiceReason` ترسمه** —
+        // **وموضعٌ واحدٌ لكلّ الشاشات.**
+        val av = vm.priced?.availability
+        if (av != null && !av.available) {
+            Spacer(Modifier.height(8.dp))
+            Note(
+                com.rahalgo.ui.ServiceReason.text(
+                    LocalContext.current,
+                    reason = av.reason,
+                    message = av.message,
+                    placeName = av.placeName,
+                    nextAvailableAt = av.nextAvailableAt,
+                ),
+                Rahal.colors.danger,
+            )
+        } else if (vm.priced?.outOfZone == true) {
+            // **وعميلٌ يكلّم محرّكاً لا يرسل الحالَ يبقى كما كان.**
             Spacer(Modifier.height(8.dp))
             Note(stringResource(R.string.cart_out_of_zone), Rahal.colors.danger)
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // **ومنطقةٌ خارجَ وقتها ليست «خارجَ التغطية»** (`ZH`)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **وعنوانُه في قلب الحيّ المخدوم** — **والساعةُ هي المانع.**
-        // **ومن قرأ «عنوانُك خارجَ منطقة التوصيل» حكم على المنصّة أنّها
-        // لا تصله أبداً فحذف التطبيق** — **ومن قرأ «يعود التوصيل
-        // الثامنة» عاد.**
-        if (vm.priced?.zoneClosed == true) {
+        // **ووقتُ المنطقة صار أحدَ أسباب السياسة أعلاه** (`AV`) —
+        // **ويبقى هذا لعميلٍ يكلّم محرّكاً لا يرسل الحال.**
+        if (vm.priced?.availability == null && vm.priced?.zoneClosed == true) {
             Spacer(Modifier.height(8.dp))
             Note(zoneClosedText(LocalContext.current, vm.priced), Rahal.colors.danger)
         }
@@ -393,9 +410,11 @@ fun CartScreen(
             },
             // **والاستقبالُ مغلقٌ يُعطّل الزرَّ** — **والسببُ فوقَه
             // مكتوب**: **زرٌّ باهتٌ بلا سببٍ يُقرأ عطباً.**
+            // **والزرُّ يقرأ الحالَ الموحَّدة** — **وسببٌ واحدٌ يحكم.**
             enabled = !vm.busy && address != null && Serving.available &&
                 vm.priced != null && vm.priced?.outOfZone != true &&
-                vm.priced?.zoneClosed != true,
+                vm.priced?.zoneClosed != true &&
+                vm.priced?.availability?.available != false,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {

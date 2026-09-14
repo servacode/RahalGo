@@ -224,40 +224,64 @@ func (s *Service) NextOrderingAt(ctx context.Context, q dbtx.Querier, zoneID str
 	return NextBothOpen(s.now(), s.settings.GetBool(ctx, EnforcedKey), pSch, c, zEnforced, zSch), nil
 }
 
-// NextBothOpen **أوّلُ لحظةٍ تجتمع فيها إتاحةُ المنصّة وإتاحةُ المنطقة.**
+// Gate **قيدٌ زمنيٌّ واحد** — جدولٌ ورايةُ سريانه.
 //
-// **خالصةٌ** — فتُقاس بلا قاعدةٍ ولا خادم.
-func NextBothOpen(now time.Time, pEnforced bool, pSch Schedule, c Closure,
-	zEnforced bool, zSch Schedule) *time.Time {
-	both := func(t time.Time) bool {
+// **وغيرُ السارية لا تقيّد شيئاً** — **ولا تُسأل عن فتراتها أصلاً.**
+type Gate struct {
+	Enforced bool
+	Sch      Schedule
+}
+
+// openAt **أيسمح هذا القيدُ بهذه اللحظة؟**
+func (g Gate) openAt(t time.Time) bool { return !g.Enforced || g.Sch.OpenAt(t) }
+
+// NextAllOpen **أوّلُ لحظةٍ تجتمع فيها كلُّ القيود الزمنيّة.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وليست أصغرَ المواعيد — بل أوّلَ ما تتقاطع** (`AV-15`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ومن أخذ أصغرَ موعدٍ في كلّ جدولٍ على حدةٍ أجاب بموعدٍ لا يُطلَب
+// فيه شيء**: **المنصّةُ تفتح التاسعةَ والمنطقةُ العاشرةَ والمتجرُ
+// الحاديةَ عشرةَ والنصف** — **والجوابُ الحاديةَ عشرةَ والنصف لا
+// التاسعة.**
+//
+// **والبحثُ في المبادئ لا في كلّ دقيقة** — **ومجموعُ «مفتوح» يتبدّل
+// عند مبادئِ الفترات ومنتهى الإيقاف وحدَها.** **ومسحُ أسبوعٍ بالدقيقة
+// عشرةُ آلافِ سؤال، وهذا بضعُ عشرات.**
+//
+// **والأفقُ ثمانيةُ أيّامٍ محدودة** — **ولا دورانَ بلا نهاية.**
+// **وفارغٌ يعني «لا تقاطعَ يُعرَف»** — **ولا يُخترَع موعد.**
+func NextAllOpen(now time.Time, c Closure, gates ...Gate) *time.Time {
+	all := func(t time.Time) bool {
 		if c.ActiveAt(t) {
 			return false
 		}
-		if pEnforced && !pSch.OpenAt(t) {
-			return false
-		}
-		if zEnforced && !zSch.OpenAt(t) {
-			return false
+		for _, g := range gates {
+			if !g.openAt(t) {
+				return false
+			}
 		}
 		return true
 	}
-	if both(now) {
+	if all(now) {
 		t := now
 		return &t
 	}
 
-	// **والمرشَّحون مبادئُ الفترات ومنتهى الإيقاف** — **ولا لحظةَ
-	// انفتاحٍ إلّا عند واحدٍ منها.**
 	cands := []time.Time{}
 	if c.EndsAt != nil && c.EndsAt.After(now) {
 		cands = append(cands, *c.EndsAt)
 	}
-	cands = append(cands, starts(now, pSch)...)
-	cands = append(cands, starts(now, zSch)...)
+	for _, g := range gates {
+		if g.Enforced {
+			cands = append(cands, starts(now, g.Sch)...)
+		}
+	}
 
 	var best *time.Time
 	for _, t := range cands {
-		if !t.After(now) || !both(t) {
+		if !t.After(now) || !all(t) {
 			continue
 		}
 		if best == nil || t.Before(*best) {
@@ -266,6 +290,51 @@ func NextBothOpen(now time.Time, pEnforced bool, pSch Schedule, c Closure,
 		}
 	}
 	return best
+}
+
+// NextBothOpen **تقاطعُ المنصّة والمنطقة** — وجهٌ ضيّقٌ لـ`NextAllOpen`.
+//
+// **ولا حسبةَ ثانيةٌ تحته** — **واثنتان تفترقان يوماً.**
+func NextBothOpen(now time.Time, pEnforced bool, pSch Schedule, c Closure,
+	zEnforced bool, zSch Schedule) *time.Time {
+	return NextAllOpen(now, c,
+		Gate{Enforced: pEnforced, Sch: pSch},
+		Gate{Enforced: zEnforced, Sch: zSch})
+}
+
+// Snapshot **القيودُ الزمنيّةُ كلُّها مقروءةً مرّةً واحدة.**
+//
+// **ويقرؤها النموذجُ القارئ ليشرح** — **والبوّابةُ تقرأ ما يخصّها
+// وحدَه.** **ومصدرُ الصفوف واحدٌ في الحالين، فلا يفترق ما يُشرَح عمّا
+// يُمنَع.**
+type Snapshot struct {
+	Closure  Closure
+	Platform Gate
+	Zone     Gate
+	// Now **لحظةُ الخادم** — **وبها يُحكَم لا بساعة جهاز.**
+	Now time.Time
+}
+
+// Snapshot يقرأ القيودَ الزمنيّةَ للمنصّة ولمنطقةٍ بعينها.
+func (s *Service) Snapshot(ctx context.Context, q dbtx.Querier, zoneID string) (Snapshot, error) {
+	pSch, err := s.Schedule(ctx, q)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	c, err := s.Closure(ctx, q)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	zSch, zEnforced, err := s.ZoneSchedule(ctx, q, zoneID)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return Snapshot{
+		Closure:  c,
+		Platform: Gate{Enforced: s.settings.GetBool(ctx, EnforcedKey), Sch: pSch},
+		Zone:     Gate{Enforced: zEnforced, Sch: zSch},
+		Now:      s.now(),
+	}, nil
 }
 
 // starts **مبادئُ فترات جدولٍ في الأيّام الثمانية القادمة.**

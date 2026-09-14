@@ -130,7 +130,24 @@ class ServingPolicyTest {
         )
         assertTrue(
             "**لا تنبيهَ يفرّق توقّفَ الوقت عن خروج العنوان من التغطية**",
-            text.contains("if (vm.priced?.zoneClosed == true) {"),
+            text.contains("vm.priced?.zoneClosed == true"),
+        )
+
+        // ══════════════════════════════════════════════════════════════
+        // **وسببٌ واحدٌ يُعرَض بسياسةٍ واحدة** (`AV`، ٢٠٢٦-٠٩-١٤)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ولو رسمت كلُّ شاشةٍ نصَّها بنفسها لَافترقت الشاشاتُ** —
+        // **فتقول السلّةُ شيئاً وتقول شاشةُ المتجر غيرَه عن اللحظة
+        // نفسِها**، **ومن أضاف سبباً جديداً أضافه في موضعٍ ونسيه في
+        // ثلاثة.**
+        assertTrue(
+            "**السلّةُ ترسم أسبابَ المنع بنفسها لا بالسياسة المركزيّة**",
+            text.contains("ServiceReason.text("),
+        )
+        assertTrue(
+            "**زرُّ الإتمام لا يقرأ الحالَ الموحَّدة**",
+            text.contains("vm.priced?.availability?.available != false"),
         )
         for (banned in listOf("LocalTime.now(", "LocalDate.now(", "Calendar.getInstance(")) {
             assertFalse(
