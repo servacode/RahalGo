@@ -433,6 +433,33 @@ fun CartScreen(
             Note(vm.error, Rahal.colors.danger)
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **وما تبدّل يُقرأ كلُّه قبل أن يُضغط** (`CA`، ٢٠٢٦-٠٩-١٥)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ولا يُكتفى بالأوّل** — **ومن أُخبر بواحدٍ فأصلحه ثمّ
+        // أُخبر بثانٍ يقرأ المنصّةَ تتلاعب به.**
+        //
+        // **والنصُّ من `CartChanges`** — **موضعٌ واحدٌ تقرؤه السلّةُ
+        // والدفع.**
+        if (vm.changes.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Note(stringResource(R.string.cc_review_title), Rahal.colors.danger)
+            vm.changes.forEach { c ->
+                Spacer(Modifier.height(6.dp))
+                Note(
+                    com.rahalgo.ui.CartChanges.text(LocalContext.current, c),
+                    Rahal.colors.ink,
+                )
+            }
+            if (!vm.canSubmit) {
+                Spacer(Modifier.height(10.dp))
+                RahalTextButton(onClick = { vm.acceptChanges() }) {
+                    Text(stringResource(R.string.cc_review_cta))
+                }
+            }
+        }
+
         Spacer(Modifier.height(14.dp))
         RahalButton(
             onClick = {
@@ -446,10 +473,14 @@ fun CartScreen(
             // **والاستقبالُ مغلقٌ يُعطّل الزرَّ** — **والسببُ فوقَه
             // مكتوب**: **زرٌّ باهتٌ بلا سببٍ يُقرأ عطباً.**
             // **والزرُّ يقرأ الحالَ الموحَّدة** — **وسببٌ واحدٌ يحكم.**
+            // **ولا يُرسَل قبل أن يراجع ما تبدّل** (`CA-09`) —
+            // **ومن أُرسل طلبُه بسعرٍ لم يره لم يوافق عليه.**
             enabled = !vm.busy && address != null && Serving.available &&
                 vm.priced != null && vm.priced?.outOfZone != true &&
                 vm.priced?.zoneClosed != true &&
-                vm.priced?.availability?.available != false,
+                vm.priced?.blocked != true &&
+                vm.priced?.availability?.available != false &&
+                vm.canSubmit,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {
@@ -534,8 +565,21 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         promoBusy = true
         viewModelScope.launch {
             runCatching {
-                api.previewPromo(code, Cart.subtotal, priced?.deliveryFee ?: 0)
-            }.onSuccess { promoResult = it }
+                // **وما كان معروضاً من خصمٍ يُقارَن به** (`PR`).
+                api.previewPromo(
+                    code, Cart.subtotal, priced?.deliveryFee ?: 0,
+                    expectedDiscount = promoResult?.discount,
+                )
+            }.onSuccess {
+                promoResult = it
+                // **وسقوطُ الخصم تبدّلٌ كغيره** — **يُعرَض في القائمة
+                // نفسِها ويوجب المراجعةَ نفسَها.**
+                if (it.changes.isNotEmpty()) {
+                    changes = changes.filter { c ->
+                        c.type != com.rahalgo.ui.CartChanges.PROMO_CHANGED
+                    } + it.changes
+                }
+            }
                 .onFailure { Flash.fail(apiError(getApplication(), it as Exception)) }
             promoBusy = false
         }
@@ -544,6 +588,40 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
 
     var priced by mutableStateOf<Quote?>(null)
         private set
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الموافقةُ على حالٍ بعينها** (`CA`، ٢٠٢٦-٠٩-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ومن وافق على مجموعٍ ثمّ تبدّل قبل أن يضغط لم يوافق على
+    // الجديد** — **والبوّابةُ في `ui` تقرؤها السلّةُ والدفع.**
+    private val gate = com.rahalgo.ui.ReviewGate()
+
+    /** **ما تبدّل منذ أن رآه** — من المحرّك، ومن معاينة الكود. */
+    var changes by mutableStateOf<List<com.rahalgo.shared.model.CartChange>>(emptyList())
+        private set
+
+    /** **بصمةُ الحال المعروضة الآن** — تتبدّل بتبدّل أيّ رقمٍ يراه. */
+    val fingerprint: String
+        get() = com.rahalgo.ui.CartChanges.fingerprint(
+            subtotal = priced?.subtotal ?: Cart.subtotal,
+            deliveryFee = priced?.deliveryFee ?: 0,
+            total = priced?.total ?: 0,
+            discount = promoResult?.discount ?: 0,
+            lines = Cart.lines.map { it.key to it.qty },
+            point = lastPoint,
+            available = priced?.availability?.available ?: true,
+        )
+
+    private var lastPoint: String = ""
+
+    /** **أيُسمَح بالإرسال الآن؟** — **ولا تبدّلَ ⇒ نعم بلا مراجعة.** */
+    val canSubmit: Boolean get() = gate.canSubmit(changes, fingerprint)
+
+    /** **يوافق على ما بين يديه الآن** — **لا على ما يأتي.** */
+    fun acceptChanges() {
+        gate.accept(fingerprint)
+    }
 
     var busy by mutableStateOf(false)
         private set
@@ -656,11 +734,28 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             priced = null
             return
         }
+        // **وما كان معروضاً يُرسَل ليُقارَن** — **ولا يُصدَّق منه
+        // حكمٌ**: **الحقيقةُ من المحرّك.**
+        //
+        // **وأوّلُ تسعيرةٍ بلا مُقارَنة** — **فلا شيءَ رآه بعد.**
+        val seen = priced
+        val expected: Map<String, Any>? = if (seen == null) {
+            null
+        } else {
+            mapOf(
+                "lines" to Cart.lines.associate { it.item.id to it.unitPrice },
+                "delivery_fee" to seen.deliveryFee,
+            )
+        }
+        lastPoint = "$lat,$lng"
         viewModelScope.launch {
             runCatching {
-                api.quote(Cart.lines.map { it.toPayload() }, lat, lng)
-            }.onSuccess { priced = it; error = "" }
-                .onFailure { error = apiError(getApplication(), it as Exception) }
+                api.quote(Cart.lines.map { it.toPayload() }, lat, lng, expected)
+            }.onSuccess {
+                priced = it
+                changes = it.changes
+                error = ""
+            }.onFailure { error = apiError(getApplication(), it as Exception) }
         }
     }
 

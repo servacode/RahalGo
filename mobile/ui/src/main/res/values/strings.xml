@@ -662,6 +662,18 @@
     <string name="dl_pick_to_know">حدد موقعك لمعرفة توفر الخدمة</string>
     <string name="dl_enable_location">فعّل الموقع لمعرفة توفر الخدمة حولك</string>
     <string name="dl_confirm_delivery">حدد موقع التوصيل أولًا</string>
+    <!-- ما تبدّل يُقال باسمه (CC/PR) -->
+    <string name="cc_unnamed_item">منتج</string>
+    <string name="cc_product_removed">هذا المنتج لم يعد متوفرًا: %1$s</string>
+    <string name="cc_product_unavailable">هذا المنتج غير متوفر حاليًا: %1$s</string>
+    <string name="cc_quantity_invalid">الكمية المطلوبة لهذا المنتج لم تعد متاحة: %1$s</string>
+    <string name="cc_price_changed">تغيّر سعر %1$s من %2$s إلى %3$s</string>
+    <string name="cc_fee_changed">تغيّرت أجور التوصيل من %1$s إلى %2$s</string>
+    <string name="cc_promo_changed">تغيّر الخصم من %1$s إلى %2$s</string>
+    <string name="cc_promo_gone">لم يعد الخصم ساريًا</string>
+    <string name="cc_review_title">تغيّرت بعض القيم منذ أن راجعتها</string>
+    <string name="cc_review_cta">متابعة بالقيم الحالية</string>
+    <string name="cc_blocked">لا يمكن إتمام الطلب قبل مراجعة التغييرات</string>
     <string name="cta_notify_me">أخبرني عند توفر الخدمة هنا</string>
     <!-- **وباسم المكان حين يُعرَف** — %1$s اسمُ المدينة أو المحافظة. -->
     <string name="cta_notify_me_named">أخبرني عند توفر الخدمة في %1$s</string>

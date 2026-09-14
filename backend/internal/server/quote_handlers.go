@@ -140,6 +140,9 @@ func (s *Server) handlePromoPreview(w http.ResponseWriter, r *http.Request) {
 		Code        string `json:"code"`
 		Subtotal    int64  `json:"subtotal"`
 		DeliveryFee int64  `json:"delivery_fee"`
+		// ExpectedDiscount **ما كان معروضاً على شاشته** — **يُقارَن
+		// به ولا يُصدَّق منه حكم** (`PR`، ٢٠٢٦-٠٩-١٥).
+		ExpectedDiscount *int64 `json:"expected_discount"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -153,6 +156,15 @@ func (s *Server) handlePromoPreview(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وسقوطُ الخصم يُقال باسمه** — **ولا يُبتلَع الفرقُ صامتاً.**
+	//
+	// **وكودٌ بطل يردّ `Valid=false` وخصماً صفراً** — **فالمقارنةُ
+	// تقع على الصفر كما تقع على رقم.**
+	if req.ExpectedDiscount != nil {
+		out.Changes = orders.PromoChange(orders.Expected{
+			Has: true, Discount: *req.ExpectedDiscount, DeliveryFee: -1,
+		}, out.Discount)
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }

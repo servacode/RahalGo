@@ -5657,6 +5657,10 @@
         {
           "name": "delivery_fee",
           "type": "int64"
+        },
+        {
+          "name": "expected_discount",
+          "type": "?int64"
         }
       ],
       "response": [

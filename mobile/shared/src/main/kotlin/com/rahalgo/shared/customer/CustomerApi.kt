@@ -106,11 +106,20 @@ class CustomerApi(private val api: ApiClient) {
      * **ولا تُحسب في الجهاز**: رسمُ المنطقة يتبدّل من اللوحة، **وحسبةٌ
      * محلّيّةٌ تفترق عمّا يُقيَّد.**
      */
-    suspend fun quote(items: List<CartLine>, lat: Double, lng: Double): Quote =
+    suspend fun quote(
+        items: List<CartLine>,
+        lat: Double,
+        lng: Double,
+        /**
+         * **ما كان معروضاً على شاشته** — **يُقارَن به ولا يُصدَّق منه
+         * حكم** (`CC`، ٢٠٢٦-٠٩-١٥).
+         */
+        expected: Map<String, Any>? = null,
+    ): Quote =
         api.call(
             "/api/v1/public/quote",
             HttpMethod.Post,
-            QuoteInput(items, lat, lng),
+            QuoteInput(items, lat, lng, expected?.let { toExpected(it) }),
         )
 
     /**
@@ -161,11 +170,17 @@ class CustomerApi(private val api: ApiClient) {
      * **وكان يُرسَل مع الطلب وحدَه** — **فيعرف أثرَه بعد أن يطلب**،
      * ومن كتب كوداً منتهياً دفع ثمناً ظنّه أقلّ.
      */
-    suspend fun previewPromo(code: String, subtotal: Long, deliveryFee: Long): PromoPreview =
+    suspend fun previewPromo(
+        code: String,
+        subtotal: Long,
+        deliveryFee: Long,
+        /** **ما كان معروضاً من خصم** — **يُقارَن به** (`PR`). */
+        expectedDiscount: Long? = null,
+    ): PromoPreview =
         api.call(
             "/api/v1/promo/preview",
             HttpMethod.Post,
-            PromoInput(code, subtotal, deliveryFee),
+            PromoInput(code, subtotal, deliveryFee, expectedDiscount),
         )
 
     /** **يُرسل الطلب** — ويردّ الطلبَ كما قُيّد. */
@@ -331,6 +346,20 @@ private data class QuoteInput(
     val items: List<CartLine>,
     val lat: Double,
     val lng: Double,
+    val expected: ExpectedInput? = null,
+)
+
+/** **ما كان معروضاً** — أسعارُ الأسطر وأجورُ التوصيل. */
+@Serializable
+private data class ExpectedInput(
+    val lines: Map<String, Long> = emptyMap(),
+    @SerialName("delivery_fee") val deliveryFee: Long? = null,
+)
+
+@Suppress("UNCHECKED_CAST")
+private fun toExpected(m: Map<String, Any>): ExpectedInput = ExpectedInput(
+    lines = (m["lines"] as? Map<String, Long>).orEmpty(),
+    deliveryFee = m["delivery_fee"] as? Long,
 )
 
 /**
@@ -539,6 +568,8 @@ data class PromoInput(
     val code: String,
     val subtotal: Long,
     @SerialName("delivery_fee") val deliveryFee: Long,
+    /** **ما كان معروضاً من خصم** — **وغيابُه يعني لا مقارنة.** */
+    @SerialName("expected_discount") val expectedDiscount: Long? = null,
 )
 
 /**
@@ -552,6 +583,8 @@ data class PromoPreview(
     val valid: Boolean = false,
     val discount: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
+    /** **أسقط الخصمُ أو تبدّل؟** (`PR`، ٢٠٢٦-٠٩-١٥). */
+    val changes: List<com.rahalgo.shared.model.CartChange> = emptyList(),
 )
 
 /** **ما يُرسَل لتسجيل نيّةِ التوسّع.** */

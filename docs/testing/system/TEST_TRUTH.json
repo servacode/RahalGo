@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 337,
-    "test_funcs": 1408
+    "test_files": 338,
+    "test_funcs": 1413
   },
   "flows": [
     {
@@ -15569,6 +15569,36 @@
         "SECURITY"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestPR01_PR02_PR04_PromoLossIsNamedAndTotalsAreCurrent",
+      "file": "internal/qa/promo_change_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPR02b_ExpiryByServerTimeIsNamed",
+      "file": "internal/qa/promo_change_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPR03_StaleDiscountCannotSubmit",
+      "file": "internal/qa/promo_change_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPR05_ReviewedCurrentStateProceeds",
+      "file": "internal/qa/promo_change_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPR06_UnchangedDiscountIsSilent",
+      "file": "internal/qa/promo_change_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestENVG1_ProductionRefusesStagingIdentity",

@@ -157,6 +157,19 @@ data class ItemsPage(val items: List<Item> = emptyList(), val total: Int = 0)
  */
 @Serializable
 data class Quote(
+    /**
+     * **ما تبدّل منذ أن رآه** (`CC`، ٢٠٢٦-٠٩-١٥).
+     *
+     * **وفارغةٌ حين لم يُرسِل ما كان يرى** — **فعميلٌ قديمٌ يبقى كما
+     * كان.**
+     */
+    val changes: List<CartChange> = emptyList(),
+    /**
+     * **لا تُسعَّر هذه السلّةُ حتّى يُحسَم ما تبدّل.**
+     *
+     * **ولا يُعرَض مجموعٌ حينها** — **وصفرٌ يُقرأ سعراً.**
+     */
+    val blocked: Boolean = false,
     val subtotal: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
     val total: Long = 0,
@@ -213,6 +226,29 @@ data class PromoPreview(
     val discount: Long = 0,
     val total: Long = 0,
     val reason: String = "",
+    /** **أسقط الخصمُ أو تبدّل؟** (`PR`، ٢٠٢٦-٠٩-١٥). */
+    val changes: List<CartChange> = emptyList(),
+)
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **تبدّلٌ واحدٌ باسمه** (`CC`/`PR`)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **والمحرّكُ يعرف أيَّ صنفٍ نفد وأيَّ سعرٍ تبدّل** — **فلا يُقرأ رمزٌ
+ * واحدٌ لا يقول أيَّها.**
+ *
+ * **والاسمُ يُرسَل ليُعلَّم سطرُه** — **ومن قيل له «تبدّل شيءٌ» ولم
+ * يُقَل أيُّه قرأ سلّتَه سطراً سطرا.**
+ */
+@Serializable
+data class CartChange(
+    val type: String = "",
+    @SerialName("menu_item_id") val menuItemId: String = "",
+    val name: String = "",
+    val qty: Int = 0,
+    @SerialName("old_value") val oldValue: Long = 0,
+    @SerialName("new_value") val newValue: Long = 0,
 )
 
 /**
