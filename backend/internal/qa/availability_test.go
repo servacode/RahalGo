@@ -180,13 +180,40 @@ func TestAV07_UnknownAreaIsNotOutsideCoverage(t *testing.T) {
 
 	u := hh.Customer()
 	it := hh.NewItem(900)
-	av := avOf(t, hh, u.Token, it, damLat, damLng)
-	if avReason(av) == "address_outside_coverage" {
-		t.Fatal("**قيل «عنوانُك خارجَ النطاق» لموضعٍ لم تُطلَق فيه الخدمةُ أصلاً** — " +
-			"**ومن قرأها ظنّ أنّ المنصّةَ تصله ولا تصل عنوانَه**")
-	}
-	if avReason(av) != "area_not_supported" {
-		t.Fatalf("**سببٌ غيرُ متوقَّع**: %v", avReason(av))
+	// ══════════════════════════════════════════════════════════════════
+	// **والمقصودُ الفرقُ لا اسمُ السبب** (٢٠٢٦-٠٩-١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان هذا الفحصُ يشترط `area_not_supported` لدمشق** — **ويومَ
+	// بُذرت مراكزُ المحافظات صارت دمشقُ تُسمّى**، **فصار السببُ
+	// `city_not_supported`** — **وهو تحسينٌ لا انحراف.**
+	//
+	// **فسقط الفحصُ في أوّل جولةٍ كاملةٍ بعد البذر** — **ومقياسٌ
+	// يُثبِّت اسمَ سببٍ يمنع تحسينَه.**
+	//
+	// **فيُقاس ما قُصد**: **أنّ «لم نُطلَق هنا» لا يُقال «عنوانُك
+	// خارجَ النطاق»** — **مهما دقّ التصنيف.**
+	for _, c := range []struct {
+		name     string
+		lat, lng float64
+	}{
+		{"دمشق — مدينةٌ معروفةٌ لم تُطلَق", damLat, damLng},
+		{"البادية — موضعٌ لا مركزَ يحويه", 34.20, 38.60},
+	} {
+		av := avOf(t, hh, u.Token, it, c.lat, c.lng)
+		if avReason(av) == "address_outside_coverage" {
+			t.Fatalf("%s: **قيل «عنوانُك خارجَ النطاق» لموضعٍ لم تُطلَق فيه "+
+				"الخدمةُ أصلاً** — **ومن قرأها ظنّ أنّ المنصّةَ تصله ولا "+
+				"تصل عنوانَه**", c.name)
+		}
+		switch avReason(av) {
+		case "area_not_supported", "city_not_supported", "province_not_supported":
+		default:
+			t.Fatalf("%s: **سببٌ غيرُ متوقَّع**: %v", c.name, avReason(av))
+		}
+		if av["available"] == true {
+			t.Fatalf("%s: **قُبل الطلبُ ولم تُطلَق الخدمةُ هناك**", c.name)
+		}
 	}
 }
 

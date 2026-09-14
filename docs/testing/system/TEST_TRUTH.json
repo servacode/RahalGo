@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 331,
-    "test_funcs": 1367
+    "test_files": 332,
+    "test_funcs": 1376
   },
   "flows": [
     {
@@ -8303,6 +8303,60 @@
         "db"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestAG01_RaqqaResolves",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG02_DamascusIsNamed",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG02b_EveryCapitalIsNamed",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG03_InactiveGovernorate",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG04_AG05_GeographyNeverGrantsDelivery",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG06_AG07_TextCannotSpoofPlace",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG08_UnmappedAreaFallsBack",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG09_InactiveCitySemantics",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAG10_ReasonsUnchanged",
+      "file": "internal/qa/admin_geography_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestALT_001_LegacyContractUnchanged",
