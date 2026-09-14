@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 338,
-    "test_funcs": 1413
+    "test_files": 339,
+    "test_funcs": 1418
   },
   "flows": [
     {
@@ -15896,6 +15896,36 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestQI01_QI04_InvalidQuantityIsNamedThroughTheRealPath",
+      "file": "internal/qa/quantity_invalid_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestQI05_QI09_InvalidQuantityTravelsWithItsNeighbours",
+      "file": "internal/qa/quantity_invalid_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestQI06_QI10_NoClampAndFixingClears",
+      "file": "internal/qa/quantity_invalid_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestQI07_CreateStillRejectsInvalidQuantity",
+      "file": "internal/qa/quantity_invalid_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestQI08_ContractMatchesWhatTheScreenReads",
+      "file": "internal/qa/quantity_invalid_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestIDEM_CleanupAfterTTL",

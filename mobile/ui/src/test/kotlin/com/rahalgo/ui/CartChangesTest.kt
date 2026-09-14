@@ -120,6 +120,40 @@ class CartChangesTest {
         assertEquals(4, changes.map { it.type }.toSet().size)
     }
 
+    // ═════════════════ QI-08 — والعقدُ حرفاً ═════════════════
+
+    /**
+     * **وأسماءُ الأنواع نصُّ المحرّك حرفاً** (`orders/changes.go`).
+     *
+     * **واسمٌ يتبدّل في المحرّك يُفرِغ الشاشةَ صامتاً** — **فلا
+     * يُعرَض شيءٌ ولا يظهر خطأ**، **ويُظنّ أنّ لا تبدّلَ وقع.**
+     *
+     * **ويُقاس الطرفُ الآخرُ في `internal/qa`** — **وهذه تُثبّت ما
+     * تقرؤه الشاشةُ منه.**
+     */
+    @Test
+    fun `أسماءُ الأنواع كما يرسلها المحرّك`() {
+        assertEquals("product_removed", CartChanges.PRODUCT_REMOVED)
+        assertEquals("product_unavailable", CartChanges.PRODUCT_UNAVAILABLE)
+        assertEquals("quantity_invalid", CartChanges.QUANTITY_INVALID)
+        assertEquals("product_price_changed", CartChanges.PRICE_CHANGED)
+        assertEquals("delivery_fee_changed", CartChanges.FEE_CHANGED)
+        assertEquals("promo_or_discount_changed", CartChanges.PROMO_CHANGED)
+    }
+
+    /** **وعددٌ غيرُ مقبولٍ يوجب المراجعةَ كغيره.** */
+    @Test
+    fun `العددُ غيرُ المقبول يوجب المراجعة`() {
+        val gate = ReviewGate()
+        val qi = listOf(
+            CartChange(type = CartChanges.QUANTITY_INVALID, name = "حمص", qty = 51),
+        )
+        assertTrue(CartChanges.needsReview(qi))
+        assertFalse("**عددٌ غيرُ مقبولٍ لم يمنع الإرسال**", gate.canSubmit(qi, fp(10_000)))
+        // **والعددُ المطلوبُ يبقى كما طلبه** — **لا يُقلَّم.**
+        assertEquals(51, qi[0].qty)
+    }
+
     // ═════════════════ CA-13 · CA-14 · CA-15 ═════════════════
 
     /**
