@@ -340,8 +340,21 @@ func TestZH22_ExistingOrderSurvivesZoneClosing(t *testing.T) {
 	fx := populatedOrder(t, hh)
 	was := phStatus(t, hh, fx.OrderID)
 
-	// **ثمّ يُغلق وقتُ المنطقة.**
-	zoneHours(t, hh, z.ID, true, zhShut())
+	// **ثمّ يُغلق وقتُ المنطقة — من باب اللوحة كما يفعل المالك**،
+	// **لا بكتابةٍ في القاعدة**: **فالمسارُ الحقيقيُّ هو الذي يُقاس.**
+	_, tok := capUser(t, hh, "admin")
+	shut := zhShut()
+	set := hh.Call("PUT", "/api/v1/admin/zones/"+z.ID+"/hours", tok, map[string]any{
+		"enforced": true,
+		"windows": []any{map[string]any{
+			"day_of_week": shut.Day,
+			"start":       shut.Start.String(),
+			"end":         shut.End.String(),
+		}},
+	}, nil)
+	if set.Code != http.StatusOK {
+		t.Fatalf("ضبطُ جدول المنطقة من اللوحة: %d / %s", set.Code, set.Err())
+	}
 
 	if got := phStatus(t, hh, fx.OrderID); got != was {
 		t.Fatalf("**حالُ طلبٍ قائمٍ تبدّلت بإغلاق المنطقة**: %q ← %q", was, got)
