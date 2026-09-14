@@ -657,6 +657,11 @@
          **و«أضِف منطقتي» غيرُ «أخبرني»** — **الأولى لمن الخدمةُ في
          مدينته وعنوانُه خارجَ الشكل، والثانيةُ لمن لم نصله بعد.** -->
     <string name="cta_request_coverage">اطلب إضافة منطقتك إلى نطاق التوصيل</string>
+    <!-- موقعُ الجهاز يُخبِر ولا يحكم (DL) -->
+    <string name="dl_current_location">موقعك الحالي: %1$s</string>
+    <string name="dl_pick_to_know">حدد موقعك لمعرفة توفر الخدمة</string>
+    <string name="dl_enable_location">فعّل الموقع لمعرفة توفر الخدمة حولك</string>
+    <string name="dl_confirm_delivery">حدد موقع التوصيل أولًا</string>
     <string name="cta_notify_me">أخبرني عند توفر الخدمة هنا</string>
     <!-- **وباسم المكان حين يُعرَف** — %1$s اسمُ المدينة أو المحافظة. -->
     <string name="cta_notify_me_named">أخبرني عند توفر الخدمة في %1$s</string>

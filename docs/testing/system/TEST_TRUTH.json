@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 336,
-    "test_funcs": 1402
+    "test_files": 337,
+    "test_funcs": 1407
   },
   "flows": [
     {
@@ -9446,6 +9446,36 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCA06_AllChangesAreSurfacedNotOnlyFirst",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCC04_CC05_RemovedAndDisabledItemsAreNamed",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCC07_CC08_PriceChangeIsSurfacedBothWays",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCC10_DeliveryFeeChangeIsSurfaced",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCC21_CC22_NoHiddenMinimumOrder",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestD7_AtLimitExactlyIsAllowed",

@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -37,6 +39,14 @@ import com.rahalgo.ui.LastPoint
  */
 object Here {
 
+    /**
+     * **نقطةُ الاستكشاف** — **من الجهاز، تُخبِر ولا تحكم** (`DL`).
+     *
+     * **ولا تصير عنوانَ توصيلٍ إلّا بفعلٍ صريحٍ من صاحبها.**
+     */
+    var discovery by androidx.compose.runtime.mutableStateOf<Discovery?>(null)
+        private set
+
     fun granted(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED ||
@@ -56,7 +66,17 @@ object Here {
             LocationServices.getFusedLocationProviderClient(context)
                 .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                 .addOnSuccessListener { loc ->
-                    if (loc != null) LastPoint.set(loc.latitude, loc.longitude)
+                    if (loc != null) {
+                        LastPoint.set(loc.latitude, loc.longitude)
+                        // **ونقطةُ الاستكشاف تُحفَظ بدقّتها** —
+                        // **ونقطةٌ لا تُعرَف دقّتُها لا يُحكَم بها**
+                        // (`DL-11`). **وهي تُخبِر ولا تحكم.**
+                        discovery = Discovery(
+                            loc.latitude,
+                            loc.longitude,
+                            if (loc.hasAccuracy()) loc.accuracy else -1f,
+                        )
+                    }
                 }
                 .addOnFailureListener { e ->
                     Log.w("RahalGo/here", "تعذّرت قراءةُ الموضع", e)

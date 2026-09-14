@@ -113,11 +113,18 @@ fun ShopScreen(
     //
     // **ومفتاحُها النقطةُ نفسُها** — **فتبديلُ العنوان يُبطل ما قبله**
     // **ولا تُقرأ حالُ عنوانٍ على عنوان.**
-    val point = com.rahalgo.customer.Orderable.pointKey(address?.lat, address?.lng)
+// **والنقطةُ السياقيّةُ**: **المؤكَّدةُ إن وُجدت، وإلّا فنقطةُ
+    // الاستكشاف** — **وهي تُخبِر ولا تحكم** (`DL`).
+    val ctx0 = com.rahalgo.customer.contextPoint(address, com.rahalgo.customer.Here.discovery)
+    val point = com.rahalgo.customer.Orderable.pointKey(
+        if (ctx0.source == com.rahalgo.customer.PointSource.NONE) null else ctx0.lat,
+        if (ctx0.source == com.rahalgo.customer.PointSource.NONE) null else ctx0.lng,
+    )
     val serviceVm: PreCartViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-    androidx.compose.runtime.LaunchedEffect(point) { serviceVm.refresh(point, address) }
+    androidx.compose.runtime.LaunchedEffect(point) { serviceVm.refreshAt(point, ctx0) }
     val availability = com.rahalgo.customer.Orderable.of(point)
-    val action = com.rahalgo.customer.addAction(address != null, availability)
+    // **ولا يفتح الاستكشافُ الزرَّ** (`DL-03`، `DL-04`).
+    val action = com.rahalgo.customer.addActionFor(ctx0, availability)
 
     // **وما يقع عند الضغط** — **موضعٌ واحدٌ للقرار**: **وبطاقةٌ تقرّر
     // ونافذةُ خياراتٍ تقرّر تفترقان يوماً.**
@@ -260,7 +267,14 @@ fun ShopScreen(
             // لا تُرى إلّا بعد أن يُملأ ما فوقها.**
             availability?.takeIf { !it.available }?.let { av ->
                 Column(Modifier.padding(horizontal = 12.dp)) {
-                    com.rahalgo.customer.ServiceBlockNotice(av, address, serviceVm)
+                    com.rahalgo.customer.ServiceBlockNotice(
+                        av,
+                        address,
+                        serviceVm,
+                        // **ونقطةُ الاستكشاف تُصاغ «موقعك الحالي»** —
+                        // **ولا تُقرأ عنوانَ توصيلٍ مؤكَّدا** (`A2`).
+                        discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
+                    )
                     Spacer(Modifier.height(10.dp))
                 }
             }

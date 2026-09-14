@@ -178,6 +178,25 @@ class PreCartViewModel(app: android.app.Application) :
      * **وسقوطُ النداء لا يمنع أحداً** — **والمحرّكُ يردّ عند الإنشاء
      * على كلّ حال**، **ومنعٌ بلا علمٍ أسوأُ من ردٍّ بعلم.**
      */
+    /** **يسأل عن النقطة السياقيّة** — مؤكَّدةً كانت أو استكشافاً. */
+    fun refreshAt(point: String, at: ContextPoint) {
+        if (point.isEmpty() || at.source == PointSource.NONE) {
+            Orderable.invalidate()
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!Orderable.stale(point, now)) return
+        if (inFlight == point) return
+        inFlight = point
+        viewModelScope.launch {
+            runCatching { api.availability(at.lat, at.lng) }
+                .onSuccess {
+                    Orderable.put(it, point, android.os.SystemClock.elapsedRealtime())
+                }
+            inFlight = ""
+        }
+    }
+
     fun refresh(point: String, address: com.rahalgo.shared.model.Address?) {
         if (point.isEmpty() || address == null) {
             // **ولا عنوانَ لا حال** — **وحالُ عنوانٍ سابقٍ على لا عنوانَ
@@ -216,20 +235,31 @@ fun ServiceBlockNotice(
     av: Availability,
     address: com.rahalgo.shared.model.Address?,
     vm: PreCartViewModel,
+    /**
+     * **أهذه نقطةُ استكشافٍ لا عنوانُ توصيل؟** (`A2`)
+     *
+     * **فتُصاغ «موقعك الحالي: …»** — **ومن قُرئ له حكمٌ على موقعه
+     * الحاليّ وظنّه حكماً على عنوانه أخطأ الفهم.**
+     */
+    discovery: Boolean = false,
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val body = com.rahalgo.ui.ServiceReason.text(
+        ctx,
+        reason = av.reason,
+        message = av.message,
+        placeName = av.placeName,
+        nextAvailableAt = av.nextAvailableAt,
+    )
     com.rahalgo.ui.Note(
-        com.rahalgo.ui.ServiceReason.text(
-            ctx,
-            reason = av.reason,
-            message = av.message,
-            placeName = av.placeName,
-            nextAvailableAt = av.nextAvailableAt,
-        ),
+        if (discovery) ctx.getString(com.rahalgo.ui.R.string.dl_current_location, body) else body,
         com.rahalgo.design.Rahal.colors.danger,
     )
+    // **ولا يُسجَّل طلبُ توسّعٍ بنقطةِ استكشاف** — **ودفترُ الطلب
+    // يُبنى عليه قرارُ توسّع**، **ونقطةٌ لم يؤكّدها صاحبُها إشارةٌ
+    // لا يُوثَق بها.**
     val cta = com.rahalgo.ui.ServiceReason.ctaKind(av.reason)
-    if (cta.isEmpty() || address == null) return
+    if (cta.isEmpty() || address == null || discovery) return
     androidx.compose.foundation.layout.Spacer(
         androidx.compose.ui.Modifier.height(8.dp),
     )
