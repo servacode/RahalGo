@@ -149,6 +149,18 @@ func (s *Service) extraSourceFee(ctx context.Context, src *Sources) int64 {
 
 // QuoteResult تسعيرةُ سلّةٍ قبل الطلب.
 type QuoteResult struct {
+	// Blocked **لا تُسعَّر هذه السلّةُ حتّى يُحسَم ما تبدّل.**
+	//
+	// **ولا يُعرَض مجموعٌ حينها** — **وصفرٌ يُقرأ سعراً**، **وجمعُ ما
+	// صحّ وحدَه يُقرأ حذفاً صامتاً للباقي.**
+	Blocked bool `json:"blocked,omitempty"`
+
+	// Changes **ما تبدّل منذ أن رآه** — انظر `changes.go`.
+	//
+	// **وفارغةٌ حين لم يُرسِل ما كان يرى** — **فعميلٌ قديمٌ يبقى كما
+	// كان.**
+	Changes []Change `json:"changes,omitempty"`
+
 	Subtotal int64 `json:"subtotal"`
 	// DeliveryFee الرسمُ كاملاً — أساسُ المنطقة زائدَ رسمِ المصادر.
 	DeliveryFee int64 `json:"delivery_fee"`
