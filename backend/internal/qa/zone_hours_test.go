@@ -601,7 +601,11 @@ func TestZH_AdminRoundTrip(t *testing.T) {
 	if r := hh.Call("PUT", path, tok, body, nil); r.Code != http.StatusOK {
 		t.Fatalf("**جدولٌ صالحٌ رُدّ**: %d / %s", r.Code, r.Err())
 	}
-	got := hh.GET(path, tok).JSON()
+	gotRes := hh.GET(path, tok)
+	if gotRes.Code != http.StatusOK {
+		t.Fatalf("**قراءةُ الجدول رُدّت**: %d / %s — %s", gotRes.Code, gotRes.Err(), gotRes.Body)
+	}
+	got := gotRes.JSON()
 	ws, _ := got["windows"].([]any)
 	if len(ws) != 2 {
 		t.Fatalf("**الجدولُ لم يُحفظ كما كُتب**: %v", got["windows"])
