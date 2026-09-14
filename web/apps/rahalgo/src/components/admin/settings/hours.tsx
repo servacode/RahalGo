@@ -34,31 +34,19 @@ import {
   Switch,
   Textarea,
   Badge,
-  IconAdd,
-  IconDelete,
   LoadingState,
 } from "@rahalgo/ui";
+import WeekHours, { type Win } from "./WeekHours";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.platformHours;
 
-interface Win {
-  day_of_week: number;
-  start: string;
-  end: string;
-}
-
 interface Closure {
   active: boolean;
   message?: string;
   ends_at?: string;
-}
-
-/** **أتعبر الفترةُ منتصفَ الليل؟** — الاصطلاحُ عينُه الذي في المحرّك. */
-function crosses(w: Win): boolean {
-  return w.end <= w.start;
 }
 
 /**
@@ -111,18 +99,6 @@ export default function HoursPanel() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  function addWindow(day: number) {
-    setWins((prev) => [...prev, { day_of_week: day, start: "09:00", end: "17:00" }]);
-  }
-
-  function removeWindow(idx: number) {
-    setWins((prev) => prev.filter((_, i) => i !== idx));
-  }
-
-  function editWindow(idx: number, patch: Partial<Win>) {
-    setWins((prev) => prev.map((w, i) => (i === idx ? { ...w, ...patch } : w)));
-  }
 
   async function saveHours() {
     setError("");
@@ -188,57 +164,9 @@ export default function HoursPanel() {
 
           <p className="text-xs text-ink-muted">{P.boundary}</p>
 
-          <div className="grid grid-cols-1 gap-3">
-            {P.days.map((label: string, day: number) => {
-              const rows = wins
-                .map((w, i) => ({ w, i }))
-                .filter((x) => x.w.day_of_week === day);
-              return (
-                <div key={day} className="rounded border border-line p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-medium">{label}</span>
-                    {rows.length === 0 && <Badge>{P.closedDay}</Badge>}
-                  </div>
-                  <div className="space-y-2">
-                    {rows.map(({ w, i }) => (
-                      <div key={i} className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-ink-muted">{P.from}</span>
-                        <Input
-                          type="time"
-                          value={w.start}
-                          disabled={!may}
-                          onChange={(e) => editWindow(i, { start: e.target.value })}
-                        />
-                        <span className="text-xs text-ink-muted">{P.to}</span>
-                        <Input
-                          type="time"
-                          value={w.end}
-                          disabled={!may}
-                          onChange={(e) => editWindow(i, { end: e.target.value })}
-                        />
-                        {crosses(w) && <Badge>{P.crosses}</Badge>}
-                        {may && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => removeWindow(i)}
-                            aria-label={P.closedDay}
-                          >
-                            <IconDelete />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {may && (
-                    <Button variant="ghost" onClick={() => addWindow(day)}>
-                      <IconAdd />
-                      {P.addWindow}
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {/* **والمحرّرُ مشتركٌ مع أوقات المناطق** — **ونسختان تفترقان
+              يوماً، فتقبل شاشةٌ ما تردّه الأخرى.** */}
+          <WeekHours windows={wins} onChange={setWins} disabled={!may} />
 
           {may && (
             <div className="flex items-center gap-3">

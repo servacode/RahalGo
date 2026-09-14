@@ -18,6 +18,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ZoneShape } from "./ZonesMap";
+import ZoneHoursCard from "./ZoneHours";
 
 const ZonesMap = dynamic(() => import("./ZonesMap"), { ssr: false });
 
@@ -242,6 +243,17 @@ export default function ZonesPanel() {
               >
                 {m.common.save}
               </Button>
+
+              {/* ══════════════════════════════════════════════════════
+                  **ووقتُ المنطقة صفةٌ من صفاتها** (`ZH`، ٢٠٢٦-٠٩-١٤)
+                  ══════════════════════════════════════════════════════
+
+                  **كالرسمِ ونصفِ القطر** — **ومن فصله في شاشةٍ ثانيةٍ
+                  جعل من يضبط منطقةً يبحث عن وقتها في مكانٍ آخر.**
+
+                  **ولا يُعرَض لمنطقةٍ لم تُحفظ بعد** — **ولا جدولَ
+                  لما ليس له معرّف.** */}
+              {draft.id && <ZoneHoursCard zoneID={draft.id} may={isAdmin} />}
             </div>
           )}
 

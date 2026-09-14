@@ -336,6 +336,19 @@ fun CartScreen(
         }
 
         // ══════════════════════════════════════════════════════════════
+        // **ومنطقةٌ خارجَ وقتها ليست «خارجَ التغطية»** (`ZH`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وعنوانُه في قلب الحيّ المخدوم** — **والساعةُ هي المانع.**
+        // **ومن قرأ «عنوانُك خارجَ منطقة التوصيل» حكم على المنصّة أنّها
+        // لا تصله أبداً فحذف التطبيق** — **ومن قرأ «يعود التوصيل
+        // الثامنة» عاد.**
+        if (vm.priced?.zoneClosed == true) {
+            Spacer(Modifier.height(8.dp))
+            Note(zoneClosedText(LocalContext.current, vm.priced), Rahal.colors.danger)
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // **وخارجَ الدوام يُقال كذلك — ويُقال متى نعود** (`PH`)
         // ══════════════════════════════════════════════════════════════
         //
@@ -381,7 +394,8 @@ fun CartScreen(
             // **والاستقبالُ مغلقٌ يُعطّل الزرَّ** — **والسببُ فوقَه
             // مكتوب**: **زرٌّ باهتٌ بلا سببٍ يُقرأ عطباً.**
             enabled = !vm.busy && address != null && Serving.available &&
-                vm.priced != null && vm.priced?.outOfZone != true,
+                vm.priced != null && vm.priced?.outOfZone != true &&
+                vm.priced?.zoneClosed != true,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {
@@ -640,5 +654,19 @@ private fun servingText(ctx: android.content.Context): String {
         },
     )
     val back = com.rahalgo.ui.backAtText(Serving.nextAt)
+    return if (back == null) base else ctx.getString(R.string.err_back_at, base, back)
+}
+
+/**
+ * zoneClosedText **سببُ توقّف التوصيل إلى المنطقة — ومتى يعود إن عُرف.**
+ *
+ * **ولا يُخترَع موعد** — **وخادمٌ لا يعرف متى يعود لا يُنطَق عنه.**
+ */
+private fun zoneClosedText(
+    ctx: android.content.Context,
+    q: com.rahalgo.shared.model.Quote?,
+): String {
+    val base = ctx.getString(R.string.err_zone_closed_now)
+    val back = com.rahalgo.ui.backAtText(q?.nextAvailableAt)
     return if (back == null) base else ctx.getString(R.string.err_back_at, base, back)
 }
