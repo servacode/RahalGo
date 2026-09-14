@@ -92,3 +92,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS coverage_requests_target_idx
 -- **وسؤالُ الدفعة الثامنة**: «من يُخبَر يومَ تُطلَق هذه المدينة؟»
 CREATE INDEX IF NOT EXISTS coverage_requests_target_active_idx
     ON coverage_requests (kind, target_key) WHERE active;
+
+-- ── ولا صفَّ بلا هويّة ────────────────────────────────────────────────
+--
+-- **وصفٌّ بهويّةٍ فارغةٍ لا يُلغى ولا يُدمَج فيه جديد** — **ويبقى
+-- يتيماً يُعَدّ في الكثافة ولا يُخبَر صاحبُه.** **فالعمودُ مُلزِم.**
+ALTER TABLE coverage_requests ALTER COLUMN target_key SET NOT NULL;
