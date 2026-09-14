@@ -62,9 +62,19 @@ func seedRequests(t *testing.T, h *Harness, lat, lng float64, n int) {
 	var ids []string
 	for i := 0; i < n; i++ {
 		var id string
+		// **والخليّةُ والهويّةُ تُكتبان كما يكتبهما المنتَج** —
+		// **وزرعٌ ينقص عمّا تكتبه الشيفرةُ يقيس جدولاً لا يقع.**
+		// (`0153` · `0154`: لا صفَّ بلا هويّةٍ تُقرأ.)
 		err := h.Pool.QueryRow(ctx, `
-			INSERT INTO coverage_requests (at, address_text, source)
-			VALUES (ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, 'QA', 'test')
+			WITH c AS (
+			    SELECT floor($1 / 0.01) * 0.01 + 0.005 AS cy,
+			           floor($2 / 0.01) * 0.01 + 0.005 AS cx
+			)
+			INSERT INTO coverage_requests
+			  (at, address_text, source, cell_y, cell_x, target_key)
+			SELECT ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, 'QA', 'test',
+			       c.cy, c.cx, 'cell:' || c.cy::text || ',' || c.cx::text
+			  FROM c
 			RETURNING id::text`, lat, lng).Scan(&id)
 		if err != nil {
 			t.Fatal(err)
