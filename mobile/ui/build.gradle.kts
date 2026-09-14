@@ -114,3 +114,22 @@ tasks.withType<Test>().configureEach {
     ).withPropertyName("drawerPolicySources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **وبياناتُ الأربعة مدخلٌ لحارس النصّ الصريح** (`P-8`، ٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`CleartextPolicyTest` يقرأ بيانَ كلّ تطبيقٍ وإعدادَ أمنِ شبكته** —
+// **فمن نقل السمةَ إلى `main` وجب أن يسقط الفحصُ لا أن يُتخطّى.**
+tasks.withType<Test>().configureEach {
+    inputs.files(
+        listOf("app-customer", "app-driver", "app-merchant", "app-rep").flatMap { app ->
+            listOf(
+                rootProject.file("$app/src/main/AndroidManifest.xml"),
+                rootProject.file("$app/src/debug/AndroidManifest.xml"),
+                rootProject.file("$app/src/debug/res/xml/network_security_config.xml"),
+            )
+        },
+    ).withPropertyName("cleartextPolicySources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
