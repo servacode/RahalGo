@@ -137,6 +137,15 @@ func TargetKey(kind, cityID string, cy, cx float64) string {
 // ftoa يكتب إحداثيّةَ خليّةٍ كما تكتبها القاعدة.
 func ftoa(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 
+// ValidTarget **أهويّةٌ تصلح؟** — **ولا فارغةَ ولا بيضاء.**
+//
+// **وصفٌّ بهويّةٍ فارغةٍ لا يُلغى ولا يُدمَج فيه جديدٌ ولا يُسأل عنه
+// يومَ تُطلَق مدينة** — **يبقى يُعَدّ في الكثافة وصاحبُه لا يُخبَر.**
+//
+// **والبناءُ اليومَ لا يُخرج فارغاً** — **وهذا الحارسُ لمن يعدّله
+// غداً**: **والقاعدةُ تحرس بعده** (`0154`). **طبقتان لا واحدة.**
+func ValidTarget(t string) bool { return strings.TrimSpace(t) != "" }
+
 // cityAt **أيُّ مدينةٍ تحوي هذه النقطة؟** — وفارغٌ إن لم تُعرَف.
 //
 // **وبالشرط عينِه الذي يصنّف به محرّكُ الإتاحة** — **فالمُطفأةُ تُعرَف
@@ -212,6 +221,11 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 		targetCity = cityAt(ctx, e, in.Lat, in.Lng)
 	}
 	target := TargetKey(in.Kind, targetCity, float64(cy), float64(cx))
+	// **ولا يُكتب صفٌّ بلا هويّة** — **ولا تُستبدَل بنصٍّ مخترَع**:
+	// **هويّةٌ مصنوعةٌ تُخفي العطبَ ولا تُصلحه.**
+	if !ValidTarget(target) {
+		return SignalResult{}, httpx.ErrInternal
+	}
 
 	cityExpr := cityFrom("$4", "$1", "$2")
 	govExpr := govFrom("$5", "$1", "$2")
