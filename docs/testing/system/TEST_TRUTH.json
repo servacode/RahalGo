@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 329,
-    "test_funcs": 1339
+    "test_files": 331,
+    "test_funcs": 1367
   },
   "flows": [
     {
@@ -7769,6 +7769,78 @@
       "orphan": true
     },
     {
+      "name": "TestAV13_SameDay",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV14_LaterDay",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV15_ThreeWayIntersection",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV15b_NoOverlapTodayMeansAnotherDay",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV16_CrossMidnightIntersection",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV16b_SpillIsStillOpen",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV17_WeekBoundaryIntersection",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV18_IndefiniteClosureInventsNothing",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV18b_EmptyEnforcedGateHasNoNext",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV_BoundedHorizon",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV_ClosureEndJoinsTheIntersection",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestAV_UnenforcedGatesDoNotConstrain",
+      "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
       "name": "TestPH15_ClosurePrecedesSchedule",
       "file": "internal/platform/state_test.go",
       "package": "platform",
@@ -8965,6 +9037,102 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestAV01_AllOpenIsAvailable",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV02_LaunchClosedWinsOverEverything",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV03_ClosureWinsOverLater",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV04_PlatformHoursClosed",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV05_InvalidLocation",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV06_CoverageUnavailable",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV07_UnknownAreaIsNotOutsideCoverage",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV08_InactiveCityIsNamed",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV09_InsideCityOutsideZone",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV10_ZoneClosedNow",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV11_MerchantClosedNow",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV19_AV20_SelectedAddressDecides",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV21_AV22_BrowsingAndOldFields",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV24_AV25_PreflightMatchesAdmission",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV27_AV30_HTTPContracts",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAV_MerchantGateMatchesOpenNowSQL",
+      "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCANC_001_CustomerCancelsPending",
