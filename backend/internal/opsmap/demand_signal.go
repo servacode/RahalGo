@@ -23,6 +23,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -110,6 +111,52 @@ func govFrom(passed, latArg, lngArg string) string {
 		 WHERE c.id = ` + cityFrom(passed, latArg, lngArg) + `))`
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **هويّةُ الهدف — ما وعد به الزرُّ** (`SI`، ٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **والزرُّ قال «أخبرني عند توفّر الخدمة في دمشق»** — **لا «في هذه
+// الخليّة».** **فمن ضغطها من عنوانين في دمشقَ هدفٌ واحد**، **ولو
+// كانتا خليّتين متباعدتين.**
+//
+// **وطلبُ التغطية مكانيٌّ بطبعه** — **«أيُّ حيٍّ خارجَ النطاق عليه أكبرُ
+// طلب؟» سؤالُ خلايا**، **ولو جُمع بالمدينة لصارت الرقّةُ صفّاً واحداً
+// لا يقول أين يُوسَّع.**
+//
+// **وموضعٌ لا مدينةَ له هدفُه خليّتُه** — **ولا مكانَ يُسمّى ليكون
+// هدفاً.**
+
+// TargetKey **هويّةُ الهدف** — تُكتب مرّةً ولا تتبدّل.
+func TargetKey(kind, cityID string, cy, cx float64) string {
+	if kind == KindInterest && cityID != "" {
+		return "city:" + cityID
+	}
+	return "cell:" + ftoa(cy) + "," + ftoa(cx)
+}
+
+// ftoa يكتب إحداثيّةَ خليّةٍ كما تكتبها القاعدة.
+func ftoa(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
+
+// cityAt **أيُّ مدينةٍ تحوي هذه النقطة؟** — وفارغٌ إن لم تُعرَف.
+//
+// **وبالشرط عينِه الذي يصنّف به محرّكُ الإتاحة** — **فالمُطفأةُ تُعرَف
+// كما تُعرَف الفعّالة**: **من اشترك في مدينةٍ لم تُطلَق يُلغي اشتراكَه
+// منها.**
+func cityAt(ctx context.Context, q Querier, lat, lng float64) string {
+	var id string
+	err := q.QueryRow(ctx, `
+		SELECT c.id::text FROM cities c
+		 WHERE ST_DWithin(c.center,
+		        ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, c.radius_m)
+		 ORDER BY ST_Distance(c.center,
+		        ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography)
+		 LIMIT 1`, lat, lng).Scan(&id)
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
 // Record **يسجّل الإشارةَ أو يدمجها في سابقتها.**
 //
 // **والدمجُ لصاحب حسابٍ فقط** — **ومن لا حساب له لا هويّةَ تجمع
@@ -158,6 +205,14 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 		gov = &in.GovID
 	}
 
+	// **والهدفُ يُحسَب بما نعرفه الآن** — **ومدينةٌ لم تُمرَّر تُستنتَج
+	// كما يستنتجها الاستعلامُ أدناه، فلا يفترق المفتاحُ عن الصفّ.**
+	targetCity := in.CityID
+	if targetCity == "" && in.Kind == KindInterest {
+		targetCity = cityAt(ctx, e, in.Lat, in.Lng)
+	}
+	target := TargetKey(in.Kind, targetCity, float64(cy), float64(cx))
+
 	cityExpr := cityFrom("$4", "$1", "$2")
 	govExpr := govFrom("$5", "$1", "$2")
 	cityExprU := cityFrom("$5", "$2", "$3")
@@ -169,12 +224,12 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 		err := e.QueryRow(ctx, `
 			INSERT INTO coverage_requests
 			  (user_id, at, address_text, city_id, governorate_id, source,
-			   kind, cell_y, cell_x, reason)
+			   kind, cell_y, cell_x, reason, target_key)
 			VALUES (NULL, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-			        $3, `+cityExpr+`, `+govExpr+`, $6, $7, $8, $9, $10)
+			        $3, `+cityExpr+`, `+govExpr+`, $6, $7, $8, $9, $10, $11)
 			RETURNING id::text`,
 			in.Lat, in.Lng, strings.TrimSpace(in.Address), city, gov, src,
-			in.Kind, cy, cx, in.Reason).Scan(&id)
+			in.Kind, cy, cx, in.Reason, target).Scan(&id)
 		if err != nil {
 			return SignalResult{}, err
 		}
@@ -191,10 +246,10 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 	err := e.QueryRow(ctx, `
 		INSERT INTO coverage_requests
 		  (user_id, at, address_text, city_id, governorate_id, source,
-		   kind, cell_y, cell_x, reason)
+		   kind, cell_y, cell_x, reason, target_key)
 		VALUES ($1::uuid, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		        $4, `+cityExprU+`, `+govExprU+`, $7, $8, $9, $10, $11)
-		ON CONFLICT (user_id, kind, cell_y, cell_x) WHERE user_id IS NOT NULL
+		        $4, `+cityExprU+`, `+govExprU+`, $7, $8, $9, $10, $11, $12)
+		ON CONFLICT (user_id, kind, target_key) WHERE user_id IS NOT NULL
 		DO UPDATE SET
 		    requests     = coverage_requests.requests + 1,
 		    last_seen_at = now(),
@@ -207,7 +262,7 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 		    reason         = EXCLUDED.reason
 		RETURNING id::text, requests, (xmax = 0)`,
 		userID, in.Lat, in.Lng, strings.TrimSpace(in.Address), city, gov, src,
-		in.Kind, cy, cx, in.Reason).Scan(&id, &requests, &inserted)
+		in.Kind, cy, cx, in.Reason, target).Scan(&id, &requests, &inserted)
 	if err != nil {
 		return SignalResult{}, err
 	}
@@ -228,13 +283,17 @@ func CancelInterest(ctx context.Context, e Execer, userID string, lat, lng float
 	if userID == "" {
 		return httpx.NewError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 	}
+	// **ويُلغى ما وعد به الزرُّ** — **ومن اشترك في دمشقَ يُلغي دمشق**،
+	// **لا الخليّةَ التي وقف فيها يومَ ضغط.**
+	//
+	// **وحلبُ لا تُمَسّ** — **والهدفُ واحدٌ بعينه لا «كلُّ اشتراكاته».**
 	cy, cx := snap(lat), snap(lng)
+	target := TargetKey(KindInterest, cityAt(ctx, e, lat, lng), float64(cy), float64(cx))
 	tag, err := e.Exec(ctx, `
 		UPDATE coverage_requests
 		   SET active = false, updated_at = now()
-		 WHERE user_id = $1::uuid AND kind = $2
-		   AND cell_y = $3 AND cell_x = $4`,
-		userID, KindInterest, cy, cx)
+		 WHERE user_id = $1::uuid AND kind = $2 AND target_key = $3`,
+		userID, KindInterest, target)
 	if err != nil {
 		return err
 	}
@@ -253,11 +312,15 @@ func InterestActive(ctx context.Context, q Querier, userID, kind string, lat, ln
 		return false, nil
 	}
 	cy, cx := snap(lat), snap(lng)
+	city := ""
+	if kind == KindInterest {
+		city = cityAt(ctx, q, lat, lng)
+	}
 	var active bool
 	err := q.QueryRow(ctx, `
 		SELECT active FROM coverage_requests
-		 WHERE user_id = $1::uuid AND kind = $2 AND cell_y = $3 AND cell_x = $4`,
-		userID, kind, cy, cx).Scan(&active)
+		 WHERE user_id = $1::uuid AND kind = $2 AND target_key = $3`,
+		userID, kind, TargetKey(kind, city, float64(cy), float64(cx))).Scan(&active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -314,6 +377,40 @@ func DemandByPlace(ctx context.Context, q Querier, kind string) ([]PlaceDemand, 
 			return nil, err
 		}
 		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **من يُخبَر يومَ تُطلَق مدينة** — سؤالُ الدفعة الثامنة (`SI-08`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ولا يُرسَل إشعارٌ اليوم** — **وإنّما يُثبَت أنّ السؤالَ يُجاب بلا
+// تكرارٍ ولا تنقيةٍ عند الإرسال.**
+//
+// **والحسابُ مرّةً واحدةً ولو ضغط الزرَّ من عشرة عناوين** — **وهو ما
+// كان يكسره التفرّدُ بالخليّة.**
+//
+// **والمُلغي لا يُستهدَف** — **ومن طلب ألّا يُخبَر لا يُخبَر.**
+
+// InterestedInCity **الحساباتُ الساريةُ المشترِكةُ في هذه المدينة.**
+func InterestedInCity(ctx context.Context, q Querier, cityID string) ([]string, error) {
+	rows, err := q.Query(ctx, `
+		SELECT user_id::text FROM coverage_requests
+		 WHERE kind = $1 AND active AND user_id IS NOT NULL
+		   AND target_key = $2
+		 ORDER BY created_at`, KindInterest, "city:"+cityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
 	}
 	return out, rows.Err()
 }
