@@ -383,7 +383,7 @@ fun err(e: Throwable): String = apiError(AppCore.get().app, e)
  * **وتاريخٌ لا يُحلَّل يُبتلَع** — **ورسالةُ «ليس الآن» أنفعُ من رسالةِ
  * عطبٍ لأنّ حقلاً جاء مشوَّهاً.**
  */
-internal fun backAtText(raw: String?): String? {
+fun backAtText(raw: String?): String? {
     val v = raw?.trim().orEmpty()
     if (v.isEmpty()) return null
     return try {

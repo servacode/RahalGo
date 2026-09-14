@@ -272,6 +272,11 @@ dependencies {
 // **وقِيس ٢٠٢٦-٠٩-١٤**: **فُتحت كتلةُ الإصدار لتجاوزٍ ومرّ الفحصُ** —
 // **لأنّه لم يُشغَّل أصلاً.** **وحارسٌ يُتخطّى ليس حارساً.**
 tasks.withType<Test>().configureEach {
+    // **وشاشةُ السلّة مدخلٌ لحارس حال الاستقبال** (`PH`) — **وغرادل
+    // لا يعلم أنّ فحصاً يقرؤها، فيرى المهمّةَ `UP-TO-DATE` ويتخطّاها.**
+    inputs.file("src/main/kotlin/com/rahalgo/customer/cart/CartScreen.kt")
+        .withPropertyName("cartScreen")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file("build.gradle.kts")
         .withPropertyName("buildScript")
         .withPathSensitivity(PathSensitivity.RELATIVE)

@@ -34,7 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.rahalgo.customer.Here
+import com.rahalgo.customer.Serving
 import com.rahalgo.customer.R
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.CartLine
@@ -96,6 +98,9 @@ fun CartScreen(
     // وحدَه: **من رأى الإجماليَّ لحظةَ الدفع فوجده أكبرَ تردّد.**
     LaunchedEffect(Cart.lines, here) { vm.quote(here?.lat, here?.lng) }
     LaunchedEffect(Cart.lines) { vm.loadSuggestions() }
+    // **وحالُ الاستقبال تُجدَّد عند فتح السلّة** — **ومن ملأ سلّتَه
+    // قبل الإغلاق بدقيقةٍ وفتحها بعده يجب أن يقرأ الحالَ لا أن يضغط.**
+    LaunchedEffect(Unit) { vm.refreshServing() }
 
     if (Cart.lines.isEmpty()) {
         Screen {
@@ -331,6 +336,20 @@ fun CartScreen(
         }
 
         // ══════════════════════════════════════════════════════════════
+        // **وخارجَ الدوام يُقال كذلك — ويُقال متى نعود** (`PH`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ونصُّ المالك يغلب نصَّ التطبيق** — **ونصٌّ في حزمةٍ لا
+        // يُصحَّح إلّا بنشرٍ في المتجر.**
+        //
+        // **ولا يُخترَع موعدٌ**: **خادمٌ لا يعرف متى يعود لا يُنطَق
+        // عنه** — **و«نعود قريباً» أصدقُ من ساعةٍ لا نفي بها.**
+        if (!Serving.available) {
+            Spacer(Modifier.height(8.dp))
+            Note(servingText(LocalContext.current), Rahal.colors.danger)
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // **والخطأُ يُقال حيث تقع العين — فوق الزرّ**
         // ══════════════════════════════════════════════════════════════
         //
@@ -359,7 +378,9 @@ fun CartScreen(
                     )
                 }
             },
-            enabled = !vm.busy && address != null &&
+            // **والاستقبالُ مغلقٌ يُعطّل الزرَّ** — **والسببُ فوقَه
+            // مكتوب**: **زرٌّ باهتٌ بلا سببٍ يُقرأ عطباً.**
+            enabled = !vm.busy && address != null && Serving.available &&
                 vm.priced != null && vm.priced?.outOfZone != true,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -376,6 +397,7 @@ fun CartScreen(
 class CartViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = CustomerApi(AppCore.get().api)
+    private val auth = com.rahalgo.shared.auth.AuthApi(AppCore.get().api)
 
     // ══════════════════════════════════════════════════════════════════
     // **وما كُتب في السلّة يبقى فيها**
@@ -495,6 +517,24 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
 
     fun locate() = Here.refresh(getApplication())
 
+    /**
+     * **يُجدّد حالَ الاستقبال إن شاخت.**
+     *
+     * **ولا يُنادى الخادمُ في كلّ فتحةٍ** — **حالٌ عمرُها ثوانٍ لا
+     * تحتاج نداءً**، **وشبكةٌ ضعيفةٌ تُثقَل بما لا يفيد.**
+     *
+     * **وسقوطُ النداء لا يُعطّل شيئاً** — **والحالُ القديمةُ أصدقُ من
+     * لا حال، والمحرّكُ يردّ الطلبَ إن كان مغلقاً.**
+     */
+    fun refreshServing() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!Serving.stale(now)) return
+        viewModelScope.launch {
+            runCatching { auth.platform() }
+                .onSuccess { Serving.put(it.ordering, android.os.SystemClock.elapsedRealtime()) }
+        }
+    }
+
     fun quote(lat: Double?, lng: Double?) {
         if (lat == null || lng == null || Cart.lines.isEmpty()) {
             priced = null
@@ -583,4 +623,22 @@ private fun PayChoice(
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
         )
     }
+}
+
+/**
+ * servingText **سببُ إغلاق الاستقبال نصّاً — ومتى نعود إن عُرف.**
+ *
+ * **ونصُّ المالك أوّلاً** — **فهو يعرف سببَه، ونصُّ الحزمة عامٌّ.**
+ */
+private fun servingText(ctx: android.content.Context): String {
+    val own = Serving.message.trim()
+    val base = if (own.isNotEmpty()) own else ctx.getString(
+        if (Serving.reason == "temporarily_unavailable") {
+            R.string.err_temporarily_unavailable
+        } else {
+            R.string.err_platform_closed_now
+        },
+    )
+    val back = com.rahalgo.ui.backAtText(Serving.nextAt)
+    return if (back == null) base else ctx.getString(R.string.err_back_at, base, back)
 }

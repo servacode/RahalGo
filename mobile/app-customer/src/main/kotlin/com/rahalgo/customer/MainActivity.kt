@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -431,6 +432,30 @@ private fun SignedIn(
     // **والثانيةُ تُرفض بلا قراءةٍ لأنّ اليدَ ما زالت على الزرّ.**
     LaunchedEffect(Unit) {
         if (Here.granted(context)) Here.refresh(context)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وحالُ الاستقبال تُجدَّد عند كلّ عودةٍ ذاتِ بال** (`PH-28`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ومن فتح التطبيقَ في الخامسة والدوامُ ينتهي السادسةَ ثمّ تركه
+    // في الخلفيّة وعاد في الثامنة** — **يرى حالاً عمرُها ثلاثُ ساعات**،
+    // فيملأ سلّةً ليُردّ في آخرها.
+    //
+    // **ولا نداءَ في كلّ عودةٍ مهما قصرت** — **من بدّل تطبيقاً لثانيةٍ
+    // وعاد لا يحتاج نداءً**، **والشرطُ في `Serving.stale`.**
+    //
+    // **والمراقبُ يُنزَع عند الخروج** (`onDispose`) — **ومراقبٌ يبقى
+    // يمسك الشاشةَ بعد موتها.**
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                Serving.refreshIfStale(scope)
+            }
+        }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
     }
 
     LaunchedEffect(tab, guest) {

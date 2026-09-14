@@ -27,6 +27,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import dynamic from "next/dynamic";
 import ZonesPanel from "@/components/admin/settings/zones";
+import HoursPanel from "@/components/admin/settings/hours";
 import CitiesPanel from "@/components/admin/settings/cities";
 import DivisionsPanel from "@/components/admin/settings/divisions";
 import SitePagesPanel from "@/components/admin/settings/site-pages";
@@ -372,6 +373,8 @@ export default function SettingsPage() {
     { key: "divisions", label: m.admin.divisions.title },
     { key: "cities", label: m.admin.cities.title },
     { key: "zones", label: m.terms.zones },
+    // **ودوامُ المنصّة بعد المناطق** — **التغطيةُ مكانٌ وهذا وقت.**
+    { key: "hours", label: m.admin.platformHours.title },
     { key: "whatsapp", label: m.admin.nav.whatsapp },
     ...(isAdmin ? [{ key: "broadcast", label: m.admin.broadcast.title }] : []),
   ];
@@ -603,6 +606,7 @@ export default function SettingsPage() {
       {active === "divisions" && <DivisionsPanel />}
       {active === "cities" && <CitiesPanel />}
       {active === "zones" && <ZonesPanel />}
+      {active === "hours" && <HoursPanel />}
       {active === "whatsapp" && <WhatsAppPanel />}
       {/* **والإعلانُ فعلٌ لا إعداد** — فيُقال ما هو قبل نموذجه: رسالةٌ تُرسل
           ولا تُسحب. واللوحُ نفسُه يسأل قبل الإرسال ويقول كم حساباً ستصل. */}
