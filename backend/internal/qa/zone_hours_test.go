@@ -243,6 +243,34 @@ func TestZH15_OutOfZoneStaysOutOfZone(t *testing.T) {
 		t.Fatalf("**نقطةٌ خارجَ التغطية رُدّت بغير `out_of_zone`**: %d / %s",
 			r.Code, r.Err())
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والحالُ عقدٌ كالرمز — ٤٠٠ لا سواها** (٢٠٢٦-٠٩-١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **و`out_of_zone` حكمٌ على العنوان المُرسَل**: **رفضٌ مفهومٌ لا
+	// عطبُ خادمٍ ولا «ليس الآن».** **وعميلٌ يفرّق بالحال قبل أن يقرأ
+	// الرمزَ يبني تصرّفَه عليها** — **فتبديلُها كسرُ عقدٍ منشور.**
+	//
+	// **ويحرسها `XG-46` كذلك** — **وهذا يضعها بجانب أختها الزمنيّة
+	// فيُقرأ الفرقُ في موضعٍ واحد.**
+	if r.Code != http.StatusBadRequest {
+		t.Fatalf("**حالُ `out_of_zone` تبدّلت**: %d — **والعقدُ ٤٠٠**", r.Code)
+	}
+
+	// **وأختُها الزمنيّةُ تفترق رمزاً وحالاً** — ٥٠٣: **«ليس الآن» لا
+	// «طلبُك خطأ».**
+	zoneHours(t, hh, z.ID, true, zhShut())
+	inside := hh.POST("/api/v1/orders", u.Token, zoneBody(it, z.Lat, z.Lng))
+	if inside.Err() != "zone_closed_now" {
+		t.Fatalf("**عنوانٌ داخلَ منطقةٍ خارجَ وقتها رُدّ بغير `zone_closed_now`**: %d / %s",
+			inside.Code, inside.Err())
+	}
+	if inside.Code != http.StatusServiceUnavailable {
+		t.Fatalf("**حالُ `zone_closed_now` ليست ٥٠٣**: %d", inside.Code)
+	}
+	if inside.Code == r.Code {
+		t.Fatal("**الحالان تساوتا** — **والعميلُ يفرّق بالحال قبل الرمز**")
+	}
 }
 
 // TestZH17_InactiveZoneNeverBecomesUsable **ومنطقةٌ مُطفأةٌ لا تصير
