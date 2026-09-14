@@ -68,6 +68,25 @@ func zoneHours(t *testing.T, h *Harness, id string, enforced bool, ws ...platfor
 		id, enforced); err != nil {
 		t.Fatalf("ضبطُ سريان المنطقة: %v", err)
 	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وما سرى يُرفَع** — **وإلّا أسقط الفحصُ جيرانَه** (٢٠٢٦-٠٩-١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ومنطقةٌ سارٍ جدولُها ومغلقةٌ الآن تبقى بعد الفحص** — **فيأتي
+	// جارٌ ينشئ طلباً فيُردّ بـ`zone_closed_now`** وهو لا يعرف لماذا.
+	//
+	// **وقِيس**: سقطت `ZONE-002` و`ZONE-003` و`ZONE-006` في جولةٍ
+	// كاملةٍ بـ«zone_closed_now» — **وهي خضراءُ منفردةً.**
+	//
+	// **ولا يكفي أن تُمحى المنطقة** — **فمنطقةٌ يُعيدها `otherZonesOff`
+	// إلى الحياة تعود بسريانها معها.**
+	t.Cleanup(func() {
+		_, _ = h.Pool.Exec(ctxBG(),
+			`UPDATE delivery_zones SET hours_enforced = false WHERE id = $1::uuid`, id)
+		_, _ = h.Pool.Exec(ctxBG(),
+			`DELETE FROM delivery_zone_hours WHERE zone_id = $1::uuid`, id)
+	})
 }
 
 // otherZonesOff **يُطفئ كلَّ منطقةٍ سواها — ثمّ يُعيدها.**
