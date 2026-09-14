@@ -97,6 +97,15 @@ type Availability struct {
 	//
 	// **ولا يُسمّى ما لا يُعرَف**: `area_not_supported` بلا اسم.
 	PlaceName string `json:"place_name,omitempty"`
+	// CityID و GovernorateID **معرّفان ثابتان حين يُعرَفان.**
+	//
+	// **ويُرسَلان ليُبنى عليهما لا ليُعرَضا** — **والاسمُ يتبدّل بتصحيحٍ
+	// إملائيٍّ في اللوحة، والمعرّفُ لا يتبدّل.**
+	//
+	// **ولا يُخزَّن بهما شيءٌ اليوم** — **وطلبُ التوسّع في دفعةٍ قادمة**،
+	// **وهذا ما تُبنى عليه هويّتُه.**
+	CityID        string `json:"city_id,omitempty"`
+	GovernorateID string `json:"governorate_id,omitempty"`
 }
 
 // Gates **ما قرأته البوّابةُ قبلَ هذا** — **يُمرَّر ولا يُقرأ ثانيةً.**
@@ -162,7 +171,12 @@ func (s *Service) AvailabilityAt(ctx context.Context, q dbtx.Querier,
 		return Availability{}, err
 	}
 	if place.Reason != "" {
-		return Availability{Reason: place.Reason, PlaceName: place.Name}, nil
+		return Availability{
+			Reason:        place.Reason,
+			PlaceName:     place.Name,
+			CityID:        place.CityID,
+			GovernorateID: place.GovID,
+		}, nil
 	}
 
 	// ٥ · و٦ · **التغطيةُ وشكلُها** — **بالمصدر الحاكم نفسِه.**
@@ -175,9 +189,11 @@ func (s *Service) AvailabilityAt(ctx context.Context, q dbtx.Querier,
 		}, nil
 	case zerr == ErrOutOfZone:
 		return Availability{
-			Reason:    ReasonAddressOutsideCoverage,
-			OrderCode: "out_of_zone",
-			PlaceName: place.Name,
+			Reason:        ReasonAddressOutsideCoverage,
+			OrderCode:     "out_of_zone",
+			PlaceName:     place.Name,
+			CityID:        place.CityID,
+			GovernorateID: place.GovID,
 		}, nil
 	case zerr != nil:
 		return Availability{}, zerr
@@ -239,6 +255,9 @@ type placeVerdict struct {
 	Reason string
 	// Name اسمُ المدينة أو المحافظة حين يُعرَف.
 	Name string
+	// CityID و GovID **هويّةٌ ثابتةٌ يُبنى عليها** — لا اسمٌ يتبدّل.
+	CityID string
+	GovID  string
 }
 
 // classifyPlace **أأُطلقت الخدمةُ في موضع هذا العنوان؟**
@@ -246,19 +265,23 @@ func (s *Service) classifyPlace(ctx context.Context, q dbtx.Querier,
 	lat, lng float64) (placeVerdict, error) {
 
 	var (
+		cityID   string
 		cityName string
 		cityOn   bool
+		govID    *string
 		govName  *string
 		govOn    *bool
 	)
+	// **وأقربُ مدينةٍ تحويه** — **وهي قاعدةُ `city_filter` نفسُها**:
+	// **مركزٌ ونصفُ قطر، والأقربُ يفوز عند التداخل.**
 	err := q.QueryRow(ctx, `
-		SELECT c.name, c.active, g.name, g.active
+		SELECT c.id::text, c.name, c.active, g.id::text, g.name, g.active
 		FROM cities c
 		LEFT JOIN districts d    ON d.id = c.district_id
 		LEFT JOIN governorates g ON g.id = d.governorate_id
 		WHERE ST_DWithin(c.center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, c.radius_m)
 		ORDER BY ST_Distance(c.center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
-		LIMIT 1`, lat, lng).Scan(&cityName, &cityOn, &govName, &govOn)
+		LIMIT 1`, lat, lng).Scan(&cityID, &cityName, &cityOn, &govID, &govName, &govOn)
 	if err != nil {
 		// **ولا مدينةَ تحويه** — **ولا محافظةَ تُسمّى له**: المحافظاتُ
 		// بلا هندسة. **فيُقال «لم نصل بعد» ولا يُسمّى ما لا يُعرَف.**
@@ -271,17 +294,22 @@ func (s *Service) classifyPlace(ctx context.Context, q dbtx.Querier,
 	// **والمحافظةُ المُطفأةُ تسبق المدينة** — **وهي الأعمّ**: **ومن
 	// قيل له «مدينتُك لم تُطلَق» والمحافظةُ كلُّها مُطفأةٌ ظنّ الأمرَ
 	// أضيقَ ممّا هو.**
+	out := placeVerdict{Name: cityName, CityID: cityID}
+	if govID != nil {
+		out.GovID = *govID
+	}
 	if govOn != nil && !*govOn {
-		name := ""
+		out.Reason = ReasonProvinceNotSupported
 		if govName != nil {
-			name = *govName
+			out.Name = *govName
 		}
-		return placeVerdict{Reason: ReasonProvinceNotSupported, Name: name}, nil
+		return out, nil
 	}
 	if !cityOn {
-		return placeVerdict{Reason: ReasonCityNotSupported, Name: cityName}, nil
+		out.Reason = ReasonCityNotSupported
+		return out, nil
 	}
-	return placeVerdict{Name: cityName}, nil
+	return out, nil
 }
 
 // ══════════════════════════════════════════════════════════════════════
