@@ -5,6 +5,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -81,9 +82,40 @@ func (s *Server) settingMediaBlur(r *http.Request, key string) string {
 //
 // **شاشةُ الدخول تحتاجها قبل أن يكون هناك حساب** — وهي أوّلُ ما يُرى.
 func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════
+	// **وحالُ الاستقبال تُقرأ مع الهويّة لا في نداءٍ ثانٍ** (`PH`)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وهذا البابُ يُقرأ أوّلَ ما تُفتح الشاشة** — **ونداءٌ ثانٍ
+	// لحقلٍ واحدٍ يجعل زرَّ الطلب يظهر ثمّ يُعطَّل أمام العين**، وهو
+	// أسوأُ من أن يُعطَّل من أوّله. (وهي العلّةُ عينُها المكتوبةُ في
+	// `show_login` أدناه.)
+	//
+	// **وحقلٌ يُضاف لا عقدٌ يُكسَر** — **وعميلٌ قديمٌ لا يقرؤه يبقى
+	// يعمل كما كان.** **ولا حقلَ قائمٌ يُنزَع ولا يُعاد تسميتُه.**
+	ordering := map[string]any{}
+	if st, err := s.platform.State(r.Context(), s.pg); err == nil {
+		ordering = map[string]any{
+			"ordering_available": st.OrderingAvailable,
+			"reason":             string(st.Reason),
+			"message":            st.Message,
+			"server_time":        st.ServerTime.Format(time.RFC3339),
+			"timezone":           st.Timezone,
+			"hours_enforced":     st.HoursEnforced,
+			"today_windows":      st.TodayWindows,
+		}
+		if st.NextAvailableAt != nil {
+			ordering["next_available_at"] = st.NextAvailableAt.Format(time.RFC3339)
+		}
+	} else {
+		s.logger.Error("تعذّر قراءةُ حال الاستقبال للردّ العامّ", "err", err)
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"name": s.settings.GetString(r.Context(), "platform.name"),
 		"logo": s.platformLogo(r),
+		// **وحالُ الاستقبال** — انظر أعلاه.
+		"ordering": ordering,
 		// **وما تحتاجه الشاشةُ قبل أن يكون هناك حساب** — لا الهويّةَ وحدَها.
 		// **وشاشةُ الدخول لا تعرف أيَّ أبوابٍ تعرض حتّى تسأل**، ونداءٌ ثانٍ
 		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
@@ -354,6 +386,11 @@ func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Reques
 	// **وبابُ المتاجر يعني أن يُفتح المخصَّصُ ويبقى الطلبُ من متجرٍ
 	// مغلقاً**: **المكتبُ يعمل والسوقُ لم تمتلئ بعد.**
 	if !s.requireLaunch(w, r, launchMerchantOrders) {
+		return
+	}
+	// **ثمّ الإيقافُ المؤقّتُ ثمّ جدولُ الدوام** — **وبعد وضع الإطلاق
+	// لا قبلَه**: **بابٌ لم يُفتح بعدُ لا يُقال عنه «نعود الرابعة».**
+	if !s.requireOrdering(w, r) {
 		return
 	}
 	in, err := decode[orders.CreateInput](r)

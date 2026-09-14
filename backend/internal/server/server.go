@@ -29,6 +29,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/opsmap"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/platform"
 	"github.com/servacode/rahalgo/backend/internal/push"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/referrals"
@@ -47,6 +48,8 @@ type Server struct {
 	identity *identity.Service
 	catalog  *catalog.Service
 	settings *settings.Store
+	// platform **دوامُ المنصّة وإيقافُها المؤقّت** — `PH`.
+	platform *platform.Service
 	// comms **حديثُ الطلب** — قناةٌ واحدةٌ لطرفيه بلا رقمٍ بينهما.
 	comms      *comms.Service
 	wallet     *wallet.Service
@@ -205,6 +208,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **ومكافأةُ الهدف تُدفع عند التسليم** — محرّكُ الطلبات يناديها.
 	ordersSvc.SetTargetGranter(srv.incentives)
 	// **والخصمُ يُقرأ لحظةَ بناء الطلب** — لا من ذاكرةٍ محمّلة.
+	// **ودوامُ المنصّة يُقرأ من موضعٍ واحد** — بابُ الطلب العاديّ
+	// **وبابُ المخصَّص والردُّ العامُّ الذي تقرؤه الشاشة.**
+	srv.platform = platform.New(pg, settingsStore)
 	srv.offers = offers.New(pg)
 	ordersSvc.SetOffers(srv.offers)
 	// **والخريطةُ تُسأل عن زمن الطريق لحظةَ الإسناد والاستلام** — تُلتقط
@@ -1185,6 +1191,13 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/menu/items/{itemID}", s.handleUpdateItem)
 				r.Delete("/menu/items/{itemID}", s.handleDeleteItem)
 				r.Put("/merchants/{id}/hours", s.handleSetHours)
+				// **ودوامُ المنصّة وإيقافُها المؤقّت** — `PH`.
+				// **ومن باب `/zones` نفسِه**: تهيئةُ تشغيلٍ عامّة،
+				// **ولا قدرةَ جديدة.**
+				r.Get("/platform/hours", s.handleGetPlatformHours)
+				r.Put("/platform/hours", s.handleSetPlatformHours)
+				r.Get("/platform/closure", s.handleGetServiceClosure)
+				r.Put("/platform/closure", s.handleSetServiceClosure)
 				r.Post("/zones", s.handleCreateZone)
 				r.Patch("/zones/{id}", s.handleUpdateZone)
 				r.Delete("/zones/{id}", s.handleDeleteZone)

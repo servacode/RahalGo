@@ -183,6 +183,10 @@ var adminPolicy = []Rule{
 	{"", "/app-file", ContentManage},
 
 	// ── الجغرافيا ───────────────────────────────────────────────
+	// **ودوامُ المنصّة وإيقافُها المؤقّت من باب المناطق نفسِه** —
+	// **تهيئةُ تشغيلٍ عامّةٌ لا مالٌ ولا أمن.**
+	{"", "/platform/hours", SettingsGeneralManage},
+	{"", "/platform/closure", SettingsGeneralManage},
 	{"", "/zones", SettingsGeneralManage},
 	{"", "/zones/{id}", SettingsGeneralManage},
 	{"", "/cities", SettingsGeneralManage},

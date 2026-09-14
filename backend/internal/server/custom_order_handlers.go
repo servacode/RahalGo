@@ -28,6 +28,11 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 	if !s.requireLaunch(w, r, launchCustomerCustomOrders) {
 		return
 	}
+	// **والمخصَّصُ يخضع لدوام المنصّة كالعاديّ** — **ومكتبٌ مغلقٌ لا
+	// يحضّر طلباً موصوفاً كما لا يحضّر طلباً من متجر.**
+	if !s.requireOrdering(w, r) {
+		return
+	}
 	req, err := decode[struct {
 		Request     string  `json:"request"`
 		AddressText string  `json:"address_text"`

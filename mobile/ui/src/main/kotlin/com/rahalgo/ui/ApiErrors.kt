@@ -79,6 +79,25 @@ fun apiError(
     // **و٥٠٣ تُقرأ عطبَ خادمٍ فتُسجَّل حادثةً** — **ووضعُ الإطلاق حالٌ
     // مقصودةٌ يضبطها المالك، لا انكسارٌ يُبلَّغ عنه.** **ولو سُجِّل
     // لَغرِق السجلُّ بمئاتٍ يوميّاً فيُفقَد فيه ما يعني شيئاً.**
+    // ══════════════════════════════════════════════════════════════════
+    // **وإغلاقُ الاستقبال ليس عطباً كذلك** (`PH`، ٢٠٢٦-٠٩-١٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وهما حالان يضبطهما المالك**: إيقافٌ مؤقّتٌ ودوامٌ انتهى —
+    // **ولا يُسجَّلان حادثةً كما لا يُسجَّل بابُ الإطلاق.**
+    //
+    // **ونصُّ المالك يغلب نصَّ التطبيق** — والمفتاحُ `notice` عينُه.
+    //
+    // **وموعدُ العودة يُقرأ من الخادم ويُنسَّق هنا** — **والأهليّةُ
+    // قُضيت هناك**: **هذا عرضٌ لا حكم.**
+    if (code == "temporarily_unavailable" || code == "platform_closed_now") {
+        val notice = e.body.details["notice"].orEmpty().trim()
+        val base = if (notice.isNotEmpty()) notice
+        else context.getString(resolveErrorRes(code, e.body.messageKey, extra))
+        val back = backAtText(e.body.details["next_available_at"])
+        return if (back == null) base
+        else context.getString(R.string.err_back_at, base, back)
+    }
     if (code == "launch_closed") {
         // **ونصُّ المالك يغلب نصَّ التطبيق** — **ونصٌّ مكتوبٌ في حزمةٍ
         // لا يُصحَّح إلّا بنشرٍ في المتجر.** وفارغُه يقع على نصّ الرمز.
@@ -305,6 +324,8 @@ private val CODES: Map<String, Int> = mapOf(
     "coverage_unavailable" to R.string.err_coverage_unavailable,
     "bad_point" to R.string.err_bad_point,
     "launch_closed" to R.string.err_launch_closed,
+    "temporarily_unavailable" to R.string.err_temporarily_unavailable,
+    "platform_closed_now" to R.string.err_platform_closed_now,
     "password_change_required" to R.string.err_password_change_required,
     "auth_unavailable" to R.string.err_auth_unavailable,
     "idempotency_reclaimed" to R.string.err_in_progress,
@@ -350,3 +371,27 @@ private val CODES: Map<String, Int> = mapOf(
  * موضع، **ولا يبقى عذرٌ لكتابة رسالةٍ بيد.**
  */
 fun err(e: Throwable): String = apiError(AppCore.get().app, e)
+
+/**
+ * backAtText **موعدُ العودة نصّاً قصيراً** — و`null` إن لم يُعرَف.
+ *
+ * **ولا يُخترَع موعد**: **خادمٌ لا يعرف متى يعود لا يُنطَق عنه.**
+ *
+ * **ويُنسَّق بمنطقة الجهاز** — **وهي منطقةُ من يقرأ**: **والحكمُ وقع
+ * في الخادم قبل أن يصل هذا النصّ.**
+ *
+ * **وتاريخٌ لا يُحلَّل يُبتلَع** — **ورسالةُ «ليس الآن» أنفعُ من رسالةِ
+ * عطبٍ لأنّ حقلاً جاء مشوَّهاً.**
+ */
+internal fun backAtText(raw: String?): String? {
+    val v = raw?.trim().orEmpty()
+    if (v.isEmpty()) return null
+    return try {
+        val at = java.time.OffsetDateTime.parse(v)
+        java.time.format.DateTimeFormatter
+            .ofPattern("h:mm a", java.util.Locale("ar"))
+            .format(at.atZoneSameInstant(java.time.ZoneId.systemDefault()))
+    } catch (_: java.time.format.DateTimeParseException) {
+        null
+    }
+}

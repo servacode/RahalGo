@@ -347,6 +347,19 @@ var Catalog = []Def{
 	// يبدّل مساراً** — والأبوابُ السبعةُ فوقَه هي التي تبدّل المسار.
 	{Key: "launch.notice", Group: GroupLaunch, Kind: KindLongText, Default: ""},
 
+	// ── وسريانُ جدول الدوام رايةٌ صريحة ────────────────────────────
+	//
+	// **والجدولُ صفوفٌ في `platform_hours`** — **وسريانُه ليس وجودَ
+	// صفوف**: **من أدخل الأحدَ وحدَه ثمّ ذهب لينام أغلق ستّةَ أيّامٍ بلا
+	// أن يقصد.** **فيُبنى الجدولُ ويُراجَع، ثمّ يُفعَّل في لحظةٍ تُختار.**
+	//
+	// **وافتراضُها `false`** — **فهجرةُ ٠١٤٩ لا تغلق شيئاً يومَ تُنشر**،
+	// وهو الدرسُ المكتوبُ في ٠١٤٨ نفسِها.
+	//
+	// **وهي غيرُ `launch.customer_orders`**: **ذاك يقول أفُتح البابُ
+	// للناس أصلاً، وهذه تقول أيسري عليه توقيت.**
+	{Key: "hours.platform_enforced", Group: GroupLaunch, Kind: KindBool, Default: false},
+
 	{Key: "platform.orders_mode", Group: GroupPlatform, Kind: KindChoice,
 		Options: []string{"platform", "merchants"}, Default: "platform"},
 
