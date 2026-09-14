@@ -32,7 +32,7 @@
     "behaviour_settings": 112,
     "order_fields": 75,
     "test_files": 337,
-    "test_funcs": 1407
+    "test_funcs": 1408
   },
   "flows": [
     {
@@ -9455,6 +9455,12 @@
     },
     {
       "name": "TestCC04_CC05_RemovedAndDisabledItemsAreNamed",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCC04b_CartOfOnlyRemovedItemStillNamesIt",
       "file": "internal/qa/cart_changes_test.go",
       "package": "qa",
       "orphan": true

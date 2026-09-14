@@ -112,6 +112,29 @@ func TestCC04_CC05_RemovedAndDisabledItemsAreNamed(t *testing.T) {
 	}
 }
 
+// TestCC04b_CartOfOnlyRemovedItemStillNamesIt **وسلّةٌ كلُّ ما فيها
+// محذوفٌ تُسمّيه كذلك.**
+//
+// **وقِيس حيّاً على التجهيز**: **ردَّ `invalid_items`** — **وهو
+// الرمزُ الأصمُّ بعينه**، **فسقطت قبل التسعير ولا مصدرَ يُستنتَج.**
+func TestCC04b_CartOfOnlyRemovedItemStillNamesIt(t *testing.T) {
+	hh := New(t)
+	z := zoneForDemand(t, hh, "منطقةُ CC-04ب")
+	gone := hh.NewItem(1000)
+	if _, err := hh.Pool.Exec(ctxBG(),
+		`DELETE FROM menu_items WHERE id = $1`, gone.ID); err != nil {
+		t.Fatalf("محوُ الصنف: %v", err)
+	}
+
+	items := []map[string]any{{"menu_item_id": gone.ID, "qty": 1}}
+	cs := changesOf(t, quoteWith(t, hh, items, z.Lat, z.Lng, map[string]any{
+		"lines": map[string]any{gone.ID: 1000},
+	}))
+	if hasChange(cs, "product_removed") == nil {
+		t.Fatalf("**سلّةٌ كلُّها محذوفٌ رُدّت برمزٍ أصمّ**: %v", cs)
+	}
+}
+
 // ═════════════════ CC-07 · CC-08 — السعرُ صعوداً ونزولاً ═════════════
 
 // TestCC07_CC08_PriceChangeIsSurfacedBothWays **ولا يُستبدَل رقمٌ بصمت.**

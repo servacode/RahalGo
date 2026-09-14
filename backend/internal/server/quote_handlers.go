@@ -231,7 +231,16 @@ func (s *Server) changesFor(
 	switch {
 	case errors.Is(cause, orders.ErrItemGone),
 		errors.Is(cause, orders.ErrItemUnavailable),
-		errors.Is(cause, orders.ErrBadQty):
+		errors.Is(cause, orders.ErrBadQty),
+		// **وسلّةٌ كلُّ ما فيها صنفٌ محذوفٌ تسقط قبل التسعير** —
+		// **فلا مصدرَ يُستنتَج** (`ErrBadItems` من `SourcesOf`).
+		//
+		// **وقِيس حيّاً على التجهيز**: **صنفٌ لا وجودَ له ردَّ
+		// `invalid_items`** — **وهو الرمزُ الأصمُّ بعينه.**
+		//
+		// **ولا يُبتلَع الرمزُ إن لم يُترجَم**: **`len(cs) > 0` عند
+		// المنادي** — **فخيارٌ غيرُ صالحٍ يبقى `invalid_items`.**
+		errors.Is(cause, orders.ErrBadItems):
 	default:
 		return nil
 	}
