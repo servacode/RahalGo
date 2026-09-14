@@ -1867,6 +1867,98 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/platform/closure",
+      "handler": "handleGetServiceClosure",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/platform/closure",
+      "handler": "handleSetServiceClosure",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "request": [
+        {
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        },
+        {
+          "name": "ends_at",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/platform/hours",
+      "handler": "handleGetPlatformHours",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "response": [
+        {
+          "name": "enforced",
+          "type": "unknown"
+        },
+        {
+          "name": "timezone",
+          "type": "unknown"
+        },
+        {
+          "name": "windows",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/platform/hours",
+      "handler": "handleSetPlatformHours",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "request": [
+        {
+          "name": "windows",
+          "type": "[]windowInput"
+        }
+      ],
+      "response": [
+        {
+          "name": "windows",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/profits",
       "handler": "handleProfits",
       "auth": true,
@@ -5784,6 +5876,10 @@
         },
         {
           "name": "name",
+          "type": "unknown"
+        },
+        {
+          "name": "ordering",
           "type": "unknown"
         },
         {

@@ -32,6 +32,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/platform"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
@@ -75,6 +76,10 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 			// فيسقط كلُّ مسارٍ يقرؤها بمؤشّرٍ فارغ.
 			identity: ident,
 			catalog:  catalog.NewService(pool, ident),
+			// **ودوامُ المنصّة مركَّبٌ كذلك** — **والردُّ العامُّ يقرؤه
+			// الآن** (`PH`)، **فأيُّ فحصٍ يمسّ `handlePublicPlatform`
+			// ينهار بمؤشّرٍ فارغ.** وهي علّةُ المحفظة والفهرس قبله.
+			platform: platform.New(pool, settingsStore),
 		},
 	}
 

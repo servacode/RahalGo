@@ -453,6 +453,7 @@
 | `launch.merchant_orders` |  | bool | `false` |
 | `launch.rep_acquisition` |  | bool | `false` |
 | `launch.notice` |  | longtext | `` |
+| `hours.platform_enforced` |  | bool | `false` |
 | `platform.support_phone` |  | text | `` |
 | `platform.address` |  | text | `` |
 | `platform.location` |  | geo | `` |

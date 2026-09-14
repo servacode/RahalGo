@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 325,
+    "routes": 329,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 139,
-    "behaviour_settings": 111,
+    "setting_defs": 140,
+    "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 324,
-    "test_funcs": 1259
+    "test_files": 327,
+    "test_funcs": 1307
   },
   "flows": [
     {
@@ -4013,6 +4013,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "hours.platform_enforced",
+      "group": "launch",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "launch.customer_browse",
       "group": "launch",
       "kind": "bool",
@@ -7629,6 +7647,180 @@
         "FULL"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestPH01_WeekdayOpenInterval",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH02_OpeningBoundaryInclusive",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH03_ClosingBoundaryExclusive",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH04_ClosedDay",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH05_MultipleWindows",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH06_BetweenWindowsClosed",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH07_CrossMidnightHead",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH08_PreviousDaySpill",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH09_WeekBoundary",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH10_NextOpenSameDay",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH10b_NextOpenWhileOpenIsNow",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH11_NextOpenLaterDay",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH12_NoPastNextOpen",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH13_DeviceTimezoneIrrelevant",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH24b_EmptyScheduleHasNoNextOpen",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH25_OverlapRejected",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH25b_CrossDayOverlapRejected",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH25c_WeekWrapOverlapRejected",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH26_InvalidRejected",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_DeterministicOrder",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH15_ClosurePrecedesSchedule",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH17_EnforcedScheduleCloses",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH23_ClosureEndIntersectsSchedule",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH23b_ClosureEndInsideWindow",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH24_IndefiniteClosureInventsNothing",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ClosureEndBoundary",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ExpiredClosureSelfLifts",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ScheduleDormantUntilEnforced",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_StateCarriesServerTruth",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
     },
     {
       "name": "TestAmount_Of",
@@ -14572,6 +14764,120 @@
     {
       "name": "TestPID4_SyrianMobileIsAccepted",
       "file": "internal/qa/phone_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH14_LaunchClosedPrecedence",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH15_ClosureBlocksNormalOrder",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH16_ClosureBlocksCustomOrder",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH17_WeeklyClosedBlocksNormalOrder",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH18_WeeklyClosedBlocksCustomOrder",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH19_RejectedOrderLeavesNothing",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH20_ExistingOrderSurvivesSchedule",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH21_ExistingOrderSurvivesClosure",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH22_BrowsingStaysOpenWhenClosed",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH25_AdminRejectsOverlap",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH26_AdminRejectsMalformed",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH27_PublicPlatformCarriesReason",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH29_StaleClientCannotSubmitAfterClose",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_AdminRejectsPastClosureEnd",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_AdminRoundTrip",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ClosurePrecedesSchedule",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_DormantScheduleAdmitsOrder",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ExpiredClosureAdmitsOrder",
+      "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_OpenScheduleAdmitsOrder",
+      "file": "internal/qa/platform_hours_test.go",
       "package": "qa",
       "orphan": true
     },
