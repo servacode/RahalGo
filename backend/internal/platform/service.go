@@ -36,6 +36,11 @@ const EnforcedKey = "hours.platform_enforced"
 var ErrClosureRange = httpx.NewError(http.StatusBadRequest,
 	"invalid_closure_range", "errors.invalid_closure_range")
 
+// ErrZoneNotFound **منطقةٌ لا وجودَ لها** — **ولا يُكتب جدولٌ لمعرّفٍ
+// مخترَع**، **فيبقى في القاعدة جدولٌ لا منطقةَ له.**
+var ErrZoneNotFound = httpx.NewError(http.StatusNotFound,
+	"not_found", "errors.not_found")
+
 // ErrBadSchedule **جدولٌ لا يُقبَل** — يومٌ خارجَ المدى أو فترةٌ فارغةٌ
 // أو تداخلٌ.
 var ErrBadSchedule = httpx.NewError(http.StatusBadRequest,

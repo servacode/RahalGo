@@ -189,6 +189,8 @@ var adminPolicy = []Rule{
 	{"", "/platform/closure", SettingsGeneralManage},
 	{"", "/zones", SettingsGeneralManage},
 	{"", "/zones/{id}", SettingsGeneralManage},
+	// **وأوقاتُ المنطقة من بابها نفسِه** — `ZH`.
+	{"", "/zones/{id}/hours", SettingsGeneralManage},
 	{"", "/cities", SettingsGeneralManage},
 	{"", "/cities/{id}", SettingsGeneralManage},
 	{"", "/governorates", SettingsGeneralManage},

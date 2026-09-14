@@ -3028,6 +3028,60 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/zones/{id}/hours",
+      "handler": "handleGetZoneHours",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "response": [
+        {
+          "name": "enforced",
+          "type": "unknown"
+        },
+        {
+          "name": "timezone",
+          "type": "unknown"
+        },
+        {
+          "name": "windows",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/zones/{id}/hours",
+      "handler": "handleSetZoneHours",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "request": [
+        {
+          "name": "enforced",
+          "type": "bool"
+        },
+        {
+          "name": "windows",
+          "type": "[]windowInput"
+        }
+      ],
+      "response": [
+        {
+          "name": "enforced",
+          "type": "unknown"
+        },
+        {
+          "name": "windows",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/auth/account/delete/confirm",
       "handler": "handleDeleteAccountConfirm",

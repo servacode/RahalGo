@@ -90,7 +90,9 @@ fun apiError(
     //
     // **وموعدُ العودة يُقرأ من الخادم ويُنسَّق هنا** — **والأهليّةُ
     // قُضيت هناك**: **هذا عرضٌ لا حكم.**
-    if (code == "temporarily_unavailable" || code == "platform_closed_now") {
+    if (code == "temporarily_unavailable" || code == "platform_closed_now" ||
+        code == "zone_closed_now"
+    ) {
         val notice = e.body.details["notice"].orEmpty().trim()
         val base = if (notice.isNotEmpty()) notice
         else context.getString(resolveErrorRes(code, e.body.messageKey, extra))
@@ -326,6 +328,7 @@ private val CODES: Map<String, Int> = mapOf(
     "launch_closed" to R.string.err_launch_closed,
     "temporarily_unavailable" to R.string.err_temporarily_unavailable,
     "platform_closed_now" to R.string.err_platform_closed_now,
+    "zone_closed_now" to R.string.err_zone_closed_now,
     "password_change_required" to R.string.err_password_change_required,
     "auth_unavailable" to R.string.err_auth_unavailable,
     "idempotency_reclaimed" to R.string.err_in_progress,

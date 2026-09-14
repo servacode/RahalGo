@@ -211,6 +211,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **ودوامُ المنصّة يُقرأ من موضعٍ واحد** — بابُ الطلب العاديّ
 	// **وبابُ المخصَّص والردُّ العامُّ الذي تقرؤه الشاشة.**
 	srv.platform = platform.New(pg, settingsStore)
+	// **ووقتُ المناطق يُسأل داخلَ معاملةِ الإنشاء** — `ZH`.
+	ordersSvc.SetZoneHours(srv.platform)
 	srv.offers = offers.New(pg)
 	ordersSvc.SetOffers(srv.offers)
 	// **والخريطةُ تُسأل عن زمن الطريق لحظةَ الإسناد والاستلام** — تُلتقط
@@ -1198,6 +1200,9 @@ func (s *Server) Router() http.Handler {
 				r.Put("/platform/hours", s.handleSetPlatformHours)
 				r.Get("/platform/closure", s.handleGetServiceClosure)
 				r.Put("/platform/closure", s.handleSetServiceClosure)
+				// **وأوقاتُ المنطقة من باب المنطقة نفسِها** — `ZH`.
+				r.Get("/zones/{id}/hours", s.handleGetZoneHours)
+				r.Put("/zones/{id}/hours", s.handleSetZoneHours)
 				r.Post("/zones", s.handleCreateZone)
 				r.Patch("/zones/{id}", s.handleUpdateZone)
 				r.Delete("/zones/{id}", s.handleDeleteZone)

@@ -48,13 +48,15 @@ type Notifier interface {
 }
 
 type Service struct {
-	db       *pgxpool.Pool
-	identity *identity.Service
-	wallet   *wallet.Service
-	cashbox  *cashbox.Service
-	pub      Publisher
-	notify   Notifier
-	logger   *slog.Logger
+	// zoneHours **آلةُ أوقات المناطق** — تُركَّب بـ`SetZoneHours`.
+	zoneHours ZoneHours
+	db        *pgxpool.Pool
+	identity  *identity.Service
+	wallet    *wallet.Service
+	cashbox   *cashbox.Service
+	pub       Publisher
+	notify    Notifier
+	logger    *slog.Logger
 	// offers الخصومُ السارية — **تُقرأ لحظةَ بناء الطلب.**
 	//
 	// **وواجهةٌ ضيّقةٌ لا حزمةٌ كاملة**: هذا المحرّكُ يسأل سؤالاً واحداً —
@@ -479,6 +481,11 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		return nil, nil, ErrOutOfZone
 	}
 	if err != nil {
+		return nil, nil, err
+	}
+	// **ووقتُ المنطقة بعد جغرافيتها** (`ZH`) — **والمنطقةُ هي التي
+	// سُعِّرت للتوّ، لا نتيجةُ استعلامٍ ثانٍ** (`ZH-34`).
+	if err := unit.requireZoneOpen(ctx, tx, zone.ZoneCharge); err != nil {
 		return nil, nil, err
 	}
 	// ══════════════════════════════════════════════════════════════════

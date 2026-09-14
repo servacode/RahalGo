@@ -147,7 +147,13 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	//
 	// **وبالمُنفّذ المُمرَّر لا بالمَسبَح** — **فالفحصُ والكتابةُ في
 	// معاملةٍ واحدةٍ**، ولا تتبدّل التغطيةُ بينهما في عين هذه المعاملة.
-	if _, err := s.RequireServiceable(ctx, q, lat, lng); err != nil {
+	// **ووقتُ المنطقة بعد جغرافيتها** (`ZH`) — **والمنطقةُ هي التي
+	// ردّتها بوّابةُ القبول نفسُها، لا نتيجةُ استعلامٍ ثانٍ** (`ZH-34`).
+	z, err := s.RequireServiceable(ctx, q, lat, lng)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := s.requireZoneOpen(ctx, q, z); err != nil {
 		return nil, nil, err
 	}
 

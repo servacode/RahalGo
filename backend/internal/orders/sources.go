@@ -208,6 +208,22 @@ type QuoteResult struct {
 	// **والرمزُ رمزُ الخطأ نفسُه** — فتُترجمه الشاشةُ بخريطتها القائمة،
 	// **ولا نصَّ ثانٍ يُكتب.**
 	ServiceableReason string `json:"serviceable_reason,omitempty"`
+
+	// ZoneClosed **مُغطّاةٌ جغرافيّاً ولا يُوصَّل إليها الآن** (`ZH`).
+	//
+	// **وهو غيرُ `OutOfZone` بقصد** — **وعنوانٌ في قلب الحيّ المخدوم
+	// ليس خارجَ التغطية، والساعةُ هي المانع.** **ومن خلطهما أخبر
+	// زبوناً أنّ المنصّةَ لا تصله أبداً وهي تصله كلَّ صباح.**
+	ZoneClosed bool `json:"zone_closed"`
+
+	// NextAvailableAt **متى يُقبَل طلبٌ إلى هذا العنوان** — RFC 3339.
+	//
+	// **وهو تقاطعُ المنصّةِ والمنطقة** — **لا موعدُ المنطقة وحدَها**:
+	// **ومن قيل له «يعود التوصيل الثالثة» والمنصّةُ لا تستقبل حتّى
+	// الخامسة عاد فوجد البابَ مغلقاً.**
+	//
+	// **وفارغٌ يعني «لا موعدَ معلوم»** — **ولا يُخترَع.**
+	NextAvailableAt string `json:"next_available_at,omitempty"`
 	// Sources عددُ المطابخ، وسقفُها، وهل تجاوزته.
 	Sources    int  `json:"sources"`
 	MaxSources int  `json:"max_sources"`
@@ -251,8 +267,15 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 		out.Serviceable = false
 		out.ServiceableReason = "bad_point"
 	} else if z, err := s.DeliveryAt(ctx, s.db, lat, lng); err == nil {
+		// **والرسمُ يبقى معروضاً ولو أُغلق الوقت** — **فالعنوانُ
+		// مُغطّىً والرقمُ صحيح**، **وإخفاؤه يُوهم أنّ المنصّةَ لا تصله.**
 		out.BaseFee = z.Fee
 		out.Serviceable = true
+		// **ثمّ وقتُ المنطقة** (`ZH`) — **بعد جغرافيتها لا قبلها**،
+		// **وللمنطقة التي سُعِّرت للتوّ لا لنتيجة استعلامٍ ثانٍ.**
+		if out.ServiceableReason == "" {
+			s.quoteZoneTime(ctx, out, z.ZoneCharge)
+		}
 	} else if errors.Is(err, ErrOutOfZone) {
 		// **خارجَ التغطية ليس خطأً في التسعيرة** — الرسمُ يبقى صفراً ويُردّ
 		// الطلبُ عند الإنشاء بـ`out_of_zone`. **وسلّةٌ تنهار لأن الدبوسَ لم
@@ -288,6 +311,14 @@ type ZoneCharge struct {
 	Name        string
 	DeliveryFee int64
 	MinOrder    int64
+
+	// HoursEnforced **أيسري جدولُ أوقات هذه المنطقة؟** (`ZH`).
+	//
+	// **ويُقرأ في الاستعلام الذي اختار المنطقة** — **لا بنداءٍ ثانٍ**:
+	// **فالمنطقةُ التي تُسعَّر هي التي يُسأل عن وقتها**، **ونداءٌ ثانٍ
+	// «أيُّ منطقةٍ تحوي النقطة» قد يقع على غيرها لو تداخلت الدوائر.**
+	// **وهو عقدُ `ZH-34` بعينه**، **ولا رحلةَ زائدةٌ في مسار القبول.**
+	HoursEnforced bool
 
 	// DistanceM بعدُ الدبّوس عن مركز المنطقة بالمتر.
 	//
@@ -326,7 +357,7 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 	// **والمسافةُ إلى المركز تبقى ترتيباً عند التداخل** — والمضلَّعُ
 	// مركزُه مركزُ ثقله، **فيفوز أقربُهما إلى الدبّوس** كما كان.
 	err := q.QueryRow(ctx, `
-		SELECT id::text, name, delivery_fee, min_order,
+		SELECT id::text, name, delivery_fee, min_order, hours_enforced,
 		       ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
 		FROM delivery_zones
 		WHERE active AND (
@@ -336,7 +367,7 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 		           AND ST_Covers(area, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography))
 		      )
 		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
-		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder, &z.DistanceM)
+		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder, &z.HoursEnforced, &z.DistanceM)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// ══════════════════════════════════════════════════════════════
 		// **وجدولٌ فارغٌ ليس «لا نُوصّل إلى أحد»**
