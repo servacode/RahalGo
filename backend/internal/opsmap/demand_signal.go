@@ -81,6 +81,35 @@ type Signal struct {
 // ErrBadSignal **إشارةٌ لا تُقبَل.**
 var ErrBadSignal = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 
+// ══════════════════════════════════════════════════════════════════════
+// **استنتاجُ المكان — نصٌّ واحدٌ لا أربعة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **والمُمرَّرُ يُقدَّم** (`COALESCE`) — **ومحرّكُ الإتاحة يعرف المدينةَ
+// المُطفأةَ وهذا لا يعرفها**: **الاستنتاجُ يقرأ الفعّالةَ وحدَها كما
+// كان يفعل البابُ القديم.**
+
+// cityFrom استعلامُ المدينة من نقطةٍ بمعاملَي عرضٍ وطول.
+func cityFrom(passed, latArg, lngArg string) string {
+	return `COALESCE(` + passed + `::uuid, (
+		SELECT c.id FROM cities c
+		 WHERE c.active
+		   AND ST_DWithin(c.center,
+		        ST_SetSRID(ST_MakePoint(` + lngArg + `, ` + latArg + `), 4326)::geography,
+		        c.radius_m)
+		 ORDER BY ST_Distance(c.center,
+		        ST_SetSRID(ST_MakePoint(` + lngArg + `, ` + latArg + `), 4326)::geography)
+		 LIMIT 1))`
+}
+
+// govFrom محافظةُ تلك المدينة — تُستنتَج منها لا من النقطة.
+func govFrom(passed, latArg, lngArg string) string {
+	return `COALESCE(` + passed + `::uuid, (
+		SELECT d.governorate_id FROM cities c
+		  JOIN districts d ON d.id = c.district_id
+		 WHERE c.id = ` + cityFrom(passed, latArg, lngArg) + `))`
+}
+
 // Record **يسجّل الإشارةَ أو يدمجها في سابقتها.**
 //
 // **والدمجُ لصاحب حسابٍ فقط** — **ومن لا حساب له لا هويّةَ تجمع
@@ -101,6 +130,19 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 	}
 	cy, cx := snap(in.Lat), snap(in.Lng)
 
+	// ══════════════════════════════════════════════════════════════════
+	// **والمكانُ يُستنتَج حين لا يُمرَّر** (٢٠٢٦-٠٩-١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ومحرّكُ الإتاحة يحلّ المكانَ ويمرّره** — **ويعرف المدينةَ
+	// المُطفأةَ أيضاً** (`city_not_supported`).
+	//
+	// **والبابُ القديمُ لا يمرّر شيئاً** — **وكان استعلامُه يستنتج
+	// المدينةَ بنفسه**، **فلمّا مرّ بهذه الدالّة فقد الاستنتاجَ وسقط
+	// فحصُه.** (قِيس: «لم تُستنتج مدينةُ الطلب».)
+	//
+	// **فيُستنتَج ما لم يُمرَّر** — **والمُمرَّرُ أدقُّ فيُقدَّم.**
+
 	var (
 		uid  *string
 		city *string
@@ -116,6 +158,11 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 		gov = &in.GovID
 	}
 
+	cityExpr := cityFrom("$4", "$1", "$2")
+	govExpr := govFrom("$5", "$1", "$2")
+	cityExprU := cityFrom("$5", "$2", "$3")
+	govExprU := govFrom("$6", "$2", "$3")
+
 	// **ومن لا حساب له يُكتب صفّاً جديداً** — **ولا مفتاحَ تفرّدٍ له.**
 	if uid == nil {
 		var id string
@@ -124,7 +171,7 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 			  (user_id, at, address_text, city_id, governorate_id, source,
 			   kind, cell_y, cell_x, reason)
 			VALUES (NULL, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-			        $3, $4::uuid, $5::uuid, $6, $7, $8, $9, $10)
+			        $3, `+cityExpr+`, `+govExpr+`, $6, $7, $8, $9, $10)
 			RETURNING id::text`,
 			in.Lat, in.Lng, strings.TrimSpace(in.Address), city, gov, src,
 			in.Kind, cy, cx, in.Reason).Scan(&id)
@@ -146,7 +193,7 @@ func Record(ctx context.Context, e Execer, userID string, in Signal) (SignalResu
 		  (user_id, at, address_text, city_id, governorate_id, source,
 		   kind, cell_y, cell_x, reason)
 		VALUES ($1::uuid, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		        $4, $5::uuid, $6::uuid, $7, $8, $9, $10, $11)
+		        $4, `+cityExprU+`, `+govExprU+`, $7, $8, $9, $10, $11)
 		ON CONFLICT (user_id, kind, cell_y, cell_x) WHERE user_id IS NOT NULL
 		DO UPDATE SET
 		    requests     = coverage_requests.requests + 1,

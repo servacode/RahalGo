@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 331,
+    "routes": 334,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 332,
-    "test_funcs": 1376
+    "test_files": 333,
+    "test_funcs": 1389
   },
   "flows": [
     {
@@ -11439,6 +11439,84 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCR01_OutsideCoverageCreatesRequest",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR02_CR03_CR20_SameAreaDedupes",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR04_DifferentAreaIsDistinct",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR05_CR08_CityInterestStoresIDs",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR07_CR09_UnmappedKeepsNullIDs",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR10_CR11_CR12_ServerReevaluates",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR13_CR17_TemporalReasonsExposeNoCTA",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR18_CR19_CoordinateIsAuthority",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR22_CR23_CR24_CancelAndHistory",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR25_NoAutomaticExpansion",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR26_CR27_Aggregation",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR28_NoRedundantIdentity",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCR29_QuoteContractUnchanged",
+      "file": "internal/qa/demand_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestDLC1_AllFourDeclaredAndClosedByDefault",
