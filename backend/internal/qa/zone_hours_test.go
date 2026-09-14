@@ -70,15 +70,50 @@ func zoneHours(t *testing.T, h *Harness, id string, enforced bool, ws ...platfor
 	}
 }
 
-// otherZonesOff **يُطفئ كلَّ منطقةٍ سواها** — **فالقاعدةُ مشتركةٌ بين
-// الفحوص**، **ومنطقةٌ خلّفها فحصٌ سابقٌ قد تفوز بالقرب فيُقاس جدولُ
-// غيرِ التي نقصد.**
+// otherZonesOff **يُطفئ كلَّ منطقةٍ سواها — ثمّ يُعيدها.**
+//
+// **فالقاعدةُ مشتركةٌ بين الفحوص**، **ومنطقةٌ خلّفها فحصٌ سابقٌ قد تفوز
+// بالقرب فيُقاس جدولُ غيرِ التي نقصد.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وما أُطفئ يُعاد — وإلّا أسقط الفحصُ جيرانَه** (٢٠٢٦-٠٩-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وأوّلُ صياغةٍ أطفأت ولم تُعِدْ** — **فسقطت `ZONE-003` و`ZONE-004`
+// و`ZONE-006` في الجولة الكاملة بـ«لا دائرةَ فعّالة»**، **وهي خضراءُ
+// منفردةً.** **وسقوطٌ في جارٍ يُطارَد في غير موضعه.**
+//
+// **والإعادةُ في `Cleanup` تقع ولو سقط الفحص** — **وخاتمةٌ تُكتب في
+// آخر الدالّة لا تُنفَّذ إن سقط قبلها.**
 func otherZonesOff(t *testing.T, h *Harness, keep string) {
 	t.Helper()
+	rows, err := h.Pool.Query(ctxBG(),
+		`SELECT id::text FROM delivery_zones WHERE active AND id <> $1::uuid`, keep)
+	if err != nil {
+		t.Fatalf("قراءةُ المناطق الفعّالة: %v", err)
+	}
+	was := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			t.Fatalf("قراءةُ منطقة: %v", err)
+		}
+		was = append(was, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		t.Fatalf("قراءةُ المناطق الفعّالة: %v", err)
+	}
+
 	if _, err := h.Pool.Exec(ctxBG(),
-		`UPDATE delivery_zones SET active = false WHERE id <> $1::uuid`, keep); err != nil {
+		`UPDATE delivery_zones SET active = false WHERE id = ANY($1::uuid[])`, was); err != nil {
 		t.Fatalf("إطفاءُ المناطق: %v", err)
 	}
+	t.Cleanup(func() {
+		_, _ = h.Pool.Exec(ctxBG(),
+			`UPDATE delivery_zones SET active = true WHERE id = ANY($1::uuid[])`, was)
+	})
 }
 
 // zoneBody طلبٌ عاديٌّ إلى نقطةٍ بعينها.
@@ -381,10 +416,11 @@ func TestZH14_ZH34_AddressPicksItsOwnZone(t *testing.T) {
 	// **منطقتان متباعدتان** — نهاريّةٌ مفتوحةٌ الآن وليليّةٌ مغلقة.
 	open := newZone(t, hh, "منطقةٌ مفتوحة", 35.9506, 39.0094)
 	shut := newZone(t, hh, "منطقةٌ مغلقة", 36.2000, 37.1500)
+	otherZonesOff(t, hh, open.ID)
+	// **والثانيةُ تُعاد إلى الحياة بعد أن أطفأتها الأولى.**
 	if _, err := hh.Pool.Exec(ctxBG(),
-		`UPDATE delivery_zones SET active = false WHERE id NOT IN ($1::uuid, $2::uuid)`,
-		open.ID, shut.ID); err != nil {
-		t.Fatalf("إطفاءُ المناطق: %v", err)
+		`UPDATE delivery_zones SET active = true WHERE id = $1::uuid`, shut.ID); err != nil {
+		t.Fatalf("إعادةُ المنطقة الثانية: %v", err)
 	}
 	zoneHours(t, hh, open.ID, true, zhOpen())
 	zoneHours(t, hh, shut.ID, true, zhShut())
