@@ -2248,6 +2248,7 @@
         "admin.whatsapp_pair": "طلب رمز ربط بوت واتساب",
         "admin.whatsapp_unpair": "فك اقتران بوت واتساب",
         "admin.zone_create": "إنشاء منطقة",
+        "admin.zone_hours_set": "ضبطُ أوقات منطقة",
         "admin.zone_delete": "حذف منطقة",
         "admin.zone_update": "تعديل منطقة",
         "auth.logout": "خروج",

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 329,
+    "routes": 331,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 327,
-    "test_funcs": 1307
+    "test_files": 329,
+    "test_funcs": 1339
   },
   "flows": [
     {
@@ -7819,6 +7819,108 @@
     {
       "name": "TestPH_StateCarriesServerTruth",
       "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH01_DisabledScheduleIsAlwaysOpen",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH02_EnforcedOpenInsideWindow",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH03_ZH04_Boundaries",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH05_ZH07_ClosedDayAndGap",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH06_MultipleWindows",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH08_ZH09_CrossMidnight",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH10_WeekBoundary",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH13_ZonesAreIndependent",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH26_NextWindowSameDay",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH27_NextWindowLaterDay",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH28_CombinedNextOrderingTime",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH28b_ZoneIsTheLaterOne",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH28c_ClosureEntersTheIntersection",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH28d_IndefiniteClosureHasNoNext",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH28e_BothOpenNow",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH28f_NeitherEnforced",
+      "file": "internal/platform/zones_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestZH29_DeviceClockIrrelevant",
+      "file": "internal/platform/zones_test.go",
       "package": "platform",
       "orphan": true
     },
@@ -18956,6 +19058,96 @@
     {
       "name": "TestOps70A_B6_RealUpgradeCountsSuccess",
       "file": "internal/qa/ws_auth_reason_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH01_DisabledScheduleKeepsExistingBehaviour",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH14_ZH34_AddressPicksItsOwnZone",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH15_OutOfZoneStaysOutOfZone",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH17_InactiveZoneNeverBecomesUsable",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH18_ZoneClosedBlocksNormalOrder",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH19_ZoneClosedBlocksCustomOrder",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH20_RejectedOrderLeavesNothing",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH22_ExistingOrderSurvivesZoneClosing",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH23_ZH24_ZH25_Precedence",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH30_BrowsingStaysOpen",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH32_AdminValidation",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH33_DeleteZoneDropsItsSchedule",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH_AdminRoundTrip",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH_OpenZoneAdmitsOrder",
+      "file": "internal/qa/zone_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZH_QuoteSaysZoneClosed",
+      "file": "internal/qa/zone_hours_test.go",
       "package": "qa",
       "orphan": true
     },
