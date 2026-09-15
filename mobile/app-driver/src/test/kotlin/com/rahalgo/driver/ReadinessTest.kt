@@ -76,6 +76,60 @@ class ReadinessTest {
         assertEquals(Readiness.Blocker.LOCATION_PERMISSION_REQUIRED, s.first)
     }
 
+    // ═════════════════ والقرارُ نفسُه يُقاس ═════════════════
+
+    /**
+     * **DR-05 · والحكمُ يُقاس لا الصفُّ وحدَه.**
+     *
+     * **وكان الفحصُ يبني `State` بيده ويقرؤها** — **فرُفع فحصُ
+     * الخدمة من القرار ولم يسقط شيء.** **وحارسٌ لا يحرس القرارَ
+     * زينة.**
+     */
+    @Test
+    fun `الخدمةُ المطفأةُ تُنتج مانعاً من القرار نفسِه`() {
+        val s = Readiness.evaluate(
+            permission = true, service = false, background = true, notifications = true,
+        )
+        assertTrue(
+            "**الإذنُ ممنوحٌ والخدمةُ مطفأةٌ ولم يُقَل شيء** — " +
+                "**فيبدو جاهزاً ولا موقعَ يُرسَل**",
+            s.blockers.contains(Readiness.Blocker.LOCATION_SERVICE_OFF),
+        )
+        assertFalse("**قيل جاهزٌ والموقعُ مطفأ**", Readiness.canWork(s))
+    }
+
+    /** **والكاملُ جاهزٌ يعمل.** */
+    @Test
+    fun `الكاملُ يعمل`() {
+        val s = Readiness.evaluate(
+            permission = true, service = true, background = true, notifications = true,
+        )
+        assertTrue(s.ready)
+        assertTrue(Readiness.canWork(s))
+    }
+
+    /** **وغيابُ الإذن يمنع من القرار نفسِه.** */
+    @Test
+    fun `غيابُ الإذن يمنع من القرار`() {
+        val s = Readiness.evaluate(
+            permission = false, service = true, background = true, notifications = true,
+        )
+        assertFalse(Readiness.canWork(s))
+        // **ولا تُسأل الخدمةُ قبل الإذن** — **ولا يُقال «شغّل الخدمة»
+        // لمن لم يمنح الإذنَ بعد.**
+        assertFalse(s.blockers.contains(Readiness.Blocker.LOCATION_SERVICE_OFF))
+    }
+
+    /** **DR-11 · والخلفيّةُ والإشعارُ لا يمنعان العمل.** */
+    @Test
+    fun `الخلفيّةُ والإشعارُ لا يمنعان العمل من القرار`() {
+        val s = Readiness.evaluate(
+            permission = true, service = true, background = false, notifications = false,
+        )
+        assertFalse("**نقصٌ لم يُقَل**", s.ready)
+        assertTrue("**مُنع العملُ لأجل إشعارٍ وخلفيّة**", Readiness.canWork(s))
+    }
+
     /**
      * **DR-01 · وأربعةُ أسبابٍ معروفةٌ لا رايةٌ عامّة.**
      *

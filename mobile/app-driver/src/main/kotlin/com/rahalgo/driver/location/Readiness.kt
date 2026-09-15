@@ -82,22 +82,49 @@ object Readiness {
      * **ومن قيل له «شغّل خدمةَ الموقع» وهو لم يمنح الإذنَ بعدُ ذهب
      * إلى إعداداتٍ لا تُصلح شيئاً.**
      */
-    fun of(context: Context): State {
+    fun of(context: Context): State = evaluate(
+        permission = LocationPermission.granted(context),
+        service = serviceEnabled(context),
+        background = LocationPermission.backgroundGranted(context),
+        notifications = !LocationPermission.notificationsNeeded(context),
+    )
+
+    /**
+     * evaluate **القرارُ وحدَه — بلا نظامٍ ولا سياق.**
+     *
+     * **وقراءةُ النظام في `of` والحكمُ هنا** — **فيُقاس الحكمُ في آلةٍ
+     * بلا أندرويد.**
+     *
+     * **وقِيس**: **شاهدٌ سلبيٌّ رفع فحصَ الخدمة ولم يسقط شيء** —
+     * **لأنّ الفحصَ كان يبني صفَّ بياناتٍ بيده ويقرؤه، لا يقيس
+     * القرار.** **وحارسٌ لا يحرس القرارَ زينة.**
+     */
+    fun evaluate(
+        permission: Boolean,
+        service: Boolean,
+        background: Boolean,
+        notifications: Boolean,
+    ): State {
         val out = mutableListOf<Blocker>()
-        if (!LocationPermission.granted(context)) {
+        if (!permission) {
             out += Blocker.LOCATION_PERMISSION_REQUIRED
-        } else if (!serviceEnabled(context)) {
+        } else if (!service) {
             // **ولا تُسأل الخدمةُ قبل الإذن** — **والترتيبُ أعلاه.**
             out += Blocker.LOCATION_SERVICE_OFF
         }
-        if (!LocationPermission.backgroundGranted(context)) {
+        if (!background) {
             out += Blocker.BACKGROUND_LOCATION_REQUIRED
         }
-        if (LocationPermission.notificationsNeeded(context)) {
+        if (!notifications) {
             out += Blocker.NOTIFICATION_PERMISSION_REQUIRED
         }
         return State(out)
     }
+
+    /** **أيُسمَح بالعمل بهذه الحال؟** — **والقرارُ يُقاس كغيره.** */
+    fun canWork(s: State): Boolean =
+        !s.blockers.contains(Blocker.LOCATION_PERMISSION_REQUIRED) &&
+            !s.blockers.contains(Blocker.LOCATION_SERVICE_OFF)
 
     /**
      * serviceEnabled **أخدمةُ الموقع مُشغَّلةٌ في النظام؟**
@@ -148,9 +175,5 @@ object Readiness {
      * **ومن مُنع من فتح ورديّته لأنّ إشعاراً غيرُ مسموحٍ حُرم عملَه
      * لأجل زينة.** **ويُقال له، ولا يُوقَف.**
      */
-    fun canWork(context: Context): Boolean {
-        val s = of(context)
-        return !s.blockers.contains(Blocker.LOCATION_PERMISSION_REQUIRED) &&
-            !s.blockers.contains(Blocker.LOCATION_SERVICE_OFF)
-    }
+    fun canWork(context: Context): Boolean = canWork(of(context))
 }
