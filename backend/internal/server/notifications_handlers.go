@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // touch يبثّ إشارة تحديث صامتة: الشاشات المفتوحة تعيد جلب بياناتها فوراً بلا
@@ -125,7 +126,11 @@ func (s *Server) handleMyNotifications(w http.ResponseWriter, r *http.Request) {
 	// عدّاد لكل نوع — تبنى عليه أزرار الترشيح في صفحة الإشعارات
 	counts := map[string]int{}
 	rows, err := s.pg.Query(r.Context(),
-		`SELECT kind, count(*) FROM notifications WHERE user_id = $1 GROUP BY kind`, userIDFrom(r))
+		// **ولا يُعَدّ نوعٌ لا يُعرَض** — **وصفُّ المحادثة حدثُ نقلٍ
+		// لا خبرٌ في صندوق** (`notifications.KindChat`).
+		`SELECT kind, count(*) FROM notifications
+		  WHERE user_id = $1 AND kind <> $2 GROUP BY kind`,
+		userIDFrom(r), notifications.KindChat)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {

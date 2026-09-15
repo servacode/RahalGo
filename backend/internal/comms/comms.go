@@ -122,6 +122,11 @@ type Permission struct {
 	PeerID string
 	// PeerName اسمُه — **ولا رقمَ معه أبداً.**
 	PeerName string
+	// Number **رقمُ الطلب كما يعرفه صاحبُه** — **لا معرّفُه.**
+	//
+	// **ويُقال في إشعار الرسالة** — **فمن وصلته رسالتان من طلبين
+	// عرف أيَّهما**، **ولا يفتح الاثنين ليعرف.**
+	Number int64
 	// Open أمفتوحةٌ القناةُ الآن.
 	Open bool
 	// ClosesAt متى تُغلق — للعرض، `nil` إن لم تُحدَّد بعد.
@@ -157,15 +162,16 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 		deliveredAt, closedAt    *time.Time
 		customerName, driverName string
 	)
+	var number int64
 	err := s.db.QueryRow(ctx, `
 		SELECT o.customer_id::text, o.driver_id::text, o.status,
-		       o.delivered_at, o.closed_at,
+		       o.delivered_at, o.closed_at, o.number,
 		       COALESCE(cu.full_name, ''), COALESCE(dr.full_name, '')
 		FROM orders o
 		JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN users dr ON dr.id = o.driver_id
 		WHERE o.id = $1`, orderID).
-		Scan(&customerID, &driverID, &status, &deliveredAt, &closedAt,
+		Scan(&customerID, &driverID, &status, &deliveredAt, &closedAt, &number,
 			&customerName, &driverName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotParty
@@ -174,7 +180,10 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 		return nil, err
 	}
 
-	p := &Permission{OrderID: orderID, SelfID: userID}
+	// **ورقمُ الطلب يُحمَل معها** — **فإشعارُ الرسالة يقول أيَّ طلبٍ
+	// يخصّ** (`CHAT-09`): **ورسالتان من طلبين بعنوانٍ واحدٍ لا
+	// تُفرَّقان في شريط الإشعارات.**
+	p := &Permission{OrderID: orderID, SelfID: userID, Number: number}
 	switch {
 	case userID == customerID:
 		p.Me = RoleCustomer

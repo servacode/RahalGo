@@ -82,6 +82,27 @@ const (
 	KindRating  = "rating"
 	KindLead    = "lead"
 	KindAccount = "account"
+
+	// ══════════════════════════════════════════════════════════════════
+	// **KindChat — صفٌّ يُدفَع ولا يُعرَض** (`CHAT-07`، ٢٠٢٦-٠٩-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ورسائلُ المحادثة لا تُعرض في الصندوق** — (قرارُ المالك
+	// ٢٠٢٦-٠٨-١٢: «رسائلُ المحادثة ما يصير تصل كإشعارات أيضا —
+	// هي أساساً تصل بالرسائل»). **والحديثُ نفسُه هو السجلّ.**
+	//
+	// # ولماذا صفٌّ إذاً
+	//
+	// **وكانت تُرسَل `Transient`** — **فلا صفَّ ولا نيّةَ دفع**،
+	// **وعاملُ النقل يقرأ الصفوفَ** (`push_pending`): **فلا دفعَ
+	// إطلاقاً.** **ومن أغلق تطبيقَه لم يعلم أنّ السائق يسأله «أيّ
+	// طابق؟».** (قِيس في تدقيق ٢٠٢٦-٠٩-١٥: صفوفٌ=٠ · نيّةُ دفعٍ=٠ ·
+	// أهدافُ نقلٍ=٠.)
+	//
+	// **فالصفُّ يُكتب ليُدفَع، ويُحجَب عن الصندوق بنوعه** — **حدثُ
+	// نقلٍ دائمٌ بعرضٍ غيرِ صندوقيّ**، **ولا محرّكَ دفعٍ ثانٍ ولا
+	// عمودٌ جديدٌ في القاعدة.**
+	KindChat = "chat"
 )
 
 type Service struct {
@@ -462,7 +483,9 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 	rows, err := s.db.Query(ctx, `
 		SELECT id, kind, title, body, entity, entity_id,
 		       (read_at IS NOT NULL), created_at::text
-		FROM notifications WHERE user_id = $1 AND ($3 = '' OR kind = $3)
+		FROM notifications
+		 WHERE user_id = $1 AND ($3 = '' OR kind = $3)
+		   AND kind <> '` + KindChat + `'
 		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind)
 	if err != nil {
 		return nil, 0, err
@@ -477,10 +500,14 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 		}
 		out = append(out, n)
 	}
+	// **ولا يُعَدّ في شارة الجرس ما لا يُعرَض فيه** — **وصفُّ المحادثة
+	// حدثُ نقلٍ لا خبرٌ يُقرأ**: **وعدُّه يجعل الجرسَ أحمرَ أبداً،
+	// فلا يُقرأ ما يهمّ.**
 	var unread int
-	_ = s.db.QueryRow(ctx,
-		`SELECT count(*) FROM notifications WHERE user_id = $1 AND read_at IS NULL`,
-		userID).Scan(&unread)
+	_ = s.db.QueryRow(ctx, `
+		SELECT count(*) FROM notifications
+		 WHERE user_id = $1 AND read_at IS NULL AND kind <> $2`,
+		userID, KindChat).Scan(&unread)
 	return out, unread, rows.Err()
 }
 

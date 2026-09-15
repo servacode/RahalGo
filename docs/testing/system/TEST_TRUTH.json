@@ -20,7 +20,7 @@
       "topup"
     ],
     "notify_sites": 49,
-    "notify_targeted": 11,
+    "notify_targeted": 12,
     "publish_rooms": [
       "customer",
       "driver",
@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 345,
-    "test_funcs": 1464
+    "test_files": 346,
+    "test_funcs": 1473
   },
   "flows": [
     {
@@ -9861,6 +9861,60 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCHAT01_TwoOrdersTwoConversations",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT02_SameDriverTwoOrdersStaySeparate",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT04_MarkReadIsPerOrder",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT05_StrangerGetsNotFound",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT07_MessageProducesExactlyOnePush",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT10_FormerDriverGetsNoNewPush",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT11_CHAT12_TerminalOrderReadableNotWritable",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT13_RetryDoesNotDuplicatePush",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT_PushRowIsNotAnInboxEntry",
+      "file": "internal/qa/chat_multi_order_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCITY_001_OtherCityHidden",
