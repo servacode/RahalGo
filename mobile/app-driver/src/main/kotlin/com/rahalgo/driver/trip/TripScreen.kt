@@ -11,7 +11,9 @@ import com.rahalgo.ui.minutesShort
 import com.rahalgo.ui.dist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.rahalgo.ui.Locating
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -171,6 +173,23 @@ fun TripScreen(
     // **حالٌ تحكم شيئاً باقياً لا تعيش في شاشةٍ تُبنى وتُهدم.**
     val follow = following
     var recenter by rememberSaveable { mutableIntStateOf(0) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **و«موقعي» عند السائق توسيطٌ لا نداءُ موضع** (`MLW-14`، ٢٠٢٦-٠٩-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وموضعُه يصل بتيّارٍ متّصلٍ من خدمة الورديّة** — **فلا يُفتح له
+    // نداءٌ ثانٍ**: **ونداءُ موضعٍ ثالثٌ فوق تيّارٍ يعمل استنزافُ
+    // بطّاريّةٍ بلا فائدة.**
+    //
+    // **والعطبُ الذي كان**: **`recenter` تُوسّط إن عُرف موضعُه، وإلّا
+    // اتّسعت الكاميرا لتضمّ النقاطَ صامتة** — **فيضغط «موقعي» فتقفز
+    // الخريطةُ إلى مكانٍ ليس هو**، **ولا سطرَ يقول لماذا.**
+    //
+    // **وأكثرُ ما يقع هذا حين تُطفأ خدمةُ الموقع** — **وهي التي لا
+    // تُرى.**
+    val locating = remember { Locating() }
+    val hereContext = LocalContext.current
 
     // ══════════════════════════════════════════════════════════════════
     // **و«اتبعني» هو بوّابةُ الملاحة — لا زرَّ ثانٍ**
@@ -748,8 +767,47 @@ fun TripScreen(
                     onDismiss = actions.dismissOffer,
                 )
             }
+            // ══════════════════════════════════════════════════════════
+            // **وتعذّرُ التوسيط يُقال بسببه** (`MLW-14`)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **ومن ضغط «موقعي» فاتّسعت الخريطةُ إلى مكانٍ ليس هو
+            // ظنّها معطوبة** — **والسببُ أنّ موضعَه لم يصل**، **وأكثرُ
+            // ما يكون ذلك بخدمةٍ مطفأة.**
+            locating.problem?.let { why ->
+                androidx.compose.material3.Text(
+                    text = com.rahalgo.ui.LocatingText.message(hereContext, why),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Rahal.colors.ink,
+                    modifier = Modifier
+                        .padding(horizontal = 14.dp)
+                        .clip(Rahal.shape.md)
+                        .background(Rahal.colors.warnTint)
+                        .clickable {
+                            // **والعلاجُ فعلٌ** — **وخدمةٌ مطفأةٌ
+                            // تُفتح صفحتُها، ولا تُفتح صفحةُ التطبيق.**
+                            if (com.rahalgo.ui.fixProblem(hereContext, why)) locating.reset()
+                        }
+                        .padding(12.dp),
+                )
+            }
             MapButtons(
-                onRecenter = { recenter++ },
+                onRecenter = {
+                    // **ولا يُوسَّط على مجهول** — **والسببُ يُقال
+                    // باسمه**: **مطفأةٌ خدمتُه أو لم يصل قياسٌ بعد.**
+                    if (state.driver != null) {
+                        locating.reset()
+                        recenter++
+                    } else if (locating.start()) {
+                        locating.failed(
+                            if (!com.rahalgo.ui.locationServiceEnabled(hereContext)) {
+                                Locating.Problem.SERVICE_OFF
+                            } else {
+                                Locating.Problem.UNAVAILABLE
+                            },
+                        )
+                    }
+                },
                 onChat = actions.chat,
                 chatting = chat != null,
                 chatUnread = chatUnread,

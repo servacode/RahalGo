@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -70,7 +71,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel as vmOf
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.rahalgo.shared.rep.RepApi
+import com.rahalgo.map.Here
+import com.rahalgo.ui.Accuracy
 import com.rahalgo.ui.LastPoint
+import com.rahalgo.ui.Locating
 import com.rahalgo.ui.Overlay
 import com.rahalgo.ui.PagesViewModel
 import com.rahalgo.ui.HelpRole
@@ -191,13 +195,20 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // مرّتين أُغلق البابُ في أندرويد ولا يُفتح إلّا من الإعدادات.
     //
     // **وهنا سببُه أمام عينه**: يقف في متجرٍ ليُسجّله.
+    // **وحالُ التحديد تعيش مع الشاشة** — **لا في كلّ رسمةٍ جديدة.**
+    val locating = remember { Locating() }
+
     val askHere = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { ok -> if (ok) Here.refresh(context) }
+    ) { ok ->
+        if (ok) Here.refresh(context, locating, Accuracy.CONFIRM_M)
+        // **ومن رفض يُقال له** — **ولا يُترَك أمام زرٍّ صامت.**
+        else locating.failed(Locating.Problem.PERMISSION_DENIED)
+    }
 
     LaunchedEffect(tab) {
         if (tab != Tab.AddClient) return@LaunchedEffect
-        if (Here.granted(context)) Here.refresh(context)
+        if (Here.granted(context)) Here.refresh(context, limit = Accuracy.CONFIRM_M)
         else askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
@@ -390,7 +401,23 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         },
                         onCancel = { picking = false },
                         // **وأيقونةُ «موقعي»** — انظر تطبيقَ الزبون.
-                        onLocate = { Here.refresh(context) },
+                        //
+                        // **ويكفيه حدُّ التأكيد** — **ونقطةُ المتجر
+                        // بابٌ يقف عليه سائق.**
+                        onLocate = {
+                            if (Here.granted(context)) {
+                                Here.refresh(context, locating, Accuracy.CONFIRM_M)
+                            } else {
+                                askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                        },
+                        // ══════════════════════════════════════════
+                        // **وحالُ التحديد تُرسَم** (`MLW-02`)
+                        // ══════════════════════════════════════════
+                        //
+                        // **فالزرُّ يدور ما دام النداءُ قائماً**،
+                        // **والتعذّرُ يُقال بسببه لا «حدث خطأ».**
+                        locating = locating,
                     )
 
                     tab == Tab.Board -> BoardScreen(boardVm)

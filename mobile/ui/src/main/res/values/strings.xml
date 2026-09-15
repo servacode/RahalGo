@@ -724,4 +724,18 @@
     <string name="err_lead_already_converted">هذا الطلب صار متجرا يعمل — ولا يرد بعد التحويل. أوقف المتجر من صفحته إن لزم.</string>
     <string name="err_in_progress">العملية قيد التنفيذ — انتظر قليلا ولا تعدها.</string>
     <string name="err_bad_request">طلبٌ غير صالح — راجع ما أُرسل</string>
+    <!-- تحديدُ الموقع: لكلّ تعذّرٍ سببُه وعلاجُه (ML، ٢٠٢٦-٠٩-١٥) -->
+    <string name="loc_fail_denied">لم يُسمح بالموقع — اسمح به ليُحدَّد مكانك</string>
+    <string name="loc_fail_denied_fix">اسمح بالموقع</string>
+    <string name="loc_fail_permanent">الإذن مرفوض — افتحه من إعدادات التطبيق</string>
+    <string name="loc_fail_permanent_fix">إعدادات التطبيق</string>
+    <string name="loc_fail_service_off">خدمة الموقع مطفأة في الجهاز — شغّلها من الإعدادات</string>
+    <string name="loc_fail_service_off_fix">شغّل خدمة الموقع</string>
+    <string name="loc_fail_timeout">طال الانتظار ولم يصل موقع — جرّب في مكان مكشوف</string>
+    <string name="loc_fail_timeout_fix">حاول ثانية</string>
+    <string name="loc_fail_weak">الموقع الذي وصل غير دقيق — حرّك الخريطة بيدك أو حاول ثانية</string>
+    <string name="loc_fail_weak_fix">حاول ثانية</string>
+    <string name="loc_fail_unavailable">تعذّر تحديد الموقع — حرّك الخريطة بيدك</string>
+    <string name="loc_fail_unavailable_fix">حاول ثانية</string>
+    <string name="loc_acquiring">يُحدَّد موقعك…</string>
 </resources>

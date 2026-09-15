@@ -1,11 +1,6 @@
 package com.rahalgo.driver.location
 
 import android.content.Context
-import android.content.Intent
-import android.location.LocationManager
-import android.os.Build
-import android.provider.Settings
-import androidx.core.content.ContextCompat
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -136,19 +131,8 @@ object Readiness {
      * **وعطبُ القراءة لا يُقرأ منعاً** — **ولا يُوقَف سائقٌ لأنّ
      * سؤالاً عن النظام سقط**: **المنعُ بعلمٍ لا بجهل** (كحال المنصّة).
      */
-    fun serviceEnabled(context: Context): Boolean {
-        val lm = ContextCompat.getSystemService(context, LocationManager::class.java)
-            ?: return true
-        return runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                lm.isLocationEnabled
-            } else {
-                @Suppress("DEPRECATION")
-                lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                    lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-            }
-        }.getOrDefault(true)
-    }
+    fun serviceEnabled(context: Context): Boolean =
+        com.rahalgo.ui.locationServiceEnabled(context)
 
     /**
      * **يفتح صفحةَ إعدادات الموقع في النظام.**
@@ -157,12 +141,8 @@ object Readiness {
      * أذوننا بل في مفتاح النظام**، **ومن وقع على صفحة التطبيق بحث
      * فيها عمّا ليس فيها.** (وهو الدرسُ المكتوبُ في `LocationPermission`.)
      */
-    fun openLocationSettings(context: Context) {
-        context.startActivity(
-            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-    }
+    fun openLocationSettings(context: Context) =
+        com.rahalgo.ui.openLocationSettings(context)
 
     /**
      * ══════════════════════════════════════════════════════════════════

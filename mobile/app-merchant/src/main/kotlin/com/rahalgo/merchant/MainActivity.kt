@@ -43,7 +43,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.remember
 import com.rahalgo.map.Here
+import com.rahalgo.ui.Accuracy
+import com.rahalgo.ui.Locating
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
 import com.rahalgo.merchant.drawer.MyReportsScreen
@@ -150,6 +155,23 @@ private fun MerchantApp() {
 @Composable
 private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val context = LocalContext.current
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وحالُ «موقعي» تعيش مع الشاشة** (`MLW-02`، ٢٠٢٦-٠٩-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وكان الزرُّ ينادي ويمضي** — **فمن رُفض إذنُه ضغطه فلم يقع شيءٌ
+    // ولا رسالة.**
+    val locating = remember { Locating() }
+
+    // **وإذنُ الموقع يُطلب عند الزرّ لا عند الإقلاع** — **وسببُه أمام
+    // عينه**: يصحّح دبّوسَ متجره.
+    val askHere = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { ok ->
+        if (ok) Here.refresh(context, locating, Accuracy.CONFIRM_M)
+        else locating.failed(Locating.Problem.PERMISSION_DENIED)
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // **وإذنُ الإشعارات عصبُ هذا التطبيق**
@@ -412,7 +434,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             picking = false
                         },
                         onCancel = { picking = false },
-                        onLocate = { Here.refresh(context) },
+                        // **ودبّوسُ المتجر يكفيه حدُّ التأكيد** —
+                        // **ومئةُ مترٍ خطأً بابُ جارِه.**
+                        onLocate = {
+                            if (Here.granted(context)) {
+                                Here.refresh(context, locating, Accuracy.CONFIRM_M)
+                            } else {
+                                askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                        },
+                        // ══════════════════════════════════════════
+                        // **وحالُ التحديد تُرسَم** (`MLW-02`)
+                        // ══════════════════════════════════════════
+                        //
+                        // **فالزرُّ يدور ما دام النداءُ قائماً**،
+                        // **والتعذّرُ يُقال بسببه لا «حدث خطأ».**
+                        locating = locating,
                     )
 
                     over is Overlay.Menu && PlatformPages.has(over.key) ->

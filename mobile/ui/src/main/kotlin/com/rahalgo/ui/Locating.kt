@@ -1,8 +1,14 @@
 package com.rahalgo.ui
 
+import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -156,4 +162,113 @@ object Accuracy {
     /** **أتكفي؟** — **وغيرُ المعروفة لا تكفي لشيء.** */
     fun enough(accuracyM: Float, limit: Float): Boolean =
         accuracyM >= 0f && accuracyM <= limit
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ولكلّ تعذّرٍ نصُّه وعلاجُه** (`MLW-06`، ٢٠٢٦-٠٩-١٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **و«حدث خطأ» جوابٌ لا يُعمَل به** — **وعلاجُ الإذن المرفوض غيرُ
+ * علاج الخدمة المطفأة**: **ومن قيل له «حاول ثانية» وخدمتُه مطفأةٌ
+ * حاول عشراً.**
+ *
+ * **وهنا لا في كلّ شاشة** — **وأربعُ نسخٍ تفترق يوماً.**
+ */
+object LocatingText {
+
+    /** **ما وقع — سطراً واحداً يقرؤه صاحبُه.** */
+    fun message(ctx: Context, p: Locating.Problem): String = ctx.getString(
+        when (p) {
+            Locating.Problem.PERMISSION_DENIED -> R.string.loc_fail_denied
+            Locating.Problem.PERMISSION_PERMANENT -> R.string.loc_fail_permanent
+            Locating.Problem.SERVICE_OFF -> R.string.loc_fail_service_off
+            Locating.Problem.TIMEOUT -> R.string.loc_fail_timeout
+            Locating.Problem.WEAK_ACCURACY -> R.string.loc_fail_weak
+            Locating.Problem.UNAVAILABLE -> R.string.loc_fail_unavailable
+        },
+    )
+
+    /** **وما يفعله** — **زرٌّ يقول فعلَه لا «حسناً».** */
+    fun action(ctx: Context, p: Locating.Problem): String = ctx.getString(
+        when (p) {
+            Locating.Problem.PERMISSION_DENIED -> R.string.loc_fail_denied_fix
+            Locating.Problem.PERMISSION_PERMANENT -> R.string.loc_fail_permanent_fix
+            Locating.Problem.SERVICE_OFF -> R.string.loc_fail_service_off_fix
+            Locating.Problem.TIMEOUT -> R.string.loc_fail_timeout_fix
+            Locating.Problem.WEAK_ACCURACY -> R.string.loc_fail_weak_fix
+            Locating.Problem.UNAVAILABLE -> R.string.loc_fail_unavailable_fix
+        },
+    )
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أخدمةُ الموقع مُشغَّلةٌ في الجهاز؟** (`MLW-03`)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **والإذنُ ممنوحٌ والخدمةُ مطفأةٌ حالٌ تقع كلَّ يوم** — **ولا نافذةَ
+ * تُرفَض ولا رسالةَ تظهر**: **يُنادى المزوّدُ فلا يجيب أبداً.**
+ *
+ * **وهنا لأنّ أربعةَ تطبيقاتٍ تسأله** — **وكانت جاهزيّةُ السائق
+ * وحدَها تعرفه.**
+ *
+ * **وعطبُ القراءة لا يُقرأ منعاً** — **المنعُ بعلمٍ لا بجهل.**
+ */
+fun locationServiceEnabled(context: Context): Boolean {
+    val lm = ContextCompat.getSystemService(context, LocationManager::class.java)
+        ?: return true
+    return runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            lm.isLocationEnabled
+        } else {
+            @Suppress("DEPRECATION")
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        }
+    }.getOrDefault(true)
+}
+
+/**
+ * **يفتح صفحةَ إعدادات الموقع في النظام.**
+ *
+ * **ولا تُفتح «معلوماتُ التطبيق» لهذا** — **فالخطأُ ليس في أذوننا بل
+ * في مفتاح النظام**، **ومن وقع على صفحة التطبيق بحث فيها عمّا ليس
+ * فيها.**
+ */
+fun openLocationSettings(context: Context) {
+    context.startActivity(
+        Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+}
+
+/** **يفتح صفحةَ التطبيق في النظام** — **لمن رُفض نهائيّاً.** */
+fun openAppSettings(context: Context) {
+    context.startActivity(
+        Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            android.net.Uri.fromParts("package", context.packageName, null),
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+}
+
+/**
+ * **العلاجُ المناسبُ للتعذّر** — **يُنادى من زرّ اللافتة.**
+ *
+ * **ويردّ `true` إن كان العلاجُ محاولةً ثانيةً** — **فينادي صاحبُه
+ * التحديدَ من جديد**، **و`false` إن فُتحت صفحةُ نظام.**
+ */
+fun fixProblem(context: Context, p: Locating.Problem): Boolean = when (p) {
+    Locating.Problem.SERVICE_OFF -> {
+        openLocationSettings(context)
+        false
+    }
+    Locating.Problem.PERMISSION_PERMANENT -> {
+        openAppSettings(context)
+        false
+    }
+    // **والإذنُ المرفوضُ مرّةً يُطلَب ثانيةً** — **والطلبُ عند صاحب
+    // الشاشة لأنّ نافذةَ النظام تحتاج نشاطاً.**
+    else -> true
 }

@@ -1,16 +1,10 @@
 package com.rahalgo.customer
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.rahalgo.ui.LastPoint
+import com.rahalgo.ui.Accuracy
+import com.rahalgo.ui.Locating
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -26,10 +20,13 @@ import com.rahalgo.ui.LastPoint
  * **وتطبيقٌ يتتبّع من لا حاجةَ لتتبّعه يستنزف بطّاريّتَه** — ويُسأل عنه
  * في متجر غوغل، **ويُرفض إن لم يكن له سببٌ ظاهر.**
  *
- * # ولماذا `Priority.HIGH_ACCURACY`
+ * # والقراءةُ نفسُها في وحدة الخرائط
  *
- * **العنوانُ يُسلَّم إليه طلبٌ** — ومئةُ مترٍ خطأً بابُ جارِه. **وقراءةٌ
- * واحدةٌ دقيقةٌ أرخصُ من عشرٍ تقريبيّة.**
+ * **وكان هذا الملفُّ نسخةً ثالثةً من `map/Here`** — **حرفاً بحرف**:
+ * **فأُصلحت إحداها (مرحلتان وأسبابُ تعذّرٍ ومهلة) وبقيت هذه كما
+ * كانت تنادي وتمضي.**
+ *
+ * **فلم يبقَ هنا إلّا ما يخصُّ الزبونَ وحدَه**: **نقطةُ الاستكشاف.**
  *
  * # وفشلُها لا يُسقط شيئا
  *
@@ -47,40 +44,24 @@ object Here {
     var discovery by androidx.compose.runtime.mutableStateOf<Discovery?>(null)
         private set
 
-    fun granted(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+    fun granted(context: Context): Boolean = com.rahalgo.map.Here.granted(context)
 
     /**
-     * **يقرأ الموضعَ مرّةً ويكتبه في الحامل المشترك.**
+     * **يقرأ الموضعَ مرّةً** — **بالمحرّك المركزيّ.**
      *
-     * **والإذنُ يُفحص هنا لا عند المنادي** — `@SuppressLint` بلا فحصٍ
-     * هو الذي يُسقط التطبيقاتِ في يد من رفض.
+     * **وحدُّ الدقّة `CONFIRM_M`** — **فالعنوانُ يُسلَّم إليه طلبٌ**:
+     * **ونقطةٌ بخطإِ كيلومترٍ بابُ حيٍّ آخر.**
+     *
+     * **ونقطةُ الاستكشاف تُحفَظ بدقّتها** — **ونقطةٌ لا تُعرَف دقّتُها
+     * لا يُحكَم بها** (`DL-11`).
      */
-    @SuppressLint("MissingPermission")
-    fun refresh(context: Context) {
-        if (!granted(context)) return
-        runCatching {
-            LocationServices.getFusedLocationProviderClient(context)
-                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                .addOnSuccessListener { loc ->
-                    if (loc != null) {
-                        LastPoint.set(loc.latitude, loc.longitude)
-                        // **ونقطةُ الاستكشاف تُحفَظ بدقّتها** —
-                        // **ونقطةٌ لا تُعرَف دقّتُها لا يُحكَم بها**
-                        // (`DL-11`). **وهي تُخبِر ولا تحكم.**
-                        discovery = Discovery(
-                            loc.latitude,
-                            loc.longitude,
-                            if (loc.hasAccuracy()) loc.accuracy else -1f,
-                        )
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.w("RahalGo/here", "تعذّرت قراءةُ الموضع", e)
-                }
+    fun refresh(context: Context, state: Locating? = null) {
+        com.rahalgo.map.Here.refresh(
+            context = context,
+            state = state,
+            limit = Accuracy.CONFIRM_M,
+        ) { lat, lng, acc ->
+            discovery = Discovery(lat, lng, acc)
         }
     }
 }

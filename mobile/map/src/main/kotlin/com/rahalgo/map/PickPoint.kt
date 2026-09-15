@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.geo.Place
 import org.maplibre.android.geometry.LatLng
+import com.rahalgo.ui.Locating
+import com.rahalgo.ui.LocatingText
 import com.rahalgo.ui.MapGestureLock
 
 /**
@@ -89,6 +91,16 @@ fun PickPoint(
      * شاشةٍ ترسم خريطة، **ولَاحتاجت إذنَ موقعٍ لا تستعمله.**
      */
     onLocate: () -> Unit = {},
+    /**
+     * **حالُ تحديد الموقع** (`MLW-02`، ٢٠٢٦-٠٩-١٥).
+     *
+     * **ومن ضغط ولم يتبدّل شيءٌ يُقرأ ظنّ الزرَّ معطوباً فضغطه خمساً** —
+     * **فالزرُّ يدور ما دام النداءُ قائماً، والتعذّرُ يُقال بسببه.**
+     *
+     * **وفارغةٌ تعني شاشةً قديمةً لم تُوصَل بعد** — **والزرُّ يعمل كما
+     * كان.**
+     */
+    locating: Locating? = null,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **وإيماءةُ فتحِ الدرج تُقفَل ما دام هذا السطحُ حاضراً** (`DWR`)
@@ -232,20 +244,72 @@ fun PickPoint(
         //
         // **وموضعُها فوق الشريط السفليّ لا في زاويةٍ بعيدة** — الإبهامُ
         // يبلغها وهو ممسكٌ بالهاتف بيدٍ واحدة.
+        //
+        // **والضغطةُ الثانيةُ لا تفتح نداءً ثانياً** — **ونداءان
+        // يتسابقان يصل أقدمُهما آخراً فيُوسَّط به** (`MLW-04`).
+        val busy = locating?.busy == true
         FloatingActionButton(
-            onClick = { vm.wantHere(); onLocate() },
+            onClick = { if (!busy) { vm.wantHere(); onLocate() } },
             containerColor = Rahal.colors.canvas,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 148.dp)
                 .size(48.dp),
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_my_location),
-                contentDescription = stringResource(R.string.pick_my_location),
-                tint = Rahal.colors.accent,
-                modifier = Modifier.size(24.dp),
-            )
+            if (busy) {
+                // **ويدور ليُعلَم أنّه عمل** — **وجوابٌ في اللحظة.**
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                    color = Rahal.colors.accent,
+                )
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_my_location),
+                    contentDescription = stringResource(R.string.pick_my_location),
+                    tint = Rahal.colors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **والتعذّرُ يُقال بسببه — لا «حدث خطأ»** (`MLW-06`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وعلاجُ الإذن غيرُ علاج الخدمة المطفأة** — **ومن قيل له
+        // «حاول ثانية» وخدمتُه مطفأةٌ حاول عشراً ثمّ ترك التطبيق.**
+        //
+        // **وفوق الشريط السفليّ** — **حيث ينظر بعد أن ضغط الزرّ.**
+        locating?.problem?.let { why ->
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
+                    .offset(y = (-132).dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Rahal.colors.canvas)
+                    .padding(12.dp),
+            ) {
+                Text(
+                    text = LocatingText.message(ctx, why),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextButton(
+                    onClick = {
+                        // **والعلاجُ فعلٌ لا «حسناً»** — **ففاتحُ
+                        // الإعدادات يفتحها، والمحاولةُ تعيد النداء.**
+                        if (com.rahalgo.ui.fixProblem(ctx, why)) {
+                            vm.wantHere()
+                            onLocate()
+                        }
+                    },
+                ) {
+                    Text(LocatingText.action(ctx, why), color = Rahal.colors.accent)
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════

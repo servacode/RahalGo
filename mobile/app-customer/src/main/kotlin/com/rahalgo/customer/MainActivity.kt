@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -49,6 +50,7 @@ import com.rahalgo.ui.AuthGate
 import com.rahalgo.ui.AuthViewModel
 import com.rahalgo.ui.Crash
 import com.rahalgo.ui.LastPoint
+import com.rahalgo.ui.Locating
 import com.rahalgo.ui.Drawer
 import com.rahalgo.ui.Overlay
 import com.rahalgo.ui.PointPicker
@@ -349,9 +351,21 @@ private fun SignedIn(
 
     // **وطالبُ الإذن يُعرَّف قبل من يستعمله** — يستعمله زرُّ «موقعي»
     // في `mapPicker` وأثرُ الإقلاع معاً.
+    // ══════════════════════════════════════════════════════════════════
+    // **وحالُ «موقعي» تعيش مع الشاشة** (`MLW-02`، ٢٠٢٦-٠٩-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وكان الزرُّ ينادي ويمضي** — **فمن رُفض إذنُه أو أطفأ خدمتَه
+    // ضغطه فلم يقع شيءٌ ولا رسالة**، **ثمّ ضغطه خمساً.**
+    val locating = remember { Locating() }
+
     val askHere = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { ok -> if (ok) Here.refresh(ctx) }
+    ) { ok ->
+        if (ok) Here.refresh(ctx, locating)
+        // **ومن رفض يُقال له** — **ولا يُترَك أمام زرٍّ صامت.**
+        else locating.failed(Locating.Problem.PERMISSION_DENIED)
+    }
 
     val mapPicker: PointPicker = { onPick, onCancel ->
         PickPoint(
@@ -373,9 +387,16 @@ private fun SignedIn(
             // **وزرٌّ لا يعمل يجب أن يقول لماذا** — أو يُصلح نفسَه.
             // وهذا يُصلح نفسَه: يطلب ما ينقصه.
             onLocate = {
-                if (Here.granted(ctx)) Here.refresh(ctx)
+                if (Here.granted(ctx)) Here.refresh(ctx, locating)
                 else askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
             },
+            // ══════════════════════════════════════════════════════
+            // **وحالُ التحديد تُرسَم** (`MLW-02`)
+            // ══════════════════════════════════════════════════════
+            //
+            // **فالزرُّ يدور ما دام النداءُ قائماً** — **وجوابٌ في
+            // اللحظة**، **والتعذّرُ يُقال بسببه.**
+            locating = locating,
         )
     }
 
