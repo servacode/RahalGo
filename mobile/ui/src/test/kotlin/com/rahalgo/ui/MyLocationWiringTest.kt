@@ -216,7 +216,12 @@ class MyLocationWiringTest {
     @Test
     fun `المحرّكُ يبدأ بالقديم ثمّ يُصحّح`() {
         val engine = read(ENGINE)
-        assertTrue("**لا مرحلةَ أولى**", engine.contains("lastLocation"))
+        // **والنداءُ نفسُه يُطلب** — **و«lastLocation» في تعليقٍ أو في
+        // اسمٍ آخر ليست مرحلةً تعمل** (كشفه الشاهدُ الثاني).
+        assertTrue(
+            "**لا مرحلةَ أولى**",
+            engine.contains("client.lastLocation.addOnSuccessListener"),
+        )
         assertTrue("**لا تصحيحَ بالطازج**", engine.contains("getCurrentLocation"))
         assertTrue("**القديمُ لا يُعلَّم مؤقّتاً**", engine.contains("provisional()"))
     }
