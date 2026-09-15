@@ -10,6 +10,9 @@ package qa
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -124,6 +127,10 @@ func TestNT03_NT04_DraftAndPreviewSendNothing(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
 	cust := hh.Customer()
+	// **ولا يرث الفحصُ ساعةَ الحائط** — **وأخطرُ ما في هذا الفحص أنّه
+	// ينفي**: **«لم يُرسَل شيء»** — **وساعةُ الهدوء تجعل النفيَ صادقاً
+	// بلا سبب**، **فيمرّ ليلاً وهو لا يقيس شيئاً.**
+	noQuiet(t, hh)
 
 	r := mkCampaign(t, hh, tok, map[string]any{
 		"title": "NT-03", "body": "نصٌّ", "audience_type": "role",
@@ -278,6 +285,11 @@ func TestNT06_NT20_SendOnceAndAudited(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
 	cust := hh.Customer()
+	// **ولا يرث الفحصُ ساعةَ الحائط** (٢٠٢٦-٠٩-١٦) — **قِيس**:
+	// **هذه الفحوصُ تخضرّ نهاراً وتحمرّ ليلاً**، **لأنّ ساعةَ الهدوء
+	// الافتراضيّةَ ٢٢→٨ تؤجّل الإرسالَ فتبقى الحملةُ `scheduled`.**
+	// **وفحصٌ يتبدّل جوابُه بالساعة ليس فحصاً.**
+	noQuiet(t, hh)
 
 	id, _ := campaignField(t, mkCampaign(t, hh, tok, map[string]any{
 		"title": "NT-06", "audience_type": "role", "audience_ref": "customer",
@@ -358,6 +370,10 @@ func TestNT09_NT10_CancelledNeverSends(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
 	cust := hh.Customer()
+	// **ولا يرث الفحصُ ساعةَ الحائط** — **وأخطرُ ما في هذا الفحص أنّه
+	// ينفي**: **«لم يُرسَل شيء»** — **وساعةُ الهدوء تجعل النفيَ صادقاً
+	// بلا سبب**، **فيمرّ ليلاً وهو لا يقيس شيئاً.**
+	noQuiet(t, hh)
 	at := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
 
 	id, _ := campaignField(t, mkCampaign(t, hh, tok, map[string]any{
@@ -394,6 +410,11 @@ func TestNT07_NT08_DueRunsAtServerTime(t *testing.T) {
 	tok := adminTok(t, hh)
 	cust := hh.Customer()
 	at := time.Now().Add(3 * time.Hour).Format(time.RFC3339)
+	// **ولا يرث الفحصُ ساعةَ الحائط** (٢٠٢٦-٠٩-١٦) — **قِيس**:
+	// **هذه الفحوصُ تخضرّ نهاراً وتحمرّ ليلاً**، **لأنّ ساعةَ الهدوء
+	// الافتراضيّةَ ٢٢→٨ تؤجّل الإرسالَ فتبقى الحملةُ `scheduled`.**
+	// **وفحصٌ يتبدّل جوابُه بالساعة ليس فحصاً.**
+	noQuiet(t, hh)
 
 	id, _ := campaignField(t, mkCampaign(t, hh, tok, map[string]any{
 		"title": "NT-07", "audience_type": "role", "audience_ref": "customer",
@@ -431,6 +452,11 @@ func TestNT14_NT15_CapHoldsEngagementAndSparesOrders(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
 	cust := hh.Customer()
+	// **وساعةُ الهدوء تُرفَع أوّلاً ثمّ يُوضَع السقفُ المقصود** —
+	// **و`noQuiet` تضع سقفاً سخيّاً، فترتيبُ السطرين هو الفحص.**
+	// **ولا يرث الفحصُ ساعةَ الحائط**: **٢٢→٨ تؤجّل فلا يُقاس سقفٌ
+	// أصلاً** (قِيس ٢٠٢٦-٠٩-١٦).
+	noQuiet(t, hh)
 	hh.Setting("notify.engagement_daily_cap", "1")
 
 	for i, title := range []string{"NT-14 أولى", "NT-14 ثانية"} {
@@ -595,5 +621,65 @@ func TestSIN04_SIN05_CellAndCityScopes(t *testing.T) {
 	}
 	if got := inboxCount(t, hh, inCity.ID, "promo"); got != 0 {
 		t.Fatalf("**بلغ خبرُ مربّعٍ مشترِكَ مدينة**: %d", got)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **ولا فحصَ يتبدّل جوابُه بساعة الحائط** (٢٠٢٦-٠٩-١٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// # ما وقع
+//
+// **جرى الفحصُ الكاملُ الواحدةَ بعد منتصف الليل فسقطت أربعةٌ** —
+// `NT-06` و`NT-07` و`NT-14` و`SI-N-06`: **كلُّها تقول «لم تُرسَل»
+// والحملةُ `scheduled`.**
+//
+// **ولا عطبَ في المنتج**: **ساعةُ الهدوء الافتراضيّةُ ٢٢→٨** (الدفعة
+// الثامنة) **تؤجّل التفاعلَ إلى الصباح** — **وهي تعمل كما أُقرّت.**
+//
+// **والعطبُ في الفحص**: **ورث سياسةَ المنصّة ولم يعلن سياستَه** —
+// **فيخضرّ نهاراً ويحمرّ ليلاً.** **وفحصٌ كذلك لا يُوثَق به في
+// الاتّجاهين**: **لا حين يخضرّ ولا حين يحمرّ.**
+//
+// # ولماذا حارسٌ لا إصلاحُ الأربعة
+//
+// **والخامسُ يُكتب غداً** — **ومن أصلح ما وقع وحدَه انتظر وقوعَه
+// ثانيةً.**
+func TestNTQ_SendingTestsDeclareTheirQuietPolicy(t *testing.T) {
+	dir := filepath.Join(repoRoot(t), "backend", "internal", "qa")
+	files, err := filepath.Glob(filepath.Join(dir, "campaigns*_test.go"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("**لم تُقرأ ملفّاتُ فحوص الحملات**: %v", err)
+	}
+
+	// **وما يدلّ على أنّ الفحصَ ينتظر إرسالاً فعليّاً.**
+	wants := []string{`!= "sent"`, `"promo") ; got != 0`, `inboxCount(`}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("قراءة %s: %v", f, err)
+		}
+		src := string(b)
+		for _, block := range strings.Split(src, "\nfunc Test")[1:] {
+			name := block[:strings.Index(block, "(")]
+			// **والفحصُ الذي يقيس التأجيلَ نفسَه يعلن هدوءَه بيده.**
+			if strings.Contains(block, "notify.quiet_from") {
+				continue
+			}
+			sends := false
+			for _, w := range wants {
+				if strings.Contains(block, w) {
+					sends = true
+					break
+				}
+			}
+			if !sends {
+				continue
+			}
+			if !strings.Contains(block, "noQuiet(t, hh)") {
+				t.Errorf("**%s ينتظر إرسالاً ولا يعلن سياسةَ الهدوء** — "+
+					"**فيخضرّ نهاراً ويحمرّ ليلاً.**", name)
+			}
+		}
 	}
 }

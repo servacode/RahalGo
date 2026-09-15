@@ -76,6 +76,10 @@ func TestEN02_ScheduledCampaignRechecksOfferAtSend(t *testing.T) {
 	f := hh.Factory()
 	fx := newOfferFx(t, hh, f, 1000)
 	cust := hh.Customer()
+	// **ولا يرث الفحصُ ساعةَ الحائط** — **وأخطرُ ما في هذا الفحص أنّه
+	// ينفي**: **«لم يُرسَل شيء»** — **وساعةُ الهدوء تجعل النفيَ صادقاً
+	// بلا سبب**، **فيمرّ ليلاً وهو لا يقيس شيئاً.**
+	noQuiet(t, hh)
 	end := time.Now().Add(4 * time.Hour)
 	live := offerIDOf(t, makeOffer(t, hh, fx, fx.Tok, 20, nil, &end))
 
@@ -114,6 +118,10 @@ func TestSIN06_SIN07_SIN08_ArrivalIsReEvaluated(t *testing.T) {
 	tok := adminTok(t, hh)
 	f := hh.Factory()
 	sub := f.NewUserWith("customer")
+	// **ولا يرث الفحصُ ساعةَ الحائط** — **قِيس ٢٠٢٦-٠٩-١٦**: **ساعةُ
+	// الهدوء ٢٢→٨ تؤجّل الإرسالَ فتبقى `scheduled`**، **فيخضرّ الفحصُ
+	// نهاراً ويحمرّ ليلاً.**
+	noQuiet(t, hh)
 
 	// **ومربّعٌ في مكانٍ لا خدمةَ فيه** — **ولا منطقةَ تغطّيه.**
 	far := opsmap.TargetKey(opsmap.KindInterest, "", 12, 77)

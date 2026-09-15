@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 347,
-    "test_funcs": 1478
+    "test_funcs": 1479
   },
   "flows": [
     {
@@ -9382,6 +9382,12 @@
     },
     {
       "name": "TestNT22_NoPhonesInCampaignOrAudit",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNTQ_SendingTestsDeclareTheirQuietPolicy",
       "file": "internal/qa/campaigns_test.go",
       "package": "qa",
       "orphan": true
