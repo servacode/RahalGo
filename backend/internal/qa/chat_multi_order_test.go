@@ -161,6 +161,11 @@ func TestCHAT01_TwoOrdersTwoConversations(t *testing.T) {
 	if r.Code != http.StatusNotFound {
 		t.Fatalf("**سائقٌ بلغ حديثَ طلبٍ ليس له**: %d", r.Code)
 	}
+	// **ولا يكتب فيه أيضاً** — **والقراءةُ والكتابةُ بابان**، **ومن
+	// حَرَس أحدَهما وترك الآخرَ لم يحرس شيئاً.**
+	if w := say(t, hh, fx.DrvB.Token, fx.OrdA, "دخيلٌ على طلبٍ ليس لي"); w.Code != http.StatusNotFound {
+		t.Fatalf("**سائقٌ كتب في حديث طلبٍ ليس له**: %d", w.Code)
+	}
 }
 
 // ═════════════════ CHAT-02 ═════════════════
@@ -401,6 +406,46 @@ func TestCHAT13_RetryDoesNotDuplicatePush(t *testing.T) {
 	}
 	if n := len(chatPushes(t, hh, fx.Cust.ID)); n != 2 {
 		t.Fatalf("**رسالتان مختلفتان ودفعٌ واحد**: %d", n)
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والمسارُ المنطقيُّ الثاني: عاملُ النقل يُعاد**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وإعادةُ الإرسال عند الباب أحدُ بابي الازدواج** — **والثاني أن
+	// يُفرَّع الصفُّ نفسُه مرّتين**: **موتٌ في منتصف التوزيع، أو
+	// عاملان يعملان معاً.**
+	//
+	// **والقفلُ `ON CONFLICT (notification_id, token)`** — **ويُقاس
+	// لا يُقرأ.**
+	if _, err := hh.Pool.Exec(ctxBG(), `
+		INSERT INTO device_tokens (user_id, token, platform, app, last_seen_at)
+		VALUES ($1::uuid, $2, 'android', 'customer', now())
+		ON CONFLICT (token) DO NOTHING`, fx.Cust.ID, "CHAT13-TOKEN-"+fx.Cust.ID); err != nil {
+		t.Fatalf("تسجيلُ الجهاز: %v", err)
+	}
+	hh.API.DeliverPushOnce(ctxBG())
+	var fanned1 int
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT count(*) FROM notification_deliveries d
+		  JOIN notifications n ON n.id = d.notification_id
+		 WHERE n.user_id = $1::uuid AND n.kind = 'chat'`, fx.Cust.ID).Scan(&fanned1); err != nil {
+		t.Fatalf("عدُّ الأهداف: %v", err)
+	}
+	if fanned1 == 0 {
+		t.Fatalf("**لم يُفرَّع هدفٌ أصلاً** — **فالقياسُ التالي لا يقول شيئاً**")
+	}
+	// **ويُعاد الفرزُ كما يُعاد بعد سقوط.**
+	hh.API.DeliverPushOnce(ctxBG())
+	var fanned2 int
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT count(*) FROM notification_deliveries d
+		  JOIN notifications n ON n.id = d.notification_id
+		 WHERE n.user_id = $1::uuid AND n.kind = 'chat'`, fx.Cust.ID).Scan(&fanned2); err != nil {
+		t.Fatalf("عدُّ الأهداف ثانيةً: %v", err)
+	}
+	if fanned2 != fanned1 {
+		t.Fatalf("**تضاعف الهدفُ بإعادة الفرز**: %d ← %d", fanned1, fanned2)
 	}
 }
 

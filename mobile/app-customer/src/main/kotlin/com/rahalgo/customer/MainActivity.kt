@@ -1035,10 +1035,52 @@ private fun SignedIn(
                     // **ولا تُؤخَذ إلّا وجهتُه هو** — **ومن أخذ كلَّ ما
                     // ينتظر ابتلع وجهةَ عرضٍ لا يعرف كيف يفتحها**
                     // (`CU-CHAT-13`).
+                    // ══════════════════════════════════════════════════
+                    // **ومستهلِكٌ واحدٌ لكلّ الوجهات** (`DLINK-08`)
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **ومستهلِكان لنوعين يبتلع أحدُهما وجهةَ الآخر** —
+                    // **فتُمحى قبل أن تُفتَح، ولا خطأَ ولا أثر.**
+                    //
+                    // **وتُؤخَذ مرّةً واحدةً** (`Opened.take`) — **ومن
+                    // أدار جهازَه فأُعيد بناءُ الشاشة لا يُساق إليها
+                    // ثانيةً** (`DLINK-09`).
+                    //
+                    // **والباردُ والدافئُ سواء**: **`onCreate` و
+                    // `onNewIntent` كلاهما يضع الوجهةَ في `Opened`**،
+                    // **وهذا يقرؤها حيثما وُضعت** (`DLINK-10`…`13`).
                     val waiting = com.rahalgo.ui.Opened.pending
                     androidx.compose.runtime.LaunchedEffect(waiting) {
-                        if (waiting.type == com.rahalgo.ui.Engagement.DEST_ORDER_CHAT) {
-                            liveChat.openId = com.rahalgo.ui.Opened.take().id
+                        when (waiting.type) {
+                            com.rahalgo.ui.Engagement.DEST_ORDER_CHAT ->
+                                liveChat.openId = com.rahalgo.ui.Opened.take().id
+
+                            com.rahalgo.ui.Engagement.DEST_OFFER -> {
+                                // **والعرضُ يُفتَح في بابه القائم** —
+                                // **بجلبٍ جديدٍ من الخادم لا من ذاكرةِ
+                                // أمس.**
+                                val id = com.rahalgo.ui.Opened.take().id
+                                overlay.show(Overlay.Menu(CustomerItems.OFFERS))
+                                mineVm.openOffer(id)
+                            }
+
+                            // ══════════════════════════════════════════
+                            // **ولا بابَ للمتجر عند الزبون** — **قصداً**
+                            // ══════════════════════════════════════════
+                            //
+                            // (قرارُ المالك ٢٠٢٦-٠٨-٠٥: **«المتاجرُ
+                            //  مخفيّةٌ عن الزبون بالكامل»** — والمحرّكُ
+                            //  يحجبها في الردّ نفسِه،
+                            //  `customer_privacy.go`.)
+                            //
+                            // **فوجهةُ متجرٍ لا تُفتَح ولا تُخترَع لها
+                            // شاشة** — **وتُؤخَذ لتُطرَح**: **ولو
+                            // تُركت معلّقةً لانتظرت مستهلِكاً لا
+                            // يجيء، ثمّ فُتحت يوماً بعد وجهةٍ أخرى.**
+                            com.rahalgo.ui.Engagement.DEST_MERCHANT ->
+                                com.rahalgo.ui.Opened.take()
+
+                            else -> Unit
                         }
                     }
                     if (liveChat.chats.isNotEmpty()) {

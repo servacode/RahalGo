@@ -113,6 +113,8 @@
     <string name="off_none_hint">نعلن العروض في الرئيسية أولاً — تابعنا</string>
     <string name="fav_none">لم تضف أي صنف إلى المفضلة</string>
     <string name="off_none">لا عروض سارية الآن</string>
+    <string name="off_from_notice">العرض الذي وصلك</string>
+    <string name="off_gone">العرض الذي وصلك لم يعد سارياً</string>
     <string name="cht_none">لا دردشات منتهية</string>
     <string name="tkt_none">لم تشتك من شيء — ونرجو أن يبقى كذلك</string>
 

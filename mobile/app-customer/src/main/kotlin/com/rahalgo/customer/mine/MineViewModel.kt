@@ -104,6 +104,44 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
     var offers by mutableStateOf<List<Offer>?>(null)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وعرضٌ بعينه جاء من إشعار** (`DLINK-03`، ٢٠٢٦-٠٩-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ولا شاشةَ عرضٍ مفردةٍ في تطبيق الزبون** — **العرضُ يُرى في
+    // قائمته**: **فيُفتَح البابُ القائمُ ويُشار إلى الذي جاء له.**
+    //
+    // **والحقيقةُ من الخادم لا من الإشعار** — **`public/offers` لا
+    // يردّ إلّا السارية**: **فعرضٌ أُوقف بعد إرسال الخبر لا يُعرض
+    // سعرُه القديمُ سارياً** (`DLINK-04`)، **وخبرٌ في الجيب لا يصير
+    // حقيقةً بمرور الوقت.**
+
+    /** **العرضُ المقصودُ بالإشعار** — وفارغٌ يعني «فُتحت القائمةُ وحدَها». */
+    var focusOffer by mutableStateOf<String?>(null)
+        private set
+
+    /** **وقد ذهب قبل أن يُفتَح** — **فيُقال ولا يُعرَض بديلاً عنه.** */
+    var focusGone by mutableStateOf(false)
+        private set
+
+    /**
+     * **يفتح قائمةَ العروض على عرضٍ بعينه** — **بجلبٍ جديدٍ دائماً.**
+     *
+     * **ومن قرأ قائمةً حُمِّلت أمسِ رأى عرضاً أُوقف اليوم** — **والخبرُ
+     * جاء أمس.**
+     */
+    fun openOffer(id: String) {
+        focusOffer = id
+        focusGone = false
+        open(CustomerItems.OFFERS, force = true)
+    }
+
+    /** **ويُنسى بعد أن يُرى** — **فلا يُشار إليه كلّما فُتحت القائمة.** */
+    fun clearFocus() {
+        focusOffer = null
+        focusGone = false
+    }
+
     var referral by mutableStateOf<Referral?>(null)
         private set
 
@@ -118,7 +156,15 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
                 if (force || favorites == null) load { favorites = api.favorites().items }
 
             CustomerItems.OFFERS ->
-                if (force || offers == null) load { offers = api.offers().offers }
+                if (force || offers == null) {
+                    load {
+                        offers = api.offers().offers
+                        // **والمقصودُ إن لم يكن في السارية فقد ذهب** —
+                        // **ولا يُخترَع له عرضٌ آخرُ مكانه.**
+                        val want = focusOffer
+                        focusGone = want != null && offers.orEmpty().none { it.id == want }
+                    }
+                }
 
             CustomerItems.INVITE ->
                 if (force || referral == null) load { referral = api.referral() }

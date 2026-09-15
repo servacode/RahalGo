@@ -185,6 +185,11 @@ private fun Offers(vm: MineViewModel) {
         return
     }
     val context = LocalContext.current
+    // **والإشارةُ تُمحى بمغادرة الشاشة** — **ومن عاد إلى العروض بعد
+    // يومٍ لا يُشار له إلى عرضِ خبرٍ قديم** (`DLINK-09`).
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { vm.clearFocus() }
+    }
     // **ويُقرأ النصُّ في التركيب لا في المستمع** — `stringResource`
     // دالّةُ تركيبٍ ولا تُنادى داخل `onClick`.
     val addedText = stringResource(R.string.shop_added)
@@ -209,6 +214,24 @@ private fun Offers(vm: MineViewModel) {
             stringResource(R.string.menu_offers_title),
             stringResource(R.string.soon_offers),
         )
+        // ══════════════════════════════════════════════════════════════
+        // **والعرضُ الذي جاء به الخبرُ يُرفَع إلى أوّلها** (`DLINK-03`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ولا شاشةَ عرضٍ مفردة** — **فمن ساقه الخبرُ إلى قائمةٍ فيها
+        // عشرون عرضاً لا يعرف أيَّها قُصد.**
+        val focus = vm.focusOffer
+        if (vm.focusGone) {
+            // **وذهب قبل أن يُفتَح** — **فيُقال، ولا يُعرَض سعرٌ مضى
+            // على أنّه سارٍ** (`DLINK-04`).
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.off_gone),
+                color = Rahal.colors.inkMuted,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         if (list.isEmpty()) {
             Empty(
                 text = stringResource(R.string.off_none),
@@ -216,7 +239,18 @@ private fun Offers(vm: MineViewModel) {
             )
             return@Screen
         }
-        list.forEach { o ->
+        val ordered =
+            if (focus == null) list else list.sortedByDescending { it.id == focus }
+        ordered.forEach { o ->
+            if (focus != null && o.id == focus) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.off_from_notice),
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
             Spacer(Modifier.height(10.dp))
             Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
