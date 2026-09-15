@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 335,
+    "routes": 341,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 140,
     "behaviour_settings": 112,
     "order_fields": 75,
-    "test_files": 339,
-    "test_funcs": 1418
+    "test_files": 342,
+    "test_funcs": 1442
   },
   "flows": [
     {
@@ -6769,6 +6769,24 @@
       "name": "BenchmarkWSAuth",
       "file": "internal/obs/obs_bench_test.go",
       "package": "obs",
+      "orphan": true
+    },
+    {
+      "name": "TestAfterDiscount_NeverBelowZero",
+      "file": "internal/offers/status_test.go",
+      "package": "offers",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveMatchesStatus",
+      "file": "internal/offers/status_test.go",
+      "package": "offers",
+      "orphan": true
+    },
+    {
+      "name": "TestStatusAt_DerivesFromServerTime",
+      "file": "internal/offers/status_test.go",
+      "package": "offers",
       "orphan": true
     },
     {
@@ -14104,6 +14122,132 @@
     {
       "name": "TestOLP2_NoUIInThePath",
       "file": "internal/qa/observability_least_privilege_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF17_StaleCartCatchesOfferLoss",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF18_BrowseMatchesQuote",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFCC_OrderAtExpiryIsNotDiscounted",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFCC_StopBetweenQuoteAndOrderWins",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFOV01_OFOV02_NoStacking",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFOV03_QuoteAndOrderResolveIdentically",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFOV04_StoppingOneRestoresPrice",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFOV05_ExpiredHoldsNoSlot",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRPOF01_RPOF05_RepManagesAssignedMerchant",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRPOF02_RPOF03_RepCannotEscapeAssignment",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRPOF04_RepActionIsAuditedAsRep",
+      "file": "internal/qa/offers_rep_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF01_MerchantCreatesOwnOffer",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF02_OF19_CannotCreateForAnotherMerchant",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF03_CannotReadAnotherMerchantOffers",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF04_OF05_OF07_OF08_StatusIsDerivedFromServerTime",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF06_OF12_OF13_OF16_StopEndsPricingAndIsIdempotent",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF09_BadWindowRejected",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF10_OF11_ExpiredOfferCannotPrice",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF14_OF15_HistoryIsImmutable",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOF20_DirectApiBypassFails",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFB_MerchantCannotSpendPlatformMargin",
+      "file": "internal/qa/offers_scoped_test.go",
       "package": "qa",
       "orphan": true
     },
