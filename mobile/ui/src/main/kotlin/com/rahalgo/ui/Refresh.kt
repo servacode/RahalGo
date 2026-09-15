@@ -1,7 +1,13 @@
 package com.rahalgo.ui
 
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -41,8 +47,60 @@ object Refresh {
     /** **نبضةٌ تتصاعد** — من راقبها أعاد جلبَ ما يخصّه. */
     val tick: StateFlow<Long> = _tick
 
-    /** **يُنادى حين يتغيّر شيءٌ يخصّ كلَّ الشاشات.** */
+    // ══════════════════════════════════════════════════════════════════
+    // **والنبضاتُ المتلاحقةُ نبضةٌ واحدة** (`PF-10`، ٢٠٢٦-٠٩-١٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // # ما قِيس
+    //
+    // **وسبعةَ عشرَ موضعاً يسمعون هذه النبضة** — **وكلُّ حدثٍ من
+    // الوصلة الحيّة يبثّها** (`ShellViewModel`) **ومعها ثلاثةُ نداءاتٍ
+    // من الغلاف نفسِه.**
+    //
+    // **وطلبٌ يمرّ بأربع حالاتٍ في دقيقة** (قُبل · أُسنِد · في الطريق ·
+    // سُلّم) **يعني أربعَ موجاتٍ من عشرات النداءات** — **وكلُّها تسأل
+    // عمّا سألت عنه قبل ثوانٍ.**
+    //
+    // **وعلى شبكة الرقّة ذاك بطءٌ يُحَسّ** — **وعلى البطّاريّة إيقاظٌ
+    // متكرّرٌ للراديو.**
+    //
+    // # والعلاجُ جمعٌ لا منع
+    //
+    // **ولا تُبتلع نبضة** — **من بثّ في أثناء النافذة يُرفَع مع
+    // الموجة التالية**: **فآخرُ الحقيقة يصل دائماً، ولا يُعاد سؤالُه
+    // ثلاثاً في ثانية.**
+    //
+    // **وثلاثُ مئةِ ملّي** — **دونها لا تُجمَع موجةُ حدثٍ واحد، وفوقها
+    // يُحَسّ التأخّرُ في شاشةٍ ينظر إليها صاحبُها.**
+    private const val COALESCE_MS = 300L
+
+    private val pending = AtomicBoolean(false)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * **يُنادى حين يتغيّر شيءٌ يخصّ كلَّ الشاشات.**
+     *
+     * **والنداءاتُ المتلاحقةُ تُجمَع في نبضةٍ واحدة** — **ولا تُهمَل
+     * واحدةٌ منها**: **الجمعُ تأخيرٌ قصيرٌ لا إسقاط.**
+     */
     fun bump() {
+        if (!pending.compareAndSet(false, true)) return
+        scope.launch {
+            delay(COALESCE_MS)
+            pending.set(false)
+            _tick.value = _tick.value + 1
+        }
+    }
+
+    /** **وتُبَثّ الآن بلا جمع** — **لفعلٍ فعله صاحبُ الشاشة بيده.** */
+    fun bumpNow() {
+        pending.set(false)
         _tick.value = _tick.value + 1
+    }
+
+    /** **يُصفَّر في الفحص** — **ولا حالَ يعبر بين فحصين.** */
+    fun resetForTest() {
+        pending.set(false)
+        _tick.value = 0L
     }
 }

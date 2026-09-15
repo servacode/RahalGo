@@ -1,5 +1,11 @@
 package com.rahalgo.ui
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import com.rahalgo.design.Rahal
@@ -275,8 +281,60 @@ fun Empty(
  * **والخبرُ كاذب.** فيُقال إنّه تعذّر، **ويُعرض زرٌّ يعيد المحاولة** —
  * وشبكةُ الشارع تنقطع وتعود.
  */
+/**
+ * **متى يُقال «تعذّر» بدل الدوران** — **عشرون ثانية.**
+ *
+ * **ومن القياس لا من الذوق**: **أبطأُ بابٍ على التجهيز ٢٦ مل.ث،
+ * وزمنُ الوصول من الجهاز ٢٦٥ مل.ث** — **فهذا أضعافُ أضعافِه.**
+ */
+private const val STUCK_AFTER_MS = 20_000L
+
 @Composable
 fun LoadState(loading: Boolean, error: String, onRetry: (() -> Unit)? = null) {
+    // ══════════════════════════════════════════════════════════════════
+    // **ودوّارةٌ بلا نهايةٍ عطبٌ لا انتظار** (`PF-01`، ٢٠٢٦-٠٩-١٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وكان الشرطُ: إن لم يكن خطأٌ فدُرْ** — **فحالُ «لا تحميلَ ولا
+    // خطأ» تدور أبداً**: **نداءٌ ابتُلع، أو ردٌّ فارغٌ، أو رايةٌ لم
+    // تُخفَض.** **ومن رآها انتظر ثمّ خرج، ولا شيءَ يقول له أن يعيد.**
+    //
+    // **ولا يُعاد شرطُ `loading`** — **رفعُه كان إصلاحاً**: **الرايةُ
+    // لا تُرفع إلّا بعد إطارٍ أو إطارين، فيرى الفاتحُ بياضاً ثمّ
+    // دوّارة.**
+    //
+    // **فتُحَدُّ بالزمن**: **تدور كما كانت، وإن طال الدورانُ بلا تبدّلٍ
+    // قيل «تعذّر» وعُرض بابُ الإعادة.** **والحدُّ من القياس**: **أبطأُ
+    // بابٍ على التجهيز ٢٦ مل.ث، وزمنُ الوصول من هنا ٢٦٥ مل.ث** —
+    // **فعشرون ثانيةً أضعافُ أضعافِه، ولا تقطع على شبكةٍ بطيئةٍ صادقة.**
+    var stuck by remember(loading, error) { mutableStateOf(false) }
+    LaunchedEffect(loading, error) {
+        stuck = false
+        if (error.isEmpty()) {
+            delay(STUCK_AFTER_MS)
+            stuck = true
+        }
+    }
+    if (stuck && error.isEmpty()) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.6f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                stringResource(R.string.load_stuck),
+                color = Rahal.colors.inkMuted,
+                textAlign = TextAlign.Center,
+            )
+            if (onRetry != null) {
+                Spacer(Modifier.height(12.dp))
+                RahalOutlineButton(onClick = onRetry) {
+                    Text(stringResource(R.string.act_retry))
+                }
+            }
+        }
+        return
+    }
     Column(
         Modifier.fillMaxWidth().fillMaxHeight(0.6f),
         horizontalAlignment = Alignment.CenterHorizontally,

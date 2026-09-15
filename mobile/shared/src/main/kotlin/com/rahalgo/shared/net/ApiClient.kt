@@ -5,6 +5,7 @@ import com.rahalgo.shared.model.Envelope
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
@@ -71,19 +72,41 @@ class ApiClient(
     @PublishedApi internal val http = HttpClient {
         install(ContentNegotiation) { json(json) }
         // ══════════════════════════════════════════════════════════════
-        // **مهل واسعة — لأن الخادم ينام**
+        // **مهلٌ من قياسٍ لا من ذكرى خادمٍ مضى** (`B9`، ٢٠٢٦-٠٩-١٦)
         // ══════════════════════════════════════════════════════════════
         //
-        // **الخطة المجّانية في Render تُنيم الخدمة بعد ربع ساعة سكون**،
-        // وأول نداء بعدها يوقظها: **ثلاثون إلى ستّين ثانية.**
+        // # ما كان ولماذا تبدّل
         //
-        // **ومهلة OkHttp الافتراضية عشر ثوان** — فيسقط النداء قبل أن
-        // يستيقظ الخادم، **ويقرأها صاحبه «لا اتصال بالإنترنت»** وهو
-        // متّصل والخادم حيّ.
+        // **كانت تسعين ثانيةً لأنّ الخطّة المجّانيّة في Render تُنيم
+        // الخدمة** — **وأوّلُ نداءٍ بعدها يوقظها في ثلاثين إلى ستّين.**
+        //
+        // **والمحرّكُ اليومَ على خادمٍ مخصَّصٍ لا ينام** (`CX33`، منذ
+        // ٢٠٢٦-٠٨-١٥) — **والذكرى بقيت في الشيفرة بعد أن ذهب سببُها.**
+        //
+        // # وما قِيس (٢٠٢٦-٠٩-١٦)
+        //
+        //	أبطأُ بابٍ على التجهيز        ٢٦ مل.ث (`my/orders`)
+        //	وسيطُ الأبواب                 ٢–١٣ مل.ث
+        //	زمنُ الوصول من جهازٍ حقيقيّ    ٢٦٥ مل.ث (وسيط)
+        //	منها للاتّصال و`TLS`          ١٨٤ مل.ث
+        //
+        // **فتسعون ثانيةً ليست سعةً بل صمتاً**: **من انقطعت شبكتُه في
+        // نفقٍ ينتظر دوّارةً دقيقةً ونصفاً قبل أن يُقال له شيء.**
+        //
+        // # والعشرون أضعافُ أضعافِ المقيس
+        //
+        // **ولا تقطع على شبكةٍ بطيئةٍ صادقة** — **وشبكةُ الرقّة تُبطئ
+        // ولا تُوقف ثلاثين ضعفا.**
+        //
+        // **والاتّصالُ وحدَه خمسَ عشرةَ** — **وهو أبطأُ ما في الرحلة
+        // على شبكةٍ محمولة.**
+        //
+        // **والرفعُ يأخذ مهلتَه بنفسه** — **صورةٌ على شبكةٍ بطيئةٍ
+        // ليست نداءً يُقاس بالملّي** (انظر `upload`).
         install(HttpTimeout) {
-            connectTimeoutMillis = 20_000
-            socketTimeoutMillis = 90_000
-            requestTimeoutMillis = 90_000
+            connectTimeoutMillis = 15_000
+            socketTimeoutMillis = 20_000
+            requestTimeoutMillis = 20_000
         }
     }
 
@@ -221,6 +244,14 @@ class ApiClient(
             header(CLIENT_HEADER, client)
             if (version > 0) header(VERSION_HEADER, version.toString())
             header("Authorization", "Bearer " + session.accessToken())
+            // **ومهلةُ الرفع ليست مهلةَ القراءة** — **صورةُ تسليمٍ على
+            // شبكةٍ بطيئةٍ تحتاج دقيقتين، وقطعُها يعني إعادةَ رفعها
+            // كلِّها وحزمةَ السائق مرّتين.**
+            timeout {
+                connectTimeoutMillis = 15_000
+                socketTimeoutMillis = 120_000
+                requestTimeoutMillis = 120_000
+            }
         }
         if (res.status.value >= 400) {
             // ══════════════════════════════════════════════════════════
