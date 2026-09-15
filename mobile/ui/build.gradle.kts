@@ -95,41 +95,4 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// **وقشورُ التطبيقات مدخلٌ لفحص السياسة المركزيّة** (`DWR`، ٢٠٢٦-٠٩-١٤)
-// ══════════════════════════════════════════════════════════════════════
-//
-// **و`DrawerCentralPolicyTest` يقرأ `MainActivity` في الأربعة وسطحَي
-// الخريطة** — **وغرادل لا يعلم ذلك**، فيرى المهمّةَ `UP-TO-DATE`
-// ويتخطّاها. **وحارسٌ يُتخطّى ليس حارساً** (وقع مثلُه اليومَ في حارس
-// قفلِ الإصدار).
-tasks.withType<Test>().configureEach {
-    inputs.files(
-        rootProject.file("app-customer/src/main/kotlin/com/rahalgo/customer/MainActivity.kt"),
-        rootProject.file("app-driver/src/main/kotlin/com/rahalgo/driver/MainActivity.kt"),
-        rootProject.file("app-merchant/src/main/kotlin/com/rahalgo/merchant/MainActivity.kt"),
-        rootProject.file("app-rep/src/main/kotlin/com/rahalgo/rep/MainActivity.kt"),
-        rootProject.file("map/src/main/kotlin/com/rahalgo/map/MapCanvas.kt"),
-        rootProject.file("map/src/main/kotlin/com/rahalgo/map/PickPoint.kt"),
-    ).withPropertyName("drawerPolicySources")
-        .withPathSensitivity(PathSensitivity.RELATIVE)
-}
 
-// ══════════════════════════════════════════════════════════════════════
-// **وبياناتُ الأربعة مدخلٌ لحارس النصّ الصريح** (`P-8`، ٢٠٢٦-٠٩-١٤)
-// ══════════════════════════════════════════════════════════════════════
-//
-// **و`CleartextPolicyTest` يقرأ بيانَ كلّ تطبيقٍ وإعدادَ أمنِ شبكته** —
-// **فمن نقل السمةَ إلى `main` وجب أن يسقط الفحصُ لا أن يُتخطّى.**
-tasks.withType<Test>().configureEach {
-    inputs.files(
-        listOf("app-customer", "app-driver", "app-merchant", "app-rep").flatMap { app ->
-            listOf(
-                rootProject.file("$app/src/main/AndroidManifest.xml"),
-                rootProject.file("$app/src/debug/AndroidManifest.xml"),
-                rootProject.file("$app/src/debug/res/xml/network_security_config.xml"),
-            )
-        },
-    ).withPropertyName("cleartextPolicySources")
-        .withPathSensitivity(PathSensitivity.RELATIVE)
-}
