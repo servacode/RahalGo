@@ -21,9 +21,12 @@ class PushService : RahalPushService() {
     override fun urgentChannelName(): String = getString(R.string.push_ch_offer)
     override fun newsChannelName(): String = getString(R.string.push_ch_news)
 
-    override fun isUrgent(kind: String): Boolean = kind == KIND_OFFER
+    // **ورسالةُ الزبون عاجلةٌ كذلك** — **سؤالٌ في طريقٍ ينتظر جواباً
+    // الآن**: «وين الباب؟» تُقرأ بعد التسليم لا تنفع.
+    override fun isUrgent(kind: String): Boolean = kind == KIND_OFFER || kind == KIND_CHAT
 
     companion object {
         const val KIND_OFFER = "order_offer"
+        const val KIND_CHAT = com.rahalgo.ui.Engagement.KIND_CHAT
     }
 }

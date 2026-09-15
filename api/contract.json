@@ -5701,6 +5701,10 @@
           "type": "unknown"
         },
         {
+          "name": "order_number",
+          "type": "unknown"
+        },
+        {
           "name": "peer_name",
           "type": "unknown"
         }

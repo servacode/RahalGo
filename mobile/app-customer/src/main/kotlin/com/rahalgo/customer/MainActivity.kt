@@ -1028,15 +1028,49 @@ private fun SignedIn(
                     androidx.compose.runtime.LaunchedEffect(Unit) {
                         com.rahalgo.ui.Refresh.tick.collect { liveChat.load(ctx) }
                     }
-                    liveChat.orderId?.let { id ->
-                        // **والشارةُ تقول كم ينتظره** — ولا شارةَ لصفر.
-                        ChatFab(unread = liveChat.unread) { liveChat.open = true }
-                        if (liveChat.open) {
-                            val cvm: com.rahalgo.ui.OrderChatViewModel = viewModel()
-                            com.rahalgo.ui.OrderChatSheet(vm = cvm, orderId = id) {
-                                liveChat.open = false
+                    // ══════════════════════════════════════════════════
+                    // **ووجهةُ الإشعار تفتح حديثَ طلبِها بعينه**
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **ولا تُؤخَذ إلّا وجهتُه هو** — **ومن أخذ كلَّ ما
+                    // ينتظر ابتلع وجهةَ عرضٍ لا يعرف كيف يفتحها**
+                    // (`CU-CHAT-13`).
+                    val waiting = com.rahalgo.ui.Opened.pending
+                    androidx.compose.runtime.LaunchedEffect(waiting) {
+                        if (waiting.type == com.rahalgo.ui.Engagement.DEST_ORDER_CHAT) {
+                            liveChat.openId = com.rahalgo.ui.Opened.take().id
+                        }
+                    }
+                    if (liveChat.chats.isNotEmpty()) {
+                        // ══════════════════════════════════════════════
+                        // **وقرصٌ لا يقول أيَّ طلبٍ يفتح لا يختار عنه**
+                        // ══════════════════════════════════════════════
+                        //
+                        // **وواحدٌ يُفتَح** — **وأكثرُ يُعرَض ليختار**
+                        // (`CU-CHAT-03`)، **والشارةُ تقول ما يفتحه
+                        // القرصُ لا مجموعَ ما لا يراه** (`CU-CHAT-04`).
+                        ChatFab(unread = liveChat.badge) {
+                            val one = liveChat.single
+                            if (one != null) {
+                                liveChat.openId = one
+                            } else {
+                                overlay.show(Overlay.Menu(CustomerItems.CHATS))
                             }
                         }
+                    }
+                    liveChat.openId?.let { id ->
+                        val cvm: com.rahalgo.ui.OrderChatViewModel = viewModel()
+                        com.rahalgo.ui.OrderChatSheet(
+                            vm = cvm,
+                            orderId = id,
+                            // **ومن الحديث إلى طلبِه** — **ولا يُبحث
+                            // عنه في شاشةٍ أخرى** (`CU-CHAT-09`).
+                            onOpenOrder = {
+                                liveChat.openId = null
+                                overlay.clear()
+                                tab = Tab.Orders
+                            },
+                        ) { liveChat.openId = null }
                     }
                 }
             }

@@ -19,6 +19,13 @@ data class ChatThread(
     /** **أما زالت مفتوحة؟** — تُغلق بانتهاء الطلب. */
     val open: Boolean = true,
     @SerialName("closes_at") val closesAt: String? = null,
+    /**
+     * **رقمُ الطلب** — **وهو ما يعرفه صاحبُه.**
+     *
+     * **وعنوانُ الشاشة كان «محادثة السائق» وحدَها** — **ومن له طلبان
+     * لا يعرف أيَّهما يقرأ**: **يعود إلى بطاقة الطلب ليتذكّر.**
+     */
+    @SerialName("order_number") val orderNumber: Long = 0,
 )
 
 @Serializable

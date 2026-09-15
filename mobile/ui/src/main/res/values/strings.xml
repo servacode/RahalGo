@@ -765,7 +765,15 @@
     <!-- ألفاظُ أصناف الصندوق — ولا رمزٌ آليٌّ على شاشة (AN-07) -->
     <string name="notice_kind_promo">عرض</string>
     <string name="notice_kind_order">طلب</string>
+    <string name="notice_kind_chat">رسالة</string>
     <string name="notice_kind_wallet">محفظة</string>
     <string name="notice_kind_account">حساب</string>
     <string name="notice_kind_other">خبر</string>
+    <!-- رأسُ الحديث يقول أيَّ طلبٍ هو (CU-CHAT-07، ٢٠٢٦-٠٩-١٥) -->
+    <string name="chat_of_order">محادثة الطلب #%d</string>
+    <string name="chat_open_order">عرض الطلب</string>
+    <string name="chat_closed">انتهى — للقراءة فقط</string>
+    <string name="chats_open_section">محادثات جارية</string>
+    <string name="chats_archive_section">محادثات سابقة</string>
+    <string name="chat_unread_badge">%d جديدة</string>
 </resources>

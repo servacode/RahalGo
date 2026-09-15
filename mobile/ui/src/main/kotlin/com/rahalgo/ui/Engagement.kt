@@ -31,12 +31,29 @@ object Engagement {
     const val KIND_ORDER = "order"
 
     /**
+     * **ورسالةُ الحديث صنفٌ ثالث** — **نصُّ المحرّك حرفاً**
+     * (`notifications.KindChat`).
+     *
+     * **ولا تُقرأ في الصندوق** — **المحرّكُ يُخفيها عنه**: **صفُّها
+     * هناك ليُرسَل الدفعُ لا ليُقرأ مرّتين.**
+     */
+    const val KIND_CHAT = "chat"
+
+    /**
      * **الوجهاتُ التي يعرف التطبيقُ كيف يفتحها.**
      *
      * **وهي نصُّ المحرّك حرفاً** (`campaigns.DestOffer` وأخواتُها).
      */
     const val DEST_OFFER = "offer"
     const val DEST_MERCHANT = "merchant"
+
+    /**
+     * **وحديثُ الطلب وجهةٌ بمعرّفِ الطلب** — **لا بمعرّفِ محادثة.**
+     *
+     * **ومعرّفُ الطلب هو مفتاحُ الحديث في المحرّك** (`order_messages`)
+     * — **فوجهةٌ بغيره تحتاج جدولاً ثانياً يُترجم بينهما.**
+     */
+    const val DEST_ORDER_CHAT = "order_chat"
     const val DEST_HOME = "home"
 
     /**
@@ -61,7 +78,8 @@ object Engagement {
         val type = entity?.trim().orEmpty()
         val id = entityId?.trim().orEmpty()
         return when (type) {
-            DEST_OFFER, DEST_MERCHANT -> if (id.isEmpty()) HOME else Dest(type, id)
+            DEST_OFFER, DEST_MERCHANT, DEST_ORDER_CHAT ->
+                if (id.isEmpty()) HOME else Dest(type, id)
             else -> HOME
         }
     }
@@ -75,6 +93,7 @@ object Engagement {
         when (kind) {
             KIND -> R.string.notice_kind_promo
             KIND_ORDER -> R.string.notice_kind_order
+            KIND_CHAT -> R.string.notice_kind_chat
             "wallet" -> R.string.notice_kind_wallet
             "account" -> R.string.notice_kind_account
             else -> R.string.notice_kind_other

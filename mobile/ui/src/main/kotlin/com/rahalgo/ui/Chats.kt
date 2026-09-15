@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.model.ChatThread
@@ -80,7 +83,19 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
         busy = true
         viewModelScope.launch {
             try {
-                rows = api.threads().threads.filter { !it.open }
+                // ══════════════════════════════════════════════════════
+                // **والجاريةُ تُعرَض أوّلاً** (`CU-CHAT-05`، ٢٠٢٦-٠٩-١٥)
+                // ══════════════════════════════════════════════════════
+                //
+                // **وكانت تُرشَّح `!open`** — **فلا يجد الزبونُ حديثَ
+                // طلبه الجاري في شاشة المحادثات إطلاقاً**: **والقرصُ
+                // العائمُ يفتح واحداً يختاره عنه.**
+                //
+                // **والمنتهيةُ تبقى** — **حجّةً عند الخلاف** (قرارُ
+                // المالك ٢٠٢٦-٠٨-٠٩).
+                rows = api.threads().threads
+                    .sortedWith(compareByDescending<ChatThreadRow> { it.open }
+                        .thenByDescending { it.lastAt ?: "" })
                 error = ""
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)
@@ -133,13 +148,26 @@ fun ChatsScreen(vm: ChatsViewModel) {
             Empty(stringResource(R.string.chats_none))
             return@Screen
         }
+        // ══════════════════════════════════════════════════════════════
+        // **والجاري يُفتَح ليُكتب فيه، والمنتهي يُطوى ليُقرأ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ولوحُ الحديث هو اللوحُ نفسُه في كلّ مكان** (`OrderChatSheet`)
+        // — **ولوحان يفترقان يجعلان الحديثَ الواحدَ حديثين.**
+        var writing by remember { mutableStateOf("") }
+        if (writing.isNotEmpty()) {
+            val chatVm: OrderChatViewModel = viewModel()
+            OrderChatSheet(vm = chatVm, orderId = writing) { writing = "" }
+        }
         list.forEach { row ->
             Spacer(Modifier.height(8.dp))
             ThreadCard(
                 row = row,
                 open = vm.openId == row.orderId,
                 thread = if (vm.openId == row.orderId) vm.thread else null,
-                onPick = { vm.pick(row.orderId) },
+                onPick = {
+                    if (row.open) writing = row.orderId else vm.pick(row.orderId)
+                },
             )
         }
         Spacer(Modifier.height(24.dp))
@@ -160,11 +188,32 @@ private fun ThreadCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.fillMaxWidth(0.75f)) {
-                Text(
-                    text = "#" + row.number + (if (row.peer.isNotEmpty()) " · " + row.peer else ""),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "#" + row.number + (if (row.peer.isNotEmpty()) " · " + row.peer else ""),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    // **وما ينتظره في هذا الحديث وحدَه** — **ولا مجموعٌ
+                    // لا يقول أيَّ طلبٍ ينتظر** (`CU-CHAT-04`).
+                    if (row.unread > 0) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.chat_unread_badge, row.unread),
+                            color = Rahal.colors.accent,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+                // **وحالُ القناة بلفظها** — **والمنتهي يُقرأ ولا يُكتب.**
+                if (!row.open) {
+                    Text(
+                        text = stringResource(R.string.chat_closed),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
                 if (row.lastBody.isNotEmpty()) {
                     Spacer(Modifier.height(2.dp))
                     Text(

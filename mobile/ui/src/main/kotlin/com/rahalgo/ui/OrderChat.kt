@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +40,7 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.model.ChatMessage
+import com.rahalgo.shared.model.ChatThread
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -93,12 +95,42 @@ class OrderChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **رأسُ الحديث** — **رقمُ الطلب والطرفُ الآخرُ وحالُ القناة.**
+     *
+     * **ويُقرأ من الردّ نفسِه** — **ولا نداءَ ثانٍ ولا حقيقةٌ ثانية.**
+     */
+    var head by mutableStateOf<ChatThread?>(null)
+        private set
+
     fun load(orderId: String) {
+        // ══════════════════════════════════════════════════════════════
+        // **وتبديلُ الطلب يمحو ما كان قبل أن يُرسَم** (`CU-CHAT-09`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكان النموذجُ واحداً للمضيف** — **يُفتح حديثُ ب ورسائلُ أ
+        // ما زالت فيه**: **و`busy` تُقرأ من فراغ القائمة، والقائمةُ
+        // غيرُ فارغةٍ** — **فلا حالةَ تحميلٍ تُرسَم، وتظهر رسائلُ أ تحت
+        // عنوان ب حتّى يصل الردّ.**
+        //
+        // **فالمحوُ قبل النداء لا بعده** — **ولا إطارَ واحدٌ يُرسَم فيه
+        // حديثُ طلبٍ آخر.**
+        if (current != orderId) {
+            messages = emptyList()
+            head = null
+            error = ""
+        }
         current = orderId
         busy = messages.isEmpty()
         viewModelScope.launch {
             try {
-                messages = api.thread(orderId).messages
+                val t = api.thread(orderId)
+                // **ولا يُكتب ردُّ طلبٍ في شاشةِ طلبٍ آخر** — **ونداءان
+                // يتسابقان يصل أقدمُهما آخراً.**
+                if (current == orderId) {
+                    messages = t.messages
+                    head = t
+                }
                 error = ""
             } catch (e: CancellationException) {
                 throw e
@@ -117,7 +149,11 @@ class OrderChatViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 api.send(orderId, text)
-                messages = api.thread(orderId).messages
+                val t = api.thread(orderId)
+                if (current == orderId) {
+                    messages = t.messages
+                    head = t
+                }
                 error = ""
             } catch (e: CancellationException) {
                 throw e
@@ -140,12 +176,24 @@ class OrderChatViewModel(app: Application) : AndroidViewModel(app) {
 fun OrderChatSheet(
     vm: OrderChatViewModel,
     orderId: String,
+    // ══════════════════════════════════════════════════════════════════
+    // **ومن الحديث إلى الطلب** (`CU-CHAT-09`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والسائقُ يسأل «أيَّ عنوانٍ تريد؟»** — **فيُغلق الحديثَ ويبحث
+    // عن الطلب في شاشةٍ أخرى ثمّ يعود فيجد ما كتبه قد ضاع.**
+    //
+    // **وفارغُه يعني «لا باب»** — **ولوحُ السائق ليس فيه شاشةُ طلبات
+    // الزبون**، **وزرٌّ يفتح عدماً أسوأُ من لا زرّ.**
+    onOpenOrder: (() -> Unit)? = null,
     onClose: () -> Unit,
 ) {
     // **ويُحفظ ما كُتب بين الرسمات** — **وحالٌ بلا `remember` تعود
     // فارغةً مع كلّ إعادة رسم**، فيُبتلع الحرفُ كما وقع في حقل البحث
     // (٢٠٢٦-٠٨-١٨).
-    var draft by remember { mutableStateOf("") }
+    // **وما كُتب لطلبٍ لا ينتقل إلى طلبٍ آخر** (`CU-CHAT-08`) —
+    // **ومن بدّل الحديثَ وجد سطرَه في غير موضعه فأرسله ولا يدري.**
+    var draft by remember(orderId) { mutableStateOf("") }
     LaunchedEffect(orderId) { vm.load(orderId) }
 
     // ══════════════════════════════════════════════════════════════════
@@ -184,12 +232,49 @@ fun OrderChatSheet(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = stringResource(R.string.ord_chat),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
-                    )
+                    // ══════════════════════════════════════════════════
+                    // **ورأسُ الحديث يقول أيَّ طلبٍ هو** (`CU-CHAT-07`)
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **وكان «محادثة السائق» وحدَها** — **ومن له طلبان
+                    // لا يعرف أيَّهما يقرأ**: **يخرج إلى بطاقة الطلب
+                    // ليتذكّر، ثمّ يعود.**
+                    //
+                    // **ولا يُطبَع معرّفٌ** — **رقمُ الطلب هو ما يعرفه
+                    // صاحبُه ويسأل به.**
+                    Column(Modifier.weight(1f)) {
+                        val h = vm.head
+                        Text(
+                            text = if (h != null && h.orderNumber > 0) {
+                                stringResource(R.string.chat_of_order, h.orderNumber)
+                            } else {
+                                stringResource(R.string.ord_chat)
+                            },
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        // **والطرفُ الآخرُ وحالُ القناة تحته** — **ولا
+                        // رقمَ هاتفٍ أبداً** (عقدُ الخصوصيّة القائم).
+                        val line = listOfNotNull(
+                            h?.peerName?.takeIf { it.isNotEmpty() },
+                            if (h != null && !h.open) stringResource(R.string.chat_closed) else null,
+                        ).joinToString(" · ")
+                        if (line.isNotEmpty()) {
+                            Text(
+                                text = line,
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                    if (onOpenOrder != null) {
+                        TextButton(onClick = onOpenOrder) {
+                            Text(
+                                text = stringResource(R.string.chat_open_order),
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                    }
                     // **ومخرجٌ ظاهر** — **ونافذةٌ تُغلق بالرجوع وحدَه
                     // تُحبس من لم يعرف ذلك.**
                     IconButton(onClick = onClose) {

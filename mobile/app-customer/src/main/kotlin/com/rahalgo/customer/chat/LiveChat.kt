@@ -43,12 +43,37 @@ import kotlinx.coroutines.launch
  */
 class LiveChatViewModel : ViewModel() {
 
-    /** **معرّفُ الطلب الذي يُفتح حديثُه** — وفارغٌ يعني «لا قرص». */
-    var orderId by mutableStateOf<String?>(null)
+    /**
+     * **أحاديثُ الزبون الجارية** — **وكلُّ واحدٍ منها طلبٌ قائمٌ بذاته.**
+     *
+     * **وكان يُحفَظ معرّفٌ واحدٌ** (`orders.firstOrNull { له سائق }`) —
+     * **فمن له طلبان جاريان يفتح قرصُه أحدَهما ولا يقول أيَّهما**:
+     * **يكتب ردَّه في الطلب الخطأ ولا يعلم** (`CU-CHAT-02`).
+     */
+    var chats by mutableStateOf<List<Live>>(emptyList())
         private set
 
-    /** **أمفتوحٌ اللوح؟** — والحالُ هنا لا في شاشةٍ تُغادَر. */
-    var open by mutableStateOf(false)
+    /** **طلبٌ جارٍ يُحادَث فيه** — ورقمُه لأنّ المعرّفَ لا يُقرأ. */
+    data class Live(val orderId: String, val unread: Int)
+
+    /**
+     * **ما يفعله القرصُ حين يُضغط.**
+     *
+     * **ولا يُختار عن الزبون ما لا يعلمه**: **واحدٌ يُفتَح، وأكثرُ من
+     * واحدٍ يُعرَض ليختار** (`CU-CHAT-03`).
+     */
+    val single: String? get() = if (chats.size == 1) chats[0].orderId else null
+
+    /**
+     * **أيُّ حديثٍ مفتوحٌ الآن** — **والحالُ هنا لا في شاشةٍ تُغادَر.**
+     *
+     * **وكان علماً نعم/لا** — **ولوحٌ واحدٌ لا يُسأل عن أيّ طلبٍ يعرض
+     * يعرض آخرَ ما حُمِّل فيه** (`CU-CHAT-07`).
+     */
+    var openId by mutableStateOf<String?>(null)
+
+    /** **أمفتوحٌ لوحٌ؟** — **وبه تُكتم الرنّةُ عمّن يقرأ الآن.** */
+    val open: Boolean get() = openId != null
 
     /**
      * **كم رسالةً تنتظره** — للشارة على القرص.
@@ -62,58 +87,57 @@ class LiveChatViewModel : ViewModel() {
     var unread by mutableStateOf(0)
         private set
 
+    /**
+     * **وما تقوله الشارةُ هو ما يفتحه القرص.**
+     *
+     * **ومجموعُ حديثين على زرٍّ يفتح أحدَهما كذبٌ**: **يرى «٣» فيفتح
+     * فيجد واحدةً، والاثنتان في طلبٍ لا يعلم به** (`CU-CHAT-04`).
+     */
+    val badge: Int
+        get() = if (chats.size == 1) chats[0].unread else unread
+
     private val api = CustomerApi(AppCore.get().api)
-    private val chats = ChatApi(AppCore.get().api)
+    private val chatApi = ChatApi(AppCore.get().api)
 
     /** **آخرُ عددٍ رُئي** — به يُعرف الجديدُ من القديم. */
     private var lastSeen = -1
 
+    /**
+     * **يقرأ الطلباتِ الجاريةَ وعدّادَها في نداءٍ واحد.**
+     *
+     * **والطلبُ هو الأصلُ لا الحديث**: **قائمةُ الأحاديث تبدأ من
+     * الرسائل** — **فمن أُسنِد له سائقٌ ولم تُكتب رسالةٌ بعدُ لا خيطَ
+     * له**، ولو اتُّخذت أصلاً لما وجد الزبونُ باباً ليبدأ.
+     *
+     * **والعدّادُ من الأحاديث** — لكلّ طلبٍ عددُه هو.
+     */
     fun load(context: Context? = null) {
-        context?.let { refreshUnread(it) }
         viewModelScope.launch {
+            val counts = runCatching { chatApi.threads().threads }
+                .onFailure { Log.w("RahalGo/chat", "تعذّرت قراءةُ عدّاد الرسائل", it) }
+                .getOrNull()
             runCatching { api.orders(openOnly = true).orders }
                 .onSuccess { orders ->
-                    // **وأوّلُ جارٍ له سائق** — **وقرصٌ واحدٌ لطلبين
-                    // يفتح أحدَهما**، والجاري هو ما يُنتظر فيه ردّ.
-                    orderId = orders.firstOrNull { !it.driverName.isNullOrEmpty() }?.id
+                    val live = orders.filter { !it.driverName.isNullOrEmpty() }
+                    val byOrder = counts.orEmpty().associate { it.orderId to it.unread }
+                    this@LiveChatViewModel.chats =
+                        live.map { Live(it.id, byOrder[it.id] ?: 0) }
                     Log.i("RahalGo/chat", "طلبات=" + orders.size +
-                        " بسائق=" + orders.count { !it.driverName.isNullOrEmpty() } +
-                        " المختار=" + orderId)
+                        " أحاديثُ جارية=" + live.size)
                 }
                 .onFailure {
                     Log.w("RahalGo/chat", "تعذّرت قراءةُ الطلبات لقرص الحديث", it)
-                    orderId = null
+                    this@LiveChatViewModel.chats = emptyList()
                 }
+            if (counts != null && context != null) {
+                val n = counts.filter { it.open }.sumOf { it.unread }
+                if (lastSeen >= 0 && n > lastSeen && !open) ring(context)
+                lastSeen = n
+                unread = n
+            }
         }
     }
 
-    /**
-     * **يقرأ عددَ ما ينتظره — ويُسمِع رنّةً للجديد.**
-     *
-     * # ولماذا لا يرنّ في كلّ قراءة
-     *
-     * **النبضةُ تصل مع كلّ تغيّرٍ في الطلب** — قبولٍ وإسنادٍ وتسليم.
-     * **ورنّةٌ مع كلّ نبضةٍ تُقرأ عطلاً في التطبيق** فيُطفئ صاحبُها
-     * الصوتَ كلَّه.
-     *
-     * **فيرنّ حين يزيد العدد وحدَه** — ولا يرنّ حين ينقص (قرأها)،
-     * **ولا في أوّل قراءةٍ بعد الإقلاع** (`lastSeen < 0`): من فتح
-     * تطبيقَه على ثلاث رسائلَ قديمةٍ لا يريد ثلاثَ رنّات.
-     *
-     * **ولا يرنّ واللوحُ مفتوح** — هو يقرؤها الآن.
-     */
-    private fun refreshUnread(context: Context) {
-        viewModelScope.launch {
-            runCatching { chats.threads().threads }
-                .onSuccess { rows ->
-                    val n = rows.filter { it.open }.sumOf { it.unread }
-                    if (lastSeen >= 0 && n > lastSeen && !open) ring(context)
-                    lastSeen = n
-                    unread = n
-                }
-                .onFailure { Log.w("RahalGo/chat", "تعذّرت قراءةُ عدّاد الرسائل", it) }
-        }
-    }
 
     /**
      * **رنّةُ الإشعار التي اختارها صاحبُ الجهاز** — لا نغمةٌ نحقنها.
@@ -130,8 +154,8 @@ class LiveChatViewModel : ViewModel() {
 
     /** **ويُطفأ عند الخروج** — وإلّا بقي قرصُ حسابٍ مضى فوق شاشةِ ضيف. */
     fun clear() {
-        orderId = null
-        open = false
+        chats = emptyList()
+        openId = null
         unread = 0
         lastSeen = -1
     }
