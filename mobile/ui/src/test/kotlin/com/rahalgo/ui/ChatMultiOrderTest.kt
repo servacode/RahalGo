@@ -267,9 +267,17 @@ class ChatMultiOrderTest {
     @Test
     fun `لا تُؤخَذ إلّا وجهةُ الحديث`() {
         val main = read(mainActivity)
+        // **ويُفرَز بالنوع قبل الأخذ** — **وصار الفرزُ `when` لمّا
+        // جاءت وجهتا العرض والمتجر** (`DLINK-08`): **والعقدُ هو أنّ
+        // حديثَ الطلب فرعٌ قائمٌ بذاته لا «كلُّ ما ينتظر».**
+        assertTrue("**سقط الفرزُ بالنوع**", main.contains("when (waiting.type) {"))
         assertTrue(
-            "**سقط شرطُ النوع قبل الأخذ**",
-            main.contains("if (waiting.type == com.rahalgo.ui.Engagement.DEST_ORDER_CHAT)"),
+            "**سقط فرعُ حديث الطلب**",
+            main.contains("com.rahalgo.ui.Engagement.DEST_ORDER_CHAT ->"),
+        )
+        assertFalse(
+            "**يُؤخَذ كلُّ ما ينتظر** — **فتُبتلع وجهةٌ لا يفتحها هذا الفرع**",
+            main.contains("if (!waiting.isHome)"),
         )
         assertTrue(
             "**لا يُفتَح الحديثُ بالوجهة**",
