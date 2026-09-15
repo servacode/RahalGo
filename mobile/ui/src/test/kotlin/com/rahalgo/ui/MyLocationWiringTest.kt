@@ -173,10 +173,15 @@ class MyLocationWiringTest {
     @Test
     fun `للنداء مهلةٌ تنتهي إليها`() {
         val engine = read(ENGINE)
-        assertTrue("**لا مهلةَ**", engine.contains("TIMEOUT_MS"))
+        // **وثابتٌ معرَّفٌ ليس مهلةً تعمل** — **فيُطلَب استعمالُه في
+        // تأجيلٍ حقيقيّ** (درسُ الشاهد الثاني: اسمٌ في ملفٍّ لا يكفي).
+        assertTrue(
+            "**لا تأجيلَ يستعمل المهلة**",
+            Regex("""postDelayed\(\{[\s\S]{0,400}?\}, TIMEOUT_MS\)""").containsMatchIn(engine),
+        )
         assertTrue(
             "**المهلةُ تُسقط نداءً انتهى**",
-            engine.contains("if (state.busy) state.failed"),
+            engine.contains("if (state.busy) state.failed(Locating.Problem.TIMEOUT)"),
         )
     }
 
@@ -200,9 +205,11 @@ class MyLocationWiringTest {
             Locating.Problem.UNAVAILABLE,
         )
         for (p in produced) {
+            // **والاسمُ في تعليقٍ ليس إنتاجاً** — **فيُطلَب النداءُ
+            // نفسُه**: `failed(Locating.Problem.X)`.
             assertTrue(
                 "**سببٌ معروضٌ لا منتِجَ له**: " + p.name,
-                engine.contains("Problem." + p.name),
+                engine.contains("failed(Locating.Problem." + p.name + ")"),
             )
         }
     }
