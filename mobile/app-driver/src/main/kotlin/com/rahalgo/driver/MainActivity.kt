@@ -962,6 +962,19 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                 !LocationPermission.granted(context) ->
                                     ask.launch(LocationPermission.FIRST_STEP)
 
+                                // ══════════════════════════════════════
+                                // **وخدمةُ النظام مطفأةٌ تُفتَح صفحتُها**
+                                // ══════════════════════════════════════
+                                //
+                                // **ولا تُفتَح «معلوماتُ التطبيق»** —
+                                // **فالخطأُ ليس في أذوننا بل في مفتاح
+                                // النظام**، **ومن وقع على صفحة التطبيق
+                                // بحث فيها عمّا ليس فيها.**
+                                !com.rahalgo.driver.location.Readiness
+                                    .serviceEnabled(context) ->
+                                    com.rahalgo.driver.location.Readiness
+                                        .openLocationSettings(context)
+
                                 !LocationPermission.backgroundGranted(context) ->
                                     disclose = true
 

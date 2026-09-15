@@ -363,7 +363,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // **والحال كاملا لا الوردية وحدها** — شاشة «لماذا
                 // لا تصلني طلبات» تُبنى منه.
                 me = out.me ?: state.me,
-                locationOn = LocationPermission.granted(getApplication()),
+                // **وخدمةُ الموقع تُسأل مع الإذن** — انظر `Readiness`.
+                locationOn = com.rahalgo.driver.location.Readiness.canWork(getApplication()),
                 loading = false,
                 error = "",
             )
