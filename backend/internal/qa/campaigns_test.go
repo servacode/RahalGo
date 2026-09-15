@@ -54,6 +54,34 @@ func interestFor(t *testing.T, h *Harness, userID, targetKey string, active bool
 	}
 }
 
+// newCity **مدينةٌ للفحص** — **ومركزُها يُقاس عليه التوفّر.**
+func newCity(t *testing.T, h *Harness, name string, lat, lng float64) string {
+	t.Helper()
+	var id string
+	if err := h.Pool.QueryRow(ctxBG(), `
+		INSERT INTO cities (name, center, radius_m, max_delivery_m, active, sort_order)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography, 5000, 5000, true, 900)
+		RETURNING id::text`, uniq(name+" "), lat, lng).Scan(&id); err != nil {
+		t.Fatalf("إنشاءُ مدينة: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = h.Pool.Exec(ctxBG(), `DELETE FROM cities WHERE id = $1::uuid`, id)
+	})
+	return id
+}
+
+// noQuiet **يُصرّح الفحصُ بسياسته** — **ولا يرث ما تركه غيرُه.**
+//
+// **والمتساويان يعنيان «لا هدوء»** (`campaigns.Quiet`).
+func noQuiet(t *testing.T, h *Harness) {
+	t.Helper()
+	h.Setting("notify.quiet_from", "0")
+	h.Setting("notify.quiet_to", "0")
+	// **والسقفُ يُصرَّح به كذلك** — **وفحصُ السقف يتركه واحداً**،
+	// **فيُحجب ما بعده.** **ولا فحصَ يرث سياسةَ غيره.**
+	h.Setting("notify.engagement_daily_cap", "5")
+}
+
 func campaignField(t *testing.T, r Res, key string) any {
 	t.Helper()
 	if r.Code != http.StatusOK {
@@ -358,6 +386,8 @@ func TestNT16_NT17_QuietDefersEngagementOnly(t *testing.T) {
 	// ساعةِ حائط.**
 	hh.Setting("notify.quiet_from", "0")
 	hh.Setting("notify.quiet_to", "23")
+	// **ويُعيد ما بدّل** — **وإعدادٌ عامٌّ يُترَك يُسكت فحصاً بعده.**
+	t.Cleanup(func() { noQuiet(t, hh) })
 
 	id, _ := campaignField(t, mkCampaign(t, hh, tok, map[string]any{
 		"title": "NT-16", "audience_type": "role", "audience_ref": "customer",
@@ -387,15 +417,23 @@ func TestNT16_NT17_QuietDefersEngagementOnly(t *testing.T) {
 func TestSIN_ServiceInterestTargeting(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
+	// **ولا يُورَث إعدادُ غيره** — **وفحصُ ساعة الهدوء يترك المنصّةَ
+	// هادئةً كلَّها**، **فيُؤجَّل هذا ولا يُرسَل.** **والمتساويان يعنيان
+	// لا هدوء.**
+	noQuiet(t, hh)
+	// **ومدينتان حقيقيّتان** — **وخبرُ الوصول يُعاد تقييمُه بمحرّك
+	// التوفّر**: **فهدفٌ لا يُعرَف موضعُه لا يُقال عنه «وصلت».**
+	z := zoneForDemand(t, hh, "منطقةُ SI-N")
 	f := hh.Factory()
 
-	want := f.NewUserWith("customer")  // **مشترِكٌ فاعلٌ في دمشق**
+	want := f.NewUserWith("customer")  // **مشترِكٌ فاعلٌ حيث وصلت**
 	gone := f.NewUserWith("customer")  // **ألغى اشتراكَه**
-	other := f.NewUserWith("customer") // **مشترِكٌ في حلب**
+	other := f.NewUserWith("customer") // **مشترِكٌ في مدينةٍ أخرى**
 	cover := f.NewUserWith("customer") // **طلب تغطيةً ولم يطلب خبراً**
 
-	const damascus = "city:11111111-1111-1111-1111-111111111111"
-	const aleppo = "city:22222222-2222-2222-2222-222222222222"
+	damascus := "city:" + newCity(t, hh, "مدينةُ SI-N أ", z.Lat, z.Lng)
+	// **والثانيةُ بعيدةٌ لا تصلها الخدمة** — **ولا يبلغها خبرُ الأولى.**
+	aleppo := "city:" + newCity(t, hh, "مدينةُ SI-N ب", 12, 77)
 	interestFor(t, hh, want.ID, damascus, true)
 	interestFor(t, hh, gone.ID, damascus, false)
 	interestFor(t, hh, other.ID, aleppo, true)
@@ -456,6 +494,7 @@ func TestSIN_ServiceInterestTargeting(t *testing.T) {
 func TestSIN04_SIN05_CellAndCityScopes(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
+	noQuiet(t, hh)
 	f := hh.Factory()
 	inCell := f.NewUserWith("customer")
 	inCity := f.NewUserWith("customer")

@@ -140,6 +140,15 @@ func (s *Service) validate(in Input) error {
 	if !ValidDest(in.DestType, in.DestID) {
 		return ErrBadDest
 	}
+	// **وموعدٌ مضى ليس جدولة** — **ومن جدول للأمس أراد الإرسالَ الآن
+	// ولم يقله**: **فيُردّ ليقوله.**
+	//
+	// **ومكانُه هنا لا في فحص العرض** — **وكان قد انزلق إليه فصار
+	// لا يُقرأ إلّا لحملةٍ وجهتُها عرض**: **فقُبل موعدٌ مضى في كلّ ما
+	// سواها.** (كشفته الجولةُ الكاملةُ بعد أن مرّت المفردة.)
+	if in.ScheduledAt != nil && !in.ScheduledAt.After(s.Now()) {
+		return ErrBadTime
+	}
 	return nil
 }
 
@@ -163,11 +172,6 @@ func (s *Service) checkOffer(ctx context.Context, in Input) error {
 	}
 	if !live {
 		return ErrOfferNotLive
-	}
-	// **وموعدٌ مضى ليس جدولة** — **ومن جدول للأمس أراد الإرسالَ الآن
-	// ولم يقله**: **فيُردّ ليقوله.**
-	if in.ScheduledAt != nil && !in.ScheduledAt.After(s.Now()) {
-		return ErrBadTime
 	}
 	return nil
 }
