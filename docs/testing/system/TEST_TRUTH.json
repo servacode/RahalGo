@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 346,
-    "test_funcs": 1473
+    "test_files": 347,
+    "test_funcs": 1477
   },
   "flows": [
     {
@@ -18239,6 +18239,30 @@
     {
       "name": "TestSNAP_015_MobileKnowsNothing",
       "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSPRE1_ProductionTargetAbortsStagingDeploy",
+      "file": "internal/qa/staging_preflight_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSPRE2_StagingTargetPasses",
+      "file": "internal/qa/staging_preflight_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSPRE3_SilentTargetIsNotProduction",
+      "file": "internal/qa/staging_preflight_guard_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSPRE4_GuardRunsBeforeFirstMutation",
+      "file": "internal/qa/staging_preflight_guard_test.go",
       "package": "qa",
       "orphan": true
     },
