@@ -762,4 +762,10 @@
         <item quantity="many">%d يوماً</item>
         <item quantity="other">%d يوم</item>
     </plurals>
+    <!-- ألفاظُ أصناف الصندوق — ولا رمزٌ آليٌّ على شاشة (AN-07) -->
+    <string name="notice_kind_promo">عرض</string>
+    <string name="notice_kind_order">طلب</string>
+    <string name="notice_kind_wallet">محفظة</string>
+    <string name="notice_kind_account">حساب</string>
+    <string name="notice_kind_other">خبر</string>
 </resources>

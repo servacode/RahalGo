@@ -154,6 +154,9 @@ class MainActivity : ComponentActivity() {
         // أحدُهما مكافأة.
         Invited.fromLink(this, intent)
         Invited.fromStore(this)
+        // **ووجهةُ الإشعار تُقرأ قبل أوّل شاشة** — **وتُستهلَك مرّةً**
+        // (`AN-02`): **ومن أدار جهازَه لا يُساق إلى العرض ثانيةً.**
+        com.rahalgo.ui.Opened.from(intent)
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         setContent { CustomerApp() }
@@ -167,6 +170,8 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         Invited.fromLink(this, intent)
+        // **وإشعارٌ يُنقر والتطبيقُ مفتوح** — **كالرابط سواءً بسواء.**
+        com.rahalgo.ui.Opened.from(intent)
     }
 }
 

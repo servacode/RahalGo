@@ -227,7 +227,6 @@
     <string name="os_failed">تعذّر تسليمه</string>
     <string name="os_refunded">استُرجع</string>
     <!-- عروضُ المتجر (OF، ٢٠٢٦-٠٩-١٥) -->
-    <string name="menu_offers">العروض</string>
     <string name="offers_title">عروض متجري</string>
     <string name="offers_empty">لا عروض بعد — أنشئ عرضاً على صنف ليراه الزبائن</string>
     <string name="offer_new">عرض جديد</string>
@@ -235,10 +234,8 @@
     <string name="offer_percent">نسبة الخصم</string>
     <string name="offer_duration">المدة</string>
     <string name="offer_create">أنشئ العرض</string>
-    <string name="offer_stop">أوقف</string>
     <string name="offer_default_title">خصم</string>
     <string name="offer_bad_input">اختر صنفاً ونسبة بين ١ و٩٠ ومدة صحيحة</string>
     <string name="offer_borne_note">الخصم يُحسم من مستحقك أنت</string>
-    <string name="offer_price_line">%1$s ← %2$s</string>
     <string name="offer_ends">ينتهي: %s</string>
 </resources>

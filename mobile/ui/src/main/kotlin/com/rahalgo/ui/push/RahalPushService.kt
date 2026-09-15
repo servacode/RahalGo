@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.rahalgo.ui.Engagement
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -91,10 +92,21 @@ abstract class RahalPushService : FirebaseMessagingService() {
         val title = data["title"].orEmpty().ifBlank { message.notification?.title.orEmpty() }
         val body = data["body"].orEmpty().ifBlank { message.notification?.body.orEmpty() }
         Log.i(TAG, "إشعار: $kind — $title")
-        show(title, body, isUrgent(kind))
+        // ══════════════════════════════════════════════════════════════
+        // **والوجهةُ تُنقّى قبل أن تُحمَل** (`AN-02`، `AN-03`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ونصٌّ يجيء من الشبكة لا يُنفَّذ مقصداً نظاميّاً** — **يُقرأ
+        // في جدولٍ نعرفه، وما لا نعرفه بيتٌ.**
+        show(title, body, isUrgent(kind), Engagement.route(data["entity"], data["entity_id"]))
     }
 
-    protected fun show(title: String, body: String, urgent: Boolean) {
+    protected fun show(
+        title: String,
+        body: String,
+        urgent: Boolean,
+        dest: Engagement.Dest = Engagement.HOME,
+    ) {
         // **ولا إشعارَ فارغ** — صندوقٌ بلا نصٍّ يُقلق ولا يُفيد.
         if (title.isBlank() && body.isBlank()) return
         val manager = getSystemService(NotificationManager::class.java)
@@ -112,10 +124,25 @@ abstract class RahalPushService : FirebaseMessagingService() {
                 ).apply { if (urgent) enableVibration(true) },
             )
         }
+        // ══════════════════════════════════════════════════════════════
+        // **ويُفتَح بيتُ التطبيق حاملاً وجهتَه** — **لا مقصدٌ من نصّ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **والشاشةُ الأولى هي التي تقرأ الوجهةَ وتفتحها** — **فإن لم
+        // تعرفها بقيت حيث هي**: **ولا شاشةَ بيضاءُ ولا سقوط.**
+        //
+        // **والمعرّفُ يدخل في `requestCode`** — **وإلّا أعاد أندرويد
+        // استعمالَ المقصد الأوّل** (`FLAG_UPDATE_CURRENT` يُحدّث
+        // الإضافات، **لكنّ إشعارين مختلفين بمقصدٍ واحدٍ يفتحان وجهةً
+        // واحدة**).
+        val intent = Intent(this, home())
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(EXTRA_DEST_TYPE, dest.type)
+            .putExtra(EXTRA_DEST_ID, dest.id)
         val open = PendingIntent.getActivity(
             this,
-            0,
-            Intent(this, home()).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            dest.id.hashCode(),
+            intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val note = NotificationCompat.Builder(this, channel)
@@ -138,5 +165,9 @@ abstract class RahalPushService : FirebaseMessagingService() {
         private const val TAG = "RahalGo/push"
         private const val ID_URGENT = 3001
         private const val ID_NEWS = 3002
+
+        /** **وجهةُ الإشعار كما تُمرَّر إلى الشاشة الأولى.** */
+        const val EXTRA_DEST_TYPE = "rahalgo.dest_type"
+        const val EXTRA_DEST_ID = "rahalgo.dest_id"
     }
 }

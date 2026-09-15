@@ -34,6 +34,7 @@ import SitePagesPanel from "@/components/admin/settings/site-pages";
 import BannersPanel from "@/components/admin/settings/banners";
 import WhatsAppPanel from "@/components/admin/settings/whatsapp";
 import BroadcastPanel from "@/components/admin/BroadcastPanel";
+import CampaignsPanel from "@/components/admin/CampaignsPanel";
 
 /** **«عرض,طول» ← رقمان** — وفارغٌ أو مشوَّهٌ يعني «لا موقع». */
 function geoOf(v: string): [number, number] | null {
@@ -614,6 +615,9 @@ export default function SettingsPage() {
         <div className="space-y-3">
           <p className="text-sm text-ink-muted">{m.admin.broadcast.hint}</p>
           <BroadcastPanel />
+          {/* **ومركزُ الحملات بجانبه** — **الإعلانُ يُرسل في الحال،
+              وهذه تُجدوَل وتُلغى ويبقى لها أثرٌ يُقرأ.** */}
+          <CampaignsPanel />
         </div>
       )}
       </>
