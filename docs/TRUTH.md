@@ -416,6 +416,9 @@
 | `platform.orders_mode` | المنصة | choice | `platform` |
 | `auth.otp_login` | المنصة | bool | `true` |
 | `auth.signup_verify` | المنصة | bool | `false` |
+| `notify.quiet_from` | المنصة | int | `22` |
+| `notify.quiet_to` | المنصة | int | `8` |
+| `notify.engagement_daily_cap` | المنصة | int | `2` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
 | `orders.auto_transfer` | المنصة | bool | `false` |
