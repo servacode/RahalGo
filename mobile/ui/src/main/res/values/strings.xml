@@ -738,4 +738,28 @@
     <string name="loc_fail_unavailable">تعذّر تحديد الموقع — حرّك الخريطة بيدك</string>
     <string name="loc_fail_unavailable_fix">حاول ثانية</string>
     <string name="loc_acquiring">يُحدَّد موقعك…</string>
+    <!-- عروضُ المتجر: حالٌ تُقرأ لا رمزٌ آليّ (OF، ٢٠٢٦-٠٩-١٥) -->
+    <string name="offer_status_scheduled">مجدول</string>
+    <string name="offer_status_active">ساري</string>
+    <string name="offer_status_stopped">موقوف</string>
+    <string name="offer_status_expired">منتهي</string>
+    <string name="offer_status_unknown">حالة غير معروفة</string>
+    <string name="offer_price_line">%1$s ← %2$s</string>
+    <string name="offer_stop">أوقف</string>
+    <plurals name="offer_hours">
+        <item quantity="zero">بلا مدة</item>
+        <item quantity="one">ساعة</item>
+        <item quantity="two">ساعتان</item>
+        <item quantity="few">%d ساعات</item>
+        <item quantity="many">%d ساعة</item>
+        <item quantity="other">%d ساعة</item>
+    </plurals>
+    <plurals name="offer_days">
+        <item quantity="zero">بلا مدة</item>
+        <item quantity="one">يوم</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%d أيام</item>
+        <item quantity="many">%d يوماً</item>
+        <item quantity="other">%d يوم</item>
+    </plurals>
 </resources>

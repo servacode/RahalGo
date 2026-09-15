@@ -661,6 +661,14 @@ func (s *Server) Router() http.Handler {
 				// **فما نادَتها شاشةٌ قطّ** — **وبابٌ مفتوحٌ بلا حاجةٍ
 				// سطحُ هجومٍ بلا مقابل**، ويُقرأ غداً على أنّه ميزةٌ
 				// قائمةٌ فيُبنى عليه.
+				// **وعروضُ عميله كقائمته** — **الحارسُ نفسُه**
+				// (`repClient`: `merchants.sales_rep_user_id`).
+				//
+				// **ولا يُخترَع للمندوب سلطانٌ جديد** — **وهي
+				// العلاقةُ القائمةُ التي يكتب بها في قائمته.**
+				r.Get("/stores/{id}/offers", s.handleRepOffers)
+				r.Post("/stores/{id}/offers", s.handleRepCreateOffer)
+				r.Post("/stores/{id}/offers/{offerID}/stop", s.handleRepStopOffer)
 				r.Post("/stores/{id}/menu/items", s.handleRepCreateItem)
 				r.Patch("/menu/items/{itemID}", s.handleRepUpdateItem)
 				r.Delete("/menu/items/{itemID}", s.handleRepDeleteItem)
@@ -806,6 +814,19 @@ func (s *Server) Router() http.Handler {
 			r.Delete("/menu/sections/{sectionID}", s.handleMerchantDeleteSection)
 			// أقسامُ السوق ليختار الصنفُ موضعَه — **والمراجعةُ تبقى الحارس.**
 			r.Get("/platform-sections", s.handleMerchantPlatformSections)
+			// ══════════════════════════════════════════════════════════
+			// **وعروضُ متجره يبنيها بنفسه** (`OF`، ٢٠٢٦-٠٩-١٥)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **وكانت عند الإدارة وحدَها** — **فصاحبُ المطعم يتّصل
+			// ليُنزَل له خصمٌ على صنفٍ اليومَ وحدَه.**
+			//
+			// **والحارسُ حارسُ قائمته نفسُه** (`ownsMerchant`) —
+			// **ولم تُوسَّع قدرتُه إلى قدرة المحتوى**: **بابٌ آخرُ
+			// يسأل سؤالاً أضيق.**
+			r.Get("/stores/{id}/offers", s.handleMerchantOffers)
+			r.Post("/stores/{id}/offers", s.handleMerchantCreateOffer)
+			r.Post("/stores/{id}/offers/{offerID}/stop", s.handleMerchantStopOffer)
 			r.Post("/stores/{id}/menu/items", s.handleMerchantCreateItem)
 			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
 			r.Delete("/menu/items/{itemID}", s.handleMerchantDeleteItem)

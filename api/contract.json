@@ -5085,6 +5085,33 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/offers",
+      "handler": "handleMerchantOffers",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/offers",
+      "handler": "handleMerchantCreateOffer",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/offers/{offerID}/stop",
+      "handler": "handleMerchantStopOffer",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/orders",
       "handler": "handleMerchantOrders",
       "auth": true,
@@ -6532,6 +6559,33 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/stores/{id}/offers",
+      "handler": "handleRepOffers",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rep/stores/{id}/offers",
+      "handler": "handleRepCreateOffer",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rep/stores/{id}/offers/{offerID}/stop",
+      "handler": "handleRepStopOffer",
+      "auth": true,
+      "roles": [
+        "sales"
       ]
     },
     {

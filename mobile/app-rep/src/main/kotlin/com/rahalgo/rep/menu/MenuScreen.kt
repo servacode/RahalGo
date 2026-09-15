@@ -83,7 +83,7 @@ import com.rahalgo.ui.RahalTextButton
  *  أو المندوبُ يختار منتجَه بأيّ قسمٍ سينزل».)
  */
 @Composable
-fun MenuScreen(vm: MenuViewModel) {
+fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
     val ctx = LocalContext.current
     BackHandler { if (vm.editing != null) vm.cancelEdit() else vm.close() }
 
@@ -123,6 +123,12 @@ fun MenuScreen(vm: MenuViewModel) {
 
     Screen {
         ScreenTitle(stringResource(R.string.mn_items), stringResource(R.string.mn_hint))
+
+        // **وبابُ عروضه من حيث قائمتُه** — **والخصمُ على صنفٍ يُفتح
+        // من مكان الصنف لا من قائمةٍ بعيدة.**
+        RahalTextButton(onClick = onOffers, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.menu_offers))
+        }
 
         RahalButton(
             onClick = { vm.newItem() },

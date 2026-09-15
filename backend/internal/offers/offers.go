@@ -38,6 +38,11 @@ var (
 	ErrNeedsTitle = httpx.NewError(http.StatusBadRequest, "offer_needs_title", "errors.validation")
 	// ErrBadDiscount خصمٌ ناقص — صنفٌ ونسبةٌ ومن يتحمّل، ثلاثةٌ معاً.
 	ErrBadDiscount = httpx.NewError(http.StatusBadRequest, "bad_offer_discount", "errors.validation")
+	// ErrBadWindow **نهايةٌ قبل بدايةٍ — مدّةٌ لا تقع أبداً.**
+	//
+	// **وعرضٌ ينتهي قبل أن يبدأ يُقبَل صامتاً ثمّ لا يُسعَّر به قطّ** —
+	// **فيُسأل «لماذا لا يعمل عرضي؟» ولا شيءَ في الشاشة يقول.**
+	ErrBadWindow = httpx.NewError(http.StatusBadRequest, "bad_offer_window", "errors.validation")
 	// ErrItemHasOffer **وخصمان على صنفٍ واحدٍ سؤالٌ بلا جواب.**
 	ErrItemHasOffer = httpx.NewError(http.StatusConflict, "item_already_discounted", "errors.item_already_discounted")
 )
@@ -90,7 +95,12 @@ type Offer struct {
 	Active   bool       `json:"active"`
 	// Live سارٍ الآن — **يقوله الخادمُ ولا يُستنتج في الشاشة**: شرطٌ يُحسب
 	// في موضعين يفترق يوماً، **فتُعرض على الزبون عروضٌ انتهت.**
-	Live      bool      `json:"live"`
+	Live bool `json:"live"`
+	// Status الحالُ المشتقّة — **يقولها الخادمُ ولا تُستنتج في الشاشة.**
+	//
+	// **وشاشةٌ تحسبها بساعة الجهاز تقول «سارٍ» لعرضٍ انتهى** — **ومن
+	// قدّم ساعتَه رأى عرضاً مجدولاً ساريا.**
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 
 	// HasOptions للصنف خياراتٌ تُختار قبل الطلب — **حجمٌ أو إضافات.**
@@ -141,6 +151,9 @@ func scan(rows interface {
 		&o.HasOptions); err != nil {
 		return nil, err
 	}
+	// **والحالُ تُشتقّ من الحقول نفسِها التي يقرؤها `LiveCond`** —
+	// **ووقتُ الخادم**: `time.Now()` في العمليّة التي تقرأ القاعدة.
+	o.Status = StatusAt(o.Active, o.StartsAt, o.EndsAt, time.Now())
 	o.ImageURL = media.URLForPtr(o.ImageURL)
 	o.ItemImageURL = media.URLForPtr(o.ItemImageURL)
 	if o.DiscountPercent != nil {
@@ -148,6 +161,56 @@ func scan(rows interface {
 		o.PriceAfter = AfterDiscount(o.PriceBefore, *o.DiscountPercent)
 	}
 	return &o, nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// الحالُ المشتقّة — **حرفٌ واحدٌ يُشتقّ ولا يُخزَّن** (`OF`، ٢٠٢٦-٠٩-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وعمودُ حالٍ مخزَّنٌ يفترق عن الحقيقة لحظةَ تمضي النهاية**: **صفٌّ
+// مكتوبٌ فيه «سارٍ» وقد انتهى أمسِ** — **إلّا أن يمرّ عليه مُجدوِلٌ
+// يصحّحه، فتصير سلامةُ السعر معلّقةً بمهمّةٍ مؤجّلة.**
+//
+// **والحقولُ الثلاثةُ تكفي** — `active` و`starts_at` و`ends_at`:
+// **ووقتُ الخادم هو الحَكَم** (`now()`)، **ولا سلطانَ لساعة الجهاز.**
+//
+//	انتهت مدّتُه            ⇒ EXPIRED   — **ولا يعود**
+//	أُنزل قبل نهايته        ⇒ STOPPED
+//	لم يبدأ بعد            ⇒ SCHEDULED
+//	وما سوى ذلك            ⇒ ACTIVE
+//
+// **والانتهاءُ يسبق الإنزال في القراءة**: **ومن أنزل عرضاً بعد انتهائه
+// لم يُنزله — انتهى وحدَه.**
+const (
+	StatusScheduled = "scheduled"
+	StatusActive    = "active"
+	StatusStopped   = "stopped"
+	StatusExpired   = "expired"
+)
+
+// StatusAt الحالُ عند لحظةٍ بعينها — **والزمنُ يُمرَّر ليُقاس.**
+//
+// **ودالّةٌ خالصةٌ تُقاس في آلةٍ بلا قاعدة** — **وحارسٌ يبني صفَّ
+// بياناتٍ بيده لا يقيس قراراً** (درسُ الدفعة السادسة).
+func StatusAt(active bool, startsAt, endsAt *time.Time, now time.Time) string {
+	if endsAt != nil && !endsAt.After(now) {
+		return StatusExpired
+	}
+	if !active {
+		return StatusStopped
+	}
+	if startsAt != nil && startsAt.After(now) {
+		return StatusScheduled
+	}
+	return StatusActive
+}
+
+// LiveAt **أيُسعَّر به الآن؟** — **والحالُ العاملةُ واحدةٌ لا اثنتان.**
+//
+// **وهي شرطُ `LiveCond` نفسُه مكتوباً في غُو** — **ومن أراد أن يتأكّد
+// أنّهما لا يفترقان فليقرأ `TestOF_LiveMatchesStatus`.**
+func LiveAt(active bool, startsAt, endsAt *time.Time, now time.Time) bool {
+	return StatusAt(active, startsAt, endsAt, now) == StatusActive
 }
 
 // AfterDiscount السعرُ بعد الخصم — **ولا يُقرَّب.**
@@ -216,6 +279,18 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 		return nil, ErrBadDiscount
 	}
 
+	// **والمدّةُ تُفحص في الخادم** — **ولا يُقبَل ما لا يقع.**
+	//
+	// **ويُقبَل الفارغُ**: **بلا بدايةٍ يعني «من الآن»، وبلا نهايةٍ
+	// «بلا حدّ»** — وهو عقدُ الجدول منذ ٠٠٧٤.
+	if in.StartsAt != nil && in.EndsAt != nil && !in.EndsAt.After(*in.StartsAt) {
+		return nil, ErrBadWindow
+	}
+	// **ونهايةٌ مضت حينَ يُنشأ عرضٌ جديد** — **وُلد منتهياً.**
+	if in.EndsAt != nil && !in.EndsAt.After(time.Now()) {
+		return nil, ErrBadWindow
+	}
+
 	active := true
 	if in.Active != nil {
 		active = *in.Active
@@ -258,6 +333,102 @@ func (s *Service) SetActive(ctx context.Context, id string, active bool,
 
 func (s *Service) Get(ctx context.Context, id string, marginOf func(int64) int64) (*Offer, error) {
 	return scan(s.db.QueryRow(ctx, offerSelect+` WHERE o.id = $1`, id), marginOf)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **بابُ صاحب المتجر ومندوبِه — على المحرّك نفسِه** (`OF`، ٢٠٢٦-٠٩-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ولا محرّكَ ثانٍ**: **الجدولُ نفسُه، و`LiveCond` نفسُه، و`LiveDiscount`
+// نفسُها التي يناديها بناءُ الطلب.** **ومحرّكٌ ثانٍ للعروض يعني سعرين.**
+//
+// **والفرقُ كلُّه في النطاق**: **من يملك الصنفَ يملك عرضَه.**
+
+// ErrNotYours **صنفٌ ليس في قائمة من يطلب.**
+//
+// **ويُردّ كما يُردّ الغائب** — **ولا يُقال «هذا الصنفُ لمتجرٍ آخر»**:
+// **وجوابٌ يفرّق بين «ليس لك» و«لا وجود له» يُعدّ المعرّفاتِ عدّاً.**
+var ErrNotYours = httpx.NewError(http.StatusForbidden, "forbidden", "errors.forbidden")
+
+// ListForMerchant عروضُ متجرٍ بعينه — **كلُّها، بحالها المشتقّة.**
+//
+// **ولا يُقرأ منها متجرٌ آخر**: **الشرطُ على `mi.merchant_id` لا على ما
+// يرسله الجهاز.**
+func (s *Service) ListForMerchant(ctx context.Context, merchantID string,
+	marginOf func(int64) int64) ([]Offer, error) {
+	rows, err := s.db.Query(ctx, offerSelect+`
+		WHERE mi.merchant_id = $1
+		ORDER BY o.created_at DESC`, merchantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Offer{}
+	for rows.Next() {
+		o, err := scan(rows, marginOf)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *o)
+	}
+	return out, rows.Err()
+}
+
+// OwnerOf **متجرُ العرض** — **يُسأل قبل كلّ فعلٍ على عرضٍ بمعرّفه.**
+//
+// **ومن أنزل عرضاً بمعرّفه وحدَه بلا هذا السؤال أنزل عرضَ أيّ متجر** —
+// **والمعرّفاتُ تُقرأ من ردٍّ سابقٍ أو تُخمَّن** (وهو درسُ `repOwnsItem`).
+func (s *Service) OwnerOf(ctx context.Context, offerID string) (string, error) {
+	var merchantID *string
+	err := s.db.QueryRow(ctx, `
+		SELECT mi.merchant_id::text FROM offers o
+		JOIN menu_items mi ON mi.id = o.menu_item_id
+		WHERE o.id = $1`, offerID).Scan(&merchantID)
+	if err != nil || merchantID == nil {
+		return "", ErrNotYours
+	}
+	return *merchantID, nil
+}
+
+// CreateScoped ينشئ عرضاً **في نطاق متجرٍ مأذونٍ فيه سلفاً.**
+//
+// # ولا يُصدَّق معرّفُ المتجر من الحمولة
+//
+// **والنطاقُ يجيء من المسار المحروس** — **والصنفُ يُسأل: أهو في هذا
+// المتجر؟** **ومن صدّق معرّفاً في الجسد فتح قائمةَ كلّ متجر.**
+//
+// # ومن يتحمّل الخصمَ ليس خياراً له
+//
+// **وصاحبُ المتجر لا يقرّر أن تتحمّله المنصّة** — **وإلّا أنفق من
+// هامشِ غيره بضغطة.** **والقرارُ بيد الإدارة وحدَها كما كان** (الهجرة
+// ٠٠٧٤: «أقرّر لكلّ عرضٍ على حدة»).
+//
+// # والمنتهي الباقي على `active` يُطوى
+//
+// **والفهرسُ يمنع عرضين فاعلين على صنف** — **ومنتهٍ لم يُنزَل يشغل
+// الموضعَ وهو لا يُسعَّر به.** **فيُطوى في المعاملة نفسِها**: **ولا
+// يُحذف** (تقريرُ «كم خسرنا على عروض رمضان؟»).
+func (s *Service) CreateScoped(ctx context.Context, actorID, merchantID string, in Input,
+	marginOf func(int64) int64) (*Offer, error) {
+	if in.MenuItemID == nil || strings.TrimSpace(*in.MenuItemID) == "" {
+		return nil, ErrBadDiscount
+	}
+	var ok bool
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1 AND merchant_id = $2)`,
+		*in.MenuItemID, merchantID).Scan(&ok); err != nil || !ok {
+		return nil, ErrNotYours
+	}
+	// **ويتحمّله المتجرُ حتماً** — **ولا يُقرأ ما أرسله الجهاز.**
+	borne := ByMerchant
+	in.BorneBy = &borne
+	if _, err := s.db.Exec(ctx, `
+		UPDATE offers SET active = false, updated_at = now()
+		WHERE menu_item_id = $1 AND active AND ends_at IS NOT NULL AND ends_at <= now()`,
+		*in.MenuItemID); err != nil {
+		return nil, err
+	}
+	return s.Create(ctx, actorID, in, marginOf)
 }
 
 // LiveDiscount خصمُ صنفٍ سارٍ الآن — **يُنادى لحظةَ بناء الطلب.**

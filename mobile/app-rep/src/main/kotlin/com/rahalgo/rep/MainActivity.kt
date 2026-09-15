@@ -170,6 +170,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val boardVm: BoardViewModel = viewModel()
     // **وأصنافُ العميل** — يبنيها المندوبُ نيابةً عنه.
     val menuVm: MenuViewModel = viewModel()
+    val offersVm: com.rahalgo.rep.offers.RepOffersViewModel = viewModel()
     // **وهدفُه من الوحدة** — والبابُ `rep/incentives`.
     val app = context.applicationContext as android.app.Application
     val goalsVm: IncentivesViewModel = vmOf(
@@ -433,7 +434,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     //
                     // **وقبل تبويب العملاء في الترتيب** — **ولو جاءت
                     // بعده لَغطّاه تبويبُ العملاء فلا تُرى أبدا.**
-                    menuVm.merchantID.isNotEmpty() -> MenuScreen(menuVm)
+                    // ══════════════════════════════════════════════
+                    // **وعروضُ عميله في سياق عميله** (`RO-01`)
+                    // ══════════════════════════════════════════════
+                    //
+                    // **ولا تُفتَح من قائمةٍ عامّةٍ بمعرّفٍ يُكتب** —
+                    // **بل من المتجر الذي هو فيه**: **فاسمُه ظاهرٌ
+                    // ولا يُخطئ متجراً بمتجر.**
+                    offersVm.merchantID.isNotEmpty() -> {
+                        BackHandler { offersVm.close() }
+                        com.rahalgo.rep.offers.RepOffersScreen(offersVm)
+                    }
+
+                    menuVm.merchantID.isNotEmpty() -> MenuScreen(
+                        vm = menuVm,
+                        onOffers = { offersVm.open(menuVm.merchantID, menuVm.merchantName) },
+                    )
 
                     tab == Tab.Clients -> ClientsScreen(clientsVm) { id, name ->
                         menuVm.open(id, name)

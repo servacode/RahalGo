@@ -455,6 +455,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Merchant)
 
+                    // **وعروضُه** — **على المحرّك المركزيّ نفسِه**
+                    // (`offers`)، **وبحارس قائمته** (`ownsMerchant`).
+                    over is Overlay.Menu && over.key == MerchantItems.OFFERS -> {
+                        val offersVm: com.rahalgo.merchant.offers.OffersViewModel = viewModel()
+                        com.rahalgo.merchant.offers.OffersScreen(offersVm)
+                    }
+
                     // **وسجلُّ الطلبات من الدرج** — قسمٌ منفصلٌ كما في الويب.
                     over is Overlay.Menu && over.key == MerchantItems.HISTORY ->
                         HistoryScreen(historyVm)

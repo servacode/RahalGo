@@ -27,6 +27,7 @@ import com.rahalgo.ui.DrawerItem
  * ثمّ السجلُّ، ثمّ بلاغاتُه، ثمّ التقارير.
  */
 object MerchantItems {
+    const val OFFERS = "Offers"
     const val HISTORY = "History"
     const val WARNINGS = "Warnings"
     const val REPORTS = "Reports"
@@ -41,6 +42,18 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         com.rahalgo.ui.R.string.menu_mine,
         R.string.menu_warnings,
         com.rahalgo.ui.R.drawable.ic_warning,
+    ),
+    // ══════════════════════════════════════════════════════════════════
+    // **وعروضُه يبنيها بنفسه** (`OF`، ٢٠٢٦-٠٩-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وكانت عند الإدارة وحدَها** — **فيتّصل ليُنزَل له خصمٌ على صنفٍ
+    // اليومَ وحدَه.**
+    DrawerItem(
+        MerchantItems.OFFERS,
+        com.rahalgo.ui.R.string.menu_mine,
+        R.string.menu_offers,
+        com.rahalgo.ui.R.drawable.ic_offer,
     ),
     DrawerItem(
         MerchantItems.HISTORY,

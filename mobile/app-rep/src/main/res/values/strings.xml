@@ -198,4 +198,15 @@
     -->
     <string name="mn_need_name">اكتب اسم الصنف</string>
     <string name="mn_need_price">اكتب سعرا صحيحا بالأرقام</string>
+    <!-- عروضُ عملائه (OF، ٢٠٢٦-٠٩-١٥) -->
+    <string name="offers_for_store">عروض %s</string>
+    <string name="offers_empty">لا عروض بعد لهذا المتجر</string>
+    <string name="offer_new">عرض جديد</string>
+    <string name="offer_pick_item">اختر الصنف</string>
+    <string name="offer_percent">نسبة الخصم</string>
+    <string name="offer_create">أنشئ العرض</string>
+    <string name="offer_default_title">خصم</string>
+    <string name="offer_bad_input">اختر صنفاً ونسبة بين ١ و٩٠ ومدة صحيحة</string>
+    <string name="offer_borne_note">الخصم يُحسم من مستحق المتجر</string>
+    <string name="menu_offers">العروض</string>
 </resources>
