@@ -115,6 +115,13 @@
     <string name="loc_permission_title">فعل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
     <string name="loc_permission_button">فعل الآن</string>
+    <!-- والاشعار شرط الاعلان عن التوفر - لا زينة (قيس ٢٠٢٦-٠٩-١٥) -->
+    <string name="notify_needed_title">اسمح بالإشعارات</string>
+    <string name="notify_needed_text">الطلب الجديد يوصلك بإشعار — وبدونه لا شيء ينبهك والجوال في جيبك</string>
+    <string name="notify_needed_button">اسمح الآن</string>
+    <string name="notify_needed_settings">من إعدادات النظام</string>
+    <string name="shift_needs_notify">لا تظهر متاحا قبل السماح بالإشعارات — الطلب لن يصلك</string>
+    <string name="shift_needs_location">لا تظهر متاحا قبل تفعيل الموقع</string>
     <!-- لماذا لا تصلني طلبات -->
     <string name="why_shift_closed">ورديتك مغلقة — افتحها من «لوحتي» ليصلك أول طلب</string>
     <string name="why_location_off">الموقع مطفأ — بدونه لا يعرف المحرك أين أنت فلا يعرض عليك أقرب طلب</string>

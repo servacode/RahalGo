@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.grouped
 import com.rahalgo.ui.money
+import com.rahalgo.driver.location.Readiness
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
@@ -209,6 +210,26 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 failed = OfflineMap.failed,
                 failure = OfflineMap.failure,
                 onDownload = { MapPackageWorker.enqueue(context) },
+            )
+            Spacer(Modifier.height(14.dp))
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **والإشعارُ شرطُ الإعلان عن التوفّر** (`DRF-04`، ٢٠٢٦-٠٩-١٥)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وقِيس**: **كشفُ الطلبات دفعٌ من `FCM`**، **و`onMessageReceived`
+        // لا تفعل غيرَ بناءِ إشعار** — **فالإذنُ مرفوضٌ ⇒ تصل الرسالةُ
+        // ويُسقطها النظامُ صامتاً**، **ولا شيءَ في التطبيق يُنعَش.**
+        //
+        // **فليس زينةً** — **بل هو طريقُ العمل**: **يُمنَع به الإعلانُ
+        // عن التوفّر، ولا تُوقَف رحلةٌ في يده.**
+        //
+        // **وتذهب حين يُمنَح** — **ولا بطاقةَ تبقى بعد اكتمال الجاهزيّة.**
+        if (state.notifyMissing) {
+            NotifyCard(
+                onAllow = actions.enableNotifications,
+                onSettings = actions.openAppSettings,
             )
             Spacer(Modifier.height(14.dp))
         }
@@ -462,6 +483,45 @@ private fun BatteryCard(onFix: () -> Unit, onLater: () -> Unit) {
     }
 }
 
+/**
+ * **بطاقةُ إذن الإشعارات.**
+ *
+ * **وزرّان لأنّ الرفضَ المتكرّرَ يُسكت نافذةَ النظام** — **ومن ضغط
+ * «اسمح» ثلاثاً ولا نافذةَ تظهر ظنّ التطبيقَ معطوباً**: **فالطريقُ
+ * الثاني مكتوبٌ بجانبه.**
+ *
+ * **وتقول ماذا يخسر لا ماذا يريد النظام** — **كمثال [LocationCard].**
+ */
+@Composable
+private fun NotifyCard(onAllow: () -> Unit, onSettings: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.warnTint)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.notify_needed_title),
+            fontWeight = FontWeight.Bold,
+            color = Rahal.colors.accent,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.notify_needed_text), color = Rahal.colors.inkMuted)
+        Spacer(Modifier.height(10.dp))
+        RahalButton(onClick = onAllow, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.notify_needed_button))
+        }
+        Spacer(Modifier.height(4.dp))
+        RahalTextButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                stringResource(R.string.notify_needed_settings),
+                color = Rahal.colors.inkMuted,
+            )
+        }
+    }
+}
+
 @Composable
 private fun LocationCard(onEnable: () -> Unit) {
     Column(
@@ -591,8 +651,17 @@ data class HomeState(
      * **مفتاحُ العمل أهمُّ ما فيها، ولا يُحجب لأجل رقمٍ لم يصل.**
      */
     val goal: IncentivesPayload? = null,
-    /** هل إذن الموقع ممنوح؟ — **وبدونه لا مسافة ولا أقرب طلب.** */
-    val locationOn: Boolean = true,
+    /**
+     * **حالُ الجاهزيّة كما قرأها النظام** (`DRF-01`، ٢٠٢٦-٠٩-١٥).
+     *
+     * **وكانت رايةً منقولةً واحدة** (`locationOn`) — **فلا تُعرف منها
+     * درجةٌ من درجة**: **ومن مُنع من الإعلان عن توفّره لأجل إشعارٍ
+     * لا يُمنَع من متابعة رحلةٍ في يده.**
+     *
+     * **فالحالُ تُحمل كما هي، والدرجاتُ تُشتقّ منها** — **ولا رايتان
+     * تفترقان.**
+     */
+    val readiness: Readiness.State = Readiness.State(),
     val busy: Boolean = false,
     val error: String = "",
     /**
@@ -601,13 +670,34 @@ data class HomeState(
      * **ويُرفع عند رفع الورديّة وحدَه**، ويُطفأ بضغطةٍ أو تجاهل.
      */
     val askBattery: Boolean = false,
-)
+) {
+    /** **أيُنتَج موقعٌ فعلاً؟** — **إذناً وخدمةً معاً.** */
+    val locationOn: Boolean get() = Readiness.canWork(readiness)
+
+    /**
+     * **أيُعلَن متاحاً لطلبٍ جديد؟**
+     *
+     * **ومن أُعلن متاحاً ولا يبلغه النداءُ يُحسَب رافضاً وهو لا يعلم.**
+     */
+    val canGoOnline: Boolean
+        get() = Readiness.allows(readiness, Readiness.Level.CAN_GO_ONLINE)
+
+    /** **أينقص إذنُ الإشعار؟** — **تقرؤها البطاقةُ وحدَها.** */
+    val notifyMissing: Boolean
+        get() = readiness.blockers.contains(
+            Readiness.Blocker.NOTIFICATION_PERMISSION_REQUIRED,
+        )
+}
 
 data class HomeActions(
     val toggleShift: (Boolean) -> Unit,
     /** **يُطفئ تنبيهَ البطّاريّة** — بقبولٍ أو تأجيل. */
     val dismissBattery: () -> Unit = {},
     val enableLocation: () -> Unit,
+    /** **يطلب إذنَ الإشعار** — **شرطُ الإعلان عن التوفّر.** */
+    val enableNotifications: () -> Unit = {},
+    /** **يفتح صفحةَ التطبيق في النظام** — **لمن رُفض نهائيّاً.** */
+    val openAppSettings: () -> Unit = {},
     val refresh: () -> Unit,
     val logout: () -> Unit,
 )

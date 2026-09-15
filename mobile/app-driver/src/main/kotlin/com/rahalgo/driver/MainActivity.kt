@@ -430,6 +430,16 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     ) { home.recheckLocation() }
 
     // ══════════════════════════════════════════════════════════════════
+    // **ونافذةُ الإشعار وحدَها لا تُتبَع بإفصاحِ الخلفيّة** (`DRF-04`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **و`ask` تُتبع كلَّ منحٍ بسؤال «طوال الوقت»** — **فمن سُئل عن
+    // الإشعار فمنحه وجد نفسَه في إفصاحِ موقعٍ لم يطلبه.**
+    val askNotify = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { home.recheckLocation() }
+
+    // ══════════════════════════════════════════════════════════════════
     // **والإفصاحُ يسبق نافذةَ النظام — شرطُ غوغل**
     // ══════════════════════════════════════════════════════════════════
     //
@@ -983,6 +993,34 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                 else -> LocationPermission.openSettings(context)
                             }
                         },
+                        // ══════════════════════════════════════════
+                        // **وإذنُ الإشعار يُطلب وحدَه** (`DRF-04`)
+                        // ══════════════════════════════════════════
+                        //
+                        // **ولا يُطلب مع الموقع هنا** — **فمن مُنع من
+                        // الإعلان عن توفّره لأجل الإشعار يريد الإشعارَ
+                        // وحدَه**، **ونافذتان لطلبٍ واحدٍ تُربكان.**
+                        //
+                        // **وقبل ١٣ لا إذنَ يُطلب** — **فتُفتح صفحةُ
+                        // النظام**: هناك تُشغَّل قناةُ الإشعارات.
+                        enableNotifications = {
+                            if (LocationPermission.NOTIFICATIONS.isEmpty()) {
+                                LocationPermission.openSettings(context)
+                            } else {
+                                askNotify.launch(LocationPermission.NOTIFICATIONS)
+                            }
+                        },
+                        openAppSettings = { LocationPermission.openSettings(context) },
+                        // ══════════════════════════════════════════
+                        // **وبطاقةُ البطّاريّة كانت لا تُغلَق**
+                        // ══════════════════════════════════════════
+                        //
+                        // **و`dismissBattery` لها قيمةٌ افتراضيّةٌ
+                        // فارغة، ولم تُوصَل هنا** — **فزرُّ «لاحقاً»
+                        // يُضغط ولا يقع شيء**، **والبطاقةُ باقيةٌ فوق
+                        // مفتاح الورديّة.** (وهي الفوضى التي يمنعها
+                        // شرطُ «لا بطاقةَ تبقى».)
+                        dismissBattery = home::dismissBattery,
                         logout = onLogout,
                     ),
                 )

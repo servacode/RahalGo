@@ -120,14 +120,19 @@ class ReadinessTest {
         assertFalse(s.blockers.contains(Readiness.Blocker.LOCATION_SERVICE_OFF))
     }
 
-    /** **DR-11 · والخلفيّةُ والإشعارُ لا يمنعان العمل.** */
+    /**
+     * **DR-11 · والخلفيّةُ والإشعارُ لا يمنعان رحلةً في اليد.**
+     *
+     * **و`canWork` معناها الآن: أيُنتَج موقع؟** — **والدرجاتُ في
+     * `allows`.**
+     */
     @Test
-    fun `الخلفيّةُ والإشعارُ لا يمنعان العمل من القرار`() {
+    fun `الخلفيّةُ والإشعارُ لا يمنعان رحلةً في اليد`() {
         val s = Readiness.evaluate(
             permission = true, service = true, background = false, notifications = false,
         )
         assertFalse("**نقصٌ لم يُقَل**", s.ready)
-        assertTrue("**مُنع العملُ لأجل إشعارٍ وخلفيّة**", Readiness.canWork(s))
+        assertTrue("**مُنعت رحلةٌ في يده لأجل إشعارٍ وخلفيّة**", Readiness.canWork(s))
     }
 
     /**
@@ -142,5 +147,174 @@ class ReadinessTest {
         assertTrue(
             Readiness.Blocker.values().contains(Readiness.Blocker.LOCATION_SERVICE_OFF),
         )
+    }
+
+    // ══════════════ ودرجاتٌ لا رايةٌ واحدة (`DRF`) ══════════════
+    //
+    // **وقِيس في المستودع ٢٠٢٦-٠٩-١٥** — **لا يُقرَّر بالحدس**:
+    //
+    // **الإشعارُ**: **كشفُ الطلبات دفعٌ من `FCM`**،
+    // **و`RahalPushService.onMessageReceived` لا تفعل غيرَ بناءِ
+    // إشعارٍ** (`manager.notify`): **لا تُنعش حالاً ولا تُبلّغ بطريقٍ
+    // آخر.** **فالإذنُ مرفوضٌ ⇒ تصل الرسالةُ ويُسقطها النظامُ صامتاً**
+    // — **والجوّالُ في الجيب فلا يرى شيئاً.**
+    //
+    // **والخلفيّةُ**: **الخدمةُ أماميّةٌ من نوع `location`** وتُشغَّل
+    // **والتطبيقُ مرئيّ** — **فيُبقي أندرويد الموقعَ بلا إذن
+    // الخلفيّة**: **فالمسارُ الطبيعيُّ يعمل.**
+
+    private fun full(
+        permission: Boolean = true,
+        service: Boolean = true,
+        background: Boolean = true,
+        notifications: Boolean = true,
+    ) = Readiness.evaluate(permission, service, background, notifications)
+
+    /** **DRF-01 · وثلاثُ درجاتٍ مسمّاةٌ لا رايةٌ عامّة.** */
+    @Test
+    fun `الدرجاتُ معدودةٌ ومسمّاة`() {
+        assertEquals(3, Readiness.Level.values().size)
+    }
+
+    /**
+     * **DRF-02 · والسجلُّ والإعداداتُ تُفتح على كلّ حال.**
+     *
+     * **ومن مُنع من قراءة سجلّه لأنّ موقعَه مطفأٌ عُوقب بلا سبب.**
+     */
+    @Test
+    fun `التطبيقُ يُستعمل وإن نقص كلُّ شيء`() {
+        val s = full(permission = false, service = false, background = false, notifications = false)
+        assertTrue(
+            "**مُنع من قراءة سجلّه لأنّ موقعَه مطفأ**",
+            Readiness.allows(s, Readiness.Level.APP_USABLE),
+        )
+    }
+
+    /**
+     * **DRF-03 · ولا موقعَ ⇒ لا إعلانَ ولا رحلة.**
+     *
+     * **والإذنُ ممنوحٌ والخدمةُ مطفأةٌ داخلةٌ في هذا** — **وهي التي لا
+     * تُرى.**
+     */
+    @Test
+    fun `الخدمةُ المطفأةُ تمنع الدرجتين العمليّتين`() {
+        val s = full(service = false)
+        assertFalse(Readiness.allows(s, Readiness.Level.CAN_GO_ONLINE))
+        assertFalse(Readiness.allows(s, Readiness.Level.CAN_RUN_ACTIVE_DELIVERY))
+    }
+
+    /** **DRF-03b · وغيابُ الإذن كذلك.** */
+    @Test
+    fun `غيابُ الإذن يمنع الدرجتين العمليّتين`() {
+        val s = full(permission = false)
+        assertFalse(Readiness.allows(s, Readiness.Level.CAN_GO_ONLINE))
+        assertFalse(Readiness.allows(s, Readiness.Level.CAN_RUN_ACTIVE_DELIVERY))
+    }
+
+    /**
+     * **DRF-04 · والإشعارُ يمنع الإعلانَ عن التوفّر — بقياس.**
+     *
+     * **ومن أُعلن متاحاً ولا يبلغه النداءُ يُحسَب رافضاً وهو لا يعلم** —
+     * **فيُنقص تقييمُه بعملٍ لم يرَه.**
+     *
+     * **وكنتُ قلتُ في تقريرٍ سابقٍ إنّه «زينة»** — **ولم أكن قِستُ**:
+     * **وقياسُ `onMessageReceived` أظهر أنّه طريقُ العمل نفسُه.**
+     */
+    @Test
+    fun `الإشعارُ الناقصُ يمنع الإعلانَ عن التوفّر`() {
+        val s = full(notifications = false)
+        assertFalse(
+            "**أُعلن متاحاً ولا نداءَ يبلغه** — **فيُحسَب رافضاً**",
+            Readiness.allows(s, Readiness.Level.CAN_GO_ONLINE),
+        )
+    }
+
+    /**
+     * **DRF-05 · ولا يُوقَف عن رحلةٍ في يده لأجل الإشعار.**
+     *
+     * **والطلبُ مقبولٌ وهو يعرفه** — **فلا يحتاج نداءً يُوقظه**،
+     * **ومن مُنع من إكمال تسليمٍ بيده حُبس زبونُه معه.**
+     */
+    @Test
+    fun `الإشعارُ الناقصُ لا يوقف رحلةً جارية`() {
+        val s = full(notifications = false)
+        assertTrue(
+            "**أُوقفت رحلةٌ في يده لأجل إذنِ إشعار**",
+            Readiness.allows(s, Readiness.Level.CAN_RUN_ACTIVE_DELIVERY),
+        )
+    }
+
+    /**
+     * **DRF-06 · والخلفيّةُ لا تمنع درجةً — بقياس.**
+     *
+     * **والخدمةُ أماميّةٌ من نوع `location` تُشغَّل والتطبيقُ مرئيّ** —
+     * **فالموقعُ يبقى بلا إذن الخلفيّة.** **ويبقى الإذنُ مهمّاً
+     * للتعافي بعد موت العمليّة** — **فيُقال ولا يُمنَع.**
+     */
+    @Test
+    fun `الخلفيّةُ الناقصةُ لا تمنع درجةً`() {
+        val s = full(background = false)
+        assertTrue(Readiness.allows(s, Readiness.Level.CAN_GO_ONLINE))
+        assertTrue(Readiness.allows(s, Readiness.Level.CAN_RUN_ACTIVE_DELIVERY))
+        // **ويُقال** — **فالحالُ ليست كاملة.**
+        assertFalse(s.ready)
+    }
+
+    /** **DRF-07 · والكاملُ يُسمَح له بكلّ درجة.** */
+    @Test
+    fun `الكاملُ يُسمَح له بالدرجات كلِّها`() {
+        val s = full()
+        for (lvl in Readiness.Level.values()) {
+            assertTrue(lvl.name, Readiness.allows(s, lvl))
+        }
+    }
+
+    /**
+     * **DRF-08 · والإعلانُ أشدُّ من الرحلة — لا العكس.**
+     *
+     * **وحالٌ تسمح بالإعلان ولا تسمح بمتابعة رحلةٍ محضُ تناقض** —
+     * **ومن أرسلنا إليه عملاً ثمّ منعناه من إتمامه أسوأُ من ألّا
+     * نرسل.**
+     */
+    @Test
+    fun `الإعلانُ لا يُسمَح حيث تُمنَع الرحلة`() {
+        val cases = listOf(
+            full(permission = false),
+            full(service = false),
+            full(background = false),
+            full(notifications = false),
+            full(permission = false, notifications = false),
+            full(service = false, background = false, notifications = false),
+            full(),
+        )
+        for (s in cases) {
+            if (Readiness.allows(s, Readiness.Level.CAN_GO_ONLINE)) {
+                assertTrue(
+                    "**أُعلن متاحاً وهو ممنوعٌ من إتمام رحلة** — " + s.blockers.toString(),
+                    Readiness.allows(s, Readiness.Level.CAN_RUN_ACTIVE_DELIVERY),
+                )
+            }
+        }
+    }
+
+    /**
+     * **DRF-09 · و`canWork` هي درجةُ الرحلة نفسُها.**
+     *
+     * **ومعنىً واحدٌ في موضعين يفترق يوماً** — **فمن غيّر أحدَهما
+     * وحدَه أسقط هذا.**
+     */
+    @Test
+    fun `canWork هي درجةُ الرحلة`() {
+        val cases = listOf(
+            full(), full(permission = false), full(service = false),
+            full(background = false), full(notifications = false),
+        )
+        for (s in cases) {
+            assertEquals(
+                s.blockers.toString(),
+                Readiness.canWork(s),
+                Readiness.allows(s, Readiness.Level.CAN_RUN_ACTIVE_DELIVERY),
+            )
+        }
     }
 }

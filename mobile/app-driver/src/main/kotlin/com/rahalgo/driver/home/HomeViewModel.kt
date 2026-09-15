@@ -15,6 +15,7 @@ import com.rahalgo.driver.push.Push
 import com.rahalgo.ui.Refresh
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
+import com.rahalgo.driver.location.Readiness
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.Notice
 import com.rahalgo.shared.net.ApiClient
@@ -71,7 +72,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 // **وفشلُه لا يُسقط اللوحة**: `runCatching` يُبقي ما وصل،
                 // **ومفتاحُ العمل أهمُّ ما فيها.**
                 val goal = runCatching { backend.me.incentives() }.getOrNull() ?: state.goal
-                state.copy(me = me, goal = goal, busy = false, locationOn = hasLocation())
+                state.copy(me = me, goal = goal, busy = false, readiness = readiness())
             } catch (e: Exception) {
                 state.copy(busy = false, error = describe(e))
             }
@@ -80,7 +81,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     /** يُنادى بعد رجوع صاحبه من نافذة الإذن أو من الإعدادات. */
     fun recheckLocation() {
-        state = state.copy(locationOn = hasLocation())
+        state = state.copy(readiness = readiness())
         state.me?.let { syncService(it) }
     }
 
@@ -91,8 +92,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     // **وكانت تسأل عن الإذن وحدَه** — **فالإذنُ ممنوحٌ وخدمةُ الموقع
     // مطفأةٌ حالٌ تقع كلَّ يوم**، **فيبدو جاهزاً ويفتح ورديّتَه ولا
     // موقعَ يُرسَل.** **ثمّ يُسأل: لماذا لا تصلك طلبات؟**
-    private fun hasLocation(): Boolean =
-        com.rahalgo.driver.location.Readiness.canWork(getApplication())
+    //
+    // **وتُقرأ الحالُ كلُّها لا رايةٌ واحدة** (`DRF-01`، ٢٠٢٦-٠٩-١٥) —
+    // **فالدرجاتُ تُشتقّ منها**: **إذنٌ ناقصٌ يمنع ما يحتاجه وحدَه.**
+    private fun readiness(): Readiness.State = Readiness.of(getApplication())
 
     /**
      * ══════════════════════════════════════════════════════════════════
@@ -128,6 +131,31 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleShift(on: Boolean) {
         if (state.busy) return
+        // ══════════════════════════════════════════════════════════════
+        // **ولا يُعلَن متاحاً وهو لا يبلغه النداء** (`DRF-04`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وقِيس ٢٠٢٦-٠٩-١٥**: **الطلبُ يُكتشَف بدفع `FCM`**،
+        // **و`onMessageReceived` لا تفعل غيرَ بناءِ إشعار** — **فإذنُ
+        // الإشعار مرفوضٌ ⇒ تصل الرسالةُ ويُسقطها النظامُ صامتاً**،
+        // **والجوّالُ في الجيب فلا يرى شيئاً.**
+        //
+        // **و«متاحٌ» عند المحرّك تعني «أرسلوا إليّ عملاً»** — **ومن
+        // أُعلن متاحاً ولا يبلغه النداءُ يُحسَب رافضاً وهو لا يعلم**:
+        // **فيُنقص تقييمُه بعملٍ لم يرَه.**
+        //
+        // **والمنعُ عند الرفع وحدَه** — **والصرفُ يُقبَل على كلّ حال،
+        // ولا يُحبَس سائقٌ في ورديّةٍ لأنّ إذناً ناقص.**
+        if (on && !state.canGoOnline) {
+            val app = getApplication<Application>()
+            state = state.copy(
+                error = app.getString(
+                    if (state.locationOn) R.string.shift_needs_notify
+                    else R.string.shift_needs_location,
+                ),
+            )
+            return
+        }
         state = state.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
@@ -162,6 +190,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 state = state.copy(
                     me = me,
                     busy = false,
+                    readiness = readiness(),
                     askBattery = on && !BatteryGuard.exempt(getApplication()),
                 )
                 return@launch
