@@ -16,6 +16,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/authz"
+	"github.com/servacode/rahalgo/backend/internal/campaigns"
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/comms"
@@ -58,6 +59,7 @@ type Server struct {
 	support    *support.Service
 	incentives *incentives.Service
 	offers     *offers.Service
+	campaigns  *campaigns.Service
 	referrals  *referrals.Service
 	media      *media.Service
 	hub        *realtime.Hub
@@ -214,6 +216,21 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **ووقتُ المناطق يُسأل داخلَ معاملةِ الإنشاء** — `ZH`.
 	ordersSvc.SetZoneHours(srv.platform)
 	srv.offers = offers.New(pg)
+	// **ومركزُ الإشعارات يركب محرّكَ الإشعارات القائم** — **ولا ثانيَ له.**
+	srv.campaigns = campaigns.New(pg, campaignNotifier{srv.notify})
+	srv.campaigns.QuietOf = func(ctx context.Context) campaigns.Quiet {
+		return campaigns.Quiet{
+			From: int(srv.settings.GetInt(ctx, "notify.quiet_from")),
+			To:   int(srv.settings.GetInt(ctx, "notify.quiet_to")),
+		}
+	}
+	// **وخبرُ الوصول يُعاد تقييمُه بمحرّك التوفّر نفسِه** — **ولا
+	// حقيقةَ ثانيةٌ للخدمة.**
+	srv.campaigns.Serviceable = srv.targetServiceable
+	srv.campaigns.LiveOffer = srv.offerIsLive
+	srv.campaigns.CapOf = func(ctx context.Context) int {
+		return int(srv.settings.GetInt(ctx, "notify.engagement_daily_cap"))
+	}
 	ordersSvc.SetOffers(srv.offers)
 	// **والخريطةُ تُسأل عن زمن الطريق لحظةَ الإسناد والاستلام** — تُلتقط
 	// إجابتُها وتُجمَّد، **فلا تُعاد سؤالاً بعد أن يتحرّك السائق.**
@@ -1172,6 +1189,18 @@ func (s *Server) Router() http.Handler {
 			// `merchants.menu_requires_approval`، وكان المفتاحُ يَعِد ولا يفعل.
 			r.Get("/menu/pending", s.handlePendingMenuItems)
 			r.Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
+			// ══════════════════════════════════════════════════════════
+			// **ومركزُ الإشعارات** (`NT`، ٢٠٢٦-٠٩-١٥)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **والإعلانُ القديمُ باقٍ كما هو** — **يُرسل في الحال
+			// بلا صفٍّ ولا جدولة**، **وما زال له من يستعمله.**
+			// **وهذه تزيد عليه: مسوّدةٌ وموعدٌ وإلغاءٌ وأثرٌ يُقرأ.**
+			r.Get("/campaigns", s.handleCampaignList)
+			r.Get("/campaigns/preview", s.handleCampaignPreview)
+			r.Post("/campaigns", s.handleCampaignCreate)
+			r.Post("/campaigns/{id}/send", s.handleCampaignSend)
+			r.Post("/campaigns/{id}/cancel", s.handleCampaignCancel)
 			r.Get("/broadcast/count", s.handleBroadcastCount)
 			r.Post("/broadcast", s.handleBroadcast)
 

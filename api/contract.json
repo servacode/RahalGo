@@ -181,6 +181,94 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/campaigns",
+      "handler": "handleCampaignList",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "campaigns",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/campaigns",
+      "handler": "handleCampaignCreate",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/campaigns/preview",
+      "handler": "handleCampaignPreview",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "quiet_now",
+          "type": "unknown"
+        },
+        {
+          "name": "quiet_until",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/campaigns/{id}/cancel",
+      "handler": "handleCampaignCancel",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/campaigns/{id}/send",
+      "handler": "handleCampaignSend",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/capabilities",
       "handler": "handleListCapabilities",
       "auth": true,

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 341,
+    "routes": 346,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -19,7 +19,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 48,
+    "notify_sites": 49,
     "notify_targeted": 11,
     "publish_rooms": [
       "customer",
@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 140,
-    "behaviour_settings": 112,
+    "setting_defs": 143,
+    "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 342,
-    "test_funcs": 1442
+    "test_files": 345,
+    "test_funcs": 1464
   },
   "flows": [
     {
@@ -4323,6 +4323,60 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "notify.engagement_daily_cap",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "notify.quiet_from",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "notify.quiet_to",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "orders.accept_timeout_min",
       "group": "merchants",
       "kind": "int",
@@ -5551,6 +5605,54 @@
       "name": "TestRoleAssignmentNeedsRolesManage",
       "file": "internal/authz/role_assignment_test.go",
       "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestCancellable",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestCap",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestNextAllowedDefersNotDrops",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestQuietCrossesMidnight",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestQuietEqualBoundsMeansNoQuiet",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestTransactionalIsNotEngagement",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestValidAudience",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestValidDest",
+      "file": "internal/campaigns/policy_test.go",
+      "package": "campaigns",
       "orphan": true
     },
     {
@@ -9203,6 +9305,90 @@
     {
       "name": "TestAV_MerchantGateMatchesOpenNowSQL",
       "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEN02_ScheduledCampaignRechecksOfferAtSend",
+      "file": "internal/qa/campaigns_offers_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEN_OfferCampaignFollowsOfferTruth",
+      "file": "internal/qa/campaigns_offers_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSIN06_SIN07_SIN08_ArrivalIsReEvaluated",
+      "file": "internal/qa/campaigns_offers_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT02_CapabilityIsRequired",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT03_NT04_DraftAndPreviewSendNothing",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT05_NT11_NT12_ValidationAtCreation",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT06_NT20_SendOnceAndAudited",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT07_NT08_DueRunsAtServerTime",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT09_NT10_CancelledNeverSends",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT14_NT15_CapHoldsEngagementAndSparesOrders",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT16_NT17_QuietDefersEngagementOnly",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNT22_NoPhonesInCampaignOrAudit",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSIN04_SIN05_CellAndCityScopes",
+      "file": "internal/qa/campaigns_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSIN_ServiceInterestTargeting",
+      "file": "internal/qa/campaigns_test.go",
       "package": "qa",
       "orphan": true
     },

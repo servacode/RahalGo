@@ -178,6 +178,12 @@ var adminPolicy = []Rule{
 	{"", "/categories/{id}", ContentManage},
 	{"POST", "/media", ContentManage},
 	{"GET", "/media/sign", ContentManage},
+	// **ومركزُ الإشعارات بالقدرة نفسِها** — **وهي قدرةُ من يخاطب
+	// الناسَ باسم المنصّة**: **لا تُخترَع قدرةٌ ثانيةٌ لفعلٍ من صنفها.**
+	{"", "/campaigns", ContentManage},
+	{"GET", "/campaigns/preview", ContentManage},
+	{"", "/campaigns/{id}/send", ContentManage},
+	{"", "/campaigns/{id}/cancel", ContentManage},
 	{"POST", "/broadcast", ContentManage},
 	{"GET", "/broadcast/count", ContentManage},
 	{"", "/app-file", ContentManage},

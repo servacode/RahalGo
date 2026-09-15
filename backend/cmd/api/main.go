@@ -308,6 +308,14 @@ func run(logger *slog.Logger) error {
 			// **وثلاثون ثانيةً كنبضة الراصد والكانس** — **إيقاعٌ
 			// واحدٌ في المنصّة أسهلُ في قراءة السجلّ.**
 			go srv.RunPushDeliveryWorker(ctx, 30*time.Second)
+
+			// **وعاملُ الحملات المستحقّة** — `NT`.
+			//
+			// **والجدولةُ في القاعدة لا في ذاكرة العمليّة** — **ومن
+			// أعاد التشغيلَ وجد المستحقَّ كما تركه.**
+			//
+			// **وبإيقاع المنصّة نفسِه** — ثلاثون ثانية.
+			go srv.RunCampaignWorker(ctx, 30*time.Second)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,
