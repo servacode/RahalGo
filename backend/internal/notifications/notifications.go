@@ -485,7 +485,7 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 		       (read_at IS NOT NULL), created_at::text
 		FROM notifications
 		 WHERE user_id = $1 AND ($3 = '' OR kind = $3)
-		   AND kind <> '` + KindChat + `'
+		   AND kind <> '`+KindChat+`'
 		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind)
 	if err != nil {
 		return nil, 0, err
