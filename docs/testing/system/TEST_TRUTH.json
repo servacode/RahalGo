@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 347,
-    "test_funcs": 1477
+    "test_funcs": 1478
   },
   "flows": [
     {
@@ -9323,6 +9323,12 @@
     {
       "name": "TestSIN06_SIN07_SIN08_ArrivalIsReEvaluated",
       "file": "internal/qa/campaigns_offers_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD_MerchantDestinationIsRefusedAtTheDoor",
+      "file": "internal/qa/campaigns_test.go",
       "package": "qa",
       "orphan": true
     },

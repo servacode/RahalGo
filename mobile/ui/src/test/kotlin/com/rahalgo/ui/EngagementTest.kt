@@ -26,8 +26,9 @@ class EngagementTest {
         assertEquals("8b0a8a71-d186-4647-ae3b-9cd3898508bf", offer.id)
         assertFalse(offer.isHome)
 
-        val store = Engagement.route("merchant", "abc")
-        assertEquals(Engagement.DEST_MERCHANT, store.type)
+        // **و«المتجر» رُفعت** (قرارُ المالك ٢٠٢٦-٠٩-١٥) — **ولا شاشةَ
+        // لها عند الزبون**: **فتسقط إلى البيت** (`MD-08`).
+        assertTrue(Engagement.route("merchant", "abc").isHome)
     }
 
     // ═════════════════ AN-03 ═════════════════

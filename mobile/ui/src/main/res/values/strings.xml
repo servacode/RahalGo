@@ -772,7 +772,7 @@
     <!-- رأسُ الحديث يقول أيَّ طلبٍ هو (CU-CHAT-07، ٢٠٢٦-٠٩-١٥) -->
     <string name="chat_of_order">محادثة الطلب #%d</string>
     <string name="chat_open_order">عرض الطلب</string>
-    <string name="chat_closed">انتهى — للقراءة فقط</string>
+    <string name="chat_read_only">انتهى — للقراءة فقط</string>
     <string name="chats_open_section">محادثات جارية</string>
     <string name="chats_archive_section">محادثات سابقة</string>
     <string name="chat_unread_badge">%d جديدة</string>

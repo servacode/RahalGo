@@ -141,7 +141,7 @@ class ChatMultiOrderTest {
     fun `صفُّ القائمة يقول الحالَ والعدّ`() {
         val src = read(chats)
         assertTrue("**لا شارةَ في الصفّ**", src.contains("R.string.chat_unread_badge"))
-        assertTrue("**لا لفظَ للمنتهي**", src.contains("R.string.chat_closed"))
+        assertTrue("**لا لفظَ للمنتهي**", src.contains("R.string.chat_read_only"))
     }
 
     /**

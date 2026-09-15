@@ -209,7 +209,7 @@ private fun ThreadCard(
                 // **وحالُ القناة بلفظها** — **والمنتهي يُقرأ ولا يُكتب.**
                 if (!row.open) {
                     Text(
-                        text = stringResource(R.string.chat_closed),
+                        text = stringResource(R.string.chat_read_only),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.labelSmall,
                     )

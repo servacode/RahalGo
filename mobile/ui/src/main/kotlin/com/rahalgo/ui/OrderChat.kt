@@ -20,7 +20,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -257,7 +256,7 @@ fun OrderChatSheet(
                         // رقمَ هاتفٍ أبداً** (عقدُ الخصوصيّة القائم).
                         val line = listOfNotNull(
                             h?.peerName?.takeIf { it.isNotEmpty() },
-                            if (h != null && !h.open) stringResource(R.string.chat_closed) else null,
+                            if (h != null && !h.open) stringResource(R.string.chat_read_only) else null,
                         ).joinToString(" · ")
                         if (line.isNotEmpty()) {
                             Text(
@@ -268,7 +267,10 @@ fun OrderChatSheet(
                         }
                     }
                     if (onOpenOrder != null) {
-                        TextButton(onClick = onOpenOrder) {
+                        // **وزرُّ العدّة المشتركة لا زرُّ Material خام** —
+                        // **وزرٌّ خامٌّ لا يعرف شكلَ المنصّة ولا حشوتَها**
+                        // (حارسُ التوكنز سمّاه).
+                        RahalTextButton(onClick = onOpenOrder) {
                             Text(
                                 text = stringResource(R.string.chat_open_order),
                                 style = MaterialTheme.typography.labelMedium,

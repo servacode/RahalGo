@@ -55,38 +55,43 @@ class DeepLinkTest {
     // ═════════════ DLINK-01 · DLINK-02 · المتجر ═════════════
 
     /**
-     * **DLINK-01 · ووجهةُ المتجر تُنقّى نوعاً ومعرّفاً.**
+     * **DLINK-01 · و«المتجر» لم تعد وجهةً** (قرارُ المالك ٢٠٢٦-٠٩-١٥).
      *
-     * **ولا شاشةَ متجرٍ عند الزبون** — **قرارُ المالك ٢٠٢٦-٠٨-٠٥
-     * و`customer_privacy.go`**: **فالمقيسُ هنا أنّ الوجهةَ تُفهَم
-     * ولا تُخترَع لها شاشة.**
+     * **ولا شاشةَ متجرٍ عند الزبون** — **قرارُه ٢٠٢٦-٠٨-٠٥**، **وقِيس
+     * حيّاً على التجهيز**: **ثلاثةُ أبوابٍ عامّةٍ للمتاجر ⇒ ٤٠٤.**
+     *
+     * **فتسقط إلى البيت كأيّ وجهةٍ لا تُعرَف** — **ولا تُفتَح شاشةٌ
+     * لا وجودَ لها.**
      */
     @Test
-    fun `وجهةُ المتجر تُقرأ نوعاً ومعرّفاً`() {
-        val d = Engagement.route("merchant", "6f1c8f31-0b2e-4a77-9d31-2f5e6a1c9b04")
-        assertEquals(Engagement.DEST_MERCHANT, d.type)
-        assertEquals("6f1c8f31-0b2e-4a77-9d31-2f5e6a1c9b04", d.id)
-        assertFalse(d.isHome)
+    fun `وجهةُ المتجر تسقط إلى البيت`() {
+        val id = "6f1c8f31-0b2e-4a77-9d31-2f5e6a1c9b04"
+        for (t in listOf("merchant", "MERCHANT", "merchants", " merchant ", "store", "shop")) {
+            val d = Engagement.route(t, id)
+            assertTrue("**فُتحت وجهةُ متجر**: " + t, d.isHome)
+            assertEquals("", d.id)
+        }
     }
 
     /**
-     * **DLINK-02 · ووجهةُ متجرٍ لا تفتح متجراً سبقه.**
+     * **DLINK-02 · وخبرٌ قديمٌ يحملها لا يفتح متجراً سبقه ولا يُسقط.**
      *
-     * **ولا تُترَك معلّقةً تنتظر قارئاً لا يجيء** — **فتُفتَح يوماً
-     * بعد وجهةٍ أخرى** — **بل تُؤخَذ لتُطرَح.**
+     * **ولا فرعَ لها في المستهلِك** — **ولا معرّفَ يبقى معلّقاً.**
      */
     @Test
-    fun `وجهةُ المتجر تُستهلَك ولا تبقى معلّقة`() {
+    fun `خبرٌ قديمٌ بوجهة متجرٍ لا يفتح شيئاً`() {
         val src = read(main)
-        assertTrue(
-            "**لا قارئَ لوجهة المتجر**",
-            src.contains("com.rahalgo.ui.Engagement.DEST_MERCHANT ->"),
+        assertFalse(
+            "**بقي فرعُ المتجر** — **ووجهةٌ رُفعت من التنقية لا تبلغه أصلاً**",
+            src.contains("Engagement.DEST_MERCHANT"),
         )
-        assertTrue(
-            "**تُترَك معلّقةً فتُفتَح بعد غيرها**",
-            src.contains("com.rahalgo.ui.Engagement.DEST_MERCHANT ->\n" +
-                "                                com.rahalgo.ui.Opened.take()"),
+        assertFalse(
+            "**بقي ثابتُ المتجر في التنقية**",
+            read("ui/src/main/kotlin/com/rahalgo/ui/Engagement.kt").contains("DEST_MERCHANT"),
         )
+        // **والبيتُ لا معرّفَ له** — **فلا يُفتَح بمعرّفِ متجرٍ سابق.**
+        assertTrue(Engagement.route("merchant", "any-old-id").isHome)
+        assertEquals("", Engagement.route("merchant", "any-old-id").id)
     }
 
     // ═════════════ DLINK-03 · العرض ═════════════
@@ -137,13 +142,31 @@ class DeepLinkTest {
 
     // ═════════════ DLINK-05 · DLINK-06 · DLINK-07 — السقوطُ الآمن ═════════════
 
-    /** **DLINK-05 · ومتجرٌ بلا معرّفٍ يسقط إلى البيت.** */
+    /**
+     * **DLINK-05 · MD-01 · ولا «متجر» في اختيارات اللوحة ولا في المحرّك.**
+     *
+     * **ولوحةٌ تُنقَّى وحدَها يتخطّاها نداءٌ مصنوعٌ بيد** — **فالمنعُ
+     * في الثلاثة: المحرّكُ واللوحةُ والجيب.**
+     */
     @Test
-    fun `متجرٌ بلا معرّفٍ يسقط إلى البيت`() {
-        for (bad in listOf("", "   ")) {
-            assertTrue("**فُتح متجرٌ بلا معرّف**", Engagement.route("merchant", bad).isHome)
-        }
-        assertTrue(Engagement.route("merchant", null).isHome)
+    fun `لا وجهةَ متجرٍ في اللوحة ولا في المحرّك`() {
+        val panel = File(mobileRoot().parentFile,
+            "web/apps/rahalgo/src/components/admin/CampaignsPanel.tsx")
+        assertTrue("**لوحةُ الحملات غائبة**", panel.exists())
+        val src = panel.readText()
+        assertTrue(
+            "**عادت «المتجر» إلى اختيارات الوجهة**",
+            src.contains("""(["home", "offer"] as const)"""),
+        )
+        assertFalse("**بقي لفظُ وجهةِ المتجر**", src.contains("destMerchant"))
+
+        val policy = File(mobileRoot().parentFile,
+            "backend/internal/campaigns/policy.go")
+        assertTrue("**سياسةُ الحملات غائبة**", policy.exists())
+        assertFalse(
+            "**عادت `DestMerchant` إلى عقد المحرّك**",
+            policy.readText().contains("DestMerchant"),
+        )
     }
 
     /** **DLINK-06 · وعرضٌ بلا معرّفٍ يسقط إلى البيت.** */
@@ -192,9 +215,11 @@ class DeepLinkTest {
         assertTrue(Opened.take().isHome)
         // **ومستهلِكٌ واحدٌ يفرز بالنوع** — **ولا مستهلِكان يتسابقان.**
         val src = read(main)
+        // **وموضعان يأخذانها**: **حديثُ الطلب والعرض** — **ورُفع
+        // ثالثُهما مع وجهة المتجر** (`MD-08`).
         assertEquals(
             "**أكثرُ من موضعٍ يأخذ الوجهةَ** — **فيبتلع أحدُهما وجهةَ الآخر**",
-            3,
+            2,
             Regex("Opened\\.take\\(\\)").findAll(src).count(),
         )
         assertTrue("**لا فرزَ بالنوع**", src.contains("when (waiting.type) {"))
@@ -291,8 +316,9 @@ class DeepLinkTest {
     fun `المعرّفُ الواحدُ لا يخلط النوعين`() {
         val id = "8b0a8a71-d186-4647-ae3b-9cd3898508bf"
         assertEquals(Engagement.DEST_OFFER, Engagement.route("offer", id).type)
-        assertEquals(Engagement.DEST_MERCHANT, Engagement.route("merchant", id).type)
         assertEquals(Engagement.DEST_ORDER_CHAT, Engagement.route("order_chat", id).type)
+        // **والمرفوعةُ لا تصير نوعاً بمعرّفٍ يشبه غيرَه.**
+        assertTrue(Engagement.route("merchant", id).isHome)
         // **ولا نوعَ يُشتقّ من شكل المعرّف.**
         assertTrue(Engagement.route("", id).isHome)
     }

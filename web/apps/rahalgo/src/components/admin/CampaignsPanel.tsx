@@ -62,7 +62,7 @@ export default function CampaignsPanel() {
   const [audienceRef, setAudienceRef] = useState("customer");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [destType, setDestType] = useState("home");
+  const [destType, setDestType] = useState<"home" | "offer">("home");
   const [destId, setDestId] = useState("");
   const [when, setWhen] = useState("");
   const [count, setCount] = useState<number | null>(null);
@@ -238,14 +238,24 @@ export default function CampaignsPanel() {
         />
 
         <div className="flex flex-wrap gap-2">
-          {/* **والوجهةُ نوعٌ نعرفه** — **ولا رابطٌ حرّ.** */}
-          {(["home", "offer", "merchant"] as const).map((d) => (
+          {/*
+            **والوجهةُ نوعٌ نعرفه** — **ولا رابطٌ حرّ.**
+
+            **و«المتجر» رُفعت** (قرارُ المالك ٢٠٢٦-٠٩-١٥): **ولا شاشةَ
+            متجرٍ عند الزبون** — **قرارُه ٢٠٢٦-٠٨-٠٥**: «المتاجرُ
+            مخفيّةٌ عن الزبون بالكامل». **ووجهةٌ لا يملك التطبيقُ أن
+            يفتحها وعدٌ يُرسَل في جيبه ثمّ لا يُوفى.**
+
+            **والمنعُ في المحرّك** (`campaigns.ValidDest`) — **وهذه
+            لوحةٌ لا تعرض ما يُردّ.**
+          */}
+          {(["home", "offer"] as const).map((d) => (
             <Button
               key={d}
               variant={destType === d ? "primary" : "ghost"}
               onClick={() => setDestType(d)}
             >
-              {d === "home" ? C.destHome : d === "offer" ? C.destOffer : C.destMerchant}
+              {d === "home" ? C.destHome : C.destOffer}
             </Button>
           ))}
         </div>

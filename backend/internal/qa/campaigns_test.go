@@ -188,6 +188,89 @@ func TestNT05_NT11_NT12_ValidationAtCreation(t *testing.T) {
 	}
 }
 
+// ═════════════════ MD-03 · MD-04 · MD-06 · MD-07 ═════════════════
+
+// TestMD_MerchantDestinationIsRefusedAtTheDoor **و«المتجر» لم تعد وجهةً.**
+//
+// # ولماذا عند الباب لا في اللوحة
+//
+// **ولوحةٌ تُنقَّى وحدَها يتخطّاها نداءٌ مصنوعٌ بيد** (`MD-03`) —
+// **ونسخةٌ قديمةٌ من اللوحة تبقى ترسلها** (`MD-07`): **والمحرّكُ هو
+// الحَكَم.**
+//
+// **ولا شاشةَ متجرٍ عند الزبون** (قرارُ المالك ٢٠٢٦-٠٨-٠٥) — **ووجهةٌ
+// لا تُفتَح وعدٌ يُرسَل في جيبه ولا يُوفى.**
+func TestMD_MerchantDestinationIsRefusedAtTheDoor(t *testing.T) {
+	hh := New(t)
+	tok := adminTok(t, hh)
+	body := func(over map[string]any) map[string]any {
+		b := map[string]any{
+			"title": "MD", "audience_type": "role", "audience_ref": "customer",
+		}
+		for k, v := range over {
+			b[k] = v
+		}
+		return b
+	}
+
+	// **MD-03 · نداءٌ مصنوعٌ بيدٍ يقصد المتجر.**
+	id := "8b0a8a71-d186-4647-ae3b-9cd3898508bf"
+	for _, dest := range []string{"merchant", "MERCHANT", "merchants", " merchant "} {
+		r := mkCampaign(t, hh, tok, body(map[string]any{"dest_type": dest, "dest_id": id}))
+		if r.Code != http.StatusBadRequest {
+			t.Fatalf("**قُبلت وجهةُ متجرٍ**: %q ⇒ %d", dest, r.Code)
+		}
+	}
+
+	// **MD-07 · ونسخةٌ قديمةٌ من اللوحة ترسلها كما كانت ترسلها** —
+	// **بمعرّفِ متجرٍ قائمٍ في القاعدة**: **والوجودُ لا يجعلها وجهة.**
+	var merchantID string
+	_ = hh.Pool.QueryRow(ctxBG(), `SELECT id::text FROM merchants LIMIT 1`).Scan(&merchantID)
+	if merchantID != "" {
+		r := mkCampaign(t, hh, tok, body(map[string]any{
+			"dest_type": "merchant", "dest_id": merchantID,
+		}))
+		if r.Code != http.StatusBadRequest {
+			t.Fatalf("**قُبلت وجهةُ متجرٍ قائمٍ فعلاً**: %d", r.Code)
+		}
+	}
+
+	// **ولا صفَّ كُتب** — **والردُّ وحدَه لا يكفي**: **حملةٌ محفوظةٌ
+	// بوجهةٍ لا تُفتَح تنتظر من يرسلها.**
+	var rows int
+	if err := hh.Pool.QueryRow(ctxBG(),
+		`SELECT count(*) FROM campaigns WHERE dest_type = 'merchant'`).Scan(&rows); err != nil {
+		t.Fatalf("عدُّ الحملات: %v", err)
+	}
+	if rows != 0 {
+		t.Fatalf("**حُفظت حملةٌ بوجهة متجر**: %d", rows)
+	}
+
+	// **MD-04 · والعرضُ يبقى مقبولاً** — **وحارسٌ يمنع كلَّ شيءٍ ليس
+	// حارساً.**
+	f := hh.Factory()
+	fx := newOfferFx(t, hh, f, 1000)
+	end := time.Now().Add(4 * time.Hour)
+	live := offerIDOf(t, makeOffer(t, hh, fx, fx.Tok, 20, nil, &end))
+	if r := mkCampaign(t, hh, tok, body(map[string]any{
+		"dest_type": "offer", "dest_id": live,
+	})); r.Code != http.StatusOK && r.Code != http.StatusCreated {
+		t.Fatalf("**رُدّت وجهةُ عرضٍ صحيحة**: %d / %s", r.Code, r.Err())
+	}
+	// **والبيتُ كذلك.**
+	if r := mkCampaign(t, hh, tok, body(nil)); r.Code != http.StatusOK && r.Code != http.StatusCreated {
+		t.Fatalf("**رُدّت وجهةُ البيت**: %d / %s", r.Code, r.Err())
+	}
+
+	// **MD-06 · وما لا نعرفه يُردّ كما كان.**
+	for _, dest := range []string{"store", "shop", "order_chat", "intent://x", "../../etc"} {
+		r := mkCampaign(t, hh, tok, body(map[string]any{"dest_type": dest, "dest_id": id}))
+		if r.Code != http.StatusBadRequest {
+			t.Fatalf("**قُبلت وجهةٌ لا تُعرَف**: %q ⇒ %d", dest, r.Code)
+		}
+	}
+}
+
 // ═════════════════ NT-06 · NT-20 ═════════════════
 
 // TestNT06_NT20_SendOnceAndAudited **وضغطتان إرسالٌ واحد.**
