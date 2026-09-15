@@ -295,9 +295,21 @@ func TestCHAT07_MessageProducesExactlyOnePush(t *testing.T) {
 		t.Fatalf("تسجيلُ الجهاز: %v", err)
 	}
 	sayAged(t, hh, fx.DrvA.Token, fx.OrdA, "وصلتُ الباب")
-	fanned, _, _, _ := hh.API.DeliverPushOnce(ctxBG())
-	if fanned < 1 {
-		t.Fatalf("**لم يُفرَّع هدفٌ لجهاز الزبون**: %d", fanned)
+
+	// **ويُقاس الأثرُ لا ردُّ النداء** — **والتفريعُ يقع عند الإرسال
+	// أيضاً (`Kick`)**: **فمن قاس ما فرّعته ناداتُه هو قاس سباقاً**،
+	// **يخضرّ حين يسبق ويحمرّ حين يُسبَق، ولا عطبَ في المنتج.**
+	hh.API.DeliverPushOnce(ctxBG())
+	hh.API.DeliverPushOnce(ctxBG())
+	var targets int
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT count(*) FROM notification_deliveries d
+		  JOIN notifications n ON n.id = d.notification_id
+		 WHERE n.user_id = $1::uuid AND n.kind = 'chat'`, fx.Cust.ID).Scan(&targets); err != nil {
+		t.Fatalf("عدُّ الأهداف: %v", err)
+	}
+	if targets < 1 {
+		t.Fatalf("**لم يُفرَّع هدفٌ لجهاز الزبون**: %d", targets)
 	}
 }
 
@@ -382,6 +394,16 @@ func TestCHAT13_RetryDoesNotDuplicatePush(t *testing.T) {
 	hh := New(t)
 	fx := newChatFx(t, hh, false)
 
+	// **والجهازُ يُسجَّل قبل أوّل رسالة** — **والتفريعُ يقع عند الإرسال
+	// (`Kick`)**: **فمن سجّل جهازَه بعده وجد الصفَّ قد فُرِّع إلى لا
+	// أحد**، **ثمّ قاس صفراً وظنّ العطبَ في القفل.**
+	if _, err := hh.Pool.Exec(ctxBG(), `
+		INSERT INTO device_tokens (user_id, token, platform, app, last_seen_at)
+		VALUES ($1::uuid, $2, 'android', 'customer', now())
+		ON CONFLICT (token) DO NOTHING`, fx.Cust.ID, "CHAT13-TOKEN-"+fx.Cust.ID); err != nil {
+		t.Fatalf("تسجيلُ الجهاز: %v", err)
+	}
+
 	first := say(t, hh, fx.DrvA.Token, fx.OrdA, "وصلت")
 	if first.Code != http.StatusCreated {
 		t.Fatalf("الأولى: %d / %s", first.Code, first.Err())
@@ -418,34 +440,36 @@ func TestCHAT13_RetryDoesNotDuplicatePush(t *testing.T) {
 	//
 	// **والقفلُ `ON CONFLICT (notification_id, token)`** — **ويُقاس
 	// لا يُقرأ.**
-	if _, err := hh.Pool.Exec(ctxBG(), `
-		INSERT INTO device_tokens (user_id, token, platform, app, last_seen_at)
-		VALUES ($1::uuid, $2, 'android', 'customer', now())
-		ON CONFLICT (token) DO NOTHING`, fx.Cust.ID, "CHAT13-TOKEN-"+fx.Cust.ID); err != nil {
-		t.Fatalf("تسجيلُ الجهاز: %v", err)
-	}
+	// **ويُستنزَف المعلَّقُ أوّلاً** — **والتفريعُ يقع عند الإرسال
+	// أيضاً (`Kick`) فيتسابق**: **فيُنادى مرّتين حتّى لا يبقى معلَّق،
+	// ثمّ يُقاس.**
 	hh.API.DeliverPushOnce(ctxBG())
-	var fanned1 int
-	if err := hh.Pool.QueryRow(ctxBG(), `
-		SELECT count(*) FROM notification_deliveries d
-		  JOIN notifications n ON n.id = d.notification_id
-		 WHERE n.user_id = $1::uuid AND n.kind = 'chat'`, fx.Cust.ID).Scan(&fanned1); err != nil {
-		t.Fatalf("عدُّ الأهداف: %v", err)
-	}
-	if fanned1 == 0 {
-		t.Fatalf("**لم يُفرَّع هدفٌ أصلاً** — **فالقياسُ التالي لا يقول شيئاً**")
-	}
-	// **ويُعاد الفرزُ كما يُعاد بعد سقوط.**
 	hh.API.DeliverPushOnce(ctxBG())
-	var fanned2 int
-	if err := hh.Pool.QueryRow(ctxBG(), `
-		SELECT count(*) FROM notification_deliveries d
-		  JOIN notifications n ON n.id = d.notification_id
-		 WHERE n.user_id = $1::uuid AND n.kind = 'chat'`, fx.Cust.ID).Scan(&fanned2); err != nil {
-		t.Fatalf("عدُّ الأهداف ثانيةً: %v", err)
+
+	count := func() int {
+		var n int
+		if err := hh.Pool.QueryRow(ctxBG(), `
+			SELECT count(*) FROM notification_deliveries d
+			  JOIN notifications n ON n.id = d.notification_id
+			 WHERE n.user_id = $1::uuid AND n.kind = 'chat'`, fx.Cust.ID).Scan(&n); err != nil {
+			t.Fatalf("عدُّ الأهداف: %v", err)
+		}
+		return n
 	}
-	if fanned2 != fanned1 {
-		t.Fatalf("**تضاعف الهدفُ بإعادة الفرز**: %d ← %d", fanned1, fanned2)
+
+	// **ورسالتان وجهازٌ واحد ⇒ هدفان** — **لا أربعة.**
+	settled := count()
+	if settled != 2 {
+		t.Fatalf("**أهدافُ رسالتين على جهازٍ واحد**: %d — **والمنتظَر ٢**", settled)
+	}
+
+	// **ثمّ يُعاد الفرزُ كما يُعاد بعد سقوطٍ في منتصف التوزيع** —
+	// **والقفلُ `ON CONFLICT (notification_id, token)`**: **ويُقاس لا
+	// يُقرأ.**
+	hh.API.DeliverPushOnce(ctxBG())
+	hh.API.DeliverPushOnce(ctxBG())
+	if again := count(); again != settled {
+		t.Fatalf("**تضاعف الهدفُ بإعادة الفرز**: %d ← %d", settled, again)
 	}
 }
 
