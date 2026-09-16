@@ -747,15 +747,35 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 "delivery_fee" to seen.deliveryFee,
             )
         }
-        lastPoint = "$lat,$lng"
+        val point = "$lat,$lng"
+        lastPoint = point
         viewModelScope.launch {
             runCatching {
                 api.quote(Cart.lines.map { it.toPayload() }, lat, lng, expected)
             }.onSuccess {
+                // ══════════════════════════════════════════════════════
+                // **وتسعيرةُ عنوانٍ غادره لا تُكتب فوق عنوانِه** (`AB-03`)
+                // ══════════════════════════════════════════════════════
+                //
+                // **ونداءان يتسابقان يصل أبطؤهما آخراً**: **يختار
+                // الرقّة فدمشق، فتصل تسعيرةُ الرقّة بعدها** — **فيقرأ
+                // أجرةَ مدينةٍ وعنوانُه في أخرى.**
+                //
+                // **والمحرّكُ يحمي المال** (يُعاد الحسابُ عند الإرسال) —
+                // **وهذا يحمي ما يُقرأ**: **ورقمٌ يُعرَض ولا يصمد وعدٌ
+                // لا يُوفى.**
+                //
+                // **وحالُ التوفّر محميّةٌ بمفتاح النقطة أصلاً**
+                // (`Orderable.put`) — **وهذه كانت الباب المتروك.**
+                if (lastPoint != point) return@onSuccess
                 priced = it
                 changes = it.changes
                 error = ""
-            }.onFailure { error = apiError(getApplication(), it as Exception) }
+            }.onFailure {
+                // **وعطبُ نداءٍ لعنوانٍ غادره لا يُعرَض على عنوانِه.**
+                if (lastPoint != point) return@onFailure
+                error = apiError(getApplication(), it as Exception)
+            }
         }
     }
 

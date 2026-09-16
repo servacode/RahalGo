@@ -12,6 +12,7 @@ import android.content.pm.ServiceInfo
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.LocationCallback
@@ -134,7 +135,20 @@ class LocationService : Service() {
      * تجمّع في دفعة واحدة** — لا نداء لكلّ نقطة.
      */
     private fun send(point: Location) {
-        val now = System.currentTimeMillis()
+        // ══════════════════════════════════════════════════════════════
+        // **ومهلةٌ تُقاس بساعةٍ لا ترجع** (`AB-06`، ٢٠٢٦-٠٩-١٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكانت `currentTimeMillis`** — **وهي ساعةُ الحائط: تقفز إلى
+        // الوراء حين يضبطها النظامُ أو صاحبُ الجهاز.**
+        //
+        // **وقفزةٌ إلى الوراء تجعل الفرقَ سالباً** — **فيُقرأ «لم تمضِ
+        // المهلة» أبداً**: **فيصمت موقعُ السائق حتّى تلحق الساعة**،
+        // **ويظهر للمكتب واقفاً وهو يسير.**
+        //
+        // **و`elapsedRealtime` تُعدّ منذ الإقلاع ولا تُضبَط** — **وهي
+        // ساعةُ المهل**، **وهي المستعملةُ في `Orderable` أصلاً.**
+        val now = SystemClock.elapsedRealtime()
         // **وحارس ثانٍ على التردّد** — النظام قد يسلّم أسرع ممّا طُلب،
         // **ونداء لكلّ نقطة يستنزف البطارية والحزمة معا.**
         if (now - lastSentAt < MIN_SEND_GAP_MS) return

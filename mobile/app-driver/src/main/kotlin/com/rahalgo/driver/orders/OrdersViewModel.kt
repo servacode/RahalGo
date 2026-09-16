@@ -1170,7 +1170,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             routeChoices = built
-            choicesAtMs = System.currentTimeMillis()
+            // **وعمرُ الجلبة بساعةٍ لا ترجع** (`AB-06`).
+            choicesAtMs = android.os.SystemClock.elapsedRealtime()
             choicesTarget = target
             choicePreview = null
             choiceStale = false
@@ -1209,7 +1210,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **عمرُ الجلبة** — تقرؤه الشاشةُ لتبني السياق. */
     fun choicesAgeMs(): Long =
-        if (choicesAtMs == 0L) Long.MAX_VALUE else System.currentTimeMillis() - choicesAtMs
+        if (choicesAtMs == 0L) {
+            Long.MAX_VALUE
+        } else {
+            android.os.SystemClock.elapsedRealtime() - choicesAtMs
+        }
 
     /**
      * **معاينةُ بديل** — البند ١١.
