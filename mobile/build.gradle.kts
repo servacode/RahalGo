@@ -78,6 +78,15 @@ subprojects {
         // **وشيفرةُ الوحدة نفسِها** — **وأكثرُها يُبطَل بإعادة الترجمة**،
         // **إلّا تعديلاً لا يغيّر شيفرةَ الآلة** (تعليقاً أو ترتيباً):
         // **وحارسُ نصٍّ يقرأ النصَّ لا الآلة.**
+        // **ونصُّ الجذر** — **يقرؤه `StagingFirebaseGuardTest` في `:ui`.**
+        //
+        // **وغرادل لا يعلم أنّ فحصاً في وحدةٍ يفتح نصَّ الجذر** —
+        // **فيقول «محدّثة» بعد أن يُنزَع الحارسُ منه، ولا تعمل.**
+        // **وهي عينُ العلّة المشروحة أعلاه.**
+        inputs.file(rootProject.file("build.gradle.kts"))
+            .withPropertyName("rootBuildScript")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+
         val main = project.file("src/main")
         if (main.exists()) {
             inputs.dir(main)
@@ -93,5 +102,121 @@ subprojects {
                     .withPathSensitivity(PathSensitivity.RELATIVE)
             }
         }
+    }
+}
+
+// ======================================================================
+//  **حارسُ فايربيس لبناء `P-8` — يُسقط البناءَ ولا يحذّر** (٢٠٢٦-٠٩-١٦)
+// ======================================================================
+//
+// # العطبُ المقيس
+//
+// **وكلُّ تطبيقٍ من الأربعة يُطبّق إضافةَ فايربيس بشرط**:
+//
+//     val firebaseReady = file("google-services.json").let {
+//         it.exists() && it.readText().contains("com.rahalgo.<س>")
+//     }
+//
+// **فإن لم يصحّ الشرطُ لم تُطبَّق الإضافةُ ولا `crashlytics`** —
+// **ويُطبَع تحذيرٌ في السجلّ ويمضي البناءُ ناجحاً.**
+//
+// **وقِيس ٢٠٢٦-٠٩-١٦ بتنحية ملفّ المندوب**: **البناءُ لم يسقط**،
+// **وتبخّرت مهمّةُ `processDebugGoogleServices` كلُّها** — «task
+// not found in project».
+//
+// **فينتج أثرٌ بلا دفعٍ أصلاً** — **يُنصَّب ويعمل وتُجرَّب الإشعاراتُ
+// فلا يصل شيء**، **ويُقرأ ذلك عيباً في المنصّة وهو نقصُ إعداد.**
+// **والتحذيرُ في سجلّ بناءٍ لا يراه أحد** — **فصار سقوطاً.**
+//
+// # ولمَ هنا لا في ملفّات الأربعة
+//
+// **وسطرٌ يُكتب في أربعة ملفّاتِ بناءٍ يُنسى في الخامس** — **وهي عينُ
+// الحجّة التي جمعت مدخلاتِ الحرّاس أعلاه في هذا الملفّ.**
+//
+// # ولا يُختلَق معرّفُ مشروع
+//
+// **ومشروعُ التجهيز لم يُنشأ بعد** (٢٠٢٦-٠٩-١٦) — **فالمعرّفُ يُمرَّر
+// خاصّيّةً ولا يُكتب ثابتاً هنا.** **وبناءُ `P-8` بلا معرّفٍ يقف**:
+// **وقوفٌ صريحٌ خيرٌ من أثرٍ صامتٍ بلا دفع.**
+//
+// **ولا يُعاد استعمالُ `rahalgo-prod`** — **ومشروعٌ واحدٌ للبيئتين
+// يجعل العزلَ محفوظاً بقاعدةِ بياناتٍ لا بالاستحالة.**
+//
+//     ./gradlew -Prahalgo.p8=true \
+//               -Prahalgo.stagingFirebaseProject=<معرّفُ مشروع التجهيز> ...
+
+/** **حزمةُ التصحيح لكلّ تطبيق** — **ولا خامسَ لها.** */
+val p8DebugPackages: Map<String, String> = mapOf(
+    "app-customer" to "com.rahalgo.customer.debug",
+    "app-driver" to "com.rahalgo.driver.debug",
+    "app-merchant" to "com.rahalgo.merchant.debug",
+    "app-rep" to "com.rahalgo.rep.debug",
+)
+
+val p8Build: Boolean =
+    ((findProperty("rahalgo.p8") as String?) ?: "false").trim().toBoolean()
+
+val stagingFirebaseProject: String? =
+    (findProperty("rahalgo.stagingFirebaseProject") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+
+fun p8Halt(why: String): Nothing = throw GradleException(
+    "بناءُ P-8 موقوف — " + why + "\n" +
+        "ولا يُبنى أثرُ قبولٍ بلا دفعٍ: يُنصَّب ويعمل ولا يصل إشعارٌ أبداً.",
+)
+
+if (p8Build) {
+    val wanted = stagingFirebaseProject
+        ?: p8Halt("معرّفُ مشروع التجهيز غيرُ مُمرَّر (rahalgo.stagingFirebaseProject).")
+    if (wanted == "rahalgo-prod") {
+        p8Halt("مشروعُ الإنتاج لا يصلح للتجهيز — والعزلُ يسقط بمشروعٍ واحد.")
+    }
+    p8DebugPackages.forEach { (module, debugPackage) ->
+        val cfg = file(module + "/src/debug/google-services.json")
+        if (!cfg.isFile) {
+            p8Halt("لا ملفَّ تجهيزٍ لـ" + module + ": " + cfg.path)
+        }
+        val root = runCatching { groovy.json.JsonSlurper().parse(cfg) as Map<*, *> }
+            .getOrElse { p8Halt("ملفُّ " + module + " ليس JSON صالحاً: " + it.message) }
+
+        val info = root["project_info"] as? Map<*, *>
+            ?: p8Halt("لا project_info في ملفّ " + module)
+        val projectId = (info["project_id"] as? String)?.trim().orEmpty()
+        if (projectId != wanted) {
+            p8Halt("مشروعُ " + module + " = " + projectId + " والمنتظَرُ " + wanted)
+        }
+        if ((info["project_number"] as? String)?.trim().isNullOrEmpty()) {
+            p8Halt("لا project_number في ملفّ " + module)
+        }
+
+        val clients = root["client"] as? List<*>
+            ?: p8Halt("لا تسجيلاتِ تطبيقٍ في ملفّ " + module)
+        fun androidInfo(c: Any?): Map<*, *>? =
+            ((c as? Map<*, *>)?.get("client_info") as? Map<*, *>)
+                ?.get("android_client_info") as? Map<*, *>
+        val packages = clients.mapNotNull { androidInfo(it)?.get("package_name") as? String }
+        if (!packages.contains(debugPackage)) {
+            p8Halt(
+                "حزمةُ " + debugPackage + " غيرُ مسجّلةٍ في ملفّ " + module +
+                    " (الموجودُ: " + packages.joinToString(" · ") + ")",
+            )
+        }
+        // **ولا حزمةَ إنتاجٍ في ملفّ تجهيز** — **وملفٌّ يعرف الحزمتَين
+        // بابٌ لخلطٍ لا داعيَ له.**
+        val production = packages.filter { it.startsWith("com.rahalgo.") && !it.endsWith(".debug") }
+        if (production.isNotEmpty()) {
+            p8Halt("ملفُّ تجهيزِ " + module + " يذكر حزمةَ إنتاج: " + production.joinToString(" · "))
+        }
+
+        val appId = clients.firstNotNullOfOrNull { c ->
+            if (androidInfo(c)?.get("package_name") as? String == debugPackage) {
+                ((c as? Map<*, *>)?.get("client_info") as? Map<*, *>)?.get("mobilesdk_app_id") as? String
+            } else {
+                null
+            }
+        }?.trim().orEmpty()
+        if (appId.isEmpty()) {
+            p8Halt("لا mobilesdk_app_id لحزمة " + debugPackage + " في ملفّ " + module)
+        }
+        logger.lifecycle("فايربيس P-8: " + module + " ⇐ " + projectId + " · " + debugPackage)
     }
 }
