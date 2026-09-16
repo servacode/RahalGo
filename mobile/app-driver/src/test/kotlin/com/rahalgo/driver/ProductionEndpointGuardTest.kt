@@ -38,6 +38,9 @@ class ProductionEndpointGuardTest {
     private companion object {
         const val PROD_API = "https://api.rahalgo.com"
         const val PROD_MAPS = "https://maps.rahalgo.com"
+
+        /** **مضيفُ التجهيز للميدان** — **عنوانٌ واحدٌ لا ثانيَ له.** */
+        const val STAGING_API = "https://staging-api.rahalgo.com"
     }
 
     /**
@@ -52,18 +55,62 @@ class ProductionEndpointGuardTest {
         if (!BuildConfig.DEBUG) return
 
         val api = BuildConfig.API_BASE_URL
-        val maps = BuildConfig.MAPS_BASE_URL
-        val acceptance = MapConfig.isLoopbackHttp(api) || MapConfig.isLoopbackHttp(maps)
-        if (!acceptance) return
 
+        // ══════════════════════════════════════════════════════════════
+        // **ولا شرطَ يُعفي بناءَ تصحيحٍ من هذا** (٢٠٢٦-٠٩-١٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكان الحارسُ يصمت إلّا إذا رأى عنواناً حلقيّاً** — **فبناءُ
+        // تصحيحٍ بلا تجاوزٍ كان يمرّ وهو على الإنتاج.**
+        //
+        // **والافتراضُ صار مضيفَ التجهيز** — **فلا عذرَ لصمتٍ:** **كلُّ
+        // بناءِ تصحيحٍ إمّا تجهيزٌ وإمّا حلقيٌّ للتطوير، ولا ثالثَ.**
         assertFalse(
-            "بناءُ قبولٍ يكلّم محرّكَ الإنتاج: $api",
-            api == PROD_API || api.contains("api.rahalgo.com"),
+            "بناءُ تصحيحٍ يكلّم محرّكَ الإنتاج: $api",
+            api.contains("//api.rahalgo.com"),
         )
+        assertTrue(
+            "بناءُ تصحيحٍ لا يكلّم التجهيزَ ولا الحلقيّ: $api",
+            api.startsWith(STAGING_API) || MapConfig.isLoopbackHttp(api),
+        )
+
+        // **وأثرُ الميدان على HTTPS** — **ولا نصَّ صريحٌ إلّا للحلقيّ.**
+        if (!MapConfig.isLoopbackHttp(api)) {
+            assertTrue("أثرُ ميدانٍ بلا HTTPS: $api", api.startsWith("https://"))
+        }
+
+        // **والخرائطُ تبقى على مضيفها العامّ** — **بلاطٌ يُقرأ ولا
+        // يُكتب، ولا مضيفَ تجهيزٍ له**: **فلا يُدَّعى عليه شيء.**
+    }
+
+    /** **ومضيفُ التجهيز مكتوبٌ مرّةً في البناء لا في الشيفرة.** */
+    @Test
+    fun `مضيفُ التجهيز من البناء لا من نصٍّ في الشيفرة`() {
+        val gradle = java.io.File(appModuleDir(), "build.gradle.kts")
+            .readText().replace("\r\n", "\n")
+        assertTrue(
+            "**ذهب افتراضُ التجهيز من كتلة التصحيح**",
+            gradle.contains("?: \"$STAGING_API\""),
+        )
+        // **ولا مبدّلَ بيئةٍ في وقت التشغيل** — **الوجهةُ تُحقَن وقتَ
+        // البناء وتُقفل.**
         assertFalse(
-            "بناءُ قبولٍ يجلب خرائطَ الإنتاج: $maps",
-            maps == PROD_MAPS || maps.contains("maps.rahalgo.com"),
+            "**ظهر مبدّلُ بيئةٍ في وقت التشغيل**",
+            gradle.contains("BuildConfig.DEBUG ? ") || gradle.contains("if (isStaging)"),
         )
+    }
+
+    private fun appModuleDir(): java.io.File {
+        var dir = java.io.File("").absoluteFile
+        repeat(6) {
+            if (java.io.File(dir, "build.gradle.kts").exists() &&
+                java.io.File(dir, "src/main").exists()
+            ) {
+                return dir
+            }
+            dir = dir.parentFile ?: return@repeat
+        }
+        throw AssertionError("لم أجد مجلَّد التطبيق من " + java.io.File("").absolutePath)
     }
 
     /** **والإصدارُ يبقى حرفاً بحرف — لا خاصّيّةَ تُغيّره.** */

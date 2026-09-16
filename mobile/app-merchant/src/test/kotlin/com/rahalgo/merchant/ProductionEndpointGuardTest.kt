@@ -38,6 +38,9 @@ class ProductionEndpointGuardTest {
     private companion object {
         const val PROD_API = "https://api.rahalgo.com"
         const val PROD_MAPS = "https://maps.rahalgo.com"
+
+        /** **مضيفُ التجهيز للميدان** — **عنوانٌ واحدٌ لا ثانيَ له.** */
+        const val STAGING_API = "https://staging-api.rahalgo.com"
     }
 
     /** **والإصدارُ يبقى على عنوانَي الإنتاج — لا خاصّيّةَ تُغيّره.** */
@@ -63,18 +66,64 @@ class ProductionEndpointGuardTest {
         if (!BuildConfig.DEBUG) return
 
         val api = BuildConfig.API_BASE_URL
-        val maps = BuildConfig.MAPS_BASE_URL
-        // **وبناءٌ تجريبيٌّ بلا تجاوزٍ يبقى على الإنتاج بحقّ** — فلا يُقاس.
-        val directed = api != PROD_API || maps != PROD_MAPS
-        if (!directed) return
 
-        // **ومن وُجّه عنوانُ محرّكِه وجب أن يفترق عن الإنتاج فعلاً** —
-        // **ولا يكفي أن يشبهه**: نطاقٌ ينتهي بـ`api.rahalgo.com` إنتاجٌ.
+        // ══════════════════════════════════════════════════════════════
+        // **ولا شرطَ يُعفي بناءَ تصحيحٍ من هذا** (٢٠٢٦-٠٩-١٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكان الحارسُ يصمت إن بقي البناءُ على الإنتاج** — **بحجّة
+        // أنّه «بناءٌ غيرُ موجَّه».** **فمن بنى أثرَ قبولٍ ونسي `-P`
+        // مرّ صامتاً وهو يكلّم الإنتاج.**
+        //
+        // **والافتراضُ صار مضيفَ التجهيز** — **فلا عذرَ لصمت:** **كلُّ
+        // بناءِ تصحيحٍ إمّا تجهيزٌ وإمّا حلقيٌّ للتطوير، ولا ثالثَ.**
         assertFalse(
-            "بناءُ قبولٍ يكلّم محرّكَ الإنتاج: $api",
+            "بناءُ تصحيحٍ يكلّم محرّكَ الإنتاج: $api",
             api == PROD_API || api.endsWith("//api.rahalgo.com") ||
                 api.endsWith(".api.rahalgo.com"),
         )
+        assertTrue(
+            "بناءُ تصحيحٍ لا يكلّم التجهيزَ ولا الحلقيّ: $api",
+            api.startsWith(STAGING_API) || api.startsWith("http://127.0.0.1") ||
+                api.startsWith("http://localhost"),
+        )
+        // **وأثرُ الميدان على HTTPS** — **ولا نصَّ صريحٌ إلّا للحلقيّ.**
+        if (api.startsWith(STAGING_API)) {
+            assertTrue("أثرُ ميدانٍ بلا HTTPS: $api", api.startsWith("https://"))
+        }
+    }
+
+    /**
+     * **ومضيفُ التجهيز يُحقَن وقتَ البناء ويُقفَل.**
+     *
+     * **ولا مبدّلَ بيئةٍ في وقت التشغيل** — **ومن جعلها خياراً جعلها
+     * خطأً ينتظر.**
+     */
+    @Test
+    fun `افتراضُ التصحيح مضيفُ التجهيز لا الإنتاج`() {
+        val gradle = java.io.File(appModuleDir(), "build.gradle.kts")
+            .readText().replace("\r\n", "\n")
+        assertTrue(
+            "**ذهب افتراضُ التجهيز من كتلة التصحيح**",
+            gradle.contains("?: \"" + STAGING_API + "\""),
+        )
+        assertTrue(
+            "**لم يعد الإصدارُ مثبَّتاً على الإنتاج**",
+            gradle.contains("\"" + PROD_API + "\""),
+        )
+    }
+
+    private fun appModuleDir(): java.io.File {
+        var dir = java.io.File("").absoluteFile
+        repeat(6) {
+            if (java.io.File(dir, "build.gradle.kts").exists() &&
+                java.io.File(dir, "src/main").exists()
+            ) {
+                return dir
+            }
+            dir = dir.parentFile ?: return@repeat
+        }
+        throw AssertionError("لم أجد مجلَّد التطبيق من " + java.io.File("").absolutePath)
     }
 
     /** **و`Backend` يقرأ الحقلَ المولَّد لا نصّاً ثانياً.** */
