@@ -86,14 +86,15 @@ class LocationService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val seconds = intent?.getLongExtra(EXTRA_PING_SEC, 0L)?.takeIf { it > 0 } ?: DEFAULT_PING_SEC
         // ══════════════════════════════════════════════════════════════
         // **وإذنٌ سُحب والورديّةُ مفتوحة** (`AB-09`، قِيس ٢٠٢٦-٠٩-١٦)
         // ══════════════════════════════════════════════════════════════
         //
         // **وقِيس على المحاكي**: **سُحب إذنُ الموقع من الإعدادات
         // والسائقُ في ورديّته** — **فأعاد النظامُ تشغيلَ الخدمة
-        // (`START_STICKY`)، فطلبت خدمةً أماميّةً من نوع `location`
-        // بلا إذن**:
+        // (`START_STICKY`)، فطلبت خدمةً أماميّةً من نوع `location` بلا
+        // إذن**:
         //
         //	SecurityException: Starting FGS with type location …
         //	requires … ACCESS_FINE_LOCATION
@@ -104,19 +105,15 @@ class LocationService : Service() {
         // **والحارسُ القديمُ كان حول `requestLocationUpdates`** —
         // **والسقوطُ يقع قبله**، **في `startForeground` نفسِها.**
         //
-        // **فيُسأل الإذنُ أوّلاً**: **ومن لا إذنَ له لا يرفع خدمةً
-        // أماميّةً أصلاً** — **ويقف بلا ضجيج، ولا يُعاد تشغيلُه**
-        // (`START_NOT_STICKY`): **والجاهزيّةُ تقول لصاحبها ما ينقص**
-        // (`Readiness`).
+        // **ومن لا إذنَ له يقف ولا يُعاد تشغيلُه** (`START_NOT_STICKY`)
+        // — **والجاهزيّةُ تقول لصاحبها ما ينقص** (`Readiness`).
         if (!LocationPermission.granted(this)) {
             Log.w(TAG, "إذنُ الموقع مسحوب — تقف الخدمةُ ولا تُعاد")
             stopSelf()
             return START_NOT_STICKY
         }
-        val seconds = intent?.getLongExtra(EXTRA_PING_SEC, 0L)?.takeIf { it > 0 } ?: DEFAULT_PING_SEC
         // **ورفعُ الخدمة قد يُردّ من النظام** — **إذنٌ يُسحب في اللحظة
         // بين السؤال والرفع، أو حالٌ لا تسمح بخدمةٍ أماميّة.**
-        // **فيُقبَض الردُّ ولا يُترجَم سقوطا.**
         if (!startForegroundSafely()) {
             stopSelf()
             return START_NOT_STICKY

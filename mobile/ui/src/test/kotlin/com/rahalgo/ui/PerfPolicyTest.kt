@@ -63,7 +63,10 @@ class PerfPolicyTest {
     private fun read(rel: String): String {
         val f = File(mobileRoot(), rel)
         assertTrue("**ملفٌّ غائب**: " + rel, f.exists())
-        return f.readText()
+        // **ونهاياتُ الأسطر تُوحَّد قبل المطابقة** — **وجيتٌ على
+        // ويندوز يكتب CRLF**، **فمطابقةُ نصٍّ فيه سطرٌ جديدٌ تسقط**:
+        // **فيُقرأ العيبُ في المنتج وهو في الفحص.**
+        return f.readText().replace("\r\n", "\n")
     }
 
     // ═════════════ PF-01 · لا دوّارةَ بلا نهاية ═════════════
