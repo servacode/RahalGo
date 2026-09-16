@@ -105,7 +105,7 @@ Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
 ## الاختبارُ والتنسيق
 
 ```
-go test -count=1 -p 1 ./...          # إلزاميّ قبل كلّ التزام
+go test -timeout 30m -count=1 -p 1 ./...   # إلزاميّ قبل كلّ التزام
 gofmt -l internal/ cmd/              # لا ملفَّ خارجَ التنسيق
 pnpm check:guards                    # حرّاسُ الويب الأربعة
 pnpm typecheck                       # ثمانيةُ تحقّقات
