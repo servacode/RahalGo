@@ -102,10 +102,31 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 bannerEveryMs = home.bannerEveryMs
                 // **والقسمُ المفتوحُ يُعاد جلبُه** — **وإنعاشٌ يُحدّث
                 // الشريطَ ويترك البضاعةَ قديمةً نصفُ إنعاش.**
-                pick?.let { items = api.sectionItems(it).items }
+                //
+                // **ويأخذ الرقمَ كغيرِه** — **فالسحبةُ أحدثُ من نداءٍ
+                // سابقٍ لم يردّ بعد**: **وإلّا دهس القديمُ الجديد.**
+                pick?.let {
+                    // **والسحبةُ تخلُف النداءَ الجاري لا تجاوره** —
+                    // **وإلّا بقي يعمل وقد أُبطلت تذكرتُه.**
+                    fetching?.cancel()
+                    val ticket = latest.begin()
+                    val got = api.sectionItems(it).items
+                    if (latest.isCurrent(ticket)) items = got
+                }
                 error = ""
             }.onFailure { error = apiError(getApplication(), it as Exception) }
             refreshing = false
+            // ══════════════════════════════════════════════════════════
+            // **ومن أبطل تذكرةَ غيرِه ورث دوّارتَه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **والدوّارةُ تُطفأ بتذكرةٍ سارية** — **فمن سُحبت تذكرتُه
+            // تركها لمن أبطلها.** **والسحبةُ تُبطل ولا تملك `busy`**:
+            // **فلو سكتت هنا لَدارت الدوّارةُ إلى الأبد** — **وهو
+            // عينُ ما يمنعه شاهدُ الجهاز «لا دوّارةَ دائمة».**
+            //
+            // **إلّا أن يكون قد بدأ نداءُ قسمٍ أحدثُ** — **فهي له.**
+            if (fetching?.isActive != true) busy = false
         }
     }
 
@@ -117,6 +138,35 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     private var typing: Job? = null
+
+    /**
+     * **نداءُ أصنافِ القسم الجاري** — **ويُلغى قبل أن يُبدأ غيرُه.**
+     *
+     * # وقسمٌ يُفتح فتُعرض بضاعةُ غيرِه
+     *
+     * **وكان كلُّ ضغطةِ رقاقةٍ تُطلق نداءً ولا تُلغي سابقَه** — فمن
+     * نقر «شاورما» ثمّ «حلويات» قبل أن يردّ الأوّل **أطلق نداءين
+     * يتسابقان على `items` نفسِها.** **والرابحُ أسرعُهما لا آخرُهما.**
+     *
+     * **فيقف الشريطُ على «حلويات» وتحتَه شاورما** — **ويطلبها الزبونُ
+     * وهو يظنّ أنّه في قسمٍ آخر.** **ولا خطأَ يُرى ولا سطرَ في سجلّ.**
+     *
+     * **وشبكةُ الرقّة تجعل هذا هو الحالَ الغالبَ لا النادر**: **ردٌّ
+     * بطيءٌ لقسمٍ صغيرٍ يسبقه ردٌّ أبطأُ لقسمٍ كبير.**
+     */
+    private var fetching: Job? = null
+
+    /**
+     * **نداءُ الصفحة الجاري** — **وضغطتان على «أعد المحاولة» نداءٌ واحد.**
+     *
+     * **ومن ضغط خمساً على شبكةٍ منقطعةٍ أطلق خمسةَ نداءاتٍ متزامنةً**
+     * — **كلُّها تكتب `error` و`busy` بلا ترتيب**، **وآخرُها انتهاءً
+     * يحكم الشاشةَ لا آخرُها ضغطاً.**
+     */
+    private var loading: Job? = null
+
+    /** **حكمُ التسابق** — انظر [Latest]: **آخرُ من طُلب هو من يكتب.** */
+    private val latest = Latest()
 
     init {
         load()
@@ -165,9 +215,13 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
     val marketEmpty: Boolean get() = sections.isNotEmpty() && visibleSections.isEmpty()
 
     fun load() {
+        // **ونداءٌ واحدٌ في الطريق** — **وإعادةُ المحاولة تُعيد المحاولةَ
+        // لا تُكوّم محاولات.** **والردُّ على شبكةٍ منقطعةٍ هو الردُّ عينُه
+        // مهما تكرّر**، **فخمسُ ضغطاتٍ تستنزف الحزمةَ ولا تغيّر حرفا.**
+        if (loading?.isActive == true) return
         busy = true
         error = ""
-        viewModelScope.launch {
+        loading = viewModelScope.launch {
             try {
                 val home = api.home()
                 sections = home.sections
@@ -217,15 +271,32 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
      * **فيُقرأ عطباً في الجهاز لا في التطبيق.**
      */
     private fun loadSection(id: String) {
+        // **ويُلغى نداءُ القسم السابق** — انظر `fetching`: **نداءان
+        // يتسابقان يضعان بضاعةَ قسمٍ تحت عنوانِ قسمٍ آخر.**
+        fetching?.cancel()
+        // **ولا يُوثَق بالإلغاء وحدَه** — **نداءٌ تمّ ولم يُستأنَف بعدُ
+        // يكتب وهو ملغى.** **والرقمُ يفصل**: **آخرُ من طُلب هو وحدَه
+        // من يكتب**، **ولو نُقرت الرقاقةُ نفسُها مرّتين.**
+        val ticket = latest.begin()
         busy = true
         error = ""
-        viewModelScope.launch {
+        fetching = viewModelScope.launch {
             try {
-                items = api.sectionItems(id).items
+                val got = api.sectionItems(id).items
+                if (!latest.isCurrent(ticket)) return@launch
+                items = got
+            } catch (e: CancellationException) {
+                // **والإلغاءُ ليس خطأً** — **وهو هنا فعلُنا نحن**:
+                // **رسالةُ عطبٍ على ضغطةِ قسمٍ ثانيةٍ تُقرأ تطبيقاً
+                // مكسوراً.** (وهي حكايةُ `gs1` نفسُها في `type`.)
+                throw e
             } catch (e: Exception) {
+                if (!latest.isCurrent(ticket)) return@launch
                 error = apiError(getApplication(), e)
             }
-            busy = false
+            // **ولا تُطفأ الدوّارةُ إلّا للأخير** — **ومن سبقه نداءٌ
+            // أحدثُ تركها له**: **فلا تنطفئ والبضاعةُ في الطريق.**
+            if (latest.isCurrent(ticket)) busy = false
         }
     }
 
@@ -251,10 +322,17 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         }
         typing = viewModelScope.launch {
             delay(QUIET_MS)
+            // **والبحثُ يكتب `items` كما يكتبها القسم** — **فيدخل
+            // الرقمَ نفسَه.** **وإلّا جاء ردُّ قسمٍ بطيءٍ بعد نتيجةِ
+            // بحثٍ فمحاها**: **يكتب الزبونُ كلمةً فيرى بضاعةً لا
+            // تمتّ إليها.**
+            val ticket = latest.begin()
             busy = true
             error = ""
             try {
-                items = api.search(q).items
+                val got = api.search(q).items
+                if (!latest.isCurrent(ticket)) return@launch
+                items = got
                 searching = true
             } catch (e: CancellationException) {
                 // ══════════════════════════════════════════════════════
@@ -283,9 +361,10 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 // يعمل** حتّى يُتلف النموذج.
                 throw e
             } catch (e: Exception) {
+                if (!latest.isCurrent(ticket)) return@launch
                 error = apiError(getApplication(), e)
             }
-            busy = false
+            if (latest.isCurrent(ticket)) busy = false
         }
     }
 

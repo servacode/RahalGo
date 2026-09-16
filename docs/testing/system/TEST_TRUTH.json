@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 351,
-    "test_funcs": 1502
+    "test_files": 352,
+    "test_funcs": 1508
   },
   "flows": [
     {
@@ -13950,6 +13950,42 @@
     {
       "name": "TestMapDataIsFresh",
       "file": "internal/qa/mapdata_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML10_MovingMerchantRecomputesCityAtRuntime",
+      "file": "internal/qa/marketplace_growth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML11_FirstQualifyingProductRevealsSection",
+      "file": "internal/qa/marketplace_growth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML12_WithdrawingLastProductHidesSection",
+      "file": "internal/qa/marketplace_growth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML13_ClosedPlatformIsNotAnEmptyMarket",
+      "file": "internal/qa/marketplace_growth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML14_CoverageFailureLeavesBrowsingIntact",
+      "file": "internal/qa/marketplace_growth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML9_ActiveMerchantWithoutCityIsNeverSilentlyServed",
+      "file": "internal/qa/marketplace_growth_test.go",
       "package": "qa",
       "orphan": true
     },
