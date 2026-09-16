@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 347,
-    "test_funcs": 1479
+    "test_files": 348,
+    "test_funcs": 1482
   },
   "flows": [
     {
@@ -5875,6 +5875,24 @@
       "name": "TestComposeIsValidYAML",
       "file": "internal/deploycheck/compose_test.go",
       "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestStagingComposeHasRoutingEngine",
+      "file": "internal/deploycheck/staging_routing_test.go",
+      "package": "deploycheck",
+      "orphan": true
+    },
+    {
+      "name": "TestStagingComposeKeepsProductionOutOfReach",
+      "file": "internal/deploycheck/staging_routing_test.go",
+      "package": "deploycheck",
+      "orphan": true
+    },
+    {
+      "name": "TestStagingComposeRoutingDefaultsAreNotEmpty",
+      "file": "internal/deploycheck/staging_routing_test.go",
+      "package": "deploycheck",
       "orphan": true
     },
     {

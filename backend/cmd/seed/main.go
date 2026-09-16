@@ -62,6 +62,7 @@ func main() {
 	driversOnly := flag.Bool("drivers", false, "زراعة ثلاثة سائقين خارج الدوام — ولا شيء غيرهم")
 	ordersOnly := flag.Bool("orders", false, "زراعة طلباتٍ في كلّ الحالات — يحتاج حساباتٍ ومتجراً موجودَين")
 	customerOnly := flag.Bool("customer", false, "زراعة زبونٍ بعنوانَين ورصيدِ محفظةٍ مُقيَّد — ولا شيء غيره")
+	p8Isolation := flag.Bool("p8-isolation", false, "زراعة مندوبٍ ثانٍ ومتجرِه — شاهدُ عزلِ المندوبين لقبول P-8")
 	flag.Parse()
 
 	cfg, err := config.Load()
@@ -92,7 +93,7 @@ func main() {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// أوضاعٌ مركَّزة: كلٌّ يزرع ما يخصّه ولا يمرّ ببقية الزراعة
-	if *storeOnly || *driversOnly || *customerOnly || *ordersOnly {
+	if *storeOnly || *driversOnly || *customerOnly || *ordersOnly || *p8Isolation {
 		if *storeOnly {
 			seedStore(ctx, tx)
 		}
@@ -104,6 +105,9 @@ func main() {
 		}
 		if *ordersOnly {
 			seedOrders(ctx, tx)
+		}
+		if *p8Isolation {
+			seedP8Isolation(ctx, tx)
 		}
 		verifyWhatsAppForSeeded(ctx, tx)
 		if err := tx.Commit(ctx); err != nil {
@@ -264,14 +268,14 @@ func seedDemo(ctx context.Context, tx pgx.Tx, ids map[string]string) {
 		Owner: ids["+963966777888"], Rep: ids["+963977888999"],
 		Lat: 35.9500, Lng: 39.0100, Commission: 10,
 		Sections: []sectionSeed{
-			{"مشاوي", []itemSeed{
+			{Name: "مشاوي", Platform: "مشاوي", Items: []itemSeed{
 				{"شيش طاووق", "مع البطاطا والثوم", 48000, []groupSeed{
 					{"الحجم", 1, 1, []optSeed{{"عادي", 0}, {"دوبل", 20000}}},
 					{"إضافات", 0, 3, []optSeed{{"جبنة", 5000}, {"بطاطا إضافية", 7000}, {"ثوم إضافي", 2000}}},
 				}},
 				{"كباب حلبي", "كيلو مشوي على الفحم", 95000, nil},
 			}},
-			{"مشروبات", []itemSeed{
+			{Name: "مشروبات", Platform: "مشروبات", Items: []itemSeed{
 				{"عصير برتقال", "طازج", 8000, nil},
 				{"غازيات", "", 6000, nil},
 			}},
@@ -283,7 +287,7 @@ func seedDemo(ctx context.Context, tx pgx.Tx, ids map[string]string) {
 		Owner: ids["+963966888999"], Rep: ids["+963977888999"],
 		Lat: 35.9640, Lng: 39.0430, Commission: 5,
 		Sections: []sectionSeed{
-			{"أساسيات", []itemSeed{
+			{Name: "أساسيات", Platform: "بقالة", Items: []itemSeed{
 				{"ربطة خبز", "", 4000, nil},
 				{"حليب مبستر 1ل", "", 12000, nil},
 				{"بيض (طبق 30)", "", 45000, nil},
@@ -325,8 +329,19 @@ type itemSeed struct {
 	Groups     []groupSeed
 }
 type sectionSeed struct {
-	Name  string
-	Items []itemSeed
+	Name string
+	// Platform قسمُ السوق الذي تظهر تحته أصنافُ هذا القسم.
+	//
+	// **والزبونُ يتصفّح أقسامَ السوق لا أقسامَ المتجر** — **وصنفٌ بلا
+	// `platform_section_id` لا يظهر لأحد**، لا في قسمٍ ولا في بحث.
+	//
+	// **وكان `seedMerchant` لا يملأه أصلاً** — **وصار العمودُ لاحقاً
+	// `NOT NULL`**، فصار المصنعُ يسقط عند أوّل صنف. (كُشف
+	// ٢٠٢٦-٠٩-١٦ عند بناء شاهدِ عزلِ `P-8`.) **و`seedStore` كان
+	// يملؤه منذ ٢٠٢٦-٠٨-٠٨** — **فمصنعان لشيءٍ واحدٍ افترقا،
+	// وأحدُهما شاخ صامتاً.**
+	Platform string
+	Items    []itemSeed
 }
 type merchantSeed struct {
 	Name, Category, Phone, Address, Desc string
@@ -375,16 +390,27 @@ func seedMerchant(ctx context.Context, tx pgx.Tx, m merchantSeed) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		// **وقسمُ السوق يُحلّ مرّةً للقسم كلِّه.**
+		var platID *string
+		if sec.Platform != "" {
+			var pid string
+			if err := tx.QueryRow(ctx,
+				`SELECT id FROM platform_sections WHERE name = $1`, sec.Platform).Scan(&pid); err != nil {
+				log.Fatalf("قسمُ سوقٍ «%s» غيرُ موجود: %v", sec.Platform, err)
+			}
+			platID = &pid
+		}
 		for ii, it := range sec.Items {
 			var itemID string
 			err := tx.QueryRow(ctx,
 				`SELECT id FROM menu_items WHERE merchant_id = $1 AND name = $2`, id, it.Name).Scan(&itemID)
 			if err == pgx.ErrNoRows {
 				err = tx.QueryRow(ctx, `
-					INSERT INTO menu_items (merchant_id, section_id, name, description,
+					INSERT INTO menu_items (merchant_id, section_id, platform_section_id,
+					                        name, description,
 					                        merchant_price, price, sort_order)
-					VALUES ($1, $2, $3, $4, $5, $5, $6) RETURNING id`,
-					id, secID, it.Name, it.Desc, it.Price, ii+1).Scan(&itemID)
+					VALUES ($1, $2, $3, $4, $5, $6, $6, $7) RETURNING id`,
+					id, secID, platID, it.Name, it.Desc, it.Price, ii+1).Scan(&itemID)
 				if err != nil {
 					log.Fatal(err)
 				}
