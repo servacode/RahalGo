@@ -451,15 +451,10 @@ func (s *Service) CreateMerchantTx(ctx context.Context, q dbtx.Querier,
 		        -- **وتُشتقّ ولا تُسأل**: صاحبُ المتجر يضع نقطتَه على
 		        -- الخريطة، **والمدينةُ تُعرف منها** — وسؤالُه عنها بعد
 		        -- ذلك سؤالٌ عمّا قاله.
-		        (SELECT c.id FROM cities c
-		          WHERE c.active
-		            AND $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
-		            AND ST_DWithin(c.center,
-		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography,
-		                c.radius_m)
-		          ORDER BY ST_Distance(c.center,
-		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography)
-		          LIMIT 1),
+		        -- **والتعبيرُ مركزيٌّ لا منسوخ** (٢٠٢٦-٠٩-١٧): **كان
+		        -- مكتوباً هنا بيدٍ وفي التحديث بأخرى** — **ونسختان
+		        -- بمعنىً واحدٍ تفترقان يومَ يتبدّل أحدُهما وحدَه.**
+		        `+CityOfPointSQL(8, 9)+`,
 		        NULLIF(COALESCE($10, ''), '')::uuid,
 		        -- **ولا يُنسخ الافتراضُ في العمود.**
 		        --
@@ -543,15 +538,10 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 		        -- **وتُشتقّ ولا تُسأل**: صاحبُ المتجر يضع نقطتَه على
 		        -- الخريطة، **والمدينةُ تُعرف منها** — وسؤالُه عنها بعد
 		        -- ذلك سؤالٌ عمّا قاله.
-		        (SELECT c.id FROM cities c
-		          WHERE c.active
-		            AND $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
-		            AND ST_DWithin(c.center,
-		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography,
-		                c.radius_m)
-		          ORDER BY ST_Distance(c.center,
-		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography)
-		          LIMIT 1),
+		        -- **والتعبيرُ مركزيٌّ لا منسوخ** (٢٠٢٦-٠٩-١٧): **كان
+		        -- مكتوباً هنا بيدٍ وفي التحديث بأخرى** — **ونسختان
+		        -- بمعنىً واحدٍ تفترقان يومَ يتبدّل أحدُهما وحدَه.**
+		        `+CityOfPointSQL(8, 9)+`,
 		        NULLIF(COALESCE($10, ''), '')::uuid,
 		        -- **ولا يُنسخ الافتراضُ في العمود.**
 		        --
