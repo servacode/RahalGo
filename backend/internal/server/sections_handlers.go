@@ -235,7 +235,17 @@ type publicSection struct {
 	// تبهت.** والمصغَّرةُ تبقى للمواضع الضيّقة.
 	ImageURL      *string `json:"image_url"`
 	ImageThumbURL *string `json:"image_thumb_url"`
-	Count         int     `json:"count"`
+	// Count **وجودُ محتوىً يخصّ مدينةَ الزبون** — **لا ما يُطلب الآن.**
+	//
+	// **وبه تُبنى بنيةُ السوق**: **قسمٌ عدُّه صفرٌ لا محتوى له أصلاً،
+	// فيُخفى** — **وقسمٌ له محتوىً يبقى وإن كانت متاجرُه نائمة.**
+	//
+	// **وشرطُه شرطُ `itemSelect` عينُه** — **فما يُعَدّ هو ما يُفتح.**
+	Count int `json:"count"`
+	// OrderableNow **ما يُطلب في هذه اللحظة** — دوامٌ وإتاحةٌ وإغلاقٌ طارئ.
+	//
+	// **وهي حالٌ تُقال لا بنيةٌ تُخفي** (قرارُ المالك ٢٠٢٦-٠٩-١٦).
+	OrderableNow int `json:"orderable_now"`
 }
 
 // publicSections **مصدرُ الحقيقة الواحد لأقسام الزبون.**
@@ -260,9 +270,30 @@ func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 	if where != "" {
 		seen = " AND m.id IS NOT NULL"
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ووجودُ المحتوى غيرُ إمكانِ الطلب الآن** (`PL-D`، ٢٠٢٦-٠٩-١٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان العدُّ يشترط `OpenNowSQL`** — **أي «مفتوحٌ في هذه الدقيقة»**
+	// — **فيصير صفراً لكلّ قسمٍ بعد إغلاق المتاجر.**
+	//
+	// **وهو نقيضُ ما كُتب لأجله**: **العدُّ وُضع كي لا «يعدَّ ثلاثين ثمّ
+	// يُفتح فارغاً»** — **وبالدوام يفعل العكس تماماً: يعدّ صفراً
+	// والقسمُ يُفتح بخمسة.** **و`itemSelect` لا يشترط الدوامَ أصلاً.**
+	// (قِيس على التجهيز ٢٠٢٦-٠٩-١٦: الساعةُ ٢٢:٣٦ فالعدُّ ٥، ولو كانت
+	//  ٠٢:٠٠ لصار صفراً في الأقسام التسعة كلِّها.)
+	//
+	// **وقرارُ المالك** (٢٠٢٦-٠٩-١٦): **إغلاقُ المتجر بالساعة لا يمحو
+	// بنيةَ السوق** — **والأقسامُ تُبنى على وجود محتوىً يخصّ مدينةَ
+	// الزبون، وحالُ الطلب تُقال فوقَها لا تُخفيها.**
+	//
+	// **فصارا عددين**: **`count` وجودٌ — بشرط `itemSelect` عينِه**
+	// (منشورٌ · ومتجرُه عاملٌ · وقسمُه مُفعَّل) — **و`orderable_now`
+	// ما يُطلب في هذه اللحظة.** **ولا محرّكَ إتاحةٍ ثانٍ.**
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT ps.id, ps.name, ps.icon, sm.path, sm.thumb_path,
-		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+seen+`)
+		       count(i.id) FILTER (WHERE i.approved`+seen+`),
+		       count(i.id) FILTER (WHERE i.approved AND i.available AND `+orders.OpenNowSQL+seen+`)
 		FROM platform_sections ps
 		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
 		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'`+where+`
@@ -279,7 +310,7 @@ func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 	for rows.Next() {
 		var x publicSection
 		if err := rows.Scan(&x.ID, &x.Name, &x.Icon, &x.ImageURL,
-			&x.ImageThumbURL, &x.Count); err != nil {
+			&x.ImageThumbURL, &x.Count, &x.OrderableNow); err != nil {
 			return nil, err
 		}
 		x.ImageURL = media.URLForPtr(x.ImageURL)

@@ -628,6 +628,20 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 				CASE WHEN $11::float8 IS NOT NULL AND $12::float8 IS NOT NULL
 				     THEN ST_SetSRID(ST_MakePoint($12::float8, $11::float8), 4326)::geography END,
 				location),
+			-- ══════════════════════════════════════════════════════
+			-- **والمدينةُ تُعاد مع الموقع — وإلّا شاخت** (٢٠٢٦-٠٩-١٦)
+			-- ══════════════════════════════════════════════════════
+			--
+			-- **وكان الموقعُ يُبدَّل والمدينةُ تبقى** — **فمتجرٌ انتقل
+			-- يظلّ منسوباً إلى مدينته الأولى**: **يراه من لا يصله،
+			-- ولا يراه من يجاوره.**
+			--
+			-- **ولا تُمحى حين لا نقطةَ تُرسَل**: تبديلُ الاسمِ وحدَه لا
+			-- يُنسي المتجرَ مدينتَه.
+			city_id       = CASE
+				WHEN $11::float8 IS NOT NULL AND $12::float8 IS NOT NULL
+				THEN `+CityOfPointSQL(11, 12)+`
+				ELSE city_id END,
 			logo_media_id = CASE WHEN $14::text IS NULL THEN logo_media_id
 			                     ELSE NULLIF($14, '')::uuid END,
 			-- **والمنطقةُ تُبدَّل حين تُرسَل وحدَها.**

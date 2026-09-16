@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -83,6 +84,20 @@ func noQuiet(t *testing.T, h *Harness) {
 	// **والسقفُ يُصرَّح به كذلك** — **وفحصُ السقف يتركه واحداً**،
 	// **فيُحجب ما بعده.** **ولا فحصَ يرث سياسةَ غيره.**
 	h.Setting("notify.engagement_daily_cap", "5")
+}
+
+// damascusTZ **منطقةُ دمشق** — **وبها تُقاس ساعةُ الهدوء في المحرّك.**
+//
+// **ولا تُقاس بساعة الجهاز** — **فمن شغّل الفحصَ في منطقةٍ أخرى
+// حسب ساعةً غيرَ التي يحسبها المحرّك.**
+func damascusTZ(t *testing.T) *time.Location {
+	t.Helper()
+	loc, err := time.LoadLocation("Asia/Damascus")
+	if err != nil {
+		// **وبلا قاعدةِ مناطقَ على النظام** — **إزاحةٌ ثابتةٌ +3.**
+		return time.FixedZone("Asia/Damascus", 3*60*60)
+	}
+	return loc
 }
 
 func campaignField(t *testing.T, r Res, key string) any {
@@ -491,10 +506,23 @@ func TestNT16_NT17_QuietDefersEngagementOnly(t *testing.T) {
 	hh := New(t)
 	tok := adminTok(t, hh)
 	cust := hh.Customer()
-	// **وتُجعل الساعةُ كلُّها هدوءاً** — **فيُقاس التأجيلُ بلا انتظار
-	// ساعةِ حائط.**
-	hh.Setting("notify.quiet_from", "0")
-	hh.Setting("notify.quiet_to", "23")
+	// ══════════════════════════════════════════════════════════════
+	// **وساعةُ الهدوء تُحسب من الساعة الجارية — لا تُكتب رقماً**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكان يُكتب `0 → 23` بنيّة «اليومُ كلُّه هدوء»** — **وليس
+	// كذلك**: `InQuiet` **تقارن `h >= from && h < to`**، **فالساعةُ
+	// الثالثةُ والعشرون خارجَ المدى.**
+	//
+	// **فكان الفحصُ يسقط ساعةً كلَّ يوم** — **بين ٢٣:٠٠ و٢٤:٠٠**
+	// **بتوقيت دمشق.** (وقع ٢٠٢٦-٠٩-١٦ الساعةَ ٢٣:٢٧.)
+	//
+	// **والحدُّ الأعلى في الفهرس ٢٣** — **فلا يُكتب ٢٤ ولو أردنا.**
+	// **فتُحسب نافذةٌ ذاتُ ساعتين تبدأ من الساعة الجارية**:
+	// **تعبر منتصفَ الليل فتُقرأ بالفرع الثاني، وتصحّ في الحالين.**
+	now := time.Now().In(damascusTZ(t)).Hour()
+	hh.Setting("notify.quiet_from", strconv.Itoa(now))
+	hh.Setting("notify.quiet_to", strconv.Itoa((now+2)%24))
 	// **ويُعيد ما بدّل** — **وإعدادٌ عامٌّ يُترَك يُسكت فحصاً بعده.**
 	t.Cleanup(func() { noQuiet(t, hh) })
 

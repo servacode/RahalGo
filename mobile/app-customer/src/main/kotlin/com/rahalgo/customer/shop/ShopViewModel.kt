@@ -149,6 +149,21 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **الأقسامُ التي لها محتوىً يخصّ هذا الزبون** — **وهي بنيةُ
+     * السوق كما يراها.**
+     *
+     * **وقسمٌ خاوٍ يُعرَض ثمّ يُفتح فارغاً يُقرأ عطباً** — **ومن
+     * فتح تسعةَ أقسامٍ كلُّها خاليةٌ ظنّ التطبيقَ معطوباً.**
+     *
+     * **ولا يُبنى على الدوام**: **متجرٌ نائمٌ يبقى قسمُه** (قرارُ
+     * المالك ٢٠٢٦-٠٩-١٦) — **والخادمُ يفصل العدّين.**
+     */
+    val visibleSections: List<Section> get() = sections.filter { it.count > 0 }
+
+    /** **أسوقٌ لم تمتلئ بعد؟** — **لا قسمَ فيه محتوىً.** */
+    val marketEmpty: Boolean get() = sections.isNotEmpty() && visibleSections.isEmpty()
+
     fun load() {
         busy = true
         error = ""
@@ -160,7 +175,9 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 bannerAuto = home.bannerAuto
                 bannerEveryMs = home.bannerEveryMs
                 // **وأوّلُ قسمٍ يُفتح** — إلّا أن يكون قد اختار قبل الدوران.
-                val first = pick ?: home.sections.firstOrNull()?.id
+                // **ويُفتح أوّلُ قسمٍ له محتوىً** — **لا أوّلُ قسمٍ في القائمة**،
+            // **فقد يكون خاوياً فيُستقبَل الزبونُ بفراغ.**
+            val first = pick ?: home.sections.firstOrNull { it.count > 0 }?.id
                 if (first != null) openSection(first) else busy = false
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)

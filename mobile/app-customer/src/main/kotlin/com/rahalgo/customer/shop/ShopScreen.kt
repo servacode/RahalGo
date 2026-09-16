@@ -212,7 +212,7 @@ fun ShopScreen(
             )
         }
 
-        val hints = vm.sections.map { it.name }
+        val hints = vm.visibleSections.map { it.name }
         var hint by remember { mutableStateOf(0) }
         LaunchedEffect(hints.size, vm.query.isEmpty()) {
             if (hints.isEmpty() || vm.query.isNotEmpty()) return@LaunchedEffect
@@ -255,7 +255,7 @@ fun ShopScreen(
                 .padding(horizontal = 14.dp, vertical = 8.dp),
         )
 
-        if (!vm.searching && vm.sections.isNotEmpty()) {
+        if (!vm.searching && vm.visibleSections.isNotEmpty()) {
             // ══════════════════════════════════════════════════════
             // **وحالُ العنوان تُقال فوق البضاعة** (`PC`، ٢٠٢٦-٠٩-١٤)
             // ══════════════════════════════════════════════════════
@@ -279,7 +279,7 @@ fun ShopScreen(
                 }
             }
 
-            SectionRail(vm.sections, vm.pick, media, vm::openSection)
+            SectionRail(vm.visibleSections, vm.pick, media, vm::openSection)
         }
 
         when {
@@ -302,11 +302,25 @@ fun ShopScreen(
             //
             // **ولا يُختلَق صنفٌ ليبدو عامراً** — **الصدقُ سطرٌ وزرٌّ
             // يعيد المحاولة.**
-            vm.items.isEmpty() && vm.sections.isEmpty() && !vm.searching -> Empty(
+            // ══════════════════════════════════════════════════════
+            // **وسوقٌ لم تمتلئ بعد — حالٌ مقصودةٌ بلا زرِّ إعادة**
+            // ══════════════════════════════════════════════════════
+            //
+            // **وكان الشرطُ `sections.isEmpty()`** — **والأقسامُ لا
+            // تفرغ أبداً**: تسعةٌ في القاعدة وإن لم يكن فيها صنف.
+            // **فلم تُعرَض هذه الحالُ قطّ**، **وعُرض بدلَها «لا أصنافَ
+            // في هذا القسم» في كلّ قسمٍ من التسعة.**
+            //
+            // **والآن يُسأل عن المحتوى لا عن عدد الأقسام** — `marketEmpty`.
+            //
+            // **ولا زرَّ إعادةٍ هنا**: **الردُّ ناجحٌ بصفر متاجر**،
+            // **وإعادةُ نداءٍ ناجحٍ تردّ جوابَه عينَه.** **وزرٌّ لا
+            // يغيّر شيئاً يُضغط ثمّ يُفقَد الرجاءُ بالتطبيق.**
+            (vm.marketEmpty || vm.sections.isEmpty()) && !vm.searching -> Empty(
                 text = stringResource(R.string.shop_market_empty),
                 hint = stringResource(R.string.shop_market_empty_hint),
-                actionLabel = stringResource(R.string.act_retry),
-                onAction = vm::load,
+                actionLabel = "",
+                onAction = null,
             )
 
             vm.items.isEmpty() -> Empty(
@@ -316,8 +330,10 @@ fun ShopScreen(
                 hint = stringResource(
                     if (vm.searching) R.string.shop_no_results_hint else R.string.mn_no_items_hint,
                 ),
-                actionLabel = if (vm.searching) "" else stringResource(R.string.act_retry),
-                onAction = if (vm.searching) null else vm::load,
+                // **ولا زرَّ إعادةٍ على نجاحٍ بصفر** — **والخطأُ له
+                // حالُه فوق، وفيها الإعادةُ تنفع.**
+                actionLabel = "",
+                onAction = null,
             )
 
             else -> LazyVerticalGrid(

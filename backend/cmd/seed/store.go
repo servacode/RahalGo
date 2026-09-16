@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 )
 
 // storeOwner صاحب المطعم — حسابٌ بكلمة مرور يدخل به إلى بوابته.
@@ -354,9 +355,11 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 		err = tx.QueryRow(ctx, `
 			INSERT INTO merchants (name, description, category_id, phone, address_text,
 			                       owner_user_id, sales_rep_user_id, commission_percent,
-			                       default_prep_minutes, min_order, location)
+			                       default_prep_minutes, min_order, location, city_id)
 			SELECT $1, $2, c.id, $3, $4, $5, $6, $7, $8, $9,
-			       ST_SetSRID(ST_MakePoint($11, $10), 4326)::geography
+			       ST_SetSRID(ST_MakePoint($11, $10), 4326)::geography,
+			       -- **والمدينةُ تُشتقّ** — انظر catalog.CityOfPointSQL.
+			       `+catalog.CityOfPointSQL(10, 11)+`
 			FROM categories c WHERE c.name = $12
 			RETURNING id`,
 			m.Name, m.Desc, m.Phone, m.Address, ownerID, repID, m.Commission,

@@ -72,7 +72,20 @@ data class Section(
     val icon: String = "",
     @SerialName("image_url") val imageUrl: String? = null,
     @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+    /**
+     * **عدُّ الوجود** — **ما يخصّ مدينةَ الزبون، لا ما يُطلب الآن.**
+     *
+     * **وبه تُبنى بنيةُ السوق** (قرارُ المالك ٢٠٢٦-٠٩-١٦): **قسمٌ
+     * عدُّه صفرٌ لا محتوى له فيُخفى**، **وقسمٌ له محتوىً يبقى وإن
+     * كانت متاجرُه نائمة.**
+     */
     val count: Int = 0,
+    /**
+     * **وما يُطلب في هذه اللحظة** — دوامٌ وإتاحةٌ وإغلاقٌ طارئ.
+     *
+     * **حالٌ تُقال لا بنيةٌ تُخفي** — **وإغلاقُ الساعة لا يمحو قسماً.**
+     */
+    @SerialName("orderable_now") val orderableNow: Int = 0,
 )
 
 /**

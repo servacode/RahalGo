@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 349,
-    "test_funcs": 1491
+    "test_files": 351,
+    "test_funcs": 1502
   },
   "flows": [
     {
@@ -13954,6 +13954,54 @@
       "orphan": true
     },
     {
+      "name": "TestML1_LocatedCustomerSeesCityMerchant",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML2_CustomerNearbyStillSees",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML3_OtherCityDoesNotLeak",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML4_MalformedGeographyFailsSafe",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML5_MissingSectionIs404NotEmpty",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML6_StructuralCountIgnoresOpeningHours",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML7_ClosedMerchantStillListsItems",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestML8_SectionCountMatchesWhatOpens",
+      "file": "internal/qa/marketplace_lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestD13_AvatarNeedsSignedURL",
       "file": "internal/qa/media_access_test.go",
       "package": "qa",
@@ -14078,6 +14126,24 @@
     {
       "name": "TestD13_UnknownMediaDefaultsToProtected",
       "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestGEO1_EveryMerchantWritePathDerivesCity",
+      "file": "internal/qa/merchant_geo_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestGEO2_LocationUpdateRecomputesCity",
+      "file": "internal/qa/merchant_geo_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestGEO3_CityExpressionMatchesBrowseFilter",
+      "file": "internal/qa/merchant_geo_test.go",
       "package": "qa",
       "orphan": true
     },

@@ -34,6 +34,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/database"
 	"github.com/servacode/rahalgo/backend/internal/identity"
@@ -357,9 +358,15 @@ func seedMerchant(ctx context.Context, tx pgx.Tx, m merchantSeed) {
 	if err == pgx.ErrNoRows {
 		err = tx.QueryRow(ctx, `
 			INSERT INTO merchants (name, description, category_id, phone, address_text,
-			                       owner_user_id, sales_rep_user_id, commission_percent, location)
+			                       owner_user_id, sales_rep_user_id, commission_percent, location,
+			                       city_id)
 			SELECT $1, $2, c.id, $3, $4, $5, $6, $7,
-			       ST_SetSRID(ST_MakePoint($9, $8), 4326)::geography
+			       ST_SetSRID(ST_MakePoint($9, $8), 4326)::geography,
+			       -- **ومدينةٌ تُشتقّ كما يشتقّها المنتج** — catalog.CityOfPointSQL.
+			       --
+			       -- **ومتجرٌ مزروعٌ بلا مدينةٍ لا يظهر لزبونٍ يرسل موقعَه**
+			       -- — **وهو ما أخفى سوقَ التجهيز كلَّه على جهازٍ حقيقيّ.**
+			       `+catalog.CityOfPointSQL(8, 9)+`
 			FROM categories c WHERE c.name = $10
 			RETURNING id`,
 			m.Name, m.Desc, m.Phone, m.Address, m.Owner, m.Rep, m.Commission,

@@ -553,11 +553,17 @@ func (h *Harness) NewItem(cost int64) *Item {
 
 	var merchantID string
 	err := h.Pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, owner_user_id, category_id, status, location)
+		INSERT INTO merchants (name, owner_user_id, category_id, status, location,
+		                       city_id)
 		VALUES ($1, $2::uuid, $3::uuid, 'active',
-		        ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography)
+		        ST_SetSRID(ST_MakePoint($5::float8, $4::float8), 4326)::geography,
+		        -- **ومتجرُ المِسنَد يشتقّ مدينتَه بالتعبير المركزيّ نفسِه.**
+		        --
+		        -- **ومِسنَدٌ يصنع متاجرَ بلا مدنٍ يُخفي العطبَ عن كلّ فحصٍ
+		        -- يتصفّح بموضع** — **فيمرّ الأخضرُ والسوقُ خالٍ على الجهاز.**
+		        `+catalog.CityOfPointSQL(4, 5)+`)
 		RETURNING id::text`,
-		uniq("متجر QA "), owner.ID, categoryID).Scan(&merchantID)
+		uniq("متجر QA "), owner.ID, categoryID, 35.9506, 39.0094).Scan(&merchantID)
 	if err != nil {
 		h.T.Fatalf("qa: تعذّر إنشاءُ متجر: %v", err)
 	}
