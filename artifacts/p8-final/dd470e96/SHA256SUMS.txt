@@ -1,0 +1,4 @@
+db181ae4828a7551f3fcae19b4bc8cfad7fcb1347b623940b326fc577e3a0ebf *rahalgo-customer-p8-dd470e96.apk
+39830b6a1a1f50f9ff8ade6a9c7a8b607f103816d6afcddc9a1a2143fb56568b *rahalgo-driver-p8-dd470e96.apk
+f71a2f50b1d879bee835c09ffb317c5083535f7142270af21a7f4c566f225b62 *rahalgo-merchant-p8-dd470e96.apk
+0ebd747acdc2ebf25f6f0ef0fce3c4b50524b7deaa69505c7068366c977a04ef *rahalgo-rep-p8-dd470e96.apk
