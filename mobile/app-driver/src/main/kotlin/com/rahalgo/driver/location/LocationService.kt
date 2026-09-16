@@ -86,8 +86,41 @@ class LocationService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // ══════════════════════════════════════════════════════════════
+        // **وإذنٌ سُحب والورديّةُ مفتوحة** (`AB-09`، قِيس ٢٠٢٦-٠٩-١٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وقِيس على المحاكي**: **سُحب إذنُ الموقع من الإعدادات
+        // والسائقُ في ورديّته** — **فأعاد النظامُ تشغيلَ الخدمة
+        // (`START_STICKY`)، فطلبت خدمةً أماميّةً من نوع `location`
+        // بلا إذن**:
+        //
+        //	SecurityException: Starting FGS with type location …
+        //	requires … ACCESS_FINE_LOCATION
+        //
+        // **فسقط التطبيقُ — ثمّ أُعيد فسقط**: **حلقةُ سقوطٍ في يد
+        // سائقٍ يعمل.**
+        //
+        // **والحارسُ القديمُ كان حول `requestLocationUpdates`** —
+        // **والسقوطُ يقع قبله**، **في `startForeground` نفسِها.**
+        //
+        // **فيُسأل الإذنُ أوّلاً**: **ومن لا إذنَ له لا يرفع خدمةً
+        // أماميّةً أصلاً** — **ويقف بلا ضجيج، ولا يُعاد تشغيلُه**
+        // (`START_NOT_STICKY`): **والجاهزيّةُ تقول لصاحبها ما ينقص**
+        // (`Readiness`).
+        if (!LocationPermission.granted(this)) {
+            Log.w(TAG, "إذنُ الموقع مسحوب — تقف الخدمةُ ولا تُعاد")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val seconds = intent?.getLongExtra(EXTRA_PING_SEC, 0L)?.takeIf { it > 0 } ?: DEFAULT_PING_SEC
-        startForegroundSafely()
+        // **ورفعُ الخدمة قد يُردّ من النظام** — **إذنٌ يُسحب في اللحظة
+        // بين السؤال والرفع، أو حالٌ لا تسمح بخدمةٍ أماميّة.**
+        // **فيُقبَض الردُّ ولا يُترجَم سقوطا.**
+        if (!startForegroundSafely()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         request(seconds)
         // **ويُعاد تشغيلها إن قتلها النظام تحت ضغط الذاكرة** — الوردية
         // مفتوحة ولا أحد يعرف أنّ الموقع انقطع.
@@ -229,7 +262,8 @@ class LocationService : Service() {
         java.time.Instant.ofEpochMilli(millis).toString()
 
     /** **إشعار الخدمة** — شرط النظام، ونافذة السائق على حاله. */
-    private fun startForegroundSafely() {
+    /** **يرفع الخدمةَ أماميّةً** — **ويردّ `false` إن ردّها النظام.** */
+    private fun startForegroundSafely(): Boolean {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
@@ -257,10 +291,22 @@ class LocationService : Service() {
             .setOngoing(true)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-        } else {
-            startForeground(NOTE_ID, note)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            } else {
+                startForeground(NOTE_ID, note)
+            }
+            true
+        } catch (e: SecurityException) {
+            // **وسُحب الإذنُ بين السؤال والرفع** — **أو منع النظامُ
+            // خدمةً أماميّةً في هذه الحال.** **ولا يُترجَم ذلك سقوطا.**
+            Log.w(TAG, "رُدّت الخدمةُ الأماميّة", e)
+            false
+        } catch (e: IllegalStateException) {
+            // **ورفعُ خدمةٍ أماميّةٍ من الخلفيّة يُردّ كذلك** — `ForegroundServiceStartNotAllowedException`.
+            Log.w(TAG, "لا يُسمح برفع الخدمة الآن", e)
+            false
         }
     }
 

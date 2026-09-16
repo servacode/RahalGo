@@ -72,8 +72,19 @@ fun apiError(
         return when (e) {
             is IOException, is HttpRequestTimeoutException, is SocketTimeoutException ->
                 context.getString(R.string.err_network)
-            else ->
-                context.getString(R.string.err_unexpected) + " (" + e.javaClass.simpleName + ")"
+            // ══════════════════════════════════════════════════════
+            // **ولا يُطبَع اسمُ صنفٍ برمجيٍّ على شاشة** (`AB-24`)
+            // ══════════════════════════════════════════════════════
+            //
+            // **وكان يُلحَق `e.javaClass.simpleName`** — **فقُرئ على
+            // الشاشة**: «تعذّر إتمام الطلب
+            // (NoTransformationFoundException)» — **وقِيس على المحاكي
+            // ٢٠٢٦-٠٩-١٦** حين ردّ الخادمُ جسماً غيرَ JSON.
+            //
+            // **واسمُ الصنف لا يقول لصاحبه ما يفعل** — **ويقول لغيره
+            // ما نستعمله.** **فيبقى في السجلّ** (`Log.e` أعلاه فيه
+            // الأثرُ كاملاً) **ويُرفَع عن الشاشة.**
+            else -> context.getString(R.string.err_unexpected)
         }
     }
     val code = e.body.code
