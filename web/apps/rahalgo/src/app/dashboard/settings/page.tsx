@@ -33,6 +33,7 @@ import DivisionsPanel from "@/components/admin/settings/divisions";
 import SitePagesPanel from "@/components/admin/settings/site-pages";
 import BannersPanel from "@/components/admin/settings/banners";
 import WhatsAppPanel from "@/components/admin/settings/whatsapp";
+import AppStatusPanel from "@/components/admin/settings/app-status";
 import BroadcastPanel from "@/components/admin/BroadcastPanel";
 import CampaignsPanel from "@/components/admin/CampaignsPanel";
 
@@ -369,6 +370,9 @@ export default function SettingsPage() {
      **والإرسالُ للمالك وحدَه**: كان البابُ محجوزاً بـ`roles: ["admin"]`،
      **فيبقى محجوزاً تبويباً** — لا يُرسَم لغيره أصلاً. */
   const extra = [
+    // **وحالُ التطبيق أوّلُ ما يُسأل عنه قبل الافتتاح** — **ومن أراد
+    // أن يعرف «هل فُتحنا؟» لا ينبغي أن يفتّش في سبعِ رايات.**
+    { key: "appStatus", label: m.admin.appStatus.title },
     // **والمدنُ قبل المناطق** — **المنطقةُ بنتُ المدينة**، ومن قرأ
     // «مناطق» قبل أن يعرف أنّ للمنصّة مدناً ظنّ التغطيةَ طبقةً واحدة.
     { key: "divisions", label: m.admin.divisions.title },
@@ -608,6 +612,7 @@ export default function SettingsPage() {
       {active === "cities" && <CitiesPanel />}
       {active === "zones" && <ZonesPanel />}
       {active === "hours" && <HoursPanel />}
+      {active === "appStatus" && <AppStatusPanel />}
       {active === "whatsapp" && <WhatsAppPanel />}
       {/* **والإعلانُ فعلٌ لا إعداد** — فيُقال ما هو قبل نموذجه: رسالةٌ تُرسل
           ولا تُسحب. واللوحُ نفسُه يسأل قبل الإرسال ويقول كم حساباً ستصل. */}

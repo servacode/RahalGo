@@ -1015,6 +1015,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/promos", s.handleListPromos)
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
+			// **وحالُ التطبيق تُقرأ مع لوح الإعدادات** — قراءةٌ لا تبديل.
+			r.Get("/launch", s.handleLaunchState)
 			r.Get("/stats", s.handleAdminStats)
 			r.Get("/reports", s.handleReports)
 			// سجلّ الأحداث — للأدمن والمالية دون العمليات: يحوي مبالغ التعويضات
@@ -1289,6 +1291,8 @@ func (s *Server) Router() http.Handler {
 				// **والإعدادُ يُحرَس بقدرةٍ بحسب أثره** — والتصنيفُ
 				// من دورةِ ٢١ لا يُخترَع ثانيةً (`settingCapability`).
 				r.Put("/settings/{key}", s.handleSetSetting)
+				// **ونمطُ حالِ التطبيق يكتب المفاتيحَ الأربعةَ معاً.**
+				r.Post("/launch/preset", s.handleApplyLaunchPreset)
 			})
 		})
 	})

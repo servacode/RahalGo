@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.rahalgo.ui.AppCore
+import com.rahalgo.shared.model.LaunchState
 import com.rahalgo.shared.model.Ordering
 import kotlinx.coroutines.launch
 
@@ -64,6 +65,35 @@ object Serving {
     /** **موعدُ العودة** — RFC 3339، وفارغٌ يعني «لا موعدَ معلوم». */
     val nextAt: String get() = if (available) "" else state?.nextAvailableAt.orEmpty()
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وحالُ الافتتاح تُقرأ مع حال الاستقبال** — **لا بنداءٍ ثانٍ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والردُّ واحدٌ يحمل الاثنتين** (`public/platform`) — **ونداءٌ
+    // ثانٍ لحقلٍ في الردّ نفسِه رحلةٌ زائدةٌ على شبكةٍ ضعيفة.**
+    //
+    // **وبها يعرف التطبيقُ أنّ المنصّةَ لم تُفتح بعدُ قبل أن يطرق
+    // باباً** — **فيرسم الحالَ المقصودةَ من أوّلها، لا شاشةَ سوقٍ
+    // تنقلب رسالةَ خطأ.**
+
+    /** **آخرُ ما قاله الخادمُ عن أبوابه** — و`null` قبل أوّل قراءة. */
+    var launch: LaunchState? by mutableStateOf(null)
+        private set
+
+    /**
+     * **أنحن قبل الافتتاح بحسب آخرِ ما نعلم؟**
+     *
+     * **وقبل أوّل قراءةٍ يُقال «لا»** — **ولا تُعرَض شاشةُ إغلاقٍ لأنّ
+     * نداءً لم يصل بعد**، **وهي حجّةُ `available` نفسُها.**
+     */
+    val preLaunch: Boolean get() = launch?.preLaunch ?: false
+
+    /** **أيُعرَض بابُ إنشاء الحساب؟** — **والدخولُ يبقى على كلّ حال.** */
+    val signupOpen: Boolean get() = launch?.signup ?: true
+
+    /** **نصُّ المالك لحال ما قبل الافتتاح.** */
+    val launchNotice: String get() = launch?.notice.orEmpty()
+
     /**
      * stale **أشاخت الحالُ فتحتاج تجديداً؟**
      *
@@ -80,6 +110,13 @@ object Serving {
         readAt = nowElapsed
     }
 
+    /** **وحالُ الافتتاح معها** — **من الردّ نفسِه.** */
+    fun put(o: Ordering, l: LaunchState, nowElapsed: Long) {
+        state = o
+        launch = l
+        readAt = nowElapsed
+    }
+
     /**
      * refreshIfStale **يسأل الخادمَ إن شاخت الحال — ويصمت إن لم تشخ.**
      *
@@ -90,13 +127,14 @@ object Serving {
         if (!stale(android.os.SystemClock.elapsedRealtime())) return
         scope.launch {
             runCatching { com.rahalgo.shared.auth.AuthApi(AppCore.get().api).platform() }
-                .onSuccess { put(it.ordering, android.os.SystemClock.elapsedRealtime()) }
+                .onSuccess { put(it.ordering, it.launch, android.os.SystemClock.elapsedRealtime()) }
         }
     }
 
     /** **تُصفَّر في الفحوص وحدَها** — **ولا يناديها منتَج.** */
     fun resetForTest() {
         state = null
+        launch = null
         readAt = 0L
     }
 

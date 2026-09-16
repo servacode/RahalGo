@@ -261,6 +261,10 @@ var adminPolicy = []Rule{
 	// الطلبات تقرأ مفتاحين تشغيليّين** — **وكانت تطلب لأجلهما رسمَ
 	// المناطق والمدن والمحافظات.**
 	{"GET", "/settings", SettingsRead},
+	// **وحالُ التطبيق قراءتُها قراءةُ لوح**، **وتبديلُها تبديلُ
+	// مفاتيحِه** — **ولا قدرةَ جديدةً لبابٍ يكتب ما يكتبه `PUT`.**
+	{"GET", "/launch", SettingsRead},
+	{"POST", "/launch/preset", SettingsGeneralManage},
 	{"GET", "/audit", AuditRead},
 	{"GET", "/stats", AnalyticsRead},
 	{"GET", "/reports", AnalyticsRead},

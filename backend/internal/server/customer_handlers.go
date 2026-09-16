@@ -5,6 +5,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -120,6 +121,31 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		// **وشاشةُ الدخول لا تعرف أيَّ أبوابٍ تعرض حتّى تسأل**، ونداءٌ ثانٍ
 		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
 		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
+		// ══════════════════════════════════════════════════════════════
+		// **وحالُ الافتتاح تُقرأ هنا** — **لا تُستنتَج من خطأ** (٢٠٢٦-٠٩-١٦)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **وكان التطبيقُ لا يعرف أنّ المنصّةَ لم تُفتح حتّى يطرق باباً
+		// فيُردّ ٥٠٣** — **فيرسم شاشةَ سوقٍ ثمّ يبدّلها رسالةَ خطأ.**
+		// **وحالٌ مقصودةٌ تُقرأ خطأً تُرى عطباً.**
+		//
+		// **فتُقرأ مع الهويّة** — **أوّلَ ما تُفتح الشاشةُ وقبل أيّ طرق**
+		// — كما قُرئت حالُ الاستقبال قبلها للعلّة نفسِها.
+		//
+		// **وحقلٌ يُضاف لا عقدٌ يُكسَر**: **عميلٌ قديمٌ لا يقرؤه يبقى
+		// يعمل كما كان**، ويقع على الخطأ كما كان يقع.
+		//
+		// **والمحرّكُ يبقى السلطان**: **هذه تقول ما يُعرَض**، **والأبوابُ
+		// في `launch_gate` هي التي تمنع.** **ومن قرأ هذا وحدَه ثمّ نادى
+		// رُدّ.**
+		"launch": map[string]any{
+			"customer_signup":        s.launchOpen(r.Context(), launchCustomerSignup),
+			"customer_browse":        s.launchOpen(r.Context(), launchCustomerBrowse),
+			"customer_orders":        s.launchOpen(r.Context(), launchCustomerOrders),
+			"customer_custom_orders": s.launchOpen(r.Context(), launchCustomerCustomOrders),
+			// **ونصُّ المالك** — **يُبدَّل من اللوحة بلا نشرٍ ولا تحديث.**
+			"notice": strings.TrimSpace(s.settings.GetString(r.Context(), launchNotice)),
+		},
 		// **وأيُطلب رمزٌ عند إنشاء الحساب؟** — (قرارُ المالك 2026-08-25).
 		//
 		// **وتطبيقٌ يعرض خطوةَ رمزٍ والمنصّةُ أطفأتها يحبس صاحبَه على

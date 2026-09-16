@@ -189,4 +189,10 @@
     <string name="city_auto">تلقائيّاً حسب موقعي</string>
     <string name="city_auto_hint">من عنوانك المحفوظ أو موقع جهازك</string>
     <string name="shop_closed_now">المتجر مغلق حالياً</string>
+    <!-- **ما قبل الافتتاح** — حالٌ مقصودةٌ لا خطأ (PL، ٢٠٢٦-٠٩-١٦).
+         **والعنوانُ في الحزمة والنصُّ من اللوحة**: العنوانُ ثابتُ
+         حالٍ، والنصُّ يبدّله المالكُ بلا نشر. -->
+    <string name="prelaunch_title">قريبًا يتم افتتاح رحال غو</string>
+    <string name="prelaunch_body">نعمل حاليًا على تجهيز رحال غو لاستقبال طلباتكم.\nترقبوا الافتتاح قريبًا.</string>
+    <string name="prelaunch_login">تسجيل الدخول</string>
 </resources>

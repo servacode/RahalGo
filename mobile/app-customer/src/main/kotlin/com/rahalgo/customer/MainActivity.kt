@@ -923,6 +923,24 @@ private fun SignedIn(
                     // **والسلّةُ تغطّي السوق** — ومن أرسل طلبَه
                     // انتقل إلى «طلباتي» ليتابعه: **شاشةُ نجاحٍ تُغلق
                     // ثمّ يُسأل «وأين طلبي؟».**
+                    // ══════════════════════════════════════════════════
+                    // **وما قبل الافتتاح حالٌ مقصودةٌ لا خطأ** (`PL`)
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **وكان التطبيقُ يرسم سوقاً ثمّ يبدّله رسالةَ
+                    // خطأٍ حين يردّ المحرّكُ ٥٠٣** — **وحالٌ مقصودةٌ
+                    // تُقرأ خطأً تُرى عطباً.**
+                    //
+                    // **والحسابُ يبقى مفتوحاً**: **من له حسابٌ يدخل
+                    // ويرى حسابَه** — **وإغلاقُ السوق ليس إغلاقَ
+                    // الباب.**
+                    //
+                    // **ولا يُقاس هنا شيء**: `Serving` **تقرأ ما قاله
+                    // الخادم**، **والمنعُ في `launch_gate` على كلّ
+                    // حال.**
+                    Serving.preLaunch && tab != Tab.Account ->
+                        PreLaunch(guest = guest, onAskLogin = onAskLogin)
+
                     tab == Tab.Cart -> CartScreen(
                         cartVm,
                         address = selectedAddress(accountVm.state.addresses),
@@ -1173,6 +1191,66 @@ private fun needsAccount(tab: Tab, over: Overlay): Boolean = when {
  * **ويقول لماذا** — لا «سجّل الدخول» وحدَها: **من عرف السببَ سجّل، ومن
  * قُرع بابُه بلا سببٍ خرج.**
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شاشةُ ما قبل الافتتاح — حالٌ مقصودةٌ لا عطب** (`PL`، ٢٠٢٦-٠٩-١٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * # ولمَ شاشةٌ لا رسالةُ خطأ
+ *
+ * **والمنصّةُ تُنزَّل قبل أن تُفتح** — **ومن فتحها رأى دوّاراً ثمّ
+ * رسالةً حمراء**: «هذا لم يُفتح بعد». **وحالٌ مقصودةٌ تُقرأ خطأً تُرى
+ * عطباً**، **ومن رآها حذف التطبيقَ ولم يعد.**
+ *
+ * # ولمَ لا دوّارَ فيها
+ *
+ * **والدوّارُ يقول «انتظر»** — **ولا شيءَ يُنتظَر.** **فتُرسم من
+ * أوّلها كما هي.**
+ *
+ * # والدخولُ يبقى
+ *
+ * **ومن له حسابٌ يدخل** — **وإغلاقُ السوق ليس إغلاقَ الباب.**
+ * **ولا زرَّ إنشاءِ حسابٍ هنا**: `launch.customer_signup` **مغلقٌ،
+ * وزرٌّ يُفتح لبابٍ يردّ المحرّكُ طارقَه عبثٌ.**
+ *
+ * # والنصُّ من اللوحة لا من الحزمة
+ *
+ * **والعنوانُ ثابتُ حالٍ** — **والنصُّ يبدّله المالكُ بلا نشرٍ في
+ * المتجر.** **وفارغُه يقع على نصّ الحزمة**، فلا تبقى الشاشةُ خرساء.
+ */
+@Composable
+private fun PreLaunch(guest: Boolean, onAskLogin: () -> Unit) {
+    val notice = Serving.launchNotice.trim()
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(28.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.prelaunch_title),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = if (notice.isNotEmpty()) notice else stringResource(R.string.prelaunch_body),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+        // **وبابُ الدخول لمن لم يدخل** — **ولا زرَّ إنشاءٍ معه.**
+        if (guest) {
+            Spacer(Modifier.height(22.dp))
+            RahalButton(onClick = onAskLogin) {
+                Text(stringResource(R.string.prelaunch_login))
+            }
+        }
+    }
+}
+
 @Composable
 private fun NeedAccount(onAskLogin: () -> Unit) {
     Column(

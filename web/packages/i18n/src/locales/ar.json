@@ -3105,6 +3105,42 @@
       "targeted": "استُهدف",
       "inboxCreated": "وصل الصندوق",
       "deferred": "أُجّل"
+    },
+    "appStatus": {
+      "title": "حالة التطبيق",
+      "hint": "ثلاث حالات للزبون — والرايات الأربع تحتها هي المخزَّن فعلاً. أبواب السائق والمتجر والمندوب لا يمسّها هذا.",
+      "current": "الحال الآن",
+      "on": "مفتوح",
+      "off": "مغلق",
+      "custom": "حالة مخصَّصة",
+      "apply": "تطبيق",
+      "applied": "طُبِّقت الحال",
+      "confirmTitle": "تأكيد تبديل حال التطبيق",
+      "willEnable": "سيُفتح",
+      "willDisable": "سيُغلق",
+      "noChange": "لا شيء يتبدّل — الحال مطبَّقة أصلاً",
+      "untouched": "لا يمسّها هذا التبديل",
+      "notice": "نصّ شاشة ما قبل الافتتاح",
+      "noticeHint": "يظهر للزبون بدل السوق. يُبدَّل من هنا بلا تحديث تطبيق.",
+      "presets": {
+        "pre_launch": "ما قبل الافتتاح",
+        "browse_only": "استعراض قبل الافتتاح",
+        "open": "مفتوح للعمل"
+      },
+      "presetHints": {
+        "pre_launch": "لا تسجيل ولا تصفّح ولا طلب — والدخول بحساب قائم يبقى.",
+        "browse_only": "يُسجَّل ويُتصفَّح ولا يُطلَب.",
+        "open": "الأبواب الأربعة مفتوحة."
+      },
+      "flags": {
+        "launch.customer_signup": "إنشاء حساب",
+        "launch.customer_browse": "تصفّح السوق",
+        "launch.customer_orders": "الطلبات",
+        "launch.customer_custom_orders": "الطلب المخصَّص",
+        "launch.driver_work": "عمل السائق",
+        "launch.merchant_orders": "طلبات المتجر",
+        "launch.rep_acquisition": "استقطاب المندوب"
+      }
     }
   },
   "merchant": {

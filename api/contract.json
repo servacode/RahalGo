@@ -923,6 +923,72 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/launch",
+      "handler": "handleLaunchState",
+      "auth": true,
+      "capability": "settings.read",
+      "response": [
+        {
+          "name": "active",
+          "type": "unknown"
+        },
+        {
+          "name": "current",
+          "type": "unknown"
+        },
+        {
+          "name": "notice",
+          "type": "unknown"
+        },
+        {
+          "name": "presets",
+          "type": "unknown"
+        },
+        {
+          "name": "untouched",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/launch/preset",
+      "handler": "handleApplyLaunchPreset",
+      "auth": true,
+      "capability": "settings.general.manage",
+      "request": [
+        {
+          "name": "preset",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "after",
+          "type": "unknown"
+        },
+        {
+          "name": "before",
+          "type": "unknown"
+        },
+        {
+          "name": "preset",
+          "type": "unknown"
+        },
+        {
+          "name": "untouched",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/leads",
       "handler": "handleAdminLeads",
       "auth": true,
@@ -6143,6 +6209,10 @@
         {
           "name": "join_open",
           "type": "unknown"
+        },
+        {
+          "name": "launch",
+          "type": "object"
         },
         {
           "name": "location",
