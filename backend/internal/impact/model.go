@@ -152,10 +152,28 @@ type Result struct {
 	Warnings   []string   `json:"warnings,omitempty"`
 }
 
+// FullCommand **الأمرُ الكامل كما في اتّفاق العمل** — **ولا نسختان له.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا مهلةٌ صريحةٌ في توصيةٍ نصّيّة** (٢٠٢٦-٠٩-١٧)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ومهلةُ `go` الافتراضيّةُ عشرُ دقائق** — **وحزمةُ `qa` وحدَها
+// تتجاوزها** (قِيست ٩١٠ و١١٩٠ و١٢٩٨ ثانيةً). **فمن أخذ هذه التوصيةَ
+// كما تُطبَع رأى `panic: test timed out`** — **وهو ليس سقوطَ فحص**،
+// **فيُطارَد عطبٌ لا وجودَ له.**
+//
+// **وتوصيةٌ تُطبَع ولا تعمل أسوأُ من لا توصية.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٩-١٧ — وهو نصُّ `CLAUDE.md` حرفاً،
+//
+//	يحرسه `TestFullFallbackMatchesWorkingAgreement`.)
+const FullCommand = "go test -timeout 30m -count=1 -p 1 ./..."
+
 // Command أمرُ التشغيل الموصى به.
 func (r *Result) Command() string {
 	if r.Fallback != "" {
-		return "go test -count=1 -p 1 ./...   # " + r.Fallback
+		return FullCommand + "   # " + r.Fallback
 	}
 	pkgs := map[string]bool{}
 	for _, t := range r.Tests {
@@ -164,7 +182,7 @@ func (r *Result) Command() string {
 		}
 	}
 	if len(pkgs) == 0 {
-		return "go test -count=1 -p 1 ./...   # لا هدفَ ضيّقٌ استُنتج"
+		return FullCommand + "   # لا هدفَ ضيّقٌ استُنتج"
 	}
 	var list []string
 	for p := range pkgs {

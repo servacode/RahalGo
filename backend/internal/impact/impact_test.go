@@ -276,6 +276,11 @@ func TestUnknownChangeFallsBackSafely(t *testing.T) {
 	if !strings.Contains(r.Command(), "./...") {
 		t.Errorf("الأمرُ الموصى به لا يشمل الكلّ: %s", r.Command())
 	}
+	// **والمهلةُ جزءٌ من التوصية لا زينة** — **وبلا تصريحٍ بها يسقط
+	// الأمرُ بمهلةِ `go` الافتراضيّةِ، والسقوطُ يُقرأ عطبَ فحص.**
+	if !strings.Contains(r.Command(), "-timeout 30m") {
+		t.Errorf("التوصيةُ الكاملةُ بلا مهلةٍ صريحة: %s", r.Command())
+	}
 	t.Logf("UNKNOWN CHANGE SELF-TEST = PROVEN")
 	t.Logf("  UNKNOWN IMPACT → SAFE FULL FALLBACK")
 }
@@ -469,4 +474,54 @@ func TestFileCategories(t *testing.T) {
 		}
 	}
 	t.Logf("FILE CATEGORIES = %d", len(cases))
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **٣٧ · ولا تشيخ التوصيةُ عن اتّفاق العمل**
+// ══════════════════════════════════════════════════════════════════════
+
+// TestFullFallbackMatchesWorkingAgreement **التوصيةُ الكاملةُ هي نصُّ
+// `CLAUDE.md` حرفاً** — **ولا نسختان لأمرٍ واحد.**
+//
+// # ولماذا حارسٌ لا تصحيحٌ مرّةً
+//
+// **وبُدّلت مهلةُ الأمر الإلزاميّ في `CLAUDE.md`** (٢٠٢٦-٠٩-١٧)
+// **وبقي هذا المحرّكُ يطبع الأمرَ القديم** — **فصارت التوصيةُ تُسقط
+// من يأخذها**: **مهلةُ `go` الافتراضيّةُ عشرُ دقائق، وحزمةُ `qa`
+// وحدَها تتجاوزها.**
+//
+// **وتصحيحُ الرقم اليومَ لا يمنع شيخوخةَ الغد** — **فيُربَط الطرفان.**
+func TestFullFallbackMatchesWorkingAgreement(t *testing.T) {
+	root, err := findRoot()
+	if err != nil {
+		t.Fatalf("لم أجد جذرَ المستودع: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(root, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("تعذّرت قراءةُ اتّفاق العمل: %v", err)
+	}
+	// **وgit على ويندوز يكتب CRLF** — وحارسٌ يطابق LF يحمرّ باطلاً.
+	agreement := strings.ReplaceAll(string(b), "\r\n", "\n")
+
+	// **والسطرُ الإلزاميُّ هو الذي يشمل الكلَّ** — لا أمرٌ ضيّقٌ عارض.
+	var line string
+	for _, l := range strings.Split(agreement, "\n") {
+		t := strings.TrimSpace(l)
+		if strings.HasPrefix(t, "go test") && strings.Contains(t, "./...") {
+			line = t
+			break
+		}
+	}
+	if line == "" {
+		t.Fatal("**لا أمرَ كاملٌ في اتّفاق العمل** — تبدّل موضعُ الحقيقة")
+	}
+	// **ويُنزَع التعليقُ** — والأمرُ ما قبل `#`.
+	cmd := strings.TrimSpace(strings.SplitN(line, "#", 2)[0])
+
+	if cmd != FullCommand {
+		t.Errorf("**التوصيةُ شاخت عن اتّفاق العمل**\n"+
+			"  الاتّفاق : %q\n"+
+			"  المحرّك  : %q\n"+
+			"**وأمرٌ يُطبَع ولا يعمل أسوأُ من لا أمر.**", cmd, FullCommand)
+	}
 }

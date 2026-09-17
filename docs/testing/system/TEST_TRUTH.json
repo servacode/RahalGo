@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 352,
-    "test_funcs": 1508
+    "test_funcs": 1509
   },
   "flows": [
     {
@@ -6642,6 +6642,12 @@
         "FULL"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestFullFallbackMatchesWorkingAgreement",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "orphan": true
     },
     {
       "name": "TestHistoricalChangeCases",
