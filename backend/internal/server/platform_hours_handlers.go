@@ -117,5 +117,24 @@ func (s *Server) handleSetServiceClosure(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ويُسجَّل من أوقف المنصّةَ ومن أعادها** (٢٠٢٦-٠٩-١٧)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **و`service_closure` صفٌّ واحدٌ يُكتب فوقه** — **فـ`updated_by`
+	// يحفظ آخرَ فاعلٍ لا تاريخَ الأفعال.** **ومن أوقف المنصّةَ أمسِ
+	// ثمّ أعادها غيرُه اليومَ ذهب أوّلُهما بلا أثر.**
+	//
+	// **وهذا أخطرُ ما يُسأل عنه**: **إيقافُ المنصّة يمنع الطلبَ عن
+	// البلد كلِّه** — **وأخوهُ `admin.zone_hours_set` مسجَّلٌ منذ
+	// زمن**، فكان غيابُه سهواً لا قصدا. (قِيس في قبول لوحة التجهيز.)
+	//
+	// **وبالسجلّ القائم لا بسجلٍّ ثانٍ** — **والنصُّ إعلانٌ للناس
+	// لا سرّ.**
+	meta := map[string]any{"active": c.Active, "message": c.Message}
+	if c.EndsAt != nil {
+		meta["ends_at"] = c.EndsAt.Format(time.RFC3339)
+	}
+	s.audit(r, "admin.platform_closure", "platform", "", meta)
 	httpx.JSON(w, http.StatusOK, out)
 }

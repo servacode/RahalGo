@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 352,
-    "test_funcs": 1512
+    "test_files": 353,
+    "test_funcs": 1514
   },
   "flows": [
     {
@@ -15790,6 +15790,18 @@
     {
       "name": "TestPID4_SyrianMobileIsAccepted",
       "file": "internal/qa/phone_identity_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPCA1_ClosingAndReopeningAreBothRecorded",
+      "file": "internal/qa/platform_closure_audit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPCA2_ActorAndShapeAreTyped",
+      "file": "internal/qa/platform_closure_audit_test.go",
       "package": "qa",
       "orphan": true
     },
