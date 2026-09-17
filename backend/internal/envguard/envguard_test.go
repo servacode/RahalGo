@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -228,11 +229,24 @@ func TestStagingConfigNeverNamesProduction(t *testing.T) {
 		// **والقيمُ وحدَها تُفحَص** — والتعليقُ يشرح ولا يمسّ شيئاً.
 		src := codeOnly(string(b), "#")
 		for _, host := range ProductionHosts {
-			// **و`staging.rahalgo.com` مسموح** — يُنزَع قبل الفحص.
-			clean := strings.ReplaceAll(src, "staging."+host, "")
-			clean = strings.ReplaceAll(clean, "stg."+host, "")
-			if strings.Contains(clean, host) {
-				t.Errorf("%s يضع مضيفَ الإنتاج %q في قيمة", f, host)
+			// ══════════════════════════════════════════════════
+			// **والمضيفُ يُطابَق بحدوده لا كسلسلةِ حروف** (٢٠٢٦-٠٩-١٧)
+			// ══════════════════════════════════════════════════
+			//
+			// **وكان النزعُ يُجرَّب صيغةً صيغةً** (`staging.` و`stg.`)
+			// — **وهو لا يتركّب**: **المضيفُ القائمُ فعلاً
+			// `staging-api.rahalgo.com` يحتوي `api.rahalgo.com`
+			// و`rahalgo.com` معاً**، **فمهما نُزعت صيغةٌ بقيت أخرى.**
+			//
+			// **فكان الحارسُ يحمرّ على مضيفِ تجهيزٍ صحيح** —
+			// **والقصدُ منعُ الإنتاج لا منعُ التجهيز.**
+			//
+			// **والحدُّ يحسم**: **ما سبقه حرفٌ أو نقطةٌ أو شَرطةٌ
+			// فهو ذيلُ مضيفٍ آخر** — **وما سبقه `/` أو `@` أو فراغٌ
+			// فهو المضيفُ نفسُه.**
+			at := regexp.MustCompile(`(^|[^A-Za-z0-9.-])` + regexp.QuoteMeta(host))
+			if m := at.FindString(src); m != "" {
+				t.Errorf("%s يضع مضيفَ الإنتاج %q في قيمة (%q)", f, host, strings.TrimSpace(m))
 			}
 		}
 		// **ولا يُشار إلى قاعدة الإنتاج ولا حجومها** (البند ٤٦).
@@ -368,6 +382,60 @@ func TestNoSecretsCommitted(t *testing.T) {
 		}
 		if strings.TrimSpace(v) != "" {
 			t.Errorf("القالبُ يحمل قيمةً لـ%s — **ولا سرَّ في المستودع**", k)
+		}
+	}
+}
+
+// TestStagingBrowserURLsAreHTTPS **وما يراه المتصفّحُ مؤمَّنٌ أو لا
+// يعمل أصلاً** (٢٠٢٦-٠٩-١٧).
+//
+// # العطبُ المقيس
+//
+// **ولوحةُ التجهيز كانت تُفتح ولا يصل منها نداءٌ واحد.** **والصفحةُ
+// تُخدَم على `https`** — **وعنوانُ المحرّك المنشورُ كان
+// `http://<ip>:8080`.**
+//
+// **والمتصفّحُ يحجب النداءَ العاديَّ من صفحةٍ مؤمَّنة** (Mixed
+// Content) — **ولا رسالةَ على الشاشة**: **السجلُّ في وحدة تحكّم
+// المتصفّح وحدَها**، **فتُقرأ اللوحةُ معطوبةً بلا سبب.**
+//
+// **ومنفذٌ خامٌّ في عنوانٍ عامٍّ يكشف المحرّكَ للناس** — **والبوّابةُ
+// وحدَها تواجههم.**
+//
+// **والداخليُّ `RAHALGO_API_INTERNAL_URL` يبقى عاديّاً عن قصد** —
+// **نداءٌ داخلَ شبكةِ التركيب لا يمرّ بمتصفّح.**
+func TestStagingBrowserURLsAreHTTPS(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(mustRepo(t), "deploy/staging/compose.staging.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := codeOnly(string(b), "#")
+	ip := regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+`)
+
+	for _, key := range []string{"RAHALGO_API_URL", "RAHALGO_SITE_URL"} {
+		i := strings.Index(src, key+":")
+		if i < 0 {
+			t.Errorf("**%s غائبٌ عن تركيب التجهيز**", key)
+			continue
+		}
+		line := src[i:]
+		if j := strings.IndexByte(line, '\n'); j > 0 {
+			line = line[:j]
+		}
+		line = strings.TrimSpace(line)
+
+		if !strings.Contains(line, "https://") {
+			t.Errorf("**%s ليس `https`**: %s\n"+
+				"**وصفحةٌ مؤمَّنةٌ لا يصل منها نداءٌ عاديّ** — "+
+				"**تُرسَم اللوحةُ ولا تعمل، ولا رسالةَ على الشاشة.**", key, line)
+		}
+		if strings.Contains(line, ":8080") {
+			t.Errorf("**%s يكشف منفذَ المحرّك الخام**: %s\n"+
+				"**والبوّابةُ وحدَها تواجه الناس.**", key, line)
+		}
+		if ip.MatchString(line) {
+			t.Errorf("**%s عنوانٌ رقميٌّ لا مضيف**: %s\n"+
+				"**وشهادةُ TLS لا تُصدَر لرقم، فيسقط التأمينُ من أصله.**", key, line)
 		}
 	}
 }

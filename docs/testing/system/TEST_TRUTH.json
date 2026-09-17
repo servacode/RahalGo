@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 352,
-    "test_funcs": 1511
+    "test_funcs": 1512
   },
   "flows": [
     {
@@ -6006,6 +6006,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestStagingBrowserURLsAreHTTPS",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "orphan": true
     },
     {
       "name": "TestStagingComposeIsFullyIsolated",

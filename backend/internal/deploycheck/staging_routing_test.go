@@ -28,6 +28,7 @@ package deploycheck
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -94,10 +95,25 @@ func TestStagingComposeKeepsProductionOutOfReach(t *testing.T) {
 	// الإنتاج عمداً ليقابلها بأسماء التجهيز**، **وحارسٌ يقرأ التعليقَ
 	// يحمرّ على توثيقٍ صحيح.** (وقع أوّلَ تشغيلٍ لهذا الحارس.)
 	raw := stripComments(readStagingComposeRaw(t))
-	for _, bad := range []string{"rahalgo-osrm-1", "rahalgo_default", "api.rahalgo.com"} {
+	for _, bad := range []string{"rahalgo-osrm-1", "rahalgo_default"} {
 		if strings.Contains(raw, bad) {
 			t.Errorf("**تركيبُ التجهيز يذكر %q** — **وهذا اسمُ إنتاج.**", bad)
 		}
+	}
+	// ══════════════════════════════════════════════════════════════
+	// **ومضيفُ الإنتاج يُطابَق مضيفاً لا سلسلةَ حروف** (٢٠٢٦-٠٩-١٧)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكان الفحصُ `Contains("api.rahalgo.com")`** — **و
+	// `staging-api.rahalgo.com` يحتوي تلك السلسلةَ حرفاً بحرف.**
+	// **فمضيفُ التجهيز الحقيقيُّ يُقرأ مضيفَ إنتاج**، **ويحمرّ
+	// الحارسُ على تركيبٍ صحيح.**
+	//
+	// **والقصدُ لم يتبدّل**: **`https://api.rahalgo.com` يبقى
+	// مرفوضاً** — **والحدُّ هو حدُّ المضيف لا موضعُ الحروف.**
+	if m := prodHost.FindString(raw); m != "" {
+		t.Errorf("**تركيبُ التجهيز يشير إلى مضيف الإنتاج**: %q — "+
+			"**ونداءُ تجهيزٍ يبلغ قاعدةَ الإنتاج لا يُستدرَك.**", strings.TrimSpace(m))
 	}
 }
 
@@ -136,3 +152,9 @@ func stripComments(raw string) string {
 	}
 	return b.String()
 }
+
+// prodHost **مضيفُ الإنتاج مطابَقاً بحدوده** — **لا كسلسلةٍ داخل غيرِه.**
+//
+// **و`staging-api.rahalgo.com` مضيفُ تجهيزٍ مشروع** — **يسبق اسمَه
+// شَرطةٌ، فلا يُقرأ إنتاجاً.**
+var prodHost = regexp.MustCompile(`(^|[^A-Za-z0-9.-])\.?api\.rahalgo\.com`)
