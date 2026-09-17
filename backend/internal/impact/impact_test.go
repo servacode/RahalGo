@@ -525,3 +525,93 @@ func TestFullFallbackMatchesWorkingAgreement(t *testing.T) {
 			"**وأمرٌ يُطبَع ولا يعمل أسوأُ من لا أمر.**", cmd, FullCommand)
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **٣٨ · والأمرُ الضيّقُ يحمل المهلةَ كالكامل**
+// ══════════════════════════════════════════════════════════════════════
+
+// TestNarrowCommandCarriesTimeoutAndExactPackages **الضيّقُ كالكامل
+// في المهلة، وكما هو في الحزم.**
+//
+// # ولماذا الضيّقُ أخطرُ من الكامل
+//
+// **وأُلحقت المهلةُ بالكامل وحدَه** (٢٠٢٦-٠٩-١٧) **وبقي الضيّقُ بلا
+// مهلة** — **وهو الطريقُ الأكثرُ سلوكاً**: **`P-9` يوصي بحزمٍ بعينها
+// أكثرَ ممّا يتوسّع.**
+//
+// **و`./internal/qa` في أكثرِ التوصيات** — **وهي وحدَها تجاوزت العشرَ
+// دقائقِ الافتراضيّةَ في كلّ قياس** (٩١٠ · ١٠٤٣ · ١١٩٠ · ١٢٩٨ ثانيةً).
+//
+// # وما يحرسه هذا الفحصُ مجتمعاً
+//
+// **المهلةُ حاضرةٌ · والحزمُ هي هي لا تنقص ولا تزيد · ولا استبدالَ
+// بالكامل خِلسةً.**
+func TestNarrowCommandCarriesTimeoutAndExactPackages(t *testing.T) {
+	e := load(t)
+	r := e.Analyze("TEST", "", "", []string{"backend/internal/impact/model.go"})
+
+	if r.Fallback != "" {
+		t.Fatalf("**هذا المُدخَلُ لم يعد يُنتج أمراً ضيّقاً** (توسّعٌ: %q) — "+
+			"**فالفحصُ لا يحرس ما وُضع له**", r.Fallback)
+	}
+
+	// **الحزمُ المختارةُ كما قرّرها المحرّك** — لا قائمةٌ مجمّدةٌ بيدي:
+	// **فلو جُمّدت لَحرست خريطتي لا سلوكَ الأمر.**
+	want := map[string]bool{}
+	for _, tt := range r.Tests {
+		if tt.Kind == "package" {
+			want["./"+tt.Target] = true
+		}
+	}
+	if len(want) == 0 {
+		t.Fatal("**لا حزمَ مختارةً أصلاً** — تبدّل الاختيار")
+	}
+
+	cmd := r.Command()
+
+	// **١ · المهلةُ حاضرة.**
+	if !strings.Contains(cmd, "-timeout "+TestTimeout) {
+		t.Errorf("**الأمرُ الضيّقُ بلا مهلةٍ صريحة**: %s\n"+
+			"**و`./internal/qa` وحدَها تتجاوز الافتراضيّة.**", cmd)
+	}
+	if !strings.HasPrefix(cmd, testCommandPrefix+" ") {
+		// **ولا تُقارَن الحزمُ ببادئةٍ مخالفة** — **فتُقرَأ رايةُ `go`
+		// حزمةً ويُغرَق الخطأُ الحقيقيُّ في ضجيج.**
+		t.Fatalf("**بدايةُ الأمر ليست السياسةَ الواحدة**: %s", cmd)
+	}
+
+	// **٢ · ولا استبدالَ بالكامل.**
+	if strings.Contains(cmd, "./...") {
+		t.Errorf("**أمرٌ ضيّقٌ انقلب توسيعاً**: %s", cmd)
+	}
+
+	// **٣ · والحزمُ هي هي — لا تنقص ولا تزيد.**
+	got := map[string]bool{}
+	for _, f := range strings.Fields(strings.TrimPrefix(cmd, testCommandPrefix)) {
+		got[f] = true
+	}
+	for p := range want {
+		if !got[p] {
+			t.Errorf("**حزمةٌ اختيرت ولم تُذكَر في الأمر**: %s", p)
+		}
+	}
+	for p := range got {
+		if !want[p] {
+			t.Errorf("**حزمةٌ في الأمر لم تُختَر**: %s", p)
+		}
+	}
+	t.Logf("NARROW COMMAND = %s", cmd)
+}
+
+// TestOneTimeoutPolicy **سياسةُ مهلةٍ واحدةٌ للطرفين** — **ولا ثابتَ منافس.**
+func TestOneTimeoutPolicy(t *testing.T) {
+	if !strings.Contains(FullCommand, "-timeout "+TestTimeout) {
+		t.Errorf("**الكاملةُ لا تتبع السياسة**: %s", FullCommand)
+	}
+	if !strings.HasPrefix(FullCommand, testCommandPrefix+" ") {
+		t.Errorf("**الكاملةُ لا تُبنى من البادئة نفسِها**: %s", FullCommand)
+	}
+	if FullCommand != testCommandPrefix+" ./..." {
+		t.Errorf("**الكاملةُ تبدّلت عن شكلها**: %s", FullCommand)
+	}
+}

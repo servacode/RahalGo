@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 352,
-    "test_funcs": 1509
+    "test_funcs": 1511
   },
   "flows": [
     {
@@ -6663,6 +6663,12 @@
       "orphan": false
     },
     {
+      "name": "TestNarrowCommandCarriesTimeoutAndExactPackages",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "orphan": true
+    },
+    {
       "name": "TestNegativeControl",
       "file": "internal/impact/impact_test.go",
       "package": "impact",
@@ -6673,6 +6679,12 @@
         "FULL"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestOneTimeoutPolicy",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "orphan": true
     },
     {
       "name": "TestRepeatabilityAndSpeed",

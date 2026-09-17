@@ -168,7 +168,21 @@ type Result struct {
 // (قرارُ المالك ٢٠٢٦-٠٩-١٧ — وهو نصُّ `CLAUDE.md` حرفاً،
 //
 //	يحرسه `TestFullFallbackMatchesWorkingAgreement`.)
-const FullCommand = "go test -timeout 30m -count=1 -p 1 ./..."
+const (
+	// TestTimeout **سياسةُ المهلة الواحدة** — **ولا ثانيةَ لها.**
+	//
+	// **والأمرُ الضيّقُ يطلب `./internal/qa` في أكثرِ أحواله** —
+	// **وهي وحدَها تجاوزت العشرَ دقائقِ الافتراضيّةَ في كلّ قياس.**
+	// **فلو حملت الكاملةُ مهلةً والضيّقةُ لا، لَسقط الطريقُ الأكثرُ
+	// سلوكاً** — **وهو ما وقع فعلاً** (قرارُ المالك ٢٠٢٦-٠٩-١٧).
+	TestTimeout = "30m"
+
+	// testCommandPrefix **بدايةُ كلّ أمرٍ يُوصى به** — كاملاً كان أو ضيّقاً.
+	testCommandPrefix = "go test -timeout " + TestTimeout + " -count=1 -p 1"
+
+	// FullCommand **الأمرُ الكامل كما في اتّفاق العمل.**
+	FullCommand = testCommandPrefix + " ./..."
+)
 
 // Command أمرُ التشغيل الموصى به.
 func (r *Result) Command() string {
@@ -189,7 +203,7 @@ func (r *Result) Command() string {
 		list = append(list, "./"+p)
 	}
 	sort.Strings(list)
-	out := "go test -count=1 -p 1"
+	out := testCommandPrefix
 	for _, p := range list {
 		out += " " + p
 	}
