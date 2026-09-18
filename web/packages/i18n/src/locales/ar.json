@@ -663,6 +663,7 @@
     "dispute_party_has_no_wallet": "لا محفظة لهذا الطرف — لا يمكن الخصم",
     "order_still_open": "الطلب لم يغلق بعد",
     "driver_has_open_orders": "بيده طلب حي — أسنده أولا",
+    "section_has_items": "القسم فيه أصناف — أطفئه بدل حذفه",
     "bad_incentive_kind": "نوع غير معروف",
     "incentive_needs_reason": "اكتب السبب — يسجل ويراه صاحبه",
     "bad_incentive_amount": "المبلغ يجب أن يكون أكبر من صفر",

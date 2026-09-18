@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 353,
-    "test_funcs": 1514
+    "test_files": 354,
+    "test_funcs": 1518
   },
   "flows": [
     {
@@ -20866,6 +20866,30 @@
     {
       "name": "TestAdminRatings_IncludesStores",
       "file": "internal/server/admin_ratings_stores_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSD1_ReferencedSectionIsRefusedExplicitly",
+      "file": "internal/server/admin_section_delete_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSD2_UnreferencedSectionIsDeleted",
+      "file": "internal/server/admin_section_delete_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSD3_RetireKeepsItemsAttached",
+      "file": "internal/server/admin_section_delete_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSD4_NoOrphanItemsExist",
+      "file": "internal/server/admin_section_delete_test.go",
       "package": "server",
       "orphan": true
     },

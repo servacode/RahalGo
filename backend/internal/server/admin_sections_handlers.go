@@ -11,10 +11,12 @@ package server
 // يرى الثاني وحدَه.**
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -150,15 +152,39 @@ func (s *Server) handleUpdatePlatformSection(w http.ResponseWriter, r *http.Requ
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
-// handleDeletePlatformSection يحذف قسماً — **وأصنافُه تبقى بلا قسم لا تُحذف معه.**
+// errSectionHasItems **قسمٌ مشغولٌ لا يُحذف** — **والتقاعدُ إطفاءٌ لا حذف.**
+var errSectionHasItems = httpx.NewError(http.StatusConflict,
+	"section_has_items", "errors.section_has_items")
+
+// handleDeletePlatformSection يحذف قسماً فارغاً — **والمشغولُ يُرفض ويُقال لماذا.**
 //
-// **والحذفُ يُقطع لا يُدمّر**: `ON DELETE SET NULL` يترك الصنفَ في متجره
-// قابلاً للطلب من صفحته، **ويُخرجه من التصفّح وحدَه.** ولو حُذف معه لَضاعت
-// أسعارٌ وخياراتٌ بُنيت على مدى شهور **بضغطةٍ واحدةٍ لا تُردّ.**
+// # ولا يُحذف معه صنف
+//
+// **ولو ذهبت أصنافُه معه لَضاعت أسعارٌ وخياراتٌ بُنيت على مدى شهور
+// بضغطةٍ واحدةٍ لا تُردّ.** **ولا يُفرَّغ قسمُ الصنف**: **قرارُ المالك
+// ٢٠٢٦-٠٨-٢٢ جعله إلزاميّاً** (هجرة ٠١١٨)، **وصنفٌ بلا قسمٍ لا يراه
+// أحد** — لا في السوق ولا في قائمة متجره.
+//
+// **فلم يبقَ إلّا المنع** (`RESTRICT`، هجرة ٠١٥٧).
+//
+// **وكان هذا يردّ خمسَمئة**: المفتاحُ يحاول الكتابةَ فراغاً فيصطدم
+// بـ`NOT NULL`، **ورمزٌ لا يعرفه `respondErr`.** **فالأدمن يقرأ «عطبٌ
+// في الخادم» ولا يعلم أنّ القسمَ مشغول.**
+//
+// **ومن أراد تقاعدَ قسمٍ عامرٍ يُطفئه** — `PATCH active=false`، **وهو
+// وحدَه ما تناديه اللوحة.**
 func (s *Server) handleDeletePlatformSection(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	tag, err := s.pg.Exec(r.Context(), `DELETE FROM platform_sections WHERE id = $1`, id)
 	if err != nil {
+		// **والمنعُ حالُ الطالب لا حالُ المنصّة** — `23503` من `RESTRICT`،
+		// **و`23502` من قاعدةٍ لم تبلغها `0157` بعد.**
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) &&
+			(pgErr.Code == "23503" || pgErr.Code == "23502") {
+			s.respondErr(w, errSectionHasItems)
+			return
+		}
 		s.respondErr(w, err)
 		return
 	}
