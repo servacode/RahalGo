@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 354,
-    "test_funcs": 1518
+    "test_files": 355,
+    "test_funcs": 1521
   },
   "flows": [
     {
@@ -5815,6 +5815,24 @@
       "name": "TestDevOTPProviderIsRefusedInProduction",
       "file": "internal/config/otp_provider_test.go",
       "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminRuntimeConfigHasNoEmptyDefault",
+      "file": "internal/deploycheck/admin_parity_test.go",
+      "package": "deploycheck",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminRuntimeConfigMatchesProductionExceptEnvironment",
+      "file": "internal/deploycheck/admin_parity_test.go",
+      "package": "deploycheck",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminRuntimeConfigSurfaceMatches",
+      "file": "internal/deploycheck/admin_parity_test.go",
+      "package": "deploycheck",
       "orphan": true
     },
     {

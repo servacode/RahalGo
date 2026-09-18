@@ -211,6 +211,20 @@ services:
       RAHALGO_API_INTERNAL_URL: http://api:8080
       RAHALGO_SITE_URL: ${STAGING_SITE_URL:-https://staging-api.rahalgo.com}
       RAHALGO_ENVIRONMENT: staging
+      # ══════════════════════════════════════════════════════════════
+      # **ونمطُ الخريطة فارغٌ عمداً — ولوحةُ التجهيز بلا خرائطَ لذلك**
+      # ══════════════════════════════════════════════════════════════
+      #
+      # (تدقيقُ التكافؤ ٢٠٢٦-٠٩-١٩ · `ADMIN-STAGING-PRIMARY-PARITY.md` §٥.)
+      #
+      # **`maps.rahalgo.com` مضيفُ إنتاج** (`envguard.ProductionHosts`)
+      # **والتجهيزُ لا يسمّي مضيفَ إنتاج** (`TestStagingConfigNeverNamesProduction`).
+      # **و`resolveMapSource` لا يرتدّ إلى مصدرٍ عامّ** — **فالفارغُ يُعطّل
+      # خرائطَ اللوحة كلَّها**: خريطةُ العمليات ومدنُ الإعدادات ومناطقُها
+      # ومنتقي موقع المتجر.
+      #
+      # **وحاولتُ ملأَه بنمط الإنتاج فأسقطه الحارسُ — وهو محقّ.**
+      # **والحلُّ خادمُ خرائطَ للتجهيز** — **قرارُ المالك، ولم يُتّخَذ بعد.**
       RAHALGO_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-}
     depends_on:
       - api
