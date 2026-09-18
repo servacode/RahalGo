@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 355,
-    "test_funcs": 1521
+    "test_funcs": 1522
   },
   "flows": [
     {
@@ -5831,6 +5831,12 @@
     },
     {
       "name": "TestAdminRuntimeConfigSurfaceMatches",
+      "file": "internal/deploycheck/admin_parity_test.go",
+      "package": "deploycheck",
+      "orphan": true
+    },
+    {
+      "name": "TestStagingMapsAreServedFromStagingItself",
       "file": "internal/deploycheck/admin_parity_test.go",
       "package": "deploycheck",
       "orphan": true

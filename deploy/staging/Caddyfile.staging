@@ -139,6 +139,40 @@
 		reverse_proxy api:8080
 	}
 
+	# ── الخرائط ────────────────────────────────────────────────────
+	#
+	# (قرارُ المالك ٢٠٢٦-٠٩-١٩ · التكافؤ G1.)
+	#
+	# **ولوحةُ التجهيز كانت بلا خرائط** — `maps.rahalgo.com` مضيفُ إنتاجٍ
+	# لا يسمّيه التجهيز (`envguard`). **فللتجهيز آثارُه** (`maps-sync.sh`)
+	# **ونمطُه يشير إلى هنا.**
+	#
+	# **ولا سجلَّ DNS لمضيفٍ خاصّ** — فتُخدَم تحت `/maps/` على مضيف التجهيز.
+	#
+	# **والكتلةُ نسخةُ كتلة الإنتاج** (`Caddyfile` · `maps.rahalgo.com`):
+	# الفهرسُ دقيقة · الآثارُ المؤرَّخةُ سنة · وما لم يُرسم أربعمئةٌ وأربعة.
+	handle_path /maps/* {
+		encode zstd gzip
+		root * /srv/maps
+
+		@manifest path /manifest.json
+		header @manifest Cache-Control "public, max-age=60"
+
+		@artifacts path /base/* /regions/* /map-resources/* /style/* /sprite/*
+		header @artifacts Cache-Control "public, max-age=31536000, immutable"
+
+		@allowed path /manifest.json /base/* /regions/* /map-resources/* /style/* /sprite/*
+		handle @allowed {
+			file_server {
+				precompressed br gzip
+			}
+		}
+
+		handle {
+			respond 404
+		}
+	}
+
 	# ── الويب ──────────────────────────────────────────────────────
 	handle {
 		reverse_proxy web:3000

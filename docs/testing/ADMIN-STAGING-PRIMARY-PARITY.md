@@ -8,17 +8,30 @@
 
 ---
 
-## الحكم
+## الحكم — بعد قرارات المالك الثلاثة (٢٠٢٦-٠٩-١٩)
 
-	التكافؤُ الوظيفيُّ الكامل = لم يتحقّق — BLOCKED
-	السببُ الأوّل          = خرائطُ لوحة التجهيز معطّلة — **وعقدٌ مغلقٌ يمنع
-	                          ملأَها بخرائط الإنتاج** (قرارُ المالك)
-	السببُ الثاني          = الإنتاجُ متأخّرٌ ١٥ التزاماً عن التجهيز
-	                          (أربعةُ آثار · يلزمها نشرُ إنتاج)
-	أُصلح في التجهيز         = فرقان (G2 · G3)
+	سطوحُ الجرد               = 372  (لم يُنقَص منها شيء)
+	PARITY_OK                 = 336  (كانت 304)
+	ENVIRONMENT_ONLY          = 13   (كانت 10)
+	DATA_ONLY                 = 18   (كما هي)
+	GENUINE_MISMATCHES        = 0    (في يد التجهيز — لا فرقَ مفتوح)
+	BLOCKED_BY_PRODUCTION_VERSION = 5 (G4–G7 — يلزمها نشرُ إنتاج)
 
-**وفي الشيفرة التجهيزُ لا ينقصه شيءٌ ممّا في الإنتاج** — **بل يزيد عليه.**
-**وفي التهيئة ينقصه الخرائط.**
+**ما بقي فرقاً سببُه واحد**: الإنتاجُ على `79d88245` والتجهيزُ على
+`68a45c97`. **ونشرُ الإنتاج غيرُ مأذونٍ بعد** — وفحصُه المسبق في §٩.
+
+| # | الفرق | الحال |
+|---|---|---|
+| G1 | خرائطُ لوحة التجهيز معطّلة | ✅ **أُصلح** — للتجهيز خرائطُه على مضيفه (§٥) |
+| G2 | ويبُ التجهيز منفصلٌ عن محرّكه | ✅ أُصلح (التدقيقُ الأوّل) |
+| G3 | تركيبُ الخادم شاخ عن المستودع | ✅ أُصلح (التدقيقُ الأوّل) |
+| G4 | حذفُ قسمٍ مشغول: الإنتاج ٥٠٠ | ⛔ يلزمه نشرُ إنتاج |
+| G5 | إيقافُ المنصّة بلا سطرِ تدقيقٍ في الإنتاج | ⛔ يلزمه نشرُ إنتاج |
+| G6 | اسمُ ذلك الفعل غائبٌ عن سجلّ الإنتاج | ⛔ يلزمه نشرُ إنتاج |
+| G7 | الهجرتان ٠١٥٦ و٠١٥٧ | ⛔ يلزمه نشرُ إنتاج |
+
+**وسياسةُ التجهيز صارت سياسةَ الإنتاج**: ٢٩ إعداداً سُوّيت بباب اللوحة
+(§٦)، **وبقي فرقان مقصودان** (`site.show_login` · `site.show_shop`).
 
 ---
 
@@ -35,22 +48,40 @@
 | **٤ · البيانات** | الإعداداتُ والأدوارُ والأقسام — قراءةٌ من القاعدتين |
 | **٥ · المخطّط** | الهجراتُ المطبَّقة |
 
-**ثمّ برهانٌ تشغيليّ**: كلُّ صفحةٍ وكلُّ بابِ قراءةٍ على البيئتين.
+**ثمّ برهانٌ تشغيليّ**: كلُّ صفحةٍ وكلُّ بابِ قراءةٍ على البيئتين،
+**وكلُّ خريطةٍ في اللوحة بمتصفّحٍ حقيقيّ.**
+
+## الجردُ — ٣٧٢ سطحاً
+
+| السطح | العدد | OK | ENV | DATA | BLOCKED |
+|---|---|---|---|---|---|
+| صفحاتُ اللوحة | 29 | 26 | 1 | 0 | 2 |
+| أبوابُ API (86 قراءة · 89 كتابة) | 175 | 173 | 0 | 0 | 2 |
+| مفاتيحُ الإعدادات | 143 | 119 | 8 | 16 | 0 |
+| الأدوار | 18 | 16 | 0 | 2 | 0 |
+| مفاتيحُ التهيئة | 5 | 1 | 4 | 0 | 0 |
+| فهرسُ الأقسام | 1 | 1 | 0 | 0 | 0 |
+| حالُ المخطّط | 1 | 0 | 0 | 0 | 1 |
+| **المجموع** | **372** | **336** | **13** | **18** | **5** |
+
+**وقبل القرارات** (التدقيقُ الأوّل): 304 · 10 · 18 · **40 فيها فرق.**
+**وما تحرّك**: ٣ صفحاتِ خرائط ⇐ OK · ٢٩ إعداداً ⇐ OK · إعدادان ⇐ ENV
+(قرارٌ مقصود) · نمطُ الخريطة ⇐ ENV (مضيفٌ لكلّ بيئة).
 
 ---
 
 # ٢ · النسخُ المنشورة
 
-| المكوّن | الإنتاج | التجهيز قبل | التجهيز بعد |
-|---|---|---|---|
-| ويبُ اللوحة | `release-79d88245` | `release-2df3e5ed` | **`release-68a45c97`** |
-| المحرّك | `release-79d88245` | `release-68a45c97` | `release-68a45c97` |
+| المكوّن | الإنتاج | التجهيز |
+|---|---|---|
+| ويبُ اللوحة | `release-79d88245` | `release-68a45c97` |
+| المحرّك | `release-79d88245` · هجرة `0155` | `release-68a45c97` · هجرة `0157` |
 
-	79d88245 ──(13)──▶ 2df3e5ed ──(2)──▶ 68a45c97
-	الإنتاج              ويبُ التجهيز قبلُ     محرّكُ التجهيز
+	79d88245 ──(13)──▶ 2df3e5ed ──(2)──▶ 68a45c97 ──(10)──▶ HEAD
+	الإنتاج                                  التجهيز      وثائقُ وأندرويد وتهيئةُ تجهيز
 
-**تاريخٌ خطّيّ** — `79d88245` سلفٌ لـ`2df3e5ed` سلفٌ لـ`68a45c97`.
-**فالتجهيزُ لا يمكن أن ينقصه ما في الإنتاج** إلّا بحذفٍ صريح — **ولا حذف.**
+**تاريخٌ خطّيّ** — فالتجهيزُ لا يمكن أن ينقصه ما في الإنتاج إلّا بحذفٍ
+صريح، **ولا حذف.**
 
 ---
 
@@ -58,299 +89,413 @@
 
 ## ٣·١ · الشيفرة
 
-**`web/` بين الإنتاج وويب التجهيز: سطرٌ واحدٌ في `ar.json`** — تسميةُ
-فعلِ التدقيق `admin.platform_closure`.
+**`web/` بين الإنتاج والتجهيز: سطران في `ar.json`** — نصُّ
+`section_has_items` وتسميةُ `admin.platform_closure`.
 
-**`backend/` بين المحرّكين (بلا اختبارات)** — وما يمسّ اللوحةَ منها:
-
-| الملفّ | الأثر على اللوحة |
-|---|---|
-| `server/admin_sections_handlers.go` | حذفُ قسمٍ مشغول: **٤٠٩ `section_has_items`** بدل ٥٠٠ |
-| `server/platform_hours_handlers.go` | إيقافُ المنصّة **يُكتب في التدقيق** |
-| `migrations/0156` · `0157` | فهرسُ الأقسام من المصدر · والمفتاحُ `RESTRICT` |
-| `catalog/citysql.go` · `sections_handlers.go` | جغرافيا الزبون — لا تمسّ اللوحة |
-
-**و`server/server.go` متطابقٌ حرفاً** — **فالموجّهُ واحد.**
+**`backend/` بين المحرّكين (بلا اختبارات)** — التفصيلُ في §٩·٢.
+**و`server/server.go` متطابقٌ حرفاً** (قِيس ثانيةً) — **فالموجّهُ واحد.**
 
 ## ٣·٢ · التفرّعُ على البيئة
 
 	الويب   = رايةُ «STAGING» (DashboardChrome.tsx:374) + اسمُ البيئة في صفحة ops
 	الخادم  = cfg.Env == "development" فقط — يتساوى فيه التجهيزُ والإنتاج
 
-**ولا ميزةَ في اللوحة تُفتح أو تُغلق بالبيئة.** `isStaging()` **لا منادٍ
-له.** ⇒ `ENVIRONMENT_ONLY` مسموح.
+**ولا ميزةَ في اللوحة تُفتح أو تُغلق بالبيئة.** ⇒ `ENVIRONMENT_ONLY` مسموح.
 
-## ٣·٣ · تهيئةُ التشغيل — `/config.js`
+## ٣·٣ · تهيئةُ التشغيل — `/config.js` (قِيس حيّاً)
 
-| المفتاح | الإنتاج | التجهيز قبل | التجهيز بعد | الصنف |
-|---|---|---|---|---|
-| `apiUrl` | api.rahalgo.com | staging-api… | staging-api… | ENVIRONMENT_ONLY |
-| `siteUrl` | rahalgo.com | staging-api… | staging-api… | ENVIRONMENT_ONLY |
-| `environment` | production | staging | staging | ENVIRONMENT_ONLY |
-| `API_INTERNAL_URL` | http://api:8080 | = | = | PARITY_OK |
-| **`mapStyleUrl`** | **maps.rahalgo.com/…/style.online.json** | **""** | **""** | **تعارضُ عقدٍ — G1 · قرارُ المالك** |
+| المفتاح | الإنتاج | التجهيز | الصنف |
+|---|---|---|---|
+| `apiUrl` | api.rahalgo.com | staging-api.rahalgo.com | ENVIRONMENT_ONLY |
+| `siteUrl` | rahalgo.com | staging-api.rahalgo.com | ENVIRONMENT_ONLY |
+| `environment` | production | staging | ENVIRONMENT_ONLY |
+| `mapStyleUrl` | maps.rahalgo.com/map-resources/1/style.online.json | **staging-api.rahalgo.com/maps/map-resources/1/style.online.json** | ENVIRONMENT_ONLY — **ويعمل (§٥)** |
+| `API_INTERNAL_URL` | http://api:8080 | = | PARITY_OK |
 
 ## ٣·٤ · الإعدادات
 
-	مفاتيحُ الفهرس          = 143 في البيئتين — **الشيفرةُ نفسُها** (settings/ لم يتبدّل)
-	أدواتُ اللوحة لها       = 143 = 143 — PARITY_OK
-	القيمُ الفعليّةُ متطابقة = 90
-	القيمُ تختلف            = 53  (مصنَّفةٌ في §٦)
-	مفاتيحُ مخزَّنةٌ بلا تعريف = 10 في الإنتاج · 12 في التجهيز — **ولا يقرؤها سطرُ كود**
+	مفاتيحُ الفهرس          = 143 في البيئتين — الشيفرةُ نفسُها
+	القيمُ الفعليّةُ متطابقة = 119  (كانت 90)
+	القيمُ تختلف            = 24   (كانت 53) — §٦
 
-**والقيمةُ الفعليّة = المخزَّنة وإلّا الافتراض** — **لا عددُ الصفوف.**
+**والقيمةُ الفعليّة = المخزَّنة وإلّا الافتراض** — لا عددُ الصفوف.
 
-## ٣·٥ · الصلاحيّات
+## ٣·٥ · الصلاحيّات (قِيست ثانيةً)
 
-	شيفرةُ authz/ و opsmap/ = لم تتبدّل منذ 79d88245
-	الأدوارُ القياسيّة       = 16 — **صلاحيّاتُها متطابقةٌ كلُّها** (107 منحة)
-	أدوارٌ في التجهيز وحدَه  = s1_ops_viewer (observability.read)
-	                           s1_orders_only (orders.read)
-	                           — أُنشئتا يدويّاً ٢٠٢٦-٠٩-١٣ · تجهيزاتُ اختبارِ
-	                             «قدرةٍ واحدة» · DATA_ONLY مسموح
+	الأدوارُ القياسيّة       = 16 — صلاحيّاتُها متطابقةٌ كلُّها
+	أدوارٌ في التجهيز وحدَه  = s1_ops_viewer · s1_orders_only
+	                           تجهيزاتُ اختبارٍ يدويّة (٢٠٢٦-٠٩-١٣) · DATA_ONLY
 
-## ٣·٦ · أقسامُ المنصّة
+## ٣·٦ · أقسامُ المنصّة (قِيست ثانيةً)
 
-	الإنتاج  = 38 فعّالاً · 6b63369341fa1434c05c0ddefe7ac82f
-	التجهيز  = 38 فعّالاً · 6b63369341fa1434c05c0ddefe7ac82f
+	الإنتاج  = 38 فعّالاً · b4a77017bb32e32812935ec26402f24d
+	التجهيز  = 38 فعّالاً · b4a77017bb32e32812935ec26402f24d
 
-**البصمةُ واحدة** — الأسماءُ والأيقوناتُ والترتيب. **والتسعةُ المتقاعدةُ في
-التجهيز تاريخٌ** طلب المالكُ حفظَه ⇒ DATA_ONLY.
+**البصمةُ واحدة** (الاسمُ والأيقونةُ والترتيب). **والعقدُ يفترق**: حذفُ
+قسمٍ مشغول ٤٠٩ في التجهيز و٥٠٠ في الإنتاج (G4).
 
-**والعقدُ يفترق**: حذفُ قسمٍ مشغول ٤٠٩ في التجهيز و٥٠٠ في الإنتاج (§٥).
+## ٣·٧ · البرهانُ التشغيليّ (أُعيد ٢٠٢٦-٠٩-١٩ بعد التسوية)
 
-## ٣·٧ · البرهانُ التشغيليّ
-
-	أبوابُ الإدارة للقراءة (86) — بلا توثيق:
-	    الإنتاج 401 · التجهيز 401  ⇐ 86/86 — **كلُّها موجودةٌ ومحروسة**
-	صفحاتُ اللوحة (29):
-	    الإنتاج 200 · التجهيز 200  ⇐ 29/29 — **قبل النشر وبعده**
-	أبوابُ الكتابة (89 = 58 POST · 11 PUT · 10 PATCH · 10 DELETE):
-	    **لم تُرسَل إلى الإنتاج** (لا كتابةَ عليه) — **والموجّهُ متطابقٌ حرفاً**
-
-**وخريطةُ العمليات في لوحة التجهيز حين مُلئ النمطُ مؤقّتاً بنمط الإنتاج**
-(متصفّحٌ حقيقيّ · دخولٌ فعليّ) — **ثمّ أُعيد فارغاً لأنّه يخرق عقداً (§٥):**
-
-	mapStyleUrl            = مضبوط
-	لوحاتُ MapLibre        = 1
-	نداءاتٌ إلى maps.rahalgo.com = 18
-	style.online.json      = 200 · 200
-
-**فهو يُثبت أنّ اللوحةَ سليمةٌ وأنّ النقصَ تهيئةٌ وحدَها** — **لا أنّ الفرقَ
-أُغلق.**
+	أبوابُ الإدارة للقراءة (86) بلا توثيق:  الإنتاج 401 · التجهيز 401 ⇐ 86/86
+	صفحاتُ اللوحة (29):                     الإنتاج 200 · التجهيز 200 ⇐ 29/29
+	أبوابُ الكتابة (89):                    لم تُرسَل إلى الإنتاج · والموجّهُ متطابقٌ حرفاً
 
 ---
 
 # ٤ · مصفوفةُ الصفحات — ٢٩
 
-**والقدرةُ من سجلّ التنقّل** (`dashboard/layout.tsx`) — **وهو واحدٌ في
-البيئتين.** **والأدوارُ الستّة عشرَ صلاحيّاتُها واحدة** ⇒ **ما يُرى في صفحةٍ
-هنا يُرى هناك.**
+| الصفحة | القدرة | الإنتاج | التجهيز | الصنف |
+|---|---|---|---|---|
+| `/dashboard` | analytics.read | 200 | 200 | PARITY_OK |
+| `/dashboard/orders` | orders.read | 200 | 200 | PARITY_OK |
+| `/dashboard/history` | orders.read | 200 | 200 | PARITY_OK |
+| `/dashboard/users` | users.read · **منتقي موقع المتجر** (`MerchantModal`) | 200 | 200 | PARITY_OK — **الخريطةُ تعمل** |
+| `/dashboard/users/[id]` | (تفصيل) · تعديلُ المتجر بالمكوّن نفسِه | 200 | 200 | PARITY_OK |
+| `/dashboard/roles` | roles.manage | 200 | 200 | PARITY_OK |
+| `/dashboard/sections` | content.manage | 200 | 200 | **BLOCKED_BY_PRODUCTION_VERSION** (G4) |
+| `/dashboard/sections/[id]` | (تفصيل) | 200 | 200 | PARITY_OK |
+| `/dashboard/merchants/[id]` | (تفصيل) | 200 | 200 | PARITY_OK |
+| `/dashboard/merchants/[id]/menu` | (تفصيل) | 200 | 200 | PARITY_OK |
+| `/dashboard/tickets` | support.manage | 200 | 200 | PARITY_OK |
+| `/dashboard/emergencies` | support.manage | 200 | 200 | PARITY_OK |
+| `/dashboard/leads` | merchants.verify | 200 | 200 | PARITY_OK |
+| `/dashboard/opsmap` | orders.read · **خريطة** | 200 | 200 | PARITY_OK — **الخريطةُ تعمل** |
+| `/dashboard/wallet` | finance.read | 200 | 200 | PARITY_OK |
+| `/dashboard/expenses` | finance.read | 200 | 200 | PARITY_OK |
+| `/dashboard/profits` | finance.read | 200 | 200 | PARITY_OK |
+| `/dashboard/cash` | finance.read | 200 | 200 | PARITY_OK |
+| `/dashboard/losses` | finance.read · support.manage | 200 | 200 | PARITY_OK |
+| `/dashboard/payouts` | finance.read | 200 | 200 | PARITY_OK |
+| `/dashboard/audit` | audit.read | 200 | 200 | **BLOCKED_BY_PRODUCTION_VERSION** (G6) |
+| `/dashboard/reports` | analytics.read | 200 | 200 | PARITY_OK |
+| `/dashboard/incentives` | finance.read | 200 | 200 | PARITY_OK |
+| `/dashboard/promos` | content.manage | 200 | 200 | PARITY_OK |
+| `/dashboard/ops` | observability.read | 200 | 200 | ENVIRONMENT_ONLY (اسمُ البيئة) |
+| `/dashboard/settings` | settings.*.manage · **ثلاثُ خرائط** | 200 | 200 | PARITY_OK — **الخرائطُ تعمل** |
+| `/dashboard/account` | (حسابُ صاحبها) | 200 | 200 | PARITY_OK |
+| `/dashboard/notifications` | (صندوقُ صاحبها) | 200 | 200 | PARITY_OK |
+| `/adminrahalgo` | عامّةٌ — بابُ الدخول | 200 | 200 | PARITY_OK |
 
-| الصفحة | القدرة | الإنتاج | التجهيز | الصنف | الحال |
-|---|---|---|---|---|---|
-| `/dashboard` | analytics.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/orders` | orders.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/history` | orders.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/users` | users.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/users/[id]` | (تفصيل) finance.read · roles.manage | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/roles` | roles.manage | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/sections` | content.manage | 200 | 200 | **عقدٌ مختلف** | ⛔ §٥ |
-| `/dashboard/sections/[id]` | (تفصيل) | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/merchants/[id]` | (تفصيل) · **منتقي الموقع** | 200 | 200 | **الخريطةُ معطّلةٌ في التجهيز** | ⛔ G1 |
-| `/dashboard/merchants/[id]/menu` | (تفصيل) | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/tickets` | support.manage | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/emergencies` | support.manage | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/leads` | merchants.verify | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/opsmap` | orders.read · **خريطة** | 200 | 200 | **الخريطةُ معطّلةٌ في التجهيز** | ⛔ G1 |
-| `/dashboard/wallet` | finance.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/expenses` | finance.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/profits` | finance.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/cash` | finance.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/losses` | finance.read · support.manage | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/payouts` | finance.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/audit` | audit.read | 200 | 200 | **تسميةُ فعلٍ غائبةٌ في الإنتاج** | ⛔ §٥ |
-| `/dashboard/reports` | analytics.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/incentives` | finance.read | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/promos` | content.manage | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/ops` | observability.read | 200 | 200 | ENVIRONMENT_ONLY (اسمُ البيئة) | ✅ |
-| `/dashboard/settings` | settings.*.manage · **المدنُ والمناطقُ خريطة** | 200 | 200 | **خريطتا المدن والمناطق معطّلتان** | ⛔ G1 |
-| `/dashboard/account` | (حسابُ صاحبها) | 200 | 200 | PARITY_OK | ✅ |
-| `/dashboard/notifications` | (صندوقُ صاحبها) | 200 | 200 | PARITY_OK | ✅ |
-| `/adminrahalgo` | عامّةٌ — بابُ الدخول | 200 | 200 | PARITY_OK | ✅ |
-
-**والسبعُ التي ليست في التنقّل صفحاتُ تفصيلٍ يُنزَل إليها** — لا صفحاتٌ
-مخبوءة: تفصيلُ المستخدم والمتجر وقائمتِه والقسم، وحسابُ صاحبها وصندوقُه،
-وبابُ الدخول.
+> **تصحيح:** **كتبتُ في التدقيق الأوّل أنّ منتقي موقع المتجر في
+> `/dashboard/merchants/[id]`** — **وليس فيها خريطةٌ أصلاً.** **المنتقي في
+> `MerchantModal`**، يُفتح من `/dashboard/users` (متجرٌ جديد) ومن
+> `/dashboard/users/[id]` (تعديلُ متجر). **والعددُ لم يتغيّر** — صفحةٌ
+> واحدةٌ عُدّت معطّلةً في الحالين — **لكنّ النسبةَ كانت خطأ.**
 
 ---
 
-# ٥ · الفروقُ الحقيقيّة
+# ٥ · G1 — خرائطُ لوحة التجهيز (أُصلح)
 
-## ما يلزمه قرارُ المالك — تعارضٌ مع عقدٍ مغلق
+## قرارُ المالك
 
-### G1 · خرائطُ لوحة التجهيز معطّلة
+**خرائطُ خاصّةٌ بالتجهيز** — **ولا يُخرَج `maps.rahalgo.com` من مضيفات
+الإنتاج، ولا يُضعَف `envguard`، ولا تُقبَل لوحةٌ بلا خرائط، ولا يُشار إلى
+مضيف إنتاج.**
 
-**`mapStyleUrl` فارغٌ في التجهيز** ⇒ `resolveMapSource` يردّ `missing`
-**ولا يرتدّ إلى مصدرٍ عامّ** (عمداً) ⇒ **أربعُ أدواتٍ معطّلة**: خريطةُ
-العمليات · مدنُ الإعدادات · مناطقُ التغطية · منتقي موقع المتجر. **وهي في
-الإنتاج تعمل.**
+## المانعُ الخارجيّ — ولماذا مسارٌ لا مضيف
 
-	الصنف = CONFLICTS_WITH_CLOSED_CONTRACT
+**لا سجلَّ DNS** لـ`staging-maps.rahalgo.com` ولا لـ`maps-staging.rahalgo.com`
+(قِيس). **وإنشاؤه بيد المالك في لوحة النطاق.**
 
-**والعقدُ الذي يمنع أبسطَ إصلاح**:
+**فخُدمت الخرائطُ من مضيف التجهيز القائم** — `staging-api.rahalgo.com/maps/`
+— **وهو يحقّق القرار كلَّه**: مضيفٌ للتجهيز وحدَه، **ونسخةٌ مستقلّةٌ من
+الآثار**، **ولا يمرّ شيءٌ بمضيف الإنتاج.** **ومن أراد اسماً مستقلّاً لاحقاً
+أضاف سجلَّ DNS وبدّل `STAGING_MAP_STYLE_URL` وحدَه.**
 
-	envguard.ProductionHosts ∋ "maps.rahalgo.com"
-	«والقائمةُ تُوسَّع ولا تُقصَّر»
-	TestStagingConfigNeverNamesProduction — التجهيزُ لا يسمّي مضيفَ إنتاج
+## ما بُني
 
-> **تصحيح:** **ملأتُ النمطَ بنمط الإنتاج أوّلاً وعددتُه إصلاحاً، ونشرتُه
-> على التجهيز** — **فأسقطه هذا الحارسُ في الفحص الكامل، وهو محقّ.**
-> **فأعدتُه فارغاً في المستودع وعلى الخادم**، وكتبتُ سببَ الفراغ في
-> التركيب حتّى لا يُكرَّر.
-
-**والتعارضُ حقيقيّ**: **التكافؤُ يطلب خرائطَ في لوحة التجهيز، والعقدُ
-يمنع خرائطَ الإنتاج عنها** — **ولا خادمَ خرائطَ للتجهيز.**
-
-**وخياراتُ المالك:**
-
-| الخيار | الأثر |
+| الملفّ | ما فيه |
 |---|---|
-| **أ · خادمُ خرائطَ للتجهيز** (مثلاً `staging-maps.rahalgo.com`) | **يحفظ العقدين** · يلزمه تجهيزُ بنية |
-| ب · إخراجُ `maps.rahalgo.com` من مضيفات الإنتاج | يُضعف حارساً «يُوسَّع ولا يُقصَّر» |
-| ج · قبولُ لوحةٍ بلا خرائط في التجهيز | يُسقط شرطَ التكافؤ الكامل |
+| `deploy/staging/maps-sync.sh` | ينسخ الآثارَ من `/srv/rahalgo/maps` إلى `/srv/rahalgo-staging/maps` **ويُعيد كتابةَ نمط التجهيز** إلى مضيفه · **ويسقط إن بقي `maps.rahalgo.com` في أيّ ملفّ** · ويرفض أن يكون الهدفُ داخلَ المصدر |
+| `deploy/staging/Caddyfile.staging` | `handle_path /maps/*` — **قائمةٌ بيضاء** (manifest · base · regions · map-resources · style · sprite) **وما عداها 404** |
+| `deploy/staging/compose.staging.yml` | حاملُ الآثار **للقراءة فقط** (`:/srv/maps:ro`) · ونمطُ الويب على مضيف التجهيز |
 
-**وملاحظةٌ للمالك**: **تطبيقاتُ الجوّال في التجهيز تشير إلى
-`maps.rahalgo.com` أصلاً** (`MAPS_BASE_URL` في بناء `debug`) — **والحارسُ
-لا يقرأ إعدادَ بناء الجوّال.** **فالعقدُ مطبَّقٌ على الويب وحدَه.**
+	نسخةُ التجهيز            = 835M · مستقلّةٌ عن نسخة الإنتاج
+	نمطُ التجهيز             = 0 إشارةٍ إلى maps.rahalgo.com
+	نمطُ الإنتاج             = 3 إشارات — لم يُمَسّ
 
-## ما أُصلح — في يد التجهيز
+## البرهانُ التشغيليّ — متصفّحٌ حقيقيّ · دخولٌ فعليّ
 
-| # | الفرق | الصنف | الإصلاح | الدليل |
-|---|---|---|---|---|
-| **G2** | **ويبُ التجهيز `2df3e5ed` ومحرّكُه `68a45c97`** — المحرّكُ يردّ `section_has_items` والويبُ لا يعرف نصَّه | EXISTS_BUT_INCOMPLETE | نُشر ويبُ التجهيز من `68a45c97` | النصُّ في الحزمة (٢ ملفّ) · ٢٩/٢٩ صفحة ٢٠٠ |
-| **G3** | **ملفُّ التركيب على الخادم شاخ عن المستودع** — ما زال فيه `http://localhost:8080` الذي أصلحه `43a8d9a9` · **ويستره ملفُّ البيئة** | EXISTS_BUT_WRONG | نُسخ تركيبُ المستودع إلى الخادم (بنسخةٍ احتياطيّة) | `/srv/backups/compose.staging.pre-parity-20260918T211055Z.yml` |
+**HTTPS:** النمط 200 · الرموز 200 · الفهرس 200 · الخطوط (`RahalGo Regular|Bold`) 200
+· البلاطات (Range) **206** · مسارٌ خارجَ القائمة **404**.
 
-## ما لم يُصلَح — يلزمه نشرُ إنتاج (**غيرُ مأذون**)
+| الخريطة | الموضع | لوحة | بلاطات | بعد التكبير | نداءاتُ الإنتاج |
+|---|---|---|---|---|---|
+| خريطةُ العمليات | `/dashboard/opsmap` | 1 | 11 | **+25** | **0** |
+| المدن | الإعدادات ← المدن | 1 | 9 | **+20** | **0** |
+| مناطقُ التغطية | الإعدادات ← مناطق التغطية | 1 | 9 | **+22** | **0** |
+| موقعُ المتجر | `/dashboard/users` ← متجر جديد | 1 | 5 | **+9** | **0** |
+| موقعُ المكتب | الإعدادات ← إعدادات الموقع ← صفحات الموقع ← تواصل معنا | 1 | 13 | **+6** | **0** |
 
-**سببٌ واحد: الإنتاجُ على `79d88245`.** **وآثارُه أربعة:**
+**ولا حفظَ في شيءٍ منها** — نافذةُ المتجر أُغلقت بلا حفظ، والمتاجرُ ٢ قبلها
+و٢ بعدها.
 
-| # | الفرق | الإنتاج | التجهيز | الصنف |
-|---|---|---|---|---|
-| **G4** | حذفُ قسمٍ مشغول | **٥٠٠** (العيبُ القديم) | ٤٠٩ `section_has_items` | PRIMARY_MISSING |
-| **G5** | إيقافُ المنصّة | **لا سطرَ تدقيق** | `admin.platform_closure` | PRIMARY_MISSING |
-| **G6** | تسميةُ ذلك الفعل في سجلّ التدقيق | غائبة | موجودة | PRIMARY_MISSING |
-| **G7** | الهجرتان ٠١٥٦ و٠١٥٧ | `0155` · `SET NULL` | `0157` · `RESTRICT` | PRIMARY_MISSING |
+**والخمسُ هي كلُّ خرائط اللوحة** — `OpsMapCanvas` و`ZonesMap` (المدن
+والمناطق) و`PickMap` (المتجر والمكتب). **ولا مستهلكَ سادس** (بحثٌ في
+`apps/rahalgo/src`).
 
-**والإصلاحُ نشرُ إصدارِ التجهيز إلى الإنتاج** — **وقبله: فحصُ ٠١٥٧ على
-الإنتاج قد مرّ** (صفرُ صنفٍ بلا قسم، ٢٠٢٦-٠٩-١٨).
+> **وخريطةُ `/contact` في الموقع العامّ لا تُرسم في التجهيز** — **لأنّ
+> `platform.location` فارغٌ فيه** (DATA_ONLY، §٦). **وليست من اللوحة.**
+
+## الحرّاس
+
+	TestStagingMapsAreServedFromStagingItself   نمطُ التجهيز على مضيف التجهيز · يمرّ بـ/maps/
+	                                            وكتلةُ Caddy · وحاملُ القراءة · وأداةُ النسخ
+	TestStagingConfigNeverNamesProduction       (envguard — لم يُمَسّ)
+
+**والشاهدُ السالب**: جُعل نمطُ التجهيز `https://maps.rahalgo.com/...`
+مؤقّتاً ⇒ **سقط الحارسان كلاهما** (`deploycheck` و`envguard`) ⇒ أُعيد
+الملفُّ بالبصمة نفسِها.
 
 ---
 
-# ٦ · قيمُ الإعدادات — ٥٣ فرقاً
+# ٦ · قيمُ الإعدادات — من ٥٣ فرقاً إلى ٢٤
 
-**والأداةُ واحدةٌ في اللوحتين — والقيمةُ قرارُ مشغّل.** **ولا تُسوّى
-صامتةً** (شرطُ المالك).
+## ٦·١ · قرارُ المالك وتصنيفُه
 
-## ٦·١ · ENVIRONMENT_ONLY — الإطلاق — ٦
-
-**الإنتاجُ قبلَ الافتتاح والتجهيزُ مفتوحٌ لقبول `P-8`** — مقصود.
-
-	launch.customer_browse · customer_custom_orders · customer_orders
-	launch.customer_signup · driver_work · merchant_orders
-	الإنتاج = false · التجهيز = true
-
-## ٦·٢ · DATA_ONLY — الهويّةُ والمحتوى — ١٦
-
-**اسمُ المنصّة وشعارُها وصورتُها وعنوانُها وهاتفُها وحساباتُها ونصوصُ
-الصفحات الأربع** — **فارغةٌ في التجهيز أو مختلفة.**
-
-	platform.name · logo · background · background_dim · address · location
-	platform.facebook · whatsapp · support_phone
-	page.about_text · help_text · privacy_text · terms_text
-	auth.background_dim · home.banner_seconds · whatsapp.otp_template
-
-## ٦·٣ · POLICY — **تغيّر السلوك** — ٣١ — **قرارُ المالك**
-
-**وهذه ليست بياناتٍ محايدة**: **أيُّ اختبارٍ على التجهيز يجري بسياسةٍ
-غيرِ سياسة الإنتاج.**
-
-### المالُ والحوافز — ٢١ · **كلُّها صفرٌ في التجهيز**
-
-| المفتاح | الإنتاج | التجهيز |
+| الصنف | العدد | المعنى |
 |---|---|---|
-| `delivery.fee` | 100 | 0 |
-| `pricing.margin_fixed` | 50 | 0 |
-| `merchants.commission_percent` | 10 | 0 |
-| `merchants.return_support_percent` | 20 | 0 |
-| `sales.commission_percent` | 10 | 0 |
-| `customers.signup_bonus` | 15 | 0 |
-| `referral.reward_1` · `_2` · `_3` · `_rest` | 30 · 20 · 10 · 5 | 0 |
-| `drivers.monthly_target` · `target_2` · `target_3` · `target_reward` | 50 · 100 · 200 · 200 | 0 |
-| `drivers.reward_2` · `reward_3` | 400 · 700 | 0 |
-| `sales.target_2` · `target_3` · `target_reward` | 15 · 25 · 200 | 0 |
-| `sales.reward_2` · `reward_3` | 400 · 600 | 0 |
+| **A · PRODUCT_POLICY_MUST_MATCH** | **29** | يجب أن يطابق الإنتاج — **سُوّي** |
+| **B · INTENTIONAL_LAUNCH_DIFFERENCE** | **2** | `site.show_login` · `site.show_shop` — **الإنتاجُ قبلَ الافتتاح** (قرارُ ٢٠٢٦-٠٨-١٧) · يبقى |
+| C · ENVIRONMENT_PROVIDER_DIFFERENCE | 0 | — |
+| D · DATA_CONTENT_DIFFERENCE | 0 | (المحتوى الستّةَ عشر مصنَّفٌ DATA_ONLY منذ التدقيق الأوّل) |
+| E · REQUIRES_OWNER_DECISION | 0 | — |
 
-**وأثرُه على `P-8`**: **موجةُ المال على التجهيز تختبر عمولةً وهامشاً
-وأجرةً صفريّة** — **فلا تُثبت اقتصادَ الإنتاج.**
+## ٦·٢ · التسوية — بباب اللوحة لا بـSQL
 
-### الهويّةُ والتحقّق — ٥
+**`PUT /api/v1/admin/settings/{key}`** بحساب المالك على التجهيز. **وستّةَ
+عشرَ مفتاحاً ماليّاً طلبت إثباتَ الهويّة (Step-Up) فأُعطي** — **ولم
+يُتجاوَز.**
 
-| المفتاح | الإنتاج | التجهيز |
+	طُبّق              = 29 / 29
+	قيس في القاعدة     = 29 / 29 تساوي الإنتاج
+	سجلُّ التدقيق      = 606 ⇐ 636 — 29 admin.setting_update + دخولٌ واحد
+	نسخةٌ قبل التبديل  = لكلّ صفّ (27 كانت على الافتراض · 2 مخزَّنة)
+
+| المفتاح | التجهيز قبل | التجهيز بعد = الإنتاج |
 |---|---|---|
-| `auth.otp_login` | false | **true** |
-| `auth.signup_verify` | **true** | false |
-| `auth.require_whatsapp` | false | **true** |
-| `drivers.require_whatsapp` | false | **true** |
-| `sales.require_whatsapp` | false | **true** |
+| `customers.signup_bonus` | 0 | 15 |
+| `delivery.fee` | 0 | 100 |
+| `pricing.margin_fixed` | 0 | 50 |
+| `merchants.commission_percent` | 0 | 10 |
+| `merchants.return_support_percent` | 0 | 20 |
+| `sales.commission_percent` | 0 | 10 |
+| `referral.reward_1` · `_2` · `_3` · `_rest` | 0 | 30 · 20 · 10 · 5 |
+| `drivers.monthly_target` · `target_2` · `target_3` · `target_reward` | 0 | 50 · 100 · 200 · 200 |
+| `drivers.reward_2` · `reward_3` | 0 | 400 · 700 |
+| `sales.target_2` · `target_3` · `target_reward` | 0 | 15 · 25 · 200 |
+| `sales.reward_2` · `reward_3` | 0 | 400 · 600 |
+| `auth.otp_login` | true | **false** |
+| `auth.signup_verify` | false | **true** |
+| `auth.require_whatsapp` | true | **false** |
+| `drivers.require_whatsapp` | true | **false** |
+| `sales.require_whatsapp` | true | **false** |
+| `customers.max_addresses` | 10 | 4 |
+| `orders.max_sources` | 2 | 1 |
+| `shop.rail_auto` | true | false |
 
-**وأثرُه على `C2`**: **الدخولُ والتسجيلُ يجريان في التجهيز بغير طريقة
-الإنتاج.**
+## ٦·٣ · ما لم يُمَسّ — وقيس
 
-### حدودُ الاستعمال والعرض — ٥
+	الطلب #1050        = on_the_way · delivery_fee 0 · platform_commission 2100
+	                     · snap_merchant 0 · snap_rep 0 · pricing_margin · 21000
+	                     — **قبل التسوية وبعدها حرفاً** (الطلبُ القائم يحمل لقطتَه)
+	المحافظ            = 4 حركات · مجموعُ الأرصدة 0 — قبل وبعد
+	الطلبات            = 1 — قبل وبعد
+	moneycheck         = 51 فحصاً · 0 خرق (على قاعدة التجهيز بعد التسوية)
+	أعلامُ الإطلاق     = لم تُمَسّ في البيئتين
+	site.show_login · site.show_shop = لم يُمَسّا (B)
 
-| المفتاح | الإنتاج | التجهيز |
-|---|---|---|
-| `customers.max_addresses` | 4 | 10 |
-| `orders.max_sources` | 1 | 2 |
-| `shop.rail_auto` | false | true |
-| `site.show_login` | false | true |
-| `site.show_shop` | false | true |
+## ٦·٤ · التحقّق — مزوّدُ الرموز
+
+**السياسةُ صارت سياسةَ الإنتاج** — **والمزوّدُ آمنٌ للتجهيز:**
+
+	التجهيز  OTP_PROVIDER = dev  (الرمزُ يُكتب في سجلّ التجهيز · لا يصل أحداً)
+	الإنتاج  OTP_PROVIDER = مزوّدُه (٨ أحرف) — **لم يُنسخ إلى التجهيز**
+	SMS_URL · SMS_OTP_URL = فارغان في البيئتين
+
+**و`auth.signup_verify = true` يعني**: التسجيلُ في التجهيز يطلب رمزاً، **والرمزُ
+في سجلّ خادم التجهيز.** **ومن اختبر التسجيلَ (`C2`) يقرؤه من هناك.**
+
+## ٦·٥ · الفروقُ الباقية — ٢٤ · كلُّها مقصودة
+
+	ENVIRONMENT_ONLY — الإطلاق (6)
+	    launch.customer_browse · customer_custom_orders · customer_orders
+	    launch.customer_signup · driver_work · merchant_orders
+	    الإنتاج = false · التجهيز = true   (الإنتاجُ قبلَ الافتتاح)
+
+	ENVIRONMENT_ONLY — B (2)
+	    site.show_login · site.show_shop    الإنتاج = false · التجهيز = true
+
+	DATA_ONLY — الهويّةُ والمحتوى (16)
+	    platform.name · logo · background · background_dim · address · location
+	    platform.facebook · whatsapp · support_phone
+	    page.about_text · help_text · privacy_text · terms_text
+	    auth.background_dim · home.banner_seconds · whatsapp.otp_template
 
 ---
 
 # ٧ · الحرّاسُ الدائمة
 
 	backend/internal/deploycheck/admin_parity_test.go
-	  TestAdminRuntimeConfigSurfaceMatches                   المفاتيحُ نفسُها
-	  TestAdminRuntimeConfigHasNoEmptyDefault                لا فراغَ يعطّل
+	  TestAdminRuntimeConfigSurfaceMatches                     المفاتيحُ نفسُها
+	  TestAdminRuntimeConfigHasNoEmptyDefault                  لا فراغَ يعطّل — ولا استثناءَ بعد G1
 	  TestAdminRuntimeConfigMatchesProductionExceptEnvironment ما لا يخصّ البيئةَ يطابق
+	  TestStagingMapsAreServedFromStagingItself                خرائطُ التجهيز من التجهيز
 
-**والحارسُ يعرف العقدَ المغلق**: **نمطُ الخريطة من مفاتيح البيئة**، **وفراغُه
-استثناءٌ مُسمّىً في `knownEmptyInStaging`** — **وكلُّ فراغٍ غيرِه يُسقطه،
-ومن ملأ النمطَ ولم يحذف الاستثناءَ أسقطه أيضاً.**
-
-**والشاهدُ السالب**: **جُعل `API_INTERNAL_URL` فارغاً ومختلفاً عن الإنتاج
-مؤقّتاً فسقط اثنان من ثلاثة** — `HasNoEmptyDefault` و`MatchesProduction…`.
-**وعلى التركيب الحاليّ: ٣/٣، ومعها حرّاسُ التركيب الخمسةُ و`envguard`.**
-
-**وما لا يُحرَس بفحصِ وحدةٍ ولماذا:**
+**و`knownEmptyInStaging` صار فارغاً** — **فأيُّ فراغٍ في تهيئة ويب التجهيز
+يُسقط الحارس.**
 
 | البُعد | ولماذا لا حارسَ وحدة |
 |---|---|
-| مفاتيحُ الإعدادات | **فهرسٌ واحدٌ في الشيفرة** — لا يفترق إلّا بنسخة |
-| سجلُّ الأبواب والتنقّل | **ملفٌّ واحد** (`server.go` · `layout.tsx`) — كذلك |
-| الأدوارُ في القاعدة | **يلزمه اتّصالٌ بالقاعدتين** — يُقاس في التدقيق لا في البناء |
-| القيم | **قرارُ مشغّل** — وحارسٌ يفرض قيمةً يسوّيها صامتاً |
+| قيمُ الإعدادات | **في القاعدة لا في الشيفرة** — تُقاس في التدقيق (§٦) |
+| الأدوارُ في القاعدة | يلزمه اتّصالٌ بالقاعدتين |
 
 ---
 
-# ٨ · حالُ التجهيز بعد التدقيق
+# ٨ · حالُ التجهيز بعد القرارات
 
-	ويبُ اللوحة  = release-68a45c97  (كان 2df3e5ed)
-	المحرّك      = release-68a45c97  (لم يُمَسّ)
-	التركيب      = مطابقٌ للمستودع    (نسخةٌ احتياطيّة قبله)
-	نمطُ الخريطة = فارغ               (كما كان · والسببُ مكتوب)
-	الإعدادات    = لم تُمَسّ          (قرارُ المالك)
-	البيانات     = لم تُمَسّ          · #1050 on_the_way
-	الإنتاج      = لم يُمَسّ          · release-79d88245 · 0155
+	ويبُ اللوحة  = release-68a45c97
+	المحرّك      = release-68a45c97 · 0157
+	التركيب      = مطابقٌ للمستودع حرفاً (compose · Caddyfile · maps-sync)
+	الخرائط      = /srv/rahalgo-staging/maps (835M) · تعمل في الخمس
+	الإعدادات    = 29 سُوّيت · 2 بقيت (B)
+	البيانات     = #1050 on_the_way · لقطتُه لم تتبدّل · moneycheck 51/51
+	الإنتاج      = لم يُمَسّ · release-79d88245 · 0155
+
+---
+
+# ٩ · الفحصُ المسبق لنشر الإنتاج — **لا نشر**
+
+> **قرارُ المالك الثالث**: «PRODUCTION PARITY DEPLOYMENT PREFLIGHT —
+> DO NOT DEPLOY.» **والإنتاجُ قُرئ فقط** (`BEGIN READ ONLY … ROLLBACK`).
+
+## ٩·١ · الهدف
+
+	الإنتاجُ الآن     = 79d88245e7c238f92abf661531738a242bb4fa2b · 0155_campaigns.sql
+	الهدفُ المقترح    = 68a45c97f18c350344949bc252947d98273a2241 · 0157_section_delete_contract.sql
+	المحرّك          = rahalgo-api:release-68a45c97
+	                   sha256:e6bb3dfbc48edeba0e28b488d098e11b2d2e80067bc60fde21e005e6e7e06afe
+	الويب            = rahalgo-web:release-68a45c97
+	                   sha256:3a3e569d960541511fed20dbabcc53e355edba583a0fa6cfe8db4e3d4d84d129
+
+**ولماذا `68a45c97` لا `HEAD`**: **ما بعده لا يمسّ شيفرةَ المحرّك ولا
+الويب** (وثائق · أندرويد · حارسٌ · تهيئةُ تجهيز). **وصورتاه هما ما يعمل
+في التجهيز الآن وعليهما قِيس كلُّ شيء** — **فيُرقّى الأثرُ عينُه ولا
+يُبنى غيرُه** (`promote.sh`). **والصورتان لهما ملفّا إصدارٍ على الخادم
+بالبصمة نفسِها** (`/srv/rahalgo/artifacts/release-{api,web}-68a45c97.json`).
+
+## ٩·٢ · الفرق — ١٥ التزاماً · كلُّ ملفٍّ مصنَّف
+
+**من `79d88245` إلى `68a45c97`:**
+
+| الصنف | الملفّات | الأثرُ على الإنتاج |
+|---|---|---|
+| **محرّك — تشغيل** | `server/admin_sections_handlers.go` | حذفُ قسمٍ مشغول ⇒ **409** بدل 500 (G4) |
+| | `server/platform_hours_handlers.go` | إيقافُ المنصّة **يُكتب في التدقيق** (G5) |
+| | `server/sections_handlers.go` | **`count` في أقسام الزبون صار «وجودَ محتوى»** لا «مفتوحٌ الآن» · وحقلٌ جديد `orderable_now` — **قرارُ المالك ٢٠٢٦-٠٩-١٦** |
+| | `catalog/catalog.go` · `catalog/citysql.go` | مدينةُ المتجر تُشتقّ بتعبيرٍ واحد · **وتُعاد حين يتبدّل موقعُه** |
+| **هجرات** | `0156_launch_sections.sql` · `0157_section_delete_contract.sql` | §٩·٣ |
+| **ويب** | `i18n/ar.json` (+٢ سطر) | نصُّ `section_has_items` · تسميةُ `admin.platform_closure` (G6) |
+| **أداةٌ لا تُشحن** | `cmd/seed/*` | **الصورةُ تبني `./cmd/api` وحدَه** (`backend/Dockerfile`) |
+| | `impact/model.go` · `web/scripts/check-app-error-codes.mjs` | أدواتُ فحص |
+| **اختبارات** | `qa/*` · `server/*_test.go` · `catalog/*_test.go` · `deploycheck` · `envguard` · `truthdoc` · `impact_test.go` | لا تُشحن |
+| **أندرويد وحدَه** | `mobile/*` | لا يمسّ الخادم |
+| **وثائق** | `docs/*` · `artifacts/*` · `CLAUDE.md` | لا يمسّ الخادم |
+| **تهيئةُ التجهيز** | `deploy/staging/*` | **لا يمسّ الإنتاج** |
+
+**ولا تبديلَ في**: `deploy/compose.yml` (**والذي على الخادم يطابق المستودع
+حرفاً** — قِيس) · `deploy/Caddyfile` · `server/server.go` · `settings/` ·
+`authz/` · `ledger` · `orders/`.
+
+**وأثرٌ يُقال للمالك**: **تغييرُ `count`** يصل تطبيقاتِ الزبون المثبّتة —
+**القسمُ الذي متاجرُه مغلقةٌ بالساعة يبقى ظاهراً** بدل أن يختفي. **وهو ما
+قرّره المالك** — **والإنتاجُ الآن بلا متاجرَ ولا أصناف، فلا أثرَ على بيانات.**
+
+## ٩·٣ · الهجرتان على بيانات الإنتاج — محاكاةٌ للقراءة
+
+	platform_sections         = 38 · فعّالةٌ 38
+	0156 · يُدرج             = 0   (الأسماءُ الثمانيةُ والثلاثون موجودة)
+	0156 · يُبدّل أيقونةً/ترتيباً = 0
+	0156 · يُطفئ             = 0   (لا قسمَ من الستّة القديمة فعّال)
+	0156 · أسماءٌ فعّالةٌ مكرّرة = 0   (شرطُ الفهرس الفريد)
+	0156 · أقسامٌ أضافها المالك = 0   (لا يمسّها أصلاً)
+	0157 · menu_items         = 0 · بلا قسم 0 · يتيمة 0
+	0157 · المفتاحُ الآن       = n (SET NULL) ⇐ r (RESTRICT)
+	merchants · store_sections · orders = 0 · 0 · 0
+
+**فالهجرتان على الإنتاج**: **فهرسٌ واحدٌ يُنشأ ومفتاحٌ يُعاد تعريفُه على
+جدولٍ فارغ.** **لا صفَّ يُكتب فوقه ولا صفَّ يُحذف.**
+
+**وكلُّ هجرةٍ في معاملتها** (`migrate.Up`) — **فإن سقطت لم يبقَ منها شيء
+ولم يُقلع المحرّك.**
+
+**وسلسلةٌ قائمةٌ لا تُضيفها الهجرتان**: `store_sections → platform_sections`
+**CASCADE** — **قديمة**، و`store_sections` في الإنتاج **صفر.** تُذكر ولا تُعدَّل.
+
+## ٩·٤ · التراجع
+
+**بالصورة لا بالقاعدة:**
+
+	promote.sh ... rahalgo-api:release-79d88245   (sha256:187053aedeb3…)
+	RAHALGO_WEB_IMAGE=rahalgo-web:release-79d88245 (sha256:ddebbc60e2a6…)
+
+**والمحرّكُ القديم يُقلع على قاعدةٍ في `0157`** — `migrate.Up` **يطبّق
+الناقصَ من ملفّاته ولا يسأل عن زائد.** **والمخطّطُ الزائدُ لا يضرّه**:
+فهرسٌ فريدٌ على أسماءٍ فريدةٍ أصلاً، ومفتاحٌ `RESTRICT` كان حذفُه يسقط
+بـ500 قبلَه.
+
+**وإن لزم إرجاعُ المخطّط نفسِه** (لا يُتوقَّع): **الاستعادةُ من النسخة
+المأخوذة قبل النشر** (§٩·٥).
+
+**ونقصٌ يُسدّ قبل النشر**: صورتا `79d88245` **في مخزن الصور بوسمهما**
+**لكن بلا أرشيفٍ ولا ملفِّ إصدارٍ في `artifacts/`** — **فيُحفظان أرشيفاً
+قبل النشر** كي لا يعتمد التراجعُ على بقاء الوسم.
+
+## ٩·٥ · النسخُ الاحتياطيّ — قبل أيّ تبديل
+
+	١ · pg_dump -Fc لقاعدة الإنتاج ⇐ /srv/rahalgo/backups/rahalgo-pre68a45c97-<UTC>.dump
+	    (آخرُ نسختين: 16 أيلول · 2.6MB و2.7MB · المساحةُ الحرّة على / 18G)
+	٢ · docker save rahalgo-{api,web}:release-79d88245 ⇐ artifacts/ + sha256
+	٣ · نسخةٌ من /srv/rahalgo/deploy/Caddyfile — وإن لم يُمَسّ
+
+## ٩·٦ · الترتيبُ المقترح
+
+	١ · النسخُ الاحتياطيّ (§٩·٥)
+	٢ · المحرّك: TARGET_ENV=production promote.sh ... rahalgo-api:release-68a45c97
+	    https://api.rahalgo.com/api/v1/public/identity sha256:e6bb3dfb…
+	    (الهجرتان تُطبَّقان عند الإقلاع)
+	٣ · فحوصُ المحرّك (§٩·٧) — وإن سقط واحدٌ: التراجعُ فوراً
+	٤ · الويب: RAHALGO_WEB_IMAGE=rahalgo-web:release-68a45c97
+	    docker compose ... up -d --no-build --no-deps web
+	٥ · فحوصُ الويب
+
+**المحرّكُ قبل الويب** — **الويبُ الجديدُ لا يطلب شيئاً من المحرّك
+القديم**، والعكسُ ينتج نافذةً قصيرةً يُرى فيها مفتاحُ الخطأ خاماً.
+
+## ٩·٧ · فحوصُ ما بعد النشر
+
+| # | الفحص | المنتظَر |
+|---|---|---|
+| 1 | `/api/v1/public/identity` | production · `68a45c97…` · `0157_section_delete_contract.sql` |
+| 2 | سجلُّ المحرّك | `migrations applied count=2` · ولا `migrate:` خطأ |
+| 3 | قراءة: `platform_sections` | 38 · فعّالةٌ 38 · البصمةُ `b4a77017…` |
+| 4 | قراءة: الفهرسُ والمفتاح | `platform_sections_active_name_uq` موجود · `confdeltype = r` |
+| 5 | قراءة: `app_settings` | **بصمتُها قبل النشر = بعده** (أعلامُ الإطلاق خصوصاً) |
+| 6 | `moneycheck` على الإنتاج | 51/51 |
+| 7 | أبوابُ الإدارة للقراءة (86) بلا توثيق | 401 كلُّها |
+| 8 | صفحاتُ اللوحة (29) | 200 كلُّها |
+| 9 | `https://rahalgo.com/config.js` | `apiUrl = https://api.rahalgo.com` · `mapStyleUrl = maps.rahalgo.com/...` |
+| 10 | `maps.rahalgo.com/.../style.online.json` | 200 |
+| 11 | `staging-api.rahalgo.com/api/v1/public/identity` | staging — **التجهيزُ لم ينقطع** |
+| 12 | `GET /api/v1/public/sections` | 200 · فيه `orderable_now` (قبل النشر: 200 بلا هذا الحقل — قِيس) |
+| 13 | بيدِ المالك في اللوحة | الدخول · الأقسام · سجلُّ التدقيق يسمّي `admin.platform_closure` |
+
+**ولا يُرسَل إلى الإنتاج فعلُ كتابةٍ للفحص** — **الحذفُ ٤٠٩ مثبتٌ في
+التجهيز وفي الاختبار** (`admin_section_delete_test.go`).
+
+## ٩·٨ · خطرٌ قائمٌ لا يمسّه هذا النشر
+
+**`Caddyfile` الإنتاج على الخادم = ما في المستودع + كتلةُ `staging-api.rahalgo.com`**
+(تُمرّر إلى بوّابة التجهيز). **وهي ليست في المستودع.** **فمن نسخ
+`deploy/Caddyfile` من المستودع فوق الخادم قطع التجهيزَ كلَّه** — لا الإنتاج.
+**والنشرُ المقترحُ لا يمسّ Caddy.** **وإدخالُها المستودعَ قرارٌ للمالك.**

@@ -44,6 +44,9 @@ services:
       - "8443:443"
     volumes:
       - ./Caddyfile.staging:/etc/caddy/Caddyfile:ro
+      # **وآثارُ خرائط التجهيز** — نسخةٌ مستقلّةٌ لا حاملُ الإنتاج
+      # (`maps-sync.sh`). **وللقراءة وحدَها.**
+      - ${STAGING_MAPS_DIR:-/srv/rahalgo-staging/maps}:/srv/maps:ro
       - caddy_data:/data
       - caddy_config:/config
     # ══════════════════════════════════════════════════════════════════
@@ -212,20 +215,21 @@ services:
       RAHALGO_SITE_URL: ${STAGING_SITE_URL:-https://staging-api.rahalgo.com}
       RAHALGO_ENVIRONMENT: staging
       # ══════════════════════════════════════════════════════════════
-      # **ونمطُ الخريطة فارغٌ عمداً — ولوحةُ التجهيز بلا خرائطَ لذلك**
+      # **ونمطُ الخريطة من خرائط التجهيز نفسِه** (قرارُ المالك ٢٠٢٦-٠٩-١٩)
       # ══════════════════════════════════════════════════════════════
       #
-      # (تدقيقُ التكافؤ ٢٠٢٦-٠٩-١٩ · `ADMIN-STAGING-PRIMARY-PARITY.md` §٥.)
+      # (تدقيقُ التكافؤ · `ADMIN-STAGING-PRIMARY-PARITY.md` G1.)
       #
-      # **`maps.rahalgo.com` مضيفُ إنتاج** (`envguard.ProductionHosts`)
-      # **والتجهيزُ لا يسمّي مضيفَ إنتاج** (`TestStagingConfigNeverNamesProduction`).
-      # **و`resolveMapSource` لا يرتدّ إلى مصدرٍ عامّ** — **فالفارغُ يُعطّل
-      # خرائطَ اللوحة كلَّها**: خريطةُ العمليات ومدنُ الإعدادات ومناطقُها
-      # ومنتقي موقع المتجر.
+      # **وكان فارغاً** — **و`resolveMapSource` لا يرتدّ إلى مصدرٍ عامّ**،
+      # **فكانت خرائطُ اللوحة كلُّها معطّلة**: خريطةُ العمليات ومدنُ
+      # الإعدادات ومناطقُها ومنتقي موقع المتجر.
       #
-      # **وحاولتُ ملأَه بنمط الإنتاج فأسقطه الحارسُ — وهو محقّ.**
-      # **والحلُّ خادمُ خرائطَ للتجهيز** — **قرارُ المالك، ولم يُتّخَذ بعد.**
-      RAHALGO_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-}
+      # **ولا يُملأ بـ`maps.rahalgo.com`**: مضيفُ إنتاج (`envguard.ProductionHosts`)
+      # **والتجهيزُ لا يسمّيه.** **وحاولتُ ذلك مرّةً فأسقطه الحارسُ — وهو محقّ.**
+      #
+      # **فللتجهيز خرائطُه** — آثارٌ منسوخةٌ (`maps-sync.sh`) تُخدَم تحت
+      # `/maps/` على مضيف التجهيز (`Caddyfile.staging`)، **ونمطٌ يشير إليها.**
+      RAHALGO_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-https://staging-api.rahalgo.com/maps/map-resources/1/style.online.json}
     depends_on:
       - api
 

@@ -22,8 +22,8 @@ package deploycheck
 // **`maps.rahalgo.com` مضيفُ إنتاج** (`envguard.ProductionHosts`)،
 // **والتجهيزُ لا يسمّيه** (`TestStagingConfigNeverNamesProduction`).
 // **وحاولتُ في هذا التدقيق أن أجعله يطابق الإنتاج فأسقطني ذلك الحارس —
-// وهو محقّ.** **فالقيمةُ تخصّ البيئة، وفراغُها استثناءٌ مُسمّىً في
-// `knownEmptyInStaging` حتّى يوجد خادمُ خرائطَ للتجهيز.**
+// وهو محقّ.** **فالقيمةُ تخصّ البيئة** — **وللتجهيز خرائطُه منذ
+// ٢٠٢٦-٠٩-١٩** (`TestStagingMapsAreServedFromStagingItself`).
 
 import (
 	"os"
@@ -46,10 +46,11 @@ var envSpecific = map[string]bool{
 }
 
 // knownEmptyInStaging **فراغٌ مُسمّىً بسببه** — **وكلُّ فراغٍ غيرِه يُسقط
-// الحارس.** ومن أضاف خادمَ خرائطَ للتجهيز حذف السطرَ هنا.
-var knownEmptyInStaging = map[string]string{
-	"RAHALGO_MAP_STYLE_URL": "لا خادمَ خرائطَ للتجهيز · والإنتاجُ ممنوع (envguard) · قرارُ المالك",
-}
+// الحارس.**
+//
+// **وكان فيه نمطُ الخريطة** حتّى وُجدت للتجهيز خرائطُه (٢٠٢٦-٠٩-١٩) —
+// **فحُذف، وصار فراغُه يُسقط الحارس.**
+var knownEmptyInStaging = map[string]string{}
 
 // webRuntimeEnv **مفاتيحُ `RAHALGO_*` في خدمة الويب.**
 func webRuntimeEnv(t *testing.T, path string) map[string]string {
@@ -133,6 +134,52 @@ func TestAdminRuntimeConfigHasNoEmptyDefault(t *testing.T) {
 			t.Errorf("**%s لم يعد فارغاً** — احذفه من `knownEmptyInStaging` "+
 				"(وكان سببُه: %s)", k, why)
 		}
+	}
+}
+
+// TestStagingMapsAreServedFromStagingItself **وخرائطُ لوحة التجهيز من
+// التجهيز نفسِه** — لا من مضيفٍ آخر ولا من الإنتاج.
+//
+// **و`envguard` يمنع مضيفَ الإنتاج** — **وهذا يشترط الأصلَ نفسَه**:
+// **نمطٌ على مضيفٍ لا يخدمه التجهيزُ يعطّل الخريطةَ كالفراغ تماماً.**
+//
+// **ويشترط ما يخدمه**: كتلةَ `/maps/` في `Caddyfile.staging`، **وحاملَ
+// الآثار للقراءة**، **وأداةَ النسخ.** **ونمطٌ يشير إلى بابٍ لا يُخدَم
+// خريطةٌ معطّلةٌ لا يسقط لها شيء.**
+func TestStagingMapsAreServedFromStagingItself(t *testing.T) {
+	env := webRuntimeEnv(t, stagingComposePath)
+	style := effectiveDefault(env["RAHALGO_MAP_STYLE_URL"])
+	api := effectiveDefault(env["RAHALGO_API_URL"])
+	host := func(u string) string {
+		u = strings.TrimPrefix(strings.TrimPrefix(u, "https://"), "http://")
+		if i := strings.IndexByte(u, '/'); i >= 0 {
+			u = u[:i]
+		}
+		return u
+	}
+	if host(style) == "" || host(style) != host(api) {
+		t.Errorf("**نمطُ خرائط التجهيز ليس على مضيف التجهيز**\n"+
+			"  النمط = %q\n  المحرّك = %q", style, api)
+	}
+	if !strings.Contains(style, "/maps/") {
+		t.Errorf("**نمطُ الخريطة لا يمرّ بـ`/maps/`** — وهو ما يخدمه كاديّ التجهيز: %q", style)
+	}
+
+	caddy, err := os.ReadFile("../../../deploy/staging/Caddyfile.staging")
+	if err != nil {
+		t.Fatalf("قراءةُ Caddyfile.staging: %v", err)
+	}
+	for _, want := range []string{"handle_path /maps/*", "root * /srv/maps", "respond 404"} {
+		if !strings.Contains(string(caddy), want) {
+			t.Errorf("**كتلةُ الخرائط ناقصةٌ في Caddyfile.staging**: %q", want)
+		}
+	}
+	raw := readStagingComposeRaw(t)
+	if !strings.Contains(raw, ":/srv/maps:ro") {
+		t.Error("**لا حاملَ لآثار الخرائط في كاديّ التجهيز** (`:/srv/maps:ro`)")
+	}
+	if _, err := os.Stat("../../../deploy/staging/maps-sync.sh"); err != nil {
+		t.Error("**لا أداةَ لنسخ آثار الخرائط** (`deploy/staging/maps-sync.sh`)")
 	}
 }
 
