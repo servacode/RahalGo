@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -78,33 +80,59 @@ object Net {
         val cm = context.applicationContext
             .getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
 
-        online = has(cm)
+        // **والقراءةُ الأولى هنا — خارجَ أيّ نداء**، فلا سباق. وهي ما
+        // يجعل الفتحَ المقطوعَ صحيحاً: لا حدثَ يأتي إن لم يتغيّر شيء.
+        val tracker = NetTracker<Network>(initialOnline = has(cm))
+        online = tracker.online
 
         // **والقدرةُ هي المقياسُ لا وجودُ الشبكة**: واي-فايٌ بلا إنترنت
         // **شبكةٌ موصولةٌ لا تُوصِّل** — `VALIDATED` هي ما يفرّق.
         val req = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
+
+        // ══════════════════════════════════════════════════════════════
+        // **وداخلَ النداء لا يُسأل النظام** (`P8-DEF-001`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان كلُّ نداءٍ يسأل `cm.activeNetwork`** — وأندرويد يحذّر
+        // نصّاً: لا ضمانَ أن يكون الجوابُ حاليّاً. **فحين سقط الواي فاي
+        // والبياناتُ معاً قرأ `onLost` شبكةً تزول بقدرتها القديمة**، فبقي
+        // «متّصل» ولا حدثَ بعده يُصحّحه.
+        //
+        // **والآن يُحكَم بما جاء به الحدثُ نفسُه** (`NetTracker`).
+        //
+        // **ويُسلَّم النداءُ على الخيط الرئيس** — فتُكتب الحالُ حيث تُقرأ.
+        val main = Handler(Looper.getMainLooper())
         runCatching {
             cm.registerNetworkCallback(
                 req,
                 object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
-                        online = has(cm)
+                        tracker.onAvailable(network)
+                        online = tracker.online
                     }
 
                     override fun onLost(network: Network) {
-                        online = has(cm)
+                        tracker.onLost(network)
+                        online = tracker.online
                     }
 
                     override fun onCapabilitiesChanged(n: Network, c: NetworkCapabilities) {
-                        online = has(cm)
+                        tracker.onCapabilitiesChanged(
+                            n,
+                            internet = c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+                            validated = c.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+                        )
+                        online = tracker.online
                     }
                 },
+                main,
             )
         }
     }
 
+    /** **القراءةُ الأولى وحدَها** — ولا تُنادى داخلَ نداءِ شبكة. */
     private fun has(cm: ConnectivityManager): Boolean {
         val c = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
         return c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
