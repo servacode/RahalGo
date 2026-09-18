@@ -39,6 +39,34 @@ func newMenuFixture(t *testing.T) *menuFixture {
 	f.actorID = testdb.NewUser(t, pool, "admin")
 	ownerID := testdb.NewUser(t, pool, "merchant")
 
+	// ── قسمُ السوق يُنشأ أوّلاً ليُحذَف آخراً ──────────────────────────
+	//
+	// **و`t.Cleanup` يُنفَّذ عكسَ ترتيب التسجيل** — فالمُسجَّلُ أوّلاً
+	// يعمل أخيراً.
+	//
+	// **و`menu_items.platform_section_id` موصوفٌ `NOT NULL` ومفتاحُه
+	// `ON DELETE SET NULL`** — **وهما لا يجتمعان**: **حذفُ قسمٍ له صنفٌ
+	// يسقط بخرقِ `NOT NULL`، ولا يُفرِّغ الحقل.**
+	//
+	// **فكان القسمُ يُحذَف أوّلاً وأصنافُه قائمة، فيسقط الحذفُ صامتاً
+	// ويتسرّب الصفّ** — **ولا فهرسَ فريداً حينها يعترض، فمرّ التسرّبُ
+	// سنةً بلا أثر.**
+	//
+	// **ويُحذَف المتجرُ أوّلاً الآن** (وأصنافُه معه بـ`CASCADE`) **ثمّ
+	// القسمُ بعده، فلا يبقى ما يشير إليه.**
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO platform_sections (name, sort_order) VALUES ('قسمُ سوقٍ للاختبار', 900)
+		RETURNING id`).Scan(&f.platformID); err != nil {
+		t.Fatalf("تعذّر إنشاء قسم السوق: %v", err)
+	}
+	// **وخطأُ التنظيف يُعلَن** — **وصمتُه هو ما أخفى التسرّب.**
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(),
+			`DELETE FROM platform_sections WHERE id = $1`, f.platformID); err != nil {
+			t.Errorf("تعذّر حذفُ قسم السوق بعد الفحص: %v", err)
+		}
+	})
+
 	var catID string
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO categories (name, icon, sort_order) VALUES ('فئةُ اختبار', '', 900)
@@ -60,14 +88,6 @@ func newMenuFixture(t *testing.T) *menuFixture {
 		t.Fatalf("تعذّر إنشاء قسم القائمة: %v", err)
 	}
 
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO platform_sections (name, sort_order) VALUES ('قسمُ سوقٍ للاختبار', 900)
-		RETURNING id`).Scan(&f.platformID); err != nil {
-		t.Fatalf("تعذّر إنشاء قسم السوق: %v", err)
-	}
-	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `DELETE FROM platform_sections WHERE id = $1`, f.platformID)
-	})
 	return f
 }
 
