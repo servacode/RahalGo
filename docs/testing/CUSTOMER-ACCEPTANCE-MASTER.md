@@ -655,7 +655,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-025 | Submit | Open-order cap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open orders at cap | Submit another | Explicit cap message; no order | — | `NOT_TESTED` | — | online | orders unchanged | — | — | — | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | — | `NOT_TESTED` | — | online | — | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
-| CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | — | — | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
+| CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | CUST-DEF-002 (source fix CLOSED; device witness pending) | `CustDef002Test` (`ui/…/CustDef002Test.kt`) · `ApiErrorsTest.inProgressResolvesToWaitNotConnectionFailure` | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PENDING (separate authorization) |
 | CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | Server returns the old committed order OR the new cart is submitted — never a silent mismatch between cart and created order | — | `NOT_TESTED` | — | cut | order items vs cart | — | — | — | Added. CAF-02: idempotency does not fingerprint the body |
 
 ## 25 · CUST-CUSTOM — Custom order «طلب خاص»
@@ -966,7 +966,7 @@ Functional correctness includes understandable UI behaviour.
 | CUST-20-016 | UI | Usable on the actual SM-A525F screen | Signed-in test customer · Staging · SM-A525F | Full walkthrough | Everything reachable | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-20-017 | UI | System font scaling keeps critical actions usable | Signed-in test customer · Staging · SM-A525F | `settings put system font_scale 1.3` (restore after) | Actions reachable; no overlap | — | `NOT_TESTED` | — | online | — | — | — | — | Restore font_scale after |
 | CUST-20-018 | UI | English/localization only if supported | — | Check app resources for non-Arabic locales | Arabic only → N/A unless a locale switch exists | — | `NOT_APPLICABLE` | — | any | — | — | — | — | **N/A:** Arabic only: no `values-xx` locale folders and no language switch in the Customer app (audit §38). · Decided by the audit (§38) |
-| CUST-20-019 | UI | Every customer-path error code has a meaningful message (added) | API errors | Trigger `not_found`, `in_progress`, `comms_closed`, `comms_no_driver` | Specific Arabic messages — not «تعذر الاتصال — حاول بعد قليل» | — | `NOT_TESTED` | — | online | — | — | — | — | Added. CAF-18: these codes are unmapped and fall back to a misleading 'connection' message |
+| CUST-20-019 | UI | Every customer-path error code has a meaningful message (added) | API errors | Trigger `not_found`, `in_progress`, `comms_closed`, `comms_no_driver` | Specific Arabic messages — not «تعذر الاتصال — حاول بعد قليل» | — | `NOT_TESTED` | — | online | — | — | — | — | Added. CAF-18: the `in_progress` part is now mapped (CUST-DEF-002, §40.25); `not_found`/`comms_closed`/`comms_no_driver` remain unmapped (CAF-18 P3, out of CUST-DEF-002 scope) |
 
 ## 33 · CUST-21 — Performance / resilience
 
@@ -1332,7 +1332,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-13-025 | Open-order cap | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | WhatsApp verification requirement on normal orders | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Cash-blocked customer | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
-| CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
+| CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PENDING (separate authorization) |
 | CUST-13-029 | Retry after cart edit does not replay the old order | Added. CAF-02: idempotency does not fingerprint the body |
 | CUST-CUSTOM-019 | Driver note is saved and shown | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
 | CUST-CUSTOM-020 | Custom order payment method | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
@@ -1389,7 +1389,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-19-027 | Client-supplied merchant_id is ignored | Added. **CAF-03 HIGH (source-confirmed)**: `CreateTx` keeps a non-empty client `merchant_id` (`orders/service.go:303-305`) and runs the open-hours check on it |
 | CUST-19-028 | Order in an unlaunched city/province is denied at create | Added. CAF-06 (reported by audit): place classification is advisory; create paths enforce zones only |
 | CUST-19-029 | Any-role token cannot misuse customer order routes | Added: the customer route group has no role check |
-| CUST-20-019 | Every customer-path error code has a meaningful message | Added. CAF-18: these codes are unmapped and fall back to a misleading 'connection' message |
+| CUST-20-019 | Every customer-path error code has a meaningful message | Added. CAF-18: the `in_progress` part is now mapped (CUST-DEF-002, §40.25); `not_found`/`comms_closed`/`comms_no_driver` remain unmapped (CAF-18 P3, out of CUST-DEF-002 scope) |
 
 ### 39.2 · Supplied cases marked NOT_APPLICABLE (7)
 
@@ -2506,3 +2506,101 @@ STAGING RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY 
 enforce the WhatsApp requirement until 2026-09-19 16:11 UTC, when it moved from `cd33b173` to
 `023d9d4c`. The requirement is off in Production, so the surface was not exposed meanwhile; the
 fix hardens it for whenever it is enabled.)*
+
+### 40.25 · CUST-DEF-002 / CAF-02 — duplicate-order retry: source fix + regression (2026-09-19)
+
+**Authorized as shared-app source fix + Kotlin regression + device-witness plan only. No
+Staging/Production mutation; no backend change; no API deployment.**
+
+**Root cause (proven before editing).** Two defects on one path in the shared `ui` module:
+1. `Attempt.isDecided` returned true for **any** `ApiClient.ApiException`. A `409 in_progress`
+   (the engine still holds the idempotency lease and is processing the first request) was thus
+   treated as a final answer, and the caller (`CartScreen`/`CustomScreen`, both
+   `if (isDecided(e)) Attempt.clear(slot)`) **cleared the persisted attempt key**. The
+   original request then commits; a later tap mints a **new** key → a **second order**.
+2. `ApiErrors.CODES` had **no entry for `in_progress`**, so it fell back to `err_internal` =
+   «تعذر الاتصال — حاول بعد قليل» — a connection-failure message that invites the very re-tap
+   that duplicates the order (and logged a false soft-crash). `idempotency_reclaimed` was
+   already mapped; `in_progress` was not.
+
+**Timing window (current source).** Client order-create `requestTimeoutMillis = 20_000`
+(`shared/net/ApiClient.kt`); server request timeout **30 s**, idempotency lease **60 s**, key
+TTL **24 h** (`server/idempotency.go`). Client-gives-up-at-20 s < server-commits-by-30 s, so
+the window is real. **The fix does not touch any timeout** — it makes the client correct under
+transport uncertainty.
+
+**Fix (minimal, shared `ui`, no migration, no backend change).**
+- `isDecided`: `409` with code `in_progress` **or** `idempotency_reclaimed` → **not decided**
+  (keep the same key; a retry replays the committed order via `writeReplay`). Every other
+  server response stays decided (400 validation, other 409s: merchant_closed, cash_blocked …).
+  Transport errors (timeout/IO) remain not-decided as before.
+- `CODES["in_progress"] → err_in_progress` («العملية قيد التنفيذ — انتظر قليلا ولا تعدها»).
+- Both callers already gate `clear` on `isDecided`, so the single change covers cart and custom.
+
+**Retry-key lifecycle after fix:** PENDING/still-processing → keep · timeout/uncertain →
+keep · success or committed-replay → retire after the app accepts the result · true terminal
+rejection → retire (unchanged). A new key is never minted while the outcome is unknown.
+
+**Automated regression** (`ui/…/CustDef002Test.kt`, `ApiErrorsTest.kt`; JVM):
+- classification: `in_progress`/`idempotency_reclaimed` not decided; validation/merchant_closed/
+  cash_blocked decided; IO not decided;
+- **orders +1 exactly**: a fake engine mirroring `idempotency.go` (lease held → `in_progress`,
+  committed key → replay, new key → new order); one logical submission through
+  in_progress → replay yields `orders == 1`;
+- **process death** between the in_progress response and the retry (store rebuilt over the same
+  disk) still yields `orders == 1`;
+- terminal rejection retires the key; first-attempt success unchanged;
+- message: `in_progress` resolves to the wait message, **not** `err_internal`.
+
+**Negative pre-fix witness:** with both fixes reverted, `stillProcessingIsNotDecided`,
+`oneSubmissionYieldsExactlyOneOrder` (**orders == 2**), `processDeathBetweenRetriesStillOneOrder`
+(**orders == 2**), and `inProgressResolvesToWaitNotConnectionFailure` FAIL — the exact
+historical defect. Restored → all pass.
+
+**Impacted scope (Kotlin unit).** app-customer 71 · app-driver 69 · app-merchant 6 · app-rep 6
+· ui 181 · shared 29 · map 185 · driver-navigation 349 = **896 tests · 0 failures** (all four
+apps + shared). Backend unchanged; no Go test added.
+
+**Ownership / double-submit.** `POST /orders/custom` and `/orders` carry no client customer id
+(authenticated user only). Rapid double-submit is already blocked by `if (busy) return` +
+`enabled = !vm.busy` (existing controls, preserved); the fix adds no new key-minting path.
+
+**Out of scope (recorded, not changed).** CUST-13-029 (idempotency does not fingerprint the
+request body): the server intentionally replays the original committed order for a reused key —
+that is the idempotency contract, not a defect the app can or should override. CAF-18 for
+`not_found`/`comms_closed`/`comms_no_driver` (still unmapped, P3): separate from CUST-DEF-002.
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
+FOUR-APP UNIT SUITE = PASS · **DEVICE WITNESS = PENDING** (required before operational closure;
+plan below) · **NOT DEPLOYED**.
+
+#### 40.25.1 · Proposed deterministic device-witness plan (needs separate authorization)
+
+Goal: on SM-A525F with the fixed Customer app, prove one logical submission → still-processing
+UI (not «تعذر الاتصال») → same key retained → committed order recovered → **exactly one order**.
+
+- **Fixture:** one disposable staging customer (`D8…`-style label), logged into the fixed
+  Customer debug APK; a serviceable address. No real accounts/orders touched.
+- **Inducing the in-progress window deterministically** — the app mints its own random key, so
+  the witness must force the lease/slow path on the server side. Options, in order of
+  preference:
+  1. **Staging-only slow hook on `POST /orders`** for the labelled disposable customer: sleep
+     ~22–25 s (past the 20 s client timeout, within the 30 s server / 60 s lease), so the
+     client times out while the server commits; the app's retry with the same persisted key
+     then hits `in_progress` (or the replay). **Requires a small staging API support + a
+     staging deploy → separate authorization.**
+  2. **Pre-seed a held lease**: read the key the app persisted (adb pull the
+     `rahalgo_attempt` prefs after the first tap), then hold that key's `idempotency_keys`
+     lease server-side so the retry returns `in_progress`, then let the original commit. More
+     manual, still needs a controlled staging DB write.
+  3. **Network throttle** at the device to stall the request into the 20–30 s window
+     (least deterministic).
+- **Observations to capture:** UI shows the pending/still-processing state and the wait
+  message (never «تعذر الاتصال»); adb-read `rahalgo_attempt` shows the **same** key across the
+  retry; the retry succeeds via replay; staging `orders` for the disposable customer = **+1
+  exactly**; then full reversible cleanup of the disposable fixture (as in the D6/D8 witnesses).
+- **Constraints:** cash orders only or wallet with no settlement (creation moves no ledger);
+  no corrective ledger entry; exact baseline restoration proven afterward.
+
+Recommended: **option 1** (a minimal, clearly-labelled staging-only delay hook), authorized
+and deployed under a separate request, then witnessed and removed.
