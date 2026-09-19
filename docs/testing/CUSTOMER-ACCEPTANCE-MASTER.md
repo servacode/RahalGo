@@ -1437,7 +1437,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | **CUST-DEF-001** | CAF-01 (+ CAF-16 signup part) | **P0** | account takeover · authentication boundary | **OPERATIONALLY CLOSED 2026-09-19** — source fix + regression (§40.14), Staging runtime PASS (§40.16), **Production patch DEPLOYED & verified (§40.17)** |
 | **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
 | **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **SOURCE FIX = CLOSED 2026-09-19** — fixed + regression + negative witness (§40.18); not deployed |
-| **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **CONFIRMED (source)** |
+| **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **SOURCE FIX = CLOSED 2026-09-20** — client session-boundary reset + regression (10/10) + negative witness (9/10 FAIL pre-fix) (§40.6.1); backend already enforces ownership (4/4); device witness pending |
 | **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **CONFIRMED (source)** |
 | **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
 | **D8** | known (EXPECTED_FAIL) | **P1 · latent** | verification boundary bypass | **CONFIRMED (source)** — dormant while `auth.require_whatsapp`=false |
@@ -1618,9 +1618,63 @@ ownership) and CAF-09.
 - Device: A → logout → B shows none of A's cart, orders, wallet, inbox or favorites,
   and receives only B's realtime.
 
-**P-9:** RISK **CRITICAL** · apps customer/driver/merchant/rep · F-04 F-30 F-34 ·
-D10 D11 D12 D19 D20 D21 · R13 R15 R16 R21 · 182 mandatory Go tests · device required
-(AND-31).
+**P-9 (finding-time, worst case):** RISK **CRITICAL** · apps customer/driver/merchant/rep ·
+F-04 F-30 F-34 · D10 D11 D12 D19 D20 D21 · R13 R15 R16 R21 · 182 mandatory Go tests ·
+device required (AND-31). *(Corrected as-built in §40.6.1: the fix is mobile-only, no Go
+change.)*
+
+#### 40.6.1 · Fix (source) — 2026-09-20
+
+**Root cause is client-only.** The backend already enforces ownership by the
+authenticated identity — an intruder cannot read, cancel or delete another customer's
+data by supplying its id (`server/customer_isolation_test.go`:
+`TestOrder_IntruderCannotRead` returns **404, not 403**; `…CannotCancel`;
+`TestAddress_IntruderCannotDelete`; `TestWallet_ShowsOnlyOwnBalance` reads the wallet
+from the session). Re-witnessed **4/4 green** against the local test DB. So
+CUST-DEF-004's open surface is purely the device-side session boundary; **no backend
+change.**
+
+**Fix — one central session-boundary hook.**
+
+| File | Change |
+|---|---|
+| `ui/Core.kt` | `AppCore.afterLogout: () -> Unit` hook (default no-op); `install(…, afterLogout)` sets it |
+| `ui/AuthViewModel.kt` | `logout()` calls `AppCore.afterLogout()` **synchronously**, after clearing session/`user`, **before** the network `/auth/logout` (so it runs even if the network is down) |
+| `customer/Backend.kt` | registers `afterLogout = { Cart.clear(); live.stop(); Refresh.bump() }` |
+| `ui/ShellViewModel.kt` | `reset()` stops the socket and clears `me`/`balance`/`unread`/`inbox` |
+| `customer/MainActivity.kt` | `LaunchedEffect(guest)` calls `shell.reset()` on the guest transition (a second, in-shell boundary) |
+
+Cart (PC-2) and socket (CAF-09) are cleared by the central hook; account-scoped shell
+state by `reset()`. Other apps get the default no-op hook — driver/merchant/rep logout
+behaviour is unchanged, and the driver keeps stopping its own socket its own way.
+
+**Regression** — `ui/src/test/…/CustDef004Test.kt` (source-assertion, the house pattern
+for session-boundary wiring, cf. CU-CHAT-16): 10 cases across the hook contract, PC-2
+cart clear, CAF-09 socket stop (hook + shell), shell-state reset, the guest transition,
+the refresh pulse, and a cross-reference that the backend ownership suite exists
+(404-not-403 rule).
+
+- **Negative witness:** with the five fix files stashed to HEAD, **9/10 FAIL**; the one
+  pass is the backend-suite cross-reference (that suite pre-existed the fix).
+- **Post-fix:** **10/10 PASS** (`tests=10 failures=0 errors=0`).
+- The mechanisms the wiring invokes are already proven behaviourally: `Cart.clear()`
+  empties (`CartTest` CART-020); `LiveSocket.stop()` then a fresh start carries the new
+  token not the stale one (`D19-T3`) and leaves one socket (`D19-T9`).
+
+**Suites (no regression):** `ui` 191/191, `app-customer` 71/71, `shared` 29/29;
+driver/merchant/rep `compileDebugKotlin` all green (API-compatible).
+
+**P-9 (as built).** Mobile-only. Changed: shared `ui` (Core, AuthViewModel,
+ShellViewModel) + `app-customer` (Backend, MainActivity). The impact engine maps **Go
+tests only** and there is **no Go change**, so it triggers no Go suite; the backend was
+verified unchanged and its isolation suite re-witnessed (4/4). Blast radius = the four
+apps that consume `ui`; the API change is additive with a default no-op, so
+driver/merchant/rep are behaviourally unchanged (compile-verified). RISK for the
+customer app **P1** (privacy / cross-account); no money path touched.
+
+**Status:** source fix + regression + negative witness **CLOSED**. **Device witness
+pending** — CUST-06-015, CUST-11-017/018, CUST-15-019, CUST-19-017 stay `NOT_TESTED`;
+acceptance remains **PAUSED**; CUST-00 15/15 unchanged. Not an operational closure.
 
 ### 40.7 · CUST-DEF-005 — the cart can show a stale total and the server charges another
 
