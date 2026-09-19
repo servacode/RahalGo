@@ -1434,7 +1434,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 
 | Defect ID | Was | Sev | Class (§3 / Owner rule B) | Status |
 |---|---|---|---|---|
-| **CUST-DEF-001** | CAF-01 (+ CAF-16 signup part) | **P0** | account takeover · authentication boundary | **CLOSED 2026-09-19** — fixed and regression-guarded (§40.14) |
+| **CUST-DEF-001** | CAF-01 (+ CAF-16 signup part) | **P0** | account takeover · authentication boundary | **OPERATIONALLY CLOSED 2026-09-19** — source fix + regression (§40.14), Staging runtime PASS (§40.16), **Production patch DEPLOYED & verified (§40.17)** |
 | **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
 | **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **CONFIRMED (source)** — exploitable by any signed-in customer with a crafted request |
 | **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **CONFIRMED (source)** |
@@ -1928,3 +1928,68 @@ wallet whose stored balance still carried the −45 was corrected by exactly +45
 · PRODUCTION = still `68a45c97` (old code), patch pending Owner authorization. Production
 is **not** protected by the code fix yet; it is only shielded because
 `auth.signup_verify` is stored `true` there.
+
+### 40.17 · CUST-DEF-001 — Production security hotfix (2026-09-19)
+
+**Authorized by the Owner** as a Production security hotfix limited to the reviewed
+CUST-DEF-001 backend fix. **API only.**
+
+**Source delta 68a45c97 → 5d7a960f** (what Production actually gained): three runtime
+files — `identity/service.go`, `server/auth_handlers.go`, `settings/catalog.go` — all
+CUST-DEF-001. Everything else in the range is tests, docs, or the already-reviewed
+staging/mobile work; **no migration, no other product/runtime change.**
+
+**Promotion:** the **exact Staging-tested image** `rahalgo-api:release-5d7a960f`
+(`034d8756…`, built from commit `5d7a960f`) was promoted with the guarded `promote.sh`
+(`--no-build --no-deps api`). No rebuild. `.env` pinned to the new API image; the web
+line kept `release-68a45c97`.
+
+| | Production before | Production after |
+|---|---|---|
+| API release / image | `release-68a45c97` / `e6bb3dfb…` | `release-5d7a960f` / `034d8756…` |
+| source_commit | `68a45c97` | `5d7a960f` |
+| web | `release-68a45c97` (`3a3e569d…`) | unchanged |
+| migration | `0157` | `0157` (none applied) |
+| health / readiness | 200 | 200 |
+| container | running · 0 restarts | running · 0 restarts · 0 error lines |
+
+**Backups before deploy (verified):**
+- `pg_dump` `rahalgo-pre-5d7a960f-20260919T110845Z.dump` — 94 table-data entries read
+  back, sha256 `602ef48e…`;
+- rollback image archive `rahalgo-api-release-68a45c97.tar` (sha256 `b7c1af5b…`, index
+  == the image that was running);
+- `.env` backup `.env.bak-pre-5d7a960f` (sha256 `42e1407d…`).
+- **Rollback path (unused):** repin `.env` `RAHALGO_API_IMAGE=rahalgo-api:release-68a45c97`
+  and `docker compose … up -d --no-build --no-deps api`; DB restore from the dump only if
+  ever needed.
+
+**Post-deploy verification (safe, non-destructive — no takeover reproduction against real
+accounts):**
+- identity reports `production` / `5d7a960f` / `0157`;
+- signup-confirm on a non-existent phone → `503 launch_closed` (the new confirm launch
+  gate is live; Production signup is closed and **no account was created**);
+- `/auth/me` without a token → `401`;
+- the deployed artifact identity is the reviewed fix (not just a started container).
+
+**Business / financial invariants — Production DB before vs after is byte-identical:**
+
+| | before | after |
+|---|---|---|
+| users | 25 | 25 |
+| users fingerprint | `9b20f7c3…` | `9b20f7c3…` |
+| user-roles fingerprint | `e9de388a…` | `e9de388a…` |
+| role-permissions fingerprint | `f37db9c4…` | `f37db9c4…` |
+| orders | 0 | 0 |
+| wallets | 2 · sum 0 | 2 · sum 0 |
+| wallet transactions | 0 | 0 |
+| moneycheck | 51/51 | 51/51 |
+| settings | verify=true · signup=false | verify=true · signup=false |
+
+**Deployment mutated Production only by:** recreating the API container onto the reviewed
+image and pinning `.env`'s API image line. No schema, no settings, no business data
+changed. **No Caddy change.**
+
+**CUST-DEF-001 status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · STAGING
+RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY = PASS ·
+**OPERATIONAL STATUS = CLOSED.** *(History preserved: Production ran the vulnerable
+`68a45c97` until 2026-09-19 11:09 UTC.)*
