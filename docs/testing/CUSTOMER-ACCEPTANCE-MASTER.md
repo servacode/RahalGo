@@ -654,7 +654,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-024 | Submit | Order count before/after proves exact mutation | Every submit case | Read counts | Exactly the intended delta | — | `NOT_TESTED` | — | online | read-only SQL | — | — | — | Applies to all CUST-13 rows |
 | CUST-13-025 | Submit | Open-order cap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open orders at cap | Submit another | Explicit cap message; no order | — | `NOT_TESTED` | — | online | orders unchanged | — | — | — | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | — | `NOT_TESTED` | — | online | — | — | — | — | Added: normal path checks WhatsApp; custom path does not (D8) |
-| CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | D6 (source fix CLOSED; not deployed) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 source fix CLOSED (custom path enforces `cashBlocked` too), not yet deployed. See §40.21 |
+| CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
 | CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | — | — | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | Server returns the old committed order OR the new cart is submitted — never a silent mismatch between cart and created order | — | `NOT_TESTED` | — | cut | order items vs cart | — | — | — | Added. CAF-02: idempotency does not fingerprint the body |
 
@@ -671,7 +671,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-005 | Custom | Lost response / retry | Signed-in test customer · Staging · SM-A525F · valid default address | Cut after send; retry | No duplicate | — | `NOT_TESTED` | — | cut | orders +1 total | — | — | — | — |
 | CUST-CUSTOM-006 | Custom | Launch flag OFF | Signed-in test customer · Staging · SM-A525F · valid default address · flag OFF | Send | Explicit `launch_closed`; no order | — | `NOT_TESTED` | — | online | no order | — | — | — | Client ignores the flag (parsed, unused) — server is the guard |
 | CUST-CUSTOM-007 | Custom | Outside coverage / zone closed / platform closed | Signed-in test customer · Staging · SM-A525F · valid default address | Send under each condition | Explicit denial each | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestSRV4_CustomOrderFollowsCoverage`, `TestZH19`, `TestPH16/18` |
-| CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path (`cash_blocked`) | — | `NOT_TESTED` | — | online | no order | — | D6 (source fix CLOSED; not deployed) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) · `TestCENSUS_D6_CustomOrderSkipsCashBan` | D6 SOURCE FIX CLOSED (§40.21): custom path now enforces `cashBlocked` (cash sent or omitted) — guarded by `TestCustomCashBan_*`; census now reports REPRODUCTION=NO. Not yet deployed |
+| CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path (`cash_blocked`) | — | `NOT_TESTED` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) · `TestCENSUS_D6_CustomOrderSkipsCashBan` | D6 CLOSED, deployed to Production (cd33b173, §40.22): custom path enforces `cashBlocked` (cash sent or omitted) — guarded by `TestCustomCashBan_*`; census reports REPRODUCTION=NO |
 | CUST-CUSTOM-009 | Custom | WhatsApp verification requirement | Unverified · require_whatsapp=true (Staging test) | Send | Must follow the same rule as the normal path | — | `NOT_TESTED` | — | online | no order | — | — | — | KNOWN DEFECT D8 (EXPECTED_FAIL) — expected FAIL |
 | CUST-CUSTOM-010 | Custom | Creation event recorded | After 001 | Read order_events | `''→pending` event exists like normal orders | — | `NOT_TESTED` | — | online | order_events | — | — | — | KNOWN DEFECT D9 (EXPECTED_FAIL) — expected FAIL |
 | CUST-CUSTOM-011 | Custom | Open-order cap shared with normal orders | Signed-in test customer · Staging · SM-A525F · valid default address · at cap | Send | Explicit cap | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestD4_CustomOrdersShareTheSameCap` |
@@ -1331,7 +1331,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-12-028 | Cart-changes review gate | Added: `CartChangesTest` (10) |
 | CUST-13-025 | Open-order cap | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | WhatsApp verification requirement on normal orders | Added: normal path checks WhatsApp; custom path does not (D8) |
-| CUST-13-027 | Cash-blocked customer | Added: both paths now check the cash ban — D6 source fix CLOSED (custom path enforces `cashBlocked` too), not yet deployed. See §40.21 |
+| CUST-13-027 | Cash-blocked customer | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
 | CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Retry after cart edit does not replay the old order | Added. CAF-02: idempotency does not fingerprint the body |
 | CUST-CUSTOM-019 | Driver note is saved and shown | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
@@ -2281,3 +2281,89 @@ regenerated: **D6 = `FIXED_AND_PASSING`** with four covering tests; the census
 **Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
 FULL SUITE = PASS · **NOT DEPLOYED** (Staging and Production still run `5105fa45`; any
 runtime/deploy phase is a separate authorization).
+
+### 40.22 · D6 — Staging runtime witness + Production hotfix (2026-09-19)
+
+**Authorized as two steps: a Staging runtime witness, then a Production hotfix limited to the
+reviewed D6 fix. API only. No setting change (the cash-ban policy configuration is not
+touched).**
+
+**Runtime source `cd33b173`** — the D6 fix (`cash_blocked` now enforced by the custom-order
+creators). Built strictly from `cd33b173` (proven `cd33b173→HEAD` delta = docs only); image
+`rahalgo-api:release-cd33b173` (`765aafb3…`), migration `0157`.
+
+**Staging runtime witness (all PASS).** Deployed `release-cd33b173` to the Staging API only.
+Disposable `D6-WITNESS-*` fixtures exercised the real `Service.cashBlocked` policy (the
+owner-documented threshold 1 failure / 30 days, set only because Staging had no cash-ban
+config, and restored to absent in cleanup) plus a genuine customer-fault failure for the
+banned customer, proven from the source of truth:
+- **A — banned + explicit `cash`** → `409 cash_blocked`; no order, no wallet tx;
+- **B — banned + omitted `payment_method`** (the second historical bypass, witnessed
+  independently) → `409 cash_blocked`; no order, no wallet tx;
+- **C — banned + `wallet`** → `201`, stored `wallet` (creation moves no ledger, so no
+  correction was ever needed);
+- **D — control (not banned) + `cash`** → `201`, stored `cash`, owner = the control customer.
+Rejections wrote zero audit rows. Cleanup restored the exact Staging baseline (all three
+fingerprints byte-identical, orders/custom/#1050/wallets/tx/sum unchanged, moneycheck 51/51,
+cash-ban config back to absent); the only residual delta was one real user's independent
+`auth.refresh` (category-B operational activity, not fixture-caused).
+
+**Production deployment delta `5105fa45 → cd33b173`:** one runtime file —
+`backend/internal/orders/custom.go` (the reviewed D6 fix). Everything else in range is the
+test, the test-truth inventory, or docs. **No migration, no other runtime/config change.**
+
+**Promotion:** the **exact Staging-tested image** `765aafb3…` (already on the shared host)
+promoted with the guarded `promote.sh` (`--no-build --no-deps api`); pre-switch guard
+confirmed `environment=production` and image id `765aafb3…`, post-switch re-confirmed the
+running id, a 40-hex `source_commit`, and `environment=production`. `.env` pinned; web kept
+`release-68a45c97`. No rebuild.
+
+| | Production before | Production after |
+|---|---|---|
+| API release / image | `release-5105fa45` / `8bfe2490…` | `release-cd33b173` / `765aafb3…` |
+| source_commit | `5105fa45` | `cd33b173` |
+| web / staging API | `release-68a45c97` / (staging untouched) | unchanged |
+| migration | `0157` | `0157` (none applied) |
+| health | 200 | 200 |
+| container | running · 0 restarts | running · 0 restarts · 0 error lines |
+
+**Backups before deploy (verified):** `pg_dump` `rahalgo-pre-cd33b173-20260919T145226Z.dump`
+(94 table-data entries, sha256 `b8079987…`); rollback archive
+`rahalgo-api-release-5105fa45.tar` (sha256 `c9c441d0…`, index == the running `8bfe2490…`);
+`.env` backup (sha256 `0ae4bf7d…`). **Rollback path (unused):** repin `.env`
+`RAHALGO_API_IMAGE=rahalgo-api:release-5105fa45` + `up -d --no-build --no-deps api`.
+
+**Post-deploy verification (safe, non-destructive — no exploit reproduction, no disposable
+Production data, no cash-ban config change):** identity `production` / `cd33b173` / `0157`,
+`staging=false`; `/auth/me` no token → `401`; `POST /orders/custom` no token → `401` (route
+served, auth-gated, no order); container running, restarts=0, 0 error lines.
+
+**Business / financial invariants — Production DB before vs after byte-identical:**
+
+| | before | after |
+|---|---|---|
+| users / users FP | 25 / `9b20f7c3…` | 25 / `9b20f7c3…` |
+| user-roles FP | `e9de388a…` | `e9de388a…` |
+| role-caps FP | `f37db9c4…` | `f37db9c4…` |
+| orders / custom orders | 0 / 0 | 0 / 0 |
+| wallets / tx / balance | 2 / 0 / 0 | 2 / 0 / 0 |
+| moneycheck | 51/51 | 51/51 |
+| cash-ban settings | **absent** | **absent** (unchanged) |
+| settings | verify=true · signup=false · custom_orders=false · max_sources=1 | identical |
+
+**Deployment mutated Production only by:** recreating the API container onto the reviewed
+image and pinning `.env`'s API image line. No schema, no settings, no business data, no Caddy.
+Production mutations outside the API image/env pin = 0.
+
+**Security evidence preserved:** a cash-banned customer could create a custom **cash** order
+via (1) explicit `payment_method="cash"` and (2) omitted `payment_method` (normalised to
+cash), because the custom-order path never called `cashBlocked`. The patch reuses the same
+authoritative policy; wallet/non-cash stays allowed; payment method has no later
+customer-reachable mutation path; D8 was not modified; no migration required.
+
+**D6 status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
+STAGING RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY = PASS ·
+**OPERATIONAL STATUS = CLOSED.** *(History preserved: Production's custom-order path did not
+enforce the cash ban until 2026-09-19 14:53 UTC, when it moved from `5105fa45` to `cd33b173`.
+Production's `launch.customer_custom_orders` is false, so the surface was gated meanwhile; the
+fix hardens it for whenever it opens.)*
