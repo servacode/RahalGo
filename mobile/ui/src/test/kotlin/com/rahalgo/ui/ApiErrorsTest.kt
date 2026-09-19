@@ -33,6 +33,24 @@ class ApiErrorsTest {
         )
     }
 
+    /**
+     * **A3 · «قيد المعالجة» يُقال صريحاً لا «تعذّر الاتصال»** — `CUST-DEF-002`.
+     *
+     * **وكان `in_progress` بلا خانةٍ فيقع على `err_internal`** («تعذر
+     * الاتصال — حاول بعد قليل») — **رسالةُ فشلٍ تُغري بإعادةٍ تُنشئ طلباً
+     * ثانياً والأوّلُ ما زال يُعالَج.** وأخوه `idempotency_reclaimed` كان
+     * صحيحاً؛ **فليكونا سواءً على رسالة الانتظار.**
+     */
+    @Test
+    fun inProgressResolvesToWaitNotConnectionFailure() {
+        assertEquals(R.string.err_in_progress, resolveErrorRes("in_progress"))
+        assertEquals(R.string.err_in_progress, resolveErrorRes("idempotency_reclaimed"))
+        // **ولا يبقى «تعذّر الاتصال» جواباً لِـ«قيد المعالجة».**
+        assertNotEquals(R.string.err_internal, resolveErrorRes("in_progress"))
+        // **ومفتاحُ الرسالة `errors.in_progress` كذلك يحلّ إلى الانتظار.**
+        assertEquals(R.string.err_in_progress, resolveErrorRes("", "errors.in_progress"))
+    }
+
     /** **A3 · رمزٌ غائبٌ ومفتاحُ رسالةٍ حاضر ⇒ يُقرأ المفتاح.** */
     @Test
     fun messageKeyIsConsumedWhenCodeIsMissing() {

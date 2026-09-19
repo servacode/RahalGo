@@ -358,6 +358,12 @@ private val CODES: Map<String, Int> = mapOf(
     "reason_mismatch" to R.string.err_reason_mismatch,
     "password_change_required" to R.string.err_password_change_required,
     "auth_unavailable" to R.string.err_auth_unavailable,
+    // **CUST-DEF-002: «قيد المعالجة» يُقال صريحاً لا «تعذّر الاتصال».**
+    // **وكان `in_progress` بلا خانةٍ فيقع على `err_internal` («تعذّر
+    // الاتصال — حاول بعد قليل») — فيُغري بإعادةٍ تُنشئ طلباً ثانياً**،
+    // **ويُسجَّل حادثةً زائفةً** (`code !in CODES`). والرسالةُ الصحيحةُ
+    // «العملية قيد التنفيذ — انتظر قليلا ولا تعدها».
+    "in_progress" to R.string.err_in_progress,
     "idempotency_reclaimed" to R.string.err_in_progress,
     "too_many_addresses" to R.string.err_too_many_addresses,
     "already_returned" to R.string.err_already_returned,
