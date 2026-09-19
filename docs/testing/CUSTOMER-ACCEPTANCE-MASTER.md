@@ -654,7 +654,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-024 | Submit | Order count before/after proves exact mutation | Every submit case | Read counts | Exactly the intended delta | — | `NOT_TESTED` | — | online | read-only SQL | — | — | — | Applies to all CUST-13 rows |
 | CUST-13-025 | Submit | Open-order cap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open orders at cap | Submit another | Explicit cap message; no order | — | `NOT_TESTED` | — | online | orders unchanged | — | — | — | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | — | `NOT_TESTED` | — | online | — | — | — | — | Added: normal path checks WhatsApp; custom path does not (D8) |
-| CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | — | — | Added: normal path checks cash ban; custom path does not (D6) |
+| CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | D6 (source fix CLOSED; not deployed) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 source fix CLOSED (custom path enforces `cashBlocked` too), not yet deployed. See §40.21 |
 | CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | — | — | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | Server returns the old committed order OR the new cart is submitted — never a silent mismatch between cart and created order | — | `NOT_TESTED` | — | cut | order items vs cart | — | — | — | Added. CAF-02: idempotency does not fingerprint the body |
 
@@ -671,7 +671,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-005 | Custom | Lost response / retry | Signed-in test customer · Staging · SM-A525F · valid default address | Cut after send; retry | No duplicate | — | `NOT_TESTED` | — | cut | orders +1 total | — | — | — | — |
 | CUST-CUSTOM-006 | Custom | Launch flag OFF | Signed-in test customer · Staging · SM-A525F · valid default address · flag OFF | Send | Explicit `launch_closed`; no order | — | `NOT_TESTED` | — | online | no order | — | — | — | Client ignores the flag (parsed, unused) — server is the guard |
 | CUST-CUSTOM-007 | Custom | Outside coverage / zone closed / platform closed | Signed-in test customer · Staging · SM-A525F · valid default address | Send under each condition | Explicit denial each | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestSRV4_CustomOrderFollowsCoverage`, `TestZH19`, `TestPH16/18` |
-| CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path | — | `NOT_TESTED` | — | online | no order | — | — | — | KNOWN DEFECT D6 (EXPECTED_FAIL `TestCENSUS_D6_CustomOrderSkipsCashBan`) — expected FAIL |
+| CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path (`cash_blocked`) | — | `NOT_TESTED` | — | online | no order | — | D6 (source fix CLOSED; not deployed) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) · `TestCENSUS_D6_CustomOrderSkipsCashBan` | D6 SOURCE FIX CLOSED (§40.21): custom path now enforces `cashBlocked` (cash sent or omitted) — guarded by `TestCustomCashBan_*`; census now reports REPRODUCTION=NO. Not yet deployed |
 | CUST-CUSTOM-009 | Custom | WhatsApp verification requirement | Unverified · require_whatsapp=true (Staging test) | Send | Must follow the same rule as the normal path | — | `NOT_TESTED` | — | online | no order | — | — | — | KNOWN DEFECT D8 (EXPECTED_FAIL) — expected FAIL |
 | CUST-CUSTOM-010 | Custom | Creation event recorded | After 001 | Read order_events | `''→pending` event exists like normal orders | — | `NOT_TESTED` | — | online | order_events | — | — | — | KNOWN DEFECT D9 (EXPECTED_FAIL) — expected FAIL |
 | CUST-CUSTOM-011 | Custom | Open-order cap shared with normal orders | Signed-in test customer · Staging · SM-A525F · valid default address · at cap | Send | Explicit cap | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestD4_CustomOrdersShareTheSameCap` |
@@ -1331,7 +1331,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-12-028 | Cart-changes review gate | Added: `CartChangesTest` (10) |
 | CUST-13-025 | Open-order cap | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | WhatsApp verification requirement on normal orders | Added: normal path checks WhatsApp; custom path does not (D8) |
-| CUST-13-027 | Cash-blocked customer | Added: normal path checks cash ban; custom path does not (D6) |
+| CUST-13-027 | Cash-blocked customer | Added: both paths now check the cash ban — D6 source fix CLOSED (custom path enforces `cashBlocked` too), not yet deployed. See §40.21 |
 | CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Retry after cart edit does not replay the old order | Added. CAF-02: idempotency does not fingerprint the body |
 | CUST-CUSTOM-019 | Driver note is saved and shown | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
@@ -2223,3 +2223,61 @@ Production financial witness was attempted, and no corrective ledger entry was n
 = PASS · STAGING RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY = PASS
 · **OPERATIONAL STATUS = CLOSED.** *(History preserved: Production accepted client-supplied
 `merchant_id` until 2026-09-19 12:37 UTC, when it moved from `5d7a960f` to `5105fa45`.)*
+
+### 40.21 · D6 — custom-order cash-ban bypass: source fix + regression (2026-09-19)
+
+**Authorized as source fix + automated regression only. No deployment; no Staging/Production
+data or settings touched.**
+
+**Root cause (proven before editing).** The cash-ban policy (`Service.cashBlocked` →
+`ErrCashBlocked`) was enforced at exactly one site — the normal-order path
+(`service.go` `CreateTx`). The custom-order creator `CreateCustomTx`
+(`POST /orders/custom` → `handleCreateCustomOrder`) never called it, and it normalises
+`payment` to `"cash"` unless `"wallet"` — so **omitting `payment_method` also yields cash**.
+A customer cash-banned for a customer-fault delivery failure could place a cash **custom**
+order (by sending `"cash"` or by omitting the field) and bypass the lock that protects
+platform money. Ownership was already correct (`userIDFrom(r)`, never a body field).
+
+**Fix (minimal, two files' worth of logic in one file, no migration).** The same policy is
+now checked in both custom creators — `CreateCustomTx` (live) and its exported sibling
+`CreateCustom` (currently unused, fixed for consistency) — after payment normalisation and
+before any lock or write: `if payment == "cash"` → `cashBlocked` → `ErrCashBlocked`. Same
+source of truth, same error contract, no second definition of the policy. The wallet option
+stays open to the banned customer (the ban is on cash, not the account).
+
+**Complete coverage (second source trace).** `payment_method` is written in exactly three
+places — the two custom creators (now guarded) and the normal creator (already guarded) —
+and is **never `UPDATE`d** anywhere. There is no customer-reachable later-stage payment
+selection/change and no custom→normal conversion: `POST /orders/{id}/agree` is driver-only
+and writes goods/fee, not payment. No residual path remains where a cash-banned customer can
+reach cash through create, quote, acceptance, payment change, finalisation or conversion.
+
+**Regression `TestCustomCashBan_*` (`orders/custom_cashban_test.go`):**
+- banned + explicit `"cash"` → `ErrCashBlocked`, **no custom-order row, no wallet tx**;
+- banned + **omitted** payment (defaults to cash) → `ErrCashBlocked`, no row, no wallet tx;
+- banned + `"wallet"` → accepted (ban is on cash only);
+- not-banned + `"cash"` → accepted (legitimate flow unchanged).
+
+**Negative witness:** with the fix temporarily reverted, both banned-cash cases FAIL — the
+custom cash order is created despite the ban (`err = <nil>`); the allowed/wallet cases still
+pass. Fix restored; the exploit cases pass again.
+
+**Money/DB safety.** The fix only rejects — it writes nothing on the banned path (the check
+precedes the advisory lock and the INSERT), and the regression asserts zero custom rows and
+zero wallet transactions after a rejected attempt. No settlement/ledger code touched; the
+financial-invariant packages (`fininv`, settlement, treasury, goods-settlement) stay green.
+
+**D8 boundary.** No WhatsApp/verification code exists in the custom creator or handler; the
+patch adds only the cash-ban block and touches nothing D8. **D8 overlap = none; D8 behaviour
+unchanged.**
+
+**Test scope (P-9).** `internal/orders/custom.go` is unmapped in the impact engine →
+classified UNKNOWN → **SAFE FULL FALLBACK**: the full backend suite is mandatory. Executed
+`go test -timeout 30m -count=1 -p 1 ./...` → **35 packages OK · 0 FAIL · 0 skip unexplained**
+(incl. `qa` 900.7s and `testtruth` — `TestTruthIsCurrent` green). `gofmt` clean. TEST_TRUTH
+regenerated: **D6 = `FIXED_AND_PASSING`** with four covering tests; the census
+`TestCENSUS_D6_CustomOrderSkipsCashBan` now reports REPRODUCTION = NO (both doors block).
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
+FULL SUITE = PASS · **NOT DEPLOYED** (Staging and Production still run `5105fa45`; any
+runtime/deploy phase is a separate authorization).
