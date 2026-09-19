@@ -15,6 +15,8 @@ package orders
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +25,19 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
+
+// sourceHas **أهذا المعرّفُ أحدُ مصادر الأصناف الحقيقيّة؟** — `CUST-DEF-003`.
+//
+// **والمقارنةُ بلا حسّاسيّة حرف** — معرّفاتُ القاعدة صغيرةٌ قانونيّة، ومن أرسل
+// المتجرَ الصحيحَ بحروفٍ كبيرةٍ لا يُرفض، **ومن أرسل غريباً يُرفض.**
+func sourceHas(ids []string, id string) bool {
+	for _, s := range ids {
+		if strings.EqualFold(s, id) {
+			return true
+		}
+	}
+	return false
+}
 
 // Sources مصادرُ أصنافٍ، مرتّبةً بالأوّلِ ظهوراً في السلّة.
 //

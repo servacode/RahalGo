@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 356,
-    "test_funcs": 1532
+    "test_files": 357,
+    "test_funcs": 1536
   },
   "flows": [
     {
@@ -132,6 +132,10 @@
         "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
         "TestCoverage_OverlappingZonesPickNearestCentre",
         "TestCoverage_PolygonInsideOutsideBoundary",
+        "TestCDEF003_ForeignMerchantCannotBecomeCommissionStore",
+        "TestCDEF003_ForeignMerchantIsRejected",
+        "TestCDEF003_LegitimateOrderStoresItemMerchant",
+        "TestCDEF003_OpenHoursUsesRealStoreNotSupplied",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
         "TestXQ2_F3_UnreadableSettingBlocksCreation",
@@ -15307,6 +15311,70 @@
       "modes": [
         "FULL",
         "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCDEF003_ForeignMerchantCannotBecomeCommissionStore",
+      "file": "internal/qa/order_merchant_trust_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCDEF003_ForeignMerchantIsRejected",
+      "file": "internal/qa/order_merchant_trust_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCDEF003_LegitimateOrderStoresItemMerchant",
+      "file": "internal/qa/order_merchant_trust_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCDEF003_OpenHoursUsesRealStoreNotSupplied",
+      "file": "internal/qa/order_merchant_trust_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
       ],
       "orphan": false
     },

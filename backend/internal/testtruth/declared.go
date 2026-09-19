@@ -1649,6 +1649,18 @@ var TestMap = map[string]TestDecl{
 	// **وكلُّها سقطت قبل الإصلاح** إلّا حُرّاسَ التسجيل المشروع —
 	// **ومنها أدمنٌ بلا PIN نال جلسةَ أدمن عبر بابِ الزبائن.**
 	// (`CUSTOMER-ACCEPTANCE-MASTER.md` §40.3 · §40.14.)
+	// ══════════════════════════════════════════════════════════════
+	// **متجرُ الطلب من أصنافه لا من العميل** — `CUST-DEF-003` (٢٠٢٦-٠٩-١٩)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **حدُّ ثقةٍ على حدٍّ ماليّ**: معرّفُ متجرٍ غريبٌ كان يُقبل فيوجّه العمولةَ
+	// والتفعيلَ والدوامَ والإشعار. **وكلُّها سقطت قبل الإصلاح** إلّا الطلبَ
+	// المشروع. (`CUSTOMER-ACCEPTANCE-MASTER.md` §40.5.)
+	"TestCDEF003_ForeignMerchantIsRejected":                  orderStoreTrustTest(),
+	"TestCDEF003_LegitimateOrderStoresItemMerchant":          orderStoreTrustTest(),
+	"TestCDEF003_OpenHoursUsesRealStoreNotSupplied":          orderStoreTrustTest(),
+	"TestCDEF003_ForeignMerchantCannotBecomeCommissionStore": orderStoreTrustTest(),
+
 	"TestSU01_ExistingAccountsAreNotTakenOverWhenVerifyIsOff": signupTest(),
 	"TestSU02_AdminCannotBeReachedThroughSignup":              signupTest(),
 	"TestSU03_SuspendedAndBlockedAccountsAreNotAltered":       signupTest(),
@@ -3466,6 +3478,15 @@ func stepUpTest() TestDecl {
 }
 
 // resetTest حارسُ استردادِ الحساب بإعادة الكلمة — `R13`.
+// orderStoreTrustTest **متجرُ الطلب من أصنافه لا من العميل** — `CUST-DEF-003`.
+func orderStoreTrustTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-01"},
+		Modes: []string{"SECURITY", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
 // signupTest **بابُ التسجيل حارسٌ للحساب القائم** — `CUST-DEF-001`.
 func signupTest() TestDecl {
 	return TestDecl{
