@@ -138,4 +138,20 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
     fun closeInbox() {
         inbox = null
     }
+
+    /**
+     * **حدُّ الحساب — يُنادى عند الخروج** (`CUST-DEF-004`).
+     *
+     * **تُوقَف الوصلةُ الحيّةُ** (وإلّا ورثها الحسابُ التالي: `LiveSocket.start`
+     * تعود صامتةً إن كانت تعمل، **فيُنعَش الوارثُ بأحداث من سبقه**)، **وتُمحى
+     * حالُ الحساب** — الرصيدُ والبريدُ والملخّص — **فلا تُعرض لحسابٍ ثانٍ.**
+     * والدخولُ التالي يُنادي `wake()` فيفتح وصلةً بالتوكن الجديد ويجلب حالَه.
+     */
+    fun reset() {
+        backend.live.stop()
+        me = null
+        balance = 0
+        unread = 0
+        inbox = null
+    }
 }

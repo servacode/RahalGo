@@ -57,5 +57,15 @@ object Backend {
 
     // **ورقمُ النسخة يُقرأ من البناء لا يُكتب** — انظر بوّابةَ التحديث.
     fun of(context: Context): Core =
-        AppCore.install(context, BASE_URL, CLIENT, BuildConfig.VERSION_CODE)
+        AppCore.install(
+            context, BASE_URL, CLIENT, BuildConfig.VERSION_CODE,
+            // **حدُّ الجلسة عند الخروج** — `CUST-DEF-004`: تُمحى السلّةُ
+            // (لا يرثها الحسابُ التالي — `PC-2`)، وتُوقَف الوصلةُ الحيّةُ
+            // (لا يرثها كذلك — `CAF-09`)، وتُنعَش الشاشاتُ لتعود ضيفاً.
+            afterLogout = {
+                com.rahalgo.customer.cart.Cart.clear()
+                runCatching { AppCore.get().live.stop() }
+                com.rahalgo.ui.Refresh.bump()
+            },
+        )
 }

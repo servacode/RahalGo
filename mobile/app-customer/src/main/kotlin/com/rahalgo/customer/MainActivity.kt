@@ -307,7 +307,10 @@ private fun SignedIn(
     val pagesVm: PagesViewModel = viewModel()
     val shell: ShellViewModel = viewModel()
     // **ومن دخل يبدأ غلافُه عملَه** — الرصيدُ والشارةُ والوصلةُ الحيّة.
-    LaunchedEffect(guest) { if (!guest) shell.wake() }
+    // **ومن خرج يُحدّ غلافُه** — `CUST-DEF-004`: تُوقَف الوصلةُ وتُمحى حالُ
+    // الحساب، فلا يرثها الحسابُ التالي (والسلّةُ والوصلةُ يمحوهما
+    // `AppCore.afterLogout` كذلك، وهذا الحدُّ الثاني للحالِ داخل الغلاف).
+    LaunchedEffect(guest) { if (!guest) shell.wake() else shell.reset() }
     val walletVm: WalletViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
     val pickVm: PickPointViewModel = viewModel()
