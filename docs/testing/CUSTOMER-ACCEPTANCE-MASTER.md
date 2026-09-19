@@ -938,7 +938,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-024 | Sec | Production secrets not embedded in the Staging debug app | APK | Search dex/resources for production keys/hosts | None (Staging Firebase project only) | — | `NOT_TESTED` | — | any | — | — | — | — | CUST-00-006 complement |
 | CUST-19-025 | Sec | No Customer-visible error dumps internal/server detail | Signed-in test customer · Staging · SM-A525F | Trigger 4xx/5xx | Mapped Arabic messages only; no stack/SQL text | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-19-026 | Sec | Signup confirm cannot take over an existing account (added) | Existing test customer X · attacker knows X's phone | API client: POST `/auth/signup/confirm` with X's phone and a new password — (a) `signup_verify`=true without a code; (b) `signup_verify`=false (Staging flip only with Owner approval) | Both denied; X's password unchanged; no session issued | — | `NOT_TESTED` | — | online | X password hash fingerprint unchanged; no new session | — | CUST-DEF-001 (CLOSED) | `TestSU01`–`TestSU06` (`qa/signup_takeover_test.go`) | Added. **CAF-01 P0 (source-confirmed)**: with `signup_verify`=false `ConfirmSignup` skips the code and overwrites an existing account's password, then issues a session (`identity/service.go:486-559`). Current Prod/Staging value = true (Staging since 2026-09-19). Expected FAIL for (b) |
-| CUST-19-027 | Sec | Client-supplied merchant_id is ignored (added) | API client | POST `/orders` with a valid cart plus a foreign/closed `merchant_id` | Server derives the merchant from the items; open-hours check uses the real source | — | `NOT_TESTED` | — | online | order.merchant_id == item source | — | — | — | Added. **CAF-03 HIGH (source-confirmed)**: `CreateTx` keeps a non-empty client `merchant_id` (`orders/service.go:303-305`) and runs the open-hours check on it |
+| CUST-19-027 | Sec | Client-supplied merchant_id is ignored (added) | API client | POST `/orders` with a valid cart plus a foreign/closed `merchant_id` | Server derives the merchant from the items; open-hours check uses the real source | — | `NOT_TESTED` | — | online | order.merchant_id == item source | — | CUST-DEF-003 (source fix CLOSED; not deployed) | `TestCDEF003_*` (`qa/order_merchant_trust_test.go`) | Added. **CAF-03 HIGH (source-confirmed)**: `CreateTx` keeps a non-empty client `merchant_id` (`orders/service.go:303-305`) and runs the open-hours check on it |
 | CUST-19-028 | Sec | Order in an unlaunched city/province is denied at create (added) | Active zone inside an inactive city (fixture) | API client submit; custom submit | Denied with the same reason availability gives | — | `NOT_TESTED` | — | online | no order | — | — | — | Added. CAF-06 (reported by audit): place classification is advisory; create paths enforce zones only |
 | CUST-19-029 | Sec | Any-role token cannot misuse customer order routes (added) | Driver/merchant/rep test tokens | POST `/orders`, rating, complaint with non-customer roles | Per contract (every role also carries customer — `TestOneRole_EveryRoleBringsCustomer`) — decide and verify | — | `NOT_TESTED` | — | online | — | — | — | — | Added: the customer route group has no role check |
 
@@ -1436,7 +1436,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 |---|---|---|---|---|
 | **CUST-DEF-001** | CAF-01 (+ CAF-16 signup part) | **P0** | account takeover · authentication boundary | **OPERATIONALLY CLOSED 2026-09-19** — source fix + regression (§40.14), Staging runtime PASS (§40.16), **Production patch DEPLOYED & verified (§40.17)** |
 | **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
-| **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **CONFIRMED (source)** — exploitable by any signed-in customer with a crafted request |
+| **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **SOURCE FIX = CLOSED 2026-09-19** — fixed + regression + negative witness (§40.18); not deployed |
 | **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **CONFIRMED (source)** |
 | **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **CONFIRMED (source)** |
 | **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
@@ -1993,3 +1993,83 @@ changed. **No Caddy change.**
 RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY = PASS ·
 **OPERATIONAL STATUS = CLOSED.** *(History preserved: Production ran the vulnerable
 `68a45c97` until 2026-09-19 11:09 UTC.)*
+
+### 40.18 · CUST-DEF-003 — source fix + automated regression (2026-09-19)
+
+**Authorized as source fix + automated regression only. No deployment; no Staging/Production
+data or settings touched.**
+
+**Proven root cause.** `POST /orders` → `handleCustomerCreateOrder` → `orders.CreateTx`.
+The order's merchant came from the request DTO field `merchant_id` (`orders/models.go`):
+`CreateTx` filled it from the items only when empty, otherwise kept the client value
+(old `orders/service.go:303`), then used it for the open-hours check, wrote it to
+`orders.merchant_id`, and every downstream store/money path reads that column
+(`settleRep`, `reverseCommissions`, `merchantActivated`, `notifyCreated`,
+merchant order list, pickup/route, ratings). **The unsafe transition:** a
+customer-controlled `merchant_id` never validated against the items' real stores became
+authoritative.
+
+**Authoritative server-side store.** `SourcesOf` derives the distinct merchant set from
+the actual `menu_items` rows — the trusted source. `sources.IDs` is that set.
+
+**Existing single/multi-store rule (preserved, not invented):** an order may span at most
+`orders.max_sources` distinct item merchants (`ErrTooManySources`); when `merchant_id` is
+omitted the order merchant is `sources.IDs[0]`.
+
+**Chosen behavior for a foreign `merchant_id`: REJECT** (`bad_merchant`). Reason it matches
+the contract: the only order-creating route is `POST /orders`, and the sole real caller
+(the customer app) never sends `merchant_id`; every existing test that sends it sends the
+items' own merchant. So rejecting a value not among the item stores breaks nothing
+legitimate, and a deterministic `bad_merchant` (already the code for a malformed id) is
+clearer than silently overriding. Empty → derived from items (unchanged).
+
+**Changed files (backend only):**
+- `orders/service.go` — the supplied `merchant_id` must be one of `sources.IDs`, else
+  `ErrBadMerchant`; empty still derives `sources.IDs[0]`.
+- `orders/sources.go` — `sourceHas` helper (case-insensitive membership).
+- `qa/order_merchant_trust_test.go` — new regression (4 tests).
+- `testtruth/declared.go` + generated `TEST_TRUTH.*` — map the new tests to F-01.
+
+**Security property proven.** A foreign `merchant_id` cannot become the order merchant, so
+it cannot affect open-hours, commission recipient/basis, commission reversal,
+store-activation/rep-reward accounting, notifications, order-list visibility, pickup/routing
+or ratings — all of which read `orders.merchant_id`. Goods settlement already uses the
+item's own store (`COALESCE(oi.merchant_id, o.merchant_id)`) and is unchanged.
+
+**Regression `TestCDEF003_*` (qa):**
+- foreign active store / random UUID / garbage → `bad_merchant`, no order created;
+- legitimate order (omitted or correct merchant) → stored `orders.merchant_id` == the item
+  store;
+- **open-hours real-store witness:** real store CLOSED + foreign OPEN supplied → not
+  orderable (`bad_merchant`, no order); real CLOSED + omitted → `merchant_closed`;
+- **inverse:** real OPEN + foreign CLOSED supplied → foreign cannot govern (`bad_merchant`);
+- **commission witness:** a foreign store cannot become the order's commission store; a
+  legitimate order's stored merchant is the item store.
+
+**Negative witness (fix reverted):** the exploit cases FAIL on the pre-fix code — a foreign
+active merchant is accepted, and a closed real store is made orderable through a foreign
+open store; the legitimate cases pass on both. Fix restored afterward.
+
+**Test scope:**
+- previous expected CRITICAL scope: 212 mandatory;
+- actual discovered scope (P-9 on this change): **218 mandatory** (the suite grew — new
+  CUST-DEF-001 and CUST-DEF-003 tests);
+- executed: the full 8-package mandatory scope — `orders` PASS (27.6 s), `qa` PASS
+  (856 s), plus `androidmap` · `failmap` · `fininv` · `impact` · `racemap` · `testtruth`;
+  the only red before regenerating was `TestTruthIsCurrent` (inventory not yet rebuilt),
+  green after regeneration;
+- full Go suite `go test -timeout 30m -count=1 -p 1 ./...`: **35 packages OK · 0 FAIL ·
+  exit 0**;
+- skips/failures: 0 unexplained.
+
+**Second source trace (post-fix).** The only other path that changes an order's merchant is
+`POST /orders/{id}/transfer`, which is under the `/admin` group (role + capability gated) —
+not customer-reachable, a separate ops contract. Custom orders (`CreateCustomTx`) never take
+a client merchant. No residual customer-controlled store trust remains.
+
+**Money/ledger:** no financial invariant weakened, no historical data touched, no
+correction transaction introduced (source-fix phase only). Existing settlement tests, which
+compute commission from `orders.merchant_id`, remain green.
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · **NOT DEPLOYED** (Staging
+and Production still run `5d7a960f`; any runtime/deploy phase is a separate authorization).
