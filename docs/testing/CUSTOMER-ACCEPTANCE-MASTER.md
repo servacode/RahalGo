@@ -1861,3 +1861,70 @@ acceptance:**
 
 **Remaining stop-class blockers after this cycle:** CUST-DEF-002 · CUST-DEF-003 ·
 CUST-DEF-004 · CUST-DEF-005 · D6 · D8. **Customer acceptance execution stays closed.**
+
+### 40.16 · CUST-DEF-001 — Staging runtime verification (2026-09-19)
+
+**Deployed to Staging only.** API `release-5d7a960f` (image `034d8756…`), built on the
+server from the uploaded source of commit `5d7a960f` (source sha256 `fee8d41d…`), promoted
+with `--no-deps api`. No migration (schema stays `0157`). Staging web unchanged.
+**Production untouched — still `68a45c97`.** Identity endpoint reports
+`source_commit=5d7a960f`, so the running artifact is the fixed code, not just a
+successful container start.
+
+**Fixtures:** a controlled script created disposable, clearly-labelled Staging accounts
+(`full_name LIKE 'CUSTDEF001-WITNESS%'`, phones `+9639977700xx`). The QA harness runs
+only against a local test DB, so it cannot seed Staging; codes for the legitimate flows
+came from the real `/auth/signup/request` endpoint, read from the server log and never
+printed.
+
+**Every case proved both the HTTP result and the database result:**
+
+| Case | HTTP | DB |
+|---|---|---|
+| A · existing password customer, verify ON, no code | `409 phone_taken`, no token | password/name/flag/PIN/status/sessions unchanged |
+| B · existing driver+customer role | `409 phone_taken`, no token | unchanged |
+| C · suspended customer | `409 phone_taken`, no token | unchanged |
+| C · blocked customer | `409 phone_taken`, no token | unchanged |
+| D · must_change_password customer | `409 phone_taken`, no token | flag stays true; unchanged |
+| E · brand-new number, verify ON, real code | `200`, session issued | account created |
+| F · password-less customer, real code | `200`, session issued | password now set (was empty) |
+| G · launch gate (`launch.customer_signup`=false) | `403/503 launch_closed` | no account created |
+| OFF · verify OFF, existing password customer, no code | `409 phone_taken`, no token | unchanged (protection holds with verify OFF) |
+| OFF · verify OFF, brand-new number, no code | `200`, session issued | account created |
+
+**Rate limit (H):** not exercised at runtime — the centralized limiter is shared by IP,
+and hammering it risks locking a real operational address. Per the Owner's section 7,
+the passing automated regression `TestSU09` (per-phone and per-IP `429`) is the evidence.
+
+**Settings-failure (I):** not induced on the live Staging settings (Owner's section 3);
+the automated `TestSU06` (injected read failure → fail closed) is the evidence.
+
+**Temporary settings** changed only for their witness and restored to the exact recorded
+originals: `launch.customer_signup` true→false→true; `auth.signup_verify` true→false→true.
+
+**Cleanup — proven exact.** All 8 fixture users and their dependent rows removed
+(sessions, roles, OTP, audit, wallets). The signup bonus had added three balanced ±15
+wallet pairs; both sides of each were deleted by their shared `ref`, and the one platform
+wallet whose stored balance still carried the −45 was corrected by exactly +45 so that
+**every wallet's balance again equals the sum of its transactions**.
+
+**Before → after (baseline restored):**
+
+| | before | after |
+|---|---|---|
+| users | 50 | 50 |
+| users fingerprint | `555561cf…` | `555561cf…` (identical) |
+| user-roles fingerprint | `5300abee…` | `5300abee…` (identical) |
+| role-permissions fingerprint | `0a8c9d8d…` | `0a8c9d8d…` (identical) |
+| orders | 1 | 1 |
+| #1050 | on_the_way · 7 events | on_the_way · 7 events |
+| wallets | 50 · sum 0 | 50 · sum 0 |
+| wallet transactions | 4 | 4 |
+| moneycheck | 51/51 | 51/51 |
+| fixture rows | — | 0 |
+| settings | verify=true · signup=true | verify=true · signup=true |
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · **STAGING RUNTIME = PASS**
+· PRODUCTION = still `68a45c97` (old code), patch pending Owner authorization. Production
+is **not** protected by the code fix yet; it is only shielded because
+`auth.signup_verify` is stored `true` there.
