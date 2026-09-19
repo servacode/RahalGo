@@ -938,7 +938,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-024 | Sec | Production secrets not embedded in the Staging debug app | APK | Search dex/resources for production keys/hosts | None (Staging Firebase project only) | — | `NOT_TESTED` | — | any | — | — | — | — | CUST-00-006 complement |
 | CUST-19-025 | Sec | No Customer-visible error dumps internal/server detail | Signed-in test customer · Staging · SM-A525F | Trigger 4xx/5xx | Mapped Arabic messages only; no stack/SQL text | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-19-026 | Sec | Signup confirm cannot take over an existing account (added) | Existing test customer X · attacker knows X's phone | API client: POST `/auth/signup/confirm` with X's phone and a new password — (a) `signup_verify`=true without a code; (b) `signup_verify`=false (Staging flip only with Owner approval) | Both denied; X's password unchanged; no session issued | — | `NOT_TESTED` | — | online | X password hash fingerprint unchanged; no new session | — | CUST-DEF-001 (CLOSED) | `TestSU01`–`TestSU06` (`qa/signup_takeover_test.go`) | Added. **CAF-01 P0 (source-confirmed)**: with `signup_verify`=false `ConfirmSignup` skips the code and overwrites an existing account's password, then issues a session (`identity/service.go:486-559`). Current Prod/Staging value = true (Staging since 2026-09-19). Expected FAIL for (b) |
-| CUST-19-027 | Sec | Client-supplied merchant_id is ignored (added) | API client | POST `/orders` with a valid cart plus a foreign/closed `merchant_id` | Server derives the merchant from the items; open-hours check uses the real source | — | `NOT_TESTED` | — | online | order.merchant_id == item source | — | CUST-DEF-003 (source fix CLOSED; not deployed) | `TestCDEF003_*` (`qa/order_merchant_trust_test.go`) | Added. **CAF-03 HIGH (source-confirmed)**: `CreateTx` keeps a non-empty client `merchant_id` (`orders/service.go:303-305`) and runs the open-hours check on it |
+| CUST-19-027 | Sec | Client-supplied merchant_id is ignored (added) | API client | POST `/orders` with a valid cart plus a foreign/closed `merchant_id` | Server derives the merchant from the items; open-hours check uses the real source | — | `NOT_TESTED` | — | online | order.merchant_id == item source | — | CUST-DEF-003 (CLOSED · Prod deployed 5105fa45) | `TestCDEF003_*` (`qa/order_merchant_trust_test.go`) | Added. **CAF-03 HIGH (source-confirmed)**: `CreateTx` keeps a non-empty client `merchant_id` (`orders/service.go:303-305`) and runs the open-hours check on it |
 | CUST-19-028 | Sec | Order in an unlaunched city/province is denied at create (added) | Active zone inside an inactive city (fixture) | API client submit; custom submit | Denied with the same reason availability gives | — | `NOT_TESTED` | — | online | no order | — | — | — | Added. CAF-06 (reported by audit): place classification is advisory; create paths enforce zones only |
 | CUST-19-029 | Sec | Any-role token cannot misuse customer order routes (added) | Driver/merchant/rep test tokens | POST `/orders`, rating, complaint with non-customer roles | Per contract (every role also carries customer — `TestOneRole_EveryRoleBringsCustomer`) — decide and verify | — | `NOT_TESTED` | — | online | — | — | — | — | Added: the customer route group has no role check |
 
@@ -2145,3 +2145,81 @@ source issue surfaced, so no code was edited.
 = PASS (negative direction witnessed; positive settlement direction by automated tests +
 source trace) · BASELINE RESTORED (exact) · **PRODUCTION NOT DEPLOYED** (separate
 authorization). Staging API remains on `release-5105fa45`.
+
+### 40.20 · CUST-DEF-003 — Production security hotfix (2026-09-19)
+
+**Authorized by the Owner** as a Production security hotfix limited to the reviewed
+CUST-DEF-003 backend fix. **API only.**
+
+**Deployment delta 5d7a960f → 5105fa45** (what Production actually gained): two runtime
+files — `orders/service.go`, `orders/sources.go` — both CUST-DEF-003 (order store is derived
+from the item rows via `SourcesOf`; a client-supplied `merchant_id` must be one of the item
+sources or is rejected `bad_merchant`). Everything else in the range is tests, the test-truth
+inventory, or docs; **no migration, no other product/runtime change, no config change.**
+
+**Promotion:** the **exact Staging-tested image** `rahalgo-api:release-5105fa45`
+(`8bfe2490…`, built from commit `5105fa45`, build id `build-20260919T120915Z-5105fa45`) was
+already present in the shared on-host image store and was promoted with the guarded
+`promote.sh` (`--no-build --no-deps api`). No rebuild. Pre-switch the guard confirmed the
+identity endpoint reports `production` and the image id equals the expected `8bfe2490…`;
+post-switch it re-confirmed the running image id, a 40-hex `source_commit`, and
+`environment=production`. `.env` pinned to the new API image; the web line kept
+`release-68a45c97`.
+
+| | Production before | Production after |
+|---|---|---|
+| API release / image | `release-5d7a960f` / `034d8756…` | `release-5105fa45` / `8bfe2490…` |
+| source_commit | `5d7a960f` | `5105fa45` |
+| web | `release-68a45c97` (`3a3e569d…`) | unchanged |
+| staging API | untouched | untouched |
+| migration | `0157` | `0157` (none applied) |
+| health | 200 | 200 |
+| container | running · 0 restarts | running · 0 restarts · 0 error lines |
+
+**Backups before deploy (verified):**
+- `pg_dump` `rahalgo-pre-5105fa45-20260919T123556Z.dump` — 94 table-data entries read back,
+  sha256 `f7b10c55…`;
+- rollback image archive `rahalgo-api-release-5d7a960f.tar` (sha256 `ea997a54…`, index ==
+  the image that was running, `034d8756…`);
+- `.env` backup `.env.bak-pre-5105fa45-20260919T123556Z` (sha256 `8d0a7435…`).
+- **Rollback path (unused):** repin `.env` `RAHALGO_API_IMAGE=rahalgo-api:release-5d7a960f`
+  and `docker compose … up -d --no-build --no-deps api`; DB restore from the dump only if
+  ever needed.
+
+**Post-deploy verification (safe, non-destructive — no exploit reproduction, no disposable
+Production data, no hours/rep-config change):**
+- identity reports `production` / `5105fa45` / `0157`, `staging=false`;
+- `/auth/me` without a token → `401`; `POST /orders` without a token → `401` (the order
+  route is served and auth-gated; **no order created**);
+- signup-confirm on a non-existent phone → `503 launch_closed` (the launch gate is intact,
+  Production signup stays closed, **no account created**);
+- the deployed artifact identity is the reviewed fix.
+
+**Business / financial invariants — Production DB before vs after is byte-identical:**
+
+| | before | after |
+|---|---|---|
+| users | 25 | 25 |
+| users fingerprint | `9b20f7c3…` | `9b20f7c3…` |
+| user-roles fingerprint | `e9de388a…` | `e9de388a…` |
+| role-permissions fingerprint | `f37db9c4…` | `f37db9c4…` |
+| orders | 0 | 0 |
+| wallets | 2 · sum 0 | 2 · sum 0 |
+| wallet transactions | 0 | 0 |
+| moneycheck | 51/51 | 51/51 |
+| settings | verify=true · signup=false · max_sources=1 | identical |
+
+**Deployment mutated Production only by:** recreating the API container onto the reviewed
+image and pinning `.env`'s API image line. No schema, no settings, no business data
+changed. **No Caddy change.** Production mutations outside the API image/env pin = 0.
+
+**Financial evidence boundary (unchanged, intentional):** commission / reversal /
+rep-activation read `orders.merchant_id`, which can no longer be set from a client value; the
+foreign-store rejection and real-store-governs behavior were directly witnessed on Staging;
+the positive settlement direction rests on the automated settlement/reversal tests — no live
+Production financial witness was attempted, and no corrective ledger entry was needed.
+
+**CUST-DEF-003 status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS
+= PASS · STAGING RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY = PASS
+· **OPERATIONAL STATUS = CLOSED.** *(History preserved: Production accepted client-supplied
+`merchant_id` until 2026-09-19 12:37 UTC, when it moved from `5d7a960f` to `5105fa45`.)*
