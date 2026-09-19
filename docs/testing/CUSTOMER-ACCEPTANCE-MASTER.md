@@ -653,7 +653,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-023 | Submit | Offline submit blocked before misleading success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Tap send | Blocked; OFFLINE explanation | — | `NOT_TESTED` | — | offline | no order | — | — | — | §7 |
 | CUST-13-024 | Submit | Order count before/after proves exact mutation | Every submit case | Read counts | Exactly the intended delta | — | `NOT_TESTED` | — | online | read-only SQL | — | — | — | Applies to all CUST-13 rows |
 | CUST-13-025 | Submit | Open-order cap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open orders at cap | Submit another | Explicit cap message; no order | — | `NOT_TESTED` | — | online | orders unchanged | — | — | — | Added: D4 fixed; `TestD4_*` |
-| CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | — | `NOT_TESTED` | — | online | — | — | D8 (source fix CLOSED; not deployed) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) | Added: both paths now enforce WhatsApp — D8 source fix CLOSED (custom path enforces `RequireWhatsApp` too), not yet deployed. See §40.23 |
+| CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | — | `NOT_TESTED` | — | online | — | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
 | CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | — | — | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | Server returns the old committed order OR the new cart is submitted — never a silent mismatch between cart and created order | — | `NOT_TESTED` | — | cut | order items vs cart | — | — | — | Added. CAF-02: idempotency does not fingerprint the body |
@@ -672,7 +672,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-006 | Custom | Launch flag OFF | Signed-in test customer · Staging · SM-A525F · valid default address · flag OFF | Send | Explicit `launch_closed`; no order | — | `NOT_TESTED` | — | online | no order | — | — | — | Client ignores the flag (parsed, unused) — server is the guard |
 | CUST-CUSTOM-007 | Custom | Outside coverage / zone closed / platform closed | Signed-in test customer · Staging · SM-A525F · valid default address | Send under each condition | Explicit denial each | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestSRV4_CustomOrderFollowsCoverage`, `TestZH19`, `TestPH16/18` |
 | CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path (`cash_blocked`) | — | `NOT_TESTED` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) · `TestCENSUS_D6_CustomOrderSkipsCashBan` | D6 CLOSED, deployed to Production (cd33b173, §40.22): custom path enforces `cashBlocked` (cash sent or omitted) — guarded by `TestCustomCashBan_*`; census reports REPRODUCTION=NO |
-| CUST-CUSTOM-009 | Custom | WhatsApp verification requirement | Unverified · require_whatsapp=true (Staging test) | Send | Must follow the same rule as the normal path | — | `NOT_TESTED` | — | online | no order | — | D8 (source fix CLOSED; not deployed) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) · `TestCENSUS_D6_D9_CustomOrderCreationGuards` | D8 SOURCE FIX CLOSED (§40.23): custom path enforces `RequireWhatsApp` (master `auth.require_whatsapp` + role key) — guarded by `TestCustomWhatsApp_*`; census reports REPRODUCTION=NO. Not yet deployed |
+| CUST-CUSTOM-009 | Custom | WhatsApp verification requirement | Unverified · require_whatsapp=true (Staging test) | Send | Must follow the same rule as the normal path | — | `NOT_TESTED` | — | online | no order | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) · `TestCENSUS_D6_D9_CustomOrderCreationGuards` | D8 CLOSED, deployed to Production (023d9d4c, §40.24): custom path enforces `RequireWhatsApp` (master `auth.require_whatsapp` + role key) — guarded by `TestCustomWhatsApp_*`; census reports REPRODUCTION=NO |
 | CUST-CUSTOM-010 | Custom | Creation event recorded | After 001 | Read order_events | `''→pending` event exists like normal orders | — | `NOT_TESTED` | — | online | order_events | — | — | — | KNOWN DEFECT D9 (EXPECTED_FAIL) — expected FAIL |
 | CUST-CUSTOM-011 | Custom | Open-order cap shared with normal orders | Signed-in test customer · Staging · SM-A525F · valid default address · at cap | Send | Explicit cap | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestD4_CustomOrdersShareTheSameCap` |
 | CUST-CUSTOM-012 | Custom | No price before agreement | After 001 | Read card | Fee shown as «يحددها السائق عند الاتفاق» until agreed | — | `NOT_TESTED` | — | online | order fee 0 | — | — | — | `TestCUST_010_NoPriceBeforeAgreement` |
@@ -1330,7 +1330,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-12-027 | Below minimum order | Added: P8-C3-029..031; minimum shown only on rejection (TRUTH §6) |
 | CUST-12-028 | Cart-changes review gate | Added: `CartChangesTest` (10) |
 | CUST-13-025 | Open-order cap | Added: D4 fixed; `TestD4_*` |
-| CUST-13-026 | WhatsApp verification requirement on normal orders | Added: both paths now enforce WhatsApp — D8 source fix CLOSED (custom path enforces `RequireWhatsApp` too), not yet deployed. See §40.23 |
+| CUST-13-026 | WhatsApp verification requirement on normal orders | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Cash-blocked customer | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
 | CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Retry after cart edit does not replay the old order | Added. CAF-02: idempotency does not fingerprint the body |
@@ -2428,3 +2428,81 @@ FALLBACK**: the full backend suite is mandatory. TEST_TRUTH regenerated: **D8 =
 **Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
 FULL SUITE = PASS · **NOT DEPLOYED** (Staging and Production still run `cd33b173`; any
 runtime/deploy phase is a separate authorization).
+
+### 40.24 · D8 — Production security hotfix (2026-09-19)
+
+**Authorized by the Owner** as a Production security hotfix limited to the reviewed D8 fix.
+**API only. No WhatsApp-policy/configuration change.**
+
+**Deployment delta `cd33b173 → 023d9d4c`:** one runtime file —
+`backend/internal/orders/custom.go` (the D8 fix: the custom-order creators now enforce the
+shared `RequireWhatsApp` policy → `ErrWhatsAppRequired`, before any lock/write). Everything
+else in range is the test, the test-truth inventory, or docs. **No migration, no other
+runtime/config change.**
+
+**Promotion:** the **exact Staging-tested image** `765aafb3`→`e827dbd9…` (`release-023d9d4c`,
+already on the shared host) promoted with the guarded `promote.sh` (`--no-build --no-deps
+api`); pre-switch guard confirmed `environment=production` and image id `e827dbd9…`,
+post-switch re-confirmed the running id, a 40-hex `source_commit`, and `environment=production`.
+`.env` pinned; web kept `release-68a45c97`. No rebuild.
+
+| | Production before | Production after |
+|---|---|---|
+| API release / image | `release-cd33b173` / `765aafb3…` | `release-023d9d4c` / `e827dbd9…` |
+| source_commit | `cd33b173` | `023d9d4c` |
+| web / staging API | `release-68a45c97` / (staging untouched) | unchanged |
+| migration | `0157` | `0157` (none applied) |
+| health | 200 | 200 |
+| container | running · 0 restarts | running · 0 restarts · 0 error lines |
+
+**Backups before deploy (verified):** `pg_dump` `rahalgo-pre-023d9d4c-20260919T161058Z.dump`
+(94 table-data entries, sha256 `4321e1cb…`); rollback archive `rahalgo-api-release-cd33b173.tar`
+(sha256 `5ff779ba…`, index == the running `765aafb3…`); `.env` backup (sha256 `72efe376…`).
+**Rollback path (unused):** repin `.env` `RAHALGO_API_IMAGE=rahalgo-api:release-cd33b173` +
+`up -d --no-build --no-deps api`.
+
+**WhatsApp policy — unchanged (the fix is enforcement, not configuration):** raw
+`auth.require_whatsapp` = `false` (present) and `customers.require_whatsapp` = ABSENT before
+**and** after → effective `RequireWhatsApp` = FALSE both sides. No key added, deleted or
+toggled. The requirement stays off in Production; the fix hardens the custom path for whenever
+it is enabled.
+
+**Post-deploy verification (safe, non-destructive — no exploit reproduction, no fixtures, no
+verification-state change):** identity `production` / `023d9d4c` / `0157`, `staging=false`;
+`/auth/me` no token → `401`; `POST /orders/custom` no token → `401` (route served, auth-gated,
+no order); container running, restarts=0, 0 error lines.
+
+**Business / security invariants — Production DB before vs after byte-identical:**
+
+| | before | after |
+|---|---|---|
+| users / users FP | 25 / `9b20f7c3…` | 25 / `9b20f7c3…` |
+| user-roles FP · role-caps FP | `e9de388a…` · `f37db9c4…` | identical |
+| orders / custom orders | 0 / 0 | 0 / 0 |
+| whatsapp-verified users | 12 | 12 (unchanged) |
+| wallets / tx / balance | 2 / 0 / 0 | 2 / 0 / 0 |
+| moneycheck | 51/51 | 51/51 |
+| settings (incl. both WhatsApp keys) | as above | identical |
+
+**Deployment mutated Production only by:** recreating the API container onto the reviewed
+image and pinning `.env`'s API image line. No schema, no settings, no business data, no
+verification state, no Caddy. Production mutations outside the API image/env pin = 0.
+
+**D6 preserved:** the deployed `custom.go` retains the `cashBlocked` enforcement in both
+custom creators (source trace); the D6 regression passes on this commit and D6 was
+runtime-witnessed on Staging earlier. D8 is additive.
+
+**Security evidence preserved.** `RequireWhatsApp` is effective TRUE only when
+`auth.require_whatsapp` **and** `customers.require_whatsapp` are both true; the authoritative
+state is `users.whatsapp_verified_at IS NOT NULL`. Historically: requirement ON + authenticated
+unverified customer + `POST /orders/custom` → custom order created without enforcing the
+requirement. The fix reuses the shared policy in both custom creators before lock/write;
+requirement-off stays off; the authenticated user is authoritative (no body selector); no
+verification state is mutated; D9/R11 unchanged; no migration.
+
+**D8 status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
+STAGING RUNTIME = PASS · PRODUCTION PATCH = DEPLOYED · PRODUCTION POST-DEPLOY = PASS ·
+**OPERATIONAL STATUS = CLOSED.** *(History preserved: Production's custom-order path did not
+enforce the WhatsApp requirement until 2026-09-19 16:11 UTC, when it moved from `cd33b173` to
+`023d9d4c`. The requirement is off in Production, so the surface was not exposed meanwhile; the
+fix hardens it for whenever it is enabled.)*
