@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **143** — منها **115** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **357** |
-| دوالُّ اختبار | **1536** |
+| ملفّاتُ اختبار | **358** |
+| دوالُّ اختبار | **1539** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1536
-MAPPED     = 452
+TOTAL      = 1539
+MAPPED     = 455
 INFRA      = 123
 ORPHAN     = 961
 ```
@@ -72,7 +72,7 @@ ORPHAN     = 961
 | **D3** | «تذكّرني» تنقلب دائمةً بعد أوّل تجديد | `NO_REGRESSION_TEST_YET` | — |
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `FIXED_AND_PASSING` | `TestD4_BoundaryAtLimit` · `TestD4_CapHoldsWhenWhatsAppIsOff` · `TestD4_CapIndependentOfWhatsAppSetting` · `TestD4_ClosingAnOrderReleasesCapacity` · `TestD4_ConcurrentCreatesCannotExceedCap` · `TestD4_ConcurrentCustomCreatesCannotExceedCap` · `TestD4_CustomOrdersShareTheSameCap` · `TestD4_DifferentCustomersAreNotSerialized` · `TestD4_DistinctKeysAreCapped` · `TestD4_IdempotentRetryRecoversSameOrder` · `TestD4_LoweringCapKeepsExistingOrders` · `TestD4_RejectedCreateLeavesNothing` · `TestD4_StressReleaseAndIdempotency` · `TestD4_StressSequentialCap` · `TestCENSUS_D4_OpenLimitNestedInWhatsAppGate` |
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
-| **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `EXPECTED_FAIL` | `TestCENSUS_D6_CustomOrderSkipsCashBan` |
+| **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `FIXED_AND_PASSING` | `TestCustomCashBan_AllowedCashAccepted` · `TestCustomCashBan_BannedCashRejected` · `TestCustomCashBan_BannedWalletAccepted` · `TestCENSUS_D6_CustomOrderSkipsCashBan` |
 | **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `FIXED_AND_PASSING` | `TestD24_ComposesWithCashCeiling` · `TestD7_AtLimitExactlyIsAllowed` · `TestD7_CeilingUnderRepetition` · `TestD7_ConcurrentAssignmentsCannotOversubscribe` · `TestD7_CumulativeExposureIsCounted` · `TestD7_DriverAcceptObeysSameCeiling` · `TestD7_ExposureIsReleasedWhenOrderCloses` · `TestD7_OversizedCashOrderIsRefused` · `TestD7_WalletOrderIsNotBlocked` · `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` · `TestXG46_DriverAcceptNeedsOneConnection` |
 | **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |

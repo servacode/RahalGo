@@ -1661,6 +1661,11 @@ var TestMap = map[string]TestDecl{
 	"TestCDEF003_OpenHoursUsesRealStoreNotSupplied":          orderStoreTrustTest(),
 	"TestCDEF003_ForeignMerchantCannotBecomeCommissionStore": orderStoreTrustTest(),
 
+	// D6 — حظرُ النقد يشمل الطلبَ الخاصّ (`custom_cashban_test.go`)
+	"TestCustomCashBan_BannedCashRejected":   customCashBanTest(),
+	"TestCustomCashBan_BannedWalletAccepted": customCashBanTest(),
+	"TestCustomCashBan_AllowedCashAccepted":  customCashBanTest(),
+
 	"TestSU01_ExistingAccountsAreNotTakenOverWhenVerifyIsOff": signupTest(),
 	"TestSU02_AdminCannotBeReachedThroughSignup":              signupTest(),
 	"TestSU03_SuspendedAndBlockedAccountsAreNotAltered":       signupTest(),
@@ -3487,6 +3492,20 @@ func orderStoreTrustTest() TestDecl {
 	}
 }
 
+// customCashBanTest **حظرُ النقد يشمل الطلبَ الخاصّ** — `D6`.
+//
+// **حدُّ الدفع النقديّ كان يُفحَص في الطلب العاديّ وحدَه، والخاصُّ بابُه
+// المفتوح** — فصار الحدُّ واحداً لبابين. **مالٌ وأمنٌ على مستوى القاعدة.**
+func customCashBanTest() TestDecl {
+	return TestDecl{
+		Level: L3, Purpose: PurposeFeature,
+		Flows:    []string{"F-02"},
+		Defects:  []string{"D6"},
+		Modes:    []string{"SECURITY", "FINANCIAL", "FULL", "RELEASE"},
+		Evidence: []string{"db"},
+	}
+}
+
 // signupTest **بابُ التسجيل حارسٌ للحساب القائم** — `CUST-DEF-001`.
 func signupTest() TestDecl {
 	return TestDecl{
@@ -3981,6 +4000,18 @@ var DefectFixed = map[string]string{
 	"D15": "**الإنشاءُ والأدوارُ والكلمةُ في معاملةٍ واحدة** " +
 		"(`AdminCreateUserFull`). **وكان مستخدِمٌ يبقى بلا كلمةٍ لا " +
 		"يدخل ورقمُه محجوز — والتعافي مسدود.**",
+
+	// ── دورةُ إصلاحٍ · ٢٠٢٦-٠٩-١٩ ─────────────────────────────────
+	"D6": "**حظرُ النقد يشمل الطلبَ الخاصَّ كما يشمل العاديّ.** كان " +
+		"`cashBlocked` يُفحَص في `CreateTx` وحدَها، **والطلبُ الخاصُّ " +
+		"(`POST /orders/custom`) بابُه المفتوح**: من قُفل عليه النقدُ " +
+		"لإخفاقٍ بذنبه يُنشئ طلباً خاصّاً نقداً — أو يُغفل حقلَ الدفع " +
+		"فيصير نقداً تلقائيّاً — **فيلتفّ على القفل.** فأُضيف الفحصُ " +
+		"نفسُه في `CreateCustomTx` و`CreateCustom` قبل القفل والكتابة، " +
+		"بالمصدر نفسِه (`cashBlocked`) والرسالةِ نفسِها (`ErrCashBlocked`) " +
+		"— **حدٌّ واحدٌ لبابين، ولا نسخةَ ثانيةً من المنطق.** والمحفظةُ " +
+		"تبقى مفتوحةً للمحظور. وشاهدٌ سالبٌ: تسقط الحالتان (نقداً صريحاً " +
+		"وبإغفال الحقل) على الشيفرة القبليّة وتمرّان بعد الإصلاح.",
 }
 
 // oblTest حارسُ تتبّعِ التزامٍ ماليّ — `XG-31`.

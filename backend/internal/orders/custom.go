@@ -88,6 +88,18 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		request = string([]rune(request)[:MaxCustomRequest])
 	}
 
+	// **ومن مُنع النقدَ في العاديّ يُمنعه في الخاصّ** — `D6` (انظر الشرحَ في
+	// `CreateCustomTx`). **والحدُّ واحدٌ لكلّ بابٍ يُنشئ طلباً خاصّاً.**
+	if payment == "cash" {
+		blocked, err := s.cashBlocked(ctx, s.db, customerID)
+		if err != nil {
+			return nil, err
+		}
+		if blocked {
+			return nil, ErrCashBlocked
+		}
+	}
+
 	// **وسقفُ المفتوح يشمله** — القاعدةُ نفسُها: من بيده ثلاثةٌ لا يفتح رابعاً.
 	//
 	// **ولو استُثني لَصار باباً يلتفّ به على السقف** — يُنشئ خاصّةً بلا حدّ.
@@ -168,6 +180,27 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	}
 	if len([]rune(request)) > MaxCustomRequest {
 		request = string([]rune(request)[:MaxCustomRequest])
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ومن مُنع النقدَ في العاديّ يُمنعه في الخاصّ** — `D6`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **حظرُ النقد يُفحَص في `CreateTx` وحدَها** (`cashBlocked`) — **والخاصُّ
+	// كان بابَه المفتوح**: من رفض الاستلامَ فقُفل عليه النقدُ يُنشئ طلباً
+	// خاصّاً نقداً ويلتفّ على القفل. **والحدُّ واحدٌ لبابين** — القرارُ نفسُه
+	// والرسالةُ نفسُها (`ErrCashBlocked`)، **ولا نسخةَ ثانيةً من المنطق.**
+	//
+	// **ويُفحَص قبل القفل والكتابة** — فلا يُقيَّد ولا يُحجَز شيءٌ لطلبٍ يُردّ.
+	// **والإعدادُ يُقرأ من المعاملة** (`s.on(q)`) — كما في العاديّ.
+	if payment == "cash" {
+		blocked, err := s.on(q).cashBlocked(ctx, q, customerID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if blocked {
+			return nil, nil, ErrCashBlocked
+		}
 	}
 
 	// **وسقفُ المفتوح يشمله** — القاعدةُ نفسُها: من بيده ثلاثةٌ لا يفتح رابعاً.

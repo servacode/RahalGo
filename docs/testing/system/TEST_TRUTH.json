@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 357,
-    "test_funcs": 1536
+    "test_files": 358,
+    "test_funcs": 1539
   },
   "flows": [
     {
@@ -185,6 +185,9 @@
         "R11"
       ],
       "tests": [
+        "TestCustomCashBan_AllowedCashAccepted",
+        "TestCustomCashBan_BannedCashRejected",
+        "TestCustomCashBan_BannedWalletAccepted",
         "TestD22_CustomOrderReachesItsOwner",
         "TestD22_CustomOrderRoomSetIsComplete",
         "TestD22_OwnerDeliveryUnderRepetition",
@@ -1859,10 +1862,14 @@
       "title": "الطلبُ الخاصُّ لا ينادي cashBlocked",
       "domain": "الطلبات · مال",
       "severity": "HIGH",
+      "fixed": "**حظرُ النقد يشمل الطلبَ الخاصَّ كما يشمل العاديّ.** كان `cashBlocked` يُفحَص في `CreateTx` وحدَها، **والطلبُ الخاصُّ (`POST /orders/custom`) بابُه المفتوح**: من قُفل عليه النقدُ لإخفاقٍ بذنبه يُنشئ طلباً خاصّاً نقداً — أو يُغفل حقلَ الدفع فيصير نقداً تلقائيّاً — **فيلتفّ على القفل.** فأُضيف الفحصُ نفسُه في `CreateCustomTx` و`CreateCustom` قبل القفل والكتابة، بالمصدر نفسِه (`cashBlocked`) والرسالةِ نفسِها (`ErrCashBlocked`) — **حدٌّ واحدٌ لبابين، ولا نسخةَ ثانيةً من المنطق.** والمحفظةُ تبقى مفتوحةً للمحظور. وشاهدٌ سالبٌ: تسقط الحالتان (نقداً صريحاً وبإغفال الحقل) على الشيفرة القبليّة وتمرّان بعد الإصلاح.",
       "tests": [
+        "TestCustomCashBan_AllowedCashAccepted",
+        "TestCustomCashBan_BannedCashRejected",
+        "TestCustomCashBan_BannedWalletAccepted",
         "TestCENSUS_D6_CustomOrderSkipsCashBan"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D7",
@@ -7155,6 +7162,72 @@
       "file": "internal/orders/custom_cancel_test.go",
       "package": "orders",
       "orphan": true
+    },
+    {
+      "name": "TestCustomCashBan_AllowedCashAccepted",
+      "file": "internal/orders/custom_cashban_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D6"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCustomCashBan_BannedCashRejected",
+      "file": "internal/orders/custom_cashban_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D6"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCustomCashBan_BannedWalletAccepted",
+      "file": "internal/orders/custom_cashban_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D6"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCustomChat_NotWrittenTwice",
