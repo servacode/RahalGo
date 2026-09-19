@@ -517,21 +517,80 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 	//
 	// **ويوم تُشترى بوّابةُ رسائلَ يُرفع المفتاحُ فيعود الرمزُ شرطاً**
 	// — بلا شيفرةٍ تتغيّر.
-	if s.boolSetting(ctx, "auth.signup_verify", false) {
-		valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "signup")
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **والتسجيلُ لا يصير استعادةً ولا استيلاءً** (`CUST-DEF-001`، ٢٠٢٦-٠٩-١٩)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان الرمزُ حين يُطفأ يُسقط كلَّ حارس**: **رقمُ حسابٍ قائمٍ يكفي لكتابة
+	// كلمته واسمِه ومحوِ علَمِ «بدّل كلمتك» وإصدارِ جلسةٍ له** — **لكلّ دور**،
+	// **والأدمنُ بلا PIN يُسلَّم تحدّيَ إنشاءِ رمزه.** **وقراءةُ الإعداد إن فشلت
+	// عُدّت إطفاءً.** (`qa/signup_takeover_test.go` — `TestSU*`.)
+	//
+	// **فصار العقدُ ثلاثة أبواب لا يتداخل منها شيء:**
+	//
+	//	رقمٌ جديد            ⇐ حسابُ زبونٍ جديد — **والرمزُ كما يقول الإعداد**
+	//	                        (**وفشلُ القراءة يطلبه**)
+	//	حسابٌ قائمٌ بكلمة     ⇐ **مرفوضٌ دائماً** (`phone_taken`) — بابُه الدخولُ
+	//	                        أو الاستعادة، **لا التسجيل**
+	//	زبونٌ قائمٌ بلا كلمة  ⇐ **(من دخل بالرمز ولم يضع كلمة)** يُكمَل **برمزٍ
+	//	                        دائماً** ولو كان الإعدادُ مطفأً — **فالرمزُ وحدَه
+	//	                        يثبت أنّه صاحبُ الرقم**
+	//
+	// **وما عدا ذلك مرفوضٌ بلا كتابة**: **موقوفٌ أو محظور · أدمنٌ أو سائقٌ أو
+	// متجرٌ أو مندوب** — **فلا يُمسّ حسابٌ ليس زبوناً عاديّاً من باب الزبائن.**
+	//
+	// **والمحاولاتُ تُعَدّ بعدّاد الدخول نفسِه** (`loginLocked`) — **لا حدٌّ
+	// ثانٍ**: **كلُّ رفضٍ يُعَدّ على الرقم والعنوان، وكلُّ حسابٍ يُنشأ يُعَدّ
+	// على العنوان.**
+	if s.loginLocked(ctx, phone, ip) {
+		return nil, ErrTooManyAttempts
+	}
+	refuse := func(e error) (*AuthResult, error) {
+		s.noteLoginFail(ctx, phone, ip)
+		return nil, e
+	}
+	consume := func() (bool, error) {
+		if strings.TrimSpace(code) == "" {
+			return false, nil
+		}
+		return s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "signup")
+	}
+	existing, existingHash, err := s.repo.UserByPhone(ctx, phone)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		// **والاحتياطيُّ مُشعَل** — فخطأُ قراءةِ الإعداد يطلب الرمزَ لا يُسقطه.
+		if s.boolSetting(ctx, "auth.signup_verify", true) {
+			valid, err := consume()
+			if err != nil {
+				return nil, err
+			}
+			if !valid {
+				return refuse(ErrOTPInvalid)
+			}
+		}
+	case err != nil:
+		return nil, err
+	case existingHash != "" || existing.Status != "active" || !onlyCustomer(existing.Roles):
+		return refuse(ErrPhoneTaken)
+	default:
+		valid, err := consume()
 		if err != nil {
 			return nil, err
 		}
 		if !valid {
-			return nil, ErrOTPInvalid
+			if strings.TrimSpace(code) == "" {
+				return refuse(ErrPhoneTaken)
+			}
+			return refuse(ErrOTPInvalid)
 		}
 	}
 	hash, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, err
 	}
-	user, _, err := s.repo.UserByPhone(ctx, phone)
-	if errors.Is(err, ErrNotFound) {
+	user := existing
+	if user == nil {
 		user, err = s.repo.CreateUserWithRole(ctx, phone, fullName, "customer")
 		if err != nil {
 			return nil, err
@@ -540,10 +599,10 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 			return nil, err
 		}
 		s.repo.Audit(ctx, &user.ID, "user.register", "user", user.ID, ip, nil)
-	} else if err != nil {
-		return nil, err
+		_, ipKey := loginKeys(phone, ip)
+		s.countAttempts(ctx, ipKey)
 	} else {
-		// حساب أُنشئ سابقاً برمز التحقق وبلا كلمة مرور — يكمل بياناته الآن
+		// زبونٌ دخل بالرمز ولم يضع كلمة — **وأثبت الرقمَ برمزٍ الآن**.
 		if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
 			return nil, err
 		}
@@ -582,11 +641,30 @@ func (s *Service) loginLocked(ctx context.Context, phone, ip string) bool {
 // noteLoginFail يعدّ محاولة فاشلة على الرقم والعنوان معاً.
 func (s *Service) noteLoginFail(ctx context.Context, phone, ip string) {
 	pk, ik := loginKeys(phone, ip)
-	for _, k := range []string{pk, ik} {
+	s.countAttempts(ctx, pk, ik)
+}
+
+// countAttempts **عدّادُ المحاولات الواحد** — للدخول وللتسجيل (`CUST-DEF-001`):
+// **ونافذتُه نافذةُ الدخول.** **ولا عدّادَ ثانٍ بمنطقٍ ثانٍ.**
+func (s *Service) countAttempts(ctx context.Context, keys ...string) {
+	for _, k := range keys {
 		if n, err := s.rdb.Incr(ctx, k).Result(); err == nil && n == 1 {
 			s.rdb.Expire(ctx, k, loginFailWindow)
 		}
 	}
+}
+
+// onlyCustomer **زبونٌ عاديٌّ لا دورَ له غيرُه** — وحده يُكمَل من باب التسجيل.
+func onlyCustomer(roles []string) bool {
+	if len(roles) == 0 {
+		return false
+	}
+	for _, r := range roles {
+		if r != RoleCustomer {
+			return false
+		}
+	}
+	return true
 }
 
 // LoginPassword دخول بكلمة المرور (للموظفين والأدوار التشغيلية غالباً).

@@ -1643,6 +1643,24 @@ type TestDecl struct {
 // **ويُملأ مرحلةً بعد مرحلة** — **و`P-1` أوّلُ ساكنيه.**
 var TestMap = map[string]TestDecl{
 	// ══════════════════════════════════════════════════════════════
+	// **التسجيلُ لا يصير استعادةً ولا استيلاءً** — `CUST-DEF-001` (٢٠٢٦-٠٩-١٩)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكلُّها سقطت قبل الإصلاح** إلّا حُرّاسَ التسجيل المشروع —
+	// **ومنها أدمنٌ بلا PIN نال جلسةَ أدمن عبر بابِ الزبائن.**
+	// (`CUSTOMER-ACCEPTANCE-MASTER.md` §40.3 · §40.14.)
+	"TestSU01_ExistingAccountsAreNotTakenOverWhenVerifyIsOff": signupTest(),
+	"TestSU02_AdminCannotBeReachedThroughSignup":              signupTest(),
+	"TestSU03_SuspendedAndBlockedAccountsAreNotAltered":       signupTest(),
+	"TestSU04_MustChangePasswordIsNotClearedBySignup":         signupTest(),
+	"TestSU05_VerifyOnStillProtectsExistingAccounts":          signupTest(),
+	"TestSU06_SettingsReadFailureFailsClosed":                 signupTest(),
+	"TestSU07_LegitimateNewSignupStillWorks":                  signupTest(),
+	"TestSU08_PasswordlessCompletionRequiresProof":            signupTest(),
+	"TestSU09_RepeatedConfirmAttemptsAreLimited":              signupTest(),
+	"TestSU10_SignupLaunchClosureCoversConfirm":               signupTest(),
+
+	// ══════════════════════════════════════════════════════════════
 	// **بوّابةُ ما قبل الإطلاق — مصفوفةُ الإبطال** (٢٠٢٦-٠٩-١٣)
 	// ══════════════════════════════════════════════════════════════
 	//
@@ -3448,6 +3466,15 @@ func stepUpTest() TestDecl {
 }
 
 // resetTest حارسُ استردادِ الحساب بإعادة الكلمة — `R13`.
+// signupTest **بابُ التسجيل حارسٌ للحساب القائم** — `CUST-DEF-001`.
+func signupTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-30"},
+		Modes: []string{"SECURITY", "FULL", "RELEASE"},
+	}
+}
+
 func resetTest() TestDecl {
 	return TestDecl{
 		Level: L4, Purpose: PurposeFeature,

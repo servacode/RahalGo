@@ -352,6 +352,12 @@ func (s *Server) handleResetVerify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
+	// **وبابُ التأكيد بابُ التسجيل نفسُه** (`CUST-DEF-001`، ٢٠٢٦-٠٩-١٩) —
+	// **وكان الإغلاقُ على الطلب وحدَه**، فمن نادى التأكيدَ مباشرةً أنشأ
+	// حساباً والبابُ مغلق. **وقبل قراءةِ الجسم** كأخيه.
+	if !s.requireLaunch(w, r, launchCustomerSignup) {
+		return
+	}
 	req, err := decode[struct {
 		Phone    string `json:"phone"`
 		Code     string `json:"code"`

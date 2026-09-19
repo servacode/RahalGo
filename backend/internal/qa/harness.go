@@ -142,6 +142,12 @@ type Harness struct {
 	// — **ونداءُ مسارٍ داخليٍّ يثبت أنّ الدالّةَ نُوديت لا أنّ الوسيطَ
 	// يقرؤها.**
 	rdb *redis.Client
+	// Identity **خدمةُ الهويّة نفسُها** — تُكشَف لتُحقَن بجسرِ الإعدادات
+	// **كما يحقنه `main.go`** (`CUST-DEF-001`). **والعُدّةُ لا تحقنه من
+	// تلقاء نفسها** — فمن احتاج إعداداتِ الهويّة من القاعدة حقنه في فحصه.
+	Identity *identity.Service
+	// Settings **مخزنُ الإعدادات نفسُه** — الجسرُ الذي يحقنه `main.go`.
+	Settings *settings.Store
 }
 
 // Redis **ذاكرةُ هذا المِسنَد.**
@@ -235,7 +241,8 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 
 	seedZone(t, pool)
 	ownPushQueue(t, pool)
-	return &Harness{T: t, Pool: pool, Srv: ts, API: s, Orders: ordersSvc, Hub: hub, MediaDir: mediaDir, tokens: tokens, rdb: rdb}
+	return &Harness{T: t, Pool: pool, Srv: ts, API: s, Orders: ordersSvc, Hub: hub, MediaDir: mediaDir, tokens: tokens, rdb: rdb,
+		Identity: identitySvc, Settings: settingsStore}
 }
 
 // ══════════════════════════════════════════════════════════════════════
