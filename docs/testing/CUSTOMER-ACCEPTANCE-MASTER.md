@@ -272,7 +272,7 @@ surface lives and are listed in §38.
 | CUST-00-006 | Env | Production API address not embedded/used by the Staging debug app | As 004 | Count `https://api.rahalgo.com` in classes*.dex; confirm ProductionEndpointGuardTest passes | 0 occurrences; guard test green | — | `NOT_TESTED` | — | any | — | — | — | — | Automated: `ProductionEndpointGuardTest` (app-customer unit test) |
 | CUST-00-007 | Env | No temporary diagnostic instrumentation remains | As 004 | Search dex for known diagnostic tags (e.g. `RGNET`) and debug-only logging added during investigations | 0 occurrences | — | `NOT_TESTED` | — | any | — | — | — | — | P8-DEF-001 diagnostic tag `RGNET` must stay absent |
 | CUST-00-008 | Env | Test app exists once in the main Android profile | Device on ADB | `pm list packages --user 0 \| grep -c rahalgo.customer` | Exactly 1 | — | `NOT_TESTED` | — | any | — | — | — | — | — |
-| CUST-00-009 | Env | No unintended Dual Messenger / work-profile duplicate remains | Device on ADB | `pm list users`; for every non-zero user `pm list packages --user <n> \| grep rahalgo` | 0 RahalGo packages outside user 0 | — | `NOT_TESTED` | — | any | — | — | — | — | Open cleanup (2026-09-19): user 95 still holds 4 RahalGo debug packages — removal authorized, pending device reconnection |
+| CUST-00-009 | Env | No unintended Dual Messenger / work-profile duplicate remains | Device on ADB | `pm list users`; for every non-zero user `pm list packages --user <n> \| grep rahalgo` | 0 RahalGo packages outside user 0 | — | `NOT_TESTED` | — | any | — | — | — | — | 2026-09-19: the Owner manually removed the 4 RahalGo apps from Dual Messenger (user 95) — DONE; ADB verification pending until the phone is reachable (§40.13) |
 | CUST-00-010 | Env | Confirm Staging baseline before testing | SSH read access to Staging | Read-only: identity, migration, launch flags, #1050, order count, wallet tx count, moneycheck | Recorded; moneycheck 51/51 | — | `NOT_TESTED` | — | online | read-only SQL + `moneycheck` | — | — | — | — |
 | CUST-00-011 | Env | Confirm Production baseline and zero intended Production mutation | — | Read `https://api.rahalgo.com/api/v1/public/identity` only | Recorded (release, migration); no other Production access | — | `NOT_TESTED` | — | online | identity endpoint only | — | — | — | Production mutations must stay 0 |
 | CUST-00-012 | Env | Record current Customer-related launch flags | SSH read access | Read-only `app_settings` where key LIKE 'launch.%' plus `site.show_*` | Recorded verbatim | — | `NOT_TESTED` | — | online | read-only SQL | — | — | — | — |
@@ -407,7 +407,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-012 | Auth | Logout removes access | Signed-in test customer · Staging · SM-A525F | Drawer → «خروج» | Signed out; server session revoked | — | `NOT_TESTED` | — | online | refresh token revoked; `auth.logout` audit | — | — | — | Logout has no confirmation |
 | CUST-06-013 | Auth | BACK cannot reopen authenticated screens after logout | After 012 | Press BACK repeatedly | No authenticated screen reappears | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-06-014 | Auth | Restart after logout stays logged out | After 012 | Force-stop; relaunch | Guest shell | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-06-015 | Auth | Login as another customer exposes nothing of the previous account | A logged out | Login as B | No A cart/orders/wallet/inbox/favorites/chats | — | `NOT_TESTED` | — | online | — | — | — | — | Audit risk: cart is device-global and not cleared on logout; activity-scoped VMs and the WebSocket are not reset |
+| CUST-06-015 | Auth | Login as another customer exposes nothing of the previous account | A logged out | Login as B | No A cart/orders/wallet/inbox/favorites/chats | — | `NOT_TESTED` | — | online | — | — | — | — | CUST-DEF-004 (STOP, §40.6): cart not cleared, account-scoped view models not reset, socket not stopped (B reuses A's socket) — expected FAIL |
 | CUST-06-016 | Auth | Password-reset flow (exposed) | Signed out (guest) · Staging · SM-A525F | نسيت كلمة المرور → phone → WhatsApp ticket → code → new password | Password changed; signed in | — | `NOT_TESTED` | — | online | `auth.password_reset` audit | — | — | — | App uses `/auth/wa/ticket` purpose=reset (WhatsApp), not SMS. Needs the Staging WhatsApp bot — BLOCKED if not paired |
 | CUST-06-017 | Auth | Reset invalidates old sessions | Signed in on device + second client | Reset from one; use the other | Other session rejected | — | `NOT_TESTED` | — | online | refresh tokens revoked | — | — | — | Contract SEC8: reset revokes all sessions |
 | CUST-06-018 | Auth | Old password fails after reset | After 016 | Login with old password | Rejected | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -519,8 +519,8 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-023 | Market | Refresh produces authoritative server state | Signed-in test customer · Staging · SM-A525F · valid default address | Compare UI to SoT after refresh | Equal | — | `NOT_TESTED` | — | online | SoT query | — | — | — | — |
 | CUST-09-024 | Market | No hidden merchant data exposed | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payloads/screens | No store name/source in customer payloads/UI | — | `NOT_TESTED` | — | online | API JSON | — | — | — | Guards: `TestBrowse_HidesSource`, `TestRedactForCustomer_HidesSource` |
 | CUST-09-025 | Market | Search | Signed-in test customer · Staging · SM-A525F · valid default address | Type ≥2 chars (300 ms debounce) | Matching items; «لا نتائج» when none; offline → OFFLINE state | — | `NOT_TESTED` | — | online | `/public/search/items` | — | — | — | Search exists; filters do not (no filter UI in source) |
-| CUST-09-026 | Market | Banner slider and banner tap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · banners with targets | Observe auto-rotation; tap a banner with a target | Rotation per `banner_auto/banner_every_ms`; a clickable banner must respond | — | `NOT_TESTED` | — | online | `/public/home` banners | — | — | — | Added. Audit finding AUD-C04: banners with a target are marked clickable but ShopScreen passes no handler — silent tap, expected FAIL |
-| CUST-09-027 | Market | Section rail auto-scroll setting (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `shop.rail_auto` | Toggle setting (Admin) and observe | Rail follows the Owner setting | — | `NOT_TESTED` | — | online | setting value | — | — | — | Added. AUD-C08: `rail_auto/rail_every_ms` parsed but never used by the app — Owner decision whether this is a defect |
+| CUST-09-026 | Market | Banner slider and banner tap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · banners with targets | Observe auto-rotation; tap a banner with a target | Rotation per `banner_auto/banner_every_ms`; a clickable banner must respond | — | `NOT_TESTED` | — | online | `/public/home` banners | — | — | — | Added. CAF-11 CONFIRMED (§40.10): banners with a target are clickable but ShopScreen passes no handler — silent tap, expected FAIL |
+| CUST-09-027 | Market | Section rail auto-scroll setting (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `shop.rail_auto` | Toggle setting (Admin) and observe | Rail follows the Owner setting | — | `NOT_TESTED` | — | online | setting value | — | — | — | Added. CAF-15 NEEDS_OWNER_DECISION (§40.10): `rail_auto/rail_every_ms` parsed but never used; the setting sits in the Site group |
 | CUST-09-028 | Market | Browse scoped to city/address (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Change city (drawer) / default address | Catalog, search, offers and suggestions follow the chosen scope | — | `NOT_TESTED` | — | online | requests carry lat/lng | — | — | — | Added. PC-1 gap noted: `CityScope.kt:90` returns the chosen city first |
 | CUST-09-029 | Market | Guest browsing of the market (added) | Signed out | Browse, search, open sections | Works without account; add/heart lead to login | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
 
@@ -565,8 +565,8 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-014 | Cart | Cart survives background/foreground | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | HOME; return | Intact | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-11-015 | Cart | Cart survives process recreation | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | `am kill`; relaunch | Intact (persisted) | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-11-016 | Cart | Cart after application restart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-stop; relaunch | Intact | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-11-017 | Cart | Logout behaviour with existing cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Logout | Per contract (to be decided): cart must not leak to another account | — | `NOT_TESTED` | — | online | — | — | — | — | AUD-C02 / PC-2: cart is device-global and NOT cleared on logout |
-| CUST-11-018 | Cart | Different customer does not inherit previous cart | A's cart; A logs out | B logs in; open cart | B does not see A's cart (unless an anonymous device-cart contract is decided) | — | `NOT_TESTED` | — | online | — | — | — | — | Expected FAIL today (AUD-C02 / PC-2) — Owner contract decision needed |
+| CUST-11-017 | Cart | Logout behaviour with existing cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Logout | Logout detaches the account's private cart (Owner decision §40.1-1); a guest cart only if explicitly scoped | — | `NOT_TESTED` | — | online | — | — | — | — | CUST-DEF-004 (STOP, §40.6): cart is device-global and NOT cleared on logout — expected FAIL |
+| CUST-11-018 | Cart | Different customer does not inherit previous cart | A's cart; A logs out | B logs in; open cart | B never sees A's cart (Owner decision §40.1-1) | — | `NOT_TESTED` | — | online | — | — | — | — | CUST-DEF-004 (STOP, §40.6) — expected FAIL |
 | CUST-11-019 | Cart | Change delivery address with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote re-fetched; notes for out-of-zone | — | `NOT_TESTED` | — | online | `/public/quote` | — | — | — | AB-03 guard |
 | CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin disables item | Open cart | Change listed; submit blocked until reviewed/removed | — | `NOT_TESTED` | — | online | — | — | — | — | P8-C3-027/036 |
 | CUST-11-021 | Cart | Price changes while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin changes price | Open cart | «cart changes» list + «متابعة بالقيم الحالية» | — | `NOT_TESTED` | — | online | quote | — | — | — | P8-C3-028 |
@@ -583,7 +583,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-032 | Cart | Recovery restores safe cart interaction | After 028–031 | Restore network | Cart usable after authoritative refresh | — | `NOT_TESTED` | — | recovering | quote refetched | — | — | — | §7.11 |
 | CUST-11-033 | Cart | Suggestions row «يُطلب معه» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap a suggestion | Added with one tap; respects gating | — | `NOT_TESTED` | — | online | `/public/suggest` | — | — | — | Added: `SuggestRow.kt` |
 | CUST-11-034 | Cart | Empty cart via «إفراغ السلة» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap «إفراغ السلة» | Cart empty (no confirmation by design — note) | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
-| CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | — | `NOT_TESTED` | — | online | no order | — | — | — | Added. AUD-C05: offers add path skips the PreCart gate (server still validates at submit) |
+| CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | — | `NOT_TESTED` | — | online | no order | — | — | — | Added. CAF-12: offers add path skips the PreCart gate (server still validates at submit) |
 | CUST-11-036 | Cart | Multi-source limit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `orders.max_sources`=1 | Add items from two sources; submit | Explicit `too_many_sources`/`multi_source_order` | — | `NOT_TESTED` | — | online | no order | — | — | — | Added: no client check; server enforces |
 | CUST-11-037 | Cart | Corrupt persisted cart is discarded safely (added) | Emulator: corrupt `rahalgo_cart` prefs | Launch | Empty cart; no crash | — | `NOT_TESTED` | — | any | — | — | — | — | Added: unreadable cart is deleted by design |
 
@@ -599,8 +599,8 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-12-004 | Checkout | Authoritative quote obtained | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Open cart | Fee from server quote | — | `NOT_TESTED` | — | online | quote JSON | — | — | — | — |
 | CUST-12-005 | Checkout | Item totals match server | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Compare subtotal with quote subtotal | Equal | — | `NOT_TESTED` | — | online | quote.subtotal | — | — | — | Subtotal is local (Cart.subtotal) — must equal server |
 | CUST-12-006 | Checkout | Delivery fee matches server contract | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Compare fee | Equal to quote (`delivery.fee` = 100 policy) | — | `NOT_TESTED` | — | online | quote.delivery_fee | — | — | — | — |
-| CUST-12-007 | Checkout | Displayed final total matches server | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Compare displayed total with quote/order total | Equal | — | `NOT_TESTED` | — | online | quote.total / order total | — | — | — | AUD-C01: total displayed = local subtotal + fee − discount (`CartScreen.kt:326`); server total used only in the change fingerprint |
-| CUST-12-008 | Checkout | Client does not invent authoritative monetary totals | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Price change + promo edge cases | Displayed total never differs from the charged total | — | `NOT_TESTED` | — | online | order.total | — | — | — | Charged amounts are server-side (AB-35, `TestFIN_*`); display risk AUD-C01 |
+| CUST-12-007 | Checkout | Displayed final total matches server | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Compare displayed total with quote/order total | Equal | — | `NOT_TESTED` | — | online | quote.total / order total | — | — | — | CUST-DEF-005 (CAF-08, STOP §40.7): total displayed = local subtotal + fee − discount (`CartScreen.kt:326`); server total used only in the change fingerprint |
+| CUST-12-008 | Checkout | Client does not invent authoritative monetary totals | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Price change + promo edge cases | Displayed total never differs from the charged total | — | `NOT_TESTED` | — | online | order.total | — | — | — | Charged amounts are server-side (AB-35, `TestFIN_*`); display risk CUST-DEF-005 (CAF-08, STOP §40.7) |
 | CUST-12-009 | Checkout | Change address before final submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote refreshes | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-12-010 | Checkout | Quote refreshes when required | After 009 | Observe | New fee/availability | — | `NOT_TESTED` | — | online | new quote | — | — | — | — |
 | CUST-12-011 | Checkout | Price change between cart and checkout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin price change | Open cart | Change review gate | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -618,7 +618,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-12-023 | Checkout | Payment methods that exist: cash and wallet | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Pay cash; pay from wallet (sufficient / insufficient balance) | Cash works; wallet works when covered; insufficient → explicit error, no order | — | `NOT_TESTED` | — | online | wallet tx; order payment | — | — | — | Methods from source: «نقدا عند التسليم», «من محفظتي» — no mixed, no card |
 | CUST-12-024 | Checkout | Promo code preview (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Enter valid / invalid / expired code → «تطبيق» | Valid → «تم تطبيق الكود — خصم X»; invalid → «الكود غير صالح أو منتهي» | — | `NOT_TESTED` | — | online | `/promo/preview` | — | — | — | Added |
 | CUST-12-025 | Checkout | Promo becomes invalid before submit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · promo applied · Admin disables promo | Submit | Explicit; no stale discount charged | — | `NOT_TESTED` | — | online | order.discount | — | — | — | Added: `TestPR03_StaleDiscountCannotSubmit` |
-| CUST-12-026 | Checkout | Promo & payment choice across process death (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · promo + wallet chosen | `am kill`; relaunch; open cart | State lost is re-entered explicitly — never silently submitted with other values | — | `NOT_TESTED` | — | online | — | — | — | — | Added. AUD-C10: promo and payment choice are memory-only |
+| CUST-12-026 | Checkout | Promo & payment choice across process death (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · promo + wallet chosen | `am kill`; relaunch; open cart | State lost is re-entered explicitly — never silently submitted with other values | — | `NOT_TESTED` | — | online | — | — | — | — | Added. CAF-17: promo and payment choice are memory-only |
 | CUST-12-027 | Checkout | Below minimum order (added) | Cart below merchant minimum | Submit | Explicit `below_min_order` | — | `NOT_TESTED` | — | online | no order | — | — | — | Added: P8-C3-029..031; minimum shown only on rejection (TRUTH §6) |
 | CUST-12-028 | Checkout | Cart-changes review gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · server change | Open cart | Changes listed; send blocked until «متابعة بالقيم الحالية» | — | `NOT_TESTED` | — | online | — | — | — | — | Added: `CartChangesTest` (10) |
 
@@ -639,7 +639,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-009 | Submit | HTTP conflict gives explicit safe result | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Concurrent in-flight key (`409 in_progress`) | Explicit message; no duplicate | — | `NOT_TESTED` | — | online | — | — | — | — | PC-8 wording not verified |
 | CUST-13-010 | Submit | Validation failure explicit | API/UI invalid payload | Submit | Explicit | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
 | CUST-13-011 | Submit | Backend 500 does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Explicit failure | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | — | `NOT_TESTED` | — | timeout | orders +0/+1 | — | — | — | AUD-C13: `CartViewModel.uncertain` is set but never displayed |
+| CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | — | `NOT_TESTED` | — | timeout | orders +0/+1 | — | — | — | PC-8: `CartViewModel.uncertain` is set but never displayed |
 | CUST-13-013 | Submit | App restart immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; force-stop at once; relaunch | Order discoverable once | — | `NOT_TESTED` | — | online | orders +1 | — | — | — | — |
 | CUST-13-014 | Submit | Process killed immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; kill; relaunch | As 013 | — | `NOT_TESTED` | — | online | orders +1 | — | — | — | P8-C3-045 |
 | CUST-13-015 | Submit | Committed order discoverable after reconnect/reopen | After 007/013 | Open طلباتي | Order visible | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -683,7 +683,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-017 | Custom | Guest sees NeedAccount | Signed out | Open طلب خاص | «هذا القسم يحتاج حسابا» + login | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-CUSTOM-018 | Custom | Custom-order realtime to owner | After 001 | Driver/ops change it | Customer sees update | — | `NOT_TESTED` | — | online | — | — | — | — | `TestD22_*` |
 | CUST-CUSTOM-019 | Custom | Driver note is saved and shown (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Send with «ملاحظات للسائق» | Note stored and visible to the driver | — | `NOT_TESTED` | — | online | order notes | — | — | — | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
-| CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Per contract (today always cash — no method sent) | — | `NOT_TESTED` | — | online | order payment_method | — | — | — | Added. CAF-07: Owner decision whether wallet should be offered |
+| CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Cash or wallet selectable (Owner decision 2026-08-09, `orders/custom.go:74-78`) | — | `NOT_TESTED` | — | online | order payment_method | — | — | — | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
 
 ## 26 · CUST-14 — Order list / lifecycle
 
@@ -716,7 +716,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | — | `NOT_TESTED` | — | online | — | — | — | — | Added: `TestCANC_002` |
 | CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | — | `NOT_TESTED` | — | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
 | CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
-| CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | — | `NOT_TESTED` | — | online | count > 30 | — | — | — | Added. AUD-C07: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
+| CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | — | `NOT_TESTED` | — | online | count > 30 | — | — | — | Added. CAF-14: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
 
 ## 26A · CUST-SUP — Chat, complaints, tickets and warnings (added by audit)
 
@@ -731,9 +731,9 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-SUP-007 | Chat | Offline chat send blocked | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Send | OFFLINE state; blocked | — | `NOT_TESTED` | — | offline | no message row | — | — | — | §7 |
 | CUST-SUP-008 | Support | Complaint on an order | Delivered disposable order | Complaint → reason (note required for 'other') → send | Ticket created; shown in الشكاوى والبلاغات | — | `NOT_TESTED` | — | online | ticket row | — | — | — | `TestComplaint_*` |
 | CUST-SUP-009 | Support | Complaint once / window / not on running order | As 008 | Complain twice; after window; on running order | Explicit denial each | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | — | `NOT_TESTED` | — | online | `/my/tickets` | — | — | — | Customer cannot reply to a ticket (PRQ-2, XG-19) — Owner decision |
+| CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | — | `NOT_TESTED` | — | online | `/my/tickets` | — | — | — | Ticket reply: PRQ-2 approved (customer should reply) but not built — release scope is the open Owner question (§40.11) |
 | CUST-SUP-011 | Support | Foreign order complaint denied | Two test customers (A, B) · API client with each token | B complains on A's order | Denied without leakage | — | `NOT_TESTED` | — | online | — | — | — | — | `TestVAL_040_ForeignOrderComplaintCode` |
-| CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Per contract (to decide) | — | `NOT_TESTED` | — | online | `/my/warnings` | — | — | — | CAF-19: backend has `/my/warnings`; the app never calls it — Owner decision whether customers must see warnings |
+| CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Warning reaches the customer (Admin contract: «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله») in safe customer-facing wording (Owner decision §40.1-2) | — | `NOT_TESTED` | — | online | `/my/warnings` | — | — | — | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
 
 ## 26B · CUST-WAL — Wallet (added by audit)
 
@@ -780,7 +780,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-15-003 | Push | Notification while process killed | App force-stopped (not 'Force stop' in settings) | Progress order | Push shown; tap opens app | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-15-004 | Push | Notification permission denied | Denied | Progress order | No push; in-app state still correct on open | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-15-005 | Push | Permission granted later | Denied then granted | Progress order | Push arrives | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | — | `NOT_TESTED` | — | online | — | — | — | — | AUD-C06 / XG-8 / XG-9: order-status pushes open the default screen — expected FAIL for status pushes |
+| CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | — | `NOT_TESTED` | — | online | — | — | — | — | XG-9 (CAF-13) / XG-8 / XG-9: order-status pushes open the default screen — expected FAIL for status pushes |
 | CUST-15-007 | Push | Old/stale notification | Old push in tray | Tap after state changed | Opens current truth; no stale action | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-15-008 | Push | Duplicate notification | Two pushes same class | Observe tray | No confusing duplicates | — | `NOT_TESTED` | — | online | — | — | — | — | XG-38 / PC-5: two fixed IDs (3001/3002) — newer replaces older |
 | CUST-15-009 | Push | Notification for an inaccessible order | Push for order of another account | Tap | Safe fallback; no data | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -793,7 +793,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-15-016 | Push | Logout removes notification association | Signed-in test customer · Staging · SM-A525F · valid default address | Logout | Device token unregistered | — | `NOT_TESTED` | — | online | device_tokens row removed | — | — | — | `TestD12_*` |
 | CUST-15-017 | Push | Notification inbox (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Bell → list; «تعليم الكل كمقروء» | Grouped by day; unread dot; all marked read; tapping an item does nothing (by design) | — | `NOT_TESTED` | — | online | `/me/notifications` | — | — | — | Added |
 | CUST-15-018 | Push | Chat message push opens the chat (added) | Signed-in test customer · Staging · SM-A525F · valid default address · driver sends message | Tap push | Opens that order's chat | — | `NOT_TESTED` | — | online | — | — | — | — | Added: `DeepLinkTest`, `ChatMultiOrderTest` |
-| CUST-15-019 | Push | Logout stops realtime (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Logout; watch socket/logcat | Socket closed; no updates for the old account | — | `NOT_TESTED` | — | online | — | — | — | — | Added. AUD-C02: `LiveSocket.stop` is not called by the customer app on logout — expected FAIL |
+| CUST-15-019 | Push | Logout stops realtime (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Logout; watch socket/logcat | Socket closed; no updates for the old account | — | `NOT_TESTED` | — | online | — | — | — | — | Added. CUST-DEF-004 (STOP §40.6): `LiveSocket.stop` is not called by the customer app on logout — expected FAIL |
 
 ## 28 · CUST-16 — Network / offline / degraded connectivity (mandatory)
 
@@ -1133,6 +1133,8 @@ customers), `me/demand/cancel`, `auth/password/reset/request`, `auth/whatsapp/re
 
 ### 38.4 · Audit findings carried into this document (not yet runtime-proven)
 
+> **Reconciled 2026-09-19 in §40.10** — every finding re-read in the source; stop-class ones received `CUST-DEF-nnn` IDs. The status column below is the original audit wording.
+
 Found by reading the source. **None is fixed. None is declared a confirmed defect until
 its acceptance row is executed** — but the P0/HIGH ones require an Owner decision before
 Customer testing starts (§3: P0/security/duplicate-order → stop progression).
@@ -1212,12 +1214,14 @@ lock, reboot), CUST-20 (RTL, font scale, keyboard), CUST-21 (performance on SM-A
 
 ### 38.8 · Owner decisions required before execution
 
-1. **CAF-01 (P0)** — confirm handling before any Customer testing (e.g. keep
-   `signup_verify`=true everywhere until fixed; schedule the fix through §3).
-2. **CAF-02 / CAF-03 (HIGH)** — duplicate-order path and client `merchant_id`.
-3. **Contract decisions:** cart ownership across accounts (PC-2); whether customers
-   see Admin warnings (CAF-19); custom-order payment method (CAF-07); ticket reply
-   (PRQ-2); required order-card fields (CUST-14-021).
+1. **Stop-class blockers (§40.2)** — CUST-DEF-001…005, D6, D8 — must be resolved
+   through §3 before Customer acceptance progresses. Keep `auth.signup_verify`=true
+   everywhere until CUST-DEF-001 is fixed.
+2. **Closed by the Owner (§40.1):** cross-account cart/state; Admin/internal warnings.
+   **Answered by existing contracts (§40.11):** custom-order payment (cash or wallet,
+   2026-08-09); ticket reply behaviour (PRQ-2 approved).
+3. **Still open:** PRQ-2 release scope; CAF-15 (is `shop.rail_auto` meant for the
+   app?); required order-card fields (CUST-14-021).
 4. **Staging policy flips for conditional rows** (each deviates from Production policy
    and must be approved and restored): `auth.otp_login`=true (CUST-05-015),
    `auth.signup_verify`=false (CUST-04-019, CUST-19-026b), `launch.*` flips.
@@ -1228,10 +1232,11 @@ lock, reboot), CUST-20 (RTL, font scale, keyboard), CUST-21 (performance on SM-A
 
 ### 38.9 · Open housekeeping from 2026-09-19 (not part of acceptance)
 
-The authorized cleanup is **still pending** because the phone is not reachable over ADB:
-remove the four RahalGo debug packages from Dual Messenger (user 95) and delete
-`/sdcard/def001`, `/data/local/tmp/def001.sh`, `/sdcard/rg_pre.xml`, `/sdcard/rg_ui.xml`.
-CUST-00-009 stays open until it is done.
+**Corrected (§40.13):** the Owner manually removed the four RahalGo apps from Dual
+Messenger (user 95) — DONE. **ADB verification is pending** until the phone is
+reachable; CUST-00-009 stays `NOT_TESTED` until then. Test residue (`/sdcard/def001`,
+`/data/local/tmp/def001.sh`, `/sdcard/rg_pre.xml`, `/sdcard/rg_ui.xml`) may remain
+until ADB is available — not an acceptance blocker.
 
 ---
 
@@ -1306,19 +1311,19 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-07-030 | Request my area / notify me (demand) | Added: `POST /api/v1/demand`; not offered for discovery points |
 | CUST-08-017 | Pre-launch screen when browsing is closed | Added: `MainActivity:1221-1252` |
 | CUST-08-018 | Owner notice overrides built-in reason text | Added: `ApiErrors.kt:118-134` |
-| CUST-09-026 | Banner slider and banner tap | Added. Audit finding AUD-C04: banners with a target are marked clickable but ShopScreen passes no handler — silent tap, expected FAIL |
-| CUST-09-027 | Section rail auto-scroll setting | Added. AUD-C08: `rail_auto/rail_every_ms` parsed but never used by the app — Owner decision whether this is a defect |
+| CUST-09-026 | Banner slider and banner tap | Added. CAF-11 CONFIRMED (§40.10): banners with a target are clickable but ShopScreen passes no handler — silent tap, expected FAIL |
+| CUST-09-027 | Section rail auto-scroll setting | Added. CAF-15 NEEDS_OWNER_DECISION (§40.10): `rail_auto/rail_every_ms` parsed but never used; the setting sits in the Site group |
 | CUST-09-028 | Browse scoped to city/address | Added. PC-1 gap noted: `CityScope.kt:90` returns the chosen city first |
 | CUST-09-029 | Guest browsing of the market | Added |
 | CUST-10-014 | Unavailable option disabled | Added |
 | CUST-11-033 | Suggestions row «يُطلب معه» | Added: `SuggestRow.kt` |
 | CUST-11-034 | Empty cart via «إفراغ السلة» | Added |
-| CUST-11-035 | Add from Offers respects address/coverage gate | Added. AUD-C05: offers add path skips the PreCart gate (server still validates at submit) |
+| CUST-11-035 | Add from Offers respects address/coverage gate | Added. CAF-12: offers add path skips the PreCart gate (server still validates at submit) |
 | CUST-11-036 | Multi-source limit | Added: no client check; server enforces |
 | CUST-11-037 | Corrupt persisted cart is discarded safely | Added: unreadable cart is deleted by design |
 | CUST-12-024 | Promo code preview | Added |
 | CUST-12-025 | Promo becomes invalid before submit | Added: `TestPR03_StaleDiscountCannotSubmit` |
-| CUST-12-026 | Promo & payment choice across process death | Added. AUD-C10: promo and payment choice are memory-only |
+| CUST-12-026 | Promo & payment choice across process death | Added. CAF-17: promo and payment choice are memory-only |
 | CUST-12-027 | Below minimum order | Added: P8-C3-029..031; minimum shown only on rejection (TRUTH §6) |
 | CUST-12-028 | Cart-changes review gate | Added: `CartChangesTest` (10) |
 | CUST-13-025 | Open-order cap | Added: D4 fixed; `TestD4_*` |
@@ -1327,13 +1332,13 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 (source-confirmed): `Attempt.isDecided` treats any ApiException (incl. 409 `in_progress`) as final and clears the key; `in_progress` is unmapped. Expected FAIL |
 | CUST-13-029 | Retry after cart edit does not replay the old order | Added. CAF-02: idempotency does not fingerprint the body |
 | CUST-CUSTOM-019 | Driver note is saved and shown | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
-| CUST-CUSTOM-020 | Custom order payment method | Added. CAF-07: Owner decision whether wallet should be offered |
+| CUST-CUSTOM-020 | Custom order payment method | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
 | CUST-14-021 | Order card shows authoritative data | Added (replaces the absent detail screen). Card omits payment method, address, times, wallet_paid, cash_due — Owner to decide if required |
 | CUST-14-022 | Cancel order within window | Added: `TestCANC_001`, `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-14-023 | Double cancel / cancel after window | Added: `TestCANC_002` |
 | CUST-14-024 | Rate a delivered order | Added. No backend test for the customer rating happy path/authz (audit) |
 | CUST-14-025 | Automatic rating prompt | Added |
-| CUST-14-026 | History beyond 30 orders | Added. AUD-C07: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
+| CUST-14-026 | History beyond 30 orders | Added. CAF-14: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
 | CUST-SUP-001 | Chat button appears for an open order with a driver | `ChatMultiOrderTest` (21) |
 | CUST-SUP-002 | Send and receive messages | Audit: real surface not covered by the supplied list |
 | CUST-SUP-003 | Chat read-only after order ends | `comms_closed`/`comms_no_driver` are unmapped codes (CAF-18) |
@@ -1343,9 +1348,9 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-SUP-007 | Offline chat send blocked | §7 |
 | CUST-SUP-008 | Complaint on an order | `TestComplaint_*` |
 | CUST-SUP-009 | Complaint once / window / not on running order | Audit: real surface not covered by the supplied list |
-| CUST-SUP-010 | Tickets list shows status and resolution | Customer cannot reply to a ticket (PRQ-2, XG-19) — Owner decision |
+| CUST-SUP-010 | Tickets list shows status and resolution | Ticket reply: PRQ-2 approved (customer should reply) but not built — release scope is the open Owner question (§40.11) |
 | CUST-SUP-011 | Foreign order complaint denied | `TestVAL_040_ForeignOrderComplaintCode` |
-| CUST-SUP-012 | Admin warnings visible to the customer | CAF-19: backend has `/my/warnings`; the app never calls it — Owner decision whether customers must see warnings |
+| CUST-SUP-012 | Admin warnings visible to the customer | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
 | CUST-WAL-001 | Balance chip and wallet screen | Audit: real surface not covered by the supplied list |
 | CUST-WAL-002 | Transaction list correctness | Audit: real surface not covered by the supplied list |
 | CUST-WAL-003 | Statement: this month / previous / all | Audit: real surface not covered by the supplied list |
@@ -1372,7 +1377,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-ENG-014 | Drawer items per auth state | Audit: real surface not covered by the supplied list |
 | CUST-15-017 | Notification inbox | Added |
 | CUST-15-018 | Chat message push opens the chat | Added: `DeepLinkTest`, `ChatMultiOrderTest` |
-| CUST-15-019 | Logout stops realtime | Added. AUD-C02: `LiveSocket.stop` is not called by the customer app on logout — expected FAIL |
+| CUST-15-019 | Logout stops realtime | Added. CUST-DEF-004 (STOP §40.6): `LiveSocket.stop` is not called by the customer app on logout — expected FAIL |
 | CUST-17-022 | Orders tab across background and process death | Added: replaces the order-detail lifecycle rows (no detail screen) |
 | CUST-18-021 | Browse closure closes every browse surface | Added. CAF-05 (reported by audit): only `/public/home`, `/public/offers`, `/public/items/{id}` are gated |
 | CUST-19-026 | Signup confirm cannot take over an existing account | Added. **CAF-01 P0 (source-confirmed)**: with `signup_verify`=false `ConfirmSignup` skips the code and overwrites an existing account's password, then issues a session (`identity/service.go:486-559`). Current Prod/Staging value = true (Staging since 2026-09-19). Expected FAIL for (b) |
@@ -1395,3 +1400,365 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 ---
 
 *Maintained with the repository. Status changes are made in this file, with evidence, row by row. Never renumber an ID.*
+
+---
+
+## 40 · Pre-acceptance blocker gate (2026-09-19) — read-only triage
+
+> **Owner instruction:** VERIFY → CLASSIFY → ROOT CAUSE → P-9 IMPACT → REGRESSION DESIGN →
+> FIX PLAN. **Read-only.** No fix implemented, no Staging or Production mutation, no
+> acceptance case executed, R1 not started.
+>
+> **Every claim below was re-read in the source by the triage itself** — sub-agent
+> reports were used only as leads.
+
+### 40.1 · Owner decisions recorded (closed 2026-09-19)
+
+1. **Cross-account cart / state.** Account B must not see or inherit Account A's
+   private cart or private authenticated state. Logout must detach the previous
+   account's private state and its authenticated realtime/session context. If an
+   anonymous/guest cart exists by design, it must be explicitly scoped and must never
+   leak private state between authenticated accounts.
+2. **Admin/internal warnings.** Customers must not receive raw internal/Admin-only
+   warning text, stack detail, debug detail, secrets or internal operational
+   information. Customer-visible errors must be safe, understandable Customer-facing
+   messages.
+
+### 40.2 · Stop-class blockers — Customer acceptance does not progress until these are resolved
+
+| Defect ID | Was | Sev | Class (§3 / Owner rule B) | Status |
+|---|---|---|---|---|
+| **CUST-DEF-001** | CAF-01 (+ CAF-16 signup part) | **P0** | account takeover · authentication boundary | **CONFIRMED (source)** — latent while `auth.signup_verify`=true |
+| **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
+| **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **CONFIRMED (source)** — exploitable by any signed-in customer with a crafted request |
+| **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **CONFIRMED (source)** |
+| **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **CONFIRMED (source)** |
+| **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
+| **D8** | known (EXPECTED_FAIL) | **P1 · latent** | verification boundary bypass | **CONFIRMED (source)** — dormant while `auth.require_whatsapp`=false |
+
+**New IDs use the `CUST-DEF-nnn` namespace of this document.** Existing IDs (D6, D8,
+D9, D11, R14, XG-9, PC-2…) are kept, never re-numbered; where a finding and a known ID
+share one root cause, the known ID is referenced instead of opening a new one.
+
+### 40.3 · CUST-DEF-001 — signup confirm can take over an existing account
+
+**Path.** `POST /api/v1/auth/signup/confirm` → `handleSignupConfirm`
+(`server/auth_handlers.go:354-418`) → `identity.ConfirmSignup`
+(`identity/service.go:486-559`).
+
+**Root cause.**
+
+1. The code check is **conditional**: `if s.boolSetting(ctx, "auth.signup_verify", false)`
+   (`service.go:520`). Catalog default is **false**; the setting is read straight from
+   the database (`settings.Store.Get`, no cache) and **any read error returns the
+   fallback false → the check is skipped (fail-open)**.
+2. For a phone that already has an account, the `else` branch calls
+   `repo.SetPassword` — `UPDATE users SET password_hash=$2, must_change_password=false`
+   (`identity/repo.go:509-513`) — and overwrites the full name. **There is no check
+   that the existing account is password-less**; that guard exists only in
+   `RequestSignup` (`service.go:436-439`), which the app skips when verification is off
+   and which an API caller need not call at all.
+3. It then calls `issueFor` → `issueSessionFor`, which revokes the victim's sessions of
+   the same client kind and returns a new session.
+4. `handleSignupConfirm` has **no `requireLaunch(launch.customer_signup)` and no rate
+   limit** — only `/signup/request` is gated (`auth_handlers.go:297`).
+
+**What an attacker gets with verification OFF (phone number only):**
+
+| Target account | Result |
+|---|---|
+| customer · driver · merchant · rep (any non-admin role), active | **password + name overwritten, full session issued, victim's same-client session revoked** |
+| admin **without** a PIN yet | password overwritten; response carries a PIN **setup** challenge → `POST /auth/pin/setup` (`SetPinFirstTime`) sets the attacker's PIN → **admin session** |
+| admin **with** a PIN | password overwritten (**lock-out**); blocked at the PIN step |
+| suspended / blocked | password overwritten **before** the status check refuses the session (state mutation) |
+| any account flagged `must_change_password` | flag cleared → forced-change bypass (links D11) |
+
+**With verification ON (today, Production and Staging).** `ConsumeOTP(phone, code,
+"signup")` must succeed first; signup codes are only sent by `RequestSignup`, which
+refuses accounts that already have a password. **A password-protected account cannot be
+reached** — the remaining path (a password-less account created by OTP login) needs a
+code delivered to that phone, i.e. its owner. **Not exploitable at runtime today**,
+but one Admin toggle, a missing setting row, or a transient settings-read error
+re-opens it.
+
+**Shared logic?** No other auth path has the pattern. `ConfirmPasswordReset`,
+`VerifyOTP` (OTP login), `ConfirmPhoneChange` (also refuses a phone owned by another
+user) and WhatsApp confirm **always** consume a code sent to the phone before touching
+an account; `/auth/sso` exchanges a one-time code minted by an authenticated
+`/auth/handoff`. **The flaw is unique to `ConfirmSignup`** — but it reaches **every
+role**, not only Customer signup.
+
+**Required safe contract (Owner).** An existing account must never have its password
+replaced or receive a new session through the signup path merely because someone knows
+its phone number. Verification OFF must never turn signup into password reset or
+takeover. Existing-account signup is rejected or redirected to login/recovery.
+Backend-enforced.
+
+**Regression (must fail before the fix, pass after):** Go, `internal/identity` +
+`internal/qa`:
+
+- verify=false · existing account with password → rejected; hash, name, sessions
+  unchanged; no session issued;
+- verify=true · no/invalid code → rejected;
+- admin without PIN → no challenge reachable through signup;
+- suspended/blocked account → nothing written;
+- `must_change_password` not cleared by signup;
+- settings read failure → fail-closed;
+- `/signup/confirm` launch-gated and rate-limited;
+- the legitimate password-less (OTP-login) completion still works only with a valid
+  signup code.
+
+**There is no test today for signup confirm or `auth.signup_verify` at all.**
+
+**P-9:** RISK CLASS **CRITICAL** · apps admin/customer/driver/merchant/rep · flows
+F-28 F-29 F-30 F-34 · defects D10 D11 D12 D14 · risks R13 R15 R16 · gaps XG-22 XG-23
+XG-24 XG-39 XG-9 · 158 mandatory tests (`./internal/identity ./internal/qa`) · Staging
+required (R16).
+
+### 40.4 · CUST-DEF-002 — a 409 `in_progress` can lead to a duplicate order
+
+**Client.** `ui/Attempt.kt` `isDecided(e) = e is ApiException` → every server answer,
+**including 409 `in_progress`**, is "decided". `CartViewModel.send`
+(`cart/CartScreen.kt:~790-836`) and `CustomViewModel.send` then `Attempt.clear(slot)`;
+the next tap mints a fresh UUID. `in_progress` has no entry in `ui/ApiErrors.kt`, so
+the user reads «تعذر الاتصال — حاول بعد قليل».
+
+**Server.** `server/idempotency.go`: claim keyed `(user, endpoint, key)` with a 60 s
+lease (`idempotencyLease`); a second request on a live, uncommitted claim gets **409
+`in_progress`** (`:221-226`); a committed claim replays the stored response; errors
+≥ 400 release. Handler timeout 30 s (`server.go:302`) vs client request timeout 20 s
+(`shared/net/ApiClient.kt:128-132`). The body is not fingerprinted.
+
+**Reachable sequence.**
+
+1. Submit #1 is slow and the client times out at 20 s; the key is kept (correct).
+2. The user retries within #1's lease; the server answers 409 `in_progress`.
+3. The client treats that as final and **clears the key**.
+4. Submit #1 commits.
+5. The next tap sends a new key, waits on the per-customer advisory lock, and passes
+   the open-order cap — `orders.max_open_per_customer` is not stored in either
+   environment, so the default is **3**.
+6. The result is **a second order**.
+
+**Regression:**
+
+- Kotlin (`ui`): `isDecided(ApiException(409,"in_progress"))` is false; Cart and
+  Custom view models keep the key on `in_progress`; `in_progress` maps to a
+  "still processing" message.
+- Integration: after a lost response and an `in_progress` answer, a retry with the
+  kept key replays the committed order (orders +1 exactly).
+- Server-side body fingerprinting is a separate, optional hardening decision.
+
+**P-9:** apps customer/driver/merchant/rep (shared `ui`) · RISK MEDIUM (Go-mapped) ·
+device required · plus Kotlin suites `AttemptTest`, `PerfFlowTest`, `AbuseMatrixTest`
+(P-9 maps Go tests only).
+
+### 40.5 · CUST-DEF-003 — `POST /orders` trusts a client-supplied `merchant_id`
+
+**Root cause.** `handleCustomerCreateOrder` (`server/customer_handlers.go:422-428`)
+decodes `orders.CreateInput` and clears only `CustomerID`/`CustomerPhone`; `CreateTx`
+fills `MerchantID` from the items **only when empty** (`orders/service.go:303-305`),
+checks only that it is a UUID (`:314-320`), runs the **open-hours check on it**
+(`:378-396`) and writes it to `orders.merchant_id` (`:605`). Items keep their true
+source (`order_items.merchant_id`).
+
+**What the header `merchant_id` drives** (verified consumers):
+
+- merchant notification (`service.go:158`);
+- the merchant's order list (`queries.go:314`);
+- pickup routing and ETA (`sameroute.go`, `routeeta.go`);
+- ratings attribution (`ratings.go:55`);
+- **sales-rep commission** (`settleRep`, `transitions.go:~1040`) and its reversal
+  (`reverseCommissions`, `:~1139`);
+- **merchant activation counting** (`merchantActivated`, `:1581`), which feeds rep
+  rewards.
+
+Goods settlement uses the item's merchant (`COALESCE(oi.merchant_id, o.merchant_id)`).
+
+**Impact.** Any signed-in customer can attribute an order to an unrelated open merchant.
+That misroutes the order and steers rep commission and activation — **financial
+source-of-truth corruption through an unsafe trust boundary.** The normal app never
+sends the field.
+
+**Regression (Go):**
+
+- a foreign or closed `merchant_id` is ignored or rejected;
+- the stored header equals the item source;
+- rep commission and activation are computed on the true merchant;
+- the open-hours check uses the true merchant.
+
+**P-9:** RISK **CRITICAL** · 4 apps + admin · order lifecycle, privacy · 212 mandatory
+tests (`./internal/orders ./internal/qa`).
+
+### 40.6 · CUST-DEF-004 — logout does not detach account-scoped state (cross-account)
+
+One root cause: **the client has no session-boundary reset.** It absorbs PC-2 (cart
+ownership) and CAF-09.
+
+| Part | Evidence | Behaviour |
+|---|---|---|
+| Cart | `customer/cart/Cart.kt` — one global object in SharedPreferences `rahalgo_cart`, no owner; `Cart.clear()` only on «إفراغ السلة» and after a successful order (`CartScreen.kt:278,816`) | **A's cart is shown to guest and to B** |
+| Logout | `ui/AuthViewModel.kt:558-570` — clears session + `user`, calls `/auth/logout`; nothing else | activity-scoped view models keep A's balance, inbox, orders and favorites until they reload |
+| Realtime | `shared/net/LiveSocket.start` returns if a job is already active; the customer app never calls `stop()` (only the driver app does) | **A's authenticated socket stays open after logout; when B signs in, B's shell reuses A's socket** — B gets refresh signals driven by A's private events and misses its own until the socket drops |
+| Server side | `server/ws.go:86-99` checks the session only at handshake | known risk **R14** ("the realtime connection is not re-checked after the handshake") — referenced, not duplicated |
+
+**Violates Owner decision 40.1-1.**
+
+**Regression:**
+
+- Kotlin: logout clears or re-scopes the cart (a guest cart only if explicitly scoped);
+  logout stops the socket; sign-in starts a socket with the new token; account-scoped
+  view-model state resets.
+- Device: A → logout → B shows none of A's cart, orders, wallet, inbox or favorites,
+  and receives only B's realtime.
+
+**P-9:** RISK **CRITICAL** · apps customer/driver/merchant/rep · F-04 F-30 F-34 ·
+D10 D11 D12 D19 D20 D21 · R13 R15 R16 R21 · 182 mandatory Go tests · device required
+(AND-31).
+
+### 40.7 · CUST-DEF-005 — the cart can show a stale total and the server charges another
+
+**Root cause.**
+
+- `CartViewModel.quote` sends **no `expected`** when `priced == null`, i.e. on the
+  first quote after opening the cart (`cart/CartScreen.kt:741-749`), so the server
+  returns no `changes` and the review gate never opens.
+- The screen shows `Cart.subtotal` from the unit prices stored when the item was added
+  (the cart persists across restarts), and the total is computed on the device
+  (`:326`).
+- The order is priced by the server at current prices (`orders/service.go:690-833`).
+
+**Impact.** A price change since the item was added is invisible at send time, so the
+customer agrees to one total and is charged another. **Stale data presented as
+authoritative.**
+
+**Regression (Kotlin):**
+
+- the first quote sends expected unit prices from the stored lines;
+- a stale price opens the change-review gate;
+- the displayed subtotal and total come from the server quote.
+
+**P-9:** customer only · device required.
+
+### 40.8 · D6 · D8 · D9 — custom order skips rules the normal order enforces
+
+| Rule | Normal `CreateTx` | Custom `CreateCustomTx` (`orders/custom.go:135-230`) |
+|---|---|---|
+| Cash ban (`customers.cash_ban_*`) | `service.go:~363` `cashBlocked` | **absent** → **D6 confirmed** |
+| WhatsApp verification (`customers.require_whatsapp` under `auth.require_whatsapp`) | `service.go:~390` | **absent** → **D8 confirmed** (latent while the master switch is off) |
+| Creation event `''→pending` + `notifyCreated` | `service.go:639,678` | **absent** (publish only) → **D9 confirmed** |
+
+**Classification:**
+
+- **D6 — STOP, P1.** A cash-banned customer can place a cash custom order, where the
+  driver buys the goods, so this is a financial risk-control bypass. Custom orders are
+  open on Staging.
+- **D8 — STOP, P1, latent.** Verification boundary bypass.
+- **D9 — not stop-class, P2.** Audit-trail and notification completeness.
+
+Launch flags are not a boundary (Owner rule).
+
+**Regression:** flip `TestCENSUS_D6_CustomOrderSkipsCashBan` and
+`TestCENSUS_D6_D9_CustomOrderCreationGuards` from EXPECTED_FAIL to PASS, plus explicit
+tests per rule.
+
+**P-9:** RISK **CRITICAL** · 212 mandatory tests (`./internal/orders ./internal/qa`).
+
+### 40.9 · D11 — forced password change
+
+**Backend holds.**
+
+- `RequireAuth` returns 403 `password_change_required` on everything except
+  `/auth/me`, `/auth/password`, `/auth/logout` and `/auth/capabilities`
+  (`server/middleware.go:~57-67`).
+- Guarded by `TestTMP1..4`.
+- **A flagged customer cannot continue normal use.**
+
+**App:**
+
+- no dedicated gate;
+- every screen shows «كلمة المرور الحالية وضعها شخص آخر — بدّلها لتتابع»;
+- the Account screen still renders its password section when the summary call fails,
+  so a way out exists.
+
+**CONFIRMED · P2 · not stop-class** (no bypass). The only bypass route is signup
+clearing the flag, which is part of CUST-DEF-001.
+
+### 40.10 · Reconciliation of all 22 §38.4 findings
+
+| Finding | Verdict | Sev | Stop | Surface · component | Note |
+|---|---|---|---|---|---|
+| CAF-01 | CONFIRMED → **CUST-DEF-001** | P0 | **YES** | signup · `identity/service.go` | §40.3 |
+| CAF-02 | CONFIRMED → **CUST-DEF-002** | P1 | **YES** | cart/custom send · `ui/Attempt.kt` | §40.4 |
+| CAF-03 | CONFIRMED → **CUST-DEF-003** | P1 | **YES** | `POST /orders` · `orders/service.go` | §40.5 |
+| CAF-04 | CONFIRMED | P2 | no | suspended customer · `server/suspension.go:55-66` | exception names `GET /api/v1/orders/{uuid}`, which has no customer route; `/my/orders*` blocked → live order unreachable in the app; cancel by id still allowed. Restrictive, not a bypass |
+| CAF-05 | CONFIRMED | P3 | no | pre-launch browse · `server.go:~439-499` | sections, section items, suggest, search stay open while `customer_browse` is off; public catalog data, app shows PreLaunch |
+| CAF-06 | CONFIRMED | P2 | no | order create · `orders/availability.go:169` | `classifyPlace` used only by availability; create enforces zones only |
+| CAF-07 | CONFIRMED | P2 | no | custom order · `custom_order_handlers.go` | `notes` not decoded → driver note silently dropped. Wallet option: see §40.11 |
+| CAF-08 | CONFIRMED → **CUST-DEF-005** | P1 | **YES** | cart · `CartScreen.kt` | §40.7 |
+| CAF-09 | CONFIRMED → **CUST-DEF-004** | P1 | **YES** | logout / account switch | §40.6 |
+| CAF-10 | CONFIRMED | P2 | no | session expiry mid-use · `AuthViewModel.kt` | session cleared only at startup and logout; a revoked session keeps loaded data on screen with an error message; server refuses new data. Socket side = R14 |
+| CAF-11 | CONFIRMED | P3 | no | Shop banners · `ShopScreen.kt:194`, `BannerSlider.kt:188` | target banners clickable, no `onOpen` → silent tap |
+| CAF-12 | CONFIRMED | P3 | no | Offers · `MineScreens.kt:204,345` | `Cart.add` without the PreCart gate; send still requires address, availability and quote |
+| CAF-13 | DUPLICATE_OF_XG-9 | — | no | push tap | order-status pushes fall to `else -> Unit` (`MainActivity.kt:1095`) |
+| CAF-14 | CONFIRMED | P2 | no | order history · `OrdersViewModel.kt:99,145` | page 1 (30) only |
+| CAF-15 | NEEDS_OWNER_DECISION | P3 | no | rail auto-scroll · `model/Shop.kt` | `shop.rail_auto` sits in the **Site** settings group (page.shop); the Android app never had auto-scroll — is the setting meant for the app? |
+| CAF-16 | NOT_A_DEFECT (signup part → CUST-DEF-001) | — | no | launch flags on client | server gates orders/custom/signup-request and answers with explicit `launch_closed` + Owner notice |
+| CAF-17 | CONFIRMED | P3 | no | cart · `CartScreen.kt:518,587` | promo and payment choice in memory only; reset visibly after process death |
+| CAF-18 | CONFIRMED (`in_progress` part → CUST-DEF-002) | P3 | no | error texts · `ui/ApiErrors.kt` | `not_found`, `comms_closed`, `comms_no_driver` unmapped → misleading «تعذر الاتصال» |
+| CAF-19 | CONFIRMED | P2 | no | warnings · `/my/warnings` | Admin panel promises «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله», but `issueWarning` sends no notification and the app never shows warnings → the customer is never told. Warnings are user-addressed by design (reason + Admin note), so decision 40.1-2 governs **how** they are worded, not **whether** they reach the customer |
+| CAF-20 | CONFIRMED | INFO | no | analytics · `app_opens.go` | every `/public/home` call counts an open; home reloads on every realtime frame → inflated |
+| CAF-21 | CONFIRMED | P3 | no | guest cart · `CartScreen.kt:202` | address card opens the sheet for guests; geo endpoints need auth |
+| CAF-22 | NOT_A_DEFECT | — | no | reset / verify | test dependency: `/auth/wa/ticket` needs the Staging WhatsApp bot |
+
+**Consolidated (no duplicate IDs):**
+
+- CAF-09 + PC-2 → CUST-DEF-004;
+- CAF-16 signup part → CUST-DEF-001;
+- CAF-18 `in_progress` → CUST-DEF-002;
+- CAF-13 → XG-9;
+- server socket side → R14.
+
+### 40.11 · Product questions — answered by existing contracts or genuinely open
+
+| Question | App today | Backend | Contract / documents | Verdict |
+|---|---|---|---|---|
+| Custom-order payment options | cash only (no `payment_method` sent) | accepts `wallet` (`custom.go:160-164`); wallet settled at delivery; short balance logged as debt (`:400-417`) | **Owner decision 2026-08-09** in `orders/custom.go:74-78`: «والدفعُ نقدٌ أو محفظة… والمحفظةُ خيارٌ» | **Answered** → the app is missing the wallet option (CONFIRMED gap, P2, not stop) |
+| Ticket reply | tickets list, read-only; tickets created only through the complaint dialog | replies are Admin-only | **PRQ-2 «CENTRAL SUPPORT CENTER» — «معتمدٌ»** (`CUSTOMER_FINAL_PRODUCT_DECISIONS.md:424`); the missing reply is named its heaviest gap; «ولا يُبنيان الآن» | **Behaviour answered** (customer should reply). **Genuinely open: is PRQ-2 in scope for this release, or deferred?** |
+
+### 40.12 · Proposed fix order (not implemented)
+
+| # | Item | Why this position |
+|---|---|---|
+| 1 | **CUST-DEF-001** | P0 · all roles · backend-only · server deploy, no app release |
+| 2 | **CUST-DEF-003** | financial trust boundary · backend-only |
+| 3 | **D6 + D8** (+ D9 in its own commit) | same file (`custom.go`), backend-only; D9 is non-blocking |
+| 4 | **CUST-DEF-002** | shared `ui` client; Kotlin tests |
+| 5 | **CUST-DEF-004** | client session boundary; device witness required |
+| 6 | **CUST-DEF-005** | cart pricing truth; device witness |
+| 7 | §7 offline blocking (L1-019 feature build) | not a defect — required before CUST-16 can pass |
+
+Each item is a separate atomic cycle (§3):
+
+1. record;
+2. regression test failing first;
+3. smallest centralized fix;
+4. impacted suites;
+5. re-run.
+
+Items 4–6 can ship in one Android debug build only after each passes its own cycle.
+Non-blocking CONFIRMED items (D9, D11, CAF-04/06/07/10/11/12/14/17/18/19/21 and the
+custom wallet option) are scheduled inside normal acceptance, in their groups.
+
+### 40.13 · Cleanup truth (2026-09-19)
+
+- **The Owner manually removed** the four RahalGo apps from Samsung Dual Messenger
+  (user 95): **DONE**.
+- **ADB verification: pending** until the phone is reachable. CUST-00-009 stays
+  `NOT_TESTED` until then.
+- Test residue on the phone (`/sdcard/def001`, `/data/local/tmp/def001.sh`,
+  `/sdcard/rg_pre.xml`, `/sdcard/rg_ui.xml`) may remain until ADB is available. This
+  is not a Customer acceptance blocker.
+
+**Gate result:** 7 stop-class blockers confirmed (CUST-DEF-001…005, D6, D8). **Customer
+acceptance execution stays closed until they are resolved through §3.**
