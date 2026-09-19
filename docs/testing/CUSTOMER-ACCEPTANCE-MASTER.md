@@ -2073,3 +2073,75 @@ compute commission from `orders.merchant_id`, remain green.
 
 **Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · **NOT DEPLOYED** (Staging
 and Production still run `5d7a960f`; any runtime/deploy phase is a separate authorization).
+
+### 40.19 · CUST-DEF-003 — Staging deployment + controlled runtime witness (2026-09-19)
+
+**Authorized as Staging deployment + controlled runtime witness only. Production not
+touched (boundary = 0). Fixtures had to be reversible: no existing wallet balance modified,
+and no manual corrective ledger entry permitted.**
+
+**Deployed source `5105fa45`** to Staging API only — image
+`rahalgo-api:release-5105fa45` (`8bfe2490…`, source_commit `5105fa45…`), migration `0157`
+(none applied). Web unchanged. Production stayed on `5d7a960f`.
+
+**Fixture design (reversible, no settlement).** One disposable customer `U`, two disposable
+stores `A` and `B` (each with owner, category, section, one approved item), all labelled
+`CUSTDEF003-WITNESS%`. Every order placed was **cash on delivery** and none was progressed
+to delivery, so **no settlement ran** — `wallet_transactions` stayed at 4 and `sum(balance)`
+at 0 throughout. No `+X/−X` correction was ever needed or made.
+
+**Runtime cases (all PASS) against the live Staging API:**
+- **A** — items from `A`, supplied `merchant_id=B` (foreign) → `400 bad_merchant`, order
+  count unchanged, zero orders point at `B`.
+- **B** — real store `A` CLOSED + supplied foreign OPEN `B` → `400 bad_merchant`; same items
+  with merchant omitted → `409 merchant_closed` (the real store governs hours).
+- **C** — real `A` OPEN + supplied foreign CLOSED `B` → `400 bad_merchant` (foreign never
+  read); legitimate order against `A` → `201`, stored `orders.merchant_id == A`.
+- **D** — merchant omitted (what the real app sends) → `201`, stored merchant == `A`.
+- **E** — correct `merchant_id=A` supplied → `201`, stored merchant == `A`.
+
+**Negative witness for the foreign store `B` (proven at runtime):** after all cases,
+**zero** orders point at `B`, **zero** notifications reached `B`'s owner or store,
+`wallet_transactions` == 4 and wallet sum == 0. A foreign merchant supplied by the client
+never became the order's store, so it can never be routed to, notified, rated, or made the
+commission/activation store — all of which read `orders.merchant_id`.
+
+**What was NOT witnessed positively at runtime, and why.** The **positive** direction of
+commission earned / commission reversed / representative-activation count / rep reward could
+not be exercised on Staging, because each requires progressing an order through settlement,
+which writes an irreversible running-balance ledger entry — and a corrective entry to undo it
+was explicitly forbidden by the authorization. These paths therefore rest on the automated
+settlement tests (which compute commission from `orders.merchant_id`) plus the source trace,
+**not** on a Staging runtime witness. **Multi-store `orders.max_sources` compatibility**
+likewise rests on the automated multi-source tests; no Staging setting was changed
+(`orders.max_sources` stayed at 1).
+
+**Cleanup — exact baseline restoration proven.** All disposable rows deleted by recorded id
+(users, roles, merchants, items, sections, categories, orders + their events/items,
+notifications, otp, refresh tokens, and the `audit_log` rows the disposable users/orders/
+merchants generated). Staging DB after cleanup vs the recorded baseline:
+
+| | baseline | after cleanup |
+|---|---|---|
+| users | 50 | 50 |
+| users fingerprint | `555561cf…` | `555561cf…` |
+| user-roles fingerprint | `5300abee…` | `5300abee…` |
+| role-permissions fingerprint | `0a8c9d8d…` | `0a8c9d8d…` |
+| orders | 1 | 1 |
+| order #1050 | `on_the_way` · 7 events | `on_the_way` · 7 events |
+| wallets · sum | 50 · 0 | 50 · 0 |
+| wallet transactions | 4 | 4 |
+| settings | verify=true · signup=true · max_sources=1 | identical |
+| migration | 0157 | 0157 |
+| disposable rows (users/merch/orders/otp/audit) | — | 0 / 0 / 0 / 0 / 0 |
+
+**moneycheck against Staging (read-only session): 51 checks · 0 violations.** All three
+fingerprints match byte-for-byte; #1050 untouched; no ledger row created or corrected.
+
+**No product change during the runtime phase.** The fix behaved correctly as deployed; no
+source issue surfaced, so no code was edited.
+
+**CUST-DEF-003 status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · STAGING RUNTIME
+= PASS (negative direction witnessed; positive settlement direction by automated tests +
+source trace) · BASELINE RESTORED (exact) · **PRODUCTION NOT DEPLOYED** (separate
+authorization). Staging API remains on `release-5105fa45`.
