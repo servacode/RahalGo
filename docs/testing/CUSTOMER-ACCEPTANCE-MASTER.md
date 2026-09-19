@@ -655,7 +655,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-025 | Submit | Open-order cap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open orders at cap | Submit another | Explicit cap message; no order | — | `NOT_TESTED` | — | online | orders unchanged | — | — | — | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | — | `NOT_TESTED` | — | online | — | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
-| CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | CUST-DEF-002 (source fix CLOSED; device witness pending) | `CustDef002Test` (`ui/…/CustDef002Test.kt`) · `ApiErrorsTest.inProgressResolvesToWaitNotConnectionFailure` | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PENDING (separate authorization) |
+| CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | — | `NOT_TESTED` | — | slow | orders +1 exactly | — | CUST-DEF-002 (CLOSED · device witness PASS §40.25.2) | `CustDef002Test` (`ui/…/CustDef002Test.kt`) · `ApiErrorsTest.inProgressResolvesToWaitNotConnectionFailure` | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PASS (§40.25.2): on SM-A525F the same attempt key survived timeout + live 409 in_progress, the still-processing message «العملية قيد التنفيذ…» showed (not «تعذر الاتصال»), and exactly one order (#1062) was created under that key |
 | CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | Server returns the old committed order OR the new cart is submitted — never a silent mismatch between cart and created order | — | `NOT_TESTED` | — | cut | order items vs cart | — | — | — | Added. CAF-02: idempotency does not fingerprint the body |
 
 ## 25 · CUST-CUSTOM — Custom order «طلب خاص»
@@ -1332,7 +1332,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-13-025 | Open-order cap | Added: D4 fixed; `TestD4_*` |
 | CUST-13-026 | WhatsApp verification requirement on normal orders | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Cash-blocked customer | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
-| CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PENDING (separate authorization) |
+| CUST-13-028 | 409 `in_progress` never leads to a duplicate order | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PASS (§40.25.2): on SM-A525F the same attempt key survived timeout + live 409 in_progress, the still-processing message «العملية قيد التنفيذ…» showed (not «تعذر الاتصال»), and exactly one order (#1062) was created under that key |
 | CUST-13-029 | Retry after cart edit does not replay the old order | Added. CAF-02: idempotency does not fingerprint the body |
 | CUST-CUSTOM-019 | Driver note is saved and shown | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
 | CUST-CUSTOM-020 | Custom order payment method | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
@@ -2571,8 +2571,8 @@ that is the idempotency contract, not a defect the app can or should override. C
 `not_found`/`comms_closed`/`comms_no_driver` (still unmapped, P3): separate from CUST-DEF-002.
 
 **Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
-FOUR-APP UNIT SUITE = PASS · **DEVICE WITNESS = PENDING** (required before operational closure;
-plan below) · **NOT DEPLOYED**.
+FOUR-APP UNIT SUITE = PASS · **DEVICE/STAGING WITNESS = PASS (§40.25.2)** ·
+**OPERATIONAL STATUS = CLOSED** · (app not shipped as a public release).
 
 #### 40.25.1 · Proposed deterministic device-witness plan (needs separate authorization)
 
@@ -2604,3 +2604,54 @@ UI (not «تعذر الاتصال») → same key retained → committed order r
 
 Recommended: **option 1** (a minimal, clearly-labelled staging-only delay hook), authorized
 and deployed under a separate request, then witnessed and removed.
+
+#### 40.25.2 · Real-device witness — executed & PASSED (2026-09-19)
+
+**Authorized real-device witness run on SM-A525F (Android 14) over stable USB ADB.** The fixed
+Customer debug APK was installed and its base.apk SHA-256 verified to equal the reviewed build
+`850be4a5321d1f9144bcca340fd135ef7211ba9904e77f7ea9de961653f60358` (source `ae472494`, staging
+API). A disposable customer (`CUSTDEF002-DEVICE`, +963997770006) with a serviceable Raqqa
+default address was logged in on the device; no real account/data was used.
+
+**Deterministic delay:** a scoped `pg_advisory_xact_lock(hashtext('customer-admit:<uid>'))`
+held server-side for the disposable customer only — the idempotency lease is established before
+the blocked handler work, so the first request stays unresolved past the app's 20 s timeout and
+a same-key retry hits `409 in_progress`. No backend source change; no slow hook.
+
+**Observed sequence (custom order «طلب خاص», payment cash, no settlement at creation):**
+- attempt key persisted on submit; the on-disk key stayed **identical** across the whole
+  submission — SHA-256(key) prefix `e7fe9edb…` at submit, after the ~20 s timeout, and after the
+  in-progress retry; **NONE** before submit and **NONE** after terminal success. **No K2.**
+- the same-key retry received a live **`ApiClient.ApiException: api in_progress (409)`** (device
+  logcat), while the lease was uncommitted and no order existed;
+- the app showed the still-processing Flash **«العملية قيد التنفيذ – انتظر قليلا ولا تعدها.»**
+  — **not** the generic «تعذر الاتصال — حاول بعد قليل»;
+- after the lease cleared, the same-key recovery created the one order; the idempotency row
+  committed with status **201** under that same key, and the app navigated to «طلباتي» showing a
+  single card **#1062** (المطلوب: CUSTDEF002-DEVICE-WITNESS, بانتظار القبول, الإجمالي 0 ل.س);
+- the attempt key was retired **only after** the successful terminal result (post-success key =
+  NONE).
+
+**Exactly one order:** disposable-customer orders before = 0, after = 1 (**delta = +1**); no
+duplicate; no second idempotency key for the logical submission; no wallet/settlement/commission
+movement (custom order, cash, pending, total 0).
+
+**Server disconnect semantics (documented):** the current server cancels a client-disconnected
+request and does not commit it (proven earlier), so the one order is created by the same-key
+recovery once the stale lease clears — not by a replay of a committed disconnected original. The
+acceptance condition for this contract (K survives uncertainty → same-key `in_progress` while
+the lease is active → correct still-processing UI → one order, no K2) is fully met.
+
+**Process-recreation:** the live recreation was skipped to avoid risking a second order on the
+completed primary witness; process-death persistence is covered by the passing automated
+regression `TestCustDef002Test.processDeathBetweenRetriesStillOneOrder` (and the on-disk
+`Attempt` store design).
+
+**Cleanup:** the disposable customer, order #1062, address, sessions, idempotency key, audit and
+wallet rows were removed in one FK-safe transaction and the app attempt store wiped; staging
+restored to the exact baseline (users 50, all three fingerprints match, orders 1 [only #1050],
+custom 0, wallets 50/tx4/sum0, idempotency_keys 0, disposable 0, migration 0157). Temporary
+device stay-awake/screen-timeout settings reset. **Production mutations = 0.**
+
+**CUST-DEF-002 / CAF-02 final:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE
+WITNESS = PASS · DEVICE/STAGING WITNESS = PASS · **OPERATIONAL STATUS = CLOSED.**
