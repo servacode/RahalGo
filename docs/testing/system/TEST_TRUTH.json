@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 358,
-    "test_funcs": 1539
+    "test_files": 359,
+    "test_funcs": 1543
   },
   "flows": [
     {
@@ -188,6 +188,10 @@
         "TestCustomCashBan_AllowedCashAccepted",
         "TestCustomCashBan_BannedCashRejected",
         "TestCustomCashBan_BannedWalletAccepted",
+        "TestCustomWhatsApp_MasterOffOverridesRole",
+        "TestCustomWhatsApp_RequiredUnverifiedRejected",
+        "TestCustomWhatsApp_RequiredVerifiedAccepted",
+        "TestCustomWhatsApp_RoleOffNotBlocked",
         "TestD22_CustomOrderReachesItsOwner",
         "TestD22_CustomOrderRoomSetIsComplete",
         "TestD22_OwnerDeliveryUnderRepetition",
@@ -1899,10 +1903,15 @@
       "title": "الطلبُ الخاصُّ لا يطلب توثيقَ واتساب",
       "domain": "الطلبات · إساءة",
       "severity": "MEDIUM",
+      "fixed": "**توثيقُ واتساب يشمل الطلبَ الخاصَّ كما يشمل العاديّ.** كان الشرطُ يُفحَص في `CreateTx` وحدَها (`RequireWhatsApp` → `ErrWhatsAppRequired`)، **والطلبُ الخاصُّ (`POST /orders/custom`) بابُه المفتوح**: حين يُشغّل المالكُ الشرطَ، من لم يوثّق رقمَه يُنشئ طلباً خاصّاً ويلتفّ عليه. **وكامنٌ اليومَ** لأنّ السياسةَ مطفأةٌ (`customers.require_whatsapp`=false افتراضاً؛ والعامُّ `auth.require_whatsapp` يعلوه). فأُضيف الفحصُ نفسُه في `CreateCustomTx` و`CreateCustom` قبل القفل والكتابة، بالمصدر نفسِه (`RequireWhatsApp`) والرسالةِ نفسِها — **سياسةٌ واحدةٌ لبابين.** والمطفأُ يبقى مطفأً (العامُّ أو الدورُ off ⇒ يمرّ غيرُ الموثَّق). وشاهدٌ سالبٌ: تسقط حالةُ «الشرطُ on + غيرُ موثَّق» على الشيفرة القبليّة وتمرّ بعد الإصلاح.",
       "tests": [
+        "TestCustomWhatsApp_MasterOffOverridesRole",
+        "TestCustomWhatsApp_RequiredUnverifiedRejected",
+        "TestCustomWhatsApp_RequiredVerifiedAccepted",
+        "TestCustomWhatsApp_RoleOffNotBlocked",
         "TestCENSUS_D6_D9_CustomOrderCreationGuards"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D9",
@@ -3387,8 +3396,13 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestCustomWhatsApp_MasterOffOverridesRole",
+        "TestCustomWhatsApp_RequiredUnverifiedRejected",
+        "TestCustomWhatsApp_RequiredVerifiedAccepted",
+        "TestCustomWhatsApp_RoleOffNotBlocked"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "auth.signup_verify",
@@ -3499,8 +3513,13 @@
         "driver",
         "merchant"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestCustomWhatsApp_MasterOffOverridesRole",
+        "TestCustomWhatsApp_RequiredUnverifiedRejected",
+        "TestCustomWhatsApp_RequiredVerifiedAccepted",
+        "TestCustomWhatsApp_RoleOffNotBlocked"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "customers.signup_bonus",
@@ -7258,6 +7277,106 @@
       "file": "internal/orders/custom_test.go",
       "package": "orders",
       "orphan": true
+    },
+    {
+      "name": "TestCustomWhatsApp_MasterOffOverridesRole",
+      "file": "internal/orders/custom_whatsapp_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D8"
+      ],
+      "settings": [
+        "auth.require_whatsapp",
+        "customers.require_whatsapp"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCustomWhatsApp_RequiredUnverifiedRejected",
+      "file": "internal/orders/custom_whatsapp_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D8"
+      ],
+      "settings": [
+        "auth.require_whatsapp",
+        "customers.require_whatsapp"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCustomWhatsApp_RequiredVerifiedAccepted",
+      "file": "internal/orders/custom_whatsapp_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D8"
+      ],
+      "settings": [
+        "auth.require_whatsapp",
+        "customers.require_whatsapp"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCustomWhatsApp_RoleOffNotBlocked",
+      "file": "internal/orders/custom_whatsapp_test.go",
+      "package": "orders_test",
+      "level": "L3",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D8"
+      ],
+      "settings": [
+        "auth.require_whatsapp",
+        "customers.require_whatsapp"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "evidence": [
+        "db"
+      ],
+      "orphan": false
     },
     {
       "name": "TestDiscount_MerchantBorne_CutsBothSides",

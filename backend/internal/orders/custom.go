@@ -100,6 +100,20 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		}
 	}
 
+	// **وتوثيقُ واتساب يشمل الخاصَّ كما يشمل العاديّ** — `D8` (انظر الشرحَ في
+	// `CreateCustomTx`). **والسياسةُ واحدةٌ لكلّ بابٍ يُنشئ طلباً خاصّاً.**
+	if s.settings != nil && s.settings.RequireWhatsApp(ctx, "customers.require_whatsapp") {
+		var verified bool
+		if err := s.db.QueryRow(ctx,
+			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
+			customerID).Scan(&verified); err != nil {
+			return nil, err
+		}
+		if !verified {
+			return nil, ErrWhatsAppRequired
+		}
+	}
+
 	// **وسقفُ المفتوح يشمله** — القاعدةُ نفسُها: من بيده ثلاثةٌ لا يفتح رابعاً.
 	//
 	// **ولو استُثني لَصار باباً يلتفّ به على السقف** — يُنشئ خاصّةً بلا حدّ.
@@ -200,6 +214,33 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		}
 		if blocked {
 			return nil, nil, ErrCashBlocked
+		}
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وتوثيقُ واتساب يشمل الخاصَّ كما يشمل العاديّ** — `D8`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الشرطُ يُفحَص في `CreateTx` وحدَها** — **والخاصُّ كان بابَه المفتوح**:
+	// حين يُشغّل المالكُ التوثيقَ، من لم يوثّق رقمَه يُنشئ طلباً خاصّاً ويلتفّ
+	// على الشرط. **والسياسةُ واحدةٌ لبابين** (`RequireWhatsApp`: المفتاحُ العامُّ
+	// `auth.require_whatsapp` يعلو مفتاحَ الدور `customers.require_whatsapp`)،
+	// والرسالةُ نفسُها (`ErrWhatsAppRequired`)، **ولا نسخةَ ثانيةً من المنطق.**
+	//
+	// **ولمّا كان العامُّ مطفأً كان كامناً** — `RequireWhatsApp` تردّ `false`،
+	// فلا فرقَ بين البابين. **فإن شُغّل ظهر الفرقُ ما لم يُسدّ هنا** — والمفتاحُ
+	// مطفأٌ في الإنتاج اليومَ، والحارسُ يمتّنه لِما بعدَ تشغيله.
+	//
+	// **ويُفحَص قبل القفل والكتابة** — فلا يُكتب شيءٌ لطلبٍ يُردّ.
+	if u := s.on(q); u.settings != nil && u.settings.RequireWhatsApp(ctx, "customers.require_whatsapp") {
+		var verified bool
+		if err := q.QueryRow(ctx,
+			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
+			customerID).Scan(&verified); err != nil {
+			return nil, nil, err
+		}
+		if !verified {
+			return nil, nil, ErrWhatsAppRequired
 		}
 	}
 

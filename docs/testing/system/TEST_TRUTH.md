@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **143** — منها **115** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **358** |
-| دوالُّ اختبار | **1539** |
+| ملفّاتُ اختبار | **359** |
+| دوالُّ اختبار | **1543** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1539
-MAPPED     = 455
+TOTAL      = 1543
+MAPPED     = 459
 INFRA      = 123
 ORPHAN     = 961
 ```
@@ -59,7 +59,7 @@ ORPHAN     = 961
 | **العيوب** | 28 | 22 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 47 | 29 | 18 |
-| **إعداداتُ السلوك** | 115 | 13 | 102 |
+| **إعداداتُ السلوك** | 115 | 15 | 100 |
 
 ---
 
@@ -74,7 +74,7 @@ ORPHAN     = 961
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
 | **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `FIXED_AND_PASSING` | `TestCustomCashBan_AllowedCashAccepted` · `TestCustomCashBan_BannedCashRejected` · `TestCustomCashBan_BannedWalletAccepted` · `TestCENSUS_D6_CustomOrderSkipsCashBan` |
 | **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `FIXED_AND_PASSING` | `TestD24_ComposesWithCashCeiling` · `TestD7_AtLimitExactlyIsAllowed` · `TestD7_CeilingUnderRepetition` · `TestD7_ConcurrentAssignmentsCannotOversubscribe` · `TestD7_CumulativeExposureIsCounted` · `TestD7_DriverAcceptObeysSameCeiling` · `TestD7_ExposureIsReleasedWhenOrderCloses` · `TestD7_OversizedCashOrderIsRefused` · `TestD7_WalletOrderIsNotBlocked` · `TestCENSUS_D7_CashCeilingCountsIncomingOrder` · `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` · `TestXG46_DriverAcceptNeedsOneConnection` |
-| **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
+| **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `FIXED_AND_PASSING` | `TestCustomWhatsApp_MasterOffOverridesRole` · `TestCustomWhatsApp_RequiredUnverifiedRejected` · `TestCustomWhatsApp_RequiredVerifiedAccepted` · `TestCustomWhatsApp_RoleOffNotBlocked` · `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `EXPECTED_FAIL` | `TestCENSUS_D6_D9_CustomOrderCreationGuards` |
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `FIXED_AND_PASSING` | `TestSessionClient_AdminLogoutAllStillGlobal` |
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |

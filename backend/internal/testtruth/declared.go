@@ -1666,6 +1666,12 @@ var TestMap = map[string]TestDecl{
 	"TestCustomCashBan_BannedWalletAccepted": customCashBanTest(),
 	"TestCustomCashBan_AllowedCashAccepted":  customCashBanTest(),
 
+	// D8 — توثيقُ واتساب يشمل الطلبَ الخاصّ (`custom_whatsapp_test.go`)
+	"TestCustomWhatsApp_RequiredUnverifiedRejected": customWhatsAppTest(),
+	"TestCustomWhatsApp_RequiredVerifiedAccepted":   customWhatsAppTest(),
+	"TestCustomWhatsApp_RoleOffNotBlocked":          customWhatsAppTest(),
+	"TestCustomWhatsApp_MasterOffOverridesRole":     customWhatsAppTest(),
+
 	"TestSU01_ExistingAccountsAreNotTakenOverWhenVerifyIsOff": signupTest(),
 	"TestSU02_AdminCannotBeReachedThroughSignup":              signupTest(),
 	"TestSU03_SuspendedAndBlockedAccountsAreNotAltered":       signupTest(),
@@ -3506,6 +3512,21 @@ func customCashBanTest() TestDecl {
 	}
 }
 
+// customWhatsAppTest **توثيقُ واتساب يشمل الطلبَ الخاصّ** — `D8`.
+//
+// **الشرطُ كان يُفحَص في الطلب العاديّ وحدَه، والخاصُّ بابُه المفتوح** —
+// فصارت السياسةُ (`RequireWhatsApp`) واحدةً لبابين. **والمطفأُ يبقى مطفأً.**
+func customWhatsAppTest() TestDecl {
+	return TestDecl{
+		Level: L3, Purpose: PurposeFeature,
+		Flows:    []string{"F-02"},
+		Defects:  []string{"D8"},
+		Settings: []string{"auth.require_whatsapp", "customers.require_whatsapp"},
+		Modes:    []string{"SECURITY", "FULL", "RELEASE"},
+		Evidence: []string{"db"},
+	}
+}
+
 // signupTest **بابُ التسجيل حارسٌ للحساب القائم** — `CUST-DEF-001`.
 func signupTest() TestDecl {
 	return TestDecl{
@@ -4012,6 +4033,19 @@ var DefectFixed = map[string]string{
 		"— **حدٌّ واحدٌ لبابين، ولا نسخةَ ثانيةً من المنطق.** والمحفظةُ " +
 		"تبقى مفتوحةً للمحظور. وشاهدٌ سالبٌ: تسقط الحالتان (نقداً صريحاً " +
 		"وبإغفال الحقل) على الشيفرة القبليّة وتمرّان بعد الإصلاح.",
+
+	"D8": "**توثيقُ واتساب يشمل الطلبَ الخاصَّ كما يشمل العاديّ.** كان " +
+		"الشرطُ يُفحَص في `CreateTx` وحدَها (`RequireWhatsApp` → " +
+		"`ErrWhatsAppRequired`)، **والطلبُ الخاصُّ (`POST /orders/custom`) " +
+		"بابُه المفتوح**: حين يُشغّل المالكُ الشرطَ، من لم يوثّق رقمَه يُنشئ " +
+		"طلباً خاصّاً ويلتفّ عليه. **وكامنٌ اليومَ** لأنّ السياسةَ مطفأةٌ " +
+		"(`customers.require_whatsapp`=false افتراضاً؛ والعامُّ " +
+		"`auth.require_whatsapp` يعلوه). فأُضيف الفحصُ نفسُه في " +
+		"`CreateCustomTx` و`CreateCustom` قبل القفل والكتابة، بالمصدر نفسِه " +
+		"(`RequireWhatsApp`) والرسالةِ نفسِها — **سياسةٌ واحدةٌ لبابين.** " +
+		"والمطفأُ يبقى مطفأً (العامُّ أو الدورُ off ⇒ يمرّ غيرُ الموثَّق). " +
+		"وشاهدٌ سالبٌ: تسقط حالةُ «الشرطُ on + غيرُ موثَّق» على الشيفرة " +
+		"القبليّة وتمرّ بعد الإصلاح.",
 }
 
 // oblTest حارسُ تتبّعِ التزامٍ ماليّ — `XG-31`.
