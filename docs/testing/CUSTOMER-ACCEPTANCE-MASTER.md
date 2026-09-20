@@ -1143,7 +1143,7 @@ Customer testing starts (§3: P0/security/duplicate-order → stop progression).
 
 | ID | Sev | Finding | Evidence | Status | Rows |
 |---|---|---|---|---|---|
-| **CAF-01** | **P0** | With `auth.signup_verify`=false, `POST /auth/signup/confirm` skips the code, **overwrites the password of an existing account** and issues a session — account takeover by phone number. `signup/confirm` is also not launch-gated and not rate-limited; the app always shows the signup door | `identity/service.go:486-559` | **source-confirmed** · latent today: Prod and Staging store `signup_verify`=true (catalog default is false; Owner decision 2026-08-25 intended false) | CUST-19-026, CUST-04-023, CUST-04-002 |
+| **CAF-01** | **P0** | With `auth.signup_verify`=false, `POST /auth/signup/confirm` skips the code, **overwrites the password of an existing account** and issues a session — account takeover by phone number. `signup/confirm` is also not launch-gated and not rate-limited; the app always shows the signup door | `identity/service.go:486-559` | **source-confirmed (original finding)** → fixed and tracked under **CUST-DEF-001: OPERATIONALLY CLOSED + Production-deployed & verified (§40.17, 2026-09-19)**. `ConfirmSignup` now refuses to overwrite an existing password-holding account regardless of `signup_verify`; guarded by `TestSU01`–`TestSU06`. The old "latent while flag=true" note is superseded — the fix is the control, not the flag. | CUST-19-026, CUST-04-023, CUST-04-002 |
 | **CAF-02** | **HIGH** | A 409 `in_progress` is treated as a final answer: the persisted Idempotency-Key is cleared, so a later tap can create a **second order** while the first is still committing; `in_progress` is unmapped (shows a misleading connection message); the key does not fingerprint the body | `ui/Attempt.kt` `isDecided`; `server/idempotency.go:221-226`; client timeout 20 s vs server 30 s, claim 60 s | **source-confirmed** (runtime path to prove) | CUST-13-028/029, CUST-20-019 |
 | **CAF-03** | **HIGH** | `POST /orders` honours a client-supplied `merchant_id` (open-hours check and attribution) | `orders/service.go:303-305,378-396`; handler does not clear it | **source-confirmed** (app never sends it) | CUST-19-027 |
 | CAF-04 | HIGH | Suspended customer cannot see/cancel a live order in the app: suspension exceptions name `GET /orders/{id}`, which the app never uses; `/my/orders*` and chat blocked; `/auth/me` 403 at start shows «offline» | `server/suspension.go:65-66` (audit B) | reported · to verify | CUST-06-031/032 |
@@ -1247,22 +1247,22 @@ until ADB is available — not an acceptance blocker.
 
 **Total acceptance cases: 578** — from the Owner contract: 474 (440 explicit cases in §11–§33 + 16 final-gate criteria in §34 + 18 CUST-CUSTOM cases written because §25 of the contract requires a dedicated group) · added later: 104 (102 by the coverage audit + 2 PRQ-2 cases by Owner decision §40.15-1).
 
-**Status now (through CUST-12, 2026-09-21):** `NOT_TESTED` 293 · `NOT_APPLICABLE` 9 · `PASS` 179 · `FAIL` 3 · `BLOCKED` 94. **Open mandatory rows: 390** (NOT_TESTED 293 + BLOCKED 94 + FAIL 3). Executed groups: CUST-00…CUST-12. FAILs (3): CUST-06 ×2, CUST-09 ×1 — all carried to the Remediation Checkpoint. Cumulative derived from the accepted per-group checkpoints (git commit ledger) plus CUST-12.
+**Status now (through CUST-12, 2026-09-21 — authoritative row-level count):** `NOT_TESTED` 292 · `NOT_APPLICABLE` 8 · `PASS` 200 · `FAIL` 4 · `BLOCKED` 74. **Open mandatory rows: 370** (NOT_TESTED 292 + BLOCKED 74 + FAIL 4). Executed groups: CUST-00…CUST-12. FAILs (4): CUST-03-003→CUST-DEF-006 (P2), CUST-06-027→forced-password-change CONTRACT_MISMATCH (P2, no dedicated ID), CUST-06-032→CUST-DEF-007 (P2), CUST-09-026→CUST-DEF-008 (P3). Counted directly from the master's case-row status cells (Remediation Checkpoint reconciliation 2026-09-21).
 
 | § | Group | Rows | Supplied | Added | NOT_TESTED | NOT_APPLICABLE | PASS | FAIL | BLOCKED |
 |---|---|---|---|---|---|---|---|---|---|
 | 11 | CUST-00 | 15 | 15 | 0 | 0 | 0 | 15 | 0 | 0 |
 | 12 | CUST-01 | 11 | 11 | 0 | 0 | 0 | 11 | 0 | 0 |
-| 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 10 | 0 | 1 |
-| 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 3 | 0 | 11 |
-| 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 9 | 0 | 14 |
+| 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 11 | 0 | 0 |
+| 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 13 | 1 | 0 |
+| 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 18 | 0 | 5 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 17 | 2 | 13 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 16 | 2 | 14 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 22 | 0 | 8 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 12 | 0 | 6 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 1 | 17 | 1 | 10 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 10 | 0 | 4 |
-| 22 | CUST-11 | 37 | 32 | 5 | 0 | 1 | 19 | 0 | 17 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 22 | 0 | 5 |
 | 24 | CUST-13 | 29 | 24 | 5 | 29 | 0 | 0 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 20 | 0 | 0 | 0 | 0 |
@@ -1270,15 +1270,15 @@ until ADB is available — not an acceptance blocker.
 | 26A | CUST-SUP | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 10 | 0 | 0 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
-| 27 | CUST-15 | 19 | 16 | 3 | 19 | 0 | 0 | 0 | 0 |
+| 27 | CUST-15 | 19 | 16 | 3 | 18 | 0 | 1 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 45 | 0 | 0 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 21 | 1 | 0 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 21 | 0 | 0 | 0 | 0 |
-| 31 | CUST-19 | 29 | 25 | 4 | 29 | 0 | 0 | 0 | 0 |
+| 31 | CUST-19 | 29 | 25 | 4 | 28 | 0 | 1 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **497** | **7** | **48** | **0** | **26** |
+| | **Total** | **578** | **474** | **104** | **292** | **8** | **200** | **4** | **74** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1452,7 +1452,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **OPERATIONALLY CLOSED 2026-09-20** — source fix + regression (10/10) + negative witness (9/10 FAIL pre-fix) (§40.6.1); backend enforces ownership (4/4); **device/staging privacy witness PASS on SM-A525F (§40.6.2)** |
 | **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **OPERATIONALLY CLOSED 2026-09-20** — client display/gate fix + regression (9/9) + negative witness (§40.7.1); charge already server-authoritative; **device/staging witness PASS — displayed == charged (46,150) across a real price change, order #1063 (§40.7.2)** |
 | **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
-| **D8** | known (EXPECTED_FAIL) | **P1 · latent** | verification boundary bypass | **CONFIRMED (source)** — dormant while `auth.require_whatsapp`=false |
+| **D8** | known | **P1** | verification boundary bypass (custom order skipped WhatsApp check) | **CLOSED 2026-09-21 (reconciled)** — source enforces `RequireWhatsApp` in BOTH normal and custom paths (`orders/custom.go:105` and `:235`, `ErrWhatsAppRequired`); regression `TestCustomWhatsApp_*` ×4 (`orders/custom_whatsapp_test.go`); fix commit `023d9d4c`, Production-deployed (§40.24). Enforcement is live when the flag is enabled; the earlier "latent/dormant" row was stale. Not exploitable, not a blocker |
 
 **New IDs use the `CUST-DEF-nnn` namespace of this document.** Existing IDs (D6, D8,
 D9, D11, R14, XG-9, PC-2…) are kept, never re-numbered; where a finding and a known ID
