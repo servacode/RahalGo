@@ -2949,6 +2949,16 @@ backend stays final (`CUST-12-023`, 409 `insufficient_balance`). Verification:
 (no safe top-up); cash PASS and wallet-**insufficient** PASS (backend 409 + now the
 disabled-UI). No 578 count change.
 
+**Overnight-run reinforcement (2026-09-21 — A3; device-independent):** the "backend is the
+final authority" claim now has END-TO-END backend coverage, not just the client assertion +
+wallet-unit overdraft test. New `TestCUST12023_WalletOrderRejectedWhenInsufficient`
+(`backend/internal/qa`): a wallet order with balance (5 000) < total (20 000) → `409
+insufficient_balance`, **no order row persisted, wallet balance unchanged** (atomic rollback).
+Negative-witnessed (funding raised → 201 success → test fails). The sufficient path stays
+covered by `TestD7_WalletOrderIsNotBlocked`. No production code changed; gofmt clean; 578
+unchanged. Device witness of the disabled UI + a live sufficient top-up remain the only open
+items (blocked by run policy / `finance.manage` classifier).
+
 #### C) Wallet top-up — PLANNED PRODUCT SCOPE (not current PASS)
 
 Current contract: NO customer-facing top-up (CUST-WAL-009: "no payouts/top-up offered to
