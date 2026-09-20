@@ -282,8 +282,13 @@ fun CartScreen(
 
         Spacer(Modifier.height(14.dp))
         Card {
-            KeyValue(stringResource(R.string.ord_subtotal), money(Cart.subtotal))
+            // **والمعروضُ من تسعيرة المحرّك متى وُجدت لا من أسعار السلّة المخزَّنة**
+            // — `CUST-DEF-005`: `Cart.subtotal` يُجمَع من `unitPrice` المحفوظ ساعةَ
+            // الإضافة ويبقى بعد إعادة التشغيل، **فسعرٌ تبدّل يجعل المعروضَ غيرَ
+            // المحسوب.** والمحرّكُ هو الحقيقة (`priceItems`)، وتردّها التسعيرةُ في
+            // `priced`. **وقبل أوّل تسعيرةٍ وحدَها يُعرض المخزَّنُ مؤقّتاً.**
             val q = vm.priced
+            KeyValue(stringResource(R.string.ord_subtotal), money(q?.subtotal ?: Cart.subtotal))
             if (q == null) {
                 // **ولا يُخمَّن التوصيل** — رقمٌ مخمَّنٌ أسوأُ من لا رقم.
                 //
@@ -321,9 +326,13 @@ fun CartScreen(
                         valueColor = Rahal.colors.success,
                     )
                 }
+                // **والإجماليُّ من مجموع المحرّك لا من مجموع السلّة** —
+                // `CUST-DEF-005`: بلا كودٍ يساوي `q.total` (subtotal + توصيل)،
+                // ومع كودٍ يُركَّب من مجموع المحرّك ومعاينة الخصم الموثَّقة
+                // (التسعيرةُ لا تأخذ الكودَ) — **فلا يُعاد اشتقاقُه من سعرٍ مخزَّن.**
                 KeyValue(
                     stringResource(R.string.ord_total),
-                    money(Cart.subtotal + fee - (cut?.discount ?: 0)),
+                    money(q.subtotal + fee - (cut?.discount ?: 0)),
                     valueColor = Rahal.colors.brand,
                 )
             }
@@ -737,15 +746,15 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         // **وما كان معروضاً يُرسَل ليُقارَن** — **ولا يُصدَّق منه
         // حكمٌ**: **الحقيقةُ من المحرّك.**
         //
-        // **وأوّلُ تسعيرةٍ بلا مُقارَنة** — **فلا شيءَ رآه بعد.**
+        // **وحتّى أوّلُ تسعيرةٍ تُقارَن** — `CUST-DEF-005`: أسعارُ الأسطر
+        // المحفوظةُ هي ما رآه الزبون (مجموعُ السلّة منها)، **فسعرٌ تبدّل عن
+        // وقت الإضافة يُبرَز عند أوّل فتحةٍ ويدخل بوّابةَ المراجعة**، ولا يمرّ
+        // بلا مقارنةٍ فيُحاسَب بغير ما رأى. **ولا تُخترَع أجرةُ توصيلٍ لم
+        // تُعرَض** — تُقارَن الأجرةُ فقط بعد أن يردَّها المحرّكُ مرّة.
         val seen = priced
-        val expected: Map<String, Any>? = if (seen == null) {
-            null
-        } else {
-            mapOf(
-                "lines" to Cart.lines.associate { it.item.id to it.unitPrice },
-                "delivery_fee" to seen.deliveryFee,
-            )
+        val expected: Map<String, Any> = buildMap {
+            put("lines", Cart.lines.associate { it.item.id to it.unitPrice })
+            if (seen != null) put("delivery_fee", seen.deliveryFee)
         }
         val point = "$lat,$lng"
         lastPoint = point
