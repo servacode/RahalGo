@@ -407,7 +407,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-012 | Auth | Logout removes access | Signed-in test customer · Staging · SM-A525F | Drawer → «خروج» | Signed out; server session revoked | — | `NOT_TESTED` | — | online | refresh token revoked; `auth.logout` audit | — | — | — | Logout has no confirmation |
 | CUST-06-013 | Auth | BACK cannot reopen authenticated screens after logout | After 012 | Press BACK repeatedly | No authenticated screen reappears | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-06-014 | Auth | Restart after logout stays logged out | After 012 | Force-stop; relaunch | Guest shell | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-06-015 | Auth | Login as another customer exposes nothing of the previous account | A logged out | Login as B | No A cart/orders/wallet/inbox/favorites/chats | — | `NOT_TESTED` | — | online | — | — | — | — | CUST-DEF-004 (STOP, §40.6): cart not cleared, account-scoped view models not reset, socket not stopped (B reuses A's socket) — expected FAIL |
+| CUST-06-015 | Auth | Login as another customer exposes nothing of the previous account | A logged out | Login as B | No A cart/orders/wallet/inbox/favorites/chats | B saw no A cart/inbox/wallet, `me`=B | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-06-016 | Auth | Password-reset flow (exposed) | Signed out (guest) · Staging · SM-A525F | نسيت كلمة المرور → phone → WhatsApp ticket → code → new password | Password changed; signed in | — | `NOT_TESTED` | — | online | `auth.password_reset` audit | — | — | — | App uses `/auth/wa/ticket` purpose=reset (WhatsApp), not SMS. Needs the Staging WhatsApp bot — BLOCKED if not paired |
 | CUST-06-017 | Auth | Reset invalidates old sessions | Signed in on device + second client | Reset from one; use the other | Other session rejected | — | `NOT_TESTED` | — | online | refresh tokens revoked | — | — | — | Contract SEC8: reset revokes all sessions |
 | CUST-06-018 | Auth | Old password fails after reset | After 016 | Login with old password | Rejected | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -565,8 +565,8 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-014 | Cart | Cart survives background/foreground | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | HOME; return | Intact | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-11-015 | Cart | Cart survives process recreation | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | `am kill`; relaunch | Intact (persisted) | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-11-016 | Cart | Cart after application restart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-stop; relaunch | Intact | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-11-017 | Cart | Logout behaviour with existing cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Logout | Logout detaches the account's private cart (Owner decision §40.1-1); a guest cart only if explicitly scoped | — | `NOT_TESTED` | — | online | — | — | — | — | CUST-DEF-004 (STOP, §40.6): cart is device-global and NOT cleared on logout — expected FAIL |
-| CUST-11-018 | Cart | Different customer does not inherit previous cart | A's cart; A logs out | B logs in; open cart | B never sees A's cart (Owner decision §40.1-1) | — | `NOT_TESTED` | — | online | — | — | — | — | CUST-DEF-004 (STOP, §40.6) — expected FAIL |
+| CUST-11-017 | Cart | Logout behaviour with existing cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Logout | Logout detaches the account's private cart (Owner decision §40.1-1); a guest cart only if explicitly scoped | A cart (1 item) → `lines`=`[]` on logout | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
+| CUST-11-018 | Cart | Different customer does not inherit previous cart | A's cart; A logs out | B logs in; open cart | B never sees A's cart (Owner decision §40.1-1) | B cart empty after A→B switch | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-11-019 | Cart | Change delivery address with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote re-fetched; notes for out-of-zone | — | `NOT_TESTED` | — | online | `/public/quote` | — | — | — | AB-03 guard |
 | CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin disables item | Open cart | Change listed; submit blocked until reviewed/removed | — | `NOT_TESTED` | — | online | — | — | — | — | P8-C3-027/036 |
 | CUST-11-021 | Cart | Price changes while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin changes price | Open cart | «cart changes» list + «متابعة بالقيم الحالية» | — | `NOT_TESTED` | — | online | quote | — | — | — | P8-C3-028 |
@@ -795,7 +795,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-15-016 | Push | Logout removes notification association | Signed-in test customer · Staging · SM-A525F · valid default address | Logout | Device token unregistered | — | `NOT_TESTED` | — | online | device_tokens row removed | — | — | — | `TestD12_*` |
 | CUST-15-017 | Push | Notification inbox (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Bell → list; «تعليم الكل كمقروء» | Grouped by day; unread dot; all marked read; tapping an item does nothing (by design) | — | `NOT_TESTED` | — | online | `/me/notifications` | — | — | — | Added |
 | CUST-15-018 | Push | Chat message push opens the chat (added) | Signed-in test customer · Staging · SM-A525F · valid default address · driver sends message | Tap push | Opens that order's chat | — | `NOT_TESTED` | — | online | — | — | — | — | Added: `DeepLinkTest`, `ChatMultiOrderTest` |
-| CUST-15-019 | Push | Logout stops realtime (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Logout; watch socket/logcat | Socket closed; no updates for the old account | — | `NOT_TESTED` | — | online | — | — | — | — | Added. CUST-DEF-004 (STOP §40.6): `LiveSocket.stop` is not called by the customer app on logout — expected FAIL |
+| CUST-15-019 | Push | Logout stops realtime (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Logout; watch socket/logcat | Socket closed; no updates for the old account | A socket stopped on logout (no reconnect); B login = 1 fresh "الوصلة قامت" | `PASS` | SM-A525F 2026-09-20 logcat | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 
 ## 28 · CUST-16 — Network / offline / degraded connectivity (mandatory)
 
@@ -928,7 +928,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-014 | Sec | Malformed identifiers | API client | Non-UUID ids on every customer path | 400/404, never 500 | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-19-015 | Sec | Deep-link route manipulation if deep links exist | — | Send crafted intents/URIs | Safe handling or N/A | — | `NOT_TESTED` | — | any | — | — | — | — | Audit decides applicability (§38) |
 | CUST-19-016 | Sec | Old screen/state cannot bypass a newly closed server rule | Signed-in test customer · Staging · SM-A525F | Close ordering server-side; submit from the stale screen | Server denies; UI explicit | — | `NOT_TESTED` | — | online | order count unchanged | — | — | — | — |
-| CUST-19-017 | Sec | Account A logout → Account B login: no A data | Two test customers | A: cart/addresses/orders; logout; B login | No A cart/addresses/orders/notifications visible | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-19-017 | Sec | Account A logout → Account B login: no A data | Two test customers | A: cart/addresses/orders; logout; B login | No A cart/addresses/orders/notifications visible | B saw no A cart/notifications; `me`=B, B's own address | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-19-018 | Sec | Two devices on the same Customer account | Second device/emulator | Login on both; act on both | Behaviour matches session contract | — | `NOT_TESTED` | — | online | sessions per client | — | — | — | — |
 | CUST-19-019 | Sec | Concurrent actions from two sessions do not corrupt order state | As 018 | Submit/cancel concurrently | Consistent single outcome | — | `NOT_TESTED` | — | online | order state | — | — | — | — |
 | CUST-19-020 | Sec | Cannot order outside serviceability by manipulating local state | API client | Submit with coordinates outside coverage / foreign address id | Server denies (`address_outside_coverage` / 404) | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
@@ -1437,7 +1437,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | **CUST-DEF-001** | CAF-01 (+ CAF-16 signup part) | **P0** | account takeover · authentication boundary | **OPERATIONALLY CLOSED 2026-09-19** — source fix + regression (§40.14), Staging runtime PASS (§40.16), **Production patch DEPLOYED & verified (§40.17)** |
 | **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
 | **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **SOURCE FIX = CLOSED 2026-09-19** — fixed + regression + negative witness (§40.18); not deployed |
-| **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **SOURCE FIX = CLOSED 2026-09-20** — client session-boundary reset + regression (10/10) + negative witness (9/10 FAIL pre-fix) (§40.6.1); backend already enforces ownership (4/4); device witness pending |
+| **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **OPERATIONALLY CLOSED 2026-09-20** — source fix + regression (10/10) + negative witness (9/10 FAIL pre-fix) (§40.6.1); backend enforces ownership (4/4); **device/staging privacy witness PASS on SM-A525F (§40.6.2)** |
 | **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **CONFIRMED (source)** |
 | **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
 | **D8** | known (EXPECTED_FAIL) | **P1 · latent** | verification boundary bypass | **CONFIRMED (source)** — dormant while `auth.require_whatsapp`=false |
@@ -1675,6 +1675,53 @@ customer app **P1** (privacy / cross-account); no money path touched.
 **Status:** source fix + regression + negative witness **CLOSED**. **Device witness
 pending** — CUST-06-015, CUST-11-017/018, CUST-15-019, CUST-19-017 stay `NOT_TESTED`;
 acceptance remains **PAUSED**; CUST-00 15/15 unchanged. Not an operational closure.
+
+#### 40.6.2 · Device / staging privacy witness — 2026-09-20 (PASS)
+
+Real-device witness of the session boundary. **Staging only; Production mutations = 0;
+wallet ledger untouched.**
+
+- **APK** (runtime `4b51bb46`): `com.rahalgo.customer.debug` v12/1.1.0, base.apk
+  SHA-256 `351ce48fe4d2404c05a88c756c802c698f105c3b8897782537997b582e53aaff`, API base
+  `https://staging-api.rahalgo.com` (DEX carries no prod URL; P-8 guard PASS).
+- **Device**: SM-A525F / Android 14, wireless ADB `adb-R68RB02ZMQL-wtmEE8._adb-tls-connect._tcp`
+  (owner-authorized transport). No `pm clear`; clean guest reached via the app's own
+  restore→auto-clear.
+- **Fixtures** (disposable, `rahalgo_staging`): `CUSTDEF004-A` (`362099b9…`, +963940040041,
+  unread inbox notice) and `CUSTDEF004-B` (`9498cf4a…`, +963940040042, empty). Both wallets
+  `0/0/0` (balance fixture skipped per owner — no ledger touch). One merchant
+  (`7048f195…`) temporarily opened for today (reversible hours upsert) so A could build a
+  real cart.
+
+| Checkpoint | Result |
+|---|---|
+| A signed in | `me` = **CUSTDEF004 A** (+963940040041); session present; live socket **up** ("الوصلة قامت") |
+| A cart (PC-2) | added a real item via the app (ساندويش شاورما دجاج) → `rahalgo_cart.xml lines` non-empty |
+| A inbox | bell shows **"CUSTDEF004-A test notice"** (unread) |
+| Normal logout | `lines`→`[]` (cart cleared), session entries removed (2022→1149 keyset-only), socket stopped (no reconnect), UI → **guest** |
+| Offline logout | **not performed** — wireless ADB means cutting Wi-Fi drops the ADB link mid-witness, and there is no safe per-app internet block without root; per step-6 fallback, network-independence rests on source (`AuthViewModel.logout` runs `AppCore.afterLogout()` synchronously **before** the fire-and-forget `viewModelScope.launch{…}` network call) + regression `boundaryRunsSynchronouslyBeforeNetwork` (negative-witnessed) |
+| B signed in, same install | `me` = **CUSTDEF004 B**; **fresh** socket (exactly 1 new "الوصلة قامت" after logout ⇒ A's socket stopped, B opened its own — CAF-09) |
+| B isolation | cart **empty**; inbox **"لا إشعارات بعد"** (A's notice absent); balance B(0); **zero** A name/phone/notice on screen |
+| Process recreation | force-stop + relaunch (not `pm clear`) → still `me`=B, cart empty, no A resurrection |
+| Cleanup | fixtures deleted (audit rows first, then users cascade), merchant-hours restored to `false/08:00:00/23:59:00`; baseline restored **users=50, wallets=50, addresses=3, notifications=311**, leftover=0, **wallets_violating=0** |
+
+**No A-private state visible to B** — cart NO · profile NO · balance NO · inbox NO ·
+unread NO · live socket NO.
+
+**Acceptance-case mapping (device-witnessed):**
+
+| Case | Result | Evidence |
+|---|---|---|
+| CUST-06-015 | **PASS** | B login after A logout showed no A cart/inbox/wallet; `me`=B (A had no orders/favorites/chats) |
+| CUST-11-017 | **PASS** | A cart (1 item) cleared to `[]` on logout |
+| CUST-11-018 | **PASS** | B's cart empty — did not inherit A's |
+| CUST-15-019 | **PASS** | A socket stopped on logout (no reconnect); B got a fresh socket (1 new "قامت") |
+| CUST-19-017 | **PASS** | B saw no A cart/addresses/notifications; `me`=B, B's own default address |
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
+BACKEND ISOLATION = PASS · DEVICE/STAGING PRIVACY WITNESS = PASS · **OPERATIONAL STATUS =
+CLOSED.** Acceptance remains **PAUSED** (only the five CUST-DEF-004 gate cases updated);
+CUST-00 15/15 unchanged.
 
 ### 40.7 · CUST-DEF-005 — the cart can show a stale total and the server charges another
 
