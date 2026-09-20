@@ -9708,3 +9708,29 @@ users=٥٠، المجمع −١٨٩٠٠، الخرق=٠، الراياتُ ال�
 
 **لا أعطابَ جديدة.** التنظيف: حُذف 096 (هديّته ٣٦/٣٧، ٩ جلسات، ٣ عناوين)، المجمع
 −١٨٩٠٠، users=٥٠، الخرق=٠، `screen_off_timeout`=30000. **مساسُ الإنتاج = 0.** لا يبدأ R1.
+
+## ٢٠٢٦-٠٩-٢٠ · CUST-08 (الإتاحة/التغطية): ١٢ PASS · ٠ FAIL · ٦ مؤجّلة
+
+حسابٌ مؤقّتٌ (097) للرمز، وفحصُ مفردات الأسباب على `/public/availability` مع إحداثيّات،
+وقلبُ رايات/جداولَ على التجهيز (كلٌّ أُعيد فوراً). **١٢ PASS**:
+
+- **الأسباب الجغرافيّة**: 001 (الرقة ⇒ service_available)، 005 (lat=999/محيط ⇒
+  invalid_location)، 008 (دمشق/حلب ⇒ city_not_supported)، 009 (صحراء ⇒
+  area_not_supported)، 010 (حافّةُ الرقة ⇒ address_outside_coverage).
+- **بوّابات المنصّة/المنطقة** (بقلبٍ مُعادٍ فوراً): 002 (customer_orders OFF ⇒
+  launch_closed)، 003 (service_closure نشط ⇒ temporarily_unavailable + رسالةٌ + موعدُ
+  عودة)، 004 (platform_enforced=true بلا جدول ⇒ platform_closed_now)، 011 (زونات
+  hours_enforced=true بلا جدول ⇒ zone_closed_now على نقطةٍ داخل الرقة).
+- **الجهاز**: 017 (customer_browse OFF ⇒ شاشةُ ما قبل الإطلاق + notice + دخول)، 018
+  (نصُّ المالك يغلب الافتراضيّ: launch.notice على launch_closed، ورسالةُ
+  service_closure على temporarily_unavailable)، 016 (فشلُ الإتاحة ⇒ حالةُ خطأٍ لا سوقٌ
+  فارغٌ كاذب — مرجعُ CUST-02-010).
+
+**٦ مؤجّلة**: 006 (coverage_unavailable — بياناتٌ)، 007 (province_not_supported —
+بياناتٌ؛ كلُّ الفحوص تحلّ لمدينة/منطقة)، 012 (merchant_closed_now — دوامُ متجرٍ + شاشة)،
+013/014/015 (تعديلُ منطقةٍ من الأدمن وقتَ التصفّح/السلّة/الإرسال).
+
+**العقدُ الحاكم مثبت**: العنوانُ المختارُ هو مدخلُ الخدمة، وترتيبُ الأسباب من المصدر
+(`availability.go`). **لا أعطابَ جديدة.** التنظيف: حُذف 097، وأُعيدت كلُّ الرايات/الجداول
+(zones=٠ مفروضة، closure=false، platform_enforced=false، customer_orders/browse=true)،
+users=٥٠، المجمع −١٨٩٠٠، الخرق=٠، `screen_off_timeout`=30000. **مساسُ الإنتاج = 0.** لا R1.
