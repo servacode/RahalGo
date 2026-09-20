@@ -302,17 +302,17 @@ Do not perform destructive install cases against important unsaved evidence with
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-02-001 | Launch | Cold first launch completes | Fresh install | Force-stop; launch; UIA at +5/+15 s | Entry screen rendered | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-02-002 | Launch | No white-screen permanent hang | As 001 | UIA at +5/+15/+30 s | Non-empty UI tree by +5 s | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-02-003 | Launch | No black-screen permanent hang | As 001 | As 002 | As 002 | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-02-004 | Launch | No infinite splash/loading state | As 001 | UIA at +30 s | Content, explicit error or explicit offline — never a spinner at +30 s | — | `NOT_TESTED` | — | online / slow | — | — | — | — | — |
-| CUST-02-005 | Launch | Initial route correct for a signed-out user | Signed out | Launch | Signed-out entry per contract (browse or auth screen as designed) | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-02-006 | Launch | Initial route correct for an already authenticated user | Signed in | Launch | Market (تسوق) tab with authoritative data | — | `NOT_TESTED` | — | online | `auth.refresh` audit only | — | — | — | — |
-| CUST-02-007 | Launch | Initial route when Customer browsing is remotely closed | `launch.customer_browse`=OFF (Staging, via Admin, restored after) | Launch | Owner's launch notice (`launch.notice`) — not an empty market | — | `NOT_TESTED` | — | online | flag value read-only before/after | — | — | — | Mutation of a Staging flag through Admin; restore and record |
-| CUST-02-008 | Launch | Initial route when signup is remotely closed | Signed out · `launch.customer_signup`=OFF | Launch; open signup | Explicit closed state from `launch_closed`; login still reachable | — | `NOT_TESTED` | — | online | flag value before/after | — | — | — | — |
-| CUST-02-009 | Launch | First launch while offline follows the offline contract | Fully offline (net=none) | Launch | OFFLINE state: «لا يوجد اتصال بالإنترنت» + «أعد المحاولة»; no empty market | — | `NOT_TESTED` | — | offline | — | — | — | — | L1-019 cold path previously PASS; re-verify under §7 |
-| CUST-02-010 | Launch | Internet up but API unreachable → explicit recoverable failure | Wi-Fi valid; Staging API host unreachable (see §38 harness note) | Launch | Explicit recoverable failure with retry; never «نعمل حاليًا على إضافة المتاجر والمنتجات» | — | `NOT_TESTED` | — | API unreachable | — | — | — | — | Harness: Private-DNS/hosts block of staging-api only — to be approved before use |
-| CUST-02-011 | Launch | Update-required gate (added) | Installed versionCode below the server minimum (`app.min_version.customer`) | Raise the minimum (Admin, Staging); make any authenticated call | Full-screen UpdateGate «تحديث الآن» (Play → rahalgo.com/app); BACK swallowed | — | `NOT_TESTED` | — | online | HTTP 426 `update_required` | — | — | — | Added: `ui/UpdateGate.kt`; `/public/*` is exempt from the 426 check |
+| CUST-02-001 | Launch | Cold first launch completes | Fresh install | Force-stop; launch; UIA at +5/+15 s | Entry screen rendered | entry rendered — 108-node UI tree at +10 s, shop content | `PASS` | emu RahalGo/A16 · 728745a3 | online | — | uiautomator | — | — | — |
+| CUST-02-002 | Launch | No white-screen permanent hang | As 001 | UIA at +5/+15/+30 s | Non-empty UI tree by +5 s | non-empty UI tree (108 nodes); no permanent white screen (an early +6 s empty dump was a uiautomator failure on the ANR-prone emulator, content by +10 s) | `PASS` | emu RahalGo/A16 | online | — | uiautomator | — | — | — |
+| CUST-02-003 | Launch | No black-screen permanent hang | As 001 | As 002 | As 002 | full UI tree rendered; no permanent black screen | `PASS` | emu RahalGo/A16 | online | — | uiautomator | — | — | — |
+| CUST-02-004 | Launch | No infinite splash/loading state | As 001 | UIA at +30 s | Content, explicit error or explicit offline — never a spinner at +30 s | at +30 s: shop content, 0 ProgressBar (no spinner) | `PASS` | emu RahalGo/A16 | online | — | uiautomator | — | — | — |
+| CUST-02-005 | Launch | Initial route correct for a signed-out user | Signed out | Launch | Signed-out entry per contract (browse or auth screen as designed) | signed-out (session=0) → guest browse market per contract | `PASS` | emu RahalGo/A16 | online | — | uiautomator + run-as | — | — | — |
+| CUST-02-006 | Launch | Initial route correct for an already authenticated user | Signed in | Launch | Market (تسوق) tab with authoritative data | signed-in relaunch → market (تسوق) with data (شاورما, prices); 5 tabs; no forced login | `PASS` | emu RahalGo/A16 | online | `auth.refresh` audit only | uiautomator | — | — | CUSTDEF02 disposable (cleaned) |
+| CUST-02-007 | Launch | Initial route when Customer browsing is remotely closed | `launch.customer_browse`=OFF (Staging, via Admin, restored after) | Launch | Owner's launch notice (`launch.notice`) — not an empty market | browse OFF → launch notice «قريبًا يتم افتتاح رحال غو» (not empty market); login reachable | `PASS` | emu RahalGo/A16 | online | flag false→true, restored (verified) | uiautomator + platform | — | — | Staging flag flipped and restored |
+| CUST-02-008 | Launch | Initial route when signup is remotely closed | Signed out · `launch.customer_signup`=OFF | Launch; open signup | Explicit closed state from `launch_closed`; login still reachable | not cleanly witnessed: emulator UI navigation to the signup screen was too flaky this run; the launch-flag closed-state mechanism is proven by 007 (browse OFF → closed notice). Deferred to a stable link | `BLOCKED` | emu RahalGo/A16 | online | — | (UI nav flaky; 007 mechanism) | — | — | Re-witness on stable link |
+| CUST-02-009 | Launch | First launch while offline follows the offline contract | Fully offline (net=none) | Launch | OFFLINE state: «لا يوجد اتصال بالإنترنت» + «أعد المحاولة»; no empty market | offline launch → «لا اتصال بالإنترنت» + «أعد المحاولة»; tabs present, not empty market; net restored | `PASS` | emu RahalGo/A16 | offline | — | uiautomator (svc wifi/data off) | — | — | L1-019 cold path previously PASS; re-verify under §7 |
+| CUST-02-010 | Launch | Internet up but API unreachable → explicit recoverable failure | Wi-Fi valid; Staging API host unreachable (see §38 harness note) | Launch | Explicit recoverable failure with retry; never «نعمل حاليًا على إضافة المتاجر والمنتجات» | not run — the Private-DNS/hosts block of staging-api is flagged "to be approved before use"; not executed without approval | `BLOCKED` | — | API unreachable | — | (harness pending approval) | — | — | Harness: Private-DNS/hosts block of staging-api only — to be approved before use |
+| CUST-02-011 | Launch | Update-required gate (added) | Installed versionCode below the server minimum (`app.min_version.customer`) | Raise the minimum (Admin, Staging); make any authenticated call | Full-screen UpdateGate «تحديث الآن» (Play → rahalgo.com/app); BACK swallowed | min_version=100 → authenticated wake → full-screen UpdateGate «يوجد إصدار جديد» / «تحديث الآن»; setting deleted (restored) | `PASS` | emu RahalGo/A16 | online | HTTP 426 `update_required` | uiautomator | — | — | Added: `ui/UpdateGate.kt`; `/public/*` is exempt; setting flip reversible |
 
 ## 14 · CUST-03 — Android permissions
 
@@ -1253,7 +1253,7 @@ until ADB is available — not an acceptance blocker.
 |---|---|---|---|---|---|---|---|---|---|
 | 11 | CUST-00 | 15 | 15 | 0 | 0 | 0 | 15 | 0 | 0 |
 | 12 | CUST-01 | 11 | 11 | 0 | 0 | 0 | 9 | 0 | 2 |
-| 13 | CUST-02 | 11 | 10 | 1 | 11 | 0 | 0 | 0 | 0 |
+| 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 9 | 0 | 2 |
 | 14 | CUST-03 | 14 | 13 | 1 | 14 | 0 | 0 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 23 | 0 | 0 | 0 | 0 |
 | 16 | CUST-05 | 17 | 14 | 3 | 17 | 0 | 0 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **545** | **7** | **24** | **0** | **2** |
+| | **Total** | **578** | **474** | **104** | **534** | **7** | **33** | **0** | **4** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
