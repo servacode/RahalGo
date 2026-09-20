@@ -326,13 +326,28 @@ fun CartScreen(
                         valueColor = Rahal.colors.success,
                     )
                 }
-                // **والإجماليُّ من مجموع المحرّك لا من مجموع السلّة** —
-                // `CUST-DEF-005`: بلا كودٍ يساوي `q.total` (subtotal + توصيل)،
-                // ومع كودٍ يُركَّب من مجموع المحرّك ومعاينة الخصم الموثَّقة
-                // (التسعيرةُ لا تأخذ الكودَ) — **فلا يُعاد اشتقاقُه من سعرٍ مخزَّن.**
+                // ══════════════════════════════════════════════════════
+                // **والإجماليُّ يطابق ما يُحاسَب به حرفاً** (`CUST-DEF-005`)
+                // ══════════════════════════════════════════════════════
+                //
+                // **المحرّكُ يحاسب** `max(0, subtotal - discount + deliveryFee)`
+                // (`service.go`) — **فيُعكَس هنا حرفاً**:
+                //
+                // • **بلا كودٍ**: `q.total` (وهو `subtotal + deliveryFee` من
+                //   التسعيرة، ≥ 0) — **رقمُ المحرّك حرفاً، لا يُعاد اشتقاقُه.**
+                // • **مع كودٍ**: من مكوّنات المحرّك بأرضيّته —
+                //   `max(0, q.subtotal + fee - cut.discount)`. **ولا `q.total -
+                //   discount`**: كودُ التوصيل المجّاني يُصفّر الأجرةَ في `fee`
+                //   **و`q.total` يحملها**، فطرحُ الخصمِ وحدَه يُبقي أجرةً أُلغيت.
+                // • **الأرضيّةُ لازمةٌ**: `promo_codes.value` بلا سقفٍ أعلى،
+                //   **فنسبةٌ فوق ١٠٠ تجعل الخصمَ أكبرَ من المجموع** — يُصفّره
+                //   المحرّكُ، **فيُصفّره العرضُ.**
+                //
+                // **والخصمُ محسوبٌ على `q.subtotal` عينِه** (`applyPromo`)
+                // **بمعادلة المحرّك نفسِها** (`validatePromo`) — فلا يفترقان.
                 KeyValue(
                     stringResource(R.string.ord_total),
-                    money(q.subtotal + fee - (cut?.discount ?: 0)),
+                    money(if (cut == null) q.total else maxOf(0L, q.subtotal + fee - cut.discount)),
                     valueColor = Rahal.colors.brand,
                 )
             }
@@ -575,8 +590,13 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching {
                 // **وما كان معروضاً من خصمٍ يُقارَن به** (`PR`).
+                //
+                // **والخصمُ على مجموع المحرّك لا على مجموع السلّة المخزَّن**
+                // — `CUST-DEF-005`: **المحرّكُ يحسب الخصمَ على `subtotal`
+                // الحاليّ عند الإنشاء** (`validatePromo`)، **فلو حُسبت المعاينةُ
+                // على `Cart.subtotal` القديم لَعُرض خصمٌ ويُحاسَب بغيره.**
                 api.previewPromo(
-                    code, Cart.subtotal, priced?.deliveryFee ?: 0,
+                    code, priced?.subtotal ?: Cart.subtotal, priced?.deliveryFee ?: 0,
                     expectedDiscount = promoResult?.discount,
                 )
             }.onSuccess {
@@ -780,6 +800,12 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 priced = it
                 changes = it.changes
                 error = ""
+                // **وكودُ الخصم يُعاد تقييمُه على المجموع الجديد** —
+                // `CUST-DEF-005`: تبدّل المجموعُ (سعرٌ أو كمّيّة) فخصمُ الأمس
+                // على مجموع الأمس. **فيُعاد التقييمُ على الحاليّ**، ويُبرِز
+                // `PromoChange` أيَّ فرقٍ فيدخل بوّابةَ المراجعة — **فلا يُعرَض
+                // خصمٌ بائتٌ ولا يُحاسَب بغيرِ ما رُئي.**
+                if (promoResult != null) applyPromo()
             }.onFailure {
                 // **وعطبُ نداءٍ لعنوانٍ غادره لا يُعرَض على عنوانِه.**
                 if (lastPoint != point) return@onFailure
@@ -799,6 +825,12 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         if (busy) return
         busy = true
         error = ""
+        // **ولا يُرسَل كودٌ لم يُطبَّق ويُعرَض أثرُه** — `CUST-DEF-005`:
+        // **`typePromo` يمحو النتيجةَ عند كلّ تعديل**، فوجودُ نتيجةٍ سارية
+        // يعني أنّ هذا النصَّ بعينِه طُبِّق وعُرض خصمُه. **وكودٌ مكتوبٌ بلا
+        // تطبيقٍ يُطبّقه الخادمُ فيُحاسَب بخصمٍ لم يُعرَض** — فلا يُمرَّر إلّا
+        // المطبَّقُ الساري.
+        val code = if (promoResult?.valid == true) promo.trim() else ""
         // **ولا يُولَّد إن كان قائماً** — محاولةٌ ثانيةٌ لطلبٍ واحد.
         //
         // **وعلى القرص** — **فمن مات تطبيقُه قبل الجواب يحمل مفتاحَه
@@ -813,7 +845,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         lat = lat,
                         lng = lng,
                         paymentMethod = payment,
-                        promoCode = promo,
+                        promoCode = code,
                     ),
                     attemptKey = key,
                 )

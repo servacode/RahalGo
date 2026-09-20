@@ -87,17 +87,74 @@ class CustDef005Test {
         )
     }
 
-    /** **CUST-DEF-005-02 · الإجماليُّ من مجموع المحرّك لا من سعرِ السلّة المخزَّن.** */
+    /**
+     * **CUST-DEF-005-02 · الإجماليُّ يطابق محاسبةَ المحرّك حرفاً.**
+     *
+     * **المحرّكُ**: `max(0, subtotal - discount + deliveryFee)`. **والعرضُ**: بلا
+     * كودٍ `q.total`؛ ومع كودٍ `max(0, q.subtotal + fee - cut.discount)` — **بأرضيّة
+     * الصفر (النسبةُ بلا سقفٍ أعلى)**، ومن المكوّنات لا `q.total - discount` (كودُ
+     * التوصيل المجّاني يُصفّر الأجرةَ و`q.total` يحملها).
+     */
     @Test
-    fun displayedTotalUsesQuote() {
+    fun displayedTotalMirrorsServerCharge() {
         val src = read(cart)
         assertTrue(
-            "**الإجماليُّ لا يُشتقّ من `q.subtotal`**",
-            src.contains("money(q.subtotal + fee - (cut?.discount ?: 0))"),
+            "**الإجماليُّ لا يعكس محاسبةَ المحرّك بأرضيّتها**",
+            src.contains("money(if (cut == null) q.total else maxOf(0L, q.subtotal + fee - cut.discount))"),
         )
         assertFalse(
             "**الإجماليُّ ما زال يُشتقّ من `Cart.subtotal` المخزَّن (العطب)**",
             src.contains("money(Cart.subtotal + fee"),
+        )
+        assertFalse(
+            "**بلا أرضيّةٍ — نسبةٌ فوق ١٠٠ تعرض إجماليّاً سالباً بينما المحرّكُ يُصفّر**",
+            src.contains("money(q.subtotal + fee - (cut?.discount ?: 0))"),
+        )
+    }
+
+    /** **CUST-DEF-005-06 · بلا كودٍ: الإجماليُّ المعروضُ هو `q.total` حرفاً.** */
+    @Test
+    fun noPromoTotalIsExactQuoteTotal() {
+        assertTrue(
+            "**بلا كودٍ لا يُعرَض `q.total` مباشرةً**",
+            read(cart).contains("if (cut == null) q.total"),
+        )
+    }
+
+    /** **CUST-DEF-005-07 · الخصمُ يُعايَن على مجموع المحرّك لا على المخزَّن.** */
+    @Test
+    fun promoPreviewedOnAuthoritativeSubtotal() {
+        val src = read(cart)
+        assertTrue(
+            "**المعاينةُ لا تُحسب على `priced.subtotal` — فتفترق عن محاسبة الإنشاء**",
+            src.contains("code, priced?.subtotal ?: Cart.subtotal, priced?.deliveryFee ?: 0"),
+        )
+        assertFalse(
+            "**المعاينةُ ما زالت على `Cart.subtotal` المخزَّن (العطب)**",
+            src.contains("code, Cart.subtotal, priced?.deliveryFee ?: 0"),
+        )
+    }
+
+    /** **CUST-DEF-005-08 · وكودُ الخصم يُعاد تقييمُه حين يتبدّل المجموع.** */
+    @Test
+    fun promoReevaluatedOnQuoteChange() {
+        assertTrue(
+            "**لا يُعاد تقييمُ الخصم على المجموع الجديد — فيُعرَض خصمٌ بائتٌ ويُحاسَب بغيره**",
+            quoteBody().contains("if (promoResult != null) applyPromo()"),
+        )
+    }
+
+    /** **CUST-DEF-005-09 · ولا يُرسَل كودٌ لم يُطبَّق ويُعرَض أثرُه.** */
+    @Test
+    fun staleOrUnvalidatedPromoNotSubmitted() {
+        val send = body(read(cart), "fun send(", "\n    fun ", "\n}")
+        assertTrue(
+            "**الكودُ المُرسَل غيرُ مشروطٍ بمعاينةٍ سارية — فيُحاسَب بخصمٍ لم يُعرَض**",
+            send.contains("val code = if (promoResult?.valid == true) promo.trim() else \"\""),
+        )
+        assertTrue(
+            "**الإنشاءُ لا يستعمل الكودَ المحروس**",
+            send.contains("promoCode = code"),
         )
     }
 
