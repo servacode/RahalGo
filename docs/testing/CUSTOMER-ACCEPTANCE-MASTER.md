@@ -1438,7 +1438,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
 | **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **SOURCE FIX = CLOSED 2026-09-19** — fixed + regression + negative witness (§40.18); not deployed |
 | **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **OPERATIONALLY CLOSED 2026-09-20** — source fix + regression (10/10) + negative witness (9/10 FAIL pre-fix) (§40.6.1); backend enforces ownership (4/4); **device/staging privacy witness PASS on SM-A525F (§40.6.2)** |
-| **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **SOURCE FIX = CLOSED 2026-09-20** — client-only display/gate fix + regression (5/5) + negative witness (4/5 FAIL pre-fix) (§40.7.1); charge already server-authoritative; device witness pending |
+| **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **OPERATIONALLY CLOSED 2026-09-20** — client display/gate fix + regression (9/9) + negative witness (§40.7.1); charge already server-authoritative; **device/staging witness PASS — displayed == charged (46,150) across a real price change, order #1063 (§40.7.2)** |
 | **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
 | **D8** | known (EXPECTED_FAIL) | **P1 · latent** | verification boundary bypass | **CONFIRMED (source)** — dormant while `auth.require_whatsapp`=false |
 
@@ -1791,9 +1791,37 @@ delivery fee on first open · submit gated on `vm.priced != null`.
   all green (no backend change).
 
 **Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS.
-**Device/staging witness pending** (a reversible staging `merchant_price` change is
-needed to show displayed == charged with a real price change) — separate authorization.
-Acceptance remains **PAUSED**; CUST-00 15/15 unchanged.
+See §40.7.2 for the device/staging witness.
+
+#### 40.7.2 · Device / staging witness — 2026-09-20 (PASS)
+
+Real-device proof that **displayed total == charged total** across a real price change.
+**Staging only; Production mutations = 0; wallet ledger untouched.**
+
+- **APK** (runtime `4def9d3b`): `com.rahalgo.customer.debug` v12/1.1.0, base.apk SHA-256
+  `728745a3c75014579659f0886c20333e3c2b9f7b803410d09513b96e2a4c5b8e`, staging endpoint.
+- **Device**: SM-A525F / Android 14, wireless ADB (owner-authorized). It dropped once
+  during the APK install (a setup step, no state) and was reconnected; no critical
+  checkpoint was affected.
+- **Fixtures** (`rahalgo_staging`): disposable customer `CUSTDEF005` (`017f567f…`,
+  +963940040051, Raqqa address); merchant `7048f195` opened for today (reversible hours);
+  item `a9e0d86f` (ساندويش شاورما دجاج) `merchant_price` raised 26000→46000 (reversible).
+
+| Step | Result |
+|---|---|
+| Add at P1 | item added via app at sell price **26,050**; `rahalgo_cart.xml` stores `price=26050` |
+| Price change | `merchant_price` 26000→46000 on staging (sell price → **46,050**) |
+| Preserve/relaunch | force-stop + relaunch (not `pm clear`) → cart still holds stale **26050** |
+| First cart open | subtotal shows **46,050** (server quote, not stale 26,050); total **46,150** (`q.total`); review note **"تغيّر سعر … من 26,050 ل.س إلى 46,050 ل.س"** surfaced |
+| Submit blocked | send button clickable node **`enabled=false`** while unreviewed |
+| After review | tapped "متابعة بالقيم الحالية" → send **enabled=true**, CTA gone, total still **46,150** |
+| Order created | **#1063** (`8b268c26…`) |
+| Charged == displayed | persisted order: subtotal **46050**, delivery **100**, discount 0, **total 46150**, unit_price **46050** — **equals the displayed 46,150** (and priced at current P2, not stale P1) |
+| Cleanup | order deleted (children cascade), audit + customer deleted, item price restored **26000**, hours restored **false/08:00:00/23:59:00**; baseline **users=50**, leftovers 0, **wallets_violating=0** |
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
+DEVICE/STAGING WITNESS = PASS · **OPERATIONAL STATUS = CLOSED.** Acceptance remains
+**PAUSED**; CUST-00 15/15 unchanged.
 
 ### 40.8 · D6 · D8 · D9 — custom order skips rules the normal order enforces
 
