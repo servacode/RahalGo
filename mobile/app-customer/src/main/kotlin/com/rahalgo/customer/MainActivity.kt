@@ -965,6 +965,9 @@ private fun SignedIn(
                     tab == Tab.Cart -> CartScreen(
                         cartVm,
                         address = selectedAddress(accountVm.state.addresses),
+                        // **رصيدُ المحفظة الموثوق** (`CUST-WAL-011..014`) — من
+                        // `ShellViewModel`؛ تحديثُه يُعيد تقييمَ أهليّة المحفظة.
+                        walletBalance = shell.balance,
                     ) {
                         tab = Tab.Orders
                         ordersVm.load()

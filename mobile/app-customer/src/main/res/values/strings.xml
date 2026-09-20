@@ -149,6 +149,8 @@
     <string name="cart_promo_bad">الكود غير صالح أو منتهي</string>
     <string name="cart_cash">نقدا عند التسليم</string>
     <string name="cart_wallet">من محفظتي</string>
+    <string name="cart_wallet_insufficient">الرصيد غير كافٍ لإتمام هذا الطلب</string>
+    <string name="cart_wallet_balance">رصيد المحفظة: %1$s</string>
     <string name="cart_need_address">اختر عنوان التوصيل لتظهر الأجرة</string>
     <!-- **والخاص قبل التوثيق يقول ما سيقع لا صفرا** — (شكوى المالك
          ٢٠٢٦-٠٨-١٨): «٠ ل.س» تقرأ «توصيل مجاني» لا «لم يتفق بعد». -->

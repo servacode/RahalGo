@@ -88,6 +88,12 @@ fun CartScreen(
      *  بنفس الطريقة».)
      */
     address: Address?,
+    /**
+     * **رصيدُ المحفظة الموثوق** — من `ShellViewModel` (`me.wallet().balance`)
+     * (`CUST-WAL-011..014`). **لا حسابٌ محلّيٌّ منفصل**: تحديثُه (شحنٌ/إنعاش)
+     * يُعيد تقييمَ أهليّة المحفظة، والمحرّكُ يبقى الحاكمَ الأخير.
+     */
+    walletBalance: Long = 0L,
     onDone: () -> Unit,
 ) {
     val here = address?.let { LastPoint.Point(it.lat, it.lng, it.text) }
@@ -255,6 +261,27 @@ fun CartScreen(
         //
         // **والرقاقةُ تُقرأ وسماً لا زرّا**: صغيرةٌ رماديّةٌ بلا دائرة،
         // **فلا يُعرف أنّ فيها خياراً حتّى تُضغط بالصدفة.**
+        // ══════════════════════════════════════════════════════════════
+        // **وأهليّةُ المحفظة من الإجماليّ المستحقِّ الموثوق** (`CUST-WAL-011..014`)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **الرصيدُ < المستحقِّ ⇒ الخيارُ معطّلٌ ظاهراً، ويُقال الرصيدُ والسبب**
+        // — لا يُنتظَر رفضُ المحرّك بعد الضغط. **والمساواةُ صالحة** (`>=`).
+        // **ويُعاد التقييمُ متى تبدّل الإجماليّ** (تسعيرة/سعر/توصيل/كود/عنوان)
+        // **أو الرصيد** (إنعاش/شحن) — كلاهما حالةٌ مُراقَبة. **والمحرّكُ يبقى
+        // الحاكمَ الأخير** (يرفض الناقصَ مهما فعل عميلٌ معدَّل).
+        val q0 = vm.priced
+        val cut0 = vm.promoResult?.takeIf { it.valid }
+        val payableTotal: Long? = q0?.let {
+            val fee0 = cut0?.deliveryFee ?: it.deliveryFee
+            if (cut0 == null) it.total else maxOf(0L, it.subtotal + fee0 - cut0.discount)
+        }
+        val walletBlocked = payableTotal != null && walletBalance < payableTotal
+        // **وخيارٌ معطّلٌ لا يبقى مختاراً** — من اختار المحفظةَ ثمّ ارتفع
+        // الإجماليُّ فوق رصيده يُعاد إلى النقد، فلا يُرسَل بما لا يُقبَل.
+        LaunchedEffect(walletBlocked) {
+            if (walletBlocked && vm.wallet) vm.wallet = false
+        }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PayChoice(
@@ -265,8 +292,18 @@ fun CartScreen(
             PayChoice(
                 text = stringResource(R.string.cart_wallet),
                 on = vm.wallet,
+                enabled = !walletBlocked,
                 modifier = Modifier.weight(1f),
             ) { vm.wallet = true }
+        }
+        // **والرصيدُ والسببُ يُقالان حيث الخيار** — فيُعرف لِمَ عُطّل.
+        if (walletBlocked) {
+            Spacer(Modifier.height(6.dp))
+            Note(stringResource(R.string.cart_wallet_insufficient), Rahal.colors.danger)
+            Note(
+                stringResource(R.string.cart_wallet_balance, money(walletBalance)),
+                Rahal.colors.inkMuted,
+            )
         }
 
         // **وإفراغُ السلّة كلِّها** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).
@@ -895,24 +932,29 @@ private fun PayChoice(
     text: String,
     on: Boolean,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onPick: () -> Unit,
 ) {
-    val tint = if (on) Rahal.colors.brand else Rahal.colors.line
+    // **والخيارُ المعطّلُ رماديٌّ لا يُضغط** (`CUST-WAL-011`): الرصيدُ لا
+    // يكفي فلا يُختار المحفظةُ أصلاً — لا يُردّ بعد الضغط.
+    val tint = if (on && enabled) Rahal.colors.brand else Rahal.colors.line
     Row(
         modifier
             .clip(Rahal.shape.md)
-            .border(if (on) 2.dp else 1.dp, tint, Rahal.shape.md)
-            .background(if (on) Rahal.colors.brand.copy(alpha = 0.06f) else Color.Transparent)
-            .clickable(onClick = onPick)
+            .border(if (on && enabled) 2.dp else 1.dp, tint, Rahal.shape.md)
+            .background(
+                if (on && enabled) Rahal.colors.brand.copy(alpha = 0.06f) else Color.Transparent,
+            )
+            .then(if (enabled) Modifier.clickable(onClick = onPick) else Modifier)
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = on, onClick = onPick)
+        RadioButton(selected = on && enabled, onClick = onPick, enabled = enabled)
         Text(
             text = text,
-            color = Rahal.colors.ink,
+            color = if (enabled) Rahal.colors.ink else Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+            fontWeight = if (on && enabled) FontWeight.Bold else FontWeight.Normal,
         )
     }
 }
