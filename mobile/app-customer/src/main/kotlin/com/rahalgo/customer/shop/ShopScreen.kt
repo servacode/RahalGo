@@ -316,12 +316,42 @@ fun ShopScreen(
             // **ولا زرَّ إعادةٍ هنا**: **الردُّ ناجحٌ بصفر متاجر**،
             // **وإعادةُ نداءٍ ناجحٍ تردّ جوابَه عينَه.** **وزرٌّ لا
             // يغيّر شيئاً يُضغط ثمّ يُفقَد الرجاءُ بالتطبيق.**
-            (vm.marketEmpty || vm.sections.isEmpty()) && !vm.searching -> Empty(
-                text = stringResource(R.string.shop_market_empty),
-                hint = stringResource(R.string.shop_market_empty_hint),
-                actionLabel = "",
-                onAction = null,
-            )
+            (vm.marketEmpty || vm.sections.isEmpty()) && !vm.searching -> {
+                // ══════════════════════════════════════════════════════
+                // **وسوقٌ فارغةٌ خارجَ التغطيةِ ليست «قريباً»** (`CUST-07-034`)
+                // ══════════════════════════════════════════════════════
+                //
+                // **خارجَ التغطيةِ لا متجرَ مخزَّناً**، فتفرغ `visibleSections`،
+                // **فيسقط تنبيهُ التغطيةِ فوقُ** (شرطُه `visibleSections
+                // .isNotEmpty()`) **ويُعرَض بدلَه «نعمل على إضافة المتاجر»**
+                // — **فيقرأ المقصيُّ «قريباً» لا «لم نصل إليك».**
+                //
+                // **والفرقُ حكمٌ لا زخرفة**: **«قريباً» تقول انتظر، و«لم
+                // نصل» تقول أخبرني** — **ودفترُ الطلب يُبنى على الثانية.**
+                // (والسلّةُ تقولها صحيحةً منذ زمن.) **فحين تُقصى النقطةُ**
+                // يُعرَض تنبيهُ الخدمةِ نفسُه — سببٌ صريحٌ وزرُّ «أخبرني»
+                // (والزرُّ لا يظهر لنقطةِ استكشافٍ ولا بلا عنوانٍ مؤكَّد،
+                // وهو عقدُ `CUST-07-030` القائم).
+                val blocked0 = availability?.takeIf { !it.available }
+                if (blocked0 != null) {
+                    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 24.dp)) {
+                        com.rahalgo.customer.ServiceBlockNotice(
+                            blocked0,
+                            address,
+                            serviceVm,
+                            discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
+                        )
+                    }
+                } else {
+                    // **وداخلَ التغطيةِ سوقٌ لم تمتلئ بعدُ** — «قريباً» صادقة.
+                    Empty(
+                        text = stringResource(R.string.shop_market_empty),
+                        hint = stringResource(R.string.shop_market_empty_hint),
+                        actionLabel = "",
+                        onAction = null,
+                    )
+                }
+            }
 
             vm.items.isEmpty() -> Empty(
                 text = stringResource(

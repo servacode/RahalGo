@@ -2886,6 +2886,31 @@ assumptions.**
   feed shows «نعمل على إضافة المتاجر» which reads as "coming soon"; the CART correctly shows
   «لم يصل إلى دمشق».)
 
+**Overnight-run status (2026-09-21 — A2; source + device-independent tests; NOT counted, still reserved):**
+- **CUST-07-031 (dedup one-per-user+area)** — VERIFIED (backend): `Record` uses
+  `ON CONFLICT (user_id, kind, target_key) DO UPDATE SET requests = requests + 1`; existing
+  `TestSI01_SI10_TwoPointsOneCityOneTarget` proves a second press in the same city returns
+  `already_registered` and yields exactly one row.
+- **CUST-07-032 (same user, different uncovered area → distinct row)** — VERIFIED (backend):
+  existing `TestSI02_SI03_DamascusAndAleppoAreDistinct`.
+- **CUST-07-033 (admin sees UNIQUE-USER count, not raw presses)** — VERIFIED (backend, NEW):
+  `DemandByPlace` uses `count(DISTINCT COALESCE(user_id, id))` for `People` and `sum(requests)`
+  for `Signals`. New `TestCUST07033_DemandByPlaceCountsUniquePeople` (baseline-delta, isolation-
+  robust) proves 3 presses by user A + 1 by user B ⇒ ΔPeople=2, ΔSignals=4. Negative-witnessed
+  (People→4 when counting presses).
+- **CUST-07-034 (uncovered ≠ "coming soon")** — FIXED (source): `ShopScreen` empty-market branch
+  now distinguishes out-of-coverage (`availability?.takeIf { !it.available }`) and renders
+  `ServiceBlockNotice` (explicit reason + notify-me CTA, CTA suppressed for discovery points per
+  CUST-07-030) instead of `shop_market_empty`; in-coverage empty still shows "coming soon". New
+  `CoverageEmptyStateTest` (4 tests) + negative witness. **Final on-device witness of the
+  out-of-coverage shop screen still PENDING** (staging serviceability witness); do not mark a
+  device PASS from source.
+- **CUST-07-030 (demand row creation)** — the API-level demand-row creation is now exercised by
+  the backend demand tests (POST `/api/v1/demand` → row); the on-device button witness remains
+  the only open item. Still BLOCKED for device acceptance.
+
+Integration into the counted matrix (adding rows) remains **pending Owner authorization**; 578 unchanged.
+
 #### B) Wallet checkout UX
 
 **Already covered (PASS):** backend independently rejects insufficient balance — `409
