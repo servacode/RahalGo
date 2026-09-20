@@ -2902,6 +2902,28 @@ sufficient), CUST-WAL-007 (insufficient), CUST-WAL-001 (balance chip/screen).
 - **CUST-WAL-014** — after top-up/refresh raises balance ≥ total, the wallet option becomes
   selectable.
 
+**Batch-2 IMPLEMENTED (`e669dfc0`)** — `CartScreen` computes `payableTotal` from the
+authoritative quote (`vm.priced`, matching the charged amount) and `walletBlocked =
+payableTotal != null && walletBalance < payableTotal` (strict `<`, so `==` is valid);
+the wallet `PayChoice` is disabled (greyed, not clickable, radio disabled) + shows
+«الرصيد غير كافٍ لإتمام هذا الطلب» + «رصيد المحفظة: …» when blocked; a selected-then-
+ineligible wallet reverts to cash; `walletBalance` comes from `ShellViewModel`
+(`me.wallet().balance`, passed by `MainActivity` — no local arithmetic), and
+`payableTotal` from the quote, so both quote-total and balance changes re-evaluate;
+backend stays final (`CUST-12-023`, 409 `insufficient_balance`). Verification:
+`CustWalletUxTest` 5/5 + negative witness; compile clean.
+
+| Addendum case | Status |
+|---|---|
+| CUST-WAL-011 (option disabled when insufficient) | **source + automated PASS** — device witness of the disabled state PENDING (device auto-locked mid-batch; needs owner PIN) |
+| CUST-WAL-012 (balance + reason shown) | **source + automated PASS** — same device-witness pending |
+| CUST-WAL-013 (exact-boundary `==` valid) | **source + automated PASS** (strict `<`) — live sufficient/boundary witness **BLOCKED** (authoritative top-up needs `finance.manage`, classifier-blocked) |
+| CUST-WAL-014 (selectable after top-up/refresh) | **source PASS** (re-evaluates from observed `ShellViewModel.balance` + quote) — live witness **BLOCKED** (no safe top-up) |
+
+**CUST-12-023 (in the 578)** stays **BLOCKED** for the wallet-**sufficient** sub-case
+(no safe top-up); cash PASS and wallet-**insufficient** PASS (backend 409 + now the
+disabled-UI). No 578 count change.
+
 #### C) Wallet top-up — PLANNED PRODUCT SCOPE (not current PASS)
 
 Current contract: NO customer-facing top-up (CUST-WAL-009: "no payouts/top-up offered to
