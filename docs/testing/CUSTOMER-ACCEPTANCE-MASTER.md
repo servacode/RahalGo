@@ -320,20 +320,20 @@ Test every permission actually requested by the Customer source (audit §38.2: P
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-03-001 | Perm | Grant requested permission | Fresh install (startup asks POST_NOTIFICATIONS + ACCESS_FINE_LOCATION once — `ui/StartupPermissions.kt`) | First launch; grant both | Both granted; app continues; location used for discovery only | — | `NOT_TESTED` | — | online | — | — | — | — | Manifest: INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, ACCESS_COARSE/FINE_LOCATION (no background location) |
-| CUST-03-002 | Perm | Deny requested permission | Fresh install | First launch; deny both | App fully usable; no re-prompt loop (flag `asked_startup_v1`) | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-03-003 | Perm | Deny twice / don't ask again | Location denied once | Tap «موقعي» in map; deny again | Explanation + fix action (open Settings); no silent failure | — | `NOT_TESTED` | — | online | — | — | — | — | `ui/Locating.kt`, `map/PickPoint.kt:250-313` |
-| CUST-03-004 | Perm | Required permission is explained, not silently failing | Location denied | Tap «موقعي» | Reason text + action shown | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-03-005 | Perm | Reduced mode when permission is optional | Location + notifications denied | Browse, add address by map search, order | Full ordering works (address chosen manually) | — | `NOT_TESTED` | — | online | order created (disposable) | — | — | — | Location is optional: delivery address is authoritative |
-| CUST-03-006 | Perm | Re-enable permission from Settings while backgrounded | Location denied | Background; grant in Settings; return | «موقعي» now works without restart | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-03-007 | Perm | Return to app — state updates | After 006 | Open Account tab (re-reads location) | Discovery updates; no crash | — | `NOT_TESTED` | — | online | — | — | — | — | `MainActivity:489-494` |
-| CUST-03-008 | Perm | Revoke permission while running/backgrounded | Location granted | Background; revoke; return | No crash (Android restarts process — handled as process death) | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-03-009 | Perm | No crash after revocation | After 008 | Use map/«موقعي» | Explained denial; no crash | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-03-010 | Perm | Notification denial does not break ordering | Notifications denied | Place disposable order | Order works; no push (in-app realtime still updates) | — | `NOT_TESTED` | — | online | order +1 | — | — | — | — |
-| CUST-03-011 | Perm | Location services OFF distinguished from permission denial | Permission granted · OS location OFF | Tap «موقعي» | Message says location is OFF (not 'denied') | — | `NOT_TESTED` | — | online | — | — | — | — | LOC-2 profile |
-| CUST-03-012 | Perm | Approximate location is safe | Grant 'approximate' only | Launch; tap «موقعي» | Discovery ignored when accuracy > 500 m (`CONFIRM_M`); no wrong serviceability | — | `NOT_TESTED` | — | online | — | — | — | — | `customer/Here.kt` |
-| CUST-03-013 | Perm | Precise location correct | Precise granted | Tap «موقعي» inside Raqqa | Pin at device position; reverse-geocoded label | — | `NOT_TESTED` | — | online | `/api/v1/geo/reverse` 200 | — | — | — | — |
-| CUST-03-014 | Perm | Camera/gallery for profile photo (added) | Signed-in test customer · Staging · SM-A525F | Account → photo → camera, then gallery | System picker/camera works without extra runtime permission prompt beyond Android's; photo uploads | — | `NOT_TESTED` | — | online | `/me/avatar` 200; media row | — | — | — | Added by audit: avatar uses system pickers (`ui/ImagePick.kt`) |
+| CUST-03-001 | Perm | Grant requested permission | Fresh install (startup asks POST_NOTIFICATIONS + ACCESS_FINE_LOCATION once — `ui/StartupPermissions.kt`) | First launch; grant both | Both granted; app continues; location used for discovery only | granted fine+coarse+notifications; app continues, no FATAL | `PASS` | emu RahalGo/A16 | online | — | — | — | — | Manifest: INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, ACCESS_COARSE/FINE_LOCATION (no background location) |
+| CUST-03-002 | Perm | Deny requested permission | Fresh install | First launch; deny both | App fully usable; no re-prompt loop (flag `asked_startup_v1`) | revoked all; relaunch → no permission dialog (asked_startup_v1), tabs render, no FATAL | `PASS` | emu RahalGo/A16 | online | — | — | — | — | — |
+| CUST-03-003 | Perm | Deny twice / don't ask again | Location denied once | Tap «موقعي» in map; deny again | Explanation + fix action (open Settings); no silent failure | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | `ui/Locating.kt`, `map/PickPoint.kt:250-313` |
+| CUST-03-004 | Perm | Required permission is explained, not silently failing | Location denied | Tap «موقعي» | Reason text + action shown | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | — |
+| CUST-03-005 | Perm | Reduced mode when permission is optional | Location + notifications denied | Browse, add address by map search, order | Full ordering works (address chosen manually) | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | order created (disposable) | — | — | — | Location is optional: delivery address is authoritative |
+| CUST-03-006 | Perm | Re-enable permission from Settings while backgrounded | Location denied | Background; grant in Settings; return | «موقعي» now works without restart | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | — |
+| CUST-03-007 | Perm | Return to app — state updates | After 006 | Open Account tab (re-reads location) | Discovery updates; no crash | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | `MainActivity:489-494` |
+| CUST-03-008 | Perm | Revoke permission while running/backgrounded | Location granted | Background; revoke; return | No crash (Android restarts process — handled as process death) | revoke FINE while running → Android killed the process (pid gone); relaunch new pid, no FATAL | `PASS` | emu RahalGo/A16 | online | — | — | — | — | — |
+| CUST-03-009 | Perm | No crash after revocation | After 008 | Use map/«موقعي» | Explained denial; no crash | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | — |
+| CUST-03-010 | Perm | Notification denial does not break ordering | Notifications denied | Place disposable order | Order works; no push (in-app realtime still updates) | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | order +1 | — | — | — | — |
+| CUST-03-011 | Perm | Location services OFF distinguished from permission denial | Permission granted · OS location OFF | Tap «موقعي» | Message says location is OFF (not 'denied') | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | LOC-2 profile |
+| CUST-03-012 | Perm | Approximate location is safe | Grant 'approximate' only | Launch; tap «موقعي» | Discovery ignored when accuracy > 500 m (`CONFIRM_M`); no wrong serviceability | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | — | — | — | — | `customer/Here.kt` |
+| CUST-03-013 | Perm | Precise location correct | Precise granted | Tap «موقعي» inside Raqqa | Pin at device position; reverse-geocoded label | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | `/api/v1/geo/reverse` 200 | — | — | — | — |
+| CUST-03-014 | Perm | Camera/gallery for profile photo (added) | Signed-in test customer · Staging · SM-A525F | Account → photo → camera, then gallery | System picker/camera works without extra runtime permission prompt beyond Android's; photo uploads | deferred to blocker-sweep — flaky map/«موقعي» / order / avatar / OS-location UI navigation on the ANR-prone emulator (Owner directive: no flaky-nav grind in normal groups) | `BLOCKED` | — | online | `/me/avatar` 200; media row | — | — | — | Added by audit: avatar uses system pickers (`ui/ImagePick.kt`) |
 
 ## 15 · CUST-04 — Customer registration
 
@@ -1254,7 +1254,7 @@ until ADB is available — not an acceptance blocker.
 | 11 | CUST-00 | 15 | 15 | 0 | 0 | 0 | 15 | 0 | 0 |
 | 12 | CUST-01 | 11 | 11 | 0 | 0 | 0 | 9 | 0 | 2 |
 | 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 9 | 0 | 2 |
-| 14 | CUST-03 | 14 | 13 | 1 | 14 | 0 | 0 | 0 | 0 |
+| 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 3 | 0 | 11 |
 | 15 | CUST-04 | 23 | 18 | 5 | 23 | 0 | 0 | 0 | 0 |
 | 16 | CUST-05 | 17 | 14 | 3 | 17 | 0 | 0 | 0 | 0 |
 | 17 | CUST-06 | 32 | 22 | 10 | 32 | 0 | 0 | 0 | 0 |
@@ -1278,9 +1278,19 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **534** | **7** | **33** | **0** | **4** |
+| | **Total** | **578** | **474** | **104** | **520** | **7** | **36** | **0** | **15** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
+
+### 39.0 · BLOCKED backlog — dedicated blocker-sweep before campaign completion
+
+These `BLOCKED` cases are carried forward and revisited together in one sweep (Owner directive, run of 2026-09-20) — an approved reversible staging/local network harness for API-unreachable cases, and a stable link for flaky UI navigation:
+
+- **CUST-01-009** interrupted install (needs low-level interruption tooling; installer is transactional, 1-package invariant confirmed)
+- **CUST-01-010** insufficient-storage (filling `/data` risks emulator stability)
+- **CUST-02-008** signup-OFF closed state (emulator signup-navigation flaky; mechanism proven by CUST-02-007)
+- **CUST-02-010** API-unreachable (DNS/hosts harness — now authorized reversible staging/local only; run in sweep)
+- **CUST-03-003/004/005/006/007/009/010/011/012/013/014** location-UI («موقعي»), reduced-mode ordering, notification-denied ordering, OS-location-OFF, approximate/precise location, and camera/gallery avatar — flaky map/order/avatar navigation deferred per directive
 
 ### 39.1 · Cases added beyond the supplied master (104)
 
