@@ -1438,7 +1438,7 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | **CUST-DEF-002** | CAF-02 (+ CAF-18 `in_progress` part) | **P1** | duplicate-order risk | **CONFIRMED (source)** — timing-dependent |
 | **CUST-DEF-003** | CAF-03 | **P1** | unsafe client/server trust boundary · financial source of truth | **SOURCE FIX = CLOSED 2026-09-19** — fixed + regression + negative witness (§40.18); not deployed |
 | **CUST-DEF-004** | CAF-09 + PC-2 (one root cause) | **P1** | cross-account data leakage | **OPERATIONALLY CLOSED 2026-09-20** — source fix + regression (10/10) + negative witness (9/10 FAIL pre-fix) (§40.6.1); backend enforces ownership (4/4); **device/staging privacy witness PASS on SM-A525F (§40.6.2)** |
-| **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **CONFIRMED (source)** |
+| **CUST-DEF-005** | CAF-08 | **P1** | financial source of truth (customer shown one total, charged another) | **SOURCE FIX = CLOSED 2026-09-20** — client-only display/gate fix + regression (5/5) + negative witness (4/5 FAIL pre-fix) (§40.7.1); charge already server-authoritative; device witness pending |
 | **D6** | known (EXPECTED_FAIL) | **P1** | financial risk-control bypass | **CONFIRMED (source)** — live on Staging; Production flag OFF is not a boundary |
 | **D8** | known (EXPECTED_FAIL) | **P1 · latent** | verification boundary bypass | **CONFIRMED (source)** — dormant while `auth.require_whatsapp`=false |
 
@@ -1746,6 +1746,45 @@ authoritative.**
 - the displayed subtotal and total come from the server quote.
 
 **P-9:** customer only · device required.
+
+#### 40.7.1 · Fix (source) — 2026-09-20
+
+**Root cause confirmed by source inspection** — a **client-only** display/gate
+mismatch, not price manipulation and not backend money loss. The charge is fully
+server-authoritative: `orders/service.go` `priceItems` computes the sell price at
+request time from `menu_items.merchant_price` + margins ("سعرُ البيع يُحسب هنا لا
+يُقرأ"); `Quote` and `CreateTx` share it, so **quote subtotal == charged subtotal**; the
+create payload (`CartLine`) carries **no price**, so the client cannot influence the
+charge.
+
+**Fix (`app-customer/cart/CartScreen.kt`):**
+
+| Part | Change |
+|---|---|
+| Displayed subtotal | `money(q?.subtotal ?: Cart.subtotal)` — the server quote once it exists; `Cart.subtotal` only as a pre-quote fallback |
+| Displayed total | `money(q.subtotal + fee − discount)` — server subtotal (== `q.total` with no promo; composed with the server-previewed promo when a code is applied, since the quote endpoint takes no code); no longer re-derived from stored `Cart.subtotal` |
+| First quote | `expected.lines` (stored `unitPrice`s) sent **on every quote incl. the first** (`buildMap`), so a stale price surfaces `changes` and enters the review gate; `delivery_fee` sent only after a prior authoritative fee was shown |
+| Submit gate | already required `vm.priced != null` (confirmed) — no order before the authoritative quote is ready; `Cart.subtotal` fallback can never authorize a submit |
+
+No backend change; no shared-model change (`quote()`'s `expected` param is already
+nullable and accepts the non-null map).
+
+**Regression** — `app-customer/…/CustDef005Test.kt` (source-assertion, house pattern),
+5 cases: subtotal from quote · total from quote (not `Cart.subtotal`) · first quote
+sends `expected.lines` · no invented delivery fee on first open · submit gated on
+`vm.priced != null`.
+
+- **Negative witness:** with `CartScreen.kt` stashed to HEAD, **4/5 FAIL**; the one pass
+  is the pre-existing submit gate.
+- **Post-fix:** **5/5 PASS**.
+- **Suites:** `app-customer` 76/76, `ui` 191/191, `shared` 29/29; backend
+  cart-changes/promo/money/validation (`TestCC*`, `TestPR0*`, `TestFIN_*`, `TestVAL_*`)
+  all green (no backend change).
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS.
+**Device/staging witness pending** (a reversible staging `merchant_price` change is
+needed to show displayed == charged with a real price change) — separate authorization.
+Acceptance remains **PAUSED**; CUST-00 15/15 unchanged.
 
 ### 40.8 · D6 · D8 · D9 — custom order skips rules the normal order enforces
 
