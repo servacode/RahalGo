@@ -62,6 +62,10 @@ data class User(
     @SerialName("full_name") val fullName: String = "",
     val roles: List<String> = emptyList(),
     @SerialName("avatar_thumb_url") val avatarThumbUrl: String? = null,
+    // **بيانٌ يعرفه ثالثٌ — فلا وصولَ قبل تبديله** (`CUST-DEF-010`).
+    // **المحرّكُ يسمح بـ`/auth/me` لمن يبدّل** فيصل هذا الحقلُ `true`،
+    // **وما عداه من الأبواب يُردّ 403 `password_change_required`.**
+    @SerialName("must_change_password") val mustChangePassword: Boolean = false,
 )
 
 @Serializable

@@ -263,6 +263,16 @@ fun AuthGate(
             ),
         )
 
+        // **تبديلُ كلمةٍ مطلوبٌ عقدٌ مستقلّ** (`CUST-DEF-010`) — **قبل فرع
+        // المستخدم**: يُساق إلى شاشة التبديل لا إلى التطبيق، ولا يُتخطّى
+        // بالرجوع (كلُّ إقلاعٍ يُعيد كشفَه).
+        vm.mustChangePassword -> ForcedPasswordScreen(
+            state = vm.pwChange,
+            onSubmit = vm::submitForcedPasswordChange,
+            onLogout = vm::logout,
+            onErrorConsumed = vm::clearPwChangeError,
+        )
+
         vm.user != null -> {
             // ══════════════════════════════════════════════════════════
             // **ونقطةُ الإشعارات تُسجَّل كلَّما ثبتت الجلسة**

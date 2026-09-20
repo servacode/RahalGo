@@ -239,9 +239,17 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 user = backend.auth.me()
                 user?.let { Crash.who(it.id) }
-                // **والتسجيل بعد ثبوت الجلسة** — لا قبلها: النقطة
-                // تحتاج توكن حساب.
-                AppCore.afterSignIn()
+                // **وتبديلُ الكلمةِ المطلوبُ يُساق إلى شاشته** (`CUST-DEF-010`) —
+                // **المحرّكُ يسمح بـ`/auth/me` لمن يبدّل**، فيصل الحقلُ `true`؛
+                // ولا يدخل التطبيقَ ولا يُسجَّل قبل التبديل. **ولا يُبطَل بالرجوع
+                // أو موتِ العمليّة**: كلُّ إقلاعٍ يُعيد كشفَه من `me()`.
+                if (user?.mustChangePassword == true) {
+                    mustChangePassword = true
+                } else {
+                    // **والتسجيل بعد ثبوت الجلسة** — لا قبلها: النقطة
+                    // تحتاج توكن حساب.
+                    AppCore.afterSignIn()
+                }
             } catch (e: ApiClient.ApiException) {
                 // ══════════════════════════════════════════════════════
                 // **لا يُمحى الحساب إلّا إذا رفضه المحرّك**
@@ -310,6 +318,48 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         mustChangePassword = false
         restoring = true
         restore()
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **تبديلُ الكلمةِ المطلوبُ — تدفّقٌ لا رسالةُ خطأ** (`CUST-DEF-010`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان العطبُ**: المحرّكُ يطلب تبديلاً (`password_change_required` /
+    // `must_change_password`) **والعميلُ يعرض نصَّ خطإٍ لا تدفّقاً**
+    // (`ApiErrors.kt`). **فلا مخرجَ**: أيُّ بابٍ يُردّ، ولا شاشةَ تبديل.
+    /** حالُ شاشةِ التبديل المطلوب — **تقرؤها الشاشةُ لترسم الزرَّ والخطأ.** */
+    data class PwChange(val busy: Boolean = false, val error: String = "")
+
+    var pwChange by mutableStateOf(PwChange())
+        private set
+
+    fun clearPwChangeError() {
+        if (pwChange.error.isNotEmpty()) pwChange = pwChange.copy(error = "")
+    }
+
+    /**
+     * **يبدّل الكلمةَ المؤقّتة عبر النقطة الموثوقة** — `POST /api/v1/auth/password`
+     * (`current_password` + `password`). **والجلسةُ الحاليّةُ تبقى والبواقي
+     * تُقطَع** (`SetPasswordKeeping`, `XG-40`). **ولا يُكشَف القديمُ** —
+     * يكتبه صاحبُه. **وعند النجاح يُرفع القيدُ ويدخل التطبيقَ بالجلسة نفسِها**
+     * (لا تسرّبَ محلّيَّ لغيره — عزلةُ `CUST-DEF-004`/`009` قائمة).
+     */
+    fun submitForcedPasswordChange(current: String, next: String) {
+        if (pwChange.busy) return
+        pwChange = pwChange.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.account.setPassword(current, next)
+                mustChangePassword = false
+                pwChange = PwChange()
+                Refresh.bump()
+                AppCore.afterSignIn()
+            } catch (e: ApiClient.ApiException) {
+                pwChange = pwChange.copy(busy = false, error = message(e))
+            } catch (e: Exception) {
+                pwChange = pwChange.copy(busy = false, error = describe(e))
+            }
+        }
     }
 
     fun login(phone: String, password: String) {
@@ -592,6 +642,13 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     private fun onSignedIn(u: User?) {
         user = u
         u?.let { Crash.who(it.id) }
+        // **وتبديلُ الكلمةِ المطلوبُ يُساق إلى شاشته أوّلاً** (`CUST-DEF-010`):
+        // **قبل أيّ دخولٍ للتطبيق وقبل خطّاف الدخول** — فلا يعمل حتّى يبدّل.
+        // (الغلافُ يرسم شاشةَ التبديل قبل فرع المستخدم.)
+        if (u?.mustChangePassword == true) {
+            mustChangePassword = true
+            return
+        }
         // **والنبضةُ قبل النداء الخاصّ** — فما يُسجَّل بعدها يجد شاشاتٍ
         // أعادت جلبَها.
         Refresh.bump()

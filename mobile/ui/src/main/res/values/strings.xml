@@ -31,6 +31,8 @@
     <string name="net_offline_body">تحقق من الواي فاي أو بيانات الجوال، ثم أعد المحاولة</string>
     <string name="account_state_title">حسابك مقيّد</string>
     <string name="account_state_body">حسابك غير نشط حاليًا. للمساعدة، تواصل مع الدعم.</string>
+    <string name="pw_forced_title">تبديل كلمة المرور مطلوب</string>
+    <string name="pw_forced_body">لأمان حسابك، يجب تعيين كلمة مرور جديدة قبل المتابعة.</string>
     <string name="chat_today">اليوم</string>
     <string name="chat_yesterday">أمس</string>
     <string name="err_bad_fail_reason">اختر سببا من القائمة</string>
