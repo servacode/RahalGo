@@ -1762,22 +1762,31 @@ charge.
 | Part | Change |
 |---|---|
 | Displayed subtotal | `money(q?.subtotal ?: Cart.subtotal)` — the server quote once it exists; `Cart.subtotal` only as a pre-quote fallback |
-| Displayed total | `money(q.subtotal + fee − discount)` — server subtotal (== `q.total` with no promo; composed with the server-previewed promo when a code is applied, since the quote endpoint takes no code); no longer re-derived from stored `Cart.subtotal` |
+| Displayed total | `money(if (cut == null) q.total else maxOf(0L, q.subtotal + fee − cut.discount))` — **mirrors the server's `max(0, subtotal − discount + deliveryFee)` exactly**; shows `q.total` verbatim with no promo. **Not** `q.total − discount`: `free_delivery` zeroes `fee` while `q.total` still carries it, which would diverge |
+| Floor | the client now clamps to ≥0 like the server — required because `promo_codes.value` has **no upper cap** (a percent > 100 → discount > subtotal → server floors to 0) |
+| Promo subtotal | `applyPromo` previews the discount on `priced.subtotal` (authoritative), not stored `Cart.subtotal`, so the preview discount **equals** the create discount (same `validatePromo`, same subtotal) |
+| Promo staleness | the promo is re-previewed when the quote changes (`if (promoResult != null) applyPromo()`), so a stale discount is never shown/charged and any change enters the review gate |
+| Promo submit | create sends the code only when a valid preview is current (`code = if (promoResult?.valid == true) promo.trim() else ""`) — a typed-but-unapplied / stale code can't be silently charged |
 | First quote | `expected.lines` (stored `unitPrice`s) sent **on every quote incl. the first** (`buildMap`), so a stale price surfaces `changes` and enters the review gate; `delivery_fee` sent only after a prior authoritative fee was shown |
 | Submit gate | already required `vm.priced != null` (confirmed) — no order before the authoritative quote is ready; `Cart.subtotal` fallback can never authorize a submit |
 
-No backend change; no shared-model change (`quote()`'s `expected` param is already
-nullable and accepts the non-null map).
+**Consistency proof.** With the promo previewed on `q.subtotal` and re-previewed on
+change, the client's `discount`/`fee` are the very values `validatePromo` yields at create;
+with the floor, `if(cut==null) q.total else max(0, q.subtotal+fee−cut.discount)` is
+term-for-term the server's `max(0, subtotal−discount+deliveryFee)` in every valid state
+(no promo, percent, fixed, free_delivery, and value>100). No backend change; no
+shared-model change.
 
 **Regression** — `app-customer/…/CustDef005Test.kt` (source-assertion, house pattern),
-5 cases: subtotal from quote · total from quote (not `Cart.subtotal`) · first quote
-sends `expected.lines` · no invented delivery fee on first open · submit gated on
-`vm.priced != null`.
+**9 cases**: subtotal from quote · total mirrors server charge (floor) · no-promo total ==
+`q.total` · promo previewed on authoritative subtotal · promo re-evaluated on quote change
+· stale/unvalidated promo not submitted · first quote sends `expected.lines` · no invented
+delivery fee on first open · submit gated on `vm.priced != null`.
 
-- **Negative witness:** with `CartScreen.kt` stashed to HEAD, **4/5 FAIL**; the one pass
-  is the pre-existing submit gate.
-- **Post-fix:** **5/5 PASS**.
-- **Suites:** `app-customer` 76/76, `ui` 191/191, `shared` 29/29; backend
+- **Negative witness:** with `CartScreen.kt` stashed, **5/9 FAIL** (the consistency
+  assertions); restored → **9/9 PASS** (the first-fix `c54916c9` cases + the pre-existing
+  gate pass on the baseline).
+- **Suites:** `app-customer` 80/80, `ui` 191/191, `shared` 29/29; backend
   cart-changes/promo/money/validation (`TestCC*`, `TestPR0*`, `TestFIN_*`, `TestVAL_*`)
   all green (no backend change).
 
