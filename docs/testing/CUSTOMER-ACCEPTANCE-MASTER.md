@@ -2966,6 +2966,84 @@ customers"). **Planned scope (reserved CUST-WAL-015, future):** manual admin/Wha
 first; transaction-based ledger model (`wallet_transactions` kind=`topup`, double-entry);
 future Sham Cash / payment-provider integration. Documented as future scope — **not PASS**.
 
+---
+
+##### C.1) Top-up transaction model — WRITTEN CONTRACT (overnight A4, 2026-09-21) — AWAITING OWNER APPROVAL
+
+> **This is a design, not an implementation.** No table, endpoint, migration, or ledger write
+> was created. Implementation is **QUARANTINED** because it writes to the money ledger
+> (`wallet_transactions`), which the work agreement forbids touching «إلّا بقرارٍ صريحٍ من
+> المالك», and because non-trivial work requires written analysis + owner approval first
+> («لا تنفيذَ قبل تحليلٍ مكتوب»). The purpose of A4 is to make that analysis exist so the owner
+> can approve or correct it.
+
+**Grounding (what already exists — do not rebuild):**
+- The `topup` ledger kind already exists and is proven: `fininv/kinds.go` → `Sign:"+"`,
+  `RefRequired:false`; credited through `wallet.ApplyTx` with the treasury double-entry mirror
+  (`FI-12.a`). Tests already use it (`f.Credit(id, amt, "topup")`).
+- **The inverse workflow already exists and is the model to mirror:** `payout_requests`
+  (request → admin approves → ledger DEBIT `payout`, ref → `payout_requests`), with a real
+  status machine in `payout_handlers.go` (`pending → processing · paid · rejected · failed ·
+  reversed`) and pending-sum guards. Top-up is its mirror: request → admin CONFIRMS → ledger
+  CREDIT.
+
+**What is missing (the new part):** the customer-facing/admin REQUEST workflow that ends in a
+`topup` credit. Proposed as a new `topup_requests` table + endpoints, mirroring `payout_requests`.
+
+**Data model (proposed `topup_requests`):** `id`, `user_id`, `amount` (>0, minor units),
+`channel` (`whatsapp` | `admin_manual` | later `sham_cash`/`provider`), `status`, `reference`
+(free text: WhatsApp msg id / receipt no.), `note`, `requested_at`, `decided_by`, `decided_at`,
+`ledger_tx_id` (the `wallet_transactions.id` written on confirm — null until confirmed),
+`created_at`, `updated_at`.
+
+**Status machine (maps the mandate's pending/confirmed/failed/cancelled):**
+- `pending` → `confirmed` (admin confirms; **atomically** writes the `topup` credit and stores
+  its `ledger_tx_id`).
+- `pending` → `cancelled` (the requester withdraws before a decision; **no ledger effect**).
+- `pending` → `failed` (admin rejects, or an external provider reports failure; **no ledger
+  effect**).
+- Terminal states (`confirmed`, `cancelled`, `failed`) are **immutable**. A confirmed top-up is
+  never "un-confirmed"; a correction is a separate, explicit reversing ledger entry (mirroring
+  `payout` `reversed`), which is a **separate future decision**, not part of this contract.
+
+**Ledger interaction (the sensitive part — owner must approve):**
+- Confirm is the ONLY transition that touches money. It must run in ONE DB transaction:
+  (a) `UPDATE topup_requests SET status='confirmed', decided_by, decided_at, ledger_tx_id` guarded
+  by `WHERE id=$ AND status='pending'` (so a double-confirm cannot double-credit), and
+  (b) `wallet.ApplyTxID(+amount, kind="topup", ref=<topup_requests.id>)` in the same tx — so the
+  credit and the state change commit or roll back together.
+- **Recommend flipping `topup` to `RefRequired:true`, `RefTarget:"topup_requests"`** so every
+  credit is traceable to an approved request (matching `payout`→`payout_requests`). This is a
+  `fininv/kinds.go` contract change and must be owner-approved.
+- The treasury mirror (`FI-12.a`) is unchanged — it already fires for every `topup` credit.
+
+**Idempotency & safety:** the `status='pending'` guard on confirm is the primary double-credit
+guard. Admin confirm should also accept an `Idempotency-Key`. A request row must be created before
+any money moves; money never moves without a row.
+
+**Authz & privacy:** creating a request is the customer's own action (or admin-on-behalf).
+Confirm/reject requires an admin **finance capability** (the same class that gates payout
+decisions — `finance.manage`; this is exactly why a live confirm could not be witnessed this run:
+the environment classifier withholds `finance.manage`). WhatsApp evidence (`reference`) is stored
+as opaque text; **the customer's WhatsApp content is never read into the system** (memory:
+«ولا يُقرأ واتسابه»).
+
+**Acceptance cases to reserve (NOT counted; execute on authorization):**
+- CUST-WAL-015a — customer/admin creates a `pending` top-up request (row exists, no ledger effect).
+- CUST-WAL-015b — admin confirm credits the wallet exactly once, atomically (balance += amount,
+  one `topup` tx, `ledger_tx_id` linked); a second confirm is a no-op (guarded).
+- CUST-WAL-015c — reject/cancel leaves balance untouched and the row terminal.
+- CUST-WAL-015d — confirmed request is immutable; correction is a separate reversing entry
+  (future).
+- CUST-WAL-015e — after a confirmed top-up raises balance ≥ total, the checkout wallet option
+  becomes selectable (ties A3 CUST-WAL-014 to a real balance source).
+
+**Open questions for the owner:** (1) minimum/maximum top-up amount? (2) can a customer have more
+than one `pending` request at once? (3) auto-expire stale `pending` requests? (4) should the
+customer app show top-up request history, or admin-only for v1? These block a final data model.
+
+**Status: design only.** No code, no migration, no ledger write. 578 unchanged.
+
 #### D) Merchant external delivery («لدي توصيلة») — FUTURE MERCHANT-DOMAIN SCOPE (OUTSIDE the 578)
 
 **Not part of the Customer 578 matrix** — no existing customer requirement maps to it; to be
