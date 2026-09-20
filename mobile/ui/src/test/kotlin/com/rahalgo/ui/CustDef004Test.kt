@@ -87,7 +87,9 @@ class CustDef004Test {
     private val mainActivity = "app-customer/src/main/kotlin/com/rahalgo/customer/MainActivity.kt"
     private val isolation = "../backend/internal/server/customer_isolation_test.go"
 
-    private fun logoutBody() = body(read(auth), "fun logout()", "\n    private fun ", "\n}")
+    private fun logoutBody() = body(read(auth), "fun logout()", "\n    private fun ", "\n    fun ", "\n}")
+    // **حدُّ الجلسة الواحد** (`CUST-DEF-009`) — الخروجُ يمرّ به الآن، وفيه الخطّاف.
+    private fun detachBody() = body(read(auth), "private fun detachSession()", "\n    }")
     private fun resetBody() = body(read(shell), "fun reset()", "\n}")
     private fun afterLogoutReg() = body(read(backend), "afterLogout = {", "},")
 
@@ -113,12 +115,22 @@ class CustDef004Test {
         )
     }
 
-    /** **CUST-DEF-004-02 · والخروجُ يستدعي الخطّاف.** */
+    /**
+     * **CUST-DEF-004-02 · والخروجُ يستدعي الخطّاف — عبر الحدّ الواحد.**
+     *
+     * **بعد `CUST-DEF-009`** انتقل الخطّافُ إلى `detachSession()` المركزيّ
+     * (يمرّ به الخروجُ ورفضُ الجلسةِ معا)، **فالخروجُ يمرّ بالحدّ، والحدُّ
+     * يستدعي الخطّاف** — والعقدُ قائمٌ لا مبدَّل.
+     */
     @Test
     fun logoutInvokesBoundaryHook() {
         assertTrue(
-            "**`logout()` لا تستدعي `AppCore.afterLogout()`** — فالجلسةُ تُمحى والباقي يُورَّث",
-            logoutBody().contains("AppCore.afterLogout()"),
+            "**`logout()` لا تمرّ بالحدّ `detachSession()`** — فالجلسةُ تُمحى والباقي يُورَّث",
+            logoutBody().contains("detachSession()"),
+        )
+        assertTrue(
+            "**الحدُّ لا يستدعي `AppCore.afterLogout()`** — فالسلّةُ والوصلةُ تبقيان",
+            detachBody().contains("AppCore.afterLogout()"),
         )
     }
 
@@ -126,22 +138,27 @@ class CustDef004Test {
      * **CUST-DEF-004-03 · والحدُّ متزامنٌ قبل الشبكة، بعد مسحِ الجلسة.**
      *
      * **ولو أُجِّل إلى `viewModelScope.launch` لَتأخّر بتعذّرِ الشبكة** —
-     * وخروجٌ لا يُفرِغ السلّةَ إن غابت الشبكةُ خروجٌ ناقص.
+     * وخروجٌ لا يُفرِغ السلّةَ إن غابت الشبكةُ خروجٌ ناقص. **والحدُّ
+     * (`detachSession()`) يُنادى متزامناً قبل نداءِ الشبكة، وفيه مسحُ
+     * الجلسةِ يسبق الخطّاف.**
      */
     @Test
     fun boundaryRunsSynchronouslyBeforeNetwork() {
-        val b = logoutBody()
-        val cleared = b.indexOf("backend.session.clear()")
-        val hook = b.indexOf("AppCore.afterLogout()")
-        val network = b.indexOf("viewModelScope.launch")
-        assertTrue("**غاب مسحُ الجلسة**", cleared >= 0)
-        assertTrue("**غاب الخطّاف**", hook >= 0)
+        val lb = logoutBody()
+        val boundary = lb.indexOf("detachSession()")
+        val network = lb.indexOf("viewModelScope.launch")
+        assertTrue("**غاب الحدُّ في الخروج**", boundary >= 0)
         assertTrue("**غاب نداءُ الشبكة**", network >= 0)
-        assertTrue("**الحدُّ قبل مسحِ الجلسة**", cleared < hook)
         assertTrue(
             "**الحدُّ داخلَ/بعد نداءِ الشبكة** — فيتأخّر بتعذّرها",
-            hook < network,
+            boundary < network,
         )
+        val d = detachBody()
+        val cleared = d.indexOf("session.clear()")
+        val hook = d.indexOf("AppCore.afterLogout()")
+        assertTrue("**غاب مسحُ الجلسة في الحدّ**", cleared >= 0)
+        assertTrue("**غاب الخطّاف في الحدّ**", hook >= 0)
+        assertTrue("**الخطّافُ قبل مسحِ الجلسة**", cleared < hook)
     }
 
     // ══════════════════════════════════════════════════════════════════
