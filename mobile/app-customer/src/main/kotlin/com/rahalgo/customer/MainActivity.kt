@@ -370,9 +370,17 @@ private fun SignedIn(
     val askHere = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { ok ->
-        if (ok) Here.refresh(ctx, locating)
-        // **ومن رفض يُقال له** — **ولا يُترَك أمام زرٍّ صامت.**
-        else locating.failed(Locating.Problem.PERMISSION_DENIED)
+        if (ok) {
+            Here.refresh(ctx, locating)
+        } else {
+            // **ومن رفض يُقال له** — **ولا يُترَك أمام زرٍّ صامت.**
+            // **والرفضُ النهائيُّ يُميَّز عن العاديّ** (`CUST-DEF-006`):
+            // النهائيُّ لا يُعاد طلبُه (حلقةٌ صامتة) بل يُفتَح له الإعدادات.
+            locating.failed(
+                (ctx as? android.app.Activity)?.let { Here.deniedProblem(it) }
+                    ?: Locating.Problem.PERMISSION_DENIED,
+            )
+        }
     }
 
     val mapPicker: PointPicker = { onPick, onCancel ->
@@ -483,6 +491,16 @@ private fun SignedIn(
         val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 Serving.refreshIfStale(scope)
+                // **والعودةُ من الإعدادات بالإذن تُنعش «موقعي»** (`CUST-DEF-006`):
+                // من فُتحت له صفحةُ الإعدادات بعد رفضٍ (نهائيٍّ أو عاديّ) فمنح
+                // الإذنَ وعاد — يُلتقَط الإذنُ فوراً، فلا يبقى أمام لافتةِ
+                // «رُفض نهائيّاً» أو زرٍّ لا يعمل.
+                val p = locating.problem
+                if ((p == Locating.Problem.PERMISSION_PERMANENT ||
+                        p == Locating.Problem.PERMISSION_DENIED) && Here.granted(context)
+                ) {
+                    Here.refresh(context, locating)
+                }
             }
         }
         owner.lifecycle.addObserver(obs)

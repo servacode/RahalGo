@@ -46,6 +46,10 @@ object Here {
 
     fun granted(context: Context): Boolean = com.rahalgo.map.Here.granted(context)
 
+    /** **رفضٌ عاديٌّ أم نهائيّ** — بالمحرّك المركزيّ (`CUST-DEF-006`). */
+    fun deniedProblem(activity: android.app.Activity): Locating.Problem =
+        com.rahalgo.map.Here.deniedProblem(activity)
+
     /**
      * **يقرأ الموضعَ مرّةً** — **بالمحرّك المركزيّ.**
      *

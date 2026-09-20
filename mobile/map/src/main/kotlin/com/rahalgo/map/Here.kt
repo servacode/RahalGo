@@ -60,6 +60,30 @@ object Here {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
+    // ══════════════════════════════════════════════════════════════════
+    // **رفضٌ عاديٌّ أم نهائيّ؟ — العقدُ الرسميُّ لأندرويد** (`CUST-DEF-006`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان ردُّ الرفض يُكتب `PERMISSION_DENIED` دائماً** — **فمن رُفض
+    // نهائيّاً («لا تسأل ثانيةً») يُعاد طلبُه فيرفضه النظامُ بلا نافذة**،
+    // **حلقةٌ صامتة**؛ و`PERMISSION_PERMANENT` وعلاجُه (صفحةُ الإعدادات)
+    // شيفرةٌ ميّتةٌ لا مُنتِج لها.
+    //
+    // **والفرقُ يُقرأ بعد الرفض من `shouldShowRequestPermissionRationale`**:
+    // صحيحٌ ⇒ رُفض مرّةً ويُطلَب ثانيةً (`PERMISSION_DENIED`)؛ خطأٌ ⇒ لا
+    // نافذةَ بعدها، رُفض نهائيّاً (`PERMISSION_PERMANENT`) وعلاجُه الإعدادات.
+    // **ويُنادى في ردّ النتيجة وحدَه** — قبل أيّ طلبٍ يكون خطأً بلا معنى.
+    //
+    // **ولا حيلةَ صانعٍ (سامسونغ أو غيره)** — العقدُ الرسميُّ لا غير.
+    fun deniedProblem(activity: android.app.Activity): Locating.Problem =
+        if (androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                activity, Manifest.permission.ACCESS_FINE_LOCATION)
+        ) {
+            Locating.Problem.PERMISSION_DENIED
+        } else {
+            Locating.Problem.PERMISSION_PERMANENT
+        }
+
     /**
      * ══════════════════════════════════════════════════════════════════
      * **يقرأ الموضعَ — على مرحلتين، ويقول ما وقع** (`MLW`، ٢٠٢٦-٠٩-١٥)
