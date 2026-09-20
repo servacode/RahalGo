@@ -242,3 +242,66 @@ fun OfflineScreen(onRetry: (() -> Unit)? = null, modifier: Modifier = Modifier) 
         }
     }
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شاشةُ حالِ الحساب — لا شاشةُ انقطاع** (`CUST-DEF-007`)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **حسابٌ مقيَّدٌ (٤٠٣ `forbidden`) يُقال له الحالُ صراحةً** — لا «لا يوجد
+ * اتصال». **والخروجُ متاحٌ** ليدخل بحسابٍ آخر (يمرّ بحدِّ الجلسة الواحد
+ * `CUST-DEF-009` فلا يتسرّب محلّيّ)؛ **وإعادةُ المحاولة** لمن رُفع عنه
+ * القيدُ للتوّ.
+ */
+@Composable
+fun AccountStateScreen(
+    onLogout: () -> Unit,
+    onRetry: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .padding(ScreenPad),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            Modifier
+                .size(96.dp)
+                .background(Rahal.colors.danger.copy(alpha = 0.10f), Rahal.shape.pill),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_no_signal),
+                contentDescription = null,
+                tint = Rahal.colors.danger,
+                modifier = Modifier.size(44.dp),
+            )
+        }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = stringResource(R.string.account_state_title),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.account_state_body),
+            color = Rahal.colors.inkMuted,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(20.dp))
+        RahalOutlineButton(onClick = onLogout) {
+            Text(stringResource(R.string.login_logout))
+        }
+        if (onRetry != null) {
+            Spacer(Modifier.height(8.dp))
+            RahalOutlineButton(onClick = onRetry) {
+                Text(stringResource(R.string.act_retry))
+            }
+        }
+    }
+}

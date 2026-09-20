@@ -307,6 +307,13 @@ fun AuthGate(
         //
         // **وحسابُه لم يضع**: الجلسةُ في الجهاز، والاستعادةُ وحدَها
         // فشلت. **فالصوابُ أن يُقال له ذلك ويُعطى زرَّ إعادة.**
+        // **حسابٌ مقيَّدٌ لا انقطاع** (`CUST-DEF-007`) — رسالةُ حالِ الحساب،
+        // **قبل شاشة الانقطاع**: ٤٠٣ `forbidden` ليس «لا اتصال».
+        vm.accountRestricted -> AccountStateScreen(
+            onLogout = vm::logout,
+            onRetry = vm::retryRestore,
+        )
+
         vm.offline -> OfflineScreen(onRetry = vm::retryRestore)
 
         guest != null && !asking -> guest()
