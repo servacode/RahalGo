@@ -2853,3 +2853,69 @@ device stay-awake/screen-timeout settings reset. **Production mutations = 0.**
 
 **CUST-DEF-002 / CAF-02 final:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE
 WITNESS = PASS · DEVICE/STAGING WITNESS = PASS · **OPERATIONAL STATUS = CLOSED.**
+
+### 40.26 · Remediation Batch-1 · PHASE 2 — product-contract requirements (DOCUMENTATION ONLY)
+
+**Status: documentation with RESERVED case IDs.** These normalize requirements so they cannot
+be forgotten during later remediation. **The authoritative 578 executed totals are unchanged**
+— nothing here is executed, reclassified, or counted yet. Formal matrix integration (adding
+counted rows) and execution are **pending Owner authorization**. **Do not mark PASS from source
+assumptions.**
+
+#### A) Coverage / area-demand
+
+**Already covered (PASS — do not re-open):**
+- Unsupported city/area gives an explicit reason: `city_not_supported` (CUST-07-016, CUST-08-008),
+  `area_not_supported`/`address_outside_coverage` (CUST-07-017, CUST-08-010). `province_not_supported`
+  is source-confirmed but BLOCKED live (CUST-08-007 — staging geography resolves to city/area).
+- Supported city, address outside the delivery zone → `address_outside_coverage` (CUST-07-014,
+  CUST-08-010).
+- Notify / request-coverage CTA EXISTS: `POST /api/v1/demand`, UI `CityPicker.kt`/`PreCart.kt`,
+  witnessed live on-device as «أخبرني عند توفر الخدمة في دمشق» (CUST-12-009/010). Acceptance case
+  CUST-07-030 remains BLOCKED (demand-row creation not yet witnessed).
+
+**Reserved NEW cases (missing coverage — to integrate + execute on authorization):**
+- **CUST-07-031** — one demand request per (USER, AREA): repeated press does NOT create a second
+  demand row (dedupe / idempotent by user+area).
+- **CUST-07-032** — the SAME user may request a DIFFERENT uncovered area (distinct demand row).
+- **CUST-07-033** — administration sees a UNIQUE-USER demand count per area (distinct users, not
+  raw press count).
+- **CUST-07-034** — an uncovered location must NOT show a misleading generic empty/offline state;
+  it must show an explicit "not covered / notify me". (Observed gap: the out-of-coverage SHOP
+  feed shows «نعمل على إضافة المتاجر» which reads as "coming soon"; the CART correctly shows
+  «لم يصل إلى دمشق».)
+
+#### B) Wallet checkout UX
+
+**Already covered (PASS):** backend independently rejects insufficient balance — `409
+insufficient_balance` (CUST-12-023). **Existing (NOT_TESTED):** CUST-WAL-006 (pay from wallet,
+sufficient), CUST-WAL-007 (insufficient), CUST-WAL-001 (balance chip/screen).
+
+**Reserved NEW cases:**
+- **CUST-WAL-011** — the wallet payment option is VISIBLY DISABLED at checkout when balance <
+  authoritative payable total (UI, not only backend rejection). *(CUST-12-023 proved only backend
+  rejection; the wallet radio was freely selectable with balance 15 ≪ total.)*
+- **CUST-WAL-012** — checkout shows the current balance and a clear "insufficient balance" reason.
+- **CUST-WAL-013** — balance == payable total is VALID (exact boundary: option selectable, order
+  succeeds, wallet debited to 0).
+- **CUST-WAL-014** — after top-up/refresh raises balance ≥ total, the wallet option becomes
+  selectable.
+
+#### C) Wallet top-up — PLANNED PRODUCT SCOPE (not current PASS)
+
+Current contract: NO customer-facing top-up (CUST-WAL-009: "no payouts/top-up offered to
+customers"). **Planned scope (reserved CUST-WAL-015, future):** manual admin/WhatsApp top-up
+first; transaction-based ledger model (`wallet_transactions` kind=`topup`, double-entry);
+future Sham Cash / payment-provider integration. Documented as future scope — **not PASS**.
+
+#### D) Merchant external delivery («لدي توصيلة») — FUTURE MERCHANT-DOMAIN SCOPE (OUTSIDE the 578)
+
+**Not part of the Customer 578 matrix** — no existing customer requirement maps to it; to be
+specified as a separate merchant-domain acceptance group when that domain is scheduled. Core
+rules to preserve when specified:
+- recipient may have NO RahalGo account/app;
+- a written address is sufficient; a map pin is optional;
+- the recipient's phone is visible only to the assigned driver, and only when operationally needed;
+- either the merchant OR the customer can be the fee payer;
+- merchant wallet or a controlled credit/receivable — NEVER an uncontrolled unlimited negative wallet;
+- the merchant sees the delivery lifecycle/tracking.
