@@ -119,6 +119,25 @@ class CustDef010Test {
         )
     }
 
+    /**
+     * **CUST-DEF-010-07 · يُلتقَط عالميّاً من أيّ بابٍ مُقيَّد (403).**
+     *
+     * **`/auth/me` مسموحٌ ويُخفي العلَمَ حين الميزةُ مطفأة** — فالإشارةُ
+     * الموثوقةُ هي `403 password_change_required` من أيّ بابٍ آخر، كالتحديث.
+     */
+    @Test
+    fun globalHookRoutesPasswordChange() {
+        assertTrue(
+            "**لا يُوصَل خطّافُ `onPasswordChangeRequired` بالحالة**",
+            read(auth).contains("ApiClient.onPasswordChangeRequired = { mustChangePassword = true }"),
+        )
+        val client = read("shared/src/main/kotlin/com/rahalgo/shared/net/ApiClient.kt")
+        assertTrue(
+            "**العميلُ لا يُطلق الخطّافَ على 403 `password_change_required`**",
+            client.contains("password_change_required") && client.contains("onPasswordChangeRequired?.invoke()"),
+        )
+    }
+
     /** **CUST-DEF-010-06 · الشاشةُ تطلب الحاليّةَ+الجديدةَ+التأكيد ولا تكشف القديم.** */
     @Test
     fun screenHasCurrentNewConfirmAndHidesOld() {

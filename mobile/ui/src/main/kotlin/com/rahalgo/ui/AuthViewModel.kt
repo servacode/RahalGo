@@ -105,6 +105,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // الرسالةُ في شاشة الدخول ولم تُغلق البوّابة.**)
         if (ApiClient.outdated) updateRequired = true
         ApiClient.onOutdated = { updateRequired = true }
+        // **وتبديلُ الكلمةِ المطلوبُ من أيّ بابٍ مُقيَّد** (`CUST-DEF-010`) —
+        // المحرّكُ يُخفي العلَمَ في `/auth/me` حين الميزةُ مطفأةٌ، لكنّ
+        // البابَ المقيَّدَ يردّ `403 password_change_required`. **فيُساق
+        // صاحبُه إلى شاشة التبديل مهما دخل** — لا نصَّ خطإٍ عابراً.
+        ApiClient.onPasswordChangeRequired = { mustChangePassword = true }
         restore()
         loadPlatform()
     }

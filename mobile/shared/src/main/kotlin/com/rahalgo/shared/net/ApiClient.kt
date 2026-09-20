@@ -208,6 +208,11 @@ class ApiClient(
         val env: Envelope<T> = res.body()
         val err = env.error
         if (err != null || env.data == null) {
+            // **تبديلُ كلمةٍ مطلوبٌ يُساق عالميّاً** (`CUST-DEF-010`) — من أيّ
+            // بابٍ مُقيَّدٍ، **كبوّابة التحديث** — والاستثناءُ يمرّ أيضاً.
+            if (res.status.value == 403 && err?.code == "password_change_required") {
+                onPasswordChangeRequired?.invoke()
+            }
             throw ApiException(res.status.value, err ?: ApiErrorBody(code = "internal"))
         }
         return env.data
@@ -422,6 +427,17 @@ class ApiClient(
          */
         @Volatile
         var onOutdated: (() -> Unit)? = null
+
+        /**
+         * **تبديلُ كلمةٍ مطلوبٌ — يُساق عالميّاً** (`CUST-DEF-010`).
+         *
+         * **المحرّكُ يسمح بـ`/auth/me` لمن يبدّل** ويُخفي العلَمَ فيه حين
+         * `security.force_password_change` مُطفأ، **لكنّ أيَّ بابٍ مُقيَّدٍ
+         * يردّ `403 password_change_required`.** فيُلتقَط من أيّ نداءٍ —
+         * كبوّابة التحديث — فيُساق صاحبُه إلى شاشة التبديل مهما دخل.
+         */
+        @Volatile
+        var onPasswordChangeRequired: (() -> Unit)? = null
 
         const val CLIENT_HEADER = "X-RahalGo-Client"
 
