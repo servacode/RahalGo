@@ -156,8 +156,14 @@ rc=0; verify_bundle_to_src "$SHA" "$BUNDLE" "$SRC" || rc=$?
 [ -f "$SRC/deploy/build-artifact.sh" ] && [ -f "$SRC/deploy/staging/compose.staging.yml" ] \
 	|| die "verified commit is not the RahalGo repo — refused" 13
 
-# staging environment (mirrors deploy/staging/deploy.sh), then envguard
-set -a; . "$STAGING_ENV"; set +a
+# staging environment (mirrors deploy/staging/deploy.sh), then envguard.
+# **Normalize CRLF -> LF**: an owner-edited .env.staging may carry Windows line
+# endings; sourcing it raw fails ($'\r': command not found) and --env-file would
+# fold a trailing \r into secret values (e.g. the DB password). We use a sanitized
+# LF copy for sourcing AND for compose/promote --env-file.
+ENVLF="$(mktemp)"; trap 'rm -f "$ENVLF"' EXIT
+tr -d '\r' < "$STAGING_ENV" > "$ENVLF"; chmod 600 "$ENVLF"
+set -a; . "$ENVLF"; set +a
 export APP_ENV=staging RAHALGO_STAGING=1
 export DATABASE_URL="postgres://rahalgo:${STAGING_DB_PASSWORD}@localhost:5534/rahalgo_staging?sslmode=disable"
 export REDIS_URL="redis://localhost:6580/0"
@@ -176,10 +182,10 @@ WEB_TAG="$(printf '%s\n' "$ART" | sed -n 's/^WEB_IMAGE_TAG=//p')"
 
 # bring up staging (non-api) then promote api by artifact
 export RAHALGO_API_IMAGE="$API_TAG" RAHALGO_WEB_IMAGE="$WEB_TAG"
-docker compose -p "$STAGING_PROJECT" -f "$SRC/deploy/staging/compose.staging.yml" --env-file "$STAGING_ENV" \
+docker compose -p "$STAGING_PROJECT" -f "$SRC/deploy/staging/compose.staging.yml" --env-file "$ENVLF" \
 	up -d --no-build --no-deps caddy web postgres redis
 TARGET_ENV=staging "$SRC/deploy/promote.sh" \
-	"$SRC/deploy/staging/compose.staging.yml" "$STAGING_ENV" "$API_TAG" "$IDENTITY_URL" "$API_ID"
+	"$SRC/deploy/staging/compose.staging.yml" "$ENVLF" "$API_TAG" "$IDENTITY_URL" "$API_ID"
 
 # verify the LIVE staging runtime is exactly what we built
 for _ in $(seq 1 60); do curl -fsS "$HEALTH_URL" >/dev/null 2>&1 && break; sleep 2; done
