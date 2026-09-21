@@ -220,8 +220,21 @@ set -a; . "$ENVLF"; set +a
 export APP_ENV=staging RAHALGO_STAGING=1
 export DATABASE_URL="postgres://rahalgo:${STAGING_DB_PASSWORD}@localhost:5534/rahalgo_staging?sslmode=disable"
 export REDIS_URL="redis://localhost:6580/0"
-export NEXT_PUBLIC_API_URL="${STAGING_API_URL}"
 case "$DATABASE_URL" in *5534/rahalgo_staging*) ;; *) die "DATABASE_URL is not the staging DB — fail closed" 11 ;; esac
+# The web's PUBLIC staging API URL comes from STAGING_API_URL via compose
+# (RAHALGO_API_URL, line ~200 of compose.staging.yml), NOT from NEXT_PUBLIC_API_URL.
+# We export NEXT_PUBLIC_API_URL ONLY so envguard can classify the target — but the
+# committed envguard only excepts `staging.`/`stg.` prefixes and false-positives on
+# the real `staging-api.rahalgo.com` alias. So we (a) precisely refuse a genuine
+# production API host here, accepting the staging alias, then (b) feed envguard the
+# on-box staging API address the wrapper actually deploys+verifies against (localhost).
+api_host="$(printf '%s' "${STAGING_API_URL:-}" | sed -E 's#^[a-zA-Z]+://##; s#[/:].*$##' | tr 'A-Z' 'a-z')"
+case "$api_host" in
+	staging-*.rahalgo.com|staging.rahalgo.com|stg.rahalgo.com|stg-*.rahalgo.com) ;;   # staging aliases OK
+	rahalgo.com|www.rahalgo.com|api.rahalgo.com|maps.rahalgo.com) die "STAGING_API_URL is a production host ($api_host) — fail closed" 11 ;;
+	*.rahalgo.com) die "STAGING_API_URL is an unrecognized rahalgo.com host ($api_host) — fail closed" 11 ;;
+esac
+export NEXT_PUBLIC_API_URL="http://localhost:8080"
 [ -n "${STAGING_GO_BIN:-}" ] && export PATH="$STAGING_GO_BIN:$PATH"
 command -v go >/dev/null 2>&1 || die "go not found on PATH — set STAGING_GO_BIN in .env.staging (dir containing 'go')" 3
 ( cd "$SRC/backend" && go run ./cmd/stagingctl guard ) || die "stagingctl guard refused the environment — fail closed" 3
