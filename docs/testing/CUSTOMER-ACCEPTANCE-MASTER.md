@@ -2947,7 +2947,7 @@ backend stays final (`CUST-12-023`, 409 `insufficient_balance`). Verification:
 | Addendum case | Status |
 |---|---|
 | CUST-WAL-011 (option disabled when insufficient) | **PASS — DEVICE-WITNESSED 2026-09-21** (SM-A525F, build 1.1.0, seeded QA customer, wallet balance 0). Cart 1× ساندويش شاورما دجاج = 26,050 > balance 0 → the «من محفظتي» option's clickable node is `enabled="false"` and tapping it changed nothing (not selectable), while «نقدا عند التسليم» is `clickable/enabled`. Text-based uiautomator evidence (no screenshots). |
-| CUST-WAL-012 (balance + reason shown) | **PASS — DEVICE-WITNESSED 2026-09-21** — checkout shows «الرصيد غير كافٍ لإتمام هذا الطلب» + «رصيد المحفظة: 0 ل.س» on the same screen. |
+| CUST-WAL-012 (balance + reason shown) | **PASS — DEVICE-WITNESSED 2026-09-21** (SM-A525F). **UX copy updated (owner 2026-09-21):** the old two lines are replaced by one concise dynamic line «رصيد محفظتك {balance} ل.س غير كافٍ لإتمام الطلب.» + a COD-available line «يمكنك الدفع نقدًا عند الاستلام.» (shown only when cash is valid — it is, unconditionally, for the standard cart). `CustWalletUxTest.showsBalanceAndReason` updated. PASS meaning unchanged (balance + reason still shown, now clearer). Re-witness on the QA emulator after the new build. |
 | CUST-WAL-013 (exact-boundary `==` valid) | **source + automated PASS** (strict `<`) — live sufficient/boundary witness **BLOCKED** (authoritative top-up needs `finance.manage`, classifier-blocked) |
 | CUST-WAL-014 (selectable after top-up/refresh) | **source PASS** (re-evaluates from observed `ShellViewModel.balance` + quote) — live witness **BLOCKED** (no safe top-up) |
 

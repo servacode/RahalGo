@@ -296,14 +296,22 @@ fun CartScreen(
                 modifier = Modifier.weight(1f),
             ) { vm.wallet = true }
         }
-        // **والرصيدُ والسببُ يُقالان حيث الخيار** — فيُعرف لِمَ عُطّل.
+        // ══════════════════════════════════════════════════════════════
+        // **جملةٌ واحدةٌ موجزةٌ بالرصيد** (تصحيحُ المالك ٢٠٢٦-٠٩-٢١)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **سطران يكرّران المعنى ويُوهمان أنّ الطلبَ كلَّه متعذّر** — والصوابُ
+        // جملةٌ واحدةٌ تحمل الرصيدَ: «رصيد محفظتك ٠ ل.س غير كافٍ لإتمام الطلب».
+        // **والنقدُ عند الاستلام بديلٌ صالحٌ للسلّة العاديّة دائماً** (خيارُ
+        // النقد غيرُ محكومٍ هنا) — **فيُقال صراحةً أنّ بابَ الدفعِ لم يُغلَق.**
+        // (ولو مُنع النقدُ لطلبٍ ما لَما ظهر هذا السطر — الخيارُ نفسُه يغيب.)
         if (walletBlocked) {
             Spacer(Modifier.height(6.dp))
-            Note(stringResource(R.string.cart_wallet_insufficient), Rahal.colors.danger)
             Note(
-                stringResource(R.string.cart_wallet_balance, money(walletBalance)),
-                Rahal.colors.inkMuted,
+                stringResource(R.string.cart_wallet_insufficient, money(walletBalance)),
+                Rahal.colors.danger,
             )
+            Note(stringResource(R.string.cart_wallet_cod_hint), Rahal.colors.inkMuted)
         }
 
         // **وإفراغُ السلّة كلِّها** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).

@@ -56,17 +56,23 @@ class CustWalletUxTest {
         )
     }
 
-    /** **CUST-WAL-012 · يُعرَض الرصيدُ وسببٌ واضح عند التعطيل.** */
+    /**
+     * **CUST-WAL-012 · جملةٌ واحدةٌ موجزةٌ بالرصيد + بديلُ النقد** (تصحيحُ المالك
+     * ٢٠٢٦-٠٩-٢١): «رصيد محفظتك {balance} ل.س غير كافٍ لإتمام الطلب» + «يمكنك الدفع
+     * نقدًا عند الاستلام».
+     */
     @Test
     fun showsBalanceAndReason() {
         val s = read(cart)
+        // السببُ والرصيدُ في جملةٍ واحدةٍ ديناميكيّة (لا سطرَين)
         assertTrue(
-            "**لا سببَ «الرصيد غير كافٍ» عند التعطيل**",
-            s.contains("cart_wallet_insufficient"),
+            "**السببُ لا يحمل الرصيدَ ديناميكيّاً** — يجب `cart_wallet_insufficient, money(walletBalance)`",
+            s.contains("R.string.cart_wallet_insufficient, money(walletBalance)"),
         )
+        // بديلُ الدفع نقداً يُقال حين المحفظةُ لا تكفي (والنقدُ صالح)
         assertTrue(
-            "**لا يُعرَض الرصيدُ الحاليّ**",
-            s.contains("cart_wallet_balance") && s.contains("money(walletBalance)"),
+            "**لا يُذكَر بديلُ الدفع نقداً عند الاستلام**",
+            s.contains("cart_wallet_cod_hint"),
         )
     }
 
