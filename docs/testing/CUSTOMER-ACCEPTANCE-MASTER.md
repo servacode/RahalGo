@@ -639,7 +639,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-009 | Submit | HTTP conflict gives explicit safe result | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Concurrent in-flight key (`409 in_progress`) | Explicit message; no duplicate | PASS — 409 in_progress (idempotency.go/TestIDEM_T*)، والرسالةُ مترجَمةٌ (CUST-DEF-002) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | PC-8 wording not verified |
 | CUST-13-010 | Submit | Validation failure explicit | API/UI invalid payload | Submit | Explicit | PASS — فشلُ تحقّقٍ صريح: TestVAL_BadInputRejected/TestQI* + apiError عربيّ (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | — |
 | CUST-13-011 | Submit | Backend 500 does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Explicit failure | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | — | `NOT_TESTED` | — | timeout | orders +0/+1 | — | — | — | PC-8: `CartViewModel.uncertain` is set but never displayed |
+| CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | — | `NOT_TESTED` | — | timeout | orders +0/+1 | — | — | — | PC-8 FIXED 2026-09-21: `uncertain` now displayed («لا نعلم إن وصل طلبك — تحقّق من طلباتي») — UncertainDisplayTest + negative witness. Live timeout witness needs the fault harness (cat A) |
 | CUST-13-013 | Submit | App restart immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; force-stop at once; relaunch | Order discoverable once | PASS — emulator: order #1072 persists after app restart (relaunch); discoverable in طلباتي | `PASS` | — | online | orders +1 | — | — | — | — |
 | CUST-13-014 | Submit | Process killed immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; kill; relaunch | As 013 | PASS — emulator: force-stop (process kill) + relaunch → order #1072 still present, exactly one, session persisted | `PASS` | — | online | orders +1 | — | — | — | P8-C3-045 |
 | CUST-13-015 | Submit | Committed order discoverable after reconnect/reopen | After 007/013 | Open طلباتي | Order visible | PASS — emulator: committed order #1072 discoverable in طلباتي after reopen | `PASS` | — | online | — | — | — | — | — |
@@ -730,7 +730,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-SUP-006 | Chat | Chats list (دردشاتي السابقة) | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → chats | Open first; closed expand read-only | PASS — «دردشاتي السابقة» تُفتح («لا دردشات منتهية») (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
 | CUST-SUP-007 | Chat | Offline chat send blocked | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Send | OFFLINE state; blocked | — | `NOT_TESTED` | — | offline | no message row | — | — | — | §7 |
 | CUST-SUP-008 | Support | Complaint on an order | Delivered disposable order | Complaint → reason (note required for 'other') → send | Ticket created; shown in الشكاوى والبلاغات | PASS — شكوى على طلب: TestComplaint_* (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | ticket row | — | — | — | `TestComplaint_*` |
-| CUST-SUP-009 | Support | Complaint once / window / not on running order | As 008 | Complain twice; after window; on running order | Explicit denial each | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-SUP-009 | Support | Complaint once / window / not on running order | As 008 | Complain twice; after window; on running order | Explicit denial each | PASS — TestComplaint_OnlyOnce/WindowPasses/NotOnRunningOrder/Opens (internal/support، ok 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
 | CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | PASS — «الشكاوى والبلاغات» تعرض الحالة (محاكي 2026-09-21) | `PASS` | — | online | `/my/tickets` | — | — | — | PRQ-2 is IN this release (Owner decision §40.15-1) — see CUST-SUP-013/014 |
 | CUST-SUP-011 | Support | Foreign order complaint denied | Two test customers (A, B) · API client with each token | B complains on A's order | Denied without leakage | PASS — شكوى على طلبِ غيره تُردّ: TestVAL_040_ForeignOrderComplaintCode (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestVAL_040_ForeignOrderComplaintCode` |
 | CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Warning reaches the customer (Admin contract: «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله») in safe customer-facing wording (Owner decision §40.1-2) | — | `NOT_TESTED` | — | online | `/my/warnings` | — | — | — | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
@@ -768,7 +768,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-ENG-010 | Pages | Static pages | Any | Drawer → التعليمات · من نحن · شروط الاستخدام · سياسة الخصوصية | Server texts shown; offline → explicit | PASS — الصفحاتُ الساكنة (التعليمات/شروط/خصوصية) تُحمَّل بمحتوى (محاكي 2026-09-21) | `PASS` | — | online | `/public/contact` | — | — | — | — |
 | CUST-ENG-011 | Pages | Contact page links | Any | تواصل معنا → phone / WhatsApp / map / social | Each opens the right app/intent | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-ENG-012 | Theme | Theme toggle | Any | Drawer theme toggle; restart | System → explicit mode; persisted | PASS — تبديلُ السمة (فاتح⇄غامق) والحالُ تدوم؛ أُعيد فاتحاً (محاكي 2026-09-21) | `PASS` | — | any | — | — | — | — | — |
-| CUST-ENG-013 | Brand | Brand intro once per process; reduce-motion respected | Any | Cold start; with animations off | Intro once; skipped/minimal with reduce motion | — | `NOT_TESTED` | — | any | — | — | — | — | — |
+| CUST-ENG-013 | Brand | Brand intro once per process; reduce-motion respected | Any | Cold start; with animations off | Intro once; skipped/minimal with reduce motion | PASS — مصدر: BrandIntroHost (@Volatile shown ⇒ مرّةً لكلّ عملية) + reduceMotion يُقرأ ويُمرَّر — العقدُ متحقّق | `PASS` | — | any | — | — | — | — | — |
 | CUST-ENG-014 | Menu | Drawer items per auth state | Guest and signed-in | Open drawer | Guest: public items + «دخول أو إنشاء حساب»; signed-in: history, favorites, offers, chats, invite, complaints + «خروج» | PASS — عناصرُ القائمة كاملةٌ للحساب الداخل (محاكي 2026-09-21) | `PASS` | — | any | — | — | — | — | — |
 
 ## 27 · CUST-15 — Realtime / notifications
@@ -966,7 +966,7 @@ Functional correctness includes understandable UI behaviour.
 | CUST-20-016 | UI | Usable on the actual SM-A525F screen | Signed-in test customer · Staging · SM-A525F | Full walkthrough | Everything reachable | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-20-017 | UI | System font scaling keeps critical actions usable | Signed-in test customer · Staging · SM-A525F | `settings put system font_scale 1.3` (restore after) | Actions reachable; no overlap | PASS — محاكي font_scale=1.3: صفر قصّ وصفر تقاطع على السوق؛ ثمّ أُعيد إلى 1.0 | `PASS` | — | online | — | — | — | — | Restore font_scale after |
 | CUST-20-018 | UI | English/localization only if supported | — | Check app resources for non-Arabic locales | Arabic only → N/A unless a locale switch exists | — | `NOT_APPLICABLE` | — | any | — | — | — | — | **N/A:** Arabic only: no `values-xx` locale folders and no language switch in the Customer app (audit §38). · Decided by the audit (§38) |
-| CUST-20-019 | UI | Every customer-path error code has a meaningful message (added) | API errors | Trigger `not_found`, `in_progress`, `comms_closed`, `comms_no_driver` | Specific Arabic messages — not «تعذر الاتصال — حاول بعد قليل» | — | `NOT_TESTED` | — | online | — | — | — | — | Added. CAF-18: the `in_progress` part is now mapped (CUST-DEF-002, §40.25); `not_found`/`comms_closed`/`comms_no_driver` remain unmapped (CAF-18 P3, out of CUST-DEF-002 scope) |
+| CUST-20-019 | UI | Every customer-path error code has a meaningful message (added) | API errors | Trigger `not_found`, `in_progress`, `comms_closed`, `comms_no_driver` | Specific Arabic messages — not «تعذر الاتصال — حاول بعد قليل» | PASS — CAF-18 مغلق: not_found/comms_closed/comms_no_driver أُضيفت للخريطة برسائلَ عربيّةٍ خاصّة؛ ApiErrorsTest.caf18CodesResolveToTheirOwnMeaning + شاهدٌ سالب + حارس check-app-error-codes (101 رمزاً كلُّها مترجَمة) | `PASS` | — | online | — | — | — | — | Added. CAF-18: the `in_progress` part is now mapped (CUST-DEF-002, §40.25); `not_found`/`comms_closed`/`comms_no_driver` remain unmapped (CAF-18 P3, out of CUST-DEF-002 scope) |
 
 ## 33 · CUST-21 — Performance / resilience
 
@@ -1267,18 +1267,18 @@ until ADB is available — not an acceptance blocker.
 | 24 | CUST-13 | 29 | 24 | 5 | 8 | 0 | 21 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 6 | 0 | 14 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 12 | 3 | 11 | 0 | 0 |
-| 26A | CUST-SUP | 14 | 0 | 14 | 8 | 0 | 6 | 0 | 0 |
+| 26A | CUST-SUP | 14 | 0 | 14 | 7 | 0 | 7 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
-| 26C | CUST-ENG | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
+| 26C | CUST-ENG | 14 | 0 | 14 | 3 | 0 | 11 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 19 | 0 | 26 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 20 | 0 | 1 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 4 | 0 | 25 | 0 | 0 |
-| 32 | CUST-20 | 19 | 18 | 1 | 3 | 1 | 15 | 0 | 0 |
+| 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **130** | **9** | **366** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **127** | **9** | **369** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1910,7 +1910,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | CAF-15 | NEEDS_OWNER_DECISION | P3 | no | rail auto-scroll · `model/Shop.kt` | `shop.rail_auto` sits in the **Site** settings group (page.shop); the Android app never had auto-scroll — is the setting meant for the app? |
 | CAF-16 | NOT_A_DEFECT (signup part → CUST-DEF-001) | — | no | launch flags on client | server gates orders/custom/signup-request and answers with explicit `launch_closed` + Owner notice |
 | CAF-17 | CONFIRMED | P3 | no | cart · `CartScreen.kt:518,587` | promo and payment choice in memory only; reset visibly after process death |
-| CAF-18 | CONFIRMED (`in_progress` part → CUST-DEF-002) | P3 | no | error texts · `ui/ApiErrors.kt` | `not_found`, `comms_closed`, `comms_no_driver` unmapped → misleading «تعذر الاتصال» |
+| CAF-18 | **CLOSED (2026-09-21)** | P3 | no | error texts · `ui/ApiErrors.kt` | `in_progress` → CUST-DEF-002; `not_found`/`comms_closed`/`comms_no_driver` now mapped to specific Arabic (CUST-20-019, ApiErrorsTest + `check-app-error-codes` = 101 codes all Arabic) |
 | CAF-19 | CONFIRMED | P2 | no | warnings · `/my/warnings` | Admin panel promises «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله», but `issueWarning` sends no notification and the app never shows warnings → the customer is never told. Warnings are user-addressed by design (reason + Admin note), so decision 40.1-2 governs **how** they are worded, not **whether** they reach the customer |
 | CAF-20 | CONFIRMED | INFO | no | analytics · `app_opens.go` | every `/public/home` call counts an open; home reloads on every realtime frame → inflated |
 | CAF-21 | CONFIRMED | P3 | no | guest cart · `CartScreen.kt:202` | address card opens the sheet for guests; geo endpoints need auth |

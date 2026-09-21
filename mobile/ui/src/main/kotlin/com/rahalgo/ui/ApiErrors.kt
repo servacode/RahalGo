@@ -378,6 +378,15 @@ private val CODES: Map<String, Int> = mapOf(
     "invite_required" to R.string.err_invite_required,
     "lead_already_converted" to R.string.err_lead_already_converted,
     "bad_bbox" to R.string.err_bad_request,
+    // ── المحادثةُ والوجود ─ `CAF-18` (`CUST-20-019`) ───────────────────
+    //
+    // **ثلاثةُ رموزٍ كانت تسقط على `err_internal` («تعذّر الاتصال — حاول
+    // بعد قليل»)** — **ورسالةٌ تقول «تعذّر الاتصال» لعطبٍ ليس اتصالاً
+    // تُرسل صاحبَها يفحص شبكتَه بلا داعٍ.** **فلكلٍّ نصُّه**: القناةُ
+    // مغلقةٌ لأنّ الطلبَ انتهى، أو لا سائقَ بعدُ، أو لم يُوجَد المطلوب.
+    "not_found" to R.string.err_not_found,
+    "comms_closed" to R.string.err_comms_closed,
+    "comms_no_driver" to R.string.err_comms_no_driver,
 )
 
 /**

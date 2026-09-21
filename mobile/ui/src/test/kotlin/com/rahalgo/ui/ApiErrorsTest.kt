@@ -51,6 +51,27 @@ class ApiErrorsTest {
         assertEquals(R.string.err_in_progress, resolveErrorRes("", "errors.in_progress"))
     }
 
+    /**
+     * **A3b · رموزُ `CAF-18` تُقال بنصّها لا «تعذّر الاتصال»** — `CUST-20-019`.
+     *
+     * **`not_found`/`comms_closed`/`comms_no_driver` كانت تسقط على
+     * `err_internal`** («تعذر الاتصال — حاول بعد قليل») — **رسالةٌ تقول
+     * «اتصال» لعطبٍ ليس اتصالاً تُرسل صاحبَها يفحص شبكتَه بلا داعٍ.**
+     */
+    @Test
+    fun caf18CodesResolveToTheirOwnMeaning() {
+        assertEquals(R.string.err_not_found, resolveErrorRes("not_found"))
+        assertEquals(R.string.err_comms_closed, resolveErrorRes("comms_closed"))
+        assertEquals(R.string.err_comms_no_driver, resolveErrorRes("comms_no_driver"))
+        // **ولا يبقى «تعذّر الاتصال» جواباً لأيٍّ منها.**
+        assertNotEquals(R.string.err_internal, resolveErrorRes("not_found"))
+        assertNotEquals(R.string.err_internal, resolveErrorRes("comms_closed"))
+        assertNotEquals(R.string.err_internal, resolveErrorRes("comms_no_driver"))
+        // **ومفاتيحُ الرسالة `errors.*` تحلّ كذلك.**
+        assertEquals(R.string.err_comms_closed, resolveErrorRes("", "errors.comms_closed"))
+        assertEquals(R.string.err_comms_no_driver, resolveErrorRes("", "errors.comms_no_driver"))
+    }
+
     /** **A3 · رمزٌ غائبٌ ومفتاحُ رسالةٍ حاضر ⇒ يُقرأ المفتاح.** */
     @Test
     fun messageKeyIsConsumedWhenCodeIsMissing() {
