@@ -252,6 +252,10 @@ WEB_TAG="$(printf '%s\n' "$ART" | sed -n 's/^WEB_IMAGE_TAG=//p')"
 export RAHALGO_API_IMAGE="$API_TAG" RAHALGO_WEB_IMAGE="$WEB_TAG"
 docker compose -p "$STAGING_PROJECT" -f "$SRC/deploy/staging/compose.staging.yml" --env-file "$ENVLF" \
 	up -d --no-build --no-deps caddy web postgres redis
+# **بعد إعادةِ إنشاء التبعيّات ننتظر أن يردّ الهدفُ ثانيةً قبل الترقية** —
+# **فإعادةُ caddy/postgres تقطع مسارَ الهويّة لحظةً، وفحصُ promote السابقُ للتبديل
+# يسقط على تلك النافذة (exit 1).** ننتظر تعافيَ المحرّك القائم قبل promote.
+for _ in $(seq 1 90); do curl -fsS "$IDENTITY_URL" >/dev/null 2>&1 && break; sleep 2; done
 TARGET_ENV=staging bash "$SRC/deploy/promote.sh" \
 	"$SRC/deploy/staging/compose.staging.yml" "$ENVLF" "$API_TAG" "$IDENTITY_URL" "$API_ID"
 
