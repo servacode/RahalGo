@@ -454,6 +454,17 @@ func (s *Server) Router() http.Handler {
 		//
 		// **ولا سرَّ فيها** — اسمُ بيئةٍ والتزامٌ وهجرة.
 		r.Get("/public/identity", s.handleIdentity)
+		// ══════════════════════════════════════════════════════════════
+		// **بابُ جلسةِ QA — على التجهيز وحدَه** (`qa_staging.go`)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **لا يُسجَّل أصلاً في غير التجهيز** — فلا وجودَ له في الإنتاج.
+		// (وحارسٌ ثانٍ في المعالِج نفسِه.) يُمكّن الاختبارَ الآليَّ الحيَّ
+		// من جلسةِ زبونٍ بلا OTP يدويّ.
+		if s.qaStagingEnabled() {
+			r.Post("/qa/session", s.handleQAStagingSession)
+			s.logger.Warn("QA staging session endpoint ENABLED — staging only (POST /api/v1/qa/session)")
+		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)
 		// ── مركزُ التنزيل الرسميّ — عامٌّ بلا توثيق (`DLC`) ──────────
