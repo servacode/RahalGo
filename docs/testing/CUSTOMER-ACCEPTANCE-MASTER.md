@@ -673,7 +673,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-007 | Custom | Outside coverage / zone closed / platform closed | Signed-in test customer · Staging · SM-A525F · valid default address | Send under each condition | Explicit denial each | PASS — يتبع التغطية/الإغلاق: TestSRV4_CustomOrderFollowsCoverage/TestZH19/TestPH16/18 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | `TestSRV4_CustomOrderFollowsCoverage`, `TestZH19`, `TestPH16/18` |
 | CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path (`cash_blocked`) | PASS — المحظورُ نقداً: D6 مغلق منشور (cd33b173) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) · `TestCENSUS_D6_CustomOrderSkipsCashBan` | D6 CLOSED, deployed to Production (cd33b173, §40.22): custom path enforces `cashBlocked` (cash sent or omitted) — guarded by `TestCustomCashBan_*`; census reports REPRODUCTION=NO |
 | CUST-CUSTOM-009 | Custom | WhatsApp verification requirement | Unverified · require_whatsapp=true (Staging test) | Send | Must follow the same rule as the normal path | PASS — واتساب مُلزَم: D8 مغلق منشور (023d9d4c) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) · `TestCENSUS_D6_D9_CustomOrderCreationGuards` | D8 CLOSED, deployed to Production (023d9d4c, §40.24): custom path enforces `RequireWhatsApp` (master `auth.require_whatsapp` + role key) — guarded by `TestCustomWhatsApp_*`; census reports REPRODUCTION=NO |
-| CUST-CUSTOM-010 | Custom | Creation event recorded | After 001 | Read order_events | `''→pending` event exists like normal orders | — | `NOT_TESTED` | — | online | order_events | — | — | — | KNOWN DEFECT D9 (EXPECTED_FAIL) — expected FAIL |
+| CUST-CUSTOM-010 | Custom | Creation event recorded | After 001 | Read order_events | `''→pending` event exists like normal orders | PASS — D9 مُصلَح: CreateCustom/CreateCustomTx تُقيّدان حدثَ الإنشاء (order_events '', 'pending', الزبون)؛ TestCUST_D9_CreationEventRecorded + شاهدٌ سالب | `PASS` | — | online | order_events | — | — | — | KNOWN DEFECT D9 (EXPECTED_FAIL) — expected FAIL |
 | CUST-CUSTOM-011 | Custom | Open-order cap shared with normal orders | Signed-in test customer · Staging · SM-A525F · valid default address · at cap | Send | Explicit cap | PASS — يشارك سقفَ العادي: TestD4_CustomOrdersShareTheSameCap (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | `TestD4_CustomOrdersShareTheSameCap` |
 | CUST-CUSTOM-012 | Custom | No price before agreement | After 001 | Read card | Fee shown as «يحددها السائق عند الاتفاق» until agreed | PASS — لا سعرَ قبل الاتفاق: بطاقةُ #1075 «يحددها السائق»/«الإجمالي 0» (محاكي 2026-09-21) + TestCUST_010_NoPriceBeforeAgreement | `PASS` | — | online | order fee 0 | — | — | — | `TestCUST_010_NoPriceBeforeAgreement` |
 | CUST-CUSTOM-013 | Custom | Cancel custom order until bought | Open custom order | Cancel | Allowed until bought; then denied explicitly | PASS — إلغاءٌ حتّى الشراء: TestCustomCancel_OwnerUntilBought (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | status | — | — | — | `TestCustomCancel_OwnerUntilBought` |
@@ -1265,7 +1265,7 @@ until ADB is available — not an acceptance blocker.
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 8 | 0 | 21 | 0 | 0 |
-| 25 | CUST-CUSTOM | 20 | 18 | 2 | 6 | 0 | 14 | 0 | 0 |
+| 25 | CUST-CUSTOM | 20 | 18 | 2 | 5 | 0 | 15 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 12 | 3 | 11 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 7 | 0 | 7 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **127** | **9** | **369** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **126** | **9** | **370** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 

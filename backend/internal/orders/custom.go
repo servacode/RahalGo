@@ -142,6 +142,19 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 	if err != nil {
 		return nil, err
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وإنشاءُ الطلبِ حدثٌ يُسجَّل كالعاديّ** (`D9`، `CUST-CUSTOM-010`)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **العاديُّ يقيّد لحظةَ ميلادِه في `order_events`** (`service.go`:
+	// `'', 'pending'`)، **والخاصُّ كان لا يقيّدها** — **فيبدأ سجلُّ حالاته
+	// من أوّل انتقالٍ لا من الإنشاء**، ويُقرأ الطلبُ بلا لحظةِ نشأة.
+	// **والفاعلُ صاحبُه** — هو من أنشأه.
+	if _, err := s.db.Exec(ctx, `
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
+		VALUES ($1, '', 'pending', $2, '')`, id, customerID); err != nil {
+		return nil, err
+	}
 	o, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -294,6 +307,14 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders).Scan(&id)
 	if err != nil {
+		return nil, nil, err
+	}
+	// **وحدثُ الإنشاء يُقيَّد في المعاملة نفسِها** (`D9`، `CUST-CUSTOM-010`) —
+	// **مع الطلبِ أو لا** (لا حدثَ ميلادٍ لطلبٍ ارتدّت معاملتُه). كالعاديّ:
+	// `'', 'pending'` والفاعلُ صاحبُه.
+	if _, err := q.Exec(ctx, `
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
+		VALUES ($1, '', 'pending', $2, '')`, id, customerID); err != nil {
 		return nil, nil, err
 	}
 	o, err := s.getByID(ctx, q, id)

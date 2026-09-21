@@ -62,6 +62,42 @@ func TestCUST_001_Create(t *testing.T) {
 	}
 }
 
+// TestCUST_D9_CreationEventRecorded **إنشاءُ الطلبِ الخاصِّ حدثٌ يُسجَّل** —
+// `D9` · `CUST-CUSTOM-010`.
+//
+// **العاديُّ يقيّد لحظةَ ميلادِه في `order_events` (`”, 'pending'`)،
+// والخاصُّ كان لا يقيّدها** — فيبدأ سجلُّ حالاته من أوّل انتقالٍ لا من
+// الإنشاء. **فوجب أن يكون له حدثُ ميلادٍ كالعاديّ، وفاعلُه صاحبُه.**
+func TestCUST_D9_CreationEventRecorded(t *testing.T) {
+	h := New(t)
+	cust := h.Customer()
+	got := h.POSTKey("/api/v1/orders/custom", cust.Token, uniq("k"),
+		customBody("علبة دواء من أيّ صيدليّة"))
+	if got.Code >= 400 {
+		t.Fatalf("D9 تعذّر الإنشاء: %s", got)
+	}
+	oid, _ := got.JSON()["id"].(string)
+	if oid == "" {
+		t.Fatalf("D9 الردُّ بلا معرّف: %s", got)
+	}
+	// **حدثُ ميلادٍ واحدٌ إلى `pending`، فاعلُه الزبون، `from` فارغ.**
+	var n int
+	var actor string
+	if err := h.Pool.QueryRow(t.Context(), `
+		SELECT count(*), COALESCE(max(actor_id::text), '')
+		  FROM order_events
+		 WHERE order_id = $1::uuid AND from_status = '' AND to_status = 'pending'`,
+		oid).Scan(&n, &actor); err != nil {
+		t.Fatalf("D9 تعذّرت قراءةُ الأحداث: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("D9 **حدثُ إنشاءٍ عددُه %d — يُنتظر واحد** (الطلبُ الخاصُّ بلا لحظةِ ميلاد)", n)
+	}
+	if actor != cust.ID {
+		t.Errorf("D9 فاعلُ الإنشاء %q — يُنتظر الزبون %q", actor, cust.ID)
+	}
+}
+
 // TestCUST_002_EmptyRequestRejected **وطلبٌ خاصٌّ بلا نصٍّ يُردّ.**
 //
 // **وطلبٌ فارغٌ يصل سائقاً يقف حائراً** — ولا أحدَ يعرف ما يُشترى.
