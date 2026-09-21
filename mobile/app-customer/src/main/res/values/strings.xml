@@ -158,6 +158,8 @@
     <string name="cart_wallet_insufficient">رصيد محفظتك %1$s غير كافٍ لإتمام الطلب.</string>
     <string name="cart_wallet_cod_hint">يمكنك الدفع نقدًا عند الاستلام.</string>
     <string name="cart_uncertain">لا نعلم إن وصل طلبك — تحقّق من «طلباتي» قبل إعادة الإرسال حتى لا يتكرّر.</string>
+    <!-- CAF-02: إقرارٌ صريحٌ يُنهي «لا ندري» بعد التحقّق من «طلباتي» -->
+    <string name="cart_uncertain_ack">تحقّقتُ من «طلباتي» ولم أجد الطلب — ابدأ محاولة جديدة</string>
     <string name="cart_wallet_balance">رصيد المحفظة: %1$s</string>
     <string name="cart_need_address">اختر عنوان التوصيل لتظهر الأجرة</string>
     <!-- **والخاص قبل التوثيق يقول ما سيقع لا صفرا** — (شكوى المالك

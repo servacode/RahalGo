@@ -236,16 +236,26 @@ func TestIDEM_SameKeyDifferentPayload(t *testing.T) {
 		t.Errorf("SAME KEY DIFFERENT PAYLOAD: أُنشئ %d طلباً — **والمفتاحُ لم يمنع**", n)
 	}
 
-	// **والقياسُ يقول الحقيقة**: لا تجزئةَ للحمولة في `idempotency.go`
-	// — **فالثانيةُ تُعاد إجابةً عن الأولى بصمت.**
-	if second.Code < 400 && secondID == firstID {
-		t.Logf("MEASURED CONTRACT — SILENT REPLAY: الحمولةُ الثانيةُ (٣ أصناف) رُدّت بجواب الأولى (صنفٌ واحد)")
-		t.Logf("OBSERVATION — لا تجزئةَ للحمولة في idempotency.go: لا يُكشَف تعارضُ الحمولة ولا يُردّ 409")
-		t.Logf("REQUIRED CONTRACT — SAME KEY + DIFFERENT PAYLOAD SHOULD NOT SILENTLY REPLAY")
-	} else if second.Code == 409 {
-		t.Logf("MEASURED CONTRACT — CONFLICT DETECTED: رُدَّ 409 على حمولةٍ مختلفة")
-	} else {
-		t.Errorf("سلوكٌ غيرُ متوقَّع: %s", second)
+	// ══════════════════════════════════════════════════════════════════
+	// **وبعد `CAF-02` صار العقدُ حازماً** — مفتاحٌ لجسمين لا يُعاد صمتاً
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يُقاس هنا الجوابان** (إعادةٌ صامتةٌ أو `409`) لأنّ التجزئةَ لم
+	// تكن، **فوُثّق العقدُ المطلوب:** «مفتاحٌ لجسمين يجب ألّا يُعاد صمتاً».
+	// **والآن بصمةُ الجسم تحرسه** (`13-029`): الجسمُ المختلفُ يُرَدّ
+	// `409 idempotency_key_reused`، **ولا يُعاد عليه جوابُ الأوّل.**
+	if second.Code != 409 {
+		t.Fatalf("SAME KEY DIFFERENT PAYLOAD: **رُدّ %d لا 409** — عادت الإعادةُ الصامتة: %s",
+			second.Code, second)
+	}
+	if code, _ := second.JSON()["error"].(map[string]any)["code"].(string); code != "idempotency_key_reused" {
+		t.Errorf("رمزُ الرفض %q — يُنتظر idempotency_key_reused", code)
+	}
+	if secondID != "" {
+		t.Errorf("الجسمُ المختلفُ رُدّ عليه معرّفُ طلبٍ %q — **يجب ألّا يُنفَّذ**", secondID)
+	}
+	if replay == "true" {
+		t.Errorf("الجسمُ المختلفُ عُدّ إعادةً (Idempotent-Replay) — **إعادةٌ صامتة**")
 	}
 }
 

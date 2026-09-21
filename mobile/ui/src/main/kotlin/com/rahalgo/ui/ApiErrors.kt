@@ -365,6 +365,10 @@ private val CODES: Map<String, Int> = mapOf(
     // «العملية قيد التنفيذ — انتظر قليلا ولا تعدها».
     "in_progress" to R.string.err_in_progress,
     "idempotency_reclaimed" to R.string.err_in_progress,
+    // **CAF-02: «مفتاحٌ لجسمين» يُقال صريحاً لا «تعذّر الاتصال».**
+    // **عُدِّلت السلّةُ ومحاولةٌ سابقةٌ لم تُحسَم** — **لا يُنشأ طلبٌ
+    // ثانٍ فوق سابقٍ قد نجح**؛ يُوجَّه إلى «طلباتي» قبل محاولةٍ جديدة.
+    "idempotency_key_reused" to R.string.err_key_reused,
     "too_many_addresses" to R.string.err_too_many_addresses,
     "already_returned" to R.string.err_already_returned,
     "merchant_no_returns" to R.string.err_merchant_no_returns,

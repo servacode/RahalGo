@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -13,6 +14,14 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
+
+// errIdemReused **مفتاحٌ واحدٌ لجسمين مختلفين** (`CAF-02` · `13-029`).
+//
+// **إعادةُ محاولةٍ صادقةٌ تحمل الجسمَ نفسَه** — فبصمتُها تطابق. **ومفتاحٌ
+// عاد بجسمٍ مختلفٍ ليس إعادة**: طلبٌ عُدّل ولم يُدوَّر مفتاحُه. **فيُرَدّ
+// ولا يُنفَّذ ثانياً** — لا هو ولا ردُّ الأوّل يُنسَب إليه.
+var errIdemReused = httpx.NewError(http.StatusConflict,
+	"idempotency_key_reused", "errors.idempotency_key_reused")
 
 // ══════════════════════════════════════════════════════════════════════
 //  **منعُ التكرار — فعلٌ واحدٌ مهما أُعيد إرساله**
@@ -118,12 +127,31 @@ func (s *Server) idempotent(next http.HandlerFunc) http.HandlerFunc {
 		endpoint := r.Method + " " + r.URL.Path
 
 		// ══════════════════════════════════════════════════════════
+		// **بصمةُ الجسم — لبابَي الإنشاء وحدَهما** (`CAF-02`)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **ويُقرأ الجسمُ هنا ثمّ يُعادُ** — فالمعالجُ يقرؤه بعدَنا كما لو
+		// لم يُمَسّ. **وما لا يُبصَم لا يُقرأ جسمُه** فلا يتغيّر مسارُه.
+		var fp []byte
+		if wantsFingerprint(endpoint) {
+			// **بالحدّ نفسِه الذي يقرأ به المعالجُ** (`decode`: ‎1 MiB) —
+			// **فما يتجاوزه يُرَدّ هنا كما يُرَدّ هناك**، ولا يُبصَم مقصوصاً.
+			body, err := io.ReadAll(io.LimitReader(r.Body, (1<<20)+1))
+			if err != nil || len(body) > (1<<20) {
+				s.respondErr(w, errValidation)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			fp = fingerprintForEndpoint(endpoint, body)
+		}
+
+		// ══════════════════════════════════════════════════════════
 		// **الحيازةُ على المَسبَح — مرئيّةٌ فوراً**
 		// ══════════════════════════════════════════════════════════
 		//
 		// **ولو أُخّرت إلى داخل معاملة العمل لما رآها المتزامنُ**
 		// (صفٌّ غيرُ مثبَّتٍ لا يُرى)، **فوقع تنفيذان.**
-		claim, replay, err := s.acquireClaim(r.Context(), uid, endpoint, key)
+		claim, replay, err := s.acquireClaim(r.Context(), uid, endpoint, key, fp)
 		if err != nil {
 			s.respondErr(w, err)
 			return
@@ -148,22 +176,55 @@ func (s *Server) idempotent(next http.HandlerFunc) http.HandlerFunc {
 //
 // **ثلاثُ نتائجَ لا رابع**: **حِيزت** (صفٌّ جديدٌ أو استردادٌ ذرّيّ) ·
 // **ثبتت** فتُعاد نتيجتُها · **حيّةٌ لغيرنا** فـ`409`.
-func (s *Server) acquireClaim(ctx context.Context, uid, endpoint, key string) (
+func (s *Server) acquireClaim(ctx context.Context, uid, endpoint, key string, fp []byte) (
 	*idemClaim, func(http.ResponseWriter), error) {
 
 	s.pruneIdempotency(ctx)
 
 	token := uuid.New()
 	tag, err := s.pg.Exec(ctx, `
-		INSERT INTO idempotency_keys (user_id, endpoint, key, owner_token, lease_until)
-		VALUES ($1, $2, $3, $4, now() + $5::interval)
+		INSERT INTO idempotency_keys (user_id, endpoint, key, owner_token, lease_until, request_fingerprint)
+		VALUES ($1, $2, $3, $4, now() + $5::interval, $6)
 		ON CONFLICT (user_id, endpoint, key) DO NOTHING`,
-		uid, endpoint, key, token, idempotencyLease.String())
+		uid, endpoint, key, token, idempotencyLease.String(), fp)
 	if err != nil {
 		return nil, nil, err
 	}
 	if tag.RowsAffected() == 1 {
 		return &idemClaim{uid: uid, endpoint: endpoint, key: key, token: token}, nil, nil
+	}
+
+	// ══════════════════════════════════════════════════════════════
+	// **حرسُ المحتوى قبل أيّ إعادة أو استرداد** (`CAF-02`)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **صفٌّ قائمٌ بالمفتاح نفسِه — أبصمتُه هي بصمتُنا؟** **فإن اختلفتا
+	// فمفتاحٌ واحدٌ لجسمين**: لا استردادَ ولا إعادةَ نتيجةٍ ولا تنفيذ —
+	// `409 idempotency_key_reused`.
+	//
+	// **والتركةُ `NULL` تمرّ**: صفٌّ بلا بصمة (من قبل الهجرة، أو جسمٌ لم
+	// يُبصَم) **لا حكمَ عليه** — فيُعامَل كما كان. **وطلبُنا بلا بصمةٍ
+	// (`fp == nil`) لا يحكم على أحد** — فلا مقارنة.
+	if fp != nil {
+		var stored []byte
+		err := s.pg.QueryRow(ctx, `
+			SELECT request_fingerprint
+			  FROM idempotency_keys
+			 WHERE user_id = $1 AND endpoint = $2 AND key = $3`,
+			uid, endpoint, key).Scan(&stored)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			// **مُحيت بين الإدراج والقراءة** — يُعاد النداءُ فيحوزها.
+			return nil, func(w http.ResponseWriter) {
+				s.respondErr(w, errIdemLost)
+			}, nil
+		case err != nil:
+			return nil, nil, err
+		case stored != nil && !bytes.Equal(stored, fp):
+			return nil, func(w http.ResponseWriter) {
+				s.respondErr(w, errIdemReused)
+			}, nil
+		}
 	}
 
 	// ══════════════════════════════════════════════════════════════
@@ -182,13 +243,14 @@ func (s *Server) acquireClaim(ctx context.Context, uid, endpoint, key string) (
 	var got int
 	err = s.pg.QueryRow(ctx, `
 		UPDATE idempotency_keys
-		   SET owner_token = $4, lease_until = now() + $5::interval
+		   SET owner_token = $4, lease_until = now() + $5::interval,
+		       request_fingerprint = COALESCE(request_fingerprint, $6)
 		 WHERE user_id = $1 AND endpoint = $2 AND key = $3
 		   AND committed_at IS NULL
 		   AND owner_token IS NOT NULL
 		   AND lease_until < now()
 		RETURNING 1`,
-		uid, endpoint, key, token, idempotencyLease.String()).Scan(&got)
+		uid, endpoint, key, token, idempotencyLease.String(), fp).Scan(&got)
 	if err == nil {
 		return &idemClaim{uid: uid, endpoint: endpoint, key: key, token: token}, nil, nil
 	}

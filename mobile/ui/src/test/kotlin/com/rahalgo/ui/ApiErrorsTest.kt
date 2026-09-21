@@ -52,6 +52,19 @@ class ApiErrorsTest {
     }
 
     /**
+     * **A3c · «مفتاحٌ لجسمين» يُقال صريحاً لا «تعذّر الاتصال»** — `CAF-02`.
+     *
+     * **`idempotency_key_reused` رمزٌ جديدٌ** — عُدّلت السلّةُ ومحاولةٌ
+     * سابقةٌ لم تُحسَم. **لو سقط على `err_internal` لظنّ صاحبُه عطبَ
+     * اتصالٍ فأعاد** — والصوابُ أن يُوجَّه إلى «طلباتي».
+     */
+    @Test
+    fun keyReusedResolvesToItsOwnMessage() {
+        assertEquals(R.string.err_key_reused, resolveErrorRes("idempotency_key_reused"))
+        assertNotEquals(R.string.err_internal, resolveErrorRes("idempotency_key_reused"))
+    }
+
+    /**
      * **A3b · رموزُ `CAF-18` تُقال بنصّها لا «تعذّر الاتصال»** — `CUST-20-019`.
      *
      * **`not_found`/`comms_closed`/`comms_no_driver` كانت تسقط على

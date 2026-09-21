@@ -515,6 +515,13 @@ fun CartScreen(
         if (vm.uncertain) {
             Spacer(Modifier.height(8.dp))
             Note(stringResource(R.string.cart_uncertain), Rahal.colors.danger)
+            // **والخروجُ بإقرارٍ صريحٍ لا بتعديلٍ صامت** (`CAF-02`): **من
+            // تحقّق من «طلباتي» ولم يجد طلبَه يبدأ محاولةً جديدةً عن قصد** —
+            // **فيُمحى المفتاحُ القديم**، ولا يُدوَّر صامتاً فوق سابقٍ نجح.
+            Spacer(Modifier.height(6.dp))
+            RahalTextButton(onClick = { vm.acknowledgeUncertain() }, tone = Tone.Danger) {
+                Text(stringResource(R.string.cart_uncertain_ack))
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -946,6 +953,25 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             }
             busy = false
         }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **إقرارٌ صريحٌ يُنهي «لا ندري» — لا تعديلٌ صامت** (`CAF-02`)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **ومحاولةٌ لم تُحسَم لا تُطرَح بتعديل السلّة**: **من عدّل ثمّ أرسل
+     * بالمفتاح نفسِه يُرَدّ `409 idempotency_key_reused`** — **فلا طلبٌ
+     * ثانٍ فوق سابقٍ قد نجح.**
+     *
+     * **والخروجُ منها هنا وحدَه**: يتحقّق صاحبُها من «طلباتي» (يقول له ذلك
+     * تحذيرُ `PC-8`)، **فإن لم يجد طلبَه أقرّ ببدء محاولةٍ جديدة** —
+     * **فيُمحى المفتاحُ القديمُ عن قصدٍ لا صمتاً**، ويُولَّد التالي طازجاً.
+     */
+    fun acknowledgeUncertain() {
+        com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.ORDER)
+        uncertain = false
+        error = ""
     }
 }
 

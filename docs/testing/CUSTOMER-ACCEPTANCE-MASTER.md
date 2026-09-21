@@ -656,7 +656,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | PASS — واتساب مُلزَمٌ على الطلب العادي: D8 مغلق ومنشورٌ للإنتاج (023d9d4c) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | PASS — منعُ الدفع نقداً للمحظور: D6 مغلق ومنشور (cd33b173) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
 | CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | PASS — 409 in_progress لا يُنشئ تكراراً: CUST-DEF-002 مغلق (§40.25) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | slow | orders +1 exactly | — | CUST-DEF-002 (CLOSED · device witness PASS §40.25.2) | `CustDef002Test` (`ui/…/CustDef002Test.kt`) · `ApiErrorsTest.inProgressResolvesToWaitNotConnectionFailure` | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PASS (§40.25.2): on SM-A525F the same attempt key survived timeout + live 409 in_progress, the still-processing message «العملية قيد التنفيذ…» showed (not «تعذر الاتصال»), and exactly one order (#1062) was created under that key |
-| CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | Server returns the old committed order OR the new cart is submitted — never a silent mismatch between cart and created order | — | `NOT_TESTED` | — | cut | order items vs cart | — | — | — | Added. CAF-02: idempotency does not fingerprint the body |
+| CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | A different cart under the same key is refused with `409 idempotency_key_reused` — never a silent replay of the old order and never a silent submit of the edited cart; the client keeps the uncertain attempt and guides the user to «طلباتي» | PASS — same key + edited body ⇒ 409 idempotency_key_reused, exactly one order, no silent replay (go qa suite, 2026-09-21) | `PASS` | — | cut | order items vs cart | — | CAF-02 (body fingerprint §40.27) | `TestCAF02_SameKeyDifferentBodyRejected` · `TestIDEM_SameKeyDifferentPayload` · `Caf02ReuseTest` | Added. CAF-02 CLOSED: server SHA-256 request-fingerprint on `idempotency_keys` (migration 0159) refuses same-key/different-body with 409 `idempotency_key_reused` (reordered cart replays; NULL-legacy compat; normal+custom). Client: `isDecided` keeps the key on `idempotency_key_reused`, and `acknowledgeUncertain` mints a fresh key only on explicit user acknowledgement (PC-8). DB-witnessed (Go qa) + unit-witnessed (`Caf02ReuseTest`) + negative witness (both). No ledger/wallet change |
 
 ## 25 · CUST-CUSTOM — Custom order «طلب خاص»
 
@@ -1144,7 +1144,7 @@ Customer testing starts (§3: P0/security/duplicate-order → stop progression).
 | ID | Sev | Finding | Evidence | Status | Rows |
 |---|---|---|---|---|---|
 | **CAF-01** | **P0** | With `auth.signup_verify`=false, `POST /auth/signup/confirm` skips the code, **overwrites the password of an existing account** and issues a session — account takeover by phone number. `signup/confirm` is also not launch-gated and not rate-limited; the app always shows the signup door | `identity/service.go:486-559` | **source-confirmed (original finding)** → fixed and tracked under **CUST-DEF-001: OPERATIONALLY CLOSED + Production-deployed & verified (§40.17, 2026-09-19)**. `ConfirmSignup` now refuses to overwrite an existing password-holding account regardless of `signup_verify`; guarded by `TestSU01`–`TestSU06`. The old "latent while flag=true" note is superseded — the fix is the control, not the flag. | CUST-19-026, CUST-04-023, CUST-04-002 |
-| **CAF-02** | **HIGH** | A 409 `in_progress` is treated as a final answer: the persisted Idempotency-Key is cleared, so a later tap can create a **second order** while the first is still committing; `in_progress` is unmapped (shows a misleading connection message); the key does not fingerprint the body | `ui/Attempt.kt` `isDecided`; `server/idempotency.go:221-226`; client timeout 20 s vs server 30 s, claim 60 s | **source-confirmed** (runtime path to prove) | CUST-13-028/029, CUST-20-019 |
+| **CAF-02** | **HIGH** | A 409 `in_progress` is treated as a final answer: the persisted Idempotency-Key is cleared, so a later tap can create a **second order** while the first is still committing; `in_progress` is unmapped (shows a misleading connection message); the key does not fingerprint the body | `ui/Attempt.kt` `isDecided`; `server/idempotency.go:221-226`; client timeout 20 s vs server 30 s, claim 60 s | **CLOSED** — three parts all fixed: (1) `in_progress` no longer clears the key (CUST-DEF-002, §40.25); (2) `in_progress`/`idempotency_reclaimed`/`idempotency_key_reused` all mapped to explicit messages (§40.25, §40.27); (3) **body fingerprint implemented** (§40.27): SHA-256 request-fingerprint on `idempotency_keys` (migration 0159) refuses same-key/different-body with `409 idempotency_key_reused`; client preserves the uncertain attempt and requires explicit acknowledgement before a fresh key. DB-witnessed (Go qa) + unit-witnessed + negative witness. No ledger/wallet change | CUST-13-028/029, CUST-20-019 |
 | **CAF-03** | **HIGH** | `POST /orders` honours a client-supplied `merchant_id` (open-hours check and attribution) | `orders/service.go:303-305,378-396`; handler does not clear it | **source-confirmed** (app never sends it) | CUST-19-027 |
 | CAF-04 | HIGH | Suspended customer cannot see/cancel a live order in the app: suspension exceptions name `GET /orders/{id}`, which the app never uses; `/my/orders*` and chat blocked; `/auth/me` 403 at start shows «offline» | `server/suspension.go:65-66` (audit B) | reported · to verify | CUST-06-031/032 |
 | CAF-05 | MED | Browse gate is partial: sections, section items, search, suggest stay open before launch | `server.go:438-442,492-493` (audit B) | reported · to verify | CUST-18-021 |
@@ -1264,7 +1264,7 @@ until ADB is available — not an acceptance blocker.
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 10 | 0 | 4 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
-| 24 | CUST-13 | 29 | 24 | 5 | 8 | 0 | 21 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 7 | 0 | 22 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 4 | 0 | 16 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 12 | 3 | 11 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 6 | 0 | 8 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **124** | **9** | **372** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **123** | **9** | **373** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1894,7 +1894,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | Finding | Verdict | Sev | Stop | Surface · component | Note |
 |---|---|---|---|---|---|
 | CAF-01 | CONFIRMED → **CUST-DEF-001** | P0 | **YES** | signup · `identity/service.go` | §40.3 |
-| CAF-02 | CONFIRMED → **CUST-DEF-002** | P1 | **YES** | cart/custom send · `ui/Attempt.kt` | §40.4 |
+| CAF-02 | CONFIRMED → **CUST-DEF-002** · **CLOSED** (body fingerprint §40.27) | P1 | **YES** | cart/custom send · `ui/Attempt.kt` · `server/idempotency.go` | §40.4 · §40.27 |
 | CAF-03 | CONFIRMED → **CUST-DEF-003** | P1 | **YES** | `POST /orders` · `orders/service.go` | §40.5 |
 | CAF-04 | CONFIRMED | P2 | no | suspended customer · `server/suspension.go:55-66` | exception names `GET /api/v1/orders/{uuid}`, which has no customer route; `/my/orders*` blocked → live order unreachable in the app; cancel by id still allowed. Restrictive, not a bypass |
 | CAF-05 | CONFIRMED | P3 | no | pre-launch browse · `server.go:~439-499` | sections, section items, suggest, search stay open while `customer_browse` is off; public catalog data, app shows PreLaunch |
@@ -2764,10 +2764,12 @@ apps + shared). Backend unchanged; no Go test added.
 (authenticated user only). Rapid double-submit is already blocked by `if (busy) return` +
 `enabled = !vm.busy` (existing controls, preserved); the fix adds no new key-minting path.
 
-**Out of scope (recorded, not changed).** CUST-13-029 (idempotency does not fingerprint the
-request body): the server intentionally replays the original committed order for a reused key —
-that is the idempotency contract, not a defect the app can or should override. CAF-18 for
-`not_found`/`comms_closed`/`comms_no_driver` (still unmapped, P3): separate from CUST-DEF-002.
+**Out of scope of §40.25 (handled separately).** CUST-13-029 (idempotency does not fingerprint
+the request body) was recorded here as "server intentionally replays the original committed
+order for a reused key." **Superseded 2026-09-21**: the owner approved a server-side body
+fingerprint (CAF-02 design), now implemented — a reused key with a *different* body is refused
+with `409 idempotency_key_reused` instead of silently replaying. See **§40.27**. CAF-18 for
+`not_found`/`comms_closed`/`comms_no_driver` was mapped separately (§40.x, CUST-20-019).
 
 **Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION = PASS · NEGATIVE WITNESS = PASS ·
 FOUR-APP UNIT SUITE = PASS · **DEVICE/STAGING WITNESS = PASS (§40.25.2)** ·
@@ -3239,3 +3241,77 @@ policy), so on-device probing was stopped. Two minor observations to watch (not 
 start `accountVm.refresh()` may briefly race session-restore, showing a GPS-based catalog until
 addresses load, then self-correcting via `CityGate`; (ii) session persistence across app restart
 should be re-verified (my repeated force-stops may have caused the guest drop).
+
+### 40.27 · CAF-02 / CUST-13-029 — idempotency body fingerprint: source fix + regression (2026-09-21)
+
+**Problem.** The Idempotency-Key protected against a *replay of the same request*, but not
+against a **reused key with a different body**. If a customer's first submit was undecided
+(network drop, `in_progress`), the key was kept (correctly, §40.25); but if the customer then
+**edited the cart and resubmitted under the same key**, the server *silently replayed the first
+order* (`Idempotent-Replay: true`) — the customer believed their edit went through when it did
+not. The reverse (key not rotated after an intentional new order) could execute an unintended
+request on the first response. Measured by the pre-existing characterization test
+`TestIDEM_SameKeyDifferentPayload` (it documented the required contract: "same key + different
+payload should not silently replay").
+
+**Owner-approved design (2026-09-21).** Add a server-side semantic **request fingerprint**:
+same key + same fingerprint ⇒ replay/in-progress as before; same key + **different** fingerprint
+⇒ `409 idempotency_key_reused`, **no second execution**. No ledger/wallet/treasury change, no
+duplicate order execution, TTL/lease unchanged, applies to both normal and custom orders.
+
+**Migration.** `0159_idempotency_fingerprint.sql` — `ALTER TABLE idempotency_keys ADD COLUMN
+IF NOT EXISTS request_fingerprint bytea` (nullable, **no backfill**). Additive and forward-only
+(house convention); rollback = drop the nullable column. Legacy/pre-migration rows keep `NULL`
+and are treated as "no fingerprint → no judgement" (compat).
+
+**Fingerprint (endpoint-specific, deterministic).** `server/idempotency_fingerprint.go`:
+SHA-256 over a *canonical* image of the **semantic** fields only —
+- normal `POST /api/v1/orders`: `merchant_id`, `items[]` (each: `menu_item_id`, `qty`, `note`,
+  sorted `option_ids`), `address_text`, `lat`, `lng`, `payment_method`, `promo_code`, `notes`;
+  `option_ids` sorted and the `items[]` list sorted by a canonical per-item key, so **reordering
+  the cart yields the same fingerprint** while a changed qty/item/option changes it (multiplicity
+  preserved — the sort does not dedupe).
+- custom `POST /api/v1/orders/custom`: `request`, `address_text`, `lat`, `lng`, `payment_method`,
+  `notes`.
+Transport/derived fields are **excluded** (the Idempotency-Key itself, timestamps, and the
+client `customer_id`/`customer_phone` which the server overwrites from the token).
+
+**Middleware.** `idempotent()` reads the body (≤1 MiB, same bound as `decode`), restores it
+(`io.NopCloser`) so the handler decodes unchanged, computes the fingerprint for the two order
+endpoints only (other idempotent routes — wallet/payout/incentive/settle — are untouched: their
+bodies are not read), and passes it to `acquireClaim`. `acquireClaim`: stores the fingerprint on
+INSERT; on a conflicting row, **before any replay/recover** compares stored vs current — non-NULL
+mismatch ⇒ `409 idempotency_key_reused`; on dead-lease recovery it `COALESCE`-upgrades a legacy
+NULL fingerprint.
+
+**Client safety (owner correction — no silent new submit).** An uncertain attempt must stay
+represented. `ui/Attempt.kt` `isDecided` now also returns *false* for `idempotency_key_reused`
+(it signals an unresolved prior attempt whose body was edited): the key is **kept**, "we don't
+know" stays. Exit is by **explicit acknowledgement only** — `CartViewModel.acknowledgeUncertain`
+(a Danger text button under the PC-8 note "تحقّقتُ من «طلباتي» ولم أجد الطلب — ابدأ محاولة جديدة")
+clears the old key deliberately, so the next submit mints a fresh key. `idempotency_key_reused`
+maps to `err_key_reused` (not the misleading connection error). Editing the cart alone never
+retires the key.
+
+**Automated regression (all green).**
+- Backend (Go qa, `internal/qa/idempotency_fingerprint_test.go`): `TestCAF02_SameKeyDifferentBodyRejected`
+  (409 + exactly one order), `TestCAF02_ReorderedItemsReplayNotReused` (reorder ⇒ same order,
+  one order), `TestCAF02_LegacyNullFingerprintReplays` (NULL ⇒ compat replay), `TestCAF02_CustomSameKeyDifferentRequestRejected`,
+  `TestCAF02_CustomSameRequestReplays`. Plus the pre-existing `TestIDEM_SameKeyDifferentPayload`
+  **tightened** from "accept either" to assert `409 idempotency_key_reused` + no execution.
+- Client (ui unit): `Caf02ReuseTest` (5) — reused-not-decided, uncertain+same-body recovery (one
+  order), uncertain+edited-body no silent second order, explicit-acknowledgement mints fresh key
+  (one order), editing-alone never retires the key; `ApiErrorsTest.keyReusedResolvesToItsOwnMessage`.
+- **Negative witness:** server — neuter the mismatch branch ⇒ the two different-body tests replay
+  (201, `Idempotent-Replay: true`) and fail; restored. Client — revert the `isDecided` line ⇒
+  4/5 `Caf02ReuseTest` fail (same-body recovery correctly still passes); restored.
+
+**Scope guarantees.** No change to ledger logic, wallet arithmetic, or treasury accounting; no
+duplicate order execution introduced; `WithIdempotentTx` commit atomicity unchanged. The
+fingerprint only gates *whether* the claimed work runs, never *what* it computes.
+
+**Status:** SOURCE FIX = CLOSED · AUTOMATED REGRESSION (backend DB-witnessed + client unit) = PASS ·
+NEGATIVE WITNESS = PASS · **STAGING/DEVICE LIVE-UI WITNESS = PENDING** (consolidated deploy plan) ·
+**Production mutations = 0.** CUST-13-029 core (server does not replay an edited-cart order) is
+DB-witnessed ⇒ PASS; the client uncertain-attempt UX (acknowledge button / PC-8) is unit-witnessed,
+on-device UX pending in the staging witness batch.
