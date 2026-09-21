@@ -683,7 +683,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-017 | Custom | Guest sees NeedAccount | Signed out | Open طلب خاص | «هذا القسم يحتاج حسابا» + login | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-CUSTOM-018 | Custom | Custom-order realtime to owner | After 001 | Driver/ops change it | Customer sees update | PASS — لحظيٌّ للمالك: TestD22_* (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestD22_*` |
 | CUST-CUSTOM-019 | Custom | Driver note is saved and shown (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Send with «ملاحظات للسائق» | Note stored and visible to the driver | PASS — CAF-07 مُصلَح: الهاتفُ يرسل notes والخادمُ يفكّها ويخزّنها في orders.notes (كالعاديّ) وعرضُ الطلب يكشفها؛ TestCUST_CAF07_NotesStored + شاهدٌ سالب | `PASS` | — | online | order notes | — | — | — | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
-| CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Cash or wallet selectable (Owner decision 2026-08-09, `orders/custom.go:74-78`) | PASS — §40.11 مُصلَح: NewCustom يحمل payment_method والشاشةُ تعرض نقد/محفظة وترسل المختار؛ المحرّكُ يخزّنها ويحرس الحظرَ النقديّ. TestCUST_PaymentWalletStored + CustomPaymentTest + شاهدٌ سالب (شهادةُ الجهاز بعد النشر) | `PASS` | — | online | order payment_method | — | — | — | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
+| CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Cash or wallet selectable (Owner decision 2026-08-09, `orders/custom.go:74-78`) | SOURCE/AUTOMATED FIXED (beb4acc8) §40.11 · PENDING STAGING LIVE WITNESS —: NewCustom يحمل payment_method والشاشةُ تعرض نقد/محفظة وترسل المختار؛ المحرّكُ يخزّنها ويحرس الحظرَ النقديّ. TestCUST_PaymentWalletStored + CustomPaymentTest + شاهدٌ سالب (شهادةُ الجهاز بعد النشر) | `NOT_TESTED` | — | online | order payment_method | — | — | — | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
 
 ## 26 · CUST-14 — Order list / lifecycle
 
@@ -760,7 +760,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-ENG-002 | Fav | Favorites screen | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → المفضلة | Grid; ♥ removes; empty state | PASS — شاشةُ المفضلة (فارغةٌ ثمّ «♥ شاورما دجاج» بعد التفضيل) (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | No add-to-cart from Favorites (by design?) — Owner note |
 | CUST-ENG-003 | Fav | Guest heart → login | Signed out | Tap heart | Login path | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-ENG-004 | Offers | Offers list | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → العروض | Image, title, prices, discount chip | PASS — «العروض» تُفتح («لا عروض سارية») (محاكي 2026-09-21) | `PASS` | — | online | `/public/offers` | — | — | — | — |
-| CUST-ENG-005 | Offers | Add offer item to cart | Signed-in test customer · Staging · SM-A525F · valid default address | «أضف إلى السلة» on an offer with an item | «أُضيف إلى السلة»; options sheet if needed; gating per CUST-11-035 | — | `NOT_TESTED` | — | online | — | — | — | — | CAF-12 |
+| CUST-ENG-005 | Offers | Add offer item to cart | Signed-in test customer · Staging · SM-A525F · valid default address | «أضف إلى السلة» on an offer with an item | «أُضيف إلى السلة»; options sheet if needed; gating per CUST-11-035 | SOURCE/AUTOMATED FIXED: بوّابةُ الخدمة المشتركة rememberAddBlocked تحرس إضافةَ العرض (OfferGateTest + شاهد سالب)؛ PENDING STAGING LIVE WITNESS (سلوكُ الجهاز خارجَ التغطية بعد النشر) | `NOT_TESTED` | — | online | — | — | — | — | CAF-12 |
 | CUST-ENG-006 | Offers | Offer opened from push; expired offer | Offer push | Tap push; tap expired | Focused at top; expired → «العرض الذي وصلك لم يعد سارياً» | PASS — الإشعارُ يفتح الوجهةَ الآمنة: DeepLinkTest (Kotlin unit suite BUILD SUCCESSFUL) | `PASS` | — | online | — | — | — | — | `DeepLinkTest` |
 | CUST-ENG-007 | Refer | Invite screen | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → ادع صديقا | Code, next reward, counts; share opens chooser | PASS — «ادع صديقا» + رمزٌ JPNV4R (محاكي 2026-09-21) | `PASS` | — | online | `/auth/referral` | — | — | — | — |
 | CUST-ENG-008 | Refer | Referral reward paid per policy | New signup with the code | Complete signup (and first order if policy) | Reward credited once per policy (`referral.*`) | PASS — مكافأةُ الإحالة: TestRewardOn*/TestBonusAndReferral_OncePerPhone (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | wallet tx | — | — | — | `TestRewardOn*`, `TestBonusAndReferral_OncePerPhone` |
@@ -1265,7 +1265,7 @@ until ADB is available — not an acceptance blocker.
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 8 | 0 | 21 | 0 | 0 |
-| 25 | CUST-CUSTOM | 20 | 18 | 2 | 3 | 0 | 17 | 0 | 0 |
+| 25 | CUST-CUSTOM | 20 | 18 | 2 | 4 | 0 | 16 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 12 | 3 | 11 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 7 | 0 | 7 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **124** | **9** | **372** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **125** | **9** | **371** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 

@@ -377,3 +377,26 @@ fun addActionFor(point: ContextPoint, av: Availability?): AddAction = when (poin
     PointSource.DELIVERY -> addAction(hasAddress = true, av = av)
     else -> AddAction.NEED_ADDRESS
 }
+
+/**
+ * rememberAddBlocked **أيُمنَع الإضافةُ إلى السلّة الآن؟** — `CAF-12`/`CUST-ENG-005`.
+ *
+ * **القرارُ المركزيُّ نفسُه الذي تقرؤه شاشةُ السوق** — يعتمد `Orderable`
+ * و`PreCartViewModel` و`addActionFor` (لا نسخةٌ ثانيةٌ من البوّابة).
+ *
+ * **فبابُ العروض يمرّ ببوّابةِ الخدمة نفسِها**: **وكان يُضيف بلا حارسٍ**
+ * (`MineScreens.kt`)، **فيُضاف عرضٌ إلى نقطةٍ لا نصلها ثمّ يُردُّ عند
+ * الإرسال** — والحارسُ الأخيرُ عند الإرسال يبقى دفاعاً في العمق.
+ */
+@androidx.compose.runtime.Composable
+fun rememberAddBlocked(address: com.rahalgo.shared.model.Address?): Boolean {
+    val ctx0 = contextPoint(address, Here.discovery)
+    val point = Orderable.pointKey(
+        if (ctx0.source == PointSource.NONE) null else ctx0.lat,
+        if (ctx0.source == PointSource.NONE) null else ctx0.lng,
+    )
+    val serviceVm: PreCartViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    androidx.compose.runtime.LaunchedEffect(point) { serviceVm.refreshAt(point, ctx0) }
+    val availability = Orderable.of(point)
+    return addActionFor(ctx0, availability) == AddAction.BLOCKED
+}

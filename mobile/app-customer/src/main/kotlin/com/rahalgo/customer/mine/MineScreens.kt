@@ -64,11 +64,11 @@ import com.rahalgo.ui.RahalButton
  * شكاواه.
  */
 @Composable
-fun MineScreen(vm: MineViewModel, key: String) {
+fun MineScreen(vm: MineViewModel, key: String, address: com.rahalgo.shared.model.Address? = null) {
     LaunchedEffect(key) { vm.open(key) }
     when (key) {
         CustomerItems.FAVORITES -> Favorites(vm)
-        CustomerItems.OFFERS -> Offers(vm)
+        CustomerItems.OFFERS -> Offers(vm, address)
         CustomerItems.INVITE -> Invite(vm)
         CustomerItems.TICKETS -> Tickets(vm)
     }
@@ -178,7 +178,7 @@ private fun Favorites(vm: MineViewModel) {
  * **ولا يعلم أنّه فاته.**
  */
 @Composable
-private fun Offers(vm: MineViewModel) {
+private fun Offers(vm: MineViewModel, address: com.rahalgo.shared.model.Address? = null) {
     val list = vm.offers
     if (list == null) {
         LoadState(vm.busy, vm.error) { vm.open(CustomerItems.OFFERS, force = true) }
@@ -193,6 +193,10 @@ private fun Offers(vm: MineViewModel) {
     // **ويُقرأ النصُّ في التركيب لا في المستمع** — `stringResource`
     // دالّةُ تركيبٍ ولا تُنادى داخل `onClick`.
     val addedText = stringResource(R.string.shop_added)
+    // **وبابُ العروض يمرّ ببوّابةِ الخدمة نفسِها** (`CAF-12`/`CUST-ENG-005`) —
+    // **ولا يُضاف عرضٌ إلى نقطةٍ لا نصلها** ثمّ يُردّ عند الإرسال.
+    val blocked = com.rahalgo.customer.rememberAddBlocked(address)
+    val blockedText = stringResource(R.string.offer_add_blocked)
 
     // **والصنفُ ذو الخياراتِ يُسأل قبل أن يدخل** — انظر `ItemOptionsSheet`.
     var picking by remember { mutableStateOf<Item?>(null) }
@@ -201,9 +205,13 @@ private fun Offers(vm: MineViewModel) {
             item = target,
             api = vm.customerApi,
             onAdd = { chosen ->
-                Cart.add(target, options = chosen)
+                if (blocked) {
+                    Flash.fail(blockedText)
+                } else {
+                    Cart.add(target, options = chosen)
+                    Flash.ok(addedText)
+                }
                 picking = null
-                Flash.ok(addedText)
             },
             onClose = { picking = null },
         )
@@ -341,6 +349,10 @@ private fun Offers(vm: MineViewModel) {
                                     )
                                     if (picked.hasOptions) {
                                         picking = picked
+                                    } else if (blocked) {
+                                        // **بوّابةُ الخدمة نفسُها** (CAF-12) —
+                                        // **لا يُضاف عرضٌ إلى نقطةٍ لا نصلها.**
+                                        Flash.fail(blockedText)
                                     } else {
                                         Cart.add(picked)
                                         // **ورسالةٌ تقول إنّه وقع** —

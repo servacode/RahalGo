@@ -902,7 +902,10 @@ private fun SignedIn(
                         ChatsScreen(chatsVm)
                     }
 
-                    over is Overlay.Menu -> MineScreen(mineVm, over.key)
+                    over is Overlay.Menu -> MineScreen(
+                        mineVm, over.key,
+                        address = selectedAddress(accountVm.state.addresses),
+                    )
 
                     // ══════════════════════════════════════════════
                     // **والمحفظةُ شاشةُ السائق نفسُها — بلا سحب**
