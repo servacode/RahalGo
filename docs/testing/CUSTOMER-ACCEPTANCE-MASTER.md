@@ -716,7 +716,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | PASS — إلغاءٌ مزدوج/بعد المهلة: TestCANC_002 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | Added: `TestCANC_002` |
 | CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | — | `NOT_TESTED` | — | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
 | CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
-| CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | — | `NOT_TESTED` | — | online | count > 30 | — | — | — | Added. CAF-14: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
+| CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | SOURCE/AUTOMATED FIXED (CAF-14): OrdersViewModel.loadMore + mergeById (منع تكرار/حفظ ترتيب) + زرُّ «تحميل المزيد»؛ OrdersMergeTest (٥) + شاهد سالب. PENDING STAGING LIVE WITNESS (حساب >30 طلباً بعد النشر) | `NOT_TESTED` | — | online | count > 30 | — | — | — | Added. CAF-14: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
 
 ## 26A · CUST-SUP — Chat, complaints, tickets and warnings (added by audit)
 
@@ -1906,7 +1906,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | CAF-11 | CLOSED (CONTRACT-CONFIRMED) | P3 | no | Shop banners · `ShopScreen.kt:194`, `BannerSlider.kt:188` | Not a defect — banner targets are not a configurable product feature (owner 2026-09-21); non-actionable banner is intended. CUST-DEF-008 closed; CUST-09-026 → N/A |
 | CAF-12 | CONFIRMED | P3 | no | Offers · `MineScreens.kt:204,345` | `Cart.add` without the PreCart gate; send still requires address, availability and quote |
 | CAF-13 | DUPLICATE_OF_XG-9 | — | no | push tap | order-status pushes fall to `else -> Unit` (`MainActivity.kt:1095`) |
-| CAF-14 | CONFIRMED | P2 | no | order history · `OrdersViewModel.kt:99,145` | page 1 (30) only |
+| CAF-14 | **SOURCE-FIXED (2026-09-21), pending staging deploy** | P2 | no | order history · `OrdersViewModel.kt` | pagination added: loadMore + mergeById + «تحميل المزيد» (CUST-14-026, OrdersMergeTest) |
 | CAF-15 | NEEDS_OWNER_DECISION | P3 | no | rail auto-scroll · `model/Shop.kt` | `shop.rail_auto` sits in the **Site** settings group (page.shop); the Android app never had auto-scroll — is the setting meant for the app? |
 | CAF-16 | NOT_A_DEFECT (signup part → CUST-DEF-001) | — | no | launch flags on client | server gates orders/custom/signup-request and answers with explicit `launch_closed` + Owner notice |
 | CAF-17 | CONFIRMED | P3 | no | cart · `CartScreen.kt:518,587` | promo and payment choice in memory only; reset visibly after process death |

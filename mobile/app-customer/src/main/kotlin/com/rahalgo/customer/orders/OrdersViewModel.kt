@@ -41,6 +41,22 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var history by mutableStateOf<List<MyOrder>>(emptyList())
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **ترقيمُ سجلّ الطلبات** (`CAF-14`، `CUST-14-026`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان يُطلب أوّلُ ثلاثين فقط** — **فمن تجاوز طلباتُه الثلاثين لم
+    // يرَ أقدمَها أبداً.** فتُجلب صفحةٌ صفحةً عند بلوغ آخر القائمة،
+    // **بلا تكرارِ بطاقةٍ وبلا خلطِ ترتيب** (`mergeById`).
+    var historyHasMore by mutableStateOf(false)
+        private set
+
+    var loadingMore by mutableStateOf(false)
+        private set
+
+    private var loadedCount = 0
+    private var lastPage = 1
+
     /**
      * **من قيّمه من طلباته** — ومنه يُعرف أين يُعرض زرُّ النجوم.
      *
@@ -96,9 +112,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         refreshing = true
         viewModelScope.launch {
             runCatching {
-                val all = api.orders(openOnly = false).orders
-                open = all.filterNot { it.status in ENDED }
-                history = all.filter { it.status in ENDED }
+                val p = api.orders(openOnly = false, page = 1)
+                open = p.orders.filterNot { it.status in ENDED }
+                history = p.orders.filter { it.status in ENDED }
+                lastPage = 1
+                loadedCount = p.orders.size
+                historyHasMore = loadedCount < p.total
                 error = ""
             }.onFailure { error = apiError(getApplication(), it as Exception) }
             refreshing = false
@@ -142,9 +161,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // **والنهاياتُ خمسٌ تعرفها الحالُ نفسُها** — فلا يرى
                 // الزبونُ طلباً منتهياً بين الجارية، **ولا يُنتظر
                 // ترحيلُ بيانات.**
-                val all = api.orders(openOnly = false).orders
+                val p = api.orders(openOnly = false, page = 1)
+                val all = p.orders
                 open = all.filterNot { it.status in ENDED }
                 history = all.filter { it.status in ENDED }
+                lastPage = 1
+                loadedCount = all.size
+                historyHasMore = loadedCount < p.total
                 // **ومن قيّم لا يُسأل ثانية** — نداءٌ ثانٍ كما في الويب.
                 // **وسقوطُه لا يُسقط الطلبات**: أسوأُ ما يقع أن يظهر
                 // زرُّ نجومٍ يردّ «قيّمتَه من قبل».
@@ -167,6 +190,34 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearAction() {
         actionError = ""
+    }
+
+    /**
+     * loadMore **يجلب الصفحةَ التاليةَ من السجلّ** (`CAF-14`، `CUST-14-026`).
+     *
+     * **ولا يُعاد نداءٌ في الجوّ** (`loadingMore`)، **ولا يُطلب ما لا مزيدَ
+     * بعده** (`historyHasMore`). **والدمجُ يمنع التكرار ويحفظ الترتيب**
+     * (`mergeById`) — **فسحبةٌ زائدةٌ لا تكرّر بطاقةً ولا تقلب صفّا.**
+     */
+    fun loadMore() {
+        if (loadingMore || !historyHasMore || busy) return
+        loadingMore = true
+        viewModelScope.launch {
+            try {
+                val next = lastPage + 1
+                val p = api.orders(openOnly = false, page = next)
+                open = mergeById(open, p.orders.filterNot { it.status in ENDED })
+                history = mergeById(history, p.orders.filter { it.status in ENDED })
+                lastPage = next
+                loadedCount += p.orders.size
+                // **وصفحةٌ فارغةٌ تُنهي الترقيم** — **ولا حلقةَ لا تقف.**
+                historyHasMore = p.orders.isNotEmpty() && loadedCount < p.total
+            } catch (e: Exception) {
+                // **وسقوطُ صفحةٍ إضافيّةٍ لا يمسح ما عُرض** — يبقى ما حُمّل.
+                actionError = apiError(getApplication(), e)
+            }
+            loadingMore = false
+        }
     }
 
     /**
@@ -244,3 +295,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
  * **أو لا تظهر في أيّهما.**
  */
 val ENDED = setOf("delivered", "cancelled", "failed", "rejected", "refunded")
+
+/**
+ * mergeById **يضمّ صفحةً جديدةً إلى ما عُرض — بلا تكرارٍ وبحفظ الترتيب** —
+ * `CAF-14` · `CUST-14-026`.
+ *
+ * **دالّةٌ صافيةٌ تُقاس بلا جهاز**: **الموجودُ أوّلاً كما هو، ثمّ الجديدُ
+ * الذي لم يُرَ بعدُ بترتيبه.** **وطلبٌ يصل في صفحتين (سباقُ إنعاش) لا
+ * يُعرض بطاقتين.**
+ */
+fun mergeById(existing: List<MyOrder>, incoming: List<MyOrder>): List<MyOrder> {
+    if (incoming.isEmpty()) return existing
+    val seen = existing.mapTo(HashSet()) { it.id }
+    return existing + incoming.filter { seen.add(it.id) }
+}

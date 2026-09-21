@@ -106,6 +106,7 @@
     <string name="cst_notes">ملاحظات للسائق</string>
     <string name="cst_pay">طريقة الدفع</string>
     <string name="offer_add_blocked">لا يمكن الإضافة — عنوانك خارج نطاق التوصيل حاليًا</string>
+    <string name="ord_load_more">تحميل المزيد</string>
     <string name="cst_send">أرسل الطلب</string>
     <string name="cst_need_point">اختر عنوان التوصيل ليعرف السائق أين يوصل</string>
     <string name="cst_done">تم إرسال طلبك رقم %1$s — تابعه في «طلباتي»</string>

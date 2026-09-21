@@ -9,6 +9,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
+import com.rahalgo.ui.RahalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -176,6 +179,24 @@ private fun OrdersList(
                     null
                 },
             )
+        }
+        // **مزيدٌ من السجلّ — صفحةً صفحة** (`CAF-14`/`CUST-14-026`).
+        // **ولا يظهر إلّا في السجلّ وحين يبقى ما يُجلب.**
+        if (history && vm.historyHasMore) {
+            item {
+                Spacer(Modifier.height(12.dp))
+                RahalButton(
+                    onClick = { vm.loadMore() },
+                    enabled = !vm.loadingMore,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (vm.loadingMore) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(R.string.ord_load_more))
+                    }
+                }
+            }
         }
         item { Spacer(Modifier.height(32.dp)) }
     }
