@@ -628,7 +628,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-13-001 | Submit | Single valid submit creates exactly one order | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | «أرسل الطلب» | Success; cart emptied; طلباتي opens | — | `NOT_TESTED` | — | online | orders +1 | — | — | — | Disposable test order only |
+| CUST-13-001 | Submit | Single valid submit creates exactly one order | Signed-in QA customer · Staging · **QA emulator (RahalGo AVD, API 36)** · valid default address (البيت) · cart populated (cash) | «أرسل الطلب» | Success; exactly one order; طلباتي opens | **PASS — emulator-witnessed 2026-09-21** (selector-based). One tap on «أرسل الطلب» → order **#1070** «بانتظار القبول»; طلباتي showed **exactly one** order (#1070); no duplicate. Cash (wallet 0/disabled). Cancelled via device («إلغاء الطلب» → «نعم، ألغه») → removed from current orders. Benign cash QA residue (register in WORKLOG). | `PASS` | QA emulator | online | order #1070 (cancelled) | — | — | — | Emulator API 36 vs real device Android 14/API 34 (recorded) |
 | CUST-13-002 | Submit | Order data matches server | After 001 | Compare card with SoT | Items, qty, fee, total, payment equal | — | `NOT_TESTED` | — | online | order row + items | — | — | — | — |
 | CUST-13-003 | Submit | Repeated fast taps create one order | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Triple-tap send | One order | — | `NOT_TESTED` | — | online | orders +1 | — | — | — | AB-01, P8-C3-039 |
 | CUST-13-004 | Submit | Button guarded while in flight | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap; inspect button | Busy/disabled until result | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -1247,7 +1247,7 @@ until ADB is available — not an acceptance blocker.
 
 **Total acceptance cases: 578** — from the Owner contract: 474 (440 explicit cases in §11–§33 + 16 final-gate criteria in §34 + 18 CUST-CUSTOM cases written because §25 of the contract requires a dedicated group) · added later: 104 (102 by the coverage audit + 2 PRQ-2 cases by Owner decision §40.15-1).
 
-**Status now (2026-09-21 — authoritative row-level count; morning owner decision applied):** `NOT_TESTED` 292 · `NOT_APPLICABLE` 9 · `PASS` 203 · `FAIL` 0 · `BLOCKED` 74. **Open mandatory rows: 366** (NOT_TESTED 292 + BLOCKED 74 + FAIL 0). Executed groups: CUST-00…CUST-12. **FAIL = 0** — CUST-09-026 was reclassified `FAIL → N/A` by owner decision 2026-09-21 (configurable banner targets are not part of the owner/admin contract, so a non-actionable banner is intended behavior; CUST-DEF-008 closed as CONTRACT-CONFIRMED / NOT-A-DEFECT). Batch-2 CLOSED: CUST-03-003→CUST-DEF-006, CUST-06-032→CUST-DEF-007, CUST-06-027→CUST-DEF-010 (all PASS). Counted directly from the master's case-row status cells.
+**Status now (2026-09-21 — authoritative row-level count; QA-emulator campaign begun):** `NOT_TESTED` 291 · `NOT_APPLICABLE` 9 · `PASS` 204 · `FAIL` 0 · `BLOCKED` 74. **Open mandatory rows: 365** (NOT_TESTED 291 + BLOCKED 74 + FAIL 0). Executed groups: CUST-00…CUST-12, +CUST-13-001 (emulator). CUST-13-001 → PASS (dedicated QA emulator, order #1070 created/verified-one/cancelled). **FAIL = 0** — CUST-09-026 was reclassified `FAIL → N/A` by owner decision 2026-09-21 (configurable banner targets are not part of the owner/admin contract, so a non-actionable banner is intended behavior; CUST-DEF-008 closed as CONTRACT-CONFIRMED / NOT-A-DEFECT). Batch-2 CLOSED: CUST-03-003→CUST-DEF-006, CUST-06-032→CUST-DEF-007, CUST-06-027→CUST-DEF-010 (all PASS). Counted directly from the master's case-row status cells.
 
 | § | Group | Rows | Supplied | Added | NOT_TESTED | NOT_APPLICABLE | PASS | FAIL | BLOCKED |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1264,7 +1264,7 @@ until ADB is available — not an acceptance blocker.
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 10 | 0 | 4 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 22 | 0 | 5 |
-| 24 | CUST-13 | 29 | 24 | 5 | 29 | 0 | 0 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 28 | 0 | 1 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 20 | 0 | 0 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 23 | 3 | 0 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **292** | **9** | **203** | **0** | **74** |
+| | **Total** | **578** | **474** | **104** | **291** | **9** | **204** | **0** | **74** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
