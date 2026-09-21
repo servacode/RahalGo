@@ -74,7 +74,7 @@ const MaxCustomRequest = 600
 // **والدفعُ نقدٌ أو محفظة** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩). **ولا يُخصم شيءٌ
 // هنا**: المبلغُ مجهولٌ حتّى يتّفقا، **والخصمُ عند التسليم لا عند الطلب.**
 func (s *Service) CreateCustom(ctx context.Context, customerID, request,
-	addressText, payment string, lat, lng float64) (*Order, error) {
+	addressText, payment, notes string, lat, lng float64) (*Order, error) {
 	// **والمحفظةُ خيارٌ** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩). **وما عداهما نقد**:
 	// قيمةٌ مجهولةٌ من العميل لا تصير طريقةَ دفع.
 	if payment != "wallet" {
@@ -132,13 +132,13 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
 		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
-		                    snap_commission_source, snap_activation_orders)
+		                    snap_commission_source, snap_activation_orders, notes)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders).Scan(&id)
+		snap.CommissionSource, snap.ActivationOrders, notes).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 // **بثٌّ خرج ثمّ ارتدّت المعاملةُ يَعِد بطلبٍ لا وجودَ له**، وهو حدُّ
 // `R24`/`XG-44` نفسُه الذي يمشي عليه `CreateTx`.
 func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID, request,
-	addressText, payment string, lat, lng float64) (*Order, func(), error) {
+	addressText, payment, notes string, lat, lng float64) (*Order, func(), error) {
 	// ══════════════════════════════════════════════════════════════════
 	// **ونقطةُ التسليم تحكم هنا كما تحكم في العاديّ** (٢٠٢٦-٠٩-١٣)
 	// ══════════════════════════════════════════════════════════════════
@@ -299,13 +299,13 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
 		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
-		                    snap_commission_source, snap_activation_orders)
+		                    snap_commission_source, snap_activation_orders, notes)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders).Scan(&id)
+		snap.CommissionSource, snap.ActivationOrders, notes).Scan(&id)
 	if err != nil {
 		return nil, nil, err
 	}

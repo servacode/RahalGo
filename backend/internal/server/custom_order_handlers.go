@@ -40,6 +40,10 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		Lng         float64 `json:"lng"`
 		// Payment **نقدٌ أو محفظة** — والخصمُ عند التسليم لا عند الطلب.
 		Payment string `json:"payment_method"`
+		// Notes **ملاحظاتٌ للسائق** — `CAF-07`/`CUST-CUSTOM-019`: كانت
+		// تُرسَل ولا تُفكّ فتُهمَل صامتةً، **فيشتري السائقُ بلا تعليماتِ
+		// صاحبها.** فتُفكّ الآن وتُخزَّن كالعاديّ (عمودُ `orders.notes`).
+		Notes string `json:"notes"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -48,7 +52,7 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		o, after, err := s.orders.CreateCustomTx(ctx, q, userIDFrom(r), req.Request,
-			req.AddressText, req.Payment, req.Lat, req.Lng)
+			req.AddressText, req.Payment, req.Notes, req.Lat, req.Lng)
 		if err != nil {
 			return IdempotentBody{}, err
 		}

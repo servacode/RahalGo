@@ -70,7 +70,7 @@ func placeCustom(ctx context.Context, f *fixture, payment string) (*orders.Order
 	defer func() { _ = tx.Rollback(ctx) }()
 	o, _, err := f.svc.CreateCustomTx(ctx, tx, f.customer,
 		"شاورما دجاج من مطعم الأصيل، بلا ثوم", "عنوانُ اختبار الخاصّ",
-		payment, 35.9528, 39.0079)
+		payment, "", 35.9528, 39.0079)
 	if err != nil {
 		return nil, err
 	}

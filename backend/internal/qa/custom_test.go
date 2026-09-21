@@ -98,6 +98,33 @@ func TestCUST_D9_CreationEventRecorded(t *testing.T) {
 	}
 }
 
+// TestCUST_CAF07_NotesStored **ملاحظةُ السائقِ تُحفَظ لا تُهمَل** —
+// `CAF-07` · `CUST-CUSTOM-019`.
+//
+// **كانت `notes` تُرسَل من التطبيق ولا تُفكّ في الخادم فتُهمَل صامتةً** —
+// **فيشتري السائقُ بلا تعليماتِ صاحبها** («بلا ثوم» تضيع). فوجب أن تُخزَّن
+// في `orders.notes` كالعاديّ وتظهر في عرض الطلب.
+func TestCUST_CAF07_NotesStored(t *testing.T) {
+	h := New(t)
+	cust := h.Customer()
+	body := customBody("وجبة من أيّ مطعم")
+	note := "بلا ثوم — واطرق الجرس مرّتين"
+	body["notes"] = note
+	got := h.POSTKey("/api/v1/orders/custom", cust.Token, uniq("k"), body)
+	if got.Code >= 400 {
+		t.Fatalf("CAF-07 تعذّر الإنشاء: %s", got)
+	}
+	oid, _ := got.JSON()["id"].(string)
+	var stored string
+	if err := h.Pool.QueryRow(t.Context(),
+		`SELECT notes FROM orders WHERE id = $1::uuid`, oid).Scan(&stored); err != nil {
+		t.Fatalf("CAF-07 تعذّرت القراءة: %v", err)
+	}
+	if stored != note {
+		t.Fatalf("CAF-07 **الملاحظةُ أُهملت**: خُزّن %q — يُنتظر %q", stored, note)
+	}
+}
+
 // TestCUST_002_EmptyRequestRejected **وطلبٌ خاصٌّ بلا نصٍّ يُردّ.**
 //
 // **وطلبٌ فارغٌ يصل سائقاً يقف حائراً** — ولا أحدَ يعرف ما يُشترى.
