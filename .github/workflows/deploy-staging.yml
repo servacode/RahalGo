@@ -1,0 +1,96 @@
+name: Deploy Staging
+
+# ══════════════════════════════════════════════════════════════════════
+#  Staging-only deployment channel (STAGING ONLY — never production)
+# ══════════════════════════════════════════════════════════════════════
+#
+# Trigger (Claude runs this after tests/preflight + pushing the exact SHA):
+#     gh workflow run deploy-staging.yml -f sha=<40-char-lowercase-sha>
+#
+# Flow: checkout exact SHA -> git archive -> stream over a RESTRICTED deploy
+# key to /usr/local/sbin/rahalgo-staging-deploy on the box -> that root-owned
+# wrapper builds+deploys STAGING only -> this job independently verifies the
+# live staging identity == the requested SHA.
+#
+# Secrets live in the `staging` GitHub Environment ONLY. No production secrets,
+# no production job, no mutable image tag as identity.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Exact 40-char lowercase git SHA to deploy to STAGING"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    env:
+      SHA: ${{ inputs.sha }}
+      SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+      SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      IDENTITY_URL: ${{ secrets.STAGING_IDENTITY_URL }}
+    steps:
+      - name: Validate SHA is exactly 40 lowercase hex
+        run: |
+          if ! printf '%s' "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::Refusing '$SHA' — must be an exact 40-char lowercase git SHA"; exit 1
+          fi
+          echo "Deploying staging SHA: $SHA"
+
+      - name: Checkout the exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+
+      - name: Verify checkout is the exact SHA
+        run: |
+          got="$(git rev-parse HEAD)"
+          [ "$got" = "$SHA" ] || { echo "::error::checkout $got != requested $SHA"; exit 1; }
+
+      - name: Create deterministic source archive of the exact SHA
+        run: git archive --format=tar.gz -o /tmp/rahalgo-src.tgz "$SHA"
+
+      - name: Configure the restricted staging deploy key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.STAGING_DEPLOY_KEY }}" > ~/.ssh/staging_deploy
+          chmod 600 ~/.ssh/staging_deploy
+          # Pinned host key — no blind TOFU.
+          printf '%s\n' "${{ secrets.STAGING_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy to staging via the restricted forced-command wrapper
+        run: |
+          # The deploy key's forced command IS /usr/local/sbin/rahalgo-staging-deploy;
+          # the SHA arrives as $SSH_ORIGINAL_COMMAND, the archive on stdin.
+          ssh -i ~/.ssh/staging_deploy \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o BatchMode=yes \
+              "$SSH_USER@$SSH_HOST" "$SHA" < /tmp/rahalgo-src.tgz
+
+      - name: Independently verify live staging identity == requested SHA
+        run: |
+          body="$(curl -fsS -m 30 "$IDENTITY_URL")" || { echo "::error::staging identity did not answer"; exit 1; }
+          echo "identity: $body"
+          echo "$body" | grep -q '"environment":"staging"' || { echo "::error::live env is not staging"; exit 1; }
+          echo "$body" | grep -q "\"source_commit\":\"$SHA\"" || { echo "::error::live source_commit != $SHA"; exit 1; }
+          echo "$body" | grep -Eq '"migration_version":"[^"]+"' || { echo "::error::no migration_version reported"; exit 1; }
+          echo "Staging verified at $SHA"
+
+      - name: Cleanup key material
+        if: always()
+        run: rm -f ~/.ssh/staging_deploy
