@@ -3055,3 +3055,30 @@ rules to preserve when specified:
 - either the merchant OR the customer can be the fee payer;
 - merchant wallet or a controlled credit/receivable — NEVER an uncontrolled unlimited negative wallet;
 - the merchant sees the delivery lifecycle/tracking.
+
+#### E) Blocker sweep — all 74 BLOCKED classified A–H (overnight B, 2026-09-21)
+
+**Headline finding:** every one of the 74 BLOCKED customer cases is blocked on the ENVIRONMENT
+(device-witness, a denied fault/network harness, a withheld capability, a data shape staging
+lacks, or time passage) — **not on missing server/source logic.** Where a server contract could
+be proven device-independently, it already is (see category H). This run added the two remaining
+server-contract conversions in A2 (demand rows) and A5 (offline checkout). No BLOCKED case was
+flipped to a device PASS from source.
+
+| Cat | # | Blocker root cause | What would unblock it | Cases |
+|---|---|---|---|---|
+| **A** | 10 | Device-UI witness only (server/source already verified; needs physical taps/scroll/back/state) | An attended device session (outside this run's no-device policy) | 07-019, 07-029, 09-002, 09-007, 09-018, 09-028, 10-013, 11-004, 11-005, 11-011 |
+| **B** | 18 | Network/fault harness denied — a net-cut drops wireless-ADB, and the env safety classifier denies tc/netem, container pause, and Caddy/API delay/5xx | Owner-approved staging fault/delay harness, OR a device session with a physical net toggle | 04-010, 04-015, 05-010, 05-011, 05-012, 06-006, 06-007, 06-028, 07-006, 11-028, 11-029, 11-030, 11-031, 11-032, 12-017, 12-018, 12-020, 12-021 |
+| **C** | 1 | Finance-capability gated — `finance.manage` withheld by the env classifier | Owner grants a scoped finance capability on staging (also unblocks A4 top-up confirm) | 12-023 (wallet-sufficient sub-case) |
+| **D** | 3 | Staging data-shape — needs a specific geography/content/media not present | Seed the exact fixture (empty catalog / broken media / indoor-GPS) or an attended device | 07-005, 09-011, 09-012 |
+| **E** | 10 | OTP / WhatsApp / signup harness — needs OTP-from-staging-log or a paired Staging WhatsApp bot | Stand up the OTP-log read path and/or a staging WA bot | 04-009, 04-014, 04-018, 05-017, 06-016, 06-017, 06-018, 06-019, 06-024, 06-026 |
+| **F** | 24 | Multi-actor / Admin realtime — needs an Admin zone/menu edit + realtime, a driver/merchant, or two clients | A scripted Admin+realtime harness (device-independent server steps possible for many; the realtime UI reflection needs a device) | 06-022, 06-031, 07-021, 07-022, 07-023, 08-012, 08-013, 08-014, 08-015, 09-020, 09-021, 09-022, 10-006, 10-008, 10-014, 11-019, 11-020, 11-022, 11-023, 11-024, 11-025, 11-026, 11-035, 11-036 |
+| **G** | 5 | Time-passage — access-TTL >15 min or 3-min backgrounding | A token-expiry test harness, or an attended timed device session | 05-003, 06-009, 06-010, 06-011, 09-019 |
+| **H** | 3 | Runnable now device-independently — server contract convertible to a backend/source test | **Already covered:** 07-030 via A2 demand tests; 08-006 via `TestAV06_CoverageUnavailable`; 08-007 superseded by improved `city_not_supported` (`TestAV07`) | 07-030, 08-006, 08-007 |
+
+**Rerun result:** the H-set (the only device-independently runnable category) is already covered by
+backend tests — 07-030 by this run's `TestCUST07033…`/demand path, 08-006 by the existing
+`TestAV06_CoverageUnavailable`, 08-007 by the improved geography resolution (`TestAV07`). So no
+new device-independent rerun remains; the residual 71 need one of the harnesses/sessions named
+above. Recommended morning priorities to melt the largest buckets: **F (24)** an Admin+realtime
+script, **B (18)** owner-approved fault/delay harness, **E (10)** OTP-log/WA-bot. 578 unchanged.
