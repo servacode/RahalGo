@@ -733,7 +733,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-SUP-009 | Support | Complaint once / window / not on running order | As 008 | Complain twice; after window; on running order | Explicit denial each | PASS — TestComplaint_OnlyOnce/WindowPasses/NotOnRunningOrder/Opens (internal/support، ok 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
 | CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | PASS — «الشكاوى والبلاغات» تعرض الحالة (محاكي 2026-09-21) | `PASS` | — | online | `/my/tickets` | — | — | — | PRQ-2 is IN this release (Owner decision §40.15-1) — see CUST-SUP-013/014 |
 | CUST-SUP-011 | Support | Foreign order complaint denied | Two test customers (A, B) · API client with each token | B complains on A's order | Denied without leakage | PASS — شكوى على طلبِ غيره تُردّ: TestVAL_040_ForeignOrderComplaintCode (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestVAL_040_ForeignOrderComplaintCode` |
-| CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Warning reaches the customer (Admin contract: «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله») in safe customer-facing wording (Owner decision §40.1-2) | — | `NOT_TESTED` | — | online | `/my/warnings` | — | — | — | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
+| CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Warning reaches the customer (Admin contract: «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله») in safe customer-facing wording (Owner decision §40.1-2) | PASS — CAF-19 مغلق: issueWarning يُنشئ إشعارَ حساب عربيّاً (warningOnYou + السبب) فيظهر في الصندوق (الجرس يطلب كلَّ الأنواع، عرضُه مشهودٌ في 15-017)؛ ‎/my/warnings معزولٌ بالمستخدم. TestCAF19_WarningReachesCustomerAndIsIsolated + شاهد سالب | `PASS` | — | online | `/my/warnings` | — | — | — | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
 | CUST-SUP-013 | Support | Customer sees replies on own ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · ticket with an Admin reply | Open the ticket | Replies visible in order, customer-facing wording | — | `NOT_TESTED` | — | online | ticket replies | — | — | — | Added by Owner decision §40.15-1. Functional gap: replies exist only under `/admin/tickets/{id}/replies`; `/my/tickets` returns no replies (`server/my_tickets.go:33`) — expected FAIL until built |
 | CUST-SUP-014 | Support | Customer replies to the same ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · open ticket | Write a reply; send | Reply stored on the same ticket and visible to Admin; closed ticket per PRQ-2 contract | — | `NOT_TESTED` | — | online | ticket replies | — | — | — | Added by Owner decision §40.15-1. Functional gap: no customer reply endpoint or UI — expected FAIL until built |
 
@@ -1267,7 +1267,7 @@ until ADB is available — not an acceptance blocker.
 | 24 | CUST-13 | 29 | 24 | 5 | 8 | 0 | 21 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 4 | 0 | 16 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 12 | 3 | 11 | 0 | 0 |
-| 26A | CUST-SUP | 14 | 0 | 14 | 7 | 0 | 7 | 0 | 0 |
+| 26A | CUST-SUP | 14 | 0 | 14 | 6 | 0 | 8 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 3 | 0 | 11 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **125** | **9** | **371** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **124** | **9** | **372** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1911,7 +1911,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | CAF-16 | NOT_A_DEFECT (signup part → CUST-DEF-001) | — | no | launch flags on client | server gates orders/custom/signup-request and answers with explicit `launch_closed` + Owner notice |
 | CAF-17 | CONFIRMED | P3 | no | cart · `CartScreen.kt:518,587` | promo and payment choice in memory only; reset visibly after process death |
 | CAF-18 | **CLOSED (2026-09-21)** | P3 | no | error texts · `ui/ApiErrors.kt` | `in_progress` → CUST-DEF-002; `not_found`/`comms_closed`/`comms_no_driver` now mapped to specific Arabic (CUST-20-019, ApiErrorsTest + `check-app-error-codes` = 101 codes all Arabic) |
-| CAF-19 | CONFIRMED | P2 | no | warnings · `/my/warnings` | Admin panel promises «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله», but `issueWarning` sends no notification and the app never shows warnings → the customer is never told. Warnings are user-addressed by design (reason + Admin note), so decision 40.1-2 governs **how** they are worded, not **whether** they reach the customer |
+| CAF-19 | **CLOSED (verified 2026-09-21)** | P2 | no | warnings · `/my/warnings` | issueWarning creates an Arabic `account` notification (surfaced by the bell inbox, display witnessed CUST-15-017) + `/my/warnings` is user-isolated; register entry was stale. Regression TestCAF19_WarningReachesCustomerAndIsIsolated |
 | CAF-20 | CONFIRMED | INFO | no | analytics · `app_opens.go` | every `/public/home` call counts an open; home reloads on every realtime frame → inflated |
 | CAF-21 | CONFIRMED | P3 | no | guest cart · `CartScreen.kt:202` | address card opens the sheet for guests; geo endpoints need auth |
 | CAF-22 | NOT_A_DEFECT | — | no | reset / verify | test dependency: `/auth/wa/ticket` needs the Staging WhatsApp bot |
