@@ -2902,9 +2902,14 @@ assumptions.**
   now distinguishes out-of-coverage (`availability?.takeIf { !it.available }`) and renders
   `ServiceBlockNotice` (explicit reason + notify-me CTA, CTA suppressed for discovery points per
   CUST-07-030) instead of `shop_market_empty`; in-coverage empty still shows "coming soon". New
-  `CoverageEmptyStateTest` (4 tests) + negative witness. **Final on-device witness of the
-  out-of-coverage shop screen still PENDING** (staging serviceability witness); do not mark a
-  device PASS from source.
+  `CoverageEmptyStateTest` (4 tests) + negative witness. **Device-witness attempted 2026-09-21**
+  (signed-in seeded QA customer, added a Damascus out-of-coverage default address via the public
+  API): the shop catalog is **location-independent** (shows the Raqqa catalog regardless of the
+  delivery point — coverage is a cart/overlay check, and the device's discovery GPS is physically
+  in-coverage Raqqa), so the *empty*-out-of-coverage shop feed that the A2 branch targets is **not
+  reproducible on current staging data** (would need a geography with zero merchants, = CUST-09-012
+  category-D blocker). The empty-state logic stays proven by source + `CoverageEmptyStateTest`.
+  Damascus test address cleaned up (البيت restored default). Do not mark a device PASS from source.
 - **CUST-07-030 (demand row creation)** — the API-level demand-row creation is now exercised by
   the backend demand tests (POST `/api/v1/demand` → row); the on-device button witness remains
   the only open item. Still BLOCKED for device acceptance.
@@ -2940,8 +2945,8 @@ backend stays final (`CUST-12-023`, 409 `insufficient_balance`). Verification:
 
 | Addendum case | Status |
 |---|---|
-| CUST-WAL-011 (option disabled when insufficient) | **source + automated PASS** — device witness of the disabled state PENDING (device auto-locked mid-batch; needs owner PIN) |
-| CUST-WAL-012 (balance + reason shown) | **source + automated PASS** — same device-witness pending |
+| CUST-WAL-011 (option disabled when insufficient) | **PASS — DEVICE-WITNESSED 2026-09-21** (SM-A525F, build 1.1.0, seeded QA customer, wallet balance 0). Cart 1× ساندويش شاورما دجاج = 26,050 > balance 0 → the «من محفظتي» option's clickable node is `enabled="false"` and tapping it changed nothing (not selectable), while «نقدا عند التسليم» is `clickable/enabled`. Text-based uiautomator evidence (no screenshots). |
+| CUST-WAL-012 (balance + reason shown) | **PASS — DEVICE-WITNESSED 2026-09-21** — checkout shows «الرصيد غير كافٍ لإتمام هذا الطلب» + «رصيد المحفظة: 0 ل.س» on the same screen. |
 | CUST-WAL-013 (exact-boundary `==` valid) | **source + automated PASS** (strict `<`) — live sufficient/boundary witness **BLOCKED** (authoritative top-up needs `finance.manage`, classifier-blocked) |
 | CUST-WAL-014 (selectable after top-up/refresh) | **source PASS** (re-evaluates from observed `ShellViewModel.balance` + quote) — live witness **BLOCKED** (no safe top-up) |
 
