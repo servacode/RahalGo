@@ -2902,14 +2902,15 @@ assumptions.**
   now distinguishes out-of-coverage (`availability?.takeIf { !it.available }`) and renders
   `ServiceBlockNotice` (explicit reason + notify-me CTA, CTA suppressed for discovery points per
   CUST-07-030) instead of `shop_market_empty`; in-coverage empty still shows "coming soon". New
-  `CoverageEmptyStateTest` (4 tests) + negative witness. **Device-witness attempted 2026-09-21**
-  (signed-in seeded QA customer, added a Damascus out-of-coverage default address via the public
-  API): the shop catalog is **location-independent** (shows the Raqqa catalog regardless of the
-  delivery point — coverage is a cart/overlay check, and the device's discovery GPS is physically
-  in-coverage Raqqa), so the *empty*-out-of-coverage shop feed that the A2 branch targets is **not
-  reproducible on current staging data** (would need a geography with zero merchants, = CUST-09-012
-  category-D blocker). The empty-state logic stays proven by source + `CoverageEmptyStateTest`.
-  Damascus test address cleaned up (البيت restored default). Do not mark a device PASS from source.
+  `CoverageEmptyStateTest` (4 tests) + negative witness. **CORRECTION (2026-09-21):** an earlier
+  device note here claimed the catalog is "location-independent" — that was **wrong**, made while
+  the app had silently dropped to **guest mode** (session lost after force-stop/relaunch), so it
+  used device GPS (physically Raqqa). The catalog is in fact **geography-scoped** — see §J geography
+  audit: backend `/public/sections/:id/items?lat=Damascus` → **0 items**, `?lat=Raqqa` → **5 items**.
+  A signed-in Damascus-default customer's app sends `BrowseScope`=Damascus → 0 items → the A2 empty
+  branch → `ServiceBlockNotice`. The empty-state logic stays proven by source + `CoverageEmptyStateTest`
+  + backend geo-filter; a clean signed-in on-device witness is still pending (device automation hit
+  session-drop + a WhatsApp-launch anomaly, so it was stopped). Do not mark a device PASS from source.
 - **CUST-07-030 (demand row creation)** — the API-level demand-row creation is now exercised by
   the backend demand tests (POST `/api/v1/demand` → row); the on-device button witness remains
   the only open item. Still BLOCKED for device acceptance.
@@ -3202,3 +3203,39 @@ detail + recommended fixes + morning device-witness queue are in `docs/WORKLOG.m
 swallowed network call" policy. **External-delivery (E+F) driver-side confirmed not built** (zero
 `recipient_*`/`kind='external'`), but the primitives (order `kind`, custom+agree, written address+nav,
 proof, cash box, server-side phone gating) are a solid foundation. 578 unchanged; Production=0.
+
+#### J) Geography / BrowseScope audit — Damascus/Raqqa catalog observation (2026-09-21)
+
+**Verdict: NOT a defect. The earlier observation was a guest-session test artifact.** Answering the
+owner's six questions from source + live API + device:
+1. **What sets BrowseScope on startup?** `CityGate` (`MainActivity.kt:341`) via
+   `LaunchedEffect(loaded, chosen, address, cities, here)` → `CityScope.resolve(address, cities)` →
+   `BrowseScope.set(lat,lng)`.
+2. **Does changing/defaulting an address update BrowseScope?** Yes — `CityGate.address =
+   selectedAddress(accountVm.state.addresses)` = the `isDefault` address; the effect re-runs on
+   `address` change → resolve → `BrowseScope.set` → `onChanged = Refresh.bump()` → all browse
+   screens reload (`ShopViewModel` observes `Refresh.tick`).
+3. **Does default address outrank device GPS at runtime?** Yes, in code: `resolve` returns `chosen`
+   (manual city) → then `address` (default, lat/lng≠0) → then `LastPoint` (GPS) → single city → null.
+   Only a manual city choice outranks the default address (matches the owner contract).
+4. **Do the catalog calls carry lat/lng?** Yes — `CustomerApi` appends `BrowseScope.query()` to
+   `/public/home`, `/public/sections/:id/items`, `/public/search/items`, `/public/offers`.
+5. **Does the backend filter by those coords?** Yes (verified live): `/public/sections/:id/items`
+   → **5 items at Raqqa (35.9506,39.0094)**, **0 items at Damascus (33.5138,36.2765)**.
+6. **Root cause of the Raqqa observation = (b) app state, and specifically an invalid test:** the
+   customer app had silently dropped to **guest mode** (session lost across my force-stop/relaunch
+   cycles), so with no signed-in account there is no default address and it correctly falls back to
+   **device GPS = physically Raqqa** → Raqqa catalog. **Not** (a) staging data, **not** (c) backend
+   gap, **not** (d). A properly signed-in Damascus-default customer sends `BrowseScope`=Damascus →
+   backend 0 items → the A2 empty branch → `ServiceBlockNotice`.
+
+**Owner product contract check:** covered Raqqa customer → Raqqa catalog ✓; out-of-coverage Damascus
+customer → 0 orderable items + (A2) explicit not-covered notice ✓ (backend + source proven); checkout
+uses `contextPoint(address, discovery)` (the confirmed address) → blocked out-of-zone ✓ (source).
+**No CUST defect assigned.** Open item: a clean signed-in on-device witness of the Damascus-default
+empty state is still pending — device automation hit repeated session-drops and a **safety anomaly**
+(a shop-card tap launched WhatsApp Business `com.whatsapp.w4b`; left immediately, no interaction, per
+policy), so on-device probing was stopped. Two minor observations to watch (not defects): (i) on cold
+start `accountVm.refresh()` may briefly race session-restore, showing a GPS-based catalog until
+addresses load, then self-correcting via `CityGate`; (ii) session persistence across app restart
+should be re-verified (my repeated force-stops may have caused the guest drop).
