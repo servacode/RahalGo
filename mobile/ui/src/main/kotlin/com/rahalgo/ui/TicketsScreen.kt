@@ -1,5 +1,6 @@
 package com.rahalgo.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +72,8 @@ import com.rahalgo.design.Rahal
  * و`Ticket` للزبون، **ولو أخذت الشاشةُ أحدَها لَما استعملها الآخر.**
  */
 data class TicketRow(
+    /** **معرّفُه للفتح** — يُمرَّر إلى `onOpen`، ولا يُعرَض. فارغٌ يعني لا فتح. */
+    val id: String = "",
     /** **رقمُه كما يُعرَف** — «#١٢» أو معرّفٌ نصّيّ. */
     val key: String,
     /** **العنوان مترجَماً** — سببُ البلاغ أو موضوعُ الشكوى. */
@@ -100,6 +103,8 @@ fun TicketsScreen(
     mineEmpty: String,
     againstMe: List<TicketRow>? = null,
     againstMeEmpty: String = "",
+    /** **يُفتَح صفٌّ فيُقرأ خيطُه** — فارغٌ يبقي الصفوفَ غيرَ قابلةٍ للفتح. */
+    onOpen: ((TicketRow) -> Unit)? = null,
 ) {
     // **والافتتاحُ على «عليّ»** — ما رُفع عليه أعجلُ ممّا رفعه:
     // **الأوّلُ قد يُنذَر به والثاني ينتظر جواباً.**
@@ -131,15 +136,21 @@ fun TicketsScreen(
         Card {
             list.forEachIndexed { i, row ->
                 if (i > 0) HorizontalDivider()
-                TicketLine(row)
+                TicketLine(row, onOpen)
             }
         }
     }
 }
 
 @Composable
-private fun TicketLine(row: TicketRow) {
-    Column(Modifier.fillMaxWidth()) {
+private fun TicketLine(row: TicketRow, onOpen: ((TicketRow) -> Unit)?) {
+    // **ويُفتَح إن كان له معرّفٌ ومُستقبِل** — وإلّا بقي سطراً يُقرأ (المتجر/السائق).
+    val open = if (onOpen != null && row.id.isNotBlank()) ({ onOpen(row) }) else null
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .then(if (open != null) Modifier.clickable(onClick = open) else Modifier),
+    ) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

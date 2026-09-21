@@ -29,7 +29,60 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/support"
 )
+
+// ══════════════════════════════════════════════════════════════════════
+// **ما يراه الزبونُ من تذكرته — أبيضُ لا صفَّ المكتب الكامل** (`SUP-013`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **صفُّ `support.Ticket` يحمل ما لمكتب المنصّة**: هاتفُ الزبون واسمُه،
+// ومعرّفُ من اشتُكي عليه، **ومعرّفاتُ من ردّ خاماً.** **فيُنسَخ منه ما
+// يخصّ صاحبَها وحدَه** — الموضوعُ والحالُ والحلُّ ورقمُ الطلب والردود.
+//
+// **وكلُّ ردٍّ يُوسَم `mine` في الخادم** — **فلا يقارن العميلُ معرّفاتٍ
+// ليعرف أهو رَدُّه أم ردُّ المنصّة**، **ولا يُكشَف له معرّفُ موظّفٍ ردّ.**
+type myTicketReplyView struct {
+	ID   int64  `json:"id"`
+	Body string `json:"body"`
+	// Mine **أهذا ردُّ صاحبِها أم ردُّ المنصّة؟** — يُحسَب في الخادم.
+	Mine      bool      `json:"mine"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type myTicketView struct {
+	ID          string              `json:"id"`
+	Number      int64               `json:"number"`
+	Subject     string              `json:"subject"`
+	Status      string              `json:"status"`
+	Resolution  string              `json:"resolution"`
+	OrderNumber *int64              `json:"order_number"`
+	CreatedAt   time.Time           `json:"created_at"`
+	Replies     []myTicketReplyView `json:"replies"`
+}
+
+// customerTicketView يبني ما يراه صاحبُ التذكرة — بوسم كلِّ ردٍّ.
+func customerTicketView(t *support.Ticket, viewerID string) myTicketView {
+	v := myTicketView{
+		ID:          t.ID,
+		Number:      t.Number,
+		Subject:     t.Subject,
+		Status:      t.Status,
+		Resolution:  t.Resolution,
+		OrderNumber: t.OrderNumber,
+		CreatedAt:   t.CreatedAt,
+		Replies:     make([]myTicketReplyView, 0, len(t.Replies)),
+	}
+	for _, r := range t.Replies {
+		v.Replies = append(v.Replies, myTicketReplyView{
+			ID:        r.ID,
+			Body:      r.Body,
+			Mine:      r.AuthorID != nil && *r.AuthorID == viewerID,
+			CreatedAt: r.CreatedAt,
+		})
+	}
+	return v
+}
 
 // handleMyTickets شكاوى الزبون نفسِه — الأحدثُ أوّلاً.
 func (s *Server) handleMyTickets(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +144,7 @@ func (s *Server) handleMyTicketDetail(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, t)
+	httpx.JSON(w, http.StatusOK, customerTicketView(t, userIDFrom(r)))
 }
 
 // handleMyTicketReply **يردّ على تذكرته ما دامت مفتوحة** (`CUST-SUP-014`، PRQ-2).
@@ -126,5 +179,5 @@ func (s *Server) handleMyTicketReply(w http.ResponseWriter, r *http.Request) {
 		Kind: notifications.KindTicket, Title: notifTitles.ticketReply, Body: t.Subject,
 		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
 	})
-	httpx.JSON(w, http.StatusOK, t)
+	httpx.JSON(w, http.StatusOK, customerTicketView(t, userIDFrom(r)))
 }

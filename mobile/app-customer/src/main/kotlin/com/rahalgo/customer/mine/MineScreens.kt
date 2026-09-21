@@ -53,8 +53,11 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenPad
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.money
+import com.rahalgo.ui.TicketMessage
 import com.rahalgo.ui.TicketRow
+import com.rahalgo.ui.TicketThreadScreen
 import com.rahalgo.ui.TicketsScreen
+import androidx.activity.compose.BackHandler
 import com.rahalgo.ui.RahalButton
 
 /**
@@ -456,6 +459,17 @@ private fun Invite(vm: MineViewModel) {
  */
 @Composable
 private fun Tickets(vm: MineViewModel) {
+    // ══════════════════════════════════════════════════════════════════
+    // **شكوًى مفتوحةٌ ⇒ خيطُها** (`SUP-013`/`014`) — والرجوعُ يعود للقائمة.
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وزرُّ النظام يُغلق الخيطَ لا القسمَ كلَّه** — يسبق حارسَ الطبقة الأعلى.
+    if (vm.openTicketId != null) {
+        BackHandler { vm.closeTicket() }
+        TicketDetail(vm)
+        return
+    }
+
     val list = vm.tickets
     if (list == null) {
         LoadState(vm.busy, vm.error) { vm.open(CustomerItems.TICKETS, force = true) }
@@ -471,6 +485,7 @@ private fun Tickets(vm: MineViewModel) {
         hint = stringResource(R.string.soon_tickets),
         mine = list.map { t ->
             TicketRow(
+                id = t.id,
                 key = "#" + t.orderCode.ifEmpty { t.id.take(6) },
                 title = t.subject.ifEmpty { t.reason },
                 status = t.status,
@@ -478,6 +493,37 @@ private fun Tickets(vm: MineViewModel) {
             )
         },
         mineEmpty = stringResource(R.string.tkt_none),
+        onOpen = { row -> vm.openTicket(row.id) },
+    )
+}
+
+/**
+ * **خيطُ شكوًى بعينها** — تحميلُه وفشلُه كسائر الأقسام، ثمّ عرضُه.
+ */
+@Composable
+private fun TicketDetail(vm: MineViewModel) {
+    val t = vm.ticketDetail
+    val id = vm.openTicketId
+    if (t == null) {
+        // **تحميلٌ أو فشلٌ بإعادة** — والإعادةُ تُعيد جلبَ الخيط نفسِه.
+        LoadState(vm.detailBusy, vm.detailError) { id?.let { vm.openTicket(it, force = true) } }
+        return
+    }
+    TicketThreadScreen(
+        subject = t.subject,
+        status = t.status,
+        createdAt = t.createdAt,
+        messages = t.replies.map { r ->
+            TicketMessage(body = r.body, mine = r.mine, at = r.createdAt)
+        },
+        emptyReplies = stringResource(R.string.tik_no_replies),
+        canReply = com.rahalgo.ui.ticketCanReply(t.status),
+        draft = vm.replyDraft,
+        onDraftChange = vm::editReplyDraft,
+        onSend = vm::sendReply,
+        sending = vm.replying,
+        sendError = vm.detailError,
+        onBack = vm::closeTicket,
     )
 }
 

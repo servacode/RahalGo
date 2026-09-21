@@ -491,12 +491,16 @@ data class Ticket(
     val resolution: String = "",
 )
 
-/** **ردٌّ على تذكرة** — `CUST-SUP-013`/`014`. */
+/** **ردٌّ على تذكرة** — `CUST-SUP-013`/`014`.
+ *
+ * **و`mine` من الخادم لا من مقارنةِ معرّفات**: أهذا ردُّ صاحبِها أم ردُّ
+ * المنصّة؟ يحسمه المحرّكُ، **فلا يُكشَف للعميل معرّفُ موظّفٍ ردّ.**
+ */
 @Serializable
 data class TicketReply(
     val id: Long = 0,
-    @SerialName("author_id") val authorId: String? = null,
     val body: String = "",
+    val mine: Boolean = false,
     @SerialName("created_at") val createdAt: String = "",
 )
 
@@ -508,6 +512,8 @@ data class TicketDetail(
     val subject: String = "",
     val status: String = "",
     val resolution: String = "",
+    @SerialName("order_number") val orderNumber: Long? = null,
+    @SerialName("created_at") val createdAt: String = "",
     val replies: List<TicketReply> = emptyList(),
 )
 

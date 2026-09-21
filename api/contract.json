@@ -5681,7 +5681,7 @@
       "auth": true,
       "response": [
         {
-          "name": "@t",
+          "name": "@customerTicketView",
           "type": "unknown"
         }
       ],
@@ -5702,7 +5702,7 @@
       ],
       "response": [
         {
-          "name": "@t",
+          "name": "@customerTicketView",
           "type": "unknown"
         }
       ],

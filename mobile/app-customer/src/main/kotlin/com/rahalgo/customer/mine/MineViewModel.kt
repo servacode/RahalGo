@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.customer.CustomerItems
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.Ticket
+import com.rahalgo.shared.customer.TicketDetail
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Offer
 import com.rahalgo.shared.model.Referral
@@ -147,6 +148,85 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
 
     var tickets by mutableStateOf<List<Ticket>?>(null)
         private set
+
+    // ══════════════════════════════════════════════════════════════════
+    // **تفصيلُ شكوًى بعينها وخيطُ ردودها** (`SUP-013`/`014`، PRQ-2)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ومن فتح شكوى يرى جوابَ المنصّة ويردّ** — لا رقماً بلا حال.
+
+    /** **الشكوى المفتوحةُ الآن** — فارغٌ يعني «القائمةُ معروضة». */
+    var openTicketId by mutableStateOf<String?>(null)
+        private set
+
+    var ticketDetail by mutableStateOf<TicketDetail?>(null)
+        private set
+
+    var detailBusy by mutableStateOf(false)
+        private set
+
+    var detailError by mutableStateOf("")
+        private set
+
+    /** **مسوّدةُ الردّ** — تُقرأ وتُكتب من الشاشة. */
+    var replyDraft by mutableStateOf("")
+        private set
+
+    var replying by mutableStateOf(false)
+        private set
+
+    /** **يفتح شكوى بردودها** — بجلبٍ جديدٍ إن طُلب أو إن كانت غيرَها. */
+    fun openTicket(id: String, force: Boolean = false) {
+        openTicketId = id
+        if (!force && ticketDetail?.id == id) return
+        ticketDetail = null
+        detailError = ""
+        replyDraft = ""
+        detailBusy = true
+        viewModelScope.launch {
+            try {
+                ticketDetail = api.myTicket(id)
+                detailError = ""
+            } catch (e: Exception) {
+                detailError = apiError(getApplication(), e)
+            }
+            detailBusy = false
+        }
+    }
+
+    /** **يعود إلى القائمة** — ويُنسى ما فُتح. */
+    fun closeTicket() {
+        openTicketId = null
+        ticketDetail = null
+        detailError = ""
+        replyDraft = ""
+    }
+
+    fun editReplyDraft(s: String) {
+        replyDraft = s
+    }
+
+    /**
+     * **يردّ على الشكوى المفتوحة** — **والخيطُ يُستبدَل بما يردّه الخادم**،
+     * فيظهر الردُّ مرّةً واحدةً ولا يتكرّر بإعادةٍ أو إنعاش.
+     */
+    fun sendReply() {
+        val id = openTicketId ?: return
+        val body = replyDraft.trim()
+        if (replying || body.isEmpty()) return
+        replying = true
+        viewModelScope.launch {
+            try {
+                ticketDetail = api.replyTicket(id, body)
+                replyDraft = ""
+                detailError = ""
+            } catch (e: Exception) {
+                // **كمحلولةٍ لا يُردُّ عليها** (`409 ticket_resolved`) — يُقال صريحاً.
+                detailError = apiError(getApplication(), e)
+            }
+            replying = false
+        }
+    }
 
     /** **يجلب ما يلزم هذا البندَ وحدَه** — ولا يُعاد ما وصل إلّا بطلب. */
     fun open(key: String, force: Boolean = false) {

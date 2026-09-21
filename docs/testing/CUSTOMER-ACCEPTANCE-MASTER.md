@@ -656,7 +656,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-026 | Submit | WhatsApp verification requirement on normal orders (added) | Signed-in test customer · Staging · SM-A525F · valid default address · unverified · `auth.require_whatsapp` policy | Submit | Behaviour per policy (false today → allowed) | PASS — واتساب مُلزَمٌ على الطلب العادي: D8 مغلق ومنشورٌ للإنتاج (023d9d4c) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) | Added: both paths now enforce WhatsApp — D8 CLOSED, deployed to Production (023d9d4c). See §40.24 |
 | CUST-13-027 | Submit | Cash-blocked customer (added) | Test customer cash-blocked | Submit cash order | Explicit denial | PASS — منعُ الدفع نقداً للمحظور: D6 مغلق ومنشور (cd33b173) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) | Added: both paths now check the cash ban — D6 CLOSED, deployed to Production (cd33b173). See §40.22 |
 | CUST-13-028 | Submit | 409 `in_progress` never leads to a duplicate order (added) | Harness: slow first submit (> client 20 s timeout, < server 30 s) | Submit; after client timeout tap send again while the first is still running; then tap again | Retry key kept; the user is told the order is still processing; exactly one order | PASS — 409 in_progress لا يُنشئ تكراراً: CUST-DEF-002 مغلق (§40.25) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | slow | orders +1 exactly | — | CUST-DEF-002 (CLOSED · device witness PASS §40.25.2) | `CustDef002Test` (`ui/…/CustDef002Test.kt`) · `ApiErrorsTest.inProgressResolvesToWaitNotConnectionFailure` | Added. CAF-02 — CUST-DEF-002 SOURCE FIX CLOSED (§40.25): `isDecided` keeps the key on 409 `in_progress`/`idempotency_reclaimed`, `in_progress` now maps to «قيد التنفيذ». Guarded by `CustDef002Test` + `ApiErrorsTest`. DEVICE WITNESS PASS (§40.25.2): on SM-A525F the same attempt key survived timeout + live 409 in_progress, the still-processing message «العملية قيد التنفيذ…» showed (not «تعذر الاتصال»), and exactly one order (#1062) was created under that key |
-| CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | A different cart under the same key is refused with `409 idempotency_key_reused` — never a silent replay of the old order and never a silent submit of the edited cart; the client keeps the uncertain attempt and guides the user to «طلباتي» | PASS — same key + edited body ⇒ 409 idempotency_key_reused, exactly one order, no silent replay (go qa suite, 2026-09-21) | `PASS` | — | cut | order items vs cart | — | CAF-02 (body fingerprint §40.27) | `TestCAF02_SameKeyDifferentBodyRejected` · `TestIDEM_SameKeyDifferentPayload` · `Caf02ReuseTest` | Added. CAF-02 CLOSED: server SHA-256 request-fingerprint on `idempotency_keys` (migration 0159) refuses same-key/different-body with 409 `idempotency_key_reused` (reordered cart replays; NULL-legacy compat; normal+custom). Client: `isDecided` keeps the key on `idempotency_key_reused`, and `acknowledgeUncertain` mints a fresh key only on explicit user acknowledgement (PC-8). DB-witnessed (Go qa) + unit-witnessed (`Caf02ReuseTest`) + negative witness (both). No ledger/wallet change |
+| CUST-13-029 | Submit | Retry after cart edit does not replay the old order (added) | Submit failed by network (key kept) | Edit cart; submit | **Server invariant**: a materially different request under the same idempotency key must not silently replay/execute as identical — it is refused with `409 idempotency_key_reused`; no second order, no silent mismatch between cart and created order | PASS — same key + edited body ⇒ 409 idempotency_key_reused, exactly one order, no silent replay (go qa suite, 2026-09-21) | `PASS` | — | cut | order items vs cart | — | CAF-02 (body fingerprint §40.27) | `TestCAF02_SameKeyDifferentBodyRejected` · `TestIDEM_SameKeyDifferentPayload` | **Scope verified 2026-09-21**: this case's pass-criterion is the SERVER invariant (no silent replay/execute of a different body under a reused key), which is DB/server-witnessed by the Go qa tests ⇒ PASS. CAF-02 CLOSED: server SHA-256 request-fingerprint on `idempotency_keys` (migration 0159), 409 `idempotency_key_reused` (reordered cart replays; NULL-legacy compat; normal+custom); negative-witnessed. The additional **client** uncertain-attempt UX (PC-8 + explicit `acknowledgeUncertain`, `Caf02ReuseTest`, §40.27) is unit-witnessed; its on-device UX is tracked SEPARATELY in the staging live-witness queue (item F) and is not a pass-gate of this server case. No ledger/wallet change |
 
 ## 25 · CUST-CUSTOM — Custom order «طلب خاص»
 
@@ -734,8 +734,8 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | PASS — «الشكاوى والبلاغات» تعرض الحالة (محاكي 2026-09-21) | `PASS` | — | online | `/my/tickets` | — | — | — | PRQ-2 is IN this release (Owner decision §40.15-1) — see CUST-SUP-013/014 |
 | CUST-SUP-011 | Support | Foreign order complaint denied | Two test customers (A, B) · API client with each token | B complains on A's order | Denied without leakage | PASS — شكوى على طلبِ غيره تُردّ: TestVAL_040_ForeignOrderComplaintCode (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestVAL_040_ForeignOrderComplaintCode` |
 | CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Warning reaches the customer (Admin contract: «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله») in safe customer-facing wording (Owner decision §40.1-2) | PASS — CAF-19 مغلق: issueWarning يُنشئ إشعارَ حساب عربيّاً (warningOnYou + السبب) فيظهر في الصندوق (الجرس يطلب كلَّ الأنواع، عرضُه مشهودٌ في 15-017)؛ ‎/my/warnings معزولٌ بالمستخدم. TestCAF19_WarningReachesCustomerAndIsIsolated + شاهد سالب | `PASS` | — | online | `/my/warnings` | — | — | — | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
-| CUST-SUP-013 | Support | Customer sees replies on own ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · ticket with an Admin reply | Open the ticket | Replies visible in order, customer-facing wording | SOURCE/AUTOMATED FIXED (PRQ-2 backend+API): GET /my/tickets/{id} بردوده (معزولٌ بالملكيّة) + CustomerApi.myTicket؛ TestPRQ2_CustomerTicketRepliesAndIsolation + شاهد سالب. PENDING شاشةُ التفصيل + STAGING LIVE WITNESS | `NOT_TESTED` | — | online | ticket replies | — | — | — | Added by Owner decision §40.15-1. Functional gap: replies exist only under `/admin/tickets/{id}/replies`; `/my/tickets` returns no replies (`server/my_tickets.go:33`) — expected FAIL until built |
-| CUST-SUP-014 | Support | Customer replies to the same ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · open ticket | Write a reply; send | Reply stored on the same ticket and visible to Admin; closed ticket per PRQ-2 contract | SOURCE/AUTOMATED FIXED (PRQ-2 backend+API): POST /my/tickets/{id}/replies (ملكيّة + حالٌ: المحلولة تُردّ 409 ticket_resolved) + CustomerApi.replyTicket؛ TestPRQ2 + شاهد سالب. PENDING مُدخِلُ الردّ + STAGING LIVE WITNESS | `NOT_TESTED` | — | online | ticket replies | — | — | — | Added by Owner decision §40.15-1. Functional gap: no customer reply endpoint or UI — expected FAIL until built |
+| CUST-SUP-013 | Support | Customer sees replies on own ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · ticket with an Admin reply | Open the ticket | Replies visible in order, customer-facing wording | SOURCE/AUTOMATED FIXED (backend+API+UI): GET /my/tickets/{id} بردوده معزولاً بالملكيّة، بردٍّ مبيَّض (`mine` من الخادم، لا كشفَ لمعرّف موظّف)؛ شاشةُ التفصيل `TicketThreadScreen` (خيطٌ زمنيٌّ، تمييزُ الطرفين، حالُ فراغٍ/تحميلٍ/فشلٍ بإعادة). TestPRQ2 (mine+ترتيب+لا تسريب author_id) + TicketThreadTest (١١) + شاهدان سالبان. PENDING STAGING LIVE/DEVICE WITNESS | `NOT_TESTED` | — | online | ticket replies | — | CAF §40.28 | `TestPRQ2_CustomerTicketRepliesAndIsolation` · `TicketThreadTest` | Added by Owner decision §40.15-1. UI source-complete 2026-09-21 (§40.28); server behavior DB-witnessed; on-device rendering pending staging deploy |
+| CUST-SUP-014 | Support | Customer replies to the same ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · open ticket | Write a reply; send | Reply stored on the same ticket and visible to Admin; closed ticket per PRQ-2 contract | SOURCE/AUTOMATED FIXED (backend+API+UI): POST /my/tickets/{id}/replies (ملكيّة + المحلولةُ تُردّ 409 ticket_resolved) + CustomerApi.replyTicket؛ مُدخِلُ الردّ يظهر إن كانت مفتوحةً ويُخفى بنصٍّ صريحٍ إن أُغلقت؛ الخيطُ يُستبدَل بجواب الخادم فلا يتكرّر. TestPRQ2 (ردٌّ يظهر مرّةً + لا تكرارَ بإعادة القراءة) + TicketThreadTest + شاهد سالب. PENDING STAGING LIVE/DEVICE WITNESS | `NOT_TESTED` | — | online | ticket replies | — | CAF §40.28 | `TestPRQ2_CustomerTicketRepliesAndIsolation` · `TicketThreadTest` · `TicketCanReplyTest` | Added by Owner decision §40.15-1. UI source-complete 2026-09-21 (§40.28); server behavior DB-witnessed; on-device flow pending staging deploy |
 
 ## 26B · CUST-WAL — Wallet (added by audit)
 
@@ -1366,8 +1366,8 @@ Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (�
 | CUST-SUP-010 | Tickets list shows status and resolution | PRQ-2 is IN this release (Owner decision §40.15-1) — see CUST-SUP-013/014 |
 | CUST-SUP-011 | Foreign order complaint denied | `TestVAL_040_ForeignOrderComplaintCode` |
 | CUST-SUP-012 | Admin warnings visible to the customer | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
-| CUST-SUP-013 | Customer sees replies on own ticket (added; PRQ-2) | Added by Owner decision §40.15-1. Functional gap: replies exist only under `/admin/tickets/{id}/replies`; `/my/tickets` returns no replies (`server/my_tickets.go:33`) — expected FAIL until built |
-| CUST-SUP-014 | Customer replies to the same ticket (added; PRQ-2) | Added by Owner decision §40.15-1. Functional gap: no customer reply endpoint or UI — expected FAIL until built |
+| CUST-SUP-013 | Customer sees replies on own ticket (added; PRQ-2) | Added by Owner decision §40.15-1. **Built 2026-09-21 (§40.28)**: `/my/tickets/{id}` with replies + ticket-thread UI; server behavior DB-witnessed, on-device rendering pending staging |
+| CUST-SUP-014 | Customer replies to the same ticket (added; PRQ-2) | Added by Owner decision §40.15-1. **Built 2026-09-21 (§40.28)**: `/my/tickets/{id}/replies` + reply composer; server behavior DB-witnessed, on-device flow pending staging |
 | CUST-WAL-001 | Balance chip and wallet screen | Audit: real surface not covered by the supplied list |
 | CUST-WAL-002 | Transaction list correctness | Audit: real surface not covered by the supplied list |
 | CUST-WAL-003 | Statement: this month / previous / all | Audit: real surface not covered by the supplied list |
@@ -2053,7 +2053,7 @@ acceptance:**
 
 | Gap | Today | Rows |
 |---|---|---|
-| **GAP-PRQ-2** ticket reply loop | replies exist only under `/admin/tickets/{id}/replies`; `/my/tickets` returns no replies (`server/my_tickets.go:33`); no customer reply endpoint or UI | CUST-SUP-013, CUST-SUP-014 |
+| **GAP-PRQ-2** ticket reply loop | **CLOSED (source) 2026-09-21 (§40.28)**: `GET /my/tickets/{id}` + `POST /my/tickets/{id}/replies` (owner-isolated, resolved→409), customer-facing view with server-computed `mine`, and the customer ticket-thread UI (`TicketThreadScreen`). Was: replies only under `/admin/tickets/{id}/replies`. Device/live witness pending staging | CUST-SUP-013, CUST-SUP-014 |
 | **GAP-CUSTOM-WALLET** | the backend accepts `wallet` (`orders/custom.go:160-164`); the app never sends a payment method | CUST-CUSTOM-020 |
 | **GAP-ORDER-CARD** | the card lacks date/time, payment method and address | CUST-14-021 |
 | **GAP-WARNINGS** | `issueWarning` sends nothing and the app never shows warnings | CUST-SUP-012 |
@@ -3315,3 +3315,45 @@ NEGATIVE WITNESS = PASS · **STAGING/DEVICE LIVE-UI WITNESS = PENDING** (consoli
 **Production mutations = 0.** CUST-13-029 core (server does not replay an edited-cart order) is
 DB-witnessed ⇒ PASS; the client uncertain-attempt UX (acknowledge button / PC-8) is unit-witnessed,
 on-device UX pending in the staging witness batch.
+
+### 40.28 · SUP-013/014 / PRQ-2 — customer ticket-thread UI: source-complete (2026-09-21)
+
+**Problem.** The customer could open a ticket and see only its number/status — not the
+support reply, and could not reply. Replies lived under `/admin/tickets` only (GAP-PRQ-2).
+Backend + client API were added earlier (commit 3bb38a2e); this completes the **customer UI**.
+
+**Server (view hardening).** `handleMyTicketDetail`/`handleMyTicketReply` now return a
+customer-facing view (`customerTicketView`) instead of the raw staff `support.Ticket`: whitelisted
+fields (id, number, subject, status, resolution, order_number, created_at, replies) and a
+**server-computed `mine`** per reply (`author_id == viewer`). This removes the staff author-UUID
+from the customer response and makes the customer/support distinction server-authoritative — the
+client never compares ids. Ownership stays server-enforced (404 for another customer); reply on a
+resolved ticket stays `409 ticket_resolved`; replies stay ordered by id.
+
+**Client UI.** `TicketsScreen` rows are now openable (`onOpen`, `TicketRow.id`). New shared
+`TicketThreadScreen` (`:ui`, presentation-only) shows: subject + status chip + created time; a
+chronological thread; each message aligned/coloured/labelled by `mine` (customer = end/brand/«أنت»,
+support = start/bubble/«فريق رحّال غو»); an empty/no-replies state; a reply composer + send CTA when
+`ticketCanReply(status)`, or a clear closed-note otherwise; inline send error. `MineViewModel` gains
+openTicket/closeTicket/editReplyDraft/sendReply; loading + error-with-retry via `LoadState`;
+BackHandler returns to the list. The thread is **replaced** by the server's response after a reply
+(no client-side append) so a reply appears exactly once and reload never duplicates. Built with the
+existing design system (Rahal tokens, Kit primitives, `chatTime`) — **not a chat product**: no
+typing/presence/read-receipts/attachments.
+
+**Tests (all green).**
+- Backend Go qa `TestPRQ2_CustomerTicketRepliesAndIsolation` (extended): own ticket readable with
+  replies; **support reply mine=false, customer reply mine=true**; ordering; **no `author_id`
+  leaked**; subject/created_at present; cross-account 404 (read + reply); resolved → 409; reply
+  appears once; **no duplicate on reload**.
+- Client `TicketThreadTest` (11, app-customer, source-assertion — the house pattern for screens,
+  `PreLaunchScreenTest`-style) covering the Owner's 11 points + a "not a chat" guard;
+  `TicketCanReplyTest` (2, executable): open/in_progress accept, resolved rejects.
+- **Negative witness:** backend — force `mine=false` ⇒ `TestPRQ2` fails; restored. Client — remove
+  the `mine` alignment branch ⇒ `TicketThreadTest` distinction + RTL tests fail; restored.
+
+**Status:** SOURCE/AUTOMATED FIXED (backend DB-witnessed + client source/unit) = PASS ·
+**STAGING/DEVICE LIVE WITNESS = PENDING** (on-device rendering + open→read→reply flow, in the
+consolidated staging live-witness queue, item E). CUST-SUP-013/014 remain NOT_TESTED (device-required
+per their steps) — **not marked PASS from source alone.** API contract regenerated. Production
+mutations = 0.

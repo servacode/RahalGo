@@ -35,8 +35,25 @@ func TestPRQ2_CustomerTicketRepliesAndIsolation(t *testing.T) {
 	if got.Code >= 400 {
 		t.Fatalf("SUP-013 صاحبُها لا يقرؤها: %s", got)
 	}
-	if rs, _ := got.JSON()["replies"].([]any); len(rs) != 1 {
+	rs, _ := got.JSON()["replies"].([]any)
+	if len(rs) != 1 {
 		t.Fatalf("SUP-013 عددُ الردود %d — يُنتظر 1", len(rs))
+	}
+	// **ردُّ المنصّة يُوسَم «ليس لي»** — والتمييزُ من الخادم لا من العميل.
+	r0, _ := rs[0].(map[string]any)
+	if mine, _ := r0["mine"].(bool); mine {
+		t.Errorf("SUP-013 **ردُّ المنصّة وُسم mine=true** — يُخلَط بردّ الزبون")
+	}
+	// **ولا يُكشَف معرّفُ من ردّ** — لا `author_id` في ردّ الزبون.
+	if _, leaked := r0["author_id"]; leaked {
+		t.Errorf("SUP-013 **تسريب**: author_id ظاهرٌ للزبون")
+	}
+	// **والتذكرةُ تحمل موضوعَها وحالَها ووقتَ فتحها** — لا رقماً بلا حال.
+	if s, _ := got.JSON()["subject"].(string); s == "" {
+		t.Errorf("SUP-013 الموضوعُ فارغٌ في التفصيل")
+	}
+	if c, _ := got.JSON()["created_at"].(string); c == "" {
+		t.Errorf("SUP-013 وقتُ الفتح غائبٌ في التفصيل")
 	}
 
 	// ── العزل · غريبٌ لا يقرؤها (404 لا 403) ─────────────────────────
@@ -50,8 +67,23 @@ func TestPRQ2_CustomerTicketRepliesAndIsolation(t *testing.T) {
 		t.Fatalf("SUP-014 صاحبُها لا يردّ: %s", rep)
 	}
 	after := h.GET("/api/v1/my/tickets/"+tid, victim.Token)
-	if rs, _ := after.JSON()["replies"].([]any); len(rs) != 2 {
-		t.Fatalf("SUP-014 بعد الردّ عددُ الردود %d — يُنتظر 2 (ظهر مرّةً)", len(rs))
+	ars, _ := after.JSON()["replies"].([]any)
+	if len(ars) != 2 {
+		t.Fatalf("SUP-014 بعد الردّ عددُ الردود %d — يُنتظر 2 (ظهر مرّةً)", len(ars))
+	}
+	// **الترتيبُ زمنيٌّ ثابت**: ردُّ المنصّة (المبذور أولاً) ثمّ ردُّ الزبون.
+	a0, _ := ars[0].(map[string]any)
+	a1, _ := ars[1].(map[string]any)
+	if mine, _ := a0["mine"].(bool); mine {
+		t.Errorf("SUP-014 الترتيب/التمييز: الأوّلُ يجب أن يكون ردَّ المنصّة (mine=false)")
+	}
+	if mine, _ := a1["mine"].(bool); !mine {
+		t.Errorf("SUP-014 التمييز: ردُّ الزبون يجب أن يكون mine=true")
+	}
+	// **ولا تكرارَ بإعادة القراءة** — إعادةُ الجلب تردّ اثنين لا ثلاثة.
+	reload := h.GET("/api/v1/my/tickets/"+tid, victim.Token)
+	if rl, _ := reload.JSON()["replies"].([]any); len(rl) != 2 {
+		t.Errorf("SUP-014 **تكرار**: بعد إعادة القراءة صار %d — يُنتظر 2", len(rl))
 	}
 
 	// ── العزل · غريبٌ لا يردّ (404) ──────────────────────────────────

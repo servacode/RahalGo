@@ -411,6 +411,15 @@
     <string name="tik_on_me">شكاوى عليّ</string>
     <string name="tik_mine">شكاوى رفعتها</string>
     <string name="tik_on_order">على الطلب %1$s</string>
+    <!-- ══ تفصيلُ الشكوى وخيطُ ردودها (SUP-013/014) ══ -->
+    <string name="tik_you">أنت</string>
+    <string name="tik_support">فريق رحّال غو</string>
+    <string name="tik_created">فُتحت في %1$s</string>
+    <string name="tik_no_replies">لا ردود بعد — سنجيبك هنا حين نردّ.</string>
+    <string name="tik_reply_hint">اكتب ردّك…</string>
+    <string name="tik_send">إرسال</string>
+    <string name="tik_closed">هذه الشكوى مغلقة — لا يمكن الردّ عليها. إن استجدّ أمرٌ افتح شكوى جديدة.</string>
+    <string name="tik_thread_hint">حالتها وردود المنصّة عليها</string>
     <string name="err_not_signed_in">هذا يحتاج حسابا — ادخل أولا</string>
     <string name="chats_hint">أحاديث الطلبات المنتهية — تقرأ ولا يكتب فيها</string>
     <string name="chats_none">لا دردشات منتهية</string>
