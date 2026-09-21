@@ -30,7 +30,11 @@ import (
 )
 
 // qaStagingPhone **زبونُ QA الثابت** — رقمٌ محجوزٌ للاختبار على التجهيز.
-const qaStagingPhone = "+963900000001"
+//
+// **ومختارٌ بعيداً عن أرقام البذور** (الأدمن `+963999…`، الطاقم `+963955…`،
+// وأرقامُ اختبارِ الأطوار `+96390000000x`) — **فلا يُصدَر بالخطأ سِمةُ حسابٍ
+// مُمتاز.** وحارسُ الدور أدناه يمنع ذلك على كلّ حال.
+const qaStagingPhone = "+963900555001"
 
 // qaStagingEnabled **أعلى التجهيز نحن؟** — الشرطان معاً، لا أحدُهما.
 func (s *Server) qaStagingEnabled() bool {
@@ -65,6 +69,40 @@ func (s *Server) handleQAStagingSession(w http.ResponseWriter, r *http.Request) 
 		uid = user.ID
 	case err != nil:
 		s.respondErr(w, err)
+		return
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **حارسُ الدور — لا تُصدَر جلسةٌ إلّا لزبونٍ محض** (لا أدمن ولا طاقم)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **دفاعٌ لو اصطدم رقمُ QA بحسابٍ مُمتازٍ مبذور** — **فلا يُصنَع توكنُ
+	// أدمنٍ من بابِ الاختبار.** أيُّ دورٍ غيرِ `customer` ⇒ رفضٌ مغلق.
+	rows, rerr := s.pg.Query(r.Context(), `SELECT role_code FROM user_roles WHERE user_id = $1::uuid`, uid)
+	if rerr != nil {
+		s.respondErr(w, rerr)
+		return
+	}
+	privileged := false
+	for rows.Next() {
+		var role string
+		if err := rows.Scan(&role); err != nil {
+			rows.Close()
+			s.respondErr(w, err)
+			return
+		}
+		if role != "customer" {
+			privileged = true
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if privileged {
+		s.logger.Warn("QA staging session REFUSED — account carries a privileged role", "user", uid)
+		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_not_customer_only", "errors.forbidden"))
 		return
 	}
 
