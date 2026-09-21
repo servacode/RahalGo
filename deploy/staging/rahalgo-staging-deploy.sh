@@ -110,10 +110,12 @@ SHA="$REQ"; SHORT="${SHA:0:8}"
 [ "$(id -u)" -eq 0 ] || die "must run as root (via sudo forced command)" 15
 [ -f "$STAGING_ENV" ] || die "persistent staging env missing: $STAGING_ENV" 12
 
-# sudo resets PATH (secure_path) and often drops Go's dir — restore common bins
-# so `go` (for stagingctl guard) and standard tools resolve. STAGING_GO_BIN in
-# .env.staging can override if Go lives somewhere unusual.
+# sudo resets the environment — restore what the build needs:
+#  - PATH: secure_path drops Go's dir (needed for stagingctl guard) and others
+#  - HOME: `go` needs a writable module/build cache (GOCACHE/GOMODCACHE default under HOME)
+# STAGING_GO_BIN in .env.staging can override if Go lives somewhere unusual.
 export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+export HOME="${HOME:-/root}"
 
 PROD_BEFORE="$(prod_snapshot || true)"
 log "-- production containers before: $(printf '%s' "$PROD_BEFORE" | wc -l) recorded"
