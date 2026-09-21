@@ -101,9 +101,18 @@ Result: **Production mutations = 0**, structurally.
 
 ---
 
-## Note (pre-existing, not introduced here)
+## Secret hygiene (verified 2026-09-21)
 
-`deploy/staging/.env.staging` in the repo carries staging secret *values*. This channel never
-uses the archive's copy — it always uses the **persistent** `/srv/rahalgo-staging/deploy/staging/.env.staging`
-on the box, and never copies production secrets. Scrubbing the committed staging secrets (move to
-`.env.staging.example` only) is worth a separate cleanup but is out of scope for this task.
+The real staging secrets live **only on the box**, never in Git:
+
+- `deploy/staging/.env.staging` was **never committed** — `git log --all -- deploy/staging/.env.staging`
+  is empty across all 1488 commits; it is gitignored (`.gitignore` lines for `.env`, `.env.*`, and an
+  explicit `deploy/staging/.env.staging`). The only value-carrying copy is the untracked file on the box.
+- The tracked, public `deploy/staging/.env.staging.example` has **empty** sensitive values
+  (`STAGING_DB_PASSWORD=`, `STAGING_JWT_SECRET=`, `STAGING_ADMIN_PASSWORD=`) — a template, not secrets.
+- Full-history scan (1488 commits): no private keys, no `.pem/.key/credential/serviceaccount`
+  files, no known token formats. FCM credentials load at runtime from `FCM_CREDENTIALS_JSON`/
+  `FCM_CREDENTIALS_FILE`, never committed.
+
+This channel always uses the persistent `/srv/rahalgo-staging/deploy/staging/.env.staging` on the box
+and never copies production secrets, so no staging secret ever enters Git through it.
