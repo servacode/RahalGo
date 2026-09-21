@@ -110,6 +110,11 @@ SHA="$REQ"; SHORT="${SHA:0:8}"
 [ "$(id -u)" -eq 0 ] || die "must run as root (via sudo forced command)" 15
 [ -f "$STAGING_ENV" ] || die "persistent staging env missing: $STAGING_ENV" 12
 
+# sudo resets PATH (secure_path) and often drops Go's dir — restore common bins
+# so `go` (for stagingctl guard) and standard tools resolve. STAGING_GO_BIN in
+# .env.staging can override if Go lives somewhere unusual.
+export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 PROD_BEFORE="$(prod_snapshot || true)"
 log "-- production containers before: $(printf '%s' "$PROD_BEFORE" | wc -l) recorded"
 
@@ -137,6 +142,8 @@ export DATABASE_URL="postgres://rahalgo:${STAGING_DB_PASSWORD}@localhost:5534/ra
 export REDIS_URL="redis://localhost:6580/0"
 export NEXT_PUBLIC_API_URL="${STAGING_API_URL}"
 case "$DATABASE_URL" in *5534/rahalgo_staging*) ;; *) die "DATABASE_URL is not the staging DB — fail closed" 11 ;; esac
+[ -n "${STAGING_GO_BIN:-}" ] && export PATH="$STAGING_GO_BIN:$PATH"
+command -v go >/dev/null 2>&1 || die "go not found on PATH — set STAGING_GO_BIN in .env.staging (dir containing 'go')" 3
 ( cd "$SRC/backend" && go run ./cmd/stagingctl guard ) || die "stagingctl guard refused the environment — fail closed" 3
 STRICT=0 "$SRC/deploy/preflight-env.sh" "$IDENTITY_URL" staging || die "preflight: target is not staging — fail closed" 11
 
