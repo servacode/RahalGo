@@ -4282,6 +4282,10 @@
       ],
       "response": [
         {
+          "name": "duplicate",
+          "type": "unknown"
+        },
+        {
           "name": "emergency_id",
           "type": "unknown"
         },
@@ -5672,6 +5676,42 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my/tickets/{id}",
+      "handler": "handleMyTicketDetail",
+      "auth": true,
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/tickets/{id}/replies",
+      "handler": "handleMyTicketReply",
+      "auth": true,
+      "request": [
+        {
+          "name": "body",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my/wallet",
       "handler": "handleMyWallet",
       "auth": true,
@@ -5723,6 +5763,10 @@
         },
         {
           "name": "payment_method",
+          "type": "string"
+        },
+        {
+          "name": "notes",
           "type": "string"
         }
       ]
