@@ -22,9 +22,13 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // handleMyTickets شكاوى الزبون نفسِه — الأحدثُ أوّلاً.
@@ -70,4 +74,57 @@ func (s *Server) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 		out = append(out, x)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"tickets": out})
+}
+
+// handleMyTicketDetail **تذكرتُه هو — بردودها** (`CUST-SUP-013`، PRQ-2).
+//
+// **كان الردُّ يُقرأ تحت `/admin/tickets` وحدَه** — **فالزبونُ يفتح شكوى ثمّ
+// لا يرى جوابَ المنصّة.** فيُعرَض له تفصيلُها بردودها، **وتذكرةُ غيره لا
+// تُقرأ**: العزلُ في الخادم، **و٤٠٤ لا ٤٠٣** فلا يُكشَف وجودُ ما ليس له.
+func (s *Server) handleMyTicketDetail(w http.ResponseWriter, r *http.Request) {
+	t, err := s.support.Get(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if t.CustomerID != userIDFrom(r) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, t)
+}
+
+// handleMyTicketReply **يردّ على تذكرته ما دامت مفتوحة** (`CUST-SUP-014`، PRQ-2).
+//
+// **الملكيّةُ أوّلاً** (تذكرةُ غيره لا يُردّ عليها)، **ثمّ الحالُ**:
+// `support.Reply` يردّ `ticket_resolved` على المحلولة، **فلا ردَّ على مغلقة.**
+// **والمكتبُ يعلم بردّه** — لا يُبتلع كما لا يُبتلع ردُّه هو.
+func (s *Server) handleMyTicketReply(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Body string `json:"body"`
+	}](r)
+	if err != nil || strings.TrimSpace(req.Body) == "" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	t0, err := s.support.Get(r.Context(), id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if t0.CustomerID != userIDFrom(r) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	t, err := s.support.Reply(r.Context(), userIDFrom(r), id, req.Body)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.notify.NotifyOps(r.Context(), notifications.Input{
+		Kind: notifications.KindTicket, Title: notifTitles.ticketReply, Body: t.Subject,
+		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
+	})
+	httpx.JSON(w, http.StatusOK, t)
 }

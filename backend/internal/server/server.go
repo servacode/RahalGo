@@ -602,6 +602,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/ratings", s.handleMyRatings)
 			// **شكاواه هو** — والتذاكرُ كلُّها كانت تحت /admin، فلا يرى صاحبُها حالَها
 			r.Get("/my/tickets", s.handleMyTickets)
+			// **وتفصيلُها بردودها، وردُّه عليها ما دامت مفتوحة** — PRQ-2
+			// (`CUST-SUP-013`/`014`): كان الردُّ تحت `/admin` وحدَه، **فلا
+			// يرى الزبونُ جوابَ المنصّة ولا يردّ.** والعزلُ في المعالج.
+			r.Get("/my/tickets/{id}", s.handleMyTicketDetail)
+			r.Post("/my/tickets/{id}/replies", s.handleMyTicketReply)
 			r.Get("/me/reputation", s.handleMeReputation)
 			r.Get("/me/notifications", s.handleMyNotifications)
 			// **وإلغاءُ «أخبرني» بحسابٍ** — **ولا يُحبَس أحدٌ في

@@ -322,6 +322,13 @@ class CustomerApi(private val api: ApiClient) {
 
     /** **شكاواه وأين وصلت** — ومن اشتكى ولم يرَ جواباً ظنّ شكواه ضاعت. */
     suspend fun tickets(): TicketsPage = api.call("/api/v1/my/tickets")
+
+    /** **تذكرتي بردودها** — `CUST-SUP-013` (PRQ-2). */
+    suspend fun myTicket(id: String): TicketDetail = api.call("/api/v1/my/tickets/$id")
+
+    /** **أردّ على تذكرتي ما دامت مفتوحة** — `CUST-SUP-014` (PRQ-2). */
+    suspend fun replyTicket(id: String, body: String): TicketDetail =
+        api.call("/api/v1/my/tickets/$id/replies", HttpMethod.Post, mapOf("body" to body))
 }
 
 /** **سطرٌ في السلّة** — صنفٌ وعددُه. */
@@ -482,6 +489,26 @@ data class Ticket(
     @SerialName("order_code") val orderCode: String = "",
     @SerialName("created_at") val createdAt: String = "",
     val resolution: String = "",
+)
+
+/** **ردٌّ على تذكرة** — `CUST-SUP-013`/`014`. */
+@Serializable
+data class TicketReply(
+    val id: Long = 0,
+    @SerialName("author_id") val authorId: String? = null,
+    val body: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+/** **تذكرةٌ بتفصيلها وردودها.** */
+@Serializable
+data class TicketDetail(
+    val id: String = "",
+    val number: Long = 0,
+    val subject: String = "",
+    val status: String = "",
+    val resolution: String = "",
+    val replies: List<TicketReply> = emptyList(),
 )
 
 @Serializable
