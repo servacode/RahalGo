@@ -76,6 +76,9 @@ func main() {
 		err = restore(os.Args[2])
 	case "verify":
 		err = verify()
+	case "flag":
+		// **بعد الحارس** — قلبُ إعدادٍ مسموحٍ للحملة (الفئة B).
+		err = flagCmd(os.Args[2:])
 	default:
 		usage()
 		os.Exit(exitUsage)
@@ -94,6 +97,8 @@ func usage() {
 	stagingctl backup     نسخةٌ كاملة
 	stagingctl restore F  استعادةٌ من نسخة
 	stagingctl verify     يعدّ الصفوفَ ويثبت سلامةَ المخطَّط
+	stagingctl flag get K       يقرأ إعداداً مسموحاً
+	stagingctl flag set K V     يقلب إعداداً مسموحاً ويطبع أمرَ الاستعادة
 
 **ولا بابَ خلفيّ** — كلُّها ترفض الإنتاجَ بخمسة حرّاسٍ مستقلّة.
 `)
