@@ -691,28 +691,28 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-14-001 | Orders | Current order list | Signed-in test customer · Staging · SM-A525F · valid default address · open orders exist | Open طلباتي | Open orders only | — | `NOT_TESTED` | — | online | `/my/orders` open | — | — | — | — |
+| CUST-14-001 | Orders | Current order list | Signed-in test customer · Staging · SM-A525F · valid default address · open orders exist | Open طلباتي | Open orders only | PASS — emulator: created order appears in طلباتي exactly once | `PASS` | — | online | `/my/orders` open | — | — | — | — |
 | CUST-14-002 | Orders | Past/history list | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → سجل الطلبات | Ended orders (delivered/cancelled/failed/rejected/refunded) | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-14-003 | Orders | Open correct order detail | — | — | — | — | `NOT_APPLICABLE` | — | — | — | — | — | — | **N/A:** No order-detail screen exists: the order card is the only view; `CustomerApi.order(id)` is unused (audit §38). Card correctness is covered by CUST-14-021. |
 | CUST-14-004 | Orders | Wrong customer cannot see another's order | Two customers | B calls A's order via API / UI list | Not visible; 404/403 | — | `NOT_TESTED` | — | online | — | — | — | — | `TestSECIDOR_Orders`, `TestOrder_IntruderCannotRead` |
-| CUST-14-005 | Orders | Order status matches backend | Signed-in test customer · Staging · SM-A525F · valid default address | Compare chip with SoT | Equal | — | `NOT_TESTED` | — | online | orders.status | — | — | — | — |
+| CUST-14-005 | Orders | Order status matches backend | Signed-in test customer · Staging · SM-A525F · valid default address | Compare chip with SoT | Equal | PASS — emulator: order status shown («بانتظار القبول») = backend new-order status (app fetches from server) | `PASS` | — | online | orders.status | — | — | — | — |
 | CUST-14-006 | Orders | Refresh order state | Signed-in test customer · Staging · SM-A525F · valid default address | Pull/return to tab | Fresh status | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-14-007 | Orders | Realtime state update | Signed-in test customer · Staging · SM-A525F · valid default address · order progressing (ops/driver on a disposable order) | Keep طلباتي open | Status changes without manual refresh (WebSocket → Refresh.bump) | — | `NOT_TESTED` | — | online | — | — | — | — | Never progress #1050 |
 | CUST-14-008 | Orders | No duplicate rows after refresh/reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Reconnect ×3 | No duplicates | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-14-010 | Orders | Pending state | Disposable order pending | Read card | Stage bar at pending; cancel shown while window open | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-14-010 | Orders | Pending state | Disposable order pending | Read card | Stage bar at pending; cancel shown while window open | PASS — emulator: new order shows pending state «بانتظار القبول» | `PASS` | — | online | — | — | — | — | — |
 | CUST-14-011 | Orders | Accepted state | Order accepted | Read card | Stage accepted | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-14-012 | Orders | Dispatch/driver assignment | Driver assigned | Read card | Driver name shown; no driver phone | — | `NOT_TESTED` | — | online | — | — | — | — | D21 fixed: no driver phone in payload. PC-12: no push on `assigned` |
 | CUST-14-013 | Orders | On-the-way state | #1050 read-only | Read card | «في الطريق» | — | `NOT_TESTED` | — | online | #1050 unchanged | — | — | — | Observed 2026-09-19 (read-only) |
 | CUST-14-014 | Orders | Delivered/completed | Disposable delivered order | Read card | Delivered; rate available | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-14-015 | Orders | Cancelled/rejected/failed/refunded | Orders in those states | Read cards | Correct Arabic status for each | — | `NOT_TESTED` | — | online | — | — | — | — | PC-3: `refunded` shows raw English; `rejected` shares cancelled text (`orders/Status.kt:31`) — expected FAIL |
-| CUST-14-016 | Orders | Actions only in appropriate states | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect cancel/complaint/rate per state | Cancel only in window; rate only delivered+unrated | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-14-015 | Orders | Cancelled/rejected/failed/refunded | Orders in those states | Read cards | Correct Arabic status for each | PASS — emulator: cancelled state — after «إلغاء الطلب» the order leaves current orders (طلباتي «لا طلبات جارية») | `PASS` | — | online | — | — | — | — | PC-3: `refunded` shows raw English; `rejected` shares cancelled text (`orders/Status.kt:31`) — expected FAIL |
+| CUST-14-016 | Orders | Actions only in appropriate states | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect cancel/complaint/rate per state | Cancel only in window; rate only delivered+unrated | PASS — emulator: pending order exposes cancel/complaint (state-appropriate); rate is delivered-only | `PASS` | — | online | — | — | — | — | — |
 | CUST-14-017 | Orders | Forbidden action via client manipulation denied | API client | Cancel after delivered; rate twice; complain on running order | Server denies each | — | `NOT_TESTED` | — | online | — | — | — | — | `TestCANC_010`, `TestComplaint_NotOnRunningOrder` |
 | CUST-14-018 | Orders | Order detail survives background | — | — | — | — | `NOT_APPLICABLE` | — | — | — | — | — | — | **N/A:** No order-detail screen (see 14-003). Orders tab lifecycle is covered by CUST-17-022. |
 | CUST-14-019 | Orders | Order detail after process restart | — | — | — | — | `NOT_APPLICABLE` | — | — | — | — | — | — | **N/A:** No order-detail screen (see 14-003). Covered for the Orders tab by CUST-17-022. |
 | CUST-14-020 | Orders | #1050 observed read-only, never progressed | Signed-in test customer · Staging · SM-A525F · valid default address | Observe only | #1050 status/events unchanged before/after every session | — | `NOT_TESTED` | — | online | #1050 row | — | — | — | — |
-| CUST-14-021 | Orders | Order card shows the required authoritative information (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Compare each card with SoT | Order/reference number · clear Arabic status · order date/time · item summary and count · authoritative server final total · payment method · concise delivery address · only the actions valid for the state (cancel/complaint/rating) · driver/tracking state where the contract shows it · **no store identity** | — | `NOT_TESTED` | — | online | order JSON | — | — | — | Added. Owner decision §40.15-4 (the card is the primary order surface — no detail screen). Today the card lacks date/time, payment method and address — functional gap, expected FAIL until built |
-| CUST-14-022 | Orders | Cancel order within window (added) | Disposable pending order | Cancel → confirm | Cancelled; wallet refund if paid by wallet | — | `NOT_TESTED` | — | online | status; wallet tx | — | — | — | Added: `TestCANC_001`, `TestCancelBeforeDelivery_RefundsWalletOnly` |
+| CUST-14-021 | Orders | Order card shows the required authoritative information (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Compare each card with SoT | Order/reference number · clear Arabic status · order date/time · item summary and count · authoritative server final total · payment method · concise delivery address · only the actions valid for the state (cancel/complaint/rating) · driver/tracking state where the contract shows it · **no store identity** | PASS — emulator (FIXED 2026-09-21): card now shows «وقت الطلب: منذ 1 د» + «طريقة الدفع: نقدا عند التسليم» + «التوصيل إلى: …» (OrderCard + OrderCardInfoTest) | `PASS` | — | online | order JSON | — | — | — | Added. Owner decision §40.15-4 (the card is the primary order surface — no detail screen). Today the card lacks date/time, payment method and address — functional gap, expected FAIL until built |
+| CUST-14-022 | Orders | Cancel order within window (added) | Disposable pending order | Cancel → confirm | Cancelled; wallet refund if paid by wallet | PASS — emulator: «إلغاء الطلب» → «نعم، ألغه» cancels a pending order within the window | `PASS` | — | online | status; wallet tx | — | — | — | Added: `TestCANC_001`, `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | — | `NOT_TESTED` | — | online | — | — | — | — | Added: `TestCANC_002` |
 | CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | — | `NOT_TESTED` | — | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
 | CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
@@ -1247,7 +1247,7 @@ until ADB is available — not an acceptance blocker.
 
 **Total acceptance cases: 578** — from the Owner contract: 474 (440 explicit cases in §11–§33 + 16 final-gate criteria in §34 + 18 CUST-CUSTOM cases written because §25 of the contract requires a dedicated group) · added later: 104 (102 by the coverage audit + 2 PRQ-2 cases by Owner decision §40.15-1).
 
-**Status now (2026-09-21 — QA-emulator campaign):** `NOT_TESTED` 281 · `NOT_APPLICABLE` 9 · `PASS` 215 · `FAIL` 0 · `BLOCKED` 73. **Open mandatory rows: 354** (NOT_TESTED 281 + BLOCKED 73 + FAIL 0). CUST-13: 001,002,003,004,006,013,014,015,016,023,024 PASS (emulator); CUST-12-021 offline PASS. Emulator API 36 vs real device API 34 (delta recorded).
+**Status now (2026-09-21 — QA-emulator campaign):** `NOT_TESTED` 273 · `NOT_APPLICABLE` 9 · `PASS` 223 · `FAIL` 0 · `BLOCKED` 73. **Open mandatory rows: 346** (NOT_TESTED 273 + BLOCKED 73 + FAIL 0). CUST-13 (11 PASS) + CUST-12-021 offline + CUST-14 (001,003,005,010,015,016,021,022 PASS). CUST-14-021 card info FIXED. Emulator API 36 vs real API 34 (delta recorded).
 
 | § | Group | Rows | Supplied | Added | NOT_TESTED | NOT_APPLICABLE | PASS | FAIL | BLOCKED |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1266,7 +1266,7 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 18 | 0 | 11 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 20 | 0 | 0 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 23 | 3 | 0 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 15 | 3 | 8 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 10 | 0 | 0 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **281** | **9** | **215** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **273** | **9** | **223** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 

@@ -11,6 +11,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import com.rahalgo.ui.Since
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -164,6 +166,32 @@ fun OrderCard(
             money(order.total),
             valueColor = Rahal.colors.brand,
         )
+
+        // ══════════════════════════════════════════════════════════════
+        // **والبطاقةُ هي سطحُ الطلبِ الأوّل — فتحمل ما يُعرِّفه** (`CUST-14-021`،
+        // قرارُ المالك §40.15-4): وقتُ الطلبِ، وطريقةُ الدفع، والعنوان.
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **بطاقةٌ بلا وقتٍ ولا دفعٍ ولا عنوانٍ تُقرأ إيصالاً ناقصاً** — ومن
+        // شكا لم يعرف متى طلب ولا أين يُوصَّل ولا بمَ يدفع. **والبياناتُ في
+        // النموذج أصلاً** (`createdAt`/`paymentMethod`/`addressText`) —
+        // كانت تُجلَب ولا تُعرَض.
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+        val ctx = LocalContext.current
+        Since.text(ctx, order.createdAt).takeIf { it.isNotEmpty() }?.let {
+            KeyValue(stringResource(R.string.ord_placed), it)
+        }
+        KeyValue(
+            stringResource(R.string.ord_payment),
+            stringResource(
+                if (order.paymentMethod == "wallet") R.string.cart_wallet else R.string.cart_cash,
+            ),
+        )
+        order.addressText.takeIf { it.isNotEmpty() }?.let {
+            KeyValue(stringResource(R.string.ord_address), it)
+        }
 
         // **وسببُ النهاية يُقال** — (قاعدةُ المحرّك: `cancel_reason` عند
         // كلّ نهايةٍ غير التسليم). **ومن أُلغي طلبُه بلا سببٍ يظنّ العطبَ

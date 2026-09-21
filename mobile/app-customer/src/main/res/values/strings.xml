@@ -50,6 +50,9 @@
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
     <string name="ord_total">الإجمالي</string>
+    <string name="ord_placed">وقت الطلب</string>
+    <string name="ord_payment">طريقة الدفع</string>
+    <string name="ord_address">التوصيل إلى</string>
     <string name="ord_cancel">إلغاء الطلب</string>
     <string name="ord_rate">تقييم</string>
     <string name="ord_complain">شكوى</string>
