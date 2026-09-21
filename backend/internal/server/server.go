@@ -463,7 +463,8 @@ func (s *Server) Router() http.Handler {
 		// من جلسةِ زبونٍ بلا OTP يدويّ.
 		if s.qaStagingEnabled() {
 			r.Post("/qa/session", s.handleQAStagingSession)
-			s.logger.Warn("QA staging session endpoint ENABLED — staging only (POST /api/v1/qa/session)")
+			r.Post("/qa/revoke", s.handleQAStagingRevoke)
+			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke)")
 		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)

@@ -119,3 +119,56 @@ func (s *Server) handleQAStagingSession(w http.ResponseWriter, r *http.Request) 
 	s.logger.Warn("QA staging session issued (staging-only)", "user", uid, "ip", clientIP(r))
 	httpx.JSON(w, http.StatusOK, res)
 }
+
+// handleQAStagingRevoke يُبطل جلساتِ رقمٍ من قائمةِ QA المسموحة — على التجهيز وحدَه.
+//
+// **لتنظيفِ أثرِ جلسةٍ من بناءٍ سابق** (كجلسةٍ صدرت خطأً لحسابٍ مُمتاز).
+// **ولا يمسّ إلّا رقمَين QA مسموحَين** — لا حسابَ إنتاجٍ ولا سواه، فلا يصير
+// بابَ تعطيلٍ لأحد.
+func (s *Server) handleQAStagingRevoke(w http.ResponseWriter, r *http.Request) {
+	if !s.qaStagingEnabled() {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
+	allowed := map[string]bool{}
+	for _, p := range []string{qaStagingPhone, "+963900000001"} { // الزبونُ + الرقمُ المُصطدَمُ في البناء المؤقّت
+		if n, nok := identity.NormalizePhone(p); nok {
+			allowed[n] = true
+		}
+	}
+	if !allowed[phone] {
+		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_phone_not_allowed", "errors.forbidden"))
+		return
+	}
+	var uid string
+	err = s.pg.QueryRow(r.Context(), `SELECT id::text FROM users WHERE phone = $1`, phone).Scan(&uid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		httpx.JSON(w, http.StatusOK, map[string]any{"revoked": 0, "note": "no such user"})
+		return
+	}
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	tag, err := s.pg.Exec(r.Context(),
+		`UPDATE refresh_tokens SET revoked_at = now()
+		  WHERE user_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()`, uid)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging sessions revoked (staging-only)", "user", uid, "count", tag.RowsAffected())
+	httpx.JSON(w, http.StatusOK, map[string]any{"revoked": tag.RowsAffected()})
+}
