@@ -3056,6 +3056,79 @@ rules to preserve when specified:
 - merchant wallet or a controlled credit/receivable — NEVER an uncontrolled unlimited negative wallet;
 - the merchant sees the delivery lifecycle/tracking.
 
+---
+
+##### D.1) External delivery — WRITTEN DOMAIN CONTRACT (overnight E+F, 2026-09-21) — AWAITING OWNER APPROVAL
+
+> **Design only.** No table, endpoint, migration, or ledger write was created. Implementation is
+> **QUARANTINED**: it needs a migration + a new order kind, and it moves money through the
+> obligations/wallet ledger — forbidden to touch «إلّا بقرارٍ صريحٍ من المالك», and non-trivial
+> work needs written analysis + approval first «لا تنفيذَ قبل تحليلٍ مكتوب». A4's top-up contract
+> is quarantined for the same reason. The purpose here is to make the analysis exist.
+
+**Grounding (reuse, do not reinvent):**
+- Orders already have a `kind`: `standard` (from a merchant) and `custom` (a request with no
+  merchant, driver agrees goods+fee, wallet settlement — `orders/custom.go`, columns
+  `custom_request`/`custom_goods_amount`/`custom_fee`/`dropoff`/`address_text`). **External
+  delivery is a third kind** and is closest to `custom`, but merchant-originated and with no goods
+  purchase.
+- **The controlled credit/receivable already exists:** `internal/obligations` (`Create`/`Settle`/
+  `Balance` per party, backing `merchants.debt`) — a tracked, bounded obligation ledger. **This,
+  not a negative wallet, is how a merchant "owes" a delivery fee.** Settlement mirrors
+  `orders/goods.go` (treasury double-entry, `merchant_earning`).
+- Driver assignment, lifecycle stages, proof-of-delivery, and "customer phone visible to the
+  assigned driver only" all already exist for `standard`/`custom` orders — reuse them.
+
+**Proposed data model (new order kind `external`):** reuse `orders` with
+`kind='external'`, `merchant_id` = originating merchant, `customer_id` NULL (recipient may have no
+account), `recipient_name`, `recipient_phone`, `address_text` (required), `dropoff` (optional pin),
+`parcel_note`, `fee_payer` (`merchant` | `recipient`), `delivery_fee`, plus the existing lifecycle
+columns. Recipient phone is a column read **only** by the assigned driver's endpoints (same
+guard as customer phone today).
+
+**Fee logic & fee-payer:**
+- `fee_payer='merchant'`: the delivery fee is charged to the merchant. If the merchant wallet has
+  balance, debit it (`order_payment`-style); otherwise record a **bounded obligation**
+  (`obligations.Create(merchant, fee)`) up to a per-merchant credit limit — **never an unbounded
+  negative wallet** (the run-agreement rule). New external deliveries are refused once the limit
+  is reached.
+- `fee_payer='recipient'`: cash-on-delivery collected by the driver (existing `cash_due` +
+  driver cash-box path) or, if the recipient is an account holder, their wallet.
+- The platform commission/fee split reuses the existing treasury settlement path (`creditTreasury`,
+  `merchant_earning`), so the money contract stays double-entry and treasury-mirrored.
+
+**Privacy:** recipient phone/name are shown to the merchant (who supplied them) and to the
+**assigned driver only**, only while the delivery is active — mirroring the customer-phone rule.
+Never exposed to other merchants, other drivers, or unrelated accounts. The recipient is not
+required to have an account, so no account data is created for them.
+
+**Lifecycle:** created (merchant) → accepted/assigned (admin or auto-dispatch) → picked up →
+on the way → delivered (proof) → settled. Cancellation before pickup releases any obligation.
+The merchant sees the live lifecycle/tracking (reuse the merchant order-tracking surface).
+
+**F) Admin support for external delivery:** admin can list/filter external deliveries, assign or
+reassign a driver, see the fee-payer and settlement state, set/adjust a merchant's external-
+delivery **credit limit**, and view the merchant's outstanding obligation balance
+(`obligations.Balance`). Admin actions that move money reuse the existing finance-capability gate
+(`finance.manage`) and the audit trail.
+
+**Reserved acceptance group (NOT counted; execute on authorization) — MEXD-01..:**
+- MEXD-01 merchant creates an external delivery with a written address (row created, no menu items).
+- MEXD-02 recipient with no account is accepted (customer_id NULL, recipient_name/phone stored).
+- MEXD-03 recipient phone visible ONLY to the assigned driver (not merchant-visible after handoff,
+  not other drivers).
+- MEXD-04 fee_payer=merchant with sufficient wallet → wallet debited; MEXD-05 with insufficient
+  wallet → bounded obligation created, refused past the credit limit (never negative wallet).
+- MEXD-06 fee_payer=recipient → cash-on-delivery via driver cash box (respects cash limit).
+- MEXD-07 delivery lifecycle + proof-of-delivery; MEXD-08 cancel-before-pickup releases obligation.
+- MEXD-09 admin assign/reassign + credit-limit management + obligation balance view.
+- MEXD-10 settlement is treasury-mirrored double-entry (moneycheck passes).
+
+**Open questions for the owner:** (1) default per-merchant external-delivery credit limit? (2) can
+the merchant edit/cancel after a driver accepts? (3) recipient notification channel (SMS? none)?
+(4) is external delivery zone-gated like normal orders, or allowed anywhere a driver covers?
+These block a final data model. **Status: design only. No code, no migration, no ledger write.**
+
 #### E) Blocker sweep — all 74 BLOCKED classified A–H (overnight B, 2026-09-21)
 
 **Headline finding:** every one of the 74 BLOCKED customer cases is blocked on the ENVIRONMENT
