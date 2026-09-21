@@ -62,7 +62,7 @@ set -euo pipefail
 STAGING_ROOT=/srv/rahalgo-staging
 STAGING_ENV="$STAGING_ROOT/deploy/staging/.env.staging"
 IDENTITY_URL="http://localhost:8080/api/v1/public/identity"
-HEALTH_URL="http://localhost:8080/api/v1/healthz"
+HEALTH_URL="http://localhost:8080/healthz"
 INCOMING="$STAGING_ROOT/incoming"
 ARTIFACT_DIR="$STAGING_ROOT/artifacts"
 PROD_PROJECT=rahalgo
