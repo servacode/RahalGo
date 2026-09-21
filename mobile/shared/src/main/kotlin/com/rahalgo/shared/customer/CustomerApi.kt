@@ -388,6 +388,15 @@ data class NewCustom(
     val lat: Double,
     val lng: Double,
     val notes: String = "",
+    /**
+     * **نقدٌ أو محفظة** (`CUST-CUSTOM-020`، §40.11، قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+     *
+     * **المحرّكُ يقبل الاثنين للطلب الخاصّ** (`orders/custom.go`)، **وكان
+     * الحقلُ غائباً فيقع كلُّ طلبٍ خاصٍّ نقداً** — فلا يختار صاحبُه المحفظةَ
+     * ولو أرادها. **والخصمُ عند الاتّفاق لا عند الإنشاء** — فلا سعرَ يُفحَص
+     * الآن، والحظرُ النقديُّ يحرسه المحرّك.
+     */
+    @SerialName("payment_method") val paymentMethod: String = "cash",
 )
 
 @Serializable

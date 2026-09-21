@@ -125,6 +125,32 @@ func TestCUST_CAF07_NotesStored(t *testing.T) {
 	}
 }
 
+// TestCUST_PaymentWalletStored **الطلبُ الخاصُّ يقبل المحفظةَ خيارَ دفع** —
+// §40.11 · `CUST-CUSTOM-020`.
+//
+// **المحرّكُ يقبل نقداً أو محفظةً للخاصّ منذ ٢٠٢٦-٠٨-٠٩، وكان التطبيقُ لا
+// يرسل الحقلَ فيقع كلُّ طلبٍ نقداً.** **بعد أن صار يرسله، يجب أن يُخزَّن
+// كما أُرسل** — فمن اختار المحفظةَ لا يُحاسَب نقداً.
+func TestCUST_PaymentWalletStored(t *testing.T) {
+	h := New(t)
+	cust := h.Customer()
+	body := customBody("قرطاسيّة من أيّ مكتبة")
+	body["payment_method"] = "wallet"
+	got := h.POSTKey("/api/v1/orders/custom", cust.Token, uniq("k"), body)
+	if got.Code >= 400 {
+		t.Fatalf("CUST-020 تعذّر الإنشاء: %s", got)
+	}
+	oid, _ := got.JSON()["id"].(string)
+	var pm string
+	if err := h.Pool.QueryRow(t.Context(),
+		`SELECT payment_method FROM orders WHERE id = $1::uuid`, oid).Scan(&pm); err != nil {
+		t.Fatalf("CUST-020 تعذّرت القراءة: %v", err)
+	}
+	if pm != "wallet" {
+		t.Fatalf("CUST-020 **طريقةُ الدفع %q — يُنتظر wallet** (اختيارُ المحفظة أُهمل)", pm)
+	}
+}
+
 // TestCUST_002_EmptyRequestRejected **وطلبٌ خاصٌّ بلا نصٍّ يُردّ.**
 //
 // **وطلبٌ فارغٌ يصل سائقاً يقف حائراً** — ولا أحدَ يعرف ما يُشترى.

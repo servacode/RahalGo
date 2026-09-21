@@ -1,11 +1,14 @@
 package com.rahalgo.customer.custom
 
 import android.app.Application
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -73,6 +76,10 @@ fun CustomScreen(
 ) {
     var request by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
+    // **طريقةُ الدفع** — `CUST-CUSTOM-020`/§40.11: نقدٌ (افتراض) أو محفظة.
+    // **والخصمُ عند الاتّفاق لا عند الإنشاء** — فلا سعرَ يُفحَص هنا؛ والحظرُ
+    // النقديُّ يحرسه المحرّكُ ويردّ برسالةٍ تدلّ على المحفظة إن كان محظوراً.
+    var wallet by rememberSaveable { mutableStateOf(false) }
 
     // ══════════════════════════════════════════════════════════════════
     // **ونجاحُ الإرسال يُفرِّغ ما كُتب ثمّ ينتقل**
@@ -164,10 +171,39 @@ fun CustomScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // ══════════════════════════════════════════════════════════════
+        // **طريقةُ الدفع — نقدٌ أو محفظة** (`CUST-CUSTOM-020`، §40.11)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **المحرّكُ يقبل الاثنين للخاصّ، وكان التطبيقُ لا يرسل شيئاً فيقع
+        // نقداً دائماً** — فلا يختار صاحبُه المحفظةَ ولو أرادها. **ولا
+        // فحصَ رصيدٍ هنا**: لا سعرَ عند الإنشاء (يُتّفق لاحقاً)، والحظرُ
+        // النقديُّ يحرسه المحرّك.
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.cst_pay), color = Rahal.colors.inkMuted)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = !wallet,
+                onClick = { wallet = false },
+                label = { Text(stringResource(R.string.cart_cash)) },
+            )
+            FilterChip(
+                selected = wallet,
+                onClick = { wallet = true },
+                label = { Text(stringResource(R.string.cart_wallet)) },
+            )
+        }
+
         Spacer(Modifier.height(16.dp))
         RahalButton(
             onClick = {
-                address?.let { vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim()) }
+                address?.let {
+                    vm.send(
+                        request.trim(), it.text, it.lat, it.lng, notes.trim(),
+                        if (wallet) "wallet" else "cash",
+                    )
+                }
             },
             enabled = !vm.busy && request.isNotBlank() && address != null,
             modifier = Modifier.fillMaxWidth(),
@@ -259,7 +295,14 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
      * عمرها**: من انتقل إليها بلا نبضةٍ رأى قائمةً لا طلبَ فيها،
      * **فأغلق التطبيقَ وفتحه ليرى طلبَه** (وهو ما وقع للمالك).
      */
-    fun send(request: String, address: String, lat: Double, lng: Double, notes: String) {
+    fun send(
+        request: String,
+        address: String,
+        lat: Double,
+        lng: Double,
+        notes: String,
+        payment: String,
+    ) {
         if (busy) return
         busy = true
         error = ""
@@ -272,7 +315,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val ref = api.createCustom(
-                    NewCustom(request, address, lat, lng, notes),
+                    NewCustom(request, address, lat, lng, notes, payment),
                     attemptKey = key,
                 )
                 com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.CUSTOM)
