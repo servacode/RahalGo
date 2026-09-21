@@ -238,11 +238,11 @@ export NEXT_PUBLIC_API_URL="http://localhost:8080"
 [ -n "${STAGING_GO_BIN:-}" ] && export PATH="$STAGING_GO_BIN:$PATH"
 command -v go >/dev/null 2>&1 || die "go not found on PATH — set STAGING_GO_BIN in .env.staging (dir containing 'go')" 3
 ( cd "$SRC/backend" && go run ./cmd/stagingctl guard ) || die "stagingctl guard refused the environment — fail closed" 3
-STRICT=0 "$SRC/deploy/preflight-env.sh" "$IDENTITY_URL" staging || die "preflight: target is not staging — fail closed" 11
+STRICT=0 bash "$SRC/deploy/preflight-env.sh" "$IDENTITY_URL" staging || die "preflight: target is not staging — fail closed" 11
 
 # build the verified commit in archive mode (identity injected + verified)
 export SOURCE_COMMIT="$SHA" SRC_ROOT="$SRC"
-ART="$("$SRC/deploy/build-artifact.sh")"; printf '%s\n' "$ART" | sed 's/^/   build: /' >&2
+ART="$(bash "$SRC/deploy/build-artifact.sh")"; printf '%s\n' "$ART" | sed 's/^/   build: /' >&2
 API_TAG="$(printf '%s\n' "$ART" | sed -n 's/^API_IMAGE_TAG=//p')"
 API_ID="$(printf '%s\n'  "$ART" | sed -n 's/^API_IMAGE_ID=//p')"
 WEB_TAG="$(printf '%s\n' "$ART" | sed -n 's/^WEB_IMAGE_TAG=//p')"
@@ -252,7 +252,7 @@ WEB_TAG="$(printf '%s\n' "$ART" | sed -n 's/^WEB_IMAGE_TAG=//p')"
 export RAHALGO_API_IMAGE="$API_TAG" RAHALGO_WEB_IMAGE="$WEB_TAG"
 docker compose -p "$STAGING_PROJECT" -f "$SRC/deploy/staging/compose.staging.yml" --env-file "$ENVLF" \
 	up -d --no-build --no-deps caddy web postgres redis
-TARGET_ENV=staging "$SRC/deploy/promote.sh" \
+TARGET_ENV=staging bash "$SRC/deploy/promote.sh" \
 	"$SRC/deploy/staging/compose.staging.yml" "$ENVLF" "$API_TAG" "$IDENTITY_URL" "$API_ID"
 
 # verify the LIVE staging runtime is exactly what we built

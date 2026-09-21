@@ -72,6 +72,7 @@ grep -q 'docker compose version' "$W" && grep -q 'go build -o /dev/null' "$W" &&
 grep -q 'sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness' "$BOOT" && ok "bootstrap gates PASS on on-box readiness" || no "bootstrap gates PASS on on-box readiness"
 grep -q 'load_runtime' "$W" && grep -q 'GO_BIN_DIR' "$W" && ok "wrapper loads Go dir from config" || no "wrapper loads Go dir from config"
 grep -q 'staging-[*].rahalgo.com' "$W" && grep -q 'STAGING_API_URL is a production host' "$W" && grep -q 'NEXT_PUBLIC_API_URL="http://localhost:8080"' "$W" && ok "wrapper accepts staging-api alias, refuses prod API host, feeds guard on-box target" || no "wrapper API-host handling"
+grep -q 'bash "$SRC/deploy/preflight-env.sh"' "$W" && grep -q 'bash "$SRC/deploy/build-artifact.sh"' "$W" && grep -q 'bash "$SRC/deploy/promote.sh"' "$W" && ok "wrapper runs archive scripts via bash (exec-bit independent)" || no "wrapper runs archive scripts via bash"
 grep -q 'find_go' "$BOOT" && grep -q 'install_go' "$BOOT" && grep -q '2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613' "$BOOT" && grep -q 'sha256sum -c' "$BOOT" && ok "bootstrap self-heals Go (detect or pinned+verified install)" || no "bootstrap self-heals Go"
 GOMOD_V="$(grep -oE '^go [0-9.]+' "$HERE/../../backend/go.mod" 2>/dev/null | awk '{print $2}')"
 [ -n "$GOMOD_V" ] && grep -q "REQUIRED_GO=$GOMOD_V" "$BOOT" && ok "installer Go version matches backend/go.mod ($GOMOD_V)" || no "installer Go version matches backend/go.mod"
