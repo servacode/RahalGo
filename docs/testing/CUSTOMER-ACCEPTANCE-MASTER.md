@@ -3174,3 +3174,26 @@ and those are **already backend-covered** and were re-run green this session
 
 **No device-independent execution remains** for CUST-13+ that would add coverage; the residual is
 device/realtime witness (per the no-device run policy). No case flipped to PASS. 578 unchanged.
+
+#### G) App audits D/H/I — verified findings (overnight, 2026-09-21) — OUTSIDE the 578
+
+Read-only source audits of the Merchant, Sales-Rep, and Driver apps. **All findings source-verified
+this session; none fixed** (audit phase, not build; new P0/P1 quarantined per run policy). Full
+detail + recommended fixes + morning device-witness queue are in `docs/WORKLOG.md` (2026-09-21
+"تقريرُ الصباح"). Tracking IDs for owner prioritization:
+
+| ID | Sev | App | Summary | Anchor |
+|---|---|---|---|---|
+| DRV-DEF-001 | **P1** | Driver | Emergency/after-pickup problem report fails SILENTLY (only `Log.w`, nothing surfaced) — driver believes ops alerted when not | `app-driver/.../orders/OrdersViewModel.kt:1434` |
+| REP-DEF-001 | P2 | Rep | Governorates load swallowed + guard blocks reload → rep silently cannot register any lead (district mandatory) | `app-rep/.../add/AddClientScreen.kt:387` |
+| MERCH-DEF-001 | P2 | Merchant | Swallowed `storeSections` → false "choose your sections" gate for a merchant who has sections | `app-merchant/.../menu/MenuViewModel.kt:135` + `MainActivity.kt:521` |
+| DRV-DEF-002 | P2 | Driver | Merchant owner's raw phone shipped to driver device, never used (privacy/data-minimization; contradicts platform principle) | `driver_handlers.go:344` + `Order.kt:62` |
+| DRV-DEF-003 | P2 | Driver | Color guard only catches `Color(0x…)`, misses `Color.White`/`MaterialTheme.colorScheme.*`; hardcoded colors pass CI; stale "zero custom colors" claim | `testkit/guards.py:29`; `trip/*`, `orders/*` |
+| PLAT-DEF-001 | P2 | All | `strings.xml` used platform-wide but GROUND-RULES §1.1/§7.2-3 mandate `mobile/shared/i18n` (which doesn't exist) — rule-vs-code contradiction; **owner decides**: fix rule or build the KMP i18n object | GROUND-RULES §1.1 |
+| (P3 group) | P3 | All | Silent sub-load swallows (`StoreViewModel`, driver `askFail`); loose API return types; dead code; hardcoded `SITE` const; platform-mode orders polling; literal Arabic ticket subject | see WORKLOG |
+
+**Cross-cutting:** the dominant pattern is swallowed sub-load failures producing misleading states
+(P1→P3), the same class fixed for the customer app in A2/A5 — recommend a platform-wide "no silently
+swallowed network call" policy. **External-delivery (E+F) driver-side confirmed not built** (zero
+`recipient_*`/`kind='external'`), but the primitives (order `kind`, custom+agree, written address+nav,
+proof, cash box, server-side phone gating) are a solid foundation. 578 unchanged; Production=0.
