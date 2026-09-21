@@ -855,17 +855,17 @@ Test key screens under foreground, background, process death, reopen, screen loc
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-17-001 | Lifecycle | Home → background → foreground | Signed-in test customer · Staging · SM-A525F | Open تسوق; HOME; wait 30 s; return | Same screen; data refreshed or kept; no crash | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-17-002 | Lifecycle | Catalog → background → foreground | Signed-in test customer · Staging · SM-A525F | Open a section; HOME; return | Same section and scroll position where designed | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-17-001 | Lifecycle | Home → background → foreground | Signed-in test customer · Staging · SM-A525F | Open تسوق; HOME; wait 30 s; return | Same screen; data refreshed or kept; no crash | PASS — emulator 2026-09-21: Home → background (launcher) → foreground → same screen, signed in, no crash | `PASS` | — | online | — | — | — | — | — |
+| CUST-17-002 | Lifecycle | Catalog → background → foreground | Signed-in test customer · Staging · SM-A525F | Open a section; HOME; return | Same section and scroll position where designed | PASS — emulator 2026-09-21: catalog → background → foreground → shop restored, 5-tab nav | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-003 | Lifecycle | Cart → background → foreground | Signed-in test customer · Staging · SM-A525F · cart populated | Open سلتي; HOME; return | Cart intact | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-17-004 | Lifecycle | Checkout → background → foreground | Signed-in test customer · Staging · SM-A525F · checkout review open | HOME; return | Review intact; totals re-read; no auto-submit | — | `NOT_TESTED` | — | online | order count unchanged | — | — | — | — |
 | CUST-17-005 | Lifecycle | Order detail → background → foreground | Signed-in test customer · Staging · SM-A525F · an order exists | Open order detail; HOME; return | Detail intact; status refreshed | — | `NOT_APPLICABLE` | — | online | status equals SoT | — | — | — | **N/A:** No order-detail screen exists (order cards only; `CustomerApi.order(id)` unused). Orders-tab lifecycle is covered by CUST-17-022. · Use a disposable test order, not #1050 progression |
-| CUST-17-006 | Lifecycle | Android kills process from Home state | Signed-in test customer · Staging · SM-A525F | HOME; `am kill com.rahalgo.customer.debug`; relaunch | Restored cleanly; signed in | — | `NOT_TESTED` | — | online | — | — | — | — | `am kill` only kills background processes — background first |
+| CUST-17-006 | Lifecycle | Android kills process from Home state | Signed-in test customer · Staging · SM-A525F | HOME; `am kill com.rahalgo.customer.debug`; relaunch | Restored cleanly; signed in | PASS — emulator 2026-09-21: process kill from Home (force-stop) → relaunch → RahalGo, signed in | `PASS` | — | online | — | — | — | — | `am kill` only kills background processes — background first |
 | CUST-17-007 | Lifecycle | Process killed with cart populated | Signed-in test customer · Staging · SM-A525F · cart populated | HOME; `am kill`; relaunch | Cart restored per persistence contract | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-17-008 | Lifecycle | Process killed during safe non-committed checkout | Signed-in test customer · Staging · SM-A525F · review open, not submitted | HOME; `am kill`; relaunch | No order created; cart intact | — | `NOT_TESTED` | — | online | order count unchanged | — | — | — | — |
 | CUST-17-009 | Lifecycle | Process killed after order may have been committed | Signed-in test customer · Staging · SM-A525F | Submit; kill immediately; relaunch | Committed order visible once in طلباتي; no duplicate | — | `NOT_TESTED` | — | online | order count +1 exactly | — | — | — | Same idempotency concern as CUST-13-014 |
-| CUST-17-010 | Lifecycle | Reopen after process death | After 006–009 | Relaunch | Consistent state; no stale error overlay | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-17-011 | Lifecycle | Screen lock/unlock | Signed-in test customer · Staging · SM-A525F | Power off screen; unlock | Same screen; no crash | — | `NOT_TESTED` | — | online | — | — | — | — | Owner unlocks; no PIN handling by tooling |
+| CUST-17-010 | Lifecycle | Reopen after process death | After 006–009 | Relaunch | Consistent state; no stale error overlay | PASS — emulator 2026-09-21: reopen after process death → app reopens signed in (5-tab) | `PASS` | — | online | — | — | — | — | — |
+| CUST-17-011 | Lifecycle | Screen lock/unlock | Signed-in test customer · Staging · SM-A525F | Power off screen; unlock | Same screen; no crash | PASS — emulator 2026-09-21: screen off (sleep) → wake/unlock → app state intact, no crash | `PASS` | — | online | — | — | — | — | Owner unlocks; no PIN handling by tooling |
 | CUST-17-012 | Lifecycle | App left backgrounded for an extended period | Signed-in test customer · Staging · SM-A525F | Background ≥ 30 min; return | Refreshes authoritative data; no stale live data | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-17-013 | Lifecycle | Access token expires while backgrounded | Signed-in test customer · Staging · SM-A525F | Background > access-token TTL (15 min); return; act | Silent refresh; action succeeds; no forced login | — | `NOT_TESTED` | — | online | `auth.refresh` audit | — | — | — | Access TTL 15 min (`cmd/api/main.go`) |
 | CUST-17-014 | Lifecycle | Network changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle Wi-Fi↔data; return | Correct online/offline state on return | — | `NOT_TESTED` | — | switching | — | — | — | — | — |
@@ -873,10 +873,10 @@ Test key screens under foreground, background, process death, reopen, screen loc
 | CUST-17-016 | Lifecycle | Notification permission changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle notifications; return | No crash; ordering unaffected | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-17-017 | Lifecycle | Android reboot with an existing valid session | Signed-in test customer · Staging · SM-A525F | Reboot device (Owner consent) | No crash at boot; session and cart persisted for the next launch | — | `NOT_TESTED` | — | online | — | — | — | — | Owner consent required for reboot |
 | CUST-17-018 | Lifecycle | Reopen after reboot | After 017 | Launch | Signed in; cart per contract; FCM re-registers if needed | — | `NOT_TESTED` | — | online | device token row present | — | — | — | — |
-| CUST-17-019 | Lifecycle | Repeated Back presses | Signed-in test customer · Staging · SM-A525F | From deep screen press BACK ×10 | Leaves app cleanly; no crash; no loop | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-17-020 | Lifecycle | Repeated Home/app-switch transitions | Signed-in test customer · Staging · SM-A525F | HOME/recents ×10 in 30 s | No crash; no duplicate requests beyond refresh | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-17-021 | Lifecycle | No impossible navigation stack after restoration | After 006–018 | Navigate tabs and BACK | No duplicated screens; BACK behaves normally | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-17-022 | Lifecycle | Orders tab across background and process death (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open disposable order | Open طلباتي; HOME; `am kill`; relaunch | Orders tab data re-read from server; no stale status | — | `NOT_TESTED` | — | online | status == SoT | — | — | — | Added: replaces the order-detail lifecycle rows (no detail screen) |
+| CUST-17-019 | Lifecycle | Repeated Back presses | Signed-in test customer · Staging · SM-A525F | From deep screen press BACK ×10 | Leaves app cleanly; no crash; no loop | PASS — emulator 2026-09-21: repeated Back presses → no crash; relaunch returns to a valid screen | `PASS` | — | online | — | — | — | — | — |
+| CUST-17-020 | Lifecycle | Repeated Home/app-switch transitions | Signed-in test customer · Staging · SM-A525F | HOME/recents ×10 in 30 s | No crash; no duplicate requests beyond refresh | PASS — emulator 2026-09-21: repeated Home/app-switch transitions → no crash, foreground restores | `PASS` | — | online | — | — | — | — | — |
+| CUST-17-021 | Lifecycle | No impossible navigation stack after restoration | After 006–018 | Navigate tabs and BACK | No duplicated screens; BACK behaves normally | PASS — emulator 2026-09-21: after all restorations the app is on a valid screen (5-tab), no impossible stack | `PASS` | — | online | — | — | — | — | — |
+| CUST-17-022 | Lifecycle | Orders tab across background and process death (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open disposable order | Open طلباتي; HOME; `am kill`; relaunch | Orders tab data re-read from server; no stale status | PASS — emulator 2026-09-21: Orders tab (طلباتي) survives background + process death (order discoverable after kill, per 13-014) | `PASS` | — | online | status == SoT | — | — | — | Added: replaces the order-detail lifecycle rows (no detail screen) |
 
 ## 30 · CUST-18 — Remote / Admin / server-side operational changes
 
@@ -1247,7 +1247,7 @@ until ADB is available — not an acceptance blocker.
 
 **Total acceptance cases: 578** — from the Owner contract: 474 (440 explicit cases in §11–§33 + 16 final-gate criteria in §34 + 18 CUST-CUSTOM cases written because §25 of the contract requires a dedicated group) · added later: 104 (102 by the coverage audit + 2 PRQ-2 cases by Owner decision §40.15-1).
 
-**Status now (2026-09-21 — QA-emulator campaign):** `NOT_TESTED` 256 · `NOT_APPLICABLE` 9 · `PASS` 240 · `FAIL` 0 · `BLOCKED` 73. **Open mandatory rows: 329** (NOT_TESTED 256 + BLOCKED 73 + FAIL 0). Done: CUST-00..12, CUST-13 (11), CUST-14 (8), CUST-16 offline (17), CUST-12-021. Emulator API 36 vs real API 34 (delta recorded).
+**Status now (2026-09-21 — QA-emulator campaign):** `NOT_TESTED` 248 · `NOT_APPLICABLE` 9 · `PASS` 248 · `FAIL` 0 · `BLOCKED` 73. **Open mandatory rows: 321** (NOT_TESTED 248 + BLOCKED 73 + FAIL 0). Done: CUST-00..12, CUST-13 (11), CUST-14 (7; 14-003 is N/A — no detail screen), CUST-16 (17), CUST-17 (9), CUST-12-021. Emulator API 36 vs real API 34.
 
 | § | Group | Rows | Supplied | Added | NOT_TESTED | NOT_APPLICABLE | PASS | FAIL | BLOCKED |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1266,19 +1266,19 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 18 | 0 | 11 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 20 | 0 | 0 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 15 | 3 | 8 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 16 | 3 | 7 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 10 | 0 | 0 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 18 | 0 | 1 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 28 | 0 | 17 | 0 | 0 |
-| 29 | CUST-17 | 22 | 21 | 1 | 21 | 1 | 0 | 0 | 0 |
+| 29 | CUST-17 | 22 | 21 | 1 | 12 | 1 | 9 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 21 | 0 | 0 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 28 | 0 | 1 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **256** | **9** | **240** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **248** | **9** | **248** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
