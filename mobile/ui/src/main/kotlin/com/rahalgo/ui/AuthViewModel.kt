@@ -229,6 +229,36 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * **دخولُ QA — للتجهيز والتصحيح فقط** (`SR-QA`).
+     *
+     * **يستدعي بابَ جلسةِ التجهيز** (`/qa/session`, يبطله الخادمُ خارجَ
+     * التجهيز بـ`404`) **ويحفظ الجلسةَ كأيّ دخولٍ ناجح** — فيُمكَّن
+     * الاختبارُ الآليُّ الحيُّ بلا OTP يدويّ. **ولا يُنادَى إلّا من مسارٍ
+     * محروسٍ بـ`BuildConfig.DEBUG`** في التطبيق.
+     */
+    fun qaLogin(onDone: () -> Unit = {}) {
+        if (state.busy) return
+        state = state.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                val result = backend.auth.qaSession()
+                backend.session.save(
+                    result.tokens.accessToken,
+                    result.tokens.refreshToken,
+                    result.tokens.accessExpiresAtMs(),
+                )
+                onSignedIn(result.user)
+                state = state.copy(busy = false)
+                onDone()
+            } catch (e: ApiClient.ApiException) {
+                state = state.copy(busy = false, error = message(e))
+            } catch (e: Exception) {
+                state = state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
+    /**
      * **استعادة الجلسة عند الإقلاع.**
      *
      * **ونجاح `me` هو الدليل لا وجود التوكن**: توكن أُبطل من الإدارة يبقى

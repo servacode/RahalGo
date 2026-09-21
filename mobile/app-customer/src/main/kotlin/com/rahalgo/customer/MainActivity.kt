@@ -206,6 +206,25 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
     LaunchedEffect(vm.user) { if (vm.user != null) Invited.clear(ctx) }
 
     // ══════════════════════════════════════════════════════════════════
+    // **دخولُ QA — للتصحيح والتجهيز فقط** (`SR-QA`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **تشغيلٌ آليٌّ حيٌّ بلا OTP يدويّ**: من أقلع بـ
+    // `am start … --ez qa_login true` **يُسجَّل زبونُ QA** عبر بابِ التجهيز
+    // (`/qa/session`). **ولا أثرَ في الإنتاج** (البابُ الخادميُّ يردّ 404)
+    // **ولا في نسخة الإصدار** (`BuildConfig.DEBUG`).
+    if (BuildConfig.DEBUG) {
+        val act = ctx as? android.app.Activity
+        LaunchedEffect(vm.restoring) {
+            if (!vm.restoring && vm.user == null &&
+                act?.intent?.getBooleanExtra("qa_login", false) == true
+            ) {
+                vm.qaLogin()
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // **وإذنُ الإشعارات يُطلب بعد الدخول** — انظر `AskNotifyPermission`.
     // ══════════════════════════════════════════════════════════════════
     //
