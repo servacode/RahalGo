@@ -27,12 +27,14 @@ package server
 // ثقل عليه طلبٌ طلبَه بحجّة الطارئ. **والمنصةُ هي التي تحرّره عنه، لا هو.**
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -73,80 +75,108 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// جهازٌ مرفوضُ الإذن، أو داخلَ بناءٍ لا إشارةَ فيه — **وطارئٌ يُردّ لأن
 	// الموقعَ لم يُقرأ طارئٌ ضاع.** والعملياتُ تتّصل به فتعرف أين هو.
 	hasPoint := req.Lat != nil && req.Lng != nil
+	// ══════════════════════════════════════════════════════════════════
+	// **بلاغٌ مفتوحٌ واحدٌ لكلّ طلب** (`DRV-DEF-001`، حارس `0158`)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **إعادةُ الضغطِ بعد فشلِ الشبكةِ لا تُنشئ بلاغاً ثانياً** — ترتدّ إلى
+	// القائمِ (`ON CONFLICT`). **فالتسجيلُ مرّةً واحدةً**، **والإخطارُ مرّةً
+	// على الأقلّ** (يُعاد أدناه ولو كان إعادة، فإنذارُ سلامةٍ ضاع أسوأُ من
+	// إنذارٍ مكرّر). **والآثارُ الجانبيّةُ (تحرير، إغلاق دوام، موضع بديل)
+	// للجديد وحدَه** — فُعِّلت مع البلاغ الأوّل.
 	var emergencyID string
+	fresh := true
 	if hasPoint {
 		err = s.pg.QueryRow(ctx, `
 			INSERT INTO driver_emergencies (driver_id, order_id, at, note)
 			VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
+			ON CONFLICT (order_id) WHERE status = 'open' DO NOTHING
 			RETURNING id`, driverID, orderID, *req.Lng, *req.Lat, clip(req.Note, 500)).
 			Scan(&emergencyID)
 	} else {
 		err = s.pg.QueryRow(ctx, `
 			INSERT INTO driver_emergencies (driver_id, order_id, note)
-			VALUES ($1, $2, $3) RETURNING id`,
+			VALUES ($1, $2, $3)
+			ON CONFLICT (order_id) WHERE status = 'open' DO NOTHING
+			RETURNING id`,
 			driverID, orderID, clip(req.Note, 500)).Scan(&emergencyID)
 	}
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		// **طارئٌ مفتوحٌ قائمٌ لهذا الطلب** — إعادةٌ، لا حادثةٌ ثانية.
+		fresh = false
+		if err = s.pg.QueryRow(ctx,
+			`SELECT id FROM driver_emergencies WHERE order_id = $1 AND status = 'open'
+			 ORDER BY created_at ASC LIMIT 1`,
+			orderID).Scan(&emergencyID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	} else if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 
-	// **نقطةُ الاستلام البديلة — إن كانت البضاعةُ قد خرجت.**
-	//
-	// قبل الاستلام الطعامُ في المتجر، **فالبديلُ يذهب إليه كما كان.** وبعده
-	// الطعامُ مع المصاب، **فمن ذهب إلى المطعم استلم طلباً ثانياً من مطبخٍ
-	// حضّر واحداً** — فتُدفع البضاعةُ مرّتين.
-	afterPickup := status == orders.StPickedUp || status == orders.StOnTheWay ||
-		status == orders.StAtDropoff
-	if afterPickup {
-		if hasPoint {
-			if _, err := s.pg.Exec(ctx, `
-				UPDATE orders
-				SET pickup_override = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-				    pickup_override_note = $4
-				WHERE id = $1`,
-				orderID, *req.Lng, *req.Lat, "استلامٌ من موضع طارئ — البضاعةُ مع السائق"); err != nil {
+	// **والآثارُ الجانبيّةُ للبلاغِ الجديدِ وحدَه** — فُعِّلت مع الأوّل،
+	// وإعادتُها على إعادةٍ تُكرّر بلا فائدة (والانتقالُ من `dispatching`
+	// إلى `dispatching` يُخطئ). **أمّا الإخطارُ فيُعاد أدناه على الحالين.**
+	released := true
+	if fresh {
+		// **نقطةُ الاستلام البديلة — إن كانت البضاعةُ قد خرجت.**
+		//
+		// قبل الاستلام الطعامُ في المتجر، **فالبديلُ يذهب إليه كما كان.** وبعده
+		// الطعامُ مع المصاب، **فمن ذهب إلى المطعم استلم طلباً ثانياً من مطبخٍ
+		// حضّر واحداً** — فتُدفع البضاعةُ مرّتين.
+		afterPickup := status == orders.StPickedUp || status == orders.StOnTheWay ||
+			status == orders.StAtDropoff
+		if afterPickup {
+			if hasPoint {
+				if _, err := s.pg.Exec(ctx, `
+					UPDATE orders
+					SET pickup_override = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+					    pickup_override_note = $4
+					WHERE id = $1`,
+					orderID, *req.Lng, *req.Lat, "استلامٌ من موضع طارئ — البضاعةُ مع السائق"); err != nil {
+					s.respondErr(w, err)
+					return
+				}
+			} else if _, err := s.pg.Exec(ctx, `
+				UPDATE orders SET pickup_override_note = $2 WHERE id = $1`,
+				orderID,
+				"البضاعةُ مع سائقٍ سابقٍ وقع له طارئ — لا تذهب إلى المتجر، اتّصل بالعمليات",
+			); err != nil {
+				// **وكلمةٌ بلا نقطةٍ خيرٌ من نقطةٍ لم تُلتقط.**
+				//
+				// كان الشرطُ `afterPickup && hasPoint` — **فإن رُفض إذنُ الموقع أو
+				// كان السائقُ داخل بناءٍ لم يُكتب شيءٌ إطلاقاً**، ويذهب الثاني إلى
+				// مطعمٍ سلّم بضاعتَه وقبض ثمنَها. **فتُدفع البضاعةُ مرّتين.**
+				//
+				// والطارئُ نفسُه لا يُردّ لغياب الموقع — وهو صواب: «طارئٌ يُردّ لأن
+				// الموقعَ لم يُقرأ طارئٌ ضاع». **لكنّ البضاعةَ حينها كانت بلا عنوان
+				// ولا كلمة.** والآن لها كلمةٌ يقرؤها من يلتقطه.
 				s.respondErr(w, err)
 				return
 			}
-		} else if _, err := s.pg.Exec(ctx, `
-			UPDATE orders SET pickup_override_note = $2 WHERE id = $1`,
-			orderID,
-			"البضاعةُ مع سائقٍ سابقٍ وقع له طارئ — لا تذهب إلى المتجر، اتّصل بالعمليات",
-		); err != nil {
-			// **وكلمةٌ بلا نقطةٍ خيرٌ من نقطةٍ لم تُلتقط.**
-			//
-			// كان الشرطُ `afterPickup && hasPoint` — **فإن رُفض إذنُ الموقع أو
-			// كان السائقُ داخل بناءٍ لم يُكتب شيءٌ إطلاقاً**، ويذهب الثاني إلى
-			// مطعمٍ سلّم بضاعتَه وقبض ثمنَها. **فتُدفع البضاعةُ مرّتين.**
-			//
-			// والطارئُ نفسُه لا يُردّ لغياب الموقع — وهو صواب: «طارئٌ يُردّ لأن
-			// الموقعَ لم يُقرأ طارئٌ ضاع». **لكنّ البضاعةَ حينها كانت بلا عنوان
-			// ولا كلمة.** والآن لها كلمةٌ يقرؤها من يلتقطه.
-			s.respondErr(w, err)
-			return
 		}
-	}
 
-	// **والتحريرُ بدور العمليات لا بدوره** — المنصةُ تحرّره عنه.
-	//
-	// ويُنفَّذ بعد تسجيل الطارئ: **تعثّرُ التحرير يجب ألّا يبتلع النداء.**
-	// فلو سقط الانتقالُ لسببٍ ما بقي الإنذارُ مسجّلاً والعملياتُ تُخبَر،
-	// **وإنسانٌ يتصرّف خيرٌ من صمتٍ لأن آلةً تعثّرت.**
-	released := true
-	if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
-		orderID, orders.StDispatching, "طارئٌ لدى السائق"); err != nil {
-		released = false
-		s.logger.Error("الطارئ: تعذّر تحرير الطلب", "order", orderID, "error", err)
-	}
+		// **والتحريرُ بدور العمليات لا بدوره** — المنصةُ تحرّره عنه.
+		//
+		// ويُنفَّذ بعد تسجيل الطارئ: **تعثّرُ التحرير يجب ألّا يبتلع النداء.**
+		// فلو سقط الانتقالُ لسببٍ ما بقي الإنذارُ مسجّلاً والعملياتُ تُخبَر،
+		// **وإنسانٌ يتصرّف خيرٌ من صمتٍ لأن آلةً تعثّرت.**
+		if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
+			orderID, orders.StDispatching, "طارئٌ لدى السائق"); err != nil {
+			released = false
+			s.logger.Error("الطارئ: تعذّر تحرير الطلب", "order", orderID, "error", err)
+		}
 
-	// **ودوامُه يُغلق.**
-	//
-	// من وقع له حادثٌ لا يُعرض عليه طلبٌ تالٍ بعد دقيقة. **وترتيبُ الطابور
-	// يقرأ `on_shift`** — فمن بقي عليه ظلّ في الدور وهو في المستشفى.
-	if _, err := s.pg.Exec(ctx,
-		`UPDATE users SET on_shift = false WHERE id = $1`, driverID); err != nil {
-		s.logger.Error("الطارئ: تعذّر إغلاق الدوام", "driver", driverID, "error", err)
+		// **ودوامُه يُغلق.**
+		//
+		// من وقع له حادثٌ لا يُعرض عليه طلبٌ تالٍ بعد دقيقة. **وترتيبُ الطابور
+		// يقرأ `on_shift`** — فمن بقي عليه ظلّ في الدور وهو في المستشفى.
+		if _, err := s.pg.Exec(ctx,
+			`UPDATE users SET on_shift = false WHERE id = $1`, driverID); err != nil {
+			s.logger.Error("الطارئ: تعذّر إغلاق الدوام", "driver", driverID, "error", err)
+		}
 	}
 
 	// **والعملياتُ تُنبَّه فوراً** — لا حين تفتح اللوحة.
@@ -164,12 +194,13 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	})
 	s.audit(r, "driver.emergency", "order", orderID, map[string]any{
 		"emergency_id": emergencyID, "released": released, "status_was": status,
+		"duplicate": !fresh,
 	})
 	s.touch("order", "ops")
 	s.touch("driver", "ops")
 
 	httpx.JSON(w, http.StatusCreated, map[string]any{
-		"emergency_id": emergencyID, "released": released,
+		"emergency_id": emergencyID, "released": released, "duplicate": !fresh,
 	})
 }
 

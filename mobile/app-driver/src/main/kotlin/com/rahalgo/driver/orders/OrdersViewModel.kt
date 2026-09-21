@@ -906,6 +906,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             requirePhoto = state.me?.requirePhoto ?: false,
             agreeOpen = agreeOpen,
             emergencyOpen = emergencyOpen,
+            emergencyBusy = emergencyBusy,
+            emergencyError = emergencyError,
             stops = state.mine.map { Stop(it.id, it.number) },
             // **وأوّل عرضٍ معروضٍ عليه وهو في رحلة** — وما رُفض لا يعود.
             // ══════════════════════════════════════════════════════════
@@ -1426,19 +1428,61 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var emergencyOpen by mutableStateOf(false)
         private set
 
+    // **حالُ إرسالِ البلاغ** — **لا نجاحَ كاذب**: لا يُغلَق البابُ إلّا بعد
+    // إقرارِ الخادم، وسقوطُه يُقال صراحةً وتُتاح الإعادة (`DRV-DEF-001`).
+    var emergencyBusy by mutableStateOf(false)
+        private set
+    var emergencyError by mutableStateOf("")
+        private set
+
+    // **آخرُ محاولةٍ** — لتُعاد بالنقطةِ والسببِ نفسِهما بلا التباس.
+    private var lastEmergencyPoint: LastPoint.Point? = null
+    private var lastEmergencyNote: String = ""
+
     fun dismissEmergency() {
+        // **ولا يُغلَق وهو يُرسِل** — إغلاقٌ أثناء الإرسال يُقرأ إلغاءً كاذبا.
+        if (emergencyBusy) return
         emergencyOpen = false
+        emergencyError = ""
     }
 
-    /** **يبلّغ العمليات** — ثمّ يُغلق النافذة ويعيد القراءة. */
+    // ══════════════════════════════════════════════════════════════════
+    // **بلاغُ الطوارئ لا يُنتِج نجاحاً غامضاً** (`DRV-DEF-001`)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان يُغلق البابَ ثمّ يبتلع الخطأ في `Log.w`** — فمن سقطت شبكتُه
+    // ظنّ العملياتِ أُبلغت وهي لم تُبلَّغ، **وهي الحركةُ الوحيدةُ التي وُجد
+    // الزرُّ لأجلها.** **والآن**: البابُ يبقى، والحالُ يُقرأ (يُرسِل…)، ونجاحٌ
+    // لا يُعرَض إلّا بعد إقرارِ الخادم، وفشلٌ يُقال صراحةً مع زرِّ إعادة.
+    // **والمحرّكُ يمنع التكرار** (`0158`: بلاغٌ مفتوحٌ واحدٌ لكلّ طلب)،
+    // فالإعادةُ آمنةٌ لا تُنشئ بلاغاً ثانياً.
     fun emergency(point: LastPoint.Point?, note: String = "") {
         val id = currentId() ?: return
-        emergencyOpen = false
+        lastEmergencyPoint = point
+        lastEmergencyNote = note
+        emergencyOpen = true
+        emergencyBusy = true
+        emergencyError = ""
         viewModelScope.launch {
-            runCatching { backend.driver.emergency(id, point?.lat, point?.lng, note) }
-                .onFailure { Log.w("RahalGo/طارئ", "تعذّر البلاغ", it) }
+            try {
+                backend.driver.emergency(id, point?.lat, point?.lng, note)
+            } catch (e: Exception) {
+                // **لا نجاحَ كاذب** — البابُ يبقى، ويُقال إنّ العملياتِ لم تُبلَّغ.
+                emergencyBusy = false
+                emergencyError = describe(e)
+                return@launch
+            }
+            // **نجاحٌ بعد إقرارِ الخادمِ لا قبله.**
+            emergencyBusy = false
+            emergencyOpen = false
+            emergencyError = ""
             load()
         }
+    }
+
+    /** **إعادةُ المحاولةِ بالنقطةِ والسببِ نفسِهما** — والمحرّكُ يمنع التكرار. */
+    fun retryEmergency() {
+        emergency(lastEmergencyPoint, lastEmergencyNote)
     }
 
     // ══════════════════════════════════════════════════════════════════

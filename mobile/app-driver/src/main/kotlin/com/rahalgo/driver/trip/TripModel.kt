@@ -206,6 +206,10 @@ data class TripState(
     val stops: List<Stop> = emptyList(),
     /** **أنافذة الطارئ مفتوحة؟** — تُفتح حين لا سببَ يُختار. */
     val emergencyOpen: Boolean = false,
+    /** **أيُرسَل البلاغُ الآن؟** — فلا يُغلَق البابُ ولا يُضغط مرّتين. */
+    val emergencyBusy: Boolean = false,
+    /** **سقط البلاغ؟** — نصُّ الخطأ؛ وفارغُه لا خطأ (`DRV-DEF-001`). */
+    val emergencyError: String = "",
     /** عرضٌ نزل وهو في رحلة — **وفارغ يعني لا عرض.** */
     val onRouteOffer: DriverOrder? = null,
     val failReasons: List<FailReasonItem>? = null,
@@ -261,6 +265,8 @@ data class TripActions(
     val problem: (String) -> Unit,
     /** **بلاغُ الطارئ** — العملياتُ تُنبَّه وموضعُه يُقرأ. */
     val emergency: () -> Unit,
+    /** **إعادةُ البلاغِ بعد فشلٍ** — بالنقطةِ نفسِها؛ والمحرّكُ يمنع التكرار. */
+    val retryEmergency: () -> Unit,
     val dismissEmergency: () -> Unit,
     /** **يقلب الصوت** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤). */
     val toggleVoice: () -> Unit = {},

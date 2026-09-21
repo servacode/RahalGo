@@ -232,6 +232,7 @@
     <string name="emg_title">تبليغ العمليات</string>
     <string name="emg_body">سيصل بلاغ فوري إلى المكتب بموقعك ورقم الطلب. استعمله عند عطل أو خطر أو أي ما يمنعك من إكمال الطلب.</string>
     <string name="emg_send">بلغ الآن</string>
+    <string name="emg_failed">لم يصل البلاغ إلى العمليات. أعد المحاولة، أو اتصل بهم مباشرة.</string>
     <string name="trip_chat">حديث الزبون</string>
     <string name="chat_hint">اكتب رسالة…</string>
     <string name="chat_closed">انتهى الطلب — أغلق الحديث</string>

@@ -3184,7 +3184,7 @@ detail + recommended fixes + morning device-witness queue are in `docs/WORKLOG.m
 
 | ID | Sev | App | Summary | Anchor |
 |---|---|---|---|---|
-| DRV-DEF-001 | **P1** | Driver | Emergency/after-pickup problem report fails SILENTLY (only `Log.w`, nothing surfaced) — driver believes ops alerted when not | `app-driver/.../orders/OrdersViewModel.kt:1434` |
+| DRV-DEF-001 | **P1** | Driver | **FIXED (source+backend) 2026-09-21** — was: emergency report failed silently (`Log.w`, dialog closed first) → ambiguous success. Now: client is ack-gated (dialog stays open, `emergencyBusy`→`emergencyError`=`describe(e)` on failure, explicit «لم يصل البلاغ» + safe retry, success only after server ack); backend deduped by a partial unique index `driver_emergencies(order_id) WHERE status='open'` + `ON CONFLICT` (record exactly-once, notify at-least-once). Tests: `TestDRVDEF001_EmergencyDedupedPerOpenOrder` + `EmergencyContractTest` (5), both negative-witnessed. **Device witness pending** (needs a driver account + on-device tap; see queue). | `app-driver/.../orders/OrdersViewModel.kt` · `backend/.../emergency_handlers.go` · migration `0158` |
 | REP-DEF-001 | P2 | Rep | Governorates load swallowed + guard blocks reload → rep silently cannot register any lead (district mandatory) | `app-rep/.../add/AddClientScreen.kt:387` |
 | MERCH-DEF-001 | P2 | Merchant | Swallowed `storeSections` → false "choose your sections" gate for a merchant who has sections | `app-merchant/.../menu/MenuViewModel.kt:135` + `MainActivity.kt:521` |
 | DRV-DEF-002 | P2 | Driver | Merchant owner's raw phone shipped to driver device, never used (privacy/data-minimization; contradicts platform principle) | `driver_handlers.go:344` + `Order.kt:62` |

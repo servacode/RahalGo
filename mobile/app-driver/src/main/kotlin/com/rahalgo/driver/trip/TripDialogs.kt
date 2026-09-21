@@ -201,19 +201,61 @@ internal fun SmallAction(
  * **وتأكيدٌ واحدٌ يسبقه**: بلاغٌ يُوقظ المكتبَ ويحرّر الطلب، **وضغطةٌ
  * بالخطأ في جيبٍ** تفعل ذلك كلَّه.
  */
+// ══════════════════════════════════════════════════════════════════════
+// **بلاغُ الطوارئ لا يُظهر نجاحاً غامضاً** (`DRV-DEF-001`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ثلاثُ حالاتٍ صريحة**: يُرسِل (لا يُغلَق ولا يُضغط ثانيةً) · سقط (يُقال «لم
+// يصل» صراحةً مع إعادةٍ آمنةٍ يمنع المحرّكُ تكرارَها) · ونجاحٌ يُغلق البابَ
+// من الخارجِ بعد إقرارِ الخادمِ لا قبله. **فلا يظنّ السائقُ العملياتِ أُبلغت
+// وهي لم تُبلَّغ.**
 @Composable
-internal fun EmergencyDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+internal fun EmergencyDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    busy: Boolean = false,
+    error: String = "",
+    onRetry: () -> Unit = onConfirm,
+) {
+    val failed = error.isNotEmpty()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // **ولا يُغلَق بلمسةٍ خارجه وهو يُرسِل** — إغلاقٌ يُقرأ إلغاءً كاذبا.
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(R.string.emg_title)) },
-        text = { Text(stringResource(R.string.emg_body), color = Rahal.colors.inkMuted) },
+        text = {
+            Column {
+                Text(
+                    if (failed) stringResource(R.string.emg_failed) else stringResource(R.string.emg_body),
+                    color = if (failed) Rahal.colors.danger else Rahal.colors.inkMuted,
+                )
+                if (failed) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        error,
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
         confirmButton = {
-            RahalTextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.emg_send), color = Rahal.colors.danger)
+            when {
+                busy -> RahalTextButton(onClick = {}, enabled = false) {
+                    Text(stringResource(R.string.cta_sending), color = Rahal.colors.inkMuted)
+                }
+                failed -> RahalTextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.act_retry), color = Rahal.colors.danger)
+                }
+                else -> RahalTextButton(onClick = onConfirm) {
+                    Text(stringResource(R.string.emg_send), color = Rahal.colors.danger)
+                }
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
+            // **ولا رجوعَ وهو يُرسِل** — لا يُترك البلاغُ معلَّقاً بلا خبر.
+            if (!busy) {
+                RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
+            }
         },
     )
 }

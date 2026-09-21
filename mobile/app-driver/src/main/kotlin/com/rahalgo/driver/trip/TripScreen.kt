@@ -909,7 +909,13 @@ fun TripScreen(
     }
 
     if (state.emergencyOpen) {
-        EmergencyDialog(onConfirm = actions.emergency, onDismiss = actions.dismissEmergency)
+        EmergencyDialog(
+            busy = state.emergencyBusy,
+            error = state.emergencyError,
+            onConfirm = actions.emergency,
+            onRetry = actions.retryEmergency,
+            onDismiss = actions.dismissEmergency,
+        )
     }
 
     if (state.failReasons != null) {
