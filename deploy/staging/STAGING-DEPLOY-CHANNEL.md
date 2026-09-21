@@ -10,48 +10,40 @@
 
 | File | Role |
 |---|---|
-| `deploy/staging/rahalgo-staging-deploy.sh` | The root-owned wrapper — the **only** thing the deploy identity can run. Validates the SHA, refuses production, extracts the source archive, builds+deploys staging, verifies live identity, proves production unchanged. Fail-closed. |
-| `.github/workflows/deploy-staging.yml` | `workflow_dispatch` action: checkout exact SHA → `git archive` → stream to the wrapper over the restricted key → independently verify live staging identity == SHA. |
-| `deploy/staging/bootstrap-staging-channel.sh` | One-time owner script (run as root on the box): creates the restricted identity, installs the wrapper, pins the forced-command key, sets permissions, prints PASS/FAIL. |
-| `deploy/staging/wrapper-selftest.sh` | Off-box proof of the wrapper's validation boundary (malformed SHA → 10, production-tainted → 11, clean → 0). **9/9 pass.** |
+| `deploy/staging/rahalgo-staging-deploy.sh` | The root-owned wrapper — the **only** thing the deploy identity can run (via `sudo`). Validates the SHA, refuses production, **cryptographically verifies the git bundle resolves to the SHA**, builds+deploys staging, verifies live identity, proves production unchanged (container-ID level). Fail-closed. |
+| `.github/workflows/deploy-staging.yml` | `workflow_dispatch(sha)`: checkout exact SHA → **git bundle bound to the SHA** → stream to the wrapper over the restricted key → independently verify live staging identity == SHA. |
+| `deploy/staging/bootstrap-staging-channel.sh` | One-time owner script (root): restricted identity (no docker group, locked password, forced-command key), narrow **sudoers rule (wrapper only)**, root-owned wrapper, PASS/FAIL. |
+| `deploy/staging/rahalgo-staging-deploy.pub` | The deploy identity's **public** key (safe to commit); bootstrap installs it. The private key lives only in the GitHub `staging` secret. |
+| `deploy/staging/wrapper-selftest.sh` | Off-box proof: SHA validation, production refusal, and the **bundle↔SHA binding** (content A + SHA B → rejected). **19/19 pass.** |
 
-The wrapper reuses the existing, self-consistent build/deploy tools **from the deployed archive**: `deploy/build-artifact.sh` (archive mode), `deploy/preflight-env.sh`, `deploy/promote.sh`. No git working tree is required on the box.
+The wrapper reuses the existing, self-consistent build/deploy tools **from the verified commit**: `deploy/build-artifact.sh` (archive mode), `deploy/preflight-env.sh`, `deploy/promote.sh`. No git working tree is required on the box.
 
 ---
 
-## 2 · One-time owner bootstrap (do this once)
+## 2 · One-time owner action — ONE command
+
+Everything else (deploy keypair, GitHub secrets, host-key pinning) is already done by Claude.
+On the box, as root, from a checkout of this repo:
 
 ```bash
-# a) Generate the dedicated deploy keypair (locally, on your machine)
-ssh-keygen -t ed25519 -f rahalgo-staging-deploy -N "" -C rahalgo-staging-deploy
-
-# b) On the box, as root, from a checkout of this repo at the approved SHA:
-sudo STAGING_DEPLOY_PUBKEY="$(cat rahalgo-staging-deploy.pub)" \
-     deploy/staging/bootstrap-staging-channel.sh
-#    -> expect:  BOOTSTRAP RESULT: PASS
-
-# c) Capture the box host key for pinning (no blind trust-on-first-use):
-ssh-keyscan -t ed25519 195.201.141.130
+sudo deploy/staging/bootstrap-staging-channel.sh
 ```
 
-Prerequisites on the box: `docker`, `go`, and `/srv/rahalgo-staging/deploy/staging/.env.staging` present (the persistent staging secrets — already there). The bootstrap is idempotent.
+Expect the last line: **`BOOTSTRAP RESULT: PASS`**. The committed public key
+(`deploy/staging/rahalgo-staging-deploy.pub`) is picked up automatically; the matching private
+key lives only in the GitHub `staging` secret. Prerequisites on the box: `docker`, `go`, and
+`/srv/rahalgo-staging/deploy/staging/.env.staging` (already present). Idempotent.
 
 ---
 
-## 3 · GitHub configuration (repo Settings → Environments → `staging`)
+## 3 · GitHub configuration — already done
 
-Add these **Environment secrets** (staging only — never production):
-
-| Secret | Value |
-|---|---|
-| `STAGING_DEPLOY_KEY` | contents of the **private** key `rahalgo-staging-deploy` |
-| `STAGING_SSH_HOST` | `195.201.141.130` |
-| `STAGING_SSH_USER` | `rahalgo-staging-deploy` |
-| `STAGING_SSH_KNOWN_HOSTS` | the line printed by `ssh-keyscan` in step (c) |
-| `STAGING_IDENTITY_URL` | `https://staging-api.rahalgo.com/api/v1/public/identity` |
-
-Then delete the local private key. Optionally add a required reviewer to the `staging`
-Environment if you want a manual approval gate before each deploy.
+Claude configured the `staging` GitHub Environment and its secrets (staging only, never
+production): `STAGING_DEPLOY_KEY` (private key piped via stdin — never printed),
+`STAGING_SSH_HOST`, `STAGING_SSH_USER`, `STAGING_SSH_KNOWN_HOSTS` (pinned via `ssh-keyscan`),
+`STAGING_IDENTITY_URL`. The local private key was deleted after upload. **Nothing for the owner
+to add.** (Optionally add a required reviewer to the `staging` Environment for a manual approval
+gate before each deploy.)
 
 ---
 
@@ -82,19 +74,24 @@ staging, and **independently** confirms `environment=staging`, `source_commit=<s
 
 ## 6 · Why production is excluded (defence in depth)
 
-1. **Identity:** forced-command key → the deploy user can run **only** the wrapper; no shell,
-   `no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding`; password locked; exactly
-   one authorized key. The bootstrap validates all of this and that the user cannot edit the wrapper.
-2. **Wrapper:** hard-codes `STAGING_ROOT=/srv/rahalgo-staging`; refuses any production-tainted
+1. **Identity (no host-root equivalence):** the deploy user is **not in the docker group**,
+   password-locked, with a forced-command key (`no-pty,no-port-forwarding,no-agent-forwarding,
+   no-X11-forwarding`, one key). It can do exactly one thing: `sudo -n /usr/local/sbin/rahalgo-staging-deploy`.
+   A sudoers rule permits **only** that wrapper. The bootstrap validates: `sudo -l` lists only the
+   wrapper, the user has no direct docker, and cannot edit the wrapper.
+2. **Source binding:** the wrapper accepts a **git bundle** and cryptographically verifies it
+   resolves to the exact requested SHA (`refs/heads/deploy-target` == SHA, content-addressed)
+   **before** building. Content from commit A under a request for SHA B is rejected (exit 14).
+3. **Wrapper:** hard-codes `STAGING_ROOT=/srv/rahalgo-staging`; refuses any production-tainted
    `DATABASE_URL/REDIS_URL/COMPOSE_FILE/…` (exit 11); requires the staging DB
-   (`:5534/rahalgo_staging`) or fails closed.
-3. **envguard:** `stagingctl guard` (the app's own `MustBeSafe`) refuses a non-staging
+   (`:5534/rahalgo_staging`) or fails closed; runs as root only via the sudo forced command (exit 15 otherwise).
+4. **envguard:** `stagingctl guard` (the app's own `MustBeSafe`) refuses a non-staging
    environment (exit 3).
-4. **Preflight:** `preflight-env.sh` requires the target to report `environment=staging`
+5. **Preflight:** `preflight-env.sh` requires the target to report `environment=staging`
    **before** any mutation; `promote.sh` re-checks env before *and* after.
-5. **Isolation proof:** the wrapper snapshots the production compose project (`rahalgo`)
-   containers before and after and **fails (exit 6) if any identity changed.**
-6. **GitHub:** only the `staging` Environment's secrets are used; there is no production job and
+6. **Isolation proof:** the wrapper snapshots the production compose project (`rahalgo`) with
+   **container ID + image ID + state** before and after, and **fails (exit 6) if any changed.**
+7. **GitHub:** only the `staging` Environment's secrets are used; there is no production job and
    no production secret in this workflow.
 
 Result: **Production mutations = 0**, structurally.

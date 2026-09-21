@@ -59,8 +59,11 @@ jobs:
           got="$(git rev-parse HEAD)"
           [ "$got" = "$SHA" ] || { echo "::error::checkout $got != requested $SHA"; exit 1; }
 
-      - name: Create deterministic source archive of the exact SHA
-        run: git archive --format=tar.gz -o /tmp/rahalgo-src.tgz "$SHA"
+      - name: Create a git bundle cryptographically bound to the exact SHA
+        run: |
+          git branch -f deploy-target "$SHA"
+          git bundle create /tmp/rahalgo.bundle deploy-target
+          git bundle verify /tmp/rahalgo.bundle
 
       - name: Configure the restricted staging deploy key
         run: |
@@ -73,14 +76,16 @@ jobs:
 
       - name: Deploy to staging via the restricted forced-command wrapper
         run: |
-          # The deploy key's forced command IS /usr/local/sbin/rahalgo-staging-deploy;
-          # the SHA arrives as $SSH_ORIGINAL_COMMAND, the archive on stdin.
+          # The deploy key's forced command is `sudo -n /usr/local/sbin/rahalgo-staging-deploy`
+          # (sudoers keeps SSH_ORIGINAL_COMMAND). The SHA arrives as $SSH_ORIGINAL_COMMAND,
+          # the git bundle on stdin. The wrapper verifies the bundle resolves to the SHA
+          # before building.
           ssh -i ~/.ssh/staging_deploy \
               -o IdentitiesOnly=yes \
               -o StrictHostKeyChecking=yes \
               -o UserKnownHostsFile=~/.ssh/known_hosts \
               -o BatchMode=yes \
-              "$SSH_USER@$SSH_HOST" "$SHA" < /tmp/rahalgo-src.tgz
+              "$SSH_USER@$SSH_HOST" "$SHA" < /tmp/rahalgo.bundle
 
       - name: Independently verify live staging identity == requested SHA
         run: |
