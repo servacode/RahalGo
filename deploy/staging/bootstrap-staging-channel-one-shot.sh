@@ -71,6 +71,16 @@ STAGING_PROJECT=rahalgo-staging
 log(){ printf '%s\n' "$*" >&2; }
 die(){ printf 'x %s\n' "$*" >&2; exit "${2:-1}"; }
 
+# ── restore a sane runtime under sudo (PATH/HOME) + the Go dir bootstrap found/installed
+GO_CONF=/etc/rahalgo-staging-deploy.conf
+load_runtime(){
+	export PATH="/usr/local/go/bin:/opt/rahalgo-go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+	export HOME="${HOME:-/root}"
+	# bootstrap writes GO_BIN_DIR here after detecting/installing a suitable Go
+	[ -r "$GO_CONF" ] && . "$GO_CONF" 2>/dev/null || true
+	[ -n "${GO_BIN_DIR:-}" ] && export PATH="$GO_BIN_DIR:$PATH"
+}
+
 # ── validate a 40-char lowercase-hex SHA ──────────────────────────────
 validate_sha(){
 	case "$1" in
@@ -131,8 +141,7 @@ readiness(){
 	if [ "$(id -u)" -eq 0 ]; then rok "wrapper runs as root via deploy-user -> sudo path"
 	else echo "  FAIL not root — sudo/forced-command path broken"; echo "READINESS: FAIL"; return 1; fi
 
-	export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
-	export HOME="${HOME:-/root}"
+	load_runtime
 
 	# persistent env: normalize + parse WITHOUT printing any value
 	if [ -f "$STAGING_ENV" ]; then
@@ -214,12 +223,9 @@ SHA="$REQ"; SHORT="${SHA:0:8}"
 [ "$(id -u)" -eq 0 ] || die "must run as root (via sudo forced command)" 15
 [ -f "$STAGING_ENV" ] || die "persistent staging env missing: $STAGING_ENV" 12
 
-# sudo resets the environment — restore what the build needs:
-#  - PATH: secure_path drops Go's dir (needed for stagingctl guard) and others
-#  - HOME: `go` needs a writable module/build cache (GOCACHE/GOMODCACHE default under HOME)
-# STAGING_GO_BIN in .env.staging can override if Go lives somewhere unusual.
-export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
-export HOME="${HOME:-/root}"
+# sudo resets the environment — restore PATH/HOME and the Go dir the bootstrap
+# detected or installed (via $GO_CONF). STAGING_GO_BIN in .env.staging still overrides.
+load_runtime
 
 PROD_BEFORE="$(prod_snapshot || true)"
 log "-- production containers before: $(printf '%s' "$PROD_BEFORE" | wc -l) recorded"
@@ -323,6 +329,26 @@ echo "installed forced-command key for $DEPLOY_USER"
 install -d -o "$DEPLOY_USER" -g "$DEPLOY_USER" -m 0755 "$STAGING_ROOT/incoming" "$STAGING_ROOT/artifacts"
 
 # ── VALIDATE — PASS/FAIL, fail closed ─────────────────────────────────
+# ── 5.5 · self-heal Go: detect a suitable toolchain, else install pinned
+REQUIRED_GO=1.25.0
+GO_CONF=/etc/rahalgo-staging-deploy.conf
+GO_SHA256=2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613
+GO_TGZ="go${REQUIRED_GO}.linux-amd64.tar.gz"
+go_ok(){ local v; v="$("$1" version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1 | sed 's/^go//')"; [ -n "$v" ] && [ "$(printf '%s\n%s\n' "$REQUIRED_GO" "$v" | sort -V | head -1)" = "$REQUIRED_GO" ]; }
+find_go(){ local c; for c in /usr/local/go/bin/go /usr/bin/go /snap/bin/go /opt/go/bin/go /opt/rahalgo-go/bin/go /usr/lib/go/bin/go /root/sdk/go*/bin/go /home/*/sdk/go*/bin/go /root/go/bin/go; do [ -x "$c" ] || continue; go_ok "$c" && { dirname "$c"; return 0; }; done; return 1; }
+install_go(){ local dest=/opt/rahalgo-go tmp; command -v curl >/dev/null 2>&1 || { echo "x curl required to install Go" >&2; return 1; }; tmp="$(mktemp -d)"; echo "downloading pinned Go $REQUIRED_GO (integrity-verified) ..." >&2; curl -fsSL "https://go.dev/dl/$GO_TGZ" -o "$tmp/$GO_TGZ" || { echo "x Go download failed" >&2; rm -rf "$tmp"; return 1; }; echo "$GO_SHA256  $tmp/$GO_TGZ" | sha256sum -c - >/dev/null 2>&1 || { echo "x Go checksum FAILED — refusing" >&2; rm -rf "$tmp"; return 1; }; rm -rf "$dest"; tar -C "$tmp" -xzf "$tmp/$GO_TGZ" || { echo "x Go extract failed" >&2; rm -rf "$tmp"; return 1; }; mv "$tmp/go" "$dest"; rm -rf "$tmp"; go_ok "$dest/bin/go" || { echo "x installed Go failed version check" >&2; return 1; }; printf '%s' "$dest/bin"; }
+echo "== ensuring Go >= $REQUIRED_GO (never overwrites an existing Go) =="
+GO_DIR="$(find_go || true)"
+if [ -n "$GO_DIR" ]; then
+  echo "detected suitable Go: $GO_DIR ($("$GO_DIR/go" version 2>/dev/null))"
+else
+  echo "no suitable Go found — installing pinned Go $REQUIRED_GO to /opt/rahalgo-go"
+  GO_DIR="$(install_go)" || { echo "BOOTSTRAP RESULT: FAIL — could not provide Go $REQUIRED_GO"; exit 1; }
+  echo "installed Go: $GO_DIR"
+fi
+printf 'GO_BIN_DIR=%s\n' "$GO_DIR" > "$GO_CONF"; chmod 0644 "$GO_CONF"
+echo "recorded Go dir in $GO_CONF"
+
 echo; echo "== validation =="
 fail=0
 chk(){ if eval "$2" >/dev/null 2>&1; then echo "PASS $1"; else echo "FAIL $1"; fail=1; fi; }

@@ -77,6 +77,26 @@ echo "installed forced-command key for $DEPLOY_USER"
 # ── 5 · staging-only writable paths for the deploy user ───────────────
 install -d -o "$DEPLOY_USER" -g "$DEPLOY_USER" -m 0755 "$STAGING_ROOT/incoming" "$STAGING_ROOT/artifacts"
 
+# ── 5.5 · self-heal Go: detect a suitable toolchain, else install pinned
+REQUIRED_GO=1.25.0
+GO_CONF=/etc/rahalgo-staging-deploy.conf
+GO_SHA256=2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613
+GO_TGZ="go${REQUIRED_GO}.linux-amd64.tar.gz"
+go_ok(){ local v; v="$("$1" version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1 | sed 's/^go//')"; [ -n "$v" ] && [ "$(printf '%s\n%s\n' "$REQUIRED_GO" "$v" | sort -V | head -1)" = "$REQUIRED_GO" ]; }
+find_go(){ local c; for c in /usr/local/go/bin/go /usr/bin/go /snap/bin/go /opt/go/bin/go /opt/rahalgo-go/bin/go /usr/lib/go/bin/go /root/sdk/go*/bin/go /home/*/sdk/go*/bin/go /root/go/bin/go; do [ -x "$c" ] || continue; go_ok "$c" && { dirname "$c"; return 0; }; done; return 1; }
+install_go(){ local dest=/opt/rahalgo-go tmp; command -v curl >/dev/null 2>&1 || { echo "x curl required to install Go" >&2; return 1; }; tmp="$(mktemp -d)"; echo "downloading pinned Go $REQUIRED_GO (integrity-verified) ..." >&2; curl -fsSL "https://go.dev/dl/$GO_TGZ" -o "$tmp/$GO_TGZ" || { echo "x Go download failed" >&2; rm -rf "$tmp"; return 1; }; echo "$GO_SHA256  $tmp/$GO_TGZ" | sha256sum -c - >/dev/null 2>&1 || { echo "x Go checksum FAILED — refusing" >&2; rm -rf "$tmp"; return 1; }; rm -rf "$dest"; tar -C "$tmp" -xzf "$tmp/$GO_TGZ" || { echo "x Go extract failed" >&2; rm -rf "$tmp"; return 1; }; mv "$tmp/go" "$dest"; rm -rf "$tmp"; go_ok "$dest/bin/go" || { echo "x installed Go failed version check" >&2; return 1; }; printf '%s' "$dest/bin"; }
+echo "== ensuring Go >= $REQUIRED_GO (never overwrites an existing Go) =="
+GO_DIR="$(find_go || true)"
+if [ -n "$GO_DIR" ]; then
+  echo "detected suitable Go: $GO_DIR ($("$GO_DIR/go" version 2>/dev/null))"
+else
+  echo "no suitable Go found — installing pinned Go $REQUIRED_GO to /opt/rahalgo-go"
+  GO_DIR="$(install_go)" || { echo "BOOTSTRAP RESULT: FAIL — could not provide Go $REQUIRED_GO"; exit 1; }
+  echo "installed Go: $GO_DIR"
+fi
+printf 'GO_BIN_DIR=%s\n' "$GO_DIR" > "$GO_CONF"; chmod 0644 "$GO_CONF"
+echo "recorded Go dir in $GO_CONF"
+
 # ── 6 · VALIDATE — PASS/FAIL, fail closed ─────────────────────────────
 echo; echo "== validation =="
 fail=0

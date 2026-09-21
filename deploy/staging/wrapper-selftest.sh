@@ -70,6 +70,10 @@ grep -q "{{.Id}}=" "$W" && ok "prod snapshot includes container ID" || no "prod 
 grep -q 'readiness(){' "$W" && grep -q '\-\-readiness)' "$W" && ok "wrapper has --readiness mode" || no "wrapper has --readiness mode"
 grep -q 'docker compose version' "$W" && grep -q 'go build -o /dev/null' "$W" && grep -q 'MemAvailable' "$W" && grep -q 'df -Pk' "$W" && ok "readiness checks tools/go/disk/memory" || no "readiness checks tools/go/disk/memory"
 grep -q 'sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness' "$BOOT" && ok "bootstrap gates PASS on on-box readiness" || no "bootstrap gates PASS on on-box readiness"
+grep -q 'load_runtime' "$W" && grep -q 'GO_BIN_DIR' "$W" && ok "wrapper loads Go dir from config" || no "wrapper loads Go dir from config"
+grep -q 'find_go' "$BOOT" && grep -q 'install_go' "$BOOT" && grep -q '2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613' "$BOOT" && grep -q 'sha256sum -c' "$BOOT" && ok "bootstrap self-heals Go (detect or pinned+verified install)" || no "bootstrap self-heals Go"
+GOMOD_V="$(grep -oE '^go [0-9.]+' "$HERE/../../backend/go.mod" 2>/dev/null | awk '{print $2}')"
+[ -n "$GOMOD_V" ] && grep -q "REQUIRED_GO=$GOMOD_V" "$BOOT" && ok "installer Go version matches backend/go.mod ($GOMOD_V)" || no "installer Go version matches backend/go.mod"
 grep -q "gpasswd -d .* docker" "$BOOT" && ok "bootstrap removes docker-group membership" || no "bootstrap removes docker-group membership"
 grep -q "NOPASSWD: \$WRAPPER_DST" "$BOOT" && ok "bootstrap sudoers is wrapper-only" || no "bootstrap sudoers is wrapper-only"
 grep -q 'command="sudo -n /usr/local/sbin/rahalgo-staging-deploy"' "$BOOT" && ok "bootstrap forces sudo wrapper command" || no "bootstrap forces sudo wrapper command"
@@ -86,6 +90,7 @@ if [ -f "$ONESHOT" ]; then
 	# embedded key is the PUBLIC key only (no PRIVATE key material)
 	! grep -q 'BEGIN .*PRIVATE KEY' "$ONESHOT" && ok "one-shot embeds no private key" || no "one-shot embeds no private key"
 	grep -q 'sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness' "$ONESHOT" && ok "one-shot gates PASS on on-box readiness" || no "one-shot gates PASS on on-box readiness"
+	grep -q 'find_go' "$ONESHOT" && grep -q '2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613' "$ONESHOT" && ok "one-shot includes Go self-heal (pinned+verified)" || no "one-shot includes Go self-heal"
 	rm -f "$tmp"
 else
 	echo "SKIP one-shot checks (file absent)"

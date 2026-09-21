@@ -39,6 +39,12 @@ disk/memory for the build (or a clear capacity warning/failure); and the fail-cl
 (malformed SHA, production-tainted target) still hold. So PASS means **genuinely deploy-ready**,
 not merely installed.
 
+It also **self-heals Go**: it detects an existing suitable Go (≥ `backend/go.mod`, currently 1.25.0)
+in common locations and points the wrapper at its absolute path; if none exists, it installs the
+pinned official toolchain (`go1.25.0.linux-amd64`, SHA-256 verified) to `/opt/rahalgo-go` — **never
+overwriting an existing Go** and **without any manual `.env.staging` edit** (the Go dir is recorded
+in `/etc/rahalgo-staging-deploy.conf`, which the wrapper reads).
+
 This **self-contained** installer embeds the root-owned wrapper + the deploy **public** key + the
 sudoers policy — no git checkout, no repo, no file copying. The private key lives only in the GitHub
 `staging` secret. If the console mangles the pipe, use two lines instead:

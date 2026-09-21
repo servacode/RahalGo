@@ -39,6 +39,16 @@ STAGING_PROJECT=rahalgo-staging
 log(){ printf '%s\n' "$*" >&2; }
 die(){ printf 'x %s\n' "$*" >&2; exit "${2:-1}"; }
 
+# ── restore a sane runtime under sudo (PATH/HOME) + the Go dir bootstrap found/installed
+GO_CONF=/etc/rahalgo-staging-deploy.conf
+load_runtime(){
+	export PATH="/usr/local/go/bin:/opt/rahalgo-go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+	export HOME="${HOME:-/root}"
+	# bootstrap writes GO_BIN_DIR here after detecting/installing a suitable Go
+	[ -r "$GO_CONF" ] && . "$GO_CONF" 2>/dev/null || true
+	[ -n "${GO_BIN_DIR:-}" ] && export PATH="$GO_BIN_DIR:$PATH"
+}
+
 # ── validate a 40-char lowercase-hex SHA ──────────────────────────────
 validate_sha(){
 	case "$1" in
@@ -99,8 +109,7 @@ readiness(){
 	if [ "$(id -u)" -eq 0 ]; then rok "wrapper runs as root via deploy-user -> sudo path"
 	else echo "  FAIL not root — sudo/forced-command path broken"; echo "READINESS: FAIL"; return 1; fi
 
-	export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
-	export HOME="${HOME:-/root}"
+	load_runtime
 
 	# persistent env: normalize + parse WITHOUT printing any value
 	if [ -f "$STAGING_ENV" ]; then
@@ -182,12 +191,9 @@ SHA="$REQ"; SHORT="${SHA:0:8}"
 [ "$(id -u)" -eq 0 ] || die "must run as root (via sudo forced command)" 15
 [ -f "$STAGING_ENV" ] || die "persistent staging env missing: $STAGING_ENV" 12
 
-# sudo resets the environment — restore what the build needs:
-#  - PATH: secure_path drops Go's dir (needed for stagingctl guard) and others
-#  - HOME: `go` needs a writable module/build cache (GOCACHE/GOMODCACHE default under HOME)
-# STAGING_GO_BIN in .env.staging can override if Go lives somewhere unusual.
-export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
-export HOME="${HOME:-/root}"
+# sudo resets the environment — restore PATH/HOME and the Go dir the bootstrap
+# detected or installed (via $GO_CONF). STAGING_GO_BIN in .env.staging still overrides.
+load_runtime
 
 PROD_BEFORE="$(prod_snapshot || true)"
 log "-- production containers before: $(printf '%s' "$PROD_BEFORE" | wc -l) recorded"
