@@ -67,6 +67,9 @@ fi
 # ── source-asserted hardening ─────────────────────────────────────────
 grep -q "id -u" "$W" && grep -q "must run as root" "$W" && ok "wrapper requires root" || no "wrapper requires root"
 grep -q "{{.Id}}=" "$W" && ok "prod snapshot includes container ID" || no "prod snapshot includes container ID"
+grep -q 'readiness(){' "$W" && grep -q '\-\-readiness)' "$W" && ok "wrapper has --readiness mode" || no "wrapper has --readiness mode"
+grep -q 'docker compose version' "$W" && grep -q 'go build -o /dev/null' "$W" && grep -q 'MemAvailable' "$W" && grep -q 'df -Pk' "$W" && ok "readiness checks tools/go/disk/memory" || no "readiness checks tools/go/disk/memory"
+grep -q 'sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness' "$BOOT" && ok "bootstrap gates PASS on on-box readiness" || no "bootstrap gates PASS on on-box readiness"
 grep -q "gpasswd -d .* docker" "$BOOT" && ok "bootstrap removes docker-group membership" || no "bootstrap removes docker-group membership"
 grep -q "NOPASSWD: \$WRAPPER_DST" "$BOOT" && ok "bootstrap sudoers is wrapper-only" || no "bootstrap sudoers is wrapper-only"
 grep -q 'command="sudo -n /usr/local/sbin/rahalgo-staging-deploy"' "$BOOT" && ok "bootstrap forces sudo wrapper command" || no "bootstrap forces sudo wrapper command"
@@ -82,6 +85,7 @@ if [ -f "$ONESHOT" ]; then
 		|| no "one-shot embeds the current wrapper (no drift)"
 	# embedded key is the PUBLIC key only (no PRIVATE key material)
 	! grep -q 'BEGIN .*PRIVATE KEY' "$ONESHOT" && ok "one-shot embeds no private key" || no "one-shot embeds no private key"
+	grep -q 'sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness' "$ONESHOT" && ok "one-shot gates PASS on on-box readiness" || no "one-shot gates PASS on on-box readiness"
 	rm -f "$tmp"
 else
 	echo "SKIP one-shot checks (file absent)"

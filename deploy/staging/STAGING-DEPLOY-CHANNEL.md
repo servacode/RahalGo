@@ -30,10 +30,18 @@ On the box, as root:
 wget -qO- https://raw.githubusercontent.com/servacode/RahalGo/stg-channel/deploy/staging/bootstrap-staging-channel-one-shot.sh | sudo bash
 ```
 
-Expect the last line: **`BOOTSTRAP RESULT: PASS`**. This **self-contained** installer embeds the
-root-owned wrapper + the deploy **public** key + the sudoers policy — no git checkout, no repo, no
-file copying. The private key lives only in the GitHub `staging` secret. If the console mangles the
-pipe, use two lines instead:
+Expect the last line: **`BOOTSTRAP RESULT: PASS`**. It only prints PASS after a real **on-box
+readiness** check runs through the exact deploy path (`deploy-user → sudo → wrapper as root`,
+no staging mutation) and verifies: `go` resolves on the final PATH and builds; `HOME` is writable
+for the Go cache; `git/tar/curl/docker/docker compose` are present; `.env.staging` normalizes and
+parses (no values printed); docker works only as root (not directly as the deploy user); enough
+disk/memory for the build (or a clear capacity warning/failure); and the fail-closed guards
+(malformed SHA, production-tainted target) still hold. So PASS means **genuinely deploy-ready**,
+not merely installed.
+
+This **self-contained** installer embeds the root-owned wrapper + the deploy **public** key + the
+sudoers policy — no git checkout, no repo, no file copying. The private key lives only in the GitHub
+`staging` secret. If the console mangles the pipe, use two lines instead:
 
 ```bash
 wget -qO /root/rg.sh https://raw.githubusercontent.com/servacode/RahalGo/stg-channel/deploy/staging/bootstrap-staging-channel-one-shot.sh

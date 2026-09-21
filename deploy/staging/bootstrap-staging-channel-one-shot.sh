@@ -119,6 +119,76 @@ prod_snapshot(){
 	done | sort
 }
 
+# ── on-box readiness: prove the REAL sudo runtime can deploy — no mutation ──
+# Invoked by bootstrap as: sudo -u <deploy-user> sudo -n <wrapper> --readiness
+# so it exercises the exact deploy path. Builds nothing on staging, touches no
+# staging/production container, prints no secret values.
+readiness(){
+	local rf=0
+	rok(){ echo "  PASS $1"; }; rno(){ echo "  FAIL $1"; rf=1; }; rw(){ echo "  WARN $1"; }
+	echo "== on-box readiness (no staging mutation) =="
+
+	if [ "$(id -u)" -eq 0 ]; then rok "wrapper runs as root via deploy-user -> sudo path"
+	else echo "  FAIL not root — sudo/forced-command path broken"; echo "READINESS: FAIL"; return 1; fi
+
+	export PATH="/usr/local/go/bin:/snap/bin:/root/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+	export HOME="${HOME:-/root}"
+
+	# persistent env: normalize + parse WITHOUT printing any value
+	if [ -f "$STAGING_ENV" ]; then
+		local e; e="$(mktemp)"; tr -d '\r' < "$STAGING_ENV" > "$e"
+		if ( set -a; . "$e"; set +a; [ -n "${STAGING_DB_PASSWORD:-}" ] && [ -n "${STAGING_API_URL:-}" ] ); then
+			rok ".env.staging normalizes + parses (required keys present)"
+		else rno ".env.staging missing required keys (DB password / API URL)"; fi
+		local gob; gob="$( set -a; . "$e"; set +a; printf '%s' "${STAGING_GO_BIN:-}" )"
+		[ -n "$gob" ] && export PATH="$gob:$PATH"
+		rm -f "$e"
+	else rno "persistent .env.staging missing: $STAGING_ENV"; fi
+
+	# HOME writable (Go cache)
+	if ( t="$HOME/.rg-readiness.$$"; : > "$t" && rm -f "$t" ) 2>/dev/null; then rok "HOME set and writable ($HOME)"
+	else rno "HOME not writable ($HOME) — Go cache would fail"; fi
+
+	# required tools
+	local t
+	for t in git tar curl docker; do command -v "$t" >/dev/null 2>&1 && rok "found: $t" || rno "missing: $t"; done
+	docker compose version >/dev/null 2>&1 && rok "found: docker compose (v2)" || rno "missing: docker compose (v2)"
+
+	# go toolchain actually builds (stagingctl compiles from the bundle at deploy time)
+	if command -v go >/dev/null 2>&1; then
+		local d; d="$(mktemp -d)"; printf 'package main\nfunc main(){}\n' > "$d/m.go"
+		if ( cd "$d" && go mod init rg_readiness >/dev/null 2>&1 && go build -o /dev/null . >/dev/null 2>&1 ); then
+			rok "go toolchain builds (proves the Go env; stagingctl compiles at deploy)"
+		else rno "go present but cannot build — cache/HOME/toolchain problem"; fi
+		rm -rf "$d"
+	else rno "go not found on PATH — set STAGING_GO_BIN in .env.staging"; fi
+
+	# docker works as root (through the wrapper) — the ONLY way this identity gets docker
+	docker ps >/dev/null 2>&1 && rok "docker usable as root (via wrapper)" || rno "docker not usable as root"
+
+	# capacity for the known build
+	local ak; ak="$(df -Pk "$STAGING_ROOT" 2>/dev/null | awk 'NR==2{print $4}')"
+	if [ -n "$ak" ]; then
+		if   [ "$ak" -lt 3145728 ]; then rno "disk critically low: $((ak/1024/1024))G free (<3G) — build will fail"
+		elif [ "$ak" -lt 8388608 ]; then rw  "disk low: $((ak/1024/1024))G free (<8G recommended)"
+		else rok "disk ok: $((ak/1024/1024))G free"; fi
+	else rw "could not read disk free"; fi
+	local ma; ma="$(awk '/MemAvailable/{print $2}' /proc/meminfo 2>/dev/null)"
+	if [ -n "$ma" ]; then
+		if [ "$ma" -lt 786432 ]; then rw "memory low: $((ma/1024))M available (Next build may OOM — ensure swap)"
+		else rok "memory ok: $((ma/1024))M available"; fi
+	else rw "could not read memory"; fi
+
+	# fail-closed guards still hold on this box
+	"$0" --check deadbeef >/dev/null 2>&1 && rno "malformed SHA NOT rejected" || rok "malformed SHA fails closed"
+	"$0" --check 0000000000000000000000000000000000000000 >/dev/null 2>&1 && rok "well-formed SHA accepted" || rno "well-formed SHA wrongly rejected"
+	DATABASE_URL=postgres://u@h:5432/rahalgo_prod?sslmode=disable "$0" --check 0000000000000000000000000000000000000000 >/dev/null 2>&1 \
+		&& rno "production-tainted NOT refused" || rok "production-tainted fails closed"
+
+	echo
+	if [ "$rf" -eq 0 ]; then echo "READINESS: PASS"; return 0; else echo "READINESS: FAIL"; return 1; fi
+}
+
 # ── resolve the request ───────────────────────────────────────────────
 REQ="${1:-${SSH_ORIGINAL_COMMAND:-}}"; REQ="${REQ%% *}"
 
@@ -134,6 +204,8 @@ case "${REQ:-}" in
 		[ "$rc" -eq 0 ] && { log "OK bundle is bound to ${2:0:8}"; exit 0; }
 		[ "$rc" -eq 14 ] && die "bundle commit != requested SHA — rejected" 14
 		die "bundle invalid — rejected" 13 ;;
+	--readiness)
+		readiness; exit $? ;;
 esac
 
 # ── real deploy ───────────────────────────────────────────────────────
@@ -270,10 +342,19 @@ chk "wrapper rejects malformed SHA"         "! $WRAPPER_DST --check deadbeef"
 chk "wrapper accepts a well-formed SHA"     "$WRAPPER_DST --check 0000000000000000000000000000000000000000"
 chk "wrapper refuses production-tainted env" "! DATABASE_URL=postgres://u@h:5432/rahalgo_prod?sslmode=disable $WRAPPER_DST --check 0000000000000000000000000000000000000000"
 echo
-if [ "$fail" -eq 0 ]; then
-  echo "BOOTSTRAP RESULT: PASS — hardened staging deploy channel installed. Routine deploys need no terminal work."
+if [ "$fail" -ne 0 ]; then
+  echo "BOOTSTRAP RESULT: FAIL — install validation failed (see FAIL lines above). Channel NOT ready."
+  exit 1
+fi
+
+# ── on-box readiness through the REAL deploy path (no staging mutation) ─
+echo "== on-box readiness (deploy-user -> sudo -> wrapper as root) =="
+if sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness; then
+  echo
+  echo "BOOTSTRAP RESULT: PASS — channel installed AND on-box runtime is deploy-ready."
   exit 0
 else
-  echo "BOOTSTRAP RESULT: FAIL — see FAIL lines above. Channel NOT ready."
+  echo
+  echo "BOOTSTRAP RESULT: FAIL — on-box readiness failed (see above). Channel NOT deploy-ready."
   exit 1
 fi

@@ -99,10 +99,19 @@ chk "wrapper accepts a well-formed SHA"     "$WRAPPER_DST --check 00000000000000
 chk "wrapper refuses production-tainted env" "! DATABASE_URL=postgres://u@h:5432/rahalgo_prod?sslmode=disable $WRAPPER_DST --check 0000000000000000000000000000000000000000"
 
 echo
-if [ "$fail" -eq 0 ]; then
-  echo "BOOTSTRAP RESULT: PASS — hardened staging deploy channel installed. Routine deploys need no terminal work."
+if [ "$fail" -ne 0 ]; then
+  echo "BOOTSTRAP RESULT: FAIL — install validation failed (see FAIL lines above). Channel NOT ready."
+  exit 1
+fi
+
+# ── on-box readiness through the REAL deploy path (no staging mutation) ─
+echo "== on-box readiness (deploy-user -> sudo -> wrapper as root) =="
+if sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness; then
+  echo
+  echo "BOOTSTRAP RESULT: PASS — channel installed AND on-box runtime is deploy-ready."
   exit 0
 else
-  echo "BOOTSTRAP RESULT: FAIL — see FAIL lines above. Channel NOT ready."
+  echo
+  echo "BOOTSTRAP RESULT: FAIL — on-box readiness failed (see above). Channel NOT deploy-ready."
   exit 1
 fi
