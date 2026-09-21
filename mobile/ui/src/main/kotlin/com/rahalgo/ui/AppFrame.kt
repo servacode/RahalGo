@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.core.view.WindowCompat
 import com.rahalgo.design.DarkPalette
 import com.rahalgo.design.Rahal
@@ -41,6 +44,7 @@ import com.rahalgo.design.RahalGoTheme
  * **واللوحةُ تُقرأ من القرار لا من الشجرة**: هذا خارج `RahalGoTheme`،
  * **فـ`Rahal.colors` فيه يردّ الفاتحةَ دائماً** مهما كان الاختيار.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AppFrame(
     /**
@@ -233,7 +237,11 @@ fun AuthGate(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        // **يجعل `testTag` مرئيّاً كـ`resource-id`** — فتُقاد الواجهةُ وتُقرأ
+        // آليّاً على التجهيز (`SR-QA`). لا أثرَ سلوكيّاً؛ مجرّدُ عونِ اختبار.
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { testTagsAsResourceId = true },
         color = Rahal.colors.canvas,
     ) {
     when {

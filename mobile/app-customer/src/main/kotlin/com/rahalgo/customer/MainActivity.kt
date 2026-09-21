@@ -63,6 +63,7 @@ import com.rahalgo.ui.ChatsViewModel
 import com.rahalgo.ui.PlatformScreen
 import com.rahalgo.ui.knowsKey
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.InboxSheet
 import com.rahalgo.ui.ThemeState
@@ -1193,7 +1194,11 @@ private enum class Tab { Shop, Cart, Orders, Custom, Account }
 /** **بندٌ برسمٍ واسم** — وثلاثةُ نسخٍ منه في شريطٍ واحدٍ حشوٌ يُنسخ. */
 @Composable
 private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, label: Int) {
+    // **وسمٌ ثابتٌ للأتمتة** (`SR-QA`) — اسمُ مورد اللافتة (nav_shop…) يظهر
+    // `resource-id` عبر adb، فيُقاد التبويبُ آليّاً.
+    val tag = LocalContext.current.resources.getResourceEntryName(label)
     NavigationBarItem(
+        modifier = Modifier.testTag(tag),
         selected = selected,
         onClick = onClick,
         icon = { Icon(painterResource(icon), contentDescription = null) },
