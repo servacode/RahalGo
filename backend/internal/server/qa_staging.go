@@ -172,3 +172,46 @@ func (s *Server) handleQAStagingRevoke(w http.ResponseWriter, r *http.Request) {
 	s.logger.Warn("QA staging sessions revoked (staging-only)", "user", uid, "count", tag.RowsAffected())
 	httpx.JSON(w, http.StatusOK, map[string]any{"revoked": tag.RowsAffected()})
 }
+
+// qaFlagAllowlist **مفاتيحُ الرايات المسموحُ قلبُها في اختبار القبول** —
+// **نفسُ ما يقلبه `stagingctl`** (رايات الإطلاق ودوامُ المنصّة): كلُّها
+// منطقيّةٌ (`bool`)، وكلُّها لازمةٌ لشهود A–F (فتحُ الطلب، إلخ).
+var qaFlagAllowlist = map[string]bool{
+	"launch.customer_signup":        true,
+	"launch.customer_browse":        true,
+	"launch.customer_orders":        true,
+	"launch.customer_custom_orders": true,
+	"launch.merchant_orders":        true,
+	"hours.platform_enforced":       true,
+}
+
+// handleQAStagingSetting يقرأ رايةً مسموحةً ويقلبها — على التجهيز وحدَه.
+//
+// **يُرجع القيمةَ السابقةَ** (لـ`RESTORE`) ثمّ يضع الجديدة. **قائمةُ سماحٍ
+// صارمة** (رايات الإطلاق/الدوام فقط) — لا مفتاحَ ماليّ ولا سواه. **يسقط
+// مغلقاً في الإنتاج** (المسارُ غيرُ مسجَّل + حارسٌ ثانٍ).
+func (s *Server) handleQAStagingSetting(w http.ResponseWriter, r *http.Request) {
+	if !s.qaStagingEnabled() {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	req, err := decode[struct {
+		Key   string `json:"key"`
+		Value bool   `json:"value"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if !qaFlagAllowlist[req.Key] {
+		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_flag_not_allowed", "errors.forbidden"))
+		return
+	}
+	prev := s.settings.GetBool(r.Context(), req.Key)
+	if err := s.settings.Set(r.Context(), req.Key, req.Value, nil); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging flag set (staging-only)", "key", req.Key, "previous", prev, "set", req.Value)
+	httpx.JSON(w, http.StatusOK, map[string]any{"key": req.Key, "previous": prev, "set": req.Value})
+}
