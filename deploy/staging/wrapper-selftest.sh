@@ -72,9 +72,25 @@ grep -q "NOPASSWD: \$WRAPPER_DST" "$BOOT" && ok "bootstrap sudoers is wrapper-on
 grep -q 'command="sudo -n /usr/local/sbin/rahalgo-staging-deploy"' "$BOOT" && ok "bootstrap forces sudo wrapper command" || no "bootstrap forces sudo wrapper command"
 grep -q "NO direct docker" "$BOOT" && ok "bootstrap validates no direct docker" || no "bootstrap validates no direct docker"
 
+# ── one-shot installer: embeds the CURRENT wrapper, byte-for-byte ─────
+ONESHOT="$HERE/bootstrap-staging-channel-one-shot.sh"
+if [ -f "$ONESHOT" ]; then
+	o="$(grep -n "<<'RG_WRAPPER_EOF'" "$ONESHOT" | head -1 | cut -d: -f1)"
+	c="$(grep -n '^RG_WRAPPER_EOF$' "$ONESHOT" | head -1 | cut -d: -f1)"
+	tmp="$(mktemp)"; sed -n "$((o+1)),$((c-1))p" "$ONESHOT" > "$tmp"
+	diff -q "$tmp" "$W" >/dev/null 2>&1 && ok "one-shot embeds the current wrapper (no drift)" \
+		|| no "one-shot embeds the current wrapper (no drift)"
+	# embedded key is the PUBLIC key only (no PRIVATE key material)
+	! grep -q 'BEGIN .*PRIVATE KEY' "$ONESHOT" && ok "one-shot embeds no private key" || no "one-shot embeds no private key"
+	rm -f "$tmp"
+else
+	echo "SKIP one-shot checks (file absent)"
+fi
+
 # ── syntax ────────────────────────────────────────────────────────────
-bash -n "$W"    && ok "wrapper syntax OK"   || no "wrapper syntax OK"
-bash -n "$BOOT" && ok "bootstrap syntax OK" || no "bootstrap syntax OK"
+bash -n "$W"       && ok "wrapper syntax OK"   || no "wrapper syntax OK"
+bash -n "$BOOT"    && ok "bootstrap syntax OK" || no "bootstrap syntax OK"
+[ -f "$ONESHOT" ] && bash -n "$ONESHOT" && ok "one-shot syntax OK" || no "one-shot syntax OK"
 
 echo
 echo "self-test: $pass passed, $fail failed"

@@ -12,7 +12,8 @@
 |---|---|
 | `deploy/staging/rahalgo-staging-deploy.sh` | The root-owned wrapper — the **only** thing the deploy identity can run (via `sudo`). Validates the SHA, refuses production, **cryptographically verifies the git bundle resolves to the SHA**, builds+deploys staging, verifies live identity, proves production unchanged (container-ID level). Fail-closed. |
 | `.github/workflows/deploy-staging.yml` | `workflow_dispatch(sha)`: checkout exact SHA → **git bundle bound to the SHA** → stream to the wrapper over the restricted key → independently verify live staging identity == SHA. |
-| `deploy/staging/bootstrap-staging-channel.sh` | One-time owner script (root): restricted identity (no docker group, locked password, forced-command key), narrow **sudoers rule (wrapper only)**, root-owned wrapper, PASS/FAIL. |
+| `deploy/staging/bootstrap-staging-channel-one-shot.sh` | **Self-contained** one-time installer (no checkout): embeds the wrapper + public key + sudoers; creates the restricted identity; validates; PASS/FAIL. Generated from the wrapper (drift-guarded by the self-test). |
+| `deploy/staging/bootstrap-staging-channel.sh` | Same install, for anyone who already has a repo checkout (reads the sibling wrapper + `.pub`). |
 | `deploy/staging/rahalgo-staging-deploy.pub` | The deploy identity's **public** key (safe to commit); bootstrap installs it. The private key lives only in the GitHub `staging` secret. |
 | `deploy/staging/wrapper-selftest.sh` | Off-box proof: SHA validation, production refusal, and the **bundle↔SHA binding** (content A + SHA B → rejected). **19/19 pass.** |
 
@@ -20,19 +21,28 @@ The wrapper reuses the existing, self-consistent build/deploy tools **from the v
 
 ---
 
-## 2 · One-time owner action — ONE command
+## 2 · One-time owner action — ONE command (no checkout needed)
 
 Everything else (deploy keypair, GitHub secrets, host-key pinning) is already done by Claude.
-On the box, as root, from a checkout of this repo:
+On the box, as root:
 
 ```bash
-sudo deploy/staging/bootstrap-staging-channel.sh
+wget -qO- https://raw.githubusercontent.com/servacode/RahalGo/stg-channel/deploy/staging/bootstrap-staging-channel-one-shot.sh | sudo bash
 ```
 
-Expect the last line: **`BOOTSTRAP RESULT: PASS`**. The committed public key
-(`deploy/staging/rahalgo-staging-deploy.pub`) is picked up automatically; the matching private
-key lives only in the GitHub `staging` secret. Prerequisites on the box: `docker`, `go`, and
-`/srv/rahalgo-staging/deploy/staging/.env.staging` (already present). Idempotent.
+Expect the last line: **`BOOTSTRAP RESULT: PASS`**. This **self-contained** installer embeds the
+root-owned wrapper + the deploy **public** key + the sudoers policy — no git checkout, no repo, no
+file copying. The private key lives only in the GitHub `staging` secret. If the console mangles the
+pipe, use two lines instead:
+
+```bash
+wget -qO /root/rg.sh https://raw.githubusercontent.com/servacode/RahalGo/stg-channel/deploy/staging/bootstrap-staging-channel-one-shot.sh
+sudo bash /root/rg.sh
+```
+
+Prerequisites on the box: `docker`, `go`, and `/srv/rahalgo-staging/deploy/staging/.env.staging`
+(already present). Idempotent. (The in-repo `deploy/staging/bootstrap-staging-channel.sh` remains
+for anyone who already has a checkout.)
 
 ---
 
