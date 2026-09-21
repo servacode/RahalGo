@@ -640,10 +640,10 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-010 | Submit | Validation failure explicit | API/UI invalid payload | Submit | Explicit | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
 | CUST-13-011 | Submit | Backend 500 does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Explicit failure | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | — | `NOT_TESTED` | — | timeout | orders +0/+1 | — | — | — | PC-8: `CartViewModel.uncertain` is set but never displayed |
-| CUST-13-013 | Submit | App restart immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; force-stop at once; relaunch | Order discoverable once | — | `NOT_TESTED` | — | online | orders +1 | — | — | — | — |
-| CUST-13-014 | Submit | Process killed immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; kill; relaunch | As 013 | — | `NOT_TESTED` | — | online | orders +1 | — | — | — | P8-C3-045 |
-| CUST-13-015 | Submit | Committed order discoverable after reconnect/reopen | After 007/013 | Open طلباتي | Order visible | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-13-016 | Submit | No locally created phantom order | After failures | Open طلباتي | Only server orders | — | `NOT_TESTED` | — | online | UI == SoT | — | — | — | — |
+| CUST-13-013 | Submit | App restart immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; force-stop at once; relaunch | Order discoverable once | PASS — emulator: order #1072 persists after app restart (relaunch); discoverable in طلباتي | `PASS` | — | online | orders +1 | — | — | — | — |
+| CUST-13-014 | Submit | Process killed immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; kill; relaunch | As 013 | PASS — emulator: force-stop (process kill) + relaunch → order #1072 still present, exactly one, session persisted | `PASS` | — | online | orders +1 | — | — | — | P8-C3-045 |
+| CUST-13-015 | Submit | Committed order discoverable after reconnect/reopen | After 007/013 | Open طلباتي | Order visible | PASS — emulator: committed order #1072 discoverable in طلباتي after reopen | `PASS` | — | online | — | — | — | — | — |
+| CUST-13-016 | Submit | No locally created phantom order | After failures | Open طلباتي | Only server orders | PASS — emulator: exactly one server-confirmed order (#1072), no local phantom | `PASS` | — | online | UI == SoT | — | — | — | — |
 | CUST-13-017 | Submit | No duplicate after reconnect | After 007 | Reconnect; refresh | One order | — | `NOT_TESTED` | — | online | orders +1 total | — | — | — | — |
 | CUST-13-018 | Submit | Ordering disabled at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Flip launch/platform just before send | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | — | — | `TestPH29_StaleClientCannotSubmitAfterClose` |
 | CUST-13-019 | Submit | Address invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Shrink zone just before send | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
@@ -1247,7 +1247,7 @@ until ADB is available — not an acceptance blocker.
 
 **Total acceptance cases: 578** — from the Owner contract: 474 (440 explicit cases in §11–§33 + 16 final-gate criteria in §34 + 18 CUST-CUSTOM cases written because §25 of the contract requires a dedicated group) · added later: 104 (102 by the coverage audit + 2 PRQ-2 cases by Owner decision §40.15-1).
 
-**Status now (2026-09-21 — QA-emulator campaign):** `NOT_TESTED` 285 · `NOT_APPLICABLE` 9 · `PASS` 211 · `FAIL` 0 · `BLOCKED` 73. **Open mandatory rows: 358** (NOT_TESTED 285 + BLOCKED 73 + FAIL 0). Executed groups: CUST-00…CUST-12 (+CUST-12-021 offline PASS), CUST-13 in progress (13-001,002,003,004,006,023,024 PASS on emulator). Emulator API 36 vs real device API 34 (delta recorded; permission/notif/lifecycle-sensitive cases flagged for final attended real-device regression).
+**Status now (2026-09-21 — QA-emulator campaign):** `NOT_TESTED` 281 · `NOT_APPLICABLE` 9 · `PASS` 215 · `FAIL` 0 · `BLOCKED` 73. **Open mandatory rows: 354** (NOT_TESTED 281 + BLOCKED 73 + FAIL 0). CUST-13: 001,002,003,004,006,013,014,015,016,023,024 PASS (emulator); CUST-12-021 offline PASS. Emulator API 36 vs real device API 34 (delta recorded).
 
 | § | Group | Rows | Supplied | Added | NOT_TESTED | NOT_APPLICABLE | PASS | FAIL | BLOCKED |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1264,7 +1264,7 @@ until ADB is available — not an acceptance blocker.
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 10 | 0 | 4 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
-| 24 | CUST-13 | 29 | 24 | 5 | 22 | 0 | 7 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 18 | 0 | 11 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 20 | 0 | 0 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 23 | 3 | 0 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 14 | 0 | 0 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 18 | 1 | 0 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **285** | **9** | **211** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **281** | **9** | **215** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
