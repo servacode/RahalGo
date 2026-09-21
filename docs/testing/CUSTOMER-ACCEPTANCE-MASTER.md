@@ -3082,3 +3082,22 @@ backend tests — 07-030 by this run's `TestCUST07033…`/demand path, 08-006 by
 new device-independent rerun remains; the residual 71 need one of the harnesses/sessions named
 above. Recommended morning priorities to melt the largest buckets: **F (24)** an Admin+realtime
 script, **B (18)** owner-approved fault/delay harness, **E (10)** OTP-log/WA-bot. 578 unchanged.
+
+#### F) Resume CUST-13+ — device-independent slice (overnight C, 2026-09-21)
+
+CUST-13…CUST-22 (292 NOT_TESTED) are **device-witness by design** (each row specifies SM-A525F /
+UIA / `input tap` / realtime). The device-independent value is their underlying server contracts,
+and those are **already backend-covered** and were re-run green this session
+(`go test ./internal/qa -run 'Launch|Idempoten|WS|Contract'` → ok, 27.6 s):
+- exactly-one-order / idempotency (CUST-13, CUST-19): `active_cap_test`, `contract_test`,
+  `race_*` (Idempotency-Key + `WithIdempotentTx`);
+- remote launch flags → `503 launch_closed` (CUST-18): `launch_mode_test`, `prelaunch_test`,
+  `platform_hours_test`;
+- order list / `/my/orders` (CUST-14): `contract_test`, `lifecycle_test`, `rest_privacy_test`;
+- realtime WS auth/status contract (CUST-15): `ws_account_status_test`, `ws_auth_reason_test`,
+  `session_authority_test`;
+- offline cold/loaded (CUST-16): source contract per A5 §7 (checkout gated) — the rest is
+  category B (needs an offline harness).
+
+**No device-independent execution remains** for CUST-13+ that would add coverage; the residual is
+device/realtime witness (per the no-device run policy). No case flipped to PASS. 578 unchanged.
