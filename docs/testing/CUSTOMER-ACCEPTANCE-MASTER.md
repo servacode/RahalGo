@@ -680,7 +680,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-014 | Custom | Foreign customer cannot read it | Two customers | B reads A's custom order id | 404/403 | PASS — الغريبُ لا يقرأ: TestCUST_020_ForeignCannotRead (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestCUST_020_ForeignCannotRead` |
 | CUST-CUSTOM-015 | Custom | Offline send blocked | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Send | OFFLINE state; blocked | PASS — إرسالٌ منقطعٌ محظور: شهادةُ محاكٍ (=CUST-16-013) | `PASS` | — | offline | no order | — | — | — | §7 |
 | CUST-CUSTOM-016 | Custom | Text preserved across rotation/background | Signed-in test customer · Staging · SM-A525F · valid default address | Type; rotate/background | Text kept (rememberSaveable) | PASS — النصُّ محفوظٌ عبر الخلفيّة: «PRESERVE16» (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
-| CUST-CUSTOM-017 | Custom | Guest sees NeedAccount | Signed out | Open طلب خاص | «هذا القسم يحتاج حسابا» + login | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-CUSTOM-017 | Custom | Guest sees NeedAccount | Signed out | Open طلب خاص | «هذا القسم يحتاج حسابا» + login | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.31): ضيفٌ (بعد pm clear) فتح «طلب خاص» ⇒ «هذا القسم يحتاج حسابا» + «دخول أو إنشاء حساب» | `PASS` | — | online | — | — | §40.31 | — | Live-witnessed 2026-09-22 (§40.31) |
 | CUST-CUSTOM-018 | Custom | Custom-order realtime to owner | After 001 | Driver/ops change it | Customer sees update | PASS — لحظيٌّ للمالك: TestD22_* (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestD22_*` |
 | CUST-CUSTOM-019 | Custom | Driver note is saved and shown (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Send with «ملاحظات للسائق» | Note stored and visible to the driver | PASS — CAF-07 مُصلَح: الهاتفُ يرسل notes والخادمُ يفكّها ويخزّنها في orders.notes (كالعاديّ) وعرضُ الطلب يكشفها؛ TestCUST_CAF07_NotesStored + شاهدٌ سالب | `PASS` | — | online | order notes | — | — | — | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
 | CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Cash or wallet selectable (Owner decision 2026-08-09, `orders/custom.go:74-78`) | PASS — شاهدٌ حيٌّ كاملٌ على staging 57ebdba0 (§40.29): شاشةُ «طلب خاص» تعرض «نقدا عند التسليم» و«من محفظتي» قابلَين للاختيار؛ نقرُ المحفظة ⇒ #1080 payment_method=wallet خادميّاً، نقرُ النقد ⇒ #1081 payment_method=cash (مُتحقَّقٌ برمزٍ مستقلٍّ لنفس زبون QA)؛ أُلغيت كلُّها ولا قبضَ ماليّ. TestCUST_PaymentWalletStored + CustomPaymentTest | `PASS` | — | online | order payment_method | — | §40.29 | `TestCUST_PaymentWalletStored` · `CustomPaymentTest` | Added. §40.11 predicted FAIL (app sent no method); FIXED beb4acc8 then LIVE-WITNESSED 2026-09-21 (§40.29): app sends the chosen method, engine stores it |
@@ -758,7 +758,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-ENG-001 | Fav | Toggle favorite from a card | Signed-in test customer · Staging · SM-A525F · valid default address | Tap heart | Toggled; persists | PASS — القلبُ يبدّل الحال (احفظ⇄أزل، 5⇄4) (محاكي 2026-09-21) | `PASS` | — | online | `/my/favorites` | — | — | — | — |
 | CUST-ENG-002 | Fav | Favorites screen | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → المفضلة | Grid; ♥ removes; empty state | PASS — شاشةُ المفضلة (فارغةٌ ثمّ «♥ شاورما دجاج» بعد التفضيل) (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | No add-to-cart from Favorites (by design?) — Owner note |
-| CUST-ENG-003 | Fav | Guest heart → login | Signed out | Tap heart | Login path | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-ENG-003 | Fav | Guest heart → login | Signed out | Tap heart | Login path | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.31): ضيفٌ نقر قلبَ المفضّلة ⇒ شاشةُ «تسجيل الدخول» + «ليس لديك حساب؟ إنشاء حساب جديد» | `PASS` | — | online | — | — | §40.31 | — | Live-witnessed 2026-09-22 (§40.31) |
 | CUST-ENG-004 | Offers | Offers list | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → العروض | Image, title, prices, discount chip | PASS — «العروض» تُفتح («لا عروض سارية») (محاكي 2026-09-21) | `PASS` | — | online | `/public/offers` | — | — | — | — |
 | CUST-ENG-005 | Offers | Add offer item to cart | Signed-in test customer · Staging · SM-A525F · valid default address | «أضف إلى السلة» on an offer with an item | «أُضيف إلى السلة»; options sheet if needed; gating per CUST-11-035 | PASS — شاهدٌ حيٌّ كاملٌ على staging 881a753a (§40.29): بُذر عرضُ خصمٍ (٢٠٪) على صنفٍ (باب qa/seed)؛ شاشةُ «العروض» تعرضه مع «أضف إلى السلة»؛ النقرُ ⇒ «أُضيف إلى السلة»، والصنفُ في السلّة بسعرِ العرض المخفَّض (3,240 بدل 4,050). OfferGateTest + شاهد سالب | `PASS` | — | online | — | — | §40.29 | `OfferGateTest` | CAF-12؛ LIVE-WITNESSED 2026-09-22 (§40.29): إضافةُ صنفِ عرضٍ إلى السلّة بسعره المخفَّض (العنوانُ داخلَ التغطية) |
 | CUST-ENG-006 | Offers | Offer opened from push; expired offer | Offer push | Tap push; tap expired | Focused at top; expired → «العرض الذي وصلك لم يعد سارياً» | PASS — الإشعارُ يفتح الوجهةَ الآمنة: DeepLinkTest (Kotlin unit suite BUILD SUCCESSFUL) | `PASS` | — | online | — | — | — | — | `DeepLinkTest` |
@@ -1265,11 +1265,11 @@ until ADB is available — not an acceptance blocker.
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 20 | 0 | 16 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 3 | 0 | 26 | 0 | 0 |
-| 25 | CUST-CUSTOM | 20 | 18 | 2 | 1 | 0 | 19 | 0 | 0 |
+| 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
-| 26C | CUST-ENG | 14 | 0 | 14 | 2 | 0 | 12 | 0 | 0 |
+| 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 17 | 0 | 28 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **92** | **9** | **410** | **0** | **67** |
+| | **Total** | **578** | **474** | **104** | **90** | **9** | **412** | **0** | **67** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
