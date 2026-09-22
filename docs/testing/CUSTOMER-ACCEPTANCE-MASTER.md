@@ -454,7 +454,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-07-020 | Addr | GPS outside coverage, selected address valid → ordering allowed | Signed-in test customer · Staging · SM-A525F | Default address inside; device outside | Ordering allowed to the address | GPS-outside / address-valid -> ordering allowed to the Raqqa address (cross-ref CUST-03-005, order #1064) | `PASS` | SM-A525F/A14 vc12 | online | order created (disposable) | — | — | — | — |
 | CUST-07-021 | Addr | Change address with items in cart | Signed-in test customer · Staging · SM-A525F · cart populated | Switch address | Quote/availability re-evaluated; out-of-zone note if needed | CARRIED: change-address-with-cart quote re-eval needs a populated cart + address switch | `BLOCKED` | - | online | `/public/quote` | — | — | — | — |
 | CUST-07-022 | Addr | Coverage changes while the address is on screen | Signed-in test customer · Staging · SM-A525F · zone edited via Admin | Wait/refresh | Availability updates; send blocked if now outside | CARRIED: coverage-change-on-screen needs an Admin zone edit | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-07-023 | Addr | Address becomes invalid before checkout | As 022 | Tap «أرسل الطلب» | Server denies explicitly; no order | CARRIED: address-invalid-before-checkout needs an Admin zone edit (depends on 022) | `BLOCKED` | - | online | order count unchanged | — | — | — | — |
+| CUST-07-023 | Addr | Address becomes invalid before checkout | As 022 | Tap «أرسل الطلب» | Server denies explicitly; no order | PASS — شاهدٌ خادميٌّ حيّ (§40.31): عنوانٌ افتراضيٌّ خارجَ التغطية (دمشق، بذّار QA) ⇒ POST /orders = 400 `out_of_zone`، لا طلب؛ استُعيد عنوانُ الرقّة | `PASS` | - | online | order count unchanged | — | §40.31 | — | Unblocked via out-of-coverage address (§40.31) 2026-09-22 |
 | CUST-07-024 | Addr | Restart preserves only appropriate address state | Signed-in test customer · Staging · SM-A525F | Kill; relaunch | Default address from server; discovery not persisted as address | Kill/relaunch -> top chip restores the default address (home) from the server | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-07-025 | Addr | Address limit reached (added) | Signed-in test customer · Staging · SM-A525F · 4 addresses (`customers.max_addresses`=4) | Add a 5th | Explicit `too_many_addresses` message | 5th address -> 409 too_many_addresses (customers.max_addresses=4) | `PASS` | staging API | online | rows stay 4 | — | — | — | Added: no client limit; server error only |
 | CUST-07-026 | Addr | Map search and reverse geocode (added) | Signed-in test customer · Staging · SM-A525F | Search ≥2 chars; move pin | Top 4 results; label filled after settle | /geo/search q=Raqqa -> results; /geo/reverse -> label; device reverse-geocode label witnessed (CUST-03-013). Arabic map-search text-entry not driveable via ADB (input text is ASCII-only) | `PASS` | SM-A525F+API | online | `/geo/search`, `/geo/reverse` | — | — | — | Added: guests cannot call geo (auth-only) — see 07-028 |
@@ -646,7 +646,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-016 | Submit | No locally created phantom order | After failures | Open طلباتي | Only server orders | PASS — emulator: exactly one server-confirmed order (#1072), no local phantom | `PASS` | — | online | UI == SoT | — | — | — | — |
 | CUST-13-017 | Submit | No duplicate after reconnect | After 007 | Reconnect; refresh | One order | PASS — لا تكرارَ بعد العودة: TestIDEM_LostResponseReplays/T6 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | orders +1 total | — | — | — | — |
 | CUST-13-018 | Submit | Ordering disabled at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Flip launch/platform just before send | Explicit denial | PASS — TestPH29_StaleClientCannotSubmitAfterClose (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | `TestPH29_StaleClientCannotSubmitAfterClose` |
-| CUST-13-019 | Submit | Address invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Shrink zone just before send | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
+| CUST-13-019 | Submit | Address invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Shrink zone just before send | Explicit denial | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إرسالٌ بإحداثيّاتٍ خارجَ التغطية ⇒ 400 `out_of_zone` صريح، لا طلب | `PASS` | — | online | no order | — | §40.31 | — | Server-authoritative denial; live-witnessed 2026-09-22 (§40.31) |
 | CUST-13-020 | Submit | Item invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Disable item just before send | Explicit | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إبطالُ الصنف (item_available=false) لحظةَ الإرسال ⇒ 409 item_unavailable صريح | `PASS` | — | online | no order | — | — | — | — |
 | CUST-13-021 | Submit | Price changed at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Change price just before send | Change review / explicit; charged = server price | — | `NOT_TESTED` | — | online | order price | — | — | — | — |
 | CUST-13-022 | Submit | Session invalid before final submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Revoke session; send | Explicit re-login; no order | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إبطالُ الجلسة (qa/revoke) قبل الإرسال ⇒ 401 unauthorized، لا طلب | `PASS` | — | online | no order | — | — | — | — |
@@ -1258,13 +1258,13 @@ until ADB is available — not an acceptance blocker.
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 18 | 0 | 5 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 18 | 0 | 14 |
-| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 22 | 0 | 8 |
+| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 12 | 0 | 6 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 18 | 0 | 9 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
-| 24 | CUST-13 | 29 | 24 | 5 | 5 | 0 | 24 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 4 | 0 | 25 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 1 | 0 | 19 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **95** | **9** | **403** | **0** | **71** |
+| | **Total** | **578** | **474** | **104** | **94** | **9** | **405** | **0** | **70** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
