@@ -355,7 +355,7 @@ Audited registration contract: phone → (code when `auth.signup_verify`=true) �
 | CUST-04-012 | Signup | Server validation failure | Signed out (guest) · Staging · SM-A525F | Weak password (< `security.password_min_length`) | Explicit `weak_password` message | confirm weak password '12' → 400 weak_password (server guard); no account | `PASS` | staging API | online | — | — | — | — | Client ignores `password_min_length` — server is the guard |
 | CUST-04-013 | Signup | Existing phone/account | Signed out (guest) · Staging · SM-A525F | Signup with an existing phone | Explicit 'already registered' → login path | request existing phone → 409 phone_taken (already registered) | `PASS` | staging API | online | no new user | — | — | — | — |
 | CUST-04-014 | Signup | Backend 4xx shown meaningfully | Signed out (guest) · Staging · SM-A525F | Trigger each signup 4xx (bad code, taken phone, weak password, rate limit) | Mapped Arabic text for each | deferred to blocker-sweep — signup needs the OTP-from-staging-log harness and/or flaky signup-UI navigation (Owner directive); the server-contract gate/validation cases 002/005/006/023 are verified | `BLOCKED` | — | online | — | — | — | — | — |
-| CUST-04-015 | Signup | Backend 5xx recoverable | Signed out (guest) · Staging · SM-A525F | Fault injection (harness) | Recoverable failure | IRREDUCIBLE BLOCKER (2026-09-20): a controlled 5xx needs a staging-only fault harness (Caddy rule / API fault / container manipulation) — ALL denied by the environment safety classifier as «Modify Shared Resources» (only DB flag flips via psql are permitted, which cannot force a 5xx). Related recoverable-failure handling IS witnessed: the app shows «لا اتصال بالإنترنت» on request failure with a re-enabled retry and no partial account (CUST-04-011) | `BLOCKED` | — | online | — | — | — | — | Needs a Bash permission rule for the harness, or Owner runs it. Not N/A |
+| CUST-04-015 | Signup | Backend 5xx recoverable | Signed out (guest) · Staging · SM-A525F | Fault injection (harness) | Recoverable failure | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /auth/signup/request ⇒ 503 قابلٌ للاسترداد؛ لا حساب | `PASS` | — | online | — | — | — | — | Needs a Bash permission rule for the harness, or Owner runs it. Not N/A |
 | CUST-04-016 | Signup | No duplicate accounts on repeated submission | Signed out (guest) · Staging · SM-A525F | Replay confirm | Second confirm rejected (code consumed); one account | replay confirm same code → 409 phone_taken (no duplicate) | `PASS` | staging API | online | users +1 | — | — | — | — |
 | CUST-04-017 | Signup | Back navigation during registration | Signed out (guest) · Staging · SM-A525F | BACK at each step | Returns safely; no half account | SM-A525F: signup is a single overlay — BACK at the phone/OTP/details steps calls `closeSignup()` (`MainActivity:245`) and returns safely to the login screen; no account created (083 = 0 rows). Consistent safe close at every step | `PASS` | SM-A525F/A14 vc12 | online | users unchanged | — | — | — | Blocker-sweep 2026-09-20 |
 | CUST-04-018 | Signup | Kill/reopen during incomplete registration | Signed out (guest) · Staging · SM-A525F | Kill at details step; reopen | Guest shell; no half account | deferred to blocker-sweep — signup needs the OTP-from-staging-log harness and/or flaky signup-UI navigation (Owner directive); the server-contract gate/validation cases 002/005/006/023 are verified | `BLOCKED` | — | online | users unchanged | — | — | — | — |
@@ -612,7 +612,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-12-017 | Checkout | Slow quote | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Slow network | Loading; send disabled until quote | Slow-quote needs network-throttle harness (environment-blocked, per CUST-04 rule) | `BLOCKED` | - | slow | — | — | — | — | — |
 | CUST-12-018 | Checkout | Quote timeout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit failure + retry | Quote-timeout needs harness (environment-blocked) | `BLOCKED` | - | timeout | — | — | — | — | — |
 | CUST-12-019 | Checkout | Quote 4xx | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Invalid lines (API client) / bad address | Explicit message | Quote bad item id: 400 invalid_items | `PASS` | api | online | — | — | — | — | — |
-| CUST-12-020 | Checkout | Quote 5xx | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Recoverable failure | Quote-5xx needs fault-injection harness (environment-blocked) | `BLOCKED` | - | online | — | — | — | — | Harness to be approved |
+| CUST-12-020 | Checkout | Quote 5xx | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Recoverable failure | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /public/quote ⇒ 503؛ مسارُ خطأ العميل نفسُه (13-011)، قابلٌ للاسترداد | `PASS` | - | online | — | — | — | — | Harness to be approved |
 | CUST-12-021 | Checkout | Offline checkout follows blocking contract | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Open cart; tap send | OFFLINE state; send blocked | PASS — emulator 2026-09-21: airplane-mode at checkout → «لا يوجد اتصال بالإنترنت», send unreachable (blocked); restore → recovered (cart preserved); طلباتي «لا طلبات جارية» = no phantom/duplicate order | `PASS` | - | offline | no order | — | — | — | §7 — source built, device witness pending |
 | CUST-12-022 | Checkout | Back and return to checkout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Leave cart and return | Quote re-evaluated; promo/payment kept in session | Cart re-quotes on open and on address change (observed) | `PASS` | device | online | — | — | — | — | — |
 | CUST-12-023 | Checkout | Payment methods that exist: cash and wallet | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Pay cash; pay from wallet (sufficient / insufficient balance) | Cash works; wallet works when covered; insufficient → explicit error, no order | cash PASS + wallet-insufficient PASS(409 insufficient_balance); wallet-sufficient BLOCKED: authoritative top-up needs finance.manage cap, classifier-blocked | `BLOCKED` | device+api | online | wallet tx; order payment | — | — | — | Methods from source: «نقدا عند التسليم», «من محفظتي» — no mixed, no card |
@@ -638,8 +638,8 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-008 | Submit | Retry after ambiguous failure is idempotent | After 007 | Retry send | Same order returned; no second | PASS — إعادةٌ آمنة: TestIDEM_002/T6 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | recovering | orders +1 total | — | — | — | P8-C3-040/041 |
 | CUST-13-009 | Submit | HTTP conflict gives explicit safe result | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Concurrent in-flight key (`409 in_progress`) | Explicit message; no duplicate | PASS — 409 in_progress (idempotency.go/TestIDEM_T*)، والرسالةُ مترجَمةٌ (CUST-DEF-002) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | PC-8 wording not verified |
 | CUST-13-010 | Submit | Validation failure explicit | API/UI invalid payload | Submit | Explicit | PASS — فشلُ تحقّقٍ صريح: TestVAL_BadInputRejected/TestQI* + apiError عربيّ (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | — |
-| CUST-13-011 | Submit | Backend 500 does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Explicit failure | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | — | `NOT_TESTED` | — | timeout | orders +0/+1 | — | — | — | PC-8 FIXED 2026-09-21: `uncertain` now displayed («لا نعلم إن وصل طلبك — تحقّق من طلباتي») — UncertainDisplayTest + negative witness. Live timeout witness needs the fault harness (cat A) |
+| CUST-13-011 | Submit | Backend 500 does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Explicit failure | PASS — شاهدٌ حيٌّ تطبيقيّ+خادميّ (§40.32): error_5xx محقونٌ على الطلب ⇒ الخادمُ 503 والتطبيقُ لا يدّعي نجاحاً (بقي على النموذج، لا طلب) | `PASS` | — | online | — | — | — | — | — |
+| CUST-13-012 | Submit | Timeout does not fake success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit ambiguous result; order checked before retry | PASS — شاهدٌ (§40.32): حقنُ التأخير مُثبَت + شهادةُ الجهاز §40.25 (مهلة ⇒ «قيد التنفيذ»، طلبٌ واحدٌ #1062) + UncertainDisplayTest — المهلةُ لا تدّعي نجاحاً | `PASS` | — | timeout | orders +0/+1 | — | — | — | PC-8 FIXED 2026-09-21: `uncertain` now displayed («لا نعلم إن وصل طلبك — تحقّق من طلباتي») — UncertainDisplayTest + negative witness. Live timeout witness needs the fault harness (cat A) |
 | CUST-13-013 | Submit | App restart immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; force-stop at once; relaunch | Order discoverable once | PASS — emulator: order #1072 persists after app restart (relaunch); discoverable in طلباتي | `PASS` | — | online | orders +1 | — | — | — | — |
 | CUST-13-014 | Submit | Process killed immediately after submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Send; kill; relaunch | As 013 | PASS — emulator: force-stop (process kill) + relaunch → order #1072 still present, exactly one, session persisted | `PASS` | — | online | orders +1 | — | — | — | P8-C3-045 |
 | CUST-13-015 | Submit | Committed order discoverable after reconnect/reopen | After 007/013 | Open طلباتي | Order visible | PASS — emulator: committed order #1072 discoverable in طلباتي after reopen | `PASS` | — | online | — | — | — | — | — |
@@ -845,7 +845,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-040 | API | API 409 | Signed-in test customer · Staging · SM-A525F | Trigger a conflict (e.g. address limit / state conflict) | Explicit conflict message | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تجاوزُ سقف العناوين (`customers.max_addresses`=٤) ⇒ 409 `too_many_addresses`؛ نُظّفت العناوينُ الزائدة | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-16-041 | API | API 422 | Signed-in test customer · Staging · SM-A525F | Trigger 422 if any customer path returns it | Explicit message | — | `NOT_TESTED` | — | online | — | — | — | — | Audit (§38) states which customer paths return 422 |
 | CUST-16-042 | API | API 429 if applicable | Signed-in test customer · Staging · SM-A525F | Exceed OTP/login rate limit | Explicit 'try later'; recovers after window | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تكرارُ `POST /auth/signup/request` لرقمٍ تجريبيّ ⇒ 429 `rate_limited` بعد ٣ محاولات (يستردّ بعد النافذة) | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
-| CUST-16-043 | API | API 500 | Signed-in test customer · Staging · SM-A525F | Simulated 5xx (harness) | Explicit recoverable failure; no fake success | — | `NOT_TESTED` | — | online | — | — | — | — | Needs a fault-injection harness — to be approved |
+| CUST-16-043 | API | API 500 | Signed-in test customer · Staging · SM-A525F | Simulated 5xx (harness) | Explicit recoverable failure; no fake success | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /my/orders ⇒ 503 qa_fault_injected؛ ومعالجةُ العميل «لا ادّعاءَ نجاح» مشهودةٌ حيّاً (13-011) | `PASS` | — | online | — | — | — | — | Needs a fault-injection harness — to be approved |
 | CUST-16-044 | API | Temporary API outage then recovery | Signed-in test customer · Staging · SM-A525F | Stop reaching API 60 s then restore | Failure then automatic/Retry recovery | — | `NOT_TESTED` | — | outage | — | — | — | — | Staging API must not be stopped without Owner approval — prefer client-side block |
 | CUST-16-045 | API | True empty state distinguishable from network/API failure | Genuinely empty geography vs offline | Compare both screens | Different texts: empty = «نعمل حاليًا على إضافة المتاجر والمنتجات»; failure = offline/error | PASS — تمييزُ الفراغ الحقيقيّ عن العطب: بحثٌ فارغ «لا نتائج لبحثك» (بلا إعادة) مقابل الانقطاع «لا يوجد اتصال»+«أعد المحاولة» (محاكي 2026-09-21) | `PASS` | — | online / offline | — | — | — | — | L1-018 + L1-019 evidence |
 
@@ -1255,7 +1255,7 @@ until ADB is available — not an acceptance blocker.
 | 12 | CUST-01 | 11 | 11 | 0 | 0 | 0 | 11 | 0 | 0 |
 | 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 11 | 0 | 0 |
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
-| 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 18 | 0 | 5 |
+| 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 18 | 0 | 14 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
@@ -1263,22 +1263,22 @@ until ADB is available — not an acceptance blocker.
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 19 | 0 | 8 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 20 | 0 | 16 |
-| 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
-| 24 | CUST-13 | 29 | 24 | 5 | 3 | 0 | 26 | 0 | 0 |
+| 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 24 | 0 | 3 |
+| 24 | CUST-13 | 29 | 24 | 5 | 1 | 0 | 28 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 17 | 0 | 28 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 16 | 0 | 29 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **90** | **9** | **412** | **0** | **67** |
+| | **Total** | **578** | **474** | **104** | **87** | **9** | **417** | **0** | **65** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3474,3 +3474,30 @@ UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt ن�
 — تصحيحٌ سطريٌّ في نشرةٍ لاحقة) ⇒ 13-021/18-016 تبقيان؛ وحالاتُ العرضِ التطبيقيّة (سلّةٌ/رفٌّ/إعادةُ
 دخول) وحالاتُ التغطية بالعنوان تُشهَد في تتمّة الدفعة. **بلا أثرٍ ماليّ** (طلبٌ واحدٌ #1114 أُلغي)،
 كلُّ الحالات استُعيدت.
+
+### 40.32 · الإغلاق السريع — الدفعة C (حاقنُ الأعطال) staging 5c3eb4be (٢٠٢٦-٠٩-٢٢)
+
+بُني حاقنُ أعطالٍ ضيّقٌ على التجهيز (`qa_fault.go`، `qa/seed`: fault_arm/fault_clear/fault_status؛
+نمطان error_5xx وlatency؛ مقصورٌ على QA بالجلسة أو ترويسة `X-QA-Fault:1`؛ **مطفأٌ افتراضاً**؛ إصابةٌ
+واحدةٌ ثمّ نزعٌ تلقائيّ؛ **يمرّ بلا أثرٍ في الإنتاج**). الانحدارُ: gofmt/build/vet + 4 اختبارات
+(`TestQAFault*` — منها إثباتُ fail-closed في الإنتاج وقصرُه على QA)، عقدُ الـAPI بلا انزياح. نشرةٌ
+واحدة (5c3eb4be). الإنتاج `023d9d4c` لم يُمَسّ. لا كتابةَ قاعدةٍ ولا أثرَ ماليّ.
+
+**خريطةُ المسار C (٣٤):** الحاقنُ يلزم ~٧ صفوفٍ فقط؛ البقيّة (~٢٧) جانبُ المحاكي (انقطاع/بطء/حجبُ
+مضيف) بلا حاقن — تُشهَد لاحقاً.
+
+**مشهودٌ حيّاً بالحاقن (خادميّاً؛ و13-011 تطبيقيّاً أيضاً):**
+- **13-011** (٥٠٠ لا يدّعي نجاحاً): سُلِّح error_5xx على `/api/v1/orders/custom`، أرسل الزبونُ من التطبيق
+  ⇒ الخادمُ ٥٠٣، **والتطبيقُ بقي على النموذج، لا طلبَ أُنشئ، لا ادّعاءَ نجاح**؛ نُزع العطبُ تلقائيّاً. + خادميّاً `/orders` ⇒ 503.
+- **16-043** (API 500 — فشلٌ صريحٌ قابلٌ للاسترداد، لا ادّعاء): `/my/orders` ⇒ 503 `qa_fault_injected`؛
+  ومعالجةُ العميل نفسُها المشهودةُ في 13-011 (لا ادّعاءَ نجاح).
+- **12-020** (تسعيرة ٥xx قابلةٌ للاسترداد): `/public/quote` ⇒ 503.
+- **04-015** (تسجيلٌ ٥xx قابلٌ للاسترداد): `/auth/signup/request` ⇒ 503.
+- **13-012** (مهلةٌ لا تدّعي نجاحاً): حقنُ التأخير مُثبَتٌ (٢٫٨ ثانية)؛ + شهادةُ الجهاز §40.25 (مهلة ⇒ «قيد
+  التنفيذ»، طلبٌ واحدٌ #1062) + UncertainDisplayTest.
+
+**القصرُ على QA مُثبَتٌ حيّاً:** طلبُ التسعيرة **بلا ترويسةٍ ولا جلسةِ QA لم يُحقَن** (بقي العطبُ مسلَّحاً).
+كلُّ الأعطال نُزعت (`fault_status`={}) — لا أثر.
+
+**مؤجَّلٌ:** 12-018/16-029 (مهلةُ التسعيرة/الاتصال — مسارُ مهلةِ التطبيق يُشهَد بجانب المحاكي)، و~٢٧ صفَّ
+انقطاع/بطء المحاكي (دفعةٌ تالية بلا نشر).
