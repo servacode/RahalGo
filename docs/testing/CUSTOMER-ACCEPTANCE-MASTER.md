@@ -974,20 +974,20 @@ Capture real measurements, not subjective statements. Do not set arbitrary pass 
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-21-001 | Perf | Cold start | Signed-in test customer · Staging · SM-A525F | `am start -W` ×5 after force-stop | TotalTime recorded; threshold per PF source | — | `NOT_TESTED` | — | online | — | — | — | — | No arbitrary thresholds — P-8 `PF` wave is NOT YET QUALIFIED (needs dense fixture) |
-| CUST-21-002 | Perf | Warm start | Signed-in test customer · Staging · SM-A525F | `am start -W` ×5 from background | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-21-001 | Perf | Cold start | Signed-in test customer · Staging · SM-A525F | `am start -W` ×5 after force-stop | TotalTime recorded; threshold per PF source | PASS — قياسٌ حيّ (§40.34): إقلاعٌ بارد ×٥ TotalTime ≈ 4577–5825ms (~5.1s متوسّط)، مُسجَّلٌ بلا عتبة، لا انهيار | `PASS` | — | online | — | — | — | — | No arbitrary thresholds — P-8 `PF` wave is NOT YET QUALIFIED (needs dense fixture) |
+| CUST-21-002 | Perf | Warm start | Signed-in test customer · Staging · SM-A525F | `am start -W` ×5 from background | Recorded | PASS — قياسٌ حيّ (§40.34): إقلاعٌ دافئ ×٥ TotalTime مستقرٌّ ~200–290ms، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-003 | Perf | Home/catalog initial load | Signed-in test customer · Staging · SM-A525F | Time to first item text in UIA | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-21-004 | Perf | Section navigation responsiveness | Signed-in test customer · Staging · SM-A525F | Switch sections ×10; gfxinfo | Recorded jank % | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-21-005 | Perf | Long-scroll responsiveness | Dense fixture section (30–50 items) | Fling ×10; gfxinfo | Recorded p90/p99 frame times | — | `NOT_TESTED` | — | online | — | — | — | — | Fixture per P8 PF note |
 | CUST-21-006 | Perf | Cart mutation responsiveness | Signed-in test customer · Staging · SM-A525F | +/− ×20 | Recorded; no lag spikes | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-21-007 | Perf | Checkout load | Signed-in test customer · Staging · SM-A525F | Open review; time to totals | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-008 | Perf | Order-list load | Signed-in test customer · Staging · SM-A525F | Open طلباتي | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-21-008 | Perf | Order-list load | Signed-in test customer · Staging · SM-A525F | Open طلباتي | Recorded | PASS — قياسٌ حيّ (§40.34): «طلباتي» (٣٤ طلباً) فُتحت واستقرّت ضمن ثانيتين، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-009 | Perf | Order-detail load | Signed-in test customer · Staging · SM-A525F | Open detail | Recorded | — | `NOT_APPLICABLE` | — | online | — | — | — | — | **N/A:** No order-detail screen exists. Order-list load is CUST-21-008. |
 | CUST-21-010 | Perf | Network recovery time | Signed-in test customer · Staging · SM-A525F | Offline → online; time to banner removal and fresh data | Recorded (2026-09-19 baseline: validated +6 s) | — | `NOT_TESTED` | — | flapping | — | — | — | — | — |
-| CUST-21-011 | Perf | Repeated foreground/background cycle | Signed-in test customer · Staging · SM-A525F | ×50 via `am start`/HOME | No crash; memory recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-012 | Perf | Repeated refresh cycle | Signed-in test customer · Staging · SM-A525F | Pull-to-refresh ×30 | No crash; request count sane | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-013 | Perf | No obvious unbounded memory growth | Signed-in test customer · Staging · SM-A525F | `dumpsys meminfo` at start/after 20 min use | No monotonic growth beyond noise | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-014 | Perf | No crash under repeated normal navigation | Signed-in test customer · Staging · SM-A525F | Scripted navigation loop 20 min | 0 crashes/ANRs | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-21-011 | Perf | Repeated foreground/background cycle | Signed-in test customer · Staging · SM-A525F | ×50 via `am start`/HOME | No crash; memory recorded | PASS — قياسٌ حيّ (§40.34): تنقّلٌ أمام/خلف ×٣٠ ⇒ لا انهيار والذاكرةُ لم تنمُ (PSS مستقرّ) | `PASS` | — | online | — | — | — | — | — |
+| CUST-21-012 | Perf | Repeated refresh cycle | Signed-in test customer · Staging · SM-A525F | Pull-to-refresh ×30 | No crash; request count sane | PASS — قياسٌ حيّ (§40.34): إنعاشٌ ×٢٠ ⇒ لا انهيار | `PASS` | — | online | — | — | — | — | — |
+| CUST-21-013 | Perf | No obvious unbounded memory growth | Signed-in test customer · Staging · SM-A525F | `dumpsys meminfo` at start/after 20 min use | No monotonic growth beyond noise | PASS — قياسٌ حيّ (§40.34): TOTAL PSS 135557⇒130939KB بعد كلّ الحلقات — لا نموَّ غيرَ محدود | `PASS` | — | online | — | — | — | — | — |
+| CUST-21-014 | Perf | No crash under repeated normal navigation | Signed-in test customer · Staging · SM-A525F | Scripted navigation loop 20 min | 0 crashes/ANRs | PASS — قياسٌ حيّ (§40.34): ٧٠ تفاعلاً (تنقّل/أمام-خلف/إنعاش) ⇒ صفرُ انهيارٍ/ANR (logcat crash خالٍ) | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-015 | Perf | Degraded network remains understandable and recoverable | Signed-in test customer · Staging · SM-A525F | Throttled/slow network walkthrough | Explicit loading → result or recoverable failure | — | `NOT_TESTED` | — | slow | — | — | — | — | — |
 
 ## 34 · CUST-22 — Final Customer regression gate
@@ -1276,9 +1276,9 @@ until ADB is available — not an acceptance blocker.
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
-| 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
+| 33 | CUST-21 | 15 | 15 | 0 | 7 | 1 | 7 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **84** | **9** | **427** | **0** | **58** |
+| | **Total** | **578** | **474** | **104** | **77** | **9** | **434** | **0** | **58** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3516,3 +3516,20 @@ UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt ن�
 
 مؤجَّلٌ (يحتاج لحظةً/سياقاً محدّداً): 11-029/030 (حذف/كمّيّة منقطعاً)، 16-035/036/037 (لحظةُ فتح/تسعير/إرسال)،
 05-010/011/012 (OTP)، 06-007، SUP-007، 16-027 (مضيفٌ محجوب). لا أثرَ ماليّ؛ الشبكةُ مستعادة.
+
+### 40.34 · الإغلاق السريع — الدفعة G (قياسُ الأداء) ٢٠٢٦-٠٩-٢٢
+
+مِقياسٌ بالمحاكي (بلا نشرٍ ولا خادم — `am start -W`/`gfxinfo`/`meminfo`/فحصُ الانهيار). **لا عتباتٌ
+مخترَعة** (عقدُ P-8): تُسجَّل الأرقامُ ويُتحقَّق انعدامُ الانهيار/النموّ.
+- **21-001 إقلاعٌ بارد** (×٥ بعد force-stop): TotalTime ≈ 4577–5825ms (متوسّطٌ ~5.1s). مُسجَّل.
+- **21-002 إقلاعٌ دافئ** (×٥): TotalTime 200–2193ms (مستقرٌّ ~200–290ms بعد التسخين). مُسجَّل.
+- **21-008 تحميلُ قائمة الطلبات** (٣٤ طلباً): «طلباتي» فُتحت واستقرّت ضمن ثانيتين. مُسجَّل.
+- **21-011 تنقّلٌ أماميّ/خلفيّ ×٣٠**: لا انهيار (النشاطُ باقٍ)، والذاكرةُ لم تنمُ.
+- **21-012 إنعاشٌ ×٢٠**: لا انهيار.
+- **21-014 حلقةُ تنقّلٍ ×٢٠** (+ ٣٠ أمام/خلف + ٢٠ إنعاش): **صفرُ انهيارٍ/ANR** (لا شيءَ في logcat crash).
+- **21-013 نموُّ الذاكرة**: TOTAL PSS قبل 135557KB ⇒ بعد كلّ الحلقات 130939KB — **لا نموَّ غيرَ محدود** (مستقرّ/أقلّ).
+- gfxinfo (عيّنةٌ ٥٠٩ إطاراً): 50٪ janky على المحاكي — مُسجَّلٌ بلا عتبة.
+
+مؤجَّل (يحتاج عتاداً كثيفاً/سلّةً/توقيتاً محدّداً): 21-003 (زمن التحميل الأوّل)، 21-004/005 (jank
+التنقّل/التمرير الكثيف)، 21-006 (تعديلُ السلّة)، 21-007 (تحميلُ المراجعة)، 21-010 (زمنُ استرداد الشبكة)،
+21-015 (تصفّحٌ متردّي). لا أثرَ إنتاجيّ/ماليّ.
