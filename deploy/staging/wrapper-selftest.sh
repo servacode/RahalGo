@@ -71,6 +71,12 @@ grep -q 'readiness(){' "$W" && grep -q '\-\-readiness)' "$W" && ok "wrapper has 
 grep -q 'docker compose version' "$W" && grep -q 'go build -o /dev/null' "$W" && grep -q 'MemAvailable' "$W" && grep -q 'df -Pk' "$W" && ok "readiness checks tools/go/disk/memory" || no "readiness checks tools/go/disk/memory"
 grep -q 'sudo -u "$DEPLOY_USER" sudo -n "$WRAPPER_DST" --readiness' "$BOOT" && ok "bootstrap gates PASS on on-box readiness" || no "bootstrap gates PASS on on-box readiness"
 grep -q 'load_runtime' "$W" && grep -q 'GO_BIN_DIR' "$W" && ok "wrapper loads Go dir from config" || no "wrapper loads Go dir from config"
+# ── disk safeguard (owner 2026-09-22): guard BEFORE build, safe cache-only prune, hard floor, report after ──
+grep -q 'disk_guard' "$W" && grep -q 'docker builder prune' "$W" && grep -q 'refusing build before exhaustion' "$W" \
+	&& ! grep -qE 'docker (volume prune|system prune -a|image prune -a)' "$W" \
+	&& ok "wrapper guards disk before build (safe build-cache prune only; never volumes/images/containers; hard floor)" \
+	|| no "wrapper disk guard before build"
+grep -q 'disk after deploy' "$W" && ok "wrapper reports disk usage after deploy" || no "wrapper reports disk after deploy"
 grep -q 'staging-[*].rahalgo.com' "$W" && grep -q 'STAGING_API_URL is a production host' "$W" && grep -q 'NEXT_PUBLIC_API_URL="http://localhost:8080"' "$W" && ok "wrapper accepts staging-api alias, refuses prod API host, feeds guard on-box target" || no "wrapper API-host handling"
 grep -q 'bash "$SRC/deploy/preflight-env.sh"' "$W" && grep -q 'bash "$SRC/deploy/build-artifact.sh"' "$W" && grep -q 'bash "$SRC/deploy/promote.sh"' "$W" && ok "wrapper runs archive scripts via bash (exec-bit independent)" || no "wrapper runs archive scripts via bash"
 grep -q 'find_go' "$BOOT" && grep -q 'install_go' "$BOOT" && grep -q '2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613' "$BOOT" && grep -q 'sha256sum -c' "$BOOT" && ok "bootstrap self-heals Go (detect or pinned+verified install)" || no "bootstrap self-heals Go"

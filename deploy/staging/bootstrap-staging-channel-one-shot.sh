@@ -272,6 +272,25 @@ command -v go >/dev/null 2>&1 || die "go not found on PATH — set STAGING_GO_BI
 ( cd "$SRC/backend" && go run ./cmd/stagingctl guard ) || die "stagingctl guard refused the environment — fail closed" 3
 STRICT=0 bash "$SRC/deploy/preflight-env.sh" "$IDENTITY_URL" staging || die "preflight: target is not staging — fail closed" 11
 
+# ── حارسُ القرص قبل البناء ─────────────────────────────────────────────
+# **العطبُ (٢٠٢٦-٠٩-٢٢): مخبأُ بناء docker (~٣١ج) ملأ `/` فهوى postgres+redis.**
+# نفحص الفراغَ قبل البناء، ونقلّم **مخبأَ البناء وحدَه** إن قلّ عن حدٍّ متحفّظ
+# (لا أحجامٌ، لا صورُ إنتاجٍ فعّالة، لا حاويّات)، ونرفض البناءَ قبل النفاد.
+disk_free_kb() { df -Pk "$SRC" 2>/dev/null | awk 'NR==2{print $4}'; }
+disk_guard() {
+	local free; free="$(disk_free_kb)"
+	[ -n "$free" ] || { log "disk: could not read free space — skipping guard"; return 0; }
+	log "disk before build: $((free/1024/1024))G free"
+	if [ "$free" -lt 10485760 ]; then   # < 10G ⇒ قلّم مخبأَ البناء الآمنَ وحدَه
+		log "disk < 10G free — pruning docker BUILD CACHE ONLY (never volumes/images/containers)"
+		docker builder prune -f >/dev/null 2>&1 || true
+		free="$(disk_free_kb)"
+		log "disk after safe prune: $((free/1024/1024))G free"
+	fi
+	[ "${free:-0}" -ge 3145728 ] || die "disk < 3G free after safe build-cache prune — refusing build before exhaustion (free volumes/logs on the box)" 15
+}
+disk_guard
+
 # build the verified commit in archive mode (identity injected + verified)
 export SOURCE_COMMIT="$SHA" SRC_ROOT="$SRC"
 ART="$(bash "$SRC/deploy/build-artifact.sh")"; printf '%s\n' "$ART" | sed 's/^/   build: /' >&2
@@ -306,6 +325,9 @@ if [ "$PROD_BEFORE" != "$PROD_AFTER" ]; then
 	log "-- production after :"; printf '%s\n' "$PROD_AFTER"  | sed 's/^/     /' >&2
 	die "PRODUCTION CONTAINER IDENTITY CHANGED — isolation breach" 6
 fi
+
+# ── تقريرُ القرص بعد النشر (المالكُ طلبه ٢٠٢٦-٠٩-٢٢) ──
+log "disk after deploy: $(df -Ph "$SRC" 2>/dev/null | awk 'NR==2{print $4" free, "$5" used"}')"
 
 MIG="$(printf '%s' "$ID" | grep -o '"migration_version":"[^"]*"' | cut -d'"' -f4)"
 log "OK staging now serves $SHORT · migration=$MIG · production unchanged"
