@@ -683,7 +683,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-CUSTOM-017 | Custom | Guest sees NeedAccount | Signed out | Open طلب خاص | «هذا القسم يحتاج حسابا» + login | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-CUSTOM-018 | Custom | Custom-order realtime to owner | After 001 | Driver/ops change it | Customer sees update | PASS — لحظيٌّ للمالك: TestD22_* (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestD22_*` |
 | CUST-CUSTOM-019 | Custom | Driver note is saved and shown (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Send with «ملاحظات للسائق» | Note stored and visible to the driver | PASS — CAF-07 مُصلَح: الهاتفُ يرسل notes والخادمُ يفكّها ويخزّنها في orders.notes (كالعاديّ) وعرضُ الطلب يكشفها؛ TestCUST_CAF07_NotesStored + شاهدٌ سالب | `PASS` | — | online | order notes | — | — | — | Added. CAF-07 (reported by audit): custom `notes` are sent but not decoded/stored — expected FAIL |
-| CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Cash or wallet selectable (Owner decision 2026-08-09, `orders/custom.go:74-78`) | SOURCE/AUTOMATED FIXED (beb4acc8) §40.11 · PENDING STAGING LIVE WITNESS —: NewCustom يحمل payment_method والشاشةُ تعرض نقد/محفظة وترسل المختار؛ المحرّكُ يخزّنها ويحرس الحظرَ النقديّ. TestCUST_PaymentWalletStored + CustomPaymentTest + شاهدٌ سالب (شهادةُ الجهاز بعد النشر) | `NOT_TESTED` | — | online | order payment_method | — | — | — | Added. Answered by contract (§40.11): the app sends no method → wallet option missing — expected FAIL |
+| CUST-CUSTOM-020 | Custom | Custom order payment method (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payment options | Cash or wallet selectable (Owner decision 2026-08-09, `orders/custom.go:74-78`) | PASS — شاهدٌ حيٌّ كاملٌ على staging 57ebdba0 (§40.29): شاشةُ «طلب خاص» تعرض «نقدا عند التسليم» و«من محفظتي» قابلَين للاختيار؛ نقرُ المحفظة ⇒ #1080 payment_method=wallet خادميّاً، نقرُ النقد ⇒ #1081 payment_method=cash (مُتحقَّقٌ برمزٍ مستقلٍّ لنفس زبون QA)؛ أُلغيت كلُّها ولا قبضَ ماليّ. TestCUST_PaymentWalletStored + CustomPaymentTest | `PASS` | — | online | order payment_method | — | §40.29 | `TestCUST_PaymentWalletStored` · `CustomPaymentTest` | Added. §40.11 predicted FAIL (app sent no method); FIXED beb4acc8 then LIVE-WITNESSED 2026-09-21 (§40.29): app sends the chosen method, engine stores it |
 
 ## 26 · CUST-14 — Order list / lifecycle
 
@@ -716,7 +716,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | PASS — إلغاءٌ مزدوج/بعد المهلة: TestCANC_002 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | Added: `TestCANC_002` |
 | CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | — | `NOT_TESTED` | — | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
 | CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
-| CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | SOURCE/AUTOMATED FIXED (CAF-14): OrdersViewModel.loadMore + mergeById (منع تكرار/حفظ ترتيب) + زرُّ «تحميل المزيد»؛ OrdersMergeTest (٥) + شاهد سالب. PENDING STAGING LIVE WITNESS (حساب >30 طلباً بعد النشر) | `NOT_TESTED` | — | online | count > 30 | — | — | — | Added. CAF-14: the app requests page 1 only (`OrdersViewModel.kt:99,145`) — expected FAIL |
+| CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | PASS — شاهدٌ حيٌّ كاملٌ على staging 57ebdba0 (§40.29): حسابُ QA بُذر ٣٤ طلباً؛ «سجل الطلبات» صفحةٌ أولى ٣٠، يظهر زرُّ «تحميل المزيد» (٣٠<٣٤)؛ نقرُه يكشف الأقدمَ (#1077..#1082، ليست في الصفحة الأولى) ثمّ يختفي حين تُحمَّل الأربعةُ والثلاثون كلُّها؛ المدى #1077..#1112 كلُّه بالغٌ، بلا تكرار، الأحدثُ أوّلاً. الخادمُ: total=34/page1=30/page2=4. OrdersMergeTest (٥) | `PASS` | — | online | count > 30 | — | §40.29 | `OrdersMergeTest` | Added. CAF-14 predicted FAIL (page 1 only); FIXED then LIVE-WITNESSED 2026-09-21 (§40.29): loadMore + mergeById + «تحميل المزيد» يبلغ ما بعد الثلاثين |
 
 ## 26A · CUST-SUP — Chat, complaints, tickets and warnings (added by audit)
 
@@ -1265,8 +1265,8 @@ until ADB is available — not an acceptance blocker.
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 7 | 0 | 22 | 0 | 0 |
-| 25 | CUST-CUSTOM | 20 | 18 | 2 | 4 | 0 | 16 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 12 | 3 | 11 | 0 | 0 |
+| 25 | CUST-CUSTOM | 20 | 18 | 2 | 3 | 0 | 17 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 11 | 3 | 12 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 6 | 0 | 8 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 3 | 0 | 11 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **123** | **9** | **373** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **121** | **9** | **375** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3357,3 +3357,46 @@ typing/presence/read-receipts/attachments.
 consolidated staging live-witness queue, item E). CUST-SUP-013/014 remain NOT_TESTED (device-required
 per their steps) — **not marked PASS from source alone.** API contract regenerated. Production
 mutations = 0.
+
+### 40.29 · شهودُ التجهيز الحيّة — الزبون (٢٠٢٦-٠٩-٢١) · شهودُ C وF على staging 57ebdba0
+
+**البيئة:** staging (`source_commit=57ebdba0`، `migration=0159`، `environment=staging`)؛ الإنتاجُ لم
+يُمَسّ (`023d9d4c`، طفراتُ الإنتاج = ٠). المحاكي `emulator-5554`، تطبيقُ `com.rahalgo.customer.debug`.
+زبونُ QA `+963900555001` (باب التجهيز `/api/v1/qa/session`، معزولٌ زبوناً محضاً). التحقّقُ نصّيٌّ
+(`uiautomator dump`) لا بالصور.
+
+**قدرةُ QA الدائمة — كيف يصير التطبيقُ مُختبَراً حيّاً:** التطبيقُ لا يصير زبونَ QA إلّا بعد
+`pm clear` ثمّ إقلاعٍ باردٍ بـ`am start … --ez qa_login true` (رايةُ `qa_login` تعمل فقط حين
+`vm.user == null`، فلا تدوس جلسةً قائمة)؛ ثمّ يُمنَح إذنُ الموقع والإشعارات. **وعنوانٌ افتراضيٌّ
+مبذورٌ** لزبون QA (`POST /my/addresses`، الرقّة 35.9506/39.0094) — لازمٌ ليُرسِلَ نموذجُ الطلب. يبقى
+هذا العنوانُ عتاداً دائماً لـQA.
+
+**C — CUST-CUSTOM-020 (طريقةُ دفع الطلب الخاصّ): شاهدٌ حيٌّ كاملٌ ⇒ `PASS`.**
+شاشةُ «طلب خاص» تعرض الخيارين «نقدا عند التسليم» و«من محفظتي» وكلاهما قابلٌ للاختيار. من طرفٍ إلى طرف
+(نقرٌ في الواجهة ⇒ ما خزّنه الخادم، مُتحقَّقٌ برمزٍ مستقلٍّ لنفس الزبون):
+- نقرُ **المحفظة** ⇒ إرسال ⇒ الطلب #1080، `payment_method = wallet` خادميّاً (بطاقةُ الطلب تعرض «من محفظتي»).
+- نقرُ **النقد** ⇒ إرسال ⇒ الطلب #1081، `payment_method = cash` خادميّاً (شاهدٌ ضابطٌ: المُبدِّلُ يقلب الوجهين).
+العزلُ والتنظيف: كلُّ طلبات QA (1077/1080/1081) أُلغيت؛ لا طلبَ معلَّقاً؛ لا قبضَ ماليّ (الدفعُ عند التسليم
+ولم يُسلَّم شيء). **⇒ CUST-CUSTOM-020 = PASS** (شاهدٌ حيٌّ كاملٌ: واجهةٌ + خادم، والمُبدِّلُ مُثبَتٌ أنّه
+يحكم الطريقةَ المُرسَلة/المخزَّنة).
+
+**F — CAF-02 / CUST-13-029 (بصمةُ الجسم): الجانبُ الخادميُّ مشهودٌ حيّاً** (مسار `POST /api/v1/orders/custom`،
+لا بوّابةَ دوامِ متجرٍ فيه):
+- R1 (مفتاحُ تفرّدٍ K، جسمٌ A) ⇒ 201، الطلبُ #1077.
+- R2 (نفسُ K، جسمٌ **مختلفٌ** B) ⇒ **409 `idempotency_key_reused`** ← جوهرُ CAF-02.
+- R3 (نفسُ K، جسمٌ A نفسُه) ⇒ 201، **نفسُ المعرّف/الرقم #1077** = إعادةُ تشغيلٍ (مرّةٌ واحدةٌ حصراً).
+- العزل: `/my/orders` = طلبٌ واحدٌ (#1077)، ثمّ أُلغي. **صفُّ 13-029 أصلاً `PASS`** (مِعيارُه الثابتُ الخادميُّ،
+  §40.27)؛ هذا الشاهدُ الحيُّ يعضده. **F (تجربةُ العميل، PC-8) بندٌ تتبُّعيٌّ منفصلٌ لا يحكم صفَّ الدفتر.**
+
+**B — CUST-14-026 (ترقيمُ صفحاتِ سجلّ الطلبات): شاهدٌ حيٌّ كاملٌ ⇒ `PASS`** (قرارُ المالك: ابذر >٣٠
+واشهد). بُذر لحساب QA ٣٤ طلباً (حدُّ المفتوحِ ٣؛ حلقةُ إنشاءٍ ثمّ إلغاءٍ حتّى التاريخُ >٣٠)، كلُّها
+مُلغاةٌ (سجلّ). شاشةُ «سجل الطلبات» (القائمة ⇐ سجل الطلبات): الصفحةُ الأولى ٣٠، يظهر «تحميل المزيد»
+(`historyHasMore` = ٣٠<٣٤)؛ نقرُه يكشف الأقدمَ (#1077/#1080/#1081/#1082، وليست في الصفحة الأولى التي
+تبدأ #1083) ثمّ يختفي الزرُّ حين تُحمَّل الأربعةُ والثلاثون. المدى #1077..#1112 كلُّه بالغٌ، بلا
+تكرار (`mergeById`)، الأحدثُ أوّلاً. الخادمُ: `total=34، page1=30، page2=4`.
+
+**مسدودٌ على عتادٍ لا يصنعه بابُ QA الزبونيُّ المحض** (قرارُ المالك: ابنِ بذّاراتٍ ضيّقةً على التجهيز):
+A (CUST-ENG-005 — لا عروضَ على staging: `/public/offers` = ٠)، والتعضيدُ الحيُّ لـD (CUST-SUP-012،
+وهو أصلاً PASS — يحتاج إنذارَ أدمن)، وE-013 (CUST-SUP-013 — يحتاج ردَّ أدمن على تذكرة). **يُبنى لها
+بذّارُ عتادٍ على التجهيز فقط** (عرضٌ+صنف، ردُّ أدمن على تذكرة زبون QA نفسِه، إنذارٌ على زبون QA) —
+يسقط مغلقاً في الإنتاج، على بيانات زبون QA وحدَها، بلا إصدار أيّ توكن أدمن.
