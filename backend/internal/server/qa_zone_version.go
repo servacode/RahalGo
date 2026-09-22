@@ -238,6 +238,33 @@ func (s *Server) qaMerchantRestore(w http.ResponseWriter, r *http.Request, itemI
 	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "restored": true, "hours": len(saved.hours)})
 }
 
+// qaGovActive **يقلب فعّاليّةَ محافظةٍ** (governorates.active) للنقطة المُعطاة —
+// لشهود `province_not_supported` (08-007). **يحلّ المحافظةَ من المدينة الحاويةِ
+// للنقطة (نفسُ استعلام `classifyPlace`)، يحفظ السابقَ ويعيده.** عكوسٌ، بلا أثرٍ ماليّ.
+func (s *Server) qaGovActive(w http.ResponseWriter, r *http.Request, lat, lng float64, active bool) {
+	ctx := r.Context()
+	var govID, govName string
+	var prev bool
+	err := s.pg.QueryRow(ctx, `
+		SELECT g.id::text, g.name, g.active
+		FROM cities c
+		JOIN districts d     ON d.id = c.district_id
+		JOIN governorates g  ON g.id = d.governorate_id
+		WHERE ST_DWithin(c.center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, c.radius_m)
+		ORDER BY ST_Distance(c.center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
+		LIMIT 1`, lat, lng).Scan(&govID, &govName, &prev)
+	if err != nil {
+		s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_no_gov_for_point", "errors.conflict"))
+		return
+	}
+	if _, err := s.pg.Exec(ctx, `UPDATE governorates SET active = $2 WHERE id = $1::uuid`, govID, active); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA governorate active toggled (staging-only)", "gov", govID, "previous", prev, "set", active)
+	httpx.JSON(w, http.StatusOK, map[string]any{"gov_id": govID, "name": govName, "previous": prev, "set": active})
+}
+
 // qaMinVersion **يضبط الحدَّ الأدنى لنسخة الزبون** (`app.min_version.customer`)
 // لشهود 426 `update_required`. **يُرجع السابقَ للاستعادة** — نداءٌ ثانٍ بقيمته
 // يُعيد الحال. **إعدادٌ رقميٌّ لا يقلبه `qa/setting` المنطقيّ.**
