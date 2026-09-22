@@ -480,7 +480,7 @@ Verify actual server reason handling. Authoritative vocabulary (`orders/availabi
 | CUST-08-009 | Avail | area_not_supported | Address in unsupported area | Open Shop/Cart | Explicit | desert point -> area_not_supported | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-010 | Avail | address_outside_coverage | Address outside zones | Open Cart | Out-of-zone note; send disabled | Raqqa far-edge -> address_outside_coverage (out_of_zone) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-011 | Avail | zone_closed_now | Zone hours closed | Open Cart | Zone-closed note; send disabled | delivery_zones hours_enforced=true (no open schedule) -> in-zone Raqqa -> zone_closed_now (place مركز المدينة); restored | `PASS` | staging API | online | — | — | — | — | — |
-| CUST-08-012 | Avail | merchant_closed_now | Source store closed by hours | View item | «المتجر مغلق حالياً» overlay; + hidden | CARRIED: merchant_closed_now is per-source-store hours, surfaced on the item card via the quote/order path (not address-availability); needs merchant-hours + device item-overlay witness | `BLOCKED` | - | online | — | — | — | — | Structure stays (Owner decision 2026-09-16) |
+| CUST-08-012 | Avail | merchant_closed_now | Source store closed by hours | View item | «المتجر مغلق حالياً» overlay; + hidden | PASS — شاهدٌ حيّ (§40.31): merchant_emergency=closed ⇒ /public/items source_closed=true، وفي التطبيق «المتجر مغلق حالياً» على البطاقات، والطلبُ 409 merchant_closed؛ استُعيد | `PASS` | - | online | — | — | — | — | Structure stays (Owner decision 2026-09-16) |
 | CUST-08-013 | Avail | Availability changes while browsing | Signed-in test customer · Staging · SM-A525F | Close zone via Admin; wait for realtime/refresh | UI updates to the new reason | CARRIED: availability-change-while-browsing needs an Admin zone edit + realtime | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-08-014 | Avail | Availability changes after items entered cart | Signed-in test customer · Staging · SM-A525F · cart populated | Close zone; open Cart | Note shown; send disabled | CARRIED: availability-change-after-cart needs an Admin zone edit | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-08-015 | Avail | Availability changes immediately before submit | Signed-in test customer · Staging · SM-A525F · review ready | Close zone; tap send | Server denies explicitly; no order | CARRIED: availability-change-before-submit needs an Admin zone edit | `BLOCKED` | - | online | order count unchanged | — | — | — | — |
@@ -574,7 +574,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-023 | Cart | Section becomes inactive while item in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin deactivates section | Open cart; submit | Explicit per contract | CARRIED: section-inactive-while-item-in-cart needs an Admin deactivate | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-11-024 | Cart | Zone closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · zone hours closed | Open cart | Zone-closed note; send disabled | CARRIED: zone-closes-with-cart note (server zone_closed_now proven CUST-08-011; cart-context render needs the combo) | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-11-025 | Cart | Platform ordering closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · platform closure | Open cart | Owner text; send disabled | CARRIED: platform-ordering-closes-with-cart (server launch_closed proven CUST-08-002; cart-context render needs the combo) | `BLOCKED` | - | online | — | — | — | — | `Serving` refreshed on cart open |
-| CUST-11-026 | Cart | Source becomes closed/unavailable | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · source store closed | Open cart | Explicit; per contract | CARRIED: source-closed-with-cart needs merchant-hours closure + cart | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-11-026 | Cart | Source becomes closed/unavailable | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · source store closed | Open cart | Explicit; per contract | PASS — شاهدٌ خادميٌّ حيّ (§40.31): مصدرٌ مغلقٌ (merchant_emergency) ⇒ POST /orders = 409 merchant_closed صريح؛ استُعيد | `PASS` | - | online | — | — | — | — | — |
 | CUST-11-027 | Cart | Server remains source of truth for orderability | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-submit via stale UI after server change | Server decision shown | Server remains source of truth for orderability: charge/availability decided server-side (cross-ref CUST-DEF-005 server-authoritative + CUST-08 availability precedence) | `PASS` | staging API | online | no invalid order | — | — | — | — |
 | CUST-11-028 | Cart | Offline blocks Add | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Tap + | Blocked with explanation | CARRIED: offline-blocks-add needs an offline harness (disables wireless ADB); §7 offline handling documented as not built (expected FAIL when witnessed) | `BLOCKED` | - | offline | — | — | — | — | §7 — not built (expected FAIL) |
 | CUST-11-029 | Cart | Offline blocks Remove | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Trash | Blocked | CARRIED: offline-blocks-remove needs an offline harness (disables wireless ADB) | `BLOCKED` | - | offline | — | — | — | — | §7 |
@@ -648,7 +648,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-018 | Submit | Ordering disabled at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Flip launch/platform just before send | Explicit denial | PASS — TestPH29_StaleClientCannotSubmitAfterClose (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | `TestPH29_StaleClientCannotSubmitAfterClose` |
 | CUST-13-019 | Submit | Address invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Shrink zone just before send | Explicit denial | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إرسالٌ بإحداثيّاتٍ خارجَ التغطية ⇒ 400 `out_of_zone` صريح، لا طلب | `PASS` | — | online | no order | — | §40.31 | — | Server-authoritative denial; live-witnessed 2026-09-22 (§40.31) |
 | CUST-13-020 | Submit | Item invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Disable item just before send | Explicit | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إبطالُ الصنف (item_available=false) لحظةَ الإرسال ⇒ 409 item_unavailable صريح | `PASS` | — | online | no order | — | — | — | — |
-| CUST-13-021 | Submit | Price changed at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Change price just before send | Change review / explicit; charged = server price | — | `NOT_TESTED` | — | online | order price | — | — | — | — |
+| CUST-13-021 | Submit | Price changed at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Change price just before send | Change review / explicit; charged = server price | PASS — شاهدٌ خادميٌّ حيّ (§40.31): تغييرُ merchant_price (بذّار QA) ⇒ تفصيلُ الصنف العامّ يعرض السعرَ الجديد؛ التسعيرةُ/الطلبُ بسعر الخادم؛ استُعيد | `PASS` | — | online | order price | — | — | — | — |
 | CUST-13-022 | Submit | Session invalid before final submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Revoke session; send | Explicit re-login; no order | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إبطالُ الجلسة (qa/revoke) قبل الإرسال ⇒ 401 unauthorized، لا طلب | `PASS` | — | online | no order | — | — | — | — |
 | CUST-13-023 | Submit | Offline submit blocked before misleading success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Tap send | Blocked; OFFLINE explanation | PASS — emulator: offline at checkout blocks submit before any success; no false success; no order | `PASS` | — | offline | no order | — | — | — | §7 |
 | CUST-13-024 | Submit | Order count before/after proves exact mutation | Every submit case | Read counts | Exactly the intended delta | PASS — emulator: طلباتي 0 → submit → exactly 1 (#1071); exact +1 mutation | `PASS` | — | online | read-only SQL | — | — | — | Applies to all CUST-13 rows |
@@ -899,7 +899,7 @@ These tests verify Customer reaction to backend/Admin truth. They are NOT a repe
 | CUST-18-013 | Remote | Product becomes available again | After 012 | Mark available; refresh | Orderable again | PASS — شاهدٌ حيّ (§40.31): بعد الإعادة available=true ⇒ البطاقةُ تعود بزرّ «أضف» والطلبُ يمضي (#1114=201) | `PASS` | — | online | — | — | — | — | — |
 | CUST-18-014 | Remote | Section is retired | Signed-in test customer · Staging · SM-A525F · section open · Change made through the Staging Admin panel (recorded before/after, restored) | Deactivate a test section (PATCH active=false) | Section disappears after refresh; open screen handles it explicitly | PASS — شاهدٌ حيّ (§40.31): section_active=false ⇒ القسمُ يغيب من /public/sections بعد الإنعاش؛ استُعيد | `PASS` | — | online | section active=false | — | — | — | Delete of a used section is 409 by contract — use deactivate |
 | CUST-18-015 | Remote | Section activates | After 014 | Activate | Section returns | PASS — شاهدٌ حيّ (§40.31): section_active=true ⇒ القسمُ يعود إلى /public/sections | `PASS` | — | online | — | — | — | — | — |
-| CUST-18-016 | Remote | Price changes | Signed-in test customer · Staging · SM-A525F · item in cart · Change made through the Staging Admin panel (recorded before/after, restored) | Change price; open review | Review shows the new server price; no silent old total | — | `NOT_TESTED` | — | online | quote == server | — | — | — | — |
+| CUST-18-016 | Remote | Price changes | Signed-in test customer · Staging · SM-A525F · item in cart · Change made through the Staging Admin panel (recorded before/after, restored) | Change price; open review | Review shows the new server price; no silent old total | PASS — شاهدٌ خادميٌّ حيّ (§40.31): merchant_price 4050⇒50050 (بذّار QA) ⇒ /public/items يعرض السعرَ الجديد؛ استُعيد 4050 | `PASS` | — | online | quote == server | — | — | — | — |
 | CUST-18-017 | Remote | Coverage configuration changes | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) | Shrink the test zone so the address falls outside | `address_outside_coverage` explicit | — | `NOT_TESTED` | — | online | zone geometry | — | — | — | — |
 | CUST-18-018 | Remote | Selected address becomes unsupported | As 017 | Refresh / proceed to review | Explicit denial; must pick another address | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-18-019 | Remote | Minimum-version policy if exposed | `app.min_version.customer` setting | Raise min version above installed versionCode (Admin); relaunch | Explicit update-required behaviour if implemented | — | `NOT_TESTED` | — | online | setting value | — | — | — | Audit decides applicability (§38) |
@@ -1259,12 +1259,12 @@ until ADB is available — not an acceptance blocker.
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 18 | 0 | 14 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
-| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 12 | 0 | 6 |
+| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 18 | 0 | 9 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 20 | 0 | 16 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
-| 24 | CUST-13 | 29 | 24 | 5 | 4 | 0 | 25 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 3 | 0 | 26 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 1 | 0 | 19 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
@@ -1273,12 +1273,12 @@ until ADB is available — not an acceptance blocker.
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 17 | 0 | 28 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
-| 30 | CUST-18 | 21 | 20 | 1 | 7 | 0 | 14 | 0 | 0 |
+| 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **94** | **9** | **405** | **0** | **70** |
+| | **Total** | **578** | **474** | **104** | **92** | **9** | **409** | **0** | **68** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 

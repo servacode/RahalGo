@@ -11061,3 +11061,14 @@ platform_pause، كلٌّ يُرجع previous للاستعادة) — نشرةٌ
 الدفع ⇒ الخادمُ يرفض، لا طلب)، **13-019** (إبطالُ العنوان لحظةَ الإرسال ⇒ out_of_zone صريح).
 
 **المجاميع: PASS 405 · FAIL 0 · BLOCKED 70 · N/A 9 · NOT_TESTED 94 = 578.** (غيرُ المحسوم ١٦٤.)
+
+## ٢٠٢٦-٠٩-٢٢ · تتمّة B — سعرُ الصنف + إغلاقُ المتجر ⇒ ٤ PASS
+
+نشرةٌ واحدة (تصحيح item_price ⇒ merchant_price + kind جديد merchant_emergency):
+- **13-021 · 18-016**: تغييرُ merchant_price ⇒ /public/items يعرض السعرَ الجديد (4050⇒50050)؛ استُعيد.
+- **08-012**: merchant_emergency=closed ⇒ source_closed=true + «المتجر مغلق حالياً» في التطبيق + 409
+  merchant_closed؛ استُعيد.
+- **11-026**: مصدرٌ مغلقٌ ⇒ POST /orders = 409 merchant_closed.
+
+لا أثرَ ماليّ، كلُّ الحالات استُعيدت (سعر/متجر). الإنتاج `023d9d4c`.
+**المجاميع: PASS 409 · FAIL 0 · BLOCKED 68 · N/A 9 · NOT_TESTED 92 = 578.** (غيرُ المحسوم ١٦٠.)
