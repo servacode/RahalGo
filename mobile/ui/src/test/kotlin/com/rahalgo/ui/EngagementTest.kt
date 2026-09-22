@@ -26,6 +26,13 @@ class EngagementTest {
         assertEquals("8b0a8a71-d186-4647-ae3b-9cd3898508bf", offer.id)
         assertFalse(offer.isHome)
 
+        // **CAF-13 · وخبرُ حالةِ الطلب يفتح الطلبَ لا البيت** — كان يسقط
+        // إلى البيت فيُفتَح السوقُ لا طلبُ الزبون (CUST-15-006).
+        val order = Engagement.route("order", "3df913ef-3c56-484f-b19d-031364df6726")
+        assertEquals(Engagement.DEST_ORDER, order.type)
+        assertEquals("3df913ef-3c56-484f-b19d-031364df6726", order.id)
+        assertFalse(order.isHome)
+
         // **و«المتجر» رُفعت** (قرارُ المالك ٢٠٢٦-٠٩-١٥) — **ولا شاشةَ
         // لها عند الزبون**: **فتسقط إلى البيت** (`MD-08`).
         assertTrue(Engagement.route("merchant", "abc").isHome)
@@ -44,10 +51,10 @@ class EngagementTest {
         val bad = listOf(
             "https://evil.example/pay" to "x",
             "intent://settings" to "y",
-            "order" to "1",
             "../../etc" to "z",
             "" to "",
             "offer" to "",        // **ومعرّفٌ فارغٌ لوجهةٍ تحتاجه**
+            "order" to "",        // **وطلبٌ بلا معرّفٍ يسقط إلى البيت أيضاً**
             "merchant" to "   ",
         )
         for ((t, i) in bad) {

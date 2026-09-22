@@ -42,6 +42,11 @@ import (
 // مُمتاز.** وحارسُ الدور أدناه يمنع ذلك على كلّ حال.
 const qaStagingPhone = "+963900555001"
 
+// qaStagingPhone2 **زبونُ QA الثاني** — لشهود «لا تسريبَ بين الحسابات»
+// (CUST-15-011). زبونٌ محضٌ كالأوّل، بعيدٌ عن أرقام البذور، وحارسُ الدور
+// يمنع أيَّ امتيازٍ عنه أيضاً.
+const qaStagingPhone2 = "+963900555002"
+
 // qaStagingEnabled **أعلى التجهيز نحن؟** — الشرطان معاً، لا أحدُهما.
 func (s *Server) qaStagingEnabled() bool {
 	return s.cfg.Env == "staging" && os.Getenv("RAHALGO_STAGING") == "1"
@@ -55,10 +60,21 @@ func (s *Server) handleQAStagingSession(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	phone, ok := identity.NormalizePhone(qaStagingPhone)
+	// **زبونٌ ثانٍ عند الطلب** (`{"second":true}`) — لشهود عزلِ الحسابات.
+	sel := qaStagingPhone
+	if req, derr := decode[struct {
+		Second bool `json:"second"`
+	}](r); derr == nil && req.Second {
+		sel = qaStagingPhone2
+	}
+	phone, ok := identity.NormalizePhone(sel)
 	if !ok {
 		s.respondErr(w, errValidation)
 		return
+	}
+	name := "زبون الاختبار QA"
+	if sel == qaStagingPhone2 {
+		name = "زبون الاختبار QA الثاني"
 	}
 
 	// **يُبحَث عنه أولاً** — **فلا يُعاد منحُ الدور على القائم** (يُدرج
@@ -67,7 +83,7 @@ func (s *Server) handleQAStagingSession(w http.ResponseWriter, r *http.Request) 
 	err := s.pg.QueryRow(r.Context(), `SELECT id::text FROM users WHERE phone = $1`, phone).Scan(&uid)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		user, cerr := s.identity.EnsureUserWithRole(r.Context(), "", qaStagingPhone, "customer", "زبون الاختبار QA", "", clientIP(r))
+		user, cerr := s.identity.EnsureUserWithRole(r.Context(), "", sel, "customer", name, "", clientIP(r))
 		if cerr != nil {
 			s.respondErr(w, cerr)
 			return
@@ -149,7 +165,7 @@ func (s *Server) handleQAStagingRevoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	allowed := map[string]bool{}
-	for _, p := range []string{qaStagingPhone, "+963900000001"} { // الزبونُ + الرقمُ المُصطدَمُ في البناء المؤقّت
+	for _, p := range []string{qaStagingPhone, qaStagingPhone2, "+963900000001"} { // زبونا QA + الرقمُ المُصطدَمُ في البناء المؤقّت
 		if n, nok := identity.NormalizePhone(p); nok {
 			allowed[n] = true
 		}
@@ -243,6 +259,8 @@ var qaSeedAllowlist = map[string]bool{
 	"resolve_ticket": true, // حلُّ تذكرة زبون QA — لشهود «المحلولةُ تُغلَق» (SUP-014، بلا تعويضٍ فلا مساسَ ماليّ)
 	"warning":        true, // إنذارُ حسابٍ على زبون QA (D-corroboration)
 	"push":           true, // دفعةٌ حتميّةٌ لزبون QA (المسار E) — kind/entity للوجهة
+	"wallet_fund":    true, // شحنُ محفظة زبون QA بمبلغٍ حتميّ (المسار D) — عبر wallet.ApplyTx
+	"wallet_drain":   true, // تصفيرُ محفظة زبون QA (تنظيفٌ ماليّ) — عبر wallet.ApplyTx
 	"offer":          true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
 	"offer_off":      true, // إطفاءُ عرضٍ بذرناه (تنظيف)
 	// ── حالاتُ العتاد (المسار B) — كلُّها تُرجع القيمةَ السابقةَ للاستعادة ──
@@ -387,7 +405,51 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		})
 		s.logger.Warn("QA push sent (staging-only)", "user", uid, "kind", req.NotifKind, "entity", req.Entity)
 		httpx.JSON(w, http.StatusOK, map[string]any{"sent": true, "kind": req.NotifKind, "entity": req.Entity, "entity_id": req.EntityID})
+	case "wallet_fund":
+		s.qaWalletFund(w, r, uid, req.ValueInt)
+	case "wallet_drain":
+		s.qaWalletDrain(w, r, uid)
 	}
+}
+
+// qaWalletFund يشحن محفظةَ زبون QA بمبلغٍ حتميّ **عبر المسار المُعتمَد**
+// (`wallet.ApplyTx` — يكتب قيدَ `wallet_transactions` ويفرض CHECK، لا تعديلَ
+// قاعدةٍ خام). يُرجع الرصيدَ ومعرّفَ القيد.
+func (s *Server) qaWalletFund(w http.ResponseWriter, r *http.Request, uid string, amount int64) {
+	if amount <= 0 || amount > 100_000_000 { // حتميٌّ وموجب، بسقفٍ يحرس من خطأٍ عرضيّ
+		s.respondErr(w, errValidation)
+		return
+	}
+	actor := uid
+	bal, txID, err := s.wallet.ApplyTxID(r.Context(), s.pg, uid, amount, "topup", "qa-fund", "QA wallet funding (staging)", &actor)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA wallet funded (staging-only)", "user", uid, "amount", amount, "balance", bal, "tx", txID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"funded": amount, "balance": bal, "tx_id": txID, "kind": "topup"})
+}
+
+// qaWalletDrain يُصفّر محفظةَ زبون QA (تنظيفٌ ماليّ) بقيدِ تسويةٍ سالبٍ
+// بمقدار الرصيد — عبر المسار المُعتمَد، لا تعديلَ خام.
+func (s *Server) qaWalletDrain(w http.ResponseWriter, r *http.Request, uid string) {
+	bal, err := s.wallet.Balance(r.Context(), uid)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if bal == 0 {
+		httpx.JSON(w, http.StatusOK, map[string]any{"drained": 0, "balance": 0})
+		return
+	}
+	actor := uid
+	newBal, txID, derr := s.wallet.ApplyTxID(r.Context(), s.pg, uid, -bal, "adjustment", "qa-drain", "QA wallet drain (staging cleanup)", &actor)
+	if derr != nil {
+		s.respondErr(w, derr)
+		return
+	}
+	s.logger.Warn("QA wallet drained (staging-only)", "user", uid, "removed", bal, "balance", newBal, "tx", txID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"drained": bal, "balance": newBal, "tx_id": txID})
 }
 
 // qaResolveTicket يحلّ أحدثَ تذكرةٍ مفتوحةٍ لزبون QA — **بلا تعويضٍ فلا يُمسّ

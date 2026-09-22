@@ -46,6 +46,16 @@ object Engagement {
      */
     const val DEST_OFFER = "offer"
 
+    /**
+     * **ووجهةُ الطلب — يفتح صفحةَ طلباته** (`CAF-13`، `CUST-15-006`).
+     *
+     * **وكان خبرُ حالةِ الطلب يسقط إلى البيت** (`entity="order"` في المحرّك،
+     * `eventmap/contracts.go` وأخواتُها) **لأنّ `route` لم تعرفه** — فيضغط
+     * الزبونُ «طلبك في الطريق» فيُفتَح السوقُ لا طلبُه. **والمعرّفُ معرّفُ
+     * الطلب**، **والوجهةُ تبويبُ «طلباتي»**: طلبٌ لا يملكه لا يظهر فيه (احتياطٌ آمن).
+     */
+    const val DEST_ORDER = "order"
+
     // ══════════════════════════════════════════════════════════════════
     // **و«المتجر» لم تعد وجهةً** (قرارُ المالك ٢٠٢٦-٠٩-١٥)
     // ══════════════════════════════════════════════════════════════════
@@ -89,7 +99,7 @@ object Engagement {
         val type = entity?.trim().orEmpty()
         val id = entityId?.trim().orEmpty()
         return when (type) {
-            DEST_OFFER, DEST_ORDER_CHAT ->
+            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER ->
                 if (id.isEmpty()) HOME else Dest(type, id)
             else -> HOME
         }
