@@ -782,10 +782,10 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-15-003 | Push | Notification while process killed | App force-stopped (not 'Force stop' in settings) | Progress order | Push shown; tap opens app | PASS — شاهدٌ حيّ (§40.36): العمليّةُ مقتولةٌ (am kill) ⇒ FCM أيقظها فظهر الإشعارُ، والنقرُ فتح التطبيق (MainActivity) | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-004 | Push | Notification permission denied | Denied | Progress order | No push; in-app state still correct on open | PASS — شاهدٌ حيّ (§40.36): الإذنُ مرفوضٌ (importance=NONE) ⇒ لا دفعةَ في الدرج، والحالةُ في التطبيق صحيحةٌ (الإشعارُ في /me/notifications) | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-005 | Push | Permission granted later | Denied then granted | Progress order | Push arrives | PASS — شاهدٌ حيّ (§40.36): بعد منح الإذن (DEFAULT) ⇒ الدفعاتُ تصل الدرجَ (FCM configured، التسليمُ يعمل) | `PASS` | — | online | — | — | — | — | — |
-| CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | — | `NOT_TESTED` | — | online | — | — | — | — | XG-9 (CAF-13) / XG-8 / XG-9: order-status pushes open the default screen — expected FAIL for status pushes |
+| CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | FAIL — CAF-13 مؤكَّدٌ حيّاً (§40.36): دفعةُ حالةِ طلبٍ يملكه زبونُ QA (#1115) ⇒ النقرُ يفتح الشاشةَ الافتراضيّة (السوق) لا صفحةَ الطلب — deep-link معطوبٌ لدفعات الطلب. (chat→sheet وoffer→offer لم يُشهدا: لا محادثةَ نشطةٌ لزبون QA) | `FAIL` | — | online | — | — | — | — | XG-9 (CAF-13) / XG-8 / XG-9: order-status pushes open the default screen — expected FAIL for status pushes |
 | CUST-15-007 | Push | Old/stale notification | Old push in tray | Tap after state changed | Opens current truth; no stale action | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-15-008 | Push | Duplicate notification | Two pushes same class | Observe tray | No confusing duplicates | — | `NOT_TESTED` | — | online | — | — | — | — | XG-38 / PC-5: two fixed IDs (3001/3002) — newer replaces older |
-| CUST-15-009 | Push | Notification for an inaccessible order | Push for order of another account | Tap | Safe fallback; no data | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-15-008 | Push | Duplicate notification | Two pushes same class | Observe tray | No confusing duplicates | PASS — شاهدٌ حيّ (§40.36): دفعتا طلبٍ من صنفٍ واحد ⇒ الدرجُ يعرض واحدةً فقط (QA_15008_v2، الأحدثُ استبدل الأقدم — معرّفٌ ثابت)، لا تكرارَ مربك | `PASS` | — | online | — | — | — | — | XG-38 / PC-5: two fixed IDs (3001/3002) — newer replaces older |
+| CUST-15-009 | Push | Notification for an inaccessible order | Push for order of another account | Tap | Safe fallback; no data | PASS — شاهدٌ حيّ (§40.36): دفعةٌ لطلبٍ لا يملكه زبونُ QA (#1050) ⇒ النقرُ يفتح الشاشةَ الافتراضيّة (احتياطٌ آمن)، لا بياناتِ الطلب، لا تسريب | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-010 | Push | Account switched after notification generated | A's push; B logged in | Tap | No A data shown to B | PASS — التوكنُ ينتقل لصاحبٍ جديد: TestPush_TokenMovesToNewOwner (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestPush_TokenMovesToNewOwner` |
 | CUST-15-011 | Push | No cross-account content leakage | Shared device, two accounts | Receive pushes after switch | Only current account's pushes | — | `NOT_TESTED` | — | online | device token owner | — | — | — | D12 fixed |
 | CUST-15-012 | Push | Realtime disconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Cut network while on طلباتي | Reconnect backoff 2→30 s; no crash | PASS — LiveSocket FIRST_RETRY=2s · MAX_RETRY=30s · مضاعفة coerceAtMost(30s)؛ D19 t1/t11؛ ومحاكي: طيران on/off على طلباتي بلا انهيار | `PASS` | — | flapping | — | — | — | — | — |
@@ -1270,7 +1270,7 @@ until ADB is available — not an acceptance blocker.
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
-| 27 | CUST-15 | 19 | 16 | 3 | 6 | 0 | 13 | 0 | 0 |
+| 27 | CUST-15 | 19 | 16 | 3 | 3 | 0 | 15 | 1 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **68** | **9** | **443** | **0** | **58** |
+| | **Total** | **578** | **474** | **104** | **65** | **9** | **445** | **1** | **58** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
