@@ -242,6 +242,7 @@ var qaSeedAllowlist = map[string]bool{
 	"ticket_reply":   true, // ردُّ أدمن على تذكرة زبون QA نفسِه (E-013)
 	"resolve_ticket": true, // حلُّ تذكرة زبون QA — لشهود «المحلولةُ تُغلَق» (SUP-014، بلا تعويضٍ فلا مساسَ ماليّ)
 	"warning":        true, // إنذارُ حسابٍ على زبون QA (D-corroboration)
+	"push":           true, // دفعةٌ حتميّةٌ لزبون QA (المسار E) — kind/entity للوجهة
 	"offer":          true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
 	"offer_off":      true, // إطفاءُ عرضٍ بذرناه (تنظيف)
 	// ── حالاتُ العتاد (المسار B) — كلُّها تُرجع القيمةَ السابقةَ للاستعادة ──
@@ -288,6 +289,12 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		Mode  string `json:"mode"`  // error_5xx | latency
 		Ms    int    `json:"ms"`    // للتأخير
 		Count int    `json:"count"` // عددُ الإصابات (افتراضُه ١)
+		// دفعةُ QA (push):
+		NotifKind string `json:"notif_kind"` // order | chat | offer | account | ticket …
+		Title     string `json:"title"`
+		Body      string `json:"body"`
+		Entity    string `json:"entity"`
+		EntityID  string `json:"entity_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -367,6 +374,19 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		s.qaSeedWarning(w, r, uid)
 	case "offer":
 		s.qaSeedOffer(w, r, uid)
+	case "push":
+		// **دفعةٌ حتميّةٌ لزبون QA** — عبر نفس مسار الإشعارات (`notify` ⇒ الدافع)،
+		// فتحمل kind/entity/entity_id للوجهة (deep-link). لا سرَّ، لا موضوعَ إنتاج.
+		title := req.Title
+		if title == "" {
+			title = "إشعار اختبار QA"
+		}
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: uid, Kind: req.NotifKind, Title: title, Body: req.Body,
+			Entity: req.Entity, EntityID: req.EntityID,
+		})
+		s.logger.Warn("QA push sent (staging-only)", "user", uid, "kind", req.NotifKind, "entity", req.Entity)
+		httpx.JSON(w, http.StatusOK, map[string]any{"sent": true, "kind": req.NotifKind, "entity": req.Entity, "entity_id": req.EntityID})
 	}
 }
 
