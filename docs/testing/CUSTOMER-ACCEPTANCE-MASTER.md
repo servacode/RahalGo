@@ -542,7 +542,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-10-010 | Item | Invalid quantity cannot be created through UI | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Try negative/zero via UI | Impossible via UI | Invalid quantity impossible via UI: - at 1 removes the line, never negative/zero | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | `CartTest` covers negative/zero |
 | CUST-10-011 | Item | Options/variants/add-ons | Item with option groups | Pick options (max=1 replaces) | Live price updates; options sent as ids | Pick options -> live price updates (عادي 26,050 -> كبير 35,050, +9,000); option sent + persisted to cart as كبير | `PASS` | SM-A525F/A14 vc12 | online | order item options == picked | — | — | — | — |
 | CUST-10-012 | Item | Required option missing | Item with required group | Try to add without choosing | Add disabled until minimums met | Required option missing -> tap أضف without choosing size is blocked (stays on sheet, nothing added) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
-| CUST-10-013 | Item | Long product names do not break layout | Long-name fixture | Open grid/sheet/cart | Readable; actions reachable | CARRIED: long-product-name layout needs a long-name fixture | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-10-013 | Item | Long product names do not break layout | Long-name fixture | Open grid/sheet/cart | Readable; actions reachable | PASS — شاهدٌ حيّ (§40.41): بذّار item_name وضع اسماً ١٢٠ حرفاً على صنفٍ ظاهر ⇒ بطاقةُ المتجر تقصّه سطراً واحداً (ellipsis) والسعرُ/التخطيطُ سليمان، لا انهيارَ ولا تجاوز؛ أُعيد الاسمُ الأصليّ | `PASS` | device | online | — | — | — | — | via item_name fixture |
 | CUST-10-014 | Item | Unavailable option disabled (added) | Item with an unavailable option | Open sheet | Option disabled; cannot be picked | CARRIED: unavailable-option-disabled needs an item with an unavailable option group entry | `BLOCKED` | - | online | — | — | — | — | Added |
 
 ## 22 · CUST-11 — Cart
@@ -952,7 +952,7 @@ Functional correctness includes understandable UI behaviour.
 | CUST-20-002 | UI | Main navigation direction/layout | Signed-in test customer · Staging · SM-A525F | UIA bottom bar | تسوق at right … حسابي at left (RTL) | PASS — محاكي UIA: تسوق أقصى اليمين (x≈939-1022) وحسابي أقصى اليسار (x≈54-145) على عرض 1080 (RTL صحيح) | `PASS` | — | online | — | — | — | — | Tabs today: تسوق · سلتي · طلباتي · طلب خاص · حسابي |
 | CUST-20-003 | UI | No clipped critical Arabic text | Signed-in test customer · Staging · SM-A525F | UIA text vs bounds on all screens | No truncation of prices/actions/errors | PASS — UIA عبر تسوق/سلتي/طلب خاص/طلباتي: صفر نصّ خارج حدود الشاشة؛ الأسعار كاملة (26,050/34,050 ل.س) | `PASS` | — | online | — | — | — | — | — |
 | CUST-20-004 | UI | No overlapping buttons/text | Signed-in test customer · Staging · SM-A525F | UIA bounds intersection check | No overlapping clickable nodes | PASS — UIA: صفر تقاطع بين العقد القابلة للنقر (سوق + سلّة + مقياس خطّ 1.3) | `PASS` | — | online | — | — | — | — | — |
-| CUST-20-005 | UI | Long product name | Fixture item with long name (Staging, via Admin) | Open section/cart/review | Wraps/ellipsizes without breaking actions | — | `NOT_TESTED` | — | online | — | — | — | — | Fixture created and removed through Admin — recorded |
+| CUST-20-005 | UI | Long product name | Fixture item with long name (Staging, via item_name seed) | Open section/cart/review | Wraps/ellipsizes without breaking actions | PASS — شاهدٌ حيّ (§40.41): اسمٌ ١٢٠ حرفاً على صنفٍ ظاهر ⇒ بطاقةُ المتجر تقصّه سطراً واحداً (ellipsis) بلا كسرِ التخطيط، السعرُ والعلاماتُ حاضرة، لا انهيار؛ أُعيد الاسمُ الأصليّ (بذّار عكوس) | `PASS` | device | online | — | — | — | — | via item_name fixture (reversible) |
 | CUST-20-006 | UI | Long address | Address with long label/details | Open review/address list | Readable; actions reachable | PASS — بطاقة الطلب تعرض عنواناً طويلاً «شارع تل أبيض — خلف الحديقة… الطابق الثاني» كاملاً بلا قصّ | `PASS` | — | online | — | — | — | — | — |
 | CUST-20-007 | UI | Large monetary values | Item priced high | Cart/review | Grouping separators; no overflow | PASS — مبالغُ كبيرةٌ بفواصل بلا فيضان (26,050/34,050/52,100) وUIA صفر قصّ (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
 | CUST-20-008 | UI | Small/zero monetary values where valid | Zero delivery fee case | Review | Shows 0 ل.س correctly | PASS — «0 ل.س» و«الإجمالي 0 ل.س» و«يحددها السائق عند الاتفاق» تُعرض صحيحةً | `PASS` | — | online | — | — | — | — | — |
@@ -1261,7 +1261,7 @@ until ADB is available — not an acceptance blocker.
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 24 | 0 | 6 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
-| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
+| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 12 | 0 | 2 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 23 | 0 | 13 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
@@ -1275,10 +1275,10 @@ until ADB is available — not an acceptance blocker.
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
-| 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
+| 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **40** | **10** | **471** | **0** | **57** |
+| | **Total** | **578** | **474** | **104** | **39** | **10** | **473** | **0** | **56** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3666,3 +3666,13 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 - **مقيَّدٌ بدوام المتجر** (كلُّ المتاجر مغلقةٌ حتّى ٠٥:٠٠Z): 14-011 (طلبٌ عاديٌّ للقبول)، 21-006/007 (أداءُ السلّة/الدفع)، و16-036/037 (يحتاجان سلّةً).
 - **مقيَّدٌ بمهلةٍ** (١٥ دق+): 17-012/013 (خلفيّة/انتهاء توكن ⇒ إنعاشٌ صامت).
 - **بلا فخٍّ** (لا بذّارَ لاسمِ صنفٍ طويل): 20-005.
+
+### 40.41 · بذّارُ الاسم الطويل — 20-005 + 10-013 staging 70f90a71 (٢٠٢٦-٠٩-٢٣)
+
+بُنِي `item_name` (بذّارٌ عكوسٌ يضبط `menu_items.name` ويُرجع السابقَ، سقفُ ٣٠٠ حرفاً، staging-only، بلا أثرٍ
+ماليّ) ونُشِر (70f90a71). وُضِع اسمٌ عربيٌّ ١٢٠ حرفاً على صنفٍ ظاهرٍ في المتجر، وشوهد في التطبيق:
+- **20-005 / 10-013**: بطاقةُ المتجر قصّت الاسمَ الطويلَ سطراً واحداً (ellipsis، ارتفاعُ العقدة ٤٢px) —
+  **التخطيطُ سليم**: السعرُ وعلامةُ «المتجر مغلق» حاضران، لا تجاوزَ ولا كسرَ ولا انهيار. **PASS.**
+تنظيف: أُعيد اسمُ الصنف الأصليّ («ساندويش شاورما دجاج»)، والكتالوج سليم.
+
+الحصيلة (محقّقة): PASS 471⇒473، NOT_TESTED 40⇒39، BLOCKED 57⇒56، N/A 10، FAIL 0. = 578.
