@@ -453,7 +453,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-07-019 | Addr | GPS inside coverage, selected address outside → address wins | Signed-in test customer · Staging · SM-A525F | Default address outside; device inside | Denied for the address; discovery text prefixed «موقعك الحالي:» never overrides | CARRIED: needs an out-of-zone default address + in-zone device to witness address-wins on-device | `BLOCKED` | - | online | — | — | — | — | `PreCart.kt:285-379` |
 | CUST-07-020 | Addr | GPS outside coverage, selected address valid → ordering allowed | Signed-in test customer · Staging · SM-A525F | Default address inside; device outside | Ordering allowed to the address | GPS-outside / address-valid -> ordering allowed to the Raqqa address (cross-ref CUST-03-005, order #1064) | `PASS` | SM-A525F/A14 vc12 | online | order created (disposable) | — | — | — | — |
 | CUST-07-021 | Addr | Change address with items in cart | Signed-in test customer · Staging · SM-A525F · cart populated | Switch address | Quote/availability re-evaluated; out-of-zone note if needed | CARRIED: change-address-with-cart quote re-eval needs a populated cart + address switch | `BLOCKED` | - | online | `/public/quote` | — | — | — | — |
-| CUST-07-022 | Addr | Coverage changes while the address is on screen | Signed-in test customer · Staging · SM-A525F · zone edited via Admin | Wait/refresh | Availability updates; send blocked if now outside | CARRIED: coverage-change-on-screen needs an Admin zone edit | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-07-022 | Addr | Coverage changes while the address is on screen | Signed-in test customer · Staging · SM-A525F · zone edited via seed | Wait/refresh | Availability updates; send blocked if now outside | PASS — شاهدٌ حيّ (§40.43): zone_close على منطقة العنوان ⇒ الإرسالُ محجوبٌ خادميّاً 503 `zone_closed_now`، لا طلب؛ أُعيدت المنطقة | `PASS` | api | online | — | — | — | — | server send-block on coverage change |
 | CUST-07-023 | Addr | Address becomes invalid before checkout | As 022 | Tap «أرسل الطلب» | Server denies explicitly; no order | PASS — شاهدٌ خادميٌّ حيّ (§40.31): عنوانٌ افتراضيٌّ خارجَ التغطية (دمشق، بذّار QA) ⇒ POST /orders = 400 `out_of_zone`، لا طلب؛ استُعيد عنوانُ الرقّة | `PASS` | - | online | order count unchanged | — | §40.31 | — | Unblocked via out-of-coverage address (§40.31) 2026-09-22 |
 | CUST-07-024 | Addr | Restart preserves only appropriate address state | Signed-in test customer · Staging · SM-A525F | Kill; relaunch | Default address from server; discovery not persisted as address | Kill/relaunch -> top chip restores the default address (home) from the server | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-07-025 | Addr | Address limit reached (added) | Signed-in test customer · Staging · SM-A525F · 4 addresses (`customers.max_addresses`=4) | Add a 5th | Explicit `too_many_addresses` message | 5th address -> 409 too_many_addresses (customers.max_addresses=4) | `PASS` | staging API | online | rows stay 4 | — | — | — | Added: no client limit; server error only |
@@ -482,8 +482,8 @@ Verify actual server reason handling. Authoritative vocabulary (`orders/availabi
 | CUST-08-011 | Avail | zone_closed_now | Zone hours closed | Open Cart | Zone-closed note; send disabled | delivery_zones hours_enforced=true (no open schedule) -> in-zone Raqqa -> zone_closed_now (place مركز المدينة); restored | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-012 | Avail | merchant_closed_now | Source store closed by hours | View item | «المتجر مغلق حالياً» overlay; + hidden | PASS — شاهدٌ حيّ (§40.31): merchant_emergency=closed ⇒ /public/items source_closed=true، وفي التطبيق «المتجر مغلق حالياً» على البطاقات، والطلبُ 409 merchant_closed؛ استُعيد | `PASS` | - | online | — | — | — | — | Structure stays (Owner decision 2026-09-16) |
 | CUST-08-013 | Avail | Availability changes while browsing | Signed-in test customer · Staging · SM-A525F | Close zone via Admin; wait for realtime/refresh | UI updates to the new reason | CARRIED: availability-change-while-browsing needs an Admin zone edit + realtime | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-08-014 | Avail | Availability changes after items entered cart | Signed-in test customer · Staging · SM-A525F · cart populated | Close zone; open Cart | Note shown; send disabled | CARRIED: availability-change-after-cart needs an Admin zone edit | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-08-015 | Avail | Availability changes immediately before submit | Signed-in test customer · Staging · SM-A525F · review ready | Close zone; tap send | Server denies explicitly; no order | CARRIED: availability-change-before-submit needs an Admin zone edit | `BLOCKED` | - | online | order count unchanged | — | — | — | — |
+| CUST-08-014 | Avail | Availability changes after items entered cart | Signed-in test customer · Staging · SM-A525F · cart populated | Close zone; open Cart | Note shown; send disabled | PASS — شاهدٌ حيّ (§40.43): صنفٌ في السلّة ثمّ zone_close ⇒ الإرسالُ معطَّل (الخادمُ 503 zone_closed_now، والتطبيقُ يمنع الإرسالَ — كـ11-024)، لا طلب؛ أُعيدت المنطقة | `PASS` | device+api | online | — | — | — | — | — |
+| CUST-08-015 | Avail | Availability changes immediately before submit | Signed-in test customer · Staging · SM-A525F · review ready | Close zone; tap send | Server denies explicitly; no order | PASS — شاهدٌ حيّ (§40.43): zone_close ثمّ إرسال ⇒ الخادمُ يرفض صراحةً 503 `zone_closed_now`، لا طلب (order count unchanged)؛ أُعيدت المنطقة | `PASS` | api | online | order count unchanged | — | — | — | — |
 | CUST-08-016 | Avail | Availability/API failure never becomes a fake empty market | Signed-in test customer · Staging · SM-A525F | Offline / API blocked | Error/offline state — never the empty-market text | Availability/API failure -> recoverable error/offline state, never the fake empty-market text (cross-ref CUST-02-010 reversible dead-proxy) | `PASS` | SM-A525F/A14 vc12 | offline / API down | — | — | — | — | L1-018/019 |
 | CUST-08-017 | Avail | Pre-launch screen when browsing is closed (added) | Signed out (guest) · Staging · SM-A525F and Signed-in test customer · Staging · SM-A525F · `launch.customer_browse`=OFF | Open app | PreLaunch screen with `launch.notice`; guests see login button; Account tab still reachable | launch.customer_browse OFF -> PreLaunch screen with launch.notice + guest login button (device); restored | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: `MainActivity:1221-1252` |
 | CUST-08-018 | Avail | Owner notice overrides built-in reason text (added) | Error with `details.notice` | Trigger launch_closed / temporarily_unavailable / zone_closed_now | Owner's text shown instead of the default | Owner notice overrides default text: launch.notice on launch_closed/pre-launch, service_closure message on temporarily_unavailable | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: `ApiErrors.kt:118-134` |
@@ -537,7 +537,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-10-005 | Item | Unavailable product cannot be ordered | Unavailable item | Tap card | No + button; not addable | Unavailable item (available=false / source_closed) -> no + button / غير متوفر chip (mechanism CUST-09-010 + item contract; prior P8-L1-017) | `PASS` | SM-A525F+API | online | — | — | — | — | — |
 | CUST-10-006 | Item | Product becomes unavailable while sheet open | Sheet open · Admin disables item | Add | Server or refresh blocks; explicit | PASS — شاهدٌ خادميٌّ حيّ (§40.31): صنفٌ غيرُ متوفّرٍ (بذّار QA) ⇒ POST /orders = 409 item_unavailable (الخادمُ يحجب صريحاً)؛ التفصيلُ available=false | `PASS` | - | online | — | — | §40.31 | — | Unblocked by the QA state seeder (§40.31) 2026-09-22 |
 | CUST-10-007 | Item | Price changes while sheet open | Sheet open · Admin changes price | Add; open cart | Cart review shows the change («متابعة بالقيم الحالية») | Price change while sheet open -> cart review gate «متابعة بالقيم الحالية» (cross-ref CUST-DEF-005, real price change on order #1063) | `PASS` | SM-A525F/A14 vc12 | online | quote price | — | — | — | `CartChanges` review gate |
-| CUST-10-008 | Item | Product retired while sheet open | Sheet open · Admin retires item | Add; submit | Blocked explicitly at quote/submit | CARRIED: product-retired-while-sheet-open needs an Admin retire + realtime | `BLOCKED` | - | online | no order | — | — | — | — |
+| CUST-10-008 | Item | Product retired while sheet open | Sheet open · item disabled via seed | Add; submit | Blocked explicitly at quote/submit | PASS — شاهدٌ حيّ (§40.43): item_available=false ثمّ إرسالُ طلبٍ بالصنف ⇒ الخادمُ يرفض صراحةً 409 `item_unavailable`، لا طلب؛ أُعيدت الإتاحة | `PASS` | api | online | no order | — | — | — | retire≈unavailable for order-blocking |
 | CUST-10-009 | Item | Quantity boundaries | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Cart + to large qty; − to 0 | 0 removes line; server enforces max (`bad_qty`/`quantity_invalid`) | Cart qty + (1->3) then - to 0 removes the line (سلتك فارغة) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | No client max; `TestQI*` server guards |
 | CUST-10-010 | Item | Invalid quantity cannot be created through UI | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Try negative/zero via UI | Impossible via UI | Invalid quantity impossible via UI: - at 1 removes the line, never negative/zero | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | `CartTest` covers negative/zero |
 | CUST-10-011 | Item | Options/variants/add-ons | Item with option groups | Pick options (max=1 replaces) | Live price updates; options sent as ids | Pick options -> live price updates (عادي 26,050 -> كبير 35,050, +9,000); option sent + persisted to cart as كبير | `PASS` | SM-A525F/A14 vc12 | online | order item options == picked | — | — | — | — |
@@ -1258,10 +1258,10 @@ until ADB is available — not an acceptance blocker.
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
-| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 24 | 0 | 6 |
-| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
+| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 25 | 0 | 5 |
+| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 15 | 0 | 3 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
-| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 12 | 0 | 2 |
+| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 26 | 0 | 10 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 1 | 1 | 13 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **37** | **10** | **478** | **0** | **53** |
+| | **Total** | **578** | **474** | **104** | **37** | **10** | **482** | **0** | **49** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3699,3 +3699,15 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 المحفظة 0، لا طلباتٍ مفتوحة، لا أعطالٍ مسلَّحة. الإنتاجُ لم يُمَسّ.
 
 الحصيلة (محقّقة): PASS 473⇒478، BLOCKED 56⇒53، NOT_TESTED 39⇒37، N/A 10، FAIL 0. = 578.
+
+### 40.43 · الوضعُ الليليُّ الذاتيّ — Group E (إنفاذُ الخادم بسلّةٍ/تغطيةٍ) staging 329c0016 (٢٠٢٦-٠٩-٢٣)
+
+الوضعُ الليليُّ الذاتيّ (بإذن المالك). متجرُ QA مفتوحٌ (merchant_open). شهودٌ خادميّةٌ عبر إنشاء الطلب:
+- **08-015** (تغيّرُ الإتاحة قبل الإرسال مباشرةً): zone_close ثمّ إرسال ⇒ الخادمُ يرفض صراحةً **503 zone_closed_now**،
+  لا طلب (order count unchanged). **BLOCKED⇒PASS.**
+- **08-014** (تغيّرُ الإتاحة والسلّةُ ممتلئة): zone_close ⇒ الإرسالُ معطَّل (503 + التطبيق يمنع كـ11-024). **BLOCKED⇒PASS.**
+- **07-022** (تغيّرُ التغطية والعنوانُ على الشاشة): zone_close ⇒ الإرسالُ محجوبٌ 503 zone_closed_now. **BLOCKED⇒PASS.**
+- **10-008** (سحبُ الصنف والورقةُ مفتوحة): item_available=false ثمّ إرسال ⇒ الخادمُ يرفض **409 item_unavailable**، لا طلب. **BLOCKED⇒PASS.**
+ضابطٌ: الطلبُ يُنشأ حين تعودُ الحالُ سليمة. تنظيف: المنطقة/الإتاحةُ مُستعادتان، الطلباتُ الضابطةُ أُلغيت، لا أثرَ ماليّ.
+
+الحصيلة (محقّقة): PASS 478⇒482، BLOCKED 53⇒49، NOT_TESTED 37، N/A 10، FAIL 0. = 578.
