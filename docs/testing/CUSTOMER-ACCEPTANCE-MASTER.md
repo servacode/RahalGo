@@ -1003,7 +1003,7 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 | CUST-22-005 | Gate | No unresolved launch-affecting security defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-001 (استيلاءُ حساب/حدُّ المصادقة) مُغلَقٌ ومنشورٌ إنتاجاً؛ لا عيبَ أمنيٍّ مؤثّرٍ على الإطلاق مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 5 |
 | CUST-22-006 | Gate | No unresolved duplicate-order defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-002 (خطرُ الطلب المكرّر) مُغلَقٌ (§40.25/40.27، isDecided + بصمةُ الجسد)؛ لا عيبَ تكرارٍ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 6 |
 | CUST-22-007 | Gate | No unresolved cross-account leakage | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-004 (تسريبٌ بين الحسابات) مُغلَقٌ (§40.6.2، detachSession + CustDef010Test)، و15-011 مُثبَتٌ حيّاً؛ لا تسريبَ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 7 |
-| CUST-22-008 | Gate | No unresolved financial/source-of-truth defect | — | Defect ledger | None | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 8 — includes CAF-03, CAF-08 |
+| CUST-22-008 | Gate | No unresolved financial/source-of-truth defect | — | Defect ledger | None | PASS — دفترُ العيوب + شاهدٌ حيّ (§40.45/40.37): CUST-DEF-003 (حدُّ الثقة الماليّ، منشورٌ إنتاجاً) وCUST-DEF-005 (مجموعُ السلّة/مصدرُ الحقيقة) مُغلَقان بانحدار؛ وتكاملُ المال مشهودٌ حيّاً على staging (رياضةُ المحفظة، order_payment وحيد، ردٌّ عند الإلغاء، مجموعُ الحركات=الرصيد، لا أثر). لا عيبَ ماليٍّ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 8 — moneycheck FI-02.c (treasury count) is a test-DB seed artifact, not a customer defect; staging moneycheck (22-013) deferred to owner DB access |
 | CUST-22-009 | Gate | Every fixed defect has regression evidence | — | Regression column | Filled for every fixed defect | PASS — دفترُ العيوب (§40.45): لكلّ عيبٍ مُصلَحٍ انحدارٌ آليّ — CUST-DEF-001 TestSU10/TestConfirm*, 002 isDecided tests, 003 TestCDEF003_* , 004 CustDef010Test, 005 CartChanges tests, CAF-13 EngagementTest | `PASS` | ledger | — | — | — | — | — | Gate item 9 |
 | CUST-22-010 | Gate | Automated impacted suites pass | — | Go full suite; Kotlin unit suites; guards | Green | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 10 |
 | CUST-22-011 | Gate | Physical-device mandatory cases pass | — | Device rows | PASS | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 11 |
@@ -1277,8 +1277,8 @@ until ADB is available — not an acceptance blocker.
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
-| 34 | CUST-22 | 16 | 16 | 0 | 9 | 0 | 7 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **31** | **10** | **493** | **0** | **44** |
+| 34 | CUST-22 | 16 | 16 | 0 | 8 | 0 | 8 | 0 | 0 |
+| | **Total** | **578** | **474** | **104** | **30** | **10** | **494** | **0** | **44** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
