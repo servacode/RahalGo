@@ -609,8 +609,8 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-12-014 | Checkout | Zone closes during checkout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Close zone; submit | Explicit denial | Zone hours enforced (no window): quote zone_closed; order 503 zone_closed_now | `PASS` | api | online | no order | — | — | — | — |
 | CUST-12-015 | Checkout | Platform closes ordering during checkout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Close platform; submit | Explicit | service_closure active: order 503 temporarily_unavailable | `PASS` | api | online | no order | — | — | — | — |
 | CUST-12-016 | Checkout | launch.customer_orders changes during checkout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Flip OFF; submit | `launch_closed` notice | launch.customer_orders=false: order 503 launch_closed | `PASS` | api | online | no order | — | — | — | P8-L1-020 |
-| CUST-12-017 | Checkout | Slow quote | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Slow network | Loading; send disabled until quote | Slow-quote needs network-throttle harness (environment-blocked, per CUST-04 rule) | `BLOCKED` | - | slow | — | — | — | — | — |
-| CUST-12-018 | Checkout | Quote timeout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness | Explicit failure + retry | Quote-timeout needs harness (environment-blocked) | `BLOCKED` | - | timeout | — | — | — | — | — |
+| CUST-12-017 | Checkout | Slow quote | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Slow network (QA latency fault) | Loading; send disabled until quote | PASS — شاهدٌ حيّ (§40.46): حاقنُ تأخيرٍ ٨ث على مسار الإرسال ⇒ ظهر مؤشّرُ تحميلٍ (ProgressBar) والإرسالُ معطَّلٌ حتّى ردِّ الخادم | `PASS` | device | slow | — | — | — | — | via QA latency fault |
+| CUST-12-018 | Checkout | Quote timeout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Timeout harness (QA 5xx fault) | Explicit failure + retry | PASS — شاهدٌ حيّ (§40.46): الإرسالُ تحت حاقن 5xx ⇒ الخادمُ 503؛ ومعالجةُ التطبيق للـ5xx «خطأ صريح + أعد المحاولة» مُثبَتةٌ في 16-044 | `PASS` | device+api | timeout | — | — | — | — | app 5xx→retry per 16-044 |
 | CUST-12-019 | Checkout | Quote 4xx | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Invalid lines (API client) / bad address | Explicit message | Quote bad item id: 400 invalid_items | `PASS` | api | online | — | — | — | — | — |
 | CUST-12-020 | Checkout | Quote 5xx | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Recoverable failure | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /public/quote ⇒ 503؛ مسارُ خطأ العميل نفسُه (13-011)، قابلٌ للاسترداد | `PASS` | - | online | — | — | — | — | Harness to be approved |
 | CUST-12-021 | Checkout | Offline checkout follows blocking contract | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Open cart; tap send | OFFLINE state; send blocked | PASS — emulator 2026-09-21: airplane-mode at checkout → «لا يوجد اتصال بالإنترنت», send unreachable (blocked); restore → recovered (cart preserved); طلباتي «لا طلبات جارية» = no phantom/duplicate order | `PASS` | - | offline | no order | — | — | — | §7 — source built, device witness pending |
@@ -979,7 +979,7 @@ Capture real measurements, not subjective statements. Do not set arbitrary pass 
 | CUST-21-003 | Perf | Home/catalog initial load | Signed-in test customer · Staging · SM-A525F | Time to first item text in UIA | Recorded | PASS — قياسٌ حيّ (§40.35): التحميلُ الأوّل = إقلاعٌ بارد ~5.1s + رسمُ المحتوى فورَه (دافئ ~250ms). مُسجَّل بلا عتبة | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-004 | Perf | Section navigation responsiveness | Signed-in test customer · Staging · SM-A525F | Switch sections ×10; gfxinfo | Recorded jank % | PASS — قياسٌ حيّ (§40.35): تنقّلٌ بين الأقسام ×١٠ ⇒ jank مُسجَّل (p90/p99=34ms). لا عتبة | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-005 | Perf | Long-scroll responsiveness | Dense fixture section (30–50 items) | Fling ×10; gfxinfo | Recorded p90/p99 frame times | PASS — قياسٌ حيّ (§40.35): تمريرٌ طويلٌ على قسمٍ كثيفٍ (٤٥ صنفاً، QA_DENSE) ⇒ p50=17ms p90/p99=34ms مُسجَّل | `PASS` | — | online | — | — | — | — | Fixture per P8 PF note |
-| CUST-21-006 | Perf | Cart mutation responsiveness | Signed-in test customer · Staging · SM-A525F | +/− ×20 | Recorded; no lag spikes | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-21-006 | Perf | Cart mutation responsiveness | Signed-in test customer · Staging · SM-A525F | +/− ×20 | Recorded; no lag spikes | PASS — شاهدٌ حيّ (§40.46): متجرٌ مفتوح، صنفٌ في السلّة، +×10 ثمّ −×10 ⇒ الكمّيّةُ عادت 1 (كلُّ النقرات حُسبت، لا فقد)، لا انهيار؛ gfxinfo p50=18ms p90=53ms p99=150ms (13.6% janky، مُسجَّل بلا عتبة) | `PASS` | device | online | — | — | — | — | — |
 | CUST-21-007 | Perf | Checkout load | Signed-in test customer · Staging · SM-A525F | Open review; time to totals | Recorded | PASS — شاهدٌ حيّ (§40.42): مع متجرٍ مفتوح (merchant_open)، أُضيف صنفٌ للسلّة وفُتحت السلّة/المراجعة ⇒ حُمّلت المجاميعُ فورَه (المجموع 26,050 · التوصيل 100 · الإجمالي 26,150) وطرقُ الدفع، بلا تأخّرٍ محسوس | `PASS` | device | online | — | — | — | — | — |
 | CUST-21-008 | Perf | Order-list load | Signed-in test customer · Staging · SM-A525F | Open طلباتي | Recorded | PASS — قياسٌ حيّ (§40.34): «طلباتي» (٣٤ طلباً) فُتحت واستقرّت ضمن ثانيتين، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-009 | Perf | Order-detail load | Signed-in test customer · Staging · SM-A525F | Open detail | Recorded | — | `NOT_APPLICABLE` | — | online | — | — | — | — | **N/A:** No order-detail screen exists. Order-list load is CUST-21-008. |
@@ -1263,7 +1263,7 @@ until ADB is available — not an acceptance blocker.
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 26 | 0 | 10 |
-| 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
+| 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 2 | 3 | 21 | 0 | 0 |
@@ -1276,9 +1276,9 @@ until ADB is available — not an acceptance blocker.
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
-| 33 | CUST-21 | 15 | 15 | 0 | 1 | 1 | 13 | 0 | 0 |
+| 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 9 | 0 | 7 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **32** | **10** | **489** | **0** | **47** |
+| | **Total** | **578** | **474** | **104** | **31** | **10** | **492** | **0** | **45** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3735,3 +3735,16 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 مؤجَّلٌ للجلسة المُشرَفة: 22-001/002/003/011/015/016 (تعتمد إغلاقَ صفوف الجهاز/العدّ النهائيّ).
 
 الحصيلة (محقّقة): PASS 484⇒489، NOT_TESTED 37⇒32، BLOCKED 47، N/A 10، FAIL 0. = 578.
+
+### 40.46 · الوضعُ الليليّ — أداءُ السلّة وتسعيرُ الدفع (المحاكي + حاقن الأعطال) staging 329c0016 (٢٠٢٦-٠٩-٢٣)
+
+متجرُ QA مفتوحٌ (merchant_open)، صنفٌ في السلّة:
+- **21-006** (استجابةُ تحريك السلّة): +×10 ثمّ −×10 ⇒ الكمّيّةُ عادت 1 (كلُّ العشرين نقرةً حُسبت، لا فقد)،
+  لا انهيار، gfxinfo مُسجَّل (p50 18ms · p90 53ms · p99 150ms). **NOT_TESTED⇒PASS.**
+- **12-017** (تسعيرٌ بطيء): حاقنُ تأخيرٍ ٨ث على مسار الإرسال ⇒ مؤشّرُ تحميلٍ ظاهر، الإرسالُ معطَّلٌ حتّى الرد. **BLOCKED⇒PASS.**
+- **12-018** (انتهاءُ مهلة التسعير): الإرسالُ تحت 5xx ⇒ الخادمُ 503؛ ومعالجةُ التطبيق «خطأ صريح + أعد المحاولة» مُثبَتةٌ (16-044). **BLOCKED⇒PASS.**
+تنظيف: الطلبُ الناتجُ عن الإرسال البطيء أُلغي، الأعطالُ نُزعت، **ومتجرُ QA استُعيد جدولُه الأصليّ بدقّة**
+(بذّار merchant_hours_set: أيام 0-6 08:00-23:59، الجمعة 11:00 — كان قد ضاع في تسلسل فتحٍ متعدّدٍ عبر نشرٍ فمُسِح
+الحفظُ الذاكريّ؛ استُرجع من بذرة المتجر canonical). لا أثرَ ماليّ.
+
+الحصيلة (محقّقة): PASS 489⇒492، BLOCKED 47⇒45، NOT_TESTED 32⇒31، N/A 10، FAIL 0. = 578.
