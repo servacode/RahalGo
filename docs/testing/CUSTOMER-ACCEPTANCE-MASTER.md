@@ -696,7 +696,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-003 | Orders | Open correct order detail | — | — | — | — | `NOT_APPLICABLE` | — | — | — | — | — | — | **N/A:** No order-detail screen exists: the order card is the only view; `CustomerApi.order(id)` is unused (audit §38). Card correctness is covered by CUST-14-021. |
 | CUST-14-004 | Orders | Wrong customer cannot see another's order | Two customers | B calls A's order via API / UI list | Not visible; 404/403 | PASS — لا يرى طلبَ غيره: TestSECIDOR_Orders/TestOrder_IntruderCannotRead (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestSECIDOR_Orders`, `TestOrder_IntruderCannotRead` |
 | CUST-14-005 | Orders | Order status matches backend | Signed-in test customer · Staging · SM-A525F · valid default address | Compare chip with SoT | Equal | PASS — emulator: order status shown («بانتظار القبول») = backend new-order status (app fetches from server) | `PASS` | — | online | orders.status | — | — | — | — |
-| CUST-14-006 | Orders | Refresh order state | Signed-in test customer · Staging · SM-A525F · valid default address | Pull/return to tab | Fresh status | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-14-006 | Orders | Refresh order state | Signed-in test customer · Staging · SM-A525F · valid default address | Pull/return to tab | Fresh status | PASS — شاهدٌ حيّ (§40.40): #1126 «بانتظار القبول»، ثمّ سُوّق خادميّاً إلى on_the_way ⇒ السحبُ للإنعاش أظهر «في الطريق» + السائق (الحالةُ الجارية) | `PASS` | device | online | — | — | — | — | — |
 | CUST-14-007 | Orders | Realtime state update | Signed-in test customer · Staging · SM-A525F · valid default address · order progressing (ops/driver on a disposable order) | Keep طلباتي open | Status changes without manual refresh (WebSocket → Refresh.bump) | — | `NOT_TESTED` | — | online | — | — | — | — | Never progress #1050 |
 | CUST-14-008 | Orders | No duplicate rows after refresh/reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Reconnect ×3 | No duplicates | PASS — شاهدٌ حيّ (§40.30): `/my/orders` (٣٤ طلباً) قراءاتٌ متكرّرةٌ بلا معرّفٍ مكرّر؛ ودمجُ `mergeById` مشهودٌ حيّاً في ترقيم 14-026 (§40.29) | `PASS` | — | online | — | — | §40.30 | `OrdersMergeTest` | Live server + mergeById live-witnessed 2026-09-22 |
 | CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | PASS — شاهدٌ حيّ (§40.30): `/my/orders` يعيد الأحدثَ أوّلاً (1113,1112,1111,… تنازليّاً) مطابقاً `created_at DESC` في المصدر | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
@@ -715,7 +715,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-022 | Orders | Cancel order within window (added) | Disposable pending order | Cancel → confirm | Cancelled; wallet refund if paid by wallet | PASS — emulator: «إلغاء الطلب» → «نعم، ألغه» cancels a pending order within the window | `PASS` | — | online | status; wallet tx | — | — | — | Added: `TestCANC_001`, `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | PASS — إلغاءٌ مزدوج/بعد المهلة: TestCANC_002 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | Added: `TestCANC_002` |
 | CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | PASS — شاهدٌ حيّ (§40.39): تقييمُ طلبٍ مُسلَّم 5/5 ⇒ 201؛ إعادةُ التقييم ⇒ 409 already_rated (محفوظٌ، لا يُعاد) | `PASS` | api | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
-| CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
+| CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | PASS — شاهدٌ حيّ (§40.40): طلبٌ مُسلَّمٌ غيرُ مُقيَّم (#1126) ثمّ إقلاعٌ باردٌ للتطبيق ⇒ ظهرت نافذةُ التقييم تلقائيّاً «كيف كانت الخدمة؟» (تقييمُ الخدمة + السائق بنجوم) | `PASS` | device | online | — | — | — | — | Added |
 | CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | PASS — شاهدٌ حيٌّ كاملٌ على staging 57ebdba0 (§40.29): حسابُ QA بُذر ٣٤ طلباً؛ «سجل الطلبات» صفحةٌ أولى ٣٠، يظهر زرُّ «تحميل المزيد» (٣٠<٣٤)؛ نقرُه يكشف الأقدمَ (#1077..#1082، ليست في الصفحة الأولى) ثمّ يختفي حين تُحمَّل الأربعةُ والثلاثون كلُّها؛ المدى #1077..#1112 كلُّه بالغٌ، بلا تكرار، الأحدثُ أوّلاً. الخادمُ: total=34/page1=30/page2=4. OrdersMergeTest (٥) | `PASS` | — | online | count > 30 | — | §40.29 | `OrdersMergeTest` | Added. CAF-14 predicted FAIL (page 1 only); FIXED then LIVE-WITNESSED 2026-09-21 (§40.29): loadMore + mergeById + «تحميل المزيد» يبلغ ما بعد الثلاثين |
 
 ## 26A · CUST-SUP — Chat, complaints, tickets and warnings (added by audit)
@@ -832,21 +832,21 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-027 | Degraded | Internet interface exists but API host unreachable | Signed-in test customer · Staging · SM-A525F | Block only staging-api (harness §38) | Explicit recoverable failure; OFFLINE-equivalent handling per §7.12; no empty market | — | `NOT_TESTED` | — | API unreachable | — | — | — | — | §7.12: interface ≠ reachability |
 | CUST-16-028 | Degraded | DNS resolution failure | Signed-in test customer · Staging · SM-A525F | Private DNS pointed to an unresolvable host (restore after) | As 027 | — | `NOT_TESTED` | — | DNS fail | — | — | — | — | Changes a phone setting — Owner approval, restore |
 | CUST-16-029 | Degraded | Connection timeout | Signed-in test customer · Staging · SM-A525F | Black-hole route to API (harness) | Timeout → explicit failure within client timeout; no hang | — | `NOT_TESTED` | — | timeout | — | — | — | — | — |
-| CUST-16-030 | Degraded | Very slow network | Signed-in test customer · Staging · SM-A525F | Throttled link (emulator netspeed or router shaping) | Loading then result; no premature error; no double submit | — | `NOT_TESTED` | — | slow | — | — | — | — | Emulator `-netspeed` |
-| CUST-16-031 | Degraded | High latency | Signed-in test customer · Staging · SM-A525F | Emulator `-netdelay` | Usable; explicit loading | — | `NOT_TESTED` | — | latency | — | — | — | — | — |
+| CUST-16-030 | Degraded | Very slow network | Signed-in test customer · Staging · SM-A525F | Throttled link (emulator netspeed or router shaping) | Loading then result; no premature error; no double submit | PASS — شاهدٌ حيّ (§40.40): حاقنُ تأخيرٍ ٧ث على `/my/orders` ⇒ السحبُ للإنعاش أظهر مؤشّرَ تحميلٍ (ProgressBar) والشاشةُ صالحة، ثمّ حُمّلت النتيجةُ بلا خطأٍ سابقٍ لأوانه | `PASS` | device | slow | — | — | — | — | via QA latency fault (deterministic) |
+| CUST-16-031 | Degraded | High latency | Signed-in test customer · Staging · SM-A525F | Emulator `-netdelay` | Usable; explicit loading | PASS — شاهدٌ حيّ (§40.40): نفسُ حقنِ التأخير ⇒ التطبيقُ صالحٌ للاستعمال ومؤشّرُ التحميل ظاهرٌ صريحاً ثمّ النتيجة | `PASS` | device | latency | — | — | — | — | via QA latency fault |
 | CUST-16-032 | Degraded | Repeated network flapping | Signed-in test customer · Staging · SM-A525F | Toggle Wi-Fi ×10 at 5 s intervals | Final state correct; no crash; no stuck state | PASS — محاكي 2026-09-21: ٣ دوراتِ طيرانٍ on/off ⇒ لا انهيار (البقاءُ في الواجهة كلَّ دورة) وتعافٍ أونلاين بعدها | `PASS` | — | flapping | — | — | — | — | — |
 | CUST-16-033 | Degraded | Network disappears while loading catalog | Signed-in test customer · Staging · SM-A525F | Cut during initial load | OFFLINE state; no partial 'empty' market | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): تحميلٌ منقطعٌ ⇒ شاشةُ انقطاعٍ صريحة، لا سوقٌ فارغٌ جزئيّ | `PASS` | — | cut mid-load | — | — | — | — | — |
 | CUST-16-034 | Degraded | Network disappears while refreshing | Signed-in test customer · Staging · SM-A525F | Cut during pull-to-refresh | OFFLINE state; content kept but not live-interactive | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): قطعٌ أثناء الإنعاش ⇒ حالةُ انقطاعٍ والمحتوى باقٍ | `PASS` | — | cut mid-refresh | — | — | — | — | — |
 | CUST-16-035 | Degraded | Network disappears while opening product | Signed-in test customer · Staging · SM-A525F | Cut during item detail/options load | OFFLINE state | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
 | CUST-16-036 | Degraded | Network disappears while obtaining quote | Signed-in test customer · Staging · SM-A525F | Cut during review/quote | OFFLINE state; no stale total shown as final | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
 | CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | — | `NOT_TESTED` | — | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
-| CUST-16-038 | API | API 401 while network is available | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset on test account) then act | Refresh fails → explicit re-login; no loop | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-16-038 | API | API 401 while network is available | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset on test account) then act | Refresh fails → explicit re-login; no loop | PASS — شاهدٌ حيّ (§40.40): إبطالُ جلسة QA خادميّاً (qa/revoke) ثمّ نداءٌ مصادَقٌ (سحبٌ للإنعاش) ⇒ التطبيقُ أظهر «انتهت جلستك — ادخل من جديد» صريحاً، لا انهيارَ ولا حلقة | `PASS` | device | online | — | — | — | — | — |
 | CUST-16-039 | API | API 403 | Signed-in test customer · Staging · SM-A525F | Hit a forbidden action (e.g. blocked account)  | Explicit denial message | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-16-040 | API | API 409 | Signed-in test customer · Staging · SM-A525F | Trigger a conflict (e.g. address limit / state conflict) | Explicit conflict message | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تجاوزُ سقف العناوين (`customers.max_addresses`=٤) ⇒ 409 `too_many_addresses`؛ نُظّفت العناوينُ الزائدة | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
-| CUST-16-041 | API | API 422 | Signed-in test customer · Staging · SM-A525F | Trigger 422 if any customer path returns it | Explicit message | — | `NOT_TESTED` | — | online | — | — | — | — | Audit (§38) states which customer paths return 422 |
+| CUST-16-041 | API | API 422 | Signed-in test customer · Staging · SM-A525F | Trigger 422 if any customer path returns it | Explicit message | N/A — لا مسارَ زبونيّاً (ولا مسارَ في المحرّك كلِّه) يردّ 422: مسحُ الشيفرة (§40.40) لا يجد `StatusUnprocessableEntity` قطّ؛ التحقّقُ كلُّه 400 `validation`. لا شيءَ لِيُطلَق | `N/A` | api | online | — | — | — | — | Source scan: zero 422 anywhere; validation is 400. Not applicable |
 | CUST-16-042 | API | API 429 if applicable | Signed-in test customer · Staging · SM-A525F | Exceed OTP/login rate limit | Explicit 'try later'; recovers after window | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تكرارُ `POST /auth/signup/request` لرقمٍ تجريبيّ ⇒ 429 `rate_limited` بعد ٣ محاولات (يستردّ بعد النافذة) | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-16-043 | API | API 500 | Signed-in test customer · Staging · SM-A525F | Simulated 5xx (harness) | Explicit recoverable failure; no fake success | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /my/orders ⇒ 503 qa_fault_injected؛ ومعالجةُ العميل «لا ادّعاءَ نجاح» مشهودةٌ حيّاً (13-011) | `PASS` | — | online | — | — | — | — | Needs a fault-injection harness — to be approved |
-| CUST-16-044 | API | Temporary API outage then recovery | Signed-in test customer · Staging · SM-A525F | Stop reaching API 60 s then restore | Failure then automatic/Retry recovery | — | `NOT_TESTED` | — | outage | — | — | — | — | Staging API must not be stopped without Owner approval — prefer client-side block |
+| CUST-16-044 | API | Temporary API outage then recovery | Signed-in test customer · Staging · SM-A525F | Stop reaching API 60 s then restore | Failure then automatic/Retry recovery | PASS — شاهدٌ حيّ (§40.40): حاقنُ 5xx على `/my/orders` ⇒ السحبُ للإنعاش أظهر خطأً صريحاً قابلاً للاسترداد «الخدمة متوقّفة مؤقّتاً…» + «أعد المحاولة»؛ نزعُ العطب + «أعد المحاولة» ⇒ عادت الشاشةُ سليمة | `PASS` | device | outage | — | — | — | — | via QA 5xx fault (no real API stop) |
 | CUST-16-045 | API | True empty state distinguishable from network/API failure | Genuinely empty geography vs offline | Compare both screens | Different texts: empty = «نعمل حاليًا على إضافة المتاجر والمنتجات»; failure = offline/error | PASS — تمييزُ الفراغ الحقيقيّ عن العطب: بحثٌ فارغ «لا نتائج لبحثك» (بلا إعادة) مقابل الانقطاع «لا يوجد اتصال»+«أعد المحاولة» (محاكي 2026-09-21) | `PASS` | — | online / offline | — | — | — | — | L1-018 + L1-019 evidence |
 
 ## 29 · CUST-17 — Android app lifecycle / interruption
@@ -1266,19 +1266,19 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 5 | 3 | 18 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 3 | 3 | 20 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 9 | 1 | 35 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **47** | **9** | **465** | **0** | **57** |
+| | **Total** | **578** | **474** | **104** | **40** | **10** | **471** | **0** | **57** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3641,3 +3641,28 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 
 الحصيلة (محقّقة): PASS 454⇒465، NOT_TESTED 58⇒47، FAIL 0، BLOCKED 57. = 578.
 مؤجَّلٌ: 14-011 (accepted — المخصّصُ يتخطّاه، يحتاج طلباً عاديّاً قبل التسوية)، 14-025 (نافذةُ تقييمٍ تلقائيّة — واجهةُ تطبيق)، SUP-007 (إرسالٌ دون اتصال — جهاز).
+
+### 40.40 · إنهاءُ المجموعة (أ) الذاتيّة — أخطاء/تردٍّ/إنعاش/تقييم staging b6cd90c7 (٢٠٢٦-٠٩-٢٣)
+
+بُنيت توسعةُ `order_advance` للطلب **العاديّ حتّى «accepted» فقط** (ما قبل التسوية، نقديٌّ، محايدٌ ماليّاً،
+عكوسٌ بالإلغاء) ونُشرت (b6cd90c7). ثمّ أُقلع المحاكي (كان مُطفأً) وشُهدت المجموعة (أ) القابلة ذاتيّاً:
+
+- **16-041** (422): **N/A** — مسحُ الشيفرة لا يجد `StatusUnprocessableEntity` قطّ؛ التحقّقُ كلُّه 400. لا شيءَ يُطلَق.
+- **16-044** (انقطاعٌ ثمّ تعافٍ): حاقنُ 5xx على `/my/orders` ⇒ السحبُ للإنعاش أظهر خطأً صريحاً «الخدمة متوقّفة
+  مؤقّتاً…» + «أعد المحاولة»؛ نزعُ العطب + «أعد المحاولة» ⇒ عادت الشاشةُ سليمة. **PASS.**
+- **16-030/031** (بطءٌ/تأخيرٌ عالٍ): حاقنُ تأخيرٍ ٧ث ⇒ مؤشّرُ تحميلٍ ظاهر، الشاشةُ صالحة، ثمّ النتيجة بلا خطأٍ
+  سابقٍ لأوانه. **PASS.**
+- **14-006** (إنعاشُ حالة الطلب): #1126 «بانتظار القبول» ⇒ تسويقٌ خادميّ إلى on_the_way ⇒ السحبُ للإنعاش
+  أظهر «في الطريق». **PASS.**
+- **14-025** (نافذةُ تقييمٍ تلقائيّة): طلبٌ مُسلَّمٌ غيرُ مُقيَّم + إقلاعٌ باردٌ ⇒ ظهرت «كيف كانت الخدمة؟» (خدمة+سائق). **PASS.**
+- **16-038** (401 والشبكةُ قائمة): إبطالُ الجلسة خادميّاً ثمّ نداءٌ مصادَق ⇒ «انتهت جلستك — ادخل من جديد» صريحاً، لا حلقة. **PASS.**
+
+حاقنُ الأعطال (المسار C) وdorُ السائق: QA-scoped على زبون QA، عكوسٌ (auto-disarm/clear)، بلا أثرٍ ماليّ.
+تنظيف: #1126 مُقيَّمٌ ومُسلَّم، الأعطالُ منزوعة، المحفظة 0.
+
+الحصيلة (محقّقة): PASS 465⇒471، NOT_TESTED 47⇒40، N/A 9⇒10، FAIL 0، BLOCKED 57. = 578.
+
+**بقيّةُ المجموعة (أ) مؤجَّلةٌ بقيدٍ زمنيّ/بيئيّ لا بقدرة:**
+- **مقيَّدٌ بدوام المتجر** (كلُّ المتاجر مغلقةٌ حتّى ٠٥:٠٠Z): 14-011 (طلبٌ عاديٌّ للقبول)، 21-006/007 (أداءُ السلّة/الدفع)، و16-036/037 (يحتاجان سلّةً).
+- **مقيَّدٌ بمهلةٍ** (١٥ دق+): 17-012/013 (خلفيّة/انتهاء توكن ⇒ إنعاشٌ صامت).
+- **بلا فخٍّ** (لا بذّارَ لاسمِ صنفٍ طويل): 20-005.
