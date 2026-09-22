@@ -245,17 +245,19 @@ var qaSeedAllowlist = map[string]bool{
 	"offer":          true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
 	"offer_off":      true, // إطفاءُ عرضٍ بذرناه (تنظيف)
 	// ── حالاتُ العتاد (المسار B) — كلُّها تُرجع القيمةَ السابقةَ للاستعادة ──
-	"item_available": true, // إتاحةُ/إيقافُ صنف (menu_items.available)
-	"item_price":     true, // تغييرُ سعرِ صنف (menu_items.price)
-	"section_active": true, // تفعيلُ/تعطيلُ قسم (platform_sections.active)
-	"zone_active":    true, // فتحُ/إغلاقُ منطقةِ تغطية (delivery_zones.active)
-	"platform_pause": true, // إيقافٌ مؤقّتٌ للمنصّة (service_closure → temporarily_unavailable)
+	"item_available":     true, // إتاحةُ/إيقافُ صنف (menu_items.available)
+	"item_price":         true, // تغييرُ سعرِ صنف (menu_items.price)
+	"section_active":     true, // تفعيلُ/تعطيلُ قسم (platform_sections.active)
+	"zone_active":        true, // فتحُ/إغلاقُ منطقةِ تغطية (delivery_zones.active)
+	"platform_pause":     true, // إيقافٌ مؤقّتٌ للمنصّة (service_closure → temporarily_unavailable)
+	"merchant_emergency": true, // إغلاقُ/فتحُ متجرِ صنفٍ طارئاً (merchants.emergency_closed)
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
 var qaStateSeed = map[string]bool{
 	"offer_off": true, "item_available": true, "item_price": true,
 	"section_active": true, "zone_active": true, "platform_pause": true,
+	"merchant_emergency": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -307,6 +309,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaSetItemPrice(w, r, req.ItemID, req.ValueInt)
 		case "platform_pause":
 			s.qaPlatformPause(w, r, req.ValueBool)
+		case "merchant_emergency":
+			s.qaSetMerchantEmergency(w, r, req.ItemID, req.ValueBool)
 		}
 		return
 	}
@@ -509,6 +513,9 @@ func (s *Server) qaSetBool(w http.ResponseWriter, r *http.Request, table, col, i
 }
 
 // qaSetItemPrice يضبط سعرَ صنفٍ ويُرجع السعرَ السابق.
+//
+// **العمودُ `merchant_price`** — وهو ما يقرؤه المحرّكُ والعرضُ (`SalePrice`)،
+// **لا `price`** القديمَ المهمَل. (تصحيحُ ٢٠٢٦-٠٩-٢٢.)
 func (s *Server) qaSetItemPrice(w http.ResponseWriter, r *http.Request, id string, price int64) {
 	if !isUUID(id) || price < 0 {
 		s.respondErr(w, errValidation)
@@ -516,17 +523,45 @@ func (s *Server) qaSetItemPrice(w http.ResponseWriter, r *http.Request, id strin
 	}
 	var prev int64
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT price FROM menu_items WHERE id = $1::uuid`, id).Scan(&prev); err != nil {
+		`SELECT merchant_price FROM menu_items WHERE id = $1::uuid`, id).Scan(&prev); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	if _, err := s.pg.Exec(r.Context(),
-		`UPDATE menu_items SET price = $2 WHERE id = $1::uuid`, id, price); err != nil {
+		`UPDATE menu_items SET merchant_price = $2 WHERE id = $1::uuid`, id, price); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	s.logger.Warn("QA staging item price set (staging-only)", "id", id, "previous", prev, "set", price)
 	httpx.JSON(w, http.StatusOK, map[string]any{"item_id": id, "previous": prev, "set": price})
+}
+
+// qaSetMerchantEmergency يغلق/يفتح متجرَ صنفٍ طارئاً (merchants.emergency_closed)،
+// ويُرجع الحالَ السابقة — لشهود «المتجر مغلق حالياً» (08-012/11-026).
+func (s *Server) qaSetMerchantEmergency(w http.ResponseWriter, r *http.Request, itemID string, closed bool) {
+	if !isUUID(itemID) {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var mid string
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT merchant_id::text FROM menu_items WHERE id = $1::uuid`, itemID).Scan(&mid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	var prev bool
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT emergency_closed FROM merchants WHERE id = $1::uuid`, mid).Scan(&prev); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE merchants SET emergency_closed = $2 WHERE id = $1::uuid`, mid, closed); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging merchant emergency set (staging-only)", "merchant", mid, "previous", prev, "set", closed)
+	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "item_id": itemID, "previous": prev, "set": closed})
 }
 
 // qaPlatformPause يضبط الإيقافَ المؤقّت للمنصّة، ويُرجع الحالَ السابقة.
