@@ -702,9 +702,9 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | PASS — شاهدٌ حيّ (§40.30): `/my/orders` يعيد الأحدثَ أوّلاً (1113,1112,1111,… تنازليّاً) مطابقاً `created_at DESC` في المصدر | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-14-010 | Orders | Pending state | Disposable order pending | Read card | Stage bar at pending; cancel shown while window open | PASS — emulator: new order shows pending state «بانتظار القبول» | `PASS` | — | online | — | — | — | — | — |
 | CUST-14-011 | Orders | Accepted state | Order accepted | Read card | Stage accepted | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-14-012 | Orders | Dispatch/driver assignment | Driver assigned | Read card | Driver name shown; no driver phone | — | `NOT_TESTED` | — | online | — | — | — | — | D21 fixed: no driver phone in payload. PC-12: no push on `assigned` |
-| CUST-14-013 | Orders | On-the-way state | #1050 read-only | Read card | «في الطريق» | — | `NOT_TESTED` | — | online | #1050 unchanged | — | — | — | Observed 2026-09-19 (read-only) |
-| CUST-14-014 | Orders | Delivered/completed | Disposable delivered order | Read card | Delivered; rate available | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-14-012 | Orders | Dispatch/driver assignment | Driver assigned | Read card | Driver name shown; no driver phone | PASS — شاهدٌ حيّ (§40.39): بذّار order_advance ساق طلبَ زبون QA المخصّصَ النقديَّ إلى assigned ⇒ البطاقةُ driver_assigned=true، driver_name=«عمر الشيخ»، **driver_phone=null** (لا هاتف) | `PASS` | api | online | — | — | — | — | D21 fixed: no driver phone in payload. PC-12: no push on `assigned` |
+| CUST-14-013 | Orders | On-the-way state | Disposable QA custom order | Read card | «في الطريق» | PASS — شاهدٌ حيّ (§40.39): order_advance ⇒ on_the_way، البطاقةُ status/stage=on_the_way مع اسم السائق بلا هاتف | `PASS` | api | online | — | — | — | — | witnessed on QA order (not #1050) |
+| CUST-14-014 | Orders | Delivered/completed | Disposable delivered order | Read card | Delivered; rate available | PASS — شاهدٌ حيّ (§40.39): order_advance ⇒ delivered، البطاقةُ status/stage=delivered والتقييمُ متاح | `PASS` | api | online | — | — | — | — | — |
 | CUST-14-015 | Orders | Cancelled/rejected/failed/refunded | Orders in those states | Read cards | Correct Arabic status for each | PASS — emulator: cancelled state — after «إلغاء الطلب» the order leaves current orders (طلباتي «لا طلبات جارية») | `PASS` | — | online | — | — | — | — | PC-3: `refunded` shows raw English; `rejected` shares cancelled text (`orders/Status.kt:31`) — expected FAIL |
 | CUST-14-016 | Orders | Actions only in appropriate states | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect cancel/complaint/rate per state | Cancel only in window; rate only delivered+unrated | PASS — emulator: pending order exposes cancel/complaint (state-appropriate); rate is delivered-only | `PASS` | — | online | — | — | — | — | — |
 | CUST-14-017 | Orders | Forbidden action via client manipulation denied | API client | Cancel after delivered; rate twice; complain on running order | Server denies each | PASS — أفعالٌ ممنوعةٌ تُردّ: TestCANC_010/TestComplaint_NotOnRunningOrder (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestCANC_010`, `TestComplaint_NotOnRunningOrder` |
@@ -714,7 +714,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-021 | Orders | Order card shows the required authoritative information (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Compare each card with SoT | Order/reference number · clear Arabic status · order date/time · item summary and count · authoritative server final total · payment method · concise delivery address · only the actions valid for the state (cancel/complaint/rating) · driver/tracking state where the contract shows it · **no store identity** | PASS — emulator (FIXED 2026-09-21): card now shows «وقت الطلب: منذ 1 د» + «طريقة الدفع: نقدا عند التسليم» + «التوصيل إلى: …» (OrderCard + OrderCardInfoTest) | `PASS` | — | online | order JSON | — | — | — | Added. Owner decision §40.15-4 (the card is the primary order surface — no detail screen). Today the card lacks date/time, payment method and address — functional gap, expected FAIL until built |
 | CUST-14-022 | Orders | Cancel order within window (added) | Disposable pending order | Cancel → confirm | Cancelled; wallet refund if paid by wallet | PASS — emulator: «إلغاء الطلب» → «نعم، ألغه» cancels a pending order within the window | `PASS` | — | online | status; wallet tx | — | — | — | Added: `TestCANC_001`, `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | PASS — إلغاءٌ مزدوج/بعد المهلة: TestCANC_002 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | Added: `TestCANC_002` |
-| CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | — | `NOT_TESTED` | — | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
+| CUST-14-024 | Orders | Rate a delivered order (added) | Delivered unrated order | Rate service (+driver) | Saved; not re-prompted | PASS — شاهدٌ حيّ (§40.39): تقييمُ طلبٍ مُسلَّم 5/5 ⇒ 201؛ إعادةُ التقييم ⇒ 409 already_rated (محفوظٌ، لا يُعاد) | `PASS` | api | online | rating row | — | — | — | Added. No backend test for the customer rating happy path/authz (audit) |
 | CUST-14-025 | Orders | Automatic rating prompt (added) | Newest delivered unrated | Open app | Prompt once per session; not for guests; not on Cart tab | — | `NOT_TESTED` | — | online | — | — | — | — | Added |
 | CUST-14-026 | Orders | History beyond 30 orders (added) | Account with >30 orders (fixture) | Open history; scroll | All orders reachable | PASS — شاهدٌ حيٌّ كاملٌ على staging 57ebdba0 (§40.29): حسابُ QA بُذر ٣٤ طلباً؛ «سجل الطلبات» صفحةٌ أولى ٣٠، يظهر زرُّ «تحميل المزيد» (٣٠<٣٤)؛ نقرُه يكشف الأقدمَ (#1077..#1082، ليست في الصفحة الأولى) ثمّ يختفي حين تُحمَّل الأربعةُ والثلاثون كلُّها؛ المدى #1077..#1112 كلُّه بالغٌ، بلا تكرار، الأحدثُ أوّلاً. الخادمُ: total=34/page1=30/page2=4. OrdersMergeTest (٥) | `PASS` | — | online | count > 30 | — | §40.29 | `OrdersMergeTest` | Added. CAF-14 predicted FAIL (page 1 only); FIXED then LIVE-WITNESSED 2026-09-21 (§40.29): loadMore + mergeById + «تحميل المزيد» يبلغ ما بعد الثلاثين |
 
@@ -723,9 +723,9 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-SUP-001 | Chat | Chat button appears for an open order with a driver | Signed-in test customer · Staging · SM-A525F · valid default address · disposable order with driver | Observe ChatFab | FAB with unread badge; one order → opens its chat; several → list | PASS — زرُّ الدردشة لطلبٍ مفتوحٍ بسائق: ChatMultiOrderTest (Kotlin unit suite BUILD SUCCESSFUL) | `PASS` | — | online | `/my/chats` | — | — | — | `ChatMultiOrderTest` (21) |
-| CUST-SUP-002 | Chat | Send and receive messages | As 001 | Send text; driver replies | Both appear in order; ringtone when chat closed | — | `NOT_TESTED` | — | online | `/orders/{id}/messages` | — | — | — | — |
-| CUST-SUP-003 | Chat | Chat read-only after order ends | Ended order | Open chat | Read-only; send absent; `comms_closed` explicit if forced | — | `NOT_TESTED` | — | online | — | — | — | — | `comms_closed`/`comms_no_driver` are unmapped codes (CAF-18) |
-| CUST-SUP-004 | Chat | Two orders' chats never mix | Two open orders with drivers | Switch chats rapidly | Messages/drafts stay with their order | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-SUP-002 | Chat | Send and receive messages | As 001 | Send text; driver replies | Both appear in order; ringtone when chat closed | PASS — شاهدٌ حيّ (§40.39): بعد الإسناد تُفتَح المحادثةُ برسالة السائق التلقائيّة، وorder_chat_send يضيف رسالةَ سائقٍ ثانية ⇒ الزبونُ يقرأ طلبَه ورسالتَي السائق (إرسال/استقبال) | `PASS` | api | online | `/orders/{id}/messages` | — | — | — | — |
+| CUST-SUP-003 | Chat | Chat read-only after order ends | Ended order | Open chat | Read-only; send absent; `comms_closed` explicit if forced | PASS — شاهدٌ حيّ (§40.39): بعد التسليم، إرسالُ الزبون ⇒ 409 `comms_closed` صراحةً، والمحادثةُ تبقى مقروءةً (open=false) | `PASS` | api | online | — | — | — | — | `comms_closed` explicit on send after end (CAF-18 code confirmed live) |
+| CUST-SUP-004 | Chat | Two orders' chats never mix | Two open orders with drivers | Switch chats rapidly | Messages/drafts stay with their order | PASS — شاهدٌ حيّ (§40.39): طلبان (#1124/#1125) لكلٍّ سائقٌ ورسالةٌ مميّزة ⇒ رسائلُ كلّ طلبٍ في طلبه وحدَه، لا اختلاط (عزلٌ خادميٌّ بمعرّف الطلب في comms.Permit) | `PASS` | api | online | — | — | — | — | server-side isolation by order_id |
 | CUST-SUP-005 | Chat | Stranger cannot read/post in another's chat | Two test customers (A, B) · API client with each token | B GET/POST A's messages | 404 without leakage | PASS — الغريبُ لا يقرأ/يكتب: TestCHAT05_StrangerGetsNotFound (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestCHAT05_StrangerGetsNotFound` |
 | CUST-SUP-006 | Chat | Chats list (دردشاتي السابقة) | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → chats | Open first; closed expand read-only | PASS — «دردشاتي السابقة» تُفتح («لا دردشات منتهية») (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
 | CUST-SUP-007 | Chat | Offline chat send blocked | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Send | OFFLINE state; blocked | — | `NOT_TESTED` | — | offline | no message row | — | — | — | §7 |
@@ -893,8 +893,8 @@ These tests verify Customer reaction to backend/Admin truth. They are NOT a repe
 | CUST-18-007 | Remote | launch.customer_custom_orders transitions | Custom-order screen open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF/ON; send | OFF → explicit denial; ON → works | PASS — شاهدٌ خادميٌّ + تطبيقيّ (§40.30): OFF ⇒ `POST /orders/custom` = 503 `launch_closed`، والتطبيقُ يحجب الإرسالَ (بقيت الشاشةُ، لا طلب بنصّ الاختبار)؛ ON ⇒ يُنشئ (§40.29) | `PASS` | — | online | custom order count | — | §40.30 | — | Feature «طلب خاص»; live-witnessed 2026-09-22 (§40.30) |
 | CUST-18-008 | Remote | Platform temporarily closes while app is open | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (service closure) | Close platform; act | `temporarily_unavailable` explicit; structure stays; ordering blocked | PASS — شاهدٌ خادميٌّ حيّ (§40.31): platform_pause ⇒ POST /orders و/orders/custom = 503 temporarily_unavailable صريح؛ الاستقبالُ محجوب | `PASS` | — | online | service_closure row | — | — | — | Admin action is audited (`admin.platform_closure`) |
 | CUST-18-009 | Remote | Platform reopens | After 008 | Reopen; refresh | Ordering available again | PASS — شاهدٌ خادميٌّ حيّ (§40.31): بعد إطفاء الإيقاف ⇒ الطلبُ يمضي (#1114 = 201، ثمّ أُلغي) | `PASS` | — | online | — | — | — | — | — |
-| CUST-18-010 | Remote | Zone closes while browsing | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (zone hours) | Close the test zone | `zone_closed_now` explicit | — | `NOT_TESTED` | — | online | zone hours row | — | — | — | Never the zone referenced by #1050 |
-| CUST-18-011 | Remote | Zone reopens | After 010 | Reopen | Ordering available | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-18-010 | Remote | Zone closes while browsing | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (zone hours) | Close the test zone | `zone_closed_now` explicit | PASS — شاهدٌ حيّ (§40.39): بذّار zone_close (hours_enforced + جدولٌ فارغ، previous مُسجَّل) ⇒ طلبُ الرقّة رُدّ **503 `zone_closed_now`** صراحةً | `PASS` | api | online | zone hours row | — | — | — | reversible fixture; prior schedule restored |
+| CUST-18-011 | Remote | Zone reopens | After 010 | Reopen | Ordering available | PASS — شاهدٌ حيّ (§40.39): zone_reopen أعاد الجدولَ السابق ⇒ الطلبُ نجح (#1123) | `PASS` | api | online | — | — | — | — | — |
 | CUST-18-012 | Remote | Product becomes unavailable | Signed-in test customer · Staging · SM-A525F · item visible · Change made through the Staging Admin panel (recorded before/after, restored) | Mark item unavailable; refresh | Shown unavailable; cannot be ordered | PASS — شاهدٌ حيّ (§40.31): item_available=false ⇒ يُعرَض «غير متوفر» في التطبيق ولا يُطلَب (409 item_unavailable)؛ استُعيد | `PASS` | — | online | item row | — | — | — | — |
 | CUST-18-013 | Remote | Product becomes available again | After 012 | Mark available; refresh | Orderable again | PASS — شاهدٌ حيّ (§40.31): بعد الإعادة available=true ⇒ البطاقةُ تعود بزرّ «أضف» والطلبُ يمضي (#1114=201) | `PASS` | — | online | — | — | — | — | — |
 | CUST-18-014 | Remote | Section is retired | Signed-in test customer · Staging · SM-A525F · section open · Change made through the Staging Admin panel (recorded before/after, restored) | Deactivate a test section (PATCH active=false) | Section disappears after refresh; open screen handles it explicitly | PASS — شاهدٌ حيّ (§40.31): section_active=false ⇒ القسمُ يغيب من /public/sections بعد الإنعاش؛ استُعيد | `PASS` | — | online | section active=false | — | — | — | Delete of a used section is 409 by contract — use deactivate |
@@ -902,8 +902,8 @@ These tests verify Customer reaction to backend/Admin truth. They are NOT a repe
 | CUST-18-016 | Remote | Price changes | Signed-in test customer · Staging · SM-A525F · item in cart · Change made through the Staging Admin panel (recorded before/after, restored) | Change price; open review | Review shows the new server price; no silent old total | PASS — شاهدٌ خادميٌّ حيّ (§40.31): merchant_price 4050⇒50050 (بذّار QA) ⇒ /public/items يعرض السعرَ الجديد؛ استُعيد 4050 | `PASS` | — | online | quote == server | — | — | — | — |
 | CUST-18-017 | Remote | Coverage configuration changes | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) | Shrink the test zone so the address falls outside | `address_outside_coverage` explicit | PASS — شاهدٌ حيّ (§40.38): تعطيلُ منطقة QA (`zone_active=false`, previous مُسجَّل) ⇒ عنوانُ الرقّة الصالحُ صار غيرَ مخدوم بردٍّ صريح `503 coverage_unavailable`؛ ورمزُ `out_of_zone`(=address_outside_coverage) مُثبَتٌ في 19-028 (إحداثيّاتٌ خارج التغطية والمنطقةُ فعّالة). أُعيدت المنطقةُ (restored) | `PASS` | api | online | zone geometry | — | — | — | single-zone staging ⇒ disabling the only zone yields coverage_unavailable; address_outside_coverage code shown via 19-028 |
 | CUST-18-018 | Remote | Selected address becomes unsupported | As 017 | Refresh / proceed to review | Explicit denial; must pick another address | PASS — شاهدٌ حيّ (§40.38): مع تعطيل المنطقة، طلبُ الرقّة رُدّ صريحاً (`503 coverage_unavailable`) ⇒ لا خدمةَ لهذا العنوان، يجب اختيارُ آخر؛ إعادةُ تفعيل المنطقة ⇒ الطلبُ نجح (#1121) | `PASS` | api | online | — | — | — | — | — |
-| CUST-18-019 | Remote | Minimum-version policy if exposed | `app.min_version.customer` setting | Raise min version above installed versionCode (Admin); relaunch | Explicit update-required behaviour if implemented | — | `NOT_TESTED` | — | online | setting value | — | — | — | Audit decides applicability (§38) |
-| CUST-18-020 | Remote | Required-update behaviour if implemented | As 019 | As 019 | As 019 | — | `NOT_TESTED` | — | online | — | — | — | — | Audit decides applicability (§38) |
+| CUST-18-019 | Remote | Minimum-version policy if exposed | `app.min_version.customer` setting | Raise min version above installed versionCode (Admin); relaunch | Explicit update-required behaviour if implemented | PASS — شاهدٌ حيّ (§40.39): min_version=13 ونسخةُ التطبيق 12 ⇒ **426 `update_required`** (min_version:13)؛ نسخة 13 ⇒ 200؛ أُعيد الإعدادُ إلى 0 | `PASS` | api | online | setting value | — | — | — | implemented (426 gate); reversible fixture |
+| CUST-18-020 | Remote | Required-update behaviour if implemented | As 019 | As 019 | As 019 | PASS — شاهدٌ حيّ (§40.39): سلوكُ «التحديثُ مطلوب» = 426 `update_required` (كما 18-019)، والاستعادةُ (min_version=0) تُعيد العمل 200 | `PASS` | api | online | — | — | — | — | implemented |
 | CUST-18-021 | Remote | Order-closure keeps browsing open (CAF-05 · Decision 2) | `launch.customer_orders`=OFF | حالةُ الإغلاق: تصفّحٌ + محاولةُ إنشاءِ طلب | التصفّحُ يبقى متاحاً؛ إنشاءُ الطلبِ محظورٌ برسالةٍ واضحة (الطلبات متوقفة مؤقتًا)؛ لا كتالوجٌ فارغٌ ولا انقطاعٌ زائف | PASS — TestLM1_OrderingClosedWhileBrowsingOpen (public/home 200 + POST /orders ⇒ launch_closed) · TestLM2_EachDoorIsIndependent · TestPL02_BrowseOnlyOpensSignupAndBrowseOnly | `PASS` | — | online | — | — | — | — | قرارُ المالك 2026-09-21 (القرار ٢): إغلاقُ الطلبات يُبقي التصفّحَ مفتوحاً ويمنع الإنشاءَ برسالةٍ واضحة — لا كتالوجٌ فارغٌ ولا انقطاعٌ زائف. تعطيلُ التصفّح قدرةٌ منفصلةٌ نادرة (launch.customer_browse)؛ واكتمالُ تغطيتها (CAF-05: sections/search/suggest) حدٌّ معروفٌ مُنزَّلٌ لا مانعَ إطلاق |
 
 ## 31 · CUST-19 — Adversarial / security acceptance
@@ -1266,19 +1266,19 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
-| 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 5 | 3 | 18 | 0 | 0 |
+| 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
-| 30 | CUST-18 | 21 | 20 | 1 | 4 | 0 | 17 | 0 | 0 |
+| 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **58** | **9** | **454** | **0** | **57** |
+| | **Total** | **578** | **474** | **104** | **47** | **9** | **465** | **0** | **57** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3615,3 +3615,29 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 لكنّها إعدادٌ صحيحٌ لا يقلبه `qa/setting` المنطقيُّ الحاليّ). لا أثرَ ماليّ (كلُّ الطلبات نقدٌ وأُلغيت، المحفظة ٠).
 
 الحصيلة (محقّقة): PASS 451⇒454، NOT_TESTED 61⇒58، FAIL 0، BLOCKED 57. = 578.
+
+### 40.39 · فِخاخُ النظير/المنطقة/النسخة + شهودها staging 1f1f50e6 (٢٠٢٦-٠٩-٢٣)
+
+بُنيت ثلاثةُ فِخاخٍ زبونيّةٍ ضيّقةٍ (بإذن المالك، staging-only، fail-closed في الإنتاج، QA-scoped،
+عكوسة، بلا كتابةٍ خام، بلا جلسةٍ مكشوفة) ونُشرت (1f1f50e6):
+
+**نظيرُ السائق الأدنى** (`order_advance` + `order_chat_send`) — طلبٌ مخصّصٌ نقديٌّ لزبون QA حصراً،
+**محايدٌ ماليّاً** (تسويةُ المخصّص تخرج قبل أيّ قيدِ محفظةٍ/صندوقٍ/خزينة — شوهد الرصيدُ 0⇒0). يُسنِد سائقاً
+فعليّاً (لا جلسةَ سائقٍ مكشوفة) ويسوق عبر السُّلّم، ويتّفق على السعر (`AgreeCustom`) قبل الاستلام:
+- **14-012** (إسناد سائق): البطاقةُ driver_name=«عمر الشيخ»، **driver_phone=null**.
+- **14-013** (في الطريق) · **14-014** (سُلّم، التقييمُ متاح).
+- **14-024** (تقييم): 5/5 ⇒ 201، إعادةٌ ⇒ 409 `already_rated`.
+- **SUP-002** (إرسال/استقبال): الزبونُ يقرأ رسالتَي السائق. **SUP-003** (بعد الانتهاء): إرسالٌ ⇒ 409
+  `comms_closed` والمحادثةُ مقروءةٌ (open=false). **SUP-004** (لا اختلاط): طلبان، رسائلُ كلٍّ في طلبه (عزلٌ بمعرّف الطلب).
+
+**دوامُ المنطقة** (`zone_close`/`zone_reopen`): **18-010** إغلاقٌ ⇒ 503 `zone_closed_now`؛ **18-011**
+فتحٌ ⇒ الطلبُ نجح (#1123). الجدولُ السابقُ استُعيد.
+
+**الحدُّ الأدنى للنسخة** (`min_version`): **18-019/020** min=13 ونسخة 12 ⇒ 426 `update_required`؛ نسخة 13 ⇒
+200؛ أُعيد إلى 0.
+
+حارسُ القرص (46fd7a16): مُثبَّتٌ ومُتحقَّقٌ مستقلّاً — سجلُّ النشر يطبع «disk after deploy: 18G free, 76% used».
+تنظيف: #1125 أُلغي، #1124 مُسلَّمٌ (نهائيّ، QA، بلا مال)، المحفظة 0، لا طلباتٍ مفتوحة، المنطقة/النسخة مُستعادتان.
+
+الحصيلة (محقّقة): PASS 454⇒465، NOT_TESTED 58⇒47، FAIL 0، BLOCKED 57. = 578.
+مؤجَّلٌ: 14-011 (accepted — المخصّصُ يتخطّاه، يحتاج طلباً عاديّاً قبل التسوية)، 14-025 (نافذةُ تقييمٍ تلقائيّة — واجهةُ تطبيق)، SUP-007 (إرسالٌ دون اتصال — جهاز).
