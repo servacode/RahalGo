@@ -31,6 +31,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/offers"
+	"github.com/servacode/rahalgo/backend/internal/platform"
 	"github.com/servacode/rahalgo/backend/internal/support"
 )
 
@@ -243,6 +244,18 @@ var qaSeedAllowlist = map[string]bool{
 	"warning":        true, // إنذارُ حسابٍ على زبون QA (D-corroboration)
 	"offer":          true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
 	"offer_off":      true, // إطفاءُ عرضٍ بذرناه (تنظيف)
+	// ── حالاتُ العتاد (المسار B) — كلُّها تُرجع القيمةَ السابقةَ للاستعادة ──
+	"item_available": true, // إتاحةُ/إيقافُ صنف (menu_items.available)
+	"item_price":     true, // تغييرُ سعرِ صنف (menu_items.price)
+	"section_active": true, // تفعيلُ/تعطيلُ قسم (platform_sections.active)
+	"zone_active":    true, // فتحُ/إغلاقُ منطقةِ تغطية (delivery_zones.active)
+	"platform_pause": true, // إيقافٌ مؤقّتٌ للمنصّة (service_closure → temporarily_unavailable)
+}
+
+// qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
+var qaStateSeed = map[string]bool{
+	"offer_off": true, "item_available": true, "item_price": true,
+	"section_active": true, "zone_active": true, "platform_pause": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -252,8 +265,13 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req, err := decode[struct {
-		Kind    string `json:"kind"`
-		OfferID string `json:"offer_id"`
+		Kind      string `json:"kind"`
+		OfferID   string `json:"offer_id"`
+		ItemID    string `json:"item_id"`
+		SectionID string `json:"section_id"`
+		ZoneID    string `json:"zone_id"`
+		ValueBool bool   `json:"value_bool"`
+		ValueInt  int64  `json:"value_int"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -264,18 +282,32 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// **العرضُ يُطفأ بمعرّفه ولا يلزمه زبونُ QA** — تنظيفٌ صريح.
-	if req.Kind == "offer_off" {
-		if req.OfferID == "" {
-			s.respondErr(w, errValidation)
-			return
+	// ── حالاتُ العتاد (لا تلزمها هويّةُ زبون QA) — كلُّها تُرجع `previous` ──
+	if qaStateSeed[req.Kind] {
+		switch req.Kind {
+		case "offer_off":
+			// **العرضُ يُطفأ بمعرّفه** — تنظيفٌ صريح.
+			if req.OfferID == "" {
+				s.respondErr(w, errValidation)
+				return
+			}
+			if _, err := s.offers.SetActive(r.Context(), req.OfferID, false, s.saleOf(r)); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			s.logger.Warn("QA staging offer deactivated (staging-only)", "offer", req.OfferID)
+			httpx.JSON(w, http.StatusOK, map[string]any{"offer_id": req.OfferID, "active": false})
+		case "item_available":
+			s.qaSetBool(w, r, "menu_items", "available", req.ItemID, req.ValueBool)
+		case "section_active":
+			s.qaSetBool(w, r, "platform_sections", "active", req.SectionID, req.ValueBool)
+		case "zone_active":
+			s.qaSetBool(w, r, "delivery_zones", "active", req.ZoneID, req.ValueBool)
+		case "item_price":
+			s.qaSetItemPrice(w, r, req.ItemID, req.ValueInt)
+		case "platform_pause":
+			s.qaPlatformPause(w, r, req.ValueBool)
 		}
-		if _, err := s.offers.SetActive(r.Context(), req.OfferID, false, s.saleOf(r)); err != nil {
-			s.respondErr(w, err)
-			return
-		}
-		s.logger.Warn("QA staging offer deactivated (staging-only)", "offer", req.OfferID)
-		httpx.JSON(w, http.StatusOK, map[string]any{"offer_id": req.OfferID, "active": false})
 		return
 	}
 
@@ -443,4 +475,75 @@ func (s *Server) qaSeedOffer(w http.ResponseWriter, r *http.Request, uid string)
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"offer_id": o.ID, "item_id": itemID, "kind": "offer", "expires_at": ends.Format(time.RFC3339),
 	})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **بذّارُ حالةِ العتاد — إتاحةٌ/سعرٌ/قسمٌ/منطقةٌ/إيقافٌ مؤقّت** (المسار B)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كلُّها تُرجع `previous`** فيستعيدها المُختبِرُ بندائه ثانيةً بالقيمة السابقة.
+// **الجدولُ والعمودُ حرفان ثابتان من `switch`** لا من الطلب، **والمعرّفُ يُتحقَّق
+// أنّه `UUID`** — فلا حقنَ. **على التجهيز وحدَه** (الحارسُ في المنادي).
+
+// qaSetBool يقلب عموداً منطقيّاً في صفٍّ بمعرّفه، ويُرجع القيمةَ السابقة.
+func (s *Server) qaSetBool(w http.ResponseWriter, r *http.Request, table, col, id string, val bool) {
+	if !isUUID(id) {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var prev bool
+	// **الجدولُ/العمودُ من قائمةِ `switch` الثابتة لا من المستخدم** — لا حقن.
+	// **نقرأ السابقَ ثمّ نكتب** — أبسطُ من CTE وكافٍ على التجهيز.
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT `+col+` FROM `+table+` WHERE id = $1::uuid`, id).Scan(&prev); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE `+table+` SET `+col+` = $2 WHERE id = $1::uuid`, id, val); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging state set (staging-only)", "table", table, "col", col, "id", id, "previous", prev, "set", val)
+	httpx.JSON(w, http.StatusOK, map[string]any{"table": table, "col": col, "id": id, "previous": prev, "set": val})
+}
+
+// qaSetItemPrice يضبط سعرَ صنفٍ ويُرجع السعرَ السابق.
+func (s *Server) qaSetItemPrice(w http.ResponseWriter, r *http.Request, id string, price int64) {
+	if !isUUID(id) || price < 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var prev int64
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT price FROM menu_items WHERE id = $1::uuid`, id).Scan(&prev); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE menu_items SET price = $2 WHERE id = $1::uuid`, id, price); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging item price set (staging-only)", "id", id, "previous", prev, "set", price)
+	httpx.JSON(w, http.StatusOK, map[string]any{"item_id": id, "previous": prev, "set": price})
+}
+
+// qaPlatformPause يضبط الإيقافَ المؤقّت للمنصّة، ويُرجع الحالَ السابقة.
+func (s *Server) qaPlatformPause(w http.ResponseWriter, r *http.Request, active bool) {
+	prev, err := s.platform.Closure(r.Context(), s.pg)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	msg := ""
+	if active {
+		msg = "إيقافٌ مؤقّتٌ للاختبار — عتادُ QA"
+	}
+	if _, err := s.platform.SetClosure(r.Context(), "", platform.Closure{Active: active, Message: msg}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging platform pause set (staging-only)", "previous", prev.Active, "set", active)
+	httpx.JSON(w, http.StatusOK, map[string]any{"previous_active": prev.Active, "previous_message": prev.Message, "set": active})
 }
