@@ -734,8 +734,8 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | PASS — «الشكاوى والبلاغات» تعرض الحالة (محاكي 2026-09-21) | `PASS` | — | online | `/my/tickets` | — | — | — | PRQ-2 is IN this release (Owner decision §40.15-1) — see CUST-SUP-013/014 |
 | CUST-SUP-011 | Support | Foreign order complaint denied | Two test customers (A, B) · API client with each token | B complains on A's order | Denied without leakage | PASS — شكوى على طلبِ غيره تُردّ: TestVAL_040_ForeignOrderComplaintCode (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestVAL_040_ForeignOrderComplaintCode` |
 | CUST-SUP-012 | Support | Admin warnings visible to the customer | Admin warns the test customer | Open app | Warning reaches the customer (Admin contract: «يصل الإنذار صاحب الحساب بنصه، ويبقى في سجله») in safe customer-facing wording (Owner decision §40.1-2) | PASS — CAF-19 مغلق: issueWarning يُنشئ إشعارَ حساب عربيّاً (warningOnYou + السبب) فيظهر في الصندوق (الجرس يطلب كلَّ الأنواع، عرضُه مشهودٌ في 15-017)؛ ‎/my/warnings معزولٌ بالمستخدم. TestCAF19_WarningReachesCustomerAndIsIsolated + شاهد سالب | `PASS` | — | online | `/my/warnings` | — | — | — | CAF-19 CONFIRMED (§40.10): no notification is sent and the app never shows warnings — expected FAIL |
-| CUST-SUP-013 | Support | Customer sees replies on own ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · ticket with an Admin reply | Open the ticket | Replies visible in order, customer-facing wording | SOURCE/AUTOMATED FIXED (backend+API+UI): GET /my/tickets/{id} بردوده معزولاً بالملكيّة، بردٍّ مبيَّض (`mine` من الخادم، لا كشفَ لمعرّف موظّف)؛ شاشةُ التفصيل `TicketThreadScreen` (خيطٌ زمنيٌّ، تمييزُ الطرفين، حالُ فراغٍ/تحميلٍ/فشلٍ بإعادة). TestPRQ2 (mine+ترتيب+لا تسريب author_id) + TicketThreadTest (١١) + شاهدان سالبان. PENDING STAGING LIVE/DEVICE WITNESS | `NOT_TESTED` | — | online | ticket replies | — | CAF §40.28 | `TestPRQ2_CustomerTicketRepliesAndIsolation` · `TicketThreadTest` | Added by Owner decision §40.15-1. UI source-complete 2026-09-21 (§40.28); server behavior DB-witnessed; on-device rendering pending staging deploy |
-| CUST-SUP-014 | Support | Customer replies to the same ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · open ticket | Write a reply; send | Reply stored on the same ticket and visible to Admin; closed ticket per PRQ-2 contract | SOURCE/AUTOMATED FIXED (backend+API+UI): POST /my/tickets/{id}/replies (ملكيّة + المحلولةُ تُردّ 409 ticket_resolved) + CustomerApi.replyTicket؛ مُدخِلُ الردّ يظهر إن كانت مفتوحةً ويُخفى بنصٍّ صريحٍ إن أُغلقت؛ الخيطُ يُستبدَل بجواب الخادم فلا يتكرّر. TestPRQ2 (ردٌّ يظهر مرّةً + لا تكرارَ بإعادة القراءة) + TicketThreadTest + شاهد سالب. PENDING STAGING LIVE/DEVICE WITNESS | `NOT_TESTED` | — | online | ticket replies | — | CAF §40.28 | `TestPRQ2_CustomerTicketRepliesAndIsolation` · `TicketThreadTest` · `TicketCanReplyTest` | Added by Owner decision §40.15-1. UI source-complete 2026-09-21 (§40.28); server behavior DB-witnessed; on-device flow pending staging deploy |
+| CUST-SUP-013 | Support | Customer sees replies on own ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · ticket with an Admin reply | Open the ticket | Replies visible in order, customer-facing wording | SOURCE/AUTOMATED FIXED (backend+API+UI): GET /my/tickets/{id} بردوده معزولاً بالملكيّة، بردٍّ مبيَّض (`mine` من الخادم، لا كشفَ لمعرّف موظّف)؛ شاشةُ التفصيل `TicketThreadScreen` (خيطٌ زمنيٌّ، تمييزُ الطرفين، حالُ فراغٍ/تحميلٍ/فشلٍ بإعادة). PASS — شاهدٌ حيٌّ كاملٌ على staging 881a753a (§40.29): بُذر ردُّ موظّفٍ على تذكرة زبون QA (باب qa/seed)؛ شاشةُ الخيط تعرض الردَّ باسم «فريق رحّال غو» (mine=false)، بترتيبٍ، بلا كشفِ author_id (raw خالٍ)؛ الخادمُ يؤكّد mine=false ولا تسريب. TestPRQ2 + TicketThreadTest (١١) | `PASS` | — | online | ticket replies | — | §40.29 | `TestPRQ2_CustomerTicketRepliesAndIsolation` · `TicketThreadTest` | Added by Owner decision §40.15-1. Built §40.28; LIVE-WITNESSED 2026-09-22 (§40.29) عبر بذّار عتادٍ على التجهيز |
+| CUST-SUP-014 | Support | Customer replies to the same ticket (added; PRQ-2) | Signed-in test customer · Staging · SM-A525F · valid default address · open ticket | Write a reply; send | Reply stored on the same ticket and visible to Admin; closed ticket per PRQ-2 contract | SOURCE/AUTOMATED FIXED (backend+API+UI): POST /my/tickets/{id}/replies (ملكيّة + المحلولةُ تُردّ 409 ticket_resolved) + CustomerApi.replyTicket؛ مُدخِلُ الردّ يظهر إن كانت مفتوحةً ويُخفى بنصٍّ صريحٍ إن أُغلقت؛ الخيطُ يُستبدَل بجواب الخادم فلا يتكرّر. PASS — شاهدٌ حيٌّ كاملٌ على staging 881a753a (§40.29): الزبونُ ردّ «QA_SUP014_customer_reply» فظهر على جهته «أنت» (mine=true) مرّةً واحدةً، لا تكرارَ بإعادة القراءة، لا تسريبَ author_id؛ ثمّ حُلّت التذكرة (بذّار resolve_ticket، تعويض 0 فلا مساسَ ماليّ) فاختفى المُدخِلُ ونصُّه «هذه الشكوى مغلقة — لا يمكن الردّ» والخادمُ ردّ 409 ticket_resolved. TestPRQ2 + TicketThreadTest + TicketCanReplyTest | `PASS` | — | online | ticket replies | — | §40.29 | `TestPRQ2_CustomerTicketRepliesAndIsolation` · `TicketThreadTest` · `TicketCanReplyTest` | Added by Owner decision §40.15-1. Built §40.28; LIVE-WITNESSED 2026-09-22 (§40.29): ردٌّ يُخزَّن مرّةً + المحلولةُ تُغلَق (409 + مُدخِلٌ مخفيّ) |
 
 ## 26B · CUST-WAL — Wallet (added by audit)
 
@@ -760,7 +760,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-ENG-002 | Fav | Favorites screen | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → المفضلة | Grid; ♥ removes; empty state | PASS — شاشةُ المفضلة (فارغةٌ ثمّ «♥ شاورما دجاج» بعد التفضيل) (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | No add-to-cart from Favorites (by design?) — Owner note |
 | CUST-ENG-003 | Fav | Guest heart → login | Signed out | Tap heart | Login path | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-ENG-004 | Offers | Offers list | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → العروض | Image, title, prices, discount chip | PASS — «العروض» تُفتح («لا عروض سارية») (محاكي 2026-09-21) | `PASS` | — | online | `/public/offers` | — | — | — | — |
-| CUST-ENG-005 | Offers | Add offer item to cart | Signed-in test customer · Staging · SM-A525F · valid default address | «أضف إلى السلة» on an offer with an item | «أُضيف إلى السلة»; options sheet if needed; gating per CUST-11-035 | SOURCE/AUTOMATED FIXED: بوّابةُ الخدمة المشتركة rememberAddBlocked تحرس إضافةَ العرض (OfferGateTest + شاهد سالب)؛ PENDING STAGING LIVE WITNESS (سلوكُ الجهاز خارجَ التغطية بعد النشر) | `NOT_TESTED` | — | online | — | — | — | — | CAF-12 |
+| CUST-ENG-005 | Offers | Add offer item to cart | Signed-in test customer · Staging · SM-A525F · valid default address | «أضف إلى السلة» on an offer with an item | «أُضيف إلى السلة»; options sheet if needed; gating per CUST-11-035 | PASS — شاهدٌ حيٌّ كاملٌ على staging 881a753a (§40.29): بُذر عرضُ خصمٍ (٢٠٪) على صنفٍ (باب qa/seed)؛ شاشةُ «العروض» تعرضه مع «أضف إلى السلة»؛ النقرُ ⇒ «أُضيف إلى السلة»، والصنفُ في السلّة بسعرِ العرض المخفَّض (3,240 بدل 4,050). OfferGateTest + شاهد سالب | `PASS` | — | online | — | — | §40.29 | `OfferGateTest` | CAF-12؛ LIVE-WITNESSED 2026-09-22 (§40.29): إضافةُ صنفِ عرضٍ إلى السلّة بسعره المخفَّض (العنوانُ داخلَ التغطية) |
 | CUST-ENG-006 | Offers | Offer opened from push; expired offer | Offer push | Tap push; tap expired | Focused at top; expired → «العرض الذي وصلك لم يعد سارياً» | PASS — الإشعارُ يفتح الوجهةَ الآمنة: DeepLinkTest (Kotlin unit suite BUILD SUCCESSFUL) | `PASS` | — | online | — | — | — | — | `DeepLinkTest` |
 | CUST-ENG-007 | Refer | Invite screen | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → ادع صديقا | Code, next reward, counts; share opens chooser | PASS — «ادع صديقا» + رمزٌ JPNV4R (محاكي 2026-09-21) | `PASS` | — | online | `/auth/referral` | — | — | — | — |
 | CUST-ENG-008 | Refer | Referral reward paid per policy | New signup with the code | Complete signup (and first order if policy) | Reward credited once per policy (`referral.*`) | PASS — مكافأةُ الإحالة: TestRewardOn*/TestBonusAndReferral_OncePerPhone (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | wallet tx | — | — | — | `TestRewardOn*`, `TestBonusAndReferral_OncePerPhone` |
@@ -1267,9 +1267,9 @@ until ADB is available — not an acceptance blocker.
 | 24 | CUST-13 | 29 | 24 | 5 | 7 | 0 | 22 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 3 | 0 | 17 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 11 | 3 | 12 | 0 | 0 |
-| 26A | CUST-SUP | 14 | 0 | 14 | 6 | 0 | 8 | 0 | 0 |
+| 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
-| 26C | CUST-ENG | 14 | 0 | 14 | 3 | 0 | 11 | 0 | 0 |
+| 26C | CUST-ENG | 14 | 0 | 14 | 2 | 0 | 12 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 19 | 0 | 26 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **121** | **9** | **375** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **118** | **9** | **378** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3395,8 +3395,29 @@ mutations = 0.
 تبدأ #1083) ثمّ يختفي الزرُّ حين تُحمَّل الأربعةُ والثلاثون. المدى #1077..#1112 كلُّه بالغٌ، بلا
 تكرار (`mergeById`)، الأحدثُ أوّلاً. الخادمُ: `total=34، page1=30، page2=4`.
 
-**مسدودٌ على عتادٍ لا يصنعه بابُ QA الزبونيُّ المحض** (قرارُ المالك: ابنِ بذّاراتٍ ضيّقةً على التجهيز):
-A (CUST-ENG-005 — لا عروضَ على staging: `/public/offers` = ٠)، والتعضيدُ الحيُّ لـD (CUST-SUP-012،
-وهو أصلاً PASS — يحتاج إنذارَ أدمن)، وE-013 (CUST-SUP-013 — يحتاج ردَّ أدمن على تذكرة). **يُبنى لها
-بذّارُ عتادٍ على التجهيز فقط** (عرضٌ+صنف، ردُّ أدمن على تذكرة زبون QA نفسِه، إنذارٌ على زبون QA) —
-يسقط مغلقاً في الإنتاج، على بيانات زبون QA وحدَها، بلا إصدار أيّ توكن أدمن.
+**بذّارُ عتادٍ ضيّقٌ على التجهيز** (قرارُ المالك ٢٠٢٦-٠٩-٢٢؛ `POST /api/v1/qa/seed`، يسقط مغلقاً في
+الإنتاج، على بيانات زبون QA وحدَها، بلا إصدار أيّ توكن أدمن) — أنواعُه: `ticket_reply` (ردُّ موظّفٍ
+على تذكرة زبون QA)، `resolve_ticket` (حلٌّ بتعويض ٠ فلا مساسَ ماليّ)، `warning` (إنذارُ حسابٍ)،
+`offer`/`offer_off` (عرضُ خصمٍ قصيرُ الأجل ثمّ إطفاؤه). فُتح به ما كان مسدوداً:
+
+**A — CUST-ENG-005 (إضافةُ صنفِ عرضٍ إلى السلّة): شاهدٌ حيٌّ كاملٌ ⇒ `PASS`.** بُذر عرضُ خصمٍ ٢٠٪؛
+شاشةُ «العروض» تعرض «QA اختبار — عرض تجريبي» (3,240 بدل 4,050، −٢٠٪) مع «أضف إلى السلة»؛ النقرُ ⇒
+«أُضيف إلى السلة»، والصنفُ («شاي») في السلّة بسعرِ العرض 3,240. العنوانُ داخلَ التغطية (الرقّة) فلا
+بوّابةَ منعٍ (CUST-11-035). ثمّ أُطفئ العرضُ (`offer_off`) فعاد `/public/offers` = ٠، وأُفرغت السلّة.
+
+**E-013 — CUST-SUP-013 (الزبونُ يرى ردَّ الموظّف): شاهدٌ حيٌّ كاملٌ ⇒ `PASS`.** ردُّ موظّفٍ على
+تذكرة زبون QA؛ شاشةُ الخيط تعرضه باسم «فريق رحّال غو» (mine=false)، بترتيبٍ، بلا كشفِ `author_id`
+(الردُّ الخامُّ خالٍ منه)؛ الخادمُ يؤكّد mine=false.
+
+**E-014 — CUST-SUP-014 (الزبونُ يردّ على تذكرته): شاهدٌ حيٌّ كاملٌ ⇒ `PASS`.** ردٌّ من الزبون ظهر على
+جهته «أنت» (mine=true) مرّةً واحدةً، لا تكرارَ بإعادة القراءة، لا تسريبَ `author_id`؛ ثمّ حُلّت التذكرة
+(تعويض ٠) فاختفى مُدخِلُ الردّ ونصُّه «هذه الشكوى مغلقة — لا يمكن الردّ عليها» والخادمُ ردّ
+`409 ticket_resolved`.
+
+**D — CUST-SUP-012 (إنذارُ الأدمن يصل الزبون): تعضيدٌ حيّ** (وهو أصلاً PASS §40.10). بُذر إنذارُ حساب؛
+`/my/warnings` يحمله معزولاً بالمستخدم، و`/me/notifications` يحمل إشعارَ حسابٍ «إنذار على حسابك — عنوانٌ
+خاطئٌ متكرّر» يُرى في جرس التطبيق بلفظٍ زبونيٍّ آمن.
+
+**العزلُ والتنظيف والمال.** كلُّ العتاد يخصّ زبونَ QA (تذكرتُه/إنذارُه) عدا العرضَ (عامٌّ بطبعه)
+فأُطفئ. لا مساسَ ماليّ: ٣٤ طلباً كلُّها مُلغاة، حلُّ التذكرة بتعويض ٠، محفظةُ زبون QA = ٠ (٠ قيود).
+مساسُ الإنتاج = ٠ (الإنتاجُ `023d9d4c`).
