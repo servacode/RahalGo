@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 348,
+    "routes": 354,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -19,7 +19,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 49,
+    "notify_sites": 52,
     "notify_targeted": 12,
     "publish_rooms": [
       "customer",
@@ -31,8 +31,8 @@
     "setting_defs": 143,
     "behaviour_settings": 115,
     "order_fields": 75,
-    "test_files": 359,
-    "test_funcs": 1543
+    "test_files": 369,
+    "test_funcs": 1568
   },
   "flows": [
     {
@@ -5553,6 +5553,30 @@
   ],
   "tests": [
     {
+      "name": "TestParseByKind",
+      "file": "cmd/stagingctl/flag_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFlags_EveryAllowedKeyIsARealCatalogKey",
+      "file": "cmd/stagingctl/flag_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFlags_NoWildcardOrSQL",
+      "file": "cmd/stagingctl/flag_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFlags_OnlyExpectedKeys",
+      "file": "cmd/stagingctl/flag_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
       "name": "TestDeviceCasesAreNotClaimedRun",
       "file": "internal/androidmap/androidmap_test.go",
       "package": "androidmap",
@@ -11038,6 +11062,24 @@
       "orphan": true
     },
     {
+      "name": "TestCUST_CAF07_NotesStored",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_D9_CreationEventRecorded",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_PaymentWalletStored",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestFAIL_001_DriverFailsDelivery",
       "file": "internal/qa/custom_test.go",
       "package": "qa",
@@ -12145,6 +12187,12 @@
       "orphan": true
     },
     {
+      "name": "TestCUST07033_DemandByPlaceCountsUniquePeople",
+      "file": "internal/qa/demand_unique_people_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDLC1_AllFourDeclaredAndClosedByDefault",
       "file": "internal/qa/download_center_test.go",
       "package": "qa",
@@ -12189,6 +12237,12 @@
     {
       "name": "TestDLC8_PackageIdsMatchGradle",
       "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDRVDEF001_EmergencyDedupedPerOpenOrder",
+      "file": "internal/qa/emergency_dedup_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -13744,6 +13798,36 @@
       "orphan": false
     },
     {
+      "name": "TestCAF02_CustomSameKeyDifferentRequestRejected",
+      "file": "internal/qa/idempotency_fingerprint_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCAF02_CustomSameRequestReplays",
+      "file": "internal/qa/idempotency_fingerprint_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCAF02_LegacyNullFingerprintReplays",
+      "file": "internal/qa/idempotency_fingerprint_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCAF02_ReorderedItemsReplayNotReused",
+      "file": "internal/qa/idempotency_fingerprint_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCAF02_SameKeyDifferentBodyRejected",
+      "file": "internal/qa/idempotency_fingerprint_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestFAIL_C06_OrphanBeforeCommitBlocksOwner",
       "file": "internal/qa/idempotency_orphan_test.go",
       "package": "qa",
@@ -14500,6 +14584,12 @@
     {
       "name": "TestMYC2_NoSecretsInBody",
       "file": "internal/qa/my_capabilities_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRQ2_CustomerTicketRepliesAndIsolation",
+      "file": "internal/qa/my_ticket_replies_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -16796,6 +16886,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestQAStaging_DisabledOutsideStaging",
+      "file": "internal/qa/qa_staging_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestQI01_QI04_InvalidQuantityIsNamedThroughTheRealPath",
@@ -19978,6 +20074,12 @@
       "orphan": true
     },
     {
+      "name": "TestCUST12023_WalletOrderRejectedWhenInsufficient",
+      "file": "internal/qa/wallet_order_insufficient_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated",
       "file": "internal/qa/wallet_reservation_test.go",
       "package": "qa",
@@ -20275,6 +20377,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCAF19_WarningReachesCustomerAndIsIsolated",
+      "file": "internal/qa/warning_delivery_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestR22_W1_AlertMarksAndCreatesIntent",
@@ -21887,6 +21995,48 @@
     {
       "name": "TestProfits_NetMatchesTreasuryLedger",
       "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQACounterpartKindsRegistered",
+      "file": "internal/server/qa_counterpart_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAOrderLadder",
+      "file": "internal/server/qa_counterpart_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQASeedFailsClosedInProduction",
+      "file": "internal/server/qa_counterpart_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFaultFailClosedInProduction",
+      "file": "internal/server/qa_fault_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFaultNotScopedWithoutQA",
+      "file": "internal/server/qa_fault_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFaultStagingInjectsForQAHeader",
+      "file": "internal/server/qa_fault_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFaultStore",
+      "file": "internal/server/qa_fault_test.go",
       "package": "server",
       "orphan": true
     },

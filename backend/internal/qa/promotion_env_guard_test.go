@@ -191,6 +191,12 @@ func TestENVG4_EveryCallerDeclaresItsEnvironment(t *testing.T) {
 			if strings.HasPrefix(strings.TrimSpace(line), "#") {
 				continue
 			}
+			// **وسطرُ `grep` ليس نداءَ ترقية** — **هو مطابقةُ نصٍّ تتحقّق
+			// أنّ الغلافَ يحوي النداء** (`wrapper-selftest.sh`): **يبحث عن
+			// `promote.sh` ولا يشغّله**، فلا `TARGET_ENV` له ولا يلزمه.
+			if strings.Contains(line, "grep") {
+				continue
+			}
 			if !strings.Contains(line, "TARGET_ENV=") {
 				bad = append(bad, fmt.Sprintf("%s: %s",
 					filepath.Base(p), strings.TrimSpace(line)))
