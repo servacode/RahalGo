@@ -238,10 +238,11 @@ func (s *Server) handleQAStagingSetting(w http.ResponseWriter, r *http.Request) 
 
 // qaSeedAllowlist أنواعُ العتاد المسموحةُ بذرُها.
 var qaSeedAllowlist = map[string]bool{
-	"ticket_reply": true, // ردُّ أدمن على تذكرة زبون QA نفسِه (E-013)
-	"warning":      true, // إنذارُ حسابٍ على زبون QA (D-corroboration)
-	"offer":        true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
-	"offer_off":    true, // إطفاءُ عرضٍ بذرناه (تنظيف)
+	"ticket_reply":   true, // ردُّ أدمن على تذكرة زبون QA نفسِه (E-013)
+	"resolve_ticket": true, // حلُّ تذكرة زبون QA — لشهود «المحلولةُ تُغلَق» (SUP-014، بلا تعويضٍ فلا مساسَ ماليّ)
+	"warning":        true, // إنذارُ حسابٍ على زبون QA (D-corroboration)
+	"offer":          true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
+	"offer_off":      true, // إطفاءُ عرضٍ بذرناه (تنظيف)
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -292,11 +293,41 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 	switch req.Kind {
 	case "ticket_reply":
 		s.qaSeedTicketReply(w, r, uid)
+	case "resolve_ticket":
+		s.qaResolveTicket(w, r, uid)
 	case "warning":
 		s.qaSeedWarning(w, r, uid)
 	case "offer":
 		s.qaSeedOffer(w, r, uid)
 	}
+}
+
+// qaResolveTicket يحلّ أحدثَ تذكرةٍ مفتوحةٍ لزبون QA — **بلا تعويضٍ فلا يُمسّ
+// دفترُ المال** — لشهود «المحلولةُ تُغلَق ولا تُردّ» (SUP-014، `ticket_resolved`).
+func (s *Server) qaResolveTicket(w http.ResponseWriter, r *http.Request, uid string) {
+	var ticketID string
+	err := s.pg.QueryRow(r.Context(),
+		`SELECT id::text FROM tickets WHERE customer_id = $1::uuid AND status IN ('open','in_progress')
+		 ORDER BY created_at DESC LIMIT 1`, uid).Scan(&ticketID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	} else if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	actor, aerr := s.qaNonCustomerAuthor(r.Context(), uid)
+	if aerr != nil {
+		s.respondErr(w, aerr)
+		return
+	}
+	if _, err := s.support.Resolve(r.Context(), actor, ticketID,
+		"عولجت — عتادُ اختبار QA", 0, clientIP(r)); err != nil { // تعويض 0 — لا قيدَ ماليّ
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging ticket resolved (staging-only)", "ticket", ticketID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"ticket_id": ticketID, "kind": "resolve_ticket", "status": "resolved"})
 }
 
 // qaNonCustomerAuthor **معرّفُ موظّفٍ يصلح كاتبَ ردٍّ أو مُصدِرَ إنذار** —
