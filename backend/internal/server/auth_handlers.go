@@ -291,6 +291,10 @@ func (s *Server) handleResetConfirm(w http.ResponseWriter, r *http.Request) {
 // --- إنشاء حساب زبون: رمز تأكيد ثم اسم وكلمة مرور. الزبون فقط، لا دور آخر. ---
 
 func (s *Server) handleSignupRequest(w http.ResponseWriter, r *http.Request) {
+	// **حاقنُ أعطالِ QA** (على التجهيز، لطلبات QA فقط) — لشهود CUST-04-015.
+	if s.qaMaybeFault(w, r) {
+		return
+	}
 	// **وبابُ إنشاء الحسابات** — وإغلاقُه لا يمسّ من أنشأ حسابَه قبلاً.
 	//
 	// **وقبل قراءةِ الجسم** — فلا يُستهلك مفتاحُ تفرّدٍ لبابٍ مغلق.

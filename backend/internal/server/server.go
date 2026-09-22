@@ -540,6 +540,9 @@ func (s *Server) Router() http.Handler {
 		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)
 		r.Group(func(r chi.Router) {
 			r.Use(s.RequireAuth)
+			// **حاقنُ الأعطال — بعد المصادقة ليعرف صاحبَ الطلب** (QA فقط،
+			// على التجهيز؛ يمرّ بلا أثرٍ في الإنتاج). انظر `qa_fault.go`.
+			r.Use(s.qaFaultMW)
 			// **ونيّةُ التوسّع بحساب** — انظر أعلاه.
 			r.Post("/demand", s.handleDemandSignal)
 			// **ومحميٌّ من الإعادة** — انظر `idempotency.go`. **أهمُّ فعلٍ

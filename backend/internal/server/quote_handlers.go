@@ -30,6 +30,10 @@ import (
 
 // handleQuote تسعيرةُ سلّةٍ في موقعٍ بعينه.
 func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
+	// **حاقنُ أعطالِ QA** (على التجهيز، لطلبات QA فقط) — قبل أيّ عمل.
+	if s.qaMaybeFault(w, r) {
+		return
+	}
 	req, err := decode[struct {
 		Items []orders.ItemInput `json:"items"`
 		Lat   float64            `json:"lat"`

@@ -251,6 +251,10 @@ var qaSeedAllowlist = map[string]bool{
 	"zone_active":        true, // فتحُ/إغلاقُ منطقةِ تغطية (delivery_zones.active)
 	"platform_pause":     true, // إيقافٌ مؤقّتٌ للمنصّة (service_closure → temporarily_unavailable)
 	"merchant_emergency": true, // إغلاقُ/فتحُ متجرِ صنفٍ طارئاً (merchants.emergency_closed)
+	// ── حاقنُ الأعطال (المسار C) — انظر `qa_fault.go` ──
+	"fault_arm":    true, // تسليحُ عطبٍ على مسار (error_5xx | latency)
+	"fault_clear":  true, // نزعُ عطبٍ (أو الكلّ)
+	"fault_status": true, // قراءةُ المسلَّح
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -258,6 +262,7 @@ var qaStateSeed = map[string]bool{
 	"offer_off": true, "item_available": true, "item_price": true,
 	"section_active": true, "zone_active": true, "platform_pause": true,
 	"merchant_emergency": true,
+	"fault_arm":          true, "fault_clear": true, "fault_status": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -274,6 +279,11 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		ZoneID    string `json:"zone_id"`
 		ValueBool bool   `json:"value_bool"`
 		ValueInt  int64  `json:"value_int"`
+		// حاقنُ الأعطال:
+		Path  string `json:"path"`  // نقطةُ النهاية (r.URL.Path) المستهدفة
+		Mode  string `json:"mode"`  // error_5xx | latency
+		Ms    int    `json:"ms"`    // للتأخير
+		Count int    `json:"count"` // عددُ الإصابات (افتراضُه ١)
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -311,6 +321,20 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaPlatformPause(w, r, req.ValueBool)
 		case "merchant_emergency":
 			s.qaSetMerchantEmergency(w, r, req.ItemID, req.ValueBool)
+		case "fault_arm":
+			if req.Path == "" || (req.Mode != qaFaultError5xx && req.Mode != qaFaultLatency) {
+				s.respondErr(w, errValidation)
+				return
+			}
+			qaFaults.arm(req.Path, req.Mode, req.Ms, req.Count)
+			s.logger.Warn("QA fault armed (staging-only)", "path", req.Path, "mode", req.Mode, "ms", req.Ms, "count", req.Count)
+			httpx.JSON(w, http.StatusOK, map[string]any{"armed": req.Path, "mode": req.Mode, "ms": req.Ms, "count": req.Count})
+		case "fault_clear":
+			qaFaults.clear(req.Path) // فارغٌ ⇒ الكلّ
+			s.logger.Warn("QA fault cleared (staging-only)", "path", req.Path)
+			httpx.JSON(w, http.StatusOK, map[string]any{"cleared": req.Path, "armed_now": qaFaults.snapshot()})
+		case "fault_status":
+			httpx.JSON(w, http.StatusOK, map[string]any{"armed": qaFaults.snapshot()})
 		}
 		return
 	}
