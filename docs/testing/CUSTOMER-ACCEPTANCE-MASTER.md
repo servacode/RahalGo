@@ -513,7 +513,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-017 | Market | Tap the same section repeatedly | Signed-in test customer · Staging · SM-A525F · valid default address | Tap ×5 | No spinner left | Repeat-tap same section x5 -> items shown, no stuck spinner | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-09-018 | Market | Scroll long content | Dense section (30–50 items) | Fling to end | Smooth; all items reachable | CARRIED: dense-section scroll needs a 30-50 item fixture | `BLOCKED` | - | online | — | — | — | — | Needs dense fixture (PF note) |
 | CUST-09-019 | Market | Return after backgrounding | Signed-in test customer · Staging · SM-A525F · valid default address | Background 3 min; return | Refreshed only if stale; no pile-up | CARRIED: return-after-3min-backgrounding refresh-if-stale needs a timed wait | `BLOCKED` | - | online | — | — | — | — | AB-36 |
-| CUST-09-020 | Market | Server retires a section while it is open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin deactivates the open section | Refresh | Section leaves the rail; screen moves to a valid section | CARRIED: server retires an open section (Admin deactivate + refresh) -> needs Admin | `BLOCKED` | - | online | active=false | — | — | — | — |
+| CUST-09-020 | Market | Server retires a section while it is open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin deactivates the open section | Refresh | Section leaves the rail; screen moves to a valid section | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.31): تعطيلُ قسم «شاورما» (بذّار QA) ⇒ بعد الإنعاش تختفي رقاقتُه من الرفّ والشاشةُ تنتقل إلى قسمٍ صالح (مشاوي)؛ استُعيد | `PASS` | - | online | active=false | — | §40.31 | — | Unblocked via section_active seeder (§40.31) 2026-09-22 |
 | CUST-09-021 | Market | Server disables an item while visible | Signed-in test customer · Staging · SM-A525F · valid default address · Admin marks item unavailable | Refresh | Card turns unavailable | PASS — شاهدٌ حيّ (§40.31): item_available=false (بذّار QA) ⇒ بطاقةُ الصنف تحمل «غير متوفر» ولا تختفي، والتفصيلُ العامّ available=false؛ استُعيد | `PASS` | - | online | — | — | §40.31 | — | Unblocked by the QA state seeder (§40.31) 2026-09-22 |
 | CUST-09-022 | Market | Server changes product data while open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin edits name/price | Refresh | New data shown | CARRIED: server changes product data while open (Admin edit) -> needs Admin | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-09-023 | Market | Refresh produces authoritative server state | Signed-in test customer · Staging · SM-A525F · valid default address | Compare UI to SoT after refresh | Equal | Refresh -> UI == server SoT: sections/counts/order match platform_sections; item price==SoT (CUST-DEF-005) | `PASS` | SM-A525F+API | online | SoT query | — | — | — | — |
@@ -1260,7 +1260,7 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 18 | 0 | 14 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 18 | 0 | 9 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 19 | 0 | 8 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 20 | 0 | 16 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **92** | **9** | **409** | **0** | **68** |
+| | **Total** | **578** | **474** | **104** | **92** | **9** | **410** | **0** | **67** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
