@@ -98,6 +98,146 @@ func (s *Server) qaZoneReopen(w http.ResponseWriter, r *http.Request, zoneID str
 	})
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **فتحُ متجرِ QA الآن حتميّاً — عكوسٌ** (٢٠٢٦-٠٩-٢٣، قرارُ المالك)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **لا قبولَ متجرٍ عامّ.** يفتح متجرَ صنفٍ بعينه على التجهيز ليُنشأ طلبٌ عاديٌّ
+// خارجَ دوامه (14-011، 21-006/007، وحالاتُ السلّة). **الفتحُ = حذفُ صفوف
+// `merchant_hours` (بلا صفوفٍ ⇒ مفتوحٌ دائماً، `OpenNowSQL`) + رفعُ الإغلاق
+// الطارئ** — **يحفظ السابقَ في الذاكرة ويعيده.** **لا أثرَ ماليّ.**
+
+type qaMHRow struct {
+	dow         int
+	closed      bool
+	openT, clsT string // HH:MM:SS
+}
+
+type qaSavedMerchant struct {
+	emergency bool
+	hours     []qaMHRow
+}
+
+var (
+	qaMerchantMu    sync.Mutex
+	qaMerchantSaved = map[string]qaSavedMerchant{}
+)
+
+// qaMerchantFromItem **معرّفُ المتجر واسمُه وحالُه من صنفٍ.**
+func (s *Server) qaMerchantFromItem(w http.ResponseWriter, r *http.Request, itemID string) (id, name, status string, ok bool) {
+	if !isUUID(itemID) {
+		s.respondErr(w, errValidation)
+		return "", "", "", false
+	}
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT m.id::text, m.name, m.status
+		FROM merchants m JOIN menu_items i ON i.merchant_id = m.id
+		WHERE i.id = $1::uuid`, itemID).Scan(&id, &name, &status)
+	if err != nil {
+		s.respondErr(w, err)
+		return "", "", "", false
+	}
+	return id, name, status, true
+}
+
+// qaMerchantOpen **يفتح متجرَ الصنف الآن** — يحفظ الجدولَ والإغلاقَ الطارئ.
+func (s *Server) qaMerchantOpen(w http.ResponseWriter, r *http.Request, itemID string) {
+	ctx := r.Context()
+	mid, name, status, ok := s.qaMerchantFromItem(w, r, itemID)
+	if !ok {
+		return
+	}
+	var emergency bool
+	if err := s.pg.QueryRow(ctx, `SELECT emergency_closed FROM merchants WHERE id = $1::uuid`, mid).Scan(&emergency); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	rows, err := s.pg.Query(ctx,
+		`SELECT day_of_week, closed, open_time::text, close_time::text FROM merchant_hours WHERE merchant_id = $1::uuid`, mid)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	saved := qaSavedMerchant{emergency: emergency}
+	for rows.Next() {
+		var h qaMHRow
+		if err := rows.Scan(&h.dow, &h.closed, &h.openT, &h.clsT); err != nil {
+			rows.Close()
+			s.respondErr(w, err)
+			return
+		}
+		saved.hours = append(saved.hours, h)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	qaMerchantMu.Lock()
+	qaMerchantSaved[mid] = saved
+	qaMerchantMu.Unlock()
+
+	// **الفتح**: حذفُ الجدول (⇒ مفتوحٌ دائماً) ورفعُ الطارئ.
+	if _, err := s.pg.Exec(ctx, `DELETE FROM merchant_hours WHERE merchant_id = $1::uuid`, mid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(ctx, `UPDATE merchants SET emergency_closed = false WHERE id = $1::uuid`, mid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA merchant forced open (staging-only)", "merchant", mid, "prev_emergency", emergency, "prev_hours", len(saved.hours), "status", status)
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"merchant_id": mid, "name": name, "status": status,
+		"opened": true, "previous_emergency": emergency, "previous_hours": len(saved.hours),
+	})
+}
+
+// qaMerchantRestore **يعيد جدولَ المتجر والإغلاقَ الطارئ المحفوظَين.**
+func (s *Server) qaMerchantRestore(w http.ResponseWriter, r *http.Request, itemID string) {
+	ctx := r.Context()
+	mid, _, _, ok := s.qaMerchantFromItem(w, r, itemID)
+	if !ok {
+		return
+	}
+	qaMerchantMu.Lock()
+	saved, had := qaMerchantSaved[mid]
+	delete(qaMerchantSaved, mid)
+	qaMerchantMu.Unlock()
+	if !had {
+		httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "restored": false, "note": "nothing saved"})
+		return
+	}
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `DELETE FROM merchant_hours WHERE merchant_id = $1::uuid`, mid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for _, h := range saved.hours {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO merchant_hours (merchant_id, day_of_week, closed, open_time, close_time)
+			VALUES ($1::uuid, $2, $3, $4::time, $5::time)`, mid, h.dow, h.closed, h.openT, h.clsT); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	if _, err := tx.Exec(ctx, `UPDATE merchants SET emergency_closed = $2 WHERE id = $1::uuid`, mid, saved.emergency); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA merchant restored (staging-only)", "merchant", mid, "hours", len(saved.hours), "emergency", saved.emergency)
+	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "restored": true, "hours": len(saved.hours)})
+}
+
 // qaMinVersion **يضبط الحدَّ الأدنى لنسخة الزبون** (`app.min_version.customer`)
 // لشهود 426 `update_required`. **يُرجع السابقَ للاستعادة** — نداءٌ ثانٍ بقيمته
 // يُعيد الحال. **إعدادٌ رقميٌّ لا يقلبه `qa/setting` المنطقيّ.**
