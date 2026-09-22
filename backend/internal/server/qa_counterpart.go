@@ -130,6 +130,18 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 				s.respondErr(w, err)
 				return
 			}
+		case "picked_up":
+			// **المخصّصُ يحتاج اتّفاقَ السعر قبل الاستلام** (وإلّا `custom_not_agreed`).
+			// **قيمٌ رمزيّةٌ حتميّة، والمخصّصُ النقديُّ لا يُسوّى** (`settle` تخرج قبل
+			// قراءة الأعمدة) **فلا عمولةَ ولا مستحقَّ متجرٍ ولا خزينةَ ولا قيدَ صندوق.**
+			if err := s.orders.AgreeCustom(ctx, orderID, driverID, 5000, 1000); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			if _, err := s.orders.Transition(ctx, driverID, []string{"driver"}, orderID, to, "QA advance"); err != nil {
+				s.respondErr(w, err)
+				return
+			}
 		default:
 			// picked_up / on_the_way / at_dropoff / delivered — فعلُ السائق.
 			if _, err := s.orders.Transition(ctx, driverID, []string{"driver"}, orderID, to, "QA advance"); err != nil {
