@@ -698,8 +698,8 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-005 | Orders | Order status matches backend | Signed-in test customer · Staging · SM-A525F · valid default address | Compare chip with SoT | Equal | PASS — emulator: order status shown («بانتظار القبول») = backend new-order status (app fetches from server) | `PASS` | — | online | orders.status | — | — | — | — |
 | CUST-14-006 | Orders | Refresh order state | Signed-in test customer · Staging · SM-A525F · valid default address | Pull/return to tab | Fresh status | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-14-007 | Orders | Realtime state update | Signed-in test customer · Staging · SM-A525F · valid default address · order progressing (ops/driver on a disposable order) | Keep طلباتي open | Status changes without manual refresh (WebSocket → Refresh.bump) | — | `NOT_TESTED` | — | online | — | — | — | — | Never progress #1050 |
-| CUST-14-008 | Orders | No duplicate rows after refresh/reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Reconnect ×3 | No duplicates | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-14-008 | Orders | No duplicate rows after refresh/reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Reconnect ×3 | No duplicates | PASS — شاهدٌ حيّ (§40.30): `/my/orders` (٣٤ طلباً) قراءاتٌ متكرّرةٌ بلا معرّفٍ مكرّر؛ ودمجُ `mergeById` مشهودٌ حيّاً في ترقيم 14-026 (§40.29) | `PASS` | — | online | — | — | §40.30 | `OrdersMergeTest` | Live server + mergeById live-witnessed 2026-09-22 |
+| CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | PASS — شاهدٌ حيّ (§40.30): `/my/orders` يعيد الأحدثَ أوّلاً (1113,1112,1111,… تنازليّاً) مطابقاً `created_at DESC` في المصدر | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-14-010 | Orders | Pending state | Disposable order pending | Read card | Stage bar at pending; cancel shown while window open | PASS — emulator: new order shows pending state «بانتظار القبول» | `PASS` | — | online | — | — | — | — | — |
 | CUST-14-011 | Orders | Accepted state | Order accepted | Read card | Stage accepted | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-14-012 | Orders | Dispatch/driver assignment | Driver assigned | Read card | Driver name shown; no driver phone | — | `NOT_TESTED` | — | online | — | — | — | — | D21 fixed: no driver phone in payload. PC-12: no push on `assigned` |
@@ -842,9 +842,9 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | — | `NOT_TESTED` | — | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
 | CUST-16-038 | API | API 401 while network is available | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset on test account) then act | Refresh fails → explicit re-login; no loop | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-16-039 | API | API 403 | Signed-in test customer · Staging · SM-A525F | Hit a forbidden action (e.g. blocked account)  | Explicit denial message | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-16-040 | API | API 409 | Signed-in test customer · Staging · SM-A525F | Trigger a conflict (e.g. address limit / state conflict) | Explicit conflict message | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-16-040 | API | API 409 | Signed-in test customer · Staging · SM-A525F | Trigger a conflict (e.g. address limit / state conflict) | Explicit conflict message | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تجاوزُ سقف العناوين (`customers.max_addresses`=٤) ⇒ 409 `too_many_addresses`؛ نُظّفت العناوينُ الزائدة | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-16-041 | API | API 422 | Signed-in test customer · Staging · SM-A525F | Trigger 422 if any customer path returns it | Explicit message | — | `NOT_TESTED` | — | online | — | — | — | — | Audit (§38) states which customer paths return 422 |
-| CUST-16-042 | API | API 429 if applicable | Signed-in test customer · Staging · SM-A525F | Exceed OTP/login rate limit | Explicit 'try later'; recovers after window | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-16-042 | API | API 429 if applicable | Signed-in test customer · Staging · SM-A525F | Exceed OTP/login rate limit | Explicit 'try later'; recovers after window | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تكرارُ `POST /auth/signup/request` لرقمٍ تجريبيّ ⇒ 429 `rate_limited` بعد ٣ محاولات (يستردّ بعد النافذة) | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-16-043 | API | API 500 | Signed-in test customer · Staging · SM-A525F | Simulated 5xx (harness) | Explicit recoverable failure; no fake success | — | `NOT_TESTED` | — | online | — | — | — | — | Needs a fault-injection harness — to be approved |
 | CUST-16-044 | API | Temporary API outage then recovery | Signed-in test customer · Staging · SM-A525F | Stop reaching API 60 s then restore | Failure then automatic/Retry recovery | — | `NOT_TESTED` | — | outage | — | — | — | — | Staging API must not be stopped without Owner approval — prefer client-side block |
 | CUST-16-045 | API | True empty state distinguishable from network/API failure | Genuinely empty geography vs offline | Compare both screens | Different texts: empty = «نعمل حاليًا على إضافة المتاجر والمنتجات»; failure = offline/error | PASS — تمييزُ الفراغ الحقيقيّ عن العطب: بحثٌ فارغ «لا نتائج لبحثك» (بلا إعادة) مقابل الانقطاع «لا يوجد اتصال»+«أعد المحاولة» (محاكي 2026-09-21) | `PASS` | — | online / offline | — | — | — | — | L1-018 + L1-019 evidence |
@@ -1266,19 +1266,19 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 7 | 0 | 22 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 1 | 0 | 19 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 11 | 3 | 12 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 2 | 0 | 12 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 19 | 0 | 26 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 17 | 0 | 28 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 13 | 0 | 8 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 3 | 0 | 26 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **108** | **9** | **388** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **104** | **9** | **392** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
