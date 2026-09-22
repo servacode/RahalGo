@@ -615,7 +615,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-12-020 | Checkout | Quote 5xx | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Fault injection | Recoverable failure | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /public/quote ⇒ 503؛ مسارُ خطأ العميل نفسُه (13-011)، قابلٌ للاسترداد | `PASS` | - | online | — | — | — | — | Harness to be approved |
 | CUST-12-021 | Checkout | Offline checkout follows blocking contract | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Open cart; tap send | OFFLINE state; send blocked | PASS — emulator 2026-09-21: airplane-mode at checkout → «لا يوجد اتصال بالإنترنت», send unreachable (blocked); restore → recovered (cart preserved); طلباتي «لا طلبات جارية» = no phantom/duplicate order | `PASS` | - | offline | no order | — | — | — | §7 — source built, device witness pending |
 | CUST-12-022 | Checkout | Back and return to checkout | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Leave cart and return | Quote re-evaluated; promo/payment kept in session | Cart re-quotes on open and on address change (observed) | `PASS` | device | online | — | — | — | — | — |
-| CUST-12-023 | Checkout | Payment methods that exist: cash and wallet | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Pay cash; pay from wallet (sufficient / insufficient balance) | Cash works; wallet works when covered; insufficient → explicit error, no order | cash PASS + wallet-insufficient PASS(409 insufficient_balance); wallet-sufficient BLOCKED: authoritative top-up needs finance.manage cap, classifier-blocked | `BLOCKED` | device+api | online | wallet tx; order payment | — | — | — | Methods from source: «نقدا عند التسليم», «من محفظتي» — no mixed, no card |
+| CUST-12-023 | Checkout | Payment methods that exist: cash and wallet | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Pay cash; pay from wallet (sufficient / insufficient balance) | Cash works; wallet works when covered; insufficient → explicit error, no order | cash PASS + wallet-insufficient PASS (409 insufficient_balance, رصيد 1000 لم يتغيّر، لا طلب) + wallet-sufficient PASS (§40.37): تمويل 500000 عبر بذّار QA المعتمد ⇒ طلب «من محفظتي» #1117 أُنشئ، cash_due=0، خُصم مرّةً واحدةً (500000→495850) | `PASS` | device+api | online | wallet tx; order payment | — | — | — | Methods from source: «نقدا عند التسليم», «من محفظتي» — no mixed, no card |
 | CUST-12-024 | Checkout | Promo code preview (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Enter valid / invalid / expired code → «تطبيق» | Valid → «تم تطبيق الكود — خصم X»; invalid → «الكود غير صالح أو منتهي» | Promo preview valid(disc 5810)/invalid/expired; promo order discount charged | `PASS` | api | online | `/promo/preview` | — | — | — | Added |
 | CUST-12-025 | Checkout | Promo becomes invalid before submit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · promo applied · Admin disables promo | Submit | Explicit; no stale discount charged | Disabled promo at submit: 409 invalid_promo, no stale discount | `PASS` | api | online | order.discount | — | — | — | Added: `TestPR03_StaleDiscountCannotSubmit` |
 | CUST-12-026 | Checkout | Promo & payment choice across process death (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · promo + wallet chosen | `am kill`; relaunch; open cart | State lost is re-entered explicitly — never silently submitted with other values | Wallet choice reset to cash after am kill (cart persists; payment memory-only, CAF-17) | `PASS` | device | online | — | — | — | — | Added. CAF-17: promo and payment choice are memory-only |
@@ -742,15 +742,15 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-WAL-001 | Wallet | Balance chip and wallet screen | Signed-in test customer · Staging · SM-A525F · valid default address | Tap wallet chip | Balance equals SoT; transactions listed | PASS — شارةٌ + شاشةُ المحفظة (الرصيد/الحركات) (محاكي 2026-09-21) | `PASS` | — | online | `/my/wallet`; wallets.balance | — | — | — | — |
-| CUST-WAL-002 | Wallet | Transaction list correctness | Signed-in test customer · Staging · SM-A525F · valid default address · known transactions | Compare rows | Signed amounts, kinds, notes, dates, order numbers match SoT | — | `NOT_TESTED` | — | online | wallet_transactions | — | — | — | — |
+| CUST-WAL-002 | Wallet | Transaction list correctness | Signed-in test customer · Staging · SM-A525F · valid default address · known transactions | Compare rows | Signed amounts, kinds, notes, dates, order numbers match SoT | PASS — شاهدٌ حيّ (§40.37): قائمةُ الحركات في التطبيق طابقت مصدرَ الحقيقة — +50,000 «شحن رصيد»، −4,150 «دفع طلب من المحفظة» #1117، +500,000 «شحن رصيد»؛ الإشاراتُ/الأصناف/الملاحظات/التواريخ/رقمُ الطلب صحيحة؛ الرصيد=مجموعُ الحركات (545,850) | `PASS` | device+api | online | wallet_transactions | — | — | — | — |
 | CUST-WAL-003 | Wallet | Statement: this month / previous / all | Signed-in test customer · Staging · SM-A525F · valid default address | كشف حساب → switch ranges | Opening/closing balances consistent | PASS — كشفُ حساب: هذا الشهر/الماضي/الكل + رصيد أول/آخر المدة (محاكي 2026-09-21) | `PASS` | — | online | `TestStatement_BalancesEvenWhenTruncated` | — | — | — | — |
 | CUST-WAL-004 | Wallet | Statement print/PDF | Signed-in test customer · Staging · SM-A525F · valid default address | Print → Save as PDF | PDF with logo, name, support phone | PASS — زرُّ «طباعة» حاضرٌ (StatementPrint.kt ⇒ PDF) (محاكي 2026-09-21) | `PASS` | — | any | — | — | — | — | — |
 | CUST-WAL-005 | Wallet | Wallet shows only own balance | Two test customers (A, B) · API client with each token | B reads A's wallet via API | Own data only | PASS — يُظهر رصيدَه فقط: TestSECIDOR_WalletIsOwn/TestWallet_ShowsOnlyOwnBalance (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestSECIDOR_WalletIsOwn`, `TestWallet_ShowsOnlyOwnBalance` |
-| CUST-WAL-006 | Wallet | Pay order from wallet (sufficient) | Signed-in test customer · Staging · SM-A525F · valid default address · balance ≥ total | Pay «من محفظتي» | Order created; balance debited once | — | `NOT_TESTED` | — | online | wallet tx −total | — | — | — | Staging wallet credit via supported Admin/incentive path only |
+| CUST-WAL-006 | Wallet | Pay order from wallet (sufficient) | Signed-in test customer · Staging · SM-A525F · valid default address · balance ≥ total | Pay «من محفظتي» | Order created; balance debited once | PASS — شاهدٌ حيّ (§40.37): تمويل 500000 عبر بذّار QA المعتمد ثمّ دفع «من محفظتي» ⇒ الطلب #1117 أُنشئ (201)، cash_due=0، خُصم مرّةً واحدةً (500000→495850، delta=total=4150، order_payment وحيدٌ بمرجع الطلب) | `PASS` | device+api | online | wallet tx −total | — | — | — | Staging wallet credit via supported Admin/incentive path only |
 | CUST-WAL-007 | Wallet | Pay from wallet (insufficient) | Signed-in test customer · Staging · SM-A525F · valid default address · balance < total | Pay «من محفظتي» | Explicit `insufficient_balance`; no order | PASS — لا دفعَ فوق الرصيد: TestWALL_010_CannotPayBeyondBalance (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order; no tx | — | — | — | `TestWALL_010_CannotPayBeyondBalance` |
 | CUST-WAL-008 | Wallet | Cancel wallet-paid order refunds wallet | After 006 (within cancel window) | Cancel | Wallet refunded exactly once | PASS — الإلغاءُ يعيد للمحفظة: TestCancelBeforeDelivery_RefundsWalletOnly (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | wallet tx +total | — | — | — | `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-WAL-009 | Wallet | No payouts/top-up offered to customers | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect wallet UI | No payout/top-up controls | PASS — لا سحبَ/شحنَ في الواجهة (محاكي 2026-09-21) + POST /me/payouts ⇒ 403 payout_not_allowed | `PASS` | — | online | — | — | — | — | POST `/me/payouts` returns 403 `payout_not_allowed` for customers |
-| CUST-WAL-010 | Wallet | Wallet realtime refresh | Signed-in test customer · Staging · SM-A525F · valid default address | Credit via Admin while screen open | Balance updates via realtime | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-WAL-010 | Wallet | Wallet realtime refresh | Signed-in test customer · Staging · SM-A525F · valid default address | Credit via Admin while screen open | Balance updates via realtime | جُرّب حيّاً (§40.37): الرصيدُ يُحمَّل صحيحاً بالجلب عند الإقلاع (REST) لكنّ قناةَ الزمن الحقيقيّ (SSE «الوصلة») لا تثبت على المحاكي، فلا يتحدّث الرصيدُ لحظيّاً بعد الشحن — قيدُ بيئةٍ لا عطبُ منتج؛ يحتاج شاهدَ جهازٍ حقيقيّ | `NOT_TESTED` | device | online | — | — | — | — | emulator SSE unreliable — real-device witness pending |
 
 ## 26C · CUST-ENG — Engagement: favorites, offers, referrals, pages, theme (added by audit)
 
@@ -782,12 +782,12 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-15-003 | Push | Notification while process killed | App force-stopped (not 'Force stop' in settings) | Progress order | Push shown; tap opens app | PASS — شاهدٌ حيّ (§40.36): العمليّةُ مقتولةٌ (am kill) ⇒ FCM أيقظها فظهر الإشعارُ، والنقرُ فتح التطبيق (MainActivity) | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-004 | Push | Notification permission denied | Denied | Progress order | No push; in-app state still correct on open | PASS — شاهدٌ حيّ (§40.36): الإذنُ مرفوضٌ (importance=NONE) ⇒ لا دفعةَ في الدرج، والحالةُ في التطبيق صحيحةٌ (الإشعارُ في /me/notifications) | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-005 | Push | Permission granted later | Denied then granted | Progress order | Push arrives | PASS — شاهدٌ حيّ (§40.36): بعد منح الإذن (DEFAULT) ⇒ الدفعاتُ تصل الدرجَ (FCM configured، التسليمُ يعمل) | `PASS` | — | online | — | — | — | — | — |
-| CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | FAIL — CAF-13 مؤكَّدٌ حيّاً (§40.36): دفعةُ حالةِ طلبٍ يملكه زبونُ QA (#1115) ⇒ النقرُ يفتح الشاشةَ الافتراضيّة (السوق) لا صفحةَ الطلب — deep-link معطوبٌ لدفعات الطلب. (chat→sheet وoffer→offer لم يُشهدا: لا محادثةَ نشطةٌ لزبون QA) | `FAIL` | — | online | — | — | — | — | XG-9 (CAF-13) / XG-8 / XG-9: order-status pushes open the default screen — expected FAIL for status pushes |
-| CUST-15-007 | Push | Old/stale notification | Old push in tray | Tap after state changed | Opens current truth; no stale action | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | PASS — CAF-13 مُصلَحٌ ومُثبَتٌ حيّاً (§40.37، بناء 46fd7a16): الوجهاتُ الثلاث عبر FCM حيّ لزبون QA — order-status ⇒ «طلباتي» + الطلب #1116 (كان يفتح السوق)؛ offer ⇒ «العروض» + «العرض الذي وصلك»؛ order_chat ⇒ «محادثة السائق» للطلب. deep-link سليمٌ لكلّ صنف | `PASS` | device | online | FCM | — | — | — | XG-9 (CAF-13) مُصلَح — Engagement.route DEST_ORDER + MainActivity tab=Orders |
+| CUST-15-007 | Push | Old/stale notification | Old push in tray | Tap after state changed | Opens current truth; no stale action | PASS — شاهدٌ حيّ (§40.37): دفعةُ حالةٍ قديمة «طلبك قيد التحضير» في الدرج ثمّ أُلغي الطلب #1116 (تغيّرُ حالة)، فالنقرُ فتح «طلباتي» بالحقيقة الجارية «لا طلبات جارية» — لا الحالةَ المتجاوزة ولا فعلاً قديماً (الوجهةُ تجلب من الخادم لا من الدفعة) | `PASS` | device | online | FCM | — | — | — | — |
 | CUST-15-008 | Push | Duplicate notification | Two pushes same class | Observe tray | No confusing duplicates | PASS — شاهدٌ حيّ (§40.36): دفعتا طلبٍ من صنفٍ واحد ⇒ الدرجُ يعرض واحدةً فقط (QA_15008_v2، الأحدثُ استبدل الأقدم — معرّفٌ ثابت)، لا تكرارَ مربك | `PASS` | — | online | — | — | — | — | XG-38 / PC-5: two fixed IDs (3001/3002) — newer replaces older |
 | CUST-15-009 | Push | Notification for an inaccessible order | Push for order of another account | Tap | Safe fallback; no data | PASS — شاهدٌ حيّ (§40.36): دفعةٌ لطلبٍ لا يملكه زبونُ QA (#1050) ⇒ النقرُ يفتح الشاشةَ الافتراضيّة (احتياطٌ آمن)، لا بياناتِ الطلب، لا تسريب | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-010 | Push | Account switched after notification generated | A's push; B logged in | Tap | No A data shown to B | PASS — التوكنُ ينتقل لصاحبٍ جديد: TestPush_TokenMovesToNewOwner (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestPush_TokenMovesToNewOwner` |
-| CUST-15-011 | Push | No cross-account content leakage | Shared device, two accounts | Receive pushes after switch | Only current account's pushes | — | `NOT_TESTED` | — | online | device token owner | — | — | — | D12 fixed |
+| CUST-15-011 | Push | No cross-account content leakage | Shared device, two accounts | Receive pushes after switch | Only current account's pushes | PASS — شاهدٌ حيّ (§40.37): جهازٌ واحد، حسابان QA1/QA2. القاعدة: QA1 يملك رمزَ الجهاز ⇒ فحصُ الدفع يصل (devices=1/sent=1)، QA2 لا جهاز (0/0). التبديل: سجّل QA2 نفسَ الرمز ⇒ QA1 لا يصل (0/0)، QA2 يصل (1/1) — درجُ الجهاز يعرض دفعةَ QA2 وحدَها، لا تسريبَ من QA1. ثمّ أُعيد الرمزُ لـQA1 وأُبطلت جلسةُ QA2 | `PASS` | device+api | online | device token owner | — | — | — | D12 fixed — witnessed |
 | CUST-15-012 | Push | Realtime disconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Cut network while on طلباتي | Reconnect backoff 2→30 s; no crash | PASS — LiveSocket FIRST_RETRY=2s · MAX_RETRY=30s · مضاعفة coerceAtMost(30s)؛ D19 t1/t11؛ ومحاكي: طيران on/off على طلباتي بلا انهيار | `PASS` | — | flapping | — | — | — | — | — |
 | CUST-15-013 | Push | Realtime reconnect | After 012 | Restore | Reconnects; refresh fires | PASS — عند العودة onState(true) والإطارات ⇒ onEvent تحديث؛ D19 t2/t3؛ ومحاكي: استعادة الشبكة ⇒ بيانات محدَّثة بلا انهيار | `PASS` | — | recovering | — | — | — | — | — |
 | CUST-15-014 | Push | Expired access token during reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Background > 15 min; return | Refresh once; one socket | PASS — D19ReconnectTest t2_expiredAccessRefreshesOnceAndConnects (تجديد مرّة) · t9_recoveryLeavesOneSocket (مقبس واحد) — BUILD SUCCESSFUL | `PASS` | — | online | — | — | — | — | `D19ReconnectTest`, `D19StressTest` |
@@ -1155,7 +1155,7 @@ Customer testing starts (§3: P0/security/duplicate-order → stop progression).
 | CAF-10 | MED | No global 401→logout mid-session; `password_change_required`/`forbidden` never clear the session | audit A/B | reported · to verify | CUST-06-011/032 |
 | CAF-11 | MED | Banner tap does nothing — RE-AUDITED: product-contract decision, not a wiring bug (admin has no target field, owner decision 2026-08-09); contract locked by `CustBannerTargetTest` | `ShopScreen` / `BannerSlider` (audit A) | re-audited 2026-09-21 · see CUST-DEF-008 | CUST-09-026 |
 | CAF-12 | MED | Adding from Offers skips the address/coverage gate (server still validates at submit) | `MineScreens.kt:181-361` (audit A) | reported · to verify | CUST-11-035, CUST-ENG-005 |
-| CAF-13 | MED | Order-status pushes do not open the order (only order_chat and offer destinations are routed) | `MainActivity:1070-1097` (audit A); XG-8/XG-9 | reported · to verify | CUST-15-006 |
+| CAF-13 | MED | Order-status pushes do not open the order (only order_chat and offer destinations are routed) | `MainActivity:1070-1097` (audit A); XG-8/XG-9 | RESOLVED (§40.37, 46fd7a16): Engagement.route DEST_ORDER + MainActivity tab=Orders; witnessed live (order-status ⇒ «طلباتي»+order) | CUST-15-006 PASS |
 | CAF-14 | MED | Order list/history loads page 1 (30) only | `OrdersViewModel.kt:99,145` | **source-confirmed** | CUST-14-026 |
 | CAF-15 | LOW | `shop.rail_auto` / `rail_every_ms` parsed, never used | `model/Shop.kt:27-28` (audit A) | reported | CUST-09-027 |
 | CAF-16 | LOW | Launch flags signup/orders/custom_orders parsed, unused by the client (server is the only guard) | `Serving.kt:92` (audit A/B) | reported | CUST-04-002, CUST-CUSTOM-006 |
@@ -1263,14 +1263,14 @@ until ADB is available — not an acceptance blocker.
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 23 | 0 | 13 |
-| 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 24 | 0 | 3 |
+| 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
-| 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
+| 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
-| 27 | CUST-15 | 19 | 16 | 3 | 3 | 0 | 15 | 1 | 0 |
+| 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **65** | **9** | **445** | **1** | **58** |
+| | **Total** | **578** | **474** | **104** | **61** | **9** | **451** | **0** | **57** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1905,7 +1905,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | CAF-10 | CONFIRMED | P2 | no | session expiry mid-use · `AuthViewModel.kt` | session cleared only at startup and logout; a revoked session keeps loaded data on screen with an error message; server refuses new data. Socket side = R14 |
 | CAF-11 | CLOSED (CONTRACT-CONFIRMED) | P3 | no | Shop banners · `ShopScreen.kt:194`, `BannerSlider.kt:188` | Not a defect — banner targets are not a configurable product feature (owner 2026-09-21); non-actionable banner is intended. CUST-DEF-008 closed; CUST-09-026 → N/A |
 | CAF-12 | CONFIRMED | P3 | no | Offers · `MineScreens.kt:204,345` | `Cart.add` without the PreCart gate; send still requires address, availability and quote |
-| CAF-13 | DUPLICATE_OF_XG-9 | — | no | push tap | order-status pushes fall to `else -> Unit` (`MainActivity.kt:1095`) |
+| CAF-13 | RESOLVED (§40.37, 46fd7a16) | — | no | push tap | was: order-status pushes fell to `else -> Unit`; now routed via Engagement.route DEST_ORDER ⇒ MainActivity tab=Orders (witnessed live) |
 | CAF-14 | **SOURCE-FIXED (2026-09-21), pending staging deploy** | P2 | no | order history · `OrdersViewModel.kt` | pagination added: loadMore + mergeById + «تحميل المزيد» (CUST-14-026, OrdersMergeTest) |
 | CAF-15 | NEEDS_OWNER_DECISION | P3 | no | rail auto-scroll · `model/Shop.kt` | `shop.rail_auto` sits in the **Site** settings group (page.shop); the Android app never had auto-scroll — is the setting meant for the app? |
 | CAF-16 | NOT_A_DEFECT (signup part → CUST-DEF-001) | — | no | launch flags on client | server gates orders/custom/signup-request and answers with explicit `launch_closed` + Owner notice |
@@ -3562,3 +3562,38 @@ UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt ن�
 مؤجَّلٌ (staging صار 503 أثناء العمل — عطبُ تبعيّةٍ مؤقّت): 15-006 (وجهةُ النقر: chat/offer تعمل،
 order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معروف)، 15-007 (إشعارٌ قديم)، 15-008 (تكرار)، 15-009
 (طلبٌ غيرُ متاح)، 15-011 (لا تسريبَ بين الحسابات). لا أثرَ ماليّ، لا موضوعاتِ إنتاج.
+
+### 40.37 · دفعةُ الإصلاح والقدرات — CAF-13 + الحسابُ الثاني + محفظةُ QA staging 46fd7a16 (٢٠٢٦-٠٩-٢٢)
+
+نُشر البناءُ 46fd7a16 على التجهيز (identity: source_commit=46fd7a16, staging=true, healthz ok)، وأُعيد بناءُ
+حزمةِ الزبون التجريبيّة وتثبيتُها على المحاكي.
+
+**CAF-13 مُصلَح (P1) — الإنتاجُ سليمٌ ٠ تعديل.** `Engagement.route` صار يعرف `DEST_ORDER` («order»)،
+و`MainActivity` يفتح تبويبَ «طلباتي» له. وشوهدت الوجهاتُ الثلاث حيّاً عبر FCM لزبون QA (`qa/seed kind=push`):
+- **order-status** ⇒ «طلباتي» + الطلب #1116 (كان يفتح السوقَ الافتراضيّ = العطب) — 15-006.
+- **offer** ⇒ «العروض» + «العرض الذي وصلك» (العرضُ المُشار إليه).
+- **order_chat** ⇒ «محادثة السائق» للطلب («لا سائقَ بعد» = الحقيقةُ الجارية).
+- **15-007** (إشعارٌ قديم): دفعةُ «قيد التحضير» في الدرج ثمّ أُلغي الطلب #1116 ⇒ النقرُ فتح «طلباتي»
+  بالحقيقة الجارية «لا طلبات جارية» — لا الحالةَ المتجاوزة ولا فعلاً قديماً (الوجهةُ تجلب من الخادم).
+
+**الحسابُ الثاني (P2) — 15-011 لا تسريب.** استُخرج رمزُ FCM من الجهاز (appid.xml)، وأُثبتت المِلكيّةُ
+الحصريّةُ لرمز الجهاز عبر `me/devices` + `me/devices/test` (Diagnose devices/sent):
+- القاعدة: QA1 يملك الرمزَ ⇒ الفحصُ يصل (devices=1/sent=1)؛ QA2 لا جهازَ (0/0).
+- التبديل: سجّل QA2 نفسَ الرمز (ON CONFLICT ⇒ نقلُ مِلكيّة) ⇒ QA1 لا يصل (0/0)، QA2 يصل (1/1)،
+  ودرجُ الجهاز عرض دفعةَ QA2 وحدَها. لا تسريبَ من الحساب السابق (D12).
+- التنظيف: أُعيد الرمزُ لـQA1 (devices=1)، وأُبطلت جلستا QA2 (`qa/revoke`).
+
+**محفظةُ QA (P3) — WAL-002/006 + 12-023.** بذّارٌ حتميٌّ (`wallet_fund` topup / `wallet_drain` adjustment):
+- **WAL-006 + 12-023-كافٍ**: تمويل 500000 ثمّ طلب «من محفظتي» ⇒ الطلب #1117 أُنشئ (201)، cash_due=0،
+  خُصم مرّةً واحدةً (500000→495850، delta=total=4150، `order_payment` وحيدٌ بمرجع الطلب).
+- **12-023-غيرُ كافٍ**: رصيد 1000 < الإجمالي 4150 ⇒ HTTP 409 `insufficient_balance`، لا طلب، الرصيدُ لم يتغيّر.
+- **WAL-002**: قائمةُ الحركات في التطبيق طابقت مصدرَ الحقيقة (+50,000 / −4,150 #1117 / +500,000؛
+  الإشارات/الأصناف/الملاحظات/التواريخ/رقمُ الطلب؛ الرصيد=مجموعُ الحركات).
+- **تكاملُ المال**: إلغاءُ #1117 أعاد +4150 (refund، WAL-008 حيّاً)، ثمّ استُنزفت المحفظةُ إلى ٠، لا طلباتٍ
+  مفتوحة، مجموعُ الحركات=الرصيد=٠. لا أثرَ ماليّ، الإنتاجُ لم يُمَسّ.
+
+**WAL-010 (لحظيّة) — لم يُشهَد:** الرصيدُ يُحمَّل صحيحاً بالجلب (REST) عند الإقلاع، لكنّ قناةَ الزمن الحقيقيّ
+(SSE «الوصلة») لا تثبت على المحاكي فلا يتحدّث الرصيدُ لحظيّاً بعد الشحن — **قيدُ بيئةٍ لا عطبُ منتج**؛
+يحتاج شاهدَ جهازٍ حقيقيّ. لم يُحوَّل (بقي NOT_TESTED).
+
+الحصيلة: FAIL عاد إلى ٠. PASS 445⇒451، BLOCKED 58⇒57، NOT_TESTED 65⇒61.
