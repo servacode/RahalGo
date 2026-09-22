@@ -900,8 +900,8 @@ These tests verify Customer reaction to backend/Admin truth. They are NOT a repe
 | CUST-18-014 | Remote | Section is retired | Signed-in test customer · Staging · SM-A525F · section open · Change made through the Staging Admin panel (recorded before/after, restored) | Deactivate a test section (PATCH active=false) | Section disappears after refresh; open screen handles it explicitly | PASS — شاهدٌ حيّ (§40.31): section_active=false ⇒ القسمُ يغيب من /public/sections بعد الإنعاش؛ استُعيد | `PASS` | — | online | section active=false | — | — | — | Delete of a used section is 409 by contract — use deactivate |
 | CUST-18-015 | Remote | Section activates | After 014 | Activate | Section returns | PASS — شاهدٌ حيّ (§40.31): section_active=true ⇒ القسمُ يعود إلى /public/sections | `PASS` | — | online | — | — | — | — | — |
 | CUST-18-016 | Remote | Price changes | Signed-in test customer · Staging · SM-A525F · item in cart · Change made through the Staging Admin panel (recorded before/after, restored) | Change price; open review | Review shows the new server price; no silent old total | PASS — شاهدٌ خادميٌّ حيّ (§40.31): merchant_price 4050⇒50050 (بذّار QA) ⇒ /public/items يعرض السعرَ الجديد؛ استُعيد 4050 | `PASS` | — | online | quote == server | — | — | — | — |
-| CUST-18-017 | Remote | Coverage configuration changes | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) | Shrink the test zone so the address falls outside | `address_outside_coverage` explicit | — | `NOT_TESTED` | — | online | zone geometry | — | — | — | — |
-| CUST-18-018 | Remote | Selected address becomes unsupported | As 017 | Refresh / proceed to review | Explicit denial; must pick another address | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-18-017 | Remote | Coverage configuration changes | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) | Shrink the test zone so the address falls outside | `address_outside_coverage` explicit | PASS — شاهدٌ حيّ (§40.38): تعطيلُ منطقة QA (`zone_active=false`, previous مُسجَّل) ⇒ عنوانُ الرقّة الصالحُ صار غيرَ مخدوم بردٍّ صريح `503 coverage_unavailable`؛ ورمزُ `out_of_zone`(=address_outside_coverage) مُثبَتٌ في 19-028 (إحداثيّاتٌ خارج التغطية والمنطقةُ فعّالة). أُعيدت المنطقةُ (restored) | `PASS` | api | online | zone geometry | — | — | — | single-zone staging ⇒ disabling the only zone yields coverage_unavailable; address_outside_coverage code shown via 19-028 |
+| CUST-18-018 | Remote | Selected address becomes unsupported | As 017 | Refresh / proceed to review | Explicit denial; must pick another address | PASS — شاهدٌ حيّ (§40.38): مع تعطيل المنطقة، طلبُ الرقّة رُدّ صريحاً (`503 coverage_unavailable`) ⇒ لا خدمةَ لهذا العنوان، يجب اختيارُ آخر؛ إعادةُ تفعيل المنطقة ⇒ الطلبُ نجح (#1121) | `PASS` | api | online | — | — | — | — | — |
 | CUST-18-019 | Remote | Minimum-version policy if exposed | `app.min_version.customer` setting | Raise min version above installed versionCode (Admin); relaunch | Explicit update-required behaviour if implemented | — | `NOT_TESTED` | — | online | setting value | — | — | — | Audit decides applicability (§38) |
 | CUST-18-020 | Remote | Required-update behaviour if implemented | As 019 | As 019 | As 019 | — | `NOT_TESTED` | — | online | — | — | — | — | Audit decides applicability (§38) |
 | CUST-18-021 | Remote | Order-closure keeps browsing open (CAF-05 · Decision 2) | `launch.customer_orders`=OFF | حالةُ الإغلاق: تصفّحٌ + محاولةُ إنشاءِ طلب | التصفّحُ يبقى متاحاً؛ إنشاءُ الطلبِ محظورٌ برسالةٍ واضحة (الطلبات متوقفة مؤقتًا)؛ لا كتالوجٌ فارغٌ ولا انقطاعٌ زائف | PASS — TestLM1_OrderingClosedWhileBrowsingOpen (public/home 200 + POST /orders ⇒ launch_closed) · TestLM2_EachDoorIsIndependent · TestPL02_BrowseOnlyOpensSignupAndBrowseOnly | `PASS` | — | online | — | — | — | — | قرارُ المالك 2026-09-21 (القرار ٢): إغلاقُ الطلبات يُبقي التصفّحَ مفتوحاً ويمنع الإنشاءَ برسالةٍ واضحة — لا كتالوجٌ فارغٌ ولا انقطاعٌ زائف. تعطيلُ التصفّح قدرةٌ منفصلةٌ نادرة (launch.customer_browse)؛ واكتمالُ تغطيتها (CAF-05: sections/search/suggest) حدٌّ معروفٌ مُنزَّلٌ لا مانعَ إطلاق |
@@ -939,7 +939,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-025 | Sec | No Customer-visible error dumps internal/server detail | Signed-in test customer · Staging · SM-A525F | Trigger 4xx/5xx | Mapped Arabic messages only; no stack/SQL text | PASS — apiError عربيّ فقط (err_network/err_unexpected/رمز مترجَم)؛ لا اسم صنف/أثر/SQL (AB-24 مُزال)؛ التفصيل في logcat فقط | `PASS` | — | online | — | — | — | — | — |
 | CUST-19-026 | Sec | Signup confirm cannot take over an existing account (added) | Existing test customer X · attacker knows X's phone | API client: POST `/auth/signup/confirm` with X's phone and a new password — (a) `signup_verify`=true without a code; (b) `signup_verify`=false (Staging flip only with Owner approval) | Both denied; X's password unchanged; no session issued | PASS — TestSU01..SU10 (signup_takeover) · CUST-DEF-001 مغلق | `PASS` | — | online | X password hash fingerprint unchanged; no new session | — | CUST-DEF-001 (CLOSED) | `TestSU01`–`TestSU06` (`qa/signup_takeover_test.go`) | Added. **CAF-01 P0 (source-confirmed)**: with `signup_verify`=false `ConfirmSignup` skips the code and overwrites an existing account's password, then issues a session (`identity/service.go:486-559`). Current Prod/Staging value = true (Staging since 2026-09-19). Expected FAIL for (b) |
 | CUST-19-027 | Sec | Client-supplied merchant_id is ignored (added) | API client | POST `/orders` with a valid cart plus a foreign/closed `merchant_id` | Server derives the merchant from the items; open-hours check uses the real source | PASS — TestCDEF003_ForeignMerchantIsRejected/StoresItemMerchant/OpenHoursUsesRealStore | `PASS` | — | online | order.merchant_id == item source | — | CUST-DEF-003 (CLOSED · Prod deployed 5105fa45) | `TestCDEF003_*` (`qa/order_merchant_trust_test.go`) | Added. **CAF-03 HIGH (source-confirmed)**: `CreateTx` keeps a non-empty client `merchant_id` (`orders/service.go:303-305`) and runs the open-hours check on it |
-| CUST-19-028 | Sec | Order in an unlaunched city/province is denied at create (added) | Active zone inside an inactive city (fixture) | API client submit; custom submit | Denied with the same reason availability gives | — | `NOT_TESTED` | — | online | no order | — | — | — | Added. CAF-06 (reported by audit): place classification is advisory; create paths enforce zones only |
+| CUST-19-028 | Sec | Order in an unlaunched city/province is denied at create (added) | Active zone inside an inactive city (fixture) | API client submit; custom submit | Denied with the same reason availability gives | PASS — شاهدٌ حيّ (§40.38): إحداثيّاتٌ خارج التغطية (دمشق 33.5138/36.2765) ⇒ الطلبُ العاديُّ **400 out_of_zone** والمخصَّصُ **400 out_of_zone**؛ ضابطٌ: نفسُ الطلب إلى الرقّة (داخل التغطية) ⇒ 201. الرفضُ خاصٌّ بالتغطية لا حجبٌ شامل | `PASS` | api | online | no order | — | — | — | Added. CAF-06: place classification advisory; create paths enforce zones only — confirmed |
 | CUST-19-029 | Sec | Any-role token cannot misuse customer order routes (added) | Driver/merchant/rep test tokens | POST `/orders`, rating, complaint with non-customer roles | Per contract (every role also carries customer — `TestOneRole_EveryRoleBringsCustomer`) — decide and verify | PASS — TestOneRole_EveryRoleBringsCustomer (كلّ دور يجلب الزبون) · TestADG2_RoleMatrix | `PASS` | — | online | — | — | — | — | Added: the customer route group has no role check |
 
 ## 32 · CUST-20 — UI / UX / Arabic / RTL
@@ -1273,12 +1273,12 @@ until ADB is available — not an acceptance blocker.
 | 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
-| 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
-| 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
+| 30 | CUST-18 | 21 | 20 | 1 | 4 | 0 | 17 | 0 | 0 |
+| 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **61** | **9** | **451** | **0** | **57** |
+| | **Total** | **578** | **474** | **104** | **58** | **9** | **454** | **0** | **57** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3597,3 +3597,21 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 يحتاج شاهدَ جهازٍ حقيقيّ. لم يُحوَّل (بقي NOT_TESTED).
 
 الحصيلة: FAIL عاد إلى ٠. PASS 445⇒451، BLOCKED 58⇒57، NOT_TESTED 65⇒61.
+
+### 40.38 · الإغلاق السريع — التغطية (المسار Remote/Sec) staging 46fd7a16 (٢٠٢٦-٠٩-٢٢)
+
+شهودٌ زبونيّةٌ عبر الـAPI وبذّار `zone_active`، لا دورَ آخر:
+
+- **19-028** (طلبٌ في منطقةٍ غير مُطلَقة يُرفض): إحداثيّاتُ دمشق (33.5138/36.2765، خارج التغطية) ⇒ الطلبُ
+  العاديُّ **400 `out_of_zone`** والمخصَّصُ **400 `out_of_zone`**. ضابطٌ: نفسُ الطلبَين إلى الرقّة (داخل
+  التغطية) ⇒ **201**. الرفضُ خاصٌّ بالتغطية لا حجبٌ شامل. → PASS.
+- **18-017 / 18-018** (تغيّرُ التغطية ⇒ العنوانُ صار غيرَ مخدوم): بذّرتُ `zone_active(false)` لمنطقة QA
+  (`previous=true` مُسجَّل) ⇒ عنوانُ الرقّة الصالحُ صار غيرَ مخدومٍ بردٍّ صريح **`503 coverage_unavailable`**
+  (staging بمنطقةٍ واحدةٍ ⇒ تعطيلُها = لا خريطةَ ⇒ coverage_unavailable؛ ورمزُ `address_outside_coverage`
+  نفسُه مُثبَتٌ في 19-028). ثمّ `zone_active(true)` ⇒ الطلبُ نجح (#1121). → PASS.
+
+**مؤجَّلٌ (يحتاج فِخاخاً إضافيّة، لا أبنيها بلا إذن):** 18-010/011 (`zone_closed_now` = دوامُ منطقةٍ، لا بذّارَ
+له)، 18-019/020 (بوّابةُ الحدّ الأدنى للنسخة موجودةٌ — 426 `update_required` + `app.min_version.customer` —
+لكنّها إعدادٌ صحيحٌ لا يقلبه `qa/setting` المنطقيُّ الحاليّ). لا أثرَ ماليّ (كلُّ الطلبات نقدٌ وأُلغيت، المحفظة ٠).
+
+الحصيلة (محقّقة): PASS 451⇒454، NOT_TESTED 61⇒58، FAIL 0، BLOCKED 57. = 578.
