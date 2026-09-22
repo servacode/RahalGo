@@ -264,8 +264,10 @@ var qaSeedAllowlist = map[string]bool{
 	"offer":          true, // عرضُ خصمٍ حيٌّ قصيرُ الأجل على صنفٍ (A/ENG-005)
 	"offer_off":      true, // إطفاءُ عرضٍ بذرناه (تنظيف)
 	// ── حالاتُ العتاد (المسار B) — كلُّها تُرجع القيمةَ السابقةَ للاستعادة ──
-	"item_available":     true, // إتاحةُ/إيقافُ صنف (menu_items.available)
-	"item_price":         true, // تغييرُ سعرِ صنف (menu_items.price)
+	"item_available": true, // إتاحةُ/إيقافُ صنف (menu_items.available)
+	"item_price":     true, // تغييرُ سعرِ صنف (menu_items.price)
+	"item_name":      true, // تغييرُ اسمِ صنف (menu_items.name) — شهودُ التفاف الاسم الطويل، عكوسٌ
+
 	"section_active":     true, // تفعيلُ/تعطيلُ قسم (platform_sections.active)
 	"zone_active":        true, // فتحُ/إغلاقُ منطقةِ تغطية (delivery_zones.active)
 	"platform_pause":     true, // إيقافٌ مؤقّتٌ للمنصّة (service_closure → temporarily_unavailable)
@@ -290,8 +292,8 @@ var qaSeedAllowlist = map[string]bool{
 var qaStateSeed = map[string]bool{
 	"offer_off": true, "item_available": true, "item_price": true,
 	"section_active": true, "zone_active": true, "platform_pause": true,
-	"merchant_emergency": true,
-	"fault_arm":          true, "fault_clear": true, "fault_status": true,
+	"merchant_emergency": true, "item_name": true,
+	"fault_arm": true, "fault_clear": true, "fault_status": true,
 	"fixture_dense": true, "fixture_dense_clear": true,
 	// دوامُ المنطقة والحدُّ الأدنى للنسخة لا تلزمها هويّةُ زبون QA:
 	"zone_close": true, "zone_reopen": true, "min_version": true,
@@ -325,6 +327,7 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		// النظيرُ/السائق (المسار B تكملة) + دوامُ المنطقة + الحدُّ الأدنى للنسخة:
 		OrderID string `json:"order_id"` // طلبُ زبون QA (order_advance / order_chat_send)
 		Target  string `json:"target"`   // الحالةُ الهدف (order_advance)
+		Name    string `json:"name"`     // اسمُ صنفٍ (item_name — شهودُ التفاف الاسم الطويل 20-005/10-013)
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -358,6 +361,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaSetBool(w, r, "delivery_zones", "active", req.ZoneID, req.ValueBool)
 		case "item_price":
 			s.qaSetItemPrice(w, r, req.ItemID, req.ValueInt)
+		case "item_name":
+			s.qaSetItemName(w, r, req.ItemID, req.Name)
 		case "platform_pause":
 			s.qaPlatformPause(w, r, req.ValueBool)
 		case "merchant_emergency":
@@ -670,6 +675,30 @@ func (s *Server) qaSetItemPrice(w http.ResponseWriter, r *http.Request, id strin
 	}
 	s.logger.Warn("QA staging item price set (staging-only)", "id", id, "previous", prev, "set", price)
 	httpx.JSON(w, http.StatusOK, map[string]any{"item_id": id, "previous": prev, "set": price})
+}
+
+// qaSetItemName **يضبط اسمَ صنفٍ** (menu_items.name) لشهود التفاف/قصّ الاسم
+// الطويل في الواجهة (20-005/10-013). **يُرجع الاسمَ السابقَ للاستعادة** — نداءٌ
+// ثانٍ بقيمته يُعيد الحال. **على التجهيز، على صنفٍ بمعرّفه، لا أثرَ ماليّ.**
+func (s *Server) qaSetItemName(w http.ResponseWriter, r *http.Request, id, name string) {
+	// **حدٌّ سخيٌّ يحرس من نصٍّ لا نهائيّ** — والطولُ المقصودُ للالتفاف نحو ٨٠–١٥٠ حرفاً.
+	if !isUUID(id) || name == "" || len([]rune(name)) > 300 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var prev string
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT name FROM menu_items WHERE id = $1::uuid`, id).Scan(&prev); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE menu_items SET name = $2 WHERE id = $1::uuid`, id, name); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA staging item name set (staging-only)", "id", id, "prev_len", len([]rune(prev)), "set_len", len([]rune(name)))
+	httpx.JSON(w, http.StatusOK, map[string]any{"item_id": id, "previous": prev, "set": name})
 }
 
 // qaSetMerchantEmergency يغلق/يفتح متجرَ صنفٍ طارئاً (merchants.emergency_closed)،
