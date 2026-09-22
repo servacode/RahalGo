@@ -255,6 +255,9 @@ var qaSeedAllowlist = map[string]bool{
 	"fault_arm":    true, // تسليحُ عطبٍ على مسار (error_5xx | latency)
 	"fault_clear":  true, // نزعُ عطبٍ (أو الكلّ)
 	"fault_status": true, // قراءةُ المسلَّح
+	// ── عتادُ كثافةٍ للأداء (المسار G) ──
+	"fixture_dense":       true, // بذرُ أصنافٍ كثيفةٍ (يستنسخ مراجعَ صنفٍ قالب)
+	"fixture_dense_clear": true, // حذفُ كلّ أصناف QA_DENSE
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -263,6 +266,7 @@ var qaStateSeed = map[string]bool{
 	"section_active": true, "zone_active": true, "platform_pause": true,
 	"merchant_emergency": true,
 	"fault_arm":          true, "fault_clear": true, "fault_status": true,
+	"fixture_dense": true, "fixture_dense_clear": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -335,6 +339,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			httpx.JSON(w, http.StatusOK, map[string]any{"cleared": req.Path, "armed_now": qaFaults.snapshot()})
 		case "fault_status":
 			httpx.JSON(w, http.StatusOK, map[string]any{"armed": qaFaults.snapshot()})
+		case "fixture_dense":
+			s.qaSeedDense(w, r, req.ItemID, req.Count)
+		case "fixture_dense_clear":
+			s.qaClearDense(w, r)
 		}
 		return
 	}
@@ -605,4 +613,53 @@ func (s *Server) qaPlatformPause(w http.ResponseWriter, r *http.Request, active 
 	}
 	s.logger.Warn("QA staging platform pause set (staging-only)", "previous", prev.Active, "set", active)
 	httpx.JSON(w, http.StatusOK, map[string]any{"previous_active": prev.Active, "previous_message": prev.Message, "set": active})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **عتادُ كثافةٍ للأداء — أصنافٌ كثيرةٌ في قسمٍ واحد** (المسار G)
+// ══════════════════════════════════════════════════════════════════════
+//
+// (عقدُ P-8: jank التمرير/التنقّل يلزمه ٣٠–٥٠ صنفاً.) **يستنسخ مراجعَ صنفٍ
+// قالبٍ قائم** (متجرُه وقسمُه ومنصّةُ قسمه) فلا يخترع بنيةً — أصنافُ QA_DENSE
+// معتمَدةٌ ومتاحةٌ لتظهر في السوق. **تُحذَف كلُّها بـ`fixture_dense_clear`.**
+
+// qaSeedDense يبذر `count` صنفاً باستنساخ مراجع صنفٍ قالب.
+func (s *Server) qaSeedDense(w http.ResponseWriter, r *http.Request, template string, count int) {
+	if !isUUID(template) {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if count <= 0 || count > 60 { // سقفٌ يحرس من كثافةٍ عرضيّة
+		count = 40
+	}
+	var psid *string
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT platform_section_id::text FROM menu_items WHERE id = $1::uuid`, template).Scan(&psid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	tag, err := s.pg.Exec(r.Context(), `
+		INSERT INTO menu_items
+		    (merchant_id, section_id, platform_section_id, name, price, merchant_price, available, approved, sort_order)
+		SELECT t.merchant_id, t.section_id, t.platform_section_id,
+		       'QA_DENSE_' || g::text, t.price, t.merchant_price, true, true, 9000 + g
+		  FROM menu_items t, generate_series(1, $2) g
+		 WHERE t.id = $1::uuid`, template, count)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA dense fixture seeded (staging-only)", "count", tag.RowsAffected(), "template", template)
+	httpx.JSON(w, http.StatusOK, map[string]any{"seeded": tag.RowsAffected(), "platform_section_id": psid, "template": template})
+}
+
+// qaClearDense يحذف كلَّ أصناف QA_DENSE — تنظيفٌ تامّ.
+func (s *Server) qaClearDense(w http.ResponseWriter, r *http.Request) {
+	tag, err := s.pg.Exec(r.Context(), `DELETE FROM menu_items WHERE name LIKE 'QA_DENSE_%'`)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA dense fixture cleared (staging-only)", "deleted", tag.RowsAffected())
+	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": tag.RowsAffected()})
 }
