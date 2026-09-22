@@ -287,9 +287,10 @@ var qaSeedAllowlist = map[string]bool{
 	"zone_reopen": true, // إعادةُ جدول المنطقة المحفوظ
 	"min_version": true, // ضبطُ app.min_version.customer (يُرجع السابق) لشهود update_required
 	// فتحُ متجرِ QA الآن حتميّاً (لطلبٍ عاديٍّ خارجَ الدوام) — عكوسٌ، بلا أثرٍ ماليّ:
-	"merchant_open":    true, // حذفُ merchant_hours + رفعُ الطارئ (يحفظ السابق)، بمعرّف صنفٍ
-	"merchant_restore": true, // إعادةُ جدول المتجر والإغلاق الطارئ المحفوظَين
-	"gov_active":       true, // قلبُ فعّاليّة محافظةِ نقطةٍ (province_not_supported، 08-007) — عكوسٌ
+	"merchant_open":      true, // حذفُ merchant_hours + رفعُ الطارئ (يحفظ السابق)، بمعرّف صنفٍ
+	"merchant_restore":   true, // إعادةُ جدول المتجر والإغلاق الطارئ المحفوظَين
+	"gov_active":         true, // قلبُ فعّاليّة محافظةِ نقطةٍ (province_not_supported، 08-007) — عكوسٌ
+	"merchant_hours_set": true, // ضبطُ جدول دوامِ متجرٍ من قائمةٍ صريحة (استعادةٌ دقيقة)
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -301,7 +302,7 @@ var qaStateSeed = map[string]bool{
 	"fixture_dense": true, "fixture_dense_clear": true,
 	// دوامُ المنطقة والحدُّ الأدنى للنسخة لا تلزمها هويّةُ زبون QA:
 	"zone_close": true, "zone_reopen": true, "min_version": true,
-	"merchant_open": true, "merchant_restore": true, "gov_active": true,
+	"merchant_open": true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -330,11 +331,12 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		Entity    string `json:"entity"`
 		EntityID  string `json:"entity_id"`
 		// النظيرُ/السائق (المسار B تكملة) + دوامُ المنطقة + الحدُّ الأدنى للنسخة:
-		OrderID string  `json:"order_id"` // طلبُ زبون QA (order_advance / order_chat_send)
-		Target  string  `json:"target"`   // الحالةُ الهدف (order_advance)
-		Name    string  `json:"name"`     // اسمُ صنفٍ (item_name — شهودُ التفاف الاسم الطويل 20-005/10-013)
-		Lat     float64 `json:"lat"`      // نقطةٌ (gov_active — حلُّ المحافظة، 08-007)
-		Lng     float64 `json:"lng"`
+		OrderID   string  `json:"order_id"` // طلبُ زبون QA (order_advance / order_chat_send)
+		Target    string  `json:"target"`   // الحالةُ الهدف (order_advance)
+		Name      string  `json:"name"`     // اسمُ صنفٍ (item_name — شهودُ التفاف الاسم الطويل 20-005/10-013)
+		Lat       float64 `json:"lat"`      // نقطةٌ (gov_active — حلُّ المحافظة، 08-007)
+		Lng       float64 `json:"lng"`
+		HoursJSON string  `json:"hours_json"` // جدولُ دوامِ متجرٍ صريح (merchant_hours_set — استعادةٌ دقيقة)
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -404,6 +406,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaMerchantRestore(w, r, req.ItemID)
 		case "gov_active":
 			s.qaGovActive(w, r, req.Lat, req.Lng, req.ValueBool)
+		case "merchant_hours_set":
+			s.qaMerchantHoursSet(w, r, req.ItemID, req.HoursJSON)
 		}
 		return
 	}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"sync"
 
@@ -236,6 +237,56 @@ func (s *Server) qaMerchantRestore(w http.ResponseWriter, r *http.Request, itemI
 	}
 	s.logger.Warn("QA merchant restored (staging-only)", "merchant", mid, "hours", len(saved.hours), "emergency", saved.emergency)
 	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "restored": true, "hours": len(saved.hours)})
+}
+
+// qaMerchantHoursSet **يضبط جدولَ دوامِ متجرِ صنفٍ من قائمةٍ صريحة** — لإعادة
+// جدولٍ أصليٍّ بدقّة (استعادةُ حالةٍ مؤقّتة). **الجدولُ يُمرَّر حرفيّاً** (يوم/فتح/
+// إغلاق/مغلق) فلا يُخترَع، **يستبدل الصفوفَ في معاملةٍ واحدة.** staging-only، بلا أثرٍ ماليّ.
+func (s *Server) qaMerchantHoursSet(w http.ResponseWriter, r *http.Request, itemID, hoursJSON string) {
+	ctx := r.Context()
+	mid, name, _, ok := s.qaMerchantFromItem(w, r, itemID)
+	if !ok {
+		return
+	}
+	type hrow struct {
+		Day    int    `json:"day"`
+		Open   string `json:"open"`
+		Close  string `json:"close"`
+		Closed bool   `json:"closed"`
+	}
+	var rows []hrow
+	if err := json.Unmarshal([]byte(hoursJSON), &rows); err != nil || len(rows) == 0 || len(rows) > 7 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `DELETE FROM merchant_hours WHERE merchant_id = $1::uuid`, mid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for _, h := range rows {
+		if h.Day < 0 || h.Day > 6 {
+			s.respondErr(w, errValidation)
+			return
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO merchant_hours (merchant_id, day_of_week, closed, open_time, close_time)
+			VALUES ($1::uuid, $2, $3, $4::time, $5::time)`, mid, h.Day, h.Closed, h.Open, h.Close); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA merchant hours set (staging-only)", "merchant", mid, "rows", len(rows))
+	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "name": name, "rows": len(rows)})
 }
 
 // qaGovActive **يقلب فعّاليّةَ محافظةٍ** (governorates.active) للنقطة المُعطاة —
