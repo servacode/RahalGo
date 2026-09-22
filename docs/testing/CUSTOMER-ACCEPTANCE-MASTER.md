@@ -568,12 +568,12 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-017 | Cart | Logout behaviour with existing cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Logout | Logout detaches the account's private cart (Owner decision §40.1-1); a guest cart only if explicitly scoped | A cart (1 item) → `lines`=`[]` on logout | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-11-018 | Cart | Different customer does not inherit previous cart | A's cart; A logs out | B logs in; open cart | B never sees A's cart (Owner decision §40.1-1) | B cart empty after A→B switch | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-11-019 | Cart | Change delivery address with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote re-fetched; notes for out-of-zone | CARRIED: change-address-with-populated-cart quote re-fetch (= CUST-07-021) needs an address switch + quote observation | `BLOCKED` | - | online | `/public/quote` | — | — | — | AB-03 guard |
-| CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin disables item | Open cart | Change listed; submit blocked until reviewed/removed | CARRIED: item-unavailable-while-in-cart needs an Admin disable + realtime | `BLOCKED` | - | online | — | — | — | — | P8-C3-027/036 |
+| CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart | Change listed; submit blocked until reviewed/removed | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ صراحةً «أحد الأصناف غير متوفر حاليا» (التطبيق)، والخادمُ يردّ 409، لا طلب؛ أُعيدت الإتاحة | `PASS` | device+api | online | — | — | — | — | P8-C3-027/036 |
 | CUST-11-021 | Cart | Price changes while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin changes price | Open cart | «cart changes» list + «متابعة بالقيم الحالية» | Price change while item in cart -> «cart changes» review + «متابعة بالقيم الحالية» (cross-ref CUST-DEF-005, real price change on order #1063) | `PASS` | SM-A525F/A14 vc12 | online | quote | — | — | — | P8-C3-028 |
 | CUST-11-022 | Cart | Item retired while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin retires item | Open cart; submit | Explicit; no order with retired item | CARRIED: item-retired-while-in-cart needs an Admin retire | `BLOCKED` | - | online | no order | — | — | — | — |
 | CUST-11-023 | Cart | Section becomes inactive while item in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin deactivates section | Open cart; submit | Explicit per contract | CARRIED: section-inactive-while-item-in-cart needs an Admin deactivate | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-11-024 | Cart | Zone closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · zone hours closed | Open cart | Zone-closed note; send disabled | CARRIED: zone-closes-with-cart note (server zone_closed_now proven CUST-08-011; cart-context render needs the combo) | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-11-025 | Cart | Platform ordering closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · platform closure | Open cart | Owner text; send disabled | CARRIED: platform-ordering-closes-with-cart (server launch_closed proven CUST-08-002; cart-context render needs the combo) | `BLOCKED` | - | online | — | — | — | — | `Serving` refreshed on cart open |
+| CUST-11-024 | Cart | Zone closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · zone hours closed | Open cart | Zone-closed note; send disabled | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ zone_close ⇒ الإرسالُ محجوبٌ (التطبيق يمنع، الخادمُ 503 zone_closed_now)، لا طلب؛ أُعيدت المنطقة | `PASS` | device+api | online | — | — | — | — | — |
+| CUST-11-025 | Cart | Platform ordering closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · platform closure | Open cart | Owner text; send disabled | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ platform_pause ⇒ الإرسالُ محجوبٌ (الخادمُ 503)، لا طلب؛ أُعيد التشغيل | `PASS` | device+api | online | — | — | — | — | `Serving` refreshed on cart open |
 | CUST-11-026 | Cart | Source becomes closed/unavailable | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · source store closed | Open cart | Explicit; per contract | PASS — شاهدٌ خادميٌّ حيّ (§40.31): مصدرٌ مغلقٌ (merchant_emergency) ⇒ POST /orders = 409 merchant_closed صريح؛ استُعيد | `PASS` | - | online | — | — | — | — | — |
 | CUST-11-027 | Cart | Server remains source of truth for orderability | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-submit via stale UI after server change | Server decision shown | Server remains source of truth for orderability: charge/availability decided server-side (cross-ref CUST-DEF-005 server-authoritative + CUST-08 availability precedence) | `PASS` | staging API | online | no invalid order | — | — | — | — |
 | CUST-11-028 | Cart | Offline blocks Add | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Tap + | Blocked with explanation | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): منقطعاً، نقرُ «أضف» ⇒ «تعذّر جلبُ الخيارات — تحقّق من الاتصال» (حجبٌ بشرح) | `PASS` | - | offline | — | — | — | — | §7 — not built (expected FAIL) |
@@ -701,7 +701,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-008 | Orders | No duplicate rows after refresh/reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Reconnect ×3 | No duplicates | PASS — شاهدٌ حيّ (§40.30): `/my/orders` (٣٤ طلباً) قراءاتٌ متكرّرةٌ بلا معرّفٍ مكرّر؛ ودمجُ `mergeById` مشهودٌ حيّاً في ترقيم 14-026 (§40.29) | `PASS` | — | online | — | — | §40.30 | `OrdersMergeTest` | Live server + mergeById live-witnessed 2026-09-22 |
 | CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | PASS — شاهدٌ حيّ (§40.30): `/my/orders` يعيد الأحدثَ أوّلاً (1113,1112,1111,… تنازليّاً) مطابقاً `created_at DESC` في المصدر | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-14-010 | Orders | Pending state | Disposable order pending | Read card | Stage bar at pending; cancel shown while window open | PASS — emulator: new order shows pending state «بانتظار القبول» | `PASS` | — | online | — | — | — | — | — |
-| CUST-14-011 | Orders | Accepted state | Order accepted | Read card | Stage accepted | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-14-011 | Orders | Accepted state | Order accepted | Read card | Stage accepted | PASS — شاهدٌ حيّ (§40.42): بذّار merchant_open فتح متجرَ QA، فأُنشئ طلبٌ عاديٌّ نقديّ (#1127)، وبذّار order_advance→accepted ⇒ بطاقةُ الزبون status/stage=accepted (kind=standard)؛ ثمّ أُلغي (محايدٌ ماليّاً، ما قبل التسوية) | `PASS` | api | online | — | — | — | — | via merchant_open + order_advance (normal, accepted-only) |
 | CUST-14-012 | Orders | Dispatch/driver assignment | Driver assigned | Read card | Driver name shown; no driver phone | PASS — شاهدٌ حيّ (§40.39): بذّار order_advance ساق طلبَ زبون QA المخصّصَ النقديَّ إلى assigned ⇒ البطاقةُ driver_assigned=true، driver_name=«عمر الشيخ»، **driver_phone=null** (لا هاتف) | `PASS` | api | online | — | — | — | — | D21 fixed: no driver phone in payload. PC-12: no push on `assigned` |
 | CUST-14-013 | Orders | On-the-way state | Disposable QA custom order | Read card | «في الطريق» | PASS — شاهدٌ حيّ (§40.39): order_advance ⇒ on_the_way، البطاقةُ status/stage=on_the_way مع اسم السائق بلا هاتف | `PASS` | api | online | — | — | — | — | witnessed on QA order (not #1050) |
 | CUST-14-014 | Orders | Delivered/completed | Disposable delivered order | Read card | Delivered; rate available | PASS — شاهدٌ حيّ (§40.39): order_advance ⇒ delivered، البطاقةُ status/stage=delivered والتقييمُ متاح | `PASS` | api | online | — | — | — | — | — |
@@ -980,7 +980,7 @@ Capture real measurements, not subjective statements. Do not set arbitrary pass 
 | CUST-21-004 | Perf | Section navigation responsiveness | Signed-in test customer · Staging · SM-A525F | Switch sections ×10; gfxinfo | Recorded jank % | PASS — قياسٌ حيّ (§40.35): تنقّلٌ بين الأقسام ×١٠ ⇒ jank مُسجَّل (p90/p99=34ms). لا عتبة | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-005 | Perf | Long-scroll responsiveness | Dense fixture section (30–50 items) | Fling ×10; gfxinfo | Recorded p90/p99 frame times | PASS — قياسٌ حيّ (§40.35): تمريرٌ طويلٌ على قسمٍ كثيفٍ (٤٥ صنفاً، QA_DENSE) ⇒ p50=17ms p90/p99=34ms مُسجَّل | `PASS` | — | online | — | — | — | — | Fixture per P8 PF note |
 | CUST-21-006 | Perf | Cart mutation responsiveness | Signed-in test customer · Staging · SM-A525F | +/− ×20 | Recorded; no lag spikes | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-007 | Perf | Checkout load | Signed-in test customer · Staging · SM-A525F | Open review; time to totals | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-21-007 | Perf | Checkout load | Signed-in test customer · Staging · SM-A525F | Open review; time to totals | Recorded | PASS — شاهدٌ حيّ (§40.42): مع متجرٍ مفتوح (merchant_open)، أُضيف صنفٌ للسلّة وفُتحت السلّة/المراجعة ⇒ حُمّلت المجاميعُ فورَه (المجموع 26,050 · التوصيل 100 · الإجمالي 26,150) وطرقُ الدفع، بلا تأخّرٍ محسوس | `PASS` | device | online | — | — | — | — | — |
 | CUST-21-008 | Perf | Order-list load | Signed-in test customer · Staging · SM-A525F | Open طلباتي | Recorded | PASS — قياسٌ حيّ (§40.34): «طلباتي» (٣٤ طلباً) فُتحت واستقرّت ضمن ثانيتين، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-009 | Perf | Order-detail load | Signed-in test customer · Staging · SM-A525F | Open detail | Recorded | — | `NOT_APPLICABLE` | — | online | — | — | — | — | **N/A:** No order-detail screen exists. Order-list load is CUST-21-008. |
 | CUST-21-010 | Perf | Network recovery time | Signed-in test customer · Staging · SM-A525F | Offline → online; time to banner removal and fresh data | Recorded (2026-09-19 baseline: validated +6 s) | PASS — قياسٌ حيّ (§40.34): انقطاعٌ ⇒ لافتة، ثمّ إعادةُ الشبكة ⇒ عادت الأصنافُ خلال ~٢٫٨ث؛ مُسجَّلٌ بلا عتبة | `PASS` | — | flapping | — | — | — | — | — |
@@ -1262,11 +1262,11 @@ until ADB is available — not an acceptance blocker.
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 12 | 0 | 2 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 23 | 0 | 13 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 26 | 0 | 10 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 25 | 0 | 2 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 3 | 3 | 20 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 2 | 3 | 21 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
@@ -1276,9 +1276,9 @@ until ADB is available — not an acceptance blocker.
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
-| 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
+| 33 | CUST-21 | 15 | 15 | 0 | 1 | 1 | 13 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **39** | **10** | **473** | **0** | **56** |
+| | **Total** | **578** | **474** | **104** | **37** | **10** | **478** | **0** | **53** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3676,3 +3676,26 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 تنظيف: أُعيد اسمُ الصنف الأصليّ («ساندويش شاورما دجاج»)، والكتالوج سليم.
 
 الحصيلة (محقّقة): PASS 471⇒473، NOT_TESTED 40⇒39، BLOCKED 57⇒56، N/A 10، FAIL 0. = 578.
+
+### 40.42 · فتحُ المتجر + التمريرة المُبكّرة (لا انتظارَ ٠٥:٠٠Z) staging 329c0016 (٢٠٢٦-٠٩-٢٣)
+
+بُنِي `merchant_open`/`merchant_restore` (بذّارٌ عكوسٌ: يحذف `merchant_hours` ويرفع الإغلاقَ الطارئ ⇒ مفتوحٌ
+الآن؛ يحفظ الجدولَ ويعيده، staging-only، QA-scope، بلا أثرٍ ماليّ؛ نُشِر 329c0016). فُتح متجرُ QA «بيت الرقة»
+(7048f195، ٧ ساعاتٍ محفوظة) فأُجريت التمريرةُ دون انتظار دوام المتجر:
+- **14-011** (accepted): طلبٌ عاديٌّ نقديّ #1127 ⇒ order_advance→accepted ⇒ البطاقةُ stage=accepted (standard)؛
+  والحارسُ رفض on_the_way (accepted-only)؛ أُلغي. **NOT_TESTED⇒PASS.**
+- **21-007** (تحميلُ الدفع): أُضيف صنفٌ للسلّة، فُتحت السلّة ⇒ المجاميعُ فورَه (26,050/100/26,150). **NOT_TESTED⇒PASS.**
+- **11-020** (صنفٌ صار غيرَ متاحٍ والسلّةُ ممتلئة): item_available=false ⇒ الإرسالُ محجوبٌ «أحد الأصناف غير متوفر
+  حاليا» + خادمٌ 409، لا طلب. **BLOCKED⇒PASS.**
+- **11-024** (إغلاقُ المنطقة والسلّةُ ممتلئة): zone_close ⇒ الإرسالُ محجوبٌ، خادمٌ 503 zone_closed_now. **BLOCKED⇒PASS.**
+- **11-025** (إيقافُ المنصّة والسلّةُ ممتلئة): platform_pause ⇒ الإرسالُ محجوبٌ، خادمٌ 503. **BLOCKED⇒PASS.**
+
+**لم تُحوَّل** (بأمانة): 11-022 (سحبُ الصنف retire — لا بذّارَ متميّزٌ عن unavailable)؛ 11-023 (تعطيلُ القسم
+والسلّةُ ممتلئة — الخادمُ **أنشأ** الطلبَ بصنفٍ قسمُه معطَّل، فالسلوكُ لا يطابق «محجوب»؛ يحتاج تأكيدَ العقد،
+تُرك BLOCKED)؛ 21-006 (تحريكُ الكميّة — لم يُقس gfxinfo هذه المرّة)؛ 16-036/037 (قطعُ الشبكة أثناء التسعير/
+الإرسال — توقيتٌ دقيقٌ، إلى جلسة الجهاز). 08-006/007 جغرافيّةٌ ثابتة (تبقى BLOCKED).
+
+تنظيف: المتجرُ مُستعادٌ (٧ ساعات، source_closed=True)، والمنطقة/القسم/الإتاحة/المنصّة/الحدُّ الأدنى مُستعادةٌ،
+المحفظة 0، لا طلباتٍ مفتوحة، لا أعطالٍ مسلَّحة. الإنتاجُ لم يُمَسّ.
+
+الحصيلة (محقّقة): PASS 473⇒478، BLOCKED 56⇒53، NOT_TESTED 39⇒37، N/A 10، FAIL 0. = 578.
