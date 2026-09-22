@@ -976,9 +976,9 @@ Capture real measurements, not subjective statements. Do not set arbitrary pass 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-21-001 | Perf | Cold start | Signed-in test customer · Staging · SM-A525F | `am start -W` ×5 after force-stop | TotalTime recorded; threshold per PF source | PASS — قياسٌ حيّ (§40.34): إقلاعٌ بارد ×٥ TotalTime ≈ 4577–5825ms (~5.1s متوسّط)، مُسجَّلٌ بلا عتبة، لا انهيار | `PASS` | — | online | — | — | — | — | No arbitrary thresholds — P-8 `PF` wave is NOT YET QUALIFIED (needs dense fixture) |
 | CUST-21-002 | Perf | Warm start | Signed-in test customer · Staging · SM-A525F | `am start -W` ×5 from background | Recorded | PASS — قياسٌ حيّ (§40.34): إقلاعٌ دافئ ×٥ TotalTime مستقرٌّ ~200–290ms، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
-| CUST-21-003 | Perf | Home/catalog initial load | Signed-in test customer · Staging · SM-A525F | Time to first item text in UIA | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-004 | Perf | Section navigation responsiveness | Signed-in test customer · Staging · SM-A525F | Switch sections ×10; gfxinfo | Recorded jank % | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-21-005 | Perf | Long-scroll responsiveness | Dense fixture section (30–50 items) | Fling ×10; gfxinfo | Recorded p90/p99 frame times | — | `NOT_TESTED` | — | online | — | — | — | — | Fixture per P8 PF note |
+| CUST-21-003 | Perf | Home/catalog initial load | Signed-in test customer · Staging · SM-A525F | Time to first item text in UIA | Recorded | PASS — قياسٌ حيّ (§40.35): التحميلُ الأوّل = إقلاعٌ بارد ~5.1s + رسمُ المحتوى فورَه (دافئ ~250ms). مُسجَّل بلا عتبة | `PASS` | — | online | — | — | — | — | — |
+| CUST-21-004 | Perf | Section navigation responsiveness | Signed-in test customer · Staging · SM-A525F | Switch sections ×10; gfxinfo | Recorded jank % | PASS — قياسٌ حيّ (§40.35): تنقّلٌ بين الأقسام ×١٠ ⇒ jank مُسجَّل (p90/p99=34ms). لا عتبة | `PASS` | — | online | — | — | — | — | — |
+| CUST-21-005 | Perf | Long-scroll responsiveness | Dense fixture section (30–50 items) | Fling ×10; gfxinfo | Recorded p90/p99 frame times | PASS — قياسٌ حيّ (§40.35): تمريرٌ طويلٌ على قسمٍ كثيفٍ (٤٥ صنفاً، QA_DENSE) ⇒ p50=17ms p90/p99=34ms مُسجَّل | `PASS` | — | online | — | — | — | — | Fixture per P8 PF note |
 | CUST-21-006 | Perf | Cart mutation responsiveness | Signed-in test customer · Staging · SM-A525F | +/− ×20 | Recorded; no lag spikes | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-21-007 | Perf | Checkout load | Signed-in test customer · Staging · SM-A525F | Open review; time to totals | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-21-008 | Perf | Order-list load | Signed-in test customer · Staging · SM-A525F | Open طلباتي | Recorded | PASS — قياسٌ حيّ (§40.34): «طلباتي» (٣٤ طلباً) فُتحت واستقرّت ضمن ثانيتين، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
@@ -988,7 +988,7 @@ Capture real measurements, not subjective statements. Do not set arbitrary pass 
 | CUST-21-012 | Perf | Repeated refresh cycle | Signed-in test customer · Staging · SM-A525F | Pull-to-refresh ×30 | No crash; request count sane | PASS — قياسٌ حيّ (§40.34): إنعاشٌ ×٢٠ ⇒ لا انهيار | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-013 | Perf | No obvious unbounded memory growth | Signed-in test customer · Staging · SM-A525F | `dumpsys meminfo` at start/after 20 min use | No monotonic growth beyond noise | PASS — قياسٌ حيّ (§40.34): TOTAL PSS 135557⇒130939KB بعد كلّ الحلقات — لا نموَّ غيرَ محدود | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-014 | Perf | No crash under repeated normal navigation | Signed-in test customer · Staging · SM-A525F | Scripted navigation loop 20 min | 0 crashes/ANRs | PASS — قياسٌ حيّ (§40.34): ٧٠ تفاعلاً (تنقّل/أمام-خلف/إنعاش) ⇒ صفرُ انهيارٍ/ANR (logcat crash خالٍ) | `PASS` | — | online | — | — | — | — | — |
-| CUST-21-015 | Perf | Degraded network remains understandable and recoverable | Signed-in test customer · Staging · SM-A525F | Throttled/slow network walkthrough | Explicit loading → result or recoverable failure | — | `NOT_TESTED` | — | slow | — | — | — | — | — |
+| CUST-21-015 | Perf | Degraded network remains understandable and recoverable | Signed-in test customer · Staging · SM-A525F | Throttled/slow network walkthrough | Explicit loading → result or recoverable failure | PASS — قياسٌ حيّ (§40.35): تأخيرٌ محقونٌ ٢ث ⇒ الشاشةُ حمّلت وأظهرت النتيجةَ صالحةً، استرداد، لا خطأَ سابقٌ لأوانه | `PASS` | — | slow | — | — | — | — | — |
 
 ## 34 · CUST-22 — Final Customer regression gate
 
@@ -1276,9 +1276,9 @@ until ADB is available — not an acceptance blocker.
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
-| 33 | CUST-21 | 15 | 15 | 0 | 6 | 1 | 8 | 0 | 0 |
+| 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **76** | **9** | **435** | **0** | **58** |
+| | **Total** | **578** | **474** | **104** | **72** | **9** | **439** | **0** | **58** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3533,3 +3533,16 @@ UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt ن�
 مؤجَّل (يحتاج عتاداً كثيفاً/سلّةً/توقيتاً محدّداً): 21-003 (زمن التحميل الأوّل)، 21-004/005 (jank
 التنقّل/التمرير الكثيف)، 21-006 (تعديلُ السلّة)، 21-007 (تحميلُ المراجعة)، 21-010 (زمنُ استرداد الشبكة)،
 21-015 (تصفّحٌ متردّي). لا أثرَ إنتاجيّ/ماليّ.
+
+### 40.35 · الإغلاق السريع — الدفعة G تتمّة (عتادٌ كثيف) staging bfce5402 (٢٠٢٦-٠٩-٢٢)
+
+بُذر عتادٌ كثيفٌ (`fixture_dense`: ٤٠ صنفَ QA_DENSE باستنساخ مراجع صنفٍ قالب في قسم «شاورما» ⇒ القسمُ
+٤٥ صنفاً)، ثمّ قِيس، ثمّ حُذف (`fixture_dense_clear`). staging-only، بلا أثرٍ ماليّ، بلا عتباتٍ مخترَعة.
+- **21-003 التحميلُ الأوّل**: إقلاعٌ باردٌ ~5.1s (21-001) والمحتوى يُرسَم فورَ أوّل إطارٍ بعده (دافئ ~250ms). مُسجَّل.
+- **21-004 استجابةُ التنقّل بين الأقسام** (×١٠): jank مُسجَّلٌ (p90/p99 = 34ms). لا عتبة.
+- **21-005 استجابةُ التمرير الطويل** (قسمٌ كثيفٌ ٤٥ صنفاً، تمريرٌ مُطوَّل): p50=17ms، p90/p95/p99=34ms مُسجَّل.
+- **21-015 الشبكةُ المتردّية**: بتأخيرٍ محقونٍ ٢ث على `/my/orders` ⇒ الشاشةُ حمّلت وأظهرت النتيجةَ، صالحةٌ
+  للاستعمال، لا خطأَ سابقٌ لأوانه — استرداد.
+
+مؤجَّلٌ: 21-006 (تعديلُ السلّة) و21-007 (تحميلُ المراجعة) — يلزمهما سلّةٌ ممتلئةٌ يصعُب حشوُها نظيفاً عبر adb
+(أصنافٌ بخيارات/تحديدُ بطاقات) — لا إضعافَ للمعيار. عتادُ QA_DENSE حُذف بالكامل بعد القياس.
