@@ -474,8 +474,8 @@ Verify actual server reason handling. Authoritative vocabulary (`orders/availabi
 | CUST-08-003 | Avail | temporarily_unavailable | Platform closure (Admin) | Open Cart | Explicit note with Owner text/«نعود الساعة…»; send disabled | service_closure active -> temporarily_unavailable + owner message + next_available_at; restored | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-004 | Avail | platform_closed_now | Platform hours closed | Open Cart | Explicit; next_available_at shown | hours.platform_enforced=true (no open schedule) -> platform_closed_now; restored | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-005 | Avail | invalid_location | API client (bad lat/lng) | `/public/availability?lat=999` | `invalid_location` handled; app never sends it in normal use | lat=999 and ocean(0,0) -> invalid_location (order_code bad_point) | `PASS` | staging API | online | — | — | — | — | P8-L1-016 prior evidence |
-| CUST-08-006 | Avail | coverage_unavailable | Geography without coverage data | Open Shop | Explicit | CARRIED: coverage_unavailable is data-dependent (needs a supported place with NO zone data); source path confirmed availability.go:185; not reproducible with staging geography | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-08-007 | Avail | province_not_supported | Address in unsupported province | Open Shop/Cart | Explicit | CARRIED: province_not_supported is data-dependent; probes across provinces resolve to city_not_supported/area_not_supported; source path confirmed (classifyPlace) | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-08-006 | Avail | coverage_unavailable | Active city with zone deactivated via seed | Open Shop | Explicit | PASS — شاهدٌ حيّ (§40.44، تدقيقُ الجغرافيا): zone_active=false على منطقةِ مدينةٍ فعّالة ⇒ `GET /public/availability` يردّ available=false reason=**coverage_unavailable** صراحةً؛ أُعيدت المنطقة | `PASS` | api | online | — | — | — | — | reachable state (not N/A): active place, no active zone |
+| CUST-08-007 | Avail | province_not_supported | Address whose governorate deactivated via seed | Open Shop/Cart | Explicit | PASS — شاهدٌ حيّ (§40.44، تدقيقُ الجغرافيا): gov_active=false لمحافظةِ نقطةٍ (الرقة) ⇒ `GET /public/availability` يردّ available=false reason=**province_not_supported** صراحةً؛ أُعيدت المحافظة | `PASS` | api | online | — | — | — | — | reachable state (not N/A): active city inside inactive governorate |
 | CUST-08-008 | Avail | city_not_supported | Address in unsupported city | Open Shop/Cart | Explicit | Damascus/Aleppo/Homs -> city_not_supported (place_name set) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-009 | Avail | area_not_supported | Address in unsupported area | Open Shop/Cart | Explicit | desert point -> area_not_supported | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-010 | Avail | address_outside_coverage | Address outside zones | Open Cart | Out-of-zone note; send disabled | Raqqa far-edge -> address_outside_coverage (out_of_zone) | `PASS` | staging API | online | — | — | — | — | — |
@@ -1259,7 +1259,7 @@ until ADB is available — not an acceptance blocker.
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 25 | 0 | 5 |
-| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 15 | 0 | 3 |
+| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 26 | 0 | 10 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 1 | 1 | 13 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **37** | **10** | **482** | **0** | **49** |
+| | **Total** | **578** | **474** | **104** | **37** | **10** | **484** | **0** | **47** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3711,3 +3711,14 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 ضابطٌ: الطلبُ يُنشأ حين تعودُ الحالُ سليمة. تنظيف: المنطقة/الإتاحةُ مُستعادتان، الطلباتُ الضابطةُ أُلغيت، لا أثرَ ماليّ.
 
 الحصيلة (محقّقة): PASS 478⇒482، BLOCKED 53⇒49، NOT_TESTED 37، N/A 10، FAIL 0. = 578.
+
+### 40.44 · تدقيقُ الجغرافيا — 08-006 / 08-007 (حالتان واقعيّتان لا N/A) staging f361c3e3 (٢٠٢٦-٠٩-٢٣)
+
+تدقيقُ `classifyPlace`/`AvailabilityAt`: **الحالتان قابلتان للتحقّق لا «غير منطبقتين»**. بُنِي `gov_active`
+(بذّارٌ عكوسٌ يقلب `governorates.active` لنقطة). عبر `GET /public/availability`:
+- **08-006** (coverage_unavailable): zone_active=false على منطقةِ مدينةٍ فعّالة ⇒ available=false، reason=**coverage_unavailable**. **BLOCKED⇒PASS.**
+- **08-007** (province_not_supported): gov_active=false لمحافظة الرقة ⇒ available=false، reason=**province_not_supported**. **BLOCKED⇒PASS.**
+الضابطُ service_available قبلَ وبعدَ الاستعادة. **الحُكم: ليستا N/A** — حالتان واقعيّتان يُنتجهما إعدادُ جغرافيا،
+وقد أُنتجتا بفخّين عكوسين. لا أثرَ ماليّ، الجغرافيا مُستعادة.
+
+الحصيلة (محقّقة): PASS 482⇒484، BLOCKED 49⇒47، NOT_TESTED 37، N/A 10، FAIL 0. = 578.
