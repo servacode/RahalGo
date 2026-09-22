@@ -666,10 +666,10 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-CUSTOM-001 | Custom | Create a custom order | Signed-in test customer · Staging · SM-A525F · valid default address · `launch.customer_custom_orders`=ON (Staging) | طلب خاص → request text → address → optional driver note → send | «تم إرسال طلبك رقم N»; switches to طلباتي | PASS — شهادةُ محاكٍ: أُنشئ طلبٌ خاصٌّ #1075 (محاكي 2026-09-21) | `PASS` | — | online | orders +1 (custom) | — | — | — | Feature exists (`custom/CustomScreen.kt`, `POST /api/v1/orders/custom`). Production flag is OFF — the code is still judged, not hidden behind the flag |
 | CUST-CUSTOM-002 | Custom | Empty request rejected | Signed-in test customer · Staging · SM-A525F · valid default address | Send blank | Send disabled | PASS — طلبٌ فارغٌ يُرفَض: TestCUST_002_EmptyRequestRejected (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestCUST_002_EmptyRequestRejected` |
-| CUST-CUSTOM-003 | Custom | No address | Signed-in test customer · Staging · SM-A525F · valid default address · no address | Try to send | Hint «اختر عنوان التوصيل…»; disabled | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-CUSTOM-003 | Custom | No address | Signed-in test customer · Staging · SM-A525F · valid default address · no address | Try to send | Hint «اختر عنوان التوصيل…»; disabled | PASS — شاهدٌ حيّ على staging (§40.30): زبونُ QA بلا عنوانٍ (بعد pm clear) عرضت شاشةُ «طلب خاص» «التوصيل إلى: اضغط لاختيار عنوان» + «اختر عنوان التوصيل ليعرف السائق أين يوصل» والإرسالُ محجوب؛ والخادمُ يردّ 400 validation على جسمٍ بلا عنوان | `PASS` | — | online | — | — | §40.30 | — | UI-witnessed (no-address state, §40.29 setup) + server validation 2026-09-22 (§40.30) |
 | CUST-CUSTOM-004 | Custom | Repeated send taps → one order | Signed-in test customer · Staging · SM-A525F · valid default address | Triple-tap send | One custom order | PASS — ٣ ضغطاتٍ ⇒ طلبٌ واحد #1075 (محاكي 2026-09-21) + TestCUST_003_Idempotent | `PASS` | — | online | orders +1 | — | — | — | Own idempotency slot (`Attempt.CUSTOM`); `TestCUST_003_Idempotent` |
 | CUST-CUSTOM-005 | Custom | Lost response / retry | Signed-in test customer · Staging · SM-A525F · valid default address | Cut after send; retry | No duplicate | PASS — فقدُ ردٍّ/إعادة: TestCUST_003 + TestIDEM_AllProtectedPathsUseCoordinator (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | cut | orders +1 total | — | — | — | — |
-| CUST-CUSTOM-006 | Custom | Launch flag OFF | Signed-in test customer · Staging · SM-A525F · valid default address · flag OFF | Send | Explicit `launch_closed`; no order | — | `NOT_TESTED` | — | online | no order | — | — | — | Client ignores the flag (parsed, unused) — server is the guard |
+| CUST-CUSTOM-006 | Custom | Launch flag OFF | Signed-in test customer · Staging · SM-A525F · valid default address · flag OFF | Send | Explicit `launch_closed`; no order | PASS — شاهدٌ خادميٌّ حيّ على staging (§40.30): `launch.customer_custom_orders=false` (عبر qa/setting) ⇒ POST /orders/custom = 503 `launch_closed`، لا طلب؛ استُعيدت الراية. المِعيارُ خادميٌّ (العميلُ يتجاهل الراية، الخادمُ هو الحارس) | `PASS` | — | online | no order | — | §40.30 | — | Client ignores the flag — server is the guard; live-witnessed 2026-09-22 (§40.30) |
 | CUST-CUSTOM-007 | Custom | Outside coverage / zone closed / platform closed | Signed-in test customer · Staging · SM-A525F · valid default address | Send under each condition | Explicit denial each | PASS — يتبع التغطية/الإغلاق: TestSRV4_CustomOrderFollowsCoverage/TestZH19/TestPH16/18 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | `TestSRV4_CustomOrderFollowsCoverage`, `TestZH19`, `TestPH16/18` |
 | CUST-CUSTOM-008 | Custom | Cash-blocked customer | Cash-blocked test customer | Send | Must be denied like the normal path (`cash_blocked`) | PASS — المحظورُ نقداً: D6 مغلق منشور (cd33b173) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | D6 (CLOSED · Prod deployed cd33b173) | `TestCustomCashBan_*` (`orders/custom_cashban_test.go`) · `TestCENSUS_D6_CustomOrderSkipsCashBan` | D6 CLOSED, deployed to Production (cd33b173, §40.22): custom path enforces `cashBlocked` (cash sent or omitted) — guarded by `TestCustomCashBan_*`; census reports REPRODUCTION=NO |
 | CUST-CUSTOM-009 | Custom | WhatsApp verification requirement | Unverified · require_whatsapp=true (Staging test) | Send | Must follow the same rule as the normal path | PASS — واتساب مُلزَم: D8 مغلق منشور (023d9d4c) (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | D8 (CLOSED · Prod deployed 023d9d4c) | `TestCustomWhatsApp_*` (`orders/custom_whatsapp_test.go`) · `TestCENSUS_D6_D9_CustomOrderCreationGuards` | D8 CLOSED, deployed to Production (023d9d4c, §40.24): custom path enforces `RequireWhatsApp` (master `auth.require_whatsapp` + role key) — guarded by `TestCustomWhatsApp_*`; census reports REPRODUCTION=NO |
@@ -884,13 +884,13 @@ These tests verify Customer reaction to backend/Admin truth. They are NOT a repe
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-18-001 | Remote | launch.customer_signup ON → OFF | Signup screen open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; submit signup | 503 `launch_closed` → Owner notice; no account created | — | `NOT_TESTED` | — | online | users count unchanged | — | — | — | — |
-| CUST-18-002 | Remote | launch.customer_signup OFF → ON | Signup closed · Change made through the Staging Admin panel (recorded before/after, restored) | Flip ON; retry | Signup proceeds | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-18-003 | Remote | launch.customer_browse ON → OFF | Signed-in test customer · Staging · SM-A525F · market open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; refresh/navigate | Owner notice (`launch.notice`); no empty market; no crash | — | `NOT_TESTED` | — | online | flag before/after | — | — | — | — |
-| CUST-18-004 | Remote | launch.customer_browse OFF → ON | After 003 | Flip ON; refresh | Market returns without reinstall | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-18-005 | Remote | launch.customer_orders ON → OFF | Signed-in test customer · Staging · SM-A525F · cart built · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; tap «أرسل الطلب» | 503 `launch_closed` + notice; no order; no spinner | — | `NOT_TESTED` | — | online | order count unchanged | — | — | — | Prior evidence: P8-L1-020 (DEVICE_VERIFIED 2026-09-18) |
-| CUST-18-006 | Remote | launch.customer_orders OFF → ON | After 005 | Flip ON; navigate away/back; submit test order (disposable) | Submit available again; cart preserved | — | `NOT_TESTED` | — | online | order count +1 exactly | — | — | — | — |
-| CUST-18-007 | Remote | launch.customer_custom_orders transitions | Custom-order screen open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF/ON; send | OFF → explicit denial; ON → works | — | `NOT_TESTED` | — | online | custom order count | — | — | — | Feature exists (tab «طلب خاص») — see CUST-CUSTOM |
+| CUST-18-001 | Remote | launch.customer_signup ON → OFF | Signup screen open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; submit signup | 503 `launch_closed` → Owner notice; no account created | PASS — شاهدٌ خادميٌّ حيّ (§40.30): `launch.customer_signup=false` ⇒ `POST /auth/signup/request` = 503 `launch_closed`، لا حساب؛ آليّةُ إشعار المالك مشهودةٌ في التطبيق (18-003). استُعيدت الراية | `PASS` | — | online | users count unchanged | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
+| CUST-18-002 | Remote | launch.customer_signup OFF → ON | Signup closed · Change made through the Staging Admin panel (recorded before/after, restored) | Flip ON; retry | Signup proceeds | PASS — شاهدٌ خادميٌّ حيّ (§40.30): بعد إعادة `launch.customer_signup=true` ⇒ `POST /auth/signup/request` = 200 (يمضي) | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
+| CUST-18-003 | Remote | launch.customer_browse ON → OFF | Signed-in test customer · Staging · SM-A525F · market open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; refresh/navigate | Owner notice (`launch.notice`); no empty market; no crash | PASS — شاهدٌ تطبيقيٌّ مباشر (§40.30): `launch.customer_browse=false` + جلبٌ طازج ⇒ السوقُ يعرض «قريبًا يتم افتتاح رحال غو» لا سوقاً فارغاً، لا انهيار، التبويباتُ باقية | `PASS` | — | online | flag before/after | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
+| CUST-18-004 | Remote | launch.customer_browse OFF → ON | After 003 | Flip ON; refresh | Market returns without reinstall | PASS — شاهدٌ تطبيقيٌّ مباشر (§40.30): بعد إعادة `launch.customer_browse=true` وجلبٍ طازج عاد السوقُ بأصنافه بلا إعادة تثبيت | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
+| CUST-18-005 | Remote | launch.customer_orders ON → OFF | Signed-in test customer · Staging · SM-A525F · cart built · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; tap «أرسل الطلب» | 503 `launch_closed` + notice; no order; no spinner | PASS — شاهدٌ خادميٌّ حيّ (§40.30): `launch.customer_orders=false` ⇒ `POST /orders` = 503 `launch_closed`، لا طلب؛ + شاهدُ جهازٍ سابق P8-L1-020 | `PASS` | — | online | order count unchanged | — | §40.30 | — | Live server 2026-09-22 (§40.30) + DEVICE_VERIFIED P8-L1-020 |
+| CUST-18-006 | Remote | launch.customer_orders OFF → ON | After 005 | Flip ON; navigate away/back; submit test order (disposable) | Submit available again; cart preserved | PASS — شاهدٌ خادميٌّ حيّ (§40.30): بعد إعادة `launch.customer_orders=true` ⇒ `POST /orders` = 201 (طلبٌ أُنشئ ثمّ أُلغي)؛ الاستقبالُ متاحٌ ثانيةً | `PASS` | — | online | order count +1 exactly | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
+| CUST-18-007 | Remote | launch.customer_custom_orders transitions | Custom-order screen open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF/ON; send | OFF → explicit denial; ON → works | PASS — شاهدٌ خادميٌّ + تطبيقيّ (§40.30): OFF ⇒ `POST /orders/custom` = 503 `launch_closed`، والتطبيقُ يحجب الإرسالَ (بقيت الشاشةُ، لا طلب بنصّ الاختبار)؛ ON ⇒ يُنشئ (§40.29) | `PASS` | — | online | custom order count | — | §40.30 | — | Feature «طلب خاص»; live-witnessed 2026-09-22 (§40.30) |
 | CUST-18-008 | Remote | Platform temporarily closes while app is open | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (service closure) | Close platform; act | `temporarily_unavailable` explicit; structure stays; ordering blocked | — | `NOT_TESTED` | — | online | service_closure row | — | — | — | Admin action is audited (`admin.platform_closure`) |
 | CUST-18-009 | Remote | Platform reopens | After 008 | Reopen; refresh | Ordering available again | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-18-010 | Remote | Zone closes while browsing | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (zone hours) | Close the test zone | `zone_closed_now` explicit | — | `NOT_TESTED` | — | online | zone hours row | — | — | — | Never the zone referenced by #1050 |
@@ -931,7 +931,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-017 | Sec | Account A logout → Account B login: no A data | Two test customers | A: cart/addresses/orders; logout; B login | No A cart/addresses/orders/notifications visible | B saw no A cart/notifications; `me`=B, B's own address | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-19-018 | Sec | Two devices on the same Customer account | Second device/emulator | Login on both; act on both | Behaviour matches session contract | — | `NOT_TESTED` | — | online | sessions per client | — | — | — | — |
 | CUST-19-019 | Sec | Concurrent actions from two sessions do not corrupt order state | As 018 | Submit/cancel concurrently | Consistent single outcome | PASS — TestRACE_TwoDriversSameOrder/AdminVsAppTransition/FinancialTruth · TestIDEM_T1/T4 | `PASS` | — | online | order state | — | — | — | — |
-| CUST-19-020 | Sec | Cannot order outside serviceability by manipulating local state | API client | Submit with coordinates outside coverage / foreign address id | Server denies (`address_outside_coverage` / 404) | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
+| CUST-19-020 | Sec | Cannot order outside serviceability by manipulating local state | API client | Submit with coordinates outside coverage / foreign address id | Server denies (`address_outside_coverage` / 404) | PASS — شاهدٌ خادميٌّ حيّ على staging (§40.30): إرسالُ طلبٍ عاديٍّ وخاصٍّ بإحداثيّات دمشق (33.5138/36.2765) خارجَ التغطية ⇒ 400 `out_of_zone` للاثنين؛ لا طلب. المِعيارُ خادميٌّ محض | `PASS` | — | online | no order | — | §40.30 | — | Server-authoritative; live-witnessed 2026-09-22 (§40.30) |
 | CUST-19-021 | Sec | Cannot order a retired/unavailable item via stale screen | Signed-in test customer · Staging · SM-A525F | Retire item server-side; submit stale cart | Server denies; explicit message | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
 | CUST-19-022 | Sec | Cannot bypass launch closure with an open screen | Signed-in test customer · Staging · SM-A525F | Close launch.customer_orders; submit | 503 `launch_closed` | PASS — TestPL11_13_OrdersBlockedAndNotBypassable · PL18_NoReviewerPhoneBypass · جهاز سابق P8-L1-020 | `PASS` | — | online | no order | — | — | — | P8-L1-020 prior evidence |
 | CUST-19-023 | Sec | Tokens/secrets not printed in normal application logs | Signed-in test customer · Staging · SM-A525F | logcat during login/refresh/order | No tokens, OTP, passwords in logcat | PASS — محاكي: 2189 سطر logcat أثناء إرسال طلب ⇒ صفر توكن/كلمة سر/JWT/OTP؛ وApiClient بلا تسجيل ترويسات/جسم | `PASS` | — | online | — | — | — | — | — |
@@ -1265,7 +1265,7 @@ until ADB is available — not an acceptance blocker.
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
 | 24 | CUST-13 | 29 | 24 | 5 | 7 | 0 | 22 | 0 | 0 |
-| 25 | CUST-CUSTOM | 20 | 18 | 2 | 3 | 0 | 17 | 0 | 0 |
+| 25 | CUST-CUSTOM | 20 | 18 | 2 | 1 | 0 | 19 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 11 | 3 | 12 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
@@ -1273,12 +1273,12 @@ until ADB is available — not an acceptance blocker.
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 19 | 0 | 26 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
-| 30 | CUST-18 | 21 | 20 | 1 | 20 | 0 | 1 | 0 | 0 |
-| 31 | CUST-19 | 29 | 25 | 4 | 4 | 0 | 25 | 0 | 0 |
+| 30 | CUST-18 | 21 | 20 | 1 | 13 | 0 | 8 | 0 | 0 |
+| 31 | CUST-19 | 29 | 25 | 4 | 3 | 0 | 26 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **118** | **9** | **378** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **108** | **9** | **388** | **0** | **73** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3421,3 +3421,26 @@ mutations = 0.
 **العزلُ والتنظيف والمال.** كلُّ العتاد يخصّ زبونَ QA (تذكرتُه/إنذارُه) عدا العرضَ (عامٌّ بطبعه)
 فأُطفئ. لا مساسَ ماليّ: ٣٤ طلباً كلُّها مُلغاة، حلُّ التذكرة بتعويض ٠، محفظةُ زبون QA = ٠ (٠ قيود).
 مساسُ الإنتاج = ٠ (الإنتاجُ `023d9d4c`).
+
+### 40.30 · دفعةُ الإغلاق السريع — الدفعة ١ (بوّاباتُ الإطلاق + الخدمة) staging 881a753a (٢٠٢٦-٠٩-٢٢)
+
+بعد تصنيف الـ١٩١ صفّاً غيرَ المحسوم إلى مساراتٍ (A=٣٦، B=٤٩، C=٣٤، D=٤، E=٩، F=٢، G=١٥، H=٤، I=٧،
+J=١، K=٩، L=٦، M=١٥)، نُفّذت أوّلُ دفعةٍ آمنةٍ كبرى من المسار A عبر `qa/session`+`qa/setting`+API+المحاكي،
+بلا كودٍ جديدٍ ولا نشر. الإنتاجُ لم يُمَسّ (`023d9d4c`). كلُّ الرايات استُعيدت ON (لا أثر).
+
+**بوّاباتُ الإطلاق (خادميّاً بقلب `qa/setting`، والتطبيقُ للإشعار):**
+- `launch.customer_signup` OFF ⇒ `POST /auth/signup/request` = **503 `launch_closed`** (لا حساب)؛ ON ⇒ 200. (18-001/002)
+- `launch.customer_browse` OFF ⇒ التطبيقُ (جلبٌ طازج) يعرض إشعارَ المالك **«قريبًا يتم افتتاح رحال غو»**،
+  لا سوقاً فارغاً، لا انهيار، والتبويباتُ باقية؛ ON ⇒ عاد السوقُ بأصنافه. (18-003/004، شاهدٌ تطبيقيٌّ مباشر)
+- `launch.customer_orders` OFF ⇒ `POST /orders` = **503 `launch_closed`** (لا طلب)؛ ON ⇒ 201 (طلبٌ أُنشئ ثمّ أُلغي).
+  (18-005 خادميّ + شاهدُ جهازٍ سابق P8-L1-020؛ 18-006) — والصنفُ المفتوحُ متجرُه أتاح إنشاءَ الطلب حيّاً.
+- `launch.customer_custom_orders` OFF ⇒ `POST /orders/custom` = **503 `launch_closed`**؛ وفي التطبيق: الإرسالُ
+  محجوبٌ (بقيت الشاشةُ، ولم يُنشأ طلبٌ بنصّ الاختبار QA_18007) — تُحقّق خادميّاً؛ ON ⇒ يُنشئ (مشهودٌ §40.29). (18-007/CUSTOM-006)
+
+**قابليّةُ الخدمة (خادميّ محض):** إرسالُ طلبٍ عاديٍّ وخاصٍّ بإحداثيّات دمشق خارجَ التغطية ⇒ **400 `out_of_zone`**
+للاثنين، لا طلب. (19-020)
+
+**لا عنوان (CUSTOM-003):** جسمٌ بلا عنوان ⇒ 400 `validation`؛ والشاشةُ (زبونُ QA بلا عنوان، §40.29) تعرض
+«اختر عنوان التوصيل» والإرسالُ محجوب.
+
+الأثرُ الماليّ = ٠ (الطلبُ الوحيدُ المُنشأ في 18-006 أُلغي؛ لا قيود). كلُّ رايات الإطلاق ON بعد الدفعة.
