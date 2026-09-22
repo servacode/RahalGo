@@ -632,7 +632,7 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-002 | Submit | Order data matches server | After 001 | Compare card with SoT | Items, qty, fee, total, payment equal | PASS — emulator: order #1071 details match submitted (ساندويش شاورما دجاج 26,050 + توصيل 100 = 26,150, cash) | `PASS` | — | online | order row + items | — | — | — | — |
 | CUST-13-003 | Submit | Repeated fast taps create one order | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Triple-tap send | One order | PASS — emulator: rapid 3× tap «أرسل الطلب» → exactly ONE order (#1071) in طلباتي | `PASS` | — | online | orders +1 | — | — | — | AB-01, P8-C3-039 |
 | CUST-13-004 | Submit | Button guarded while in flight | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap; inspect button | Busy/disabled until result | PASS — emulator (via 003): rapid in-flight taps produced no duplicate → send/idempotency guard holds | `PASS` | — | online | — | — | — | — | — |
-| CUST-13-005 | Submit | Slow submit response | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Slow network | Busy then result; no duplicate | — | `NOT_TESTED` | — | slow | orders +1 | — | — | — | — |
+| CUST-13-005 | Submit | Slow submit response | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Slow network | Busy then result; no duplicate | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): تأخيرٌ محقونٌ ٣ ثوانٍ على الإرسال ⇒ التطبيقُ انشغل ثمّ أظهر النتيجة، وأُنشئ طلبٌ واحدٌ (#1115) بلا تكرار؛ ثمّ أُلغي | `PASS` | — | slow | orders +1 | — | §40.33 | — | Live via injected latency 2026-09-22 (§40.33) |
 | CUST-13-006 | Submit | Network loss before request reaches server | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Cut before tap (after §7 block) / during connect | Explicit failure; no order; key kept | PASS — emulator: airplane-mode before submit → request never reaches server, no order created | `PASS` | — | cut | orders +0 | — | — | — | — |
 | CUST-13-007 | Submit | Loss after server commit, before client response | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Cut right after send (harness delay) | No duplicate on retry; order discoverable | PASS — TestIDEM_002_LostResponse · مفتاح المحاولة على القرص (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | cut | orders +1 total | — | — | — | Idempotency-Key persisted (`Attempt`, `TestIDEM_002_LostResponse`) |
 | CUST-13-008 | Submit | Retry after ambiguous failure is idempotent | After 007 | Retry send | Same order returned; no second | PASS — إعادةٌ آمنة: TestIDEM_002/T6 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | recovering | orders +1 total | — | — | — | P8-C3-040/041 |
@@ -1264,7 +1264,7 @@ until ADB is available — not an acceptance blocker.
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 23 | 0 | 13 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 24 | 0 | 3 |
-| 24 | CUST-13 | 29 | 24 | 5 | 1 | 0 | 28 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **85** | **9** | **423** | **0** | **61** |
+| | **Total** | **578** | **474** | **104** | **84** | **9** | **424** | **0** | **61** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
