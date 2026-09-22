@@ -277,6 +277,13 @@ var qaSeedAllowlist = map[string]bool{
 	// ── عتادُ كثافةٍ للأداء (المسار G) ──
 	"fixture_dense":       true, // بذرُ أصنافٍ كثيفةٍ (يستنسخ مراجعَ صنفٍ قالب)
 	"fixture_dense_clear": true, // حذفُ كلّ أصناف QA_DENSE
+	// ── نظيرُ السائق (المسار B تكملة) — طلبٌ مخصّصٌ نقديٌّ لزبون QA فقط، محايدٌ ماليّاً ──
+	"order_advance":   true, // سوقُ طلبِ زبون QA المخصّصِ النقديّ عبر الحالات (يُسنِد سائقاً فعليّاً)
+	"order_chat_send": true, // رسالةُ سائقٍ على طلبِ زبون QA (SUP-002) — عبر comms.Send
+	// ── دوامُ المنطقة (zone_closed_now) + الحدُّ الأدنى للنسخة (426) — عكوسان ──
+	"zone_close":  true, // إغلاقُ منطقةٍ الآن حتميّاً (hours_enforced + جدولٌ فارغ)، يحفظ السابق
+	"zone_reopen": true, // إعادةُ جدول المنطقة المحفوظ
+	"min_version": true, // ضبطُ app.min_version.customer (يُرجع السابق) لشهود update_required
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -286,6 +293,8 @@ var qaStateSeed = map[string]bool{
 	"merchant_emergency": true,
 	"fault_arm":          true, "fault_clear": true, "fault_status": true,
 	"fixture_dense": true, "fixture_dense_clear": true,
+	// دوامُ المنطقة والحدُّ الأدنى للنسخة لا تلزمها هويّةُ زبون QA:
+	"zone_close": true, "zone_reopen": true, "min_version": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -313,6 +322,9 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		Body      string `json:"body"`
 		Entity    string `json:"entity"`
 		EntityID  string `json:"entity_id"`
+		// النظيرُ/السائق (المسار B تكملة) + دوامُ المنطقة + الحدُّ الأدنى للنسخة:
+		OrderID string `json:"order_id"` // طلبُ زبون QA (order_advance / order_chat_send)
+		Target  string `json:"target"`   // الحالةُ الهدف (order_advance)
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -368,6 +380,12 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaSeedDense(w, r, req.ItemID, req.Count)
 		case "fixture_dense_clear":
 			s.qaClearDense(w, r)
+		case "zone_close":
+			s.qaZoneClose(w, r, req.ZoneID)
+		case "zone_reopen":
+			s.qaZoneReopen(w, r, req.ZoneID)
+		case "min_version":
+			s.qaMinVersion(w, r, req.ValueInt)
 		}
 		return
 	}
@@ -409,6 +427,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		s.qaWalletFund(w, r, uid, req.ValueInt)
 	case "wallet_drain":
 		s.qaWalletDrain(w, r, uid)
+	case "order_advance":
+		s.qaOrderAdvance(w, r, uid, req.OrderID, req.Target)
+	case "order_chat_send":
+		s.qaOrderChatSend(w, r, uid, req.OrderID, req.Body)
 	}
 }
 
