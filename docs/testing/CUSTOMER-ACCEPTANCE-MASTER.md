@@ -778,10 +778,10 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-15-001 | Push | Order update reaches foreground app | Signed-in test customer · Staging · SM-A525F · valid default address · disposable order progressing | Keep app open | UI updates via WebSocket; notification per policy | — | `NOT_TESTED` | — | online | — | — | — | — | Realtime = WebSocket `/api/v1/ws` (no polling) |
-| CUST-15-002 | Push | Update while backgrounded | As 001 · app backgrounded | Progress order | Push notification (urgent channel) | — | `NOT_TESTED` | — | online | notification_deliveries | — | — | — | — |
-| CUST-15-003 | Push | Notification while process killed | App force-stopped (not 'Force stop' in settings) | Progress order | Push shown; tap opens app | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-15-004 | Push | Notification permission denied | Denied | Progress order | No push; in-app state still correct on open | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-15-005 | Push | Permission granted later | Denied then granted | Progress order | Push arrives | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-15-002 | Push | Update while backgrounded | As 001 · app backgrounded | Progress order | Push notification (urgent channel) | PASS — شاهدٌ حيّ (§40.36): التطبيقُ خلفيّةً + دفعةُ طلبٍ (qa/push عبر FCM) ⇒ ظهرت في الدرج بعنوانها/نصّها | `PASS` | — | online | notification_deliveries | — | — | — | — |
+| CUST-15-003 | Push | Notification while process killed | App force-stopped (not 'Force stop' in settings) | Progress order | Push shown; tap opens app | PASS — شاهدٌ حيّ (§40.36): العمليّةُ مقتولةٌ (am kill) ⇒ FCM أيقظها فظهر الإشعارُ، والنقرُ فتح التطبيق (MainActivity) | `PASS` | — | online | — | — | — | — | — |
+| CUST-15-004 | Push | Notification permission denied | Denied | Progress order | No push; in-app state still correct on open | PASS — شاهدٌ حيّ (§40.36): الإذنُ مرفوضٌ (importance=NONE) ⇒ لا دفعةَ في الدرج، والحالةُ في التطبيق صحيحةٌ (الإشعارُ في /me/notifications) | `PASS` | — | online | — | — | — | — | — |
+| CUST-15-005 | Push | Permission granted later | Denied then granted | Progress order | Push arrives | PASS — شاهدٌ حيّ (§40.36): بعد منح الإذن (DEFAULT) ⇒ الدفعاتُ تصل الدرجَ (FCM configured، التسليمُ يعمل) | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-006 | Push | Tapping a notification opens the intended safe destination | Push received | Tap order_chat / offer / order-status pushes | order_chat → chat sheet; offer → offer; order status → the order | — | `NOT_TESTED` | — | online | — | — | — | — | XG-9 (CAF-13) / XG-8 / XG-9: order-status pushes open the default screen — expected FAIL for status pushes |
 | CUST-15-007 | Push | Old/stale notification | Old push in tray | Tap after state changed | Opens current truth; no stale action | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-15-008 | Push | Duplicate notification | Two pushes same class | Observe tray | No confusing duplicates | — | `NOT_TESTED` | — | online | — | — | — | — | XG-38 / PC-5: two fixed IDs (3001/3002) — newer replaces older |
@@ -1270,7 +1270,7 @@ until ADB is available — not an acceptance blocker.
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
-| 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
+| 27 | CUST-15 | 19 | 16 | 3 | 6 | 0 | 13 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 2 | 1 | 12 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **72** | **9** | **439** | **0** | **58** |
+| | **Total** | **578** | **474** | **104** | **68** | **9** | **443** | **0** | **58** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3546,3 +3546,19 @@ UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt ن�
 
 مؤجَّلٌ: 21-006 (تعديلُ السلّة) و21-007 (تحميلُ المراجعة) — يلزمهما سلّةٌ ممتلئةٌ يصعُب حشوُها نظيفاً عبر adb
 (أصنافٌ بخيارات/تحديدُ بطاقات) — لا إضعافَ للمعيار. عتادُ QA_DENSE حُذف بالكامل بعد القياس.
+
+### 40.36 · الإغلاق السريع — الدفعة E (Push/FCM) staging 50409629 (٢٠٢٦-٠٩-٢٢)
+
+بُنيت قدرةُ دفعٍ حتميّةٌ ضيّقةٌ على التجهيز (`qa/seed kind=push`: notif_kind/title/body/entity/entity_id
+عبر مسار `notify`⇒الدافع؛ QA-scoped، fail-closed في الإنتاج، لا موضوعات/اعتمادات إنتاج). **FCM على
+التجهيز مهيّأ** (`configured:true`) والجهازُ مُسجَّل، والتسليمُ يعمل (زمنُ ~٢٠ث) — «RahalGo/push: إشعار».
+- **15-004** (الإذنُ مرفوض ⇒ لا دفعة): والتطبيقُ importance=NONE ⇒ الدفعةُ لم تظهر في الدرج، **والحالةُ
+  في التطبيق صحيحةٌ** (الإشعارُ في صندوق `/me/notifications`).
+- **15-005** (مُنح الإذنُ لاحقاً ⇒ تصل): بعد المنح (importance=DEFAULT) وصلت الدفعاتُ إلى الدرج.
+- **15-002** (خلفيّةً ⇒ تظهر): التطبيقُ في الخلفية ⇒ دفعةُ طلبٍ ظهرت في الدرج بعنوانها/نصّها.
+- **15-003** (العمليّةُ مقتولةٌ `am kill` لا force-stop ⇒ تظهر، والنقرُ يفتح): FCM أيقظ العمليّةَ المقتولة،
+  الإشعارُ ظهر، والنقرُ عليه فتح التطبيق (MainActivity).
+
+مؤجَّلٌ (staging صار 503 أثناء العمل — عطبُ تبعيّةٍ مؤقّت): 15-006 (وجهةُ النقر: chat/offer تعمل،
+order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معروف)، 15-007 (إشعارٌ قديم)، 15-008 (تكرار)، 15-009
+(طلبٌ غيرُ متاح)، 15-011 (لا تسريبَ بين الحسابات). لا أثرَ ماليّ، لا موضوعاتِ إنتاج.
