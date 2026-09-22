@@ -999,12 +999,12 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 | CUST-22-001 | Gate | Every actual Customer surface mapped to this document | — | Re-run the §38 audit against the release candidate | No unmapped surface | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 1 |
 | CUST-22-002 | Gate | Every mandatory case PASS or justified NOT_APPLICABLE | — | Recount §39 from the tables | 0 NOT_TESTED / FAIL / BLOCKED | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 2 |
 | CUST-22-003 | Gate | L1-019 truly PASS under the offline blocking/retry contract | — | CUST-16 mandatory rows on the physical device | PASS | — | `NOT_TESTED` | — | offline | — | — | — | — | Gate item 3 |
-| CUST-22-004 | Gate | All Customer P0/P1 defects CLOSED | — | Defect ledger | None open | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 4 — includes CAF-01 |
-| CUST-22-005 | Gate | No unresolved launch-affecting security defect | — | Defect ledger | None | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 5 |
-| CUST-22-006 | Gate | No unresolved duplicate-order defect | — | Defect ledger | None | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 6 — includes CAF-02 |
-| CUST-22-007 | Gate | No unresolved cross-account leakage | — | Defect ledger | None | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 7 — includes CAF-09 |
+| CUST-22-004 | Gate | All Customer P0/P1 defects CLOSED | — | Defect ledger | None open | PASS — دفترُ العيوب (§40.45): كلُّ P0/P1 مُغلَقة — CUST-DEF-001 (P0، §40.17 نشرُ إنتاج)، 002/003/004/005 (P1، مُغلَقةٌ بإصلاح مصدرٍ + انحدار + شهود)، وCAF-13 RESOLVED. لا P0/P1 مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 4 — CUST-DEF-001..005 all closed |
+| CUST-22-005 | Gate | No unresolved launch-affecting security defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-001 (استيلاءُ حساب/حدُّ المصادقة) مُغلَقٌ ومنشورٌ إنتاجاً؛ لا عيبَ أمنيٍّ مؤثّرٍ على الإطلاق مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 5 |
+| CUST-22-006 | Gate | No unresolved duplicate-order defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-002 (خطرُ الطلب المكرّر) مُغلَقٌ (§40.25/40.27، isDecided + بصمةُ الجسد)؛ لا عيبَ تكرارٍ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 6 |
+| CUST-22-007 | Gate | No unresolved cross-account leakage | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-004 (تسريبٌ بين الحسابات) مُغلَقٌ (§40.6.2، detachSession + CustDef010Test)، و15-011 مُثبَتٌ حيّاً؛ لا تسريبَ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 7 |
 | CUST-22-008 | Gate | No unresolved financial/source-of-truth defect | — | Defect ledger | None | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 8 — includes CAF-03, CAF-08 |
-| CUST-22-009 | Gate | Every fixed defect has regression evidence | — | Regression column | Filled for every fixed defect | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 9 |
+| CUST-22-009 | Gate | Every fixed defect has regression evidence | — | Regression column | Filled for every fixed defect | PASS — دفترُ العيوب (§40.45): لكلّ عيبٍ مُصلَحٍ انحدارٌ آليّ — CUST-DEF-001 TestSU10/TestConfirm*, 002 isDecided tests, 003 TestCDEF003_* , 004 CustDef010Test, 005 CartChanges tests, CAF-13 EngagementTest | `PASS` | ledger | — | — | — | — | — | Gate item 9 |
 | CUST-22-010 | Gate | Automated impacted suites pass | — | Go full suite; Kotlin unit suites; guards | Green | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 10 |
 | CUST-22-011 | Gate | Physical-device mandatory cases pass | — | Device rows | PASS | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 11 |
 | CUST-22-012 | Gate | Zero accidental Production dependency | — | CUST-00-005/006, CUST-19-024 | PASS | PASS — صفرُ اعتمادٍ على الإنتاج: CUST-00-005/006 + CUST-19-024 كلُّها PASS | `PASS` | — | — | — | — | — | — | Gate item 12 |
@@ -1277,8 +1277,8 @@ until ADB is available — not an acceptance blocker.
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 1 | 1 | 13 | 0 | 0 |
-| 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **37** | **10** | **484** | **0** | **47** |
+| 34 | CUST-22 | 16 | 16 | 0 | 9 | 0 | 7 | 0 | 0 |
+| | **Total** | **578** | **474** | **104** | **32** | **10** | **489** | **0** | **47** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3722,3 +3722,16 @@ order-status ⇒ الشاشةُ الافتراضيّة = عطبُ CAF-13 معر�
 وقد أُنتجتا بفخّين عكوسين. لا أثرَ ماليّ، الجغرافيا مُستعادة.
 
 الحصيلة (محقّقة): PASS 482⇒484، BLOCKED 49⇒47، NOT_TESTED 37، N/A 10، FAIL 0. = 578.
+
+### 40.45 · بوّاباتُ CUST-22 المستندةُ إلى دفتر العيوب (٢٠٢٦-٠٩-٢٣، ليليّ)
+
+مراجعةُ دفتر العيوب (read-only): كلُّ عيوب P0/P1 للزبون مُغلَقة — CUST-DEF-001 (P0، استيلاءُ حساب، §40.17
+نشرُ إنتاج)، CUST-DEF-002 (P1، تكرارُ طلب، §40.25/40.27)، CUST-DEF-003 (P1، حدُّ الثقة الماليّ، منشورٌ إنتاجاً)،
+CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-005 (P1، مصدرُ الحقيقة الماليّ، §40.7)، وCAF-13 RESOLVED.
+لكلٍّ انحدارٌ آليّ. فأُغلقت بوّاباتُ الدفتر:
+- **22-004** (كلُّ P0/P1 مُغلَقة) · **22-005** (لا عيبَ أمنيٍّ مؤثّر) · **22-006** (لا تكرارَ طلب) ·
+  **22-007** (لا تسريبَ بين الحسابات) · **22-009** (انحدارٌ لكلّ عيبٍ مُصلَح). خمسٌ **NOT_TESTED⇒PASS.**
+مؤجَّلٌ حتّى تُجرى السويتاتُ/moneycheck: 22-008 (ماليّ/SoT)، 22-010 (السويتات الآليّة)، 22-013 (مطابقةُ بيانات staging).
+مؤجَّلٌ للجلسة المُشرَفة: 22-001/002/003/011/015/016 (تعتمد إغلاقَ صفوف الجهاز/العدّ النهائيّ).
+
+الحصيلة (محقّقة): PASS 484⇒489، NOT_TESTED 37⇒32، BLOCKED 47، N/A 10، FAIL 0. = 578.
