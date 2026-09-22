@@ -64,18 +64,17 @@ func (s *Server) qaDriverIdentity(w http.ResponseWriter, r *http.Request) (strin
 	return did, true
 }
 
-// qaOrderAdvance **يسوق طلبَ زبون QA المخصّصَ النقديَّ إلى حالةٍ هدف.**
+// qaOrderAdvance **يسوق طلبَ زبون QA إلى حالةٍ هدف.**
 //
-// **QA-scoped**: يرفض طلباً لا يملكه زبونُ QA. **محايدٌ ماليّاً**: يرفض غيرَ
-// المخصّص أو غيرَ النقديّ. **لا رجوعَ**: الهدفُ فوقَ الحالة الجارية.
+// **مساران، كلاهما نقديٌّ محايدٌ ماليّاً و QA-scoped:**
+//   - **مخصّص**: السُّلّمُ كاملاً حتّى `delivered` (يُسنِد سائقاً، يتّفق السعر).
+//   - **عاديّ**: **حتّى `accepted` فقط** — ما قبل التسوية، بلا سائقٍ ولا مال
+//     (لشهود 14-011). أيُّ هدفٍ آخرَ للعاديّ يُرفض.
+//
+// **QA-scoped**: يرفض طلباً لا يملكه زبونُ QA. **لا رجوعَ**: الهدفُ فوقَ الحالة الجارية.
 func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, orderID, target string) {
 	if !isUUID(orderID) {
 		s.respondErr(w, errValidation)
-		return
-	}
-	toIdx := qaLadderIndex(target)
-	if toIdx <= 0 { // pending (0) ليس هدفاً، والمجهولُ يُرفض
-		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_bad_target", "errors.validation"))
 		return
 	}
 	ctx := r.Context()
@@ -95,9 +94,50 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_not_qa_order", "errors.forbidden"))
 		return
 	}
-	// **الحيادُ الماليّ**: مخصّصٌ نقديٌّ حصراً (لا قيدَ محفظةٍ/صندوقٍ/خزينة).
-	if kind != "custom" || payment != "cash" {
+	// ══════════════════════════════════════════════════════════════════
+	// **الطلبُ العاديّ: «accepted» فقط — لشهود 14-011** (ما قبل التسوية)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **التسويةُ تبدأ عند `picked_up`** (`transitions.go`: `settle` حالتا ٢/٣):
+	// **فالوقوفُ عند `accepted` لا يمسّ محفظةً ولا صندوقاً ولا خزينةً ولا
+	// عمولةً ولا تعويضاً.** **نقديٌّ حصراً** فلا خصمَ إنشاءٍ للمحفظة (العاديُّ
+	// يخصم عند الإنشاء إن كان محفظةً). **لا سائقَ**، **وقابلٌ للإلغاء**
+	// (accepted ⇒ cancelled للزبون) فيُنظَّف.
+	if kind != "custom" {
+		if payment != "cash" {
+			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_normal_cash_only", "errors.validation"))
+			return
+		}
+		if target != "accepted" {
+			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_normal_accepted_only", "errors.validation"))
+			return
+		}
+		if status != "pending" {
+			s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_no_backward", "errors.conflict"))
+			return
+		}
+		actor, aerr := s.qaNonCustomerAuthor(ctx, uid)
+		if aerr != nil {
+			s.respondErr(w, aerr)
+			return
+		}
+		// pending ⇒ accepted (merchant/ops) — بلا سائقٍ ولا تسوية.
+		if _, err := s.orders.Transition(ctx, actor, []string{"ops"}, orderID, "accepted", "QA accept"); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		s.logger.Warn("QA normal order accepted (staging-only)", "order", orderID, "actor", actor)
+		httpx.JSON(w, http.StatusOK, map[string]any{"order_id": orderID, "status": "accepted", "was": status})
+		return
+	}
+	// **المخصّصُ: الحيادُ الماليّ** — نقديٌّ حصراً.
+	if payment != "cash" {
 		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_needs_custom_cash", "errors.validation"))
+		return
+	}
+	toIdx := qaLadderIndex(target)
+	if toIdx <= 0 { // pending (0) ليس هدفاً، والمجهولُ يُرفض
+		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_bad_target", "errors.validation"))
 		return
 	}
 	fromIdx := qaLadderIndex(status)
