@@ -983,7 +983,7 @@ Capture real measurements, not subjective statements. Do not set arbitrary pass 
 | CUST-21-007 | Perf | Checkout load | Signed-in test customer · Staging · SM-A525F | Open review; time to totals | Recorded | — | `NOT_TESTED` | — | online | — | — | — | — | — |
 | CUST-21-008 | Perf | Order-list load | Signed-in test customer · Staging · SM-A525F | Open طلباتي | Recorded | PASS — قياسٌ حيّ (§40.34): «طلباتي» (٣٤ طلباً) فُتحت واستقرّت ضمن ثانيتين، مُسجَّل | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-009 | Perf | Order-detail load | Signed-in test customer · Staging · SM-A525F | Open detail | Recorded | — | `NOT_APPLICABLE` | — | online | — | — | — | — | **N/A:** No order-detail screen exists. Order-list load is CUST-21-008. |
-| CUST-21-010 | Perf | Network recovery time | Signed-in test customer · Staging · SM-A525F | Offline → online; time to banner removal and fresh data | Recorded (2026-09-19 baseline: validated +6 s) | — | `NOT_TESTED` | — | flapping | — | — | — | — | — |
+| CUST-21-010 | Perf | Network recovery time | Signed-in test customer · Staging · SM-A525F | Offline → online; time to banner removal and fresh data | Recorded (2026-09-19 baseline: validated +6 s) | PASS — قياسٌ حيّ (§40.34): انقطاعٌ ⇒ لافتة، ثمّ إعادةُ الشبكة ⇒ عادت الأصنافُ خلال ~٢٫٨ث؛ مُسجَّلٌ بلا عتبة | `PASS` | — | flapping | — | — | — | — | — |
 | CUST-21-011 | Perf | Repeated foreground/background cycle | Signed-in test customer · Staging · SM-A525F | ×50 via `am start`/HOME | No crash; memory recorded | PASS — قياسٌ حيّ (§40.34): تنقّلٌ أمام/خلف ×٣٠ ⇒ لا انهيار والذاكرةُ لم تنمُ (PSS مستقرّ) | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-012 | Perf | Repeated refresh cycle | Signed-in test customer · Staging · SM-A525F | Pull-to-refresh ×30 | No crash; request count sane | PASS — قياسٌ حيّ (§40.34): إنعاشٌ ×٢٠ ⇒ لا انهيار | `PASS` | — | online | — | — | — | — | — |
 | CUST-21-013 | Perf | No obvious unbounded memory growth | Signed-in test customer · Staging · SM-A525F | `dumpsys meminfo` at start/after 20 min use | No monotonic growth beyond noise | PASS — قياسٌ حيّ (§40.34): TOTAL PSS 135557⇒130939KB بعد كلّ الحلقات — لا نموَّ غيرَ محدود | `PASS` | — | online | — | — | — | — | — |
@@ -1276,9 +1276,9 @@ until ADB is available — not an acceptance blocker.
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
-| 33 | CUST-21 | 15 | 15 | 0 | 7 | 1 | 7 | 0 | 0 |
+| 33 | CUST-21 | 15 | 15 | 0 | 6 | 1 | 8 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **77** | **9** | **434** | **0** | **58** |
+| | **Total** | **578** | **474** | **104** | **76** | **9** | **435** | **0** | **58** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
