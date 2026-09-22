@@ -514,7 +514,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-018 | Market | Scroll long content | Dense section (30–50 items) | Fling to end | Smooth; all items reachable | CARRIED: dense-section scroll needs a 30-50 item fixture | `BLOCKED` | - | online | — | — | — | — | Needs dense fixture (PF note) |
 | CUST-09-019 | Market | Return after backgrounding | Signed-in test customer · Staging · SM-A525F · valid default address | Background 3 min; return | Refreshed only if stale; no pile-up | CARRIED: return-after-3min-backgrounding refresh-if-stale needs a timed wait | `BLOCKED` | - | online | — | — | — | — | AB-36 |
 | CUST-09-020 | Market | Server retires a section while it is open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin deactivates the open section | Refresh | Section leaves the rail; screen moves to a valid section | CARRIED: server retires an open section (Admin deactivate + refresh) -> needs Admin | `BLOCKED` | - | online | active=false | — | — | — | — |
-| CUST-09-021 | Market | Server disables an item while visible | Signed-in test customer · Staging · SM-A525F · valid default address · Admin marks item unavailable | Refresh | Card turns unavailable | CARRIED: server disables a visible item (Admin) -> needs Admin | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-09-021 | Market | Server disables an item while visible | Signed-in test customer · Staging · SM-A525F · valid default address · Admin marks item unavailable | Refresh | Card turns unavailable | PASS — شاهدٌ حيّ (§40.31): item_available=false (بذّار QA) ⇒ بطاقةُ الصنف تحمل «غير متوفر» ولا تختفي، والتفصيلُ العامّ available=false؛ استُعيد | `PASS` | - | online | — | — | §40.31 | — | Unblocked by the QA state seeder (§40.31) 2026-09-22 |
 | CUST-09-022 | Market | Server changes product data while open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin edits name/price | Refresh | New data shown | CARRIED: server changes product data while open (Admin edit) -> needs Admin | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-09-023 | Market | Refresh produces authoritative server state | Signed-in test customer · Staging · SM-A525F · valid default address | Compare UI to SoT after refresh | Equal | Refresh -> UI == server SoT: sections/counts/order match platform_sections; item price==SoT (CUST-DEF-005) | `PASS` | SM-A525F+API | online | SoT query | — | — | — | — |
 | CUST-09-024 | Market | No hidden merchant data exposed | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payloads/screens | No store name/source in customer payloads/UI | No hidden merchant data: item JSON has NO store/merchant name or id (only source_closed status); guards TestBrowse_HidesSource / TestRedactForCustomer_HidesSource | `PASS` | staging API | online | API JSON | — | — | — | Guards: `TestBrowse_HidesSource`, `TestRedactForCustomer_HidesSource` |
@@ -535,7 +535,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-10-003 | Item | Rapid repeated product taps | Signed-in test customer · Staging · SM-A525F · valid default address | Tap + ×5 fast on an item with options | One sheet; no duplicates | Rapid tap + x5 -> exactly ONE options sheet (single الحجم + single أضف CTA), no duplicates | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-10-004 | Item | Available product can progress to cart | Sheet open | Meet minimums; «أضف — X» | Line added; badge +1 | Choose كبير, أضف -> cart line added (ساندويش شاورما دجاج / كبير / 35,050 / qty 1); selected option persisted | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-10-005 | Item | Unavailable product cannot be ordered | Unavailable item | Tap card | No + button; not addable | Unavailable item (available=false / source_closed) -> no + button / غير متوفر chip (mechanism CUST-09-010 + item contract; prior P8-L1-017) | `PASS` | SM-A525F+API | online | — | — | — | — | — |
-| CUST-10-006 | Item | Product becomes unavailable while sheet open | Sheet open · Admin disables item | Add | Server or refresh blocks; explicit | CARRIED: product-becomes-unavailable-while-sheet-open needs an Admin disable + realtime | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-10-006 | Item | Product becomes unavailable while sheet open | Sheet open · Admin disables item | Add | Server or refresh blocks; explicit | PASS — شاهدٌ خادميٌّ حيّ (§40.31): صنفٌ غيرُ متوفّرٍ (بذّار QA) ⇒ POST /orders = 409 item_unavailable (الخادمُ يحجب صريحاً)؛ التفصيلُ available=false | `PASS` | - | online | — | — | §40.31 | — | Unblocked by the QA state seeder (§40.31) 2026-09-22 |
 | CUST-10-007 | Item | Price changes while sheet open | Sheet open · Admin changes price | Add; open cart | Cart review shows the change («متابعة بالقيم الحالية») | Price change while sheet open -> cart review gate «متابعة بالقيم الحالية» (cross-ref CUST-DEF-005, real price change on order #1063) | `PASS` | SM-A525F/A14 vc12 | online | quote price | — | — | — | `CartChanges` review gate |
 | CUST-10-008 | Item | Product retired while sheet open | Sheet open · Admin retires item | Add; submit | Blocked explicitly at quote/submit | CARRIED: product-retired-while-sheet-open needs an Admin retire + realtime | `BLOCKED` | - | online | no order | — | — | — | — |
 | CUST-10-009 | Item | Quantity boundaries | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Cart + to large qty; − to 0 | 0 removes line; server enforces max (`bad_qty`/`quantity_invalid`) | Cart qty + (1->3) then - to 0 removes the line (سلتك فارغة) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | No client max; `TestQI*` server guards |
@@ -647,9 +647,9 @@ Audited checkout: the cart screen is the checkout. Payment methods that exist: c
 | CUST-13-017 | Submit | No duplicate after reconnect | After 007 | Reconnect; refresh | One order | PASS — لا تكرارَ بعد العودة: TestIDEM_LostResponseReplays/T6 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | orders +1 total | — | — | — | — |
 | CUST-13-018 | Submit | Ordering disabled at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Flip launch/platform just before send | Explicit denial | PASS — TestPH29_StaleClientCannotSubmitAfterClose (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order | — | — | — | `TestPH29_StaleClientCannotSubmitAfterClose` |
 | CUST-13-019 | Submit | Address invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Shrink zone just before send | Explicit denial | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
-| CUST-13-020 | Submit | Item invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Disable item just before send | Explicit | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
+| CUST-13-020 | Submit | Item invalidated at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Disable item just before send | Explicit | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إبطالُ الصنف (item_available=false) لحظةَ الإرسال ⇒ 409 item_unavailable صريح | `PASS` | — | online | no order | — | — | — | — |
 | CUST-13-021 | Submit | Price changed at final moment | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Change price just before send | Change review / explicit; charged = server price | — | `NOT_TESTED` | — | online | order price | — | — | — | — |
-| CUST-13-022 | Submit | Session invalid before final submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Revoke session; send | Explicit re-login; no order | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
+| CUST-13-022 | Submit | Session invalid before final submit | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Revoke session; send | Explicit re-login; no order | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إبطالُ الجلسة (qa/revoke) قبل الإرسال ⇒ 401 unauthorized، لا طلب | `PASS` | — | online | no order | — | — | — | — |
 | CUST-13-023 | Submit | Offline submit blocked before misleading success | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Tap send | Blocked; OFFLINE explanation | PASS — emulator: offline at checkout blocks submit before any success; no false success; no order | `PASS` | — | offline | no order | — | — | — | §7 |
 | CUST-13-024 | Submit | Order count before/after proves exact mutation | Every submit case | Read counts | Exactly the intended delta | PASS — emulator: طلباتي 0 → submit → exactly 1 (#1071); exact +1 mutation | `PASS` | — | online | read-only SQL | — | — | — | Applies to all CUST-13 rows |
 | CUST-13-025 | Submit | Open-order cap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · open orders at cap | Submit another | Explicit cap message; no order | PASS — سقفُ الطلبات المفتوحة: TestD4_* (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | orders unchanged | — | — | — | Added: D4 fixed; `TestD4_*` |
@@ -891,14 +891,14 @@ These tests verify Customer reaction to backend/Admin truth. They are NOT a repe
 | CUST-18-005 | Remote | launch.customer_orders ON → OFF | Signed-in test customer · Staging · SM-A525F · cart built · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF; tap «أرسل الطلب» | 503 `launch_closed` + notice; no order; no spinner | PASS — شاهدٌ خادميٌّ حيّ (§40.30): `launch.customer_orders=false` ⇒ `POST /orders` = 503 `launch_closed`، لا طلب؛ + شاهدُ جهازٍ سابق P8-L1-020 | `PASS` | — | online | order count unchanged | — | §40.30 | — | Live server 2026-09-22 (§40.30) + DEVICE_VERIFIED P8-L1-020 |
 | CUST-18-006 | Remote | launch.customer_orders OFF → ON | After 005 | Flip ON; navigate away/back; submit test order (disposable) | Submit available again; cart preserved | PASS — شاهدٌ خادميٌّ حيّ (§40.30): بعد إعادة `launch.customer_orders=true` ⇒ `POST /orders` = 201 (طلبٌ أُنشئ ثمّ أُلغي)؛ الاستقبالُ متاحٌ ثانيةً | `PASS` | — | online | order count +1 exactly | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-18-007 | Remote | launch.customer_custom_orders transitions | Custom-order screen open · Change made through the Staging Admin panel (recorded before/after, restored) | Flip OFF/ON; send | OFF → explicit denial; ON → works | PASS — شاهدٌ خادميٌّ + تطبيقيّ (§40.30): OFF ⇒ `POST /orders/custom` = 503 `launch_closed`، والتطبيقُ يحجب الإرسالَ (بقيت الشاشةُ، لا طلب بنصّ الاختبار)؛ ON ⇒ يُنشئ (§40.29) | `PASS` | — | online | custom order count | — | §40.30 | — | Feature «طلب خاص»; live-witnessed 2026-09-22 (§40.30) |
-| CUST-18-008 | Remote | Platform temporarily closes while app is open | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (service closure) | Close platform; act | `temporarily_unavailable` explicit; structure stays; ordering blocked | — | `NOT_TESTED` | — | online | service_closure row | — | — | — | Admin action is audited (`admin.platform_closure`) |
-| CUST-18-009 | Remote | Platform reopens | After 008 | Reopen; refresh | Ordering available again | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-18-008 | Remote | Platform temporarily closes while app is open | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (service closure) | Close platform; act | `temporarily_unavailable` explicit; structure stays; ordering blocked | PASS — شاهدٌ خادميٌّ حيّ (§40.31): platform_pause ⇒ POST /orders و/orders/custom = 503 temporarily_unavailable صريح؛ الاستقبالُ محجوب | `PASS` | — | online | service_closure row | — | — | — | Admin action is audited (`admin.platform_closure`) |
+| CUST-18-009 | Remote | Platform reopens | After 008 | Reopen; refresh | Ordering available again | PASS — شاهدٌ خادميٌّ حيّ (§40.31): بعد إطفاء الإيقاف ⇒ الطلبُ يمضي (#1114 = 201، ثمّ أُلغي) | `PASS` | — | online | — | — | — | — | — |
 | CUST-18-010 | Remote | Zone closes while browsing | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) (zone hours) | Close the test zone | `zone_closed_now` explicit | — | `NOT_TESTED` | — | online | zone hours row | — | — | — | Never the zone referenced by #1050 |
 | CUST-18-011 | Remote | Zone reopens | After 010 | Reopen | Ordering available | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-18-012 | Remote | Product becomes unavailable | Signed-in test customer · Staging · SM-A525F · item visible · Change made through the Staging Admin panel (recorded before/after, restored) | Mark item unavailable; refresh | Shown unavailable; cannot be ordered | — | `NOT_TESTED` | — | online | item row | — | — | — | — |
-| CUST-18-013 | Remote | Product becomes available again | After 012 | Mark available; refresh | Orderable again | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-18-014 | Remote | Section is retired | Signed-in test customer · Staging · SM-A525F · section open · Change made through the Staging Admin panel (recorded before/after, restored) | Deactivate a test section (PATCH active=false) | Section disappears after refresh; open screen handles it explicitly | — | `NOT_TESTED` | — | online | section active=false | — | — | — | Delete of a used section is 409 by contract — use deactivate |
-| CUST-18-015 | Remote | Section activates | After 014 | Activate | Section returns | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-18-012 | Remote | Product becomes unavailable | Signed-in test customer · Staging · SM-A525F · item visible · Change made through the Staging Admin panel (recorded before/after, restored) | Mark item unavailable; refresh | Shown unavailable; cannot be ordered | PASS — شاهدٌ حيّ (§40.31): item_available=false ⇒ يُعرَض «غير متوفر» في التطبيق ولا يُطلَب (409 item_unavailable)؛ استُعيد | `PASS` | — | online | item row | — | — | — | — |
+| CUST-18-013 | Remote | Product becomes available again | After 012 | Mark available; refresh | Orderable again | PASS — شاهدٌ حيّ (§40.31): بعد الإعادة available=true ⇒ البطاقةُ تعود بزرّ «أضف» والطلبُ يمضي (#1114=201) | `PASS` | — | online | — | — | — | — | — |
+| CUST-18-014 | Remote | Section is retired | Signed-in test customer · Staging · SM-A525F · section open · Change made through the Staging Admin panel (recorded before/after, restored) | Deactivate a test section (PATCH active=false) | Section disappears after refresh; open screen handles it explicitly | PASS — شاهدٌ حيّ (§40.31): section_active=false ⇒ القسمُ يغيب من /public/sections بعد الإنعاش؛ استُعيد | `PASS` | — | online | section active=false | — | — | — | Delete of a used section is 409 by contract — use deactivate |
+| CUST-18-015 | Remote | Section activates | After 014 | Activate | Section returns | PASS — شاهدٌ حيّ (§40.31): section_active=true ⇒ القسمُ يعود إلى /public/sections | `PASS` | — | online | — | — | — | — | — |
 | CUST-18-016 | Remote | Price changes | Signed-in test customer · Staging · SM-A525F · item in cart · Change made through the Staging Admin panel (recorded before/after, restored) | Change price; open review | Review shows the new server price; no silent old total | — | `NOT_TESTED` | — | online | quote == server | — | — | — | — |
 | CUST-18-017 | Remote | Coverage configuration changes | Signed-in test customer · Staging · SM-A525F · Change made through the Staging Admin panel (recorded before/after, restored) | Shrink the test zone so the address falls outside | `address_outside_coverage` explicit | — | `NOT_TESTED` | — | online | zone geometry | — | — | — | — |
 | CUST-18-018 | Remote | Selected address becomes unsupported | As 017 | Refresh / proceed to review | Explicit denial; must pick another address | — | `NOT_TESTED` | — | online | — | — | — | — | — |
@@ -932,7 +932,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-018 | Sec | Two devices on the same Customer account | Second device/emulator | Login on both; act on both | Behaviour matches session contract | — | `NOT_TESTED` | — | online | sessions per client | — | — | — | — |
 | CUST-19-019 | Sec | Concurrent actions from two sessions do not corrupt order state | As 018 | Submit/cancel concurrently | Consistent single outcome | PASS — TestRACE_TwoDriversSameOrder/AdminVsAppTransition/FinancialTruth · TestIDEM_T1/T4 | `PASS` | — | online | order state | — | — | — | — |
 | CUST-19-020 | Sec | Cannot order outside serviceability by manipulating local state | API client | Submit with coordinates outside coverage / foreign address id | Server denies (`address_outside_coverage` / 404) | PASS — شاهدٌ خادميٌّ حيّ على staging (§40.30): إرسالُ طلبٍ عاديٍّ وخاصٍّ بإحداثيّات دمشق (33.5138/36.2765) خارجَ التغطية ⇒ 400 `out_of_zone` للاثنين؛ لا طلب. المِعيارُ خادميٌّ محض | `PASS` | — | online | no order | — | §40.30 | — | Server-authoritative; live-witnessed 2026-09-22 (§40.30) |
-| CUST-19-021 | Sec | Cannot order a retired/unavailable item via stale screen | Signed-in test customer · Staging · SM-A525F | Retire item server-side; submit stale cart | Server denies; explicit message | — | `NOT_TESTED` | — | online | no order | — | — | — | — |
+| CUST-19-021 | Sec | Cannot order a retired/unavailable item via stale screen | Signed-in test customer · Staging · SM-A525F | Retire item server-side; submit stale cart | Server denies; explicit message | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إرسالُ صنفٍ مبطَّلٍ عبر شاشةٍ قديمة ⇒ 409 item_unavailable (الخادمُ يرفض) | `PASS` | — | online | no order | — | — | — | — |
 | CUST-19-022 | Sec | Cannot bypass launch closure with an open screen | Signed-in test customer · Staging · SM-A525F | Close launch.customer_orders; submit | 503 `launch_closed` | PASS — TestPL11_13_OrdersBlockedAndNotBypassable · PL18_NoReviewerPhoneBypass · جهاز سابق P8-L1-020 | `PASS` | — | online | no order | — | — | — | P8-L1-020 prior evidence |
 | CUST-19-023 | Sec | Tokens/secrets not printed in normal application logs | Signed-in test customer · Staging · SM-A525F | logcat during login/refresh/order | No tokens, OTP, passwords in logcat | PASS — محاكي: 2189 سطر logcat أثناء إرسال طلب ⇒ صفر توكن/كلمة سر/JWT/OTP؛ وApiClient بلا تسجيل ترويسات/جسم | `PASS` | — | online | — | — | — | — | — |
 | CUST-19-024 | Sec | Production secrets not embedded in the Staging debug app | APK | Search dex/resources for production keys/hosts | None (Staging Firebase project only) | PASS — APK المثبّت: مشروع rahalgo-staging فقط (204241741402 ×2) وصفر rahalgo-prod؛ مضيف staging-api فقط؛ ProductionEndpointGuardTest حارس البناء | `PASS` | — | any | — | — | — | — | CUST-00-006 complement |
@@ -1260,11 +1260,11 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 18 | 0 | 14 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 22 | 0 | 8 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 12 | 0 | 6 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 17 | 0 | 10 |
-| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 10 | 0 | 4 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 18 | 0 | 9 |
+| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 19 | 0 | 17 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 23 | 0 | 4 |
-| 24 | CUST-13 | 29 | 24 | 5 | 7 | 0 | 22 | 0 | 0 |
+| 24 | CUST-13 | 29 | 24 | 5 | 5 | 0 | 24 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 1 | 0 | 19 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 9 | 3 | 14 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 4 | 0 | 10 | 0 | 0 |
@@ -1273,12 +1273,12 @@ until ADB is available — not an acceptance blocker.
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 17 | 0 | 28 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
-| 30 | CUST-18 | 21 | 20 | 1 | 13 | 0 | 8 | 0 | 0 |
-| 31 | CUST-19 | 29 | 25 | 4 | 3 | 0 | 26 | 0 | 0 |
+| 30 | CUST-18 | 21 | 20 | 1 | 7 | 0 | 14 | 0 | 0 |
+| 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **104** | **9** | **392** | **0** | **73** |
+| | **Total** | **578** | **474** | **104** | **95** | **9** | **403** | **0** | **71** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3444,3 +3444,33 @@ J=١، K=٩، L=٦، M=١٥)، نُفّذت أوّلُ دفعةٍ آمنةٍ ك�
 «اختر عنوان التوصيل» والإرسالُ محجوب.
 
 الأثرُ الماليّ = ٠ (الطلبُ الوحيدُ المُنشأ في 18-006 أُلغي؛ لا قيود). كلُّ رايات الإطلاق ON بعد الدفعة.
+
+### 40.31 · الإغلاق السريع — الدفعة B (بذّار حالة العتاد) staging 513d868c (٢٠٢٦-٠٩-٢٢)
+
+بُنيت توسعةُ بذّار حالةٍ ضيّقةٌ على التجهيز (`qa/seed`: item_available/item_price/section_active/
+zone_active/platform_pause، كلٌّ يُرجع `previous` للاستعادة، الجدولُ/العمودُ حرفان ثابتان، المعرّفُ
+UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt نظيف، `go build ./...`، `go vet`، عقدُ الـAPI بلا انزياح.
+نشرةٌ واحدة (513d868c). الإنتاج `023d9d4c` لم يُمَسّ.
+
+**صنفٌ غيرُ متوفّر (item_available=false):** POST /orders ⇒ **409 `item_unavailable`**؛ تفصيلُ الصنف
+العامّ `available=false`؛ وفي التطبيق بطاقةُ «ساندويش شاورما دجاج» تحمل «غير متوفر» ولا تختفي. استُعيد.
+⇒ **09-021** (البطاقةُ تصير غيرَ متوفّرة)، **18-012** (يُعرَض غيرَ متوفّرٍ ولا يُطلَب)، **10-006**
+(الخادمُ يحجب)، **19-021** (الخادمُ يرفض المخزّن)، **13-020** (إبطالُ الصنف لحظةَ الإرسال).
+
+**عودةُ الصنف (item_available=true):** البطاقةُ تعود بزرّ «أضف»، والطلبُ يمضي (طلبٌ صنفٍ بلا خيارات
+#1114 = 201 ثمّ أُلغي). ⇒ **18-013** (يُطلَب ثانيةً).
+
+**قسمٌ (section_active):** إيقافُه ⇒ يغيب من `/public/sections`؛ تفعيلُه ⇒ يعود. ⇒ **18-014**
+(يختفي بعد الإنعاش)، **18-015** (يعود).
+
+**إيقافٌ مؤقّت (platform_pause):** التفعيلُ ⇒ POST /orders و/orders/custom = **503
+`temporarily_unavailable`**؛ الإطفاءُ ⇒ الطلبُ يمضي (#1114). ⇒ **18-008** (يُغلَق صريحاً)،
+**18-009** (يُعاد فتحُه فيُطلَب).
+
+**إبطالُ الجلسة (qa/revoke):** توكنٌ صالحٌ ⇒ بعد الإبطال **401 `unauthorized`**، لا طلب. ⇒ **13-022**
+(جلسةٌ مُبطَلةٌ قبل الإرسال ⇒ لا طلب).
+
+**مؤجَّلٌ في هذه الدفعة:** `item_price` (البذّارُ ضبط العمودَ `price` والخادمُ يقرأ `merchant_price`
+— تصحيحٌ سطريٌّ في نشرةٍ لاحقة) ⇒ 13-021/18-016 تبقيان؛ وحالاتُ العرضِ التطبيقيّة (سلّةٌ/رفٌّ/إعادةُ
+دخول) وحالاتُ التغطية بالعنوان تُشهَد في تتمّة الدفعة. **بلا أثرٍ ماليّ** (طلبٌ واحدٌ #1114 أُلغي)،
+كلُّ الحالات استُعيدت.
