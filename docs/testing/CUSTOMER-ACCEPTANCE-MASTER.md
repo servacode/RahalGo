@@ -460,7 +460,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-07-026 | Addr | Map search and reverse geocode (added) | Signed-in test customer · Staging · SM-A525F | Search ≥2 chars; move pin | Top 4 results; label filled after settle | /geo/search q=Raqqa -> results; /geo/reverse -> label; device reverse-geocode label witnessed (CUST-03-013). Arabic map-search text-entry not driveable via ADB (input text is ASCII-only) | `PASS` | SM-A525F+API | online | `/geo/search`, `/geo/reverse` | — | — | — | Added: guests cannot call geo (auth-only) — see 07-028 |
 | CUST-07-027 | Addr | Address form validation (added) | Signed-in test customer · Staging · SM-A525F | Save with missing area/street; non-digit floor | Save disabled until lat/lng + area + street; floor digits only | Save with empty area/street -> blocked, no address created (stayed 3) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added |
 | CUST-07-028 | Addr | Guest cannot reach geo endpoints / address book (added) | Signed out (guest) · Staging · SM-A525F | Open cart address card; try map search | Explicit login path; no silent failure | Guest: no delivery selector, add-to-cart gates to login; /geo/search without token -> 401. No silent geo failure | `PASS` | SM-A525F+API | online | — | — | — | — | Added: audit found the cart address card is not guest-gated while geo calls are auth-only |
-| CUST-07-029 | Addr | Browse city picker (added) | Signed-in test customer · Staging · SM-A525F | Drawer header «تتسوّق في …» → choose city / «تلقائيّاً حسب موقعي» | Catalog scoped to the chosen city; persisted | CARRIED: browse city-picker (drawer scope) needs a device witness | `BLOCKED` | - | online | requests carry lat/lng of the city | — | — | — | Added: `CityPicker.kt`, `CityScope.kt` |
+| CUST-07-029 | Addr | Browse city picker (added) | Signed-in test customer · Staging · SM-A525F | Drawer header «تتسوّق في …» → choose city / «تلقائيّاً حسب موقعي» | Catalog scoped to the chosen city; persisted | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): «تتسوّق في» في الدرج ⇒ «من أيّ مدينة تتسوّق؟» + «تلقائيّاً حسب موقعي» + «تُعرض متاجر المدينة التي تختارها وحدها»؛ والقصرُ على المدينة مشهودٌ (09-028) | `PASS` | - | online | requests carry lat/lng of the city | — | — | — | Added: `CityPicker.kt`, `CityScope.kt` |
 | CUST-07-030 | Addr | Request my area / notify me (demand) (added) | Signed-in test customer · Staging · SM-A525F · address outside coverage | Tap the demand button | Explicit confirmation; one demand row | CARRIED: request-my-area/demand needs an out-of-coverage address + the demand button | `BLOCKED` | - | online | demand row +1 | — | — | — | Added: `POST /api/v1/demand`; not offered for discovery points |
 
 ## 19 · CUST-08 — Availability / coverage
@@ -1258,7 +1258,7 @@ until ADB is available — not an acceptance blocker.
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
-| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
+| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 24 | 0 | 6 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **84** | **9** | **426** | **0** | **59** |
+| | **Total** | **578** | **474** | **104** | **84** | **9** | **427** | **0** | **58** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
