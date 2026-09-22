@@ -495,7 +495,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-09-001 | Market | Home loads normally | Signed-in test customer · Staging · SM-A525F · valid default address | Open تسوق | Banners, search, section rail, items grid | /public/home 200 with sections+categories; device rail renders banners/search/rail/items | `PASS` | SM-A525F+API | online | `/public/home` 200 | — | — | — | Home = Shop tab (`ShopScreen.kt`) |
-| CUST-09-002 | Market | Sections load | Signed-in test customer · Staging · SM-A525F · valid default address | Observe rail | Sections with content shown | CARRIED: back-from-options-sheet-with-nothing-added needs a signed-in device witness (sheet opening witnessed in CUST-03-005; closed with CUST-10-002) | `BLOCKED` | - | online | `/public/home` sections | — | — | — | — |
+| CUST-09-002 | Market | Sections load | Signed-in test customer · Staging · SM-A525F · valid default address | Observe rail | Sections with content shown | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): شاشةُ «تسوق» تعرض أقسامَ السوق بمحتواها (رقاقاتُ الأقسام + بطاقاتُ الأصناف بأسعارها) — مشهودٌ مرارًا هذه الجلسة | `PASS` | - | online | `/public/home` sections | — | — | — | — |
 | CUST-09-003 | Market | Correct active sections appear | Signed-in test customer · Staging · SM-A525F · valid default address | Compare rail vs SoT | Only active sections with count>0 for this city | Only count>0 active sections shown: client filters ShopViewModel.visibleSections (count>0); device rail matches | `PASS` | SM-A525F+API | online | platform_sections active + counts | — | — | — | 38-section launch catalog (0156) |
 | CUST-09-004 | Market | Inactive/retired sections not shown | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with retired list | None of the 6 retired starters / inactive sections | API returns only active sections (44 of 47 total); retired/inactive never returned/shown | `PASS` | staging API | online | active=false rows | — | — | — | — |
 | CUST-09-005 | Market | Section ordering correct | Signed-in test customer · Staging · SM-A525F · valid default address | Read rail order | Matches `sort_order` | Visible sections ordered by sort_order (1,3,6,7,9,10,11,12,16,26); API + device rail match | `PASS` | SM-A525F+API | online | sort_order | — | — | — | — |
@@ -521,7 +521,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-025 | Market | Search | Signed-in test customer · Staging · SM-A525F · valid default address | Type ≥2 chars (300 ms debounce) | Matching items; «لا نتائج» when none; offline → OFFLINE state | /public/search/items q=شاورما -> 6 results; q=nomatch -> 0 (لا نتائج). Debounce is UI | `PASS` | SM-A525F+API | online | `/public/search/items` | — | — | — | Search exists; filters do not (no filter UI in source) |
 | CUST-09-026 | Market | Banner slider and banner tap (added) | Signed-in test customer · Staging · SM-A525F · valid default address · banners with targets | Observe auto-rotation; tap a banner with a target | Rotation per `banner_auto/banner_every_ms`; a banner has no configurable target | N/A by owner decision 2026-09-21: the owner/admin contract does not support configurable banner targets (decision 2026-08-09), so a non-actionable banner is intended behavior, not a defect. CUST-DEF-008 closed CONTRACT-CONFIRMED. Contract locked by `CustBannerTargetTest`. | `NOT_APPLICABLE` | staging API | online | `/public/home` banners | — | — | — | Reclassified FAIL→N/A (owner 2026-09-21). CUST-DEF-008 = NOT-A-DEFECT / CONTRACT-CONFIRMED |
 | CUST-09-027 | Market | Section rail auto-scroll setting (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `shop.rail_auto` | Toggle setting (Admin) and observe | Rail follows the Owner setting | — | `NOT_APPLICABLE` | — | online | setting value | — | — | — | **N/A:** Owner decision 2026-09-19: `shop.rail_auto` is WEBSITE-ONLY — catalog places it in the Site group, section page.shop (`backend/internal/settings/catalog.go:759`); the Android app only parses `rail_auto` (`mobile/shared/.../model/Shop.kt:27`) and has no auto-scroll. A mobile auto-scroll needs its own product contract. · Added. CAF-15 NEEDS_OWNER_DECISION (§40.10): `rail_auto/rail_every_ms` parsed but never used; the setting sits in the Site group |
-| CUST-09-028 | Market | Browse scoped to city/address (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Change city (drawer) / default address | Catalog, search, offers and suggestions follow the chosen scope | CARRIED: browse scoped to city (drawer city change / default address) needs a device witness of the scope change | `BLOCKED` | - | online | requests carry lat/lng | — | — | — | Added. PC-1 gap noted: `CityScope.kt:90` returns the chosen city first |
+| CUST-09-028 | Market | Browse scoped to city/address (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Change city (drawer) / default address | Catalog, search, offers and suggestions follow the chosen scope | PASS — شاهدٌ حيّ (§40.31/§40.33): السوقُ مقصورٌ على مدينة الزبون — الرقّة تعرض الأصناف، وعنوانٌ/موقعٌ في دمشق ⇒ «لم يصل رحال غو إلى دمشق»/out_of_zone | `PASS` | - | online | requests carry lat/lng | — | — | — | Added. PC-1 gap noted: `CityScope.kt:90` returns the chosen city first |
 | CUST-09-029 | Market | Guest browsing of the market (added) | Signed out | Browse, search, open sections | Works without account; add/heart lead to login | Guest browses the market (sections + items + search); add/heart -> login gate (cross-ref CUST-06-030) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added |
 
 ## 21 · CUST-10 — Product interaction
@@ -1260,7 +1260,7 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 19 | 0 | 8 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 23 | 0 | 13 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 24 | 0 | 3 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **84** | **9** | **424** | **0** | **61** |
+| | **Total** | **578** | **474** | **104** | **84** | **9** | **426** | **0** | **59** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
