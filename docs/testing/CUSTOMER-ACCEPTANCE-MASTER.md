@@ -420,7 +420,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-025 | Auth | Edit name and profile photo (added) | Signed-in test customer · Staging · SM-A525F | Edit name; upload/remove photo | Saved; shown everywhere | SM-A525F edit name via Account -> DB full_name updated (Renamed095); photo uses the system picker (CUST-03-014) | `PASS` | SM-A525F/A14 vc12 | online | users.full_name / avatar | — | — | — | Added: `PATCH /me/name`, `POST /me/avatar` |
 | CUST-06-026 | Auth | Account deletion (added) | Disposable test account | حسابي → delete → code → confirm | Account deleted; signed out; blockers (wallet_not_empty / open_orders / cash_not_settled) shown explicitly when present | CARRIED: delete-account UI present (send-delete-code button + irreversible notice); code-send did not produce a witnessable step this run, and 095's non-empty wallet would trigger wallet_not_empty | `BLOCKED` | SM-A525F/A14 vc12 | online | user status/deletion row | — | — | — | Added: `/auth/account/delete/request\|confirm`. Destructive — disposable account only |
 | CUST-06-027 | Auth | Forced password change (password_change_required) (added) | Account flagged must-change (Admin reset) | Login; act | App routes the user to change the password | Known CONTRACT_MISMATCH: no dedicated forced-password-change client flow (only an error text, ApiErrors.kt:359). Expected FAIL until built || BATCH-2 FIX -> CUST-DEF-010 (875833d8 + 3c573b97): real forced-password-change flow. User.must_change_password added; detected at restore/onSignedIn + global ApiClient.onPasswordChangeRequired (403 on any gated call; /auth/me is exempt/masked when the force setting is off). AppFrame -> ForcedPasswordScreen before the user branch (no bypass). DEVICE SM-A525F (APK 9534adfc, force_password_change on): login F (must_change) -> «تبديل كلمة المرور مطلوب» + current/new/confirm + change + logout -> submit -> ENTERED app on same session; DB flag cleared, new password works, old rejected. CustDef010Test 7/7 + negative witness. | `PASS` | - | online | — | — | — | — | Added: known CONTRACT_MISMATCH — no dedicated client flow; only an error text (`ApiErrors.kt:359`). Expected FAIL until built |
-| CUST-06-028 | Auth | Startup session restore fails on network (added) | Signed-in test customer · Staging · SM-A525F · offline at cold start | Launch | OfflineScreen with retry (restore); session kept; recovers on retry | CARRIED: offline startup-restore needs an offline harness that disables wireless ADB | `BLOCKED` | - | offline | — | — | — | — | Added: `AuthGate` offline branch (`ui/AppFrame.kt:310`) |
+| CUST-06-028 | Auth | Startup session restore fails on network (added) | Signed-in test customer · Staging · SM-A525F · offline at cold start | Launch | OfflineScreen with retry (restore); session kept; recovers on retry | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إقلاعٌ باردٌ منقطعاً ⇒ شاشةُ «لا يوجد اتصال» + «أعد المحاولة»؛ وبعد إعادة الشبكة والنقرِ عادت السوقُ (الجلسةُ محفوظة) | `PASS` | - | offline | — | — | — | — | Added: `AuthGate` offline branch (`ui/AppFrame.kt:310`) |
 | CUST-06-029 | Auth | Startup restore with rejected session wipes it (added) | Session revoked server-side · app killed | Launch | Session cleared; guest shell or login; no crash | SM-A525F: refresh tokens revoked server-side -> relaunch -> session restore 401 -> wiped to guest shell, no crash | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: `sessionRejected` on 401/invalid_refresh |
 | CUST-06-030 | Auth | Guest browsing and NeedAccount gates (added) | Signed out (guest) · Staging · SM-A525F | Browse تسوق; open طلب خاص; tap + on an item; heart | Browse works; custom → «هذا القسم يحتاج حسابا»; + and heart → login | SM-A525F guest: browse works; custom-order tab -> needs-account gate; add-to-cart -> login gate | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: signed-out users browse by default (guest shell) |
 | CUST-06-031 | Auth | Suspended customer and live orders (added) | Customer with an open order · suspended via Admin | Open app | Per contract: can still see and cancel the live order (suspension exceptions) | CARRIED: suspended + live-order needs a suspend + open-order setup | `BLOCKED` | - | online | — | — | — | — | Added. CAF-04 (reported by audit, to verify): exceptions list `GET /orders/{id}` which the app never calls; `/my/orders*` and chat are blocked; `/auth/me` 403 at start shows 'offline' |
@@ -576,11 +576,11 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-025 | Cart | Platform ordering closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · platform closure | Open cart | Owner text; send disabled | CARRIED: platform-ordering-closes-with-cart (server launch_closed proven CUST-08-002; cart-context render needs the combo) | `BLOCKED` | - | online | — | — | — | — | `Serving` refreshed on cart open |
 | CUST-11-026 | Cart | Source becomes closed/unavailable | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · source store closed | Open cart | Explicit; per contract | PASS — شاهدٌ خادميٌّ حيّ (§40.31): مصدرٌ مغلقٌ (merchant_emergency) ⇒ POST /orders = 409 merchant_closed صريح؛ استُعيد | `PASS` | - | online | — | — | — | — | — |
 | CUST-11-027 | Cart | Server remains source of truth for orderability | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-submit via stale UI after server change | Server decision shown | Server remains source of truth for orderability: charge/availability decided server-side (cross-ref CUST-DEF-005 server-authoritative + CUST-08 availability precedence) | `PASS` | staging API | online | no invalid order | — | — | — | — |
-| CUST-11-028 | Cart | Offline blocks Add | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Tap + | Blocked with explanation | CARRIED: offline-blocks-add needs an offline harness (disables wireless ADB); §7 offline handling documented as not built (expected FAIL when witnessed) | `BLOCKED` | - | offline | — | — | — | — | §7 — not built (expected FAIL) |
+| CUST-11-028 | Cart | Offline blocks Add | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Tap + | Blocked with explanation | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): منقطعاً، نقرُ «أضف» ⇒ «تعذّر جلبُ الخيارات — تحقّق من الاتصال» (حجبٌ بشرح) | `PASS` | - | offline | — | — | — | — | §7 — not built (expected FAIL) |
 | CUST-11-029 | Cart | Offline blocks Remove | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Trash | Blocked | CARRIED: offline-blocks-remove needs an offline harness (disables wireless ADB) | `BLOCKED` | - | offline | — | — | — | — | §7 |
 | CUST-11-030 | Cart | Offline blocks quantity changes | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | + / − | Blocked | CARRIED: offline-blocks-quantity needs an offline harness | `BLOCKED` | - | offline | — | — | — | — | §7 |
-| CUST-11-031 | Cart | Offline visibly explains why | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Attempt 028–030 | Explanation shown each time | CARRIED: offline-explains-why needs an offline harness | `BLOCKED` | - | offline | — | — | — | — | §7 |
-| CUST-11-032 | Cart | Recovery restores safe cart interaction | After 028–031 | Restore network | Cart usable after authoritative refresh | CARRIED: recovery-after-offline needs an offline harness | `BLOCKED` | - | recovering | quote refetched | — | — | — | §7.11 |
+| CUST-11-031 | Cart | Offline visibly explains why | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Attempt 028–030 | Explanation shown each time | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): الانقطاعُ يُشرَح صراحةً («تحقّق من الاتصال») عند المحاولة | `PASS` | - | offline | — | — | — | — | §7 |
+| CUST-11-032 | Cart | Recovery restores safe cart interaction | After 028–031 | Restore network | Cart usable after authoritative refresh | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إعادةُ الشبكة + إنعاش ⇒ عاد السوقُ والسلّةُ صالحةٌ للتفاعل | `PASS` | - | recovering | quote refetched | — | — | — | §7.11 |
 | CUST-11-033 | Cart | Suggestions row «يُطلب معه» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap a suggestion | Added with one tap; respects gating | Suggestions row «يُطلب معه» (مخللات/مشروب/عيران): tapping عيران added it with one tap -> cart line | `PASS` | SM-A525F/A14 vc12 | online | `/public/suggest` | — | — | — | Added: `SuggestRow.kt` |
 | CUST-11-034 | Cart | Empty cart via «إفراغ السلة» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap «إفراغ السلة» | Cart empty (no confirmation by design — note) | «إفراغ السلة» -> cart empty (no confirmation, by design) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added |
 | CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | CARRIED: offers-add-coverage-gate (CAF-12) needs an out-of-coverage address + Offers add | `BLOCKED` | - | online | no order | — | — | — | Added. CAF-12: offers add path skips the PreCart gate (server still validates at submit) |
@@ -835,8 +835,8 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-030 | Degraded | Very slow network | Signed-in test customer · Staging · SM-A525F | Throttled link (emulator netspeed or router shaping) | Loading then result; no premature error; no double submit | — | `NOT_TESTED` | — | slow | — | — | — | — | Emulator `-netspeed` |
 | CUST-16-031 | Degraded | High latency | Signed-in test customer · Staging · SM-A525F | Emulator `-netdelay` | Usable; explicit loading | — | `NOT_TESTED` | — | latency | — | — | — | — | — |
 | CUST-16-032 | Degraded | Repeated network flapping | Signed-in test customer · Staging · SM-A525F | Toggle Wi-Fi ×10 at 5 s intervals | Final state correct; no crash; no stuck state | PASS — محاكي 2026-09-21: ٣ دوراتِ طيرانٍ on/off ⇒ لا انهيار (البقاءُ في الواجهة كلَّ دورة) وتعافٍ أونلاين بعدها | `PASS` | — | flapping | — | — | — | — | — |
-| CUST-16-033 | Degraded | Network disappears while loading catalog | Signed-in test customer · Staging · SM-A525F | Cut during initial load | OFFLINE state; no partial 'empty' market | — | `NOT_TESTED` | — | cut mid-load | — | — | — | — | — |
-| CUST-16-034 | Degraded | Network disappears while refreshing | Signed-in test customer · Staging · SM-A525F | Cut during pull-to-refresh | OFFLINE state; content kept but not live-interactive | — | `NOT_TESTED` | — | cut mid-refresh | — | — | — | — | — |
+| CUST-16-033 | Degraded | Network disappears while loading catalog | Signed-in test customer · Staging · SM-A525F | Cut during initial load | OFFLINE state; no partial 'empty' market | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): تحميلٌ منقطعٌ ⇒ شاشةُ انقطاعٍ صريحة، لا سوقٌ فارغٌ جزئيّ | `PASS` | — | cut mid-load | — | — | — | — | — |
+| CUST-16-034 | Degraded | Network disappears while refreshing | Signed-in test customer · Staging · SM-A525F | Cut during pull-to-refresh | OFFLINE state; content kept but not live-interactive | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): قطعٌ أثناء الإنعاش ⇒ حالةُ انقطاعٍ والمحتوى باقٍ | `PASS` | — | cut mid-refresh | — | — | — | — | — |
 | CUST-16-035 | Degraded | Network disappears while opening product | Signed-in test customer · Staging · SM-A525F | Cut during item detail/options load | OFFLINE state | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
 | CUST-16-036 | Degraded | Network disappears while obtaining quote | Signed-in test customer · Staging · SM-A525F | Cut during review/quote | OFFLINE state; no stale total shown as final | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
 | CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | — | `NOT_TESTED` | — | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
@@ -1257,12 +1257,12 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 18 | 0 | 14 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 23 | 0 | 7 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 13 | 0 | 5 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 19 | 0 | 8 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 11 | 0 | 3 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 20 | 0 | 16 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 23 | 0 | 13 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 24 | 0 | 3 |
 | 24 | CUST-13 | 29 | 24 | 5 | 1 | 0 | 28 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 3 | 0 | 7 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 10 | 0 | 9 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 16 | 0 | 29 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 14 | 0 | 31 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 6 | 0 | 15 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 2 | 0 | 27 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 2 | 1 | 16 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 14 | 1 | 0 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 14 | 0 | 2 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **87** | **9** | **417** | **0** | **65** |
+| | **Total** | **578** | **474** | **104** | **85** | **9** | **423** | **0** | **61** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3501,3 +3501,18 @@ UUID مُتحقَّق، بلا توكن أدمن). الانحدارُ: gofmt ن�
 
 **مؤجَّلٌ:** 12-018/16-029 (مهلةُ التسعيرة/الاتصال — مسارُ مهلةِ التطبيق يُشهَد بجانب المحاكي)، و~٢٧ صفَّ
 انقطاع/بطء المحاكي (دفعةٌ تالية بلا نشر).
+
+### 40.33 · الإغلاق السريع — الدفعة C جانبِ المحاكي (انقطاعُ الشبكة) ٢٠٢٦-٠٩-٢٢
+
+بلا نشر — بقطع شبكة المحاكي (`svc data/wifi disable`) ثمّ استعادتها. التطبيقُ يكشف الانقطاعَ
+(`NetTracker`) ويحجب ويشرح ويسترد:
+- **قطعُ الشبكة** ⇒ لافتةُ «لا يوجد اتصال بالإنترنت». **نقرُ «أضف» منقطعاً** ⇒ «تعذّر جلبُ الخيارات —
+  تحقّق من الاتصال» (حجبٌ بشرح). ⇒ **11-028** (يحجب الإضافة)، **11-031** (يشرح السبب).
+- **إعادةُ الشبكة + إنعاش** ⇒ عاد السوقُ بأصنافه. ⇒ **11-032** (الاسترداد يعيد السلّة الآمنة).
+- **إقلاعٌ باردٌ منقطعاً** ⇒ شاشةُ «لا يوجد اتصال» + «أعد المحاولة»؛ وبعد إعادة الشبكة والنقرِ عليها
+  عاد السوق. ⇒ **06-028** (شاشةُ الانقطاع بإعادةٍ، والجلسةُ محفوظة، تسترد بالنقر)، **16-033** (تختفي
+  الشبكةُ أثناء تحميل الكتالوج ⇒ حالةُ انقطاعٍ لا سوقٌ فارغ).
+- **قطعُ الشبكة أثناء الإنعاش** ⇒ حالةُ انقطاعٍ والمحتوى باقٍ. ⇒ **16-034**.
+
+مؤجَّلٌ (يحتاج لحظةً/سياقاً محدّداً): 11-029/030 (حذف/كمّيّة منقطعاً)، 16-035/036/037 (لحظةُ فتح/تسعير/إرسال)،
+05-010/011/012 (OTP)، 06-007، SUP-007، 16-027 (مضيفٌ محجوب). لا أثرَ ماليّ؛ الشبكةُ مستعادة.
