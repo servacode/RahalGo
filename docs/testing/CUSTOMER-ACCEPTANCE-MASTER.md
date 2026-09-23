@@ -401,8 +401,8 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-006 | Auth | Slow login response | Signed out (guest) · Staging · SM-A525F | Slow network | Loading then result | CARRIED: slow-login needs a staging delay harness (classifier-denied, see CUST-04-010) | `BLOCKED` | - | slow | — | — | — | — | — |
 | CUST-06-007 | Auth | Network loss during login | Signed out (guest) · Staging · SM-A525F | Cut after tap | Explicit failure; retry works | CARRIED: network-loss-during-login needs an offline harness that disables wireless ADB; mechanism proven by CUST-04-011 | `BLOCKED` | - | cut | — | — | — | — | — |
 | CUST-06-008 | Auth | Successful login lands on correct surface | Signed out (guest) · Staging · SM-A525F | Login | تسوق tab; cart/addresses of this account | SM-A525F login lands on the shop (تسوق) surface with the account wallet/address + 5-tab signed-in nav | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
-| CUST-06-009 | Auth | Access token refresh during use | Signed-in test customer · Staging · SM-A525F | Use > 15 min | Silent refresh; no interruption | CARRIED: access-token refresh needs >15 min TTL passage or a token-expiry harness | `BLOCKED` | - | online | `auth.refresh` audit | — | — | — | Access TTL 15 min |
-| CUST-06-010 | Auth | Expired access token with valid refresh recovers | Signed-in test customer · Staging · SM-A525F | Background > 15 min; act | Action succeeds after silent refresh | CARRIED: expired-access recovery needs >15 min TTL passage | `BLOCKED` | - | online | — | — | — | — | `shared/net/ApiClient.kt:147-176` |
+| CUST-06-009 | Auth | Access token refresh during use | Signed-in test customer · Staging · SM-A525F | Use > 15 min | Silent refresh; no interruption | PASS — شاهدٌ حيّ (§40.54): بعد خمولٍ >30د (تجاوز TTL 15د) نُفِّذت ثلاثةُ نداءاتٍ مصادَقةٍ متتالية (الطلبات/الحساب GET me «زبون الاختبار QA»/التصفّح) ⇒ كلُّها نجحت بلا مقاطعةٍ ولا شاشةِ دخول؛ ودورةُ التوكن مُثبَتةٌ خادميّاً (صالح⇒200، فاسد⇒401، تجديد⇒access جديد، إعادة⇒200) وApiClient يجدّد على 401 | `PASS` | device+api | online | `auth.refresh` audit | — | — | — | Access TTL 15 min |
+| CUST-06-010 | Auth | Expired access token with valid refresh recovers | Signed-in test customer · Staging · SM-A525F | Background > 15 min; act | Action succeeds after silent refresh | PASS — شاهدٌ حيّ (§40.54 + §40.50): التطبيقُ خُلّف >30د (وسابقاً 20د في 17-013)، التوكنُ منتهٍ، ثمّ فعلٌ مصادَقٌ ⇒ نجح بتحديثٍ صامتٍ بلا دخول؛ ودورةُ الاسترداد الخادميّة مُثبَتةٌ (401⇒/auth/refresh⇒200) | `PASS` | device+api | online | — | — | — | — | `shared/net/ApiClient.kt:147-176` |
 | CUST-06-011 | Auth | Invalid/revoked session → re-authentication | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset of the test account); use app | Explicit re-login path; no loop; no stale private data | CARRIED: mid-session refresh-failure needs >15 min access TTL (revoked refresh + expiry); the startup variant is covered by 029 | `BLOCKED` | - | online | — | — | — | — | Audit risk: mid-session refresh failure shows «انتهت جلستك — ادخل من جديد» but does not sign out (no global 401 → logout) |
 | CUST-06-012 | Auth | Logout removes access | Signed-in test customer · Staging · SM-A525F | Drawer → «خروج» | Signed out; server session revoked | SM-A525F logout -> guest shell; server session revoked (active refresh 2->1) | `PASS` | SM-A525F/A14 vc12 | online | refresh token revoked; `auth.logout` audit | — | — | — | Logout has no confirmation |
 | CUST-06-013 | Auth | BACK cannot reopen authenticated screens after logout | After 012 | Press BACK repeatedly | No authenticated screen reappears | SM-A525F BACK after logout -> guest shell, no authenticated screen reappears | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
@@ -866,7 +866,7 @@ Test key screens under foreground, background, process death, reopen, screen loc
 | CUST-17-009 | Lifecycle | Process killed after order may have been committed | Signed-in test customer · Staging · SM-A525F | Submit; kill immediately; relaunch | Committed order visible once in طلباتي; no duplicate | PASS — قتلٌ بعد احتمال التقييد ⇒ لا تكرار: TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate + مفتاحٌ على القرص (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | order count +1 exactly | — | — | — | Same idempotency concern as CUST-13-014 |
 | CUST-17-010 | Lifecycle | Reopen after process death | After 006–009 | Relaunch | Consistent state; no stale error overlay | PASS — emulator 2026-09-21: reopen after process death → app reopens signed in (5-tab) | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-011 | Lifecycle | Screen lock/unlock | Signed-in test customer · Staging · SM-A525F | Power off screen; unlock | Same screen; no crash | PASS — emulator 2026-09-21: screen off (sleep) → wake/unlock → app state intact, no crash | `PASS` | — | online | — | — | — | — | Owner unlocks; no PIN handling by tooling |
-| CUST-17-012 | Lifecycle | App left backgrounded for an extended period | Signed-in test customer · Staging · SM-A525F | Background ≥ 30 min; return | Refreshes authoritative data; no stale live data | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-17-012 | Lifecycle | App left backgrounded for an extended period | Signed-in test customer · Staging · SM-A525F | Background ≥ 30 min; return | Refreshes authoritative data; no stale live data | PASS — شاهدٌ حيّ (§40.54): لقطةُ التطبيق «#1141 بانتظار القبول»؛ خُلّف ≥30د (04:19⇒04:50، العمليّةُ نجت pid 13360 = عودةٌ دافئة)، وأُلغي #1141 خادميّاً خلالها؛ العودةُ ⇒ تبويبُ الطلبات «لا طلبات جارية» (الحالةُ المُوثَّقةُ الحيّة، لا البائتة)، بلا شاشةِ دخول (تحديثٌ صامتٌ للتوكن المنتهي) | `PASS` | device+api | online | status equals SoT | — | — | — | — |
 | CUST-17-013 | Lifecycle | Access token expires while backgrounded | Signed-in test customer · Staging · SM-A525F | Background > access-token TTL (15 min); return; act | Silent refresh; action succeeds; no forced login | PASS — شاهدٌ حيّ (§40.50): التطبيقُ خُمِّل في الخلفيّة ٢٠+ دقيقة (تجاوز TTL 15د)، ثمّ إحضارٌ للمقدّمة ونداءاتٌ مصادَقةٌ حيّة — تصفّحٌ + طلباتي (GET /orders) + حسابي (GET /me يردّ «زبون الاختبار QA» +963900555001) + سحبٌ للإنعاش ⇒ كلُّها نجحت بلا شاشةِ «انتهت جلستك»، تحديثٌ صامتٌ للتوكن | `PASS` | device | online | `auth.refresh` audit | — | — | — | Access TTL 15 min (`cmd/api/main.go`) |
 | CUST-17-014 | Lifecycle | Network changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle Wi-Fi↔data; return | Correct online/offline state on return | PASS — تبدُّلُ الشبكة في الخلفيّة ⇒ عودةٌ بلا انهيارٍ وتعافٍ (محاكي 2026-09-21) | `PASS` | — | switching | — | — | — | — | — |
 | CUST-17-015 | Lifecycle | Location permission changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; revoke/grant in Settings; return | No crash; state reflects permission | PASS — محاكي 2026-09-21: إلغاءُ إذن الموقع في الخلفيّة ثمّ العودة ⇒ لا انهيار | `PASS` | — | online | — | — | — | — | — |
@@ -1257,7 +1257,7 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 21 | 0 | 11 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 24 | 0 | 3 |
@@ -1272,13 +1272,13 @@ until ADB is available — not an acceptance blocker.
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
-| 29 | CUST-17 | 22 | 21 | 1 | 3 | 1 | 18 | 0 | 0 |
+| 29 | CUST-17 | 22 | 21 | 1 | 2 | 1 | 19 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **27** | **10** | **504** | **0** | **37** |
+| | **Total** | **578** | **474** | **104** | **26** | **10** | **507** | **0** | **35** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,27 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.54 · الوضعُ الليليّ — خلفيّةٌ ≥30د: 17-012 + تحديثُ التوكن 06-009/06-010 (٢٠٢٦-٠٩-٢٣)
+
+خُلّف التطبيقُ الساعةَ 04:19:30 وتُرك ≥**30 دقيقة** (تجاوزَ TTL توكنِ الوصول 15د بأكثرَ من ضعف).
+**العمليّةُ نجت** (pidof=13360) ⇒ عودةٌ **دافئةٌ** حقيقيّة لا إقلاعٌ بارد. وخلالَ النافذة أُلغي طلبُ QA1
+**#1141** خادميّاً (كان التطبيقُ قد لقّطه «بانتظار القبول» قبلَ التخليف).
+
+عند العودة (04:50):
+- **17-012** (إنعاشُ المُوثَّق، لا بائت): الشاشةُ حطّت على المحتوى المصادَق بلا «انتهت جلستك»؛ تبويبُ الطلبات
+  أظهر **«لا طلبات جارية»** — أي الحالةَ الحيّةَ المُوثَّقة (#1141 ملغى ⇒ ليس جارياً)، **لا البائتةَ**
+  «#1141 بانتظار القبول». فالتطبيقُ جلب `GET /my/orders` طازجاً (استلزم تحديثاً صامتاً للتوكن المنتهي).
+- **06-009** (تحديثٌ صامتٌ أثناء الاستعمال، بلا مقاطعة): ثلاثةُ نداءاتٍ مصادَقةٍ متتاليةٍ بعد الانتهاء —
+  الطلبات، ثمّ الحساب (`GET /me` ⇒ «زبون الاختبار QA» · +963900555001)، ثمّ التصفّح — **كلُّها نجحت
+  بلا أيّ مقاطعةٍ ولا شاشةِ دخول.**
+- **06-010** (استردادُ التوكن المنتهي بتجديدٍ صالح): نفسُ الشاهد + §40.50 (17-013، 20د). والعقدُ الخادميُّ
+  مُثبَتٌ حيّاً: access صالح⇒200، فاسد⇒**401**، `POST /auth/refresh` {refresh صالح}⇒access جديد، إعادة⇒**200**
+  (وApiClient.kt:172 يجدّد على 401 وحدَه ثمّ يعيد النداء).
+
+**NOT_TESTED/BLOCKED ⇒ PASS ×3.** لا حالةَ باقية (#1141 ملغى؛ لا طلب مفتوح؛ محفظة 0).
+
+الحصيلة (محقّقة): PASS 504⇒507، BLOCKED 37⇒35، NOT_TESTED 27⇒26، N/A 10، FAIL 0. = 578.
 
 ### 40.53 · الوضعُ الليليّ — دورةُ الخلفيّة والإنعاش: 09-019 (٢٠٢٦-٠٩-٢٣)
 
