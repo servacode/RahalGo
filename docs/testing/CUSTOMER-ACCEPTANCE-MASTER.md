@@ -500,7 +500,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-004 | Market | Inactive/retired sections not shown | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with retired list | None of the 6 retired starters / inactive sections | API returns only active sections (44 of 47 total); retired/inactive never returned/shown | `PASS` | staging API | online | active=false rows | — | — | — | — |
 | CUST-09-005 | Market | Section ordering correct | Signed-in test customer · Staging · SM-A525F · valid default address | Read rail order | Matches `sort_order` | Visible sections ordered by sort_order (1,3,6,7,9,10,11,12,16,26); API + device rail match | `PASS` | SM-A525F+API | online | sort_order | — | — | — | — |
 | CUST-09-006 | Market | Open section | Signed-in test customer · Staging · SM-A525F · valid default address | Tap a section chip | Its items only | Open section -> /public/sections/{id}/items returns the section items (5 for شاورما) | `PASS` | SM-A525F+API | online | `/public/sections/{id}/items` | — | — | — | P8-C3-015 prior DEVICE_VERIFIED |
-| CUST-09-007 | Market | Return without losing position/state | Signed-in test customer · Staging · SM-A525F · valid default address | Scroll; switch tab; return | Same section and position where designed | **PRODUCT-DECISION ROW** (§40.57): الحالةُ الجوهريّةُ محفوظةٌ — العودةُ إلى القسم نفسِه (Shop، لأنّ `tab` عبر `rememberSaveable`)، السلّةُ والجلسةُ باقيتان، لا انهيار (شاهدٌ حيّ). أمّا **إزاحةُ التمرير** فتُعادُ للأعلى بالتصميم (تركيبٌ شرطيّ `tab==Tab.Shop -> ShopScreen()` بلا `SaveableStateHolder`، وحالةُ القائمة غيرُ محفوظة). **لا عقدَ صريحٌ** يوجب حفظَ الإزاحة عبر تبديل التبويب (GROUND-RULES صامتة؛ «where designed» تفويضيّة) ⇒ **غيرُ محدَّد**. قرارُ المالك: أ) قبولُ الإرجاع للأعلى (الحاليّ)، أم ب) إضافةُ SaveableStateHolder لحفظ الإزاحة. | `BLOCKED` | - | online | state preserved; scroll-offset reset by design | — | — | — | Product decision: scroll-offset retention across tab-switch (unspecified) |
+| CUST-09-007 | Market | Return without losing position/state | Signed-in test customer · Staging · SM-A525F · valid default address | Scroll; switch tab; return | Same section and position where designed | PASS — قرارُ منتجٍ مُوثَّقٌ (§40.60): المالكُ حسم (٢٠٢٦-٠٩-٢٣) أنّ إرجاعَ التمرير للأعلى عند العودة لتبويب السوق **هو التصميمُ المقصود**، مع حفظِ حالةِ الزبون/الجلسة/السلّة/القسم — شاهدٌ حيّ (العودةُ إلى Shop عبر `rememberSaveable`، السلّةُ والجلسةُ باقيتان، لا انهيار). والمعيارُ «Same section and position **where designed**» تفويضيٌّ للتصميم ولا يشترط حفظَ الإزاحة؛ فالتصميمُ المحسومُ يحقّقه: القسمُ نفسُه والموضعُ «حيث صُمِّم» = الأعلى. **لا تعارض** ⇒ BLOCKED⇒PASS | `PASS` | - | online | state preserved; scroll-reset is intended design | — | — | — | Owner design decision 2026-09-23: scroll resets to top on tab-return by design; state preserved. Contract in §40.60 |
 | CUST-09-008 | Market | Products/items load | Signed-in test customer · Staging · SM-A525F · valid default address | Open section | Grid of items with price pills | Items grid loads with price pills (device + API items array) | `PASS` | SM-A525F+API | online | — | — | — | — | — |
 | CUST-09-009 | Market | Available product displays correctly | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect card | Image, price, discount chip, + button | Item card has image_url, price, price_before/discount_percent, has_options (+ button); price==SoT (CUST-DEF-005) | `PASS` | SM-A525F+API | online | price == SoT | — | — | — | — |
 | CUST-09-010 | Market | Unavailable product behaviour | Item marked unavailable | Inspect card | «غير متوفر» chip; + hidden; section stays | Unavailable items exist (مشاوي count>orderable_now); item.available/source_closed drive the غير متوفر/closed chip; prior device evidence P8-L1-017 | `PASS` | SM-A525F+API | online | item available=false | — | — | — | P8-L1-017 prior evidence |
@@ -1260,7 +1260,7 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 22 | 0 | 10 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 25 | 0 | 2 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 26 | 0 | 1 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
 | 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 34 | 0 | 3 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **24** | **10** | **515** | **0** | **29** |
+| | **Total** | **578** | **474** | **104** | **24** | **10** | **516** | **0** | **28** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,23 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.60 · قرارُ منتجٍ مُوثَّق — 09-007 (سلوكُ التمرير عند العودة للتبويب) (٢٠٢٦-٠٩-٢٣)
+
+**عقدُ القبول (حسمه المالك ٢٠٢٦-٠٩-٢٣):** في تطبيق الزبون، الخروجُ من تبويب السوق ثمّ العودةُ إليه **قد
+يُعيد إزاحةَ التمرير إلى الأعلى** — **وهذا هو التصميمُ المقصود**، بينما تبقى حالةُ الزبون/الجلسة/السلّة
+والقسمُ محفوظةً. (المصدر: تركيبٌ شرطيٌّ `tab==Tab.Shop -> ShopScreen()` بلا `SaveableStateHolder`؛
+`tab` نفسُه عبر `rememberSaveable`.) **فلم يعد هذا غامضاً.**
+
+**فحصُ المعيار (لا يُضعَّف):** معيارُ 09-007 المكتوب هو «Same section and position **where designed**».
+هذه صياغةٌ **تفويضيّةٌ للتصميم** — لا تشترط حفظَ إزاحةِ التمرير. فالعقدُ المحسومُ يحقّقها حرفيّاً:
+- **Same section** ✓ — العودةُ إلى Shop (محفوظٌ عبر rememberSaveable)، والسلّةُ والجلسةُ باقيتان (شاهدٌ حيّ).
+- **position where designed** ✓ — الموضعُ المُصمَّمُ الآن = الأعلى.
+
+**لا يوجد في المعيار اشتراطٌ صريحٌ لحفظِ موضع التمرير** ⇒ لا تعارضَ يُبلَّغ. **BLOCKED⇒PASS** (بلا إعادةِ
+صياغةٍ للمعيار — العقدُ الآن صريحٌ والمعيارُ يُرضى كما كُتب).
+
+الحصيلة (محقّقة): PASS 515⇒516، BLOCKED 29⇒28، NOT_TESTED 24، N/A 10، FAIL 0. = 578.
 
 ### 40.59 · قدرةُ المطابقة والتسجيل 4xx — 22-013 + 04-014 (٢٠٢٦-٠٩-٢٣)
 
