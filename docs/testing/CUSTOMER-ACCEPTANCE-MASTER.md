@@ -806,8 +806,8 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-001 | Offline | Fresh app launch fully offline | Force-stopped · net=none | Launch; UIA +3/+8/+15 s | OFFLINE state: «لا يوجد اتصال بالإنترنت» + «أعد المحاولة»; interaction blocked (§7); no empty market; stable | PASS — emulator 2026-09-21 (airplane-mode): cold launch fully offline → «لا يوجد اتصال بالإنترنت» + guidance + «أعد المحاولة» | `PASS` | — | offline | — | — | — | — | L1-019 cold path |
 | CUST-16-002 | Offline | Marketplace loaded, Wi-Fi disappears, no other network | Signed-in test customer · Staging · SM-A525F · market loaded · data OFF | Disable Wi-Fi only; UIA +3/+8/+15 s | OFFLINE state: «لا يوجد اتصال بالإنترنت» + «أعد المحاولة»; interaction blocked (§7) | PASS — emulator 2026-09-21 (airplane-mode): marketplace loaded then connectivity lost → offline state (no stale silent shop) | `PASS` | — | offline | — | — | — | — | Exact P8-DEF-001 scenario |
 | CUST-16-003 | Offline | Marketplace loaded, mobile data disappears | Signed-in test customer · Staging · SM-A525F · Wi-Fi OFF · data ON | Disable data; UIA | OFFLINE state: «لا يوجد اتصال بالإنترنت» + «أعد المحاولة»; interaction blocked (§7) | PASS — محاكي 2026-09-21: تعطيل واي فاي + بيانات الجوّال (الشبكة الافتراضيّة none) ⇒ «لا يوجد اتصال بالإنترنت» (مُطلِق: اختفاء بيانات الجوّال) | `PASS` | — | offline | — | — | — | — | — |
-| CUST-16-004 | Offline | Wi-Fi switches to mobile data successfully | Signed-in test customer · Staging · SM-A525F · both ON · on Wi-Fi | Disable Wi-Fi; wait for cellular VALIDATED | No OFFLINE state once cellular validates (a brief state during validation is acceptable and must clear); data keeps working | — | `NOT_TESTED` | — | switching | — | — | — | — | 2026-09-19 evidence: a new cellular network shows banner until VALIDATED · محاكي (2026-09-21): لا يوجد إلّا شبكةٌ واحدةٌ مُصادَقة (خلويّة عبر NAT المضيف)؛ واي فاي المحاكي لا يُصادِق وحدَه، فلا يمكن إنتاج تسليمٍ أمين بين راديوَين — أُبقيت قدرة-محجوبة. عقدُ متانة تبدّل المسار مثبتٌ بـ NetTrackerTest. الشهادة الحيّة تحتاج جهازاً براديوَين مُصادَقَين |
-| CUST-16-005 | Offline | Mobile data switches to Wi-Fi successfully | Signed-in test customer · Staging · SM-A525F · on cellular | Enable Wi-Fi | Stays online; no false OFFLINE | — | `NOT_TESTED` | — | switching | — | — | — | — | — · كسابقتها 16-004: تعذّر تسليمٌ أمين بين واي فاي/خلويّ على المحاكي (شبكةٌ مُصادَقةٌ واحدة)؛ NetTrackerTest يثبت متانة تبدّل المسار؛ الشهادة الحيّة على جهازٍ حقيقيّ |
+| CUST-16-004 | Offline | Wi-Fi switches to mobile data successfully | Signed-in test customer · Staging · SM-A525F · both ON · on Wi-Fi | Disable Wi-Fi; wait for cellular VALIDATED | No OFFLINE state once cellular validates (a brief state during validation is acceptable and must clear); data keeps working | PASS — شاهدٌ حيٌّ على SM-A525F (§40.83) بمراقبةِ المالك: QA1 داخلٌ على السوق، **إطفاءُ الواي فاي والبياناتُ الخلويّةُ مشغّلة** ⇒ حالةُ «لا اتصال» وجيزةٌ أثناء التسليم **ثمّ زالت تلقائيّاً** وتعافى الاتّصالُ على الخلويّ. (زوالُ الرايةِ لا يقع إلّا بشبكةٍ `VALIDATED` — أي أنّ الإنترنتَ عاملٌ على الخلويّ، فالبياناتُ تعمل.) جهازٌ حقيقيٌّ براديوَين مُصادَقَين حلّ قيدَ المحاكي. | `PASS` | device | switching | — | — | — | — | جهازٌ حقيقيّ (vc14). عقدُ المتانة مثبتٌ أيضاً بـ NetTrackerTest |
+| CUST-16-005 | Offline | Mobile data switches to Wi-Fi successfully | Signed-in test customer · Staging · SM-A525F · on cellular | Enable Wi-Fi | Stays online; no false OFFLINE | PASS — شاهدٌ حيٌّ على SM-A525F (§40.83) بمراقبةِ المالك: من الخلويّ (واي فاي مطفأ)، **تشغيلُ الواي فاي** والبياناتُ باقية ⇒ **لا حالةَ «لا اتصال» كاذبة**، بقي متّصلاً فوراً، والمحتوى صالحٌ على الواي فاي. والحالةُ المتعافية التُقطت عبر ADB بعد العودة: QA1 داخلٌ، السوقُ محمّلٌ (أزرارُ «أضف إلى السلة»)، بلا رايةِ انقطاع. | `PASS` | device | switching | — | — | — | — | جهازٌ حقيقيّ (vc14). NetTrackerTest يثبت متانة تبدّل المسار |
 | CUST-16-006 | Offline | All connectivity disappears | Signed-in test customer · Staging · SM-A525F | Cut Wi-Fi; cut data only if a default network remains; wait for net=none (on-device script) | OFFLINE state: «لا يوجد اتصال بالإنترنت» + «أعد المحاولة»; interaction blocked (§7) | PASS — emulator 2026-09-21 (airplane-mode): all connectivity gone (airplane) → offline state | `PASS` | — | offline | — | — | — | — | — |
 | CUST-16-007 | Offline | Network transition while the old network is disappearing (P8-DEF-001 guard) | Signed-in test customer · Staging · SM-A525F | Drop the only validated network while another is still connecting/unvalidated | OFFLINE until a validated network exists; never stuck 'online' | PASS — NetTrackerTest (11 tests incl. callbacksNeverQueryTheSystem) أخضر — البقاءُ منقطعاً حتّى تُصادَق شبكةٌ، لا عُلوقَ على متّصل | `PASS` | — | switching | — | — | — | — | Automated guard: `NetTrackerTest` (11 tests incl. `callbacksNeverQueryTheSystem`) |
 | CUST-16-008 | Offline | Offline state blocks catalog network-dependent interaction | Signed-in test customer · Staging · SM-A525F · offline | Tap section chips, item cards, search, banners | Blocked with explanation; no navigation into 'live' data | PASS — emulator 2026-09-21 (airplane-mode): offline blocks catalog network interaction (catalog does not load; offline screen) | `PASS` | — | offline | — | — | — | — | Not implemented today (§6) — expected FAIL until built |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 3 | 1 | 41 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 1 | 1 | 43 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **11** | **10** | **556** | **0** | **1** |
+| | **Total** | **578** | **474** | **104** | **9** | **10** | **558** | **0** | **1** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3757,6 +3757,16 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.83 · الجلسةُ المرافقة — تبديلُ المسار واي فاي↔خلويّ: 16-004 + 16-005 (٢٠٢٦-٠٩-٢٣)
+
+QA1 داخلٌ على شاشة السوق (vc14)، جهازٌ حقيقيٌّ براديوَين مُصادَقَين (واي فاي + شريحةُ بياناتٍ فعّالة) — وهو ما حلّ قيدَ المحاكي (شبكةٌ مُصادَقةٌ واحدة). فعلٌ ماديٌّ بمراقبةِ المالك (الواي فاي مطفأٌ ⇒ ADB اللاسلكيّ ينقطع، فالمالك يراقب نافذةَ الخلويّ):
+- **16-004 (واي فاي ⇒ خلويّ) — PASS**: إطفاءُ الواي فاي (البياناتُ مشغّلة) ⇒ حالةُ «لا اتصال» **وجيزةٌ** أثناء التسليم **ثمّ زالت تلقائيّاً**، وتعافى الاتّصالُ على الخلويّ. زوالُ الرايةِ لا يقع إلّا بشبكةٍ `VALIDATED` ⇒ الإنترنتُ عاملٌ على الخلويّ (البياناتُ تعمل). المعيارُ يقبل الحالةَ العابرةَ ويشترط زوالَها ⇒ مُستوفى.
+- **16-005 (خلويّ ⇒ واي فاي) — PASS**: تشغيلُ الواي فاي (البياناتُ باقية) ⇒ **لا حالةَ «لا اتصال» كاذبة**، بقي متّصلاً فوراً، والمحتوى صالح. الحالةُ المتعافية عبر ADB بعد العودة: QA1 داخلٌ، السوقُ محمّلٌ، بلا رايةِ انقطاع.
+
+**NOT_TESTED⇒PASS ×2.** (عقدُ متانةِ تبدّلِ المسار مثبتٌ أيضاً منطقيّاً بـ `NetTrackerTest`.)
+
+**المجاميع (محقّقة): PASS 558 · FAIL 0 · BLOCKED 1 · N/A 10 · NOT_TESTED 9 = 578.**
 
 ### 40.82 · الجلسةُ المرافقة — انقطاعٌ حول تحقّق رمز التسجيل: 05-011 + 05-012 (٢٠٢٦-٠٩-٢٣)
 
