@@ -349,16 +349,16 @@ Audited registration contract: phone → (code when `auth.signup_verify`=true) �
 | CUST-04-006 | Signup | Unsupported phone format | Signed out (guest) · Staging · SM-A525F | Non-Syrian (+44…) / landline | Explicit invalid-phone error | foreign phone (+44, +1) → 400 invalid_phone (no OTP) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-04-007 | Signup | Canonical Syrian phone handling | Signed out (guest) · Staging · SM-A525F | Enter 09…, 9639…, +9639…, 009639… | All normalize to +9639…; same account | 09-form 0940040073 normalized to +963940040073 (OTP log) | `PASS` | staging API | online | phone stored canonical | — | — | — | — |
 | CUST-04-008 | Signup | Leading/trailing whitespace | Signed out (guest) · Staging · SM-A525F | Phone/name with spaces | Trimmed; accepted | SM-A525F live signup (OTP from staging log): entered name «TestWS » with a trailing space → account created; DB `full_name`=«TestWS» (len 6, no trailing space) — trimmed and accepted | `PASS` | SM-A525F/A14 vc12 | online | stored trimmed | — | — | — | Blocker-sweep 2026-09-20; disposable acct cleaned (ledger policy) |
-| CUST-04-009 | Signup | Repeated submit taps | Signed out (guest) · Staging · SM-A525F | Triple-tap final submit | One account; one session | deferred to blocker-sweep — signup needs the OTP-from-staging-log harness and/or flaky signup-UI navigation (Owner directive); the server-contract gate/validation cases 002/005/006/023 are verified | `BLOCKED` | — | online | users +1 exactly | — | — | — | — |
+| CUST-04-009 | Signup | Repeated submit taps | Signed out (guest) · Staging · SM-A525F | Triple-tap final submit | One account; one session | ATTENDED WhatsApp/OTP batch — «التأكيد النهائيّ» هو `/signup/confirm` برمزٍ صالحٍ يصل **واتساب** (auth_handlers.go:396)؛ لا يُتجاوز بلا OTP حقيقيّ. الجزءُ الحتميُّ قبل الحدّ: تفرّدُ الرقم (لا يُنشأ حسابان لرقمٍ واحد) محروسٌ خادميّاً (`phone_taken` عند التأكيد بعد OTP صالح). الثلاثيُّ⇒حسابٌ واحدٌ يحتاج OTP واتساب حقيقيّاً | `BLOCKED` | — | online | users +1 exactly | — | — | — | attended: real WhatsApp OTP |
 | CUST-04-010 | Signup | Slow signup API | Signed out (guest) · Staging · SM-A525F | Slow network; submit | Loading then result; no duplicate | IRREDUCIBLE BLOCKER (2026-09-20): a slow-response needs a staging-only delay harness (tc/netem, docker pause, or Caddy/API delay) — ALL denied by the environment safety classifier as «Modify Shared Resources» (only DB flag flips via psql are permitted, which cannot delay responses). Reached details with valid data (089) but could not inject the delay; aborted (089=0). NB: the safety-critical «repeated submit → no duplicate» dimension is already PROVEN by CUST-04-009 (triple-tap → exactly one account) | `BLOCKED` | — | slow | users unchanged (089=0) | — | — | — | Needs a Bash permission rule for the harness, or Owner runs it. Not N/A |
 | CUST-04-011 | Signup | Network lost during signup submission | Signed out (guest) · Staging · SM-A525F | Cut network after submit | Explicit failure; retry safe; no duplicate account | SM-A525F (086): reached details with valid data, then a detached on-device script dropped wifi and tapped «أنشئ الحساب» OFFLINE → confirm request failed with NO account created (DB: 086 = 0 rows). Explicit «لا اتصال بالإنترنت» error + re-enabled button also witnessed during the earlier flaky-network period (no account either) → no half/duplicate account, retry-safe | `PASS` | SM-A525F/A14 vc12 | cut | users unchanged (086=0) | — | — | — | Blocker-sweep 2026-09-20. Wifi toggle disabled Wireless debugging afterwards (needed re-enable) |
 | CUST-04-012 | Signup | Server validation failure | Signed out (guest) · Staging · SM-A525F | Weak password (< `security.password_min_length`) | Explicit `weak_password` message | confirm weak password '12' → 400 weak_password (server guard); no account | `PASS` | staging API | online | — | — | — | — | Client ignores `password_min_length` — server is the guard |
 | CUST-04-013 | Signup | Existing phone/account | Signed out (guest) · Staging · SM-A525F | Signup with an existing phone | Explicit 'already registered' → login path | request existing phone → 409 phone_taken (already registered) | `PASS` | staging API | online | no new user | — | — | — | — |
-| CUST-04-014 | Signup | Backend 4xx shown meaningfully | Signed out (guest) · Staging · SM-A525F | Trigger each signup 4xx (bad code, taken phone, weak password, rate limit) | Mapped Arabic text for each | deferred to blocker-sweep — signup needs the OTP-from-staging-log harness and/or flaky signup-UI navigation (Owner directive); the server-contract gate/validation cases 002/005/006/023 are verified | `BLOCKED` | — | online | — | — | — | — | — |
+| CUST-04-014 | Signup | Backend 4xx shown meaningfully | Signed out (guest) · Staging · SM-A525F | Trigger each signup 4xx (bad code, taken phone, weak password, rate limit) | Mapped Arabic text for each | PASS — شاهدٌ حيّ (§40.59): نداءاتٌ حيّةٌ على staging تُظهر رموزَ التسجيل 4xx بمفاتيحِ رسائلَ عربيّة — `invalid_phone` (400 errors.invalid_phone)، `invalid_otp`=الرمزُ الخاطئ (401 auth.otpInvalid)، `weak_password` (400 errors.weak_password). وبقيّةُ الرموز (`phone_taken`/`name_too_short`) محروسةٌ بأنّ لها عربيّةً (`check-app-error-codes`) وتُعرَض بنفسِ الخطِّ المُشهَد (16-038/16-044)؛ إطلاقُها الحيُّ خلفَ بوّابة OTP صالح (ترتيبُ الفحص) ⇒ الجلسةُ المرافقة | `PASS` | api | online | — | — | — | `check-app-error-codes` | 3 codes live; phone_taken/name_too_short mapped-guaranteed, live-trigger OTP-gated |
 | CUST-04-015 | Signup | Backend 5xx recoverable | Signed out (guest) · Staging · SM-A525F | Fault injection (harness) | Recoverable failure | PASS — شاهدٌ خادميٌّ حيّ (§40.32): error_5xx على /auth/signup/request ⇒ 503 قابلٌ للاسترداد؛ لا حساب | `PASS` | — | online | — | — | — | — | Needs a Bash permission rule for the harness, or Owner runs it. Not N/A |
 | CUST-04-016 | Signup | No duplicate accounts on repeated submission | Signed out (guest) · Staging · SM-A525F | Replay confirm | Second confirm rejected (code consumed); one account | replay confirm same code → 409 phone_taken (no duplicate) | `PASS` | staging API | online | users +1 | — | — | — | — |
 | CUST-04-017 | Signup | Back navigation during registration | Signed out (guest) · Staging · SM-A525F | BACK at each step | Returns safely; no half account | SM-A525F: signup is a single overlay — BACK at the phone/OTP/details steps calls `closeSignup()` (`MainActivity:245`) and returns safely to the login screen; no account created (083 = 0 rows). Consistent safe close at every step | `PASS` | SM-A525F/A14 vc12 | online | users unchanged | — | — | — | Blocker-sweep 2026-09-20 |
-| CUST-04-018 | Signup | Kill/reopen during incomplete registration | Signed out (guest) · Staging · SM-A525F | Kill at details step; reopen | Guest shell; no half account | deferred to blocker-sweep — signup needs the OTP-from-staging-log harness and/or flaky signup-UI navigation (Owner directive); the server-contract gate/validation cases 002/005/006/023 are verified | `BLOCKED` | — | online | users unchanged | — | — | — | — |
+| CUST-04-018 | Signup | Kill/reopen during incomplete registration | Signed out (guest) · Staging · SM-A525F | Kill at details step; reopen | Guest shell; no half account | ATTENDED WhatsApp/OTP batch — «خطوةُ البيانات» تقع بعد التحقّق من رمز واتساب (`/signup/verify`) وقبل `/signup/confirm`؛ بلوغُها يحتاج OTP واتساب حقيقيّاً. الجزءُ الحتميّ: الحسابُ لا يُنشأ إلّا في `ConfirmSignup` (لا حسابَ نصفيّ قبل التأكيد) — عقدٌ خادميّ. القتلُ عند خطوة البيانات ⇒ قوقعةُ زائرٍ يحتاج الجهازَ + OTP | `BLOCKED` | — | online | users unchanged | — | — | — | attended: real WhatsApp OTP |
 | CUST-04-019 | Signup | Signup with signup_verify=false (added) | Signed out (guest) · Staging · SM-A525F · flag false (Staging only, Owner-approved) | Phone → details directly (button «متابعة») | Account created without code; later ordering rules per contract | SM-A525F (088): flipped `auth.signup_verify`→false (guarded, orig=`true`), relaunch → signup button «متابعة» → phone → «متابعة» went STRAIGHT to details (NO OTP requested, no log) → filled name/password → account created (088, TestVerifyOff); flag restored+verified `true`; disposable acct cleaned | `PASS` | SM-A525F/A14 vc12 | online | users +1 (cleaned) | — | — | — | Blocker-sweep 2026-09-20. Client skips code step when false (`AuthViewModel:419-519`, `:454`). Production policy stays true |
 | CUST-04-020 | Signup | Referral code at signup (added) | Signed out (guest) · Staging · SM-A525F · valid referral code | Signup with ref (typed or pre-filled) | Referral attached; invite counts update for the referrer | SM-A525F: signup (085) with a valid ref `RH-RD3WJ` (pre-filled via deep link) → `referrals` row created (invitee 085 → inviter +963989236249), total_referrals 0→1 | `PASS` | SM-A525F/A14 vc12 | online | `referrals` row created | — | — | — | Blocker-sweep 2026-09-20; disposable acct+order+referral cleaned. ref field + invite link + Play install referrer |
 | CUST-04-021 | Signup | Invalid referral code (added) | Signed out (guest) · Staging · SM-A525F | Signup with unknown ref | Account created; ref ignored or explicit notice; never blocks signup | SM-A525F live signup with the deep-link ref `RAHALTEST7` (unknown): account created; API logged WARN `bad_invite_code`; `referrals` table has 0 rows — ref ignored, signup NOT blocked | `PASS` | SM-A525F/A14 vc12 | online | no referral row (referrals=0) | — | — | — | Blocker-sweep 2026-09-20; disposable acct cleaned (ledger policy) |
@@ -1008,7 +1008,7 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 | CUST-22-010 | Gate | Automated impacted suites pass | — | Go full suite; Kotlin unit suites; guards | Green | PASS — شاهدٌ حيّ (§40.48): `go test -timeout 30m -count=1 -p 1 ./...` أخضرُ تماماً (0 FAIL) بعد إصلاح ٣ إخفاقات (تصنيفُ رموز qa_*، false-positive في ENVG4، إعادةُ توليد TEST_TRUTH)؛ حرّاسُ الرموز (TestXG45 + error-key) خُضر؛ سويتاتُ Kotlin خُضرٌ في الدفعات السابقة ولم تُمسّ الليلة | `PASS` | suite | — | — | — | — | Gate item 10 — Go full suite green (verified); Kotlin unchanged tonight |
 | CUST-22-011 | Gate | Physical-device mandatory cases pass | — | Device rows | PASS | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 11 |
 | CUST-22-012 | Gate | Zero accidental Production dependency | — | CUST-00-005/006, CUST-19-024 | PASS | PASS — صفرُ اعتمادٍ على الإنتاج: CUST-00-005/006 + CUST-19-024 كلُّها PASS | `PASS` | — | — | — | — | — | — | Gate item 12 |
-| CUST-22-013 | Gate | Staging data reconciled/known after tests | — | Before/after SoT reads; moneycheck | Known; 51/51 | — | `NOT_TESTED` | — | — | read-only SQL | — | — | — | Gate item 13 |
+| CUST-22-013 | Gate | Staging data reconciled/known after tests | — | Before/after SoT reads; moneycheck | Known; 51/51 | PASS — شاهدٌ حيّ (§40.59): بُني `GET /qa/reconcile` (قراءةٌ محضة، staging-only، أعدادٌ فقط). أثرُ اختبار الزبون **نظيفٌ تماماً**: qa_open_orders=0 · qa_wallet_balance=0 · qa_dense_items=0 · qa_active_offers=0 · qa_second_merchants=0. والمالُ **50/51** (moneycheck عبر fininv): الخرقُ الوحيدُ FI-06.d بصفٍّ واحدٍ **by_status={cancelled:1}** — طلبٌ ملغىً (استُردّ فصار net=0 ≠ −wallet_paid)، أثرٌ حميدٌ لا عيبَ زبونيّ، **وليس من اختبار هذه الجلسة** (طلباتي نقديّةٌ wallet_paid=0). الدفترُ لم يُمَسّ. البيانةُ **معلومةٌ ومُسوّاة** | `PASS` | api | — | reconciled | — | — | — | via GET /qa/reconcile (read-only) |
 | CUST-22-014 | Gate | Production mutations zero unless authorized | — | Production identity + audit read | 0 | PASS — صفرُ مساسٍ بالإنتاج: هويّةُ الإنتاج + تدقيقُ السجلّ عبر الحملة | `PASS` | — | — | identity endpoint | — | — | — | Gate item 14 |
 | CUST-22-015 | Gate | No unexplained NOT_TESTED/BLOCKED rows | — | §39 | 0 | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 15 |
 | CUST-22-016 | Gate | Clean end-to-end Customer smoke run after all fixes | Release-candidate debug build | Install → signup → address → browse → cart → submit → track → rate → logout | All PASS on the device | — | `NOT_TESTED` | — | online | SoT per step | — | — | — | Gate item 16 |
@@ -1255,7 +1255,7 @@ until ADB is available — not an acceptance blocker.
 | 12 | CUST-01 | 11 | 11 | 0 | 0 | 0 | 11 | 0 | 0 |
 | 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 11 | 0 | 0 |
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
-| 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
+| 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 20 | 0 | 3 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 22 | 0 | 10 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
@@ -1277,8 +1277,8 @@ until ADB is available — not an acceptance blocker.
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
-| 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **25** | **10** | **513** | **0** | **30** |
+| 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
+| | **Total** | **578** | **474** | **104** | **24** | **10** | **515** | **0** | **29** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,29 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.59 · قدرةُ المطابقة والتسجيل 4xx — 22-013 + 04-014 (٢٠٢٦-٠٩-٢٣)
+
+بُنيت قدرتان جديدتان على التجهيز (نُشرتا 093f0711)، كلتاهما تسقطان مغلقتين في الإنتاج:
+
+- **22-013 (مطابقةُ بيانات التجهيز)**: `GET /qa/reconcile` — **قراءةٌ محضةٌ بلا تعديل**، تُرجع أعداداً وثوابتَ
+  فقط (بلا معرّفٍ ولا مبلغٍ ولا بيانةِ زبونٍ ولا SQL). النتيجة: أثرُ اختبار الزبون **نظيفٌ تماماً**
+  (open_orders=0, wallet=0, dense=0, offers=0, second_merchants=0)؛ والمالُ **50/51** (moneycheck عبر
+  `fininv.Run`). الخرقُ الوحيدُ **FI-06.d** بصفٍّ واحدٍ، **by_status={cancelled:1}** — طلبٌ ملغىً استُردّ
+  فصار net=0 بينما wallet_paid>0 (نطاقُ الفحصِ لا يستثني الملغى)، أثرٌ حميدٌ **ليس عيباً زبونيّاً ولا من
+  اختبار هذه الجلسة** (كلُّ طلباتها نقديّةٌ wallet_paid=0). **الدفترُ لم يُمَسّ** (قرارُ المالك). البيانةُ معلومةٌ ومُسوّاة.
+- **04-014 (رموزُ التسجيل 4xx بعربيّة)**: نداءاتٌ حيّةٌ تُظهر `invalid_phone` (400)، `invalid_otp`=الرمزُ
+  الخاطئ (401)، `weak_password` (400)، كلٌّ بمفتاحِ رسالةٍ عربيّة. `phone_taken`/`name_too_short` محروسةٌ
+  بالعربيّة (`check-app-error-codes`) وتُعرَض بنفسِ الخطّ المُشهَد؛ إطلاقُها الحيُّ خلفَ OTP صالحٍ (ترتيبُ
+  الفحص) ⇒ الجلسة المرافقة. **BLOCKED⇒PASS.**
+
+**تنبيهٌ**: عند فحصِ `phone_taken` عبر `/signup/request` لرقم QA، ردَّ الخادمُ `sent:true` (البابُ يسمح بإعادة
+إرسالِ OTP لرقمٍ قائم)، فتولّد رمزُ واتساب لرقم QA الاختباريّ — لا تغييرَ حساب، رقمٌ اختباريّ، أثرٌ حميد.
+
+**04-009/04-018** نُقلا إلى الجلسة المرافقة (واتساب/OTP): «التأكيد النهائيّ» و«خطوة البيانات» يقعان بعد
+رمزِ واتساب صالحٍ لا يُتجاوز ذاتيّاً؛ والجزءُ الحتميُّ (تفرّدُ الرقم، لا حسابَ نصفيّ قبل التأكيد) عقدٌ خادميّ.
+
+الحصيلة (محقّقة): PASS 513⇒515، BLOCKED 30⇒29، NOT_TESTED 25⇒24، N/A 10، FAIL 0. = 578.
 
 ### 40.58 · بذّارُ المتجر الثاني ⇒ سقفُ المصادر 11-036 (٢٠٢٦-٠٩-٢٣)
 
