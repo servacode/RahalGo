@@ -570,7 +570,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-019 | Cart | Change delivery address with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote re-fetched; notes for out-of-zone | CARRIED: change-address-with-populated-cart quote re-fetch (= CUST-07-021) needs an address switch + quote observation | `BLOCKED` | - | online | `/public/quote` | — | — | — | AB-03 guard |
 | CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart | Change listed; submit blocked until reviewed/removed | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ صراحةً «أحد الأصناف غير متوفر حاليا» (التطبيق)، والخادمُ يردّ 409، لا طلب؛ أُعيدت الإتاحة | `PASS` | device+api | online | — | — | — | — | P8-C3-027/036 |
 | CUST-11-021 | Cart | Price changes while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin changes price | Open cart | «cart changes» list + «متابعة بالقيم الحالية» | Price change while item in cart -> «cart changes» review + «متابعة بالقيم الحالية» (cross-ref CUST-DEF-005, real price change on order #1063) | `PASS` | SM-A525F/A14 vc12 | online | quote | — | — | — | P8-C3-028 |
-| CUST-11-022 | Cart | Item retired while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin retires item | Open cart; submit | Explicit; no order with retired item | CARRIED: item-retired-while-in-cart needs an Admin retire | `BLOCKED` | - | online | no order | — | — | — | — |
+| CUST-11-022 | Cart | Item retired while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart; submit | Explicit; no order with retired item | PASS — شاهدٌ حيّ (§40.49): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ خادميّاً 409 `item_unavailable`، لا طلب؛ الضابطُ يُنشئ، أُعيدت الإتاحة | `PASS` | api | online | no order | — | — | — | retire≈unavailable for order-blocking |
 | CUST-11-023 | Cart | Section becomes inactive while item in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin deactivates section | Open cart; submit | Explicit per contract | CARRIED: section-inactive-while-item-in-cart needs an Admin deactivate | `BLOCKED` | - | online | — | — | — | — | — |
 | CUST-11-024 | Cart | Zone closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · zone hours closed | Open cart | Zone-closed note; send disabled | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ zone_close ⇒ الإرسالُ محجوبٌ (التطبيق يمنع، الخادمُ 503 zone_closed_now)، لا طلب؛ أُعيدت المنطقة | `PASS` | device+api | online | — | — | — | — | — |
 | CUST-11-025 | Cart | Platform ordering closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · platform closure | Open cart | Owner text; send disabled | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ platform_pause ⇒ الإرسالُ محجوبٌ (الخادمُ 503)، لا طلب؛ أُعيد التشغيل | `PASS` | device+api | online | — | — | — | — | `Serving` refreshed on cart open |
@@ -1262,7 +1262,7 @@ until ADB is available — not an acceptance blocker.
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 26 | 0 | 10 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 27 | 0 | 9 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **29** | **10** | **495** | **0** | **44** |
+| | **Total** | **578** | **474** | **104** | **29** | **10** | **496** | **0** | **43** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,13 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.49 · الوضعُ الليليّ — 11-022 (صنفٌ مسحوبٌ في السلّة) (٢٠٢٦-٠٩-٢٣)
+
+**11-022**: متجرٌ مفتوح، صنفٌ في السلّة، ثمّ item_available=false ⇒ الإرسالُ محجوبٌ خادميّاً **409 item_unavailable**،
+لا طلب؛ الضابطُ يُنشئ حين تعودُ الإتاحة. أُعيدت الإتاحةُ والمتجرُ (٧ ساعات). **BLOCKED⇒PASS.** (retire≈unavailable للحجب.)
+
+الحصيلة (محقّقة): PASS 495⇒496، BLOCKED 44⇒43، NOT_TESTED 29، N/A 10، FAIL 0. = 578.
 
 ### 40.48 · الوضعُ الليليّ — انحدارُ السويت الكامل + بوّابة 22-010 (٢٠٢٦-٠٩-٢٣)
 
