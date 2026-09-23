@@ -830,7 +830,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-025 | Offline | No data clear required | After recovery | Observe | Works without clearing data | PASS — emulator 2026-09-21 (airplane-mode): recovery needs no data clear | `PASS` | — | online | — | — | — | — | — |
 | CUST-16-026 | Offline | No unnecessary logout | After recovery | Observe | Still signed in | PASS — محاكي 2026-09-21: بعد ٣ دوراتِ طيرانٍ متكرّرة، المستخدمُ ما زال داخلاً (طلباتي، لا شاشةَ دخول) | `PASS` | — | online | no new password_login | — | — | — | — |
 | CUST-16-027 | Degraded | Internet interface exists but API host unreachable | Signed-in test customer · Staging · SM-A525F | Block only staging-api (harness §38) | Explicit recoverable failure; OFFLINE-equivalent handling per §7.12; no empty market | PASS — شاهدٌ مرافقٌ على SM-A525F (§40.78): طيرانٌ ON + Wi‑Fi OFF ⇒ لافتةٌ صريحة **«لا يوجد اتصال بالإنترنت»** والكتالوجُ الظاهرُ بقي مرئيّاً (لا سوقٌ فارغٌ كاذب)؛ وبإطفاء الطيران عادت الوصلةُ واختفت اللافتة. مطابقٌ §7.12. | `PASS` | device | offline | — | — | — | — | §7.12: interface ≠ reachability |
-| CUST-16-028 | Degraded | DNS resolution failure | Signed-in test customer · Staging · SM-A525F | Private DNS pointed to an unresolvable host (restore after) | As 027 | — | `NOT_TESTED` | — | DNS fail | — | — | — | — | Changes a phone setting — Owner approval, restore |
+| CUST-16-028 | Degraded | DNS resolution failure | Signed-in test customer · Staging · SM-A525F | Private DNS pointed to an unresolvable host (restore after) | As 027 | PASS — شاهدٌ حيٌّ على SM-A525F (§40.84)، بإذن المالك (وجّه بإجرائها) وذاتيّاً عبر ADB (الواي فاي باقٍ فلا ينقطع ADB): QA1 داخلٌ على السوق، **DNS خاصٌّ إلى مضيفٍ لا يُحلّ** (`private_dns_mode=hostname`, `…invalid`) ⇒ فشلُ الحلّ (`ping: unknown host`) والشبكةُ `PrivateDnsBroken` بلا `VALIDATED`. سحبٌ للتحديث (نداءٌ جديد) ⇒ **رايةٌ صريحة «لا يوجد اتصال بالإنترنت»** أعلى، **والكتالوجُ بقي كاملاً** (أصنافٌ + «أضف إلى السلة») — لا سوقٌ فارغٌ كاذب، ولا انهيار (= كـ027). ثمّ **استعادةُ الإعداد** (mode=off, specifier=`dns.adguard.com` — الأصل بالضبط) ⇒ عاد الحلُّ (staging→195.201.141.130) وزالت الرايةُ والكتالوجُ حيّ. | `PASS` | device | DNS fail | — | — | CUST-16-027 (نظير) | — | جهازٌ حقيقيّ (vc14). أُعيد إعدادُ الهاتف بالضبط |
 | CUST-16-029 | Degraded | Connection timeout | Signed-in test customer · Staging · SM-A525F | Black-hole route to API (harness) | Timeout → explicit failure within client timeout; no hang | PASS — شاهدٌ حيٌّ على SM-A525F (§40.77): عطبُ تأخيرٍ 25ث (>مهلةِ العميل 20ث) على `/my/orders` (مقصورٌ QA)؛ سحبٌ لتحديث تبويب الطلبات ⇒ مؤشّرُ تحميل، ثمّ **بعد مهلة العميل** اختفى المؤشّرُ وظهر **«لا اتصال بالإنترنت» + «أعد المحاولة»** — فشلٌ صريحٌ ضمن المهلة، بلا تعليقٍ لا نهائيّ. | `PASS` | device | timeout | — | — | — | — | — |
 | CUST-16-030 | Degraded | Very slow network | Signed-in test customer · Staging · SM-A525F | Throttled link (emulator netspeed or router shaping) | Loading then result; no premature error; no double submit | PASS — شاهدٌ حيّ (§40.40): حاقنُ تأخيرٍ ٧ث على `/my/orders` ⇒ السحبُ للإنعاش أظهر مؤشّرَ تحميلٍ (ProgressBar) والشاشةُ صالحة، ثمّ حُمّلت النتيجةُ بلا خطأٍ سابقٍ لأوانه | `PASS` | device | slow | — | — | — | — | via QA latency fault (deterministic) |
 | CUST-16-031 | Degraded | High latency | Signed-in test customer · Staging · SM-A525F | Emulator `-netdelay` | Usable; explicit loading | PASS — شاهدٌ حيّ (§40.40): نفسُ حقنِ التأخير ⇒ التطبيقُ صالحٌ للاستعمال ومؤشّرُ التحميل ظاهرٌ صريحاً ثمّ النتيجة | `PASS` | device | latency | — | — | — | — | via QA latency fault |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 1 | 1 | 43 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 0 | 1 | 44 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **9** | **10** | **558** | **0** | **1** |
+| | **Total** | **578** | **474** | **104** | **8** | **10** | **559** | **0** | **1** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3757,6 +3757,18 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.84 · فشلُ حلِّ DNS — شاهدٌ ذاتيٌّ عبر ADB: 16-028 (٢٠٢٦-٠٩-٢٣)
+
+QA1 داخلٌ على السوق (vc14). بإذن المالك (وجّه بإجرائها) وذاتيّاً — فشلُ DNS لا يُسقط الواي فاي فلا ينقطع ADB اللاسلكيّ، فيُشاهَد عبر الجهاز مباشرةً (كـ16-029/06-006):
+- سُجّل الإعدادُ الأصليّ (`private_dns_mode=off`, `specifier=dns.adguard.com`).
+- **كُسر الحلّ**: `private_dns_mode=hostname` + مضيفٌ لا يُحلّ (`…invalid`). التحقّق: `ping staging-api.rahalgo.com` ⇒ `unknown host`، والشبكةُ (واي فاي وخلويّ) `PrivateDnsBroken` بلا `VALIDATED`.
+- الكتالوجُ المحمّلُ بقي ظاهراً (الوصلةُ الدافئةُ تُخفي الكسرَ حتّى نداءٍ جديد). **سحبٌ للتحديث** (نداءٌ جديدٌ يحتاج حلّاً) ⇒ **رايةٌ صريحة «لا يوجد اتصال بالإنترنت»** أعلى، **والكتالوجُ باقٍ كاملاً** — لا سوقٌ فارغٌ كاذب، ولا انهيار. **= كـ027 بالضبط.**
+- **الاستعادةُ**: `mode=off` + `specifier=dns.adguard.com` (الأصلُ بالضبط) ⇒ عاد الحلُّ (staging→195.201.141.130)، وسحبٌ للتحديث ⇒ زالت الرايةُ والكتالوجُ حيّ. **إعدادُ الهاتف عاد كما كان.**
+
+**NOT_TESTED⇒PASS ×1.** مجموعةُ CUST-16 مكتملةٌ (٤٤ PASS + ١ N/A = ٤٥).
+
+**المجاميع (محقّقة): PASS 559 · FAIL 0 · BLOCKED 1 · N/A 10 · NOT_TESTED 8 = 578.**
 
 ### 40.83 · الجلسةُ المرافقة — تبديلُ المسار واي فاي↔خلويّ: 16-004 + 16-005 (٢٠٢٦-٠٩-٢٣)
 
