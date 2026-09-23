@@ -750,7 +750,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-WAL-007 | Wallet | Pay from wallet (insufficient) | Signed-in test customer · Staging · SM-A525F · valid default address · balance < total | Pay «من محفظتي» | Explicit `insufficient_balance`; no order | PASS — لا دفعَ فوق الرصيد: TestWALL_010_CannotPayBeyondBalance (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | no order; no tx | — | — | — | `TestWALL_010_CannotPayBeyondBalance` |
 | CUST-WAL-008 | Wallet | Cancel wallet-paid order refunds wallet | After 006 (within cancel window) | Cancel | Wallet refunded exactly once | PASS — الإلغاءُ يعيد للمحفظة: TestCancelBeforeDelivery_RefundsWalletOnly (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | wallet tx +total | — | — | — | `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-WAL-009 | Wallet | No payouts/top-up offered to customers | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect wallet UI | No payout/top-up controls | PASS — لا سحبَ/شحنَ في الواجهة (محاكي 2026-09-21) + POST /me/payouts ⇒ 403 payout_not_allowed | `PASS` | — | online | — | — | — | — | POST `/me/payouts` returns 403 `payout_not_allowed` for customers |
-| CUST-WAL-010 | Wallet | Wallet realtime refresh | Signed-in test customer · Staging · SM-A525F · valid default address | Credit via Admin while screen open | Balance updates via realtime | FINDING (§40.67) — شاهدٌ حيٌّ على SM-A525F: السلّةُ تُظهر «رصيد المحفظة: 0»؛ wallet_fund +30000 خادميّاً والشاشةُ مفتوحة ⇒ **لم يتحدّث لحظيّاً** (WS)، ولا عند تبديل التبويب؛ تحدّث فقط بعد **إقلاعٍ بارد** ⇒ «30,000». reconcile=30000 (الشحنُ أصاب QA1). فالطلباتُ لحظيّة (14-007) لكن **رصيدَ المحفظة ليس لحظيّاً** — يُنعَش بإعادة إقلاق التطبيق. المعيار «via realtime» غيرُ محقَّق. قرارُ المالك: ميزةُ اشتراكِ WS للمحفظة (تعديلُ عميلٍ + بناءُ APK) أم قبولُ P2. أُعيد الرصيدُ 0 | `BLOCKED` | device | online | — | — | — | — | emulator SSE unreliable — real-device witness pending |
+| CUST-WAL-010 | Wallet | Wallet realtime refresh | Signed-in test customer · Staging · SM-A525F · valid default address | Credit via Admin while screen open | Balance updates via realtime | PASS — شاهدٌ حيٌّ على SM-A525F (لاسلكيّ، ٢٠٢٦-٠٩-٢٣، §40.67): الاكتشافُ السابقُ كان **أثرَ فكسچر لا عطبَ منتَج**. العميلُ يُنعش الرصيدَ على أيّ إطار WS أصلاً (`ShellViewModel.onEvent ⇒ refresh() ⇒ me.wallet().balance`، ورقاقةُ المحفظة مربوطةٌ بـ`shell.balance`)، ومسارُ تعويضِ الأدمن يبثّ الإطارَ (`admin_wallet_handlers.go:107 touchUser`)؛ لكنّ فكسچر `wallet_fund/drain` كتب القيدَ بلا بثٍّ ⇒ أُصلح (50d7bdc1: `touchUser`) ونُشر. الشاهد: الرقاقةُ 0⇒30,000⇒0 لحظيّاً بلا إقلاعٍ ولا إنعاشٍ يدويّ، ومستمعُ WS مستقلٌّ سجّل إطاراً واحداً بالضبط لكلّ فعل (إجمالي ٢، لا تكرار)، reconcile نظيف (50/50). لا تعديلَ عميلٍ ولا APK (قرارُ المالك). | `PASS` | device | online | — | — | — | — | witnessed on real SM-A525F over wireless ADB |
 
 ## 26C · CUST-ENG — Engagement: favorites, offers, referrals, pages, theme (added by audit)
 
@@ -1268,7 +1268,7 @@ until ADB is available — not an acceptance blocker.
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 0 | 3 | 23 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
-| 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 9 | 0 | 1 |
+| 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **20** | **10** | **523** | **0** | **25** |
+| | **Total** | **578** | **474** | **104** | **20** | **10** | **524** | **0** | **24** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3760,6 +3760,10 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ### 40.67 · الجلسةُ المرافقة — WAL-010 (المحفظةُ ليست لحظيّة) على SM-A525F (٢٠٢٦-٠٩-٢٣)
 
 **اكتشافٌ**: السلّةُ (زبون QA داخل، متجرٌ مفتوح، صنفٌ في السلّة) تُظهر «رصيد المحفظة: 0 ل.س»؛ `wallet_fund +30000` خادميّاً والشاشةُ مفتوحة ⇒ **الرصيدُ لم يتحدّث لحظيّاً** (WS)، ولا عند تبديل التبويب؛ تحدّث فقط بعد **إقلاعٍ بارد** ⇒ «30,000 ل.س». و`reconcile` أكّد الشحنَ أصاب QA1 (qa_wallet_balance=30000). فالطلباتُ لحظيّة (14-007/15-001) لكنّ **رصيدَ المحفظة ليس لحظيّاً** — يُنعَش بإعادة إقلاق التطبيق لا بـWS. المعيار «Balance updates via realtime» غيرُ محقَّق ⇒ **صفُّ اكتشافٍ (BLOCKED)**. الإصلاحُ: اشتراكُ WS لتحديثات المحفظة في العميل (تعديلُ تطبيقٍ + بناءُ APK جديد) — أكبرُ من إصلاحِ مصدرٍ أدنى؛ **بانتظار قرار المالك** (تنفيذٌ أم قبولُ P2 غير موقِف: الرصيدُ يُنعَش بالإقلاق، والطلباتُ لحظيّة). أُعيد الرصيدُ 0، أُعيد جدولُ المتجر، فُرِّغت السلّة.
+
+**الحلُّ (٢٠٢٦-٠٩-٢٣، خيارُ المالك «أ»):** الاكتشافُ أعلاه **أثرُ فكسچر لا عطبُ منتَج.** العميلُ يُنعش الرصيدَ على أيّ إطار WS أصلاً — `ShellViewModel.onEvent ⇒ refresh() ⇒ balance = me.wallet().balance`، ورقاقةُ المحفظة في الشريط العلويّ مربوطةٌ بـ`shell.balance` — ومسارُ تعويضِ الأدمن الحقيقيّ يبثّ الإطارَ (`admin_wallet_handlers.go:107 ⇒ touchUser(id,"wallet") ⇒ hub.Publish("user:"+id,{"type":"wallet"})`). لكنّ فكسچر `wallet_fund/wallet_drain` كتب القيدَ بـ`ApplyTxID` **بلا بثٍّ** ⇒ لم يصل الجهازَ إطارٌ، فبدا الرصيدُ جامداً. أُصلح الفكسچر (50d7bdc1: `s.touchUser(uid,"wallet")` في الاثنين) ونُشر (تحقُّق الهويّة: `source_commit=50d7bdc1`، env=staging). [النشرُ حُجب أوّلاً بامتلاء قرص staging (2G<3G)؛ حرّر المالكُ القرصَ (df=9.3G حرّ) ثمّ نجح النشر.]
+
+**الشاهدُ الحيُّ على SM-A525F (لاسلكيّ ADB، ٢٠٢٦-٠٩-٢٣):** رقاقةُ المحفظة في الشريط العلويّ = «0 ل.س» (خطُّ أساسٍ حقيقيٌّ بعد دخولٍ نظيف)؛ `wallet_fund +30000` خادميّاً **بلا لمسِ التطبيق** ⇒ الرقاقةُ «30,000 ل.س» لحظيّاً (بلا إقلاعٍ ولا إنعاشٍ يدويّ)؛ `wallet_drain` ⇒ «0 ل.س» لحظيّاً. ومستمعُ WS مستقلٌّ سجّل **إطاراً واحداً بالضبط لكلّ فعل** (`{"type":"wallet"}` عند 1790157153.5 للشحن و1790157160.1 للتصفية — إجمالي ٢، **لا تكرارَ اشتراكٍ ولا حدث**). `reconcile` نظيف (50/50، qa_wallet_balance=0، qa_open_orders=0). المعيار «Balance updates via realtime» **محقَّق**. **BLOCKED⇒PASS** (PASS 523⇒524، BLOCKED 25⇒24). **لا تعديلَ عميلٍ ولا APK جديد** (خيارُ المالك «أ»: لا اشتراكَ ثانٍ).
 
 ### 40.66 · الجلسةُ المرافقة — 08-013 (تغيُّرُ التغطية أثناء التصفّح) على SM-A525F (٢٠٢٦-٠٩-٢٣)
 
