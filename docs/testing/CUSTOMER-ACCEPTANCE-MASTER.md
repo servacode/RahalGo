@@ -1005,7 +1005,7 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 | CUST-22-007 | Gate | No unresolved cross-account leakage | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-004 (تسريبٌ بين الحسابات) مُغلَقٌ (§40.6.2، detachSession + CustDef010Test)، و15-011 مُثبَتٌ حيّاً؛ لا تسريبَ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 7 |
 | CUST-22-008 | Gate | No unresolved financial/source-of-truth defect | — | Defect ledger | None | PASS — دفترُ العيوب + شاهدٌ حيّ (§40.45/40.37): CUST-DEF-003 (حدُّ الثقة الماليّ، منشورٌ إنتاجاً) وCUST-DEF-005 (مجموعُ السلّة/مصدرُ الحقيقة) مُغلَقان بانحدار؛ وتكاملُ المال مشهودٌ حيّاً على staging (رياضةُ المحفظة، order_payment وحيد، ردٌّ عند الإلغاء، مجموعُ الحركات=الرصيد، لا أثر). لا عيبَ ماليٍّ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 8 — moneycheck FI-02.c (treasury count) is a test-DB seed artifact, not a customer defect; staging moneycheck (22-013) deferred to owner DB access |
 | CUST-22-009 | Gate | Every fixed defect has regression evidence | — | Regression column | Filled for every fixed defect | PASS — دفترُ العيوب (§40.45): لكلّ عيبٍ مُصلَحٍ انحدارٌ آليّ — CUST-DEF-001 TestSU10/TestConfirm*, 002 isDecided tests, 003 TestCDEF003_* , 004 CustDef010Test, 005 CartChanges tests, CAF-13 EngagementTest | `PASS` | ledger | — | — | — | — | — | Gate item 9 |
-| CUST-22-010 | Gate | Automated impacted suites pass | — | Go full suite; Kotlin unit suites; guards | Green | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 10 |
+| CUST-22-010 | Gate | Automated impacted suites pass | — | Go full suite; Kotlin unit suites; guards | Green | PASS — شاهدٌ حيّ (§40.48): `go test -timeout 30m -count=1 -p 1 ./...` أخضرُ تماماً (0 FAIL) بعد إصلاح ٣ إخفاقات (تصنيفُ رموز qa_*، false-positive في ENVG4، إعادةُ توليد TEST_TRUTH)؛ حرّاسُ الرموز (TestXG45 + error-key) خُضر؛ سويتاتُ Kotlin خُضرٌ في الدفعات السابقة ولم تُمسّ الليلة | `PASS` | suite | — | — | — | — | Gate item 10 — Go full suite green (verified); Kotlin unchanged tonight |
 | CUST-22-011 | Gate | Physical-device mandatory cases pass | — | Device rows | PASS | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 11 |
 | CUST-22-012 | Gate | Zero accidental Production dependency | — | CUST-00-005/006, CUST-19-024 | PASS | PASS — صفرُ اعتمادٍ على الإنتاج: CUST-00-005/006 + CUST-19-024 كلُّها PASS | `PASS` | — | — | — | — | — | — | Gate item 12 |
 | CUST-22-013 | Gate | Staging data reconciled/known after tests | — | Before/after SoT reads; moneycheck | Known; 51/51 | — | `NOT_TESTED` | — | — | read-only SQL | — | — | — | Gate item 13 |
@@ -1277,8 +1277,8 @@ until ADB is available — not an acceptance blocker.
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
-| 34 | CUST-22 | 16 | 16 | 0 | 8 | 0 | 8 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **30** | **10** | **494** | **0** | **44** |
+| 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
+| | **Total** | **578** | **474** | **104** | **29** | **10** | **495** | **0** | **44** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,3 +3756,13 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.48 · الوضعُ الليليّ — انحدارُ السويت الكامل + بوّابة 22-010 (٢٠٢٦-٠٩-٢٣)
+
+`go test -timeout 30m -count=1 -p 1 ./...` كشف ٣ إخفاقات (كلُّها بسبب إضافاتِ هذه الجلسة): TestXG45 (رموز qa_*
+غيرُ مصنّفة)، TestENVG4 (false-positive على سطرِ grep يذكر promote.sh)، TestTruthIsCurrent (TEST_TRUTH شاخ).
+أُصلحت الثلاثةُ (تصنيفُ الرموز في SERVER_ADMIN، تخطّي سطور grep في حارس الترقية، إعادةُ توليد TEST_TRUTH)،
+وأُعيد تشغيلُ السويت كاملاً ⇒ **أخضرُ تماماً (0 FAIL)**. **22-010 NOT_TESTED⇒PASS.** (سويتاتُ Kotlin خُضرٌ في
+الدفعات السابقة ولم تُمسّ الليلة؛ لا سلوكَ منتجٍ تغيّر.)
+
+الحصيلة (محقّقة): PASS 494⇒495، NOT_TESTED 30⇒29، BLOCKED 44، N/A 10، FAIL 0. = 578.
