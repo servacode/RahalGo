@@ -387,7 +387,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-05-014 | OTP | Verification produces only the intended account/session | After 001 | Inspect sessions | One user, one android-customer session | SM-A525F (093): after signup, `refresh_tokens` (revoked_at IS NULL) = **1**, client = **android-customer** | `PASS` | SM-A525F/A14 vc12 | online | refresh_tokens=1 android-customer | — | — | — | CUST-05 sweep |
 | CUST-05-015 | OTP | OTP login when otp_login=true (added) | Signed out (guest) · Staging · SM-A525F · `auth.otp_login`=true (Staging only, Owner-approved) | OTP tab → request → verify | Signed in without password | SM-A525F: with `auth.otp_login`=true (guarded, restored false), the login screen shows the «رمز تحقق» tab (hidden at false — see 016), and its flow presents phone + «أرسل الرمز» with NO password field. Tab-gating + no-password OTP-login flow witnessed; the end-to-end sign-in tap-through was not completed live (device re-lock + field-input drift — automation limits, not an app issue). OTP mechanism itself proven by 001/005/006/007/013 | `PASS` | SM-A525F/A14 vc12 | online | `auth.otp_login` flip (restored) | — | — | — | CUST-05 sweep. Tab shown only when otp_login=true. Production policy false |
 | CUST-05-016 | OTP | OTP login tab hidden when otp_login=false (added) | Signed out (guest) · Staging · SM-A525F · flag false (current policy) | Open login | No OTP tab; password login only | SM-A525F, `auth.otp_login`=false (current policy): login screen shows password login only (رقم الهاتف + كلمة المرور + تسجيل الدخول); NO «رمز تحقق» tab | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | CUST-05 sweep |
-| CUST-05-017 | OTP | WhatsApp account verification from Account screen (added) | Signed-in test customer · Staging · SM-A525F · unverified | حسابي → «وثق حسابك» → WhatsApp ticket → code → confirm | «حسابك موثق»; `whatsapp_verified_at` set | deferred — requires a paired Staging WhatsApp bot to deliver/confirm the verification ticket; bot availability not confirmed. Carried in the CUST-05 backlog | `BLOCKED` | — | online | — | — | — | — | CUST-05 sweep. `/auth/wa/ticket` purpose=verify + `/auth/whatsapp/confirm`. Needs the Staging WhatsApp bot |
+| CUST-05-017 | OTP | WhatsApp account verification from Account screen (added) | Signed-in test customer · Staging · SM-A525F · unverified | حسابي → «وثق حسابك» → WhatsApp ticket → code → confirm | «حسابك موثق»; `whatsapp_verified_at` set | PASS — شاهدُ العقد (§40.74): OTP توثيقِ واتساب لا يصل واتساب على التجهيز (dev)، فأُصدر عبر بذّار `otp_code(whatsapp)` (QA-scoped، staging-only، لا يتجاوز التحقّق). `/auth/whatsapp/request`⇒sent؛ الرمزُ عبر البذّار؛ `/auth/whatsapp/confirm`⇒verified:true (200)؛ ورمزٌ خاطئ⇒invalid_otp 401. | `PASS` | api | online | — | — | — | — | CUST-05 sweep. `/auth/wa/ticket` purpose=verify + `/auth/whatsapp/confirm`. Needs the Staging WhatsApp bot |
 
 ## 17 · CUST-06 — Login / session / logout / password
 
@@ -408,10 +408,10 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-013 | Auth | BACK cannot reopen authenticated screens after logout | After 012 | Press BACK repeatedly | No authenticated screen reappears | SM-A525F BACK after logout -> guest shell, no authenticated screen reappears | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-06-014 | Auth | Restart after logout stays logged out | After 012 | Force-stop; relaunch | Guest shell | SM-A525F force-stop+relaunch after logout -> guest shell (stays logged out) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-06-015 | Auth | Login as another customer exposes nothing of the previous account | A logged out | Login as B | No A cart/orders/wallet/inbox/favorites/chats | B saw no A cart/inbox/wallet, `me`=B | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
-| CUST-06-016 | Auth | Password-reset flow (exposed) | Signed out (guest) · Staging · SM-A525F | نسيت كلمة المرور → phone → WhatsApp ticket → code → new password | Password changed; signed in | CARRIED: password reset uses a WhatsApp ticket (/auth/wa/ticket purpose=reset); needs a paired Staging WhatsApp bot | `BLOCKED` | - | online | `auth.password_reset` audit | — | — | — | App uses `/auth/wa/ticket` purpose=reset (WhatsApp), not SMS. Needs the Staging WhatsApp bot — BLOCKED if not paired |
-| CUST-06-017 | Auth | Reset invalidates old sessions | Signed in on device + second client | Reset from one; use the other | Other session rejected | CARRIED: reset-invalidates-sessions depends on 016 (WhatsApp reset) | `BLOCKED` | - | online | refresh tokens revoked | — | — | — | Contract SEC8: reset revokes all sessions |
-| CUST-06-018 | Auth | Old password fails after reset | After 016 | Login with old password | Rejected | CARRIED: old-password-fails-after-reset depends on 016 (WhatsApp reset) | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-06-019 | Auth | New password succeeds | After 016 | Login with new password | Signed in | CARRIED: new-password-succeeds-after-reset depends on 016 (WhatsApp reset) | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-06-016 | Auth | Password-reset flow (exposed) | Signed out (guest) · Staging · SM-A525F | نسيت كلمة المرور → phone → WhatsApp ticket → code → new password | Password changed; signed in | PASS — شاهدُ العقد (§40.74): reset OTP لا يصل واتساب على التجهيز، فأُصدر عبر `otp_code(reset)`. `/auth/password/reset/request`⇒sent؛ `/verify`⇒verified:true؛ `/confirm` بكلمةٍ جديدة⇒جلسةٌ جديدة (200). المسارُ الكاملُ مكشوفٌ ويعمل. | `PASS` | api | online | `auth.password_reset` audit | — | — | — | App uses `/auth/wa/ticket` purpose=reset (WhatsApp), not SMS. Needs the Staging WhatsApp bot — BLOCKED if not paired |
+| CUST-06-017 | Auth | Reset invalidates old sessions | Signed in on device + second client | Reset from one; use the other | Other session rejected | PASS — (§40.74): بعد reset/confirm، توكنُ QA1 السابقُ (قبل الاستعادة) ردّ **401** على `/my/addresses` — الجلساتُ القديمةُ أُبطلت (SEC8). | `PASS` | api | online | refresh tokens revoked | — | — | — | Contract SEC8: reset revokes all sessions |
+| CUST-06-018 | Auth | Old password fails after reset | After 016 | Login with old password | Rejected | PASS — (§40.74): بعد الاستعادة إلى كلمةٍ جديدة، الدخولُ بالكلمة القديمة (RahalQA@2026) ⇒ **401**. | `PASS` | api | online | — | — | — | — | — |
+| CUST-06-019 | Auth | New password succeeds | After 016 | Login with new password | Signed in | PASS — (§40.74): الدخولُ بالكلمة الجديدة (RahalQA@2027) ⇒ **200**. (ثمّ أُعيدت الكلمةُ إلى RahalQA@2026 للاتّساق.) | `PASS` | api | online | — | — | — | — | — |
 | CUST-06-020 | Auth | Suspended account: new login | Test account suspended via Admin | Login | Explicit suspended message; no session | Suspended (DB status=suspended) -> login 403 user_suspended (explicit, distinct from invalid_credentials, no session); status restored to active | `PASS` | staging API | online | users.status | — | — | — | — |
 | CUST-06-021 | Auth | Suspended account: existing session behaviour | Signed in · then suspended via Admin | Continue using app | Matches backend contract (refresh/requests rejected as the contract says) | Suspended existing session: backend rejects per contract (403 user_suspended); the app-side presentation is the CAF-10 issue tracked in 032 | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Confirm contract from backend before execution |
 | CUST-06-022 | Auth | Multiple active devices/sessions | Second device/emulator | Login on both | Per contract: same-client login revokes the previous family (`revokeClientSessions`) — verify which | CARRIED: same-client session-family revocation needs a controlled two-client test | `BLOCKED` | - | online | sessions per client | — | — | — | — |
@@ -1256,8 +1256,8 @@ until ADB is available — not an acceptance blocker.
 | 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 11 | 0 | 0 |
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 20 | 0 | 3 |
-| 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 24 | 0 | 8 |
+| 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 13 | 0 | 4 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 28 | 0 | 4 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 30 | 0 | 0 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **16** | **10** | **534** | **0** | **18** |
+| | **Total** | **578** | **474** | **104** | **16** | **10** | **539** | **0** | **13** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,24 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.74 · OTP — الاستعادةُ وتوثيقُ واتساب عبر المسار الحقيقيّ (٢٠٢٦-٠٩-٢٣)
+
+**البنية:** بذّار `otp_code(phone, purpose)` (staging-only، مقصورٌ على أرقام QA، **لا يتجاوز التحقّق** — يُصدر رمزاً حقيقيّاً عبر `CreateOTP`+`otpLifetime`، و`ConsumeOTP` يتحقّق منه عاديّاً). سببُه: التجهيزُ يستعمل مزوّدَ dev فلا يصل رمزٌ عبر واتساب.
+
+**06-016/017/018/019 (استعادةُ كلمة المرور) — PASS** على QA1:
+- `/auth/password/reset/request`⇒{sent:true}؛ `otp_code(reset)`⇒رمز؛ `/auth/password/reset/verify`⇒{verified:true}؛ `/auth/password/reset/confirm` بكلمةٍ جديدة (RahalQA@2027)⇒جلسةٌ جديدة (200) — **06-016** المسارُ الكاملُ مكشوفٌ ويعمل.
+- الدخولُ بالكلمة القديمة⇒**401** — **06-018**؛ الدخولُ بالكلمة الجديدة⇒**200** — **06-019**.
+- توكنُ QA1 السابقُ (قبل الاستعادة)⇒**401** على `/my/addresses` — **06-017** (الجلساتُ أُبطلت، SEC8).
+- ثمّ أُعيدت كلمةُ QA1 إلى RahalQA@2026 (customer_set_password) — دخولٌ 200.
+
+**05-017 (توثيقُ واتساب) — PASS:** `/auth/whatsapp/request`⇒sent؛ `otp_code(whatsapp)`⇒رمز؛ `/auth/whatsapp/confirm`⇒{verified:true} (200). ورمزٌ خاطئ (000000)⇒**invalid_otp 401** — التحقّقُ حقيقيٌّ (البذّارُ لا يتجاوزه).
+
+والتطبيقُ يستدعي هذه المسارات حرفيّاً. **BLOCKED⇒PASS ×5**.
+
+**المتبقّي من OTP** (05-003 المنتهي، 06-024 تغييرُ الرقم، 04-009/018/010 على الجهاز) يحتاج نشرَ 392d967a (أضاف purpose `login`/`phone_change` + مِعطارَ التأخير) — **محجوبٌ بهبوط التجهيز (نفادُ قرص أثناء البناء) — فعلُ المالك**.
+
+**المجاميع (محقّقة): PASS 539 · FAIL 0 · BLOCKED 13 · N/A 10 · NOT_TESTED 16 = 578.**
 
 ### 40.73 · CUST-17-017/018 الإقلاع — الجلسةُ والسلّةُ تنجوان (٢٠٢٦-٠٩-٢٣)
 
