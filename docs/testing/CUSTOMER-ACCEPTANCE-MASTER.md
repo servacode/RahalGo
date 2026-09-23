@@ -584,7 +584,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-033 | Cart | Suggestions row «يُطلب معه» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap a suggestion | Added with one tap; respects gating | Suggestions row «يُطلب معه» (مخللات/مشروب/عيران): tapping عيران added it with one tap -> cart line | `PASS` | SM-A525F/A14 vc12 | online | `/public/suggest` | — | — | — | Added: `SuggestRow.kt` |
 | CUST-11-034 | Cart | Empty cart via «إفراغ السلة» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap «إفراغ السلة» | Cart empty (no confirmation by design — note) | «إفراغ السلة» -> cart empty (no confirmation, by design) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added |
 | CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | PASS — شاهدٌ باختبارٍ+نداءٍ حيّ (§40.55): CAF-12 عولِج — `OfferGateTest` أخضرُ هذه الجلسة (2/2): بابُ العروض يعيد استعمالَ نفسِ بوّابةِ السوق (`rememberAddBlocked`/`addActionFor==BLOCKED`) و`if(blocked)` يحرس كلَّ إضافةٍ في `Offers()`؛ ونداءٌ حيّ: gov_active=false على نقطة QA ⇒ availability=**province_not_supported** (خارج التغطية)، وبوّابةُ الإرسال تحجب صراحةً (08-015)؛ فالبابان محروسان | `PASS` | api+test | online | no order | — | — | `OfferGateTest` | CAF-12 remediated (shared PreCart gate); live offers-UI add-blocked = device parity candidate |
-| CUST-11-036 | Cart | Multi-source limit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `orders.max_sources`=1 | Add items from two sources; submit | Explicit `too_many_sources`/`multi_source_order` | CARRIED: multi-source limit (orders.max_sources=1 -> too_many_sources) needs a 2-source cart at submit | `BLOCKED` | - | online | no order | — | — | — | Added: no client check; server enforces |
+| CUST-11-036 | Cart | Multi-source limit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `orders.max_sources`=1 | Add items from two sources; submit | Explicit `too_many_sources`/`multi_source_order` | PASS — شاهدٌ حيّ (§40.58): بُني متجرٌ ثانٍ عكوسٌ (بذّار merchant_second، بلا قبولِ متجر)؛ تسعيرةُ سلّةٍ من مصدرين ⇒ sources=2, max_sources=1, **too_many_sources=true**؛ وإنشاءُ الطلب (submit) ⇒ **409 `too_many_sources`**، لا طلب؛ أُزيل المتجر الثاني (residue=0). لا فحصَ عميلٍ — الخادمُ يفرض | `PASS` | api | online | no order | — | — | `TestSources_CapEnforced` | via merchant_second fixture (reversible) |
 | CUST-11-037 | Cart | Corrupt persisted cart is discarded safely (added) | Emulator: corrupt `rahalgo_cart` prefs | Launch | Empty cart; no crash | PASS — شاهدٌ حيّ (§40.56): كُتبت بياناتٌ فاسدةٌ (XML غير صالح) في rahalgo_cart.xml عبر run-as، ثمّ إقلاعٌ ⇒ التطبيقُ حيٌّ (pid) بلا انهيار، السوقُ يُعرض، والسلّةُ «سلتك فارغة» (السلّةُ غيرُ المقروءةِ تُطرح بالتصميم) | `PASS` | device | any | — | — | — | — | Added: unreadable cart is deleted by design |
 
 ## 23 · CUST-12 — Quote / checkout
@@ -1262,7 +1262,7 @@ until ADB is available — not an acceptance blocker.
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 25 | 0 | 2 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
-| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 33 | 0 | 4 |
+| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 34 | 0 | 3 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **25** | **10** | **512** | **0** | **31** |
+| | **Total** | **578** | **474** | **104** | **25** | **10** | **513** | **0** | **30** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,21 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.58 · بذّارُ المتجر الثاني ⇒ سقفُ المصادر 11-036 (٢٠٢٦-٠٩-٢٣)
+
+**11-036** (سقفُ المصادر — إضافةٌ من مصدرين ثمّ إرسال ⇒ إنفاذٌ خادميّ): بُني بذّارٌ جديدٌ عكوسٌ على
+التجهيز `merchant_second` (متجرٌ ثانٍ صغيرٌ بصنفٍ متاحٍ معتمَد؛ **لا يبدأ قبولَ المتجر**، `SourcesOf`
+يجمع بـ`merchant_id` فمتجرٌ ثانٍ = مصدرٌ ثانٍ). نُشر على staging (093f07…/99865642).
+
+- **التسعيرة** (سلّة: ساندويش مصدرٍ ١ + صنف مصدرٍ ٢): sources=2 · max_sources=1 · **too_many_sources=true**.
+- **الإرسال** (POST /orders بمصدرين): **HTTP 409 `too_many_sources`** (`errors.too_many_sources`)، لا طلب.
+- **لا فحصَ عميل** — العقدُ «الخادمُ يفرض» (service.go:300 قبل التسعير)، والانحدارُ `TestSources_CapEnforced`.
+- أُزيل المتجرُ الثاني (`merchant_second_clear`، deleted 1)، وأكّد reconcile: qa_second_merchants=0.
+
+**BLOCKED⇒PASS.**
+
+الحصيلة (محقّقة): PASS 512⇒513، BLOCKED 31⇒30، NOT_TESTED 25، N/A 10، FAIL 0. = 578.
 
 ### 40.57 · دفعةُ الإغلاق الأخيرة قبل الجلسة المرافقة — 09-007/11-023/09-012 (٢٠٢٦-٠٩-٢٣)
 
