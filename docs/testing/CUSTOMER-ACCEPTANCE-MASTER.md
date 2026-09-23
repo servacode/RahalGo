@@ -381,8 +381,8 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-05-008 | OTP | OTP screen background/foreground | As 001 | HOME; return | Step and phone preserved | SM-A525F (094): at OTP step → HOME → return → still on the OTP step («اكتب الرمز الذي وصلك», code field), preserved | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | CUST-05 sweep |
 | CUST-05-009 | OTP | Kill/reopen during OTP flow | As 001 | Kill; reopen | Safe restart of the flow; no half account | SM-A525F (094): at OTP step → force-stop → reopen → guest browse shell (safe restart, not stuck), no half account (094=0) | `PASS` | SM-A525F/A14 vc12 | online | users unchanged (094=0) | — | — | — | CUST-05 sweep |
 | CUST-05-010 | OTP | Network loss before OTP request | As 001 · offline | Request code | Blocked/explicit offline; no request | PASS — شاهدٌ حيٌّ على SM-A525F (§40.81) بمراقبةِ المالك: على شاشةِ إنشاء الحساب برقمِ QA، **وضعُ الطيران مُشغَّل** ثمّ نقرُ «توثيق حسابي» ⇒ رسالةٌ صريحة «لا يوجد اتصال بالإنترنت» (شريطاً) و«لا اتصال بالإنترنت» (تحت الحقل)، **ولم يُرسل أيُّ طلبٍ للرمز** والشاشةُ بقيت على خطوة الرقم — انسدادٌ صريحٌ بلا نداء. (وكشف التعافي عطبَ الرايةِ الحقليّةِ الساكنة ⇒ `CUST-DEF-011`، أُصلح وشُهد.) | `PASS` | device | offline | — | — | CUST-DEF-011 | — | CUST-05 sweep. Owner-observed offline block on vc14 |
-| CUST-05-011 | OTP | Network loss after request, before verification | Code requested · then offline | Enter code | Explicit offline; code still valid after recovery | deferred — same offline-over-wireless-ADB constraint as 010; offline-verify failure mechanism = CUST-04-011. Carried | `BLOCKED` | — | offline→online | — | — | CUST-04-011 (mechanism) | — | CUST-05 sweep |
-| CUST-05-012 | OTP | Network restored and flow recovers | After 011 | Restore; verify | Verification succeeds | deferred — follows 011; recovery-after-network-return proven by CUST-DEF-005 device witness (order #1063 after reconnect) and the many successful post-flaky signups. Carried | `BLOCKED` | — | online | — | — | — | — | CUST-05 sweep |
+| CUST-05-011 | OTP | Network loss after request, before verification | Code requested · then offline | Enter code | Explicit offline; code still valid after recovery | PASS — شاهدٌ حيٌّ على SM-A525F (§40.82) بمراقبةِ المالك: على خطوةِ الرمز (رمزٌ صحيحٌ مبذورٌ عبر مِعطارِ QA للتسجيل، `509025`)، **وضعُ الطيران مُشغَّل** ثمّ «تحقق» ⇒ خطأُ انقطاعٍ صريح، **ولم يمضِ التحقّقُ** والشاشةُ بقيت على الرمز، بلا انهيار. والرمزُ ظلّ صالحاً بعد العودة (تحقّقُ التسجيل يفحص ولا يستهلك — CheckOTP). | `PASS` | device | offline→online | — | — | CUST-DEF-011 | — | CUST-05 sweep. Owner-observed on vc14 |
+| CUST-05-012 | OTP | Network restored and flow recovers | After 011 | Restore; verify | Verification succeeds | PASS — شاهدٌ حيٌّ على SM-A525F (§40.82) بمراقبةِ المالك: **وضعُ الطيران مُطفأ** والاتصالُ عائد (زالت رايةُ الانقطاعِ تلقائيّاً + وميضُ «عاد الاتصال»)، ثمّ «تحقق» بالرمزِ نفسِه ⇒ **نجح التحقّقُ ومضى إلى نموذجِ الاسم/كلمة المرور**. وأُوقف عند النموذج بلا تأكيد ⇒ **لا حساب أُنشئ** (التأكيدُ وحدَه يُنشئ، ولم يُنفَّذ) — لا أثرَ في الإنتاج ولا في الدفتر. | `PASS` | device | online | — | — | — | — | CUST-05 sweep. Owner-observed on vc14; stopped pre-confirm |
 | CUST-05-013 | OTP | OTP for one flow/account cannot verify another | Two phones | Use A's code for B / reset code for signup | Rejected (purpose + phone bound) | API: 091's signup code used to confirm 092 → `invalid_otp` 401 (bound to phone). Purpose binding per `identity/service.go` | `PASS` | staging API | online | — | — | — | — | CUST-05 sweep. OTP hash bound to phone+purpose |
 | CUST-05-014 | OTP | Verification produces only the intended account/session | After 001 | Inspect sessions | One user, one android-customer session | SM-A525F (093): after signup, `refresh_tokens` (revoked_at IS NULL) = **1**, client = **android-customer** | `PASS` | SM-A525F/A14 vc12 | online | refresh_tokens=1 android-customer | — | — | — | CUST-05 sweep |
 | CUST-05-015 | OTP | OTP login when otp_login=true (added) | Signed out (guest) · Staging · SM-A525F · `auth.otp_login`=true (Staging only, Owner-approved) | OTP tab → request → verify | Signed in without password | SM-A525F: with `auth.otp_login`=true (guarded, restored false), the login screen shows the «رمز تحقق» tab (hidden at false — see 016), and its flow presents phone + «أرسل الرمز» with NO password field. Tab-gating + no-password OTP-login flow witnessed; the end-to-end sign-in tap-through was not completed live (device re-lock + field-input drift — automation limits, not an app issue). OTP mechanism itself proven by 001/005/006/007/013 | `PASS` | SM-A525F/A14 vc12 | online | `auth.otp_login` flip (restored) | — | — | — | CUST-05 sweep. Tab shown only when otp_login=true. Production policy false |
@@ -1256,7 +1256,7 @@ until ADB is available — not an acceptance blocker.
 | 13 | CUST-02 | 11 | 10 | 1 | 0 | 0 | 11 | 0 | 0 |
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 23 | 0 | 0 |
-| 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 15 | 0 | 2 |
+| 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 17 | 0 | 0 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 31 | 0 | 1 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 30 | 0 | 0 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **11** | **10** | **554** | **0** | **3** |
+| | **Total** | **578** | **474** | **104** | **11** | **10** | **556** | **0** | **1** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3757,6 +3757,18 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.82 · الجلسةُ المرافقة — انقطاعٌ حول تحقّق رمز التسجيل: 05-011 + 05-012 (٢٠٢٦-٠٩-٢٣)
+
+خطوةُ الرمز في إنشاء الحساب (رقمُ QA `0900555998`، بناءٌ vc14). رمزٌ صحيحٌ مبذورٌ عبر مِعطارِ QA للتسجيل (`otp_code`/signup ⇒ `509025`، وهو أحدثُ رمزٍ فعّالٍ فيُفحص) مُعبّأٌ سلفاً. فعلٌ ماديٌّ بمراقبةِ المالك (لا واتساب — «تحقق» نداءٌ مباشر):
+- **05-011 (انقطاعٌ بعد الطلب قبل التحقّق) — PASS**: **طيران ON** ثمّ «تحقق» ⇒ خطأُ انقطاعٍ صريح، **ولم يمضِ التحقّق**، والشاشةُ بقيت على الرمز، بلا انهيار. والرمزُ ظلّ صالحاً (تحقّقُ التسجيل يفحص ولا يستهلك).
+- **05-012 (عودةٌ فتعافٍ) — PASS**: **طيران OFF** والاتصالُ عائد (زالت رايةُ الانقطاعِ تلقائيّاً + وميضُ «عاد الاتصال بالإنترنت» — إصلاحُ `CUST-DEF-011` يعمل هنا أيضاً)، ثمّ «تحقق» بالرمزِ نفسِه ⇒ **نجح التحقّقُ ومضى إلى نموذجِ الاسم/كلمة المرور**.
+
+**وأُوقف عند النموذج بلا تأكيد ⇒ لا حساب أُنشئ** (التأكيدُ `signup/confirm` وحدَه يُنشئ الحساب ويستهلك الرمز، ولم يُنفَّذ) — **لا أثرَ في الإنتاج ولا في دفتر المال.**
+
+**BLOCKED⇒PASS ×2.** مجموعةُ CUST-05 مكتملةٌ (١٧/١٧).
+
+**المجاميع (محقّقة): PASS 556 · FAIL 0 · BLOCKED 1 · N/A 10 · NOT_TESTED 11 = 578.**
 
 ### 40.81 · الجلسةُ المرافقة — طيرانٌ ON→OFF على إنشاء الحساب: 05-010 + إصلاح CUST-DEF-011 (٢٠٢٦-٠٩-٢٣)
 
