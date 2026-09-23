@@ -481,7 +481,7 @@ Verify actual server reason handling. Authoritative vocabulary (`orders/availabi
 | CUST-08-010 | Avail | address_outside_coverage | Address outside zones | Open Cart | Out-of-zone note; send disabled | Raqqa far-edge -> address_outside_coverage (out_of_zone) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-011 | Avail | zone_closed_now | Zone hours closed | Open Cart | Zone-closed note; send disabled | delivery_zones hours_enforced=true (no open schedule) -> in-zone Raqqa -> zone_closed_now (place مركز المدينة); restored | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-08-012 | Avail | merchant_closed_now | Source store closed by hours | View item | «المتجر مغلق حالياً» overlay; + hidden | PASS — شاهدٌ حيّ (§40.31): merchant_emergency=closed ⇒ /public/items source_closed=true، وفي التطبيق «المتجر مغلق حالياً» على البطاقات، والطلبُ 409 merchant_closed؛ استُعيد | `PASS` | - | online | — | — | — | — | Structure stays (Owner decision 2026-09-16) |
-| CUST-08-013 | Avail | Availability changes while browsing | Signed-in test customer · Staging · SM-A525F | Close zone via Admin; wait for realtime/refresh | UI updates to the new reason | CARRIED: availability-change-while-browsing needs an Admin zone edit + realtime | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-08-013 | Avail | Availability changes while browsing | Signed-in test customer · Staging · SM-A525F | Close zone via Admin; wait for realtime/refresh | UI updates to the new reason | PASS — شاهدٌ حيٌّ على SM-A525F (§40.66): تصفّحُ السوق (زبون QA داخل)؛ gov_active=false على نقطة QA (province_not_supported) ⇒ السوقُ عرض سببَ خروجِ التغطية «رحال غو لم يصل إلى الرقة بعد — نعمل على التوسّع» + «أخبرني عند توفر الخدمة»؛ وبإعادة gov=true عادت الأصنافُ (26,050). الواجهةُ تُحدَّث للسبب الجديد | `PASS` | - | online | — | — | — | — | — |
 | CUST-08-014 | Avail | Availability changes after items entered cart | Signed-in test customer · Staging · SM-A525F · cart populated | Close zone; open Cart | Note shown; send disabled | PASS — شاهدٌ حيّ (§40.43): صنفٌ في السلّة ثمّ zone_close ⇒ الإرسالُ معطَّل (الخادمُ 503 zone_closed_now، والتطبيقُ يمنع الإرسالَ — كـ11-024)، لا طلب؛ أُعيدت المنطقة | `PASS` | device+api | online | — | — | — | — | — |
 | CUST-08-015 | Avail | Availability changes immediately before submit | Signed-in test customer · Staging · SM-A525F · review ready | Close zone; tap send | Server denies explicitly; no order | PASS — شاهدٌ حيّ (§40.43): zone_close ثمّ إرسال ⇒ الخادمُ يرفض صراحةً 503 `zone_closed_now`، لا طلب (order count unchanged)؛ أُعيدت المنطقة | `PASS` | api | online | order count unchanged | — | — | — | — |
 | CUST-08-016 | Avail | Availability/API failure never becomes a fake empty market | Signed-in test customer · Staging · SM-A525F | Offline / API blocked | Error/offline state — never the empty-market text | Availability/API failure -> recoverable error/offline state, never the fake empty-market text (cross-ref CUST-02-010 reversible dead-proxy) | `PASS` | SM-A525F/A14 vc12 | offline / API down | — | — | — | — | L1-018/019 |
@@ -1259,7 +1259,7 @@ until ADB is available — not an acceptance blocker.
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 23 | 0 | 9 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
-| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
+| 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 34 | 0 | 3 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **21** | **10** | **522** | **0** | **25** |
+| | **Total** | **578** | **474** | **104** | **21** | **10** | **523** | **0** | **24** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,10 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.66 · الجلسةُ المرافقة — 08-013 (تغيُّرُ التغطية أثناء التصفّح) على SM-A525F (٢٠٢٦-٠٩-٢٣)
+
+تصفّحُ السوق (زبون QA داخل)؛ `gov_active=false` على نقطة QA (province_not_supported) ⇒ السوقُ عرض سببَ خروجِ التغطية الجديد **«رحال غو لم يصل إلى الرقة بعد — نعمل على التوسّع»** + «أخبرني عند توفر الخدمة في الرقة». وبإعادة `gov_active=true` عادت الأصنافُ (26,050). الواجهةُ تُحدَّث للسبب الجديد (تغطية). **BLOCKED⇒PASS.**
 
 ### 40.65 · الجلسةُ المرافقة — اللحظيّ على SM-A525F: 14-007 + 15-001 (٢٠٢٦-٠٩-٢٣)
 
