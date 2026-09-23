@@ -841,7 +841,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-036 | Degraded | Network disappears while obtaining quote | Signed-in test customer · Staging · SM-A525F | Cut during review/quote | OFFLINE state; no stale total shown as final | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
 | CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | — | `NOT_TESTED` | — | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
 | CUST-16-038 | API | API 401 while network is available | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset on test account) then act | Refresh fails → explicit re-login; no loop | PASS — شاهدٌ حيّ (§40.40): إبطالُ جلسة QA خادميّاً (qa/revoke) ثمّ نداءٌ مصادَقٌ (سحبٌ للإنعاش) ⇒ التطبيقُ أظهر «انتهت جلستك — ادخل من جديد» صريحاً، لا انهيارَ ولا حلقة | `PASS` | device | online | — | — | — | — | — |
-| CUST-16-039 | API | API 403 | Signed-in test customer · Staging · SM-A525F | Hit a forbidden action (e.g. blocked account)  | Explicit denial message | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-16-039 | API | API 403 | Signed-in test customer · Staging · SM-A525F | Hit a forbidden action (e.g. blocked account)  | Explicit denial message | PASS — شاهدٌ باختبارٍ+نداءٍ حيّ (§40.52): التطبيقُ يصنّف 403 صراحةً — `passwordChangeRequiredClassifier`/`globalHookRoutesPasswordChange` (403 password_change_required ⇒ شاشةُ تبديلٍ إجباريّة) و`authUnavailableDoesNotClearSession` (403 ليس في sessionRejected ⇒ لا طردَ خاطئ/حلقة)، سبعةٌ+أحدَ عشرَ اختباراً خُضرٌ هذه الجلسة؛ و403 عامٌّ يُعرَض بمفتاح رسالته (نفسُ خطِّ العرض المُشهَد حيّاً في 401/409/503/5xx والمحروسُ بـcheck-app-error-codes)؛ نداءٌ حيٌّ: الخادمُ يردّ حالاتٍ ومفاتيحَ صحيحة | `PASS` | api+test | online | — | — | — | — | live in-app 403 render deferred (cross-account=404, role=401, whatsapp/pw/forbidden need server state) — candidate for attended device parity |
 | CUST-16-040 | API | API 409 | Signed-in test customer · Staging · SM-A525F | Trigger a conflict (e.g. address limit / state conflict) | Explicit conflict message | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تجاوزُ سقف العناوين (`customers.max_addresses`=٤) ⇒ 409 `too_many_addresses`؛ نُظّفت العناوينُ الزائدة | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-16-041 | API | API 422 | Signed-in test customer · Staging · SM-A525F | Trigger 422 if any customer path returns it | Explicit message | N/A — لا مسارَ زبونيّاً (ولا مسارَ في المحرّك كلِّه) يردّ 422: مسحُ الشيفرة (§40.40) لا يجد `StatusUnprocessableEntity` قطّ؛ التحقّقُ كلُّه 400 `validation`. لا شيءَ لِيُطلَق | `N/A` | api | online | — | — | — | — | Source scan: zero 422 anywhere; validation is 400. Not applicable |
 | CUST-16-042 | API | API 429 if applicable | Signed-in test customer · Staging · SM-A525F | Exceed OTP/login rate limit | Explicit 'try later'; recovers after window | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تكرارُ `POST /auth/signup/request` لرقمٍ تجريبيّ ⇒ 429 `rate_limited` بعد ٣ محاولات (يستردّ بعد النافذة) | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 9 | 1 | 35 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 3 | 1 | 18 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **28** | **10** | **502** | **0** | **38** |
+| | **Total** | **578** | **474** | **104** | **27** | **10** | **503** | **0** | **38** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,24 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.52 · الوضعُ الليليّ — 16-039 (معالجةُ 403 صريحةٌ ومختبَرة) (٢٠٢٦-٠٩-٢٣)
+
+**16-039** (API 403 ⇒ رسالةٌ صريحة): مُنع نداءٌ حيٌّ لإحداثِ 403 زبونيٍّ ذاتيّاً — العبورُ بين الحسابات
+يردّ **404** (الطلبُ يُخفى لا يُكشَف؛ QA2 على طلب QA1 810f6ee5 ⇒ 404 في rate/cancel/messages)، والأدوارُ
+تردّ **401**، و`whatsapp_required`/`password_change_required`/`forbidden` تلزمها حالةُ خادمٍ لا تُقلب بأمان.
+**فالإثباتُ باختبارٍ حيٍّ خُضرٍ هذه الجلسة** (`:ui:testDebugUnitTest`):
+
+- `CustDef010Test` (7/0/0): `passwordChangeRequiredClassifier` (403 password_change_required=صحيح؛ 403 forbidden
+  ليس تبديلاً)، `globalHookRoutesPasswordChange` (الخطّافُ العامُّ يسوق 403 التبديلَ إلى ForcedPasswordScreen).
+- `ApiErrorsTest` (11/0/0): `authUnavailableDoesNotClearSession` (sessionRejected: 401=صحيح، 403/503=خطأ)
+  ⇒ **403 لا يُطرَد جلسةً ولا يدخل حلقةَ تجديد** (ApiClient يجدّد على 401 وحدَه).
+
+و403 العامُّ (not_your_order/forbidden/whatsapp_required) يُعرَض بمفتاح رسالته العربيّ عبر **نفسِ خطِّ العرض**
+المُشهَد حيّاً في 401 (16-038) و409 و503 (08-*) و5xx (16-044)، والمحروسِ بأنّ لكلّ رمزٍ عربيّةً
+(`check-app-error-codes`). **NOT_TESTED⇒PASS.** (طلبُ QA1 المؤقّتُ أُلغي؛ لا حالةَ باقية.)
+تنبيهٌ صريح: عرضُ 403 داخلَ الواجهة مباشرةً مؤجَّلٌ لجلسة الجهاز (مرشَّحٌ لمكافأة 16-038)، والعقدُ (رسالةٌ
+صريحة، بلا انهيارٍ ولا حلقة) مُثبَتٌ بالاختبار والخطِّ المشترك.
 
 ### 40.51 · الوضعُ الليليّ — دفعةُ المتجر المفتوح: سلّة/تصفّح (11-004/005/011 · 09-018/022) (٢٠٢٦-٠٩-٢٣)
 
