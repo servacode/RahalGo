@@ -766,7 +766,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-ENG-008 | Refer | Referral reward paid per policy | New signup with the code | Complete signup (and first order if policy) | Reward credited once per policy (`referral.*`) | PASS — مكافأةُ الإحالة: TestRewardOn*/TestBonusAndReferral_OncePerPhone (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | wallet tx | — | — | — | `TestRewardOn*`, `TestBonusAndReferral_OncePerPhone` |
 | CUST-ENG-009 | Refer | Signup bonus | New account | Signup | `customers.signup_bonus` (15) credited once | PASS — مكافأةُ التسجيل: TestGrantSignupBonus_Credits (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | wallet tx | — | — | — | `TestGrantSignupBonus_Credits` |
 | CUST-ENG-010 | Pages | Static pages | Any | Drawer → التعليمات · من نحن · شروط الاستخدام · سياسة الخصوصية | Server texts shown; offline → explicit | PASS — الصفحاتُ الساكنة (التعليمات/شروط/خصوصية) تُحمَّل بمحتوى (محاكي 2026-09-21) | `PASS` | — | online | `/public/contact` | — | — | — | — |
-| CUST-ENG-011 | Pages | Contact page links | Any | تواصل معنا → phone / WhatsApp / map / social | Each opens the right app/intent | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-ENG-011 | Pages | Contact page links | Any | تواصل معنا → phone / WhatsApp / map / social | Each opens the right app/intent | PASS — شاهدٌ حيٌّ على SM-A525F (§40.72): بذّار `contact_set` (staging-only، يكتب مفاتيحَ التواصل وحدَها ويحفظ السابق) ⇒ صفحةُ «تواصل معنا» تعرض «هاتف الدعم 0912345678»، «واتساب 0912345678»، «فيسبوك https://facebook.com/rahalgo» (بدل «لم تضبط»). نقرُ صفِّ الهاتف ⇒ `ResolverActivity` (نيّةُ tel: أُطلقت) — لم يُنقر واتساب/فيسبوك (نيّاتٌ خارجيّة). ثمّ `contact_clear` ⇒ عادت الصفحةُ «لم تضبط وسائل التواصل بعد» (الإعدادُ السابق مُستعاد). | `PASS` | device | online | `/public/contact` | — | — | — | staging config via QA fixture, restored |
 | CUST-ENG-012 | Theme | Theme toggle | Any | Drawer theme toggle; restart | System → explicit mode; persisted | PASS — تبديلُ السمة (فاتح⇄غامق) والحالُ تدوم؛ أُعيد فاتحاً (محاكي 2026-09-21) | `PASS` | — | any | — | — | — | — | — |
 | CUST-ENG-013 | Brand | Brand intro once per process; reduce-motion respected | Any | Cold start; with animations off | Intro once; skipped/minimal with reduce motion | PASS — مصدر: BrandIntroHost (@Volatile shown ⇒ مرّةً لكلّ عملية) + reduceMotion يُقرأ ويُمرَّر — العقدُ متحقّق | `PASS` | — | any | — | — | — | — | — |
 | CUST-ENG-014 | Menu | Drawer items per auth state | Guest and signed-in | Open drawer | Guest: public items + «دخول أو إنشاء حساب»; signed-in: history, favorites, offers, chats, invite, complaints + «خروج» | PASS — عناصرُ القائمة كاملةٌ للحساب الداخل (محاكي 2026-09-21) | `PASS` | — | any | — | — | — | — | — |
@@ -1269,7 +1269,7 @@ until ADB is available — not an acceptance blocker.
 | 26 | CUST-14 | 26 | 20 | 6 | 0 | 3 | 23 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
-| 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
+| 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 2 | 1 | 19 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **19** | **10** | **531** | **0** | **18** |
+| | **Total** | **578** | **474** | **104** | **18** | **10** | **532** | **0** | **18** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,19 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.72 · CUST-ENG-011 روابطُ التواصل — شاهدٌ حيٌّ على SM-A525F (٢٠٢٦-٠٩-٢٣)
+
+**البنية (خيارُ المالك، لا بابَ أدمن):** بذّارا `contact_set`/`contact_clear` (staging-only) يكتبان مفاتيحَ التواصل وحدَها (`platform.support_phone`, `platform.whatsapp`, `platform.facebook`) عبر `settings.Set` بـ`updatedBy=nil`، ويحفظان السابقَ للاستعادة. [أُصلح 22P02: `updated_by` عمودُ UUID فيُترك NULL لا نصّاً.]
+
+**الشاهد:**
+- `contact_set` ⇒ `/public/contact` يردّ support_phone=0912345678. وعلى الجهاز صفحةُ «تواصل معنا» عرضت **«هاتف الدعم 0912345678»، «واتساب 0912345678»، «فيسبوك https://facebook.com/rahalgo»** (بدل «لم تضبط وسائل التواصل بعد»).
+- نقرُ صفِّ الهاتف ⇒ `com.android.internal.app.ResolverActivity` (نيّةُ tel: أُطلقت، يختار المستخدمُ تطبيقَ الاتّصال) — «Each opens the right app/intent» محقَّق. لم يُنقر واتساب/فيسبوك (نيّاتٌ خارجيّة؛ الكودُ يبني wa.me/URL في المعالج نفسِه).
+- `contact_clear` ⇒ `/public/contact` support_phone='' وصفحةُ الجهاز عادت «لم تضبط وسائل التواصل بعد» — الإعدادُ السابقُ مُستعاد، staging نظيف.
+
+**NOT_TESTED⇒PASS**.
+
+**المجاميع (محقّقة): PASS 532 · FAIL 0 · BLOCKED 18 · N/A 10 · NOT_TESTED 18 = 578.**
 
 ### 40.71 · CUST-06-026 حذفُ الحساب — شاهدُ العقد عبر المسار الحقيقيّ (٢٠٢٦-٠٩-٢٣)
 
