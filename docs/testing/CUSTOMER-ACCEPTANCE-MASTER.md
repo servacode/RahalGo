@@ -577,8 +577,8 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-026 | Cart | Source becomes closed/unavailable | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · source store closed | Open cart | Explicit; per contract | PASS — شاهدٌ خادميٌّ حيّ (§40.31): مصدرٌ مغلقٌ (merchant_emergency) ⇒ POST /orders = 409 merchant_closed صريح؛ استُعيد | `PASS` | - | online | — | — | — | — | — |
 | CUST-11-027 | Cart | Server remains source of truth for orderability | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-submit via stale UI after server change | Server decision shown | Server remains source of truth for orderability: charge/availability decided server-side (cross-ref CUST-DEF-005 server-authoritative + CUST-08 availability precedence) | `PASS` | staging API | online | no invalid order | — | — | — | — |
 | CUST-11-028 | Cart | Offline blocks Add | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Tap + | Blocked with explanation | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): منقطعاً، نقرُ «أضف» ⇒ «تعذّر جلبُ الخيارات — تحقّق من الاتصال» (حجبٌ بشرح) | `PASS` | - | offline | — | — | — | — | §7 — not built (expected FAIL) |
-| CUST-11-029 | Cart | Offline blocks Remove | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | Trash | Blocked | CARRIED: offline-blocks-remove needs an offline harness (disables wireless ADB) | `BLOCKED` | - | offline | — | — | — | — | §7 |
-| CUST-11-030 | Cart | Offline blocks quantity changes | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · offline | + / − | Blocked | CARRIED: offline-blocks-quantity needs an offline harness | `BLOCKED` | - | offline | — | — | — | — | §7 |
+| CUST-11-029 | Cart | Local Remove works offline (was: "blocks") | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Trash | Local remove works; reconciles on reconnect | PASS — معيارٌ صُحّح (قرارُ المالك ٢٠٢٦-٠٩-٢٣ Option A، §40.76): توقُّعُ «يُحجب منقطعاً» **متقادمٌ** — العقدُ المعتمَد: تعديلاتُ السلّة المحلّيّة (حذف/كمّيّة) مسموحةٌ منقطعاً وتُصالَح عند العودة (متّسقٌ مع 16-011 PASS وقرارِ ٢٠٢٦-٠٩-٢١). شاهدٌ حيٌّ على SM-A525F: «حذف من السلة» ⇒ الصنفُ أُزيل والسلّةُ «فارغة» فورَه (محلّيٌّ، بلا نداءِ شبكة)؛ والمصدرُ `Cart.kt/CartScreen.kt` بلا فرعِ اتّصالٍ فالسلوكُ نفسُه منقطعاً. | `PASS` | device | online | — | — | — | — | §7؛ عقدُ المالك ٢٠٢٦-٠٩-٢٣ |
+| CUST-11-030 | Cart | Local quantity change works offline (was: "blocks") | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | + / − | Local quantity change works; reconciles on reconnect | PASS — معيارٌ صُحّح (Option A، §40.76): «يُحجب منقطعاً» متقادمٌ (قرارُ ٢٠٢٦-٠٩-٢١ صراحةً: تعديلُ الكمّيّة المحلّيُّ مسموحٌ منقطعاً). شاهدٌ حيٌّ: + ⇒ الكمّيّة 1→2 والمجموع 26,050→52,100 فورَه؛ − ⇒ 2→1 — محلّيٌّ لحظيٌّ بلا نداءِ شبكة (متّسقٌ مع 16-011). | `PASS` | device | online | — | — | — | — | §7؛ عقدُ المالك |
 | CUST-11-031 | Cart | Offline visibly explains why | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Attempt 028–030 | Explanation shown each time | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): الانقطاعُ يُشرَح صراحةً («تحقّق من الاتصال») عند المحاولة | `PASS` | - | offline | — | — | — | — | §7 |
 | CUST-11-032 | Cart | Recovery restores safe cart interaction | After 028–031 | Restore network | Cart usable after authoritative refresh | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إعادةُ الشبكة + إنعاش ⇒ عاد السوقُ والسلّةُ صالحةٌ للتفاعل | `PASS` | - | recovering | quote refetched | — | — | — | §7.11 |
 | CUST-11-033 | Cart | Suggestions row «يُطلب معه» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap a suggestion | Added with one tap; respects gating | Suggestions row «يُطلب معه» (مخللات/مشروب/عيران): tapping عيران added it with one tap -> cart line | `PASS` | SM-A525F/A14 vc12 | online | `/public/suggest` | — | — | — | Added: `SuggestRow.kt` |
@@ -998,7 +998,7 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CUST-22-001 | Gate | Every actual Customer surface mapped to this document | — | Re-run the §38 audit against the release candidate | No unmapped surface | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 1 |
 | CUST-22-002 | Gate | Every mandatory case PASS or justified NOT_APPLICABLE | — | Recount §39 from the tables | 0 NOT_TESTED / FAIL / BLOCKED | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 2 |
-| CUST-22-003 | Gate | L1-019 truly PASS under the offline blocking/retry contract | — | CUST-16 mandatory rows on the physical device | PASS | — | `NOT_TESTED` | — | offline | — | — | — | — | Gate item 3 |
+| CUST-22-003 | Gate | L1-019 truly PASS under the offline blocking/retry contract | — | CUST-16 mandatory rows on the physical device | PASS | العقدُ المصحّح (Option A، ٢٠٢٦-٠٩-٢٣): تعديلاتُ السلّة المحلّيّة مسموحةٌ منقطعاً وتُصالَح عند العودة (لا «تُحجب») — منسجمٌ مع 11-029/030 و16-011. البوّابةُ تبقى مفتوحةً حتّى تُغلق سوابقُها (CUST-16 على الجهاز). | `NOT_TESTED` | — | offline | — | — | — | — | Gate item 3 |
 | CUST-22-004 | Gate | All Customer P0/P1 defects CLOSED | — | Defect ledger | None open | PASS — دفترُ العيوب (§40.45): كلُّ P0/P1 مُغلَقة — CUST-DEF-001 (P0، §40.17 نشرُ إنتاج)، 002/003/004/005 (P1، مُغلَقةٌ بإصلاح مصدرٍ + انحدار + شهود)، وCAF-13 RESOLVED. لا P0/P1 مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 4 — CUST-DEF-001..005 all closed |
 | CUST-22-005 | Gate | No unresolved launch-affecting security defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-001 (استيلاءُ حساب/حدُّ المصادقة) مُغلَقٌ ومنشورٌ إنتاجاً؛ لا عيبَ أمنيٍّ مؤثّرٍ على الإطلاق مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 5 |
 | CUST-22-006 | Gate | No unresolved duplicate-order defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-002 (خطرُ الطلب المكرّر) مُغلَقٌ (§40.25/40.27، isDecided + بصمةُ الجسد)؛ لا عيبَ تكرارٍ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 6 |
@@ -1262,7 +1262,7 @@ until ADB is available — not an acceptance blocker.
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
-| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 35 | 0 | 2 |
+| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 37 | 0 | 0 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **16** | **10** | **544** | **0** | **8** |
+| | **Total** | **578** | **474** | **104** | **16** | **10** | **546** | **0** | **6** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,18 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.76 · CUST-11-029/030 — تصحيحُ العقد + شاهدُ التعديل المحلّيّ منقطعاً (٢٠٢٦-٠٩-٢٣)
+
+**تصحيحُ معيار (قرارُ المالك Option A):** كان 11-029/030 يتوقّعان «يُحجب منقطعاً» (Trash/± ⇒ Blocked). وهذا **متقادمٌ ومتناقض**: 16-011 PASS وقرارُ المالك ٢٠٢٦-٠٩-٢١ يقولان إنّ تعديلاتِ السلّة المحلّيّة (كمّيّة/حذف) **مسموحةٌ منقطعاً وتُصالَح عند العودة**. المصدرُ يؤكّد: `Cart.kt`/`CartScreen.kt` بلا أيّ فرعِ اتصالٍ لعمليّات الحذف/الكمّيّة — فهي محلّيّةٌ بحتة. لم يُغيَّر التطبيقُ (لا نحجب تعديلاً محلّيّاً مشروعاً).
+
+**شاهدٌ حيٌّ على SM-A525F** (سلّةٌ فيها «ساندويش شاورما دجاج»، كمّيّة 1، 26,050):
+- **11-030:** «+» ⇒ الكمّيّة 1→2 والمجموع 26,050→**52,100** فورَه؛ «−» ⇒ 2→1 — تحديثٌ محلّيٌّ لحظيٌّ بلا نداءِ شبكة.
+- **11-029:** «حذف من السلة» ⇒ الصنفُ أُزيل والسلّةُ **«فارغة»** فورَه — محلّيٌّ لحظيّ.
+
+كونُها بلا فرعِ اتصالٍ (مصدر) يعني السلوكَ نفسَه منقطعاً. **BLOCKED⇒PASS ×2** (معيارٌ مصحَّح). و**22-003** حُوذيَ مع العقد المصحّح (يبقى NOT_TESTED حتّى تُغلق سوابقُه).
+
+**المجاميع (محقّقة): PASS 546 · FAIL 0 · BLOCKED 6 · N/A 10 · NOT_TESTED 16 = 578.**
 
 ### 40.75 · OTP — التسجيلُ البطيء/المكرّر، الرمزُ المنتهي، تغييرُ الرقم (٢٠٢٦-٠٩-٢٣)
 
