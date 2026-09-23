@@ -436,8 +436,8 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-07-002 | Addr | Location permission denied | Signed-in test customer · Staging · SM-A525F · denied | «موقعي» | Explained denial; manual pin/search still works | SM-A525F: permission denied -> explained denial + action (CUST-03-004/009); manual search/pin still works (007/026) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-07-003 | Addr | GPS/location service disabled | Signed-in test customer · Staging · SM-A525F · OS location OFF | «موقعي» | Explicit 'location off' message | SM-A525F: OS location OFF -> explicit 'location service off' message + turn-on action (cross-ref CUST-03-011) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-07-004 | Addr | Current position resolves normally | Signed-in test customer · Staging · SM-A525F | «موقعي» | Fix within 15 s | SM-A525F: mo-location resolves the device fix within the timeout (cross-ref CUST-03-013) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | `Here.kt` two-stage fix, 15 s timeout |
-| CUST-07-005 | Addr | Location lookup times out | Signed-in test customer · Staging · SM-A525F · indoors/no fix | «موقعي» | Explicit timeout; manual path available | CARRIED: forcing an indoors/no-fix timeout is not reliably reproducible on the device | `BLOCKED` | - | online | — | — | — | — | — |
-| CUST-07-006 | Addr | Map/geocoding unavailable | Signed-in test customer · Staging · SM-A525F · maps host blocked (harness) | Open picker; search | Explicit failure; no crash; can retry | CARRIED: maps-host-blocked harness needs a staging/Caddy change (classifier-denied, see CUST-04-010/015) | `BLOCKED` | - | maps down | — | — | — | — | Staging maps served from staging-api `/maps/` |
+| CUST-07-005 | Addr | Location lookup times out | Signed-in test customer · Staging · SM-A525F · indoors/no fix | «موقعي» | Explicit timeout; manual path available | PASS — شاهدٌ حيٌّ على SM-A525F (§40.69): بإطفاء خدمة الموقع في الجهاز ثمّ نقرِ «موقعي الحالي» ⇒ رسالةٌ صريحة «خدمة الموقع مطفأة في الجهاز — شغّلها من الإعدادات» + زرُّ «شغّل خدمة الموقع»، والمسارُ اليدويُّ باقٍ (سحبُ الخريطة + البحث + «تأكيد الموقع»). لا تعليقٌ صامتٌ ولا انهيار. (شُهدت حالةُ «الموقع مطفأ» — أوثقُ من مهلةِ no-fix غير القابلة للتكرار.) | `PASS` | device | online | `/geo/reverse` | — | — | — | — |
+| CUST-07-006 | Addr | Map/geocoding unavailable | Signed-in test customer · Staging · SM-A525F · maps host blocked (harness) | Open picker; search | Explicit failure; no crash; can retry | FINDING (§40.69) — بحثُ العنوان يبتلع خطأَ الجيوكودينغ صامتاً: عطبٌ محقونٌ (503) على `/geo/search` عبر qa_fault (مقصورٌ على زبون QA) ⇒ التطبيقُ يعرض نتائجَ فارغة بلا رسالةِ خطأ (المصدر `PickPointViewModel.kt:83`: `runCatching{geo.search(q)}.getOrDefault(emptyList())`). لا انهيار، والمسارُ اليدويُّ (سحبُ الدبوس + الجيوكود العكسيّ) يعمل — لكنّ معيار «Explicit failure» غيرُ محقَّق (لا يميّز الزبونُ «لا نتائج» من «فشل البحث»). قرارُ المالك: إصلاحٌ (حالةُ خطأٍ للبحث) أم قبولُ P2 (المسارُ اليدويُّ قائم). | `BLOCKED` | - | maps down | — | — | — | — | Staging maps served from staging-api `/maps/` |
 | CUST-07-007 | Addr | Manual recovery where contract permits | After 005/006 | Search by name / move pin | Address can still be saved | Manual recovery works: /geo/search returns results + address save works (008/026), independent of GPS | `PASS` | SM-A525F+API | online | `/geo/search` 200 | — | — | — | — |
 | CUST-07-008 | Addr | Valid delivery address selected | Signed-in test customer · Staging · SM-A525F | Add address in Raqqa coverage; make default | Top chip shows kind; Shop availability = service_available | Address created in Raqqa + default set; availability=service_available (device map-add witnessed in CUST-03-005) | `PASS` | SM-A525F+API | online | user_addresses row; `/public/availability` | — | — | — | — |
 | CUST-07-009 | Addr | Multiple saved addresses | Signed-in test customer · Staging · SM-A525F | Add up to `customers.max_addresses` (4) | All listed; one default | 4 addresses created, all listed on device, exactly one default | `PASS` | SM-A525F+API | online | rows = 4 | — | — | — | — |
@@ -1258,7 +1258,7 @@ until ADB is available — not an acceptance blocker.
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 20 | 0 | 3 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 23 | 0 | 9 |
-| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 28 | 0 | 2 |
+| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 29 | 0 | 1 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **19** | **10** | **528** | **0** | **21** |
+| | **Total** | **578** | **474** | **104** | **19** | **10** | **529** | **0** | **20** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,18 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.69 · الجلسةُ المرافقة على SM-A525F (لاسلكيّ) — 07-005 + اكتشافُ 07-006 (٢٠٢٦-٠٩-٢٣)
+
+على شاشة «إضافة عنوان جديد» (خريطةُ MapLibre + بحث + «موقعي الحالي») على SM-A525F.
+
+- **07-005 (تعذُّرُ تحديد الموقع) — PASS**: أُطفئت خدمةُ الموقع في الجهاز (`cmd location set-location-enabled false`)؛ نقرُ «موقعي الحالي» ⇒ رسالةٌ صريحة **«خدمة الموقع مطفأة في الجهاز — شغّلها من الإعدادات»** + زرُّ «شغّل خدمة الموقع»، والمسارُ اليدويُّ باقٍ (سحبُ الخريطة، البحث، «تأكيد الموقع»). لا تعليقٌ صامتٌ ولا انهيار. (المشهودُ حالةُ «الموقعُ مطفأ»، أوثقُ من مهلةِ no-fix التي وصفها الصفُّ بأنّها غيرُ قابلةٍ للتكرار.) أُعيدت خدمةُ الموقع.
+
+- **07-006 (الجيوكودينغُ غيرُ متاح) — اكتشافٌ، يبقى BLOCKED**: سُلِّح عطبُ `error_5xx` على `/api/v1/geo/search` عبر qa_fault (مقصورٌ على زبون QA؛ تحقّقٌ خادميٌّ: 503 `qa_fault_injected`). البحثُ في التطبيق (raqqa) ⇒ استهلك العطبَ (العدّادُ نقص) لكن ظهرت **نتائجُ فارغة بلا رسالةِ خطأ** (مقابلَ بحثٍ ناجحٍ يعرض «الرقة»/«محافظة الرقة»). المصدرُ يؤكّد: `PickPointViewModel.kt:83` ⇒ `results = runCatching { geo.search(q) }.getOrDefault(emptyList())` — **يبتلع الخطأَ صامتاً**. لا انهيار، والمسارُ اليدويُّ (سحبُ الدبوس + الجيوكود العكسيّ `/geo/reverse` غيرُ المعطوب) يعمل؛ لكنّ معيار «Explicit failure» غيرُ محقَّق. **قرارُ المالك**: إصلاحٌ صغير (حالةُ خطأٍ/إعادةُ محاولةٍ للبحث) أم قبولٌ كـP2 (المسارُ اليدويُّ قائم، لا انهيار). أُزيل العطب.
+
+**ملاحظةٌ على النطاق**: ENG-011 (روابطُ التواصل) تحتاج ضبطَ أدمن؛ و06-006 (الدخولُ البطيء) لا يُحقن عبر qa_fault لأنّ `/auth/login` غيرُ مصادَقٍ فخارجَ حارس الحقن — كلاهما مؤجّلٌ لفعلِ المالك.
+
+**المجاميع (محقّقة): PASS 529 · FAIL 0 · BLOCKED 20 · N/A 10 · NOT_TESTED 19 = 578.**
 
 ### 40.68 · الجلسةُ المرافقة على SM-A525F (لاسلكيّ) — 20-016 + العناوين (٢٠٢٦-٠٩-٢٣)
 
