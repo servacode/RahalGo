@@ -728,7 +728,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-SUP-004 | Chat | Two orders' chats never mix | Two open orders with drivers | Switch chats rapidly | Messages/drafts stay with their order | PASS — شاهدٌ حيّ (§40.39): طلبان (#1124/#1125) لكلٍّ سائقٌ ورسالةٌ مميّزة ⇒ رسائلُ كلّ طلبٍ في طلبه وحدَه، لا اختلاط (عزلٌ خادميٌّ بمعرّف الطلب في comms.Permit) | `PASS` | api | online | — | — | — | — | server-side isolation by order_id |
 | CUST-SUP-005 | Chat | Stranger cannot read/post in another's chat | Two test customers (A, B) · API client with each token | B GET/POST A's messages | 404 without leakage | PASS — الغريبُ لا يقرأ/يكتب: TestCHAT05_StrangerGetsNotFound (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestCHAT05_StrangerGetsNotFound` |
 | CUST-SUP-006 | Chat | Chats list (دردشاتي السابقة) | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → chats | Open first; closed expand read-only | PASS — «دردشاتي السابقة» تُفتح («لا دردشات منتهية») (محاكي 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
-| CUST-SUP-007 | Chat | Offline chat send blocked | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Send | OFFLINE state; blocked | — | `NOT_TESTED` | — | offline | no message row | — | — | — | §7 |
+| CUST-SUP-007 | Chat | Offline chat send blocked | Signed-in test customer · Staging · SM-A525F · valid default address · offline | Send | OFFLINE state; blocked | PASS — شاهدٌ حيٌّ على SM-A525F (§40.85) بمراقبةِ المالك: QA1 في محادثةِ سائقِ الطلب #١١٤٨ (طلبٌ مخصّصٌ نقديٌّ حياديٌّ ماليّاً، أُسند سائقٌ عبر مِعطارِ QA الجديد). **وضعُ الطيران مُشغَّل** ثمّ «إرسال» ⇒ **لم تظهر الرسالةُ كمُرسَلة**، لا نجاحَ كاذب، لا انهيار. **وضعُ الطيران مُطفأ** ⇒ لم تُرسَل تلقائيّاً ولم تظهر. **جلبٌ خادميٌّ حديثٌ** (إعادةُ فتح المحادثة) ⇒ «SUP007-offline-send-test» **غيرُ موجودٍ** (لا رسالةَ شبح/مكرّرة)، والحقلُ فارغٌ (أُسقطت لا صُفّت). ثمّ أُلغي الطلبُ، ونُظّفت الحالة. | `PASS` | device | offline | no message row (verified) | — | — | — | §7. Owner-observed on vc14 |
 | CUST-SUP-008 | Support | Complaint on an order | Delivered disposable order | Complaint → reason (note required for 'other') → send | Ticket created; shown in الشكاوى والبلاغات | PASS — شكوى على طلب: TestComplaint_* (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | ticket row | — | — | — | `TestComplaint_*` |
 | CUST-SUP-009 | Support | Complaint once / window / not on running order | As 008 | Complain twice; after window; on running order | Explicit denial each | PASS — TestComplaint_OnlyOnce/WindowPasses/NotOnRunningOrder/Opens (internal/support، ok 2026-09-21) | `PASS` | — | online | — | — | — | — | — |
 | CUST-SUP-010 | Support | Tickets list shows status and resolution | Signed-in test customer · Staging · SM-A525F · valid default address | Drawer → الشكاوى والبلاغات | Number, subject, status, resolution | PASS — «الشكاوى والبلاغات» تعرض الحالة (محاكي 2026-09-21) | `PASS` | — | online | `/my/tickets` | — | — | — | PRQ-2 is IN this release (Owner decision §40.15-1) — see CUST-SUP-013/014 |
@@ -1267,7 +1267,7 @@ until ADB is available — not an acceptance blocker.
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
 | 26 | CUST-14 | 26 | 20 | 6 | 0 | 3 | 23 | 0 | 0 |
-| 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
+| 26A | CUST-SUP | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **8** | **10** | **559** | **0** | **1** |
+| | **Total** | **578** | **474** | **104** | **7** | **10** | **560** | **0** | **1** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3757,6 +3757,21 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.85 · الجلسةُ المرافقة — إرسالُ محادثةٍ منقطعاً مسدود: SUP-007 (٢٠٢٦-٠٩-٢٣)
+
+**الإعداد** (بمعطارِ QA الجديد `1d2a8686`، منشورٌ واحد): أُنشئ طلبُ QA1 مخصّصٌ نقديٌّ (#١١٤٨، حياديٌّ ماليّاً — نقديّ، يقف عند «assigned» قبل التسوية) عبر التطبيق (اختيارُ العنوان المحفوظ صراحةً كان المفتاحَ)، ثمّ سيقَ إلى **assigned** بنداءٍ **بلا `order_id`** — فحلّ المعطارُ طلبَ QA1 المفتوحَ الوحيدَ (`qaResolveOpenOrder`) وأسند سائقاً فعليّاً (عمر الشيخ) وفتح القناة. لا كشفَ جلسةِ سائق/أدمن، لا قيدَ مال.
+
+**الشاهد** (مراقبةُ المالك): في محادثةِ السائق للطلب #١١٤٨، رسالةٌ مُعبّأةٌ «SUP007-offline-send-test» (غيرُ مُرسَلة):
+- **طيران ON** ثمّ «إرسال» ⇒ **لم تظهر الرسالةُ كمُرسَلة**، لا نجاحَ كاذب، لا انهيار.
+- **طيران OFF** ⇒ لم تُرسَل تلقائيّاً ولم تظهر (لا صفٌّ/إعادةُ محاولة).
+- **جلبٌ خادميٌّ حديثٌ** (إعادةُ فتح المحادثة بعد العودة) ⇒ تاريخُ المحادثة فيه الفقاعتان السابقتان فقط، و«SUP007-offline-send-test» **غائبةٌ** (`grep=0`) — **لا رسالةَ شبح/مكرّرة**، والحقلُ عاد فارغاً.
+
+**التنظيف**: أُلغي #١١٤٨ («نعم، ألغه») ⇒ «لا طلبات جارية»، والسائقُ حُرّر، والقناةُ أُغلقت. **المطابقة**: `qa_open_orders=0`, `qa_wallet_balance=0` — نظيفٌ بلا أثرٍ ماليّ.
+
+**NOT_TESTED⇒PASS ×1.** مجموعةُ CUST-SUP مكتملةٌ (١٤/١٤).
+
+**المجاميع (محقّقة): PASS 560 · FAIL 0 · BLOCKED 1 · N/A 10 · NOT_TESTED 7 = 578.**
 
 ### 40.84 · فشلُ حلِّ DNS — شاهدٌ ذاتيٌّ عبر ADB: 16-028 (٢٠٢٦-٠٩-٢٣)
 
