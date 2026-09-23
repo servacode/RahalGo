@@ -504,7 +504,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-008 | Market | Products/items load | Signed-in test customer · Staging · SM-A525F · valid default address | Open section | Grid of items with price pills | Items grid loads with price pills (device + API items array) | `PASS` | SM-A525F+API | online | — | — | — | — | — |
 | CUST-09-009 | Market | Available product displays correctly | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect card | Image, price, discount chip, + button | Item card has image_url, price, price_before/discount_percent, has_options (+ button); price==SoT (CUST-DEF-005) | `PASS` | SM-A525F+API | online | price == SoT | — | — | — | — |
 | CUST-09-010 | Market | Unavailable product behaviour | Item marked unavailable | Inspect card | «غير متوفر» chip; + hidden; section stays | Unavailable items exist (مشاوي count>orderable_now); item.available/source_closed drive the غير متوفر/closed chip; prior device evidence P8-L1-017 | `PASS` | SM-A525F+API | online | item available=false | — | — | — | P8-L1-017 prior evidence |
-| CUST-09-011 | Market | Missing/broken image does not break the screen | Item with broken media | Open section | Placeholder; layout intact | ATTENDED (تأكيدُ واجهةٍ ~٣٠ث) — البذّارُ بُني ونُشر (`qa/seed item_image` يُفرّغ image_media_id، عكوسٌ بردِّ المعرّف السابق). والتعاملُ مع الصورة الناقصة مُشهَدٌ سلفاً على مستوى الأقسام (§40: أقسامٌ image_url=null ⇒ أيقونةُ بديل)، والصنفُ يستعمل نفسَ مكوّن الصورة. عرضُ الواجهة لصنفٍ مؤجَّلٌ: **شبكةُ المحاكي انهارت عتاديّاً هذه الجلسة** — تأكيدٌ بصريٌّ خاطفٌ على جهاز المالك | `BLOCKED` | src | online | image intact (never applied) | — | — | — | fixture built+deployed; UI-render device (emulator NIC failed) |
+| CUST-09-011 | Market | Missing/broken image does not break the screen | Item with broken media | Open section | Placeholder; layout intact | PASS — شاهدٌ حيٌّ على SM-A525F (§40.63): بذّار item_image أفرغ صورةَ a9e0d86f (image_media_id=null، prev=265b256c محفوظ)؛ تصفّحُ السوق (زائر) ⇒ بطاقةُ «ساندويش شاورما دجاج · 26,050 ل.س» تُعرض سليمةً بلا صورة (شاغرُ الصورة بديلٌ)، وجيرانُها (لحمة/شيش/كباب/فلافل) سليمة، **لا انهيار ولا خطأ**، التخطيطُ متماسك. أُعيدت الصورة | `PASS` | device | online | image restored | — | — | — | live SM-A525F guest browse; layout intact, no crash; image restored |
 | CUST-09-012 | Market | Genuine empty catalog has explicit empty state | Geography with no content | Open تسوق | «نعمل حاليًا على إضافة المتاجر والمنتجات»; no retry (by design) | PASS — شاهدٌ حيّ (§40.57): عُطّلت كلُّ الأقسام العشرة المملوءة ببذّار section_active=false (كلُّها previous=true)، إقلاعٌ ⇒ الشاشةُ أظهرت الحالةَ الفارغةَ الصريحة «نعمل حاليًا على إضافة المتاجر والمنتجات» + «ستظهر الخيارات هنا فور توفرها»، بلا انهيارٍ ولا إعادةِ محاولة؛ أُعيدت الأقسامُ العشرة (10 فعّالة) | `PASS` | device | online | `service_available` + zero items | — | — | — | via section_active fixture (reversible) |
 | CUST-09-013 | Market | API/network failure never shows the genuine-empty message | Signed-in test customer · Staging · SM-A525F · valid default address | Offline / API blocked | Error or OFFLINE state instead | API/network failure -> error/OFFLINE state, never the genuine-empty message (cross-ref CUST-08-016 / CUST-02-010 reversible dead-proxy) | `PASS` | SM-A525F/A14 vc12 | offline / API down | — | — | — | — | — |
 | CUST-09-014 | Market | Refresh normally | Signed-in test customer · Staging · SM-A525F · valid default address | Pull-to-refresh | Refreshed; spinner ends | Pull-to-refresh -> items refresh, spinner ends | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | P8-C3-017 |
@@ -1260,7 +1260,7 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 23 | 0 | 9 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 26 | 0 | 1 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
 | 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 34 | 0 | 3 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **23** | **10** | **518** | **0** | **27** |
+| | **Total** | **578** | **474** | **104** | **23** | **10** | **519** | **0** | **26** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,21 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.63 · الجلسةُ المرافقة على SM-A525F — البدء + 09-011 (٢٠٢٦-٠٩-٢٣)
+
+بدأت الجلسةُ المرافقةُ على الجهاز الحقيقيّ **SM-A525F** (أندرويد 14، `com.rahalgo.customer.debug` vc12،
+لاسلكيّ 192.168.1.103). التطبيقُ يحمّل التجهيزَ فعلاً (الكتالوج ظاهر).
+
+- **09-011 (PASS)**: بذّار `item_image` أفرغ صورةَ a9e0d86f (image_media_id=null، السابقُ 265b256c محفوظ)؛
+  تصفّحُ السوق (زائر — لا يلزم دخول) ⇒ بطاقةُ «ساندويش شاورما دجاج · 26,050 ل.س» تُعرض سليمةً بلا صورة، وجيرانُها
+  سليمة، **لا انهيار ولا نصَّ خطأ**، التخطيطُ متماسك. أُعيدت الصورة. **BLOCKED⇒PASS.**
+- **قيدٌ في الجلسة**: `qa_login` (دخولُ QA التلقائيّ) لا يعمل على بناء الجهاز vc12 (يبقى زائراً)، وجلسةُ QA1 بلا
+  كلمةِ مرور، والتوكن مُعمّى (EncryptedSharedPreferences) فلا يُحقَن. ⇒ بقيّةُ الحالات (10-014 والسلّة/الطلبات/
+  الحساب) تحتاج زبوناً داخلاً — يُدخله المالكُ برقمه (يغطّي أيضاً حالاتِ واتساب). الوصلةُ لاسلكيّةٌ فتبديلُ الشبكة
+  يفعله المالك.
+
+الحصيلة (محقّقة): PASS 518⇒519، BLOCKED 27⇒26، NOT_TESTED 23، N/A 10، FAIL 0. = 578.
 
 ### 40.62 · إصلاحُ CAF-04 ⇒ 06-031 PASS كاملاً (٢٠٢٦-٠٩-٢٣)
 
