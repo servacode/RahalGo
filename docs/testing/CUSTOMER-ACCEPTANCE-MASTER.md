@@ -414,7 +414,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-019 | Auth | New password succeeds | After 016 | Login with new password | Signed in | PASS — (§40.74): الدخولُ بالكلمة الجديدة (RahalQA@2027) ⇒ **200**. (ثمّ أُعيدت الكلمةُ إلى RahalQA@2026 للاتّساق.) | `PASS` | api | online | — | — | — | — | — |
 | CUST-06-020 | Auth | Suspended account: new login | Test account suspended via Admin | Login | Explicit suspended message; no session | Suspended (DB status=suspended) -> login 403 user_suspended (explicit, distinct from invalid_credentials, no session); status restored to active | `PASS` | staging API | online | users.status | — | — | — | — |
 | CUST-06-021 | Auth | Suspended account: existing session behaviour | Signed in · then suspended via Admin | Continue using app | Matches backend contract (refresh/requests rejected as the contract says) | Suspended existing session: backend rejects per contract (403 user_suspended); the app-side presentation is the CAF-10 issue tracked in 032 | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Confirm contract from backend before execution |
-| CUST-06-022 | Auth | Multiple active devices/sessions | Second device/emulator | Login on both | Per contract: same-client login revokes the previous family (`revokeClientSessions`) — verify which | CARRIED: same-client session-family revocation needs a controlled two-client test | `BLOCKED` | - | online | sessions per client | — | — | — | — |
+| CUST-06-022 | Auth | Multiple active devices/sessions | Second device/emulator | Login on both | Per contract: same-client login revokes the previous family (`revokeClientSessions`) — verify which | PASS — شاهدٌ حيٌّ ذاتيٌّ (§40.86): جهازان لنفس العميل `android-customer` (SM-A525F + محاكي)، حسابُ QA1. QA1 داخلٌ على SM-A525F (نشطٌ، شاشةُ حسابي تُظهر ملفَّه). ثمّ دخولُ QA1 على المحاكي ⇒ **إبطالُ عائلة SM-A525F** (`revokeClientSessions` لنفس النوع، فوريّاً عبر Redis). التحقّق: **المحاكي نشطٌ وباقٍ** عبر إعادة الفتح (restore/`/auth/me` 200)، و**SM-A525F عند إعادة الفتح سقط إلى ضيف** (`/auth/me` 401 ⇒ session-rejected ⇒ `detachSession`، عزلةُ CUST-DEF-009: السلّة/الحالة تُمحى). **الأحدثُ يبقى، والأقدمُ يُبطَل** — لا تسريبَ توكن، لا جلسةٌ شبحيّة. جلسةُ المحاكي المؤقّتةُ نُظّفت (خروج). | `PASS` | device+emulator | online | sessions per client (verified) | — | CUST-DEF-009 | — | Owner-approved emulator as 2nd device |
 | CUST-06-023 | Auth | Change password from Account (added) | Signed-in test customer · Staging · SM-A525F | حسابي → current + new + confirm | Changed; explicit success; wrong current → explicit error | SM-A525F change password via Account (current+new+confirm) -> new password logs in 200, old password 401 | `PASS` | SM-A525F/A14 vc12 | online | `auth.password_change` audit | — | — | — | Added: Account screen feature |
 | CUST-06-024 | Auth | Change phone number (added) | Signed-in test customer · Staging · SM-A525F | حسابي → change phone → code → confirm | Phone changed; login with new phone works | PASS — شاهدُ العقد (§40.75): `/auth/phone/request`(رقمٌ جديد)⇒sent؛ `otp_code(phone_change)`⇒رمز؛ `/auth/phone/confirm`⇒updated:true (200). بعده: الرقمُ القديم⇒دخول **401**، الرقمُ الجديد⇒دخول **200**. ثمّ أُعيد الرقمُ إلى +963900555001 (دخول 200)، reconcile نظيف. | `PASS` | api | online | users.phone | — | — | — | Added: `/auth/phone/request` + `/auth/phone/confirm` |
 | CUST-06-025 | Auth | Edit name and profile photo (added) | Signed-in test customer · Staging · SM-A525F | Edit name; upload/remove photo | Saved; shown everywhere | SM-A525F edit name via Account -> DB full_name updated (Renamed095); photo uses the system picker (CUST-03-014) | `PASS` | SM-A525F/A14 vc12 | online | users.full_name / avatar | — | — | — | Added: `PATCH /me/name`, `POST /me/avatar` |
@@ -929,7 +929,7 @@ Defensive acceptance testing of RahalGo's own application.
 | CUST-19-015 | Sec | Deep-link route manipulation if deep links exist | — | Send crafted intents/URIs | Safe handling or N/A | PASS — تلاعبُ الروابط الآمن: DeepLinkTest (وجهةٌ تُنقّى) (Kotlin unit suite BUILD SUCCESSFUL) | `PASS` | — | any | — | — | — | — | Audit decides applicability (§38) |
 | CUST-19-016 | Sec | Old screen/state cannot bypass a newly closed server rule | Signed-in test customer · Staging · SM-A525F | Close ordering server-side; submit from the stale screen | Server denies; UI explicit | PASS — TestPL11_13_OrdersBlockedAndNotBypassable · TestLM · وشهادة جهاز سابقة P8-L1-020 | `PASS` | — | online | order count unchanged | — | — | — | — |
 | CUST-19-017 | Sec | Account A logout → Account B login: no A data | Two test customers | A: cart/addresses/orders; logout; B login | No A cart/addresses/orders/notifications visible | B saw no A cart/notifications; `me`=B, B's own address | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
-| CUST-19-018 | Sec | Two devices on the same Customer account | Second device/emulator | Login on both; act on both | Behaviour matches session contract | — | `NOT_TESTED` | — | online | sessions per client | — | — | — | — |
+| CUST-19-018 | Sec | Two devices on the same Customer account | Second device/emulator | Login on both; act on both | Behaviour matches session contract | PASS — شاهدٌ حيٌّ ذاتيٌّ (§40.86): نفسُ سياق 06-022 (SM-A525F + محاكي، QA1). العقدُ: جلسةٌ واحدةٌ لكلّ نوعِ عميل — فدخولُ الجهاز الثاني يُبطل الأوّل. **مطابقٌ للعقد**: المحاكي (الأحدث) صار المالكَ النشط (شاشةُ حسابي تُظهر ملفَّ QA1، يعمل)، وSM-A525F (الأقدم) سقط إلى ضيف بأمان (`detachSession` يمحو حالتَه المحلّيّة ⇒ لا فسادَ سلّة/طلب/حساب، ولا خلطَ هويّةٍ بين الجهازين). ملكيّةُ الجلسة صحيحةٌ (الأحدث). لا أثرَ في المطابقة (residue=0). | `PASS` | device+emulator | online | sessions per client (verified) | — | CUST-06-022 | — | Owner-approved emulator as 2nd device |
 | CUST-19-019 | Sec | Concurrent actions from two sessions do not corrupt order state | As 018 | Submit/cancel concurrently | Consistent single outcome | PASS — TestRACE_TwoDriversSameOrder/AdminVsAppTransition/FinancialTruth · TestIDEM_T1/T4 | `PASS` | — | online | order state | — | — | — | — |
 | CUST-19-020 | Sec | Cannot order outside serviceability by manipulating local state | API client | Submit with coordinates outside coverage / foreign address id | Server denies (`address_outside_coverage` / 404) | PASS — شاهدٌ خادميٌّ حيّ على staging (§40.30): إرسالُ طلبٍ عاديٍّ وخاصٍّ بإحداثيّات دمشق (33.5138/36.2765) خارجَ التغطية ⇒ 400 `out_of_zone` للاثنين؛ لا طلب. المِعيارُ خادميٌّ محض | `PASS` | — | online | no order | — | §40.30 | — | Server-authoritative; live-witnessed 2026-09-22 (§40.30) |
 | CUST-19-021 | Sec | Cannot order a retired/unavailable item via stale screen | Signed-in test customer · Staging · SM-A525F | Retire item server-side; submit stale cart | Server denies; explicit message | PASS — شاهدٌ خادميٌّ حيّ (§40.31): إرسالُ صنفٍ مبطَّلٍ عبر شاشةٍ قديمة ⇒ 409 item_unavailable (الخادمُ يرفض) | `PASS` | — | online | no order | — | — | — | — |
@@ -1257,7 +1257,7 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 23 | 0 | 0 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 17 | 0 | 0 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 31 | 0 | 1 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 32 | 0 | 0 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 30 | 0 | 0 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
@@ -1274,11 +1274,11 @@ until ADB is available — not an acceptance blocker.
 | 28 | CUST-16 | 45 | 45 | 0 | 0 | 1 | 44 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
-| 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
+| 31 | CUST-19 | 29 | 25 | 4 | 0 | 0 | 29 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **7** | **10** | **560** | **0** | **1** |
+| | **Total** | **578** | **474** | **104** | **6** | **10** | **562** | **0** | **0** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3757,6 +3757,22 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.86 · جهازان لنفس الحساب — عقدُ الجلسة الواحدة لكلّ عميل: 06-022 + 19-018 (٢٠٢٦-٠٩-٢٣)
+
+الجهازُ الأوّل SM-A525F (حقيقيّ)، الثاني محاكي أندرويد (بإذن المالك — المعياران ينصّان «Second device/emulator»، فلا اشتراطَ جهازين ماديّين). كلاهما `com.rahalgo.customer` ⇒ نوعُ العميل نفسُه `android-customer` (`Backend.CLIENT`). العقدُ (قرارُ المالك ٢٠٢٦-٠٨-١١، `client_kind.go`): **جلسةٌ واحدةٌ لكلّ (حساب، نوعِ عميل)** — دخولٌ جديدٌ من النوع نفسِه يُبطل عائلتَه السابقة (`revokeClientSessions`، فوريٌّ عبر مرآة Redis).
+
+**الشاهد** (ذاتيٌّ عبر ADB، كلاهما متّصل):
+1. QA1 داخلٌ على SM-A525F ⇒ **نشط** (شاشةُ حسابي تُظهر «زبون الاختبار QA» / +963900555001 من الخادم).
+2. المحاكي (كان ضيفاً نظيفاً؛ عُولج عطبُ DNS بإقلاعِ المحاكي بـ`-dns-server`) ⇒ دخولُ QA1.
+3. **06-022** — التحقّقُ من الإبطال: **المحاكي (الأحدث) نشطٌ وباقٍ** عبر إعادة الفتح (`/auth/me` 200، شاشةُ حسابي تُظهر QA1)، و**SM-A525F (الأقدم) عند إعادة الفتح سقط إلى ضيف** (شريطٌ ثلاثيّ، لا محفظة) — `/auth/me` 401 ⇒ session-rejected ⇒ `detachSession` (عزلةُ CUST-DEF-009: السلّة/الحالة المحلّيّة تُمحى). **الأحدثُ يبقى، الأقدمُ يُبطَل** — لا تسريبَ توكن، لا جلسةٌ شبحيّةٌ غيرُ مأذونة.
+4. **19-018** — مطابقةُ العقد: العقدُ (جلسةٌ واحدةٌ لكلّ نوع) مُنفَّذ؛ الجهازُ الثاني صار المالكَ النشط، والأوّلُ سقط إلى ضيفٍ بأمانٍ (حالتُه المحلّيّةُ ممحوّة ⇒ **لا فسادَ سلّة/طلب/حساب، ولا خلطَ هويّةٍ بين الجهازين**). ملكيّةُ الجلسة للأحدث.
+
+**التنظيف**: جلسةُ المحاكي المؤقّتةُ نُظّفت (خروج ⇒ ضيف). **المطابقة**: residue=0 (لا طلبات/محفظة)، والمالُ 50/51 (FI-06.d الحميدُ الموثّق، بلا تغيّر).
+
+**BLOCKED⇒PASS ×1 (06-022) · NOT_TESTED⇒PASS ×1 (19-018).** لا جهازَ ثانٍ ماديٌّ مطلوبٌ في المعيارين.
+
+**المجاميع (محقّقة): PASS 562 · FAIL 0 · BLOCKED 0 · N/A 10 · NOT_TESTED 6 = 578.**
 
 ### 40.85 · الجلسةُ المرافقة — إرسالُ محادثةٍ منقطعاً مسدود: SUP-007 (٢٠٢٦-٠٩-٢٣)
 
