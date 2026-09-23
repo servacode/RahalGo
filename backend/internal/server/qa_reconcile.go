@@ -130,6 +130,84 @@ func (s *Server) qaMerchantSecondClear(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"deleted_merchants": tag.RowsAffected()})
 }
 
+// qaOptionAvailable **يقلب إتاحةَ خيارِ إضافةٍ** (`modifier_options.available`) —
+// لشهود «خيارٌ غيرُ متاحٍ مُعطَّلٌ في الورقة» (`CUST-10-014`). عكوسٌ، يُرجع السابق.
+//
+// **بلا optionID**: أوّلُ خيارٍ لأوّلِ مجموعةِ الصنف — فيكفي معرّفُ الصنف.
+func (s *Server) qaOptionAvailable(w http.ResponseWriter, r *http.Request, optionID, itemID string, avail bool) {
+	ctx := r.Context()
+	if optionID == "" {
+		if itemID == "" {
+			s.respondErr(w, errValidation)
+			return
+		}
+		if err := s.pg.QueryRow(ctx, `
+			SELECT o.id::text FROM modifier_options o
+			JOIN modifier_groups g ON g.id = o.group_id
+			WHERE g.item_id = $1::uuid ORDER BY o.sort_order LIMIT 1`, itemID).Scan(&optionID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_no_option", "errors.conflict"))
+				return
+			}
+			s.respondErr(w, err)
+			return
+		}
+	}
+	var prev bool
+	var name string
+	if err := s.pg.QueryRow(ctx,
+		`SELECT available, name FROM modifier_options WHERE id = $1::uuid`, optionID).Scan(&prev, &name); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(ctx,
+		`UPDATE modifier_options SET available = $2 WHERE id = $1::uuid`, optionID, avail); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA option availability set (staging-only)", "option", optionID, "previous", prev, "set", avail)
+	httpx.JSON(w, http.StatusOK, map[string]any{"option_id": optionID, "name": name, "previous": prev, "set": avail})
+}
+
+// qaItemImage **يبدّل صورةَ صنفٍ** (`menu_items.image_media_id`) — لشهود «صورةٌ
+// ناقصةٌ/معطوبةٌ لا تكسر الشاشة» (`CUST-09-011`). عكوسٌ: يُرجع السابقَ ويُعاد به.
+//
+// **mediaID فارغٌ ⇒ إزالةُ الصورة** (NULL = ناقصة ⇒ بديلٌ). وغيرُ الفارغِ يُعيدها.
+func (s *Server) qaItemImage(w http.ResponseWriter, r *http.Request, itemID, mediaID string) {
+	ctx := r.Context()
+	if itemID == "" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var prev *string
+	if err := s.pg.QueryRow(ctx,
+		`SELECT image_media_id::text FROM menu_items WHERE id = $1::uuid`, itemID).Scan(&prev); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+		s.respondErr(w, err)
+		return
+	}
+	if mediaID == "" {
+		if _, err := s.pg.Exec(ctx, `UPDATE menu_items SET image_media_id = NULL WHERE id = $1::uuid`, itemID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	} else {
+		if _, err := s.pg.Exec(ctx, `UPDATE menu_items SET image_media_id = $2::uuid WHERE id = $1::uuid`, itemID, mediaID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	prevOut := ""
+	if prev != nil {
+		prevOut = *prev
+	}
+	s.logger.Warn("QA item image set (staging-only)", "item", itemID, "previous", prevOut, "set", mediaID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"item_id": itemID, "previous": prevOut, "set": mediaID})
+}
+
 // handleQAStagingReconcile **مطابقةُ بيانات التجهيز بعد الاختبار** — على التجهيز
 // وحدَه، **قراءةٌ محضة** (`CUST-22-013`).
 //

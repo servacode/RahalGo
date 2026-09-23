@@ -294,6 +294,8 @@ var qaSeedAllowlist = map[string]bool{
 	// متجرٌ ثانٍ عكوسٌ لشهود سقفِ المصادر (CUST-11-036) — بلا أثرٍ ماليّ، لا قبولَ متجر:
 	"merchant_second":       true, // إنشاءُ متجرٍ ثانٍ صغيرٍ (مصدرٌ ثانٍ)
 	"merchant_second_clear": true, // حذفُه (FK-safe)
+	"option_available":      true, // قلبُ إتاحةِ خيارِ إضافة (10-014) — عكوسٌ
+	"item_image":            true, // تبديلُ صورةِ صنف (09-011) — عكوسٌ
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -307,6 +309,7 @@ var qaStateSeed = map[string]bool{
 	"zone_close": true, "zone_reopen": true, "min_version": true,
 	"merchant_open": true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
 	"merchant_second": true, "merchant_second_clear": true,
+	"option_available": true, "item_image": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -341,6 +344,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		Lat       float64 `json:"lat"`      // نقطةٌ (gov_active — حلُّ المحافظة، 08-007)
 		Lng       float64 `json:"lng"`
 		HoursJSON string  `json:"hours_json"` // جدولُ دوامِ متجرٍ صريح (merchant_hours_set — استعادةٌ دقيقة)
+		OptionID  string  `json:"option_id"`  // خيارُ إضافةٍ (option_available — 10-014)
+		MediaID   string  `json:"media_id"`   // صورةُ صنفٍ للاستعادة (item_image — 09-011)
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -416,6 +421,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaMerchantSecond(w, r)
 		case "merchant_second_clear":
 			s.qaMerchantSecondClear(w, r)
+		case "option_available":
+			s.qaOptionAvailable(w, r, req.OptionID, req.ItemID, req.ValueBool)
+		case "item_image":
+			s.qaItemImage(w, r, req.ItemID, req.MediaID)
 		}
 		return
 	}

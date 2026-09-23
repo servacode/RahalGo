@@ -108,7 +108,7 @@ const SERVER_ADMIN = new Set([
   "qa_no_driver_on_order", "qa_no_free_item", "qa_no_gov_for_point",
   "qa_normal_accepted_only", "qa_normal_cash_only", "qa_not_customer_only",
   "qa_not_qa_order", "qa_order_off_ladder", "qa_phone_not_allowed",
-  "qa_seed_kind_not_allowed",
+  "qa_seed_kind_not_allowed", "qa_no_option",
 ]);
 
 const found = new Map();
