@@ -273,6 +273,81 @@ func (s *Server) qaCustomerSetPassword(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true, "phone": qaStagingPhone})
 }
 
+// ── الجهازُ التجريبيّ لحذف الحساب (CUST-06-026) ─────────────────────────
+// **رقمٌ منفصلٌ يُستهلك** — لا يُمسّ به زبونُ QA الأساسيّ. staging-only، عكوسٌ
+// (الحذفُ يحرّر الرقمَ فيُعاد إنشاؤُه).
+const (
+	qaDisposablePhone = "+963900555999"
+	qaDisposableName  = "زبون تجريبي للحذف (QA)"
+)
+
+// qaDisposableCreate يُنشئ (أو يُرجع) زبونَ الحذف التجريبيّ بكلمةٍ معلومة.
+func (s *Server) qaDisposableCreate(w http.ResponseWriter, r *http.Request) {
+	id, err := s.identity.QACreateOrGetCustomer(r.Context(), qaDisposablePhone, qaDisposableName, qaCustomerPassword)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA disposable customer ready (staging-only)", "id", id)
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": id, "phone": qaDisposablePhone, "password": qaCustomerPassword})
+}
+
+// qaDisposableDeleteCode يُصدر رمزَ حذفٍ حقيقيّاً للجهاز التجريبيّ ويُعيده —
+// يُدعى **بعد** أن يطلب التطبيقُ الرمزَ (الأحدثُ يُستهلك في `ConsumeOTP`).
+func (s *Server) qaDisposableDeleteCode(w http.ResponseWriter, r *http.Request) {
+	code, err := s.identity.QAIssueDeleteCode(r.Context(), qaDisposablePhone)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA disposable delete code issued (staging-only)")
+	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "phone": qaDisposablePhone})
+}
+
+// ── روابطُ التواصل (CUST-ENG-011) ───────────────────────────────────────
+// **يضبط إعداداتِ التواصل لشهودها على الجهاز ثمّ يستعيدها.** staging-only، عكوس،
+// **لا بابَ أدمن**: يكتب مفاتيحَ التواصل وحدَها ويحفظ سابقَها.
+var qaContactKeys = []string{"platform.support_phone", "platform.whatsapp", "platform.facebook"}
+var qaContactValues = map[string]string{
+	"platform.support_phone": "0912345678",
+	"platform.whatsapp":      "0912345678",
+	"platform.facebook":      "https://facebook.com/rahalgo",
+}
+var qaContactSaved map[string]string
+
+func (s *Server) qaContactSet(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	by := "qa-staging"
+	saved := map[string]string{}
+	for _, k := range qaContactKeys {
+		saved[k] = s.settings.GetString(ctx, k)
+		if err := s.settings.Set(ctx, k, qaContactValues[k], &by); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	qaContactSaved = saved
+	s.logger.Warn("QA contact links set (staging-only)")
+	httpx.JSON(w, http.StatusOK, map[string]any{"set": qaContactValues})
+}
+
+func (s *Server) qaContactClear(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	by := "qa-staging"
+	for _, k := range qaContactKeys {
+		prev := ""
+		if qaContactSaved != nil {
+			prev = qaContactSaved[k]
+		}
+		if err := s.settings.Set(ctx, k, prev, &by); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	s.logger.Warn("QA contact links restored (staging-only)")
+	httpx.JSON(w, http.StatusOK, map[string]any{"restored": true})
+}
+
 // handleQAStagingReconcile **مطابقةُ بيانات التجهيز بعد الاختبار** — على التجهيز
 // وحدَه، **قراءةٌ محضة** (`CUST-22-013`).
 //

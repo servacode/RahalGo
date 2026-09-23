@@ -299,6 +299,11 @@ var qaSeedAllowlist = map[string]bool{
 	"customer_suspend":      true, // إيقافُ زبون QA (06-031) — عكوسٌ، بلا إبطالِ جلسة
 	"customer_set_password": true, // ضبطُ كلمةِ مرورِ زبون QA لدخول الواجهة
 	"customer_restore":      true, // إعادةُ زبون QA إلى active
+	// ── الجهازُ التجريبيّ لحذف الحساب (CUST-06-026) + روابطُ التواصل (CUST-ENG-011) ──
+	"disposable_create":      true, // زبونٌ منفصلٌ يُستهلك لشهود الحذف (لا يمسّ QA1)
+	"disposable_delete_code": true, // رمزُ حذفٍ حقيقيٌّ للجهاز التجريبيّ (يُدعى بعد طلب التطبيق)
+	"contact_set":            true, // ضبطُ إعداداتِ التواصل لشهودها (يحفظ السابق) — لا بابَ أدمن
+	"contact_clear":          true, // استعادةُ إعداداتِ التواصل السابقة
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -314,6 +319,8 @@ var qaStateSeed = map[string]bool{
 	"merchant_second": true, "merchant_second_clear": true,
 	"option_available": true, "item_image": true,
 	"customer_suspend": true, "customer_restore": true, "customer_set_password": true,
+	"disposable_create": true, "disposable_delete_code": true,
+	"contact_set": true, "contact_clear": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -435,6 +442,14 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaCustomerSuspend(w, r, "active")
 		case "customer_set_password":
 			s.qaCustomerSetPassword(w, r)
+		case "disposable_create":
+			s.qaDisposableCreate(w, r)
+		case "disposable_delete_code":
+			s.qaDisposableDeleteCode(w, r)
+		case "contact_set":
+			s.qaContactSet(w, r)
+		case "contact_clear":
+			s.qaContactClear(w, r)
 		}
 		return
 	}

@@ -1330,6 +1330,50 @@ func (s *Service) QASetPassword(ctx context.Context, userID, password string) er
 	return s.repo.SetPassword(ctx, userID, hash)
 }
 
+// QACreateOrGetCustomer **بيئةُ تجهيزٍ فقط** — يُنشئ (أو يُرجع إن وُجد) زبوناً
+// يُستهلك لشهود حذف الحساب (CUST-06-026)، **فلا يُمسّ به زبونُ QA الأساسيّ.**
+// يضبط له كلمةَ مرورٍ معلومةً فيُدخَل بالرقم+الكلمة بلا OTP. عكوسٌ: الحذفُ
+// يحرّر الرقمَ فيُعاد إنشاؤُه.
+func (s *Service) QACreateOrGetCustomer(ctx context.Context, rawPhone, fullName, password string) (string, error) {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return "", ErrInvalidPhone
+	}
+	if u, _, err := s.repo.UserByPhone(ctx, phone); err == nil && u != nil {
+		if perr := s.QASetPassword(ctx, u.ID, password); perr != nil {
+			return "", perr
+		}
+		return u.ID, nil
+	}
+	u, err := s.repo.CreateUserWithRole(ctx, phone, fullName, "customer")
+	if err != nil {
+		return "", err
+	}
+	if err := s.QASetPassword(ctx, u.ID, password); err != nil {
+		return "", err
+	}
+	return u.ID, nil
+}
+
+// QAIssueDeleteCode **بيئةُ تجهيزٍ فقط** — يُصدر رمزَ حذفٍ حقيقيّاً (يُخزَّن
+// مجزّأً بنفس مسار الإنتاج) ويُعيده، كي تُشهَد سيرورةُ الحذف في التطبيق دون
+// قراءة السجلّ. **والأحدثُ هو ما يُستهلك** (`ConsumeOTP` يأخذ آخرَ رمزٍ فعّال)،
+// فيُدعى بعد أن يطلب التطبيقُ الرمز.
+func (s *Service) QAIssueDeleteCode(ctx context.Context, rawPhone string) (string, error) {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return "", ErrInvalidPhone
+	}
+	code, err := randomDigits(6)
+	if err != nil {
+		return "", err
+	}
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "delete", s.otpLifetime(ctx)); err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
 // otpSendError **يُمرّر سببَ الفشل حين يكون معروفاً — ولا يبتلعه.**
 //
 // ══════════════════════════════════════════════════════════════════════
