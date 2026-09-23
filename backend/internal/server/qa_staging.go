@@ -296,6 +296,8 @@ var qaSeedAllowlist = map[string]bool{
 	"merchant_second_clear": true, // حذفُه (FK-safe)
 	"option_available":      true, // قلبُ إتاحةِ خيارِ إضافة (10-014) — عكوسٌ
 	"item_image":            true, // تبديلُ صورةِ صنف (09-011) — عكوسٌ
+	"customer_suspend":      true, // إيقافُ زبون QA (06-031) — عكوسٌ، بلا إبطالِ جلسة
+	"customer_restore":      true, // إعادةُ زبون QA إلى active
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -310,6 +312,7 @@ var qaStateSeed = map[string]bool{
 	"merchant_open": true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
 	"merchant_second": true, "merchant_second_clear": true,
 	"option_available": true, "item_image": true,
+	"customer_suspend": true, "customer_restore": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -425,6 +428,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaOptionAvailable(w, r, req.OptionID, req.ItemID, req.ValueBool)
 		case "item_image":
 			s.qaItemImage(w, r, req.ItemID, req.MediaID)
+		case "customer_suspend":
+			s.qaCustomerSuspend(w, r, "suspended")
+		case "customer_restore":
+			s.qaCustomerSuspend(w, r, "active")
 		}
 		return
 	}

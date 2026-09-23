@@ -208,6 +208,41 @@ func (s *Server) qaItemImage(w http.ResponseWriter, r *http.Request, itemID, med
 	httpx.JSON(w, http.StatusOK, map[string]any{"item_id": itemID, "previous": prevOut, "set": mediaID})
 }
 
+// qaCustomerSuspend **يوقف/يُعيد زبونَ QA وحدَه** — لشهود «موقوفٌ وله طلبٌ حيّ»
+// (`CUST-06-031`). عكوسٌ، **مقصورٌ على رقم QA** (لا رقمَ آخرَ يُمَسّ)، **بلا
+// إبطالِ جلسة** — مطابقةً لعقد المالك (٢٠٢٦-٠٩-٠٧): الإيقافُ يمنع نشاطاً جديداً
+// ولا يترك طلباً حيّاً معلَّقاً، **فالجلسةُ تبقى (توثيقٌ لا تخويل).**
+//
+// **ولا يُصدِر جلسةَ أدمنٍ ولا يقبل رقماً من الطلب**: الرقمُ ثابتٌ في الشيفرة،
+// والحالةُ محصورةٌ في `suspended`/`active`.
+func (s *Server) qaCustomerSuspend(w http.ResponseWriter, r *http.Request, status string) {
+	if status != "suspended" && status != "active" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	ctx := r.Context()
+	var prev string
+	if err := s.pg.QueryRow(ctx,
+		`SELECT status FROM users WHERE phone = $1`, qaStagingPhone).Scan(&prev); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+		s.respondErr(w, err)
+		return
+	}
+	// **رقمُ QA وحدَه** — والحالةُ من `switch` لا من الطلب. **ولا إبطالَ للجلسات.**
+	tag, err := s.pg.Exec(ctx,
+		`UPDATE users SET status = $2 WHERE phone = $1 AND status IN ('active','suspended')`,
+		qaStagingPhone, status)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA customer status set (staging-only)", "phone", "QA", "previous", prev, "set", status, "rows", tag.RowsAffected())
+	httpx.JSON(w, http.StatusOK, map[string]any{"previous": prev, "set": status, "rows": tag.RowsAffected()})
+}
+
 // handleQAStagingReconcile **مطابقةُ بيانات التجهيز بعد الاختبار** — على التجهيز
 // وحدَه، **قراءةٌ محضة** (`CUST-22-013`).
 //
@@ -285,6 +320,16 @@ func (s *Server) handleQAStagingReconcile(w http.ResponseWriter, r *http.Request
 	qaActiveOffers := count(`SELECT count(*) FROM offers WHERE active AND title LIKE 'QA%'`)
 	qaSecondMerchants := count(`SELECT count(*) FROM merchants WHERE name = $1`, qaSecondMerchantName)
 
+	// ── مراقبةُ #1050 قراءةً فقط (CUST-14-020) — حالتُه وعددُ أحداثه بصمةٌ ──
+	// **تتغيّر لو تقدّم**. لا تعديلَ، أرقامٌ فقط.
+	var o1050Status string
+	var o1050Exists bool
+	var o1050Events int64
+	if err := s.pg.QueryRow(ctx, `SELECT status FROM orders WHERE number = 1050`).Scan(&o1050Status); err == nil {
+		o1050Exists = true
+		o1050Events = count(`SELECT count(*) FROM order_events e JOIN orders o ON o.id = e.order_id WHERE o.number = 1050`)
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"money": map[string]any{
 			"checks_total": total, "checks_passed": passed, "failed": failed,
@@ -295,6 +340,9 @@ func (s *Server) handleQAStagingReconcile(w http.ResponseWriter, r *http.Request
 			"qa_dense_items":      qaDenseItems,
 			"qa_active_offers":    qaActiveOffers,
 			"qa_second_merchants": qaSecondMerchants,
+		},
+		"order_1050": map[string]any{
+			"exists": o1050Exists, "status": o1050Status, "events": o1050Events,
 		},
 	})
 }
