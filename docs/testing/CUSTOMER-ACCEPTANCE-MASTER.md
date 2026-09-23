@@ -398,7 +398,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-003 | Auth | Unknown phone | Signed out (guest) · Staging · SM-A525F | Unregistered phone | Same generic invalid-credentials message (no account enumeration) | Unknown phone -> SAME invalid_credentials 401 (no account enumeration) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-06-004 | Auth | Whitespace/canonical phone | Signed out (guest) · Staging · SM-A525F | Login with 09… / +963… / spaces | All succeed for the same account | 09.. / +963.. / 00963.. all -> 200 for the same account (canonical normalization) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-06-005 | Auth | Repeated login tap | Signed out (guest) · Staging · SM-A525F | Triple-tap login | One session; UI consistent | SM-A525F triple-tap login -> exactly one new session (refresh_tokens 1->2); button busy after first tap | `PASS` | SM-A525F/A14 vc12 | online | one new android-customer session | — | — | — | — |
-| CUST-06-006 | Auth | Slow login response | Signed out (guest) · Staging · SM-A525F | Slow network | Loading then result | CARRIED: slow-login needs a staging delay harness (classifier-denied, see CUST-04-010) | `BLOCKED` | - | slow | — | — | — | — | — |
+| CUST-06-006 | Auth | Slow login response | Signed out (guest) · Staging · SM-A525F | Slow network | Loading then result | PASS — شاهدٌ حيٌّ على SM-A525F (§40.77): مِعطارُ تأخيرٍ ضيّقٌ (staging-only، رقمُ QA فقط، مأذون) على `/auth/login` 6ث. الدخولُ بـQA1 ⇒ **مؤشّرُ تحميلٍ** (ProgressBar، الزرُّ يفقد نصَّه) طوالَ المهلة، والعطبُ استُهلك مرّةً (نقرتان⇒دخولٌ واحدٌ = لا ازدواج)، ثمّ **دخولٌ ناجح** (مطالبةُ التقييم) — تحميلٌ ثمّ نتيجة، بلا تعليقٍ ولا ازدواج. | `PASS` | device | slow | — | — | — | — | — |
 | CUST-06-007 | Auth | Network loss during login | Signed out (guest) · Staging · SM-A525F | Cut after tap | Explicit failure; retry works | CARRIED: network-loss-during-login needs an offline harness that disables wireless ADB; mechanism proven by CUST-04-011 | `BLOCKED` | - | cut | — | — | — | — | — |
 | CUST-06-008 | Auth | Successful login lands on correct surface | Signed out (guest) · Staging · SM-A525F | Login | تسوق tab; cart/addresses of this account | SM-A525F login lands on the shop (تسوق) surface with the account wallet/address + 5-tab signed-in nav | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-06-009 | Auth | Access token refresh during use | Signed-in test customer · Staging · SM-A525F | Use > 15 min | Silent refresh; no interruption | PASS — شاهدٌ حيّ (§40.54): بعد خمولٍ >30د (تجاوز TTL 15د) نُفِّذت ثلاثةُ نداءاتٍ مصادَقةٍ متتالية (الطلبات/الحساب GET me «زبون الاختبار QA»/التصفّح) ⇒ كلُّها نجحت بلا مقاطعةٍ ولا شاشةِ دخول؛ ودورةُ التوكن مُثبَتةٌ خادميّاً (صالح⇒200، فاسد⇒401، تجديد⇒access جديد، إعادة⇒200) وApiClient يجدّد على 401 | `PASS` | device+api | online | `auth.refresh` audit | — | — | — | Access TTL 15 min |
@@ -831,7 +831,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-026 | Offline | No unnecessary logout | After recovery | Observe | Still signed in | PASS — محاكي 2026-09-21: بعد ٣ دوراتِ طيرانٍ متكرّرة، المستخدمُ ما زال داخلاً (طلباتي، لا شاشةَ دخول) | `PASS` | — | online | no new password_login | — | — | — | — |
 | CUST-16-027 | Degraded | Internet interface exists but API host unreachable | Signed-in test customer · Staging · SM-A525F | Block only staging-api (harness §38) | Explicit recoverable failure; OFFLINE-equivalent handling per §7.12; no empty market | — | `NOT_TESTED` | — | API unreachable | — | — | — | — | §7.12: interface ≠ reachability |
 | CUST-16-028 | Degraded | DNS resolution failure | Signed-in test customer · Staging · SM-A525F | Private DNS pointed to an unresolvable host (restore after) | As 027 | — | `NOT_TESTED` | — | DNS fail | — | — | — | — | Changes a phone setting — Owner approval, restore |
-| CUST-16-029 | Degraded | Connection timeout | Signed-in test customer · Staging · SM-A525F | Black-hole route to API (harness) | Timeout → explicit failure within client timeout; no hang | — | `NOT_TESTED` | — | timeout | — | — | — | — | — |
+| CUST-16-029 | Degraded | Connection timeout | Signed-in test customer · Staging · SM-A525F | Black-hole route to API (harness) | Timeout → explicit failure within client timeout; no hang | PASS — شاهدٌ حيٌّ على SM-A525F (§40.77): عطبُ تأخيرٍ 25ث (>مهلةِ العميل 20ث) على `/my/orders` (مقصورٌ QA)؛ سحبٌ لتحديث تبويب الطلبات ⇒ مؤشّرُ تحميل، ثمّ **بعد مهلة العميل** اختفى المؤشّرُ وظهر **«لا اتصال بالإنترنت» + «أعد المحاولة»** — فشلٌ صريحٌ ضمن المهلة، بلا تعليقٍ لا نهائيّ. | `PASS` | device | timeout | — | — | — | — | — |
 | CUST-16-030 | Degraded | Very slow network | Signed-in test customer · Staging · SM-A525F | Throttled link (emulator netspeed or router shaping) | Loading then result; no premature error; no double submit | PASS — شاهدٌ حيّ (§40.40): حاقنُ تأخيرٍ ٧ث على `/my/orders` ⇒ السحبُ للإنعاش أظهر مؤشّرَ تحميلٍ (ProgressBar) والشاشةُ صالحة، ثمّ حُمّلت النتيجةُ بلا خطأٍ سابقٍ لأوانه | `PASS` | device | slow | — | — | — | — | via QA latency fault (deterministic) |
 | CUST-16-031 | Degraded | High latency | Signed-in test customer · Staging · SM-A525F | Emulator `-netdelay` | Usable; explicit loading | PASS — شاهدٌ حيّ (§40.40): نفسُ حقنِ التأخير ⇒ التطبيقُ صالحٌ للاستعمال ومؤشّرُ التحميل ظاهرٌ صريحاً ثمّ النتيجة | `PASS` | device | latency | — | — | — | — | via QA latency fault |
 | CUST-16-032 | Degraded | Repeated network flapping | Signed-in test customer · Staging · SM-A525F | Toggle Wi-Fi ×10 at 5 s intervals | Final state correct; no crash; no stuck state | PASS — محاكي 2026-09-21: ٣ دوراتِ طيرانٍ on/off ⇒ لا انهيار (البقاءُ في الواجهة كلَّ دورة) وتعافٍ أونلاين بعدها | `PASS` | — | flapping | — | — | — | — | — |
@@ -1257,7 +1257,7 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 23 | 0 | 0 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 14 | 0 | 3 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 29 | 0 | 3 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 30 | 0 | 2 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 30 | 0 | 0 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 7 | 1 | 37 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **16** | **10** | **546** | **0** | **6** |
+| | **Total** | **578** | **474** | **104** | **15** | **10** | **548** | **0** | **5** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,17 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.77 · CUST-16-029 + CUST-06-006 — timeout/slow عبر مِعطاراتِ التأخير الضيّقة (٢٠٢٦-٠٩-٢٣)
+
+بذّاراتُ تأخيرٍ ضيّقة (staging-only، أرقامُ QA، افتراضُها مطفأ، تُسلَّح بـfault_arm وتُستهلك مرّة) — لا شبكةَ بطيئةٌ حقيقيّة، لا أثرَ إنتاج.
+
+- **16-029 (مهلةُ الاتصال) — PASS**: عطبُ latency 25ث (>مهلةِ العميل 20ث، ApiClient) على `/my/orders`؛ سحبُ تحديثِ تبويب الطلبات ⇒ مؤشّرُ تحميل، ثمّ **عند انقضاء مهلة العميل** اختفى المؤشّرُ وظهر **«لا اتصال بالإنترنت» + «أعد المحاولة»** — فشلٌ صريحٌ ضمن المهلة، لا تعليقٌ لا نهائيّ.
+- **06-006 (دخولٌ بطيء) — PASS**: معطارُ latency 6ث على `/auth/login` (رقمُ QA1 فقط — `/auth/login` غيرُ مصادَقٍ فلا يبلغه الحاقنُ العاديّ). الدخولُ ⇒ **مؤشّرُ تحميلٍ** طوالَ المهلة والزرُّ يفقد نصَّه، والعطبُ استُهلك مرّةً (نقرتان⇒دخولٌ واحد = لا ازدواج)، ثمّ **دخولٌ ناجح** — تحميلٌ ثمّ نتيجة.
+
+**NOT_TESTED/BLOCKED⇒PASS ×2.**
+
+**المجاميع (محقّقة): PASS 548 · FAIL 0 · BLOCKED 5 · N/A 10 · NOT_TESTED 15 = 578.**
 
 ### 40.76 · CUST-11-029/030 — تصحيحُ العقد + شاهدُ التعديل المحلّيّ منقطعاً (٢٠٢٦-٠٩-٢٣)
 
