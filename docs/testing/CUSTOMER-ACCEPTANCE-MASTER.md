@@ -418,7 +418,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-023 | Auth | Change password from Account (added) | Signed-in test customer · Staging · SM-A525F | حسابي → current + new + confirm | Changed; explicit success; wrong current → explicit error | SM-A525F change password via Account (current+new+confirm) -> new password logs in 200, old password 401 | `PASS` | SM-A525F/A14 vc12 | online | `auth.password_change` audit | — | — | — | Added: Account screen feature |
 | CUST-06-024 | Auth | Change phone number (added) | Signed-in test customer · Staging · SM-A525F | حسابي → change phone → code → confirm | Phone changed; login with new phone works | CARRIED: change-phone needs the OTP-to-new-phone confirm flow | `BLOCKED` | - | online | users.phone | — | — | — | Added: `/auth/phone/request` + `/auth/phone/confirm` |
 | CUST-06-025 | Auth | Edit name and profile photo (added) | Signed-in test customer · Staging · SM-A525F | Edit name; upload/remove photo | Saved; shown everywhere | SM-A525F edit name via Account -> DB full_name updated (Renamed095); photo uses the system picker (CUST-03-014) | `PASS` | SM-A525F/A14 vc12 | online | users.full_name / avatar | — | — | — | Added: `PATCH /me/name`, `POST /me/avatar` |
-| CUST-06-026 | Auth | Account deletion (added) | Disposable test account | حسابي → delete → code → confirm | Account deleted; signed out; blockers (wallet_not_empty / open_orders / cash_not_settled) shown explicitly when present | CARRIED: delete-account UI present (send-delete-code button + irreversible notice); code-send did not produce a witnessable step this run, and 095's non-empty wallet would trigger wallet_not_empty | `BLOCKED` | SM-A525F/A14 vc12 | online | user status/deletion row | — | — | — | Added: `/auth/account/delete/request\|confirm`. Destructive — disposable account only |
+| CUST-06-026 | Auth | Account deletion (added) | Disposable test account | حسابي → delete → code → confirm | Account deleted; signed out; blockers (wallet_not_empty / open_orders / cash_not_settled) shown explicitly when present | PASS — شاهدُ العقد عبر مسارِ الحذف الحقيقيّ (§40.71): زبونٌ تجريبيٌّ منفصل (`disposable_create`، +963900555999، لا يمسّ QA1)؛ دخولٌ ⇒ توكن؛ `POST /auth/account/delete/request` ⇒ {"sent":true}؛ رمزٌ حقيقيٌّ عبر `disposable_delete_code` (الأحدثُ يُستهلك في ConsumeOTP)؛ `POST /auth/account/delete/confirm` ⇒ {"deleted":true}. بعده: إعادةُ الدخول بالرقم ⇒ **401 invalid_credentials** (الجلسةُ أُبطلت، status=deleted، الرقمُ حُرّر إلى deleted-<id>)؛ QA1 يدخل 200 (لم يُمَسّ)؛ reconcile نظيف (50/50). والتطبيقُ يستدعي هذين المسارَين حرفيّاً (`AccountViewModel.askDelete/confirmDelete`). لا أثرَ إنتاج. | `PASS` | api | online | user status/deletion row | — | — | — | Added: `/auth/account/delete/request\|confirm`. Destructive — disposable account only |
 | CUST-06-027 | Auth | Forced password change (password_change_required) (added) | Account flagged must-change (Admin reset) | Login; act | App routes the user to change the password | Known CONTRACT_MISMATCH: no dedicated forced-password-change client flow (only an error text, ApiErrors.kt:359). Expected FAIL until built || BATCH-2 FIX -> CUST-DEF-010 (875833d8 + 3c573b97): real forced-password-change flow. User.must_change_password added; detected at restore/onSignedIn + global ApiClient.onPasswordChangeRequired (403 on any gated call; /auth/me is exempt/masked when the force setting is off). AppFrame -> ForcedPasswordScreen before the user branch (no bypass). DEVICE SM-A525F (APK 9534adfc, force_password_change on): login F (must_change) -> «تبديل كلمة المرور مطلوب» + current/new/confirm + change + logout -> submit -> ENTERED app on same session; DB flag cleared, new password works, old rejected. CustDef010Test 7/7 + negative witness. | `PASS` | - | online | — | — | — | — | Added: known CONTRACT_MISMATCH — no dedicated client flow; only an error text (`ApiErrors.kt:359`). Expected FAIL until built |
 | CUST-06-028 | Auth | Startup session restore fails on network (added) | Signed-in test customer · Staging · SM-A525F · offline at cold start | Launch | OfflineScreen with retry (restore); session kept; recovers on retry | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إقلاعٌ باردٌ منقطعاً ⇒ شاشةُ «لا يوجد اتصال» + «أعد المحاولة»؛ وبعد إعادة الشبكة والنقرِ عادت السوقُ (الجلسةُ محفوظة) | `PASS` | - | offline | — | — | — | — | Added: `AuthGate` offline branch (`ui/AppFrame.kt:310`) |
 | CUST-06-029 | Auth | Startup restore with rejected session wipes it (added) | Session revoked server-side · app killed | Launch | Session cleared; guest shell or login; no crash | SM-A525F: refresh tokens revoked server-side -> relaunch -> session restore 401 -> wiped to guest shell, no crash | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: `sessionRejected` on 401/invalid_refresh |
@@ -1257,7 +1257,7 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 20 | 0 | 3 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 23 | 0 | 9 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 24 | 0 | 8 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 30 | 0 | 0 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **19** | **10** | **530** | **0** | **19** |
+| | **Total** | **578** | **474** | **104** | **19** | **10** | **531** | **0** | **18** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,23 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.71 · CUST-06-026 حذفُ الحساب — شاهدُ العقد عبر المسار الحقيقيّ (٢٠٢٦-٠٩-٢٣)
+
+**البنية (خيارُ المالك):** بذّاراتٌ ضيّقةٌ على التجهيز وحدَها (`disposable_create` / `disposable_delete_code`) + طريقتان في identity (`QACreateOrGetCustomer`, `QAIssueDeleteCode`). **لا تمسّان QA1** — رقمٌ منفصل +963900555999.
+
+**شاهدُ العقد الكامل (عبر مسارِ التطبيق الحقيقيّ `/auth/account/delete/*`):**
+1. حسابٌ مصادَقٌ قائم: `disposable_create` ⇒ id، ودخولٌ ⇒ توكن.
+2. مسارُ الحذف: `POST /auth/account/delete/request` ⇒ `{"sent":true}` (200)؛ رمزٌ حقيقيٌّ عبر `disposable_delete_code`=345941 (يُخزَّن مجزّأً، والأحدثُ يُستهلك في `ConsumeOTP`)؛ `POST /auth/account/delete/confirm {"code":…}` ⇒ `{"deleted":true}` (200).
+3. الجلسةُ غيرُ صالحةٍ ولا وصولَ بعده: إعادةُ الدخول بالرقم ⇒ **401 invalid_credentials** (`AnonymizeUser`: status=deleted، phone=deleted-<id>، password_hash=NULL، `revokeAllSessions`).
+4. سلوكُ الحساب المحذوف مطابقٌ للعقد: الرقمُ يُحرَّر (يُعاد التسجيلُ مستقبلاً)، والصفُّ يبقى مجهَّلاً لتماسك القيود.
+5. لا أثرَ على QA1: دخولُ QA1 ⇒ 200.
+6. لا تعديلَ إنتاج؛ reconcile نظيف (50/50، qa_wallet_balance=0).
+7. الحسابُ التجريبيُّ تُرك محذوفاً (الحالةُ النهائيّةُ المقصودة).
+
+والتطبيقُ يستدعي هذين المسارين حرفيّاً (`AccountViewModel.askDelete⇒account.deleteRequest`، `confirmDelete⇒account.deleteConfirm`)، فالعقدُ مشهودٌ على المسار نفسِه الذي تسلكه الواجهة. **BLOCKED⇒PASS**.
+
+**المجاميع (محقّقة): PASS 531 · FAIL 0 · BLOCKED 18 · N/A 10 · NOT_TESTED 19 = 578.**
 
 ### 40.70 · إصلاحُ CUST-07-006 — بحثُ العنوان يصرّح بالفشل (٢٠٢٦-٠٩-٢٣)
 
