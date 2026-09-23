@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -72,12 +73,60 @@ func (s *Server) qaDriverIdentity(w http.ResponseWriter, r *http.Request) (strin
 //     (لشهود 14-011). أيُّ هدفٍ آخرَ للعاديّ يُرفض.
 //
 // **QA-scoped**: يرفض طلباً لا يملكه زبونُ QA. **لا رجوعَ**: الهدفُ فوقَ الحالة الجارية.
+// qaResolveOpenOrder **يحلّ طلبَ QA1 المفتوحَ الوحيدَ** حين يُغفَل المعرّفُ
+// (SUP-007).
+//
+// **لماذا خادميّاً**: معرّفُ الطلبِ لا تكشفه الواجهةُ ولا نقطةُ نهايةٍ قائمة،
+// **وقراءةُ رمزِ جلسةِ QA1 يمنعها المصنِّف** — فيُحلُّ هنا، **مقصوراً على QA1**
+// (`uid` مُشتقٌّ من `qaStagingPhone` وحدَه في الموزّع)، **وعلى التجهيز حصراً**
+// (الموزّعُ خلفَ `qaStagingEnabled` ⇒ ٤٠٤ في الإنتاج). **قراءةٌ فقط، بلا قيد.**
+//
+// **ولا تخمين**: صفرٌ ⇒ خطأٌ صريح (`qa_no_open_order`)، وأكثرُ من واحدٍ ⇒ خطأٌ
+// صريح (`qa_multiple_open_orders`) — **واحدٌ مفتوحٌ فقط يُقبل.**
+func (s *Server) qaResolveOpenOrder(ctx context.Context, uid string) (string, error) {
+	rows, err := s.pg.Query(ctx,
+		`SELECT id::text FROM orders WHERE customer_id = $1::uuid AND closed_at IS NULL ORDER BY created_at DESC`,
+		uid)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return "", err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	switch len(ids) {
+	case 0:
+		return "", httpx.NewError(http.StatusNotFound, "qa_no_open_order", "errors.not_found")
+	case 1:
+		return ids[0], nil
+	default:
+		return "", httpx.NewError(http.StatusConflict, "qa_multiple_open_orders", "errors.conflict")
+	}
+}
+
 func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, orderID, target string) {
+	ctx := r.Context()
+	// **معرّفٌ مُغفَلٌ ⇒ يُحلُّ طلبُ QA1 المفتوحُ الوحيد** (SUP-007) — لا تخمين.
+	if orderID == "" {
+		resolved, err := s.qaResolveOpenOrder(ctx, uid)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		orderID = resolved
+	}
 	if !isUUID(orderID) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	ctx := r.Context()
 	var custID, kind, payment, status string
 	err := s.pg.QueryRow(ctx,
 		`SELECT customer_id::text, kind, payment_method, status FROM orders WHERE id = $1::uuid`,
@@ -203,11 +252,20 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 // `comms.Send` بنفس مسار التطبيق، لا كتابةَ قاعدةٍ خام. QA-scoped وعلى طلبٍ
 // مُسنَدٍ (القناةُ مفتوحةٌ من `assigned` حتّى `at_dropoff`).
 func (s *Server) qaOrderChatSend(w http.ResponseWriter, r *http.Request, uid, orderID, body string) {
+	ctx := r.Context()
+	// **معرّفٌ مُغفَلٌ ⇒ يُحلُّ طلبُ QA1 المفتوحُ الوحيد** (SUP-007) — لا تخمين.
+	if orderID == "" {
+		resolved, err := s.qaResolveOpenOrder(ctx, uid)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		orderID = resolved
+	}
 	if !isUUID(orderID) || body == "" {
 		s.respondErr(w, errValidation)
 		return
 	}
-	ctx := r.Context()
 	var custID string
 	var driverID *string
 	err := s.pg.QueryRow(ctx,
