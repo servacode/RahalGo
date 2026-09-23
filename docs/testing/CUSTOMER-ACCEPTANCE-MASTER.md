@@ -423,7 +423,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-028 | Auth | Startup session restore fails on network (added) | Signed-in test customer · Staging · SM-A525F · offline at cold start | Launch | OfflineScreen with retry (restore); session kept; recovers on retry | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إقلاعٌ باردٌ منقطعاً ⇒ شاشةُ «لا يوجد اتصال» + «أعد المحاولة»؛ وبعد إعادة الشبكة والنقرِ عادت السوقُ (الجلسةُ محفوظة) | `PASS` | - | offline | — | — | — | — | Added: `AuthGate` offline branch (`ui/AppFrame.kt:310`) |
 | CUST-06-029 | Auth | Startup restore with rejected session wipes it (added) | Session revoked server-side · app killed | Launch | Session cleared; guest shell or login; no crash | SM-A525F: refresh tokens revoked server-side -> relaunch -> session restore 401 -> wiped to guest shell, no crash | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: `sessionRejected` on 401/invalid_refresh |
 | CUST-06-030 | Auth | Guest browsing and NeedAccount gates (added) | Signed out (guest) · Staging · SM-A525F | Browse تسوق; open طلب خاص; tap + on an item; heart | Browse works; custom → «هذا القسم يحتاج حسابا»; + and heart → login | SM-A525F guest: browse works; custom-order tab -> needs-account gate; add-to-cart -> login gate | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: signed-out users browse by default (guest shell) |
-| CUST-06-031 | Auth | Suspended customer and live orders (added) | Customer with an open order · suspended via Admin | Open app | Per contract: can still see and cancel the live order (suspension exceptions) | CARRIED: suspended + live-order needs a suspend + open-order setup | `BLOCKED` | - | online | — | — | — | — | Added. CAF-04 (reported by audit, to verify): exceptions list `GET /orders/{id}` which the app never calls; `/my/orders*` and chat are blocked; `/auth/me` 403 at start shows 'offline' |
+| CUST-06-031 | Auth | Suspended customer and live orders (added) | Customer with an open order · suspended via QA fixture | Open app | Per contract: can still see and cancel the live order (suspension exceptions) | شوهد حيّاً (§40.61) ببذّار customer_suspend العكوسّ (QA فقط، بلا إبطال جلسة): طلبٌ حيٌّ #1142 ثمّ تعليقُ QA1 ⇒ **إلغاءُ الطلب الحيّ يعمل** (POST /orders/{id}/cancel ⇒ 200)، و**النشاطُ الجديدُ محجوب** (/my/orders، /auth/me، طلبٌ جديد ⇒ 403 لكلٍّ). لكنّ **رؤيةَ الطلب معطوبة**: استثناءُ السماح في suspension.go يسمّي `GET /api/v1/orders/{id}` **ولا مسارَ زبونيٌّ بهذا الاسم** (404)، والمسارُ الحقيقيُّ `GET /my/orders/{id}` محجوب ⇒ الطلبُ غيرُ مرئيٍّ في التطبيق. **هذا CAF-04 — مؤكَّدٌ حيّاً الآن** (كان P2 غير موقِف: «تقييدٌ لا تجاوز»). المعيار «see AND cancel»: الإلغاءُ نعم، الرؤيةُ لا. **إصلاحٌ أدنى محدَّد** (بادئةُ استثناء الزبون `/api/v1/orders/`⇒`/api/v1/my/orders/`) — **لم يُطبَّق** (وسيطُ أمنٍ، وهذه دفعةُ شهودٍ لا إصلاح): بانتظار قرار المالك (إصلاح⇒PASS أم قبولُ P2) | `BLOCKED` | api | online | QA1 restored active; #1142 cancelled | — | — | — | witnessed→confirms CAF-04 (P2 non-blocking). suspend fixture built+deployed+reversible. Minimal fix identified (exception prefix→/my/orders/); NOT applied (owner decision) |
 | CUST-06-032 | Auth | Session-level 403 codes are not shown as network failures (added) | Temporary password / blocked / suspended account | Launch and act | Explicit account-state message, never «لا اتصال» | FAIL (CAF-10): a 403 user_suspended at startup is shown as the offline screen (لا يوجد اتصال), not an account-state message. P2 UX defect || BATCH-2 FIX (9a0a569c): central classifier accountForbidden(403,forbidden); restore() -> accountRestricted -> AccountStateScreen (session NOT cleared, CUST-DEF-009 intact). DEVICE SM-A525F: customer suspended server-side (status=suspended, cache cleared) -> relaunch -> «حسابك مقيّد» + «حسابك غير نشط حاليا. للمساعدة، تواصل مع الدعم.» + خروج + اعد المحاولة (NOT «لا يوجد اتصال»). CustDef007Test 7/7 + negative witness; network still maps to offline (test #07, code unchanged). | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added. CAF-10: 403 on `/auth/me` at startup renders the offline state |
 
 ## 18 · CUST-07 — Location / address
@@ -710,7 +710,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-017 | Orders | Forbidden action via client manipulation denied | API client | Cancel after delivered; rate twice; complain on running order | Server denies each | PASS — أفعالٌ ممنوعةٌ تُردّ: TestCANC_010/TestComplaint_NotOnRunningOrder (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestCANC_010`, `TestComplaint_NotOnRunningOrder` |
 | CUST-14-018 | Orders | Order detail survives background | — | — | — | — | `NOT_APPLICABLE` | — | — | — | — | — | — | **N/A:** No order-detail screen (see 14-003). Orders tab lifecycle is covered by CUST-17-022. |
 | CUST-14-019 | Orders | Order detail after process restart | — | — | — | — | `NOT_APPLICABLE` | — | — | — | — | — | — | **N/A:** No order-detail screen (see 14-003). Covered for the Orders tab by CUST-17-022. |
-| CUST-14-020 | Orders | #1050 observed read-only, never progressed | Signed-in test customer · Staging · SM-A525F · valid default address | Observe only | #1050 status/events unchanged before/after every session | — | `NOT_TESTED` | — | online | #1050 row | — | — | — | — |
+| CUST-14-020 | Orders | #1050 observed read-only, never progressed | Signed-in test customer · Staging · SM-A525F · valid default address | Observe only | #1050 status/events unchanged before/after every session | PASS — شاهدٌ حيٌّ قراءةً محضة (§40.61): `GET /qa/reconcile` (نقطةٌ لا تُعدِّل) يقرأ #1050 ⇒ exists=true, status=**on_the_way**, events=**7** (حالةٌ ثابتةٌ مثبَّتة). لم يُمَسّ في الحملة: طلباتُ QA منفصلةٌ (1136-1142، كلُّها ملغاة) وأثرُ QA=0. مُراقَبٌ ولم يُقدَّم | `PASS` | api | online | #1050 status=on_the_way, events=7 | — | — | — | read-only via GET /qa/reconcile |
 | CUST-14-021 | Orders | Order card shows the required authoritative information (added) | Signed-in test customer · Staging · SM-A525F · valid default address | Compare each card with SoT | Order/reference number · clear Arabic status · order date/time · item summary and count · authoritative server final total · payment method · concise delivery address · only the actions valid for the state (cancel/complaint/rating) · driver/tracking state where the contract shows it · **no store identity** | PASS — emulator (FIXED 2026-09-21): card now shows «وقت الطلب: منذ 1 د» + «طريقة الدفع: نقدا عند التسليم» + «التوصيل إلى: …» (OrderCard + OrderCardInfoTest) | `PASS` | — | online | order JSON | — | — | — | Added. Owner decision §40.15-4 (the card is the primary order surface — no detail screen). Today the card lacks date/time, payment method and address — functional gap, expected FAIL until built |
 | CUST-14-022 | Orders | Cancel order within window (added) | Disposable pending order | Cancel → confirm | Cancelled; wallet refund if paid by wallet | PASS — emulator: «إلغاء الطلب» → «نعم، ألغه» cancels a pending order within the window | `PASS` | — | online | status; wallet tx | — | — | — | Added: `TestCANC_001`, `TestCancelBeforeDelivery_RefundsWalletOnly` |
 | CUST-14-023 | Orders | Double cancel / cancel after window (added) | After 022 | Cancel again / after window | Explicit denial | PASS — إلغاءٌ مزدوج/بعد المهلة: TestCANC_002 (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | Added: `TestCANC_002` |
@@ -1266,7 +1266,7 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 2 | 3 | 21 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 1 | 3 | 22 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **24** | **10** | **516** | **0** | **28** |
+| | **Total** | **578** | **474** | **104** | **23** | **10** | **517** | **0** | **28** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1896,7 +1896,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | CAF-01 | CONFIRMED → **CUST-DEF-001** | P0 | **YES** | signup · `identity/service.go` | §40.3 |
 | CAF-02 | CONFIRMED → **CUST-DEF-002** · **CLOSED** (body fingerprint §40.27) | P1 | **YES** | cart/custom send · `ui/Attempt.kt` · `server/idempotency.go` | §40.4 · §40.27 |
 | CAF-03 | CONFIRMED → **CUST-DEF-003** | P1 | **YES** | `POST /orders` · `orders/service.go` | §40.5 |
-| CAF-04 | CONFIRMED | P2 | no | suspended customer · `server/suspension.go:55-66` | exception names `GET /api/v1/orders/{uuid}`, which has no customer route; `/my/orders*` blocked → live order unreachable in the app; cancel by id still allowed. Restrictive, not a bypass |
+| CAF-04 | CONFIRMED | P2 | no | suspended customer · `server/suspension.go:55-66` | exception names `GET /api/v1/orders/{uuid}`, which has no customer route; `/my/orders*` blocked → live order unreachable in the app; cancel by id still allowed. Restrictive, not a bypass. **LIVE-WITNESSED 2026-09-23 (§40.61)** via QA `customer_suspend` fixture: cancel-by-id=200, /my/orders=403, /auth/me=403, new-order=403, GET /orders/{id}=404 (no route) — matches this triage exactly. Minimal fix identified (continuationRoutes customer-GET prefix `/api/v1/orders/`→`/api/v1/my/orders/`); NOT applied — security-middleware change awaiting Owner decision |
 | CAF-05 | CONFIRMED | P3 | no | pre-launch browse · `server.go:~439-499` | sections, section items, suggest, search stay open while `customer_browse` is off; public catalog data, app shows PreLaunch |
 | CAF-06 | CONFIRMED | P2 | no | order create · `orders/availability.go:169` | `classifyPlace` used only by availability; create enforces zones only |
 | CAF-07 | **CLOSED (2026-09-21)** | P2 | no | custom order · `custom_order_handlers.go` | `notes` now decoded + stored in `orders.notes` and exposed by the order view (CUST-CUSTOM-019, TestCUST_CAF07_NotesStored). Wallet option: see §40.11 → CUST-CUSTOM-020 |
@@ -3756,6 +3756,26 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.61 · تعليقُ زبونٍ + مراقبةُ #1050 — 06-031 (CAF-04) + 14-020 (٢٠٢٦-٠٩-٢٣)
+
+بُنيت قدرتان عكوستان على التجهيز (نُشرتا d6c3df15)، كلتاهما تسقطان مغلقتين في الإنتاج:
+
+- **14-020 (PASS — مراقبةٌ قراءةً محضة)**: أُضيف #1050 إلى `GET /qa/reconcile` (نقطةٌ لا تُعدِّل). القراءة:
+  exists=true، status=**on_the_way**، events=**7** — حالةٌ ثابتةٌ مثبَّتة. لم تمسَّها الحملة (طلباتُ QA منفصلةٌ
+  1136-1142 كلُّها ملغاة، أثرُ QA=0). **NOT_TESTED⇒PASS.**
+- **06-031 (شوهد ⇒ يؤكّد CAF-04 · يبقى BLOCKED)**: بذّار `customer_suspend`/`customer_restore` (QA فقط،
+  بلا إبطال جلسة، مطابقٌ لعقد المالك: التعليق يمنع الجديدَ ولا يشلّ القائم). طلبٌ حيٌّ #1142 ثمّ تعليقُ QA1 بجلسته:
+  - **الإلغاءُ يعمل**: `POST /orders/{id}/cancel` ⇒ 200 (استثناءُ الاستمرار). ✓
+  - **النشاطُ الجديدُ محجوب**: `/my/orders`، `/auth/me`، طلبٌ جديد ⇒ 403 لكلٍّ. ✓
+  - **الرؤيةُ معطوبة**: `GET /orders/{id}` ⇒ 404 (لا مسارَ زبونيّاً بهذا الاسم؛ استثناءُ suspension.go يسمّيه)، والمسارُ
+    الحقيقيّ `GET /my/orders/{id}` محجوب ⇒ الطلبُ غيرُ مرئيٍّ في التطبيق. ✗
+  هذا **CAF-04 مؤكَّدٌ حيّاً** (كان P2 غيرَ موقِف، «تقييدٌ لا تجاوز»). المعيارُ «see AND cancel» غيرُ محقَّقٍ كاملاً
+  (الإلغاءُ نعم، الرؤيةُ لا). **إصلاحٌ أدنى محدَّد**: بادئةُ استثناء الزبون `/api/v1/orders/`⇒`/api/v1/my/orders/`
+  في `continuationRoutes` (تُطابق المسارَ الحقيقيّ، بحارس `isLiveParticipant`). **لم يُطبَّق** — وسيطُ أمنٍ، وهذه دفعةُ
+  شهودٍ لا إصلاح؛ ينتظر قرارَ المالك (إصلاح⇒PASS، أم قبولُ P2 غير الموقِف). أُعيدت QA1 (active) وأُلغي #1142.
+
+الحصيلة (محقّقة): PASS 516⇒517، NOT_TESTED 24⇒23، BLOCKED 28، N/A 10، FAIL 0. = 578. (06-031 يبقى BLOCKED بانتظار قرار CAF-04.)
 
 ### 40.60 · قرارُ منتجٍ مُوثَّق — 09-007 (سلوكُ التمرير عند العودة للتبويب) (٢٠٢٦-٠٩-٢٣)
 
