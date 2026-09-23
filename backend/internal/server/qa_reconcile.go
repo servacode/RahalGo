@@ -246,6 +246,33 @@ func (s *Server) qaCustomerSuspend(w http.ResponseWriter, r *http.Request, statu
 	httpx.JSON(w, http.StatusOK, map[string]any{"previous": prev, "set": status, "rows": tag.RowsAffected()})
 }
 
+// qaCustomerPassword كلمةُ مرورِ زبون QA الثابتة — لدخولِ الواجهة على التجهيز
+// (بلا OTP، بلا حقنِ توكن). **رقمُ QA اختباريّ على التجهيز فقط.**
+const qaCustomerPassword = "RahalQA@2026"
+
+// qaCustomerSetPassword **يضبط كلمةَ مرورِ زبون QA** — ليُسجَّل الدخولُ بالواجهة
+// على الجهاز (رقم QA + هذه الكلمة). **رقمُ QA وحدَه**، staging-only، عكوسٌ عمليّاً
+// (يُعاد ضبطُها أو يُبقى — حسابُ اختبار). **لا يفتح بابَ أدمن ولا يمسّ رقماً آخر.**
+func (s *Server) qaCustomerSetPassword(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var uid string
+	if err := s.pg.QueryRow(ctx,
+		`SELECT id::text FROM users WHERE phone = $1`, qaStagingPhone).Scan(&uid); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.QASetPassword(ctx, uid, qaCustomerPassword); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA customer password set (staging-only)", "phone", "QA")
+	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true, "phone": qaStagingPhone})
+}
+
 // handleQAStagingReconcile **مطابقةُ بيانات التجهيز بعد الاختبار** — على التجهيز
 // وحدَه، **قراءةٌ محضة** (`CUST-22-013`).
 //

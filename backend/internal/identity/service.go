@@ -1319,6 +1319,17 @@ func (s *Service) InvalidateStatusCache(ctx context.Context, userID string) {
 	s.invalidateStatusCache(ctx, userID)
 }
 
+// QASetPassword **يضبط كلمةَ مرورِ مستخدمٍ مباشرةً** — للبذّارات على التجهيز
+// وحدَها (يُدعى من بابِ QA المحروسِ بالبيئة). يُجزّئ بنفس argon2id ويضع
+// `must_change_password=false` فيصير الدخولُ بالرقم+الكلمة عاديّاً بلا OTP.
+func (s *Service) QASetPassword(ctx context.Context, userID, password string) error {
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	return s.repo.SetPassword(ctx, userID, hash)
+}
+
 // otpSendError **يُمرّر سببَ الفشل حين يكون معروفاً — ولا يبتلعه.**
 //
 // ══════════════════════════════════════════════════════════════════════

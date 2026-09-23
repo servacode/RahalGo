@@ -297,6 +297,7 @@ var qaSeedAllowlist = map[string]bool{
 	"option_available":      true, // قلبُ إتاحةِ خيارِ إضافة (10-014) — عكوسٌ
 	"item_image":            true, // تبديلُ صورةِ صنف (09-011) — عكوسٌ
 	"customer_suspend":      true, // إيقافُ زبون QA (06-031) — عكوسٌ، بلا إبطالِ جلسة
+	"customer_set_password": true, // ضبطُ كلمةِ مرورِ زبون QA لدخول الواجهة
 	"customer_restore":      true, // إعادةُ زبون QA إلى active
 }
 
@@ -312,7 +313,7 @@ var qaStateSeed = map[string]bool{
 	"merchant_open": true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
 	"merchant_second": true, "merchant_second_clear": true,
 	"option_available": true, "item_image": true,
-	"customer_suspend": true, "customer_restore": true,
+	"customer_suspend": true, "customer_restore": true, "customer_set_password": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -432,6 +433,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaCustomerSuspend(w, r, "suspended")
 		case "customer_restore":
 			s.qaCustomerSuspend(w, r, "active")
+		case "customer_set_password":
+			s.qaCustomerSetPassword(w, r)
 		}
 		return
 	}
