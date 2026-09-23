@@ -497,6 +497,11 @@ func (s *Server) qaWalletFund(w http.ResponseWriter, r *http.Request, uid string
 		s.respondErr(w, err)
 		return
 	}
+	// **يُبثّ حدثُ المحفظة اللحظيّ كما يفعل مسارُ الأدمن الحقيقيّ**
+	// (`handleAdminWalletApply` ⇒ `touchUser(id, "wallet")`): البذّارُ كان يكتب
+	// القيدَ فقط بلا بثٍّ، فبدا رصيدُ الواجهة جامداً — وهو أثرُ عتادٍ لا عطبُ
+	// منتَج. **فيُطابَق المسارُ الإنتاجيّ** ليُشهَد التحديثُ اللحظيّ (CUST-WAL-010).
+	s.touchUser(uid, "wallet")
 	s.logger.Warn("QA wallet funded (staging-only)", "user", uid, "amount", amount, "balance", bal, "tx", txID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"funded": amount, "balance": bal, "tx_id": txID, "kind": "topup"})
 }
@@ -519,6 +524,7 @@ func (s *Server) qaWalletDrain(w http.ResponseWriter, r *http.Request, uid strin
 		s.respondErr(w, derr)
 		return
 	}
+	s.touchUser(uid, "wallet") // بثٌّ لحظيٌّ كمسار الأدمن — الرصيدُ تغيّر
 	s.logger.Warn("QA wallet drained (staging-only)", "user", uid, "removed", bal, "balance", newBal, "tx", txID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"drained": bal, "balance": newBal, "tx_id": txID})
 }
