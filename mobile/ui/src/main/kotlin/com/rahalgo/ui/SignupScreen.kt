@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,20 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
     // بيده. **ومفتاحُه الرمزُ القادم**: لو وصل بعد أن رُسمت الشاشةُ
     // لَبقي الحقلُ فارغاً وقد صار في الحالة.
     var referral by remember(state.referral) { mutableStateOf(state.referral) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وعودةُ الاتّصال تمحو رسالةَ الانقطاعِ الحقليّةَ وحدَها**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (`CUST-DEF-011`.) **رسالةُ `state.error` حالٌ غيرُ شريطِ الأعلى**:
+    // الشريطُ يتبع `Net.online`، وهذه نصٌّ كتبه فشلُ نداءٍ منقطع —
+    // **فكانت تبقى معروضةً وقد عاد الاتّصال.** فحين يعود يُبلَّغ النموذجُ
+    // فيمحوها (ويُبقي أخطاءَ التحقّق). **والشاشةُ تُبلِّغ لا تقرّر** —
+    // القرارُ في `signupConnectivityRestored` (`GROUND-RULES §7.2`).
+    val online = Net.online
+    LaunchedEffect(online) {
+        if (online) actions.onReconnected()
+    }
 
     Column(
         modifier = Modifier
@@ -277,6 +292,11 @@ data class SignupState(
      */
     val needsCode: Boolean = false,
     val error: String = "",
+    /**
+     * **أخطأُ الانقطاعِ وحدَه** — وهو يُمحى تلقائيّاً عند عودة الاتّصال
+     * (`CUST-DEF-011`)، **وأخطاءُ التحقّق تبقى** فليست من الشبكة.
+     */
+    val offlineError: Boolean = false,
 )
 
 data class SignupActions(
@@ -285,4 +305,6 @@ data class SignupActions(
     val verifyCode: (String) -> Unit,
     val confirm: (name: String, password: String, referral: String) -> Unit,
     val cancel: () -> Unit,
+    /** **عاد الاتّصال** — تُمحى رسالةُ الانقطاعِ الحقليّةُ (`CUST-DEF-011`). */
+    val onReconnected: () -> Unit,
 )

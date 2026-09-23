@@ -257,6 +257,7 @@ fun AuthGate(
                 verifyCode = vm::verifySignupCode,
                 confirm = vm::confirmSignup,
                 cancel = vm::closeSignup,
+                onReconnected = vm::signupConnectivityRestored,
             ),
         )
 

@@ -29,6 +29,7 @@
     <string name="net_offline_banner">لا يوجد اتصال بالإنترنت</string>
     <string name="net_offline_title">لا يوجد اتصال بالإنترنت</string>
     <string name="net_offline_body">تحقق من الواي فاي أو بيانات الجوال، ثم أعد المحاولة</string>
+    <string name="net_reconnected">عاد الاتصال بالإنترنت</string>
     <string name="account_state_title">حسابك مقيّد</string>
     <string name="account_state_body">حسابك غير نشط حاليًا. للمساعدة، تواصل مع الدعم.</string>
     <string name="pw_forced_title">تبديل كلمة المرور مطلوب</string>

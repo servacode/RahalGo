@@ -583,15 +583,18 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             signup = current.copy(step = SignupStep.DETAILS, code = "", error = "")
             return
         }
-        signup = current.copy(busy = true, error = "")
+        signup = current.copy(busy = true, error = "", offlineError = false)
         viewModelScope.launch {
             signup = try {
                 backend.auth.signupRequest(current.phone.trim())
-                current.copy(step = SignupStep.CODE, busy = false)
+                // **ويُمحى خطأُ المحاولة السابقة عند النجاح** — `current`
+                // لقطةٌ من قبل التصفير، فنجاحٌ بعد فشلِ انقطاعٍ كان يحمل
+                // «لا اتصال بالإنترنت» إلى خطوة الرمز (`CUST-DEF-011`).
+                current.copy(step = SignupStep.CODE, busy = false, error = "", offlineError = false)
             } catch (e: ApiClient.ApiException) {
-                current.copy(busy = false, error = message(e))
+                current.copy(busy = false, error = message(e), offlineError = false)
             } catch (e: Exception) {
-                current.copy(busy = false, error = describe(e))
+                current.copy(busy = false, error = describe(e), offlineError = isOffline(e))
             }
         }
     }
@@ -599,17 +602,18 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     fun verifySignupCode(code: String) {
         val current = signup ?: return
         if (current.busy) return
-        signup = current.copy(busy = true, error = "")
+        signup = current.copy(busy = true, error = "", offlineError = false)
         viewModelScope.launch {
             signup = try {
                 backend.auth.signupVerify(current.phone.trim(), code)
                 // **والرمزُ يُحمل إلى الخطوة الأخيرة** — المحرّكُ يطلبه
                 // مرّةً ثانيةً مع البيانات، **ولا يستهلكه هنا.**
-                current.copy(step = SignupStep.DETAILS, code = code, busy = false)
+                // **وخطأُ المحاولة السابقة يُمحى عند النجاح** (`CUST-DEF-011`).
+                current.copy(step = SignupStep.DETAILS, code = code, busy = false, error = "", offlineError = false)
             } catch (e: ApiClient.ApiException) {
-                current.copy(busy = false, error = message(e))
+                current.copy(busy = false, error = message(e), offlineError = false)
             } catch (e: Exception) {
-                current.copy(busy = false, error = describe(e))
+                current.copy(busy = false, error = describe(e), offlineError = isOffline(e))
             }
         }
     }
@@ -749,8 +753,41 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **أهو انقطاعٌ أو مهلة؟** — وهو وحدَه يُمحى عند عودة الاتّصال، فما
+     * عداه (خطأٌ غيرُ متوقّع، ردُّ خادمٍ) ليس من الشبكة (`CUST-DEF-011`).
+     */
+    private fun isOffline(e: Exception): Boolean =
+        e is IOException || e is HttpRequestTimeoutException
+
     fun clearError() {
         state = state.copy(error = "")
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **عاد الاتّصالُ — تُمحى رسالةُ الانقطاعِ الحقليّةُ وحدَها**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (`CUST-DEF-011` · شكوى المالك ٢٠٢٦-٠٩-٢٣.)
+     *
+     * **ورسالةُ `SignupState.error` نصٌّ ساكنٌ** كتبه فشلُ نداءٍ منقطع —
+     * **لا يتبع `Net.online` كشريطِ الأعلى**، فكان يبقى معروضاً وقد عاد
+     * الاتّصال. **فتُبلَّغ الشاشةُ بعودة الاتّصال فتمحوه هنا** — دون
+     * نقرةٍ ولا تنقّلٍ ولا إعادةِ فتح.
+     *
+     * **و`offlineError` يفرّق**: خطأُ الانقطاعِ يُمحى، **وأخطاءُ التحقّق
+     * (رمزٌ خطأ، رقمٌ له حساب) تبقى** — فليست من الشبكة.
+     *
+     * **ورسالةٌ طافيةٌ تُطمئن** («عاد الاتصال») تنصرف وحدَها — ولا تظهر
+     * إلّا حين كان ثمّةَ انقطاعٌ فعليٌّ يُمحى، فلا تُزعج من لم ينقطع.
+     */
+    fun signupConnectivityRestored() {
+        val current = signup ?: return
+        if (current.offlineError) {
+            signup = current.copy(error = "", offlineError = false)
+            Flash.ok(str(R.string.net_reconnected))
+        }
     }
 
     private fun str(id: Int): String = getApplication<Application>().getString(id)
