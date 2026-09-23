@@ -466,7 +466,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/qa/revoke", s.handleQAStagingRevoke)
 			r.Post("/qa/setting", s.handleQAStagingSetting)
 			r.Post("/qa/seed", s.handleQAStagingSeed)
-			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed)")
+			r.Get("/qa/reconcile", s.handleQAStagingReconcile)
+			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed; GET /qa/reconcile)")
 		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)

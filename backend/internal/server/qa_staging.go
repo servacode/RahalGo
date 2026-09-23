@@ -291,6 +291,9 @@ var qaSeedAllowlist = map[string]bool{
 	"merchant_restore":   true, // إعادةُ جدول المتجر والإغلاق الطارئ المحفوظَين
 	"gov_active":         true, // قلبُ فعّاليّة محافظةِ نقطةٍ (province_not_supported، 08-007) — عكوسٌ
 	"merchant_hours_set": true, // ضبطُ جدول دوامِ متجرٍ من قائمةٍ صريحة (استعادةٌ دقيقة)
+	// متجرٌ ثانٍ عكوسٌ لشهود سقفِ المصادر (CUST-11-036) — بلا أثرٍ ماليّ، لا قبولَ متجر:
+	"merchant_second":       true, // إنشاءُ متجرٍ ثانٍ صغيرٍ (مصدرٌ ثانٍ)
+	"merchant_second_clear": true, // حذفُه (FK-safe)
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -303,6 +306,7 @@ var qaStateSeed = map[string]bool{
 	// دوامُ المنطقة والحدُّ الأدنى للنسخة لا تلزمها هويّةُ زبون QA:
 	"zone_close": true, "zone_reopen": true, "min_version": true,
 	"merchant_open": true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
+	"merchant_second": true, "merchant_second_clear": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -408,6 +412,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaGovActive(w, r, req.Lat, req.Lng, req.ValueBool)
 		case "merchant_hours_set":
 			s.qaMerchantHoursSet(w, r, req.ItemID, req.HoursJSON)
+		case "merchant_second":
+			s.qaMerchantSecond(w, r)
+		case "merchant_second_clear":
+			s.qaMerchantSecondClear(w, r)
 		}
 		return
 	}
