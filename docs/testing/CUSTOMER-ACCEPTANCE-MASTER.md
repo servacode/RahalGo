@@ -867,7 +867,7 @@ Test key screens under foreground, background, process death, reopen, screen loc
 | CUST-17-010 | Lifecycle | Reopen after process death | After 006–009 | Relaunch | Consistent state; no stale error overlay | PASS — emulator 2026-09-21: reopen after process death → app reopens signed in (5-tab) | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-011 | Lifecycle | Screen lock/unlock | Signed-in test customer · Staging · SM-A525F | Power off screen; unlock | Same screen; no crash | PASS — emulator 2026-09-21: screen off (sleep) → wake/unlock → app state intact, no crash | `PASS` | — | online | — | — | — | — | Owner unlocks; no PIN handling by tooling |
 | CUST-17-012 | Lifecycle | App left backgrounded for an extended period | Signed-in test customer · Staging · SM-A525F | Background ≥ 30 min; return | Refreshes authoritative data; no stale live data | — | `NOT_TESTED` | — | online | — | — | — | — | — |
-| CUST-17-013 | Lifecycle | Access token expires while backgrounded | Signed-in test customer · Staging · SM-A525F | Background > access-token TTL (15 min); return; act | Silent refresh; action succeeds; no forced login | — | `NOT_TESTED` | — | online | `auth.refresh` audit | — | — | — | Access TTL 15 min (`cmd/api/main.go`) |
+| CUST-17-013 | Lifecycle | Access token expires while backgrounded | Signed-in test customer · Staging · SM-A525F | Background > access-token TTL (15 min); return; act | Silent refresh; action succeeds; no forced login | PASS — شاهدٌ حيّ (§40.50): التطبيقُ خُمِّل في الخلفيّة ٢٠+ دقيقة (تجاوز TTL 15د)، ثمّ إحضارٌ للمقدّمة ونداءاتٌ مصادَقةٌ حيّة — تصفّحٌ + طلباتي (GET /orders) + حسابي (GET /me يردّ «زبون الاختبار QA» +963900555001) + سحبٌ للإنعاش ⇒ كلُّها نجحت بلا شاشةِ «انتهت جلستك»، تحديثٌ صامتٌ للتوكن | `PASS` | device | online | `auth.refresh` audit | — | — | — | Access TTL 15 min (`cmd/api/main.go`) |
 | CUST-17-014 | Lifecycle | Network changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle Wi-Fi↔data; return | Correct online/offline state on return | PASS — تبدُّلُ الشبكة في الخلفيّة ⇒ عودةٌ بلا انهيارٍ وتعافٍ (محاكي 2026-09-21) | `PASS` | — | switching | — | — | — | — | — |
 | CUST-17-015 | Lifecycle | Location permission changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; revoke/grant in Settings; return | No crash; state reflects permission | PASS — محاكي 2026-09-21: إلغاءُ إذن الموقع في الخلفيّة ثمّ العودة ⇒ لا انهيار | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-016 | Lifecycle | Notification permission changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle notifications; return | No crash; ordering unaffected | PASS — محاكي 2026-09-21: إلغاءُ إذن الإشعارات في الخلفيّة ثمّ العودة ⇒ لا انهيار، التطبيقُ يعمل | `PASS` | — | online | — | — | — | — | — |
@@ -1272,13 +1272,13 @@ until ADB is available — not an acceptance blocker.
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 9 | 1 | 35 | 0 | 0 |
-| 29 | CUST-17 | 22 | 21 | 1 | 4 | 1 | 17 | 0 | 0 |
+| 29 | CUST-17 | 22 | 21 | 1 | 3 | 1 | 18 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **29** | **10** | **496** | **0** | **43** |
+| | **Total** | **578** | **474** | **104** | **28** | **10** | **497** | **0** | **43** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,24 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.50 · الوضعُ الليليّ — 17-013 (انتهاءُ التوكن في الخلفيّة ⇒ تحديثٌ صامت) (٢٠٢٦-٠٩-٢٣)
+
+**17-013** (وقتيٌّ، انتُظر حتّى نافذته): التطبيقُ (QA1) خُمِّل في الخلفيّة الساعةَ 02:52 محلّيّاً وتُرك خاملاً
+٢٠+ دقيقة — **تجاوزَ TTL توكنِ الوصول (١٥ دقيقة)**. ثمّ أُحضر للمقدّمة (`am start`، المهمّةُ رُفعت لا إقلاعٌ بارد)
+وأُجريت نداءاتٌ مصادَقةٌ حيّة متتاليةٌ لا مُخبّأة:
+
+- **تصفّحُ المتجر** ⇒ قائمةٌ بأسعارٍ حيّة وعنوانُ التوصيل (مصادَق).
+- **طلباتي** (GET /orders) ⇒ الحالةُ الفارغةُ المصادَقة «لا طلبات جارية» بلا شاشةِ دخول.
+- **سحبٌ للإنعاش** على طلباتي ⇒ بقيت الشاشةُ، لا ارتدادَ إلى «انتهت جلستك — ادخل من جديد».
+- **حسابي** (GET /me الديناميّ) ⇒ ردَّ ملفَّ الزبون الحقيقيّ: **«زبون الاختبار QA» · +963900555001** — دليلٌ قاطعٌ
+  على نداءٍ شبكيٍّ مصادَقٍ ناجح، لا حالةٌ مُخبّأة.
+
+**لا شاشةَ «انتهت جلستك» في أيٍّ منها** ⇒ التوكنُ حُدِّث صامتاً عبر توكنِ التجديد الصالح، والفعلُ نجح.
+النقيضُ مُثبَتٌ في 16-038 (إبطالٌ خادميّ ⇒ التجديد يفشل ⇒ «انتهت جلستك» صريحاً) — فالفرقُ بين البابين قائم.
+**NOT_TESTED⇒PASS.** لا حالةَ مؤقّتةٌ تُعاد (قراءةٌ فقط).
+
+الحصيلة (محقّقة): PASS 496⇒497، NOT_TESTED 29⇒28، BLOCKED 43، N/A 10، FAIL 0. = 578.
 
 ### 40.49 · الوضعُ الليليّ — 11-022 (صنفٌ مسحوبٌ في السلّة) (٢٠٢٦-٠٩-٢٣)
 
