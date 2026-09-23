@@ -871,8 +871,8 @@ Test key screens under foreground, background, process death, reopen, screen loc
 | CUST-17-014 | Lifecycle | Network changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle Wi-Fi↔data; return | Correct online/offline state on return | PASS — تبدُّلُ الشبكة في الخلفيّة ⇒ عودةٌ بلا انهيارٍ وتعافٍ (محاكي 2026-09-21) | `PASS` | — | switching | — | — | — | — | — |
 | CUST-17-015 | Lifecycle | Location permission changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; revoke/grant in Settings; return | No crash; state reflects permission | PASS — محاكي 2026-09-21: إلغاءُ إذن الموقع في الخلفيّة ثمّ العودة ⇒ لا انهيار | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-016 | Lifecycle | Notification permission changes while backgrounded | Signed-in test customer · Staging · SM-A525F | Background; toggle notifications; return | No crash; ordering unaffected | PASS — محاكي 2026-09-21: إلغاءُ إذن الإشعارات في الخلفيّة ثمّ العودة ⇒ لا انهيار، التطبيقُ يعمل | `PASS` | — | online | — | — | — | — | — |
-| CUST-17-017 | Lifecycle | Android reboot with an existing valid session | Signed-in test customer · Staging · SM-A525F | Reboot device (Owner consent) | No crash at boot; session and cart persisted for the next launch | — | `NOT_TESTED` | — | online | — | — | — | — | Owner consent required for reboot |
-| CUST-17-018 | Lifecycle | Reopen after reboot | After 017 | Launch | Signed in; cart per contract; FCM re-registers if needed | — | `NOT_TESTED` | — | online | device token row present | — | — | — | — |
+| CUST-17-017 | Lifecycle | Android reboot with an existing valid session | Signed-in test customer · Staging · SM-A525F | Reboot device (Owner consent) | No crash at boot; session and cart persisted for the next launch | PASS — شاهدٌ حيٌّ على SM-A525F (§40.73): قبل الإقلاع QA1 داخلٌ وسلّةٌ فيها «ساندويش شاورما دجاج». أعاد المالكُ التشغيلَ مرّةً؛ بعده أُطلق التطبيقُ ⇒ فُتح **داخلاً** (شارةُ المحفظة + شريطُ ٥ + لا شاشةَ دخول) والسلّةُ ما تزال فيها الصنف، لا انهيار. الجلسةُ والسلّةُ نجتا الإقلاعَ. | `PASS` | device | online | — | — | — | — | Owner consent required for reboot |
+| CUST-17-018 | Lifecycle | Reopen after reboot | After 017 | Launch | Signed in; cart per contract; FCM re-registers if needed | PASS — من نفس الإقلاع (§40.73): إعادةُ فتح التطبيق بعد الإقلاع ⇒ داخلٌ (بلا إعادةِ دخول)، السلّةُ بالعقد (الصنفُ باقٍ)، والتطبيقُ يعمل. | `PASS` | device | online | device token row present | — | — | — | — |
 | CUST-17-019 | Lifecycle | Repeated Back presses | Signed-in test customer · Staging · SM-A525F | From deep screen press BACK ×10 | Leaves app cleanly; no crash; no loop | PASS — emulator 2026-09-21: repeated Back presses → no crash; relaunch returns to a valid screen | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-020 | Lifecycle | Repeated Home/app-switch transitions | Signed-in test customer · Staging · SM-A525F | HOME/recents ×10 in 30 s | No crash; no duplicate requests beyond refresh | PASS — emulator 2026-09-21: repeated Home/app-switch transitions → no crash, foreground restores | `PASS` | — | online | — | — | — | — | — |
 | CUST-17-021 | Lifecycle | No impossible navigation stack after restoration | After 006–018 | Navigate tabs and BACK | No duplicated screens; BACK behaves normally | PASS — emulator 2026-09-21: after all restorations the app is on a valid screen (5-tab), no impossible stack | `PASS` | — | online | — | — | — | — | — |
@@ -1272,13 +1272,13 @@ until ADB is available — not an acceptance blocker.
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
-| 29 | CUST-17 | 22 | 21 | 1 | 2 | 1 | 19 | 0 | 0 |
+| 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **18** | **10** | **532** | **0** | **18** |
+| | **Total** | **578** | **474** | **104** | **16** | **10** | **534** | **0** | **18** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,21 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.73 · CUST-17-017/018 الإقلاع — الجلسةُ والسلّةُ تنجوان (٢٠٢٦-٠٩-٢٣)
+
+**قبل الإقلاع (مُلتقَط):** QA1 داخلٌ على SM-A525F، وسلّةٌ فيها «ساندويش شاورما دجاج» (26,050).
+
+**فعلٌ ماديٌّ واحد:** أعاد المالكُ تشغيلَ الجهاز مرّةً (ثمّ أعاد تفعيلَ Wireless debugging — أندرويد يطفئه عبر الإقلاع؛ منفذٌ جديد 44181).
+
+**بعد الإقلاع:**
+- **17-017**: أُطلق التطبيقُ ⇒ فُتح **داخلاً** بلا شاشةِ دخول (شارةُ المحفظة «0 ل.س» + شريطُ ٥ تبويبات + مطالبةُ التقييم التي لا تظهر إلّا لِداخل). الجلسةُ (EncryptedSharedPreferences) نجت الإقلاعَ. لا انهيارَ عند الإقلاع.
+- والسلّةُ ما تزال فيها «ساندويش شاورما دجاج» ⇒ السلّةُ نجت الإقلاعَ.
+- **17-018**: إعادةُ فتح التطبيق بعد الإقلاع ⇒ داخلٌ، السلّةُ بالعقد، التطبيقُ يعمل.
+
+إقلاعٌ واحدٌ غطّى الصفّين (كطلب المالك). **NOT_TESTED⇒PASS ×2**.
+
+**المجاميع (محقّقة): PASS 534 · FAIL 0 · BLOCKED 18 · N/A 10 · NOT_TESTED 16 = 578.**
 
 ### 40.72 · CUST-ENG-011 روابطُ التواصل — شاهدٌ حيٌّ على SM-A525F (٢٠٢٦-٠٩-٢٣)
 
