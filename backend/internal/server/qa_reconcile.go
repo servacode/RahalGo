@@ -221,9 +221,9 @@ func (s *Server) qaCustomerSuspend(w http.ResponseWriter, r *http.Request, statu
 		return
 	}
 	ctx := r.Context()
-	var prev string
+	var uid, prev string
 	if err := s.pg.QueryRow(ctx,
-		`SELECT status FROM users WHERE phone = $1`, qaStagingPhone).Scan(&prev); err != nil {
+		`SELECT id::text, status FROM users WHERE phone = $1`, qaStagingPhone).Scan(&uid, &prev); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			s.respondErr(w, httpx.ErrNotFound)
 			return
@@ -239,6 +239,9 @@ func (s *Server) qaCustomerSuspend(w http.ResponseWriter, r *http.Request, statu
 		s.respondErr(w, err)
 		return
 	}
+	// **ويُبطَل كاشُ الحالة فوراً** — كالمسار الإداريّ (`invalidateStatusCache`)،
+	// **وإلّا رأى الوسيطُ الحالةَ القديمةَ ٣٠ث فلا يُنفَّذ التعليقُ حتميّاً.**
+	s.identity.InvalidateStatusCache(ctx, uid)
 	s.logger.Warn("QA customer status set (staging-only)", "phone", "QA", "previous", prev, "set", status, "rows", tag.RowsAffected())
 	httpx.JSON(w, http.StatusOK, map[string]any{"previous": prev, "set": status, "rows": tag.RowsAffected()})
 }

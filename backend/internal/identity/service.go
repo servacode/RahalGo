@@ -1312,6 +1312,13 @@ func (s *Service) invalidateStatusCache(ctx context.Context, userID string) {
 	s.rdb.Del(ctx, "ustatus:"+userID)
 }
 
+// InvalidateStatusCache **مُصدَّرٌ للبذّارات على التجهيز** — من غيّر حالةَ
+// مستخدمٍ خارجَ مسار الإدارة (بذّارُ QA) يجب أن يُبطل كاشَه بنفسِه، **وإلّا
+// رأى الوسيطُ الحالةَ القديمةَ حتّى انتهاء المهلة (٣٠ث).**
+func (s *Service) InvalidateStatusCache(ctx context.Context, userID string) {
+	s.invalidateStatusCache(ctx, userID)
+}
+
 // otpSendError **يُمرّر سببَ الفشل حين يكون معروفاً — ولا يبتلعه.**
 //
 // ══════════════════════════════════════════════════════════════════════
