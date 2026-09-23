@@ -165,9 +165,30 @@ func (s *Server) handleQAStagingReconcile(w http.ResponseWriter, r *http.Request
 			passed++
 			continue
 		}
-		failed = append(failed, map[string]any{
+		entry := map[string]any{
 			"id": c.ID, "name": c.Name, "violating_rows": len(vs[0].Rows),
-		})
+		}
+		// **تصنيفُ الخرق بحالةِ الطلب فقط** — عددٌ لكلّ حالة، بلا معرّفٍ ولا
+		// مبلغٍ ولا بيانةِ زبون. **فيُعرَف أهو طلبٌ ملغىً (أثرٌ حميد) أم جارٍ.**
+		statusIdx := -1
+		for i, col := range vs[0].Cols {
+			if col == "status" {
+				statusIdx = i
+				break
+			}
+		}
+		if statusIdx >= 0 {
+			byStatus := map[string]int{}
+			for _, row := range vs[0].Rows {
+				if statusIdx < len(row) {
+					if st, ok := row[statusIdx].(string); ok {
+						byStatus[st]++
+					}
+				}
+			}
+			entry["by_status"] = byStatus
+		}
+		failed = append(failed, entry)
 	}
 
 	// ── أثرُ عتادِ QA ────────────────────────────────────────────────
