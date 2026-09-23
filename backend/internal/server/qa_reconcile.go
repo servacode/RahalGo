@@ -343,7 +343,7 @@ func (s *Server) qaMaybeSignupLatency(rawPhone string) {
 	if !ok || phone != qaSignupPhone {
 		return
 	}
-	if f, ok := qaFaults.take("/api/v1/auth/otp/request"); ok && f.mode == qaFaultLatency {
+	if f, ok := qaFaults.take("/api/v1/auth/signup/request"); ok && f.mode == qaFaultLatency {
 		s.logger.Warn("QA signup latency injected (staging-only)", "ms", f.ms)
 		time.Sleep(time.Duration(f.ms) * time.Millisecond)
 	}

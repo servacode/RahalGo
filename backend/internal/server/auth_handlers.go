@@ -70,9 +70,6 @@ func (s *Server) handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **مِعطارُ تأخيرٍ ضيّقٌ على التجهيز** — لشهود «تسجيلٌ بطيء» (CUST-04-010)،
-	// مقصورٌ على رقم QA للتسجيل، بلا أثرٍ في الإنتاج (يفحص qaStagingEnabled).
-	s.qaMaybeSignupLatency(req.Phone)
 	if err := s.identity.RequestOTP(r.Context(), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
@@ -311,6 +308,9 @@ func (s *Server) handleSignupRequest(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **مِعطارُ تأخيرٍ ضيّقٌ على التجهيز** — لشهود «تسجيلٌ بطيء» (CUST-04-010)،
+	// مقصورٌ على رقم QA للتسجيل، بلا أثرٍ في الإنتاج (يفحص qaStagingEnabled).
+	s.qaMaybeSignupLatency(req.Phone)
 	if err := s.identity.RequestSignup(r.Context(), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
