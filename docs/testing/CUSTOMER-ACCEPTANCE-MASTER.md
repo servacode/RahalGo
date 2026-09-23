@@ -403,7 +403,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-008 | Auth | Successful login lands on correct surface | Signed out (guest) · Staging · SM-A525F | Login | تسوق tab; cart/addresses of this account | SM-A525F login lands on the shop (تسوق) surface with the account wallet/address + 5-tab signed-in nav | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-06-009 | Auth | Access token refresh during use | Signed-in test customer · Staging · SM-A525F | Use > 15 min | Silent refresh; no interruption | PASS — شاهدٌ حيّ (§40.54): بعد خمولٍ >30د (تجاوز TTL 15د) نُفِّذت ثلاثةُ نداءاتٍ مصادَقةٍ متتالية (الطلبات/الحساب GET me «زبون الاختبار QA»/التصفّح) ⇒ كلُّها نجحت بلا مقاطعةٍ ولا شاشةِ دخول؛ ودورةُ التوكن مُثبَتةٌ خادميّاً (صالح⇒200، فاسد⇒401، تجديد⇒access جديد، إعادة⇒200) وApiClient يجدّد على 401 | `PASS` | device+api | online | `auth.refresh` audit | — | — | — | Access TTL 15 min |
 | CUST-06-010 | Auth | Expired access token with valid refresh recovers | Signed-in test customer · Staging · SM-A525F | Background > 15 min; act | Action succeeds after silent refresh | PASS — شاهدٌ حيّ (§40.54 + §40.50): التطبيقُ خُلّف >30د (وسابقاً 20د في 17-013)، التوكنُ منتهٍ، ثمّ فعلٌ مصادَقٌ ⇒ نجح بتحديثٍ صامتٍ بلا دخول؛ ودورةُ الاسترداد الخادميّة مُثبَتةٌ (401⇒/auth/refresh⇒200) | `PASS` | device+api | online | — | — | — | — | `shared/net/ApiClient.kt:147-176` |
-| CUST-06-011 | Auth | Invalid/revoked session → re-authentication | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset of the test account); use app | Explicit re-login path; no loop; no stale private data | CARRIED: mid-session refresh-failure needs >15 min access TTL (revoked refresh + expiry); the startup variant is covered by 029 | `BLOCKED` | - | online | — | — | — | — | Audit risk: mid-session refresh failure shows «انتهت جلستك — ادخل من جديد» but does not sign out (no global 401 → logout) |
+| CUST-06-011 | Auth | Invalid/revoked session → re-authentication | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset of the test account); use app | Explicit re-login path; no loop; no stale private data | PASS — شاهدٌ حيّ (§40.56): qa/revoke أبطل ١٦ توكناً؛ سحبٌ للإنعاش في الطلبات ⇒ «انتهت جلستك — ادخل من جديد» + «أعد المحاولة» (مسارُ دخولٍ صريح)؛ **لا بياناتٍ خاصّةٍ بائتة** (محتوى الطلبات اختفى، الرسالةُ وحدَها)؛ التطبيقُ حيٌّ مستقرٌّ بعد ٣ث (لا حلقةَ ولا انهيار) | `PASS` | device+api | online | — | — | — | — | =16-038 method; no stale private data confirmed |
 | CUST-06-012 | Auth | Logout removes access | Signed-in test customer · Staging · SM-A525F | Drawer → «خروج» | Signed out; server session revoked | SM-A525F logout -> guest shell; server session revoked (active refresh 2->1) | `PASS` | SM-A525F/A14 vc12 | online | refresh token revoked; `auth.logout` audit | — | — | — | Logout has no confirmation |
 | CUST-06-013 | Auth | BACK cannot reopen authenticated screens after logout | After 012 | Press BACK repeatedly | No authenticated screen reappears | SM-A525F BACK after logout -> guest shell, no authenticated screen reappears | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-06-014 | Auth | Restart after logout stays logged out | After 012 | Force-stop; relaunch | Guest shell | SM-A525F force-stop+relaunch after logout -> guest shell (stays logged out) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
@@ -585,7 +585,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-034 | Cart | Empty cart via «إفراغ السلة» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap «إفراغ السلة» | Cart empty (no confirmation by design — note) | «إفراغ السلة» -> cart empty (no confirmation, by design) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added |
 | CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | PASS — شاهدٌ باختبارٍ+نداءٍ حيّ (§40.55): CAF-12 عولِج — `OfferGateTest` أخضرُ هذه الجلسة (2/2): بابُ العروض يعيد استعمالَ نفسِ بوّابةِ السوق (`rememberAddBlocked`/`addActionFor==BLOCKED`) و`if(blocked)` يحرس كلَّ إضافةٍ في `Offers()`؛ ونداءٌ حيّ: gov_active=false على نقطة QA ⇒ availability=**province_not_supported** (خارج التغطية)، وبوّابةُ الإرسال تحجب صراحةً (08-015)؛ فالبابان محروسان | `PASS` | api+test | online | no order | — | — | `OfferGateTest` | CAF-12 remediated (shared PreCart gate); live offers-UI add-blocked = device parity candidate |
 | CUST-11-036 | Cart | Multi-source limit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `orders.max_sources`=1 | Add items from two sources; submit | Explicit `too_many_sources`/`multi_source_order` | CARRIED: multi-source limit (orders.max_sources=1 -> too_many_sources) needs a 2-source cart at submit | `BLOCKED` | - | online | no order | — | — | — | Added: no client check; server enforces |
-| CUST-11-037 | Cart | Corrupt persisted cart is discarded safely (added) | Emulator: corrupt `rahalgo_cart` prefs | Launch | Empty cart; no crash | — | `NOT_TESTED` | — | any | — | — | — | — | Added: unreadable cart is deleted by design |
+| CUST-11-037 | Cart | Corrupt persisted cart is discarded safely (added) | Emulator: corrupt `rahalgo_cart` prefs | Launch | Empty cart; no crash | PASS — شاهدٌ حيّ (§40.56): كُتبت بياناتٌ فاسدةٌ (XML غير صالح) في rahalgo_cart.xml عبر run-as، ثمّ إقلاعٌ ⇒ التطبيقُ حيٌّ (pid) بلا انهيار، السوقُ يُعرض، والسلّةُ «سلتك فارغة» (السلّةُ غيرُ المقروءةِ تُطرح بالتصميم) | `PASS` | device | any | — | — | — | — | Added: unreadable cart is deleted by design |
 
 ## 23 · CUST-12 — Quote / checkout
 
@@ -1257,12 +1257,12 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 19 | 0 | 4 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 21 | 0 | 11 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 22 | 0 | 10 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 24 | 0 | 3 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 31 | 0 | 5 |
+| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 32 | 0 | 5 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **26** | **10** | **508** | **0** | **34** |
+| | **Total** | **578** | **474** | **104** | **25** | **10** | **510** | **0** | **33** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,21 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.56 · الوضعُ الليليّ — 11-037 (سلّةٌ فاسدةٌ تُطرح) + 06-011 (جلسةٌ مُبطَلةٌ ⇒ دخولٌ صريح) (٢٠٢٦-٠٩-٢٣)
+
+- **11-037** (السلّةُ المحفوظةُ الفاسدةُ تُطرح بأمان): كُتبت بياناتٌ فاسدةٌ («@@@CORRUPT_NOT_XML_broken<<<»،
+  XML غير صالح) في `shared_prefs/rahalgo_cart.xml` عبر `run-as` (بناءُ debug)؛ إقلاعٌ ⇒ التطبيقُ **حيٌّ**
+  (pid 15595، **لا انهيار**)، السوقُ يُعرض، وتبويبُ السلّة **«سلتك فارغة»** — أي السلّةُ غيرُ المقروءةِ
+  طُرحت (لا تُحمَّل بيانات فاسدة). أُعيد الملفُّ إلى فارغٍ صالح (والتطبيقُ يُصلحه ذاتيّاً عند أوّل تعديلِ سلّة).
+- **06-011** (جلسةٌ مُبطَلةٌ خادميّاً ⇒ إعادةُ توثيقٍ صريحة): `qa/revoke` أبطل **١٦** توكناً؛ في التطبيق سحبٌ
+  للإنعاش على الطلبات ⇒ **«انتهت جلستك — ادخل من جديد»** + زرُّ **«أعد المحاولة»** (مسارُ دخولٍ صريح).
+  **لا بياناتٍ خاصّةٍ بائتة**: محتوى الطلبات اختفى، لم يبقَ إلّا الرسالة. التطبيقُ حيٌّ مستقرٌّ بعد ٣ث
+  (**لا حلقةَ، لا انهيار**). (نفسُ أسلوب 16-038، مع تأكيدِ «لا بيانات بائتة».)
+
+**NOT_TESTED/BLOCKED ⇒ PASS ×2.** (الجلسةُ على المحاكي مُبطَلةٌ الآن؛ تُستعاد QA1 بـpm clear + qa_login.)
+
+الحصيلة (محقّقة): PASS 508⇒510، BLOCKED 34⇒33، NOT_TESTED 26⇒25، N/A 10، FAIL 0. = 578.
 
 ### 40.55 · الوضعُ الليليّ — 11-035 (بابُ العروض يحترم بوّابةَ التغطية، CAF-12 معالَج) (٢٠٢٦-٠٩-٢٣)
 
