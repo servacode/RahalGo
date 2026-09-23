@@ -450,9 +450,9 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-07-016 | Addr | Address in unsupported city | Signed-in test customer · Staging · SM-A525F | Address in Damascus/Aleppo | `city_not_supported` | Damascus/Aleppo -> city_not_supported | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-07-017 | Addr | Address in unsupported area/zone | Signed-in test customer · Staging · SM-A525F | Address in an uncovered area | `area_not_supported` / `address_outside_coverage` | far-desert -> area_not_supported; Raqqa-edge -> address_outside_coverage; ocean -> invalid_location | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-07-018 | Addr | Address near a coverage boundary | Signed-in test customer · Staging · SM-A525F | Points just inside/outside a zone edge | Inside serviceable; outside denied — consistent with server | Boundary: Raqqa center serviceable, far-edge denied - consistent with the server | `PASS` | staging API | online | availability per point | — | — | — | — |
-| CUST-07-019 | Addr | GPS inside coverage, selected address outside → address wins | Signed-in test customer · Staging · SM-A525F | Default address outside; device inside | Denied for the address; discovery text prefixed «موقعك الحالي:» never overrides | CARRIED: needs an out-of-zone default address + in-zone device to witness address-wins on-device | `BLOCKED` | - | online | — | — | — | — | `PreCart.kt:285-379` |
+| CUST-07-019 | Addr | GPS inside coverage, selected address outside → address wins | Signed-in test customer · Staging · SM-A525F | Default address outside; device inside | Denied for the address; discovery text prefixed «موقعك الحالي:» never overrides | PASS — شاهدٌ حيٌّ على SM-A525F (§40.68): أُضيف عنوانٌ خارج التغطية (دمشق 33.51,36.28) عبر API الزبون؛ اختيارُه في التطبيق ⇒ «رحال غو لم يصل إلى دمشق بعد — نعمل على التوسّع» + «أخبرني عند توفر الخدمة في دمشق». القرارُ يتبع العنوانَ المختار (دمشق مشتقّةٌ من إحداثيّاته) لا موقعَ الجهاز ⇒ العنوانُ يغلب. حُذف العنوانُ بعده. | `PASS` | device | online | — | — | — | — | `PreCart.kt:285-379` |
 | CUST-07-020 | Addr | GPS outside coverage, selected address valid → ordering allowed | Signed-in test customer · Staging · SM-A525F | Default address inside; device outside | Ordering allowed to the address | GPS-outside / address-valid -> ordering allowed to the Raqqa address (cross-ref CUST-03-005, order #1064) | `PASS` | SM-A525F/A14 vc12 | online | order created (disposable) | — | — | — | — |
-| CUST-07-021 | Addr | Change address with items in cart | Signed-in test customer · Staging · SM-A525F · cart populated | Switch address | Quote/availability re-evaluated; out-of-zone note if needed | CARRIED: change-address-with-cart quote re-eval needs a populated cart + address switch | `BLOCKED` | - | online | `/public/quote` | — | — | — | — |
+| CUST-07-021 | Addr | Change address with items in cart | Signed-in test customer · Staging · SM-A525F · cart populated | Switch address | Quote/availability re-evaluated; out-of-zone note if needed | PASS — شاهدٌ حيٌّ على SM-A525F (§40.68): سلّةٌ فيها صنف (26,050)؛ تبديلُ عنوان التوصيل داخل السلّة ⇒ إعادةُ تقييمٍ فوريّة: خارج التغطية (دمشق) ⇒ التوصيل 0 + «رحال غو لم يصل إلى دمشق بعد»؛ العودةُ للداخل (الرقة) ⇒ التوصيل 100، الإجمالي 26,150، وإشعار «تغيّرت أجور التوصيل من 0 ل.س إلى 100 ل.س». | `PASS` | device | online | `/public/quote` | — | — | — | — |
 | CUST-07-022 | Addr | Coverage changes while the address is on screen | Signed-in test customer · Staging · SM-A525F · zone edited via seed | Wait/refresh | Availability updates; send blocked if now outside | PASS — شاهدٌ حيّ (§40.43): zone_close على منطقة العنوان ⇒ الإرسالُ محجوبٌ خادميّاً 503 `zone_closed_now`، لا طلب؛ أُعيدت المنطقة | `PASS` | api | online | — | — | — | — | server send-block on coverage change |
 | CUST-07-023 | Addr | Address becomes invalid before checkout | As 022 | Tap «أرسل الطلب» | Server denies explicitly; no order | PASS — شاهدٌ خادميٌّ حيّ (§40.31): عنوانٌ افتراضيٌّ خارجَ التغطية (دمشق، بذّار QA) ⇒ POST /orders = 400 `out_of_zone`، لا طلب؛ استُعيد عنوانُ الرقّة | `PASS` | - | online | order count unchanged | — | §40.31 | — | Unblocked via out-of-coverage address (§40.31) 2026-09-22 |
 | CUST-07-024 | Addr | Restart preserves only appropriate address state | Signed-in test customer · Staging · SM-A525F | Kill; relaunch | Default address from server; discovery not persisted as address | Kill/relaunch -> top chip restores the default address (home) from the server | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
@@ -567,7 +567,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-016 | Cart | Cart after application restart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Force-stop; relaunch | Intact | Application restart -> cart intact (2 lines) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-017 | Cart | Logout behaviour with existing cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Logout | Logout detaches the account's private cart (Owner decision §40.1-1); a guest cart only if explicitly scoped | A cart (1 item) → `lines`=`[]` on logout | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
 | CUST-11-018 | Cart | Different customer does not inherit previous cart | A's cart; A logs out | B logs in; open cart | B never sees A's cart (Owner decision §40.1-1) | B cart empty after A→B switch | `PASS` | SM-A525F 2026-09-20 | online | — | — | — | — | CUST-DEF-004 fixed — device witness §40.6.2 |
-| CUST-11-019 | Cart | Change delivery address with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote re-fetched; notes for out-of-zone | CARRIED: change-address-with-populated-cart quote re-fetch (= CUST-07-021) needs an address switch + quote observation | `BLOCKED` | - | online | `/public/quote` | — | — | — | AB-03 guard |
+| CUST-11-019 | Cart | Change delivery address with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch address | Quote re-fetched; notes for out-of-zone | PASS — = CUST-07-021 (§40.68): تبديلُ العنوان بسلّةٍ ممتلئة يعيد جلبَ التسعيرة على SM-A525F (الرقة ⇒ 100/26,150؛ دمشق ⇒ 0 + ملاحظةُ خارج التغطية). | `PASS` | device | online | `/public/quote` | — | — | — | AB-03 guard |
 | CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart | Change listed; submit blocked until reviewed/removed | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ صراحةً «أحد الأصناف غير متوفر حاليا» (التطبيق)، والخادمُ يردّ 409، لا طلب؛ أُعيدت الإتاحة | `PASS` | device+api | online | — | — | — | — | P8-C3-027/036 |
 | CUST-11-021 | Cart | Price changes while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin changes price | Open cart | «cart changes» list + «متابعة بالقيم الحالية» | Price change while item in cart -> «cart changes» review + «متابعة بالقيم الحالية» (cross-ref CUST-DEF-005, real price change on order #1063) | `PASS` | SM-A525F/A14 vc12 | online | quote | — | — | — | P8-C3-028 |
 | CUST-11-022 | Cart | Item retired while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart; submit | Explicit; no order with retired item | PASS — شاهدٌ حيّ (§40.49): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ خادميّاً 409 `item_unavailable`، لا طلب؛ الضابطُ يُنشئ، أُعيدت الإتاحة | `PASS` | api | online | no order | — | — | — | retire≈unavailable for order-blocking |
@@ -963,7 +963,7 @@ Functional correctness includes understandable UI behaviour.
 | CUST-20-013 | UI | Retry action visible where recovery is possible | Signed-in test customer · Staging · SM-A525F | Trigger recoverable failures | «أعد المحاولة» present | PASS — «أعد المحاولة» ظاهرٌ في الانقطاع (شهادات 16-019/16-020) | `PASS` | — | offline / API down | — | — | — | — | — |
 | CUST-20-014 | UI | Disabled action visually understandable | Signed-in test customer · Staging · SM-A525F | Disabled submit/add states | Disabled state visible with reason where relevant | PASS — معطَّل مع سبب: خيار المحفظة معطَّل مع «الرصيد غير كافٍ» (CUST-WAL-012)؛ وزرّ الإرسال يُعطَّل في الانقطاع/النقص | `PASS` | — | online | — | — | — | — | — |
 | CUST-20-015 | UI | No tap target silently accepts touch without response | Signed-in test customer · Staging · SM-A525F | Tap every clickable node per screen | Each tap yields a visible response | PASS — لا نقرة صامتة: الانقطاع 16-015 + النقرات المتّصلة تستجيب (تنقّل/لوحة/إرسال) | `PASS` | — | online | — | — | — | — | Automatable with UIA clickable enumeration |
-| CUST-20-016 | UI | Usable on the actual SM-A525F screen | Signed-in test customer · Staging · SM-A525F | Full walkthrough | Everything reachable | — | `NOT_TESTED` | — | online | — | — | — | — | — |
+| CUST-20-016 | UI | Usable on the actual SM-A525F screen | Signed-in test customer · Staging · SM-A525F | Full walkthrough | Everything reachable | PASS — SM-A525F (1080×2400، §40.68): لا عنصرَ خارجَ حدود الشاشة (0 OOB)، العربيّةُ RTL تُعرض سليمة (٢٩ عقدةً نصّيّة في الكتالوج)، ٢٤ عنصراً تفاعليّاً؛ الجلسةُ كلُّها (دخول/تنقّل/سلّة/عناوين/محفظة/تسعيرة) عملت على الشاشة الفعليّة. | `PASS` | device | online | — | — | — | — | — |
 | CUST-20-017 | UI | System font scaling keeps critical actions usable | Signed-in test customer · Staging · SM-A525F | `settings put system font_scale 1.3` (restore after) | Actions reachable; no overlap | PASS — محاكي font_scale=1.3: صفر قصّ وصفر تقاطع على السوق؛ ثمّ أُعيد إلى 1.0 | `PASS` | — | online | — | — | — | — | Restore font_scale after |
 | CUST-20-018 | UI | English/localization only if supported | — | Check app resources for non-Arabic locales | Arabic only → N/A unless a locale switch exists | — | `NOT_APPLICABLE` | — | any | — | — | — | — | **N/A:** Arabic only: no `values-xx` locale folders and no language switch in the Customer app (audit §38). · Decided by the audit (§38) |
 | CUST-20-019 | UI | Every customer-path error code has a meaningful message (added) | API errors | Trigger `not_found`, `in_progress`, `comms_closed`, `comms_no_driver` | Specific Arabic messages — not «تعذر الاتصال — حاول بعد قليل» | PASS — CAF-18 مغلق: not_found/comms_closed/comms_no_driver أُضيفت للخريطة برسائلَ عربيّةٍ خاصّة؛ ApiErrorsTest.caf18CodesResolveToTheirOwnMeaning + شاهدٌ سالب + حارس check-app-error-codes (101 رمزاً كلُّها مترجَمة) | `PASS` | — | online | — | — | — | — | Added. CAF-18: the `in_progress` part is now mapped (CUST-DEF-002, §40.25); `not_found`/`comms_closed`/`comms_no_driver` remain unmapped (CAF-18 P3, out of CUST-DEF-002 scope) |
@@ -1258,11 +1258,11 @@ until ADB is available — not an acceptance blocker.
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 20 | 0 | 3 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 23 | 0 | 9 |
-| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
+| 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 28 | 0 | 2 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
-| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 34 | 0 | 3 |
+| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 35 | 0 | 2 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1275,10 +1275,10 @@ until ADB is available — not an acceptance blocker.
 | 29 | CUST-17 | 22 | 21 | 1 | 2 | 1 | 19 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
-| 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
+| 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **20** | **10** | **524** | **0** | **24** |
+| | **Total** | **578** | **474** | **104** | **19** | **10** | **528** | **0** | **21** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,24 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.68 · الجلسةُ المرافقة على SM-A525F (لاسلكيّ) — 20-016 + العناوين (٢٠٢٦-٠٩-٢٣)
+
+الجلسةُ على SM-A525F عبر **لاسلكيّ ADB** (192.168.1.103؛ USB غيرُ مستقرّ — اتّصل ثمّ سقط). زبونُ QA داخلٌ (دخولُ الواجهة بـ TAB→تفعيل).
+
+- **20-016 (صالحٌ على الشاشة الفعليّة) — PASS**: الكتالوج على 1080×2400: **٠ عناصرَ خارجَ حدود الشاشة**، العربيّةُ RTL سليمة (٢٩ عقدةً نصّيّة، ٦ أسعار)، ٢٤ عنصراً تفاعليّاً؛ والجلسةُ كلُّها (دخول، تنقّل، سلّة، خيارات صنف، عناوين، محفظة، تسعيرة) عملت على الشاشة الفعليّة بلا قصٍّ ولا انهيار.
+
+- **07-019 (العنوانُ المختار يغلب GPS) — PASS**: أُضيف عنوانٌ خارج التغطية (دمشق 33.5138,36.2765) عبر `POST /my/addresses` بتوكن الزبون؛ اختيارُه في ورقة العناوين ⇒ «رحال غو لم يصل إلى دمشق بعد — نعمل على التوسّع» + «أخبرني عند توفر الخدمة في دمشق». المدينةُ «دمشق» مشتقّةٌ من إحداثيّات العنوان، فالقرارُ يتبع العنوانَ المختارَ لا موقعَ الجهاز.
+
+- **07-021 / 11-019 (تبديلُ العنوان بسلّةٍ ممتلئة) — PASS**: سلّةٌ فيها «ساندويش شاورما دجاج» (26,050). تبديلُ عنوان التوصيل داخل السلّة يعيد تقييمَ التسعيرة فورَه:
+  - إلى دمشق (خارج) ⇒ التوصيل 0، الإجمالي 26,050، وملاحظةُ «رحال غو لم يصل إلى دمشق بعد» فوق «أرسل الطلب».
+  - العودةُ للرقة (داخل) ⇒ التوصيل 100، الإجمالي 26,150، وإشعارُ «تغيّرت أجور التوصيل من 0 ل.س إلى 100 ل.س»، وتُمحى ملاحظةُ خارج التغطية.
+
+**التنظيف:** أُعيد العنوانُ الداخليُّ افتراضيّاً، حُذف عنوانُ دمشق (`DELETE /my/addresses`)، فُرِّغت السلّة. عادت الحالةُ لعنوانٍ داخليٍّ واحد.
+
+**ENG-011 (روابطُ صفحة التواصل) — يبقى NOT_TESTED**: صفحةُ «تواصل معنا» تعرض حالةً فارغةً لبقةً «لم تضبط وسائل التواصل بعد» (لا انهيار)، لكنّ الروابطَ (هاتف/واتساب/خريطة/تواصل) غيرُ مضبوطةٍ على staging ⇒ لا يُشهَد فتحُ النيّات. يحتاج ضبطَ إعداداتِ التواصل (أدمن — خارج نطاق «الزبون فقط»).
+
+**المجاميع (محقّقة): PASS 528 · FAIL 0 · BLOCKED 21 · N/A 10 · NOT_TESTED 19 = 578.**
 
 ### 40.67 · الجلسةُ المرافقة — WAL-010 (المحفظةُ ليست لحظيّة) على SM-A525F (٢٠٢٦-٠٩-٢٣)
 
