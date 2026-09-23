@@ -583,7 +583,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-032 | Cart | Recovery restores safe cart interaction | After 028–031 | Restore network | Cart usable after authoritative refresh | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إعادةُ الشبكة + إنعاش ⇒ عاد السوقُ والسلّةُ صالحةٌ للتفاعل | `PASS` | - | recovering | quote refetched | — | — | — | §7.11 |
 | CUST-11-033 | Cart | Suggestions row «يُطلب معه» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap a suggestion | Added with one tap; respects gating | Suggestions row «يُطلب معه» (مخللات/مشروب/عيران): tapping عيران added it with one tap -> cart line | `PASS` | SM-A525F/A14 vc12 | online | `/public/suggest` | — | — | — | Added: `SuggestRow.kt` |
 | CUST-11-034 | Cart | Empty cart via «إفراغ السلة» (added) | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Tap «إفراغ السلة» | Cart empty (no confirmation by design — note) | «إفراغ السلة» -> cart empty (no confirmation, by design) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added |
-| CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | CARRIED: offers-add-coverage-gate (CAF-12) needs an out-of-coverage address + Offers add | `BLOCKED` | - | online | no order | — | — | — | Added. CAF-12: offers add path skips the PreCart gate (server still validates at submit) |
+| CUST-11-035 | Cart | Add from Offers respects address/coverage gate (added) | Signed-in test customer · Staging · SM-A525F · valid default address · address outside coverage | Offers → «أضف إلى السلة» | Same gating as Shop add, or submit blocked explicitly | PASS — شاهدٌ باختبارٍ+نداءٍ حيّ (§40.55): CAF-12 عولِج — `OfferGateTest` أخضرُ هذه الجلسة (2/2): بابُ العروض يعيد استعمالَ نفسِ بوّابةِ السوق (`rememberAddBlocked`/`addActionFor==BLOCKED`) و`if(blocked)` يحرس كلَّ إضافةٍ في `Offers()`؛ ونداءٌ حيّ: gov_active=false على نقطة QA ⇒ availability=**province_not_supported** (خارج التغطية)، وبوّابةُ الإرسال تحجب صراحةً (08-015)؛ فالبابان محروسان | `PASS` | api+test | online | no order | — | — | `OfferGateTest` | CAF-12 remediated (shared PreCart gate); live offers-UI add-blocked = device parity candidate |
 | CUST-11-036 | Cart | Multi-source limit (added) | Signed-in test customer · Staging · SM-A525F · valid default address · `orders.max_sources`=1 | Add items from two sources; submit | Explicit `too_many_sources`/`multi_source_order` | CARRIED: multi-source limit (orders.max_sources=1 -> too_many_sources) needs a 2-source cart at submit | `BLOCKED` | - | online | no order | — | — | — | Added: no client check; server enforces |
 | CUST-11-037 | Cart | Corrupt persisted cart is discarded safely (added) | Emulator: corrupt `rahalgo_cart` prefs | Launch | Empty cart; no crash | — | `NOT_TESTED` | — | any | — | — | — | — | Added: unreadable cart is deleted by design |
 
@@ -1262,7 +1262,7 @@ until ADB is available — not an acceptance blocker.
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 24 | 0 | 3 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 30 | 0 | 6 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 31 | 0 | 5 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **26** | **10** | **507** | **0** | **35** |
+| | **Total** | **578** | **474** | **104** | **26** | **10** | **508** | **0** | **34** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,25 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.55 · الوضعُ الليليّ — 11-035 (بابُ العروض يحترم بوّابةَ التغطية، CAF-12 معالَج) (٢٠٢٦-٠٩-٢٣)
+
+**11-035** (الإضافةُ من العروض تحترم بوّابةَ العنوان/التغطية): CAF-12 (بابُ العروض كان ينادي `Cart.add`
+بلا بوّابةٍ ما قبل السلّة) **عولِج**. الدليل:
+
+- **اختبارٌ حيٌّ خُضرٌ هذه الجلسة** — `:app-customer:OfferGateTest` (2/2): `sharedGateReusesPreCartPath`
+  (PreCart.kt فيها `rememberAddBlocked(` وتعتمد `addActionFor(ctx0, availability) == AddAction.BLOCKED`
+  المركزيّة)، `offersGuardEveryAdd` (MineScreens.kt تستدعي `rememberAddBlocked(address)` و`Offers()` تحرس
+  كلَّ إضافةٍ بـ`if (blocked)`). ⇒ **بابُ العروض يمرّ بنفسِ بوّابةِ إضافةِ السوق** = «Same gating as Shop add».
+- **نداءٌ حيّ**: gov_active=false على نقطة QA (الرقة) ⇒ `GET /public/availability` = available=false
+  **province_not_supported** (خارج التغطية فعليّاً)، وبوّابةُ الإرسال تحجب صراحةً (مُشهَدٌ في 08-015/07-022).
+- بذّاراتُ الشاهد (merchant_open + offer + gov_active=false) **أُعيدت كلُّها**: gov=true (available=true)،
+  offer_off، جدولُ المتجر 7 صفوف. لا طلب، محفظة 0.
+
+**BLOCKED⇒PASS.** (شاهدُ العروض في الواجهة مباشرةً خارجَ التغطية: مرشَّحٌ لمكافأة الجهاز؛ العقدُ مُثبَتٌ
+بالاختبار الأخضر والنداء الحيّ.) وتصنيفُ CAF-12 في دفتر العيوب: الأثرُ عولِج بحارسٍ مشترك، وregression=`OfferGateTest`.
+
+الحصيلة (محقّقة): PASS 507⇒508، BLOCKED 35⇒34، NOT_TESTED 26، N/A 10، FAIL 0. = 578.
 
 ### 40.54 · الوضعُ الليليّ — خلفيّةٌ ≥30د: 17-012 + تحديثُ التوكن 06-009/06-010 (٢٠٢٦-٠٩-٢٣)
 
