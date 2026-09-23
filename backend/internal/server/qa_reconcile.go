@@ -317,11 +317,12 @@ var qaContactSaved map[string]string
 
 func (s *Server) qaContactSet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	by := "qa-staging"
+	// **`updated_by` عمودُ UUID** — تمريرُ نصٍّ غيرِ UUID يرمي 22P02. البذّارُ
+	// لا مستخدمَ له فيُترك NULL.
 	saved := map[string]string{}
 	for _, k := range qaContactKeys {
 		saved[k] = s.settings.GetString(ctx, k)
-		if err := s.settings.Set(ctx, k, qaContactValues[k], &by); err != nil {
+		if err := s.settings.Set(ctx, k, qaContactValues[k], nil); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -333,13 +334,12 @@ func (s *Server) qaContactSet(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) qaContactClear(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	by := "qa-staging"
 	for _, k := range qaContactKeys {
 		prev := ""
 		if qaContactSaved != nil {
 			prev = qaContactSaved[k]
 		}
-		if err := s.settings.Set(ctx, k, prev, &by); err != nil {
+		if err := s.settings.Set(ctx, k, prev, nil); err != nil {
 			s.respondErr(w, err)
 			return
 		}
