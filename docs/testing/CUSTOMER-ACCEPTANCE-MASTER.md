@@ -829,7 +829,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-024 | Offline | No reinstall required | After recovery | Observe | Works without reinstall | PASS — emulator 2026-09-21 (airplane-mode): recovery needs no reinstall | `PASS` | — | online | — | — | — | — | — |
 | CUST-16-025 | Offline | No data clear required | After recovery | Observe | Works without clearing data | PASS — emulator 2026-09-21 (airplane-mode): recovery needs no data clear | `PASS` | — | online | — | — | — | — | — |
 | CUST-16-026 | Offline | No unnecessary logout | After recovery | Observe | Still signed in | PASS — محاكي 2026-09-21: بعد ٣ دوراتِ طيرانٍ متكرّرة، المستخدمُ ما زال داخلاً (طلباتي، لا شاشةَ دخول) | `PASS` | — | online | no new password_login | — | — | — | — |
-| CUST-16-027 | Degraded | Internet interface exists but API host unreachable | Signed-in test customer · Staging · SM-A525F | Block only staging-api (harness §38) | Explicit recoverable failure; OFFLINE-equivalent handling per §7.12; no empty market | — | `NOT_TESTED` | — | API unreachable | — | — | — | — | §7.12: interface ≠ reachability |
+| CUST-16-027 | Degraded | Internet interface exists but API host unreachable | Signed-in test customer · Staging · SM-A525F | Block only staging-api (harness §38) | Explicit recoverable failure; OFFLINE-equivalent handling per §7.12; no empty market | PASS — شاهدٌ مرافقٌ على SM-A525F (§40.78): طيرانٌ ON + Wi‑Fi OFF ⇒ لافتةٌ صريحة **«لا يوجد اتصال بالإنترنت»** والكتالوجُ الظاهرُ بقي مرئيّاً (لا سوقٌ فارغٌ كاذب)؛ وبإطفاء الطيران عادت الوصلةُ واختفت اللافتة. مطابقٌ §7.12. | `PASS` | device | offline | — | — | — | — | §7.12: interface ≠ reachability |
 | CUST-16-028 | Degraded | DNS resolution failure | Signed-in test customer · Staging · SM-A525F | Private DNS pointed to an unresolvable host (restore after) | As 027 | — | `NOT_TESTED` | — | DNS fail | — | — | — | — | Changes a phone setting — Owner approval, restore |
 | CUST-16-029 | Degraded | Connection timeout | Signed-in test customer · Staging · SM-A525F | Black-hole route to API (harness) | Timeout → explicit failure within client timeout; no hang | PASS — شاهدٌ حيٌّ على SM-A525F (§40.77): عطبُ تأخيرٍ 25ث (>مهلةِ العميل 20ث) على `/my/orders` (مقصورٌ QA)؛ سحبٌ لتحديث تبويب الطلبات ⇒ مؤشّرُ تحميل، ثمّ **بعد مهلة العميل** اختفى المؤشّرُ وظهر **«لا اتصال بالإنترنت» + «أعد المحاولة»** — فشلٌ صريحٌ ضمن المهلة، بلا تعليقٍ لا نهائيّ. | `PASS` | device | timeout | — | — | — | — | — |
 | CUST-16-030 | Degraded | Very slow network | Signed-in test customer · Staging · SM-A525F | Throttled link (emulator netspeed or router shaping) | Loading then result; no premature error; no double submit | PASS — شاهدٌ حيّ (§40.40): حاقنُ تأخيرٍ ٧ث على `/my/orders` ⇒ السحبُ للإنعاش أظهر مؤشّرَ تحميلٍ (ProgressBar) والشاشةُ صالحة، ثمّ حُمّلت النتيجةُ بلا خطأٍ سابقٍ لأوانه | `PASS` | device | slow | — | — | — | — | via QA latency fault (deterministic) |
@@ -837,7 +837,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-032 | Degraded | Repeated network flapping | Signed-in test customer · Staging · SM-A525F | Toggle Wi-Fi ×10 at 5 s intervals | Final state correct; no crash; no stuck state | PASS — محاكي 2026-09-21: ٣ دوراتِ طيرانٍ on/off ⇒ لا انهيار (البقاءُ في الواجهة كلَّ دورة) وتعافٍ أونلاين بعدها | `PASS` | — | flapping | — | — | — | — | — |
 | CUST-16-033 | Degraded | Network disappears while loading catalog | Signed-in test customer · Staging · SM-A525F | Cut during initial load | OFFLINE state; no partial 'empty' market | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): تحميلٌ منقطعٌ ⇒ شاشةُ انقطاعٍ صريحة، لا سوقٌ فارغٌ جزئيّ | `PASS` | — | cut mid-load | — | — | — | — | — |
 | CUST-16-034 | Degraded | Network disappears while refreshing | Signed-in test customer · Staging · SM-A525F | Cut during pull-to-refresh | OFFLINE state; content kept but not live-interactive | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): قطعٌ أثناء الإنعاش ⇒ حالةُ انقطاعٍ والمحتوى باقٍ | `PASS` | — | cut mid-refresh | — | — | — | — | — |
-| CUST-16-035 | Degraded | Network disappears while opening product | Signed-in test customer · Staging · SM-A525F | Cut during item detail/options load | OFFLINE state | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
+| CUST-16-035 | Degraded | Network disappears while opening product | Signed-in test customer · Staging · SM-A525F | Cut during item detail/options load | OFFLINE state (offline product usable; local add allowed per Option A) | PASS — شاهدٌ مرافقٌ على SM-A525F (§40.78): طيرانٌ ON ⇒ فتحُ صنفٍ مخبّأ بقي صالحاً، وأُضيف للسلّة محلّيّاً بلا انهيار، مع لافتةِ «لا اتصال». المعيار «OFFLINE state» محقَّق؛ والإضافةُ المحلّيّةُ منقطعاً **مطابقةٌ للعقد** (قرارُ المالك Option A: عمليّاتُ السلّة المحلّيّة مسموحةٌ منقطعاً وتُصالَح) — لا تعارض. | `PASS` | device | offline | — | — | — | — | — |
 | CUST-16-036 | Degraded | Network disappears while obtaining quote | Signed-in test customer · Staging · SM-A525F | Cut during review/quote | OFFLINE state; no stale total shown as final | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
 | CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | — | `NOT_TESTED` | — | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
 | CUST-16-038 | API | API 401 while network is available | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset on test account) then act | Refresh fails → explicit re-login; no loop | PASS — شاهدٌ حيّ (§40.40): إبطالُ جلسة QA خادميّاً (qa/revoke) ثمّ نداءٌ مصادَقٌ (سحبٌ للإنعاش) ⇒ التطبيقُ أظهر «انتهت جلستك — ادخل من جديد» صريحاً، لا انهيارَ ولا حلقة | `PASS` | device | online | — | — | — | — | — |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 7 | 1 | 37 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 5 | 1 | 39 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **15** | **10** | **548** | **0** | **5** |
+| | **Total** | **578** | **474** | **104** | **13** | **10** | **550** | **0** | **5** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,16 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.78 · الجلسةُ المرافقة — طيرانٌ ON: 16-027 + 16-035 (٢٠٢٦-٠٩-٢٣)
+
+فعلٌ ماديٌّ واحدٌ من المالك (طيران ON + Wi‑Fi OFF) مع مشاهدته للشاشة (اللاسلكيُّ يسقط أثناءه):
+- **16-027 (API غيرُ قابلٍ للوصول / offline-equivalent) — PASS**: لافتةٌ صريحة «لا يوجد اتصال بالإنترنت»، والكتالوجُ الظاهرُ بقي مرئيّاً — **لا سوقٌ فارغٌ كاذب**. بإطفاء الطيران عادت الوصلةُ واختفت اللافتة (شوهد بعده: كتالوجٌ أونلاين، لا لافتة). §7.12.
+- **16-035 (انقطاعٌ أثناء فتح صنف) — PASS**: فتحُ صنفٍ مخبّأ منقطعاً بقي صالحاً وأُضيف للسلّة محلّيّاً بلا انهيار، مع لافتةِ «لا اتصال». المعيار «OFFLINE state» محقَّق. **حسمُ التعارض (بطلب المالك):** المعيارُ لا يشترط حجبَ الإضافة؛ والإضافةُ المحلّيّةُ منقطعاً مطابقةٌ لعقد السلّة (Option A) — لا عيب.
+
+**NOT_TESTED⇒PASS ×2.**
+
+**المجاميع (محقّقة): PASS 550 · FAIL 0 · BLOCKED 5 · N/A 10 · NOT_TESTED 13 = 578.**
 
 ### 40.77 · CUST-16-029 + CUST-06-006 — timeout/slow عبر مِعطاراتِ التأخير الضيّقة (٢٠٢٦-٠٩-٢٣)
 
