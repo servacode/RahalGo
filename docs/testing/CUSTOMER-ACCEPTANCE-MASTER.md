@@ -399,7 +399,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-004 | Auth | Whitespace/canonical phone | Signed out (guest) · Staging · SM-A525F | Login with 09… / +963… / spaces | All succeed for the same account | 09.. / +963.. / 00963.. all -> 200 for the same account (canonical normalization) | `PASS` | staging API | online | — | — | — | — | — |
 | CUST-06-005 | Auth | Repeated login tap | Signed out (guest) · Staging · SM-A525F | Triple-tap login | One session; UI consistent | SM-A525F triple-tap login -> exactly one new session (refresh_tokens 1->2); button busy after first tap | `PASS` | SM-A525F/A14 vc12 | online | one new android-customer session | — | — | — | — |
 | CUST-06-006 | Auth | Slow login response | Signed out (guest) · Staging · SM-A525F | Slow network | Loading then result | PASS — شاهدٌ حيٌّ على SM-A525F (§40.77): مِعطارُ تأخيرٍ ضيّقٌ (staging-only، رقمُ QA فقط، مأذون) على `/auth/login` 6ث. الدخولُ بـQA1 ⇒ **مؤشّرُ تحميلٍ** (ProgressBar، الزرُّ يفقد نصَّه) طوالَ المهلة، والعطبُ استُهلك مرّةً (نقرتان⇒دخولٌ واحدٌ = لا ازدواج)، ثمّ **دخولٌ ناجح** (مطالبةُ التقييم) — تحميلٌ ثمّ نتيجة، بلا تعليقٍ ولا ازدواج. | `PASS` | device | slow | — | — | — | — | — |
-| CUST-06-007 | Auth | Network loss during login | Signed out (guest) · Staging · SM-A525F | Cut after tap | Explicit failure; retry works | CARRIED: network-loss-during-login needs an offline harness that disables wireless ADB; mechanism proven by CUST-04-011 | `BLOCKED` | - | cut | — | — | — | — | — |
+| CUST-06-007 | Auth | Network loss during login | Signed out (guest) · Staging · SM-A525F | Cut after tap | Explicit failure; retry works | PASS — شاهدٌ حيٌّ على SM-A525F (§40.80) بمراقبةِ المالك: **وضعُ الطيران مُشغَّل** ⇒ ظهرت «لا اتصال بالإنترنت»، ولم يمضِ الدخولُ، بلا تعليقٍ ولا انهيار. **وضعُ الطيران مُطفأ** والاتصالُ عائد ⇒ الدخولُ نجح طبيعيّاً. الحالةُ بعدَ التعافي: QA1 داخلٌ (مؤشّرُ المحفظة «محفظتك» + تبويب «حسابي») — فشلٌ صريحٌ ثمّ إعادةُ محاولةٍ تعمل. | `PASS` | device | cut | — | — | — | — | — |
 | CUST-06-008 | Auth | Successful login lands on correct surface | Signed out (guest) · Staging · SM-A525F | Login | تسوق tab; cart/addresses of this account | SM-A525F login lands on the shop (تسوق) surface with the account wallet/address + 5-tab signed-in nav | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-06-009 | Auth | Access token refresh during use | Signed-in test customer · Staging · SM-A525F | Use > 15 min | Silent refresh; no interruption | PASS — شاهدٌ حيّ (§40.54): بعد خمولٍ >30د (تجاوز TTL 15د) نُفِّذت ثلاثةُ نداءاتٍ مصادَقةٍ متتالية (الطلبات/الحساب GET me «زبون الاختبار QA»/التصفّح) ⇒ كلُّها نجحت بلا مقاطعةٍ ولا شاشةِ دخول؛ ودورةُ التوكن مُثبَتةٌ خادميّاً (صالح⇒200، فاسد⇒401، تجديد⇒access جديد، إعادة⇒200) وApiClient يجدّد على 401 | `PASS` | device+api | online | `auth.refresh` audit | — | — | — | Access TTL 15 min |
 | CUST-06-010 | Auth | Expired access token with valid refresh recovers | Signed-in test customer · Staging · SM-A525F | Background > 15 min; act | Action succeeds after silent refresh | PASS — شاهدٌ حيّ (§40.54 + §40.50): التطبيقُ خُلّف >30د (وسابقاً 20د في 17-013)، التوكنُ منتهٍ، ثمّ فعلٌ مصادَقٌ ⇒ نجح بتحديثٍ صامتٍ بلا دخول؛ ودورةُ الاسترداد الخادميّة مُثبَتةٌ (401⇒/auth/refresh⇒200) | `PASS` | device+api | online | — | — | — | — | `shared/net/ApiClient.kt:147-176` |
@@ -1257,7 +1257,7 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 23 | 0 | 0 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 14 | 0 | 3 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 30 | 0 | 2 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 31 | 0 | 1 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 30 | 0 | 0 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 18 | 0 | 0 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **11** | **10** | **552** | **0** | **5** |
+| | **Total** | **578** | **474** | **104** | **11** | **10** | **553** | **0** | **4** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,15 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.80 · الجلسةُ المرافقة — طيرانٌ ON→OFF أثناء الدخول: 06-007 (٢٠٢٦-٠٩-٢٣)
+
+الجهازُ خارجٌ (ضيف)، وشاشةُ الدخول. فعلٌ ماديٌّ واحد مع مشاهدة المالك:
+- **06-007 (انقطاعُ الشبكة أثناء الدخول) — PASS**: **طيران ON** ⇒ ظهرت **«لا اتصال بالإنترنت»**، ولم يمضِ الدخولُ، بلا تعليقٍ ولا انهيار (لا دخولَ offline). **طيران OFF** والاتصالُ عائد ⇒ الدخولُ نجح طبيعيّاً. الحالةُ بعدَ التعافي (التُقطت من الجهاز): QA1 داخلٌ — مؤشّرُ المحفظة **«محفظتك»** أعلى وتبويب **«حسابي»** حاضران (شريطُ التنقّل خماسيٌّ = مسجَّل). فشلٌ صريحٌ ثمّ إعادةُ محاولةٍ تعمل.
+
+**BLOCKED⇒PASS ×1** (كانت محجوبةً على أنّها تحتاج مِعطارَ offline يُعطِّل ADB اللاسلكيّ؛ حُلّت بنمط مراقبةِ المالك).
+
+**المجاميع (محقّقة): PASS 553 · FAIL 0 · BLOCKED 4 · N/A 10 · NOT_TESTED 11 = 578.**
 
 ### 40.79 · الجلسةُ المرافقة — طيرانٌ ON: 16-036 + 16-037 (٢٠٢٦-٠٩-٢٣)
 
