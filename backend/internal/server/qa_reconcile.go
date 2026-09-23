@@ -387,6 +387,78 @@ func (s *Server) qaOTPCode(w http.ResponseWriter, r *http.Request, rawPhone, pur
 	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "phone": phone, "purpose": purpose})
 }
 
+// qaSignupBonusReverse **يعكس هديّةَ تسجيلِ حسابِ `qaSignupPhone`** (CUST-22-016،
+// تنظيفُ الدخان الحيّ).
+//
+// **لماذا مِعطارٌ ودَورُه**: كلُّ تسجيلٍ جديدٍ ينال هديّةً عامّة
+// (`customers.signup_bonus`) بقيدٍ **مزدوج**: +المبلغ للحساب و−المبلغ للخزينة
+// (`GrantSignupBonus`). فحذفُ الحساب يرفضه العقدُ ما دامت محفظتُه غيرَ صفر
+// (`ErrWalletNotEmpty`)، **ولا مِعطارَ قائمٌ يعكس الطرفين**: `qaWalletDrain`
+// مقصورٌ على QA1 وقيدُه **مفردٌ** (لا مقابلَ خزينة) فيُخلّ التوازن.
+//
+// **فالعكسُ هنا مزدوجٌ عبر المسار المعتمد** `wallet.ApplyTx` — **لا تعديلَ قاعدةٍ
+// خام**: −الرصيد من الحساب و+الرصيد على الخزينة في معاملةٍ واحدة، فيعود الحسابُ
+// **صفراً** والخزينةُ إلى ما كانت **قبل الهديّة** بالضبط. ثمّ يُحذف الحسابُ عبر
+// المسار الحقيقيّ `/auth/account/delete`. **staging فقط** (الموزّعُ خلفَ
+// `qaStagingEnabled` ⇒ ٤٠٤ في الإنتاج)، **ومقصورٌ على رقمِ تسجيل QA وحدَه**،
+// **وعكوسٌ** (رصيدٌ صفرٌ ⇒ لا قيد).
+func (s *Server) qaSignupBonusReverse(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	phone, ok := identity.NormalizePhone(qaSignupPhone)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var uid string
+	err := s.pg.QueryRow(ctx, `SELECT id::text FROM users WHERE phone = $1`, phone).Scan(&uid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		httpx.JSON(w, http.StatusOK, map[string]any{"reversed": 0, "note": "no_account"})
+		return
+	} else if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	bal, err := s.wallet.Balance(ctx, uid)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if bal == 0 {
+		httpx.JSON(w, http.StatusOK, map[string]any{"reversed": 0, "account_balance": 0})
+		return
+	}
+	var tid string
+	if err := s.pg.QueryRow(ctx, `SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1`).Scan(&tid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **قيدٌ مزدوجٌ في معاملةٍ واحدة** — إمّا كلاهما أو لا شيء.
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	actor := uid
+	accBal, _, e1 := s.wallet.ApplyTxID(ctx, tx, uid, -bal, "adjustment", "qa-signup-bonus-reverse", "عكسُ هديّة التسجيل (تنظيف QA)", &actor)
+	if e1 != nil {
+		s.respondErr(w, e1)
+		return
+	}
+	treBal, _, e2 := s.wallet.ApplyTxID(ctx, tx, tid, bal, "adjustment", "qa-signup-bonus-reverse", "عكسُ هديّة التسجيل — استعادةُ الخزينة (تنظيف QA)", &actor)
+	if e2 != nil {
+		s.respondErr(w, e2)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touchUser(uid, "wallet")
+	s.logger.Warn("QA signup bonus reversed (staging-only)", "user", uid, "amount", bal, "account_balance", accBal, "treasury_balance", treBal)
+	httpx.JSON(w, http.StatusOK, map[string]any{"reversed": bal, "account_balance": accBal, "treasury_balance": treBal})
+}
+
 // ── روابطُ التواصل (CUST-ENG-011) ───────────────────────────────────────
 // **يضبط إعداداتِ التواصل لشهودها على الجهاز ثمّ يستعيدها.** staging-only، عكوس،
 // **لا بابَ أدمن**: يكتب مفاتيحَ التواصل وحدَها ويحفظ سابقَها.

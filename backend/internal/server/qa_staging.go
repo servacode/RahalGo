@@ -305,6 +305,7 @@ var qaSeedAllowlist = map[string]bool{
 	"contact_set":            true, // ضبطُ إعداداتِ التواصل لشهودها (يحفظ السابق) — لا بابَ أدمن
 	"contact_clear":          true, // استعادةُ إعداداتِ التواصل السابقة
 	"otp_code":               true, // إصدارُ رمزِ OTP لرقمِ QA (04/05/06) — dev يطبع لا يرسل واتساب
+	"signup_bonus_reverse":   true, // عكسُ هديّةِ تسجيلِ حسابِ QA (CUST-22-016) — قيدٌ مزدوجٌ عبر ApplyTx
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -322,6 +323,7 @@ var qaStateSeed = map[string]bool{
 	"customer_suspend": true, "customer_restore": true, "customer_set_password": true,
 	"disposable_create": true, "disposable_delete_code": true,
 	"contact_set": true, "contact_clear": true, "otp_code": true,
+	"signup_bonus_reverse": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -455,6 +457,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaContactClear(w, r)
 		case "otp_code":
 			s.qaOTPCode(w, r, req.Phone, req.Purpose)
+		case "signup_bonus_reverse":
+			s.qaSignupBonusReverse(w, r)
 		}
 		return
 	}
