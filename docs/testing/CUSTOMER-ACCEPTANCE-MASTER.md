@@ -697,7 +697,7 @@ Full multi-role order progression belongs to later E2E acceptance. #1050 may be 
 | CUST-14-004 | Orders | Wrong customer cannot see another's order | Two customers | B calls A's order via API / UI list | Not visible; 404/403 | PASS — لا يرى طلبَ غيره: TestSECIDOR_Orders/TestOrder_IntruderCannotRead (go qa suite (0 FAIL, 2026-09-21)) | `PASS` | — | online | — | — | — | — | `TestSECIDOR_Orders`, `TestOrder_IntruderCannotRead` |
 | CUST-14-005 | Orders | Order status matches backend | Signed-in test customer · Staging · SM-A525F · valid default address | Compare chip with SoT | Equal | PASS — emulator: order status shown («بانتظار القبول») = backend new-order status (app fetches from server) | `PASS` | — | online | orders.status | — | — | — | — |
 | CUST-14-006 | Orders | Refresh order state | Signed-in test customer · Staging · SM-A525F · valid default address | Pull/return to tab | Fresh status | PASS — شاهدٌ حيّ (§40.40): #1126 «بانتظار القبول»، ثمّ سُوّق خادميّاً إلى on_the_way ⇒ السحبُ للإنعاش أظهر «في الطريق» + السائق (الحالةُ الجارية) | `PASS` | device | online | — | — | — | — | — |
-| CUST-14-007 | Orders | Realtime state update | Signed-in test customer · Staging · SM-A525F · valid default address · order progressing (ops/driver on a disposable order) | Keep طلباتي open | Status changes without manual refresh (WebSocket → Refresh.bump) | — | `NOT_TESTED` | — | online | — | — | — | — | Never progress #1050 |
+| CUST-14-007 | Orders | Realtime state update | Signed-in test customer · Staging · SM-A525F · valid default address · order progressing (ops/driver on a disposable order) | Keep طلباتي open | Status changes without manual refresh (WebSocket → Refresh.bump) | PASS — شاهدٌ حيٌّ على SM-A525F (§40.65): التطبيقُ في المقدّمة على تبويب الطلبات، وأُنشئ طلبٌ (#1146)؛ تسويقٌ خادميٌّ متتالٍ (order_advance) pending⇒dispatching⇒on_the_way **بلا لمسِ التطبيق** ⇒ البطاقةُ حدّثت حالتَها لحظيّاً «بانتظار سائق» ثمّ «في الطريق»+السائق (بلا سحبٍ يدويّ)، مطابقةً للـAPI. الوصلةُ اللحظيّة (WS) تعمل على الجهاز | `PASS` | — | online | — | — | — | — | Never progress #1050 |
 | CUST-14-008 | Orders | No duplicate rows after refresh/reconnect | Signed-in test customer · Staging · SM-A525F · valid default address | Reconnect ×3 | No duplicates | PASS — شاهدٌ حيّ (§40.30): `/my/orders` (٣٤ طلباً) قراءاتٌ متكرّرةٌ بلا معرّفٍ مكرّر؛ ودمجُ `mergeById` مشهودٌ حيّاً في ترقيم 14-026 (§40.29) | `PASS` | — | online | — | — | §40.30 | `OrdersMergeTest` | Live server + mergeById live-witnessed 2026-09-22 |
 | CUST-14-009 | Orders | Ordering/sorting correct | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with SoT | Newest first as designed | PASS — شاهدٌ حيّ (§40.30): `/my/orders` يعيد الأحدثَ أوّلاً (1113,1112,1111,… تنازليّاً) مطابقاً `created_at DESC` في المصدر | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
 | CUST-14-010 | Orders | Pending state | Disposable order pending | Read card | Stage bar at pending; cancel shown while window open | PASS — emulator: new order shows pending state «بانتظار القبول» | `PASS` | — | online | — | — | — | — | — |
@@ -777,7 +777,7 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-15-001 | Push | Order update reaches foreground app | Signed-in test customer · Staging · SM-A525F · valid default address · disposable order progressing | Keep app open | UI updates via WebSocket; notification per policy | — | `NOT_TESTED` | — | online | — | — | — | — | Realtime = WebSocket `/api/v1/ws` (no polling) |
+| CUST-15-001 | Push | Order update reaches foreground app | Signed-in test customer · Staging · SM-A525F · valid default address · disposable order progressing | Keep app open | UI updates via WebSocket; notification per policy | PASS — شاهدٌ حيّ (§40.65): تحديثُ حالةِ الطلب يصل التطبيقَ في المقدّمة لحظيّاً — order_advance خادميٌّ (pending⇒dispatching⇒on_the_way) انعكس فورَه على بطاقة #1146 دون إعادةٍ يدويّة (WS)، مطابقٌ للـAPI | `PASS` | — | online | — | — | — | — | Realtime = WebSocket `/api/v1/ws` (no polling) |
 | CUST-15-002 | Push | Update while backgrounded | As 001 · app backgrounded | Progress order | Push notification (urgent channel) | PASS — شاهدٌ حيّ (§40.36): التطبيقُ خلفيّةً + دفعةُ طلبٍ (qa/push عبر FCM) ⇒ ظهرت في الدرج بعنوانها/نصّها | `PASS` | — | online | notification_deliveries | — | — | — | — |
 | CUST-15-003 | Push | Notification while process killed | App force-stopped (not 'Force stop' in settings) | Progress order | Push shown; tap opens app | PASS — شاهدٌ حيّ (§40.36): العمليّةُ مقتولةٌ (am kill) ⇒ FCM أيقظها فظهر الإشعارُ، والنقرُ فتح التطبيق (MainActivity) | `PASS` | — | online | — | — | — | — | — |
 | CUST-15-004 | Push | Notification permission denied | Denied | Progress order | No push; in-app state still correct on open | PASS — شاهدٌ حيّ (§40.36): الإذنُ مرفوضٌ (importance=NONE) ⇒ لا دفعةَ في الدرج، والحالةُ في التطبيق صحيحةٌ (الإشعارُ في /me/notifications) | `PASS` | — | online | — | — | — | — | — |
@@ -1266,11 +1266,11 @@ until ADB is available — not an acceptance blocker.
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
-| 26 | CUST-14 | 26 | 20 | 6 | 1 | 3 | 22 | 0 | 0 |
+| 26 | CUST-14 | 26 | 20 | 6 | 0 | 3 | 23 | 0 | 0 |
 | 26A | CUST-SUP | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
 | 26B | CUST-WAL | 10 | 0 | 10 | 1 | 0 | 9 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 1 | 0 | 13 | 0 | 0 |
-| 27 | CUST-15 | 19 | 16 | 3 | 1 | 0 | 18 | 0 | 0 |
+| 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
 | 28 | CUST-16 | 45 | 45 | 0 | 8 | 1 | 36 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 2 | 1 | 19 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **23** | **10** | **520** | **0** | **25** |
+| | **Total** | **578** | **474** | **104** | **21** | **10** | **522** | **0** | **25** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,22 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.65 · الجلسةُ المرافقة — اللحظيّ على SM-A525F: 14-007 + 15-001 (٢٠٢٦-٠٩-٢٣)
+
+زبونُ QA داخلٌ على الجهاز (عبر customer_set_password + دخولِ الواجهة). أُنشئ طلبٌ #1146 والتطبيقُ في المقدّمة
+على تبويب الطلبات. تسويقٌ خادميٌّ متتالٍ (order_advance) **بلا لمسِ التطبيق**:
+- pending ⇒ **dispatching**: البطاقةُ حدّثت لحظيّاً «بانتظار سائق» (بلا سحبٍ يدويّ).
+- dispatching ⇒ **on_the_way**: البطاقةُ عرضت «في الطريق» + السائق لحظيّاً.
+كلٌّ مطابقٌ للـAPI. **الوصلةُ اللحظيّة (WebSocket /ws) تعمل على الجهاز الحقيقيّ** (بخلاف المحاكي). ⇒
+**14-007** (تحديثُ الحالة اللحظيّ) و**15-001** (يصل التطبيقَ في المقدّمة) **PASS**. أُغلق #1146 (delivered،
+custom+cash محايد)، لا طلبٌ مفتوح، reconcile نظيف.
+
+### 40.64 · الجلسةُ المرافقة — 10-014 (خيارٌ غير متاحٍ معطَّل) على SM-A525F (٢٠٢٦-٠٩-٢٣)
+
+بذّار option_available عطّل «جبنة» على a9e0d86f؛ فُتحت ورقةُ الصنف على الجهاز (زبون QA داخل) ⇒ «جبنة» ظاهرةٌ
+لكن **غيرُ قابلةٍ للانتقاء**: نقرُها لم يُغيّر «أضف — 26,050» (لا تُختار)، بينما نقرُ «بطاطا» (متاح) رفعه إلى
+30,050 (+4000). فالخيارُ غيرُ المتاح معطَّلٌ لا يُنقر (مطابقٌ للمصدر ItemOptionsSheet:190/202/216). أُعيدت «جبنة». **PASS.**
 
 ### 40.63 · الجلسةُ المرافقة على SM-A525F — البدء + 09-011 (٢٠٢٦-٠٩-٢٣)
 
