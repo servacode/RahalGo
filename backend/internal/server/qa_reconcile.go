@@ -349,6 +349,24 @@ func (s *Server) qaMaybeSignupLatency(rawPhone string) {
 	}
 }
 
+// qaMaybeLoginLatency **مِعطارُ تأخيرٍ ضيّقٌ لدخول QA (CUST-06-006)** — نظيرُ
+// معطارِ التسجيل: `/auth/login` غيرُ مصادَقٍ فلا يبلغه حاقنُ العطب العاديّ (المقصورُ
+// على uid)؛ فهذا يُطبّق التأخيرَ المسلَّح **لرقم QA وحدَه** على التجهيز، افتراضُه
+// مطفأ (لا عطبَ مسلَّح ⇒ لا أثر). لا يمسّ رقماً آخرَ ولا الإنتاج.
+func (s *Server) qaMaybeLoginLatency(rawPhone string) {
+	if !s.qaStagingEnabled() {
+		return
+	}
+	phone, ok := identity.NormalizePhone(rawPhone)
+	if !ok || phone != qaStagingPhone {
+		return
+	}
+	if f, ok := qaFaults.take("/api/v1/auth/login"); ok && f.mode == qaFaultLatency {
+		s.logger.Warn("QA login latency injected (staging-only)", "ms", f.ms)
+		time.Sleep(time.Duration(f.ms) * time.Millisecond)
+	}
+}
+
 // qaOTPCode يُصدر رمزَ OTP لرقمِ QA وغرضٍ محدَّدين ويُعيده.
 func (s *Server) qaOTPCode(w http.ResponseWriter, r *http.Request, rawPhone, purpose string) {
 	phone, ok := identity.NormalizePhone(rawPhone)

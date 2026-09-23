@@ -103,6 +103,9 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **مِعطارُ تأخيرٍ ضيّقٌ على التجهيز** — لشهود «دخولٌ بطيء» (CUST-06-006)،
+	// مقصورٌ على رقم QA، افتراضُه مطفأ، بلا أثرٍ في الإنتاج (يفحص qaStagingEnabled).
+	s.qaMaybeLoginLatency(req.Phone)
 	res, err := s.identity.LoginPassword(r.Context(), req.Phone, req.Password, r.UserAgent(), clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
