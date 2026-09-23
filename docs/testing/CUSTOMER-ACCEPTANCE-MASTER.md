@@ -543,7 +543,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-10-011 | Item | Options/variants/add-ons | Item with option groups | Pick options (max=1 replaces) | Live price updates; options sent as ids | Pick options -> live price updates (عادي 26,050 -> كبير 35,050, +9,000); option sent + persisted to cart as كبير | `PASS` | SM-A525F/A14 vc12 | online | order item options == picked | — | — | — | — |
 | CUST-10-012 | Item | Required option missing | Item with required group | Try to add without choosing | Add disabled until minimums met | Required option missing -> tap أضف without choosing size is blocked (stays on sheet, nothing added) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-10-013 | Item | Long product names do not break layout | Long-name fixture | Open grid/sheet/cart | Readable; actions reachable | PASS — شاهدٌ حيّ (§40.41): بذّار item_name وضع اسماً ١٢٠ حرفاً على صنفٍ ظاهر ⇒ بطاقةُ المتجر تقصّه سطراً واحداً (ellipsis) والسعرُ/التخطيطُ سليمان، لا انهيارَ ولا تجاوز؛ أُعيد الاسمُ الأصليّ | `PASS` | device | online | — | — | — | — | via item_name fixture |
-| CUST-10-014 | Item | Unavailable option disabled (added) | Item with an unavailable option | Open sheet | Option disabled; cannot be picked | ATTENDED (تأكيدُ واجهةٍ ~٣٠ث) — البذّارُ بُني ونُشر (`qa/seed option_available`، عكوسٌ)، وشاهدٌ خادميٌّ حيّ: تعطيلُ «جبنة» ⇒ `available:false` في تفصيل الصنف. والمصدرُ يربط الإتاحةَ بالواجهة صراحةً (ItemOptionsSheet.kt:190 `if(o.available) onPick`، :202 `.clickable(enabled=option.available)`، :216 لونٌ مكتوم) ⇒ خيارٌ غيرُ متاحٍ = معطَّلٌ لا يُنقر. عرضُ الواجهة مؤجَّلٌ: **شبكةُ المحاكي انهارت عتاديّاً هذه الجلسة** (لا واجهةَ راديو، يصمد الإقلاعَ البارد) — تأكيدٌ بصريٌّ خاطفٌ على جهاز المالك | `BLOCKED` | api+src | online | جبنة restored (available=true) | — | — | — | fixture built+deployed; server+source confirmed; UI-render device (emulator NIC failed) |
+| CUST-10-014 | Item | Unavailable option disabled (added) | Item with an unavailable option | Open sheet | Option disabled; cannot be picked | PASS — شاهدٌ حيٌّ على SM-A525F (§40.64): بذّار option_available عطّل «جبنة»؛ فُتحت ورقةُ ساندويش شاورما دجاج (زبون QA داخلٌ عبر customer_set_password)، فظهرت «جبنة» ضمن الإضافات لكن **غيرَ قابلةٍ للانتقاء**: النقرُ عليها لم يُغيّر السعرَ (أضف—26,050 ثابت)، بينما نقرُ «بطاطا» (متاح) رفعه إلى 30,050 (+4000). فالخيارُ غيرُ المتاح معطَّلٌ لا يُختار. أُعيدت «جبنة»، لا إضافةَ للسلّة | `PASS` | device | online | جبنة restored | — | — | — | live SM-A525F: unavailable option not selectable (price unchanged); available option selectable |
 
 ## 22 · CUST-11 — Cart
 
@@ -1261,7 +1261,7 @@ until ADB is available — not an acceptance blocker.
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 27 | 0 | 0 |
-| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
+| 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 34 | 0 | 3 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **23** | **10** | **519** | **0** | **26** |
+| | **Total** | **578** | **474** | **104** | **23** | **10** | **520** | **0** | **25** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
