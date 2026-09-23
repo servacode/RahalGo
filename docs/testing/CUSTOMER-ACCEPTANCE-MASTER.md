@@ -838,8 +838,8 @@ Audited: FCM push (channels `rahalgo_urgent` / `rahalgo_default`) and a WebSocke
 | CUST-16-033 | Degraded | Network disappears while loading catalog | Signed-in test customer · Staging · SM-A525F | Cut during initial load | OFFLINE state; no partial 'empty' market | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): تحميلٌ منقطعٌ ⇒ شاشةُ انقطاعٍ صريحة، لا سوقٌ فارغٌ جزئيّ | `PASS` | — | cut mid-load | — | — | — | — | — |
 | CUST-16-034 | Degraded | Network disappears while refreshing | Signed-in test customer · Staging · SM-A525F | Cut during pull-to-refresh | OFFLINE state; content kept but not live-interactive | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): قطعٌ أثناء الإنعاش ⇒ حالةُ انقطاعٍ والمحتوى باقٍ | `PASS` | — | cut mid-refresh | — | — | — | — | — |
 | CUST-16-035 | Degraded | Network disappears while opening product | Signed-in test customer · Staging · SM-A525F | Cut during item detail/options load | OFFLINE state (offline product usable; local add allowed per Option A) | PASS — شاهدٌ مرافقٌ على SM-A525F (§40.78): طيرانٌ ON ⇒ فتحُ صنفٍ مخبّأ بقي صالحاً، وأُضيف للسلّة محلّيّاً بلا انهيار، مع لافتةِ «لا اتصال». المعيار «OFFLINE state» محقَّق؛ والإضافةُ المحلّيّةُ منقطعاً **مطابقةٌ للعقد** (قرارُ المالك Option A: عمليّاتُ السلّة المحلّيّة مسموحةٌ منقطعاً وتُصالَح) — لا تعارض. | `PASS` | device | offline | — | — | — | — | — |
-| CUST-16-036 | Degraded | Network disappears while obtaining quote | Signed-in test customer · Staging · SM-A525F | Cut during review/quote | OFFLINE state; no stale total shown as final | — | `NOT_TESTED` | — | cut | — | — | — | — | — |
-| CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | — | `NOT_TESTED` | — | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
+| CUST-16-036 | Degraded | Network disappears while obtaining quote | Signed-in test customer · Staging · SM-A525F | Cut during review/quote | OFFLINE state; no stale total shown as final | PASS — شاهدٌ مرافقٌ على SM-A525F (§40.79): طيرانٌ ON أثناء المراجعة ⇒ رسالةٌ صريحة «لا يوجد اتصال بالإنترنت» أسفلَ الشاشة، والمجموعُ السابقُ ظاهرٌ لكنّ «أرسل الطلب» **معطَّل** — فالمجموعُ غيرُ مقدَّمٍ كنهائيٍّ قابلٍ للإرسال (حالةٌ offline صريحة). لا انهيار. | `PASS` | device | offline | — | — | — | — | — |
+| CUST-16-037 | Degraded | Network disappears during final order submission | Signed-in test customer · Staging · SM-A525F | Cut after tapping «أرسل الطلب» | Ambiguous result handled: on reconnect the app shows the committed order once or allows a safe retry; never a duplicate | PASS — شاهدٌ مرافقٌ على SM-A525F (§40.79): منقطعاً كان «أرسل الطلب» **معطَّلاً/مقفلاً** فتعذّر الإرسال (مُنعت الحالةُ الغامضة أصلاً)، لا انهيار. تحقُّقٌ خادميٌّ بعد العودة: **لا طلبَ جديد** (أحدثُ طلبٍ هو الملغى 45118ed7 قبل الاختبار)، qa_open_orders=0 — never a duplicate. | `PASS` | device | cut mid-submit | order count +0 or +1, never +2 | — | — | — | Ties to CUST-13-007/008 |
 | CUST-16-038 | API | API 401 while network is available | Signed-in test customer · Staging · SM-A525F | Revoke session server-side (password reset on test account) then act | Refresh fails → explicit re-login; no loop | PASS — شاهدٌ حيّ (§40.40): إبطالُ جلسة QA خادميّاً (qa/revoke) ثمّ نداءٌ مصادَقٌ (سحبٌ للإنعاش) ⇒ التطبيقُ أظهر «انتهت جلستك — ادخل من جديد» صريحاً، لا انهيارَ ولا حلقة | `PASS` | device | online | — | — | — | — | — |
 | CUST-16-039 | API | API 403 | Signed-in test customer · Staging · SM-A525F | Hit a forbidden action (e.g. blocked account)  | Explicit denial message | PASS — شاهدٌ باختبارٍ+نداءٍ حيّ (§40.52): التطبيقُ يصنّف 403 صراحةً — `passwordChangeRequiredClassifier`/`globalHookRoutesPasswordChange` (403 password_change_required ⇒ شاشةُ تبديلٍ إجباريّة) و`authUnavailableDoesNotClearSession` (403 ليس في sessionRejected ⇒ لا طردَ خاطئ/حلقة)، سبعةٌ+أحدَ عشرَ اختباراً خُضرٌ هذه الجلسة؛ و403 عامٌّ يُعرَض بمفتاح رسالته (نفسُ خطِّ العرض المُشهَد حيّاً في 401/409/503/5xx والمحروسُ بـcheck-app-error-codes)؛ نداءٌ حيٌّ: الخادمُ يردّ حالاتٍ ومفاتيحَ صحيحة | `PASS` | api+test | online | — | — | — | — | live in-app 403 render deferred (cross-account=404, role=401, whatsapp/pw/forbidden need server state) — candidate for attended device parity |
 | CUST-16-040 | API | API 409 | Signed-in test customer · Staging · SM-A525F | Trigger a conflict (e.g. address limit / state conflict) | Explicit conflict message | PASS — شاهدٌ خادميٌّ حيّ (§40.30): تجاوزُ سقف العناوين (`customers.max_addresses`=٤) ⇒ 409 `too_many_addresses`؛ نُظّفت العناوينُ الزائدة | `PASS` | — | online | — | — | §40.30 | — | Live-witnessed 2026-09-22 (§40.30) |
@@ -1271,14 +1271,14 @@ until ADB is available — not an acceptance blocker.
 | 26B | CUST-WAL | 10 | 0 | 10 | 0 | 0 | 10 | 0 | 0 |
 | 26C | CUST-ENG | 14 | 0 | 14 | 0 | 0 | 14 | 0 | 0 |
 | 27 | CUST-15 | 19 | 16 | 3 | 0 | 0 | 19 | 0 | 0 |
-| 28 | CUST-16 | 45 | 45 | 0 | 5 | 1 | 39 | 0 | 0 |
+| 28 | CUST-16 | 45 | 45 | 0 | 3 | 1 | 41 | 0 | 0 |
 | 29 | CUST-17 | 22 | 21 | 1 | 0 | 1 | 21 | 0 | 0 |
 | 30 | CUST-18 | 21 | 20 | 1 | 0 | 0 | 21 | 0 | 0 |
 | 31 | CUST-19 | 29 | 25 | 4 | 1 | 0 | 28 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **13** | **10** | **550** | **0** | **5** |
+| | **Total** | **578** | **474** | **104** | **11** | **10** | **552** | **0** | **5** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,16 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.79 · الجلسةُ المرافقة — طيرانٌ ON: 16-036 + 16-037 (٢٠٢٦-٠٩-٢٣)
+
+سلّةٌ نظيفةٌ بصنفٍ طازج (بعد إلغاء الطلب العرضيّ 45118ed7). فعلٌ ماديٌّ واحد (طيران ON) مع مشاهدة المالك:
+- **16-036 (انقطاعٌ أثناء التسعيرة) — PASS**: المجموعُ السابقُ بقي ظاهراً، ورسالةٌ صريحة **«لا يوجد اتصال بالإنترنت»** أسفل، و**«أرسل الطلب» معطَّل** — حالةٌ offline صريحة، والمجموعُ غيرُ مقدَّمٍ كنهائيٍّ قابلٍ للإرسال (المعيارُ لا يشترط اختفاءَ المجموع). لا انهيار.
+- **16-037 (انقطاعٌ عند الإرسال) — PASS**: «أرسل الطلب» معطَّلٌ منقطعاً فتعذّر الإرسال (مُنعت الحالةُ الغامضة)، لا انهيار/تعليق. **تحقُّقٌ خادميٌّ بعد العودة: لا طلبَ جديد** (أحدثُ طلبٍ هو الملغى 45118ed7 السابقُ للاختبار، qa_open_orders=0) — never a duplicate.
+
+**NOT_TESTED⇒PASS ×2.**
+
+**المجاميع (محقّقة): PASS 552 · FAIL 0 · BLOCKED 5 · N/A 10 · NOT_TESTED 11 = 578.**
 
 ### 40.78 · الجلسةُ المرافقة — طيرانٌ ON: 16-027 + 16-035 (٢٠٢٦-٠٩-٢٣)
 
