@@ -500,12 +500,12 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-004 | Market | Inactive/retired sections not shown | Signed-in test customer · Staging · SM-A525F · valid default address | Compare with retired list | None of the 6 retired starters / inactive sections | API returns only active sections (44 of 47 total); retired/inactive never returned/shown | `PASS` | staging API | online | active=false rows | — | — | — | — |
 | CUST-09-005 | Market | Section ordering correct | Signed-in test customer · Staging · SM-A525F · valid default address | Read rail order | Matches `sort_order` | Visible sections ordered by sort_order (1,3,6,7,9,10,11,12,16,26); API + device rail match | `PASS` | SM-A525F+API | online | sort_order | — | — | — | — |
 | CUST-09-006 | Market | Open section | Signed-in test customer · Staging · SM-A525F · valid default address | Tap a section chip | Its items only | Open section -> /public/sections/{id}/items returns the section items (5 for شاورما) | `PASS` | SM-A525F+API | online | `/public/sections/{id}/items` | — | — | — | P8-C3-015 prior DEVICE_VERIFIED |
-| CUST-09-007 | Market | Return without losing position/state | Signed-in test customer · Staging · SM-A525F · valid default address | Scroll; switch tab; return | Same section and position where designed | CARRIED: return-without-losing-position (scroll+tab-switch+return) needs a clean device state witness | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-09-007 | Market | Return without losing position/state | Signed-in test customer · Staging · SM-A525F · valid default address | Scroll; switch tab; return | Same section and position where designed | **PRODUCT-DECISION ROW** (§40.57): الحالةُ الجوهريّةُ محفوظةٌ — العودةُ إلى القسم نفسِه (Shop، لأنّ `tab` عبر `rememberSaveable`)، السلّةُ والجلسةُ باقيتان، لا انهيار (شاهدٌ حيّ). أمّا **إزاحةُ التمرير** فتُعادُ للأعلى بالتصميم (تركيبٌ شرطيّ `tab==Tab.Shop -> ShopScreen()` بلا `SaveableStateHolder`، وحالةُ القائمة غيرُ محفوظة). **لا عقدَ صريحٌ** يوجب حفظَ الإزاحة عبر تبديل التبويب (GROUND-RULES صامتة؛ «where designed» تفويضيّة) ⇒ **غيرُ محدَّد**. قرارُ المالك: أ) قبولُ الإرجاع للأعلى (الحاليّ)، أم ب) إضافةُ SaveableStateHolder لحفظ الإزاحة. | `BLOCKED` | - | online | state preserved; scroll-offset reset by design | — | — | — | Product decision: scroll-offset retention across tab-switch (unspecified) |
 | CUST-09-008 | Market | Products/items load | Signed-in test customer · Staging · SM-A525F · valid default address | Open section | Grid of items with price pills | Items grid loads with price pills (device + API items array) | `PASS` | SM-A525F+API | online | — | — | — | — | — |
 | CUST-09-009 | Market | Available product displays correctly | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect card | Image, price, discount chip, + button | Item card has image_url, price, price_before/discount_percent, has_options (+ button); price==SoT (CUST-DEF-005) | `PASS` | SM-A525F+API | online | price == SoT | — | — | — | — |
 | CUST-09-010 | Market | Unavailable product behaviour | Item marked unavailable | Inspect card | «غير متوفر» chip; + hidden; section stays | Unavailable items exist (مشاوي count>orderable_now); item.available/source_closed drive the غير متوفر/closed chip; prior device evidence P8-L1-017 | `PASS` | SM-A525F+API | online | item available=false | — | — | — | P8-L1-017 prior evidence |
 | CUST-09-011 | Market | Missing/broken image does not break the screen | Item with broken media | Open section | Placeholder; layout intact | CARRIED: broken-image placeholder needs an item with broken media | `BLOCKED` | - | online | — | — | — | — | P8-C3-023 |
-| CUST-09-012 | Market | Genuine empty catalog has explicit empty state | Geography with no content | Open تسوق | «نعمل حاليًا على إضافة المتاجر والمنتجات»; no retry (by design) | CARRIED: genuine-empty-catalog state needs a geography with zero content (service_available + 0 items) | `BLOCKED` | - | online | `service_available` + zero items | — | — | — | P8-L1-018 prior evidence |
+| CUST-09-012 | Market | Genuine empty catalog has explicit empty state | Geography with no content | Open تسوق | «نعمل حاليًا على إضافة المتاجر والمنتجات»; no retry (by design) | PASS — شاهدٌ حيّ (§40.57): عُطّلت كلُّ الأقسام العشرة المملوءة ببذّار section_active=false (كلُّها previous=true)، إقلاعٌ ⇒ الشاشةُ أظهرت الحالةَ الفارغةَ الصريحة «نعمل حاليًا على إضافة المتاجر والمنتجات» + «ستظهر الخيارات هنا فور توفرها»، بلا انهيارٍ ولا إعادةِ محاولة؛ أُعيدت الأقسامُ العشرة (10 فعّالة) | `PASS` | device | online | `service_available` + zero items | — | — | — | via section_active fixture (reversible) |
 | CUST-09-013 | Market | API/network failure never shows the genuine-empty message | Signed-in test customer · Staging · SM-A525F · valid default address | Offline / API blocked | Error or OFFLINE state instead | API/network failure -> error/OFFLINE state, never the genuine-empty message (cross-ref CUST-08-016 / CUST-02-010 reversible dead-proxy) | `PASS` | SM-A525F/A14 vc12 | offline / API down | — | — | — | — | — |
 | CUST-09-014 | Market | Refresh normally | Signed-in test customer · Staging · SM-A525F · valid default address | Pull-to-refresh | Refreshed; spinner ends | Pull-to-refresh -> items refresh, spinner ends | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | P8-C3-017 |
 | CUST-09-015 | Market | Repeated refresh | Signed-in test customer · Staging · SM-A525F · valid default address | Pull ×5 quickly | One effective refresh; no stuck spinner | 5 rapid pulls -> one effective refresh, no stuck spinner | `PASS` | SM-A525F/A14 vc12 | online | request count sane | — | — | — | `MarketplaceRaceTest` |
@@ -571,7 +571,7 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-020 | Cart | Item becomes unavailable while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart | Change listed; submit blocked until reviewed/removed | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ صراحةً «أحد الأصناف غير متوفر حاليا» (التطبيق)، والخادمُ يردّ 409، لا طلب؛ أُعيدت الإتاحة | `PASS` | device+api | online | — | — | — | — | P8-C3-027/036 |
 | CUST-11-021 | Cart | Price changes while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin changes price | Open cart | «cart changes» list + «متابعة بالقيم الحالية» | Price change while item in cart -> «cart changes» review + «متابعة بالقيم الحالية» (cross-ref CUST-DEF-005, real price change on order #1063) | `PASS` | SM-A525F/A14 vc12 | online | quote | — | — | — | P8-C3-028 |
 | CUST-11-022 | Cart | Item retired while in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · item disabled via seed | Open cart; submit | Explicit; no order with retired item | PASS — شاهدٌ حيّ (§40.49): صنفٌ في السلّة ثمّ item_available=false ⇒ الإرسالُ محجوبٌ خادميّاً 409 `item_unavailable`، لا طلب؛ الضابطُ يُنشئ، أُعيدت الإتاحة | `PASS` | api | online | no order | — | — | — | retire≈unavailable for order-blocking |
-| CUST-11-023 | Cart | Section becomes inactive while item in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin deactivates section | Open cart; submit | Explicit per contract | CARRIED: section-inactive-while-item-in-cart needs an Admin deactivate | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-11-023 | Cart | Section becomes inactive while item in cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · Admin deactivates section | Open cart; submit | Explicit per contract | PASS — العقدُ محسومٌ من المصدر + شاهدٌ حيّ (§40.57): `service.go:732-757` يحرس بـ`mi.available AND mi.approved` فقط، و`LEFT JOIN platform_sections` يقرأ `margin_override` لا `ps.active` — والتعليقُ صريح «إخفاءُ صنفٍ من التصفّح لا يمنع طلبَه». نداءٌ حيّ: تسعيرةُ a9e0d86f **متطابقةٌ** قبل تعطيل قسم شاورما وبعده (26,050/الإجمالي 26,150، serviceable=true؛ الحاجزُ الوحيدُ merchant_closed_now = دوامٌ لا قسم). القسمُ عرضٌ لا بوّابةُ طلب ⇒ إنشاءُ الطلب صحيحٌ بالعقد | `PASS` | api | online | order gates on item.available, not section | — | — | — | display-only; contract resolved |
 | CUST-11-024 | Cart | Zone closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · zone hours closed | Open cart | Zone-closed note; send disabled | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ zone_close ⇒ الإرسالُ محجوبٌ (التطبيق يمنع، الخادمُ 503 zone_closed_now)، لا طلب؛ أُعيدت المنطقة | `PASS` | device+api | online | — | — | — | — | — |
 | CUST-11-025 | Cart | Platform ordering closes with populated cart | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · platform closure | Open cart | Owner text; send disabled | PASS — شاهدٌ حيّ (§40.42): صنفٌ في السلّة ثمّ platform_pause ⇒ الإرسالُ محجوبٌ (الخادمُ 503)، لا طلب؛ أُعيد التشغيل | `PASS` | device+api | online | — | — | — | — | `Serving` refreshed on cart open |
 | CUST-11-026 | Cart | Source becomes closed/unavailable | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated · source store closed | Open cart | Explicit; per contract | PASS — شاهدٌ خادميٌّ حيّ (§40.31): مصدرٌ مغلقٌ (merchant_emergency) ⇒ POST /orders = 409 merchant_closed صريح؛ استُعيد | `PASS` | - | online | — | — | — | — | — |
@@ -1260,9 +1260,9 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 22 | 0 | 10 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 24 | 0 | 3 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 25 | 0 | 2 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
-| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 32 | 0 | 5 |
+| 22 | CUST-11 | 37 | 32 | 5 | 0 | 0 | 33 | 0 | 4 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **25** | **10** | **510** | **0** | **33** |
+| | **Total** | **578** | **474** | **104** | **25** | **10** | **512** | **0** | **31** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,24 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.57 · دفعةُ الإغلاق الأخيرة قبل الجلسة المرافقة — 09-007/11-023/09-012 (٢٠٢٦-٠٩-٢٣)
+
+- **09-007 (قرارُ منتج، لا تحويل)**: العودةُ بعد تبديل التبويب — الحالةُ الجوهريّةُ محفوظةٌ (القسم Shop عبر
+  `rememberSaveable`، السلّة، الجلسة، لا انهيار — شاهدٌ حيّ). لكنّ إزاحةَ التمرير تُعاد للأعلى **بالتصميم**:
+  `MainActivity` يركّب التبويبَ شرطيّاً (`tab==Tab.Shop -> ShopScreen()`) بلا `SaveableStateHolder`،
+  و`ShopScreen` بلا حالةِ قائمةٍ محفوظة. **لا عقدَ صريحٌ** يوجب حفظَ الإزاحة عبر التبويب (GROUND-RULES صامتة؛
+  المعيار «where designed» تفويضيّ) ⇒ **غيرُ محدَّد**. يبقى صفَّ قرارِ منتجٍ صريحاً (أ: قبول الإرجاع للأعلى،
+  ب: SaveableStateHolder). لم يُحوَّل.
+- **11-023 (العقدُ محسوم ⇒ PASS)**: القسمُ غيرُ الفعّال **لا يمنع الطلب**. المصدر `service.go:732-757` يحرس
+  بـ`mi.available AND mi.approved` فقط؛ `LEFT JOIN platform_sections` لقراءة `margin_override` لا `ps.active`؛
+  والتعليقُ صريح «إخفاءُ صنفٍ من التصفّح لا يمنع طلبَه». شاهدٌ حيّ: تسعيرةُ a9e0d86f **متطابقةٌ** قبل تعطيل
+  قسم شاورما وبعده (26,050/26,150، serviceable=true؛ الحاجزُ الوحيد merchant_closed_now = دوام). أُعيد القسم.
+- **09-012 (شاهدٌ حيّ ⇒ PASS)**: عُطّلت الأقسامُ العشرةُ المملوءةُ كلُّها (section_active=false، previous=true
+  للكلّ) ⇒ إقلاعٌ ⇒ الحالةُ الفارغةُ الصريحة **«نعمل حاليًا على إضافة المتاجر والمنتجات»** + «ستظهر الخيارات
+  هنا فور توفرها»، بلا انهيارٍ ولا إعادة. أُعيدت الأقسامُ العشرةُ فعّالةً.
+
+الحصيلة (محقّقة): PASS 510⇒512، BLOCKED 33⇒31، NOT_TESTED 25، N/A 10، FAIL 0. = 578. (09-007 يبقى صفَّ قرار.)
 
 ### 40.56 · الوضعُ الليليّ — 11-037 (سلّةٌ فاسدةٌ تُطرح) + 06-011 (جلسةٌ مُبطَلةٌ ⇒ دخولٌ صريح) (٢٠٢٦-٠٩-٢٣)
 
