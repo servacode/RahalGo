@@ -423,7 +423,7 @@ Use the actual Staging OTP mechanism (dev provider → Staging API log). Never p
 | CUST-06-028 | Auth | Startup session restore fails on network (added) | Signed-in test customer · Staging · SM-A525F · offline at cold start | Launch | OfflineScreen with retry (restore); session kept; recovers on retry | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.33): إقلاعٌ باردٌ منقطعاً ⇒ شاشةُ «لا يوجد اتصال» + «أعد المحاولة»؛ وبعد إعادة الشبكة والنقرِ عادت السوقُ (الجلسةُ محفوظة) | `PASS` | - | offline | — | — | — | — | Added: `AuthGate` offline branch (`ui/AppFrame.kt:310`) |
 | CUST-06-029 | Auth | Startup restore with rejected session wipes it (added) | Session revoked server-side · app killed | Launch | Session cleared; guest shell or login; no crash | SM-A525F: refresh tokens revoked server-side -> relaunch -> session restore 401 -> wiped to guest shell, no crash | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: `sessionRejected` on 401/invalid_refresh |
 | CUST-06-030 | Auth | Guest browsing and NeedAccount gates (added) | Signed out (guest) · Staging · SM-A525F | Browse تسوق; open طلب خاص; tap + on an item; heart | Browse works; custom → «هذا القسم يحتاج حسابا»; + and heart → login | SM-A525F guest: browse works; custom-order tab -> needs-account gate; add-to-cart -> login gate | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added: signed-out users browse by default (guest shell) |
-| CUST-06-031 | Auth | Suspended customer and live orders (added) | Customer with an open order · suspended via QA fixture | Open app | Per contract: can still see and cancel the live order (suspension exceptions) | شوهد حيّاً (§40.61) ببذّار customer_suspend العكوسّ (QA فقط، بلا إبطال جلسة): طلبٌ حيٌّ #1142 ثمّ تعليقُ QA1 ⇒ **إلغاءُ الطلب الحيّ يعمل** (POST /orders/{id}/cancel ⇒ 200)، و**النشاطُ الجديدُ محجوب** (/my/orders، /auth/me، طلبٌ جديد ⇒ 403 لكلٍّ). لكنّ **رؤيةَ الطلب معطوبة**: استثناءُ السماح في suspension.go يسمّي `GET /api/v1/orders/{id}` **ولا مسارَ زبونيٌّ بهذا الاسم** (404)، والمسارُ الحقيقيُّ `GET /my/orders/{id}` محجوب ⇒ الطلبُ غيرُ مرئيٍّ في التطبيق. **هذا CAF-04 — مؤكَّدٌ حيّاً الآن** (كان P2 غير موقِف: «تقييدٌ لا تجاوز»). المعيار «see AND cancel»: الإلغاءُ نعم، الرؤيةُ لا. **إصلاحٌ أدنى محدَّد** (بادئةُ استثناء الزبون `/api/v1/orders/`⇒`/api/v1/my/orders/`) — **لم يُطبَّق** (وسيطُ أمنٍ، وهذه دفعةُ شهودٍ لا إصلاح): بانتظار قرار المالك (إصلاح⇒PASS أم قبولُ P2) | `BLOCKED` | api | online | QA1 restored active; #1142 cancelled | — | — | — | witnessed→confirms CAF-04 (P2 non-blocking). suspend fixture built+deployed+reversible. Minimal fix identified (exception prefix→/my/orders/); NOT applied (owner decision) |
+| CUST-06-031 | Auth | Suspended customer and live orders (added) | Customer with an open order · suspended via QA fixture | Open app | Per contract: can still see and cancel the live order (suspension exceptions) | PASS — CAF-04 أُصلح وشوهد كاملاً حيّاً (§40.62): إصلاحُ مصدرٍ أدنى في suspension.go (بادئةُ استثناء رؤية الزبون `/api/v1/orders/`⇒`/api/v1/my/orders/`، المسارُ الحقيقيّ handleMyOrder، بحارس isLiveParticipant). بذّار customer_suspend عكوسٌ (QA فقط، يُبطل كاشَ الحالة، بلا إبطال جلسة). طلبٌ حيٌّ ثمّ تعليقُ QA1 ⇒ **رؤيةُ الطلب الحيّ** GET /my/orders/{id}=**200** (pending)، و**الإلغاءُ** POST /orders/{id}/cancel=**200**، و**النشاطُ الجديدُ محجوب**: /my/orders=403 · /auth/me=403 · طلبٌ جديد=403. أُعيدت QA1 (active)، لا طلبٌ مفتوح، reconcile نظيف. انحدارٌ: TestXG22_T5 + سويت XG22 خضراء. **BLOCKED⇒PASS.** | `PASS` | api | online | QA1 restored active; order cancelled; reconcile clean | — | — | `TestXG22_T5` | CAF-04 fixed + full contract live-witnessed |
 | CUST-06-032 | Auth | Session-level 403 codes are not shown as network failures (added) | Temporary password / blocked / suspended account | Launch and act | Explicit account-state message, never «لا اتصال» | FAIL (CAF-10): a 403 user_suspended at startup is shown as the offline screen (لا يوجد اتصال), not an account-state message. P2 UX defect || BATCH-2 FIX (9a0a569c): central classifier accountForbidden(403,forbidden); restore() -> accountRestricted -> AccountStateScreen (session NOT cleared, CUST-DEF-009 intact). DEVICE SM-A525F: customer suspended server-side (status=suspended, cache cleared) -> relaunch -> «حسابك مقيّد» + «حسابك غير نشط حاليا. للمساعدة، تواصل مع الدعم.» + خروج + اعد المحاولة (NOT «لا يوجد اتصال»). CustDef007Test 7/7 + negative witness; network still maps to offline (test #07, code unchanged). | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Added. CAF-10: 403 on `/auth/me` at startup renders the offline state |
 
 ## 18 · CUST-07 — Location / address
@@ -1257,7 +1257,7 @@ until ADB is available — not an acceptance blocker.
 | 14 | CUST-03 | 14 | 13 | 1 | 0 | 0 | 14 | 0 | 0 |
 | 15 | CUST-04 | 23 | 18 | 5 | 0 | 0 | 20 | 0 | 3 |
 | 16 | CUST-05 | 17 | 14 | 3 | 0 | 0 | 12 | 0 | 5 |
-| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 22 | 0 | 10 |
+| 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 23 | 0 | 9 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
 | 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 26 | 0 | 1 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **23** | **10** | **517** | **0** | **28** |
+| | **Total** | **578** | **474** | **104** | **23** | **10** | **518** | **0** | **27** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -1896,7 +1896,7 @@ clearing the flag, which is part of CUST-DEF-001.
 | CAF-01 | CONFIRMED → **CUST-DEF-001** | P0 | **YES** | signup · `identity/service.go` | §40.3 |
 | CAF-02 | CONFIRMED → **CUST-DEF-002** · **CLOSED** (body fingerprint §40.27) | P1 | **YES** | cart/custom send · `ui/Attempt.kt` · `server/idempotency.go` | §40.4 · §40.27 |
 | CAF-03 | CONFIRMED → **CUST-DEF-003** | P1 | **YES** | `POST /orders` · `orders/service.go` | §40.5 |
-| CAF-04 | CONFIRMED | P2 | no | suspended customer · `server/suspension.go:55-66` | exception names `GET /api/v1/orders/{uuid}`, which has no customer route; `/my/orders*` blocked → live order unreachable in the app; cancel by id still allowed. Restrictive, not a bypass. **LIVE-WITNESSED 2026-09-23 (§40.61)** via QA `customer_suspend` fixture: cancel-by-id=200, /my/orders=403, /auth/me=403, new-order=403, GET /orders/{id}=404 (no route) — matches this triage exactly. Minimal fix identified (continuationRoutes customer-GET prefix `/api/v1/orders/`→`/api/v1/my/orders/`); NOT applied — security-middleware change awaiting Owner decision |
+| CAF-04 | **FIXED 2026-09-23** | P2 | no | suspended customer · `server/suspension.go` | Was: visibility exception named `GET /api/v1/orders/{uuid}` (no customer route) while real read `GET /my/orders/{id}` was blocked → suspended customer couldn't see their live order. **FIXED (Owner-approved 2026-09-23)**: continuationRoutes customer-GET prefix `/api/v1/orders/`→`/api/v1/my/orders/` (guarded by isLiveParticipant = own+live). Regression `TestXG22_T5`; deployed to staging (`e0561701`). **LIVE-WITNESSED full contract (§40.62)**: see own live order=200, cancel=200, /my/orders=403, /auth/me=403, new-order=403. CUST-06-031 ⇒ PASS. Production untouched |
 | CAF-05 | CONFIRMED | P3 | no | pre-launch browse · `server.go:~439-499` | sections, section items, suggest, search stay open while `customer_browse` is off; public catalog data, app shows PreLaunch |
 | CAF-06 | CONFIRMED | P2 | no | order create · `orders/availability.go:169` | `classifyPlace` used only by availability; create enforces zones only |
 | CAF-07 | **CLOSED (2026-09-21)** | P2 | no | custom order · `custom_order_handlers.go` | `notes` now decoded + stored in `orders.notes` and exposed by the order view (CUST-CUSTOM-019, TestCUST_CAF07_NotesStored). Wallet option: see §40.11 → CUST-CUSTOM-020 |
@@ -3756,6 +3756,24 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.62 · إصلاحُ CAF-04 ⇒ 06-031 PASS كاملاً (٢٠٢٦-٠٩-٢٣)
+
+بأمرِ المالك «أصلح CAF-04 الآن لا تقبله P2». **إصلاحُ مصدرٍ أدنى مُتحقَّق** في `suspension.go`: بادئةُ استثناء
+رؤية الزبون `{"GET", "/api/v1/orders/", "", "customer"}` ⇒ `{"GET", "/api/v1/my/orders/", ...}` — تُطابق
+المسارَ الحقيقيّ (`handleMyOrder`)، محروسةً بـ`isLiveParticipant` (صاحبُه + حيّ). الإلغاءُ (`POST /orders/{id}/cancel`)
+لم يُمَسّ. **وبذّار customer_suspend صار يُبطل كاشَ الحالة** (`ustatus:<id>`، عبر `identity.InvalidateStatusCache`
+المُصدَّر) فالإنفاذُ حتميّ.
+
+- **انحدارٌ**: `TestXG22_T5` جديد (موقوفٌ يرى طلبَه الحيّ=200، القائمةُ محجوبة، الإلغاء=200) + سويت XG22 خضراء + build/vet.
+- **نُشر على staging** (`9386020c` ثمّ `e0561701`). لا مساسَ بالإنتاج.
+- **شاهدٌ حيٌّ كاملٌ للعقد** (زبون QA موقوفٌ وله طلبٌ حيّ): **رؤيةُ الطلب** GET /my/orders/{id}=**200** (pending)،
+  **الإلغاء** POST /orders/{id}/cancel=**200**، **النشاطُ الجديدُ محجوب**: /my/orders=**403** · /auth/me=**403** ·
+  طلبٌ جديد=**403**. أُعيدت QA1 (active)، لا طلبٌ مفتوح، reconcile نظيف (أثر=0)، لا انحدار.
+
+**CAF-04 ⇒ FIXED. CUST-06-031 BLOCKED⇒PASS.**
+
+الحصيلة (محقّقة): PASS 517⇒518، BLOCKED 28⇒27، NOT_TESTED 23، N/A 10، FAIL 0. = 578.
 
 ### 40.61 · تعليقُ زبونٍ + مراقبةُ #1050 — 06-031 (CAF-04) + 14-020 (٢٠٢٦-٠٩-٢٣)
 
