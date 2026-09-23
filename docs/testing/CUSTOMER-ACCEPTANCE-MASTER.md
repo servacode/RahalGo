@@ -512,7 +512,7 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-016 | Market | Rapid navigation between sections | Signed-in test customer · Staging · SM-A525F · valid default address | Tap 5 sections in 2 s | Last tapped wins; no mixed items | Rapid nav across 5 sections -> last tapped wins, its items shown, no mixed items, no stuck spinner (Latest guard) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | `Latest` guard; P8-C3-016/020 |
 | CUST-09-017 | Market | Tap the same section repeatedly | Signed-in test customer · Staging · SM-A525F · valid default address | Tap ×5 | No spinner left | Repeat-tap same section x5 -> items shown, no stuck spinner | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-09-018 | Market | Scroll long content | Dense section (30–50 items) | Fling to end | Smooth; all items reachable | PASS — شاهدٌ حيّ (§40.51): بذّار fixture_dense زرع ٣٥ صنفاً (قسم شاورما ⇒ ٤٠)، فَليٌّ متتالٍ بلغ QA_DENSE_35 والتذييلَ (نهايةُ القائمة) بسلاسةٍ بلا انهيار؛ أُزيل البذّار (deleted 35، القسم=5) | `PASS` | device | online | — | — | — | — | via fixture_dense (reversible) |
-| CUST-09-019 | Market | Return after backgrounding | Signed-in test customer · Staging · SM-A525F · valid default address | Background 3 min; return | Refreshed only if stale; no pile-up | CARRIED: return-after-3min-backgrounding refresh-if-stale needs a timed wait | `BLOCKED` | - | online | — | — | — | — | AB-36 |
+| CUST-09-019 | Market | Return after backgrounding | Signed-in test customer · Staging · SM-A525F · valid default address | Background 3 min; return | Refreshed only if stale; no pile-up | PASS — شاهدٌ حيّ (§40.53): لقطةُ التطبيق «لا طلبات جارية»، خُلّف ٣ دقائقَ وأُنشئ طلبٌ خادميّاً (#1141) خلالها، ثمّ عودةٌ ⇒ تبويبُ الطلبات أظهر #1141 «بانتظار القبول» (إنعاشُ البائت)، طلبٌ واحدٌ متماسكٌ لا تكدُّس، لا انهيار | `PASS` | device+api | online | — | — | — | — | AB-36 |
 | CUST-09-020 | Market | Server retires a section while it is open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin deactivates the open section | Refresh | Section leaves the rail; screen moves to a valid section | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.31): تعطيلُ قسم «شاورما» (بذّار QA) ⇒ بعد الإنعاش تختفي رقاقتُه من الرفّ والشاشةُ تنتقل إلى قسمٍ صالح (مشاوي)؛ استُعيد | `PASS` | - | online | active=false | — | §40.31 | — | Unblocked via section_active seeder (§40.31) 2026-09-22 |
 | CUST-09-021 | Market | Server disables an item while visible | Signed-in test customer · Staging · SM-A525F · valid default address · Admin marks item unavailable | Refresh | Card turns unavailable | PASS — شاهدٌ حيّ (§40.31): item_available=false (بذّار QA) ⇒ بطاقةُ الصنف تحمل «غير متوفر» ولا تختفي، والتفصيلُ العامّ available=false؛ استُعيد | `PASS` | - | online | — | — | §40.31 | — | Unblocked by the QA state seeder (§40.31) 2026-09-22 |
 | CUST-09-022 | Market | Server changes product data while open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin edits name/price | Refresh | New data shown | PASS — شاهدٌ حيّ (§40.51): بذّار item_name غيّر اسمَ a9e0d86f خادميّاً؛ الخادمُ يردّه فورَه (لا كاش)، وبعد إعادةِ جلبِ التطبيق ظهر «شاورما دجاج ★تحديث QA★» ثمّ أُعيد الاسمُ الأصليّ | `PASS` | device+api | online | — | — | — | — | via item_name fixture (reversible) |
@@ -1260,7 +1260,7 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 23 | 0 | 4 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 24 | 0 | 3 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
 | 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 30 | 0 | 6 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **27** | **10** | **503** | **0** | **38** |
+| | **Total** | **578** | **474** | **104** | **27** | **10** | **504** | **0** | **37** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,17 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.53 · الوضعُ الليليّ — دورةُ الخلفيّة والإنعاش: 09-019 (٢٠٢٦-٠٩-٢٣)
+
+**09-019** (العودةُ بعد التخليف ٣ دقائق ⇒ إنعاشٌ إن بات، بلا تكدُّس): لقطةُ التطبيق قبلَ التخليف
+«لا طلبات جارية». خُلّف الساعةَ 04:14، وأُنشئ خادميّاً طلبٌ خاصٌّ (#1141، بانتظار القبول) **خلالَ**
+نافذةِ الخلفيّة — بياناتٌ حيّةٌ لا يعرفها التطبيق. بعد ٣ دقائقَ عودةٌ ⇒ تبويبُ الطلبات أظهر **#1141
+«بانتظار القبول»** («المطلوب: طلب اختبار الإنعاش…»): **إنعاشٌ للبائت** (اللقطةُ كانت فارغة). طلبٌ
+واحدٌ متماسكٌ (لا تكرارَ، لا فيضَ أخطاء، لا انهيار) ⇒ **بلا تكدُّس**. **BLOCKED⇒PASS.**
+(دورةُ الـ٣٠ دقيقة لـ17-012/06-009/06-010 جاريةٌ بنفس الأسلوب — تُوثَّق عند العودة؛ #1141 أُلغي خادميّاً خلالها.)
+
+الحصيلة (محقّقة): PASS 503⇒504، BLOCKED 38⇒37، NOT_TESTED 27، N/A 10، FAIL 0. = 578.
 
 ### 40.52 · الوضعُ الليليّ — 16-039 (معالجةُ 403 صريحةٌ ومختبَرة) (٢٠٢٦-٠٩-٢٣)
 
