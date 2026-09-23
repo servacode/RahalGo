@@ -501,7 +501,22 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 	case "wallet_drain":
 		s.qaWalletDrain(w, r, uid)
 	case "order_advance":
-		s.qaOrderAdvance(w, r, uid, req.OrderID, req.Target)
+		// **هدفٌ اختياريّ**: رقمُ QA مسموحٌ (كرقمِ تسجيل الدخان CUST-22-016) —
+		// وإلّا فزبونُ QA1. **والحيادُ محفوظٌ**: `qaOrderAdvance` لا يسوق إلّا
+		// المخصّصَ النقديّ، ويتحقّق `custID==uid`.
+		advUID := uid
+		if req.Phone != "" {
+			p, pok := identity.NormalizePhone(req.Phone)
+			if !pok || !qaOTPPhones[p] {
+				s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_phone_not_allowed", "errors.forbidden"))
+				return
+			}
+			if err := s.pg.QueryRow(r.Context(), `SELECT id::text FROM users WHERE phone = $1`, p).Scan(&advUID); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+		}
+		s.qaOrderAdvance(w, r, advUID, req.OrderID, req.Target)
 	case "order_chat_send":
 		s.qaOrderChatSend(w, r, uid, req.OrderID, req.Body)
 	}
