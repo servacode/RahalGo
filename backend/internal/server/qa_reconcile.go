@@ -23,6 +23,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 // qaSecondMerchantName اسمُ المتجر الثاني القابلِ للحذف — علامةٌ ثابتةٌ للتنظيف.
@@ -302,6 +303,44 @@ func (s *Server) qaDisposableDeleteCode(w http.ResponseWriter, r *http.Request) 
 	}
 	s.logger.Warn("QA disposable delete code issued (staging-only)")
 	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "phone": qaDisposablePhone})
+}
+
+// ── رموزُ OTP على التجهيز (04/05/06) ────────────────────────────────────
+// **المزوّدُ dev يطبع الرمزَ في السجلّ لا يرسله واتساب** — فلا سبيلَ لشهود
+// مسارات OTP على التطبيق إلّا إصدارُ الرمز وإعادتُه. **مقصورٌ على أرقام QA**
+// (نطاقٌ محجوز)، staging-only، **ولا يتجاوز التحقّق**: `ConsumeOTP` يبقى كما هو
+// (مهلة/محاولات/الأحدث)، فتبقى حالاتُ القبول حقيقيّة.
+const (
+	qaSignupPhone = "+963900555998" // تسجيلٌ جديد (04-*)
+	qaNewPhone    = "+963900555997" // هدفُ تغيير الرقم (06-024)
+)
+
+var qaOTPPhones = map[string]bool{
+	qaStagingPhone:    true, // QA1 — reset/whatsapp/change-from
+	qaDisposablePhone: true, // زبونُ الحذف
+	qaSignupPhone:     true, // تسجيلٌ جديد
+	qaNewPhone:        true, // هدفُ تغيير الرقم
+}
+var qaOTPPurposes = map[string]bool{"signup": true, "reset": true, "whatsapp": true, "delete": true}
+
+// qaOTPCode يُصدر رمزَ OTP لرقمِ QA وغرضٍ محدَّدين ويُعيده.
+func (s *Server) qaOTPCode(w http.ResponseWriter, r *http.Request, rawPhone, purpose string) {
+	phone, ok := identity.NormalizePhone(rawPhone)
+	if !ok || !qaOTPPhones[phone] {
+		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_phone_not_allowed", "errors.forbidden"))
+		return
+	}
+	if !qaOTPPurposes[purpose] {
+		s.respondErr(w, errValidation)
+		return
+	}
+	code, err := s.identity.QAIssueCode(r.Context(), phone, purpose)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA OTP code issued (staging-only)", "purpose", purpose)
+	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "phone": phone, "purpose": purpose})
 }
 
 // ── روابطُ التواصل (CUST-ENG-011) ───────────────────────────────────────

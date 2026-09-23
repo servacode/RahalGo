@@ -1360,6 +1360,15 @@ func (s *Service) QACreateOrGetCustomer(ctx context.Context, rawPhone, fullName,
 // قراءة السجلّ. **والأحدثُ هو ما يُستهلك** (`ConsumeOTP` يأخذ آخرَ رمزٍ فعّال)،
 // فيُدعى بعد أن يطلب التطبيقُ الرمز.
 func (s *Service) QAIssueDeleteCode(ctx context.Context, rawPhone string) (string, error) {
+	return s.QAIssueCode(ctx, rawPhone, "delete")
+}
+
+// QAIssueCode **بيئةُ تجهيزٍ فقط** — يُصدر رمزَ OTP حقيقيّاً لأيّ غرضٍ
+// (signup/reset/whatsapp/delete) ويُعيده، كي تُشهَد مساراتُ OTP في التطبيق
+// على التجهيز (المزوّدُ dev يطبع في السجلّ لا يرسل واتساب). **لا يتجاوز
+// التحقّق**: يُخزَّن مجزّأً بنفس `CreateOTP`+`otpLifetime`، و`ConsumeOTP` يتحقّق
+// منه عاديّاً (مهلة، محاولات، الأحدثُ يُستهلك) — فتبقى حالاتُ القبول حقيقيّة.
+func (s *Service) QAIssueCode(ctx context.Context, rawPhone, purpose string) (string, error) {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return "", ErrInvalidPhone
@@ -1368,7 +1377,7 @@ func (s *Service) QAIssueDeleteCode(ctx context.Context, rawPhone string) (strin
 	if err != nil {
 		return "", err
 	}
-	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "delete", s.otpLifetime(ctx)); err != nil {
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), purpose, s.otpLifetime(ctx)); err != nil {
 		return "", err
 	}
 	return code, nil

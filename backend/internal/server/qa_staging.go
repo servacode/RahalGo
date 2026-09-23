@@ -304,6 +304,7 @@ var qaSeedAllowlist = map[string]bool{
 	"disposable_delete_code": true, // رمزُ حذفٍ حقيقيٌّ للجهاز التجريبيّ (يُدعى بعد طلب التطبيق)
 	"contact_set":            true, // ضبطُ إعداداتِ التواصل لشهودها (يحفظ السابق) — لا بابَ أدمن
 	"contact_clear":          true, // استعادةُ إعداداتِ التواصل السابقة
+	"otp_code":               true, // إصدارُ رمزِ OTP لرقمِ QA (04/05/06) — dev يطبع لا يرسل واتساب
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -320,7 +321,7 @@ var qaStateSeed = map[string]bool{
 	"option_available": true, "item_image": true,
 	"customer_suspend": true, "customer_restore": true, "customer_set_password": true,
 	"disposable_create": true, "disposable_delete_code": true,
-	"contact_set": true, "contact_clear": true,
+	"contact_set": true, "contact_clear": true, "otp_code": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -357,6 +358,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		HoursJSON string  `json:"hours_json"` // جدولُ دوامِ متجرٍ صريح (merchant_hours_set — استعادةٌ دقيقة)
 		OptionID  string  `json:"option_id"`  // خيارُ إضافةٍ (option_available — 10-014)
 		MediaID   string  `json:"media_id"`   // صورةُ صنفٍ للاستعادة (item_image — 09-011)
+		Phone     string  `json:"phone"`      // رقمُ QA لإصدار رمزِ OTP (otp_code — 04/05/06)
+		Purpose   string  `json:"purpose"`    // signup | reset | whatsapp | delete (otp_code)
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -450,6 +453,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaContactSet(w, r)
 		case "contact_clear":
 			s.qaContactClear(w, r)
+		case "otp_code":
+			s.qaOTPCode(w, r, req.Phone, req.Purpose)
 		}
 		return
 	}
