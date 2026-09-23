@@ -18,6 +18,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -321,7 +322,32 @@ var qaOTPPhones = map[string]bool{
 	qaSignupPhone:     true, // تسجيلٌ جديد
 	qaNewPhone:        true, // هدفُ تغيير الرقم
 }
-var qaOTPPurposes = map[string]bool{"signup": true, "reset": true, "whatsapp": true, "delete": true}
+var qaOTPPurposes = map[string]bool{
+	"login":        true, // مسارُ OTP للدخول/التسجيل (/auth/otp/request+verify) — RequestOTP
+	"signup":       true, // مسارُ تسجيلٍ منفصلٍ إن وُجد
+	"reset":        true, // استعادةُ كلمة المرور
+	"whatsapp":     true, // توثيقُ واتساب
+	"phone_change": true, // تغييرُ الرقم
+	"delete":       true, // حذفُ الحساب
+}
+
+// qaMaybeSignupLatency **مِعطارُ تأخيرٍ ضيّقٌ (CUST-04-010)** — إن سُلّح تأخيرٌ
+// على مسار طلبِ الرمز `/auth/otp/request` **ورقمُ الطالبِ رقمُ QA للتسجيل**،
+// نام المقدارَ المسلَّح ثمّ مضى. staging-only، مقصورٌ على رقم QA، يُستهلك مرّةً —
+// **فيُشهَد «تسجيلٌ بطيء» بلا مسٍّ لمستخدمٍ آخر ولا للإنتاج.**
+func (s *Server) qaMaybeSignupLatency(rawPhone string) {
+	if !s.qaStagingEnabled() {
+		return
+	}
+	phone, ok := identity.NormalizePhone(rawPhone)
+	if !ok || phone != qaSignupPhone {
+		return
+	}
+	if f, ok := qaFaults.take("/api/v1/auth/otp/request"); ok && f.mode == qaFaultLatency {
+		s.logger.Warn("QA signup latency injected (staging-only)", "ms", f.ms)
+		time.Sleep(time.Duration(f.ms) * time.Millisecond)
+	}
+}
 
 // qaOTPCode يُصدر رمزَ OTP لرقمِ QA وغرضٍ محدَّدين ويُعيده.
 func (s *Server) qaOTPCode(w http.ResponseWriter, r *http.Request, rawPhone, purpose string) {
