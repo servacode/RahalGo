@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 369,
-    "test_funcs": 1568
+    "test_funcs": 1569
   },
   "flows": [
     {
@@ -19549,6 +19549,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestXG22_T5_SuspendedCustomerSeesAndCancelsOwnLiveOrder",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestXG22_T6_NormalActorUnchanged",

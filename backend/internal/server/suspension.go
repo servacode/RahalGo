@@ -62,7 +62,13 @@ var continuationRoutes = []struct {
 	// **الزبون** — يرى طلبَه القائمَ ويستطيع إلغاءه.
 	//
 	// **ودفع مالَه** — **فحجبُ رؤيته عنه عقوبةٌ على مالٍ لا على فعل.**
-	{"GET", "/api/v1/orders/", "", "customer"},
+	//
+	// **والرؤيةُ عبر المسار الحقيقيّ** (`GET /api/v1/my/orders/{id}` — `handleMyOrder`)
+	// **لا `GET /api/v1/orders/{id}` الذي لا وجودَ له** (كان `CAF-04`: استثناءٌ يشير
+	// إلى مسارٍ غير مسجَّل، فيبقى الطلبُ غيرَ مرئيٍّ لصاحبه الموقوف). **والإلغاءُ
+	// مسارُه `POST /api/v1/orders/{id}/cancel` فيبقى كما هو.** وكلاهما محروسٌ
+	// بـ`isLiveParticipant` (صاحبُه + حيّ).
+	{"GET", "/api/v1/my/orders/", "", "customer"},
 	{"POST", "/api/v1/orders/", "/cancel", "customer"},
 }
 

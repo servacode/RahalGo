@@ -210,6 +210,45 @@ func TestXG22_T10_EnforcementIsServerSide(t *testing.T) {
 var _ = context.Background
 
 // ══════════════════════════════════════════════════════════════════════
+// **T5 · والزبونُ الموقوفُ يرى طلبَه الحيَّ ويُلغيه** — `CAF-04`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان استثناءُ الرؤية يشير إلى `GET /api/v1/orders/{id}` ولا مسارَ
+// زبونيٌّ بهذا الاسم** — **فيبقى الطلبُ غيرَ مرئيٍّ لصاحبه الموقوف
+// (المسارُ الحقيقيُّ `GET /api/v1/my/orders/{id}` كان محجوباً).**
+// **والإصلاحُ: الاستثناءُ على المسار الحقيقيّ، بحارس `isLiveParticipant`.**
+func TestXG22_T5_SuspendedCustomerSeesAndCancelsOwnLiveOrder(t *testing.T) {
+	h := New(t)
+	treasury(t, h)
+	cust := h.Customer()
+	item := h.NewItem(1000)
+	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
+	if made.Code >= 400 {
+		t.Fatalf("إنشاءُ الطلب: %s", made)
+	}
+	oid, _ := made.JSON()["id"].(string)
+
+	suspend(t, h, cust.ID, "suspended")
+
+	// **يرى طلبَه الحيَّ عبر المسار الحقيقيّ** — لا يُحجب.
+	see := h.GET("/api/v1/my/orders/"+oid, cust.Token)
+	if see.Code >= 400 {
+		t.Errorf("**الموقوفُ لا يرى طلبَه الحيّ** (%d) — CAF-04 لم يُصلَح", see.Code)
+	}
+	// **ولا تُفتح له القائمةُ العامّة** — نشاطٌ جديدٌ محجوب.
+	list := h.GET("/api/v1/my/orders", cust.Token)
+	if list.Code < 400 {
+		t.Errorf("**القائمةُ العامّةُ مفتوحةٌ لموقوف** (%d) — تسرّبٌ", list.Code)
+	}
+	// **ويُلغي طلبَه الحيّ** — الاستثناءُ الثاني.
+	cancel := h.POST("/api/v1/orders/"+oid+"/cancel", cust.Token,
+		map[string]any{"reason": "XG-22 T5"})
+	if cancel.Code >= 400 {
+		t.Errorf("**الموقوفُ لا يُلغي طلبَه الحيّ** (%d)", cancel.Code)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // **T7 · والإدارةُ تحلّ الطلبَ كما كانت**
 // ══════════════════════════════════════════════════════════════════════
 //
