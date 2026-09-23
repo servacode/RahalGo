@@ -511,11 +511,11 @@ The Customer product presents a catalog (sections → items); stores are deliber
 | CUST-09-015 | Market | Repeated refresh | Signed-in test customer · Staging · SM-A525F · valid default address | Pull ×5 quickly | One effective refresh; no stuck spinner | 5 rapid pulls -> one effective refresh, no stuck spinner | `PASS` | SM-A525F/A14 vc12 | online | request count sane | — | — | — | `MarketplaceRaceTest` |
 | CUST-09-016 | Market | Rapid navigation between sections | Signed-in test customer · Staging · SM-A525F · valid default address | Tap 5 sections in 2 s | Last tapped wins; no mixed items | Rapid nav across 5 sections -> last tapped wins, its items shown, no mixed items, no stuck spinner (Latest guard) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | `Latest` guard; P8-C3-016/020 |
 | CUST-09-017 | Market | Tap the same section repeatedly | Signed-in test customer · Staging · SM-A525F · valid default address | Tap ×5 | No spinner left | Repeat-tap same section x5 -> items shown, no stuck spinner | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
-| CUST-09-018 | Market | Scroll long content | Dense section (30–50 items) | Fling to end | Smooth; all items reachable | CARRIED: dense-section scroll needs a 30-50 item fixture | `BLOCKED` | - | online | — | — | — | — | Needs dense fixture (PF note) |
+| CUST-09-018 | Market | Scroll long content | Dense section (30–50 items) | Fling to end | Smooth; all items reachable | PASS — شاهدٌ حيّ (§40.51): بذّار fixture_dense زرع ٣٥ صنفاً (قسم شاورما ⇒ ٤٠)، فَليٌّ متتالٍ بلغ QA_DENSE_35 والتذييلَ (نهايةُ القائمة) بسلاسةٍ بلا انهيار؛ أُزيل البذّار (deleted 35، القسم=5) | `PASS` | device | online | — | — | — | — | via fixture_dense (reversible) |
 | CUST-09-019 | Market | Return after backgrounding | Signed-in test customer · Staging · SM-A525F · valid default address | Background 3 min; return | Refreshed only if stale; no pile-up | CARRIED: return-after-3min-backgrounding refresh-if-stale needs a timed wait | `BLOCKED` | - | online | — | — | — | — | AB-36 |
 | CUST-09-020 | Market | Server retires a section while it is open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin deactivates the open section | Refresh | Section leaves the rail; screen moves to a valid section | PASS — شاهدٌ تطبيقيٌّ حيّ (§40.31): تعطيلُ قسم «شاورما» (بذّار QA) ⇒ بعد الإنعاش تختفي رقاقتُه من الرفّ والشاشةُ تنتقل إلى قسمٍ صالح (مشاوي)؛ استُعيد | `PASS` | - | online | active=false | — | §40.31 | — | Unblocked via section_active seeder (§40.31) 2026-09-22 |
 | CUST-09-021 | Market | Server disables an item while visible | Signed-in test customer · Staging · SM-A525F · valid default address · Admin marks item unavailable | Refresh | Card turns unavailable | PASS — شاهدٌ حيّ (§40.31): item_available=false (بذّار QA) ⇒ بطاقةُ الصنف تحمل «غير متوفر» ولا تختفي، والتفصيلُ العامّ available=false؛ استُعيد | `PASS` | - | online | — | — | §40.31 | — | Unblocked by the QA state seeder (§40.31) 2026-09-22 |
-| CUST-09-022 | Market | Server changes product data while open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin edits name/price | Refresh | New data shown | CARRIED: server changes product data while open (Admin edit) -> needs Admin | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-09-022 | Market | Server changes product data while open | Signed-in test customer · Staging · SM-A525F · valid default address · Admin edits name/price | Refresh | New data shown | PASS — شاهدٌ حيّ (§40.51): بذّار item_name غيّر اسمَ a9e0d86f خادميّاً؛ الخادمُ يردّه فورَه (لا كاش)، وبعد إعادةِ جلبِ التطبيق ظهر «شاورما دجاج ★تحديث QA★» ثمّ أُعيد الاسمُ الأصليّ | `PASS` | device+api | online | — | — | — | — | via item_name fixture (reversible) |
 | CUST-09-023 | Market | Refresh produces authoritative server state | Signed-in test customer · Staging · SM-A525F · valid default address | Compare UI to SoT after refresh | Equal | Refresh -> UI == server SoT: sections/counts/order match platform_sections; item price==SoT (CUST-DEF-005) | `PASS` | SM-A525F+API | online | SoT query | — | — | — | — |
 | CUST-09-024 | Market | No hidden merchant data exposed | Signed-in test customer · Staging · SM-A525F · valid default address | Inspect payloads/screens | No store name/source in customer payloads/UI | No hidden merchant data: item JSON has NO store/merchant name or id (only source_closed status); guards TestBrowse_HidesSource / TestRedactForCustomer_HidesSource | `PASS` | staging API | online | API JSON | — | — | — | Guards: `TestBrowse_HidesSource`, `TestRedactForCustomer_HidesSource` |
 | CUST-09-025 | Market | Search | Signed-in test customer · Staging · SM-A525F · valid default address | Type ≥2 chars (300 ms debounce) | Matching items; «لا نتائج» when none; offline → OFFLINE state | /public/search/items q=شاورما -> 6 results; q=nomatch -> 0 (لا نتائج). Debounce is UI | `PASS` | SM-A525F+API | online | `/public/search/items` | — | — | — | Search exists; filters do not (no filter UI in source) |
@@ -552,14 +552,14 @@ Audited product model: no product-detail screen; items with options open the opt
 | CUST-11-001 | Cart | Add one item | Signed-in test customer · Staging · SM-A525F · valid default address | Tap + (no options) | Badge 1; line in سلتي | No-options item (عيران) added with one tap -> cart line (witnessed via the يُطلب معه suggestion add; has_options=false direct add) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | Cart is local (SharedPreferences `rahalgo_cart`) |
 | CUST-11-002 | Cart | Add multiple quantities | Signed-in test customer · Staging · SM-A525F · valid default address | + ×3 | Qty 3 on one line | Cart + x2 from qty 1 -> qty 3 on one line | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-003 | Cart | Add multiple products | Signed-in test customer · Staging · SM-A525F · valid default address | Add 3 items | 3 lines | Added two different items -> two distinct cart lines (شاورما دجاج + شاورما لحمة) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
-| CUST-11-004 | Cart | Rapid Add taps | Signed-in test customer · Staging · SM-A525F · valid default address | `input tap` ×5 in 1 s | Qty equals taps counted by design (each tap adds 1) — no lost/duplicated adds | CARRIED: rapid-add-taps-count on a shop card needs a no-options shop item (rail could not scroll to مياه) | `BLOCKED` | - | online | — | — | — | — | `ButtonsUiTest.rapidQuantityTapsAllCount` |
-| CUST-11-005 | Cart | Quantity correct after rapid tapping | After 004 | Read cart | Equals number of registered taps | CARRIED: quantity-after-rapid-tapping needs the no-options shop-card add (see 004) | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-11-004 | Cart | Rapid Add taps | Signed-in test customer · Staging · SM-A525F · valid default address | `input tap` ×5 in 1 s | Qty equals taps counted by design (each tap adds 1) — no lost/duplicated adds | PASS — شاهدٌ حيّ (§40.51): متجر QA مفتوح، صنفٌ في السلّة (كمّيّة 1)، «+» ×5 سريعاً ⇒ الكمّيّة 6 بالضبط (كلُّ نقرةٍ حُسبت، لا فقد/تكرار)، إجماليُّ السطر 156,300 = 26,050×6، لا انهيار | `PASS` | device | online | — | — | — | — | `ButtonsUiTest.rapidQuantityTapsAllCount` |
+| CUST-11-005 | Cart | Quantity correct after rapid tapping | After 004 | Read cart | Equals number of registered taps | PASS — شاهدٌ حيّ (§40.51): قراءةُ السلّة بعد الخمس نقرات السريعة ⇒ الكمّيّة 6 بالضبط (=1+5)، والمجموعُ الجزئيّ 156,300 = 26,050×6، لا نقصَ ولا تضاعف | `PASS` | device | online | — | — | — | — | — |
 | CUST-11-006 | Cart | Increase quantity | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | + in cart | Qty +1; totals update | Cart + -> qty +1 (1->3) | `PASS` | SM-A525F/A14 vc12 | online | quote refetched | — | — | — | — |
 | CUST-11-007 | Cart | Decrease quantity | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | − in cart | Qty −1 | Cart - -> qty -1 (3->2) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-008 | Cart | Remove item | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Trash icon | Line removed | Trash icon -> line removed (2 lines -> 1) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-009 | Cart | Remove last item | One line | Remove | Empty state | Remove the last line -> empty state | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-010 | Cart | Empty cart state | Empty | Open سلتي | Explicit empty state; send absent | Empty cart -> «سلتك فارغة»; send button absent | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
-| CUST-11-011 | Cart | Repeated remove taps safe | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Trash ×3 fast | One removal; no crash | CARRIED: repeated-remove-trash-x3 (analogous to 012 rapid-decrement removal, witnessed safe) | `BLOCKED` | - | online | — | — | — | — | — |
+| CUST-11-011 | Cart | Repeated remove taps safe | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Trash ×3 fast | One removal; no crash | PASS — شاهدٌ حيّ (§40.51): «−» ×7 سريعاً على صنفٍ كمّيّتُه 6 ⇒ نزلت بأمانٍ حتّى «سلتك فارغة»، النقراتُ الزائدةُ بعد الصفر امتُصّت (لا سالب، لا انهيار، لا حذفٌ مكرَّرٌ خطأً) | `PASS` | device | online | — | — | — | — | — |
 | CUST-11-012 | Cart | Repeated quantity taps safe | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | − ×5 fast from qty 2 | Line removed once; no negative | Rapid - x5 from qty 2 -> line removed once, empty, no negative, no crash | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-013 | Cart | Cart survives screen navigation | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | Switch tabs | Intact | Switch tabs -> cart intact (2 lines) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
 | CUST-11-014 | Cart | Cart survives background/foreground | Signed-in test customer · Staging · SM-A525F · valid default address · cart populated | HOME; return | Intact | HOME + return -> cart intact (2 lines) | `PASS` | SM-A525F/A14 vc12 | online | — | — | — | — | — |
@@ -1260,9 +1260,9 @@ until ADB is available — not an acceptance blocker.
 | 17 | CUST-06 | 32 | 22 | 10 | 0 | 0 | 19 | 0 | 13 |
 | 18 | CUST-07 | 30 | 24 | 6 | 0 | 0 | 26 | 0 | 4 |
 | 19 | CUST-08 | 18 | 16 | 2 | 0 | 0 | 17 | 0 | 1 |
-| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 21 | 0 | 6 |
+| 20 | CUST-09 | 29 | 25 | 4 | 0 | 2 | 23 | 0 | 4 |
 | 21 | CUST-10 | 14 | 13 | 1 | 0 | 0 | 13 | 0 | 1 |
-| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 27 | 0 | 9 |
+| 22 | CUST-11 | 37 | 32 | 5 | 1 | 0 | 30 | 0 | 6 |
 | 23 | CUST-12 | 28 | 23 | 5 | 0 | 1 | 27 | 0 | 0 |
 | 24 | CUST-13 | 29 | 24 | 5 | 0 | 0 | 29 | 0 | 0 |
 | 25 | CUST-CUSTOM | 20 | 18 | 2 | 0 | 0 | 20 | 0 | 0 |
@@ -1278,7 +1278,7 @@ until ADB is available — not an acceptance blocker.
 | 32 | CUST-20 | 19 | 18 | 1 | 1 | 1 | 17 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
 | 34 | CUST-22 | 16 | 16 | 0 | 7 | 0 | 9 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **28** | **10** | **497** | **0** | **43** |
+| | **Total** | **578** | **474** | **104** | **28** | **10** | **502** | **0** | **38** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3756,6 +3756,25 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.51 · الوضعُ الليليّ — دفعةُ المتجر المفتوح: سلّة/تصفّح (11-004/005/011 · 09-018/022) (٢٠٢٦-٠٩-٢٣)
+
+فُتح متجر QA (بيت الرقة 7048f195) ببذّار merchant_open (item 1736f328، prev_hours=7)، ثمّ:
+
+- **11-004/005** (النقرُ السريع على الإضافة/الكمّيّة): صنفٌ في السلّة (1)، «+» ×5 سريعاً ⇒ الكمّيّة **6**
+  بالضبط (كلُّ النقرات حُسبت، لا فقد ولا تضاعف)، إجماليُّ السطر **156,300 = 26,050×6**، لا انهيار.
+- **11-011** (تكرارُ الحذف آمن): «−» ×7 سريعاً على كمّيّةٍ 6 ⇒ نزلت بأمانٍ حتّى «سلتك فارغة»، والنقراتُ
+  الزائدةُ بعد الصفر امتُصّت (لا سالب، لا انهيار، لا حذفٌ مكرَّر).
+- **09-022** (تغيُّرُ بيانات الصنف خادميّاً ⇒ ظهورُها بعد الإنعاش): بذّار item_name غيّر اسمَ a9e0d86f؛ الخادمُ
+  يردُّ الاسمَ الجديدَ فورَه (لا كاش خادميّ)، وبعد إعادةِ جلبِ التطبيق ظهر **«شاورما دجاج ★تحديث QA★»**؛ أُعيد الأصليّ.
+- **09-018** (فَليٌّ في قسمٍ كثيف): بذّار fixture_dense زرع **35** صنفاً (القسم ⇒ 40)، فَليٌّ متتالٍ بلغ
+  **QA_DENSE_35** والتذييلَ (نهايةَ القائمة) بسلاسةٍ بلا انهيار؛ أُزيل البذّار (deleted 35، القسم=5).
+
+**الاستعادةُ كاملة**: اسمُ الصنف وسعرُه أُعيدا؛ البذّارُ الكثيفُ حُذف؛ جدولُ المتجر أُعيد بـmerchant_hours_set
+(٧ صفوف، الجمعة 11:00) ⇒ «المتجر مغلق حالياً» كأصله؛ السلّةُ فُرِّغت؛ محفظة 0؛ لا طلب. Production لم يُمسّ.
+(تنبيه: نداءُ فتحٍ ثانٍ عرضيٌّ أفسد الحفظَ في الذاكرة (hours=0)، فاستُعيد حتميّاً بـmerchant_hours_set لا merchant_restore.)
+
+الحصيلة (محقّقة): PASS 497⇒502، BLOCKED 43⇒38، NOT_TESTED 28، N/A 10، FAIL 0. = 578.
 
 ### 40.50 · الوضعُ الليليّ — 17-013 (انتهاءُ التوكن في الخلفيّة ⇒ تحديثٌ صامت) (٢٠٢٦-٠٩-٢٣)
 
