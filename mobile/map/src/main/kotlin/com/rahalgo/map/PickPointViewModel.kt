@@ -48,6 +48,17 @@ class PickPointViewModel(app: Application) : AndroidViewModel(app) {
     var results by mutableStateOf<List<Place>>(emptyList())
         private set
 
+    /**
+     * **فشلُ البحث لا فراغُ نتيجته** — نداءُ `/geo/search` قد يسقط
+     * (٥٠٣/انقطاع)، **وكان يُبتلع صامتاً فيُقرأ «لا نتائج».** فنميّز:
+     * `searchFailed` يعني «تعذّر البحث» لا «لا مطابق». (CUST-07-006)
+     */
+    var searchFailed by mutableStateOf(false)
+        private set
+
+    /** **آخرُ ما بُحث عنه** — ليُعاد عند «إعادة المحاولة». */
+    private var lastQuery = ""
+
     /** **تقفز الخريطةُ إليها** — تقرؤها `MapCanvas` من هذه الحال. */
     var jumpTo by mutableStateOf<LatLng?>(null)
         private set
@@ -74,18 +85,30 @@ class PickPointViewModel(app: Application) : AndroidViewModel(app) {
     fun search(query: String) {
         typer?.cancel()
         val q = query.trim()
+        lastQuery = q
         if (q.length < MIN_CHARS) {
             results = emptyList()
+            searchFailed = false
             return
         }
         typer = viewModelScope.launch {
             delay(QUIET_MS)
-            results = runCatching { geo.search(q) }.getOrDefault(emptyList())
+            // **النجاحُ يعرض المطابقاتِ (وفراغُها «لا نتائج»)، والفشلُ
+            // يُصرَّح به ولا يُقرأ فراغا** — والمسارُ اليدويُّ باقٍ.
+            runCatching { geo.search(q) }
+                .onSuccess { results = it; searchFailed = false }
+                .onFailure { results = emptyList(); searchFailed = true }
         }
+    }
+
+    /** **يعيد آخرَ بحثٍ تعذّر** — زرُّ «إعادة المحاولة». */
+    fun retrySearch() {
+        if (lastQuery.length >= MIN_CHARS) search(lastQuery)
     }
 
     fun goTo(place: Place) {
         results = emptyList()
+        searchFailed = false
         label = place.label
         jumpTo = LatLng(place.lat, place.lng)
     }

@@ -229,6 +229,27 @@ fun PickPoint(
                     }
                 }
             }
+            // **وإن تعذّر البحثُ صُرّح به** — لا يُقرأ فراغا؛ ويُتاح تكرارُه،
+            // والمسارُ اليدويُّ (سحبُ الدبّوس) باقٍ. (CUST-07-006)
+            if (vm.searchFailed) {
+                Spacer(Modifier.height(4.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Rahal.colors.canvas)
+                        .padding(10.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.pick_search_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    TextButton(onClick = { vm.retrySearch() }) {
+                        Text(stringResource(R.string.pick_search_retry))
+                    }
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
