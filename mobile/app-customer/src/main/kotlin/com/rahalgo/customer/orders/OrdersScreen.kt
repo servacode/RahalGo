@@ -46,7 +46,7 @@ import com.rahalgo.ui.OrderChatViewModel
  * منتهيةٍ لا يجده.**
  */
 @Composable
-fun OrdersScreen(vm: OrdersViewModel) {
+fun OrdersScreen(vm: OrdersViewModel, walletBalance: Long = 0) {
     OrdersList(
         vm = vm,
         list = vm.open,
@@ -54,6 +54,7 @@ fun OrdersScreen(vm: OrdersViewModel) {
         hint = stringResource(R.string.soon_orders),
         empty = stringResource(R.string.ord_none_open),
         history = false,
+        walletBalance = walletBalance,
     )
 }
 
@@ -67,6 +68,8 @@ fun HistoryScreen(vm: OrdersViewModel) {
         hint = stringResource(R.string.soon_history),
         empty = stringResource(R.string.ord_none_history),
         history = true,
+        // **والسجلُّ منتهٍ — لا تأكيدَ عرضٍ فيه، فلا حاجةَ لرصيد.**
+        walletBalance = 0,
     )
 }
 
@@ -78,6 +81,7 @@ private fun OrdersList(
     hint: String,
     empty: String,
     history: Boolean,
+    walletBalance: Long,
 ) {
     // **والنوافذُ تبقى بعد الدوران** — من كتب سببَ شكواه ثمّ أمال هاتفَه
     // لا يعيد كتابتَه. (وقع في تطبيق السائق ٢٠٢٦-٠٨-١٣.)
@@ -178,6 +182,14 @@ private fun OrdersList(
                 } else {
                     null
                 },
+                // **وتأكيدُ عرض الطلب المخصَّص** (Batch 2c) — في الجاري وحدَه.
+                walletBalance = walletBalance,
+                onConfirmQuote = if (!history && o.kind == "custom") {
+                    { method -> vm.confirmQuote(o, method) }
+                } else {
+                    null
+                },
+                confirming = vm.busy,
             )
         }
         // **مزيدٌ من السجلّ — صفحةً صفحة** (`CAF-14`/`CUST-14-026`).

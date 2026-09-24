@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.rahalgo.ui.AppCore
+import com.rahalgo.shared.model.CustomDelivery
 import com.rahalgo.shared.model.LaunchState
 import com.rahalgo.shared.model.Ordering
 import kotlinx.coroutines.launch
@@ -94,6 +95,21 @@ object Serving {
     /** **نصُّ المالك لحال ما قبل الافتتاح.** */
     val launchNotice: String get() = launch?.notice.orEmpty()
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وسياسةُ أجرة الطلب المخصَّص — تُقرأ مع الحال نفسِها** (Batch 2c)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ليقول نموذجُ الطلب الخاصّ للزبون قبل الإرسال**: أجرةٌ محدَّدةٌ من
+    // المنصة تُعرَض، وإلّا فتُحدَّد بعد قبول السائق. **من الردّ نفسِه لا نداءٍ ثانٍ.**
+    var customDelivery: CustomDelivery? by mutableStateOf(null)
+        private set
+
+    /** **أحدّدت المنصةُ أجرةَ الطلب المخصَّص؟** — فتُعرَض قيمتُها عند الإنشاء. */
+    val customFeeAdminDefined: Boolean get() = customDelivery?.adminDefined ?: false
+
+    /** **قيمةُ أجرة المخصَّص حين تحدّدها المنصة** — تُعرَض للزبون. */
+    val customFeeValue: Long get() = customDelivery?.fee ?: 0L
+
     /**
      * stale **أشاخت الحالُ فتحتاج تجديداً؟**
      *
@@ -110,10 +126,11 @@ object Serving {
         readAt = nowElapsed
     }
 
-    /** **وحالُ الافتتاح معها** — **من الردّ نفسِه.** */
-    fun put(o: Ordering, l: LaunchState, nowElapsed: Long) {
+    /** **وحالُ الافتتاح وسياسةُ أجرة المخصَّص معها** — **من الردّ نفسِه.** */
+    fun put(o: Ordering, l: LaunchState, cd: CustomDelivery, nowElapsed: Long) {
         state = o
         launch = l
+        customDelivery = cd
         readAt = nowElapsed
     }
 
@@ -127,7 +144,7 @@ object Serving {
         if (!stale(android.os.SystemClock.elapsedRealtime())) return
         scope.launch {
             runCatching { com.rahalgo.shared.auth.AuthApi(AppCore.get().api).platform() }
-                .onSuccess { put(it.ordering, it.launch, android.os.SystemClock.elapsedRealtime()) }
+                .onSuccess { put(it.ordering, it.launch, it.customDelivery, android.os.SystemClock.elapsedRealtime()) }
         }
     }
 
@@ -135,6 +152,7 @@ object Serving {
     fun resetForTest() {
         state = null
         launch = null
+        customDelivery = null
         readAt = 0L
     }
 

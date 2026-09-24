@@ -203,7 +203,28 @@ data class Platform(
      * يقرأ هذا الحقلَ قطّ.**
      */
     val launch: LaunchState = LaunchState(),
+    /**
+     * **سياسةُ أجرة الطلب المخصَّص عند الإنشاء** (`Batch 2c`).
+     *
+     * **يقرؤها نموذجُ الطلب الخاصّ ليقول للزبون قبل الإرسال**: إن كانت
+     * الأجرةُ محدَّدةً من المنصة عُرضت فوراً، وإلّا قيل «تُحدَّد بعد قبول
+     * السائق». **وهي عرضٌ لا حكم** — اللقطةُ على الطلب هي التي تُلزم.
+     */
+    @SerialName("custom_delivery") val customDelivery: CustomDelivery = CustomDelivery(),
 )
+
+/**
+ * **سياسةُ أجرة الطلب المخصَّص** — `admin_defined` تعني أنّ المنصةَ
+ * حدّدت الأجرةَ فتُعرَض؛ وما عداها يحددها السائق بعد قبوله.
+ */
+@Serializable
+data class CustomDelivery(
+    val source: String = "driver_defined",
+    val fee: Long = 0,
+) {
+    /** **أحدّدتها المنصة؟** — فيُعرَض رقمُها للزبون عند الإنشاء. */
+    val adminDefined: Boolean get() = source == "admin_defined"
+}
 
 /**
  * **حالُ الافتتاح كما يقولها الخادم.**

@@ -1021,7 +1021,7 @@ private fun SignedIn(
                     //
                     // **وقبل التبويبات في الترتيب** — ولو جاءت بعدها
                     // لَغطّاها التبويبُ فلا تُرى أبدا.
-                    tab == Tab.Orders -> OrdersScreen(ordersVm)
+                    tab == Tab.Orders -> OrdersScreen(ordersVm, walletBalance = shell.balance)
 
                     // **ونجاحُ الطلب الخاصّ ينقله إلى «طلباتي»** —
                     // (شكوى المالك ٢٠٢٦-٠٨-١٨): **نموذجٌ يبقى مملوءاً

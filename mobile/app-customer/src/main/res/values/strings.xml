@@ -47,6 +47,7 @@
     <string name="ord_wanted">المطلوب:</string>
     <string name="ord_driver">السائق</string>
     <string name="ord_subtotal">المجموع</string>
+    <string name="ord_goods">قيمة المشتريات</string>
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
     <string name="ord_total">الإجمالي</string>
@@ -110,6 +111,21 @@
     <string name="cst_send">أرسل الطلب</string>
     <string name="cst_need_point">اختر عنوان التوصيل ليعرف السائق أين يوصل</string>
     <string name="cst_done">تم إرسال طلبك رقم %1$s — تابعه في «طلباتي»</string>
+    <!-- ── الطلب المخصّص: تحديد التكلفة وتأكيدها (Batch 2c) ── -->
+    <string name="cst_pay_after_cost">طريقة الدفع تُحدد بعد تحديد تكلفة الطلب.</string>
+    <string name="cst_fee_on_deal">سيتم تحديد أجرة التوصيل بعد قبول السائق.</string>
+    <string name="cst_total_pending">الإجمالي يُعرف بعد تحديد قيمة المشتريات.</string>
+    <string name="ord_awaiting_quote">بانتظار تحديد تكلفة الطلب</string>
+    <string name="ord_fee_value">أجرة التوصيل: %1$s</string>
+    <string name="ord_confirm_prompt">أكد المبلغ واختر طريقة الدفع</string>
+    <string name="ord_confirm_action">تأكيد المبلغ وطريقة الدفع</string>
+    <string name="ord_wallet_short">رصيد محفظتك غير كافٍ للدفع بهذا الطلب.</string>
+    <string name="ord_confirmed_cash">تم تأكيد المبلغ.</string>
+    <string name="ord_confirmed_wallet">تم حجز المبلغ من محفظتك لهذا الطلب حتى إتمامه.</string>
+    <string name="ord_reserved_note">محجوز من محفظتك: %1$s</string>
+    <string name="ord_quote_increased">تغيّر المبلغ المطلوب. يرجى مراجعة المبلغ وتأكيده من جديد.</string>
+    <string name="ord_quote_decreased">تم تخفيض تكلفة طلبك إلى %1$s.</string>
+    <string name="ord_quote_stale">تم تحديث تكلفة الطلب. راجع المبلغ الجديد ثم أكد من جديد.</string>
 
     <!-- **عناوينُ أقسام «ما يخصّني»** — والاسمُ في الشاشة كالاسم في القائمة. -->
     <string name="menu_favorites_title">المفضلة</string>

@@ -93,9 +93,23 @@ import org.maplibre.android.geometry.LatLng
  * **وأجرة التوصيل لا تُترك**: هي حقّه، **وطلبٌ بلا أجرة اتّفاقٌ ناقص.**
  */
 @Composable
-internal fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) {
+internal fun AgreeDialog(
+    /** **من يحدّد الأجرة** (Batch 2c) — `admin_defined` أو `driver_defined`. */
+    feeSource: String,
+    /** **لقطةُ أجرة المنصة** — تُملأ سلفاً حين تحدّدها المنصة. */
+    feeSnapshot: Long?,
+    /** **أيجوز للسائق تعديلُها** — حين تحدّدها المنصة. */
+    driverMayChange: Boolean,
+    onConfirm: (Long, Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val adminDefined = feeSource == "admin_defined"
+    // **مفروضةٌ لا تُعدَّل** حين تحدّدها المنصةُ ولا تأذن للسائق (2c) —
+    // **والمحرّكُ يفرضها على كلّ حال**، والحقلُ المقفلُ يقول ذلك للسائق.
+    val feeLocked = adminDefined && !driverMayChange
     var goods by remember { mutableStateOf("") }
-    var fee by remember { mutableStateOf("") }
+    // **تُملأ سلفاً من لقطة المنصة إن حدّدتها** — مقفلةً أو قابلةً للتعديل.
+    var fee by remember { mutableStateOf(if (adminDefined) (feeSnapshot?.toString() ?: "0") else "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -114,17 +128,28 @@ internal fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = fee,
-                    onValueChange = { fee = it.filter { c -> c.isDigit() } },
+                    onValueChange = { if (!feeLocked) fee = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_fee)) },
                     singleLine = true,
+                    readOnly = feeLocked,
+                    enabled = !feeLocked,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
+                if (feeLocked) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.agree_fee_fixed),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
             RahalTextButton(
                 onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
-                enabled = fee.isNotBlank(),
+                // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة.
+                enabled = feeLocked || fee.isNotBlank(),
             ) {
                 Text(stringResource(R.string.agree_confirm))
             }

@@ -58,6 +58,23 @@ data class DriverOrder(
     @SerialName("custom_goods_amount") val customGoods: Long? = null,
     @SerialName("custom_fee") val customFee: Long? = null,
 
+    /**
+     * **لقطةُ سياسة الأجرة وعرضُ السعر** (Batch 2c).
+     *
+     * **من يحدّد الأجرة**: `admin_defined` مع `customDriverMayChangeFee=false`
+     * تعني أنّ الأجرةَ مفروضةٌ (قيمتُها في `customFeeSnapshot`) والسائقُ يُدخل
+     * البضاعةَ وحدَها؛ ومع `true` تُملأ سلفاً ويجوز تعديلُها؛ و`driver_defined`
+     * يُدخل الاثنين. **والمحرّكُ يفرض ذلك** — الشاشةُ تعكسه لا تحرسه.
+     *
+     * **وحالُ التأكيد**: العرضُ مؤكَّدٌ حين `quoteConfirmedVersion == quoteVersion` —
+     * وقبلها لا يبدأ الاستلامُ ويرى السائقُ «بانتظار تأكيد الزبون».
+     */
+    @SerialName("custom_fee_source") val customFeeSource: String = "driver_defined",
+    @SerialName("custom_fee_snapshot") val customFeeSnapshot: Long? = null,
+    @SerialName("custom_driver_may_change_fee") val customDriverMayChangeFee: Boolean = true,
+    @SerialName("quote_version") val quoteVersion: Long = 0,
+    @SerialName("quote_confirmed_version") val quoteConfirmedVersion: Long? = null,
+
     @SerialName("merchant_name") val merchantName: String = "",
     @SerialName("merchant_phone") val merchantPhone: String? = null,
 

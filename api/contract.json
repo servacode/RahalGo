@@ -6310,6 +6310,10 @@
           "type": "unknown"
         },
         {
+          "name": "custom_delivery",
+          "type": "object"
+        },
+        {
           "name": "join_open",
           "type": "unknown"
         },

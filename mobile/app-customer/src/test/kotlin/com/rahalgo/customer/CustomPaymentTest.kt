@@ -6,12 +6,15 @@ import org.junit.Test
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **الطلبُ الخاصُّ يعرض منتقيَ الدفع** (`CUST-CUSTOM-020`، §40.11)
+ * **عقدُ دفعِ الطلب الخاصّ — يُؤجَّل إلى تأكيد العرض** (Batch 2c)
  * ══════════════════════════════════════════════════════════════════════
  *
- * **المحرّكُ يقبل نقداً أو محفظةً للطلب الخاصّ** (`orders/custom.go`)، **وكان
- * التطبيقُ لا يرسل الحقلَ فيقع كلُّ طلبٍ نقداً** — فلا يختار صاحبُه المحفظةَ
- * ولو أرادها. **فوجب أن تعرض الشاشةُ الخيارَين وترسل المختار.**
+ * (قرارُ المالك — عقدُ Batch 2c.)
+ *
+ * **الطلبُ المخصَّصُ لا سعرَ له عند الإنشاء** — فلا تُختار طريقةُ الدفع حينها،
+ * ولا تُعرَض المحفظةُ قبل معرفة المبلغ. **بل يُقال «تُحدَّد بعد التكلفة»**،
+ * ويؤكّد الزبونُ ويختار الدفعَ حين يصل العرضُ (`confirm-quote`). **والمحفظةُ
+ * لا تُعرَض إلّا إن غطّى رصيدُها المبلغَ.**
  *
  * **اختبارُ مصدرٍ**: عقدُ الشاشة لا يُقاس بلقطة.
  */
@@ -32,21 +35,25 @@ class CustomPaymentTest {
         return f.readText().replace("\r\n", "\n")
     }
 
-    /** **الشاشةُ تعرض خياريَ نقدٍ ومحفظةٍ وترسل المختار.** */
+    /** **الإنشاءُ لا يعرض منتقيَ الدفع — بل يؤجّله إلى تأكيد العرض.** */
     @Test
-    fun customScreenExposesPaymentSelector() {
+    fun customCreationDefersPaymentChoice() {
         val s = read("app-customer/src/main/kotlin/com/rahalgo/customer/custom/CustomScreen.kt")
+        // **لا منتقيَ دفعٍ عند الإنشاء** — لا اختيارُ الزبون يُرسَل.
+        assertTrue("**عاد اختيارُ الدفع يُرسَل من الإنشاء**", !s.contains("if (wallet)"))
+        // **بل يُقال إنّ الدفعَ يُحدَّد بعد التكلفة.**
         assertTrue(
-            "**لا خيارَ محفظةٍ في الطلب الخاصّ**",
-            s.contains("R.string.cart_cash") && s.contains("R.string.cart_wallet"),
+            "**لا إشعارَ بتأجيل اختيار الدفع**",
+            s.contains("R.string.cst_pay_after_cost"),
         )
+        // **وسياسةُ الأجرة تُقرأ من الحال** — أجرةٌ محدَّدةٌ من المنصة أو بعد قبول السائق.
         assertTrue(
-            "**المختارُ لا يُرسَل**",
-            s.contains("if (wallet) \"wallet\" else \"cash\""),
+            "**لا تُقرأ سياسةُ أجرة المخصَّص عند الإنشاء**",
+            s.contains("Serving.customFeeAdminDefined") && s.contains("R.string.cst_fee_on_deal"),
         )
     }
 
-    /** **والحمولةُ تحمل طريقةَ الدفع.** */
+    /** **والحمولةُ تحمل طريقةَ الدفع** (يستعملها المحرّكُ افتراضاً آمناً). */
     @Test
     fun newCustomCarriesPaymentMethod() {
         val s = read("shared/src/main/kotlin/com/rahalgo/shared/customer/CustomerApi.kt")
@@ -54,5 +61,27 @@ class CustomPaymentTest {
             "**`NewCustom` بلا `payment_method`**",
             Regex("data class NewCustom\\b[\\s\\S]*?payment_method[\\s\\S]*?\\)").containsMatchIn(s),
         )
+    }
+
+    /** **وبابُ تأكيد العرض موصولٌ** — نسخةٌ ومبلغٌ متوقَّعان وطريقةُ دفع. */
+    @Test
+    fun customerApiConfirmsQuote() {
+        val s = read("shared/src/main/kotlin/com/rahalgo/shared/customer/CustomerApi.kt")
+        assertTrue("**لا `confirmQuote`**", s.contains("fun confirmQuote("))
+        assertTrue("**لا نداءَ `confirm-quote`**", s.contains("/confirm-quote"))
+        assertTrue(
+            "**التأكيدُ بلا نسخةٍ ومبلغٍ متوقَّعين**",
+            s.contains("expected_total") && s.contains("expected_quote_version"),
+        )
+    }
+
+    /** **وبطاقةُ الطلب لا تعرض المحفظةَ إلّا إن غطّى رصيدُها المبلغ.** */
+    @Test
+    fun orderCardGatesWalletOnBalance() {
+        val s = read("app-customer/src/main/kotlin/com/rahalgo/customer/orders/OrderCard.kt")
+        assertTrue("**لا بوّابةَ رصيدٍ للمحفظة**", s.contains("walletBalance >= total"))
+        assertTrue("**لا زرَّ تأكيدٍ للعرض**", s.contains("R.string.ord_confirm_action"))
+        // **والرصيدُ غيرُ الكافي يُقال لا يُخفى بلا سبب.**
+        assertTrue("**لا رسالةَ رصيدٍ غيرِ كافٍ**", s.contains("R.string.ord_wallet_short"))
     }
 }

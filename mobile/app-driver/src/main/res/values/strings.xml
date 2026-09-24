@@ -242,7 +242,9 @@
     <string name="agree_hint">ثمن البضاعة اختياري — اتركه فارغا إن كانت أمانة بلا ثمن</string>
     <string name="agree_goods">ثمن البضاعة</string>
     <string name="agree_fee">أجرة التوصيل</string>
+    <string name="agree_fee_fixed">أجرة التوصيل محددة من المنصة.</string>
     <string name="agree_confirm">وثق</string>
+    <string name="drv_awaiting_customer">بانتظار تأكيد الزبون للتكلفة</string>
     <string name="trip_on_route">طلب على طريقك</string>
     <string name="order_agree">موافق</string>
     <!-- **ولا «رفض»** — (قرارُ المالك ٢٠٢٦-٠٨-١٤): يوافق أو يترك.

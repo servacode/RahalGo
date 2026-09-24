@@ -905,7 +905,14 @@ fun TripScreen(
     }
 
     if (state.agreeOpen) {
-        AgreeDialog(onConfirm = actions.agree, onDismiss = actions.dismissAgree)
+        AgreeDialog(
+            // **سلطةُ الأجرة من لقطة الطلب** (Batch 2c) — لا من إعدادٍ عامّ.
+            feeSource = order.customFeeSource,
+            feeSnapshot = order.customFeeSnapshot,
+            driverMayChange = order.customDriverMayChangeFee,
+            onConfirm = actions.agree,
+            onDismiss = actions.dismissAgree,
+        )
     }
 
     if (state.emergencyOpen) {
@@ -1302,7 +1309,25 @@ private fun TripCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val next = nextAction(order.status, order.kind == "custom")
-                if (next != null) {
+                // ══════════════════════════════════════════════════════════
+                // **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ** (Batch 2c)
+                // ══════════════════════════════════════════════════════════
+                //
+                // **المحرّكُ يمنع `picked_up` حتّى يؤكّد الزبونُ النسخةَ الحاليّة**
+                // (`quote_not_confirmed`) — **والشاشةُ تقول ذلك بدل أن يُضغط
+                // فيُردّ.** ويبقى زرُّ الاتّفاق ليعدّل إن لزم. **والحارسُ في
+                // المحرّك لا في إخفاء الزرّ.**
+                val awaitingConfirm = order.kind == "custom" &&
+                    order.customGoods != null && order.status == "assigned" &&
+                    order.quoteConfirmedVersion != order.quoteVersion
+                if (awaitingConfirm) {
+                    Text(
+                        stringResource(R.string.drv_awaiting_customer),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else if (next != null) {
                     SmallAction(
                         icon = R.drawable.ic_check_circle,
                         label = next.label,
@@ -1382,7 +1407,9 @@ private fun TripCard(
             // هاتف في الطرفين، **وما يُفتح فجأةً يكون في مرمى الإبهام.**
             // **والاتّفاق للطلب الخاصّ وحدَه** — العاديّ سعرُه معروف
             // سلفا، **وزرٌّ يظهر فيه يسأل عمّا لا يُسأل عنه.**
-            if (order.kind == "custom") {
+            // **والاتّفاقُ قبل الاستلام وحدَه** (Batch 2c) — بعد الاستلام يُقفَل
+            // السعرُ ولا يعدّله السائق (يفرضه المحرّك؛ والزرُّ يُخفى كذلك).
+            if (order.kind == "custom" && order.status == "assigned") {
                 RahalTextButton(onClick = actions.askAgree, enabled = !state.busy) {
                     Text(stringResource(R.string.agree_button), color = Rahal.colors.accent)
                 }

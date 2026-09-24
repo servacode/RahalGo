@@ -227,6 +227,30 @@ class CustomerApi(private val api: ApiClient) {
         api.call("/api/v1/orders/custom", HttpMethod.Post, input, idempotencyKey = attemptKey)
 
     /**
+     * **الزبونُ يؤكّد عرضَ الطلب المخصَّص ويختار طريقةَ الدفع** (Batch 2c).
+     *
+     * **يُرسِل ما رآه** — المبلغَ والنسخة — **فإن تبدّل العرضُ بينهما ردّ
+     * الخادمُ `quote_changed`** فيُعاد جلبُ العرض الجديد. **والمحفظةُ لا
+     * تُقبَل إلّا إن غطّى المتاحُ المبلغَ، ويُحجَز فوراً** (يحرسه المحرّك).
+     *
+     * **ويردّ الطلبَ كما صار** — بحالة التأكيد والحجز. **ومفتاحُ المحاولة
+     * يحمله**، والمحرّكُ متكرّرٌ بالنسخة نفسِها لا يُحدث أثراً ثانيا.
+     */
+    suspend fun confirmQuote(
+        orderId: String,
+        paymentMethod: String,
+        expectedTotal: Long,
+        expectedQuoteVersion: Long,
+        attemptKey: String,
+    ): MyOrder =
+        api.call(
+            "/api/v1/orders/$orderId/confirm-quote",
+            HttpMethod.Post,
+            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion),
+            idempotencyKey = attemptKey,
+        )
+
+    /**
      * **يُلغي طلباً في مهلته** — والمهلةُ من الخادم لا من حسبةِ الشاشة.
      *
      * **ولا سببَ معه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): الزبونُ حرٌّ في
@@ -406,6 +430,14 @@ data class NewCustom(
     @SerialName("payment_method") val paymentMethod: String = "cash",
 )
 
+/** **تأكيدُ عرض السعر** — الطريقةُ، والمبلغُ والنسخةُ اللذان رآهما الزبون. */
+@Serializable
+private data class ConfirmQuoteInput(
+    @SerialName("payment_method") val paymentMethod: String,
+    @SerialName("expected_total") val expectedTotal: Long,
+    @SerialName("expected_quote_version") val expectedQuoteVersion: Long,
+)
+
 @Serializable
 data class OrderRef(
     val id: String = "",
@@ -550,6 +582,19 @@ data class MyOrder(
     @SerialName("address_text") val addressText: String = "",
     val notes: String = "",
     @SerialName("custom_request") val customRequest: String = "",
+    // ── عرضُ سعر الطلب المخصَّص وتأكيدُه (Batch 2c) ──────────────────
+    //
+    // **`customGoodsAmount == null` تعني «لم يُتّفق بعد»** — فتُعرَض حالُ
+    // الانتظار؛ وحين يصل العرضُ تُعرَض بطاقتُه ويُطلَب التأكيد. **والتأكيدُ
+    // مربوطٌ بنسخةٍ**: `quoteConfirmedVersion == quoteVersion` تعني تأكيداً
+    // حيّاً، وإلّا فالعرضُ تغيّر ويجب أن يُؤكَّد من جديد. **والمحجوزُ مالُه.**
+    @SerialName("custom_goods_amount") val customGoodsAmount: Long? = null,
+    @SerialName("custom_fee") val customFee: Long? = null,
+    @SerialName("quote_version") val quoteVersion: Long = 0,
+    @SerialName("quote_confirmed_at") val quoteConfirmedAt: String? = null,
+    @SerialName("quote_confirmed_total") val quoteConfirmedTotal: Long? = null,
+    @SerialName("quote_confirmed_version") val quoteConfirmedVersion: Long? = null,
+    @SerialName("custom_reserved_amount") val customReservedAmount: Long = 0,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("delivered_at") val deliveredAt: String? = null,
     @SerialName("cancel_reason") val cancelReason: String = "",

@@ -1,14 +1,11 @@
 package com.rahalgo.customer.custom
 
 import android.app.Application
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -16,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -24,10 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rahalgo.customer.R
+import com.rahalgo.customer.Serving
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.NewCustom
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.money
 import com.rahalgo.shared.model.Address
 import com.rahalgo.ui.AddressCard
 import com.rahalgo.ui.Flash
@@ -76,10 +76,19 @@ fun CustomScreen(
 ) {
     var request by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
-    // **طريقةُ الدفع** — `CUST-CUSTOM-020`/§40.11: نقدٌ (افتراض) أو محفظة.
-    // **والخصمُ عند الاتّفاق لا عند الإنشاء** — فلا سعرَ يُفحَص هنا؛ والحظرُ
-    // النقديُّ يحرسه المحرّكُ ويردّ برسالةٍ تدلّ على المحفظة إن كان محظوراً.
-    var wallet by rememberSaveable { mutableStateOf(false) }
+    // ══════════════════════════════════════════════════════════════════
+    // **ولا تُختار طريقةُ الدفع هنا** — Batch 2c (قرارُ المالك)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الطلبُ المخصَّصُ لا سعرَ له عند الإنشاء** — والمحفظةُ لا تُقبَل قبل
+    // معرفة المبلغ كاملاً. **فيُقال «تُحدَّد بعد تحديد التكلفة»**، ويؤكّد
+    // الزبونُ ويختار الدفعَ حين يصل العرضُ (`confirm-quote`). **والمحرّكُ
+    // يستعمل نقداً افتراضاً آمناً**، ولا تُوحي الشاشةُ أنّ الزبونَ اختاره.
+    //
+    // **وسياسةُ الأجرة تُقرأ من الحال** (`Serving.customDelivery`) — تُجدَّد
+    // عند فتح الشاشة كما تُجدَّد للسلّة.
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { Serving.refreshIfStale(scope) }
 
     // ══════════════════════════════════════════════════════════════════
     // **ونجاحُ الإرسال يُفرِّغ ما كُتب ثمّ ينتقل**
@@ -172,37 +181,45 @@ fun CustomScreen(
         )
 
         // ══════════════════════════════════════════════════════════════
-        // **طريقةُ الدفع — نقدٌ أو محفظة** (`CUST-CUSTOM-020`، §40.11)
+        // **تكلفةُ الطلب وطريقةُ الدفع تُحدَّدان لاحقاً** (Batch 2c)
         // ══════════════════════════════════════════════════════════════
         //
-        // **المحرّكُ يقبل الاثنين للخاصّ، وكان التطبيقُ لا يرسل شيئاً فيقع
-        // نقداً دائماً** — فلا يختار صاحبُه المحفظةَ ولو أرادها. **ولا
-        // فحصَ رصيدٍ هنا**: لا سعرَ عند الإنشاء (يُتّفق لاحقاً)، والحظرُ
-        // النقديُّ يحرسه المحرّك.
+        // **أجرةُ التوصيل**: إن حدّدتها المنصةُ عُرضت فوراً، وإلّا قيل إنّها
+        // تُحدَّد بعد قبول السائق. **والإجماليُّ مجهولٌ حتّى تُعرَف قيمةُ
+        // المشتريات.** **وطريقةُ الدفع تُختار عند تأكيد العرض لا الآن.**
         Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.cst_pay), color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = !wallet,
-                onClick = { wallet = false },
-                label = { Text(stringResource(R.string.cart_cash)) },
+        if (Serving.customFeeAdminDefined) {
+            Text(
+                stringResource(R.string.ord_fee_value, money(Serving.customFeeValue)),
+                style = MaterialTheme.typography.bodyMedium,
             )
-            FilterChip(
-                selected = wallet,
-                onClick = { wallet = true },
-                label = { Text(stringResource(R.string.cart_wallet)) },
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.cst_total_pending),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            Text(
+                stringResource(R.string.cst_fee_on_deal),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.cst_pay_after_cost),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
 
         Spacer(Modifier.height(16.dp))
         RahalButton(
             onClick = {
                 address?.let {
-                    vm.send(
-                        request.trim(), it.text, it.lat, it.lng, notes.trim(),
-                        if (wallet) "wallet" else "cash",
-                    )
+                    // **بلا اختيار دفعٍ من الزبون** — المحرّكُ يستعمل نقداً
+                    // افتراضاً آمناً، والاختيارُ الحقيقيُّ عند تأكيد العرض.
+                    vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash")
                 }
             },
             enabled = !vm.busy && request.isNotBlank() && address != null,

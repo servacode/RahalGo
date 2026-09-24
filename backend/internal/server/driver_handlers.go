@@ -321,6 +321,13 @@ type driverOrder struct {
 	// CustomGoodsAmount وCustomFee ما وُثّق — **و`nil` تعني «لم يُوثَّق بعد».**
 	CustomGoodsAmount *int64 `json:"custom_goods_amount"`
 	CustomFee         *int64 `json:"custom_fee"`
+	// لقطةُ سياسة الأجرة وعرضُ السعر (Batch 2c) — ليعرف السائقُ أيحدّد
+	// الأجرةَ أم تُفرَض عليه، وأأكّد الزبونُ العرضَ الحاليّ فيبدأ الشراء.
+	CustomFeeSource          string `json:"custom_fee_source"`
+	CustomFeeSnapshot        *int64 `json:"custom_fee_snapshot"`
+	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
+	QuoteVersion             int64  `json:"quote_version"`
+	QuoteConfirmedVersion    *int64 `json:"quote_confirmed_version"`
 }
 
 const driverOrderSelect = `
@@ -385,6 +392,9 @@ const driverOrderSelect = `
 	       -- **وبطاقتُه تقول «اشترِ ثمّ سلّم» لا «استلم ثمّ سلّم».**
 	       o.kind, COALESCE(o.custom_request, ''),
 	       o.custom_goods_amount, o.custom_fee,
+	       -- **لقطةُ سياسة الأجرة وعرضُ السعر** (Batch 2c) — سلطةُ الأجرة وحالُ التأكيد.
+	       o.custom_fee_source, o.custom_fee_snapshot, o.custom_driver_may_change_fee,
+	       o.quote_version, o.quote_confirmed_version,
 	       -- ══════════════════════════════════════════════════════════
 	       -- **ما تقوله البطاقةُ قبل أن يقرّر**
 	       -- ══════════════════════════════════════════════════════════
@@ -439,6 +449,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
 			&o.OfferExpiresAt, &o.NavLat, &o.NavLng,
 			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
+			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
+			&o.QuoteVersion, &o.QuoteConfirmedVersion,
 			&o.DeliveryFee, &o.PickupAddress); err != nil {
 			s.respondErr(w, err)
 			return

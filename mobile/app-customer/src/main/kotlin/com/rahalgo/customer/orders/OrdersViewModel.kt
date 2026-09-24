@@ -6,10 +6,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.rahalgo.customer.R
 import com.rahalgo.shared.customer.ComplaintReason
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.MyOrder
+import com.rahalgo.shared.net.ApiClient
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.Attempt
+import com.rahalgo.ui.Flash
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.apiError
 import kotlinx.coroutines.flow.drop
@@ -115,6 +119,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 val p = api.orders(openOnly = false, page = 1)
                 open = p.orders.filterNot { it.status in ENDED }
                 history = p.orders.filter { it.status in ENDED }
+                noteQuoteChanges(open)
                 lastPage = 1
                 loadedCount = p.orders.size
                 historyHasMore = loadedCount < p.total
@@ -165,6 +170,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 val all = p.orders
                 open = all.filterNot { it.status in ENDED }
                 history = all.filter { it.status in ENDED }
+                noteQuoteChanges(open)
                 lastPage = 1
                 loadedCount = all.size
                 historyHasMore = loadedCount < p.total
@@ -286,6 +292,76 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             load()
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **تأكيدُ عرض الطلب المخصَّص واختيارُ الدفع** (Batch 2c)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الزبونُ يؤكّد المبلغَ والنسخةَ اللذين رآهما.** **فإن تبدّل العرضُ
+    // بينهما ردّ المحرّكُ `quote_changed`** — فيُجلب الجديدُ ويُقال «راجِعه»
+    // لا خطأٌ عامّ (`L`). **والمحرّكُ سلطان**: المحفظةُ لا تُقبَل بلا رصيدٍ
+    // كافٍ، ويُحجَز فوراً. **ومفتاحُ المحاولة يحمله** فلا يُؤكَّد مرّتين.
+    fun confirmQuote(order: MyOrder, method: String) {
+        if (busy) return
+        busy = true
+        actionError = ""
+        val slot = "confirm:" + order.id
+        val key = Attempt.key(slot)
+        viewModelScope.launch {
+            try {
+                api.confirmQuote(order.id, method, order.total, order.quoteVersion, key)
+                Attempt.clear(slot)
+                Flash.ok(
+                    getApplication<Application>().getString(
+                        if (method == "wallet") R.string.ord_confirmed_wallet
+                        else R.string.ord_confirmed_cash,
+                    ),
+                )
+            } catch (e: Exception) {
+                if (e is ApiClient.ApiException && e.body.code == "quote_changed") {
+                    Attempt.clear(slot)
+                    Flash.ok(getApplication<Application>().getString(R.string.ord_quote_stale))
+                } else {
+                    if (com.rahalgo.ui.isDecided(e)) Attempt.clear(slot)
+                    actionError = apiError(getApplication(), e)
+                }
+            }
+            busy = false
+            load()
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **إشعارُ الزبون بتغيُّر العرض لحظيّاً** (Batch 2c: F/G/H/I)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الوصلةُ الحيّةُ تُعيد الجلبَ فتُحدَّث البطاقةُ وحدَها** (`F`)؛ **وهنا
+    // يُقال ما تغيّر لمن كان قد أكّد**: خُفّض المبلغُ فبقي تأكيدُه (`I`)، أو
+    // تغيّر فبطل ويجب أن يُعيد التأكيد (`G`/`H`). **ومن لم يكن أكّد لا يُزعَج.**
+    private var prevQuotes = mapOf<String, QuoteSnap>()
+
+    private fun noteQuoteChanges(orders: List<MyOrder>) {
+        val next = HashMap<String, QuoteSnap>()
+        for (o in orders) {
+            if (o.kind != "custom") continue
+            val confirmedNow = o.quoteConfirmedAt != null && o.quoteConfirmedVersion == o.quoteVersion
+            next[o.id] = QuoteSnap(o.quoteVersion, o.total, confirmedNow)
+            val prev = prevQuotes[o.id] ?: continue
+            if (o.quoteVersion <= prev.version) continue // لا تغيّرَ حقيقيّ في العرض
+            when {
+                confirmedNow && o.total < prev.total ->
+                    Flash.ok(
+                        getApplication<Application>()
+                            .getString(R.string.ord_quote_decreased, com.rahalgo.ui.money(o.total)),
+                    )
+                prev.confirmedNow && !confirmedNow ->
+                    Flash.ok(getApplication<Application>().getString(R.string.ord_quote_increased))
+            }
+        }
+        prevQuotes = next
+    }
+
+    private data class QuoteSnap(val version: Long, val total: Long, val confirmedNow: Boolean)
 }
 
 /**
