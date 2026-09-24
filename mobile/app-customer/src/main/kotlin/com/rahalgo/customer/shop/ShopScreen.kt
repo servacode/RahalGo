@@ -103,6 +103,8 @@ fun ShopScreen(
     address: com.rahalgo.shared.model.Address? = null,
     /** **يُساق إلى اختيار عنوانٍ حين لا عنوانَ له** (`PC-02`). */
     onNeedAddress: () -> Unit = {},
+    /** **المدنُ الفعّالة** (Batch 3c) — منها تُعرَف المدينةُ الرائدةُ لاستعراض سوقها. */
+    cities: List<com.rahalgo.shared.model.City> = emptyList(),
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
@@ -122,13 +124,48 @@ fun ShopScreen(
     )
     val serviceVm: PreCartViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     androidx.compose.runtime.LaunchedEffect(point) { serviceVm.refreshAt(point, ctx0) }
+    // **إشارةُ اللوحة/عودةُ الوصلة تُصحّحان إتاحةَ النقطة** (Batch 3b) — تجديدٌ
+    // إجباريٌّ يتجاوز العمرَ، فيتبدّل السببُ/الحظرُ تلقائيّاً بلا إعادة فتحٍ يدويّة.
+    androidx.compose.runtime.LaunchedEffect(point) {
+        com.rahalgo.ui.Refresh.tick.collect { serviceVm.refreshAt(point, ctx0, force = true) }
+    }
+    // **العودةُ إلى الواجهة تُصحّح إتاحةَ العنوان دائماً** (Batch 3b، تصحيحُ المالك ٢):
+    // تجديدٌ إجباريٌّ عند ON_RESUME يتجاوز عمرَ الدقيقتين — فالعائدُ لا يرى حظراً/سماحاً
+    // شائخاً. (والعمرُ يبقى للاستطلاع الروتينيّ في تبدّل النقطة.)
+    run {
+        val shopOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+        androidx.compose.runtime.DisposableEffect(shopOwner, point) {
+            val o = androidx.lifecycle.LifecycleEventObserver { _, e ->
+                if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                    serviceVm.refreshAt(point, ctx0, force = true)
+                }
+            }
+            shopOwner.lifecycle.addObserver(o)
+            onDispose { shopOwner.lifecycle.removeObserver(o) }
+        }
+    }
     val availability = com.rahalgo.customer.Orderable.of(point)
     // **ولا يفتح الاستكشافُ الزرَّ** (`DL-03`، `DL-04`).
     val action = com.rahalgo.customer.addActionFor(ctx0, availability)
 
+    // ══════════════════════════════════════════════════════════════════
+    // **استعراضُ سوقِ المدينةِ المُطلَقة** (Batch 3c)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **المدينةُ الرائدة** (أوّلُ فعّالة = الرقّة) تُعرَض للقراءة فقط لمن لم تُطلَق
+    // مدينتُه. **والدخولُ يُثبّت مدينةَ التصفّح، والخروجُ يُعيدها لعنوان الزبون** —
+    // **ونقطةُ التوصيل لا تتبدّل، فتبقى الإضافةُ والطلبُ مغلقَين خادميّاً.**
+    val flagship = com.rahalgo.customer.CityScope.flagship(cities)
+    val previewing = com.rahalgo.customer.CityScope.preview
+    val enterPreview: (() -> Unit)? = flagship?.let { fc ->
+        { com.rahalgo.customer.CityScope.enterPreview(context, fc); vm.load() }
+    }
+
     // **وما يقع عند الضغط** — **موضعٌ واحدٌ للقرار**: **وبطاقةٌ تقرّر
     // ونافذةُ خياراتٍ تقرّر تفترقان يوماً.**
-    val blocked = action == AddAction.BLOCKED
+    // **وفي وضع الاستعراض لا إضافة البتّة** (Batch 3c) — سوقُ القراءةِ فقط،
+    // ونقطةُ التوصيلِ (مدينةُ الزبونِ التي لم تُطلَق) تحجب الإضافةَ خادميّاً كذلك.
+    val blocked = action == AddAction.BLOCKED || previewing
 
     // **الصنفُ الذي تُختار خياراتُه الآن** — وفارغٌ حين لا نافذة.
     var picking by androidx.compose.runtime.remember {
@@ -265,17 +302,39 @@ fun ShopScreen(
             //
             // **وفوق الأقسام لا تحتها** — **ولافتةٌ تحت البضاعة
             // لا تُرى إلّا بعد أن يُملأ ما فوقها.**
-            availability?.takeIf { !it.available }?.let { av ->
+            if (previewing) {
+                // **لافتةُ الاستعراض الدائمة** (Batch 3c) — **أنت تتصفح سوق الرقة**،
+                // والتوصيلُ إلى مدينتك غير متاح؛ وخروجٌ صريحٌ يعيدك إلى مدينتك.
                 Column(Modifier.padding(horizontal = 12.dp)) {
-                    com.rahalgo.customer.ServiceBlockNotice(
-                        av,
-                        address,
-                        serviceVm,
-                        // **ونقطةُ الاستكشاف تُصاغ «موقعك الحالي»** —
-                        // **ولا تُقرأ عنوانَ توصيلٍ مؤكَّدا** (`A2`).
-                        discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
+                    com.rahalgo.ui.Note(
+                        stringResource(
+                            com.rahalgo.ui.R.string.preview_banner_named,
+                            com.rahalgo.customer.CityScope.chosen?.name ?: flagship?.name ?: "",
+                        ),
+                        Rahal.colors.brand,
                     )
+                    Spacer(Modifier.height(8.dp))
+                    com.rahalgo.ui.RahalOutlineButton(
+                        onClick = { com.rahalgo.customer.CityScope.exitPreview(context); vm.load() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(com.rahalgo.ui.R.string.preview_exit)) }
                     Spacer(Modifier.height(10.dp))
+                }
+            } else {
+                availability?.takeIf { !it.available }?.let { av ->
+                    Column(Modifier.padding(horizontal = 12.dp)) {
+                        com.rahalgo.customer.ServiceBlockNotice(
+                            av,
+                            address,
+                            serviceVm,
+                            // **ونقطةُ الاستكشاف تُصاغ «موقعك الحالي»** —
+                            // **ولا تُقرأ عنوانَ توصيلٍ مؤكَّدا** (`A2`).
+                            discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
+                            flagshipName = flagship?.name ?: "",
+                            onBrowseFlagship = enterPreview,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
                 }
             }
 
@@ -340,6 +399,9 @@ fun ShopScreen(
                             address,
                             serviceVm,
                             discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
+                            // **ولمدينةٍ لم تُطلَق: زرُّ «استعرض سوق الرقة»** (Batch 3c).
+                            flagshipName = flagship?.name ?: "",
+                            onBrowseFlagship = enterPreview,
                         )
                     }
                 } else {
@@ -393,6 +455,9 @@ fun ShopScreen(
                         media = media,
                         liked = item.id in liked,
                         onAdd = {
+                            // **وضعُ الاستعراض للقراءة فقط** (Batch 3c) — لا إضافةَ
+                            // ولا سؤالَ عنوان؛ اللافتةُ فوقُ تشرح، والخروجُ صريح.
+                            if (previewing) return@ItemCard
                             // **ولا عنوانَ لا إضافة** — **يُسأل أوّلاً**
                             // (`PC-02`)، **ولا يُخترَع له عنوان.**
                             if (action == AddAction.NEED_ADDRESS) {

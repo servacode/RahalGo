@@ -51,9 +51,18 @@ object CityScope {
     private const val KEY_LAT = "lat"
     private const val KEY_LNG = "lng"
     private const val KEY_NAME = "name"
+    private const val KEY_PREVIEW = "preview"
 
     /** **ما اختاره بيده** — يبقى بين الجلسات. */
     var chosen by mutableStateOf<City?>(null)
+        private set
+
+    /**
+     * **وضعُ الاستعراض** (Batch 3c) — **يتصفّح سوقَ مدينةٍ مُطلَقةٍ للقراءة فقط**،
+     * من مدينةٍ لم تُطلَق بعد. **ويبقى بين الجلسات** (فمدينةُ التصفّح تبقى، فتبقى معها
+     * رايتُه) — **فلا يعود بعد الإقلاع سوقاً «يُشترى منه» بلا لافتة.**
+     */
+    var preview by mutableStateOf(false)
         private set
 
     fun load(context: Context) {
@@ -65,6 +74,28 @@ object CityScope {
         val lat = p.getString(KEY_LAT, null)?.toDoubleOrNull() ?: return
         val lng = p.getString(KEY_LNG, null)?.toDoubleOrNull() ?: return
         chosen = City(id = id, name = p.getString(KEY_NAME, "").orEmpty(), lat = lat, lng = lng)
+        preview = p.getBoolean(KEY_PREVIEW, false)
+    }
+
+    /** **المدينةُ المُطلَقةُ الرائدة** — أوّلُ مدينةٍ فعّالة (والقائمةُ فعّالةٌ فقط، مرتّبةٌ). */
+    fun flagship(cities: List<City>): City? = cities.firstOrNull()
+
+    /**
+     * **يدخل استعراضَ سوقِ مدينةٍ مُطلَقة** — يُثبّت مدينةَ التصفّح ويرفع الراية.
+     * **ونقطةُ التوصيلِ (عنوانُ الزبون) لا تتبدّل** — فتبقى الإتاحةُ محجوبةً خادميّاً،
+     * والإضافةُ والطلبُ مغلقان.
+     */
+    fun enterPreview(context: Context, city: City) {
+        choose(context, city)
+        preview = true
+        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_PREVIEW, true).apply()
+    }
+
+    /** **يخرج من الاستعراض** — يُنسى اختيارُ المدينة فيعود التصفّحُ إلى عنوان الزبون/موقعه. */
+    fun exitPreview(context: Context) {
+        preview = false
+        choose(context, null) // يمسح كلَّ المفاتيح (بما فيها الراية)
     }
 
     fun choose(context: Context, city: City?) {

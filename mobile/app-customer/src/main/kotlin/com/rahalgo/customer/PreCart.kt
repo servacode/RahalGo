@@ -178,14 +178,19 @@ class PreCartViewModel(app: android.app.Application) :
      * **وسقوطُ النداء لا يمنع أحداً** — **والمحرّكُ يردّ عند الإنشاء
      * على كلّ حال**، **ومنعٌ بلا علمٍ أسوأُ من ردٍّ بعلم.**
      */
-    /** **يسأل عن النقطة السياقيّة** — مؤكَّدةً كانت أو استكشافاً. */
-    fun refreshAt(point: String, at: ContextPoint) {
+    /**
+     * **يسأل عن النقطة السياقيّة** — مؤكَّدةً كانت أو استكشافاً.
+     *
+     * **`force=true`** يتجاوز عمرَ الحال (Batch 3b) — لإشارة اللوحة/عودة الوصلة/
+     * العودة للواجهة؛ يبقى حارسُ «نداءٌ واحدٌ في الجوّ» (`inFlight`) على حاله.
+     */
+    fun refreshAt(point: String, at: ContextPoint, force: Boolean = false) {
         if (point.isEmpty() || at.source == PointSource.NONE) {
             Orderable.invalidate()
             return
         }
         val now = android.os.SystemClock.elapsedRealtime()
-        if (!Orderable.stale(point, now)) return
+        if (!force && !Orderable.stale(point, now)) return
         if (inFlight == point) return
         inFlight = point
         viewModelScope.launch {
@@ -242,6 +247,15 @@ fun ServiceBlockNotice(
      * الحاليّ وظنّه حكماً على عنوانه أخطأ الفهم.**
      */
     discovery: Boolean = false,
+    /**
+     * **استعراضُ سوقِ المدينةِ المُطلَقة** (Batch 3c) — اسمُها وفعلُ الدخول.
+     *
+     * **يُعرَض لمن لم نصل مدينتَه بعد وحدَه** (`expansionPending`): زرٌّ ثانويٌّ
+     * «استعرض سوق %s» — **استعراضٌ للقراءة فقط، لا يُبدّل عنوانَ التوصيل ولا يفتح
+     * الطلب.** وفارغٌ/`null` يعني «لا استعراض» (لا مدينةَ مُطلَقةٌ تُعرَض).
+     */
+    flagshipName: String = "",
+    onBrowseFlagship: (() -> Unit)? = null,
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val body = com.rahalgo.ui.ServiceReason.text(
@@ -255,27 +269,49 @@ fun ServiceBlockNotice(
         if (discovery) ctx.getString(com.rahalgo.ui.R.string.dl_current_location, body) else body,
         com.rahalgo.design.Rahal.colors.danger,
     )
-    // **ولا يُسجَّل طلبُ توسّعٍ بنقطةِ استكشاف** — **ودفترُ الطلب
-    // يُبنى عليه قرارُ توسّع**، **ونقطةٌ لم يؤكّدها صاحبُها إشارةٌ
-    // لا يُوثَق بها.**
+    // ══════════════════════════════════════════════════════════════════
+    // **الزرُّ الأساسيّ: «أشعرني»/«اطلب تغطية»** — بالسياسة المركزيّة
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ولا يُسجَّل طلبُ توسّعٍ بنقطةِ استكشافٍ ولا بلا عنوان** — **ودفترُ الطلب
+    // يُبنى عليه قرارُ توسّع**، **ونقطةٌ لم يؤكّدها صاحبُها إشارةٌ لا يُوثَق بها.**
     val cta = com.rahalgo.ui.ServiceReason.ctaKind(av.reason)
-    if (cta.isEmpty() || address == null || discovery) return
-    androidx.compose.foundation.layout.Spacer(
-        androidx.compose.ui.Modifier.height(8.dp),
-    )
-    if (vm.demandDone) {
-        com.rahalgo.ui.Note(
-            com.rahalgo.ui.ServiceReason.ctaDoneText(ctx, av.reason),
-            com.rahalgo.design.Rahal.colors.brand,
-        )
-    } else {
-        com.rahalgo.ui.RahalButton(
-            onClick = { vm.sendDemand(av.reason, address) },
-            enabled = !vm.demandBusy,
+    if (cta.isNotEmpty() && address != null && !discovery) {
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+        if (vm.demandDone) {
+            com.rahalgo.ui.Note(
+                com.rahalgo.ui.ServiceReason.ctaDoneText(ctx, av.reason),
+                com.rahalgo.design.Rahal.colors.brand,
+            )
+        } else {
+            com.rahalgo.ui.RahalButton(
+                onClick = { vm.sendDemand(av.reason, address) },
+                enabled = !vm.demandBusy,
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+            ) {
+                androidx.compose.material3.Text(
+                    com.rahalgo.ui.ServiceReason.ctaText(ctx, av.reason, av.placeName),
+                )
+            }
+        }
+    }
+    // ══════════════════════════════════════════════════════════════════
+    // **الزرُّ الثانويّ: «استعرض سوق الرقة»** (Batch 3c) — لمن لم نصل مدينتَه بعد
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **لأسبابِ «لم نصل بعد» وحدَها** (`expansionPending`)، **بلا اشتراطِ عنوانٍ
+    // مؤكَّد**: استعراضٌ للقراءة فقط لا يُنشئ طلباً ولا يُبدّل عنوانَ التوصيل، **فيبقى
+    // الخادمُ مغلقاً على من لم تُطلَق مدينتُه.**
+    if (onBrowseFlagship != null && flagshipName.isNotEmpty() &&
+        com.rahalgo.ui.ServiceReason.expansionPending(av.reason)
+    ) {
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+        com.rahalgo.ui.RahalOutlineButton(
+            onClick = onBrowseFlagship,
             modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
         ) {
             androidx.compose.material3.Text(
-                com.rahalgo.ui.ServiceReason.ctaText(ctx, av.reason, av.placeName),
+                ctx.getString(com.rahalgo.ui.R.string.preview_browse_cta_named, flagshipName),
             )
         }
     }

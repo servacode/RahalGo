@@ -135,11 +135,9 @@ object ServiceReason {
     fun ctaText(ctx: Context, reason: String, placeName: String = ""): String =
         when (ctaKind(reason)) {
             KIND_COVERAGE -> ctx.getString(R.string.cta_request_coverage)
-            KIND_INTEREST -> {
-                val p = placeName.trim()
-                if (p.isEmpty()) ctx.getString(R.string.cta_notify_me)
-                else ctx.getString(R.string.cta_notify_me_named, p)
-            }
+            // **«أشعرني عند وصول رحال غو» بنصٍّ ثابت** (Batch 3c، قرارُ المالك) —
+            // نيّةٌ عملُها الوصولُ إلى المدينة لا العنوان، فلا يُلبَس باسم مكانٍ متغيّر.
+            KIND_INTEREST -> ctx.getString(R.string.cta_notify_me)
             else -> ""
         }
 

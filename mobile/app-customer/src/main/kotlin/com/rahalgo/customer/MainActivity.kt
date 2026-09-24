@@ -510,7 +510,10 @@ private fun SignedIn(
     DisposableEffect(owner) {
         val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                Serving.refreshIfStale(scope)
+                // **العودةُ إلى الواجهة تُصحّح الإتاحةَ دائماً** (Batch 3b، تصحيحُ
+                // المالك ٢): تجديدٌ إجباريٌّ يتجاوز عمرَ الدقيقتين — فالعائدُ لا يرى
+                // حالاً شائخةً أبداً، بلا إعادة فتحٍ يدويّة. (والعمرُ يبقى للاستطلاع الروتينيّ.)
+                Serving.refresh(scope, force = true)
                 // **والعودةُ من الإعدادات بالإذن تُنعش «موقعي»** (`CUST-DEF-006`):
                 // من فُتحت له صفحةُ الإعدادات بعد رفضٍ (نهائيٍّ أو عاديّ) فمنح
                 // الإذنَ وعاد — يُلتقَط الإذنُ فوراً، فلا يبقى أمام لافتةِ
@@ -525,6 +528,14 @@ private fun SignedIn(
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+
+    // **إشارةُ اللوحة اللحظيّة وعودةُ الوصلة تُصحّحان حالَ المنصّة** (Batch 3b):
+    // `Refresh.tick` يرتفع عند حدثٍ حيّ من `TopicCatalog` وعند عودةِ الوصلة
+    // (`ShellViewModel`)، فتُجدَّد `Serving` إجباريّاً بلا انتظار العمر. **وإتاحةُ
+    // النقطة تُجدَّد في شاشتها** (Shop/Cart تستمعان لـ`Refresh.tick` كذلك).
+    LaunchedEffect(Unit) {
+        com.rahalgo.ui.Refresh.tick.collect { Serving.refresh(scope, force = true) }
     }
 
     LaunchedEffect(tab, guest) {
@@ -1013,6 +1024,8 @@ private fun SignedIn(
                         onNeedAddress = {
                             if (guest) onAskLogin() else DeliveryAddress.open()
                         },
+                        // **المدنُ الفعّالة** (Batch 3c) — لاستعراضِ سوقِ المدينةِ الرائدة.
+                        cities = citiesVm.cities,
                     )
 
                     // ══════════════════════════════════════════════

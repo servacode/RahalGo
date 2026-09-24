@@ -191,15 +191,14 @@ class AbuseMatrixTest {
     // ═════════════ AB-36 · العودةُ لا تُضاعف ═════════════
 
     /**
-     * **AB-36 · والعودةُ من الخلفيّة تُنعش ما شاخ وحدَه.**
-     *
-     * **ولا نداءَ في كلّ عودةٍ مهما قصرت** — **والمراقبُ يُنزَع عند
-     * الخروج فلا يتراكم.**
+     * **AB-36 · والعودةُ من الخلفيّة تُصحّح الإتاحةَ إجباريّاً** (Batch 3b، تصحيحُ
+     * المالك ٢): **العودةُ مُشغِّلٌ سلطويّ يتجاوز عمرَ الدقيقتين** — فالعائدُ يُعيد
+     * التحقّقَ من الإتاحة دائماً بلا إعادة فتحٍ يدويّة. **والمراقبُ يُنزَع عند الخروج.**
      */
     @Test
-    fun `AB-36 العودةُ تُنعش ما شاخ ولا تتراكم`() {
+    fun `AB-36 العودةُ تُصحّح الإتاحةَ إجباريّاً ولا تتراكم`() {
         val main = read("app-customer/src/main/kotlin/com/rahalgo/customer/MainActivity.kt")
-        assertTrue("**صارت العودةُ تُنعش كلَّ شيء**", main.contains("Serving.refreshIfStale(scope)"))
+        assertTrue("**العودةُ لا تُصحّح الإتاحةَ إجباريّاً**", main.contains("Serving.refresh(scope, force = true)"))
         assertTrue("**لا يُنزَع المراقب**", main.contains("onDispose { owner.lifecycle.removeObserver(obs) }"))
     }
 }

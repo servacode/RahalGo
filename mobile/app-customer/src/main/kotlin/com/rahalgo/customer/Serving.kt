@@ -140,8 +140,22 @@ object Serving {
      * **وسقوطُ النداء لا يُبدّل شيئاً** — **والحالُ القديمةُ أصدقُ من
      * لا حال**، **والمحرّكُ يردّ الطلبَ إن كان مغلقاً على كلّ حال.**
      */
-    fun refreshIfStale(scope: kotlinx.coroutines.CoroutineScope) {
-        if (!stale(android.os.SystemClock.elapsedRealtime())) return
+    fun refreshIfStale(scope: kotlinx.coroutines.CoroutineScope) = refresh(scope, force = false)
+
+    /**
+     * refresh **يسأل الخادمَ عن الحال.**
+     *
+     * **`force=false`**: يصمت إن لم تشخ الحالُ — للاستطلاع الروتينيّ (تحسينُ شبكة).
+     *
+     * **`force=true`**: يتجاوز عمرَ الدقيقتين — **للمُشغِّلات السلطويّة** (Batch 3b):
+     * إشارةُ اللوحة اللحظيّة · عودةُ الوصلة · العودةُ إلى الواجهة · تبدّلُ العنوان.
+     * **فالعائدُ إلى رحّال غو يُعيد التحقّقَ من إتاحته دائماً بلا إعادة فتحٍ يدويّة.**
+     *
+     * **وسقوطُ النداء لا يُبدّل شيئاً** — الحالُ القديمةُ أصدقُ من لا حال، والمحرّكُ
+     * يردّ الطلبَ إن كان مغلقاً على كلّ حال.
+     */
+    fun refresh(scope: kotlinx.coroutines.CoroutineScope, force: Boolean = false) {
+        if (!force && !stale(android.os.SystemClock.elapsedRealtime())) return
         scope.launch {
             runCatching { com.rahalgo.shared.auth.AuthApi(AppCore.get().api).platform() }
                 .onSuccess { put(it.ordering, it.launch, it.customDelivery, android.os.SystemClock.elapsedRealtime()) }

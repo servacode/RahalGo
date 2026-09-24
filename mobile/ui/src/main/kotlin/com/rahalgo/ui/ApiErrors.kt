@@ -322,6 +322,14 @@ private val CODES: Map<String, Int> = mapOf(
     "item_unavailable" to R.string.err_item_unavailable,
     "invalid_items" to R.string.err_invalid_items,
     "out_of_zone" to R.string.err_out_of_zone,
+    // ── السلطةُ الإداريّةُ عند الإنشاء (Batch 3a) ──
+    //
+    // **محافظةٌ/مدينةٌ لم تُطلَق، أو موضعٌ لا مدينةَ تحويه** — صار الإنشاءُ
+    // يردّها (كانت للقراءة وحدَها)، **وبنصوصِ الإتاحة نفسِها** (`ServiceReason`)
+    // فلا يفترق رفضُ الإنشاء عن شرحِ الشاشة.
+    "province_not_supported" to R.string.av_province_not_supported,
+    "city_not_supported" to R.string.av_city_not_supported,
+    "area_not_supported" to R.string.av_area_not_supported,
     "below_min_order" to R.string.err_below_min_order,
     "too_many_open_orders" to R.string.err_too_many_open_orders,
     "invalid_promo" to R.string.err_invalid_promo,

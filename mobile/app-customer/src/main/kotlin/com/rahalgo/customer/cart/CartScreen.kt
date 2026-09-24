@@ -107,6 +107,23 @@ fun CartScreen(
     // **وحالُ الاستقبال تُجدَّد عند فتح السلّة** — **ومن ملأ سلّتَه
     // قبل الإغلاق بدقيقةٍ وفتحها بعده يجب أن يقرأ الحالَ لا أن يضغط.**
     LaunchedEffect(Unit) { vm.refreshServing() }
+    // **إشارةُ اللوحة/عودةُ الوصلة تُصحّحان تسعيرةَ السلّة وإتاحتها** (Batch 3b):
+    // تبدّلُ إتاحةِ العنوان (تغطية/محافظة/مدينة/منطقة/دوام) يُعاد سؤالُه فوراً،
+    // فلا يُرسَل ضدَّ أهليّةٍ شائخة. (وحالُ المنصّة تُجدَّد إجباريّاً من `MainActivity`.)
+    LaunchedEffect(Unit) {
+        com.rahalgo.ui.Refresh.tick.collect { vm.quote(here?.lat, here?.lng) }
+    }
+    // **والعودةُ إلى الواجهة تُعيد التسعيرةَ والإتاحة** (تصحيحُ المالك ٢).
+    run {
+        val cartOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+        androidx.compose.runtime.DisposableEffect(cartOwner) {
+            val o = androidx.lifecycle.LifecycleEventObserver { _, e ->
+                if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) vm.quote(here?.lat, here?.lng)
+            }
+            cartOwner.lifecycle.addObserver(o)
+            onDispose { cartOwner.lifecycle.removeObserver(o) }
+        }
+    }
 
     if (Cart.lines.isEmpty()) {
         Screen {

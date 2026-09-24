@@ -675,7 +675,7 @@
 
          **و«أضِف منطقتي» غيرُ «أخبرني»** — **الأولى لمن الخدمةُ في
          مدينته وعنوانُه خارجَ الشكل، والثانيةُ لمن لم نصله بعد.** -->
-    <string name="cta_request_coverage">اطلب إضافة منطقتك إلى نطاق التوصيل</string>
+    <string name="cta_request_coverage">اطلب تغطية منطقتي</string>
     <!-- موقعُ الجهاز يُخبِر ولا يحكم (DL) -->
     <string name="dl_current_location">موقعك الحالي: %1$s</string>
     <string name="dl_pick_to_know">حدد موقعك لمعرفة توفر الخدمة</string>
@@ -693,9 +693,14 @@
     <string name="cc_review_title">تغيّرت بعض القيم منذ أن راجعتها</string>
     <string name="cc_review_cta">متابعة بالقيم الحالية</string>
     <string name="cc_blocked">لا يمكن إتمام الطلب قبل مراجعة التغييرات</string>
-    <string name="cta_notify_me">أخبرني عند توفر الخدمة هنا</string>
+    <string name="cta_notify_me">أشعرني عند وصول رحال غو</string>
     <!-- **وباسم المكان حين يُعرَف** — %1$s اسمُ المدينة أو المحافظة. -->
-    <string name="cta_notify_me_named">أخبرني عند توفر الخدمة في %1$s</string>
+    <string name="cta_notify_me_named">أشعرني عند وصول رحال غو</string>
+    <!-- Batch 3c — تصفّحُ سوقِ المدينةِ المُطلَقةِ للقراءة فقط من مدينةٍ لم تُطلَق بعد.
+         %1$s اسمُ المدينة المُطلَقة (الرقّة اليوم). -->
+    <string name="preview_browse_cta_named">استعرض سوق %1$s</string>
+    <string name="preview_banner_named">أنت تتصفح سوق %1$s — التوصيل إلى مدينتك غير متوفر حاليًا</string>
+    <string name="preview_exit">العودة إلى مدينتي</string>
     <!-- **وبعد التسجيل** — **ولا يُوعَد بموعدٍ ولا بإضافة.** -->
     <string name="cta_coverage_done">تم تسجيل طلب منطقتك، وسنأخذها بعين الاعتبار عند توسيع نطاق التوصيل</string>
     <string name="cta_notify_done">تم تسجيل طلبك، وسنخبرك عند توفر رحال غو في منطقتك</string>
