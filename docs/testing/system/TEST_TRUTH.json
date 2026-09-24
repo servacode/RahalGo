@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 355,
+    "routes": 357,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 143,
-    "behaviour_settings": 115,
-    "order_fields": 75,
-    "test_files": 369,
-    "test_funcs": 1572
+    "setting_defs": 146,
+    "behaviour_settings": 118,
+    "order_fields": 79,
+    "test_files": 371,
+    "test_funcs": 1586
   },
   "flows": [
     {
@@ -3546,6 +3546,69 @@
       "kind": "bool",
       "sensitive": false,
       "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.custom_driver_may_change_fee",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.custom_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.custom_fee_source",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": false,
+      "money": true,
       "flows": [
         "F-07",
         "F-08",
@@ -7293,6 +7356,66 @@
     {
       "name": "TestCustomChat_OpensItselfOnAssign",
       "file": "internal/orders/custom_chat_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_AdminDefinedFeeForced",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_CancelReleasesReservation",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_ConcurrentConfirmReservesOnce",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_DecreaseKeepsConfirmation",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_IncreaseInvalidatesAndReleases",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_NoOpAgreeNoVersionBump",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_PickupGate",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_StaleRejected",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_WalletHappyPath",
+      "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomQuote_WalletInsufficient",
+      "file": "internal/orders/custom_quote_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -11048,6 +11171,30 @@
         "payload"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCustomReservation_StaleAggregateFailsFININV",
+      "file": "internal/qa/custom_reservation_invariant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomReservation_StaleConfirmationFailsFININV",
+      "file": "internal/qa/custom_reservation_invariant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomReservation_TerminalResidueFailsFININV",
+      "file": "internal/qa/custom_reservation_invariant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomReservation_ValidLiveOrderClean",
+      "file": "internal/qa/custom_reservation_invariant_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCUST_001_Create",

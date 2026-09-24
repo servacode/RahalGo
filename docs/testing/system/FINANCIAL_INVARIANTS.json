@@ -102,6 +102,10 @@
         "FI-11.f",
         "FI-11.g",
         "FI-11.h",
+        "FI-11.j",
+        "FI-11.k",
+        "FI-11.l",
+        "FI-11.m",
         "FI-11.i"
       ]
     },
@@ -703,7 +707,7 @@
     {
       "id": "FI-11.e",
       "family": "FI-11",
-      "name": "محافظُ الناس: المحجوزُ يُصالِح طلباتِ السحب القائمة",
+      "name": "محافظُ الناس: المحجوزُ يُصالِح طلباتِ السحب وحجوزَ الطلبات المخصَّصة",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -757,6 +761,58 @@
       "id": "FI-11.i",
       "family": "FI-11",
       "name": "الخزينةُ خارجَ عقد الحجز — ولا محجوزَ لها",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ]
+    },
+    {
+      "id": "FI-11.j",
+      "family": "FI-11",
+      "name": "حجزُ الطلب المخصَّص لا يكون سالباً",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ]
+    },
+    {
+      "id": "FI-11.k",
+      "family": "FI-11",
+      "name": "طلبٌ غيرُ مخصَّصٍ لا يحمل حجزاً مخصَّصاً",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ]
+    },
+    {
+      "id": "FI-11.l",
+      "family": "FI-11",
+      "name": "طلبٌ مخصَّصٌ انتهى لا يبقى له حجز",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ]
+    },
+    {
+      "id": "FI-11.m",
+      "family": "FI-11",
+      "name": "حجزٌ موجبٌ يقابل طلبَ محفظةٍ حيّاً مؤكَّداً بنسخته الحاليّة",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -1123,8 +1179,8 @@
   ],
   "counts": {
     "families": 13,
-    "checks": 57,
-    "provable_now": 51,
+    "checks": 61,
+    "provable_now": 55,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
@@ -1140,6 +1196,9 @@
     "delivery.per_km",
     "delivery.max_fee",
     "delivery.by_distance",
+    "delivery.custom_fee_source",
+    "delivery.custom_fee",
+    "delivery.custom_driver_may_change_fee",
     "drivers.cash_limit",
     "payouts.min_amount",
     "customers.signup_bonus",

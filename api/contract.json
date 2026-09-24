@@ -1827,6 +1827,36 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/custom-quote",
+      "handler": "handleAdminOverrideCustomQuote",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "goods_amount",
+          "type": "int64"
+        },
+        {
+          "name": "fee",
+          "type": "int64"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/goods",
       "handler": "handleGoods",
       "auth": true,
@@ -5780,6 +5810,35 @@
         {
           "name": "note",
           "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/confirm-quote",
+      "handler": "handleConfirmQuote",
+      "auth": true,
+      "request": [
+        {
+          "name": "payment_method",
+          "type": "string"
+        },
+        {
+          "name": "expected_total",
+          "type": "int64"
+        },
+        {
+          "name": "expected_quote_version",
+          "type": "int64"
         }
       ],
       "response": [

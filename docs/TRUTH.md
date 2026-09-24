@@ -671,6 +671,9 @@
 | `delivery.by_distance` | السائقون | bool | `false` |
 | `delivery.per_km` | السائقون | money | `0` |
 | `delivery.max_fee` | السائقون | money | `0` |
+| `delivery.custom_fee_source` | السائقون | choice | `driver_defined` |
+| `delivery.custom_fee` | السائقون | money | `0` |
+| `delivery.custom_driver_may_change_fee` | السائقون | bool | `false` |
 | `delivery.default_radius_m` | السائقون | int | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `1` |

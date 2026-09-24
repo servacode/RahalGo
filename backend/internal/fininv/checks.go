@@ -718,19 +718,28 @@ var All = []Check{
 	},
 	{
 		ID: "FI-11.e", Family: FI11, Status: ProvableNow, Ops: true,
-		Name: "محافظُ الناس: المحجوزُ يُصالِح طلباتِ السحب القائمة",
+		Name: "محافظُ الناس: المحجوزُ يُصالِح طلباتِ السحب وحجوزَ الطلبات المخصَّصة",
 		Why: "**`wallets.reserved` صورةٌ محفوظةٌ لا حقيقةٌ ثانية** — " +
-			"**والحقيقةُ طلباتُ السحب `pending` و`processing`.** " +
-			"**ورقمٌ لا يُنسَب إلى طلبٍ قائمٍ مالٌ مجمَّدٌ بلا سبب.**",
+			"**والحقيقةُ طلباتُ السحب `pending`/`processing` وحجوزُ الطلبات " +
+			"المخصَّصةِ الحيّةِ من المحفظة** (Batch 2a). **ورقمٌ لا يُنسَب إلى " +
+			"مصدرٍ قائمٍ مالٌ مجمَّدٌ بلا سبب.**",
 		Flows:     []string{"F-24"},
 		Registers: []string{"XG-12"},
-		SQL: `SELECT w.user_id::text, w.reserved, COALESCE(a.total, 0)
+		// **مصدران للحجز يُجمعان**: طلباتُ السحب المعلَّقة، وحجوزُ الطلبات
+		// المخصَّصة (`custom_reserved_amount`). **وكلُّ حجزٍ منسوبٌ لطلبه**،
+		// فيُصالَح المجموعُ صفّاً بصفّ.
+		SQL: `SELECT w.user_id::text, w.reserved, COALESCE(a.total, 0) + COALESCE(c.total, 0)
 		        FROM wallets w
 		        LEFT JOIN (SELECT user_id, sum(amount) AS total
 		                     FROM payout_requests
 		                    WHERE status IN ('pending','processing')
 		                    GROUP BY user_id) a ON a.user_id = w.user_id
-		       WHERE NOT w.is_treasury AND w.reserved <> COALESCE(a.total, 0)`,
+		        LEFT JOIN (SELECT customer_id AS user_id, sum(custom_reserved_amount) AS total
+		                     FROM orders
+		                    WHERE kind = 'custom' AND custom_reserved_amount > 0
+		                    GROUP BY customer_id) c ON c.user_id = w.user_id
+		       WHERE NOT w.is_treasury
+		         AND w.reserved <> COALESCE(a.total, 0) + COALESCE(c.total, 0)`,
 	},
 	{
 		ID: "FI-11.f", Family: FI11, Status: ProvableNow, Ops: true,
@@ -779,6 +788,65 @@ var All = []Check{
 		         AND NOT EXISTS (SELECT 1 FROM wallet_transactions t
 		                          WHERE t.ref = p.id::text AND t.kind = 'refund'
 		                            AND t.amount = p.amount)`,
+	},
+	// ══════════════════════════════════════════════════════════════
+	// **حجزُ الطلب المخصَّص — مملوكٌ للطلب، مصالَحٌ، لا يبقى لطلبٍ ميّت** — Batch 2a
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **`custom_reserved_amount` حجزٌ منسوبٌ لطلبه** — يدخل مصالحةَ `FI-11.e`
+	// أعلاه، **وهذه الثوابتُ تحرس شكلَه**: غيرُ سالبٍ، للمخصَّص وحدَه، لا يبقى
+	// لطلبٍ انتهى، **وموجبُه يقابل طلبَ محفظةٍ حيّاً أكّده صاحبُه بنسخته الحاليّة.**
+	{
+		ID: "FI-11.j", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "حجزُ الطلب المخصَّص لا يكون سالباً",
+		Why: "**فكٌّ يتجاوز الحجزَ يُنزله تحت الصفر** — **ومالٌ محجوزٌ سالبٌ " +
+			"لا معنى له.** (يحرسه القيدُ `orders_custom_reserved_nonneg`، " +
+			"**والثابتُ يقيس النتيجة.**)",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL:       `SELECT id::text, custom_reserved_amount FROM orders WHERE custom_reserved_amount < 0`,
+	},
+	{
+		ID: "FI-11.k", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "طلبٌ غيرُ مخصَّصٍ لا يحمل حجزاً مخصَّصاً",
+		Why: "**الحجزُ المخصَّصُ بابُه المخصَّصُ وحدَه** — **ورقمٌ فيه على طلبٍ " +
+			"عاديٍّ يُجمَّد مالُ صاحبه بلا مصدر.** (يحرسه القيدُ " +
+			"`orders_custom_reserved_only_custom`.)",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL:       `SELECT id::text, kind, custom_reserved_amount FROM orders WHERE kind <> 'custom' AND custom_reserved_amount <> 0`,
+	},
+	{
+		ID: "FI-11.l", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "طلبٌ مخصَّصٌ انتهى لا يبقى له حجز",
+		Why: "**التسليمُ يُسوّي الحجزَ فيُصفّره، والإلغاءُ/التعذّرُ/الرفضُ " +
+			"يفكّه** — **وحجزٌ يبقى لطلبٍ انتهى يُجمّد مالَ صاحبه إلى الأبد.**",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL: `SELECT id::text, status, custom_reserved_amount
+		        FROM orders
+		       WHERE kind = 'custom' AND custom_reserved_amount <> 0
+		         AND status IN ('delivered','cancelled','rejected','failed')`,
+	},
+	{
+		ID: "FI-11.m", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "حجزٌ موجبٌ يقابل طلبَ محفظةٍ حيّاً مؤكَّداً بنسخته الحاليّة",
+		Why: "**المالُ لا يُحجَز إلّا لطلبِ محفظةٍ حيٍّ أكّده صاحبُه**، " +
+			"**والمحجوزُ = ما أكّده بالضبط** (`quote_confirmed_total`) " +
+			"**بالنسخة الحاليّة** — **وحجزٌ لا يطابق تأكيداً حيّاً مالٌ مجمَّدٌ " +
+			"بلا عقد.**",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL: `SELECT id::text, status, payment_method, custom_reserved_amount,
+		             quote_confirmed_total, quote_confirmed_version, quote_version
+		        FROM orders
+		       WHERE kind = 'custom' AND custom_reserved_amount > 0
+		         AND ( payment_method <> 'wallet'
+		            OR quote_confirmed_at IS NULL
+		            OR custom_paid_at IS NOT NULL
+		            OR quote_confirmed_version IS DISTINCT FROM quote_version
+		            OR quote_confirmed_total IS DISTINCT FROM custom_reserved_amount
+		            OR status IN ('delivered','cancelled','rejected','failed') )`,
 	},
 	// ══════════════════════════════════════════════════════════════
 	// **لقطةُ اقتصادِ الطلب** — `XQ-2` · `XG-25`…`XG-28` (دورةُ ٣٢)

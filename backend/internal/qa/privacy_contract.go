@@ -211,6 +211,12 @@ var OrderPrivacy = map[string]FieldRule{
 	"custom_goods_amount": {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_fee":          {Ref: "أجرُ الخدمة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
+	// ── عرضُ السعر وتأكيدُه (Batch 2a) — كأعمدةِ الخاصّ نفسِها ────────
+	"quote_version":           {Ref: "نسخةُ العرض", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"quote_confirmed_at":      {Ref: "متى أكّد الزبونُ العرض", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"quote_confirmed_total":   {Ref: "المبلغُ الذي أكّده", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"quote_confirmed_version": {Ref: "أيَّ نسخةٍ أكّد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+
 	// ── الأصنافُ والتوقيتات ───────────────────────────────────────
 	"items":                 {Ref: "الأصناف — والمتجرُ يحضّرها", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"items_count":           all(VisAllowed, "عددُ الأصناف"),

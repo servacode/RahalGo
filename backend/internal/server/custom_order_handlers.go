@@ -109,3 +109,73 @@ func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"agreed": true})
 }
+
+// handleConfirmQuote **الزبونُ يؤكّد العرضَ ويختار طريقةَ الدفع** — Batch 2a.
+//
+// (قرارُ المالك: العرضُ يُقفَل بتأكيدٍ من الزبون قبل أن يبدأ الشراء.)
+//
+// **ويُرسِل الزبونُ ما رآه** — المبلغَ والنسخة — **فإن تبدّل العرضُ بينهما رُدّ
+// `quote_changed`** ليقرأ الجديدَ ويؤكّده. **والمحفظةُ لا تُقبَل إلّا إن غطّى
+// المتاحُ المبلغَ، ويُحجَز فوراً.**
+func (s *Server) handleConfirmQuote(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		// Payment **نقدٌ أو محفظة** — يُختار عند القفل لا عند الطلب.
+		Payment string `json:"payment_method"`
+		// ExpectedTotal وExpectedQuoteVersion **العرضُ الذي رآه الزبونُ** —
+		// يُطابَقان بالحاليّ، وإلّا فتغيّر السعرُ تحت يده.
+		ExpectedTotal        int64 `json:"expected_total"`
+		ExpectedQuoteVersion int64 `json:"expected_quote_version"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	orderID := chi.URLParam(r, "id")
+	o, err := s.orders.ConfirmQuote(r.Context(), orderID, userIDFrom(r),
+		req.Payment, req.ExpectedTotal, req.ExpectedQuoteVersion)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	view, err := orderView(orders.AudienceCustomer, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, view)
+}
+
+// handleAdminOverrideCustomQuote **الأدمنُ يعدّل عرضَ الطلب المخصَّص** — Batch 2a.
+//
+// (قرارُ المالك: قبل الاستلام حرّاً، وبعده نقصاً أو تصحيحاً فقط، موثَّقاً.)
+//
+// **والسببُ إلزاميّ**: تدخّلٌ ماليٌّ بتقدير إنسان، **وبلا كلمةٍ لا يُراجَع.**
+// **والتوثيقُ في المحرّك** (`audit_log` داخلَ المعاملة) — لا في المعالِج.
+func (s *Server) handleAdminOverrideCustomQuote(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Goods  int64  `json:"goods_amount"`
+		Fee    int64  `json:"fee"`
+		Reason string `json:"reason"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.Goods < 0 || req.Fee < 0 || len(req.Reason) == 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	orderID := chi.URLParam(r, "id")
+	o, err := s.orders.AdminOverrideCustomQuote(r.Context(), orderID, userIDFrom(r),
+		req.Goods, req.Fee, req.Reason)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	view, err := orderView(orders.AudienceOps, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, view)
+}

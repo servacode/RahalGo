@@ -1143,6 +1143,34 @@ var Catalog = []Def{
 		ShowWhen: &Condition{Key: "delivery.by_distance", Equals: []string{"true"}}},
 
 	// ══════════════════════════════════════════════════════════════════
+	// **ومن يحدّد أجرةَ الطلب المخصَّص — السائقُ أم الأدمن** — Batch 2a
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الطلبُ المخصَّصُ لا متجرَ له ولا فاتورة**: السائقُ يذهب فيشتري ما
+	// طُلب، ثمّ يتّفق على قيمة البضاعة وأجرة التوصيل. **والسؤالُ: من يملك
+	// رقمَ الأجرة؟**
+	//
+	//   driver_defined = السائقُ يحدّدها عند الاتفاق (الحالُ الأصليّ).
+	//   admin_defined  = المنصةُ تحدّدها، وتُلتقط على الطلب لحظةَ إنشائه.
+	//
+	// **ولا تتبع اللقطةُ الإعدادَ العامّ بعد الإنشاء** — من غيّر الرقمَ
+	// العامَّ لم يُعِد كتابةَ طلبٍ قائم (`custom_fee_snapshot` على الطلب).
+	{Key: "delivery.custom_fee_source", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"driver_defined", "admin_defined"}, Default: "driver_defined"},
+
+	// **وأجرةُ الطلب المخصَّص حين تحدّدها المنصة** — تُلتقط على كلّ طلبٍ
+	// جديدٍ لحظةَ إنشائه. وصفرٌ يعني توصيلاً مجّانيّاً للطلب المخصَّص.
+	{Key: "delivery.custom_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true,
+		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
+
+	// **وهل يُسمح للسائق أن يغيّر الأجرةَ المحدَّدةَ من المنصة** — مطفأٌ
+	// افتراضاً: فالمنصةُ حين تملك الرقمَ تملكه كاملاً. **وحين يُشعَل يصير
+	// رقمُ المنصة اقتراحاً يبدأ منه السائق.** (يُقرأ فقط حين المصدرُ منصة.)
+	{Key: "delivery.custom_driver_may_change_fee", Group: GroupDrivers, Kind: KindBool, Default: false,
+		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
+
+	// ══════════════════════════════════════════════════════════════════
 	// **ومدى التوصيل الافتراضيّ — أوّلُ درجاتِ السُّلّم الثلاث**
 	// ══════════════════════════════════════════════════════════════════
 	//

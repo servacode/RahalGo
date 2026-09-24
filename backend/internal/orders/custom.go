@@ -45,6 +45,24 @@ var (
 	// ErrCustomNotAgreed **ولا يبدأ قبل أن يُوثَّق ما اتُّفق عليه.**
 	ErrCustomNotAgreed = httpx.NewError(http.StatusConflict,
 		"custom_not_agreed", "errors.custom_not_agreed")
+
+	// ErrQuoteChanged **تغيّر العرضُ بين عرضِه وتأكيدِه** — Batch 2a.
+	//
+	// **الزبونُ يؤكّد مبلغاً ونسخةً بعينهما**: فإن تبدّل أحدُهما قبل أن يصل
+	// تأكيدُه رُدّ **ليقرأ العرضَ الجديدَ ويؤكّده** — **ولا يُقفَل سعرٌ لم يره.**
+	ErrQuoteChanged = httpx.NewError(http.StatusConflict,
+		"quote_changed", "errors.quote_changed")
+
+	// ErrQuoteNotConfirmed **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ الحاليّ** — Batch 2a.
+	ErrQuoteNotConfirmed = httpx.NewError(http.StatusConflict,
+		"quote_not_confirmed", "errors.quote_not_confirmed")
+
+	// ErrCustomLocked **ولا يُعدَّل العرضُ بعد الاستلام** — Batch 2a.
+	//
+	// **بعد أن يستلم السائقُ البضاعةَ يُقفَل السعر**: لا السائقُ يغيّره ولا
+	// يُعاد التأكيد. **وما بعدَه تصحيحٌ أو تعويضٌ بيد الأدمن، موثَّقٌ.**
+	ErrCustomLocked = httpx.NewError(http.StatusConflict,
+		"custom_locked", "errors.custom_locked")
 )
 
 // isCustom **أطلبٌ خاصٌّ هو؟** — سؤالٌ يُسأل قبل قرارٍ يخصّه.
@@ -65,6 +83,28 @@ func (s *Service) isCustom(ctx context.Context, orderID string) bool {
 // **وما يُطلب يُوصف في سطرين**: «شاورما دجاج من مطعم الأصيل، بلا ثوم».
 // **وحدٌّ واسعٌ يجعله رسالةً**، والرسالةُ محلُّها المحادثة بعد الإسناد.
 const MaxCustomRequest = 600
+
+// customFeePolicy **لقطةُ سياسة أجرة المخصَّص لحظةَ الإنشاء** — Batch 2a.
+//
+// **السياسةُ العامّةُ قد تتبدّل بعد الإنشاء**، فتُلتقط على الطلب فلا تتبعه.
+//
+//   - driver_defined (الافتراض): السائقُ يحدّد الأجرة — لا لقطة، ويجوز له.
+//   - admin_defined: المنصةُ تحدّدها — تُلتقط قيمتُها، وهل يجوز للسائق تغييرُها.
+//
+// **ويُقرأ من منفّذ النداء** (`s.on(q)`) داخلَ المعاملة — لا من المَسبَح.
+func (s *Service) customFeePolicy(ctx context.Context) (source string, snapshot *int64, mayChange bool) {
+	source, mayChange = "driver_defined", true
+	if s.settings == nil {
+		return
+	}
+	if s.settings.GetString(ctx, "delivery.custom_fee_source") == "admin_defined" {
+		source = "admin_defined"
+		fee := s.settings.GetInt(ctx, "delivery.custom_fee")
+		snapshot = &fee
+		mayChange = s.settings.GetBool(ctx, "delivery.custom_driver_may_change_fee")
+	}
+	return
+}
 
 // CreateCustom **يُنشئ طلباً خاصّاً — بلا متجرٍ ولا سعر.**
 //
@@ -127,18 +167,22 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 	if err != nil {
 		return nil, err
 	}
+	// **ولقطةُ سياسة الأجرة تُثبَّت مع الطلب** — Batch 2a.
+	feeSource, feeSnap, feeMayChange := s.customFeePolicy(ctx)
 	var id string
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
 		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
-		                    snap_commission_source, snap_activation_orders, notes)
+		                    snap_commission_source, snap_activation_orders, notes,
+		                    custom_fee_source, custom_fee_snapshot, custom_driver_may_change_fee)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders, notes).Scan(&id)
+		snap.CommissionSource, snap.ActivationOrders, notes,
+		feeSource, feeSnap, feeMayChange).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -294,18 +338,23 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	if err != nil {
 		return nil, nil, err
 	}
+	// **ولقطةُ سياسة الأجرة تُثبَّت مع الطلب في معاملته** — Batch 2a.
+	// **وتُقرأ من المنفّذ المُمرَّر** (`s.on(q)`) — لا من المَسبَح داخلَ معاملة.
+	feeSource, feeSnap, feeMayChange := s.on(q).customFeePolicy(ctx)
 	var id string
 	err = q.QueryRow(ctx, `
 		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
 		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
-		                    snap_commission_source, snap_activation_orders, notes)
+		                    snap_commission_source, snap_activation_orders, notes,
+		                    custom_fee_source, custom_fee_snapshot, custom_driver_may_change_fee)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders, notes).Scan(&id)
+		snap.CommissionSource, snap.ActivationOrders, notes,
+		feeSource, feeSnap, feeMayChange).Scan(&id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -368,82 +417,69 @@ func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 
-	var kind string
-	var owner *string
-	err := s.db.QueryRow(ctx,
-		`SELECT kind, driver_id::text FROM orders WHERE id = $1`, orderID).
-		Scan(&kind, &owner)
+	// **والعملُ في معاملةٍ مقفولة** — Batch 2a: **التغييرُ وضبطُ الحجز
+	// والتدقيقُ فعلٌ واحدٌ يتمّ كلُّه أو لا يقع منه شيء.**
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	row, err := s.lockCustomRow(ctx, tx, orderID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrNotFound
 	}
 	if err != nil {
 		return err
 	}
-	if kind != KindCustom {
+	if row.kind != KindCustom {
 		return ErrNotCustom
 	}
 	// **ولا يوثّق إلّا من يحمله** — هو من اتّفق.
-	if owner == nil {
+	if row.driverID == nil {
 		return ErrCustomTooEarly
 	}
-	if *owner != driverID {
+	if *row.driverID != driverID {
 		return httpx.NewError(http.StatusForbidden, "not_your_order", "errors.not_your_order")
 	}
+	// **ولا يُعدَّل العرضُ بعد الاستلام** — Batch 2a: يُقفَل السعرُ لحظةَ
+	// خروجِ البضاعة، **فلا السائقُ يغيّره** (ما بعدَه للأدمن تصحيحاً موثَّقاً).
+	if row.pickedUpAt != nil {
+		return ErrCustomLocked
+	}
 
-	// ══════════════════════════════════════════════════════════════════
-	// **وما اتُّفق عليه يُكتب في أعمدة الطلب أيضاً**
-	// ══════════════════════════════════════════════════════════════════
+	// ── سلطةُ الأجرة من لقطة السياسة، لا من الإعداد العامّ الحاليّ ──────
 	//
-	// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بالطبع يجب أن يُكتب الإجماليُّ وأجرةُ
-	//  التوصيل بالطلب أيضاً، لتكون واضحةً لدى الزبون والسائق
-	//  والمنصّة».)
-	//
-	// # وكانت أصفاراً عمداً
-	//
-	// **خشيةَ أن يصير الرقمُ مالاً للمنصّة بلا قرار** — والتسويةُ تقرأ
-	// هذه الأعمدة. **وقيس اليومَ أنّها لا تقرؤها في الخاصّ**: التسويةُ
-	// تخرج خروجاً صريحاً قبل أن تصل إليها (`transitions.go`:
-	// `if in.custom { … return }`) — **لا عمولةَ ولا مستحقَّ متجرٍ ولا
-	// خزينةَ ولا قيدَ صندوق.**
-	//
-	// **وبقاؤها أصفاراً كان يكذب على ثلاثة**: الزبونُ يقرأ فاتورةً
-	// بصفر، والسائقُ يقرأ سجلَّه «٠ ل.س» على طلبٍ حمل فيه ستّةَ آلاف،
-	// **والمنصّةُ تحسب يومَها ناقصاً.**
-	//
-	// # ولا يُمسّ `cash_due`
-	//
-	// **هو مطلبُ المنصّة على السائق** — وما قبضه في الخاصّ مالُه هو:
-	// ثمنٌ دفعه من جيبه وأجرةٌ استحقّها. **ولو كُتب فيه لَظهر في ذمّته
-	// دَينٌ لا وجودَ له.**
-	_, err = s.db.Exec(ctx, `
-		UPDATE orders
-		SET custom_goods_amount = $2, custom_fee = $3,
-		    -- **والنوعُ يُقال صراحةً في الجمع** — انظر الشرحَ فوق الدالّة.
-		    subtotal = $2, delivery_fee = $3, total = $2::bigint + $3::bigint,
-		    custom_agreed_at = now(), updated_at = now()
-		WHERE id = $1`, orderID, goods, fee)
-	if err != nil {
+	// **admin_defined بلا إذنٍ للسائق**: تُفرض قيمةُ اللقطة ويُهمَل ما أرسله
+	// السائق — **خادمٌ يُغلق البابَ لا شاشةٌ تُخفي الحقل.** **وما عداه أجرةُ
+	// السائق** (سائقيَّ المصدر، أو أدمنيَّه بإذنٍ للتغيير). **والبضاعةُ للسائق
+	// دائماً** — هو من اشتراها.
+	effGoods, effFee := goods, fee
+	if row.feeSource == "admin_defined" && !row.driverMayChangeFee {
+		effFee = 0
+		if row.feeSnapshot != nil {
+			effFee = *row.feeSnapshot
+		}
+	}
+
+	// **والجوهرُ في `applyCustomQuoteTx`** — كتابةُ الأعمدة، وتزايدُ النسخة
+	// عند تغييرٍ حقيقيٍّ وحدَه، وسياسةُ التأكيد/الحجز، والتدقيق. **بابٌ واحدٌ
+	// يشترك فيه السائقُ والأدمن** — ولا نسختان من المنطق الماليّ.
+	if _, err := s.applyCustomQuoteTx(ctx, tx, row, effGoods, effFee, quoteMutator{
+		actorID: driverID, role: "driver", source: "driver_agree",
+	}); err != nil {
 		return err
 	}
-	// ══════════════════════════════════════════════════════════════════
-	// **ويصل صاحبَ الطلب ما وُثّق باسمه** — `D22`
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// **وكان يبثّ `ops` وحدَها**: **تراه العملياتُ ولا يراه من يدفع.**
-	// **واتّفاقٌ لا يراه صاحبُه ليس اتّفاقاً** — يُقال له في المحادثة
-	// **ويبقى مكتوباً حيث يراه.**
-	//
-	// **والبابُ واحدٌ للجميع** (`publishOrder`): **هو يحلّ الأطرافَ
-	// ويبني لكلٍّ حمولتَه ويسقط مغلقاً** — **ولا تُنثَر نداءاتُ بثٍّ
-	// في المعالِجات.**
-	//
-	// **وبعد الكتابة لا داخلَها**: هذا النداءُ خارج معاملة (`s.db.Exec`
-	// أعلاه مثبَّتة) — **وبثٌّ يسبق التثبيتَ يَعِد بما قد يُلغى.**
-	o, err := s.GetByID(ctx, orderID)
-	if err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
-	s.publishOrder(o)
+
+	// **ويصل صاحبَ الطلب ما وُثّق باسمه** (`D22`) — بعد التثبيت لا داخلَه.
+	// **ومحفظتُه إن تحرّك حجزُها.**
+	if o, err := s.GetByID(ctx, orderID); err == nil {
+		s.publishOrder(o)
+		s.publishWalletsOf(ctx, orderID)
+	}
 	return nil
 }
 
@@ -466,60 +502,53 @@ func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 // (شبكةٌ تُعيد الطلب أو موظّفٌ يضغط ثانيةً)، **فيُخصم مرّتين ولا يظهر إلّا في
 // شكوى.**
 //
-// # ولا يُبطل تسليماً وقع
+// # ويُسوّى الحجزُ لا الرصيدُ المتاح — Batch 2a
 //
-// **رصيدٌ لا يكفي لا يردّ التسليم**: البضاعةُ في يد الزبون فعلاً. **فيُقيَّد
-// في السجلّ ويبقى الدَّينُ بينهما** — ومن ردّ التسليمَ لأجل رصيدٍ ترك السائقَ
-// بلا إقفالٍ ولا مال.
+// **المالُ محجوزٌ منذ تأكيد الزبون** (`custom_reserved_amount`)، **والحجزُ
+// يمنع إنفاقَه في غيره**: فرصيدٌ لا يكفي مستحيلٌ هنا — القيدُ `reserved <=
+// balance` يرفض أيَّ خصمٍ ينزل بالرصيد تحت المحجوز. **فيُفكّ الحجزُ ويُخصَم
+// معاً** (`SettleReservedTx`)، **ويُودَع للسائق.**
+//
+// **وحجزٌ صفرٌ في طلبِ محفظةٍ بلغ التسليمَ شذوذٌ** — فالاستلامُ مقفولٌ على
+// تأكيدٍ يحجز. **فيُقيَّد في السجلّ ولا يُخصَم** (لا حجزَ يُسوّى)، **ولا
+// يُبطَل تسليمٌ وقع.**
 func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 	in settlement) error {
 	if in.driverID == nil {
 		return nil
 	}
 	var method string
-	var goods, fee *int64
+	var reserved int64
 	var paidAt *time.Time
 	if err := q.QueryRow(ctx, `
-		SELECT payment_method, custom_goods_amount, custom_fee, custom_paid_at
+		SELECT payment_method, custom_reserved_amount, custom_paid_at
 		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).
-		Scan(&method, &goods, &fee, &paidAt); err != nil {
+		Scan(&method, &reserved, &paidAt); err != nil {
 		return err
 	}
-	if method != "wallet" || goods == nil || paidAt != nil {
+	// **دفعٌ من محفظة، ولم يُدفع قبلُ** — والعلامةُ (`custom_paid_at`) تمنع
+	// التكرار: **التسليمُ قد يُنادى مرّتين**، فيُخصم مرّتين لولاها.
+	if method != "wallet" || paidAt != nil {
 		return nil
 	}
-	total := *goods
-	if fee != nil {
-		total += *fee
-	}
-	if total <= 0 {
+	if reserved <= 0 {
+		s.logger.Warn("الطلب الخاصّ: تسليمٌ بمحفظةٍ بلا حجزٍ حيّ — لا خصم",
+			"order", in.orderID)
 		return nil
 	}
 
-	// **والمتاحُ لا الرصيد** — `XG-12`: **الرصيدُ يشمل ما حُجز لسحبٍ
-	// جارٍ**، ودفعُ الطلب منه يرتدّ عند القيد.
-	var balance int64
-	if err := q.QueryRow(ctx,
-		`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
-		      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
-		in.customerID).Scan(&balance); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return err
-	}
-	if balance < total {
-		s.logger.Warn("الطلب الخاصّ: رصيدُ الزبون لا يكفي — يبقى الدَّينُ بينهما",
-			"order", in.orderID, "need", total, "have", balance)
-		return nil
-	}
-
-	if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, -total, "order_payment",
+	// **يُفكّ الحجزُ ويُخصَم معاً** — فعلٌ واحدٌ لا يفترق (`SettleReservedTx`).
+	if _, err := s.wallet.SettleReservedTx(ctx, q, in.customerID, reserved, "order_payment",
 		in.orderID, "طلبٌ خاصّ — دفعٌ من المحفظة", &in.actorID); err != nil {
 		return err
 	}
-	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, total, "driver_earning",
+	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, reserved, "driver_earning",
 		in.orderID, "طلبٌ خاصّ — تحصيلٌ من محفظة الزبون", &in.actorID); err != nil {
 		return err
 	}
+	// **ويُصفَّر الحجزُ على الطلب مع علامة الدفع** — فلا يبقى محجوزٌ بعد التسوية.
 	_, err := q.Exec(ctx,
-		`UPDATE orders SET custom_paid_at = now() WHERE id = $1`, in.orderID)
+		`UPDATE orders SET custom_reserved_amount = 0, custom_paid_at = now(),
+		        updated_at = now() WHERE id = $1`, in.orderID)
 	return err
 }

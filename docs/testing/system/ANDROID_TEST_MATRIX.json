@@ -335,22 +335,135 @@
       "result": "NOT_RUN",
       "evidence": "لا جهازَ متّصل",
       "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-60",
+      "app": "all",
+      "area": "realtime",
+      "title": "رمزٌ منتهٍ وعائلةٌ سليمة ⇒ تجديدٌ واحدٌ ثمّ وصلٌ بالجديد",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D19"
+      ],
+      "test": "D19ReconnectTest",
+      "result": "PASS",
+      "evidence": "المصافحةُ الأولى تحمل الجديد · وتجديدٌ واحدٌ لا أكثر · وحدثٌ يصل"
+    },
+    {
+      "id": "AND-61",
+      "app": "all",
+      "area": "realtime",
+      "title": "انقطاعُ نقلٍ برمزٍ صالحٍ لا يُدوّر رمزَ التجديد",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D19"
+      ],
+      "test": "D19ReconnectTest.t1",
+      "result": "PASS",
+      "evidence": "٥٠٢ ثمّ وصلٌ ناجح · وصفرُ تجديدات"
+    },
+    {
+      "id": "AND-62",
+      "app": "all",
+      "area": "realtime",
+      "title": "مرفوضٌ ومتعذّرٌ لا يمحوان اعتماداً ولا يطرقان التجديد",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D19",
+        "R16"
+      ],
+      "test": "D19StressTest.unavailable50AndRevoked50",
+      "result": "PASS",
+      "evidence": "٥٠٣×٥٠ و٤٠١×٥٠ · صفرُ اعتماداتٍ مُحيت · صفرُ تجديدات"
+    },
+    {
+      "id": "AND-63",
+      "app": "all",
+      "area": "realtime",
+      "title": "تكرارُ التعافي والتزامن",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D19"
+      ],
+      "test": "D19StressTest",
+      "result": "PASS",
+      "evidence": "تعافٍ×١٠٠ · وصلٌ عاديٌّ×١٠٠ · تزامنٌ×١٠٠ · صفرُ حلقاتٍ قديمة"
+    },
+    {
+      "id": "AND-64",
+      "app": "all",
+      "area": "push",
+      "title": "الخروجُ يُنهي وجهةَ هذا الجهاز ويُبقي غيرَه",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D12"
+      ],
+      "test": "TestD12_LogoutRemovesThisDeviceBinding",
+      "result": "PASS",
+      "evidence": "المُرسِلُ لا يعود يختار الجهازَ · وجهازٌ ثانٍ للحساب نفسِه باقٍ"
+    },
+    {
+      "id": "AND-65",
+      "app": "all",
+      "area": "push",
+      "title": "تبديلُ الحساب على الجهاز نفسِه لا يسرق وجهةً",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D12"
+      ],
+      "test": "TestD12_AccountSwitchOnSameDevice",
+      "result": "PASS",
+      "evidence": "إلغاءُ الأوّلِ لرمزٍ يملكه الثاني لا يمسّه — والحذفُ مقيَّدٌ بصاحبه"
+    },
+    {
+      "id": "AND-66",
+      "app": "all",
+      "area": "push",
+      "title": "تكرارُ الخروج والتسجيل والسباق",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D12"
+      ],
+      "test": "TestD12_Stress*",
+      "result": "PASS",
+      "evidence": "خروجٌ×١٠٠ · جهازان×١٠٠ · سباقُ خروجٍ وتسجيل×١٠٠ · صفرُ وجهاتٍ ناجية"
+    },
+    {
+      "id": "AND-67",
+      "app": "all",
+      "area": "push",
+      "title": "الخروجُ يُنهي وجهةَ عائلته ولو تعذّر رمزُ الجهاز",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D12"
+      ],
+      "test": "TestD12_LogoutWithoutDeviceTokenStillRemovesBinding",
+      "result": "PASS",
+      "evidence": "المِلكيّةُ عائلةُ جلسة · خروجٌ بلا رمزِ جهازٍ ⇒ صفرُ وجهات · والمُرسِلُ صامت"
     }
   ],
   "counts": {
     "Devices": 5,
     "DevicesAvailable": 0,
     "DevicesExecuted": 0,
-    "Cases": 27,
-    "Structural": 5,
+    "Cases": 35,
+    "Structural": 13,
     "UnitK": 0,
     "ReplayK": 0,
     "DeviceK": 21,
     "DriveK": 1,
-    "AutomatedN": 5,
+    "AutomatedN": 13,
     "SemiAutoN": 19,
     "ManualN": 3,
-    "PassN": 0,
+    "PassN": 8,
     "ExpectedFailN": 2,
     "RiskConfirmedN": 3,
     "NotRunN": 22,

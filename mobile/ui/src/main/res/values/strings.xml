@@ -496,6 +496,9 @@
     <string name="err_not_custom_order">هذا ليس طلبا خاصا.</string>
     <string name="err_custom_not_assigned">لم يسند سائق بعد.</string>
     <string name="err_custom_not_agreed">لم يوثق المبلغ المتفق عليه بعد</string>
+    <string name="err_quote_changed">تغيّر السعر. راجع العرض الجديد وأكّده.</string>
+    <string name="err_quote_not_confirmed">لم يؤكّد الزبون السعر بعد.</string>
+    <string name="err_custom_locked">لا يمكن تعديل السعر بعد الاستلام.</string>
     <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
     <!-- **وتقول البديلَ لا المنعَ وحدَه** — (٢٠٢٦-٠٨-٢٣): من قرأ
          «مرفوض» أغلق التطبيق، **ومن قرأ «ادفع من محفظتك» أكمل طلبَه.**

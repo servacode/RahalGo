@@ -58,18 +58,21 @@ type Counts struct {
 // قراءتِه في `internal/pricing` و`internal/cashbox` و`internal/server`،
 // **وحارسٌ في الاختبار يطابقها بمعجم الإعدادات فيسقط إن اختفى مفتاح.**
 var FinancialSettings = []string{
-	"merchants.commission_percent", // pricing.go:153 — عمولةُ المنصّة
-	"sales.commission_percent",     // pricing.go:164 — عمولةُ المندوب
-	"sales.commission_source",      // pricing.go — مصدرُ احتساب عمولته
-	"sales.activation_orders",      // merchantActivated — عتبةُ التفعيل
-	"pricing.margin_fixed",         // pricing.go:69  — هامشُ التسعير
-	"delivery.fee",                 // pricing.go:195 — أجرةُ التوصيل
-	"delivery.per_km",              // pricing.go:229
-	"delivery.max_fee",             // pricing.go:236
-	"delivery.by_distance",         // pricing.go:226
-	"drivers.cash_limit",           // cashbox.go:52  — سقفُ النقد
-	"payouts.min_amount",           // payout_handlers.go:120
-	"customers.signup_bonus",       // referrals.go:443
+	"merchants.commission_percent",          // pricing.go:153 — عمولةُ المنصّة
+	"sales.commission_percent",              // pricing.go:164 — عمولةُ المندوب
+	"sales.commission_source",               // pricing.go — مصدرُ احتساب عمولته
+	"sales.activation_orders",               // merchantActivated — عتبةُ التفعيل
+	"pricing.margin_fixed",                  // pricing.go:69  — هامشُ التسعير
+	"delivery.fee",                          // pricing.go:195 — أجرةُ التوصيل
+	"delivery.per_km",                       // pricing.go:229
+	"delivery.max_fee",                      // pricing.go:236
+	"delivery.by_distance",                  // pricing.go:226
+	"delivery.custom_fee_source",            // orders/custom.go — من يحدّد أجرةَ المخصَّص
+	"delivery.custom_fee",                   // orders/custom.go — أجرةُ المخصَّص حين تحدّدها المنصة
+	"delivery.custom_driver_may_change_fee", // orders/custom.go — هل يغيّرها السائق
+	"drivers.cash_limit",                    // cashbox.go:52  — سقفُ النقد
+	"payouts.min_amount",                    // payout_handlers.go:120
+	"customers.signup_bonus",                // referrals.go:443
 	"referral.reward_1",
 	"referral.reward_2",
 	"referral.reward_3",

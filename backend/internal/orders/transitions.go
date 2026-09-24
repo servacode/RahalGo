@@ -61,14 +61,14 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 
 	var from string
 	var driverID *string
-	var walletPaid, cashDue, deliveryFee int64
+	var walletPaid, cashDue, deliveryFee, customReserved int64
 	var customerID, promoCode, kind string
 	err = tx.QueryRow(ctx, `
 		SELECT status, driver_id, wallet_paid, cash_due, delivery_fee, customer_id,
-		       COALESCE(promo_code,''), kind
+		       COALESCE(promo_code,''), kind, custom_reserved_amount
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode,
-			&kind)
+			&kind, &customReserved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -123,13 +123,22 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **وفي المحرّك لا في الشاشة**: زرٌّ يُخفى يُلتفّ عليه.
 	if kind == KindCustom && to == StPickedUp {
 		var agreed *time.Time
+		var confVersion *int64
+		var quoteVersion int64
 		if err := tx.QueryRow(ctx,
-			`SELECT custom_agreed_at FROM orders WHERE id = $1`, orderID).
-			Scan(&agreed); err != nil {
+			`SELECT custom_agreed_at, quote_confirmed_version, quote_version
+			 FROM orders WHERE id = $1`, orderID).
+			Scan(&agreed, &confVersion, &quoteVersion); err != nil {
 			return nil, err
 		}
 		if agreed == nil {
 			return nil, ErrCustomNotAgreed
+		}
+		// **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ الحاليّ** — Batch 2a:
+		// **تأكيدٌ لنسخةٍ سابقةٍ لا يُقفِل السعرَ الحاليّ** (قفلُ السعر، قرارُ
+		// المالك). **وفي المحرّك لا في الشاشة** — زرٌّ يُخفى يُلتفّ عليه.
+		if confVersion == nil || *confVersion != quoteVersion {
+			return nil, ErrQuoteNotConfirmed
 		}
 	}
 
@@ -314,7 +323,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		orderID: orderID, from: from, to: to, actorID: actorID,
 		customerID: customerID, driverID: driverID,
 		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,
-		custom: kind == KindCustom,
+		custom: kind == KindCustom, customReserved: customReserved,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -693,6 +702,11 @@ type settlement struct {
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «السعر والأجرة لن تدخل بالحسابات، لأنّها
 	//  خدمة للسائق فقط».)
 	custom bool
+	// customReserved **ما حُجز من محفظة الزبون لهذا الطلب المخصَّص** — Batch 2a.
+	//
+	// **يُمرَّر ليقرّر `settle` بلا قراءةٍ ثانية**: نهايةٌ إلى غير التسليم تفكّ
+	// الحجزَ **إن وُجد وحدَه** — **فطلبٌ نقديٌّ (لا حجزَ له) لا يمسّ شيئاً.**
+	customReserved int64
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -724,6 +738,13 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		// **والمنصّةُ تعبر بلا أن تأخذ.**
 		if in.to == StDelivered {
 			return s.settleCustomWallet(ctx, q, in)
+		}
+		// **ونهايةٌ إلى غير التسليم تُطلق حجزَ المحفظة** — Batch 2a: **مالٌ
+		// حُجز عند التأكيد لا يبقى محجوزاً لطلبٍ أُلغي أو تعذّر** (وإلّا سقط
+		// الحارسُ الماليّ). **والنقدُ لا حجزَ له — فلا شيءَ يُفكّ ولا يُمَسّ**
+		// (يُقرَّر باللقطة المُمرَّرة بلا استعلامٍ ثانٍ).
+		if terminal(in.to) && in.customReserved > 0 {
+			return s.releaseCustomReservationOnTerminal(ctx, q, in.orderID, in.customerID)
 		}
 		return nil
 	}

@@ -126,8 +126,17 @@ type Order struct {
 	CustomAgreedAt    *time.Time `json:"custom_agreed_at"`
 	CustomGoodsAmount *int64     `json:"custom_goods_amount"`
 	CustomFee         *int64     `json:"custom_fee"`
-	MerchantID        string     `json:"merchant_id"`
-	MerchantName      string     `json:"merchant_name"`
+	// QuoteVersion **نسخةُ العرض** — تتزايد مع كلّ تغييرٍ حقيقيّ في البضاعة
+	// أو الأجرة. **وتأكيدُ الزبون مربوطٌ بنسخةٍ بعينها** (`QuoteConfirmedVersion`):
+	// **فتغييرٌ بعد التأكيد يُبطله ما لم يُطابق النسختين.** (Batch 2a)
+	QuoteVersion int64 `json:"quote_version"`
+	// QuoteConfirmedAt وأخواتُها **تأكيدُ الزبون للعرض** — متى، وأيَّ مبلغٍ،
+	// وأيَّ نسخة. **ولا يبدأ الشراءُ قبل تأكيدٍ مطابقٍ للنسخة الحاليّة.**
+	QuoteConfirmedAt      *time.Time `json:"quote_confirmed_at"`
+	QuoteConfirmedTotal   *int64     `json:"quote_confirmed_total"`
+	QuoteConfirmedVersion *int64     `json:"quote_confirmed_version"`
+	MerchantID            string     `json:"merchant_id"`
+	MerchantName          string     `json:"merchant_name"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من

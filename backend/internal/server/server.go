@@ -582,6 +582,9 @@ func (s *Server) Router() http.Handler {
 			// **فضغطتان على شبكةٍ سيّئةٍ تُنشئان طلبين** يذهب فيهما
 			// سائقان إلى بابٍ واحد.
 			r.Post("/orders/custom", s.idempotent(s.handleCreateCustomOrder))
+			// **الزبونُ يؤكّد عرضَ الطلب المخصَّص ويختار الدفع** — Batch 2a:
+			// **يُقفَل السعرُ قبل أن يبدأ السائقُ الشراء.**
+			r.Post("/orders/{id}/confirm-quote", s.handleConfirmQuote)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
 			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
@@ -1134,6 +1137,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/transfer", s.handleTransferOrder)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/transition", s.handleOrderTransition)
+			// **تدخّلُ الأدمن على عرضِ الطلب المخصَّص** — Batch 2a: قبل
+			// الاستلام حرّاً، وبعده نقصاً أو تصحيحاً فقط، **موثَّقاً.**
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/custom-quote", s.handleAdminOverrideCustomQuote)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`

@@ -17,6 +17,8 @@ const orderSelect = `
 	       -- **ونوعُ الطلب** — الشاشاتُ تعرض به، والخارطةُ تختلف عليه.
 	       o.kind, COALESCE(o.custom_request, ''),
 	       o.custom_agreed_at, o.custom_goods_amount, o.custom_fee,
+	       -- **عرضُ السعر وتأكيدُه** (Batch 2a) — النسخةُ ولحظةُ التأكيد ومبلغُه ونسختُه.
+	       o.quote_version, o.quote_confirmed_at, o.quote_confirmed_total, o.quote_confirmed_version,
 	       -- **وفراغٌ لا NULL** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): الحقلان نصّان
 	       -- في البنية، **وNULL فيهما يُسقط المسحَ كلَّه** لا هذا الحقلَ وحدَه.
 	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, ''),
@@ -102,6 +104,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	var items []byte
 	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerPhone, &o.CustomerName,
 		&o.Kind, &o.CustomRequest, &o.CustomAgreedAt, &o.CustomGoodsAmount, &o.CustomFee,
+		&o.QuoteVersion, &o.QuoteConfirmedAt, &o.QuoteConfirmedTotal, &o.QuoteConfirmedVersion,
 		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,

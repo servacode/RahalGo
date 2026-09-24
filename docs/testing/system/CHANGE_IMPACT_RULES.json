@@ -18,7 +18,7 @@
   ],
   "counts": {
     "categories": 15,
-    "domain_rules": 13,
+    "domain_rules": 16,
     "input_modes": 3
   },
   "domain_rules": [
@@ -197,9 +197,12 @@
         "backend/internal/identity/",
         "backend/internal/server/middleware",
         "backend/internal/server/auth_handlers.go",
+        "backend/internal/server/ws",
         "backend/internal/realtime/"
       ],
       "flows": [
+        "F-28",
+        "F-29",
         "F-30",
         "F-34"
       ],
@@ -220,6 +223,87 @@
       ],
       "why": "مسٌّ للهويّة أو الجلسة أو تخويل البثّ ⇒ أمنٌ وبثٌّ (البند ١٦)",
       "staging_required": "**`R16`** — فشلُ Redis المفتوح يحتاج طقمَ خدماتٍ حقيقيّاً"
+    },
+    {
+      "name": "PUSH_OWNERSHIP",
+      "match": [
+        "backend/internal/push/push.go",
+        "backend/internal/server/device_handlers.go",
+        "mobile/ui/src/main/kotlin/com/rahalgo/ui/Push.kt",
+        "mobile/ui/src/main/kotlin/com/rahalgo/ui/AuthViewModel.kt",
+        "mobile/app-driver/src/main/kotlin/com/rahalgo/driver/push/Push.kt",
+        "mobile/app-driver/src/main/kotlin/com/rahalgo/driver/home/HomeViewModel.kt"
+      ],
+      "flows": [
+        "F-30"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "modes": [
+        "SECURITY",
+        "ANDROID"
+      ],
+      "packages": [
+        "internal/qa",
+        "internal/push"
+      ],
+      "why": "مسٌّ لملكيّة وجهةِ الدفع أو لبابِ الخروج ⇒ خصوصيّةُ الجهاز بعد الخروج (`D12`)"
+    },
+    {
+      "name": "REALTIME_CLIENT",
+      "match": [
+        "mobile/shared/src/main/kotlin/com/rahalgo/shared/net/LiveSocket.kt",
+        "mobile/shared/src/main/kotlin/com/rahalgo/shared/net/RealtimeAuth.kt",
+        "mobile/shared/src/main/kotlin/com/rahalgo/shared/net/ApiClient.kt"
+      ],
+      "flows": [
+        "F-04",
+        "F-34"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "modes": [
+        "ANDROID",
+        "REALTIME",
+        "SECURITY"
+      ],
+      "packages": [
+        "internal/qa",
+        "internal/androidmap"
+      ],
+      "why": "مسٌّ لحلقة البثّ أو لسلطة الجلسة في الجهاز ⇒ تعافي الوصل (`D19`)",
+      "device_required": "**`AND-31`** — عودةُ الوصلة بعد انقطاعٍ وانتهاءِ رمزٍ على جهازٍ حقيقيّ"
+    },
+    {
+      "name": "ACCOUNT_DELETION",
+      "match": [
+        "backend/internal/identity/deletion.go"
+      ],
+      "flows": [
+        "F-36"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "modes": [
+        "SECURITY"
+      ],
+      "packages": [
+        "internal/qa",
+        "internal/identity"
+      ],
+      "why": "مسٌّ لحذف الحساب ⇒ تجريدٌ وإبطالُ جلسات (`XG-49`)"
     },
     {
       "name": "EVENTS",

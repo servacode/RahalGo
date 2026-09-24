@@ -76,6 +76,7 @@ var adminPolicy = []Rule{
 
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},
+	{"POST", "/orders/{id}/custom-quote", OrdersIntervene}, // تدخّلُ الأدمن على عرض المخصَّص — Batch 2a
 	{"POST", "/orders/{id}/assign", OrdersIntervene},
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	{"POST", "/orders/{id}/recompute", OrdersIntervene},

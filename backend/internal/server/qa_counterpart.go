@@ -227,6 +227,19 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 				s.respondErr(w, err)
 				return
 			}
+			// **والزبونُ يؤكّد العرضَ قبل الاستلام** (Batch 2a) — **وإلّا
+			// `quote_not_confirmed`.** نقداً حتماً (المخصّصُ النقديُّ لا يُسوّى)،
+			// والمبلغُ 6000 والنسخةُ 1 حتميّان بعد اتّفاقٍ أوّلَ بقيمٍ رمزيّة.
+			var qaCust string
+			if err := s.pg.QueryRow(ctx,
+				`SELECT customer_id::text FROM orders WHERE id = $1`, orderID).Scan(&qaCust); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			if _, err := s.orders.ConfirmQuote(ctx, orderID, qaCust, "cash", 6000, 1); err != nil {
+				s.respondErr(w, err)
+				return
+			}
 			if _, err := s.orders.Transition(ctx, driverID, []string{"driver"}, orderID, to, "QA advance"); err != nil {
 				s.respondErr(w, err)
 				return

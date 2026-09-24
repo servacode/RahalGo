@@ -309,6 +309,10 @@ private val CODES: Map<String, Int> = mapOf(
     "not_custom_order" to R.string.err_not_custom_order,
     "custom_not_assigned" to R.string.err_custom_not_assigned,
     "custom_not_agreed" to R.string.err_custom_not_agreed,
+    // ── عرضُ السعر المخصَّص وتأكيدُه (Batch 2a) ──
+    "quote_changed" to R.string.err_quote_changed,
+    "quote_not_confirmed" to R.string.err_quote_not_confirmed,
+    "custom_locked" to R.string.err_custom_locked,
     "merchant_closed" to R.string.err_merchant_closed,
     // **والدفعُ نقداً موقوفٌ مؤقّتاً** — (٢٠٢٦-٠٨-٢٣). **والرسالةُ
     // تقول البديل**: المحفظةُ مفتوحةٌ له.
