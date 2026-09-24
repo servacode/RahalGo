@@ -306,6 +306,11 @@ var qaSeedAllowlist = map[string]bool{
 	"contact_clear":          true, // استعادةُ إعداداتِ التواصل السابقة
 	"otp_code":               true, // إصدارُ رمزِ OTP لرقمِ QA (04/05/06) — dev يطبع لا يرسل واتساب
 	"signup_bonus_reverse":   true, // عكسُ هديّةِ تسجيلِ حسابِ QA (CUST-22-016) — قيدٌ مزدوجٌ عبر ApplyTx
+	// ── شاهدُ تغطيةِ المنطقة الحيّ (Batch 3d) — بنيةُ اختبارٍ ضيّقةٌ، منطقةٌ
+	//    واحدةٌ باسمٍ ثابت، تمرّ بخدمةِ الأدمن الحقيقيّة (`qa_coverage_zone.go`) ──
+	"coverage_zone_create": true, // إنشاءُ منطقةِ التغطيةِ الاختباريّةِ الثابتةِ + إشعارٌ حقيقيّ
+	"coverage_zone_resave": true, // إعادةُ حفظِ نفسِ المنطقة — شهودُ عدمِ التكرار
+	"coverage_zone_delete": true, // حذفُ نفسِ المنطقةِ الاختباريّةِ وحدَها — تنظيف
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -324,6 +329,8 @@ var qaStateSeed = map[string]bool{
 	"disposable_create": true, "disposable_delete_code": true,
 	"contact_set": true, "contact_clear": true, "otp_code": true,
 	"signup_bonus_reverse": true,
+	// شاهدُ تغطيةِ المنطقة (Batch 3d) — لا تلزمها هويّةُ زبون QA:
+	"coverage_zone_create": true, "coverage_zone_resave": true, "coverage_zone_delete": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -459,6 +466,12 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaOTPCode(w, r, req.Phone, req.Purpose)
 		case "signup_bonus_reverse":
 			s.qaSignupBonusReverse(w, r)
+		case "coverage_zone_create":
+			s.qaCoverageZoneCreate(w, r)
+		case "coverage_zone_resave":
+			s.qaCoverageZoneResave(w, r)
+		case "coverage_zone_delete":
+			s.qaCoverageZoneDelete(w, r)
 		}
 		return
 	}

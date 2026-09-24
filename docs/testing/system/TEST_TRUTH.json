@@ -31,8 +31,8 @@
     "setting_defs": 146,
     "behaviour_settings": 118,
     "order_fields": 83,
-    "test_files": 374,
-    "test_funcs": 1596
+    "test_files": 375,
+    "test_funcs": 1597
   },
   "flows": [
     {
@@ -22238,6 +22238,12 @@
     {
       "name": "TestQASeedFailsClosedInProduction",
       "file": "internal/server/qa_counterpart_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQACoverageZoneCapabilityGuards",
+      "file": "internal/server/qa_coverage_zone_guard_test.go",
       "package": "server",
       "orphan": true
     },
