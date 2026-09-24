@@ -16,11 +16,14 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 const (
@@ -37,7 +40,24 @@ const (
 )
 
 // qaFixedUser **يضمن هويّةَ QA ثابتةً بدورها** ويردّ معرّفَها — المسارُ الحقيقيّ.
+//
+// **ولا يُعاد منحُ الدور على حسابٍ قائم**: `EnsureUserWithRole` على القائم يمرّ
+// بـ`GrantRole(uid, role, &"")` — سلسلةٌ خاويةٌ لعمودِ `granted_by` من نوع `uuid`
+// ⇒ خطأُ بوستغرس `22P02`، **و`respondErr` يصنّفه «غير موجود» (٤٠٤) بلا تسجيل**.
+// فكان تدخّلُ الأدمن وإسنادُ سائق QA يسقطان بـ٤٠٤ بعد أوّل نداءٍ في الشهادة الحيّة،
+// والسجلُّ صامت. **فيُبحَث عنه بهاتفه أوّلاً ولا يُنشأ إلّا مرّة** — كما يفعل
+// `handleQAStagingSession` أصلاً؛ إصلاحٌ ضيّقٌ في أداة QA لا يمسّ عقدَ الإنتاج.
 func (s *Server) qaFixedUser(ctx context.Context, phone, role, name, ip string) (string, error) {
+	if norm, ok := identity.NormalizePhone(phone); ok {
+		var uid string
+		err := s.pg.QueryRow(ctx, `SELECT id::text FROM users WHERE phone = $1`, norm).Scan(&uid)
+		if err == nil {
+			return uid, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", err
+		}
+	}
 	u, err := s.identity.EnsureUserWithRole(ctx, "", phone, role, name, "", ip)
 	if err != nil {
 		return "", err
