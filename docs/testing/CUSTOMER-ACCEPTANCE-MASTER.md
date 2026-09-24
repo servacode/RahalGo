@@ -996,9 +996,9 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 
 | ID | Area | Scenario | Pre | Steps | Expected | Actual | Status | Device/Build | Net | SoT | Evidence | Defect | Regression | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| CUST-22-001 | Gate | Every actual Customer surface mapped to this document | — | Re-run the §38 audit against the release candidate | No unmapped surface | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 1 |
-| CUST-22-002 | Gate | Every mandatory case PASS or justified NOT_APPLICABLE | — | Recount §39 from the tables | 0 NOT_TESTED / FAIL / BLOCKED | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 2 |
-| CUST-22-003 | Gate | L1-019 truly PASS under the offline blocking/retry contract | — | CUST-16 mandatory rows on the physical device | PASS | العقدُ المصحّح (Option A، ٢٠٢٦-٠٩-٢٣): تعديلاتُ السلّة المحلّيّة مسموحةٌ منقطعاً وتُصالَح عند العودة (لا «تُحجب») — منسجمٌ مع 11-029/030 و16-011. البوّابةُ تبقى مفتوحةً حتّى تُغلق سوابقُها (CUST-16 على الجهاز). | `NOT_TESTED` | — | offline | — | — | — | — | Gate item 3 |
+| CUST-22-001 | Gate | Every actual Customer surface mapped to this document | — | Re-run the §38 audit against the release candidate | No unmapped surface | §40.88 (٢٠٢٦-٠٩-٢٤): إعادةُ تدقيق §38 على المرشّح e022cd9c — كلُّ سطحٍ جديدٍ منذ الأساس (1fc4da52) مربوط: ForcedPasswordScreen⇒CUST-06-027، TicketThreadScreen⇒CUST-SUP-013/014؛ مسارَا التذاكر الجديدان مربوطان، وبقيّةُ الجديد معطاراتُ QA على التجهيز (٤٠٤ إنتاجاً). لا سطحَ غيرَ مربوط | `PASS` | source | — | — | — | — | — | Gate item 1 · §40.88 |
+| CUST-22-002 | Gate | Every mandatory case PASS or justified NOT_APPLICABLE | — | Recount §39 from the tables | 0 NOT_TESTED / FAIL / BLOCKED | §40.88 (٢٠٢٦-٠٩-٢٤): إعادةُ العدّ الحسابيّ — 0 NOT_TESTED · 0 FAIL · 0 BLOCKED؛ 568 PASS + 10 N/A مبرَّرة = 578 | `PASS` | tables | — | — | — | — | — | Gate item 2 · §40.88 |
+| CUST-22-003 | Gate | L1-019 truly PASS under the offline blocking/retry contract | — | CUST-16 mandatory rows on the physical device | PASS | العقدُ المصحّح (Option A، ٢٠٢٦-٠٩-٢٣): تعديلاتُ السلّة المحلّيّة مسموحةٌ منقطعاً وتُصالَح عند العودة (لا «تُحجب») — منسجمٌ مع 11-029/030 و16-011. البوّابةُ تبقى مفتوحةً حتّى تُغلق سوابقُها (CUST-16 على الجهاز). §40.88 (٢٠٢٦-٠٩-٢٤): العقدُ مؤكَّدٌ من المالك (عملياتُ السلّة المحلّيّة المشروعةُ تعمل منقطعةً وتُصالَح عند العودة؛ الأفعالُ ذاتُ المرجعيّة الخادميّة تبقى تُتحقَّق خادميّاً)، وCUST-16 مغلقةٌ كاملاً (44 PASS / 1 N/A / 0 مفتوح) ⇒ السوابقُ أُغلقت. | `PASS` | — | offline | — | — | — | — | Gate item 3 · §40.88 |
 | CUST-22-004 | Gate | All Customer P0/P1 defects CLOSED | — | Defect ledger | None open | PASS — دفترُ العيوب (§40.45): كلُّ P0/P1 مُغلَقة — CUST-DEF-001 (P0، §40.17 نشرُ إنتاج)، 002/003/004/005 (P1، مُغلَقةٌ بإصلاح مصدرٍ + انحدار + شهود)، وCAF-13 RESOLVED. لا P0/P1 مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 4 — CUST-DEF-001..005 all closed |
 | CUST-22-005 | Gate | No unresolved launch-affecting security defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-001 (استيلاءُ حساب/حدُّ المصادقة) مُغلَقٌ ومنشورٌ إنتاجاً؛ لا عيبَ أمنيٍّ مؤثّرٍ على الإطلاق مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 5 |
 | CUST-22-006 | Gate | No unresolved duplicate-order defect | — | Defect ledger | None | PASS — دفترُ العيوب (§40.45): CUST-DEF-002 (خطرُ الطلب المكرّر) مُغلَقٌ (§40.25/40.27، isDecided + بصمةُ الجسد)؛ لا عيبَ تكرارٍ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 6 |
@@ -1006,11 +1006,11 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 | CUST-22-008 | Gate | No unresolved financial/source-of-truth defect | — | Defect ledger | None | PASS — دفترُ العيوب + شاهدٌ حيّ (§40.45/40.37): CUST-DEF-003 (حدُّ الثقة الماليّ، منشورٌ إنتاجاً) وCUST-DEF-005 (مجموعُ السلّة/مصدرُ الحقيقة) مُغلَقان بانحدار؛ وتكاملُ المال مشهودٌ حيّاً على staging (رياضةُ المحفظة، order_payment وحيد، ردٌّ عند الإلغاء، مجموعُ الحركات=الرصيد، لا أثر). لا عيبَ ماليٍّ مفتوح | `PASS` | ledger | — | — | — | — | — | Gate item 8 — moneycheck FI-02.c (treasury count) is a test-DB seed artifact, not a customer defect; staging moneycheck (22-013) deferred to owner DB access |
 | CUST-22-009 | Gate | Every fixed defect has regression evidence | — | Regression column | Filled for every fixed defect | PASS — دفترُ العيوب (§40.45): لكلّ عيبٍ مُصلَحٍ انحدارٌ آليّ — CUST-DEF-001 TestSU10/TestConfirm*, 002 isDecided tests, 003 TestCDEF003_* , 004 CustDef010Test, 005 CartChanges tests, CAF-13 EngagementTest | `PASS` | ledger | — | — | — | — | — | Gate item 9 |
 | CUST-22-010 | Gate | Automated impacted suites pass | — | Go full suite; Kotlin unit suites; guards | Green | PASS — شاهدٌ حيّ (§40.48): `go test -timeout 30m -count=1 -p 1 ./...` أخضرُ تماماً (0 FAIL) بعد إصلاح ٣ إخفاقات (تصنيفُ رموز qa_*، false-positive في ENVG4، إعادةُ توليد TEST_TRUTH)؛ حرّاسُ الرموز (TestXG45 + error-key) خُضر؛ سويتاتُ Kotlin خُضرٌ في الدفعات السابقة ولم تُمسّ الليلة | `PASS` | suite | — | — | — | — | Gate item 10 — Go full suite green (verified); Kotlin unchanged tonight |
-| CUST-22-011 | Gate | Physical-device mandatory cases pass | — | Device rows | PASS | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 11 |
+| CUST-22-011 | Gate | Physical-device mandatory cases pass | — | Device rows | PASS | §40.88 (٢٠٢٦-٠٩-٢٤): كلُّ صفوفِ الجهاز الإلزاميّة PASS — لا صفَّ جهازٍ مفتوح (CUST-16 وشهودُ SM-A525F عبر §40.x مغلقة، وآخرُها 22-016/§40.87) | `PASS` | device | — | — | — | — | — | Gate item 11 · §40.88 |
 | CUST-22-012 | Gate | Zero accidental Production dependency | — | CUST-00-005/006, CUST-19-024 | PASS | PASS — صفرُ اعتمادٍ على الإنتاج: CUST-00-005/006 + CUST-19-024 كلُّها PASS | `PASS` | — | — | — | — | — | — | Gate item 12 |
 | CUST-22-013 | Gate | Staging data reconciled/known after tests | — | Before/after SoT reads; moneycheck | Known; 51/51 | PASS — شاهدٌ حيّ (§40.59): بُني `GET /qa/reconcile` (قراءةٌ محضة، staging-only، أعدادٌ فقط). أثرُ اختبار الزبون **نظيفٌ تماماً**: qa_open_orders=0 · qa_wallet_balance=0 · qa_dense_items=0 · qa_active_offers=0 · qa_second_merchants=0. والمالُ **50/51** (moneycheck عبر fininv): الخرقُ الوحيدُ FI-06.d بصفٍّ واحدٍ **by_status={cancelled:1}** — طلبٌ ملغىً (استُردّ فصار net=0 ≠ −wallet_paid)، أثرٌ حميدٌ لا عيبَ زبونيّ، **وليس من اختبار هذه الجلسة** (طلباتي نقديّةٌ wallet_paid=0). الدفترُ لم يُمَسّ. البيانةُ **معلومةٌ ومُسوّاة** | `PASS` | api | — | reconciled | — | — | — | via GET /qa/reconcile (read-only) |
 | CUST-22-014 | Gate | Production mutations zero unless authorized | — | Production identity + audit read | 0 | PASS — صفرُ مساسٍ بالإنتاج: هويّةُ الإنتاج + تدقيقُ السجلّ عبر الحملة | `PASS` | — | — | identity endpoint | — | — | — | Gate item 14 |
-| CUST-22-015 | Gate | No unexplained NOT_TESTED/BLOCKED rows | — | §39 | 0 | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 15 |
+| CUST-22-015 | Gate | No unexplained NOT_TESTED/BLOCKED rows | — | §39 | 0 | §40.88 (٢٠٢٦-٠٩-٢٤): 0 NOT_TESTED · 0 BLOCKED بعد إغلاق بوّابات CUST-22 الستّ | `PASS` | tables | — | — | — | — | — | Gate item 15 · §40.88 |
 | CUST-22-016 | Gate | Clean end-to-end Customer smoke run after all fixes | Release-candidate debug build | Install → signup → address → browse → cart → submit → track → rate → logout | All PASS on the device | §40.87 (٢٠٢٦-٠٩-٢٤): QASmoke على SM-A525F، طلبٌ خاصٌّ نقديٌّ #١١٥٠ ⇒ delivered (حياديّ) ⇒ تقييم ⇒ خروج؛ عكسُ الهديّة + حذفُ الحساب + مطابقةٌ residue=0 | `PASS` | — | online | SoT per step | — | — | — | Gate item 16 · شاهد §40.87 |
 
 ---
@@ -1277,8 +1277,8 @@ until ADB is available — not an acceptance blocker.
 | 31 | CUST-19 | 29 | 25 | 4 | 0 | 0 | 29 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
-| 34 | CUST-22 | 16 | 16 | 0 | 5 | 0 | 11 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **5** | **10** | **563** | **0** | **0** |
+| 34 | CUST-22 | 16 | 16 | 0 | 0 | 0 | 16 | 0 | 0 |
+| | **Total** | **578** | **474** | **104** | **0** | **10** | **568** | **0** | **0** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3758,6 +3758,28 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.88 · إغلاقُ الأساس — بوّاباتُ CUST-22 الخمس الأخيرة ⇒ 578 مغلق (٢٠٢٦-٠٩-٢٤)
+
+**بعد 22-016 (§40.87) بقيت خمسُ بوّاباتِ تصديق؛ أُغلقت بعد تحقّقٍ حقيقيٍّ لا آليّ.**
+
+**22-001 (كلُّ سطحِ زبونٍ مربوطٌ بالوثيقة)** — إعادةُ تدقيق §38 على المرشّح `e022cd9c` (فرقٌ من أساس التدقيق `1fc4da52`):
+- سطحان جديدان فقط في وحدات الزبون (app-customer/ui/shared/map، ملفّاتٌ غيرُ اختباريّة): `ForcedPasswordScreen.kt` ⇒ **CUST-06-027** (عبر CUST-DEF-010، PASS بشاهد جهاز)؛ `TicketThreadScreen.kt` ⇒ **CUST-SUP-013/014** (PRQ-2، PASS بشاهد حيّ §40.29).
+- مساراتُ الخادم الجديدةُ الوحيدةُ القابلةُ للزبون: `/my/tickets/{id}` و`/my/tickets/{id}/replies` (⇒ SUP-013/014). البقيّةُ (`/qa/*`) معطاراتُ اختبارٍ على التجهيز — يبطلها الخادمُ ٤٠٤ في الإنتاج، فلا سطحَ إنتاجيّ.
+- تحسيناتُ الشاشات القائمة (السلّة/الخاصّ/الطلبات/السوق) تبقى ضمن مجموعاتها. **لا سطحَ غيرَ مربوط.**
+
+**22-003 (عقدُ الانقطاع L1-019)** — العقدُ المصحّحُ مؤكَّدٌ من المالك: عملياتُ السلّة المحلّيّة المشروعةُ تعمل منقطعةً وتُصالَح عند العودة، والأفعالُ ذاتُ المرجعيّة الخادميّة تبقى تُتحقَّق خادميّاً. سوابقُه CUST-16 مغلقةٌ كاملاً (44 PASS/1 N/A/0 مفتوح).
+
+**22-002 · 22-011 · 22-015** — إعادةُ العدّ: لا صفَّ NOT_TESTED ولا FAIL ولا BLOCKED؛ كلُّ صفوفِ الجهاز الإلزاميّة PASS.
+
+**تحقّقُ الإغلاق النهائيّ**:
+- **الهُويّات**: التجهيز `e022cd9c` (staging)، الإنتاج `023d9d4c` (production) — قراءةٌ فقط، صفرُ مساسٍ بالإنتاج.
+- **`qa/reconcile`**: المالُ 50/51 (moneycheck عبر fininv؛ الخرقُ الوحيدُ FI-06.d الحميدُ الموثّق، بلا تغيّر)، residue=0 في كلّ الحقول.
+- **الانحدار**: لا شيفرةَ تغيّرت في دفعة الإغلاق هذه (تعديلُ وثيقةٍ فقط)؛ سويتُ Go الكاملةُ خضراءُ سلفاً (22-010/§40.48)، وكلُّ صفٍّ يحمل شاهدَه/اختبارَه.
+
+**البوّاباتُ الستُّ كلُّها PASS.**
+
+**المجاميع (محقّقة): PASS 568 · FAIL 0 · BLOCKED 0 · N/A 10 · NOT_TESTED 0 = 578.** **قبول الأساس 578 للزبون = مغلق.**
 
 ### 40.87 · CUST-22-016 — الدخانُ الكاملُ من طرفٍ إلى طرف على الجهاز (٢٠٢٦-٠٩-٢٤)
 
