@@ -959,10 +959,13 @@ func (r *Repo) RevokeClientTokens(ctx context.Context, userID, client string) (i
 //
 // **ولا تُقطَع وجهةُ عائلةٍ أخرى للحساب نفسِه** (جلسةُ الويب تبقى)، **ولا وجهةُ
 // الجهازِ الحاليّ** — فهي بعائلتِه الجديدة، **ويعيد هو تسجيلَها بعد دخوله.**
-func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client string) ([]string, error) {
+// **ويعيد رموزَ الدفعِ المحذوفةَ** (Obs 3.1): بها يُرسَل إشعارُ أمانٍ لمرّةٍ
+// واحدةٍ للجهازِ المُزاح **بعد** حذفِها من الجدول — فلا يُعاد إدراجُها ولا
+// يُختار بالمستخدم في دفعٍ خاصٍّ لاحق.
+func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client string) (sids []string, tokens []string, err error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -973,15 +976,15 @@ func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client st
 		   AND revoked_at IS NULL AND expires_at > now()
 		RETURNING session_id::text`, userID, client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	seen := map[string]bool{}
-	sids := []string{}
+	sids = []string{}
 	for rows.Next() {
 		var sid string
 		if err := rows.Scan(&sid); err != nil {
 			rows.Close()
-			return nil, err
+			return nil, nil, err
 		}
 		if !seen[sid] {
 			seen[sid] = true
@@ -990,18 +993,36 @@ func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client st
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	tokens = []string{}
 	if len(sids) > 0 {
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM device_tokens WHERE session_id = ANY($1::uuid[])`, sids); err != nil {
-			return nil, err
+		trows, derr := tx.Query(ctx,
+			`DELETE FROM device_tokens WHERE session_id = ANY($1::uuid[]) RETURNING token`, sids)
+		if derr != nil {
+			return nil, nil, derr
+		}
+		seenT := map[string]bool{}
+		for trows.Next() {
+			var tok string
+			if serr := trows.Scan(&tok); serr != nil {
+				trows.Close()
+				return nil, nil, serr
+			}
+			if tok != "" && !seenT[tok] {
+				seenT[tok] = true
+				tokens = append(tokens, tok)
+			}
+		}
+		trows.Close()
+		if terr := trows.Err(); terr != nil {
+			return nil, nil, terr
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sids, nil
+	return sids, tokens, nil
 }
 
 // RevokedReasonOfSession **سببُ إبطالِ عائلةٍ** — من الحقيقة الموثوقة، يدوم بعد

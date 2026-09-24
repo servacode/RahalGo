@@ -48,6 +48,10 @@ class CustomerApplication : Application() {
         // الحالة التي نحتاجها.**
         com.rahalgo.ui.PushChannels.ensure(this)
 
+        // **إشارةُ ظهورِ التطبيق** (Obs 3.1) — ليُكتَم إشعارُ الإزاحة النظاميُّ في
+        // المقدّمة (الرسالةُ الداخليّةُ تكفي) ويُعرَض في الخلفيّة وحدَها.
+        com.rahalgo.ui.AppForeground.install(this)
+
         MapStyleRepository.init(this, MapConfig(baseUrl = Backend.MAPS_BASE_URL))
     }
 

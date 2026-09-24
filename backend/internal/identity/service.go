@@ -108,6 +108,9 @@ type Service struct {
 	// pub **ناشرُ الحديث الحيّ** — لإشعارِ عائلةٍ أُبطلت فوراً (Obs 3). احتياطيّاً
 	// صامتٌ، فلا تحتاج اختباراتُ الهوية مُسرِّعاً.
 	pub Publisher
+	// logoutNotifier **إشعارُ أمانٍ لمرّةٍ واحدةٍ لجهازٍ أُزيح** (Obs 3.1) — يُنادى
+	// برموزِ الدفعِ المحذوفةِ بعد الإبطال. احتياطيّاً `nil` (لا إشعار).
+	logoutNotifier func(ctx context.Context, tokens []string)
 }
 
 // Publisher **ما يكفي من المُسرِّع** — إشارةٌ إلى موضوع (نفسُ نمط orders/notifications).
@@ -129,6 +132,13 @@ func (s *Service) SetRealtimePublisher(p Publisher) {
 	if p != nil {
 		s.pub = p
 	}
+}
+
+// SetLogoutNotifier يربط إشعارَ الأمانِ لمرّةٍ واحدةٍ لجهازٍ أُزيح (تُنادى مرّة
+// عند الإقلاع). وبلا ربطٍ لا يُرسَل شيءٌ — الإبطالُ والقطعُ يسريان كما هما.
+// **والمُنادى يفصل السياقَ ولا يعرقل الدخول** — فشلُ الإرسال لا يُرجع الدخول.
+func (s *Service) SetLogoutNotifier(f func(ctx context.Context, tokens []string)) {
+	s.logoutNotifier = f
 }
 
 // SetSettingReader يربط الخدمة بإعدادات اللوحة (تُنادى مرّة عند الإقلاع).
@@ -957,7 +967,7 @@ func (s *Service) revokeSession(ctx context.Context, userID, sid string) error {
 func (s *Service) revokeClientSessions(ctx context.Context, userID, client string) ([]string, error) {
 	// **إبطالٌ وقطعُ وجهةٍ في معاملةٍ واحدة** (Obs 3) — والسببُ `superseded` يُثبَت
 	// في القاعدة فيدوم، ووجهاتُ العائلاتِ المُبطَلةِ وحدَها تُقطَع.
-	sids, err := s.repo.RevokeClientSessionsAtomic(ctx, userID, client)
+	sids, tokens, err := s.repo.RevokeClientSessionsAtomic(ctx, userID, client)
 	if err != nil {
 		return nil, err
 	}
@@ -968,6 +978,12 @@ func (s *Service) revokeClientSessions(ctx context.Context, userID, client strin
 		// فيسأل الخادمَ فيُردّ `session_superseded` فيخرج بالرسالة الصريحة. **موضوعٌ
 		// خاصٌّ بالعائلة** فلا يصل الجهازَ الجديد (عائلتُه أخرى).
 		s.pub.Publish(SessionTopic(sid), map[string]any{"type": "session_revoked", "reason": ReasonSuperseded})
+	}
+	// **إشعارُ أمانٍ لمرّةٍ واحدةٍ للجهازِ المُزاح** (Obs 3.1) — للجهازِ في الخلفيّة
+	// (لا يلتقط إشارةَ `sess:` ولا يُنادي فيصله الرفض). رموزُه حُذفت توّاً فلا يصلها
+	// دفعٌ خاصٌّ بعد الآن؛ يُرسَل هذا مباشرةً إليها. **لا يعرقل الدخول ولا يُرجعه.**
+	if len(tokens) > 0 && s.logoutNotifier != nil {
+		s.logoutNotifier(ctx, tokens)
 	}
 	return sids, nil
 }

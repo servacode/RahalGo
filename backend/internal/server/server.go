@@ -186,6 +186,22 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		pushSvc = push.New(pg, logger, fcm)
 	}
 	notify.SetPusher(pushAdapter{pushSvc})
+	// **إشعارُ أمانِ الإزاحةِ لمرّةٍ واحدة** (Obs 3.1) — حين يُزيح دخولٌ جديدٌ جهازاً
+	// من نوعِ العميل نفسِه، تُحذف رموزُه ثمّ يُرسَل إليها إشعارٌ **غيرُ حسّاسٍ** واحد.
+	// **يُفصَل السياقُ ولا يُنتظَر** فلا يعرقل الدخولَ ولا يُرجعه إن سقط. حمولةٌ
+	// بيانيّةٌ خالصةٌ فيرسمها التطبيقُ في الخلفيّة والمقتول، **ويكتمها في المقدّمة**
+	// (`kind=session_superseded`، `RahalPushService`). **ولا يُعاد إدراجُ الرمز.**
+	identitySvc.SetLogoutNotifier(func(_ context.Context, tokens []string) {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			pushSvc.SendToTokens(ctx, tokens, push.Message{
+				Title: "رحال غو",
+				Body:  "تم تسجيل خروجك من رحال غو بسبب تسجيل الدخول إلى حسابك من جهاز آخر.",
+				Data:  map[string]string{"kind": "session_superseded"},
+			})
+		}()
+	})
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
 	routeClient := routing.New(cfg.OSRMURL)
 	if !routeClient.Enabled() {

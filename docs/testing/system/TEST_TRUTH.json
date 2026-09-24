@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 369,
-    "test_funcs": 1571
+    "test_funcs": 1572
   },
   "flows": [
     {
@@ -8498,6 +8498,12 @@
     },
     {
       "name": "TestPush_RoutesToTargetAppOnly",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_SendToTokensGoesDirect",
       "file": "internal/push/push_test.go",
       "package": "push",
       "orphan": true

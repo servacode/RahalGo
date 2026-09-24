@@ -69,6 +69,31 @@ func TestPush_TokenMovesToNewOwner(t *testing.T) {
 	}
 }
 
+// TestPush_SendToTokensGoesDirect **إشعارُ الإزاحةِ يُرسَل إلى الرموزِ مباشرةً**
+// (Obs 3.1) — لا عبر جدول الأجهزة (الرمزُ حُذف توّاً)، وبالنوعِ الصحيح.
+func TestPush_SendToTokensGoesDirect(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	ft := &fakeTransport{}
+	svc := New(pool, quietLogger(), ft)
+
+	svc.SendToTokens(ctx, []string{"tok-old-1", "tok-old-2"}, Message{
+		Title: "رحال غو",
+		Body:  "تم تسجيل خروجك من رحال غو بسبب تسجيل الدخول إلى حسابك من جهاز آخر.",
+		Data:  map[string]string{"kind": "session_superseded"},
+	})
+
+	if len(ft.sent) != 2 {
+		t.Fatalf("أُرسل إلى %d رمزاً — يُنتظَر 2 مباشرةً بلا قراءةِ جدول", len(ft.sent))
+	}
+	if ft.msg.Data["kind"] != "session_superseded" {
+		t.Fatalf("نوعُ الإشعار %q لا session_superseded — فلا يُكتَم في المقدّمة", ft.msg.Data["kind"])
+	}
+	if ft.msg.Title == "" || ft.msg.Body == "" {
+		t.Fatal("إشعارُ الإزاحةِ بلا عنوانٍ أو نصّ — لا يُرسَم")
+	}
+}
+
 // TestPush_UnregisterBoundToOwner **ولا يُسكت أحدٌ إشعاراتِ غيره.**
 //
 // **ولولا قيدُ `user_id`** لَاستطاع أيُّ داخلٍ يعرف رمزاً أن يحذفه —

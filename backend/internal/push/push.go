@@ -308,6 +308,30 @@ func (s *Service) SendToUser(ctx context.Context, userID string, msg Message) {
 	}
 }
 
+// SendToTokens **يرسل إلى رموزٍ بعينها مباشرةً** — لا عبر جدول الأجهزة (Obs 3.1).
+//
+// **لإشعارِ أمانٍ لمرّةٍ واحدةٍ إلى رموزٍ أُزيلت توّاً**: الرمزُ حُذف من
+// `device_tokens` فلا يُختار بالمستخدم في دفعٍ خاصٍّ بعد الآن، **ويُرسَل إليه هنا
+// بالسلسلةِ مباشرةً** — **ولا يُعاد إدراجُه** (لا كتابةَ جدول). الرموزُ لأجهزةِ
+// أندرويد (نوعُ العميل المُزاح `android-*`). **الفشلُ يُسجَّل ولا يُرمى** فلا
+// يعرقل نداءَ الإبطال/الدخول.
+func (s *Service) SendToTokens(ctx context.Context, tokens []string, msg Message) {
+	if s == nil || len(tokens) == 0 || !s.Enabled() {
+		return
+	}
+	t, ok := s.transports[PlatformAndroid]
+	if !ok {
+		return
+	}
+	obs.Push(obs.PushAttempted, len(tokens))
+	if _, err := t.Send(ctx, tokens, msg); err != nil {
+		obs.Push(obs.PushFailed, len(tokens))
+		s.logger.Error("الدفع: تعذّر إشعارُ الإزاحة المباشر", "devices", len(tokens), "error", err)
+		return
+	}
+	obs.Push(obs.PushSent, len(tokens))
+}
+
 // tokensOf أجهزةُ الحساب مجموعةً بمنصّتها — **والميّتُ بالزمن لا يُقرأ.**
 //
 // **و`apps` فارغةٌ تعني كلَّ الأجهزة.** وإن حُدّدت، **يبقى الجهازُ المجهولُ

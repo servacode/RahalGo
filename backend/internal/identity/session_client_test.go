@@ -178,12 +178,17 @@ func TestSessionClient_SupersedeCutsDeviceTokenAndStampsReason(t *testing.T) {
 	insertDeviceToken(ctx, t, pool, "tok-old-app", uid, appSID)
 	insertDeviceToken(ctx, t, pool, "tok-web", uid, webSID)
 
-	sids, err := repo.RevokeClientSessionsAtomic(ctx, uid, "android-customer")
+	sids, tokens, err := repo.RevokeClientSessionsAtomic(ctx, uid, "android-customer")
 	if err != nil {
 		t.Fatalf("الإبطالُ الذرّي: %v", err)
 	}
 	if len(sids) != 1 || sids[0] != appSID {
 		t.Fatalf("العائلاتُ المُبطَلة %v — يُنتظَر [%s] وحدَها", sids, appSID)
+	}
+	// **ويعيد رمزَ الجهاز المحذوف** (Obs 3.1) — به يُرسَل إشعارُ أمانِ الإزاحةِ
+	// لمرّةٍ واحدة، **ورمزُ المتصفّح لا يُعاد** (عائلةٌ أخرى، لم تُمَسّ).
+	if len(tokens) != 1 || tokens[0] != "tok-old-app" {
+		t.Fatalf("رموزُ الدفع المُعادة %v — يُنتظَر [tok-old-app] وحدَه (لإشعار الإزاحة)", tokens)
 	}
 
 	// (٢) **وجهةُ الجهاز القديم تُقطَع** — وإلّا استقبل جهازٌ مُخرَجٌ إشعاراً خاصّاً.

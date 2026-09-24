@@ -109,6 +109,7 @@ const SERVER_ADMIN = new Set([
   "qa_normal_accepted_only", "qa_normal_cash_only", "qa_not_customer_only",
   "qa_not_qa_order", "qa_order_off_ladder", "qa_phone_not_allowed",
   "qa_seed_kind_not_allowed", "qa_no_option",
+  "qa_no_open_order", "qa_multiple_open_orders",
 ]);
 
 const found = new Map();
