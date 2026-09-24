@@ -483,6 +483,12 @@ func (s *Server) Router() http.Handler {
 			r.Post("/qa/setting", s.handleQAStagingSetting)
 			r.Post("/qa/seed", s.handleQAStagingSeed)
 			r.Get("/qa/reconcile", s.handleQAStagingReconcile)
+			// **أدواتُ شهادة عقد الطلب المخصَّص** (Batch 2, staging-only) — qa_custom.go.
+			r.Post("/qa/custom-fee-policy", s.handleQACustomFeePolicy)
+			r.Post("/qa/driver-session", s.handleQACustomDriverSession)
+			r.Post("/qa/custom-agree", s.handleQACustomAgree)
+			r.Post("/qa/custom-override", s.handleQACustomOverride)
+			r.Post("/qa/custom-cleanup", s.handleQACustomCleanup)
 			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed; GET /qa/reconcile)")
 		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.

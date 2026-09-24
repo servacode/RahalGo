@@ -49,20 +49,15 @@ func qaLadderIndex(status string) int {
 
 // qaDriverIdentity **يردّ معرّفَ سائقٍ فعليٍّ نشط** — لا توكن، لا جلسة.
 func (s *Server) qaDriverIdentity(w http.ResponseWriter, r *http.Request) (string, bool) {
-	var did string
-	err := s.pg.QueryRow(r.Context(), `
-		SELECT u.id::text FROM users u
-		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-		WHERE u.status = 'active'
-		ORDER BY u.created_at LIMIT 1`).Scan(&did)
-	if errors.Is(err, pgx.ErrNoRows) {
-		s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_no_driver", "errors.conflict"))
-		return "", false
-	} else if err != nil {
+	// **سائقُ QA الثابت** (Batch 2c) — **يُضمَن وجودُه لا يُختار عشوائيّاً**،
+	// فتتطابقُ شهادةُ تطبيق السائق (المُسجَّل بجلسة `qa/driver-session`) مع الطلبِ
+	// الذي يُسنَد إليه هنا. **هويّةٌ واحدةٌ معزولةٌ للسائق في كلّ مسارات QA.**
+	uid, err := s.qaFixedUser(r.Context(), qaStagingDriverPhone, "driver", "سائق الاختبار QA", clientIP(r))
+	if err != nil {
 		s.respondErr(w, err)
 		return "", false
 	}
-	return did, true
+	return uid, true
 }
 
 // qaOrderAdvance **يسوق طلبَ زبون QA إلى حالةٍ هدف.**
