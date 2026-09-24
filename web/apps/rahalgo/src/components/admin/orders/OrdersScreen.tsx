@@ -120,6 +120,24 @@ interface OrderRow {
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
   custom_fee?: number | null;
+  /** **نسخةُ العرض** — تُرفع مع كلّ تعديلٍ ماليّ، وبها يُعرف تأكيدٌ شاخ. */
+  quote_version?: number;
+  /** متى أكّد الزبونُ المبلغ — وفارغٌ يعني «لم يؤكّد بعد». */
+  quote_confirmed_at?: string | null;
+  /** المبلغُ الذي أكّده الزبون. */
+  quote_confirmed_total?: number | null;
+  /** أيَّ نسخةٍ أكّد — فإن خالفت الحاليّةَ فالتأكيدُ لاغٍ. */
+  quote_confirmed_version?: number | null;
+  /** المحجوزُ من محفظة الزبون لهذا العرض — وصفرٌ يعني «لا حجز». */
+  custom_reserved_amount?: number;
+  /** من يحدّد أجرةَ التوصيل — الإدارةُ أو السائق. */
+  custom_fee_source?: "driver_defined" | "admin_defined";
+  /** أجرةُ المنصة المُثبَّتة حين تحدّدها الإدارة — وفارغٌ يعني «لا تثبيت». */
+  custom_fee_snapshot?: number | null;
+  /** أللسائق أن يعدّل الأجرةَ المُثبَّتة. */
+  custom_driver_may_change_fee?: boolean;
+  /** متى استُلمت البضاعة — وبه يُقفل السعرُ على الخفض بعده. */
+  picked_up_at?: string | null;
   driver_name: string | null;
   /** من عُرض عليه الطلبُ ولم يقبل بعد — **يُعرض ما دام العرضُ حيّاً.** */
   offered_driver_name: string | null;
@@ -1368,6 +1386,16 @@ function OrderActions({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
+  /**
+   * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
+   *
+   * **خطوتان لا واحدة** (قرارٌ ٣): يفتح الزرُّ النموذجَ فتُملأ الأرقام،
+   * ثمّ تُعرض المراجعةُ فيُقرأ ما سيقع قبل أن يقع.
+   */
+  const [overriding, setOverriding] = useState(false);
+  const [confirmingOverride, setConfirmingOverride] = useState(false);
+  const [overrideGoods, setOverrideGoods] = useState("");
+  const [overrideFee, setOverrideFee] = useState("");
 
   /**
    * **وجوابُ التدقيق يُعرض** — (قِيس ٢٠٢٦-٠٩-٠٢).
@@ -1614,6 +1642,46 @@ function OrderActions({
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // **تعديلُ عرض الطلب الخاصّ — تصحيحُ ما وثّقه السائق**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والخادمُ هو الحَكَم**: قبل الاستلام يقبل أيَّ تغيير، وبعده خفضاً أو
+  // تصحيحاً فقط — **وزيادةٌ تُردّ `custom_locked`.** فلا تحسب الشاشةُ المالَ،
+  // إنّما تعرض ما سيقع وتُظهر ما ردّه الخادم.
+  async function submitOverride() {
+    const g = Number(overrideGoods);
+    const f = Number(overrideFee);
+    if (!Number.isFinite(g) || !Number.isFinite(f) || reason.trim() === "")
+      return;
+    setBusy("override");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/custom-quote`, {
+        method: "POST",
+        body: JSON.stringify({
+          goods_amount: Math.round(g),
+          fee: Math.round(f),
+          reason: reason.trim(),
+        }),
+      });
+      setConfirmingOverride(false);
+      setOverriding(false);
+      setOverrideGoods("");
+      setOverrideFee("");
+      setReason("");
+      onChanged();
+    } catch (e) {
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function assign(driverID: string) {
     setBusy("assign");
     setErr("");
@@ -1845,6 +1913,150 @@ function OrderActions({
     );
   }
 
+  // **ومراجعةٌ واحدةٌ قبل الإرسال** — تُقرأ فيها الأرقامُ ونتائجُها.
+  if (confirmingOverride) {
+    const curGoods = o.custom_goods_amount ?? 0;
+    const curFee = o.custom_fee ?? 0;
+    const curTotal = curGoods + curFee;
+    const newGoods = Math.round(Number(overrideGoods) || 0);
+    const newFee = Math.round(Number(overrideFee) || 0);
+    const newTotal = newGoods + newFee;
+    const confirmed = o.quote_confirmed_at != null;
+    const confirmedTotal = o.quote_confirmed_total ?? 0;
+    // **ويُلغى التأكيدُ إن زاد المبلغُ عمّا أكّده الزبون، أو تبدّلت أرقامُه
+    //  دون أن يتغيّر إجماليُّه** — والخادمُ يفعلها، وهذا نذيرُها.
+    const invalidate =
+      confirmed &&
+      (newTotal > confirmedTotal ||
+        (newTotal === confirmedTotal &&
+          (newGoods !== curGoods || newFee !== curFee)));
+    const reserved = (o.custom_reserved_amount ?? 0) > 0;
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">
+          {m.admin.ordersPage.overrideConfirmTitle}
+        </p>
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">
+              {m.admin.ordersPage.overrideGoodsLabel}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Money value={curGoods} small />
+              <span aria-hidden>←</span>
+              <Money value={newGoods} small />
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">
+              {m.admin.ordersPage.overrideFeeLabel}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Money value={curFee} small />
+              <span aria-hidden>←</span>
+              <Money value={newFee} small />
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-1 font-bold">
+            <span>{m.admin.ordersPage.overrideTotalLabel}</span>
+            <span className="flex items-center gap-1.5">
+              <Money value={curTotal} small />
+              <span aria-hidden>←</span>
+              <Money value={newTotal} small />
+            </span>
+          </div>
+          <div className="flex items-start justify-between gap-2 pt-1">
+            <span className="shrink-0 text-ink-muted">
+              {m.admin.ordersPage.overrideReasonLabel}
+            </span>
+            <span className="text-end">{reason.trim()}</span>
+          </div>
+        </div>
+        {invalidate && (
+          <p className="text-xs text-warning">
+            {m.admin.ordersPage.overrideInvalidateWarn}
+          </p>
+        )}
+        {reserved &&
+          (invalidate ? (
+            <p className="text-xs text-warning">
+              {m.admin.ordersPage.overrideReleaseWarn}
+            </p>
+          ) : newTotal < curTotal ? (
+            <p className="text-xs text-warning">
+              {m.admin.ordersPage.overrideReduceWarn}
+            </p>
+          ) : null)}
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={busy !== ""}
+          onSave={() => void submitOverride()}
+          onCancel={() => setConfirmingOverride(false)}
+          saveLabel={m.admin.ordersPage.overrideConfirmBtn}
+          cancelLabel={m.admin.ordersPage.overrideBackBtn}
+        />
+      </div>
+    );
+  }
+
+  if (overriding) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">{m.admin.ordersPage.overrideBtn}</p>
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={m.admin.ordersPage.overrideGoodsLabel}
+          value={overrideGoods}
+          onChange={(e) => setOverrideGoods(e.target.value)}
+        />
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={m.admin.ordersPage.overrideFeeLabel}
+          value={overrideFee}
+          onChange={(e) => setOverrideFee(e.target.value)}
+        />
+        <Input
+          placeholder={m.admin.ordersPage.overrideReasonLabel}
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErr("");
+          }}
+        />
+        {/* **وبعد الاستلام لا زيادة** — يقولها قبل أن يردّها الخادمُ خطأً. */}
+        {o.picked_up_at && (
+          <p className="text-xs text-ink-muted">
+            {m.admin.ordersPage.overridePostPickupHint}
+          </p>
+        )}
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={reason.trim() === ""}
+          onSave={() => {
+            if (
+              Number.isFinite(Number(overrideGoods)) &&
+              Number.isFinite(Number(overrideFee)) &&
+              reason.trim() !== ""
+            ) {
+              setErr("");
+              setConfirmingOverride(true);
+            }
+          }}
+          onCancel={() => {
+            setOverriding(false);
+            setOverrideGoods("");
+            setOverrideFee("");
+            setReason("");
+            setErr("");
+          }}
+          saveLabel={m.common.next}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       {/* ══════════════════════════════════════════════════════════════
@@ -1875,6 +2087,30 @@ function OrderActions({
           {notice}
         </span>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          **تعديلُ عرض الطلب الخاصّ — بيدِ من يملك التدخّل**
+          ══════════════════════════════════════════════════════════════
+
+          **ولا يُعرض إلّا على خاصٍّ قائم**: الخادمُ يردّ `custom_locked` على
+          طلبٍ أُغلق، **وزرٌّ يُعرض ولا يفعل أسوأُ من زرٍّ غائب.** */}
+      {o.kind === "custom" &&
+        canIntervene &&
+        !CLOSED_STATUSES.has(o.status) && (
+          <Button
+            variant="secondary"
+            disabled={busy !== ""}
+            onClick={() => {
+              setOverrideGoods(String(o.custom_goods_amount ?? 0));
+              setOverrideFee(String(o.custom_fee ?? 0));
+              setReason("");
+              setErr("");
+              setOverriding(true);
+            }}
+          >
+            {m.admin.ordersPage.overrideBtn}
+          </Button>
+        )}
 
       {/* **ما بعد الفشل — سؤالان لا يُجيبهما النظام وحده.**
 
@@ -2167,6 +2403,94 @@ function InvoiceList({ o }: { o: OrderRow }) {
             <li className="pt-1 text-2xs text-ink-muted">{OP.customNote}</li>
           </ul>
         )}
+        {/* ══════════════════════════════════════════════════════════════
+            **عرضُ السعر وسياستُه — يُقرأ ولا يُملأ**
+            ══════════════════════════════════════════════════════════════
+
+            **الفاتورةُ فوقُ تقول كم اتُّفق، وهذا يقول كيف يُحكم**: من يحدّد
+            الأجرة، وأثبّتها الإدارةُ أم تركتها للسائق، وأأكّد الزبونُ أم
+            بقي عرضٌ معلّق. **والخادمُ وحدَه يحكم المال** — وهذه مرآتُه. */}
+        <div className="space-y-1.5 border-t border-line-soft pt-2 text-sm">
+          <p className="text-xs font-medium text-ink-muted">
+            {OP.customQuotePanelTitle}
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{OP.customFeeSourceLabel}</span>
+            <span>
+              {o.custom_fee_source === "admin_defined"
+                ? OP.customFeeSourceAdmin
+                : OP.customFeeSourceDriver}
+            </span>
+          </div>
+          {o.custom_fee_source === "admin_defined" &&
+            o.custom_fee_snapshot != null && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-ink-muted">
+                  {OP.customFeeSnapshotLabel}
+                </span>
+                <Money value={o.custom_fee_snapshot} small />
+              </div>
+            )}
+          {o.custom_fee_source === "admin_defined" && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-ink-muted">
+                {OP.customDriverMayChangeLabel}
+              </span>
+              <span>{o.custom_driver_may_change_fee ? OP.yes : OP.no}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{OP.quoteVersionLabel}</span>
+            <span>{goods == null ? "—" : fmtNum(o.quote_version ?? 0)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{OP.quoteConfirmStateLabel}</span>
+            <span>
+              {goods == null
+                ? OP.quoteConfirmNotAgreed
+                : o.quote_confirmed_at == null
+                  ? OP.quoteConfirmPending
+                  : o.quote_confirmed_version !== o.quote_version
+                    ? OP.quoteConfirmStale
+                    : OP.quoteConfirmed}
+            </span>
+          </div>
+          {o.quote_confirmed_at != null && (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-ink-muted">
+                  {OP.quoteConfirmedTotalLabel}
+                </span>
+                <Money value={o.quote_confirmed_total ?? 0} small />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-ink-muted">
+                  {OP.quoteConfirmedVersionLabel}
+                </span>
+                <span>{fmtNum(o.quote_confirmed_version ?? 0)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-ink-muted">{OP.payment}</span>
+                <span>
+                  {o.payment_method === "wallet"
+                    ? OP.paymentWallet
+                    : OP.paymentCash}
+                </span>
+              </div>
+            </>
+          )}
+          {(o.custom_reserved_amount ?? 0) > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-ink-muted">{OP.walletReservedLabel}</span>
+              <Money value={o.custom_reserved_amount ?? 0} small />
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{OP.quoteLockLabel}</span>
+            <span>{o.picked_up_at ? OP.quoteLocked : OP.quoteUnlocked}</span>
+          </div>
+          <p className="pt-1 text-2xs text-ink-muted">{OP.customPolicyNote}</p>
+        </div>
       </div>
     );
   }

@@ -135,8 +135,16 @@ type Order struct {
 	QuoteConfirmedAt      *time.Time `json:"quote_confirmed_at"`
 	QuoteConfirmedTotal   *int64     `json:"quote_confirmed_total"`
 	QuoteConfirmedVersion *int64     `json:"quote_confirmed_version"`
-	MerchantID            string     `json:"merchant_id"`
-	MerchantName          string     `json:"merchant_name"`
+	// CustomReservedAmount **ما حُجز من محفظة الزبون لهذا الطلب** — Batch 2b/2c:
+	// يراه الزبونُ (مالُه هو) والأدمن. صفرٌ إن لا حجز.
+	CustomReservedAmount int64 `json:"custom_reserved_amount"`
+	// لقطةُ سياسة الأجرة على الطلب (Batch 2b/2c) — لا تتبع الإعدادَ العامّ:
+	// المصدرُ، والقيمةُ الملتقَطةُ للأدمن، وهل يغيّرها السائق. يراها السائقُ والأدمن.
+	CustomFeeSource          string `json:"custom_fee_source"`
+	CustomFeeSnapshot        *int64 `json:"custom_fee_snapshot"`
+	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
+	MerchantID               string `json:"merchant_id"`
+	MerchantName             string `json:"merchant_name"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من

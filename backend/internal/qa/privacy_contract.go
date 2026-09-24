@@ -217,6 +217,14 @@ var OrderPrivacy = map[string]FieldRule{
 	"quote_confirmed_total":   {Ref: "المبلغُ الذي أكّده", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"quote_confirmed_version": {Ref: "أيَّ نسخةٍ أكّد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
+	// ── الحجزُ ولقطةُ سياسة الأجرة (Batch 2b/2c) ────────────────────
+	// **الحجزُ مالُ الزبون** — يراه هو والأدمن. **ولقطةُ السياسة** يراها
+	// السائقُ (ليعرف أيغيّر الأجرة) والأدمن — لا الزبونُ ولا المتجرُ ولا المندوب.
+	"custom_reserved_amount":       {Ref: "المحجوزُ من محفظة الزبون لهذا الطلب", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"custom_fee_source":            {Ref: "من يحدّد أجرةَ المخصَّص", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_fee_snapshot":          {Ref: "لقطةُ أجرة المنصة على الطلب", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_driver_may_change_fee": {Ref: "أيغيّر السائقُ الأجرة", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+
 	// ── الأصنافُ والتوقيتات ───────────────────────────────────────
 	"items":                 {Ref: "الأصناف — والمتجرُ يحضّرها", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"items_count":           all(VisAllowed, "عددُ الأصناف"),
