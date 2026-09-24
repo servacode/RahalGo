@@ -134,11 +134,13 @@ func TestSRV1_InsideAndOutsideAndBoundary(t *testing.T) {
 		t.Errorf("**نقطةُ المركز رُدّت خارجَ التغطية** — والدائرةُ حولها.")
 	}
 
-	// ── ٢ · خارجٌ بيّن — دمشق، ٤٠٠ كم ───────────────────────────
+	// ── ٢ · خارجٌ بيّن — في الرقّة (مدينةٌ مُطلَقة) خارجَ الدائرة ─────
+	// **بعد Batch 3a تُردّ نقطةُ دمشقَ `city_not_supported` (مدينةٌ لم تُطلَق)،
+	// و`out_of_zone` محصورةٌ بمدينةٍ مُطلَقةٍ خارجَ أشكالها.**
 	before := countOrders(t, hh, u.ID)
-	out := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, 33.5138, 36.2765))
+	out := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, srvLat+0.05, srvLng))
 	if out.Err() != "out_of_zone" {
-		t.Errorf("**نقطةٌ في دمشق قُبلت والدائرةُ في الرقّة**: %d / %s",
+		t.Errorf("**نقطةٌ في الرقّة خارجَ الدائرة قُبلت**: %d / %s",
 			out.Code, out.Err())
 	}
 	if after := countOrders(t, hh, u.ID); after != before {
@@ -264,10 +266,14 @@ func TestSRV4_CustomOrderFollowsCoverage(t *testing.T) {
 		t.Errorf("**مخصَّصٌ داخلَ التغطية رُدّ**: %d / %s", r.Code, r.Err())
 	}
 	before := countOrders(t, hh, u.ID)
-	// ── ونقطةٌ في تركيا ─────────────────────────────────────────
-	out := hh.POST("/api/v1/orders/custom", tok, srvCustomBody(41.0082, 28.9784))
+	// ── ونقطةٌ في الرقّة (مدينةٌ مُطلَقة) خارجَ منطقتها ────────────
+	// **بعد Batch 3a تفصل السلطةُ الإداريّةُ عن التغطية**: نقطةٌ في مدينةٍ لم
+	// تُطلَق تُردّ `city_not_supported`/`area_not_supported`، و«خارجَ الشكل في
+	// مدينةٍ مُطلَقة» وحدَها تُردّ `out_of_zone`. **فيُختبَر هذا الأخير بنقطةٍ في
+	// الرقّة خارجَ منطقتها** (السلطةُ تمرّ، والتغطيةُ تردّ).
+	out := hh.POST("/api/v1/orders/custom", tok, srvCustomBody(srvLat+0.03, srvLng))
 	if out.Err() != "out_of_zone" {
-		t.Errorf("**مخصَّصٌ إلى إستنبول قُبل**: %d / %s", out.Code, out.Err())
+		t.Errorf("**مخصَّصٌ خارجَ التغطية داخلَ مدينةٍ مُطلَقة قُبل**: %d / %s", out.Code, out.Err())
 	}
 	if after := countOrders(t, hh, u.ID); after != before {
 		t.Errorf("**مخصَّصٌ مردودٌ أنشأ صفّاً**: %d ⇒ %d", before, after)
@@ -292,9 +298,11 @@ func TestSRV5_LaunchAndCoverageAreDistinct(t *testing.T) {
 			r.Code, r.Err())
 	}
 
-	// ── ١٣ · بابٌ مفتوحٌ وخارجَ التغطية ⇒ ردُّ تغطية ────────────
+	// ── ١٣ · بابٌ مفتوحٌ وخارجَ التغطية (في مدينةٍ مُطلَقة) ⇒ ردُّ تغطية ──
+	// **نقطةٌ في الرقّة خارجَ منطقتها**: السلطةُ الإداريّةُ تمرّ (الرقّةُ مُطلَقة)
+	// فيكون الردُّ عن **التغطية** لا عن الإطلاق — وهو المقصودُ من افتراقِ الردّين.
 	srvOpenAllLaunch(hh)
-	r2 := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, 33.5138, 36.2765))
+	r2 := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, srvLat+0.03, srvLng))
 	if r2.Err() != "out_of_zone" {
 		t.Errorf("**بابٌ مفتوحٌ وخارجَ التغطية لم يردّ ردَّ التغطية**: %d / %s",
 			r2.Code, r2.Err())
@@ -321,11 +329,11 @@ func TestSRV6_RejectedOrderLeavesNoTrace(t *testing.T) {
 	var beforeEvents int
 	_ = hh.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM outbox`).Scan(&beforeEvents)
 
-	// ── خارجَ التغطية ───────────────────────────────────────────
-	if r := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, 33.5138, 36.2765)); r.Err() != "out_of_zone" {
+	// ── خارجَ التغطية (في الرقّة، خارجَ الدائرة) ─────────────────
+	if r := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, srvLat+0.05, srvLng)); r.Err() != "out_of_zone" {
 		t.Fatalf("لم يُردّ: %d / %s", r.Code, r.Err())
 	}
-	if r := hh.POST("/api/v1/orders/custom", tok, srvCustomBody(33.5138, 36.2765)); r.Err() != "out_of_zone" {
+	if r := hh.POST("/api/v1/orders/custom", tok, srvCustomBody(srvLat+0.05, srvLng)); r.Err() != "out_of_zone" {
 		t.Fatalf("المخصَّصُ لم يُردّ: %d / %s", r.Code, r.Err())
 	}
 
@@ -359,9 +367,9 @@ func TestSRV7_AddressChangeIsRevalidated(t *testing.T) {
 	}
 	before := countOrders(t, hh, u.ID)
 
-	// **وبالسلّة نفسِها إلى نقطةٍ خارج** — **يُردّ ولا يُسلَّم إلى
-	// القديمة.**
-	out := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, 33.5138, 36.2765))
+	// **وبالسلّة نفسِها إلى نقطةٍ خارج** (في الرقّة خارجَ الدائرة) — **يُردّ
+	// ولا يُسلَّم إلى القديمة.**
+	out := hh.POST("/api/v1/orders", tok, srvOrderBody(t, hh, srvLat+0.05, srvLng))
 	if out.Err() != "out_of_zone" {
 		t.Errorf("**العنوانُ الجديدُ خارجَ التغطية ومرّ**: %d / %s", out.Code, out.Err())
 	}
@@ -410,7 +418,7 @@ func TestSRV9_PricingReadsTheSamePoint(t *testing.T) {
 		why      string
 	}{
 		{srvLat, srvLng, "", "المركز — يُوصَّل"},
-		{33.5138, 36.2765, "out_of_zone", "دمشق — خارجَ التغطية"},
+		{srvLat + 0.05, srvLng, "out_of_zone", "في الرقّة خارجَ الدائرة"},
 		{0, 0, "bad_point", "صفرٌ صفرٌ — لم يُحدَّد الموضع"},
 	} {
 		// **وبعقدِ البابِ نفسِه** — `items` و`lat` و`lng`. **وجسمٌ

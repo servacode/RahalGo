@@ -256,8 +256,11 @@ func TestZH15_OutOfZoneStaysOutOfZone(t *testing.T) {
 
 	u := hh.Customer()
 	it := hh.NewItem(900)
-	// **دمشقُ — بعيدةٌ عن كلّ منطقةٍ فعّالة.**
-	r := hh.POST("/api/v1/orders", u.Token, zoneBody(it, 33.5138, 36.2765))
+	// **نقطةٌ في الرقّة (مدينةٌ مُطلَقة) خارجَ كلّ منطقةٍ فعّالة** — بعد Batch 3a
+	// تُردّ نقطةُ دمشقَ `city_not_supported` (مدينةٌ لم تُطلَق)، و`out_of_zone`
+	// محصورةٌ بمدينةٍ مُطلَقةٍ خارجَ أشكالها. **فتُختبَر بنقطةٍ في الرقّة خارجَ المنطقة**
+	// (شمالَ المنطقة ~٥,٥كم، داخلَ مدينة الرقّة ٢٥كم، خارجَ الشكل ٢كم).
+	r := hh.POST("/api/v1/orders", u.Token, zoneBody(it, 36.0006, 39.0094))
 	if r.Err() != "out_of_zone" {
 		t.Fatalf("**نقطةٌ خارجَ التغطية رُدّت بغير `out_of_zone`**: %d / %s",
 			r.Code, r.Err())
@@ -460,9 +463,13 @@ func TestZH22_ExistingOrderSurvivesZoneClosing(t *testing.T) {
 func TestZH14_ZH34_AddressPicksItsOwnZone(t *testing.T) {
 	hh := New(t)
 	ordersOpen(t, hh)
-	// **منطقتان متباعدتان** — نهاريّةٌ مفتوحةٌ الآن وليليّةٌ مغلقة.
+	// **منطقتان متمايزتان في مدينةِ الرقّة المُطلَقة** — نهاريّةٌ مفتوحةٌ الآن
+	// وليليّةٌ مغلقة. **وكلتاهما تحت مدينةٍ مُطلَقة** (Batch 3a): لو كانت إحداهما
+	// في مدينةٍ مُطفأةٍ (كحلب) لَردّت السلطةُ الإداريّةُ `city_not_supported` قبل
+	// وقتِ المنطقة، **فلا يُختبَر `zone_closed_now`.** فالثانيةُ في الرقّة كذلك،
+	// بعيدةٌ عن الأولى (~٤,٥كم) فتُنتقى بنقطتها هي (`ZH-34`).
 	open := newZone(t, hh, "منطقةٌ مفتوحة", 35.9506, 39.0094)
-	shut := newZone(t, hh, "منطقةٌ مغلقة", 36.2000, 37.1500)
+	shut := newZone(t, hh, "منطقةٌ مغلقة", 35.9506, 39.0594)
 	otherZonesOff(t, hh, open.ID)
 	// **والثانيةُ تُعاد إلى الحياة بعد أن أطفأتها الأولى.**
 	if _, err := hh.Pool.Exec(ctxBG(),

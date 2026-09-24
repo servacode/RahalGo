@@ -161,7 +161,10 @@ func TestXG46_OutOfCoverageNeedsOneConnection(t *testing.T) {
 		t.Logf("XG-46 خارجَ التغطية: %d بعد %s — %s", r.code,
 			time.Since(start).Round(time.Millisecond),
 			strings.TrimSpace(r.body[:cap160(len(r.body))]))
-		if r.code != 400 || !strings.Contains(r.body, "out_of_zone") {
+		// **ودمشقُ مدينةٌ لم تُطلَق** (بذرةُ 0151) ⇒ `city_not_supported` بعد Batch 3a
+		// (السلطةُ الإداريّةُ في مُنفِّذ المعاملة نفسِه — لا وصلةَ ثانية). **والمقصودُ
+		// قائم**: رفضٌ مفهومٌ بـ٤٠٠ على وصلةٍ واحدة، لا عطبُ خادم.
+		if r.code != 400 || !strings.Contains(r.body, "city_not_supported") {
 			t.Errorf("**الردُّ %d** — **والعقدُ رفضٌ مفهومٌ لا عطبُ خادم**: %s",
 				r.code, r.body)
 		}

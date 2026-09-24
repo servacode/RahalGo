@@ -492,6 +492,13 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		return nil, nil, ErrBadPoint
 	}
 
+	// **سلطةُ الجغرافيا الإداريّة قبل التغطية** (Batch 3a) — بترتيب سُلّم
+	// الإتاحة (§٤ قبل §٥-٦): محافظةٌ/مدينةٌ مُطفأةٌ تردّ الطلبَ خادميّاً ولو
+	// بقيت المنطقةُ الابنةُ نشطةً. `classifyPlace` عينُها التي تقرؤها الإتاحة.
+	if err := unit.requirePlaceLaunched(ctx, tx, in.Lat, in.Lng); err != nil {
+		return nil, nil, err
+	}
+
 	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**
 	zone, err := unit.DeliveryAt(ctx, tx, in.Lat, in.Lng)
 	if errors.Is(err, ErrOutOfZone) {

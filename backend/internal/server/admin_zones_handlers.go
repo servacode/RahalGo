@@ -57,6 +57,9 @@ func (s *Server) handleCreateZone(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **إشعارُ تغطية المنطقة** (Batch 3d) — نقاطُ «اطلب تغطية منطقتي» التي صارت
+	// مُغطّاةً فعليّاً بهذه المنطقة الجديدة (بالسلطةِ الكاملةِ للهرم).
+	s.notifyAreaCoverage(r.Context())
 	httpx.JSON(w, http.StatusCreated, z)
 }
 
@@ -71,6 +74,9 @@ func (s *Server) handleUpdateZone(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **إشعارُ تغطية المنطقة** (Batch 3d) — تفعيلٌ أو تغييرُ هندسةٍ قد يُغطّي
+	// نقاطاً معلَّقةً؛ يُشعَر أصحابُها إن صارت مُغطّاةً فعليّاً.
+	s.notifyAreaCoverage(r.Context())
 	httpx.JSON(w, http.StatusOK, z)
 }
 

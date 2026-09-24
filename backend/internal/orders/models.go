@@ -42,6 +42,18 @@ var (
 	ErrItemGone    = httpx.NewError(http.StatusBadRequest, "item_gone", "errors.item_gone")
 	ErrOutOfZone   = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
 
+	// ErrProvinceNotSupported · ErrCityNotSupported · ErrAreaNotSupported
+	// **سلطةُ الجغرافيا الإداريّة عند الإنشاء** (Batch 3a) — محافظةٌ مُطفأةٌ،
+	// أو مدينةٌ مُطفأةٌ/لم تُطلَق، أو موضعٌ لا مدينةَ تحويه أصلاً.
+	//
+	// **ومنطقةٌ نشطةٌ تحت مدينةٍ مُطفأةٍ لا تفتح الباب**: الحكمُ للأبِ لا للابن.
+	// **وتُشتَقّ من `classifyPlace` نفسِها التي تقرؤها الإتاحة** — فلا يفترق
+	// الشرحُ (القراءة) عن الإنشاء. **وكلُّ سببٍ برمزه، لا يُجمَع في خطأٍ عامّ**
+	// (قرارُ المالك: أبقِ المعجمَ كما هو).
+	ErrProvinceNotSupported = httpx.NewError(http.StatusBadRequest, "province_not_supported", "errors.province_not_supported")
+	ErrCityNotSupported     = httpx.NewError(http.StatusBadRequest, "city_not_supported", "errors.city_not_supported")
+	ErrAreaNotSupported     = httpx.NewError(http.StatusBadRequest, "area_not_supported", "errors.area_not_supported")
+
 	// ErrCoverageUnavailable **لا إعدادَ تغطيةٍ صالحاً — لا حكمٌ جغرافيّ.**
 	//
 	// **وهي غيرُ `out_of_zone`**: **تلك «لا نُوصّل إلى هنا» وهذه «لا

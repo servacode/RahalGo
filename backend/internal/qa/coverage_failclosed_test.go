@@ -216,9 +216,11 @@ func TestCFC4_FourStatesAreDistinct(t *testing.T) {
 		seen["launch"] = e
 	}
 
-	// ── ب · مفتوحٌ وتغطيةٌ صالحةٌ وخارجَها ──────────────────────
+	// ── ب · مفتوحٌ وتغطيةٌ صالحةٌ وخارجَها (في الرقّة المُطلَقة، خارجَ الدائرة) ──
+	// **بعد Batch 3a: دمشقُ `city_not_supported`؛ و`out_of_zone` لمدينةٍ مُطلَقةٍ
+	// خارجَ أشكالها — فيُختبَر بنقطةٍ في الرقّة خارجَ الدائرة.**
 	srvOpenAllLaunch(hh)
-	if e, _ := cfcProbe(t, hh, tok, 33.5138, 36.2765); e != "out_of_zone" {
+	if e, _ := cfcProbe(t, hh, tok, srvLat+0.05, srvLng); e != "out_of_zone" {
 		t.Errorf("**خارجَ تغطيةٍ صالحةٍ ردّ %q** — والمنتظَرُ out_of_zone", e)
 	} else {
 		seen["outside"] = e

@@ -88,3 +88,72 @@ func (s *Service) RequireServiceable(ctx context.Context, q dbtx.Querier,
 	}
 	return s.ZoneAt(ctx, q, lat, lng)
 }
+
+// requirePlaceLaunched **سلطةُ الجغرافيا الإداريّة عند الإنشاء** (Batch 3a).
+//
+// **يُنادى بعد `ValidPoint` وقبل `ZoneAt`** — بترتيب سُلّم الإتاحة نفسِه
+// (`AvailabilityAt` §٤ قبل §٥-٦) — **فيُطابق الشرحُ الإنشاءَ حرفاً**: يقرأ
+// `classifyPlace` عينَها ويردّ خطأً برمز سببها. **والحكمُ للأبِ لا للابن**:
+// محافظةٌ أو مدينةٌ مُطفأةٌ تردّ الطلبَ ولو بقيت منطقةٌ ابنةٌ نشطة. **ولا يُطفَأ
+// شيءٌ في القاعدة** — القرارُ لحظيٌّ من حالة الأب.
+func (s *Service) requirePlaceLaunched(ctx context.Context, q dbtx.Querier, lat, lng float64) error {
+	place, err := s.classifyPlace(ctx, q, lat, lng)
+	if err != nil {
+		return err
+	}
+	switch place.Reason {
+	case ReasonProvinceNotSupported:
+		return ErrProvinceNotSupported
+	case ReasonCityNotSupported:
+		return ErrCityNotSupported
+	case ReasonAreaNotSupported:
+		return ErrAreaNotSupported
+	}
+	return nil
+}
+
+// CoverableAt **أهذه النقطةُ مُغطّاةٌ فعليّاً الآن، بصرف النظر عن الساعة؟**
+// (Batch 3d — إشعارُ تغطية المنطقة).
+//
+// **بالسلطةِ الكاملةِ للهرم**: المحافظةُ نشطةٌ (`classifyPlace`) والمدينةُ نشطةٌ
+// ومنطقةٌ نشطةٌ تحوي النقطةَ هندسيّاً (`ZoneAt`). **ووقتُ المنطقة يُتجاهَل عمداً**:
+// نافذةُ ساعةٍ مغلقةٍ ليست «لا تغطية». **فتُشتَقّ من دالّتَي القراءة/الإنشاء
+// نفسِهما** فلا تفترق الإتاحةُ عن الإنشاء عن الإشعار.
+func (s *Service) CoverableAt(ctx context.Context, q dbtx.Querier, lat, lng float64) (bool, error) {
+	if !ValidPoint(lat, lng) {
+		return false, nil
+	}
+	place, err := s.classifyPlace(ctx, q, lat, lng)
+	if err != nil {
+		return false, err
+	}
+	if place.Reason != "" {
+		return false, nil
+	}
+	_, zerr := s.ZoneAt(ctx, q, lat, lng)
+	switch {
+	case zerr == ErrOutOfZone, zerr == ErrCoverageUnavailable:
+		return false, nil
+	case zerr != nil:
+		return false, zerr
+	}
+	return true, nil
+}
+
+// CityEffectivelyLaunched **أُطلقت المدينةُ فعليّاً تحت الهرم؟** (Batch 3d —
+// إشعارُ إطلاق المدينة). **المدينةُ نشطةٌ ومحافظتُها نشطة** — فمدينةٌ نشطةٌ تحت
+// محافظةٍ مُطفأةٍ ليست مُطلَقةً بعد. (بلا محافظةٍ مرتبطةٍ ⇒ حكمُ المدينة وحدَه.)
+func (s *Service) CityEffectivelyLaunched(ctx context.Context, q dbtx.Querier, cityID string) (bool, error) {
+	var cityOn bool
+	var govOn *bool
+	err := q.QueryRow(ctx, `
+		SELECT c.active, g.active
+		FROM cities c
+		LEFT JOIN districts d    ON d.id = c.district_id
+		LEFT JOIN governorates g ON g.id = d.governorate_id
+		WHERE c.id = $1::uuid`, cityID).Scan(&cityOn, &govOn)
+	if err != nil {
+		return false, err
+	}
+	return cityOn && (govOn == nil || *govOn), nil
+}

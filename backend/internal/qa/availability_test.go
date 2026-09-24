@@ -458,8 +458,10 @@ func TestAV27_AV30_HTTPContracts(t *testing.T) {
 	u := hh.Customer()
 	it := hh.NewItem(900)
 
-	// AV-27 · out_of_zone ⇒ ٤٠٠
-	if r := hh.POST("/api/v1/orders", u.Token, zoneBody(it, damLat, damLng)); r.Code != http.StatusBadRequest || r.Err() != "out_of_zone" {
+	// AV-27 · out_of_zone ⇒ ٤٠٠ — **في الرقّة (مدينةٌ مُطلَقة) خارجَ الدائرة**
+	// بعد Batch 3a (دمشقُ صارت `city_not_supported`؛ و`out_of_zone` لمدينةٍ مُطلَقةٍ
+	// خارجَ أشكالها).
+	if r := hh.POST("/api/v1/orders", u.Token, zoneBody(it, raqqaLat+0.05, raqqaLng)); r.Code != http.StatusBadRequest || r.Err() != "out_of_zone" {
 		t.Errorf("**AV-27**: %d / %s — والعقدُ ٤٠٠ `out_of_zone`", r.Code, r.Err())
 	}
 	// AV-29 · zone_closed_now ⇒ ٥٠٣

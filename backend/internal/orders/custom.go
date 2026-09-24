@@ -232,6 +232,14 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 	// معاملةٍ واحدةٍ**، ولا تتبدّل التغطيةُ بينهما في عين هذه المعاملة.
 	// **ووقتُ المنطقة بعد جغرافيتها** (`ZH`) — **والمنطقةُ هي التي
 	// ردّتها بوّابةُ القبول نفسُها، لا نتيجةُ استعلامٍ ثانٍ** (`ZH-34`).
+	// **سلطةُ الجغرافيا الإداريّة قبل التغطية** (Batch 3a) — كالعاديّ حرفاً:
+	// صحّةُ النقطة، ثمّ محافظةٌ/مدينةٌ مُطلَقةٌ (`classifyPlace`)، ثمّ التغطية.
+	if !ValidPoint(lat, lng) {
+		return nil, nil, ErrBadPoint
+	}
+	if err := s.requirePlaceLaunched(ctx, q, lat, lng); err != nil {
+		return nil, nil, err
+	}
 	z, err := s.RequireServiceable(ctx, q, lat, lng)
 	if err != nil {
 		return nil, nil, err

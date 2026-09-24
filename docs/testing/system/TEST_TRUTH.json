@@ -19,8 +19,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 52,
-    "notify_targeted": 12,
+    "notify_sites": 54,
+    "notify_targeted": 14,
     "publish_rooms": [
       "customer",
       "driver",
@@ -31,8 +31,8 @@
     "setting_defs": 146,
     "behaviour_settings": 118,
     "order_fields": 83,
-    "test_files": 371,
-    "test_funcs": 1586
+    "test_files": 374,
+    "test_funcs": 1596
   },
   "flows": [
     {
@@ -7559,6 +7559,30 @@
       "name": "TestCreate_OpenOrdersAreCapped",
       "file": "internal/orders/flood_test.go",
       "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCityEffectivelyLaunched",
+      "file": "internal/orders/geo_authority_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCoverableAt_EffectiveAuthority_IgnoresHours",
+      "file": "internal/orders/geo_authority_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRequirePlaceLaunched_AreaUnknown",
+      "file": "internal/orders/geo_authority_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRequirePlaceLaunched_ParentAuthority",
+      "file": "internal/orders/geo_authority_test.go",
+      "package": "orders",
       "orphan": true
     },
     {
@@ -21990,6 +22014,36 @@
       "orphan": true
     },
     {
+      "name": "TestNotifyAreaCoverage_EffectiveAndIdempotent",
+      "file": "internal/server/geo_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNotifyAreaCoverage_InactiveCity_NoNotify",
+      "file": "internal/server/geo_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNotifyCityLaunch_EffectiveAndIdempotent",
+      "file": "internal/server/geo_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNotifyCityLaunch_InactiveGovernorate_NoNotify",
+      "file": "internal/server/geo_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNotifyGovernorateLaunch_NotifiesChildCities",
+      "file": "internal/server/geo_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestGeoSeed_AllSyrianGovernorates",
       "file": "internal/server/geo_seed_test.go",
       "package": "server",
@@ -22208,6 +22262,12 @@
     {
       "name": "TestQAFaultStore",
       "file": "internal/server/qa_fault_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAFixedUserIdempotent",
+      "file": "internal/server/qa_fixed_user_test.go",
       "package": "server",
       "orphan": true
     },

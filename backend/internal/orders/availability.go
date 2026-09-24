@@ -172,7 +172,11 @@ func (s *Service) AvailabilityAt(ctx context.Context, q dbtx.Querier,
 	}
 	if place.Reason != "" {
 		return Availability{
-			Reason:        place.Reason,
+			Reason: place.Reason,
+			// **ورمزُ الإنشاء = اسمُ السبب** (Batch 3a): الإنشاءُ صار يردّ
+			// `province_not_supported`/`city_not_supported`/`area_not_supported`،
+			// فيُرسَل هنا ليُقارَن، **فلا يفترق زرُّ الشاشة عن رفض الخادم.**
+			OrderCode:     place.Reason,
 			PlaceName:     place.Name,
 			CityID:        place.CityID,
 			GovernorateID: place.GovID,

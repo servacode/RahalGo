@@ -243,9 +243,13 @@ func TestZONE_004_OutsideAllZonesRejected(t *testing.T) {
 	if made.Code != 400 {
 		t.Fatalf("ZONE-004 **دبّوسٌ خارجَ التغطية لم يُردّ**: %s", made)
 	}
+	// **ودمشقُ مدينةٌ معروفةٌ لم تُطلَق** (بذرةُ 0151): بعد Batch 3a تفصل السلطةُ
+	// الإداريّةُ عن التغطية، فيُردّ دبّوسُها `city_not_supported` — **وهو ما تردّه
+	// القراءةُ نفسُها** (CUST-07-016)، فلا يفترق الشرحُ عن الإنشاء. **والمقصودُ
+	// قائم**: دبّوسٌ خارجَ الخدمةِ يُردّ خادميّاً بـ٤٠٠، لا يُقبَل.
 	code := made.Err()
-	if code != "out_of_zone" {
-		t.Errorf("ZONE-004 الرمزُ %q — والمنتظَرُ out_of_zone: %s", code, made)
+	if code != "city_not_supported" {
+		t.Errorf("ZONE-004 الرمزُ %q — والمنتظَرُ city_not_supported (دمشقُ لم تُطلَق): %s", code, made)
 	}
 }
 
