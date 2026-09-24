@@ -693,9 +693,9 @@
     <string name="cc_review_title">تغيّرت بعض القيم منذ أن راجعتها</string>
     <string name="cc_review_cta">متابعة بالقيم الحالية</string>
     <string name="cc_blocked">لا يمكن إتمام الطلب قبل مراجعة التغييرات</string>
-    <string name="cta_notify_me">أشعرني عند وصول رحال غو</string>
+    <string name="cta_notify_me">أخبرني عند وصول رحال غو</string>
     <!-- **وباسم المكان حين يُعرَف** — %1$s اسمُ المدينة أو المحافظة. -->
-    <string name="cta_notify_me_named">أشعرني عند وصول رحال غو</string>
+    <string name="cta_notify_me_named">أخبرني عند وصول رحال غو</string>
     <!-- Batch 3c — تصفّحُ سوقِ المدينةِ المُطلَقةِ للقراءة فقط من مدينةٍ لم تُطلَق بعد.
          %1$s اسمُ المدينة المُطلَقة (الرقّة اليوم). -->
     <string name="preview_browse_cta_named">استعرض سوق %1$s</string>

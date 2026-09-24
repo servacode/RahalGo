@@ -91,11 +91,11 @@ class Batch3WiringTest {
     @Test
     fun `3c الزرّان متمايزان بالنصّ الصحيح`() {
         val sr = read("ui/src/main/kotlin/com/rahalgo/ui/ServiceReason.kt")
-        // «أشعرني» نصٌّ ثابتٌ للـINTEREST (لا variant بالاسم).
+        // «أخبرني» نصٌّ ثابتٌ للـINTEREST (لا variant بالاسم).
         assertTrue("**INTEREST لا يستعمل النصَّ الثابت**", sr.contains("KIND_INTEREST -> ctx.getString(R.string.cta_notify_me)"))
         val strings = read("ui/src/main/res/values/strings.xml")
         assertTrue("**نصُّ «اطلب تغطية منطقتي» غيرُ دقيق**", strings.contains(">اطلب تغطية منطقتي<"))
-        assertTrue("**نصُّ «أشعرني عند وصول رحال غو» غيرُ دقيق**", strings.contains(">أشعرني عند وصول رحال غو<"))
+        assertTrue("**نصُّ «أخبرني عند وصول رحال غو» غيرُ دقيق**", strings.contains(">أخبرني عند وصول رحال غو<"))
         assertTrue("**لا نصَّ استعراضٍ**", strings.contains("preview_browse_cta_named"))
     }
 }
