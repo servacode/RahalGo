@@ -32,7 +32,7 @@
     "behaviour_settings": 115,
     "order_fields": 75,
     "test_files": 369,
-    "test_funcs": 1569
+    "test_funcs": 1571
   },
   "flows": [
     {
@@ -6695,7 +6695,19 @@
       "orphan": true
     },
     {
+      "name": "TestSessionClient_GenericRevokeStaysDistinct",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestSessionClient_SecondPhoneKillsFirst",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestSessionClient_SupersedeCutsDeviceTokenAndStampsReason",
       "file": "internal/identity/session_client_test.go",
       "package": "identity",
       "orphan": true

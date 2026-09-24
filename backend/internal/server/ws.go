@@ -187,6 +187,14 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// موضوع الإشعارات الشخصي — لكل مستخدم مهما كان دوره، فلا أحد يبقى بلا بث.
 	topics = append(topics, "user:"+claims.Subject)
 
+	// **وموضوعُ العائلةِ الخاصُّ بهذه الجلسة** (Obs 3) — **لإشعارِها وحدَها إن
+	// أُبطلت** بدخولٍ جديدٍ من نوعِ العميل نفسِه. **خاصٌّ بالعائلة** فلا يصل جلسةً
+	// أخرى للحساب نفسِه (الجديدةُ تبقى). الجهازُ القديمُ يلتقط الإشارةَ فيسأل
+	// الخادمَ فيُردّ `session_superseded` فيخرج بالرسالة الصريحة.
+	if claims.SID != "" {
+		topics = append(topics, identity.SessionTopic(claims.SID))
+	}
+
 	// **وإشارةُ اللوحة لكلّ متّصلٍ كذلك** — (شكوى المالك ٢٠٢٦-٠٨-١٨:
 	// «أيُّ تعديلٍ من لوحة الأدمن فوراً يُطبَّق حتّى ولو الزبونُ فاتحٌ
 	// التطبيق»).
@@ -210,6 +218,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// المعلَّقَ من نفسها.**
 	if status == "suspended" {
 		own := map[string]bool{"user:" + claims.Subject: true}
+		// **وموضوعُ العائلة يبقى للمعلَّق** (Obs 3) — إبطالُ جلسته بدخولٍ جديدٍ
+		// يجب أن يُخرجه أيضاً.
+		if claims.SID != "" {
+			own[identity.SessionTopic(claims.SID)] = true
+		}
 		if slices.Contains(roles, "customer") {
 			own["customer:"+claims.Subject] = true
 		}
@@ -317,6 +330,14 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			err := conn.Ping(pingCtx)
 			pcancel()
 			if err != nil {
+				return
+			}
+			// **وإعادةُ فحصِ الجلسة على النبضة** (Obs 3، دفاعٌ في العمق لـ`R14`):
+			// **الوصلةُ القائمةُ لا تُفحَص عند المصافحة وحدَها** — فلو فاتت إشارةُ
+			// `sess:<sid>` (جهازٌ كان مقطوعاً لحظتَها) أُغلقت هنا خلال ≤٣٠ث، فلا يبقى
+			// مقبسٌ حيٌّ لجلسةٍ مُبطَلة. **والخطأُ لا يُغلق**: «تعذّر التحقّق» ≠ «مُبطَلة».
+			if st, _, _, _, cerr := s.identity.CheckSession(ctx, claims.SID); cerr == nil && st == identity.SessionRevoked {
+				obs.WSAuth(obs.WSRevokedSession)
 				return
 			}
 		case msg := <-ch:

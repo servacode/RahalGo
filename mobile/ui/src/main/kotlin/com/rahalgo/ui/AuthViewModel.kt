@@ -94,6 +94,14 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     //
     // (كشفه اختبارُ الميدان ٢٠٢٦-٠٨-٣١ برفع `app.min_version.rep` لحظةً.)
     var updateRequired by mutableStateOf(false)
+
+    /**
+     * **عدّادُ إنشاءِ الجلسة** (Obs 3) — يزيد مع كلّ دخولٍ ناجح، **حتّى لو لم
+     * يتبدّل المستخدم** (إعادةُ دخولِ الحساب نفسِه على الجهاز نفسِه). **الغلافُ
+     * يعيد تسجيلَ رمزِ الدفع على مفتاحه** فتُعاد وجهةُ الجهاز الحاليّ إلى جلسته
+     * الجديدة بعد أن قُطعت وجهةُ العائلة القديمة خادميّاً.
+     */
+    var sessionEpoch by mutableStateOf(0)
         private set
 
     private val backend = AppCore.get()
@@ -110,6 +118,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // البابَ المقيَّدَ يردّ `403 password_change_required`. **فيُساق
         // صاحبُه إلى شاشة التبديل مهما دخل** — لا نصَّ خطإٍ عابراً.
         ApiClient.onPasswordChangeRequired = { mustChangePassword = true }
+        // **وجلسةٌ رُفضت وسط العمل تُساق إلى خروجٍ صريح** (Obs 3) — دخولٌ من جهازٍ
+        // آخر (`session_superseded`) أو إبطالٌ عامّ. **حدٌّ واحدٌ يمسح الجلسةَ
+        // والحالةَ المحلّيّة ويُظهر السبب** — لا شاشةٌ تعرض خطأً وصاحبُها «داخلٌ».
+        ApiClient.onSessionRejected = { code -> viewModelScope.launch { forcedLogout(code) } }
         restore()
         loadPlatform()
     }
@@ -680,6 +692,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun onSignedIn(u: User?) {
         user = u
+        // **كلُّ دخولٍ يبدّل الجلسة — فيُعاد تسجيلُ رمز الدفع على جلسته الجديدة**
+        // (Obs 3)، **ولو كان الحسابُ نفسَه على الجهاز نفسِه** (مفتاحُ المستخدمِ
+        // وحدَه لا يتبدّل، فلا تُعاد وجهةٌ قُطعت لحظةَ الإزاحة).
+        sessionEpoch += 1
         u?.let { Crash.who(it.id) }
         // **وتبديلُ الكلمةِ المطلوبُ يُساق إلى شاشته أوّلاً** (`CUST-DEF-010`):
         // **قبل أيّ دخولٍ للتطبيق وقبل خطّاف الدخول** — فلا يعمل حتّى يبدّل.
@@ -714,6 +730,24 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         backend.session.clear()
         user = null
         AppCore.afterLogout()
+    }
+
+    /**
+     * **خروجٌ قسريٌّ بسببٍ صريح** (Obs 3) — يُنادى حين يرفض الخادمُ الجلسةَ وسط
+     * العمل (`ApiClient.onSessionRejected`). **يمرّ بحدِّ `detachSession` الواحد**
+     * (يمسح التوكنَ والسلّةَ والوصلةَ الحيّة — عزلةُ CUST-DEF-009)، **ثمّ يُظهر
+     * السبب**: «من جهازٍ آخر» أو «انتهت جلستك». **ووجهةُ الدفعِ قُطعت خادميّاً
+     * أصلاً** فلا يبقى هذا الجهازُ هدفاً لإشعارٍ خاصّ.
+     */
+    private fun forcedLogout(code: String) {
+        if (user == null) return // ضيفٌ أصلاً — لا شيءَ يُخرَج
+        detachSession()
+        val msg = if (code == "session_superseded") {
+            str(R.string.err_session_superseded)
+        } else {
+            str(R.string.err_invalid_refresh)
+        }
+        Flash.fail(msg)
     }
 
     fun logout() {

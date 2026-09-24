@@ -306,7 +306,10 @@ fun AuthGate(
             // **والتسجيلُ يُعاد بلا ضرر**: المحرّكُ يُحدّث الصفَّ نفسَه
             // (`ON CONFLICT (token) DO UPDATE`).
             val ctx = LocalContext.current
-            LaunchedEffect(vm.user?.id) {
+            // **ويُعاد التسجيلُ مع كلّ إنشاءِ جلسة لا مع تبدّلِ المستخدم وحدَه**
+            // (Obs 3): **إعادةُ دخولِ الحساب نفسِه** لا تبدّل `user.id`، لكنّ
+            // إزاحةَ العائلة القديمة قطعت وجهةَ الجهاز — فيُعيدها `sessionEpoch`.
+            LaunchedEffect(vm.user?.id, vm.sessionEpoch) {
                 Push.register(ctx)
             }
             onSignedIn()

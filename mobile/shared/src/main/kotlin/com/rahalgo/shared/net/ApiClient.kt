@@ -170,7 +170,28 @@ class ApiClient(
             return raw(path, method, body, idempotencyKey, session.accessToken())
         } catch (e: ApiException) {
             if (e.status != 401 || session.refreshToken().isEmpty()) throw e
-            refresh()
+            val firstCode = e.body.code
+            try {
+                refresh()
+            } catch (re: ApiException) {
+                // ══════════════════════════════════════════════════════════
+                // **جلسةٌ رُفضت وسط العمل — تُساق عالميّاً** (`Obs 3`)
+                // ══════════════════════════════════════════════════════════
+                //
+                // **التجديدُ فشل ⇒ الجلسةُ ماتت**: لا تُترَك الشاشةُ تعرض خطأً
+                // وصاحبُها «داخلٌ» ظاهريّاً — **يُساق إلى الخروج بحدٍّ واحد**
+                // (كبوّابتَي التحديث والكلمة). **ويُفضَّل سببُ «جهازٌ آخر»** من
+                // أيّ الإشارتين ظهر (رمزُ الوصول المرفوضُ أوّلاً، أو ردُّ
+                // التجديد) — فيخرج بالرسالة الصريحة لا العامّة، **ويبقى دائماً
+                // عبر ردِّ التجديد ولو زالت مرآةُ Redis** (الجهازُ العائدُ متأخّراً).
+                val reason = if (firstCode == "session_superseded" || re.body.code == "session_superseded") {
+                    "session_superseded"
+                } else {
+                    re.body.code
+                }
+                onSessionRejected?.invoke(reason)
+                throw re
+            }
             return raw(path, method, body, idempotencyKey, session.accessToken())
         }
     }
@@ -438,6 +459,18 @@ class ApiClient(
          */
         @Volatile
         var onPasswordChangeRequired: (() -> Unit)? = null
+
+        /**
+         * **جلسةٌ رُفضت وسط العمل — تُساق عالميّاً** (`Obs 3`).
+         *
+         * **يُنادى حين يفشل التجديدُ بعد ٤٠١** (الجلسةُ ماتت): دخولٌ جديدٌ من
+         * جهازٍ آخر، أو إبطالٌ عامّ، أو توكنُ تجديدٍ منتهٍ. **والوسمُ يُمرَّر**
+         * (`session_superseded` أو غيرُه) فيُعرَض السببُ الصحيح — «تم تسجيل خروجك…
+         * من جهازٍ آخر» أو «انتهت جلستك». **ويُنادى من `:shared` بلا معرفةِ إطارِ
+         * واجهة** — الغلافُ يُترجمه إلى خروجٍ ورسالة.
+         */
+        @Volatile
+        var onSessionRejected: ((String) -> Unit)? = null
 
         const val CLIENT_HEADER = "X-RahalGo-Client"
 

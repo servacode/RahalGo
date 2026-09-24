@@ -43,6 +43,7 @@
     <string name="err_internal">تعذر الاتصال — حاول بعد قليل</string>
     <string name="err_invalid_phone">رقم الهاتف غير صحيح</string>
     <string name="err_invalid_refresh">انتهت جلستك — ادخل من جديد</string>
+    <string name="err_session_superseded">تم تسجيل خروجك لأن حسابك تم تسجيل الدخول إليه من جهاز آخر</string>
     <string name="err_network">لا اتصال بالإنترنت</string>
     <string name="err_no_merchant">لا متجر في هذا الطلب — الخاص تشتريه بنفسك</string>
     <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون

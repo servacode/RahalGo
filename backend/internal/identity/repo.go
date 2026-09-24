@@ -949,6 +949,87 @@ func (r *Repo) RevokeClientTokens(ctx context.Context, userID, client string) (i
 	return int(tag.RowsAffected()), err
 }
 
+// RevokeClientSessionsAtomic **يُبطل عائلاتِ عميلٍ ويقطع وجهاتِ دفعها معاً** —
+// في معاملةٍ واحدة، ويعيد معرّفاتِ العائلات المُبطَلة (بلا تكرار).
+//
+// **لماذا ذرّيّاً** (Obs 3): **الإبطالُ وقطعُ الوجهةِ فعلٌ واحد** — لو أُبطلت
+// الجلسةُ وبقيت وجهةُ الدفع لَاستقبل جهازٌ مُخرَجٌ إشعاراً خاصّاً (انكشافُ
+// خصوصيّة، `revocation_matrix_test`). **والسببُ يُثبَت `superseded`** فيعرفه
+// الجهازُ القديمُ ولو عاد بعد زوال Redis.
+//
+// **ولا تُقطَع وجهةُ عائلةٍ أخرى للحساب نفسِه** (جلسةُ الويب تبقى)، **ولا وجهةُ
+// الجهازِ الحاليّ** — فهي بعائلتِه الجديدة، **ويعيد هو تسجيلَها بعد دخوله.**
+func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client string) ([]string, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	rows, err := tx.Query(ctx, `
+		UPDATE refresh_tokens
+		   SET revoked_at = now(), revoked_reason = 'superseded'
+		 WHERE user_id = $1 AND client = $2
+		   AND revoked_at IS NULL AND expires_at > now()
+		RETURNING session_id::text`, userID, client)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	sids := []string{}
+	for rows.Next() {
+		var sid string
+		if err := rows.Scan(&sid); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if !seen[sid] {
+			seen[sid] = true
+			sids = append(sids, sid)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(sids) > 0 {
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM device_tokens WHERE session_id = ANY($1::uuid[])`, sids); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return sids, nil
+}
+
+// RevokedReasonOfSession **سببُ إبطالِ عائلةٍ** — من الحقيقة الموثوقة، يدوم بعد
+// زوال Redis. فارغٌ إن لم تُبطَل أو لم تُعرَف.
+func (r *Repo) RevokedReasonOfSession(ctx context.Context, sid string) (string, error) {
+	var reason string
+	err := r.db.QueryRow(ctx, `
+		SELECT COALESCE(max(revoked_reason), '') FROM refresh_tokens
+		 WHERE session_id = $1::uuid AND revoked_at IS NOT NULL`, sid).Scan(&reason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	return reason, err
+}
+
+// RevokedReasonOfToken **سببُ إبطالِ توكنِ تجديدٍ بعينه** — للمسار الذي يعود فيه
+// الجهازُ القديمُ متأخّراً فيجدّد برمزٍ مُبطَل (رمزُ الوصول انتهى وRedis زالت).
+func (r *Repo) RevokedReasonOfToken(ctx context.Context, tokenHash string) (string, error) {
+	var reason string
+	err := r.db.QueryRow(ctx,
+		`SELECT COALESCE(revoked_reason, '') FROM refresh_tokens WHERE token_hash = $1`,
+		tokenHash).Scan(&reason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	return reason, err
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  رمزُ الأدمن — قراءةٌ وكتابةٌ في عمودٍ واحد
 // ══════════════════════════════════════════════════════════════════════

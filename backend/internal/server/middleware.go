@@ -31,6 +31,9 @@ const (
 
 var (
 	errUnauthorized = httpx.NewError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+	// errSessionSuperseded **جلسةٌ أُزيحت بدخولٍ جديدٍ من نوعِ العميل نفسِه** (Obs 3)
+	// — تُميَّز عن الإبطال العامّ لتُعرَض «تم تسجيل خروجك… من جهازٍ آخر».
+	errSessionSuperseded = httpx.NewError(http.StatusUnauthorized, "session_superseded", "errors.unauthorized")
 
 	// errAuthUnavailable **تعذّر التحقّقُ من الجلسة** — `R16`.
 	//
@@ -121,7 +124,13 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 			httpx.Error(w, errAuthUnavailable)
 			return
 		case state == identity.SessionRevoked:
-			httpx.Error(w, errUnauthorized)
+			// **والسببُ يُقرأ في فرعِ الرفض وحدَه** (Obs 3) — Redis أوّلاً ثمّ
+			// القاعدة، فيعرف الجهازُ القديمُ أنّه «جهازٌ آخر» لا انتهاءٌ عامّ.
+			if s.identity.RevokeReason(r.Context(), claims.SID) == identity.ReasonSuperseded {
+				httpx.Error(w, errSessionSuperseded)
+			} else {
+				httpx.Error(w, errUnauthorized)
+			}
 			return
 		}
 		// ══════════════════════════════════════════════════════════

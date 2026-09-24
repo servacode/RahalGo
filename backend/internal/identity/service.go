@@ -36,10 +36,13 @@ var (
 	ErrUserBlocked        = httpx.NewError(http.StatusForbidden, "user_blocked", "errors.user_blocked")
 	ErrUserSuspended      = httpx.NewError(http.StatusForbidden, "user_suspended", "errors.user_suspended")
 	ErrInvalidRefresh     = httpx.NewError(http.StatusUnauthorized, "invalid_refresh", "errors.unauthorized")
-	ErrWeakPassword       = httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password")
-	ErrOTPSendFailed      = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
-	ErrTooManyAttempts    = httpx.NewError(http.StatusTooManyRequests, "too_many_attempts", "errors.too_many_attempts")
-	ErrNameTooShort       = httpx.NewError(http.StatusBadRequest, "name_too_short", "errors.name_too_short")
+	// ErrSessionSuperseded **جلسةٌ أُزيحت بدخولٍ جديدٍ من نوعِ العميل نفسِه** —
+	// تُميَّز عن الإبطال العامّ لتُعرَض «تم تسجيل خروجك… من جهازٍ آخر» (Obs 3).
+	ErrSessionSuperseded = httpx.NewError(http.StatusUnauthorized, "session_superseded", "errors.unauthorized")
+	ErrWeakPassword      = httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password")
+	ErrOTPSendFailed     = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
+	ErrTooManyAttempts   = httpx.NewError(http.StatusTooManyRequests, "too_many_attempts", "errors.too_many_attempts")
+	ErrNameTooShort      = httpx.NewError(http.StatusBadRequest, "name_too_short", "errors.name_too_short")
 
 	// ErrWrongCurrentPassword **كلمةُ المرور الحاليّة خاطئة — لا غير.**
 	//
@@ -102,10 +105,30 @@ type Service struct {
 	// حزمة الإعدادات، وهي أدنى منها في الترتيب. والدالّة تكسر الاتجاه بلا
 	// واجهةٍ اصطناعية.
 	setting func(ctx context.Context, key string, fallback int64) int64
+	// pub **ناشرُ الحديث الحيّ** — لإشعارِ عائلةٍ أُبطلت فوراً (Obs 3). احتياطيّاً
+	// صامتٌ، فلا تحتاج اختباراتُ الهوية مُسرِّعاً.
+	pub Publisher
 }
 
+// Publisher **ما يكفي من المُسرِّع** — إشارةٌ إلى موضوع (نفسُ نمط orders/notifications).
+type Publisher interface {
+	Publish(topic string, event any)
+}
+
+type noopPublisher struct{}
+
+func (noopPublisher) Publish(string, any) {}
+
 func NewService(repo *Repo, rdb *redis.Client, tokens *auth.TokenIssuer, sender notify.OTPSender, secret string, logger *slog.Logger) *Service {
-	return &Service{repo: repo, rdb: rdb, tokens: tokens, sender: sender, secret: secret, logger: logger}
+	return &Service{repo: repo, rdb: rdb, tokens: tokens, sender: sender, secret: secret, logger: logger, pub: noopPublisher{}}
+}
+
+// SetRealtimePublisher يربط الخدمةَ بمُسرِّع الحديث الحيّ (تُنادى مرّة عند الإقلاع).
+// وبلا ربطٍ تبقى الإشارةُ صامتةً — فالإبطالُ يسري عبر Redis والقاعدة كما كان.
+func (s *Service) SetRealtimePublisher(p Publisher) {
+	if p != nil {
+		s.pub = p
+	}
 }
 
 // SetSettingReader يربط الخدمة بإعدادات اللوحة (تُنادى مرّة عند الإقلاع).
@@ -832,7 +855,7 @@ func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip
 	// **دخولٌ جديدٌ يُبطل ما سبق من نوعه** — والإبطال يشمل قائمة Redis
 	// كي يسري فوراً على توكنات الوصول القائمة.
 	if sessionID == "" {
-		if err := s.revokeClientSessions(ctx, user.ID, client); err != nil {
+		if _, err := s.revokeClientSessions(ctx, user.ID, client); err != nil {
 			return nil, err
 		}
 	}
@@ -863,8 +886,15 @@ func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip
 // Refresh يدوّر توكن التحديث: يبطل القديم ويصدر زوجاً جديداً داخل نفس الجلسة —
 // فتدوير لوحة لا يقطع اللوحة الأخرى المفتوحة لنفس الشخص.
 func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string) (*AuthResult, error) {
-	userID, sessionID, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
+	hash := auth.HashToken(rawRefresh)
+	userID, sessionID, err := s.repo.RevokeRefresh(ctx, hash)
 	if errors.Is(err, ErrNotFound) {
+		// **ورمزٌ مُبطَلٌ يُميَّز من مجهول** (Obs 3): **جهازٌ قديمٌ عاد يجدّد بعد
+		// إزاحته** ورمزُ وصولِه انتهى وRedis زالت — القاعدةُ تحفظ السبب، فيُردّ
+		// `session_superseded` فيخرج بالرسالة الصريحة لا برسالةٍ عامّة.
+		if reason, rerr := s.repo.RevokedReasonOfToken(ctx, hash); rerr == nil && reason == ReasonSuperseded {
+			return nil, ErrSessionSuperseded
+		}
 		return nil, ErrInvalidRefresh
 	}
 	if err != nil {
@@ -879,6 +909,13 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string)
 
 // sessionRevokedKey مفتاح إبطال جلسة في Redis.
 func sessionRevokedKey(sid string) string { return "sess:revoked:" + sid }
+
+// ReasonSuperseded **وسمُ الإبطال حين يزيح دخولٌ جديدٌ عائلةً من نوعه** — يُخزَّن
+// في القاعدة (دائم) وفي Redis (سريع)، ويُميَّز عن الإبطال العامّ (`""`).
+const ReasonSuperseded = "superseded"
+
+// sessionTopic **موضوعُ بثٍّ خاصٌّ بعائلةِ جلسةٍ** — لإشعارها وحدَها بإبطالها (Obs 3).
+func SessionTopic(sid string) string { return "sess:" + sid }
 
 // ══════════════════════════════════════════════════════════════════════
 // **وحُذفت `SessionRevoked`** — `R16`
@@ -917,18 +954,38 @@ func (s *Service) revokeSession(ctx context.Context, userID, sid string) error {
 // **وRedis شرطٌ لا زينة**: القاعدةُ تُبطل توكنَ التجديد، **وتوكنُ الوصول
 // القائمُ يبقى صالحاً حتّى تنتهي مهلتُه** — والوسيطُ يسأل Redis في كلّ
 // طلبٍ ليعرف أنّ الجلسةَ ماتت.
-func (s *Service) revokeClientSessions(ctx context.Context, userID, client string) error {
-	sids, err := s.repo.ClientSessionIDs(ctx, userID, client)
+func (s *Service) revokeClientSessions(ctx context.Context, userID, client string) ([]string, error) {
+	// **إبطالٌ وقطعُ وجهةٍ في معاملةٍ واحدة** (Obs 3) — والسببُ `superseded` يُثبَت
+	// في القاعدة فيدوم، ووجهاتُ العائلاتِ المُبطَلةِ وحدَها تُقطَع.
+	sids, err := s.repo.RevokeClientSessionsAtomic(ctx, userID, client)
 	if err != nil {
-		return err
-	}
-	if _, err := s.repo.RevokeClientTokens(ctx, userID, client); err != nil {
-		return err
+		return nil, err
 	}
 	for _, sid := range sids {
-		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+		// **قيمةُ Redis تحمل السبب** — مسارٌ سريعٌ يميّز «جهازٌ آخر» من إبطالٍ عامّ.
+		s.rdb.Set(ctx, sessionRevokedKey(sid), ReasonSuperseded, s.tokens.AccessTTL()+time.Minute)
+		// **وإشارةٌ فوريّةٌ للعائلةِ المُبطَلةِ وحدَها** — الجهازُ القديمُ يلتقطها
+		// فيسأل الخادمَ فيُردّ `session_superseded` فيخرج بالرسالة الصريحة. **موضوعٌ
+		// خاصٌّ بالعائلة** فلا يصل الجهازَ الجديد (عائلتُه أخرى).
+		s.pub.Publish(SessionTopic(sid), map[string]any{"type": "session_revoked", "reason": ReasonSuperseded})
 	}
-	return nil
+	return sids, nil
+}
+
+// RevokeReason **سببُ إبطالِ جلسةٍ للعرض** — Redis أوّلاً (سريع)، ثمّ القاعدة
+// (دائمةٌ بعد زوال المفتاح). **يُنادى في فرعِ الرفض وحدَه** فلا يُثقِل المسارَ الحارّ.
+func (s *Service) RevokeReason(ctx context.Context, sid string) string {
+	if sid == "" {
+		return ""
+	}
+	if v, err := s.rdb.Get(ctx, sessionRevokedKey(sid)).Result(); err == nil && v == ReasonSuperseded {
+		return ReasonSuperseded
+	}
+	reason, err := s.repo.RevokedReasonOfSession(ctx, sid)
+	if err != nil {
+		return ""
+	}
+	return reason
 }
 
 func (s *Service) revokeAllSessions(ctx context.Context, userID string) error {

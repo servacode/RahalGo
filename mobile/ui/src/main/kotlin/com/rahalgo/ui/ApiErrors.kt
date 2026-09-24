@@ -193,6 +193,8 @@ private val CODES: Map<String, Int> = mapOf(
     // حسابا. (قِيس ٢٠٢٦-٠٨-١٤.)
     "not_signed_in" to R.string.err_not_signed_in,
     "invalid_refresh" to R.string.err_invalid_refresh,
+    // **ودخولٌ من جهازٍ آخر يُقال بصريحه** (Obs 3) — لا «انتهت جلستُك» العامّة.
+    "session_superseded" to R.string.err_session_superseded,
     // ══════════════════════════════════════════════════════════════════
     // **و«ممنوع» لا تعني «لستَ سائقا»**
     // ══════════════════════════════════════════════════════════════════

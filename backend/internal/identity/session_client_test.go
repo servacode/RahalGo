@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
@@ -149,6 +151,102 @@ func TestSessionClient_DefaultIsWeb(t *testing.T) {
 		t.Fatalf("الصفُّ القديم نوعُه %q لا %q — **فلا يُبطله دخولُ ويبٍ جديد "+
 			"وتبقى جلساتٌ قديمةٌ حيّة**", client, ClientWeb)
 	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الإزاحةُ تقطع وجهةَ الجهاز القديم وتُثبِت السبب — بلا مساسٍ بالمتصفّح**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **اختبارُ أثرٍ على قاعدةٍ حقيقيّة** (Obs 3): دخولٌ جديدٌ من نوعِ العميل نفسِه
+// يجب أن (١) يُبطل العائلةَ القديمة، (٢) يقطع وجهةَ دفعها فلا يستقبل جهازٌ
+// مُخرَجٌ إشعاراً خاصّاً، (٣) يُثبِت السببَ `superseded` دائماً في القاعدة،
+// (٤) **ولا يمسّ جلسةَ المتصفّح ولا وجهتَها** — القيدُ لكلّ نوعٍ لا للحساب.
+func TestSessionClient_SupersedeCutsDeviceTokenAndStampsReason(t *testing.T) {
+	pool := testdb.Pool(t)
+	repo := NewRepo(pool)
+	ctx := context.Background()
+	uid := testdb.NewUser(t, pool, "customer")
+
+	appSID, err := repo.StoreRefresh(ctx, uid, "hash-old-app", testSessionTTL, "هاتف قديم", "2.2.2.2", "", "android-customer")
+	if err != nil {
+		t.Fatalf("جلسةُ التطبيق: %v", err)
+	}
+	webSID, err := repo.StoreRefresh(ctx, uid, "hash-web", testSessionTTL, "متصفّح", "1.1.1.1", "", ClientWeb)
+	if err != nil {
+		t.Fatalf("جلسةُ المتصفّح: %v", err)
+	}
+	insertDeviceToken(ctx, t, pool, "tok-old-app", uid, appSID)
+	insertDeviceToken(ctx, t, pool, "tok-web", uid, webSID)
+
+	sids, err := repo.RevokeClientSessionsAtomic(ctx, uid, "android-customer")
+	if err != nil {
+		t.Fatalf("الإبطالُ الذرّي: %v", err)
+	}
+	if len(sids) != 1 || sids[0] != appSID {
+		t.Fatalf("العائلاتُ المُبطَلة %v — يُنتظَر [%s] وحدَها", sids, appSID)
+	}
+
+	// (٢) **وجهةُ الجهاز القديم تُقطَع** — وإلّا استقبل جهازٌ مُخرَجٌ إشعاراً خاصّاً.
+	if deviceTokenExists(ctx, t, pool, "tok-old-app") {
+		t.Fatal("رمزُ دفعِ الجهاز القديم بقي بعد الإزاحة — **انكشافُ خصوصيّة**")
+	}
+	// (٤) **ووجهةُ المتصفّح تبقى** — القيدُ لكلّ نوعِ عميل، لا للحساب كلِّه.
+	if !deviceTokenExists(ctx, t, pool, "tok-web") {
+		t.Fatal("إزاحةُ التطبيق قطعت وجهةَ المتصفّح — **والقيدُ لكلّ نوعٍ لا للحساب**")
+	}
+	// (٣) **والسببُ يُثبَت دائماً** — فيعرفه الجهازُ القديمُ ولو عاد بعد زوال Redis.
+	if got, _ := repo.RevokedReasonOfSession(ctx, appSID); got != ReasonSuperseded {
+		t.Fatalf("سببُ العائلة %q لا %q", got, ReasonSuperseded)
+	}
+	if got, _ := repo.RevokedReasonOfToken(ctx, "hash-old-app"); got != ReasonSuperseded {
+		t.Fatalf("سببُ التوكن %q لا %q — **فالجهازُ العائدُ متأخّراً لا يعرف أنّه «جهازٌ آخر»**", got, ReasonSuperseded)
+	}
+	// (١)+(٤) **والمتصفّحُ حيٌّ** بعد إزاحة التطبيق.
+	if !repo.mustActive(ctx, t, uid)[webSID] {
+		t.Fatal("جلسةُ المتصفّح ماتت مع إزاحة التطبيق")
+	}
+}
+
+// TestSessionClient_GenericRevokeStaysDistinct **والإبطالُ العامُّ يبقى مميَّزاً**
+// (Obs 3): خروجٌ · حظرٌ · حذفٌ · إعادةُ كلمة لا تُوسَم `superseded` — فلا يُعرَض
+// «من جهازٍ آخر» في غير موضعه.
+func TestSessionClient_GenericRevokeStaysDistinct(t *testing.T) {
+	pool := testdb.Pool(t)
+	repo := NewRepo(pool)
+	ctx := context.Background()
+	uid := testdb.NewUser(t, pool, "customer")
+
+	sid, err := repo.StoreRefresh(ctx, uid, "hash-generic", testSessionTTL, "هاتف", "2.2.2.2", "", "android-customer")
+	if err != nil {
+		t.Fatalf("جلسة: %v", err)
+	}
+	if _, err := repo.RevokeAllTokens(ctx, uid); err != nil {
+		t.Fatalf("الإبطالُ الشامل: %v", err)
+	}
+	if got, _ := repo.RevokedReasonOfSession(ctx, sid); got == ReasonSuperseded {
+		t.Fatal("إبطالٌ شاملٌ وُسم `superseded` — **فيُعرَض «من جهازٍ آخر» على خروجٍ عاديّ**")
+	}
+}
+
+// insertDeviceToken وجهةُ دفعٍ مربوطةٌ بعائلةِ جلسة — لاختبار قطعِها عند الإزاحة.
+func insertDeviceToken(ctx context.Context, t *testing.T, pool *pgxpool.Pool, token, userID, sid string) {
+	t.Helper()
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO device_tokens (token, user_id, session_id, platform, app, app_version)
+		VALUES ($1, $2, $3::uuid, 'android', 'customer', '1.0')`, token, userID, sid); err != nil {
+		t.Fatalf("إدراجُ وجهةِ الدفع %q: %v", token, err)
+	}
+}
+
+// deviceTokenExists **أباقٍ صفُّ الوجهة؟** — أساسُ فحصِ قطعِ الوجهة.
+func deviceTokenExists(ctx context.Context, t *testing.T, pool *pgxpool.Pool, token string) bool {
+	t.Helper()
+	var n int
+	if err := pool.QueryRow(ctx,
+		`SELECT count(*) FROM device_tokens WHERE token = $1`, token).Scan(&n); err != nil {
+		t.Fatalf("عدُّ وجهةِ الدفع %q: %v", token, err)
+	}
+	return n > 0
 }
 
 // mustActive عائلاتُ الجلسات الحيّة — مجموعةً لتُسأل بالاسم.

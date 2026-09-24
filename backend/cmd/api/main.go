@@ -234,6 +234,9 @@ func run(logger *slog.Logger) error {
 	}
 	cashboxSvc := cashbox.NewService(pg, settingsStore)
 	hub := realtime.NewHub(logger)
+	// **وإبطالُ عائلةٍ يُشعِرها فوراً عبر البثّ** (Obs 3) — الجهازُ القديمُ يخرج
+	// بالرسالة الصريحة «من جهازٍ آخر» بلا انتظارِ نبضةٍ ولا نداءٍ لاحق.
+	identitySvc.SetRealtimePublisher(hub)
 	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, hub, logger)
 
 	// ══════════════════════════════════════════════════════════════
