@@ -1011,7 +1011,7 @@ Customer must NOT be declared ACCEPTED until every row below is PASS.
 | CUST-22-013 | Gate | Staging data reconciled/known after tests | — | Before/after SoT reads; moneycheck | Known; 51/51 | PASS — شاهدٌ حيّ (§40.59): بُني `GET /qa/reconcile` (قراءةٌ محضة، staging-only، أعدادٌ فقط). أثرُ اختبار الزبون **نظيفٌ تماماً**: qa_open_orders=0 · qa_wallet_balance=0 · qa_dense_items=0 · qa_active_offers=0 · qa_second_merchants=0. والمالُ **50/51** (moneycheck عبر fininv): الخرقُ الوحيدُ FI-06.d بصفٍّ واحدٍ **by_status={cancelled:1}** — طلبٌ ملغىً (استُردّ فصار net=0 ≠ −wallet_paid)، أثرٌ حميدٌ لا عيبَ زبونيّ، **وليس من اختبار هذه الجلسة** (طلباتي نقديّةٌ wallet_paid=0). الدفترُ لم يُمَسّ. البيانةُ **معلومةٌ ومُسوّاة** | `PASS` | api | — | reconciled | — | — | — | via GET /qa/reconcile (read-only) |
 | CUST-22-014 | Gate | Production mutations zero unless authorized | — | Production identity + audit read | 0 | PASS — صفرُ مساسٍ بالإنتاج: هويّةُ الإنتاج + تدقيقُ السجلّ عبر الحملة | `PASS` | — | — | identity endpoint | — | — | — | Gate item 14 |
 | CUST-22-015 | Gate | No unexplained NOT_TESTED/BLOCKED rows | — | §39 | 0 | — | `NOT_TESTED` | — | — | — | — | — | — | Gate item 15 |
-| CUST-22-016 | Gate | Clean end-to-end Customer smoke run after all fixes | Release-candidate debug build | Install → signup → address → browse → cart → submit → track → rate → logout | All PASS on the device | — | `NOT_TESTED` | — | online | SoT per step | — | — | — | Gate item 16 |
+| CUST-22-016 | Gate | Clean end-to-end Customer smoke run after all fixes | Release-candidate debug build | Install → signup → address → browse → cart → submit → track → rate → logout | All PASS on the device | §40.87 (٢٠٢٦-٠٩-٢٤): QASmoke على SM-A525F، طلبٌ خاصٌّ نقديٌّ #١١٥٠ ⇒ delivered (حياديّ) ⇒ تقييم ⇒ خروج؛ عكسُ الهديّة + حذفُ الحساب + مطابقةٌ residue=0 | `PASS` | — | online | SoT per step | — | — | — | Gate item 16 · شاهد §40.87 |
 
 ---
 
@@ -1277,8 +1277,8 @@ until ADB is available — not an acceptance blocker.
 | 31 | CUST-19 | 29 | 25 | 4 | 0 | 0 | 29 | 0 | 0 |
 | 32 | CUST-20 | 19 | 18 | 1 | 0 | 1 | 18 | 0 | 0 |
 | 33 | CUST-21 | 15 | 15 | 0 | 0 | 1 | 14 | 0 | 0 |
-| 34 | CUST-22 | 16 | 16 | 0 | 6 | 0 | 10 | 0 | 0 |
-| | **Total** | **578** | **474** | **104** | **6** | **10** | **562** | **0** | **0** |
+| 34 | CUST-22 | 16 | 16 | 0 | 5 | 0 | 11 | 0 | 0 |
+| | **Total** | **578** | **474** | **104** | **5** | **10** | **563** | **0** | **0** |
 
 Rows marked *conditional* in Notes need an Owner-approved Staging policy flip (§38.8); until approved they stay `NOT_TESTED`. Rows noting *expected FAIL* point at a source-confirmed or known gap — they are still executed and recorded honestly.
 
@@ -3758,6 +3758,29 @@ CUST-DEF-004 (P1، تسريبٌ بين الحسابات، §40.6.2)، CUST-DEF-0
 ثمّ `/me/demand/cancel` ⇒ active=false. **BLOCKED⇒PASS.**
 
 الحصيلة (محقّقة): PASS 492⇒493، BLOCKED 45⇒44، NOT_TESTED 31، N/A 10، FAIL 0. = 578.
+
+### 40.87 · CUST-22-016 — الدخانُ الكاملُ من طرفٍ إلى طرف على الجهاز (٢٠٢٦-٠٩-٢٤)
+
+**الحساب**: QASmoke (+963900555998، من تسجيلٍ حقيقيٍّ جديد)، على SM-A525F (المستخدم 0 — الملفُّ الرئيس)، تجهيزٌ على `e022cd9c`. **أتمتةٌ موثوقة**: كلُّ نقرةٍ على مركزِ العقدةِ القابلةِ للنقر بعد قراءةِ حدودِها، وإغلاقُ لوحةِ المفاتيح قبل نقرِ الأزرار — لا نقراتٍ عمياءَ متكرّرة.
+
+**الشاهد** (ذاتيٌّ عبر ADB + نداءاتٌ حيّة):
+1. **تصفّح + سلّة**: السوقُ يعرض الأصناف، صنفٌ واحدٌ في السلّة، والعنوانُ المحفوظ «المنزل — الثورة، الرقة» ظاهرٌ في المنتقي.
+2. **إرسال**: طلبٌ خاصٌّ نقديّ (طلب خاص، الدفعُ نقداً عند التسليم — كان محدَّداً افتراضاً) أُنشئ عبر واجهةِ التطبيق ⇒ **#١١٥٠** (UUID `56e37a40…`)، الحالةُ «بانتظار القبول»، ظهر في «طلباتي». **المفتاحُ**: إغلاقُ IME قبل نقرِ «أرسل الطلب» — الزرُّ كان تحت لوحةِ المفاتيح (سببُ تعثّرِ المحاولات السابقة).
+3. **تحقّقٌ خادميٌّ + تتبّع**: `order_advance` (مقصورٌ برقمِ QASmoke، بلا `order_id` ⇒ حلَّ الطلبَ المفتوحَ الوحيد) ⇒ «assigned»، سائقٌ فعليّ (عمر الشيخ). على الجهاز عرضت «طلباتي» «مع سائق» واسمَ السائق — تتبّعٌ حيّ.
+4. **التسليم**: `order_advance` ⇒ «delivered». مخصّصٌ نقديٌّ ⇒ **حياديٌّ ماليّاً** (التسويةُ تتخطّاه: لا محفظةَ ولا خزينةَ ولا صندوقَ سائق).
+5. **التقييم**: عند التسليم فتح التطبيقُ شاشةَ التقييم تلقائيّاً ⇒ ٥ نجومٍ للخدمة و٥ للسائق، «إرسال» ⇒ الشاشةُ أُغلقت والطلبُ خرج من القائمةِ الجارية.
+6. **الخروج**: «خروج» من الدرج ⇒ حالةُ ضيف (لا شارةَ محفظة، شريطٌ مصغّرٌ: تسوّق + طلب خاص فقط).
+
+**التنظيف والمطابقة**:
+- **عكسُ الهديّة**: `signup_bonus_reverse` (قيدٌ مزدوجٌ عبر `ApplyTx`): −١٥ من الحساب، +١٥ للخزينة ⇒ محفظةُ QASmoke = ٠، والخزينةُ عادت إلى ما قبل الهديّة بالضبط.
+- **الحذف**: عادَ الدخولُ (كلمةُ المرور) لأنّ مسارَ الحذف الحقيقيّ `/auth/account/delete` يحتاج جلسةَ الحساب نفسِه (و`/qa/session` مقصورٌ على QA1/QA2). ثمّ من «حسابي» ⇒ «أرسل رمز الحذف» ⇒ رمزُ الحذف عبر معطارِ `otp_code` (purpose=delete) ⇒ «احذف حسابي نهائيا». الحسابُ جُرِّد (`AnonymizeUser`: الهاتفُ حُرِّر، status=deleted، الجلساتُ أُبطلت).
+- **التحقّق**: `signup_bonus_reverse` ثانيةً ⇒ `no_account` (الرقمُ محرَّر)؛ وعلى الجهاز حالةُ ضيف. **المطابقة**: residue=0 (طلباتٌ مفتوحة ٠، محافظُ QA ٠، عروض/كثافة/متجرٌ ثانٍ ٠)، والمالُ ٥٠/٥١ (FI-06.d الحميدُ الموثّق، بلا تغيّر). الطلبُ #١١٥٠ يبقى مسجّلاً كتاريخٍ مُسلَّمٍ مغلقٍ منسوبٍ لحسابٍ مجهَّل — سلوكٌ مقصود، لا أثرَ ماليّ.
+
+**ملاحظةُ جهاز** (تأجَّل تنظيفُها بقرارِ المالك): التطبيقُ مثبَّتٌ على المستخدم 0 (الرئيس)؛ ونسخةُ «التطبيق المزدوج» من سامسونج في المستخدم 95 (`DUAL_APP`) معطَّلةٌ ولها بياناتٌ منفصلة — مصدرُ الالتباسِ السابق في رؤيةِ التطبيق/الحساب على الجهاز.
+
+**NOT_TESTED⇒PASS ×1 (22-016).**
+
+**المجاميع (محقّقة): PASS 563 · FAIL 0 · BLOCKED 0 · N/A 10 · NOT_TESTED 5 = 578.**
 
 ### 40.86 · جهازان لنفس الحساب — عقدُ الجلسة الواحدة لكلّ عميل: 06-022 + 19-018 (٢٠٢٦-٠٩-٢٣)
 
