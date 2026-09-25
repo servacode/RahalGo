@@ -11,6 +11,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 
 /**
@@ -84,7 +85,29 @@ fun rememberMapSurface(): MapSurface {
     val surface = remember(context) {
         MapSurfaceCache.of(context) {
             ensureMapLibre(context)
-            MapSurface(MapView(context), MapOverlayRegistry()).also { made ->
+            // ══════════════════════════════════════════════════════════
+            // **نمطُ TextureView لا SurfaceView** (CUST-DEF-012)
+            // ══════════════════════════════════════════════════════════
+            //
+            // (بلاغُ المالك: ANR «رحّال غو لا يستجيب» عند مغادرة الخريطة.)
+            //
+            // **العلّة**: MapLibre 13.4.1 يبني بـSurfaceView + Vulkan
+            // افتراضاً. **وعند فصلِ الخريطةِ عن النافذة** (إغلاقُ منتقي
+            // العنوان/رجوع) **يُشغِّل `nativeReset` متزامناً على الخيطِ
+            // الرئيس** ينتظر خيطَ العرض؛ **وإن كان خيطُ العرضِ عالقاً**
+            // (شبكةٌ ساقطة) **لا يعود النداءُ فيتجمّد التطبيقُ >١٠ث ⇒ ANR.**
+            //
+            // **`textureMode(true)`**: يفصل TextureView عن النافذة **بلا
+            // مصافحةٍ متزامنةٍ مع خيطِ العرض** فلا تجمّد. **موضعٌ واحدٌ
+            // يعمّ التطبيقاتِ الأربعة** (منتقي العنوان + خريطةُ السائق).
+            // **والدورةُ المركزيّةُ لا تُمَسّ** — العلّةُ في نمطِ السطح لا فيها.
+            //
+            // **والتوقيعُ محقَّقٌ على 13.4.1 عينِها** (لا افتراض):
+            // `MapView(Context, MapLibreMapOptions)` +
+            // `createFromAttributes(context).textureMode(true)` موجودةٌ
+            // في `android-sdk-13.4.1-api.jar`.
+            val opts = MapLibreMapOptions.createFromAttributes(context).textureMode(true)
+            MapSurface(MapView(context, opts), MapOverlayRegistry()).also { made ->
             // ══════════════════════════════════════════════════════════
             // **ولا شعارَ ولا زرَّ إسنادٍ ولا بوصلةٍ فوق الخريطة**
             // ══════════════════════════════════════════════════════════

@@ -507,9 +507,18 @@ private fun SignedIn(
     // **والمراقبُ يُنزَع عند الخروج** (`onDispose`) — **ومراقبٌ يبقى
     // يمسك الشاشةَ بعد موتها.**
     val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    // **مُوقِّتُ الحدّ يُربَط بنطاق التطبيق** (Batch 5) — عليه ينام حتّى أقربِ حدّ.
+    LaunchedEffect(Unit) { BoundaryScheduler.bind(scope) }
     DisposableEffect(owner) {
         val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            // **وفي الخلفيّة يُلغى مؤقّتُ الحدّ** — لا نومٌ لشاشةٍ لا تُرى.
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                BoundaryScheduler.onBackground()
+            }
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                // **وعند العودة يُسلَّح المؤقّتُ ثانيةً** — والتجديدُ الإجباريُّ
+                // أدناه يُعيد `syncPlatform`/`syncZone` فيُضبَط على أقربِ حدٍّ حاليّ.
+                BoundaryScheduler.onForeground()
                 // **العودةُ إلى الواجهة تُصحّح الإتاحةَ دائماً** (Batch 3b، تصحيحُ
                 // المالك ٢): تجديدٌ إجباريٌّ يتجاوز عمرَ الدقيقتين — فالعائدُ لا يرى
                 // حالاً شائخةً أبداً، بلا إعادة فتحٍ يدويّة. (والعمرُ يبقى للاستطلاع الروتينيّ.)

@@ -267,6 +267,12 @@ data class Ordering(
     val message: String = "",
     /** **موعدُ العودة** — RFC 3339، وفارغٌ يعني «لا موعدَ معلوم». */
     @SerialName("next_available_at") val nextAvailableAt: String = "",
+    /**
+     * **متى يُغلَق المفتوحُ الآن** — RFC 3339 (Batch 5). **وفارغٌ يعني
+     * «مفتوحٌ بلا حدّ»** (لا جدولَ سارٍ، أو مغلقٌ أصلاً). **وبه يُسلّح
+     * التطبيقُ مُوقِّتَ الحدِّ ليُجدّد نفسَه عند الإغلاق دون حدثِ خادم.**
+     */
+    @SerialName("next_close_at") val nextCloseAt: String = "",
     /** **لحظةُ الخادم** — **وبها يُقاس لا بساعة الجهاز.** */
     @SerialName("server_time") val serverTime: String = "",
     val timezone: String = "",

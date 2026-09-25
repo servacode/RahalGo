@@ -5,6 +5,8 @@ package platform
 // ══════════════════════════════════════════════════════════════════════
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -131,5 +133,29 @@ func TestPH_StateCarriesServerTruth(t *testing.T) {
 	}
 	if len(st.TodayWindows) != 1 {
 		t.Fatalf("**فتراتُ اليوم لم تُعَد**: %d", len(st.TodayWindows))
+	}
+}
+
+// NC-07 · تسلسلُ next_close_at في الردّ (Batch 5): يظهر حين تُفتح بجدولٍ
+// سارٍ، ويُحذَف حين تكون مغلقةً أو غيرَ سارية (omitempty).
+func TestNC07_NextCloseAtSerialization(t *testing.T) {
+	sch := Schedule{win(t, 0, "09:00", "17:00")}
+	now := time.Date(2026, 9, 13, 12, 0, 0, 0, Location()) // الأحد ظهراً — مفتوح
+
+	openEnforced, _ := json.Marshal(Decide(now, true, sch, Closure{}))
+	if !strings.Contains(string(openEnforced), `"next_close_at"`) {
+		t.Fatalf("**مفتوحةٌ ساريةٌ يجب أن تحمل next_close_at**: %s", openEnforced)
+	}
+	notEnforced, _ := json.Marshal(Decide(now, false, sch, Closure{}))
+	if strings.Contains(string(notEnforced), `"next_close_at"`) {
+		t.Fatalf("**غيرُ ساريةٍ لا next_close_at**: %s", notEnforced)
+	}
+	closedNow := time.Date(2026, 9, 13, 20, 0, 0, 0, Location()) // مغلق
+	closed, _ := json.Marshal(Decide(closedNow, true, sch, Closure{}))
+	if strings.Contains(string(closed), `"next_close_at"`) {
+		t.Fatalf("**مغلقةٌ لا next_close_at**: %s", closed)
+	}
+	if !strings.Contains(string(closed), `"next_available_at"`) {
+		t.Fatalf("**مغلقةٌ يجب أن تحمل next_available_at**: %s", closed)
 	}
 }

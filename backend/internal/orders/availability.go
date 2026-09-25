@@ -106,6 +106,11 @@ type Availability struct {
 	// **وهذا ما تُبنى عليه هويّتُه.**
 	CityID        string `json:"city_id,omitempty"`
 	GovernorateID string `json:"governorate_id,omitempty"`
+	// NextCloseAt **متى يُغلَق التوصيلُ المفتوحُ الآن لهذه النقطة** —
+	// نهايةُ فترةِ منطقتها الجارية. **يُملأ حين تكون متاحةً بمنطقةٍ
+	// جدولُها سارٍ**، و`nil` وإلّا (بلا حدٍّ، أو مغلقةٌ أصلاً). **وبه
+	// يُجدّد التطبيقُ نفسَه عند الحدّ دون حدثٍ من الخادم.**
+	NextCloseAt *time.Time `json:"next_close_at,omitempty"`
 }
 
 // Gates **ما قرأته البوّابةُ قبلَ هذا** — **يُمرَّر ولا يُقرأ ثانيةً.**
@@ -232,7 +237,16 @@ func (s *Service) AvailabilityAt(ctx context.Context, q dbtx.Querier,
 		}
 	}
 
-	return Availability{Available: true, Reason: ReasonAvailable}, nil
+	avail := Availability{Available: true, Reason: ReasonAvailable}
+	// **ومتى يُغلَق** — لمنطقةٍ جدولُها سارٍ ومفتوحةٌ الآن، ليُجدّد التطبيقُ
+	// نفسَه عند حدّ الإغلاق دون حدثٍ من الخادم. **مسارُ العرضِ لا الإنشاء**
+	// (بوّابةُ الإنشاء `requireZoneOpen` لا تمرّ بهذا).
+	if zone.HoursEnforced && zone.ID != "" && s.zoneHours != nil {
+		if nc, err := s.zoneHours.ZoneNextCloseAt(ctx, q, zone.ID); err == nil {
+			avail.NextCloseAt = nc
+		}
+	}
+	return avail, nil
 }
 
 // reasonOfPlatform يترجم رمزَ منعِ المنصّة إلى اسم السبب.

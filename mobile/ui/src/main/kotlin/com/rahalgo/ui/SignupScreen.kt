@@ -91,6 +91,9 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        // **شعارُ الهويّة المشترك** (Batch 5) — مُصغَّرٌ ومسافةٌ أقلُّ فوقَه
+        // فلا يزحم حقولَ الإنشاء الكثيرة.
+        AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
         Text(
             text = stringResource(R.string.signup_title),
             style = MaterialTheme.typography.headlineSmall,

@@ -228,6 +228,12 @@ data class Availability(
     /** **نصُّ المالك** — يغلب نصَّ التطبيق. */
     val message: String = "",
     @SerialName("next_available_at") val nextAvailableAt: String = "",
+    /**
+     * **متى يُغلَق التوصيلُ المفتوحُ الآن لهذا العنوان** — RFC 3339
+     * (Batch 5). **وفارغٌ يعني «مفتوحٌ بلا حدّ»** (منطقةٌ بلا جدولٍ سارٍ،
+     * أو مغلقةٌ أصلاً). **وبه يُسلّح مُوقِّتُ الحدِّ لحدِّ إغلاقِ المنطقة.**
+     */
+    @SerialName("next_close_at") val nextCloseAt: String = "",
     /** **اسمُ المدينة أو المحافظة حين يُعرَف** — ولا يُسمّى ما لا يُعرَف. */
     @SerialName("place_name") val placeName: String = "",
 )

@@ -108,6 +108,11 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		if st.NextAvailableAt != nil {
 			ordering["next_available_at"] = st.NextAvailableAt.Format(time.RFC3339)
 		}
+		// **ومتى يُغلَق المفتوحُ الآن** (Batch 5) — ليُجدّد التطبيقُ نفسَه عند
+		// الحدّ دون حدثٍ من الخادم. **حقلٌ يُضاف لا عقدٌ يُكسَر.**
+		if st.NextCloseAt != nil {
+			ordering["next_close_at"] = st.NextCloseAt.Format(time.RFC3339)
+		}
 	} else {
 		s.logger.Error("تعذّر قراءةُ حال الاستقبال للردّ العامّ", "err", err)
 	}

@@ -893,6 +893,9 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 priced = it
                 changes = it.changes
                 error = ""
+                // **ومُوقِّتُ الحدِّ يُعاد تسليحُه على حدِّ منطقةِ السلّة** (Batch 5)
+                // — من التسعيرة نفسِها، فتنقلب السلّةُ عند الإغلاقِ القادمِ بلا لمس.
+                com.rahalgo.customer.BoundaryScheduler.syncZone(it.availability)
                 // **وكودُ الخصم يُعاد تقييمُه على المجموع الجديد** —
                 // `CUST-DEF-005`: تبدّل المجموعُ (سعرٌ أو كمّيّة) فخصمُ الأمس
                 // على مجموع الأمس. **فيُعاد التقييمُ على الحاليّ**، ويُبرِز

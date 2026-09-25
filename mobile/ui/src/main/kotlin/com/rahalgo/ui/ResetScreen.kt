@@ -58,6 +58,8 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        // **شعارُ الهويّة المشترك** (Batch 5) — مُصغَّرٌ فلا يزحم حقولَ الاستعادة.
+        AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
         Text(
             text = stringResource(R.string.reset_title),
             style = MaterialTheme.typography.headlineSmall,

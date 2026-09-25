@@ -63,6 +63,9 @@ object Orderable {
         state = av
         forPoint = point
         readAt = nowElapsed
+        // **ومُوقِّتُ الحدِّ يُعاد تسليحُه على حدِّ المنطقة** (Batch 5) —
+        // فتنقلب الشاشةُ عند إغلاقِ/فتحِ المنطقةِ القادمِ بلا حدثِ خادمٍ ولا لمس.
+        BoundaryScheduler.syncZone(av)
     }
 
     /** **يُنسى ما كان** — عند تبديل العنوان أو الخروج. */
@@ -70,6 +73,8 @@ object Orderable {
         state = null
         forPoint = ""
         readAt = 0L
+        // **ولا حدَّ منطقةٍ بلا عنوان** — يُنزَع من المؤقّت.
+        BoundaryScheduler.syncZone(null)
     }
 
     /**

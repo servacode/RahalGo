@@ -32,7 +32,7 @@
     "behaviour_settings": 119,
     "order_fields": 83,
     "test_files": 377,
-    "test_funcs": 1602
+    "test_funcs": 1609
   },
   "flows": [
     {
@@ -8242,6 +8242,42 @@
       "orphan": false
     },
     {
+      "name": "TestNC01_SameDayClose",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestNC02_CrossMidnightHeadClosesTomorrow",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestNC03_CrossMidnightTailWeekWrap",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestNC04_ClosedGivesNil",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestNC05_OpenCloseReopenSequence",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestNC06_NotEnforcedOmitsNextClose",
+      "file": "internal/platform/hours_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
       "name": "TestPH01_WeekdayOpenInterval",
       "file": "internal/platform/hours_test.go",
       "package": "platform",
@@ -8430,6 +8466,12 @@
     {
       "name": "TestAV_UnenforcedGatesDoNotConstrain",
       "file": "internal/platform/intersect_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestNC07_NextCloseAtSerialization",
+      "file": "internal/platform/state_test.go",
       "package": "platform",
       "orphan": true
     },

@@ -44,6 +44,9 @@ type ZoneState struct {
 	Enforced bool `json:"enforced"`
 	// NextOpenAt **متى يعود التوصيلُ إليها** — و`nil` إن لم يُعرَف.
 	NextOpenAt *time.Time `json:"next_open_at,omitempty"`
+	// NextCloseAt **متى يُغلَق التوصيلُ المفتوحُ الآن** — نهايةُ فترتها
+	// الجارية. **يُملأ حين تكون مفتوحةً بجدولٍ سارٍ**، و`nil` وإلّا.
+	NextCloseAt *time.Time `json:"next_close_at,omitempty"`
 }
 
 // ZoneSchedule **جدولُ منطقةٍ ورايةُ سريانه.**
@@ -130,7 +133,10 @@ func DecideZone(now time.Time, enforced bool, sch Schedule) ZoneState {
 		return ZoneState{Open: true}
 	}
 	st := ZoneState{Enforced: true, Open: sch.OpenAt(now)}
-	if !st.Open {
+	if st.Open {
+		// **ومفتوحةٌ يُعرَف متى تُغلَق** — نهايةُ فترتها الجارية.
+		st.NextCloseAt = sch.NextCloseAt(now)
+	} else {
 		st.NextOpenAt = sch.NextOpenAt(now)
 	}
 	return st
@@ -357,6 +363,17 @@ func starts(now time.Time, sch Schedule) []time.Time {
 		}
 	}
 	return out
+}
+
+// ZoneNextCloseAt **متى تُغلَق منطقةٌ مفتوحةٌ الآن** — و`nil` حين لا جدولَ
+// سارٍ (مفتوحةٌ بلا حدّ) أو حين تكون مغلقة. **جوابٌ أوّليٌّ للطلبات** فلا
+// تستورد `orders` هذه الحزمة (نظيرُ `ZoneOpen`).
+func (s *Service) ZoneNextCloseAt(ctx context.Context, q dbtx.Querier, zoneID string) (*time.Time, error) {
+	st, err := s.ZoneStateOf(ctx, q, zoneID)
+	if err != nil {
+		return nil, err
+	}
+	return st.NextCloseAt, nil
 }
 
 // ZoneOpen **أيُوصَّل إلى هذه المنطقة الآن — ومتى يُقبَل طلبٌ إليها.**

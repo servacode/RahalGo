@@ -82,6 +82,11 @@ type State struct {
 	// NextAvailableAt **أوّلُ لحظةٍ يُقبَل فيها طلبٌ** — و`nil` إن لم
 	// تُعرَف.
 	NextAvailableAt *time.Time `json:"next_available_at,omitempty"`
+	// NextCloseAt **متى يُغلَق الاستقبالُ المفتوحُ الآن** — نهايةُ الفترة
+	// الجارية. **يُملأ حين تكون مفتوحةً بجدولٍ سارٍ**، و`nil` حين لا جدولَ
+	// سارٍ (مفتوحةٌ بلا حدّ) أو حين تكون مغلقةً. **وبه يُجدّد التطبيقُ
+	// نفسَه عند الحدّ دون حدثٍ من الخادم.**
+	NextCloseAt *time.Time `json:"next_close_at,omitempty"`
 	// ServerTime **لحظةُ الخادم** — **والشاشةُ تنسّقها ولا تحكم بها.**
 	ServerTime time.Time `json:"server_time"`
 	// Timezone **باسمها** — انظر TZ.
@@ -124,6 +129,12 @@ func Decide(now time.Time, enforced bool, sch Schedule, c Closure) State {
 	}
 
 	st.OrderingAvailable = true
+	// **وحين تُفتح بجدولٍ سارٍ يُعرَف متى تُغلَق** — نهايةُ الفترة الجارية،
+	// وبها يُجدّد التطبيقُ نفسَه عند الحدّ. **وغيرُ الساريةِ مفتوحةٌ بلا
+	// حدٍّ فلا موعدَ إغلاق.**
+	if enforced {
+		st.NextCloseAt = sch.NextCloseAt(now)
+	}
 	return st
 }
 

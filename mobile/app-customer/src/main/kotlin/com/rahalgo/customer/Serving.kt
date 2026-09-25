@@ -158,7 +158,13 @@ object Serving {
         if (!force && !stale(android.os.SystemClock.elapsedRealtime())) return
         scope.launch {
             runCatching { com.rahalgo.shared.auth.AuthApi(AppCore.get().api).platform() }
-                .onSuccess { put(it.ordering, it.launch, it.customDelivery, android.os.SystemClock.elapsedRealtime()) }
+                .onSuccess {
+                    put(it.ordering, it.launch, it.customDelivery, android.os.SystemClock.elapsedRealtime())
+                    // **ومُوقِّتُ الحدِّ يُعاد تسليحُه على أقربِ حدٍّ للمنصّة**
+                    // (Batch 5) — فتنقلب الشاشةُ عند الإغلاق/الفتحِ القادمِ
+                    // بلا حدثِ خادمٍ ولا لمس.
+                    BoundaryScheduler.syncPlatform(it.ordering)
+                }
         }
     }
 

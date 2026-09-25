@@ -1,6 +1,5 @@
 package com.rahalgo.ui
 
-import androidx.compose.foundation.Image
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -99,13 +98,9 @@ fun AuthScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(Modifier.height(40.dp))
-        Image(
-            painter = painterResource(com.rahalgo.design.R.drawable.intro_logo),
-            contentDescription = null,
-            modifier = Modifier.size(140.dp),
-        )
-        Spacer(Modifier.height(6.dp))
+        // **ترويسةُ الهويّة المشتركة** (Batch 5) — بقيمِ الدخولِ نفسِها
+        // (١٤٠dp/٤٠/٦) فلا يتغيّر مظهرُه.
+        AuthHeader()
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,

@@ -70,6 +70,11 @@ type ZoneHours interface {
 	// **ولا يُحسَب الموعدُ إلّا عند المنع** — **فمسارُ القبول لا يدفع
 	// ثمنَ سؤالٍ لا يُعرَض.**
 	ZoneOpen(ctx context.Context, q dbtx.Querier, zoneID string) (open bool, nextAt *time.Time, err error)
+
+	// ZoneNextCloseAt **متى تُغلَق منطقةٌ مفتوحةٌ الآن** — و`nil` حين لا جدولَ
+	// سارٍ أو حين تكون مغلقة. **يُقرأ في مسارِ العرض (التسعيرة/الإتاحة)
+	// ليُجدّد التطبيقُ نفسَه عند الحدّ** — لا في بوّابة الإنشاء.
+	ZoneNextCloseAt(ctx context.Context, q dbtx.Querier, zoneID string) (*time.Time, error)
 }
 
 // SetZoneHours **يركّب آلةَ الجداول** — **ونظيرُ `SetOffers` و`SetRouter`.**

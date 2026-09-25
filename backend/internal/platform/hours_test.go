@@ -282,3 +282,104 @@ func TestPH_DeterministicOrder(t *testing.T) {
 		}
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **حدُّ الإغلاق — NextCloseAt** (Batch 5)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ونظيرُ NextOpenAt**: متى يُغلَق المفتوحُ الآن. **يُقاس بنفسِ منطقِ
+// OpenAt** (صدرُ اليوم، وذيلُ أمسِ العابر) فلا يفترقان.
+
+func mustTime(t *testing.T, p *time.Time) time.Time {
+	t.Helper()
+	if p == nil {
+		t.Fatal("**NextCloseAt = nil ولا يُنتظَر**")
+	}
+	return *p
+}
+
+// NC-01 · إغلاقُ اليومِ العاديّ — نهايةُ الفترةِ اليوم.
+func TestNC01_SameDayClose(t *testing.T) {
+	s := Schedule{win(t, 0, "09:00", "17:00")}
+	got := mustTime(t, s.NextCloseAt(at(0, 12, 0, 0)))
+	if !got.Equal(at(0, 17, 0, 0)) {
+		t.Fatalf("**إغلاقُ اليوم**: %s ≠ %s", got, at(0, 17, 0, 0))
+	}
+}
+
+// NC-02 · العابرةُ منتصفَ الليل — صدرُها يُغلَق غداً (مثالُ المالك).
+func TestNC02_CrossMidnightHeadClosesTomorrow(t *testing.T) {
+	s := Schedule{win(t, 0, "22:00", "03:00")} // الأحد ٢٢:٠٠ ← الاثنين ٠٣:٠٠
+	got := mustTime(t, s.NextCloseAt(at(0, 23, 0, 0)))
+	want := at(1, 3, 0, 0) // الاثنين ٠٣:٠٠ — لا اليوم
+	if !got.Equal(want) {
+		t.Fatalf("**صدرُ العابرة يُغلَق غداً**: %s ≠ %s", got, want)
+	}
+}
+
+// NC-03 · ذيلُ عابرةِ أمسِ — يُغلَق اليوم (حدُّ أسبوعٍ: سبتٌ ← أحد).
+func TestNC03_CrossMidnightTailWeekWrap(t *testing.T) {
+	s := Schedule{win(t, 6, "22:00", "03:00")} // السبت ٢٢:٠٠ ← الأحد ٠٣:٠٠
+	// الأحدُ الواحدةُ ليلاً داخلَ ذيلِ فترةِ السبت.
+	got := mustTime(t, s.NextCloseAt(at(0, 1, 0, 0)))
+	want := at(0, 3, 0, 0) // الأحد ٠٣:٠٠ اليوم
+	if !got.Equal(want) {
+		t.Fatalf("**ذيلُ عابرةِ أمس يُغلَق اليوم**: %s ≠ %s", got, want)
+	}
+}
+
+// NC-04 · مغلقٌ الآن — لا حدَّ إغلاقٍ لحاله (nil).
+func TestNC04_ClosedGivesNil(t *testing.T) {
+	s := Schedule{win(t, 0, "09:00", "17:00")}
+	if got := s.NextCloseAt(at(0, 8, 0, 0)); got != nil {
+		t.Fatalf("**مغلقٌ ولا حدَّ إغلاقٍ له**، وجد: %s", got)
+	}
+	if got := s.NextCloseAt(at(0, 17, 0, 0)); got != nil { // الحدُّ خارجٌ
+		t.Fatalf("**١٧:٠٠ خارجُ الفترة (الانتهاءُ خارج)**، وجد: %s", got)
+	}
+}
+
+// NC-05 · متتالية مفتوح→مغلق→مفتوح عبر فترتين.
+func TestNC05_OpenCloseReopenSequence(t *testing.T) {
+	s := Schedule{win(t, 0, "09:00", "12:00"), win(t, 0, "14:00", "18:00")}
+	// مفتوحٌ أولاً — يُغلَق ١٢:٠٠.
+	if got := mustTime(t, s.NextCloseAt(at(0, 10, 0, 0))); !got.Equal(at(0, 12, 0, 0)) {
+		t.Fatalf("**الفترةُ الأولى تُغلَق ١٢:٠٠**: %s", got)
+	}
+	// بين الفترتين — مغلقٌ، لا حدَّ إغلاق (nil)، والفتحُ ١٤:٠٠.
+	if got := s.NextCloseAt(at(0, 12, 30, 0)); got != nil {
+		t.Fatalf("**بين الفترتين مغلقٌ بلا حدِّ إغلاق**، وجد: %s", got)
+	}
+	if got := mustTime(t, s.NextOpenAt(at(0, 12, 30, 0))); !got.Equal(at(0, 14, 0, 0)) {
+		t.Fatalf("**يُفتح ثانيةً ١٤:٠٠**: %s", got)
+	}
+	// الفترةُ الثانية — تُغلَق ١٨:٠٠.
+	if got := mustTime(t, s.NextCloseAt(at(0, 15, 0, 0))); !got.Equal(at(0, 18, 0, 0)) {
+		t.Fatalf("**الفترةُ الثانية تُغلَق ١٨:٠٠**: %s", got)
+	}
+}
+
+// NC-06 · غيرُ سارٍ ⇒ لا حدَّ إغلاقٍ (يُحذَف): المنصّةُ والمنطقة.
+func TestNC06_NotEnforcedOmitsNextClose(t *testing.T) {
+	sch := Schedule{win(t, 0, "09:00", "17:00")}
+	// المنصّة: غيرُ سارٍ ⇒ مفتوحةٌ بلا حدّ.
+	if st := Decide(at(0, 12, 0, 0), false, sch, Closure{}); st.NextCloseAt != nil {
+		t.Fatalf("**منصّةٌ غيرُ ساريةٍ لا حدَّ إغلاقٍ لها**، وجد: %s", st.NextCloseAt)
+	}
+	// المنصّة: سارٍ ومفتوحٌ ⇒ حدٌّ موجود.
+	if st := Decide(at(0, 12, 0, 0), true, sch, Closure{}); st.NextCloseAt == nil {
+		t.Fatal("**منصّةٌ ساريةٌ مفتوحةٌ يجب أن يُعرَف إغلاقُها**")
+	}
+	// المنطقة: غيرُ ساريةٍ ⇒ لا حدّ.
+	if zs := DecideZone(at(0, 12, 0, 0), false, sch); zs.NextCloseAt != nil {
+		t.Fatalf("**منطقةٌ غيرُ ساريةٍ لا حدَّ إغلاقٍ لها**، وجد: %s", zs.NextCloseAt)
+	}
+	// المنطقة: ساريةٌ ومفتوحةٌ ⇒ حدٌّ موجودٌ، ولا NextOpenAt.
+	zs := DecideZone(at(0, 12, 0, 0), true, sch)
+	if zs.NextCloseAt == nil {
+		t.Fatal("**منطقةٌ ساريةٌ مفتوحةٌ يجب أن يُعرَف إغلاقُها**")
+	}
+	if zs.NextOpenAt != nil {
+		t.Fatalf("**ومفتوحةٌ لا موعدَ فتحٍ لها**، وجد: %s", zs.NextOpenAt)
+	}
+}
