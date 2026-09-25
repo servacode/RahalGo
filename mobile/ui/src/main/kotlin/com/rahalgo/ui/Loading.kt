@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -75,7 +77,6 @@ fun RahalLoader(size: Dp = 64.dp, modifier: Modifier = Modifier) {
     )
 
     val brand = Rahal.colors.brand
-    val accent = Rahal.colors.accent
 
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -97,11 +98,18 @@ fun RahalLoader(size: Dp = 64.dp, modifier: Modifier = Modifier) {
                     style = Stroke(width = maxR * 0.06f),
                 )
             }
-
-            // **والقلبُ ثابتٌ لا ينبض** — نقطةٌ تتحرّك وموجاتٌ حولها
-            // **تُقرأ شيئين يتنازعان العين.**
-            drawCircle(color = accent, radius = maxR * 0.22f, center = c)
         }
+
+        // **والقلبُ شعارُ رحّال غو نفسُه** (قرار المالك ٢٠٢٦-٠٩-٢٦: «خلّي
+        // اللوغو بالنص») — الرسميُّ نفسُه (`intro_logo`)، ثابتٌ في المركز
+        // والموجاتُ تصدر من خلفِه، **فيُقرأ الانتظارُ صادراً عن العلامة
+        // لا عن نقطةٍ غُفل.** حجمُه نصفُ قطر العدّة فلا يقصّ الموجاتِ ولا
+        // يشوّه بنسبةٍ ثابتة (`ContentScale.Fit` افتراضاً).
+        Image(
+            painter = painterResource(com.rahalgo.design.R.drawable.intro_logo),
+            contentDescription = null,
+            modifier = Modifier.size(size * 0.5f),
+        )
     }
 }
 

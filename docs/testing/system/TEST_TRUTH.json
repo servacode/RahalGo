@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 147,
-    "behaviour_settings": 119,
+    "setting_defs": 148,
+    "behaviour_settings": 120,
     "order_fields": 83,
-    "test_files": 381,
-    "test_funcs": 1618
+    "test_files": 382,
+    "test_funcs": 1629
   },
   "flows": [
     {
@@ -3465,6 +3465,25 @@
       "kind": "int",
       "sensitive": false,
       "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.cod_limit",
+      "group": "customers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
       "flows": [
         "F-01",
         "F-17"
@@ -10542,6 +10561,72 @@
     {
       "name": "TestCITY_071_CitiesAreAdminOnly",
       "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD01_BelowLimitAllowed",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD02_SingleAboveLimitRejected",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD04_ExistingPlusNewExceeds",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD05_ExistingPlusNewWithinLimit",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD06_TerminalReleasesCapacity",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD07_ConcurrentCannotExceed",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD08_WalletAllowedWhenCashBlocked",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD10_CustomConfirmOverLimitRejected",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD11_CustomWalletConfirmUnaffected",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD12_SettingChangeTakesEffectLive",
+      "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCOD14_RejectedLeavesNothing",
+      "file": "internal/qa/cod_limit_test.go",
       "package": "qa",
       "orphan": true
     },

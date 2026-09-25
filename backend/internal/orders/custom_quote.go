@@ -281,6 +281,21 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 		if blocked {
 			return nil, ErrCashBlocked
 		}
+		// **وسقفُ النقد غيرِ المسدَّدِ بذمّة الزبون** (`COD`) — عند التأكيد
+		// لا عند الإنشاء: **السعرُ لا يُعرف قبل عرض السائق**، وهنا صار
+		// `current` هو المتّفَقَ عليه. **ويُعقد قفلُ `customer-admit:` نفسُه**
+		// الذي يعقده إنشاءُ الطلب العاديّ، فلا يسابق تأكيدٌ خاصٌّ إنشاءً
+		// عاديّاً على المتّسع (`COD-07`)؛ والصفُّ مقفولٌ (`FOR UPDATE`) فلا
+		// تأكيدان لطلبٍ واحد. **والطلبُ القائمُ يُستثنى من المجموع** بمعرّفه
+		// فلا يُحسب مرّتين، **وقبل كتابة أعمدة التأكيد** فالردُّ لا يخلّف أثراً.
+		if _, err := tx.Exec(ctx,
+			`SELECT pg_advisory_xact_lock(hashtext($1))`,
+			"customer-admit:"+customerID); err != nil {
+			return nil, err
+		}
+		if err := s.on(tx).checkCODLimit(ctx, tx, customerID, orderID, current); err != nil {
+			return nil, err
+		}
 	} else { // wallet
 		avail, err := s.wallet.AvailableTx(ctx, tx, customerID)
 		if err != nil {

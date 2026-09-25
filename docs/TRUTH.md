@@ -660,6 +660,7 @@
 | `customers.max_addresses` |  | int | `10` |
 | `customers.cash_ban_failures` |  | int | `1` |
 | `customers.cash_ban_days` |  | int | `30` |
+| `customers.cod_limit` |  | money | `0` |
 | `customers.require_whatsapp` |  | bool | `false` |
 | `customers.signup_bonus` |  | money | `0` |
 | `app.min_version.driver` | السائقون | int | `0` |

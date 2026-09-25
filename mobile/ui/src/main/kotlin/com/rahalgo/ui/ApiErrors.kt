@@ -317,6 +317,9 @@ private val CODES: Map<String, Int> = mapOf(
     // **والدفعُ نقداً موقوفٌ مؤقّتاً** — (٢٠٢٦-٠٨-٢٣). **والرسالةُ
     // تقول البديل**: المحفظةُ مفتوحةٌ له.
     "cash_blocked" to R.string.err_cash_blocked,
+    // **وسقفُ نقد الزبون غيرِ المسدَّد** — غيرُ سقف السائق (`cash_limit_exceeded`):
+    // **قيمةُ الطلب تعبر ما يُسمح به نقداً عند الاستلام**، والمحفظةُ بديلٌ.
+    "cod_limit_exceeded" to R.string.err_cod_limit_exceeded,
     "multi_source_order" to R.string.err_multi_source_order,
     "too_many_sources" to R.string.err_too_many_sources,
     "item_unavailable" to R.string.err_item_unavailable,

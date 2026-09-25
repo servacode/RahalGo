@@ -513,6 +513,7 @@
          **ولا تقول «لأنك رفضت الاستلام»**: تُقرأ اتّهاماً، والغرضُ
          حمايةُ المال لا التوبيخ. -->
     <string name="err_cash_blocked">الدفع نقداً موقوف لحسابك حالياً — أكمل طلبك من محفظتك</string>
+    <string name="err_cod_limit_exceeded">قيمة الطلب تتجاوز الحد المسموح للدفع عند الاستلام.</string>
     <string name="err_multi_source_order">تعذر تحديد مصدر بعض الأصناف</string>
     <string name="err_too_many_sources">أصناف سلتك من مصادر أكثر من المسموح</string>
     <string name="err_item_unavailable">أحد الأصناف غير متوفر حاليا</string>

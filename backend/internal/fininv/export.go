@@ -71,6 +71,7 @@ var FinancialSettings = []string{
 	"delivery.custom_fee",                   // orders/custom.go — أجرةُ المخصَّص حين تحدّدها المنصة
 	"delivery.custom_driver_may_change_fee", // orders/custom.go — هل يغيّرها السائق
 	"drivers.cash_limit",                    // cashbox.go:52  — سقفُ النقد
+	"customers.cod_limit",                   // orders/service.go — سقفُ نقد الزبون غيرِ المسدَّد
 	"payouts.min_amount",                    // payout_handlers.go:120
 	"customers.signup_bonus",                // referrals.go:443
 	"referral.reward_1",

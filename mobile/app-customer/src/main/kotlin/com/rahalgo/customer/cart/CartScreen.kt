@@ -517,6 +517,35 @@ fun CartScreen(
         if (vm.error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             Note(vm.error, Rahal.colors.danger)
+            // ══════════════════════════════════════════════════════════════
+            // **وسقفُ الدفع نقداً يُتبَع ببابِ خروجٍ لا برسالةٍ صمّاء** (`COD`)
+            // ══════════════════════════════════════════════════════════════
+            //
+            // **البديلان حاضران**: المحفظةُ خيارٌ فعّالٌ فوق إن غطّت، **وبابُ
+            // واتساب للدعم برسالةٍ مهيّأة** — والرقمُ مركزيٌّ من المنصّة
+            // (`ContactPage` تقرؤه كذلك) لا مكتوبٌ هنا. **ولا يُعرَض إن لم
+            // يصل الرقمُ بعد** فلا زرَّ ميّت.
+            if (vm.errorCode == "cod_limit_exceeded") {
+                val wa = vm.supportWhatsapp.filter(Char::isDigit)
+                if (wa.isNotEmpty()) {
+                    val ctx = LocalContext.current
+                    val prefill = stringResource(R.string.cod_whatsapp_prefill)
+                    Spacer(Modifier.height(8.dp))
+                    RahalTextButton(onClick = {
+                        val url = "https://wa.me/" + wa + "?text=" + android.net.Uri.encode(prefill)
+                        runCatching {
+                            ctx.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(url),
+                                ),
+                            )
+                        }
+                    }) {
+                        Text(stringResource(R.string.cta_contact_whatsapp))
+                    }
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -752,6 +781,20 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /**
+     * **رمزُ آخرِ خطأٍ من المحرّك** — لتمييز سقف الدفع نقداً (`cod_limit_exceeded`)
+     * فيُتبَع ببابِ واتساب، دون أن يُغيَّر نصُّ الرسالة.
+     */
+    var errorCode by mutableStateOf("")
+        private set
+
+    /**
+     * **رقمُ واتساب المركزيُّ للدعم** — من المنصّة لا مكتوبٌ هنا (`ContactPage`
+     * تقرؤه كذلك). يُجلب عند سقف النقد وحدَه فلا يُثقَل كلُّ فتحِ سلّة.
+     */
+    var supportWhatsapp by mutableStateOf("")
+        private set
+
+    /**
      * **أُرسل ولا نعلم أوصل؟** (`SR-07`)
      *
      * **وتقرؤها الشاشةُ فتقول «تحقّق من طلباتك»** — **لا «فشل
@@ -893,6 +936,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 priced = it
                 changes = it.changes
                 error = ""
+                errorCode = ""
                 // **ومُوقِّتُ الحدِّ يُعاد تسليحُه على حدِّ منطقةِ السلّة** (Batch 5)
                 // — من التسعيرة نفسِها، فتنقلب السلّةُ عند الإغلاقِ القادمِ بلا لمس.
                 com.rahalgo.customer.BoundaryScheduler.syncZone(it.availability)
@@ -906,6 +950,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 // **وعطبُ نداءٍ لعنوانٍ غادره لا يُعرَض على عنوانِه.**
                 if (lastPoint != point) return@onFailure
                 error = apiError(getApplication(), it as Exception)
+                // **والتسعيرةُ لا تُنشئ طلباً** فلا سقفَ نقدٍ منها — يُصفَّر الرمز.
+                errorCode = ""
             }
         }
     }
@@ -921,6 +967,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         if (busy) return
         busy = true
         error = ""
+        errorCode = ""
         // **ولا يُرسَل كودٌ لم يُطبَّق ويُعرَض أثرُه** — `CUST-DEF-005`:
         // **`typePromo` يمحو النتيجةَ عند كلّ تعديل**، فوجودُ نتيجةٍ سارية
         // يعني أنّ هذا النصَّ بعينِه طُبِّق وعُرض خصمُه. **وكودٌ مكتوبٌ بلا
@@ -970,6 +1017,13 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                     uncertain = true
                 }
                 error = apiError(getApplication(), e)
+                errorCode = (e as? com.rahalgo.shared.net.ApiClient.ApiException)?.body?.code ?: ""
+                // **وسقفُ الدفع نقداً يفتح بابَ الدعم** — الرقمُ المركزيُّ من
+                // المنصّة، يُجلب عند الحاجة وحدَها (لا مع كلّ إرسال).
+                if (errorCode == "cod_limit_exceeded" && supportWhatsapp.isEmpty()) {
+                    runCatching { auth.platform() }
+                        .onSuccess { supportWhatsapp = it.social.whatsapp }
+                }
             }
             busy = false
         }

@@ -602,6 +602,20 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	cashDue := total - walletPaid
 
 	// ══════════════════════════════════════════════════════════════
+	// **وسقفُ النقد غيرِ المسدَّدِ بذمّة الزبون** — `COD`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **تحت قفل `customer-admit:` المعقودِ آنفاً** — فطلبان نقديّان
+	// متزامنان لا يقرآن المتّسعَ نفسَه فيعبرانه معاً. **والطلبُ لم يُدرَج
+	// بعد** فلا شيءَ يُستثنى من المجموع، **وقبل أيِّ كتابةٍ** فالردُّ لا
+	// يخلّف طلباً ولا قيداً.
+	if in.PaymentMethod == "cash" {
+		if err := unit.checkCODLimit(ctx, tx, customerID, "", cashDue); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// ══════════════════════════════════════════════════════════════
 	// **ولقطةُ الاقتصاد تُكتب مع الطلب لا بعده** — `XQ-2`
 	// ══════════════════════════════════════════════════════════════
 	//
@@ -1157,6 +1171,63 @@ func (s *Service) checkOpenLimit(ctx context.Context, q dbtx.Querier, customerID
 	}
 	if open >= cap {
 		return ErrTooManyOpen
+	}
+	return nil
+}
+
+// checkCODLimit **سقفُ النقد غيرِ المسدَّدِ بذمّة الزبون — للطلب العاديّ والخاصّ معاً.**
+//
+// # ولماذا مجموعٌ لا طلبٌ واحد
+//
+// **سقفٌ على الطلب الواحد وحدَه يُلتفّ عليه بالتفريق**: شراءٌ كبيرٌ يُقسَّم
+// طلباتٍ صغيرةً نقديّةً فيمرّ كلُّها. **فالحدُّ على المجموع**: ما بذمّته من
+// نقدٍ مفتوحٍ (`incoming` مستثنًى منه إن كان طلباً قائماً يُؤكَّد) **زائدَ**
+// نقدِ هذا الطلب.
+//
+// # وقيمةُ النقد تختلف بنوع الطلب
+//
+// **العاديُّ يحمل نقدَه في `cash_due`، والخاصُّ في `total`** (نقدُ الخاصّ
+// لا يُكتب في `cash_due` بل يبقى صفراً) — **فالمجموعُ يفرّق بينهما بـ`kind`.**
+// والمحفظيُّ نقدُه صفرٌ فلا يدخل أصلاً (`payment_method='cash'`).
+//
+// # وعلى المفتوح لا على ما مضى
+//
+// **`closed_at IS NULL`** — القاعدةُ نفسُها التي يقيس بها `checkOpenLimit`:
+// المُسلَّمُ (قُبض نقدُه) والمُلغى والمرفوضُ والفاشلُ كلُّها أُغلقت فخرجت،
+// **فيتّسع للزبون بقدر ما يُغلق.**
+//
+// **والقفلُ على الزبون معقودٌ قبل النداء** (`customer-admit:`) — فطلبان
+// متزامنان لا يقرآن السقفَ نفسَه فيمرّان معاً (`COD-07`). والصفرُ يُطفئ
+// الحارسَ. **ويُقرأ الإعدادُ بمنفّذ المعاملة** (`s` وحدةٌ مربوطةٌ بها) —
+// فلا وصلةَ ثانيةٌ تُطلَب والأولى بيده (`XG-46`).
+func (s *Service) checkCODLimit(ctx context.Context, q dbtx.Querier, customerID, excludeOrderID string, incoming int64) error {
+	if incoming <= 0 {
+		return nil
+	}
+	limit := s.settingInt(ctx, "customers.cod_limit")
+	if limit <= 0 {
+		return nil
+	}
+	// **الطلبُ القائمُ الذي يُؤكَّد يُستثنى من المجموع** — وإلّا حُسب مرّتين:
+	// مرّةً في `current` ومرّةً في `incoming`. **والعاديُّ لم يُدرَج بعد فلا
+	// شيءَ يُستثنى** — يُمرَّر معرّفٌ صفريٌّ لا يطابق أيَّ طلبٍ حقيقيّ.
+	exclude := excludeOrderID
+	if exclude == "" {
+		exclude = "00000000-0000-0000-0000-000000000000"
+	}
+	var current int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(SUM(CASE WHEN kind = 'custom' THEN total ELSE cash_due END), 0)
+		FROM orders
+		WHERE customer_id = $1::uuid
+		  AND payment_method = 'cash'
+		  AND closed_at IS NULL
+		  AND id <> $2::uuid`,
+		customerID, exclude).Scan(&current); err != nil {
+		return err
+	}
+	if current+incoming > limit {
+		return ErrCODLimitExceeded
 	}
 	return nil
 }
