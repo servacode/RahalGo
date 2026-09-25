@@ -332,6 +332,9 @@ var qaOTPPhones = func() map[string]bool {
 	for _, p := range qaSignupWitnessPhones {
 		m[p] = true // أرقامُ شاهدِ «ضاع الرد» — تسجيلٌ ثابتٌ متعدّد
 	}
+	for _, p := range qaRefWitnessPhones {
+		m[p] = true // أرقامُ شاهدِ الإحالة من الواجهة (٩٨٠–٩٨٤) — signup + whatsapp
+	}
 	return m
 }()
 var qaOTPPurposes = map[string]bool{

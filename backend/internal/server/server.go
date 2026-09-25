@@ -489,7 +489,20 @@ func (s *Server) Router() http.Handler {
 			r.Post("/qa/custom-agree", s.handleQACustomAgree)
 			r.Post("/qa/custom-override", s.handleQACustomOverride)
 			r.Post("/qa/custom-cleanup", s.handleQACustomCleanup)
-			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed; GET /qa/reconcile)")
+			// ── جسرُ شاهدِ فهرس القِسم (Batch 5، Customer Final) ──────────────
+			//
+			// **يمرّ بمعالِجاتِ الأدمن الحقيقيّةِ عينِها ووسيطِ `announceWrites`
+			// عينِه** — نفسُ التحقّقِ، نفسُ الحفظِ، نفسُ نشرِ `TopicCatalog` —
+			// **لا تطبيقٌ ثانٍ ولا SQL خامّ**. يُخطّي حرّاسَ الأدمن (القدرة/الخطوة)
+			// وحدَها، فالمسارُ الطافرُ هو مسارُ الإنتاجِ إلّا التخويلَ. **staging-only**
+			// (المسارُ غيرُ مسجَّلٍ في الإنتاج ⇒ 404).
+			r.Group(func(r chi.Router) {
+				r.Use(s.announceWrites)
+				r.Post("/qa/catalog/sections", s.handleCreatePlatformSection)
+				r.Patch("/qa/catalog/sections/{id}", s.handleUpdatePlatformSection)
+				r.Delete("/qa/catalog/sections/{id}", s.handleDeletePlatformSection)
+			})
+			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed, /qa/catalog/sections; GET /qa/reconcile)")
 		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 362,
+    "routes": 365,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 147,
     "behaviour_settings": 119,
     "order_fields": 83,
-    "test_files": 380,
-    "test_funcs": 1617
+    "test_files": 381,
+    "test_funcs": 1618
   },
   "flows": [
     {
@@ -22358,6 +22358,12 @@
     {
       "name": "TestQAReferralUIWitnessGuards",
       "file": "internal/server/qa_batch5b_referral_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQACatalogBridgeGuards",
+      "file": "internal/server/qa_catalog_bridge_guard_test.go",
       "package": "server",
       "orphan": true
     },

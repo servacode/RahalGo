@@ -50,9 +50,20 @@ var qaRefUISaved struct {
 	prevRewardOn string
 }
 
-// qaRefInviteePhonesUI المدعوّون الخمسةُ عبر المسار الحقيقيّ — أرقامُ شاهدِ
-// التسجيل نفسُها (في `qaOTPPhones`)، والترتيبُ يعطي الرتبَ ١..٥.
-func qaRefInviteePhonesUI() []string { return qaSignupWitnessPhones }
+// qaRefWitnessPhones **خمسةُ أرقامٍ محجوزةٌ نظيفةٌ لشاهد الإحالة من الواجهة** —
+// **لم تُستعمل قطّ** (قرار المالك ٢٠٢٦-٠٩-٢٥): لا تُعاد أرقامُ شاهدِ التسجيل
+// (٩٩٠–٩٩٤) لأنّ لها التزاماتٍ تاريخيّةً من الدفعة الرابعة تمنع تجهيلَها.
+// **مضافةٌ إلى `qaOTPPhones`** (signup + whatsapp)، والترتيبُ يعطي الرتبَ ١..٥.
+var qaRefWitnessPhones = []string{
+	"+963900555980",
+	"+963900555981",
+	"+963900555982",
+	"+963900555983",
+	"+963900555984",
+}
+
+// qaRefInviteePhonesUI المدعوّون الخمسةُ عبر المسار الحقيقيّ.
+func qaRefInviteePhonesUI() []string { return qaRefWitnessPhones }
 
 // qaReferralUIArm يضبط الرتبَ ويُخلي أرقامَ المدعوّين لتسجيلٍ نظيف.
 func (s *Server) qaReferralUIArm(w http.ResponseWriter, r *http.Request) {
