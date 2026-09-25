@@ -258,6 +258,10 @@ fun AuthGate(
                 confirm = vm::confirmSignup,
                 cancel = vm::closeSignup,
                 onReconnected = vm::signupConnectivityRestored,
+                // **استعادةٌ عند `phone_taken`** (Batch 4، SG1) — لا طريقٌ مسدود.
+                toLogin = vm::recoverToLogin,
+                toReset = vm::recoverToReset,
+                toOtp = vm::recoverToOtp,
             ),
         )
 

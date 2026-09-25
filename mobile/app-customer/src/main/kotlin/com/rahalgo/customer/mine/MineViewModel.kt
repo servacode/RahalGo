@@ -10,6 +10,7 @@ import com.rahalgo.customer.CustomerItems
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.Ticket
 import com.rahalgo.shared.customer.TicketDetail
+import com.rahalgo.shared.model.ComplaintBrief
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Offer
 import com.rahalgo.shared.model.Referral
@@ -149,6 +150,10 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
     var tickets by mutableStateOf<List<Ticket>?>(null)
         private set
 
+    /** **بلاغاتٌ ضدّي** (Batch 4، C2) — مُقنَّعةٌ (بلا اسمِ مُبلِّغ) من `/me/reputation`. */
+    var againstMe by mutableStateOf<List<ComplaintBrief>?>(null)
+        private set
+
     // ══════════════════════════════════════════════════════════════════
     // **تفصيلُ شكوًى بعينها وخيطُ ردودها** (`SUP-013`/`014`، PRQ-2)
     // ══════════════════════════════════════════════════════════════════
@@ -250,7 +255,12 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
                 if (force || referral == null) load { referral = api.referral() }
 
             CustomerItems.TICKETS ->
-                if (force || tickets == null) load { tickets = api.tickets().tickets }
+                if (force || tickets == null) load {
+                    tickets = api.tickets().tickets
+                    // **وبلاغاتٌ ضدّي** (C2) — تبويبٌ منفصلٌ مُقنَّع؛ وسقوطُها لا
+                    // يُسقط شكاواه (المُقدَّمةُ هي الأساس).
+                    againstMe = runCatching { api.reputation().complaints }.getOrDefault(emptyList())
+                }
         }
     }
 

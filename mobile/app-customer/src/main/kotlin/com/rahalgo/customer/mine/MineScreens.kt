@@ -478,8 +478,9 @@ private fun Tickets(vm: MineViewModel) {
     // ══════════════════════════════════════════════════════════════════
     // **والشاشةُ من `:ui`** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: مركزيّةٌ للثلاثة).
     //
-    // **وبلا تبويبين هنا**: الزبونُ يشتكي ولا تُعرض عليه شكوى، **وتبويبٌ
-    // فارغٌ أبداً يُعلّم صاحبَه ألّا ينظر.**
+    // **وتبويبان الآن** (Batch 4، C2): «شكاوى قدّمتها» و«بلاغات ضدّي». كان
+    // يُفترَض أنّ الزبونَ لا يُشتكى عليه — **والسائقُ يُبلّغ عنه**، فبلاغُه كان
+    // يتسلّل إلى قائمة شكاواه (تسريب). فصار له تبويبٌ مُقنَّعٌ (بلا اسمِ مُبلِّغ).
     TicketsScreen(
         title = stringResource(R.string.menu_tickets_title),
         hint = stringResource(R.string.soon_tickets),
@@ -493,6 +494,17 @@ private fun Tickets(vm: MineViewModel) {
             )
         },
         mineEmpty = stringResource(R.string.tkt_none),
+        // **بلاغاتٌ ضدّي — مُقنَّعة**: لا معرّفَ يُفتَح (خيطٌ مخفيّ) ولا اسمَ
+        // مُبلِّغ؛ موضوعٌ وحالٌ ورقمُ طلبٍ فقط.
+        againstMe = vm.againstMe.orEmpty().map { c ->
+            TicketRow(
+                key = "#" + c.number,
+                title = c.subject,
+                status = c.status,
+                orderNumber = c.orderNumber?.toString().orEmpty(),
+            )
+        },
+        againstMeEmpty = stringResource(R.string.tkt_against_none),
         onOpen = { row -> vm.openTicket(row.id) },
     )
 }

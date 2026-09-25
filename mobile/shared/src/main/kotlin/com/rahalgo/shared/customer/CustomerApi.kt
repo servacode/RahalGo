@@ -8,6 +8,7 @@ import com.rahalgo.shared.model.ItemsPage
 import com.rahalgo.shared.model.OffersPage
 import com.rahalgo.shared.model.Quote
 import com.rahalgo.shared.model.Referral
+import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
@@ -346,6 +347,14 @@ class CustomerApi(private val api: ApiClient) {
 
     /** **شكاواه وأين وصلت** — ومن اشتكى ولم يرَ جواباً ظنّ شكواه ضاعت. */
     suspend fun tickets(): TicketsPage = api.call("/api/v1/my/tickets")
+
+    /**
+     * **سمعتُه — ومنها «بلاغاتٌ ضدّي» المُقنَّعة** (Batch 4، C2).
+     *
+     * **يردّ `complaints` بلا اسمِ مُبلِّغ** (خصومةٌ تُحقَّق، وكشفُ المُبلِّغ يفتح
+     * باباً للردّ خارجَ المنصّة) — نفسُ نداءِ السائق والمتجر.
+     */
+    suspend fun reputation(): Reputation = api.call("/api/v1/me/reputation")
 
     /** **تذكرتي بردودها** — `CUST-SUP-013` (PRQ-2). */
     suspend fun myTicket(id: String): TicketDetail = api.call("/api/v1/my/tickets/$id")

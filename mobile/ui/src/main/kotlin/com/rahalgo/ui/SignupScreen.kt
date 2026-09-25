@@ -209,52 +209,81 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             }
         }
 
-        if (state.error.isNotEmpty()) {
+        if (state.recovery) {
+            // ══════════════════════════════════════════════════════════════
+            // **رقمٌ لحسابٍ موجود — لا طريقٌ مسدود** (Batch 4، SG1)
+            // ══════════════════════════════════════════════════════════════
+            //
+            // **بدلاً من «الرقم مستعمل» الساكنة**: خياراتُ استعادةٍ صريحة.
+            // **ولا دخولٌ أعمى هنا**: الدخولُ التلقائيُّ لا يقع إلّا في سياق
+            // ضياعِ ردِّ تسجيلٍ بدأه العميلُ نفسُه (يُعالَج في النموذج).
             Spacer(Modifier.height(14.dp))
             Text(
-                text = state.error,
-                color = Rahal.colors.accent,
+                text = stringResource(R.string.signup_taken_title),
+                color = Rahal.colors.ink,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
-        }
-
-        Spacer(Modifier.height(24.dp))
-        RahalButton(
-            onClick = {
-                when (state.step) {
-                    SignupStep.PHONE -> actions.sendCode()
-                    SignupStep.CODE -> actions.verifyCode(code.trim())
-                    SignupStep.DETAILS -> actions.confirm(name.trim(), password, referral.trim())
-                }
-            },
-            enabled = !state.busy && when (state.step) {
-                SignupStep.PHONE -> state.phone.isNotBlank()
-                SignupStep.CODE -> code.isNotBlank()
-                // **والزرُّ لا يعمل حتّى تتطابق الكلمتان** — ورسالةُ
-                // خطأٍ بعد الضغط أسوأُ من زرٍّ يقول «لم تكتمل بعد».
-                SignupStep.DETAILS ->
-                    name.isNotBlank() && password.isNotBlank() && password2 == password
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (state.busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
+            Spacer(Modifier.height(16.dp))
+            RahalButton(onClick = actions.toLogin, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.signup_recover_login))
+            }
+            Spacer(Modifier.height(8.dp))
+            RahalTextButton(onClick = actions.toOtp) {
+                Text(stringResource(R.string.signup_recover_otp))
+            }
+            Spacer(Modifier.height(4.dp))
+            RahalTextButton(onClick = actions.toReset) {
+                Text(stringResource(R.string.signup_recover_reset))
+            }
+        } else {
+            if (state.error.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
                 Text(
-                    stringResource(
-                        when (state.step) {
-                            // **ويقول ما سيفعل** — انظر `needsCode`:
-                            // **«متابعة» حين لا رمزَ يُطلب**، فلا يَعِد
-                            // بواتساب لا يُفتح.
-                            SignupStep.PHONE ->
-                                if (state.needsCode) R.string.auth_verify_account
-                                else R.string.auth_continue
-                            SignupStep.CODE -> R.string.reset_verify
-                            SignupStep.DETAILS -> R.string.signup_create
-                        },
-                    ),
+                    text = state.error,
+                    color = Rahal.colors.accent,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            RahalButton(
+                onClick = {
+                    when (state.step) {
+                        SignupStep.PHONE -> actions.sendCode()
+                        SignupStep.CODE -> actions.verifyCode(code.trim())
+                        SignupStep.DETAILS -> actions.confirm(name.trim(), password, referral.trim())
+                    }
+                },
+                enabled = !state.busy && when (state.step) {
+                    SignupStep.PHONE -> state.phone.isNotBlank()
+                    SignupStep.CODE -> code.isNotBlank()
+                    // **والزرُّ لا يعمل حتّى تتطابق الكلمتان** — ورسالةُ
+                    // خطأٍ بعد الضغط أسوأُ من زرٍّ يقول «لم تكتمل بعد».
+                    SignupStep.DETAILS ->
+                        name.isNotBlank() && password.isNotBlank() && password2 == password
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (state.busy) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(
+                        stringResource(
+                            when (state.step) {
+                                // **ويقول ما سيفعل** — انظر `needsCode`:
+                                // **«متابعة» حين لا رمزَ يُطلب**، فلا يَعِد
+                                // بواتساب لا يُفتح.
+                                SignupStep.PHONE ->
+                                    if (state.needsCode) R.string.auth_verify_account
+                                    else R.string.auth_continue
+                                SignupStep.CODE -> R.string.reset_verify
+                                SignupStep.DETAILS -> R.string.signup_create
+                            },
+                        ),
+                    )
+                }
             }
         }
 
@@ -297,6 +326,12 @@ data class SignupState(
      * (`CUST-DEF-011`)، **وأخطاءُ التحقّق تبقى** فليست من الشبكة.
      */
     val offlineError: Boolean = false,
+    /**
+     * **رقمٌ لحساب موجود** (Batch 4، SG1): يُعرَض بدلاً من رسالة الخطأ لوحُ
+     * استعادةٍ — دخولٌ/استعادةُ كلمةٍ/دخولٌ برمز — لا طريقٌ مسدود عند
+     * `phone_taken`. **ويُعرَض بعد فشلِ الدخولِ التلقائيّ** في سياق الضياع.
+     */
+    val recovery: Boolean = false,
 )
 
 data class SignupActions(
@@ -307,4 +342,10 @@ data class SignupActions(
     val cancel: () -> Unit,
     /** **عاد الاتّصال** — تُمحى رسالةُ الانقطاعِ الحقليّةُ (`CUST-DEF-011`). */
     val onReconnected: () -> Unit,
+    /** **الرقمُ لحسابٍ موجود ⇒ إلى الدخول بكلمة المرور** (بالرقمِ مُعبّأً). */
+    val toLogin: () -> Unit = {},
+    /** **⇒ استعادةُ كلمة المرور.** */
+    val toReset: () -> Unit = {},
+    /** **⇒ الدخولُ برمز.** */
+    val toOtp: () -> Unit = {},
 )

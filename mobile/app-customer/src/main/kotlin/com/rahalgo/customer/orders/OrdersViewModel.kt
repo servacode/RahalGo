@@ -19,6 +19,10 @@ import com.rahalgo.ui.apiError
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
+// **مفتاحُ القائمةِ الدائمةِ لِما سُئل تلقائيّاً** (Batch 4) — في
+// SharedPreferences، فلا يُعاد سؤالُ الطلبِ نفسِه بعد إعادةِ التشغيل.
+private const val KEY_AUTO_PROMPTED = "auto_prompted"
+
 /**
  * ══════════════════════════════════════════════════════════════════════
  * **طلباتُ الزبون — الجاري وحدَه أو المنتهي وحدَه**
@@ -82,19 +86,33 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     //
     // **واللحظةُ التي يُقيَّم فيها هي لحظةُ الاستلام** — وبعدها بساعةٍ
     // يكون قد نسي.
+    // ══════════════════════════════════════════════════════════════════
+    // **سؤالٌ تلقائيٌّ مرّةً واحدة — ثمّ الزرُّ لمن أراد** (Batch 4)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الطلبُ المسلَّمُ غيرُ المقيَّم يُسأل تلقائيّاً مرّةً واحدةً فقط.** وإغلاقُ
+    // النافذة (رجوع) يُثبَّت دائماً فلا يعود يُسأل عند الإقلاعِ الباردِ أو
+    // العودةِ أو النبضةِ أو إعادةِ الوصلِ أو تبديلِ اللسانِ أو إعادةِ التشغيل.
+    // **والزرُّ «قيّم الطلب» يبقى في بطاقة الطلب المسلَّم** (`OrdersScreen.onRate`،
+    // محكومٌ بـ `!in rated` لا بالسؤال التلقائيّ) فلا يُحرَم التقييمَ لاحقاً.
     var askRate by mutableStateOf<MyOrder?>(null)
         private set
 
-    /**
-     * **ومن أُغلقت نافذتُه لا يُسأل ثانيةً في هذه الجلسة.**
-     *
-     * **وسؤالٌ يتكرّر كلّما فُتح التطبيقُ عقوبةٌ لا طلبُ رأي** —
-     * **والزرُّ يبقى في بطاقته** لمن أراد بعدها.
-     */
-    private var skipped = setOf<String>()
+    // **والتخزينُ دائمٌ ومحدود** (SharedPreferences): يُقلَّم في كلّ جلبٍ إلى ما
+    // في السجلّ الحاليِّ وغيرِ المقيَّم، فلا ينمو بلا حدّ.
+    private val prefs = app.getSharedPreferences("rate_prompts", Application.MODE_PRIVATE)
+    private var autoPrompted: Set<String> =
+        runCatching { prefs.getStringSet(KEY_AUTO_PROMPTED, emptySet())!!.toSet() }.getOrDefault(emptySet())
 
-    fun skipRate() {
-        askRate?.let { skipped = skipped + it.id }
+    // **ولا يُسأل إلّا طلبٌ واحدٌ في الجلسة** — فلا تتوالى النوافذ.
+    private var autoPromptShownThisSession = false
+
+    private fun persistAutoPrompted() {
+        runCatching { prefs.edit().putStringSet(KEY_AUTO_PROMPTED, autoPrompted).apply() }
+    }
+
+    /** **يُغلق نافذةَ السؤال التلقائيّ** — والطلبُ مُثبَّتٌ سلفاً فلا يُسأل ثانيةً. */
+    fun dismissRate() {
         askRate = null
     }
 
@@ -181,10 +199,30 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     api.ratings().ratings.filter { it.rated }.map { it.orderId }.toSet()
                 }.getOrDefault(rated)
 
-                // **والأحدثُ أوّلا** — من سُلّم له طلبان يُسأل عن
-                // آخرِهما: **هو ما يذكره.**
-                askRate = history.firstOrNull {
-                    it.status == "delivered" && it.id !in rated && it.id !in skipped
+                // **تُقلَّم القائمةُ الدائمة** — يُطرح ما قُيّم (كفاه الخادمُ) وما
+                // خرج من السجلّ الحاليّ، فتبقى محدودةً بحجم السجلّ لا تنمو.
+                val historyIds = history.map { it.id }.toSet()
+                val prunedPrompted = autoPrompted.intersect(historyIds) - rated
+                if (prunedPrompted != autoPrompted) {
+                    autoPrompted = prunedPrompted
+                    persistAutoPrompted()
+                }
+
+                // **سؤالٌ تلقائيٌّ واحدٌ في الجلسة، ومرّةً واحدةً لكلّ طلب.**
+                // **الأحدثُ المسلَّمُ غيرُ المقيَّم ولم يُسأل** — يُثبَّت فورَ
+                // اختياره فلا يُسأل ثانيةً ولو مات التطبيقُ قبل أن يُغلَق.
+                // **ولا تُعاد النافذةُ على نبضةٍ أو إعادةِ وصلٍ أو عودة** لأنّ
+                // الطلبَ صار في `autoPrompted` الدائمة والجلسةُ سُئلت مرّةً.
+                if (!autoPromptShownThisSession) {
+                    val cand = history.firstOrNull {
+                        it.status == "delivered" && it.id !in rated && it.id !in autoPrompted
+                    }
+                    if (cand != null) {
+                        askRate = cand
+                        autoPrompted = autoPrompted + cand.id
+                        persistAutoPrompted()
+                        autoPromptShownThisSession = true
+                    }
                 }
                 error = ""
             } catch (e: Exception) {
@@ -254,6 +292,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 api.rate(orderId, stars, driverStars)
+                // **قُيّم فيُغلَق السؤالُ التلقائيّ** — والخادمُ يصير المرجعَ
+                // (`rated`)، فيختفي زرُّ «قيّم الطلب» ولا يُسأل ثانيةً.
+                askRate = null
             } catch (e: Exception) {
                 actionError = apiError(getApplication(), e)
             }

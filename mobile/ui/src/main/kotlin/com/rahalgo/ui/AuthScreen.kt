@@ -83,7 +83,9 @@ fun AuthScreen(
     signup: Boolean = false,
 ) {
     // **والرقم يبقى بين التبويبين** — من كتبه ثمّ بدّل الطريقة لا يعيده.
-    var phone by remember { mutableStateOf("") }
+    // **ويُعبَّأ من `prefillPhone`** عند الاستعادة من التسجيل (Batch 4): مفتاحُ
+    // `remember` يُعيد التهيئةَ حين يتغيّر الرقمُ المُعبَّأ، ويبقى ثابتاً بعدها.
+    var phone by remember(state.prefillPhone) { mutableStateOf(state.prefillPhone) }
     var password by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
 
@@ -254,6 +256,11 @@ data class LoginState(
     val otpAvailable: Boolean = false,
     val busy: Boolean = false,
     val error: String = "",
+    /**
+     * **رقمٌ يُعبَّأ سلفاً** (Batch 4) — للاستعادة من `phone_taken`: من ضغط
+     * «تسجيل الدخول» في شاشة التسجيل يجد رقمَه جاهزاً، فلا يعيده.
+     */
+    val prefillPhone: String = "",
 )
 
 /** ما تستطيع الشاشة أن تطلبه. */

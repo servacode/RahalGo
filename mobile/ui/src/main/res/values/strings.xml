@@ -138,6 +138,11 @@
     <string name="signup_referral">رمز الدعوة (اختياري)</string>
     <string name="signup_referral_hint">إن دعاك صديق، اكتب رمزه هنا لتحصلا على المكافأة</string>
     <string name="signup_create">أنشئ الحساب</string>
+    <!-- Batch 4 · SG1: لوحُ الاستعادة عند phone_taken — لا طريقٌ مسدود -->
+    <string name="signup_taken_title">هذا الرقم مرتبط بحساب موجود</string>
+    <string name="signup_recover_login">تسجيل الدخول</string>
+    <string name="signup_recover_reset">نسيت كلمة المرور</string>
+    <string name="signup_recover_otp">دخول برمز</string>
     <!-- **ونصُّه نصُّ الويب حرفاً بحرف** (`i18n/ar.json`) — **ونصّان
          لمعنًى واحدٍ يفترقان يومَ يُصحَّح أحدُهما.** -->
     <string name="err_no_whatsapp">هذا الرقم غير مسجل في واتساب — استعمل رقما عليه واتساب</string>

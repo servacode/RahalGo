@@ -1087,14 +1087,16 @@ private fun SignedIn(
                 //
                 // **ولا تُعرض لضيف** — ولا وهو في السلّة يدفع.
                 if (!guest && tab != Tab.Cart) {
+                    // **السؤالُ التلقائيُّ مرّةً واحدة** — يُثبَّت فلا يعود عند
+                    // الإقلاعِ/العودةِ/النبضةِ/إعادةِ الوصل. **واليدويُّ في بطاقة
+                    // الطلب** (`OrdersScreen.onRate`) لمن أراد بعد الإغلاق.
                     ordersVm.askRate?.let { o ->
                         RateDialog(
                             hasDriver = !o.driverName.isNullOrEmpty(),
                             onConfirm = { stars, driverStars ->
                                 ordersVm.rate(o.id, stars, driverStars)
-                                ordersVm.skipRate()
                             },
-                            onDismiss = ordersVm::skipRate,
+                            onDismiss = ordersVm::dismissRate,
                         )
                     }
                 }

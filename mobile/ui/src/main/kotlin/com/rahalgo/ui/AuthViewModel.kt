@@ -561,10 +561,12 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     /** @param referral رمزُ من دعاه — **من الرابط لا من يده.** */
     fun openSignup(referral: String = "") {
+        signupWasAmbiguous = false
         signup = SignupState(referral = referral, needsCode = signupNeedsCode)
     }
 
     fun closeSignup() {
+        signupWasAmbiguous = false
         signup = null
     }
 
@@ -630,11 +632,22 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **سياقُ الغموض** (Batch 4، SG1): هل كانت المحاولةُ السابقةُ ضاع ردُّها؟
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **التسجيلُ نداءٌ واحدٌ يُنشئ الحسابَ ويفتح الجلسة.** فإن ضاع ردُّه
+    // (انقطاعٌ/مهلة) فالحسابُ قد أُنشئ بالكلمةِ نفسِها، **والإعادةُ تردّ
+    // `phone_taken`.** فحينئذٍ وحدَه — لا في كلّ `phone_taken` — نجرّب الدخولَ
+    // بالكلمةِ نفسِها مرّةً واحدة: نجاحٌ يستعيد الجلسةَ بسلاسة، وفشلٌ يعرض
+    // الخيارات. **ولا يصير التسجيلُ مولّدَ محاولاتِ دخولٍ عمياء.**
+    private var signupWasAmbiguous = false
+
     /** **ينتهي داخلا** — المحرّك يفتح الجلسة مع الإنشاء. */
     fun confirmSignup(name: String, password: String, referral: String = "") {
         val current = signup ?: return
         if (current.busy) return
-        signup = current.copy(busy = true, error = "")
+        signup = current.copy(busy = true, error = "", recovery = false)
         viewModelScope.launch {
             try {
                 val result = backend.auth.signupConfirm(
@@ -652,14 +665,77 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     result.tokens.refreshToken,
                     result.tokens.accessExpiresAtMs(),
                 )
+                signupWasAmbiguous = false
                 onSignedIn(result.user)
                 signup = null
             } catch (e: ApiClient.ApiException) {
-                signup = current.copy(busy = false, error = message(e))
+                // **جوابٌ صريحٌ من الخادم — لا غموضَ فيه.**
+                if (e.body.code == "phone_taken") {
+                    val ambiguousRetry = signupWasAmbiguous
+                    signupWasAmbiguous = false
+                    // **استعادةٌ من تسجيلٍ ضاع ردُّه**: دخولٌ بالكلمةِ نفسِها مرّةً.
+                    if (ambiguousRetry && tryLoginRecovery(current.phone.trim(), password)) {
+                        return@launch
+                    }
+                    // **رقمٌ قائمٌ بلا سياقِ ضياع (أو فشلَ الدخولُ)** — خياراتٌ لا طريقٌ مسدود.
+                    signup = current.copy(busy = false, error = "", recovery = true)
+                } else {
+                    signup = current.copy(busy = false, error = message(e))
+                }
             } catch (e: Exception) {
-                signup = current.copy(busy = false, error = describe(e))
+                // **ردٌّ غامضٌ** (انقطاع/مهلة): قد يكون أُنشئ الحساب — يُعلَّم
+                // السياقُ فتُجرَّب الاستعادةُ عند الإعادة لا الآن.
+                signupWasAmbiguous = true
+                signup = current.copy(busy = false, error = describe(e), offlineError = isOffline(e))
             }
         }
+    }
+
+    /**
+     * **دخولٌ بالكلمةِ نفسِها مرّةً واحدة** — استعادةً من تسجيلٍ ضاع ردُّه
+     * (Batch 4، SG1). ينجح فيفتح الجلسةَ ويردّ `true`، أو يفشل فيردّ `false`
+     * لتُعرَض الخيارات. **ولا يمسّ عقدَ الاستيلاء**: هذا دخولٌ عاديٌّ بكلمةٍ
+     * يملكها صاحبُها، لا تسجيلٌ يُصدر جلسةً لحسابٍ قائم.
+     */
+    private suspend fun tryLoginRecovery(phone: String, password: String): Boolean =
+        try {
+            val result = backend.auth.login(phone, password)
+            backend.session.save(
+                result.tokens.accessToken,
+                result.tokens.refreshToken,
+                result.tokens.accessExpiresAtMs(),
+            )
+            onSignedIn(result.user)
+            signup = null
+            true
+        } catch (e: Exception) {
+            false
+        }
+
+    private fun signupPhoneForRecovery(): String {
+        val p = signup?.phone?.trim().orEmpty()
+        signupWasAmbiguous = false
+        signup = null
+        return p
+    }
+
+    /** **من لوح الاستعادة ⇒ الدخول بكلمة المرور** — بالرقمِ مُعبّأً. */
+    fun recoverToLogin() {
+        state = LoginState(mode = LoginMode.PASSWORD, otpAvailable = state.otpAvailable,
+            prefillPhone = signupPhoneForRecovery())
+    }
+
+    /** **⇒ الدخول برمز** — بالرقمِ مُعبّأً. */
+    fun recoverToOtp() {
+        state = LoginState(mode = LoginMode.OTP, otpAvailable = state.otpAvailable,
+            prefillPhone = signupPhoneForRecovery())
+    }
+
+    /** **⇒ استعادة كلمة المرور** — بالرقمِ مُعبّأً في شاشة الاستعادة. */
+    fun recoverToReset() {
+        val p = signupPhoneForRecovery()
+        openReset()
+        setResetPhone(p)
     }
 
     /**

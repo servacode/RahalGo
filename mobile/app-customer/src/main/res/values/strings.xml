@@ -55,7 +55,7 @@
     <string name="ord_payment">طريقة الدفع</string>
     <string name="ord_address">التوصيل إلى</string>
     <string name="ord_cancel">إلغاء الطلب</string>
-    <string name="ord_rate">تقييم</string>
+    <string name="ord_rate">قيّم الطلب</string>
     <string name="ord_complain">شكوى</string>
     <string name="ord_none_open">لا طلبات جارية — تصفح السوق وابدأ</string>
     <string name="ord_none_history">لا طلبات منتهية بعد</string>
@@ -142,6 +142,7 @@
     <string name="off_gone">العرض الذي وصلك لم يعد سارياً</string>
     <string name="cht_none">لا دردشات منتهية</string>
     <string name="tkt_none">لم تشتك من شيء — ونرجو أن يبقى كذلك</string>
+    <string name="tkt_against_none">لا بلاغات ضدك — وهذا خبرٌ جيّد</string>
 
     <string name="inv_earn">ادع صديقا واربح %1$s</string>
     <string name="inv_on_signup">تصرف المكافأة عند إتمام تسجيله</string>
