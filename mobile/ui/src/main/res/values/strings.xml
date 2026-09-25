@@ -69,6 +69,9 @@
     <string name="update_title">يوجد إصدار جديد</string>
     <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>
     <string name="update_action">تحديث الآن</string>
+    <!-- **زرّان صريحان** (قرار المالك ٢٠٢٦-٠٩-٢٦): غوغل بلاي، والتنزيل المباشر. -->
+    <string name="update_play">تحديث عبر Google Play</string>
+    <string name="update_direct">التنزيل المباشر</string>
     <string name="err_update_required">يوجد إصدار جديد — حدّث التطبيق</string>
     <!-- **وكلُّ سببٍ يقول نفسَه** — (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «ليش
          يعطي تحقق من البيانات المدخلة؟»). سبعةُ أسبابٍ كانت ترجع
