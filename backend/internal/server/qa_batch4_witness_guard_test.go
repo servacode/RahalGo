@@ -115,8 +115,8 @@ func TestQAReferralWitnessCapabilityGuards(t *testing.T) {
 		t.Fatalf("read auth_handlers.go: %v", err)
 	}
 	a := string(auth)
-	// 19) الخطّافُ محروسٌ بـ qaStagingEnabled + بعد ConfirmSignup (post-commit).
-	if !strings.Contains(a, "s.qaStagingEnabled() && qaSignupConfirmAbortHit(req.Phone)") {
+	// 19) الخطّافُ محروسٌ بـ qaStagingEnabled + مقصورٌ على رقمِ الطلب.
+	if !strings.Contains(a, "s.qaStagingEnabled()") || !strings.Contains(a, "qaSignupConfirmAbortHit(req.Phone)") {
 		t.Error("**خطّافُ الإسقاطِ غيرُ محروسٍ بـ qaStagingEnabled + رقمِ الطلب**")
 	}
 	ci := strings.Index(a, "s.identity.ConfirmSignup(")

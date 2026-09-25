@@ -429,34 +429,44 @@ func (s *Server) qaReportCleanup(w http.ResponseWriter, r *http.Request) {
 // يقع **بعد** إتمامِ المنطق: يُختطف الاتصالُ ويُغلق بلا كتابةِ ردّ، فيرى العميلُ
 // فشلَ اتصالٍ (لا رمزَ HTTP) — وهو ما يُشعل `signupWasAmbiguous` في التطبيق.
 
-// qaSignupAbort **مخزنُ الإسقاط الواحد** — رقمُ QA الثابتُ المستهدَف، أو فارغٌ
-// (مطفأ). لا يُسلَّح إلّا عبر `/qa/seed` على التجهيز.
+// qaSignupAbort **مخزنُ الإسقاط الواحد** — رقمُ QA الثابتُ المستهدَف (أو فارغٌ =
+// مطفأ) ومهلةُ الحجزِ قبل الإسقاط. لا يُسلَّح إلّا عبر `/qa/seed` على التجهيز.
+//
+// **ولماذا مهلةٌ اختياريّة**: أمامَ المحرّكِ وسيطٌ عكسيّ (nginx) يترجم إغلاقَ
+// الاتصالِ الفوريَّ إلى ٥٠٢ — ورمزٌ صريحٌ لا يراه العميلُ «غموضاً» دائماً.
+// **فالحجزُ حتّى تتجاوزَ مهلةُ العميلِ (٢٠ث) يُنتج مهلةً حقيقيّةً عند العميل**
+// وهي غموضٌ لا لبسَ فيه (`HttpRequestTimeoutException` ليست `ApiException`).
+// delayMs=0 ⇒ إسقاطٌ مباشرٌ فوريّ (اختطافٌ وإغلاق).
 var qaSignupAbort struct {
-	mu    sync.Mutex
-	phone string // normalized؛ فارغٌ = مطفأ
+	mu      sync.Mutex
+	phone   string // normalized؛ فارغٌ = مطفأ
+	delayMs int
 }
 
 // qaArmSignupConfirmAbort يُسلّح إسقاطَ ردِّ signup/confirm لرقمِ QA ثابتٍ واحد.
-func qaArmSignupConfirmAbort(phone string) {
+func qaArmSignupConfirmAbort(phone string, delayMs int) {
 	qaSignupAbort.mu.Lock()
 	defer qaSignupAbort.mu.Unlock()
 	qaSignupAbort.phone = phone
+	qaSignupAbort.delayMs = delayMs
 }
 
 // qaSignupConfirmAbortHit **أمُسلَّحٌ لهذا الرقم؟** — وإن كان، يُنظَّف فوراً
-// (مرّةً واحدة) ويُرجع true. رقمٌ آخرُ يمرّ سالماً.
-func qaSignupConfirmAbortHit(rawPhone string) bool {
+// (مرّةً واحدة) ويُرجع (true, مهلةُ الحجز). رقمٌ آخرُ يمرّ سالماً.
+func qaSignupConfirmAbortHit(rawPhone string) (bool, int) {
 	phone, ok := identity.NormalizePhone(rawPhone)
 	if !ok {
-		return false
+		return false, 0
 	}
 	qaSignupAbort.mu.Lock()
 	defer qaSignupAbort.mu.Unlock()
 	if qaSignupAbort.phone == "" || qaSignupAbort.phone != phone {
-		return false
+		return false, 0
 	}
+	delay := qaSignupAbort.delayMs
 	qaSignupAbort.phone = "" // **مرّةً واحدةً** — يُنظَّف نفسَه.
-	return true
+	qaSignupAbort.delayMs = 0
+	return true, delay
 }
 
 // qaAbortResponse يختطف الاتصالَ ويُغلقه بلا كتابةِ ردّ — فيرى العميلُ فشلَ
@@ -476,7 +486,7 @@ func (s *Server) qaAbortResponse(w http.ResponseWriter) bool {
 
 // qaSignupConfirmAbort **بابُ التسليح** — يقبل رقمَ QA ثابتاً وحدَه (من قائمة
 // أرقام OTP المسموحة)، ويُسلّح إسقاطَ ردِّ أوّلِ signup/confirm له.
-func (s *Server) qaSignupConfirmAbort(w http.ResponseWriter, r *http.Request, rawPhone string) {
+func (s *Server) qaSignupConfirmAbort(w http.ResponseWriter, r *http.Request, rawPhone string, delayMs int) {
 	if !s.qaStagingEnabled() {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -486,9 +496,12 @@ func (s *Server) qaSignupConfirmAbort(w http.ResponseWriter, r *http.Request, ra
 		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_phone_not_allowed", "errors.forbidden"))
 		return
 	}
-	qaArmSignupConfirmAbort(phone)
-	s.logger.Warn("QA signup-confirm abort armed (staging-only)", "phone", "QA")
-	httpx.JSON(w, http.StatusOK, map[string]any{"armed": true, "phone": phone, "kind": "signup_confirm_abort"})
+	if delayMs < 0 || delayMs > 60000 {
+		delayMs = 0 // **سقفٌ معقول** — لا حجزَ يتجاوز الدقيقة.
+	}
+	qaArmSignupConfirmAbort(phone, delayMs)
+	s.logger.Warn("QA signup-confirm abort armed (staging-only)", "phone", "QA", "delay_ms", delayMs)
+	httpx.JSON(w, http.StatusOK, map[string]any{"armed": true, "phone": phone, "delay_ms": delayMs, "kind": "signup_confirm_abort"})
 }
 
 // qaReferralReverseWallet يعكس ما صُرف للداعي بقيدٍ مزدوجٍ متوازنٍ

@@ -316,12 +316,24 @@ const (
 	qaNewPhone    = "+963900555997" // هدفُ تغيير الرقم (06-024)
 )
 
-var qaOTPPhones = map[string]bool{
-	qaStagingPhone:    true, // QA1 — reset/whatsapp/change-from
-	qaDisposablePhone: true, // زبونُ الحذف
-	qaSignupPhone:     true, // تسجيلٌ جديد
-	qaNewPhone:        true, // هدفُ تغيير الرقم
+// qaSignupWitnessPhones **أرقامُ تسجيلٍ إضافيّةٌ ثابتةٌ** لشاهدِ «ضاع الرد»
+// (Batch 4): كلُّ محاولةٍ تستهلك رقماً (يصير له حساب)، فيلزم عدّةٌ ثابتةٌ صغيرة.
+var qaSignupWitnessPhones = []string{
+	"+963900555990", "+963900555991", "+963900555992", "+963900555993", "+963900555994",
 }
+
+var qaOTPPhones = func() map[string]bool {
+	m := map[string]bool{
+		qaStagingPhone:    true, // QA1 — reset/whatsapp/change-from
+		qaDisposablePhone: true, // زبونُ الحذف
+		qaSignupPhone:     true, // تسجيلٌ جديد
+		qaNewPhone:        true, // هدفُ تغيير الرقم
+	}
+	for _, p := range qaSignupWitnessPhones {
+		m[p] = true // أرقامُ شاهدِ «ضاع الرد» — تسجيلٌ ثابتٌ متعدّد
+	}
+	return m
+}()
 var qaOTPPurposes = map[string]bool{
 	"login":        true, // مسارُ OTP للدخول/التسجيل (/auth/otp/request+verify) — RequestOTP
 	"signup":       true, // مسارُ تسجيلٍ منفصلٍ إن وُجد

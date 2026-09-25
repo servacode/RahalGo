@@ -433,10 +433,16 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 	// **شاهدُ «ضاع الرد» — على التجهيز وحدَه** (Batch 4، `qa_batch4_witness.go`):
 	// بعد إتمامِ المنطقِ وإنشاءِ الحساب، يُسقَط الردُّ عن العميلِ مرّةً واحدةً
 	// لرقمِ QA ثابتٍ فيرى غموضاً. **مطفأٌ ولا وجودَ له في الإنتاج** (fail-closed).
-	if s.qaStagingEnabled() && qaSignupConfirmAbortHit(req.Phone) {
-		s.logger.Warn("QA signup-confirm response dropped post-commit (staging-only)", "phone", "QA")
-		if s.qaAbortResponse(w) {
-			return
+	if s.qaStagingEnabled() {
+		if hit, delayMs := qaSignupConfirmAbortHit(req.Phone); hit {
+			// **الحجزُ حتّى تتجاوزَ مهلةُ العميلِ فيرى مهلةً (غموضاً)، ثمّ يُغلَق.**
+			if delayMs > 0 {
+				time.Sleep(time.Duration(delayMs) * time.Millisecond)
+			}
+			s.logger.Warn("QA signup-confirm response dropped post-commit (staging-only)", "phone", "QA", "delay_ms", delayMs)
+			if s.qaAbortResponse(w) {
+				return
+			}
 		}
 	}
 	httpx.JSON(w, http.StatusOK, res)

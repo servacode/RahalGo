@@ -493,7 +493,7 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		case "report_cleanup":
 			s.qaReportCleanup(w, r)
 		case "signup_confirm_abort":
-			s.qaSignupConfirmAbort(w, r, req.Phone)
+			s.qaSignupConfirmAbort(w, r, req.Phone, int(req.ValueInt))
 		}
 		return
 	}
