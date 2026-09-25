@@ -270,10 +270,17 @@ fun ServiceBlockNotice(
         placeName = av.placeName,
         nextAvailableAt = av.nextAvailableAt,
     )
-    com.rahalgo.ui.Note(
-        if (discovery) ctx.getString(com.rahalgo.ui.R.string.dl_current_location, body) else body,
-        com.rahalgo.design.Rahal.colors.danger,
-    )
+    // **حالُ الإغلاق المؤقّت** (منصّةٌ أو منطقة) تُعرَض بلافتةٍ تحذيريّةٍ أوضحَ
+    // تنبض بهدوء (قرار المالك ٢٠٢٦-٠٩-٢٥)؛ وسائرُ أسبابِ المنع تبقى `Note`.
+    val shown = if (discovery) ctx.getString(com.rahalgo.ui.R.string.dl_current_location, body) else body
+    val closedNow = !discovery &&
+        (av.reason == com.rahalgo.ui.ServiceReason.ZONE_CLOSED_NOW ||
+            av.reason == com.rahalgo.ui.ServiceReason.PLATFORM_CLOSED_NOW)
+    if (closedNow) {
+        com.rahalgo.ui.ServiceClosedBanner(shown)
+    } else {
+        com.rahalgo.ui.Note(shown, com.rahalgo.design.Rahal.colors.danger)
+    }
     // ══════════════════════════════════════════════════════════════════
     // **الزرُّ الأساسيّ: «أخبرني»/«اطلب تغطية»** — بالسياسة المركزيّة
     // ══════════════════════════════════════════════════════════════════

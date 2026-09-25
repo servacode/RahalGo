@@ -6,7 +6,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
@@ -213,6 +220,41 @@ fun Note(text: String, color: Color) {
             .clip(Rahal.shape.sm)
             .background(color.copy(alpha = 0.08f))
             .padding(10.dp),
+    )
+    Spacer(Modifier.height(10.dp))
+}
+
+/**
+ * ServiceClosedBanner **لافتةُ «التوصيل متوقفٌ الآن» — تحذيرٌ واضحٌ ينبض بهدوء.**
+ *
+ * (قرار المالك ٢٠٢٦-٠٩-٢٥: حالُ الإغلاق المؤقّت — منصّةٌ أو منطقة — يجب أن
+ *  يُفهَم فوراً أنّ الطلبَ متعذّرٌ الآن. أقوى من `Note` العاديّة: حاويةٌ
+ *  حمراءُ ممتلئةٌ وحدٌّ ينبض بلطفٍ — لا وميضٌ قويٌّ مستمرّ.)
+ *
+ * **والنبضُ على الحدِّ لا الخلفيّة** — يخفت ويعود ببطءٍ (١٫٤ث)، فيلفت النظرَ
+ * بلا إزعاج. **والنصُّ من المورد/`ServiceReason`** — لا يُصاغ هنا.
+ */
+@Composable
+fun ServiceClosedBanner(text: String) {
+    val pulse = rememberInfiniteTransition(label = "serviceClosed")
+    val edge by pulse.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
+        label = "serviceClosedEdge",
+    )
+    val danger = Rahal.colors.danger
+    Text(
+        text = text,
+        color = danger,
+        textAlign = TextAlign.Center,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(danger.copy(alpha = 0.14f))
+            .border(BorderStroke(1.5.dp, danger.copy(alpha = edge)), Rahal.shape.sm)
+            .padding(14.dp),
     )
     Spacer(Modifier.height(10.dp))
 }

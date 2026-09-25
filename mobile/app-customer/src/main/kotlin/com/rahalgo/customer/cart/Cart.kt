@@ -94,15 +94,18 @@ object Cart {
      *
      * **فالمفتاحُ هو المعرّفُ وخياراتُه معاً** لا المعرّفَ وحدَه.
      */
-    fun add(item: Item, qty: Int = 1, options: List<ModifierOption> = emptyList()) {
+    /** **يُرجع `true` إن زاد كميّةَ صنفٍ قائمٍ** — ليختار المنادي رسالةَ التأكيد. */
+    fun add(item: Item, qty: Int = 1, options: List<ModifierOption> = emptyList()): Boolean {
         val line = Line(item, qty, options)
         val at = lines.indexOfFirst { it.key == line.key }
-        lines = if (at >= 0) {
+        val increased = at >= 0
+        lines = if (increased) {
             lines.toMutableList().also { it[at] = it[at].copy(qty = it[at].qty + qty) }
         } else {
             lines + line
         }
         save()
+        return increased
     }
 
     /**

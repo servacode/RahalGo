@@ -483,7 +483,7 @@ fun CartScreen(
         // **ويبقى هذا لعميلٍ يكلّم محرّكاً لا يرسل الحال.**
         if (vm.priced?.availability == null && vm.priced?.zoneClosed == true) {
             Spacer(Modifier.height(8.dp))
-            Note(zoneClosedText(LocalContext.current, vm.priced), Rahal.colors.danger)
+            com.rahalgo.ui.ServiceClosedBanner(zoneClosedText(LocalContext.current, vm.priced))
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -497,7 +497,7 @@ fun CartScreen(
         // عنه** — **و«نعود قريباً» أصدقُ من ساعةٍ لا نفي بها.**
         if (!Serving.available) {
             Spacer(Modifier.height(8.dp))
-            Note(servingText(LocalContext.current), Rahal.colors.danger)
+            com.rahalgo.ui.ServiceClosedBanner(servingText(LocalContext.current))
         }
 
         // ══════════════════════════════════════════════════════════════

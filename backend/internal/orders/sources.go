@@ -16,10 +16,9 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 
@@ -367,7 +366,7 @@ type ZoneCharge struct {
 	DistanceM float64
 }
 
-// ZoneAt المنطقةُ التي يقع فيها هذا الدبوس — **وأقربُها مركزاً حين تتداخل.**
+// ZoneAt المنطقةُ التي يقع فيها هذا الدبوس — **والمفتوحةُ منها حين تتداخل.**
 //
 // # لماذا في موضعٍ واحد
 //
@@ -393,9 +392,14 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 	// **الشقُّ الأوّلُ من الشرط هو الاستعلامُ القديمُ بعينه**، ولا صفَّ
 	// قائمٍ يمرّ بالشقّ الثاني — `shape` افتراضُه `radius`.
 	//
-	// **والمسافةُ إلى المركز تبقى ترتيباً عند التداخل** — والمضلَّعُ
-	// مركزُه مركزُ ثقله، **فيفوز أقربُهما إلى الدبّوس** كما كان.
-	err := q.QueryRow(ctx, `
+	// **وعند التداخل تُقدَّم المفتوحةُ** (قرار المالك ٢٠٢٦-٠٩-٢٥): منطقةٌ
+	// مغلقةٌ لا تحجب نقطةً تغطّيها منطقةٌ أخرى مفتوحة. **فتُجلَب كلُّ المناطق
+	// المُغطِّية**، مرتَّبةً `sort_order` ثمّ الأقربَ مركزاً ثمّ `id` (ترتيبٌ
+	// حاسمٌ لا لبسَ فيه)، **ويختار `effectiveZone` النافذةَ منها.**
+	//
+	// **والمسافةُ إلى المركز تبقى ترتيباً ثانويّاً** — والمضلَّعُ مركزُه
+	// مركزُ ثقله، فيفوز الأقربُ عند تساوي `sort_order`.
+	rows, qerr := q.Query(ctx, `
 		SELECT id::text, name, delivery_fee, min_order, hours_enforced,
 		       ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
 		FROM delivery_zones
@@ -405,9 +409,27 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 		     OR (shape = 'polygon' AND area IS NOT NULL
 		           AND ST_Covers(area, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography))
 		      )
-		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
-		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder, &z.HoursEnforced, &z.DistanceM)
-	if errors.Is(err, pgx.ErrNoRows) {
+		ORDER BY sort_order,
+		         ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography),
+		         id`, lat, lng)
+	if qerr != nil {
+		return z, qerr
+	}
+	var cands []ZoneCharge
+	for rows.Next() {
+		var c ZoneCharge
+		if e := rows.Scan(&c.ID, &c.Name, &c.DeliveryFee, &c.MinOrder, &c.HoursEnforced, &c.DistanceM); e != nil {
+			rows.Close()
+			return z, e
+		}
+		cands = append(cands, c)
+	}
+	rerr := rows.Err()
+	rows.Close() // **يُغلَق قبل أيّ استعلامٍ ثانٍ على المُنفّذ نفسِه** (معاملةٌ بوصلةٍ واحدة).
+	if rerr != nil {
+		return z, rerr
+	}
+	if len(cands) == 0 {
 		// ══════════════════════════════════════════════════════════════
 		// **وجدولٌ فارغٌ ليس «لا نُوصّل إلى أحد»**
 		// ══════════════════════════════════════════════════════════════
@@ -472,7 +494,49 @@ func (s *Service) ZoneAt(ctx context.Context, q dbtx.Querier, lat, lng float64) 
 		}
 		return z, ErrCoverageUnavailable
 	}
-	return z, err
+	return s.effectiveZone(ctx, q, cands), nil
+}
+
+// effectiveZone **يختار منطقةَ التسليم النافذةَ من المناطق المتداخلة.**
+//
+// (قرار المالك ٢٠٢٦-٠٩-٢٥: نقطةٌ تغطّيها أكثرُ من منطقة ⇒ إن كانت واحدةٌ
+//
+//	مفتوحةً فالتوصيلُ متاح؛ منطقةٌ مغلقةٌ لا تحجب ما تفتحه أخرى.)
+//
+// # القاعدة
+//
+//	مفتوحةٌ واحدةٌ على الأقلّ ⇒ أوّلُ مفتوحةٍ بالترتيب (`sort_order`←الأقرب←`id`)
+//	كلُّها مغلقة            ⇒ الأقربُ إلى إعادةِ الفتح — فيُعرَض أصدقُ موعدِ عودة
+//	لا منطقةَ تُغطّي         ⇒ عولِج قبل الاستدعاء (`out_of_zone`/`coverage_unavailable`)
+//
+// **والفتحُ يُقاس بآلةِ الجداول نفسِها التي تحكم البوّابةَ** (`ZoneOpen`) —
+// **فلا تنشقّ نسخةٌ ثانيةٌ من «متى تُفتح» عن التي تردّ الطلبَ** (`ZH-34`).
+// **وبلا آلةٍ مركَّبةٍ لا مفهومَ للإغلاق** — تُعاد الأولى بالترتيب كما كان.
+// **وعطبُ قراءةٍ ليس منعاً** — تُعدّ المنطقةُ مفتوحةً (كـ`requireZoneOpen`).
+func (s *Service) effectiveZone(ctx context.Context, q dbtx.Querier, cands []ZoneCharge) ZoneCharge {
+	if s.zoneHours == nil {
+		return cands[0]
+	}
+	var closedRep *ZoneCharge
+	var closedNext *time.Time
+	for i := range cands {
+		c := cands[i]
+		if !c.HoursEnforced {
+			return c // مفتوحةٌ دائماً — وأوّلُ مفتوحةٍ بالترتيب تفوز
+		}
+		open, nextAt, err := s.zoneHours.ZoneOpen(ctx, q, c.ID)
+		if err != nil || open {
+			return c
+		}
+		// مغلقةٌ — نحفظ الأقربَ إلى إعادةِ الفتح ممثِّلاً لحالِ «كلُّها مغلقة».
+		if closedRep == nil ||
+			(nextAt != nil && (closedNext == nil || nextAt.Before(*closedNext))) {
+			cc := c
+			closedRep = &cc
+			closedNext = nextAt
+		}
+	}
+	return *closedRep // لا مفتوحةَ — أقربُها إلى العودة
 }
 
 // HasUsableCoverage **أثمّةَ منطقةٌ فعّالةٌ تُغطّي شيئاً فعلاً؟**

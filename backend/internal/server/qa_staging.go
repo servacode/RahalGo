@@ -323,6 +323,9 @@ var qaSeedAllowlist = map[string]bool{
 	//    خدمةِ الأدمن الحقيقيّة، عكوسٌ (`qa_batch5_witness.go`) ──
 	"boundary_arm":     true, // ضبطُ نافذةٍ تُغلَق بعد دقيقتين وتُعيد الفتحَ — منصّةٌ أو منطقةٌ، يحفظ السابق
 	"boundary_restore": true, // إعادةُ الجدولِ السابقِ المحفوظ — تنظيف
+	// ── شاهدُ الإحالة من واجهة الزبون (Batch 5) — تسليحُ الرتب/إخلاءُ المدعوّين، وعكسٌ متوازنٌ وتجهيلٌ (`qa_batch5b_referral.go`) ──
+	"referral_ui_arm":     true, // ضبطُ الرتبِ الخمسِ + reward_on=signup + إخلاءُ أرقام ٩٩٠–٩٩٤ لتسجيلٍ نظيف
+	"referral_ui_cleanup": true, // عكسُ رصيدِ QA1 (متوازن) + تجهيلُ المدعوّين + استعادةُ الرتب
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -351,6 +354,8 @@ var qaStateSeed = map[string]bool{
 	"signup_confirm_abort": true,
 	// شاهدُ حدِّ الوقت (Batch 5) — يحلّ المنطقةَ من عنوانِ QA بنفسِه، لا يلزمه قبلَ التبديل:
 	"boundary_arm": true, "boundary_restore": true,
+	// شاهدُ الإحالة من واجهة الزبون (Batch 5) — يحلّ QA1 والمدعوّين بنفسِه:
+	"referral_ui_arm": true, "referral_ui_cleanup": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -504,6 +509,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaBoundaryArm(w, r, req.Target, int(req.ValueInt))
 		case "boundary_restore":
 			s.qaBoundaryRestore(w, r, req.Target)
+		case "referral_ui_arm":
+			s.qaReferralUIArm(w, r)
+		case "referral_ui_cleanup":
+			s.qaReferralUICleanup(w, r)
 		}
 		return
 	}

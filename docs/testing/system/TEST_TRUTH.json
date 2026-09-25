@@ -31,8 +31,8 @@
     "setting_defs": 147,
     "behaviour_settings": 119,
     "order_fields": 83,
-    "test_files": 378,
-    "test_funcs": 1612
+    "test_files": 380,
+    "test_funcs": 1617
   },
   "flows": [
     {
@@ -21087,6 +21087,24 @@
       "orphan": true
     },
     {
+      "name": "TestZOV1_OpenZoneRescuesClosedNearer",
+      "file": "internal/qa/zone_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZOV2_AllCoveringClosedIsZoneClosedNow",
+      "file": "internal/qa/zone_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZOV3_DeterministicBySortOrder",
+      "file": "internal/qa/zone_overlap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestZONE_001_NoZonesOrderIsRefused",
       "file": "internal/qa/zone_test.go",
       "package": "qa",
@@ -22328,6 +22346,18 @@
     {
       "name": "TestQABoundaryWindows",
       "file": "internal/server/qa_batch5_witness_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAReferralUIKindsRegistered",
+      "file": "internal/server/qa_batch5b_referral_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAReferralUIWitnessGuards",
+      "file": "internal/server/qa_batch5b_referral_guard_test.go",
       "package": "server",
       "orphan": true
     },

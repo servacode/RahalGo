@@ -178,7 +178,15 @@ fun ShopScreen(
             onAdd = { chosen ->
                 // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
                 // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
-                if (!blocked) Cart.add(target, options = chosen)
+                if (!blocked) {
+                    val inc = Cart.add(target, options = chosen)
+                    com.rahalgo.ui.Flash.ok(
+                        context.getString(
+                            if (inc) com.rahalgo.ui.R.string.cart_qty_updated
+                            else com.rahalgo.ui.R.string.cart_item_added,
+                        ),
+                    )
+                }
                 picking = null
             },
             onClose = { picking = null },
@@ -473,7 +481,17 @@ fun ShopScreen(
                                 // **وما له خياراتٌ يُسأل قبل أن يدخل** —
                                 // **والمجموعةُ الإلزاميّةُ تُسقط الطلبَ
                                 // كلَّه** إن دخل بلا اختيار.
-                                if (item.hasOptions) picking = item else Cart.add(item)
+                                if (item.hasOptions) {
+                                    picking = item
+                                } else {
+                                    val inc = Cart.add(item)
+                                    com.rahalgo.ui.Flash.ok(
+                                        context.getString(
+                                            if (inc) com.rahalgo.ui.R.string.cart_qty_updated
+                                            else com.rahalgo.ui.R.string.cart_item_added,
+                                        ),
+                                    )
+                                }
                             }
                         },
                         onLike = { onLike(item) },
