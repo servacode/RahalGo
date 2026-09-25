@@ -31,8 +31,8 @@
     "setting_defs": 147,
     "behaviour_settings": 119,
     "order_fields": 83,
-    "test_files": 377,
-    "test_funcs": 1609
+    "test_files": 378,
+    "test_funcs": 1612
   },
   "flows": [
     {
@@ -22310,6 +22310,24 @@
     {
       "name": "TestQAReferralWitnessCapabilityGuards",
       "file": "internal/server/qa_batch4_witness_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQABoundaryCapabilityGuards",
+      "file": "internal/server/qa_batch5_witness_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQABoundaryKindsRegistered",
+      "file": "internal/server/qa_batch5_witness_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQABoundaryWindows",
+      "file": "internal/server/qa_batch5_witness_test.go",
       "package": "server",
       "orphan": true
     },

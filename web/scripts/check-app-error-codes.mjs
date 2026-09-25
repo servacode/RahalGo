@@ -112,6 +112,7 @@ const SERVER_ADMIN = new Set([
   "qa_no_open_order", "qa_multiple_open_orders",
   "qa_coverage_zone_exists",
   "qa_no_closed_order",
+  "qa_boundary_near_midnight", "qa_no_default_address", "qa_no_zone_for_address",
 ]);
 
 const found = new Map();

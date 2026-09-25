@@ -319,6 +319,10 @@ var qaSeedAllowlist = map[string]bool{
 	"report_cleanup":          true, // حذفُ بلاغاتِ السائقِ الثابتِ — تنظيفٌ نهائيّ
 	// ── شاهدُ «ضاع الرد» (Batch 4، SG1) — إسقاطُ ردِّ signup/confirm بعد الـcommit ──
 	"signup_confirm_abort": true, // تسليحُ إسقاطِ ردٍّ واحدٍ لرقمِ QA ثابت — يرى العميلُ غموضاً
+	// ── شاهدُ حدِّ الوقت الحيّ (Batch 5، FINAL-TIME) — حدُّ إغلاقٍ مستقبليٌّ عبر
+	//    خدمةِ الأدمن الحقيقيّة، عكوسٌ (`qa_batch5_witness.go`) ──
+	"boundary_arm":     true, // ضبطُ نافذةٍ تُغلَق بعد دقيقتين وتُعيد الفتحَ — منصّةٌ أو منطقةٌ، يحفظ السابق
+	"boundary_restore": true, // إعادةُ الجدولِ السابقِ المحفوظ — تنظيف
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -345,6 +349,8 @@ var qaStateSeed = map[string]bool{
 	"report_against_customer": true, "report_cleanup": true,
 	// شاهدُ «ضاع الرد» (Batch 4) — يُسلَّح برقمٍ من الطلب، لا يلزمه زبونُ QA:
 	"signup_confirm_abort": true,
+	// شاهدُ حدِّ الوقت (Batch 5) — يحلّ المنطقةَ من عنوانِ QA بنفسِه، لا يلزمه قبلَ التبديل:
+	"boundary_arm": true, "boundary_restore": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -494,6 +500,10 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaReportCleanup(w, r)
 		case "signup_confirm_abort":
 			s.qaSignupConfirmAbort(w, r, req.Phone, int(req.ValueInt))
+		case "boundary_arm":
+			s.qaBoundaryArm(w, r, req.Target, int(req.ValueInt))
+		case "boundary_restore":
+			s.qaBoundaryRestore(w, r, req.Target)
 		}
 		return
 	}
