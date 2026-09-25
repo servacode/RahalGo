@@ -125,10 +125,13 @@ func (s *Server) qaBoundaryArm(w http.ResponseWriter, r *http.Request, target st
 	case "zone":
 		phone, _ := identity.NormalizePhone(qaStagingPhone)
 		var lat, lng float64
+		// **عنوانُ زبونِ QA كما يختاره التطبيقُ نفسُه** — الافتراضيُّ أوّلاً
+		// ثمّ الأحدث (`user_addresses`، كترتيب `handleMyAddresses`)، وله موضعٌ.
 		if err := s.pg.QueryRow(ctx, `
 			SELECT ST_Y(a.location::geometry), ST_X(a.location::geometry)
-			FROM addresses a JOIN users u ON u.id = a.user_id
-			WHERE u.phone = $1 AND a.is_default
+			FROM user_addresses a JOIN users u ON u.id = a.user_id
+			WHERE u.phone = $1 AND a.location IS NOT NULL
+			ORDER BY a.is_default DESC, a.created_at DESC
 			LIMIT 1`, phone).Scan(&lat, &lng); err != nil {
 			s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_no_default_address", "errors.conflict"))
 			return
