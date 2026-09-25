@@ -430,6 +430,15 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 		// **والهديّةُ بعد الحساب لا قبله** — انظر `GrantSignupBonus`.
 		s.referrals.GrantSignupBonus(r.Context(), res.User.ID, res.User.ID)
 	}
+	// **شاهدُ «ضاع الرد» — على التجهيز وحدَه** (Batch 4، `qa_batch4_witness.go`):
+	// بعد إتمامِ المنطقِ وإنشاءِ الحساب، يُسقَط الردُّ عن العميلِ مرّةً واحدةً
+	// لرقمِ QA ثابتٍ فيرى غموضاً. **مطفأٌ ولا وجودَ له في الإنتاج** (fail-closed).
+	if s.qaStagingEnabled() && qaSignupConfirmAbortHit(req.Phone) {
+		s.logger.Warn("QA signup-confirm response dropped post-commit (staging-only)", "phone", "QA")
+		if s.qaAbortResponse(w) {
+			return
+		}
+	}
 	httpx.JSON(w, http.StatusOK, res)
 }
 

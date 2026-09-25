@@ -90,4 +90,38 @@ func TestQAReferralWitnessCapabilityGuards(t *testing.T) {
 	if !strings.Contains(s, "qaStagingPhone") {
 		t.Error("**هدفُ البلاغِ ليس زبونَ QA الثابت**")
 	}
+
+	// ── شاهدُ «ضاع الرد» (signup_confirm_abort) ─────────────────────────
+	// 15) مقصورٌ على رقمِ QA ثابتٍ من قائمةِ OTP — لا يُسقَط ردُّ أيّ رقمٍ آخر.
+	if !strings.Contains(s, "qaOTPPhones[phone]") {
+		t.Error("**الإسقاطُ لا يُقصَر على أرقامِ QA المسموحة**")
+	}
+	// 16) مرّةً واحدةً ثمّ يُنظَّف نفسَه (يُفرَّغ الرقمُ المستهدَف).
+	if !strings.Contains(s, `qaSignupAbort.phone = ""`) {
+		t.Error("**الإسقاطُ ليس مرّةً واحدةً (لا يُنظَّف نفسَه)**")
+	}
+	// 17) الإسقاطُ اختطافُ اتصالٍ وإغلاقٌ — لا رمزَ HTTP يُقرأ نجاحاً/خطأً.
+	if !strings.Contains(s, "http.Hijacker") || !strings.Contains(s, "conn.Close()") {
+		t.Error("**الإسقاطُ ليس اختطافَ اتصالٍ وإغلاقاً**")
+	}
+	// 18) لا إنشاءَ حسابٍ خامٍّ في القدرة — المنطقُ الحقيقيّ في ConfirmSignup.
+	if strings.Contains(s, "CreateCustomerWithPassword") || strings.Contains(s, "INSERT INTO users") {
+		t.Error("**القدرةُ تُنشئ حساباً خامّاً — يجب أن يمرّ بـ ConfirmSignup**")
+	}
+
+	// ── الخطّافُ في المعالِج مطفأٌ في الإنتاج (fail-closed) ──────────────
+	auth, err := os.ReadFile("auth_handlers.go")
+	if err != nil {
+		t.Fatalf("read auth_handlers.go: %v", err)
+	}
+	a := string(auth)
+	// 19) الخطّافُ محروسٌ بـ qaStagingEnabled + بعد ConfirmSignup (post-commit).
+	if !strings.Contains(a, "s.qaStagingEnabled() && qaSignupConfirmAbortHit(req.Phone)") {
+		t.Error("**خطّافُ الإسقاطِ غيرُ محروسٍ بـ qaStagingEnabled + رقمِ الطلب**")
+	}
+	ci := strings.Index(a, "s.identity.ConfirmSignup(")
+	hi := strings.Index(a, "qaSignupConfirmAbortHit(")
+	if ci < 0 || hi < 0 || hi < ci {
+		t.Error("**الإسقاطُ ليس بعد ConfirmSignup (post-commit)**")
+	}
 }

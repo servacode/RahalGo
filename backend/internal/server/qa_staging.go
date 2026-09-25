@@ -317,6 +317,8 @@ var qaSeedAllowlist = map[string]bool{
 	// ── شاهدُ «بلاغٌ ضدَّ الزبون» الحيّ (Batch 4) — عبرَ support.DriverReport ──
 	"report_against_customer": true, // سائقُ QA الثابتُ يرفع بلاغاً حقيقيّاً ضدَّ زبونِ QA
 	"report_cleanup":          true, // حذفُ بلاغاتِ السائقِ الثابتِ — تنظيفٌ نهائيّ
+	// ── شاهدُ «ضاع الرد» (Batch 4، SG1) — إسقاطُ ردِّ signup/confirm بعد الـcommit ──
+	"signup_confirm_abort": true, // تسليحُ إسقاطِ ردٍّ واحدٍ لرقمِ QA ثابت — يرى العميلُ غموضاً
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -341,6 +343,8 @@ var qaStateSeed = map[string]bool{
 	"referral_witness": true,
 	// شاهدُ «بلاغٌ ضدَّ الزبون» (Batch 4) — يحلّ زبونَ QA بنفسِه، لا يلزمه قبلَ التبديل:
 	"report_against_customer": true, "report_cleanup": true,
+	// شاهدُ «ضاع الرد» (Batch 4) — يُسلَّح برقمٍ من الطلب، لا يلزمه زبونُ QA:
+	"signup_confirm_abort": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -488,6 +492,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaReportAgainstCustomer(w, r)
 		case "report_cleanup":
 			s.qaReportCleanup(w, r)
+		case "signup_confirm_abort":
+			s.qaSignupConfirmAbort(w, r, req.Phone)
 		}
 		return
 	}

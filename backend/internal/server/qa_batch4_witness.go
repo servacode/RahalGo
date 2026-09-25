@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -407,6 +408,87 @@ func (s *Server) qaReportCleanup(w http.ResponseWriter, r *http.Request) {
 	}
 	s.logger.Warn("QA report witness cleaned (staging-only)", "driver", drvID, "deleted", tag.RowsAffected())
 	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": tag.RowsAffected(), "kind": "report_cleanup"})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **شاهدُ «ضاع الرد» الحيّ — commit ثمّ إسقاطُ الرد عن العميل** (Batch 4، SG1)
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٩-٢٥: «الجهازُ لاسلكيّ فلا تُطفأ شبكتُه؛ استعمل حقناً
+//  ضيّقاً على staging يُنفّذ منطقَ signup/confirm الحقيقيَّ ويُنشئ الحساب مرّةً،
+//  ثمّ يُسقط الاستجابةَ عن العميل مرّةً واحدةً — فيرى العميلُ انقطاعاً/غموضاً
+//  والـWiFi وADB باقيان».)
+//
+// # لماذا هذا آمن — **حقنٌ يمرّ بلا أثرٍ في الإنتاج**
+//
+// **لا وجودَ له في الإنتاج**: بابُ التسليح `/qa/seed` غيرُ مسجَّلٍ أصلاً هناك،
+// والفحصُ `qaStagingEnabled()` يحرس. **ومقصورٌ على رقمِ QA ثابتٍ واحد** (لا
+// يُسقَط ردُّ أيّ رقمٍ آخر مهما كان). **ولمرّةٍ واحدةٍ ثمّ يُنظَّف نفسَه.**
+//
+// **والحسابُ يُنشأ بالمسار الحقيقيّ** (`ConfirmSignup`) — لا حقنَ SQL. الإسقاطُ
+// يقع **بعد** إتمامِ المنطق: يُختطف الاتصالُ ويُغلق بلا كتابةِ ردّ، فيرى العميلُ
+// فشلَ اتصالٍ (لا رمزَ HTTP) — وهو ما يُشعل `signupWasAmbiguous` في التطبيق.
+
+// qaSignupAbort **مخزنُ الإسقاط الواحد** — رقمُ QA الثابتُ المستهدَف، أو فارغٌ
+// (مطفأ). لا يُسلَّح إلّا عبر `/qa/seed` على التجهيز.
+var qaSignupAbort struct {
+	mu    sync.Mutex
+	phone string // normalized؛ فارغٌ = مطفأ
+}
+
+// qaArmSignupConfirmAbort يُسلّح إسقاطَ ردِّ signup/confirm لرقمِ QA ثابتٍ واحد.
+func qaArmSignupConfirmAbort(phone string) {
+	qaSignupAbort.mu.Lock()
+	defer qaSignupAbort.mu.Unlock()
+	qaSignupAbort.phone = phone
+}
+
+// qaSignupConfirmAbortHit **أمُسلَّحٌ لهذا الرقم؟** — وإن كان، يُنظَّف فوراً
+// (مرّةً واحدة) ويُرجع true. رقمٌ آخرُ يمرّ سالماً.
+func qaSignupConfirmAbortHit(rawPhone string) bool {
+	phone, ok := identity.NormalizePhone(rawPhone)
+	if !ok {
+		return false
+	}
+	qaSignupAbort.mu.Lock()
+	defer qaSignupAbort.mu.Unlock()
+	if qaSignupAbort.phone == "" || qaSignupAbort.phone != phone {
+		return false
+	}
+	qaSignupAbort.phone = "" // **مرّةً واحدةً** — يُنظَّف نفسَه.
+	return true
+}
+
+// qaAbortResponse يختطف الاتصالَ ويُغلقه بلا كتابةِ ردّ — فيرى العميلُ فشلَ
+// اتصالٍ (EOF)، لا رمزَ حالةٍ يُقرأ نجاحاً أو خطأً صريحاً.
+func (s *Server) qaAbortResponse(w http.ResponseWriter) bool {
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		return false
+	}
+	conn, _, err := hj.Hijack()
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+// qaSignupConfirmAbort **بابُ التسليح** — يقبل رقمَ QA ثابتاً وحدَه (من قائمة
+// أرقام OTP المسموحة)، ويُسلّح إسقاطَ ردِّ أوّلِ signup/confirm له.
+func (s *Server) qaSignupConfirmAbort(w http.ResponseWriter, r *http.Request, rawPhone string) {
+	if !s.qaStagingEnabled() {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	phone, ok := identity.NormalizePhone(rawPhone)
+	if !ok || !qaOTPPhones[phone] {
+		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_phone_not_allowed", "errors.forbidden"))
+		return
+	}
+	qaArmSignupConfirmAbort(phone)
+	s.logger.Warn("QA signup-confirm abort armed (staging-only)", "phone", "QA")
+	httpx.JSON(w, http.StatusOK, map[string]any{"armed": true, "phone": phone, "kind": "signup_confirm_abort"})
 }
 
 // qaReferralReverseWallet يعكس ما صُرف للداعي بقيدٍ مزدوجٍ متوازنٍ
