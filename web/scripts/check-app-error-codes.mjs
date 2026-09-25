@@ -111,6 +111,7 @@ const SERVER_ADMIN = new Set([
   "qa_seed_kind_not_allowed", "qa_no_option",
   "qa_no_open_order", "qa_multiple_open_orders",
   "qa_coverage_zone_exists",
+  "qa_no_closed_order",
 ]);
 
 const found = new Map();

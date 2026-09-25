@@ -31,8 +31,8 @@
     "setting_defs": 147,
     "behaviour_settings": 119,
     "order_fields": 83,
-    "test_files": 376,
-    "test_funcs": 1599
+    "test_files": 377,
+    "test_funcs": 1602
   },
   "flows": [
     {
@@ -9784,6 +9784,18 @@
     {
       "name": "TestAV_MerchantGateMatchesOpenNowSQL",
       "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBatch4_DriverReportPrivacyAgainstCustomer",
+      "file": "internal/qa/batch4_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBatch4_MerchantReportResponseMinimal",
+      "file": "internal/qa/batch4_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -22250,6 +22262,12 @@
     {
       "name": "TestProfits_NetMatchesTreasuryLedger",
       "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAReferralWitnessCapabilityGuards",
+      "file": "internal/server/qa_batch4_witness_guard_test.go",
       "package": "server",
       "orphan": true
     },

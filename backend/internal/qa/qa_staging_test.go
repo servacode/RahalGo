@@ -15,4 +15,12 @@ func TestQAStaging_DisabledOutsideStaging(t *testing.T) {
 	if got.Code != 404 {
 		t.Fatalf("**بابُ جلسةِ QA ظهر خارج التجهيز** — رمز=%d (يُنتظر 404): %s", got.Code, got)
 	}
+	// **وبذّارُ QA كذلك** — شاهدُ الإحالة (Batch 4) يمرّ به، فيجب ألّا
+	// يوجد أصلاً في الإنتاج: لا صرفَ مكافأةٍ ولا مساسَ بالمحفظة.
+	for _, kind := range []string{"referral_witness", "report_against_customer", "report_cleanup"} {
+		seed := h.POST("/api/v1/qa/seed", "", map[string]any{"kind": kind})
+		if seed.Code != 404 {
+			t.Fatalf("**بذّارُ QA (%s) ظهر خارج التجهيز** — رمز=%d (يُنتظر 404): %s", kind, seed.Code, seed)
+		}
+	}
 }

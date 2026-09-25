@@ -1,0 +1,93 @@
+package server
+
+import (
+	"os"
+	"strings"
+	"testing"
+)
+
+// TestQAReferralWitnessCapabilityGuards **حرّاسُ قدرةِ شاهدِ الإحالة الحيّ**
+// (Batch 4). **بنيةُ اختبارٍ ضيّقةٌ يجب ألّا تصير باباً واسعاً** — تُقاس من
+// المصدرِ فلا تُنسى أو يتّسع نطاقُها في تعديلٍ لاحق. **وهي تمسّ المالَ**
+// (مكافآتٌ ومحفظة)، فحراستُها أشدّ.
+func TestQAReferralWitnessCapabilityGuards(t *testing.T) {
+	src, err := os.ReadFile("qa_batch4_witness.go")
+	if err != nil {
+		t.Fatalf("read source: %v", err)
+	}
+	s := string(src)
+
+	// 1) حارسُ التجهيز — يسقط مغلقاً في الإنتاج (حارسٌ ثانٍ بعد المنادي).
+	if !strings.Contains(s, "if !s.qaStagingEnabled() {") {
+		t.Error("**حارسُ qaStagingEnabled غائب**")
+	}
+	// 2) هويّاتٌ ثابتةٌ وحدَها — لا معرّفَ مستخدمٍ من الطلب.
+	if !strings.Contains(s, `qaRefInviterPhone = "+963900556000"`) {
+		t.Error("**هاتفُ الداعي الثابتُ غائبٌ أو تغيّر**")
+	}
+	if strings.Contains(s, "chi.URLParam") ||
+		strings.Contains(s, `Query().Get(`) ||
+		strings.Contains(s, "req.UserID") || strings.Contains(s, "req.OrderID") ||
+		strings.Contains(s, "req.ZoneID") {
+		t.Error("**القدرةُ تقبل معرّفاً/إعداداً من الطلب — ممنوع**")
+	}
+	// 3) يمرّ بمسارِ الإحالةِ الحقيقيّ — لا حقنَ رصيدٍ بديلاً عن الصرف.
+	for _, m := range []string{"s.referrals.Attach(", "s.referrals.SettleOnSignup(", "s.referrals.MyCode(", "s.wallet.Balance("} {
+		if !strings.Contains(s, m) {
+			t.Errorf("**لا يستدعي المسارَ الحقيقيَّ %s**", m)
+		}
+	}
+	// 4) لا حقنَ رصيدٍ خامٍّ: لا UPDATE/INSERT على المحافظِ أو القيود.
+	if strings.Contains(s, "INSERT INTO wallet") || strings.Contains(s, "UPDATE wallets") ||
+		strings.Contains(s, "UPDATE wallet_transactions") {
+		t.Error("**حقنُ رصيدٍ خامٌّ على المحافظِ — يجب أن يمرّ بالصرفِ الحقيقيّ**")
+	}
+	// 5) العكسُ متوازنٌ — قيدٌ مزدوجٌ (الداعي ↔ الخزينة) لا طرفٌ واحد.
+	if !strings.Contains(s, "is_treasury") || strings.Count(s, "s.wallet.ApplyTxID(") < 2 {
+		t.Error("**عكسُ المصروفِ ليس قيداً مزدوجاً متوازناً**")
+	}
+	// 6) لا يُصدِر توكن/جلسة — لا أدمن ولا سائق ولا متجر.
+	if strings.Contains(s, "IssueForUserID") || strings.Contains(s, "ActiveSessionID") ||
+		strings.Contains(s, "TokenFor") {
+		t.Error("**القدرةُ تُصدِر جلسةً/توكن — ممنوع**")
+	}
+	// 7) الإعداداتُ تُحفظ وتُستعاد — لا يبقى إعدادٌ اختباريٌّ نافذاً.
+	if !strings.Contains(s, "defer func()") || !strings.Contains(s, "prevInt") {
+		t.Error("**لا استعادةَ مؤجّلةً للإعداداتِ السابقة**")
+	}
+	// 8) التنظيفُ محصورٌ في الهويّاتِ الثابتةِ — حذفٌ بمعرّفِ الداعي/المدعوّين لا كنسٌ عامّ.
+	if !strings.Contains(s, "DELETE FROM referrals WHERE inviter_id = $1 OR invitee_id = ANY($2)") {
+		t.Error("**تنظيفُ الإحالةِ ليس محصوراً في الهويّاتِ الثابتة**")
+	}
+	// 9) قيمُ المكافآتِ الخمسُ متمايزةٌ — كي يُقرأ كلُّ رتبةٍ على حدة.
+	for _, v := range []string{"1000", "2000", "3000", "4000", "500"} {
+		if !strings.Contains(s, v) {
+			t.Errorf("**قيمةُ مكافأةٍ اختباريّةٌ متمايزةٌ غائبة: %s**", v)
+		}
+	}
+
+	// ── شاهدُ «بلاغٌ ضدَّ الزبون» (report_against_customer / report_cleanup) ──
+	// 10) سائقٌ ثابتٌ وحدَه — لا معرّفَ سائقٍ من الطلب.
+	if !strings.Contains(s, `qaReportDriverPhone = "+963900556010"`) {
+		t.Error("**هاتفُ السائقِ الثابتُ غائبٌ أو تغيّر**")
+	}
+	// 11) البلاغُ يمرّ بالخدمةِ الحقيقيّة — لا حقنَ تذكرةٍ خام.
+	if !strings.Contains(s, "s.support.DriverReport(") {
+		t.Error("**لا يمرّ البلاغُ بـ support.DriverReport الحقيقيّة**")
+	}
+	if strings.Contains(s, "INSERT INTO tickets") {
+		t.Error("**حقنُ تذكرةٍ خامٌّ — يجب أن يمرّ بخدمةِ البلاغ**")
+	}
+	// 12) التجهيزُ محصورٌ في طلبٍ واحدٍ ويُستعاد — driver_id + closed_at عكوسان.
+	if !strings.Contains(s, "restore()") {
+		t.Error("**تجهيزُ الطلبِ (driver_id/closed_at) لا يُستعاد**")
+	}
+	// 13) التنظيفُ محصورٌ في تذاكرِ السائقِ الثابتِ وحدَه — لا كنسٌ عامّ.
+	if !strings.Contains(s, "DELETE FROM tickets WHERE created_by = $1::uuid") {
+		t.Error("**تنظيفُ البلاغِ ليس محصوراً في تذاكرِ السائقِ الثابت**")
+	}
+	// 14) زبونُ QA الثابتُ هو الهدفُ — لا معرّفَ زبونٍ من الطلب.
+	if !strings.Contains(s, "qaStagingPhone") {
+		t.Error("**هدفُ البلاغِ ليس زبونَ QA الثابت**")
+	}
+}

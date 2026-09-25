@@ -311,6 +311,12 @@ var qaSeedAllowlist = map[string]bool{
 	"coverage_zone_create": true, // إنشاءُ منطقةِ التغطيةِ الاختباريّةِ الثابتةِ + إشعارٌ حقيقيّ
 	"coverage_zone_resave": true, // إعادةُ حفظِ نفسِ المنطقة — شهودُ عدمِ التكرار
 	"coverage_zone_delete": true, // حذفُ نفسِ المنطقةِ الاختباريّةِ وحدَها — تنظيف
+	// ── شاهدُ الإحالة الحيّ (Batch 4) — رصيدٌ حقيقيٌّ عبر Attach/SettleOnSignup،
+	//    هويّاتٌ ثابتة، عكوسٌ ومتوازن (`qa_batch4_witness.go`) ──
+	"referral_witness": true, // ضبطُ المكافآتِ الأربعِ وما بعدَها + خمسُ رتبٍ + قياسُ الرصيد + تنظيف
+	// ── شاهدُ «بلاغٌ ضدَّ الزبون» الحيّ (Batch 4) — عبرَ support.DriverReport ──
+	"report_against_customer": true, // سائقُ QA الثابتُ يرفع بلاغاً حقيقيّاً ضدَّ زبونِ QA
+	"report_cleanup":          true, // حذفُ بلاغاتِ السائقِ الثابتِ — تنظيفٌ نهائيّ
 }
 
 // qaStateSeed أنواعُ الحالة التي لا تلزمها هويّةُ زبون QA (تُعالَج قبل استخراجه).
@@ -331,6 +337,10 @@ var qaStateSeed = map[string]bool{
 	"signup_bonus_reverse": true,
 	// شاهدُ تغطيةِ المنطقة (Batch 3d) — لا تلزمها هويّةُ زبون QA:
 	"coverage_zone_create": true, "coverage_zone_resave": true, "coverage_zone_delete": true,
+	// شاهدُ الإحالة (Batch 4) — يدير هويّاتِه الثابتةَ بنفسِه، لا يلزمه زبونُ QA:
+	"referral_witness": true,
+	// شاهدُ «بلاغٌ ضدَّ الزبون» (Batch 4) — يحلّ زبونَ QA بنفسِه، لا يلزمه قبلَ التبديل:
+	"report_against_customer": true, "report_cleanup": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -472,6 +482,12 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaCoverageZoneResave(w, r)
 		case "coverage_zone_delete":
 			s.qaCoverageZoneDelete(w, r)
+		case "referral_witness":
+			s.qaReferralWitness(w, r)
+		case "report_against_customer":
+			s.qaReportAgainstCustomer(w, r)
+		case "report_cleanup":
+			s.qaReportCleanup(w, r)
 		}
 		return
 	}
