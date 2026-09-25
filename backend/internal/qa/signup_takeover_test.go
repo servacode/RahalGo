@@ -50,7 +50,7 @@ func suIP(t *testing.T, h *Harness) string {
 	t.Helper()
 	n := suSeq.Add(1)
 	ip := fmt.Sprintf("10.201.%d.%d", (n/250)%250, n%250+1)
-	t.Cleanup(func() { h.Redis().Del(ctxBG(), "login:fail:i:"+ip) })
+	t.Cleanup(func() { h.Redis().Del(ctxBG(), "login:fail:i:"+ip, "signup:fail:i:"+ip) })
 	return ip
 }
 
@@ -98,7 +98,7 @@ func suAccount(t *testing.T, h *Harness, roles []string, status string, password
 			t.Fatalf("حالُ الحساب: %v", err)
 		}
 	}
-	t.Cleanup(func() { h.Redis().Del(ctxBG(), "login:fail:p:"+u.Phone) })
+	t.Cleanup(func() { h.Redis().Del(ctxBG(), "login:fail:p:"+u.Phone, "signup:fail:p:"+u.Phone) })
 	return suAcct{ID: u.ID, Phone: u.Phone}
 }
 
@@ -207,7 +207,7 @@ func suNoUser(t *testing.T, h *Harness, phone string) {
 func suDropPhone(t *testing.T, h *Harness, phone string) {
 	t.Cleanup(func() {
 		_, _ = h.Pool.Exec(ctxBG(), `DELETE FROM users WHERE phone = $1`, phone)
-		h.Redis().Del(ctxBG(), "login:fail:p:"+phone)
+		h.Redis().Del(ctxBG(), "login:fail:p:"+phone, "signup:fail:p:"+phone)
 	})
 }
 

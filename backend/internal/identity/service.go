@@ -576,11 +576,11 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 	// **والمحاولاتُ تُعَدّ بعدّاد الدخول نفسِه** (`loginLocked`) — **لا حدٌّ
 	// ثانٍ**: **كلُّ رفضٍ يُعَدّ على الرقم والعنوان، وكلُّ حسابٍ يُنشأ يُعَدّ
 	// على العنوان.**
-	if s.loginLocked(ctx, phone, ip) {
+	if s.signupLocked(ctx, phone, ip) {
 		return nil, ErrTooManyAttempts
 	}
 	refuse := func(e error) (*AuthResult, error) {
-		s.noteLoginFail(ctx, phone, ip)
+		s.noteSignupFail(ctx, phone, ip)
 		return nil, e
 	}
 	consume := func() (bool, error) {
@@ -624,15 +624,16 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 	}
 	user := existing
 	if user == nil {
-		user, err = s.repo.CreateUserWithRole(ctx, phone, fullName, "customer")
+		// **إنشاءٌ ذرّيٌّ** (Batch 4، SG3): الحساب وكلمتُه في معاملةٍ واحدة —
+		// فلا يبقى رقمٌ محجوزٌ بلا كلمةٍ إن سقطت خطوةٌ (كان التعافي يُسدّ).
+		user, err = s.repo.CreateCustomerWithPassword(ctx, phone, fullName, hash)
 		if err != nil {
 			return nil, err
 		}
-		if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
-			return nil, err
-		}
 		s.repo.Audit(ctx, &user.ID, "user.register", "user", user.ID, ip, nil)
-		_, ipKey := loginKeys(phone, ip)
+		// **يُعَدُّ الإنشاءُ على مفتاحِ التسجيل** (SG2) لا الدخول — فلا تقفل
+		// كثرةُ الإنشاءِ من عنوانٍ مسارَ الدخول.
+		_, ipKey := signupKeys(phone, ip)
 		s.countAttempts(ctx, ipKey)
 	} else {
 		// زبونٌ دخل بالرمز ولم يضع كلمة — **وأثبت الرقمَ برمزٍ الآن**.
@@ -677,14 +678,50 @@ func (s *Service) noteLoginFail(ctx context.Context, phone, ip string) {
 	s.countAttempts(ctx, pk, ik)
 }
 
-// countAttempts **عدّادُ المحاولات الواحد** — للدخول وللتسجيل (`CUST-DEF-001`):
-// **ونافذتُه نافذةُ الدخول.** **ولا عدّادَ ثانٍ بمنطقٍ ثانٍ.**
+// countAttempts **عدّادُ المحاولات** — يزيد المفتاحَ ويضبط نافذتَه مرّةً.
+// **ونافذتُه نافذةُ الدخول** (`loginFailWindow`) للدخول وللتسجيل معاً.
+//
+// **وصار للتسجيلِ مفتاحُه** (Batch 4، SG2): كان الدخولُ والتسجيلُ يتقاسمان
+// `login:fail:*` (قرارُ `CUST-DEF-001`)، **فكانت إعادةُ محاولةِ تسجيلٍ ضاع
+// ردُّها تقفل مسارَ الاستعادة (الدخول بكلمة).** فصار لكلٍّ عدّادُه بالمنطقِ
+// نفسِه: التسجيلُ محدودٌ على `signup:fail:*` (يحرس من فتحِ حساباتٍ بالجملة
+// كما كان)، **ولا يمسّ `login:fail:*`.** والتحكّمُ في التكرار من العميل
+// (استعادةٌ واحدةٌ لا حلقة، SG1).
 func (s *Service) countAttempts(ctx context.Context, keys ...string) {
 	for _, k := range keys {
 		if n, err := s.rdb.Incr(ctx, k).Result(); err == nil && n == 1 {
 			s.rdb.Expire(ctx, k, loginFailWindow)
 		}
 	}
+}
+
+// signupKeys **مفاتيحُ عدِّ محاولاتِ التسجيلِ الفاشلة** — منفصلةٌ عن الدخول
+// (Batch 4، SG2)، بالرقمِ وبالعنوان.
+func signupKeys(phone, ip string) (string, string) {
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	}
+	return "signup:fail:p:" + phone, "signup:fail:i:" + ip
+}
+
+// signupLocked هل تجاوز الرقمُ أو العنوانُ حدَّ محاولاتِ التسجيل؟ — بالحدودِ
+// نفسِها، على مفاتيحِ التسجيلِ وحدَها. يفشل مفتوحاً عند عطل الكاش.
+func (s *Service) signupLocked(ctx context.Context, phone, ip string) bool {
+	pk, ik := signupKeys(phone, ip)
+	if n, err := s.rdb.Get(ctx, pk).Int(); err == nil && int64(n) >= s.intSetting(ctx, "security.login_max_attempts", loginMaxPerPhone) {
+		return true
+	}
+	if n, err := s.rdb.Get(ctx, ik).Int(); err == nil && n >= loginMaxPerIP {
+		return true
+	}
+	return false
+}
+
+// noteSignupFail يعدّ محاولةَ تسجيلٍ فاشلةً على الرقمِ والعنوانِ معاً — على
+// مفاتيحِ التسجيلِ لا الدخول.
+func (s *Service) noteSignupFail(ctx context.Context, phone, ip string) {
+	pk, ik := signupKeys(phone, ip)
+	s.countAttempts(ctx, pk, ik)
 }
 
 // onlyCustomer **زبونٌ عاديٌّ لا دورَ له غيرُه** — وحده يُكمَل من باب التسجيل.

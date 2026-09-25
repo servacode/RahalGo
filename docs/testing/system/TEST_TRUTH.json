@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 146,
-    "behaviour_settings": 118,
+    "setting_defs": 147,
+    "behaviour_settings": 119,
     "order_fields": 83,
-    "test_files": 375,
-    "test_funcs": 1597
+    "test_files": 376,
+    "test_funcs": 1599
   },
   "flows": [
     {
@@ -4935,6 +4935,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "referral.reward_4",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "referral.reward_on",
       "group": "platform",
       "kind": "choice",
@@ -9766,6 +9784,18 @@
     {
       "name": "TestAV_MerchantGateMatchesOpenNowSQL",
       "file": "internal/qa/availability_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBatch4_MyTicketsFiledByMeOnly",
+      "file": "internal/qa/batch4_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBatch4_SignupRetryDoesNotLockLogin",
+      "file": "internal/qa/batch4_test.go",
       "package": "qa",
       "orphan": true
     },

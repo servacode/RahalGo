@@ -4446,7 +4446,15 @@
       ],
       "response": [
         {
-          "name": "@t",
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "number",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
           "type": "unknown"
         }
       ],
@@ -5049,7 +5057,15 @@
       ],
       "response": [
         {
-          "name": "@t",
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "number",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
           "type": "unknown"
         }
       ],

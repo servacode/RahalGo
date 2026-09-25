@@ -150,7 +150,8 @@ type rowRunner interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-// rewardFor مكافأةُ الرتبة — **والرابعةُ فما فوقها بالثابت.**
+// rewardFor مكافأةُ الرتبة — **والخامسةُ فما فوقها بالثابت** (Batch 4:
+// صارت الرابعةُ رتبةً قائمةً بذاتها، والثابتُ يبدأ من الخامسة).
 func (s *Service) rewardFor(ctx context.Context, rank int) int64 {
 	switch rank {
 	case 1:
@@ -159,6 +160,8 @@ func (s *Service) rewardFor(ctx context.Context, rank int) int64 {
 		return s.settings.GetInt(ctx, "referral.reward_2")
 	case 3:
 		return s.settings.GetInt(ctx, "referral.reward_3")
+	case 4:
+		return s.settings.GetInt(ctx, "referral.reward_4")
 	default:
 		return s.settings.GetInt(ctx, "referral.reward_rest")
 	}
@@ -513,8 +516,8 @@ func (s *Service) Standing(ctx context.Context, userID string) (*Standing, error
 	out.NextReward = s.rewardFor(ctx, out.Invited+1)
 	// **ومن `rewardFor` نفسِها لا من قراءةٍ ثانيةٍ للإعدادات** — قائمتان
 	// للأرقام نفسِها تفترقان يوماً، **فيُعرض جدولٌ ويُصرف غيرُه.**
-	out.Tiers = []int64{s.rewardFor(ctx, 1), s.rewardFor(ctx, 2), s.rewardFor(ctx, 3)}
-	out.Rest = s.rewardFor(ctx, 4)
+	out.Tiers = []int64{s.rewardFor(ctx, 1), s.rewardFor(ctx, 2), s.rewardFor(ctx, 3), s.rewardFor(ctx, 4)}
+	out.Rest = s.rewardFor(ctx, 5)
 	out.RewardOn = s.rewardOn(ctx)
 	return &out, nil
 }

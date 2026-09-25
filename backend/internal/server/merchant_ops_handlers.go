@@ -238,5 +238,7 @@ func (s *Server) handleMerchantReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.touch("ticket", "ops")
-	httpx.JSON(w, http.StatusCreated, t)
+	// **ردٌّ أدنى للمُبلِّغ** (خصوصيّة، Batch 4): لا اسمَ زبونٍ ولا هاتفَه في
+	// ردّ البلاغ — إقرارُ تسجيلٍ فقط. صفُّ الهويّة الكامل لبابِ الأدمن وحدَه.
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": t.ID, "number": t.Number, "status": t.Status})
 }

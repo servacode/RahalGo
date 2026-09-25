@@ -100,6 +100,38 @@ func (r *Repo) CreateUserWithRole(ctx context.Context, phone, fullName, role str
 	return u, err
 }
 
+// CreateCustomerWithPassword ينشئ زبوناً جديداً بكلمةِ مرورِه في معاملةٍ
+// واحدة (Batch 4، SG3) — **الإنشاءُ وكلمةُ المرور ذرّةٌ واحدة.**
+//
+// **وكان على خطوتين** (`CreateUserWithRole` ثمّ `SetPassword`): **فإن سقطت
+// الثانيةُ بقي مستخدِمٌ بلا كلمة، رقمُه محجوزٌ، والتعافي مسدود** — نفسُ الداء
+// الذي عولج لبابِ الأدمن (`AdminCreateUserFull`). فيُكتب هنا كلُّه معاً:
+// إن سقطت أيُّ خطوةٍ تراجعت المعاملةُ ولم يُحجَز الرقم.
+func (r *Repo) CreateCustomerWithPassword(ctx context.Context, phone, fullName, hash string) (*User, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var id string
+	if err := tx.QueryRow(ctx,
+		`INSERT INTO users (phone, full_name, password_hash, must_change_password)
+		 VALUES ($1, $2, $3, false) RETURNING id`,
+		phone, fullName, hash).Scan(&id); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')`, id); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	u, _, err := r.UserByID(ctx, id)
+	return u, err
+}
+
 // ListUsers بحث وترشيح وترقيم صفحات لإدارة المستخدمين.
 func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly bool, status string, limit, offset int) ([]User, int, error) {
 	// role الخاص "staff" = موظفو المنصة (عمليات + مالية)

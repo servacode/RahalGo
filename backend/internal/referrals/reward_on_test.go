@@ -183,6 +183,7 @@ func TestStanding_ShowsTheSameTiersItPays(t *testing.T) {
 			"referral.reward_1":    5_000,
 			"referral.reward_2":    3_000,
 			"referral.reward_3":    1_000,
+			"referral.reward_4":    2_000,
 			"referral.reward_rest": 500,
 		}},
 		func(context.Context) string { return f.treasury }, f.notif, nil)
@@ -191,8 +192,13 @@ func TestStanding_ShowsTheSameTiersItPays(t *testing.T) {
 	if err != nil {
 		t.Fatalf("تعذّرت القراءة: %v", err)
 	}
-	if got := []int64{st.Tiers[0], st.Tiers[1], st.Tiers[2], st.Rest}; got[0] != 5_000 ||
-		got[1] != 3_000 || got[2] != 1_000 || got[3] != 500 {
+	// **أربعُ رتبٍ متمايزةٍ ثمّ ثابتٌ من الخامسة** (Batch 4): الرابعةُ لها
+	// رقمُها (2000) لا رقمُ ما بعدها (500).
+	if len(st.Tiers) != 4 {
+		t.Fatalf("عددُ الدرجات %d — **والمطلوبُ أربع**", len(st.Tiers))
+	}
+	if got := []int64{st.Tiers[0], st.Tiers[1], st.Tiers[2], st.Tiers[3], st.Rest}; got[0] != 5_000 ||
+		got[1] != 3_000 || got[2] != 1_000 || got[3] != 2_000 || got[4] != 500 {
 		t.Fatalf("الدرجاتُ %v — **والمعروضُ غيرُ المصروف**", got)
 	}
 	if st.RewardOn != referrals.OnFirstOrder {

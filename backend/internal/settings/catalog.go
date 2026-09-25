@@ -971,7 +971,10 @@ var Catalog = []Def{
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
 	{Key: "referral.reward_3", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
-	// **وما بعد الثالثة** — رقمٌ واحدٌ لا يتغيّر.
+	// **والرابعةُ رتبةٌ قائمةٌ بذاتها** (Batch 4) — لا تُدمَج مع ما بعدها.
+	{Key: "referral.reward_4", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	// **وما بعد الرابعة** — رقمٌ واحدٌ لا يتغيّر (الخامسةُ فصاعداً).
 	{Key: "referral.reward_rest", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
 

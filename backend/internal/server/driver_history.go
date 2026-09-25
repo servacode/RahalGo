@@ -147,5 +147,8 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 	// **والعملياتُ تُنبَّه** — بلاغٌ لا يراه أحدٌ حتى يفتح الشاشةَ صدفةً بلاغٌ
 	// لم يُقدَّم.
 	s.touch("ticket", "ops")
-	httpx.JSON(w, http.StatusOK, t)
+	// **ردٌّ أدنى للمُبلِّغ** (خصوصيّة، Batch 4): إقرارُ تسجيلٍ — المعرّفُ
+	// والرقمُ والحالُ لا صفُّ المكتب الكامل: لا هاتفَ زبونٍ ولا اسمَه ولا
+	// معرّفَ من أُبلِغ عنه. صفُّ الهويّة الكامل لبابِ الأدمن وحدَه.
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": t.ID, "number": t.Number, "status": t.Status})
 }

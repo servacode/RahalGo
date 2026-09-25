@@ -127,8 +127,11 @@ func (s *Server) handleMyComplaint(w http.ResponseWriter, r *http.Request) {
 	var id string
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT t.id FROM tickets t
-		WHERE t.order_id = $1
-		ORDER BY t.created_at DESC LIMIT 1`, orderID).Scan(&id)
+		-- **شكواه هو على هذا الطلب** — لا آخرَ تذكرةٍ على الطلب أيّاً كان
+		-- كاتبُها. بلاغُ سائقٍ على الطلب نفسِه له كاتبٌ آخر (created_by =
+		-- السائق)، ولو أُرجع هنا لكشف هويّةَ المُبلِّغ لصاحب الطلب.
+		WHERE t.order_id = $1 AND t.created_by = $2 AND t.opened_by_customer
+		ORDER BY t.created_at DESC LIMIT 1`, orderID, userIDFrom(r)).Scan(&id)
 	if err != nil {
 		// **وطلبُه بلا شكوى يبقى ٢٠٠ بـ`null`** — **وهذا هو المعنى
 		// الثاني**، والشاشةُ تعرض «لم تشتكِ بعد».
@@ -140,5 +143,8 @@ func (s *Server) handleMyComplaint(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"ticket": t})
+	// **يُقنَّع كما في `/my/tickets`** — الردودُ بوسم `mine` لا بمعرّفِ كاتبٍ
+	// خام، ولا هاتفَ زبونٍ ولا معرّفَ مُشتكىً عليه. **صفُّ المكتب الكامل
+	// لبابِ الأدمن وحدَه.**
+	httpx.JSON(w, http.StatusOK, map[string]any{"ticket": customerTicketView(t, userIDFrom(r))})
 }

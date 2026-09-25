@@ -426,6 +426,7 @@
 | `referral.reward_1` | المنصة | money | `0` |
 | `referral.reward_2` | المنصة | money | `0` |
 | `referral.reward_3` | المنصة | money | `0` |
+| `referral.reward_4` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
 | `auth.require_whatsapp` | المنصة | bool | `true` |
 | `orders.auto_accept_min` | المنصة | int | `0` |

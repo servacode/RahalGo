@@ -92,7 +92,12 @@ func (s *Server) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 		       t.created_at, t.resolved_at
 		FROM tickets t
 		LEFT JOIN orders o ON o.id = t.order_id
-		WHERE t.customer_id = $1
+		-- شكاواه هو وحدَه: من قدّمها بنفسه (created_by = المستخدم و
+		-- opened_by_customer). لا customer_id: صفُّ بلاغِ سائقٍ أو متجرٍ ضدَّ
+		-- الزبون يحمل customer_id = صاحبُ الطلب، فيتسلّل إلى «شكاواي» ويكشف
+		-- أنّ بلاغاً رُفع عليه — تسريبٌ لا شاشةٌ ناقصة. وبلاغاتُ «ضدّي» لها
+		-- بابُها المُقنَّع في مسار السمعة.
+		WHERE t.created_by = $1 AND t.opened_by_customer
 		ORDER BY t.created_at DESC
 		LIMIT 100`, userIDFrom(r))
 	if err != nil {
