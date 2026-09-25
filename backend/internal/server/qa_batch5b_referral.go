@@ -73,6 +73,7 @@ func (s *Server) qaReferralUIArm(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	ip := clientIP(r)
+	actor := s.qaCoverageActor(ctx)
 
 	qa1, err := s.qaUserIDByPhone(ctx, qaStagingPhone)
 	if err != nil {
@@ -89,7 +90,7 @@ func (s *Server) qaReferralUIArm(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	purged := s.qaAnonymizeInvitees(ctx, ip)
+	purged := s.qaAnonymizeInvitees(ctx, ip, actor)
 
 	qaRefUISaved.mu.Lock()
 	if !qaRefUISaved.armed {
@@ -164,7 +165,7 @@ func (s *Server) qaReferralUICleanup(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	purged := s.qaAnonymizeInvitees(ctx, ip)
+	purged := s.qaAnonymizeInvitees(ctx, ip, actor)
 
 	// استعادةُ الرتبِ والوضع.
 	qaRefUISaved.mu.Lock()
@@ -236,7 +237,11 @@ func (s *Server) qaClearInviteePhoneClaims(ctx context.Context, phones []string)
 
 // qaAnonymizeInvitees يُجهِّل حساباتِ المدعوّين الحيّةَ عبر مسار الحذف الحقيقيّ
 // (رمزٌ حقيقيٌّ ثمّ تأكيد) — فيتحرّر الرقمُ لتسجيلٍ جديد. يُرجع عددَ ما جُهِّل.
-func (s *Server) qaAnonymizeInvitees(ctx context.Context, ip string) int {
+//
+// **وقبل الحذفِ تُفرَّغ محفظةُ المدعوّ** (هديّةُ التسجيل) **بقيدٍ متوازنٍ إلى
+// الخزينة** — فالحذفُ الحقيقيُّ يرفض محفظةً غيرَ فارغة (`wallet_not_empty`).
+// **ولا يمسّ إلّا أرقامَ المدعوّين الخمسةَ الجديدة** (٩٨٠–٩٨٤)، لا حسابَ آخر.
+func (s *Server) qaAnonymizeInvitees(ctx context.Context, ip, actor string) int {
 	n := 0
 	for _, p := range qaRefInviteePhonesUI() {
 		norm, ok := identity.NormalizePhone(p)
@@ -246,6 +251,11 @@ func (s *Server) qaAnonymizeInvitees(ctx context.Context, ip string) int {
 		var uid string
 		if err := s.pg.QueryRow(ctx, `SELECT id::text FROM users WHERE phone = $1`, norm).Scan(&uid); err != nil {
 			continue // لا حساب — لا شيء
+		}
+		// **إفراغُ الرصيدِ بقيدٍ متوازن** — يُخصَم من المدعوّ ويُردّ إلى الخزينة،
+		// فيبقى صافي الدفتر صفراً، وتصير المحفظةُ فارغةً فتُقبَل الأنسنة.
+		if bal, err := s.wallet.Balance(ctx, uid); err == nil && bal > 0 {
+			_, _ = s.qaReferralReverseWallet(ctx, uid, bal, actor)
 		}
 		code, err := s.identity.QAIssueDeleteCode(ctx, norm)
 		if err != nil {
