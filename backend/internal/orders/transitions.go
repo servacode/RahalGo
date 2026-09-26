@@ -586,6 +586,28 @@ func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, 
 	if in.driverID == nil || in.deliveryFee <= 0 || s.settings == nil {
 		return nil
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **ولا يُعوَّض السائقُ عن الطلب نفسِه مرّتين** — منعُ تكرارٍ ماليّ.
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **يُنادى تلقائيّاً من مسارين**: تعذّرُ التسليم النهائيّ (حالةٌ منتهية)،
+	// **وحظرُ المتجر** (`merchant_blocked.go`) الذي **يُعيد الطلبَ إلى `accepted`
+	// ثمّ يُعاد توزيعُه** — فقد يعود السائقُ نفسُه ويُحظَر ثانيةً على المتجر
+	// نفسِه، **فيُعوَّض مرّتين والخزينةُ تُخصَم مرّتين.** والمسارُ اليدويّ
+	// (`failure_aftermath.go`) يحرسه بـ`EXISTS(ref,kind,user)`؛ **والتلقائيُّ لم
+	// يكن يحرسه.** والحارسُ لكلّ (طلب، سائق): **سائقٌ مختلفٌ يُعوَّض عن مشوارِه**
+	// (طلبٌ حُوّل إليه ثمّ حُظر)، **ونفسُه لا يُعوَّض مرّتين.** وصفُّ الطلب
+	// مقفولٌ `FOR UPDATE` في `transitionTx` فالفحصُ آمنٌ من السباق.
+	var already bool
+	if err := q.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM wallet_transactions
+		              WHERE ref = $1 AND kind = 'compensation' AND user_id = $2)`,
+		in.orderID, *in.driverID).Scan(&already); err != nil {
+		return err
+	}
+	if already {
+		return nil
+	}
 	var fault string
 	if err := q.QueryRow(ctx,
 		`SELECT COALESCE(fault, '') FROM orders WHERE id = $1`, in.orderID).

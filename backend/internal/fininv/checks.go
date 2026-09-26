@@ -269,15 +269,20 @@ var All = []Check{
 
 	{
 		ID: "FI-05.a", Family: FI05, Status: ProvableNow, Ops: true,
-		Name:  "لا تعويضَ مكرَّرٌ لطلب",
-		Why:   "طلبٌ عُوِّض أكثرَ من مرّة — وهو ما أُصلح ٢٠٢٦-٠٨-٠٨",
+		Name: "لا تعويضَ مكرَّرٌ لمستحقٍّ عن طلب",
+		// **والوحدةُ (طلب، مستحقّ) لا (طلب) وحدَه**: طلبٌ حُظر عند المتجر يعود
+		// إلى `accepted` ويُعاد توزيعُه (`merchant_blocked.go`)، **فسائقٌ ثانٍ
+		// يقود مشوارَه ويُحظَر يستحقُّ تعويضَه** — سطران بمرجعٍ واحدٍ لسائقَين
+		// حقٌّ لا خطأ. **والخطأُ أن يُعوَّض السائقُ نفسُه مرّتين** عن الطلب
+		// نفسِه (يمنعه حارسُ `compensateDriverOnFail`)، وهو ما يمسكه هذا الثابت.
+		Why:   "المستحقُّ عُوِّض عن الطلب نفسِه أكثرَ من مرّة — تكرارٌ ماليّ",
 		Flows: []string{"F-16"},
 		Kinds: []string{"compensation"},
 		SQL: `
-			SELECT t.ref, count(*)::bigint AS مرّات
+			SELECT t.ref, t.user_id, count(*)::bigint AS مرّات
 			FROM wallet_transactions t
 			WHERE t.kind = 'compensation' AND t.ref <> ''
-			GROUP BY t.ref HAVING count(*) > 1`,
+			GROUP BY t.ref, t.user_id HAVING count(*) > 1`,
 	},
 	{
 		ID: "FI-05.b", Family: FI05, Status: ProvableNow, Ops: true,
