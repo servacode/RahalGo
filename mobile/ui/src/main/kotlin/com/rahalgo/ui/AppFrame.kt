@@ -190,6 +190,12 @@ fun AuthGate(
     onSignedIn: @Composable () -> Unit,
     /** **ما يُعرض لضيفٍ لم يطلب الدخولَ بعد** — أو فارغ. */
     guest: (@Composable () -> Unit)? = null,
+    // **قناةُ تحديثِ هذا التطبيق** (٢٠٢٦-٠٩-٢٦): الافتراضُ زبونٌ على Google Play؛
+    // تطبيقُ المندوب (توزيعٌ مباشرٌ من الموقع) يمرّر `updateShowPlay=false` ورابطَه
+    // المباشر ونصّاً ملائماً لدوره. تُمرَّر إلى `UpdateGate` أدناه.
+    updateShowPlay: Boolean = true,
+    updateFallbackUrl: String = "https://rahalgo.com/app",
+    updateBody: String? = null,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **وأرضُ السمة تُوضع هنا — بوّابةً واحدةً لثلاث شاشات**
@@ -232,7 +238,12 @@ fun AuthGate(
     // **والاثنان معاً**: الرايةُ العامّةُ تلتقط ٤٢٦ من أيّ نداءٍ آخر —
     // **إنّما لا يُعتمد عليها وحدَها لإيقاظ الرسم.**
     if (vm.updateRequired) {
-        UpdateGate(pkg = LocalContext.current.packageName)
+        UpdateGate(
+            pkg = LocalContext.current.packageName,
+            fallbackUrl = updateFallbackUrl,
+            showPlay = updateShowPlay,
+            body = updateBody,
+        )
         return
     }
 

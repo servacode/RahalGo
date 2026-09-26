@@ -4815,6 +4815,7 @@
       "path": "/api/v1/me/payouts",
       "handler": "handleCreatePayout",
       "auth": true,
+      "idempotent": true,
       "request": [
         {
           "name": "amount",
@@ -4824,15 +4825,6 @@
           "name": "note",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "id",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
       ]
     },
     {
@@ -6608,6 +6600,7 @@
       "roles": [
         "sales"
       ],
+      "idempotent": true,
       "request": [
         {
           "name": "store_name",
@@ -6645,15 +6638,6 @@
           "name": "lng",
           "type": "?float64"
         }
-      ],
-      "response": [
-        {
-          "name": "id",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
       ]
     },
     {

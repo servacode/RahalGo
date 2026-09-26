@@ -40,8 +40,11 @@ class RepApi(private val api: ApiClient) {
      * **ولا يُنشئ متجراً بضغطة**: من فتح هذا البابَ بلا مراجعةٍ فتح
      * بابَ من يُسجّل متاجرَ وهميّةً ليأخذ عمولتَها.
      */
-    suspend fun createLead(input: NewLead): Lead =
-        api.call("/api/v1/rep/leads", HttpMethod.Post, input)
+    // **ومفتاحُ الحمايةِ من التكرار يُمرَّر** — الخادمُ يلفّ المسارَ
+    // (`s.idempotent`)، فمفتاحٌ ثابتٌ للمحاولة الواحدة يجعل الضغطَ المزدوجَ
+    // أو الإعادةَ بعد جوابٍ غامضٍ تُنشئ طلبَ انضمامٍ واحداً لا اثنين.
+    suspend fun createLead(input: NewLead, idempotencyKey: String? = null): Lead =
+        api.call("/api/v1/rep/leads", HttpMethod.Post, input, idempotencyKey = idempotencyKey)
 
     /** **تصنيفاتُ المتاجر** — لنموذج التسجيل. */
     suspend fun categories(): List<RepCategory> = api.call("/api/v1/rep/categories")
@@ -337,9 +340,9 @@ data class RepOrderLine(
     val total: Long = 0,
     val subtotal: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
-    @SerialName("platform_commission") val platformCommission: Long = 0,
-    /** **ما كان سيُحتسب لولا الإلغاء** — يُعرض مشطوباً ولا يدخل مجموعا. */
-    @SerialName("forfeited_commission") val forfeitedCommission: Long = 0,
+    // **هامشُ المنصّة وعمولتُها الداخليّة لا يراهما المندوب** (RQ-7، ٢٠٢٦-٠٩-٢٦):
+    // الخادمُ لم يعُد يرسلهما، فحُذفا من النموذج كذلك. يبقى للمندوب نصيبُه هو:
+    // `forfeited_share` (ما فاته على الملغى) و`my_share`.
     @SerialName("forfeited_share") val forfeitedShare: Long = 0,
     @SerialName("my_share") val myShare: Long = 0,
     @SerialName("created_at") val createdAt: String = "",

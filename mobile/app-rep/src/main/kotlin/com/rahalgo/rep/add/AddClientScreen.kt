@@ -431,6 +431,12 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
         busy = true
         error = ""
         done = false
+        // **ومفتاحٌ ثابتٌ للمحاولة** (`Attempt.LEAD`) — يُولَّد مرّةً ويبقى على
+        // القرص حتّى تنجح، **فإعادةٌ بعد جوابٍ غامضٍ (انقطاعُ شبكة) تحمله نفسَه**
+        // والخادمُ يلفّ المسارَ (`s.idempotent`) فيردّ الطلبَ الأوّلَ ولا يُنشئ
+        // ثانياً. **وردُّ الخادم حسمٌ فيُمحى** (خطأُ إدخال)، وانقطاعُ الشبكة ليس
+        // حسماً فيبقى ليُعيد المحاولةَ بمفتاحه. والضغطُ المزدوجُ يمنعه `busy` أعلاه.
+        val key = com.rahalgo.ui.Attempt.key(com.rahalgo.ui.Attempt.LEAD)
         viewModelScope.launch {
             try {
                 api.createLead(
@@ -445,7 +451,9 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                         lat = point?.first,
                         lng = point?.second,
                     ),
+                    idempotencyKey = key,
                 )
+                com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.LEAD)
                 done = true
                 // **والنموذجُ يُفرَّغ بعد أن يُقيَّد لا قبله** — **ومن
                 // فرّغه قبل الجواب خسر ما كتبه إن سقط النداء.**
@@ -461,6 +469,11 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                 pickedDistrict = ""
                 districts = emptyList()
             } catch (e: Exception) {
+                // **وردُّ الخادم حسمٌ فيُمحى المفتاح** — محاولةٌ جديدةٌ عن قصد.
+                // **وانقطاعُ الشبكة ليس حسماً فيبقى** — إعادةٌ آمنةٌ بالمفتاح نفسِه.
+                if (com.rahalgo.ui.isDecided(e)) {
+                    com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.LEAD)
+                }
                 error = apiError(getApplication(), e)
             }
             busy = false

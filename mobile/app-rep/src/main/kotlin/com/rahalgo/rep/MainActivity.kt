@@ -136,12 +136,27 @@ class MainActivity : ComponentActivity() {
 private fun RepApp() {
     // **والإطارُ من الوحدة** — السمةُ وشريطا النظام: **قِيس أنّها
     // متطابقةٌ في الثلاثة** (٢٠٢٦-٠٨-١٤).
-    AppFrame { theme, dark ->
+    //
+    // **وإذنُ الموقع لا يُطلب قبل الدخول** (RO-2، ٢٠٢٦-٠٩-٢٦): يُطلب سياقيّاً
+    // عند «إضافة عميل» وحدَها (انظر أدناه)، فلا يُحرَق رفضٌ بلا سياقٍ يكسر
+    // التقاطَ الدبّوس لاحقاً.
+    //
+    // **وتحديثُ المندوب توزيعٌ مباشرٌ من الموقع لا Google Play** (٢٠٢٦-٠٩-٢٦):
+    // لا زرَّ متجرٍ يشير إلى قائمةٍ لا وجودَ للتطبيق فيها، بل تنزيلٌ مباشرٌ من
+    // صفحة تطبيق المندوب، ونصٌّ ملائمٌ لدوره (المندوبُ لا «يطلب»).
+    AppFrame(
+        permissions = com.rahalgo.ui.startupPermissions(location = false),
+    ) { theme, dark ->
         val vm: AuthViewModel = viewModel()
         AuthGate(
             vm = vm,
             // **ولا تسجيلَ حسابٍ للمندوب** — حسابُه من المنصّة كالسائق.
             onSignedIn = { SignedIn(theme, dark, onLogout = vm::logout) },
+            // **وتحديثُ المندوب توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٦):
+            // لا زرَّ متجرٍ، بل تنزيلٌ مباشرٌ من صفحة تطبيق المندوب، ونصٌّ لدوره.
+            updateShowPlay = false,
+            updateFallbackUrl = "https://rahalgo.com/download/rep",
+            updateBody = stringResource(R.string.update_body_rep),
         )
     }
 }

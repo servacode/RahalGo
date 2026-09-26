@@ -208,4 +208,6 @@
     <string name="offer_default_title">خصم</string>
     <string name="offer_bad_input">اختر صنفاً ونسبة بين ١ و٩٠ ومدة صحيحة</string>
     <string name="offer_borne_note">الخصم يُحسم من مستحق المتجر</string>
+    <!-- **نصُّ شاشة التحديث الإلزاميّ للمندوب** — توزيعٌ مباشرٌ من الموقع، لا Google Play، والمندوبُ لا «يطلب». -->
+    <string name="update_body_rep">صدر تحديثٌ إلزاميٌّ لتطبيق المندوب. نزّله من موقع رحّال غو لتتابع عملك.</string>
 </resources>

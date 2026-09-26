@@ -158,49 +158,60 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 	// **والفحصُ فوق القفل لا بدلَ منه**: **المتاحُ يُقرأ ثانيةً داخل
 	// المعاملة** — **فطلبان متزامنان لا يحجزان ضعفَ المتاح**،
 	// **والقيدُ في الجدول حارسٌ ثالث.**
-	var id string
-	err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+	// ══════════════════════════════════════════════════════════════════
+	// **والطلبُ وحجزُه وعلامةُ منعِ التكرار فعلٌ واحد** — `XG-33`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ملفوفٌ بـ`s.idempotent` (server.go) فهو مسارٌ محميّ** — والحارسُ
+	// البنيويّ (`TestIDEM_AllProtectedPathsUseCoordinator`) يفرض أن يمرّ عبر
+	// `WithIdempotentTx`: **فطلبُ السحب وحجزُه وعلامةُ التثبيت في معاملةٍ
+	// واحدة**، **فلا نقرةٌ مزدوجةٌ تُنشئ طلبَين ولا علامةٌ تُكتب خارجَ الحجز.**
+	// **وضمانةُ الطلبِ المعلَّقِ الواحد باقيةٌ**: الفهرسُ الفريدُ يردّ الثانيَ
+	// `errPayoutPending` (نقرةٌ مزدوجةٌ بمفتاحٍ واحدٍ ⇒ استرجاعُ الأوّل).
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		// **وقفلُ صفّ المحفظة يُرتِّب المتزاحمَين** — والثاني يقرأ
 		// بعد أن كُتب الأوّل.
 		if _, e := q.Exec(ctx, `
 			INSERT INTO wallets (user_id) VALUES ($1)
 			ON CONFLICT (user_id) DO NOTHING`, uid); e != nil {
-			return e
+			return IdempotentBody{}, e
 		}
 		var bal, res int64
 		if e := q.QueryRow(ctx,
 			`SELECT balance, reserved FROM wallets WHERE user_id = $1 FOR UPDATE`,
 			uid).Scan(&bal, &res); e != nil {
-			return e
+			return IdempotentBody{}, e
 		}
 		if req.Amount > bal-res {
-			return errPayoutOver
+			return IdempotentBody{}, errPayoutOver
 		}
+		var id string
 		if e := q.QueryRow(ctx, `
 			INSERT INTO payout_requests (user_id, amount, note) VALUES ($1, $2, $3)
 			RETURNING id`, uid, req.Amount, clip(req.Note, 300)).Scan(&id); e != nil {
-			return e
+			if isUniqueViolation(e) {
+				return IdempotentBody{}, errPayoutPending // الفهرس الفريد يمنع طلبين معلّقين
+			}
+			return IdempotentBody{}, e
 		}
-		return s.wallet.ReserveTx(ctx, q, uid, req.Amount)
+		if e := s.wallet.ReserveTx(ctx, q, uid, req.Amount); e != nil {
+			return IdempotentBody{}, e
+		}
+		return IdempotentBody{
+			Status:  http.StatusCreated,
+			Payload: map[string]any{"id": id},
+			AfterCommit: func() {
+				// المالية تعرف فوراً — الطلب بلا متابع يبقى معلّقاً بلا نهاية
+				s.notify.NotifyRoles(r.Context(), []string{"admin", "finance"}, notifications.Input{
+					Kind: notifications.KindWallet, Title: notifTitles.payoutRequested,
+					Body: s.userLabel(r.Context(), uid), Entity: "payout", EntityID: id,
+					Href: "/dashboard/payouts",
+				})
+				s.touch("wallet", "ops")
+				s.touchUser(uid, "wallet")
+			},
+		}, nil
 	})
-	if isUniqueViolation(err) {
-		s.respondErr(w, errPayoutPending) // الفهرس الفريد يمنع طلبين معلّقين
-		return
-	}
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-
-	// المالية تعرف فوراً — الطلب بلا متابع يبقى معلّقاً بلا نهاية
-	s.notify.NotifyRoles(r.Context(), []string{"admin", "finance"}, notifications.Input{
-		Kind: notifications.KindWallet, Title: notifTitles.payoutRequested,
-		Body: s.userLabel(r.Context(), uid), Entity: "payout", EntityID: id,
-		Href: "/dashboard/payouts",
-	})
-	s.touch("wallet", "ops")
-	s.touchUser(uid, "wallet")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
 }
 
 // handleAdminPayouts كل طلبات السحب (ترشيح بالحالة) — للأدمن والمالية.
@@ -414,6 +425,10 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 				s.notify.Notify(r.Context(), notifications.Input{
 					UserID: userID, Kind: notifications.KindWallet, Title: title,
 					Body: req.Decision, Entity: "payout", EntityID: id, Href: "/portal/wallet",
+					// **إلى تطبيق المستحقِّ وحدَه** (OBS-R7): الدفعةُ لعاملٍ
+					// (مندوبٍ/سائقٍ/متجر)، فيُوجَّه القرارُ إلى تطبيقه لا إلى
+					// تطبيق الزبون على جهازه نفسِه. يُحسب من دور المستحقّ.
+					Apps: s.payeeWorkerApps(r.Context(), userID),
 				})
 				s.touch("wallet", "ops")
 				// **وصاحبُ الطلب يرى قرارَه ورصيدَه فوراً** — لا حين يُحدّث الصفحة.
@@ -421,6 +436,36 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 			},
 		}, nil
 	})
+}
+
+// payeeWorkerApps **تطبيقاتُ العامل المستحقِّ الدفعة** — يُحسب من أدواره
+// فيُوجَّه إشعارُ قرار الدفعة إلى تطبيقه (المندوب/السائق/المتجر) لا إلى تطبيق
+// الزبون على جهازه نفسِه (OBS-R7). **والدفعةُ لعاملٍ دائماً** (البابُ محصورٌ
+// في `payoutRoles`)، فلا يعود فارغاً في الممارسة؛ ولو عاد فارغاً احتياطاً
+// وُجِّه الإشعارُ كما كان (بلا قيد) فلا يضيع.
+func (s *Server) payeeWorkerApps(ctx context.Context, userID string) []string {
+	rows, err := s.pg.Query(ctx,
+		`SELECT role_code FROM user_roles WHERE user_id = $1::uuid`, userID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var role string
+		if rows.Scan(&role) != nil {
+			continue
+		}
+		switch role {
+		case "sales":
+			out = append(out, notifications.AppRep)
+		case "driver":
+			out = append(out, notifications.AppDriver)
+		case "merchant":
+			out = append(out, notifications.AppMerchant)
+		}
+	}
+	return out
 }
 
 // userLabel اسم المستخدم أو هاتفه — لنصوص الإشعارات.

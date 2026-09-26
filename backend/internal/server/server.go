@@ -691,7 +691,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/me/notifications/read", s.handleMarkNotificationRead)
 			// طلبات سحب الرصيد — لأي صاحب رصيد (مندوب اليوم، سائق مع تطبيقه)
 			r.Get("/me/payouts", s.handleMyPayouts)
-			r.Post("/me/payouts", s.handleCreatePayout)
+			r.Post("/me/payouts", s.idempotent(s.handleCreatePayout))
 		})
 
 		// لوحة المندوب — دور المبيعات حصراً (قراءة: كوده ومتاجره وعمولاته)
@@ -705,7 +705,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/wallet", s.handleRepWallet)
 			r.Get("/leads", s.handleRepLeads)
 			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
-			r.Post("/leads", s.handleRepCreateLead)
+			r.Post("/leads", s.idempotent(s.handleRepCreateLead))
 			r.Get("/categories", s.handleListCategories) // تصنيفات المتاجر للنموذج
 			// **وهدفُ المندوب كهدف السائق** — المقياسُ يختلف والمعنى واحد.
 			r.Get("/incentives", s.handleMyIncentives)

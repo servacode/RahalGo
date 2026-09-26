@@ -3,6 +3,7 @@ package catalog
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
@@ -23,6 +24,12 @@ import (
 var (
 	ErrCategoryInvalid = httpx.NewError(http.StatusBadRequest, "invalid_category", "errors.invalid_category")
 	ErrNameRequired    = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+	// ErrTransferReasonRequired **نقلُ المتجر بين مندوبَين يلزمه سبب.**
+	//
+	// **يحوّل النقلُ عمولةَ كلّ طلبٍ قادمٍ ونسبةَ الهدف** — فلا يُقبل صامتاً.
+	ErrTransferReasonRequired = httpx.NewError(http.StatusBadRequest,
+		"transfer_reason_required", "errors.transfer_reason_required")
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ولا متجرَ بلا موضعٍ على الأرض**
@@ -364,6 +371,13 @@ type MerchantInput struct {
 	Lng        *float64 `json:"lng"`
 	// معرف وسائط الشعار: غير مُرسل = بلا تغيير، "" = إزالة الشعار
 	LogoMediaID *string `json:"logo_media_id"`
+	// TransferReason **سببُ نقلِ المتجر من مندوبٍ إلى آخر — إلزاميٌّ عند النقل.**
+	//
+	// **ونقلُ `sales_rep_user_id` يحوّل ملكيّةَ العمولة المستقبليّة ونسبةَ الهدف**
+	// (يقرأ `settleRep` المندوبَ الحاليَّ لحظةَ التسليم) — **ففعلٌ ماليٌّ صامتٌ
+	// بلا سببٍ لا يُراجَع ولا يُنازَع فيه.** يُطلب فقط حين يختلف المندوبُ الجديد
+	// عن القديم؛ وتبديلُ اسمٍ أو هاتفٍ لا يلزمه.
+	TransferReason *string `json:"transfer_reason"`
 }
 
 // requirePoint **يتحقّق أنّ الدبّوس موجودٌ وفي حدود الأرض.**
@@ -593,6 +607,33 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		return nil, err
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **ونقلُ المتجر بين مندوبَين يُوثَّق بسببٍ إلزاميّ** (RQ-transfer)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **نقلُ `sales_rep_user_id` يحوّل عمولةَ كلّ طلبٍ قادمٍ ونسبةَ الهدف** —
+	// يقرأ `settleRep` المندوبَ الحاليَّ لحظةَ التسليم، ويَعُدّ الهدفُ المتاجرَ
+	// بمندوبها الحاليّ. **ففعلٌ ماليٌّ صامتٌ لا يُراجَع.** يُقرأ القديمُ قبل
+	// الكتابة؛ فإن اختلف عنه الجديدُ فهو نقلٌ يلزمه سبب، ويُكتب له حدثُ تدقيقٍ
+	// مستقلٌّ بالمصدر والوجهة والفاعل والسبب. **وتبديلُ اسمٍ أو هاتفٍ لا يلزمه.**
+	var fromRep *string
+	transfer := false
+	if repID != nil {
+		if err := s.db.QueryRow(ctx,
+			`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`, id).Scan(&fromRep); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, httpx.ErrNotFound
+			}
+			return nil, err
+		}
+		if fromRep == nil || *fromRep != *repID {
+			transfer = true
+			if in.TransferReason == nil || strings.TrimSpace(*in.TransferReason) == "" {
+				return nil, ErrTransferReasonRequired
+			}
+		}
+	}
+
 	tag, err := s.db.Exec(ctx, `
 		UPDATE merchants SET
 			name          = COALESCE($2, name),
@@ -654,6 +695,20 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		return nil, httpx.ErrNotFound
 	}
 	s.audit(ctx, actorID, "admin.merchant_update", "merchant", id, ip)
+	// **وحدثُ نقلٍ مستقلٌّ حين يتبدّل المندوب** — بالمصدر والوجهة والفاعل والسبب،
+	// فيُقرأ من يملك عمولةَ هذا المتجر مستقبلاً ولماذا تحوّل (RQ-transfer).
+	if transfer {
+		from := ""
+		if fromRep != nil {
+			from = *fromRep
+		}
+		reason := ""
+		if in.TransferReason != nil {
+			reason = strings.TrimSpace(*in.TransferReason)
+		}
+		s.auditDetail(ctx, actorID, "admin.merchant_rep_transfer", "merchant", id, ip,
+			map[string]any{"merchant_id": id, "from_rep": from, "to_rep": *repID, "reason": reason})
+	}
 	return s.merchantByID(ctx, id)
 }
 
@@ -711,6 +766,18 @@ func (s *Service) audit(ctx context.Context, actorID, action, entity, entityID, 
 	_, _ = s.db.Exec(ctx, `
 		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip)
 		VALUES ($1, $2, $3, $4, $5)`, actorID, action, entity, entityID, ip)
+}
+
+// auditDetail **حدثُ تدقيقٍ يحمل تفاصيلَ في عمود `details`** — كنظيره في الخادم
+// (`auditTx`)، لأحداثٍ لا يكفيها الفاعلُ والكيان (كنقل المتجر بين مندوبَين).
+func (s *Service) auditDetail(ctx context.Context, actorID, action, entity, entityID, ip string, detail map[string]any) {
+	var raw []byte
+	if len(detail) > 0 {
+		raw, _ = json.Marshal(detail)
+	}
+	_, _ = s.db.Exec(ctx, `
+		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
+		VALUES ($1, $2, $3, $4, $5, $6)`, actorID, action, entity, entityID, ip, raw)
 }
 
 // ErrOwnerRequired **لا متجرَ بلا صاحب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).

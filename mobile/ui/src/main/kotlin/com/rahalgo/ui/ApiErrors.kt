@@ -350,6 +350,9 @@ private val CODES: Map<String, Int> = mapOf(
     "code_taken" to R.string.err_code_taken,
     "section_not_empty" to R.string.err_section_not_empty,
     "section_required" to R.string.err_section_required,
+    // **سببُ نقل المتجر بين المندوبَين إلزاميّ** — بابُ أدمن (لا يبلغ الهاتفَ
+    // عمليّاً)، لكنّ حارسَ الرموز يفحص حزمةَ `catalog` فيلزمه تعيينٌ ونصّ.
+    "transfer_reason_required" to R.string.err_transfer_reason_required,
     "invalid_zone" to R.string.err_invalid_zone,
     "over_settle" to R.string.err_over_settle,
     "cash_limit_exceeded" to R.string.err_cash_limit_exceeded,

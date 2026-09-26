@@ -165,6 +165,9 @@ export function MerchantModal({
   const [ownerPass, setOwnerPass] = useState("");
   const [ownerPass2, setOwnerPass2] = useState("");
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
+  // **سببُ نقل المتجر إلى مندوبٍ آخر** — إلزاميٌّ عند تغيير مندوب متجرٍ قائم،
+  // لأنّ النقل يحوّل عمولةَ الطلبات القادمة ونسبةَ الهدف ويُسجَّل في التدقيق.
+  const [transferReason, setTransferReason] = useState("");
   // **والمحافظةُ تُصفّي المنطقة** — ومحافظةُ متجرٍ قائمٍ تُشتقّ من
   // منطقته عند الفتح، **فلا يُطالَب باختيارها من جديدٍ ليعدّل هاتفاً.**
   const [govs, setGovs] = useState<Division[]>([]);
@@ -230,6 +233,16 @@ export function MerchantModal({
       setError(m.admin.merchants.passwordMismatch);
       return;
     }
+    // **ونقلُ متجرٍ قائمٍ إلى مندوبٍ آخر يلزمه سبب** — الخادمُ يفرضه
+    // (transfer_reason_required)، والواجهةُ تطلبه هنا قبل النداء.
+    const isRepTransfer =
+      !!merchant &&
+      repCode.trim() !== "" &&
+      repCode.trim() !== (merchant.sales_rep_code ?? "");
+    if (isRepTransfer && transferReason.trim() === "") {
+      setError(m.admin.merchants.transferReasonRequired);
+      return;
+    }
     setBusy(true);
     setError("");
     const body = {
@@ -247,6 +260,7 @@ export function MerchantModal({
       district_id: districtId,
       commission_percent: Number(commission) || 0,
       ...(logoID !== null ? { logo_media_id: logoID } : {}),
+      ...(isRepTransfer ? { transfer_reason: transferReason.trim() } : {}),
     };
     try {
       if (merchant) {
@@ -359,6 +373,21 @@ export function MerchantModal({
                 placeholder="RH-XXXXX"
               />
               <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.repCodeHint}</p>
+              {merchant &&
+                repCode.trim() !== "" &&
+                repCode.trim() !== (merchant.sales_rep_code ?? "") && (
+                  <div className="mt-2">
+                    <Input
+                      id="m-transfer-reason"
+                      label={m.admin.merchants.transferReason}
+                      value={transferReason}
+                      onChange={(e) => setTransferReason(e.target.value)}
+                    />
+                    <p className="mt-1 text-xs text-ink-muted">
+                      {m.admin.merchants.transferReasonHint}
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
         </FormSection>

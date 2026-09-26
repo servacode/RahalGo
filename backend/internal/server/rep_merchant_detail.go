@@ -144,9 +144,12 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		Total        int64  `json:"total"`
 		Subtotal     int64  `json:"subtotal"`
 		DeliveryFee  int64  `json:"delivery_fee"`
-		Commission   int64  `json:"platform_commission"`
-		// ما كان سيُحتسب لولا الإلغاء — للعرض مشطوباً لا للحساب
-		Forfeited      int64      `json:"forfeited_commission"`
+		// **هامشُ المنصّة داخليٌّ لا يُكشف للمندوب** (RQ-7، قرارُ المالك ٢٠٢٦-٠٩-٢٦):
+		// **يبقى محسوباً في الخادم** (منه يُشتقّ نصيبُ المندوب المشطوب أدناه)،
+		// **ولا يُسلسَل في الجواب** (`json:"-"`). فيرى المندوبُ نصيبَه لا هامشَنا.
+		Commission int64 `json:"-"`
+		// ما كان سيُحتسب لولا الإلغاء — يبقى داخليّاً؛ المندوبُ يرى نصيبَه المشطوبَ وحدَه.
+		Forfeited      int64      `json:"-"`
 		ForfeitedShare int64      `json:"forfeited_share"`
 		MyShare        int64      `json:"my_share"`
 		CreatedAt      time.Time  `json:"created_at"`

@@ -242,6 +242,9 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 			//
 			// وهي علّةُ `N-21` نفسُها في لوحةٍ أخرى.
 			Entity: "lead", Href: "/portal/merchants",
+			// **إلى تطبيق المندوب وحدَه** (OBS-R7): بلا هذا القيد يرنّ الإشعارُ
+			// على كلّ تطبيقات المستخدم — ومنها تطبيقُ الزبون على الجهاز نفسِه.
+			Apps: []string{notifications.AppRep},
 		})
 	}
 	s.notify.NotifyOps(r.Context(), notifications.Input{
@@ -511,45 +514,60 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repID := userIDFrom(r)
-	var leadID string
-	if err := s.pg.QueryRow(r.Context(), `
-		INSERT INTO merchant_leads
-			(store_name, owner_name, phone, area, district_id, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING id`,
-		req.StoreName, req.OwnerName, phone, req.Area, district,
-		req.CategoryID, req.Lat, req.Lng, pwHash, repID).Scan(&leadID); err != nil {
-		// ══════════════════════════════════════════════════════════════
-		// **وتصنيفٌ حُذف من اللوحة يُقال لا يُردّ خاماً**
-		// ══════════════════════════════════════════════════════════════
-		//
-		// **كان يُردّ ٥٠٠ «خطأ غير متوقّع»** — والإدراجُ يفشل بانتهاك
-		// مفتاحٍ أجنبيّ (`23503`) أو بمعرّفٍ لا يُقرأ (`22P02`)،
-		// **فيُمرَّر كما هو.**
-		//
-		// **و`CreateMerchant` تترجمه منذ زمن** — وهذا الباب لا:
-		// **معالجةٌ تُكتب في موضعٍ وتُنسى في نظيره.**
-		//
-		// **وهي حالٌ تقع فعلاً**: يفتح المندوبُ النموذجَ في السوق،
-		// **وتُحذف فئةٌ من اللوحة قبل أن يضغط «أرسل»** — فيقرأ «خطأ غير
-		// متوقّع» ولا يعرف أنّ عليه اختيارَ تصنيفٍ آخر.
-		//
-		// (كشفه اختبارُ الميدان ٢٠٢٦-٠٨-٣٠.)
-		if isFKViolation(err) {
-			s.respondErr(w, catalog.ErrCategoryInvalid)
-			return
-		}
-		s.respondErr(w, err)
-		return
-	}
+	storeName := req.StoreName
 
-	// مكتب المنصة يعرف فوراً أن عميلاً ينتظر الموافقة
-	s.notify.NotifyOps(r.Context(), notifications.Input{
-		Kind: notifications.KindLead, Title: m.leadNewOps,
-		Body: req.StoreName, Entity: "lead", EntityID: leadID, Href: "/dashboard/leads",
+	// ══════════════════════════════════════════════════════════════
+	// **وإنشاءُ المرشَّح يمرّ بمنعِ التكرار الدائم**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// المسارُ ملفوفٌ بـ`s.idempotent` (server.go) الذي يحوز المطالبةَ
+	// ويضعها في السياق؛ و`WithIdempotentTx` يقفل صفَّ المفتاح ويُدرج
+	// المرشَّحَ ويكتب الجوابَ في معاملةٍ واحدة. **فالنقرةُ المزدوجةُ
+	// وإعادةُ المهلة والمتزامنُ بالمفتاح نفسِه ⇒ مرشَّحٌ واحدٌ بعينه** —
+	// إعادةٌ لاحقةٌ بالمفتاح نفسِه تُعيد المُثبَّتَ الأوّلَ لا صفّاً ثانياً.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		var leadID string
+		if err := q.QueryRow(ctx, `
+			INSERT INTO merchant_leads
+				(store_name, owner_name, phone, area, district_id, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id`,
+			storeName, req.OwnerName, phone, req.Area, district,
+			req.CategoryID, req.Lat, req.Lng, pwHash, repID).Scan(&leadID); err != nil {
+			// ══════════════════════════════════════════════════════════════
+			// **وتصنيفٌ حُذف من اللوحة يُقال لا يُردّ خاماً**
+			// ══════════════════════════════════════════════════════════════
+			//
+			// **كان يُردّ ٥٠٠ «خطأ غير متوقّع»** — والإدراجُ يفشل بانتهاك
+			// مفتاحٍ أجنبيّ (`23503`) أو بمعرّفٍ لا يُقرأ (`22P02`)،
+			// **فيُمرَّر كما هو.**
+			//
+			// **و`CreateMerchant` تترجمه منذ زمن** — وهذا الباب لا:
+			// **معالجةٌ تُكتب في موضعٍ وتُنسى في نظيره.**
+			//
+			// **وهي حالٌ تقع فعلاً**: يفتح المندوبُ النموذجَ في السوق،
+			// **وتُحذف فئةٌ من اللوحة قبل أن يضغط «أرسل»** — فيقرأ «خطأ غير
+			// متوقّع» ولا يعرف أنّ عليه اختيارَ تصنيفٍ آخر.
+			//
+			// (كشفه اختبارُ الميدان ٢٠٢٦-٠٨-٣٠.)
+			if isFKViolation(err) {
+				return IdempotentBody{}, catalog.ErrCategoryInvalid
+			}
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusCreated,
+			Payload: map[string]any{"id": leadID},
+			AfterCommit: func() {
+				// مكتب المنصة يعرف فوراً أن عميلاً ينتظر الموافقة
+				s.notify.NotifyOps(r.Context(), notifications.Input{
+					Kind: notifications.KindLead, Title: m.leadNewOps,
+					Body: storeName, Entity: "lead", EntityID: leadID, Href: "/dashboard/leads",
+				})
+				s.touch("lead", "ops", "sales:"+repID)
+			},
+		}, nil
 	})
-	s.touch("lead", "ops", "sales:"+repID)
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": leadID})
 }
 
 // handleRepLeads طلبات انضمام المندوب نفسه (بوابة المندوب).
@@ -657,6 +675,8 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 			UserID: *repID, Kind: notifications.KindLead,
 			Title: notifTitles.leadRejected, Body: storeName + " — " + note,
 			Entity: "lead", EntityID: id, Href: "/portal/leads",
+			// **إلى تطبيق المندوب وحدَه** (OBS-R7) — لا يرنّ على تطبيق زبونه.
+			Apps: []string{notifications.AppRep},
 		})
 	}
 	s.touch("lead", "ops")

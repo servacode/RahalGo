@@ -249,7 +249,8 @@ private fun OrderRow(o: RepOrderLine) {
         }
         Spacer(Modifier.height(6.dp))
         KeyValue(stringResource(R.string.cd_col_total), money(o.total))
-        KeyValue(stringResource(R.string.cd_col_commission), money(o.platformCommission))
+        // **ولا يُعرض هامشُ المنصّة ولا عمولتُها الداخليّة** (RQ-7، ٢٠٢٦-٠٩-٢٦):
+        // المندوبُ يرى إجماليَّ الطلب ونصيبَه هو — لا هامشَنا. (حُذف صفُّ عمولة المنصّة.)
 
         // ══════════════════════════════════════════════════════════════
         // **ونصيبُه — مشطوباً إن ضاع**

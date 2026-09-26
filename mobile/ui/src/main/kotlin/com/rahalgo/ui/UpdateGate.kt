@@ -61,8 +61,20 @@ import com.rahalgo.design.Rahal
  * (كثيرةٌ في سوريا)، يفتح رابطَ المتجر المباشر. **والاختيارُ صريحٌ للمستخدم**
  * لا محاولةٌ صامتةٌ يظنّ معها أنّ التحديثَ تعذّر.
  */
+// **وقناةُ التوزيع تفرّق الأزرار** (٢٠٢٦-٠٩-٢٦):
+//
+// **الزبونُ على Google Play**، فله زرُّ المتجر أوّلاً والمباشرُ احتياطاً.
+// **والمندوبُ (وأخواه لاحقاً) توزيعٌ مباشرٌ من الموقع لا غير** — فلا زرَّ Play
+// (رابطُه إلى صفحةٍ لا وجودَ لها فيُوهم أنّ التحديثَ متعذّر)، بل زرُّ التنزيل
+// المباشر وحدَه رئيسيّاً إلى رابطِ تطبيقه بعينه. **والنصُّ يُمرَّر ملائماً
+// لدور التطبيق** (المندوبُ لا «يطلب»)، وإلّا فالنصُّ العامّ.
 @Composable
-fun UpdateGate(pkg: String, fallbackUrl: String = "https://rahalgo.com/app") {
+fun UpdateGate(
+    pkg: String,
+    fallbackUrl: String = "https://rahalgo.com/app",
+    showPlay: Boolean = true,
+    body: String? = null,
+) {
     val ctx = LocalContext.current
 
     // **والرجوعُ يخرج من التطبيق** — انظر أعلاه: لا بقاءَ عالقاً، ولا تسلّلَ للداخل.
@@ -101,47 +113,56 @@ fun UpdateGate(pkg: String, fallbackUrl: String = "https://rahalgo.com/app") {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.update_body),
+                text = body ?: stringResource(R.string.update_body),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(28.dp))
-            // **زرُّ Google Play** — تطبيقُ المتجر أوّلاً، فإن غاب فصفحتُه على الويب.
-            RahalButton(
-                onClick = {
-                    val market = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("market://details?id=$pkg"),
-                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    val ok = runCatching { ctx.startActivity(market) }.isSuccess
-                    if (!ok) {
-                        // **بلاي غيرُ مثبَّتٍ ⇒ صفحتُه على الويب** — لا الرابطُ المباشر (له زرُّه).
-                        runCatching {
-                            ctx.startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
-                                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
+            val openDirect = {
+                runCatching {
+                    ctx.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }
+                Unit
+            }
+            if (showPlay) {
+                // **زرُّ Google Play** — تطبيقُ المتجر أوّلاً، فإن غاب فصفحتُه على الويب.
+                RahalButton(
+                    onClick = {
+                        val market = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("market://details?id=$pkg"),
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        val ok = runCatching { ctx.startActivity(market) }.isSuccess
+                        if (!ok) {
+                            // **بلاي غيرُ مثبَّتٍ ⇒ صفحتُه على الويب** — لا الرابطُ المباشر (له زرُّه).
+                            runCatching {
+                                ctx.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
+                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.update_play)) }
-            Spacer(Modifier.height(12.dp))
-            // **زرُّ التنزيل المباشر** — للأجهزة بلا خدمات غوغل، يفتح رابطَ المتجر المباشر.
-            RahalOutlineButton(
-                onClick = {
-                    runCatching {
-                        ctx.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl))
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.update_direct)) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.update_play)) }
+                Spacer(Modifier.height(12.dp))
+                // **زرُّ التنزيل المباشر** — للأجهزة بلا خدمات غوغل، يفتح رابطَ التنزيل المباشر.
+                RahalOutlineButton(onClick = openDirect, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.update_direct))
+                }
+            } else {
+                // **توزيعٌ مباشرٌ لا غير** (المندوب) — زرٌّ واحدٌ رئيسيٌّ إلى رابط تطبيقه،
+                // ولا زرَّ Play يُوهم بمتجرٍ لا وجودَ للتطبيق فيه.
+                RahalButton(onClick = openDirect, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.update_direct))
+                }
+            }
         }
     }
 }

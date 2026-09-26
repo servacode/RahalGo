@@ -20,7 +20,7 @@
       "topup"
     ],
     "notify_sites": 54,
-    "notify_targeted": 14,
+    "notify_targeted": 17,
     "publish_rooms": [
       "customer",
       "driver",
@@ -31,8 +31,8 @@
     "setting_defs": 148,
     "behaviour_settings": 120,
     "order_fields": 83,
-    "test_files": 382,
-    "test_funcs": 1629
+    "test_files": 386,
+    "test_funcs": 1636
   },
   "flows": [
     {
@@ -17855,6 +17855,48 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestRepDetail_HidesInternalCommission",
+      "file": "internal/qa/rep_detail_hide_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRepIDOR_CannotWriteAnotherRepsMenu",
+      "file": "internal/qa/rep_idor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestREPLEAD_Idempotency_Concurrent",
+      "file": "internal/qa/rep_lead_idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestREPLEAD_Idempotency_DistinctKeys",
+      "file": "internal/qa/rep_lead_idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestREPLEAD_Idempotency_SameKey",
+      "file": "internal/qa/rep_lead_idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRepTransfer_NonRepFieldNeedsNoReason",
+      "file": "internal/qa/rep_transfer_audit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRepTransfer_RequiresReasonAndWritesAudit",
+      "file": "internal/qa/rep_transfer_audit_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestRRT_001_OnlyOwnDriverGetsRoute",
