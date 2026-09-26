@@ -32,7 +32,7 @@
     "behaviour_settings": 120,
     "order_fields": 83,
     "test_files": 390,
-    "test_funcs": 1646
+    "test_funcs": 1647
   },
   "flows": [
     {
@@ -22592,6 +22592,12 @@
     },
     {
       "name": "TestRepMoneySeed_RegisteredAndBounded",
+      "file": "internal/server/qa_rep_bridge_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepQACleanup_RegisteredBoundedAndPreservesLedger",
       "file": "internal/server/qa_rep_bridge_guard_test.go",
       "package": "server",
       "orphan": true

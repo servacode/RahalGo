@@ -191,6 +191,43 @@ func TestRepReleaseSeed_RegisteredAndBounded(t *testing.T) {
 	}
 }
 
+// TestRepQACleanup_RegisteredBoundedAndPreservesLedger **تنظيفُ كيانات المندوب
+// مسجَّلٌ حالةً، محصورُ الأسماء، ولا يمسّ مستخدماً/محفظةً/دفتراً/تدقيقاً.**
+func TestRepQACleanup_RegisteredBoundedAndPreservesLedger(t *testing.T) {
+	if !qaSeedAllowlist["rep_qa_cleanup"] {
+		t.Fatal("rep_qa_cleanup must be in qaSeedAllowlist")
+	}
+	if !qaStateSeed["rep_qa_cleanup"] {
+		t.Fatal("rep_qa_cleanup must be a state seed")
+	}
+	want := map[string]bool{"QA-Device-Store": true, "QA-Device-Store2": true, "QA-RewardDemo": true, "QA E2E Store": true}
+	if len(qaRepCleanupNames) != len(want) {
+		t.Fatalf("qaRepCleanupNames size=%d want=%d — must stay bounded", len(qaRepCleanupNames), len(want))
+	}
+	for _, n := range qaRepCleanupNames {
+		if !want[n] {
+			t.Errorf("qaRepCleanupNames carries UNEXPECTED name %q", n)
+		}
+	}
+	src, err := os.ReadFile("qa_rep_cleanup.go")
+	if err != nil {
+		t.Fatalf("read qa_rep_cleanup.go: %v", err)
+	}
+	s := string(src)
+	// **يُحفَظ التاريخُ الماليُّ والتدقيق والمستخدمون** — لا حذفَ لأيٍّ منها.
+	for _, forbidden := range []string{"DELETE FROM users", "DELETE FROM wallets", "DELETE FROM wallet_transactions", "DELETE FROM audit_log", "DELETE FROM incentives", "DELETE FROM payout_requests"} {
+		if strings.Contains(s, forbidden) {
+			t.Errorf("**تنظيفُ المندوب يمسّ التاريخَ الماليَّ/التدقيق/المستخدمين (%q) — ممنوع**", forbidden)
+		}
+	}
+	// **يحذف فقط كياناتِ الكتالوج/المرشَّح/المتجر** — وبالاسم المحصور (ANY($1)).
+	for _, need := range []string{"DELETE FROM menu_items", "DELETE FROM merchant_leads", "DELETE FROM merchants WHERE name = ANY($1)"} {
+		if !strings.Contains(s, need) {
+			t.Errorf("**تنظيفُ المندوب لا يحوي %q**", need)
+		}
+	}
+}
+
 // TestRepBridge_NoRawBusinessLogicNoAdminToken **الجسرُ لا يصنع حالةً خاماً ولا
 // يُصدر توكنَ أدمن.**
 func TestRepBridge_NoRawBusinessLogicNoAdminToken(t *testing.T) {
