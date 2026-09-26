@@ -174,6 +174,18 @@ func (s *Server) qaMerchantDeviceClear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	// ① الطلبات أوّلاً — `orders.merchant_id → merchants` بلا CASCADE، فحذفُ
+	//    المتجر يُردّ ما دام له طلب. **وأبناءُ الطلب يَشلَّحون بالسلسلة**
+	//    (`order_items`/`order_events` … `ON DELETE CASCADE`؛ و`ratings/tickets`
+	//    خاليةٌ لطلبِ QA لم يُسلَّم فلا تحجب). **وطلباتُ QA نقديّةٌ غيرُ مُسوّاة
+	//    ⇒ لا أثرَ ماليّ** (لا `wallet_transactions` ولا تسوية).
+	orderTag, err := tx.Exec(ctx,
+		`DELETE FROM orders WHERE merchant_id IN (SELECT id FROM merchants WHERE name = ANY($1))`, names)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// ② الأصنافُ بعد الطلبات — `order_items` قد شُلّحت، فلا مرجعَ يمنع الصنف.
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM menu_items WHERE merchant_id IN (SELECT id FROM merchants WHERE name = ANY($1))`, names); err != nil {
 		s.respondErr(w, err)
@@ -193,6 +205,10 @@ func (s *Server) qaMerchantDeviceClear(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	s.logger.Warn("QA merchant device cleared (staging-only)", "deleted", tag.RowsAffected())
-	httpx.JSON(w, http.StatusOK, map[string]any{"deleted_merchants": tag.RowsAffected()})
+	s.logger.Warn("QA merchant device cleared (staging-only)",
+		"deleted_merchants", tag.RowsAffected(), "deleted_orders", orderTag.RowsAffected())
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"deleted_merchants": tag.RowsAffected(),
+		"deleted_orders":    orderTag.RowsAffected(),
+	})
 }
