@@ -135,6 +135,29 @@ func TestRepMoneySeed_RegisteredAndBounded(t *testing.T) {
 	}
 }
 
+// TestRepWalletFundSeed_RegisteredAndRealLedger **شحنُ محفظةِ المندوب مسجَّلٌ
+// حالةً، ويمرّ بدفتر المحفظة الحقيقيّ** (`wallet.ApplyTxID`) لا بحقنٍ خام.
+func TestRepWalletFundSeed_RegisteredAndRealLedger(t *testing.T) {
+	if !qaSeedAllowlist["rep_wallet_fund"] {
+		t.Fatal("rep_wallet_fund must be in qaSeedAllowlist")
+	}
+	if !qaStateSeed["rep_wallet_fund"] {
+		t.Fatal("rep_wallet_fund must be a state seed")
+	}
+	src, err := os.ReadFile("qa_rep_bridge.go")
+	if err != nil {
+		t.Fatalf("read qa_rep_bridge.go: %v", err)
+	}
+	s := string(src)
+	if !strings.Contains(s, "s.wallet.ApplyTxID(") {
+		t.Error("**shحنُ المندوب لا يمرّ بمسار الدفتر الحقيقيّ `wallet.ApplyTxID`**")
+	}
+	// **وسقفٌ يحرس من خطأٍ عرضيّ** — كنظيرِ شحنِ الزبون.
+	if !strings.Contains(s, "amount > 100_000_000") {
+		t.Error("**shحنُ المندوب بلا سقفٍ حارس**")
+	}
+}
+
 // TestRepBridge_NoRawBusinessLogicNoAdminToken **الجسرُ لا يصنع حالةً خاماً ولا
 // يُصدر توكنَ أدمن.**
 func TestRepBridge_NoRawBusinessLogicNoAdminToken(t *testing.T) {

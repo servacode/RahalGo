@@ -283,11 +283,12 @@ var qaSeedAllowlist = map[string]bool{
 	"order_advance":   true, // سوقُ طلبِ زبون QA المخصّصِ النقديّ عبر الحالات (يُسنِد سائقاً فعليّاً)
 	"order_chat_send": true, // رسالةُ سائقٍ على طلبِ زبون QA (SUP-002) — عبر comms.Send
 	// ── دوامُ المنطقة (zone_closed_now) + الحدُّ الأدنى للنسخة (426) — عكوسان ──
-	"zone_close":    true, // إغلاقُ منطقةٍ الآن حتميّاً (hours_enforced + جدولٌ فارغ)، يحفظ السابق
-	"zone_reopen":   true, // إعادةُ جدول المنطقة المحفوظ
-	"min_version":   true, // ضبطُ app.min_version.customer (يُرجع السابق) لشهود update_required
-	"cod_limit":     true, // ضبطُ customers.cod_limit (يُرجع السابق) لشهود cod_limit_exceeded — عبر settings.Set الحقيقيّ
-	"rep_money_set": true, // ضبطُ مفتاحِ مالِ مندوبٍ مؤقّتاً لشهود العمولة/الهدف/المكافأة/السحب (يُرجع السابق) — عبر settings.Set الحقيقيّ، مفاتيحُه محصورة
+	"zone_close":      true, // إغلاقُ منطقةٍ الآن حتميّاً (hours_enforced + جدولٌ فارغ)، يحفظ السابق
+	"zone_reopen":     true, // إعادةُ جدول المنطقة المحفوظ
+	"min_version":     true, // ضبطُ app.min_version.customer (يُرجع السابق) لشهود update_required
+	"cod_limit":       true, // ضبطُ customers.cod_limit (يُرجع السابق) لشهود cod_limit_exceeded — عبر settings.Set الحقيقيّ
+	"rep_money_set":   true, // ضبطُ مفتاحِ مالِ مندوبٍ مؤقّتاً لشهود العمولة/الهدف/المكافأة/السحب (يُرجع السابق) — عبر settings.Set الحقيقيّ، مفاتيحُه محصورة
+	"rep_wallet_fund": true, // شحنُ محفظةِ مندوب QA عبر مسار الدفتر الحقيقيّ (topup) لشهود آلةِ السحب — لا حقنَ خامّ
 	// فتحُ متجرِ QA الآن حتميّاً (لطلبٍ عاديٍّ خارجَ الدوام) — عكوسٌ، بلا أثرٍ ماليّ:
 	"merchant_open":      true, // حذفُ merchant_hours + رفعُ الطارئ (يحفظ السابق)، بمعرّف صنفٍ
 	"merchant_restore":   true, // إعادةُ جدول المتجر والإغلاق الطارئ المحفوظَين
@@ -339,7 +340,7 @@ var qaStateSeed = map[string]bool{
 	"fixture_dense": true, "fixture_dense_clear": true,
 	// دوامُ المنطقة والحدُّ الأدنى للنسخة لا تلزمها هويّةُ زبون QA:
 	"zone_close": true, "zone_reopen": true, "min_version": true, "cod_limit": true,
-	"rep_money_set": true,
+	"rep_money_set": true, "rep_wallet_fund": true,
 	"merchant_open": true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
 	"merchant_second": true, "merchant_second_clear": true,
 	"option_available": true, "item_image": true,
@@ -467,6 +468,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaCODLimit(w, r, req.ValueInt)
 		case "rep_money_set":
 			s.qaRepMoneySet(w, r, req.Key, req.ValueInt, req.ValueStr)
+		case "rep_wallet_fund":
+			s.qaRepWalletFund(w, r, req.ValueInt)
 		case "merchant_open":
 			s.qaMerchantOpen(w, r, req.ItemID)
 		case "merchant_restore":

@@ -160,6 +160,36 @@ func (s *Server) qaRepMoneySet(w http.ResponseWriter, r *http.Request, key strin
 	httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueInt})
 }
 
+// qaRepWalletFund **يشحن محفظةَ مندوب QA (خانة أ) عبر مسار الدفتر الحقيقيّ**
+// (`wallet.ApplyTxID` نوع `topup`) **ليُشهَد تدفّقُ السحب حيّاً** — لا حقنَ خامّ.
+//
+// **ولماذا شحنٌ لا عمولة**: رصيدُ المندوب في الإنتاج عمولةٌ من طلبٍ سُلِّم، وذاك
+// يلزمه طورُ السائق (تبعيّةٌ عبر التطبيقات). **فالشحنُ هنا يُمكّن شهادةَ آلةِ
+// السحب** (طلبٌ ⇒ حجزٌ ⇒ قرارٌ ⇒ دفترٌ ⇒ إشعار) **بمصدرِ رصيدٍ صريحٍ مؤقّت**،
+// وسحبٌ مدفوعٌ بكامل المبلغ يُعيد الرصيدَ إلى صفرٍ فلا يبقى أثر. — kind=rep_wallet_fund.
+func (s *Server) qaRepWalletFund(w http.ResponseWriter, r *http.Request, amount int64) {
+	if amount <= 0 || amount > 100_000_000 { // حتميٌّ موجبٌ بسقفٍ يحرس من خطأٍ عرضيّ
+		s.respondErr(w, errValidation)
+		return
+	}
+	ctx := r.Context()
+	uid, err := s.qaFixedUser(ctx, qaStagingRepPhoneA, "sales", "مندوب الاختبار QA-أ", clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	actor := uid
+	bal, txID, err := s.wallet.ApplyTxID(ctx, s.pg, uid, amount, "topup", "qa-rep-fund",
+		"QA rep wallet funding (staging)", &actor)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touchUser(uid, "wallet") // بثٌّ لحظيٌّ كمسار الأدمن الحقيقيّ
+	s.logger.Warn("QA rep wallet funded (staging-only)", "user", uid, "amount", amount, "balance", bal, "tx", txID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"funded": amount, "balance": bal, "tx_id": txID, "user_id": uid})
+}
+
 // qaAdminActor **وسيطٌ يحقن أدمنَ QA الثابتَ فاعلاً ثمّ يشغّل المعالِجَ الإنتاجيّ.**
 //
 // **على التجهيز وحدَه** (يسقط ٤٠٤ في غيره). **يخطّي حرّاسَ الأدمن (التوثيق/القدرة/
