@@ -232,6 +232,49 @@ log "-- production containers before: $(printf '%s' "$PROD_BEFORE" | wc -l) reco
 
 # receive + cryptographically bind the source to the SHA
 mkdir -p "$INCOMING" "$ARTIFACT_DIR"
+
+# ── تقليمُ نُسخِ المصدر الشائخة قبل الاستلام والبناء ────────────────────────
+# **العطبُ (٢٠٢٦-٠٩-٢٦): كلُّ نشرةٍ تفكّ نسخةَ المستودع كاملةً في
+# `incoming/<SHA>` ولا تُحذف القديمة — فيمتلئ فِلترُ `/srv/rahalgo-staging`
+# ويرفض حارسُ القرص البناءَ (١G حرّ) رغم أنّ الجذرَ فسيح.** فنُقلّم القديمَ
+# **قبل** استلام الحُزمة (كي لا يمنع فكُّها) و**قبل** `disk_guard`.
+#
+# **حدودٌ صارمة (staging وحدَه، لا إنتاجَ أبداً):**
+#   - `STAGING_ROOT` مثبّتٌ `/srv/rahalgo-staging` (فُحص أعلاه ٦٣)، ونعمل
+#     تحت `$INCOMING`/`$ARTIFACT_DIR` فقط — **لا `/srv/rahalgo` الإنتاجيّ.**
+#   - **لا نحذف نشرةَ SHA الجارية** (`$SHA` و`$SHA.bundle`).
+#   - **أمانُ الفشل**: إن لم يكن `$SHA` أربعينَ خانةً ست‌عشريّة، لا نحذف شيئاً.
+#   - **نافذةُ تراجعٍ صغيرة**: نُبقي أحدثَ ٣ آثارٍ في `$ARTIFACT_DIR`.
+#   - نُسجّل كلَّ حذفٍ وكم استُرجع.
+stale_prune() {
+	[ "$STAGING_ROOT" = /srv/rahalgo-staging ] || { log "stale-prune: staging root misconfigured — skip (fail safe)"; return 0; }
+	case "$INCOMING" in /srv/rahalgo-staging/*) ;; *) log "stale-prune: INCOMING outside staging root — skip"; return 0 ;; esac
+	printf '%s' "$SHA" | grep -Eq '^[0-9a-f]{40}$' || { log "stale-prune: active SHA unidentified — skip (fail safe, delete nothing)"; return 0; }
+	local before after freedm d name
+	before="$(df -Pk "$INCOMING" 2>/dev/null | awk 'NR==2{print $4}')"
+	for d in "$INCOMING"/*; do
+		[ -e "$d" ] || continue
+		name="$(basename "$d")"
+		case "$name" in "$SHA"|"$SHA.bundle") continue ;; esac   # never the active deploy
+		log "stale-prune: rm incoming/$name ($(du -sh "$d" 2>/dev/null | cut -f1))"
+		rm -rf "$d"
+	done
+	# artifacts: keep the newest 3 (rollback window), prune older
+	if [ -d "$ARTIFACT_DIR" ]; then
+		ls -1dt "$ARTIFACT_DIR"/* 2>/dev/null | tail -n +4 | while IFS= read -r a; do
+			case "$a" in /srv/rahalgo-staging/*) : ;; *) continue ;; esac
+			log "stale-prune: rm artifact $(basename "$a") ($(du -sh "$a" 2>/dev/null | cut -f1))"
+			rm -rf "$a"
+		done
+	fi
+	after="$(df -Pk "$INCOMING" 2>/dev/null | awk 'NR==2{print $4}')"
+	if [ -n "$before" ] && [ -n "$after" ]; then
+		freedm=$(( (after - before) / 1024 ))
+		log "stale-prune: reclaimed ~${freedm}M on the incoming filesystem"
+	fi
+}
+stale_prune
+
 BUNDLE="$INCOMING/$SHA.bundle"; SRC="$INCOMING/$SHA"
 rm -rf "$SRC" "$BUNDLE"; mkdir -p "$SRC"
 cat > "$BUNDLE"          # git bundle from stdin

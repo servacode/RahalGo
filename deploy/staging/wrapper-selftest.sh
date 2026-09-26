@@ -77,6 +77,20 @@ grep -q 'disk_guard' "$W" && grep -q 'docker builder prune' "$W" && grep -q 'ref
 	&& ok "wrapper guards disk before build (safe build-cache prune only; never volumes/images/containers; hard floor)" \
 	|| no "wrapper disk guard before build"
 grep -q 'disk after deploy' "$W" && ok "wrapper reports disk usage after deploy" || no "wrapper reports disk after deploy"
+# ── stale-source prune (owner 2026-09-26): prune old incoming/artifacts BEFORE receive+build, staging-only, keep active SHA, fail-safe, never prod ──
+grep -q 'stale_prune()' "$W" \
+	&& grep -q 'active SHA unidentified — skip (fail safe' "$W" \
+	&& grep -q '\[ "\$STAGING_ROOT" = /srv/rahalgo-staging \]' "$W" \
+	&& grep -q 'case "\$name" in "\$SHA"|"\$SHA.bundle") continue' "$W" \
+	&& ! grep -qE 'rm -rf +/srv/rahalgo[^-]' "$W" \
+	&& ok "wrapper stale-prune: staging-only, fail-safe, keeps active SHA, never a production path" \
+	|| no "wrapper stale-prune invariants"
+# stale_prune must be invoked BEFORE disk_guard and BEFORE the bundle is received
+sp_call="$(grep -n '^stale_prune$' "$W" | tail -1 | cut -d: -f1)"
+dg_call="$(grep -n '^disk_guard$' "$W" | tail -1 | cut -d: -f1)"
+recv_line="$(grep -n 'cat > "\$BUNDLE"' "$W" | head -1 | cut -d: -f1)"
+{ [ -n "$sp_call" ] && [ -n "$dg_call" ] && [ -n "$recv_line" ] && [ "$sp_call" -lt "$dg_call" ] && [ "$sp_call" -lt "$recv_line" ]; } \
+	&& ok "stale_prune runs before bundle-receive and before disk_guard" || no "stale_prune ordering"
 grep -q 'staging-[*].rahalgo.com' "$W" && grep -q 'STAGING_API_URL is a production host' "$W" && grep -q 'NEXT_PUBLIC_API_URL="http://localhost:8080"' "$W" && ok "wrapper accepts staging-api alias, refuses prod API host, feeds guard on-box target" || no "wrapper API-host handling"
 grep -q 'bash "$SRC/deploy/preflight-env.sh"' "$W" && grep -q 'bash "$SRC/deploy/build-artifact.sh"' "$W" && grep -q 'bash "$SRC/deploy/promote.sh"' "$W" && ok "wrapper runs archive scripts via bash (exec-bit independent)" || no "wrapper runs archive scripts via bash"
 grep -q 'find_go' "$BOOT" && grep -q 'install_go' "$BOOT" && grep -q '2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613' "$BOOT" && grep -q 'sha256sum -c' "$BOOT" && ok "bootstrap self-heals Go (detect or pinned+verified install)" || no "bootstrap self-heals Go"
