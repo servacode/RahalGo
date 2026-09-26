@@ -302,6 +302,7 @@ var qaSeedAllowlist = map[string]bool{
 	"merchant_second_clear": true, // حذفُه (FK-safe)
 	"merchant_device_setup": true, // مالكُ متجرِ QA ومتجراه (شهادةُ تطبيق المتجر على الجهاز) — reusable
 	"merchant_device_clear": true, // حذفُ متجرَي الجهاز (لا يمسّ المالك)
+	"orders_mode_set":       true, // ضبطُ platform.orders_mode (merchants/platform) مؤقّتاً — يُرجع السابق للاستعادة
 	"option_available":      true, // قلبُ إتاحةِ خيارِ إضافة (10-014) — عكوسٌ
 	"item_image":            true, // تبديلُ صورةِ صنف (09-011) — عكوسٌ
 	"customer_suspend":      true, // إيقافُ زبون QA (06-031) — عكوسٌ، بلا إبطالِ جلسة
@@ -349,7 +350,7 @@ var qaStateSeed = map[string]bool{
 	"merchant_release_set": true, // ضبطُ نسخةِ إصدار المتجر أو حدِّه الأدنى (release.merchant.version / app.min_version.merchant) — يُرجع السابق
 	"merchant_open":        true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
 	"merchant_second": true, "merchant_second_clear": true,
-	"merchant_device_setup": true, "merchant_device_clear": true,
+	"merchant_device_setup": true, "merchant_device_clear": true, "orders_mode_set": true,
 	"option_available": true, "item_image": true,
 	"customer_suspend": true, "customer_restore": true, "customer_set_password": true,
 	"disposable_create": true, "disposable_delete_code": true,
@@ -497,6 +498,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaMerchantDeviceSetup(w, r)
 		case "merchant_device_clear":
 			s.qaMerchantDeviceClear(w, r)
+		case "orders_mode_set":
+			s.qaOrdersMode(w, r, req.ValueStr)
 		case "option_available":
 			s.qaOptionAvailable(w, r, req.OptionID, req.ItemID, req.ValueBool)
 		case "item_image":

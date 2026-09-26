@@ -143,6 +143,26 @@ func (s *Server) qaEnsureDeviceStore(ctx context.Context, ownerID, name string, 
 	return mid, nil
 }
 
+// qaOrdersMode **يضبط وضعَ إدارة الطلبات مؤقّتاً** — `merchants` (المتجر يقبل
+// بنفسه، لشهود جرس الطلب والقبول/الرفض) أو `platform` (المكتب). **يُرجع السابقَ
+// للاستعادة**، والقيمةُ محصورةٌ في الاثنتين. — kind=orders_mode_set (على
+// التجهيز وحدَه). **هذا هو الإعدادُ المؤقّتُ الذي يُسجَّل ويُستعاد بالضبط.**
+func (s *Server) qaOrdersMode(w http.ResponseWriter, r *http.Request, valueStr string) {
+	if valueStr != "merchants" && valueStr != "platform" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	ctx := r.Context()
+	const key = "platform.orders_mode"
+	prev := s.settings.GetString(ctx, key)
+	if err := s.settings.Set(ctx, key, valueStr, nil); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA orders_mode set (staging-only)", "key", key, "previous", prev, "set", valueStr)
+	httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueStr})
+}
+
 // qaMerchantDeviceClear **يحذف متجرَي الجهاز وأصنافَهما وأقسامَهما** — FK-safe.
 // **ولا يمسّ المالكَ** (حسابُ QA ثابت). — kind=merchant_device_clear.
 func (s *Server) qaMerchantDeviceClear(w http.ResponseWriter, r *http.Request) {
