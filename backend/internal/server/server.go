@@ -502,7 +502,23 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/qa/catalog/sections/{id}", s.handleUpdatePlatformSection)
 				r.Delete("/qa/catalog/sections/{id}", s.handleDeletePlatformSection)
 			})
-			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed, /qa/catalog/sections; GET /qa/reconcile)")
+			// ── جسورُ شهادةِ تطبيق المندوب الحيّة (Rep E2E، staging-only) ──────
+			//
+			// **جلسةُ مندوبٍ** تُصدر توكنَ مندوب (دور `sales`) عبر مسار الهويّة
+			// الحقيقيّ. **وأفعالُ الأدمن** تمرّ بالمعالِجات الإنتاجيّة عينِها خلف
+			// `qaAdminActor` الذي يحقن أدمنَ QA فاعلاً (بلا إصدار توكن أدمن) و
+			// `announceWrites` للبثّ — **لا منطقَ عملٍ بديلٌ ولا SQL خامّ، والتخويلُ
+			// وحدَه هو المُخطَّى**. غيرُ مسجَّلةٍ في الإنتاج ⇒ ٤٠٤.
+			r.Post("/qa/rep-session", s.handleQARepSession)
+			r.Group(func(r chi.Router) {
+				r.Use(s.announceWrites)
+				r.Use(s.qaAdminActor)
+				r.Post("/qa/leads/{id}/status", s.handleAdminLeadStatus) // تحويلُ المرشَّح ⇒ متجر
+				r.Post("/qa/payouts/{id}/decide", s.handleDecidePayout)  // قرارُ السحب
+				r.Patch("/qa/users/{id}", s.handleAdminUpdateUser)       // إيقاف/تفعيل المندوب
+				r.Patch("/qa/merchants/{id}", s.handleUpdateMerchant)    // نقلُ المتجر بين مندوبَين (بسبب)
+			})
+			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed, /qa/catalog/sections, /qa/rep-session, /qa/leads/{id}/status, /qa/payouts/{id}/decide, /qa/users/{id}, /qa/merchants/{id}; GET /qa/reconcile)")
 		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)
