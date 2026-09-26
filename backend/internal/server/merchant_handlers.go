@@ -28,6 +28,69 @@ func (s *Server) ownsMerchant(r *http.Request, merchantID string) bool {
 	return err == nil && owns
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه — والخادمُ هو الحُجّة** (A4)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **قرارُ المالك**: المتجرُ الموقوفُ (`status='suspended'`) يراه صاحبُه لكن
+// **لا يعدّل قائمتَه ولا إتاحتَه ولا عروضَه ولا ساعاتِه ولا إعداداتِه** حتى
+// يرفع المكتبُ الإيقاف. **ورفعُ الإيقاف يعيده `active` فيتعافى بلا إعادةِ
+// تثبيت** (`merchant_violations.go`) — الحالةُ في القاعدة، والتطبيقُ يقرؤها.
+//
+// **والقراءةُ لا تمرّ بهذا الحارس**: أبوابُ العرض (GET) تبقى على `ownsMerchant`
+// وحدَه، **فالموقوفُ يرى متجرَه.** وهذا يخصّ إدارةَ المتجر فقط — **أمّا إتمامُ
+// طلبٍ جارٍ** (قبول/جاهزيّة/انتقال) **فليس إدارةَ متجرٍ ولا يُمنع**، لئلّا
+// يُترَك زبونٌ معلّقاً حين يُوقَف متجرٌ وطلبُه في المطبخ.
+//
+// **ولا يكشف الوجود**: من لا يملكه ومن لا وجودَ له يُردّان `forbidden` سواءً،
+// كما كان `ownsMerchant` يفعل — الإيقافُ وحدَه يُفصح عن نفسه لمالكه.
+
+// merchantWriteGuard **حارسُ كتابةٍ في متجرٍ بمعرّفه** — يجمع الملكيّةَ
+// والإيقاف. يردّ `nil` إن كان مملوكاً ونشطاً، و`errForbidden` إن لم يملكه،
+// و`errStoreSuspended` إن كان موقوفاً.
+func (s *Server) merchantWriteGuard(r *http.Request, merchantID string) error {
+	var status string
+	err := s.pg.QueryRow(r.Context(),
+		`SELECT status FROM merchants WHERE id = $1 AND owner_user_id = $2`,
+		merchantID, userIDFrom(r)).Scan(&status)
+	return writableFromStatus(status, err)
+}
+
+// itemWriteGuard **حارسُ كتابةٍ على صنفٍ بمعرّفه** — يحلّ متجرَه ثمّ يحكم.
+func (s *Server) itemWriteGuard(r *http.Request, itemID string) error {
+	var status string
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT m.status FROM menu_items mi
+		JOIN merchants m ON m.id = mi.merchant_id
+		WHERE mi.id = $1 AND m.owner_user_id = $2`,
+		itemID, userIDFrom(r)).Scan(&status)
+	return writableFromStatus(status, err)
+}
+
+// sectionWriteGuard **حارسُ كتابةٍ على قسمٍ بمعرّفه** — يحلّ متجرَه ثمّ يحكم.
+func (s *Server) sectionWriteGuard(r *http.Request, sectionID string) error {
+	var status string
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT m.status FROM menu_sections ms
+		JOIN merchants m ON m.id = ms.merchant_id
+		WHERE ms.id = $1 AND m.owner_user_id = $2`,
+		sectionID, userIDFrom(r)).Scan(&status)
+	return writableFromStatus(status, err)
+}
+
+// writableFromStatus **يترجم نتيجةَ الاستعلام إلى قرار الكتابة** — نصٌّ واحدٌ
+// لا يتكرّر في ثلاثة حرّاس: خطأُ الاستعلام (غيرُ موجودٍ أو غيرُ مملوك) يُردّ
+// `errForbidden` بلا كشفِ الوجود، والموقوفُ `errStoreSuspended`، وما عداه مسموح.
+func writableFromStatus(status string, err error) error {
+	if err != nil {
+		return errForbidden
+	}
+	if status == "suspended" {
+		return errStoreSuspended
+	}
+	return nil
+}
+
 type merchantStore struct {
 	ID              string  `json:"id"`
 	Name            string  `json:"name"`
@@ -44,6 +107,14 @@ type merchantStore struct {
 	AddressText string   `json:"address_text"`
 	Lat         *float64 `json:"lat"`
 	Lng         *float64 `json:"lng"`
+	// **الحالةُ الفعليّةُ يحسبها الخادمُ لا التطبيق** (A3): `status` تقول
+	// موقوفاً أو نشطاً، و`emergency_closed` الإغلاقَ اليدويّ، **و`open_now`
+	// وحدَها تقرأ ساعاتِ العمل** — بمنطق `OpenNowSQL` نفسِه الذي يحكم إنشاءَ
+	// الطلب، فلا يفترق العرضُ عن القبول. و`next_open` موعدُ الفتح القادم أو
+	// `null` إن كان مفتوحاً الآن أو بلا دوام. **والتطبيقُ يؤلّف الكلمةَ من
+	// هذه الحقول ولا يعيد حسابَ الساعات** — نصٌّ واحدٌ لا نصّان.
+	OpenNow  bool       `json:"open_now"`
+	NextOpen *time.Time `json:"next_open"`
 }
 
 // handleMerchantStores متاجر صاحب الحساب.
@@ -54,7 +125,12 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		       -- **وعنوانُه ودبّوسُه تقرؤهما شاشةُ إعداداته** — ولا تُضبط
 		       -- من لوحة الإدارة وحدَها بعد اليوم (قرارُ المالك ٢٠٢٦-٠٨-١٢).
 		       m.address_text,
-		       ST_Y(m.location::geometry), ST_X(m.location::geometry)
+		       ST_Y(m.location::geometry), ST_X(m.location::geometry),
+		       -- **الحالةُ الفعليّةُ من مصدرِ الحقيقة نفسِه** (A3): منطقُ
+		       -- استقبالِ الطلب الآن وموعدِ الفتح القادم، لا نسخةٌ ثانيةٌ في
+		       -- التطبيق تفترق عن الخادم.
+		       `+orders.OpenNowSQL+`,
+		       `+orders.NextOpenSQL+`
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -69,7 +145,7 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		var m merchantStore
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.LogoThumbURL,
 			&m.Status, &m.EmergencyClosed, &m.PrepMinutes, &m.MinOrder,
-			&m.AddressText, &m.Lat, &m.Lng); err != nil {
+			&m.AddressText, &m.Lat, &m.Lng, &m.OpenNow, &m.NextOpen); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -263,7 +339,18 @@ func (s *Server) handleMerchantGetOrder(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	view, err := orderView(orders.AudienceMerchant, o)
+	// ══════════════════════════════════════════════════════════════════
+	// **والمالُ يُملأ من الدفتر هنا كما في القائمة** (A1، ٢٠٢٦-٠٩-٢٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت القائمةُ تنادي `fillMerchantMoney` والمفردُ لا** — فيُعيد المفردُ
+	// `subtotal` الخامَّ (سعرَ البيع بهامش المنصّة) و`platform_commission`
+	// المجموعةَ عبر مطابخِ الطلب، بينما `merchant_net` صفرٌ. **وهو عينُ عطبِ
+	// «١٨٥ مقابل ١٣٥» الذي أُصلح في القائمة ونُسي هنا.** فيُملأ بالصيغة نفسِها
+	// ثمّ يُنقّى — والمرشَّحُ آخرُ ما يمسّ الحمولة.
+	list := []orders.Order{*o}
+	s.fillMerchantMoney(r, o.MerchantID, list)
+	view, err := orderView(orders.AudienceMerchant, &list[0])
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -290,7 +377,18 @@ func (s *Server) handleMerchantTransition(w http.ResponseWriter, r *http.Request
 	}
 	// إلغاءُ المتجر يلزمه سبب: «ضاع طلب» بلا جوابه يترك الزبون والإدارة يخمّنان،
 	// ويمنع قياس أي متجرٍ يُكثر الإلغاء.
-	if req.To == "cancelled" && strings.TrimSpace(req.Note) == "" {
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **والرفضُ كذلك يلزمه سببٌ — والخادمُ هو الحُجّة** (A5)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قرارُ المالك**: يختار المتجرُ سبباً من قائمةٍ سريعة (الصنفُ غير
+	// متوفّر · ضغطُ طلبات · تعذّر التجهيز · المتجر على وشك الإغلاق · سببٌ
+	// آخر بنصّه). **والنصُّ يُحفَظ ويصل الزبونَ كما هو** (`notifyTransition`:
+	// «اعتذر المتجر عن طلبك — <السبب>»). **وكان الرفضُ يمرّ بلا سبب** فيقرأ
+	// الزبونُ اعتذاراً بلا لماذا، **ولا يُقاس متجرٌ يُكثر الرفض.** والاشتراطُ
+	// هنا لا في التطبيق وحدَه: **عميلٌ قديمٌ أو مُعدَّلٌ لا يفلت منه.**
+	if (req.To == "cancelled" || req.To == "rejected") && strings.TrimSpace(req.Note) == "" {
 		s.respondErr(w, errReasonRequired)
 		return
 	}
@@ -356,6 +454,12 @@ func (s *Server) handleMerchantMenu(w http.ResponseWriter, r *http.Request) {
 // (إدارة القائمة السيادية للمنصة — قرار 15).
 func (s *Server) handleMerchantItemAvailability(w http.ResponseWriter, r *http.Request) {
 	itemID := chi.URLParam(r, "itemID")
+	// **والموقوفُ لا يبدّل إتاحةَ صنفٍ** (A4) — «متوفّر/نفد» إدارةُ متجرٍ لا
+	// إتمامُ طلب، فتُمنع كسائرِ الكتابات حتى يُرفع الإيقاف.
+	if err := s.itemWriteGuard(r, itemID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	req, err := decode[struct {
 		Available *bool `json:"available"`
 	}](r)
@@ -383,6 +487,12 @@ func (s *Server) handleMerchantItemAvailability(w http.ResponseWriter, r *http.R
 // handleMerchantEmergency إغلاق/فتح طارئ للمتجر من صاحبه.
 func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
+	// **والموقوفُ لا يبدّل إغلاقَه الطارئ** (A4) — متجرٌ موقوفٌ مغلقٌ أصلاً،
+	// والمفتاحُ إدارةُ إتاحةٍ تُمنع حتى يُرفع الإيقاف.
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	req, err := decode[struct {
 		Closed *bool `json:"closed"`
 	}](r)

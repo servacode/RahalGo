@@ -43,8 +43,9 @@ func (s *Server) ownsItem(r *http.Request, itemID string) bool {
 
 func (s *Server) handleMerchantCreateSection(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
-	if !s.ownsMerchant(r, merchantID) {
-		s.respondErr(w, errForbidden)
+	// **والموقوفُ لا يبني قائمتَه** (A4) — يراها ولا يزيد عليها.
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	req, err := decode[catalog.SectionInput](r)
@@ -63,8 +64,8 @@ func (s *Server) handleMerchantCreateSection(w http.ResponseWriter, r *http.Requ
 // handleMerchantUpdateSection تعديلُ اسم القسم أو صورته — **بعد فحص الملكيّة.**
 func (s *Server) handleMerchantUpdateSection(w http.ResponseWriter, r *http.Request) {
 	sectionID := chi.URLParam(r, "sectionID")
-	if !s.ownsSection(r, sectionID) {
-		s.respondErr(w, errForbidden)
+	if err := s.sectionWriteGuard(r, sectionID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	req, err := decode[catalog.SectionInput](r)
@@ -82,8 +83,8 @@ func (s *Server) handleMerchantUpdateSection(w http.ResponseWriter, r *http.Requ
 
 func (s *Server) handleMerchantDeleteSection(w http.ResponseWriter, r *http.Request) {
 	sectionID := chi.URLParam(r, "sectionID")
-	if !s.ownsSection(r, sectionID) {
-		s.respondErr(w, errForbidden)
+	if err := s.sectionWriteGuard(r, sectionID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	if err := s.catalog.DeleteSection(r.Context(), userIDFrom(r), sectionID, clientIP(r)); err != nil {
@@ -95,8 +96,9 @@ func (s *Server) handleMerchantDeleteSection(w http.ResponseWriter, r *http.Requ
 
 func (s *Server) handleMerchantCreateItem(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
-	if !s.ownsMerchant(r, merchantID) {
-		s.respondErr(w, errForbidden)
+	// **والموقوفُ لا يضيف صنفاً** (A4).
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	req, err := decode[catalog.MenuItemInput](r)
@@ -124,8 +126,9 @@ func (s *Server) handleMerchantCreateItem(w http.ResponseWriter, r *http.Request
 
 func (s *Server) handleMerchantUpdateItem(w http.ResponseWriter, r *http.Request) {
 	itemID := chi.URLParam(r, "itemID")
-	if !s.ownsItem(r, itemID) {
-		s.respondErr(w, errForbidden)
+	// **والموقوفُ لا يعدّل صنفاً** (A4).
+	if err := s.itemWriteGuard(r, itemID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	req, err := decode[catalog.MenuItemInput](r)
@@ -152,8 +155,8 @@ func (s *Server) handleMerchantUpdateItem(w http.ResponseWriter, r *http.Request
 
 func (s *Server) handleMerchantDeleteItem(w http.ResponseWriter, r *http.Request) {
 	itemID := chi.URLParam(r, "itemID")
-	if !s.ownsItem(r, itemID) {
-		s.respondErr(w, errForbidden)
+	if err := s.itemWriteGuard(r, itemID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	if err := s.catalog.DeleteItem(r.Context(), userIDFrom(r), itemID, clientIP(r)); err != nil {
@@ -285,8 +288,9 @@ func (s *Server) handleMerchantStoreSections(w http.ResponseWriter, r *http.Requ
 // المتجرُ بلا أقسامٍ إطلاقا.
 func (s *Server) handleMerchantSetStoreSections(w http.ResponseWriter, r *http.Request) {
 	storeID := chi.URLParam(r, "id")
-	if !s.ownsMerchant(r, storeID) {
-		s.respondErr(w, errForbidden)
+	// **والموقوفُ لا يبدّل أقسامَ متجره** (A4).
+	if err := s.merchantWriteGuard(r, storeID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	in, err := decode[struct {

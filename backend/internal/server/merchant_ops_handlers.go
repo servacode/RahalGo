@@ -17,6 +17,9 @@ import (
 var (
 	errNotReadyable   = httpx.NewError(http.StatusConflict, "not_readyable", "errors.not_readyable")
 	errReasonRequired = httpx.NewError(http.StatusBadRequest, "reason_required", "errors.reason_required")
+	// **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — ٤٠٣ لا ٤٠٩: **حالُ ملكيّةٍ
+	// دائمةٌ يقرّرها المكتب**، لا تعارضٌ لحظيٌّ يزول بإعادة المحاولة.
+	errStoreSuspended = httpx.NewError(http.StatusForbidden, "store_suspended", "errors.store_suspended")
 )
 
 // readyableStatuses الحالات التي يصحّ فيها إعلان الجاهزية.
@@ -93,8 +96,9 @@ func (s *Server) handleMerchantGetHours(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleMerchantSetHours(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
-	if !s.ownsMerchant(r, merchantID) {
-		s.respondErr(w, errForbidden)
+	// **والموقوفُ لا يكتب ساعاتِه** (A4) — يقرؤها ولا يعدّلها حتى يُرفع الإيقاف.
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	req, err := decode[struct {
@@ -117,8 +121,10 @@ func (s *Server) handleMerchantSetHours(w http.ResponseWriter, r *http.Request) 
 // عقدٌ بين طرفين لا يعدّله طرف، والثانية قرار المنصة في من يعمل على منصّتها.
 func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
-	if !s.ownsMerchant(r, merchantID) {
-		s.respondErr(w, errForbidden)
+	// **والموقوفُ لا يعدّل إعداداتِ متجره** (A4) — الاسمُ ووقتُ التحضير
+	// والدبّوسُ إدارةٌ تُمنع حتى يُرفع الإيقاف.
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	req, err := decode[struct {

@@ -20,7 +20,7 @@
       "topup"
     ],
     "notify_sites": 54,
-    "notify_targeted": 17,
+    "notify_targeted": 19,
     "publish_rooms": [
       "customer",
       "driver",
@@ -31,8 +31,8 @@
     "setting_defs": 148,
     "behaviour_settings": 120,
     "order_fields": 83,
-    "test_files": 390,
-    "test_funcs": 1647
+    "test_files": 391,
+    "test_funcs": 1655
   },
   "flows": [
     {
@@ -22389,6 +22389,54 @@
     {
       "name": "TestMerchantKindsAreASubset",
       "file": "internal/server/merchant_media_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_AcceptVsReject",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_AcceptVsTimeout",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_DoubleAccept",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_MultiStoreIsolation",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_OrderIDOR",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_ReadyTwiceKeepsFirstTime",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_SuspendedAvailabilityRejected",
+      "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchant_WriteGuardMatrix",
+      "file": "internal/server/merchant_ops_guard_test.go",
       "package": "server",
       "orphan": true
     },

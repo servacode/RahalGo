@@ -314,6 +314,11 @@ private val CODES: Map<String, Int> = mapOf(
     "quote_not_confirmed" to R.string.err_quote_not_confirmed,
     "custom_locked" to R.string.err_custom_locked,
     "merchant_closed" to R.string.err_merchant_closed,
+    // **ومتجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — **حارسُ الخادم هو
+    // الحُجّة**: لو أرسل التطبيقُ كتابةً رغم شاشة الإيقاف، يعود ٤٠٣
+    // `store_suspended` فيُقرأ عربيّاً لا خامّاً. وهو غيرُ «موقوف الحساب»
+    // (`user_suspended`): إيقافُ متجرٍ واحدٍ لا صاحبِه.
+    "store_suspended" to R.string.err_store_suspended,
     // **والدفعُ نقداً موقوفٌ مؤقّتاً** — (٢٠٢٦-٠٨-٢٣). **والرسالةُ
     // تقول البديل**: المحفظةُ مفتوحةٌ له.
     "cash_blocked" to R.string.err_cash_blocked,

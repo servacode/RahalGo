@@ -146,6 +146,13 @@ func (s *Server) createScopedOffer(w http.ResponseWriter, r *http.Request,
 }
 
 func (s *Server) handleMerchantCreateOffer(w http.ResponseWriter, r *http.Request) {
+	// **والموقوفُ لا يُنزل عرضاً على متجره** (A4) — **والمندوبُ ليس هنا**:
+	// الحارسُ يخصّ بابَ المالك، وبابُ المندوب (`handleRepCreateOffer`) نطاقُه
+	// عميلُه لا ملكُه، **فلا يُقيَّد بإيقاف متجرٍ ليس متجرَه.**
+	if err := s.merchantWriteGuard(r, chi.URLParam(r, "id")); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	s.createScopedOffer(w, r, s.merchantOfferScope)
 }
 
@@ -181,6 +188,12 @@ func (s *Server) stopScopedOffer(w http.ResponseWriter, r *http.Request,
 }
 
 func (s *Server) handleMerchantStopOffer(w http.ResponseWriter, r *http.Request) {
+	// **والموقوفُ لا يبدّل عروضَه** (A4) — إيقافُ عرضٍ إدارةُ متجرٍ كإنشائه،
+	// تُمنع حتى يُرفع الإيقاف. والمندوبُ خارجَ هذا الحارس.
+	if err := s.merchantWriteGuard(r, chi.URLParam(r, "id")); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	s.stopScopedOffer(w, r, s.merchantOfferScope)
 }
 

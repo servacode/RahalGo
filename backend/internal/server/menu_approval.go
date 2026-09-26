@@ -199,6 +199,9 @@ func (s *Server) handleReviewMenuItem(w http.ResponseWriter, r *http.Request) {
 			UserID: *ownerID, Kind: notifications.KindAccount,
 			Title: title, Body: name + " — " + note,
 			Entity: "menu_item", EntityID: itemID, Href: "/portal/menu",
+			// **إلى تطبيق المتجر وحدَه** (A2): مالكُ الصنف متجرٌ، فيُوجَّه قرارُ
+			// المراجعة إلى تطبيقه لا إلى تطبيق الزبون على جهازه نفسِه.
+			Apps: []string{notifications.AppMerchant},
 		})
 	}
 	s.audit(r, "admin.menu_reviewed", "menu_item", itemID, map[string]any{

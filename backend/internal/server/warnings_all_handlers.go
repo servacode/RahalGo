@@ -192,6 +192,10 @@ func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 		UserID: userID, Kind: notifications.KindAccount,
 		Title: notifTitles.warningOnYou, Body: clip(body, 200),
 		Entity: "user", EntityID: userID,
+		// **إلى تطبيق دور المستحقّ** (A2): الإنذارُ على عاملٍ (متجر/سائق/مندوب)
+		// يُوجَّه إلى تطبيقه لا إلى تطبيق الزبون على جهازه نفسِه. وزبونٌ محضٌ
+		// بلا دورِ عملٍ ⇒ فارغٌ ⇒ تطبيقُه الوحيد.
+		Apps: s.payeeWorkerApps(r.Context(), userID),
 	})
 	s.audit(r, "ops.warning_issued", "user", userID, map[string]any{"reason": reason})
 	s.touch("user", "ops")
