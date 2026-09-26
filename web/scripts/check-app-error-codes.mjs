@@ -109,7 +109,7 @@ const SERVER_ADMIN = new Set([
   "qa_normal_accepted_only", "qa_normal_cash_only", "qa_not_customer_only",
   "qa_not_qa_order", "qa_order_off_ladder", "qa_phone_not_allowed",
   "qa_seed_kind_not_allowed", "qa_no_option",
-  "qa_not_rep_only", "qa_money_key_not_allowed",
+  "qa_not_rep_only", "qa_money_key_not_allowed", "qa_release_key_not_allowed",
   "qa_no_open_order", "qa_multiple_open_orders",
   "qa_coverage_zone_exists",
   "qa_no_closed_order",

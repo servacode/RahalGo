@@ -39,6 +39,7 @@ var repBridgeRoutes = []string{
 	`r.Post("/qa/payouts/{id}/decide", s.handleDecidePayout)`,
 	`r.Patch("/qa/users/{id}", s.handleAdminUpdateUser)`,
 	`r.Patch("/qa/merchants/{id}", s.handleUpdateMerchant)`,
+	`r.Post("/qa/app-file", s.handleUploadAppFile)`,
 }
 
 // TestRepBridge_RegisteredInsideStagingGateOnly **كلُّ مسارٍ داخلَ `if
@@ -79,6 +80,7 @@ func TestRepBridge_ReusesRealHandlersNoFakeLogic(t *testing.T) {
 		"s.handleDecidePayout",    // قرارُ السحب
 		"s.handleAdminUpdateUser", // إيقاف/تفعيل
 		"s.handleUpdateMerchant",  // نقلُ المتجر
+		"s.handleUploadAppFile",   // نشرُ أثرِ التطبيق (APK)
 	}
 	src, err := os.ReadFile("server.go")
 	if err != nil {
@@ -155,6 +157,37 @@ func TestRepWalletFundSeed_RegisteredAndRealLedger(t *testing.T) {
 	// **وسقفٌ يحرس من خطأٍ عرضيّ** — كنظيرِ شحنِ الزبون.
 	if !strings.Contains(s, "amount > 100_000_000") {
 		t.Error("**shحنُ المندوب بلا سقفٍ حارس**")
+	}
+}
+
+// TestRepReleaseSeed_RegisteredAndBounded **ضبطُ قناةِ الإصدار مسجَّلٌ حالةً،
+// ومفاتيحُه محصورةٌ بمفتاحَي المندوب** — لا مفتاحَ إصدارٍ لتطبيقٍ آخر.
+func TestRepReleaseSeed_RegisteredAndBounded(t *testing.T) {
+	if !qaSeedAllowlist["rep_release_set"] {
+		t.Fatal("rep_release_set must be in qaSeedAllowlist")
+	}
+	if !qaStateSeed["rep_release_set"] {
+		t.Fatal("rep_release_set must be a state seed")
+	}
+	want := map[string]bool{"release.rep.version": true, "app.min_version.rep": true}
+	if len(qaRepReleaseKeys) != len(want) {
+		t.Fatalf("qaRepReleaseKeys size=%d want=%d — must stay bounded", len(qaRepReleaseKeys), len(want))
+	}
+	for k := range want {
+		if !qaRepReleaseKeys[k] {
+			t.Errorf("qaRepReleaseKeys missing %q", k)
+		}
+	}
+	for k := range qaRepReleaseKeys {
+		if !want[k] {
+			t.Errorf("qaRepReleaseKeys carries UNEXPECTED key %q", k)
+		}
+	}
+	// **لا مفاتيحَ إصدارِ تطبيقٍ آخر** — المندوب وحدَه.
+	for _, forbidden := range []string{"app.min_version.customer", "app.min_version.driver", "app.min_version.merchant", "release.customer.version"} {
+		if qaRepReleaseKeys[forbidden] {
+			t.Errorf("qaRepReleaseKeys must NOT contain %q — rep release only", forbidden)
+		}
 	}
 }
 

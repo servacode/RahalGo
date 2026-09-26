@@ -190,6 +190,43 @@ func (s *Server) qaRepWalletFund(w http.ResponseWriter, r *http.Request, amount 
 	httpx.JSON(w, http.StatusOK, map[string]any{"funded": amount, "balance": bal, "tx_id": txID, "user_id": uid})
 }
 
+// qaRepReleaseKeys **مفاتيحُ قناةِ إصدار المندوب المسموحُ ضبطُها في الشهادة** —
+// اسمُ النسخة (نصّ) وحدُّها الأدنى (عدد). **قائمةٌ صارمةٌ**: لا مفتاحَ إصدارٍ
+// لتطبيقٍ آخر، ولا مفتاحَ سواه.
+var qaRepReleaseKeys = map[string]bool{
+	"release.rep.version": true, // اسمُ نسخةِ المندوب المعروض في /public/releases (نصّ)
+	"app.min_version.rep": true, // الحدُّ الأدنى لنسخةِ المندوب (عدد) — لشاهد التحديث الإلزاميّ 426
+}
+
+// qaRepReleaseSet **يضبط مفتاحَ قناةِ إصدار المندوب مؤقّتاً عبر مسار الإعدادات
+// الحقيقيّ** (`settings.Set`) **ويُرجع السابقَ للاستعادة**. `release.rep.version`
+// نصّيٌّ (`value_str`)، و`app.min_version.rep` عدديٌّ (`value_int`). **لا مفتاحَ
+// خارجَ `qaRepReleaseKeys`.** — kind=rep_release_set (على التجهيز وحدَه).
+func (s *Server) qaRepReleaseSet(w http.ResponseWriter, r *http.Request, key string, valueInt int64, valueStr string) {
+	if !qaRepReleaseKeys[key] {
+		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_release_key_not_allowed", "errors.forbidden"))
+		return
+	}
+	ctx := r.Context()
+	if key == "release.rep.version" {
+		prev := s.settings.GetString(ctx, key)
+		if err := s.settings.Set(ctx, key, valueStr, nil); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		s.logger.Warn("QA rep release set (staging-only)", "key", key, "previous", prev, "set", valueStr)
+		httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueStr})
+		return
+	}
+	prev := s.settings.GetInt(ctx, key)
+	if err := s.settings.Set(ctx, key, int(valueInt), nil); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA rep release set (staging-only)", "key", key, "previous", prev, "set", valueInt)
+	httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueInt})
+}
+
 // qaAdminActor **وسيطٌ يحقن أدمنَ QA الثابتَ فاعلاً ثمّ يشغّل المعالِجَ الإنتاجيّ.**
 //
 // **على التجهيز وحدَه** (يسقط ٤٠٤ في غيره). **يخطّي حرّاسَ الأدمن (التوثيق/القدرة/

@@ -517,6 +517,7 @@ func (s *Server) Router() http.Handler {
 				r.Post("/qa/payouts/{id}/decide", s.handleDecidePayout)  // قرارُ السحب
 				r.Patch("/qa/users/{id}", s.handleAdminUpdateUser)       // إيقاف/تفعيل المندوب
 				r.Patch("/qa/merchants/{id}", s.handleUpdateMerchant)    // نقلُ المتجر بين مندوبَين (بسبب)
+				r.Post("/qa/app-file", s.handleUploadAppFile)            // نشرُ أثرِ التطبيق (APK) عبر معالِج الرفع الحقيقيّ — ?key=release.rep.apk
 			})
 			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed, /qa/catalog/sections, /qa/rep-session, /qa/leads/{id}/status, /qa/payouts/{id}/decide, /qa/users/{id}, /qa/merchants/{id}; GET /qa/reconcile)")
 		}

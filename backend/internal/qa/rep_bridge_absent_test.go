@@ -37,4 +37,7 @@ func TestRepBridges_AbsentOutsideStaging(t *testing.T) {
 	if got := h.PATCH("/api/v1/qa/merchants/"+fakeID, "", map[string]any{"sales_rep_code": "X", "transfer_reason": "qa"}); got.Code != 404 {
 		t.Errorf("**/qa/merchants/{id} ظهر خارج التجهيز** — رمز=%d (يُنتظر 404): %s", got.Code, got)
 	}
+	if got := h.POST("/api/v1/qa/app-file?key=release.rep.apk", "", map[string]any{}); got.Code != 404 {
+		t.Errorf("**/qa/app-file ظهر خارج التجهيز** — رمز=%d (يُنتظر 404): %s", got.Code, got)
+	}
 }
