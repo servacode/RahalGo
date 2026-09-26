@@ -190,31 +190,34 @@ func (s *Server) qaRepWalletFund(w http.ResponseWriter, r *http.Request, amount 
 	httpx.JSON(w, http.StatusOK, map[string]any{"funded": amount, "balance": bal, "tx_id": txID, "user_id": uid})
 }
 
-// qaRepReleaseKeys **مفاتيحُ قناةِ إصدار المندوب المسموحُ ضبطُها في الشهادة** —
-// اسمُ النسخة (نصّ) وحدُّها الأدنى (عدد). **قائمةٌ صارمةٌ**: لا مفتاحَ إصدارٍ
-// لتطبيقٍ آخر، ولا مفتاحَ سواه.
-var qaRepReleaseKeys = map[string]bool{
-	"release.rep.version": true, // اسمُ نسخةِ المندوب المعروض في /public/releases (نصّ)
-	"app.min_version.rep": true, // الحدُّ الأدنى لنسخةِ المندوب (عدد) — لشاهد التحديث الإلزاميّ 426
+// qaReleaseKeys **مفاتيحُ قنواتِ الإصدار المسموحُ ضبطُها في الشهادة** — اسمُ
+// النسخة (نصّ) وحدُّها الأدنى (عدد)، **للمندوب والمتجر**. **قائمةٌ صارمةٌ**:
+// لا مفتاحَ إصدارٍ لتطبيقٍ خارجَها، ولا مفتاحَ سواه.
+var qaReleaseKeys = map[string]bool{
+	"release.rep.version":      true, // اسمُ نسخةِ المندوب المعروض في /public/releases (نصّ)
+	"app.min_version.rep":      true, // الحدُّ الأدنى لنسخةِ المندوب (عدد) — لشاهد التحديث الإلزاميّ 426
+	"release.merchant.version": true, // اسمُ نسخةِ المتجر المعروض في /public/releases (نصّ)
+	"app.min_version.merchant": true, // الحدُّ الأدنى لنسخةِ المتجر (عدد) — لشاهد التحديث الإلزاميّ 426
 }
 
-// qaRepReleaseSet **يضبط مفتاحَ قناةِ إصدار المندوب مؤقّتاً عبر مسار الإعدادات
-// الحقيقيّ** (`settings.Set`) **ويُرجع السابقَ للاستعادة**. `release.rep.version`
-// نصّيٌّ (`value_str`)، و`app.min_version.rep` عدديٌّ (`value_int`). **لا مفتاحَ
-// خارجَ `qaRepReleaseKeys`.** — kind=rep_release_set (على التجهيز وحدَه).
-func (s *Server) qaRepReleaseSet(w http.ResponseWriter, r *http.Request, key string, valueInt int64, valueStr string) {
-	if !qaRepReleaseKeys[key] {
+// qaReleaseSet **يضبط مفتاحَ قناةِ إصدارٍ مؤقّتاً عبر مسار الإعدادات الحقيقيّ**
+// (`settings.Set`) **ويُرجع السابقَ للاستعادة**. مفاتيحُ `release.*.version`
+// نصّيّةٌ (`value_str`)، و`app.min_version.*` عدديّةٌ (`value_int`). **لا مفتاحَ
+// خارجَ `qaReleaseKeys`.** — kind=rep_release_set / merchant_release_set (على
+// التجهيز وحدَه).
+func (s *Server) qaReleaseSet(w http.ResponseWriter, r *http.Request, key string, valueInt int64, valueStr string) {
+	if !qaReleaseKeys[key] {
 		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_release_key_not_allowed", "errors.forbidden"))
 		return
 	}
 	ctx := r.Context()
-	if key == "release.rep.version" {
+	if key == "release.rep.version" || key == "release.merchant.version" {
 		prev := s.settings.GetString(ctx, key)
 		if err := s.settings.Set(ctx, key, valueStr, nil); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		s.logger.Warn("QA rep release set (staging-only)", "key", key, "previous", prev, "set", valueStr)
+		s.logger.Warn("QA release set (staging-only)", "key", key, "previous", prev, "set", valueStr)
 		httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueStr})
 		return
 	}
@@ -223,7 +226,7 @@ func (s *Server) qaRepReleaseSet(w http.ResponseWriter, r *http.Request, key str
 		s.respondErr(w, err)
 		return
 	}
-	s.logger.Warn("QA rep release set (staging-only)", "key", key, "previous", prev, "set", valueInt)
+	s.logger.Warn("QA release set (staging-only)", "key", key, "previous", prev, "set", valueInt)
 	httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueInt})
 }
 

@@ -160,33 +160,43 @@ func TestRepWalletFundSeed_RegisteredAndRealLedger(t *testing.T) {
 	}
 }
 
-// TestRepReleaseSeed_RegisteredAndBounded **ضبطُ قناةِ الإصدار مسجَّلٌ حالةً،
-// ومفاتيحُه محصورةٌ بمفتاحَي المندوب** — لا مفتاحَ إصدارٍ لتطبيقٍ آخر.
-func TestRepReleaseSeed_RegisteredAndBounded(t *testing.T) {
-	if !qaSeedAllowlist["rep_release_set"] {
-		t.Fatal("rep_release_set must be in qaSeedAllowlist")
+// TestReleaseSeed_RegisteredAndBounded **ضبطُ قناةِ الإصدار مسجَّلٌ حالةً
+// للمندوب والمتجر، ومفاتيحُه محصورةٌ بأربعةٍ** — لا مفتاحَ إصدارٍ لتطبيقٍ خارجَها.
+func TestReleaseSeed_RegisteredAndBounded(t *testing.T) {
+	for _, kind := range []string{"rep_release_set", "merchant_release_set"} {
+		if !qaSeedAllowlist[kind] {
+			t.Fatalf("%s must be in qaSeedAllowlist", kind)
+		}
+		if !qaStateSeed[kind] {
+			t.Fatalf("%s must be a state seed", kind)
+		}
 	}
-	if !qaStateSeed["rep_release_set"] {
-		t.Fatal("rep_release_set must be a state seed")
+	want := map[string]bool{
+		"release.rep.version":      true,
+		"app.min_version.rep":      true,
+		"release.merchant.version": true,
+		"app.min_version.merchant": true,
 	}
-	want := map[string]bool{"release.rep.version": true, "app.min_version.rep": true}
-	if len(qaRepReleaseKeys) != len(want) {
-		t.Fatalf("qaRepReleaseKeys size=%d want=%d — must stay bounded", len(qaRepReleaseKeys), len(want))
+	if len(qaReleaseKeys) != len(want) {
+		t.Fatalf("qaReleaseKeys size=%d want=%d — must stay bounded", len(qaReleaseKeys), len(want))
 	}
 	for k := range want {
-		if !qaRepReleaseKeys[k] {
-			t.Errorf("qaRepReleaseKeys missing %q", k)
+		if !qaReleaseKeys[k] {
+			t.Errorf("qaReleaseKeys missing %q", k)
 		}
 	}
-	for k := range qaRepReleaseKeys {
+	for k := range qaReleaseKeys {
 		if !want[k] {
-			t.Errorf("qaRepReleaseKeys carries UNEXPECTED key %q", k)
+			t.Errorf("qaReleaseKeys carries UNEXPECTED key %q", k)
 		}
 	}
-	// **لا مفاتيحَ إصدارِ تطبيقٍ آخر** — المندوب وحدَه.
-	for _, forbidden := range []string{"app.min_version.customer", "app.min_version.driver", "app.min_version.merchant", "release.customer.version"} {
-		if qaRepReleaseKeys[forbidden] {
-			t.Errorf("qaRepReleaseKeys must NOT contain %q — rep release only", forbidden)
+	// **لا مفاتيحَ إصدارِ الزبون أو السائق** — المندوبُ والمتجرُ وحدَهما.
+	for _, forbidden := range []string{
+		"app.min_version.customer", "app.min_version.driver",
+		"release.customer.version", "release.driver.version",
+	} {
+		if qaReleaseKeys[forbidden] {
+			t.Errorf("qaReleaseKeys must NOT contain %q — rep+merchant release only", forbidden)
 		}
 	}
 }
