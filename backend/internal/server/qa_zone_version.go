@@ -329,3 +329,23 @@ func (s *Server) qaMinVersion(w http.ResponseWriter, r *http.Request, value int6
 	s.logger.Warn("QA min_version set (staging-only)", "key", key, "previous", prev, "set", value)
 	httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": value})
 }
+
+// qaCODLimit **يضبط سقفَ الدفع نقداً بذمّة الزبون** (`customers.cod_limit`)
+// لشهود `cod_limit_exceeded` حيّاً على التجهيز. **يُرجع السابقَ للاستعادة** —
+// نداءٌ ثانٍ بقيمته (صفرٌ = معطّل) يُعيد الحال. **إعدادٌ ماليٌّ لا يقلبه
+// `qa/setting` المنطقيّ**، ويمرّ بمسار الكتابة الحقيقيّ (`settings.Set`) لا
+// بتعديلٍ خام — كنظيرِه `qaMinVersion`. **على التجهيز وحدَه** (الحارسُ في المنادي).
+func (s *Server) qaCODLimit(w http.ResponseWriter, r *http.Request, value int64) {
+	if value < 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	const key = "customers.cod_limit"
+	prev := s.settings.GetInt(r.Context(), key)
+	if err := s.settings.Set(r.Context(), key, int(value), nil); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA cod_limit set (staging-only)", "key", key, "previous", prev, "set", value)
+	httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": value})
+}
