@@ -96,8 +96,8 @@ func newTreasuryFixture(t *testing.T, subtotal, deliveryFee int64) *treasuryFixt
 	}
 	var merchantID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, category_id, owner_user_id, commission_percent)
-		VALUES ('متجر اختبار الخزينة', $1, $2, 10) RETURNING id`,
+		INSERT INTO merchants (name, category_id, owner_user_id, commission_percent, settlement_method)
+		VALUES ('متجر اختبار الخزينة', $1, $2, 10, 'wallet') RETURNING id`,
 		categoryID, f.owner).Scan(&merchantID); err != nil {
 		t.Fatalf("تعذّر إنشاء متجر: %v", err)
 	}

@@ -147,11 +147,17 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	// **ما قُيّد للأطراف وما رُدَّ للزبون وما سبق أن أخذته الخزينة** — ثلاثةٌ
 	// تُقرأ من الدفتر في نداءٍ واحد. **والقراءةُ من الدفتر لا من المعادلة**:
 	// قيدٌ رُفض لنقص رصيدٍ يظهر أثرُه هنا فوراً.
+	// **و`merchant_cash_accrued` نصيبُ طرفٍ لا ربحُ منصة** — التزامٌ نقديٌّ نشأ
+	// للمتجر (طريقةُ تسويته «نقد»). **فيُجمَع مع أنصبةِ الأطراف** كي لا تحسبه
+	// الخزينةُ ربحاً وهو مالٌ تدين به المنصةُ للمتجر (قرارٌ ماليٌّ ٢٠٢٦-٠٩-٢٧).
+	// **وعكسُه بالنوع نفسِه سالباً** فيتصافى في المجموع نفسِه.
+	// **و`merchant_cash_paid` تسويةُ التزامٍ لا نصيبُ طرف** — فلا تدخل هنا (تُحسَب
+	// خروجَ نقدٍ خارجيّاً في مصالحة FI-12 العامّة لا في ربح الطلب).
 	var toParties, refunded, posted int64
 	if err := q.QueryRow(ctx, `
 		SELECT
 			COALESCE(sum(amount) FILTER (WHERE kind IN
-				('merchant_earning','driver_earning','commission')), 0),
+				('merchant_earning','driver_earning','commission','merchant_cash_accrued')), 0),
 			COALESCE(sum(amount) FILTER (WHERE kind = 'refund'), 0),
 			COALESCE(sum(amount) FILTER (WHERE kind = 'platform_profit'), 0)
 		FROM wallet_transactions WHERE ref = $1`, orderID).

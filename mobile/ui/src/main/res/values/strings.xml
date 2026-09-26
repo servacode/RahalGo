@@ -535,6 +535,10 @@
     <string name="err_rate_own_client">لا يمكنك تقييم متجر أنت مندوبه — التقييم شهادة زبون مستقل.</string>
     <string name="err_invalid_amount">المبلغ غير صالح</string>
     <string name="err_invalid_category">التصنيف غير صالح</string>
+    <string name="err_settlement_method_invalid">طريقة التسوية يجب أن تكون نقدا أو محفظة</string>
+    <string name="err_settlement_not_found">لا تسوية بهذا المعرّف</string>
+    <string name="err_settlement_not_cash">هذه التسوية ليست نقدية</string>
+    <string name="err_settlement_not_payable">لا مستحق نقدي قائم لهذه التسوية</string>
     <string name="err_merchant_location_required">حدد موقع المتجر على الخريطة قبل الحفظ</string>
     <string name="err_owner_required">لا متجر بلا صاحب — اكتب رقم صاحب المتجر</string>
     <string name="err_invalid_hours">ساعات العمل غير صالحة — تأكد من وقتي الفتح والإغلاق</string>

@@ -25,6 +25,10 @@ var (
 	ErrCategoryInvalid = httpx.NewError(http.StatusBadRequest, "invalid_category", "errors.invalid_category")
 	ErrNameRequired    = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 
+	// ErrSettlementMethodInvalid طريقةُ التسويةِ نقدٌ أو محفظةٌ لا غير.
+	ErrSettlementMethodInvalid = httpx.NewError(http.StatusBadRequest,
+		"settlement_method_invalid", "errors.settlement_method_invalid")
+
 	// ErrTransferReasonRequired **نقلُ المتجر بين مندوبَين يلزمه سبب.**
 	//
 	// **يحوّل النقلُ عمولةَ كلّ طلبٍ قادمٍ ونسبةَ الهدف** — فلا يُقبل صامتاً.
@@ -96,6 +100,8 @@ type Merchant struct {
 	// **واسمٌ منسوخٌ في صفٍّ يشيخ حين يُعدَّل في مصدره.**
 	District  string    `json:"district"`
 	CreatedAt time.Time `json:"created_at"`
+	// SettlementMethod طريقةُ تسويةِ مستحقّاتِ المتجر — `cash|wallet` (الأدمن وحدَه يغيّرها).
+	SettlementMethod string `json:"settlement_method"`
 }
 
 type MerchantPage struct {
@@ -217,7 +223,8 @@ func merchantSelect(daysExpr string) string {
 	       -- **والنصُّ يُبنى ولا يُخزَّن**: اسمٌ منسوخٌ في صفٍّ يشيخ حين
 	       -- يُعدَّل في مصدره، **فيبقى في اللوحة اسمٌ بدّله المالكُ من سنة.**
 	       m.district_id::text,
-	       COALESCE(dd.name || '، ' || gg.name, '')
+	       COALESCE(dd.name || '، ' || gg.name, ''),
+	       m.settlement_method
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -244,7 +251,8 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
-		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District)
+		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
+		&m.SettlementMethod)
 	if err != nil {
 		return nil, err
 	}
@@ -709,6 +717,42 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		s.auditDetail(ctx, actorID, "admin.merchant_rep_transfer", "merchant", id, ip,
 			map[string]any{"merchant_id": id, "from_rep": from, "to_rep": *repID, "reason": reason})
 	}
+	return s.merchantByID(ctx, id)
+}
+
+// SetSettlementMethod يبدّل طريقةَ تسويةِ مستحقّاتِ المتجر — **الأدمنُ وحدَه.**
+//
+// **التغييرُ للطلبات الجديدةِ فقط** — لا يمسّ تسويةَ طلبٍ قائم (كلُّ طلبٍ يحمل
+// لقطتَه). **والقفلُ على صفِّ المتجر** يتسلسل مع إنشاء الطلب: إمّا رأى الطلبُ
+// القديمةَ أو الجديدةَ، لا فراغَ ولا خلط (البند ٥ / SET-06).
+func (s *Service) SetSettlementMethod(ctx context.Context, actorID, id, method, ip string) (*Merchant, error) {
+	if method != "cash" && method != "wallet" {
+		return nil, ErrSettlementMethodInvalid
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var cur string
+	if err := tx.QueryRow(ctx,
+		`SELECT settlement_method FROM merchants WHERE id = $1 FOR UPDATE`, id).Scan(&cur); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, httpx.ErrNotFound
+		}
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE merchants SET settlement_method = $2, updated_at = now() WHERE id = $1`,
+		id, method); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	s.auditDetail(ctx, actorID, "admin.merchant_settlement_update", "merchant", id, ip,
+		map[string]any{"merchant_id": id, "from": cur, "to": method})
 	return s.merchantByID(ctx, id)
 }
 

@@ -349,6 +349,13 @@ private val CODES: Map<String, Int> = mapOf(
     "rate_own_client" to R.string.err_rate_own_client,
     "invalid_amount" to R.string.err_invalid_amount,
     "invalid_category" to R.string.err_invalid_category,
+    // **تسويةُ مستحقّات المتجر — أبوابُ الأدمن**: لا تبلغ هذه الرموزُ عميلَ
+    // هاتفٍ عمليّاً (صلاحيّةٌ ماليّةٌ + خطوةُ تحقّق)، لكنّها في حزمتَي
+    // orders/catalog فيُطلب لها نصٌّ عربيٌّ اتّساقاً مع الحارس.
+    "settlement_method_invalid" to R.string.err_settlement_method_invalid,
+    "settlement_not_found" to R.string.err_settlement_not_found,
+    "settlement_not_cash" to R.string.err_settlement_not_cash,
+    "settlement_not_payable" to R.string.err_settlement_not_payable,
     "merchant_location_required" to R.string.err_merchant_location_required,
     "owner_required" to R.string.err_owner_required,
     "invalid_hours" to R.string.err_invalid_hours,

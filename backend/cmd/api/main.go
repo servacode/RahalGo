@@ -232,6 +232,10 @@ func run(logger *slog.Logger) error {
 	} else if tid == "" {
 		logger.Warn("لا خزينةَ للمنصة ولا إداريَّ بعد — مصروفُ المنصة لن يُقيَّد")
 	}
+	// **ومحفظةُ الاحتباس للمستحقّات النقديّة المعلّقة** — دورةُ التسوية النقديّة.
+	if _, err := wallet.EnsureCashHolding(ctx, pg); err != nil {
+		return err
+	}
 	cashboxSvc := cashbox.NewService(pg, settingsStore)
 	hub := realtime.NewHub(logger)
 	// **وإبطالُ عائلةٍ يُشعِرها فوراً عبر البثّ** (Obs 3) — الجهازُ القديمُ يخرج

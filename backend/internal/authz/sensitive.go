@@ -107,6 +107,11 @@ var sensitiveActions = []Sensitive{
 	{"POST", "/expenses/{id}/void", "finance.expense_voided", "expense", 1, nil, ""},
 	{"POST", "/orders/{id}/compensate-driver", "finance.compensate_driver",
 		"order", 1, []string{"amount"}, ""},
+	// **وتسويةُ مستحقّات المتجر — تغييرُ الطريقة وتأكيدُ الدفع نقداً.**
+	{"PATCH", "/merchants/{id}/settlement-method", "admin.merchant_settlement_update",
+		"merchant", 1, []string{"method"}, ""},
+	{"POST", "/merchant-cash-settlements/{id}/pay", "finance.merchant_cash_paid",
+		"merchant_settlement", 1, nil, ""},
 
 	// ── الإعداداتُ ذاتُ الأثر ───────────────────────────────────
 	{"PUT", "/settings/{key}", "admin.setting_update", "setting", 1,

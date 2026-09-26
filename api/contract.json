@@ -1183,6 +1183,34 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/merchant-cash-settlements/{id}/pay",
+      "handler": "handleMarkCashSettlementPaid",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "already_paid",
+          "type": "unknown"
+        },
+        {
+          "name": "amount",
+          "type": "unknown"
+        },
+        {
+          "name": "settlement_id",
+          "type": "unknown"
+        },
+        {
+          "name": "state",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/merchants",
       "handler": "handleListMerchants",
@@ -1239,6 +1267,22 @@
       "response": [
         {
           "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/cash-settlements",
+      "handler": "handleMerchantCashSettlements",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@sum",
           "type": "unknown"
         }
       ],
@@ -1346,6 +1390,22 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/merchants/{id}/settlement-method",
+      "handler": "handleSetMerchantSettlementMethod",
+      "auth": true,
+      "capability": "settings.financial.manage",
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

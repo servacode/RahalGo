@@ -38,7 +38,7 @@ type KindContract struct {
 	Reachable bool
 }
 
-// Kinds العقودُ — **أربعةَ عشرَ نوعاً، بعددِ ما يسمح به قيدُ القاعدة.**
+// Kinds العقودُ — **ستّةَ عشرَ نوعاً، بعددِ ما يسمح به قيدُ القاعدة.**
 var Kinds = map[string]KindContract{
 	"topup": {
 		Kind: "topup", Sign: "+", RefRequired: false,
@@ -167,6 +167,27 @@ var Kinds = map[string]KindContract{
 		Path:       "POST /admin/users/{id}/incentive",
 		Semantics:  "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وتُرفض إن لم يكفِ رصيدُه.**",
 		Invariants: []string{"FI-03.a", "FI-02.b"},
+		Reachable:  true,
+	},
+	"merchant_cash_accrued": {
+		Kind: "merchant_cash_accrued", Sign: "±", RefRequired: true, RefTarget: "orders",
+		Creators: []string{
+			"internal/orders/cash_settlement.go", // accrueCashSettlement · postCashReversal · offsetMerchantDebtCash
+		},
+		Path: "الاستلامُ من متجرٍ طريقتُه «نقد» · وعكسُ استردادٍ · واقتطاعُ دَين",
+		// **التزامٌ نقديٌّ للمتجر في محفظة الاحتباس** — تراه الخزينةُ في
+		// `toParties` فلا تحسبه ربحاً. **والسالبُ عكسٌ (ردٌّ) أو اقتطاعُ دَينٍ
+		// سابقٍ من المستحقّ** — بالنوع نفسِه فيتصافى في المجموع.
+		Semantics:  "مستحقُّ المتجرِ نقداً في الاحتباس — **والسالبُ عكسٌ أو اقتطاعُ دَين.**",
+		Invariants: []string{"FI-06.a", "FI-14.a", "FI-14.b", "FI-14.c", "FI-14.d"},
+		Reachable:  true,
+	},
+	"merchant_cash_paid": {
+		Kind: "merchant_cash_paid", Sign: "-", RefRequired: true, RefTarget: "orders",
+		Creators:   []string{"internal/orders/cash_settlement.go"}, // MarkCashSettlementPaid
+		Path:       "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر",
+		Semantics:  "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.**",
+		Invariants: []string{"FI-14.a", "FI-14.f"},
 		Reachable:  true,
 	},
 }

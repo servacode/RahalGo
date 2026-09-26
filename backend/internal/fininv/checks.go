@@ -412,8 +412,12 @@ var All = []Check{
 			       COALESCE(c.cash, 0)::bigint AS نقدُ_الصندوق
 			FROM orders o
 			LEFT JOIN LATERAL (
+				-- **وقيدُ الدفع النقديّ تسويةُ التزامٍ لا توزيعُ طلب** — ينقل
+				-- نقداً من الاحتباس إلى المتجر خارجَ معادلة «التوزيع = نقدُ
+				-- السائق». يحرسه FI-14.f (المدفوعُ = المستحقُّ) وFI-14.a
+				-- (الاحتباس = القائم)، فيُستثنى هنا كي لا يُقرأ خرقاً.
 				SELECT sum(t.amount) AS net FROM wallet_transactions t
-				WHERE t.ref = o.id::text
+				WHERE t.ref = o.id::text AND t.kind <> 'merchant_cash_paid'
 			) l ON true
 			LEFT JOIN LATERAL (
 				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
@@ -621,6 +625,111 @@ var All = []Check{
 			  AND NOT EXISTS (
 				SELECT 1 FROM expenses e
 				WHERE e.id::text = t.ref AND e.voided_at IS NOT NULL)`,
+	},
+
+	// ═══════════════════════════════════════════════════════════════════
+	// FI-14 — تسويةُ المتجر نقداً: الاحتباسُ والهُويّةُ والعكس
+	// ═══════════════════════════════════════════════════════════════════
+
+	{
+		ID: "FI-14.a", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "رصيدُ الاحتباس = المستحقُّ النقديُّ القائم",
+		Why: "**محفظةُ الاحتباس ليست مالاً حرّاً** — رصيدُها التزامٌ نقديٌّ لم " +
+			"يُدفَع بعد. **فإن خالف مجموعَ (`amount − reversed`) للمستحقّات " +
+			"القائمة فإمّا قيدٌ بلا صفٍّ أو صفٌّ بلا قيد** — والالتزامُ ضاع أو خُلق.",
+		Kinds: []string{"merchant_cash_accrued", "merchant_cash_paid"},
+		SQL: `
+			SELECT w.user_id, w.balance,
+			       COALESCE((SELECT sum(amount - reversed_amount)
+			                 FROM merchant_settlements
+			                 WHERE method = 'cash' AND state = 'cash_due'), 0) AS outstanding
+			FROM wallets w
+			WHERE w.is_cash_holding
+			  AND w.balance <> COALESCE((SELECT sum(amount - reversed_amount)
+			                             FROM merchant_settlements
+			                             WHERE method = 'cash' AND state = 'cash_due'), 0)`,
+	},
+	{
+		ID: "FI-14.b", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "المحفظةُ والنقدُ لا يجتمعان لمصدرٍ واحد",
+		Why: "**عقدُ XOR**: مستحقُّ (طلب، متجر) يُسوّى محفظةً أو نقداً لا كليهما. " +
+			"**فتسويةٌ نقديّةٌ لها قيدُ مستحقٍّ محفظيّ، أو محفظيّةٌ لها قيدُ احتباسٍ " +
+			"أو دفعٍ نقديّ، تعني مصدراً قُيّد بطريقتين.**",
+		SQL: `
+			SELECT id, method, state
+			FROM merchant_settlements
+			WHERE (method = 'cash'
+			         AND (accrued_tx_id IS NULL OR earning_tx_id IS NOT NULL))
+			   OR (method = 'wallet'
+			         AND (earning_tx_id IS NULL
+			              OR accrued_tx_id IS NOT NULL
+			              OR paid_tx_id IS NOT NULL))`,
+	},
+	{
+		ID: "FI-14.c", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "المعكوسُ المخزَّن = مجموعُ سطورِ العكس",
+		Why: "**`reversed_amount` صورةٌ محفوظةٌ لمجموعِ سطورِ العكس** (ردٌّ أو " +
+			"اقتطاعُ دَين). **فافتراقُهما يعني معكوساً لا سطرَ له، أو سطراً لم " +
+			"يُحدِّث القائم** — فيُدفَع ما استُرِدّ.",
+		SQL: `
+			SELECT ms.id
+			FROM merchant_settlements ms
+			WHERE ms.reversed_amount <> COALESCE(
+			        (SELECT sum(r.amount) FROM merchant_settlement_reversals r
+			          WHERE r.settlement_id = ms.id), 0)`,
+	},
+	{
+		ID: "FI-14.d", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "قيودُ الدفتر تطابق صفَّ التسوية النقديّة",
+		Why: "**الصفُّ والدفترُ يقولان الشيءَ نفسَه**: قيدُ الاحتباس (+) = " +
+			"`amount`، ومجموعُ قيودِ العكس (−) = `reversed_amount`. **وافتراقُهما " +
+			"رقمٌ في الصفّ لا يقابله مالٌ في الدفتر** — وهو أصلُ كلِّ تسريب.",
+		Kinds: []string{"merchant_cash_accrued"},
+		SQL: `
+			SELECT ms.id
+			FROM merchant_settlements ms
+			WHERE ms.method = 'cash'
+			  AND (
+			    ms.amount <> COALESCE((SELECT wt.amount FROM wallet_transactions wt
+			                            WHERE wt.id = ms.accrued_tx_id), 0)
+			 OR ms.reversed_amount <> COALESCE(
+			        (SELECT -sum(wt.amount)
+			           FROM merchant_settlement_reversals r
+			           JOIN wallet_transactions wt ON wt.id = r.tx_id
+			          WHERE r.settlement_id = ms.id), 0)
+			  )`,
+	},
+	{
+		ID: "FI-14.e", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "الاحتباسُ لا يُسحَب ولا يُنفَق ولا يهبط تحت الصفر",
+		Why: "**حسابٌ نظاميٌّ لا محفظةُ إنسان**: ليس خزينةً فلا يهبط تحت الصفر، " +
+			"ولا يُحجَز منه، **ولا يُطلَب منه سحبٌ** — فطلبُ سحبٍ منه مسارٌ يعامله " +
+			"كرصيدٍ حرّ.",
+		SQL: `
+			SELECT w.user_id
+			FROM wallets w
+			WHERE w.is_cash_holding AND (w.balance < 0 OR w.reserved <> 0)
+			UNION ALL
+			SELECT pr.user_id
+			FROM payout_requests pr
+			JOIN wallets w ON w.user_id = pr.user_id
+			WHERE w.is_cash_holding`,
+	},
+	{
+		ID: "FI-14.f", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "النقدُ المدفوعُ = مجموعُ المستحقّات المسوّاة",
+		Why: "**كلُّ دينارٍ خرج من الاحتباس دفعاً يقابله مستحقٌّ صار `cash_paid`** " +
+			"بمقداره. **فافتراقُهما دفعٌ بلا تسويةٍ أو تسويةٌ بلا دفع** — نقدٌ خرج " +
+			"لا يُعرَف لمن، أو مستحقٌّ يُدفَع مرّتين.",
+		Kinds: []string{"merchant_cash_paid"},
+		SQL: `
+			SELECT paid.total AS paid_out, due.total AS settled_due
+			FROM (SELECT COALESCE(-sum(amount), 0) AS total
+			        FROM wallet_transactions WHERE kind = 'merchant_cash_paid') paid,
+			     (SELECT COALESCE(sum(amount - reversed_amount), 0) AS total
+			        FROM merchant_settlements
+			       WHERE method = 'cash' AND state = 'cash_paid') due
+			WHERE paid.total <> due.total`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════

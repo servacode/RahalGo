@@ -36,8 +36,8 @@ func TestTwoSources_EachPaidItsOwn(t *testing.T) {
 	owner2 := testdb.NewUser(t, f.pool, "merchant")
 	var merchant2 string
 	if err := f.pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, category_id, commission_percent, owner_user_id)
-		VALUES ('المصدرُ الثاني', $1, 20, $2) RETURNING id`, categoryID, owner2).
+		INSERT INTO merchants (name, category_id, commission_percent, owner_user_id, settlement_method)
+		VALUES ('المصدرُ الثاني', $1, 20, $2, 'wallet') RETURNING id`, categoryID, owner2).
 		Scan(&merchant2); err != nil {
 		t.Fatalf("تعذّر إنشاء متجر ثانٍ: %v", err)
 	}
@@ -98,8 +98,8 @@ func TestSources_CapEnforced(t *testing.T) {
 	for _, name := range []string{"مصدرٌ ١", "مصدرٌ ٢", "مصدرٌ ٣"} {
 		var mid, secID, itemID string
 		if err := f.pool.QueryRow(ctx, `
-			INSERT INTO merchants (name, category_id, commission_percent, status)
-			VALUES ($1, $2, 10, 'active') RETURNING id`, name, categoryID).Scan(&mid); err != nil {
+			INSERT INTO merchants (name, category_id, commission_percent, status, settlement_method)
+			VALUES ($1, $2, 10, 'active', 'wallet') RETURNING id`, name, categoryID).Scan(&mid); err != nil {
 			t.Fatalf("تعذّر إنشاء متجر: %v", err)
 		}
 		t.Cleanup(func() {
@@ -172,8 +172,8 @@ func TestTwoSources_RefundReversesEach(t *testing.T) {
 	owner2 := testdb.NewUser(t, f.pool, "merchant")
 	var merchant2 string
 	if err := f.pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, category_id, commission_percent, owner_user_id)
-		VALUES ('المصدرُ الثاني للاسترداد', $1, 10, $2) RETURNING id`, categoryID, owner2).
+		INSERT INTO merchants (name, category_id, commission_percent, owner_user_id, settlement_method)
+		VALUES ('المصدرُ الثاني للاسترداد', $1, 10, $2, 'wallet') RETURNING id`, categoryID, owner2).
 		Scan(&merchant2); err != nil {
 		t.Fatalf("تعذّر إنشاء متجر ثانٍ: %v", err)
 	}

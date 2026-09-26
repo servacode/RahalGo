@@ -359,3 +359,42 @@ func EnsureTreasury(ctx context.Context, db Querier) (string, error) {
 	}
 	return admin, nil
 }
+
+// EnsureCashHolding يضمن وجودَ محفظةِ الاحتباس النظاميّة — واحدةٌ لا غير.
+//
+// **حسابٌ نظاميٌّ يجمع المستحقّاتِ النقديّةَ المعلّقةَ للمتاجر** (طريقةُ
+// التسوية «نقد»، دورةُ التسوية النقديّة ٢٠٢٦-٠٩-٢٧). **لا يُنفَق ولا يُسحَب ولا
+// يُعرَض كرصيدِ مستخدم** — **وليس خزينةً**، فيبقى عليه قيدُ `balance >= 0`
+// فالالتزامُ لا يصير سالباً، ورصيدُه = المستحقُّ النقديُّ القائم (FI-14.a).
+//
+// **يُبذَر بالترحيل**، وهذا ضمانُ حضورِه بعد أيّ تنظيفِ بيانات — مستخدمٌ
+// مخصَّصٌ بلا دورٍ ولا كلمةِ مرور فلا يدخل ولا يملك صلاحيّة.
+func EnsureCashHolding(ctx context.Context, db Querier) (string, error) {
+	var id string
+	err := db.QueryRow(ctx,
+		`SELECT user_id::text FROM wallets WHERE is_cash_holding LIMIT 1`).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	// **مستخدمٌ نظاميٌّ مخصَّص** — رقمٌ ليس سوريّاً حقيقيّاً (+963...) فلا يلتبس.
+	var uid string
+	if err := db.QueryRow(ctx, `
+		INSERT INTO users (phone, full_name, status)
+		VALUES ('+000000000001', 'نظامٌ: مستحقّاتُ المتاجر النقديّة المعلّقة', 'active')
+		ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone
+		RETURNING id::text`).Scan(&uid); err != nil {
+		return "", err
+	}
+	if _, err := db.Exec(ctx,
+		`INSERT INTO wallets (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, uid); err != nil {
+		return "", err
+	}
+	if _, err := db.Exec(ctx,
+		`UPDATE wallets SET is_cash_holding = true WHERE user_id = $1`, uid); err != nil {
+		return "", err
+	}
+	return uid, nil
+}

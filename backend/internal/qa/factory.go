@@ -497,9 +497,9 @@ func (f *Factory) Merchant(opts ...MerchantOpt) *Merchant {
 	var id string
 	err := f.h.Pool.QueryRow(f.ctx(), `
 		INSERT INTO merchants (name, category_id, phone, address_text, owner_user_id,
-		                       sales_rep_user_id, status, commission_percent, location)
+		                       sales_rep_user_id, status, commission_percent, location, settlement_method)
 		VALUES ($1, $2::uuid, $3, 'QA', $4::uuid, $5::uuid, $6, $7,
-		        ST_SetSRID(ST_MakePoint(39.01, 35.95), 4326)::geography)
+		        ST_SetSRID(ST_MakePoint(39.01, 35.95), 4326)::geography, 'wallet')
 		RETURNING id::text`,
 		name, catID, s.owner.Phone, s.owner.ID, repID, s.status, pct).Scan(&id)
 	if err != nil {

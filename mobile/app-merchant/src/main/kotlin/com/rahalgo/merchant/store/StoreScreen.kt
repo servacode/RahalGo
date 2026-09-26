@@ -282,6 +282,32 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             }
 
             // ══════════════════════════════════════════════════════════
+            // **٣·ب — طريقةُ استلامِ المستحقّات — عرضٌ لا حكم** (٢٠٢٦-٠٩-٢٧)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **المتجرُ لا يغيّرها** (الأدمن وحدَه) — يراها ليعرف كيف يصله ماله:
+            // «نقدي» يُسلَّم يداً، «المحفظة» يُقيَّد في رصيده. **وللنقديِّ يُعرَض
+            // المستحقُّ غير المسدَّد** إن وُجد — للمتجرِ الحاليِّ المختار.
+            Spacer(Modifier.height(10.dp))
+            Card {
+                KeyValue(
+                    label = stringResource(R.string.store_settlement_method),
+                    value = if (store.settlementMethod == "wallet") {
+                        stringResource(R.string.store_settlement_wallet)
+                    } else {
+                        stringResource(R.string.store_settlement_cash)
+                    },
+                )
+                if (store.settlementMethod == "cash" && store.unpaidCashDue > 0) {
+                    KeyValue(
+                        label = stringResource(R.string.store_unpaid_cash),
+                        value = money(store.unpaidCashDue),
+                        valueColor = Rahal.colors.brand,
+                    )
+                }
+            }
+
+            // ══════════════════════════════════════════════════════════
             // **٤ · أرقامُ اليوم — أربعةٌ لا خامسَ لها**
             // ══════════════════════════════════════════════════════════
             //

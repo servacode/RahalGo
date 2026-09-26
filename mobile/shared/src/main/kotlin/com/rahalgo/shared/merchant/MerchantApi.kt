@@ -354,6 +354,13 @@ data class Store(
      */
     @SerialName("open_now") val openNow: Boolean = false,
     @SerialName("next_open") val nextOpen: String? = null,
+    /**
+     * **طريقةُ استلامِ المستحقّات** — `cash` نقداً أو `wallet` من المحفظة.
+     * **للعرضِ فقط**: المتجرُ لا يغيّرها (الأدمن وحدَه). و`unpaidCashDue`
+     * مجموعُ المستحقّ النقديّ غير المسدَّد (صفرٌ للمحفظيّ).
+     */
+    @SerialName("settlement_method") val settlementMethod: String = "cash",
+    @SerialName("unpaid_cash_due") val unpaidCashDue: Long = 0,
 )
 
 @Serializable

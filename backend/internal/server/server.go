@@ -1338,6 +1338,10 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/categories/{id}", s.handleUpdateCategory)
 				r.Post("/merchants", s.handleCreateMerchant)
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
+				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go
+				r.Patch("/merchants/{id}/settlement-method", s.handleSetMerchantSettlementMethod)
+				r.Get("/merchants/{id}/cash-settlements", s.handleMerchantCashSettlements)
+				r.Post("/merchant-cash-settlements/{id}/pay", s.handleMarkCashSettlementPaid)
 				// **الحظرُ والعفو** — merchant_violations.go
 				r.Get("/merchants/{id}/violations", s.handleMerchantViolations)
 				r.Post("/merchants/{id}/warnings", s.handleIssueMerchantWarning)

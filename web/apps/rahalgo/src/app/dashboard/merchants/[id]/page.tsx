@@ -44,6 +44,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
+import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.merchantProfile;
@@ -69,6 +70,8 @@ interface Merchant {
   emergency_closed: boolean;
   /** أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — وعليه يظهر زرُّ الردّ في الطلبات. */
   accepts_returns: boolean;
+  /** طريقةُ تسويةِ مستحقّاته — نقدٌ أو محفظة (الأدمنُ ذو الصلاحيّة الماليّة يغيّرها). */
+  settlement_method: "cash" | "wallet";
   created_at: string;
 }
 
@@ -198,6 +201,7 @@ export default function MerchantProfilePage() {
       <Tabs className="mb-4 mt-5" items={TABS} value={tab} onChange={setTab} />
 
       {tab === "overview" && (
+        <>
         <dl className="grid grid-cols-1 gap-3 surface p-4 sm:grid-cols-2">
           <Row label={m.terms.phone} value={mr.phone} ltr />
           <Row label={P.address} value={mr.address_text} />
@@ -229,8 +233,10 @@ export default function MerchantProfilePage() {
             </dd>
           </div>
         </dl>
+        <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
+        </>
       )}
-      {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice />}
+      {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice />}
       {tab === "hours" && (
         <div className="surface p-4">
           <StoreHours

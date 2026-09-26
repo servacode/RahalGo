@@ -127,8 +127,8 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	}
 	// نسبة المنصة 10% كي يكون الحساب المتوقع صريحاً
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, category_id, sales_rep_user_id, commission_percent)
-		VALUES ('متجر اختبار التسويات', $1, $2, 10) RETURNING id`,
+		INSERT INTO merchants (name, category_id, sales_rep_user_id, commission_percent, settlement_method)
+		VALUES ('متجر اختبار التسويات', $1, $2, 10, 'wallet') RETURNING id`,
 		categoryID, f.rep).Scan(&f.merchantID); err != nil {
 		t.Fatalf("تعذّر إنشاء متجر: %v", err)
 	}

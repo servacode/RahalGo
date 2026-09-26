@@ -840,6 +840,11 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		if err := s.reverseCommissions(ctx, q, in.orderID, in.actorID); err != nil {
 			return err
 		}
+		// **وعكسُ المستحقّات النقديّة** (طريقةُ التسوية «نقد»): القائمُ يُعكَس
+		// في الاحتباس، والمدفوعُ يصير التزامَ متجرٍ للمنصة — لا يُعاد كتابةُ دفع.
+		if err := s.reverseCashSettlements(ctx, q, in.orderID, in.actorID); err != nil {
+			return err
+		}
 		// **بعد عكس الأنصبة لا قبله**: الخزينةُ تقرأ ما بقي مقيَّداً، فلو
 		// قُرئت قبل العكس لحسبت أنصبةً ستُلغى بعد سطر.
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
@@ -863,15 +868,31 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	//
 	// **ومنعُ التكرار بالدفتر لا بالحالة**: يُسأل عن قيدٍ وقع، لا عن حالةٍ
 	// يُظنّ أنها مرّت.
-	var already bool
+	// ══════════════════════════════════════════════════════════════
+	// **الحارسُ الرجعيُّ للتراث** — طلبٌ سُوّي محفظةً قبل الترحيل (البند ١).
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **الهُويّةُ الآن `merchant_settlements` لكلّ (طلب، متجر)**، والطلباتُ
+	// التاريخيّةُ لا صفَّ لها. فطلبٌ قُيّد له `merchant_earning` قبل الترحيل ثمّ
+	// عاد إلى هنا (نداءُ التسليم الاحتياطيّ أو إصلاحُ بيانات) **لا يُقيَّد
+	// ثانيةً**: لا صفَّ تسويةٍ + قيدُ محفظةٍ تاريخيٌّ ⇒ سُوّي سابقاً.
+	var hasSettlements bool
 	if err := q.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM wallet_transactions
-		               WHERE ref = $1 AND kind = 'merchant_earning')`,
-		orderID).Scan(&already); err != nil {
+		`SELECT EXISTS(SELECT 1 FROM merchant_settlements WHERE order_id = $1)`,
+		orderID).Scan(&hasSettlements); err != nil {
 		return err
 	}
-	if already {
-		return nil
+	if !hasSettlements {
+		var legacy bool
+		if err := q.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM wallet_transactions
+			               WHERE ref = $1 AND kind = 'merchant_earning')`,
+			orderID).Scan(&legacy); err != nil {
+			return err
+		}
+		if legacy {
+			return nil
+		}
 	}
 
 	// **الأساسُ سعرُ الشراء لا سعرُ البيع.**
@@ -912,15 +933,19 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		return err
 	}
 
+	// **ولقطةُ طريقةِ التسوية لكلّ مصدرٍ من `order_items`** — كلُّ بنودِ مصدرٍ
+	// تحمل طريقتَه نفسَها (تُكتب في الإنشاء)، فـ`max` تلتقطها، وإعدادُ المتجر
+	// اليومَ احتياطٌ لطلبٍ قديمٍ بلا لقطة.
 	rows, err := q.Query(ctx, `
 		SELECT COALESCE(oi.merchant_id, o.merchant_id)::text,
 		       m.commission_percent, m.owner_user_id::text,
-		       sum(oi.merchant_price * oi.qty)
+		       sum(oi.merchant_price * oi.qty),
+		       COALESCE(max(oi.merchant_settlement_method), m.settlement_method)
 		FROM order_items oi
 		JOIN orders o ON o.id = oi.order_id
 		JOIN merchants m ON m.id = COALESCE(oi.merchant_id, o.merchant_id)
 		WHERE oi.order_id = $1
-		GROUP BY 1, 2, 3`, orderID)
+		GROUP BY 1, 2, 3, m.settlement_method`, orderID)
 	if err != nil {
 		return err
 	}
@@ -929,6 +954,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		ownerID    *string
 		commission int64
 		due        int64
+		method     string
 	}
 	shares := []share{}
 	var totalCommission int64
@@ -938,13 +964,14 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		var pct *int64
 		var owner *string
 		var cost int64
-		if err := rows.Scan(&merchantID, &pct, &owner, &cost); err != nil {
+		var method string
+		if err := rows.Scan(&merchantID, &pct, &owner, &cost, &method); err != nil {
 			rows.Close()
 			return err
 		}
 		c := pricing.MerchantCommission(ctx, s.settings, orderPct(pct, snap)).Of(cost)
 		totalCommission += c
-		shares = append(shares, share{merchantID: merchantID, ownerID: owner, commission: c, due: cost - c})
+		shares = append(shares, share{merchantID: merchantID, ownerID: owner, commission: c, due: cost - c, method: method})
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
@@ -958,15 +985,16 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		var subtotal int64
 		var pct *int64
 		var owner *string
+		var method string
 		if err := q.QueryRow(ctx, `
-			SELECT m.id::text, o.subtotal, m.commission_percent, m.owner_user_id::text
+			SELECT m.id::text, o.subtotal, m.commission_percent, m.owner_user_id::text, m.settlement_method
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
-			WHERE o.id = $1`, orderID).Scan(&fallbackID, &subtotal, &pct, &owner); err != nil {
+			WHERE o.id = $1`, orderID).Scan(&fallbackID, &subtotal, &pct, &owner, &method); err != nil {
 			return err
 		}
 		c := pricing.MerchantCommission(ctx, s.settings, orderPct(pct, snap)).Of(subtotal)
 		totalCommission = c
-		shares = append(shares, share{merchantID: fallbackID, ownerID: owner, commission: c, due: subtotal - c})
+		shares = append(shares, share{merchantID: fallbackID, ownerID: owner, commission: c, due: subtotal - c, method: method})
 	}
 
 	if _, err := q.Exec(ctx,
@@ -980,19 +1008,54 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	// **لا `total`**: رسم التوصيل أجرُ خدمةٍ تؤدّيها المنصة بسائقها فليس من
 	// نصيبه — والعمولة نفسها محسوبة على بضاعته، فالأساسان متسقان.
 	for _, sh := range shares {
+		// **صافٍ صفريٌّ أو سالبٌ لا يُسوّى** (§Z): عمولةُ ١٠٠٪ تُنتج صفراً —
+		// لا صفَّ ولا قيدَ ولا مستحقّ، ومرّةً واحدةً بداهةً (لا شيءَ يقع).
 		if sh.ownerID == nil || sh.due <= 0 {
 			continue
 		}
-		out.credit(*sh.ownerID, sh.due, t.merchantEarned, notifications.AppMerchant)
-		if _, err := s.wallet.ApplyTx(ctx, q, *sh.ownerID, sh.due, "merchant_earning",
-			orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID); err != nil {
+		// **بوّابةُ الهُويّة لكلّ (طلب، متجر)** — «مرّةً واحدة» للطريقتين، وXOR بنيويّ.
+		var settleID string
+		err := q.QueryRow(ctx, `
+			INSERT INTO merchant_settlements
+			       (order_id, merchant_id, owner_user_id, method, amount, state)
+			VALUES ($1, $2, $3, $4, $5, $6)
+			ON CONFLICT (order_id, merchant_id) DO NOTHING
+			RETURNING id::text`,
+			orderID, sh.merchantID, *sh.ownerID, sh.method, sh.due, initialState(sh.method)).
+			Scan(&settleID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			// **تعارضٌ = تسويةٌ قائمة ⇒ تُتحقَّق ولا تُتجاوَز عمياءَ** (البند ١).
+			if err := s.validateSettlement(ctx, q, orderID, sh.merchantID, sh.method, sh.due); err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
 			return err
 		}
-		// **ودَينُ بضاعةٍ رُدّت يُقتطع من أوّل مستحقٍّ قادم** (قرارُ المالك
-		// ٢٠٢٦-٠٨-٠٤). وهو ما بقي حين لم تحتمله محفظتُه يومَ الردّ.
-		if err := s.offsetMerchantDebt(ctx, q, sh.merchantID, *sh.ownerID,
-			sh.due, orderID, actorID); err != nil {
-			return err
+		if sh.method == "wallet" {
+			out.credit(*sh.ownerID, sh.due, t.merchantEarned, notifications.AppMerchant)
+			_, txID, err := s.wallet.ApplyTxID(ctx, q, *sh.ownerID, sh.due, "merchant_earning",
+				orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID)
+			if err != nil {
+				return err
+			}
+			if _, err := q.Exec(ctx,
+				`UPDATE merchant_settlements SET earning_tx_id = $2 WHERE id = $1`,
+				settleID, txID); err != nil {
+				return err
+			}
+			// **ودَينُ بضاعةٍ رُدّت يُقتطع من أوّل مستحقٍّ قادم** (قرارُ المالك ٢٠٢٦-٠٨-٠٤).
+			if err := s.offsetMerchantDebt(ctx, q, sh.merchantID, *sh.ownerID,
+				sh.due, orderID, actorID); err != nil {
+				return err
+			}
+		} else {
+			// **نقداً**: لا قيدَ في محفظة المتجر — التزامٌ في الاحتباس + اقتطاعُ دَين.
+			if err := s.accrueCashSettlement(ctx, q, settleID, orderID, sh.merchantID,
+				*sh.ownerID, sh.due, actorID); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

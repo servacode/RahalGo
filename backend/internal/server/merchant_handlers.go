@@ -115,6 +115,10 @@ type merchantStore struct {
 	// هذه الحقول ولا يعيد حسابَ الساعات** — نصٌّ واحدٌ لا نصّان.
 	OpenNow  bool       `json:"open_now"`
 	NextOpen *time.Time `json:"next_open"`
+	// **طريقةُ استلامِ المستحقّات** — للعرضِ فقط، لا يغيّرها المتجر (الأدمن وحدَه).
+	// **والمستحقُّ النقديُّ غير المسدَّد** للمتاجرِ النقديّة (صفرٌ للمحفظيّة).
+	SettlementMethod string `json:"settlement_method"`
+	UnpaidCashDue    int64  `json:"unpaid_cash_due"`
 }
 
 // handleMerchantStores متاجر صاحب الحساب.
@@ -130,7 +134,10 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		       -- استقبالِ الطلب الآن وموعدِ الفتح القادم، لا نسخةٌ ثانيةٌ في
 		       -- التطبيق تفترق عن الخادم.
 		       `+orders.OpenNowSQL+`,
-		       `+orders.NextOpenSQL+`
+		       `+orders.NextOpenSQL+`,
+		       m.settlement_method,
+		       COALESCE((SELECT sum(amount - reversed_amount) FROM merchant_settlements ms
+		                 WHERE ms.merchant_id = m.id AND ms.state = 'cash_due'), 0)
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -145,7 +152,8 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		var m merchantStore
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.LogoThumbURL,
 			&m.Status, &m.EmergencyClosed, &m.PrepMinutes, &m.MinOrder,
-			&m.AddressText, &m.Lat, &m.Lng, &m.OpenNow, &m.NextOpen); err != nil {
+			&m.AddressText, &m.Lat, &m.Lng, &m.OpenNow, &m.NextOpen,
+			&m.SettlementMethod, &m.UnpaidCashDue); err != nil {
 			s.respondErr(w, err)
 			return
 		}

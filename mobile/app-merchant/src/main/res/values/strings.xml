@@ -105,6 +105,11 @@
     <string name="store_state_temp_closed">مغلق مؤقتاً</string>
     <string name="store_state_closed_hours">مغلق حسب ساعات العمل</string>
     <string name="store_next_open">يفتح %1$s</string>
+    <!-- **طريقةُ استلامِ المستحقّات — عرضٌ لا يغيّره المتجر** (٢٠٢٦-٠٩-٢٧). -->
+    <string name="store_settlement_method">طريقة استلام المستحقات</string>
+    <string name="store_settlement_cash">نقدي</string>
+    <string name="store_settlement_wallet">المحفظة</string>
+    <string name="store_unpaid_cash">المستحقات النقدية غير المسددة</string>
     <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (B6). -->
     <string name="store_suspended_banner">متجرك موقوف من الإدارة. يمكنك عرض متجرك لكن لا تعديلَ القائمة ولا الإتاحة ولا الساعات حتى يُرفع الإيقاف — تواصل مع الدعم.</string>
     <!-- **والشرحُ يقول ما لا يقوله المفتاح** — أنّ الدوامَ يغلقه أيضاً. -->

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -649,14 +650,57 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		return nil, nil, err
 	}
 
+	// ══════════════════════════════════════════════════════════════
+	// **ولقطةُ طريقةِ تسويةِ كلّ مصدرٍ تُثبَّت تحت قفل صفِّ المتجر** — البند ٥.
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **تغييرُ الأدمنِ للطريقة وإنشاءُ الطلب يتسلسلان على صفِّ المتجر**: إمّا رأى
+	// الطلبُ القديمةَ (سبق القفلَ) أو الجديدةَ (سبق التغييرُ) — لا فراغَ ولا خلطَ
+	// لمصدرٍ واحد. **والقفلُ لكلّ معرّفٍ على حدةٍ بترتيبٍ مرتَّبٍ** يمنع التشابكَ
+	// بين طلبين متزامنين على مصادرَ متقاطعة.
+	settleMethod := map[string]string{}
+	{
+		seen := map[string]bool{}
+		ids := make([]string, 0, len(items))
+		for _, it := range items {
+			mid := it.MerchantID
+			if mid == "" {
+				mid = in.MerchantID
+			}
+			if !seen[mid] {
+				seen[mid] = true
+				ids = append(ids, mid)
+			}
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			var method string
+			if err := tx.QueryRow(ctx,
+				`SELECT settlement_method FROM merchants WHERE id = $1 FOR UPDATE`, id).
+				Scan(&method); err != nil {
+				return nil, nil, err
+			}
+			settleMethod[id] = method
+		}
+	}
+
 	for _, it := range items {
+		mid := it.MerchantID
+		if mid == "" {
+			mid = in.MerchantID
+		}
+		method := settleMethod[mid]
+		if method == "" {
+			method = "cash"
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
-			                         merchant_price, merchant_id, qty, note, options)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			                         merchant_price, merchant_id, qty, note, options,
+			                         merchant_settlement_method)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
 			it.MerchantID, it.Qty, it.Note,
-			marshalOptions(it.Options)); err != nil {
+			marshalOptions(it.Options), method); err != nil {
 			return nil, nil, err
 		}
 	}

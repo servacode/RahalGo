@@ -109,6 +109,10 @@ var adminPolicy = []Rule{
 	{"GET", "/leads", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
+	// **تسويةُ مستحقّات المتجر — صلاحيّةٌ ماليّة لا إدارةُ متجر.**
+	{"PATCH", "/merchants/{id}/settlement-method", SettingsFinancialManage},
+	{"GET", "/merchants/{id}/cash-settlements", FinanceRead},
+	{"POST", "/merchant-cash-settlements/{id}/pay", FinanceManage},
 	{"POST", "/merchants/{id}/menu/sections", MerchantsManage},
 	{"POST", "/merchants/{id}/menu/items", MerchantsManage},
 	{"PATCH", "/menu/sections/{sectionID}", MerchantsManage},
