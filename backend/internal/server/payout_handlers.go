@@ -6,6 +6,8 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -418,13 +420,34 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 			Payload: map[string]any{"updated": true},
 			AfterCommit: func() {
 
+				// ══════════════════════════════════════════════════════════
+				// **والإشعارُ يقول أثرَه في الرصيد صراحةً** — لا القرارَ وحدَه
+				// ══════════════════════════════════════════════════════════
+				//
+				// **كان الجسدُ ملاحظةَ الماليّة فقط** — **فيقرأ المندوبُ «صُرف
+				// طلب السحب» ويرى رصيدَه نقص ولا يعرف لماذا.** (قرارُ المالك:
+				// «لازم يكون واضحاً أنّه خُصم من الرصيد ليعرف الشخصُ صحّ».)
+				//
+				// **فيُقال المبلغُ واتّجاهُه**: `paid` خُصم من الرصيد، و`rejected`
+				// أُعيد إليه (فُكّ الحجز). وملاحظةُ الماليّة تُلحَق إن وُجدت.
 				title := notifTitles.payoutPaid
-				if req.Status == "rejected" {
+				body := "خُصم " + fmtMoneyAr(amount) + " من رصيدك"
+				switch req.Status {
+				case "rejected":
 					title = notifTitles.payoutRejected
+					body = "أُعيد " + fmtMoneyAr(amount) + " إلى رصيدك"
+				case "failed", "reversed":
+					// **رُدّ المالُ إلى الرصيد** — فُشل الصرفُ أو ارتدّ.
+					body = "أُعيد " + fmtMoneyAr(amount) + " إلى رصيدك"
+				case "processing":
+					body = "طلبُ سحبك قيد الصرف"
+				}
+				if note := strings.TrimSpace(req.Decision); note != "" {
+					body += " · " + note
 				}
 				s.notify.Notify(r.Context(), notifications.Input{
 					UserID: userID, Kind: notifications.KindWallet, Title: title,
-					Body: req.Decision, Entity: "payout", EntityID: id, Href: "/portal/wallet",
+					Body: body, Entity: "payout", EntityID: id, Href: "/portal/wallet",
 					// **إلى تطبيق المستحقِّ وحدَه** (OBS-R7): الدفعةُ لعاملٍ
 					// (مندوبٍ/سائقٍ/متجر)، فيُوجَّه القرارُ إلى تطبيقه لا إلى
 					// تطبيق الزبون على جهازه نفسِه. يُحسب من دور المستحقّ.
@@ -479,4 +502,28 @@ func (s *Server) userLabel(ctx context.Context, id string) string {
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+// fmtMoneyAr **مبلغٌ بفواصل الآلاف ووحدةِ العملة** — «100000» ⟵ «100,000 ل.س».
+//
+// **يُقرأ في إشعارٍ لا يُنقَر** — فالفواصلُ تجعل المبلغَ الكبيرَ مقروءاً بلمحة،
+// **ومن رأى «100000» بلا فاصلةٍ في إشعارٍ عابرٍ يخطئ في قدره.**
+func fmtMoneyAr(n int64) string {
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	s := strconv.FormatInt(n, 10)
+	var b []byte
+	for i := 0; i < len(s); i++ {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			b = append(b, ',')
+		}
+		b = append(b, s[i])
+	}
+	out := string(b)
+	if neg {
+		out = "-" + out
+	}
+	return out + " ل.س"
 }

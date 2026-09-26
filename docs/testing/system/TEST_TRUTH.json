@@ -31,8 +31,8 @@
     "setting_defs": 148,
     "behaviour_settings": 120,
     "order_fields": 83,
-    "test_files": 388,
-    "test_funcs": 1644
+    "test_files": 390,
+    "test_funcs": 1646
   },
   "flows": [
     {
@@ -16512,6 +16512,12 @@
       "orphan": false
     },
     {
+      "name": "TestPAYOUT_NotifBodyStatesBalanceEffect",
+      "file": "internal/qa/payout_notif_body_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestPID1_ForeignNumberRejectedBeforeOTP",
       "file": "internal/qa/phone_identity_test.go",
       "package": "qa",
@@ -22407,6 +22413,12 @@
     {
       "name": "TestOffers_SpreadAcrossDrivers",
       "file": "internal/server/offer_spread_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFmtMoneyAr",
+      "file": "internal/server/payout_money_fmt_test.go",
       "package": "server",
       "orphan": true
     },
