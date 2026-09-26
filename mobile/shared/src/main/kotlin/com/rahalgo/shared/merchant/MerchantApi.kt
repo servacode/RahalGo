@@ -330,9 +330,6 @@ data class Store(
     @SerialName("logo_thumb_url") val logoThumbUrl: String? = null,
     /**
      * **أغلقه طارئاً** — وهو المفتاحُ الذي بيده فعلاً.
-     *
-     * **ولا `open_now` في هذا الباب**: الدوامُ يُقرأ من الساعات،
-     * **وحقلٌ خمّنتُه ولا وجودَ له يُقرأ فارغاً ويكذب على الشاشة.**
      */
     @SerialName("emergency_closed") val emergencyClosed: Boolean = false,
     @SerialName("default_prep_minutes") val prepMinutes: Int = 0,
@@ -340,6 +337,23 @@ data class Store(
     @SerialName("address_text") val addressText: String = "",
     val lat: Double? = null,
     val lng: Double? = null,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **الحالةُ الفعليّةُ يحسبها الخادم — لا التطبيق** (A3، ٢٠٢٦-٠٩-٢٦)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **صار المحرّكُ يردّها الآن** (`merchant_handlers.go`): `open_now`
+     * بمنطق `OpenNowSQL` نفسِه الذي يحكم إنشاءَ الطلب، **فلا يفترق ما
+     * يراه المتجرُ عمّا يقبله الخادم.** و`next_open` موعدُ الفتح القادم
+     * أو `null` إن كان مفتوحاً الآن أو بلا دوام.
+     *
+     * **وكان التطبيقُ لا يعرف حالتَه الفعليّة** — يرى «موقوف/نشط» و«أغلق
+     * طارئاً» ولا يعرف أمفتوحٌ بساعاته الآن. **والكلمةُ تُؤلَّف من هذه
+     * الحقول** (`status` + `emergencyClosed` + `openNow` + `nextOpen`)
+     * **بلا إعادةِ حسابِ الساعات في الجهاز** — نصٌّ واحدٌ لا نصّان.
+     */
+    @SerialName("open_now") val openNow: Boolean = false,
+    @SerialName("next_open") val nextOpen: String? = null,
 )
 
 @Serializable

@@ -129,9 +129,28 @@ class MainActivity : ComponentActivity() {
         com.rahalgo.ui.Images.install(this)
         Crash.start(debug = BuildConfig.DEBUG)
         Backend.of(this)
+        // ══════════════════════════════════════════════════════════════
+        // **ونقرةُ إشعارِ الطلب تفتح الطلبَ بعينه** (B3، ٢٠٢٦-٠٩-٢٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكان المقصدُ يحمل وجهةَ الطلب ولا أحدَ يقرؤها** — فينقر صاحبُ
+        // المتجر «طلبٌ جديد» فيُفتَح البيتُ لا طلبُه. **فتُقرأ هنا مرّةً**
+        // (`Opened`)، **ويستهلكها الغلافُ** فيفتح تبويبَ الطلبات ويُبرز ذاك
+        // الطلب. **وتُستهلَك مرّةً**: من أدار جهازَه لا يُساق إليه ثانية.
+        com.rahalgo.ui.Opened.from(intent)
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         setContent { MerchantApp() }
+    }
+
+    /**
+     * **وإشعارٌ يُنقر والتطبيقُ مفتوح** — `onNewIntent` لا `onCreate`:
+     * **بلا هذا يبقى مقصدُ الأمس فيُقرأ طلبُ أمس** (مرآةُ الزبون).
+     */
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        com.rahalgo.ui.Opened.from(intent)
     }
 }
 
@@ -142,6 +161,17 @@ private fun MerchantApp() {
         AuthGate(
             vm = vm,
             onSignedIn = { SignedIn(theme, dark, onLogout = vm::logout) },
+            // ══════════════════════════════════════════════════════════
+            // **وتحديثُ المتجر توزيعٌ مباشرٌ من الموقع لا Google Play** (B1)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **لا زرَّ متجرٍ يشير إلى قائمةٍ لا وجودَ للتطبيق فيها** — بل
+            // تنزيلٌ مباشرٌ من صفحة تطبيق المتجر، ونصٌّ لدوره (يستقبل طلباتٍ
+            // لا «يطلب»). **والرجوعُ لا يتخطّاه** (`UpdateGate` يُنهي النشاط)،
+            // **ولا زرَّ تخطٍّ أو تأجيل** — الإصدارُ الأدنى قرارُ المالك.
+            updateShowPlay = false,
+            updateFallbackUrl = "https://rahalgo.com/download/merchant",
+            updateBody = stringResource(R.string.update_body_merchant),
         )
     }
 }
@@ -221,6 +251,58 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val scope = rememberCoroutineScope()
     val overlay = rememberOverlay { key -> MERCHANT_ITEMS.any { it.key == key } }
     var tab by rememberSaveable { mutableStateOf(Tab.Orders) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ونقرةُ إشعارِ الطلب تفتح ذاك الطلب بعينه** (B3، ٢٠٢٦-٠٩-٢٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **يقرأ الوجهةَ التي وضعها المقصدُ** (`Opened`)، **ويستهلكها مرّةً**
+    // (`take`) فلا يُعاد فتحُها عند دوران الجهاز. **ووجهةُ الطلب تفتح تبويبَ
+    // الطلبات وتُبرز ذاك الطلب** (`ordersVm.focus`) — والإبرازُ يبحث عنه في
+    // الفروع إن لزم. **وفي وضع المنصّة لا تبويبَ للطلبات** فتُستهلَك الوجهةُ
+    // بلا أثرٍ ضارّ (البابُ آمنٌ للطلب الشائخ).
+    val waiting = com.rahalgo.ui.Opened.pending
+    LaunchedEffect(waiting) {
+        if (waiting.type == com.rahalgo.ui.Engagement.DEST_ORDER) {
+            val dest = com.rahalgo.ui.Opened.take()
+            overlay.clear()
+            if (selfManage) {
+                tab = Tab.Orders
+                ordersVm.focus(dest.id)
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **جرسُ الطلب الجديد — يتكرّر ما دام طلبٌ ينتظر قراراً** (B2، ٢٠٢٦-٠٩-٢٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **مصدرُه قائمةُ الطلبات الحيّة** (تُنعشها النبضةُ والدورة، B4) — طلبٌ
+    // في «pending» يعني قراراً معلّقاً. **فإن قُبل أو رُفض أو انقضت مهلتُه أو
+    // عُولج من جهازٍ آخر، خرج من pending في أوّل إنعاش فيتوقّف الجرس** — لا
+    // رنينَ يتيم. **ويُصمَت في الخلفيّة** (`ON_STOP`) ويعود عند الظهور
+    // (`ON_RESUME`)، **فالإشعارُ العالي يتكفّل بالجيب المغلق.**
+    val alerting = selfManage && ordersVm.orders.any { it.status == "pending" }
+    LaunchedEffect(alerting) {
+        com.rahalgo.merchant.push.MerchantOrderAlert.sync(context, alerting)
+    }
+    val alertOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(alertOwner, alerting) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_STOP ->
+                    com.rahalgo.merchant.push.MerchantOrderAlert.stop()
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME ->
+                    com.rahalgo.merchant.push.MerchantOrderAlert.sync(context, alerting)
+                else -> {}
+            }
+        }
+        alertOwner.lifecycle.addObserver(obs)
+        onDispose {
+            alertOwner.lifecycle.removeObserver(obs)
+            com.rahalgo.merchant.push.MerchantOrderAlert.stop()
+        }
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // **ومحرّرُ الصنف يُغلق بمغادرة بابه**
@@ -400,17 +482,40 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 }
             },
         ) { padding ->
-            Box(
+            Column(
                 Modifier
                     .fillMaxSize()
                     .padding(
                         top = padding.calculateTopPadding(),
                         bottom = padding.calculateBottomPadding(),
                     ),
-                contentAlignment = Alignment.Center,
             ) {
-                if (over != Overlay.None) BackHandler { overlay.clear() }
-                when {
+                // ══════════════════════════════════════════════════════
+                // **ومبدّلُ الفرع فوق المحتوى** (B8، ٢٠٢٦-٠٩-٢٦)
+                // ══════════════════════════════════════════════════════
+                //
+                // **لا يظهر لمن يملك متجراً واحداً** (`StoreSwitcher` يختفي
+                // عند فرعٍ واحد)، **ولا فوق الخريطة ولا الصفحات المنبثقة ولا
+                // حسابي** — تلك ليست مشهدَ فرع. **وتبديلُه يُعيد بناءَ
+                // الشاشات كلِّها** (`SelectedStore.set` + `Refresh.bump`).
+                if (!picking && over == Overlay.None && tab != Tab.Account) {
+                    com.rahalgo.merchant.store.StoreSwitcher(
+                        stores = storeVm.stores,
+                        selectedId = com.rahalgo.merchant.SelectedStore.id,
+                        onSelect = { id ->
+                            com.rahalgo.merchant.SelectedStore.set(id)
+                            com.rahalgo.ui.Refresh.bump()
+                        },
+                    )
+                }
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (over != Overlay.None) BackHandler { overlay.clear() }
+                    when {
                     // ══════════════════════════════════════════════
                     // **والخريطةُ فوقَ كلّ شيء**
                     // ══════════════════════════════════════════════
@@ -518,7 +623,14 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         //
                         // **وبابٌ مغلقٌ بلا سببٍ يُقرأ عطباً** — فيُقال
                         // له لماذا، **ويُعطى الطريقَ لا مجرّدَ المنع.**
-                        if (menuVm.sections.isEmpty() && !menuVm.loading) {
+                        if (menuVm.suspended) {
+                            // **والموقوفُ لا يضيف صنفاً** (B6) — يُقال له لماذا،
+                            // ويُوجَّه إلى «متجري» حيث لافتةُ الإيقاف وتفصيلُها.
+                            NeedSections(
+                                title = stringResource(R.string.store_state_suspended),
+                                body = stringResource(R.string.store_suspended_banner),
+                            ) { tab = Tab.Store }
+                        } else if (menuVm.sections.isEmpty() && !menuVm.loading) {
                             NeedSections { tab = Tab.Store }
                         } else {
                             MenuScreen(menuVm)
@@ -550,6 +662,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         worker = true,
                         push = false,
                     )
+                }
                 }
             }
         }
@@ -589,7 +702,11 @@ private fun RowScope.Tab(
  * **ما يُعرض لمن لم يختر أقسامَ متجره** — انظر `Tab.AddItem`.
  */
 @Composable
-private fun NeedSections(onGo: () -> Unit) {
+private fun NeedSections(
+    title: String = stringResource(R.string.need_sections_title),
+    body: String = stringResource(R.string.need_sections_body),
+    onGo: () -> Unit,
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -598,14 +715,14 @@ private fun NeedSections(onGo: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            stringResource(R.string.need_sections_title),
+            title,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            stringResource(R.string.need_sections_body),
+            body,
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,

@@ -7,12 +7,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.rahalgo.merchant.SelectedStore
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.MerchantOrder
 import com.rahalgo.shared.merchant.Store
 import com.rahalgo.ui.err
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Flash
+import com.rahalgo.ui.Refresh
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -44,6 +46,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var store by mutableStateOf<Store?>(null)
         private set
 
+    /** **كلُّ متاجره** — للمبدّل حين يملك أكثرَ من واحد (B8). */
+    var stores by mutableStateOf<List<Store>>(emptyList())
+        private set
+
     var orders by mutableStateOf<List<MerchantOrder>>(emptyList())
         private set
 
@@ -68,6 +74,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     /** **يتوقّف الإنعاشُ حين يقرأ** — انظر أعلاه. */
     var reading by mutableStateOf(false)
 
+    /**
+     * **الطلبُ الذي فُتح من إشعاره** — يُبرَز في القائمة (B3).
+     *
+     * **وفارغٌ يعني لا إبراز.** يُصفّر عند أوّل فعلٍ من صاحب المتجر
+     * (`clearFocus`) فلا يبقى محاطاً إلى الأبد.
+     */
+    var focusedId by mutableStateOf("")
+        private set
+
+    fun clearFocus() {
+        focusedId = ""
+    }
+
     private var busyIds by mutableStateOf<Set<String>>(emptySet())
 
     fun busy(id: String) = id in busyIds
@@ -75,25 +94,41 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             load(first = true)
+            // ══════════════════════════════════════════════════════════
+            // **والدورةُ احتياطٌ لا مصدرٌ أوّل** (B4، ٢٠٢٦-٠٩-٢٦)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كانت الطلباتُ تُقرأ كلَّ عشر ثوانٍ وحدَها** — فطلبٌ جديدٌ
+            // يصل بإشعارٍ فوريٍّ ثمّ ينتظر في الشاشة حتّى تِمّ الدورة،
+            // **وصاحبُ المتجر ينظر إلى شاشةٍ لا طلبَ فيها والجرسُ يرنّ.**
+            // **فصار يسمع النبضةَ** (`Refresh.tick`، يبثّها المقبسُ الحيّ
+            // عبر `ShellViewModel`) فيُنعش فوراً، **والدورةُ تبقى شبكةَ
+            // أمانٍ لمقبسٍ ينقطع صامتاً.**
             while (true) {
                 delay(REFRESH_MS)
                 if (!reading) load(first = false)
             }
+        }
+        // **والنبضةُ تنعش فوراً** — ومنها تبديلُ الفرع أيضاً (`Refresh.bump`).
+        viewModelScope.launch {
+            Refresh.tick.collect { if (it > 0L && !reading) load(first = false) }
         }
     }
 
     /**
      * **يقرأ متجرَه ثمّ طلباتِه.**
      *
-     * **ومتجرٌ واحدٌ في الغالب** — ولو ملك اثنين قُرئ الأوّل، **وشاشةُ
-     * اختيار الفرع تُبنى يوم يوجد فرعان** لا قبله.
+     * **والمتجرُ من الاختيار المشترك** (`SelectedStore`) — لا `firstOrNull`
+     * أعمى: **مالكٌ له فرعان يرى الفرعَ الذي اختاره في كلّ شاشة، لا فرعاً
+     * هنا وفرعاً هناك.** (B8)
      */
     private suspend fun load(first: Boolean) {
         runCatching {
             val page = api.stores()
             selfManage = page.selfManageOrders
             rememberSelfManage(page.selfManageOrders)
-            val mine = store ?: page.stores.firstOrNull()
+            stores = page.stores
+            val mine = SelectedStore.resolve(page.stores)
             if (mine == null) {
                 error = noStoreMsg()
                 loading = false
@@ -111,6 +146,37 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refresh() = viewModelScope.launch { load(first = false) }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **يفتح الطلبَ بعينه — من نقرة إشعاره** (B3، ٢٠٢٦-٠٩-٢٦)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **يُبرزه في القائمة، ويُنعش أوّلاً كي يكون حاضراً.** **ولمالكٍ له
+     * أكثرُ من فرع**: إن لم يكن الطلبُ في الفرع المختار **يُبحث عنه في
+     * فروعه ويُبدَّل الفرعُ إليه** — فلا يفتح إشعارُ فرعٍ على قائمةِ فرعٍ
+     * آخر. **وطلبٌ لا يُوجَد (شاخ) يسقط سالماً**: القائمةُ تُعرض بلا إبراز.
+     */
+    fun focus(orderId: String) {
+        if (orderId.isBlank()) return
+        focusedId = orderId
+        viewModelScope.launch {
+            load(first = false)
+            if (orders.any { it.id == orderId }) return@launch
+            // **لم يكن في الفرع المختار** — ابحث في بقيّة الفروع.
+            for (s in stores) {
+                if (s.id == store?.id) continue
+                val here = runCatching { api.orders(s.id).orders.any { it.id == orderId } }
+                    .getOrDefault(false)
+                if (here) {
+                    SelectedStore.set(s.id)
+                    Refresh.bump()
+                    load(first = false)
+                    return@launch
+                }
+            }
+        }
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // **الأفعالُ الثلاثة — والمحرّكُ يحرسها**

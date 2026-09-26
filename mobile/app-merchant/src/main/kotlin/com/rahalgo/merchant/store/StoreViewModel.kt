@@ -1,6 +1,7 @@
 package com.rahalgo.merchant.store
 
 import com.rahalgo.merchant.noStoreMsg
+import com.rahalgo.merchant.SelectedStore
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,10 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
     private val api = MerchantApi(AppCore.get().api)
 
     var store by mutableStateOf<Store?>(null)
+        private set
+
+    /** **كلُّ متاجره** — للمبدّل حين يملك أكثرَ من واحد (B8). */
+    var stores by mutableStateOf<List<Store>>(emptyList())
         private set
 
     var hours by mutableStateOf<List<DayHours>>(emptyList())
@@ -107,7 +112,11 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
     fun load() {
         viewModelScope.launch {
             runCatching {
-                val mine = api.stores().stores.firstOrNull()
+                val page = api.stores()
+                stores = page.stores
+                // **والمتجرُ من الاختيار المشترك لا `firstOrNull`** (B8) —
+                // فمالكٌ له فرعان يرى الفرعَ نفسَه في كلّ شاشة.
+                val mine = SelectedStore.resolve(page.stores)
                 if (mine == null) {
                     error = noStoreMsg()
                     loading = false

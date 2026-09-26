@@ -134,15 +134,19 @@ fun MenuScreen(vm: MenuViewModel) {
         ScreenTitle(open.name, stringResource(R.string.menu_hint))
         Spacer(Modifier.height(6.dp))
         // **وإضافةُ صنفٍ من داخل قسمه** — **فلا يُعيد اختيارَ ما هو فيه.**
-        RahalButton(onClick = { vm.newItem(open.name) }) {
-            Text(stringResource(R.string.item_add))
+        // **والموقوفُ لا يضيف** (B6) — يُخفى الزرُّ لا يُعرَض معطّلاً بلا سبب.
+        if (!vm.suspended) {
+            RahalButton(onClick = { vm.newItem(open.name) }) {
+                Text(stringResource(R.string.item_add))
+            }
+            Spacer(Modifier.height(10.dp))
         }
-        Spacer(Modifier.height(10.dp))
         Card {
             open.items.forEach { item ->
                 ItemRow(
                     item = item,
                     media = media,
+                    suspended = vm.suspended,
                     onToggle = { vm.toggle(item.id) },
                     onEdit = { vm.editItem(item) },
                 )
@@ -231,6 +235,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
 private fun ItemRow(
     item: MenuItem,
     media: (String?) -> String?,
+    suspended: Boolean,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
 ) {
@@ -297,7 +302,12 @@ private fun ItemRow(
         }
         Spacer(Modifier.size(8.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Switch(checked = item.available, onCheckedChange = { onToggle() })
+            // **والموقوفُ لا يبدّل الإتاحة** (B6) — المفتاحُ يُعطَّل.
+            Switch(
+                checked = item.available,
+                enabled = !suspended,
+                onCheckedChange = { onToggle() },
+            )
             Text(
                 stringResource(
                     if (item.available) R.string.mn_available else R.string.mn_unavailable,

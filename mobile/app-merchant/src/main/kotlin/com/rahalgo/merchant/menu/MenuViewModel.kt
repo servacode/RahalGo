@@ -2,6 +2,7 @@ package com.rahalgo.merchant.menu
 
 import com.rahalgo.ui.menu.ItemDraft
 import com.rahalgo.merchant.noStoreMsg
+import com.rahalgo.merchant.SelectedStore
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,15 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     var error by mutableStateOf("")
         private set
 
+    /**
+     * **أموقوفٌ المتجرُ المختار؟** (B6) — فلا يُعدَّل قائمتُه.
+     *
+     * **والخادمُ هو الحُجّة** (A4)، **لكن تعطيلَ الأزرار أصدقُ** من تركها
+     * تُضغط لتُردّ بخطأ.
+     */
+    var suspended by mutableStateOf(false)
+        private set
+
     private var storeId: String = ""
 
     /** **وجهُ كلّ قسمٍ باسمه** — من `platform-sections`، تُقرأ مرّةً. */
@@ -102,9 +112,12 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     fun load() {
         viewModelScope.launch {
             runCatching {
-                if (storeId.isEmpty()) {
-                    storeId = api.stores().stores.firstOrNull()?.id ?: ""
-                }
+                // **والمتجرُ من الاختيار المشترك في كلّ تحميل** (B8) — لا
+                // يُخبَّأ مرّةً: **من بدّل فرعَه وجب أن تُقرأ قائمةُ الفرع
+                // الجديد، لا أن تبقى قائمةُ الأوّل محفوظةً في `storeId`.**
+                val mine = SelectedStore.resolve(api.stores().stores)
+                storeId = mine?.id.orEmpty()
+                suspended = mine?.status == "suspended"
                 if (storeId.isEmpty()) {
                     error = noStoreMsg()
                     loading = false

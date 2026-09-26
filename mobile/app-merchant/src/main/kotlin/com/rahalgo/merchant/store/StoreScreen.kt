@@ -99,14 +99,38 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
     var renaming by remember { mutableStateOf<String?>(null) }
     var confirming by remember { mutableStateOf(false) }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (B6، ٢٠٢٦-٠٩-٢٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **قرارُ المالك**: الموقوفُ يرى متجرَه لكن لا يعدّل. **والخادمُ هو
+    // الحُجّة** (A4) — لكن تعطيلُ الأزرار هنا أصدقُ من تركها تُضغط لتُردّ.
+    val suspended = store.status == "suspended"
+
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
+            // ══════════════════════════════════════════════════════════
+            // **٠ · لافتةُ الإيقاف — فوق كلّ شيء** (B6)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **ومن رأى أزراراً معطّلةً بلا سببٍ ظنّ التطبيقَ عطبان** —
+            // فتُقال له الحالُ صريحةً، وأنّ الحلَّ عند الإدارة لا في جهازه.
+            if (suspended) {
+                Card(tone = Rahal.colors.danger) {
+                    Text(
+                        stringResource(R.string.store_suspended_banner),
+                        color = Rahal.colors.danger,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             // ══════════════════════════════════════════════════════════
             // **١ · اسمُه بيده — وقلمٌ بجانبه**
             // ══════════════════════════════════════════════════════════
             //
             // **وكان للأدمن وحدَه**، فمن أخطأ حرفاً يومَ سُجّل **بقي
-            // الخطأُ في كلّ إشعارٍ يصل سائقَه.**
+            // الخطأُ في كلّ إشعارٍ يصل سائقَه.** **والموقوفُ لا يعدّله** (B6).
             val editingName = renaming
             if (editingName == null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -116,7 +140,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.headlineSmall,
                     )
-                    RahalTextButton(onClick = { renaming = store.name }) {
+                    if (!suspended) RahalTextButton(onClick = { renaming = store.name }) {
                         Icon(
                             painter = painterResource(com.rahalgo.ui.R.drawable.ic_edit),
                             contentDescription = stringResource(R.string.store_rename),
@@ -158,7 +182,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             //
             // **ويُسأل قبل أن يُنفَّذ**: **ضغطةٌ واحدةٌ تغلق متجراً وتُبلّغ
             // الإدارة** — والإبهامُ يزلّ.
-            if (!store.emergencyClosed) {
+            if (!store.emergencyClosed && !suspended) {
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = { confirming = true },
@@ -202,28 +226,56 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             }
 
             // ══════════════════════════════════════════════════════════
-            // **٣ · مفتوحٌ أو مغلق — بلا شرحٍ تحته**
+            // **٣ · الحالةُ الفعليّةُ — من الخادم لا من التطبيق** (B5)
             // ══════════════════════════════════════════════════════════
             //
-            // **و`emergency_closed` جزءٌ من معادلة «مفتوح» نفسِها**
-            // (`orders/hours.go`) — فالمفتاحُ يفتح ويغلق حرفيّاً.
+            // **أربعُ حالاتٍ لا اثنتان**: موقوفٌ (الإدارة) · مغلقٌ مؤقّتاً
+            // (إغلاقُه الطارئ) · مغلقٌ حسب ساعات العمل (`open_now` من الخادم
+            // بمنطق `OpenNowSQL` نفسِه) · مفتوح. **وكان المفتاحُ وحدَه يحكم
+            // العرضَ** فيقول «مفتوح» ومتجرُه مغلقٌ بساعاته، **فيظنّ الزبائنَ
+            // يرونه وهم لا.**
+            //
+            // **والمفتاحُ يبقى للإغلاق الطارئ** — وهو ما يملكه بيده. **ويُعطَّل
+            // للموقوف** (B6): لا يفتح متجراً أوقفته الإدارة.
             Spacer(Modifier.height(10.dp))
+            val stateLabel = when {
+                suspended -> stringResource(R.string.store_state_suspended)
+                store.emergencyClosed -> stringResource(R.string.store_state_temp_closed)
+                !store.openNow -> stringResource(R.string.store_state_closed_hours)
+                else -> stringResource(R.string.store_open)
+            }
+            val stateColor = when {
+                suspended -> Rahal.colors.danger
+                store.emergencyClosed || !store.openNow -> Rahal.colors.inkMuted
+                else -> Rahal.colors.brand
+            }
+            // **وموعدُ الفتح القادم يُقرأ من الخادم ويُنسَّق هنا** — عرضٌ لا
+            // حكم. **ولا يُخترَع موعد**: خادمٌ لا يعرف لا يُنطَق عنه.
+            val nextOpen = if (!suspended && !store.emergencyClosed && !store.openNow) {
+                com.rahalgo.ui.backAtText(store.nextOpen)
+            } else {
+                null
+            }
             Card {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(
-                            if (!store.emergencyClosed) R.string.store_open
-                            else R.string.store_closed,
-                        ),
-                        modifier = Modifier.weight(1f),
-                        fontWeight = FontWeight.Bold,
-                        color = if (!store.emergencyClosed) Rahal.colors.brand
-                        else Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stateLabel,
+                            fontWeight = FontWeight.Bold,
+                            color = stateColor,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        if (nextOpen != null) {
+                            Text(
+                                stringResource(R.string.store_next_open, nextOpen),
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
                     Switch(
                         checked = !store.emergencyClosed,
-                        enabled = !vm.saving,
+                        enabled = !vm.saving && !suspended,
                         onCheckedChange = { vm.setOpen(it) },
                     )
                 }
@@ -289,7 +341,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                     )
                     RahalTextButton(
                         onClick = { vm.setPrepMinutes(store.prepMinutes - 5) },
-                        enabled = !vm.saving && store.prepMinutes > 5,
+                        enabled = !vm.saving && !suspended && store.prepMinutes > 5,
                     ) { Text("−", style = MaterialTheme.typography.titleLarge) }
                     Text(
                         "${store.prepMinutes} ${stringResource(R.string.store_prep_unit)}",
@@ -297,7 +349,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                     )
                     RahalTextButton(
                         onClick = { vm.setPrepMinutes(store.prepMinutes + 5) },
-                        enabled = !vm.saving,
+                        enabled = !vm.saving && !suspended,
                     ) { Text("+", style = MaterialTheme.typography.titleLarge) }
                 }
             }
@@ -408,7 +460,7 @@ private fun SectionsEditor(vm: StoreViewModel) {
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        if (dirty) {
+        if (dirty && vm.store?.status != "suspended") {
             RahalButton(
                 onClick = { vm.saveSections(picked.toList()) },
                 enabled = !vm.saving,
@@ -520,7 +572,7 @@ private fun HoursEditor(vm: StoreViewModel) {
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        if (dirty) {
+        if (dirty && vm.store?.status != "suspended") {
             RahalButton(
                 onClick = { vm.saveHours(draft) },
                 enabled = !vm.saving,
@@ -759,7 +811,7 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        if (dirty) {
+        if (dirty && vm.store?.status != "suspended") {
             RahalButton(
                 onClick = { vm.saveAddress(text, vm.pickedLat, vm.pickedLng) },
                 enabled = !vm.saving,

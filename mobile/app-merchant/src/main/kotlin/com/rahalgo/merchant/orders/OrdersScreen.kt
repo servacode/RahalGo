@@ -1,7 +1,9 @@
 package com.rahalgo.merchant.orders
 
 import com.rahalgo.ui.Since
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -65,7 +72,6 @@ import com.rahalgo.ui.money
  */
 @Composable
 fun OrdersScreen(vm: OrdersViewModel) {
-    val rejectNote = stringResource(R.string.order_reject_note)
     if (vm.loading || (vm.error.isNotEmpty() && vm.orders.isEmpty())) {
         Screen {
             ScreenTitle(stringResource(R.string.nav_orders_mine), stringResource(R.string.orders_hint))
@@ -90,18 +96,25 @@ fun OrdersScreen(vm: OrdersViewModel) {
                 return@Screen
             }
 
+            // **وطلبٌ فُتح من إشعاره يُبرَز ثمّ يخفت** (B3) — لا يبقى محاطاً
+            // إلى الأبد. **ثمانِ ثوانٍ تكفي ليجده صاحبُ المتجر بنظرة.**
+            LaunchedEffect(vm.focusedId) {
+                if (vm.focusedId.isNotEmpty()) {
+                    kotlinx.coroutines.delay(8_000)
+                    vm.clearFocus()
+                }
+            }
+
             vm.orders.forEach { order ->
                 Spacer(Modifier.height(10.dp))
                 OrderCard(
                     order = order,
                     busy = vm.busy(order.id),
+                    highlighted = order.id == vm.focusedId,
                     onAccept = { vm.accept(order.id) },
                     onStart = { vm.startPreparing(order.id) },
                     onReady = { vm.markReady(order.id) },
-                    // **والسببُ يُرسَل مع الرفض** — المحرّكُ يمرّره إلى
-                    // الزبون (`notify.go:207`). **ورفضٌ بلا سببٍ يجعل
-                    // الزبونَ يظنّ العطبَ في المنصّة لا في الصنف.**
-                    onReject = { vm.reject(order.id, rejectNote) },
+                    onReject = { note -> vm.reject(order.id, note) },
                 )
             }
             Spacer(Modifier.height(24.dp))
@@ -113,12 +126,20 @@ fun OrdersScreen(vm: OrdersViewModel) {
 private fun OrderCard(
     order: MerchantOrder,
     busy: Boolean,
+    highlighted: Boolean,
     onAccept: () -> Unit,
     onStart: () -> Unit,
     onReady: () -> Unit,
-    onReject: () -> Unit,
+    onReject: (String) -> Unit,
 ) {
-    Card {
+    // **وطلبٌ فُتح من إشعاره محاطٌ بلون العلامة** (B3) — يجده صاحبُ المتجر
+    // بنظرةٍ بين طلباتٍ كثيرة.
+    val cardModifier = if (highlighted) {
+        Modifier.border(2.dp, Rahal.colors.brand, Rahal.shape.md)
+    } else {
+        Modifier
+    }
+    Card(modifier = cardModifier) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "#" + order.number,
@@ -258,12 +279,110 @@ private fun OrderCard(
 
         // **والاعتذارُ نصٌّ جانبيٌّ لا زرٌّ مساوٍ** — انظر أعلاه.
         if (order.status == "pending") {
+            var showReject by remember { mutableStateOf(false) }
             Spacer(Modifier.height(4.dp))
-            RahalTextButton(onClick = onReject, enabled = !busy) {
+            RahalTextButton(onClick = { showReject = true }, enabled = !busy) {
                 Text(stringResource(R.string.order_reject), color = Rahal.colors.inkMuted)
+            }
+            if (showReject) {
+                RejectReasonDialog(
+                    onDismiss = { showReject = false },
+                    onPick = { reason ->
+                        showReject = false
+                        onReject(reason)
+                    },
+                )
             }
         }
     }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مُنتقي سببِ الاعتذار — سريعٌ لا حرٌّ** (B7، ٢٠٢٦-٠٩-٢٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك: أسبابٌ جاهزةٌ يختار منها بضغطة — الصنفُ غير متوفّر · ضغطُ
+ *  طلبات · تعذّر التجهيز · المتجر على وشك الإغلاق — و«سببٌ آخر» بنصٍّ حرّ.)
+ *
+ * # ولماذا قائمةٌ لا حقلٌ فارغ
+ *
+ * **كان الاعتذارُ يرسل نصّاً واحداً محفوظاً** — يصل الزبونَ كلَّ مرّةٍ سواءً،
+ * **فلا يعرف لماذا اعتُذر عنه ولا نقيس متجراً يُكثر سبباً بعينه.** وحقلٌ حرٌّ
+ * وحدَه بطيءٌ على يدٍ في العجين. **فالجاهزُ ضغطةٌ، والحرُّ لمن أراد.**
+ *
+ * **والنصُّ العربيُّ نفسُه يُرسَل ويُحفَظ ويصل الزبون** (`cancel_reason`) —
+ * لا رمزٌ يُترجَم في موضعين فيفترقان.
+ */
+@Composable
+private fun RejectReasonDialog(
+    onDismiss: () -> Unit,
+    onPick: (String) -> Unit,
+) {
+    val canned = listOf(
+        stringResource(R.string.order_reject_r_unavailable),
+        stringResource(R.string.order_reject_r_busy),
+        stringResource(R.string.order_reject_r_cantprep),
+        stringResource(R.string.order_reject_r_closing),
+    )
+    var custom by remember { mutableStateOf(false) }
+    var customText by rememberSaveable { mutableStateOf("") }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.order_reject_title)) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                if (!custom) {
+                    canned.forEach { reason ->
+                        RahalTextButton(
+                            onClick = { onPick(reason) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(Modifier.fillMaxWidth()) {
+                                Text(reason)
+                            }
+                        }
+                    }
+                    // **«سببٌ آخر» يكشف الحقلَ الحرّ** — لمن لا يجد سببَه أعلاه.
+                    RahalTextButton(
+                        onClick = { custom = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(Modifier.fillMaxWidth()) {
+                            Text(
+                                stringResource(R.string.order_reject_r_other),
+                                color = Rahal.colors.inkMuted,
+                            )
+                        }
+                    }
+                } else {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = customText,
+                        onValueChange = { customText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.order_reject_custom_hint)) },
+                        singleLine = false,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (custom) {
+                RahalButton(
+                    onClick = { onPick(customText.trim()) },
+                    enabled = customText.isNotBlank(),
+                ) {
+                    Text(stringResource(R.string.order_reject_send))
+                }
+            }
+        },
+        dismissButton = {
+            RahalTextButton(onClick = onDismiss) {
+                Text(stringResource(com.rahalgo.ui.R.string.act_cancel))
+            }
+        },
+    )
 }
 
 /** **الزرُّ يتبع الحال** — واحدٌ في كلّ لحظة. */

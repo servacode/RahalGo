@@ -4,6 +4,13 @@
 
     <string name="app_name">رحال غو — المتجر</string>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         **التحديثُ الإلزاميُّ — توزيعٌ مباشرٌ لا Google Play** (B1)
+         ══════════════════════════════════════════════════════════════
+         تطبيقُ المتجر يُنزَّل من موقع رحّال غو لا من المتجر، فلا زرَّ
+         «حدّث في Google Play» بل تنزيلٌ مباشر، ونصٌّ يخاطب صاحبَ المتجر. -->
+    <string name="update_body_merchant">صدر تحديثٌ إلزاميٌّ لتطبيق المتجر. نزّله من موقع رحّال غو لتستقبل طلباتك.</string>
+
     <!-- **ويقول دورَه** — **والعاملُ يفتح تطبيقين على جهازٍ واحدٍ
          أحياناً**، فيفرّق بينهما بالعنوان. -->
 
@@ -16,12 +23,27 @@
     <string name="tab_store">متجري</string>
     <string name="tab_account">حسابي</string>
 
+    <!-- **مبدّلُ الفرع** — لا يظهر إلا لمن يملك أكثر من متجر (B8). -->
+    <string name="store_switch">تبديل</string>
+
     <string name="orders_hint">اقبل الطلب ثم حضّره ثم أعلن جاهزيته</string>
     <string name="orders_empty_hint">يصلك الطلب بإشعار — وتأكّد أن متجرك مفتوح من «القائمة»</string>
     <string name="orders_empty">لا طلبات الآن — سنُعلمك حين يصل طلب</string>
 
     <string name="order_accept">استلمت الطلب</string>
-    <string name="order_reject">رفض — غير متوفر</string>
+    <string name="order_reject">اعتذار عن الطلب</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         **مُنتقي سببِ الاعتذار — أسبابٌ جاهزةٌ وسببٌ حرّ** (B7)
+         ══════════════════════════════════════════════════════════════
+         النصُّ العربيُّ نفسُه يُرسَل ويُحفَظ ويصل الزبون — لا رمزٌ يُترجَم. -->
+    <string name="order_reject_title">سبب الاعتذار</string>
+    <string name="order_reject_r_unavailable">الصنف غير متوفر</string>
+    <string name="order_reject_r_busy">ضغط طلبات</string>
+    <string name="order_reject_r_cantprep">تعذّر التجهيز</string>
+    <string name="order_reject_r_closing">المتجر على وشك الإغلاق</string>
+    <string name="order_reject_r_other">سبب آخر</string>
+    <string name="order_reject_custom_hint">اكتب السبب</string>
+    <string name="order_reject_send">إرسال</string>
     <string name="order_start">بدأت التحضير</string>
     <string name="order_ready">جاهز للاستلام</string>
     <string name="order_ready_done">أُعلن جاهزاً — بانتظار السائق</string>
@@ -73,6 +95,18 @@
          «مفتوح/مغلق» فلا يجده فيظنّ الدوامَ وحدَه يحكمه. -->
     <string name="store_open">مفتوح</string>
     <string name="store_closed">مغلق</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         **الحالةُ الفعليّةُ من الخادم — أربعُ حالات** (B5، ٢٠٢٦-٠٩-٢٦)
+         ══════════════════════════════════════════════════════════════
+         موقوف (الإدارة) · مغلق مؤقتاً (إغلاقه الطارئ) · مغلق حسب ساعات
+         العمل · مفتوح. يؤلّفها التطبيقُ من status + emergency_closed +
+         open_now — لا يعيد حسابَ الساعات. -->
+    <string name="store_state_suspended">موقوف من الإدارة</string>
+    <string name="store_state_temp_closed">مغلق مؤقتاً</string>
+    <string name="store_state_closed_hours">مغلق حسب ساعات العمل</string>
+    <string name="store_next_open">يفتح %1$s</string>
+    <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (B6). -->
+    <string name="store_suspended_banner">متجرك موقوف من الإدارة. يمكنك عرض متجرك لكن لا تعديلَ القائمة ولا الإتاحة ولا الساعات حتى يُرفع الإيقاف — تواصل مع الدعم.</string>
     <!-- **والشرحُ يقول ما لا يقوله المفتاح** — أنّ الدوامَ يغلقه أيضاً. -->
     <string name="store_prep">مدة التحضير الافتراضية</string>
     <string name="store_prep_unit">دقيقة</string>
@@ -215,7 +249,6 @@
     <string name="need_sections_title">اختر أقسام متجرك أولاً</string>
     <string name="need_sections_body">الصنف ينزل في قسم من أقسام السوق — واختيار الأقسام يمنع أن ينزل صنفك في المكان الخطأ فلا يجده الزبون</string>
     <string name="need_sections_go">اذهب إلى متجري</string>
-    <string name="order_reject_note">الصنف غير متوفر حالياً</string>
     <string name="os_dispatching">بانتظار سائق</string>
     <string name="os_assigned">أُسند لسائق</string>
     <string name="os_on_way">في الطريق</string>
