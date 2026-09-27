@@ -117,6 +117,11 @@ var sensitiveActions = []Sensitive{
 	// أثرِ التدقيق (`ops.order_transition`).
 	{"POST", "/orders/{id}/transition", "ops.order_transition",
 		"order", 1, []string{"to"}, CondTransitionRefund},
+	// **وإذنُ استثناءِ إثبات التسليم — تجاوزُ قاعدةِ سلامةٍ بيدِ العمليّات**
+	// (قرارُ المالك G، ٢٠٢٦-٠٩-٢٧): السائقُ لا يتخطّى بنفسه، والعملياتُ تأذن
+	// بسببٍ إلزاميٍّ — وهي فعلٌ خطيرٌ يلزمه خطوةُ تحقّق كنظرائه.
+	{"POST", "/orders/{id}/proof-exception", "ops.delivery_proof_exception",
+		"order", 1, []string{"reason"}, ""},
 	// **وتسويةُ مستحقّات المتجر — تغييرُ الطريقة وتأكيدُ الدفع نقداً.**
 	{"PATCH", "/merchants/{id}/settlement-method", "admin.merchant_settlement_update",
 		"merchant", 1, []string{"method"}, ""},
