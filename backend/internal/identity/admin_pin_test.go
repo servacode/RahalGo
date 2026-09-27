@@ -34,6 +34,10 @@ func TestPin_RequiredForAdminOnly(t *testing.T) {
 	if !NeedsPin([]string{"admin", "customer"}) {
 		t.Fatalf("الأدمنُ بلا رمز — **وهو أخطرُ حسابٍ في المنصّة، وبابُه بابُ الجميع**")
 	}
+	// **والمالكُ الأعلى أخطرُ من الأدمن** — يُبذَر بهذا الدور وحدَه، فلا يدخل بكلمةٍ بلا رمز.
+	if !NeedsPin([]string{"owner_super_admin"}) {
+		t.Fatalf("المالكُ الأعلى بلا رمز — **وهو الأخطر، يملك كلَّ قدرة، ويستعمل اللوحةَ نفسَها**")
+	}
 	// **وقرارُ المالك: العملياتُ والماليةُ خارجَه.**
 	for _, roles := range [][]string{
 		{"ops", "customer"}, {"finance", "customer"}, {"merchant"},

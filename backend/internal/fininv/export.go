@@ -77,6 +77,7 @@ var FinancialSettings = []string{
 	"referral.reward_1",
 	"referral.reward_2",
 	"referral.reward_3",
+	"referral.reward_4",
 	"referral.reward_rest",
 	"referral.reward_on",
 	"drivers.target_reward",
@@ -89,6 +90,12 @@ var FinancialSettings = []string{
 	"customers.cash_ban_failures",
 	"orders.extra_source_fee",
 	"orders.route_margin_pct",
+	// **نسبتان تدخلان حساباً ماليّاً وكانتا خارجَ القائمة** (جردُ الأدمن
+	// ٢٠٢٦-٠٩-٢٧): تعويضُ السائق عند تعذّر التسليم (`orders/transitions.go`)،
+	// ودعمُ المتجر عن بضاعةٍ رُدّت (`orders/goods.go`). **فبإضافتِهما هنا
+	// تنالان القدرةَ الماليّةَ + خطوةَ التحقّق + الإدراجَ في الصورة الماليّة.**
+	"drivers.failed_compensation_percent",
+	"merchants.return_support_percent",
 }
 
 // Snapshot يبني الصورة.

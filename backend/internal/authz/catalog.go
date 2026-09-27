@@ -214,6 +214,17 @@ var FieldPolicy = map[string]Capability{
 	"phone":          UsersContactRead,
 	"customer_phone": UsersContactRead,
 	"driver_phone":   UsersContactRead,
+	// **وأسماءٌ أخرى للهاتف نفسِه تُسرَّب من أبوابٍ لا تملك `contact.read`**
+	// (جردُ الأمن ٢٠٢٦-٠٩-٢٧): `party_phone` في النزاعات (يبلغه `finance`
+	// بـ`support.manage`)، `user_phone` في السحوبات (`finance.read`)،
+	// وهاتفَا المالكِ والمندوبِ في سجلّ المتاجر (`merchants.read`).
+	// **والماليّةُ محرومةٌ من `contact.read` عمداً** (`0145`) — فتُحجَب عنها.
+	"party_phone":     UsersContactRead,
+	"user_phone":      UsersContactRead,
+	"owner_phone":     UsersContactRead,
+	"sales_rep_phone": UsersContactRead,
+	// **ولا يُدرَج `merchant_phone`**: هاتفُ المتجرِ يُكشَف للسائق عمداً
+	// ليتّصل بالمطعم — بابٌ مقصودٌ لا تسريب.
 }
 
 // catalog **المعجمُ المُعرَّفُ في الشيفرة** — ووصفٌ لكلٍّ يُقرأ في اللوحة.
