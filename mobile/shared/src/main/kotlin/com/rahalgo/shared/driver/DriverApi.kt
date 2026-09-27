@@ -356,14 +356,8 @@ class DriverApi(private val api: ApiClient) {
         )
     }
 
-    /** **يتخطّى الصورة بسبب** — ولا يُقبل تخطٍّ بلا سبب. */
-    suspend fun skipProof(orderId: String, reason: String) {
-        api.call<Ack>(
-            "/api/v1/driver/orders/" + orderId + "/proof/skip",
-            HttpMethod.Post,
-            mapOf("reason" to reason),
-        )
-    }
+    // **ولا تخطٍّ للسائق** (قرارُ المالك ٢٠٢٦-٠٩-٢٧): التخطّي إذنُ عملياتٍ
+    // مُخوَّلٌ على المسار الإداريّ، لا كلمةُ سائق — فحُذف `skipProof`.
 
     /**
      * ══════════════════════════════════════════════════════════════════

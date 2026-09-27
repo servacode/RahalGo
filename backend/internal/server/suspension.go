@@ -52,7 +52,6 @@ var continuationRoutes = []struct {
 	// **السائق** — يُتمّ رحلتَه أو يعلن تعذّرها.
 	{"POST", "/api/v1/driver/orders/", "/transition", "driver"},
 	{"POST", "/api/v1/driver/orders/", "/proof", "driver"},
-	{"POST", "/api/v1/driver/orders/", "/proof/skip", "driver"},
 	{"GET", "/api/v1/driver/orders/", "", "driver"},
 
 	// **المتجر** — يقبل أو يرفض ما بين يديه.

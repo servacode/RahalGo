@@ -91,11 +91,7 @@ func TestLIFE_001_HappyPath(t *testing.T) {
 		t.Logf("LIFE-002 رُدّ برمزٍ آخر: %s", bare.Err())
 	}
 
-	skip := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{"reason": "اختبارٌ آليّ"})
-	if skip.Code >= 400 {
-		t.Fatalf("LIFE-001 تعذّر تخطّي الإثبات: %s", skip)
-	}
+	h.authorizeProofExempt(oid)
 	done := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 		map[string]any{"to": "delivered"})
 	if done.Code >= 400 {

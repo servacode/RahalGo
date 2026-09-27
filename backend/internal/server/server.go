@@ -811,8 +811,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/emergency", s.handleDriverEmergency)
 			// **إثباتُ التسليم** — صورةٌ وإحداثياتٌ ووقت. والمعيارُ العالميّ
 			// ثلاثةٌ لا واحد. (انظر `delivery_proof.go`)
+			//
+			// **ولا بابَ تخطٍّ للسائق** (قرارُ المالك ٢٠٢٦-٠٩-٢٧): التخطّي إذنُ
+			// عملياتٍ مُخوَّلٌ (`/admin/orders/{id}/proof-exception`)، لا كلمةُ سائق.
 			r.Post("/orders/{id}/proof", s.handleDeliveryProof)
-			r.Post("/orders/{id}/proof/skip", s.handleSkipDeliveryProof)
 			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
 			r.Post("/orders/{id}/return", s.handleDriverReturn)
 			// **وتوثيقُ ما اتُّفق عليه في الطلب الخاصّ** — بعد المحادثة.
@@ -1216,6 +1218,10 @@ func (s *Server) Router() http.Handler {
 			// بتقدير إنسان**، وموظّفُ العمليات ليس طرفاً في المال — وهو
 			// الفصلُ نفسه المطبَّق على سجلّ الأحداث وحركات المحفظة.
 			r.Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
+			// **إذنُ استثناءِ إثبات التسليم** — كاميرا معطّلةٌ فيأذن العملياتُ
+			// بالتسليم بلا صورة (قرارُ المالك ٢٠٢٦-٠٩-٢٧). **لا يأذن السائقُ
+			// لنفسه**: سببٌ إلزاميٌّ ومُدقَّقٌ في المعاملة (delivery_proof.go).
+			r.Post("/orders/{id}/proof-exception", s.handleAuthorizeProofException)
 			// **المكافآتُ والعقوبات** — مالٌ يخرج بتقدير إنسان،
 			// **وموظّفُ العمليات ليس طرفاً في المال**: الحارسُ نفسُه الذي
 			// على تعويض السائق.

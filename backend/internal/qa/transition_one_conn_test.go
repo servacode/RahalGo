@@ -167,11 +167,8 @@ func TestXG48_DeliverySettlementNeedsOneConnection(t *testing.T) {
 	}
 
 	// **والتسليمُ يشترط إثباتاً** (`delivery_proof_required`) —
-	// **ويُتخطّى بسببٍ مسمّى، وهو بابٌ قائمٌ في المنتَج.**
-	if got := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{"reason": "لا شبكة"}); got.Code >= 400 {
-		t.Fatalf("تخطّي الإثبات: %s", got)
-	}
+	// **ويُؤذَن بالاستثناء من العمليّات** (لا يتخطّى السائقُ بنفسه — ٢٠٢٦-٠٩-٢٧).
+	h.authorizeProofExempt(oid)
 
 	var errText string
 	code := transitionOnOneConn(t, h, "التسليمُ والتسوية", func() int {

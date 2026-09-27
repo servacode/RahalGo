@@ -19,12 +19,13 @@ package server
 // **وأهمُّها الإحداثيات**: صورةُ بابٍ قد تكون لأيّ باب، **وصورةٌ بإحداثياتٍ
 // على بُعد أمتارٍ من عنوان الزبون بيّنة.**
 //
-// # ولا يقف التسليمُ على كاميرا
+// # ولا يقف التسليمُ على كاميرا — لكنّ التخطّي إذنُ عملياتٍ لا فعلُ سائق
 //
 // هاتفٌ لا يعمل، أو إذنٌ مرفوض، أو ليلٌ لا يُرى فيه شيء — **وسائقٌ لا يستطيع
-// إنهاء طلبٍ سلّمه فعلاً يقف في الشارع.** فيُتاح التخطّي **بكلمةٍ تُكتب
-// وتُقرأ يومَ النزاع**: من تخطّى عشراً يُقرأ ذلك في صفّه، ومن تخطّى مرّةً لا
-// يُلام.
+// إنهاء طلبٍ سلّمه فعلاً يقف في الشارع.** **لكنّ السائقَ لا يأذن لنفسه بكلمة**
+// (قرارُ المالك ٢٠٢٦-٠٩-٢٧): مسارُه العاديُّ يفشل آمناً، **والاستثناءُ يحتاج
+// إذنَ أدمن/عمليّاتٍ مُخوَّل** (`handleAuthorizeProofException`) بسببٍ إلزاميٍّ
+// مُدقَّقٍ في المعاملة. فمن عطبت كاميرتُه يطلب من العمليّات، وهي تأذن وتُوقّع.
 
 import (
 	"net/http"
@@ -111,16 +112,16 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleSkipDeliveryProof يُسجّل تعذّرَ الصورة بسببه.
+// handleAuthorizeProofException **إذنُ عملياتٍ بتسليمٍ بلا صورة.**
 //
-// **والسببُ إلزاميّ**: تخطٍّ بلا كلمةٍ لا يُقرأ يومَ النزاع، **ولا يُفرَّق بين
-// من عطبت كاميرتُه ومن لم يشأ.**
-func (s *Server) handleSkipDeliveryProof(w http.ResponseWriter, r *http.Request) {
+// **قرارُ المالك ٢٠٢٦-٠٩-٢٧**: لا يتخطّى السائقُ إثباتَ التسليم بكلمةٍ يكتبها
+// بنفسه — **فيأذن لنفسه.** الاستثناءُ الحقيقيُّ (كاميرا معطّلةٌ أو غيرُ متاحة)
+// يحتاج **إذنَ أدمن/عمليّاتٍ مُخوَّل** (قدرةُ `OrdersIntervene`)، والسببُ
+// إلزاميّ. **ويُقيَّد في معاملةٍ واحدةٍ**: مَن أذن (الفاعل) وللسائق (`driver_id`)
+// ولأيّ طلبٍ (الكيان) والسبب والوقت — دائمٌ يُقرأ يومَ النزاع. **وإعادةُ النداء
+// آمنة**: إذنٌ قائمٌ لا يُكتب ثانيةً ولا يُدقَّق مرّتين.
+func (s *Server) handleAuthorizeProofException(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
-	if !s.driverOwnsOrder(r, orderID) {
-		s.respondErr(w, errNotYourOrder)
-		return
-	}
 	req, err := decode[struct {
 		Reason string `json:"reason"`
 	}](r)
@@ -133,15 +134,52 @@ func (s *Server) handleSkipDeliveryProof(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errReasonRequired)
 		return
 	}
-	if _, err := s.pg.Exec(r.Context(),
-		`UPDATE orders SET pod_skip_reason = $2 WHERE id = $1`,
-		orderID, clip(reason, 200)); err != nil {
+
+	actor := userIDFrom(r)
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "driver.delivery_proof_skipped", "order", orderID,
-		map[string]any{"reason": reason})
-	httpx.JSON(w, http.StatusOK, map[string]any{"skipped": true})
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
+	// **قفلُ الصفّ يجعل فحصَ التكرار صادقاً** — كنظير تعويض السائق.
+	var driverID, skipBy *string
+	if err := tx.QueryRow(r.Context(),
+		`SELECT driver_id::text, pod_skip_by::text FROM orders WHERE id = $1 FOR UPDATE`,
+		orderID).Scan(&driverID, &skipBy); err != nil {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	// **أُذن من قبل**: إعادةُ النداء لا تكتب ثانيةً ولا تُدقّق مرّتين.
+	if skipBy != nil {
+		if err := tx.Commit(r.Context()); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		httpx.JSON(w, http.StatusOK, map[string]any{"authorized": true, "already": true})
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		UPDATE orders SET pod_skip_by = $2, pod_skip_reason = $3, pod_skip_at = now()
+		WHERE id = $1`, orderID, actor, clip(reason, 200)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **الأثرُ في المعاملة نفسِها** (`AQ-4`): تخطٍّ لقاعدة سلامةٍ يجب أن يبقى
+	// أثرُه ولو سقط ما بعده.
+	if err := s.auditTx(r.Context(), tx, r, "ops.delivery_proof_exception", "order", orderID, map[string]any{
+		"driver_id": driverID, "reason": reason,
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("order", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"authorized": true})
 }
 
 // requireProofBeforeDelivery يمنع «سُلّم» بلا إثباتٍ ولا سببٍ لتخطّيه.
@@ -152,14 +190,16 @@ func (s *Server) requireProofBeforeDelivery(r *http.Request, orderID string) err
 	if !s.settings.GetBool(r.Context(), "drivers.require_delivery_photo") {
 		return nil
 	}
-	var mediaID *string
-	var skip string
+	// **إمّا صورةٌ، وإمّا إذنُ استثناءٍ مُخوَّل** (٢٠٢٦-٠٩-٢٧): `pod_skip_by`
+	// يضعه أدمن/عمليّاتٌ مُخوَّلٌ وحدَه، **ولا يقبل الحارسُ كلمةَ السائق
+	// (`pod_skip_reason`) بلا إذن.** فالسائقُ العاديُّ لا يأذن لنفسه.
+	var mediaID, skipBy *string
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT pod_media_id::text, pod_skip_reason FROM orders WHERE id = $1`,
-		orderID).Scan(&mediaID, &skip); err != nil {
+		`SELECT pod_media_id::text, pod_skip_by::text FROM orders WHERE id = $1`,
+		orderID).Scan(&mediaID, &skipBy); err != nil {
 		return err
 	}
-	if mediaID == nil && strings.TrimSpace(skip) == "" {
+	if mediaID == nil && skipBy == nil {
 		return errProofRequired
 	}
 	return nil

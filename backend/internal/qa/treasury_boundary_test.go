@@ -199,10 +199,7 @@ func walkToDropoff(t *testing.T, h *Harness, oid string, drv *User) {
 			t.Fatalf("الانتقالُ إلى %s رُدّ: %s", to, got)
 		}
 	}
-	if skip := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{"reason": "R4 — حدُّ معاملةِ الخزينة"}); skip.Code >= 400 {
-		t.Fatalf("تخطّي الإثبات رُدّ: %s", skip)
-	}
+	h.authorizeProofExempt(oid)
 }
 
 func treasuryBalance(t *testing.T, h *Harness, tid string) int64 {

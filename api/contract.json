@@ -1983,6 +1983,32 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/proof-exception",
+      "handler": "handleAuthorizeProofException",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "already",
+          "type": "bool"
+        },
+        {
+          "name": "authorized",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/recompute",
       "handler": "handleRecomputeSettlement",
       "auth": true,
@@ -4424,30 +4450,6 @@
       ],
       "statuses": [
         "StatusCreated"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/driver/orders/{id}/proof/skip",
-      "handler": "handleSkipDeliveryProof",
-      "auth": true,
-      "roles": [
-        "driver"
-      ],
-      "request": [
-        {
-          "name": "reason",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "skipped",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {

@@ -336,10 +336,7 @@ func TestRACE_FinancialTruthAfterConcurrentDeliveries(t *testing.T) {
 				t.Fatalf("الانتقالُ إلى %s رُدّ: %s", to, got)
 			}
 		}
-		if got := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-			map[string]any{"reason": "P-5"}); got.Code >= 400 {
-			t.Fatalf("تخطّي الإثبات: %s", got)
-		}
+		h.authorizeProofExempt(oid)
 		jobs[i] = job{oid: oid, drv: drv}
 	}
 
@@ -400,8 +397,7 @@ func TestRACE_SettingChangeDuringSettlement(t *testing.T) {
 			t.Fatalf("الانتقالُ إلى %s: %s", to, got)
 		}
 	}
-	_ = h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{"reason": "P-5"})
+	h.authorizeProofExempt(oid)
 
 	admin := h.NewUser("admin")
 	r := Race(t, DefaultRaceTimeout,

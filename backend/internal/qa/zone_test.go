@@ -168,10 +168,7 @@ func TestZONE_002_OrderSurvivesLifecycle(t *testing.T) {
 	}
 	// **والتسليمُ يحتاج إثباتاً** — قاعدةُ عملٍ لا علاقةَ لها بالمنطقة
 	// (انظر `LIFE-001`)، **فتُخطّى بسببٍ مكتوبٍ كما تفعل دورةُ الحياة.**
-	if skip := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{"reason": "اختبارٌ آليّ"}); skip.Code >= 400 {
-		t.Fatalf("ZONE-002 تعذّر تخطّي الإثبات: %s", skip)
-	}
+	h.authorizeProofExempt(oid)
 	if done := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 		map[string]any{"to": "delivered"}); done.Code >= 400 {
 		t.Fatalf("ZONE-002 **التسليمُ انكسر**: %s", done)

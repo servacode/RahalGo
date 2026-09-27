@@ -80,6 +80,7 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/assign", OrdersIntervene},
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	{"POST", "/orders/{id}/recompute", OrdersIntervene},
+	{"POST", "/orders/{id}/proof-exception", OrdersIntervene}, // إذنُ تسليمٍ بلا صورةٍ — عملياتٌ مُخوَّلةٌ لا السائق (٢٠٢٦-٠٩-٢٧)
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},
 	{"POST", "/orders/{id}/settle-goods", FinanceManage},
 	{"POST", "/orders/{id}/goods", OrdersIntervene},

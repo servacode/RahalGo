@@ -1,37 +1,45 @@
 package qa
 
 // ══════════════════════════════════════════════════════════════════════
-// **إثباتُ التسليم يفشل آمناً، وبابُ الاستثناء موثَّقٌ لا مجّانيّ**
+// **تخطّي إثبات التسليم إذنُ عملياتٍ مُخوَّلٌ لا فعلُ سائق**
 // ══════════════════════════════════════════════════════════════════════
 //
-// المعرّفات: `PROOF-*` · قرارُ المالك (البند ٣، ٢٠٢٦-٠٩-٢٧)
+// المعرّفات: `PROOF-*` · قرارُ المالك النهائيّ (٢٠٢٦-٠٩-٢٧)
 //
-// # المسألة
+// # القرار
 //
-// **صورةٌ مطلوبةٌ وكاميرا لا تعمل** — هاتفٌ عطب، أو إذنٌ رُفض، أو ليلٌ لا يُرى
-// فيه شيء. **قرارُ المالك: لا بابَ تخطٍّ مجّانيّ** — يفشل التسليمُ آمناً، **وبابُ
-// الاستثناء يبقى موثَّقاً**: كلمةٌ تُكتب وتُقرأ يومَ النزاع، **ولا تُضعَّف
-// القاعدةُ في صمت.**
+// **لا يتخطّى السائقُ الصورةَ الإلزاميّةَ بكلمةٍ يكتبها بنفسه.** للحالة الحقيقيّة
+// (كاميرا معطّلةٌ أو غيرُ متاحة): مسارُ السائق العاديُّ **يفشل آمناً**،
+// والاستثناءُ يحتاج **إذنَ أدمن/عمليّاتٍ مُخوَّل**، السببُ إلزاميّ، ويُدقَّق
+// (الفاعلُ + السائقُ + الطلبُ + السببُ + الوقت) دائماً، وإعادةُ النداء آمنة،
+// **والسائقُ العاديُّ لا يأذن لنفسه.**
 //
-// **والقاعدةُ قائمةٌ في المحرّك أصلاً** (`drivers.require_delivery_photo`
-// افتراضُه صحيح، و`requireProofBeforeDelivery`، و`handleSkipDeliveryProof`
-// بسببٍ إلزاميٍّ مُدقَّق). **وهذا الاختبارُ يُقفلها** فلا تُضعَّف بلا أن يسقط
-// شيءٌ يُرى: يُثبت أنّ التسليمَ يُمنع بلا إثبات، وأنّ التخطّي بلا سببٍ يُرفض،
-// وأنّ التخطّي بسببٍ يُقيَّد ثمّ يمرّ.
-//
-// **وما لم يُحسَم — قرارُ مالكٍ مطلوب**: أيبقى التخطّي بيدِ السائق بسببٍ مُدقَّق،
-// أم يُرفع إلى إذنِ الأدمن؟ **لا يُغيَّر هنا** — بابُ إذنِ الأدمن قد يُوقف
-// سائقاً في الشارع ينتظر ردّاً، والتخطّي المُدقَّق قابلٌ للقراءة والمساءلة.
+// **وهذا الاختبارُ يُقفل كلَّ بندٍ منها** فلا يُضعَّف صمتاً.
 
 import (
 	"net/http"
 	"testing"
-	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/authz"
 )
 
-// TestPROOF_NoCameraFailsSafeWithAuditedException **الكاميرا لا تعمل: يفشل
-// آمناً، والاستثناءُ موثَّقٌ لا مجّانيّ.**
-func TestPROOF_NoCameraFailsSafeWithAuditedException(t *testing.T) {
+// authorizeProofExempt **بديلُ العُدّة لإذنِ الاستثناء من العمليّات**: يعلّم
+// الطلبَ قابلاً للتسليم بلا صورة (`pod_skip_by`). **والسائقُ لم يعد يتخطّى
+// بنفسه** (قرارُ المالك ٢٠٢٦-٠٩-٢٧)؛ فالاختباراتُ التي تحتاج فقط الوصولَ إلى
+// `delivered` تستعمل هذا بدل بابِ التخطّي المحذوف — والمسارُ الحقيقيُّ للاستثناء
+// هو `POST /admin/orders/{id}/proof-exception` (يفحصه `PROOF-*`).
+func (h *Harness) authorizeProofExempt(orderID string) {
+	h.T.Helper()
+	if _, err := h.Pool.Exec(h.T.Context(), `
+		UPDATE orders SET pod_skip_by = driver_id, pod_skip_reason = 'qa-fixture', pod_skip_at = now()
+		WHERE id = $1::uuid AND driver_id IS NOT NULL`, orderID); err != nil {
+		h.T.Fatalf("qa: authorizeProofExempt: %v", err)
+	}
+}
+
+// TestPROOF_NoCameraNeedsOpsAuthorizedException **الكاميرا لا تعمل: يفشل آمناً،
+// والاستثناءُ إذنُ عملياتٍ مُخوَّلٌ مُدقَّقٌ لا كلمةُ سائق.**
+func TestPROOF_NoCameraNeedsOpsAuthorizedException(t *testing.T) {
 	h := New(t)
 	cust := h.Customer()
 	item := h.NewItem(1000)
@@ -50,61 +58,78 @@ func TestPROOF_NoCameraFailsSafeWithAuditedException(t *testing.T) {
 		}
 	}
 
-	// ── (١) يفشل آمناً: لا «سُلّم» بلا إثباتٍ ولا تخطٍّ ──
+	// ── (١) يفشل آمناً: لا «سُلّم» بلا إثباتٍ ولا إذنِ استثناء ──
 	bare := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 		map[string]any{"to": "delivered"})
 	if bare.Code != http.StatusConflict || bare.Err() != "delivery_proof_required" {
 		t.Fatalf("PROOF-1 سُلّم — أو رُدّ بغير delivery_proof_required — بلا إثبات: %s", bare)
 	}
-	if got := h.statusOf(oid); got != "at_dropoff" {
-		t.Fatalf("PROOF-1 الحالُ %q بعد منعِ التسليم — **تسلّم رغم المنع**", got)
+
+	// ── (٢) لا يأذن السائقُ لنفسه: لا مسارَ تخطٍّ للسائق أصلاً ──
+	gone := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
+		map[string]any{"reason": "الكاميرا معطّلة"})
+	if gone.Code != http.StatusNotFound {
+		t.Fatalf("PROOF-2 مسارُ تخطّي السائق ما زال حيّاً (%s) — **السائقُ يأذن لنفسه**", gone)
 	}
 
-	// ── (٢) ليس باباً مجّانيّاً: تخطٍّ بلا سببٍ يُرفض ──
-	//
-	// **وهو ما يميّز الاستثناءَ المُدقَّق من البابِ المجّانيّ**: سببٌ يُكتب.
-	empty := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
+	// ── (٣) وحتّى على باب العمليّات: السائقُ بلا قدرةٍ يُمنع ──
+	drvTry := h.POST("/api/v1/admin/orders/"+oid+"/proof-exception", drv.Token,
+		map[string]any{"reason": "محاولةُ سائق"})
+	if drvTry.Code != http.StatusForbidden && drvTry.Code != http.StatusUnauthorized {
+		t.Fatalf("PROOF-3 سائقٌ أذن لنفسه عبر باب العمليّات (%s) — **لا فصلَ سلطة**", drvTry)
+	}
+	// **ولم يُفتَح الباب**: لا يزال محجوباً.
+	if still := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
+		map[string]any{"to": "delivered"}); still.Code != http.StatusConflict {
+		t.Fatalf("PROOF-3 تسلّم بعد محاولة السائق (%s) — **تخطٍّ التفافيّ**", still)
+	}
+
+	// ── عملياتٌ مُخوَّلة (قدرةُ OrdersIntervene) ──
+	capRole(t, h, "qa_ops_proof", authz.OrdersIntervene)
+	ops, opsTok := capUser(t, h, "qa_ops_proof")
+
+	// ── (٤) السببُ إلزاميّ ──
+	noReason := h.POST("/api/v1/admin/orders/"+oid+"/proof-exception", opsTok,
 		map[string]any{"reason": ""})
-	if empty.Code < 400 {
-		t.Fatalf("PROOF-2 تخطٍّ بسببٍ فارغٍ قُبل — **بابٌ مجّانيّ**: %s", empty)
-	}
-	none := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{})
-	if none.Code < 400 {
-		t.Fatalf("PROOF-2 تخطٍّ بلا حقلِ سببٍ قُبل — **بابٌ مجّانيّ**: %s", none)
+	if noReason.Code < 400 {
+		t.Fatalf("PROOF-4 إذنٌ بلا سببٍ قُبل: %s", noReason)
 	}
 
-	// ── (٣) بابُ الاستثناء موثَّق: تخطٍّ بسببٍ يُقبل ويُقيَّد ──
-	skip := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
+	// ── (٥) إذنٌ بسببٍ من مُخوَّلٍ: يمرّ · يُسجَّل مَن أذن · يُدقَّق مرّةً ──
+	auth1 := h.POST("/api/v1/admin/orders/"+oid+"/proof-exception", opsTok,
 		map[string]any{"reason": "الكاميرا معطّلةٌ والضوءُ خافت"})
-	if skip.Code >= 400 {
-		t.Fatalf("PROOF-3 تعذّر التخطّي بسببٍ صريح: %s", skip)
+	if auth1.Code >= 400 {
+		t.Fatalf("PROOF-5 تعذّر إذنُ الاستثناء من مُخوَّل: %s", auth1)
+	}
+	var skipBy *string
+	if err := h.Pool.QueryRow(h.T.Context(),
+		`SELECT pod_skip_by::text FROM orders WHERE id = $1`, oid).Scan(&skipBy); err != nil {
+		t.Fatalf("PROOF-5 قراءةُ pod_skip_by: %v", err)
+	}
+	if skipBy == nil || *skipBy != ops.ID {
+		t.Fatalf("PROOF-5 لم يُسجَّل مَن أذن (skipBy=%v · ops=%s)", skipBy, ops.ID)
+	}
+	if n := auditCount(t, h, "ops.delivery_proof_exception", oid); n != 1 {
+		t.Fatalf("PROOF-5 تدقيقُ الإذن = %d، والمتوقّع 1 (الفاعل+السائق+الطلب+السبب+الوقت)", n)
 	}
 
-	// **والتخطّي يُقرأ يومَ النزاع** — يُقيَّد في السجلّ (كتابةٌ بالخلفيّة فيُنتظر).
-	deadline := time.Now().Add(3 * time.Second)
-	var audited int
-	for time.Now().Before(deadline) {
-		_ = h.Pool.QueryRow(h.T.Context(), `
-			SELECT count(*) FROM audit_log
-			WHERE action = 'driver.delivery_proof_skipped' AND entity_id = $1`,
-			oid).Scan(&audited)
-		if audited > 0 {
-			break
-		}
-		time.Sleep(50 * time.Millisecond)
+	// ── (٦) إعادةُ النداء آمنة: لا تدقيقَ ثانٍ ──
+	auth2 := h.POST("/api/v1/admin/orders/"+oid+"/proof-exception", opsTok,
+		map[string]any{"reason": "نداءٌ ثانٍ"})
+	if auth2.Code >= 400 {
+		t.Fatalf("PROOF-6 إعادةُ النداء رُدّت: %s", auth2)
 	}
-	if audited == 0 {
-		t.Errorf("PROOF-3 التخطّي لم يُقيَّد — **صامتٌ لا يُقرأ يومَ النزاع**")
+	if n := auditCount(t, h, "ops.delivery_proof_exception", oid); n != 1 {
+		t.Fatalf("PROOF-6 تكرّر التدقيقُ (%d) — **النداءُ ليس مأموناً**", n)
 	}
 
-	// ── (٤) وبعد التخطّي الموثَّق يمرّ التسليم ──
+	// ── (٧) وبعد الإذن الموثَّق يمرّ التسليم ──
 	done := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 		map[string]any{"to": "delivered"})
 	if done.Code >= 400 {
-		t.Fatalf("PROOF-4 التسليمُ رُدّ بعد التخطّي الموثَّق: %s", done)
+		t.Fatalf("PROOF-7 التسليمُ رُدّ بعد الإذن: %s", done)
 	}
 	if got := h.statusOf(oid); got != "delivered" {
-		t.Fatalf("PROOF-4 الحالُ %q بعد التسليم — يُنتظر delivered", got)
+		t.Fatalf("PROOF-7 الحالُ %q بعد التسليم — يُنتظر delivered", got)
 	}
 }

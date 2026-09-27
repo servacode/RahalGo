@@ -167,10 +167,7 @@ func deliverOrder(t *testing.T, h *Harness, oid string, drv *User) {
 		}
 	}
 	// **والتسليمُ يشترط شاهداً** — صورةً أو تخطّياً بسبب (delivery_proof.go:40).
-	if skip := h.POST("/api/v1/driver/orders/"+oid+"/proof/skip", drv.Token,
-		map[string]any{"reason": "P-4 — إثباتُ ثابتٍ ماليّ"}); skip.Code >= 400 {
-		t.Fatalf("تخطّي الإثبات رُدّ: %s", skip)
-	}
+	h.authorizeProofExempt(oid)
 	if got := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 		map[string]any{"to": "delivered"}); got.Code >= 400 {
 		t.Fatalf("التسليمُ رُدّ: %s", got)
