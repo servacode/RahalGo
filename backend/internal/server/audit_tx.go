@@ -65,6 +65,16 @@ var criticalAuditActions = map[string]bool{
 	"ops.merchant_suspend": true,
 	"admin.setting_update": true,
 	"ops.order_transition": true,
+
+	// ── مالٌ يتحرّك أُغفل من الصنف `A` — جردُ ٢٠٢٦-٠٩-٢٧ ────────────
+	//
+	// **الثلاثةُ تحرّك مالاً وكان تدقيقُها أفضلَ جهدٍ بعد التثبيت**: تعويضُ
+	// السائق · تسويةُ نزاعٍ (خصمٌ/إعفاء) · دفعُ مستحقٍّ نقديٍّ للمتجر.
+	// **صار كلٌّ منها `auditTx` داخلَ معاملته** (تعويضُ السائق والنزاعُ في
+	// الخادم، والنقديُّ في طبقة الطلبات).
+	"finance.driver_compensation": true,
+	"ops.dispute_settled":         true,
+	"finance.merchant_cash_paid":  true,
 }
 
 // conditionalAuditActions **أفعالٌ صنفُها يتقرّر بمعاملها لا باسمها.**

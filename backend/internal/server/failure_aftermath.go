@@ -147,13 +147,19 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// **والأثرُ في المعاملة نفسِها — لا بعد التثبيت** (`AQ-4`/`PF-06`): تعويضٌ
+	// خرج والخزينةُ خُصمت، **فسقوطُ سطر التدقيق بعد التثبيت يترك مالاً تحرّك
+	// بلا من ولا متى، وإعادةُ النداء تُردّ `already_compensated` فلا يُستدرَك.**
+	if err := s.auditTx(r.Context(), tx, r, "finance.driver_compensation", "order", orderID, map[string]any{
+		"driver_id": *driverID, "amount": req.Amount, "note": note,
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "finance.driver_compensation", "order", orderID, map[string]any{
-		"driver_id": *driverID, "amount": req.Amount, "note": note,
-	})
 	s.touch("order", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})

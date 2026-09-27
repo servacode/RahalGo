@@ -277,7 +277,7 @@ func TestSET15_16_AdminPayIdempotent(t *testing.T) {
 	sid := f.settlementID(t, oid, m)
 	holdBefore := f.balance(t, f.holding)
 
-	res, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "دُفع")
+	res, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "دُفع", "")
 	if err != nil {
 		t.Fatalf("تأكيدُ الدفع فشل: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestSET15_16_AdminPayIdempotent(t *testing.T) {
 	}
 	// **إعادةُ التأكيد: لا قيدَ ولا نقصَ ثانٍ.**
 	holdAfter := f.balance(t, f.holding)
-	res2, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "ثانية")
+	res2, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "ثانية", "")
 	if err != nil {
 		t.Fatalf("إعادةُ الدفع أخطأت: %v", err)
 	}
@@ -344,7 +344,7 @@ func TestSET18_CashRefundPostPay(t *testing.T) {
 	oid := f.order(t, m, 100_000, 10_000, "cash")
 	f.deliver(t, oid)
 	sid := f.settlementID(t, oid, m)
-	if _, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "دُفع"); err != nil {
+	if _, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "دُفع", ""); err != nil {
 		t.Fatalf("الدفع فشل: %v", err)
 	}
 	f.transition(t, oid, "refunded")
@@ -498,7 +498,7 @@ func TestSET24_PayCurrentOwner(t *testing.T) {
 		t.Fatalf("تعذّر تبديلُ المالك: %v", err)
 	}
 	sid := f.settlementID(t, oid, m)
-	res, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "دُفع")
+	res, err := f.svc.MarkCashSettlementPaid(context.Background(), sid, f.treasury, "دُفع", "")
 	if err != nil {
 		t.Fatalf("الدفع فشل: %v", err)
 	}

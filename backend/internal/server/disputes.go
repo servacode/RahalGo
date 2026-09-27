@@ -305,14 +305,18 @@ func (s *Server) handleSettleDispute(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والأثرُ داخلَ المعاملة** (`AQ-4`/`PF-06`): مطالبةٌ خُصمت أو أُعفيت مالٌ
+	// تحرّك، **فسطرُ تدقيقٍ بعد التثبيت قد يسقط ويترك القرارَ بلا أثرٍ يُراجَع.**
+	if err := s.auditTx(r.Context(), tx, r, "ops.dispute_settled", "dispute", id, map[string]any{
+		"party": role, "settlement": req.Settlement, "amount": amount, "note": note,
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-
-	s.audit(r, "ops.dispute_settled", "dispute", id, map[string]any{
-		"party": role, "settlement": req.Settlement, "amount": amount, "note": note,
-	})
 	s.touch("dispute", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"settled": req.Settlement})

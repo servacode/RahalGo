@@ -15,6 +15,7 @@ package orders
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -348,7 +349,7 @@ type CashPaidResult struct {
 // **يخصم القائمَ من الاحتباس، ويصير الصفُّ `cash_paid`، ويُسجّل المالكَ الحاليَّ
 // لحظةَ الدفع** (قد تكون الملكيّةُ تبدّلت منذ النشأة — فلا يُدفَع/يُشعَر مالكٌ قديم).
 // **وإعادةُ التأكيد لمدفوعٍ سلفاً لا تُكرّر شيئاً** (البند ٥).
-func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, adminID, note string) (CashPaidResult, error) {
+func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, adminID, note, ip string) (CashPaidResult, error) {
 	var res CashPaidResult
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -410,6 +411,28 @@ func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, admi
 		   SET state = 'cash_paid', paid_tx_id = $2, paid_by = $3,
 		       paid_owner_user_id = $4, paid_at = now(), note = $5
 		 WHERE id = $1`, settlementID, txID, adminID, currentOwner, note); err != nil {
+		return res, err
+	}
+	// **والأثرُ في المعاملة نفسِها — لا بعد التثبيت** (`AQ-4`/`PF-06`): نقدٌ
+	// خرج من الاحتباس، **فلو كُتب التدقيقُ أفضلَ جهدٍ بعد التثبيت وسقط، بقي مالٌ
+	// دُفع بلا من ولا متى، وإعادةُ التأكيد تُردّ «مدفوعٌ سلفاً» فلا يُستدرَك.**
+	// **والدفترُ يكتبه هنا** (كنظير `auditTx` في الخادم) لأنّ المعاملةَ في هذه
+	// الطبقة.
+	details, err := json.Marshal(map[string]any{
+		"settlement_id": settlementID, "order_id": orderID,
+		"amount": outstanding, "method": "cash",
+		"from_state": "cash_due", "to_state": "cash_paid",
+		"owner_user_id": currentOwner, "note": note,
+	})
+	if err != nil {
+		return res, err
+	}
+	// **و`ip` نصٌّ غيرُ فارغٍ في القاعدة** (`NOT NULL DEFAULT ''`) — يُمرَّر
+	// حرفاً لا `NULL`، فالفارغُ يصير `''` لا خرقَ قيد.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
+		VALUES ($1, 'finance.merchant_cash_paid', 'merchant', $2, $3, $4)`,
+		adminID, merchantID, ip, details); err != nil {
 		return res, err
 	}
 	if err := tx.Commit(ctx); err != nil {

@@ -112,6 +112,13 @@ var sensitiveActions = []Sensitive{
 		"merchant", 1, []string{"method"}, ""},
 	{"POST", "/merchant-cash-settlements/{id}/pay", "finance.merchant_cash_paid",
 		"merchant_settlement", 1, nil, ""},
+	// **وتسويةُ نزاعٍ وحلُّ تذكرةٍ بتعويض — مالٌ يتحرّك بلا خطوةٍ ثانية** (جردُ
+	// ٢٠٢٦-٠٩-٢٧): خصمُ مطالبةٍ من متجر/إعفاؤها، ودفعُ تعويضِ شكوى — **وكلُّ
+	// نظرائهما من محرّكات المال مؤكَّدون.** والاسمُ نفسُه اسمُ أثرِ التدقيق.
+	{"POST", "/disputes/{id}/settle", "ops.dispute_settled",
+		"dispute", 1, []string{"settlement"}, ""},
+	{"POST", "/tickets/{id}/resolve", "finance.ticket_resolve",
+		"ticket", 1, []string{"compensation"}, ""},
 
 	// ── الإعداداتُ ذاتُ الأثر ───────────────────────────────────
 	{"PUT", "/settings/{key}", "admin.setting_update", "setting", 1,

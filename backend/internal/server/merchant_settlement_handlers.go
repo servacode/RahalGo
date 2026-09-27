@@ -58,28 +58,22 @@ func (s *Server) handleMarkCashSettlementPaid(w http.ResponseWriter, r *http.Req
 		return
 	}
 	res, err := s.orders.MarkCashSettlementPaid(r.Context(),
-		chi.URLParam(r, "id"), userIDFrom(r), req.Note)
+		chi.URLParam(r, "id"), userIDFrom(r), req.Note, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	// **وإعادةُ التأكيدِ لمدفوعٍ سلفاً لا تُدقَّق ولا تُشعِر ثانيةً** (البند ٥).
-	if !res.AlreadyPaid {
-		s.audit(r, "finance.merchant_cash_paid", "merchant", res.MerchantID, map[string]any{
-			"settlement_id": res.SettlementID, "order_id": res.OrderID,
-			"merchant_id": res.MerchantID, "amount": res.Amount, "method": "cash",
-			"from_state": "cash_due", "to_state": "cash_paid",
-			"owner_user_id": res.OwnerUserID, "note": req.Note,
+	// **والتدقيقُ صار داخلَ معاملة الدفع** (`AQ-4`/`PF-06`): يُكتب ذرّياً مع
+	// خروجِ النقد لا بأفضل جهدٍ بعده. **وإعادةُ التأكيدِ لمدفوعٍ سلفاً لا تُشعِر
+	// ثانيةً** (البند ٥) — الإشعارُ وحدَه يبقى هنا (لا يمسّ الدفتر).
+	if !res.AlreadyPaid && s.notify != nil && res.OwnerUserID != "" {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: res.OwnerUserID, Kind: notifications.KindWallet,
+			Title:  "تم تسديد مستحقاتك النقدية",
+			Body:   fmt.Sprintf("%d ل.س", res.Amount),
+			Entity: "order", EntityID: res.OrderID, Href: "/portal",
+			Apps: []string{notifications.AppMerchant},
 		})
-		if s.notify != nil && res.OwnerUserID != "" {
-			s.notify.Notify(r.Context(), notifications.Input{
-				UserID: res.OwnerUserID, Kind: notifications.KindWallet,
-				Title:  "تم تسديد مستحقاتك النقدية",
-				Body:   fmt.Sprintf("%d ل.س", res.Amount),
-				Entity: "order", EntityID: res.OrderID, Href: "/portal",
-				Apps: []string{notifications.AppMerchant},
-			})
-		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"settlement_id": res.SettlementID,
