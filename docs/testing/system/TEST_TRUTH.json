@@ -33,8 +33,8 @@
     "setting_defs": 148,
     "behaviour_settings": 120,
     "order_fields": 83,
-    "test_files": 397,
-    "test_funcs": 1673
+    "test_files": 398,
+    "test_funcs": 1674
   },
   "flows": [
     {
@@ -22121,6 +22121,12 @@
     {
       "name": "TestIdempotencySkipsWithoutKey",
       "file": "internal/server/create_routes_guarded_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCriticalSettingKey_MinVersionIsCritical",
+      "file": "internal/server/critical_settings_minversion_test.go",
       "package": "server",
       "orphan": true
     },
