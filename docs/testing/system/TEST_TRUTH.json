@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 374,
+    "routes": 375,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 148,
     "behaviour_settings": 120,
     "order_fields": 83,
-    "test_files": 394,
-    "test_funcs": 1669
+    "test_files": 397,
+    "test_funcs": 1673
   },
   "flows": [
     {
@@ -7661,6 +7661,12 @@
       "orphan": true
     },
     {
+      "name": "TestFreeDelivery_DriverStillEarns",
+      "file": "internal/orders/driver_fee_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestZoneAt_EmptyTableIsClosed",
       "file": "internal/orders/empty_zones_test.go",
       "package": "orders_test",
@@ -12491,6 +12497,12 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestPROOF_NoCameraFailsSafeWithAuditedException",
+      "file": "internal/qa/delivery_proof_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestSI11_SI12_TargetConstructorNeverEmpty",
@@ -22847,6 +22859,18 @@
     {
       "name": "TestSiteDoors_ReachThePublicPayload",
       "file": "internal/server/site_doors_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSensitiveNow_StatusStrong",
+      "file": "internal/server/stepup_conditional_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSensitiveNow_TransitionRefundNeedsStepUp",
+      "file": "internal/server/stepup_conditional_test.go",
       "package": "server",
       "orphan": true
     },
