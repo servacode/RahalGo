@@ -138,14 +138,17 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 
 	total := subtotal + deliveryFee
 	cashDue := total - walletPaid
+	// **و`driver_fee = delivery_fee`**: طلبٌ بلا عرضٍ يُصفّر التوصيل، فأجرُ
+	// السائقِ = أجرةُ التوصيل (كحال القائم قبل هجرة 0164). ومن دونه لَقُرئ
+	// صفراً فسلّم السائقُ بلا أجر — إذ يُدفَع اليوم من `driver_fee`.
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			payment_method, subtotal, delivery_fee, driver_fee, total, wallet_paid, cash_due,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, $3, $4, 'عنوان اختبار',
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', $5, $6, $7, $8, $9,
+			'cash', $5, $6, $6, $7, $8, $9,
 			`+qaSnapSQLX()+`)
 		RETURNING id`,
 		f.customer, f.merchantID, f.driver, status, subtotal, deliveryFee, total, walletPaid, cashDue).

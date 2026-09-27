@@ -560,6 +560,16 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// جزءٌ منه بعد «توصيلٌ مجّانيّ» وعدٌ يُخلَف.**
 	deliveryFee += unit.extraSourceFee(ctx, sources)
 
+	// ══════════════════════════════════════════════════════════════
+	// **أجرُ السائقِ الأساسُ — قبل أيّ عرضٍ يُصفّر ما يدفعه الزبون** (٢٠٢٦-٠٩-٢٧)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **عرضُ «توصيلٌ مجّانيّ» يُصفّر `deliveryFee`** (دفعُ الزبون) في
+	// `validatePromo` أدناه، **والسائقُ يأخذ هذا الأساسَ لا الصفرَ** — قرارُ
+	// المالك: **العرضُ مموَّلٌ من المنصّة**، والفرقُ يخرج من الخزينة بالحساب
+	// الفرقيّ تلقائيّاً. فيُلتقَط هنا قبل الخصم، ويُثبَّت مع الطلب (`driver_fee`).
+	driverFee := deliveryFee
+
 	// الإنشاء الذرّي
 
 	// **كودُ الخصم يُفحص داخل المعاملة لا قبلها.**
@@ -636,16 +646,16 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			payment_method, subtotal, delivery_fee, discount, total, wallet_paid, cash_due,
 			promo_code, notes, created_by,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
-			snap_commission_source, snap_activation_orders)
+			snap_commission_source, snap_activation_orders, driver_fee)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20)
+			$17, $18, $19, $20, $21)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders).Scan(&orderID)
+		snap.CommissionSource, snap.ActivationOrders, driverFee).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}

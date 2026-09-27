@@ -488,20 +488,22 @@ var All = []Check{
 	},
 	{
 		ID: "FI-06.c", Family: FI06, Status: ProvableNow, Ops: true,
-		Name:  "أجرُ السائقِ المقيَّد = أجرةُ الطلب",
-		Why:   "أجرٌ يخالف الأجرةَ المحفوظةَ في الطلب — **والسائقُ قبض غيرَ ما اتُّفق.**",
+		Name:  "أجرُ السائقِ المقيَّد = أجرُ السائقِ المعتمَد",
+		Why:   "أجرٌ يخالف الأجرَ المحفوظَ في الطلب — **والسائقُ قبض غيرَ ما اتُّفق.**",
 		Flows: []string{"F-14"},
 		Kinds: []string{"driver_earning"},
-		// payDriver:1229 يقيّد أجرةَ الطلب — **وهي المحفوظةُ في العمود
-		// لحظةَ الإنشاء، لا إعدادٌ يُقرأ حيّاً.** (وهذا ملقوطٌ فعلاً — FI-07.)
+		// payDriver يقيّد `driver_fee` — **أجرَ السائقِ المعتمَدَ المحفوظَ في
+		// العمود لحظةَ الإنشاء، لا `delivery_fee`** (ما يدفعه الزبون؛ قد يصفّره
+		// عرضُ «توصيلٍ مجّانيّ»). **فالطلبُ المجّانيُّ سائقُه يقبض أجرَه كاملاً
+		// والخزينةُ تموّله** (٢٠٢٦-٠٩-٢٧) — والمقارنةُ إذن مع `driver_fee`.
 		SQL: `
-			SELECT o.number, o.delivery_fee, sum(t.amount)::bigint AS المقيَّد
+			SELECT o.number, o.driver_fee, sum(t.amount)::bigint AS المقيَّد
 			FROM orders o
 			JOIN wallet_transactions t
 			  ON t.ref = o.id::text AND t.kind = 'driver_earning'
 			WHERE o.kind <> 'custom'
-			GROUP BY o.number, o.delivery_fee
-			HAVING sum(t.amount) <> o.delivery_fee`,
+			GROUP BY o.number, o.driver_fee
+			HAVING sum(t.amount) <> o.driver_fee`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════

@@ -63,8 +63,12 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	var driverID *string
 	var walletPaid, cashDue, deliveryFee, customReserved int64
 	var customerID, promoCode, kind string
+	// **و`deliveryFee` هنا أجرُ السائقِ المعتمَد (`driver_fee`) لا ما يدفعه
+	// الزبون** (٢٠٢٦-٠٩-٢٧): يُقرأ لتسويةِ أجرِ السائق وتعويضِه وحدَهما، **فعرضُ
+	// «توصيلٌ مجّانيّ» يُصفّر `delivery_fee` (دفعُ الزبون) ولا يُصفّر أجرَ من
+	// قاد** — والفرقَ تموّله الخزينة. (للطلبات القديمة `driver_fee=delivery_fee`.)
 	err = tx.QueryRow(ctx, `
-		SELECT status, driver_id, wallet_paid, cash_due, delivery_fee, customer_id,
+		SELECT status, driver_id, wallet_paid, cash_due, driver_fee, customer_id,
 		       COALESCE(promo_code,''), kind, custom_reserved_amount
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode,

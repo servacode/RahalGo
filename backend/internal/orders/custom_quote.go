@@ -186,8 +186,11 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	//
 	// **والنوعُ يُقال صراحةً في الجمع** (`$2::bigint + $3`) — وإلّا سألت
 	// بوستغرس «أيُّ + هذا؟» بين وسيطين مجهولين فسقط النداءُ بخمسمئة.
+	// **و`driver_fee = custom_fee` أيضاً**: الطلبُ الخاصُّ لا عرضَ فيه يُصفّر
+	// دفعَ الزبون، **فأجرُ السائقِ هو الأجرةُ المتّفقُ عليها نفسُها** — والسائقُ
+	// يُدفَع من `driver_fee` (٢٠٢٦-٠٩-٢٧). فلولا هذا لقاد بأجرٍ صفرٍ (افتراضِ العمود).
 	set := `custom_goods_amount = $2, custom_fee = $3,
-	        subtotal = $2, delivery_fee = $3, total = $2::bigint + $3::bigint,
+	        subtotal = $2, delivery_fee = $3, driver_fee = $3, total = $2::bigint + $3::bigint,
 	        quote_version = $4, custom_agreed_at = now(), updated_at = now()`
 	args := []any{row.id, newGoods, newFee, newVersion}
 	switch {
