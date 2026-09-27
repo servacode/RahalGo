@@ -34,6 +34,7 @@ import SitePagesPanel from "@/components/admin/settings/site-pages";
 import BannersPanel from "@/components/admin/settings/banners";
 import WhatsAppPanel from "@/components/admin/settings/whatsapp";
 import AppStatusPanel from "@/components/admin/settings/app-status";
+import ReleasePanel from "@/components/admin/settings/release";
 import BroadcastPanel from "@/components/admin/BroadcastPanel";
 import CampaignsPanel from "@/components/admin/CampaignsPanel";
 
@@ -373,6 +374,8 @@ export default function SettingsPage() {
     // **وحالُ التطبيق أوّلُ ما يُسأل عنه قبل الافتتاح** — **ومن أراد
     // أن يعرف «هل فُتحنا؟» لا ينبغي أن يفتّش في سبعِ رايات.**
     { key: "appStatus", label: m.admin.appStatus.title },
+    // **وحدُّ نسخةِ التطبيق — تحديثٌ إلزاميٌّ بخطوةِ تحقّق** (F، ٢٠٢٦-٠٩-٢٧).
+    { key: "release", label: m.admin.release.title },
     // **والمدنُ قبل المناطق** — **المنطقةُ بنتُ المدينة**، ومن قرأ
     // «مناطق» قبل أن يعرف أنّ للمنصّة مدناً ظنّ التغطيةَ طبقةً واحدة.
     { key: "divisions", label: m.admin.divisions.title },
@@ -613,6 +616,7 @@ export default function SettingsPage() {
       {active === "zones" && <ZonesPanel />}
       {active === "hours" && <HoursPanel />}
       {active === "appStatus" && <AppStatusPanel />}
+      {active === "release" && <ReleasePanel />}
       {active === "whatsapp" && <WhatsAppPanel />}
       {/* **والإعلانُ فعلٌ لا إعداد** — فيُقال ما هو قبل نموذجه: رسالةٌ تُرسل
           ولا تُسحب. واللوحُ نفسُه يسأل قبل الإرسال ويقول كم حساباً ستصل. */}
