@@ -262,6 +262,16 @@ class MainActivity : ComponentActivity() {
         // الحارسُ باسمه** لا برسالةٍ مبهمة.
         Backend.of(this)
         // ══════════════════════════════════════════════════════════════
+        // **ووجهةُ الإشعار تُقرأ قبل أوّل شاشة** (`DLINK`، ٢٠٢٦-٠٩-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكان المقصدُ يحمل وجهةَ الطلب/الحديث ولا أحدَ يقرؤها** — فينقر
+        // السائقُ إشعاراً فيُفتَح البيتُ لا وجهتُه. **فتُقرأ هنا مرّةً**
+        // (`Opened`) **ويستهلكها الغلافُ** — تبويبُ الطلبات أو شاشةُ
+        // الدردشات. **وتُستهلَك مرّةً**: من أدار جهازَه لا يُساق إليها ثانية.
+        // (مرآةُ الزبون والمتجر.)
+        com.rahalgo.ui.Opened.from(intent)
+        // ══════════════════════════════════════════════════════════════
         // **وشريطُ النظام يبقى** — الساعةُ والشبكةُ والبطّاريّة
         // ══════════════════════════════════════════════════════════════
         //
@@ -276,6 +286,16 @@ class MainActivity : ComponentActivity() {
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         setContent { DriverApp() }
+    }
+
+    /**
+     * **وإشعارٌ يُنقر والتطبيقُ مفتوح** — `onNewIntent` لا `onCreate`:
+     * **بلا هذا يبقى مقصدُ الأمس فيُقرأ وجهةُ أمس** (مرآةُ الزبون والمتجر).
+     */
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        com.rahalgo.ui.Opened.from(intent)
     }
 
 }
@@ -523,6 +543,35 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         if (orders.startTrip) {
             tab = 0
             orders.tripOpened()
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ونقرةُ الإشعار تفتح وجهتَها** (`DLINK`، ٢٠٢٦-٠٩-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **يقرأ الوجهةَ التي وضعها المقصدُ** (`Opened`) **ويستهلكها مرّةً**
+    // (`take`) فلا يُعاد فتحُها عند دوران الجهاز. **ووجهةُ الطلب تفتح تبويبَ
+    // الطلبات، ووجهةُ الحديث تفتح شاشةَ الدردشات** — كلاهما الشاشةُ الصحيحةُ
+    // لنوع الوجهة، مرآةً للزبون والمتجر.
+    //
+    // **ولا يُفتَح طلبٌ بعينه ولا حديثٌ بعينه**: الشريطُ لا يقبل تركيزاً على
+    // بطاقةِ طلبٍ مفردة، وشاشةُ الدردشات لا تقبل معرّفاً مبدئيّاً —
+    // **وذاك تغييرُ ملاحةٍ أوسعُ لم يُطلب.** **والوجهةُ المجهولةُ (عرضٌ مثلاً)
+    // تُترَك بلا أثرٍ ضارّ.**
+    val waiting = com.rahalgo.ui.Opened.pending
+    LaunchedEffect(waiting) {
+        when (waiting.type) {
+            com.rahalgo.ui.Engagement.DEST_ORDER -> {
+                com.rahalgo.ui.Opened.take()
+                overlay.clear()
+                tab = 1
+            }
+            com.rahalgo.ui.Engagement.DEST_ORDER_CHAT -> {
+                com.rahalgo.ui.Opened.take()
+                overlay.show(Overlay.Menu(MenuItem.Chats.name))
+            }
+            else -> Unit
         }
     }
 

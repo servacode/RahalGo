@@ -126,9 +126,28 @@ class MainActivity : ComponentActivity() {
         // **والنواةُ تُركَّب قبل أوّل شاشة** — `AuthViewModel` يصنعه
         // أندرويدُ لا نحن، **فيقرؤها من المُسجَّل.**
         Backend.of(this)
+        // ══════════════════════════════════════════════════════════════
+        // **ووجهةُ الإشعار تُقرأ قبل أوّل شاشة** (`DLINK`، ٢٠٢٦-٠٩-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **يُقرأ المقصدُ مرّةً ويُنقّى** (`Opened`) — كالتطبيقات الأربعة.
+        // **وإشعارُ المندوب `lead` نوعٌ لا تعرفه `route` فيسقط إلى البيت**،
+        // فلا يصل هنا شيءٌ عمليّاً؛ **لكنّ التركيبَ واحدٌ فلا يفترق تطبيقٌ عن
+        // إخوته**، **والمقصدُ يُنقّى على كلّ حال** فلا تبقى وجهةٌ شاردةٌ معلّقة.
+        com.rahalgo.ui.Opened.from(intent)
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         setContent { RepApp() }
+    }
+
+    /**
+     * **وإشعارٌ يُنقر والتطبيقُ مفتوح** — `onNewIntent` لا `onCreate`:
+     * **بلا هذا يبقى مقصدُ الأمس** (مرآةُ الزبون والمتجر).
+     */
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        com.rahalgo.ui.Opened.from(intent)
     }
 }
 
@@ -226,6 +245,25 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         if (tab != Tab.AddClient) return@LaunchedEffect
         if (Here.granted(context)) Here.refresh(context, limit = Accuracy.CONFIRM_M)
         else askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ونقرةُ الإشعار — لا وجهةَ يفتحها المندوب** (`DLINK`، ٢٠٢٦-٠٩-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والوجهاتُ التي يعرفها `Engagement` ثلاثٌ**: طلبٌ وحديثُ طلبٍ وعرض —
+    // **ولا شاشةَ لأيٍّ منها في المندوب**: لا طلباتٌ ولا دردشاتٌ ولا عروضٌ
+    // عامّة (تبويباتُه: لوحتي · إضافةُ عميل · عملائي · حسابي). **وإشعارُه
+    // `lead`** (`PushService.KIND_LEAD`) **نوعٌ لا تعرفه `route` فيسقط إلى
+    // البيت** — فلا يصل `Opened` وجهةٌ عمليّاً.
+    //
+    // **فالمطلوبُ هنا التركيبُ المشترك وحدَه**: `onCreate`/`onNewIntent` يقرآن
+    // ويُنقّيان المقصد. **وهذا يستهلك أيَّ وجهةٍ شاردةٍ بأمان** (خبرٌ سبق المنعَ
+    // أو مقصدٌ لتطبيقٍ آخر) فلا تبقى معلّقة. **وفتحُ وجهةٍ لعميلٍ/متجرٍ بعينه
+    // تغييرُ ملاحةٍ أوسعُ لم يُطلب.**
+    val waiting = com.rahalgo.ui.Opened.pending
+    LaunchedEffect(waiting) {
+        if (!waiting.isHome) com.rahalgo.ui.Opened.take()
     }
 
     // **والرجوعُ من القائمة يغلقها — لا يُخرج من التطبيق.**
