@@ -666,6 +666,48 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     }
     val pip = pipHost?.floating?.inPip == true
 
+    // ══════════════════════════════════════════════════════════════════
+    // **إعدادُ أوّلِ دخول — طبقةٌ رقيقةٌ فوق الجاهزيّة** (C، ٢٠٢٦-٠٩-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **يُعرض ما دام لم يكتمل مرّةً** (علمٌ مخزَّنٌ لكلّ جهاز) — فإذا اكتمل
+    // لم يظهر ثانيةً، **وإن فسد الإذنُ لاحقاً تولّته `LocationCard`
+    // التفاعليّة** لا هذا المعالج. **ولا يُمسح العلمُ بالخروج** — فالإعدادُ
+    // فعلٌ على الجهاز لا على الحساب. **ولا منطقَ أذونٍ هنا**: المُطلِقاتُ
+    // نفسُها (`ask`/`disclose`/`askNotify`) و`Readiness` مصدرُ الحقيقة.
+    val setupPrefs = remember {
+        context.getSharedPreferences("driver_setup", android.content.Context.MODE_PRIVATE)
+    }
+    var setupDone by rememberSaveable {
+        mutableStateOf(setupPrefs.getBoolean("complete", false))
+    }
+    if (!setupDone) {
+        com.rahalgo.driver.setup.SetupWizard(
+            readiness = home.state.readiness,
+            onGrantLocation = { ask.launch(LocationPermission.FIRST_STEP) },
+            onEnableGps = { com.rahalgo.driver.location.Readiness.openLocationSettings(context) },
+            onGrantBackground = { disclose = true },
+            onGrantNotifications = {
+                if (LocationPermission.NOTIFICATIONS.isEmpty()) {
+                    LocationPermission.openSettings(context)
+                } else {
+                    askNotify.launch(LocationPermission.NOTIFICATIONS)
+                }
+            },
+            onOpenAppSettings = { LocationPermission.openSettings(context) },
+            onStartMapPrep = {
+                com.rahalgo.driver.trip.MapPackageWorker.enqueue(
+                    context,
+                    trigger = com.rahalgo.driver.trip.MapPackageWorker.Companion.Trigger.AUTOMATIC,
+                )
+            },
+            onDone = {
+                setupPrefs.edit().putBoolean("complete", true).apply()
+                setupDone = true
+            },
+        )
+    } else {
+
     Scaffold(
         // ══════════════════════════════════════════════════════════════
         // **ولا شريطَ علويًّا في الرحلة**
@@ -1095,6 +1137,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 )
             }
         }
+    }
     }
     }
 }

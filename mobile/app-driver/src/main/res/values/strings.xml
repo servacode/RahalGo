@@ -115,6 +115,20 @@
     <string name="loc_permission_title">فعل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
     <string name="loc_permission_button">فعل الآن</string>
+    <!-- اعداد اول دخول - طبقة رقيقة فوق الجاهزية (C، ٢٠٢٦-٠٩-٢٧) -->
+    <string name="setup_title">تجهيز حسابك</string>
+    <string name="setup_why">نحتاج موقعك لنرسل إليك أقرب طلب ونحسب المسافة والأجرة — يُستعمل أثناء العمل فقط. وتُحضَّر خريطة مدينتك تلقائياً لتعمل ولو انقطع الإنترنت.</string>
+    <string name="setup_step_location">إذن الموقع</string>
+    <string name="setup_step_gps">خدمة الموقع في النظام</string>
+    <string name="setup_step_background">الموقع طوال الوقت</string>
+    <string name="setup_step_notifications">إذن الإشعارات</string>
+    <string name="setup_grant_location">اسمح بالوصول إلى الموقع</string>
+    <string name="setup_enable_gps">شغّل خدمة الموقع</string>
+    <string name="setup_grant_background">اسمح بالموقع طوال الوقت</string>
+    <string name="setup_grant_notifications">اسمح بالإشعارات</string>
+    <string name="setup_open_settings">افتح إعدادات التطبيق</string>
+    <string name="setup_recovery_hint">إن رُفض الإذن نهائياً، فعّله من إعدادات التطبيق.</string>
+    <string name="setup_continue">متابعة إلى الرئيسية</string>
     <!-- والاشعار شرط الاعلان عن التوفر - لا زينة (قيس ٢٠٢٦-٠٩-١٥) -->
     <string name="notify_needed_title">اسمح بالإشعارات</string>
     <string name="notify_needed_text">الطلب الجديد يوصلك بإشعار — وبدونه لا شيء ينبهك والجوال في جيبك</string>
