@@ -43,6 +43,12 @@ func criticalSettingKey(key string) bool {
 	if strings.HasPrefix(key, "security.") {
 		return true
 	}
+	// **وحدُّ نسخةِ التطبيق فعلٌ تشغيليٌّ خطير** (٢٠٢٦-٠٩-٢٧): رفعُ
+	// `app.min_version.driver` يقفل تطبيقَ كلِّ سائقٍ دون النسخة على شاشةِ
+	// تحديثٍ إلزاميّ — فيلزمه خطوةُ تحقّقٍ وتدقيقٌ في المعاملة كالمال.
+	if strings.HasPrefix(key, "app.min_version.") {
+		return true
+	}
 	for _, k := range fininv.FinancialSettings {
 		if k == key {
 			return true
