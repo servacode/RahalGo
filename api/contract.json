@@ -1492,6 +1492,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/obligations",
+      "handler": "handleListObligations",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/offers",
       "handler": "handleAdminOffers",
       "auth": true,

@@ -826,6 +826,7 @@
       "expenses": "مصروفات التشغيل",
       "profits": "الأرباح",
       "cash": "أموال لم تستلم",
+      "obligations": "الالتزامات المالية",
       "losses": "الخسائر",
       "emergencies": "الطوارئ",
       "sections": "السوق",
@@ -2599,6 +2600,39 @@
       "pickParty": "اختر من هو الطرف",
       "settledBadge": "محسوم",
       "waivedBadge": "مسقط"
+    },
+    "obligations": {
+      "title": "الالتزامات المالية",
+      "hint": "الدين علينا وعلى الأطراف — على من وكم ومن أين وكم بقي. قراءة فقط.",
+      "outstandingTotal": "مجموع المتبقي المفتوح",
+      "party": "الطرف",
+      "amount": "المبلغ",
+      "outstanding": "المتبقي",
+      "cause": "السبب",
+      "reference": "الطلب / المرجع",
+      "createdAt": "تاريخ الإنشاء",
+      "state": "الحالة",
+      "empty": "لا التزامات",
+      "history": "سطور التسوية",
+      "noHistory": "لا تسويات بعد",
+      "settledAmount": "المسدد",
+      "remaining": "الباقي بعده",
+      "kinds": {
+        "all": "الكل",
+        "merchant": "متجر",
+        "rep": "مندوب"
+      },
+      "states": {
+        "all": "الكل",
+        "open": "مفتوح",
+        "closed": "مغلق"
+      },
+      "causes": {
+        "refund_merchant_earning": "استرداد طلب — مستحق المتجر",
+        "refund_rep_commission": "استرداد طلب — عمولة المندوب",
+        "returned_goods": "بضاعة مردودة",
+        "legacy_opening": "رصيد مفتوح سابق"
+      }
     },
     "broadcast": {
       "title": "إعلان المنصة",

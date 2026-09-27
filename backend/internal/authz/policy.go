@@ -146,6 +146,8 @@ var adminPolicy = []Rule{
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},
 	{"GET", "/payouts", FinanceRead},
+	// **والالتزاماتُ الماليّة قراءةٌ ماليّة** — تُقرأ ولا تُكتب، فلا تأكيد.
+	{"GET", "/obligations", FinanceRead},
 	{"GET", "/profits", FinanceRead},
 	{"GET", "/expenses", FinanceRead},
 	{"GET", "/expenses/categories", FinanceRead},
