@@ -1386,6 +1386,8 @@ function OrderActions({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
+  // **إذنُ استثناء إثبات التسليم — بيدِ العمليّات لا السائق** (٢٠٢٦-٠٩-٢٧).
+  const [proofExcepting, setProofExcepting] = useState(false);
   /**
    * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
    *
@@ -1643,6 +1645,36 @@ function OrderActions({
   }
 
   // ══════════════════════════════════════════════════════════════════
+  // **إذنُ استثناءِ إثبات التسليم — كاميرا معطّلةٌ فيأذن العملياتُ بلا صورة**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والسائقُ لا يأذن لنفسه** (قرارُ المالك G، ٢٠٢٦-٠٩-٢٧): سببٌ إلزاميّ،
+  // وخطوةُ تحقّقٍ مركزيّةٌ يلتقطها `StepUpGate`، وتدقيقٌ دائمٌ في الخادم،
+  // **وإعادةُ النداء آمنة** — الخادمُ هو الحَكَم (`proof-exception`).
+  async function authorizeProofException() {
+    if (reason.trim() === "") return;
+    setBusy("proof");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/proof-exception`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      setProofExcepting(false);
+      setReason("");
+      onChanged();
+    } catch (e) {
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
   // **تعديلُ عرض الطلب الخاصّ — تصحيحُ ما وثّقه السائق**
   // ══════════════════════════════════════════════════════════════════
   //
@@ -1787,6 +1819,33 @@ function OrderActions({
               setCompensating(false);
               setErr("");
             }} saveLabel={m.common.confirm} />
+      </div>
+    );
+  }
+
+  if (proofExcepting) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">
+          {m.admin.ordersPage.proofExceptionTitle}
+        </p>
+        <p className="text-xs text-ink-muted">
+          {m.admin.ordersPage.proofExceptionHint}
+        </p>
+        <Input
+          placeholder={m.admin.ordersPage.proofExceptionReason}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          onSave={() => void authorizeProofException()}
+          onCancel={() => {
+            setProofExcepting(false);
+            setErr("");
+          }}
+          saveLabel={m.common.confirm}
+        />
       </div>
     );
   }
@@ -2184,6 +2243,26 @@ function OrderActions({
             </Button>
           )}
         </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+        * **إذنُ استثناءِ إثبات التسليم — للعمليّات وحدَها** (٢٠٢٦-٠٩-٢٧)
+        * ══════════════════════════════════════════════════════════════
+        *
+        * **يظهر عند «وصل إلى العنوان» بلا صورةٍ بعد** — كاميرا السائق
+        * معطّلةٌ فيأذن العملياتُ (قدرةُ `orders.intervene`) بالتسليم بلا
+        * صورة بسببٍ إلزاميٍّ ومُدقَّق. **والسائقُ لا يأذن لنفسه.** */}
+      {o.status === "at_dropoff" && !o.proof_url && canIntervene && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => {
+            setReason("");
+            setProofExcepting(true);
+          }}
+        >
+          {m.admin.ordersPage.proofExceptionButton}
+        </Button>
       )}
 
       {/* **التحويلُ إلى المتجر — في الوضعين لا في وضعٍ واحد.**

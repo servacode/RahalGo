@@ -898,6 +898,10 @@
       "compensateTitle": "تعويض السائق عن مشوار لم يثمر",
       "compensateAmount": "المبلغ",
       "compensateReason": "السبب — يسجل",
+      "proofExceptionButton": "إذن تسليم بلا صورة",
+      "proofExceptionTitle": "إذن استثناء إثبات التسليم",
+      "proofExceptionHint": "للكاميرا المعطّلة فقط — يُسجَّل من أذن ولأيّ طلب ولماذا، ويلزمه تأكيد.",
+      "proofExceptionReason": "السبب — إلزاميّ ويُسجَّل",
       "noWhatsApp": "لا رقم واتساب صالح لهذا المتجر",
       "popupBlocked": "حول الطلب — لكن المتصفح منع فتح واتساب. افتحه يدويا.",
       "endedBy": {
