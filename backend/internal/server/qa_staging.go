@@ -282,6 +282,7 @@ var qaSeedAllowlist = map[string]bool{
 	// ── نظيرُ السائق (المسار B تكملة) — طلبٌ مخصّصٌ نقديٌّ لزبون QA فقط، محايدٌ ماليّاً ──
 	"order_advance":   true, // سوقُ طلبِ زبون QA المخصّصِ النقديّ عبر الحالات (يُسنِد سائقاً فعليّاً)
 	"order_chat_send": true, // رسالةُ سائقٍ على طلبِ زبون QA (SUP-002) — عبر comms.Send
+	"driver_shift":    true, // شاهدُ التوزيع (E): سائقُ QA في ورديّةٍ منتِجة + بثٌّ ليصله العرضُ الحقيقيّ — عكوسٌ، بلا أثرٍ ماليّ
 	// ── دوامُ المنطقة (zone_closed_now) + الحدُّ الأدنى للنسخة (426) — عكوسان ──
 	"zone_close":           true, // إغلاقُ منطقةٍ الآن حتميّاً (hours_enforced + جدولٌ فارغ)، يحفظ السابق
 	"zone_reopen":          true, // إعادةُ جدول المنطقة المحفوظ
@@ -368,6 +369,8 @@ var qaStateSeed = map[string]bool{
 	"boundary_arm": true, "boundary_restore": true,
 	// شاهدُ الإحالة من واجهة الزبون (Batch 5) — يحلّ QA1 والمدعوّين بنفسِه:
 	"referral_ui_arm": true, "referral_ui_cleanup": true,
+	// شاهدُ التوزيع (E) — يدير هويّةَ سائق QA الثابتةَ بنفسِه، لا يلزمه زبونُ QA:
+	"driver_shift": true,
 }
 
 // handleQAStagingSeed يبذر عتادَ اختبارٍ لزبون QA — على التجهيز وحدَه.
@@ -500,6 +503,9 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaMerchantDeviceClear(w, r)
 		case "orders_mode_set":
 			s.qaOrdersMode(w, r, req.ValueStr)
+		case "driver_shift":
+			// شاهدُ التوزيع (E): ValueBool = ورديّةٌ منتِجةٌ؟ · ValueStr = الوضعُ يُستعاد عند الإطفاء.
+			s.qaDriverShift(w, r, req.ValueBool, req.ValueStr)
 		case "option_available":
 			s.qaOptionAvailable(w, r, req.OptionID, req.ItemID, req.ValueBool)
 		case "item_image":

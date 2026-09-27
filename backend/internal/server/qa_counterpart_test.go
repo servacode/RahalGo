@@ -8,15 +8,16 @@ import (
 // TestQACounterpartKindsRegistered — الأنواعُ الجديدةُ مسجَّلةٌ في السماح،
 // وتصنيفُها (بحاجةٍ لهويّة زبون QA أو لا) صحيحٌ فتُوجَّه في المكان الصائب.
 func TestQACounterpartKindsRegistered(t *testing.T) {
-	for _, k := range []string{"order_advance", "order_chat_send", "zone_close", "zone_reopen", "min_version"} {
+	for _, k := range []string{"order_advance", "order_chat_send", "zone_close", "zone_reopen", "min_version", "driver_shift"} {
 		if !qaSeedAllowlist[k] {
 			t.Fatalf("%s must be in qaSeedAllowlist", k)
 		}
 	}
 	// دوامُ المنطقة والحدُّ الأدنى للنسخة لا تلزمها هويّةُ زبون QA ⇒ state seeds.
-	for _, k := range []string{"zone_close", "zone_reopen", "min_version"} {
+	// وشاهدُ التوزيع (driver_shift) يدير هويّةَ سائق QA بنفسِه ⇒ state seed أيضاً.
+	for _, k := range []string{"zone_close", "zone_reopen", "min_version", "driver_shift"} {
 		if !qaStateSeed[k] {
-			t.Fatalf("%s must be a state seed (no QA uid needed)", k)
+			t.Fatalf("%s must be a state seed (no QA customer uid needed)", k)
 		}
 	}
 	// سوقُ الطلب ورسالةُ المحادثة على طلبِ زبون QA ⇒ تلزمهما هويّتُه ⇒ ليست state.
