@@ -139,6 +139,14 @@ func (s *Server) sensitiveNow(path string, act authz.Sensitive, body []byte) boo
 		// **والإيقافُ العاديُّ يمضي** — **وهو عقدُ دورةِ ١٧**:
 		// معلَّقٌ يُتمّ طلبَه، ومحظورٌ ينقطع.
 		return in.Status == "blocked" || in.Status == "deleted"
+	case authz.CondTransitionRefund:
+		var in struct {
+			To string `json:"to"`
+		}
+		_ = json.Unmarshal(body, &in)
+		// **وردُّ طلبٍ مُسلَّمٍ يعكس مالاً** فيلزمه تأكيد؛ وبقيّةُ الانتقالات
+		// تشغيليّةٌ (استلامٌ/طريقٌ/تسليم/تعذّر) تمضي بلا تأكيد.
+		return in.To == "refunded"
 	}
 	return true
 }

@@ -65,6 +65,11 @@ const (
 	// CondStatusIsStrong **الحظرُ والحذفُ يلزمهما تأكيد**،
 	// **والإيقافُ العاديُّ لا** — وهو فرقُ دورةِ ١٧ بعينه.
 	CondStatusIsStrong = "statusIsStrong"
+	// CondTransitionRefund **نقلٌ إداريٌّ يعكس مالاً يلزمه تأكيد** — قرارُ
+	// المالك ٢٠٢٦-٠٩-٢٧: `delivered→refunded` يعكس العمولاتِ والتسوياتِ
+	// النقديّةَ ويردّ للزبون كاملاً، **فهو فعلٌ ماليٌّ حسّاس.** وبقيّةُ
+	// الانتقالات (استلامٌ/طريقٌ/تسليم) تشغيليّةٌ لا تُؤكَّد.
+	CondTransitionRefund = "transitionRefund"
 )
 
 // sensitiveActions **الجدولُ الكانونيّ** — كلُّ سطرٍ مسارٌ قائم.
@@ -107,6 +112,11 @@ var sensitiveActions = []Sensitive{
 	{"POST", "/expenses/{id}/void", "finance.expense_voided", "expense", 1, nil, ""},
 	{"POST", "/orders/{id}/compensate-driver", "finance.compensate_driver",
 		"order", 1, []string{"amount"}, ""},
+	// **والنقلُ الإداريُّ إلى `refunded` يعكس مالاً** (قرارُ المالك ٢٠٢٦-٠٩-٢٧):
+	// شرطيٌّ — يُؤكَّد حين `to=refunded` وحدَها، لا في كلّ انتقال. والاسمُ اسمُ
+	// أثرِ التدقيق (`ops.order_transition`).
+	{"POST", "/orders/{id}/transition", "ops.order_transition",
+		"order", 1, []string{"to"}, CondTransitionRefund},
 	// **وتسويةُ مستحقّات المتجر — تغييرُ الطريقة وتأكيدُ الدفع نقداً.**
 	{"PATCH", "/merchants/{id}/settlement-method", "admin.merchant_settlement_update",
 		"merchant", 1, []string{"method"}, ""},
