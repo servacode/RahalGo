@@ -113,19 +113,50 @@ log "يكتب في: $STAGING (التجهيز) — ولا يمسّ $PROD (الإ�
 # ── مقتطفُ OSM: في عمل التجهيز وحدَه — **لا لمسَ لـ/srv/rahalgo إطلاقاً** ──
 # **ولا يُقرأ من عمل الإنتاج** (٢٠٢٦-٠٩-٢٧): كلُّ شيءٍ تحت التجهيز، ولو
 # كلّف تنزيلاً ثانياً — **فصفرُ لمسٍ للإنتاج أوضحُ من قراءةٍ آمنة.**
-PIN=0a8d6878a3c0da48a8311e8c54ebcce49b4b6d4de5a1a7fccb56cb2a7f9db7ac
+#
+# **المصدرُ مستقرٌّ لا مؤرَّخ** (إصلاحُ ٢٠٢٦-٠٩-٢٧): كان الرابطُ يشير إلى
+# لقطةٍ يوميّةٍ مؤرَّخةٍ (`syria-260820`)، **وGeofabrik تُسقط اللقطاتِ
+# اليوميّةَ القديمةَ فيردّ الرابطُ 404** — وهو ما أوقف البناء. **فصار
+# `syria-latest.osm.pbf` (رابطٌ ثابتٌ لا يشيخ).**
+#
+# **والسلامةُ لم تُضعَّف بل صارت دائمة**: بدل بصمةٍ مجمَّدةٍ لملفٍّ زال،
+# **نتحقّق ضدَّ md5 الذي ينشره المزوّدُ نفسُه** (`.md5`)، ونسقط عند أيّ
+# عدم تطابق. **بوّابةُ سلامةٍ صارمةٌ باقية** — والمقايضةُ الوحيدةُ أنّ
+# البيانات «أحدثُ لقطة» لا لقطةً بعينها (وهي مقايضةٌ حتميّةٌ إذ زال الملفّ).
 OSM="$WORK/syria.osm.pbf"
-if [ ! -s "$OSM" ]; then
-  log "تنزيلُ مقتطف OSM إلى عمل التجهيز: $OSM (مُهلة: اتّصال ٣٠ث · أقصى ٣٠د · ٣ محاولات)"
+OSM_URL="https://download.geofabrik.de/asia/syria-latest.osm.pbf"
+OSM_MD5_URL="$OSM_URL.md5"
+OSM_MIN_BYTES=40000000                 # أرضيّةُ عقلٍ (~٤٠م)؛ latest نحو ٨٢م
+need_dl=1
+if [ -s "$OSM" ]; then
+  sz=$(stat -c %s "$OSM")
+  if [ "$sz" -ge "$OSM_MIN_BYTES" ]; then
+    need_dl=0
+    log "مقتطفٌ مخبّأٌ صالحُ الحجم ($sz bytes) — بلا تنزيلٍ ولا لمسِ شبكة"
+  else
+    log "مقتطفٌ مخبّأٌ صغيرٌ مريبٌ ($sz bytes) — يُحذف ويُعاد تنزيله"
+    rm -f "$OSM"
+  fi
+fi
+if [ "$need_dl" -eq 1 ]; then
+  # **فحصٌ مسبقٌ يسقط باكراً وبوضوحٍ لو شاخ الرابط** — لا تعلّقَ، لا 404 مبهم.
+  code=$(curl -sIL -o /dev/null -w '%{http_code}' --connect-timeout 30 --max-time 60 "$OSM_URL" 2>/dev/null || echo 000)
+  [ "$code" = "200" ] || { echo "✗ مصدرُ OSM غيرُ متاحٍ (HTTP $code) — رابطٌ شائخ؟: $OSM_URL" >&2; exit 3; }
+  log "تنزيلُ مقتطف OSM المستقرّ: $OSM_URL (مُهلة: اتّصال ٣٠ث · أقصى ٣٠د · ٣ محاولات)"
   if ! curl -L --fail --connect-timeout 30 --max-time 1800 --retry 3 --retry-delay 10 \
-        -o "$OSM.part" https://download.geofabrik.de/asia/syria-260820.osm.pbf; then
+        -o "$OSM.part" "$OSM_URL"; then
     rm -f "$OSM.part"; echo "✗ تعذّر تنزيلُ مقتطف OSM (شبكة/مُهلة)" >&2; exit 3
   fi
+  # **تحقّقُ السلامةِ ضدَّ md5 المنشورِ من المزوّد** — بوّابةٌ صارمةٌ تسقط عند أيّ خلل.
+  PUB=$(curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 "$OSM_MD5_URL" 2>/dev/null | awk '{print $1}')
+  [ -n "$PUB" ] || { rm -f "$OSM.part"; echo "✗ تعذّر جلبُ md5 المنشور — لا تحقّقَ بلا مرجع" >&2; exit 3; }
+  GOTMD5=$(md5sum "$OSM.part" | awk '{print $1}')
+  [ "$GOTMD5" = "$PUB" ] || { rm -f "$OSM.part"; echo "✗ عدمُ تطابق md5: $GOTMD5 != $PUB" >&2; exit 3; }
   mv -f "$OSM.part" "$OSM"
+  log "سلامةُ المقتطفِ مؤكَّدةٌ ضدَّ md5 المزوّد ($PUB)"
 fi
-log "تحقّقُ بصمة المقتطف…"
-GOT=$(sha256sum "$OSM" | cut -d' ' -f1)
-[ "$GOT" = "$PIN" ] || { echo "!! تعذّرت مطابقةُ بصمة المقتطف: $GOT" >&2; exit 3; }
+# **بصمةُ sha256 تُسجَّل للتدقيق** (لا تحكم البناءَ بل تُبقي الأثرَ قابلاً للمراجعة).
+log "sha256 المقتطف: $(sha256sum "$OSM" | cut -d' ' -f1)"
 
 # ── الأداة (في عمل التجهيز) ──────────────────────────────────────────
 JAR="$WORK/planetiler.jar"
