@@ -160,7 +160,15 @@ android {
             )
             buildConfigField(
                 "String", "MAPS_BASE_URL",
-                quoted(overrideOrNull(project, "rahalgo.mapsBaseUrl") ?: "https://maps.rahalgo.com"),
+                // ══════════════════════════════════════════════════════════
+                // **وخرائطُ التصحيح من مضيف التجهيز لا الإنتاج** (٢٠٢٦-٠٩-٢٧)
+                // ══════════════════════════════════════════════════════════
+                //
+                // **كان أساسُ الـAPI صار تجهيزاً (٢٠٢٦-٠٩-١٦) وبقيت الخريطةُ
+                // على الإنتاج** — فبناءُ تصحيحٍ يكلّم تجهيزَ الـAPI وخرائطَ
+                // الإنتاج معاً. **والتجهيزُ يخدم خرائطَه على `/maps`**
+                // (`maps-sync.sh`، `Caddyfile.staging`) — فيُوحَّد المضيف.
+                quoted(overrideOrNull(project, "rahalgo.mapsBaseUrl") ?: "https://staging-api.rahalgo.com/maps"),
             )
 
             // ══════════════════════════════════════════════════════════
