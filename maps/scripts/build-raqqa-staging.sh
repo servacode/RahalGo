@@ -19,16 +19,19 @@
 #     فتمحو ما نضعه. **فبعد هذا السكربت لا تُشغَّل المزامنة.**
 #   • لا يمسّ `maps.rahalgo.com` ولا أيَّ خدمةِ إنتاج.
 #
-# # المضيفُ/المساراتُ التي يلمسها
+# # المضيفُ/المساراتُ التي يلمسها — **صفرُ لمسٍ لـ/srv/rahalgo والإنتاج**
 #
-#   يقرأ  : الأساسَ القائمَ في التجهيز، ومقتطفَ OSM (من عملِ الإنتاج إن
-#           وُجد قراءةً فقط، وإلّا يُنزَّل إلى عملِ التجهيز).
+#   يقرأ  : الأساسَ القائمَ في التجهيز فقط، ومقتطفَ OSM من عمل التجهيز
+#           (يُنزَّل إليه إن غاب). **ولا يقرأ ولا يكتب تحت /srv/rahalgo.**
 #   يكتب  : `/srv/rahalgo-staging/maps/regions/<dv>/region-raqqa.pmtiles`
-#           و`/srv/rahalgo-staging/maps/manifest.json` (بنسخةٍ احتياطيّة).
+#           و`/srv/rahalgo-staging/maps/manifest.json` (بنسخةٍ احتياطيّة)
+#           و`/srv/rahalgo-staging/maps-work/` (عملٌ مؤقّت). **لا غير.**
 #   يخدَم : `https://staging-api.rahalgo.com/maps` (Caddyfile.staging).
+#   لا يُعيد تشغيلَ أيِّ خدمة، ولا يتّصل بـ`maps.rahalgo.com`.
 #
-#   الاستعمال (على صندوق الخرائط):
-#     setsid nohup sh maps/scripts/build-raqqa-staging.sh > raqqa-staging.log 2>&1 &
+#   الاستعمال (بمسارٍ مطلق):
+#     setsid nohup sh /srv/rahalgo-staging/build-raqqa-staging.sh \
+#       > /srv/rahalgo-staging/raqqa-staging.log 2>&1 &
 set -eu
 
 # ── الحدود والمدى من الوصفة نفسِها ───────────────────────────────────
@@ -54,18 +57,14 @@ cd "$WORK"
 echo "════ RAQQA-STAGING START $(date -u +%FT%TZ) ════"
 echo "   يكتب في: $STAGING (التجهيز) — ولا يمسّ $PROD (الإنتاج)"
 
-# ── مقتطفُ OSM: يُعاد استعمالُ عمل الإنتاج قراءةً إن وُجد ─────────────
+# ── مقتطفُ OSM: في عمل التجهيز وحدَه — **لا لمسَ لـ/srv/rahalgo إطلاقاً** ──
+# **ولا يُقرأ من عمل الإنتاج** (٢٠٢٦-٠٩-٢٧): كلُّ شيءٍ تحت التجهيز، ولو
+# كلّف تنزيلاً ثانياً — **فصفرُ لمسٍ للإنتاج أوضحُ من قراءةٍ آمنة.**
 PIN=0a8d6878a3c0da48a8311e8c54ebcce49b4b6d4de5a1a7fccb56cb2a7f9db7ac
-OSM=""
-if [ -s "$PROD/work/syria.osm.pbf" ]; then
-  OSM="$PROD/work/syria.osm.pbf"                 # قراءةٌ فقط من عمل الإنتاج
-  echo "   مقتطفُ OSM (قراءةٌ فقط): $OSM"
-elif [ -s "$WORK/syria.osm.pbf" ]; then
-  OSM="$WORK/syria.osm.pbf"
-else
-  echo "   تنزيلُ مقتطف OSM إلى عمل التجهيز"
-  curl -sL --fail -o "$WORK/syria.osm.pbf" https://download.geofabrik.de/asia/syria-260820.osm.pbf
-  OSM="$WORK/syria.osm.pbf"
+OSM="$WORK/syria.osm.pbf"
+if [ ! -s "$OSM" ]; then
+  echo "   تنزيلُ مقتطف OSM إلى عمل التجهيز: $OSM"
+  curl -sL --fail -o "$OSM" https://download.geofabrik.de/asia/syria-260820.osm.pbf
 fi
 GOT=$(sha256sum "$OSM" | cut -d' ' -f1)
 [ "$GOT" = "$PIN" ] || { echo "!! تعذّرت مطابقةُ بصمة المقتطف: $GOT" >&2; exit 3; }
