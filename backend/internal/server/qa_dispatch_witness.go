@@ -23,13 +23,20 @@ import (
 // يسوق هذا الانتقالَ بعينِه.** فما ينقص شيءٌ واحدٌ: **أن يكون سائقُ QA
 // الثابتُ في ورديّةٍ منتِجةٍ فيصله العرض** — وهذا ما يفعله هذا البذّار.
 //
-// # لماذا وضعُ «بالتساوي» مؤقّتاً
+// # لماذا وضعُ «بالتناوب» (rotation) لا «بالتساوي»
 //
-// **البثُّ في وضع «بالتساوي» يُرسل العرضَ إلى كلّ من في الورديّة** — **فيصل
-// جهازَ سائقِ QA حتماً** بلا اعتمادٍ على ترتيبِ الدور. **عكوسٌ**: يُرجَع
-// الوضعُ السابقُ في نداءِ الإطفاء. **وليست حالةً وهميّة**: `on_shift` هو
-// العمودُ نفسُه الذي ترفعه نقطةُ الورديّة الحقيقيّة — **حالةُ توفّرٍ فعليّةٌ لا
-// خدعةُ واجهة.**
+// **العرضُ الحقيقيُّ يُطلَق من `OfferNext`، و`OfferNext` لا يفعل شيئاً إلّا
+// في وضع «بالتناوب»** (`rotation.go`: `if AssignmentMode != "rotation"
+// { return }`). **فبثُّ «بالتساوي» يقع عند إنشاء الطلب لا عند الانتقال
+// اليدويّ** الذي يسوقه `order_advance`. **فالوضعُ الصائبُ هنا «بالتناوب»**:
+// عندها يختار `OfferNext` صاحبَ الدور ويُرسل إليه عرضاً (وطلبُ الاختبار
+// مخصّصٌ ⇒ **عرضٌ لا إسنادٌ مباشر**، `rotation.go`: «لا إسنادَ مباشرٌ لطلبٍ خاصّ»).
+//
+// **وسائقُ QA يُجعَل صاحبَ الدور حتميّاً**: `on_shift` + `status='active'`
+// + `last_assigned_at=NULL` (NULLS FIRST) + `shift_started_at` قديمٌ جداً
+// (فيسبق أيَّ ورديّةٍ أحدثَ في الترتيب `ORDER BY last_assigned_at NULLS
+// FIRST, shift_started_at`). **عكوسٌ**: يُرجَع الوضعُ السابقُ عند الإطفاء.
+// **وليست حالةً وهميّة**: هذه أعمدةُ التوفّرِ الحقيقيّةُ نفسُها.
 //
 // # لا أثرَ ماليّ
 //
@@ -63,25 +70,27 @@ func (s *Server) qaDriverShift(w http.ResponseWriter, r *http.Request, on bool, 
 	prevMode := s.settings.GetString(ctx, modeKey)
 
 	if on {
-		// **مرشّحٌ منتِجٌ حتميّاً**: هذه بعينُها شروطُ `OfferNext`/البثّ
-		// (on_shift + status='active')، **و`last_assigned_at=NULL` يجعله في
-		// مقدّمة الدور** لو كان الوضعُ «بالتناوب» رغم أنّنا نبثّ.
+		// **صاحبُ الدور حتميّاً**: شروطُ `OfferNext` (on_shift + active)،
+		// **و`last_assigned_at=NULL` (NULLS FIRST) + ورديّةٌ قديمةٌ جداً**
+		// فيسبق أيَّ مرشّحٍ آخرَ في `ORDER BY last_assigned_at NULLS FIRST,
+		// shift_started_at`. **فيُختار هو ويُرسَل إليه العرضُ الحقيقيّ.**
 		if _, err := s.pg.Exec(ctx,
 			`UPDATE users SET on_shift = true, status = 'active',
-			        shift_started_at = now(), last_assigned_at = NULL
+			        shift_started_at = now() - interval '365 days',
+			        last_assigned_at = NULL
 			  WHERE id = $1::uuid`, uid); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		// **بثٌّ لضمانِ الوصول** — عكوسٌ، ويُرجَع السابقُ للاستعادة.
-		if err := s.settings.Set(ctx, modeKey, "queue", nil); err != nil {
+		// **وضعُ «بالتناوب»** — فيه وحدَه يعمل `OfferNext`. عكوسٌ، يُرجَع السابق.
+		if err := s.settings.Set(ctx, modeKey, "rotation", nil); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		s.logger.Warn("QA driver_shift ON (staging-only)",
 			"driver", uid, "previous_on_shift", prevOnShift, "previous_mode", prevMode)
 		httpx.JSON(w, http.StatusOK, map[string]any{
-			"driver_id": uid, "on_shift": true, "assignment_mode": "queue",
+			"driver_id": uid, "on_shift": true, "assignment_mode": "rotation",
 			"previous_on_shift": prevOnShift, "previous_mode": prevMode,
 		})
 		return
