@@ -22,6 +22,10 @@ type setSettlementMethodReq struct {
 
 // handleSetMerchantSettlementMethod يبدّل طريقةَ تسويةِ المتجر — للطلبات الجديدة فقط.
 func (s *Server) handleSetMerchantSettlementMethod(w http.ResponseWriter, r *http.Request) {
+	if !isUUID(chi.URLParam(r, "id")) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
 	req, err := decode[setSettlementMethodReq](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -38,6 +42,10 @@ func (s *Server) handleSetMerchantSettlementMethod(w http.ResponseWriter, r *htt
 
 // handleMerchantCashSettlements كشفُ المستحقّات النقديّة لمتجرٍ والمجموعُ القائم.
 func (s *Server) handleMerchantCashSettlements(w http.ResponseWriter, r *http.Request) {
+	if !isUUID(chi.URLParam(r, "id")) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
 	sum, err := s.orders.MerchantCashSettlements(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.respondErr(w, err)
@@ -52,6 +60,10 @@ type markCashPaidReq struct {
 
 // handleMarkCashSettlementPaid يؤكّد أنّ الأدمنَ سلّم المتجرَ مستحقَّه نقداً.
 func (s *Server) handleMarkCashSettlementPaid(w http.ResponseWriter, r *http.Request) {
+	if !isUUID(chi.URLParam(r, "id")) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
 	req, err := decode[markCashPaidReq](r)
 	if err != nil {
 		s.respondErr(w, err)
