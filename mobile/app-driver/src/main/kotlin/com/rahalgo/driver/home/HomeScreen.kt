@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -194,25 +193,23 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **خريطة المدينة في الجهاز**
+        // **خريطةُ المدينة تُحضَّر تلقائيّاً — لا بطاقةَ تنزيلٍ يدويّة** (B)
         // ══════════════════════════════════════════════════════════════
         //
-        // **وتُعرض ما لم تُنزَّل** — ولا تُنزَّل بنفسها: عشرات الميغابايت
-        // من حزمة السائق **قرارُه هو.**
-        if (!OfflineMap.ready) {
-            OfflineCard(
-                // **واسمُها من الفهرس** — انظر `RegionPicker`.
-                regionName = OfflineMap.status.name,
-                progress = OfflineMap.progress,
-                downloading = OfflineMap.downloading,
-                // **والساقطُ يُقال إنّه سقط** — إغلاقُ
-                // `TD-MAP-SILENT-RESOURCE-FAIL`.
-                failed = OfflineMap.failed,
-                failure = OfflineMap.failure,
-                onDownload = { MapPackageWorker.enqueue(context) },
-            )
-            Spacer(Modifier.height(14.dp))
-        }
+        // (قرارُ المالك ٢٠٢٦-٠٩-٢٧، بعد شاهد الجهاز: حزمةُ الرقّة صارت ~٢م
+        //  لا ٥٠٢م، **فالتنزيلُ تلقائيٌّ صامتٌ في الخلفيّة على الواي فاي**
+        //  — نُودي أعلاه `AUTOMATIC`. **ولا بطاقةَ قرارٍ ولا زرَّ تنزيلٍ
+        //  بعد اليوم**؛ القرارُ الذي كان يُستحقُّ بأربعمئةِ ميغا لا يُستحقُّ
+        //  بمليونين.)
+        //
+        // **لكنّ السقوطَ لا يُخفى** (`TD-MAP-SILENT-RESOURCE-FAIL`): سطرٌ
+        // صغيرٌ غيرُ حاجبٍ للعمل يقول إنّه سقط ويتيح إعادةً — لا بطاقة.
+        MapPrepStatus(
+            downloading = OfflineMap.downloading && !OfflineMap.ready,
+            failed = OfflineMap.failed,
+            failure = OfflineMap.failure,
+            onRetry = { MapPackageWorker.enqueue(context) },
+        )
 
         // ══════════════════════════════════════════════════════════════
         // **والإشعارُ شرطُ الإعلان عن التوفّر** (`DRF-04`، ٢٠٢٦-٠٩-١٥)
@@ -338,79 +335,52 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 }
 
 /**
- * **بطاقة تنزيل خريطة المدينة.**
+ * ══════════════════════════════════════════════════════════════════════
+ * **حالةُ تحضير الخريطة — سطرٌ صغيرٌ غيرُ حاجب، لا بطاقةَ قرار** (B، ٢٠٢٦-٠٩-٢٧)
+ * ══════════════════════════════════════════════════════════════════════
  *
- * **وتقول ماذا يكسب لا ما نطلبه**: «تشتغل بلا إنترنت» أوقع من «نزّل
- * البيانات».
+ * (قرارُ المالك بعد شاهد الجهاز: حزمةُ الرقّة ~١٫٩م لا ٥٠٢م، **فالتحضيرُ
+ *  تلقائيٌّ في الخلفيّة على الواي فاي** — لا بطاقةَ تنزيلٍ ولا زرَّ قرار.)
+ *
+ * # وما زال السقوطُ يُقال
+ *
+ * **إغلاقُ `TD-MAP-SILENT-RESOURCE-FAIL` باقٍ**: عند الفشلِ سطرٌ صغيرٌ
+ * يقول ما جرى ويتيح إعادةً يدويّةً (`RahalTextButton`، ليست حلقةً آليّة)
+ * — **غيرُ حاجبٍ للعمل، لا نافذةَ قرار.** ونبضةٌ خفيفةٌ أثناء التحضير.
+ * **ولا شيءَ حين تكون جاهزةً** (النجاحُ صامت).
  */
 @Composable
-private fun OfflineCard(
-    /** **اسمُ مدينته كما في الفهرس** — لا اسمٌ مكتوبٌ في النصّ. */
-    regionName: String,
-    progress: Int,
+private fun MapPrepStatus(
     downloading: Boolean,
     failed: Boolean,
     failure: com.rahalgo.map.data.MapFailure?,
-    onDownload: () -> Unit,
+    onRetry: () -> Unit,
 ) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.surface)
-            .padding(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.offline_map_title, regionName),
-            fontWeight = FontWeight.Bold,
-            color = Rahal.colors.brand,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.offline_map_text), color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(10.dp))
-        if (downloading) {
-            LinearProgressIndicator(
-                progress = { progress / 100f },
+    when {
+        failed -> {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(stringResource(R.string.offline_map_progress, progress), color = Rahal.colors.inkMuted)
-        } else {
-            // ══════════════════════════════════════════════════════════
-            // **والساقطُ يُقال إنّه سقط — ثمّ يُعطى بابَ الإعادة**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (إغلاقُ `TD-MAP-SILENT-RESOURCE-FAIL`، قرارُ المالك
-            //  ٢٠٢٦-٠٨-٢٢ البند ٦: «لا تعد الواجهة بصمت إلى الحالة
-            //  الابتدائية وكأن شيئاً لم يقع».)
-            //
-            // **كانت البطاقةُ تقرأ رقمين**: `progress` و`downloading`.
-            // **والساقطُ ليس واحداً منهما** — فيُرسَم كمن لم يبدأ،
-            // **والزرُّ يقول «نزّل الآن» بعد أن جرّب السائقُ وفشل.**
-            //
-            // **وقِيس على الجهاز المرجعيّ ٢٠٢٦-٠٨-٢٢**: سقط التنزيلُ
-            // مرّتين متتاليتين **وما تغيّرت الشاشةُ في المرّتين.**
-            if (failed) {
+            ) {
                 Text(
                     text = stringResource(failureMessage(failure)),
                     color = Rahal.colors.accent,
-                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.height(10.dp))
+                RahalTextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.offline_map_retry))
+                }
             }
-            RahalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
-                // **ومن وقف في نصفه يُقال له «أكمل» لا «نزّل»** — الأوّل
-                // يقول إنّ ما مضى محفوظ.
-                Text(
-                    stringResource(
-                        when {
-                            failed -> R.string.offline_map_retry
-                            progress in 1..99 -> R.string.offline_map_resume
-                            else -> R.string.offline_map_button
-                        },
-                    ),
-                )
-            }
+            Spacer(Modifier.height(14.dp))
+        }
+        downloading -> {
+            Text(
+                text = stringResource(R.string.offline_map_preparing),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(14.dp))
         }
     }
 }

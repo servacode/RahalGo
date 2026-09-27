@@ -234,6 +234,8 @@
     <string name="offline_map_failed_space">مساحةُ التخزين لا تكفي — فرّغ بعضَ المساحة ثمّ حاول مرّة أخرى</string>
     <string name="offline_map_failed_other">تعذّر تنزيل ملفّات الخريطة — حاول مرّة أخرى</string>
     <string name="offline_map_retry">حاول مرّة أخرى</string>
+    <!-- B (٢٠٢٦-٠٩-٢٧): التحضيرُ تلقائيٌّ في الخلفيّة — نبضةٌ خفيفةٌ غيرُ حاجبة، لا بطاقةَ تنزيل. -->
+    <string name="offline_map_preparing">تُحضَّر خريطةُ مدينتك…</string>
     <string name="trip_near_pickup">يبدو أنك وصلت المتجر</string>
     <string name="trip_near_dropoff">يبدو أنك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
