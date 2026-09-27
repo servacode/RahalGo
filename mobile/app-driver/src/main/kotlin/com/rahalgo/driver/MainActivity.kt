@@ -337,6 +337,13 @@ private fun Destination(theme: ThemeState) {
     AuthGate(
         vm = vm,
         onSignedIn = { SignedIn(theme, onLogout = vm::logout) },
+        // **وتحديثُ السائق توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٧): حزمةُ
+        // السائق `ChannelDirect` في سجلّ الإصدار (`release/catalog.go`)، فلا
+        // تُعرَض له صفحةُ متجرٍ لا وجودَ لها — بل تنزيلٌ مباشرٌ من موقع رحّال غو،
+        // ونصٌّ لدوره. (كان يرث الافتراضَ `showPlay=true` ورابطَ `/app` العامّ.)
+        updateShowPlay = false,
+        updateFallbackUrl = "https://rahalgo.com/download/driver",
+        updateBody = stringResource(R.string.update_body_driver),
     )
 }
 

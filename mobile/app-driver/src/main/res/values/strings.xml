@@ -420,4 +420,6 @@
     <string name="replay_start">رحلة تجريبيّة</string>
     <string name="map_server_said">الخادم رد %1$d</string>
     <string name="map_no_package">لا حزمة باسم %1$s</string>
+    <!-- **تحديثٌ إلزاميٌّ — توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٧). -->
+    <string name="update_body_driver">صدر تحديثٌ إلزاميٌّ لتطبيق السائق. نزّله من موقع رحّال غو لتتابع عملك.</string>
 </resources>
