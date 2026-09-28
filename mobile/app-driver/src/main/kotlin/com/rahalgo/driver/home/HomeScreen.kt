@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.rahalgo.driver.BuildConfig
 import com.rahalgo.driver.R
 import com.rahalgo.ui.grouped
 import com.rahalgo.ui.money
@@ -330,6 +331,38 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // **والخروجُ انتقل إلى أسفل القائمة الجانبيّة** — (قرارُ المالك
         // ٢٠٢٦-٠٨-١٣). **وموضعان لفعلٍ واحدٍ يجعلان أحدَهما يُنسى**،
         // ولوحةُ العمل ليست موضعَ فعلٍ يُنهي الجلسة.
+
+        // ══════════════════════════════════════════════════════════════
+        // **قسمُ التطوير/QA — مختبرُ الرحلة التجريبيّة** (بناءُ التطوير وحدَه)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **محروسٌ بـ`BuildConfig.DEBUG`**: لا يظهر ولا يُطلَق في الإصدار،
+        // والنشاطُ نفسُه معلَنٌ في بيان التطوير وحدَه (`src/debug`) فلا يُصرَّف
+        // في الإنتاج. **عزلٌ تامّ**: يحاكي الملاحةَ بحالةٍ محلّيّةٍ ديباغ —
+        // لا طلبَ ولا خادمَ ولا دفترَ ولا دفعة.
+        if (BuildConfig.DEBUG) {
+            Spacer(Modifier.height(26.dp))
+            Text(
+                text = "أدوات التطوير · QA",
+                style = MaterialTheme.typography.titleSmall,
+                color = Rahal.colors.inkMuted,
+            )
+            Spacer(Modifier.height(8.dp))
+            RahalButton(
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent("com.rahalgo.driver.debug.REPLAY_LAB")
+                                .setPackage(context.packageName),
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.replay_lab_open))
+            }
+        }
+
         Spacer(Modifier.height(28.dp))
     }
 }

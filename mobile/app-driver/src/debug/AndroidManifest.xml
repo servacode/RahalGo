@@ -16,6 +16,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:networkSecurityConfig="@xml/network_security_config" />
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <!-- ══════════════════════════════════════════════════════════════
+             مختبرُ الرحلة التجريبيّة — بناءُ التطوير وحدَه
+             ══════════════════════════════════════════════════════════════
+             معلَنٌ في بيان التطوير فقط، فلا وجودَ له في الإصدار البتّة.
+             يُطلَق بفعلٍ صريحٍ محروسٍ بـ BuildConfig.DEBUG من الشاشة. -->
+        <activity
+            android:name="com.rahalgo.driver.replaylab.ReplayLabActivity"
+            android:exported="false"
+            android:label="رحلة تجريبيّة">
+            <intent-filter>
+                <action android:name="com.rahalgo.driver.debug.REPLAY_LAB" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+    </application>
 
 </manifest>

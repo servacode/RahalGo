@@ -390,6 +390,37 @@ class NavigationSession(
         replaying = false
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **إعادةٌ مُقادةٌ من الخارج — لمختبر QA (بناءُ التطوير وحدَه)**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **نفسُ مسار `startReplay`** لكنْ بلا حلقةٍ داخليّة: يقرّر المتحكّمُ
+    // الخارجيّ (مختبرُ الإعادة) الإيقاعَ والإيقافَ المؤقّتَ والسرعةَ وتبديلَ
+    // الساقِ (متجر←زبون) وحقنَ الخروجِ عن المسار. **يُسكِت مجرى الأقمار**
+    // كالإعادة، **ولا يُنادى إلّا من شاشةٍ محروسةٍ بـ`BuildConfig.DEBUG`.**
+    fun replayBegin() {
+        stopReplay()
+        engine.onFix = null
+        engine.stop()
+        engineCore.reset()
+        nav = null
+        stepId = 0L
+        firstFixAt = 0L
+        lastFixAt = 0L
+        minGapMs = Long.MAX_VALUE
+        maxGapMs = 0L
+        replaying = true
+        running = true
+    }
+
+    /** **قراءةٌ مصنوعةٌ واحدةٌ** — بنفس مسار الأقمار الداخليّ (`consume`). */
+    fun replayFeed(fix: NavFix) = consume(fix)
+
+    /** **إنهاءُ الإعادةِ المُقادة** — لا يُعيد تشغيلَ الأقمار (كـ`stopReplay`). */
+    fun replayEnd() {
+        replaying = false
+    }
+
     /**
      * **سطرُ الخلاصة** — يُطبع عند الإغلاق ويُقرأ في التقرير.
      *
