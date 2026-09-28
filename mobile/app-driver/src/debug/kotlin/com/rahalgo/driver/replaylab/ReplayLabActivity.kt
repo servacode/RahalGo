@@ -30,10 +30,21 @@ class ReplayLabActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val model = ViewModelProvider(this)[Model::class.java]
+        val c = model.controller
+
+        // **تشغيلٌ آليٌّ لاختبار QA** (اختياريّ): يُطلَق بمُدخَلاتِ النيّة
+        //   --ez rlab_autostart true --es rlab_scenario normal|reroute
+        // فيمكن قياسُ السلوكِ عبر logcat (شاشةُ الخريطة تُصعّب قراءةَ الواجهة).
+        val scId = intent?.getStringExtra("rlab_scenario")
+        if (scId != null) c.scenarios().firstOrNull { it.id == scId }?.let { c.selectScenario(it) }
+        intent?.getIntExtra("rlab_speed", 0)?.takeIf { it > 0 }?.let { c.changeSpeed(it) }
+        val autostart = intent?.getBooleanExtra("rlab_autostart", false) == true
+
         setContent {
             MaterialTheme {
-                ReplayLabScreen(model.controller)
+                ReplayLabScreen(c)
             }
         }
+        if (savedInstanceState == null && autostart) c.start()
     }
 }

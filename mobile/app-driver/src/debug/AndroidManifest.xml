@@ -23,9 +23,12 @@
              ══════════════════════════════════════════════════════════════
              معلَنٌ في بيان التطوير فقط، فلا وجودَ له في الإصدار البتّة.
              يُطلَق بفعلٍ صريحٍ محروسٍ بـ BuildConfig.DEBUG من الشاشة. -->
+        <!-- exported=true مقصورٌ على بناء التطوير (هذا البيانُ في src/debug
+             وحدَه) — يتيح لـ adb تشغيلَ المختبر لقياس QA. **لا وجودَ له في
+             الإصدار البتّة** فلا سطحَ تصديرٍ في الإنتاج. -->
         <activity
             android:name="com.rahalgo.driver.replaylab.ReplayLabActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="رحلة تجريبيّة">
             <intent-filter>
                 <action android:name="com.rahalgo.driver.debug.REPLAY_LAB" />

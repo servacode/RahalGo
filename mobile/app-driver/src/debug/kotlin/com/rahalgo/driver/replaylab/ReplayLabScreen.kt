@@ -82,7 +82,7 @@ internal fun ReplayLabScreen(c: ReplayLabController) {
                 },
                 instruction = maneuverText(nav?.currentManeuver),
                 distance = distanceText(nav?.remainingM),
-                eta = etaText(nav?.remainingSec),
+                eta = etaText(nav?.remainingSec, nav?.remainingM),
                 offRoute = nav?.isOffRoute == true,
                 reroute = c.session.rerouteStatus,
             )
@@ -190,9 +190,14 @@ private fun distanceText(m: Double?): String {
     return if (m >= 1000) "%.1f كم".format(m / 1000) else "${m.toInt()} م"
 }
 
-private fun etaText(sec: Double?): String {
-    if (sec == null || sec < 0) return "—"
-    val s = sec.toInt()
+// **الزمنُ من المحرّك إن توفّر، وإلّا من المسافة** (المسارُ المُصطنَعُ بلا مدد):
+// ~٨٫٣ م/ث سرعةُ الإعادة.
+private fun etaText(sec: Double?, distM: Double?): String {
+    val s = when {
+        sec != null && sec > 0 -> sec.toInt()
+        distM != null && distM >= 0 -> (distM / 8.3).toInt()
+        else -> return "—"
+    }
     val min = s / 60
-    return if (min >= 1) "$min دقيقة" else "$s ثانية"
+    return if (min >= 1) "$min د ${s % 60} ث" else "$s ثانية"
 }
