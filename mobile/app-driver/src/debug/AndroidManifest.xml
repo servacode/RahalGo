@@ -29,9 +29,21 @@
         <activity
             android:name="com.rahalgo.driver.replaylab.ReplayLabActivity"
             android:exported="true"
-            android:label="رحلة تجريبيّة">
+            android:label="مختبر الملاحة (تشخيص)">
             <intent-filter>
                 <action android:name="com.rahalgo.driver.debug.REPLAY_LAB" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- الرحلة التجريبيّة المواجِهةُ للمالك — على شاشة الرحلة الحقيقيّة.
+             بناءُ التطوير وحدَه؛ exported=true مقصورٌ على التطوير (adb/QA). -->
+        <activity
+            android:name="com.rahalgo.driver.replaylab.ReplayTripActivity"
+            android:exported="true"
+            android:label="رحلة تجريبيّة">
+            <intent-filter>
+                <action android:name="com.rahalgo.driver.debug.REPLAY_TRIP" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

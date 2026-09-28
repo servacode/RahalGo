@@ -434,8 +434,9 @@
     <string name="map_delete_failed">تعذّر حذفُ بعض الملفّات</string>
     <string name="replay_stop">أوقف الرحلة التجريبيّة</string>
     <string name="replay_start">رحلة تجريبيّة</string>
-    <!-- مدخلُ مختبر الرحلة التجريبيّة (قسمُ التطوير/QA) — بناءُ التطوير وحدَه -->
-    <string name="replay_lab_open">رحلة تجريبيّة (مختبر الملاحة)</string>
+    <!-- مداخلُ التطوير/QA — بناءُ التطوير وحدَه -->
+    <string name="replay_trip_open">رحلة تجريبيّة</string>
+    <string name="replay_lab_open">مختبر الملاحة (تشخيص)</string>
     <string name="map_server_said">الخادم رد %1$d</string>
     <string name="map_no_package">لا حزمة باسم %1$s</string>
     <!-- **تحديثٌ إلزاميٌّ — توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٧). -->

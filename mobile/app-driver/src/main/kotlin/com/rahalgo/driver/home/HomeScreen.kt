@@ -348,7 +348,23 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 color = Rahal.colors.inkMuted,
             )
             Spacer(Modifier.height(8.dp))
+            // **الرحلة التجريبيّة المواجِهةُ للمالك** — على شاشة الرحلة الحقيقيّة.
             RahalButton(
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent("com.rahalgo.driver.debug.REPLAY_TRIP")
+                                .setPackage(context.packageName),
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.replay_trip_open))
+            }
+            Spacer(Modifier.height(6.dp))
+            // **مختبرُ الملاحة التشخيصيّ** — أداةُ هندسةٍ (خريطةٌ مستقلّة).
+            RahalTextButton(
                 onClick = {
                     runCatching {
                         context.startActivity(

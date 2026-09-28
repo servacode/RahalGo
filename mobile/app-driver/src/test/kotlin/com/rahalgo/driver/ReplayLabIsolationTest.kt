@@ -37,7 +37,9 @@ class ReplayLabIsolationTest {
             "شيفرةُ المختبر ليست في src/debug: " + debugKotlin.absolutePath,
             File(debugKotlin, "ReplayLabActivity.kt").exists() &&
                 File(debugKotlin, "ReplayLabController.kt").exists() &&
-                File(debugKotlin, "ReplayLabScreen.kt").exists(),
+                File(debugKotlin, "ReplayLabScreen.kt").exists() &&
+                File(debugKotlin, "ReplayTripActivity.kt").exists() &&
+                File(debugKotlin, "ReplayTripController.kt").exists(),
         )
         // **ولا ملفَّ مختبرٍ في `src/main`** — فلا يدخل الإصدار.
         val leakedInMain = File(mainKotlin, "replaylab").exists()
@@ -49,17 +51,20 @@ class ReplayLabIsolationTest {
     fun `lab activity is declared in the debug manifest only`() {
         val debugManifest = File(moduleDir, "src/debug/AndroidManifest.xml").readText()
         assertTrue(
-            "بيانُ التطوير لا يُعلن ReplayLabActivity",
-            debugManifest.contains("com.rahalgo.driver.replaylab.ReplayLabActivity"),
+            "بيانُ التطوير لا يُعلن نشاطَي المختبر/الرحلة",
+            debugManifest.contains("com.rahalgo.driver.replaylab.ReplayLabActivity") &&
+                debugManifest.contains("com.rahalgo.driver.replaylab.ReplayTripActivity"),
         )
         assertTrue(
-            "بيانُ التطوير لا يحمل فعلَ الإطلاق REPLAY_LAB",
-            debugManifest.contains("com.rahalgo.driver.debug.REPLAY_LAB"),
+            "بيانُ التطوير لا يحمل فعلَي الإطلاق",
+            debugManifest.contains("com.rahalgo.driver.debug.REPLAY_LAB") &&
+                debugManifest.contains("com.rahalgo.driver.debug.REPLAY_TRIP"),
         )
         val mainManifest = File(moduleDir, "src/main/AndroidManifest.xml").readText()
         assertFalse(
-            "**البيانُ الرئيسيُّ يُعلن نشاطَ المختبر** — فيدخل الإصدار",
-            mainManifest.contains("ReplayLabActivity") || mainManifest.contains("REPLAY_LAB"),
+            "**البيانُ الرئيسيُّ يُعلن نشاطَ المختبر/الرحلة** — فيدخل الإصدار",
+            mainManifest.contains("ReplayLabActivity") || mainManifest.contains("ReplayTripActivity") ||
+                mainManifest.contains("REPLAY_LAB") || mainManifest.contains("REPLAY_TRIP"),
         )
     }
 
@@ -67,12 +72,14 @@ class ReplayLabIsolationTest {
     @Test
     fun `home entry to the lab is gated behind BuildConfig DEBUG`() {
         val home = File(mainKotlin, "home/HomeScreen.kt").readText().replace("\r\n", "\n")
-        val launchIdx = home.indexOf("com.rahalgo.driver.debug.REPLAY_LAB")
-        assertTrue("لم يُعثر على مدخل المختبر في HomeScreen", launchIdx > 0)
-        val gateIdx = home.lastIndexOf("if (BuildConfig.DEBUG)", launchIdx)
-        assertTrue(
-            "**مدخلُ المختبر غيرُ محروسٍ بـBuildConfig.DEBUG** — فيظهر في الإصدار",
-            gateIdx in 0 until launchIdx,
-        )
+        for (action in listOf("com.rahalgo.driver.debug.REPLAY_TRIP", "com.rahalgo.driver.debug.REPLAY_LAB")) {
+            val launchIdx = home.indexOf(action)
+            assertTrue("لم يُعثر على مدخل $action في HomeScreen", launchIdx > 0)
+            val gateIdx = home.lastIndexOf("if (BuildConfig.DEBUG)", launchIdx)
+            assertTrue(
+                "**مدخلُ $action غيرُ محروسٍ بـBuildConfig.DEBUG** — فيظهر في الإصدار",
+                gateIdx in 0 until launchIdx,
+            )
+        }
     }
 }
