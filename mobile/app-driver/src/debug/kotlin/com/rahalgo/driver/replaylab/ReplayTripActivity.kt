@@ -46,6 +46,10 @@ class ReplayTripActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // **تركيبُ النواة** كما تفعل الشاشةُ الرئيسيّة — فـ`TripScreen`
+        // (زرُّ الإعادة) يقرأ `AppCore.get()`، ويُطلَق هذا النشاطُ مباشرةً
+        // دونها. لا نداءَ شبكةٍ هنا؛ مجرّدُ تركيبِ العميل.
+        runCatching { com.rahalgo.driver.data.Backend.of(applicationContext) }
         val model = ViewModelProvider(this)[Model::class.java]
         val c = model.c
         setContent {
@@ -100,8 +104,8 @@ private fun DebugBadge(c: ReplayTripController) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("تجريبيّ · DEBUG", color = Color(0xFFF0B429), fontWeight = FontWeight.Bold)
-        listOf(1, 2, 5).forEach { x ->
+        Text("${c.kmh()} كم/س", color = Color(0xFF7FD1AE), fontWeight = FontWeight.Bold)
+        listOf(1, 2, 3).forEach { x ->
             FilterChip(selected = c.speed == x, onClick = { c.changeSpeed(x) }, label = { Text("${x}x") })
         }
         val pausedNow = c.paused

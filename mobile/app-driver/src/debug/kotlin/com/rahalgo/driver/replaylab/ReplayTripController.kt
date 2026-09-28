@@ -37,8 +37,12 @@ internal class ReplayTripController(context: Context) {
     private var currentTarget: GeoPoint? = null
     private var currentRerouteGeom: List<GeoPoint>? = null
 
-    private val speaker = AndroidSpeaker(context)
-    val voice = VoiceOrchestrator(speaker)
+    // **سلسلةُ الصوت كما في تطبيق السائق تماماً**: ناطقُ نظامٍ مُهيّأ (`init`)،
+    // ثمّ `ClipSpeaker` (مقاطعُ الملاحة المسجّلة، والنطقُ الآليُّ احتياطاً)، ثمّ
+    // المنسّق. **بلا `init` وبلا `ClipSpeaker` كان صامتاً.**
+    private val speaker = AndroidSpeaker(context).also { it.init() }
+    private val clipSpeaker = com.rahalgo.driver.trip.ClipSpeaker(context, speaker)
+    val voice = VoiceOrchestrator(clipSpeaker)
 
     /** محرّكُ الملاحةِ الحقيقيّ + صوتٌ حقيقيّ + مصدرُ إعادةِ توجيهٍ مُصطنَعٍ محلّيّ. */
     val session = NavigationSession(
@@ -121,8 +125,11 @@ internal class ReplayTripController(context: Context) {
 
     fun pause() { if (running) paused = true }
     fun resume() { if (running) paused = false }
-    fun changeSpeed(x: Int) { if (x == 1 || x == 2 || x == 5) speed = x }
+    fun changeSpeed(x: Int) { if (x in 1..3) speed = x }
     fun restart() = start()
+
+    /** السرعةُ المعروضةُ كم/س — سرعةُ الإعادةِ الأساسُ (~٣٠) مضروبةً بالمضاعِف. */
+    fun kmh(): Int = Math.round(8.3f * 3.6f * speed)
 
     fun stop() {
         job?.cancel()
