@@ -311,6 +311,19 @@ func (s *Service) pickRotationCandidate(ctx context.Context, orderID string, ski
 		timeout = 1
 	}
 
+	// **بلا نقطةِ التقاطٍ لا مسافةَ تُقاس** — لكنّ الحداثةَ تبقى شرطاً:
+	// نختار أقربَ مؤهَّلٍ حديثِ الموقع بالعدل، **ولا نهبط إلى شائخ.**
+	if !hasPickup {
+		id, err := s.freshFallbackCandidate(ctx, orderID, skip, limit, maxActive, fresh, bucket)
+		if err == nil {
+			return id, false, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", false, err
+		}
+		return "", true, pgx.ErrNoRows // **يُنتظر مؤهَّلٌ حديثُ الموقع.**
+	}
+
 	radius := initR + stepR*(waitSec/timeout)
 	if radius >= maxR {
 		radius = maxR
@@ -318,7 +331,7 @@ func (s *Service) pickRotationCandidate(ctx context.Context, orderID string, ski
 	// **بلغ الأقصى، أو لا خطوةَ توسّعٍ أصلاً** — عندها لا مزيدَ من الحلقات.
 	atMax := radius >= maxR || stepR <= 0
 
-	id, err := s.proximityRotationCandidate(ctx, orderID, skip, limit, maxActive, fresh, radius, bucket)
+	id, err := s.proximityInRadius(ctx, orderID, skip, limit, maxActive, fresh, radius, bucket)
 	if err == nil {
 		return id, false, nil
 	}
@@ -326,9 +339,24 @@ func (s *Service) pickRotationCandidate(ctx context.Context, orderID string, ski
 		return "", false, err
 	}
 	if atMax {
-		// **شبكةُ الأمان الموثَّقة** — العدلُ الصِّرف على كلّ مؤهَّل.
-		id, err := s.legacyRotationCandidate(ctx, orderID, skip, limit, maxActive)
-		return id, false, err
+		// ══════════════════════════════════════════════════════════════
+		// **شبكةُ الأمان تبقى حديثةَ الموقع — لا تهبط إلى شائخ** (قرارُ
+		// المالك ٢٠٢٦-٠٩-٢٨)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **بلوغُ الأقصى لا يجعل موضعاً شائخاً مؤهَّلاً**: نُسقط حدَّ المسافة
+		// وحدَه ونُبقي الحداثة، فنختار أقربَ مؤهَّلٍ حديثِ الموقع أينما كان.
+		// **وإن لم يكن ثمّة حديثٌ مؤهَّل — يُنتظر** حتّى يتحدّث موضعُ أحدهم،
+		// **ولا يُعرض على مجهولِ الموضع.** والعدلُ الصِّرفُ الأعمى عن الموضع
+		// لا يقع إلّا حين يُطفئ المشغّلُ القربَ صراحةً (`proximity_enabled=false`).
+		id, err := s.freshFallbackCandidate(ctx, orderID, skip, limit, maxActive, fresh, bucket)
+		if err == nil {
+			return id, false, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", false, err
+		}
+		return "", true, pgx.ErrNoRows // **لا حديثَ مؤهَّل — يُنتظر لا يُهبَط.**
 	}
 	// **يُنتظر التوسّع.**
 	return "", true, pgx.ErrNoRows
@@ -395,26 +423,10 @@ const zoneGateClause = `
 		             OR (z.shape = 'polygon' AND z.area IS NOT NULL
 		                 AND ST_Covers(z.area, u.last_location)) ) ) )`
 
-// proximityRotationCandidate الأقربُ المؤهَّلُ حديثُ الموقع داخلَ الحلقة —
-// **الجغرافيا تُرشّح (فهرسُ GIST)، والمسافةُ تُرتّب، والعدلُ يفصل بين المتقاربين.**
-//
-// **والشريحةُ (`$7`) تمنع الجوع**: من تساوت مسافتاهما تقريباً يفصل بينهما أطولُ
-// انتظاراً، **فلا يبتلع الأقربُ بأمتارٍ كلَّ شيء.**
-func (s *Service) proximityRotationCandidate(ctx context.Context, orderID string, skip []string, limit, maxActive, fresh, radius, bucket int64) (string, error) {
-	zoneClause := ""
-	if s.settings != nil && s.settings.GetBool(ctx, "drivers.zone_gate_enabled") {
-		zoneClause = zoneGateClause
-	}
-	q := `
-		SELECT u.id
-		FROM users u
-		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-		CROSS JOIN (
-		    SELECT COALESCE(o.pickup_override, m.location) AS pickup,
-		           COALESCE(o.cash_due, 0) AS cash_due
-		    FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		    WHERE o.id = $4
-		) ord
+// **جسمُ الأهليّة المشترك** — دوامٌ وحالةٌ وتخطٍّ ونقدٌ وعددُ طلباتٍ وعرضٌ حيٌّ
+// واحد، **وحداثةُ الموقعِ شرطٌ لا يسقط** (`last_location` حديثٌ). يُبنى فوقه
+// استعلامان: داخلَ الحلقة، وحديثٌ بلا حلقة.
+const proximityEligibleWhere = `
 		WHERE u.on_shift AND u.status = 'active'
 		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
@@ -426,16 +438,61 @@ func (s *Service) proximityRotationCandidate(ctx context.Context, orderID string
 		      WHERE o2.offered_driver_id = u.id AND o2.id <> $4
 		        AND o2.status = 'dispatching' AND o2.driver_id IS NULL
 		        AND o2.offer_expires_at > now())
-		  -- **القرب: موضعٌ حديثٌ داخلَ الحلقة** — الجغرافيا تُرشّح، المسافةُ تُرتّب.
-		  AND ord.pickup IS NOT NULL
+		  -- **الحداثةُ شرطٌ لا يسقط أبداً حين يكون القربُ مُفعَّلاً** — ولو بلغ
+		  --  نصفُ القطر أقصاه: مجهولُ الموضع أو شائخُه لا يُعرض عليه.
 		  AND u.last_location IS NOT NULL
-		  AND u.last_location_at > now() - make_interval(secs => $5)
+		  AND u.last_location_at > now() - make_interval(secs => $5)`
+
+const proximityCTE = `
+		SELECT u.id
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
+		CROSS JOIN (
+		    SELECT COALESCE(o.pickup_override, m.location) AS pickup,
+		           COALESCE(o.cash_due, 0) AS cash_due
+		    FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
+		    WHERE o.id = $4
+		) ord`
+
+// proximityInRadius الأقربُ المؤهَّلُ حديثُ الموقع **داخلَ حلقةٍ** — الجغرافيا
+// تُرشّح (فهرسُ GIST)، والمسافةُ تُرتّب، والشريحةُ (`$7`) تمنع الجوع.
+func (s *Service) proximityInRadius(ctx context.Context, orderID string, skip []string, limit, maxActive, fresh, radius, bucket int64) (string, error) {
+	zoneClause := ""
+	if s.settings != nil && s.settings.GetBool(ctx, "drivers.zone_gate_enabled") {
+		zoneClause = zoneGateClause
+	}
+	q := proximityCTE + proximityEligibleWhere + `
+		  AND ord.pickup IS NOT NULL
 		  AND ST_DWithin(u.last_location, ord.pickup, $6)` + zoneClause + `
 		ORDER BY floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($7::float8, 1)),
 		         u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
 		LIMIT 1`
 	var driverID string
 	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, radius, bucket).Scan(&driverID)
+	return driverID, err
+}
+
+// freshFallbackCandidate **شبكةُ الأمان — حديثةُ الموقعِ لا شائختُه.**
+//
+// **تُسقط حدَّ المسافة وحدَه وتُبقي الحداثة** (`proximityEligibleWhere`): تُنادى
+// حين بلغ نصفُ القطر أقصاه ولا قريبٌ داخلَه، أو حين لا نقطةَ التقاطٍ تُقاس.
+// **فتختار أقربَ مؤهَّلٍ حديثِ الموقع أينما كان، أو لا تختار** — ولا تعرض على
+// مجهولِ الموضع. **والعدلُ الأعمى عن الموضع في `legacyRotationCandidate` وحدَها،
+// ولا تُنادى إلّا حين يُطفئ المشغّلُ القربَ.**
+//
+// **والترتيبُ بالمسافة إن وُجدت النقطة، وإلّا بالعدل** — `NULLS LAST` تجعل من لا
+// مسافةَ له (لا نقطةَ التقاط) يُرتَّب بالعدل وحدَه.
+func (s *Service) freshFallbackCandidate(ctx context.Context, orderID string, skip []string, limit, maxActive, fresh, bucket int64) (string, error) {
+	zoneClause := ""
+	if s.settings != nil && s.settings.GetBool(ctx, "drivers.zone_gate_enabled") {
+		zoneClause = zoneGateClause
+	}
+	q := proximityCTE + proximityEligibleWhere + zoneClause + `
+		ORDER BY floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($6::float8, 1)) NULLS LAST,
+		         u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
+		LIMIT 1`
+	var driverID string
+	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, bucket).Scan(&driverID)
 	return driverID, err
 }
 

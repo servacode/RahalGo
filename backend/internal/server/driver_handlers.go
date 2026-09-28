@@ -534,12 +534,17 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = $1 AND du.on_shift AND du.status = 'active')
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = $1), 0) + o.cash_due <= $3
 		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = $1 AND oo.closed_at IS NULL) < $4
-		  -- **قريبٌ حديثُ الموقع داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا
-		  --  نقطةِ التقاطٍ تُقاس** — عندها لا يُحجب بالمسافة.
+		  -- ══════════════════════════════════════════════════════════════
+		  -- **السائقُ السائلُ حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك
+		  --  ٢٠٢٦-٠٩-٢٨): مجهولُ الموضع أو شائخُه لا يُبثُّ إليه، **ولو بلغ
+		  --  الطلبُ أقصى توسّعه.** فالبثُّ لا يبلغ من لا يُعرف أين هو.
+		  -- ══════════════════════════════════════════════════════════════
+		  AND `+freshLoc+` IS NOT NULL
+		  -- **حديثٌ داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ
+		  --  تُقاس** — عندها لا يُحجب بالمسافة، **والحداثةُ مضمونةٌ فوق.**
 		  AND (
 		    COALESCE(o.pickup_override, m.location) IS NULL
-		    OR (`+freshLoc+` IS NOT NULL
-		        AND ST_DWithin(`+freshLoc+`, COALESCE(o.pickup_override, m.location), `+radiusExpr+`))
+		    OR ST_DWithin(`+freshLoc+`, COALESCE(o.pickup_override, m.location), `+radiusExpr+`)
 		    OR $8 <= 0
 		    OR `+radiusExpr+` >= $6::float8
 		  )

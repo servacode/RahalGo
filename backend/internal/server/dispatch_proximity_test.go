@@ -42,6 +42,9 @@ func armProximity(t *testing.T, f *driverFixture) {
 	f.setSetting(t, "drivers.proximity_bucket_m", 500)
 	f.setSetting(t, "drivers.max_active_orders", 1)   // سقفٌ معلومٌ للاختبار
 	f.setSetting(t, "drivers.same_route_radius_m", 0) // لا نفسَ مسارٍ في اختبارات الدور
+	// **ولا يُسرَّب `proximity_enabled=false`** (يضبطه اختبارُ الإطفاء) إلى
+	// اختباراتٍ لاحقةٍ في القاعدة المشتركة — يُعاد إلى الافتراض بعد كلّ اختبار.
+	t.Cleanup(func() { f.setSetting(t, "drivers.proximity_enabled", true) })
 }
 
 func (f *driverFixture) offer(t *testing.T, orderID string, skip []string) {
@@ -319,6 +322,76 @@ func TestProximity_SameRouteStillGated(t *testing.T) {
 	f.setSetting(t, "drivers.same_route_radius_m", 100)
 	if f.srv.orders.SameRouteDriver(context.Background(), ord) != nil {
 		t.Fatalf("نفسُ المسار: وُجد مرشّحٌ رغم ضيقِ المدى المركزيّ")
+	}
+}
+
+// L1 — لا قريبٌ حديث ونصفُ القطر بلغ أقصاه ويوجد شائخٌ فقط → **لا عرض** (لا يُهبَط
+// إلى الشائخ، يُنتظر تحديثُ الموضع).
+func TestProximity_StaleOnlyAtMaxGetsNoOffer(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	armProximity(t, f)
+	d := f.drivers[0]
+	f.onShift(t, d, true)
+	f.standAt(t, d, nearLat, nearLng) // قريبٌ بالمكان…
+	f.locationAgo(t, d, 1200)         // …لكنّ موضعَه شائخ
+	ord := f.orderAt(t, pmLat, pmLng, pdLat, pdLng)
+	f.dispatchedAgo(t, ord, 600) // انتظارٌ يبلغ أقصى نصف القطر
+	f.offer(t, ord, nil)
+	if o := f.offeredDriver(t, ord); o != nil {
+		t.Fatalf("عُرض على شائخِ الموضع عند الأقصى %s — والمتوقّع لا عرض", (*o)[:8])
+	}
+}
+
+// L2 — بعد أن يصير موضعُ ذاك السائق حديثاً → يصير مؤهَّلاً.
+func TestProximity_StaleBecomesFreshThenEligible(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	armProximity(t, f)
+	d := f.drivers[0]
+	f.onShift(t, d, true)
+	f.standAt(t, d, nearLat, nearLng)
+	f.locationAgo(t, d, 1200)
+	ord := f.orderAt(t, pmLat, pmLng, pdLat, pdLng)
+	f.dispatchedAgo(t, ord, 600)
+	f.offer(t, ord, nil)
+	if o := f.offeredDriver(t, ord); o != nil {
+		t.Fatalf("لا ينبغي عرضٌ والموضعُ شائخ: %s", (*o)[:8])
+	}
+	// **يتحدّث الموضع** → يصير مؤهَّلاً.
+	f.standAt(t, d, nearLat, nearLng) // last_location_at = now()
+	f.offer(t, ord, nil)
+	want(t, f.offeredDriver(t, ord), d, "بعد تحديث الموضع يصير مؤهَّلاً")
+}
+
+// L3 — إطفاءُ القرب صراحةً → العدلُ الأعمى عن الموضع يعمل عمداً (يقبل الشائخ).
+func TestProximity_DisabledFallsBackToLegacy(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	armProximity(t, f)
+	f.setSetting(t, "drivers.proximity_enabled", false) // قرارُ المشغّل الصريح
+	d := f.drivers[0]
+	f.onShift(t, d, true)
+	f.standAt(t, d, nearLat, nearLng)
+	f.locationAgo(t, d, 1200) // شائخ
+	ord := f.orderAt(t, pmLat, pmLng, pdLat, pdLng)
+	f.offer(t, ord, nil)
+	want(t, f.offeredDriver(t, ord), d, "القربُ مطفأً: العدلُ يقبل الشائخ عمداً")
+}
+
+// L4 — الطابور: السائقُ الشائخُ الموضع لا يرى الطلب؛ وحين يتحدّث موضعُه يراه.
+func TestProximity_QueueHidesStaleCaller(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	armProximity(t, f)
+	f.setSetting(t, "drivers.assignment_mode", "queue")
+	d := f.drivers[0]
+	f.onShift(t, d, true)
+	f.standAt(t, d, nearLat, nearLng)
+	f.locationAgo(t, d, 1200) // شائخ
+	ord := f.orderAt(t, pmLat, pmLng, pdLat, pdLng)
+	if hasID(f.queueIDs(t, d), ord) {
+		t.Fatalf("الطابور: شائخُ الموضع رأى الطلب")
+	}
+	f.standAt(t, d, nearLat, nearLng) // يتحدّث
+	if !hasID(f.queueIDs(t, d), ord) {
+		t.Fatalf("الطابور: حديثُ الموضع لم يرَ الطلب داخلَ حلقته")
 	}
 }
 
