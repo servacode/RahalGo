@@ -482,32 +482,76 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 //
 // وفي نمط «الأسرع» يبقى السلوكُ القديم — **لأنه هو النمطُ نفسُه.**
 func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
-	// **في «بالترتيب» لا يرى السائقُ إلّا ما عُرض عليه باسمه.**
-	mine := `AND o.offered_driver_id = $1`
-	if s.orders.AssignmentMode(r.Context()) != "rotation" {
-		// **وما رفضه لا يعود إليه** — (قرارُ المالك ٢٠٢٦-٠٨-١٢):
-		// **الرفضُ في «للجميع» إخفاءٌ لا نقل**، والطلبُ يبقى لغيره.
-		mine = `AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
-		        AND NOT ($1::uuid = ANY(o.offer_passed))`
+	ctx := r.Context()
+	uid := userIDFrom(r)
+
+	// **في «بالترتيب» لا يرى السائقُ إلّا ما عُرض عليه باسمه** — و`OfferNext`
+	// صار يختار بالقرب، فالطابورُ في هذا الوضع قريبٌ سلفاً.
+	//
+	// **ومعرّفُ السائق يُمرَّر.** كان `$1` مكتوباً ولا يُمرَّر شيء، فيردّ
+	// الاستعلامُ خطأً وتبقى القائمةُ فارغةً بلا كلمة (جردُ ٢٠٢٦-٠٨-٠٩).
+	if s.orders.AssignmentMode(ctx) == "rotation" {
+		s.scanDriverOrders(w, r, driverOrderSelect+`
+			WHERE o.status = 'dispatching' AND o.driver_id IS NULL
+			  AND o.offered_driver_id = $1
+			ORDER BY o.ready_at NULLS LAST, o.created_at
+			LIMIT 50`, uid, staleLocationMinutes)
+		return
 	}
-	// **ومعرّفُ السائق يُمرَّر.**
+
+	// ══════════════════════════════════════════════════════════════════
+	// **«للجميع» لم تعد للجميع — بل للمؤهَّلين القريبين** (قرارُ المالك
+	// ٢٠٢٦-٠٩-٢٨): يُبثّ الطلبُ فقط لمن هو مؤهَّلٌ حديثُ الموقع داخلَ حلقةِ
+	// التوزيع، بنفسِ سياسة توسّعها، **لا لكلّ سائقٍ في المدينة.** والأقربُ أوّلاً.
+	// ══════════════════════════════════════════════════════════════════
 	//
-	// كان `$1` مكتوباً في الاستعلام **ولا يُمرَّر إليه شيء** — فيردّ الاستعلامُ
-	// `expected 1 arguments, got 0`، **وتردّ الواجهةُ خمسمئة في كلّ نداء.**
-	// وشاشةُ السائق تبتلع الخطأ (`.catch(() => undefined)`) **فتبقى القائمةُ
-	// فارغةً بلا كلمة.**
-	//
-	// **وهذا سببُ «لم يتم تحويل الطلب للسائق»**: لم يكن الترتيبُ معطوباً —
-	// **كان الطابورُ نفسُه لا يُقرأ أبداً.** فلم يرَ سائقٌ طلباً قطّ، واضطُرّ
-	// المالكُ إلى الإسناد اليدويّ في كلّ مرّة.
-	//
-	// **ولم يُمسك في بناءٍ ولا `vet` ولا اختبار**: عددُ الوسائط يُفحص وقتَ
-	// التنفيذ لا وقتَ الترجمة، **ولا اختبارَ كان ينادي هذا المسار.**
+	// **ومطفأً — أو بلا نقطةِ التقاطٍ للطلب — يعود البثُّ الصِّرف** كما كان.
+	if !s.orders.ProximityEnabled(ctx) {
+		s.scanDriverOrders(w, r, driverOrderSelect+`
+			WHERE o.status = 'dispatching' AND o.driver_id IS NULL
+			  -- **وما رفضه لا يعود إليه** (الرفضُ في «للجميع» إخفاءٌ لا نقل).
+			  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
+			  AND NOT ($1::uuid = ANY(o.offer_passed))
+			ORDER BY o.ready_at NULLS LAST, o.created_at
+			LIMIT 50`, uid, staleLocationMinutes)
+		return
+	}
+
+	// **حلقةٌ تتوسّع بانتظار الطلب** كنظيرتها في الدور:
+	// نصفُ القطر = الأوّل + الخطوة × عددِ المُهَل المنقضية، محدوداً بالأقصى.
+	// وبلوغُ الأقصى (أو انعدامُ الخطوة) يُسقط شرطَ المسافة — **شبكةُ أمانٍ
+	// موثَّقة** فلا يبقى طلبٌ عالقاً في منطقةٍ قليلةِ السائقين.
+	dp := s.orders.DispatchProximity(ctx)
+	radiusExpr := `LEAST($6::float8, $7::float8 + $8::float8 *
+		floor(GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at)))) / GREATEST($9::float8, 1)))`
+	freshLoc := `(SELECT du.last_location FROM users du
+	              WHERE du.id = $1 AND du.last_location_at > now() - make_interval(secs => $5))`
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-		  `+mine+`
-		ORDER BY o.ready_at NULLS LAST, o.created_at
-		LIMIT 50`, userIDFrom(r), staleLocationMinutes)
+		  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
+		  AND NOT ($1::uuid = ANY(o.offer_passed))
+		  -- **السائقُ السائلُ مؤهَّلٌ فعلاً** — دوامٌ وحالةٌ وسقفُ نقدٍ وعددُ طلبات.
+		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = $1 AND du.on_shift AND du.status = 'active')
+		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = $1), 0) + o.cash_due <= $3
+		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = $1 AND oo.closed_at IS NULL) < $4
+		  -- **قريبٌ حديثُ الموقع داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا
+		  --  نقطةِ التقاطٍ تُقاس** — عندها لا يُحجب بالمسافة.
+		  AND (
+		    COALESCE(o.pickup_override, m.location) IS NULL
+		    OR (`+freshLoc+` IS NOT NULL
+		        AND ST_DWithin(`+freshLoc+`, COALESCE(o.pickup_override, m.location), `+radiusExpr+`))
+		    OR $8 <= 0
+		    OR `+radiusExpr+` >= $6::float8
+		  )
+		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
+		ORDER BY
+		  CASE WHEN `+freshLoc+` IS NOT NULL AND COALESCE(o.pickup_override, m.location) IS NOT NULL
+		       THEN ST_Distance(`+freshLoc+`, COALESCE(o.pickup_override, m.location))
+		       ELSE NULL END NULLS LAST,
+		  o.ready_at NULLS LAST, o.created_at
+		LIMIT 50`,
+		uid, staleLocationMinutes, dp.CashLimit, dp.MaxActive, dp.FreshSec,
+		dp.MaxM, dp.InitialM, dp.StepM, dp.TimeoutSec)
 }
 
 // handleDriverOrders طلباته هو — **المفتوحةُ وحدَها.**

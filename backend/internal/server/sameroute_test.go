@@ -117,6 +117,11 @@ const (
 func armSameRoute(t *testing.T, f *driverFixture) (driver, anchor string) {
 	t.Helper()
 	armRotation(t, f, 60)
+	// **الأطوالُ صارت إعداداتٍ مركزيّة** — تُثبَّت هنا كي لا يُلوّثها اختبارٌ
+	// سابقٌ في القاعدة المشتركة (`-p 1`)، فيُقرأ نفسُ المسار بقيمِه المقصودة.
+	f.setSetting(t, "drivers.same_route_radius_m", 800)
+	f.setSetting(t, "drivers.same_route_spread_m", 2000)
+	f.setSetting(t, "drivers.location_fresh_sec", 300)
 	driver = f.drivers[0]
 	f.onShift(t, driver, true)
 	anchor = f.orderAt(t, mA1, mA2, dA1, dA2)

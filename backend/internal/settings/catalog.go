@@ -1235,6 +1235,67 @@ var Catalog = []Def{
 	{Key: "drivers.same_route_extra", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 3, Unit: "order", Default: 1},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **القُربُ في التوزيع — لا العدلُ وحدَه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٩-٢٨: التوزيعُ يُبنى على صلاحيّة التوصيل الحقيقيّة
+	//  لا على دورةِ العدل وحدَها — الأقربُ المؤهَّلُ أوّلاً، والعدلُ يفصل
+	//  بين المتقاربين.)
+	//
+	// **والمفتاحُ الرئيس**: مطفأً يعود التوزيعُ إلى العدل الصِّرف (السلوك
+	// السابق) — شبكةُ أمانٍ إن شاخت المواقعُ أو تعذّر القرب.
+	{Key: "drivers.proximity_enabled", Group: GroupDrivers, Kind: KindBool,
+		Default: true},
+
+	// **حداثةُ الموقع — بعدها لا يُقاس القربُ عليه.**
+	//
+	// **نقطةٌ بلا وقتٍ كذبةٌ تشيخ**: من أطفأ التطبيقَ قبل مدّةٍ يبقى موضعُه
+	// مكتوباً فيُحسب أقربَ الجميع وهو في بيته. يقرؤه القربُ في الدور
+	// والطابور ونفسِ المسار — **رقمٌ واحدٌ لمعنًى واحد.**
+	{Key: "drivers.location_fresh_sec", Group: GroupDrivers, Kind: KindInt,
+		Min: 60, Max: 1800, Unit: "second", Default: 300,
+		ShowWhen: &Condition{Key: "drivers.proximity_enabled", Equals: []string{"true"}}},
+
+	// **نصفُ القطر الأوّل حول المتجر** — يُعرض على المؤهَّلين داخلَه أوّلاً.
+	{Key: "drivers.dispatch_radius_initial_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 200, Max: 200000, Unit: "meters", Default: 3000,
+		ShowWhen: &Condition{Key: "drivers.proximity_enabled", Equals: []string{"true"}}},
+
+	// **خطوةُ التوسّع** — كلّما طال انتظارُ الطلب بلا آخذٍ اتّسعت الحلقةُ بها.
+	{Key: "drivers.dispatch_radius_step_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 200000, Unit: "meters", Default: 2000,
+		ShowWhen: &Condition{Key: "drivers.proximity_enabled", Equals: []string{"true"}}},
+
+	// **أقصى نصفِ قطر** — بعده لا اتّساعَ، ويعود التوزيعُ إلى العدل الصِّرف
+	// إن لم يبقَ قريبٌ مؤهَّل (شبكةُ الأمان الموثَّقة).
+	{Key: "drivers.dispatch_radius_max_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 200, Max: 200000, Unit: "meters", Default: 15000,
+		ShowWhen: &Condition{Key: "drivers.proximity_enabled", Equals: []string{"true"}}},
+
+	// **مدى «متقاربان»** — من وقعا في نفس الشريحة يفصل بينهما العدلُ لا المتر،
+	// **فلا يبتلع الأقربُ كلَّ شيءٍ ويُجوَّع من يليه.** صفرُه يجعل الترتيبَ
+	// بالمسافة الصافية.
+	{Key: "drivers.proximity_bucket_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 50000, Unit: "meters", Default: 1000,
+		ShowWhen: &Condition{Key: "drivers.proximity_enabled", Equals: []string{"true"}}},
+
+	// **مدى نفسِ المسار — كم بين المتجرين ليُعدّا متجاورين** (كان ثابتاً في
+	// الشيفرة، صار مركزيّاً).
+	{Key: "drivers.same_route_radius_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 50000, Unit: "meters", Default: 800},
+
+	// **انتشارُ نفسِ المسار — كم بين الزبونين ليُعدّا في الجهة نفسِها.**
+	{Key: "drivers.same_route_spread_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 50000, Unit: "meters", Default: 2000},
+
+	// **بوّابةُ المنطقة — اختياريّةٌ ومطفأةٌ افتراضاً** (قرارُ المالك
+	// ٢٠٢٦-٠٩-٢٨). حين تُشعَل يُشترط أن يكون موضعُ السائق داخلَ منطقةِ الطلب
+	// (`orders.zone_id` على هندسة `delivery_zones`). **ومطفأةً القربُ وحدَه
+	// حارسُ نطاق الخدمة** — فالسائقُ قد يكون قربَ المتجر في منطقةِ تسليمٍ أخرى.
+	{Key: "drivers.zone_gate_enabled", Group: GroupDrivers, Kind: KindBool,
+		Default: false},
+
 	// **تعويضُ السائق عند تعذّر التسليم — نسبةٌ من أجرة التوصيل.**
 	//
 	// **وأجرةُ التوصيل هي حصّتُه كاملةً حين يُسلَّم الطلب** — فالتعويضُ جزءٌ

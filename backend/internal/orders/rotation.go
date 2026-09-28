@@ -115,6 +115,41 @@ func (s *Service) settingInt(ctx context.Context, key string) int64 {
 	return s.settings.GetInt(ctx, key)
 }
 
+// ProximityEnabled أمُفعَّلٌ التوزيعُ بالقرب — **مطفأً يعود العدلُ/البثُّ
+// الصِّرف.** (بلا مخزنِ إعداداتٍ في اختبار: مطفأ.)
+func (s *Service) ProximityEnabled(ctx context.Context) bool {
+	return s.settings != nil && s.settings.GetBool(ctx, "drivers.proximity_enabled")
+}
+
+// DispatchProximity أرقامُ القربِ المركزيّة — **يقرؤها الطابورُ (البثّ) ليحصر
+// الرؤيةَ في المؤهَّلين القريبين، بنفسِ سياسة توسّع الدور.**
+type DispatchProximity struct {
+	CashLimit  int64
+	MaxActive  int64
+	FreshSec   int64
+	InitialM   int64
+	StepM      int64
+	MaxM       int64
+	TimeoutSec int64
+}
+
+// DispatchProximity يجمع أرقامَ القرب من الإعدادات المركزيّة.
+func (s *Service) DispatchProximity(ctx context.Context) DispatchProximity {
+	timeout := int64(s.offerTimeout(ctx).Seconds())
+	if timeout < 1 {
+		timeout = 1
+	}
+	return DispatchProximity{
+		CashLimit:  s.settingInt(ctx, "drivers.cash_limit"),
+		MaxActive:  s.settingInt(ctx, "drivers.max_active_orders"),
+		FreshSec:   s.settingInt(ctx, "drivers.location_fresh_sec"),
+		InitialM:   s.settingInt(ctx, "drivers.dispatch_radius_initial_m"),
+		StepM:      s.settingInt(ctx, "drivers.dispatch_radius_step_m"),
+		MaxM:       s.settingInt(ctx, "drivers.dispatch_radius_max_m"),
+		TimeoutSec: timeout,
+	}
+}
+
 // OfferNext يعرض الطلبَ على صاحب الدور، أو يُفرّغ العرضَ إن لم يبقَ أحد.
 //
 // `skip` سائقون مرّ عليهم الدورُ في هذا الطلب فلا يُعادون إليه — **وإلّا دار
@@ -173,42 +208,10 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	limit := s.settingInt(ctx, "drivers.cash_limit")
 	maxActive := s.settingInt(ctx, "drivers.max_active_orders")
 
-	// **الأهليةُ تُفحص في الاستعلام لا بعده**: جلبُ الجميع ثم غربلتُهم في Go
-	// يعني قراءةَ كل سائقٍ في المنصة لاختيار واحد.
-	var driverID string
-	err := s.db.QueryRow(ctx, `
-		SELECT u.id
-		FROM users u
-		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-		WHERE u.on_shift
-		  AND u.status = 'active'
-		  -- **COALESCE لا يُستغنى عنه**: أوّلُ عرضٍ يمرّ بـskip فارغاً،
-		  -- و NOT (id = ANY(NULL)) يُنتج NULL لا TRUE — **فيسقط كلُّ سائقٍ
-		  -- في المنصة ويعود الطلبُ مشاعاً وكأن لا أحدَ أهلٌ له.**
-		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
-		  -- **وسقفُ النقد يُقاس بما بحوزته وبنقد هذا الطلب معاً** — انظر
-		  -- تعليلَه فوق الدالّة.
-		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
-		                WHERE b.driver_id = u.id), 0)
-		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0) <= $2
-		  AND (SELECT count(*) FROM orders o
-		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
-		  -- **وعرضٌ حيٌّ واحدٌ لكلّ سائق** — انظر تعليلَه فوق الدالّة.
-		  AND NOT EXISTS (
-		      SELECT 1 FROM orders o2
-		      WHERE o2.offered_driver_id = u.id
-		        AND o2.id <> $4
-		        AND o2.status = 'dispatching'
-		        AND o2.driver_id IS NULL
-		        AND o2.offer_expires_at > now())
-		-- **ومن لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
-		--
-		-- كان الفاصلُ u.id — **معرّفٌ عشوائيٌّ لا معنى له**: من سُجّل أوّلاً
-		-- يسبق من بكّر بالدوام. **وقاعدةُ المالك: من فتح دوامَه أوّلاً يستحقّ
-		-- أوّلَ طلب** — وهو ما يجعل التبكير مجدياً.
-		ORDER BY u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
-		LIMIT 1`, skip, limit, maxActive, orderID).Scan(&driverID)
-
+	// **الاختيارُ بالقرب ثمّ العدل** — انظر `pickRotationCandidate`. والأهليّةُ
+	// تُفحص في الاستعلام لا بعده: جلبُ الجميع ثمّ غربلتُهم في Go يعني قراءةَ
+	// كلّ سائقٍ في المنصة لاختيار واحد.
+	driverID, waitForExpansion, err := s.pickRotationCandidate(ctx, orderID, skip, limit, maxActive)
 	if err != nil {
 		// **خطأُ الاستعلام لا يُقرأ «لا أحد».**
 		//
@@ -219,6 +222,12 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 			s.logger.Error("الترتيب: تعذّر اختيار صاحب الدور",
 				"order", orderID, "error", err)
 			return err
+		}
+		// **قريبٌ مؤهَّلٌ لم يُوجد بعد، ونصفُ القطر لم يبلغ أقصاه** — يُترك
+		// الطلبُ بلا عرضٍ لتلتقطه الكنسةُ التالية بحلقةٍ أوسع (`offerWaiting`).
+		// **لا يُفرَّغ ولا يُهمَل**: التوسّعُ يقاس بانتظاره.
+		if waitForExpansion {
+			return nil
 		}
 		// **لا أحدَ أهلٌ — فليَرَه الجميع.** الطلبُ لا يُحجَز لمن لا يستطيع.
 		_, e := s.db.Exec(ctx, `
@@ -261,6 +270,173 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		s.notifyOffer(ctx, orderID, driverID)
 	}
 	return err
+}
+
+// pickRotationCandidate يختار صاحبَ الدور — **بالقرب ثمّ العدل، أو العدلِ
+// وحدَه.**
+//
+// # ثلاثةُ مخارج
+//
+//	سائقٌ            ←  وُجد مرشّح (قريبٌ مؤهَّلٌ حديثُ الموقع، أو مؤهَّلٌ بالعدل)
+//	`waitForExpansion` ←  القربُ مُفعَّلٌ ولا مرشّحَ داخلَ الحلقة بعد، ونصفُ
+//	                      القطر دون أقصاه: يُنتظر توسّعُه في الكنسة التالية
+//	`pgx.ErrNoRows`    ←  لا مؤهَّلَ أصلاً — يُفرَّغ العرضُ فيراه الجميع
+//
+// **والقربُ يتوسّع بانتظار الطلب**: نصفُ القطر = الأوّل + الخطوة × عددِ المُهَل
+// المنقضية، محدوداً بالأقصى. بلغ الأقصى ولا قريبٌ حديث؟ **يعود العدلُ الصِّرف**
+// (شبكةُ الأمان) فلا يبقى طلبٌ عالقاً في منطقةٍ قليلةِ السائقين.
+func (s *Service) pickRotationCandidate(ctx context.Context, orderID string, skip []string, limit, maxActive int64) (string, bool, error) {
+	// **مطفأً — أو بلا مخزنِ إعداداتٍ في اختبار — يعود العدلُ الصِّرف** كما كان.
+	if s.settings == nil || !s.settings.GetBool(ctx, "drivers.proximity_enabled") {
+		id, err := s.legacyRotationCandidate(ctx, orderID, skip, limit, maxActive)
+		return id, false, err
+	}
+	hasPickup, waitSec, err := s.orderDispatchInfo(ctx, orderID)
+	if err != nil {
+		return "", false, err
+	}
+	// **بلا نقطةِ التقاطٍ لا قُربَ يُقاس** — العدلُ الصِّرف.
+	if !hasPickup {
+		id, err := s.legacyRotationCandidate(ctx, orderID, skip, limit, maxActive)
+		return id, false, err
+	}
+
+	fresh := s.settingInt(ctx, "drivers.location_fresh_sec")
+	initR := s.settingInt(ctx, "drivers.dispatch_radius_initial_m")
+	stepR := s.settingInt(ctx, "drivers.dispatch_radius_step_m")
+	maxR := s.settingInt(ctx, "drivers.dispatch_radius_max_m")
+	bucket := s.settingInt(ctx, "drivers.proximity_bucket_m")
+	timeout := int64(s.offerTimeout(ctx).Seconds())
+	if timeout < 1 {
+		timeout = 1
+	}
+
+	radius := initR + stepR*(waitSec/timeout)
+	if radius >= maxR {
+		radius = maxR
+	}
+	// **بلغ الأقصى، أو لا خطوةَ توسّعٍ أصلاً** — عندها لا مزيدَ من الحلقات.
+	atMax := radius >= maxR || stepR <= 0
+
+	id, err := s.proximityRotationCandidate(ctx, orderID, skip, limit, maxActive, fresh, radius, bucket)
+	if err == nil {
+		return id, false, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", false, err
+	}
+	if atMax {
+		// **شبكةُ الأمان الموثَّقة** — العدلُ الصِّرف على كلّ مؤهَّل.
+		id, err := s.legacyRotationCandidate(ctx, orderID, skip, limit, maxActive)
+		return id, false, err
+	}
+	// **يُنتظر التوسّع.**
+	return "", true, pgx.ErrNoRows
+}
+
+// orderDispatchInfo يقرأ ما يلزم لحساب الحلقة: **أللطلب نقطةُ التقاطٍ، وكم
+// انتظر منذ نزوله إلى الطابور** (`dispatched_at`، وإلّا `created_at`).
+func (s *Service) orderDispatchInfo(ctx context.Context, orderID string) (hasPickup bool, waitSec int64, err error) {
+	var wait float64
+	err = s.db.QueryRow(ctx, `
+		SELECT COALESCE(o.pickup_override, m.location) IS NOT NULL,
+		       GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at))))
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&hasPickup, &wait)
+	if err != nil {
+		return false, 0, err
+	}
+	return hasPickup, int64(wait), nil
+}
+
+// legacyRotationCandidate العدلُ الصِّرف — **أطولُ انتظاراً أوّلاً، بلا قُرب.**
+// وهو السلوكُ قبل القرب، ويبقى شبكةَ الأمان ووضعَ الإطفاء.
+func (s *Service) legacyRotationCandidate(ctx context.Context, orderID string, skip []string, limit, maxActive int64) (string, error) {
+	var driverID string
+	// **الأهليةُ تُفحص في الاستعلام لا بعده**: جلبُ الجميع ثم غربلتُهم في Go
+	// يعني قراءةَ كل سائقٍ في المنصة لاختيار واحد.
+	err := s.db.QueryRow(ctx, `
+		SELECT u.id
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
+		WHERE u.on_shift AND u.status = 'active'
+		  -- **COALESCE لا يُستغنى عنه**: أوّلُ عرضٍ يمرّ بـskip فارغاً، و
+		  -- NOT (id = ANY(NULL)) يُنتج NULL لا TRUE فيسقط كلُّ سائق.
+		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
+		  -- **وسقفُ النقد يُقاس بما بحوزته وبنقد هذا الطلب معاً.**
+		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
+		                WHERE b.driver_id = u.id), 0)
+		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0) <= $2
+		  AND (SELECT count(*) FROM orders o
+		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
+		  -- **وعرضٌ حيٌّ واحدٌ لكلّ سائق.**
+		  AND NOT EXISTS (
+		      SELECT 1 FROM orders o2
+		      WHERE o2.offered_driver_id = u.id AND o2.id <> $4
+		        AND o2.status = 'dispatching' AND o2.driver_id IS NULL
+		        AND o2.offer_expires_at > now())
+		-- **ومن لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
+		ORDER BY u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
+		LIMIT 1`, skip, limit, maxActive, orderID).Scan(&driverID)
+	return driverID, err
+}
+
+// zoneGateClause بوّابةُ المنطقة الاختياريّة — تُضاف حين تُشعَل: موضعُ السائق
+// داخلَ منطقةِ الطلب (`orders.zone_id` على هندسة `delivery_zones`، دائرةً أو
+// مضلّعاً). **وطلبٌ بلا منطقةٍ يمرّ** — لا نمنع ما لم نُصنّفه.
+const zoneGateClause = `
+		  AND ( (SELECT o3.zone_id FROM orders o3 WHERE o3.id = $4) IS NULL
+		    OR EXISTS (
+		        SELECT 1 FROM delivery_zones z
+		        WHERE z.id = (SELECT o3.zone_id FROM orders o3 WHERE o3.id = $4)
+		          AND z.active
+		          AND ( (z.shape = 'radius' AND z.center IS NOT NULL
+		                 AND ST_DWithin(z.center, u.last_location, z.radius_m))
+		             OR (z.shape = 'polygon' AND z.area IS NOT NULL
+		                 AND ST_Covers(z.area, u.last_location)) ) ) )`
+
+// proximityRotationCandidate الأقربُ المؤهَّلُ حديثُ الموقع داخلَ الحلقة —
+// **الجغرافيا تُرشّح (فهرسُ GIST)، والمسافةُ تُرتّب، والعدلُ يفصل بين المتقاربين.**
+//
+// **والشريحةُ (`$7`) تمنع الجوع**: من تساوت مسافتاهما تقريباً يفصل بينهما أطولُ
+// انتظاراً، **فلا يبتلع الأقربُ بأمتارٍ كلَّ شيء.**
+func (s *Service) proximityRotationCandidate(ctx context.Context, orderID string, skip []string, limit, maxActive, fresh, radius, bucket int64) (string, error) {
+	zoneClause := ""
+	if s.settings != nil && s.settings.GetBool(ctx, "drivers.zone_gate_enabled") {
+		zoneClause = zoneGateClause
+	}
+	q := `
+		SELECT u.id
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
+		CROSS JOIN (
+		    SELECT COALESCE(o.pickup_override, m.location) AS pickup,
+		           COALESCE(o.cash_due, 0) AS cash_due
+		    FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		    WHERE o.id = $4
+		) ord
+		WHERE u.on_shift AND u.status = 'active'
+		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
+		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
+		                WHERE b.driver_id = u.id), 0) + ord.cash_due <= $2
+		  AND (SELECT count(*) FROM orders o2
+		       WHERE o2.driver_id = u.id AND o2.closed_at IS NULL) < $3
+		  AND NOT EXISTS (
+		      SELECT 1 FROM orders o2
+		      WHERE o2.offered_driver_id = u.id AND o2.id <> $4
+		        AND o2.status = 'dispatching' AND o2.driver_id IS NULL
+		        AND o2.offer_expires_at > now())
+		  -- **القرب: موضعٌ حديثٌ داخلَ الحلقة** — الجغرافيا تُرشّح، المسافةُ تُرتّب.
+		  AND ord.pickup IS NOT NULL
+		  AND u.last_location IS NOT NULL
+		  AND u.last_location_at > now() - make_interval(secs => $5)
+		  AND ST_DWithin(u.last_location, ord.pickup, $6)` + zoneClause + `
+		ORDER BY floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($7::float8, 1)),
+		         u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
+		LIMIT 1`
+	var driverID string
+	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, radius, bucket).Scan(&driverID)
+	return driverID, err
 }
 
 // assignDirectly يضع الطلبَ في مهامّ صاحب الدور — **بالمسار نفسِه الذي يسلكه

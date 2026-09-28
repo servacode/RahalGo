@@ -34,17 +34,11 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
-// SameRouteRadiusM كم بين المتجرين ليُعدّا متجاورين.
-//
-// **وثمانمئةُ مترٍ وقفةٌ بدقيقتين على درّاجة**، وأبعدُ منها رحلةٌ ثانيةٌ
-// تُسمّى نفسَها اقتصاداً وهي ليست كذلك.
-const SameRouteRadiusM = 800
-
-// SameRouteSpreadM كم بين الزبونين ليُعدّا في الجهة نفسِها.
-//
-// **وأوسعُ من المتجرين عمداً**: نقطتا تسليمٍ في حيٍّ واحدٍ قد تبعدان كيلومتراً
-// **وهما على الخطّ نفسِه**، بينما مطعمان متباعدان وقفتان مستقلّتان.
-const SameRouteSpreadM = 2000
+// **أطوالُ نفسِ المسار صارت إعداداتٍ مركزيّة** — `drivers.same_route_radius_m`
+// (كم بين المتجرين ليُعدّا متجاورين، ثمانمئةُ مترٍ افتراضاً) و
+// `drivers.same_route_spread_m` (كم بين الزبونين ليُعدّا في الجهة نفسِها،
+// أوسعُ عمداً: نقطتا تسليمٍ في حيٍّ قد تبعدان كيلومتراً وهما على الخطّ نفسِه).
+// **وحداثةُ الموقع من `drivers.location_fresh_sec`** المشتركِ مع القرب.
 
 // SameRouteCandidate سائقٌ يصلح لطلبٍ بنفس مساره — **ومعه سببُ صلاحه.**
 //
@@ -82,6 +76,13 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 	maxActive := s.settingInt(ctx, "drivers.max_active_orders") +
 		s.settingInt(ctx, "drivers.same_route_extra")
 
+	// **الأطوالُ والحداثةُ من الإعدادات المركزيّة** — كانت ثوابتَ في الشيفرة
+	// (`SameRouteRadiusM`/`SameRouteSpreadM` و«خمسُ دقائق»)، فصارت مضبوطةً من
+	// اللوحة، **وحداثةُ الموقع رقمٌ واحدٌ يشترك فيه القربُ كلُّه.**
+	radius := s.settingInt(ctx, "drivers.same_route_radius_m")
+	spread := s.settingInt(ctx, "drivers.same_route_spread_m")
+	fresh := s.settingInt(ctx, "drivers.location_fresh_sec")
+
 	var c SameRouteCandidate
 	// **والشروطُ في الاستعلام لا بعده**: جلبُ كلّ سائقٍ ثمّ غربلتُه في Go
 	// يعني قراءةَ المنصة كلِّها لاختيار واحد.
@@ -116,7 +117,7 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		  --     **وموضعٌ شاخ لا يُقاس عليه** — من أطفأ التطبيقَ قبل ساعةٍ
 		  --     يبقى موضعُه مكتوباً.
 		  AND u.last_location IS NOT NULL
-		  AND u.last_location_at > now() - interval '5 minutes'
+		  AND u.last_location_at > now() - make_interval(secs => $6)
 		  AND ST_Distance(u.last_location, nw.pick) <
 		      ST_Distance(u.last_location, nw.dropoff)
 		  -- ٤ · ويحتمله سقفُه — **الحارسُ نفسُه الذي في الدور.**
@@ -127,7 +128,7 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		-- **والأقربُ أوّلاً** — وقفتان متلاصقتان خيرٌ من متباعدتين.
 		ORDER BY ST_Distance(a.pick, nw.pick)
 		LIMIT 1`,
-		orderID, SameRouteRadiusM, SameRouteSpreadM, limit, maxActive).
+		orderID, radius, spread, limit, maxActive, fresh).
 		Scan(&c.DriverID, &c.AnchorOrderID, &c.BetweenPickupsM, &c.BetweenDropoffsM)
 	if err != nil {
 		return nil
