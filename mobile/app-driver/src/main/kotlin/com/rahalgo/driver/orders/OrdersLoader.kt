@@ -88,6 +88,13 @@ suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome = kotlinx.c
         offers = feed.queue()
         mine = feed.orders()
         me = feed.me()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // **والإلغاءُ ليس عطباً** — **وابتلاعُه يُظهر للسائق رسالةَ خطأٍ
+        // كلَّما غادر الشاشةَ أو أعاد التحديث**، **ويكسر التزامنَ
+        // البنيويَّ**: `coroutineScope` تنتظر إلغاءً لا يُبلَّغ.
+        //
+        // (أمسكه حارسُ الويب ٢٠٢٦-٠٩-٣٠ — ودخل مع `d55efc73`.)
+        throw e
     } catch (e: Exception) {
         // **وسقوطُ القائمة يُسقط الدورة** — **وشاشةُ طلباتٍ فارغةٌ بلا
         // سببٍ أسوأُ من رسالةِ عطب**: يظنّ أنّه لا عمل.

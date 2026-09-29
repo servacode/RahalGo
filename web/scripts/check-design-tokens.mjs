@@ -50,10 +50,22 @@ const RULES = {
   rawButton: /(?<![A-Za-z])(Button|OutlinedButton|TextButton|FilledTonalButton)\s*\(/g,
 }
 
-const kt = (dir, out = []) => {
+// **ومجموعاتُ المصدرِ التي لا تُصدَّر ليست منتجاً** — `debug` و`test`
+// و`androidTest`. **ونظامُ التصميم يحكم ما يراه صاحبُ الجهاز**، ومختبرُ
+// الملاحة (`app-driver/src/debug/replaylab`) عدّةُ مطوّرٍ لا شاشةَ زبون.
+//
+// **وقِيس** (٢٠٢٦-٠٩-٣٠): سبعةُ مواضعَ خامّةٍ كلُّها في `debug`،
+// **فكان الحارسُ أحمرَ منذ `d55efc73` بلا عطبٍ في المنتج** — **وحارسٌ
+// أحمرُ دائماً حارسٌ يُتجاوَز.**
+const NOT_SHIPPED = new Set(['debug', 'test', 'androidTest'])
+
+const kt = (dir, out = [], depth = 0) => {
   for (const name of readdirSync(dir)) {
+    // **والاستثناءُ في الجذرِ وحدَه** — `src/debug`، لا أيُّ مجلّدٍ
+    // اسمُه `test` في عمقِ الشجرة.
+    if (depth === 0 && NOT_SHIPPED.has(name)) continue
     const p = join(dir, name)
-    if (statSync(p).isDirectory()) kt(p, out)
+    if (statSync(p).isDirectory()) kt(p, out, depth + 1)
     else if (name.endsWith('.kt')) out.push(p)
   }
   return out

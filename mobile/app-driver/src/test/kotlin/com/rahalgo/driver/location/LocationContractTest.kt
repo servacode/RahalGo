@@ -145,8 +145,12 @@ class LocationContractTest {
         val svc = source("location/LocationService.kt")
         assertTrue2(svc.contains("START_STICKY"), "الخدمةُ لم تعد لاصقةً — يُعاد القياس")
 
-        val i = svc.indexOf("onStartCommand")
-        assertTrue2(i >= 0, "onStartCommand غيرُ موجودة")
+        // **والمرساةُ على التصريح لا على ذِكرِ الاسم** — **تعليقٌ يسمّي
+        // الدالّةَ قبل تصريحِها يُزحلق النافذةَ فيسقط الاختبارُ وسلوكُ
+        // الخدمة سليم.** (وقع ٢٠٢٦-٠٩-٣٠: تعليقُ «نبضةٌ واحدةٌ لا اثنتان»
+        // ذكرها في السطر ٧٢ والتصريحُ في ١٠٩.)
+        val i = svc.indexOf("override fun onStartCommand")
+        assertTrue2(i >= 0, "تصريحُ onStartCommand غيرُ موجود")
         val body = svc.substring(i, minOf(i + 600, svc.length))
 
         assertTrue2(body.contains("intent?."), "الفاصلُ لا يُقرأ من intent — يُعاد القياس")
