@@ -295,12 +295,18 @@ func (s *Service) pickRotationCandidate(ctx context.Context, orderID string, ski
 	if err != nil {
 		return "", false, err
 	}
-	// **بلا نقطةِ التقاطٍ لا قُربَ يُقاس** — العدلُ الصِّرف.
-	if !hasPickup {
-		id, err := s.legacyRotationCandidate(ctx, orderID, skip, limit, maxActive)
-		return id, false, err
-	}
-
+	// ══════════════════════════════════════════════════════════════════
+	// **وكانت هنا كتلةٌ ثانيةٌ `if !hasPickup` تسبق أختَها** — فتُنادي
+	// `legacyRotationCandidate` **بلا شرطِ حداثة**، وتُميت الكتلةَ التي
+	// تحفظ الحداثة (أدناه). **فحُذفت.**
+	//
+	// **ونسختان لشرطٍ واحدٍ إحداهما ميّتةٌ أخطرُ من غياب الشرط**: تُقرأ
+	// الشيفرةُ فتُرى الحداثةُ محفوظةً، **والمنفَّذُ غيرُ المقروء.**
+	//
+	// (قُيس ٢٠٢٦-٠٩-٢٩: الاستعلامُ الموروثُ يختار لطلبٍ خاصٍّ سائقاً
+	//  موضعُه شائخٌ ١١٫٧ يوماً، **والحديثُ بجانبه يخسر الدور** — لأنّ
+	//  ترتيبَه `last_assigned_at NULLS FIRST` لا يعرف الحداثة.)
+	// ══════════════════════════════════════════════════════════════════
 	fresh := s.settingInt(ctx, "drivers.location_fresh_sec")
 	initR := s.settingInt(ctx, "drivers.dispatch_radius_initial_m")
 	stepR := s.settingInt(ctx, "drivers.dispatch_radius_step_m")
@@ -366,10 +372,27 @@ func (s *Service) pickRotationCandidate(ctx context.Context, orderID string, ski
 // انتظر منذ نزوله إلى الطابور** (`dispatched_at`، وإلّا `created_at`).
 func (s *Service) orderDispatchInfo(ctx context.Context, orderID string) (hasPickup bool, waitSec int64, err error) {
 	var wait float64
+	// ══════════════════════════════════════════════════════════════════
+	// **والوصلةُ يسرى لا داخليّة** — `LEFT JOIN`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الطلبُ الخاصُّ لا متجرَ له** (`merchant_id` NULL)، **ووصلةٌ داخليّةٌ
+	// تُسقط الصفَّ كلَّه** فتردّ `ErrNoRows`. **ومن فوقنا يقرأ `ErrNoRows`
+	// «لا سائقَ مؤهَّلَ أصلاً»** فيُفرّغ العرضَ ويعود — **ولأنّه ليس خطأً لا
+	// يُسجَّل سطرٌ واحد.**
+	//
+	// **فكلُّ طلبٍ خاصٍّ كان لا يُعرض على أحدٍ أبداً، بصمت.** (قُيس على
+	// التجهيز ٢٠٢٦-٠٩-٢٩: طلبٌ خاصٌّ ثلاثاً وعشرين دقيقةً في `dispatching`
+	// بلا عرضٍ ولا سجلّ، **و١٠١ طلبٍ خاصٍّ في القاعدة كلُّها بلا متجر.**)
+	//
+	// **وهي العائلةُ المكتوبةُ في `admin_users_handlers.go`**: وصلةٌ صلبةٌ
+	// بـ`merchants` على طلبٍ بلا متجر، **أمسكها المشيُ الحيُّ خمسَ مرّاتٍ
+	// وكلُّ مرّةٍ تُصلَح واحدةً ويبقى الباقي.** وهذه السادسة — **وموضعُها
+	// محرّكُ التوزيع لا شاشةُ عرض.**
 	err = s.db.QueryRow(ctx, `
 		SELECT COALESCE(o.pickup_override, m.location) IS NOT NULL,
 		       GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at))))
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).Scan(&hasPickup, &wait)
 	if err != nil {
 		return false, 0, err

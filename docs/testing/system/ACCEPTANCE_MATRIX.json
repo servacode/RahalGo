@@ -1,0 +1,1339 @@
+{
+ "_note": "مصفوفةُ القبول المتكاملة — المصدرُ الواحد. تُشغَّل بـ scripts/qa/matrix.py، وتُرسم الوثيقةُ منها بـ --render. لا تُحرَّر الوثيقةُ بيد.",
+ "_authored": "2026-09-29",
+ "_target": "staging only",
+ "profiles": {
+  "SMOKE": "أسرعُ ما يُثبت أنّ البيئةَ حيّةٌ والعقودُ حاضرة — يُشغَّل قبل كلّ شيء",
+  "CONTRACTS": "العقودُ المولَّدةُ لم تشِخ — يُشغَّل قبل أيّ قياسٍ يعتمد عليها",
+  "SECURITY": "التخويلُ والعزلُ والأسرار",
+  "MONEY": "الدفترُ والثوابتُ الماليّة",
+  "GOLDEN": "الدورةُ الذهبيّةُ الواحدةُ عبر التطبيقات — المرحلةُ الرابعة",
+  "REGRESSION": "ما يُقارَن قبلاً وبعداً لكشف ما أحدثته المرحلة",
+  "FULL": "الكلّ"
+ },
+ "statuses": {
+  "PENDING": "لم يُفحص — ولا يُعَدُّ ناجحاً",
+  "PASS": "فُحص فنجح",
+  "FAIL": "فُحص فسقط",
+  "BLOCKED": "لا يُفحص لأنّ شرطَه غائب",
+  "KNOWN-GAP": "ثغرةٌ مُسجَّلةٌ قبل التشغيل — لا تُعَدُّ انحداراً",
+  "N/A": "لا ينطبق في هذا الوضع"
+ },
+ "classifications": [
+  "BLOCKER",
+  "DEFECT",
+  "DEBT",
+  "DOC-DRIFT",
+  "FALSE-POSITIVE"
+ ],
+ "rows": [
+  {
+   "id": "SMK-01",
+   "area": "env",
+   "title": "التجهيزُ حيٌّ ويُعلن أنّه تجهيز",
+   "profiles": [
+    "SMOKE",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "api",
+    "path": "/public/identity",
+    "query": "data.environment",
+    "expect": "staging"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SMK-02",
+   "area": "env",
+   "title": "علامةُ التجهيزِ الصريحةُ مرفوعة",
+   "profiles": [
+    "SMOKE",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "api",
+    "path": "/public/identity",
+    "query": "data.staging",
+    "expect": true
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SMK-03",
+   "area": "env",
+   "title": "بابُ QA مُسجَّلٌ على التجهيز (وهو ما يُمكّن الشهادة)",
+   "profiles": [
+    "SMOKE",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "api",
+    "path": "/qa/reconcile",
+    "expect_status": 200
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "ENV-01",
+   "area": "env",
+   "title": "لا سكربتَ في المستودع يقصد الإنتاجَ افتراضاً",
+   "profiles": [
+    "SMOKE",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "script",
+    "cmd": [
+     "python",
+     "scripts/qa/test_target.py"
+    ],
+    "expect_contains": "all green"
+   },
+   "status": "PENDING",
+   "note": "٣١ فحصاً؛ يمشي على المستودع كلِّه ويُشغّل المحرّكاتَ الثلاثةَ فعلاً"
+  },
+  {
+   "id": "ENV-02",
+   "area": "env",
+   "title": "الإنتاجُ والتجهيزُ على صندوقٍ واحدٍ — عزلٌ منطقيٌّ لا ماديّ",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "قِيس بـdocker ps: rahalgo-staging-* بجوار rahalgo-api-1. قرارُ المالك مطلوب: يُقبل أم يُفصل."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "measured 2026-09-29 via ssh docker ps"
+  },
+  {
+   "id": "ENV-03",
+   "area": "env",
+   "title": "ثلاثةٌ من أربعةِ تطبيقاتٍ غيرُ مثبَّتةٍ على جهاز الاختبار",
+   "profiles": [
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "device",
+    "note": "adb: com.rahalgo.driver.debug وحدَه مثبَّت. الدورةُ عبر التطبيقات تحتاج الزبونَ والمتجرَ والمندوب."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "BLOCKER",
+   "source": "measured 2026-09-29 via adb pm list packages"
+  },
+  {
+   "id": "SEC-LEAK-01",
+   "area": "security",
+   "title": "حساباتُ إنتاجٍ حقيقيّةٌ كانت مقروءةً في تاريخ مستودعٍ عامّ",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "بُدِّلت بأمر المالك ٢٠٢٦-٠٩-٢٩. والتاريخُ يبقى — فالإصلاحُ التبديلُ لا الحذف."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "BLOCKER",
+   "source": "commit 13323ba5; anonymous raw.githubusercontent fetch returned 200"
+  },
+  {
+   "id": "SEC-LEAK-02",
+   "area": "security",
+   "title": "ولا يعود سرٌّ مُسرَّبٌ إلى ملفٍّ مُتابَع",
+   "profiles": [
+    "SMOKE",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "script",
+    "cmd": [
+     "python",
+     "scripts/qa/test_target.py"
+    ],
+    "expect_contains": "secrets: leaked values absent"
+   },
+   "status": "PENDING",
+   "note": "يُقاس ببصماتِ الأسرار لا بنصِّها — فالحارسُ نفسُه في مستودعٍ عامّ"
+  },
+  {
+   "id": "SEC-01",
+   "area": "security",
+   "title": "معجمُ القدرات ثمانٍ وعشرون",
+   "profiles": [
+    "CONTRACTS",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "count(capabilities)",
+    "expect": 28
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SEC-02",
+   "area": "security",
+   "title": "سياسةُ المسارات مئةٌ واثنان وستّون صفّاً",
+   "profiles": [
+    "CONTRACTS",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "route_policy.rules",
+    "expect": 162
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SEC-03",
+   "area": "security",
+   "title": "أحدٌ وعشرون فعلاً حسّاساً لا يقع بلا إثبات",
+   "profiles": [
+    "CONTRACTS",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "count(sensitive_actions)",
+    "expect": 21
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SEC-04",
+   "area": "security",
+   "title": "الإثباتُ كلمةُ مرورٍ لا رمزاً سرّيّاً",
+   "profiles": [
+    "CONTRACTS",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "step_up.factor",
+    "expect": "password"
+   },
+   "status": "PENDING",
+   "note": "تصحيحٌ لفهمٍ خاطئٍ سابق: الرمزُ السرّيُّ عاملُ دخولٍ يُحكم بالدور، لا شرطٌ على نقطة"
+  },
+  {
+   "id": "SEC-05",
+   "area": "security",
+   "title": "الإذنُ خمسُ دقائقَ ولمرّةٍ واحدة",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "step_up.ttl",
+    "expect": "5m"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SEC-06",
+   "area": "security",
+   "title": "سبعةُ حقولٍ محروسةٌ بقدرةِ قراءةِ الاتّصال",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "count(field_policy)",
+    "expect": 7
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SEC-07",
+   "area": "security",
+   "title": "ولا قدرةٌ تحرس لا باباً ولا حقلاً",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/authzdoc/",
+    "test": "TestEveryCapabilityIsAccountedFor"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SEC-08",
+   "area": "security",
+   "title": "كلُّ مسارٍ إداريٍّ مُصنَّفٌ بقدرةٍ أو استثناءٍ مكتوب",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/qa/",
+    "test": "TestADG2_EveryAdminRouteClassified"
+   },
+   "status": "PENDING",
+   "note": "يمشي على الموجّه الحقيقيّ — قاعدةُ بياناتٍ مطلوبة"
+  },
+  {
+   "id": "GAP-SEC-01",
+   "area": "security",
+   "title": "صحّةُ المنصّة لا يبلغها أحدٌ — ولا المالك",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "observability.read لا تُمنَح لدورٍ في أيّ هجرة، ودورُ observability مصنَّفٌ ولا هجرةَ تُنشئه. فـGET /admin/ops/health مسدودٌ على قاعدةٍ مهاجَرةٍ حديثاً."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "authz/roleclass.go:78; 0138_canonical_roles.sql:40"
+  },
+  {
+   "id": "GAP-SEC-02",
+   "area": "security",
+   "title": "تسعٌ وخمسون نقطةً موثَّقةٌ بلا دورٍ وبلا قدرة",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "/my/* /me/* /auth/* /orders/* /geo/* /demand/* /promo/* — تخويلُها منطقُ ملكيّةٍ في كلّ معالِج، ولا حارسَ يمشي على الموجّه لها."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "api/contract.json: 314 auth endpoints, 185 with capability, 70 role-gated"
+  },
+  {
+   "id": "MON-01",
+   "area": "money",
+   "title": "ثلاثةَ عشرَ عائلةً وأحدٌ وستّون فحصاً في الدفتر",
+   "profiles": [
+    "CONTRACTS",
+    "MONEY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/FINANCIAL_INVARIANTS.json",
+    "query": "counts.checks",
+    "expect": 61
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "MON-02",
+   "area": "money",
+   "title": "أربعةَ عشرَ نوعَ قيدٍ معروفاً",
+   "profiles": [
+    "CONTRACTS",
+    "MONEY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/FINANCIAL_INVARIANTS.json",
+    "query": "counts.kinds",
+    "expect": 14
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "MON-03",
+   "area": "money",
+   "title": "الدفترُ على التجهيز: ٥٩ من ٦١ — وهو خطُّ الأساس",
+   "profiles": [
+    "MONEY",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "api",
+    "path": "/qa/reconcile",
+    "query": "data.money.checks_passed",
+    "expect": 59
+   },
+   "status": "PENDING",
+   "note": "فإن صار ٦٠ فقد أُصلح شيء، وإن صار ٥٨ فقد كُسر شيء — وكلاهما يُقال"
+  },
+  {
+   "id": "MON-FI-04a",
+   "area": "money",
+   "title": "FI-04.a يشترط merchant_earning — والتسويةُ النقديّةُ لا تُنشئه",
+   "profiles": [
+    "MONEY",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "**بلاغٌ كاذبٌ لا عيبٌ ماليّ** (أُعيد تصنيفُه بقرار المالك ٢٠٢٦-٠٩-٢٩). الفحصُ يشترط قيدَ merchant_earning على كلّ طلبٍ مسلَّم، والمتجرُ نقديُّ التسويةِ يُنشئ merchant_cash_accrued في محفظة الاحتباس ومعه صفَّ merchant_settlements بحالة cash_due — والطريقان متعارضان بنيويّاً (XOR). وبُرهانُه: دفترُ الطلب #1223 أُغلق جبريّاً على صفر، ولا طلبَ مسلَّمٌ واحدٌ على هذه القاعدة له merchant_earning. والصفّان المخروقان (#1218 و#1223) نقديّان."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "FALSE-POSITIVE",
+   "source": "fininv/checks.go:189 (Kinds=[merchant_earning]) · orders/cash_settlement.go:120 (merchant_cash_accrued) · قِيس بالدورة الذهبيّة ٢٠٢٦-٠٩-٢٩",
+   "reclassified_from": "DEFECT"
+  },
+  {
+   "id": "MON-FI-06d",
+   "area": "money",
+   "title": "طلبٌ ملغىً واحدٌ يحمل أكثرَ من خصمه",
+   "profiles": [
+    "MONEY",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "خرقٌ قائمٌ قبل المرحلة — صفٌّ واحدٌ في حالة cancelled."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "baseline-pre 2026-09-29: FI-06.d rows=1 {cancelled:1}"
+  },
+  {
+   "id": "MON-04",
+   "area": "money",
+   "title": "أثرُ QA صفرٌ إلّا ثلاثةَ طلباتٍ مفتوحة",
+   "profiles": [
+    "MONEY",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "api",
+    "path": "/qa/reconcile",
+    "query": "data.residue.qa_wallet_balance",
+    "expect": 0
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "MON-05",
+   "area": "money",
+   "title": "محفظةُ الاحتباسِ واحدةٌ ورصيدُها يُقارَن قبلاً وبعداً",
+   "profiles": [
+    "MONEY",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "script",
+    "cmd": [
+     "python",
+     "scripts/qa/baseline.py",
+     "--compare",
+     "pre",
+     "post"
+    ],
+    "expect_pass": true
+   },
+   "status": "BLOCKED",
+   "note": "يحتاج لقطةَ post — بعد الدورة الذهبيّة"
+  },
+  {
+   "id": "SM-01",
+   "area": "state-machine",
+   "title": "أربعَ عشرةَ حالةً وخمسٌ نهائيّة",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/ORDER_STATE_MACHINE.json",
+    "query": "count(statuses)",
+    "expect": 14
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SM-02",
+   "area": "state-machine",
+   "title": "خمسةٌ وخمسون حدّاً — ثلاثون قياسيّاً وخمسةٌ وعشرون مخصَّصاً",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/ORDER_STATE_MACHINE.json",
+    "query": "count(edges)",
+    "expect": 55
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SM-03",
+   "area": "state-machine",
+   "title": "تسعةُ أسبابِ تعذّرٍ لا أكثر",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/ORDER_STATE_MACHINE.json",
+    "query": "count(fail_reasons)",
+    "expect": 9
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SM-04",
+   "area": "state-machine",
+   "title": "التنقيةُ لا تُوسّع — ولا دورَ فعليٌّ غيرُ مُصرَّح",
+   "profiles": [
+    "CONTRACTS",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/machinedoc/",
+    "test": "TestMachineEffectiveIsSubsetOfDeclaredPlusAdmin"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "SM-05",
+   "area": "state-machine",
+   "title": "وضعُ المنصّةِ لا يملك أحدٌ فيه أكثرَ من وضع المتاجر",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/machinedoc/",
+    "test": "TestMachinePlatformNeverWiderThanMerchants"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "GAP-SM-01",
+   "area": "state-machine",
+   "title": "تعذّرُ التسليمِ في الطريقِ لا يملكه أحدٌ في وضع المنصّة",
+   "profiles": [
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "picked_up→failed و on_the_way→failed: الخريطةُ تعطيهما ops، وP3 تُسقط ops والمالكَ لأنّ failed في driverOnly. فالسائقُ يجب أن يبلغ at_dropoff أوّلاً. والتعليقُ في statuses.go:151 يقول «للعمليات وحدَها»."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "modes.go:171 + modes.go:262; docs/TRUTH.md:138,142"
+  },
+  {
+   "id": "GAP-SM-02",
+   "area": "state-machine",
+   "title": "حدٌّ يقع ولا يظهر في خريطةٍ: at_pickup → accepted",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/ORDER_STATE_MACHINE.json",
+    "query": "count(implicit_edges_declared)",
+    "expect": 1
+   },
+   "status": "PENDING",
+   "note": "صار مُصرَّحاً في العقد المولَّد — وكان غائباً عن TRUTH.md وعن الخريطتَين",
+   "source": "merchant_blocked.go:46"
+  },
+  {
+   "id": "GAP-SM-03",
+   "area": "state-machine",
+   "title": "ORDER_TRANSITIONS_55.md يزعم أنّه مولَّدٌ ولا مولِّدَ له",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "يحرسه عدُّ صفوفٍ فقط (testtruth/extract.go:121) — فلو بُدِّل كلُّ دورٍ في صفوفه بقي أخضرَ. عُلِّم LEGACY، وحلَّ محلَّه عقدٌ مولَّدٌ محروسٌ بالمقارنة."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DOC-DRIFT",
+   "source": "docs/testing/ORDER_TRANSITIONS_55.md:3"
+  },
+  {
+   "id": "GAP-SM-04",
+   "area": "state-machine",
+   "title": "قائمتان مستقلّتان للحالات النهائيّة تشيخان منفردتَين",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "terminal() دالّةٌ و TerminalStatuses() قائمةٌ، وكلٌّ يكتب الأسماءَ الخمسةَ بيده. والتعليقُ عند statuses.go:204 يحذّر من قائمةٍ ثانيةٍ — وهو نفسُه القائمةُ الثانية."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "statuses.go:208 vs statuses.go:212"
+  },
+  {
+   "id": "GAP-SM-05",
+   "area": "state-machine",
+   "title": "driverHolds تُمرَّر ولا تُقرأ، وP4 مُبتَلَعةٌ في P3",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/ORDER_STATE_MACHINE.json",
+    "query": "countwhere(mode_rules_declared, id == \"D0\")",
+    "expect": 1
+   },
+   "status": "PENDING",
+   "note": "شيفرةٌ ميتةٌ وتعليقٌ يزعم أثراً — سُجِّلت في العقد صريحةً",
+   "source": "modes.go:61, modes.go:208"
+  },
+  {
+   "id": "GAP-SM-06",
+   "area": "state-machine",
+   "title": "نافذةُ إلغاء الزبون تُقاس على الأدوار الخامّ فتُتجاوَز",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "G7 يفحص actorRoles لا effRoles — فزبونٌ يحمل ops أو admin يلغي بعد انقضاء النافذة. ظاهرُه مقصودٌ ولا نصَّ يقوله."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DOC-DRIFT",
+   "source": "transitions.go:301"
+  },
+  {
+   "id": "CON-01",
+   "area": "contracts",
+   "title": "عقدُ آلةِ الحالات لم يشِخ",
+   "profiles": [
+    "SMOKE",
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/machinedoc/",
+    "test": "TestMachineDocIsCurrent"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "CON-02",
+   "area": "contracts",
+   "title": "عقدُ التخويل لم يشِخ",
+   "profiles": [
+    "SMOKE",
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/authzdoc/",
+    "test": "TestAuthzDocIsCurrent"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "CON-03",
+   "area": "contracts",
+   "title": "مصدرُ الحقيقةِ الواحدُ لم يشِخ",
+   "profiles": [
+    "SMOKE",
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/truthdoc/",
+    "test": "TestTruthDocIsCurrent"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "CON-04",
+   "area": "contracts",
+   "title": "عقدُ الـAPI لم يشِخ",
+   "profiles": [
+    "SMOKE",
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/apidoc/",
+    "test": "TestContractIsCurrent"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "CON-05",
+   "area": "contracts",
+   "title": "ولا سطرَ مُصرَّحٌ في عقد الآلة بلا ملفٍّ وسطر",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/machinedoc/",
+    "test": "TestMachineDeclaredRowsCiteASource"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "GAP-TEST-01",
+   "area": "contracts",
+   "title": "إعداداتُ السلوك ١٢٩ والمُعلَنُ ١٢٠ — ساقطٌ على HEAD",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/testtruth/",
+    "test": "TestExtractorsAgreeWithSource",
+    "expect_pass": false
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "قِيس في شجرةِ عملٍ منفصلةٍ على d55efc73 — سابقٌ لهذه المرحلة، لا من عملها"
+  },
+  {
+   "id": "GAP-DOC-01",
+   "area": "contracts",
+   "title": "مصدرُ الحقيقةِ كان شائخاً منذ a0a6b42a — تسعةُ إعداداتِ قُربٍ غائبة",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/truthdoc/",
+    "test": "TestTruthDocIsCurrent"
+   },
+   "status": "PASS",
+   "classification": "DOC-DRIFT",
+   "note": "أُصلح ٢٠٢٦-٠٩-٢٩ بإعادة التوليد. والأهمُّ أنّ الحارسَ الإلزاميَّ بقي أحمرَ من التزامٍ إلى التزام — فالبوّابةُ لم تُحترَم، لا أنّ الحارسَ غاب.",
+   "source": "قِيس: git show HEAD:catalog.go فيه الإعدادات، و git show HEAD:docs/TRUTH.md لا تذكرها"
+  },
+  {
+   "id": "GAP-DISP-01",
+   "area": "dispatch",
+   "title": "طلبٌ بلا نقطةِ التقاطٍ يُعرَض على سائقٍ موضعُه شائخٌ — والقُربُ مُفعَّل",
+   "profiles": [
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "كتلتان متماثلتان `if !hasPickup` في pickRotationCandidate: الأولى (rotation.go:299) تردّ legacyRotationCandidate وهو بلا شرطِ حداثة، والثانية (rotation.go:316) تردّ freshFallbackCandidate وهي المقصودةُ — **وغيرُ قابلةٍ للوصول**. وhasPickup يُسنَد مرّةً عند 294 ولا يُعاد إسنادُه (مقيسٌ بالمسح). فالنتيجةُ تخالف قرارَ المالك ٢٠٢٦-٠٩-٢٨ وتعليقَ rotation.go:342 نفسَه. || **وتأكيدٌ حيٌّ ٢٠٢٦-٠٩-٢٩**: الاستعلامُ الموروثُ منفّذاً على التجهيز يختار للطلب الخاصّ #1224 السائقَ `895b6a27` — وموضعُه شائخٌ ١١٫٧ يوماً — لأنّ ترتيبَه `last_assigned_at NULLS FIRST` بلا شرطِ حداثة، والسائقُ الحديثُ `1e27f9c5` (١٦ ثانية) يخسر الدور. فمن أصلح الوصلةَ الداخليّةَ وحدَها (LEFT JOIN) سلّم الطلبَ إلى شائخ. **والفرعُ الثاني هو المقصود** (freshFallbackCandidate، وفيه قرارُ المالك ٢٠٢٦-٠٩-٢٨ «لا تهبط إلى شائخ») **وهو ميّتٌ لا يُبلَغ.** وانظر GAP-DISP-07."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "internal/orders/rotation.go:299 vs :316 — قِيس ٢٠٢٦-٠٩-٢٩"
+  },
+  {
+   "id": "GAP-DISP-02",
+   "area": "dispatch",
+   "title": "طلبٌ أُسند بـsame-route لسائقٍ صمت لا يُستردّ بالإعدادات الافتراضيّة",
+   "profiles": [
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "TrySameRoute تنادي assignDirectly بلا شرط، وتكتب offer_expires_at على طلبٍ صار assigned. وقارئُه الوحيدُ reclaimSilentAssignments، وهي تخرج مبكّراً إن لم يكن drivers.direct_assign صحيحاً — وافتراضُه false. فلا يُستردّ، ولا يُرى في تنبيه no_driver (يشترط driver_id IS NULL)، ويظهر بعد ٦٠ دقيقةً كـtoo_long."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "sameroute.go:155 · rotation.go:586 · catalog.go:1113"
+  },
+  {
+   "id": "GAP-DISP-03",
+   "area": "dispatch",
+   "title": "orders.manual_assign_after_min يُقرأ وليس في فهرس الإعدادات",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "صفٌّ مبذورٌ بهجرةٍ فقط (0050_dispatched_at.sql:37) ولا وجودَ له في internal/settings — فلا يظهر في لوحة الإعدادات ولا يُعدَّل، والويبُ يهبط إلى ١٠ ثابتةً إن غاب الصفّ. وهو عينُ ما يحذّر منه تعليقُ settingInt."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "OrdersScreen.tsx:663 · rotation.go:101"
+  },
+  {
+   "id": "GAP-DISP-04",
+   "area": "dispatch",
+   "title": "حداثةُ الموقع رقمان لا رقم — إعدادٌ للأهليّة وثابتُ Go للعرض",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "drivers.location_fresh_sec (٣٠٠ث، إعداد) للأهليّة، وStaleLocationAfter (١٥د، ثابتٌ في Go لا يُعدَّل من اللوحة) للعرض وشارةِ اللوحة. فسائقٌ قد يكون غيرَ مؤهَّلٍ للتوزيع ولا تظهر عليه شارةُ «موقعٌ شائخ»."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "catalog.go:1256 vs driver_location.go:28"
+  },
+  {
+   "id": "GAP-DISP-05",
+   "area": "dispatch",
+   "title": "لا تحقّقَ متقاطعاً بين مهلةِ الحداثة ودوريّةِ النبض",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "بالافتراض ٣٠٠ث حداثةٍ و٦٠ث نبضاً = خمسُ نبضاتٍ فائتةٍ سماحاً. ومن أنزل location_fresh_sec إلى أرضيّته ٦٠ث بلا إنزال النبض **جعل نبضةً فائتةً واحدةً تُخرج سائقاً عاملاً من الأهليّة** فتقف الطلبات بلا عرض. والمفتاحان في المجموعة نفسِها بلا تحقّقٍ متقاطع."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "catalog.go:1256 · catalog.go:1053"
+  },
+  {
+   "id": "DISP-01",
+   "area": "dispatch",
+   "title": "الحلقةُ تتوسّع بانتظار الطلب لا بعدّاد دورات",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/server/",
+    "test": "TestProximity_RadiusExpands"
+   },
+   "status": "PENDING",
+   "note": "يحتاج قاعدةَ اختبار — TEST_DATABASE_URL"
+  },
+  {
+   "id": "DISP-02",
+   "area": "dispatch",
+   "title": "بلوغُ الأقصى لا يُنجي موضعاً شائخاً — يُنتظَر ولا يُهبَط",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/server/",
+    "test": "TestProximity_StaleOnlyAtMaxGetsNoOffer"
+   },
+   "status": "PENDING",
+   "note": "ويغطّي مسارَ «له نقطةُ التقاط» وحدَه — ومن ثمّ GAP-DISP-01"
+  },
+  {
+   "id": "DISP-03",
+   "area": "dispatch",
+   "title": "العدلُ يسبق القُربَ داخل شريحةِ المسافة",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "gotest",
+    "package": "./internal/server/",
+    "test": "TestProximity_FairnessTieBreak"
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "GAP-MERCH-01",
+   "area": "merchant",
+   "title": "ألفاظُ التوفّر مُوحَّدةٌ في الحالة — وثلاثُ بقايا تقول العكسَ أو كلمةً ثالثة",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "وهذا يُجيب بندَ المالك المؤجَّل: التوحيدُ واقعٌ في الحالة، والمطلوبُ قرارٌ في البقايا الثلاث"
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DOC-DRIFT",
+   "source": "strings.xml:584-585 · ar.json:310-311,2572-2573,2577-2578 · check-menu-parity.mjs:78"
+  },
+  {
+   "id": "GAP-MERCH-02",
+   "area": "merchant",
+   "title": "نصٌّ يقول للمتجر إنّه لا يستطيع ما يستطيعه",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "«لا أصناف بعد — تُضاف من لوحة الإدارة أو من مندوبك» — وللمتجر تبٌّ «أضف صنفاً» موصولٌ بـMerchantApi.createItem."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "app-merchant/src/main/res/values/strings.xml:64 · MenuScreen.kt:179"
+  },
+  {
+   "id": "GAP-MERCH-03",
+   "area": "merchant",
+   "title": "تعليقان يسمّيان مفتاحَ الوضعِ باسمٍ لا وجودَ له",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "modes.go:11 و merchant_dispatch.go:11 يقولان merchants.self_manage_orders — والشيفرةُ تقرأ platform.orders_mode. غيرُ ضارٍّ اليوم، مُضلّلٌ غداً."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DOC-DRIFT",
+   "source": "modes.go:11 · modes.go:247"
+  },
+  {
+   "id": "MERCH-01",
+   "area": "merchant",
+   "title": "في وضع المنصّة لا يملك المتجرُ انتقالاً واحداً — والمنعُ في المحرّك لا في الشاشة",
+   "profiles": [
+    "GOLDEN",
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/ORDER_STATE_MACHINE.json",
+    "query": "countwhere(edges, from == \"pending\")",
+    "expect": 6
+   },
+   "status": "PENDING",
+   "note": "ثلاثةٌ قياسيّةٌ وثلاثةٌ مخصَّصة؛ والأدوارُ الفعليّةُ في وضع المنصّة لا تحمل merchant في أيٍّ منها"
+  },
+  {
+   "id": "MERCH-02",
+   "area": "merchant",
+   "title": "المتجرُ يستحقُّ عند الالتقاطِ لا عند التسليم — والخزينةُ تسلب بينهما",
+   "profiles": [
+    "MONEY",
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "settleMerchant + creditTreasury عند picked_up (transitions.go:800). والخزينةُ سالبةٌ بين الالتقاط والتسليم — مقبولٌ بنصِّ الشيفرة. ويُنادى ثانياً عند delivered لحاقاً بحارسِ عدمِ التكرار."
+   },
+   "status": "PENDING",
+   "source": "transitions.go:787-820"
+  },
+  {
+   "id": "GAP-ADMIN-01",
+   "area": "admin",
+   "title": "زرُّ «تعذّر التسليم» يظهر للعمليات ويردّ المحرّكُ 409",
+   "profiles": [
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "الويبُ نزع failed من DRIVER_ONLY يوم ٢٠٢٦-٠٩-٠٢ وأدرجه في OPS_NEXT لـpicked_up وon_the_way. والمحرّكُ في وضع المنصّة يُسقط ops والمالكَ بـP3. فالأثرُ: يرى المشغّلُ زرّاً يضغطه فيُردّ invalid_transition — وهو بعينه السيناريو الذي أُضيف الزرُّ لأجله (هاتفُ سائقٍ مات في الطريق). وهذا وجهُ GAP-SM-01 في الواجهة."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "OrdersScreen.tsx:439-442,523-532 · modes.go:171,262"
+  },
+  {
+   "id": "GAP-ADMIN-02",
+   "area": "admin",
+   "title": "في وضع المتاجر لا يُنقّي المحرّكُ شيئاً — فنداءٌ مباشرٌ يوقّع «سُلّم» بِاسم العمليات",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "M0 تردّ الأدوارَ كما هي، وat_dropoff→delivered مُصرَّحٌ لـdriverOps. فالمانعُ الوحيدُ أنّ الويبَ يخفي الزرَّ بلا شرطِ وضع — والويبُ نفسُه يقول إنّ الزرَّ المخفيَّ وعدٌ بالمنع لا منع. ونداءُ API مباشرٌ من حساب ops في وضع المتاجر لا يرفضه rolesUnderMode."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "modes.go:123 · statuses.go:175 · OrdersScreen.tsx:588,552-556"
+  },
+  {
+   "id": "GAP-ADMIN-03",
+   "area": "admin",
+   "title": "إعادةُ حساب التسوية هي الكتابةُ الماليّةُ الوحيدةُ بلا إثبات",
+   "profiles": [
+    "SECURITY",
+    "MONEY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/AUTHZ_CONTRACT.json",
+    "query": "countwhere(sensitive_actions, action == \"ops.order_recompute\")",
+    "expect": 0
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "note": "حارسُها «المغلقةُ وحدَها» + orders.intervene. وتكتب قيداً مضادّاً بالفرق — فتحرّك مالاً بلا إثباتِ كلمةِ مرور.",
+   "source": "admin_orders_handlers.go:212 · authz/sensitive.go:76-141"
+  },
+  {
+   "id": "GAP-MERCH-04",
+   "area": "merchant",
+   "title": "متجرٌ بفرعَين يرى إنذاراتِ فرعِه الأوّلِ وحدَها",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "handleMerchantWarnings يحسم المتجرَ بـSELECT id FROM merchants WHERE owner_user_id=$1 LIMIT 1. والإنذاراتُ هي ما يؤدّي إلى التعليق — فصاحبُ فرعَين يُعلَّق على إنذاراتٍ لم يرَها تطبيقُه. وكلُّ مسارٍ آخرَ للمتجر مُقيَّدٌ بـ{id}."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "warnings_handlers.go:57-66"
+  },
+  {
+   "id": "GAP-REP-01",
+   "area": "rep",
+   "title": "قوائمُ المندوب بسقفٍ صلبٍ بلا ترقيمٍ ولا مجموع",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "العملاءُ ٥٠٠ والمرشَّحون ٢٠٠، بلا صفحاتٍ وبلا total — فمندوبٌ نشطٌ يتوقّف عن رؤية قدمائه ولا سطرَ على الشاشة يقول ذلك. وقائمةُ الأدمن مرقَّمةٌ بعدّاد، وطابورُ المراجعة يُرسل count وlimit ليقول «٢٠٠ من ٣١٤»."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "rep_handlers.go:95-100,139-141 · leads_handlers.go:574-588"
+  },
+  {
+   "id": "GAP-REP-02",
+   "area": "rep",
+   "title": "إشعارُ رفضِ المرشَّح يشير إلى صفحةٍ لا وجودَ لها",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "Href=/portal/leads، وإشعارُ الموافقةِ بُدِّل عمداً إلى /portal/merchants لأنّ /portal/leads لا وجودَ له في لوحة المندوب. ومسارُ الرفض بقي على المقصد المكسور."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "leads_handlers.go:677 vs :234-243"
+  },
+  {
+   "id": "GAP-REP-03",
+   "area": "rep",
+   "title": "حدودُ المعدَّل تهبط إلى «لا حدَّ» بلا Redis",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "incr تردّ (0,nil) إن كان rdb فارغاً — فـ/public/join (١٠/س) و/public/invite (٦٠/س) و/rep/leads (٣٠/س) كلُّها بلا حدٍّ. مقصودٌ بنصِّ الشيفرة («والحدُّ أفضليّةٌ لا شرط») — ويحتاج إقرارَ المالك."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "leads_handlers.go:54-59,445"
+  },
+  {
+   "id": "GAP-MAPS-01",
+   "area": "maps",
+   "title": "بياناتُ الرقّة تقف عند z16 والملاحةُ ترسم عند z17.5",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "تمطيطٌ لا عيبُ نمط: لا maxzoom على مصدر النمط ولا setMaxZoomPreference في وحدة الخريطة. قرارُ المالك مؤجَّلٌ ومُسجَّلٌ في WORKLOG:30."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "maps/config/build.env:24,61 · NavCamera.kt:60"
+  },
+  {
+   "id": "GAP-MAPS-02",
+   "area": "maps",
+   "title": "نقطةُ نمطِ خريطةٍ يتيمةٌ حيّةٌ بلا توثيقٍ تُخدَم من OSM مباشرةً",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "api",
+    "path": "/public/map-style.json",
+    "expect_status": 200
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "note": "مسجَّلةٌ وحيّةٌ وبلا مستهلِك: الجوّالُ انتقل إلى المتّجهات والويبُ يستعمل RAHALGO_MAP_STYLE_URL. وتخدم tile.openstreetmap.org لأنّ MAP_TILE_URL غيرُ مضبوطٍ في deploy — وسياسةُ استعمال OSM مذكورةٌ في الشيفرة نفسِها.",
+   "source": "server.go:462 · map_style.go:60,64-79"
+  },
+  {
+   "id": "GAP-MAPS-03",
+   "area": "maps",
+   "title": "علَمُ التزييف يُجمَع ولا يُنفَّذ في المنصّة كلِّها",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "mocked يُحفَظ ولا يقرؤه سطرٌ — مقيسٌ ٢٠٢٦-٠٩-٠٢ ومكتوبٌ في الشيفرة. وbearing_deg كذلك: يُخزَّن ولا يُقرأ."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "driver_location.go:57-58,60-66,107"
+  },
+  {
+   "id": "GAP-DEFAULTS-01",
+   "area": "admin",
+   "title": "بالإعدادات الافتراضيّة كلُّ طلبٍ ينتظر إنساناً على مكتب العمليات",
+   "profiles": [
+    "GOLDEN",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "orders.auto_transfer=false و orders.auto_accept_min=0 و وضعُ المنصّة. والمتجرُ في هذا الوضع لا شاشةَ طلباتٍ حيّةً له أصلاً — فلا سبيلَ له لتحرير الطلب. ومعها merchants.commission_percent=0 و sales.commission_percent=0: لا عمولةَ متجرٍ ولا عمولةَ مندوبٍ خارجَ الصندوق."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "catalog.go:933,1528-1529,1492-1493,1580-1581"
+  },
+  {
+   "id": "MAPS-01",
+   "area": "maps",
+   "title": "بلا محرّكِ مسارٍ يُردّ خطٌّ مستقيمٌ بـ200 و available:false — لا خطأ",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "OSRM_URL افتراضُه فارغٌ، وErrNoEngine يُردُّ قبل أيّ نداءِ شبكة، والمعالِجُ يردّ 200 مع available:false. وحارسُ نشرٍ يثبّت افتراضَ التجهيز فلا يعود فارغاً صامتاً."
+   },
+   "status": "PENDING",
+   "source": "osrm.go:105,135,179 · driver_route.go:230-256 · deploycheck/staging_routing_test.go:83"
+  },
+  {
+   "id": "EVT-01",
+   "area": "notify",
+   "title": "أحدَ عشرَ حدثاً في عقد الأحداث",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/EVENT_CONTRACT_MATRIX.json",
+    "query": "counts.Events",
+    "expect": 11
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "EVT-02",
+   "area": "notify",
+   "title": "خمسُ غرفٍ للنشر الحيّ",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/EVENT_CONTRACT_MATRIX.json",
+    "query": "count(rooms)",
+    "expect": 5
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "EVT-03",
+   "area": "notify",
+   "title": "اثنان وخمسون موضعَ إطلاقٍ للأحداث",
+   "profiles": [
+    "CONTRACTS",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "contract",
+    "file": "docs/testing/system/EVENT_CONTRACT_MATRIX.json",
+    "query": "count(emit_sites)",
+    "expect": 52
+   },
+   "status": "PENDING"
+  },
+  {
+   "id": "GAP-MERCH-05",
+   "area": "merchant",
+   "title": "المتجرُ يَسِمُ طلباً «جاهزاً» وهو لا يملك رؤيتَه",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "POST /merchant/orders/{id}/ready ردَّ 200 على #1223 في وضع المنصّة، والطلبُ محجوبٌ عنه في handleMerchantOrders. و«جاهز» ليست انتقالَ حالةٍ فلا تمرّ بـrolesUnderMode. قِيس في الدورة الذهبيّة."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "merchant_ops_handlers.go:39 · merchant_handlers.go:216"
+  },
+  {
+   "id": "GAP-AUDIT-01",
+   "area": "admin",
+   "title": "لم يُوجَد صفُّ تدقيقٍ ops.order_transition للطلب الذهبيّ",
+   "profiles": [
+    "SECURITY",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "TransitionAudited تكتب ops.order_transition داخل المعاملة (admin_orders_handlers.go:142)، ولم أجد صفّاً في audit_log بـentity_id للطلب #1223 بعد انتقالَي العمليات. يُفحَص: أهو حقلُ ربطٍ مختلفٌ أم قيدٌ غائب."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEFECT",
+   "source": "audit_log بلا صفٍّ لـ302fd77f — قِيس ٢٠٢٦-٠٩-٢٩"
+  },
+  {
+   "id": "GAP-DISP-06",
+   "area": "dispatch",
+   "title": "offer_passed ينمو بلا حدٍّ — ١٣٨ مدخلاً لسائقٍ واحد",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "مقيسٌ حيّاً: #1223 بلغ ٨٨ مدخلاً في ٤٤ دقيقةً و١٠٢ عند القبول، و#1219 بلغ ١٣٨ — وكلُّها لسائقٍ واحدٍ مكرَّر. المِكنسةُ تُلحق الاسمَ عند كلّ انقضاءِ عرضٍ، والمصفوفةُ تُقرأ في كلّ دورة."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DEBT",
+   "source": "rotation.go:670 · قِيس بالدورة الذهبيّة ٢٠٢٦-٠٩-٢٩"
+  },
+  {
+   "id": "GAP-DISP-07",
+   "area": "dispatch",
+   "title": "الطلبُ الخاصُّ لا يُعرض على سائقٍ أبداً — وصلةٌ داخليّةٌ تُسقط كلَّ طلبٍ بلا متجر",
+   "profiles": [
+    "CUSTOM",
+    "GOLDEN",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "مقيسٌ حيّاً على التجهيز ٢٠٢٦-٠٩-٢٩. `orderDispatchInfo` (rotation.go:372) تصل `orders` بـ`merchants` وصلةً داخليّةً، والطلبُ الخاصُّ لا متجرَ له (merchant_id NULL). فالاستعلامُ يردّ صفرَ صفوفٍ ⇒ pgx.ErrNoRows ⇒ pickRotationCandidate تعود بالخطأ قبل أن تبلغ فرعَ «بلا نقطةِ التقاط» ⇒ OfferNext تقرؤه «لا مؤهَّلَ أصلاً»، فتُفرّغ العرضَ وتعود بلا سطرِ سجلٍّ واحد. الدليلُ: #1224 (0d8b6de6) بقي `dispatching` ٨٨٠ ثانيةً، `offered_driver_id` NULL و`offer_passed` صفراً، والراصدُ يعمل (watchdog escalation في السجلّ كلَّ دقائق) ولا خطأَ واحداً. والاستعلامُ نفسُه منفّذاً على القاعدة: rows_returned=0 للخاصّ، و1 لكلِّ عاديّ (30937a44 · 0f45e03a · bcdd08b1). والاستعلامُ الموروثُ وحدَه يردّ مرشّحاً (895b6a27) — فالمنعُ ليس أهليّةً بل عودةٌ مبكّرةٌ بخطأ. والمدى: ١٠١ طلباً خاصّاً في القاعدة، كلُّها merchant_id NULL، ولا pickup_override في واحدٍ منها. والإعدادُ افتراضيٌّ لا استثناءً: drivers.proximity_enabled افتراضُه true في الفهرس (catalog.go:1249) وقيمتُه true على التجهيز — فالإنتاجُ مثلُه. وانحدارٌ من a0a6b42a (التوزيعُ بالقرب). ولا اختبارَ يمسّه: dispatch_proximity_test.go لا يذكر custom ولا مرّةً واحدة."
+   },
+   "status": "FAIL",
+   "classification": "BLOCKER",
+   "source": "internal/orders/rotation.go:369-377"
+  },
+  {
+   "id": "GAP-NOTIF-01",
+   "area": "notifications",
+   "title": "الطلبُ الخاصُّ لا يُولّد إشعاراً لأحد — لا للعمليّات ولا لغيرها",
+   "profiles": [
+    "CUSTOM",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "مقيسٌ حيّاً ٢٠٢٦-٠٩-٢٩ بالمقارنة: الطلبُ العاديُّ #1223 ولّد **١٨ إشعاراً** («طلب جديد قادم إليك» لصاحب المتجر · «طلب جديد في المنصة» لثمانيةٍ من الموظّفين · «طلبٌ بلا سائق» لثمانيةٍ · «سُلّم طلب من متجرك»). والطلبُ الخاصُّ #1224 ولّد **صفراً**. والسببُ: `CreateCustomTx` (custom.go:218) لا تنادي `notifyCreated` أصلاً — تنادي `publishOrder` وحدَها، **والبثُّ يصل الشاشاتِ المفتوحةَ فقط** (وهي العلّةُ التي كُتبت في watchdog.go: «فمن أغلق اللوحة ليلاً لم يصله شيء»). و`notifyCreated` لها منادٍ واحدٌ في المشروع: service.go:770 — مسارُ الطلب العاديِّ وحدَه. وليست علّةَ `parties`: تلك تستعمل LEFT JOIN وقد أُصلحت من قبل. **فالطلبُ الخاصُّ لا يُخبَر به أحدٌ خارجَ شاشةٍ مفتوحةٍ في تلك اللحظة.**"
+   },
+   "status": "FAIL",
+   "classification": "DEFECT",
+   "source": "internal/orders/custom.go:218 · internal/orders/notify.go:110"
+  },
+  {
+   "id": "GAP-WATCH-01",
+   "area": "ops",
+   "title": "الطلبُ الخاصُّ العالقُ لا يظهر في تنبيهات الراصد — وصلةٌ داخليّةٌ بالمتاجر",
+   "profiles": [
+    "CUSTOM",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "مقيسٌ حيّاً ٢٠٢٦-٠٩-٢٩: `Alerts` (watchdog.go:50) تصل `merchants` وصلةً داخليّةً، فالطلبُ الخاصُّ (merchant_id NULL) **لا يظهر في تنبيهات غرفة العمليّات أبداً.** والدليلُ منفّذاً على القاعدة: `orders.driver_timeout_min` = ١٠ دقائق، و#1224 مضى عليه **٢٣ دقيقةً** في `dispatching` بلا سائق. واستعلامُ الراصد بوصلته يردّ **#1219 و#1222 وحدَهما** — و#1224 غائب. والاستعلامُ نفسُه بلا الوصلة يردّ **#1219 و#1222 و#1224**. والسجلُّ يُظهر `watchdog escalation` كلَّ دقائقَ على ٣–٤ طلبات — **وليس فيها الخاصّ.** وأثرُه مركَّبٌ مع GAP-DISP-07: الطلبُ لا يُوزَّع ولا يُنبَّه عليه، **فيبقى عالقاً غيرَ مرئيٍّ والزبونُ يقرأ «بانتظار القبول» بلا نهاية.**"
+   },
+   "status": "FAIL",
+   "classification": "DEFECT",
+   "source": "internal/orders/watchdog.go:50"
+  },
+  {
+   "id": "GAP-CFG-01",
+   "area": "dispatch",
+   "title": "drivers.max_active_orders في القاعدة ٢ وافتراضُ الفهرس ١",
+   "profiles": [
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "app_settings تقول 2 وcatalog.go:1208 افتراضُه 1. فمن قرأ الفهرسَ وحدَه بنى توقّعاً خاطئاً لسعة السائق. ولا عيبَ في السلوك — تباينُ مصدرٍ يُقال."
+   },
+   "status": "KNOWN-GAP",
+   "classification": "DOC-DRIFT",
+   "source": "app_settings vs settings/catalog.go:1208"
+  },
+  {
+   "id": "GOLD-01",
+   "area": "e2e",
+   "title": "الدورةُ الذهبيّةُ في وضع المنصّة — تسعةُ حدودٍ ودفترٌ يُغلق على صفر",
+   "profiles": [
+    "GOLDEN",
+    "REGRESSION",
+    "FULL"
+   ],
+   "verify": {
+    "kind": "owner",
+    "note": "#1223: pending→accepted→dispatching(autoDispatchNote)→assigned→at_pickup→picked_up→on_the_way→at_dropoff→delivered. ستّةُ قيودٍ: −15150 زبونٌ · +13500 احتباسٌ · +1650 خزينةٌ · +100 سائقٌ · +5 مندوبٌ · −105 خزينة. المجموعُ صفر."
+   },
+   "status": "PASS",
+   "source": "artifacts/integrated-acceptance/stage4-golden/EVIDENCE.md"
+  }
+ ],
+ "_stage4_verdict": {
+  "verdict": "PASS WITH KNOWN PRE-EXISTING GAPS",
+  "approved": "2026-09-29",
+  "golden_order": 1223,
+  "note": "الدفترُ أُغلق جبريّاً على صفرٍ — لا أثرَ ناقصاً ولا مكرَّراً."
+ },
+ "_custom_cycle_verdict": {
+  "verdict": "BLOCKED AT DISPATCH",
+  "date": "2026-09-29",
+  "order_number": 1224,
+  "order_id": "0d8b6de6",
+  "blocker": "GAP-DISP-07 (+ GAP-NOTIF-01 · GAP-WATCH-01)",
+  "measured": "البنودُ ١–٧ مقيسةٌ (إنشاءٌ · حالةٌ · مالٌ صفرٌ · لا متجرَ · قبولُ العمليّات · منعُ accepted · التوزيعُ المباشر)",
+  "blocked": "البنودُ ٨–١٥ (عرضُ السائق · قبولُه · التسعيرُ بالاتّفاق · تأكيدُ الزبون · التسليمُ · الدفتر) — لا سائقَ يُعرض عليه",
+  "note": "لا إصلاحَ بلا إذنِ المالك — والثغرةُ تحجز هذه الدورةَ بعينها.",
+  "root_cause_family": "وصلةٌ داخليّةٌ بـ`merchants` على طلبٍ بلا متجر — وهي العائلةُ التي يسمّيها التعليقُ في admin_users_handlers.go:497 ويقول إنّ المشيَ الحيَّ أمسكها **خمسَ مرّاتٍ** من قبل (GetByID · مهامُّ السائق · التقييمُ · الإشعاراتُ · بطاقةُ الإدارة)، **وكلُّ مرّةٍ تُصلَح واحدةً ويبقى الباقي.** وهاتان السادسةُ والسابعة، وموضعُهما محرّكُ التوزيع والراصد — لا شاشةَ عرض."
+ }
+}

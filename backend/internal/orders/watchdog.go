@@ -32,7 +32,10 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 			SELECT $1::float8 AS accept_min, $2::float8 AS driver_min,
 			       $3::float8 AS delivery_min
 		)
-		SELECT o.id, o.number, o.status, m.name, cu.phone,
+		SELECT o.id, o.number, o.status,
+			-- **والخاصُّ لا متجرَ له** — فاسمُه طلبٌ خاصٌّ لا NULL: العمودُ
+			-- يُقرأ في نصٍّ، **وNULL فيه يُسقط المسحَ كلَّه بخطأ تحويل.**
+			COALESCE(m.name, 'طلبٌ خاصّ') AS merchant_name, cu.phone,
 			CASE
 				WHEN o.status = 'pending' AND o.created_at < now() - make_interval(mins => t.accept_min::int)
 					THEN 'no_accept'
@@ -47,7 +50,18 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 			round(EXTRACT(EPOCH FROM now() - o.created_at) / 60) AS minutes
 		FROM orders o
 		CROSS JOIN t
-		JOIN merchants m ON m.id = o.merchant_id
+		-- ══════════════════════════════════════════════════════════════
+		-- **والوصلةُ يسرى** — وإلّا اختفى الطلبُ الخاصُّ من التنبيهات كلِّها
+		-- ══════════════════════════════════════════════════════════════
+		--
+		-- **الطلبُ الخاصُّ بلا متجر**، ووصلةٌ داخليّةٌ تُسقطه — **فيبقى
+		-- عالقاً ولا يعلم به المكتب.** (قُيس على التجهيز ٢٠٢٦-٠٩-٢٩:
+		-- الحدُّ عشرُ دقائق، والطلبُ مضى عليه ثلاثٌ وعشرون، **والاستعلامُ
+		-- بوصلته لا يردّه وبلا الوصلة يردّه.**)
+		--
+		-- **ومع صمت التوزيع عنه في rotation.go يصير عالقاً وغيرَ مرئيٍّ
+		-- معاً** — والزبونُ يقرأ «بانتظار القبول» بلا نهاية.
+		LEFT JOIN merchants m ON m.id = o.merchant_id
 		JOIN users cu ON cu.id = o.customer_id
 		WHERE o.closed_at IS NULL AND (
 			(o.status = 'pending' AND o.created_at < now() - make_interval(mins => t.accept_min::int)) OR

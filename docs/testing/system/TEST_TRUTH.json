@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 148,
-    "behaviour_settings": 120,
+    "setting_defs": 157,
+    "behaviour_settings": 129,
     "order_fields": 83,
-    "test_files": 398,
-    "test_funcs": 1674
+    "test_files": 403,
+    "test_funcs": 1707
   },
   "flows": [
     {
@@ -3824,10 +3824,94 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "drivers.dispatch_radius_initial_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.dispatch_radius_max_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.dispatch_radius_step_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.failed_compensation_percent",
       "group": "drivers",
       "kind": "int",
       "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.location_fresh_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
       "money": false,
       "flows": [
         "F-07",
@@ -3915,6 +3999,48 @@
       "key": "drivers.offer_timeout_sec",
       "group": "drivers",
       "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.proximity_bucket_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.proximity_enabled",
+      "group": "drivers",
+      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -4038,6 +4164,48 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "drivers.same_route_radius_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.same_route_spread_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.target_2",
       "group": "drivers",
       "kind": "int",
@@ -4085,6 +4253,27 @@
       "kind": "money",
       "sensitive": false,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.zone_gate_enabled",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -5774,6 +5963,42 @@
       "orphan": true
     },
     {
+      "name": "TestAuthzDocIsCurrent",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryCapabilityIsAccountedFor",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestExemptionsCarryTheirReason",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestRoleClassesCoverEveryClassifiedRole",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestSensitiveActionsAreComplete",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestStepUpIsPasswordNotPin",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
       "name": "TestCancellable",
       "file": "internal/campaigns/policy_test.go",
       "package": "campaigns",
@@ -6064,6 +6289,24 @@
     {
       "name": "TestComposeIsValidYAML",
       "file": "internal/deploycheck/compose_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRaqqaBuildStaysStagingOnly",
+      "file": "internal/deploycheck/maps_source_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRaqqaOSMIntegrityGateKept",
+      "file": "internal/deploycheck/maps_source_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRaqqaOSMSourceIsStableNotDated",
+      "file": "internal/deploycheck/maps_source_test.go",
       "package": "deploycheck_test",
       "orphan": true
     },
@@ -6953,6 +7196,36 @@
       "name": "TestSharedLayersHaveImpactMapping",
       "file": "internal/impact/shared_layers_test.go",
       "package": "impact",
+      "orphan": true
+    },
+    {
+      "name": "TestMachineCoversEveryStatus",
+      "file": "internal/machinedoc/machinedoc_test.go",
+      "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestMachineDeclaredRowsCiteASource",
+      "file": "internal/machinedoc/machinedoc_test.go",
+      "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestMachineDocIsCurrent",
+      "file": "internal/machinedoc/machinedoc_test.go",
+      "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestMachineEffectiveIsSubsetOfDeclaredPlusAdmin",
+      "file": "internal/machinedoc/machinedoc_test.go",
+      "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestMachinePlatformNeverWiderThanMerchants",
+      "file": "internal/machinedoc/machinedoc_test.go",
+      "package": "machinedoc",
       "orphan": true
     },
     {
@@ -22199,6 +22472,120 @@
     {
       "name": "TestDiscount_ShownPriceMatchesCharged",
       "file": "internal/server/discount_end_to_end_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomOrder_FreshPreferredOverStale",
+      "file": "internal/server/dispatch_custom_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomOrder_IsOfferedToEligibleDriver",
+      "file": "internal/server/dispatch_custom_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomOrder_NotifiesOpsOnCreate",
+      "file": "internal/server/dispatch_custom_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWatchdog_SeesStuckCustomOrder",
+      "file": "internal/server/dispatch_custom_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_DisabledFallsBackToLegacy",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_FairnessTieBreak",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_NearBusyExcluded",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_NearInactiveExcluded",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_NearOffShiftExcluded",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_NearPreferredOverFar",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_QueueBroadcastIsBounded",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_QueueHidesStaleCaller",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_RadiusExpands",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_SameRouteStillGated",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_StaleBecomesFreshThenEligible",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_StaleDoesNotOutrankFresh",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_StaleOnlyAtMaxGetsNoOffer",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_TimeoutReoffersNext",
+      "file": "internal/server/dispatch_proximity_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProximity_ZoneGateWhenEnabled",
+      "file": "internal/server/dispatch_proximity_test.go",
       "package": "server",
       "orphan": true
     },

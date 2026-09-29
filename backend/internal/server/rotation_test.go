@@ -29,11 +29,29 @@ func armRotation(t *testing.T, f *driverFixture, timeoutSec int) {
 	}
 	isolateStaleOrders(t, f.pool)
 	f.setSetting(t, "drivers.assignment_mode", "rotation")
+	// ══════════════════════════════════════════════════════════════════
+	// **والقربُ يُطفأ صراحةً — هذا عتادُ العدلِ الصِّرف**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وافتراضُ `proximity_enabled` في الفهرس `true`** — فكانت اختباراتُ
+	// الدور تمشي في مسار القرب وهي لا تقصده، **وتمرّ لأنّ متجرَ العُدّة بلا
+	// موضعٍ فتُقرأ «بلا نقطةِ التقاط» فتهبط إلى العدل الأعمى.**
+	//
+	// **فكانت تمرّ بكتلةٍ ميتة** (`GAP-DISP-01`): حين حُذفت الكتلةُ وصار فرعُ
+	// «بلا نقطةِ التقاط» يشترط موضعاً حديثاً، **سقطت ثمانيةُ اختباراتٍ
+	// سائقوها بلا موضعٍ قطّ** — وليس فيها واحدٌ موضوعُه القرب.
+	//
+	// **ومن أشعله أشعله بيده** (`armProximity`، وموضعان في ملفّ القرب) —
+	// **والعتادُ يقول ما يفعل.**
+	f.setSetting(t, "drivers.proximity_enabled", false)
 	if timeoutSec > 0 {
 		f.setSetting(t, "drivers.offer_timeout_sec", timeoutSec)
 	}
 	t.Cleanup(func() {
 		f.setSetting(t, "drivers.assignment_mode", "queue")
+		// **ولا يُسرَّب الإطفاءُ إلى غيره** — القاعدةُ مشتركة، **والافتراضُ
+		// يعود** (وهو ما يفعله `armProximity` لنفسه).
+		f.setSetting(t, "drivers.proximity_enabled", true)
 	})
 }
 
