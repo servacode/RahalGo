@@ -525,6 +525,7 @@
     <string name="err_invalid_items">تحقق من البيانات المدخلة</string>
     <string name="err_out_of_zone">العنوان خارج مناطق التغطية الحالية</string>
     <string name="err_below_min_order">قيمة الطلب أقل من الحد الأدنى لهذه المنطقة</string>
+    <string name="err_delivery_credit_exhausted">لا يكفي رصيد متجرك لأجرة التوصيلة، وقد بلغت حد الدين المسموح. اشحن محفظتك أو راجع الإدارة لرفع الحد.</string>
     <string name="err_too_many_open_orders">لديك طلبات لم تسلم بعد. أكملها أولا ثم اطلب من جديد.</string>
     <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقا</string>
     <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>

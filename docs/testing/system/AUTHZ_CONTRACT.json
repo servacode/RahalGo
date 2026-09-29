@@ -1,0 +1,559 @@
+{
+ "_note": "مولَّدٌ من internal/authz و internal/opsmap — لا يُحرَّر بيد. go run ./cmd/authzdoc. ومصفوفةُ الدور⇒القدرة ليست هنا: جدولٌ في القاعدة يُبدَّل من اللوحة.",
+ "capabilities": [
+  {
+   "code": "analytics.read",
+   "description": "قراءةُ التحليلات",
+   "guards_routes": 6
+  },
+  {
+   "code": "audit.read",
+   "description": "قراءةُ سجلّ التدقيق",
+   "guards_routes": 1
+  },
+  {
+   "code": "content.manage",
+   "description": "لافتاتٌ وعروضٌ ومحتوى",
+   "guards_routes": 20
+  },
+  {
+   "code": "drivers.manage",
+   "description": "إدارةُ السائقين وتشغيلُهم",
+   "guards_routes": 1
+  },
+  {
+   "code": "drivers.read",
+   "description": "قراءةُ سجلّ السائقين ومواضعهم",
+   "guards_routes": 2
+  },
+  {
+   "code": "finance.export",
+   "description": "سحبُ الدفتر وكشفِ الطلبات ملفّاً",
+   "guards_routes": 2
+  },
+  {
+   "code": "finance.manage",
+   "description": "قيدُ محفظةٍ ومصروفٌ وخزينة",
+   "guards_routes": 11
+  },
+  {
+   "code": "finance.read",
+   "description": "قراءةُ المال والتقارير الماليّة",
+   "guards_routes": 14
+  },
+  {
+   "code": "merchants.manage",
+   "description": "إدارةُ المتاجر وتعليقُها",
+   "guards_routes": 10
+  },
+  {
+   "code": "merchants.read",
+   "description": "قراءةُ سجلّ المتاجر وقوائمها",
+   "guards_routes": 4
+  },
+  {
+   "code": "merchants.verify",
+   "description": "مراجعةُ المرشَّحين والقوائم",
+   "guards_routes": 4
+  },
+  {
+   "code": "observability.read",
+   "description": "قراءةُ صحّة المنصّة الداخليّة",
+   "guards_routes": 1
+  },
+  {
+   "code": "orders.communications.read",
+   "description": "قراءةُ محادثات الطلب ورسائله",
+   "guards_routes": 3
+  },
+  {
+   "code": "orders.intervene",
+   "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
+   "guards_routes": 8
+  },
+  {
+   "code": "orders.read",
+   "description": "قراءةُ الطلبات ولوحةِ العمليّات",
+   "guards_routes": 10
+  },
+  {
+   "code": "payouts.decide",
+   "description": "قرارُ السحب",
+   "guards_routes": 1
+  },
+  {
+   "code": "roles.manage",
+   "description": "منحُ الأدوار وسحبُها",
+   "guards_routes": 7
+  },
+  {
+   "code": "safety.manage",
+   "description": "الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر",
+   "guards_routes": 8
+  },
+  {
+   "code": "settings.financial.manage",
+   "description": "إعداداتٌ تدخل حساباً ماليّاً",
+   "guards_routes": 1
+  },
+  {
+   "code": "settings.general.manage",
+   "description": "إعداداتٌ عامّةٌ ومحتوى",
+   "guards_routes": 20
+  },
+  {
+   "code": "settings.read",
+   "description": "قراءةُ لوح الإعدادات",
+   "guards_routes": 2
+  },
+  {
+   "code": "settings.security.manage",
+   "description": "إعداداتُ الأمن والجلسات",
+   "guards_routes": 3
+  },
+  {
+   "code": "support.manage",
+   "description": "التذاكرُ والنزاعاتُ والطوارئ",
+   "guards_routes": 10
+  },
+  {
+   "code": "users.contact.read",
+   "description": "قراءةُ رقم الاتّصال",
+   "guards_routes": 0,
+   "guards_fields": [
+    "customer_phone",
+    "driver_phone",
+    "owner_phone",
+    "party_phone",
+    "phone",
+    "sales_rep_phone",
+    "user_phone"
+   ],
+   "field_scoped_only": true
+  },
+  {
+   "code": "users.export",
+   "description": "سحبُ دليل الحسابات ملفّاً",
+   "guards_routes": 1
+  },
+  {
+   "code": "users.read",
+   "description": "قراءةُ الحسابات",
+   "guards_routes": 6
+  },
+  {
+   "code": "users.sensitive.read",
+   "description": "قراءةُ عناوين المرء وأثرِه",
+   "guards_routes": 2
+  },
+  {
+   "code": "users.status.manage",
+   "description": "إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته",
+   "guards_routes": 4
+  }
+ ],
+ "field_policy": [
+  {
+   "field": "customer_phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "driver_phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "owner_phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "party_phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "sales_rep_phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "user_phone",
+   "need": "users.contact.read"
+  }
+ ],
+ "route_policy": {
+  "rules": 162,
+  "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
+  "capabilities_used": [
+   "analytics.read",
+   "audit.read",
+   "content.manage",
+   "drivers.manage",
+   "drivers.read",
+   "finance.export",
+   "finance.manage",
+   "finance.read",
+   "merchants.manage",
+   "merchants.read",
+   "merchants.verify",
+   "observability.read",
+   "orders.communications.read",
+   "orders.intervene",
+   "orders.read",
+   "payouts.decide",
+   "roles.manage",
+   "safety.manage",
+   "settings.financial.manage",
+   "settings.general.manage",
+   "settings.read",
+   "settings.security.manage",
+   "support.manage",
+   "users.export",
+   "users.read",
+   "users.sensitive.read",
+   "users.status.manage"
+  ]
+ },
+ "exemptions": [
+  {
+   "pattern": "/settings/{key}",
+   "reason": "**القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`)."
+  },
+  {
+   "pattern": "/step-up",
+   "reason": "**قدرتُه قدرةُ الفعل المُؤكَّد** — تُقاس في المعالِج من `LookupAdmin` نفسِها. (`ADG-3`.)"
+  }
+ ],
+ "sensitive_actions": [
+  {
+   "method": "PATCH",
+   "pattern": "/merchants/{id}/settlement-method",
+   "action": "admin.merchant_settlement_update",
+   "target_type": "merchant",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "method"
+   ],
+   "need": "settings.financial.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/password",
+   "action": "admin.password_reset",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "users.status.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/roles/{code}/capabilities",
+   "action": "admin.role_capability_grant",
+   "target_type": "role",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "capability"
+   ],
+   "need": "roles.manage"
+  },
+  {
+   "method": "DELETE",
+   "pattern": "/roles/{code}/capabilities/{cap}",
+   "action": "admin.role_capability_revoke",
+   "target_type": "role",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "roles.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/roles",
+   "action": "admin.role_create",
+   "target_type": "role",
+   "target_segment": -1,
+   "fingerprint_params": [
+    "code"
+   ],
+   "need": "roles.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/roles",
+   "action": "admin.role_grant",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "role"
+   ],
+   "need": "roles.manage"
+  },
+  {
+   "method": "DELETE",
+   "pattern": "/users/{id}/roles/{role}",
+   "action": "admin.role_revoke",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "roles.manage"
+  },
+  {
+   "method": "PUT",
+   "pattern": "/settings/{key}",
+   "action": "admin.setting_update",
+   "target_type": "setting",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "value"
+   ],
+   "conditional": "settingSensitivity"
+  },
+  {
+   "method": "PATCH",
+   "pattern": "/users/{id}",
+   "action": "admin.user_update",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "status"
+   ],
+   "conditional": "statusIsStrong",
+   "need": "users.status.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/orders/{id}/compensate-driver",
+   "action": "finance.compensate_driver",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/drivers/{id}/settle",
+   "action": "finance.driver_settle",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/expenses",
+   "action": "finance.expense_added",
+   "target_type": "expense",
+   "target_segment": -1,
+   "fingerprint_params": [
+    "amount",
+    "category_id"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/expenses/{id}/void",
+   "action": "finance.expense_voided",
+   "target_type": "expense",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/incentive",
+   "action": "finance.incentive",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/merchant-cash-settlements/{id}/pay",
+   "action": "finance.merchant_cash_paid",
+   "target_type": "merchant_settlement",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/payouts/{id}/decide",
+   "action": "finance.payout_decide",
+   "target_type": "payout",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "approve",
+    "amount"
+   ],
+   "need": "payouts.decide"
+  },
+  {
+   "method": "POST",
+   "pattern": "/tickets/{id}/resolve",
+   "action": "finance.ticket_resolve",
+   "target_type": "ticket",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "compensation"
+   ],
+   "need": "support.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/wallet",
+   "action": "finance.wallet_apply",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount",
+    "kind"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/orders/{id}/proof-exception",
+   "action": "ops.delivery_proof_exception",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "reason"
+   ],
+   "need": "orders.intervene"
+  },
+  {
+   "method": "POST",
+   "pattern": "/disputes/{id}/settle",
+   "action": "ops.dispute_settled",
+   "target_type": "dispute",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "settlement"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/orders/{id}/transition",
+   "action": "ops.order_transition",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "to"
+   ],
+   "conditional": "transitionRefund",
+   "need": "orders.intervene"
+  }
+ ],
+ "role_classes": [
+  {
+   "class": "protected",
+   "roles": [
+    "owner_super_admin"
+   ],
+   "grant_authority": "owner",
+   "creatable_at_signup": false
+  },
+  {
+   "class": "elevated",
+   "roles": [
+    "admin"
+   ],
+   "grant_authority": "owner",
+   "creatable_at_signup": false
+  },
+  {
+   "class": "staff",
+   "roles": [
+    "analytics",
+    "customer_support",
+    "driver_verification",
+    "finance",
+    "marketing_content",
+    "merchant_verification",
+    "observability",
+    "operations",
+    "trust_safety"
+   ],
+   "grant_authority": "roles.manage",
+   "creatable_at_signup": false
+  },
+  {
+   "class": "account_type",
+   "roles": [
+    "customer",
+    "driver",
+    "merchant",
+    "sales"
+   ],
+   "grant_authority": "roles.manage",
+   "creatable_at_signup": true
+  },
+  {
+   "class": "legacy",
+   "roles": [
+    "ops"
+   ],
+   "grant_authority": "never",
+   "creatable_at_signup": false
+  }
+ ],
+ "ops_map_perms": [
+  {
+   "capability": "analytics.read",
+   "grants_layers": [
+    "VIEW_DEMAND_ANALYTICS"
+   ]
+  },
+  {
+   "capability": "drivers.read",
+   "grants_layers": [
+    "VIEW_DRIVER_LOCATIONS"
+   ]
+  },
+  {
+   "capability": "finance.read",
+   "grants_layers": [
+    "VIEW_MAP_FINANCIALS"
+   ]
+  },
+  {
+   "capability": "merchants.manage",
+   "grants_layers": [
+    "VIEW_REP_ACTIVITY"
+   ]
+  },
+  {
+   "capability": "orders.read",
+   "grants_layers": [
+    "VIEW_OPERATIONS_MAP",
+    "VIEW_MERCHANT_LOCATIONS",
+    "VIEW_ACTIVE_ORDERS"
+   ]
+  },
+  {
+   "capability": "settings.general.manage",
+   "grants_layers": [
+    "MANAGE_COVERAGE",
+    "MANAGE_BRANCHES"
+   ]
+  }
+ ],
+ "step_up": {
+  "scope_formula": "sha256(method + \"\\n\" + path + \"\\n\" + material)",
+  "ttl": "5m",
+  "single_use": true,
+  "factor": "password",
+  "header": "X-Step-Up",
+  "source": "internal/identity/stepup.go:44",
+  "pin_is_not_step_up": "الرمزُ السرّيُّ عاملٌ ثانٍ عند الدخول يُحكم بالدور (admin أو owner_super_admin، identity/admin_pin.go:93) — وليس شرطاً على نقطةٍ. والإثباتُ (step-up) كلمةُ مرورٍ محدودةٌ بمسارٍ وجسم. **ولا نقطةَ تطلب الرمزَ السرّيّ.**"
+ }
+}

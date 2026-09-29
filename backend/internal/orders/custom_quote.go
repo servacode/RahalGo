@@ -189,15 +189,54 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	// **و`driver_fee = custom_fee` أيضاً**: الطلبُ الخاصُّ لا عرضَ فيه يُصفّر
 	// دفعَ الزبون، **فأجرُ السائقِ هو الأجرةُ المتّفقُ عليها نفسُها** — والسائقُ
 	// يُدفَع من `driver_fee` (٢٠٢٦-٠٩-٢٧). فلولا هذا لقاد بأجرٍ صفرٍ (افتراضِ العمود).
+	// ══════════════════════════════════════════════════════════════════
+	// **ونصيبُ المنصّةِ من الأجرةِ وحدَها** — قرارُ المالك النهائيُّ ٢٠٢٦-٠٩-٢٩
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان `driver_fee = custom_fee`** — الأجرةَ كاملةً، **والمنصّةُ تعبر
+	// بلا أن تأخذ** (قرارُ المالك ٢٠٢٦-٠٨-٠٩). **ثمّ شهد المالكُ خزينتَه
+	// صفراً ونقض قرارَه**: «خزينة المنصة فارغة مازالت صفر».
+	//
+	// # والبضاعةُ ردٌّ لا كسب
+	//
+	// **`goods_amount` لا تُؤخذ منه نسبةٌ البتّة** (نصُّ المالك: «لا تأخذ
+	// نسبة المنصة من goods_amount»): **السائقُ دفع ثمنَها من جيبه**،
+	// **فأخذُ نسبةٍ منه اقتطاعٌ من رأس ماله لا من ربحه** — ويجعله يخسر
+	// بكلّ طلب.
+	//
+	// **والأجرةُ وحدَها ربحٌ** — فهي وحدَها تُقسَم.
+	//
+	// # واللقطةُ هنا لا عند التسوية
+	//
+	// **تُثبَّت لحظةَ تثبيت الاتّفاق** (نصُّ المالك: «snapshot … وقت تثبيت
+	// الاتفاق، بحيث تغيير النسبة لاحقاً لا يؤثر على أي طلب قديم»):
+	// **ولو قُرئ الإعدادُ وقتَ التسوية لتبدّل مالُ طلبٍ اتُّفق عليه أمس**،
+	// **ولاختلف ما وُعد به السائقُ عمّا قُبض.**
+	//
+	// **ويُعاد الحسابُ مع كلّ تعديلِ اتّفاق** — فالأجرةُ تتبدّل، **ونصيبٌ
+	// محسوبٌ على أجرةٍ قديمةٍ يكذب.**
+	pct := s.settingInt(ctx, SettingMerchantDeliveryPlatformPercent)
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 90 {
+		pct = 90
+	}
+	driverFee := newFee - (newFee * pct / 100)
+
 	set := `custom_goods_amount = $2, custom_fee = $3,
-	        subtotal = $2, delivery_fee = $3, driver_fee = $3, total = $2::bigint + $3::bigint,
+	        subtotal = $2, delivery_fee = $3, driver_fee = $5,
+	        snap_platform_delivery_percent = $6,
+	        total = $2::bigint + $3::bigint,
 	        quote_version = $4, custom_agreed_at = now(), updated_at = now()`
-	args := []any{row.id, newGoods, newFee, newVersion}
+	// **والثابتان يُضافان قبل الشرطيّ** — **ورقمُ وسيطٍ يتزحزح بحسب فرعٍ
+	// يُنفَّذ أو لا يُنفَّذ يكتب قيمةً في عمودٍ آخر بصمت.**
+	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct}
 	switch {
 	case invalidate:
 		set += `, quote_confirmed_at = NULL, quote_confirmed_total = NULL, quote_confirmed_version = NULL`
 	case row.confirmedAt != nil: // نقصٌ مع تأكيدٍ باقٍ: يُحدَّث المبلغُ والنسخة
-		set += `, quote_confirmed_total = $5, quote_confirmed_version = $4`
+		set += `, quote_confirmed_total = $7, quote_confirmed_version = $4`
 		args = append(args, newTotal)
 	}
 	if _, err := q.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
@@ -311,11 +350,33 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 
 	// **تُكتب أعمدةُ التأكيد أوّلاً** (الطريقة، اللحظة، المبلغ، النسخة) —
 	// **قبل أن يصير الحجزُ موجباً**، فالقيدُ يشترط محفظةً مؤكَّدةً لأيّ حجز.
+	// ══════════════════════════════════════════════════════════════════
+	// **والنقدُ يُكتب مستحقّاً على الطلب** — وإلّا بقي فراغاً ماليّاً
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان `cash_due` يبقى صفراً للخاصِّ النقديِّ أبداً** — والمبلغُ لا
+	// يُعرف إلّا بعد الاتّفاق، **ولم يُكتب حين عُرف.**
+	//
+	// **فكان الخاصُّ النقديُّ فراغاً ماليّاً كاملاً** (قُيس ٢٠٢٦-٠٩-٢٩):
+	// لا صندوقَ نقدٍ للسائق، ولا قيدَ في الدفتر، ولا نصيبَ للمنصّة —
+	// **والسائقُ يقبض المبلغَ ولا أثرَ له في المنصّة إطلاقاً.**
+	//
+	// **و`cash_due` هو ما تقرؤه المنصّةُ كلُّها**: سقفُ نقدِ السائق في
+	// الأهليّة، وصندوقُه عند التسليم، و`creditTreasury` في الدفتر.
+	// **فبصفرِه لا يُحرَس سقفٌ ولا يُقيَّد قبض.**
+	//
+	// **ويُصفَّر إن كان الدفعُ بالمحفظة** — تبديلُ الطريقة يقع
+	// (`payment_method = $2`)، **ومستحقٌّ نقديٌّ باقٍ على طلبٍ صار
+	// محفظيّاً يجعل السائقَ يقبض مرّةً والمحفظةَ تُخصم مرّةً.**
+	cashDue := int64(0)
+	if paymentMethod == "cash" {
+		cashDue = current
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders SET payment_method = $2,
 		       quote_confirmed_at = now(), quote_confirmed_total = $3,
-		       quote_confirmed_version = $4, updated_at = now()
-		WHERE id = $1`, orderID, paymentMethod, current, row.quoteVersion); err != nil {
+		       quote_confirmed_version = $4, cash_due = $5, updated_at = now()
+		WHERE id = $1`, orderID, paymentMethod, current, row.quoteVersion, cashDue); err != nil {
 		return nil, err
 	}
 	// **ثمّ يُحجَز كاملُ المبلغ فوراً** — فشلٌ مغلق (`reserved <= balance`).

@@ -577,18 +577,124 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 		return nil
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **البضاعةُ ردٌّ كاملٌ، والأجرةُ وحدَها تُقسَم** — قرارُ المالك ٢٠٢٦-٠٩-٢٩
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان السائقُ يأخذ المحجوزَ كلَّه** — **والمنصّةُ تعبر بلا أن تأخذ**
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩). **ثمّ شهد المالكُ خزينتَه صفراً فنقضه.**
+	//
+	// **وثمنُ البضاعةِ يُردُّ كاملاً**: السائقُ دفعه من جيبه، **فأخذُ نسبةٍ
+	// منه اقتطاعٌ من رأس ماله لا من ربحه** (نصُّ المالك: «لا تأخذ نسبة
+	// المنصة من goods_amount»).
+	//
+	// **ويُقرآن من الصفّ لا يُحسبان هنا** — **وحسبةٌ ثانيةٌ في موضعٍ ثانٍ
+	// تفترق عن أختها يومَ تتبدّل القاعدة.** و`driver_fee` ملقوطةٌ لحظةَ
+	// تثبيت الاتّفاق، **فتغييرُ النسبة بعدها لا يمسّ هذا الطلب.**
+	var goods, driverFee int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(custom_goods_amount, 0), driver_fee
+		FROM orders WHERE id = $1`, in.orderID).Scan(&goods, &driverFee); err != nil {
+		return err
+	}
+	driverGets := goods + driverFee
+	// **ولا يُعطى أكثرَ من المحجوز** — **لقطةٌ شاخت أو تعديلُ أدمنٍ قد يجعل
+	// المجموعَ غيرَ المحجوز، وقيدٌ يتجاوزه يخلق مالاً من عدم.**
+	if driverGets > reserved {
+		s.logger.Warn("الطلب الخاصّ: نصيبُ السائق يتجاوز المحجوز — يُقصَر عليه",
+			"order", in.orderID, "driver", driverGets, "reserved", reserved)
+		driverGets = reserved
+	}
+
 	// **يُفكّ الحجزُ ويُخصَم معاً** — فعلٌ واحدٌ لا يفترق (`SettleReservedTx`).
 	if _, err := s.wallet.SettleReservedTx(ctx, q, in.customerID, reserved, "order_payment",
 		in.orderID, "طلبٌ خاصّ — دفعٌ من المحفظة", &in.actorID); err != nil {
 		return err
 	}
-	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, reserved, "driver_earning",
-		in.orderID, "طلبٌ خاصّ — تحصيلٌ من محفظة الزبون", &in.actorID); err != nil {
+	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, driverGets, "driver_earning",
+		in.orderID, "طلبٌ خاصّ — بضاعةٌ وأجرٌ", &in.actorID); err != nil {
 		return err
 	}
 	// **ويُصفَّر الحجزُ على الطلب مع علامة الدفع** — فلا يبقى محجوزٌ بعد التسوية.
-	_, err := q.Exec(ctx,
+	//
+	// **وما دُفع يُكتب على الطلب**: `creditTreasury` تقرأ الصفَّ لا المحفظة،
+	// **فلولاه لقُرئ المدفوعُ صفراً فصارت البقيّةُ سالبةً بمقدار نصيب
+	// السائق** — **فتُقيَّد الخزينةُ خسارةً وهي التي كسبت.**
+	if _, err := q.Exec(ctx,
 		`UPDATE orders SET custom_reserved_amount = 0, custom_paid_at = now(),
-		        updated_at = now() WHERE id = $1`, in.orderID)
-	return err
+		        wallet_paid = $2, updated_at = now() WHERE id = $1`,
+		in.orderID, reserved); err != nil {
+		return err
+	}
+	// **والبقيّةُ تبلغ الخزينةَ من نفسِها** — لا قيدَ مخترَعٌ ولا نسبةٌ تُحسب
+	// مرّتين: **مدفوعٌ − مستردٌّ − ما وصل الأطراف.**
+	//
+	// **وبه تُغلق المعادلةُ على صفرٍ بنيويّاً** (نصُّ المالك: «−17,000 +
+	// 16,500 + 500 = 0») — **لا بفحصٍ يُجرى بعدها.**
+	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+}
+
+// settleCustomCash **الطلبُ الخاصُّ نقداً** — قرارُ المالك ٢٠٢٦-٠٩-٢٩.
+//
+// # وكان فراغاً ماليّاً كاملاً
+//
+// **قُيس ٢٠٢٦-٠٩-٢٩**: `ConfirmQuote` لا تضبط `cash_due`، والتسويةُ تخرج
+// مبكّراً لغير المحفظة — **فلا صندوقَ نقدٍ للسائق، ولا قيدَ في الدفتر، ولا
+// نصيبَ للمنصّة.** **يقبض المبلغَ ولا أثرَ له في المنصّة إطلاقاً.**
+//
+// # وما يقع الآن
+//
+//	صندوقُ السائق  ← **كلُّ المقبوض** (بضاعةٌ وأجرةٌ ونصيبُ المنصّة)
+//	محفظةُ السائق  ← **بضاعتُه وأجرُه** — ما يستحقّه
+//	الخزينة        ← **البقيّةُ من نفسِها** = نصيبُ المنصّة
+//
+// **فيبقى في ذمّته نصيبُ المنصّةِ نقداً** — وهو عينُ ما يقع في الطلب
+// العاديِّ النقديّ. **ولا مسارَ ماليٌّ موازٍ.**
+//
+// # ولا خصمَ من الزبون
+//
+// **دفع نقداً بيده** — **وقيدُ `order_payment` هنا يخصم مرّتين**: مرّةً من
+// جيبه ومرّةً من محفظة لا علاقةَ لها.
+func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in settlement) error {
+	if in.driverID == nil || in.cashDue <= 0 {
+		return nil
+	}
+	// **وعلامةُ الدفعِ تحرس التكرار** — كما في المحفظة: **التسليمُ قد
+	// يُنادى مرّتين، فيُقيَّد مرّتين لولاها.**
+	var paidAt *time.Time
+	var goods, driverFee int64
+	if err := q.QueryRow(ctx, `
+		SELECT custom_paid_at, COALESCE(custom_goods_amount, 0), driver_fee
+		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).
+		Scan(&paidAt, &goods, &driverFee); err != nil {
+		return err
+	}
+	if paidAt != nil {
+		return nil
+	}
+
+	// **والمقبوضُ كلُّه يدخل صندوقَه** — **وصندوقٌ لا يعرف ما قُبض لا يحرس
+	// سقفاً ولا يُقاصّ.**
+	if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {
+		return err
+	}
+	driverGets := goods + driverFee
+	if driverGets > in.cashDue {
+		s.logger.Warn("الطلب الخاصّ نقداً: نصيبُ السائق يتجاوز المقبوض — يُقصَر عليه",
+			"order", in.orderID, "driver", driverGets, "cash", in.cashDue)
+		driverGets = in.cashDue
+	}
+	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, driverGets, "driver_earning",
+		in.orderID, "طلبٌ خاصّ نقداً — بضاعةٌ وأجرٌ", &in.actorID); err != nil {
+		return err
+	}
+	if _, err := q.Exec(ctx,
+		`UPDATE orders SET custom_paid_at = now(), updated_at = now() WHERE id = $1`,
+		in.orderID); err != nil {
+		return err
+	}
+	// **والبقيّةُ للخزينة** — `creditTreasury` تقرأ `cash_due` عند التسليم
+	// فتجد المقبوضَ، وتطرح ما وصل السائق. **فنصيبُ المنصّة أثرٌ لا قيدٌ
+	// مخترَع.**
+	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 }

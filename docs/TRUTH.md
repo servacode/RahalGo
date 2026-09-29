@@ -696,6 +696,7 @@
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `delivery.by_distance` | السائقون | bool | `false` |
+| `delivery.merchant_delivery_platform_percent` | السائقون | percent | `10` |
 | `delivery.per_km` | السائقون | money | `0` |
 | `delivery.max_fee` | السائقون | money | `0` |
 | `delivery.custom_fee_source` | السائقون | choice | `driver_defined` |
@@ -705,6 +706,15 @@
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `1` |
 | `drivers.same_route_extra` | السائقون | int | `1` |
+| `drivers.proximity_enabled` | السائقون | bool | `true` |
+| `drivers.location_fresh_sec` | السائقون | int | `300` |
+| `drivers.dispatch_radius_initial_m` | السائقون | int | `3000` |
+| `drivers.dispatch_radius_step_m` | السائقون | int | `2000` |
+| `drivers.dispatch_radius_max_m` | السائقون | int | `15000` |
+| `drivers.proximity_bucket_m` | السائقون | int | `1000` |
+| `drivers.same_route_radius_m` | السائقون | int | `800` |
+| `drivers.same_route_spread_m` | السائقون | int | `2000` |
+| `drivers.zone_gate_enabled` | السائقون | bool | `false` |
 | `orders.driver_timeout_min` | السائقون | int | `10` |
 | `orders.handover_timeout_min` | السائقون | int | `5` |
 | `orders.route_margin_pct` | السائقون | int | `50` |

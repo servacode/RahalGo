@@ -339,6 +339,7 @@ private val CODES: Map<String, Int> = mapOf(
     "city_not_supported" to R.string.av_city_not_supported,
     "area_not_supported" to R.string.av_area_not_supported,
     "below_min_order" to R.string.err_below_min_order,
+    "delivery_credit_exhausted" to R.string.err_delivery_credit_exhausted,
     "too_many_open_orders" to R.string.err_too_many_open_orders,
     "invalid_promo" to R.string.err_invalid_promo,
     "invalid_transition" to R.string.err_invalid_transition,

@@ -1,0 +1,1595 @@
+{
+ "_note": "مولَّدٌ من internal/orders — لا يُحرَّر بيد. go run ./cmd/machinedoc. الحقولُ المنتهيةُ بـ_declared سلوكٌ مُصرَّحٌ بمصدره، وما عداها مُشتَقٌّ من الشيفرة.",
+ "statuses": [
+  {
+   "code": "pending",
+   "label": "بانتظار القبول",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 0
+  },
+  {
+   "code": "accepted",
+   "label": "مقبول",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 1
+  },
+  {
+   "code": "preparing",
+   "label": "قيد التحضير",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 2
+  },
+  {
+   "code": "dispatching",
+   "label": "في الطابور",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 3
+  },
+  {
+   "code": "assigned",
+   "label": "أُسند لسائق",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 4
+  },
+  {
+   "code": "at_pickup",
+   "label": "السائق عند المتجر",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 5
+  },
+  {
+   "code": "picked_up",
+   "label": "استلم السائق",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 6
+  },
+  {
+   "code": "on_the_way",
+   "label": "في الطريق",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 7
+  },
+  {
+   "code": "at_dropoff",
+   "label": "عند الزبون",
+   "terminal": false,
+   "refund_on_enter": false,
+   "flow_index": 8
+  },
+  {
+   "code": "delivered",
+   "label": "سُلّم",
+   "terminal": true,
+   "refund_on_enter": false,
+   "flow_index": 9
+  },
+  {
+   "code": "rejected",
+   "label": "مرفوض",
+   "terminal": true,
+   "refund_on_enter": true,
+   "flow_index": 10
+  },
+  {
+   "code": "cancelled",
+   "label": "ملغى",
+   "terminal": true,
+   "refund_on_enter": true,
+   "flow_index": 11
+  },
+  {
+   "code": "failed",
+   "label": "تعذّر التسليم",
+   "terminal": true,
+   "refund_on_enter": true,
+   "flow_index": 12
+  },
+  {
+   "code": "refunded",
+   "label": "مُسترَدّ",
+   "terminal": true,
+   "refund_on_enter": true,
+   "flow_index": 13
+  }
+ ],
+ "terminal_statuses": [
+  "delivered",
+  "rejected",
+  "cancelled",
+  "failed",
+  "refunded"
+ ],
+ "kinds": [
+  "standard",
+  "custom",
+  "merchant_delivery"
+ ],
+ "modes": [
+  "platform",
+  "merchants"
+ ],
+ "roles": [
+  "customer",
+  "merchant",
+  "ops",
+  "admin",
+  "driver"
+ ],
+ "edges": [
+  {
+   "kind": "standard",
+   "from": "pending",
+   "to": "accepted",
+   "declared_roles": [
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "merchant",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "pending",
+   "to": "rejected",
+   "declared_roles": [
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "merchant",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "pending",
+   "to": "cancelled",
+   "declared_roles": [
+    "customer",
+    "ops"
+   ],
+   "effective_platform": [
+    "customer",
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "customer",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "accepted",
+   "to": "preparing",
+   "declared_roles": [
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "merchant",
+    "ops",
+    "admin"
+   ],
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "standard",
+   "from": "accepted",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "accepted",
+   "to": "cancelled",
+   "declared_roles": [
+    "customer",
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [
+    "customer",
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "customer",
+    "merchant",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "preparing",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "preparing",
+   "to": "cancelled",
+   "declared_roles": [
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "merchant",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "dispatching",
+   "to": "assigned",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "dispatching",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "assigned",
+   "to": "dispatching",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "assigned",
+   "to": "at_pickup",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "assigned",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_pickup",
+   "to": "dispatching",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_pickup",
+   "to": "picked_up",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_pickup",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_pickup",
+   "to": "failed",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "picked_up",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "picked_up",
+   "to": "on_the_way",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "picked_up",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "picked_up",
+   "to": "failed",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "standard",
+   "from": "on_the_way",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "on_the_way",
+   "to": "at_dropoff",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "on_the_way",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "on_the_way",
+   "to": "failed",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "standard",
+   "from": "at_dropoff",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_dropoff",
+   "to": "delivered",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_dropoff",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "at_dropoff",
+   "to": "failed",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "standard",
+   "from": "delivered",
+   "to": "refunded",
+   "declared_roles": [],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "admin"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "pending",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "pending",
+   "to": "rejected",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "pending",
+   "to": "cancelled",
+   "declared_roles": [
+    "customer",
+    "ops"
+   ],
+   "effective_platform": [
+    "customer",
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "customer",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "dispatching",
+   "to": "assigned",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "dispatching",
+   "to": "cancelled",
+   "declared_roles": [
+    "customer",
+    "ops"
+   ],
+   "effective_platform": [
+    "customer",
+    "admin"
+   ],
+   "effective_merchants": [
+    "customer",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "assigned",
+   "to": "dispatching",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "assigned",
+   "to": "picked_up",
+   "declared_roles": [
+    "driver"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "assigned",
+   "to": "cancelled",
+   "declared_roles": [
+    "customer",
+    "ops"
+   ],
+   "effective_platform": [
+    "customer",
+    "admin"
+   ],
+   "effective_merchants": [
+    "customer",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "custom",
+   "from": "at_pickup",
+   "to": "dispatching",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_pickup",
+   "to": "picked_up",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_pickup",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_pickup",
+   "to": "failed",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "picked_up",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "picked_up",
+   "to": "on_the_way",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "picked_up",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "picked_up",
+   "to": "failed",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true,
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "custom",
+   "from": "on_the_way",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "on_the_way",
+   "to": "at_dropoff",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "on_the_way",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "on_the_way",
+   "to": "failed",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true,
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_dropoff",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_dropoff",
+   "to": "delivered",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_dropoff",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "at_dropoff",
+   "to": "failed",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "custom",
+   "from": "delivered",
+   "to": "refunded",
+   "declared_roles": [],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "admin"
+   ],
+   "inherited": true
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "dispatching",
+   "to": "assigned",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "dispatching",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "assigned",
+   "to": "dispatching",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "assigned",
+   "to": "at_pickup",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "assigned",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_pickup",
+   "to": "dispatching",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin",
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_pickup",
+   "to": "picked_up",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_pickup",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_pickup",
+   "to": "failed",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "picked_up",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "picked_up",
+   "to": "on_the_way",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "picked_up",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "picked_up",
+   "to": "failed",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "on_the_way",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "on_the_way",
+   "to": "at_dropoff",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "on_the_way",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "on_the_way",
+   "to": "failed",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ],
+   "nobody_in_platform": true
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_dropoff",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_dropoff",
+   "to": "delivered",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_dropoff",
+   "to": "cancelled",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "at_dropoff",
+   "to": "failed",
+   "declared_roles": [
+    "driver",
+    "ops"
+   ],
+   "effective_platform": [
+    "driver"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin",
+    "driver"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "delivered",
+   "to": "refunded",
+   "declared_roles": [],
+   "effective_platform": [
+    "admin"
+   ],
+   "effective_merchants": [
+    "admin"
+   ]
+  }
+ ],
+ "mode_rules_declared": [
+  {
+   "id": "P1",
+   "what": "وضعُ المنصّة يُسقط دورَ المتجر دائماً",
+   "source": "internal/orders/modes.go:131"
+  },
+  {
+   "id": "P2",
+   "what": "الدخولُ إلى preparing يُسقط ops وadmin",
+   "source": "internal/orders/modes.go:144"
+  },
+  {
+   "id": "P3",
+   "what": "وجهةٌ في driverOnly تُسقط ops وadmin",
+   "source": "internal/orders/modes.go:171"
+  },
+  {
+   "id": "P4",
+   "what": "**مُبتَلَعةٌ في P3** — شرطُها جزءٌ من شرطِها فلا تُسقط شيئاً جديداً",
+   "source": "internal/orders/modes.go:208"
+  },
+  {
+   "id": "P5",
+   "what": "الإلغاءُ بعد التسليم للسائق يُسقط ops لغير المالك",
+   "source": "internal/orders/modes.go:224"
+  },
+  {
+   "id": "M0",
+   "what": "وضعُ المتاجر لا يُنقّي شيئاً — يردّ الأدوارَ كما هي",
+   "source": "internal/orders/modes.go:123"
+  },
+  {
+   "id": "A0",
+   "what": "المالكُ يملك كلَّ حدٍّ في الخريطة ولا يخترع حدّاً",
+   "source": "internal/orders/statuses.go:330"
+  },
+  {
+   "id": "D0",
+   "what": "**driverHolds يُمرَّر ولا يُقرأ** — فالجدولُ دالّةُ (kind, from, to, roles, mode) وحدَها",
+   "source": "internal/orders/modes.go:61"
+  }
+ ],
+ "guards_declared": [
+  {
+   "id": "G0",
+   "what": "قفلُ الصفِّ FOR UPDATE قبل أيّ قراءة",
+   "source": "internal/orders/transitions.go:70"
+  },
+  {
+   "id": "G1",
+   "what": "الوضعُ يُقرأ من داخل المعاملة لا قبلها",
+   "source": "internal/orders/transitions.go:106"
+  },
+  {
+   "id": "G2",
+   "what": "canTransition — وإلّا invalid_transition (409)",
+   "source": "internal/orders/transitions.go:109"
+  },
+  {
+   "id": "G3",
+   "what": "at_pickup وpicked_up يشترطان سائقاً مُسنَداً — driver_required (409)",
+   "source": "internal/orders/transitions.go:115"
+  },
+  {
+   "id": "G4",
+   "what": "المخصَّصُ إلى picked_up يشترط custom_agreed_at",
+   "source": "internal/orders/transitions.go:128"
+  },
+  {
+   "id": "G5",
+   "what": "ويشترط قفلَ السعر quote_confirmed_version == quote_version",
+   "source": "internal/orders/transitions.go:141"
+  },
+  {
+   "id": "G6",
+   "what": "at_pickup → failed **يُحوَّل** إلى merchantBlocked ولا يُنفَّذ",
+   "source": "internal/orders/transitions.go:168"
+  },
+  {
+   "id": "G7",
+   "what": "نافذةُ إلغاء الزبون — وتُقاس على الأدوار الخامّ فيتجاوزها زبونٌ يحمل ops",
+   "source": "internal/orders/transitions.go:301"
+  },
+  {
+   "id": "H1",
+   "what": "الأدمن يحتاج القدرة orders.intervene",
+   "source": "internal/server/server.go:1176"
+  },
+  {
+   "id": "H2",
+   "what": "السائقُ إلى delivered يحتاج إثباتاً إن فُعّل drivers.require_delivery_photo",
+   "source": "internal/server/delivery_proof.go:189"
+  },
+  {
+   "id": "H3",
+   "what": "قبولُ العرض يشترط ورديّةً مفتوحةً وسقفَ نقدٍ وسقفَ طلبات",
+   "source": "internal/server/driver_handlers.go:614"
+  }
+ ],
+ "auto_rules_declared": [
+  {
+   "id": "AUTO-PREPARING",
+   "what": "accepted → preparing — **وضعُ المتاجر وحدَه**، بأدوار الفاعل الأصليّ",
+   "source": "internal/orders/transitions.go:552"
+  },
+  {
+   "id": "AUTO-DISPATCH",
+   "what": "preparing → dispatching — وضعُ المتاجر وorders.auto_dispatch، بأدوار ops قسراً",
+   "source": "internal/orders/transitions.go:559"
+  },
+  {
+   "id": "AUTO-DISPATCH-EXPORTED",
+   "what": "AutoDispatch بلا شرطِ وضعٍ ولا علَم — **وهو طريقُ وضع المنصّة**",
+   "source": "internal/orders/transitions.go:568"
+  },
+  {
+   "id": "AUTO-ACCEPT",
+   "what": "pending → accepted بعد orders.auto_accept_min (افتراضُه صفرٌ ⇒ مطفأ)",
+   "source": "internal/orders/watchdog.go:257"
+  },
+  {
+   "id": "AUTO-TRANSFER",
+   "what": "pending → accepted ثمّ إنزال — orders.auto_transfer (افتراضُه لا)",
+   "source": "internal/server/auto_transfer.go:98"
+  },
+  {
+   "id": "AUTO-ASSIGN",
+   "what": "dispatching → assigned بالدور",
+   "source": "internal/orders/rotation.go:541"
+  }
+ ],
+ "implicit_edges_declared": [
+  {
+   "id": "IMPLICIT-AT-PICKUP-ACCEPTED",
+   "what": "at_pickup → accepted — **لا تظهر في خريطةٍ ولا في TRUTH.md**: merchantBlocked يردّ الطلبَ مقبولاً ويُفرّغ السائقَ ويُثبّت الذنبَ على المتجر",
+   "source": "internal/orders/merchant_blocked.go:46"
+  }
+ ],
+ "fail_reasons": [
+  {
+   "code": "customer_absent",
+   "fault": "customer",
+   "at": "at_dropoff"
+  },
+  {
+   "code": "customer_refused",
+   "fault": "customer",
+   "at": "at_dropoff"
+  },
+  {
+   "code": "customer_unreachable",
+   "fault": "customer",
+   "at": "at_dropoff"
+  },
+  {
+   "code": "address_wrong",
+   "fault": "customer",
+   "at": "at_dropoff"
+  },
+  {
+   "code": "driver_late",
+   "fault": "driver",
+   "at": "at_dropoff"
+  },
+  {
+   "code": "merchant_closed",
+   "fault": "merchant",
+   "at": "at_pickup"
+  },
+  {
+   "code": "merchant_refused",
+   "fault": "merchant",
+   "at": "at_pickup"
+  },
+  {
+   "code": "merchant_not_ready",
+   "fault": "merchant",
+   "at": "at_pickup"
+  },
+  {
+   "code": "order_unknown",
+   "fault": "merchant",
+   "at": "at_pickup"
+  }
+ ],
+ "requires_reason": [
+  "rejected",
+  "cancelled",
+  "failed",
+  "refunded"
+ ]
+}
