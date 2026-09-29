@@ -1,5 +1,6 @@
 package com.rahalgo.driver.orders
 
+import kotlinx.coroutines.async
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.OrderRoute
@@ -63,7 +64,23 @@ data class LoadOutcome(
  *
  * @param openId الطلبُ المفتوحُ على الشاشة، أو فارغٌ فيُؤخذ أوّلُ ما في يده.
  */
-suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome {
+suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome = kotlinx.coroutines.coroutineScope {
+    // ══════════════════════════════════════════════════════════════════
+    // **والمسارُ متوازياً حين يُعرَف الطلبُ سلفاً** (`openId`) — لا خلفَ القائمتين
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٩-٢٨: الخريطةُ والملاحةُ تحتاجان المسارَ أوّلا،
+    //  **فلا يُنتظَر خلفَ `queue`+`orders`+`me`** — ثلاثةُ نداءاتٍ تتقدّمه.)
+    //
+    // **وحين لا يُعرَف الطلبُ** (نأخذ أوّلَ ما في اليد) يبقى المسارُ بعد
+    // القائمة كما كان — **فهو يحتاج `mine` ليختار أوّلَها، وذاك هو السطرُ
+    // الذي كان في غير موضعه.** فالتوازي للحالة المعروفة وحدَها، بلا نداءٍ مكرّر.
+    val routeEarly = if (!openId.isNullOrEmpty()) {
+        async { runCatching { feed.route(openId) }.getOrNull()?.takeIf { it.available } }
+    } else {
+        null
+    }
+
     val offers: List<DriverOrder>
     val mine: List<DriverOrder>
     val me: DriverMe
@@ -74,21 +91,17 @@ suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome {
     } catch (e: Exception) {
         // **وسقوطُ القائمة يُسقط الدورة** — **وشاشةُ طلباتٍ فارغةٌ بلا
         // سببٍ أسوأُ من رسالةِ عطب**: يظنّ أنّه لا عمل.
-        return LoadOutcome(emptyList(), emptyList(), null, null, e)
+        routeEarly?.cancel()
+        return@coroutineScope LoadOutcome(emptyList(), emptyList(), null, null, e)
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // **والمسارُ بعدها لا قبلها**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // **وهذا هو السطرُ الذي كان في غير موضعه.**
     val id = openId ?: mine.firstOrNull()?.id
-    val route = if (id.isNullOrEmpty()) {
-        null
-    } else {
+    val route = when {
+        routeEarly != null -> routeEarly.await()
+        id.isNullOrEmpty() -> null
         // **وفشلُه صامتٌ بالتصميم** — الشاشةُ ترسم مستقيمَها ولا تسقط.
         // **والمسارُ زينةٌ حول الطلب لا شرطٌ له.**
-        runCatching { feed.route(id) }.getOrNull()?.takeIf { it.available }
+        else -> runCatching { feed.route(id) }.getOrNull()?.takeIf { it.available }
     }
-    return LoadOutcome(offers, mine, me, route)
+    LoadOutcome(offers, mine, me, route)
 }

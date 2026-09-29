@@ -262,7 +262,12 @@ class UrlHttpSource : com.rahalgo.map.data.HttpSource {
         val status = connection.responseCode
         if (status !in 200..299) {
             connection.disconnect()
-            throw com.rahalgo.map.data.HttpSource.HttpException(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.map_server_said, status))
+            // **والرقمُ لاتينيٌّ** — `%1$s` لا `%1$d`؛ انظر `TripPanel`.
+            throw com.rahalgo.map.data.HttpSource.HttpException(
+                com.rahalgo.ui.AppCore.get().app.getString(
+                    com.rahalgo.driver.R.string.map_server_said, status.toString(),
+                ),
+            )
         }
 
         /**

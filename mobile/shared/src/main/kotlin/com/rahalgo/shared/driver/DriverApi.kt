@@ -16,6 +16,8 @@ import com.rahalgo.shared.model.TrackPoint
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.buildJsonObject
 
@@ -291,16 +293,72 @@ class DriverApi(private val api: ApiClient) {
          */
         mocked: Boolean? = null,
     ) {
-        val body = buildMap<String, Any> {
-            put("lat", lat)
-            put("lng", lng)
-            if (mocked != null) put("mocked", mocked)
-            if (speedMps != null) put("speed_mps", speedMps)
-            if (accuracyM != null) put("accuracy_m", accuracyM)
-            if (bearingDeg != null) put("bearing_deg", bearingDeg)
-        }
+        // ══════════════════════════════════════════════════════════════
+        // **وجسمُ النداء `JsonObject` لا `Map<String, Any>`**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وقِيس على الجهاز ٢٠٢٦-٠٩-٢٩** — كلُّ إرسالِ موضعٍ كان يسقط:
+        //
+        //	IllegalStateException: Serializing collections of different
+        //	element types is not yet supported.
+        //	Selected serializers: [kotlin.Double, kotlin.Boolean]
+        //
+        // **و`Map<String, Any>` لا نوعَ لعناصرها**، فيستنبط Ktor مُسلسِلاً
+        // من أنواعها في زمن التشغيل — **ويسقط حين تختلف**: `lat` عددٌ
+        // و`mocked` منطقيّة. **و`mocked` تُرسَل دائماً** (`isMocked()` لا
+        // تردّ فراغاً)، **فالسقوطُ في كلّ نقطةٍ لا في حالةٍ نادرة.**
+        //
+        // # وثمنُه أنّ السائقَ لا يصل إليه طلبٌ أبدا
+        //
+        // **والخطأُ مُلتقَطٌ في `LocationService`** فيُحفَظ في الطابور
+        // ويُقال «تعذّر الإرسال» — **فلا انهيارَ يُرى ولا نقطةَ تصل.**
+        // **و`users.last_location_at` يشيخ**، والتوزيعُ بالقرب يشترط
+        // موضعاً حديثاً (`drivers.location_fresh_sec`) — **فيصير السائقُ
+        // غيرَ مؤهَّلٍ دائماً ولا يُعرَض عليه شيء.** (قِيس: عمرُ الموضع
+        // ٩٩٢٠ ثانية وطابورُ العروض فارغ.)
+        //
+        // ══════════════════════════════════════════════════════════════
+        // **ونموذجٌ موسومٌ `@Serializable` — لا خريطةٌ ولا `JsonObject`**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **و`ApiClient.call` تأخذ الجسمَ `Any?`** — فلا نوعَ يُمرَّر معه،
+        // **ويستنبط Ktor المُسلسِلَ من صنفِ زمنِ التشغيل.**
+        //
+        // **فسقطت خريطةُ الأنواع المختلطة** أوّلاً، **ثمّ سقط
+        // `JsonObject`** ثانياً (قِيس ٢٠٢٦-٠٩-٢٩):
+        //
+        //	SerializationException: Serializer for class 'JsonLiteral'
+        //	is not found.
+        //
+        // **لأنّ عناصرَها أصنافٌ داخليّةٌ في المكتبة** لا مُسلسِلَ لها
+        // بالاسم. **والصنفُ الموسومُ وحدَه يجد مُسلسِلَه في زمن التشغيل** —
+        // وهو ما تفعله بقيّةُ نداءات هذا الملفّ (`ReportInput`،
+        // `TrackPoint`)، **فيُتَّبع ما ثبت لا ما يُظنّ.**
+        //
+        // **والفارغُ لا يُكتب**: `explicitNulls = false` في `ApiClient`.
+        val body = LocationBody(
+            lat = lat, lng = lng, mocked = mocked,
+            speedMps = speedMps, accuracyM = accuracyM, bearingDeg = bearingDeg,
+        )
         api.call<Ack>("/api/v1/driver/location", HttpMethod.Post, body)
     }
+
+    /**
+     * **جسمُ نداء الموضع** — انظر الشرحَ في [sendLocation].
+     *
+     * **وأسماءُ الحقول كما يقرؤها المحرّك** (`driver_location.go`)، **والفارغُ
+     * يُحذَف** لا يُرسَل صفراً: **صفرُ اتّجاهٍ يوجّه الواقفَ شمالاً، وصفرُ
+     * `mocked` ادّعاءُ صدقٍ لم يُفحَص.**
+     */
+    @Serializable
+    private data class LocationBody(
+        val lat: Double,
+        val lng: Double,
+        val mocked: Boolean? = null,
+        @SerialName("speed_mps") val speedMps: Double? = null,
+        @SerialName("accuracy_m") val accuracyM: Double? = null,
+        @SerialName("bearing_deg") val bearingDeg: Double? = null,
+    )
 
     /**
      * **يرسل ما تجمّع حين انقطعت الشبكة — دفعة واحدة.**

@@ -78,7 +78,23 @@ class LocationService : Service() {
             // تصل نقطة أصلا، **والسكوت يُقرأ عملا وهو صمت.**
             Log.i(TAG, "نقطة: ${point.latitude}, ${point.longitude} دقّة ${point.accuracy}")
             // **والشاشة تقرؤه من هنا** — الخريطة تتحرّك مع صاحبها.
-            LastPoint.set(point.latitude, point.longitude, mocked = point.isMocked())
+            // ══════════════════════════════════════════════════════════
+            // **وتُحمَل السرعةُ ووقتُها معه** (قرارُ المالك ٢٠٢٦-٠٩-٢٨)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **ولوحةُ الرحلة تعرض `0 كم/س` للواقف** — وذاك لا يُعرف من
+            // موضعٍ بلا وقت: **قراءةٌ شائخةٌ لا تصف وقوفاً.** انظر
+            // `SpeedReadout`.
+            //
+            // **و`hasSpeed()` كاذبةٌ على الواقف** — فيُمرَّر فراغُها كما
+            // هو، **والصفرُ يُقرّره القارئُ لا الكاتب.**
+            LastPoint.set(
+                point.latitude,
+                point.longitude,
+                mocked = point.isMocked(),
+                speedMps = if (point.hasSpeed()) point.speed else null,
+                atMs = android.os.SystemClock.elapsedRealtime(),
+            )
             send(point)
         }
     }

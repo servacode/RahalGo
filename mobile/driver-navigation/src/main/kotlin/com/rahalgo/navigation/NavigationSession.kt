@@ -110,6 +110,29 @@ class NavigationSession(
         private set
 
     /**
+     * **السرعةُ الحاليّةُ كم/س — من آخر قراءةٍ صالحة، لا تُخترع.**
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٩-٢٨: سرعةُ الرأس من حالِ الملاحة الحقيقيّ لا
+     *  من إعدادٍ ولا من الإعادة.) **null تعني «لم تصل قراءةٌ بعد»** —
+     * فيعرض الرأسُ حالةً آمنةً لا رقماً مصنوعا.
+     *
+     * **والصفرُ يعني «وصلت قراءةٌ ولا حركةَ فيها»** — وذاك وقوفٌ يُعرض
+     * `0 كم/س` (قرارُ المالك ٢٠٢٦-٠٩-٢٨). **و`hasSpeed()` تكذب على
+     * الواقف** فتردّ فراغاً حيث الحقُّ صفر، **والقراءةُ الواصلةُ نفسُها
+     * هي الدليلُ على أنّه واقفٌ لا مجهول.**
+     */
+    var currentSpeedKmh by mutableStateOf<Int?>(null)
+        private set
+
+    /**
+     * **مرشِّحُ السرعة** — ثلاثةُ شهودٍ وهدنةٌ بعتبتين، انظر `SpeedFilter`.
+     *
+     * **وواحدٌ للجلسة** — يحمل القراءةَ السابقةَ وحالَ «يسير/واقف»،
+     * **ويُنسى مع كلّ إغلاق** فلا ترث جلسةٌ سرعةَ سابقتها.
+     */
+    private val speedFilter = SpeedFilter()
+
+    /**
      * **بابُ التعليمات** — يُنادى مع كلّ قراءةٍ مقبولة.
      *
      * **ويُوصَل في نموذج العرض** لا في الشاشة — انظر `consume`.
@@ -197,6 +220,15 @@ class NavigationSession(
     /** **حالُ إعادة الحساب** — تقرؤها الشاشةُ ولا تحسبها. */
     val rerouteStatus: RerouteStatus get() = nav?.reroute ?: RerouteStatus.NONE
 
+    /**
+     * **وقتُ آخرِ قراءةٍ بلغت الجلسة** — بالمقياس الرتيب، وصفرٌ يعني
+     * «لا قراءةَ بعد».
+     *
+     * **ويُقرأ لتقدير شيخوخة [currentSpeedKmh]** — انظر
+     * `SpeedReadout`: **سرعةٌ من جلسةٍ توقّفت قراءاتُها لا تُعرض.**
+     */
+    val lastFixAtMs: Long get() = lastFixAt
+
     /** **مخطِّطُ الصوت** — يُحقَن فيه طرفُ الرحلة. */
     val voicePlanner: VoicePlanner? get() = engineCore.voice
 
@@ -244,6 +276,10 @@ class NavigationSession(
         stepId = 0L
         firstFixAt = 0L
         lastFixAt = 0L
+        // **ولا تبقى سرعةٌ من جلسةٍ انتهت** — **صفرٌ متروكٌ يُقرأ
+        // وقوفاً وهو انعدامُ جلسة.**
+        currentSpeedKmh = null
+        speedFilter.reset()
         minGapMs = Long.MAX_VALUE
         maxGapMs = 0L
         engine.onFix = { fix -> consume(fix) }
@@ -281,6 +317,17 @@ class NavigationSession(
         lastFixAt = fix.atMs
         val out = engineCore.onFix(fix)
         nav = out
+        // **السرعةُ الحاليّة — مرشَّحةً لا خامّة.**
+        //
+        // **وقراءةٌ بلا سرعةٍ وقوفٌ لا جهل** (قرارُ المالك ٢٠٢٦-٠٩-٢٨):
+        // **قد وصلت القراءةُ**، فالموضعُ معروفٌ والحركةُ منعدمة — **وذاك
+        // صفرٌ يُعرض لا فراغٌ يُخفي الشريحة.** ولا يبقى رقمٌ قديمٌ يُقرأ
+        // حاضرا.
+        //
+        // **وقِيس على الجهاز ٢٠٢٦-٠٩-٢٩**: هاتفٌ واقفٌ عرض ٤ ثمّ ٥ ثمّ ٦
+        // كم/س — **فالقراءةُ الواحدةُ لا تعرف أواقفٌ هو أم يزحف.** انظر
+        // `SpeedFilter`: ثلاثةُ شهودٍ وهدنةٌ بعتبتين.
+        currentSpeedKmh = speedFilter.next(fix)
         // ══════════════════════════════════════════════════════════════
         // **والتعليماتُ تُسلَّم من هنا لا من الشاشة**
         // ══════════════════════════════════════════════════════════════
@@ -371,6 +418,10 @@ class NavigationSession(
         stepId = 0L
         firstFixAt = 0L
         lastFixAt = 0L
+        // **ولا تبقى سرعةٌ من جلسةٍ انتهت** — **صفرٌ متروكٌ يُقرأ
+        // وقوفاً وهو انعدامُ جلسة.**
+        currentSpeedKmh = null
+        speedFilter.reset()
         minGapMs = Long.MAX_VALUE
         maxGapMs = 0L
         replaying = true
@@ -407,6 +458,10 @@ class NavigationSession(
         stepId = 0L
         firstFixAt = 0L
         lastFixAt = 0L
+        // **ولا تبقى سرعةٌ من جلسةٍ انتهت** — **صفرٌ متروكٌ يُقرأ
+        // وقوفاً وهو انعدامُ جلسة.**
+        currentSpeedKmh = null
+        speedFilter.reset()
         minGapMs = Long.MAX_VALUE
         maxGapMs = 0L
         replaying = true

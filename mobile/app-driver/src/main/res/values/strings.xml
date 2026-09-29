@@ -122,6 +122,8 @@
     <string name="setup_step_gps">خدمة الموقع في النظام</string>
     <string name="setup_step_background">الموقع طوال الوقت</string>
     <string name="setup_step_notifications">إذن الإشعارات</string>
+    <string name="setup_step_battery">العمل في الخلفية دون إيقاف</string>
+    <string name="setup_grant_battery">اسمح بالعمل في الخلفية</string>
     <string name="setup_grant_location">اسمح بالوصول إلى الموقع</string>
     <string name="setup_enable_gps">شغّل خدمة الموقع</string>
     <string name="setup_grant_background">اسمح بالموقع طوال الوقت</string>
@@ -199,6 +201,8 @@
     <string name="trip_p_at_store">وصلت المتجر</string>
     <!-- **والخاصُّ قبل الشراء**: اتّفاقٌ ثمّ شراء، لا سيرٌ إلى متجر. -->
     <string name="trip_p_custom">اتفق مع الزبون ثم اشتر</string>
+    <string name="trip_route_loading">جاري حساب الطريق…</string>
+    <string name="trip_speed_kmh">%1$s كم/س</string>
     <string name="trip_p_to_customer">الطريق إلى %1$s</string>
     <string name="trip_p_at_customer">وصلت الزبون</string>
     <string name="trip_p_delivered">سلمت الطلب</string>
@@ -217,7 +221,7 @@
     <string name="offline_map_title">نزّل خريطة %1$s</string>
     <string name="offline_map_text">تنزل مرة وتبقى — فتعمل الخريطة ولو انقطع الإنترنت في الطريق</string>
     <string name="offline_map_button">نزل الآن</string>
-    <string name="offline_map_progress">جار التنزيل %1$d%%</string>
+    <string name="offline_map_progress">جار التنزيل %1$s%%</string>
     <string name="offline_map_resume">أكمل التنزيل</string>
     <!-- ══════════════════════════════════════════════════════════════
          عباراتُ الإخفاق — إغلاقُ TD-MAP-SILENT-RESOURCE-FAIL
@@ -437,7 +441,7 @@
     <!-- مداخلُ التطوير/QA — بناءُ التطوير وحدَه -->
     <string name="replay_trip_open">رحلة تجريبيّة</string>
     <string name="replay_lab_open">مختبر الملاحة (تشخيص)</string>
-    <string name="map_server_said">الخادم رد %1$d</string>
+    <string name="map_server_said">الخادم رد %1$s</string>
     <string name="map_no_package">لا حزمة باسم %1$s</string>
     <!-- **تحديثٌ إلزاميٌّ — توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٧). -->
     <string name="update_body_driver">صدر تحديثٌ إلزاميٌّ لتطبيق السائق. نزّله من موقع رحّال غو لتتابع عملك.</string>

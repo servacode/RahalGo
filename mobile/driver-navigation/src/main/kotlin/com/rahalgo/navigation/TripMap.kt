@@ -139,6 +139,9 @@ fun TripMap(
 
     /** **الحالُ الأخيرُ للرسم** — يقرؤه المُعيدُ بعد تحميل النمط. */
     val latest = remember { arrayOfNulls<TripDraw>(1) }
+
+    /** **آخرُ خطٍّ قِيس كادرُه** — فلا يُكتب القياسُ في كلّ إطار. */
+    val shownRoute = remember { intArrayOf(-1) }
     // ══════════════════════════════════════════════════════════════════
     // **ويُطوى ما قُطع من الخطّ**
     // ══════════════════════════════════════════════════════════════════
@@ -181,7 +184,16 @@ fun TripMap(
     // **فيُطرح من التقدّم أساسُه عند آخر تغيّرٍ للخطّ** — والخطُّ
     // المجلوبُ من موضعه لم يُمشَ منه شيءٌ بعد، **فالقصُّ يبدأ من
     // صفرٍ كما ينبغي.**
-    val progressBase = remember(route) { floatArrayOf(Float.NaN) }
+    // **ومع أساسِ التقدّم تُنسى ذاكرةُ القصّ** — خطٌّ جديدٌ لا يرث نسبةَ
+    // سابقه (`Markers.resetProgress`، عيبٌ كامنٌ قِيس ٢٠٢٦-٠٩-٢٩).
+    //
+    // **والمفتاحُ `route` نفسُه** يغطّي: مسارٌ يُركَّب · ساقٌ تبدأ ·
+    // إعادةُ حسابٍ تبدّل الهندسة · طلبٌ أو جلسةٌ تتبدّل. **وموضعٌ واحدٌ
+    // للنسيان فلا يفترق اثنان.**
+    val progressBase = remember(route) {
+        Markers.resetProgress()
+        floatArrayOf(Float.NaN)
+    }
     latest[0] = TripDraw(driver, pickup, dropoff, route, icons)
 
     /**
@@ -319,8 +331,69 @@ fun TripMap(
      *
      * **والكاميرا تُلتقط قبل التحميل وتُعاد بعده** (البند ٢١).
      */
+    // ══════════════════════════════════════════════════════════════════
+    // **وأثرُ الخطّ الأزرق من طرفه إلى طرفه** (بلاغُ المالك ٢٠٢٦-٠٩-٢٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **و«المسارُ رُكِّب» ليس دليلاً على أنّ الخطَّ يُرى** — بينهما
+    // النمطُ والمصدرُ والطبقةُ والكاميرا. **فيُكتب كلُّ طرفٍ منها.**
+    LaunchedEffect(route, binding) {
+        android.util.Log.i(
+            "RahalGo/perf",
+            "polyline state route=${route.size} lengthM=${routeLengthM.toInt()} " +
+                "bbox=$routeBbox binding=${binding::class.simpleName} " +
+                "style=${styleRef[0] != null} driver=${driver != null}",
+        )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والدليلُ الحقُّ: ما رسمه المحرّكُ فعلاً على البكسل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٩-٢٩: «لا تعدَّ سجلَّ التركيب كافياً — النجاحُ
+    //  يقتضي دليلاً أنّ الخطَّ مرسومٌ على الشاشة».)
+    //
+    // **و`queryRenderedFeatures` تسأل المحرّكَ عمّا رسمه لا عمّا سُلّم
+    // إليه** — فمصدرٌ حاضرٌ وطبقةٌ مبنيّةٌ وخطٌّ لا يُرى يفترقون هنا.
+    // **وتُسأل بعد إطارٍ أو اثنين** — سؤالُها قبل الرسم يردّ فراغاً صادقاً
+    // عن خطٍّ سيُرسم بعد حين.
+    LaunchedEffect(route, binding) {
+        if (route.size < 2) return@LaunchedEffect
+        kotlinx.coroutines.delay(1_200)
+        view.getMapAsync { libre ->
+            runCatching {
+                // **وتُعيَّن عيّنةٌ من رؤوس الخطّ** — لا الخطُّ كلُّه: عشرةٌ
+                // تكفي للحكم، وألفٌ تُثقل الخيطَ الرئيسيّ.
+                val step = (route.size / 10).coerceAtLeast(1)
+                val sample = route.filterIndexed { i, _ -> i % step == 0 }.take(12)
+                var drawn = 0
+                var onScreen = 0
+                for (p in sample) {
+                    val sp = libre.projection.toScreenLocation(p)
+                    if (sp.x < 0 || sp.y < 0) continue
+                    onScreen++
+                    val box = android.graphics.RectF(sp.x - 12f, sp.y - 12f, sp.x + 12f, sp.y + 12f)
+                    if (libre.queryRenderedFeatures(box, "trip-line-layer").isNotEmpty()) drawn++
+                }
+                android.util.Log.i(
+                    "RahalGo/perf",
+                    "polyline RENDERED drawn=$drawn/$onScreen sampled=${sample.size} " +
+                        "verdict=${if (drawn > 0) "VISIBLE" else "NOT-VISIBLE"}",
+                )
+            }
+        }
+    }
+
     LaunchedEffect(binding) {
-        val ready = binding as? MapRuntime.Binding.Ready ?: return@LaunchedEffect
+        val ready = binding as? MapRuntime.Binding.Ready ?: run {
+            // **وربطٌ غيرُ جاهزٍ يعني خريطةً بلا نمطٍ** — **ولا مصدرَ ولا
+            // طبقةَ خطّ**، فلا يُترك بلا سطر.
+            android.util.Log.w(
+                "RahalGo/perf",
+                "polyline blocked — binding=${binding::class.simpleName} (no style, no line)",
+            )
+            return@LaunchedEffect
+        }
         view.getMapAsync { libre ->
             val keep: CameraPosition? = if (framed[0]) libre.cameraPosition else null
             libre.setStyle(Style.Builder().fromJson(ready.bound.json)) { loaded ->
@@ -334,6 +407,10 @@ fun TripMap(
                  * القديمُ ويُكتب `active.json`.**
                  */
                 MapStyleRepository.onStyleLoaded(binding)
+                android.util.Log.i(
+                    "RahalGo/perf",
+                    "polyline style loaded — restoring overlays, route=${latest[0]?.route?.size}",
+                )
                 // **الطبقاتُ تُعاد أوّلاً** — فلا إطارَ واحدٌ بلا مسار.
                 surface.overlays.restoreAll()
                 if (keep != null) {
@@ -348,10 +425,43 @@ fun TripMap(
 
     AndroidView(factory = { view }, modifier = modifier) { map ->
         map.getMapAsync { libre ->
-            val style = libre.style ?: return@getMapAsync
+            val style = libre.style ?: run {
+                // **ونمطٌ لم يُحمَّل بعد يُسقط هذه الهندسة** — فتُنتظر
+                // `restoreAll`. **ولا يُترك الإسقاطُ بلا أثر** (٢٠٢٦-٠٩-٢٨).
+                android.util.Log.w(
+                    "RahalGo/perf",
+                    "polyline dropped — style not ready, route=${route.size}",
+                )
+                return@getMapAsync
+            }
             // **البدائلُ أوّلاً** — فتبقى تحتَ الدبابيس.
             AltRouteLayer.draw(style, alternatives, previewRouteId)
             Markers.draw(context, style, driver, pickup, dropoff, route, icons)
+
+            // ══════════════════════════════════════════════════════════
+            // **وأيقع الخطُّ داخلَ ما تراه العين؟**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **وخطٌّ مرسومٌ خارجَ الكادر خطٌّ لا يُرى** — وهو ما يشكو منه
+            // المالك، **ولا يفرّقه عن خطٍّ لم يُرسم إلّا قياسُ الكادر.**
+            if (route.size >= 2 && shownRoute[0] != route.size) {
+                shownRoute[0] = route.size
+                runCatching {
+                    val seen = libre.projection.visibleRegion.latLngBounds
+                    val bb = bboxOf(route)!!
+                    val inside = route.count { seen.contains(it) }
+                    android.util.Log.i(
+                        "RahalGo/perf",
+                        "polyline onscreen pts=${route.size} visible=$inside " +
+                            "cam=${libre.cameraPosition.target?.latitude}," +
+                            "${libre.cameraPosition.target?.longitude} " +
+                            "zoom=${libre.cameraPosition.zoom} " +
+                            "seenSW=[${seen.southWest.latitude},${seen.southWest.longitude}] " +
+                            "seenNE=[${seen.northEast.latitude},${seen.northEast.longitude}] " +
+                            "bbox=$bb",
+                    )
+                }
+            }
 
             if (recenter != handled[0]) {
                 handled[0] = recenter
@@ -404,8 +514,41 @@ fun TripMap(
                             // **والتقدّمُ بين القراءتين يُستكمَل** —
                             // فيزحف طرفُ الخطّ مع السهم لا مع القراءة.
                             val walked = progressFrom[0] + (progressTo[0] - progressFrom[0]) * t
-                            if (progressBase[0].isNaN()) progressBase[0] = walked
-                            val onLine = (walked - progressBase[0]).coerceAtLeast(0f)
+                            // ══════════════════════════════════════════
+                            // **والأساسُ من قراءةٍ صحيحة، لا من `-1`**
+                            // ══════════════════════════════════════════
+                            //
+                            // (بلاغُ المالك ٢٠٢٦-٠٩-٢٨: «الخطُّ الأزرقُ لم
+                            //  يظهر» — **وقِيس على الجهاز ٢٠٢٦-٠٩-٢٩**:
+                            //  `traveled` قفزت إلى `0.999` بعد تسع ثوانٍ،
+                            //  **فطُمس الخطُّ كلُّه** بينما هندستُه مرسومةٌ
+                            //  وطبقتاه مرئيّتان.)
+                            //
+                            // **و`progressFrom/To` تبدآن `-1f`** — علامةَ
+                            // «لا قراءةَ بعد». **وإطارُ الحركة يسبق أوّلَ
+                            // قراءةٍ**، فيُحسب `walked = -1` **فيُحفظ
+                            // الأساسُ `-1`.** ثمّ تصل القراءةُ الأولى
+                            // (`1822م`) فيصير المقطوعُ `1823م` من `1824م`:
+                            // **النسبةُ ٠٫٩٩٩ والخطُّ يختفي.**
+                            //
+                            // **والأساسُ إنّما وُضع ليُطرح** (انظر شرحَه
+                            // أعلاه) — **وطرحُ علامةٍ ليست قياساً يُبطله.**
+                            //
+                            // **ولا يُقصّ شيءٌ قبل قراءةٍ صحيحة**: مسارٌ
+                            // حُسب من موضعٍ يسبق موضعَ السائق (والخادمُ
+                            // يعرف موضعاً أقدمَ من الهاتف دائماً) **يُسقِط
+                            // الإسقاطَ قريباً من آخر الخطّ** — فلو قُصَّ
+                            // بذلك لَاختفى الطريقُ كلُّه وهو لم يُمشَ.
+                            // **فالمقطوعُ ما مشاه بعد رسم الخطّ لا ما
+                            // يقوله إسقاطٌ أوّلُ.**
+                            if (progressBase[0].isNaN() && walked >= 0f) {
+                                progressBase[0] = walked
+                            }
+                            val onLine = if (progressBase[0].isNaN()) {
+                                0f
+                            } else {
+                                (walked - progressBase[0]).coerceAtLeast(0f)
+                            }
                             Markers.setTraveled(
                                 it, RouteTrim.fraction(onLine.toDouble(), routeLengthM),
                             )

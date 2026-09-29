@@ -684,9 +684,11 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     if (!setupDone) {
         com.rahalgo.driver.setup.SetupWizard(
             readiness = home.state.readiness,
+            batteryExempt = com.rahalgo.ui.BatteryGuard.exempt(context),
             onGrantLocation = { ask.launch(LocationPermission.FIRST_STEP) },
             onEnableGps = { com.rahalgo.driver.location.Readiness.openLocationSettings(context) },
             onGrantBackground = { disclose = true },
+            onGrantBattery = { com.rahalgo.ui.BatteryGuard.ask(context) },
             onGrantNotifications = {
                 if (LocationPermission.NOTIFICATIONS.isEmpty()) {
                     LocationPermission.openSettings(context)
@@ -1110,16 +1112,6 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                             }
                         },
                         openAppSettings = { LocationPermission.openSettings(context) },
-                        // ══════════════════════════════════════════
-                        // **وبطاقةُ البطّاريّة كانت لا تُغلَق**
-                        // ══════════════════════════════════════════
-                        //
-                        // **و`dismissBattery` لها قيمةٌ افتراضيّةٌ
-                        // فارغة، ولم تُوصَل هنا** — **فزرُّ «لاحقاً»
-                        // يُضغط ولا يقع شيء**، **والبطاقةُ باقيةٌ فوق
-                        // مفتاح الورديّة.** (وهي الفوضى التي يمنعها
-                        // شرطُ «لا بطاقةَ تبقى».)
-                        dismissBattery = home::dismissBattery,
                         logout = onLogout,
                     ),
                 )

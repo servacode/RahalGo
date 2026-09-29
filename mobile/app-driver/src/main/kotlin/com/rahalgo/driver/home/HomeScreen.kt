@@ -1,6 +1,5 @@
 package com.rahalgo.driver.home
 
-import com.rahalgo.ui.BatteryGuard
 import androidx.compose.foundation.background
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.StatRow
@@ -44,7 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.driver.BuildConfig
 import com.rahalgo.driver.R
 import com.rahalgo.ui.grouped
 import com.rahalgo.ui.money
@@ -244,16 +242,9 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // **ولا يُغلق البابَ عليه**: بطاقةٌ يقرؤها ويقرّر، **لا نافذةٌ
         // تحجب الشاشةَ حتّى يستجيب.** فمن رفض اليومَ يعمل، ومن قبل
         // بقي موضعُه حيّاً.
-        if (state.askBattery) {
-            Spacer(Modifier.height(12.dp))
-            BatteryCard(
-                onFix = {
-                    BatteryGuard.ask(context)
-                    actions.dismissBattery()
-                },
-                onLater = actions.dismissBattery,
-            )
-        }
+        // **ولا بطاقةَ «اعمل في الخلفية» في الرئيسيّة** (قرارُ المالك ٢٠٢٦-٠٩-٢٨):
+        // إعفاءُ البطّاريّة صار خطوةً في تهيئة أوّل دخول (`SetupScreen`)، لا بطاقةً
+        // دائمةً بـ«لاحقاً» على لوحة العمل. **والرئيسيّةُ للعمل لا للتهيئة.**
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
@@ -333,51 +324,13 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // ولوحةُ العمل ليست موضعَ فعلٍ يُنهي الجلسة.
 
         // ══════════════════════════════════════════════════════════════
-        // **قسمُ التطوير/QA — مختبرُ الرحلة التجريبيّة** (بناءُ التطوير وحدَه)
+        // **لا أدواتِ تطويرٍ في واجهة السائق** (قرارُ المالك ٢٠٢٦-٠٩-٢٨)
         // ══════════════════════════════════════════════════════════════
         //
-        // **محروسٌ بـ`BuildConfig.DEBUG`**: لا يظهر ولا يُطلَق في الإصدار،
-        // والنشاطُ نفسُه معلَنٌ في بيان التطوير وحدَه (`src/debug`) فلا يُصرَّف
-        // في الإنتاج. **عزلٌ تامّ**: يحاكي الملاحةَ بحالةٍ محلّيّةٍ ديباغ —
-        // لا طلبَ ولا خادمَ ولا دفترَ ولا دفعة.
-        if (BuildConfig.DEBUG) {
-            Spacer(Modifier.height(26.dp))
-            Text(
-                text = "أدوات التطوير · QA",
-                style = MaterialTheme.typography.titleSmall,
-                color = Rahal.colors.inkMuted,
-            )
-            Spacer(Modifier.height(8.dp))
-            // **الرحلة التجريبيّة المواجِهةُ للمالك** — على شاشة الرحلة الحقيقيّة.
-            RahalButton(
-                onClick = {
-                    runCatching {
-                        context.startActivity(
-                            android.content.Intent("com.rahalgo.driver.debug.REPLAY_TRIP")
-                                .setPackage(context.packageName),
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.replay_trip_open))
-            }
-            Spacer(Modifier.height(6.dp))
-            // **مختبرُ الملاحة التشخيصيّ** — أداةُ هندسةٍ (خريطةٌ مستقلّة).
-            RahalTextButton(
-                onClick = {
-                    runCatching {
-                        context.startActivity(
-                            android.content.Intent("com.rahalgo.driver.debug.REPLAY_LAB")
-                                .setPackage(context.packageName),
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.replay_lab_open))
-            }
-        }
+        // **حُذف مدخلُ «أدوات التطوير · QA»** (الرحلةُ التجريبيّة ومختبرُ
+        // الملاحة) من الواجهة العاديّة — **فلا يبلغه سائقٌ حقيقيّ.** ومحرّكُ
+        // الإعادة وأنشطتُه تبقى في `src/debug` (تُطلَق بـ`adb` عند الحاجة
+        // الهندسيّة)، **ولا مدخلَ لها في التطبيق، والإصدارُ لا يحملها أصلاً.**
 
         Spacer(Modifier.height(28.dp))
     }
@@ -467,41 +420,6 @@ internal fun failureMessage(failure: com.rahalgo.map.data.MapFailure?): Int = wh
  * **وتقول ماذا يخسر لا ماذا يريد النظام**: «لا تعرف كم يبعد المتجر»
  * أوقع من «التطبيق يحتاج إذن الموقع».
  */
-/**
- * **ونظامُ الهاتف قد يقتل الخدمة.**
- *
- * **(قِيس ٢٠٢٦-٠٩-٠٢: لا سطرَ في المشروع كلِّه يعالج توفيرَ الطاقة.)**
- *
- * **وعلى مثال [LocationCard]** — كلاهما إذنٌ يُطلب من النظام، **ونمطٌ
- * ثانٍ في شاشةٍ واحدةٍ يُقرأ شيئين مختلفين.**
- */
-@Composable
-private fun BatteryCard(onFix: () -> Unit, onLater: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.warnTint)
-            .padding(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.battery_title),
-            fontWeight = FontWeight.Bold,
-            color = Rahal.colors.accent,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.battery_body), color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(10.dp))
-        RahalButton(onClick = onFix, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.battery_fix))
-        }
-        Spacer(Modifier.height(4.dp))
-        RahalTextButton(onClick = onLater, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.battery_later), color = Rahal.colors.inkMuted)
-        }
-    }
-}
-
 /**
  * **بطاقةُ إذن الإشعارات.**
  *
@@ -683,12 +601,6 @@ data class HomeState(
     val readiness: Readiness.State = Readiness.State(),
     val busy: Boolean = false,
     val error: String = "",
-    /**
-     * **أيُسأل عن إعفاء البطّاريّة؟** — انظر `BatteryGuard`.
-     *
-     * **ويُرفع عند رفع الورديّة وحدَه**، ويُطفأ بضغطةٍ أو تجاهل.
-     */
-    val askBattery: Boolean = false,
 ) {
     /** **أيُنتَج موقعٌ فعلاً؟** — **إذناً وخدمةً معاً.** */
     val locationOn: Boolean get() = Readiness.canWork(readiness)
@@ -710,8 +622,6 @@ data class HomeState(
 
 data class HomeActions(
     val toggleShift: (Boolean) -> Unit,
-    /** **يُطفئ تنبيهَ البطّاريّة** — بقبولٍ أو تأجيل. */
-    val dismissBattery: () -> Unit = {},
     val enableLocation: () -> Unit,
     /** **يطلب إذنَ الإشعار** — **شرطُ الإعلان عن التوفّر.** */
     val enableNotifications: () -> Unit = {},

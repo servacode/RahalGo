@@ -223,8 +223,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
         // **ويُطلب معرّفُ المسار ضمنَ النداء القائم** — المرحلة ٨ب،
         // البند ٣: لا بنداءٍ ثانٍ.
-        override suspend fun route(orderId: String) =
-            backend.driver.route(orderId, correlation = true)
+        override suspend fun route(orderId: String): com.rahalgo.shared.model.OrderRoute {
+            val t0 = android.os.SystemClock.elapsedRealtime()
+            val r = backend.driver.route(orderId, correlation = true)
+            Log.i(
+                "RahalGo/perf",
+                "route reply ${android.os.SystemClock.elapsedRealtime() - t0}ms available=${r.available}",
+            )
+            return r
+        }
     }
 
 
@@ -327,8 +334,35 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     /** **أبُنيت الجلسةُ أصلاً؟** — فلا تُبنى لتُغلق. */
     private var navBuilt = false
 
+    // ══════════════════════════════════════════════════════════════════
+    // **ودورةٌ واحدةٌ في الطريق، لا ثلاث** (قِيس على الجهاز ٢٠٢٦-٠٩-٢٩)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وقِيس عند قبول الطلب ١٢١٩**: ثلاثُ ردودِ مسارٍ في مئةٍ وثلاثين
+    // ملّي (`route reply 536ms · 361ms · 581ms`) — **ثلاثُ دوراتٍ كاملةٍ
+    // متوازية**، كلُّ واحدةٍ `queue`+`orders`+`me`+`route`: **اثنا عشرَ
+    // نداءً حيث يكفي أربعة.**
+    //
+    // **ولها ثلاثةُ أبوابٍ تُنادى منها في اللحظة نفسِها**: القبولُ نفسُه،
+    // والوصلةُ الحيّةُ تُبلّغ بالتبدّل، ونبضةُ الاستقصاء.
+    //
+    // **ولا تُهمَل طلبةُ تحديثٍ وصلت أثناء دورة**: الدورةُ الجارية قد
+    // بدأت قبل الحدث فلا تحمله — **فتُعلَّم ويُعاد بعدها مرّةً واحدة.**
+    // وذاك يمنع التكرارَ ولا يمنع الخبر.
+    private var loadJob: kotlinx.coroutines.Job? = null
+    private var loadAgain = false
+
     fun refresh() {
-        viewModelScope.launch { load() }
+        if (loadJob?.isActive == true) {
+            loadAgain = true
+            return
+        }
+        loadJob = viewModelScope.launch {
+            do {
+                loadAgain = false
+                load()
+            } while (loadAgain)
+        }
     }
 
     /**

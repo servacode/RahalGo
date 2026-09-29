@@ -57,10 +57,12 @@ import com.rahalgo.ui.RahalButton
 @Composable
 fun SetupWizard(
     readiness: Readiness.State,
+    batteryExempt: Boolean,
     onGrantLocation: () -> Unit,
     onEnableGps: () -> Unit,
     onGrantBackground: () -> Unit,
     onGrantNotifications: () -> Unit,
+    onGrantBattery: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onStartMapPrep: () -> Unit,
     onDone: () -> Unit,
@@ -106,6 +108,13 @@ fun SetupWizard(
             done = !readiness.blockers.contains(Readiness.Blocker.NOTIFICATION_PERMISSION_REQUIRED),
             label = stringResource(R.string.setup_step_notifications),
         )
+        // **وإعفاءُ البطّاريّة — «اعمل في الخلفية»** — خطوةُ تهيئةٍ لا بطاقةَ
+        // رئيسيّةٍ دائمة (قرارُ المالك ٢٠٢٦-٠٩-٢٨). **استرشاديٌّ لا يحجب المتابعة**:
+        // يُطلَب هنا مرّةً، فمن رفضه يعمل والمسارُ الأماميُّ يُبقي موضعَه حيّاً.
+        StepRow(
+            done = batteryExempt,
+            label = stringResource(R.string.setup_step_battery),
+        )
 
         Spacer(Modifier.height(20.dp))
 
@@ -139,6 +148,16 @@ fun SetupWizard(
                 tone = com.rahalgo.ui.Tone.Accent,
             ) {
                 Text(stringResource(R.string.setup_open_settings))
+            }
+        }
+
+        // ── إعفاءُ البطّاريّة يُطلَب حين يصير الموقعُ منتِجاً، قبل المتابعة ──
+        // **ولا يحجبها**: استرشاديٌّ (لا يدخل `canWork`)، فيُعرض زرُّه ما لم
+        // يُمنَح، ويختفي حين يُمنَح — **بلا «لاحقاً» دائمةٍ على الرئيسيّة.**
+        if (canWork && !batteryExempt) {
+            Spacer(Modifier.height(16.dp))
+            RahalButton(onClick = onGrantBattery, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.setup_grant_battery))
             }
         }
 

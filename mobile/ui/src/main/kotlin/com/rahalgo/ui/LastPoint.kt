@@ -34,8 +34,15 @@ object LastPoint {
      * **وفارغٌ حين يأتي الموضعُ من جهاز التموضع** — لا اسمَ معه،
      * **فتُعرض إحداثيّاته**: رقمان يُقرآن بصعوبةٍ خيرٌ من حقلٍ فارغ.
      */
-    fun set(lat: Double, lng: Double, name: String = "", mocked: Boolean = false) {
-        value = Point(lat, lng, name, mocked)
+    fun set(
+        lat: Double,
+        lng: Double,
+        name: String = "",
+        mocked: Boolean = false,
+        speedMps: Float? = null,
+        atMs: Long = 0L,
+    ) {
+        value = Point(lat, lng, name, mocked, speedMps, atMs)
     }
 
     data class Point(
@@ -49,5 +56,15 @@ object LastPoint {
          * يُبنى من هذه النقطة** — فمن زيّف موضعَه كتب الإثباتَ بيده.
          */
         val mocked: Boolean = false,
+        /**
+         * **ما قاله الجهازُ عن السرعة** — بالمتر في الثانية، **وفارغٌ
+         * يعني أنّ الجهازَ لم يقلها** (`hasSpeed()` كاذبة).
+         *
+         * **وفراغُها ليس وقوفاً وليس سيراً** — انظر [SpeedReadout]:
+         * **الوقوفُ يُعرض صفراً، وانعدامُ القراءة لا يُعرض شيئاً.**
+         */
+        val speedMps: Float? = null,
+        /** **متى قِيست** — `elapsedRealtime` بالملّي، وصفرٌ يعني لا وقت. */
+        val atMs: Long = 0L,
     )
 }

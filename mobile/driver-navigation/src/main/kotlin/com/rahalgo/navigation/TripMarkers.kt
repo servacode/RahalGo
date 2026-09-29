@@ -62,8 +62,13 @@ object Markers {
     /** **طرفا الرحلة كما رُسما آخرَ مرّة** — يُقرآن في كلّ إطار. */
     private var ends: List<Feature> = emptyList()
 
-    /** **آخرُ نسبةٍ طُبّقت** — فلا يُبنى تعبيرٌ لفرقٍ لا يُرى. */
-    private var lastTraveled = -1.0
+    /**
+     * **ذاكرةُ نسبةِ القصّ** — لخطٍّ واحدٍ لا للعمليّة، انظر [TrimMemo].
+     *
+     * **وكانت حقلاً في هذا الكائن** فانتقلت نسبةُ خطٍّ إلى خطٍّ آخر
+     * (قِيس ٢٠٢٦-٠٩-٢٩). **وتُنسى مع كلّ خطٍّ جديد** — [resetProgress].
+     */
+    private val trim = TrimMemo()
 
     private val DRIVER = MapRoutePalette.DRIVER_PIN
     private val PICKUP = MapRoutePalette.PICKUP_PIN
@@ -403,9 +408,13 @@ object Markers {
         val existing = style.getSourceAs<GeoJsonSource>(SRC_LINE)
         if (existing != null) {
             existing.setGeoJson(geometry)
+            report("update", coords.size, style)
             return
         }
-        if (coords.size < 2) return
+        if (coords.size < 2) {
+            report("skip-short", coords.size, style)
+            return
+        }
         // **و`lineMetrics` شرطُ التدرّج** — انظر [setTraveled].
         // **وبلاها يُهمَل `line-gradient` بصمت** فيبقى الخطُّ كاملاً
         // خلف السائق ولا خطأَ في سجلّ.
@@ -436,6 +445,39 @@ object Markers {
                 PropertyFactory.lineJoin("round"),
             ),
         )
+        // **وطبقتان وُلدتا الآن بلا تدرّج** — فتُنسى الذاكرةُ حتماً،
+        // **وإلّا قالت «مطبَّقٌ» عن طبقةٍ لا تدرّجَ فيها.**
+        trim.reset()
+        report("create", coords.size, style)
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **أثرُ الخطّ الأزرق — قياسٌ لا انطباع**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٩-٢٨: «الخطُّ الأزرقُ لم يظهر على الخريطة» —
+     *  **و«المسارُ رُكِّب» ليس دليلاً على أنّ الخطَّ يُرى.**)
+     *
+     * **فيُكتب في كلّ مرحلةٍ ما يُسأل عنه**: أطولُ الهندسةِ كافٍ، وأمصدرٌ
+     * حاضر، وأطبقتان مبنيّتان، وأمرئيّتان، وما عرضُهما ولونُهما، وأيُّ
+     * تدرّجٍ يُخفيهما.
+     *
+     * **ولا يُسقط القياسُ رسماً** — كلُّه في `runCatching`.
+     */
+    private fun report(phase: String, pts: Int, style: Style) {
+        runCatching {
+            val src = style.getSourceAs<GeoJsonSource>(SRC_LINE) != null
+            val core = style.getLayer("trip-line-layer") as? LineLayer
+            val glow = style.getLayer("trip-line-glow") as? LineLayer
+            android.util.Log.i(
+                "RahalGo/perf",
+                "polyline $phase pts=$pts src=$src core=${core != null} glow=${glow != null} " +
+                    "vis=${core?.visibility?.value} w=${core?.lineWidth?.value} " +
+                    "color=${core?.lineColor?.value} opacity=${core?.lineOpacity?.value} " +
+                    "traveled=${trim.lastApplied} layers=${style.layers.size}",
+            )
+        }
     }
 
     /**
@@ -458,8 +500,7 @@ object Markers {
         // **ولا يُبنى تعبيرٌ لفرقٍ لا تراه عين** — **جزءٌ من ألفٍ من
         // مسارٍ طولُه كيلومترٌ مترٌ واحد.** وبناءُ تعبيرٍ وتسليمُه
         // للمحرّك ستّين مرّةً في الثانية ثمنٌ بلا مقابل.
-        if (kotlin.math.abs(t - lastTraveled) < 0.001) return
-        lastTraveled = t
+        if (!trim.shouldApply(t)) return
         // **ولونُ اللوحة نصٌّ والتعبيرُ يريد عددا** — يُحلّ مرّةً.
         val ink = android.graphics.Color.parseColor(DRIVER)
         // **وصفرٌ يعني لا شيءَ مقطوعا** — فلا تدرّجَ أصلاً، ويبقى
@@ -490,7 +531,21 @@ object Markers {
         // **وطبقةٌ لم تُبنَ بعد لا تُسقط شيئاً** — أوّلُ إطارٍ قبل
         // أن يُرسم الخطّ. **وسطرٌ في كلّ ثانيةٍ يُغرق السجلّ**، فحُذف
         // بعد أن أثبت أنّ التدرّج يُطبَّق (٢٠٢٦-٠٨-٢٤: طبقات=2).
+        // **ويُكتب الآن ما يُخفي الخطّ** — **والتدرّجُ أقدرُ ما يُخفيه**
+        // (بلاغُ المالك ٢٠٢٦-٠٩-٢٨)، فلا يُسأل عنه بلا جواب.
+        android.util.Log.i("RahalGo/perf", "polyline gradient t=$t layers=$found")
         if (found == 0) return
+    }
+
+    /**
+     * **يُنسى تقدّمُ الخطّ السابق** — يُنادى مع كلّ خطٍّ جديد.
+     *
+     * **مسارٌ يُركَّب · ساقٌ تبدأ · إعادةُ حسابٍ · طلبٌ أو جلسةٌ تتبدّل** —
+     * انظر `TripMap`: ينادى من حيث يُصفَّر أساسُ التقدّم نفسُه، **فلا
+     * موضعان يفترقان.**
+     */
+    fun resetProgress() {
+        trim.reset()
     }
 
     private fun feature(at: LatLng, kind: String, rotateDeg: Float? = null): Feature =

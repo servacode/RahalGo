@@ -95,6 +95,24 @@ internal class ReplayTripController(context: Context) {
             dropoff = LatLng(scenario.customer.lat, scenario.customer.lng),
             routeLine = leg.route.geometry.map { LatLng(it.lat, it.lng) },
             navRoute = leg.route,
+            // ══════════════════════════════════════════════════════════
+            // **والزمنُ والمسافةُ من محرّك الملاحة نفسِه — لا من اختلاق**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قِيس في الرحلة المحاكاة ٢٠٢٦-٠٩-٢٩: اللوحُ بقي على «جاري
+            //  حساب الطريق…» الرحلةَ كلَّها.)
+            //
+            // **وكانت هذه الحقولُ تُترك فارغةً** — فتقرأ `TripPanel` أنّ
+            // لا مسافةَ معروفةً فتُظهر حالةَ الحساب بحقّ: **فالمِرقابُ لم
+            // يعطها، لا أنّ اللوحَ أخطأ.**
+            //
+            // **وطولُ الساق من المسار المركَّب**، **وما بقي من
+            // `RouteProgress` الحقيقيّة** التي تحسبها `NavigationSession`
+            // من القراءات المُغذّاة — **فالأرقامُ التي يراها المالكُ هي
+            // أرقامُ المحرّك حرفاً بحرف، تنقص كما تنقص في الشارع.**
+            routeM = leg.route.totalM,
+            routeSec = session.nav?.remainingSec?.takeIf { it >= 0 } ?: -1.0,
+            remainingM = session.nav?.remainingM ?: -1.0,
             requirePhoto = false,
         )
     }

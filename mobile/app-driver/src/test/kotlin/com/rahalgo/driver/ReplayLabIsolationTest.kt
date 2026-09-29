@@ -18,8 +18,8 @@ import java.io.File
  * ١) **الشيفرةُ في `src/debug` وحدَها** — فلا تُصرَّف في الإصدار البتّة،
  *    ولا سطرَ منها في `src/main`.
  * ٢) **النشاطُ مُعلَنٌ في بيان التطوير وحدَه** — وغائبٌ عن بيان الإصدار.
- * ٣) **مدخلُه في الشاشة محروسٌ بـ`BuildConfig.DEBUG`** — فلا يُطلَق في
- *    الإصدار ولو صُرِّف.
+ * ٣) **لا مدخلَ له في واجهة السائق أصلاً** — لا في الرئيسيّة ولا على شاشة
+ *    الرحلة الحقيقيّة؛ يُطلَق بـ`adb` للهندسة وحدَها.
  *
  * **وحارسٌ يقرأ الملفّاتِ لا النيّة**: من نقل ملفاً إلى `src/main`، أو
  * أعلن النشاطَ في البيان الرئيسيّ، أو نزع الحارسَ — يُسقط هذا الفحص.
@@ -68,18 +68,26 @@ class ReplayLabIsolationTest {
         )
     }
 
-    /** ٣) مدخلُ الشاشة محروسٌ بـ`BuildConfig.DEBUG`. */
+    /**
+     * ٣) **لا مدخلَ للمختبر/الإعادة في واجهة السائق البتّة** — حُذف من المسار
+     *    العاديّ (قرارُ المالك ٢٠٢٦-٠٩-٢٨: «أزِل المداخلَ التي يبلغها سائقٌ
+     *    حقيقيّ»). **والمحرّكُ يبقى في `src/debug` (يُطلَق بـ`adb`)، ولا زرَّ
+     *    في التطبيق.**
+     */
     @Test
-    fun `home entry to the lab is gated behind BuildConfig DEBUG`() {
-        val home = File(mainKotlin, "home/HomeScreen.kt").readText().replace("\r\n", "\n")
-        for (action in listOf("com.rahalgo.driver.debug.REPLAY_TRIP", "com.rahalgo.driver.debug.REPLAY_LAB")) {
-            val launchIdx = home.indexOf(action)
-            assertTrue("لم يُعثر على مدخل $action في HomeScreen", launchIdx > 0)
-            val gateIdx = home.lastIndexOf("if (BuildConfig.DEBUG)", launchIdx)
-            assertTrue(
-                "**مدخلُ $action غيرُ محروسٍ بـBuildConfig.DEBUG** — فيظهر في الإصدار",
-                gateIdx in 0 until launchIdx,
-            )
-        }
+    fun `no user-facing lab or replay entry in the driver UI`() {
+        // **الرئيسيّة: لا فعلَ إطلاقٍ للإعادة/المختبر.**
+        val home = File(mainKotlin, "home/HomeScreen.kt").readText()
+        assertFalse(
+            "**الرئيسيّة تحوي مدخلَ إعادة/مختبر** — يبلغه سائقٌ حقيقيّ",
+            home.contains("com.rahalgo.driver.debug.REPLAY_TRIP") ||
+                home.contains("com.rahalgo.driver.debug.REPLAY_LAB"),
+        )
+        // **وشاشةُ الرحلة الحقيقيّة: لا زرَّ «رحلة تجريبيّة» (`ReplayButton`).**
+        val trip = File(mainKotlin, "trip/TripScreen.kt").readText()
+        assertFalse(
+            "**شاشةُ الرحلة تحوي زرَّ إعادةٍ** — يبلغه السائقُ على رحلةٍ حقيقيّة",
+            trip.contains("ReplayButton("),
+        )
     }
 }
