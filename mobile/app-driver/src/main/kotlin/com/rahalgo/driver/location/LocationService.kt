@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -68,6 +69,10 @@ class LocationService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private var lastSentAt = 0L
+    // **ونبضةٌ واحدةٌ لا اثنتان** — `onStartCommand` يُنادى مرّاتٍ
+    // (إعادةُ تشغيلٍ بعد قتلٍ، أو تبديلُ تردّد)، **وحلقةٌ لكلّ نداءٍ
+    // تُضاعف النداءات بلا أن يظهر ذلك في شيء.**
+    private var beating = false
     private val queue by lazy { PointQueue(applicationContext) }
 
     private val callback = object : LocationCallback() {
@@ -135,9 +140,53 @@ class LocationService : Service() {
             return START_NOT_STICKY
         }
         request(seconds)
+        heartbeat()
         // **ويُعاد تشغيلها إن قتلها النظام تحت ضغط الذاكرة** — الوردية
         // مفتوحة ولا أحد يعرف أنّ الموقع انقطع.
         return START_STICKY
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **نبضةُ الواقف — يبقى مرئيّاً وإن لم يتحرّك**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **تُعيد إرسالَ آخر موضعٍ معلومٍ حين يطول الصمت** — انظر شرحَ
+    // `HEARTBEAT_SEC`. **ولا تنافس المرشِّح**: إن جاءت قراءةٌ جديدةٌ في
+    // الأثناء رُفع `lastSentAt`، **فتجد النبضةُ الصمتَ قصيراً فتنام.**
+    //
+    // **وتُبنى على آخرِ موضعٍ قرأه التطبيقُ نفسُه** (`LastPoint`) — **ولا
+    // تسأل النظامَ موضعاً جديداً**: سؤالٌ كلَّ دقيقتين يوقظ عتادَ الموقع
+    // ويستنزف ما وُفِّر.
+    //
+    // **وإن لم يُقرأ موضعٌ بعدُ لم تخترع واحداً** — **وموضعٌ مخترَعٌ أسوأُ
+    // من غيابه**: يُبنى عليه توزيعٌ ويُقاس به قرب.
+    private fun heartbeat() {
+        if (beating) return
+        beating = true
+        scope.launch {
+            while (true) {
+                delay(HEARTBEAT_SEC * 1000)
+                val silence = SystemClock.elapsedRealtime() - lastSentAt
+                if (silence < HEARTBEAT_SEC * 1000) continue
+                val p = LastPoint.value ?: continue
+                // **ولا يُغسَل موضعٌ مزيَّفٌ بنبضة.**
+                //
+                // **`isMocked` تُقرأ من `Location` الذي سلّمه النظام**،
+                // **وموضعٌ نبنيه نحن يُقرأ أصيلاً دائماً** — فلو نبضنا
+                // بمزيَّفٍ لخرج من بابنا بلا وسمه، **ويُبنى عليه إثباتُ
+                // تسليم.**
+                //
+                // **فمن زيّف موضعَه يشيخ** — وذلك صوابٌ لا نقص.
+                if (p.mocked) continue
+                Log.i(TAG, "نبضةُ واقف: صمتٌ ${silence / 1000}ث — يُعاد آخرُ موضع")
+                send(
+                    Location(HEARTBEAT_PROVIDER).apply {
+                        latitude = p.lat
+                        longitude = p.lng
+                    },
+                )
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -331,6 +380,39 @@ class LocationService : Service() {
         private const val DEFAULT_PING_SEC = 20L
         private const val MIN_MOVE_M = 20f
         private const val MIN_SEND_GAP_MS = 5_000L
+
+        // ══════════════════════════════════════════════════════════════
+        // **ونبضةٌ تُبقي الواقفَ مرئيّاً** — `GAP-LOC-IDLE-01`
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **مرشِّحُ العشرين متراً يمنع الإرسالَ عن الواقف** («ومن وقف لا
+        // يُرسل» أعلاه) — **ومحرّكُ التوزيع يشترط موضعاً أحدثَ من
+        // `drivers.location_fresh_sec`** (٣٠٠ث افتراضاً).
+        //
+        // **فالسائقُ المتوقّفُ ينتظر عملاً كان يصير شائخاً بعد خمس دقائق،
+        // فلا يُعرض عليه شيءٌ أبداً حتّى يتحرّك عشرين متراً.**
+        //
+        // **والعطبُ يضرب أسوأَ ما يمكن**: المنشغلُ يتحرّك فيبقى مرئيّاً،
+        // **والفارغُ الواقفُ يختفي** — وهو بعينه من يُراد إعطاؤه طلباً.
+        //
+        // **وقِيس على الجهاز** (٢٠٢٦-٠٩-٢٩، والتطبيقُ مفتوحٌ على شاشة
+        // الرحلة): العمرُ نما ٢٥٠ ⇐ ٣١٦ ⇐ ٣٣٦ ⇐ ٣٧٠ ⇐ ٤٠٥ ⇐ ٤٣٩،
+        // **وطلبٌ في الطابور لم يُعرَض عليه دقائق.**
+        //
+        // (حكمُ المالك ٢٠٢٦-٠٩-٢٩: «لا يجوز ألّا يُعرض أيُّ طلبٍ على سائقٍ
+        //  لأنّه متوقّف، هذا غلطٌ كبير».)
+        //
+        // **والمرشِّحُ يبقى** — النبضةُ تُكمله لا تُلغيه: **الخادمُ يحتاج
+        // «أعرف أين هو الآن» لا «تحرّك».** وإعادةُ آخرِ موضعٍ معلومٍ حزمةٌ
+        // واحدةٌ كلَّ دقيقتين، **وحذفُ المرشِّح يجعل كلَّ ضجيجِ قمرٍ
+        // صناعيٍّ نداءَ شبكة.**
+        //
+        // **ومئةٌ وعشرون دون الثلاثمئة بهامشٍ يحتمل نداءً يسقط ويُعاد** —
+        // **ونبضةٌ تساوي الحدَّ تصل متأخّرةً ثانيةً فتسقط.**
+        private const val HEARTBEAT_SEC = 120L
+
+        // **ومصدرُها يُسمّى** — من قرأ سجلّاً عرف أنّها إعادةٌ لا قراءة.
+        private const val HEARTBEAT_PROVIDER = "rahalgo-heartbeat"
 
         /** **تبدأ مع الوردية** — والفترة من المحرّك. */
         fun start(context: Context, pingSec: Long) {
