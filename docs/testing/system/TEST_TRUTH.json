@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 55,
-    "notify_targeted": 20,
+    "notify_sites": 57,
+    "notify_targeted": 22,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 157,
     "behaviour_settings": 129,
     "order_fields": 83,
-    "test_files": 404,
-    "test_funcs": 1710
+    "test_files": 405,
+    "test_funcs": 1713
   },
   "flows": [
     {
@@ -22400,6 +22400,24 @@
     {
       "name": "TestCriticalSettingKey_MinVersionIsCritical",
       "file": "internal/server/critical_settings_minversion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomNotify_AssignmentReachesCustomer",
+      "file": "internal/server/custom_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomNotify_ConfirmReachesDriver",
+      "file": "internal/server/custom_notify_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomNotify_QuoteReachesCustomer",
+      "file": "internal/server/custom_notify_test.go",
       "package": "server",
       "orphan": true
     },

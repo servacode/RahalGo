@@ -354,7 +354,28 @@ private fun OrderCard(
             //
             // **والأيقونةُ يمينَ الاسم** — (تصحيح المالك ٢٠٢٦-٠٨-١٢).
             // **وأوّلُ الصفّ في العربيّة يمينُه**، فتُكتب قبله.
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // ══════════════════════════════════════════════════════════
+            // **والعرضُ يُقسَّم صراحةً — وإلّا انكسر الرقم حرفاً حرفاً**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (شهده المالك ٢٠٢٦-٠٩-٢٩ في بطاقةٍ على جهازه: «إجمالي
+            //  الفاتورة الرقم كل رقم لحاله».)
+            //
+            // **كان هذا الصفُّ بلا `weight`** — فيأخذ اسمُ المتجر ما يشاء
+            // («مطعم بيت الرقة» ستَّ عشرةَ حرفاً)، **ويبقى لعمود السعر
+            // فُتاتٌ**، فيلتفّ الرقمُ على نفسه: ١٥، ثمّ ١٥ ثمّ ٠ ثمّ ل.
+            // ثمّ س — **خمسةَ أسطرٍ لرقمٍ واحد.**
+            //
+            // **ورقمٌ مكسورٌ أسوأُ من رقمٍ غائب**: الغائبُ يُسأل عنه،
+            // **والمكسورُ يُقرأ خطأً** — «١٥» تُقرأ خمسةَ عشرَ ألفاً أو
+            // خمسةَ عشرَ، **والسائقُ يقبض بها.**
+            //
+            // **فالاسمُ يأخذ المتبقّي ويُقصّ، والسعرُ لا يُسحق**: أولويّةُ
+            // العرض للرقم لأنّه المال.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
                 Icon(
                     // **ولا أيقونةَ متجرٍ لطلبٍ بلا متجر** — والصورةُ
                     // تُقرأ قبل الحرف: **من رأى واجهةَ دكّانٍ انتظر
@@ -374,6 +395,10 @@ private fun OrderCard(
                     text = order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    // **والاسمُ يُقصّ ولا يلتفّ** — سطرٌ واحدٌ ونقاط:
+                    // **اسمُ متجرٍ ناقصٌ يُفهَم، ورقمُ مالٍ ناقصٌ يُقبَض.**
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     // **واسمُ الخاصّ بلون التنبيه** — ليس متجراً يُقرأ
                     // كسائر المتاجر، **وطريقتُه في المال مختلفة.**
                     color = if (custom) Rahal.colors.accent else Color.Unspecified,
@@ -424,12 +449,19 @@ private fun OrderCard(
                             text = stringResource(R.string.card_invoice_total),
                             color = Rahal.colors.inkMuted,
                             style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
                         )
                         Spacer(Modifier.size(6.dp))
                         Text(
                             text = money(order.total),
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
+                            // **والرقمُ لا يلتفّ ولو ضاق ما ضاق** — حزامٌ
+                            // ثانٍ لا يتّكل على قسمة العرض وحدَها:
+                            // **`softWrap=false` تمنع الالتفافَ من أصله**،
+                            // فإن ضاق المكانُ قُصّ ولم يُكسر.
+                            maxLines = 1,
+                            softWrap = false,
                             // **ولونه يقول أمقبوضٌ أم لا** — أحمر: اقبض،
                             // أخضر: مدفوع بالمحفظة.
                             color = if (order.cashDue > 0) {

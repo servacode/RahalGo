@@ -23,38 +23,46 @@ var t = struct {
 	offerDriver, assignedDriver              string
 	newOrderMerchant, newOrderOps            string
 	accepted, preparing, onTheWay, delivered string
-	rejected, cancelled, failed, refunded    string
-	merchantDelivered, commission            string
-	targetReached                            string
-	violationsWarn, violationsBanned         string
-	endedOps, warningIssued                  string
+	// **مفصلا الطلب الخاصّ** — كلٌّ منهما يوقف الطلبَ على فعلِ طرفٍ بعينه،
+	// **فمن عليه الدورُ يُخبَر أنّ الدورَ عليه.**
+	customQuoted, customConfirmed, driverAssignedToCustomer string
+	rejected, cancelled, failed, refunded                   string
+	merchantDelivered, commission                           string
+	targetReached                                           string
+	violationsWarn, violationsBanned                        string
+	endedOps, warningIssued                                 string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
 }{
-	offerDriver:       "طلب جديد بانتظارك",
-	assignedDriver:    "طلب أُسند إليك",
-	newOrderMerchant:  "طلب جديد قادم إليك",
-	newOrderOps:       "طلب جديد في المنصة",
-	accepted:          "قبل المتجر طلبك",
-	preparing:         "طلبك قيد التحضير",
-	onTheWay:          "طلبك في الطريق إليك",
-	delivered:         "تم تسليم طلبك",
-	rejected:          "اعتذر المتجر عن طلبك",
-	cancelled:         "أُلغي طلبك",
-	failed:            "تعذّر تسليم طلبك",
-	refunded:          "استُرجع مبلغ طلبك",
-	merchantDelivered: "سُلّم طلب من متجرك",
-	commission:        "عمولة جديدة في محفظتك",
-	targetReached:     "أنجزت هدف الشهر — نالتك مكافأته",
-	violationsWarn:    "متجرٌ بلغ حدّ المخالفات",
-	violationsBanned:  "حُظر متجرٌ لكثرة الإلغاء",
-	endedOps:          "انتهى طلبٌ قبل تسليمه",
-	warningIssued:     "إنذارٌ على متجرك",
-	driverEarned:      "أجر توصيل في محفظتك",
-	merchantEarned:    "مستحق مبيعاتك في محفظتك",
-	refunded2:         "أُعيد المبلغ إلى محفظتك",
-	compensated:       "تعويض في محفظتك",
+	offerDriver:      "طلب جديد بانتظارك",
+	assignedDriver:   "طلب أُسند إليك",
+	newOrderMerchant: "طلب جديد قادم إليك",
+	newOrderOps:      "طلب جديد في المنصة",
+	accepted:         "قبل المتجر طلبك",
+	preparing:        "طلبك قيد التحضير",
+	onTheWay:         "طلبك في الطريق إليك",
+	delivered:        "تم تسليم طلبك",
+	// **ونصٌّ يقول الفعلَ المطلوبَ لا الخبرَ وحدَه** — «سعرٌ جاهز» تُقرأ
+	// خبراً فيُؤجَّل، **و«أكّده ليبدأ» تُقرأ طلباً فيُفتح التطبيق.**
+	customQuoted:             "سعر طلبك جاهز — أكّده ليبدأ الشراء",
+	customConfirmed:          "أكّد الزبون السعر — ابدأ الشراء",
+	driverAssignedToCustomer: "أُسند سائقٌ لطلبك",
+	rejected:                 "اعتذر المتجر عن طلبك",
+	cancelled:                "أُلغي طلبك",
+	failed:                   "تعذّر تسليم طلبك",
+	refunded:                 "استُرجع مبلغ طلبك",
+	merchantDelivered:        "سُلّم طلب من متجرك",
+	commission:               "عمولة جديدة في محفظتك",
+	targetReached:            "أنجزت هدف الشهر — نالتك مكافأته",
+	violationsWarn:           "متجرٌ بلغ حدّ المخالفات",
+	violationsBanned:         "حُظر متجرٌ لكثرة الإلغاء",
+	endedOps:                 "انتهى طلبٌ قبل تسليمه",
+	warningIssued:            "إنذارٌ على متجرك",
+	driverEarned:             "أجر توصيل في محفظتك",
+	merchantEarned:           "مستحق مبيعاتك في محفظتك",
+	refunded2:                "أُعيد المبلغ إلى محفظتك",
+	compensated:              "تعويض في محفظتك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -151,6 +159,16 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 
 // customerTitles الانتقالات التي تستحق إشعاراً للزبون.
 var customerTitles = map[string]string{
+	// ══════════════════════════════════════════════════════════════════
+	// **وإسنادُ السائقِ يُخبَر به الزبون**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **للطلب الخاصِّ لا خطوةَ قبولِ متجرٍ قبلَه** — فكان أوّلُ ما يصل الزبونَ
+	// «طلبك في الطريق»، **وقد اشترى السائقُ بماله قبلها.** (قُيس على دورةٍ
+	// حيّةٍ ٢٠٢٦-٠٩-٢٩.)
+	//
+	// **والعاديُّ ينتفع به كذلك**: «قبل المتجر» ثمّ صمتٌ حتّى الطريق.
+	StAssigned:  t.driverAssignedToCustomer,
 	StAccepted:  t.accepted,
 	StPreparing: t.preparing,
 	StOnTheWay:  t.onTheWay,
@@ -182,6 +200,55 @@ var passingTitles = map[string]bool{
 	StPreparing: true,
 	StOnTheWay:  true,
 	StDelivered: true,
+}
+
+// notifyCustomQuoted **السعرُ وُثّق — والدورُ على الزبون.**
+//
+// **والطلبُ بعدها لا يتقدّم خطوةً حتّى يؤكّد**: لا شراءَ ولا طريقَ ولا تسليم.
+// **فإشعارٌ باقٍ لا عابر** — العابرُ يرنّ ويذهب، **وهذا يُنتظَر فعلُه.**
+//
+// (بلاغُ المالك ٢٠٢٦-٠٩-٢٩: «مشان ما يفكّر حاله إنه طلب وهو يستنّى بدون ما
+//
+//	يحصل شي».)
+func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total int64) {
+	if s.notify == nil {
+		return
+	}
+	p, err := s.parties(ctx, orderID)
+	if err != nil {
+		return
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: p.customerID, Kind: notifications.KindOrder,
+		Title: t.customQuoted,
+		// **والمبلغُ في النصّ** — من قرأه عرف على ماذا يوافق قبل أن يفتح.
+		Body:   fmt.Sprintf("#%d — %s ل.س", p.number, groupDigits(total)),
+		Entity: "order", EntityID: orderID, Href: "/portal/orders",
+		Apps: []string{notifications.AppCustomer},
+	})
+}
+
+// notifyCustomConfirmed **الزبونُ أكّد — والدورُ على السائق.**
+//
+// **وكان البثُّ وحدَه**، وهو يصل شاشةً مفتوحةً لا جيباً مغلقاً: **فالسائقُ
+// ينتظر ولا يعلم أنّ انتظارَه انتهى.**
+func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID string, total int64) {
+	if s.notify == nil || driverID == "" {
+		return
+	}
+	var number int64
+	if err := s.db.QueryRow(ctx,
+		`SELECT number FROM orders WHERE id = $1`, orderID).Scan(&number); err != nil {
+		return
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: driverID, Kind: notifications.KindOrder,
+		Title:  t.customConfirmed,
+		Body:   fmt.Sprintf("#%d — %s ل.س", number, groupDigits(total)),
+		Entity: "order", EntityID: orderID, Href: "/portal",
+		// **وتطبيقُ السائق وحدَه يرنّ** — الحسابُ نفسُه قد يكون زبوناً.
+		Apps: []string{notifications.AppDriver},
+	})
 }
 
 // notifyTransition يُعلم من يخصّه هذا الانتقال. يُستدعى بعد نجاح الإيداع:

@@ -341,6 +341,16 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 	if err == nil {
 		s.publishOrder(o)
 		s.publishWalletsOf(ctx, orderID)
+		// ══════════════════════════════════════════════════════════════
+		// **والدورُ صار على السائق — فيُخبَر أنّ الدورَ عليه**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **وكان البثُّ وحدَه**، وهو يصل شاشةً مفتوحةً لا جيباً مغلقاً:
+		// **فالسائقُ ينتظر التأكيدَ ولا يعلم أنّ انتظارَه انتهى**، والزبونُ
+		// يرى «بانتظار الشراء» ولا أحدَ يشتري.
+		if o.DriverID != nil {
+			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total)
+		}
 	}
 	return o, err
 }
