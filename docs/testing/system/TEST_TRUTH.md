@@ -17,20 +17,20 @@
 | أنواعُ قيدِ المحفظة | **16** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_cash_accrued` · `merchant_cash_paid` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **57** — منها **22** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
-| تعريفاتُ الإعدادات | **157** — منها **129** مُغيِّرٌ للسلوك |
+| تعريفاتُ الإعدادات | **158** — منها **130** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **83** — من عقد `P-1` |
-| ملفّاتُ اختبار | **405** |
-| دوالُّ اختبار | **1713** |
+| ملفّاتُ اختبار | **410** |
+| دوالُّ اختبار | **1727** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1713
+TOTAL      = 1727
 MAPPED     = 459
 INFRA      = 123
-ORPHAN     = 1131
+ORPHAN     = 1145
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -39,11 +39,11 @@ ORPHAN     = 1131
 | الحزمة | يتيمٌ |
 |---|---|
 | `qa` | 453 |
-| `server` | 192 |
-| `orders_test` | 83 |
+| `server` | 195 |
+| `orders_test` | 92 |
 | `routing` | 76 |
 | `platform` | 65 |
-| `orders` | 58 |
+| `orders` | 60 |
 | `identity` | 25 |
 | `settings` | 14 |
 | `deploycheck_test` | 13 |
@@ -59,7 +59,7 @@ ORPHAN     = 1131
 | **العيوب** | 28 | 22 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 47 | 29 | 18 |
-| **إعداداتُ السلوك** | 129 | 15 | 114 |
+| **إعداداتُ السلوك** | 130 | 15 | 115 |
 
 ---
 

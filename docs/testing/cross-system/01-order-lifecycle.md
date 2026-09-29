@@ -1,3 +1,15 @@
+> ## ⚠️ LEGACY — DO NOT USE AS CURRENT CONTRACT
+>
+> **هذه الوثيقةُ سجلٌّ تاريخيٌّ لا عقدٌ حاضر.** تُقرأ لتعرف **ما وقع**،
+> **ولا يُبنى عليها قرارٌ ولا يُقاس بها قبول.**
+>
+> **والعقدُ الحاضرُ في**: `docs/TRUTH.md` · `docs/GROUND-RULES.md` ·
+> `docs/PROJECT-CONTRACT.md` · `docs/ORDER-STATE-MACHINE.md` ·
+> `docs/SECURITY-CAPABILITY-CONTRACT.md` ·
+> `docs/INTEGRATED-ACCEPTANCE-MATRIX.md`
+>
+> (عُلِّمت ٢٠٢٦-٠٩-٢٩ بحكم المالك الأوّل. **ولم يُحذف منها حرف.**)
+
 # دورةُ الطلب عبر المنظومة — §٢ إلى §٧
 
 > **تفصيلٌ تابعٌ لـ**[`CROSS_SYSTEM_INTERACTION_CLOSURE.md`](../CROSS_SYSTEM_INTERACTION_CLOSURE.md).

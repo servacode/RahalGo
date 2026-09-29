@@ -1,3 +1,15 @@
+> ## ⚠️ LEGACY — DO NOT USE AS CURRENT CONTRACT
+>
+> **هذه الوثيقةُ سجلٌّ تاريخيٌّ لا عقدٌ حاضر.** تُقرأ لتعرف **ما وقع**،
+> **ولا يُبنى عليها قرارٌ ولا يُقاس بها قبول.**
+>
+> **والعقدُ الحاضرُ في**: `docs/TRUTH.md` · `docs/GROUND-RULES.md` ·
+> `docs/PROJECT-CONTRACT.md` · `docs/ORDER-STATE-MACHINE.md` ·
+> `docs/SECURITY-CAPABILITY-CONTRACT.md` ·
+> `docs/INTEGRATED-ACCEPTANCE-MATRIX.md`
+>
+> (عُلِّمت ٢٠٢٦-٠٩-٢٩ بحكم المالك الأوّل. **ولم يُحذف منها حرف.**)
+
 # دورة ٦٩أ — أساسُ سجلِّ الوصول في البوّابة
 
 > **خطّةٌ تُكتب قبل الإعداد.** (اتّفاقُ العمل، البند ١: «لا تنفيذَ قبل

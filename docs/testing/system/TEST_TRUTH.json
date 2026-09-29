@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 157,
-    "behaviour_settings": 129,
+    "setting_defs": 158,
+    "behaviour_settings": 130,
     "order_fields": 83,
-    "test_files": 405,
-    "test_funcs": 1713
+    "test_files": 410,
+    "test_funcs": 1727
   },
   "flows": [
     {
@@ -3696,6 +3696,27 @@
       "key": "delivery.max_fee",
       "group": "drivers",
       "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.merchant_delivery_platform_percent",
+      "group": "drivers",
+      "kind": "percent",
       "sensitive": true,
       "money": true,
       "flows": [
@@ -7666,6 +7687,30 @@
       "orphan": true
     },
     {
+      "name": "TestCustomCash_CollectedAndShared",
+      "file": "internal/orders/custom_cash_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomCash_GoodsNeverTaxed",
+      "file": "internal/orders/custom_cash_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomCash_Idempotent",
+      "file": "internal/orders/custom_cash_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomCash_SwitchToWalletClearsCashDue",
+      "file": "internal/orders/custom_cash_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestCustomCashBan_AllowedCashAccepted",
       "file": "internal/orders/custom_cashban_test.go",
       "package": "orders_test",
@@ -7740,6 +7785,36 @@
     {
       "name": "TestCustomChat_OpensItselfOnAssign",
       "file": "internal/orders/custom_chat_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomShare_CancelAfterQuoteLeavesNoMoney",
+      "file": "internal/orders/custom_platform_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomShare_GoodsNeverTaxed",
+      "file": "internal/orders/custom_platform_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomShare_OwnerExampleClosesToZero",
+      "file": "internal/orders/custom_platform_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomShare_SettlementIsIdempotent",
+      "file": "internal/orders/custom_platform_share_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomShare_SnapshotSurvivesSettingChange",
+      "file": "internal/orders/custom_platform_share_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -8063,6 +8138,18 @@
       "name": "TestMerchantBlocked_StillCountsAgainstTheMerchant",
       "file": "internal/orders/merchant_blocked_test.go",
       "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantDeliveryPercentKeyMatchesCatalog",
+      "file": "internal/orders/merchant_delivery_share_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantDeliveryShare",
+      "file": "internal/orders/merchant_delivery_share_test.go",
+      "package": "orders",
       "orphan": true
     },
     {
@@ -22460,6 +22547,24 @@
     {
       "name": "TestRedactOffersForCustomer_HidesSource",
       "file": "internal/server/customer_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDecline_LeavesOrderDispatching",
+      "file": "internal/server/decline_reoffer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDecline_MovesToNextAndDoesNotReturnWithinRound",
+      "file": "internal/server/decline_reoffer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDecline_SoleDriverOrderSurvives",
+      "file": "internal/server/decline_reoffer_test.go",
       "package": "server",
       "orphan": true
     },
