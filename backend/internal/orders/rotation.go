@@ -212,6 +212,39 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	// تُفحص في الاستعلام لا بعده: جلبُ الجميع ثمّ غربلتُهم في Go يعني قراءةَ
 	// كلّ سائقٍ في المنصة لاختيار واحد.
 	driverID, waitForExpansion, err := s.pickRotationCandidate(ctx, orderID, skip, limit, maxActive)
+
+	// ══════════════════════════════════════════════════════════════════
+	// **دارت الجولةُ ولم يأخذه أحد — فتُصفَّر ويعود إلى الجميع**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وهو الوعدُ المكتوبُ في `transitions.go` ولم يكن يُنفَّذ**: «ولا يُحرم
+	// منه أبداً: الاستثناءُ لهذه الجولة وحدَها، **فإن دار الطابورُ ولم يأخذه
+	// أحد عاد إليه مع الجميع**». **و`offer_passed` كان يُضاف إليه في ثلاثة
+	// مواضعَ ولا يُصفَّر في موضعٍ واحدٍ من المشروع.**
+	//
+	// **فبعتادِ سائقٍ واحدٍ مؤهَّلٍ كان الطلبُ يموت عند أوّل مهلةٍ تنقضي**:
+	// المحرّكُ يستثني من مرّ، **وقائمتا تطبيقه تستثنيانه كذلك** — فلا يُعرض
+	// ولا يُرى. (قُيس على التجهيز ٢٠٢٦-٠٩-٢٩: مدخلٌ جديدٌ كلَّ ثلاثين ثانيةً —
+	// ٩ ثمّ ١٠ ثمّ ١١ — **كلُّها المعرّفُ نفسُه، والطلبُ ساكنٌ لا يتقدّم.**)
+	//
+	// **والسؤالُ الفارق: أغابَ المرشَّحُ لأنّه مُستثنى أم لأنّه غيرُ مؤهَّل؟**
+	// فيُعاد السؤالُ بلا استثناءٍ مرّةً واحدة: **وُجد ⇒ الجولةُ تمّت فتُفتح
+	// جديدة. لم يُوجد ⇒ لا أحدَ أصلاً، فيُنتظر كما كان.**
+	//
+	// **ولا تُصفَّر إلّا ومرشَّحُها في اليد** — تصفيرٌ بلا مرشَّحٍ يمحو تاريخَ
+	// الجولة ولا يُقدّم الطلبَ خطوة.
+	if errors.Is(err, pgx.ErrNoRows) && len(skip) > 0 {
+		if id2, wait2, err2 := s.pickRotationCandidate(ctx, orderID, nil, limit, maxActive); err2 == nil {
+			if _, e := s.db.Exec(ctx,
+				`UPDATE orders SET offer_passed = '{}' WHERE id = $1`, orderID); e != nil {
+				s.logger.Error("الترتيب: تعذّر تصفيرُ الجولة",
+					"order", orderID, "error", e)
+			} else {
+				driverID, waitForExpansion, err = id2, wait2, nil
+			}
+		}
+	}
+
 	if err != nil {
 		// **خطأُ الاستعلام لا يُقرأ «لا أحد».**
 		//
@@ -691,7 +724,11 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 		// لعاد الدورُ إليه فوراً لأنه ما زال أطولَ انتظاراً.
 		var skip []string
 		if err := s.db.QueryRow(ctx, `
-			UPDATE orders SET offer_passed = offer_passed || $2::uuid
+			UPDATE orders
+			-- **ولا يُوسَم معرّفٌ مرّتين** — النبضةُ تتكرّر كلَّ ثلاثين ثانيةً
+			-- على طلبٍ ساكن، **فيصير الصفُّ سجلَّ نبضاتٍ لا سجلَّ جولة.**
+			SET offer_passed = CASE WHEN $2::uuid = ANY(offer_passed)
+			                        THEN offer_passed ELSE offer_passed || $2::uuid END
 			WHERE id = $1 RETURNING array(SELECT unnest(offer_passed)::text)`,
 			e.orderID, e.driverID).Scan(&skip); err != nil {
 			s.logger.Error("الترتيب: تعذّر وسمُ مرور الدور",

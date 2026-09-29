@@ -33,8 +33,8 @@
     "setting_defs": 157,
     "behaviour_settings": 129,
     "order_fields": 83,
-    "test_files": 403,
-    "test_funcs": 1707
+    "test_files": 404,
+    "test_funcs": 1710
   },
   "flows": [
     {
@@ -22940,6 +22940,24 @@
     {
       "name": "TestOffer_SkipsDriverWhoCannotAccept",
       "file": "internal/server/offer_cash_limit_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferRound_CustomOrderSurvivesExpiry",
+      "file": "internal/server/offer_round_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferRound_PassMarkDoesNotGrowUnbounded",
+      "file": "internal/server/offer_round_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferRound_RestartsWhenEveryonePassed",
+      "file": "internal/server/offer_round_test.go",
       "package": "server",
       "orphan": true
     },

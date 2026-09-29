@@ -192,15 +192,40 @@ func TestRotation_TurnPassesAndNeverReturns(t *testing.T) {
 	if len(seen) != 3 {
 		t.Errorf("عُرض على %d سائقين والمتوقّع 3", len(seen))
 	}
-	// **وبعد الجميع يعود مشاعاً** — لا يبقى محجوزاً لمن لا يستطيع.
+	// ══════════════════════════════════════════════════════════════════
+	// **وبعد الجميع تُفتح جولةٌ جديدة** — لا يبقى محجوزاً لمن لا يستطيع
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان يُفحص بـ`offered_driver_id IS NULL`** — أي «يعود مشاعاً».
+	// **والمشاعُ في «بالترتيب» لا يراه أحد**: قائمتا تطبيق السائق تستثنيان
+	// من هو في `offer_passed` (`driver_handlers.go`)، **فالثلاثةُ كلُّهم فيه
+	// بعد الجولة** — **فالطلبُ لا يُعرض ولا يُرى: يموت.**
+	//
+	// (قُيس حيّاً على التجهيز ٢٠٢٦-٠٩-٢٩ — `GAP-DISP-08`: طلبٌ انقضت مهلتُه
+	//  فصار يُوسَم كلَّ ثلاثين ثانيةً — ٩ ثمّ ١٠ ثمّ ١١ — **وهو ساكنٌ لا
+	//  يتقدّم**، ولا سائقَ يراه.)
+	//
+	// **والمقصدُ محفوظٌ والآليّةُ أدقّ**: «لا يبقى محجوزاً لمن لا يستطيع» —
+	// فيُفحص أنّ الجولةَ فُتحت (`offer_passed` فارغ ⇒ **يراه الجميع**)،
+	// وأنّ أيَّ حجزٍ قائمٍ **حجزٌ حيٌّ لقادر** لا حجزٌ ميّتٌ لعاجز.
+	// **وهو عينُ ما تَعِد به الشيفرة**: «فإن دار الطابورُ ولم يأخذه أحد عاد
+	// إليه مع الجميع».
 	var offered *string
-	if err := f.pool.QueryRow(ctx,
-		`SELECT offered_driver_id::text FROM orders WHERE id = $1`, orderID).
-		Scan(&offered); err != nil {
+	var live bool
+	var passed int
+	if err := f.pool.QueryRow(ctx, `
+		SELECT offered_driver_id::text,
+		       COALESCE(offer_expires_at > now(), false),
+		       COALESCE(array_length(offer_passed, 1), 0)
+		FROM orders WHERE id = $1`, orderID).Scan(&offered, &live, &passed); err != nil {
 		t.Fatalf("تعذّرت قراءة العرض: %v", err)
 	}
-	if offered != nil {
-		t.Errorf("بقي محجوزاً بعد مرور الجميع: %s", *offered)
+	if passed != 0 {
+		t.Errorf("لم تُفتح جولةٌ جديدةٌ بعد مرور الجميع — %d مارّاً، **والطلبُ لا يراه أحد**",
+			passed)
+	}
+	if offered != nil && !live {
+		t.Errorf("بقي محجوزاً بحجزٍ ميّتٍ بعد مرور الجميع: %s", *offered)
 	}
 }
 
