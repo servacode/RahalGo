@@ -15,7 +15,8 @@
 # على سائقٍ هو نصٌّ آليّ.**
 
 set -u
-A="${API:-https://api.rahalgo.com/api/v1}"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts/qa" && pwd)/target.sh"
+A="$(rg_base_url /api/v1)"
 PHONE="${DRV_PHONE:-}"
 PASS="${DRV_PASS:-}"
 Z=00000000-0000-0000-0000-000000000000

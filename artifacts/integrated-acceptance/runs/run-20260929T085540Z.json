@@ -1,0 +1,15 @@
+{
+ "at": "20260929T085540Z",
+ "target": "staging",
+ "profile": null,
+ "counts": {
+  "KNOWN-GAP": 1
+ },
+ "rows": [
+  {
+   "id": "GAP-TEST-01",
+   "status": "KNOWN-GAP",
+   "detail": "rc=1 FAIL\tgithub.com/servacode/rahalgo/backend/internal/testtruth\t0.491s / FAIL"
+  }
+ ]
+}

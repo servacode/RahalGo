@@ -1,0 +1,71 @@
+{
+ "at": "20260929T210535Z",
+ "target": "staging",
+ "profile": null,
+ "counts": {
+  "PASS": 8,
+  "BLOCKED": 4
+ },
+ "rows": [
+  {
+   "id": "SEC-07",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestEveryCapabilityIsAccountedFor (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.163s"
+  },
+  {
+   "id": "SEC-08",
+   "status": "BLOCKED",
+   "detail": "**مُخطَّى** — شرطُه غائبٌ (قاعدةُ اختبارٍ؟) فلم يُقَس"
+  },
+  {
+   "id": "SM-04",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachineEffectiveIsSubsetOfDeclaredPlusAdmin (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.343s"
+  },
+  {
+   "id": "SM-05",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachinePlatformNeverWiderThanMerchants (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.338s"
+  },
+  {
+   "id": "CON-01",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachineDocIsCurrent (0.01s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.263s"
+  },
+  {
+   "id": "CON-02",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestAuthzDocIsCurrent (0.02s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.275s"
+  },
+  {
+   "id": "CON-03",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestTruthDocIsCurrent (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/truthdoc\t0.278s"
+  },
+  {
+   "id": "CON-04",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestContractIsCurrent (0.07s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/apidoc\t0.631s"
+  },
+  {
+   "id": "CON-05",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachineDeclaredRowsCiteASource (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.295s"
+  },
+  {
+   "id": "DISP-01",
+   "status": "BLOCKED",
+   "detail": "**مُخطَّى** — شرطُه غائبٌ (قاعدةُ اختبارٍ؟) فلم يُقَس"
+  },
+  {
+   "id": "DISP-02",
+   "status": "BLOCKED",
+   "detail": "**مُخطَّى** — شرطُه غائبٌ (قاعدةُ اختبارٍ؟) فلم يُقَس"
+  },
+  {
+   "id": "DISP-03",
+   "status": "BLOCKED",
+   "detail": "**مُخطَّى** — شرطُه غائبٌ (قاعدةُ اختبارٍ؟) فلم يُقَس"
+  }
+ ]
+}

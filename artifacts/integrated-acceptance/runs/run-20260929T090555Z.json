@@ -1,0 +1,101 @@
+{
+ "at": "20260929T090555Z",
+ "target": "staging",
+ "profile": "SECURITY",
+ "counts": {
+  "PASS": 13,
+  "KNOWN-GAP": 5
+ },
+ "rows": [
+  {
+   "id": "SMK-02",
+   "status": "PASS",
+   "detail": "got=True want=True"
+  },
+  {
+   "id": "ENV-01",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "ENV-02",
+   "status": "KNOWN-GAP",
+   "detail": "قِيس بـdocker ps: rahalgo-staging-* بجوار rahalgo-api-1. قرارُ المالك مطلوب: يُقبل أم يُفصل."
+  },
+  {
+   "id": "SEC-LEAK-01",
+   "status": "KNOWN-GAP",
+   "detail": "بُدِّلت بأمر المالك ٢٠٢٦-٠٩-٢٩. والتاريخُ يبقى — فالإصلاحُ التبديلُ لا الحذف."
+  },
+  {
+   "id": "SEC-LEAK-02",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "SEC-01",
+   "status": "PASS",
+   "detail": "got=28 want=28"
+  },
+  {
+   "id": "SEC-02",
+   "status": "PASS",
+   "detail": "got=162 want=162"
+  },
+  {
+   "id": "SEC-03",
+   "status": "PASS",
+   "detail": "got=21 want=21"
+  },
+  {
+   "id": "SEC-04",
+   "status": "PASS",
+   "detail": "got='password' want='password'"
+  },
+  {
+   "id": "SEC-05",
+   "status": "PASS",
+   "detail": "got='5m' want='5m'"
+  },
+  {
+   "id": "SEC-06",
+   "status": "PASS",
+   "detail": "got=7 want=7"
+  },
+  {
+   "id": "SEC-07",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.144s"
+  },
+  {
+   "id": "SEC-08",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/qa\t0.233s"
+  },
+  {
+   "id": "GAP-SEC-01",
+   "status": "KNOWN-GAP",
+   "detail": "observability.read لا تُمنَح لدورٍ في أيّ هجرة، ودورُ observability مصنَّفٌ ولا هجرةَ تُنشئه. فـGET /admin/ops/health مسدودٌ على قاعدةٍ مهاجَرةٍ حديثاً."
+  },
+  {
+   "id": "GAP-SEC-02",
+   "status": "KNOWN-GAP",
+   "detail": "/my/* /me/* /auth/* /orders/* /geo/* /demand/* /promo/* — تخويلُها منطقُ ملكيّةٍ في كلّ معالِج، ولا حارسَ يمشي على الموجّه لها."
+  },
+  {
+   "id": "SM-04",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.297s"
+  },
+  {
+   "id": "GAP-SM-06",
+   "status": "KNOWN-GAP",
+   "detail": "G7 يفحص actorRoles لا effRoles — فزبونٌ يحمل ops أو admin يلغي بعد انقضاء النافذة. ظاهرُه مقصودٌ ولا نصَّ يقوله."
+  },
+  {
+   "id": "MERCH-01",
+   "status": "PASS",
+   "detail": "got=6 want=6"
+  }
+ ]
+}

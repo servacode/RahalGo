@@ -1,0 +1,116 @@
+{
+ "at": "20260929T085511Z",
+ "target": "staging",
+ "profile": "CONTRACTS",
+ "counts": {
+  "PASS": 20,
+  "CLEARED?": 1
+ },
+ "rows": [
+  {
+   "id": "SEC-01",
+   "status": "PASS",
+   "detail": "got=28 want=28"
+  },
+  {
+   "id": "SEC-02",
+   "status": "PASS",
+   "detail": "got=162 want=162"
+  },
+  {
+   "id": "SEC-03",
+   "status": "PASS",
+   "detail": "got=21 want=21"
+  },
+  {
+   "id": "SEC-04",
+   "status": "PASS",
+   "detail": "got='password' want='password'"
+  },
+  {
+   "id": "MON-01",
+   "status": "PASS",
+   "detail": "got=61 want=61"
+  },
+  {
+   "id": "MON-02",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "SM-01",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "SM-02",
+   "status": "PASS",
+   "detail": "got=55 want=55"
+  },
+  {
+   "id": "SM-03",
+   "status": "PASS",
+   "detail": "got=9 want=9"
+  },
+  {
+   "id": "SM-04",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.214s"
+  },
+  {
+   "id": "SM-05",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.307s"
+  },
+  {
+   "id": "CON-01",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.229s"
+  },
+  {
+   "id": "CON-02",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.242s"
+  },
+  {
+   "id": "CON-03",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/truthdoc\t0.251s"
+  },
+  {
+   "id": "CON-04",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/apidoc\t0.639s"
+  },
+  {
+   "id": "CON-05",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.251s"
+  },
+  {
+   "id": "GAP-TEST-01",
+   "status": "CLEARED?",
+   "detail": "rc=1 FAIL\tgithub.com/servacode/rahalgo/backend/internal/testtruth\t0.396s / FAIL"
+  },
+  {
+   "id": "GAP-DOC-01",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/truthdoc\t0.243s"
+  },
+  {
+   "id": "EVT-01",
+   "status": "PASS",
+   "detail": "got=11 want=11"
+  },
+  {
+   "id": "EVT-02",
+   "status": "PASS",
+   "detail": "got=5 want=5"
+  },
+  {
+   "id": "EVT-03",
+   "status": "PASS",
+   "detail": "got=52 want=52"
+  }
+ ]
+}

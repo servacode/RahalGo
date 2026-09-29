@@ -1,0 +1,55 @@
+{
+ "at": "20260929T085451Z",
+ "target": "staging",
+ "profile": "SMOKE",
+ "counts": {
+  "PASS": 9
+ },
+ "rows": [
+  {
+   "id": "SMK-01",
+   "status": "PASS",
+   "detail": "got='staging' want='staging'"
+  },
+  {
+   "id": "SMK-02",
+   "status": "PASS",
+   "detail": "got=True want=True"
+  },
+  {
+   "id": "SMK-03",
+   "status": "PASS",
+   "detail": "http=200"
+  },
+  {
+   "id": "ENV-01",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "SEC-LEAK-02",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "CON-01",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.219s"
+  },
+  {
+   "id": "CON-02",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.269s"
+  },
+  {
+   "id": "CON-03",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/truthdoc\t0.188s"
+  },
+  {
+   "id": "CON-04",
+   "status": "PASS",
+   "detail": "rc=0 ok  \tgithub.com/servacode/rahalgo/backend/internal/apidoc\t0.610s"
+  }
+ ]
+}

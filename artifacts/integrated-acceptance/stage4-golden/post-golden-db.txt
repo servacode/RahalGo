@@ -1,0 +1,17 @@
+##orders_by_status
+cancelled|120
+delivered|16
+dispatching|2
+on_the_way|1
+##totals
+orders_total|139
+orders_open|3
+wallet_tx_rows|132
+settlements|2
+##balances
+customer_qa1|184850
+driver|6600
+driver_cashbox|31000
+rep|-1
+holding|36900
+treasury|-159815

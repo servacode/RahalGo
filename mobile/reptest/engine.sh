@@ -26,7 +26,8 @@
 # على جمالٍ ولا سرعةِ تمرير.**
 
 set -u
-A="${API:-https://api.rahalgo.com/api/v1}"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts/qa" && pwd)/target.sh"
+A="$(rg_base_url /api/v1)"
 PHONE="${REP_PHONE:-}"
 PASS="${REP_PASS:-}"
 

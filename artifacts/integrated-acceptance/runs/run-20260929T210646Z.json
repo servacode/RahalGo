@@ -1,0 +1,30 @@
+{
+ "at": "20260929T210646Z",
+ "target": "staging",
+ "profile": null,
+ "counts": {
+  "PASS": 4
+ },
+ "rows": [
+  {
+   "id": "SEC-08",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestADG2_EveryAdminRouteClassified (2.11s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/qa\t2.352s"
+  },
+  {
+   "id": "DISP-01",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestProximity_RadiusExpands (2.16s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/server\t2.302s"
+  },
+  {
+   "id": "DISP-02",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestProximity_StaleOnlyAtMaxGetsNoOffer (2.45s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/server\t2.750s"
+  },
+  {
+   "id": "DISP-03",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestProximity_FairnessTieBreak (2.44s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/server\t2.632s"
+  }
+ ]
+}

@@ -28,6 +28,7 @@
 package qa
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -207,7 +208,27 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 	}
 	t.Cleanup(func() { _ = rdb.Close() })
 
-	quiet := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
+	// ══════════════════════════════════════════════════════════════════
+	// **والخطأُ يُكتب في سجلّ الاختبار لا يُرمى**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان `io.Discard`** — **فخمسُمئةٍ تقع في الاختبار ولا تترك أثراً**:
+	// المعالِجُ يسجّل `internal error` بسببها (`respondErr`)، **والسجلُّ
+	// يُرمى** فيبقى في يد القارئ رمزٌ ورسالةٌ عامّةٌ ولا شيء.
+	//
+	// **وقِيس ٢٠٢٦-٠٩-٢٩**: سقط `TestD4` ثلاثَ مرّاتٍ في دوراتٍ كاملةٍ
+	// بـ٥٠٠ **ولم يُعرَف سببُها**، ويمرّ في ستِّ تشغيلاتٍ منفردة. **وبحثٌ
+	// عن علّةٍ بلا سجلّ بحثٌ في الظلام.**
+	//
+	// **و`t.Log` يظهر عند السقوط وحدَه** — فلا يُغرق المخرَجَ في النجاح،
+	// **ويُسلّم السببَ حين يُطلب.** (و`t.Logf` آمنٌ من عدّة خيوطٍ.)
+	//
+	// **ومستوى الخطأ وحدَه** — لا إغراقَ بالمعلومات.
+	logw := &testLogWriter{t: t}
+	// **ويُوقَف مع الاختبار** — خيطٌ خلفيٌّ يسجّل بعد انتهائه يُسقط
+	// العمليّةَ كلَّها بذعر.
+	t.Cleanup(logw.stop)
+	quiet := slog.New(slog.NewTextHandler(logw, &slog.HandlerOptions{Level: slog.LevelError}))
 	tokens := auth.NewTokenIssuer(jwtSecret, 15*time.Minute)
 	sender := &notify.DevSender{Logger: quiet}
 
@@ -664,4 +685,35 @@ func signWith(secret, userID string, roles []string) string {
 	}
 	s, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 	return s
+}
+
+// testLogWriter **يكتب سجلَّ الخادم في سجلّ الاختبار** — `t.Log` يظهر عند
+// السقوط وحدَه.
+//
+// **ولا يُكتب إلى `io.Discard`** — **فخطأٌ يُسجَّل ثمّ يُرمى يترك القارئَ
+// برمزٍ عامٍّ ولا سبب.** (قِيس ٢٠٢٦-٠٩-٢٩: ثلاثةُ سقوطٍ بـ٥٠٠ بلا سببٍ
+// معروف.)
+//
+// **ويُحرس من الكتابة بعد انتهاء الاختبار**: خيطٌ خلفيٌّ (الراصدُ مثلاً)
+// قد يسجّل بعد `t` انتهى، **و`t.Log` حينها يُسقط العمليّةَ كلَّها بذعر.**
+type testLogWriter struct {
+	t    *testing.T
+	mu   sync.Mutex
+	done bool
+}
+
+func (w *testLogWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.done {
+		return len(p), nil
+	}
+	w.t.Logf("خادم: %s", bytes.TrimRight(p, "\n"))
+	return len(p), nil
+}
+
+func (w *testLogWriter) stop() {
+	w.mu.Lock()
+	w.done = true
+	w.mu.Unlock()
 }

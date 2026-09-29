@@ -1,0 +1,51 @@
+{
+ "at": "20260929T202518Z",
+ "target": "staging",
+ "profile": null,
+ "counts": {
+  "PASS": 7,
+  "FAIL": 1
+ },
+ "rows": [
+  {
+   "id": "SMK-01",
+   "status": "PASS",
+   "detail": "got='staging' want='staging'"
+  },
+  {
+   "id": "SMK-02",
+   "status": "PASS",
+   "detail": "got=True want=True"
+  },
+  {
+   "id": "SMK-03",
+   "status": "PASS",
+   "detail": "http=200"
+  },
+  {
+   "id": "ENV-01",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "SEC-LEAK-02",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "MON-03",
+   "status": "PASS",
+   "detail": "got=59 want=59"
+  },
+  {
+   "id": "MON-04",
+   "status": "FAIL",
+   "detail": "got=167850 want=0"
+  },
+  {
+   "id": "SM-02",
+   "status": "PASS",
+   "detail": "got=77 want=77"
+  }
+ ]
+}

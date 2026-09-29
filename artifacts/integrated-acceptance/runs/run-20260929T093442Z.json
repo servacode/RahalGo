@@ -1,0 +1,368 @@
+{
+ "at": "20260929T093442Z",
+ "target": "staging",
+ "profile": "FULL",
+ "counts": {
+  "PASS": 37,
+  "KNOWN-GAP": 31,
+  "BLOCKED": 1,
+  "PENDING": 2
+ },
+ "rows": [
+  {
+   "id": "SMK-01",
+   "status": "PASS",
+   "detail": "got='staging' want='staging'"
+  },
+  {
+   "id": "SMK-02",
+   "status": "PASS",
+   "detail": "got=True want=True"
+  },
+  {
+   "id": "SMK-03",
+   "status": "PASS",
+   "detail": "http=200"
+  },
+  {
+   "id": "ENV-01",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "ENV-02",
+   "status": "KNOWN-GAP",
+   "detail": "قِيس بـdocker ps: rahalgo-staging-* بجوار rahalgo-api-1. قرارُ المالك مطلوب: يُقبل أم يُفصل."
+  },
+  {
+   "id": "ENV-03",
+   "status": "KNOWN-GAP",
+   "detail": "adb: com.rahalgo.driver.debug وحدَه مثبَّت. الدورةُ عبر التطبيقات تحتاج الزبونَ والمتجرَ والمندوب."
+  },
+  {
+   "id": "SEC-LEAK-01",
+   "status": "KNOWN-GAP",
+   "detail": "بُدِّلت بأمر المالك ٢٠٢٦-٠٩-٢٩. والتاريخُ يبقى — فالإصلاحُ التبديلُ لا الحذف."
+  },
+  {
+   "id": "SEC-LEAK-02",
+   "status": "PASS",
+   "detail": "rc=0  / all green"
+  },
+  {
+   "id": "SEC-01",
+   "status": "PASS",
+   "detail": "got=28 want=28"
+  },
+  {
+   "id": "SEC-02",
+   "status": "PASS",
+   "detail": "got=162 want=162"
+  },
+  {
+   "id": "SEC-03",
+   "status": "PASS",
+   "detail": "got=21 want=21"
+  },
+  {
+   "id": "SEC-04",
+   "status": "PASS",
+   "detail": "got='password' want='password'"
+  },
+  {
+   "id": "SEC-05",
+   "status": "PASS",
+   "detail": "got='5m' want='5m'"
+  },
+  {
+   "id": "SEC-06",
+   "status": "PASS",
+   "detail": "got=7 want=7"
+  },
+  {
+   "id": "SEC-07",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestEveryCapabilityIsAccountedFor (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.220s"
+  },
+  {
+   "id": "SEC-08",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestADG2_EveryAdminRouteClassified (9.04s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/qa\t9.313s"
+  },
+  {
+   "id": "GAP-SEC-01",
+   "status": "KNOWN-GAP",
+   "detail": "observability.read لا تُمنَح لدورٍ في أيّ هجرة، ودورُ observability مصنَّفٌ ولا هجرةَ تُنشئه. فـGET /admin/ops/health مسدودٌ على قاعدةٍ مهاجَرةٍ حديثاً."
+  },
+  {
+   "id": "GAP-SEC-02",
+   "status": "KNOWN-GAP",
+   "detail": "/my/* /me/* /auth/* /orders/* /geo/* /demand/* /promo/* — تخويلُها منطقُ ملكيّةٍ في كلّ معالِج، ولا حارسَ يمشي على الموجّه لها."
+  },
+  {
+   "id": "MON-01",
+   "status": "PASS",
+   "detail": "got=61 want=61"
+  },
+  {
+   "id": "MON-02",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "MON-03",
+   "status": "PASS",
+   "detail": "got=59 want=59"
+  },
+  {
+   "id": "MON-FI-04a",
+   "status": "KNOWN-GAP",
+   "detail": "خرقٌ قائمٌ قبل المرحلة — صفٌّ واحدٌ في حالة delivered. يُقارَن عدداً لا هويّةً، لأنّ /qa/reconcile يحجب المعرّفَ عمداً."
+  },
+  {
+   "id": "MON-FI-06d",
+   "status": "KNOWN-GAP",
+   "detail": "خرقٌ قائمٌ قبل المرحلة — صفٌّ واحدٌ في حالة cancelled."
+  },
+  {
+   "id": "MON-04",
+   "status": "PASS",
+   "detail": "got=0 want=0"
+  },
+  {
+   "id": "MON-05",
+   "status": "BLOCKED",
+   "detail": "يحتاج لقطةَ post — بعد الدورة الذهبيّة"
+  },
+  {
+   "id": "SM-01",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "SM-02",
+   "status": "PASS",
+   "detail": "got=55 want=55"
+  },
+  {
+   "id": "SM-03",
+   "status": "PASS",
+   "detail": "got=9 want=9"
+  },
+  {
+   "id": "SM-04",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachineEffectiveIsSubsetOfDeclaredPlusAdmin (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.184s"
+  },
+  {
+   "id": "SM-05",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachinePlatformNeverWiderThanMerchants (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.207s"
+  },
+  {
+   "id": "GAP-SM-01",
+   "status": "KNOWN-GAP",
+   "detail": "picked_up→failed و on_the_way→failed: الخريطةُ تعطيهما ops، وP3 تُسقط ops والمالكَ لأنّ failed في driverOnly. فالسائقُ يجب أن يبلغ at_dropoff أوّلاً. والتعليقُ في statuses.go:151 يقول «للعمليات وحدَها»."
+  },
+  {
+   "id": "GAP-SM-02",
+   "status": "PASS",
+   "detail": "got=1 want=1"
+  },
+  {
+   "id": "GAP-SM-03",
+   "status": "KNOWN-GAP",
+   "detail": "يحرسه عدُّ صفوفٍ فقط (testtruth/extract.go:121) — فلو بُدِّل كلُّ دورٍ في صفوفه بقي أخضرَ. عُلِّم LEGACY، وحلَّ محلَّه عقدٌ مولَّدٌ محروسٌ بالمقارنة."
+  },
+  {
+   "id": "GAP-SM-04",
+   "status": "KNOWN-GAP",
+   "detail": "terminal() دالّةٌ و TerminalStatuses() قائمةٌ، وكلٌّ يكتب الأسماءَ الخمسةَ بيده. والتعليقُ عند statuses.go:204 يحذّر من قائمةٍ ثانيةٍ — وهو نفسُه القائمةُ الثانية."
+  },
+  {
+   "id": "GAP-SM-05",
+   "status": "PASS",
+   "detail": "got=1 want=1"
+  },
+  {
+   "id": "GAP-SM-06",
+   "status": "KNOWN-GAP",
+   "detail": "G7 يفحص actorRoles لا effRoles — فزبونٌ يحمل ops أو admin يلغي بعد انقضاء النافذة. ظاهرُه مقصودٌ ولا نصَّ يقوله."
+  },
+  {
+   "id": "CON-01",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachineDocIsCurrent (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.236s"
+  },
+  {
+   "id": "CON-02",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestAuthzDocIsCurrent (0.01s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/authzdoc\t0.392s"
+  },
+  {
+   "id": "CON-03",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestTruthDocIsCurrent (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/truthdoc\t0.241s"
+  },
+  {
+   "id": "CON-04",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestContractIsCurrent (0.05s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/apidoc\t0.632s"
+  },
+  {
+   "id": "CON-05",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestMachineDeclaredRowsCiteASource (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/machinedoc\t0.241s"
+  },
+  {
+   "id": "GAP-TEST-01",
+   "status": "KNOWN-GAP",
+   "detail": "rc=1 FAIL / FAIL\tgithub.com/servacode/rahalgo/backend/internal/testtruth\t0.409s / FAIL"
+  },
+  {
+   "id": "GAP-DOC-01",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestTruthDocIsCurrent (0.00s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/truthdoc\t0.226s"
+  },
+  {
+   "id": "GAP-DISP-01",
+   "status": "KNOWN-GAP",
+   "detail": "كتلتان متماثلتان `if !hasPickup` في pickRotationCandidate: الأولى (rotation.go:299) تردّ legacyRotationCandidate وهو بلا شرطِ حداثة، والثانية (rotation.go:316) تردّ freshFallbackCandidate وهي المقصودةُ — **وغيرُ قابلةٍ للوصول**. وhasPickup يُسنَد مرّةً عند 294 ولا يُعاد إسنادُه (مقيسٌ بالمسح). فالنتيجةُ تخالف قرارَ المالك ٢٠٢٦-٠٩-٢٨ وتعليقَ rotation.go:342 نفسَه."
+  },
+  {
+   "id": "GAP-DISP-02",
+   "status": "KNOWN-GAP",
+   "detail": "TrySameRoute تنادي assignDirectly بلا شرط، وتكتب offer_expires_at على طلبٍ صار assigned. وقارئُه الوحيدُ reclaimSilentAssignments، وهي تخرج مبكّراً إن لم يكن drivers.direct_assign صحيحاً — وافتراضُه false. فلا يُستردّ، ولا يُرى في تنبيه no_driver (يشترط driver_id IS NULL)، ويظهر بعد ٦٠ دقيقةً كـtoo_long."
+  },
+  {
+   "id": "GAP-DISP-03",
+   "status": "KNOWN-GAP",
+   "detail": "صفٌّ مبذورٌ بهجرةٍ فقط (0050_dispatched_at.sql:37) ولا وجودَ له في internal/settings — فلا يظهر في لوحة الإعدادات ولا يُعدَّل، والويبُ يهبط إلى ١٠ ثابتةً إن غاب الصفّ. وهو عينُ ما يحذّر منه تعليقُ settingInt."
+  },
+  {
+   "id": "GAP-DISP-04",
+   "status": "KNOWN-GAP",
+   "detail": "drivers.location_fresh_sec (٣٠٠ث، إعداد) للأهليّة، وStaleLocationAfter (١٥د، ثابتٌ في Go لا يُعدَّل من اللوحة) للعرض وشارةِ اللوحة. فسائقٌ قد يكون غيرَ مؤهَّلٍ للتوزيع ولا تظهر عليه شارةُ «موقعٌ شائخ»."
+  },
+  {
+   "id": "GAP-DISP-05",
+   "status": "KNOWN-GAP",
+   "detail": "بالافتراض ٣٠٠ث حداثةٍ و٦٠ث نبضاً = خمسُ نبضاتٍ فائتةٍ سماحاً. ومن أنزل location_fresh_sec إلى أرضيّته ٦٠ث بلا إنزال النبض **جعل نبضةً فائتةً واحدةً تُخرج سائقاً عاملاً من الأهليّة** فتقف الطلبات بلا عرض. والمفتاحان في المجموعة نفسِها بلا تحقّقٍ متقاطع."
+  },
+  {
+   "id": "DISP-01",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestProximity_RadiusExpands (7.54s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/server\t7.800s"
+  },
+  {
+   "id": "DISP-02",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestProximity_StaleOnlyAtMaxGetsNoOffer (6.95s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/server\t7.244s"
+  },
+  {
+   "id": "DISP-03",
+   "status": "PASS",
+   "detail": "rc=0 --- PASS: TestProximity_FairnessTieBreak (7.48s) / PASS / ok  \tgithub.com/servacode/rahalgo/backend/internal/server\t7.730s"
+  },
+  {
+   "id": "GAP-MERCH-01",
+   "status": "KNOWN-GAP",
+   "detail": "وهذا يُجيب بندَ المالك المؤجَّل: التوحيدُ واقعٌ في الحالة، والمطلوبُ قرارٌ في البقايا الثلاث"
+  },
+  {
+   "id": "GAP-MERCH-02",
+   "status": "KNOWN-GAP",
+   "detail": "«لا أصناف بعد — تُضاف من لوحة الإدارة أو من مندوبك» — وللمتجر تبٌّ «أضف صنفاً» موصولٌ بـMerchantApi.createItem."
+  },
+  {
+   "id": "GAP-MERCH-03",
+   "status": "KNOWN-GAP",
+   "detail": "modes.go:11 و merchant_dispatch.go:11 يقولان merchants.self_manage_orders — والشيفرةُ تقرأ platform.orders_mode. غيرُ ضارٍّ اليوم، مُضلّلٌ غداً."
+  },
+  {
+   "id": "MERCH-01",
+   "status": "PASS",
+   "detail": "got=6 want=6"
+  },
+  {
+   "id": "MERCH-02",
+   "status": "PENDING",
+   "detail": "settleMerchant + creditTreasury عند picked_up (transitions.go:800). والخزينةُ سالبةٌ بين الالتقاط والتسليم — مقبولٌ بنصِّ الشيفرة. ويُنادى ثانياً عند delivered لحاقاً بحارسِ عدمِ التكرار."
+  },
+  {
+   "id": "GAP-ADMIN-01",
+   "status": "KNOWN-GAP",
+   "detail": "الويبُ نزع failed من DRIVER_ONLY يوم ٢٠٢٦-٠٩-٠٢ وأدرجه في OPS_NEXT لـpicked_up وon_the_way. والمحرّكُ في وضع المنصّة يُسقط ops والمالكَ بـP3. فالأثرُ: يرى المشغّلُ زرّاً يضغطه فيُردّ invalid_transition — وهو بعينه السيناريو الذي أُضيف الزرُّ لأجله (هاتفُ سائقٍ مات في الطريق). وهذا وجهُ GAP-SM-01 في الواجهة."
+  },
+  {
+   "id": "GAP-ADMIN-02",
+   "status": "KNOWN-GAP",
+   "detail": "M0 تردّ الأدوارَ كما هي، وat_dropoff→delivered مُصرَّحٌ لـdriverOps. فالمانعُ الوحيدُ أنّ الويبَ يخفي الزرَّ بلا شرطِ وضع — والويبُ نفسُه يقول إنّ الزرَّ المخفيَّ وعدٌ بالمنع لا منع. ونداءُ API مباشرٌ من حساب ops في وضع المتاجر لا يرفضه rolesUnderMode."
+  },
+  {
+   "id": "GAP-ADMIN-03",
+   "status": "KNOWN-GAP",
+   "detail": "got=0 want=0"
+  },
+  {
+   "id": "GAP-MERCH-04",
+   "status": "KNOWN-GAP",
+   "detail": "handleMerchantWarnings يحسم المتجرَ بـSELECT id FROM merchants WHERE owner_user_id=$1 LIMIT 1. والإنذاراتُ هي ما يؤدّي إلى التعليق — فصاحبُ فرعَين يُعلَّق على إنذاراتٍ لم يرَها تطبيقُه. وكلُّ مسارٍ آخرَ للمتجر مُقيَّدٌ بـ{id}."
+  },
+  {
+   "id": "GAP-REP-01",
+   "status": "KNOWN-GAP",
+   "detail": "العملاءُ ٥٠٠ والمرشَّحون ٢٠٠، بلا صفحاتٍ وبلا total — فمندوبٌ نشطٌ يتوقّف عن رؤية قدمائه ولا سطرَ على الشاشة يقول ذلك. وقائمةُ الأدمن مرقَّمةٌ بعدّاد، وطابورُ المراجعة يُرسل count وlimit ليقول «٢٠٠ من ٣١٤»."
+  },
+  {
+   "id": "GAP-REP-02",
+   "status": "KNOWN-GAP",
+   "detail": "Href=/portal/leads، وإشعارُ الموافقةِ بُدِّل عمداً إلى /portal/merchants لأنّ /portal/leads لا وجودَ له في لوحة المندوب. ومسارُ الرفض بقي على المقصد المكسور."
+  },
+  {
+   "id": "GAP-REP-03",
+   "status": "KNOWN-GAP",
+   "detail": "incr تردّ (0,nil) إن كان rdb فارغاً — فـ/public/join (١٠/س) و/public/invite (٦٠/س) و/rep/leads (٣٠/س) كلُّها بلا حدٍّ. مقصودٌ بنصِّ الشيفرة («والحدُّ أفضليّةٌ لا شرط») — ويحتاج إقرارَ المالك."
+  },
+  {
+   "id": "GAP-MAPS-01",
+   "status": "KNOWN-GAP",
+   "detail": "تمطيطٌ لا عيبُ نمط: لا maxzoom على مصدر النمط ولا setMaxZoomPreference في وحدة الخريطة. قرارُ المالك مؤجَّلٌ ومُسجَّلٌ في WORKLOG:30."
+  },
+  {
+   "id": "GAP-MAPS-02",
+   "status": "KNOWN-GAP",
+   "detail": "http=200"
+  },
+  {
+   "id": "GAP-MAPS-03",
+   "status": "KNOWN-GAP",
+   "detail": "mocked يُحفَظ ولا يقرؤه سطرٌ — مقيسٌ ٢٠٢٦-٠٩-٠٢ ومكتوبٌ في الشيفرة. وbearing_deg كذلك: يُخزَّن ولا يُقرأ."
+  },
+  {
+   "id": "GAP-DEFAULTS-01",
+   "status": "KNOWN-GAP",
+   "detail": "orders.auto_transfer=false و orders.auto_accept_min=0 و وضعُ المنصّة. والمتجرُ في هذا الوضع لا شاشةَ طلباتٍ حيّةً له أصلاً — فلا سبيلَ له لتحرير الطلب. ومعها merchants.commission_percent=0 و sales.commission_percent=0: لا عمولةَ متجرٍ ولا عمولةَ مندوبٍ خارجَ الصندوق."
+  },
+  {
+   "id": "MAPS-01",
+   "status": "PENDING",
+   "detail": "OSRM_URL افتراضُه فارغٌ، وErrNoEngine يُردُّ قبل أيّ نداءِ شبكة، والمعالِجُ يردّ 200 مع available:false. وحارسُ نشرٍ يثبّت افتراضَ التجهيز فلا يعود فارغاً صامتاً."
+  },
+  {
+   "id": "EVT-01",
+   "status": "PASS",
+   "detail": "got=11 want=11"
+  },
+  {
+   "id": "EVT-02",
+   "status": "PASS",
+   "detail": "got=5 want=5"
+  },
+  {
+   "id": "EVT-03",
+   "status": "PASS",
+   "detail": "got=52 want=52"
+  }
+ ]
+}

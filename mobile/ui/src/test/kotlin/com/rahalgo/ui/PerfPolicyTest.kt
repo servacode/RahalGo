@@ -60,6 +60,15 @@ class PerfPolicyTest {
         throw AssertionError("لم أجد جذرَ mobile من " + File("").absolutePath)
     }
 
+    /** مقطعٌ من المصدر بين علامةٍ وأوّلِ نهايةٍ تليها. */
+    private fun body(src: String, marker: String, vararg ends: String): String {
+        val start = src.indexOf(marker)
+        assertTrue("**غاب المقطع**: " + marker, start >= 0)
+        val end = ends.mapNotNull { e -> src.indexOf(e, start + marker.length).takeIf { it >= 0 } }
+            .minOrNull() ?: src.length
+        return src.substring(start, end)
+    }
+
     private fun read(rel: String): String {
         val f = File(mobileRoot(), rel)
         assertTrue("**ملفٌّ غائب**: " + rel, f.exists())
@@ -154,11 +163,30 @@ class PerfPolicyTest {
             "**رُكّب مُعيدٌ عامٌّ يعيد كلَّ نداءٍ ومنها ما يكتب**",
             src.contains("HttpRequestRetry"),
         )
-        // **والتجديدُ مرّةً لا حلقة.**
+        // ══════════════════════════════════════════════════════════════
+        // **والتجديدُ مرّةً لا حلقة** — يُحرَس بالبنية لا بشكلِ سطرَين
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان يُعَدُّ نمطُ `refresh()` يليه مباشرةً `return raw`** —
+        // **فشاخ يومَ لُفَّ التجديدُ في `try/catch`** ليُساق صاحبُ الجلسةِ
+        // الميتةِ إلى الخروج (`Obs 3`): صار بينهما كتلةُ `catch`،
+        // **فلا يطابق النمطُ شيئاً ويسقط الحارسُ — والعقدُ الذي يحرسه سليم.**
+        // (قِيس ٢٠٢٦-٠٩-٢٩: صفرُ مطابقةٍ على `HEAD` وعلى `HEAD~6` معاً.)
+        //
+        // **والعقدُ المحروسُ**: نداءُ تجديدٍ واحدٌ في المسار، **ومحاولتان
+        // لا أكثر** — الأولى بالرمز القائم، والثانية بعد التجديد.
+        // **وثالثةٌ تعني حلقةً**، وصفرُ ثانيةٍ يعني أنّ التجديدَ لا يُستعمل.
+        val calls = body(src, "suspend inline fun <reified T> call(", "\n    /** نداء بلا تجديد")
         assertEquals(
-            "**تبدّل عقدُ التجديد الواحد**",
+            "**تبدّل عقدُ التجديد الواحد** — نداءُ تجديدٍ واحدٌ في المسار",
             1,
-            Regex("refresh\\(\\)\\s*\\n\\s*return raw").findAll(src).count(),
+            Regex("(?<![A-Za-z])refresh\\(\\)").findAll(calls).count(),
+        )
+        assertEquals(
+            "**محاولتان لا أكثر** — الأولى بالرمز القائم والثانيةُ بعد التجديد. "
+                + "**وثالثةٌ حلقةٌ تُعيد نداءً يكتب.**",
+            2,
+            Regex("return raw\\(").findAll(calls).count(),
         )
     }
 

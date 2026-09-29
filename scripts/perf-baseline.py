@@ -30,7 +30,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REF = os.path.join(ROOT, "docs", "qa", "perf-baseline.json")
 PKG = "com.rahalgo.customer"
-API = "https://api.rahalgo.com/api/v1"
+# **والهدفُ من البوّابة** — التجهيزُ افتراضاً؛ انظر `scripts/qa/target.py`.
+sys.path.insert(0, os.path.join(ROOT, "scripts", "qa"))
+import target  # noqa: E402
+API = target.base_url("/api/v1")
 
 # **وعتبةُ التراجع ٢٥٪** — **وضجيجُ القياس على هاتفٍ حقيقيٍّ يبلغ
 # العشرة**، فعتبةٌ ضيّقةٌ تُنذر كلَّ يومٍ ثمّ تُطفأ.

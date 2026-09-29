@@ -20,10 +20,20 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "qa"
 import ui  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
-B = "https://api.rahalgo.com/api/v1"
-CUSTOMER = ("0996280740", "Rahal2026x", None)
-DRIVER = ("0994352064", "Mm12341234", None)
-ADMIN = ("0985395131", "Mm12341234", "2525")
+# ══════════════════════════════════════════════════════════════════════
+# **الهدفُ من البوّابة لا من سطرٍ هنا** (قرارُ المالك ٢٠٢٦-٠٩-٢٩)
+# ══════════════════════════════════════════════════════════════════════
+#
+# **كان هذا السطرُ يحمل عنوانَ الإنتاج**، وتحته ثلاثةُ حساباتٍ حقيقيّةٍ
+# بكلماتها ورمزِ أدمن. **فمن شغّله ليجرّب أنشأ طلباتٍ في بيانات الزبائن**
+# ولا سطرَ يمنعه. انظر `scripts/qa/target.py`.
+import target  # noqa: E402
+
+B = target.base_url("/api/v1")
+CUSTOMER = target.creds("customer")
+DRIVER = target.creds("driver")
+ADMIN = target.creds("admin")
+print(target.banner())
 
 rows = []
 

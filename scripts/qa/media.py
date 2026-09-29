@@ -21,7 +21,9 @@ import urllib.request as u
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-BASE = "https://api.rahalgo.com"
+# **والهدفُ من البوّابة** — التجهيزُ افتراضاً؛ انظر `target.py`.
+import target  # noqa: E402
+BASE = target.base_url()
 
 # **حدُّ ما يُعرض في قائمة** — فوقه يُعدّ ثقيلاً.
 HEAVY_KB = 60

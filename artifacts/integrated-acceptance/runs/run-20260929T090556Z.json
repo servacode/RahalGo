@@ -1,0 +1,53 @@
+{
+ "at": "20260929T090556Z",
+ "target": "staging",
+ "profile": "MONEY",
+ "counts": {
+  "PASS": 4,
+  "KNOWN-GAP": 2,
+  "FAIL": 1,
+  "PENDING": 1
+ },
+ "rows": [
+  {
+   "id": "MON-01",
+   "status": "PASS",
+   "detail": "got=61 want=61"
+  },
+  {
+   "id": "MON-02",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "MON-03",
+   "status": "PASS",
+   "detail": "got=59 want=59"
+  },
+  {
+   "id": "MON-FI-04a",
+   "status": "KNOWN-GAP",
+   "detail": "خرقٌ قائمٌ قبل المرحلة — صفٌّ واحدٌ في حالة delivered. يُقارَن عدداً لا هويّةً، لأنّ /qa/reconcile يحجب المعرّفَ عمداً."
+  },
+  {
+   "id": "MON-FI-06d",
+   "status": "KNOWN-GAP",
+   "detail": "خرقٌ قائمٌ قبل المرحلة — صفٌّ واحدٌ في حالة cancelled."
+  },
+  {
+   "id": "MON-04",
+   "status": "PASS",
+   "detail": "got=0 want=0"
+  },
+  {
+   "id": "MON-05",
+   "status": "FAIL",
+   "detail": "rc=1 �� ���� ����: D:\\RahalGo\\artifacts\\integrated-acceptance\\baseline-post\\snapshot.json"
+  },
+  {
+   "id": "MERCH-02",
+   "status": "PENDING",
+   "detail": "settleMerchant + creditTreasury عند picked_up (transitions.go:800). والخزينةُ سالبةٌ بين الالتقاط والتسليم — مقبولٌ بنصِّ الشيفرة. ويُنادى ثانياً عند delivered لحاقاً بحارسِ عدمِ التكرار."
+  }
+ ]
+}

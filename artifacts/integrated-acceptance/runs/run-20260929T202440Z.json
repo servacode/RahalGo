@@ -1,0 +1,96 @@
+{
+ "at": "20260929T202440Z",
+ "target": "staging",
+ "profile": null,
+ "counts": {
+  "PASS": 16,
+  "FAIL": 1
+ },
+ "rows": [
+  {
+   "id": "SEC-01",
+   "status": "PASS",
+   "detail": "got=28 want=28"
+  },
+  {
+   "id": "SEC-02",
+   "status": "PASS",
+   "detail": "got=162 want=162"
+  },
+  {
+   "id": "SEC-03",
+   "status": "PASS",
+   "detail": "got=21 want=21"
+  },
+  {
+   "id": "SEC-04",
+   "status": "PASS",
+   "detail": "got='password' want='password'"
+  },
+  {
+   "id": "SEC-05",
+   "status": "PASS",
+   "detail": "got='5m' want='5m'"
+  },
+  {
+   "id": "SEC-06",
+   "status": "PASS",
+   "detail": "got=7 want=7"
+  },
+  {
+   "id": "MON-01",
+   "status": "PASS",
+   "detail": "got=61 want=61"
+  },
+  {
+   "id": "MON-02",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "SM-01",
+   "status": "PASS",
+   "detail": "got=14 want=14"
+  },
+  {
+   "id": "SM-02",
+   "status": "FAIL",
+   "detail": "got=77 want=55"
+  },
+  {
+   "id": "SM-03",
+   "status": "PASS",
+   "detail": "got=9 want=9"
+  },
+  {
+   "id": "GAP-SM-02",
+   "status": "PASS",
+   "detail": "got=1 want=1"
+  },
+  {
+   "id": "GAP-SM-05",
+   "status": "PASS",
+   "detail": "got=1 want=1"
+  },
+  {
+   "id": "MERCH-01",
+   "status": "PASS",
+   "detail": "got=6 want=6"
+  },
+  {
+   "id": "EVT-01",
+   "status": "PASS",
+   "detail": "got=11 want=11"
+  },
+  {
+   "id": "EVT-02",
+   "status": "PASS",
+   "detail": "got=5 want=5"
+  },
+  {
+   "id": "EVT-03",
+   "status": "PASS",
+   "detail": "got=52 want=52"
+  }
+ ]
+}

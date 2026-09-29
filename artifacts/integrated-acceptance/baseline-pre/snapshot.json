@@ -1,0 +1,105 @@
+{
+ "identity": {
+  "http": 200,
+  "data": {
+   "environment": "staging",
+   "source_commit": "956b84a291839fdf81240286555d6f9c61b455c6",
+   "build_id": "build-20260928T161317Z-956b84a2",
+   "migration_version": "0165_proof_exception_admin.sql",
+   "staging": true
+  }
+ },
+ "reconcile": {
+  "http": 200,
+  "data": {
+   "money": {
+    "checks_passed": 59,
+    "checks_total": 61,
+    "failed": [
+     {
+      "by_status": {
+       "delivered": 1
+      },
+      "id": "FI-04.a",
+      "name": "كلُّ طلبٍ مسلَّمٍ له مستحقُّ متجر",
+      "violating_rows": 1
+     },
+     {
+      "by_status": {
+       "cancelled": 1
+      },
+      "id": "FI-06.d",
+      "name": "الطلبُ قبل المحاسبة يحمل خصمَه وحدَه",
+      "violating_rows": 1
+     }
+    ]
+   },
+   "order_1050": {
+    "events": 7,
+    "exists": true,
+    "status": "on_the_way"
+   },
+   "residue": {
+    "qa_active_offers": 0,
+    "qa_dense_items": 0,
+    "qa_open_orders": 3,
+    "qa_second_merchants": 0,
+    "qa_wallet_balance": 0
+   }
+  }
+ },
+ "_source": "ssh-readonly",
+ "orders_by_status": {
+  "pending": 0,
+  "accepted": 1,
+  "preparing": 0,
+  "dispatching": 1,
+  "assigned": 1,
+  "at_pickup": 0,
+  "picked_up": 0,
+  "on_the_way": 1,
+  "at_dropoff": 0,
+  "delivered": 15,
+  "rejected": 0,
+  "cancelled": 119,
+  "failed": 0,
+  "refunded": 0
+ },
+ "orders_total_summed": 138,
+ "orders_total_reported": 138,
+ "orders_open_closed": {
+  "false": "134",
+  "true": "4"
+ },
+ "money": {
+  "wallets_flagged": {
+   "cash_holding": "1/23400",
+   "plain": "86/125460",
+   "treasury": "1/-161360"
+  },
+  "wallet_tx_by_kind": {
+   "adjustment": "35/-1025000",
+   "driver_earning": "1/6500",
+   "merchant_cash_accrued": "1/23400",
+   "merchant_earning": "1/18900",
+   "operating_expense": "2/0",
+   "order_payment": "2/-10650",
+   "payout": "6/-240000",
+   "platform_profit": "3/-11300",
+   "refund": "1/4150",
+   "reward": "44/0",
+   "topup": "29/1221500"
+  },
+  "wallet_tx_total": {
+   "all": "125/-12500"
+  },
+  "driver_cash": {
+   "boxes": "1/31000"
+  },
+  "driver_cash_by_kind": {
+   "order_collection": "1/31000"
+  }
+ },
+ "_captured_at_utc": "20260929T082618Z",
+ "_target": "staging"
+}
