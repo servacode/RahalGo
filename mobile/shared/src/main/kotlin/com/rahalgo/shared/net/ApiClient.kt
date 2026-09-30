@@ -91,7 +91,44 @@ class ApiClient(
         // صار `Platform.logo`.**
     }
 
-    @PublishedApi internal val http = HttpClient {
+    // ══════════════════════════════════════════════════════════════════
+    // **واتّصالٌ ميّتٌ لا يُعاد إليه** — `NET-STUCK`، ٢٠٢٦-٠٩-٣٠
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **رُئي على جهاز المالك**: انقطعت الشبكةُ عن التطبيق صامتةً ثمّ عادت،
+    // **فبقي كلُّ نداءٍ يسقط بمهلة ٢٠ ثانية** — `me/summary` · `my/wallet` ·
+    // `rep/merchants` — **حتّى أُغلق التطبيقُ وفُتح.** والمحرّكُ الافتراضيُّ
+    // يُبقي اتّصالَه (`HTTP/2` واحدٌ تتقاسمه النداءاتُ كلُّها) **ولا يعلم أنّه
+    // مات.** **والشبكةُ الجوّالةُ تفعل هذا كلَّ يوم** — تسقط وتعود بلا إعلان.
+    //
+    // **فشيئان**: نبضٌ على الاتّصال (`pingInterval`) يكشف موتَه بنفسه، **وكلُّ
+    // مهلةٍ أو عطبِ شبكةٍ يطرح الاتّصالاتِ القائمة** — فالنداءُ التالي يفتح
+    // جديداً بدل أن ينتظر على الميّت.
+    @PublishedApi internal val okhttp: okhttp3.OkHttpClient = okhttp3.OkHttpClient.Builder()
+        .pingInterval(15, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
+
+    /** **يطرح الاتّصالاتِ القائمة** — بعد مهلةٍ أو عطبِ شبكة. */
+    @PublishedApi internal fun dropDeadConnections() {
+        runCatching { okhttp.connectionPool.evictAll() }
+        runCatching { onReach?.invoke(false) }
+    }
+
+    /**
+     * **أيصل الخادمُ؟** — يُبلَّغ بعد كلّ نداء: ردٌّ (أيّاً كان رمزُه) ⇒ نعم،
+     * ومهلةٌ أو عطبُ شبكة ⇒ لا. (`NET-STUCK`، الخطوة ١٥.)
+     *
+     * **ومراقبُ الجهاز لا يكفي**: شبكةٌ جوّالةٌ ضعيفةٌ تبقى «متّصلة» عند
+     * النظام والخادمُ لا يُجيب — **فتُعرض أرقامٌ قديمةٌ كأنّها الآن.**
+     */
+    var onReach: ((Boolean) -> Unit)? = null
+
+    @PublishedApi internal fun reached() {
+        runCatching { onReach?.invoke(true) }
+    }
+
+    @PublishedApi internal val http = HttpClient(io.ktor.client.engine.okhttp.OkHttp) {
+        engine { preconfigured = okhttp }
         install(ContentNegotiation) { json(json) }
         // ══════════════════════════════════════════════════════════════
         // **مهلٌ من قياسٍ لا من ذكرى خادمٍ مضى** (`B9`، ٢٠٢٦-٠٩-١٦)
@@ -224,19 +261,28 @@ class ApiClient(
         idempotencyKey: String? = null,
         token: String = "",
     ): T {
-        val res: HttpResponse = http.request(baseUrl + path) {
-            this.method = method
-            header(CLIENT_HEADER, client)
-            if (version > 0) header(VERSION_HEADER, version.toString())
-            if (token.isNotEmpty()) header("Authorization", "Bearer $token")
-            // **ومفتاح منع التكرار حيث يُطلب** — النقاط التي تكتب مالا
-            // (انظر `server/idempotency.go` و`api/contract.json`).
-            if (idempotencyKey != null) header("Idempotency-Key", idempotencyKey)
-            if (body != null) {
-                contentType(ContentType.Application.Json)
-                setBody(body)
+        val res: HttpResponse = try {
+            http.request(baseUrl + path) {
+                this.method = method
+                header(CLIENT_HEADER, client)
+                if (version > 0) header(VERSION_HEADER, version.toString())
+                if (token.isNotEmpty()) header("Authorization", "Bearer $token")
+                // **ومفتاح منع التكرار حيث يُطلب** — النقاط التي تكتب مالا
+                // (انظر `server/idempotency.go` و`api/contract.json`).
+                if (idempotencyKey != null) header("Idempotency-Key", idempotencyKey)
+                if (body != null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(body)
+                }
             }
+        } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+            dropDeadConnections()
+            throw e
+        } catch (e: java.io.IOException) {
+            dropDeadConnections()
+            throw e
         }
+        reached()
         // **وبوّابةُ التحديث تُقرأ قبل أيّ شيء** — انظر `outdated`.
         if (res.status.value == 426) {
             // **ويُنادى مرّةً واحدةً** — عند أوّل ٤٢٦ لا في كلّ نداءٍ بعده.

@@ -49,7 +49,11 @@ class Core(
     val app: Context = context.applicationContext
 
     val session = AndroidSession(context)
-    val api = ApiClient(baseUrl, client, session, version)
+    val api = ApiClient(baseUrl, client, session, version).also {
+        // **وصولُ الخادم يُقرأ من النداءات نفسِها** (`NET-STUCK`) — فشريطُ
+        // الانقطاع يظهر حين يصمت الخادمُ والجهازُ يقول «متّصل».
+        it.onReach = { ok -> Net.reportReach(ok) }
+    }
     val auth = AuthApi(api)
     val me = MeApi(api)
 
@@ -171,6 +175,18 @@ object AppCore {
                 wired = it
                 this.afterSignIn = afterSignIn
                 this.afterLogout = afterLogout
+                // ══════════════════════════════════════════════════════════
+                // **ومخزنُ مفاتيح المحاولة يُركَّب مع النواة** — `DUP-LEAD`
+                // ══════════════════════════════════════════════════════════
+                //
+                // **كان يُركَّب في تطبيق الزبون وحدَه** (`MainActivity`)، **وبلا
+                // مخزنٍ يُولِّد `Attempt.key` مفتاحاً جديداً في كلّ نداء** —
+                // فالمحاولةُ الثانيةُ غريبةٌ عن الأولى عند الخادم.
+                //
+                // **رُئي على جهاز المالك ٢٠٢٦-٠٩-٣٠**: عميلٌ أُرسل وانقطعت
+                // الشبكةُ قبل الردّ، **ثمّ أُعيد فسُجِّل مرّتين.** والحراسةُ
+                // في الخادم سليمة (`WithIdempotentTx`) — **والمفتاحُ لم يثبت.**
+                Attempt.install(context)
             }
         }
 

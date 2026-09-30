@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -442,6 +443,34 @@ type MenuItemInput struct {
 }
 
 func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in MenuItemInput, ip string) (string, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	id, err := s.CreateItemIn(ctx, tx, merchantID, in)
+	if err != nil {
+		return "", err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", err
+	}
+	s.audit(ctx, actorID, "menu.item_create", "menu_item", id, ip)
+	return id, nil
+}
+
+// AuditItemCreate **يُقيَّد الإنشاءُ بعد التثبيت** — لمن أدرج بـ`CreateItemIn`
+// في معاملته هو.
+func (s *Service) AuditItemCreate(ctx context.Context, actorID, id, ip string) {
+	s.audit(ctx, actorID, "menu.item_create", "menu_item", id, ip)
+}
+
+// CreateItemIn **يُدرج الصنفَ في معاملة من يناديه** — `DUP-LEAD`، ٢٠٢٦-٠٩-٣٠.
+//
+// **لتُثبَّت مع علامة منع التكرار في معاملةٍ واحدة** (`WithIdempotentTx`):
+// صنفٌ أُدرج وانقطعت الشبكةُ قبل الردّ، **فأُعيد فأُدرج ثانيةً** — وإضافةُ
+// الصنف لم يكن لها حارسٌ في الخادم أصلاً.
+func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID string, in MenuItemInput) (string, error) {
 	// **وقسمُ السوق شرطٌ لا اختيار.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «كلُّ الأصناف ستذهب إلى السوق بلوحة الأدمن
@@ -455,11 +484,6 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 	if in.PlatformSectionID == nil || *in.PlatformSectionID == "" {
 		return "", ErrSectionRequired
 	}
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
 
 	// **وقسمُ السوق يُكتب هنا كما يُكتب في التعديل.**
 	//
@@ -475,7 +499,7 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 	// **أي أنّ صاحبَ متجرٍ لا يستطيع أن يدسّ صنفاً في قسمِ متجرٍ آخر**،
 	// وهذا يبقى محروساً بـ`merchant_id` في الصفّ نفسِه.
 	var id string
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		INSERT INTO menu_items (merchant_id, name, description,
 		                        merchant_price, price, image_media_id, sort_order,
 		                        platform_section_id)
@@ -498,10 +522,6 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 			return "", err
 		}
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return "", err
-	}
-	s.audit(ctx, actorID, "menu.item_create", "menu_item", id, ip)
 	return id, nil
 }
 
@@ -622,7 +642,7 @@ func (s *Service) DeleteItem(ctx context.Context, actorID, itemID, ip string) er
 	return nil
 }
 
-func insertModifiers(ctx context.Context, tx pgx.Tx, itemID string, groups []ModifierGroupInput) error {
+func insertModifiers(ctx context.Context, tx dbtx.Querier, itemID string, groups []ModifierGroupInput) error {
 	for gi, g := range groups {
 		if g.Name == "" {
 			return ErrNameRequired

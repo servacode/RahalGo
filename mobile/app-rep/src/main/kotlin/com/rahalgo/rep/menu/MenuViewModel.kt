@@ -193,6 +193,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **صنفٌ جديد** — وقسمُ السوق يُختار في النموذج. */
     fun newItem(platformSectionId: String = "") {
+        // **صنفٌ جديدٌ محاولةٌ جديدة** — فلا يحمل مفتاحَ صنفٍ سابقٍ مجهولِ
+        // المصير فيُعادَ ردُّه بدل إدراجه.
+        com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.REP_ITEM)
         editing = ItemDraft(platformSectionId = platformSectionId)
     }
 
@@ -352,8 +355,21 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 .map { g -> g.copy(options = g.options.filter { it.name.isNotBlank() }) }
                 .filter { it.name.isNotBlank() && it.options.isNotEmpty() },
         )
-        write {
-            if (d.isNew) api.createItem(merchantID, input) else api.updateItem(d.itemId, input)
+        // **ومفتاحُ المحاولة للإنشاء وحدَه** (`DUP-LEAD`) — يثبت حتّى ينجح
+        // أو يحسمه الخادم، **فإعادةٌ بعد انقطاعٍ لا تُدرج صنفاً ثانياً.**
+        // والتعديلُ يُعاد بلا ضرر: يكتب القيمَ نفسَها.
+        write(onFail = { e ->
+            if (d.isNew && com.rahalgo.ui.isDecided(e)) {
+                com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.REP_ITEM)
+            }
+        }) {
+            if (d.isNew) {
+                val key = com.rahalgo.ui.Attempt.key(com.rahalgo.ui.Attempt.REP_ITEM)
+                api.createItem(merchantID, input, idempotencyKey = key)
+                com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.REP_ITEM)
+            } else {
+                api.updateItem(d.itemId, input)
+            }
             editing = null
             Flash.ok(getApplication<Application>().getString(com.rahalgo.rep.R.string.mn_saved))
         }
@@ -374,7 +390,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      * تحسبها المنصّة، **ونسخةٌ تُصلَح بيد الجهاز تفترق عمّا في القاعدة
      * فيقرأ المندوبُ رقماً لا وجودَ له.**
      */
-    private fun write(block: suspend () -> Unit) {
+    private fun write(onFail: (Exception) -> Unit = {}, block: suspend () -> Unit) {
         busy = true
         viewModelScope.launch {
             try {
@@ -383,6 +399,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 sections = api.menu(merchantID)
                 regroup()
             } catch (e: Exception) {
+                onFail(e)
                 Flash.fail(apiError(getApplication(), e))
             }
             busy = false

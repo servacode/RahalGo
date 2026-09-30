@@ -54,6 +54,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
@@ -111,17 +112,26 @@ func (s *Server) handleRepCreateItem(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	id, err := s.catalog.CreateItem(r.Context(), userIDFrom(r), merchantID, *req, clientIP(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
+	// **والإدراجُ وعلامةُ منع التكرار في معاملةٍ واحدة** (`DUP-LEAD`) —
+	// صنفٌ أُدرج وضاع ردُّه فأُعيد **لا يُدرج ثانيةً**: يُعاد ردُّ الأوّل.
 	pending := s.menuNeedsApproval(r)
-	if pending {
-		s.holdForReview(r, id)
-	}
-	s.notifyMerchantOfRepEdit(r, merchantID, notifRepItemAdded)
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id, "pending_review": pending})
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		id, err := s.catalog.CreateItemIn(ctx, q, merchantID, *req)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusCreated,
+			Payload: map[string]any{"id": id, "pending_review": pending},
+			AfterCommit: func() {
+				s.catalog.AuditItemCreate(r.Context(), userIDFrom(r), id, clientIP(r))
+				if pending {
+					s.holdForReview(r, id)
+				}
+				s.notifyMerchantOfRepEdit(r, merchantID, notifRepItemAdded)
+			},
+		}, nil
+	})
 }
 
 // handleRepUpdateItem **تعديلُ صنفٍ في قائمة عميله.**

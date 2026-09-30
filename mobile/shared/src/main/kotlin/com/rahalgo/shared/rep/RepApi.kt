@@ -103,8 +103,8 @@ class RepApi(private val api: ApiClient) {
     suspend fun platformSections(): List<PlatformSection> =
         api.call<PlatformSections>("/api/v1/rep/platform-sections").sections
 
-    suspend fun createItem(merchantID: String, input: ItemInput): CreatedID =
-        api.call("/api/v1/rep/stores/$merchantID/menu/items", HttpMethod.Post, input)
+    suspend fun createItem(merchantID: String, input: ItemInput, idempotencyKey: String? = null): CreatedID =
+        api.call("/api/v1/rep/stores/$merchantID/menu/items", HttpMethod.Post, input, idempotencyKey = idempotencyKey)
 
     suspend fun updateItem(itemId: String, input: ItemInput) {
         api.call<Map<String, Boolean>>(

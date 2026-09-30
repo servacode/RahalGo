@@ -785,7 +785,7 @@ func (s *Server) Router() http.Handler {
 				r.Get("/stores/{id}/offers", s.handleRepOffers)
 				r.Post("/stores/{id}/offers", s.handleRepCreateOffer)
 				r.Post("/stores/{id}/offers/{offerID}/stop", s.handleRepStopOffer)
-				r.Post("/stores/{id}/menu/items", s.handleRepCreateItem)
+				r.Post("/stores/{id}/menu/items", s.idempotent(s.handleRepCreateItem))
 				r.Patch("/menu/items/{itemID}", s.handleRepUpdateItem)
 				r.Delete("/menu/items/{itemID}", s.handleRepDeleteItem)
 			})

@@ -6814,19 +6814,7 @@
       "roles": [
         "sales"
       ],
-      "response": [
-        {
-          "name": "id",
-          "type": "unknown"
-        },
-        {
-          "name": "pending_review",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
-      ]
+      "idempotent": true
     },
     {
       "method": "GET",

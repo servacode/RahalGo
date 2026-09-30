@@ -94,6 +94,7 @@
     <string name="of_s3">اختر الصنف</string>
     <string name="of_s5">حدد مدة العرض</string>
     <string name="of_no_clients">لا عملاء لك بعد — سجل عميلا ثم ارجع لتضع له عرضا</string>
+    <string name="of_loading">جاري تحميل أقسام المتجر…</string>
     <string name="of_no_sections">لا أقسام في قائمة هذا المتجر بعد</string>
     <string name="of_no_items">لا أصناف في هذا القسم — أضف صنفا أولا</string>
     <string name="of_change_store">تبديل المتجر</string>
@@ -185,7 +186,6 @@
     <string name="ac_district_after_gov">اختر المحافظة أولا لتظهر مناطقها</string>
 
     <!-- **لوحتي** — والشهريُّ يسبق التراكميّ. -->
-    <string name="bd_target_done">تحقق الهدف — أحسنت</string>
     <!-- **والوحدةُ «عميل»** — الهدفُ يعدّ ما فتح من متاجرَ هذا الشهر
          (`incentives/target.go`).
          **وكانت «طلبا» يوماً واحداً** (٢٠٢٦-٠٨-٣٠): رأيتُ الشيفرةَ
@@ -194,7 +194,10 @@
          «الهدفُ الشهريُّ هو عددُ العملاء المسجَّلين».)
          **ومندوبٌ فتح عشرةَ متاجرَ في أسبوعٍ كان عدّادُه صفراً** حتّى
          يشتري الناسُ منها — **وذلك يقيس السوقَ لا المندوب.** -->
-    <string name="bd_target_left">بقي من الهدف: %1$s</string>
+    <string name="bd_target_left">باقي %1$s</string>
+    <string name="bd_level">المرحلة %1$s · %2$s عملاء</string>
+    <string name="bd_level_done">✓ تحققت</string>
+    <string name="bd_level_done_reward">✓ تحققت · +%1$s ل.س</string>
     <string name="bd_this_month">هذا الشهر</string>
     <!-- **وأخفُّ** — (طلبُ المالك ٢٠٢٦-٠٨-٣١). **والقسمُ فوقها يقول
          «هذا الشهر»، والآخرُ «منذ بدأت»** — فيكفي «عملاؤك» فيهما. -->

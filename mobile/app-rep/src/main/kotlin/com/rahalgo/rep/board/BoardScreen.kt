@@ -2,11 +2,13 @@ package com.rahalgo.rep.board
 
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -104,9 +106,22 @@ fun BoardScreen(vm: BoardViewModel) {
         //
         // **وأنا من وضع الخطأ** (٢٠٢٦-٠٨-٣٠): رأيتُ الشيفرةَ تعدّ طلبات
         // **فجعلتُ الشاشةَ تتبعها**، والصوابُ أن تتبع الشيفرةُ القصد.
-        val target = maxOf(1, me.monthlyTarget)
+        // ══════════════════════════════════════════════════════════════
+        // **وهدفُ الشهر خطٌّ طويلٌ بمراحله الثلاث** — طلبُ المالك ٢٠٢٦-٠٩-٣٠
+        // ══════════════════════════════════════════════════════════════
+        //
+        // «لازم يطول خط الهدف بحيث يعرف أنّه حقّق أوّل هدف، وشو باقي لثاني
+        // هدف وثالث هدف». **وكانت البطاقةُ تعرف المرحلةَ الأولى وحدَها**
+        // (`monthly_target`) — فمن بلغ خمسةً رأى «تمّ» ولم يعرف أنّ أمامه ١٥.
+        //
+        // **والعدّادُ شهريّ** — يبدأ من صفرٍ كلَّ شهرٍ بتوقيت دمشق
+        // (`incentives.doneThisMonthOn`)، والمراحلُ تُدفع مرّةً في الشهر.
         val done = me.monthMerchants
-        val reached = done >= target
+        val steps = vm.levels.ifEmpty {
+            listOf(com.rahalgo.shared.model.TargetLevel(n = 1, target = maxOf(1, me.monthlyTarget).toLong()))
+        }
+        val top = steps.last().target
+        val allDone = done >= top
         Spacer(Modifier.height(12.dp))
         Card {
             Row(
@@ -120,27 +135,61 @@ fun BoardScreen(vm: BoardViewModel) {
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "$done / $target",
-                    color = if (reached) Rahal.colors.success else Rahal.colors.brand,
+                    text = "$done / $top",
+                    color = if (allDone) Rahal.colors.success else Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            Bar(
-                ratio = done.toFloat() / target.toFloat(),
-                color = if (reached) Rahal.colors.success else Rahal.colors.brand,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (reached) {
-                    stringResource(R.string.bd_target_done)
-                } else {
-                    stringResource(R.string.bd_target_left, (target - done).toString())
-                },
-                color = if (reached) Rahal.colors.success else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Spacer(Modifier.height(10.dp))
+            // **خطٌّ واحدٌ بقطعٍ على قدر المراحل** — قطعةُ كلِّ مرحلةٍ بطولِ
+            // ما بينها وبين سابقتها، **فيُرى أين هو من الثلاث معاً.**
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                var from = 0L
+                steps.forEach { l ->
+                    val span = (l.target - from).coerceAtLeast(1)
+                    val filled = ((done - from).toFloat() / span).coerceIn(0f, 1f)
+                    Box(Modifier.weight(span.toFloat())) {
+                        Bar(
+                            ratio = filled,
+                            color = if (done >= l.target) Rahal.colors.success else Rahal.colors.brand,
+                        )
+                    }
+                    from = l.target
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            steps.forEach { l ->
+                val reachedL = done >= l.target
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.bd_level, l.n.toString(), l.target.toString()),
+                        color = if (reachedL) Rahal.colors.success else Rahal.colors.ink,
+                        fontWeight = if (reachedL) FontWeight.Bold else FontWeight.Normal,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        if (reachedL) {
+                            if (l.reward > 0) {
+                                stringResource(R.string.bd_level_done_reward, l.reward.toString())
+                            } else {
+                                stringResource(R.string.bd_level_done)
+                            }
+                        } else {
+                            stringResource(R.string.bd_target_left, (l.target - done).toString())
+                        },
+                        color = if (reachedL) Rahal.colors.success else Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -267,6 +316,10 @@ class BoardViewModel(app: Application) : AndroidViewModel(app) {
     var me by mutableStateOf<RepMe?>(null)
         private set
 
+    /** **مراحلُ هدف الشهر الثلاث** — عددُ كلٍّ ومكافأتُها (`/rep/incentives`). */
+    var levels by mutableStateOf<List<com.rahalgo.shared.model.TargetLevel>>(emptyList())
+        private set
+
     var busy by mutableStateOf(false)
         private set
 
@@ -285,6 +338,11 @@ class BoardViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 me = api.me()
+                // **والمراحلُ أفضلُ جهد** — بلاها تبقى البطاقةُ على هدفٍ واحد.
+                levels = runCatching { api.incentives().levels }
+                    .getOrDefault(levels)
+                    .filter { it.target > 0 }
+                    .sortedBy { it.target }
                 error = ""
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)

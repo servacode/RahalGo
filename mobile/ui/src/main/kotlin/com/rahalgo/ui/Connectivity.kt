@@ -65,6 +65,19 @@ object Net {
     var online by mutableStateOf(true)
         private set
 
+    /**
+     * **أيُجيب الخادم؟** — من نداءات التطبيق نفسِها (`ApiClient.onReach`).
+     *
+     * **والجهازُ قد يقول «متّصل» والخادمُ صامت** — شبكةٌ جوّالةٌ ضعيفة.
+     * (`NET-STUCK`، رُئي على جهاز المالك: أرقامٌ قديمةٌ بلا أيّ علامة.)
+     */
+    var reachable by mutableStateOf(true)
+        private set
+
+    fun reportReach(ok: Boolean) {
+        if (reachable != ok) reachable = ok
+    }
+
     @Volatile private var wired = false
 
     /**
@@ -162,7 +175,7 @@ object Net {
 @Composable
 fun NetBanner(modifier: Modifier = Modifier) {
     AnimatedVisibility(
-        visible = !Net.online,
+        visible = !Net.online || !Net.reachable,
         enter = slideInVertically { -it },
         exit = slideOutVertically { -it },
         modifier = modifier,
@@ -183,7 +196,9 @@ fun NetBanner(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.size(8.dp))
             Text(
-                text = stringResource(R.string.net_offline_banner),
+                text = stringResource(
+                    if (!Net.online) R.string.net_offline_banner else R.string.net_unreachable_banner,
+                ),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelLarge,

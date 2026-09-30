@@ -156,15 +156,21 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
             item {
                 // **وردُّ الخادم يُقال بلفظه** — **ومنعُ التخويل يُقرأ
                 // «هذا المتجر ليس من عملائك» لا «حدث خطأ».**
-                Text(
-                    vm.error,
-                    color = Rahal.colors.danger,
-                    modifier = Modifier
+                Column(
+                    Modifier
                         .fillMaxWidth()
                         .clip(Rahal.shape.md)
                         .background(Rahal.colors.warnTint)
                         .padding(12.dp),
-                )
+                ) {
+                    Text(vm.error, color = Rahal.colors.danger)
+                    // **ومن فشل تحميلُه يُعيده بضغطة** — لا يرجع ويدخل من جديد.
+                    if (vm.merchantID.isNotEmpty() && vm.sections.isEmpty()) {
+                        RahalTextButton(onClick = { vm.load() }, enabled = !vm.busy) {
+                            Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+                        }
+                    }
+                }
             }
         }
 
@@ -190,8 +196,13 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         if (step == 2) {
             item {
                 StepCard(stringResource(R.string.of_s2)) {
-                    if (vm.sections.isEmpty() && !vm.busy) {
-                        Hint(stringResource(R.string.of_no_sections))
+                    // **والتحميلُ يُقال، والفشلُ لا يُقرأ «لا أقسام»** (الخطوة ١٥):
+                    // رُئي بلا نت — عشرون ثانيةً فارغة، **ثمّ «لا أقسام في
+                    // قائمة هذا المتجر» والأقسامُ موجودةٌ لم تُحمَّل.**
+                    when {
+                        vm.busy -> Hint(stringResource(R.string.of_loading))
+                        vm.sections.isEmpty() && vm.error.isEmpty() ->
+                            Hint(stringResource(R.string.of_no_sections))
                     }
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
