@@ -6251,29 +6251,6 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/public/invite",
-      "handler": "handlePublicInvite",
-      "auth": false,
-      "response": [
-        {
-          "name": "by",
-          "type": "string"
-        },
-        {
-          "name": "code",
-          "type": "unknown"
-        },
-        {
-          "name": "rep_name",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
       "path": "/api/v1/public/items/{id}",
       "handler": "handlePublicItem",
       "auth": false,
@@ -6289,63 +6266,6 @@
       ],
       "statuses": [
         "StatusOK"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/public/join",
-      "handler": "handlePublicJoin",
-      "auth": false,
-      "request": [
-        {
-          "name": "ref",
-          "type": "string"
-        },
-        {
-          "name": "store_name",
-          "type": "string"
-        },
-        {
-          "name": "owner_name",
-          "type": "string"
-        },
-        {
-          "name": "phone",
-          "type": "string"
-        },
-        {
-          "name": "area",
-          "type": "string"
-        },
-        {
-          "name": "district_id",
-          "type": "string"
-        },
-        {
-          "name": "category_id",
-          "type": "string"
-        },
-        {
-          "name": "password",
-          "type": "string"
-        },
-        {
-          "name": "lat",
-          "type": "?float64"
-        },
-        {
-          "name": "lng",
-          "type": "?float64"
-        }
-      ],
-      "response": [
-        {
-          "name": "received",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
       ]
     },
     {

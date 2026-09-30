@@ -46,7 +46,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.Rahal
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
-import com.rahalgo.rep.link.LinkScreen
 import com.rahalgo.rep.board.BoardScreen
 import com.rahalgo.rep.board.BoardViewModel
 import com.rahalgo.rep.add.AddClientScreen
@@ -426,8 +425,6 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Rep)
 
-                    over is Overlay.Menu && over.key == RepItems.LINK -> LinkScreen(boardVm)
-
                     over is Overlay.Menu && over.key == RepItems.REWARDS -> {
                         LaunchedEffect(Unit) { goalsVm.load() }
                         IncentivesScreen(goalsVm)
@@ -602,10 +599,6 @@ private fun Soon(key: String) {
     val title: Int
     val hint: Int
     when (key) {
-        RepItems.LINK -> {
-            title = R.string.menu_link
-            hint = R.string.soon_link
-        }
         RepItems.REWARDS -> {
             title = com.rahalgo.ui.R.string.menu_rewards
             hint = R.string.soon_rewards

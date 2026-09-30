@@ -10,8 +10,8 @@ import com.rahalgo.ui.DrawerItem
  * **وما ليس فيها عمدا**: لوحتُه وعملاؤه وحسابُه **تبويباتٌ في الأسفل**
  * — **وفعلٌ في موضعين يُنسى أحدُهما فيبقى قديماً حين يتبدّل.**
  *
- * **والترتيبُ بحسب ما يُفتح**: رابطُ الدعوة كلَّما لقي صاحبَ متجر،
- * **والأهدافُ آخرَ الشهر.**
+ * **ولا رابطَ دعوةٍ فيها** (`JOIN-0`، ٢٠٢٦-٠٩-٣٠): المندوبُ يسجّل المتجرَ
+ * بنفسه من «إضافة عميل» — **ولا يبعث رابطاً يملؤه صاحبُ المتجر.**
  *
  * # ولا دردشاتِ له
  *
@@ -22,17 +22,10 @@ import com.rahalgo.ui.DrawerItem
  * القائمة يشغل موضعاً ويُقرأ عطبا.
  */
 object RepItems {
-    const val LINK = "Link"
     const val REWARDS = "Rewards"
 }
 
 val REP_ITEMS: List<DrawerItem> = listOf(
-    DrawerItem(
-        RepItems.LINK,
-        com.rahalgo.ui.R.string.menu_mine,
-        R.string.menu_link,
-        com.rahalgo.ui.R.drawable.ic_invite,
-    ),
     DrawerItem(
         RepItems.REWARDS,
         com.rahalgo.ui.R.string.menu_mine,

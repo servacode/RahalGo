@@ -54,7 +54,6 @@ const PAGES = [
   "/contact",
   "/terms",
   "/privacy",
-  "/join",
   "/invite",
   "/custom",
   "/dashboard",

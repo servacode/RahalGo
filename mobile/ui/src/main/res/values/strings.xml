@@ -40,7 +40,8 @@
     <string name="err_cash_limit">النقد الذي بذمتك بلغ السقف — سلم للمكتب</string>
     <string name="err_complaint_window">مضت مهلة البلاغ على هذا الطلب</string>
     <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تسلم</string>
-    <string name="err_internal">تعذر الاتصال — حاول بعد قليل</string>
+    <string name="err_internal">تعذر إتمام العملية — حاول بعد قليل</string>
+    <string name="err_server">حدث خطأ في المنصة وليس في اتصالك — حاول بعد قليل، وإن تكرر فأبلغ الإدارة</string>
     <string name="err_invalid_phone">رقم الهاتف غير صحيح</string>
     <string name="err_invalid_refresh">انتهت جلستك — ادخل من جديد</string>
     <string name="err_session_superseded">تم تسجيل خروجك لأن حسابك تم تسجيل الدخول إليه من جهاز آخر</string>
@@ -65,6 +66,11 @@
     <string name="err_user_blocked">هذا الحساب محظور</string>
     <string name="err_user_suspended">هذا الحساب موقوف</string>
     <string name="err_validation">تحقق من البيانات المدخلة</string>
+    <string name="err_item_already_discounted">هذا الصنف عليه عرض قائم — أوقفه أولاً أو اختر صنفاً آخر</string>
+    <string name="err_bad_offer_discount">قيمة الخصم غير صحيحة — النسبة من ١ إلى ٩٠، والمبلغ أكبر من صفر</string>
+    <string name="err_bad_offer_window">مدة العرض غير صحيحة — اختر مدة تنتهي بعد الآن</string>
+    <string name="err_offer_needs_title">العرض يحتاج عنواناً</string>
+    <string name="err_bad_offer_kind">نوع العرض غير معروف</string>
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
     <string name="update_title">يوجد إصدار جديد</string>
     <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>

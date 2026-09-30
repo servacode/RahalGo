@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,15 +19,14 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
-// طلبات انضمام المتاجر عبر رابط المندوب.
+// طلبات انضمام المتاجر — يسجّلها المندوب من تطبيقه (`POST /rep/leads`).
 
 // **وما حُوِّل لا يُردّ** — والرسالةُ تقول السبب لا «غير موجود».
 var errLeadConverted = httpx.NewError(http.StatusConflict,
 	"lead_already_converted", "errors.lead_already_converted")
 
 // نصوص إشعارات هذا القسم — مجمّعة كي لا تتناثر في الكود.
-var m = struct{ leadNew, leadNewOps, leadApproved string }{
-	leadNew:      "طلب انضمام جديد عبر رابطك",
+var m = struct{ leadNewOps, leadApproved string }{
 	leadNewOps:   "طلب انضمام متجر جديد",
 	leadApproved: "تمت الموافقة على عميلك",
 }
@@ -37,7 +35,6 @@ var m = struct{ leadNew, leadNewOps, leadApproved string }{
 const (
 	leadMaxShort = 120  // اسم المتجر/المالك/المنطقة/الهاتف
 	leadMaxNote  = 1000 // الملاحظات
-	joinMaxPerIP = 10   // طلبات لكل عنوان خلال النافذة
 )
 
 // clip يقصّ ويهذّب نصاً إلى حدٍّ أقصى.
@@ -56,246 +53,6 @@ func (s *Server) incr(ctx context.Context, key string) (int64, error) {
 		return 0, nil
 	}
 	return s.rdb.Incr(ctx, key).Result()
-}
-
-// handlePublicJoin التقاط طلب انضمام متجر عبر رابط/باركود مندوب (عام، بلا حساب).
-func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
-	// تحديد المعدل حسب العنوان — نقطة عامة قابلة للإغراق (نفس نمط طلب الرمز).
-	// نعزل المضيف عن المنفذ العابر كي يكون المفتاح لكل عنوان لا لكل اتصال.
-	ip := clientIP(r)
-	if host, _, err := net.SplitHostPort(ip); err == nil {
-		ip = host
-	}
-	key := "join:req:" + ip
-	// **وحدُّ المعدّل يحتاج ريدس** — **وفحصٌ بلا ريدس كان يسقط بمؤشّرٍ
-	// فارغ**، والحدُّ أصلاً أفضليّةٌ لا شرط: أخطاؤه مُبتلَعةٌ أدناه.
-	// (وهو الحارسُ نفسُه في `driver_route.go`.)
-	if n, err := s.incr(r.Context(), key); err == nil {
-		if n == 1 && s.rdb != nil {
-			s.rdb.Expire(r.Context(), key, time.Hour)
-		}
-		if n > joinMaxPerIP {
-			s.respondErr(w, httpx.NewError(http.StatusTooManyRequests, "rate_limited", "errors.rate_limited"))
-			return
-		}
-	}
-
-	req, err := decode[struct {
-		Ref       string `json:"ref"` // كود دعوة المندوب
-		StoreName string `json:"store_name"`
-		OwnerName string `json:"owner_name"`
-		Phone     string `json:"phone"`
-		// Area **عنوانٌ تفصيليٌّ اختياريّ** — «مقابل الجامع».
-		Area string `json:"area"`
-		// DistrictID **المنطقةُ الإداريّة** — تُختار من قائمةٍ متدرّجة.
-		DistrictID string   `json:"district_id"`
-		CategoryID string   `json:"category_id"` // تصنيف المتجر
-		Password   string   `json:"password"`    // كلمة مرور صاحب المتجر
-		Lat        *float64 `json:"lat"`         // موقع المتجر (اختياري)
-		Lng        *float64 `json:"lng"`
-	}](r)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	req.StoreName = clip(req.StoreName, leadMaxShort)
-	req.OwnerName = clip(req.OwnerName, leadMaxShort)
-	req.Area = clip(req.Area, leadMaxShort)
-	if req.StoreName == "" {
-		s.respondErr(w, errValidation)
-		return
-	}
-	// الرقم يجب أن يكون رقم موبايل صالح (سيصله رمز الدخول والإشعارات عبر واتساب).
-	phone, ok := identity.NormalizePhone(req.Phone)
-	if !ok {
-		s.respondErr(w, identity.ErrInvalidPhone)
-		return
-	}
-	// كلمة المرور إلزامية — يدخل بها صاحب المتجر بعد الموافقة.
-	if len(req.Password) < s.minPasswordLen(r.Context()) {
-		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
-		return
-	}
-	pwHash, err := auth.HashPassword(req.Password)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// معرّف التصنيف — اختياري لكنه إن وُجد يجب أن يكون UUID صالحاً.
-	var categoryID *string
-	if req.CategoryID != "" {
-		if !isUUID(req.CategoryID) {
-			s.respondErr(w, errValidation)
-			return
-		}
-		categoryID = &req.CategoryID
-	}
-	// ══════════════════════════════════════════════════════════════════
-	// **ولا يُسجَّل متجرٌ بلا كودِ مندوبٍ فعّال**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// (سياسةُ المالك ٢٠٢٦-٠٨-١٧: «رابطُ المتجر وصاحب المتجر، فقط الإدارةُ
-	//  والمندوبُ يستطيع الوصولَ إليه. ما يصير شخصٌ يفتح الرابطَ بشكلٍ
-	//  خارجيّ — ربّما حدا استطاع الوصولَ إليه أو خمّن الرابطَ ويصير
-	//  يسجّل».)
-	//
-	// **وحجبُ الرابط في الشاشة ليس حجباً**: النقطةُ مفتوحةٌ لمن ناداها
-	// بأداةٍ سطريّة — **ومن عرف عنوانَها سجّل متجراً بلا أن يفتح صفحةً.**
-	// **والقفلُ في المحرّك أو لا قفل.**
-	//
-	// # وكودُ المندوب هو المفتاح
-	//
-	// **ولا يُخترع مفتاحٌ ثانٍ**: للمندوب كودٌ فريدٌ في `users` يُسجّل به
-	// متاجرَه أصلاً — **وهو الذي يفرّق من دُعي عمّن خمّن.**
-	//
-	// **والإدارةُ لا تحتاجه**: تُنشئ المتاجرَ من لوحتها بمسارٍ آخرَ
-	// موثَّق.
-	//
-	// **ورسالةٌ تقول «بدعوةٍ فقط» لا «خطأٌ في الطلب»** — **ومن جاء بكودٍ
-	// انتهت صلاحيّتُه يستحقّ أن يعرف السبب.**
-	repCheck, repErr := s.identity.SalesRepByInviteCode(r.Context(), strings.TrimSpace(req.Ref))
-	if repErr != nil || repCheck.Status != "active" {
-		s.respondErr(w, httpx.NewError(http.StatusForbidden,
-			"invite_required", "errors.invite_required"))
-		return
-	}
-
-	// الإسناد: كود مندوب صالح وفعّال → يُنسب له. غير ذلك (لا كود/كود المنصة/كود
-	// خاطئ) → تسجيل مباشر منسوب للمنصة (لا رفض) — الإنشاء الفعلي عند موافقة الإدارة.
-	var repID *string
-	if rep, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref); err == nil && rep.Status == "active" {
-		repID = &rep.ID
-	}
-	// ══════════════════════════════════════════════════════════════════
-	// **وكودٌ قُدّم ولم يُعرَف يُكتب — لا يُبتلع**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// **الطلبُ يمضي بلا نسبةٍ ولا يُرفض** — وهو القرارُ الصحيحُ أعلاه:
-	// **حرمانُ المتجر من التسجيل عقوبةٌ على المندوب لا عليه.**
-	//
-	// **لكنّ الصمتَ يُضيع الحقّ**: المندوبُ التقى صاحبَ المتجر في السوق
-	// وأرسل رابطَه، **والحرفُ الناقصُ في الكود يجعل الفرصةَ للمنصّة** —
-	// فلا هو يعلم ولا الإدارةُ تعلم، **ويقرأ في لوحته «صفرُ فرص» فيظنّ
-	// أنّ الرجل لم يسجّل.**
-	//
-	// **فيُقيَّد الكودُ كما كُتب** في ملاحظة الفرصة — **والإدارةُ تقرؤه
-	// فتعرف أنّ أحداً جلبه** وتنسبه بيدها. **وسطرٌ يُقرأ خيرٌ من حقٍّ
-	// يضيع بلا أثر.**
-	//
-	// **ولا يُكتب حين لا كودَ أصلاً** — من دخل من رابط المنصّة لم يُخطئ.
-	note := ""
-	if repID == nil && strings.TrimSpace(req.Ref) != "" {
-		note = "كودُ دعوةٍ لم يُعرَف: " + clip(strings.TrimSpace(req.Ref), 40)
-	}
-	// **لا نسبة لمتجرٍ على المنصة أصلاً**.
-	//
-	// المندوب يُكافأ على **جلب** متجر، ومتجرٌ يعمل عندنا لم يُجلَب. وبلا هذا
-	// الفحص يستطيع من يعرف متاجر المنصة أن يدعو متجراً قائماً برقمٍ آخر
-	// فيَنسبه لنفسه ويقبض عن مبيعاته. (وهو ما تمنعه DoorDash صراحةً في شروط
-	// إحالتها: لا مكافأة لمتجرٍ له حساب سابق.)
-	//
-	// والطلب لا يُرفض — يمضي بلا نسبة. فالمتجر قد يكون فرعاً جديداً بحقّ،
-	// وحرمانُه من التسجيل عقوبةٌ على المندوب لا عليه.
-	if repID != nil {
-		var exists bool
-		if err := s.pg.QueryRow(r.Context(), `
-			SELECT EXISTS(
-				SELECT 1 FROM merchants m
-				JOIN users u ON u.id = m.owner_user_id
-				WHERE u.phone = $1)`, phone).Scan(&exists); err == nil && exists {
-			repID = nil
-		}
-	}
-	// **والمنطقةُ تُفحص إن أُرسلت ولا تُلزَم هنا**
-	//
-	// **بخلاف بابِ المندوب**: هذا يملؤه صاحبُ المتجر بنفسه من هاتفه،
-	// **وحقلٌ إلزاميٌّ زائدٌ في نموذجٍ عامٍّ يُسقط من كان سيسجّل.**
-	// **والإدارةُ تراجع الطلبَ قبل أن يصير متجراً** فتُكملها إن نقصت.
-	district, err := s.validDistrict(r, req.DistrictID)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if _, err := s.pg.Exec(r.Context(), `
-		INSERT INTO merchant_leads
-			(store_name, owner_name, phone, area, district_id, category_id, lat, lng, owner_password_hash,
-			 sales_rep_user_id, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		req.StoreName, req.OwnerName, phone, req.Area, district,
-		categoryID, req.Lat, req.Lng, pwHash, repID, note); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// إشعار فوري: المندوب صاحب الكود والإدارة يعرفان بالطلب بلا تحديث صفحة.
-	if repID != nil {
-		s.notify.Notify(r.Context(), notifications.Input{
-			UserID: *repID, Kind: notifications.KindLead,
-			Title: m.leadNew, Body: req.StoreName,
-			// **والرابطُ إلى صفحةٍ قائمة.**
-			//
-			// كان يشير إلى `/portal/leads` **ولا وجودَ لها في لوحة المندوب** —
-			// فيُضغط الإشعارُ فيصل إلى لا شيء. **وإشعارٌ يفتح صفحةً غيرَ موجودة
-			// أسوأُ من إشعارٍ بلا رابط**: يُقرأ عطباً في المنصة.
-			//
-			// والفرصُ تُعرض في «متاجري» مع المتاجر — **رحلةُ المتجر واحدةٌ من
-			// فرصةٍ إلى متجرٍ يعمل**، وفصلُها بابين يجعل المندوبَ يتنقّل بينهما.
-			//
-			// وهي علّةُ `N-21` نفسُها في لوحةٍ أخرى.
-			Entity: "lead", Href: "/portal/merchants",
-			// **إلى تطبيق المندوب وحدَه** (OBS-R7): بلا هذا القيد يرنّ الإشعارُ
-			// على كلّ تطبيقات المستخدم — ومنها تطبيقُ الزبون على الجهاز نفسِه.
-			Apps: []string{notifications.AppRep},
-		})
-	}
-	s.notify.NotifyOps(r.Context(), notifications.Input{
-		Kind: notifications.KindLead, Title: m.leadNewOps,
-		Body: req.StoreName, Entity: "lead", Href: "/dashboard/leads",
-	})
-	httpx.JSON(w, http.StatusCreated, map[string]any{"received": true})
-}
-
-// handlePublicInvite يعيد كود الدعوة الذي يُعرض في نموذج التسجيل (للقراءة فقط):
-// كود المندوب إن كان صالحاً وفعّالاً، وإلا كود المنصة الافتراضي (تسجيل مباشر).
-func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
-	// تحديد معدل حسب العنوان — نقطة عامة قد تُستغل لتعداد أكواد المندوبين.
-	ip := clientIP(r)
-	if host, _, err := net.SplitHostPort(ip); err == nil {
-		ip = host
-	}
-	key := "invite:req:" + ip
-	if n, err := s.incr(r.Context(), key); err == nil {
-		if n == 1 && s.rdb != nil {
-			s.rdb.Expire(r.Context(), key, time.Hour)
-		}
-		if n > 60 {
-			s.respondErr(w, httpx.NewError(http.StatusTooManyRequests, "rate_limited", "errors.rate_limited"))
-			return
-		}
-	}
-
-	ref := r.URL.Query().Get("ref")
-	if ref != "" {
-		if rep, err := s.identity.SalesRepByInviteCode(r.Context(), ref); err == nil && rep.Status == "active" {
-			// **واسمُه معه.**
-			//
-			// كانت النقطة تعرف المندوب — تجلب صفَّه وتتحقق من نشاطه — ثم تردّ
-			// «by: rep» بلا اسم. فيصل صاحبُ المتجر إلى صفحة تسجيلٍ لا يعرف من
-			// دعاه إليها، ويُطلب منه أن يكتب اسمه وهاتفه وكلمة مروره لمجهول.
-			//
-			// **ورابطُ الإحالة كلُّه قائمٌ على أن يُعرف صاحبه**: المندوب يشاركه
-			// عبر واتساب بعد لقاءٍ في السوق، والصفحة التي لا تذكر اسمه تنقض
-			// ذلك اللقاء.
-			//
-			// والاسم ليس تسريباً: المندوب موظّفٌ يعمل علناً باسمه، ويقوله بفمه
-			// لكل متجرٍ يزوره. والتعداد محروسٌ بحدّ المعدّل أعلاه.
-			httpx.JSON(w, http.StatusOK, map[string]any{
-				"code": ref, "by": "rep", "rep_name": rep.FullName,
-			})
-			return
-		}
-	}
-	code := s.settings.GetString(r.Context(), "platform.invite_code")
-	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "by": "platform"})
 }
 
 type lead struct {

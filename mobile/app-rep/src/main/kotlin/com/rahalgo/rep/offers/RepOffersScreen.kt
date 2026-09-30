@@ -201,17 +201,31 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     //
                     // **فيُوسَم المحجوزُ ويُمنَع ضغطُه** — والسببُ مكتوبٌ
                     // بجانبه. **ومن رأى الجوابَ في أوّل الطريق لم يمشِه.**
+                    //
+                    // **ولا حجزَ بعد اليوم** (`OFFER-EXP`، قرارُ المالك
+                    // ٢٠٢٦-٠٩-٣٠: «لازم نقدر نعمل عرض إيمت ما بدنا»):
+                    // **الخادمُ يُنزل القائمَ ويُدرج الجديد.** فالصنفُ يبقى
+                    // قابلاً للاختيار، **ويُقال بجانبه إنّ الجديدَ يحلّ محلّ
+                    // عرضه** — فلا يُستبدَل خصمٌ سارٍ بلا علم.
                     val taken = vm.rows.orEmpty()
-                        .filter { com.rahalgo.ui.OfferStatus.discounting(it.status) }
-                        .mapNotNull { it.menuItemId }
-                        .toSet()
+                        .filter {
+                            it.status == com.rahalgo.ui.OfferStatus.ACTIVE ||
+                                it.status == com.rahalgo.ui.OfferStatus.SCHEDULED
+                        }
+                        .mapNotNull { o -> o.menuItemId?.let { it to o.status } }
+                        .toMap()
                     inSection.forEach { i ->
-                        val busyItem = i.id in taken
+                        val holder = taken[i.id]
                         PickRow(
                             text = i.name,
                             chosen = vm.pickedItem == i.id,
-                            enabled = !busyItem,
-                            note = if (busyItem) stringResource(R.string.of_item_taken) else null,
+                            enabled = true,
+                            note = when (holder) {
+                                null -> null
+                                com.rahalgo.ui.OfferStatus.SCHEDULED ->
+                                    stringResource(R.string.of_item_scheduled)
+                                else -> stringResource(R.string.of_item_taken)
+                            },
                             onClick = { vm.pickItem(i.id) },
                         )
                     }

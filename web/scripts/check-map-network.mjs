@@ -18,7 +18,7 @@ import { chromium } from "playwright";
 const BASE = (process.argv[2] || "http://localhost:3003").replace(/\/+$/, "");
 
 /** **الصفحاتُ التي فيها خريطة** — كلُّها لا عيّنة. */
-const PAGES = ["/cart", "/custom", "/join", "/contact", "/dashboard/settings"];
+const PAGES = ["/cart", "/custom", "/contact", "/dashboard/settings"];
 
 /** **ما لا يجوز أن يُطلَب.** */
 const FORBIDDEN = [

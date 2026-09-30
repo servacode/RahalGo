@@ -12,8 +12,6 @@
     <string name="soon_profile">اسمك وصورتك ورقمك وكلمة مرورك</string>
 
     <!-- **بنودُ «ما يخصّني»** -->
-    <string name="menu_link">رابط الدعوة</string>
-    <string name="soon_link">رمزك للمتاجر — ومن سجل به ينسب لك</string>
     <string name="soon_rewards">هدف الشهر وما تناله عند بلوغه</string>
 
     <!-- **عملائي** -->
@@ -110,7 +108,8 @@
     <string name="cl_items">أصناف معروضة</string>
     <string name="cl_offers">عروض جارية</string>
     <!-- طريقة الخصم — نسبة أو مبلغ ثابت -->
-    <string name="of_item_taken">عليه عرض جار</string>
+    <string name="of_item_taken">عليه عرض جار — الجديد يحل محله</string>
+    <string name="of_item_scheduled">عليه عرض مجدول — الجديد يحل محله</string>
     <string name="of_s4b">حدد قيمة الخصم</string>
     <string name="of_mode_percent">نسبة مئوية</string>
     <string name="of_mode_fixed">مبلغ ثابت</string>

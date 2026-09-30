@@ -135,7 +135,30 @@ fun apiError(
     if (e.status >= 500 || (code !in CODES && code !in extra && code.isNotEmpty())) {
         Crash.soft(e, "api " + e.status + " " + code)
     }
-    return context.getString(resolveErrorRes(code, e.body.messageKey, extra))
+    return context.getString(errorResFor(e.status, code, e.body.messageKey, extra))
+}
+
+/**
+ * **خطأُ الخادم يُقال خطأَ خادمٍ لا «تعذّر الاتصال»** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠.
+ *
+ * **رآه المالك**: عرضٌ بمبلغٍ ثابتٍ ردَّه المحرّكُ بـ٥٠٠، **والهاتفُ قال
+ * «تعذّر الاتصال» والشبكةُ سليمة** — «لازم يكون في سبب واضح مفهوم».
+ * **ورسالةٌ تقول «اتصال» تُرسل صاحبَها يفحص شبكتَه** وهي ليست العطب.
+ *
+ * **فانقطاعُ الشبكة وحدَه يقول «اتصال»** (`err_network`)، **والخمسمئة
+ * تقول «المنصّة لا اتّصالك»**، **والمجهولُ «تعذّر إتمام العملية».**
+ */
+fun errorResFor(
+    status: Int,
+    code: String,
+    messageKey: String = "",
+    extra: Map<String, Int> = emptyMap(),
+): Int {
+    val res = resolveErrorRes(code, messageKey, extra)
+    // **ورمزٌ له نصُّه يبقى بنصّه** ولو كان ٥٠٣ (`auth_unavailable`) —
+    // **والعامُّ وحدَه يصير «خطأ المنصّة».**
+    if (status >= 500 && res == R.string.err_internal) return R.string.err_server
+    return res
 }
 
 /**
@@ -217,6 +240,19 @@ private val CODES: Map<String, Int> = mapOf(
     "rate_limited" to R.string.err_rate_limited,
     "too_many_attempts" to R.string.err_rate_limited,
     "validation" to R.string.err_validation,
+    // ══════════════════════════════════════════════════════════════════
+    // **وأسبابُ رفض العرض — كلٌّ باسمه** (`OFFER-EXP`، ٢٠٢٦-٠٩-٣٠)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وكان `item_already_discounted` بلا خانةٍ ومفتاحُه بلا خانة**
+    // فيقع على «تعذّر الاتصال» — **ورآه المالكُ على صنفٍ حجزه عرضٌ
+    // منتهٍ**: **يظنّ الشبكةَ مقطوعةً والمنصّةُ تقول «مشغول».**
+    // والأربعةُ الباقيةُ تقع على «تحقّق من البيانات» — **ولا تقول أيَّها.**
+    "item_already_discounted" to R.string.err_item_already_discounted,
+    "bad_offer_discount" to R.string.err_bad_offer_discount,
+    "bad_offer_window" to R.string.err_bad_offer_window,
+    "offer_needs_title" to R.string.err_offer_needs_title,
+    "bad_offer_kind" to R.string.err_bad_offer_kind,
     "update_required" to R.string.err_update_required,
     // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
     "no_items" to R.string.err_no_items,

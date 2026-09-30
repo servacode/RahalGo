@@ -718,12 +718,13 @@ export default async function HomePage() {
             <p className="mt-3 text-sm text-ink-muted">{H.familyLead}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* **والزبونُ إلى التسجيل والباقون إلى الانضمام** — **وبابٌ
-                واحدٌ للأربعة يُرسل الزبونَ إلى نموذج متجر.** */}
+            {/* **والزبونُ إلى التسجيل والشركاءُ إلى «تواصل معنا»** — **ولا
+                نموذجَ انضمامٍ عامّاً** (`JOIN-0`، ٢٠٢٦-٠٩-٣٠، بقرار المالك):
+                المندوبُ يسجّل المتجرَ من تطبيقه، والسائقُ والمندوبُ يتواصلان. */}
             <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/app" open={brand.joinOpen} />
-            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" open={brand.joinOpen} partner />
-            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" open={brand.joinOpen} partner />
-            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" open={brand.joinOpen} partner />
+            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/contact" open={brand.joinOpen} partner />
+            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/contact" open={brand.joinOpen} partner />
+            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/contact" open={brand.joinOpen} partner />
           </div>
         </div>
       </Band>

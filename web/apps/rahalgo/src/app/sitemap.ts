@@ -57,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     //
     // **ولا مجلَّدَ آثارٍ في الخريطة**: **الآثارُ تُخدَم من المحرّك
     // بمفاتيحها** — **ولا مجلَّدَ يُعلَن ولا يُستعرَض.**
-    ...["shop", "about", "contact", "join", "help", "terms", "privacy", "delete-account",
+    ...["shop", "about", "contact", "help", "terms", "privacy", "delete-account",
       "download", "download/customer", "download/driver", "download/merchant",
       "download/rep"].map((path) => ({
       url: `${SITE()}/${path}`,

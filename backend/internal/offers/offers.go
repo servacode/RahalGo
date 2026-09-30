@@ -370,8 +370,39 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	if in.Active != nil {
 		active = *in.Active
 	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	// ══════════════════════════════════════════════════════════════════
+	//  **والعرضُ الجديدُ يحلّ محلّ القائم** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **القيدُ `offers_one_live_per_item` يقرأ العلَمَ `active` لا المدّة**
+	// — **فعرضٌ لساعةٍ مضت يحجز صنفَه للأبد** حتّى يُنزَل بيد، **والشاشةُ
+	// تعرضه متاحاً** لأنّها تقرأ الحال. (رآه المالك: النسبةُ والمبلغُ الثابتُ
+	// سقطا معاً على صنفٍ واحد.)
+	//
+	// # والجديدُ يحلّ محلّ القديم — أيّاً كان حالُه
+	//
+	// **قرارُ المالك ٢٠٢٦-٠٩-٣٠:** «لازم نقدر نعمل عرض إيمت ما بدنا، ما إلو
+	// علاقة». **فكلُّ عرضٍ قائمٍ على الصنف — منتهٍ أو سارٍ أو مجدول — يُنزَل
+	// قبل الإدراج وفي المعاملة نفسِها.** والقيدُ يبقى: **عرضٌ قائمٌ واحدٌ
+	// على الصنف** — **لكنّ الجديدَ هو الواحد لا القديم.**
+	//
+	// **والأثرُ الماليّ مقصود**: الطلبُ الجديدُ يُسعَّر بالعرض الجديد،
+	// **والطلبُ القائمُ لا يُمَسّ** — سعرُه قُيّد في `order_items` يومَ بُني.
+	if in.MenuItemID != nil && active {
+		if _, err := tx.Exec(ctx, `
+			UPDATE offers SET active = false, updated_at = now()
+			WHERE menu_item_id = $1::uuid AND kind = 'discount' AND active`,
+			*in.MenuItemID); err != nil {
+			return nil, err
+		}
+	}
 	var id string
-	err := s.db.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO offers (kind, title, body, media_id, href, menu_item_id,
 		                    discount_percent, discount_amount, borne_by,
 		                    starts_at, ends_at, active, created_by)
@@ -385,6 +416,9 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 		return nil, ErrItemHasOffer
 	}
 	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 	return s.Get(ctx, id, marginOf)

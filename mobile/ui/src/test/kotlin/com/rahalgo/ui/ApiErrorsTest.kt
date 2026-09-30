@@ -65,6 +65,43 @@ class ApiErrorsTest {
     }
 
     /**
+     * **أسبابُ رفض العرض تُقال بأسمائها** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠.
+     *
+     * **رآه المالك**: عرضٌ بالنسبة وآخرُ بالمبلغ على صنفٍ حجزه عرضٌ منتهٍ،
+     * **فقال الهاتفُ «تعذّر الاتصال» والشبكةُ سليمة.** **ويُقاس الرمزُ
+     * ومفتاحُه معاً** كما يرسلهما المحرّك (`offers.go`).
+     */
+    @Test
+    fun offerRejectionsNameTheirReason() {
+        val sent = listOf(
+            Triple("item_already_discounted", "errors.item_already_discounted", R.string.err_item_already_discounted),
+            Triple("bad_offer_discount", "errors.validation", R.string.err_bad_offer_discount),
+            Triple("bad_offer_window", "errors.validation", R.string.err_bad_offer_window),
+            Triple("offer_needs_title", "errors.validation", R.string.err_offer_needs_title),
+            Triple("bad_offer_kind", "errors.validation", R.string.err_bad_offer_kind),
+        )
+        for ((code, key, want) in sent) {
+            assertEquals("«$code» لا يُقال باسمه", want, resolveErrorRes(code, key))
+            assertNotEquals("«$code» يقول «تعذّر الاتصال»", R.string.err_internal, resolveErrorRes(code, key))
+        }
+    }
+
+    /**
+     * **خطأُ الخادم لا يقول «اتصال»** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠.
+     *
+     * **رآه المالك**: ٥٠٠ على إنشاء عرض، **والهاتفُ قال «تعذّر الاتصال»
+     * والشبكةُ سليمة.** **والرمزُ الذي له نصُّه يبقى بنصّه** ولو كان ٥٠٣.
+     */
+    @Test
+    fun serverErrorIsNotCalledAConnectionError() {
+        assertEquals(R.string.err_server, errorResFor(500, "internal", "errors.internal"))
+        assertEquals(R.string.err_server, errorResFor(502, ""))
+        assertEquals(R.string.err_auth_unavailable, errorResFor(503, "auth_unavailable"))
+        // **و٤٠٩ برمزه يبقى برمزه.**
+        assertEquals(R.string.err_item_already_discounted, errorResFor(409, "item_already_discounted"))
+    }
+
+    /**
      * **A3b · رموزُ `CAF-18` تُقال بنصّها لا «تعذّر الاتصال»** — `CUST-20-019`.
      *
      * **`not_found`/`comms_closed`/`comms_no_driver` كانت تسقط على
