@@ -280,3 +280,51 @@ func TestDeployWrapper_ExportsArtifactDir(t *testing.T) {
 		t.Fatal("غلافُ النشر لا ينادي deploy/retention.sh — **وسياسةٌ لا يناديها أحدٌ سياسةٌ لا وجودَ لها**")
 	}
 }
+
+// TestDeployWrapper_EmbeddedCopyMatchesStandalone **الغلافُ نسختان — ولا
+// يجوز أن تفترقا.**
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **المثبَّتُ على الخادم يأتي من النصّ المضمَّن** في
+// `bootstrap-staging-channel-one-shot.sh` (`cat > "$WRAPPER_DST" <<'RG_WRAPPER_EOF'`)،
+// **لا من الملفّ المستقلّ** `rahalgo-staging-deploy.sh`.
+//
+// **فإصلاحٌ في المستقلِّ وحدَه إصلاحٌ لا يُنفَّذ أبداً** — وقع ٢٠٢٦-٠٩-٣٠:
+// أُصلح `export ARTIFACT_DIR` في المستقلّ، **ونُشر أخضرَ، ولم تعمل السياسةُ
+// ولا سطرٌ منها**، لأنّ المُنفَّذ نسخةٌ أخرى.
+//
+// **وكانتا متطابقتَين بايتاً ببايت قبل ذلك** (قِيس: صفرُ فارق) — **فالخطرُ
+// أنّهما تفترقان صامتتَين.**
+func TestDeployWrapper_EmbeddedCopyMatchesStandalone(t *testing.T) {
+	root := filepath.Dir(filepath.Dir(scriptPath(t)))
+	stand, err := os.ReadFile(filepath.Join(root, "deploy", "staging", "rahalgo-staging-deploy.sh"))
+	if err != nil {
+		t.Fatalf("الملفُّ المستقلّ: %v", err)
+	}
+	boot, err := os.ReadFile(filepath.Join(root, "deploy", "staging",
+		"bootstrap-staging-channel-one-shot.sh"))
+	if err != nil {
+		t.Fatalf("المُثبِّت: %v", err)
+	}
+	const open = "cat > \"$WRAPPER_DST\" <<'RG_WRAPPER_EOF'\n"
+	const close = "\nRG_WRAPPER_EOF\n"
+	s := strings.ReplaceAll(string(boot), "\r\n", "\n")
+	i := strings.Index(s, open)
+	if i < 0 {
+		t.Fatal("لم يُعثر على فتحِ النصّ المضمَّن في المُثبِّت")
+	}
+	i += len(open)
+	j := strings.Index(s[i:], close)
+	if j < 0 {
+		t.Fatal("لم يُعثر على إغلاقِ النصّ المضمَّن")
+	}
+	embedded := s[i : i+j+1]
+	want := strings.ReplaceAll(string(stand), "\r\n", "\n")
+	if embedded != want {
+		t.Fatalf("النسختان افترقتا — **والمثبَّتُ على الخادم هو المضمَّنُ**\n"+
+			"المضمَّن %d حرفاً · المستقلّ %d حرفاً\n"+
+			"يُزامَن بإعادة لصقِ المستقلِّ داخل `RG_WRAPPER_EOF`",
+			len(embedded), len(want))
+	}
+}
