@@ -9,15 +9,79 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
+// rolesFrom **فاعلو آلةِ الحالات** — لا أدوارُ الجلسة كما هي.
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**وآلةُ الحالات مفرداتُها نطاقٌ لا سجلُّ أدوار**  `BOOK-03`
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **خريطةُ الانتقالات تعرف خمسةَ فاعلين**: `customer` · `merchant` ·
+// `driver` · `ops` · `admin` (`orders/statuses.go`). **وهي مفرداتُ نطاقٍ
+// تصف من يفعل ماذا في عمرِ الطلب** — **لا قائمةَ أدوارٍ في القاعدة.**
+//
+// # والعطبُ الذي كان
+//
+// **`ops` في الخريطة كان يُطابَق باسم الدور** — **و`ops` دورٌ مُحالٌ إلى
+// الإرث** (`authz/roleclass.go`: `ClassLegacy` ⇒ `GrantNever`)، **ودورُ
+// العمليّات الحيُّ اسمُه `operations`** — **ولا يظهر في `internal/orders`
+// إطلاقاً.**
+//
+// **فموظّفُ عمليّاتٍ يُنشأ من اللوحة كان لا يستطيع نقلَ حالةِ طلبٍ واحدة**:
+// **البابُ يفتح له بالقدرة** (`orders.intervene` في `authz/policy.go`)
+// **والآلةُ ترفضه بالاسم.** **ووضعُ المنصّة كلُّه يقوم على أنّ العمليّاتَ
+// تقبل وتوزّع** — **فالموظّفُ الذي يُدير المنصّة لا يستطيع أن يُديرها.**
+//
+// (قِيس ٢٠٢٦-٠٩-٣٠ في تجربة المنصّة. **ولم يُصِب التجربةَ نفسَها** لأنّ
+// `canTransition` تستثني `admin` صراحةً — **فالمالكُ يعمل والموظّفُ لا.**)
+//
+// # والإصلاحُ بالعقد لا بالترقيع
+//
+// **عقدُ المنصّة `ADG-2`**: «كلُّ بابٍ بقدرته لا باسم دور» — **وحارسٌ
+// بأسماء أدوارٍ فوقه يُعطّل دوراً مُنح.** **وإضافةُ `"operations"` إلى
+// الخريطة ترقيعٌ يُثبّت اسماً ثانياً** ويُعيد العطبَ لثالثٍ غداً.
+//
+// **فالفاعلُ `ops` يُشتقّ من القدرة**: من ملك `orders.intervene` فهو فاعلُ
+// عمليّاتٍ في الآلة — **أيَّ دورٍ حمل، اليومَ أو غداً.**
+//
+// **وأنواعُ الحسابات تبقى كما هي** (`customer` · `driver` · `merchant`) —
+// **فهي صفةُ الحساب لا قدرةٌ تُمنَح**، والآلةُ تسألها عن الطرف لا عن الإذن.
 func rolesFrom(r *http.Request) []string {
 	roles, _ := r.Context().Value(ctxRoles).([]string)
-	return roles
+	if !s0HasOpsIntervene(r) {
+		return roles
+	}
+	for _, x := range roles {
+		if x == "ops" {
+			return roles
+		}
+	}
+	// **ولا يُبدَّل المُمرَّرُ للنداء** — نسخةٌ، فلا يُفسد سياقاً مشتركاً.
+	out := make([]string, 0, len(roles)+1)
+	out = append(out, roles...)
+	return append(out, "ops")
+}
+
+// s0HasOpsIntervene **أيملك الفاعلُ قدرةَ التدخّل في الطلبات؟**
+//
+// **ولا يُقرأ دورٌ باسمه** — القدراتُ محسوبةٌ في الحقيقة الموثوقة
+// (`ctxCaps`، `ADG-1`).
+func s0HasOpsIntervene(r *http.Request) bool {
+	caps, _ := r.Context().Value(ctxCaps).([]string)
+	for _, c := range caps {
+		if c == string(authz.OrdersIntervene) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {

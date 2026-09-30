@@ -285,7 +285,8 @@ func TestADG3_S13S14_SessionRevokedAndBlocked(t *testing.T) {
 	}
 
 	// ── S14 · محظورٌ ⇒ إثباتُه لا يُستعمَل ──────────────────────
-	admin2 := stepUser(t, hh, "admin")
+	// **والهدفُ موظّفٌ لا أدمن** — انظر `BOOK-02` في `S16`.
+	admin2 := stepUser(t, hh, "finance")
 	g2, _ := askStepUp(t, hh, admin2.Token, "POST", path, walletBody(100), stepPass)
 	if g2 == "" {
 		t.Fatal("لم يصدر إثبات")
@@ -353,8 +354,23 @@ func TestADG3_S15_SelfPasswordChangeKillsGrant(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 func TestADG3_S16_AdminResetKillsGrant(t *testing.T) {
 	hh := New(t)
+	// ══════════════════════════════════════════════════════════════
+	// **وهدفُ الإدارة موظّفٌ لا أدمن** — `BOOK-02`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وقرارُ المالك ٢٠٢٦-٠٩-٣٠**: «صاحبُ المنصّة لا أحدَ يستطيع تعديلَ
+	// أيِّ إجراءٍ يخصّه» — **وأُلحق به الدورُ المرتفعُ بسياسة `GrantByOwner`
+	// القائمة**: لا يُدار حسابٌ يحمل `admin` إلّا من مالك.
+	//
+	// **وكان الهدفُ هنا `admin` بالعَرَض لا بالجوهر** — **والثابتُ المُقاس
+	// لا علاقةَ له بدورِ الهدف**: إعادةُ كلمةٍ تُبطل إثباتاً، وحظرٌ يُبطل
+	// إثباتاً. **فصار الهدفُ `finance`** — يملك `finance.manage` فيصلح
+	// لأخذ إثباتِ بابِ المحفظة، **وليس مرتفعاً فلا يمسّه الحارس.**
+	//
+	// **ودورُ الهدف صار حاملاً للمعنى**: من ردّه إلى `admin` أسقط الاختبارَ
+	// بـ`owner_role_protected` — **وذاك حارسٌ يعمل لا عطب.**
 	owner := stepUser(t, hh, "admin")
-	target := stepUser(t, hh, "admin")
+	target := stepUser(t, hh, "finance")
 	victim := hh.NewUser("customer")
 	path := walletPath(victim.ID)
 

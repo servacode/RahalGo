@@ -138,6 +138,10 @@ type UpdateUserInput struct {
 }
 
 func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, in UpdateUserInput, ip string) (*User, error) {
+	// **وإدارةُ حسابٍ يحمل دوراً محميّاً أو مرتفعاً سلطةٌ** — `BOOK-02`.
+	if err := guardAccountAdmin(ctx, s.repo.pool(), actorID, userID); err != nil {
+		return nil, err
+	}
 	if in.Status != nil {
 		if *in.Status != "active" && *in.Status != "suspended" && *in.Status != "blocked" {
 			return nil, errValidationErr
@@ -385,6 +389,10 @@ func isUniqueViolation(err error) bool {
 // **مفاتيحُ `Redis` تسريعُ رفضٍ لا مصدرُ حقيقة** (`R16`) — **فسقوطُها
 // لا يُسقط الاسترداد.**
 func (s *Service) AdminResetPassword(ctx context.Context, actorID, userID, hash, ip string) error {
+	// **ولا يُعاد تعيينُ كلمةِ حسابٍ محميٍّ أو مرتفعٍ من غير سلطته** — `BOOK-02`.
+	if err := guardAccountAdmin(ctx, s.repo.pool(), actorID, userID); err != nil {
+		return err
+	}
 	tx, err := s.repo.pool().Begin(ctx)
 	if err != nil {
 		return err
@@ -448,6 +456,10 @@ func (s *Service) AdminResetPassword(ctx context.Context, actorID, userID, hash,
 
 // AdminLogoutAll يُبطل كل جلسات الحساب فوراً (توكنات التجديد) — لقطع وصول موقوف.
 func (s *Service) AdminLogoutAll(ctx context.Context, actorID, userID, ip string) (int, error) {
+	// **وإخراجُ حسابٍ محميٍّ أو مرتفعٍ من جلساته سلطةٌ** — `BOOK-02`.
+	if err := guardAccountAdmin(ctx, s.repo.pool(), actorID, userID); err != nil {
+		return 0, err
+	}
 	sids, err := s.repo.ActiveSessionIDs(ctx, userID)
 	if err != nil {
 		return 0, err

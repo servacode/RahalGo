@@ -281,6 +281,44 @@ var All = []Race{
 			"(`refresh_tokens_session_lookup_idx` + `user_roles_pkey` · " +
 			"~0.13ms).",
 	},
+	{
+		ID: "C-13", Title: "زبونان يُنشئان طلبَين على متجرٍ واحد",
+		Flows: []string{"F-01"}, Actors: []string{"customer", "customer"},
+		Shared: "صفُّ `merchants` — قفلُه في معاملة إنشاء الطلب",
+		Where:  Local, Result: Pass,
+		Window: "**`INSERT INTO orders` يأخذ `FOR KEY SHARE` على صفِّ " +
+			"المتجر ضمنيّاً** (يفرضه `orders_merchant_id_fkey`)، **ثمّ كانت " +
+			"قراءةُ `settlement_method` تطلب `FOR UPDATE` على الصفِّ نفسِه** " +
+			"(`orders/service.go`) — **ترقيةٌ من مشتركٍ إلى حصريّ.** " +
+			"**فكلُّ معاملةٍ تحمل ما تنتظره الأخرى**، والنافذةُ من الإدراج " +
+			"إلى القراءة.",
+		Invariant: "زبونٌ مؤهَّلٌ يُنشئ طلبَه ولا يُحرم بسبب زبونٍ آخرَ " +
+			"على المتجر نفسِه · ولقطةُ أسلوب التسوية واحدةٌ كاملة",
+		Tests: []string{"TestD4_DifferentCustomersAreNotSerialized",
+			"TestConc_ManyCustomersOneMerchant_NoDeadlock",
+			"TestConc_SameKeyParallel_CreatesOneOrder",
+			"TestConc_SettlementChangeDuringLoad_SnapshotIsWhole",
+			"TestConc_CreateTxNeverWritesMerchantRow",
+			"TestConc_SettlementChangerKeepsExclusiveLock"},
+		Registers: []string{"REL-CONC-01"},
+		TxClass: "LOCK-COMPATIBILITY — **نقطةُ التسلسل نمطُ القفل على صفِّ " +
+			"المتجر**: مشتركٌ مع مشتركٍ متوافقان فلا تسلسل، **ومشتركٌ مع " +
+			"حصريٍّ متعارضان فيبقى التسلسلُ مع مُبدِّل الأسلوب** (البند ٥).",
+		Evidence: "**قبل** (`FOR UPDATE`): ثمانيةُ زبائنَ معاً ⇒ **خمسةٌ " +
+			"رُدّوا 500** و`deadlock detected (SQLSTATE 40P01)` في سجلّ " +
+			"المحرّك · وسجلُّ بوستغرس: عمليّتان على النداء نفسِه والصفِّ " +
+			"نفسِه (`tuple (2,17)`) كلٌّ محجوبةٌ بالأخرى · وأربعون تشغيلاً " +
+			"لـ`D4-T10` ⇒ تعارضٌ واحد (١ من ٢٠). " +
+			"**بعد** (`FOR SHARE`): ثمانيةٌ من ثمانية 201 · **صفرُ تعارضٍ " +
+			"بفارق `pg_stat_database.deadlocks`** · أربعون تشغيلاً بصفر " +
+			"تعارضٍ وصفر 500 · واثنتا عشرةَ بذرةً × ثلاثةِ اختباراتِ إجهادٍ " +
+			"بصفر سقوط. " +
+			"**وبرهانُ الآليّة في معزل**: قاعدةٌ بجدولَين ومعاملتان — " +
+			"إدراجٌ بمفتاحٍ أجنبيّ ثمّ `FOR UPDATE` ⇒ تعارض · ثمّ " +
+			"`FOR SHARE` ⇒ صفر · وقارئٌ بـ`FOR SHARE` حبس مُبدِّلاً " +
+			"يطلب `FOR UPDATE` ثانيتين ثمّ نجح — **فالحمايةُ باقيةٌ " +
+			"والتسلسلُ زال.**",
+	},
 }
 
 // Counts إحصاءٌ مولَّد.

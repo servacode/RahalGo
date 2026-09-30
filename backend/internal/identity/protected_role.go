@@ -188,3 +188,88 @@ func (s *Service) guardCreatableRoles(ctx context.Context, actorID string, roles
 	}
 	return nil
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  **وإدارةُ الحساب سلطةٌ كمنح الدور**  `BOOK-02`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **السياسةُ كانت مكتوبةً ونصفَ مُطبَّقة.** `authz/roleclass.go` ينصّ أنّ
+// `admin` (مرتفع) و`owner_super_admin` (محميّ) **لا يُمنحان ولا يُنزعان
+// إلّا من مالك** — **وطُبِّق ذلك على منح الأدوار وحدَه.**
+//
+// **وأمّا إدارةُ الحساب الذي يحملها فكانت مفتوحةً لكلّ من يملك
+// `users.status.manage`** — وهم على التجهيز: `admin` و`owner_super_admin`
+// **و`trust_safety`**.
+//
+// **فموظّفُ `trust_safety` كان يستطيع**:
+//
+//	PATCH /admin/users/{id}            حظرَ حسابِ المالك
+//	POST  /admin/users/{id}/password   إعادةَ تعيين كلمته
+//	POST  /admin/users/{id}/logout-all إخراجَه من كلّ جلساته
+//
+// **والحارسُ الوحيدُ كان «لا تفعلها بنفسك»** — فمن أراد غيرَه مرّ.
+// **وارتفاعُ صلاحيّةٍ من طاقمٍ إلى سيطرةٍ على حساب المالك.**
+// (قِيس ٢٠٢٦-٠٩-٣٠ في تجربة المنصّة، وظهر من قياس `BOOK-01`.)
+//
+// # وقرارُ المالك ٢٠٢٦-٠٩-٣٠
+//
+// «**صاحبُ المنصّة لا أحدَ يستطيع تعديلَ أيِّ إجراءٍ يخصّه.**»
+//
+// **فحسابُ المالك لا يمسّه أحدٌ غيرُه** — ولا أدمنٌ ولا طاقم.
+// **والدورُ المرتفعُ يمسّه المالكُ وحدَه** — وهو نصُّ السياسة القائمة
+// مطبَّقاً على إدارة الحساب كما طُبِّق على منح الدور.
+//
+// # وثمنُه يُقال صريحاً
+//
+// **وحسابٌ لا يمسّه أحدٌ حسابٌ لا يُستردّ من لوحة** — فمن نسي كلمتَه
+// لا يُعيدها له أدمن. **ومخرجُه أدواتُ الخادم** (`cmd/ownerbootstrap`)
+// **أو استردادُ الرمز الذاتيّ** — لا بابُ إدارةٍ.
+
+// guardAccountAdmin **سلطةُ إدارةِ حسابٍ بعينه** — القاعدةُ الواحدة.
+//
+// **ويقرؤها الحظرُ وإعادةُ الكلمة وإنهاءُ الجلسات معاً** — **ومن كتب
+// الشرطَ في واحدٍ منها ترك البابَين الآخرَين**، وذاك ما وقع في منح الأدوار.
+func guardAccountAdmin(ctx context.Context, q dbtx.Querier, actorID, targetID string) error {
+	// **وفعلُ المرءِ بنفسِه ليس إدارةَ غيرِه** — وله حرّاسُه (لا تحظر نفسك).
+	if actorID == targetID {
+		return nil
+	}
+	rows, err := q.Query(ctx,
+		`SELECT role_code FROM user_roles WHERE user_id = $1::uuid`, targetID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	protected, elevated := false, false
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return err
+		}
+		switch authz.ClassOf(code) {
+		case authz.ClassProtected:
+			protected = true
+		case authz.ClassElevated:
+			elevated = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	// **والمحميُّ لا يمسّه أحدٌ غيرُه** — قرارُ المالك، ولا استثناءَ لمالكٍ آخر.
+	if protected {
+		return ErrOwnerRoleProtected
+	}
+	if !elevated {
+		return nil
+	}
+	// **والمرتفعُ يمسّه المالكُ وحدَه** — سياسةُ `GrantByOwner` نفسُها.
+	has, err := actorHoldsRole(ctx, q, actorID, authz.RoleOwnerSuperAdmin)
+	if err != nil {
+		return err
+	}
+	if !has {
+		return ErrOwnerRoleProtected
+	}
+	return nil
+}

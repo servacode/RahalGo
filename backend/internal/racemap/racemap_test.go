@@ -13,8 +13,8 @@ import (
 // (إعادةُ كلمةٍ مقابلَ تجديد). **والتجميدُ يمنع اختفاءَ تدفّقٍ لا
 // اكتشافَ واحد.**
 func TestTenFlowsMapped(t *testing.T) {
-	if len(All) != 12 {
-		t.Fatalf("الخريطةُ فيها %d — والعددُ المجمَّد 12", len(All))
+	if len(All) != 13 {
+		t.Fatalf("الخريطةُ فيها %d — والعددُ المجمَّد 13", len(All))
 	}
 	seen := map[string]bool{}
 	for _, r := range All {

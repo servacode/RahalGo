@@ -135,6 +135,31 @@ func (r *Repo) CreateCustomerWithPassword(ctx context.Context, phone, fullName, 
 // ListUsers بحث وترشيح وترقيم صفحات لإدارة المستخدمين.
 func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly bool, status string, limit, offset int) ([]User, int, error) {
 	// role الخاص "staff" = موظفو المنصة (عمليات + مالية)
+	//
+	// ══════════════════════════════════════════════════════════════════
+	//  **ولا يُخفى أحد — والأدمنُ حسابٌ كغيره في القائمة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان الأدمنُ يُستثنى، والاستثناءُ مكتوباً مرّتين بصيغتين غير
+	// مكافئتين**: المجموعُ بـ`NOT EXISTS`، والصفوفُ بـ
+	// `HAVING NOT bool_or(ur.role_code = 'admin')`.
+	//
+	// **ولحسابٍ بلا أيِّ دورٍ هما مختلفتان**: `NOT EXISTS` تردّ `true`
+	// فيُعَدّ، **و`bool_or` على مجموعةٍ فارغةٍ تردّ `NULL`** فـ`NOT NULL`
+	// = `NULL`، **و`HAVING` تطرح ما ليس `true`.**
+	//
+	// **فكلُّ حسابٍ بلا دورٍ كان يُعَدّ ولا يُعرَض** — شبحٌ يزيد العدّادَ
+	// ولا يظهر: حسابٌ سُحب دورُه، أو أُنشئ ولم يُكمل، أو حسابٌ نظاميّ —
+	// **لا يجده الأدمنُ ولا يُديره.** (قِيس حيّاً ٢٠٢٦-٠٩-٣٠ على أوّل
+	// شاشةٍ في التجربة: `total=1` وصفرُ صفوف. `BOOK-01`.)
+	//
+	// **وقرارُ المالك ٢٠٢٦-٠٩-٣٠**: «حسابُ الأدمن يجب أن يكون ظاهراً
+	// أيضاً أنّه حسابُ زبون — لا يجوز إخفاؤه ويبدو كعطب».
+	//
+	// **والإخفاءُ لم يكن حمايةً أصلاً**: بابُ الكتابة
+	// (`PATCH /admin/users/{id}`) مفتوحٌ لمن يملك القدرةَ ويعرف المعرّف،
+	// **فالإخفاءُ كان يمنع الاكتشافَ في الواجهة وحدَه.** **والحمايةُ
+	// موضعُها حرّاسُ الكتابة لا حجبُ القراءة** — انظر `BOOK-02`.
 	where := `WHERE ($1 = '' OR u.phone ILIKE '%'||$1||'%' OR u.full_name ILIKE '%'||$1||'%' OR u.invite_code ILIKE '%'||$1||'%')
 	          AND ($2 = '' OR EXISTS (
 	              SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
@@ -143,7 +168,8 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 	          AND ($4 = '' OR u.status = $4)`
 
 	var total int
-	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where+` AND NOT EXISTS (SELECT 1 FROM user_roles ar WHERE ar.user_id = u.id AND ar.role_code = 'admin')`, query, role, onlineOnly, status).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where,
+		query, role, onlineOnly, status).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -209,7 +235,6 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		`+where+`
 		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at,
 		         rp.stores, cm.total, u.on_shift, cb.held, dv.open_cnt, dv.today_cnt
-		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
 		LIMIT $5 OFFSET $6`, query, role, onlineOnly, status, limit, offset)
 	if err != nil {

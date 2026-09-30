@@ -33,8 +33,8 @@
     "setting_defs": 158,
     "behaviour_settings": 130,
     "order_fields": 83,
-    "test_files": 411,
-    "test_funcs": 1734
+    "test_files": 416,
+    "test_funcs": 1752
   },
   "flows": [
     {
@@ -6350,6 +6350,12 @@
       "orphan": true
     },
     {
+      "name": "TestDeployWrapper_EmbeddedCopyMatchesStandalone",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
+      "orphan": true
+    },
+    {
       "name": "TestDeployWrapper_ExportsArtifactDir",
       "file": "internal/deployguard/retention_test.go",
       "package": "deployguard",
@@ -6943,6 +6949,36 @@
       "orphan": false
     },
     {
+      "name": "TestAccountGuard_AdminCannotTouchOwner",
+      "file": "internal/identity/account_admin_guard_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestAccountGuard_ElevatedNeedsOwner",
+      "file": "internal/identity/account_admin_guard_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestAccountGuard_OrdinaryAccountsUnaffected",
+      "file": "internal/identity/account_admin_guard_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestAccountGuard_SelfIsAllowed",
+      "file": "internal/identity/account_admin_guard_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestAccountGuard_StaffCannotTouchOwner",
+      "file": "internal/identity/account_admin_guard_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestPin_FormatIsFourDigitsOnly",
       "file": "internal/identity/admin_pin_test.go",
       "package": "identity",
@@ -6993,6 +7029,18 @@
     {
       "name": "TestGrantRole_RefusesSecondPrimaryFromAnyPath",
       "file": "internal/identity/grant_one_role_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestListUsers_RoleFilterFindsAdmin",
+      "file": "internal/identity/list_users_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestListUsers_TotalEqualsRowsOnOnePage",
+      "file": "internal/identity/list_users_test.go",
       "package": "identity",
       "orphan": true
     },
@@ -15362,6 +15410,36 @@
       "orphan": true
     },
     {
+      "name": "TestConc_CreateTxNeverWritesMerchantRow",
+      "file": "internal/qa/merchant_lock_stress_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestConc_ManyCustomersOneMerchant_NoDeadlock",
+      "file": "internal/qa/merchant_lock_stress_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestConc_SameKeyParallel_CreatesOneOrder",
+      "file": "internal/qa/merchant_lock_stress_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestConc_SettlementChangeDuringLoad_SnapshotIsWhole",
+      "file": "internal/qa/merchant_lock_stress_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestConc_SettlementChangerKeepsExclusiveLock",
+      "file": "internal/qa/merchant_lock_stress_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMDIS_001_SMSChannelIsGone",
       "file": "internal/qa/merchant_notify_test.go",
       "package": "qa",
@@ -15851,6 +15929,18 @@
     {
       "name": "TestXG46_OutOfCoverageNeedsOneConnection",
       "file": "internal/qa/one_connection_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK03_OperationsStaffCanTransitionOrder",
+      "file": "internal/qa/operations_can_operate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK03_SupportStaffStillCannotTransition",
+      "file": "internal/qa/operations_can_operate_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -16780,6 +16870,24 @@
         "SECURITY"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestBOOK02_StaffCannotResetOwnerPassword",
+      "file": "internal/qa/owner_account_untouchable_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK02_StaffStillManagesOrdinaryAccounts",
+      "file": "internal/qa/owner_account_untouchable_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK02_StaffWithGrantCannotSuspendOwner",
+      "file": "internal/qa/owner_account_untouchable_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestOBS1_PhoneNormalizationIsCanonical",

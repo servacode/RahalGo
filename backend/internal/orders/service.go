@@ -668,6 +668,33 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// الطلبُ القديمةَ (سبق القفلَ) أو الجديدةَ (سبق التغييرُ) — لا فراغَ ولا خلطَ
 	// لمصدرٍ واحد. **والقفلُ لكلّ معرّفٍ على حدةٍ بترتيبٍ مرتَّبٍ** يمنع التشابكَ
 	// بين طلبين متزامنين على مصادرَ متقاطعة.
+	//
+	// ══════════════════════════════════════════════════════════════
+	// **و`FOR SHARE` لا `FOR UPDATE` — لأنّ الحصريَّ هنا ترقيةُ قفل**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **إدراجُ الطلب قبله** (`INSERT INTO orders`، أعلاه) **يأخذ
+	// `FOR KEY SHARE` على صفِّ المتجر ضمنيّاً** — يفرضه
+	// `orders_merchant_id_fkey`. **فطلبُ `FOR UPDATE` بعده ترقيةٌ من
+	// مشتركٍ إلى حصريٍّ على الصفِّ نفسِه.**
+	//
+	// **وزبونان يُنشئان طلبَين على متجرٍ واحدٍ معاً**: كلٌّ يحمل
+	// `KEY SHARE` وينتظر `UPDATE` الذي يحجبه الآخر — **حلقةٌ مقفلة**،
+	// فيُردّ أحدهما بخمسمئة ولا طلبَ له. (قِيس ٢٠٢٦-٠٩-٣٠: `D4-T10`،
+	// و`deadlock detected` في سجلّ المحرّك، وعمليّتان على النداء نفسِه
+	// والصفِّ نفسِه في سجلّ بوستغرس.)
+	//
+	// **و`FOR SHARE` يحسمها بلا تنازل**:
+	//
+	//	متوافقٌ مع `FOR KEY SHARE`  ⇒ لا ترقيةَ، فلا حلقة
+	//	متوافقٌ مع `FOR SHARE`      ⇒ **طلبان متزامنان لا يتسلسلان**
+	//	متعارضٌ مع `FOR UPDATE`     ⇒ **والتسلسلُ مع المُبدِّل باقٍ** كما
+	//	                              نصّ البندُ ٥ — `SetSettlementMethod`
+	//	                              يأخذ `FOR UPDATE` فينتظر أو يُنتظَر
+	//
+	// **ونقلُ القراءةِ قبل الإدراج مرفوض**: يحفظ الحصريَّ بلا ترقيةٍ
+	// **لكنّه يُسلسل كلَّ إنشاءِ طلبٍ على المتجر طولَ المعاملة** — وهو
+	// عينُ ما يمنعه `D4`.
 	settleMethod := map[string]string{}
 	{
 		seen := map[string]bool{}
@@ -686,7 +713,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		for _, id := range ids {
 			var method string
 			if err := tx.QueryRow(ctx,
-				`SELECT settlement_method FROM merchants WHERE id = $1 FOR UPDATE`, id).
+				`SELECT settlement_method FROM merchants WHERE id = $1 FOR SHARE`, id).
 				Scan(&method); err != nil {
 				return nil, nil, err
 			}
