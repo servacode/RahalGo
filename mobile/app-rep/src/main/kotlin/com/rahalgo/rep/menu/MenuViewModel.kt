@@ -355,10 +355,17 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         write {
             if (d.isNew) api.createItem(merchantID, input) else api.updateItem(d.itemId, input)
             editing = null
+            Flash.ok(getApplication<Application>().getString(com.rahalgo.rep.R.string.mn_saved))
         }
     }
 
-    fun deleteItem(id: String) = write { api.deleteItem(id) }
+    // **والحذفُ يُغلق المحرِّر** (الخطوة ١٥) — رُئي على الجهاز: حُذف الصنفُ
+    // **وبقيت شاشةُ تعديله مفتوحةً عليه بلا كلمة**، فيظنّه المندوبُ لم يُحذف.
+    fun deleteItem(id: String) = write {
+        api.deleteItem(id)
+        editing = null
+        Flash.ok(getApplication<Application>().getString(com.rahalgo.rep.R.string.mn_deleted))
+    }
 
     /**
      * **كلُّ كتابةٍ تُتبَع بجلب.**

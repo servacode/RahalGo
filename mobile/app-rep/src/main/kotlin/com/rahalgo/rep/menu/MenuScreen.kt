@@ -148,7 +148,17 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
     }
 
     Screen {
-        ScreenTitle(stringResource(R.string.mn_items), stringResource(R.string.mn_hint))
+        // **واسمُ المتجر في الرأس** (الخطوة ١٥) — كان «الأصناف» وحدَها،
+        // **ومندوبٌ له عشرةُ عملاء لا يعرف في أيّهم يُضيف.** (وهو حارسُ
+        // `RO-01` نفسُه في شاشة العروض: اسمُ المتجر فوق كلّ خطوة.)
+        ScreenTitle(
+            if (vm.merchantName.isNotBlank()) {
+                stringResource(R.string.mn_items_of, vm.merchantName)
+            } else {
+                stringResource(R.string.mn_items)
+            },
+            stringResource(R.string.mn_hint),
+        )
 
         // ══════════════════════════════════════════════════════════════
         // **فعلان بوزنٍ واحد — لا زرٌّ وفوقه رابط**

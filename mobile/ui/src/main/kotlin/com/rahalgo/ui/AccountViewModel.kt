@@ -40,6 +40,16 @@ data class AccountState(
     val loading: Boolean = true,
     val busy: Boolean = false,
     val error: String = "",
+    /**
+     * **سببُ رفض تبديل الكلمة — يبقى تحت الزرّ حتّى يُكتب من جديد** (الخطوة ١٥).
+     *
+     * **رُئي على الجهاز**: «كلمة المرور الحالية غير صحيحة» منبثقةٌ عابرةٌ
+     * أعلى الشاشة تختفي في ثوانٍ، **والحقولُ الثلاثةُ تُفرَّغ** — فلا يعرف
+     * أيَّها أخطأ، ويعيد كتابتَها كلَّها.
+     */
+    val pwError: String = "",
+    /** **عددُ التبديلات الناجحة** — تقرؤه الشاشةُ فتُفرّغ حقولَها بعد النجاح وحدَه. */
+    val pwDone: Int = 0,
     /** **مرحلةُ الحذف**: لم يُطلب · وصل الرمزُ وينتظر · تمّ. */
     val deleteAsked: Boolean = false,
     val deleted: Boolean = false,
@@ -180,8 +190,23 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun removeAvatar() =
         act(R.string.acc_removed_photo) { backend.account.removeAvatar() }
 
-    fun setPassword(current: String, next: String) =
-        act(R.string.acc_pw_changed) { backend.account.setPassword(current, next) }
+    fun setPassword(current: String, next: String) {
+        if (state.busy) return
+        state = state.copy(busy = true, pwError = "")
+        viewModelScope.launch {
+            state = try {
+                backend.account.setPassword(current, next)
+                Flash.ok(getApplication<Application>().getString(R.string.acc_pw_changed))
+                state.copy(busy = false, pwDone = state.pwDone + 1)
+            } catch (e: Exception) {
+                state.copy(busy = false, pwError = describe(e))
+            }
+        }
+    }
+
+    fun clearPwError() {
+        if (state.pwError.isNotEmpty()) state = state.copy(pwError = "")
+    }
 
     /**
      * **يحفظ عنواناً جديداً** — بأجزائه لا بسطر.

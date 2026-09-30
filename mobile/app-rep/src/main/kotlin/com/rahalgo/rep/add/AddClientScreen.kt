@@ -214,11 +214,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             stringResource(R.string.ac_title_hint),
         )
 
-        if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Note(vm.error, Rahal.colors.danger)
-        }
-
         // ══════════════════════════════════════════════════════════════
         // **والاختياراتُ الثلاثةُ أوّلاً — ثمّ ما يُكتب باليد**
         // ══════════════════════════════════════════════════════════════
@@ -364,6 +359,24 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
+        // **والنقطةُ في منطقةٍ غيرِ المختارة يُنبَّه عليها** (الخطوة ١٥) —
+        // رُئي على الجهاز: نقطةٌ «الثورة، الرقة» والمنطقةُ «مركز الرقة»،
+        // **ولا كلمة.** والتنبيهُ لا يمنع: **اسمُ الخريطة تقريبيّ**، والحكمُ
+        // للمندوب الواقف في المتجر.
+        val chosenDistrict = vm.districts.firstOrNull { it.id == vm.pickedDistrict }
+        val pointDistrict = vm.districts.firstOrNull {
+            it.id != vm.pickedDistrict && vm.pointLabel.contains(it.name)
+        }
+        if (vm.point != null && chosenDistrict != null && pointDistrict != null &&
+            !vm.pointLabel.contains(chosenDistrict.name)
+        ) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.ac_point_other_district, pointDistrict.name, chosenDistrict.name),
+                color = Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **وكلمةُ مرورِ صاحب المتجر**
@@ -382,6 +395,32 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             style = MaterialTheme.typography.bodySmall,
         )
 
+        // ══════════════════════════════════════════════════════════════
+        // **وخطأُ الإرسال يُرسم فوق الزرّ لا في رأس الشاشة** (الخطوة ١٥)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **رُئي على الجهاز**: «رقم الهاتف غير صحيح» رُسمت أعلى الشاشة
+        // والمندوبُ في أسفلها عند الزرّ — **فضغط ولم يرَ شيئاً.** وهو عطبُ
+        // التأكيد نفسُه الذي رآه المالكُ ٢٠٢٦-٠٩-٣٠: **الرسالةُ حيث تُضغط.**
+        if (vm.error.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Note(vm.error, Rahal.colors.danger)
+        }
+
+        // **وما ينقص يُسمّى** — كان الزرُّ يُعطَّل بنقص العنوان ولا يُقال
+        // إلّا نقصُ النقطة. **ومن رأى زرّاً لا يعمل ولا يعرف لماذا أغلق
+        // التطبيق.**
+        val missing = buildList {
+            if (vm.pickedDistrict.isEmpty()) add(stringResource(R.string.ac_district))
+            if (vm.pickedCategory.isEmpty()) add(stringResource(R.string.ac_category))
+            if (vm.store.isBlank()) add(stringResource(com.rahalgo.ui.R.string.mn_store_name))
+            if (vm.owner.isBlank()) add(stringResource(R.string.ac_owner))
+            if (vm.phone.isBlank()) add(stringResource(com.rahalgo.ui.R.string.login_phone))
+            if (vm.area.isBlank()) add(stringResource(R.string.ac_area))
+            if (vm.point == null) add(stringResource(R.string.ac_point))
+            if (vm.password.isBlank()) add(stringResource(R.string.ac_password))
+        }
+
         Spacer(Modifier.height(16.dp))
         RahalButton(
             onClick = { vm.send() },
@@ -398,10 +437,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             //
             // **والمحافظةُ لا تُشترط منفصلةً** — لا تُختار منطقةٌ بلا
             // محافظة، **وشرطٌ لا يمكن كسرُه شرطٌ يزحم ولا يحرس.**
-            enabled = !vm.busy && vm.store.isNotBlank() && vm.owner.isNotBlank() &&
-                vm.phone.isNotBlank() && vm.pickedCategory.isNotEmpty() &&
-                vm.pickedDistrict.isNotEmpty() && vm.area.isNotBlank() &&
-                vm.password.isNotBlank() && vm.point != null,
+            enabled = !vm.busy && missing.isEmpty(),
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {
@@ -411,12 +447,10 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             }
         }
 
-        // **ويُقال ما ينقص قبل أن يُضغط** — **ومن رأى زرّاً لا يعمل ولا
-        // يعرف لماذا أغلق التطبيق.**
-        if (vm.point == null) {
+        if (missing.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Text(
-                stringResource(R.string.ac_need_point),
+                stringResource(R.string.ac_missing, missing.joinToString("، ")),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )

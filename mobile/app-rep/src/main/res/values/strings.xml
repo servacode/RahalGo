@@ -41,7 +41,6 @@
     <string name="cd_orders">طلبات هذا العميل</string>
     <string name="cd_no_orders">لا طلبات بعد من هذا العميل</string>
     <string name="cd_col_total">قيمة الطلب</string>
-    <string name="cd_col_commission">عمولة المنصة</string>
     <string name="cd_col_share">عمولتي</string>
     <string name="cd_forfeited">لا تحتسب</string>
     <string name="cd_no_reason">لم يذكر سبب</string>
@@ -93,7 +92,6 @@
     <string name="of_s1">اختر المتجر</string>
     <string name="of_s2">اختر القسم</string>
     <string name="of_s3">اختر الصنف</string>
-    <string name="of_s4">حدد نسبة الخصم</string>
     <string name="of_s5">حدد مدة العرض</string>
     <string name="of_no_clients">لا عملاء لك بعد — سجل عميلا ثم ارجع لتضع له عرضا</string>
     <string name="of_no_sections">لا أقسام في قائمة هذا المتجر بعد</string>
@@ -170,7 +168,11 @@
     <string name="ac_password">كلمة مرور صاحب المتجر</string>
     <string name="ac_password_hint">سلمها لصاحب المتجر — سيطلب منه تبديلها عند أول دخول</string>
     <string name="ac_send">أرسل للإدارة</string>
-    <string name="ac_need_point">حدد نقطة المتجر قبل الإرسال</string>
+    <string name="mn_items_of">أصناف %1$s</string>
+    <string name="mn_saved">✓ تم حفظ الصنف</string>
+    <string name="mn_deleted">✓ حُذف الصنف</string>
+    <string name="ac_missing">ينقص قبل الإرسال: %1$s</string>
+    <string name="ac_point_other_district">النقطة في «%1$s» والمنطقة المختارة «%2$s» — تأكد منهما</string>
     <!-- تأكيدُ الإرسال — نافذةٌ تُغلق بضغطة، لا سطرٌ يضيع فوق نموذجٍ فُرِّغ -->
     <string name="ac_ok_title">تم تسجيل العميل</string>
     <string name="ac_ok_body">أُرسل الطلب إلى الإدارة وهو الآن بانتظار الموافقة. سيظهر في عملائك فور قبوله.</string>
@@ -181,7 +183,6 @@
     <string name="ac_pick_district">اختر المنطقة</string>
     <string name="ac_pick_category">اختر تصنيف المتجر</string>
     <string name="ac_district_after_gov">اختر المحافظة أولا لتظهر مناطقها</string>
-    <string name="ac_done">وصل الطلب للإدارة — سيظهر عميلا فعالا فور الموافقة</string>
 
     <!-- **لوحتي** — والشهريُّ يسبق التراكميّ. -->
     <string name="bd_target_done">تحقق الهدف — أحسنت</string>
@@ -193,11 +194,11 @@
          «الهدفُ الشهريُّ هو عددُ العملاء المسجَّلين».)
          **ومندوبٌ فتح عشرةَ متاجرَ في أسبوعٍ كان عدّادُه صفراً** حتّى
          يشتري الناسُ منها — **وذلك يقيس السوقَ لا المندوب.** -->
-    <string name="bd_target_left">بقي %1$s عميل</string>
+    <string name="bd_target_left">بقي من الهدف: %1$s</string>
     <string name="bd_this_month">هذا الشهر</string>
     <!-- **وأخفُّ** — (طلبُ المالك ٢٠٢٦-٠٨-٣١). **والقسمُ فوقها يقول
          «هذا الشهر»، والآخرُ «منذ بدأت»** — فيكفي «عملاؤك» فيهما. -->
-    <string name="bd_month_clients">عملاءك</string>
+    <string name="bd_month_clients">عملاؤك</string>
     <string name="bd_month_delivered">طلبات مسلمة</string>
     <!-- **وأخفُّ** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «بدل عمولات هذا الشهر
          خلّيها عمولات الشهر فقط، أفضل وأخفّ»). **والقسمُ فوقها يقول
@@ -205,21 +206,17 @@
     <string name="bd_month_commissions">عمولات الشهر</string>
     <string name="bd_pending">بانتظار موافقة الإدارة</string>
     <string name="bd_all_time">منذ بدأت</string>
-    <string name="bd_clients">عملاءك</string>
+    <string name="bd_clients">عملاؤك</string>
     <string name="bd_delivered">طلبات مسلمة</string>
     <string name="bd_commissions">إجمالي العمولات</string>
     <string name="bd_balance">رصيد المحفظة</string>
-    <string name="bd_code">رمزك للمتاجر</string>
+    <string name="bd_code">رمزك لدى الإدارة</string>
     <!-- **ويُقفل حتّى يوثّق واتساب** — والمتجرُ الذي يُسجّل برمزه
          يُنسب إليه، **ومن لا قناةَ تواصلٍ موثّقةً له لا يُتحقّق أنّه
          هو.** -->
     <string name="bd_code_locked">وثق حسابك من «حسابي» ليظهر رمزك</string>
 
     <!-- **رابطُ الدعوة** -->
-    <string name="lk_link">الرابط</string>
-    <string name="lk_copy">انسخ الرابط</string>
-    <string name="lk_share_text">سجل متجرك في رحال غو من هنا: %1$s</string>
-    <string name="lk_hint">كل متجر يسجل من رابطك ينسب إليك — وتجري عمولتك عن طلباته بعد تفعيله.</string>
     <string name="push_ch_lead">عملاء جدد</string>
     <string name="mn_back">رجوع إلى الأقسام</string>
 
@@ -240,10 +237,7 @@
     <string name="mn_need_name">اكتب اسم الصنف</string>
     <string name="mn_need_price">اكتب سعرا صحيحا بالأرقام</string>
     <!-- عروضُ عملائه (OF، ٢٠٢٦-٠٩-١٥) -->
-    <string name="offers_for_store">عروض %s</string>
     <string name="offers_empty">لا عروض بعد لهذا المتجر</string>
-    <string name="offer_new">عرض جديد</string>
-    <string name="offer_pick_item">اختر الصنف</string>
     <string name="offer_percent">نسبة الخصم</string>
     <string name="offer_create">أنشئ العرض</string>
     <string name="offer_default_title">خصم</string>

@@ -476,11 +476,16 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
 
     SectionTitle(stringResource(R.string.acc_password))
     // **وحقلُ كلمة المرور من المركز — بأيقونة العين.**
-    PasswordField(current, { current = it }, !s.busy, R.string.acc_pw_current)
+    // **والحقولُ تُفرَّغ بعد النجاح وحدَه** — لا عند الضغط: من أخطأ في
+    // الحاليّة يصحّحها ولا يعيد كتابةَ الجديدة مرّتين.
+    LaunchedEffect(s.pwDone) {
+        if (s.pwDone > 0) { current = ""; next = ""; confirm = "" }
+    }
+    PasswordField(current, { current = it; vm.clearPwError() }, !s.busy, R.string.acc_pw_current)
     Spacer(Modifier.height(8.dp))
-    PasswordField(next, { next = it }, !s.busy, R.string.acc_pw_new)
+    PasswordField(next, { next = it; vm.clearPwError() }, !s.busy, R.string.acc_pw_new)
     Spacer(Modifier.height(8.dp))
-    PasswordField(confirm, { confirm = it }, !s.busy, R.string.acc_pw_confirm)
+    PasswordField(confirm, { confirm = it; vm.clearPwError() }, !s.busy, R.string.acc_pw_confirm)
 
     // **والتطابقُ يُقال قبل الإرسال لا بعده** — نداءٌ يذهب ليعود بخطأٍ
     // يعرفه الجهازُ نفسُه **يُضيّع ثانيتين ويستهلك حزمة.**
@@ -490,13 +495,14 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
     }
     Spacer(Modifier.height(8.dp))
     RahalButton(
-        onClick = {
-            vm.setPassword(current, next)
-            current = ""; next = ""; confirm = ""
-        },
+        onClick = { vm.setPassword(current, next) },
         enabled = !s.busy && current.isNotEmpty() && next.isNotEmpty() && !mismatch,
         modifier = Modifier.fillMaxWidth(),
     ) { Text(stringResource(R.string.acc_pw_change)) }
+    if (s.pwError.isNotEmpty()) {
+        Spacer(Modifier.height(6.dp))
+        Text(s.pwError, color = Rahal.colors.danger)
+    }
 }
 
 
