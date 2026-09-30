@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalOutlineButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +65,17 @@ import com.rahalgo.ui.money
  * **فرقمٌ ظاهرٌ خيرٌ من وعدٍ مبهم.**
  */
 @Composable
-fun ClientsScreen(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit = { _, _ -> }) {
+fun ClientsScreen(
+    vm: ClientsViewModel,
+    onOpenMenu: (String, String) -> Unit = { _, _ -> },
+    /**
+     * **وبابُ عروضه من بطاقته** — (طلبُ المالك ٢٠٢٦-٠٩-٣٠).
+     *
+     * **ويُمرَّر المتجرُ باسمه ومعرّفه معاً** — **وحارسُ `RO-01` يقوم
+     * على أن يبقى الاسمُ فوق شاشة العروض**، فلا يُفتح بمعرّفٍ وحدَه.
+     */
+    onOpenOffers: (String, String) -> Unit = { _, _ -> },
+) {
     // **والتفصيلُ يغطّي القائمةَ** — **ولا صفحةٌ ثانيةٌ يخرج إليها
     // فيعود فلا يجد موضعَه.**
     if (vm.openId.isNotEmpty()) {
@@ -118,6 +130,8 @@ fun ClientsScreen(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit = {
                     m = m,
                     media = { path -> Backend.of(context).media(path) },
                     onOpen = { vm.openDetail(m.id) },
+                    onAddItem = { onOpenMenu(m.id, m.name) },
+                    onMakeOffer = { onOpenOffers(m.id, m.name) },
                 )
             }
         }
@@ -181,6 +195,8 @@ private fun MerchantCard(
     m: RepMerchant,
     media: (String?) -> String?,
     onOpen: () -> Unit,
+    onAddItem: () -> Unit,
+    onMakeOffer: () -> Unit,
 ) {
     Spacer(Modifier.height(10.dp))
     // **وضغطُ البطاقة يفتح تفصيلَه** — (طلبُ المالك
@@ -245,6 +261,63 @@ private fun MerchantCard(
                 modifier = Modifier.weight(1f),
                 color = Rahal.colors.brand,
             )
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وكم صنفاً يعرض وكم عرضاً يجري — في البطاقة لا خلفها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف مربّعاً لعدد العناصر المعروضة
+        //  بكلّ متجر… لنعرف كلّ متجر كم صنف عارض بدون ما نفوت عليه».)
+        //
+        // **وكان المندوبُ يفتح كلَّ متجرٍ ليرى أفارغٌ هو** — نداءٌ وشاشةٌ
+        // ورجوع، لكلّ عميلٍ من عشرة.
+        //
+        // **والصفرُ هنا يُصبَغ تنبيهاً لا رماديّاً**: **متجرٌ بلا صنفٍ
+        // معروضٍ لا يظهر للزبون أصلاً** — فهو عملٌ ناقصٌ لا رقمٌ يُقرأ،
+        // **ومن رآه رماديّاً مرّ عليه.**
+        Spacer(Modifier.height(6.dp))
+        StatRow {
+            StatBox(
+                label = stringResource(R.string.cl_items),
+                value = m.itemsCount.toString(),
+                modifier = Modifier.weight(1f),
+                color = if (m.itemsCount == 0) Rahal.colors.accent else Rahal.colors.ink,
+            )
+            StatBox(
+                label = stringResource(R.string.cl_offers),
+                value = m.offersCount.toString(),
+                modifier = Modifier.weight(1f),
+                color = if (m.offersCount > 0) Rahal.colors.success else Rahal.colors.inkMuted,
+            )
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وفعلاه من بطاقته — لا من داخله**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف نفس الزرّ إضافة صنف أو أنشئ
+        //  عرض بنفس البطاقة، هيك نسهّل عالمندوب».)
+        //
+        // **والمندوبُ واقفٌ في المتجر** — **وثلاثُ ضغطاتٍ ليبلغ «صنف
+        // جديد» ثلاثُ ضغطاتٍ يقضيها صاحبُ المتجر ينتظر.**
+        //
+        // **وهما الزرّان نفسُهما في صفحة الأصناف** — نصّاً وترتيباً،
+        // **فلا يتعلّم المندوبُ بابين لفعلٍ واحد.**
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            RahalButton(
+                onClick = onAddItem,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.mn_add_item)) }
+
+            RahalOutlineButton(
+                onClick = onMakeOffer,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.mn_make_offer)) }
         }
 
         // ══════════════════════════════════════════════════════════════

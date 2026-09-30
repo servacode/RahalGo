@@ -101,15 +101,31 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun regroup() {
         val items = sections.orEmpty().flatMap { it.items }
-        // **ووجهُ القسم من أوّل صنفٍ فيه** — `PlatformSection` في واجهة
-        // المندوب تحمل الاسمَ والمعرّفَ فقط، **بلا صورة.**
+        // ══════════════════════════════════════════════════════════════
+        // **ووجهُ القسم من القسم نفسِه — لا من أوّل صنفٍ فيه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «صورة القسم تأتي من صور الأقسام حسب
+        //  سوق المنصّة… وما تصير صورة الصنف هي صورة القسم».)
+        //
+        // **وكان `list.firstNotNullOfOrNull { it.imageThumbUrl }`** —
+        // **فصورةُ أوّل صنفٍ تصير وجهَ القسم.** ومتجرٌ جديدٌ أصنافُه بلا
+        // صورٍ **يظهر قسمُه حروفاً**، ومتجرٌ صوّر صنفاً واحداً يصير ذاك
+        // الصنفُ عنوانَ القسم كلِّه.
+        //
+        // **وأقسامُ السوق مصوَّرةٌ كلُّها في القاعدة**، والمحرّكُ يردّ
+        // صورتَها منذ ٢٠٢٦-٠٨-٢٣ — **وكان العقدُ في التطبيق يُسقطها.**
+        //
+        // **ولا احتياطَ بصورة صنف**: **قسمٌ بلا صورةٍ يُرسَم بحرفه**،
+        // وهو صادقٌ — **وصورةُ صنفٍ في موضع القسم كذبٌ صغيرٌ يتكرّر.**
+        val faceOf = platformSections.associate { it.name to (it.imageThumbUrl ?: it.imageUrl) }
         groups = items
             .groupBy { it.platformSectionName.ifBlank { unsorted() } }
             .map { (name, list) ->
                 ItemGroup(
                     name = name,
                     items = list.sortedBy { it.name },
-                    imageUrl = list.firstNotNullOfOrNull { it.imageThumbUrl },
+                    imageUrl = faceOf[name],
                 )
             }
             .sortedByDescending { it.items.size }

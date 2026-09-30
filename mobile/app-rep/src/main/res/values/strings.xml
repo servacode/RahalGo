@@ -87,6 +87,36 @@
          **ويحرسه `pnpm check:menu-parity`** — يقارن الملفَّين حرفاً.
     -->
     <!-- **والبابُ اسمُه اسمُ الشاشة** — `terms.menu` في الويب. -->
+    <!-- زرا صفحة الأصناف — فعلان بوزن واحد، لا زر وفوقه رابط -->
+    <string name="mn_add_item">إضافة صنف</string>
+    <string name="mn_make_offer">إنشاء عرض</string>
+    <!-- مسار إنشاء العرض — خمس خطوات، كل خطوة تقول رقمها وما تنتظره -->
+    <string name="of_step">الخطوة %1$d من %2$d</string>
+    <string name="of_s1">اختر المتجر</string>
+    <string name="of_s2">اختر القسم</string>
+    <string name="of_s3">اختر الصنف</string>
+    <string name="of_s4">حدد نسبة الخصم</string>
+    <string name="of_s5">حدد مدة العرض</string>
+    <string name="of_no_clients">لا عملاء لك بعد — سجل عميلا ثم ارجع لتضع له عرضا</string>
+    <string name="of_no_sections">لا أقسام في قائمة هذا المتجر بعد</string>
+    <string name="of_no_items">لا أصناف في هذا القسم — أضف صنفا أولا</string>
+    <string name="of_change_store">تبديل المتجر</string>
+    <string name="of_percent_hint">من 1 إلى 90 بالمئة</string>
+    <string name="of_fixed_soon">الخصم بمبلغ ثابت غير متاح بعد — بالمئة فقط</string>
+    <string name="of_preview">%1$s: خصم %2$d%% لمدة %3$s</string>
+    <string name="of_current">عروض هذا المتجر</string>
+    <string name="of_back">رجوع</string>
+    <!-- مربعا بطاقة العميل — كم صنفا يعرض وكم عرضا يجري -->
+    <string name="cl_items">أصناف معروضة</string>
+    <string name="cl_offers">عروض جارية</string>
+    <!-- طريقة الخصم — نسبة أو مبلغ ثابت -->
+    <string name="of_item_taken">عليه عرض جار</string>
+    <string name="of_s4b">حدد قيمة الخصم</string>
+    <string name="of_mode_percent">نسبة مئوية</string>
+    <string name="of_mode_fixed">مبلغ ثابت</string>
+    <string name="of_amount">المبلغ (ل.س)</string>
+    <string name="of_amount_hint">يخصم هذا المبلغ من سعر الصنف</string>
+    <string name="of_preview_fixed">%1$s: خصم %2$s ل.س لمدة %3$s</string>
     <string name="mn_hint">أضف أصناف عميلك: الاسم والسعر والصورة — وتتحكم بإتاحتها وتوفرها.</string>
     <string name="mn_empty">القائمة فارغة — أضف أول صنف</string>
     <string name="mn_price">سعر المتجر</string>
@@ -140,6 +170,16 @@
     <string name="ac_password_hint">سلمها لصاحب المتجر — سيطلب منه تبديلها عند أول دخول</string>
     <string name="ac_send">أرسل للإدارة</string>
     <string name="ac_need_point">حدد نقطة المتجر قبل الإرسال</string>
+    <!-- تأكيدُ الإرسال — نافذةٌ تُغلق بضغطة، لا سطرٌ يضيع فوق نموذجٍ فُرِّغ -->
+    <string name="ac_ok_title">تم تسجيل العميل</string>
+    <string name="ac_ok_body">أُرسل الطلب إلى الإدارة وهو الآن بانتظار الموافقة. سيظهر في عملائك فور قبوله.</string>
+    <string name="ac_ok_go">عرض عملائي</string>
+    <!-- وحقولُ الاختيار تقول إنها مطلوبة قبل أن يُضغط زر معطل -->
+    <string name="ac_required">مطلوب</string>
+    <string name="ac_pick_governorate">اختر المحافظة</string>
+    <string name="ac_pick_district">اختر المنطقة</string>
+    <string name="ac_pick_category">اختر تصنيف المتجر</string>
+    <string name="ac_district_after_gov">اختر المحافظة أولا لتظهر مناطقها</string>
     <string name="ac_done">وصل الطلب للإدارة — سيظهر عميلا فعالا فور الموافقة</string>
 
     <!-- **لوحتي** — والشهريُّ يسبق التراكميّ. -->

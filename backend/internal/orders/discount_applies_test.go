@@ -34,9 +34,13 @@ import (
 )
 
 // stubDiscount قارئُ خصمٍ ثابت — **يردّ للصنف المقصود ولا شيءَ لغيره.**
+//
+// **و`amount` بديلُ `percent` لا رفيقُه** (قرارُ المالك ٢٠٢٦-٠٩-٣٠) —
+// كما يحرسه قيدُ `offers_one_discount_kind` في القاعدة.
 type stubDiscount struct {
 	itemID  string
 	percent int
+	amount  int64
 	borneBy string
 }
 
@@ -45,6 +49,20 @@ func (d stubDiscount) LiveDiscount(_ context.Context, _ dbtx.Querier, menuItemID
 		return 0, ""
 	}
 	return d.percent, d.borneBy
+}
+
+func (d stubDiscount) LiveCut(_ context.Context, _ dbtx.Querier, menuItemID string) (
+	*int, *int64, string,
+) {
+	if menuItemID != d.itemID {
+		return nil, nil, ""
+	}
+	if d.amount > 0 {
+		a := d.amount
+		return nil, &a, d.borneBy
+	}
+	p := d.percent
+	return &p, nil, d.borneBy
 }
 
 // orderMoney يقرأ المالَ من الصفّ — **لا من الكائن الذي ردّته الدالّة.**

@@ -476,7 +476,14 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
 
                     tab == Tab.Board -> BoardScreen(boardVm)
 
-                    tab == Tab.AddClient -> AddClientScreen(addVm) { picking = true }
+                    // **وبعد الإرسال ينتقل إلى «عملائي»** (طلبُ المالك
+                    // ٢٠٢٦-٠٩-٣٠) — **فيرى المكانَ الذي سيظهر فيه العميلُ
+                    // حين يُقبَل**، ولا يبقى أمام نموذجٍ فُرِّغ يظنّه فشلاً.
+                    tab == Tab.AddClient -> AddClientScreen(
+                        vm = addVm,
+                        pick = { picking = true },
+                        onDone = { tab = Tab.Clients; overlay.clear() },
+                    )
 
                     // ══════════════════════════════════════════════
                     // **وأصنافُ العميل تغطّي تفصيلَه**
@@ -504,9 +511,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         onOffers = { offersVm.open(menuVm.merchantID, menuVm.merchantName) },
                     )
 
-                    tab == Tab.Clients -> ClientsScreen(clientsVm) { id, name ->
-                        menuVm.open(id, name)
-                    }
+                    // **وفعلا البطاقة يفتحان ما يفتحه الدخولُ نفسُه** —
+                    // (طلبُ المالك ٢٠٢٦-٠٩-٣٠) **فلا بابان لفعلٍ واحد.**
+                    tab == Tab.Clients -> ClientsScreen(
+                        vm = clientsVm,
+                        onOpenMenu = { id, name -> menuVm.open(id, name) },
+                        onOpenOffers = { id, name -> offersVm.open(id, name) },
+                    )
 
                     tab == Tab.Account -> AccountScreen(
                         vm = accountVm,

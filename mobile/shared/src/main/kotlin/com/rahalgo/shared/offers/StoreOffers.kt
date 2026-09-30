@@ -36,6 +36,12 @@ data class StoreOffer(
     @SerialName("menu_item_id") val menuItemId: String? = null,
     @SerialName("item_name") val itemName: String = "",
     @SerialName("discount_percent") val discountPercent: Int? = null,
+    /**
+     * **خصمٌ بمبلغٍ ثابتٍ بالليرة** — بديلُ النسبة لا رفيقُها
+     * (قرارُ المالك ٢٠٢٦-٠٩-٣٠). **وأحدُهما فارغٌ دائماً**،
+     * يحرسه قيدُ القاعدة `offers_one_discount_kind`.
+     */
+    @SerialName("discount_amount") val discountAmount: Long? = null,
     @SerialName("price_before") val priceBefore: Long = 0,
     @SerialName("price_after") val priceAfter: Long = 0,
     @SerialName("starts_at") val startsAt: String? = null,
@@ -64,7 +70,9 @@ data class StoreOffersPage(val offers: List<StoreOffer> = emptyList())
 data class NewOffer(
     val title: String,
     @SerialName("menu_item_id") val menuItemId: String,
-    @SerialName("discount_percent") val discountPercent: Int,
+    @SerialName("discount_percent") val discountPercent: Int? = null,
+    /** **أو مبلغٌ ثابت** — ويُرسَل أحدُهما لا كلاهما. */
+    @SerialName("discount_amount") val discountAmount: Long? = null,
     @SerialName("starts_at") val startsAt: String? = null,
     @SerialName("ends_at") val endsAt: String? = null,
 )

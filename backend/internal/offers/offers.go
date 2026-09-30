@@ -87,8 +87,12 @@ type Offer struct {
 	PriceBefore int64 `json:"price_before"`
 	PriceAfter  int64 `json:"price_after"`
 
-	DiscountPercent *int    `json:"discount_percent"`
-	BorneBy         *string `json:"borne_by"`
+	DiscountPercent *int `json:"discount_percent"`
+	// DiscountAmount **خصمٌ بمبلغٍ ثابتٍ بالليرة** — بديلُ النسبة لا
+	// رفيقُها (قيدُ `offers_one_discount_kind`). **وأحدُهما `null`
+	// دائماً**، فالقارئُ يعرف الطريقةَ من أيّهما حضر.
+	DiscountAmount *int64  `json:"discount_amount"`
+	BorneBy        *string `json:"borne_by"`
 
 	StartsAt *time.Time `json:"starts_at"`
 	EndsAt   *time.Time `json:"ends_at"`
@@ -129,7 +133,7 @@ const offerSelect = `
 	       o.menu_item_id::text, COALESCE(mi.name, ''), COALESCE(mr.name, ''),
 	       mr.id::text, im.path,
 	       COALESCE(mi.price, 0),
-	       o.discount_percent, o.borne_by,
+	       o.discount_percent, o.discount_amount, o.borne_by,
 	       o.starts_at, o.ends_at, o.active, ` + LiveCond + `, o.created_at,
 	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = mi.id)
 	FROM offers o
@@ -146,7 +150,7 @@ func scan(rows interface {
 	if err := rows.Scan(&o.ID, &o.Kind, &o.Title, &o.Body,
 		&o.MediaID, &o.ImageURL, &o.Href,
 		&o.MenuItemID, &o.ItemName, &o.MerchantName, &o.MerchantID, &o.ItemImageURL,
-		&cost, &o.DiscountPercent, &o.BorneBy,
+		&cost, &o.DiscountPercent, &o.DiscountAmount, &o.BorneBy,
 		&o.StartsAt, &o.EndsAt, &o.Active, &o.Live, &o.CreatedAt,
 		&o.HasOptions); err != nil {
 		return nil, err
@@ -156,9 +160,11 @@ func scan(rows interface {
 	o.Status = StatusAt(o.Active, o.StartsAt, o.EndsAt, time.Now())
 	o.ImageURL = media.URLForPtr(o.ImageURL)
 	o.ItemImageURL = media.URLForPtr(o.ItemImageURL)
-	if o.DiscountPercent != nil {
+	// **والسعرُ بعد الخصم يُحسب بأيّ طريقةٍ كانت** — نسبةً أو مبلغاً
+	// ثابتاً، **من المصدر الواحد** (`AfterCut`).
+	if o.DiscountPercent != nil || o.DiscountAmount != nil {
 		o.PriceBefore = marginOf(cost)
-		o.PriceAfter = AfterDiscount(o.PriceBefore, *o.DiscountPercent)
+		o.PriceAfter = AfterCut(o.PriceBefore, o.DiscountPercent, o.DiscountAmount)
 	}
 	return &o, nil
 }
@@ -224,6 +230,55 @@ func AfterDiscount(price int64, percent int) int64 {
 	return price - price*int64(percent)/100
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  **وخصمٌ بمبلغٍ ثابت — والحسبةُ واحدةٌ لا اثنتان**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٩-٣٠.)
+//
+// **ولا تُكتب `AfterAmount` إلى جانب `AfterDiscount` فيتفرّقا** — وهو
+// عينُ ما يحذّر منه تعليقُ الأولى: «حسبةٌ في موضعين تفترق يوماً فيرى
+// سعراً ويُحاسَب بآخر».
+//
+// **فتُجمَع الطريقتان في مدخلٍ واحد**: **مقدارُ الخصم بالليرة** — تحسبه
+// هذه من أيّهما كان، **ويقرؤه كلُّ موضعٍ بعدها بلا أن يعرف أيَّ طريقةٍ
+// اختار المتجر.**
+
+// Cut **مقدارُ الخصم بالليرة** — من النسبة أو من المبلغ الثابت.
+//
+// **ولا ينزل السعرُ تحت الصفر**: مبلغٌ ثابتٌ أكبرُ من السعر (تبدّل سعرُ
+// الصنف بعد إنشاء العرض) **يُقصّ إلى السعر كلِّه** — **وسعرٌ سالبٌ يعني
+// أنّ المنصّة تدفع للزبون ليشتري.**
+//
+// **والفارغان يعنيان لا خصم** — وهي حالُ صفٍّ لا يقع (يمنعها قيدُ
+// `offers_one_discount_kind`)، **لكنّ الحسبةَ لا تفترض سلامةَ القاعدة.**
+func Cut(price int64, percent *int, amount *int64) int64 {
+	if price <= 0 {
+		return 0
+	}
+	var cut int64
+	switch {
+	case percent != nil && *percent > 0:
+		cut = price * int64(*percent) / 100
+	case amount != nil && *amount > 0:
+		cut = *amount
+	default:
+		return 0
+	}
+	if cut > price {
+		cut = price
+	}
+	return cut
+}
+
+// AfterCut **السعرُ بعد الخصم بأيّ طريقةٍ كان** — **ولا يُقرَّب.**
+//
+// **وهي التي يقرؤها بناءُ الطلبِ والشاشةُ معاً** — `AfterDiscount` تبقى
+// للنسبة وحدَها لأنّ لها قارئين قدامى، **وهي حالةٌ خاصّةٌ من هذه.**
+func AfterCut(price int64, percent *int, amount *int64) int64 {
+	return price - Cut(price, percent, amount)
+}
+
 // List العروضُ كلُّها — للإدارة. و`liveOnly` للزبون.
 func (s *Service) List(ctx context.Context, liveOnly bool, marginOf func(int64) int64) ([]Offer, error) {
 	q := offerSelect
@@ -259,6 +314,7 @@ type Input struct {
 	Href            string     `json:"href"`
 	MenuItemID      *string    `json:"menu_item_id"`
 	DiscountPercent *int       `json:"discount_percent"`
+	DiscountAmount  *int64     `json:"discount_amount"`
 	BorneBy         *string    `json:"borne_by"`
 	StartsAt        *time.Time `json:"starts_at"`
 	EndsAt          *time.Time `json:"ends_at"`
@@ -273,8 +329,27 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	if strings.TrimSpace(in.Title) == "" {
 		return nil, ErrNeedsTitle
 	}
-	if in.MenuItemID == nil || in.DiscountPercent == nil ||
-		*in.DiscountPercent < 1 || *in.DiscountPercent > 90 ||
+	// ══════════════════════════════════════════════════════════════════
+	//  **وطريقةٌ واحدةٌ بالضبط — نسبةٌ أو مبلغٌ ثابت**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٩-٣٠.)
+	//
+	// **ولا يُقبَل الاثنان** — **صفٌّ يحملهما لا جوابَ له**: أيُّهما
+	// يُحسب؟ والقيدُ في القاعدة يرفضه، **لكنّ الخطأَ يُقال هنا بلفظه** لا
+	// بـ٥٠٠ من مُحرّكِ قاعدة.
+	//
+	// **ولا يُقبَل الفارغان** — عرضٌ بلا خصمٍ ليس عرضا.
+	//
+	// **وحدُّ النسبة ٩٠ كما كان**، **والمبلغُ الثابتُ حدُّه أن يكون
+	// موجباً وحدَه**: **سقفُه سعرُ الصنف، وهو يتبدّل بعد الإنشاء** —
+	// فيُقصّ عند الحساب (`Cut`) لا عند الإدخال. **ومن حدَّه بسعر اليوم
+	// منع عرضاً صحيحاً غداً.**
+	hasPct := in.DiscountPercent != nil
+	hasAmt := in.DiscountAmount != nil
+	if in.MenuItemID == nil || hasPct == hasAmt ||
+		(hasPct && (*in.DiscountPercent < 1 || *in.DiscountPercent > 90)) ||
+		(hasAmt && *in.DiscountAmount <= 0) ||
 		in.BorneBy == nil || (*in.BorneBy != ByPlatform && *in.BorneBy != ByMerchant) {
 		return nil, ErrBadDiscount
 	}
@@ -298,12 +373,13 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	var id string
 	err := s.db.QueryRow(ctx, `
 		INSERT INTO offers (kind, title, body, media_id, href, menu_item_id,
-		                    discount_percent, borne_by, starts_at, ends_at, active, created_by)
+		                    discount_percent, discount_amount, borne_by,
+		                    starts_at, ends_at, active, created_by)
 		VALUES ($1, $2, $3, NULLIF($4,'')::uuid, $5, NULLIF($6,'')::uuid,
-		        $7, $8, $9, $10, $11, $12)
+		        $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id::text`,
 		in.Kind, strings.TrimSpace(in.Title), in.Body, ptrStr(in.MediaID), in.Href,
-		ptrStr(in.MenuItemID), in.DiscountPercent, in.BorneBy,
+		ptrStr(in.MenuItemID), in.DiscountPercent, in.DiscountAmount, in.BorneBy,
 		in.StartsAt, in.EndsAt, active, actorID).Scan(&id)
 	if err != nil && strings.Contains(err.Error(), "offers_one_live_per_item") {
 		return nil, ErrItemHasOffer
@@ -436,16 +512,37 @@ func (s *Service) CreateScoped(ctx context.Context, actorID, merchantID string, 
 // **ويُقرأ من القاعدة لا من ذاكرةٍ محمّلة**: عرضٌ يُنزَل وطلبٌ يُبنى في اللحظة
 // نفسِها — **والذاكرةُ تُعطي سعراً انتهى.**
 func (s *Service) LiveDiscount(ctx context.Context, q dbtx.Querier, menuItemID string) (percent int, borneBy string) {
-	var p *int
-	var b *string
-	_ = q.QueryRow(ctx, `
-		SELECT o.discount_percent, o.borne_by FROM offers o
-		WHERE o.menu_item_id = $1 AND o.kind = 'discount' AND `+LiveCond,
-		menuItemID).Scan(&p, &b)
-	if p == nil || b == nil {
+	p, _, b := s.LiveCut(ctx, q, menuItemID)
+	if p == nil || b == "" {
 		return 0, ""
 	}
-	return *p, *b
+	return *p, b
+}
+
+// LiveCut **الخصمُ الجاري بطريقتِه** — نسبةً أو مبلغاً ثابتاً ومن يتحمّله.
+//
+// (قرارُ المالك ٢٠٢٦-٠٩-٣٠.)
+//
+// **وأحدُ الأوّلَين `nil` دائماً** — يحرسه قيدُ `offers_one_discount_kind`
+// في القاعدة، **والحسبةُ لا تفترض سلامتَها** فـ`Cut` تردّ صفراً للفارغين.
+//
+// **و`LiveDiscount` باقيةٌ فوقها** — قارئوها القدامى يسألون عن النسبة
+// وحدَها، **ومن حذفها كسرهم صامتاً.** **وهي تردّ صفراً لعرضٍ بمبلغٍ
+// ثابت** — فمن يريد المالَ الصحيحَ ينادي هذه.
+func (s *Service) LiveCut(ctx context.Context, q dbtx.Querier, menuItemID string) (
+	percent *int, amount *int64, borneBy string,
+) {
+	var p *int
+	var a *int64
+	var b *string
+	_ = q.QueryRow(ctx, `
+		SELECT o.discount_percent, o.discount_amount, o.borne_by FROM offers o
+		WHERE o.menu_item_id = $1 AND o.kind = 'discount' AND `+LiveCond,
+		menuItemID).Scan(&p, &a, &b)
+	if b == nil {
+		return nil, nil, ""
+	}
+	return p, a, *b
 }
 
 func ptrStr(p *string) string {

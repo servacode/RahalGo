@@ -204,6 +204,21 @@ data class MenuItem(
 data class PlatformSection(
     val id: String = "",
     val name: String = "",
+    // ══════════════════════════════════════════════════════════════════
+    // **ووجهُ القسم من القسم لا من أوّل صنفٍ فيه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «صورة القسم تأتي من صور الأقسام حسب سوق
+    //  المنصّة… وما تصير صورة الصنف هي صورة القسم».)
+    //
+    // **والمحرّكُ يردّهما منذ ٢٠٢٦-٠٨-٢٣** (`handleMerchantPlatformSections`:
+    // `LEFT JOIN media im ON im.id = ps.image_media_id`) — **وهذا العقدُ
+    // كان يُسقطهما**، فأخذت شاشةُ المندوب صورةَ أوّل صنفٍ في القسم.
+    //
+    // **وأصنافُ متجرٍ جديدٍ بلا صور** — **فيظهر القسمُ حروفاً**، وهو
+    // بعينه ما أُصلح لتطبيق المتجر ولم يُصلَح هنا.
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
 )
 
 /** **غلافُ ردّ أقسام السوق** — المحرّكُ يضعها تحت مفتاح. */
@@ -285,6 +300,15 @@ data class RepMerchant(
     @SerialName("last_order_at") val lastOrderAt: String? = null,
     @SerialName("activation_done") val activationDone: Int = 0,
     @SerialName("activation_needed") val activationNeeded: Long = 0,
+    /**
+     * **كم صنفاً معروضاً في قائمته** — المتاحُ وحدَه.
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «لنعرف كلّ متجر كم صنف عارض بدون ما
+     *  نفوت عليه».) **والصفرُ هنا نداءُ عملٍ لا رقمٌ يُقرأ.**
+     */
+    @SerialName("items_count") val itemsCount: Int = 0,
+    /** **وكم عرضاً جارياً** — الفعّالُ الذي بدأ ولم ينتهِ. */
+    @SerialName("offers_count") val offersCount: Int = 0,
 )
 
 @Serializable

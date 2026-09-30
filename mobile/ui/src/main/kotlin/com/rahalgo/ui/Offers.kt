@@ -2,6 +2,7 @@ package com.rahalgo.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,14 +10,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
@@ -146,18 +150,73 @@ fun OfferCard(
     priceBefore: Long,
     priceAfter: Long,
     percent: Int?,
+    /**
+     * **أو خصمٌ بمبلغٍ ثابت** — بديلُ النسبة لا رفيقُها
+     * (قرارُ المالك ٢٠٢٦-٠٩-٣٠). **وأحدُهما فارغٌ دائماً.**
+     */
+    amount: Long? = null,
     stopping: Boolean,
     onStop: () -> Unit,
 ) {
     val ctx = LocalContext.current
+    // ══════════════════════════════════════════════════════════════════
+    //  **وبطاقةٌ تُقرأ من بعيد — لا ثلاثةُ أسطرٍ رماديّة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «تصميم عروض المتجر يجب أن تكون أقوى
+    //  بصريّاً من العرض الحالي».)
+    //
+    // **وكانت سطرين بحجمٍ واحدٍ ولونٍ واحد**: اسمُ الصنف، ثمّ
+    // `قبل ← بعد · ٢٠٪` **كلُّه `bodySmall` رماديّ.** **فالخصمُ — وهو
+    // كلُّ سببِ وجود البطاقة — أصغرُ ما فيها**، والسعرُ الجديدُ لا
+    // يُميَّز عن القديم إلّا بسهمٍ بينهما.
+    //
+    // **وصارت:**
+    //   - **شارةُ خصمٍ ملوّنةٌ في رأس البطاقة** — «٢٠٪» أو «−٥٠٠» بلون
+    //     العلامة على أرضيّةٍ خفيفة، **تُقرأ قبل أن يُقرأ الاسم.**
+    //   - **والسعرُ الجديدُ بحجم العنوان** وبلون النجاح، **والقديمُ
+    //     صغيرٌ مشطوبٌ فوقه** — **لا سهمٌ بين رقمين متساويين.**
+    //   - **وسطرُ التوفير بالليرة** — **والمتجرُ يفهم «يوفّر ٥٠٠» أسرعَ
+    //     من «٢٠٪»**، وهو ما يقوله لزبونه.
+    //   - **وحدٌّ يمينيٌّ بلون الحال** — سارٍ بلون العلامة، ومنتهٍ
+    //     رماديّ: **فصفٌّ من عشرِ بطاقاتٍ يُفرَز بالعين بلا قراءة.**
+    val live = OfferStatus.discounting(status)
+    val edge = if (live) Rahal.colors.brand else Rahal.colors.inkMuted
+    val saved = (priceBefore - priceAfter).coerceAtLeast(0)
     Column(
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, edge.copy(alpha = 0.35f), Rahal.shape.md)
             .padding(12.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // **وشارةُ الخصم أوّلَ ما يقع عليه البصر.**
+            val badge = when {
+                percent != null -> percent.toString() + "٪−"
+                amount != null -> "−" + money(amount)
+                else -> ""
+            }
+            if (badge.isNotEmpty()) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (live) Rahal.colors.brand else Rahal.colors.inkMuted,
+                    modifier = Modifier
+                        .clip(Rahal.shape.sm)
+                        .background(
+                            (if (live) Rahal.colors.brand else Rahal.colors.inkMuted)
+                                .copy(alpha = 0.12f),
+                        )
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+            }
             Text(
                 text = itemName,
                 fontWeight = FontWeight.Bold,
@@ -170,21 +229,39 @@ fun OfferCard(
             Text(
                 text = OfferStatus.text(ctx, status),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (OfferStatus.discounting(status)) {
-                    Rahal.colors.accent
-                } else {
-                    Rahal.colors.inkMuted
-                },
+                color = if (live) Rahal.colors.accent else Rahal.colors.inkMuted,
             )
         }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = stringResource(
-                R.string.offer_price_line, money(priceBefore), money(priceAfter),
-            ) + (percent?.let { "  ·  " + it + "٪" } ?: ""),
-            style = MaterialTheme.typography.bodySmall,
-            color = Rahal.colors.inkMuted,
-        )
+
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            // **والسعرُ الجديدُ هو الرقم** — بحجم العنوان ولون النجاح.
+            Text(
+                text = money(priceAfter),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (live) Rahal.colors.success else Rahal.colors.ink,
+            )
+            Spacer(Modifier.width(8.dp))
+            // **والقديمُ مشطوبٌ صغيرٌ** — **ورقمان متساويان في الحجم
+            // يجعلان القارئَ يقارن بدل أن يرى.**
+            Text(
+                text = money(priceBefore),
+                style = MaterialTheme.typography.bodySmall,
+                color = Rahal.colors.inkMuted,
+                textDecoration = TextDecoration.LineThrough,
+            )
+        }
+
+        // **وما يوفّره بالليرة** — **وهو ما يقوله المتجرُ لزبونه.**
+        if (saved > 0) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.offer_saves, money(saved)),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (live) Rahal.colors.success else Rahal.colors.inkMuted,
+            )
+        }
         // **وزرُّ الإيقاف حيث يُفيد** — **ولا يُعرَض على منتهٍ.**
         if (OfferStatus.canStop(status)) {
             Spacer(Modifier.height(6.dp))

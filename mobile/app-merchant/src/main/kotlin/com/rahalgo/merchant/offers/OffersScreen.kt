@@ -189,6 +189,7 @@ fun OffersScreen(vm: OffersViewModel) {
                 priceBefore = o.priceBefore,
                 priceAfter = o.priceAfter,
                 percent = o.discountPercent,
+                amount = o.discountAmount,
                 stopping = vm.stopping == o.id,
                 onStop = { vm.stop(o.id) },
             )

@@ -131,7 +131,37 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		       -- الأول يجعله يشكّ في المنصة، والثاني يجعله يسأل.
 		       (SELECT count(*) FROM orders o
 		        WHERE o.merchant_id = m.id AND o.status = 'delivered'
-		          AND o.customer_id IS DISTINCT FROM m.sales_rep_user_id)
+		          AND o.customer_id IS DISTINCT FROM m.sales_rep_user_id),
+		       -- ══════════════════════════════════════════════════════
+		       -- **وكم صنفاً يعرض، وكم عرضاً يجري**
+		       -- ══════════════════════════════════════════════════════
+		       --
+		       -- (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف مربّعاً لعدد العناصر
+		       --  المعروضة بكلّ متجر… لنعرف كلّ متجر كم صنف عارض بدون
+		       --  ما نفوت عليه».)
+		       --
+		       -- **والمندوبُ يفتح عشرةَ متاجرَ ليرى أيُّها فارغ** — وهو
+		       -- نداءٌ لكلّ متجر. **والعددُ في البطاقة يُجيبه بلا فتح.**
+		       --
+		       -- **و«معروض» لا «موجود»**: المتاحُ وحدَه يُعَدّ —
+		       -- **وصنفٌ مخفيٌّ لا يراه زبونٌ فلا يُعَدّ عرضاً.** ومن عدّ
+		       -- الكلَّ قال للمندوب «عنده ٤٠ صنفاً» ومتجرُه فارغٌ في
+		       -- التصفّح.
+		       (SELECT count(*) FROM menu_items mi
+		        WHERE mi.merchant_id = m.id AND mi.available),
+		       -- **والعرضُ الجاري وحدَه** — الفعّالُ الذي بدأ ولم ينتهِ.
+		       -- **وعرضٌ منتهٍ رقمٌ يخدع**: يظنّ المندوبُ أنّ متجرَه يروّج
+		       -- وهو ساكن. **وعرضٌ لم يبدأ كذلك.**
+		       --
+		       -- **ولا عمودَ متجرٍ في جدول العروض** — قِيس على القاعدة
+		       -- الحيّة ٢٠٢٦-٠٩-٣٠: أعمدتُه معرّفُ الصنف ونسبةُ الخصم
+		       -- ومن يتحمّله والنافذة. **فالنسبةُ إلى المتجر تمرّ بالصنف**،
+		       -- ومن كتبها بعمودٍ مفترضٍ كتب استعلاماً يبني ويسقط في التشغيل.
+		       (SELECT count(*) FROM offers of2
+		        JOIN menu_items mi2 ON mi2.id = of2.menu_item_id
+		        WHERE mi2.merchant_id = m.id AND of2.active
+		          AND (of2.starts_at IS NULL OR of2.starts_at <= now())
+		          AND (of2.ends_at IS NULL OR of2.ends_at > now()))
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
@@ -162,6 +192,10 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		// يلزم. متساويان أو أكثر يعني أن العمولة تجري.
 		ActivationDone   int   `json:"activation_done"`
 		ActivationNeeded int64 `json:"activation_needed"`
+		// ItemsCount كم صنفاً **معروضاً** في قائمته، وOffersCount كم
+		// عرضاً **جارياً** — يقرؤهما المندوبُ من البطاقة بلا أن يفتح.
+		ItemsCount  int `json:"items_count"`
+		OffersCount int `json:"offers_count"`
 	}
 	// **العتبةُ تُقرأ مرّةً لا لكل متجر** — وهي إعدادُ منصةٍ لا خاصّيةُ متجر.
 	activationNeeded := s.settings.GetInt(r.Context(), "sales.activation_orders")
@@ -170,7 +204,8 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		var m repMerchant
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
 			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered, &m.Cancelled,
-			&m.MyCommission, &m.LastOrderAt, &m.ActivationDone); err != nil {
+			&m.MyCommission, &m.LastOrderAt, &m.ActivationDone,
+			&m.ItemsCount, &m.OffersCount); err != nil {
 			s.respondErr(w, err)
 			return
 		}

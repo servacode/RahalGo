@@ -94,6 +94,15 @@ type DiscountReader interface {
 	// **وحدةُ إنشاءِ الطلب تمسك وصلتَها**، **فقارئٌ يفتح وصلةً ثانيةً
 	// من داخلها يجمّد الطلبَ حين يمتلئ المَسبَح.**
 	LiveDiscount(ctx context.Context, q dbtx.Querier, menuItemID string) (percent int, borneBy string)
+
+	// LiveCut **الخصمُ بطريقتِه** — نسبةً أو مبلغاً ثابتاً
+	// (قرارُ المالك ٢٠٢٦-٠٩-٣٠).
+	//
+	// **وهي التي يقرؤها بناءُ الطلب** — **و`LiveDiscount` تردّ صفراً
+	// لعرضٍ بمبلغٍ ثابت**، فمن بنى بها طلباً خصم صفراً وأرى الزبونَ
+	// سعراً مخفوضاً. **وتبقى في الواجهة لقارئيها القدامى.**
+	LiveCut(ctx context.Context, q dbtx.Querier, menuItemID string) (
+		percent *int, amount *int64, borneBy string)
 }
 
 // SetOffers يحقن قارئَ الخصوم — **يُنادى مرّةً عند الإقلاع.**
@@ -871,10 +880,16 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 		//
 		// **ولا يُقرأ من ذاكرةٍ محمّلة**: عرضٌ يُنزَل وطلبٌ يُبنى في اللحظة
 		// نفسِها، **والذاكرةُ تُعطي سعراً انتهى.**
+		// **والخصمُ نسبةً أو مبلغاً ثابتاً** (قرارُ المالك ٢٠٢٦-٠٩-٣٠) —
+		// **ويُقرأ بـ`LiveCut` لا بـ`LiveDiscount`**: الثانيةُ تردّ النسبةَ
+		// وحدَها، **فعرضٌ بمبلغٍ ثابتٍ كان يمرّ عليها بصفرٍ فلا يُخصَم في
+		// الطلب** — **ويرى الزبونُ سعراً مخفوضاً في الشاشة ويُحاسَب
+		// كاملاً.** وهو أسوأُ عطبٍ يمكن أن تُحدثه هذه الميزة.
 		if s.offers != nil && it.MenuItemID != nil {
-			if pct, by := s.offers.LiveDiscount(ctx, q, *it.MenuItemID); pct > 0 {
+			pctP, amtP, by := s.offers.LiveCut(ctx, q, *it.MenuItemID)
+			if offers.Cut(it.UnitPrice, pctP, amtP) > 0 {
 				before := it.UnitPrice
-				it.UnitPrice = offers.AfterDiscount(before, pct)
+				it.UnitPrice = offers.AfterCut(before, pctP, amtP)
 				if by == offers.ByMerchant {
 					// **وينزل سعرُ الشراء بالمقدار نفسِه لا بالنسبة نفسِها**:
 					// النسبةُ على سعرِ بيعٍ أكبرَ تُنتج خصماً أكبر، **فيتحمّل

@@ -56,6 +56,10 @@ type publicItem struct {
 	PriceBefore *int64 `json:"price_before"`
 	// DiscountPercent نسبةُ الحسم — **تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان.**
 	DiscountPercent *int `json:"discount_percent"`
+	// DiscountAmount **خصمٌ بمبلغٍ ثابت** — بديلُ النسبة لا رفيقُها
+	// (قرارُ المالك ٢٠٢٦-٠٩-٣٠). **وأحدُهما `null` دائماً**، فالشاشةُ
+	// تعرف أيَّ شارةٍ ترسم من أيّهما حضر.
+	DiscountAmount *int64 `json:"discount_amount"`
 
 	// HasOptions هل للصنف خياراتٌ تُختار قبل الطلب — **حجمٌ أو إضافات.**
 	//
@@ -98,7 +102,7 @@ const itemFrom = `
 	       (i.available AND i.approved AND m.status = 'active' AND ps.active),
 	       ps.id, ps.name, ps.margin_override,
 	       ` + orders.OpenNowSQL + `, ` + orders.NextOpenSQL + `,
-	       o.discount_percent,
+	       o.discount_percent, o.discount_amount,
 	       -- **وجودُ خياراتٍ يُقرأ بوجودٍ لا بعدّ** — تقف عند أوّل صفٍّ
 	       -- وتترك الباقي، **وعدٌّ كاملٌ لكلّ بطاقةٍ يقرأ ما لا يُعرض.**
 	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = i.id)
@@ -154,12 +158,11 @@ const favoritesSelect = itemFrom + `
 //
 // `offers.AfterDiscount` هي عينُها التي يستعملها المحرّكُ عند بناء الطلب —
 // **ولو حُسبت هنا بيدٍ لَافترق المعروضُ عن المقبوض** بتقريبٍ أو كسر.
-func markDown(it *publicItem, pct *int) {
-	if pct == nil || *pct <= 0 {
-		return
-	}
+func markDown(it *publicItem, pct *int, amt *int64) {
 	before := it.Price
-	it.Price = offers.AfterDiscount(before, *pct)
+	// **والحسبةُ واحدةٌ لأيّ طريقة** (`offers.AfterCut`) — **ولو حُسبت
+	// هنا بيدٍ لَافترق المعروضُ عن المقبوض** بتقريبٍ أو كسر.
+	it.Price = offers.AfterCut(before, pct, amt)
 	// **وخصمٌ لا يغيّر الرقمَ لا يُعرض** — «−١٪» على ألفٍ توفيرُ عشرة،
 	// **وشارةٌ بلا فرقٍ في الرقم تُقرأ خدعة.**
 	if it.Price >= before {
@@ -168,6 +171,7 @@ func markDown(it *publicItem, pct *int) {
 	}
 	it.PriceBefore = &before
 	it.DiscountPercent = pct
+	it.DiscountAmount = amt
 }
 
 func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, args ...any) {
@@ -187,14 +191,15 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var open bool
 		var opensAt *time.Time
 		var pct *int
+		var amt *int64
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &it.HasOptions); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
-		markDown(&it, pct)
+		markDown(&it, pct, amt)
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.SourceClosed = !open
@@ -375,16 +380,17 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	var open bool
 	var opensAt *time.Time
 	var pct *int
+	var amt *int64
 	if err := s.pg.QueryRow(r.Context(), itemSelect+` AND i.id = $1`,
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &it.HasOptions); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
-	markDown(&it, pct)
+	markDown(&it, pct, amt)
 	it.ImageURL = media.URLForPtr(it.ImageURL)
 	it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 	it.SourceClosed = !open

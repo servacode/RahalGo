@@ -60,13 +60,97 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
     var stopping by mutableStateOf<String?>(null)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    //  **ومسارٌ متدرّج: متجرٌ ثمّ قسمٌ ثمّ صنفٌ ثمّ نسبةٌ ثمّ مدّة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٩-٣٠ نصّاً: «يختار المتجر ثمّ يختار القسم ثمّ
+    //  يختار الصنف ثمّ يحدّد النسبة ثمّ يحدّد المدّة».)
+    //
+    // # ولماذا لم تكن الشاشةُ تخيّر متجراً
+    //
+    // **`RO-01` (٢٠٢٦-٠٩-١٥) قصدَ ذلك**: تُفتح من داخل المتجر فيبقى اسمُه
+    // فوق الشاشة، **ومن أنزل خصماً على متجرٍ ظنّه غيرَه أضرّ برزق رجل.**
+    //
+    // **والطلبُ لا ينقض ذلك بل يوسّعه**: **يُختار من قائمة عملائه
+    // بالاسم** — لا بمعرّفٍ يُكتب — **واسمُه يبقى ظاهراً في كلّ خطوةٍ
+    // بعده.** فيُنال التدرّجُ ويبقى الحارس.
+    //
+    // # والأقسامُ كانت تُسحق
+    //
+    // **كان `menu(...).flatMap { it.items }`** — **فصفٌّ واحدٌ يضمّ كلَّ
+    // أصناف المتجر** بلا قسم. ومتجرٌ فيه ثمانون صنفاً يصير قائمةَ بحثٍ
+    // بالعين. **فتُحفَظ الأقسامُ كما ردّها المحرّك**، والصنفُ يُبلَغ في
+    // قسمه.
+
+    /** **عملاؤه** — يُقرَأون من `/rep/merchants` بعلاقته، لا بمعرّفٍ يُكتب. */
+    var clients by mutableStateOf<List<com.rahalgo.shared.rep.RepMerchant>>(emptyList())
+        private set
+
+    /** **أقسامُ قائمة المتجر المفتوح** — بأصنافها كما ردّها المحرّك. */
+    var sections by mutableStateOf<List<com.rahalgo.shared.rep.MenuSection>>(emptyList())
+        private set
+
+    var pickedSection by mutableStateOf("")
+        private set
+
+    var pickedItem by mutableStateOf("")
+        private set
+
+    /**
+     * **ويُحمَّل لوحُ العملاء قبل أن يُختار أحدٌ** — **وشاشةٌ تفتح على
+     * فراغٍ تُقرأ عطباً.**
+     */
+    fun loadClients() {
+        if (clients.isNotEmpty() || busy) return
+        busy = true
+        error = ""
+        viewModelScope.launch {
+            try {
+                clients = rep.merchants()
+            } catch (e: Exception) {
+                error = err(e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     /** **يُفتح في سياق متجرٍ بعينه** — **ولا يُفتح بلا متجر.** */
     fun open(id: String, name: String) {
         merchantID = id
         merchantName = name
         rows = null
         error = ""
+        pickedSection = ""
+        pickedItem = ""
         load()
+    }
+
+    /**
+     * **ويُعاد اختيارُ المتجر بلا خروجٍ من الشاشة** — **ومن أراد متجراً
+     * آخرَ لا يُطالَب بالرجوع خطوتين.**
+     */
+    fun clearMerchant() {
+        merchantID = ""
+        merchantName = ""
+        rows = null
+        items = emptyList()
+        sections = emptyList()
+        pickedSection = ""
+        pickedItem = ""
+        error = ""
+        loadClients()
+    }
+
+    /** **والقسمُ يُختار فيُنسى الصنفُ** — **وصنفٌ من قسمٍ آخرَ اختيارٌ قديم.** */
+    fun pickSection(id: String) {
+        pickedSection = id
+        pickedItem = ""
+    }
+
+    fun pickItem(id: String) {
+        pickedItem = id
     }
 
     fun close() {
@@ -81,7 +165,12 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 rows = offers.list(merchantID).offers
-                items = rep.menu(merchantID).flatMap { it.items }
+                val secs = rep.menu(merchantID)
+                sections = secs
+                items = secs.flatMap { it.items }
+                // **وقسمٌ واحدٌ لا يُسأل عنه** — **وخطوةٌ جوابُها واحدٌ
+                // زحمةٌ لا اختيار.**
+                if (secs.size == 1) pickedSection = secs.first().id
             } catch (e: Exception) {
                 error = err(e)
             } finally {
@@ -90,9 +179,30 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun create(itemId: String, percent: Int, hours: Int) {
+    /**
+     * **طريقةُ الخصم** — نسبةٌ أو مبلغٌ ثابت (قرارُ المالك ٢٠٢٦-٠٩-٣٠).
+     *
+     * **وواحدةٌ لا اثنتان** — يحرسه قيدُ القاعدة `offers_one_discount_kind`،
+     * **ويقولها الخادمُ `bad_offer_discount` قبل أن تبلغه.**
+     */
+    var byPercent by mutableStateOf(true)
+        private set
+
+    fun pickMode(percent: Boolean) {
+        byPercent = percent
+    }
+
+    /**
+     * create **ينشئ الخصمَ بطريقتِه.**
+     *
+     * **والقيمةُ واحدةٌ تُقرأ بحسب الطريقة** — **ولا حقلان في الشاشة
+     * يملأ المندوبُ أحدَهما وينسى الآخر**، فيُرسَل عرضٌ بنسبةٍ ومبلغٍ
+     * معاً ويُردّ.
+     */
+    fun create(itemId: String, value: Long, hours: Int) {
         if (busy || merchantID.isEmpty()) return
-        if (itemId.isBlank() || percent !in 1..90 || !OfferDuration.valid(hours)) {
+        val okValue = if (byPercent) value in 1..90 else value > 0
+        if (itemId.isBlank() || !okValue || !OfferDuration.valid(hours)) {
             error = getApplication<Application>().getString(
                 com.rahalgo.rep.R.string.offer_bad_input,
             )
@@ -112,7 +222,11 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
                             com.rahalgo.rep.R.string.offer_default_title,
                         ),
                         menuItemId = itemId,
-                        discountPercent = percent,
+                        // **ويُرسَل أحدُهما لا كلاهما** — والفارغُ يُحذف من
+                        // الجسم (`encodeDefaults` مطفأ)، **فالخادمُ يرى حقلاً
+                        // واحداً كما يشترط.**
+                        discountPercent = if (byPercent) value.toInt() else null,
+                        discountAmount = if (byPercent) null else value,
                         endsAt = DateTimeFormatter.ISO_INSTANT.format(ends),
                     ),
                 )

@@ -798,6 +798,9 @@
     <string name="offer_status_expired">منتهي</string>
     <string name="offer_status_unknown">حالة غير معروفة</string>
     <string name="offer_price_line">%1$s ← %2$s</string>
+    <!-- بطاقة العرض — الخصم شارة، والتوفير رقم يفهمه صاحب المتجر -->
+    <string name="offer_saves">يوفر %1$s</string>
+    <string name="offer_was">كان</string>
     <string name="offer_stop">أوقف</string>
     <plurals name="offer_hours">
         <item quantity="zero">بلا مدة</item>

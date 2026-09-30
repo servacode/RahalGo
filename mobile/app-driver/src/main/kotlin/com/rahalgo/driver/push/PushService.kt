@@ -16,7 +16,22 @@ import com.rahalgo.ui.push.RahalPushService
  */
 class PushService : RahalPushService() {
     override fun home(): Class<*> = MainActivity::class.java
-    override fun icon(): Int = R.drawable.ic_orders
+    // ══════════════════════════════════════════════════════════════
+    // **وأيقونةُ الإشعار شعارُ رحّال غو — في التطبيقات الأربعة**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «أيقونة الإشعار لازم يكون لوغو رحّال
+    //  غو لينعرف إنّ الإشعار تابع لرحّال غو، مو أيقونات مختلفة».)
+    //
+    // **وكانت ثلاثةً**: أيقونةُ الطلبات للزبون والسائق والمتجر،
+    // وأيقونةُ المستخدم للمندوب — **ولا واحدةٌ منها شعارُ المنصّة.**
+    // فيصل المستخدمَ إشعارٌ برمزٍ لا يعرفه، **ومن لا يعرف المُرسِل
+    // لا يفتح.**
+    //
+    // **وهي ظلٌّ أحاديٌّ لا شعارٌ ملوّن**: أندرويد يُهمل ألوانَ أيقونة
+    // الشريط ويقرأ الألفا وحدَها، **وشعارٌ ملوّنٌ يُرسَم بقعةً بيضاء.**
+    // فتُولَّد من شعار العلامة بألفاه وحدَها، بخمس كثافات.
+    override fun icon(): Int = com.rahalgo.ui.R.drawable.ic_notification
     override fun appName(): String = getString(R.string.app_name)
     override fun urgentChannelName(): String = getString(R.string.push_ch_offer)
     override fun newsChannelName(): String = getString(R.string.push_ch_news)

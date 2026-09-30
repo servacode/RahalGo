@@ -1,27 +1,36 @@
 package com.rahalgo.rep.add
 
 import android.app.Application
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -66,9 +75,138 @@ import kotlinx.coroutines.launch
  *
  * **ولا تبقى عند المندوب** — **ومن احتفظ بها دخل حسابَ متجرٍ ليس له.**
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **لوحُ اختيارٍ يقول إنّه مطلوب قبل أن يُضغط زرٌّ معطّل**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «المحافظة والمنطقة والتصنيف حسّن شكلها
+ *  بصريّاً بحيث المندوب يعرف أنّه لازم يختارها بتصميم أفضل».)
+ *
+ * # ما كان
+ *
+ * **عنوانٌ رماديٌّ بحجم النصّ الثاني وصفُّ رقائق** — بلا إطارٍ ولا
+ * أرضيّةٍ ولا علامةِ إلزام. **فيقرؤه المندوبُ شرحاً لا حقلاً**، ويمرّ
+ * عليه، ثمّ يجد زرَّ الإرسال معطّلاً ولا يعرف ما نقص.
+ *
+ * **وحقولُ النصّ حولَه مؤطَّرةٌ** (`OutlinedTextField`) — **فما لا إطارَ
+ * له لا يبدو حقلاً أصلاً.**
+ *
+ * # وما صار
+ *
+ *   - **إطارٌ وأرضيّة** — فيُقرأ حقلاً كجيرانه.
+ *   - **وسمُ «مطلوب» بلون التنبيه** ما دام فارغاً، **فيختفي** حين
+ *     يُختار: **الوسمُ الباقي بعد الاختيار يصير ضجيجاً.**
+ *   - **وما اختير يُقال باسمه** بعلامة صحّ خضراء — **فلا يُبحَث عنه
+ *     في صفٍّ طويلٍ قد جرّه المندوبُ بعيداً.**
+ *   - **والحدُّ يتبدّل**: تنبيهٌ ما دام ناقصاً، **وعلامةٌ** حين يتمّ.
+ *
+ * **ولا لونَ جديد** — `accent` و`success` و`brand` من لوح العلامة.
+ */
 @Composable
-fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
+private fun PickerBlock(
+    label: String,
+    hint: String,
+    chosen: String?,
+    chips: @Composable () -> Unit,
+) {
+    val done = !chosen.isNullOrBlank()
+    val edge = if (done) Rahal.colors.brand else Rahal.colors.accent
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(
+                if (done) Rahal.colors.surface else Rahal.colors.warnTint,
+            )
+            .border(Rahal.stroke.hair, edge.copy(alpha = if (done) 0.35f else 0.55f), Rahal.shape.md)
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label,
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.width(8.dp))
+            if (done) {
+                // **وعلامةُ الصحّ نصٌّ لا أيقونة** — **ولا تُجَرّ حزمةُ
+                // `material-icons` كلُّها (آلافُ المتّجهات) لأجل رمزٍ
+                // واحد**، والمشروعُ لا يعتمدها أصلاً.
+                Text(
+                    "✓ " + chosen.orEmpty(),
+                    color = Rahal.colors.success,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                Text(
+                    stringResource(R.string.ac_required),
+                    color = Rahal.colors.accent,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .clip(Rahal.shape.sm)
+                        .background(Rahal.colors.accent.copy(alpha = 0.14f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
+        }
+        // **والتلميحُ يبقى ما دام ناقصاً ويذهب حين يتمّ** — **وشرحٌ
+        // يبقى بعد الفعل يزحم الشاشةَ ولا يُقرأ.**
+        if (!done) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                hint,
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) { chips() }
+    }
+}
+
+@Composable
+fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit = {}) {
     LaunchedEffect(Unit) { vm.loadCategories() }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  **ونجاحٌ يُرى — نافذةٌ لا سطرٌ في أعلى نموذجٍ فُرِّغ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **قِيس ٢٠٢٦-٠٩-٣٠ في تجربة المالك**: أرسل المندوبُ طلبَين، **ولم
+    // يرَ تأكيداً واحداً.** والسببُ أنّ `Note` تُرسَم **أعلى الشاشة**
+    // و`send()` يُضغط **في أسفلها** — **فالشاشةُ لا تصعد، والسطرُ يظهر
+    // حيث لا ينظر أحد.**
+    //
+    // **وفي اللحظة نفسِها تُفرَّغ الحقولُ كلُّها.** فما يراه المندوبُ:
+    // **نموذجٌ عاد فارغاً بلا كلمة** — **وذلك شكلُ الفشل لا شكلُ النجاح**،
+    // فيُعيد الإرسالَ ظانّاً أنّه سقط.
+    //
+    // **فالتأكيدُ نافذةٌ تعترض** — لا تُتجاوَز بلا قراءة، **وزرُّها
+    // ينقله إلى «عملائي»**: يرى مكانَ العميل الذي سجّله، **فيفهم أين
+    // سيظهر حين يُقبَل.** (طلبُ المالك ٢٠٢٦-٠٩-٣٠ نصّاً.)
+    if (vm.done) {
+        AlertDialog(
+            onDismissRequest = { vm.dismissDone(); onDone() },
+            title = {
+                Text(
+                    "✓ " + stringResource(R.string.ac_ok_title),
+                    color = Rahal.colors.success,
+                )
+            },
+            text = { Text(stringResource(R.string.ac_ok_body)) },
+            confirmButton = {
+                TextButton(onClick = { vm.dismissDone(); onDone() }) {
+                    Text(stringResource(R.string.ac_ok_go))
+                }
+            },
+        )
+    }
 
     Screen {
         ScreenTitle(
@@ -76,15 +214,99 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
             stringResource(R.string.ac_title_hint),
         )
 
-        if (vm.done) {
-            Spacer(Modifier.height(10.dp))
-            // **ويقول ماذا يقع بعده** — **و«تمّ» وحدَها تترك صاحبَها
-            // ينتظر شيئاً لا يعرف متى يجيء.**
-            Note(stringResource(R.string.ac_done), Rahal.colors.success)
-        }
         if (vm.error.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Note(vm.error, Rahal.colors.danger)
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **والاختياراتُ الثلاثةُ أوّلاً — ثمّ ما يُكتب باليد**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «المحافظة والمنطقة والتصنيف برأيي
+        //  يكونوا أوّل شي، ثلاثة ورا بعض بصريّاً أفضل، ثمّ باقي
+        //  الخانات».)
+        //
+        // **وكانت متفرّقةً بين الحقول**: المحافظةُ والمنطقةُ بعد الهاتف،
+        // **والتصنيفُ بعد العنوان الكامل** — **فثلاثةُ ألواحٍ متشابهةٍ
+        // يفصل بينها حقلٌ نصّيّ**، ولا يُقرأ أنّها مجموعةٌ واحدة.
+        //
+        // **والاختيارُ أسرعُ من الكتابة** — ضغطةٌ بالإبهام مقابل لوحةِ
+        // مفاتيح: **فمن بدأ بها أنهى نصفَ النموذج وهو واقفٌ في السوق.**
+        //
+        // **ومن العامّ إلى الخاصّ داخلها**: محافظةٌ فمنطقةٌ فتصنيف —
+        // **والمنطقةُ لا تُعرَف قبل محافظتها.**
+
+        // ══════════════════════════════════════════════════════════════
+        // **والمحافظةُ ثمّ المنطقةُ ثمّ العنوانُ التفصيليّ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **من العامّ إلى الخاصّ** — **وعكسُه يجعل أوّلَ ما يُملأ أغمضَ
+        // ما فيه.**
+        //
+        // **ورقائقُ لا قائمةٌ منسدلة** — كالتصنيف حرفاً: **المندوبُ واقفٌ
+        // في السوق بيدٍ واحدة**، والرقاقةُ تُضغط بالإبهام والمنسدلةُ
+        // تحتاج ضغطتين ونافذةً تُغطّي النموذج.
+        Spacer(Modifier.height(12.dp))
+        PickerBlock(
+            label = stringResource(R.string.ac_governorate),
+            hint = stringResource(R.string.ac_pick_governorate),
+            chosen = vm.governorates.firstOrNull { it.id == vm.pickedGovernorate }?.name,
+        ) {
+            vm.governorates.forEach { g ->
+                FilterChip(
+                    selected = vm.pickedGovernorate == g.id,
+                    onClick = { vm.pickGovernorate(g.id) },
+                    label = { Text(g.name) },
+                )
+            }
+        }
+
+        // **ولوحُ المناطق يُرسم دائماً ويقول لماذا هو فارغ** — **وكان
+        // يُخفى حتّى تُختار محافظة**، فيرى المندوبُ حقلين ويُرسل فيُردّ
+        // عليه بزرٍّ معطّلٍ لا يعرف سببَه. **والصفُّ الغائبُ لا يُعلّم،
+        // والصفُّ الذي يقول «اختر المحافظة أوّلاً» يُعلّم.**
+        Spacer(Modifier.height(10.dp))
+        PickerBlock(
+            label = stringResource(R.string.ac_district),
+            hint = stringResource(
+                if (vm.pickedGovernorate.isEmpty()) {
+                    R.string.ac_district_after_gov
+                } else {
+                    R.string.ac_pick_district
+                },
+            ),
+            chosen = vm.districts.firstOrNull { it.id == vm.pickedDistrict }?.name,
+        ) {
+            vm.districts.forEach { d ->
+                FilterChip(
+                    selected = vm.pickedDistrict == d.id,
+                    onClick = { vm.pickDistrict(d.id) },
+                    label = { Text(d.name) },
+                )
+            }
+        }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // **والتصنيفُ يُختار من قائمة المحرّك لا يُكتب**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ونصٌّ حرٌّ يجعل «مطاعم» و«مطعم» و«مطاعم ووجبات» ثلاثةَ
+        // تصنيفات** — فلا يُعثر على المتجر في بابه.
+        Spacer(Modifier.height(12.dp))
+        PickerBlock(
+            label = stringResource(R.string.ac_category),
+            hint = stringResource(R.string.ac_pick_category),
+            chosen = vm.categories.firstOrNull { it.id == vm.pickedCategory }?.name,
+        ) {
+            vm.categories.forEach { c ->
+                FilterChip(
+                    selected = vm.pickedCategory == c.id,
+                    onClick = { vm.pickCategory(c.id) },
+                    label = { Text(c.name) },
+                )
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -108,64 +330,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         // واحدٍ لا في كلّ نموذج.**
         PhoneField(value = vm.phone, onChange = { vm.phone = it }, enabled = !vm.busy)
 
-        // ══════════════════════════════════════════════════════════════
-        // **والمحافظةُ ثمّ المنطقةُ ثمّ العنوانُ التفصيليّ**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **من العامّ إلى الخاصّ** — **وعكسُه يجعل أوّلَ ما يُملأ أغمضَ
-        // ما فيه.**
-        //
-        // **ورقائقُ لا قائمةٌ منسدلة** — كالتصنيف حرفاً: **المندوبُ واقفٌ
-        // في السوق بيدٍ واحدة**، والرقاقةُ تُضغط بالإبهام والمنسدلةُ
-        // تحتاج ضغطتين ونافذةً تُغطّي النموذج.
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(R.string.ac_governorate),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.height(6.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            vm.governorates.forEach { g ->
-                FilterChip(
-                    selected = vm.pickedGovernorate == g.id,
-                    onClick = { vm.pickGovernorate(g.id) },
-                    label = { Text(g.name) },
-                )
-            }
-        }
-
-        // **ولا يُرسم لوحُ المناطق قبل أن تُختار محافظة** — **وصفٌّ فارغٌ
-        // يُعلّم صاحبَه ألّا ينظر إليه**، ثمّ لا ينظر حين يمتلئ.
-        if (vm.pickedGovernorate.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                stringResource(R.string.ac_district),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(6.dp))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                vm.districts.forEach { d ->
-                    FilterChip(
-                        selected = vm.pickedDistrict == d.id,
-                        onClick = { vm.pickDistrict(d.id) },
-                        label = { Text(d.name) },
-                    )
-                }
-            }
-        }
-
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = vm.area,
@@ -174,34 +338,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-
-        // ══════════════════════════════════════════════════════════════
-        // **والتصنيفُ يُختار من قائمة المحرّك لا يُكتب**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **ونصٌّ حرٌّ يجعل «مطاعم» و«مطعم» و«مطاعم ووجبات» ثلاثةَ
-        // تصنيفات** — فلا يُعثر على المتجر في بابه.
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(R.string.ac_category),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.height(6.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            vm.categories.forEach { c ->
-                FilterChip(
-                    selected = vm.pickedCategory == c.id,
-                    onClick = { vm.pickCategory(c.id) },
-                    label = { Text(c.name) },
-                )
-            }
-        }
 
         // ══════════════════════════════════════════════════════════════
         // **والنقطةُ على الخريطة**
@@ -354,6 +490,14 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
 
     var done by mutableStateOf(false)
         private set
+
+    /**
+     * **يُطوى التأكيدُ بعد أن يُقرأ** — **و`done` تبقى `private set`**
+     * فلا تُرفع إلّا من `send()` حين ينجح النداءُ فعلاً.
+     */
+    fun dismissDone() {
+        done = false
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // **والمحافظةُ تُصفّي المنطقة**

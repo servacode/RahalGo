@@ -93,8 +93,34 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         // سطراً بينهما يفعلان الشيءَ نفسَه.**
         ItemEditor(
             d = vm.editing!!,
-            sections = vm.platformSections.map {
-                com.rahalgo.shared.merchant.PlatformSectionRef(id = it.id, name = it.name, imageUrl = null, imageThumbUrl = null)
+            // ══════════════════════════════════════════════════════════
+            // **وأقسامُ متجرِه أوّلاً — لا كلُّ أقسام المنصّة بترتيبها**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «لا يلزم يُعرض كلّ الأقسام، لازم
+            //  تطلع أقسام المتجر نفسه مشان المندوب ما يتعذّب ويدور بين
+            //  الأقسام».)
+            //
+            // **ومتجرٌ يبيع في قسمين، وأقسامُ المنصّة عشرات** — فيبحث
+            // المندوبُ في صفٍّ طويلٍ عن قسمٍ يعرفه سلفاً، **مرّةً لكلّ
+            // صنفٍ يضيفه.**
+            //
+            // **ولا تُحذف البقيّة**: أوّلُ صنفٍ لمتجرٍ جديدٍ لا قسمَ له
+            // بعد، **ومن أراد قسماً جديداً لم يجد إليه سبيلاً.** **بل
+            // تُقدَّم أقسامُه ويبقى ما سواها خلفها** — فينال السرعةَ ولا
+            // يفقد القدرة.
+            sections = run {
+                val mine = vm.sections.orEmpty().map { it.id }.toSet()
+                (vm.platformSections.filter { it.id in mine } +
+                    vm.platformSections.filter { it.id !in mine })
+                    .map {
+                        // **وصورةُ القسم من القسم** — **وكانت تُمرَّر
+                        // فارغةً فيرسم المحرّرُ حرفاً بدل وجهِ السوق.**
+                        com.rahalgo.shared.merchant.PlatformSectionRef(
+                            id = it.id, name = it.name,
+                            imageUrl = it.imageUrl, imageThumbUrl = it.imageThumbUrl,
+                        )
+                    }
             },
             busy = vm.busy,
             media = { path -> Backend.of(ctx).media(path) },
@@ -124,17 +150,39 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
     Screen {
         ScreenTitle(stringResource(R.string.mn_items), stringResource(R.string.mn_hint))
 
-        // **وبابُ عروضه من حيث قائمتُه** — **والخصمُ على صنفٍ يُفتح
-        // من مكان الصنف لا من قائمةٍ بعيدة.**
-        RahalTextButton(onClick = onOffers, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.menu_offers))
-        }
+        // ══════════════════════════════════════════════════════════════
+        // **فعلان بوزنٍ واحد — لا زرٌّ وفوقه رابط**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «صفحة الأصناف هناك زرّين: إضافة صنف
+        //  وإنشاء عرض، مشان يكون واضح للمندوب».)
+        //
+        // **وكان «العروض» `RahalTextButton`** — بلا أرضيّةٍ ولا إطار،
+        // **فيُقرأ رابطاً أو عنواناً لا فعلاً**، والمندوبُ الواقفُ في
+        // السوق لا يراه بابَ عمل. **والصنفُ زرٌّ ممتلئٌ تحته**، فبدا
+        // الفعلُ واحداً وفوقه سطرٌ.
+        //
+        // **وهما فعلان لمتجرٍ واحد**: يضيف صنفاً، ثمّ يضع عليه عرضاً.
+        // **فيُوضعان في صفٍّ واحدٍ بوزنين متساويين** — والأوّلُ ممتلئٌ
+        // لأنّه الأكثرُ وقوعاً، **والثاني مؤطَّرٌ فيُرى فعلاً لا رابطاً.**
+        //
+        // **وبابُ عروضه من حيث قائمتُه** — **والخصمُ على صنفٍ يُفتح من
+        // مكان الصنف لا من قائمةٍ بعيدة.**
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            RahalButton(
+                onClick = { vm.newItem() },
+                enabled = !vm.busy,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.mn_add_item)) }
 
-        RahalButton(
-            onClick = { vm.newItem() },
-            enabled = !vm.busy,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.mn_item_new)) }
+            RahalOutlineButton(
+                onClick = onOffers,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.mn_make_offer)) }
+        }
 
         Spacer(Modifier.height(12.dp))
 
