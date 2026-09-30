@@ -21,10 +21,12 @@ package offers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -45,6 +47,8 @@ var (
 	ErrBadWindow = httpx.NewError(http.StatusBadRequest, "bad_offer_window", "errors.validation")
 	// ErrItemHasOffer **وخصمان على صنفٍ واحدٍ سؤالٌ بلا جواب.**
 	ErrItemHasOffer = httpx.NewError(http.StatusConflict, "item_already_discounted", "errors.item_already_discounted")
+	// ErrAmountOverPrice **مبلغُ خصمٍ يبلغ سعرَ الصنف يهبه** — `OFFER-EXP`.
+	ErrAmountOverPrice = httpx.NewError(http.StatusBadRequest, "offer_amount_over_price", "errors.offer_amount_over_price")
 )
 
 // KindDiscount النوعُ الوحيدُ الباقي — **واللافتاتُ في جدولها** (`banners`).
@@ -364,6 +368,30 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	// **ونهايةٌ مضت حينَ يُنشأ عرضٌ جديد** — **وُلد منتهياً.**
 	if in.EndsAt != nil && !in.EndsAt.After(time.Now()) {
 		return nil, ErrBadWindow
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	//  **ومبلغٌ يبلغ سعرَ الصنف يُرفض** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **رُئي على الجهاز**: ٢٠٠ على صنفٍ بـ١٥٠ قُبل بلا تحذير، **فصار
+	// الصنفُ «٠ ل.س» سارياً.** **وصفرٌ زائدٌ خطأَ إصبعٍ يهب الصنف.**
+	// (قرارُ المالك: «صلّحهم» — والمقترحُ المقبولُ الرفضُ لا السقف.)
+	//
+	// **والسقفُ سعرُ الزبون اليوم** — **ومن رفع المتجرُ سعرَه بعدها فالعرضُ
+	// أصغرُ لا أكبر**، ومن خفضه فـ`Cut` يقصّ عند الصفر كما كان.
+	if hasAmt {
+		var price int64
+		if err := s.db.QueryRow(ctx,
+			`SELECT price FROM menu_items WHERE id = $1::uuid`, *in.MenuItemID).Scan(&price); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, ErrBadDiscount
+			}
+			return nil, err
+		}
+		if *in.DiscountAmount >= price {
+			return nil, ErrAmountOverPrice
+		}
 	}
 
 	active := true

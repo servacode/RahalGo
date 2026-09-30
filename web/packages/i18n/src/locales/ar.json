@@ -673,6 +673,7 @@
     "incentive_needs_reason": "اكتب السبب — يسجل ويراه صاحبه",
     "bad_incentive_amount": "المبلغ يجب أن يكون أكبر من صفر",
     "item_already_discounted": "على هذا الصنف خصم سار — أنزله أولا",
+    "offer_amount_over_price": "مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً",
     "bad_offer_discount": "الخصم يلزمه صنف ونسبة ومن يتحمل",
     "offer_needs_title": "اكتب عنوان العرض",
     "bad_offer_kind": "نوع عرض غير معروف",

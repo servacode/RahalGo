@@ -71,6 +71,7 @@
     <string name="err_bad_offer_window">مدة العرض غير صحيحة — اختر مدة تنتهي بعد الآن</string>
     <string name="err_offer_needs_title">العرض يحتاج عنواناً</string>
     <string name="err_bad_offer_kind">نوع العرض غير معروف</string>
+    <string name="err_offer_amount_over_price">مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً</string>
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
     <string name="update_title">يوجد إصدار جديد</string>
     <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>

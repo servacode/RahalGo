@@ -254,7 +254,10 @@ fun OfferCard(
         }
 
         // **وما يوفّره بالليرة** — **وهو ما يقوله المتجرُ لزبونه.**
-        if (saved > 0) {
+        //
+        // **والموقوفُ والمنتهي لا «يوفّران» شيئاً** (`OFFER-EXP`، رُئي على
+        // الجهاز): «يوفر ٧٥ ل.س» بجانب «موقوف» يُقرأ عرضاً سارياً.
+        if (saved > 0 && (live || status == OfferStatus.SCHEDULED)) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.offer_saves, money(saved)),

@@ -100,7 +100,6 @@
     <string name="of_no_items">لا أصناف في هذا القسم — أضف صنفا أولا</string>
     <string name="of_change_store">تبديل المتجر</string>
     <string name="of_percent_hint">من 1 إلى 90 بالمئة</string>
-    <string name="of_fixed_soon">الخصم بمبلغ ثابت غير متاح بعد — بالمئة فقط</string>
     <string name="of_preview">%1$s: خصم %2$d%% لمدة %3$s</string>
     <string name="of_current">عروض هذا المتجر</string>
     <string name="of_back">رجوع</string>
@@ -109,6 +108,9 @@
     <string name="cl_offers">عروض جارية</string>
     <!-- طريقة الخصم — نسبة أو مبلغ ثابت -->
     <string name="of_item_taken">عليه عرض جار — الجديد يحل محله</string>
+    <string name="of_created">✓ تم إنشاء العرض — وهو ظاهر في قائمة عروض المتجر أدناه</string>
+    <string name="of_bad_percent">النسبة يجب أن تكون من 1 إلى 90</string>
+    <string name="of_bad_amount">المبلغ يجب أن يكون أقل من سعر الصنف (%1$s ل.س)</string>
     <string name="of_item_scheduled">عليه عرض مجدول — الجديد يحل محله</string>
     <string name="of_s4b">حدد قيمة الخصم</string>
     <string name="of_mode_percent">نسبة مئوية</string>

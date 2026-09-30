@@ -79,6 +79,7 @@ class ApiErrorsTest {
             Triple("bad_offer_window", "errors.validation", R.string.err_bad_offer_window),
             Triple("offer_needs_title", "errors.validation", R.string.err_offer_needs_title),
             Triple("bad_offer_kind", "errors.validation", R.string.err_bad_offer_kind),
+            Triple("offer_amount_over_price", "errors.offer_amount_over_price", R.string.err_offer_amount_over_price),
         )
         for ((code, key, want) in sent) {
             assertEquals("«$code» لا يُقال باسمه", want, resolveErrorRes(code, key))

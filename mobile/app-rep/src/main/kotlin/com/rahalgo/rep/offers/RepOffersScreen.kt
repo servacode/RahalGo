@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -79,6 +85,7 @@ import com.rahalgo.ui.RahalTextButton
 @Composable
 fun RepOffersScreen(vm: RepOffersViewModel) {
     val ctx = LocalContext.current
+    val focus = LocalFocusManager.current
     var percent by remember { mutableStateOf("") }
     var hours by remember { mutableStateOf(24) }
 
@@ -91,7 +98,15 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
     // **وقيمةٌ واحدةٌ تُقرأ بحسب الطريقة** — **ولا حقلان يملأ أحدَهما
     // وينسى الآخر** فيُرسَل عرضٌ بنسبةٍ ومبلغٍ معاً ويُردّ.
     val value = percent.toLongOrNull() ?: 0L
-    val valueOK = if (vm.byPercent) value in 1..90 else value > 0
+    // **والمبلغُ دون سعر الصنف** (`OFFER-EXP`): ٢٠٠ على ١٥٠ قُبل على الجهاز
+    // فصار الصنفُ «٠ ل.س». **والخادمُ يرفضه أيضاً** — وهذا ليُقال قبل الإرسال.
+    val itemPrice = vm.items.firstOrNull { it.id == vm.pickedItem }?.price ?: 0L
+    val valueOK = if (vm.byPercent) value in 1..90
+    else value > 0 && (itemPrice <= 0 || value < itemPrice)
+
+    // **ونجاحُ الإنشاء يمسح القيمة** — **لا الضغطُ**: من رُفض عرضُه يجد
+    // رقمَه كما كتبه فيصحّحه.
+    LaunchedEffect(vm.created) { if (vm.created > 0) percent = "" }
     val step = when {
         vm.merchantID.isEmpty() -> 1
         vm.pickedSection.isEmpty() -> 2
@@ -100,8 +115,10 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         else -> 5
     }
 
+    // **و`imePadding`**: لوحةُ المفاتيح كانت تغطّي «أنشئ العرض» فيقع الضغطُ
+    // عليها (`OFFER-EXP`، رُئي على الجهاز) — **فالقائمةُ تقصر فوقها.**
     LazyColumn(
-        Modifier.fillMaxWidth().padding(14.dp),
+        Modifier.fillMaxWidth().imePadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { StepHeader(step) }
@@ -115,6 +132,22 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     section = vm.sections.firstOrNull { it.id == vm.pickedSection }?.name,
                     item = vm.items.firstOrNull { it.id == vm.pickedItem }?.name,
                     onChangeMerchant = { vm.clearMerchant() },
+                )
+            }
+        }
+
+        // **و«تمّ» يُقال** — كانت الشاشةُ تعود للخطوة ٤ صامتة.
+        if (vm.createdShown && vm.error.isEmpty()) {
+            item {
+                Text(
+                    stringResource(R.string.of_created),
+                    color = Rahal.colors.success,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(Rahal.shape.md)
+                        .background(Rahal.colors.success.copy(alpha = 0.10f))
+                        .padding(12.dp),
                 )
             }
         }
@@ -272,6 +305,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                             // الطولِ يمنع لصقةً بمليارٍ تصير خصماً كاملاً.**
                             percent = v.filter { it.isDigit() }
                                 .take(if (vm.byPercent) 2 else 9)
+                            vm.clearCreated()
                         },
                         label = {
                             Text(
@@ -282,6 +316,31 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                         },
                         singleLine = true,
                         isError = percent.isNotEmpty() && !valueOK,
+                        // **والخطأُ يُقال بالأحمر تحت الحقل** — كانت ٩٥٪ تُعلق
+                        // الشاشةَ بلا سبب، والسطرُ الرماديُّ وحدَه.
+                        supportingText = if (percent.isNotEmpty() && !valueOK) {
+                            {
+                                Text(
+                                    if (vm.byPercent) {
+                                        stringResource(R.string.of_bad_percent)
+                                    } else {
+                                        stringResource(
+                                            R.string.of_bad_amount,
+                                            itemPrice.toString(),
+                                        )
+                                    },
+                                    color = Rahal.colors.danger,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                        // **و«تمّ» في لوحة المفاتيح يطويها.**
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(4.dp))
@@ -349,8 +408,8 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     Spacer(Modifier.height(8.dp))
                     RahalButton(
                         onClick = {
+                            focus.clearFocus()
                             vm.create(vm.pickedItem, value, hours)
-                            percent = ""
                         },
                         enabled = !vm.busy,
                         modifier = Modifier.fillMaxWidth(),

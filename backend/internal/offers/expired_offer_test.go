@@ -27,6 +27,7 @@ package offers
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -122,6 +123,18 @@ func TestCreate_ExpiredOfferDoesNotBlockItem(t *testing.T) {
 		if stillActive {
 			t.Fatalf("%s: المنتهي بقي مرفوعاً بعد إنشاء الجديد", tc.name)
 		}
+	}
+
+	// ── ٣ · مبلغٌ يبلغ السعرَ يُرفض — رُئي: ٢٠٠ على ١٥٠ صار «٠ ل.س» ──────
+	for _, over := range []int64{25000, 30000} {
+		item := newItem("صنفٌ لا يُوهَب")
+		if err := create(item, nil, &over); !errors.Is(err, ErrAmountOverPrice) {
+			t.Fatalf("مبلغ %d على سعر 25000 ردَّ %v — والمنتظَرُ الرفض", over, err)
+		}
+	}
+	under := int64(24999)
+	if err := create(newItem("صنفٌ خصمُه دون سعره"), nil, &under); err != nil {
+		t.Fatalf("مبلغٌ دون السعر رُفض: %v", err)
 	}
 
 	// ── ٢ · السارِي والمجدولُ يُستبدلان كذلك — والجديدُ وحدَه قائم ──────

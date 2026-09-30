@@ -21,7 +21,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +41,7 @@ import com.rahalgo.shared.rep.Division
 import com.rahalgo.shared.rep.NewLead
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.shared.rep.RepCategory
+import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Note
 import com.rahalgo.ui.PasswordField
@@ -201,7 +201,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             },
             text = { Text(stringResource(R.string.ac_ok_body)) },
             confirmButton = {
-                TextButton(onClick = { vm.dismissDone(); onDone() }) {
+                RahalTextButton(onClick = { vm.dismissDone(); onDone() }) {
                     Text(stringResource(R.string.ac_ok_go))
                 }
             },

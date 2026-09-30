@@ -161,6 +161,12 @@ func TestRPOF04_RepActionIsAuditedAsRep(t *testing.T) {
 // TestOFOV01_OFOV02_NoStacking **ولا خصمان على صنفٍ واحد.**
 //
 // **والمنعُ في القاعدة** — **لا في شرطٍ في غُو يُنسى في بابٍ ثانٍ.**
+//
+// # والثاني يحلّ محلّ الأوّل — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠
+//
+// **كان الثاني يُردّ بـ٤٠٩.** **وقرارُ المالك**: «لازم نقدر نعمل عرض إيمت
+// ما بدنا، ما إلو علاقة» — **فيُقبَل ويُنزَل الأوّل.** **والحارسُ الأصليُّ
+// باقٍ بعينه**: خصمٌ واحدٌ لا خصمان — **٧٠٠ لا ٥٦٠.**
 func TestOFOV01_OFOV02_NoStacking(t *testing.T) {
 	hh := New(t)
 	z := zoneForDemand(t, hh, "منطقةُ OF-OV-01")
@@ -168,17 +174,26 @@ func TestOFOV01_OFOV02_NoStacking(t *testing.T) {
 	fx := newOfferFx(t, hh, f, 1000)
 	end := time.Now().Add(2 * time.Hour)
 
-	if r := makeOffer(t, hh, fx, fx.Tok, 20, nil, &end); r.Code != http.StatusOK {
-		t.Fatalf("الأوّل: %d / %s", r.Code, r.Err())
+	first := makeOffer(t, hh, fx, fx.Tok, 20, nil, &end)
+	if first.Code != http.StatusOK {
+		t.Fatalf("الأوّل: %d / %s", first.Code, first.Err())
 	}
-	// **والثاني يُردّ بصراحة** — **ولا يُقبَل صامتاً فيتراكم.**
 	second := makeOffer(t, hh, fx, fx.Tok, 30, nil, &end)
-	if second.Code != http.StatusConflict {
-		t.Fatalf("**قُبل خصمٌ ثانٍ على الصنف نفسِه**: %d / %s", second.Code, second.Err())
+	if second.Code != http.StatusOK {
+		t.Fatalf("**رُدّ الثاني والقرارُ أن يحلّ محلّ الأوّل**: %d / %s", second.Code, second.Err())
 	}
-	// **والسعرُ خصمٌ واحدٌ لا خصمان** — **٨٠٠ لا ٥٦٠.**
-	if got := unitPriceOf(t, hh, z, fx.Item.ID); got != 800 {
-		t.Fatalf("**تراكم خصمان**: %d", got)
+	// **والأوّلُ نزل** — قائمٌ واحدٌ على الصنف.
+	var live int
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT count(*) FROM offers WHERE menu_item_id = $1 AND active`, fx.Item.ID).Scan(&live); err != nil {
+		t.Fatal(err)
+	}
+	if live != 1 {
+		t.Fatalf("**قائمٌ على الصنف %d لا واحد**", live)
+	}
+	// **والسعرُ خصمٌ واحدٌ لا خصمان** — **٧٠٠ لا ٥٦٠.**
+	if got := unitPriceOf(t, hh, z, fx.Item.ID); got != 700 {
+		t.Fatalf("**تراكم خصمان أو بقي الأوّل**: %d", got)
 	}
 }
 

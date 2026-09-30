@@ -60,6 +60,23 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
     var stopping by mutableStateOf<String?>(null)
         private set
 
+    /**
+     * **عددُ ما أُنشئ بنجاح** — تقرؤه الشاشةُ فتقول «تمّ» وتمسح القيمة.
+     *
+     * **وكانت تعود للخطوة ٤ صامتةً** (`OFFER-EXP`، رُئي على الجهاز)، **والقيمةُ
+     * تُمسح قبل ردّ الخادم** — فمن رُفض عرضُه وجد حقلَه فارغاً.
+     */
+    var created by mutableStateOf(0)
+        private set
+
+    /** **والتأكيدُ يبقى حتّى يبدأ عرضاً آخر** — ثمّ يُطوى. */
+    fun clearCreated() {
+        createdShown = false
+    }
+
+    var createdShown by mutableStateOf(false)
+        private set
+
     // ══════════════════════════════════════════════════════════════════
     //  **ومسارٌ متدرّج: متجرٌ ثمّ قسمٌ ثمّ صنفٌ ثمّ نسبةٌ ثمّ مدّة**
     // ══════════════════════════════════════════════════════════════════
@@ -231,9 +248,12 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
                     ),
                 )
                 busy = false
+                created += 1
+                createdShown = true
                 load()
             } catch (e: Exception) {
                 error = err(e)
+                createdShown = false
                 busy = false
             }
         }
