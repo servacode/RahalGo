@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -113,9 +114,47 @@ func (s *Server) handleAdminRevokeRole(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminUserRoleCounts أعداد الحسابات لكل دور — تغذي الكروت الذكية
 // الفلترة أعلى شاشة الحسابات.
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**والبطاقةُ تعدّ ما تعرضه القائمةُ تحتها — وإلّا فهما رقمان**  `BOOK-06`
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// # ما قِيس (٢٠٢٦-٠٩-٣٠، شاشةُ الحسابات على التجهيز، رآها المالك)
+//
+//	بطاقةُ «موظّفو المنصّة»  تقول  **١**
+//	وضغطُها يُخرج            **٥**   — مديرُ المنصّة والعمليّاتُ والماليّةُ
+//	                                   وخدمةُ العملاء ومراقبُ المنصّة
+//	وبطاقةُ «كلّ الحسابات»   تقول  **٥**   والجدولُ تحتها **ستّةُ صفوف**
+//
+// **ورقمان يتناقضان في شاشةٍ واحدةٍ أسوأُ من رقمٍ غائب**: من قرأ البطاقة
+// ولم يضغطها استنتج أن لا موظّفَ في منصّته.
+//
+// # وثلاثةُ أسبابٍ في دالّةٍ واحدة — كلُّها من عائلةٍ أُصلحت مرّتين
+//
+//  1. **`role_code <> 'admin'`** في عدّ الأدوار — **وهو `BOOK-01` بعينه**:
+//     إخفاءُ الأدمن من القراءة. وقد نُقض بقرار المالك ٢٠٢٦-٠٩-٣٠.
+//  2. **`role_code IN ('ops','finance')`** للطاقم — **وهو `BOOK-05` بعينه**:
+//     `ops` مُحالٌ إلى الإرث وصفرُ حاملين، و`operations` و`customer_support`
+//     و`admin` و`platform_monitor` غائبون كلُّهم. **فالخمسةُ صاروا واحداً.**
+//  3. **`WHERE NOT EXISTS (... 'admin')`** في المجموع — فالمجموعُ يطرح
+//     حساباتِ الأدمن، **والقائمةُ تعرضها**. (قِيس: ٥ مقابل ٦.)
+//
+// # والإصلاحُ أن يُقرأ المُسنَدُ من موضعٍ واحد
+//
+// **`identity.ListUsers` هي التي تُخرج الصفوف** — فهذه الدالّةُ تعدّ بمُسنَدها
+// نفسِه لا بمُسنَدٍ مشابه: **مجموعٌ بلا استثناء**، **وطاقمٌ بالنفي**
+// (`role_code <> ALL(accountTypes)`)، **وعدُّ أدوارٍ بلا حجب.**
+//
+// **ولا تشيخ بدورٍ جديد**: من أضاف دورَ عملٍ غداً ظهر في البطاقة وفي القائمة
+// معاً **بلا تعديلِ استعلامٍ في موضعين.**
 func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Request) {
+	// **وصفةُ الحساب ليست وظيفة** — وما عداها عملٌ. (`authz.ClassAccountType`)
+	accountTypes := authz.RolesInClass(authz.ClassAccountType)
+
 	rows, err := s.pg.Query(r.Context(),
-		`SELECT role_code, count(*) FROM user_roles WHERE role_code <> 'admin' GROUP BY role_code`)
+		`SELECT role_code, count(*) FROM user_roles GROUP BY role_code`)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -135,10 +174,9 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT count(*),
 		       count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_roles sr
-		           WHERE sr.user_id = u.id AND sr.role_code IN ('ops','finance'))),
+		           WHERE sr.user_id = u.id AND sr.role_code <> ALL($1))),
 		       count(*) FILTER (WHERE u.last_seen_at > now() - interval '2 minutes')
-		FROM users u
-		WHERE NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role_code = 'admin')`).
+		FROM users u`, accountTypes).
 		Scan(&total, &staff, &online); err != nil {
 		s.respondErr(w, err)
 		return

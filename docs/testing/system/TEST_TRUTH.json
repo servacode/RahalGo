@@ -33,8 +33,8 @@
     "setting_defs": 158,
     "behaviour_settings": 130,
     "order_fields": 83,
-    "test_files": 416,
-    "test_funcs": 1755
+    "test_files": 417,
+    "test_funcs": 1760
   },
   "flows": [
     {
@@ -21096,6 +21096,36 @@
     {
       "name": "TestXG46_ReadFailureInsideUnitRollsBackEverything",
       "file": "internal/qa/tx_read_failure_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK06_EveryRoleCardMatchesItsFilter",
+      "file": "internal/qa/user_counts_match_list_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK06_StaffCardCountsEveryStaffRole",
+      "file": "internal/qa/user_counts_match_list_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK06_StaffCardMatchesStaffList",
+      "file": "internal/qa/user_counts_match_list_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK06_StaffIsNotJustFinance",
+      "file": "internal/qa/user_counts_match_list_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK06_TotalCardMatchesUnfilteredList",
+      "file": "internal/qa/user_counts_match_list_test.go",
       "package": "qa",
       "orphan": true
     },
