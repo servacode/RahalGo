@@ -187,7 +187,7 @@
 |---|---|---|---|
 | `protected` | `owner_super_admin` | `owner` | لا |
 | `elevated` | `admin` | `owner` | لا |
-| `staff` | `analytics`, `customer_support`, `driver_verification`, `finance`, `marketing_content`, `merchant_verification`, `observability`, `operations`, `trust_safety` | `roles.manage` | لا |
+| `staff` | `analytics`, `customer_support`, `driver_verification`, `finance`, `marketing_content`, `merchant_verification`, `observability`, `operations`, `platform_monitor`, `trust_safety` | `roles.manage` | لا |
 | `account_type` | `customer`, `driver`, `merchant`, `sales` | `roles.manage` | **نعم** |
 | `legacy` | `ops` | `never` | لا |
 <!-- /gen:role-classes -->

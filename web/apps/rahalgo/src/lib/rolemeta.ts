@@ -176,6 +176,7 @@ const ROLE_CLASSES: Record<string, RoleClass> = {
   marketing_content: "staff",
   trust_safety: "staff",
   observability: "staff",
+  platform_monitor: "staff",
 
   // **وصفةُ الحساب ليست وظيفة** — والمحرّكُ يرفض أكثرَها بيدٍ
   // (`ErrRoleConflict` · `ErrMerchantNeedsStore`).

@@ -481,6 +481,7 @@
     "merchant_verification",
     "observability",
     "operations",
+    "platform_monitor",
     "trust_safety"
    ],
    "grant_authority": "roles.manage",

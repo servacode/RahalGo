@@ -201,6 +201,9 @@ export default function AllAccountsTable() {
           <span className="inline-flex min-w-0 items-center gap-2">
             <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || m.terms.avatarFallback} size={32} />
             <span className="truncate">{u.full_name || "—"}</span>
+            {/* **حسابٌ نظاميٌّ يُوسَم ولا يُخفى** — سأل المالكُ عنه فظنّه
+                بلا عمل، **والعيبُ في العرض لا في الحساب.** */}
+            {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
           </span>
           <button
             type="button"

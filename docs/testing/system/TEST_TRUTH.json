@@ -34,7 +34,7 @@
     "behaviour_settings": 130,
     "order_fields": 83,
     "test_files": 416,
-    "test_funcs": 1752
+    "test_funcs": 1755
   },
   "flows": [
     {
@@ -7033,7 +7033,25 @@
       "orphan": true
     },
     {
+      "name": "TestListUsers_FindsByLocalPhoneForm",
+      "file": "internal/identity/list_users_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestListUsers_MarksSystemAccountWithoutHiding",
+      "file": "internal/identity/list_users_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestListUsers_RoleFilterFindsAdmin",
+      "file": "internal/identity/list_users_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestListUsers_StaffFilterCoversEveryStaffRole",
       "file": "internal/identity/list_users_test.go",
       "package": "identity",
       "orphan": true

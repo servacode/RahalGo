@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
@@ -160,16 +161,62 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 	// (`PATCH /admin/users/{id}`) مفتوحٌ لمن يملك القدرةَ ويعرف المعرّف،
 	// **فالإخفاءُ كان يمنع الاكتشافَ في الواجهة وحدَه.** **والحمايةُ
 	// موضعُها حرّاسُ الكتابة لا حجبُ القراءة** — انظر `BOOK-02`.
-	where := `WHERE ($1 = '' OR u.phone ILIKE '%'||$1||'%' OR u.full_name ILIKE '%'||$1||'%' OR u.invite_code ILIKE '%'||$1||'%')
+	// ══════════════════════════════════════════════════════════════════
+	//  **والبحثُ بالرقم كما يكتبه الإنسان**  `BOOK-04`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الأرقامُ تُخزَّن مطبَّعةً** (`+963990000001`)، **والبحثُ كان
+	// `ILIKE` خامّاً على النصّ** — **فمن كتب `0990000001` كما هو على بطاقة
+	// الموظّف رُدّ بصفر نتائج.**
+	//
+	// **ونفيٌ كاذبٌ أسوأُ من خطأ**: يُقرأ «لا حسابَ بهذا الرقم» فيُنشأ
+	// الحسابُ مرّتين. (قِيس حيّاً ٢٠٢٦-٠٩-٣٠: `0990000001` ⇒ صفر،
+	// و`+963990000001` ⇒ واحد.)
+	//
+	// **فيُطبَّع المكتوبُ بدالّة المشروع** — ويُبحَث بالصيغتين معاً، فلا
+	// تضيع صيغةٌ صحيحةٌ بأخرى.
+	phoneQ := query
+	if n, ok := NormalizePhone(query); ok {
+		phoneQ = n
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	//  **و«الطاقم» صنفُ دورٍ محسوبٌ لا زوجٌ مكتوبٌ بيد**  `BOOK-05`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان `role_code IN ('ops','finance')`** — **و`ops` دورٌ مُحالٌ إلى
+	// الإرث** (`authz.ClassLegacy`)، **و`operations` و`customer_support`
+	// غائبان.** فمن ضغط «الموظّفون» رأى المالية وحدَها.
+	//
+	// (قِيس حيّاً ٢٠٢٦-٠٩-٣٠: ثلاثةُ موظّفين في القاعدة، و`role=staff`
+	// يردّ واحداً.)
+	//
+	// # وموظّفُ المنصّة من ليس صاحبَ حسابٍ عاديّ
+	//
+	// **وأوّلُ إصلاحٍ كتبتُه كان `RolesInClass(ClassStaff)`** — **وأسقط
+	// مديرَ المنصّة**: `admin` صنفُه `ClassElevated` لا `ClassStaff`،
+	// **والمالكُ الأعلى `ClassProtected`.** (أمسكه سؤالُ المالك
+	// ٢٠٢٦-٠٩-٣٠: «ويجب أن يكون… ومدير المنصّة ضمن موظّفي المنصّة».)
+	//
+	// **فالتعريفُ بالنفي لا بالعدّ**: موظّفُ المنصّة **كلُّ من دورُه ليس
+	// صفةَ حساب** — زبوناً أو سائقاً أو متجراً أو مندوباً.
+	//
+	// **ولا تشيخ القائمةُ بدورٍ جديد**: من أنشأ دوراً وظيفيّاً أو أدمناً
+	// ثانياً غداً **ظهر في «الموظّفون» بلا أن يُعدَّل استعلام** — وصفةُ
+	// الحساب أربعةٌ مستقرّة، وما عداها عمل.
+	accountTypes := authz.RolesInClass(authz.ClassAccountType)
+
+	where := `WHERE ($1 = '' OR u.phone ILIKE '%'||$1||'%' OR u.phone ILIKE '%'||$5||'%'
+	               OR u.full_name ILIKE '%'||$1||'%' OR u.invite_code ILIKE '%'||$1||'%')
 	          AND ($2 = '' OR EXISTS (
 	              SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
-	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code IN ('ops','finance')))))
+	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code <> ALL($6)))))
 	          AND (NOT $3 OR u.last_seen_at > now() - interval '2 minutes')
 	          AND ($4 = '' OR u.status = $4)`
 
 	var total int
 	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where,
-		query, role, onlineOnly, status).Scan(&total); err != nil {
+		query, role, onlineOnly, status, phoneQ, accountTypes).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -193,7 +240,11 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		       COALESCE(rp.stores, 0), COALESCE(cm.total, 0),
 		       -- **وحالُه كسائق** — ورديّتُه ونقدُه وما في يده وما سلّم اليوم.
 		       u.on_shift, COALESCE(cb.held, 0),
-		       COALESCE(dv.open_cnt, 0), COALESCE(dv.today_cnt, 0)
+		       COALESCE(dv.open_cnt, 0), COALESCE(dv.today_cnt, 0),
+		       -- **وحسابٌ نظاميٌّ يُوسَم ولا يُخفى** — والوسمُ من القاعدة:
+		       -- محفظةُ الاحتباس. **ولا يُقرأ من is_treasury** فالخزينةُ
+		       -- على محفظة المالك، وهو إنسانٌ لا نظام.
+		       COALESCE(w.is_cash_holding, false)
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN media am ON am.id = u.avatar_media_id
@@ -234,9 +285,10 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		) dv ON dv.uid = u.id
 		`+where+`
 		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at,
-		         rp.stores, cm.total, u.on_shift, cb.held, dv.open_cnt, dv.today_cnt
+		         rp.stores, cm.total, u.on_shift, cb.held, dv.open_cnt, dv.today_cnt,
+		         w.is_cash_holding
 		ORDER BY u.created_at DESC
-		LIMIT $5 OFFSET $6`, query, role, onlineOnly, status, limit, offset)
+		LIMIT $7 OFFSET $8`, query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -248,7 +300,8 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles,
 			&u.Balance, &u.OrdersCount, &u.OrdersSpent, &u.LastOrderAt,
 			&u.RepStores, &u.Commissions,
-			&u.OnShift, &u.DriverCash, &u.OpenOrders, &u.DeliveredToday); err != nil {
+			&u.OnShift, &u.DriverCash, &u.OpenOrders, &u.DeliveredToday,
+			&u.IsSystem); err != nil {
 			return nil, 0, err
 		}
 		u.AvatarURL = media.SignedURLPtr(u.AvatarURL)

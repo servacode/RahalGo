@@ -76,6 +76,10 @@ var roleClasses = map[string]RoleClass{
 	"marketing_content":     ClassStaff,
 	"trust_safety":          ClassStaff,
 	"observability":         ClassStaff,
+	// **وموظّفُ مراقبةِ المنصّة** (قرارُ المالك ٢٠٢٦-٠٩-٣٠) — **يرى
+	// كلَّ شيءٍ ولا يكتب شيئاً**، وصنفُه موظّفٌ **فيظهر في «الموظّفون»
+	// بلا تعديلِ استعلام** (`BOOK-05`).
+	"platform_monitor": ClassStaff,
 
 	// **وصفةُ الحساب ليست وظيفة** — والمحرّكُ يرفض أكثرَها بيدٍ
 	// (`ErrMerchantNeedsStore` · `ErrRoleConflict`).
