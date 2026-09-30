@@ -1070,12 +1070,14 @@
    "from": "dispatching",
    "to": "cancelled",
    "declared_roles": [
-    "ops"
+    "ops",
+    "merchant"
    ],
    "effective_platform": [
     "admin"
    ],
    "effective_merchants": [
+    "merchant",
     "ops",
     "admin"
    ]
@@ -1121,12 +1123,14 @@
    "from": "assigned",
    "to": "cancelled",
    "declared_roles": [
-    "ops"
+    "ops",
+    "merchant"
    ],
    "effective_platform": [
     "admin"
    ],
    "effective_merchants": [
+    "merchant",
     "ops",
     "admin"
    ]
@@ -1172,12 +1176,14 @@
    "from": "at_pickup",
    "to": "cancelled",
    "declared_roles": [
-    "ops"
+    "ops",
+    "merchant"
    ],
    "effective_platform": [
     "admin"
    ],
    "effective_merchants": [
+    "merchant",
     "ops",
     "admin"
    ]

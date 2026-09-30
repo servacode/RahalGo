@@ -1308,6 +1308,48 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/delivery-credit",
+      "handler": "handleAdminMerchantDeliveryCredit",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "limit",
+          "type": "unknown"
+        },
+        {
+          "name": "owed",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/merchants/{id}/delivery-credit",
+      "handler": "handleAdminSetMerchantDeliveryCredit",
+      "auth": true,
+      "capability": "settings.financial.manage",
+      "request": [
+        {
+          "name": "limit",
+          "type": "?int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "limit",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/merchants/{id}/hours",
       "handler": "handleGetHours",
       "auth": true,
@@ -4936,6 +4978,42 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/deliveries/{id}",
+      "handler": "handleMerchantDelivery",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/deliveries/{id}/cancel",
+      "handler": "handleMerchantCancelDelivery",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/merchant/media",
       "handler": "handleMerchantUploadMedia",
@@ -5226,6 +5304,86 @@
         },
         {
           "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/deliveries",
+      "handler": "handleMerchantDeliveries",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "deliveries",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/deliveries",
+      "handler": "handleMerchantCreateDelivery",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "idempotent": true,
+      "request": [
+        {
+          "name": "recipient_name",
+          "type": "string"
+        },
+        {
+          "name": "recipient_phone",
+          "type": "string"
+        },
+        {
+          "name": "address_text",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        },
+        {
+          "name": "parcel_note",
+          "type": "string"
+        },
+        {
+          "name": "driver_note",
+          "type": "string"
+        },
+        {
+          "name": "fee_payer",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/delivery-quote",
+      "handler": "handleMerchantDeliveryQuote",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@q",
           "type": "unknown"
         }
       ],

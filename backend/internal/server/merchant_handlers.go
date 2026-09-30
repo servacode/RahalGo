@@ -198,6 +198,8 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 		OpenOnly:   q.Get("open_only") == "true",
 		Page:       page,
 		PerPage:    perPage,
+		// **والتوصيلاتُ في قائمتها** (`/stores/{id}/deliveries`) — لا بين المبيعات.
+		SalesOnly: true,
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **وسجلُّ الطلبات يُطلب صراحةً — ويُجاب في الوضعين**

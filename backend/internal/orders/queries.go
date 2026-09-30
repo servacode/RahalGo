@@ -13,7 +13,13 @@ import (
 )
 
 const orderSelect = `
-	SELECT o.id, o.number, o.customer_id, cu.phone, cu.full_name,
+	SELECT o.id, o.number,
+	       -- **والتوصيلةُ بلا زبون** («لدي توصيلة» · قرارُ المالك ٤): المستلِمُ
+	       -- ليس مستخدماً، **فاسمُه ورقمُه في موضع الزبون** — فيراه السائقُ
+	       -- والمكتبُ حيث اعتادا بلا شاشةٍ جديدة.
+	       COALESCE(o.customer_id::text, ''),
+	       COALESCE(cu.phone, o.recipient_phone, ''),
+	       COALESCE(cu.full_name, o.recipient_name, ''),
 	       -- **ونوعُ الطلب** — الشاشاتُ تعرض به، والخارطةُ تختلف عليه.
 	       o.kind, COALESCE(o.custom_request, ''),
 	       o.custom_agreed_at, o.custom_goods_amount, o.custom_fee,
@@ -86,9 +92,13 @@ const orderSelect = `
 	                          'qty', oi.qty, 'note', oi.note,
 	                          'options', COALESCE(oi.options, '[]'::jsonb))
 	                        ORDER BY oi.id)
-	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json)
+	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json),
+	       -- **ووصفُ الغرض ومن يدفع** — للتوصيلة وحدَها، وفراغٌ لغيرها.
+	       COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''), o.dropoff_known
 	FROM orders o
-	JOIN users cu ON cu.id = o.customer_id
+	-- **والزبونُ يُضمّ يساراً** — التوصيلةُ لا زبونَ لها (customer_id فارغ).
+	-- **وضمٌّ صلبٌ يُسقطها من كلّ قراءة** — وهي علّةُ الخاصِّ مع المتجر بعينها.
+	LEFT JOIN users cu ON cu.id = o.customer_id
 	-- **والمتجرُ يُضمّ يساراً** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): لا متجرَ له.
 	--
 	-- **وضمٌّ صلبٌ يُسقطه من كلّ قراءة** — لا يُخطئ ولا يُنذر، **إنّما يختفي
@@ -119,7 +129,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.LegM, &o.DriverToPickupM,
 		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
-		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)
+		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items,
+		&o.ParcelNote, &o.FeePayer, &o.DropoffKnown)
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +237,11 @@ type ListFilter struct {
 	DriverID   string
 	Query      string // رقم طلب أو هاتف زبون
 	OpenOnly   bool   // الطلبات الجارية فقط
+	// SalesOnly **طلباتُ السوق وحدَها — بلا «لدي توصيلة»** (الخطوة ١٨).
+	//
+	// **سجلُّ المتجر جوابُ «ماذا بعتُ اليوم»** — والتوصيلةُ خدمةٌ طلبها لا بيعٌ
+	// باعه، **وسطرٌ بمبيعٍ صفرٍ بين طلباته يُربك حسابَه.** ولها قائمتُها.
+	SalesOnly bool
 	// ClosedOnly المنتهيةُ وحدَها — **سجلٌّ لا شاشةَ متابعة.**
 	//
 	// يُستعمل حين تدير المنصةُ الطلبات: **المتجرُ لا يملك زرّاً في الجارية**،
@@ -320,7 +336,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		AND ($2 = '' OR o.merchant_id::text = $2)
 		AND ($3 = '' OR o.customer_id::text = $3)
 		AND ($4 = '' OR o.driver_id::text = $4)
-		AND ($5 = '' OR o.number::text = $5 OR cu.phone ILIKE '%'||$5||'%')
+		AND ($5 = '' OR o.number::text = $5 OR COALESCE(cu.phone, o.recipient_phone) ILIKE '%'||$5||'%')
 		AND (NOT $6 OR o.closed_at IS NULL)
 		AND (NOT $7 OR o.closed_at IS NOT NULL)
 		-- **وصاحبُ المتجر يجمع متاجرَه كلَّها** — (٢٠٢٦-٠٨-١٦).
@@ -329,11 +345,15 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		-- لا يُطلب هذا الشرط. **وشرطٌ على عمودٍ من ضمٍّ يساريٍّ يُقصي
 		-- بلا متجرٍ بذاته** — وهو ما نريد هنا بالضبط.
 		AND ($8 = '' OR mr.owner_user_id::text = $8)`
+	if f.SalesOnly {
+		where += `
+		AND o.kind <> 'merchant_delivery'`
+	}
 
 	var total int
 	if err := s.db.QueryRow(ctx, `
 		SELECT count(*) FROM orders o
-		JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
 		f.ClosedOnly, f.OwnerID).Scan(&total); err != nil {
@@ -393,7 +413,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if f.ClosedOnly {
 		cRows, err := s.db.Query(ctx, `
 			SELECT o.status, count(*) FROM orders o
-			JOIN users cu ON cu.id = o.customer_id
+			LEFT JOIN users cu ON cu.id = o.customer_id
 			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where+`
 			GROUP BY o.status`,
 			"", f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,

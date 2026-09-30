@@ -2381,6 +2381,7 @@
         "admin.banner_delete": "حذف لافتة",
         "admin.banner_update": "تعديل لافتة",
         "admin.category_create": "إنشاء تصنيف",
+        "admin.merchant_delivery_credit": "ضبط سقف دين التوصيلة لمتجر",
         "admin.category_update": "تعديل تصنيف",
         "admin.logout_all": "إنهاء كل الجلسات",
         "admin.menu_reviewed": "مراجعة قائمة متجر",

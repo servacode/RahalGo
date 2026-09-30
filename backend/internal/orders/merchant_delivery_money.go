@@ -28,6 +28,7 @@ import (
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -120,11 +121,70 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 		return ErrDeliveryCreditExhausted
 	}
 	if _, err := obligations.Create(ctx, q, obligations.PartyMerchant, merchantID,
-		fee, "merchant_delivery_fee", orderID, &actorID); err != nil {
+		fee, causeMerchantDeliveryFee, orderID, &actorID); err != nil {
 		return err
 	}
 	return nil
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **تسويةُ التوصيلة — مسارٌ ثالثٌ لا يمرّ بالعامّ** (الخطوة ١٨، ٢٠٢٦-١٠-٠١)
+// ══════════════════════════════════════════════════════════════════════
+//
+// # لماذا لا يمرّ بالعامّ
+//
+// **العامُّ يفترض زبوناً وبضاعة**: يُعيد المحفظةَ إلى `customer_id` عند
+// الإلغاء (**وهو فارغٌ هنا — فيضيع مالُ المتجر**)، **ويُقيّد مستحقَّ المتجر عند
+// الاستلام** (لا بضاعةَ باعها)، **ويصرف عمولةَ المندوب عند التسليم** (لا مبيعات).
+// **وكلُّ واحدةٍ منها خطأٌ ماليٌّ صامتٌ لو مرّت التوصيلةُ من هناك.**
+//
+// # وما يقع
+//
+//	التسليم          ⇐ نقدُ المستلِم إلى صندوق السائق (إن دفع هو) · أجرُ السائق ·
+//	                   والبقيّةُ للخزينة (`creditTreasury`)
+//	نهايةٌ بلا تسليم ⇐ **يُعاد المالُ لمن دفعه**: محفظةُ المتجر إن خُصمت، أو
+//	                   يُسقَط الدينُ إن قُيّد. **ولا أجرَ لسائقٍ لم يُسلّم.**
+func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
+	in settlement, out *settled) error {
+	switch {
+	case in.to == StDelivered:
+		if in.cashDue > 0 && in.driverID != nil {
+			if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {
+				return err
+			}
+		}
+		if err := s.payDriver(ctx, q, in, out); err != nil {
+			return err
+		}
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+
+	case refundOnEnter(in.to) && in.from != StDelivered:
+		var merchantID, ownerID string
+		if err := q.QueryRow(ctx, `
+			SELECT o.merchant_id::text, m.owner_user_id::text
+			  FROM orders o JOIN merchants m ON m.id = o.merchant_id
+			 WHERE o.id = $1`, in.orderID).Scan(&merchantID, &ownerID); err != nil {
+			return err
+		}
+		if in.walletPaid > 0 {
+			if _, err := s.wallet.ApplyTx(ctx, q, ownerID, in.walletPaid, "refund",
+				in.orderID, "استرجاعُ أجرةِ توصيلةٍ لم تُسلَّم", &in.actorID); err != nil {
+				return err
+			}
+			out.credit(ownerID, in.walletPaid, t.refunded2, notifications.AppMerchant)
+		}
+		// **والدينُ يُسقَط كما يُردّ المال** — دينٌ على توصيلةٍ لم تقع باطل.
+		if err := obligations.VoidForOrder(ctx, q, obligations.PartyMerchant, merchantID,
+			in.orderID, causeMerchantDeliveryFee, &in.actorID); err != nil {
+			return err
+		}
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+	}
+	return nil
+}
+
+// causeMerchantDeliveryFee **سببُ دينِ أجرة التوصيلة** — موضعٌ واحدٌ للنصّ.
+const causeMerchantDeliveryFee = "merchant_delivery_fee"
 
 // MerchantDeliveryCredit **سقفُ دينِ متجرٍ ورصيدُه** — لشاشة الإدارة.
 //

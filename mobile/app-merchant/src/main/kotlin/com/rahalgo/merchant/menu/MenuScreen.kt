@@ -111,6 +111,7 @@ fun MenuScreen(vm: MenuViewModel) {
             onPickImage = { bytes -> vm.pickImage(bytes) },
             onClearImage = { vm.clearImage() },
             onSave = { vm.saveItem() },
+            error = vm.editError,
             onCancel = { vm.cancelEdit() },
             onDelete = { vm.deleteItem(draft.itemId) },
         )

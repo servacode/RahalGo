@@ -222,6 +222,11 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // **وخريطةُ الدبّوس تغطّي الشاشةَ ولا تفتح صفحةً ثانية** — **ومن
     // خرج إلى صفحةٍ ليختار نقطةً عاد فلم يجد ما كتب.**
     var picking by rememberSaveable { mutableStateOf(false) }
+    // **«لدي توصيلة»** (الخطوة ١٨) — ونقطةُ المستلِم على الخريطة نفسِها.
+    val deliveryVm: com.rahalgo.merchant.delivery.DeliveryViewModel = viewModel()
+    var pickingDelivery by rememberSaveable { mutableStateOf(false) }
+    // **و«رجوع» على الخريطة يُغلقها لا التطبيق.**
+    androidx.activity.compose.BackHandler(enabled = pickingDelivery) { pickingDelivery = false }
     val historyVm: HistoryViewModel = viewModel()
     // ══════════════════════════════════════════════════════════════════
     // **وثلاثةُ أقسامٍ في الدرج تُبنى عند فتحها لا عند الإقلاع**
@@ -251,6 +256,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val scope = rememberCoroutineScope()
     val overlay = rememberOverlay { key -> MERCHANT_ITEMS.any { it.key == key } }
     var tab by rememberSaveable { mutableStateOf(Tab.Orders) }
+
+    // **و«رجوع» من تبويبٍ يعود إلى الأوّل لا يُخرج** (تقريرُ فحص المتجر) — كما
+    // في تطبيق المندوب. **والخريطةُ والدرجُ والشاشاتُ المفتوحةُ تغلبه** (تُسجَّل
+    // بعده فتُقدَّم)، **ولا يُفعَّل وهما مفتوحتان** — فيُسبَق بشرطهما هنا.
+    androidx.activity.compose.BackHandler(
+        enabled = tab != Tab.Orders && !drawer.isOpen && !picking && !pickingDelivery,
+    ) { tab = Tab.Orders; menuVm.cancelEdit() }
 
     // ══════════════════════════════════════════════════════════════════
     // **ونقرةُ إشعارِ الطلب تفتح ذاك الطلب بعينه** (B3، ٢٠٢٦-٠٩-٢٦)
@@ -467,6 +479,18 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         label = R.string.mn_items,
                     )
                     // ══════════════════════════════════════════════════
+                    // **و«لدي توصيلة» في الشريط السفليّ** (الخطوة ١٨)
+                    // ══════════════════════════════════════════════════
+                    //
+                    // (نصُّ المالك: «الزرّ يكون بالشريط السفلي».) **وقبل
+                    // «حسابي»** — فعلُ عملٍ بين أفعال العمل، والحسابُ آخرُها.
+                    Tab(
+                        selected = tab == Tab.Delivery && over == Overlay.None,
+                        onClick = { tab = Tab.Delivery; overlay.clear() },
+                        icon = com.rahalgo.ui.R.drawable.ic_moto,
+                        label = R.string.tab_delivery,
+                    )
+                    // ══════════════════════════════════════════════════
                     // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
                     // ══════════════════════════════════════════════════
                     //
@@ -498,7 +522,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 // عند فرعٍ واحد)، **ولا فوق الخريطة ولا الصفحات المنبثقة ولا
                 // حسابي** — تلك ليست مشهدَ فرع. **وتبديلُه يُعيد بناءَ
                 // الشاشات كلِّها** (`SelectedStore.set` + `Refresh.bump`).
-                if (!picking && over == Overlay.None && tab != Tab.Account) {
+                if (!picking && !pickingDelivery && over == Overlay.None && tab != Tab.Account) {
                     com.rahalgo.merchant.store.StoreSwitcher(
                         stores = storeVm.stores,
                         selectedId = com.rahalgo.merchant.SelectedStore.id,
@@ -557,6 +581,33 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         locating = locating,
                     )
 
+                    // **ونقطةُ مستلِم التوصيلة** — تبدأ من المتجر: الغرضُ
+                    // يخرج منه، والمستلِمُ غالباً في حيّه.
+                    pickingDelivery -> PickPoint(
+                        start = (storeVm.store?.lat to storeVm.store?.lng)
+                            .let { (la, ln) ->
+                                if (la != null && ln != null) {
+                                    org.maplibre.android.geometry.LatLng(la, ln)
+                                } else {
+                                    null
+                                }
+                            },
+                        vm = pickVm,
+                        onPick = { at, label ->
+                            deliveryVm.setPoint(at.latitude, at.longitude, label)
+                            pickingDelivery = false
+                        },
+                        onCancel = { pickingDelivery = false },
+                        onLocate = {
+                            if (Here.granted(context)) {
+                                Here.refresh(context, locating, Accuracy.CONFIRM_M)
+                            } else {
+                                askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                        },
+                        locating = locating,
+                    )
+
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Merchant)
 
@@ -564,12 +615,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // (`offers`)، **وبحارس قائمته** (`ownsMerchant`).
                     over is Overlay.Menu && over.key == MerchantItems.OFFERS -> {
                         val offersVm: com.rahalgo.merchant.offers.OffersViewModel = viewModel()
+                        // **وكلُّ فتحٍ يقرأ الفرعَ المختار** — النموذجُ يعيش مع النشاط.
+                        LaunchedEffect(Unit) { offersVm.refresh() }
                         com.rahalgo.merchant.offers.OffersScreen(offersVm)
                     }
 
                     // **وسجلُّ الطلبات من الدرج** — قسمٌ منفصلٌ كما في الويب.
-                    over is Overlay.Menu && over.key == MerchantItems.HISTORY ->
+                    over is Overlay.Menu && over.key == MerchantItems.HISTORY -> {
+                        LaunchedEffect(Unit) { historyVm.load() }
                         HistoryScreen(historyVm)
+                    }
+
+                    // **وسجلُّ التوصيلات** — كلُّ «لدي توصيلة» أرسلها (الخطوة ١٨).
+                    over is Overlay.Menu && over.key == MerchantItems.DELIVERIES -> {
+                        val dhVm: com.rahalgo.merchant.delivery.DeliveryHistoryViewModel = viewModel()
+                        com.rahalgo.merchant.delivery.DeliveryHistoryScreen(dhVm)
+                    }
 
                     // **وما عليه** — يُقرأ قبل أن يُحظر.
                     over is Overlay.Menu && over.key == MerchantItems.WARNINGS -> {
@@ -580,12 +641,14 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // **وما أرسله هو** — لا شكاوى الزبائن عليه.
                     over is Overlay.Menu && over.key == MerchantItems.REPORTS -> {
                         val repVm: MyReportsViewModel = viewModel()
+                        LaunchedEffect(Unit) { repVm.load() }
                         MyReportsScreen(repVm)
                     }
 
                     // **ومدًى يختاره** — و«متجري» يقول يومَه وحدَه.
                     over is Overlay.Menu && over.key == MerchantItems.SALES -> {
                         val salesVm: SalesViewModel = viewModel()
+                        LaunchedEffect(Unit) { salesVm.load() }
                         SalesScreen(salesVm)
                     }
 
@@ -639,6 +702,10 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
 
                     tab == Tab.Store -> StoreScreen(storeVm) { picking = true }
 
+                    tab == Tab.Delivery -> com.rahalgo.merchant.delivery.DeliveryScreen(deliveryVm) {
+                        pickingDelivery = true
+                    }
+
                     else -> AccountScreen(
                         vm = accountVm,
                         onLoggedOut = onLogout,
@@ -680,7 +747,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
  * ويبقى مضيئاً، **فيظنّ صاحبُ المتجر أنّه في القائمة لا في صفحةِ
  * إضافة.** ورجوعُه كان يُلقيه في القائمة لا حيث كان.
  */
-private enum class Tab { Orders, Menu, AddItem, Store, Account }
+private enum class Tab { Orders, Menu, AddItem, Store, Delivery, Account }
 
 @Composable
 private fun RowScope.Tab(

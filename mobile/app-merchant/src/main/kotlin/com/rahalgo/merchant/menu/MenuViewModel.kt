@@ -82,6 +82,13 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /** **الصنفُ الذي يُحرَّر الآن** — وفارغٌ يعني لا محرّر. */
+    /**
+     * **سببُ رفض الحفظ — يُرسم فوق زرّه** (تقريرُ فحص المتجر) — كان `Flash`
+     * عابراً أعلى الشاشة. **ويُمحى عند أوّل تعديل.**
+     */
+    var editError by mutableStateOf("")
+        private set
+
     var editing by mutableStateOf<ItemDraft?>(null)
         private set
 
@@ -252,6 +259,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **صنفٌ جديدٌ في قسمٍ معلوم** — فلا يُعيد اختيارَ ما هو فيه. */
     fun newItem(sectionName: String = "") {
+        // **صنفٌ جديدٌ محاولةٌ جديدة** — لا يحمل مفتاحَ سابقٍ مجهولِ المصير.
+        com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.MERCHANT_ITEM)
+        editError = ""
         val ps = sections.firstOrNull { it.name == sectionName }?.id.orEmpty()
         editing = ItemDraft(platformSectionId = ps)
     }
@@ -273,9 +283,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     fun editDraft(block: (ItemDraft) -> ItemDraft) {
         editing = editing?.let(block)
+        editError = ""
     }
 
     fun cancelEdit() {
+        editError = ""
         editing = null
     }
 
@@ -357,12 +369,25 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 modifiers = d.modifiers,
             )
             runCatching {
-                if (d.itemId.isEmpty()) api.createItem(storeId, input)
-                else api.updateItem(d.itemId, input)
+                if (d.itemId.isEmpty()) {
+                    val key = com.rahalgo.ui.Attempt.key(com.rahalgo.ui.Attempt.MERCHANT_ITEM)
+                    api.createItem(storeId, input, idempotencyKey = key)
+                    com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.MERCHANT_ITEM)
+                } else {
+                    api.updateItem(d.itemId, input)
+                }
             }.onSuccess {
                 editing = null
+                editError = ""
+                // **و«تمّ» يُقال** — كان النجاحُ صامتاً (تقريرُ فحص المتجر).
+                Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.merchant.R.string.mn_item_saved))
                 load()
-            }.onFailure { Flash.fail(err(it)) }
+            }.onFailure {
+                if (d.itemId.isEmpty() && com.rahalgo.ui.isDecided(it)) {
+                    com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.MERCHANT_ITEM)
+                }
+                editError = err(it)
+            }
             busy = false
         }
     }
@@ -373,9 +398,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.deleteItem(id) }
                 .onSuccess {
                     editing = null
+                    editError = ""
+                    Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.merchant.R.string.mn_item_deleted))
                     load()
                 }
-                .onFailure { Flash.fail(err(it)) }
+                .onFailure { editError = err(it) }
             busy = false
         }
     }

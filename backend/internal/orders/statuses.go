@@ -1,5 +1,7 @@
 package orders
 
+import "slices"
+
 // آلة حالات الطلب (PLAN.md §6.1) — كل انتقال مسموح به لأدوار محددة فقط،
 // وكل ما عداه مرفوض. الانتقالات النهائية تُغلق الطلب وتُطلق التسويات المالية.
 
@@ -333,9 +335,32 @@ func transitionsFor(kind, from string) []transition {
 		if from == StPending {
 			return nil
 		}
-		return withoutMerchantSteps(from)
+		return merchantDeliveryEdges(from)
 	}
 	return allowedTransitions[from]
+}
+
+// merchantDeliveryEdges **خارطةُ التوصيلة: العامّةُ بلا خطوتَي المتجر، ويُلغيها منشئُها.**
+//
+// **المتجرُ في التوصيلة مُنشئٌ لا بائع** — فكما يُلغي الزبونُ طلبَه قبل أن
+// يُستلَم، **يُلغي المتجرُ توصيلتَه ما دام الغرضُ عنده** (في الطابور، أو
+// أُسندت، أو وصل السائقُ إليه). **وبعد الاستلام لا** — الغرضُ في الطريق،
+// ومن أوقفه فالمكتب. (الخطوة ١٨، ٢٠٢٦-١٠-٠١.)
+func merchantDeliveryEdges(from string) []transition {
+	out := withoutMerchantSteps(from)
+	if from != StDispatching && from != StAssigned && from != StAtPickup {
+		return out
+	}
+	// **نسخةٌ لا تعديلٌ في المكان** — `out` تشارك الخارطةَ العامّةَ مصفوفتَها،
+	// **وتعديلُها يمنح المتجرَ إلغاءَ كلِّ طلبٍ عاديٍّ في هذه الحالات.**
+	edges := make([]transition, len(out))
+	copy(edges, out)
+	for i, t := range edges {
+		if t.To == StCancelled && !slices.Contains(t.Roles, "merchant") {
+			edges[i] = transition{To: t.To, Roles: append(append([]string{}, t.Roles...), "merchant")}
+		}
+	}
+	return edges
 }
 
 // withoutMerchantSteps الخارطةُ العامّةُ بلا خطوتَي المتجر.

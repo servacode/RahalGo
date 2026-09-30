@@ -189,6 +189,10 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
     var against by mutableStateOf<List<MerchantReport>>(emptyList())
         private set
 
+    /** **فشلُ «التي عليّ» وحدَه** — لا يُقرأ «لا شكاوى عليك» وهو لم يُحمَّل. */
+    var againstError by mutableStateOf("")
+        private set
+
     // **وأيُّ التبويبين معروضٌ صار في الشاشة المركزيّة** — والقائمتان
     // تُحمَّلان معاً هنا، **فحالُ العرض شأنُ الشاشة لا شأنُ النداء.**
 
@@ -202,10 +206,17 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
             // **وفشلُ «التي عليّ» يُقال** — كان يُبتلع صامتاً، **فتُعرض
             // «لا شكاوى عليك» والنداءُ لم يصل أصلاً.** ومن رآها اطمأنّ
             // إلى شيءٍ لم يُقرأ.
+            againstError = ""
             runCatching {
-                val id = api.stores().stores.firstOrNull()?.id.orEmpty()
+                // **والفرعُ المختار** لا أوّلُ متجر (تقريرُ فحص المتجر).
+                val id = com.rahalgo.merchant.SelectedStore.resolve(api.stores().stores)?.id.orEmpty()
                 if (id.isNotEmpty()) against = api.reportsAgainst(id).reports
-            }.onFailure { if (error.isEmpty()) error = err(it) }
+            }.onFailure {
+                // **وكان يُحفظ ولا يُعرض** حين تكون عنده بلاغاتٌ رفعها هو —
+                // **فتُقرأ «لا شكاوى عليك» كاذبة.** (تقريرُ فحص المتجر.)
+                againstError = err(it)
+                if (error.isEmpty()) error = err(it)
+            }
             loading = false
         }
     }
@@ -248,7 +259,9 @@ fun MyReportsScreen(vm: MyReportsViewModel) {
             mine = vm.items.map(toRow),
             mineEmpty = stringResource(com.rahalgo.merchant.R.string.reports_list_empty),
             againstMe = vm.against.map(toRow),
-            againstMeEmpty = stringResource(com.rahalgo.merchant.R.string.reports_against_empty),
+            againstMeEmpty = vm.againstError.ifEmpty {
+                stringResource(com.rahalgo.merchant.R.string.reports_against_empty)
+            },
         )
     }
 }
@@ -333,12 +346,10 @@ class SalesViewModel(app: Application) : AndroidViewModel(app) {
     fun load() {
         viewModelScope.launch {
             runCatching {
-                if (storeId.isEmpty()) {
-                    val page = api.stores()
-                    val mine = page.stores.firstOrNull()
-                    storeId = mine?.id ?: ""
-                    storeName = mine?.name.orEmpty()
-                }
+                // **والفرعُ المختارُ في كلّ تحميل** (تقريرُ فحص المتجر).
+                val mine = com.rahalgo.merchant.SelectedStore.resolve(api.stores().stores)
+                storeId = mine?.id ?: ""
+                storeName = mine?.name.orEmpty()
                 if (storeId.isEmpty()) {
                     error = noStoreMsg()
                     loading = false

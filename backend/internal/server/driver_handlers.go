@@ -350,7 +350,7 @@ const driverOrderSelect = `
 	       -- بياناتٌ قرارُ مالكٍ لا تنظيفُ شيفرة.
 	       NULLIF(mo.phone::text, ''),
 	       o.address_text, ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
-	       cu.full_name, o.total, o.cash_due,
+	       COALESCE(cu.full_name, o.recipient_name, ''), o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
 	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
@@ -428,7 +428,8 @@ const driverOrderSelect = `
 	       END
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
-	JOIN users cu ON cu.id = o.customer_id
+	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
+	LEFT JOIN users cu ON cu.id = o.customer_id
 	LEFT JOIN users mo ON mo.id = m.owner_user_id`
 
 func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql string, args ...any) {

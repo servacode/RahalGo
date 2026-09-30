@@ -154,8 +154,14 @@ class MerchantApi(private val api: ApiClient) {
             mapOf("sections" to ids),
         )
 
-    suspend fun createItem(storeId: String, input: MenuItemInput): MenuItem =
-        api.call("/api/v1/merchant/stores/$storeId/menu/items", HttpMethod.Post, input)
+    /** **بمفتاح منع التكرار** — صنفٌ ضاع ردُّه فأُعيد لا يُدرج ثانيةً. */
+    suspend fun createItem(storeId: String, input: MenuItemInput, idempotencyKey: String? = null): MenuItem =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/menu/items",
+            HttpMethod.Post,
+            input,
+            idempotencyKey = idempotencyKey,
+        )
 
     suspend fun updateItem(itemId: String, input: MenuItemInput): MenuItem =
         api.call("/api/v1/merchant/menu/items/$itemId", HttpMethod.Patch, input)

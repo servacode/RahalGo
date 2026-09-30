@@ -125,6 +125,9 @@ var sensitiveActions = []Sensitive{
 	// **وتسويةُ مستحقّات المتجر — تغييرُ الطريقة وتأكيدُ الدفع نقداً.**
 	{"PATCH", "/merchants/{id}/settlement-method", "admin.merchant_settlement_update",
 		"merchant", 1, []string{"method"}, ""},
+	// **وسقفُ دينِ «لدي توصيلة»** — يُدين به المتجرُ المنصّة (الخطوة ١٨).
+	{"PATCH", "/merchants/{id}/delivery-credit", "admin.merchant_delivery_credit",
+		"merchant", 1, []string{"limit"}, ""},
 	{"POST", "/merchant-cash-settlements/{id}/pay", "finance.merchant_cash_paid",
 		"merchant_settlement", 1, nil, ""},
 	// **وتسويةُ نزاعٍ وحلُّ تذكرةٍ بتعويض — مالٌ يتحرّك بلا خطوةٍ ثانية** (جردُ

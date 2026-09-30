@@ -170,6 +170,46 @@ func Settle(ctx context.Context, q Querier, partyKind, partyID string,
 	return taken, bumpCache(ctx, q, partyKind, partyID, -taken)
 }
 
+// VoidForOrder **يُسقط التزاماً نشأ من طلبٍ لم يقع** — «لدي توصيلة»، ٢٠٢٦-١٠-٠١.
+//
+// **دينُ أجرةِ توصيلةٍ أُلغيت قبل التسليم باطل** — ما أُخذ عنه شيء. **فيُغلق
+// بباقيه ويُكتب سطرُ تسويةٍ بلا قيدِ دفتر** (`ledger_tx_id` فارغ): **يُقرأ في
+// السجلّ «أُسقط» لا «سُدِّد»**، ولا مالَ يتحرّك.
+//
+// **ولا يُمحى الصفّ** — كما لا يُمحى في `Settle`. **ولا أثرَ لنداءٍ ثانٍ**:
+// المغلقُ لا يُختار.
+func VoidForOrder(ctx context.Context, q Querier, partyKind, partyID, orderID, cause string,
+	actorID *string) error {
+	var id string
+	var remaining int64
+	err := q.QueryRow(ctx, `
+		SELECT id::text, amount - settled FROM financial_obligations
+		 WHERE party_kind = $1 AND party_id = $2 AND order_id = $3 AND cause = $4
+		   AND closed_at IS NULL
+		 FOR UPDATE`, partyKind, partyID, orderID, cause).Scan(&id, &remaining)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if remaining <= 0 {
+		return nil
+	}
+	if _, err := q.Exec(ctx, `
+		INSERT INTO obligation_settlements
+		       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by)
+		VALUES ($1, $2, $3, NULL, 0, $4)`, id, remaining, orderID, actorID); err != nil {
+		return err
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE financial_obligations SET settled = amount, closed_at = now()
+		 WHERE id = $1`, id); err != nil {
+		return err
+	}
+	return bumpCache(ctx, q, partyKind, partyID, -remaining)
+}
+
 // Balance الباقي على طرفٍ — **من الوقائع لا من الصورة.**
 func Balance(ctx context.Context, q Querier, partyKind, partyID string) (int64, error) {
 	var v int64

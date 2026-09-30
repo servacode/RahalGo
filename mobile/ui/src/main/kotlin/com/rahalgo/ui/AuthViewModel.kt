@@ -363,6 +363,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         offline = false
         accountRestricted = false
         mustChangePassword = false
+        ApiClient.passwordChangePending = false
         restoring = true
         restore()
     }
@@ -398,6 +399,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 backend.account.setPassword(current, next)
                 mustChangePassword = false
+                ApiClient.passwordChangePending = false
                 pwChange = PwChange()
                 Refresh.bump()
                 AppCore.afterSignIn()
@@ -805,6 +807,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     private fun detachSession() {
         backend.session.clear()
         user = null
+        // **والخروجُ يُسقط شاشةَ التبديل** — كان «خروج» فيها لا يُخرج: يُمسح
+        // المستخدمُ ويبقى العلَمُ فتبقى الشاشة (`AppFrame` يقرؤه قبل المستخدم).
+        mustChangePassword = false
+        ApiClient.passwordChangePending = false
         AppCore.afterLogout()
     }
 

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 373,
+    "routes": 380,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 158,
     "behaviour_settings": 130,
-    "order_fields": 83,
-    "test_files": 420,
-    "test_funcs": 1767
+    "order_fields": 86,
+    "test_files": 421,
+    "test_funcs": 1774
   },
   "flows": [
     {
@@ -15448,6 +15448,48 @@
     {
       "name": "TestD13_UnknownMediaDefaultsToProtected",
       "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD01_MerchantPaysEndToEnd",
+      "file": "internal/qa/merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD02_CancelBeforePickupRefundsWallet",
+      "file": "internal/qa/merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD03_DebtPathAndVoid",
+      "file": "internal/qa/merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD04_RecipientPaysCash",
+      "file": "internal/qa/merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD05_NoCancelAfterPickup",
+      "file": "internal/qa/merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD06_MerchantPaysCash",
+      "file": "internal/qa/merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD07_NoPointUsesStoreZone",
+      "file": "internal/qa/merchant_delivery_test.go",
       "package": "qa",
       "orphan": true
     },

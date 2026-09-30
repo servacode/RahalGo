@@ -174,6 +174,15 @@ internal fun TripPanel(state: TripState) {
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
             )
+            // **و«لدي توصيلة» بلا نقطةٍ على الخريطة** (الخطوة ١٨) — المسارُ
+            // المرسومُ إلى نقطة المتجر لا إلى المستلِم، **فيُقال له ألّا يتبعه.**
+            if (state.step >= TripStep.PICKED_UP && !order.dropoffKnown) {
+                Text(
+                    text = stringResource(R.string.detail_no_point),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
 
             // **ورقمُ المحرّك يسبق الهوائيّ** — «٩٨٢ م ودقيقتان» كانت
             // تعني في الواقع «١٫١ كم وسبعَ دقائق». (قيس ٢٠٢٦-٠٨-١٢.)

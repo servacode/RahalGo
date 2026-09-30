@@ -126,6 +126,14 @@ type Order struct {
 	CustomerID    string `json:"customer_id"`
 	CustomerPhone string `json:"customer_phone"`
 	CustomerName  string `json:"customer_name"`
+	// ParcelNote **وصفُ الغرض في «لدي توصيلة»** — يقرؤه السائقُ ليعرف ما يحمل.
+	// وفي التوصيلة يُقرأ `CustomerName`/`CustomerPhone` اسمَ المستلِم ورقمَه.
+	ParcelNote string `json:"parcel_note,omitempty"`
+	// FeePayer **من يدفع أجرةَ التوصيلة** — `merchant` أو `recipient` (فارغٌ لغيرها).
+	FeePayer string `json:"fee_payer,omitempty"`
+	// DropoffKnown **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ يُكتب
+	// موقعُ المتجر ويُعلَّم هذا **فلا يُوجَّه السائقُ إلى نقطةٍ كاذبة.**
+	DropoffKnown bool `json:"dropoff_known"`
 	// Kind **نوعُ الطلب** — `standard` من متجر، و`custom` طلبٌ خاصٌّ بلا متجر.
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.

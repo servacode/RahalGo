@@ -112,6 +112,9 @@ var adminPolicy = []Rule{
 	{"PATCH", "/merchants/{id}", MerchantsManage},
 	// **تسويةُ مستحقّات المتجر — صلاحيّةٌ ماليّة لا إدارةُ متجر.**
 	{"PATCH", "/merchants/{id}/settlement-method", SettingsFinancialManage},
+	// **وسقفُ دينِ التوصيلة كذلك** — رقمٌ يُدين به المتجرُ المنصّة (الخطوة ١٨).
+	{"GET", "/merchants/{id}/delivery-credit", FinanceRead},
+	{"PATCH", "/merchants/{id}/delivery-credit", SettingsFinancialManage},
 	{"GET", "/merchants/{id}/cash-settlements", FinanceRead},
 	{"POST", "/merchant-cash-settlements/{id}/pay", FinanceManage},
 	{"POST", "/merchants/{id}/menu/sections", MerchantsManage},

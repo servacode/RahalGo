@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,9 +125,9 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
     fun load() {
         viewModelScope.launch {
             runCatching {
-                if (storeId.isEmpty()) {
-                    storeId = api.stores().stores.firstOrNull()?.id ?: ""
-                }
+                // **والفرعُ المختارُ في كلّ تحميل** (تقريرُ فحص المتجر) — كان أوّلَ
+                // متجرٍ مرّةً ويُحفظ، **فمن بدّل فرعَه قرأ سجلَّ الأوّل.**
+                storeId = com.rahalgo.merchant.SelectedStore.resolve(api.stores().stores)?.id.orEmpty()
                 if (storeId.isEmpty()) {
                     error = noStoreMsg()
                     loading = false
@@ -324,8 +325,9 @@ fun HistoryScreen(vm: HistoryViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () -> Unit) {
-    var reason by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
+    // **ويبقيان مع التدوير** (تقريرُ فحص المتجر).
+    var reason by rememberSaveable { mutableStateOf("") }
+    var note by rememberSaveable { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onClose,

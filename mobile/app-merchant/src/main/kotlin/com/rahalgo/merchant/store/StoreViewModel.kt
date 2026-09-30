@@ -183,7 +183,8 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                 // **والردُّ `{"updated": true}` لا المتجر** — فيُبدَّل
                 // الحالُ محلّيّاً، **ونداءُ قراءةٍ كاملٍ لرقمٍ واحدٍ حملٌ
                 // بلا سبب.**
-                .onSuccess { store = store?.copy(prepMinutes = minutes) }
+                // **و«تمّ» يُقال** — كان النجاحُ صامتاً (تقريرُ فحص المتجر).
+                .onSuccess { store = store?.copy(prepMinutes = minutes); Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_prep_saved)) }
                 .onFailure { Flash.fail(err(it)) }
             saving = false
         }
@@ -205,7 +206,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         saving = true
         viewModelScope.launch {
             runCatching { api.settings(id, StoreSettingsInput(name = trimmed)) }
-                .onSuccess { store = store?.copy(name = trimmed) }
+                .onSuccess { store = store?.copy(name = trimmed); Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_name_saved)) }
                 .onFailure { Flash.fail(err(it)) }
             saving = false
         }
@@ -297,7 +298,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         saving = true
         viewModelScope.launch {
             runCatching { api.setHours(id, days) }
-                .onSuccess { hours = days }
+                .onSuccess { hours = days; Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_hours_saved)) }
                 .onFailure { Flash.fail(err(it)) }
             saving = false
         }

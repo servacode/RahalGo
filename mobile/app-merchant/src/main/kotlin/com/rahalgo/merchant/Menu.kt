@@ -29,6 +29,8 @@ import com.rahalgo.ui.DrawerItem
 object MerchantItems {
     const val OFFERS = "Offers"
     const val HISTORY = "History"
+    /** **سجلُّ التوصيلات** — كلُّ «لدي توصيلة» أرسلها المتجر (الخطوة ١٨). */
+    const val DELIVERIES = "Deliveries"
     const val WARNINGS = "Warnings"
     const val REPORTS = "Reports"
     const val SALES = "Sales"
@@ -60,6 +62,14 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         com.rahalgo.ui.R.string.menu_mine,
         R.string.menu_history,
         com.rahalgo.ui.R.drawable.ic_history,
+    ),
+    // **وسجلُّ التوصيلات بجانب سجلّ الطلبات** — (نصُّ المالك ٢٠٢٦-١٠-٠١:
+    // «بالقائمة الجانبيّة سجلّ التوصيلات… كلّ عمليّات التوصيل التي قمنا بها».)
+    DrawerItem(
+        MerchantItems.DELIVERIES,
+        com.rahalgo.ui.R.string.menu_mine,
+        R.string.menu_deliveries,
+        com.rahalgo.ui.R.drawable.ic_moto,
     ),
     // **وبلاغاتُه هو لا شكاوى الزبائن عليه** — انظر `merchant_reports.go`.
     DrawerItem(

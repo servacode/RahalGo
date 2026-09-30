@@ -45,7 +45,7 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.number, o.created_at, o.status, o.payment_method,
-		       cu.full_name, cu.phone::text, mm.name,
+		       COALESCE(cu.full_name, o.recipient_name, ''), COALESCE(cu.phone::text, o.recipient_phone, ''), mm.name,
 		       COALESCE(dr.full_name, ''),
 		       o.subtotal, o.delivery_fee, o.discount, o.total,
 		       o.wallet_paid, o.cash_due,
@@ -59,7 +59,7 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 		                 WHERE t.ref = o.id::text AND t.kind IN ('platform_profit','platform_expense')), 0),
 		       COALESCE(o.cancel_reason, '')
 		FROM orders o
-		JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN users cu ON cu.id = o.customer_id
 		JOIN merchants mm ON mm.id = o.merchant_id
 		LEFT JOIN users dr ON dr.id = o.driver_id
 		WHERE o.created_at >= $1::date AND o.created_at < ($2::date + 1)

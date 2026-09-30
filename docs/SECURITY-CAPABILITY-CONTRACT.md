@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**28 قدرةً · 162 صفَّ سياسةٍ للمسارات · 2 استثناءً · 21 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**28 قدرةً · 164 صفَّ سياسةٍ للمسارات · 2 استثناءً · 22 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -62,7 +62,7 @@
 | `drivers.read` | 2 | — | قراءةُ سجلّ السائقين ومواضعهم |
 | `finance.export` | 2 | — | سحبُ الدفتر وكشفِ الطلبات ملفّاً |
 | `finance.manage` | 11 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
-| `finance.read` | 14 | — | قراءةُ المال والتقارير الماليّة |
+| `finance.read` | 15 | — | قراءةُ المال والتقارير الماليّة |
 | `merchants.manage` | 10 | — | إدارةُ المتاجر وتعليقُها |
 | `merchants.read` | 4 | — | قراءةُ سجلّ المتاجر وقوائمها |
 | `merchants.verify` | 4 | — | مراجعةُ المرشَّحين والقوائم |
@@ -73,7 +73,7 @@
 | `payouts.decide` | 1 | — | قرارُ السحب |
 | `roles.manage` | 7 | — | منحُ الأدوار وسحبُها |
 | `safety.manage` | 8 | — | الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر |
-| `settings.financial.manage` | 1 | — | إعداداتٌ تدخل حساباً ماليّاً |
+| `settings.financial.manage` | 2 | — | إعداداتٌ تدخل حساباً ماليّاً |
 | `settings.general.manage` | 20 | — | إعداداتٌ عامّةٌ ومحتوى |
 | `settings.read` | 2 | — | قراءةُ لوح الإعدادات |
 | `settings.security.manage` | 3 | — | إعداداتُ الأمن والجلسات |
@@ -134,6 +134,7 @@
 <!-- gen:sensitive -->
 | الفعل | الطريقة | المسار | بصمةُ الجسم | بشرط | القدرة |
 |---|---|---|---|---|---|
+| `admin.merchant_delivery_credit` | `PATCH` | `/merchants/{id}/delivery-credit` | `limit` | دائماً | `settings.financial.manage` |
 | `admin.merchant_settlement_update` | `PATCH` | `/merchants/{id}/settlement-method` | `method` | دائماً | `settings.financial.manage` |
 | `admin.password_reset` | `POST` | `/users/{id}/password` | — | دائماً | `users.status.manage` |
 | `admin.role_capability_grant` | `POST` | `/roles/{code}/capabilities` | `capability` | دائماً | `roles.manage` |

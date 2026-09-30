@@ -132,6 +132,12 @@ fun ItemEditor(
     @StringRes sectionLabel: Int = R.string.item_section,
     /** **تنبيهُ «بلا قسم»** — وصفرٌ يعني لا تنبيه. */
     @StringRes sectionHint: Int = 0,
+    /**
+     * **سببُ رفض الحفظ — فوق الزرّ لا منبثقةٌ عابرة** (تقريرُ فحص المتجر،
+     * ٢٠٢٦-١٠-٠١). كان يُقال في `Flash` أعلى الشاشة ويختفي بعد ثوانٍ، **ومن
+     * حفظ في أسفل نموذجٍ طويلٍ لم يره.** وفارغٌ يعني لا خطأ.
+     */
+    error: String = "",
 ) {
     val pick = rememberImagePicker { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -247,6 +253,10 @@ fun ItemEditor(
 
         ModifiersEditor(d, onEdit)
 
+        if (error.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            com.rahalgo.ui.Note(error, com.rahalgo.design.Rahal.colors.danger)
+        }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RahalButton(onClick = { onSave() }, enabled = !busy) {

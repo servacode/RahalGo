@@ -53,6 +53,12 @@ const (
 	AudienceDriver   Audience = "driver"
 	AudienceRep      Audience = "rep"
 	AudienceOps      Audience = "ops"
+	// AudienceMerchantDelivery **صاحبُ المتجر يقرأ توصيلتَه** («لدي توصيلة»).
+	//
+	// **حقولُ المتجر نفسُها وفوقها ما كتبه هو**: المستلِمُ ورقمُه وعنوانُه
+	// ووصفُ الغرض ومن يدفع والأجرة — **بياناتُه لا بياناتُ غيره.** **ولا
+	// هويّةَ سائق** — كما في كلّ طلبٍ يراه المتجر. (الخطوة ١٨.)
+	AudienceMerchantDelivery Audience = "merchant_delivery"
 )
 
 // audienceAllow **ما يجوز لكلّ طرفٍ أن يقرأه** — بوسم `json` لا باسم
@@ -168,56 +174,60 @@ var audienceAllow = map[Audience]map[string]bool{
 		"custom_fee":                   true,
 		"custom_goods_amount":          true,
 		"custom_request":               true,
-		"quote_confirmed_at":           true,
-		"quote_confirmed_total":        true,
-		"quote_confirmed_version":      true,
-		"quote_version":                true,
-		"customer_id":                  true,
-		"customer_name":                true,
-		"delivered_at":                 true,
-		"delivery_estimate_min":        true,
-		"delivery_fee":                 true,
-		"dispatched_at":                true,
-		"driver_assigned":              true,
-		"driver_id":                    true,
-		"driver_name":                  true,
-		"driver_phone":                 true,
-		"driver_to_pickup_m":           true,
-		"fail_reason":                  true,
-		"id":                           true,
-		"items":                        true,
-		"items_count":                  true,
-		"items_preview":                true,
-		"kind":                         true,
-		"lat":                          true,
-		"leg_m":                        true,
-		"lng":                          true,
-		"merchant_accepts_returns":     true,
-		"merchant_id":                  true,
-		"merchant_logo_thumb_url":      true,
-		"merchant_name":                true,
-		"notes":                        true,
-		"number":                       true,
-		"offered_driver_name":          true,
-		"payment_method":               true,
-		"picked_up_at":                 true,
-		"prep_minutes":                 true,
-		"proof_meters":                 true,
-		"proof_skip_reason":            true,
-		"proof_taken_at":               true,
-		"proof_url":                    true,
-		"ready_at":                     true,
-		"returned_at":                  true,
-		"stage":                        true,
-		"stage_at":                     true,
-		"stages":                       true,
-		"status":                       true,
-		"subtotal":                     true,
-		"to_door_eta_sec":              true,
-		"to_store_eta_sec":             true,
-		"total":                        true,
-		"zone_id":                      true,
-		"zone_name":                    true,
+		// **«لدي توصيلة»** — ما يحمله · ومن يقبض منه · وأتُتبَع النقطة.
+		"parcel_note":              true,
+		"fee_payer":                true,
+		"dropoff_known":            true,
+		"quote_confirmed_at":       true,
+		"quote_confirmed_total":    true,
+		"quote_confirmed_version":  true,
+		"quote_version":            true,
+		"customer_id":              true,
+		"customer_name":            true,
+		"delivered_at":             true,
+		"delivery_estimate_min":    true,
+		"delivery_fee":             true,
+		"dispatched_at":            true,
+		"driver_assigned":          true,
+		"driver_id":                true,
+		"driver_name":              true,
+		"driver_phone":             true,
+		"driver_to_pickup_m":       true,
+		"fail_reason":              true,
+		"id":                       true,
+		"items":                    true,
+		"items_count":              true,
+		"items_preview":            true,
+		"kind":                     true,
+		"lat":                      true,
+		"leg_m":                    true,
+		"lng":                      true,
+		"merchant_accepts_returns": true,
+		"merchant_id":              true,
+		"merchant_logo_thumb_url":  true,
+		"merchant_name":            true,
+		"notes":                    true,
+		"number":                   true,
+		"offered_driver_name":      true,
+		"payment_method":           true,
+		"picked_up_at":             true,
+		"prep_minutes":             true,
+		"proof_meters":             true,
+		"proof_skip_reason":        true,
+		"proof_taken_at":           true,
+		"proof_url":                true,
+		"ready_at":                 true,
+		"returned_at":              true,
+		"stage":                    true,
+		"stage_at":                 true,
+		"stages":                   true,
+		"status":                   true,
+		"subtotal":                 true,
+		"to_door_eta_sec":          true,
+		"to_store_eta_sec":         true,
+		"total":                    true,
+		"zone_id":                  true,
+		"zone_name":                true,
 	},
 	AudienceRep: {
 		"accepted_at":           true,
@@ -242,6 +252,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		"total":                 true,
 	},
 	AudienceOps: {
+		"parcel_note":                  true,
+		"fee_payer":                    true,
+		"dropoff_known":                true,
 		"custom_reserved_amount":       true,
 		"custom_fee_source":            true,
 		"custom_fee_snapshot":          true,
@@ -331,6 +344,18 @@ var audienceAllow = map[Audience]map[string]bool{
 // ViewFor حمولةُ الطلب كما يجوز لهذا الطرف أن يقرأها.
 //
 // **وفارغٌ يعني «لا تبثّ»** — لا «ابثث كلَّ شيء».
+func init() {
+	md := map[string]bool{}
+	for k, v := range audienceAllow[AudienceMerchant] {
+		md[k] = v
+	}
+	for _, k := range []string{"customer_name", "customer_phone", "address_text",
+		"parcel_note", "fee_payer", "dropoff_known", "delivery_fee", "cash_due"} {
+		md[k] = true
+	}
+	audienceAllow[AudienceMerchantDelivery] = md
+}
+
 func ViewFor(a Audience, o *Order) map[string]any {
 	allow, ok := audienceAllow[a]
 	if o == nil || !ok {

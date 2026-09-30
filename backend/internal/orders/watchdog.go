@@ -35,7 +35,7 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 		SELECT o.id, o.number, o.status,
 			-- **والخاصُّ لا متجرَ له** — فاسمُه طلبٌ خاصٌّ لا NULL: العمودُ
 			-- يُقرأ في نصٍّ، **وNULL فيه يُسقط المسحَ كلَّه بخطأ تحويل.**
-			COALESCE(m.name, 'طلبٌ خاصّ') AS merchant_name, cu.phone,
+			COALESCE(m.name, 'طلبٌ خاصّ') AS merchant_name, COALESCE(cu.phone, o.recipient_phone, ''),
 			CASE
 				WHEN o.status = 'pending' AND o.created_at < now() - make_interval(mins => t.accept_min::int)
 					THEN 'no_accept'
@@ -62,7 +62,8 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 		-- **ومع صمت التوزيع عنه في rotation.go يصير عالقاً وغيرَ مرئيٍّ
 		-- معاً** — والزبونُ يقرأ «بانتظار القبول» بلا نهاية.
 		LEFT JOIN merchants m ON m.id = o.merchant_id
-		JOIN users cu ON cu.id = o.customer_id
+		-- **والتوصيلةُ بلا زبونٍ كذلك** — فلا تبقى عالقةً بلا إنذار.
+		LEFT JOIN users cu ON cu.id = o.customer_id
 		WHERE o.closed_at IS NULL AND (
 			(o.status = 'pending' AND o.created_at < now() - make_interval(mins => t.accept_min::int)) OR
 			(o.status IN ('preparing','dispatching') AND o.driver_id IS NULL

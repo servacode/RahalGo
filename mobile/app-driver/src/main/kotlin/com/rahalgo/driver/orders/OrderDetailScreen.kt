@@ -96,8 +96,30 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
             Field(stringResource(R.string.card_custom_what), order.customRequest)
         }
 
+        // **وما يحمله في «لدي توصيلة»** — طلبُ المتجر لا سلّةَ فيه.
+        if (order.parcelNote.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            Field(stringResource(R.string.detail_parcel), order.parcelNote)
+        }
+        // **ومن أين يقبض الأجرة** — «أنا نقداً»: من المتجر عند الاستلام لا من الباب.
+        if (order.kind == "merchant_delivery" && order.feePayer == "merchant_cash") {
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.detail_fee_from_store), color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
+        }
+        // **وبلا نقطةٍ على الخريطة** — العنوانُ والاتّصالُ بالمستلِم لا الملاحة.
+        if (!order.dropoffKnown) {
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.detail_no_point), color = Rahal.colors.danger, fontWeight = FontWeight.Bold)
+        }
+
         Spacer(Modifier.height(18.dp))
-        Field(stringResource(R.string.detail_customer), order.customerName)
+        // **والمستلِمُ ليس زبوناً** في التوصيلة — يُسمّى بما هو.
+        Field(
+            stringResource(
+                if (order.kind == "merchant_delivery") R.string.detail_recipient else R.string.detail_customer,
+            ),
+            order.customerName,
+        )
         Field(stringResource(R.string.act_address), order.addressText)
         if (order.itemsCount > 0) {
             Field(stringResource(R.string.detail_items), order.itemsCount.toString())

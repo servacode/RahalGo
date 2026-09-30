@@ -261,6 +261,9 @@ class ApiClient(
         idempotencyKey: String? = null,
         token: String = "",
     ): T {
+        if (passwordChangePending && !allowedWhilePasswordPending(path)) {
+            throw ApiException(403, ApiErrorBody(code = "password_change_required"))
+        }
         val res: HttpResponse = try {
             http.request(baseUrl + path) {
                 this.method = method
@@ -298,6 +301,7 @@ class ApiClient(
             // **تبديلُ كلمةٍ مطلوبٌ يُساق عالميّاً** (`CUST-DEF-010`) — من أيّ
             // بابٍ مُقيَّدٍ، **كبوّابة التحديث** — والاستثناءُ يمرّ أيضاً.
             if (res.status.value == 403 && err?.code == "password_change_required") {
+                passwordChangePending = true
                 onPasswordChangeRequired?.invoke()
             }
             throw ApiException(res.status.value, err ?: ApiErrorBody(code = "internal"))
@@ -525,6 +529,23 @@ class ApiClient(
          */
         @Volatile
         var onPasswordChangeRequired: (() -> Unit)? = null
+
+        /**
+         * **الكلمةُ يجب أن تُبدَّل — فلا يُنادى غيرُ بابها** (تقريرُ فحص المتجر،
+         * ٢٠٢٦-١٠-٠١).
+         *
+         * **رُئي على الجهاز**: ستّةَ عشرَ ردّاً `403 password_change_required`
+         * متتالياً — تسعُ شاشاتٍ تنادي عند الإقلاع وحلقةُ الطلبات كلَّ عشر ثوانٍ
+         * خلف شاشة التبديل. **وأوّلُ رفضٍ يكفي**: بعده لا يخرج نداءٌ إلّا إلى
+         * التبديل والخروج والهويّة، **والباقي يُردّ في الجهاز بلا شبكة.**
+         * **ويُرفع حين تُبدَّل الكلمةُ أو يُخرَج.**
+         */
+        @Volatile
+        var passwordChangePending: Boolean = false
+
+        /** **ما يُنادى والكلمةُ معلّقة** — التبديلُ والخروجُ والهويّةُ والتجديد. */
+        fun allowedWhilePasswordPending(path: String): Boolean =
+            path.startsWith("/api/v1/auth/")
 
         /**
          * **جلسةٌ رُفضت وسط العمل — تُساق عالميّاً** (`Obs 3`).

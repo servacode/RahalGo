@@ -279,7 +279,7 @@ private fun OrderCard(
 
         // **والاعتذارُ نصٌّ جانبيٌّ لا زرٌّ مساوٍ** — انظر أعلاه.
         if (order.status == "pending") {
-            var showReject by remember { mutableStateOf(false) }
+            var showReject by rememberSaveable(order.id) { mutableStateOf(false) }
             Spacer(Modifier.height(4.dp))
             RahalTextButton(onClick = { showReject = true }, enabled = !busy) {
                 Text(stringResource(R.string.order_reject), color = Rahal.colors.inkMuted)

@@ -382,6 +382,10 @@
     <!-- الطلبُ الخاصّ — بطاقتُه تقول حقيقته -->
     <string name="card_custom_price">السعر يتفق عليه</string>
     <string name="card_custom_what">المطلوب</string>
+    <string name="detail_parcel">يحمل</string>
+    <string name="detail_recipient">المستلم</string>
+    <string name="detail_fee_from_store">استلم أجرة التوصيل من المتجر نقداً عند الاستلام</string>
+    <string name="detail_no_point">لا نقطة على الخريطة — اقرأ العنوان المكتوب، واسأل المتجر عن المستلم</string>
     <string name="card_agreed_later">تتفق</string>
     <string name="card_custom_pay">تشتري وتسترد</string>
     <!-- **واسمُ الفعل كما في الويب** — «اشتريتُ الطلب» لا «استلمت». -->

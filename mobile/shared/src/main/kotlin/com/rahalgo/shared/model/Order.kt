@@ -47,6 +47,21 @@ data class DriverOrder(
     @SerialName("custom_request") val customRequest: String = "",
 
     /**
+     * **ما يحمله السائقُ في «لدي توصيلة»** (الخطوة ١٨) — «كيس طعام ساخن، لا
+     * يُقلب». **وفي التوصيلة `customer_name` اسمُ المستلِم** — لا حسابَ له.
+     */
+    @SerialName("parcel_note") val parcelNote: String = "",
+
+    /** **من يدفع أجرةَ التوصيلة** — و`merchant_cash`: يقبضها السائقُ من المتجر عند الاستلام. */
+    @SerialName("fee_payer") val feePayer: String = "",
+
+    /**
+     * **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ تُكتب نقطةُ المتجر
+     * ويُعلَّم هذا **فلا يُوجَّه السائقُ إليها**: يقرأ العنوانَ ويتّصل بالمستلِم.
+     */
+    @SerialName("dropoff_known") val dropoffKnown: Boolean = true,
+
+    /**
      * **ما وُثّق من ثمنٍ وأجرة** — و`null` تعني **«لم يُوثَّق بعد»**.
      *
      * **وهي علامةُ الطور في الطلب الخاصّ**: قبلها يتّفق، **وبعدها

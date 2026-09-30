@@ -78,10 +78,10 @@ class OffersViewModel(app: Application) : AndroidViewModel(app) {
         error = ""
         viewModelScope.launch {
             try {
-                val store = storeId.ifEmpty {
-                    merchant.stores().stores.firstOrNull()?.id
-                        ?: throw IllegalStateException(noStoreMsg())
-                }
+                // **والفرعُ المختارُ في كلّ تحميل** (تقريرُ فحص المتجر) — كان أوّلَ
+                // متجر: **فيُنشئ عرضاً على فرعٍ غيرِ الذي اختاره.**
+                val store = com.rahalgo.merchant.SelectedStore.resolve(merchant.stores().stores)?.id
+                    ?: throw IllegalStateException(noStoreMsg())
                 storeId = store
                 rows = offers.list(store).offers
                 items = merchant.menu(store).flatMap { it.items }.filter { it.approved }

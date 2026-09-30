@@ -68,7 +68,10 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// «توصيلٌ مجّانيّ» يُصفّر `delivery_fee` (دفعُ الزبون) ولا يُصفّر أجرَ من
 	// قاد** — والفرقَ تموّله الخزينة. (للطلبات القديمة `driver_fee=delivery_fee`.)
 	err = tx.QueryRow(ctx, `
-		SELECT status, driver_id, wallet_paid, cash_due, driver_fee, customer_id,
+		SELECT status, driver_id, wallet_paid, cash_due, driver_fee,
+		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
+		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
+		       COALESCE(customer_id::text, ''),
 		       COALESCE(promo_code,''), kind, custom_reserved_amount
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode,
@@ -107,6 +110,13 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 
 	selfManage := unit.MerchantsSelfManage(ctx)
 	effRoles := rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)
+	// **وفي التوصيلة المتجرُ مُنشئٌ لا بائع** (الخطوة ١٨) — فلا يُسقَط دورُه
+	// في وضع «المنصّة تدير» حين يُلغي توصيلتَه هو. **والآلةُ تحصره** قبل
+	// الاستلام (`merchantDeliveryEdges`)، **والملكيّةُ يحرسها بابُه**.
+	if kind == KindMerchantDelivery && to == StCancelled &&
+		slices.Contains(actorRoles, "merchant") && !slices.Contains(effRoles, "merchant") {
+		effRoles = append(effRoles, "merchant")
+	}
 	if !canTransition(kind, from, to, effRoles) {
 		return nil, ErrBadTransition
 	}
@@ -328,6 +338,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		customerID: customerID, driverID: driverID,
 		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,
 		custom: kind == KindCustom, customReserved: customReserved,
+		merchantDelivery: kind == KindMerchantDelivery,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -404,7 +415,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	//
 	// **وتخرج صامتةً إن لم يكن ثمّة ما يُصرف** — والحارسُ في موضعٍ واحدٍ خيرٌ
 	// من شرطٍ يُكتب في كلّ نداء.
-	if to == StDelivered && s.referrals != nil {
+	if to == StDelivered && s.referrals != nil && customerID != "" {
 		s.referrals.SettleFirstOrder(ctx, customerID, orderID, actorID)
 	}
 
@@ -733,6 +744,8 @@ type settlement struct {
 	// **يُمرَّر ليقرّر `settle` بلا قراءةٍ ثانية**: نهايةٌ إلى غير التسليم تفكّ
 	// الحجزَ **إن وُجد وحدَه** — **فطلبٌ نقديٌّ (لا حجزَ له) لا يمسّ شيئاً.**
 	customReserved int64
+	// merchantDelivery **«لدي توصيلة» — لا بضاعةَ ولا زبونَ ولا عمولةَ مبيعات.**
+	merchantDelivery bool
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -753,6 +766,11 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	// **وخروجٌ صريحٌ لا اعتمادٌ على أنّ الأعمدةَ أصفار**: هي أصفارٌ اليوم،
 	// **وعمودٌ يُملأ غداً بسهوٍ يجعل مالاً يتحرّك بلا قرار.** والصمتُ في المال
 	// أخطرُ منه في غيره.
+
+	// (0-ب) **والتوصيلةُ مسارٌ ثالثٌ لا يمرّ بالعامّ** — انظر `settleMerchantDelivery`.
+	if in.merchantDelivery {
+		return s.settleMerchantDelivery(ctx, q, in, out)
+	}
 
 	if in.custom {
 		// **إلّا نقلَ المحفظة عند التسليم** — إن اختار الزبونُ الدفعَ منها.

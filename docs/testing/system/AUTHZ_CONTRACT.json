@@ -39,7 +39,7 @@
   {
    "code": "finance.read",
    "description": "قراءةُ المال والتقارير الماليّة",
-   "guards_routes": 14
+   "guards_routes": 15
   },
   {
    "code": "merchants.manage",
@@ -94,7 +94,7 @@
   {
    "code": "settings.financial.manage",
    "description": "إعداداتٌ تدخل حساباً ماليّاً",
-   "guards_routes": 1
+   "guards_routes": 2
   },
   {
    "code": "settings.general.manage",
@@ -183,7 +183,7 @@
   }
  ],
  "route_policy": {
-  "rules": 162,
+  "rules": 164,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -226,6 +226,17 @@
   }
  ],
  "sensitive_actions": [
+  {
+   "method": "PATCH",
+   "pattern": "/merchants/{id}/delivery-credit",
+   "action": "admin.merchant_delivery_credit",
+   "target_type": "merchant",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "limit"
+   ],
+   "need": "settings.financial.manage"
+  },
   {
    "method": "PATCH",
    "pattern": "/merchants/{id}/settlement-method",

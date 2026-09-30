@@ -946,6 +946,13 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/offers", s.handleMerchantCreateOffer)
 			r.Post("/stores/{id}/offers/{offerID}/stop", s.handleMerchantStopOffer)
 			r.Post("/stores/{id}/menu/items", s.handleMerchantCreateItem)
+			// **«لدي توصيلة»** (الخطوة ١٨) — المتجرُ يطلب سائقاً لغرضٍ جاهزٍ عنده.
+			// **والإنشاءُ بمفتاح منع التكرار** — لا توصيلتان ولا خصمان.
+			r.Get("/stores/{id}/delivery-quote", s.handleMerchantDeliveryQuote)
+			r.Get("/stores/{id}/deliveries", s.handleMerchantDeliveries)
+			r.Post("/stores/{id}/deliveries", s.idempotent(s.handleMerchantCreateDelivery))
+			r.Get("/deliveries/{id}", s.handleMerchantDelivery)
+			r.Post("/deliveries/{id}/cancel", s.handleMerchantCancelDelivery)
 			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
 			r.Delete("/menu/items/{itemID}", s.handleMerchantDeleteItem)
 		})
@@ -1371,6 +1378,9 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go
 				r.Patch("/merchants/{id}/settlement-method", s.handleSetMerchantSettlementMethod)
+				// **سقفُ دينِ «لدي توصيلة»** — merchant_delivery_handlers.go
+				r.Get("/merchants/{id}/delivery-credit", s.handleAdminMerchantDeliveryCredit)
+				r.Patch("/merchants/{id}/delivery-credit", s.handleAdminSetMerchantDeliveryCredit)
 				r.Get("/merchants/{id}/cash-settlements", s.handleMerchantCashSettlements)
 				r.Post("/merchant-cash-settlements/{id}/pay", s.handleMarkCashSettlementPaid)
 				// **الحظرُ والعفو** — merchant_violations.go
