@@ -85,7 +85,15 @@ import com.rahalgo.ui.RahalTextButton
 @Composable
 fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
     val ctx = LocalContext.current
-    BackHandler { if (vm.editing != null) vm.cancelEdit() else vm.close() }
+    // **والرجوعُ درجةً درجة** (الخطوة ١٥) — رُئي على الجهاز: «رجوع» من داخل
+    // قسمٍ أغلق المتجرَ كلَّه وقفز فوق قائمة الأقسام.
+    BackHandler {
+        when {
+            vm.editing != null -> vm.cancelEdit()
+            vm.open != null -> vm.back()
+            else -> vm.close()
+        }
+    }
 
     if (vm.editing != null) {
         // **والمحرّرُ من الوحدة المشتركة** — نسخةٌ واحدةٌ للمتجر

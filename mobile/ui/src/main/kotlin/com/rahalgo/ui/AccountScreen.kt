@@ -326,7 +326,7 @@ private fun WhatsAppVerify(
     verified: Boolean,
     worker: Boolean,
 ) {
-    var code by remember { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
     val waiting = s.waPending.isNotEmpty()
 
     // **ونصٌّ واحدٌ للجميع** — **كان للعامل نصٌّ وللزبون آخر** لأنّ سببَ
@@ -402,7 +402,7 @@ private fun WhatsAppVerify(
 private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
     var open by rememberSaveable { mutableStateOf(false) }
     var phone by rememberSaveable { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
     val waiting = s.phonePending.isNotEmpty()
 
     if (!open && !waiting) {
@@ -676,7 +676,7 @@ private fun AddressRow(
 
 @Composable
 private fun DangerSection(vm: AccountViewModel, s: AccountState) {
-    var code by remember { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
 
     SectionTitle(stringResource(R.string.acc_danger), Rahal.colors.danger)
     Text(

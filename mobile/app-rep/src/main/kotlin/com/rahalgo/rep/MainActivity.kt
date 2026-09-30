@@ -221,6 +221,15 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val overlay = rememberOverlay { key -> knowsKey(REP_ITEMS, key) }
     var tab by rememberSaveable { mutableStateOf(Tab.Board) }
 
+    // **والتبويبُ يُغلق شاشةَ المتجر المفتوحة** (الخطوة ١٥) — رُئي على الجهاز:
+    // «عملائي» ضُغط وشاشةُ الأصناف باقيةٌ فوقه، **فلا يعرف أنّه ضغط.**
+    // الأصنافُ والعروضُ تُفتح بمعرّف المتجر لا بطبقة، فلا يمحوها `overlay.clear`.
+    fun leaveStore() {
+        overlay.clear()
+        menuVm.close()
+        offersVm.close()
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **وإذنُ الموقع يُطلب عند فتح «إضافة عميل» — لا عند الإقلاع**
     // ══════════════════════════════════════════════════════════════════
@@ -268,6 +277,11 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // **والرجوعُ من القائمة يغلقها — لا يُخرج من التطبيق.**
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
     BackHandler(enabled = picking && !drawer.isOpen) { picking = false }
+    // **و«رجوع» من تبويبٍ يعود إلى «لوحتي» لا يخرج** (الخطوة ١٥) — رُئي على
+    // الجهاز: «رجوع» في «عملائي» أخرج التطبيقَ إلى الشاشة الرئيسيّة للهاتف.
+    // **والخروجُ من «لوحتي» وحدها** — كما في تطبيقات التبويبات عامّةً.
+    // (ويُسجَّل قبل ما في الشاشات، فتغلبه شاشةُ متجرٍ أو طبقةٌ مفتوحة.)
+    BackHandler(enabled = tab != Tab.Board && !drawer.isOpen && !picking) { tab = Tab.Board }
 
     ModalNavigationDrawer(
         drawerState = drawer,
@@ -346,7 +360,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // صباحٍ ليرى كم بقي على هدفه.
                     Tab(
                         selected = tab == Tab.Board && over == Overlay.None,
-                        onClick = { tab = Tab.Board; overlay.clear() },
+                        onClick = { tab = Tab.Board; leaveStore() },
                         icon = com.rahalgo.ui.R.drawable.ic_star,
                         label = R.string.act_my_board,
                     )
@@ -371,7 +385,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // شاشةٍ أخرى.**
                     Tab(
                         selected = tab == Tab.AddClient && over == Overlay.None,
-                        onClick = { tab = Tab.AddClient; overlay.clear() },
+                        onClick = { tab = Tab.AddClient; leaveStore() },
                         icon = com.rahalgo.ui.R.drawable.ic_plus,
                         label = R.string.nav_add_client,
                     )
@@ -381,14 +395,14 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // جلبهم ويتابعهم** — وهي الحقيقة.
                     Tab(
                         selected = tab == Tab.Clients && over == Overlay.None,
-                        onClick = { tab = Tab.Clients; overlay.clear() },
+                        onClick = { tab = Tab.Clients; leaveStore() },
                         icon = com.rahalgo.ui.R.drawable.ic_store,
                         label = R.string.nav_clients,
                     )
                     // **وحسابي آخرا فهو في اليسار** — وصورتُه لا أيقونة.
                     NavigationBarItem(
                         selected = tab == Tab.Account && over == Overlay.None,
-                        onClick = { tab = Tab.Account; overlay.clear() },
+                        onClick = { tab = Tab.Account; leaveStore() },
                         icon = {
 // ══════════════════════════════════
 // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**

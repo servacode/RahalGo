@@ -1,5 +1,6 @@
 package com.rahalgo.rep.menu
 
+import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.menu.ItemDraft
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -398,6 +399,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 error = ""
                 sections = api.menu(merchantID)
                 regroup()
+                // **وعدّاداتُ بطاقة العميل تتحدّث** (الخطوة ١٥) — رُئي على الجهاز:
+                // صنفٌ أُضيف وبقيت «أصناف معروضة ٠».
+                Refresh.bump()
             } catch (e: Exception) {
                 onFail(e)
                 Flash.fail(apiError(getApplication(), e))

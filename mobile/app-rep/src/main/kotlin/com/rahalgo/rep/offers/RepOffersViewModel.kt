@@ -11,6 +11,7 @@ import com.rahalgo.shared.offers.StoreOffer
 import com.rahalgo.shared.offers.StoreOffersApi
 import com.rahalgo.shared.rep.MenuItem
 import com.rahalgo.shared.rep.RepApi
+import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.OfferDuration
 import com.rahalgo.ui.err
@@ -251,6 +252,8 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
                 created += 1
                 createdShown = true
                 load()
+                // **و«عروض جارية» في بطاقة العميل تتحدّث.**
+                Refresh.bump()
             } catch (e: Exception) {
                 error = err(e)
                 createdShown = false
@@ -267,6 +270,7 @@ class RepOffersViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val updated = offers.stop(merchantID, offerId)
                 rows = rows?.map { if (it.id == updated.id) updated else it }
+                Refresh.bump()
             } catch (e: Exception) {
                 error = err(e)
             } finally {

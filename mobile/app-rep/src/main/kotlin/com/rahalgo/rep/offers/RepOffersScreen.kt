@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,8 +87,10 @@ import com.rahalgo.ui.RahalTextButton
 fun RepOffersScreen(vm: RepOffersViewModel) {
     val ctx = LocalContext.current
     val focus = LocalFocusManager.current
-    var percent by remember { mutableStateOf("") }
-    var hours by remember { mutableStateOf(24) }
+    // **ويبقيان مع تدوير الشاشة** (الخطوة ١٥) — رُئي على الجهاز: «15» كُتبت
+    // ثمّ دُوّرت الشاشةُ فعادت الخطوةُ ٥ إلى ٤ فارغة.
+    var percent by rememberSaveable { mutableStateOf("") }
+    var hours by rememberSaveable { mutableStateOf(24) }
 
     // **ولوحُ العملاء يُحمَّل عند الفتح بلا متجر** — **وخطوةٌ أولى فارغةٌ
     // تُقرأ عطباً.**
