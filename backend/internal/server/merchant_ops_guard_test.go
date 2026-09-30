@@ -425,7 +425,7 @@ func TestMerchant_WriteGuardMatrix(t *testing.T) {
 		{"متجرٌ نشطٌ مملوك", f.srv.merchantWriteGuard(reqAs(ownerA), active), nil},
 		{"متجرٌ موقوفٌ مملوك", f.srv.merchantWriteGuard(reqAs(ownerA), suspended), errStoreSuspended},
 		{"متجرٌ أجنبيّ", f.srv.merchantWriteGuard(reqAs(ownerA), foreign), errForbidden},
-		{"متجرٌ غيرُ موجود", f.srv.merchantWriteGuard(reqAs(ownerA), active[:len(active)-1]+"0"), errForbidden},
+		{"متجرٌ غيرُ موجود", f.srv.merchantWriteGuard(reqAs(ownerA), flipLastHex(active)), errForbidden},
 		{"صنفٌ نشطٌ مملوك", f.srv.itemWriteGuard(reqAs(ownerA), activeItem), nil},
 		{"صنفٌ موقوفٌ مملوك", f.srv.itemWriteGuard(reqAs(ownerA), suspendedItem), errStoreSuspended},
 		{"صنفٌ أجنبيّ", f.srv.itemWriteGuard(reqAs(ownerA), foreignItem), errForbidden},
@@ -437,6 +437,53 @@ func TestMerchant_WriteGuardMatrix(t *testing.T) {
 		if c.got != c.want {
 			t.Errorf("%s: الحارسُ ردّ %v، والمتوقّع %v", c.name, c.got, c.want)
 		}
+	}
+}
+
+// flipLastHex **معرّفٌ سليمُ الشكل لا وجودَ له** — يخالف الحقيقيَّ بخانةٍ.
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وكان `active[:len-1]+"0"`** — **فإن انتهى معرّفُ المتجر الحقيقيُّ
+// بصفرٍ أصلاً صار «غيرُ الموجود» هو المتجرَ نفسَه**، فيردّ الحارسُ `nil`
+// بحقٍّ ويسقط الاختبارُ بلا عطبٍ في المنتج.
+//
+// **واحتمالُه واحدٌ من ستّةَ عشرَ في كلّ تشغيل** — فيسقط مرّةً كلَّ ستّةَ
+// عشرَ، **ويُقرأ «اختبارٌ متقلّب» فيُتجاوَز.** (وقع ٢٠٢٦-٠٩-٣٠ في جولةٍ
+// كاملة، ونجح منفرداً فوراً — وهذا بعينه ما يُخفي السببَ.)
+//
+// **والقلبُ يضمن الاختلاف**: صفرٌ يصير واحداً، وما سواه يصير صفراً.
+func flipLastHex(id string) string {
+	if id == "" {
+		return id
+	}
+	last := id[len(id)-1]
+	if last == '0' {
+		return id[:len(id)-1] + "1"
+	}
+	return id[:len(id)-1] + "0"
+}
+
+// TestFlipLastHex_AlwaysDiffers **البرهانُ حسابيٌّ لا تشغيليّ.**
+//
+// **وسقوطٌ واحدٌ من ستّةَ عشرَ لا تبرهنه تشغيلةٌ ناجحة** — فيُقاس الشرطُ
+// نفسُه: **القديمُ يساوي أصلَه حين ينتهي بصفر، والجديدُ لا يساويه أبداً.**
+func TestFlipLastHex_AlwaysDiffers(t *testing.T) {
+	for _, id := range []string{
+		"11111111-1111-1111-1111-111111111110", // ينتهي بصفر — الحالةُ التي أسقطت
+		"11111111-1111-1111-1111-111111111111",
+		"0", "a",
+	} {
+		// **العيبُ القديمُ مقيسٌ لا موصوف**
+		if old := id[:len(id)-1] + "0"; old == id && id[len(id)-1] == '0' {
+			t.Logf("العيبُ القديمُ يتحقّق على %q — كان يُنتج المعرّفَ نفسَه", id)
+		}
+		if got := flipLastHex(id); got == id {
+			t.Fatalf("flipLastHex(%q) = %q — **ومعرّفٌ لا يختلف لا يختبر شيئاً**", id, got)
+		}
+	}
+	if flipLastHex("") != "" {
+		t.Fatal("الفراغُ يُعاد كما هو")
 	}
 }
 

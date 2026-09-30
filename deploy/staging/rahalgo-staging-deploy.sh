@@ -32,7 +32,19 @@ STAGING_ENV="$STAGING_ROOT/deploy/staging/.env.staging"
 IDENTITY_URL="http://localhost:8080/api/v1/public/identity"
 HEALTH_URL="http://localhost:8080/healthz"
 INCOMING="$STAGING_ROOT/incoming"
-ARTIFACT_DIR="$STAGING_ROOT/artifacts"
+# **ويُصدَّر — ولا يُسند وحدَه.**
+#
+# `build-artifact.sh` تُنادى عمليّةً ابنة (`bash "$SRC/deploy/build-artifact.sh"`)،
+# **والابنةُ لا ترث ما لم يُصدَّر**، فتهبط إلى افتراضها `/srv/rahalgo/artifacts`
+# — **وهو مجلّدُ الإنتاج.** وتنقيةُ التجهيز تحرس المسارَ بـ`case
+# /srv/rahalgo-staging/*` **فلا ترى ما كُتب هناك أبداً.**
+#
+# **فتراكم ٢٤٤ أرشيفاً = 28G** حتّى امتلأ القرصُ ١٠٠٪ (٢٠٢٦-٠٩-٣٠)،
+# **فسقطت قاعدةُ التجهيز في `recovery mode`** وفشلت هجرةُ `0166` بـ«No space
+# left on device» — **والإنتاجُ على القرص نفسِه.**
+#
+# ويحرسه `TestDeployWrapper_ExportsArtifactDir`.
+export ARTIFACT_DIR="$STAGING_ROOT/artifacts"
 PROD_PROJECT=rahalgo
 STAGING_PROJECT=rahalgo-staging
 
@@ -227,14 +239,10 @@ stale_prune() {
 		log "stale-prune: rm incoming/$name ($(du -sh "$d" 2>/dev/null | cut -f1))"
 		rm -rf "$d"
 	done
-	# artifacts: keep the newest 3 (rollback window), prune older
-	if [ -d "$ARTIFACT_DIR" ]; then
-		ls -1dt "$ARTIFACT_DIR"/* 2>/dev/null | tail -n +4 | while IFS= read -r a; do
-			case "$a" in /srv/rahalgo-staging/*) : ;; *) continue ;; esac
-			log "stale-prune: rm artifact $(basename "$a") ($(du -sh "$a" 2>/dev/null | cut -f1))"
-			rm -rf "$a"
-		done
-	fi
+	# **وأرشيفاتُ الإصدار لها سياستُها** — `retention_sweep` بعد التحقّق من
+	# المصدر، **فالسكربتُ يأتي من المصدر المتحقَّق لا من الخادم.** وكانت
+	# هنا `ls | tail -n +4` **بلا حمايةٍ لإصدارٍ عاملٍ شاخ تاريخُه**،
+	# **وبلا فرقٍ بين أرشيفٍ وبيانٍ** — فتُحذف الصورةُ ويبقى بيانُها.
 	after="$(df -Pk "$INCOMING" 2>/dev/null | awk 'NR==2{print $4}')"
 	if [ -n "$before" ] && [ -n "$after" ]; then
 		freedm=$(( (after - before) / 1024 ))
@@ -301,6 +309,39 @@ disk_guard() {
 	[ "${free:-0}" -ge 3145728 ] || die "disk < 3G free after safe build-cache prune — refusing build before exhaustion (free volumes/logs on the box)" 15
 }
 disk_guard
+
+# ══════════════════════════════════════════════════════════════════════
+#  استبقاءُ أرشيفات الإصدار — قبل البناء لا بعده
+# ══════════════════════════════════════════════════════════════════════
+#
+# **البناءُ هو الذي يكتب نصفَ غيغابايت** — فالتحريرُ قبله لا بعده،
+# **وإلّا امتلأ القرصُ في منتصف `docker image save`** وهو ما وقع.
+#
+# **والسياسةُ في المصدر المتحقَّق** (`$SRC/deploy/retention.sh`) لا على
+# الخادم — **فما يُنقّي به تجهيزُ الغد هو ما التزمه أحدٌ ودُقّق.**
+#
+# **والمحميُّ يُقرأ من الصور العاملة** لا من قائمةٍ مكتوبة: كلُّ إصدارٍ
+# تعمل صورتُه الآن — إنتاجاً أو تجهيزاً — **لا يُحذف أرشيفُه ولو شاخ**،
+# فيبقى الرجوعُ إليه ممكناً.
+#
+# **ونسخُ القاعدةِ خارجَ هذا كلِّه** — لها سياستُها، و`retention.sh` ترفض
+# أيَّ مسارٍ فيه `backup` أو `pgdata` قبل أن تقرأه.
+retention_sweep() {
+	local keep="${RELEASE_KEEP_N:-5}" min="${MIN_FREE_MB:-6144}" prot=""
+	if [ ! -f "$SRC/deploy/retention.sh" ]; then
+		log "retention: السكربتُ غائبٌ عن المصدر المتحقَّق — يُتخطّى (أمانُ فشل)"
+		return 0
+	fi
+	mkdir -p "$ARTIFACT_DIR"
+	prot="$(docker ps --format '{{.Image}}' 2>/dev/null | sed -n 's/.*release-//p' | sort -u | tr '\n' ' ')"
+	log "retention: يُحتفظ بـ$keep · محميٌّ: $prot$SHORT"
+	# **والتنقيةُ لا تُسقط النشر** — أمّا الحارسُ فيُسقطه.
+	bash "$SRC/deploy/retention.sh" apply "$ARTIFACT_DIR" "$keep" $prot "$SHORT" \
+		|| log "retention: التنقيةُ لم تكتمل — يُتابَع، والحارسُ بعدها"
+	bash "$SRC/deploy/retention.sh" guard "$ARTIFACT_DIR" "$min" \
+		|| die "retention: المساحةُ دونَ الحدّ بعد التنقية — ولا يُبنى ما لا مكانَ له" 15
+}
+retention_sweep
 
 # build the verified commit in archive mode (identity injected + verified)
 export SOURCE_COMMIT="$SHA" SRC_ROOT="$SRC"

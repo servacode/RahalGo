@@ -33,8 +33,8 @@
     "setting_defs": 158,
     "behaviour_settings": 130,
     "order_fields": 83,
-    "test_files": 410,
-    "test_funcs": 1727
+    "test_files": 411,
+    "test_funcs": 1734
   },
   "flows": [
     {
@@ -6347,6 +6347,42 @@
       "name": "TestStagingComposeRoutingDefaultsAreNotEmpty",
       "file": "internal/deploycheck/staging_routing_test.go",
       "package": "deploycheck",
+      "orphan": true
+    },
+    {
+      "name": "TestDeployWrapper_ExportsArtifactDir",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
+      "orphan": true
+    },
+    {
+      "name": "TestRetention_IgnoresForeignFiles",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
+      "orphan": true
+    },
+    {
+      "name": "TestRetention_KeepsNewestFive",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
+      "orphan": true
+    },
+    {
+      "name": "TestRetention_NeverDeletesProtected",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
+      "orphan": true
+    },
+    {
+      "name": "TestRetention_RefusesBadKeepCount",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
+      "orphan": true
+    },
+    {
+      "name": "TestRetention_RefusesUnsafeDirs",
+      "file": "internal/deployguard/retention_test.go",
+      "package": "deployguard",
       "orphan": true
     },
     {
@@ -23003,6 +23039,12 @@
     {
       "name": "TestMerchantKindsAreASubset",
       "file": "internal/server/merchant_media_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFlipLastHex_AlwaysDiffers",
+      "file": "internal/server/merchant_ops_guard_test.go",
       "package": "server",
       "orphan": true
     },
