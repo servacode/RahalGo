@@ -6288,6 +6288,14 @@
           "type": "unknown"
         },
         {
+          "name": "driver_privacy_text",
+          "type": "unknown"
+        },
+        {
+          "name": "driver_terms_text",
+          "type": "unknown"
+        },
+        {
           "name": "help_text",
           "type": "unknown"
         },
@@ -6300,11 +6308,27 @@
           "type": "unknown"
         },
         {
+          "name": "merchant_privacy_text",
+          "type": "unknown"
+        },
+        {
+          "name": "merchant_terms_text",
+          "type": "unknown"
+        },
+        {
           "name": "privacy_text",
           "type": "unknown"
         },
         {
           "name": "rep_help_text",
+          "type": "unknown"
+        },
+        {
+          "name": "rep_privacy_text",
+          "type": "unknown"
+        },
+        {
+          "name": "rep_terms_text",
           "type": "unknown"
         },
         {

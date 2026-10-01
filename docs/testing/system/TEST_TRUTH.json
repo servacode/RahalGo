@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 159,
+    "setting_defs": 165,
     "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 430,
-    "test_funcs": 1796
+    "test_files": 431,
+    "test_funcs": 1798
   },
   "flows": [
     {
@@ -19635,6 +19635,18 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestRTX01_EachRoleHasItsOwnTexts",
+      "file": "internal/qa/role_terms_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRTX02_PanelTextOverridesDefault",
+      "file": "internal/qa/role_terms_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestRNAV_001_CacheKeyIsVersioned",

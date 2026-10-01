@@ -17,20 +17,20 @@
 | أنواعُ قيدِ المحفظة | **16** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_cash_accrued` · `merchant_cash_paid` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **55** — منها **21** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
-| تعريفاتُ الإعدادات | **159** — منها **131** مُغيِّرٌ للسلوك |
+| تعريفاتُ الإعدادات | **165** — منها **131** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **86** — من عقد `P-1` |
-| ملفّاتُ اختبار | **430** |
-| دوالُّ اختبار | **1796** |
+| ملفّاتُ اختبار | **431** |
+| دوالُّ اختبار | **1798** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1796
+TOTAL      = 1798
 MAPPED     = 459
 INFRA      = 123
-ORPHAN     = 1214
+ORPHAN     = 1216
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -38,7 +38,7 @@ ORPHAN     = 1214
 
 | الحزمة | يتيمٌ |
 |---|---|
-| `qa` | 497 |
+| `qa` | 499 |
 | `server` | 195 |
 | `orders_test` | 99 |
 | `routing` | 76 |

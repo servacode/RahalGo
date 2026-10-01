@@ -143,6 +143,17 @@ data class SiteContact(
     @SerialName("rep_help_text") val repHelpText: String = "",
     /** **وتعليماتُ المتجر رابعة** — بُني تطبيقُه ٢٠٢٦-٠٨-٢٣. */
     @SerialName("merchant_help_text") val merchantHelpText: String = "",
+    /**
+     * **وشروطٌ وخصوصيّةٌ لكلّ دورٍ يعمل معنا** — قرارُ المالك ٢٠٢٦-١٠-٠١:
+     * «نصٌّ خاصٌّ للمتجر ونصٌّ خاصٌّ للمندوب ونصٌّ خاصٌّ للسائق».
+     * **وفارغُها يسقط إلى العامّة** — فلا تُعرض صفحةٌ فارغة.
+     */
+    @SerialName("merchant_terms_text") val merchantTermsText: String = "",
+    @SerialName("merchant_privacy_text") val merchantPrivacyText: String = "",
+    @SerialName("rep_terms_text") val repTermsText: String = "",
+    @SerialName("rep_privacy_text") val repPrivacyText: String = "",
+    @SerialName("driver_terms_text") val driverTermsText: String = "",
+    @SerialName("driver_privacy_text") val driverPrivacyText: String = "",
 )
 
 /**

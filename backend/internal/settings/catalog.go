@@ -724,6 +724,21 @@ var Catalog = []Def{
 		Default: DefaultTerms},
 	{Key: "page.privacy_text", Group: GroupSite, Section: "page.privacy", Kind: KindLongText,
 		Default: DefaultPrivacy},
+	// **وشروطٌ وخصوصيّةٌ لكلّ دورٍ يعمل معنا** — قرارُ المالك ٢٠٢٦-١٠-٠١:
+	// «نصٌّ خاصٌّ للمتجر ونصٌّ خاصٌّ للمندوب ونصٌّ خاصٌّ للسائق». **والعامّةُ
+	// فوقُ للزبون**، وفارغُ أيٍّ منها يسقط إليها في التطبيق.
+	{Key: "page.merchant_terms_text", Group: GroupSite, Section: "page.terms", Kind: KindLongText,
+		Default: DefaultMerchantTerms},
+	{Key: "page.rep_terms_text", Group: GroupSite, Section: "page.terms", Kind: KindLongText,
+		Default: DefaultRepTerms},
+	{Key: "page.driver_terms_text", Group: GroupSite, Section: "page.terms", Kind: KindLongText,
+		Default: DefaultDriverTerms},
+	{Key: "page.merchant_privacy_text", Group: GroupSite, Section: "page.privacy", Kind: KindLongText,
+		Default: DefaultMerchantPrivacy},
+	{Key: "page.rep_privacy_text", Group: GroupSite, Section: "page.privacy", Kind: KindLongText,
+		Default: DefaultRepPrivacy},
+	{Key: "page.driver_privacy_text", Group: GroupSite, Section: "page.privacy", Kind: KindLongText,
+		Default: DefaultDriverPrivacy},
 	// **ومن نحن** — (طلبُ المالك ٢٠٢٦-٠٨-١٣، لرفعه على غوغل بلاي).
 	{Key: "page.about_text", Group: GroupSite, Section: "page.about", Kind: KindLongText,
 		Default: DefaultAbout},

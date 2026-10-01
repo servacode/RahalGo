@@ -64,7 +64,14 @@ func (s *Server) handlePublicContact(w http.ResponseWriter, r *http.Request) {
 		"rep_help_text": s.settings.GetString(ctx, "page.rep_help_text"),
 		// **وتعليماتُ المتجر رابعة** — تصل مع أخواتها في النداء نفسِه.
 		"merchant_help_text": s.settings.GetString(ctx, "page.merchant_help_text"),
-		"support_phone":      s.settings.GetString(ctx, "platform.support_phone"),
-		"address":            s.settings.GetString(ctx, "platform.address"),
+		// **وشروطُ كلّ دورٍ وخصوصيّتُه** — قرارُ المالك ٢٠٢٦-١٠-٠١.
+		"merchant_terms_text":   s.settings.GetString(ctx, "page.merchant_terms_text"),
+		"merchant_privacy_text": s.settings.GetString(ctx, "page.merchant_privacy_text"),
+		"rep_terms_text":        s.settings.GetString(ctx, "page.rep_terms_text"),
+		"rep_privacy_text":      s.settings.GetString(ctx, "page.rep_privacy_text"),
+		"driver_terms_text":     s.settings.GetString(ctx, "page.driver_terms_text"),
+		"driver_privacy_text":   s.settings.GetString(ctx, "page.driver_privacy_text"),
+		"support_phone":         s.settings.GetString(ctx, "platform.support_phone"),
+		"address":               s.settings.GetString(ctx, "platform.address"),
 	})
 }

@@ -64,8 +64,20 @@ fun PlatformPage(
             HelpRole.Customer -> contact.helpText
         }
         PlatformPages.ABOUT -> contact.aboutText
-        PlatformPages.TERMS -> contact.termsText
-        PlatformPages.PRIVACY -> contact.privacyText
+        // **والشروطُ والخصوصيّةُ لكلّ دورٍ نصُّه** (قرارُ المالك ٢٠٢٦-١٠-٠١)
+        // — **وفارغُه يسقط إلى العامّة.**
+        PlatformPages.TERMS -> when (role) {
+            HelpRole.Driver -> contact.driverTermsText
+            HelpRole.Rep -> contact.repTermsText
+            HelpRole.Merchant -> contact.merchantTermsText
+            HelpRole.Customer -> ""
+        }.ifBlank { contact.termsText }
+        PlatformPages.PRIVACY -> when (role) {
+            HelpRole.Driver -> contact.driverPrivacyText
+            HelpRole.Rep -> contact.repPrivacyText
+            HelpRole.Merchant -> contact.merchantPrivacyText
+            HelpRole.Customer -> ""
+        }.ifBlank { contact.privacyText }
         else -> ""
     }
     // **والقوالبُ تُملأ هنا كما تُملأ في الويب** — ولا يُترك «{name}»
