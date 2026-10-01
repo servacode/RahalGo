@@ -130,6 +130,10 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	if err := s.requireZoneOpen(ctx, tx, zone); err != nil {
 		return "", err
 	}
+	// **ولا توصيلةَ بلا سائقٍ قريب** — انظر `merchant_delivery_drivers.go`.
+	if err := s.requireDriverNearby(ctx, tx, merchantID); err != nil {
+		return "", err
+	}
 
 	// ── المال ─────────────────────────────────────────────────────────
 	//
@@ -307,6 +311,10 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 		return nil, err
 	}
 	if err := s.requireZoneOpen(ctx, s.db, zone); err != nil {
+		return nil, err
+	}
+	// **ويُقال عند فتح الشاشة** — لا بعد ملء النموذج كلِّه.
+	if err := s.requireDriverNearby(ctx, s.db, merchantID); err != nil {
 		return nil, err
 	}
 	q := &MerchantDeliveryQuote{Fee: zone.DeliveryFee, ZoneName: zone.Name}

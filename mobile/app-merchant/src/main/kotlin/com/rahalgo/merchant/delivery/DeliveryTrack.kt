@@ -146,6 +146,11 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 Rahal.colors.danger,
             )
         } else {
+            // **والانتظارُ يُرى يجري** — دوائرُ تنبض حول الموتور (طلبُ المالك).
+            if (d.status == "dispatching") {
+                SearchingBanner()
+                Spacer(Modifier.height(12.dp))
+            }
             Card {
                 val steps = listOf(
                     R.string.md_step_waiting,
@@ -161,18 +166,20 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                         Modifier.fillMaxWidth().padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(
-                            Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    when {
-                                        done -> Rahal.colors.success
-                                        now -> Rahal.colors.brand
-                                        else -> Rahal.colors.inkMuted.copy(alpha = 0.25f)
-                                    },
-                                ),
-                        )
+                        // **والخطوةُ الحاليّةُ تنبض** — والمنجَزةُ خضراء.
+                        if (now) {
+                            PulseDot(if (at == 0) Rahal.colors.accent else Rahal.colors.brand, 14.dp)
+                        } else {
+                            Box(
+                                Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (done) Rahal.colors.success
+                                        else Rahal.colors.inkMuted.copy(alpha = 0.25f),
+                                    ),
+                            )
+                        }
                         Spacer(Modifier.width(10.dp))
                         Text(
                             stringResource(label),
@@ -197,31 +204,39 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         // ── تفاصيلُها ─────────────────────────────────────────────────
         Spacer(Modifier.height(12.dp))
         Card {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.md_track_to, d.recipientName), fontWeight = FontWeight.Bold)
-                Text(d.recipientPhone, color = Rahal.colors.inkMuted)
-                Text(d.addressText, color = Rahal.colors.inkMuted)
-                if (!d.dropoffKnown) {
-                    Text(stringResource(R.string.md_row_no_point), color = Rahal.colors.inkMuted)
-                }
-                if (d.parcelNote.isNotBlank()) Text(d.parcelNote)
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(
-                        when (d.feePayer) {
-                            "recipient" -> R.string.md_row_cash
-                            "merchant_cash" -> R.string.md_row_me_cash
-                            else -> R.string.md_row_wallet
-                        },
-                        d.fee.toString(),
-                    ),
+                    stringResource(R.string.md_track_details),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
                 )
+                StatusPill(d.status)
             }
+            Hairline()
+            InfoLine(com.rahalgo.ui.R.drawable.ic_user, d.recipientName, strong = true)
+            InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
+            InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
+            if (!d.dropoffKnown) {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_pin, stringResource(R.string.md_row_no_point), muted = true)
+            }
+            if (d.parcelNote.isNotBlank()) {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_orders, d.parcelNote)
+            }
+            InfoLine(
+                com.rahalgo.ui.R.drawable.ic_wallet,
+                stringResource(
+                    when (d.feePayer) {
+                        "recipient" -> R.string.md_row_cash
+                        "merchant_cash" -> R.string.md_row_me_cash
+                        else -> R.string.md_row_wallet
+                    },
+                    d.fee.toString(),
+                ),
+            )
         }
-        if (d.status in setOf("dispatching", "assigned", "at_pickup")) {
-            Spacer(Modifier.height(8.dp))
-            RahalTextButton(onClick = { vm.cancel(id) }, enabled = !vm.busy) {
-                Text(stringResource(R.string.md_cancel))
-            }
+        if (d.status in cancellable) {
+            Spacer(Modifier.height(14.dp))
+            CancelDeliveryButton(busy = vm.busy) { vm.cancel(id) }
         }
         Spacer(Modifier.height(24.dp))
     }

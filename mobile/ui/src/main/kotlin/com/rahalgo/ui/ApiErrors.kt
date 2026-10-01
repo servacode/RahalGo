@@ -254,6 +254,7 @@ private val CODES: Map<String, Int> = mapOf(
     "offer_needs_title" to R.string.err_offer_needs_title,
     "bad_offer_kind" to R.string.err_bad_offer_kind,
     "offer_amount_over_price" to R.string.err_offer_amount_over_price,
+    "offer_item_unavailable" to R.string.err_offer_item_unavailable,
     "update_required" to R.string.err_update_required,
     // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
     "no_items" to R.string.err_no_items,
@@ -424,6 +425,7 @@ private val CODES: Map<String, Int> = mapOf(
     "temporarily_unavailable" to R.string.err_temporarily_unavailable,
     "platform_closed_now" to R.string.err_platform_closed_now,
     "zone_closed_now" to R.string.err_zone_closed_now,
+    "no_drivers_nearby" to R.string.err_no_drivers_nearby,
     "service_now_available" to R.string.err_service_now_available,
     "reason_mismatch" to R.string.err_reason_mismatch,
     "password_change_required" to R.string.err_password_change_required,

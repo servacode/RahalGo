@@ -33,6 +33,11 @@ func (s *Server) handleMerchantDeliveryQuote(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, errForbidden)
 		return
 	}
+	// **والمنصّةُ في دوامها وغيرُ موقوفة** — بوّابةُ طلب الزبون نفسُها
+	// (قرارُ المالك ٢٠٢٦-١٠-٠١: «نحمي الخطوة إذا كانت المنصّة خارج أوقات العمل»).
+	if !s.requireOrdering(w, r) {
+		return
+	}
 	// **والنقطةُ اختياريّة** — بلاها فالأجرةُ من موقع المتجر.
 	var lat, lng float64
 	has := r.URL.Query().Get("lat") != "" || r.URL.Query().Get("lng") != ""
@@ -61,6 +66,11 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 	merchantID := chi.URLParam(r, "id")
 	if !s.ownsMerchant(r, merchantID) {
 		s.respondErr(w, errForbidden)
+		return
+	}
+	// **والمنصّةُ في دوامها وغيرُ موقوفة** — بوّابةُ طلب الزبون نفسُها
+	// (قرارُ المالك ٢٠٢٦-١٠-٠١: «نحمي الخطوة إذا كانت المنصّة خارج أوقات العمل»).
+	if !s.requireOrdering(w, r) {
 		return
 	}
 	req, err := decode[struct {

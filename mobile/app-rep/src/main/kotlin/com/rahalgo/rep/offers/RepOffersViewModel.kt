@@ -26,6 +26,11 @@ class RepOffersViewModel(app: Application) : OffersWizardViewModel(app) {
 
     override suspend fun menu(storeId: String): List<OfferSection> =
         rep.menu(storeId).map { s ->
-            OfferSection(s.id, s.name, s.items.map { OfferItem(it.id, it.name, it.price) })
-        }
+            // **و«غير المتوفر» لا يُعرض** (نصُّ المالك ٢٠٢٦-١٠-٠١) — والخادمُ يرفضه أيضاً.
+            OfferSection(
+                s.id,
+                s.name,
+                s.items.filter { it.available }.map { OfferItem(it.id, it.name, it.price) },
+            )
+        }.filter { it.items.isNotEmpty() }
 }

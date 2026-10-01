@@ -330,5 +330,13 @@
     <string name="md_step_at_you">السائق عندك</string>
     <string name="md_step_to_recipient">في الطريق إلى المستلم</string>
     <string name="md_step_delivered">تم التسليم</string>
-    <string name="md_cancel">ألغِ التوصيلة</string>
+    <string name="md_cancel">إلغاء التوصيلة</string>
+    <string name="md_cancelling">جاري الإلغاء…</string>
+    <string name="md_cancel_q">إلغاء التوصيلة؟</string>
+    <string name="md_cancel_body">ستتوقف عملية البحث عن سائق، ويعود أي مبلغ دُفع من محفظتك إليها.</string>
+    <string name="md_cancel_yes">نعم، ألغِها</string>
+    <string name="md_searching">جاري البحث عن سائق…</string>
+    <string name="md_searching_hint">نعرضها الآن على السائقين القريبين — وتتغير الحالة وحدها حين يقبلها أحدهم</string>
+    <string name="md_blocked_title">لا يمكن إرسال توصيلة الآن</string>
+    <string name="md_track_details">تفاصيل التوصيلة</string>
 </resources>

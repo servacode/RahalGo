@@ -2,6 +2,7 @@ package com.rahalgo.merchant.delivery
 
 import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.clickable
@@ -244,8 +245,6 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-/** **ما يُلغى من المتجر** — ما دام الغرضُ عنده (الخادمُ يحكم أيضاً). */
-private val cancellable = setOf("dispatching", "assigned", "at_pickup")
 
 @Composable
 fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
@@ -257,6 +256,39 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
     }
     Screen {
         ScreenTitle(stringResource(R.string.md_title), stringResource(R.string.md_hint))
+
+        // **وما يمنع الإرسالَ يُقال أوّلَ الشاشة** — المنصّةُ خارجَ دوامها أو لا
+        // سائقَ قريب (قرارُ المالك ٢٠٢٦-١٠-٠١) — **لا بعد ملء النموذج كلِّه.**
+        if (vm.quoteError.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.danger.copy(alpha = 0.08f))
+                    .border(Rahal.stroke.hair, Rahal.colors.danger.copy(alpha = 0.4f), Rahal.shape.md)
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painterResource(com.rahalgo.ui.R.drawable.ic_moto),
+                    contentDescription = null,
+                    tint = Rahal.colors.danger,
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.md_blocked_title),
+                        color = Rahal.colors.danger,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(vm.quoteError, color = Rahal.colors.ink, style = MaterialTheme.typography.bodySmall)
+                }
+                RahalTextButton(onClick = { vm.load() }) {
+                    Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+                }
+            }
+        }
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
@@ -367,10 +399,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
 
         // ── الأجرةُ قبل الإرسال ───────────────────────────────────────
         val q = vm.quote
-        if (vm.quoteError.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Note(vm.quoteError, Rahal.colors.danger)
-        } else if (q != null) {
+        if (vm.quoteError.isEmpty() && q != null) {
             Spacer(Modifier.height(10.dp))
             Column(
                 Modifier
@@ -465,32 +494,51 @@ private fun FieldIcon(icon: Int) {
     Icon(painterResource(icon), contentDescription = null, tint = Rahal.colors.inkMuted)
 }
 
-/** **سطرُ توصيلة** — في «آخر التوصيلات» وفي السجلّ، نسخةٌ واحدة. */
+/**
+ * **بطاقةُ توصيلة** — في «آخر التوصيلات» وفي السجلّ، نسخةٌ واحدة.
+ *
+ * رأسٌ برقمها وشارةِ حالها · **«جاري البحث عن سائق…» تنبض ما دامت تنتظر** ·
+ * المستلِمُ ورقمُه وعنوانُه والغرضُ والأجرةُ كلٌّ بأيقونته · **وزرُّ إلغاءٍ أحمرُ
+ * يسأل قبل أن يُلغي** (طلبُ المالك ٢٠٢٦-١٠-٠١).
+ */
 @Composable
 fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCancel: () -> Unit) {
-    Spacer(Modifier.height(8.dp))
-    // **والسطرُ يُفتح على مراقبتها** — (نصُّ المالك: «ليعرف المتجرُ حالةَ توصيلته»).
-    Card(Modifier.clickable { onOpen() }) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("#" + d.number + " · " + d.recipientName, fontWeight = FontWeight.Bold)
-            Text(statusText(d.status), color = Rahal.colors.brand)
-        }
-        Text(d.addressText, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-        if (!d.dropoffKnown) {
+    Spacer(Modifier.height(10.dp))
+    val tone = toneColor(toneOf(d.status))
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, tone.copy(alpha = 0.45f), Rahal.shape.md)
+            .clickable { onOpen() }
+            .padding(14.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.md_row_no_point),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                stringResource(R.string.md_track_title, d.number.toString()),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
             )
+            StatusPill(d.status)
+        }
+        Hairline()
+        if (d.status == "dispatching") {
+            SearchingBanner(compact = true)
+            Spacer(Modifier.height(8.dp))
+        }
+        InfoLine(com.rahalgo.ui.R.drawable.ic_user, d.recipientName, strong = true)
+        InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
+        InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
+        if (!d.dropoffKnown) {
+            InfoLine(com.rahalgo.ui.R.drawable.ic_pin, stringResource(R.string.md_row_no_point), muted = true)
         }
         if (d.parcelNote.isNotBlank()) {
-            Text(d.parcelNote, style = MaterialTheme.typography.bodySmall)
+            InfoLine(com.rahalgo.ui.R.drawable.ic_orders, d.parcelNote)
         }
-        Text(
+        InfoLine(
+            com.rahalgo.ui.R.drawable.ic_wallet,
             stringResource(
                 when (d.feePayer) {
                     "recipient" -> R.string.md_row_cash
@@ -499,17 +547,17 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
                 },
                 d.fee.toString(),
             ),
-            style = MaterialTheme.typography.bodySmall,
         )
+        Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.md_track_open),
             color = Rahal.colors.brand,
+            fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.bodySmall,
         )
         if (d.status in cancellable) {
-            RahalTextButton(onClick = onCancel, enabled = !cancelling) {
-                Text(stringResource(R.string.md_cancel))
-            }
+            Spacer(Modifier.height(10.dp))
+            CancelDeliveryButton(busy = cancelling, onConfirm = onCancel)
         }
     }
 }
@@ -635,19 +683,3 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
         Spacer(Modifier.height(24.dp))
     }
 }
-
-@Composable
-private fun statusText(status: String): String = stringResource(
-    when (status) {
-        "dispatching" -> R.string.os_dispatching
-        "assigned" -> R.string.os_assigned
-        "at_pickup" -> R.string.os_at_pickup
-        "picked_up" -> R.string.os_picked_up
-        "on_the_way" -> R.string.os_on_way
-        "at_dropoff" -> R.string.os_at_dropoff
-        "delivered" -> com.rahalgo.ui.R.string.ord_st_delivered
-        "cancelled" -> R.string.os_cancelled
-        "failed" -> R.string.os_failed
-        else -> R.string.os_dispatching
-    },
-)

@@ -33,8 +33,8 @@
     "setting_defs": 158,
     "behaviour_settings": 130,
     "order_fields": 86,
-    "test_files": 422,
-    "test_funcs": 1777
+    "test_files": 423,
+    "test_funcs": 1783
   },
   "flows": [
     {
@@ -15466,6 +15466,42 @@
     {
       "name": "TestMA05_ReportTodayIsDamascusDay",
       "file": "internal/qa/merchant_audit_backend_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDG01_NoDriverOnShift",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDG02_DriverTooFar",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDG03_DriverLocationStale",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDG04_DriverNearbyPasses",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDG05_PlatformPaused",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFU01_NoOfferOnUnavailableItem",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
       "orphan": true
     },

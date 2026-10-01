@@ -503,6 +503,13 @@ func (s *Service) Get(ctx context.Context, id string, marginOf func(int64) int64
 // **وجوابٌ يفرّق بين «ليس لك» و«لا وجود له» يُعدّ المعرّفاتِ عدّاً.**
 var ErrNotYours = httpx.NewError(http.StatusForbidden, "forbidden", "errors.forbidden")
 
+// ErrItemUnavailable **صنفٌ «غير متوفر» لا يُنزَل عليه عرض** (نصُّ المالك
+// ٢٠٢٦-١٠-٠١: «مو معقول ينزل عرض لصنف مو موجود عنده أصلاً»).
+//
+// **والزبونُ لا يطلبه** — فعرضُه إعلانٌ عن شيءٍ لا يُباع، **ويُفعَّل أوّلاً.**
+var ErrItemUnavailable = httpx.NewError(http.StatusConflict,
+	"offer_item_unavailable", "errors.offer_item_unavailable")
+
 // ListForMerchant عروضُ متجرٍ بعينه — **كلُّها، بحالها المشتقّة.**
 //
 // **ولا يُقرأ منها متجرٌ آخر**: **الشرطُ على `mi.merchant_id` لا على ما
@@ -584,11 +591,15 @@ func (s *Service) CreateScopedIn(ctx context.Context, q dbtx.Querier, actorID, m
 	if in.MenuItemID == nil || strings.TrimSpace(*in.MenuItemID) == "" {
 		return nil, ErrBadDiscount
 	}
-	var ok bool
+	var ok, available bool
 	if err := q.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1 AND merchant_id = $2)`,
-		*in.MenuItemID, merchantID).Scan(&ok); err != nil || !ok {
+		SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1 AND merchant_id = $2),
+		       COALESCE((SELECT available FROM menu_items WHERE id = $1 AND merchant_id = $2), false)`,
+		*in.MenuItemID, merchantID).Scan(&ok, &available); err != nil || !ok {
 		return nil, ErrNotYours
+	}
+	if !available {
+		return nil, ErrItemUnavailable
 	}
 	// **ويتحمّله المتجرُ حتماً** — **ولا يُقرأ ما أرسله الجهاز.**
 	borne := ByMerchant

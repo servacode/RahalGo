@@ -73,6 +73,8 @@
     <string name="err_offer_needs_title">العرض يحتاج عنواناً</string>
     <string name="err_bad_offer_kind">نوع العرض غير معروف</string>
     <string name="err_offer_amount_over_price">مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً</string>
+    <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
+    <string name="err_no_drivers_nearby">لا يوجد سائقون متاحون قربك الآن — حاول بعد قليل</string>
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
     <string name="update_title">يوجد إصدار جديد</string>
     <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>
@@ -609,6 +611,7 @@
     <string name="act_delete">حذف</string>
     <string name="act_cancel">إلغاء</string>
     <string name="act_back">رجوع</string>
+    <string name="act_back_off">تراجع</string>
     <string name="act_optional">اختياري</string>
     <string name="act_share_link">شارك الرابط</string>
     <string name="act_address">العنوان</string>
@@ -851,7 +854,11 @@
     <string name="ow_no_clients">لا عملاء لك بعد — سجل عميلا ثم ارجع لتضع له عرضا</string>
     <string name="ow_loading">جاري تحميل أقسام المتجر…</string>
     <string name="ow_no_sections">لا أقسام في قائمة هذا المتجر بعد</string>
-    <string name="ow_no_items">لا أصناف معتمدة في هذا القسم</string>
+    <string name="ow_no_items">لا أصناف متوفرة في هذا القسم</string>
+    <string name="ow_no_items_store">لا أصناف متوفرة في متجرك — أضف صنفا أو فعّل صنفا غير متوفر أولا</string>
+    <string name="ow_no_match">لا صنف بهذا الاسم</string>
+    <string name="ow_search">ابحث عن صنف…</string>
+    <string name="ow_loading_items">جاري تحميل أصنافك…</string>
     <string name="ow_change_store">تبديل المتجر</string>
     <string name="ow_percent_hint">من 1 إلى 90 بالمئة</string>
     <string name="ow_preview">%1$s: خصم %2$d%% لمدة %3$s</string>

@@ -50,6 +50,12 @@ abstract class OffersWizardViewModel(app: Application) : AndroidViewModel(app) {
     /** **هل يختار متجراً؟** المندوبُ نعم، والمتجرُ فرعُه مختارٌ سلفاً. */
     abstract val picksStore: Boolean
 
+    /**
+     * **هل يمرّ بالقسم قبل الصنف؟** المندوبُ نعم (طلبُ المالك ٢٠٢٦-٠٩-٣٠)،
+     * **والمتجرُ يختار الصنفَ مباشرةً** بحثاً (طلبُه ٢٠٢٦-١٠-٠١).
+     */
+    open val picksSection: Boolean = true
+
     /** المتاجرُ التي يعمل عليها — **للمتجر: الفرعُ المختارُ وحدَه.** */
     protected abstract suspend fun stores(): List<OfferStore>
 

@@ -17,11 +17,13 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 )
 
 const mdPct = "delivery.merchant_delivery_platform_percent"
 
 type mdFx struct {
+	f        *Factory
 	fx       offerFx
 	z        zoneFx
 	admin    *User
@@ -32,14 +34,38 @@ type mdFx struct {
 
 func newMDFx(t *testing.T, h *Harness, name string) mdFx {
 	t.Helper()
+	m := newMDFxBare(t, h, name)
+	// **وسائقٌ بالدوام عند المتجر** — لا توصيلةَ بلا سائقٍ قريب (قرارُ المالك
+	// ٢٠٢٦-١٠-٠١). وحرّاسُ غيابه في `merchant_delivery_gate_test.go`.
+	mdDriverAtStore(t, h, m.f, m.fx.M.ID)
+	return m
+}
+
+// newMDFxBare **المتجرُ ومنطقتُه بلا سائق** — لحرّاس «لا سائقَ قريب».
+func newMDFxBare(t *testing.T, h *Harness, name string) mdFx {
+	t.Helper()
 	treasury(t, h)
 	z := zoneForDemand(t, h, name)
 	h.Setting(mdPct, "10")
 	f := h.Factory()
-	return mdFx{
+	m := mdFx{
+		f:  f,
 		fx: newOfferFx(t, h, f, 1000), z: z, admin: h.NewUser("admin"),
 		dropLat: z.Lat + 0.002, dropLng: z.Lng + 0.002,
 	}
+	return m
+}
+
+// mdDriverAtStore سائقٌ بالدوام موقعُه الآن عند المتجر.
+func mdDriverAtStore(t *testing.T, h *Harness, f *Factory, merchantID string) *User {
+	t.Helper()
+	var lat, lng float64
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT COALESCE(ST_Y(location::geometry), 0), COALESCE(ST_X(location::geometry), 0)
+		FROM merchants WHERE id = $1`, merchantID).Scan(&lat, &lng); err != nil {
+		t.Fatal(err)
+	}
+	return f.Driver(OnShift(), LocationAt(lat, lng, time.Now()))
 }
 
 func (m mdFx) url(p string) string { return "/api/v1/merchant/stores/" + m.fx.M.ID + p }

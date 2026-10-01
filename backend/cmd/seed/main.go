@@ -64,6 +64,7 @@ func main() {
 	ordersOnly := flag.Bool("orders", false, "زراعة طلباتٍ في كلّ الحالات — يحتاج حساباتٍ ومتجراً موجودَين")
 	customerOnly := flag.Bool("customer", false, "زراعة زبونٍ بعنوانَين ورصيدِ محفظةٍ مُقيَّد — ولا شيء غيره")
 	p8Isolation := flag.Bool("p8-isolation", false, "زراعة مندوبٍ ثانٍ ومتجرِه — شاهدُ عزلِ المندوبين لقبول P-8")
+	fleet := flag.Bool("fleet", false, "ثلاثةُ مناديب بتسعة متاجر وخمسةُ سائقين، وإكمالُ القائمة إلى عشرة — انظر fleet.go")
 	flag.Parse()
 
 	cfg, err := config.Load()
@@ -92,6 +93,15 @@ func main() {
 		log.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+
+	// **والأسطولُ يوثّق أرقامَه وحدَها** — لا `verifyWhatsAppForSeeded` على القاعدة كلِّها.
+	if *fleet {
+		seedFleet(ctx, tx)
+		if err := tx.Commit(ctx); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
 
 	// أوضاعٌ مركَّزة: كلٌّ يزرع ما يخصّه ولا يمرّ ببقية الزراعة
 	if *storeOnly || *driversOnly || *customerOnly || *ordersOnly || *p8Isolation {

@@ -85,6 +85,7 @@ fun OffersWizard(vm: OffersWizardViewModel) {
     // ثمّ دُوّرت الشاشةُ فعادت الخطوةُ ٥ إلى ٤ فارغة.
     var percent by rememberSaveable { mutableStateOf("") }
     var hours by rememberSaveable { mutableStateOf(24) }
+    var query by rememberSaveable { mutableStateOf("") }
 
     // **ولوحُ العملاء يُحمَّل عند الفتح بلا متجر** — **وخطوةٌ أولى فارغةٌ
     // تُقرأ عطباً.**
@@ -104,12 +105,14 @@ fun OffersWizard(vm: OffersWizardViewModel) {
     // **ونجاحُ الإنشاء يمسح القيمة** — **لا الضغطُ**: من رُفض عرضُه يجد
     // رقمَه كما كتبه فيصحّحه.
     LaunchedEffect(vm.created) { if (vm.created > 0) percent = "" }
-    // **والمتجرُ لا يختار متجراً** — فخطواتُه أربعٌ تبدأ من القسم.
-    val total = if (vm.picksStore) 5 else 4
-    val skip = if (vm.picksStore) 0 else 1
+    // **والمتجرُ لا يختار متجراً ولا قسماً** — فخطواتُه ثلاث: الصنف ثمّ
+    // القيمة ثمّ المدّة. والمندوبُ خمس.
+    val noStore = if (vm.picksStore) 0 else 1
+    val noSection = if (vm.picksSection) 0 else 1
+    val total = 5 - noStore - noSection
     val step = when {
         vm.merchantID.isEmpty() -> 1
-        vm.pickedSection.isEmpty() -> 2
+        vm.picksSection && vm.pickedSection.isEmpty() -> 2
         vm.pickedItem.isEmpty() -> 3
         !valueOK -> 4
         else -> 5
@@ -121,7 +124,7 @@ fun OffersWizard(vm: OffersWizardViewModel) {
         Modifier.fillMaxWidth().imePadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { StepHeader(maxOf(1, step - skip), total) }
+        item { StepHeader(maxOf(1, step - noStore - (if (step > 2) noSection else 0)), total) }
 
         // **وما اختير يبقى مكتوباً** — **فتُراجَع الخطواتُ بلا رجوع**،
         // **ولا يُنزَل خصمٌ على متجرٍ أو صنفٍ يظنّه غيرَه.**
@@ -226,13 +229,46 @@ fun OffersWizard(vm: OffersWizardViewModel) {
         // ── ٣ · الصنف ────────────────────────────────────────────────
         if (step == 3) {
             item {
-                val inSection = vm.sections
-                    .firstOrNull { it.id == vm.pickedSection }?.items.orEmpty()
+                // **والمتجرُ يرى أصنافَه كلَّها ويبحث** — والمندوبُ أصنافَ القسم.
+                val pool = if (vm.picksSection) {
+                    vm.sections.firstOrNull { it.id == vm.pickedSection }?.items.orEmpty()
+                } else {
+                    vm.items
+                }
+                val inSection = if (query.isBlank()) pool
+                else pool.filter { it.name.contains(query.trim(), ignoreCase = true) }
                 StepCard(
                     stringResource(R.string.ow_s3),
-                    onBack = { vm.pickSection("") },
+                    onBack = if (vm.picksSection) { { vm.pickSection("") } } else null,
                 ) {
-                    if (inSection.isEmpty()) Hint(stringResource(R.string.ow_no_items))
+                    if (!vm.picksSection) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it.take(40) },
+                            placeholder = { Text(stringResource(R.string.ow_search)) },
+                            leadingIcon = {
+                                androidx.compose.material3.Icon(
+                                    androidx.compose.ui.res.painterResource(R.drawable.ic_search),
+                                    contentDescription = null,
+                                )
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        if (vm.busy && pool.isEmpty()) Hint(stringResource(R.string.ow_loading_items))
+                    }
+                    if (inSection.isEmpty() && !vm.busy) {
+                        Hint(
+                            stringResource(
+                                if (query.isNotBlank()) R.string.ow_no_match
+                                else if (vm.picksSection) R.string.ow_no_items
+                                else R.string.ow_no_items_store,
+                            ),
+                        )
+                    }
                     // ══════════════════════════════════════════════════
                     // **وصنفٌ عليه عرضٌ جارٍ يُقال قبل أن يُختار**
                     // ══════════════════════════════════════════════════
