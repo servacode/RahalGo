@@ -923,6 +923,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stores/{id}/sections", s.handleMerchantStoreSections)
 			r.Put("/stores/{id}/sections", s.handleMerchantSetStoreSections)
 			r.Patch("/stores/{id}/settings", s.handleMerchantSettings)
+			// **وطريقةُ مستحقّاته يبدّلها بنفسه** — للطلبات الجديدة وحدَها.
+			r.Patch("/stores/{id}/settlement-method", s.handleMerchantOwnSettlementMethod)
 			r.Patch("/menu/items/{itemID}/availability", s.handleMerchantItemAvailability)
 			// القائمة بضاعته: يضيف ويعدّل ويحذف بنفسه — الحارس مختلف والعملية واحدة
 			r.Post("/stores/{id}/menu/sections", s.handleMerchantCreateSection)

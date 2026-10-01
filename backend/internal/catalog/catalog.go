@@ -726,6 +726,17 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 // لقطتَه). **والقفلُ على صفِّ المتجر** يتسلسل مع إنشاء الطلب: إمّا رأى الطلبُ
 // القديمةَ أو الجديدةَ، لا فراغَ ولا خلط (البند ٥ / SET-06).
 func (s *Service) SetSettlementMethod(ctx context.Context, actorID, id, method, ip string) (*Merchant, error) {
+	return s.SetSettlementMethodAs(ctx, actorID, id, method, ip, "admin.merchant_settlement_update")
+}
+
+// SetSettlementMethodAs **القاعدةُ نفسُها لبابين** — الأدمنُ وصاحبُ المتجر (قرارُ المالك
+// ٢٠٢٦-١٠-٠١: «تكون بإعدادات المتجر ويقدر يبدّلها»). **ويُقيَّد كلٌّ بفعله** —
+// «بدّلها الأدمن» و«بدّلها صاحبُها» سؤالان يُسألان بعد شهر.
+//
+// **وللطلبات الجديدة وحدَها**: كلُّ بندٍ يحمل طريقتَه يومَ أُنشئ
+// (`order_items.merchant_settlement_method`)، **والمستحقُّ النقديُّ القائمُ يبقى
+// حتّى يُصرف.**
+func (s *Service) SetSettlementMethodAs(ctx context.Context, actorID, id, method, ip, action string) (*Merchant, error) {
 	if method != "cash" && method != "wallet" {
 		return nil, ErrSettlementMethodInvalid
 	}
@@ -751,7 +762,7 @@ func (s *Service) SetSettlementMethod(ctx context.Context, actorID, id, method, 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	s.auditDetail(ctx, actorID, "admin.merchant_settlement_update", "merchant", id, ip,
+	s.auditDetail(ctx, actorID, action, "merchant", id, ip,
 		map[string]any{"merchant_id": id, "from": cur, "to": method})
 	return s.merchantByID(ctx, id)
 }

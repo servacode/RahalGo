@@ -176,11 +176,20 @@ func (s *Service) SetClosure(ctx context.Context, actorID string, c Closure) (Cl
 	if actorID != "" {
 		actor = actorID
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **يُدرَج إن غاب ويُحدَّث إن وُجد** — فحصُ المتجر ٢٠٢٦-١٠-٠١
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس على التجهيز**: الإيقافُ يردّ «فُعِّل» والطلباتُ تُقبل — **الصفُّ
+	// الوحيدُ غائب** (إعادةُ ضبط التجهيز تُفرغ الجداولَ كلَّها، وصفُّه من الهجرة
+	// ٠١٤٩). **وكان `UPDATE` بلا صفٍّ يمرّ صامتاً**: يقول المالكُ «أوقفنا» والمنصّةُ
+	// تستقبل. **فالكتابةُ لا تفترض وجودَ الصفّ.**
 	_, err := s.db.Exec(ctx, `
-		UPDATE service_closure
-		   SET active = $1, message = $2, ends_at = $3,
-		       updated_at = now(), updated_by = $4::uuid
-		 WHERE id`, c.Active, c.Message, c.EndsAt, actor)
+		INSERT INTO service_closure (id, active, message, ends_at, updated_at, updated_by)
+		VALUES (true, $1, $2, $3, now(), $4::uuid)
+		ON CONFLICT (id) DO UPDATE
+		   SET active = EXCLUDED.active, message = EXCLUDED.message, ends_at = EXCLUDED.ends_at,
+		       updated_at = now(), updated_by = EXCLUDED.updated_by`, c.Active, c.Message, c.EndsAt, actor)
 	if err != nil {
 		return Closure{}, err
 	}

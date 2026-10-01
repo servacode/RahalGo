@@ -5700,6 +5700,24 @@
       ]
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/merchant/stores/{id}/settlement-method",
+      "handler": "handleMerchantOwnSettlementMethod",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "settlement_method",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/merchant/warnings",
       "handler": "handleMerchantWarnings",

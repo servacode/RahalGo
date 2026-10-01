@@ -331,6 +331,10 @@
     <string name="md_step_to_recipient">في الطريق إلى المستلم</string>
     <string name="md_step_delivered">تم التسليم</string>
     <string name="md_cancel">إلغاء التوصيلة</string>
+    <string name="ok_settlement_saved">تم تغيير طريقة استلام المستحقات</string>
+    <string name="settlement_q">تغيير طريقة استلام المستحقات؟</string>
+    <string name="settlement_body">ينطبق على الطلبات الجديدة فقط. وما لك نقداً من الطلبات السابقة يبقى كما هو حتى يُسلَّم لك.</string>
+    <string name="settlement_yes">نعم، غيّرها</string>
     <string name="md_cancelling">جاري الإلغاء…</string>
     <string name="md_cancel_q">إلغاء التوصيلة؟</string>
     <string name="md_cancel_body">ستتوقف عملية البحث عن سائق، ويعود أي مبلغ دُفع من محفظتك إليها.</string>

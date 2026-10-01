@@ -1,5 +1,10 @@
-"use client";
-import { SsoPage } from "@rahalgo/auth";
+import { redirect } from "next/navigation";
+
+/**
+ * **لا دخولَ من الموقع** — (قرارُ المالك ٢٠٢٦-١٠-٠١: «بوّابةُ الدخول ما بدنا ياها
+ * كلّها»). كلٌّ يدخل من تطبيقه، **والعنوانُ القديمُ لا يُترك صفحةً ميّتة**: من حفظه
+ * أو جاءه من بحثٍ يجد التطبيقات.
+ */
 export default function Page() {
-  return <SsoPage />;
+  redirect("/download");
 }

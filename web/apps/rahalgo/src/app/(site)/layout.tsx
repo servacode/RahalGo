@@ -1,8 +1,6 @@
 import { fetchPlatform } from "@rahalgo/ui";
-import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { BottomNav, BottomNavSpacer } from "@/components/BottomNav";
 import { readServerConfig } from "@/lib/config";
 
 // **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
@@ -27,7 +25,7 @@ const API = () => readServerConfig().apiUrl;
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const brand = await fetchPlatform(API());
   return (
-    <CartProvider>
+    <>
       {/* **ولا حشوةَ يميناً ويساراً** — (قاعدةُ المالك، قالها أربعَ
           مرّات): الصفحةُ تأخذ العرضَ كاملاً. **والعموديُّ في `main`
           وحدَه** لأنّ الشريطَ والفوترَ شريطان يبلغان الحافّة. */}
@@ -72,11 +70,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             الطلبات وحدَها. (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) */}
         {/* **وفراغٌ بارتفاع الشريط السفليّ** — وبلاه يختفي آخرُ سطرٍ
             خلفه، وهو غالباً زرُّ الحسم. */}
-        <BottomNavSpacer />
       </div>
       {/* **أقسامُ الزبون حيث يصل الإبهام** — على الجوّال وحدَه.
           (خارجَ غلاف الحشوة لأنّه يلتصق بحافّة الشاشة.) */}
-      <BottomNav />
-    </CartProvider>
+    </>
   );
 }

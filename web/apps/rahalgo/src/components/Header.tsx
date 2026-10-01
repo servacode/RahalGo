@@ -26,9 +26,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   TopBar,
   BrandMark,
-  usePlatform,
   TopBarLink,
-  AppDownloadChip,
   TopBarChip,
   TopBarActions,
   TOPBAR_ICON,
@@ -40,7 +38,6 @@ import {
   IconLink,
   IconSupport,
   IconWallet,
-  IconUser,
   IconStore,
   IconOverview,
   wsBase,
@@ -69,6 +66,12 @@ const MARKETING = [
 
      **ولم تُترك بلا رابط**: صفحةٌ لا يقود إليها شيءٌ تسقط من فهرسة
      غوغل، **وهي التي طلبها للنشر على غوغل بلاي.** */
+  /* **الرئيسيّةُ والتطبيقاتُ وتواصلُ معنا** — (قرارُ المالك ٢٠٢٦-١٠-٠١: «نحطّ
+     الرئيسيّة… ثاني شي التطبيقات وهي تضمّ الزبون والمتجر والسائق والمندوب، مشان
+     كلّ شخص يحمّل التطبيقَ من الموقع والتحديث»). **ولا «دخول»**: «بوّابةُ الدخول
+     ما بدنا ياها كلّها» — **وكلٌّ يدخل من تطبيقه.** */
+  { href: "/", label: N.home },
+  { href: "/download", label: N.apps },
   { href: "/contact", label: N.contact },
 ];
 // **وقناةُ البثّ مُشتَقّةٌ من تهيئة التشغيل** — دورةُ ٧١و.
@@ -124,7 +127,6 @@ export default function Header({
   /* **وبابا الموقع يُقرآن من الهويّة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
      **وهي مقروءةٌ في الخادم ومُمرَّرةٌ قيمةً مبدئيّة**، فلا يظهر الزرُّ
      ثمّ يختفي أمام عين الزائر — **وومضةٌ كهذه أسوأُ من بقائه.** */
-  const { showLogin } = usePlatform();
   const router = useRouter();
   const pathname = usePathname();
   const logged = isLoggedIn(user);
@@ -331,7 +333,6 @@ export default function Header({
               <span className="hidden md:inline">{m.shared.backToDashboard}</span>
             </TopBarChip>
           )}
-          <AppDownloadChip label={m.auth.getApp} />
           <TopBarChip
             onClick={() => {
               logout();
@@ -343,32 +344,9 @@ export default function Header({
           </TopBarChip>
         </>
       ) : (
-        <>
-          {/* **واسمُه يُخفى على الجوّال لا أيقونتُه.**
-
-              (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «أيقونة لتسجيل الدخول ليكون أيضاً
-               واضح».)
-
-              **وأيقونةُ الشخص تُقرأ «حسابي» في كلّ تطبيق** — والاسمُ يأخذ
-              ثلاثةَ أضعافِ عرضِها **في شريطٍ صار فيه بابُ التسوّق أيضاً.**
-
-              **ويبقى للقارئ الصوتيّ** — `aria-label` يحمله. */}
-          {showLogin && (
-          <TopBarLink
-            Link={Link}
-            href="/app"
-            title={N.login}
-            aria-label={N.login}
-            className="border border-line"
-          >
-            <IconUser size={TOPBAR_ICON} />
-            <span className="hidden sm:inline">{N.login}</span>
-          </TopBarLink>
-          )}
-          {/* **وبجانبه زرُّ التطبيق** — لمن لم يقرّر الدخولَ بعد.
-              (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «لازم يكون بالتوب بار».) */}
-          <AppDownloadChip label={m.auth.getApp} />
-        </>
+        /* **ولا «دخول» ولا «حمّل التطبيق»** — (قرارُ المالك ٢٠٢٦-١٠-٠١). الزائرُ
+           يجد «التطبيقات» في الشريط نفسِه، **وزرّان لمعنًى واحدٍ زحمة.** */
+        null
       )}
     </TopBar>
   );

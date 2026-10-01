@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 380,
+    "routes": 381,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 159,
     "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 425,
-    "test_funcs": 1788
+    "test_files": 429,
+    "test_funcs": 1793
   },
   "flows": [
     {
@@ -7682,6 +7682,18 @@
       "orphan": true
     },
     {
+      "name": "TestSETG1_CashDueReturnedGoodsIsReversed",
+      "file": "internal/orders/cash_goods_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestSETG2_CashPaidReturnedGoodsBecomesDebt",
+      "file": "internal/orders/cash_goods_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestSET06_SnapshotIsFutureOnly",
       "file": "internal/orders/cash_settlement_test.go",
       "package": "orders_test",
@@ -11158,6 +11170,12 @@
     {
       "name": "TestCITY_071_CitiesAreAdminOnly",
       "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ClosureWritesEvenWithoutRow",
+      "file": "internal/qa/closure_missing_row_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -15513,19 +15531,25 @@
       "orphan": true
     },
     {
+      "name": "TestMCM01_CardShowsMerchantMoneyWithoutOverride",
+      "file": "internal/qa/merchant_card_money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMDG01_NoDriverOnShift",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
       "orphan": true
     },
     {
-      "name": "TestMDG02_DriverTooFar",
+      "name": "TestMDG02_DriverFarStillCounts",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
       "orphan": true
     },
     {
-      "name": "TestMDG03_DriverLocationStale",
+      "name": "TestMDG03_BusyOrStaleStillCounts",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
       "orphan": true
@@ -15653,6 +15677,12 @@
     {
       "name": "TestMDIS_020_NoVerifiedMessage",
       "file": "internal/qa/merchant_notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMSS01_OwnerSwitchesSettlementMethod",
+      "file": "internal/qa/merchant_settlement_switch_test.go",
       "package": "qa",
       "orphan": true
     },

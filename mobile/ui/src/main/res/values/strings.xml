@@ -76,7 +76,7 @@
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
     <string name="err_item_text_too_long">الاسم أطول من ١٢٠ حرفاً أو الوصف أطول من ٥٠٠</string>
-    <string name="err_no_drivers_nearby">لا يوجد سائقون متاحون قربك الآن — حاول بعد قليل</string>
+    <string name="err_no_drivers_on_shift">لا يوجد سائقون بالدوام الآن — حاول بعد قليل</string>
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
     <string name="update_title">يوجد إصدار جديد</string>
     <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>

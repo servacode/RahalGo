@@ -427,7 +427,7 @@ private val CODES: Map<String, Int> = mapOf(
     "temporarily_unavailable" to R.string.err_temporarily_unavailable,
     "platform_closed_now" to R.string.err_platform_closed_now,
     "zone_closed_now" to R.string.err_zone_closed_now,
-    "no_drivers_nearby" to R.string.err_no_drivers_nearby,
+    "no_drivers_on_shift" to R.string.err_no_drivers_on_shift,
     "service_now_available" to R.string.err_service_now_available,
     "reason_mismatch" to R.string.err_reason_mismatch,
     "password_change_required" to R.string.err_password_change_required,

@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -230,16 +228,11 @@ internal fun InfoLine(icon: Int, text: String, strong: Boolean = false, muted: B
 @Composable
 internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
     var asking by rememberSaveable { mutableStateOf(false) }
-    val red = Rahal.colors.danger
-    OutlinedButton(
+    // **ونبرةُ الخطر المشتركة** (`Tone.Danger`) — زرُّ «اعتذر عن الطلب» بها أيضاً.
+    com.rahalgo.ui.RahalOutlineButton(
         onClick = { asking = true },
         enabled = !busy,
-        shape = Rahal.shape.md,
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, red),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = red.copy(alpha = 0.06f),
-            contentColor = red,
-        ),
+        tone = com.rahalgo.ui.Tone.Danger,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(

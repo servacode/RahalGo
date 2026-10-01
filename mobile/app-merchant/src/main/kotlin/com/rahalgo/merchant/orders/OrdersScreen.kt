@@ -281,8 +281,15 @@ private fun OrderCard(
         if (order.status == "pending") {
             var showReject by rememberSaveable(order.id) { mutableStateOf(false) }
             Spacer(Modifier.height(4.dp))
-            RahalTextButton(onClick = { showReject = true }, enabled = !busy) {
-                Text(stringResource(R.string.order_reject), color = Rahal.colors.inkMuted)
+            // **وزرٌّ أحمرُ واضحٌ بعرض البطاقة** (طلبُ المالك ٢٠٢٦-١٠-٠١: «اعتذر عن
+            // الطلب خلّيه زرّاً أحمرَ واضحاً لأنّه رفض») — **ويسأل عن السبب قبل أن يرفض.**
+            com.rahalgo.ui.RahalOutlineButton(
+                onClick = { showReject = true },
+                enabled = !busy,
+                tone = com.rahalgo.ui.Tone.Danger,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.order_reject), fontWeight = FontWeight.Bold)
             }
             if (showReject) {
                 RejectReasonDialog(

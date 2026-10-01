@@ -174,6 +174,25 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **يبدّل طريقةَ مستحقّاته** — للطلبات الجديدة وحدَها، **والمستحقُّ النقديُّ
+     * القائمُ يبقى حتّى يُصرف** (قرارُ المالك ٢٠٢٦-١٠-٠١).
+     */
+    fun setSettlementMethod(method: String) {
+        val id = store?.id ?: return
+        if (method == store?.settlementMethod) return
+        saving = true
+        viewModelScope.launch {
+            runCatching { api.setSettlementMethod(id, method) }
+                .onSuccess {
+                    store = store?.copy(settlementMethod = it.settlementMethod)
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_settlement_saved))
+                }
+                .onFailure { Flash.fail(err(it)) }
+            saving = false
+        }
+    }
+
     fun setPrepMinutes(minutes: Int) {
         val id = store?.id ?: return
         if (minutes <= 0) return

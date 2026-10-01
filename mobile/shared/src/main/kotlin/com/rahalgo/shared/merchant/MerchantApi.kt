@@ -196,6 +196,17 @@ class MerchantApi(private val api: ApiClient) {
         api.call("/api/v1/merchant/stores/$storeId/settings", HttpMethod.Patch, input)
 
     /**
+     * **يبدّل طريقةَ مستحقّاته** — `cash` أو `wallet`، للطلبات الجديدة وحدَها
+     * (قرارُ المالك ٢٠٢٦-١٠-٠١: «تكون بإعدادات المتجر ويقدر يبدّلها»).
+     */
+    suspend fun setSettlementMethod(storeId: String, method: String): SettlementMethodAck =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/settlement-method",
+            HttpMethod.Patch,
+            mapOf("method" to method),
+        )
+
+    /**
      * ══════════════════════════════════════════════════════════════════
      * **يفتح المتجرَ أو يغلقه**
      * ══════════════════════════════════════════════════════════════════
@@ -661,4 +672,9 @@ data class MenuItemInput(
     @SerialName("platform_section_id") val platformSectionId: String? = null,
     @SerialName("image_media_id") val imageMediaId: String? = null,
     val modifiers: List<ModifierGroup>? = null,
+)
+
+@Serializable
+data class SettlementMethodAck(
+    @SerialName("settlement_method") val settlementMethod: String = "",
 )

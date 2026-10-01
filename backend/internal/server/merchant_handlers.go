@@ -785,12 +785,14 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	if len(list) == 0 {
 		return
 	}
-	var pct int
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT commission_percent FROM merchants WHERE id = $1`,
-		merchantID).Scan(&pct); err != nil {
-		return
-	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والنسبةُ بقاعدة التسوية نفسِها** — فحصُ المتجر ٢٠٢٦-١٠-٠١
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **رُئي على الجهاز**: «خصم المنصة ٠٪ · المستحق لك ٠» على طلبٍ بـ٤٥٬٠٠٠.
+	// **عمودُ المتجر فارغٌ** («اتبع العامّ») **فكان مسحُه يسقط والدالّةُ تعود
+	// بلا شيء** — فتبقى المبالغُ أصفاراً. **والتسويةُ تقرأ: تجاوزُ المتجر إن
+	// وُجد، وإلّا لقطةُ الطلب** (`transitions.go`) — **فالبطاقةُ بالقاعدة نفسِها.**
 	ids := make([]string, 0, len(list))
 	for i := range list {
 		ids = append(ids, list[i].ID)
@@ -851,6 +853,7 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	// **طلبٌ لم يُقبض عنه شيءٌ تحكمه نسبةُ اليوم لا نسبةُ الأمس.**
 	cost := map[string]int64{}
 	paid := map[string]int64{}
+	pcts := map[string]int{}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.id::text,
 		       COALESCE((SELECT sum(oi.merchant_price * oi.qty)
@@ -860,22 +863,26 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                  WHERE t.ref = o.id::text AND t.kind = 'merchant_earning'
 		                    AND t.user_id = (SELECT owner_user_id FROM merchants
-		                                      WHERE id = $2)), 0)
+		                                      WHERE id = $2)), 0),
+		       COALESCE((SELECT m.commission_percent FROM merchants m WHERE m.id = $2),
+		                o.snap_merchant_commission_percent, 0)
 		FROM orders o WHERE o.id = ANY($1)`, ids, merchantID)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id string
-			var base, net int64
-			if rows.Scan(&id, &base, &net) == nil {
+			var base, net, p int64
+			if rows.Scan(&id, &base, &net, &p) == nil {
 				cost[id] = base
 				paid[id] = net
+				pcts[id] = int(p)
 			}
 		}
 	}
 	for i := range list {
 		o := &list[i]
 		base := cost[o.ID]
+		pct := pcts[o.ID]
 		// **ولا تُقرأ `orders.platform_commission`**: هي مجموعُ عمولات
 		// متاجر الطلب كلِّها، **فتصير في طلبٍ من مطبخين عمولةَ غيره
 		// محسوبةً عليه.**

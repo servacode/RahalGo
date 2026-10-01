@@ -169,9 +169,9 @@ const portal = readFileSync(
 );
 if (!/if \(loading \|\| !capsLoaded\) return;/.test(portal))
   fail("صفحةُ `portal` تحوّل قبل وصول القدرات — **فيُساق صاحبُ القدرة إلى `/app`**");
+// **والشريطُ السفليُّ حُذف** (٢٠٢٦-١٠-٠١) — كان لمن يدخل من الموقع، **ولا دخولَ منه.**
 for (const [file, path] of [
   ["Header", "apps/rahalgo/src/components/Header.tsx"],
-  ["BottomNav", "apps/rahalgo/src/components/BottomNav.tsx"],
 ]) {
   const src = readFileSync(join(web, path), "utf8");
   if (/portalFor\(user\.roles\)/.test(src) || /homeFor\(user\.roles\)/.test(src))

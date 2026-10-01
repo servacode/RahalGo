@@ -40,6 +40,31 @@ func (s *Server) handleSetMerchantSettlementMethod(w http.ResponseWriter, r *htt
 	httpx.JSON(w, http.StatusOK, m)
 }
 
+// handleMerchantOwnSettlementMethod **صاحبُ المتجر يبدّل طريقةَ مستحقّاته** — نقداً أو
+// محفظةً، للطلبات الجديدة وحدَها (قرارُ المالك ٢٠٢٦-١٠-٠١).
+//
+// **ومن بابه هو**: يملك المتجرَ (`merchantWriteGuard` — **والموقوفُ لا يبدّل**).
+func (s *Server) handleMerchantOwnSettlementMethod(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := s.merchantWriteGuard(r, id); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	req, err := decode[setSettlementMethodReq](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	m, err := s.catalog.SetSettlementMethodAs(r.Context(), userIDFrom(r), id, req.Method,
+		clientIP(r), "merchant.settlement_update")
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("merchant", "ops", "merchant:"+id)
+	httpx.JSON(w, http.StatusOK, map[string]any{"settlement_method": m.SettlementMethod})
+}
+
 // handleMerchantCashSettlements كشفُ المستحقّات النقديّة لمتجرٍ والمجموعُ القائم.
 func (s *Server) handleMerchantCashSettlements(w http.ResponseWriter, r *http.Request) {
 	if !isUUID(chi.URLParam(r, "id")) {

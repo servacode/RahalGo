@@ -287,9 +287,10 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // **٣·ب — طريقةُ استلامِ المستحقّات — عرضٌ لا حكم** (٢٠٢٦-٠٩-٢٧)
             // ══════════════════════════════════════════════════════════
             //
-            // **المتجرُ لا يغيّرها** (الأدمن وحدَه) — يراها ليعرف كيف يصله ماله:
-            // «نقدي» يُسلَّم يداً، «المحفظة» يُقيَّد في رصيده. **وللنقديِّ يُعرَض
-            // المستحقُّ غير المسدَّد** إن وُجد — للمتجرِ الحاليِّ المختار.
+            // **ويبدّلها بنفسه** (قرارُ المالك ٢٠٢٦-١٠-٠١: «تكون بإعدادات المتجر
+            // ويقدر يبدّلها») — **ويُسأل قبل التبديل**: للطلبات الجديدة وحدَها،
+            // **والمستحقُّ النقديُّ القائمُ يبقى حتّى يُصرف.** «نقدي» يُسلَّم يداً،
+            // «المحفظة» يُقيَّد في رصيده.
             Spacer(Modifier.height(10.dp))
             Card {
                 KeyValue(
@@ -305,6 +306,32 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         label = stringResource(R.string.store_unpaid_cash),
                         value = money(store.unpaidCashDue),
                         valueColor = Rahal.colors.brand,
+                    )
+                }
+                var askMethod by rememberSaveable { mutableStateOf<String?>(null) }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(
+                        selected = store.settlementMethod == "cash",
+                        onClick = { if (store.settlementMethod != "cash") askMethod = "cash" },
+                        enabled = !vm.saving,
+                        label = { Text(stringResource(R.string.store_settlement_cash)) },
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = store.settlementMethod == "wallet",
+                        onClick = { if (store.settlementMethod != "wallet") askMethod = "wallet" },
+                        enabled = !vm.saving,
+                        label = { Text(stringResource(R.string.store_settlement_wallet)) },
+                    )
+                }
+                askMethod?.let { m ->
+                    com.rahalgo.ui.ConfirmDialog(
+                        title = stringResource(R.string.settlement_q),
+                        body = stringResource(R.string.settlement_body),
+                        confirm = stringResource(R.string.settlement_yes),
+                        onConfirm = { vm.setSettlementMethod(m) },
+                        onDismiss = { askMethod = null },
+                        danger = false,
                     )
                 }
             }

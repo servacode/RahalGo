@@ -1,6 +1,6 @@
 package qa
 
-// **حمايةُ «لدي توصيلة»** — قرارُ المالك ٢٠٢٦-١٠-٠١.
+// **حمايةُ «لدي توصيلة»** — قرارا المالك ٢٠٢٦-١٠-٠١ (والثاني: «المهمّ سائقٌ بالدوام»).
 //
 // (نصُّه: «لازم نحمي هي الخطوة إذا كانت المنصّة خارج أوقات العمل والسائقين
 //  خارج أوقات العمل أيضاً» · واختار: «سائقٌ بالدوام قريبٌ من المتجر».)
@@ -29,37 +29,47 @@ func mdgExpect(t *testing.T, h *Harness, m mdFx, code string) {
 func TestMDG01_NoDriverOnShift(t *testing.T) {
 	h := New(t)
 	m := newMDFxBare(t, h, "منطقةُ MDG-01")
+	// **وسائقو الفحوص السابقة في القاعدة نفسِها خارجَ الدوام** — يُقاس هذا وحدَه.
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET on_shift = false WHERE on_shift`); err != nil {
+		t.Fatal(err)
+	}
 	// **وسائقٌ عند المتجر خارجَ الدوام لا يُحسب.**
 	m.f.Driver(LocationAt(m.z.Lat, m.z.Lng, time.Now()))
-	mdgExpect(t, h, m, "no_drivers_nearby")
+	mdgExpect(t, h, m, "no_drivers_on_shift")
 }
 
-// TestMDG02_DriverTooFar **بالدوام لكن خارجَ أقصى نصف قطر التوزيع.**
-func TestMDG02_DriverTooFar(t *testing.T) {
+// mdgAllowed **تمرّ** — عرضُ السعر والإنشاء كلاهما.
+func mdgAllowed(t *testing.T, h *Harness, m mdFx, tag string) {
+	t.Helper()
+	if q := h.GET(m.url("/delivery-quote"), m.fx.Tok); q.Code != http.StatusOK {
+		t.Fatalf("عرضُ السعر: %d / %s", q.Code, q.Err())
+	}
+	m.create(t, h, "recipient", uniq(tag))
+}
+
+// TestMDG02_DriverFarStillCounts **بعيدٌ لكن بالدوام ⇒ تمرّ** — قرارُ المالك:
+// «مو ضروري يكونون قريبين، المهمّ في سائقين بالدوام».
+func TestMDG02_DriverFarStillCounts(t *testing.T) {
 	h := New(t)
-	h.Setting("drivers.dispatch_radius_max_m", "5000")
 	m := newMDFxBare(t, h, "منطقةُ MDG-02")
 	m.f.Driver(OnShift(), LocationAt(m.z.Lat+1.0, m.z.Lng, time.Now())) // ~١١١ كم
-	mdgExpect(t, h, m, "no_drivers_nearby")
+	mdgAllowed(t, h, m, "mdg02")
 }
 
-// TestMDG03_DriverLocationStale **بالدوام عند المتجر لكن موقعُه شائخ.**
-func TestMDG03_DriverLocationStale(t *testing.T) {
+// TestMDG03_BusyOrStaleStillCounts **بالدوام وموقعُه شائخ ⇒ تمرّ** — «حتّى لو كانوا مشغولين».
+func TestMDG03_BusyOrStaleStillCounts(t *testing.T) {
 	h := New(t)
 	m := newMDFxBare(t, h, "منطقةُ MDG-03")
 	m.f.Driver(OnShift(), LocationAt(m.z.Lat, m.z.Lng, time.Now().Add(-3*time.Hour)))
-	mdgExpect(t, h, m, "no_drivers_nearby")
+	mdgAllowed(t, h, m, "mdg03")
 }
 
-// TestMDG04_DriverNearbyPasses **بالدوام عند المتجر حديثُ الموقع** ⇒ تمرّ.
+// TestMDG04_DriverNearbyPasses **بالدوام عند المتجر** ⇒ تمرّ.
 func TestMDG04_DriverNearbyPasses(t *testing.T) {
 	h := New(t)
 	m := newMDFxBare(t, h, "منطقةُ MDG-04")
 	mdDriverAtStore(t, h, m.f, m.fx.M.ID)
-	if q := h.GET(m.url("/delivery-quote"), m.fx.Tok); q.Code != http.StatusOK {
-		t.Fatalf("عرضُ السعر: %d / %s", q.Code, q.Err())
-	}
-	m.create(t, h, "recipient", uniq("mdg04"))
+	mdgAllowed(t, h, m, "mdg04")
 }
 
 // TestMDG05_PlatformPaused **المنصّةُ موقوفةٌ مؤقّتاً** ⇒ رمزُ طلب الزبون نفسُه.

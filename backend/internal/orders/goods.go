@@ -99,6 +99,10 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string) 
 		if err := s.clawBackGoods(ctx, tx, orderID, actorID); err != nil {
 			return err
 		}
+		// **والمتجرُ النقديُّ كذلك** — انظر `clawBackCashGoods`.
+		if err := s.clawBackCashGoods(ctx, tx, orderID, actorID); err != nil {
+			return err
+		}
 		// **والخزينةُ تُعيد الحساب** — لا تُقيَّد بيدٍ ثانية.
 		//
 		// `creditTreasury` تقرأ ما قُيّد للأطراف من الدفتر وتضع الفرق، **فقيدٌ
@@ -193,6 +197,93 @@ func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, 
 				sh.merchantID, rest, obligations.CauseReturnedGoods,
 				orderID, &actorID); err != nil {
 				return err
+			}
+		}
+	}
+	return nil
+}
+
+// clawBackCashGoods **المتجرُ النقديُّ رُدّت إليه بضاعتُه** — فحصُ المتجر ٢٠٢٦-١٠-٠١.
+//
+// (قرارُ المالك: «موافق — والنسبةُ نحدّدها من لوحة الأدمن».)
+//
+// **قِيس على التجهيز**: متجرٌ «نقداً» رُدّت إليه بضاعةٌ بـ٣٠٬٠٠٠ **فبقي مستحقُّه
+// ٢٧٬٠٠٠ كاملاً ولم يُدفع له دعم.** `clawBackGoods` يقرأ `merchant_earning` من
+// المحفظة، **ومستحقُّ النقديّ ليس في محفظته** — في الاحتباس (`cash_settlement.go`).
+//
+// **فالقاعدةُ نفسُها بأدوات النقد**:
+//
+//	لم يُدفع بعد (`cash_due`)   ←  يُعكس من الاحتباس (`postCashReversal`)
+//	دُفع نقداً (`cash_paid`)     ←  التزامٌ عليه يُقتطع من مستحقٍّ قادم
+//	والدعمُ                     ←  في محفظته، **والخزينةُ تدفعه** — كالمحفظيّ حرفاً
+//
+// **والسببُ `returned_goods`** — كان معرَّفاً في `cashReversalNote` ولا يناديه أحد.
+// **ومعرّفُ الحدث `goods:` يمنع العكسَ مرّتين** (الحسمُ نفسُه مقفولٌ أيضاً).
+func (s *Service) clawBackCashGoods(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
+	rows, err := q.Query(ctx, `
+		SELECT ms.id::text, ms.merchant_id::text, m.owner_user_id::text,
+		       ms.amount, ms.amount - ms.reversed_amount, ms.state
+		FROM merchant_settlements ms
+		JOIN merchants m ON m.id = ms.merchant_id
+		WHERE ms.order_id = $1 AND ms.method = 'cash'
+		FOR UPDATE OF ms`, orderID)
+	if err != nil {
+		return err
+	}
+	type row struct {
+		id, merchantID, ownerID string
+		amount, outstanding     int64
+		state                   string
+	}
+	var list []row
+	for rows.Next() {
+		var r row
+		if err := rows.Scan(&r.id, &r.merchantID, &r.ownerID, &r.amount, &r.outstanding, &r.state); err != nil {
+			rows.Close()
+			return err
+		}
+		list = append(list, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(list) == 0 {
+		return nil
+	}
+	hid, err := s.cashHoldingOn(ctx, q)
+	if err != nil {
+		return err
+	}
+	pct := int64(0)
+	if s.settings != nil {
+		pct = s.settings.GetInt(ctx, "merchants.return_support_percent")
+	}
+	for _, r := range list {
+		if support := pct * r.amount / 100; support > 0 {
+			if _, err := s.wallet.ApplyTx(ctx, q, r.ownerID, support,
+				"compensation", orderID,
+				"دعمُ المنصة عن بضاعةٍ رُدّت", &actorID); err != nil {
+				return err
+			}
+			if err := s.DebitTreasury(ctx, q, support, orderID,
+				"دعمُ متجرٍ عن بضاعةٍ رُدّت", actorID); err != nil {
+				return err
+			}
+		}
+		switch r.state {
+		case "cash_due":
+			if _, err := s.postCashReversal(ctx, q, r.id, hid, r.outstanding,
+				obligations.CauseReturnedGoods, "goods:"+orderID, orderID, actorID); err != nil {
+				return err
+			}
+		case "cash_paid":
+			if r.outstanding > 0 {
+				if _, err := obligations.Create(ctx, q, obligations.PartyMerchant,
+					r.merchantID, r.outstanding, obligations.CauseReturnedGoods,
+					orderID, &actorID); err != nil {
+					return err
+				}
 			}
 		}
 	}

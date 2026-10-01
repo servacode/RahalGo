@@ -468,7 +468,12 @@ func assertNoNewDeadlocks(t *testing.T, h *Harness, before int64) {
 func TestConc_SettlementChangerKeepsExclusiveLock(t *testing.T) {
 	src := geoSource(t, "backend/internal/catalog/catalog.go")
 
-	i := strings.Index(src, "func (s *Service) SetSettlementMethod(")
+	// **والبابان — الأدمنُ وصاحبُ المتجر — يمرّان بدالّةٍ واحدة** (٢٠٢٦-١٠-٠١):
+	// `SetSettlementMethod` تنادي `SetSettlementMethodAs`، **والقفلُ هناك.**
+	if !strings.Contains(src, "return s.SetSettlementMethodAs(ctx, actorID, id, method, ip,") {
+		t.Fatal("**بابُ الأدمن لا يمرّ بالدالّة المشتركة** — فقفلُها لا يحميه")
+	}
+	i := strings.Index(src, "func (s *Service) SetSettlementMethodAs(")
 	if i < 0 {
 		t.Fatal("**ذهبت `SetSettlementMethod`** — يُعاد بناءُ الحارس")
 	}
