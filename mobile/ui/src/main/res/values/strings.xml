@@ -721,7 +721,7 @@
     <string name="cc_unnamed_item">منتج</string>
     <string name="cc_product_removed">هذا المنتج لم يعد متوفرًا: %1$s</string>
     <string name="cc_product_unavailable">هذا المنتج غير متوفر حاليًا: %1$s</string>
-    <string name="cc_quantity_invalid">الكمية المطلوبة لهذا المنتج لم تعد متاحة: %1$s</string>
+    <string name="cc_quantity_invalid">الكمية المطلوبة لهذا المنتج لم تعد متوفرة: %1$s</string>
     <string name="cc_price_changed">تغيّر سعر %1$s من %2$s إلى %3$s</string>
     <string name="cc_fee_changed">تغيّرت أجور التوصيل من %1$s إلى %2$s</string>
     <string name="cc_promo_changed">تغيّر الخصم من %1$s إلى %2$s</string>

@@ -33,8 +33,8 @@
     "setting_defs": 165,
     "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 431,
-    "test_funcs": 1798
+    "test_files": 432,
+    "test_funcs": 1799
   },
   "flows": [
     {
@@ -22248,6 +22248,12 @@
       "name": "TestGrantSignupBonus_Credits",
       "file": "internal/referrals/signup_bonus_test.go",
       "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerDirectOnlyOnStaging",
+      "file": "internal/release/public_staging_test.go",
+      "package": "release",
       "orphan": true
     },
     {

@@ -291,6 +291,7 @@ type releaseStore struct{ s *Server }
 func (r releaseStore) GetString(ctx context.Context, key string) string {
 	return r.s.settings.GetString(ctx, key)
 }
+func (r releaseStore) Staging() bool { return r.s.qaStagingEnabled() }
 func (r releaseStore) ArtifactDir() string {
 	return filepath.Join(r.s.media.Dir(), appDir)
 }

@@ -3800,7 +3800,7 @@
       "cancel": "إلغاء الطلب",
       "cancelWindow": "يبقى لك {t} لإلغاء الطلب",
       "reorderNone": "لم يعد أي من أصناف هذا الطلب متاحا.",
-      "reorderPartial": "أضيفت الأصناف المتاحة. {n} منها لم تعد متاحة.",
+      "reorderPartial": "أضيفت الأصناف المتوفرة. {n} منها لم تعد متوفرة.",
       "fromPlatform": "{platform}",
       "itemsTitle": "أصناف الطلب",
       "invoice": "الفاتورة",

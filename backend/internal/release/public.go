@@ -43,6 +43,8 @@ type Store interface {
 	GetString(ctx context.Context, key string) string
 	// ArtifactDir مجلَّدُ الآثار المرفوعة.
 	ArtifactDir() string
+	// Staging **أعلى التجهيز نحن؟** — يفتح رابطَ الزبون المباشرَ هناك وحدَه.
+	Staging() bool
 }
 
 // PublicPath مسارُ التنزيل العامُّ لتطبيقٍ — **بمفتاحه لا باسم ملفّه.**
@@ -120,7 +122,10 @@ func playURL(ctx context.Context, st Store, a App) string {
 // **وتنزيلُ الزبون المباشرُ مقفَلٌ هنا لا في الشاشة**: **من أقفله في
 // الشاشة وحدَها تركه مكشوفاً بمسارٍ مباشر.**
 func artifact(ctx context.Context, st Store, a App) (int64, string, bool) {
-	if a.Key == "customer" && !CustomerDirectAllowed {
+	// **وعلى التجهيز يُفتح** (قرارُ المالك ٢٠٢٦-١٠-٠١: «نعم رابط مباشر
+	// أيضاً»): **نسخةُ التجهيز حزمةٌ أخرى** (`.staging`) بمفتاحٍ آخر، **فلا
+	// تحلّ محلَّ نسخة المتجر ولا تكسر تحديثَها** — وهو ما أُقفل لأجله.
+	if a.Key == "customer" && !CustomerDirectAllowed && !st.Staging() {
 		return 0, "", false
 	}
 	name := strings.TrimSpace(st.GetString(ctx, ApkKey(a.Key)))

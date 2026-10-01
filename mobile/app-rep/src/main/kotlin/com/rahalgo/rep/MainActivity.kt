@@ -567,11 +567,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         // «الميزةُ لم تُبنَ» وقد بُنيت.
                         push = true,
                         picker = { onPick, onCancel ->
+                            // **وزرُّ «موقعي» يعمل هنا كما في «إضافة عميل»** — قرارُ
+                            // المالك ٢٠٢٦-١٠-٠١: «طريقة واحدة» لالتقاط النقطة في كلّ
+                            // شاشة. **كان الزرُّ هنا ظاهراً ولا يفعل شيئاً.**
                             PickPoint(
                                 start = LastPoint.value?.let { LatLng(it.lat, it.lng) },
                                 vm = pickVm,
                                 onPick = { at, name -> onPick(at.latitude, at.longitude, name) },
                                 onCancel = onCancel,
+                                onLocate = {
+                                    if (Here.granted(context)) {
+                                        Here.refresh(context, locating, Accuracy.CONFIRM_M)
+                                    } else {
+                                        askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                    }
+                                },
+                                locating = locating,
                             )
                         },
                     )
