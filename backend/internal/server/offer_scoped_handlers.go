@@ -33,10 +33,12 @@ package server
 // كما كان (الهجرة ٠٠٧٤: «أقرّر لكلّ عرضٍ على حدة»).
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 )
@@ -118,31 +120,48 @@ func (s *Server) handleRepOffers(w http.ResponseWriter, r *http.Request) {
 // **الإنشاء**
 // ══════════════════════════════════════════════════════════════════════
 
-func (s *Server) createScopedOffer(w http.ResponseWriter, r *http.Request,
-	who func(*http.Request) (offerActor, bool)) {
+// offerCreateInput **من الفاعلُ وما أرسل** — ويردّ هو إن رُفض.
+func (s *Server) offerCreateInput(w http.ResponseWriter, r *http.Request,
+	who func(*http.Request) (offerActor, bool)) (offerActor, *offers.Input, bool) {
 	a, ok := who(r)
 	if !ok {
 		s.respondErr(w, errForbidden)
-		return
+		return a, nil, false
 	}
 	in, err := decode[offers.Input](r)
 	if err != nil {
 		s.respondErr(w, err)
-		return
+		return a, nil, false
 	}
-	o, err := s.offers.CreateScoped(r.Context(), userIDFrom(r), a.merchantID, *in, s.saleOf(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
+	return a, in, true
+}
+
+// offerCreateTx **الإدراجُ وعلامةُ منع التكرار في معاملةٍ واحدة** (`XG-33`) —
+// عرضٌ أُرسل وضاع ردُّه فأُعيد **يُعاد ردُّه لا يُنشأ ثانيةً.**
+//
+// **ويُنادى `WithIdempotentTx` من المعالج نفسِه لا من هنا** — حارسُ
+// `TestIDEM_AllProtectedPathsUseCoordinator` يقرأ جسمَ المعالج.
+func (s *Server) offerCreateTx(r *http.Request, a offerActor, in *offers.Input) func(context.Context, dbtx.Querier) (IdempotentBody, error) {
+	marginOf := s.saleOf(r)
+	return func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		o, err := s.offers.CreateScopedIn(ctx, q, userIDFrom(r), a.merchantID, *in, marginOf)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusOK,
+			Payload: o,
+			AfterCommit: func() {
+				// **ومن فعلها يُقيَّد بدوره** — **«أنزل المندوبُ عرضاً» و«أنزله
+				// صاحبُ المتجر» سؤالان مختلفان يُسألان بعد شهر.**
+				s.audit(r, "catalog.offer_create", "offer", o.ID, map[string]any{
+					"kind": o.Kind, "title": o.Title, "by": a.role,
+					"merchant_id": a.merchantID, "percent": o.DiscountPercent,
+				})
+				s.touch("offer", "ops")
+			},
+		}, nil
 	}
-	// **ومن فعلها يُقيَّد بدوره** — **«أنزل المندوبُ عرضاً» و«أنزله
-	// صاحبُ المتجر» سؤالان مختلفان يُسألان بعد شهر.**
-	s.audit(r, "catalog.offer_create", "offer", o.ID, map[string]any{
-		"kind": o.Kind, "title": o.Title, "by": a.role,
-		"merchant_id": a.merchantID, "percent": o.DiscountPercent,
-	})
-	s.touch("offer", "ops")
-	httpx.JSON(w, http.StatusOK, o)
 }
 
 func (s *Server) handleMerchantCreateOffer(w http.ResponseWriter, r *http.Request) {
@@ -153,11 +172,19 @@ func (s *Server) handleMerchantCreateOffer(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
-	s.createScopedOffer(w, r, s.merchantOfferScope)
+	a, in, ok := s.offerCreateInput(w, r, s.merchantOfferScope)
+	if !ok {
+		return
+	}
+	s.WithIdempotentTx(w, r, s.offerCreateTx(r, a, in))
 }
 
 func (s *Server) handleRepCreateOffer(w http.ResponseWriter, r *http.Request) {
-	s.createScopedOffer(w, r, s.repOfferScope)
+	a, in, ok := s.offerCreateInput(w, r, s.repOfferScope)
+	if !ok {
+		return
+	}
+	s.WithIdempotentTx(w, r, s.offerCreateTx(r, a, in))
 }
 
 // ══════════════════════════════════════════════════════════════════════

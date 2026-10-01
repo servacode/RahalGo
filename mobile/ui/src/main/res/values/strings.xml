@@ -840,4 +840,39 @@
     <string name="chats_open_section">محادثات جارية</string>
     <string name="chats_archive_section">محادثات سابقة</string>
     <string name="chat_unread_badge">%d جديدة</string>
+
+    <!-- شاشة العروض المركزية: المندوب والمتجر معا -->
+    <string name="ow_step">الخطوة %1$d من %2$d</string>
+    <string name="ow_s1">اختر المتجر</string>
+    <string name="ow_s2">اختر القسم</string>
+    <string name="ow_s3">اختر الصنف</string>
+    <string name="ow_s4b">حدد قيمة الخصم</string>
+    <string name="ow_s5">حدد مدة العرض</string>
+    <string name="ow_no_clients">لا عملاء لك بعد — سجل عميلا ثم ارجع لتضع له عرضا</string>
+    <string name="ow_loading">جاري تحميل أقسام المتجر…</string>
+    <string name="ow_no_sections">لا أقسام في قائمة هذا المتجر بعد</string>
+    <string name="ow_no_items">لا أصناف معتمدة في هذا القسم</string>
+    <string name="ow_change_store">تبديل المتجر</string>
+    <string name="ow_percent_hint">من 1 إلى 90 بالمئة</string>
+    <string name="ow_preview">%1$s: خصم %2$d%% لمدة %3$s</string>
+    <string name="ow_preview_fixed">%1$s: خصم %2$s ل.س لمدة %3$s</string>
+    <string name="ow_current">عروض هذا المتجر</string>
+    <string name="ow_current_mine">عروض متجري</string>
+    <string name="ow_back">رجوع</string>
+    <string name="ow_item_taken">عليه عرض جار — الجديد يحل محله</string>
+    <string name="ow_item_scheduled">عليه عرض مجدول — الجديد يحل محله</string>
+    <string name="ow_created">✓ تم إنشاء العرض — وهو ظاهر في قائمة العروض أدناه</string>
+    <string name="ow_bad_percent">النسبة يجب أن تكون من 1 إلى 90</string>
+    <string name="ow_bad_amount">المبلغ يجب أن يكون أقل من سعر الصنف (%1$s ل.س)</string>
+    <string name="ow_mode_percent">نسبة مئوية</string>
+    <string name="ow_mode_fixed">مبلغ ثابت</string>
+    <string name="ow_amount">المبلغ (ل.س)</string>
+    <string name="ow_amount_hint">يخصم هذا المبلغ من سعر الصنف</string>
+    <string name="ow_percent">نسبة الخصم</string>
+    <string name="ow_create">أنشئ العرض</string>
+    <string name="ow_default_title">خصم</string>
+    <string name="ow_bad_input">اختر صنفا وقيمة خصم صحيحة ومدة</string>
+    <string name="ow_borne_store">الخصم يُحسم من مستحق المتجر</string>
+    <string name="ow_borne_me">الخصم يُحسم من مستحقك أنت</string>
+    <string name="ow_offers_empty">لا عروض بعد — أنشئ عرضا على صنف ليراه الزبائن</string>
 </resources>

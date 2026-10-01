@@ -88,8 +88,13 @@ class StoreOffersApi(private val api: ApiClient, private val root: String) {
     suspend fun list(storeId: String): StoreOffersPage =
         api.call("/api/v1/$root/stores/$storeId/offers")
 
-    suspend fun create(storeId: String, body: NewOffer): StoreOffer =
-        api.call("/api/v1/$root/stores/$storeId/offers", HttpMethod.Post, body)
+    suspend fun create(storeId: String, body: NewOffer, idempotencyKey: String? = null): StoreOffer =
+        api.call(
+            "/api/v1/$root/stores/$storeId/offers",
+            HttpMethod.Post,
+            body,
+            idempotencyKey = idempotencyKey,
+        )
 
     /**
      * **يُنزل العرضَ** — **ولا يحذفه.**

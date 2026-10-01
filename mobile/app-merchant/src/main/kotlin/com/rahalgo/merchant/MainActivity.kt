@@ -616,8 +616,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     over is Overlay.Menu && over.key == MerchantItems.OFFERS -> {
                         val offersVm: com.rahalgo.merchant.offers.OffersViewModel = viewModel()
                         // **وكلُّ فتحٍ يقرأ الفرعَ المختار** — النموذجُ يعيش مع النشاط.
-                        LaunchedEffect(Unit) { offersVm.refresh() }
-                        com.rahalgo.merchant.offers.OffersScreen(offersVm)
+                        LaunchedEffect(Unit) { offersVm.clearMerchant() }
+                        com.rahalgo.ui.offers.OffersWizard(offersVm)
                     }
 
                     // **وسجلُّ الطلبات من الدرج** — قسمٌ منفصلٌ كما في الويب.

@@ -514,7 +514,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // ولا يُخطئ متجراً بمتجر.**
                     offersVm.merchantID.isNotEmpty() -> {
                         BackHandler { offersVm.close() }
-                        com.rahalgo.rep.offers.RepOffersScreen(offersVm)
+                        com.rahalgo.ui.offers.OffersWizard(offersVm)
                     }
 
                     menuVm.merchantID.isNotEmpty() -> MenuScreen(

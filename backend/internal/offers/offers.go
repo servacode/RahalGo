@@ -325,8 +325,30 @@ type Input struct {
 	Active          *bool      `json:"active"`
 }
 
-// Create ينشئ عرضاً — **والتحقّقُ هنا لا في الشاشة.**
+// Create ينشئ عرضاً في معاملته — انظر `CreateIn`.
 func (s *Service) Create(ctx context.Context, actorID string, in Input,
+	marginOf func(int64) int64) (*Offer, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	o, err := s.CreateIn(ctx, tx, actorID, in, marginOf)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return o, nil
+}
+
+// CreateIn ينشئ عرضاً **في معاملة من يناديه** — **والتحقّقُ هنا لا في الشاشة.**
+//
+// **ولماذا في معاملة المنادي**: بابا المتجر والمندوب يُثبّتان علامةَ منع
+// التكرار في المعاملة نفسِها (`WithIdempotentTx`) — **فعرضٌ أُدرج وضاعت
+// علامتُه لا يقع** (`XG-33`).
+func (s *Service) CreateIn(ctx context.Context, q dbtx.Querier, actorID string, in Input,
 	marginOf func(int64) int64) (*Offer, error) {
 	// **والنوعُ يُفترض ولا يُسأل** — لم يبقَ إلّا واحد.
 	in.Kind = KindDiscount
@@ -382,7 +404,7 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	// أصغرُ لا أكبر**، ومن خفضه فـ`Cut` يقصّ عند الصفر كما كان.
 	if hasAmt {
 		var price int64
-		if err := s.db.QueryRow(ctx,
+		if err := q.QueryRow(ctx,
 			`SELECT price FROM menu_items WHERE id = $1::uuid`, *in.MenuItemID).Scan(&price); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, ErrBadDiscount
@@ -398,11 +420,6 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	if in.Active != nil {
 		active = *in.Active
 	}
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
 	// ══════════════════════════════════════════════════════════════════
 	//  **والعرضُ الجديدُ يحلّ محلّ القائم** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠
 	// ══════════════════════════════════════════════════════════════════
@@ -422,7 +439,7 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	// **والأثرُ الماليّ مقصود**: الطلبُ الجديدُ يُسعَّر بالعرض الجديد،
 	// **والطلبُ القائمُ لا يُمَسّ** — سعرُه قُيّد في `order_items` يومَ بُني.
 	if in.MenuItemID != nil && active {
-		if _, err := tx.Exec(ctx, `
+		if _, err := q.Exec(ctx, `
 			UPDATE offers SET active = false, updated_at = now()
 			WHERE menu_item_id = $1::uuid AND kind = 'discount' AND active`,
 			*in.MenuItemID); err != nil {
@@ -430,7 +447,7 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 		}
 	}
 	var id string
-	err = tx.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		INSERT INTO offers (kind, title, body, media_id, href, menu_item_id,
 		                    discount_percent, discount_amount, borne_by,
 		                    starts_at, ends_at, active, created_by)
@@ -446,10 +463,8 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	if err != nil {
 		return nil, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
-	}
-	return s.Get(ctx, id, marginOf)
+	// **ويُقرأ من المعاملة نفسِها** — اتّصالٌ آخرُ لا يرى ما لم يُثبَّت.
+	return scan(q.QueryRow(ctx, offerSelect+` WHERE o.id = $1`, id), marginOf)
 }
 
 // SetActive يرفع العرضَ أو ينزله.
@@ -548,11 +563,29 @@ func (s *Service) OwnerOf(ctx context.Context, offerID string) (string, error) {
 // يُحذف** (تقريرُ «كم خسرنا على عروض رمضان؟»).
 func (s *Service) CreateScoped(ctx context.Context, actorID, merchantID string, in Input,
 	marginOf func(int64) int64) (*Offer, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	o, err := s.CreateScopedIn(ctx, tx, actorID, merchantID, in, marginOf)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return o, nil
+}
+
+// CreateScopedIn **`CreateScoped` في معاملة من يناديه** — لبابَي المتجر والمندوب.
+func (s *Service) CreateScopedIn(ctx context.Context, q dbtx.Querier, actorID, merchantID string, in Input,
+	marginOf func(int64) int64) (*Offer, error) {
 	if in.MenuItemID == nil || strings.TrimSpace(*in.MenuItemID) == "" {
 		return nil, ErrBadDiscount
 	}
 	var ok bool
-	if err := s.db.QueryRow(ctx, `
+	if err := q.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1 AND merchant_id = $2)`,
 		*in.MenuItemID, merchantID).Scan(&ok); err != nil || !ok {
 		return nil, ErrNotYours
@@ -560,13 +593,13 @@ func (s *Service) CreateScoped(ctx context.Context, actorID, merchantID string, 
 	// **ويتحمّله المتجرُ حتماً** — **ولا يُقرأ ما أرسله الجهاز.**
 	borne := ByMerchant
 	in.BorneBy = &borne
-	if _, err := s.db.Exec(ctx, `
+	if _, err := q.Exec(ctx, `
 		UPDATE offers SET active = false, updated_at = now()
 		WHERE menu_item_id = $1 AND active AND ends_at IS NOT NULL AND ends_at <= now()`,
 		*in.MenuItemID); err != nil {
 		return nil, err
 	}
-	return s.Create(ctx, actorID, in, marginOf)
+	return s.CreateIn(ctx, q, actorID, in, marginOf)
 }
 
 // LiveDiscount خصمُ صنفٍ سارٍ الآن — **يُنادى لحظةَ بناء الطلب.**

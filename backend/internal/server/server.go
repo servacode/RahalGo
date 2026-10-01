@@ -783,7 +783,7 @@ func (s *Server) Router() http.Handler {
 				// **ولا يُخترَع للمندوب سلطانٌ جديد** — **وهي
 				// العلاقةُ القائمةُ التي يكتب بها في قائمته.**
 				r.Get("/stores/{id}/offers", s.handleRepOffers)
-				r.Post("/stores/{id}/offers", s.handleRepCreateOffer)
+				r.Post("/stores/{id}/offers", s.idempotent(s.handleRepCreateOffer))
 				r.Post("/stores/{id}/offers/{offerID}/stop", s.handleRepStopOffer)
 				r.Post("/stores/{id}/menu/items", s.idempotent(s.handleRepCreateItem))
 				r.Patch("/menu/items/{itemID}", s.handleRepUpdateItem)
@@ -943,9 +943,9 @@ func (s *Server) Router() http.Handler {
 			// **ولم تُوسَّع قدرتُه إلى قدرة المحتوى**: **بابٌ آخرُ
 			// يسأل سؤالاً أضيق.**
 			r.Get("/stores/{id}/offers", s.handleMerchantOffers)
-			r.Post("/stores/{id}/offers", s.handleMerchantCreateOffer)
+			r.Post("/stores/{id}/offers", s.idempotent(s.handleMerchantCreateOffer))
 			r.Post("/stores/{id}/offers/{offerID}/stop", s.handleMerchantStopOffer)
-			r.Post("/stores/{id}/menu/items", s.handleMerchantCreateItem)
+			r.Post("/stores/{id}/menu/items", s.idempotent(s.handleMerchantCreateItem))
 			// **«لدي توصيلة»** (الخطوة ١٨) — المتجرُ يطلب سائقاً لغرضٍ جاهزٍ عنده.
 			// **والإنشاءُ بمفتاح منع التكرار** — لا توصيلتان ولا خصمان.
 			r.Get("/stores/{id}/delivery-quote", s.handleMerchantDeliveryQuote)

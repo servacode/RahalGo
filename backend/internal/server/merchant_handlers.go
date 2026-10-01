@@ -544,15 +544,22 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errForbidden)
 		return
 	}
-	to := time.Now()
+	// **«اليوم» يومُ دمشق لا يومُ UTC** — وإلّا وقعت طلباتُ منتصف الليل
+	// حتى الثالثة في اليوم الخطأ. ويُقطع «الآن» إلى أوّل يومه أيضاً.
+	loc, lerr := time.LoadLocation("Asia/Damascus")
+	if lerr != nil {
+		loc = time.UTC
+	}
+	now := time.Now().In(loc)
+	to := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	from := to.AddDate(0, 0, -6)
 	if v := r.URL.Query().Get("from"); v != "" {
-		if t, err := time.Parse("2006-01-02", v); err == nil {
+		if t, err := time.ParseInLocation("2006-01-02", v, loc); err == nil {
 			from = t
 		}
 	}
 	if v := r.URL.Query().Get("to"); v != "" {
-		if t, err := time.Parse("2006-01-02", v); err == nil {
+		if t, err := time.ParseInLocation("2006-01-02", v, loc); err == nil {
 			to = t
 		}
 	}
@@ -613,7 +620,9 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(sum(platform_commission) FILTER (WHERE picked_up_at IS NOT NULL
 		                                                  AND returned_at IS NULL), 0)
 		FROM orders o
-		WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $3`,
+		-- **والتوصيلةُ ليست بيعاً** — لها سجلُّها (الخطوة ١٨).
+		WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $3
+		  AND kind <> 'merchant_delivery'`,
 		merchantID, from, toEnd).
 		Scan(&summary.Orders, &summary.Delivered, &summary.Cancelled,
 			&summary.Sold, &summary.Returned, &summary.Sales, &summary.Commission)
@@ -634,7 +643,8 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(o.orders, 0), COALESCE(o.delivered, 0), COALESCE(o.sales, 0)
 		FROM generate_series($2::date, $3::date, '1 day') d
 		LEFT JOIN (
-			SELECT created_at::date AS day, count(*) AS orders,
+			-- **واليومُ يومُ دمشق** — لا يومُ ساعة القاعدة.
+			SELECT (created_at AT TIME ZONE 'Asia/Damascus')::date AS day, count(*) AS orders,
 			       count(*) FILTER (WHERE status = 'delivered') AS delivered,
 			       -- **وبسعر المتجر كما في المجاميع** — ولا رقمان لمعنًى واحد.
 			       COALESCE(sum(CASE WHEN picked_up_at IS NOT NULL AND returned_at IS NULL
@@ -643,10 +653,11 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 			                         ELSE 0 END), 0) AS sales
 			-- **واسمٌ مستعارٌ للداخليّ** — والحرفُ o اسمُ الجدول الفرعيّ الخارجيّ،
 			-- فبلاه يُقرأ الشرطُ على نفسه.
-			FROM orders ord WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $4
+			FROM orders ord WHERE merchant_id = $1 AND created_at >= $5 AND created_at < $4
+			  AND kind <> 'merchant_delivery'
 			GROUP BY 1
 		) o ON o.day = d::date`,
-		merchantID, from.Format("2006-01-02"), to.Format("2006-01-02"), toEnd)
+		merchantID, from.Format("2006-01-02"), to.Format("2006-01-02"), toEnd, from)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -704,7 +715,7 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		  AND o.picked_up_at IS NOT NULL AND o.returned_at IS NULL
 		GROUP BY oi.name
 		ORDER BY 3 DESC, 2 DESC
-		LIMIT 100`, merchantID, from.Format("2006-01-02"), toEnd)
+		LIMIT 100`, merchantID, from, toEnd)
 	if err != nil {
 		s.respondErr(w, err)
 		return

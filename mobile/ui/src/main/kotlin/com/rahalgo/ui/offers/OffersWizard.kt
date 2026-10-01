@@ -1,4 +1,4 @@
-package com.rahalgo.rep.offers
+package com.rahalgo.ui.offers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,7 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
-import com.rahalgo.rep.R
+import com.rahalgo.ui.R
 import com.rahalgo.ui.OfferCard
 import com.rahalgo.ui.OfferDuration
 import com.rahalgo.ui.RahalButton
@@ -72,19 +72,13 @@ import com.rahalgo.ui.RahalTextButton
  * `RO-01` باقٍ**: اسمُ المتجر فوق كلّ خطوةٍ بعده، **ومن أنزل خصماً على
  * متجرٍ ظنّه غيرَه أضرّ برزق رجل.**
  *
- * # والخصمُ بالمئة وحدَه — ويُقال
+ * # وشاشةٌ واحدةٌ للمندوب وللمتجر
  *
- * **طلب المالكُ «نسبة ثابتة أو بالمئة»** — **والمحرّكُ لا يعرف إلّا
- * المئة**: `offers.go:90` حقلٌ واحدٌ `discount_percent`، وتحقّقُه
- * `1..90`، والعمودُ في القاعدة كذلك. **والمبلغُ الثابت يمسّ حسابَ السعر
- * بعد الخصم ولقطةَ اقتصاد الطلب** — **فهو دفعةُ مالٍ بقرارٍ صريح، لا
- * حقلٌ يُضاف في شاشة.**
- *
- * **فيُقال للمندوب صريحاً أنّه غيرُ متاح بعد** — **ولا يُترك يبحث عن
- * زرٍّ لا وجودَ له.**
+ * (طلبُ المالك ٢٠٢٦-٠٩-٣٠.) **المتجرُ لا يختار متجراً** — فرعُه المختارُ
+ * يُفتح وحدَه وخطواتُه أربع. **والخصمُ نسبةٌ أو مبلغٌ ثابت** للاثنين.
  */
 @Composable
-fun RepOffersScreen(vm: RepOffersViewModel) {
+fun OffersWizard(vm: OffersWizardViewModel) {
     val ctx = LocalContext.current
     val focus = LocalFocusManager.current
     // **ويبقيان مع تدوير الشاشة** (الخطوة ١٥) — رُئي على الجهاز: «15» كُتبت
@@ -110,6 +104,9 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
     // **ونجاحُ الإنشاء يمسح القيمة** — **لا الضغطُ**: من رُفض عرضُه يجد
     // رقمَه كما كتبه فيصحّحه.
     LaunchedEffect(vm.created) { if (vm.created > 0) percent = "" }
+    // **والمتجرُ لا يختار متجراً** — فخطواتُه أربعٌ تبدأ من القسم.
+    val total = if (vm.picksStore) 5 else 4
+    val skip = if (vm.picksStore) 0 else 1
     val step = when {
         vm.merchantID.isEmpty() -> 1
         vm.pickedSection.isEmpty() -> 2
@@ -124,7 +121,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         Modifier.fillMaxWidth().imePadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { StepHeader(step) }
+        item { StepHeader(maxOf(1, step - skip), total) }
 
         // **وما اختير يبقى مكتوباً** — **فتُراجَع الخطواتُ بلا رجوع**،
         // **ولا يُنزَل خصمٌ على متجرٍ أو صنفٍ يظنّه غيرَه.**
@@ -134,7 +131,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     merchant = vm.merchantName,
                     section = vm.sections.firstOrNull { it.id == vm.pickedSection }?.name,
                     item = vm.items.firstOrNull { it.id == vm.pickedItem }?.name,
-                    onChangeMerchant = { vm.clearMerchant() },
+                    onChangeMerchant = if (vm.picksStore) { { vm.clearMerchant() } } else null,
                 )
             }
         }
@@ -143,7 +140,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         if (vm.createdShown && vm.error.isEmpty()) {
             item {
                 Text(
-                    stringResource(R.string.of_created),
+                    stringResource(R.string.ow_created),
                     color = Rahal.colors.success,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
@@ -170,7 +167,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     // **ومن فشل تحميلُه يُعيده بضغطة** — لا يرجع ويدخل من جديد.
                     if (vm.merchantID.isNotEmpty() && vm.sections.isEmpty()) {
                         RahalTextButton(onClick = { vm.load() }, enabled = !vm.busy) {
-                            Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+                            Text(stringResource(R.string.act_retry))
                         }
                     }
                 }
@@ -178,11 +175,14 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         }
 
         // ── ١ · المتجر ───────────────────────────────────────────────
-        if (vm.merchantID.isEmpty()) {
+        if (vm.merchantID.isEmpty() && !vm.picksStore) {
+            item { if (vm.busy) Hint(stringResource(R.string.ow_loading)) }
+        }
+        if (vm.merchantID.isEmpty() && vm.picksStore) {
             item {
-                StepCard(stringResource(R.string.of_s1)) {
+                StepCard(stringResource(R.string.ow_s1)) {
                     if (vm.clients.isEmpty() && !vm.busy) {
-                        Hint(stringResource(R.string.of_no_clients))
+                        Hint(stringResource(R.string.ow_no_clients))
                     }
                     vm.clients.forEach { c ->
                         PickRow(
@@ -198,14 +198,14 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         // ── ٢ · القسم ────────────────────────────────────────────────
         if (step == 2) {
             item {
-                StepCard(stringResource(R.string.of_s2)) {
+                StepCard(stringResource(R.string.ow_s2)) {
                     // **والتحميلُ يُقال، والفشلُ لا يُقرأ «لا أقسام»** (الخطوة ١٥):
                     // رُئي بلا نت — عشرون ثانيةً فارغة، **ثمّ «لا أقسام في
                     // قائمة هذا المتجر» والأقسامُ موجودةٌ لم تُحمَّل.**
                     when {
-                        vm.busy -> Hint(stringResource(R.string.of_loading))
+                        vm.busy -> Hint(stringResource(R.string.ow_loading))
                         vm.sections.isEmpty() && vm.error.isEmpty() ->
-                            Hint(stringResource(R.string.of_no_sections))
+                            Hint(stringResource(R.string.ow_no_sections))
                     }
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -229,10 +229,10 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                 val inSection = vm.sections
                     .firstOrNull { it.id == vm.pickedSection }?.items.orEmpty()
                 StepCard(
-                    stringResource(R.string.of_s3),
+                    stringResource(R.string.ow_s3),
                     onBack = { vm.pickSection("") },
                 ) {
-                    if (inSection.isEmpty()) Hint(stringResource(R.string.of_no_items))
+                    if (inSection.isEmpty()) Hint(stringResource(R.string.ow_no_items))
                     // ══════════════════════════════════════════════════
                     // **وصنفٌ عليه عرضٌ جارٍ يُقال قبل أن يُختار**
                     // ══════════════════════════════════════════════════
@@ -270,8 +270,8 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                             note = when (holder) {
                                 null -> null
                                 com.rahalgo.ui.OfferStatus.SCHEDULED ->
-                                    stringResource(R.string.of_item_scheduled)
-                                else -> stringResource(R.string.of_item_taken)
+                                    stringResource(R.string.ow_item_scheduled)
+                                else -> stringResource(R.string.ow_item_taken)
                             },
                             onClick = { vm.pickItem(i.id) },
                         )
@@ -284,7 +284,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
         if (step >= 4) {
             item {
                 StepCard(
-                    stringResource(R.string.of_s4b),
+                    stringResource(R.string.ow_s4b),
                     onBack = { vm.pickItem("") },
                 ) {
                     // ══════════════════════════════════════════════════
@@ -303,12 +303,12 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                         FilterChip(
                             selected = vm.byPercent,
                             onClick = { if (!vm.byPercent) { vm.pickMode(true); percent = "" } },
-                            label = { Text(stringResource(R.string.of_mode_percent)) },
+                            label = { Text(stringResource(R.string.ow_mode_percent)) },
                         )
                         FilterChip(
                             selected = !vm.byPercent,
                             onClick = { if (vm.byPercent) { vm.pickMode(false); percent = "" } },
-                            label = { Text(stringResource(R.string.of_mode_fixed)) },
+                            label = { Text(stringResource(R.string.ow_mode_fixed)) },
                         )
                     }
                     Spacer(Modifier.height(10.dp))
@@ -324,7 +324,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                         label = {
                             Text(
                                 stringResource(
-                                    if (vm.byPercent) R.string.offer_percent else R.string.of_amount,
+                                    if (vm.byPercent) R.string.ow_percent else R.string.ow_amount,
                                 ),
                             )
                         },
@@ -336,10 +336,10 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                             {
                                 Text(
                                     if (vm.byPercent) {
-                                        stringResource(R.string.of_bad_percent)
+                                        stringResource(R.string.ow_bad_percent)
                                     } else {
                                         stringResource(
-                                            R.string.of_bad_amount,
+                                            R.string.ow_bad_amount,
                                             itemPrice.toString(),
                                         )
                                     },
@@ -360,7 +360,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     Spacer(Modifier.height(4.dp))
                     Hint(
                         stringResource(
-                            if (vm.byPercent) R.string.of_percent_hint else R.string.of_amount_hint,
+                            if (vm.byPercent) R.string.ow_percent_hint else R.string.ow_amount_hint,
                         ),
                     )
                 }
@@ -369,7 +369,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
 
         if (step == 5) {
             item {
-                StepCard(stringResource(R.string.of_s5)) {
+                StepCard(stringResource(R.string.ow_s5)) {
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -392,14 +392,14 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     Text(
                         if (vm.byPercent) {
                             stringResource(
-                                R.string.of_preview,
+                                R.string.ow_preview,
                                 vm.items.firstOrNull { it.id == vm.pickedItem }?.name.orEmpty(),
                                 value.toInt(),
                                 OfferDuration.label(ctx, hours),
                             )
                         } else {
                             stringResource(
-                                R.string.of_preview_fixed,
+                                R.string.ow_preview_fixed,
                                 vm.items.firstOrNull { it.id == vm.pickedItem }?.name.orEmpty(),
                                 value.toString(),
                                 OfferDuration.label(ctx, hours),
@@ -417,7 +417,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                     Spacer(Modifier.height(6.dp))
                     // **ومن يتحمّله يُقال للمندوب أيضاً** — **فهو يشرحه
                     // لصاحب المتجر وهو واقفٌ عنده.**
-                    Hint(stringResource(R.string.offer_borne_note))
+                    Hint(stringResource(if (vm.picksStore) R.string.ow_borne_store else R.string.ow_borne_me))
 
                     Spacer(Modifier.height(8.dp))
                     RahalButton(
@@ -427,7 +427,7 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
                         },
                         enabled = !vm.busy,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.offer_create)) }
+                    ) { Text(stringResource(R.string.ow_create)) }
                 }
             }
         }
@@ -438,13 +438,13 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
             item {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    stringResource(R.string.of_current),
+                    stringResource(if (vm.picksStore) R.string.ow_current else R.string.ow_current_mine),
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
                 )
             }
             if (rows.isEmpty()) {
-                item { Hint(stringResource(R.string.offers_empty)) }
+                item { Hint(stringResource(R.string.ow_offers_empty)) }
             }
         }
         items(rows.orEmpty(), key = { it.id }) { o ->
@@ -464,10 +464,10 @@ fun RepOffersScreen(vm: RepOffersViewModel) {
 
 /** **رأسٌ يقول أين هو من الطريق** — **ومن لا يعرف كم بقي يظنّه لا ينتهي.** */
 @Composable
-private fun StepHeader(step: Int) {
+private fun StepHeader(step: Int, total: Int) {
     Column(Modifier.fillMaxWidth()) {
         Text(
-            stringResource(R.string.of_step, step, 5),
+            stringResource(R.string.ow_step, step, total),
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelMedium,
         )
@@ -476,7 +476,7 @@ private fun StepHeader(step: Int) {
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            repeat(5) { i ->
+            repeat(total) { i ->
                 Box(
                     Modifier
                         .weight(1f)
@@ -497,7 +497,7 @@ private fun ChosenBar(
     merchant: String,
     section: String?,
     item: String?,
-    onChangeMerchant: () -> Unit,
+    onChangeMerchant: (() -> Unit)?,
 ) {
     Column(
         Modifier
@@ -513,8 +513,10 @@ private fun ChosenBar(
                 color = Rahal.colors.ink,
                 modifier = Modifier.weight(1f),
             )
-            RahalTextButton(onClick = onChangeMerchant) {
-                Text(stringResource(R.string.of_change_store))
+            if (onChangeMerchant != null) {
+                RahalTextButton(onClick = onChangeMerchant) {
+                    Text(stringResource(R.string.ow_change_store))
+                }
             }
         }
         val trail = listOfNotNull(section, item).joinToString(" ← ")
@@ -553,7 +555,7 @@ private fun StepCard(
             // **ورجوعٌ خطوةً واحدة** — **ومن أخطأ صنفاً لا يبدأ من أوّله.**
             if (onBack != null) {
                 RahalTextButton(onClick = onBack) {
-                    Text(stringResource(R.string.of_back))
+                    Text(stringResource(R.string.ow_back))
                 }
             }
         }

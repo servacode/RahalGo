@@ -5483,19 +5483,7 @@
       "roles": [
         "merchant"
       ],
-      "response": [
-        {
-          "name": "id",
-          "type": "unknown"
-        },
-        {
-          "name": "pending_review",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
-      ]
+      "idempotent": true
     },
     {
       "method": "POST",
@@ -5531,7 +5519,8 @@
       "auth": true,
       "roles": [
         "merchant"
-      ]
+      ],
+      "idempotent": true
     },
     {
       "method": "POST",
@@ -6990,7 +6979,8 @@
       "auth": true,
       "roles": [
         "sales"
-      ]
+      ],
+      "idempotent": true
     },
     {
       "method": "POST",
