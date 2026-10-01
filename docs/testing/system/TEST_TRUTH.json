@@ -33,8 +33,8 @@
     "setting_defs": 159,
     "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 429,
-    "test_funcs": 1793
+    "test_files": 430,
+    "test_funcs": 1796
   },
   "flows": [
     {
@@ -9684,6 +9684,24 @@
     {
       "name": "TestALT_010_DecisionDivergenceInContract",
       "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPR01_EachAppAdmitsOnlyItsRole",
+      "file": "internal/qa/app_role_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPR02_OldWrongAppSessionDoesNotRefresh",
+      "file": "internal/qa/app_role_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPR03_RefusedLoginKeepsOwnAppSession",
+      "file": "internal/qa/app_role_gate_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -21117,7 +21135,7 @@
       "orphan": true
     },
     {
-      "name": "TestTMP3_RestrictionIsNotTiedToTheUIToggle",
+      "name": "TestTMP3_RestrictionFollowsTheToggle",
       "file": "internal/qa/temp_password_test.go",
       "package": "qa",
       "orphan": true

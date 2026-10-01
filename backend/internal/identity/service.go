@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -35,6 +36,10 @@ var (
 	ErrInvalidCredentials = httpx.NewError(http.StatusUnauthorized, "invalid_credentials", "errors.invalid_credentials")
 	ErrUserBlocked        = httpx.NewError(http.StatusForbidden, "user_blocked", "errors.user_blocked")
 	ErrUserSuspended      = httpx.NewError(http.StatusForbidden, "user_suspended", "errors.user_suspended")
+	// **حسابٌ بلا صفةِ هذا التطبيق** — مندوبٌ في تطبيق المتجر مثلاً.
+	ErrNotMerchantAccount = httpx.NewError(http.StatusForbidden, "not_merchant_account", "errors.not_merchant_account")
+	ErrNotRepAccount      = httpx.NewError(http.StatusForbidden, "not_rep_account", "errors.not_rep_account")
+	ErrNotDriverAccount   = httpx.NewError(http.StatusForbidden, "not_driver_account", "errors.not_driver_account")
 	ErrInvalidRefresh     = httpx.NewError(http.StatusUnauthorized, "invalid_refresh", "errors.unauthorized")
 	// ErrSessionSuperseded **جلسةٌ أُزيحت بدخولٍ جديدٍ من نوعِ العميل نفسِه** —
 	// تُميَّز عن الإبطال العامّ لتُعرَض «تم تسجيل خروجك… من جهازٍ آخر» (Obs 3).
@@ -894,11 +899,17 @@ func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip
 		}
 		return nil, ErrUserBlocked
 	}
+	client := ClientFrom(ctx)
+	// **وحسابٌ بلا صفةِ التطبيق لا تُفتح له جلسةٌ فيه** — ولا يُجدَّد ما
+	// فُتح قبل هذا القفل، **فيخرج التطبيقُ برسالته عند أوّل تجديد.**
+	// **وقبل إبطال جلسات النوع**: دخولٌ مرفوضٌ لا يزيح أحداً.
+	if err := checkAppRole(client, user.Roles); err != nil {
+		return nil, err
+	}
 	rawRefresh, refreshHash, err := auth.NewOpaqueToken()
 	if err != nil {
 		return nil, err
 	}
-	client := ClientFrom(ctx)
 	// **دخولٌ جديدٌ يُبطل ما سبق من نوعه** — والإبطال يشمل قائمة Redis
 	// كي يسري فوراً على توكنات الوصول القائمة.
 	if sessionID == "" {
@@ -1517,4 +1528,20 @@ func (s *Service) otpSendError(err error) error {
 	}
 	s.logger.Error("otp send failed", "error", err)
 	return ErrOTPSendFailed
+}
+
+// checkAppRole يردّ خطأ التطبيق إن لم يحمل الحسابُ صفتَه.
+func checkAppRole(client string, roles []string) error {
+	app, role := RequiredRole(client)
+	if role == "" || slices.Contains(roles, role) {
+		return nil
+	}
+	switch app {
+	case "merchant":
+		return ErrNotMerchantAccount
+	case "rep":
+		return ErrNotRepAccount
+	default:
+		return ErrNotDriverAccount
+	}
 }

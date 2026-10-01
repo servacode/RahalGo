@@ -230,6 +230,10 @@ private val CODES: Map<String, Int> = mapOf(
     // صاحبَها يبحث في حسابه عن عطبٍ ليس فيه.
     "forbidden" to R.string.err_forbidden,
     "user_blocked" to R.string.err_user_blocked,
+    // **حسابٌ بلا صفةِ هذا التطبيق** — يُرفض دخولُه (قرارُ المالك ٢٠٢٦-١٠-٠١).
+    "not_merchant_account" to R.string.err_not_merchant_account,
+    "not_rep_account" to R.string.err_not_rep_account,
+    "not_driver_account" to R.string.err_not_driver_account,
     "user_suspended" to R.string.err_user_suspended,
     "internal" to R.string.err_internal,
     // **تعذّر بناءُ حمولةٍ آمنة** — والخادمُ يسقط مغلقاً بدل أن

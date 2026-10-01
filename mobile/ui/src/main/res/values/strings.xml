@@ -65,6 +65,9 @@
     <string name="err_unauthorized">رقم الهاتف أو كلمة المرور غير صحيحة</string>
     <string name="err_unexpected">تعذر إتمام الطلب</string>
     <string name="err_user_blocked">هذا الحساب محظور</string>
+    <string name="err_not_merchant_account">هذا الحساب ليس حساب متجر رحال غو</string>
+    <string name="err_not_rep_account">هذا الحساب ليس حساب مندوب رحال غو</string>
+    <string name="err_not_driver_account">هذا الحساب ليس حساب كابتن رحال غو</string>
     <string name="err_user_suspended">هذا الحساب موقوف</string>
     <string name="err_validation">تحقق من البيانات المدخلة</string>
     <string name="err_item_already_discounted">هذا الصنف عليه عرض قائم — أوقفه أولاً أو اختر صنفاً آخر</string>

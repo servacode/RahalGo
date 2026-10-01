@@ -222,7 +222,8 @@ func TestD12_DispatcherNoLongerTargetsLoggedOutDevice(t *testing.T) {
 	h := NewWith(t, server.WithPushTransport(fake))
 	admin := h.NewUser("admin")
 	f := h.Factory()
-	owner := f.NewUserWith("customer")
+	// **سائقٌ لا زبونٌ وحدَه**: تطبيقُ السائق لا يفتح جلسةً لمن لا صفةَ له (`APR`).
+	owner := f.NewUserWith("driver")
 
 	// **وجلستان لا رمزان في جلسة** — انظر `LogoutIsDeviceScoped`.
 	phone := d12Phone(t, h, owner.ID)
@@ -605,7 +606,8 @@ func TestD12_DispatcherSilentAfterTokenlessLogout(t *testing.T) {
 	h := NewWith(t, server.WithPushTransport(fake))
 	admin := h.NewUser("admin")
 	f := h.Factory()
-	owner := f.NewUserWith("customer")
+	// **سائقٌ لا زبونٌ وحدَه**: تطبيقُ السائق لا يفتح جلسةً لمن لا صفةَ له (`APR`).
+	owner := f.NewUserWith("driver")
 	phone := d12Phone(t, h, owner.ID)
 
 	accessDriver, refreshDriver := d12LoginAs(t, h, phone, "driver")

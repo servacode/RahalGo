@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- اسمُ نسخةِ القياس (المضغوطة على التجهيز) — يميّزها على الجهاز عن التصحيح والإصدار. -->
+<resources>
+    <string name="app_name">رحال غو · قياس</string>
+</resources>

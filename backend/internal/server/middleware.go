@@ -170,7 +170,14 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// **وثلاثةُ أبوابٍ تبقى مفتوحةً** — **وإلّا صار القيدُ حبساً
 		// لا مخرجَ منه**: قراءةُ نفسِه · تبديلُ الكلمة · الخروج.
 		// (**والتجديدُ خارجَ هذا الوسيط أصلاً.**)
-		if mustChange && !passwordChangePathAllowed(r.URL.Path) {
+		// **وصار يتبع زرَّ اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٠١: «عند إنشاء
+		// حساب إيقاف تبديل كلمة المرور الإجباريّة بحيث يستطيع لاحقاً
+		// تبديلها… نعم خلّيه مطفأ»). **كان الزرُّ يُطفئ الشاشةَ وحدَها
+		// والقيدُ هنا باقٍ**، فيُجبَر كلُّ حسابٍ أنشأه مندوبٌ أو إدارة
+		// مهما قال الزرّ. **والثمنُ معلومٌ للمالك**: من وضع الكلمةَ يعرفها
+		// حتّى يبدّلها صاحبُها. **وتشغيلُ الزرّ يعيد القيدَ كما كان.**
+		if mustChange && s.settings.GetBool(r.Context(), "security.force_password_change") &&
+			!passwordChangePathAllowed(r.URL.Path) {
 			httpx.Error(w, errPasswordChangeRequired)
 			return
 		}

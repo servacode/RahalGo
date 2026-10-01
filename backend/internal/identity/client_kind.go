@@ -67,6 +67,28 @@ var clientApps = map[string]bool{
 
 type clientCtxKey struct{}
 
+// appRole **الصفةُ التي يشترطها كلُّ تطبيقِ دورٍ لفتح جلسةٍ فيه.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠١: «تمّ تسجيل الدخول بحساب المتجر بالرغم انه
+// مندوب… المفروض يقول هذا الحساب ليس حساب متجر».) **كانت كلُّ جلسةٍ
+// تُفتح في كلّ تطبيق** — والبياناتُ محميّةٌ بـ`RequireRoles` فلا يرى شيئاً،
+// **لكنّه يدخل تطبيقاً فارغاً يملؤه الرفض.** والصفاتُ هنا هي صفاتُ
+// `RequireRoles` في `server.go` حرفاً.
+//
+// **والزبونُ لا صفةَ له هنا**: كلُّ حسابٍ زبون. **والمتصفّحُ كذلك** —
+// لوحةُ الإدارة تحرسها صلاحيّاتُها.
+var appRole = map[string]string{
+	"merchant": "merchant",
+	"rep":      "sales",
+	"driver":   "driver",
+}
+
+// RequiredRole **الصفةُ التي يشترطها تطبيقُ هذا العميل**، أو `""` إن لم يشترط.
+func RequiredRole(client string) (app, role string) {
+	_, app = SplitClient(normalizeClient(client))
+	return app, appRole[app]
+}
+
 // WithClient يضع نوعَ العميل في السياق — **يُنادى من وسيط الخادم وحدَه.**
 func WithClient(ctx context.Context, client string) context.Context {
 	return context.WithValue(ctx, clientCtxKey{}, normalizeClient(client))

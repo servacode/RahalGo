@@ -101,7 +101,8 @@ def build(app: str, cfg: dict, mark: Image.Image, check: bool) -> int:
     if not res.exists():
         sys.exit(f"لا مجلّدَ موارد في {res} — أهذا اسمُ تطبيقٍ صحيح؟")
 
-    bg = hex_rgba(cfg["background"])
+    bg_hex = cfg.get("backgrounds", {}).get(app, cfg["background"])
+    bg = hex_rgba(bg_hex)
     changed = 0
 
     def put(path: Path, img: Image.Image):
@@ -141,7 +142,7 @@ def build(app: str, cfg: dict, mark: Image.Image, check: bool) -> int:
         '<?xml version="1.0" encoding="utf-8"?>\n'
         "<!-- مولَّد بـ mobile/tools/make-icon.py — لا يُحرَّر باليد. -->\n"
         "<resources>\n"
-        f'    <color name="ic_launcher_background">{cfg["background"]}</color>\n'
+        f'    <color name="ic_launcher_background">{bg_hex}</color>\n'
         "</resources>\n"
     )
 

@@ -52,7 +52,7 @@ class ProductionEndpointGuardTest {
      */
     @Test
     fun `بناءُ القبول التجريبيُّ لا يشير إلى الإنتاج`() {
-        if (!BuildConfig.DEBUG) return
+        if (BuildConfig.BUILD_TYPE == "release") return
 
         val api = BuildConfig.API_BASE_URL
 
@@ -116,7 +116,7 @@ class ProductionEndpointGuardTest {
     /** **والإصدارُ يبقى حرفاً بحرف — لا خاصّيّةَ تُغيّره.** */
     @Test
     fun `الإصدارُ يبقى على عنوانَي الإنتاج`() {
-        if (BuildConfig.DEBUG) return
+        if (BuildConfig.BUILD_TYPE != "release") return
         assertEquals(PROD_API, BuildConfig.API_BASE_URL)
         assertEquals(PROD_MAPS, BuildConfig.MAPS_BASE_URL)
     }

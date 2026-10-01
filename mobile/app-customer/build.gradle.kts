@@ -200,6 +200,29 @@ android {
             // **وأسوأُ من ضياع الوقت أن يُشكَّ في الإصلاح**: أُبلغ أنّ
             // العطبَ زال وهو يراه بعينه.
         }
+        // ══════════════════════════════════════════════════════════════
+        // **نسخةُ القياس — مضغوطةٌ كالإصدار، وعلى التجهيز وحدَه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-١٠-٠١: «نفّذ الثلاثة» — ثالثُها نسخةٌ قريبةٌ من
+        //  الحقيقيّة لقياس الافتتاح.) **نسخةُ التصحيح أبطأُ من الحقيقيّة بأضعاف**:
+        // قِيس فيها ٥١١ م.ث لفكّ ٢٢ ملفَّ كودٍ مضغوطاً (٤٥ م.ب) — **وذاك لا يقع
+        // في الإصدار.** فلا تُقاس سرعةٌ على ما لن يُشحن.
+        //
+        // **ولا تمسّ الإنتاج**: عنوانُها التجهيزُ حرفاً، **واسمُها `.staging`** فلا
+        // تحلّ محلَّ نسخة التصحيح ولا الإصدار، **وتوقيعُها مفتاحُ التصحيح.**
+        create("staging") {
+            buildConfigField("String", "API_BASE_URL", quoted("https://staging-api.rahalgo.com"))
+            buildConfigField("String", "MAPS_BASE_URL", quoted("https://maps.rahalgo.com"))
+            applicationIdSuffix = ".staging"
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {

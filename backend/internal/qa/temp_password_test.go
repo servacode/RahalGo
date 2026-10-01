@@ -61,6 +61,7 @@ func tmpUser(t *testing.T, h *Harness, role string) (id, token string) {
 // ══════════════════════════════════════════════════════════════════════
 func TestTMP1_TemporaryPasswordCannotUseTheApp(t *testing.T) {
 	h := New(t)
+	h.Setting("security.force_password_change", "true")
 	_, tok := tmpUser(t, h, "customer")
 
 	for _, p := range []string{
@@ -87,6 +88,7 @@ func TestTMP1_TemporaryPasswordCannotUseTheApp(t *testing.T) {
 // من القيد إلّا به.**
 func TestTMP2_TheWayOutStaysOpen(t *testing.T) {
 	h := New(t)
+	h.Setting("security.force_password_change", "true")
 	_, tok := tmpUser(t, h, "customer")
 
 	if got := h.GET("/api/v1/auth/me", tok); got.Code != http.StatusOK {
@@ -103,25 +105,22 @@ func TestTMP2_TheWayOutStaysOpen(t *testing.T) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// **TMP3 · والقيدُ لا يتعلّق بإعدادِ واجهة**
+// **TMP3 · والقيدُ يتبع زرَّ اللوحة** — قرارُ المالك ٢٠٢٦-١٠-٠١
 // ══════════════════════════════════════════════════════════════════════
 //
-// **و`security.force_password_change` إعدادُ إلحاحٍ في الواجهة** (قرارُ
-// المالك ٢٠٢٦-٠٨-٠٩: «الحالةُ الافتراضيّةُ غيرُ مفعّل»). **وهو لا يحكم
-// الأمنَ**: **ومن أطفأه لا يفتح حساباً ببيانٍ يعرفه ثالث.**
+// («عند إنشاء حساب إيقاف تبديل كلمة المرور الإجباريّة بحيث يستطيع لاحقاً
 //
-// **وقِيس أنّ الإنتاجَ بلا صفٍّ لهذا الإعداد** — **فلو كان القيدُ معلَّقاً
-// به لكان مُطفأً هناك.**
-func TestTMP3_RestrictionIsNotTiedToTheUIToggle(t *testing.T) {
+//	تبديلها… نعم خلّيه مطفأ».) **كان هذا الفحصُ يقيس العكس** — أنّ إطفاءَ
+//
+// الزرّ لا يفتح الحساب (`TMP`، ٢٠٢٦-٠٩-١٣). **وقرارُ المالك يسبقه**:
+// مُطفأً يدخل صاحبُ الكلمة المؤقّتة ويبدّلها متى شاء، **ومُشغَّلاً يعود
+// القيد** (`TMP1`).
+func TestTMP3_RestrictionFollowsTheToggle(t *testing.T) {
 	h := New(t)
-	h.Setting("security.force_password_change", "0")
-	_, tok := tmpUser(t, h, "driver")
-
-	got := h.GET("/api/v1/my/orders", tok)
-	t.Logf("TMP3 والإعدادُ مُطفأٌ ⇒ %d", got.Code)
-	if got.Code == http.StatusOK {
-		t.Error("TMP3 **إطفاءُ إعدادِ الواجهة فتح الحسابَ** — " +
-			"**والقيدُ أمنٌ لا إلحاح.**")
+	h.Setting("security.force_password_change", "false")
+	_, tok := tmpUser(t, h, "customer")
+	if got := h.GET("/api/v1/my/orders", tok); got.Code != http.StatusOK {
+		t.Errorf("TMP3 **الزرُّ مُطفأٌ والحسابُ محجوب**: %s", got)
 	}
 }
 

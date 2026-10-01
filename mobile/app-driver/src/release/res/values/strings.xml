@@ -3,5 +3,5 @@
      في `build.gradle.kts` فتقول إنّها تجريبيّة، **فلا تُفتح
      نسخةٌ قديمةٌ ويُظنّ أنّ الإصلاح لم يقع.** -->
 <resources>
-    <string name="app_name">رحال غو — السائق</string>
+    <string name="app_name">كابتن رحال غو</string>
 </resources>

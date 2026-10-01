@@ -824,10 +824,14 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     private fun forcedLogout(code: String) {
         if (user == null) return // ضيفٌ أصلاً — لا شيءَ يُخرَج
         detachSession()
-        val msg = if (code == "session_superseded") {
-            str(R.string.err_session_superseded)
-        } else {
-            str(R.string.err_invalid_refresh)
+        val msg = when (code) {
+            "session_superseded" -> str(R.string.err_session_superseded)
+            // **جلسةٌ فُتحت بحسابٍ بلا صفةِ هذا التطبيق قبل القفل** — يرفض
+            // الخادمُ تجديدَها، **فيُقال لصاحبها لماذا** (٢٠٢٦-١٠-٠١).
+            "not_merchant_account" -> str(R.string.err_not_merchant_account)
+            "not_rep_account" -> str(R.string.err_not_rep_account)
+            "not_driver_account" -> str(R.string.err_not_driver_account)
+            else -> str(R.string.err_invalid_refresh)
         }
         Flash.fail(msg)
     }
