@@ -122,3 +122,15 @@ func TestCASH01_AutoAssignObeysCashCeiling(t *testing.T) {
 		t.Fatalf("**أُسنِد الثاني (نقدُه %d) والتعرّضُ صار %d والسقفُ %d**", due2, held+inflight, fx.Limit)
 	}
 }
+
+// TestCAP03_NegativePriceOnUpdateIs400 **سعرٌ سالبٌ في التعديل ٤٠٠ لا ٥٠٠** — فحصُ المندوب.
+func TestCAP03_NegativePriceOnUpdateIs400(t *testing.T) {
+	h := New(t)
+	cs := newCapStore(t, h)
+	made := cs.add(h, map[string]any{"name": "صنف", "price": 5000})
+	id, _ := made.JSON()["id"].(string)
+	up := h.Call("PATCH", "/api/v1/merchant/menu/items/"+id, cs.tok, map[string]any{"price": -5}, nil)
+	if up.Code != http.StatusBadRequest {
+		t.Fatalf("**سعرٌ سالبٌ في التعديل ردّ %d / %s** — والمنتظَرُ ٤٠٠", up.Code, up.Err())
+	}
+}

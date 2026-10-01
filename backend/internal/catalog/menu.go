@@ -51,6 +51,11 @@ func (s *Service) checkItemBounds(ctx context.Context, in MenuItemInput) error {
 	if in.Description != nil && utf8.RuneCountInString(*in.Description) > MaxItemDescription {
 		return ErrItemTextTooLong
 	}
+	// **والسالبُ في التعديل كان يبلغ قيدَ القاعدة فيُردّ ٥٠٠** (فحصُ المندوب
+	// ٢٠٢٦-١٠-٠١) — الإنشاءُ يردّه قبلها، والتعديلُ لا. **فيُردّ هنا للبابين.**
+	if in.Price != nil && *in.Price < 0 {
+		return ErrNameRequired
+	}
 	if in.Price != nil && s.settings != nil {
 		if max := s.settings.GetInt(ctx, "merchants.max_item_price"); max > 0 && *in.Price > max {
 			return &httpx.AppError{Status: http.StatusBadRequest, Code: "item_price_too_high",

@@ -253,6 +253,27 @@ class ApiClient(
         }
     }
 
+    /** **الإرسالُ وحدَه** — بلا قراءةِ ردٍّ ولا إعادة. */
+    @PublishedApi internal suspend fun send(
+        path: String,
+        method: HttpMethod,
+        body: Any?,
+        idempotencyKey: String?,
+        token: String,
+    ): HttpResponse = http.request(baseUrl + path) {
+        this.method = method
+        header(CLIENT_HEADER, client)
+        if (version > 0) header(VERSION_HEADER, version.toString())
+        if (token.isNotEmpty()) header("Authorization", "Bearer $token")
+        // **ومفتاح منع التكرار حيث يُطلب** — النقاط التي تكتب مالا
+        // (انظر `server/idempotency.go` و`api/contract.json`).
+        if (idempotencyKey != null) header("Idempotency-Key", idempotencyKey)
+        if (body != null) {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+    }
+
     /** نداء بلا تجديد — للدخول وما لا توكن له. */
     suspend inline fun <reified T> raw(
         path: String,
@@ -265,25 +286,32 @@ class ApiClient(
             throw ApiException(403, ApiErrorBody(code = "password_change_required"))
         }
         val res: HttpResponse = try {
-            http.request(baseUrl + path) {
-                this.method = method
-                header(CLIENT_HEADER, client)
-                if (version > 0) header(VERSION_HEADER, version.toString())
-                if (token.isNotEmpty()) header("Authorization", "Bearer $token")
-                // **ومفتاح منع التكرار حيث يُطلب** — النقاط التي تكتب مالا
-                // (انظر `server/idempotency.go` و`api/contract.json`).
-                if (idempotencyKey != null) header("Idempotency-Key", idempotencyKey)
-                if (body != null) {
-                    contentType(ContentType.Application.Json)
-                    setBody(body)
-                }
-            }
+            send(path, method, body, idempotencyKey, token)
         } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
             dropDeadConnections()
             throw e
         } catch (e: java.io.IOException) {
-            dropDeadConnections()
-            throw e
+            // ══════════════════════════════════════════════════════════
+            // **والقراءةُ تُعاد مرّةً بصمت** — فحصُ المندوب ٢٠٢٦-١٠-٠١
+            // ══════════════════════════════════════════════════════════
+            //
+            // **رُئي على الجهاز**: عاد النتُّ فضغط «أعد المحاولة» فسقطت
+            // **مرّةً** ثمّ نجحت — **فالنداءُ الأوّلُ يقع على اتّصالٍ ميّتٍ في
+            // المَسبَح**، وطرحُه يقع بعد سقوطه. **فيُطرح ويُعاد فوراً.**
+            //
+            // **والقراءةُ وحدَها** — **والكتابةُ لا تُعاد هنا ولو حملت مفتاحاً**:
+            // يقرّرها صاحبُها، ومن أعادها هنا ضاعف ما لا يُرى.
+            runCatching { okhttp.connectionPool.evictAll() }
+            if (method != HttpMethod.Get) {
+                dropDeadConnections()
+                throw e
+            }
+            try {
+                send(path, method, body, idempotencyKey, token)
+            } catch (e2: java.io.IOException) {
+                dropDeadConnections()
+                throw e2
+            }
         }
         reached()
         // **وبوّابةُ التحديث تُقرأ قبل أيّ شيء** — انظر `outdated`.

@@ -149,6 +149,14 @@ class OffersPolicyTest {
         const val M_VM = "app-merchant/src/main/kotlin/com/rahalgo/merchant/offers/OffersViewModel.kt"
         const val R_VM = "app-rep/src/main/kotlin/com/rahalgo/rep/offers/RepOffersViewModel.kt"
         const val API = "shared/src/main/kotlin/com/rahalgo/shared/offers/StoreOffers.kt"
+
+        // **والشاشةُ ومنطقُها مركزيّان منذ ٢٠٢٦-١٠-٠١** (طلبُ المالك: «شاشةُ
+        // العروض مركزيّةٌ بين المندوب والمتجر») — **والتطبيقان يقولان من أين
+        // المتاجرُ والقائمة وحدَهما.**
+        const val W_SCREEN = "ui/src/main/kotlin/com/rahalgo/ui/offers/OffersWizard.kt"
+        const val W_VM = "ui/src/main/kotlin/com/rahalgo/ui/offers/OffersWizardViewModel.kt"
+        const val M_MAIN = "app-merchant/src/main/kotlin/com/rahalgo/merchant/MainActivity.kt"
+        const val R_MAIN = "app-rep/src/main/kotlin/com/rahalgo/rep/MainActivity.kt"
     }
 
     /**
@@ -159,10 +167,11 @@ class OffersPolicyTest {
      */
     @Test
     fun `التطبيقان يرسمان البطاقةَ المركزيّة`() {
-        for (rel in listOf(
-            "app-merchant/src/main/kotlin/com/rahalgo/merchant/offers/OffersScreen.kt",
-            "app-rep/src/main/kotlin/com/rahalgo/rep/offers/RepOffersScreen.kt",
-        )) {
+        // **والتطبيقان يرسمان الشاشةَ المركزيّةَ نفسَها** — لا نسخةَ لكلٍّ منهما.
+        for (main in listOf(M_MAIN, R_MAIN)) {
+            assertTrue("**لا يرسم الشاشةَ المركزيّة**: " + main, read(main).contains("OffersWizard("))
+        }
+        for (rel in listOf(W_SCREEN)) {
             val src = read(rel)
             assertTrue("**بطاقةٌ خاصّةٌ في** " + rel, src.contains("OfferCard("))
             // **ولا حسبةَ سعرٍ في الجهاز** — **والسعران يجيئان
@@ -189,7 +198,7 @@ class OffersPolicyTest {
      */
     @Test
     fun `الإيقافُ لا يُفتَح مرّتين`() {
-        for (rel in listOf(M_VM, R_VM)) {
+        for (rel in listOf(W_VM)) {
             val src = read(rel)
             assertTrue(
                 "**لا حارسَ لضغطةٍ ثانيةٍ في** " + rel,
@@ -206,7 +215,7 @@ class OffersPolicyTest {
      */
     @Test
     fun `الحالُ تُكتب من ردّ الخادم`() {
-        for (rel in listOf(M_VM, R_VM)) {
+        for (rel in listOf(W_VM)) {
             val src = read(rel)
             assertTrue(
                 "**بُدّلت الحالُ قبل الردّ في** " + rel,
@@ -232,8 +241,10 @@ class OffersPolicyTest {
             "**متجرُ الشاشة لا يجيء من `stores`**",
             m.contains("merchant.stores()"),
         )
-        val r = read(R_VM)
-        assertTrue("**نطاقُ المندوب لا يُفتح بمتجرٍ مُمرَّر**", r.contains("fun open(id: String"))
+        // **والمندوبُ يختار من عملائه** (`/rep/merchants`) **ويُفتح النطاقُ بمتجرٍ
+        // منهم** — والحارسُ في الخادم (`repClient`).
+        assertTrue("**عملاءُ المندوب لا يجيئون من بابه**", read(R_VM).contains("rep.merchants()"))
+        assertTrue("**النطاقُ لا يُفتح بمتجرٍ مُختار**", read(W_VM).contains("fun open(id: String"))
     }
 
     /**

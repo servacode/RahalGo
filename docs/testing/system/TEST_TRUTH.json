@@ -34,7 +34,7 @@
     "behaviour_settings": 131,
     "order_fields": 86,
     "test_files": 425,
-    "test_funcs": 1787
+    "test_funcs": 1788
   },
   "flows": [
     {
@@ -15496,6 +15496,12 @@
     },
     {
       "name": "TestCAP02_ItemTextLimits",
+      "file": "internal/qa/merchant_audit_bounds_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCAP03_NegativePriceOnUpdateIs400",
       "file": "internal/qa/merchant_audit_bounds_test.go",
       "package": "qa",
       "orphan": true
