@@ -255,6 +255,8 @@ private val CODES: Map<String, Int> = mapOf(
     "bad_offer_kind" to R.string.err_bad_offer_kind,
     "offer_amount_over_price" to R.string.err_offer_amount_over_price,
     "offer_item_unavailable" to R.string.err_offer_item_unavailable,
+    "item_price_too_high" to R.string.err_item_price_too_high,
+    "item_text_too_long" to R.string.err_item_text_too_long,
     "update_required" to R.string.err_update_required,
     // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
     "no_items" to R.string.err_no_items,

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,6 +23,42 @@ var ErrSectionNotEmpty = httpx.NewError(http.StatusConflict, "section_not_empty"
 
 // ErrSectionRequired صنفٌ بلا قسمِ سوق — **ولا يراه زبونٌ فلا يُقبل.**
 var ErrSectionRequired = httpx.NewError(http.StatusBadRequest, "section_required", "errors.section_required")
+
+// ══════════════════════════════════════════════════════════════════════
+// **حدودُ الصنف** — فحصُ المتجر ٢٠٢٦-١٠-٠١ (قرارُ المالك: «أعلى سعر ١٠٠ ألف»)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **قِيس على التجهيز**: صنفٌ بتسعة تريليونات قُبل، واسمٌ بخمسة آلاف حرفٍ
+// ووصفٌ بعشرين ألفاً خُزّنا كما هما — **فيخرّبان السلّةَ والتقاريرَ وكلَّ شاشةٍ
+// تعرضهما.** والحدودُ هنا لا في الشاشة: **المتجرُ والمندوبُ واللوحةُ بابٌ واحد.**
+
+// MaxItemName و MaxItemDescription بالحروف لا بالبايتات — العربيّةُ بايتان للحرف.
+const (
+	MaxItemName        = 120
+	MaxItemDescription = 500
+)
+
+// ErrItemTextTooLong اسمٌ أو وصفٌ فوق الحدّ.
+var ErrItemTextTooLong = httpx.NewError(http.StatusBadRequest,
+	"item_text_too_long", "errors.item_text_too_long")
+
+// checkItemBounds **يُنادى في الإنشاء والتعديل معاً** — حارسٌ على بابٍ واحدٍ
+// من بابين ليس حارساً. **والقائمُ فوق الحدّ يبقى** — ما لم يُرسَل لا يُفحص.
+func (s *Service) checkItemBounds(ctx context.Context, in MenuItemInput) error {
+	if in.Name != nil && utf8.RuneCountInString(*in.Name) > MaxItemName {
+		return ErrItemTextTooLong
+	}
+	if in.Description != nil && utf8.RuneCountInString(*in.Description) > MaxItemDescription {
+		return ErrItemTextTooLong
+	}
+	if in.Price != nil && s.settings != nil {
+		if max := s.settings.GetInt(ctx, "merchants.max_item_price"); max > 0 && *in.Price > max {
+			return &httpx.AppError{Status: http.StatusBadRequest, Code: "item_price_too_high",
+				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": max}}
+		}
+	}
+	return nil
+}
 
 type ModifierOption struct {
 	ID         string `json:"id"`
@@ -484,6 +521,9 @@ func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID 
 	if in.PlatformSectionID == nil || *in.PlatformSectionID == "" {
 		return "", ErrSectionRequired
 	}
+	if err := s.checkItemBounds(ctx, in); err != nil {
+		return "", err
+	}
 
 	// **وقسمُ السوق يُكتب هنا كما يُكتب في التعديل.**
 	//
@@ -552,6 +592,9 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 	// لا السكوت.
 	if in.PlatformSectionID != nil && strings.TrimSpace(*in.PlatformSectionID) == "" {
 		return ErrSectionRequired
+	}
+	if err := s.checkItemBounds(ctx, in); err != nil {
+		return err
 	}
 
 	tx, err := s.db.Begin(ctx)

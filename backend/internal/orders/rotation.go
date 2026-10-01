@@ -450,6 +450,10 @@ func (s *Service) legacyRotationCandidate(ctx context.Context, orderID string, s
 		  -- **وسقفُ النقد يُقاس بما بحوزته وبنقد هذا الطلب معاً.**
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
 		                WHERE b.driver_id = u.id), 0)
+		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
+		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
+		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
 		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0) <= $2
 		  AND (SELECT count(*) FROM orders o
 		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
@@ -486,7 +490,12 @@ const proximityEligibleWhere = `
 		WHERE u.on_shift AND u.status = 'active'
 		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
-		                WHERE b.driver_id = u.id), 0) + ord.cash_due <= $2
+		                WHERE b.driver_id = u.id), 0)
+		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
+		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
+		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
+		      + ord.cash_due <= $2
 		  AND (SELECT count(*) FROM orders o2
 		       WHERE o2.driver_id = u.id AND o2.closed_at IS NULL) < $3
 		  AND NOT EXISTS (
@@ -570,14 +579,52 @@ func (s *Service) freshFallbackCandidate(ctx context.Context, orderID string, sk
 // **والمحرّكُ يكتب الاثنين وحدَه** — فيُنادى كما يُنادى من الأخذ اليدويّ:
 // `driver_id` أوّلاً بشرطٍ ذرّيّ، ثمّ انتقالٌ عاديّ.
 func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note string) error {
+	// ══════════════════════════════════════════════════════════════════
+	// **وحارسُ القبول نفسُه قبل الإسناد** — فحصُ المتجر ٢٠٢٦-١٠-٠١
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس على التجهيز**: ثلاثةُ طلباتٍ أُسنِدت إلى سائقٍ في ثلاث ثوانٍ،
+	// **فبلغ نقدُه ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠.** بابُ «خذ الطلب» يمرّ بـ
+	// `AdmitDriverTx` (قفلُ السائق + التعرّضُ كلُّه)، **والإسنادُ التلقائيُّ لم
+	// يكن يمرّ** — كان يكتفي بمرشّح الاستعلام، **وإسنادان متتاليان يقرأ كلٌّ
+	// منهما ما قبل الآخر.**
+	//
+	// **والسقفُ والنقدُ يُقرآن قبل فتح المعاملة** (`XG-46`).
+	// **وسقفُ العدد لا يُفحص هنا** (`ActiveMax: -1`): المرشِّحُ يحمله، **وطريقُ
+	// «في طريقه» أعلى بواحدٍ بقرار المالك** — والحارسُ لا يعرف أيَّ طريقٍ جاء.
+	var cashDue int64
+	if err := s.db.QueryRow(ctx,
+		`SELECT COALESCE(cash_due, 0) FROM orders WHERE id = $1`, orderID).Scan(&cashDue); err != nil {
+		return err
+	}
+	limit := s.settingInt(ctx, "drivers.cash_limit")
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := s.AdmitDriverTx(ctx, tx, driverID, Admission{
+		CashDue: cashDue, CashLimit: limit, ActiveMax: -1,
+	}); err != nil {
+		// **لا يُسنَد، ولا يُعلَّق عليه** — يبقى في الطابور لمن يحتمله.
+		s.logger.Info("الترتيب: الإسنادُ التلقائيُّ ردّه الحارس",
+			"order", orderID, "driver", driverID, "reason", err.Error())
+		_, _ = s.db.Exec(ctx, `
+			UPDATE orders SET offered_driver_id = NULL, offer_expires_at = NULL
+			WHERE id = $1 AND driver_id IS NULL AND offered_driver_id = $2`, orderID, driverID)
+		return nil
+	}
 	// **الشرطُ الذرّيّ يبقى**: سائقٌ ضغط «خذ الطلب» في اللحظة نفسِها يجد صفراً.
-	tag, err := s.db.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE orders
 		SET offered_driver_id = $2, driver_id = $2, updated_at = now(),
 		    offer_expires_at = now() + make_interval(secs => $3)
 		WHERE id = $1 AND status = 'dispatching' AND driver_id IS NULL`,
 		orderID, driverID, s.silenceTimeout(ctx).Seconds())
 	if err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 	// **وسبقَنا إليه غيرُنا** — لا خطأ: الطلبُ في يدٍ أمينة.

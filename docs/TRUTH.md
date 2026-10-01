@@ -736,6 +736,7 @@
 | `merchants.cancel_ban_count` | المتاجر | int | `5` |
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |
 | `merchants.default_prep_minutes` | المتاجر | int | `20` |
+| `merchants.max_item_price` | المتاجر | int | `100000` |
 | `merchants.menu_requires_approval` | المتاجر | bool | `false` |
 | `app.min_version.rep` | المندوبون | int | `0` |
 | `sales.require_whatsapp` | المندوبون | bool | `true` |

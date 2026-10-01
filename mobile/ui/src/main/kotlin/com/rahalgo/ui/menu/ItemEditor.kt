@@ -178,7 +178,8 @@ fun ItemEditor(
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = d.name,
-            onValueChange = { v -> onEdit { it.copy(name = v) } },
+            // **وحدودُ الخادم نفسُها** (١٢٠ و٥٠٠) — لا يُكتب ما سيُرفض.
+            onValueChange = { v -> onEdit { it.copy(name = v.take(120)) } },
             label = { Text(stringResource(R.string.mn_item_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -186,7 +187,7 @@ fun ItemEditor(
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = d.description,
-            onValueChange = { v -> onEdit { it.copy(description = v) } },
+            onValueChange = { v -> onEdit { it.copy(description = v.take(500)) } },
             label = { Text(stringResource(descLabel)) },
             modifier = Modifier.fillMaxWidth(),
         )

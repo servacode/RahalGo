@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 158,
-    "behaviour_settings": 130,
+    "setting_defs": 159,
+    "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 423,
-    "test_funcs": 1783
+    "test_files": 425,
+    "test_funcs": 1787
   },
   "flows": [
     {
@@ -4601,6 +4601,25 @@
     },
     {
       "key": "merchants.default_prep_minutes",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.max_item_price",
       "group": "merchants",
       "kind": "int",
       "sensitive": false,
@@ -15470,6 +15489,24 @@
       "orphan": true
     },
     {
+      "name": "TestCAP01_ItemPriceCeiling",
+      "file": "internal/qa/merchant_audit_bounds_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCAP02_ItemTextLimits",
+      "file": "internal/qa/merchant_audit_bounds_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH01_AutoAssignObeysCashCeiling",
+      "file": "internal/qa/merchant_audit_bounds_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMDG01_NoDriverOnShift",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
@@ -21052,6 +21089,12 @@
     {
       "name": "TestTMP4_NormalAccountUnaffected",
       "file": "internal/qa/temp_password_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTKT01_MerchantReportDoesNotSilenceCustomer",
+      "file": "internal/qa/ticket_per_actor_test.go",
       "package": "qa",
       "orphan": true
     },

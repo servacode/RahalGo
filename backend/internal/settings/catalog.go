@@ -1794,6 +1794,12 @@ var Catalog = []Def{
 	{Key: "merchants.default_prep_minutes", Group: GroupMerchants, Kind: KindInt,
 		Min: 1, Max: 180, Unit: "minute", Default: 20},
 
+	// **أعلى سعرٍ لصنف** (قرارُ المالك ٢٠٢٦-١٠-٠١: «أعلى سعر ١٠٠ ألف») — قِيس
+	// على التجهيز: صنفٌ بتسعة تريليونات قُبل بلا كلمة. **وصفرٌ زائدٌ خطأُ إصبع**
+	// يخرّب التقاريرَ والسلّة. والقائمُ فوقه يبقى، **ولا يُرفع سعرُه فوقه.**
+	{Key: "merchants.max_item_price", Group: GroupMerchants, Kind: KindInt,
+		Min: 1000, Max: 100000000, Unit: "currency", Default: 100000},
+
 	// **ومراجعةُ الأصناف قبل ظهورها** — تُطفأ حين يُوثَق بالمتاجر، وتُشعل
 	// حين يكثر الجدد.
 	{Key: "merchants.menu_requires_approval", Group: GroupMerchants, Kind: KindBool,

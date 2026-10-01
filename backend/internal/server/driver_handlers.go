@@ -533,7 +533,11 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 		  AND NOT ($1::uuid = ANY(o.offer_passed))
 		  -- **السائقُ السائلُ مؤهَّلٌ فعلاً** — دوامٌ وحالةٌ وسقفُ نقدٍ وعددُ طلبات.
 		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = $1 AND du.on_shift AND du.status = 'active')
-		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = $1), 0) + o.cash_due <= $3
+		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = $1), 0)
+		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure.
+		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		                  WHERE oi.driver_id = $1 AND oi.closed_at IS NULL), 0)
+		      + o.cash_due <= $3
 		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = $1 AND oo.closed_at IS NULL) < $4
 		  -- ══════════════════════════════════════════════════════════════
 		  -- **السائقُ السائلُ حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك

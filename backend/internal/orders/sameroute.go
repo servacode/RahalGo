@@ -122,7 +122,12 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		      ST_Distance(u.last_location, nw.dropoff)
 		  -- ٤ · ويحتمله سقفُه — **الحارسُ نفسُه الذي في الدور.**
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
-		                WHERE b.driver_id = u.id), 0) + nw.cash_due <= $4
+		                WHERE b.driver_id = u.id), 0)
+		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
+		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
+		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
+		      + nw.cash_due <= $4
 		  AND (SELECT count(*) FROM orders o2
 		       WHERE o2.driver_id = u.id AND o2.closed_at IS NULL) < $5
 		-- **والأقربُ أوّلاً** — وقفتان متلاصقتان خيرٌ من متباعدتين.
