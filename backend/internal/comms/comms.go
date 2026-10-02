@@ -142,6 +142,11 @@ type Permission struct {
 	Former bool
 }
 
+// CustomerDriverLabel **ما يراه الزبونُ مكانَ اسم السائق** — نسخةُ
+// `orders.CustomerDriverLabel` (لا تستورد هذه الحزمةُ الطلبات)، **وحارسٌ يمنع
+// افتراقَهما** (`TestCustomerDriverLabel_OneText`).
+const CustomerDriverLabel = "كابتن رحال غو"
+
 // Service قارئُ الصلاحية وحاملُ الرسائل.
 type Service struct{ db *pgxpool.Pool }
 
@@ -165,23 +170,22 @@ var openStatuses = map[string]bool{
 // لا يملكه لا يُصدَّق** — والادّعاءُ هو أوّلُ ما يُجرَّب.
 func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permission, error) {
 	var (
-		customerID               string
-		driverID                 *string
-		status                   string
-		deliveredAt, closedAt    *time.Time
-		customerName, driverName string
+		customerID            string
+		driverID              *string
+		status                string
+		deliveredAt, closedAt *time.Time
+		customerName          string
 	)
 	var number int64
 	err := s.db.QueryRow(ctx, `
 		SELECT o.customer_id::text, o.driver_id::text, o.status,
 		       o.delivered_at, o.closed_at, o.number,
-		       COALESCE(cu.full_name, ''), COALESCE(dr.full_name, '')
+		       COALESCE(cu.full_name, '')
 		FROM orders o
 		JOIN users cu ON cu.id = o.customer_id
-		LEFT JOIN users dr ON dr.id = o.driver_id
 		WHERE o.id = $1`, orderID).
 		Scan(&customerID, &driverID, &status, &deliveredAt, &closedAt, &number,
-			&customerName, &driverName)
+			&customerName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotParty
 	}
@@ -200,7 +204,7 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 			// **ولا سائقَ الآن** — وقد يكون سائقٌ كتب ثمّ سُحب منه الطلب.
 			// **فحديثٌ وقع فعلاً يبقى مقروءاً** — و«لا سائقَ بعد» تُقال
 			// لمن لا حديثَ له لا لمن يقرأ ما كُتب له.
-			peerID, peerName, err := s.formerPeer(ctx, orderID, userID)
+			peerID, _, err := s.formerPeer(ctx, orderID, userID)
 			if err != nil {
 				return nil, err
 			}
@@ -208,11 +212,13 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 				// **ولا سائقَ بعد** — القناةُ قائمةٌ ولا طرفَ لها.
 				return p, ErrNoDriverYet
 			}
-			p.PeerID, p.PeerName = peerID, peerName
+			p.PeerID, p.PeerName = peerID, CustomerDriverLabel
 			p.DriverID = peerID
 			return p, nil // **مقفلةٌ للكتابة** — `Send` يردّ عند `Open` كاذبة.
 		}
-		p.PeerID, p.PeerName = *driverID, driverName
+		// **والزبونُ يرى «كابتن رحال غو» لا اسمَ السائق** (قرارُ المالك مساءَ
+		// ٢٠٢٦-١٠-٠٢).
+		p.PeerID, p.PeerName = *driverID, CustomerDriverLabel
 		p.DriverID = *driverID
 	case driverID != nil && userID == *driverID:
 		p.Me = RoleDriver

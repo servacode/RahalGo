@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // tenureFx **طلبٌ في الطابور وسائقان على وردية.**
@@ -193,9 +195,12 @@ func TestCHAT_TENURE_FreshChatPerDriver(t *testing.T) {
 	}
 }
 
-// TestCHAT_TENURE_CustomerToldDriverChanged **الإسنادُ الثاني يقول إنّه
-// سائقٌ آخر — والأوّلُ بنصّه.**
-func TestCHAT_TENURE_CustomerToldDriverChanged(t *testing.T) {
+// TestCHAT_TENURE_CustomerNotToldDriverChanged **لا خبرَ للزبون بتبديل السائق
+// ولا باسمه** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢ — ينسخ «تم تغيير السائق»).
+//
+// «ما بدّنا ينعرف اسم السائق.» **والزبونُ يرى «كابتن رحال غو» أيّاً كان السائق**،
+// فلا خبرَ عن تبديلٍ لا يراه — **والإسنادُ الأوّلُ بنصّه بلا اسم.**
+func TestCHAT_TENURE_CustomerNotToldDriverChanged(t *testing.T) {
 	h := New(t)
 	fx := newTenureFx(t, h)
 
@@ -243,15 +248,23 @@ func TestCHAT_TENURE_CustomerToldDriverChanged(t *testing.T) {
 	}
 	all := titles()
 	if count(all, "أُسند سائقٌ لطلبك") != 1 {
-		t.Fatalf("**الإسنادُ الثاني قيل بنصّ الأوّل**: %v", all)
+		t.Fatalf("**الإسنادُ الثاني قيل للزبون**: %v", all)
 	}
-	if count(all, "تم تغيير السائق") != 1 {
-		t.Fatalf("**الزبونُ لم يُخبَر أنّ سائقَه تغيّر**: %v", all)
+	if count(all, "تم تغيير السائق") != 0 {
+		t.Fatalf("**الزبونُ أُخبر بتبديل السائق** — والمالكُ نسخه: %v", all)
 	}
 	for _, s := range all {
-		if strings.HasPrefix(s, "تم تغيير السائق") && !strings.Contains(s, "سائقك الجديد: "+nameB) {
-			t.Fatalf("**الإشعارُ لا يسمّي السائقَ الجديد**: %q", s)
+		if nameB != "" && strings.Contains(s, nameB) {
+			t.Fatalf("**إشعارُ الزبون يسمّي السائق**: %q", s)
 		}
+	}
+	// **ورأسُ الحديث عند الزبون الشعارُ لا الاسم.**
+	r := h.GET("/api/v1/orders/"+fx.Order+"/messages", fx.Cust.Token)
+	if r.Code != http.StatusOK {
+		t.Fatalf("قراءةُ الحديث: %d", r.Code)
+	}
+	if peer, _ := r.JSON()["peer_name"].(string); peer != orders.CustomerDriverLabel {
+		t.Fatalf("**رأسُ الحديث عند الزبون «%s»** — والمقرَّرُ «%s»", peer, orders.CustomerDriverLabel)
 	}
 }
 

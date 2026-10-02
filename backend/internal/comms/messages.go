@@ -235,7 +235,9 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		       --
 		       -- **والزبونُ يرى صاحبَ الولاية** — لا حاملَ الطلب الآن وحدَه:
 		       -- **ومن سُحب الطلبُ من يده يبقى اسمُه على ولايته.**
-		       COALESCE(CASE WHEN o.customer_id = $1 THEN dr.full_name
+		       -- **والزبونُ يرى «كابتن رحال غو» لا اسمَ السائق** (قرارُ المالك
+		       -- مساءَ ٢٠٢٦-١٠-٠٢).
+		       COALESCE(CASE WHEN o.customer_id = $1 THEN $2
 		                     ELSE cu.full_name END, ''),
 		       -- **وطرفٌ الآن أم خرج** — سائقٌ ترك الطلبَ لا تُفتح له
 		       -- القناةُ ولو كان الطلبُ في الطريق مع غيره.
@@ -251,7 +253,7 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN users dr ON dr.id = t.tenure
 		ORDER BY t.last_at DESC
-		LIMIT 50`, userID)
+		LIMIT 50`, userID, CustomerDriverLabel)
 	if err != nil {
 		return nil, err
 	}
