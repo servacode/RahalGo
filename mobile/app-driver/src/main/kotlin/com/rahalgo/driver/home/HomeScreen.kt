@@ -562,7 +562,12 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
                 color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
             )
             if (busy) {
-                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                // **ويُرى على البطاقة** — كان بلون العلامة فوق بطاقةٍ بلون العلامة.
+                CircularProgressIndicator(
+                    Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                    color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
+                )
             } else {
                 Switch(
                     checked = on,

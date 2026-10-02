@@ -57,9 +57,18 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **قراءةٌ في الخلفية لا تُخفي مفتاحَ العمل** (بلاغُ المالك ٢٠٢٦-١٠-٠٢ بصورة: «بالعمل
+     * لا يوجد الزرّ، يختفي أحياناً»). **كانت كلُّ قراءةٍ تضع `busy`** — والمفتاحُ يُستبدل
+     * بدائرةٍ لا تُرى على البطاقة؛ **وصارت القراءةُ أكثرَ اليوم** (العودة · قيامُ الوصلة ·
+     * كلَّ ١٥ ثانيةً إن انقطعت). **فـ`busy` لفعل السائق وحدَه**، والقراءةُ لها رايتُها.
+     */
+    private var refreshing = false
+
     fun refresh() {
-        if (state.busy) return
-        state = state.copy(busy = true, error = "")
+        if (refreshing || state.busy) return
+        refreshing = true
+        state = state.copy(error = "")
         viewModelScope.launch {
             state = try {
                 val me = backend.driver.me()
@@ -70,9 +79,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 // **وفشلُه لا يُسقط اللوحة**: `runCatching` يُبقي ما وصل،
                 // **ومفتاحُ العمل أهمُّ ما فيها.**
                 val goal = runCatching { backend.me.incentives() }.getOrNull() ?: state.goal
-                state.copy(me = me, goal = goal, busy = false, readiness = readiness())
+                state.copy(me = me, goal = goal, readiness = readiness())
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                state.copy(error = describe(e))
+            } finally {
+                refreshing = false
             }
         }
     }

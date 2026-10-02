@@ -49,12 +49,18 @@ object NavClips {
     const val GPS_WEAK = "gps_weak"
     const val GPS_RESTORED = "gps_restored"
     const val ARRIVED_PICKUP = "arrived_pickup"
-    const val ARRIVED_DROPOFF = "arrived_dropoff"
 
     fun arrival(target: TripTarget): String = when (target) {
         TripTarget.PICKUP -> ARRIVED_PICKUP
-        TripTarget.DROPOFF -> ARRIVED_DROPOFF
+        // **«لقد وصلت إلى وجهتك»** (`arrived`) — طلبُ المالك ٢٠٢٦-١٠-٠٢ بدل «وجهة التوصيل».
+        TripTarget.DROPOFF -> ARRIVED
     }
+
+    /** **«لقد وصلت إلى وجهتك.»** — من مكتبة المقاطع (`corpus.ts`). */
+    const val ARRIVED = "arrived"
+
+    /** **«بدأت الملاحة.»** */
+    const val NAV_STARTED = "navigation_started"
 
     /**
      * **مسافاتُ الإعلان المسجَّلة** — ولا مقطعَ لسواها.

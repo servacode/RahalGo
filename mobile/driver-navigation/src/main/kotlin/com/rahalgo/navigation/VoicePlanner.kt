@@ -88,6 +88,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         if (state.grade == FixGrade.ACCEPTED) trustedAtMs = fix.atMs
 
         val out = ArrayList<VoiceCue>(3)
+        startCue(state, generation)?.let { out += it }
         wrongWayCue(state, generation)?.let { out += it }
         rerouteCue(state, generation)?.let { out += it }
         arrivalCue(state, generation)?.let { out += it }
@@ -103,6 +104,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         lastDistanceM = Double.NaN
         lastManeuverAtM = Double.NaN
         mergedAtM = Double.NaN
+        startSaidFor = null
         lastGeneration = -1L
         trustedAtMs = 0L
         rerouteEpisodeSaid = false
@@ -292,6 +294,26 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         if (arrivalSaid && state.arrivedAtTarget) return null
         if (routeEndEpisode == generation) return null
         routeEndEpisode = generation
+        // ══════════════════════════════════════════════════════════════
+        // **وقربَ الوجهة يُقال «وصلت» لا «انتهى المسار»** (بلاغُ المالك ٢٠٢٦-١٠-٠٢:
+        // «يقول انتهى المسار المرسوم تابع إلى وجهتك — المفروض وصلت إلى وجهتك»)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **بابُ الزبون كثيراً ما يُرسم بعيداً عن الطريق بعشرات الأمتار** — فينتهي الخطُّ
+        // قبله. **وما دون ٦٠م هو عنده** (نصفُ قطر زرّ «وصلت» ٥٠م)؛ و«انتهى المسار» تبقى لمن
+        // بقي عليه مشيٌ حقيقيّ.
+        if (state.targetDistanceM in 0.0..ROUTE_END_IS_ARRIVAL_M && !arrivalSaid) {
+            arrivalSaid = true
+            return VoiceCue(
+                id = CueId(generation, ARRIVAL_KEY, CueStage.EVENT),
+                kind = CueKind.ARRIVE,
+                stage = CueStage.EVENT,
+                priority = tuning.priorityNow,
+                validUntilProgressM = Double.MAX_VALUE,
+                text = VoicePhrases.arrival(target),
+                clip = NavClips.arrival(target),
+            )
+        }
         return VoiceCue(
             id = CueId(generation, ROUTE_END_KEY, CueStage.EVENT),
             kind = CueKind.ROUTE_END,
@@ -302,6 +324,35 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             clip = NavClips.ROUTE_END,
         )
     }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **«بدأت الملاحة» حين يتحرّك — لا وهو واقف** (طلبُ المالك ٢٠٢٦-١٠-٠٢: «بعد ما ينطلق بثوانٍ
+     * يقول بدأت الرحلة»)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **مرّةً لكلّ وجهة** (إلى المتجر، ثمّ إلى الزبون) — **لا لكلّ جيل**: إعادةُ الحساب تبدأ
+     * جيلاً جديداً والسائقُ ماشٍ منذ دقائق. **و«ابدأ السير» وهو واقفٌ أُسكتت** (أدناه).
+     *
+     * **والمقطعُ «بدأت الملاحة»** إلى أن يُسجَّل «بدأت الرحلة» بالصوت نفسِه.
+     */
+    private fun startCue(state: NavState, generation: Long): VoiceCue? {
+        if (startSaidFor == target) return null
+        if (state.speedMps < START_MOVING_MPS || state.progress == null) return null
+        startSaidFor = target
+        return VoiceCue(
+            id = CueId(generation, START_KEY, CueStage.EVENT),
+            kind = CueKind.START,
+            stage = CueStage.EVENT,
+            priority = tuning.priorityPrepare,
+            validUntilProgressM = Double.MAX_VALUE,
+            text = VoicePhrases.NAV_STARTED,
+            clip = NavClips.NAV_STARTED,
+        )
+    }
+
+    /** **لأيّ وجهةٍ قيلت «بدأت الملاحة»** — فلا تُعاد مع كلّ جيل. */
+    private var startSaidFor: TripTarget? = null
 
     private fun arrivalCue(state: NavState, generation: Long): VoiceCue? {
         // ══════════════════════════════════════════════════════════════
@@ -363,7 +414,8 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // **ولا «تابع مستقيماً»** — كغوغل: الصمتُ على الطريق المستقيم (طلبُ المالك
         // ٢٠٢٦-١٠-٠٢: «قصير ولا يكرّر»). **و«ابدأ السير» باقيةٌ**: أُسكتت معها ساعةً فبدأت
         // الرحلةُ صامتةً حتّى أوّل منعطف (بلاغُ المالك: «الصوتُ اختفى في بداية الرحلة»).
-        if (target.kind == ManeuverKinds.STRAIGHT) return null
+        // **و«ابدأ السير» تُسكَت مجدّداً** — حلّت محلَّها «بدأت الملاحة» حين يتحرّك فعلاً.
+        if (target.kind == ManeuverKinds.STRAIGHT || target.kind == ManeuverKinds.DEPART) return null
         val distance = max(0.0, target.atDistanceM - p.progressM)
         val speed = trustedSpeed(fix, p, state.speedMps)
 
@@ -746,6 +798,13 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
         /** **مفتاحُ نداء نهاية المسار** — آخرُ ميل، ٢٠٢٦-٠٨-٢١. */
         const val ROUTE_END_KEY = -3.0
+        const val START_KEY = -5.0
+
+        /** **ما دونه نهايةُ الخطّ وصولٌ** — بابُ الزبون بعيدٌ عن الطريق غالباً. */
+        const val ROUTE_END_IS_ARRIVAL_M = 60.0
+
+        /** **يتحرّك فعلاً** — ٩ كم/س، كالبوصلة. */
+        const val START_MOVING_MPS = 2.5
         const val REROUTE_KEY = -2.0
 
         /** **ومفتاحُ الاتّجاه المعاكس** — ورقمُ النوبة يُطرح منه. */

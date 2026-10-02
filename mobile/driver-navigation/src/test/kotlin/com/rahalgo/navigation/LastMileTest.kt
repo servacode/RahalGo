@@ -81,7 +81,18 @@ class LastMileTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    fun `ب - خمسون متراً`() = lastMileScenario(50.0)
+    fun `ب - خمسون متراً فوصولٌ لا نهايةُ مسار`() {
+        // **طلبُ المالك ٢٠٢٦-١٠-٠٢**: «يقول انتهى المسار المرسوم — المفروض وصلت إلى وجهتك».
+        // **وما دون ٦٠م من الباب وصولٌ** (`ROUTE_END_IS_ARRIVAL_M`) — يُقال مرّةً، ولا يُعاد
+        // حين يبلغ البابَ فعلاً.
+        val r = Rig(50.0)
+        r.drive()
+        assertEquals(ArrivalPhase.LAST_MILE_TO_TARGET, r.engine.state?.arrivalPhase)
+        assertEquals("لا «انتهى المسار» على ٥٠م", 0, r.routeEnds())
+        assertEquals("«وصلت» مرّةً عند نهاية الخطّ", 1, r.arrivals())
+        r.walkTo(0.0)
+        assertEquals("ولا تُعاد عند الباب", 1, r.arrivals())
+    }
 
     @Test
     fun `ج - مئةٌ وعشرون متراً`() = lastMileScenario(120.0)

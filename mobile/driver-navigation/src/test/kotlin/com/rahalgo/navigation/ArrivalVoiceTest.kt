@@ -75,7 +75,8 @@ class ArrivalVoiceTest {
             "نُطق ادّعاءُ وصولٍ أكثرَ من مرّة: ${claimsArrival(said).map { it.text }}",
             1, claimsArrival(said).size,
         )
-        assertTrue(arrivals(said).first().text.contains("وجهة التوصيل"))
+        // **«لقد وصلت إلى وجهتك»** — طلبُ المالك ٢٠٢٦-١٠-٠٢ (كانت «وجهة التوصيل»).
+        assertTrue(arrivals(said).first().text.contains("وجهتك"))
     }
 
     // ══════════════════════════════════════════════════════════════

@@ -202,7 +202,8 @@ object VoicePhrases {
 
     fun arrival(target: TripTarget): String = when (target) {
         TripTarget.PICKUP -> "وصلت إلى نقطة الاستلام"
-        TripTarget.DROPOFF -> "وصلت إلى وجهة التوصيل"
+        // **«لقد وصلت إلى وجهتك»** — طلبُ المالك ٢٠٢٦-١٠-٠٢، ومقطعُها `arrived` مسجَّلٌ بالصوت نفسِه.
+        TripTarget.DROPOFF -> "لقد وصلت إلى وجهتك"
     }
 
     /**
@@ -221,6 +222,9 @@ object VoicePhrases {
      * **ولفظٌ واحدٌ للطرفين** — البند ٩: «الموقع» يصلح للمتجر
      * وللزبون، **ولا حاجةَ لصيغتين حيث المعنى واحد.**
      */
+    /** **بدأت الملاحة** — تُقال حين يتحرّك أوّلَ مرّة (مقطعُ `navigation_started`). */
+    const val NAV_STARTED = "بدأت الملاحة"
+
     const val ROUTE_END = "انتهى المسار المرسوم، تابع نحو الموقع"
 
     const val GPS_LOST = "انقطعت إشارة تحديد الموقع"
