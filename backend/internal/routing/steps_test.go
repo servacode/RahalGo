@@ -241,7 +241,7 @@ func TestROUTE_032_UnknownTypeIsSafe(t *testing.T) {
 func TestROUTE_033_AllMeasuredTypesMap(t *testing.T) {
 	measured := map[string]ManeuverKind{
 		"depart": KindDepart, "arrive": KindArrive,
-		"continue": KindStraight, "new name": KindStraight,
+		"continue": KindTurnRight, "new name": KindStraight,
 		"merge": KindMerge, "fork": KindFork, "off ramp": KindOffRamp,
 		"roundabout": KindRoundabout, "exit roundabout": KindExitRoundabout,
 		"rotary": KindRoundabout, "exit rotary": KindExitRoundabout,
@@ -261,6 +261,21 @@ func TestROUTE_033_AllMeasuredTypesMap(t *testing.T) {
 		if got := mapKind("turn", ptr(mod)); got != want {
 			t.Errorf("ROUTE-033 turn/%q → %s لا %s", mod, got, want)
 		}
+	}
+
+	// **والشارعُ نفسُه ينعطف عند تقاطعٍ ⇒ انعطاف**، **وانحناؤه الخفيفُ صمتٌ** — بلاغُ المالك
+	// ٢٠٢٦-١٠-٠٢: «لازم نميّز بين الانعطاف والبقاء على الطريق».
+	cont := map[string]ManeuverKind{
+		"left": KindTurnLeft, "right": KindTurnRight, "sharp right": KindSharpRight,
+		"slight left": KindStraight, "slight right": KindStraight, "straight": KindStraight,
+	}
+	for mod, want := range cont {
+		if got := mapKind("continue", ptr(mod)); got != want {
+			t.Errorf("ROUTE-033 continue/%q → %s لا %s", mod, got, want)
+		}
+	}
+	if got := mapKind("continue", nil); got != KindStraight {
+		t.Errorf("ROUTE-033 continue بلا جهة → %s", got)
 	}
 }
 

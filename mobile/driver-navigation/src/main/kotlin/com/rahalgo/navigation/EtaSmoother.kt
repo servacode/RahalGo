@@ -14,9 +14,11 @@ import kotlin.math.min
  * # ما يصنعه
  *
  * ١. **زمنُ الطريق أساسٌ** (`remainingSec` من المحرّك) — يعرف الشوارعَ البطيئة.
- * ٢. **وسرعتُه هو تُخلَط معه** حين يسير (≥ ٣م/ث): نصفٌ ونصف — **فمن يسير بـ٢٠ كم/س
- *    لا يُقال له زمنُ سيّارةٍ بـ٦٠.**
- * ٣. **ولا أسرعَ من ٤٥ كم/س وسطيّاً في المدينة** — حدٌّ أدنى للزمن لا يكذب على الزبون.
+ * ٢. **ومعدّلُ سرعته هو** (وهو يسير وحدَه، لا الوقفات) يُخلَط معه، **ويزيد وزنُه كلّما
+ *    طال سيرُه** حتّى ثلاثةِ أرباع بعد دقيقة — طلبُ المالك: «الموتورُ قد يمشي ٣٠ أو ٥٠
+ *    أو ٧٠، والقياسُ حسبَ السرعة مثلَ غوغل».
+ * ٣. **ولا أسرعَ من ٩٠ كم/س وسطيّاً** — حدٌّ يمنع رقماً مستحيلاً لا أكثر. (كان ٤٥،
+ *    **فمن يسير بـ٧٠ يُقال له وقتٌ أطولُ من الحقيقيّ.**)
  * ٤. **والمعروضُ يقترب من المحسوب ولا يقفز** — ربعُ الفرق في كلّ قراءة، **إلّا أن
  *    يتبدّل الطريقُ** (إعادة حساب) فيُأخذ الجديد كما هو.
  */
@@ -25,9 +27,16 @@ class EtaSmoother {
     private var shownSec = Double.NaN
     private var lastTotalM = Double.NaN
 
+    /** **معدّلُ سرعته وهو يسير** — نحو دقيقةٍ أخيرة، والوقفاتُ لا تدخل. */
+    var paceMps = Double.NaN
+        private set
+    private var movingFixes = 0
+
     fun reset() {
         shownSec = Double.NaN
         lastTotalM = Double.NaN
+        paceMps = Double.NaN
+        movingFixes = 0
     }
 
     /**
@@ -39,9 +48,14 @@ class EtaSmoother {
     fun update(remainingM: Double, routeSec: Double, speedMps: Double, routeTotalM: Double): Double {
         if (remainingM < 0) return -1.0
         val floorSec = remainingM / MAX_CITY_MPS
-        var target = if (routeSec >= 0) routeSec else remainingM / FALLBACK_MPS
         if (speedMps >= MOVING_MPS) {
-            target = 0.5 * target + 0.5 * (remainingM / speedMps)
+            paceMps = if (paceMps.isNaN()) speedMps else paceMps + PACE_ALPHA * (speedMps - paceMps)
+            movingFixes++
+        }
+        var target = if (routeSec >= 0) routeSec else remainingM / FALLBACK_MPS
+        if (!paceMps.isNaN()) {
+            val w = MAX_PACE_WEIGHT * (movingFixes.toDouble() / PACE_RAMP_FIXES).coerceAtMost(1.0)
+            target = (1 - w) * target + w * (remainingM / paceMps)
         }
         target = max(target, floorSec)
         val fresh = shownSec.isNaN() || routeTotalM != lastTotalM
@@ -54,8 +68,11 @@ class EtaSmoother {
 
     companion object {
         const val MOVING_MPS = 3.0
-        const val MAX_CITY_MPS = 12.5 // ٤٥ كم/س
+        const val MAX_CITY_MPS = 25.0 // ٩٠ كم/س — حدُّ المستحيل لا حدُّ المدينة
         const val FALLBACK_MPS = 7.0 // ٢٥ كم/س
         const val ALPHA = 0.25
+        const val PACE_ALPHA = 0.05 // ≈ دقيقةٌ أخيرةٌ بقراءةٍ كلَّ ثانية
+        const val PACE_RAMP_FIXES = 60
+        const val MAX_PACE_WEIGHT = 0.75
     }
 }

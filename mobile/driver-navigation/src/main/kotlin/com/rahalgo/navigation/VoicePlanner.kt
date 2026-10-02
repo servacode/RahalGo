@@ -360,9 +360,10 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // (وهي الدلالةُ نفسُها التي كشفتها معايرةُ ٣أ في سماح
         //  المناورة.)
         val target = p.current ?: p.next ?: return null
-        // **ولا «تابع مستقيماً» ولا «ابدأ السير»** — كغوغل: الصمتُ على الطريق
-        // المستقيم، والكلامُ عند المنعطف وحدَه (طلبُ المالك ٢٠٢٦-١٠-٠٢: «قصير ولا يكرّر»).
-        if (target.kind == ManeuverKinds.STRAIGHT || target.kind == ManeuverKinds.DEPART) return null
+        // **ولا «تابع مستقيماً»** — كغوغل: الصمتُ على الطريق المستقيم (طلبُ المالك
+        // ٢٠٢٦-١٠-٠٢: «قصير ولا يكرّر»). **و«ابدأ السير» باقيةٌ**: أُسكتت معها ساعةً فبدأت
+        // الرحلةُ صامتةً حتّى أوّل منعطف (بلاغُ المالك: «الصوتُ اختفى في بداية الرحلة»).
+        if (target.kind == ManeuverKinds.STRAIGHT) return null
         val distance = max(0.0, target.atDistanceM - p.progressM)
         val speed = trustedSpeed(fix, p, state.speedMps)
 

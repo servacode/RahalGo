@@ -146,6 +146,13 @@ fun TripMap(
     val camBearing = remember { floatArrayOf(Float.NaN) }
     val zoomNow = remember { doubleArrayOf(Double.NaN) }
     val diagMs = remember { longArrayOf(0L) }
+
+    /**
+     * **آخرُ لمسةٍ للخريطة** — وبعد ثلاث ثوانٍ بلا لمسٍ تعود الكاميرا إلى السهم وحدَها
+     * (طلبُ المالك ٢٠٢٦-١٠-٠٢: «الكاميرا لازم دائماً تلاحق المثلّث»). **وما دامت الإصبعُ
+     * تحرّكها فالمؤقّتُ يتجدّد** (`addOnCameraMoveListener` أدناه).
+     */
+    val panAtMs = remember { longArrayOf(0L) }
     val libreRef = remember { arrayOfNulls<MapLibreMap>(1) }
     val slowRef = remember { booleanArrayOf(false) }
     val navOn = remember { booleanArrayOf(false) }
@@ -178,6 +185,11 @@ fun TripMap(
             // فتتحرّك الأرضُ والسهمُ في لحظتين مختلفتين، وذاك هو التقطّع.
             androidx.compose.runtime.withFrameNanos { }
             val libre = libreRef[0] ?: continue
+            if (freePan[0] && navOn[0] &&
+                android.os.SystemClock.uptimeMillis() - panAtMs[0] >= AUTO_RECENTER_MS
+            ) {
+                freePan[0] = false
+            }
             if (!navOn[0] || freePan[0] || shown[0].isNaN()) {
                 lastMs = 0L
                 continue
@@ -223,9 +235,14 @@ fun TripMap(
     LaunchedEffect(Unit) {
         view.getMapAsync { libre ->
             libreRef[0] = libre
+            // **وكلُّ حركةٍ والخريطةُ حرّةٌ هي من الإصبع** — كاميرا الملاحة لا تتحرّك حينها.
+            libre.addOnCameraMoveListener {
+                if (freePan[0]) panAtMs[0] = android.os.SystemClock.uptimeMillis()
+            }
             libre.addOnCameraMoveStartedListener { reason ->
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
                     freePan[0] = true
+                    panAtMs[0] = android.os.SystemClock.uptimeMillis()
                 }
             }
         }
@@ -792,6 +809,9 @@ private fun fitAll(
  * **السهمُ في الثلث السفليّ والطريقُ أمامه** (المواصفة ١٠).
  */
 private fun navPaddingTop(heightPx: Int): Double = heightPx * 0.4
+
+/** **عودةُ الكاميرا إلى السهم بعد آخر لمسة** — ثلاثُ ثوانٍ (طلبُ المالك: «عشرٌ كثير، لازم تلحقه مباشرة»). */
+private const val AUTO_RECENTER_MS = 3_000L
 
 /** **منطقةُ الدوران الميّتة** — رجفةٌ أصغرُ منها لا تُدير الخريطة. */
 private const val BEARING_DEADBAND_DEG = 6f

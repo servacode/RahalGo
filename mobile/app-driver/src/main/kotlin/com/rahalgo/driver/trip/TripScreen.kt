@@ -487,6 +487,31 @@ fun TripScreen(
     LaunchedEffect(routeTarget) { actions.clearChoices() }
 
     // ══════════════════════════════════════════════════════════════════
+    // **وكلَّ دقيقتين وهو يسير: هل من طريقٍ أفضل؟** (طلبُ المالك ٢٠٢٦-١٠-٠٢)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **لا يُسأل** واقفاً، ولا قربَ الوجهة (٣٠٠م)، ولا والحالُ غيرُ سليمة أو يُعاد الحساب،
+    // **ولا والبدائلُ معروضةٌ الآن لهذا الجيل** — فلا يُبدَّل ما ينظر إليه.
+    LaunchedEffect(state.order?.id, routeTarget) {
+        while (true) {
+            kotlinx.coroutines.delay(BETTER_ROUTE_EVERY_MS)
+            val nav = navSession.nav ?: continue
+            val lat = nav.lat ?: continue
+            val lng = nav.lng ?: continue
+            if (nav.speedMps < 3.0 || nav.remainingM in 0.0..300.0) continue
+            if (!com.rahalgo.navigation.RouteChoiceHealth.of(nav)) continue
+            val shown = state.routeChoices
+            if (shown != null && shown.generation == navSession.generation &&
+                shown.alternatives.isNotEmpty() &&
+                choiceUi !is com.rahalgo.navigation.RouteChoiceUi.Hidden
+            ) {
+                continue
+            }
+            actions.checkBetterRoute(navSession.generation, routeTarget, lat, lng)
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // **الوصولُ يُسجَّل وحدَه — ولا زرَّ يُضغط**
     // ══════════════════════════════════════════════════════════════════
     //
@@ -613,7 +638,9 @@ fun TripScreen(
             ),
             // **البدائلُ تُرسم ولا يُلاحَ عليها** — البند ٢٨ من ٧.
             alternatives = choiceUi.choicesOrNull?.alternatives.orEmpty().map {
-                com.rahalgo.navigation.AltRouteLayer.Drawable(it.routeId, it.route, it.engineDurationS)
+                com.rahalgo.navigation.AltRouteLayer.Drawable(
+                    it.routeId, it.route, it.engineDurationS, it.deltaDurationS,
+                )
             },
             previewRouteId = choiceUi.previewRouteId,
             // **ولمسُ الخطّ يُعاين ولا يعتمد** — البندان ٢٤ و٢٧.
@@ -1514,3 +1541,6 @@ private fun NoTrip(onOrders: () -> Unit) {
         RahalButton(onClick = onOrders) { Text(stringResource(R.string.nav_orders_all)) }
     }
 }
+
+/** **كم بين بحثين عن طريقٍ أفضل** — كغوغل تقريباً. */
+private const val BETTER_ROUTE_EVERY_MS = 120_000L

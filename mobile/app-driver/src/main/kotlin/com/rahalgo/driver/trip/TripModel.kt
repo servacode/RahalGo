@@ -292,6 +292,13 @@ data class TripActions(
         List<com.rahalgo.navigation.GeoPoint>,
     ) -> Unit = { _, _, _, _, _, _, _ -> },
 
+    /**
+     * **يبحث عن طريقٍ أفضلَ من موضعه الآن** — كلَّ دقيقتين وهو يسير (طلبُ المالك
+     * ٢٠٢٦-١٠-٠٢). الجيلُ والوجهةُ وموضعُه.
+     */
+    val checkBetterRoute: (Long, com.rahalgo.navigation.RouteTarget, Double, Double) -> Unit =
+        { _, _, _, _ -> },
+
     /** **يُعاين** — بصريٌّ محضٌ (البند ١٣)، و`null` يُلغي. */
     val previewRoute: (String?) -> Unit = {},
 

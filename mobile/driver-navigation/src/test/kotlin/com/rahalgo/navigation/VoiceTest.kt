@@ -33,6 +33,21 @@ class VoiceTest {
         return out
     }
 
+    /**
+     * **VOICE-START** — الرحلةُ لا تبدأ صامتة (بلاغُ المالك ٢٠٢٦-١٠-٠٢: «الصوتُ اختفى،
+     * خصوصاً بدايةَ الرحلة»). **وأوّلُ ما يُقال يقع في أوّل عشرين قراءة.**
+     */
+    @Test
+    fun `VOICE-START الرحلة تبدأ بصوت`() {
+        val route = RouteFixtures.singleRight()
+        val (e, _) = engineWithVoice(route)
+        val cues = cuesOf(e, RouteFixtures.driveAlong(route, speedMps = 8f))
+        val first = cues.firstOrNull()
+        println("VOICE-START · أوّلُ تعليمة عند القراءة ${first?.first}: ${first?.second?.text}")
+        assertTrue("لا صوتَ في أوّل عشرين قراءة", first != null && first.first < 20)
+        assertTrue("الصوتُ اختفى من الرحلة كلّها", cues.size >= 2)
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **١ · الأطوارُ والزنادُ الديناميكيّ**
     // ══════════════════════════════════════════════════════════════════

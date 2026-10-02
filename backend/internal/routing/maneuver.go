@@ -126,10 +126,24 @@ func mapKind(osrmType string, modifier *string) ManeuverKind {
 		return KindFork
 	case "off ramp":
 		return KindOffRamp
-	case "continue", "new name":
+	case "new name":
 		// **و«اسمٌ جديد» ليست مناورة** — الشارعُ تبدّل اسمُه والسائقُ
 		// يمضي مستقيماً. **ومن جعلها انعطافاً أربك من يقودها.**
 		return KindStraight
+	case "continue":
+		// **والشارعُ نفسُه ينعطف عند تقاطع** (بلاغُ المالك ٢٠٢٦-١٠-٠٢: «لازم نميّز
+		// بين الانعطاف والبقاء على الطريق») — Valhalla يقولها «انعطف يميناً لتبقى على
+		// شارع كذا»، **وتصلنا `continue` بجهةٍ يمينٍ أو يسار. وكانت تُطوى هنا إلى
+		// «مستقيم» فيسكت الصوتُ والسائقُ أمامَ تقاطعٍ عليه أن ينعطف فيه.** (قِيست أربعُ
+		// حالاتٍ في خمسين رحلةً وسطَ الرقّة.)
+		//
+		// **والانحناءُ الخفيفُ في الشارع نفسِه يبقى صمتاً** — لا خيارَ عنده، كغوغل.
+		switch k := byModifier(modifier); k {
+		case KindTurnLeft, KindTurnRight, KindSharpLeft, KindSharpRight, KindUTurn:
+			return k
+		default:
+			return KindStraight
+		}
 	case "end of road":
 		// **ونهايةُ الطريق مناورةٌ بذاتها لا انعطافٌ عاديّ**
 		//

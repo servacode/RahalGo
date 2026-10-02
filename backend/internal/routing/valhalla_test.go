@@ -75,9 +75,10 @@ func TestValhallaRequestCostsAMotorcycle(t *testing.T) {
 			t.Errorf("%s = %v، والمطلوب %v", k, opts[k], v)
 		}
 	}
-	// **وعكسُ الاتّجاه الواحد مسموحٌ للموتور** — قرارُ المالك ٢٠٢٦-١٠-٠٢.
-	if opts["ignore_oneways"] != true {
-		t.Errorf("ignore_oneways = %v، والمطلوب true", opts["ignore_oneways"])
+	// **ولا عكسَ للاتّجاه أبداً** — بلاغُ المالك ٢٠٢٦-١٠-٠٢: جانبا الطريق المفصول
+	// كلٌّ منهما باتّجاهٍ واحد، فعكسُه سيرٌ عكسَ السير.
+	if v, ok := opts["ignore_oneways"]; ok && v != false {
+		t.Errorf("ignore_oneways = %v — السيرُ عكسَ السير ممنوع", v)
 	}
 	if body["directions_options"].(map[string]any)["units"] != "kilometers" {
 		t.Errorf("الوحدات: %v", body["directions_options"])

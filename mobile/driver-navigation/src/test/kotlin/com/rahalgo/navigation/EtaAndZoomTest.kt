@@ -29,6 +29,25 @@ class EtaAndZoomTest {
     }
 
     @Test
+    fun `بعد دقيقة سير يتبع سرعته هو — ٣٠ أو ٧٠`() {
+        for ((kmh, label) in listOf(30.0 to "٣٠", 70.0 to "٧٠")) {
+            val eta = EtaSmoother()
+            val v = kmh / 3.6
+            var remaining = 5000.0
+            var sec = 0.0
+            // **زمنُ المحرّك ثابتٌ على ٥٠ كم/س** — والسائقُ يسير بغيرها.
+            repeat(120) {
+                remaining -= v
+                sec = eta.update(remaining, remaining / (50 / 3.6), v, 5000.0)
+            }
+            val truth = remaining / v
+            val engine = remaining / (50 / 3.6)
+            println("ETA · $label كم/س ⇒ المعروض=${"%.0f".format(sec)}ث · الحقيقيّ=${"%.0f".format(truth)}ث · المحرّك=${"%.0f".format(engine)}ث")
+            assertTrue("$label: لم يقترب من الحقيقيّ", kotlin.math.abs(sec - truth) < kotlin.math.abs(engine - truth) * 0.4)
+        }
+    }
+
+    @Test
     fun `طريق جديد يؤخذ كما هو`() {
         val eta = EtaSmoother()
         eta.update(2000.0, 240.0, 0.0, 2000.0)

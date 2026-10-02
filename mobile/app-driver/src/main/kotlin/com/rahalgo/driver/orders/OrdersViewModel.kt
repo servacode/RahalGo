@@ -1239,6 +1239,74 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * @param reason **لماذا نطلب** — واختيارُ السائق لا يطلب (البند ٦).
      * @param navRouteFingerprint **بصمةُ ما تقوده الملاحةُ الآن.**
      */
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **طريقٌ أفضلُ أثناء السير** — يُعرض ولا يُفرض
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-١٠-٠٢: «يطلع طريقاً أزرقَ باهتاً والشخصُ يختار أو يبقى على مساره».)
+     *
+     * **يُسأل الخادمُ من موضعه الآن**، ويُقاس كلُّ ما ردّه على **ما بقي من طريقه** (`BetterRoute`):
+     * ما يوفّر ٣٠ ثانيةً وعُشرَ الباقي يُعرض بديلاً بنقطة افتراقه على طريقه، **وما سواه يُترك.**
+     */
+    fun checkBetterRoute(
+        generation: Long,
+        target: com.rahalgo.navigation.RouteTarget,
+        lat: Double,
+        lng: Double,
+    ) {
+        val id = currentId() ?: return
+        val current = navSession.route ?: return
+        val nav = navSession.nav ?: return
+        val progressM = nav.progress?.progressM ?: return
+        val remainingSec = nav.remainingSec
+        if (remainingSec <= 0) return
+        altJob?.cancel()
+        altJob = viewModelScope.launch {
+            val fetched = try {
+                backend.driver.route(id, lat, lng, alternatives = true, heading = routeHeading())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+            if (fetched == null || !fetched.available) return@launch
+            // **والجيلُ تبدّل أثناء الطلب ⇒ الردُّ لطريقٍ لم يعد طريقَه.**
+            if (navGeneration != generation || currentId() != id) return@launch
+            val built = com.rahalgo.driver.trip.RouteChoicesMapper.toChoices(
+                route = fetched,
+                setId = id + ":" + generation + ":" + target.name + ":better:" + (++altSeq),
+                generation = generation,
+                originLat = lat,
+                originLng = lng,
+            ) ?: return@launch
+            val better = com.rahalgo.navigation.BetterRoute.evaluate(
+                current, progressM, remainingSec, built.all,
+            )
+            Log.i(
+                "RahalGo/بدائل",
+                "بحثٌ أثناء السير: مرشّحون=" + built.all.size + " أفضل=" + better.size +
+                    " باقٍ=" + remainingSec.toInt() + "ث",
+            )
+            if (better.isEmpty()) return@launch
+            val remainingM = (current.totalM - progressM).coerceAtLeast(0.0)
+            routeChoices = built.copy(
+                recommended = com.rahalgo.navigation.RouteOption(
+                    routeId = java.lang.Long.toHexString(com.rahalgo.navigation.RouteFingerprint.of(current)),
+                    route = current,
+                    engineDurationS = remainingSec,
+                    distanceM = remainingM,
+                ),
+                alternatives = better,
+                selectedRouteId = null,
+            )
+            choicesAtMs = android.os.SystemClock.elapsedRealtime()
+            choicesTarget = target
+            choicePreview = null
+            choiceStale = false
+        }
+    }
+
     fun loadAlternatives(
         generation: Long,
         target: com.rahalgo.navigation.RouteTarget,

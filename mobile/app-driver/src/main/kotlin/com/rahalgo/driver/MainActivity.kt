@@ -1048,6 +1048,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         //
                         // **والفحصُ في نموذج العرض** — الشاشةُ تسلّم
                         // ما قُبل ولا تتفاءل (البند ١٨).
+                        checkBetterRoute = orders::checkBetterRoute,
                         loadAlternatives = { gen, target, lat, lng, reason, fp, geom ->
                             orders.loadAlternatives(gen, target, lat, lng, reason, fp, geom)
                         },

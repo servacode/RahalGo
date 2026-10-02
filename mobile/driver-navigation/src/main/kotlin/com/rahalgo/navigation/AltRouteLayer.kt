@@ -68,7 +68,13 @@ object AltRouteLayer {
     const val TOUCH_TARGET_DP = 48f
 
     /** **بديلٌ يُرسم** — هندسةٌ ومعرِّف، **وزمنُه** لفقاعة الوقت (سالبٌ: بلا فقاعة). */
-    data class Drawable(val routeId: String, val route: NavRoute, val durationS: Double = -1.0)
+    data class Drawable(
+        val routeId: String,
+        val route: NavRoute,
+        val durationS: Double = -1.0,
+        /** **فرقُه عن طريقه بالثواني** — سالبٌ أسرع. وبه تقول الفقاعةُ «أسرع ٢ د» كغوغل. */
+        val deltaS: Double = Double.NaN,
+    )
 
     /** **فقاعاتُ الوقت** — كغوغل: على كلّ بديلٍ زمنُه (طلبُ المالك ٢٠٢٦-١٠-٠٢). */
     const val LABEL_SOURCE = "rahalgo-alt-labels"
@@ -78,6 +84,18 @@ object AltRouteLayer {
     /** **نصُّ الفقاعة** — دقائقُ بأرقامٍ لاتينيّة، وأقلُّه دقيقة. */
     fun labelOf(durationS: Double): String =
         "${kotlin.math.max(1L, kotlin.math.round(durationS / 60.0).toLong())} د"
+
+    /**
+     * **الفرقُ لا المجموع** — كغوغل: «أسرع ٢ د» أو «+٣ د»، وما دونَ نصفِ دقيقةٍ «نفس الوقت».
+     */
+    fun deltaLabelOf(deltaS: Double): String {
+        val min = kotlin.math.max(1L, kotlin.math.round(kotlin.math.abs(deltaS) / 60.0).toLong())
+        return when {
+            deltaS <= -30.0 -> "أسرع $min د"
+            deltaS >= 30.0 -> "+$min د"
+            else -> "نفس الوقت"
+        }
+    }
 
     /** **موضعُ الفقاعة** — عند ٥٥٪ من طول البديل، حيث يفترق غالباً عن الفعّال. */
     private fun labelPoint(route: NavRoute): GeoPoint? =
@@ -110,7 +128,10 @@ object AltRouteLayer {
                 val at = labelPoint(alt.route) ?: return@mapNotNull null
                 Feature.fromGeometry(GeoJsonPoint.fromLngLat(at.lng, at.lat)).apply {
                     addStringProperty(PROP_ROUTE_ID, alt.routeId)
-                    addStringProperty(PROP_LABEL, labelOf(alt.durationS))
+                    addStringProperty(
+                        PROP_LABEL,
+                        if (alt.deltaS.isNaN()) labelOf(alt.durationS) else deltaLabelOf(alt.deltaS),
+                    )
                 }
             },
         )
