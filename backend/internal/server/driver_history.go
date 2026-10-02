@@ -69,39 +69,35 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type withRating struct {
-		orders.Order
-		// MerchantRated أقيّمتُ متجرَه — **ومن قيّم لا يُعرض عليه الزرُّ ثانيةً.**
-		MerchantRated bool `json:"merchant_rated"`
-		// CanRateMerchant **وقف عند بابه فعلاً** — ومن لم يقف لا رأيَ له فيه.
-		CanRateMerchant bool `json:"can_rate_merchant"`
-	}
-	out := make([]withRating, len(res.Orders))
+	// ══════════════════════════════════════════════════════════════════
+	// **والسجلُّ بعين السائق لا بعين المدير** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يُرسَل صفُّ الطلب كاملاً** — وفيه `customer_phone` ومعرّفُ الزبون وإحداثيّاتُ
+	// بابه. **وقرارُ المالك (٢٠٢٦-٠٨-٠٩): «ولا رقمَ زبونٍ يصل إلى سائق».** فيمرّ بقائمة
+	// السائق (`orders.ViewFor`) — **ويُنزع الموضعُ فوقها: الطلبُ انتهى فلا حاجةَ له.**
+	out := make([]map[string]any, len(res.Orders))
 	for i := range res.Orders {
 		o := res.Orders[i]
-		out[i] = withRating{
-			Order:         o,
-			MerchantRated: rated[o.ID],
-			// **والشرطُ هو شرطُ الخادم نفسُه** — نسخةٌ ثانيةٌ تفترق فيُعرض
-			// زرٌّ يُردّ أو يُخفى زرٌّ يجوز.
-			// ══════════════════════════════════════════════════
-			// **ولا يُقيَّم متجرٌ لا وجودَ له**
-			// ══════════════════════════════════════════════════
-			//
-			// (سأل المالك ٢٠٢٦-٠٨-١٣: «هل بقي شيءٌ بالطلب الخاصّ لم
-			//  نكتشفه؟».)
-			//
-			// **والطلبُ الخاصُّ بلا متجر** — والشرطُ كان «وقف عنده
-			// فعلاً» وحدَه: **والخاصُّ يمرّ بـ`picked_up` عند الشراء**،
-			// فيصير مؤهَّلاً لتقييم من لا وجودَ له.
-			//
-			// **ويُعرض عليه الزرُّ فيضغطه فيُردّ** — بأربعمئةٍ وأربعة
-			// لأنّ `merchant_id` فارغ: **رفضٌ بعد ضغطةٍ يُقرأ عطباً لا
-			// قاعدة.**
-			CanRateMerchant: o.MerchantID != "" &&
-				(o.PickedUpAt != nil ||
-					(o.Status == "failed" && o.Fault == "merchant")),
+		v := orders.ViewFor(orders.AudienceDriver, &o)
+		if v == nil {
+			v = map[string]any{}
 		}
+		for _, k := range historyHidden {
+			delete(v, k)
+		}
+		// **وما تحتاجه شاشةُ السجلّ ممّا ليس في قائمة السائق.**
+		v["merchant_name"] = o.MerchantName
+		v["number"] = o.Number
+		v["total"] = o.Total
+		v["merchant_rated"] = rated[o.ID]
+		out[i] = v
+		// **وشرطُ التقييم هو شرطُ الخادم نفسُه** — نسخةٌ ثانيةٌ تفترق فيُعرض زرٌّ يُردّ.
+		// **ولا يُقيَّم متجرٌ لا وجودَ له** (سأل المالك ٢٠٢٦-٠٨-١٣): الخاصُّ بلا متجرٍ يمرّ
+		// بـ`picked_up` عند الشراء، **فكان يصير مؤهَّلاً لتقييم من لا وجودَ له ويُردّ بـ٤٠٤.**
+		v["can_rate_merchant"] = o.MerchantID != "" &&
+			(o.PickedUpAt != nil ||
+				(o.Status == "failed" && o.Fault == "merchant"))
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"orders": out, "total": res.Total, "page": res.Page, "per_page": res.PerPage,
@@ -152,3 +148,6 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 	// معرّفَ من أُبلِغ عنه. صفُّ الهويّة الكامل لبابِ الأدمن وحدَه.
 	httpx.JSON(w, http.StatusOK, map[string]any{"id": t.ID, "number": t.Number, "status": t.Status})
 }
+
+// historyHidden **ما لا يحتاجه سجلُّ طلبٍ انتهى** — موضعُ باب الزبون ومعرّفُه.
+var historyHidden = []string{"lat", "lng", "customer_id", "nav_lat", "nav_lng", "customer_phone"}

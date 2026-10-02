@@ -84,6 +84,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         /** **كم بين نظرةٍ وأخرى** — والوقوفُ يُقاس بالثواني لا بالنبضات. */
         const val ARRIVAL_TICK_MS = 2_000L
 
+        /** **كم بين سؤالين حين تنقطع الوصلة.** */
+        const val POLL_WHEN_DOWN_MS = 15_000L
+
         /** **كم يقف حتّى يُعدّ واصلا** — (قرار المالك: بين ٣٠ و٦٠ ثانية). */
         const val ARRIVAL_HOLD_MS = 30_000L
     }
@@ -271,9 +274,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // **والإشارة بلا حمولة**: يقول المحرّك «تغيّر شيء»، **وما يراه
         // هذا السائق تقرّره نقطة الطابور** بحسب ورديّته ونمط التوزيع.
         watchArrival()
+        pollWhileDown()
         backend.live.start(
             scope = viewModelScope,
-            onState = { up -> Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت") },
+            onState = { up ->
+                Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت")
+                liveUp = up
+                // **وعودةُ الوصلة تُعيد القراءة** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢): ما وقع وهي
+                // منقطعةٌ لم يصل — عرضٌ بخمسٍ وأربعين ثانيةً قد يفوت وإشعارُه وصل.
+                if (up) {
+                    refresh()
+                    Refresh.bump()
+                }
+            },
             onEvent = {
                 refresh()
                 // **وما وصل الوصلةَ يُبَثّ للجميع** — (شكوى المالك
@@ -290,6 +303,32 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 if (chat != null) reloadChat()
             },
         )
+    }
+
+    /** **أقائمةٌ الوصلةُ الحيّة؟** — وبلاها يُسأل المحرّكُ بنفسه. */
+    @Volatile private var liveUp = false
+
+    /**
+     * **وحين تنقطع الوصلةُ يُسأل المحرّكُ كلَّ خمسَ عشرةَ ثانية** — شبكةُ السوق تنقطع
+     * كثيراً، **والوصلةُ وحدَها كانت مصدرَ كلِّ تحديث**: فإن انقطعت بقيت الشاشةُ قديمةً
+     * حتّى يضغط السائقُ التبويب. (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢.)
+     */
+    private fun pollWhileDown() {
+        viewModelScope.launch {
+            while (true) {
+                delay(POLL_WHEN_DOWN_MS)
+                if (!liveUp) refresh()
+            }
+        }
+    }
+
+    /**
+     * **عاد التطبيقُ إلى الواجهة** — أو فُتح من إشعار. **يُقرأ من جديد**: ما فاته وهو
+     * في الخلفية لا يصله إلّا هكذا.
+     */
+    fun onForeground() {
+        refresh()
+        Refresh.bump()
     }
 
     // ══════════════════════════════════════════════════════════════════

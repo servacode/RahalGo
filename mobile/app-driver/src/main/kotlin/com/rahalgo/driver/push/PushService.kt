@@ -40,6 +40,10 @@ class PushService : RahalPushService() {
     // الآن**: «وين الباب؟» تُقرأ بعد التسليم لا تنفع.
     override fun isUrgent(kind: String): Boolean = kind == KIND_OFFER || kind == KIND_CHAT
 
+    // **وعرضُ الطلب يصل عاجلاً بعلامة المحرّك** — كان يُبحث عن `order_offer` والمحرّكُ
+    // يرسل `order` مع `urgent=1`، فوصل العرضُ على قناة الأخبار (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢).
+    override fun honorsServerUrgency(): Boolean = true
+
     companion object {
         const val KIND_OFFER = "order_offer"
         const val KIND_CHAT = com.rahalgo.ui.Engagement.KIND_CHAT

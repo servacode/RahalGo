@@ -507,6 +507,9 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     // الإعدادات، **فلا تبقى البطاقة تطلب ما أُعطي.**
     LifecycleResumeEffect(Unit) {
         home.recheckLocation()
+        // **وما فاته في الخلفية يُقرأ عند العودة** — أو عند فتحه من إشعار عرض
+        // (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢: «لا تحديثَ عند العودة ولا عند نقر الإشعار»).
+        orders.onForeground()
         onPauseOrDispose { }
     }
 

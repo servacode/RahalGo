@@ -107,14 +107,34 @@ abstract class RahalPushService : FirebaseMessagingService() {
         // **في الخلفيّة/غير الظاهر**: الرسالةُ الداخليّةُ لا تُرى، **فيُعرَض
         // الصندوقُ النظاميُّ الأمنيُّ** (رسالةٌ غيرُ حسّاسة).
         if (kind == "session_superseded" && com.rahalgo.ui.AppForeground.isForeground) return
-        show(title, body, isUrgent(kind), Engagement.route(data["entity"], data["entity_id"]))
+        // ══════════════════════════════════════════════════════════════
+        // **والعجلةُ من المحرّك أوّلاً** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **المحرّكُ يرسل `urgent=1` مع عرض الطلب** (`push/fcm.go withText`) — والتطبيقُ
+        // كان يحكم بالنوع وحدَه ويبحث عن `order_offer` **والمحرّكُ يرسل `order`.** فوصل
+        // العرضُ على قناة الأخبار: بلا تنبيهٍ فوق الشاشة ولا اهتزاز.
+        show(
+            title, body,
+            isUrgent(kind) || (honorsServerUrgency() && data["urgent"] == "1"),
+            Engagement.route(data["entity"], data["entity_id"]),
+            key = if (honorsServerUrgency()) kind + ":" + data["entity_id"].orEmpty() else "",
+        )
     }
+
+    /**
+     * **أيُقرأ `urgent` من المحرّك ويُعطى كلُّ خبرٍ رقمَه؟** — السائقُ وحدَه اليوم
+     * (٢٠٢٦-١٠-٠٢). **والمتجرُ والمندوبُ مجمَّدان بقرار المالك** فلا يتبدّل سلوكُهما من هنا.
+     */
+    protected open fun honorsServerUrgency(): Boolean = false
 
     protected fun show(
         title: String,
         body: String,
         urgent: Boolean,
         dest: Engagement.Dest = Engagement.HOME,
+        /** **مفتاحُ الإشعار** — لكلّ طلبٍ ونوعٍ إشعارُه، فلا يمحو خبرٌ عرضاً. */
+        key: String = "",
     ) {
         // **ولا إشعارَ فارغ** — صندوقٌ بلا نصٍّ يُقلق ولا يُفيد.
         if (title.isBlank() && body.isBlank()) return
@@ -167,13 +187,20 @@ abstract class RahalPushService : FirebaseMessagingService() {
             .build()
         // **ومعرّفانِ لا واحد**: العاجلُ لا يطمس الخبر، والخبرُ لا يطمس
         // العاجل.
-        manager.notify(if (urgent) ID_URGENT else ID_NEWS, note)
+        // **ولكلّ خبرٍ رقمُه** — كان رقمان للكلّ، فخبرُ المحفظة يمحو عرضَ طلبٍ لم يُقرأ.
+        val id = if (key.isBlank()) {
+            if (urgent) ID_URGENT else ID_NEWS
+        } else {
+            ID_BASE + (key.hashCode() and 0x0FFFFFFF)
+        }
+        manager.notify(id, note)
     }
 
     companion object {
         private const val TAG = "RahalGo/push"
         private const val ID_URGENT = 3001
         private const val ID_NEWS = 3002
+        private const val ID_BASE = 0x10000
 
         /** **وجهةُ الإشعار كما تُمرَّر إلى الشاشة الأولى.** */
         const val EXTRA_DEST_TYPE = "rahalgo.dest_type"
