@@ -132,7 +132,8 @@ func (s *Service) alertCompensationPending(ctx context.Context, orderID string) 
 		Body:     "#" + itoa(number) + " — " + reason + " — المقترَح " + itoa(suggested),
 		Entity:   "order",
 		EntityID: orderID,
-		Href:     "/dashboard/orders",
+		// **وينقر فيصل إلى قائمة الموافقة نفسِها** — لا إلى الطلبات يبحث فيها.
+		Href: "/dashboard/compensations",
 	})
 }
 

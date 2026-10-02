@@ -127,6 +127,9 @@ if (!vectorRaw) {
   const labels = v.layers.filter((l) => l.type === 'symbol');
   for (const l of labels) {
     const field = JSON.stringify(l.layout?.['text-field'] ?? '');
+    // **وما لا يقرأ اسماً لا يُسأل عن عربيّته** — أسهمُ الاتّجاه الواحد بلا نصّ، ورقمُ
+    // البناية ليس اسماً (القاعدةُ نفسُها في `MapStyleBinding.labelExpressionsAreArabicFirst`).
+    if (!field.includes('name')) continue;
     if (!field.includes('name:ar')) {
       problems.push(`طبقةُ الأسماء ${l.id} لا تقرأ name:ar`);
     }
