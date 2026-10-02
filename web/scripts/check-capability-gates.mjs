@@ -196,6 +196,11 @@ const walk = (d, out = []) => {
     ["components/admin/orders/OrdersScreen.tsx", "canIntervene && next.map", "أزرارُ تبديل الحال"],
     ["components/admin/orders/OrdersScreen.tsx", 'o.status === "failed" && can("finance.manage")', "تسويةُ البضاعة"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && (o.status === "accepted"', "إخبارُ المتجر"],
+    // **وإنهاءُ الباب بقدرة التدخّل** (مساءَ ٢٠٢٦-١٠-٠٢، البند ١) — المحرّكُ
+    // يردّ ٤٠٣ لمن لا يملكها، **فلا يُعرض له زرٌّ يُعتذر عنه.**
+    ["components/admin/orders/DoorPanel.tsx", 'const canResolve = can("orders.intervene")', "إنهاءُ الباب"],
+    ["components/admin/orders/DoorPanel.tsx", "{canResolve && (", "زرّا الباب"],
+    ["components/admin/orders/OrdersScreen.tsx", 'can("finance.manage") ? (', "رابطُ تسوية البضاعة بعد الإعادة"],
     ["app/dashboard/page.tsx", 'can("settings.security.manage")', "حالُ واتساب في الرئيسيّة"],
     // **ورايةُ تحرير الإعداد من المحرّك لا من اسم الناظر.**
     ["app/dashboard/settings/page.tsx", "s.editable ?? false", "تحريرُ مفتاح الإعداد"],

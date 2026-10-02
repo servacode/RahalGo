@@ -158,12 +158,19 @@ func (s *Server) driverStageReport(w http.ResponseWriter, r *http.Request, order
 	}
 	s.notify.NotifyOps(ctx, notifications.Input{
 		Kind: notifications.KindOrder, Title: title, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+		Entity: "order", EntityID: orderID, Href: stageReportHref(number),
 	})
 	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"reported": true, "duplicate": false, "code": code, "status": status,
 	})
+}
+
+// stageReportHref **وجهةُ التنبيه: الطلبُ بعينه** — بحثُ شاشة الطلبات برقمه
+// (`?q=`) يفتحه حيثما كان، **ولوحةُ «عند باب الزبون» فيه** (مساءَ ٢٠٢٦-١٠-٠٢).
+// كانت `/dashboard/orders` عامّةً — فيبحث المكتبُ عن الطلب بين عشرين.
+func stageReportHref(number int64) string {
+	return "/dashboard/orders?q=" + strconv.FormatInt(number, 10)
 }
 
 // doorWaitedMinutes **كم دقيقةً مضت منذ وصل الباب** — وسالبٌ إن لم يُعرف.

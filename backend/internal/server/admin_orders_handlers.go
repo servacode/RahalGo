@@ -121,6 +121,11 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		if res.Orders[i].Status == orders.StDispatching {
 			res.Orders[i].BlockedReason = s.orders.NoEligibleReason(r.Context(), res.Orders[i].ID)
 		}
+		// **وعند باب الزبون يقرّر المكتب** — فيرى ما قال السائقُ وكم ينتظر
+		// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١، `orders/door_view.go`).
+		if res.Orders[i].Status == orders.StAtDropoff {
+			res.Orders[i].Door = s.orders.DoorViewOf(r.Context(), res.Orders[i].ID)
+		}
 	}
 	httpx.JSON(w, http.StatusOK, res)
 }
@@ -139,6 +144,9 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	if o.Status == orders.StAtDropoff {
+		o.Door = s.orders.DoorViewOf(r.Context(), o.ID)
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **ومسارُه كاملاً بأوقاته ومن فعله**

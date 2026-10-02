@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   getMessages,
   defaultLocale,
@@ -35,11 +36,13 @@ import {
   IconCamera,
   IconWhatsApp,
   IconSwap,
+  IconWarning,
   Invoice,
   FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { DoorPanel, type DoorView } from "./DoorPanel";
 
 const m = getMessages(defaultLocale);
 
@@ -158,6 +161,8 @@ interface OrderRow {
   dispatched_at: string | null;
   /** لماذا لا يلتقطه أحد — **وفارغٌ حين لا مشكلة**. */
   blocked_reason?: string;
+  /** **حالُ باب الزبون** — يرسله المحرّكُ لطلبٍ عند الباب وحدَه. */
+  door?: DoorView;
   /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
   goods_settled_to: "merchant" | "platform" | null;
   /** أيستردّ كلُّ مصدرٍ في هذا الطلب بضاعتَه — سياسةُ متجرٍ لا قاعدةُ منصة. */
@@ -439,7 +444,10 @@ const OPS_NEXT: Record<string, string[]> = {
   at_pickup: ["picked_up", "failed"],
   picked_up: ["on_the_way", "failed"],
   on_the_way: ["at_dropoff", "failed"],
-  at_dropoff: ["delivered", "failed"],
+  // **وعند الباب لا «فشل» من هنا** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١):
+  // المحرّكُ يردّ `door_needs_ops` على الانتقال العامّ — **والإنهاءُ من لوحة
+  // «عند باب الزبون»** بذنبٍ يكتبه المكتب (`DoorPanel`).
+  at_dropoff: ["delivered"],
   /* **ولا استرجاعَ بعد التسليم من هنا.**
 
      (قرارُ المالك ٢٠٢٦-٠٨-٠٩، وقد قاله قبلَها: «ما فائدة الاسترجاع بعد
@@ -661,6 +669,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [selfManage, setSelfManage] = useState<boolean | null>(null);
   /** مهلةُ ظهور زرّ الإسناد اليدويّ — من الإعدادات لا من الشيفرة */
   const [assignAfterMin, setAssignAfterMin] = useState(10);
+  /** **مدّةُ منع النقد بذنب الزبون** — من الإعدادات، تُقال قبل «عُد إلى المكتب». */
+  const [cashBanDays, setCashBanDays] = useState(30);
+  /**
+   * **طلبٌ أُعيد إلى المكتب من لوحة الباب** — يخرج من شاشة العمل، **فالتذكيرُ
+   * بتسوية بضاعته يُقال هنا لا في بطاقته.**
+   */
+  const [returnedNumber, setReturnedNumber] = useState<number | null>(null);
   /**
    * **كم سائقاً في الدوام الآن** — يُقرأ قبل التحويل لا بعده.
    *
@@ -683,6 +698,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           (x) => x.key === "orders.manual_assign_after_min",
         );
         setAssignAfterMin(typeof delay?.value === "number" ? delay.value : 10);
+        const banDays = all.find((x) => x.key === "customers.cash_ban_days");
+        if (typeof banDays?.value === "number") setCashBanDays(banDays.value);
         // **ومن المفتاح الحيّ لا المحذوف.**
         //
         // كان يقرأ `merchants.self_manage_orders` — **وقد صار
@@ -920,6 +937,30 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // أضاع الاسمُ أم لم يكن؟
       hide: (o: OrderRow) => o.kind === "custom",
       cell: (o) => o.merchant_name,
+    },
+    {
+      // ══════════════════════════════════════════════════════════════
+      // **عند باب الزبون — السائقُ يُبلّغ والمكتبُ يقرّر**
+      // ══════════════════════════════════════════════════════════════
+      //
+      // (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١.) **بعرض البطاقة وقبل
+      // الفاتورة**: رجلٌ ينتظر في الشارع أعجلُ من سطور الأصناف.
+      id: "door",
+      header: m.admin.ordersPage.door.title,
+      icon: <IconWarning />,
+      block: true,
+      hide: (o: OrderRow) => o.status !== "at_dropoff",
+      cell: (o) => (
+        <DoorPanel
+          orderId={o.id}
+          orderNumber={o.number}
+          customerPhone={o.customer_phone}
+          door={o.door}
+          cashBanDays={cashBanDays}
+          onChanged={load}
+          onReturned={setReturnedNumber}
+        />
+      ),
     },
     /* **ولا سطرَ للسائق في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢:
        «السائق — لم يُسنَد بعد: احذفها، هي كمان رح تكون بشريط الرحلة»).
@@ -1213,6 +1254,32 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       </div>
 
       {error && <Alert className="mb-4">{error}</Alert>}
+
+      {/* **وبعد «عُد إلى المكتب» تبقى البضاعةُ معلّقة** — تُسوّى حين تصل
+          المكتب، **ومن يملك المالَ يسوّيها من الطلب نفسِه.** */}
+      {returnedNumber !== null && (
+        <Alert
+          tone="info"
+          className="mb-4"
+          title={m.admin.ordersPage.door.returnedTitle.replace(
+            "{n}",
+            `#${fmtNum(returnedNumber)}`,
+          )}
+          onDismiss={() => setReturnedNumber(null)}
+        >
+          <p>{m.admin.ordersPage.door.returnedBody}</p>
+          {can("finance.manage") ? (
+            <Link
+              href={`/dashboard/history?q=${returnedNumber}`}
+              className="mt-1 inline-block font-medium underline"
+            >
+              {m.admin.ordersPage.door.settleGoods}
+            </Link>
+          ) : (
+            <p className="mt-1">{m.admin.ordersPage.door.returnedFinanceOnly}</p>
+          )}
+        </Alert>
+      )}
 
       <DataView
         items={data?.orders ?? []}
