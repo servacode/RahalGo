@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 384,
+    "routes": 385,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 59,
-    "notify_targeted": 22,
+    "notify_sites": 61,
+    "notify_targeted": 23,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 166,
-    "behaviour_settings": 132,
+    "setting_defs": 165,
+    "behaviour_settings": 131,
     "order_fields": 87,
-    "test_files": 446,
-    "test_funcs": 1854
+    "test_files": 451,
+    "test_funcs": 1868
   },
   "flows": [
     {
@@ -3888,27 +3888,6 @@
     },
     {
       "key": "drivers.dispatch_radius_step_m",
-      "group": "drivers",
-      "kind": "int",
-      "sensitive": false,
-      "money": false,
-      "flows": [
-        "F-07",
-        "F-08",
-        "F-13",
-        "F-27"
-      ],
-      "apps": [
-        "admin",
-        "customer",
-        "driver",
-        "merchant"
-      ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
-    },
-    {
-      "key": "drivers.door_wait_sec",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -8217,6 +8196,42 @@
       "orphan": true
     },
     {
+      "name": "TestDoor_DeliverNow_OrderStaysWithDriver",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDoor_DriverCannotEndOrder",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDoor_GenericOpsTransitionRefused",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDoor_ReturnToOffice_FaultDecidesCompensation",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDoor_Validation",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantDelivery_FailAtDoor_PlatformPays",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestFreeDelivery_DriverStillEarns",
       "file": "internal/orders/driver_fee_test.go",
       "package": "orders_test",
@@ -8502,18 +8517,6 @@
       "name": "TestOpsCustomTimesTakeAgreementForBuying",
       "file": "internal/orders/opscustom_test.go",
       "package": "orders",
-      "orphan": true
-    },
-    {
-      "name": "TestDoorWait_AbsentRefusedUntilWaited",
-      "file": "internal/orders/problem_button_test.go",
-      "package": "orders_test",
-      "orphan": true
-    },
-    {
-      "name": "TestDoorWait_RefusedNeedsNoWait",
-      "file": "internal/orders/problem_button_test.go",
-      "package": "orders_test",
       "orphan": true
     },
     {
@@ -9410,6 +9413,18 @@
       "name": "TestSalePrice",
       "file": "internal/pricing/pricing_test.go",
       "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferPush_ExpiredIsNotSent",
+      "file": "internal/push/offer_expiry_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferPush_UrgentWithTTLAndCollapse",
+      "file": "internal/push/offer_expiry_test.go",
+      "package": "push",
       "orphan": true
     },
     {
@@ -11189,7 +11204,7 @@
       "orphan": true
     },
     {
-      "name": "TestCHAT_TENURE_CustomerToldDriverChanged",
+      "name": "TestCHAT_TENURE_CustomerNotToldDriverChanged",
       "file": "internal/qa/chat_driver_tenure_test.go",
       "package": "qa",
       "orphan": true
@@ -23179,6 +23194,24 @@
       "orphan": true
     },
     {
+      "name": "TestCustomerDriverLabel_ChatPeer",
+      "file": "internal/server/customer_driver_label_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerDriverLabel_OneText",
+      "file": "internal/server/customer_driver_label_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerDriverLabel_OrderView",
+      "file": "internal/server/customer_driver_label_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestAddress_IntruderCannotDelete",
       "file": "internal/server/customer_isolation_test.go",
       "package": "server",
@@ -23413,7 +23446,7 @@
       "orphan": true
     },
     {
-      "name": "TestDriverFail_CodedReasonNeedsNoNote",
+      "name": "TestDriverFail_AtDoorBecomesReport",
       "file": "internal/server/driver_fail_reason_test.go",
       "package": "server",
       "orphan": true
@@ -23785,6 +23818,24 @@
       "orphan": true
     },
     {
+      "name": "TestOfferPush_QueueModeOnlyWhoSeesIt",
+      "file": "internal/server/offer_push_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferPush_RowQueuedForClosedApp",
+      "file": "internal/server/offer_push_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferSweeper_MovesWithinSeconds",
+      "file": "internal/server/offer_push_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestOfferRound_CustomOrderSurvivesExpiry",
       "file": "internal/server/offer_round_test.go",
       "package": "server",
@@ -23875,6 +23926,12 @@
       "orphan": true
     },
     {
+      "name": "TestDoorReport_AlertsOpsWithWaitTime",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDriverFail_WrongStageIs409",
       "file": "internal/server/problem_button_test.go",
       "package": "server",
@@ -23894,12 +23951,6 @@
     },
     {
       "name": "TestEmergency_PickupNoteReachesNextDriver",
-      "file": "internal/server/problem_button_test.go",
-      "package": "server",
-      "orphan": true
-    },
-    {
-      "name": "TestFailReasons_DoorWaitCountdown",
       "file": "internal/server/problem_button_test.go",
       "package": "server",
       "orphan": true
@@ -24081,6 +24132,18 @@
     {
       "name": "TestNoBacktickInsideRawSQL",
       "file": "internal/server/raw_string_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRelease_NeedsReasonAndNote_BeforePickupOnly",
+      "file": "internal/server/release_reason_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRelease_NeverReturnsToLeaver_ShiftEnds_NoApology",
+      "file": "internal/server/release_reason_test.go",
       "package": "server",
       "orphan": true
     },

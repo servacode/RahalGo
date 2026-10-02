@@ -62,6 +62,8 @@ var notifTitles = struct {
 	targetReached                               string
 	payoutRequested, payoutPaid, payoutRejected string
 	warningIssued, driverEmergency              string
+	// **سائقٌ ترك طلباً قبل الاستلام بسبب** — ودوامُه أُغلق (مساءَ ٢٠٢٦-١٠-٠٢).
+	driverReleased string
 	// **رسالةٌ في حديث الطلب — والعنوانُ يقول من كتب لا ماذا كتب.**
 	//
 	// **ولا رقمَ ولا اسمَ شخصٍ في العنوان**: يُقرأ الإشعارُ على شاشةٍ مقفلة،
@@ -89,6 +91,7 @@ var notifTitles = struct {
 	messageFromCustomer: "رسالة من الزبون",
 	warningIssued:       "إنذارٌ على متجرك",
 	driverEmergency:     "طارئٌ لدى سائق",
+	driverReleased:      "سائقٌ ترك طلباً قبل الاستلام — ودوامُه أُغلق",
 	walletCredit:        "إيداع في محفظتك",
 	walletDebit:         "خصم من محفظتك",
 	ratingNew:           "تقييم جديد على خدمتك",

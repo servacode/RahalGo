@@ -40,6 +40,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
@@ -188,6 +189,18 @@ func (s *Service) DispatchProximity(ctx context.Context) DispatchProximity {
 // **وما لم يبقَ له سائقٌ ينتظر بلا عرض** — لا يُهمَل: `SweepExpiredOffers`
 // يلتقطه حين يتحرّر أحدُهم.
 func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) error {
+	// ══════════════════════════════════════════════════════════════════
+	// **ومن ترك الطلبَ مستثنى أبداً — لا لهذه الجولة وحدَها** (قرارُ المالك
+	// مساءَ ٢٠٢٦-١٠-٠٢، البند ٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «لا يعود الطلبُ إلى من تركه أبداً — ولو لم يوجد غيرُه.» **و`offer_passed`
+	// سجلُّ جولةٍ يُصفَّر أدناه حين يدور الطابورُ على الجميع** — فكان الطلبُ يعود
+	// إلى التارك إن لم يبقَ غيرُه. **فالمستثنى أبداً عمودٌ لا يُصفَّر**
+	// (`excluded_drivers`)، **ويُضمّ إلى كلّ استثناءٍ هنا** — في الجولة وفي تصفيرها.
+	excluded := s.excludedDrivers(ctx, orderID)
+	skip = append(append([]string{}, skip...), excluded...)
+
 	// **ونفسُ المسار قبل الدور — وقبل النمط.**
 	//
 	// **وهو قبل الدور لأنّه ليس منافساً له**: الدورُ يوزّع ما لا صاحبَ له،
@@ -233,8 +246,8 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	//
 	// **ولا تُصفَّر إلّا ومرشَّحُها في اليد** — تصفيرٌ بلا مرشَّحٍ يمحو تاريخَ
 	// الجولة ولا يُقدّم الطلبَ خطوة.
-	if errors.Is(err, pgx.ErrNoRows) && len(skip) > 0 {
-		if id2, wait2, err2 := s.pickRotationCandidate(ctx, orderID, nil, limit, maxActive); err2 == nil {
+	if errors.Is(err, pgx.ErrNoRows) && len(skip) > len(excluded) {
+		if id2, wait2, err2 := s.pickRotationCandidate(ctx, orderID, excluded, limit, maxActive); err2 == nil {
 			if _, e := s.db.Exec(ctx,
 				`UPDATE orders SET offer_passed = '{}' WHERE id = $1`, orderID); e != nil {
 				s.logger.Error("الترتيب: تعذّر تصفيرُ الجولة",
@@ -1075,4 +1088,27 @@ func (s *Service) DeclineOffer(ctx context.Context, orderID, driverID string) er
 		return nil
 	}
 	return s.OfferNext(ctx, orderID, skip)
+}
+
+// excludedDrivers **من ترك هذا الطلبَ فلا يعود إليه** — وفارغٌ إن لم يتركه أحد.
+func (s *Service) excludedDrivers(ctx context.Context, orderID string) []string {
+	var out []string
+	if err := s.db.QueryRow(ctx,
+		`SELECT array(SELECT unnest(excluded_drivers)::text) FROM orders WHERE id = $1`,
+		orderID).Scan(&out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// ExcludeDriverTx **يُثبّت أنّ هذا السائقَ ترك الطلب — فلا يعود إليه أبداً.**
+//
+// **في معاملة الترك نفسِها** — فالعرضُ التالي بعد التثبيت يقرؤه.
+func (s *Service) ExcludeDriverTx(ctx context.Context, q dbtx.Querier, orderID, driverID string) error {
+	_, err := q.Exec(ctx, `
+		UPDATE orders
+		SET excluded_drivers = CASE WHEN $2::uuid = ANY(excluded_drivers)
+		                            THEN excluded_drivers ELSE excluded_drivers || $2::uuid END
+		WHERE id = $1`, orderID, driverID)
+	return err
 }

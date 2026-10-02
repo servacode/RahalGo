@@ -178,6 +178,11 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 		// ويُنفَّذ بعد تسجيل الطارئ: **تعثّرُ التحرير يجب ألّا يبتلع النداء.**
 		// فلو سقط الانتقالُ لسببٍ ما بقي الإنذارُ مسجّلاً والعملياتُ تُخبَر،
 		// **وإنسانٌ يتصرّف خيرٌ من صمتٍ لأن آلةً تعثّرت.**
+		// **ولا يعود إليه أبداً** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٢) — كان
+		// الاستثناءُ لجولةٍ واحدة.
+		if err := s.orders.ExcludeDriverTx(ctx, s.pg, orderID, driverID); err != nil {
+			s.logger.Error("الطارئ: تعذّر استثناءُ السائق", "order", orderID, "error", err)
+		}
 		if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
 			orderID, orders.StDispatching, "طارئٌ لدى السائق"); err != nil {
 			released = false
@@ -264,6 +269,9 @@ func (s *Server) emergencyOtherOrders(ctx context.Context, driverID, orderID str
 	for i, o := range out {
 		if o.Status != orders.StAssigned && o.Status != orders.StAtPickup {
 			continue
+		}
+		if err := s.orders.ExcludeDriverTx(ctx, s.pg, o.ID, driverID); err != nil {
+			s.logger.Error("الطارئ: تعذّر استثناءُ السائق", "order", o.ID, "error", err)
 		}
 		if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
 			o.ID, orders.StDispatching, "طارئٌ لدى السائق — طلبٌ آخرُ بيده"); err != nil {

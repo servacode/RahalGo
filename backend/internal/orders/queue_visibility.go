@@ -25,7 +25,9 @@ import (
 func QueueBaseSQL(drv string) string {
 	return `(o.offered_driver_id IS NULL OR o.offered_driver_id = ` + drv + `)
 		  -- **وما رفضه لا يعود إليه** (الرفضُ في «للجميع» إخفاءٌ لا نقل).
-		  AND NOT (` + drv + ` = ANY(o.offer_passed))`
+		  AND NOT (` + drv + ` = ANY(o.offer_passed))
+		  -- **وما تركه لا يعود إليه أبداً** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢).
+		  AND NOT (` + drv + ` = ANY(o.excluded_drivers))`
 }
 
 // QueueDriverFreshLocSQL **موضعُ السائق إن كان حديثاً** — وإلّا `NULL`.

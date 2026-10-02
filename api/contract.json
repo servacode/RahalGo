@@ -4626,6 +4626,10 @@
       ],
       "request": [
         {
+          "name": "reason",
+          "type": "string"
+        },
+        {
           "name": "note",
           "type": "string"
         }
@@ -4633,6 +4637,10 @@
       "response": [
         {
           "name": "released",
+          "type": "bool"
+        },
+        {
+          "name": "shift_ended",
           "type": "bool"
         }
       ],
