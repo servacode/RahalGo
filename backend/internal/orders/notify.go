@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
@@ -488,24 +489,23 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وفي «للجميع» لا يرنّ إلّا لمن يرى الطلبَ في طابوره** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يرنّ عند كلّ سائقٍ على ورديّة في المدينة** — قريباً أو بعيداً،
+	// مؤهَّلاً أو بلغ سقفَه. **فيفتح البعيدُ طلباً لا يجده في طابوره.** والسؤالُ
+	// هو سؤالُ بابِ الطابور نفسُه (`queueAudience`) — **لا شرطٌ ثانٍ يشبهه.**
 	targets := []string{}
 	if driverID != "" {
 		targets = append(targets, driverID)
 	} else {
-		rows, err := s.db.Query(ctx, `
-			SELECT u.id::text FROM users u
-			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-			WHERE u.on_shift AND u.status = 'active'`)
+		ids, err := s.queueAudience(ctx, orderID)
 		if err != nil {
+			s.logger.Error("العرض: تعذّرت قراءةُ من يرى الطلب", "order", orderID, "error", err)
 			return
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id string
-			if err := rows.Scan(&id); err == nil {
-				targets = append(targets, id)
-			}
-		}
+		targets = ids
 	}
 
 	title := t.offerDriver
@@ -532,7 +532,25 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 	//
 	// **والإسنادُ المباشرُ يُحفَظ**: ليس عرضاً ينقضي، **إنّما طلبٌ صار
 	// في يده** — ويُسأل عنه غدا.
-	transient := title == t.offerDriver
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا يُسكَت دفعُه — صفٌّ بنوعٍ لا يُعرَض** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان «يرنّ ولا يُحفَظ» يعني عمليّاً «لا يرنّ والتطبيقُ مغلق»**: العابرُ
+	// لا صفَّ له، **وعاملُ النقل يقرأ الصفوف.** (قِيس على جهاز المالك.) فصار
+	// صفّاً بنوع `order_offer` **يُدفَع عاجلاً ويُحجَب عن الصندوق** — وقرارُ
+	// ٢٠٢٦-٠٨-١٤ باقٍ. **وأجلُه مهلةُ العرض** فلا يصل بعد موته، **ومفتاحُ طيّه
+	// الطلب** فعرضان له صورةٌ واحدة.
+	offer := title == t.offerDriver
+	kind := notifications.KindOrder
+	var ttl time.Duration
+	collapse := ""
+	if offer {
+		kind = notifications.KindOrderOffer
+		ttl = s.offerTTL(ctx, orderID)
+		collapse = "offer:" + orderID
+	}
 	body := merchant
 	if cash > 0 {
 		body = fmt.Sprintf("%s · تقبض %d", merchant, cash)
@@ -540,7 +558,7 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 
 	for _, id := range targets {
 		s.notify.Notify(ctx, notifications.Input{
-			UserID: id, Kind: notifications.KindOrder,
+			UserID: id, Kind: kind,
 			Title: title, Body: body,
 			Entity: "order", EntityID: orderID,
 			Href: "/portal", // **لوحتُه أيّاً كانت** — حُذفت `/driver` من الويب ٢٠٢٦-٠٨-٢٣
@@ -548,10 +566,29 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 			// زبوناً، **وطلبُ عملٍ يرنّ في تطبيق الزبون** خبرٌ في غير
 			// مكانه.
 			Apps: []string{"driver"},
-			// **يرنّ ولا يُحفَظ** — انظر أعلاه.
-			Transient: transient,
+			// **يُدفَع ولا يُعرَض في الصندوق، وله أجل** — انظر أعلاه.
+			TTL: ttl, Collapse: collapse,
 		})
 	}
+}
+
+// offerTTL **ما بقي من مهلة العرض** — من الصفّ إن كان معروضاً على أحدٍ
+// بعينه، وإلّا مهلةُ العرض كاملة. **ولا أقلَّ من ثانية**: الصفرُ «بلا أجل».
+func (s *Service) offerTTL(ctx context.Context, orderID string) time.Duration {
+	var left *float64
+	_ = s.db.QueryRow(ctx, `
+		SELECT EXTRACT(EPOCH FROM (offer_expires_at - now()))
+		FROM orders WHERE id = $1 AND offer_expires_at IS NOT NULL`, orderID).Scan(&left)
+	if left != nil {
+		if *left < 1 {
+			return time.Second
+		}
+		return time.Duration(*left * float64(time.Second))
+	}
+	if d := s.offerTimeout(ctx); d > 0 {
+		return d
+	}
+	return time.Minute
 }
 
 // notifyTargetReached **السائقُ يعرف أنّه بلغ مرحلةً فنال مكافأتَها.**

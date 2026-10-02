@@ -50,6 +50,19 @@ type Store interface {
 // PublicPath مسارُ التنزيل العامُّ لتطبيقٍ — **بمفتاحه لا باسم ملفّه.**
 func PublicPath(key string) string { return "/api/v1/public/app/" + key }
 
+// VersionedPath **مسارُ التنزيل موسوماً ببصمة الأثر** — `?v=` أوّلُ اثني عشرَ
+// حرفاً منها. **والخادمُ لا يقرأ الوسم** (يخدم الأثرَ القائمَ أيّاً كان)؛
+// **إنّما يجعل لكلّ ملفٍّ عنواناً لا يشاركه فيه غيرُه في خبيئة متصفّح.**
+func VersionedPath(key, sha string) string {
+	if len(sha) > 12 {
+		sha = sha[:12]
+	}
+	if sha == "" {
+		return PublicPath(key)
+	}
+	return PublicPath(key) + "?v=" + sha
+}
+
 // Resolve **حالُ التطبيقات الأربعة كما تُقال للناس.**
 //
 // # والترتيبُ مقصود
@@ -85,7 +98,10 @@ func ResolveOne(ctx context.Context, st Store, a App) Public {
 	p.Version = strings.TrimSpace(st.GetString(ctx, VersionKey(a.Key)))
 
 	if size, sha, ok := artifact(ctx, st, a); ok {
-		p.DownloadURL = PublicPath(a.Key)
+		// **والمسارُ يحمل بصمةَ الملفّ** (٢٠٢٦-١٠-٠٢) — **فملفٌّ جديدٌ رابطٌ
+		// جديد**، ولا يجد المتصفّحُ في خبيئته نسخةً قديمةً بالمسار نفسِه.
+		// (قِيس على متصفّح المالك: نزّل ملفّاً قديماً من الرابط نفسِه.)
+		p.DownloadURL = VersionedPath(a.Key, sha)
 		p.SizeBytes = size
 		p.SHA256 = sha
 	}
@@ -200,15 +216,21 @@ func sumOf(path string, fi os.FileInfo) (string, error) {
 //
 // **وتُوسَم الهويّةُ في الاسم**: النسخةُ إن عُرفت، **وإلّا فأوّلُ بصمته**
 // — **فملفّان مختلفان لا يتشابهان في مجلَّد التنزيل.**
+//
+// **وأوّلُ البصمة يُلحق بالنسخة دائماً** (٢٠٢٦-١٠-٠٢): نسخةٌ لم يُبدَّل رقمُها
+// وملفُّها تبدّل **تنزل باسم القديم نفسِه** — فيفتح صاحبُها القديمَ من مجلَّده.
 func FileName(p Public) string {
-	tag := strings.TrimSpace(p.Version)
-	if tag == "" && len(p.SHA256) >= 12 {
-		tag = p.SHA256[:12]
+	parts := []string{}
+	if v := strings.TrimSpace(p.Version); v != "" {
+		parts = append(parts, safeTag(v))
 	}
-	if tag == "" {
+	if len(p.SHA256) >= 8 {
+		parts = append(parts, p.SHA256[:8])
+	}
+	if len(parts) == 0 {
 		return "rahalgo-" + p.Key + ".apk"
 	}
-	return "rahalgo-" + p.Key + "-" + safeTag(tag) + ".apk"
+	return "rahalgo-" + p.Key + "-" + strings.Join(parts, "-") + ".apk"
 }
 
 // safeTag **وسمٌ يصلح في اسم ملفٍّ** — حروفٌ وأرقامٌ ونقطةٌ وشُرطة.

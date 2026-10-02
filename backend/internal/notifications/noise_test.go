@@ -65,11 +65,17 @@ func TestOfferIsTransientAndMoneyIsSilent(t *testing.T) {
 	s := string(src)
 
 	offer := between(s, "func (s *Service) notifyOffer", "\n}\n")
-	if !strings.Contains(offer, "Transient: transient") {
-		t.Error("عرضُ الطلب يُحفَظ في الصندوق — وهو خبرٌ يموت بعد دقيقتين")
+	// **والعرضُ صفٌّ بنوعٍ لا يُعرَض** (٢٠٢٦-١٠-٠٢) — **لا عابر**: العابرُ لا
+	// صفَّ له فلا يُدفَع والتطبيقُ مغلق. **ويبقى خارجَ الصندوق** بنوعه
+	// (`InboxHidden`) — وقرارُ ٢٠٢٦-٠٨-١٤ باقٍ.
+	if strings.Contains(offer, "Transient:") {
+		t.Error("عرضُ الطلب عابرٌ — والعابرُ لا يُدفَع إلى هاتفٍ تطبيقُه مغلق")
 	}
-	if !strings.Contains(offer, "transient := title == t.offerDriver") {
-		t.Error("العرضُ والإسنادُ سواءٌ في الحفظ — والإسنادُ طلبٌ صار في يده يُسأل عنه غدا")
+	if !strings.Contains(offer, "kind = notifications.KindOrderOffer") {
+		t.Error("العرضُ والإسنادُ سواءٌ في النوع — والإسنادُ طلبٌ صار في يده يُسأل عنه غدا")
+	}
+	if !strings.Contains(offer, "offer := title == t.offerDriver") {
+		t.Error("العرضُ لا يُميَّز من الإسناد المباشر")
 	}
 
 	credits := between(s, "func (s *Service) notifyCredits", "\n}\n")

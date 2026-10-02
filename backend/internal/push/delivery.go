@@ -75,6 +75,7 @@ const (
 	classDeadToken = "DEAD_TOKEN"   // المنصّةُ رفضته نهائيّاً
 	classExhausted = "MAX_ATTEMPTS" // نفدت المحاولات
 	classNoTransp  = "NO_TRANSPORT" // لا ناقلَ لهذه المنصّة
+	classExpired   = "EXPIRED"      // مات أجلُ الخبر قبل أن يُرسَل
 )
 
 // deliveryJob صفُّ نقلٍ مطالَبٌ به مع مضمون إشعاره.
@@ -88,6 +89,10 @@ type deliveryJob struct {
 	Kind     string
 	Entity   string
 	EntityID string
+	// ExpiresAt **أجلُ الخبر** — وفارغٌ «بلا أجل». (عرضُ الطلب، ٢٠٢٦-١٠-٠٢.)
+	ExpiresAt *time.Time
+	// Collapse **مفتاحُ الطيّ** — خبران بمفتاحٍ واحدٍ صورةٌ واحدة.
+	Collapse string
 }
 
 // RunDeliveryWorker **حلقةُ النقل** — تُنادى مرّةً عند الإقلاع.
@@ -126,9 +131,17 @@ func (s *Service) DeliverOnce(ctx context.Context) (fanned, sent, retried, faile
 // **والعلامةُ `push_pending` تُكتب في صفّ الإشعار نفسِه** — **فلا فجوةَ
 // بين كتابتين تُضيّع التنبيه** (وهي علّةُ `PF-07` بعينها).
 func (s *Service) fanOut(ctx context.Context) int {
+	// **وما مات أجلُه لا يُفرَّع** — تُطفأ علامتُه ولا يُرسَل. (عرضُ طلبٍ
+	// انقضت مهلتُه: من وصله بعد موته ضغط على طلبٍ ذهب لغيره.)
+	if _, err := s.db.Exec(ctx, `
+		UPDATE notifications SET push_pending = false
+		 WHERE push_pending AND expires_at IS NOT NULL AND expires_at <= now()`); err != nil {
+		s.logger.Error("الدفع: تعذّر إطفاءُ المنقضي", "error", err)
+	}
 	rows, err := s.db.Query(ctx, `
 		SELECT id::text, user_id::text FROM notifications
 		 WHERE push_pending
+		   AND (expires_at IS NULL OR expires_at > now())
 		 ORDER BY created_at
 		 LIMIT $1
 		 FOR UPDATE SKIP LOCKED`, deliveryBatch)
@@ -258,7 +271,8 @@ func (s *Service) claim(ctx context.Context) []deliveryJob {
 		  FROM due, notifications n
 		 WHERE d.id = due.id AND n.id = d.notification_id
 		RETURNING d.id::text, d.token, d.platform, d.attempts,
-		          n.title, n.body, n.kind, n.entity, n.entity_id`,
+		          n.title, n.body, n.kind, n.entity, n.entity_id,
+		          n.expires_at, n.collapse_key`,
 		deliveryBatch, claimLease.String())
 	if err != nil {
 		s.logger.Error("الدفع: تعذّرت المطالبة", "error", err)
@@ -268,7 +282,8 @@ func (s *Service) claim(ctx context.Context) []deliveryJob {
 	for rows.Next() {
 		var j deliveryJob
 		if err := rows.Scan(&j.ID, &j.Token, &j.Platform, &j.Attempts,
-			&j.Title, &j.Body, &j.Kind, &j.Entity, &j.EntityID); err != nil {
+			&j.Title, &j.Body, &j.Kind, &j.Entity, &j.EntityID,
+			&j.ExpiresAt, &j.Collapse); err != nil {
 			rows.Close()
 			return nil
 		}
@@ -296,6 +311,15 @@ func (s *Service) attempt(ctx context.Context, j deliveryJob) outcome {
 		return outcomeTerminal
 	}
 
+	// **وخبرٌ مات أجلُه لا يُرسَل** — يُقيَّد منقضياً لا مُخفِقاً في النقل.
+	var ttl time.Duration
+	if j.ExpiresAt != nil {
+		ttl = time.Until(*j.ExpiresAt)
+		if ttl <= 0 {
+			s.finish(ctx, j, "failed", classExpired, "انقضى أجلُ الخبر قبل إرساله")
+			return outcomeTerminal
+		}
+	}
 	msg := Message{
 		Title: j.Title,
 		Body:  j.Body,
@@ -304,7 +328,11 @@ func (s *Service) attempt(ctx context.Context, j deliveryJob) outcome {
 			"entity":    j.Entity,
 			"entity_id": j.EntityID,
 		},
-		Urgent: j.Kind == kindOrder,
+		// **والعرضُ عاجلٌ كالطلب** — يوقظ الهاتفَ المقفل. (والتطبيقُ يقرأ
+		// `urgent=1` ويعرف `order_offer` عاجلاً أصلاً.)
+		Urgent:   j.Kind == kindOrder || j.Kind == kindOrderOffer,
+		TTL:      ttl,
+		Collapse: j.Collapse,
 	}
 	dead, err := t.Send(ctx, []string{j.Token}, msg)
 
@@ -457,6 +485,9 @@ func truncErr(s string) string {
 // الحزمةُ**: `notifications` تعرف `push` ولا العكس، **ودورةُ استيرادٍ
 // أسوأُ من ثابتٍ مكرَّرٍ يحرسه فحص.**
 const kindOrder = "order"
+
+// kindOrderOffer **نسخةٌ من `notifications.KindOrderOffer`** — بالعلّة نفسِها.
+const kindOrderOffer = "order_offer"
 
 // ══════════════════════════════════════════════════════════════════════
 // **النبضة: محاولةُ الفور بلا انتظارِ صاحب العمل**

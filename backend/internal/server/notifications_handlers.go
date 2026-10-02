@@ -129,8 +129,8 @@ func (s *Server) handleMyNotifications(w http.ResponseWriter, r *http.Request) {
 		// **ولا يُعَدّ نوعٌ لا يُعرَض** — **وصفُّ المحادثة حدثُ نقلٍ
 		// لا خبرٌ في صندوق** (`notifications.KindChat`).
 		`SELECT kind, count(*) FROM notifications
-		  WHERE user_id = $1 AND kind <> $2 GROUP BY kind`,
-		userIDFrom(r), notifications.KindChat)
+		  WHERE user_id = $1 AND kind <> ALL($2::text[]) GROUP BY kind`,
+		userIDFrom(r), notifications.InboxHidden())
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {

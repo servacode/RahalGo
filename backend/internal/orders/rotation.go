@@ -784,6 +784,48 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 	if s.AssignmentMode(ctx) != "rotation" {
 		return
 	}
+	s.sweepOfferExpiry(ctx)
+	s.offerWaiting(ctx)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **العرضُ ينتقل لحظةَ موته — لا بعد نبضة الراصد** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الانتقالُ مع نبضة الراصد (ثلاثون ثانية)** — فعرضٌ مهلتُه دقيقةٌ يبقى
+// ميّتاً عند صاحبه حتّى نصفَ دقيقةٍ أخرى. (قِيس: فجواتٌ نحو عشرين ثانية.)
+//
+// **فحلقةٌ سريعةٌ للعروض وحدَها** — كلَّ ثانية: **سؤالٌ واحدٌ رخيصٌ** عن عرضٍ
+// انقضى، **ولا شيءَ يُفعل إن لم يوجد.** **ومن القاعدة لا من مؤقّتٍ في الذاكرة**:
+// إعادةُ التشغيل لا تُضيّع عرضاً، فالحلقةُ تقرأ ما في الصفّ حين تعود.
+//
+// **وما ينتظر بلا عرضٍ يبقى على نبضة الراصد** (`SweepWaitingOffers`) — هو
+// الأثقل (يسأل عن مرشّحٍ لكلّ منتظِر)، **ولا موعدَ ينقضي فيه.**
+func (s *Service) RunOfferSweeper(ctx context.Context, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if s.AssignmentMode(ctx) == "rotation" {
+				s.sweepOfferExpiry(ctx)
+			}
+		}
+	}
+}
+
+// SweepWaitingOffers **ما ينتظر بلا عرض** — على نبضة الراصد.
+func (s *Service) SweepWaitingOffers(ctx context.Context) {
+	if s.AssignmentMode(ctx) != "rotation" {
+		return
+	}
+	s.offerWaiting(ctx)
+}
+
+// sweepOfferExpiry **العروضُ المنقضيةُ والإسناداتُ الصامتة** — وحدَها.
+func (s *Service) sweepOfferExpiry(ctx context.Context) {
 	s.reclaimSilentAssignments(ctx)
 	rows, err := s.db.Query(ctx, `
 		SELECT id, offered_driver_id FROM orders
@@ -811,20 +853,30 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 			UPDATE orders
 			-- **ولا يُوسَم معرّفٌ مرّتين** — النبضةُ تتكرّر كلَّ ثلاثين ثانيةً
 			-- على طلبٍ ساكن، **فيصير الصفُّ سجلَّ نبضاتٍ لا سجلَّ جولة.**
+			--
+			-- **والعرضُ الميّتُ يُفرَّغ مع الوسم** — فلا يراه صاحبُه في طابوره
+			-- ولا يستطيع قبولَه، **ولا تعود إليه الحلقةُ في الثانية التالية**:
+			-- إن لم يوجد غيرُه صار منتظِراً تلتقطه نبضةُ الراصد.
 			SET offer_passed = CASE WHEN $2::uuid = ANY(offer_passed)
-			                        THEN offer_passed ELSE offer_passed || $2::uuid END
-			WHERE id = $1 RETURNING array(SELECT unnest(offer_passed)::text)`,
+			                        THEN offer_passed ELSE offer_passed || $2::uuid END,
+			    offered_driver_id = NULL, offer_expires_at = NULL
+			-- **والشرطُ يتكرّر في التحديث** — حلقتان أو مُنفّذان يقرآن العرضَ
+			-- نفسَه فيأخذه أوّلُهما، **ولا يُنقل الدورُ مرّتين.**
+			WHERE id = $1 AND offered_driver_id = $2
+			  AND offer_expires_at IS NOT NULL AND offer_expires_at <= now()
+			  AND status = 'dispatching' AND driver_id IS NULL
+			RETURNING array(SELECT unnest(offer_passed)::text)`,
 			e.orderID, e.driverID).Scan(&skip); err != nil {
-			s.logger.Error("الترتيب: تعذّر وسمُ مرور الدور",
-				"order", e.orderID, "error", err)
+			if !errors.Is(err, pgx.ErrNoRows) {
+				s.logger.Error("الترتيب: تعذّر وسمُ مرور الدور",
+					"order", e.orderID, "error", err)
+			}
 			continue
 		}
 		if err := s.OfferNext(ctx, e.orderID, skip); err != nil {
 			s.logger.Error("الترتيب: تعذّر نقل الدور", "order", e.orderID, "error", err)
 		}
 	}
-
-	s.offerWaiting(ctx)
 }
 
 // offerWaiting يعرض ما ينتظر بلا عرض — **حين يتحرّر سائق.**

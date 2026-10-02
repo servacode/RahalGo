@@ -218,6 +218,8 @@ func (s *Server) handleDownloadApp(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
 	w.Header().Set("Content-Disposition", `attachment; filename="rahalgo.apk"`)
+	// **ولا يُخبَّأ** — الرابطُ نفسُه يخدم كلَّ ملفٍّ يُرفع (انظر أدناه).
+	w.Header().Set("Cache-Control", "no-store")
 	http.ServeContent(w, r, "rahalgo.apk", st.ModTime(), f)
 }
 
@@ -278,8 +280,18 @@ func (s *Server) handleDownloadAppByKey(w http.ResponseWriter, r *http.Request) 
 	out := release.FileName(pub)
 	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+out+`"`)
-	// **وأثرٌ موسومٌ بهويّته لا يتبدّل** — فيُخزَّن طويلاً.
-	w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا يُخبَّأ أبداً** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان «يُخزَّن طويلاً» بحجّة أنّ الأثرَ موسومٌ لا يتبدّل** — **والمسارُ
+	// `/public/app/{key}` نفسُه يخدم كلَّ ملفٍّ يُرفع بعده.** فنزّل متصفّحُ
+	// المالك من خبيئته ملفّاً قديماً يوماً كاملاً بعد رفع الجديد.
+	//
+	// **فلا خبيئةَ هنا** — والمسارُ المعروضُ يحمل البصمةَ أيضاً
+	// (`release.VersionedPath`)، **وبصمةُ الملفّ وسمٌ يتحقّق منه من شاء.**
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
+	w.Header().Set("ETag", `"`+pub.SHA256+`"`)
 	http.ServeContent(w, r, out, st.ModTime(), f)
 }
 

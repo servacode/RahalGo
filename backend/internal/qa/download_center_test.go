@@ -137,8 +137,10 @@ func TestDLC3_RegisteredArtifactIsDescribedExactly(t *testing.T) {
 	if d["version"] != "1.2.3" {
 		t.Errorf("DLC3 النسخةُ %v — والمكتوبةُ 1.2.3", d["version"])
 	}
-	if d["download_url"] != "/api/v1/public/app/driver" {
-		t.Errorf("DLC3 مسارُ التنزيل %v", d["download_url"])
+	// **والمسارُ موسومٌ ببصمة الملفّ** (٢٠٢٦-١٠-٠٢) — ملفٌّ جديدٌ رابطٌ جديد،
+	// **فلا يجد المتصفّحُ في خبيئته ملفّاً قديماً بالرابط نفسِه.**
+	if d["download_url"] != "/api/v1/public/app/driver?v="+sum[:12] {
+		t.Errorf("DLC3 مسارُ التنزيل %v — والمتوقّعُ موسوماً بالبصمة", d["download_url"])
 	}
 
 	// **والملفُّ يُخدَم فعلاً — بلا توثيقٍ وباسمٍ يقول ما هو.**
@@ -149,8 +151,19 @@ func TestDLC3_RegisteredArtifactIsDescribedExactly(t *testing.T) {
 	if ct := got.Head.Get("Content-Type"); ct != "application/vnd.android.package-archive" {
 		t.Errorf("DLC3 نوعُ المحتوى %q", ct)
 	}
-	if cd := got.Head.Get("Content-Disposition"); !strings.Contains(cd, "rahalgo-driver-1.2.3.apk") {
+	// **والاسمُ يحمل النسخةَ وأوّلَ البصمة** — نسخةٌ لم يُبدَّل رقمُها وملفُّها
+	// تبدّل لا تنزل باسم القديم.
+	if cd := got.Head.Get("Content-Disposition"); !strings.Contains(cd, "rahalgo-driver-1.2.3-"+sum[:8]+".apk") {
 		t.Errorf("DLC3 **اسمُ التنزيل لا يحمل هويّتَه**: %q", cd)
+	}
+	// **ولا يُخبَّأ** — المسارُ نفسُه يخدم كلَّ ملفٍّ يُرفع بعده (قِيس على متصفّح
+	// المالك: ملفٌّ قديمٌ من الخبيئة يوماً كاملاً).
+	if cc := got.Head.Get("Cache-Control"); !strings.Contains(cc, "no-store") {
+		t.Errorf("DLC3 **الأثرُ يُخبَّأ** (%q) — فينزل القديمُ بعد رفع الجديد", cc)
+	}
+	// **والمسارُ الموسومُ يخدم الأثرَ نفسَه.**
+	if v := dlcGet(t, h, d["download_url"].(string)); v.Code != http.StatusOK || string(v.Body) != string(body) {
+		t.Errorf("DLC3 المسارُ الموسومُ لا يخدم الأثر: %d", v.Code)
 	}
 	if string(got.Body) != string(body) {
 		t.Errorf("DLC3 **المخدومُ ليس الملفَّ المزروع**")

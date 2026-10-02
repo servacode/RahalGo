@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -244,6 +245,19 @@ func (f *FCM) sendOne(ctx context.Context, endpoint, auth, device string, msg Me
 	if msg.Urgent {
 		priority = "high"
 	}
+	// **والمهلةُ ما بقي من عمر الخبر إن كان له أجل** — وإلّا ساعة.
+	ttl := "3600s"
+	if msg.TTL > 0 {
+		sec := int64((msg.TTL + time.Second - 1) / time.Second)
+		ttl = strconv.FormatInt(sec, 10) + "s"
+	}
+	android := map[string]any{
+		"priority": priority,
+		"ttl":      ttl,
+	}
+	if msg.Collapse != "" {
+		android["collapse_key"] = msg.Collapse
+	}
 	payload := map[string]any{
 		"message": map[string]any{
 			"token": device,
@@ -266,20 +280,17 @@ func (f *FCM) sendOne(ctx context.Context, endpoint, auth, device string, msg Me
 			//
 			// **والعنوانُ والنصُّ ينتقلان إلى الحمولة** — ولا يضيعان.
 			"data": withText(msg),
-			"android": map[string]any{
-				"priority": priority,
-				// **ومهلةُ الحياة قصيرة**: طلبٌ عمرُه ساعةٌ لا معنى لتسليمه
-				// بعد يوم — **وإشعارٌ متأخّرٌ عن حدثٍ انتهى يُربك ولا يُفيد.**
-				"ttl": "3600s",
-				// **ولا `notification` هنا أيضاً** — وهي تعمل مع
-				// الحقل الأعلى وحدَه. **والقناةُ يختارها التطبيقُ
-				// الآن** (`ui/PushChannels.kt`)، **وأسماؤها عقدٌ
-				// بين الطرفين**: `rahalgo_urgent` و`rahalgo_default`.
-				//
-				// **ووُجد أنّهما كانا يفترقان** (٢٠٢٦-٠٨-٢٣): المحرّكُ
-				// يرسل `rahalgo_urgent` والتطبيقُ ينشئ `rahalgo_order`
-				// — **فيرتدّ أندرويد إلى قناةٍ صامتة.**
-			},
+			// **ومهلةُ الحياة قصيرة**: طلبٌ عمرُه ساعةٌ لا معنى لتسليمه
+			// بعد يوم — **وإشعارٌ متأخّرٌ عن حدثٍ انتهى يُربك ولا يُفيد.**
+			//
+			// **ولا `notification` هنا أيضاً** — وهي تعمل مع الحقل الأعلى
+			// وحدَه. **والقناةُ يختارها التطبيقُ الآن** (`ui/PushChannels.kt`)،
+			// **وأسماؤها عقدٌ بين الطرفين**: `rahalgo_urgent` و`rahalgo_default`.
+			//
+			// **ووُجد أنّهما كانا يفترقان** (٢٠٢٦-٠٨-٢٣): المحرّكُ يرسل
+			// `rahalgo_urgent` والتطبيقُ ينشئ `rahalgo_order` — **فيرتدّ
+			// أندرويد إلى قناةٍ صامتة.**
+			"android": android,
 		},
 	}
 	body, _ := json.Marshal(payload)

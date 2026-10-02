@@ -550,12 +550,13 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	// ══════════════════════════════════════════════════════════════════
 	//
 	// **ومطفأً — أو بلا نقطةِ التقاطٍ للطلب — يعود البثُّ الصِّرف** كما كان.
+	//
+	// **والشرطُ في المحرّك لا هنا** (`orders.QueueVisibleSQL`) — **ودفعُ العرض
+	// يقرؤه نفسَه** فلا يرنّ إلّا لمن يرى الطلبَ في طابوره (٢٠٢٦-١٠-٠٢).
 	if !s.orders.ProximityEnabled(ctx) {
 		s.scanDriverOrders(w, r, driverOrderSelect+`
 			WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-			  -- **وما رفضه لا يعود إليه** (الرفضُ في «للجميع» إخفاءٌ لا نقل).
-			  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
-			  AND NOT ($1::uuid = ANY(o.offer_passed))
+			  AND `+orders.QueueBaseSQL("$1::uuid")+`
 			ORDER BY o.ready_at NULLS LAST, o.created_at
 			LIMIT 50`, uid, staleLocationMinutes)
 		return
@@ -566,36 +567,10 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	// وبلوغُ الأقصى (أو انعدامُ الخطوة) يُسقط شرطَ المسافة — **شبكةُ أمانٍ
 	// موثَّقة** فلا يبقى طلبٌ عالقاً في منطقةٍ قليلةِ السائقين.
 	dp := s.orders.DispatchProximity(ctx)
-	radiusExpr := `LEAST($6::float8, $7::float8 + $8::float8 *
-		floor(GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at)))) / GREATEST($9::float8, 1)))`
-	freshLoc := `(SELECT du.last_location FROM users du
-	              WHERE du.id = $1 AND du.last_location_at > now() - make_interval(secs => $5))`
+	freshLoc := orders.QueueDriverFreshLocSQL("$1::uuid", "$5")
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-		  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
-		  AND NOT ($1::uuid = ANY(o.offer_passed))
-		  -- **السائقُ السائلُ مؤهَّلٌ فعلاً** — دوامٌ وحالةٌ وسقفُ نقدٍ وعددُ طلبات.
-		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = $1 AND du.on_shift AND du.status = 'active')
-		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = $1), 0)
-		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure.
-		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
-		                  WHERE oi.driver_id = $1 AND oi.closed_at IS NULL), 0)
-		      + o.cash_due <= $3
-		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = $1 AND oo.closed_at IS NULL) < $4
-		  -- ══════════════════════════════════════════════════════════════
-		  -- **السائقُ السائلُ حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك
-		  --  ٢٠٢٦-٠٩-٢٨): مجهولُ الموضع أو شائخُه لا يُبثُّ إليه، **ولو بلغ
-		  --  الطلبُ أقصى توسّعه.** فالبثُّ لا يبلغ من لا يُعرف أين هو.
-		  -- ══════════════════════════════════════════════════════════════
-		  AND `+freshLoc+` IS NOT NULL
-		  -- **حديثٌ داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ
-		  --  تُقاس** — عندها لا يُحجب بالمسافة، **والحداثةُ مضمونةٌ فوق.**
-		  AND (
-		    `+orders.DispatchAnchorSQL+` IS NULL
-		    OR ST_DWithin(`+freshLoc+`, `+orders.DispatchAnchorSQL+`, `+radiusExpr+`)
-		    OR $8 <= 0
-		    OR `+radiusExpr+` >= $6::float8
-		  )
+		  AND `+orders.QueueVisibleSQL("$1::uuid", 3)+`
 		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
 		ORDER BY
 		  CASE WHEN `+freshLoc+` IS NOT NULL AND `+orders.DispatchAnchorSQL+` IS NOT NULL
