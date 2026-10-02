@@ -18,8 +18,6 @@ import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.buildJsonObject
 
 /**
  * **أبواب السائق — كما هي في عقد الـAPI.**
@@ -123,11 +121,13 @@ class DriverApi(private val api: ApiClient) {
         api.call(
             "/api/v1/driver/orders/" + orderId + "/emergency",
             HttpMethod.Post,
-            buildJsonObject {
-                if (lat != null) put("lat", lat)
-                if (lng != null) put("lng", lng)
-                put("note", note)
-            },
+            // ══════════════════════════════════════════════════════════
+            // **صنفٌ موسومٌ لا `buildJsonObject`** (بلاغُ المالك ٢٠٢٦-١٠-٠٢ على جهازه: «لم
+            // يصل البلاغُ للعمليات») — **قِيس ٢٠٢٦-٠٩-٢٩ أنّ `JsonObject` يسقط في النسخة
+            // المضغوطة** (`Serializer for class 'JsonLiteral' is not found`، انظر `sendLocation`)،
+            // **ونسخةُ التجهيز مضغوطةٌ منذ ٢٠٢٦-١٠-٠١ — فسقط الطارئُ كلُّه ولم يُرَ في اختبار.**
+            // ══════════════════════════════════════════════════════════
+            EmergencyBody(lat = lat, lng = lng, note = note),
         )
 
     /**
@@ -256,7 +256,8 @@ class DriverApi(private val api: ApiClient) {
     ): CorrelationVerdict = api.call<CorrelationVerdict>(
         "/api/v1/driver/orders/" + orderId + "/road-correlation",
         HttpMethod.Post,
-        mapOf("route_id" to routeId, "fixes" to fixes),
+        // **وخريطةٌ مختلطةُ الأنواع تسقط في النسخة المضغوطة** — صنفٌ موسوم (٢٠٢٦-١٠-٠٢).
+        CorrelationBody(routeId = routeId, fixes = fixes),
     )
 
     suspend fun transition(
@@ -395,6 +396,25 @@ class DriverApi(private val api: ApiClient) {
      * يُحذَف** لا يُرسَل صفراً: **صفرُ اتّجاهٍ يوجّه الواقفَ شمالاً، وصفرُ
      * `mocked` ادّعاءُ صدقٍ لم يُفحَص.**
      */
+    /** **جسمُ الطارئ** — انظر [emergency]: لا `buildJsonObject` في النسخة المضغوطة. */
+    @Serializable
+    private data class EmergencyBody(
+        val lat: Double? = null,
+        val lng: Double? = null,
+        val note: String = "",
+    )
+
+    /** **جسمُ مطابقة الطريق** — لا خريطةَ مختلطة. */
+    @Serializable
+    private data class CorrelationBody(
+        @SerialName("route_id") val routeId: String,
+        val fixes: List<CorrelationFix>,
+    )
+
+    /** **جسمُ دفعة المواضع** — لا قائمةَ داخلَ خريطة. */
+    @Serializable
+    private data class BatchBody(val points: List<TrackPoint>)
+
     @Serializable
     private data class LocationBody(
         val lat: Double,
@@ -416,7 +436,8 @@ class DriverApi(private val api: ApiClient) {
         api.call<Ack>(
             "/api/v1/driver/location/batch",
             HttpMethod.Post,
-            mapOf("points" to points),
+            // **وقائمةُ أصنافٍ داخلَ خريطةٍ تُخمَّن في زمن التشغيل** — صنفٌ موسومٌ لا تخمين.
+            BatchBody(points = points),
         )
     }
 
