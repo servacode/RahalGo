@@ -183,6 +183,7 @@ const walk = (d, out = []) => {
     ["app/dashboard/cash/page.tsx", 'can("finance.manage")', "تسويةُ نقد السائق"],
     ["app/dashboard/losses/page.tsx", 'can("finance.read")', "تبويبُ الخسائر"],
     ["app/dashboard/payouts/page.tsx", 'can("payouts.decide")', "قرارُ السحب"],
+    ["app/dashboard/compensations/page.tsx", 'can("finance.manage")', "قرارُ التعويض المعلَّق"],
     ["components/admin/money/disputes.tsx", 'can("finance.manage")', "تسويةُ النزاع"],
     ["components/admin/support/tickets.tsx", 'can("support.manage")', "إغلاقُ التذكرة"],
     ["components/admin/orders/OrdersScreen.tsx", 'can("finance.manage")', "تعويضُ السائق"],

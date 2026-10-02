@@ -72,7 +72,7 @@ const ROLES = [
     port: 3001,
     phone: "+963999000001",
     pass: "RahalGo@2026",
-    pages: ["/dashboard", "/dashboard/orders", "/dashboard/users", "/dashboard/sections", "/dashboard/tickets", "/dashboard/wallet", "/dashboard/reports", "/dashboard/settings", "/dashboard/promos", "/dashboard/ratings", "/dashboard/notifications", "/dashboard/broadcast", "/dashboard/incentives", "/dashboard/claims", "/dashboard/losses", "/dashboard/emergencies", "/dashboard/history", "/dashboard/audit", "/dashboard/leads", "/dashboard/cash", "/dashboard/payouts"],
+    pages: ["/dashboard", "/dashboard/orders", "/dashboard/users", "/dashboard/sections", "/dashboard/tickets", "/dashboard/wallet", "/dashboard/reports", "/dashboard/settings", "/dashboard/promos", "/dashboard/ratings", "/dashboard/notifications", "/dashboard/broadcast", "/dashboard/incentives", "/dashboard/claims", "/dashboard/losses", "/dashboard/emergencies", "/dashboard/history", "/dashboard/audit", "/dashboard/leads", "/dashboard/cash", "/dashboard/payouts", "/dashboard/compensations"],
   },
 ];
 
