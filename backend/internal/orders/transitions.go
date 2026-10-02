@@ -431,6 +431,12 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	s.publishWalletsOf(ctx, orderID)
 	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
 	s.notifyTransition(ctx, orderID, to, note, endedBy)
+	// **وحاملُ الطلب يُخبَر حين يُؤخذ منه بفعل غيره** — إلغاءٌ أو إعادةٌ أو
+	// إنهاءٌ يدويّ (`driver_lost.go`). **وكان يُغلَق عليه الطلبُ صامتاً.**
+	if driverID != nil && (to == StCancelled || to == StDispatching || to == StFailed) {
+		code := DriverLossCode(to, endedBy, actorID == *driverID, actorID == "")
+		s.notifyDriverLost(ctx, orderID, *driverID, code)
+	}
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
 	// **وكلُّ من تحرّكت محفظتُه يعرف عمّاذا** — (قرارُ المالك ٢٠٢٦-٠٨-١١:
 	// «الرصيد يتغيّر وما حدا بيعرف ليش»).

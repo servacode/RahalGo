@@ -466,4 +466,14 @@
     <string name="map_no_package">لا حزمة باسم %1$s</string>
     <!-- **تحديثٌ إلزاميٌّ — توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٧). -->
     <string name="update_body_driver">صدر تحديثٌ إلزاميٌّ لتطبيق السائق. نزّله من موقع رحّال غو لتتابع عملك.</string>
+    <!-- **طلبٌ خرج من يده — يُقال لماذا** (٢٠٢٦-١٠-٠٢). -->
+    <string name="lost_title">الطلب #%1$d لم يعد معك</string>
+    <string name="lost_cancelled_customer">ألغى الزبون الطلب.</string>
+    <string name="lost_cancelled_merchant">ألغى المتجر الطلب.</string>
+    <string name="lost_cancelled_ops">ألغت الإدارة الطلب.</string>
+    <string name="lost_requeued_ops">أعادته الإدارة إلى الطابور — لم يعد عليك شيء فيه.</string>
+    <string name="lost_requeued_system">أعادته المنصة إلى الطابور — لم يعد عليك شيء فيه.</string>
+    <string name="lost_merchant_blocked">عاد الطلب إلى الإدارة لتبديل المتجر، وتعويضك بعد موافقتها.</string>
+    <string name="lost_failed_ops">أنهته الإدارة — تعذّر التسليم.</string>
+    <string name="lost_ok">حسناً</string>
 </resources>

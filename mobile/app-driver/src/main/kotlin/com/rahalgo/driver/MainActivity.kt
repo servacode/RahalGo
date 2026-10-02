@@ -541,6 +541,30 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         if (!hasTrip && tab == 0) tab = 1
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وطلبٌ خرج من يده يُقال لماذا — لا قفزةٌ صامتة** (٢٠٢٦-١٠-٠٢)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان يُعاد إلى «الطلبات» بلا كلمة** حين يُلغى طلبُه أو يُعاد إلى الطابور
+    // — فيظنّ عطباً في هاتفه. **والسببُ من سجلّ الطلب** (`Departures`).
+    orders.lostTrip?.let { lost ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = orders::dismissLost,
+            title = { Text(stringResource(R.string.lost_title, lost.number.toInt())) },
+            text = {
+                Text(
+                    com.rahalgo.driver.orders.Departures.reasonRes(lost.reason)
+                        ?.let { stringResource(it) } ?: lost.message,
+                )
+            },
+            confirmButton = {
+                com.rahalgo.ui.RahalTextButton(onClick = orders::dismissLost) {
+                    Text(stringResource(R.string.lost_ok))
+                }
+            },
+        )
+    }
+
     // **ومن قبِل طلبا فُتحت رحلته** — (قرار المالك ٢٠٢٦-٠٨-١٢).
     LaunchedEffect(orders.startTrip) {
         if (orders.startTrip) {

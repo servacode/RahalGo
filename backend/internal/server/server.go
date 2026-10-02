@@ -869,6 +869,8 @@ func (s *Server) Router() http.Handler {
 			// يجد طلباً يتذكّره ليُبلّغ عنه. (انظر `driver_history.go`)
 			r.Get("/orders/history", s.handleDriverHistory)
 			r.Get("/orders/report-reasons", s.handleDriverReportReasons)
+			// **وما آل إليه طلبٌ خرج من يده** — لماذا اختفى (`driver_outcome.go`).
+			r.Get("/orders/{id}/outcome", s.handleDriverOrderOutcome)
 			// **وبلاغُ المرحلة من البابِ نفسِه بحقل `code`** — «لدي مشكلة» لا
 			// تُغلق الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٢، `driver_stage_report.go`).
 			r.Post("/orders/{id}/report", s.handleDriverReportOrStage)

@@ -664,6 +664,9 @@ func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note st
 // autoAssignNote نصُّ حدثِ الإسناد التلقائيّ — **يُقرأ في سجلّ الطلب.**
 const autoAssignNote = "إسنادٌ تلقائيٌّ بالدور"
 
+// reclaimNote نصُّ حدثِ نزعِ إسنادٍ صامت.
+const reclaimNote = "نُزع لعدم التحرّك — عاد إلى الطابور"
+
 // reclaimSilentAssignments ينزع طلباً أُسند مباشرةً ولم يتحرّك صاحبُه.
 //
 // # المسألة
@@ -729,6 +732,19 @@ func (s *Service) reclaimSilentAssignments(ctx context.Context) {
 			}
 			continue
 		}
+		// ══════════════════════════════════════════════════════════════
+		// **والنزعُ يُكتب في السجلّ ويُقال لصاحبه** (٢٠٢٦-١٠-٠٢)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **كان يمرّ بلا حدثٍ ولا خبر** — فيفتح السائقُ تطبيقَه فلا يجد طلبَه
+		// ولا يعرف لماذا، **وسجلُّ الطلب يقفز من «أُسند» إلى «أُسند» لغيره.**
+		if _, e := s.db.Exec(ctx, `
+			INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+			VALUES ($1, 'assigned', 'dispatching', NULL, $3, $2)`,
+			x.orderID, x.driverID, reclaimNote); e != nil {
+			s.logger.Error("الترتيب: تعذّر قيدُ حدثِ النزع", "order", x.orderID, "error", e)
+		}
+		s.notifyDriverLost(ctx, x.orderID, x.driverID, LossRequeuedSystem)
 		s.pub.Publish("driver:"+x.driverID, map[string]any{"type": "order"})
 		s.pub.Publish("ops", map[string]any{"type": "order"})
 		// **والزبونُ يرى طلبَه عاد إلى الطابور** — كما في كلّ مسارٍ يمرّ

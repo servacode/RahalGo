@@ -144,6 +144,22 @@ data class DriverOrder(
 )
 
 /**
+ * **ما آل إليه طلبٌ كان بيد السائق** (`GET /driver/orders/{id}/outcome`، ٢٠٢٦-١٠-٠٢).
+ *
+ * **يُسأل حين يختفي طلبٌ من قائمته** — فيُقال له «ألغى الزبونُ الطلب» بدل أن تُغلَق
+ * الملاحةُ ويقفز صامتاً. **و`reason` فارغٌ: لا خبر** (سلّمه هو أو أعاده هو).
+ */
+@Serializable
+data class DriverOutcome(
+    @SerialName("order_id") val orderId: String = "",
+    val number: Long = 0,
+    val status: String = "",
+    val reason: String = "",
+    /** **جملةُ الخادم** — لرمزٍ لا يعرفه التطبيقُ بعد. */
+    val message: String = "",
+)
+
+/**
  * **أسباب التعذّر — مصنّفة لا حرّة.**
  *
  * (`orders/failreasons.go` — ولكلّ سبب ذنب يقرّر التعويض.)

@@ -188,6 +188,13 @@ class DriverApi(private val api: ApiClient) {
     suspend fun orders(): List<DriverOrder> = api.call("/api/v1/driver/orders")
 
     /**
+     * **لماذا خرج طلبٌ من يده** — إلغاءٌ أو إعادةٌ إلى الطابور أو ردٌّ إلى المكتب
+     * (٢٠٢٦-١٠-٠٢). **ومن سجلّ الطلب لا من الدفع** — فيصل ولو لم يصل الإشعار.
+     */
+    suspend fun outcome(orderId: String): com.rahalgo.shared.model.DriverOutcome =
+        api.call("/api/v1/driver/orders/" + orderId + "/outcome")
+
+    /**
      * **يأخذ الطلب.**
      *
      * **وقد يرفض المحرّك**: وردية مغلقة · طلبات أكثر من حدّه · نقد بلغ

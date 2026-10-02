@@ -36,6 +36,8 @@ var t = struct {
 	driverEarned, merchantEarned, refunded2, compensated string
 	// **وتبدّلُ السائق يُقال** — (قرارُ المالك ٢٠٢٦-١٠-٠٢).
 	driverChanged, newDriverIs string
+	// **والسائقُ يُخبَر حين يُؤخذ منه طلبُه** — انظر `driver_lost.go`.
+	driverLost string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -67,6 +69,7 @@ var t = struct {
 	compensated:              "تعويض في محفظتك",
 	driverChanged:            "تم تغيير السائق",
 	newDriverIs:              "سائقك الجديد: ",
+	driverLost:               "طلبٌ لم يعد معك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.

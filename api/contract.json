@@ -4511,6 +4511,24 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/driver/orders/{id}/outcome",
+      "handler": "handleDriverOrderOutcome",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/driver/orders/{id}/proof",
       "handler": "handleDeliveryProof",
