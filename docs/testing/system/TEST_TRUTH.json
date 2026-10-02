@@ -32,9 +32,9 @@
     ],
     "setting_defs": 165,
     "behaviour_settings": 131,
-    "order_fields": 87,
-    "test_files": 451,
-    "test_funcs": 1868
+    "order_fields": 88,
+    "test_files": 452,
+    "test_funcs": 1870
   },
   "flows": [
     {
@@ -22949,6 +22949,18 @@
     {
       "name": "TestAdminAddresses_OnlyThisUsersAndAllOfThem",
       "file": "internal/server/admin_addresses_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminOrders_DoorViewAndAlertHref",
+      "file": "internal/server/admin_door_view_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminOrders_DoorViewOnlyAtDoor",
+      "file": "internal/server/admin_door_view_test.go",
       "package": "server",
       "orphan": true
     },

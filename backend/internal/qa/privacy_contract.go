@@ -257,8 +257,11 @@ var OrderPrivacy = map[string]FieldRule{
 	"cancel_reason":  {Ref: "السببُ يُقال لمن يخصّه", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
 	"blocked_reason": {Ref: "سببُ الحظر — لصاحبه والإدارة", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"ended_by":       {Ref: "من أنهى — حكمٌ تشغيليٌّ للإدارة", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"fault":          {Ref: "نسبةُ الخطأ — حكمٌ على طرف", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"fail_reason":    {Ref: "سببُ التعذّر", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **لوحةُ الباب للإدارة وحدَها** (٢٠٢٦-١٠-٠٢): آخرُ بلاغٍ من السائق ومدّةُ انتظاره وأمرُ المكتب —
+	// **والسائقُ يقرأ أمرَه من `door_instruction`**، لا من هذا.
+	"door":        {Ref: "door_view.go · لوحةُ «عند باب الزبون»", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"fault":       {Ref: "نسبةُ الخطأ — حكمٌ على طرف", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"fail_reason": {Ref: "سببُ التعذّر", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"goods_settled_to": {Ref: "لمن سُلّمت البضاعةُ — تسويةٌ داخليّة",
 		Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 
