@@ -33,8 +33,8 @@
     "setting_defs": 165,
     "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 432,
-    "test_funcs": 1799
+    "test_files": 435,
+    "test_funcs": 1816
   },
   "flows": [
     {
@@ -6245,6 +6245,24 @@
     {
       "name": "TestDevOTPProviderIsRefusedInProduction",
       "file": "internal/config/otp_provider_test.go",
+      "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestRoutingEngineDefaultsToOSRM",
+      "file": "internal/config/routing_engine_test.go",
+      "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestRoutingEngineUnknownIsRefused",
+      "file": "internal/config/routing_engine_test.go",
+      "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestRoutingEngineValhallaIsRead",
+      "file": "internal/config/routing_engine_test.go",
       "package": "config",
       "orphan": true
     },
@@ -18796,6 +18814,12 @@
       "orphan": true
     },
     {
+      "name": "TestRRT_014_HeadingIsOptional",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestRRT_020_ClientCannotSetDestination",
       "file": "internal/qa/reroute_test.go",
       "package": "qa",
@@ -22713,6 +22737,66 @@
       "orphan": true
     },
     {
+      "name": "TestBearingMissFallsBackOnce",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveValhallaRaqqa",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestOSRMSendsOriginBearing",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestPointWithoutBearingSerializesAsBefore",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaEmptyIsNoEngine",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaErrorsAreNamed",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaFixtureParsesWithOSRMReader",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaHeadingOnOriginOnly",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaRequestCostsAMotorcycle",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaRouteSetAsksAlternates",
+      "file": "internal/routing/valhalla_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
       "name": "TestActivity_HidesRefreshAndFilters",
       "file": "internal/server/admin_activity_filter_test.go",
       "package": "server",
@@ -23790,6 +23874,24 @@
     {
       "name": "TestRotation_TurnPassesAndNeverReturns",
       "file": "internal/server/rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestClientHeadingIgnoresInvalid",
+      "file": "internal/server/route_heading_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestHeadingCellSplitsOpposites",
+      "file": "internal/server/route_heading_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteKeyPrefixKeepsOSRMKeys",
+      "file": "internal/server/route_heading_test.go",
       "package": "server",
       "orphan": true
     },

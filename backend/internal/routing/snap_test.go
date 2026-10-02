@@ -71,7 +71,7 @@ func TestSnapRadiusesSent(t *testing.T) {
 			defer srv.Close()
 
 			c := NewWithSnap(srv.URL, tc.snap)
-			if _, err := c.Route(context.Background(), Point{35.95, 39.01}, Point{35.96, 39.02}); err != nil {
+			if _, err := c.Route(context.Background(), Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02}); err != nil {
 				t.Fatalf("مسار: %v", err)
 			}
 			if got != tc.want {
@@ -98,10 +98,10 @@ func TestSnapRadiusesOnEveryPath(t *testing.T) {
 
 	c := New(srv.URL)
 	ctx := context.Background()
-	if _, err := c.Route(ctx, Point{35.95, 39.01}, Point{35.96, 39.02}); err != nil {
+	if _, err := c.Route(ctx, Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02}); err != nil {
 		t.Fatalf("مفرد: %v", err)
 	}
-	if _, err := c.RouteSet(ctx, Point{35.95, 39.01}, Point{35.96, 39.02}); err != nil {
+	if _, err := c.RouteSet(ctx, Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02}); err != nil {
 		t.Fatalf("بدائل: %v", err)
 	}
 	if len(seen) < 2 {
@@ -132,7 +132,7 @@ func TestNoSegmentIsTypedAndNotRetried(t *testing.T) {
 
 	c := New(srv.URL)
 	// **باريس** — الحالةُ التي كشفها القياس.
-	_, err := c.Route(context.Background(), Point{48.8566, 2.3522}, Point{35.95, 39.01})
+	_, err := c.Route(context.Background(), Point{Lat: 48.8566, Lng: 2.3522}, Point{Lat: 35.95, Lng: 39.01})
 	if !errors.Is(err, ErrNoSegment) {
 		t.Fatalf("الخطأُ ليس ErrNoSegment: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestNoRouteIsTyped(t *testing.T) {
 		return map[string]any{"code": "NoRoute"}
 	})
 	defer srv.Close()
-	_, err := New(srv.URL).Route(context.Background(), Point{35.95, 39.01}, Point{35.96, 39.02})
+	_, err := New(srv.URL).Route(context.Background(), Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02})
 	if !errors.Is(err, ErrNoRoute) {
 		t.Fatalf("الخطأُ ليس ErrNoRoute: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestOverviewRetryKeepsRadius(t *testing.T) {
 	defer srv.Close()
 
 	if _, err := New(srv.URL).Route(context.Background(),
-		Point{35.95, 39.01}, Point{35.96, 39.02}); err != nil {
+		Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02}); err != nil {
 		t.Fatalf("مسار: %v", err)
 	}
 	if len(seen) != 2 {
@@ -247,7 +247,7 @@ func TestRadiusSeparatorIsEncodedOnTheWire(t *testing.T) {
 	srv := fakeOSRM(t, func(url.Values) any { return okBody() })
 	defer srv.Close()
 	if _, err := New(srv.URL).Route(context.Background(),
-		Point{35.95, 39.01}, Point{35.96, 39.02}); err != nil {
+		Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02}); err != nil {
 		t.Fatalf("مسار: %v", err)
 	}
 	if len(rawQueries) == 0 {

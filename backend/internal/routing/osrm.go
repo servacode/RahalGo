@@ -23,7 +23,10 @@ package routing
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,6 +37,10 @@ import (
 type Point struct {
 	Lat float64
 	Lng float64
+	// Bearing **اتّجاهُ السائق بالدرجات** — وفارغٌ يعني «غيرُ معروف».
+	// طلبُ المالك ٢٠٢٦-١٠-٠٢: الموتور يدخل كلّ الطرق مو سيارة — فالمسارُ
+	// يبدأ في اتّجاه سيره لا خلفَه. **ولا يُخزَّن فارغاً** (omitempty).
+	Bearing *float64 `json:",omitempty"`
 }
 
 // Route ما يردّه المحرّك.
@@ -180,6 +187,10 @@ func (c *Client) fetch(ctx context.Context, from, to Point, alternatives int) ([
 		return nil, ErrNoEngine
 	}
 	out, err := c.request(ctx, from, to, alternatives, "false")
+	if retryWithoutBearing(err, from) {
+		from.Bearing = nil
+		out, err = c.request(ctx, from, to, alternatives, "false")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +234,10 @@ func (c *Client) request(
 	if c.snap.bounded() {
 		url += "&radiuses=" + c.snap.radiuses()
 	}
+	// **واتّجاهُ الأصل إن عُرف** — ±٤٥° والوجهةُ بلا قيد (٢٠٢٦-١٠-٠٢).
+	if b := bearingValue(from.Bearing); b != "" {
+		url += "&bearings=" + b + ",45%3B"
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -251,9 +266,19 @@ func (c *Client) request(
 		return nil, fmt.Errorf("routing: ردّ %d", res.StatusCode)
 	}
 
+	return parseOSRMResponse(res.Body)
+}
+
+// parseOSRMResponse **يفكّ ردّاً بصيغة OSRM إلى مسارات** — مشتركٌ بين
+// OSRM وValhalla (`format=osrm`)، فلا يكون للمحرّكين قارئان يفترقان.
+// (٢٠٢٦-١٠-٠٢.)
+func parseOSRMResponse(r io.Reader) ([]*Route, error) {
 	var body struct {
-		Code   string `json:"code"`
-		Routes []struct {
+		Code string `json:"code"`
+		// ErrorCode **رمزُ Valhalla الأصليّ** — يأتي إن لم تُطبَّق صيغةُ
+		// OSRM على الخطأ (٢٠٢٦-١٠-٠٢).
+		ErrorCode int `json:"error_code"`
+		Routes    []struct {
 			Distance float64 `json:"distance"`
 			Duration float64 `json:"duration"`
 			// ══════════════════════════════════════════════════════
@@ -302,7 +327,7 @@ func (c *Client) request(
 			} `json:"legs"`
 		} `json:"routes"`
 	}
-	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(r).Decode(&body); err != nil {
 		return nil, err
 	}
 	// **و«لا مسار» ليست خطأً في النداء**: نقطةٌ في الصحراء بلا طريقٍ إليها
@@ -323,6 +348,9 @@ func (c *Client) request(
 			return nil, ErrNoSegment
 		case "NoRoute":
 			return nil, ErrNoRoute
+		}
+		if err := valhallaError(body.ErrorCode); err != nil {
+			return nil, err
 		}
 		return nil, fmt.Errorf("routing: %s", body.Code)
 	}
@@ -364,3 +392,27 @@ func (c *Client) request(
 // coord يكتب الإحداثيَّ بستّ منازل — **نحوُ عشرة سنتيمترات**، وما زاد
 // عليها ضجيجٌ يطيل العنوان.
 func coord(v float64) string { return strconv.FormatFloat(v, 'f', 6, 64) }
+
+// bearingValue **اتّجاهٌ صحيحٌ بين ٠ و٣٥٩** — وفارغٌ إن لم يُعرف.
+func bearingValue(b *float64) string {
+	if b == nil || math.IsNaN(*b) || math.IsInf(*b, 0) {
+		return ""
+	}
+	return strconv.Itoa(normBearing(*b))
+}
+
+// retryWithoutBearing **اتّجاهٌ ضيّقٌ لا يُسقط المسار**: إن لم تُطابق
+// طريقٌ ضمنَ الحدّ اتّجاهَه (بوصلةُ واقفٍ تضطرب) يُعاد بلا اتّجاه مرّةً —
+// **وحدُّ الالتقاط باقٍ كما هو** فلا يعود العيبُ الصامت (٢٠٢٦-١٠-٠٢).
+func retryWithoutBearing(err error, from Point) bool {
+	return errors.Is(err, ErrNoSegment) && from.Bearing != nil
+}
+
+// normBearing يطوي الدرجاتِ إلى ٠..٣٥٩ — فـ٣٦٠ تصير صفراً.
+func normBearing(b float64) int {
+	d := int(math.Round(b)) % 360
+	if d < 0 {
+		d += 360
+	}
+	return d
+}

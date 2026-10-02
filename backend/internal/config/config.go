@@ -63,6 +63,13 @@ type Config struct {
 	// لأنّ خدمةَ مساراتٍ نامت** أسوأُ من مسافةٍ تقريبيّة.
 	OSRMURL string
 
+	// RoutingEngine **أيُّ محرّكٍ يرسم المسار**: `osrm` (الافتراض) أو
+	// `valhalla`. طلبُ المالك ٢٠٢٦-١٠-٠٢: الموتور يدخل كلّ الطرق مو سيارة
+	// — وValhalla له تكلفةُ دراجةٍ ناريّةٍ لا يملكها ملفُّ OSRM.
+	RoutingEngine string
+	// ValhallaURL عنوانُ Valhalla — **ولا يُقرأ إلّا مع `valhalla`.**
+	ValhallaURL string
+
 	// WebOrigins **نطاقاتُ الواجهة المسموح لها بمناداة المحرّك.**
 	//
 	// **تُفصَل بفاصلة** (`https://a.com,https://b.com`)، **ويُقبل النجم في
@@ -158,6 +165,8 @@ func Load() (*Config, error) {
 		UploadsDir:       getEnv("UPLOADS_DIR", "./uploads"),
 		GeocoderURL:      getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
 		OSRMURL:          getEnv("OSRM_URL", ""),
+		RoutingEngine:    strings.ToLower(strings.TrimSpace(getEnv("ROUTING_ENGINE", "osrm"))),
+		ValhallaURL:      getEnv("VALHALLA_URL", ""),
 		WebOrigins:       splitList(getEnv("WEB_ORIGINS", "")),
 	}
 
@@ -180,6 +189,14 @@ func Load() (*Config, error) {
 	// موضعه عرف قبل أن يرفع صورةً واحدة.**
 	if abs, err := filepath.Abs(cfg.UploadsDir); err == nil {
 		cfg.UploadsDir = abs
+	}
+
+	// **ومحرّكٌ مجهولُ الاسم خطأُ تشغيل** — لا يُبدَّل صامتاً إلى OSRM
+	// فيظنّ المشغّلُ أنّه يقيس Valhalla (٢٠٢٦-١٠-٠٢).
+	switch cfg.RoutingEngine {
+	case "osrm", "valhalla":
+	default:
+		return nil, fmt.Errorf("config: ROUTING_ENGINE=%q — expected osrm or valhalla", cfg.RoutingEngine)
 	}
 
 	if cfg.Env == "production" {

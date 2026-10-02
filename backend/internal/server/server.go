@@ -69,7 +69,13 @@ type Server struct {
 	//
 	// **والخادمُ لا يعرف أيَّ محرّكٍ يردّ** — يعرف أنّه يردّ
 	// `Route` و`RouteSet`. **ولا يعلم به الجوّالُ أصلاً** (البند ٢).
-	route     routing.Backend
+	route routing.Backend
+	// routeEngine **اسمُ المحرّك المختار** (`osrm`/`valhalla`) — للسجلّ
+	// ولمفتاح المخبأ وحدَهما (٢٠٢٦-١٠-٠٢).
+	routeEngine string
+	// osrm **عقدُ OSRM ومطابقتُه** — الارتباطُ ميزةُ OSRM وحدَه، فيبقى
+	// عليه وإن رسم Valhalla المسار. وبلا `OSRM_URL` يُعطَّل بهدوء.
+	osrm      *routing.Client
 	notify    *notifications.Service
 	push      *push.Service
 	otpStatus func() map[string]any
@@ -203,9 +209,17 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		}()
 	})
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
-	routeClient := routing.New(cfg.OSRMURL)
+	osrmClient := routing.New(cfg.OSRMURL)
+	// **والمحرّكُ يُختار بالإعداد** — طلبُ المالك ٢٠٢٦-١٠-٠٢: الموتور
+	// يدخل كلّ الطرق مو سيارة.
+	var routeClient routing.Backend = osrmClient
+	if cfg.RoutingEngine == "valhalla" {
+		routeClient = routing.NewValhalla(cfg.ValhallaURL)
+	}
 	if !routeClient.Enabled() {
-		logger.Warn("المسارات: لا محرّك — المسافةُ بخطٍّ مستقيم")
+		logger.Warn("المسارات: لا محرّك — المسافةُ بخطٍّ مستقيم", "engine", cfg.RoutingEngine)
+	} else {
+		logger.Info("المسارات: المحرّك", "engine", cfg.RoutingEngine)
 	}
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
 	ordersSvc.SetNotifier(notify)
@@ -218,7 +232,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
-		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient}
+		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient,
+		routeEngine: cfg.RoutingEngine, osrm: osrmClient}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)

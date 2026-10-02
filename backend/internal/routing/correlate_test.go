@@ -155,7 +155,7 @@ func TestNodesUsesSnapRadius(t *testing.T) {
 	}))
 	defer srv.Close()
 	ns, err := New(srv.URL).Nodes(context.Background(),
-		Point{35.95, 39.01}, Point{35.96, 39.02})
+		Point{Lat: 35.95, Lng: 39.01}, Point{Lat: 35.96, Lng: 39.02})
 	if err != nil || len(ns) != 2 {
 		t.Fatalf("عقد: %v %v", ns, err)
 	}

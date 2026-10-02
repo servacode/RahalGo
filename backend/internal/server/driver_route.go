@@ -196,6 +196,12 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	if local != nil {
 		from = *local
 	}
+	// **واتّجاهُ السائق يُرفق بموضعه وحدَه** — لا بنقطة الاستلام إن
+	// صارت أصلاً. طلبُ المالك ٢٠٢٦-١٠-٠٢: الموتور يدخل كلّ الطرق مو
+	// سيارة — فلا يبدأ المسارُ خلفَه بدورانٍ للخلف.
+	if local != nil || (!picked && fromLat != nil && fromLng != nil) {
+		from.Bearing = clientHeading(r)
+	}
 	to := routing.Point{Lat: pickLat, Lng: pickLng}
 	if picked {
 		to = routing.Point{Lat: dropLat, Lng: dropLng}
@@ -250,7 +256,7 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, routing.ErrNoEngine):
 			reason = "لا محرّك"
 		}
-		s.logger.Warn("المسار: "+reason, "error", err, "target", target)
+		s.logger.Warn("المسار: "+reason, "error", err, "target", target, "engine", s.routeEngine)
 		httpx.JSON(w, http.StatusOK, map[string]any{"available": false})
 		return
 	}
@@ -464,6 +470,38 @@ func clientPoint(r *http.Request) (*routing.Point, error) {
 	return &routing.Point{Lat: lat, Lng: lng}, nil
 }
 
+// clientHeading **اتّجاهُ السائق من `heading`** (٠..٣٦٠) — وفاسدُه يُهمَل
+// لا يُرفض: هو تحسينٌ لا شرط، ونسخةٌ لا ترسله تعمل كما كانت (٢٠٢٦-١٠-٠٢).
+func clientHeading(r *http.Request) *float64 {
+	raw := r.URL.Query().Get("heading")
+	if raw == "" {
+		return nil
+	}
+	h, err := strconv.ParseFloat(raw, 64)
+	if err != nil || math.IsNaN(h) || h < 0 || h > 360 {
+		return nil
+	}
+	return &h
+}
+
+// routeKeyPrefix **مفتاحُ المخبأ بمحرّكه** — مسارُ OSRM لا يُقرأ جواباً
+// لـValhalla. **وOSRM يبقى بمفتاحه القديم** فلا يبرد مخبأٌ يعمل.
+func (s *Server) routeKeyPrefix() string {
+	if s.routeEngine == "" || s.routeEngine == "osrm" {
+		return ""
+	}
+	return s.routeEngine + ":"
+}
+
+// headingCell **ثمانيةُ قطاعاتٍ بـ٤٥°** — اتّجاهان متقاربان يتشاركان
+// الجوابَ، والمعاكسان لا (٢٠٢٦-١٠-٠٢).
+func headingCell(b *float64) string {
+	if b == nil {
+		return ""
+	}
+	return ":h" + strconv.Itoa(int(math.Mod(*b+22.5, 360)/45))
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // **مخبأُ المجموعة — مفصولٌ عن المفرد** (البند ١٧)
 // ══════════════════════════════════════════════════════════════════════
@@ -483,9 +521,10 @@ func (s *Server) routeSetCached(
 		mode = cacheModeAlts
 		decimals = cellDecimalsAlts
 	}
-	key := "route:" + routeCacheVersion + ":" + mode + ":" +
+	key := "route:" + routeCacheVersion + ":" + s.routeKeyPrefix() + mode + ":" +
 		cellAt(from.Lat, decimals) + "," + cellAt(from.Lng, decimals) + ";" +
-		cellAt(to.Lat, decimals) + "," + cellAt(to.Lng, decimals)
+		cellAt(to.Lat, decimals) + "," + cellAt(to.Lng, decimals) +
+		headingCell(from.Bearing)
 
 	if s.rdb != nil {
 		if raw, err := s.rdb.Get(ctx, key).Bytes(); err == nil {
@@ -571,7 +610,7 @@ func (s *Server) routeCached(ctx context.Context, from, to routing.Point) (*rout
 	//
 	// **ومفتاحٌ جديدٌ لا إبطالٌ صريح** — القديمُ يموت وحدَه بعد عشر
 	// دقائق، **ولا يُمسّ مفتاحُ سائقٍ يقود الآن.**
-	key := "route:" + routeCacheVersion + ":" +
+	key := "route:" + routeCacheVersion + ":" + s.routeKeyPrefix() +
 		cell(from.Lat) + "," + cell(from.Lng) + ";" + cell(to.Lat) + "," + cell(to.Lng)
 	if s.rdb != nil {
 		if raw, err := s.rdb.Get(ctx, key).Bytes(); err == nil {

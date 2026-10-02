@@ -164,6 +164,27 @@ func TestRRT_013_MalformedCoordinatesRejected(t *testing.T) {
 	}
 }
 
+// TestRRT_014_HeadingIsOptional **الاتّجاهُ تحسينٌ لا شرط** — صالحُه
+// يُقبل وفاسدُه يُهمَل ولا يُردّ (٢٠٢٦-١٠-٠٢: الموتور يدخل كلّ الطرق).
+func TestRRT_014_HeadingIsOptional(t *testing.T) {
+	h := New(t)
+	oid, drv := h.assignedOrder(t)
+	for _, q := range []string{
+		"lat=35.9506&lng=39.0094&heading=180",
+		"lat=35.9506&lng=39.0094&heading=abc",
+		"lat=35.9506&lng=39.0094&heading=999",
+		"heading=90",
+	} {
+		got := h.GET(routePath(oid, q), drv.Token)
+		if got.Code != 200 {
+			t.Errorf("RRT-014 (%s) رُدّ: %s", q, got)
+		}
+		if _, ok := got.JSON()["available"]; !ok {
+			t.Errorf("RRT-014 (%s) العقدُ تبدّل: %s", q, got)
+		}
+	}
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // **٣ · ولا يحدّد الجهازُ وجهةً**
 // ══════════════════════════════════════════════════════════════════════

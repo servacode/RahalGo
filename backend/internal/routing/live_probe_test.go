@@ -17,10 +17,10 @@ func TestLiveSelfSimilarity(t *testing.T) {
 		name     string
 		from, to Point
 	}{
-		{"الرقّة→دمشق", Point{35.9500, 39.0050}, Point{33.5138, 36.2765}},
-		{"الرقّة→ديرالزور", Point{35.9500, 39.0050}, Point{35.3350, 40.1400}},
-		{"دمشق→اللاذقيّة", Point{33.5138, 36.2765}, Point{35.5200, 35.7900}},
-		{"حلب→حمص", Point{36.2021, 37.1343}, Point{34.7308, 36.7090}},
+		{"الرقّة→دمشق", Point{Lat: 35.9500, Lng: 39.0050}, Point{Lat: 33.5138, Lng: 36.2765}},
+		{"الرقّة→ديرالزور", Point{Lat: 35.9500, Lng: 39.0050}, Point{Lat: 35.3350, Lng: 40.1400}},
+		{"دمشق→اللاذقيّة", Point{Lat: 33.5138, Lng: 36.2765}, Point{Lat: 35.5200, Lng: 35.7900}},
+		{"حلب→حمص", Point{Lat: 36.2021, Lng: 37.1343}, Point{Lat: 34.7308, Lng: 36.7090}},
 	}
 	for _, tc := range cases {
 		all, err := c.RouteSet(context.Background(), tc.from, tc.to)

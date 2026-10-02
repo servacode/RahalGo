@@ -94,14 +94,9 @@ func (s *Server) storeCorrelation(
 
 // routeNodes **عقدُ المسار من المحرّك** — وفارغٌ إن لم يكن ثمّة محرّك.
 func (s *Server) routeNodes(ctx context.Context, from, to routing.Point) ([]int64, error) {
-	type nodeSource interface {
-		Nodes(context.Context, routing.Point, routing.Point) ([]int64, error)
-	}
-	src, ok := s.route.(nodeSource)
-	if !ok {
-		return nil, routing.ErrNoEngine
-	}
-	return src.Nodes(ctx, from, to)
+	// **من OSRM وحدَه** وإن رسم Valhalla المسار — فعقدُ المسار وعقدُ
+	// المطابقة من شبكةٍ واحدة (٢٠٢٦-١٠-٠٢). وفارغُه يردّ ErrNoEngine.
+	return s.osrm.Nodes(ctx, from, to)
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -193,15 +188,11 @@ func (s *Server) handleRoadCorrelation(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	type matcher interface {
-		Match(context.Context, []routing.TracePoint) (*routing.MatchResult, error)
-	}
-	m, ok := s.route.(matcher)
-	if !ok {
+	if !s.osrm.Enabled() {
 		s.correlationReply(w, correlationInsufficient, 0)
 		return
 	}
-	res, err := m.Match(r.Context(), trace)
+	res, err := s.osrm.Match(r.Context(), trace)
 	if err != nil || res == nil || len(res.Nodes) == 0 {
 		if err != nil && !errors.Is(err, routing.ErrNoRoute) {
 			s.logger.Warn("الارتباط: تعذّرت المطابقة", "error", err)

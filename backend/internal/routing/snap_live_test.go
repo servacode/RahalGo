@@ -26,19 +26,19 @@ func TestLiveFarCoordinatesRejected(t *testing.T) {
 	if base == "" {
 		t.Skip("لا محرّك")
 	}
-	raqqa := Point{35.9500, 39.0100}
+	raqqa := Point{Lat: 35.9500, Lng: 39.0100}
 	far := []struct {
 		name string
 		p    Point
 		// snappedKm **ما قِيس قبل الحماية.**
 		snappedKm int
 	}{
-		{"باريس", Point{48.8566, 2.3522}, 3111},
-		{"القاهرة", Point{30.0444, 31.2357}, 523},
-		{"أنقرة", Point{39.9334, 32.8597}, 473},
-		{"بغداد", Point{33.3152, 44.3661}, 332},
-		{"البحرُ المتوسّط", Point{35.0000, 34.0000}, 170},
-		{"الباديةُ السوريّة", Point{33.5000, 39.5000}, 23},
+		{"باريس", Point{Lat: 48.8566, Lng: 2.3522}, 3111},
+		{"القاهرة", Point{Lat: 30.0444, Lng: 31.2357}, 523},
+		{"أنقرة", Point{Lat: 39.9334, Lng: 32.8597}, 473},
+		{"بغداد", Point{Lat: 33.3152, Lng: 44.3661}, 332},
+		{"البحرُ المتوسّط", Point{Lat: 35.0000, Lng: 34.0000}, 170},
+		{"الباديةُ السوريّة", Point{Lat: 33.5000, Lng: 39.5000}, 23},
 	}
 
 	// **بلا حدٍّ: يمرّ كلُّها** — وهذا هو العيب.
@@ -85,13 +85,13 @@ func TestLiveValidPointsStillRoute(t *testing.T) {
 		from, to Point
 	}{
 		// **مواضعُ حضريّةٌ حقيقيّة** — من رفيدة المرحلة ٨.
-		{"الرقّة حضريّ", Point{35.9500, 39.0100}, Point{35.9600, 39.0200}},
-		{"دمشق حضريّ", Point{33.5138, 36.2765}, Point{33.5220, 36.2900}},
-		{"حلب حضريّ", Point{36.2021, 37.1343}, Point{36.2100, 37.1500}},
+		{"الرقّة حضريّ", Point{Lat: 35.9500, Lng: 39.0100}, Point{Lat: 35.9600, Lng: 39.0200}},
+		{"دمشق حضريّ", Point{Lat: 33.5138, Lng: 36.2765}, Point{Lat: 33.5220, Lng: 36.2900}},
+		{"حلب حضريّ", Point{Lat: 36.2021, Lng: 37.1343}, Point{Lat: 36.2100, Lng: 37.1500}},
 		// **وريفيّةٌ وبين المدن** — حيث الشبكةُ أرقّ.
-		{"الرقّة→الطبقة", Point{35.9500, 39.0100}, Point{35.8400, 38.5450}},
-		{"الرقّة→دمشق", Point{35.9500, 39.0100}, Point{33.5138, 36.2765}},
-		{"ديرالزور→دمشق", Point{35.3350, 40.1400}, Point{33.5138, 36.2765}},
+		{"الرقّة→الطبقة", Point{Lat: 35.9500, Lng: 39.0100}, Point{Lat: 35.8400, Lng: 38.5450}},
+		{"الرقّة→دمشق", Point{Lat: 35.9500, Lng: 39.0100}, Point{Lat: 33.5138, Lng: 36.2765}},
+		{"ديرالزور→دمشق", Point{Lat: 35.3350, Lng: 40.1400}, Point{Lat: 33.5138, Lng: 36.2765}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -118,11 +118,11 @@ func TestLiveGpsOffsetStillRoutes(t *testing.T) {
 		t.Skip("لا محرّك")
 	}
 	c := New(base)
-	dst := Point{35.9600, 39.0250}
+	dst := Point{Lat: 35.9600, Lng: 39.0250}
 	origins := []Point{
-		{35.9500, 39.0100}, // الرقّة
-		{33.5138, 36.2765}, // دمشق
-		{36.2021, 37.1343}, // حلب
+		{Lat: 35.9500, Lng: 39.0100}, // الرقّة
+		{Lat: 33.5138, Lng: 36.2765}, // دمشق
+		{Lat: 36.2021, Lng: 37.1343}, // حلب
 	}
 	// **درجةُ عرضٍ ≈ ١١١٣٢٠م** — فالإزاحةُ تُحسب منها.
 	const degPerM = 1.0 / 111320.0
@@ -131,12 +131,12 @@ func TestLiveGpsOffsetStillRoutes(t *testing.T) {
 		for _, off := range []float64{10, 25, 50, 75} {
 			// **شمالاً ثمّ شرقاً** — اتّجاهان لا واحد.
 			for _, d := range []Point{
-				{o.Lat + off*degPerM, o.Lng},
-				{o.Lat, o.Lng + off*degPerM*1.22},
+				{Lat: o.Lat + off*degPerM, Lng: o.Lng},
+				{Lat: o.Lat, Lng: o.Lng + off*degPerM*1.22},
 			} {
 				to := dst
 				if o.Lat > 35.0 && o.Lng < 38.0 {
-					to = Point{o.Lat + 0.02, o.Lng + 0.02}
+					to = Point{Lat: o.Lat + 0.02, Lng: o.Lng + 0.02}
 				}
 				_, err := c.Route(context.Background(), d, to)
 				if errors.Is(err, ErrNoSegment) {
@@ -156,8 +156,8 @@ func TestLiveRadiusIsHonoured(t *testing.T) {
 	if base == "" {
 		t.Skip("لا محرّك")
 	}
-	p := Point{35.9500, 39.0100}
-	to := Point{35.9600, 39.0200}
+	p := Point{Lat: 35.9500, Lng: 39.0100}
+	to := Point{Lat: 35.9600, Lng: 39.0200}
 
 	if _, err := New(base).Route(context.Background(), p, to); err != nil {
 		t.Fatalf("الحدُّ الافتراضيُّ رفض نقطةً على ٤٥٫٥م: %v", err)
