@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // tenureFx **طلبٌ في الطابور وسائقان على وردية.**
@@ -62,7 +64,9 @@ func acceptOrder(t *testing.T, h *Harness, drv *User, oid string) {
 
 func releaseOrder(t *testing.T, h *Harness, drv *User, oid string) {
 	t.Helper()
-	if got := h.POST("/api/v1/driver/orders/"+oid+"/release", drv.Token, nil); got.Code >= 400 {
+	// **والتركُ بسببٍ وكلمة** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٢).
+	if got := h.POST("/api/v1/driver/orders/"+oid+"/release", drv.Token,
+		map[string]any{"reason": "bike_broken", "note": "تعطّلت الدرّاجة"}); got.Code >= 400 {
 		t.Fatalf("**التركُ رُدّ**: %s", got)
 	}
 }
@@ -84,6 +88,8 @@ func chatThread(t *testing.T, h *Harness, tok, orderID string) map[string]any {
 	return nil
 }
 
+// releaseApology **السطرُ الذي كان يُكتب عند الترك — وحُذف** (مساءَ ٢٠٢٦-١٠-٠٢)؛
+// يبقى هنا ليُثبت غيابَه.
 const releaseApology = "أعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."
 
 // TestCHAT_TENURE_FreshChatPerDriver **حديثٌ جديدٌ للثاني، وولايةُ الأوّل
@@ -97,20 +103,21 @@ func TestCHAT_TENURE_FreshChatPerDriver(t *testing.T) {
 	sayAged(t, h, fx.Cust.Token, fx.Order, "الطابق الثالث")
 	releaseOrder(t, h, fx.DrvA, fx.Order)
 
-	// **والاعتذارُ في ولاية التارك** — لا بلا ولايةٍ ولا في ولاية من بعده.
-	var stamped *string
+	// **ولا سطرَ اعتذارٍ بعد اليوم** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٣) —
+	// «أعتذر: تعذّر عليّ إكمالُ طلبك» حُذف، والزبونُ لا يُخبَر بتبديل السائق.
+	var apologies int
 	if err := h.Pool.QueryRow(ctxBG(), `
-		SELECT driver_id::text FROM order_messages
-		 WHERE order_id = $1::uuid AND body = $2`, fx.Order, releaseApology).Scan(&stamped); err != nil {
-		t.Fatalf("**لا اعتذارَ في الحديث**: %v", err)
+		SELECT count(*) FROM order_messages
+		 WHERE order_id = $1::uuid AND body = $2`, fx.Order, releaseApology).Scan(&apologies); err != nil {
+		t.Fatalf("عدّ: %v", err)
 	}
-	if stamped == nil || *stamped != fx.DrvA.ID {
-		t.Fatalf("**الاعتذارُ في غير ولاية التارك**: %v", stamped)
+	if apologies != 0 {
+		t.Fatalf("**كُتب سطرُ الاعتذار في حديث الزبون** — وقد حذفه المالك")
 	}
 
-	// **والزبونُ بلا سائقٍ يقرأ آخرَ ولايةٍ مقفلة** — والاعتذارُ آخرُها.
+	// **والزبونُ بلا سائقٍ يقرأ آخرَ ولايةٍ مقفلة.**
 	got := readChat(t, h, fx.Cust.Token, fx.Order)
-	if !chatHas(got, "أنا عند المتجر") || !chatHas(got, releaseApology) {
+	if !chatHas(got, "أنا عند المتجر") {
 		t.Fatalf("**الزبونُ لا يقرأ حديثَ سائقه السابق**: %v", got)
 	}
 	if r := say(t, h, fx.Cust.Token, fx.Order, "هل من أحد؟"); r.Code == http.StatusCreated {
@@ -144,7 +151,7 @@ func TestCHAT_TENURE_FreshChatPerDriver(t *testing.T) {
 
 	// **والأوّلُ يقرأ ولايتَه وحدَها** — ولا يرى ما قيل بعده.
 	got = readChat(t, h, fx.DrvA.Token, fx.Order)
-	if !chatHas(got, "الطابق الثالث") || !chatHas(got, releaseApology) {
+	if !chatHas(got, "الطابق الثالث") {
 		t.Fatalf("**السائقُ الأوّلُ لا يقرأ ولايتَه**: %v", got)
 	}
 	if chatHas(got, "الباب الأزرق") {
@@ -169,7 +176,7 @@ func TestCHAT_TENURE_FreshChatPerDriver(t *testing.T) {
 	if n, _ := th["unread"].(float64); n != 0 {
 		t.Fatalf("**سجلُّ الأوّل يعدّ رسائلَ الثاني**: %v", th)
 	}
-	if th["last_body"] != releaseApology {
+	if th["last_body"] != "الطابق الثالث" {
 		t.Fatalf("**آخرُ سطرٍ في سجلّ الأوّل ليس من ولايته**: %v", th["last_body"])
 	}
 	if th["open"] == true {
@@ -193,9 +200,12 @@ func TestCHAT_TENURE_FreshChatPerDriver(t *testing.T) {
 	}
 }
 
-// TestCHAT_TENURE_CustomerToldDriverChanged **الإسنادُ الثاني يقول إنّه
-// سائقٌ آخر — والأوّلُ بنصّه.**
-func TestCHAT_TENURE_CustomerToldDriverChanged(t *testing.T) {
+// TestCHAT_TENURE_CustomerNotToldDriverChanged **لا خبرَ للزبون بتبديل السائق
+// ولا باسمه** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢ — ينسخ «تم تغيير السائق»).
+//
+// «ما بدّنا ينعرف اسم السائق.» **والزبونُ يرى «كابتن رحال غو» أيّاً كان السائق**،
+// فلا خبرَ عن تبديلٍ لا يراه — **والإسنادُ الأوّلُ بنصّه بلا اسم.**
+func TestCHAT_TENURE_CustomerNotToldDriverChanged(t *testing.T) {
 	h := New(t)
 	fx := newTenureFx(t, h)
 
@@ -243,15 +253,23 @@ func TestCHAT_TENURE_CustomerToldDriverChanged(t *testing.T) {
 	}
 	all := titles()
 	if count(all, "أُسند سائقٌ لطلبك") != 1 {
-		t.Fatalf("**الإسنادُ الثاني قيل بنصّ الأوّل**: %v", all)
+		t.Fatalf("**الإسنادُ الثاني قيل للزبون**: %v", all)
 	}
-	if count(all, "تم تغيير السائق") != 1 {
-		t.Fatalf("**الزبونُ لم يُخبَر أنّ سائقَه تغيّر**: %v", all)
+	if count(all, "تم تغيير السائق") != 0 {
+		t.Fatalf("**الزبونُ أُخبر بتبديل السائق** — والمالكُ نسخه: %v", all)
 	}
 	for _, s := range all {
-		if strings.HasPrefix(s, "تم تغيير السائق") && !strings.Contains(s, "سائقك الجديد: "+nameB) {
-			t.Fatalf("**الإشعارُ لا يسمّي السائقَ الجديد**: %q", s)
+		if nameB != "" && strings.Contains(s, nameB) {
+			t.Fatalf("**إشعارُ الزبون يسمّي السائق**: %q", s)
 		}
+	}
+	// **ورأسُ الحديث عند الزبون الشعارُ لا الاسم.**
+	r := h.GET("/api/v1/orders/"+fx.Order+"/messages", fx.Cust.Token)
+	if r.Code != http.StatusOK {
+		t.Fatalf("قراءةُ الحديث: %d", r.Code)
+	}
+	if peer, _ := r.JSON()["peer_name"].(string); peer != orders.CustomerDriverLabel {
+		t.Fatalf("**رأسُ الحديث عند الزبون «%s»** — والمقرَّرُ «%s»", peer, orders.CustomerDriverLabel)
 	}
 }
 

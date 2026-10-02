@@ -140,20 +140,32 @@ func TestFailReasons_KindsClosesAndReports(t *testing.T) {
 		t.Error("«الزبونُ غير موجود» يُعرض عند المتجر")
 	}
 
+	// **وعند الباب بلاغاتٌ كلُّها — والإدارةُ تُنهي** (مساءَ ٢٠٢٦-١٠-٠٢).
 	door := f.reasons(t, d, "at=at_dropoff")
-	for _, code := range []string{"customer_absent", "customer_refused", "address_wrong", "driver_late"} {
-		if r := door[code]; r.Kind != "fail" || !r.Closes {
-			t.Errorf("%s = %+v — **عند الزبون يُغلق**", code, r)
+	for _, code := range []string{"customer_absent", "customer_refused", "customer_unreachable",
+		"address_wrong", "driver_late", "customer_no_answer"} {
+		if r, ok := door[code]; !ok || r.Kind != "report" || r.Closes || r.AvailableInSec != 0 {
+			t.Errorf("%s = %+v — **عند الزبون بلاغٌ لا إغلاق**", code, r)
 		}
 	}
-	if r := door["customer_no_answer"]; r.Kind != "report" || r.Closes {
-		t.Errorf("customer_no_answer = %+v — بلاغٌ للعمليات", r)
+	if r := door["driver_late"]; r.Fault != "driver" {
+		t.Errorf("driver_late ذنبُه المقترَح %q", r.Fault)
 	}
 
 	way := f.reasons(t, d, "at=on_the_way")
-	for _, code := range []string{"customer_cancelled_by_phone", "customer_new_address"} {
-		if r := way[code]; r.Kind != "report" || r.Closes {
-			t.Errorf("%s = %+v في الطريق — بلاغٌ والطلبُ يبقى", code, r)
+	if r := way["customer_cancelled_by_phone"]; r.Kind != "report" || r.Closes {
+		t.Errorf("customer_cancelled_by_phone = %+v في الطريق — بلاغٌ والطلبُ يبقى", r)
+	}
+	// **ولا «يريد عنواناً آخر»** — الزبونُ لا يغيّر العنوان (مساءَ ٢٠٢٦-١٠-٠٢، البند ٤).
+	if _, ok := way["customer_new_address"]; ok {
+		t.Error("customer_new_address ما زال يُعرض")
+	}
+
+	// **وفي الطريق إلى المتجر أسبابُ التركِ وحدَها** (البند ٢).
+	assigned := f.reasons(t, d, "at=assigned")
+	for _, code := range []string{"bike_broken", "accident", "force_majeure"} {
+		if r, ok := assigned[code]; !ok || r.Kind != "release" || r.Closes {
+			t.Errorf("%s = %+v — **تركٌ قبل الاستلام**", code, r)
 		}
 	}
 	for code, r := range way {
@@ -163,36 +175,34 @@ func TestFailReasons_KindsClosesAndReports(t *testing.T) {
 	}
 }
 
-// TestFailReasons_DoorWaitCountdown **الشاشةُ تعرف كم بقي.**
-func TestFailReasons_DoorWaitCountdown(t *testing.T) {
+// TestDoorReport_AlertsOpsWithWaitTime **بلاغُ الباب يصل المكتبَ بكم ينتظر السائق**
+// — والطلبُ معه (مساءَ ٢٠٢٦-١٠-٠٢؛ بدل «انتظار الباب» الذي حُذف).
+func TestDoorReport_AlertsOpsWithWaitTime(t *testing.T) {
 	f := newDriverFixture(t, 1)
+	ops := f.armOps(t)
 	d := f.drivers[0]
 	orderID := f.problemOrderAt(t, "on_the_way", d)
 	if _, err := f.srv.orders.Transition(context.Background(), d, []string{"driver"},
 		orderID, orders.StAtDropoff, ""); err != nil {
 		t.Fatalf("الوصول: %v", err)
 	}
-	door := f.reasons(t, d, "at=at_dropoff&order="+orderID)
-	if r := door["customer_absent"]; r.AvailableInSec <= 0 || r.AvailableInSec > 300 {
-		t.Errorf("customer_absent متاحٌ بعد %d ثانية — والمتوقّع بين ١ و٣٠٠", r.AvailableInSec)
+	if _, err := f.pool.Exec(context.Background(), `
+		UPDATE order_events SET created_at = now() - interval '7 minutes'
+		WHERE order_id = $1 AND to_status = 'at_dropoff'`, orderID); err != nil {
+		t.Fatal(err)
 	}
-	if r := door["customer_refused"]; r.AvailableInSec != 0 {
-		t.Errorf("customer_refused ينتظر %d — **والرفضُ لا ينتظر**", r.AvailableInSec)
+	w := f.call(f.srv.handleDriverReportOrStage, http.MethodPost,
+		"/driver/orders/"+orderID+"/report", orderID, d, []string{"driver"},
+		`{"code":"customer_absent","note":"طرقتُ الباب"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("البلاغُ ردّ %d: %s", w.Code, w.Body.String())
 	}
-
-	// **والفشلُ قبل انقضائه ٤٠٩ بما بقي**.
-	w := f.fail(d, orderID, "customer_absent", "")
-	if w.Code != http.StatusConflict || errCode(t, w) != "door_wait" {
-		t.Fatalf("الفشلُ بعد ثوانٍ ردّ %d %s — والمتوقّع 409 door_wait", w.Code, w.Body.String())
+	alerts := f.opsAlerts(t, ops, orderID)
+	if len(alerts) != 1 || !strings.Contains(alerts[0], "منذ 7 د") {
+		t.Fatalf("تنبيهُ المكتب %v — **والمتوقّعُ أن يقول كم ينتظر السائقُ عند الباب**", alerts)
 	}
-	var body struct {
-		Error struct {
-			Details map[string]float64 `json:"details"`
-		} `json:"error"`
-	}
-	_ = json.Unmarshal(w.Body.Bytes(), &body)
-	if left := body.Error.Details["remaining_sec"]; left <= 0 || left > 300 {
-		t.Errorf("remaining_sec = %v في جسم الردّ: %s", left, w.Body.String())
+	if st, drv := f.orderRow(t, orderID); st != "at_dropoff" || drv == nil || *drv != d {
+		t.Fatalf("(%s · %v) — **والبلاغُ لا يمسّ الطلب**", st, drv)
 	}
 }
 
@@ -202,7 +212,8 @@ func TestDriverFail_WrongStageIs409(t *testing.T) {
 	d := f.drivers[0]
 	orderID := f.problemOrderAt(t, "at_pickup", d)
 	w := f.fail(d, orderID, "customer_absent", "")
-	if w.Code != http.StatusConflict || errCode(t, w) != "fail_reason_wrong_stage" {
+	// **و«الزبونُ غير موجود» صار بلاغَ باب** (مساءَ ٢٠٢٦-١٠-٠٢) — فيُردّ بلاغاً في غير مرحلته.
+	if w.Code != http.StatusConflict || errCode(t, w) != "report_wrong_stage" {
 		t.Fatalf("«الزبونُ غير موجود» عند المتجر ردّ %d %s", w.Code, w.Body.String())
 	}
 	if st, _ := f.orderRow(t, orderID); st != "at_pickup" {
@@ -219,12 +230,15 @@ func TestStageReport_PerStatus(t *testing.T) {
 	}{
 		{"at_pickup", "merchant_not_ready", true},
 		{"picked_up", "customer_cancelled_by_phone", true},
-		{"on_the_way", "customer_new_address", true},
+		// **ولا «يريد عنواناً آخر»** — الزبونُ لا يغيّر العنوان (مساءَ ٢٠٢٦-١٠-٠٢).
+		{"on_the_way", "customer_new_address", false},
 		{"at_dropoff", "customer_no_answer", true},
 		{"at_pickup", "customer_no_answer", false},
 		{"at_dropoff", "customer_cancelled_by_phone", false},
 		{"assigned", "merchant_not_ready", false},
-		{"at_dropoff", "customer_absent", false},
+		// **وأسبابُ الباب كلُّها بلاغات** (مساءَ ٢٠٢٦-١٠-٠٢).
+		{"at_dropoff", "customer_absent", true},
+		{"at_dropoff", "driver_late", true},
 	}
 	for _, c := range cases {
 		t.Run(c.status+"/"+c.code, func(t *testing.T) {
@@ -316,8 +330,9 @@ func TestCompensation_AfterOpsApproval_PaysOnce(t *testing.T) {
 	ctx := context.Background()
 	orderID := f.problemOrderAt(t, "at_dropoff", d)
 
-	if w := f.fail(d, orderID, "customer_refused", ""); w.Code != http.StatusOK {
-		t.Fatalf("الفشلُ ردّ %d: %s", w.Code, w.Body.String())
+	// **والمكتبُ يُنهي بذنب الزبون** (مساءَ ٢٠٢٦-١٠-٠٢) — لا ضغطةُ السائق.
+	if w := f.endAtDoor(t, orderID, "customer", "customer_refused"); w.Code != http.StatusOK {
+		t.Fatalf("الإنهاءُ ردّ %d: %s", w.Code, w.Body.String())
 	}
 	if bal, _ := f.srv.wallet.Balance(ctx, d); bal != 0 {
 		t.Fatalf("قُيّد للسائق %d لحظةَ الضغطة — **والتعويضُ بعد موافقة العمليات**", bal)
@@ -402,8 +417,8 @@ func TestCompensation_RejectClosesPending(t *testing.T) {
 	admin := f.armCompensation(t)
 	d := f.drivers[0]
 	orderID := f.problemOrderAt(t, "at_dropoff", d)
-	if w := f.fail(d, orderID, "address_wrong", ""); w.Code != http.StatusOK {
-		t.Fatalf("الفشلُ ردّ %d", w.Code)
+	if w := f.endAtDoor(t, orderID, "customer", "address_wrong"); w.Code != http.StatusOK {
+		t.Fatalf("الإنهاءُ ردّ %d: %s", w.Code, w.Body.String())
 	}
 	if w := f.call(f.srv.handleRejectCompensation, http.MethodPost, "/x", orderID, admin,
 		[]string{"admin"}, `{"note":""}`); w.Code == http.StatusOK {

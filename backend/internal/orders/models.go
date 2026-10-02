@@ -79,15 +79,10 @@ var (
 	ErrFailReasonStage = httpx.NewError(http.StatusConflict, "fail_reason_wrong_stage", "errors.fail_reason_wrong_stage")
 )
 
-// DoorWaitError **لم يمضِ انتظارُ الباب** — ومعه ما بقي بالثواني.
-//
-// **نسخةٌ لكلّ ردٍّ لا خطأٌ مشترك**: التفاصيلُ تختلف بين طلبٍ وطلب، **وكتابتُها
-// في متغيّرٍ عامٍّ تسرّب ثواني طلبٍ إلى ردّ آخر.**
-func DoorWaitError(remainingSec, waitSec int64) *httpx.AppError {
-	e := httpx.NewError(http.StatusConflict, "door_wait", "errors.door_wait")
-	e.Details = map[string]any{"remaining_sec": remainingSec, "wait_sec": waitSec}
-	return e
-}
+// ErrDoorNeedsOps **السائقُ لا يُنهي الطلبَ عند باب الزبون** (قرارُ المالك مساءَ
+// ٢٠٢٦-١٠-٠٢): يُبلّغ، **والإدارةُ تُنهي من بابها** (`ResolveDoor`). **ولا بابٌ
+// ثانٍ يُفشل الطلبَ من هناك** — ولا انتقالُ اللوحة العامّ.
+var ErrDoorNeedsOps = httpx.NewError(http.StatusConflict, "door_needs_ops", "errors.door_needs_ops")
 
 type OptionSnapshot struct {
 	// معرّف الخيار — يُحفظ لتصحّ **إعادة الطلب** بخياراته كما كان.

@@ -267,6 +267,9 @@ func run(logger *slog.Logger) error {
 	}
 
 	go ordersSvc.RunWatchdog(ctx, 30*time.Second)
+	// **والعرضُ ينتقل لحظةَ موته** (قرارُ المالك ٢٠٢٦-١٠-٠٢) — حلقةٌ كلَّ ثانيةٍ
+	// للعروض المنقضية وحدَها، **ولا تنتظر نبضةَ الراصد.**
+	go ordersSvc.RunOfferSweeper(ctx, time.Second)
 	supportSvc := support.NewService(pg, identitySvc, walletSvc)
 	supportSvc.SetSettings(settingsStore)
 	// **وسرُّ توقيع الوسائط** — `D13`: **الشخصيُّ يُخدَم برابطٍ موقَّعٍ

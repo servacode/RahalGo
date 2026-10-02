@@ -273,12 +273,25 @@ func TestFAIL_001_DriverFailsDelivery(t *testing.T) {
 	//
 	// **ويُقرأ الرمزُ من القائمة الحيّة لا يُكتب هنا** — **ورمزٌ مكتوبٌ
 	// بيدٍ يشيخ يومَ تتبدّل القائمة**، فيسقط الاختبارُ على تغييرٍ سليم.
-	code := firstFailCode(t, h, drv, "at_dropoff")
+	code := firstDoorReport(t, h, drv)
 
-	got := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
-		map[string]any{"to": "failed", "reason": code, "note": "لا أحدَ في العنوان"})
+	// ══════════════════════════════════════════════════════════════════
+	// **وعند الباب السائقُ يُبلّغ والإدارةُ تُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	got := h.POST("/api/v1/driver/orders/"+oid+"/report", drv.Token,
+		map[string]any{"code": code, "note": "لا أحدَ في العنوان"})
 	if got.Code >= 400 {
-		t.Fatalf("FAIL-001 إعلانُ الفشل رُدّ: %s", got)
+		t.Fatalf("FAIL-001 البلاغُ رُدّ: %s", got)
+	}
+	if st := h.statusOf(oid); st != "at_dropoff" {
+		t.Fatalf("FAIL-001 الحالُ %q بعد البلاغ — **والطلبُ يبقى مع السائق**", st)
+	}
+	ops := h.NewUser("admin")
+	end := h.POST("/api/v1/admin/orders/"+oid+"/door-resolution", ops.Token,
+		map[string]any{"action": "return_to_office", "fault": "customer",
+			"note": "اتّصلنا ولم يردّ"})
+	if end.Code >= 400 {
+		t.Fatalf("FAIL-001 إنهاءُ الإدارة رُدّ: %s", end)
 	}
 	if st := h.statusOf(oid); st != "failed" {
 		t.Errorf("FAIL-001 الحالُ %q — يُنتظر failed", st)
@@ -300,11 +313,17 @@ func TestFAIL_002_ReasonIsRecorded(t *testing.T) {
 		h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 			map[string]any{"to": to})
 	}
-	code := firstFailCode(t, h, drv, "at_dropoff")
-	if got := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
-		map[string]any{"to": "failed", "reason": code,
-			"note": "رفض الزبونُ الاستلام"}); got.Code >= 400 {
-		t.Fatalf("FAIL-002 إعلانُ الفشل رُدّ: %s", got)
+	code := firstDoorReport(t, h, drv)
+	if got := h.POST("/api/v1/driver/orders/"+oid+"/report", drv.Token,
+		map[string]any{"code": code, "note": "رفض الزبونُ الاستلام"}); got.Code >= 400 {
+		t.Fatalf("FAIL-002 البلاغُ رُدّ: %s", got)
+	}
+	// **والإدارةُ تُنهي بلا سببٍ تكتبه — فيُكتب آخرُ بلاغِ باب.**
+	ops := h.NewUser("admin")
+	if got := h.POST("/api/v1/admin/orders/"+oid+"/door-resolution", ops.Token,
+		map[string]any{"action": "return_to_office", "fault": "customer",
+			"note": "رفض نهائيّاً"}); got.Code >= 400 {
+		t.Fatalf("FAIL-002 إنهاءُ الإدارة رُدّ: %s", got)
 	}
 	var stored string
 	if err := h.Pool.QueryRow(t.Context(),
@@ -341,36 +360,24 @@ func TestFAIL_010_NoMoveAfterFailed(t *testing.T) {
 	}
 }
 
-// firstFailCode **أوّلُ رمزِ فشلٍ تعرفه المنصّة** — يُقرأ من بابِه.
-func firstFailCode(t *testing.T, h *Harness, drv *User, at string) string {
+// firstDoorReport **أوّلُ بلاغِ بابٍ في القائمة الحيّة** — لا يُكتب بيد، **ورمزٌ
+// مكتوبٌ بيدٍ يشيخ يومَ تتبدّل القائمة.** (وعند الباب كلُّها بلاغاتٌ منذ مساءِ
+// ٢٠٢٦-١٠-٠٢ — الإدارةُ تُنهي.)
+func firstDoorReport(t *testing.T, h *Harness, drv *User) string {
 	t.Helper()
-	// **والأسبابُ مرشَّحةٌ بالحال** (`?at=`) — **ونداءٌ بلا مُرشِّحٍ يردّ
-	// قائمةً فارغةً لا خطأ**، فيُقرأ «لا أسبابَ» وهي موجودة.
-	res := h.GET("/api/v1/driver/fail-reasons?at="+at, drv.Token)
+	res := h.GET("/api/v1/driver/fail-reasons?at=at_dropoff", drv.Token)
 	if res.Code >= 400 {
-		t.Fatalf("FAIL: أسبابُ الفشل لا تُقرأ: %s", res)
+		t.Fatalf("FAIL: أسبابُ الباب لا تُقرأ: %s", res)
 	}
 	list, _ := res.JSON()["reasons"].([]any)
-	if len(list) == 0 {
-		t.Skip("FAIL: لا أسبابَ مضبوطةٌ في هذه القاعدة — يُتخطّى")
-	}
-	// **أوّلُ سببِ فشلٍ متاحٍ الآن** — لا بلاغٌ (لا يُغلق)، ولا ما ينتظر الباب خمسَ دقائق
-	// («الزبونُ غير موجود» — قرارُ المالك ٢٠٢٦-١٠-٠٢). **وكان يُؤخذ الأوّلُ أيّاً كان**،
-	// فسقط الاختبارُ على قاعدةٍ سليمة.
 	for _, x := range list {
 		r, _ := x.(map[string]any)
 		code, _ := r["code"].(string)
 		kind, _ := r["kind"].(string)
-		wait, _ := r["available_in_sec"].(float64)
-		if code != "" && kind != "report" && wait == 0 && !doorWaitCode(code) {
+		if code != "" && kind == "report" {
 			return code
 		}
 	}
-	t.Fatalf("FAIL: لا سببَ فشلٍ متاحٌ الآن في %s: %v", at, list)
+	t.Fatalf("FAIL: لا بلاغَ بابٍ في القائمة: %v", list)
 	return ""
-}
-
-// doorWaitCode **ما ينتظر الباب** — والقائمةُ بلا `order=` تقول صفراً، والخادمُ يردّه.
-func doorWaitCode(code string) bool {
-	return code == "customer_absent" || code == "customer_unreachable"
 }

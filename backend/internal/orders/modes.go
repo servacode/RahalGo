@@ -168,7 +168,7 @@ func rolesUnderMode(selfManage bool, from, to string, roles []string, driverHold
 	//
 	// **والتحريرُ تخلٍّ عن إسنادٍ لم يُثمر، والإعلانُ شهادةٌ على واقعة** —
 	// الأوّلُ لا يقيّد قرشاً والثاني يحرّك المالَ كلَّه.
-	if driverOnly[to] {
+	if driverOnly[to] && !officeEndsAtDoor(from, to) {
 		roles = drop("ops")
 		roles = drop("admin")
 	}
@@ -205,7 +205,7 @@ func rolesUnderMode(selfManage bool, from, to string, roles []string, driverHold
 	//
 	// **والأوّلُ يحرّك المال** على قولٍ لا شاهدَ له، **والثاني يعيد الطلبَ إلى
 	// الطابور ولا يقيّد قرشاً.**
-	if goodsWithDriver[from] && driverOnly[to] {
+	if goodsWithDriver[from] && driverOnly[to] && !officeEndsAtDoor(from, to) {
 		roles = drop("ops")
 		roles = drop("admin")
 	}
@@ -254,6 +254,18 @@ const (
 	// ModeMerchants المتجرُ يفتح بوابتَه ويقبل بنفسه.
 	ModeMerchants = "merchants"
 )
+
+// officeEndsAtDoor **إنهاءُ المكتب عند باب الزبون — الاستثناءُ الوحيدُ بعد الاستلام.**
+//
+// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢: «ويبقى الطلبُ مع السائق إلى أن تُحلّ القصّة…
+// وقتها **الإدارةُ هي تُنهي الطلبَ من عندها**، يصل أمرٌ للسائق».)
+//
+// **والقاعدةُ أعلاه «لا تُعلن المنصّةُ ما لا تعلم» باقية** — وهذا ليس إعلاناً:
+// **المكتبُ اتّصل بالزبون فعلِم**، والسائقُ بلّغ من الباب، **والقرارُ بذنبٍ مكتوب**
+// (`ResolveDoor` — والمحرّكُ يردّ هذا الانتقالَ بلا ذنبٍ بـ`door_needs_ops`).
+func officeEndsAtDoor(from, to string) bool {
+	return from == StAtDropoff && to == StFailed
+}
 
 // driverOnly مراحلُ الطريق — لا يملكها إلّا من يسير فيها.
 

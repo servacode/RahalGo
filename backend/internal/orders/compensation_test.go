@@ -3,6 +3,8 @@ package orders_test
 import (
 	"context"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // TestCompensation_FollowsFault **الذنبُ يقرّر أيُطلَب تعويض — ولا يُقيَّد شيء.**
@@ -26,14 +28,11 @@ func TestCompensation_FollowsFault(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			f := setup(t, "at_dropoff", 100_000, 10_000, 0)
-			ctx := context.Background()
 			f.armTreasury(t)
 
 			before := f.balance(t, f.driver)
-			if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-				f.orderID, "failed", "", c.reason); err != nil {
-				t.Fatalf("الإفشال فشل: %v", err)
-			}
+			// **والذنبُ ما يقترحه السببُ ويكتبه المكتب** (مساءَ ٢٠٢٦-١٠-٠٢).
+			f.failAtDoor(t, orders.SuggestedFault(c.reason), c.reason)
 			if got := f.balance(t, f.driver) - before; got != 0 {
 				t.Errorf("قُيّد للسائق %d بلا موافقة", got)
 			}

@@ -1224,6 +1224,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/transfer", s.handleTransferOrder)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/transition", s.handleOrderTransition)
+			// **وعند باب الزبون الإدارةُ تُنهي** — السائقُ يُبلّغ ولا يُغلق
+			// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢). انظر `door_resolution.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/door-resolution", s.handleDoorResolution)
 			// **تدخّلُ الأدمن على عرضِ الطلب المخصَّص** — Batch 2a: قبل
 			// الاستلام حرّاً، وبعده نقصاً أو تصحيحاً فقط، **موثَّقاً.**
 			r.With(s.RequireCapability(authz.OrdersIntervene)).

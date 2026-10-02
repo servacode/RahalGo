@@ -213,7 +213,8 @@ func TestCENSUS_D1_ReleaseWritesEvent(t *testing.T) {
 	_ = h.Pool.QueryRow(ctxBG(),
 		`SELECT count(*) FROM order_events WHERE order_id = $1::uuid`, oid).Scan(&before)
 
-	rel := h.POST("/api/v1/driver/orders/"+oid+"/release", drv.Token, nil)
+	rel := h.POST("/api/v1/driver/orders/"+oid+"/release", drv.Token,
+		map[string]any{"reason": "bike_broken", "note": "تعطّلت الدرّاجة"})
 	if rel.Code >= 400 {
 		t.Fatalf("**فكُّ الإسناد لم يقع فلا يُقاس ما بعده**: %s", rel)
 	}

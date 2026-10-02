@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -350,6 +352,13 @@ type driverOrder struct {
 	ParcelNote string `json:"parcel_note"`
 	// FeePayer **من يدفع الأجرة** — و`merchant_cash` يقبضها من المتجر عند الاستلام.
 	FeePayer string `json:"fee_payer"`
+	// DoorInstruction **أمرُ الإدارة عند باب الزبون** — `deliver_now` أو فارغ
+	// (مساءَ ٢٠٢٦-١٠-٠٢). **يُقرأ هنا ولو ضاع الإشعار**: «الإدارة: سلّم الآن».
+	// و`return_to_office` لا يظهر هنا — الطلبُ أُنهي فخرج من القائمة، **ويُقرأ
+	// من `/driver/orders/{id}/outcome`.**
+	DoorInstruction string `json:"door_instruction"`
+	// DoorNote **كلمةُ الإدارة مع أمرها.**
+	DoorNote string `json:"door_note"`
 }
 
 const driverOrderSelect = `
@@ -455,7 +464,9 @@ const driverOrderSelect = `
 	           ELSE COALESCE(m.address_text, '')
 	       END,
 	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
-	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, '')
+	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''),
+	       -- **وأمرُ الإدارة عند الباب** — مساءَ ٢٠٢٦-١٠-٠٢.
+	       o.door_instruction, o.door_instruction_note
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -483,7 +494,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
 			&o.DeliveryFee, &o.PickupAddress,
-			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer); err != nil {
+			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer,
+			&o.DoorInstruction, &o.DoorNote); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -550,12 +562,13 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	// ══════════════════════════════════════════════════════════════════
 	//
 	// **ومطفأً — أو بلا نقطةِ التقاطٍ للطلب — يعود البثُّ الصِّرف** كما كان.
+	//
+	// **والشرطُ في المحرّك لا هنا** (`orders.QueueVisibleSQL`) — **ودفعُ العرض
+	// يقرؤه نفسَه** فلا يرنّ إلّا لمن يرى الطلبَ في طابوره (٢٠٢٦-١٠-٠٢).
 	if !s.orders.ProximityEnabled(ctx) {
 		s.scanDriverOrders(w, r, driverOrderSelect+`
 			WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-			  -- **وما رفضه لا يعود إليه** (الرفضُ في «للجميع» إخفاءٌ لا نقل).
-			  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
-			  AND NOT ($1::uuid = ANY(o.offer_passed))
+			  AND `+orders.QueueBaseSQL("$1::uuid")+`
 			ORDER BY o.ready_at NULLS LAST, o.created_at
 			LIMIT 50`, uid, staleLocationMinutes)
 		return
@@ -566,36 +579,10 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	// وبلوغُ الأقصى (أو انعدامُ الخطوة) يُسقط شرطَ المسافة — **شبكةُ أمانٍ
 	// موثَّقة** فلا يبقى طلبٌ عالقاً في منطقةٍ قليلةِ السائقين.
 	dp := s.orders.DispatchProximity(ctx)
-	radiusExpr := `LEAST($6::float8, $7::float8 + $8::float8 *
-		floor(GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at)))) / GREATEST($9::float8, 1)))`
-	freshLoc := `(SELECT du.last_location FROM users du
-	              WHERE du.id = $1 AND du.last_location_at > now() - make_interval(secs => $5))`
+	freshLoc := orders.QueueDriverFreshLocSQL("$1::uuid", "$5")
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-		  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
-		  AND NOT ($1::uuid = ANY(o.offer_passed))
-		  -- **السائقُ السائلُ مؤهَّلٌ فعلاً** — دوامٌ وحالةٌ وسقفُ نقدٍ وعددُ طلبات.
-		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = $1 AND du.on_shift AND du.status = 'active')
-		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = $1), 0)
-		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure.
-		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
-		                  WHERE oi.driver_id = $1 AND oi.closed_at IS NULL), 0)
-		      + o.cash_due <= $3
-		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = $1 AND oo.closed_at IS NULL) < $4
-		  -- ══════════════════════════════════════════════════════════════
-		  -- **السائقُ السائلُ حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك
-		  --  ٢٠٢٦-٠٩-٢٨): مجهولُ الموضع أو شائخُه لا يُبثُّ إليه، **ولو بلغ
-		  --  الطلبُ أقصى توسّعه.** فالبثُّ لا يبلغ من لا يُعرف أين هو.
-		  -- ══════════════════════════════════════════════════════════════
-		  AND `+freshLoc+` IS NOT NULL
-		  -- **حديثٌ داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ
-		  --  تُقاس** — عندها لا يُحجب بالمسافة، **والحداثةُ مضمونةٌ فوق.**
-		  AND (
-		    `+orders.DispatchAnchorSQL+` IS NULL
-		    OR ST_DWithin(`+freshLoc+`, `+orders.DispatchAnchorSQL+`, `+radiusExpr+`)
-		    OR $8 <= 0
-		    OR `+radiusExpr+` >= $6::float8
-		  )
+		  AND `+orders.QueueVisibleSQL("$1::uuid", 3)+`
 		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
 		ORDER BY
 		  CASE WHEN `+freshLoc+` IS NOT NULL AND `+orders.DispatchAnchorSQL+` IS NOT NULL
@@ -717,6 +704,19 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	// الإسناد معاً.** **ونمطُ الإسناد كان يُقرأ بينهما فجمد الباب**
 	// (`TestXG46_DriverAcceptNeedsOneConnection` أمسكه).
 	cashLimit := s.cashbox.Limit(r.Context())
+	// **ومن ترك هذا الطلبَ لا يأخذه ثانيةً** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) —
+	// **والطابورُ يحجبه عنه** (`orders.QueueBaseSQL`)، **وهذا لمن نادى مباشرةً.**
+	var left bool
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT COALESCE((SELECT $2::uuid = ANY(excluded_drivers) FROM orders WHERE id = $1), false)`,
+		orderID, uid).Scan(&left); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if left {
+		s.respondErr(w, errDriverExcluded)
+		return
+	}
 	own := `AND (offered_driver_id IS NULL OR offered_driver_id = $2)`
 	if s.orders.AssignmentMode(r.Context()) == "rotation" {
 		own = `AND offered_driver_id = $2`
@@ -901,10 +901,6 @@ func (s *Server) replayOwnTransition(w http.ResponseWriter, r *http.Request, ord
 	return true
 }
 
-// handleDriverRelease يفكّ إسناده فيعود الطلب إلى الطابور.
-//
-// حقٌّ يملكه في الخارطة (`assigned → dispatching`): تعطّلت درّاجته أو أخطأ
-// التقدير. وتركُ الطلب معلّقاً بلا سائق أسوأ من إعادته إلى الطابور.
 // ══════════════════════════════════════════════════════════════════════
 // **رفضُ العرض — «موافق» و«رفض» لا «خذ الطلب» وحدَها**
 // ══════════════════════════════════════════════════════════════════════
@@ -927,82 +923,120 @@ func (s *Server) handleDriverDecline(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"declined": true})
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// handleDriverRelease **تركُ الطلب قبل الاستلام — بسببٍ وكلمة** (قرارُ المالك
+// مساءَ ٢٠٢٦-١٠-٠٢، البند ٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «مجرّد ما ينطلق السائق ما يصير ينعاد للطابور.» **فلا زرَّ «أعد إلى الطابور»** —
+// **إلّا «لدي مشكلة» قبل الاستلام** بسببٍ من ثلاثة (`orders.ReleaseReasons`:
+// تعطّلت الدرّاجة · حادث · ظرفٌ قاهر) **وكلمةٍ تشرحه.** وبعد الاستلام بابُه
+// الطارئ (`/emergency`).
+//
+// # وثلاثةُ أشياءَ تقع معه
+//
+//	الطلبُ   ←  إلى الطابور، **ولا يعود إليه أبداً** — ولو لم يوجد غيرُه
+//	           (`excluded_drivers`)؛ يبقى في الطابور والإدارةُ تعلم
+//	دوامُه   ←  يُغلَق وحدَه — من تعطّلت درّاجتُه لا يُعرض عليه
+//	المكتبُ  ←  يُنبَّه بالسبب والكلمة
+//
+// **ولا سطرَ اعتذارٍ في حديث الزبون بعد اليوم** (البند ٣): «اعتذر: تعذّر عليّ
+// إكمالُ طلبك» حُذف — **والزبونُ لا يُخبَر بتبديل السائق أصلاً.**
 func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	if !s.driverOwnsOrder(r, orderID) {
 		s.respondErr(w, errNotYourOrder)
 		return
 	}
+	// **وجسمٌ فارغٌ من نسخةٍ قديمةٍ يُقرأ «بلا سبب»** — فيُردّ بما ينقصه لا بخطأٍ عامّ.
 	req, _ := decode[struct {
-		Note string `json:"note"`
+		Reason string `json:"reason"`
+		Note   string `json:"note"`
 	}](r)
-	note := ""
+	var reason, note string
 	if req != nil {
-		note = clip(req.Note, 300)
+		reason = strings.TrimSpace(req.Reason)
+		note = clip(strings.TrimSpace(req.Note), 300)
 	}
 	uid := userIDFrom(r)
+	ctx := r.Context()
 
-	// ══════════════════════════════════════════════════════════════════
-	// **واعتذارٌ للزبون في حديثه**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// (البندُ الثالثَ عشر في قائمة المالك ٢٠٢٦-٠٨-١٢: «تُغلق محادثتُه مع
-	//  الزبون وتتحوّل للسائق الثاني مع رسالةِ اعتذارٍ أنّ السائق تغيّر».)
-	//
-	// **والزبونُ كان يقرأ «في طريقي إليك» ثمّ لا شيء** — والطلبُ يعود
-	// إلى الطابور بلا أن يعلم. **فيبقى ينتظر من لن يأتي.**
-	//
-	// # وفي ولاية من تركه — لا في حديث من بعده
-	//
-	// (قرارُ المالك ٢٠٢٦-١٠-٠٢: «حديثٌ جديدٌ لكلّ سائق».) **فالاعتذارُ آخرُ
-	// سطرٍ في حديث التارك** — يقرؤه الزبونُ ما دام بلا سائق، **والثاني يبدأ
-	// حديثاً فارغاً لا يبدأ باعتذار غيره.**
-	//
-	// **ويُكتب داخلَ معاملة الانتقال لا بعدها**: بعد التثبيت يقع العرضُ
-	// التالي (`OfferNext`) وقد يُسنَد الطلبُ لغيره قبل أن يُكتب السطر.
-	// **والولايةُ تُكتب صريحةً** فلا تُقرأ من حامل الطلب ساعتَها.
-	//
-	// **ولا يُفشل الإرجاع**: نقطةُ حفظٍ تحيط به — **وسطرُ حديثٍ يسقط لا
-	// يُبقي الطلبَ في يدِ من تركه.**
-	noteFailed := false
-	apology := func(ctx context.Context, q dbtx.Querier) error {
-		if _, err := q.Exec(ctx, `SAVEPOINT release_apology`); err != nil {
-			return err
-		}
-		if _, err := q.Exec(ctx, `
-			INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
-			VALUES ($1, $2, 'driver', $3, $2, true)`,
-			orderID, uid,
-			// **«أعتذر» بهمزة المتكلّم** (٢٠٢٦-١٠-٠٢) — كانت «اعتذر» فتُقرأ أمراً للزبون.
-			"أعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
-			noteFailed = true
-			_, rbErr := q.Exec(ctx, `ROLLBACK TO SAVEPOINT release_apology`)
-			return rbErr
-		}
-		_, err := q.Exec(ctx, `RELEASE SAVEPOINT release_apology`)
-		return err
+	var status string
+	var number int64
+	if err := s.pg.QueryRow(ctx,
+		`SELECT status, number FROM orders WHERE id = $1`, orderID).Scan(&status, &number); err != nil {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
 	}
-	if _, err := s.orders.TransitionAudited(r.Context(), uid, []string{"driver"},
-		orderID, orders.StDispatching, note, apology); err != nil {
+	if status != orders.StAssigned && status != orders.StAtPickup {
+		s.respondErr(w, errReleaseWrongStage)
+		return
+	}
+	if _, ok := orders.ReleaseReasonAt(reason, status); !ok || note == "" {
+		s.respondErr(w, errReleaseReasonRequired)
+		return
+	}
+
+	// **ودوامُه يُغلَق قبل الترك لا بعده** — الترتيبُ يقرأ `on_shift`، **والتركُ
+	// يعرض الطلبَ فوراً** (وهو الدرسُ نفسُه في الطارئ).
+	if _, err := s.pg.Exec(ctx,
+		`UPDATE users SET on_shift = false WHERE id = $1`, uid); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if noteFailed {
-		s.audit(r, "driver.release_note_failed", "order", orderID, nil)
+	// **والاستثناءُ والأثرُ في معاملة الترك** — فالعرضُ التالي بعد التثبيت يقرؤه.
+	hook := func(ctx context.Context, q dbtx.Querier) error {
+		if err := s.orders.ExcludeDriverTx(ctx, q, orderID, uid); err != nil {
+			return err
+		}
+		return s.auditTx(ctx, q, r, "driver.order_released", "order", orderID, map[string]any{
+			"reason": reason, "note": note, "status": status,
+		})
+	}
+	if _, err := s.orders.TransitionAudited(ctx, uid, []string{"driver"},
+		orderID, orders.StDispatching, note, hook); err != nil {
+		// **والدوامُ يعود إن لم يقع الترك** — لا يُغلَق دوامُ من بقي الطلبُ معه.
+		_, _ = s.pg.Exec(ctx, `UPDATE users SET on_shift = true WHERE id = $1`, uid)
+		s.respondErr(w, err)
+		return
 	}
 	// **والمحرّكُ يُصفّي السائقَ بنفسه** (`driver_id = NULL` في الانتقال إلى
-	// الطابور). **وهذا احتياطٌ مشروطٌ بأنّه ما زال له** — بعد التثبيت قد
-	// يكون العرضُ التالي أسنده لغيره، **وتصفيرٌ بلا شرطٍ ينزعه من الثاني.**
-	if _, err := s.pg.Exec(r.Context(),
+	// الطابور). **وهذا احتياطٌ مشروطٌ بأنّه ما زال له.**
+	if _, err := s.pg.Exec(ctx,
 		`UPDATE orders SET driver_id = NULL WHERE id = $1 AND driver_id = $2`,
 		orderID, uid); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 
+	body := "#" + strconv.FormatInt(number, 10) + " — " + releaseReasonLabels[reason] + " · " + note
+	s.notify.NotifyOps(ctx, notifications.Input{
+		Kind: notifications.KindOrder, Title: notifTitles.driverReleased, Body: body,
+		Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+	})
 	s.touch("order", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"released": true})
+	s.touch("driver", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"released": true, "shift_ended": true})
 }
+
+// releaseReasonLabels **سببُ الترك كما يقرؤه المكتب.**
+var releaseReasonLabels = map[string]string{
+	"bike_broken":   "تعطّلت الدرّاجة",
+	"accident":      "حادث",
+	"force_majeure": "ظرفٌ قاهر",
+}
+
+var (
+	// errReleaseReasonRequired **تركٌ بلا سببٍ من الثلاثة أو بلا كلمة.**
+	errReleaseReasonRequired = httpx.NewError(http.StatusBadRequest,
+		"release_reason_required", "errors.release_reason_required")
+	// errReleaseWrongStage **لا تركَ بعد الاستلام** — بابُه الطارئ.
+	errReleaseWrongStage = httpx.NewError(http.StatusConflict,
+		"release_wrong_stage", "errors.release_wrong_stage")
+	// errDriverExcluded **ترك هذا الطلبَ من قبل — لا يعود إليه.**
+	errDriverExcluded = httpx.NewError(http.StatusConflict,
+		"driver_excluded", "errors.driver_excluded")
+)
 
 // driverOwnsOrder يتحقق أن الطلب مُسنَد لهذا السائق.
 func (s *Server) driverOwnsOrder(r *http.Request, orderID string) bool {

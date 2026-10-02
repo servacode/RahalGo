@@ -63,15 +63,9 @@ func TestCashBlocked_AfterCustomerFault(t *testing.T) {
 	}
 
 	// ── يفشل التسليمُ بذنبه ────────────────────────────────────────────
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "failed",
-		"customer_refused"); err != nil {
-		t.Fatalf("تعذّر الفشل: %v", err)
-	}
-	// **والذنبُ يُثبَّت صراحةً** — الاختبارُ يقيس الحارسَ لا كتابةَ الذنب.
-	if _, err := pool.Exec(ctx,
-		`UPDATE orders SET fault = 'customer' WHERE id = $1`, f.orderID); err != nil {
-		t.Fatalf("تعذّر تثبيتُ الذنب: %v", err)
-	}
+	// **والمكتبُ هو من يُنهي بذنب الزبون** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — **لا
+	// ضغطةُ سائق**: الحظرُ يقع حين يكتب المكتبُ الذنب.
+	f.failAtDoor(t, orders.FaultCustomer, "customer_refused")
 
 	// ── بعده: النقدُ يُردّ برمزٍ يُقرأ ─────────────────────────────────
 	_, err := placeCash(ctx, f, itemID)
@@ -106,14 +100,8 @@ func TestCashBlocked_MerchantFaultDoesNotCount(t *testing.T) {
 	itemID, cleanup := arena(t, pool, f)
 	defer cleanup()
 
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "failed",
-		"merchant_closed"); err != nil {
-		t.Fatalf("تعذّر الفشل: %v", err)
-	}
-	if _, err := pool.Exec(ctx,
-		`UPDATE orders SET fault = 'merchant' WHERE id = $1`, f.orderID); err != nil {
-		t.Fatalf("تعذّر ضبطُ الذنب: %v", err)
-	}
+	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
+	f.failAtDoor(t, orders.FaultMerchant, "")
 
 	if _, err := placeCash(ctx, f, itemID); err != nil {
 		t.Fatalf("مُنع النقدُ عن زبونٍ ذنبُه على المتجر (%v) — "+

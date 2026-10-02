@@ -103,7 +103,26 @@ const (
 	// نقلٍ دائمٌ بعرضٍ غيرِ صندوقيّ**، **ولا محرّكَ دفعٍ ثانٍ ولا
 	// عمودٌ جديدٌ في القاعدة.**
 	KindChat = "chat"
+
+	// ══════════════════════════════════════════════════════════════════
+	// **KindOrderOffer — عرضُ طلبٍ يُدفَع ولا يُعرَض** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان العرضُ `Transient`** — **فلا صفَّ ولا نيّةَ دفع**، وعاملُ النقل
+	// يقرأ الصفوف: **فلا يصل هاتفاً تطبيقُه مغلق.** (قِيس على جهاز المالك:
+	// عرضٌ لا يرنّ إلّا والتطبيقُ مفتوح.) **وهي علّةُ `KindChat` بعينها.**
+	//
+	// **فالصفُّ يُكتب ليُدفَع، ويُحجَب عن الصندوق بنوعه** — **وقرارُ المالك
+	// ٢٠٢٦-٠٨-١٤ باقٍ: العروضُ لا تملأ صندوقَ السائق.** **وله أجلٌ ومفتاحُ
+	// طيّ** (`Input.TTL` · `Input.Collapse`): عرضٌ مات لا يُسلَّم بعد موته.
+	KindOrderOffer = "order_offer"
 )
+
+// InboxHidden **أنواعٌ تُدفَع ولا تُعرَض في الصندوق ولا تُعَدّ في شارته.**
+//
+// **وقائمةٌ واحدةٌ تُقرأ في كلّ موضع** — القائمةُ وعدُّ غير المقروء وعدُّ
+// الأنواع. **وشرطٌ يُكتب في ثلاثة مواضعَ ينساه الرابع.**
+func InboxHidden() []string { return []string{KindChat, KindOrderOffer} }
 
 type Service struct {
 	db     *pgxpool.Pool
@@ -232,6 +251,17 @@ type Input struct {
 	// **الرنّةُ ثمنُها انتباهُ صاحبها** — ومن دفعه في خبرٍ لا فعلَ فيه
 	// **لم يبقَ له ما يدفعه حين يجيء العرض.**
 	Silent bool
+
+	// ══════════════════════════════════════════════════════════════════
+	// **TTL و Collapse — خبرٌ له أجل** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **عرضُ طلبٍ عمرُه دقيقة** — ومن وصله بعد ثلاثٍ ضغط على طلبٍ ذهب لغيره.
+	// **فالأجلُ يُكتب في الصفّ** (`expires_at`): لا يُفرَّع بعده ولا يُرسَل،
+	// **ويُبلَّغ الناقلُ مهلةَ ما بقي** فلا يُسلّمه المزوّدُ بعد موته.
+	// **والطيُّ مفتاحٌ واحدٌ لكلّ طلب**: عرضان للطلب نفسِه صورةٌ واحدة.
+	TTL      time.Duration
+	Collapse string
 }
 
 // Notify يحفظ الإشعار ويبثّه لصاحبه فوراً. لا يُفشل العملية الأصلية أبداً —
@@ -267,11 +297,14 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 		// والثاني لا يُحفَظ أصلاً.**
 		err := s.db.QueryRow(ctx, `
 			INSERT INTO notifications (user_id, kind, title, body, entity,
-			            entity_id, href, push_pending, push_apps)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			            entity_id, href, push_pending, push_apps,
+			            expires_at, collapse_key)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+			        CASE WHEN $10::bigint > 0
+			             THEN now() + make_interval(secs => $10::bigint) END, $11)
 			RETURNING id, created_at::text`,
 			in.UserID, in.Kind, in.Title, in.Body, in.Entity, in.EntityID,
-			in.Href, !in.Silent, apps(in.Apps)).
+			in.Href, !in.Silent, apps(in.Apps), ttlSec(in.TTL), in.Collapse).
 			Scan(&id, &createdAt)
 		if err != nil {
 			s.logger.Error("notify: insert", "error", err, "user", in.UserID)
@@ -286,7 +319,8 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 			Read: false, CreatedAt: createdAt,
 			// **وتُوسَم عابرةً في البثّ** — الشاشةُ ترفعها لحظةً ولا
 			// تضيفها إلى صندوقها، **ولا تزيد عدّادَ غير المقروء.**
-			Transient: in.Transient,
+			// **والعرضُ كذلك** — صفٌّ للدفع لا خبرٌ في الصندوق.
+			Transient: in.Transient || in.Kind == KindOrderOffer,
 		},
 	})
 
@@ -335,11 +369,14 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 	if !in.Transient {
 		if _, err := s.db.Exec(ctx, `
 			INSERT INTO notifications (user_id, kind, title, body, entity,
-			            entity_id, href, push_pending, push_apps)
-			SELECT u, $2, $3, $4, $5, $6, $7, $8, $9
+			            entity_id, href, push_pending, push_apps,
+			            expires_at, collapse_key)
+			SELECT u, $2, $3, $4, $5, $6, $7, $8, $9,
+			       CASE WHEN $10::bigint > 0
+			            THEN now() + make_interval(secs => $10::bigint) END, $11
 			  FROM unnest($1::uuid[]) AS u`,
 			userIDs, in.Kind, in.Title, in.Body, in.Entity, in.EntityID,
-			in.Href, !in.Silent, apps(in.Apps),
+			in.Href, !in.Silent, apps(in.Apps), ttlSec(in.TTL), in.Collapse,
 		); err != nil {
 			s.logger.Error("notify: bulk insert", "error", err, "count", len(userIDs))
 			return
@@ -363,7 +400,8 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 			"notification": Notification{
 				Kind: in.Kind, Title: in.Title, Body: in.Body,
 				Entity: in.Entity, EntityID: in.EntityID,
-				Read: false, CreatedAt: createdAt, Transient: in.Transient,
+				Read: false, CreatedAt: createdAt,
+				Transient: in.Transient || in.Kind == KindOrderOffer,
 			},
 		})
 		// **ولا حمولةَ تُبنى هنا بعد اليوم** — **كانت نسختين تفترقان
@@ -485,8 +523,8 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 		       (read_at IS NOT NULL), created_at::text
 		FROM notifications
 		 WHERE user_id = $1 AND ($3 = '' OR kind = $3)
-		   AND kind <> '`+KindChat+`'
-		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind)
+		   AND kind <> ALL($4::text[])
+		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind, InboxHidden())
 	if err != nil {
 		return nil, 0, err
 	}
@@ -506,8 +544,8 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 	var unread int
 	_ = s.db.QueryRow(ctx, `
 		SELECT count(*) FROM notifications
-		 WHERE user_id = $1 AND read_at IS NULL AND kind <> $2`,
-		userID, KindChat).Scan(&unread)
+		 WHERE user_id = $1 AND read_at IS NULL AND kind <> ALL($2::text[])`,
+		userID, InboxHidden()).Scan(&unread)
 	return out, unread, rows.Err()
 }
 
@@ -521,6 +559,17 @@ func (s *Service) MarkRead(ctx context.Context, userID, id string) error {
 	_, err := s.db.Exec(ctx,
 		`UPDATE notifications SET read_at = now() WHERE user_id = $1 AND id = $2`, userID, id)
 	return err
+}
+
+// ttlSec **الأجلُ بالثواني كما يُكتب في الصفّ** — وصفرٌ «بلا أجل».
+//
+// **ويُقرَّب إلى الأعلى**: أجلٌ نصفُ ثانيةٍ يُكتب ثانيةً لا صفراً — والصفرُ
+// يعني «أبداً» فيقلب المعنى.
+func ttlSec(d time.Duration) int64 {
+	if d <= 0 {
+		return 0
+	}
+	return int64((d + time.Second - 1) / time.Second)
 }
 
 // apps **تطبيقاتُ الهدف كما تُكتب في الصفّ** — **وفارغةٌ تعني كلَّ

@@ -178,6 +178,32 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 			in.orderID, causeMerchantDeliveryFee, &in.actorID); err != nil {
 			return err
 		}
+		// ══════════════════════════════════════════════════════════════
+		// **وفشلُها بعد الاستلام يُعوَّض فيه السائقُ من المنصّة** (قرارُ المالك
+		// مساءَ ٢٠٢٦-١٠-٠٢، البند ٨: «المنصّة تدفع طبعاً»)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **كان هذا الفرعُ بلا تعويضٍ أصلاً** — فسائقٌ قاد التوصيلةَ إلى بابٍ لم
+		// يستلم يعود بلا شيء. **وأجرُها على المتجر حين تُسلَّم**، فإن لم تُسلَّم
+		// **فالمنصّةُ تعوّض** — بطلبٍ معلَّقٍ كغيره (`compensation_requests.go`)
+		// يوافق عليه إنسان، **بذنبٍ «المنصّة»** فلا تُفتح مطالبةٌ على المتجر.
+		// **وذنبُ السائق لا تعويضَ فيه** — كما في كلّ طلب.
+		if in.to == StFailed && in.driverID != nil && pastPickup[in.from] {
+			var fault, reason string
+			if err := q.QueryRow(ctx,
+				`SELECT COALESCE(fault, ''), COALESCE(fail_reason, '') FROM orders WHERE id = $1`,
+				in.orderID).Scan(&fault, &reason); err != nil {
+				return err
+			}
+			if fault != FaultDriver {
+				created, err := s.requestDriverCompensation(ctx, q, in.orderID, in.driverID,
+					FaultPlatform, reason, in.deliveryFee)
+				if err != nil {
+					return err
+				}
+				out.compensationRequested = out.compensationRequested || created
+			}
+		}
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
 	return nil

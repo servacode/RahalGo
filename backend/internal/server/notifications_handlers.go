@@ -62,6 +62,8 @@ var notifTitles = struct {
 	targetReached                               string
 	payoutRequested, payoutPaid, payoutRejected string
 	warningIssued, driverEmergency              string
+	// **سائقٌ ترك طلباً قبل الاستلام بسبب** — ودوامُه أُغلق (مساءَ ٢٠٢٦-١٠-٠٢).
+	driverReleased string
 	// **رسالةٌ في حديث الطلب — والعنوانُ يقول من كتب لا ماذا كتب.**
 	//
 	// **ولا رقمَ ولا اسمَ شخصٍ في العنوان**: يُقرأ الإشعارُ على شاشةٍ مقفلة،
@@ -89,6 +91,7 @@ var notifTitles = struct {
 	messageFromCustomer: "رسالة من الزبون",
 	warningIssued:       "إنذارٌ على متجرك",
 	driverEmergency:     "طارئٌ لدى سائق",
+	driverReleased:      "سائقٌ ترك طلباً قبل الاستلام — ودوامُه أُغلق",
 	walletCredit:        "إيداع في محفظتك",
 	walletDebit:         "خصم من محفظتك",
 	ratingNew:           "تقييم جديد على خدمتك",
@@ -129,8 +132,8 @@ func (s *Server) handleMyNotifications(w http.ResponseWriter, r *http.Request) {
 		// **ولا يُعَدّ نوعٌ لا يُعرَض** — **وصفُّ المحادثة حدثُ نقلٍ
 		// لا خبرٌ في صندوق** (`notifications.KindChat`).
 		`SELECT kind, count(*) FROM notifications
-		  WHERE user_id = $1 AND kind <> $2 GROUP BY kind`,
-		userIDFrom(r), notifications.KindChat)
+		  WHERE user_id = $1 AND kind <> ALL($2::text[]) GROUP BY kind`,
+		userIDFrom(r), notifications.InboxHidden())
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {

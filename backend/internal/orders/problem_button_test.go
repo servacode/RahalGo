@@ -14,7 +14,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -61,6 +60,11 @@ func TestFailReason_RefusedOutsideItsStage(t *testing.T) {
 			before := f.balance(t, f.driver)
 			_, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
 				f.orderID, "failed", "", c.reason)
+			// **وعند الباب لا فشلَ للسائق أصلاً** (مساءَ ٢٠٢٦-١٠-٠٢) — يُردّ
+			// بالخارطة قبل أن يُسأل عن السبب.
+			if c.at == "at_dropoff" && errors.Is(err, orders.ErrBadTransition) {
+				err = orders.ErrFailReasonStage
+			}
 			if !errors.Is(err, orders.ErrFailReasonStage) {
 				t.Fatalf("قُبل «%s» في %s (الخطأ: %v) — **وسببٌ لا يخصّ المرحلة دفع تعويضاً على التجهيز**",
 					c.reason, c.at, err)
@@ -76,7 +80,8 @@ func TestFailReason_RefusedOutsideItsStage(t *testing.T) {
 }
 
 // TestFailAtDropoff_NoAutoCompensation_PendingByFault **لا قيدَ تلقائيّ —
-// وطلبٌ معلَّقٌ بحسب الذنب.**
+// وطلبٌ معلَّقٌ بحسب الذنب.** والذنبُ صار يكتبه المكتبُ حين يُنهي عند الباب
+// (مساءَ ٢٠٢٦-١٠-٠٢) — انظر `door_resolution_test.go`.
 func TestFailAtDropoff_NoAutoCompensation_PendingByFault(t *testing.T) {
 	cases := []struct {
 		reason    string
@@ -86,7 +91,7 @@ func TestFailAtDropoff_NoAutoCompensation_PendingByFault(t *testing.T) {
 	}{
 		{"customer_refused", "customer", 5_000, true},
 		{"address_wrong", "customer", 5_000, true},
-		// **«تأخّرتُ أنا» ذنبُ السائق** — لا يُطلَب له شيء (وكان يُدفع له ٥٬٠٠٠).
+		// **«تأخّرتُ أنا» ذنبُ السائق إن أقرّه المكتب** — لا يُطلَب له شيء.
 		{"driver_late", "driver", 0, false},
 	}
 	for _, c := range cases {
@@ -95,12 +100,9 @@ func TestFailAtDropoff_NoAutoCompensation_PendingByFault(t *testing.T) {
 			ctx := context.Background()
 			f.armTreasury(t)
 			before := f.balance(t, f.driver)
-			if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-				f.orderID, "failed", "", c.reason); err != nil {
-				t.Fatalf("الإفشالُ رُدّ: %v", err)
-			}
+			f.failAtDoor(t, c.fault, c.reason)
 			if got := f.balance(t, f.driver) - before; got != 0 {
-				t.Fatalf("قُيّد للسائق %d لحظةَ الضغطة — **والتعويضُ بعد موافقة العمليات** (٢٠٢٦-١٠-٠٢)", got)
+				t.Fatalf("قُيّد للسائق %d لحظةَ الإنهاء — **والتعويضُ بعد موافقة العمليات** (٢٠٢٦-١٠-٠٢)", got)
 			}
 			var fault string
 			if err := f.pool.QueryRow(ctx, `SELECT COALESCE(fault,'') FROM orders WHERE id = $1`,
@@ -108,7 +110,7 @@ func TestFailAtDropoff_NoAutoCompensation_PendingByFault(t *testing.T) {
 				t.Fatal(err)
 			}
 			if fault != c.fault {
-				t.Errorf("الذنبُ %q والمتوقّع %q — **والذنبُ من السبب**", fault, c.fault)
+				t.Errorf("الذنبُ %q والمتوقّع %q — **والذنبُ ما كتبه المكتب**", fault, c.fault)
 			}
 			gotFault, suggested, found := f.pendingRequest(t)
 			if found != c.pending {
@@ -157,56 +159,6 @@ func TestMerchantBlocked_FaultFromReason_PendingNotPaid(t *testing.T) {
 	}
 	if disputes != 0 {
 		t.Errorf("فُتح نزاعٌ قبل أن يُدفع شيء: %d", disputes)
-	}
-}
-
-// TestDoorWait_AbsentRefusedUntilWaited **خمسُ دقائقَ عند الباب قبل «الزبونُ غير موجود».**
-func TestDoorWait_AbsentRefusedUntilWaited(t *testing.T) {
-	f := setup(t, "on_the_way", 100_000, 10_000, 0)
-	ctx := context.Background()
-	f.armTreasury(t)
-	// **الوصولُ بالانتقال الحقيقيّ** — ومنه يُكتب الحدثُ الذي يُقاس منه الانتظار.
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "at_dropoff", ""); err != nil {
-		t.Fatalf("الوصولُ رُدّ: %v", err)
-	}
-	for _, reason := range []string{"customer_absent", "customer_unreachable"} {
-		_, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-			f.orderID, "failed", "", reason)
-		var app *httpx.AppError
-		if !errors.As(err, &app) || app.Code != "door_wait" {
-			t.Fatalf("«%s» بعد ثوانٍ من الوصول: %v — **وقِيس على التجهيز فشلٌ بعد ٦٨ ثانية**", reason, err)
-		}
-		left, _ := app.Details["remaining_sec"].(int64)
-		if left <= 0 || left > 300 {
-			t.Errorf("ما بقي = %v والمتوقّع بين ١ و٣٠٠", app.Details["remaining_sec"])
-		}
-	}
-	if st := f.statusOf(t); st != "at_dropoff" {
-		t.Fatalf("الحالُ %q بعد الرفض", st)
-	}
-	// **ومضت الدقائقُ الخمس** — الحدثُ يُرجَع ستّاً.
-	if _, err := f.pool.Exec(ctx, `
-		UPDATE order_events SET created_at = now() - interval '6 minutes'
-		WHERE order_id = $1 AND to_status = 'at_dropoff'`, f.orderID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_absent"); err != nil {
-		t.Fatalf("رُدّ بعد انقضاء الانتظار: %v", err)
-	}
-}
-
-// TestDoorWait_RefusedNeedsNoWait **«رفض» و«العنوانُ خطأ» لا ينتظران.**
-func TestDoorWait_RefusedNeedsNoWait(t *testing.T) {
-	f := setup(t, "on_the_way", 100_000, 10_000, 0)
-	ctx := context.Background()
-	f.armTreasury(t)
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "at_dropoff", ""); err != nil {
-		t.Fatalf("الوصولُ رُدّ: %v", err)
-	}
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_refused"); err != nil {
-		t.Fatalf("«الزبونُ رفض» رُدّ: %v — **والرفضُ لا ينتظر**", err)
 	}
 }
 

@@ -36,6 +36,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
 // atDropoffOrder طلبٌ نقديٌّ بلغ باب الزبون بيد هذا السائق — الحالُ الذي
@@ -68,35 +70,37 @@ func (f *driverFixture) fail(driverID, orderID, reason, note string) *httptest.R
 	return w
 }
 
-// TestDriverFail_CodedReasonNeedsNoNote **سببٌ مختارٌ يكفي — ولا تُطلب كتابة.**
-func TestDriverFail_CodedReasonNeedsNoNote(t *testing.T) {
+// endAtDoor **المكتبُ يُنهي عند الباب من بابه** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢).
+func (f *driverFixture) endAtDoor(t *testing.T, orderID, fault, reason string) *httptest.ResponseRecorder {
+	t.Helper()
+	ops := testdb.NewUser(t, f.pool, "ops")
+	return f.call(f.srv.handleDoorResolution, http.MethodPost,
+		"/admin/orders/"+orderID+"/door-resolution", orderID, ops, []string{"ops"},
+		`{"action":"return_to_office","fault":"`+fault+`","reason":"`+reason+`","note":"اتّصلنا بالزبون"}`)
+}
+
+// TestDriverFail_AtDoorBecomesReport **«تعذّر» عند الباب بلاغٌ لا إغلاق** (قرارُ
+// المالك مساءَ ٢٠٢٦-١٠-٠٢) — **والسببُ المختارُ يكفي بلا كتابة.**
+//
+// **تطبيقٌ لم يُحدَّث يرسل «الزبونُ غير موجود» فشلاً** — فيُسجَّل بلاغاً والطلبُ
+// يبقى معه، **والإدارةُ تُنهي.**
+func TestDriverFail_AtDoorBecomesReport(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	driver := f.drivers[0]
 	orderID := f.atDropoffOrder(t, driver)
 
 	w := f.fail(driver, orderID, "customer_absent", "")
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("اختار السائقُ «الزبون غير موجود» ولم يكتب شيئاً — فردّ الخادمُ %d (%s)\n"+
-			"والتفصيلُ اختياريٌّ بنصّ `failreasons.go`: «القائمةُ تُصنّف والنصُّ يشرح»\n"+
-			"الردّ: %s", w.Code, errCode(t, w), w.Body.String())
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"reported":true`) {
+		t.Fatalf("ردّ %d %s — والمتوقّعُ بلاغاً مقبولاً", w.Code, w.Body.String())
 	}
-
-	// **والذنبُ يُشتقّ من القائمة لا من تقدير أحد** — وهو ما يقرّر التعويض.
-	var status, fault, failReason string
+	var status string
+	var holder *string
 	if err := f.pool.QueryRow(context.Background(), `
-		SELECT status, COALESCE(fault, ''), COALESCE(fail_reason, '')
-		FROM orders WHERE id = $1`, orderID).Scan(&status, &fault, &failReason); err != nil {
+		SELECT status, driver_id::text FROM orders WHERE id = $1`, orderID).Scan(&status, &holder); err != nil {
 		t.Fatalf("تعذّرت قراءةُ الطلب: %v", err)
 	}
-	if status != "failed" {
-		t.Fatalf("الطلبُ بقي %q بعد التعذّر — والسائقُ يرى زرَّ «سلّمتُ الطلب» قائماً", status)
-	}
-	if failReason != "customer_absent" {
-		t.Fatalf("الرمزُ المحفوظ %q لا «customer_absent» — ولا يُقاس ما لا يُصنَّف", failReason)
-	}
-	if fault != "customer" {
-		t.Fatalf("الذنبُ %q لا «customer» — والذنبُ هو من يقرّر التعويض", fault)
+	if status != "at_dropoff" || holder == nil || *holder != driver {
+		t.Fatalf("(%s · %v) — **أغلق السائقُ الطلبَ عند الباب والإدارةُ هي التي تُنهي**", status, holder)
 	}
 }
 

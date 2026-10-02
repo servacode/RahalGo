@@ -60,8 +60,9 @@ func TestDriverOrders_FailedLeavesTheList(t *testing.T) {
 		t.Fatalf("الطلبُ عند باب الزبون ولم يظهر في مهامّه: %d", len(before))
 	}
 
-	if w := f.fail(driver, orderID, "customer_absent", ""); w.Code != http.StatusOK {
-		t.Fatalf("تعذّرَ الإفشال: %d — %s", w.Code, w.Body.String())
+	// **والإنهاءُ عند الباب للمكتب** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢).
+	if w := f.endAtDoor(t, orderID, "customer", "customer_absent"); w.Code != http.StatusOK {
+		t.Fatalf("تعذّرَ الإنهاء: %d — %s", w.Code, w.Body.String())
 	}
 
 	// **وبعد**: لا شيء. **ولم تُحسم البضاعةُ عمداً** — `returned_at`

@@ -2013,6 +2013,40 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/door-resolution",
+      "handler": "handleDoorResolution",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "action",
+          "type": "string"
+        },
+        {
+          "name": "fault",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/goods",
       "handler": "handleGoods",
       "auth": true,
@@ -4592,6 +4626,10 @@
       ],
       "request": [
         {
+          "name": "reason",
+          "type": "string"
+        },
+        {
           "name": "note",
           "type": "string"
         }
@@ -4599,6 +4637,10 @@
       "response": [
         {
           "name": "released",
+          "type": "bool"
+        },
+        {
+          "name": "shift_ended",
           "type": "bool"
         }
       ],

@@ -40,6 +40,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
@@ -188,6 +189,18 @@ func (s *Service) DispatchProximity(ctx context.Context) DispatchProximity {
 // **وما لم يبقَ له سائقٌ ينتظر بلا عرض** — لا يُهمَل: `SweepExpiredOffers`
 // يلتقطه حين يتحرّر أحدُهم.
 func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) error {
+	// ══════════════════════════════════════════════════════════════════
+	// **ومن ترك الطلبَ مستثنى أبداً — لا لهذه الجولة وحدَها** (قرارُ المالك
+	// مساءَ ٢٠٢٦-١٠-٠٢، البند ٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «لا يعود الطلبُ إلى من تركه أبداً — ولو لم يوجد غيرُه.» **و`offer_passed`
+	// سجلُّ جولةٍ يُصفَّر أدناه حين يدور الطابورُ على الجميع** — فكان الطلبُ يعود
+	// إلى التارك إن لم يبقَ غيرُه. **فالمستثنى أبداً عمودٌ لا يُصفَّر**
+	// (`excluded_drivers`)، **ويُضمّ إلى كلّ استثناءٍ هنا** — في الجولة وفي تصفيرها.
+	excluded := s.excludedDrivers(ctx, orderID)
+	skip = append(append([]string{}, skip...), excluded...)
+
 	// **ونفسُ المسار قبل الدور — وقبل النمط.**
 	//
 	// **وهو قبل الدور لأنّه ليس منافساً له**: الدورُ يوزّع ما لا صاحبَ له،
@@ -233,8 +246,8 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	//
 	// **ولا تُصفَّر إلّا ومرشَّحُها في اليد** — تصفيرٌ بلا مرشَّحٍ يمحو تاريخَ
 	// الجولة ولا يُقدّم الطلبَ خطوة.
-	if errors.Is(err, pgx.ErrNoRows) && len(skip) > 0 {
-		if id2, wait2, err2 := s.pickRotationCandidate(ctx, orderID, nil, limit, maxActive); err2 == nil {
+	if errors.Is(err, pgx.ErrNoRows) && len(skip) > len(excluded) {
+		if id2, wait2, err2 := s.pickRotationCandidate(ctx, orderID, excluded, limit, maxActive); err2 == nil {
 			if _, e := s.db.Exec(ctx,
 				`UPDATE orders SET offer_passed = '{}' WHERE id = $1`, orderID); e != nil {
 				s.logger.Error("الترتيب: تعذّر تصفيرُ الجولة",
@@ -784,6 +797,48 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 	if s.AssignmentMode(ctx) != "rotation" {
 		return
 	}
+	s.sweepOfferExpiry(ctx)
+	s.offerWaiting(ctx)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **العرضُ ينتقل لحظةَ موته — لا بعد نبضة الراصد** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الانتقالُ مع نبضة الراصد (ثلاثون ثانية)** — فعرضٌ مهلتُه دقيقةٌ يبقى
+// ميّتاً عند صاحبه حتّى نصفَ دقيقةٍ أخرى. (قِيس: فجواتٌ نحو عشرين ثانية.)
+//
+// **فحلقةٌ سريعةٌ للعروض وحدَها** — كلَّ ثانية: **سؤالٌ واحدٌ رخيصٌ** عن عرضٍ
+// انقضى، **ولا شيءَ يُفعل إن لم يوجد.** **ومن القاعدة لا من مؤقّتٍ في الذاكرة**:
+// إعادةُ التشغيل لا تُضيّع عرضاً، فالحلقةُ تقرأ ما في الصفّ حين تعود.
+//
+// **وما ينتظر بلا عرضٍ يبقى على نبضة الراصد** (`SweepWaitingOffers`) — هو
+// الأثقل (يسأل عن مرشّحٍ لكلّ منتظِر)، **ولا موعدَ ينقضي فيه.**
+func (s *Service) RunOfferSweeper(ctx context.Context, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if s.AssignmentMode(ctx) == "rotation" {
+				s.sweepOfferExpiry(ctx)
+			}
+		}
+	}
+}
+
+// SweepWaitingOffers **ما ينتظر بلا عرض** — على نبضة الراصد.
+func (s *Service) SweepWaitingOffers(ctx context.Context) {
+	if s.AssignmentMode(ctx) != "rotation" {
+		return
+	}
+	s.offerWaiting(ctx)
+}
+
+// sweepOfferExpiry **العروضُ المنقضيةُ والإسناداتُ الصامتة** — وحدَها.
+func (s *Service) sweepOfferExpiry(ctx context.Context) {
 	s.reclaimSilentAssignments(ctx)
 	rows, err := s.db.Query(ctx, `
 		SELECT id, offered_driver_id FROM orders
@@ -811,20 +866,30 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 			UPDATE orders
 			-- **ولا يُوسَم معرّفٌ مرّتين** — النبضةُ تتكرّر كلَّ ثلاثين ثانيةً
 			-- على طلبٍ ساكن، **فيصير الصفُّ سجلَّ نبضاتٍ لا سجلَّ جولة.**
+			--
+			-- **والعرضُ الميّتُ يُفرَّغ مع الوسم** — فلا يراه صاحبُه في طابوره
+			-- ولا يستطيع قبولَه، **ولا تعود إليه الحلقةُ في الثانية التالية**:
+			-- إن لم يوجد غيرُه صار منتظِراً تلتقطه نبضةُ الراصد.
 			SET offer_passed = CASE WHEN $2::uuid = ANY(offer_passed)
-			                        THEN offer_passed ELSE offer_passed || $2::uuid END
-			WHERE id = $1 RETURNING array(SELECT unnest(offer_passed)::text)`,
+			                        THEN offer_passed ELSE offer_passed || $2::uuid END,
+			    offered_driver_id = NULL, offer_expires_at = NULL
+			-- **والشرطُ يتكرّر في التحديث** — حلقتان أو مُنفّذان يقرآن العرضَ
+			-- نفسَه فيأخذه أوّلُهما، **ولا يُنقل الدورُ مرّتين.**
+			WHERE id = $1 AND offered_driver_id = $2
+			  AND offer_expires_at IS NOT NULL AND offer_expires_at <= now()
+			  AND status = 'dispatching' AND driver_id IS NULL
+			RETURNING array(SELECT unnest(offer_passed)::text)`,
 			e.orderID, e.driverID).Scan(&skip); err != nil {
-			s.logger.Error("الترتيب: تعذّر وسمُ مرور الدور",
-				"order", e.orderID, "error", err)
+			if !errors.Is(err, pgx.ErrNoRows) {
+				s.logger.Error("الترتيب: تعذّر وسمُ مرور الدور",
+					"order", e.orderID, "error", err)
+			}
 			continue
 		}
 		if err := s.OfferNext(ctx, e.orderID, skip); err != nil {
 			s.logger.Error("الترتيب: تعذّر نقل الدور", "order", e.orderID, "error", err)
 		}
 	}
-
-	s.offerWaiting(ctx)
 }
 
 // offerWaiting يعرض ما ينتظر بلا عرض — **حين يتحرّر سائق.**
@@ -1023,4 +1088,27 @@ func (s *Service) DeclineOffer(ctx context.Context, orderID, driverID string) er
 		return nil
 	}
 	return s.OfferNext(ctx, orderID, skip)
+}
+
+// excludedDrivers **من ترك هذا الطلبَ فلا يعود إليه** — وفارغٌ إن لم يتركه أحد.
+func (s *Service) excludedDrivers(ctx context.Context, orderID string) []string {
+	var out []string
+	if err := s.db.QueryRow(ctx,
+		`SELECT array(SELECT unnest(excluded_drivers)::text) FROM orders WHERE id = $1`,
+		orderID).Scan(&out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// ExcludeDriverTx **يُثبّت أنّ هذا السائقَ ترك الطلب — فلا يعود إليه أبداً.**
+//
+// **في معاملة الترك نفسِها** — فالعرضُ التالي بعد التثبيت يقرؤه.
+func (s *Service) ExcludeDriverTx(ctx context.Context, q dbtx.Querier, orderID, driverID string) error {
+	_, err := q.Exec(ctx, `
+		UPDATE orders
+		SET excluded_drivers = CASE WHEN $2::uuid = ANY(excluded_drivers)
+		                            THEN excluded_drivers ELSE excluded_drivers || $2::uuid END
+		WHERE id = $1`, orderID, driverID)
+	return err
 }

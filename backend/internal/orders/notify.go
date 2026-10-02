@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
@@ -34,8 +35,6 @@ var t = struct {
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
-	// **وتبدّلُ السائق يُقال** — (قرارُ المالك ٢٠٢٦-١٠-٠٢).
-	driverChanged, newDriverIs string
 	// **والسائقُ يُخبَر حين يُؤخذ منه طلبُه** — انظر `driver_lost.go`.
 	driverLost string
 }{
@@ -67,8 +66,6 @@ var t = struct {
 	merchantEarned:           "مستحق مبيعاتك في محفظتك",
 	refunded2:                "أُعيد المبلغ إلى محفظتك",
 	compensated:              "تعويض في محفظتك",
-	driverChanged:            "تم تغيير السائق",
-	newDriverIs:              "سائقك الجديد: ",
 	driverLost:               "طلبٌ لم يعد معك",
 }
 
@@ -285,22 +282,15 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 		body = ref + " — " + note // **والسببُ يُقال**: من أُلغي طلبُه يستحقّ لماذا
 	}
 	// ══════════════════════════════════════════════════════════════════
-	// **وسائقٌ ثانٍ يُقال إنّه ثانٍ** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
+	// **ولا يُقال للزبون إنّ السائقَ تغيّر** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢)
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// **كان الزبونُ يقرأ «أُسند سائقٌ لطلبك» مرّتين** — ولا يعلم أنّ الثانيةَ
-	// رجلٌ آخر، **فيكتب لسائقه ما كان يكتبه للأوّل.** **ولا يُقال السبب**:
-	// تركه السائقُ أو نزعه المكتبُ أو صمت — شأنُ المنصّة لا الزبون.
-	//
-	// **والإسنادُ الأوّلُ يبقى بنصّه.**
-	if to == StAssigned {
-		if changed, name := s.driverChange(ctx, orderID); changed {
-			title = t.driverChanged
-			body = ref
-			if name != "" {
-				body = ref + " — " + t.newDriverIs + name
-			}
-		}
+	// «ما بدّنا ينعرف اسم السائق، وإذا قدّم شكوى فرقمُ الطلب يكفي.» **كان
+	// الإسنادُ الثاني يُقال «تم تغيير السائق — سائقك الجديد: فلان»** — **فنُسخ:
+	// الزبونُ يرى «كابتن رحال غو» أيّاً كان السائق** (`CustomerDriverLabel`)،
+	// **فلا خبرَ عن تبديلٍ لا يراه.** والإسنادُ الأوّلُ يبقى بنصّه بلا اسم.
+	if to == StAssigned && s.driverChanged(ctx, orderID) {
+		return
 	}
 	// **والرابطُ إلى القائمة لا إلى صفحةِ طلبٍ منفردة.**
 	//
@@ -351,24 +341,21 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 	}
 }
 
-// driverChange **أكان للطلب سائقٌ غيرُ حامله الآن؟** — واسمُ الحامل.
+// driverChanged **أكان للطلب سائقٌ غيرُ حامله الآن؟**
 //
 // **ومن سجلّ الانتقالات لا من الحديث**: كلُّ إسنادٍ يمرّ بالمحرّك فيُكتب
-// حاملُه في حدثه (`order_events.driver_id`)، **والحديثُ قد لا يُكتب فيه سطر.**
-// **وسائقٌ يعود إليه الطلبُ نفسُه ليس تبديلاً.**
-func (s *Service) driverChange(ctx context.Context, orderID string) (bool, string) {
+// حاملُه في حدثه (`order_events.driver_id`). **وسائقٌ يعود إليه الطلبُ نفسُه
+// ليس تبديلاً.**
+func (s *Service) driverChanged(ctx context.Context, orderID string) bool {
 	var changed bool
-	var name string
 	if err := s.db.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM order_events e
 		               WHERE e.order_id = o.id AND e.to_status = 'assigned'
-		                 AND e.driver_id IS NOT NULL AND e.driver_id <> o.driver_id),
-		       COALESCE(u.full_name, '')
-		FROM orders o LEFT JOIN users u ON u.id = o.driver_id
-		WHERE o.id = $1`, orderID).Scan(&changed, &name); err != nil {
-		return false, ""
+		                 AND e.driver_id IS NOT NULL AND e.driver_id <> o.driver_id)
+		FROM orders o WHERE o.id = $1`, orderID).Scan(&changed); err != nil {
+		return false
 	}
-	return changed, name
+	return changed
 }
 
 // notifyCommission المندوب يعرف بعمولته لحظة قيدها — مصدر دخله لا يُترك للاكتشاف.
@@ -488,24 +475,23 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وفي «للجميع» لا يرنّ إلّا لمن يرى الطلبَ في طابوره** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يرنّ عند كلّ سائقٍ على ورديّة في المدينة** — قريباً أو بعيداً،
+	// مؤهَّلاً أو بلغ سقفَه. **فيفتح البعيدُ طلباً لا يجده في طابوره.** والسؤالُ
+	// هو سؤالُ بابِ الطابور نفسُه (`queueAudience`) — **لا شرطٌ ثانٍ يشبهه.**
 	targets := []string{}
 	if driverID != "" {
 		targets = append(targets, driverID)
 	} else {
-		rows, err := s.db.Query(ctx, `
-			SELECT u.id::text FROM users u
-			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-			WHERE u.on_shift AND u.status = 'active'`)
+		ids, err := s.queueAudience(ctx, orderID)
 		if err != nil {
+			s.logger.Error("العرض: تعذّرت قراءةُ من يرى الطلب", "order", orderID, "error", err)
 			return
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id string
-			if err := rows.Scan(&id); err == nil {
-				targets = append(targets, id)
-			}
-		}
+		targets = ids
 	}
 
 	title := t.offerDriver
@@ -532,7 +518,25 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 	//
 	// **والإسنادُ المباشرُ يُحفَظ**: ليس عرضاً ينقضي، **إنّما طلبٌ صار
 	// في يده** — ويُسأل عنه غدا.
-	transient := title == t.offerDriver
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا يُسكَت دفعُه — صفٌّ بنوعٍ لا يُعرَض** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان «يرنّ ولا يُحفَظ» يعني عمليّاً «لا يرنّ والتطبيقُ مغلق»**: العابرُ
+	// لا صفَّ له، **وعاملُ النقل يقرأ الصفوف.** (قِيس على جهاز المالك.) فصار
+	// صفّاً بنوع `order_offer` **يُدفَع عاجلاً ويُحجَب عن الصندوق** — وقرارُ
+	// ٢٠٢٦-٠٨-١٤ باقٍ. **وأجلُه مهلةُ العرض** فلا يصل بعد موته، **ومفتاحُ طيّه
+	// الطلب** فعرضان له صورةٌ واحدة.
+	offer := title == t.offerDriver
+	kind := notifications.KindOrder
+	var ttl time.Duration
+	collapse := ""
+	if offer {
+		kind = notifications.KindOrderOffer
+		ttl = s.offerTTL(ctx, orderID)
+		collapse = "offer:" + orderID
+	}
 	body := merchant
 	if cash > 0 {
 		body = fmt.Sprintf("%s · تقبض %d", merchant, cash)
@@ -540,7 +544,7 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 
 	for _, id := range targets {
 		s.notify.Notify(ctx, notifications.Input{
-			UserID: id, Kind: notifications.KindOrder,
+			UserID: id, Kind: kind,
 			Title: title, Body: body,
 			Entity: "order", EntityID: orderID,
 			Href: "/portal", // **لوحتُه أيّاً كانت** — حُذفت `/driver` من الويب ٢٠٢٦-٠٨-٢٣
@@ -548,10 +552,29 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 			// زبوناً، **وطلبُ عملٍ يرنّ في تطبيق الزبون** خبرٌ في غير
 			// مكانه.
 			Apps: []string{"driver"},
-			// **يرنّ ولا يُحفَظ** — انظر أعلاه.
-			Transient: transient,
+			// **يُدفَع ولا يُعرَض في الصندوق، وله أجل** — انظر أعلاه.
+			TTL: ttl, Collapse: collapse,
 		})
 	}
+}
+
+// offerTTL **ما بقي من مهلة العرض** — من الصفّ إن كان معروضاً على أحدٍ
+// بعينه، وإلّا مهلةُ العرض كاملة. **ولا أقلَّ من ثانية**: الصفرُ «بلا أجل».
+func (s *Service) offerTTL(ctx context.Context, orderID string) time.Duration {
+	var left *float64
+	_ = s.db.QueryRow(ctx, `
+		SELECT EXTRACT(EPOCH FROM (offer_expires_at - now()))
+		FROM orders WHERE id = $1 AND offer_expires_at IS NOT NULL`, orderID).Scan(&left)
+	if left != nil {
+		if *left < 1 {
+			return time.Second
+		}
+		return time.Duration(*left * float64(time.Second))
+	}
+	if d := s.offerTimeout(ctx); d > 0 {
+		return d
+	}
+	return time.Minute
 }
 
 // notifyTargetReached **السائقُ يعرف أنّه بلغ مرحلةً فنال مكافأتَها.**

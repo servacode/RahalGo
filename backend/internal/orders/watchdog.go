@@ -111,7 +111,10 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 			// **انتقالُ الدور مع نبضة الراصد** — لا مع نداءِ سائقٍ للطابور:
 			// لو انتظرنا من يسأل لبقي طلبٌ محجوزاً لسائقٍ نائمٍ حتى يفتح
 			// غيرُه التطبيق. **والزبونُ لا ينتظر أن يتذكّر أحدٌ أن ينظر.**
-			s.SweepExpiredOffers(ctx)
+			//
+			// **والعروضُ المنقضيةُ لها حلقتُها السريعة** (`RunOfferSweeper`،
+			// ٢٠٢٦-١٠-٠٢) — **وهنا ما ينتظر بلا عرضٍ وحدَه.**
+			s.SweepWaitingOffers(ctx)
 			// **ويُقبل ما نُسي في انتظار المكتب** — انظر `sweepAutoAccept`.
 			s.sweepAutoAccept(ctx)
 			alerts, err := s.Alerts(ctx)

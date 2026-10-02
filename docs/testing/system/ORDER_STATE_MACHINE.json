@@ -551,16 +551,15 @@
    "from": "at_dropoff",
    "to": "failed",
    "declared_roles": [
-    "driver",
     "ops"
    ],
    "effective_platform": [
-    "driver"
+    "ops",
+    "admin"
    ],
    "effective_merchants": [
     "ops",
-    "admin",
-    "driver"
+    "admin"
    ]
   },
   {
@@ -927,16 +926,15 @@
    "from": "at_dropoff",
    "to": "failed",
    "declared_roles": [
-    "driver",
     "ops"
    ],
    "effective_platform": [
-    "driver"
+    "ops",
+    "admin"
    ],
    "effective_merchants": [
     "ops",
-    "admin",
-    "driver"
+    "admin"
    ],
    "inherited": true
   },
@@ -1244,16 +1242,15 @@
    "from": "at_dropoff",
    "to": "failed",
    "declared_roles": [
-    "driver",
     "ops"
    ],
    "effective_platform": [
-    "driver"
+    "ops",
+    "admin"
    ],
    "effective_merchants": [
     "ops",
-    "admin",
-    "driver"
+    "admin"
    ]
   },
   {
@@ -1282,7 +1279,7 @@
   },
   {
    "id": "P3",
-   "what": "وجهةٌ في driverOnly تُسقط ops وadmin",
+   "what": "وجهةٌ في driverOnly تُسقط ops وadmin — **إلّا at_dropoff → failed**: المكتبُ يُنهي عند الباب (مساءَ ٢٠٢٦-١٠-٠٢)",
    "source": "internal/orders/modes.go:171"
   },
   {
@@ -1348,6 +1345,11 @@
    "source": "internal/orders/transitions.go:168"
   },
   {
+   "id": "G8",
+   "what": "at_dropoff → failed **بلا ذنبٍ مكتوب** يُردّ door_needs_ops (409) — بابُه ResolveDoor وحدَه",
+   "source": "internal/orders/transitions.go:180"
+  },
+  {
    "id": "G7",
    "what": "نافذةُ إلغاء الزبون — وتُقاس على الأدوار الخامّ فيتجاوزها زبونٌ يحمل ops",
    "source": "internal/orders/transitions.go:301"
@@ -1408,31 +1410,6 @@
   }
  ],
  "fail_reasons": [
-  {
-   "code": "customer_absent",
-   "fault": "customer",
-   "at": "at_dropoff"
-  },
-  {
-   "code": "customer_refused",
-   "fault": "customer",
-   "at": "at_dropoff"
-  },
-  {
-   "code": "customer_unreachable",
-   "fault": "customer",
-   "at": "at_dropoff"
-  },
-  {
-   "code": "address_wrong",
-   "fault": "customer",
-   "at": "at_dropoff"
-  },
-  {
-   "code": "driver_late",
-   "fault": "driver",
-   "at": "at_dropoff"
-  },
   {
    "code": "merchant_closed",
    "fault": "merchant",
