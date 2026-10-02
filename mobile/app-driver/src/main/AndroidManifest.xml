@@ -39,6 +39,9 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- **إقلاعُ الهاتف وسط الورديّة** (٢٠٢٦-١٠-٠٢) — تعود خدمةُ الموقع أو يُطلب
+         فتحُ التطبيق (`location/BootResume.kt`). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- **وإشعار الخدمة يحتاج إذنا من أندرويد ١٣** — وبلاه تعمل الخدمة
          بلا أن يراها صاحبها، وهو ما يمنعه النظام. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -85,6 +88,14 @@
             android:name=".location.LocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <receiver
+            android:name=".location.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 </manifest>

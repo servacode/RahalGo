@@ -143,6 +143,11 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 	if requested {
 		s.alertCompensationPending(ctx, orderID)
 	}
+	// **وسائقُه يُخبَر إن ردّه غيرُه** — من بلّغ بنفسه يقرأ ذلك في تطبيقه
+	// (`DriverOutcomeOf`)، **ورنّةٌ بما فعله للتوّ ضجيج.**
+	if driverID != nil && actorID != *driverID {
+		s.notifyDriverLost(ctx, orderID, *driverID, LossMerchantBlocked)
+	}
 	return updated, nil
 }
 

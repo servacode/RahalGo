@@ -160,6 +160,23 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                     draft = ""
                 }
             }
+            // ══════════════════════════════════════════════════════════
+            // **وسقوطُ الإرسال يُقال — والنصُّ يعود** (٢٠٢٦-١٠-٠٢)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان يُبتلع في السجلّ**: يُمحى الحقلُ ولا تظهر الرسالةُ ولا يُقال
+            // لماذا، **فيظنّ الزبونَ قرأها ولم يردّ.**
+            androidx.compose.runtime.LaunchedEffect(state.unsent) {
+                if (state.unsent.isNotEmpty() && draft.isEmpty()) draft = state.unsent
+            }
+            if (state.error.isNotEmpty()) {
+                Text(
+                    text = state.error,
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                )
+            }
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it },
@@ -203,6 +220,10 @@ data class ChatState(
     val peerName: String = "",
     val open: Boolean = true,
     val busy: Boolean = false,
+    /** **سقط الإرسال** — نصُّ الخادم (٢٠٢٦-١٠-٠٢)؛ وفارغٌ لا خطأ. */
+    val error: String = "",
+    /** **ما لم يُرسَل** — يعود إلى الحقل فلا يُكتب ثانيةً. */
+    val unsent: String = "",
 )
 
 data class ChatActions(

@@ -225,6 +225,8 @@ data class TripState(
     val dropoff: LatLng? = null,
     val busy: Boolean = false,
     val error: String = "",
+    /** **حسابُه موقوف** — يُكمل هذا الطلبَ وحدَه (٢٠٢٦-١٠-٠٢). */
+    val suspended: Boolean = false,
 
     // ══════════════════════════════════════════════════════════════════
     // **خياراتُ المسار — إغلاقُ واجهة ٧، ٢٠٢٦-٠٨-٢١**
@@ -363,11 +365,102 @@ data class TripActions(
  * و`on_the_way` وحدَها. **وما بينهما (`at_pickup` · `picked_up`)
  * حالٌ بلغها بيده، ولا يُعاد تسجيلُها.**
  */
-fun autoArrivalTarget(status: String, custom: Boolean): String? {
+fun autoArrivalTarget(status: String, custom: Boolean, dropoffKnown: Boolean = true): String? {
     if (custom) return null
     return when (status) {
         "assigned" -> "at_pickup"
-        "on_the_way" -> "at_dropoff"
+        // **٤ · ولا وصولَ تلقائيّاً إلى نقطةٍ غيرِ معروفة** (٢٠٢٦-١٠-٠٢) — «لدي
+        // توصيلة» بلا نقطةٍ يُكتب مكانَها موقعُ المتجر، **فيُعلَن وصولُه إلى
+        // المستلِم وهو واقفٌ عند المتجر.** فيبقى الزرُّ بيده.
+        "on_the_way" -> if (dropoffKnown) "at_dropoff" else null
         else -> null
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **إلى أين يُقاس وصولُه — أو لا يُعرف** (٢٠٢٦-١٠-٠٢)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **ثلاثةُ أجوبةٍ لا جوابان**: ليس في طورِ وصول · نقطةٌ لا تُعرف · نقطةٌ بعينها.
+ *
+ * **و«لا تُعرف» غيرُ «بعيد»**: بعيدٌ يُخفي زرَّ «وصلت» حتّى يقترب، **ومجهولٌ
+ * يُظهره** — ومن أُخفي عنه الزرُّ وهو واقفٌ عند الباب لا يجد ما يضغطه.
+ */
+sealed interface ArrivalPoint {
+    /** ليس في طورٍ يُعلَن فيه وصول. */
+    data object NotArriving : ArrivalPoint
+
+    /** **في طورِ وصولٍ والنقطةُ مجهولة** — والزرُّ ظاهرٌ بيده. */
+    data object Unknown : ArrivalPoint
+
+    data class At(val lat: Double, val lng: Double) : ArrivalPoint
+}
+
+fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
+    "assigned" -> {
+        val la = order.navLat
+        val ln = order.navLng
+        // **ومتجرٌ بلا دبّوسٍ «لا يُعرف» لا «بعيد»** (٢٠٢٦-١٠-٠٢) — كان يُقرأ بعيداً
+        // فيُخفى زرُّ «وصلت المتجر» إلى الأبد، **ولا آليّةَ تضغطه عنه.**
+        if (la == null || ln == null) ArrivalPoint.Unknown else ArrivalPoint.At(la, ln)
+    }
+    // **«لدي توصيلة» بلا نقطةٍ** — المكتوبُ موقعُ المتجر لا باب المستلِم.
+    "on_the_way" -> if (order.dropoffKnown) ArrivalPoint.At(order.lat, order.lng) else ArrivalPoint.Unknown
+    else -> ArrivalPoint.NotArriving
+}
+
+/**
+ * **نقطةُ الباب على الخريطة** — وفارغةٌ حين لا تُعرف: **لا دبّوسَ ولا خطَّ إلى
+ * موقع المتجر على أنّه بابُ المستلِم.**
+ */
+fun dropoffPoint(order: DriverOrder): Pair<Double, Double>? =
+    if (order.dropoffKnown) order.lat to order.lng else null
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ممّن يقبض — ومتى** (٢٠٢٦-١٠-٠٢)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **«أنا نقداً» في «لدي توصيلة»**: المتجرُ يدفع الأجرةَ بيد السائق **عند
+ * الاستلام** — **وكانت البطاقةُ تقول بعد الاستلام «المطلوب من المستلِم»**
+ * فيطلبها من رجلٍ لا يدين بشيء، **وتسكت عند المتجر حيث يجب أن يقبض.**
+ */
+enum class CashFrom { NONE, STORE, RECIPIENT }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **متى يجهز الطلب في المتجر** (٢٠٢٦-١٠-٠٢)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كان المحرّكُ يرسل `ready_at` و`prep_minutes` ولا يُقرآن** — فيصل السائقُ
+ * فيقف عشرين دقيقةً لا يعرف أكان عليه أن يتأخّر. **و«جاهز» ختمُ المتجر،
+ * و«حوالي» القبولُ مضافاً إليه مهلةُ التحضير.**
+ */
+sealed interface PrepState {
+    data object Ready : PrepState
+    data class Around(val hhmm: String) : PrepState
+    data object Unknown : PrepState
+}
+
+fun prepState(order: DriverOrder, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): PrepState {
+    if (order.kind == "custom") return PrepState.Unknown
+    if (!order.readyAt.isNullOrBlank()) return PrepState.Ready
+    val minutes = order.prepMinutes?.takeIf { it > 0 } ?: return PrepState.Unknown
+    val accepted = order.acceptedAt?.let {
+        runCatching { java.time.OffsetDateTime.parse(it) }.getOrNull()
+    } ?: return PrepState.Unknown
+    val at = accepted.plusMinutes(minutes.toLong()).atZoneSameInstant(zone)
+    return PrepState.Around(String.format(java.util.Locale.ROOT, "%02d:%02d", at.hour, at.minute))
+}
+
+fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {
+    if (order.cashDue <= 0) return CashFrom.NONE
+    val fromStore = order.kind == "merchant_delivery" && order.feePayer == "merchant_cash"
+    return when {
+        fromStore && !pickedUp -> CashFrom.STORE
+        fromStore -> CashFrom.NONE
+        pickedUp -> CashFrom.RECIPIENT
+        else -> CashFrom.NONE
     }
 }

@@ -93,15 +93,21 @@ class LocationService : Service() {
             //
             // **و`hasSpeed()` كاذبةٌ على الواقف** — فيُمرَّر فراغُها كما
             // هو، **والصفرُ يُقرّره القارئُ لا الكاتب.**
-            LastPoint.set(
-                point.latitude,
-                point.longitude,
-                mocked = point.isMocked(),
-                speedMps = if (point.hasSpeed()) point.speed else null,
-                atMs = android.os.SystemClock.elapsedRealtime(),
-            )
-            send(point)
+            accept(point)
         }
+    }
+
+    /** **قراءةٌ حقيقيّةٌ من النظام** — تُحفظ للشاشة وتُرسَل، والإشارةُ حيّة. */
+    private fun accept(point: Location) {
+        LastPoint.set(
+            point.latitude,
+            point.longitude,
+            mocked = point.isMocked(),
+            speedMps = if (point.hasSpeed()) point.speed else null,
+            atMs = android.os.SystemClock.elapsedRealtime(),
+        )
+        GpsSignal.alive()
+        send(point)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -130,12 +136,15 @@ class LocationService : Service() {
         // — **والجاهزيّةُ تقول لصاحبها ما ينقص** (`Readiness`).
         if (!LocationPermission.granted(this)) {
             Log.w(TAG, "إذنُ الموقع مسحوب — تقف الخدمةُ ولا تُعاد")
+            if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) BootResume.askToOpen(this)
             stopSelf()
             return START_NOT_STICKY
         }
         // **ورفعُ الخدمة قد يُردّ من النظام** — **إذنٌ يُسحب في اللحظة
         // بين السؤال والرفع، أو حالٌ لا تسمح بخدمةٍ أماميّة.**
         if (!startForegroundSafely()) {
+            // **وبعد الإقلاع يُطلب فتحُ التطبيق** — لا تقف الخدمةُ صامتةً والورديّةُ مفتوحة.
+            if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) BootResume.askToOpen(this)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -154,43 +163,80 @@ class LocationService : Service() {
     // `HEARTBEAT_SEC`. **ولا تنافس المرشِّح**: إن جاءت قراءةٌ جديدةٌ في
     // الأثناء رُفع `lastSentAt`، **فتجد النبضةُ الصمتَ قصيراً فتنام.**
     //
-    // **وتُبنى على آخرِ موضعٍ قرأه التطبيقُ نفسُه** (`LastPoint`) — **ولا
-    // تسأل النظامَ موضعاً جديداً**: سؤالٌ كلَّ دقيقتين يوقظ عتادَ الموقع
-    // ويستنزف ما وُفِّر.
+    // **وتُبنى على آخرِ موضعٍ قرأه التطبيقُ نفسُه** (`LastPoint`) ما دام عمرُه
+    // دون خمس دقائق — **ولا تسأل النظامَ في كلّ نبضة**: سؤالٌ كلَّ دقيقتين
+    // يوقظ عتادَ الموقع ويستنزف ما وُفِّر.
     //
-    // **وإن لم يُقرأ موضعٌ بعدُ لم تخترع واحداً** — **وموضعٌ مخترَعٌ أسوأُ
-    // من غيابه**: يُبنى عليه توزيعٌ ويُقاس به قرب.
+    // **وما شاخ لا يُعاد** (٢٠٢٦-١٠-٠٢، `Heartbeat`): يُسأل النظامُ موضعاً
+    // جديداً، **فإن لم يردّ فلا نبضة** — وموضعٌ ميّتٌ يُعاد «حديثاً» يُبنى عليه
+    // توزيعٌ ويُقاس به قرب، **وهو أسوأُ من غيابه.**
     private fun heartbeat() {
         if (beating) return
         beating = true
         scope.launch {
             while (true) {
                 delay(HEARTBEAT_SEC * 1000)
-                val silence = SystemClock.elapsedRealtime() - lastSentAt
-                if (silence < HEARTBEAT_SEC * 1000) continue
-                val p = LastPoint.value ?: continue
-                // **ولا يُغسَل موضعٌ مزيَّفٌ بنبضة.**
-                //
-                // **`isMocked` تُقرأ من `Location` الذي سلّمه النظام**،
-                // **وموضعٌ نبنيه نحن يُقرأ أصيلاً دائماً** — فلو نبضنا
-                // بمزيَّفٍ لخرج من بابنا بلا وسمه، **ويُبنى عليه إثباتُ
-                // تسليم.**
-                //
-                // **فمن زيّف موضعَه يشيخ** — وذلك صوابٌ لا نقص.
-                if (p.mocked) continue
-                Log.i(TAG, "نبضةُ واقف: صمتٌ ${silence / 1000}ث — يُعاد آخرُ موضع")
-                send(
-                    Location(HEARTBEAT_PROVIDER).apply {
-                        latitude = p.lat
-                        longitude = p.lng
-                    },
-                )
+                val now = SystemClock.elapsedRealtime()
+                val p = LastPoint.value
+                // **ولا يُغسَل موضعٌ مزيَّفٌ بنبضة** — **`isMocked` تُقرأ من
+                // `Location` الذي سلّمه النظام**، وموضعٌ نبنيه نحن يُقرأ أصيلاً
+                // دائماً. **فمن زيّف موضعَه يشيخ** — وذلك صوابٌ لا نقص.
+                when (Heartbeat.decide(now, lastSentAt, p)) {
+                    Heartbeat.Act.WAIT -> Unit
+                    Heartbeat.Act.RESEND -> {
+                        Log.i(TAG, "نبضةُ واقف: يُعاد آخرُ موضع")
+                        send(
+                            Location(HEARTBEAT_PROVIDER).apply {
+                                latitude = p!!.lat
+                                longitude = p.lng
+                            },
+                        )
+                    }
+                    // **وشاخ ما عندنا** — يُسأل النظامُ موضعاً جديداً (`Heartbeat`).
+                    Heartbeat.Act.REFRESH -> {
+                        val fix = freshFix()
+                        if (fix != null) {
+                            accept(fix)
+                        } else {
+                            // **ولا إرسال** — يشيخ عند الخادم فلا يُعرض عليه ما
+                            // لا يستطيع بلوغَه، **ويُقال له في لوحته.**
+                            Log.w(TAG, "لا موضعَ حيّ — لا نبضة، والإشارةُ مفقودة")
+                            GpsSignal.dead()
+                        }
+                    }
+                }
             }
         }
     }
 
+    /**
+     * **موضعٌ جديدٌ من النظام — أو لا شيء** (٢٠٢٦-١٠-٠٢).
+     *
+     * **ولا يُقبل ما شاخ**: `getCurrentLocation` قد تردّ مخبوءاً قديماً.
+     */
+    private suspend fun freshFix(): Location? = try {
+        kotlinx.coroutines.withTimeoutOrNull(FIX_TIMEOUT_MS) {
+            kotlinx.coroutines.suspendCancellableCoroutine<Location?> { cont ->
+                val cancel = com.google.android.gms.tasks.CancellationTokenSource()
+                cont.invokeOnCancellation { cancel.cancel() }
+                client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancel.token)
+                    .addOnCompleteListener { t ->
+                        if (cont.isActive) cont.resumeWith(Result.success(if (t.isSuccessful) t.result else null))
+                    }
+            }
+        }?.takeIf {
+            val ageMs = (SystemClock.elapsedRealtimeNanos() - it.elapsedRealtimeNanos) / 1_000_000
+            ageMs in 0..Heartbeat.EVERY_MS
+        }
+    } catch (e: SecurityException) {
+        Log.w(TAG, "إذن الموقع غير ممنوح", e)
+        null
+    }
+
     override fun onDestroy() {
         client.removeLocationUpdates(callback)
+        // **ولا إنذارَ «إشارةٌ مفقودة» لمن أغلق ورديّته.**
+        GpsSignal.alive()
         scope.cancel()
         super.onDestroy()
     }
@@ -265,6 +311,7 @@ class LocationService : Service() {
         // (`BearingTracker`)، **وأثرُ الورديّة يحفظ ما قاله الجهازُ
         // لا ما استنتجناه.**
         val bearing = if (point.hasBearing()) point.bearing.toDouble() else null
+        val capturedAt = if (point.provider == HEARTBEAT_PROVIDER || point.time <= 0L) null else stamp(point.time)
 
         scope.launch {
             val api = Backend.of(applicationContext).driver
@@ -272,6 +319,9 @@ class LocationService : Service() {
                 api.sendLocation(
                     point.latitude, point.longitude, speed, accuracy, bearing,
                     point.isMocked(),
+                    // **ووقتُ الالتقاط لا الوصول** (٢٠٢٦-١٠-٠٢) — والنبضةُ المعادةُ
+                    // بلا وقت: تشهد «ما زلتُ هنا» والإشارةُ حيّةٌ منذ دقائق.
+                    recordedAt = capturedAt,
                 )
             } catch (e: CancellationException) {
                 // **وتوقّفُ الخدمة ليس فشلَ إرسال** — ولو صُفَّت النقطةُ
@@ -409,15 +459,22 @@ class LocationService : Service() {
         //
         // **ومئةٌ وعشرون دون الثلاثمئة بهامشٍ يحتمل نداءً يسقط ويُعاد** —
         // **ونبضةٌ تساوي الحدَّ تصل متأخّرةً ثانيةً فتسقط.**
-        private const val HEARTBEAT_SEC = 120L
+        internal const val HEARTBEAT_SEC = 120L
+
+        /** **كم يُنتظر النظامُ ليردّ موضعاً جديداً** — قبل أن تُعدّ الإشارةُ مفقودة. */
+        private const val FIX_TIMEOUT_MS = 30_000L
 
         // **ومصدرُها يُسمّى** — من قرأ سجلّاً عرف أنّها إعادةٌ لا قراءة.
         private const val HEARTBEAT_PROVIDER = "rahalgo-heartbeat"
 
+        /** **من الإقلاع؟** — فإن رُدّت الخدمةُ طُلب فتحُ التطبيق (`BootResume`). */
+        private const val EXTRA_FROM_BOOT = "from_boot"
+
         /** **تبدأ مع الوردية** — والفترة من المحرّك. */
-        fun start(context: Context, pingSec: Long) {
+        fun start(context: Context, pingSec: Long, fromBoot: Boolean = false) {
             val intent = Intent(context, LocationService::class.java)
                 .putExtra(EXTRA_PING_SEC, pingSec)
+                .putExtra(EXTRA_FROM_BOOT, fromBoot)
             context.startForegroundService(intent)
         }
 

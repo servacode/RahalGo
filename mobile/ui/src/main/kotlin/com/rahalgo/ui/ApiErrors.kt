@@ -285,6 +285,7 @@ private val CODES: Map<String, Int> = mapOf(
     "too_many_active_orders" to R.string.err_too_many_active,
     "not_your_order" to R.string.err_not_your_order,
     "delivery_proof_required" to R.string.err_proof_required,
+    "proof_not_at_door" to R.string.err_proof_not_at_door,
     "bad_fail_reason" to R.string.err_bad_fail_reason,
     // **زرُّ «لدي مشكلة» لكلّ مرحلةٍ عملُها** (قرارُ المالك ٢٠٢٦-١٠-٠٢).
     "fail_reason_wrong_stage" to R.string.err_fail_reason_wrong_stage,

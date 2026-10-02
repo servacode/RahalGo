@@ -188,6 +188,13 @@ class DriverApi(private val api: ApiClient) {
     suspend fun orders(): List<DriverOrder> = api.call("/api/v1/driver/orders")
 
     /**
+     * **لماذا خرج طلبٌ من يده** — إلغاءٌ أو إعادةٌ إلى الطابور أو ردٌّ إلى المكتب
+     * (٢٠٢٦-١٠-٠٢). **ومن سجلّ الطلب لا من الدفع** — فيصل ولو لم يصل الإشعار.
+     */
+    suspend fun outcome(orderId: String): com.rahalgo.shared.model.DriverOutcome =
+        api.call("/api/v1/driver/orders/" + orderId + "/outcome")
+
+    /**
      * **يأخذ الطلب.**
      *
      * **وقد يرفض المحرّك**: وردية مغلقة · طلبات أكثر من حدّه · نقد بلغ
@@ -252,11 +259,22 @@ class DriverApi(private val api: ApiClient) {
         mapOf("route_id" to routeId, "fixes" to fixes),
     )
 
-    suspend fun transition(orderId: String, to: String, reason: String = "", note: String = "") {
+    suspend fun transition(
+        orderId: String,
+        to: String,
+        reason: String = "",
+        note: String = "",
+        /**
+         * **مفتاحُ المحاولة** (٢٠٢٦-١٠-٠٢) — يُعاد بعينه حين يضيع الردّ، **فيُجاب
+         * بالطلب كما هو لا بـ«انتقالٌ غيرُ جائز» على خطوةٍ ثبتت.** وفارغٌ: كما كان.
+         */
+        idempotencyKey: String? = null,
+    ) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/transition",
             HttpMethod.Post,
             mapOf("to" to to, "reason" to reason, "note" to note),
+            idempotencyKey = idempotencyKey,
         )
     }
 
@@ -312,6 +330,12 @@ class DriverApi(private val api: ApiClient) {
          * **و`false` ادّعاءُ صدقٍ لم نفحصه.**
          */
         mocked: Boolean? = null,
+        /**
+         * **متى التقطها الجهاز** — `ISO-8601`، وفارغٌ: يُختَم بوقت الوصول.
+         *
+         * (٢٠٢٦-١٠-٠٢.) **كانت تُختَم بوقت وصولها** — فموضعٌ قديمٌ يُكتب حديثاً.
+         */
+        recordedAt: String? = null,
     ) {
         // ══════════════════════════════════════════════════════════════
         // **وجسمُ النداء `JsonObject` لا `Map<String, Any>`**
@@ -359,6 +383,7 @@ class DriverApi(private val api: ApiClient) {
         val body = LocationBody(
             lat = lat, lng = lng, mocked = mocked,
             speedMps = speedMps, accuracyM = accuracyM, bearingDeg = bearingDeg,
+            recordedAt = recordedAt,
         )
         api.call<Ack>("/api/v1/driver/location", HttpMethod.Post, body)
     }
@@ -378,6 +403,7 @@ class DriverApi(private val api: ApiClient) {
         @SerialName("speed_mps") val speedMps: Double? = null,
         @SerialName("accuracy_m") val accuracyM: Double? = null,
         @SerialName("bearing_deg") val bearingDeg: Double? = null,
+        @SerialName("recorded_at") val recordedAt: String? = null,
     )
 
     /**

@@ -35,10 +35,15 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 var errProofRequired = httpx.NewError(http.StatusConflict,
 	"delivery_proof_required", "errors.delivery_proof_required")
+
+// errProofNotAtDoor **صورةُ التسليم عند باب الزبون وحدَه** (٢٠٢٦-١٠-٠٢).
+var errProofNotAtDoor = httpx.NewError(http.StatusConflict,
+	"proof_not_at_door", "errors.proof_not_at_door")
 
 // handleDeliveryProof يحفظ صورةَ التسليم وموضعَها.
 //
@@ -48,6 +53,22 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	if !s.driverOwnsOrder(r, orderID) {
 		s.respondErr(w, errNotYourOrder)
+		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والصورةُ عند الباب وحدَه** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت تُقبل في أيّ حال** — فصورةٌ تُلتقط عند المتجر أو في الطريق تُحفظ
+	// «إثباتَ تسليم»، **ويُقاس بُعدُها عن الباب فيُقرأ تسليماً بعيداً وهو لم يُسلَّم
+	// بعد.** والبيّنةُ التي بُنيت للنزاع تشهد بما لم يقع.
+	var status string
+	if err := s.pg.QueryRow(r.Context(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if status != orders.StAtDropoff {
+		s.respondErr(w, errProofNotAtDoor)
 		return
 	}
 

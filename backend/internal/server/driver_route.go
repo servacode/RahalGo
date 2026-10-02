@@ -146,6 +146,7 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		fromLat, fromLng *float64
 		pickLat, pickLng float64
 		dropLat, dropLng float64
+		dropKnown        bool
 	)
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT o.status,
@@ -154,15 +155,27 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		       -- طارئ) — فيُمشى إليها لا إلى المتجر.
 		       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
 		       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
-		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry)
+		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
+		       o.dropoff_known
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users du ON du.id = o.driver_id
 		WHERE o.id = $1::uuid AND o.driver_id = $2::uuid`,
 		chi.URLParam(r, "id"), userIDFrom(r)).
-		Scan(&status, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng)
+		Scan(&status, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng, &dropKnown)
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا طريقَ إلى نقطةٍ غيرِ معروفة** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **«لدي توصيلة» بلا نقطة تسليمٍ يُكتب مكانَها موقعُ المتجر** (`0170`) —
+	// **فطريقٌ إليها يقود السائقَ بعد الاستلام إلى المتجر نفسِه، والملاحةُ
+	// تُعلن وصولَه هناك.** فلا طريق: يقرأ العنوانَ ويسأل.
+	if !dropKnown && status != "assigned" && status != "at_pickup" {
+		httpx.JSON(w, http.StatusOK, map[string]any{"available": false})
 		return
 	}
 

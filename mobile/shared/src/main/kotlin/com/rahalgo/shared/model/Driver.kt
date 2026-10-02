@@ -61,6 +61,11 @@ data class DriverMe(
 
     /** **صورته** — ومسار نسبيّ (`/media/...`) لا عنوان كامل. */
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    /**
+     * **أحسابُه موقوف؟** (٢٠٢٦-١٠-٠٢) — يُكمل طلبَه القائمَ وحدَه، **ويُقال له
+     * ذلك** بدل أن تُردّ الأبوابُ عليه بلا سبب.
+     */
+    val suspended: Boolean = false,
 )
 
 /**

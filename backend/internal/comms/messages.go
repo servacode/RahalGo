@@ -90,7 +90,7 @@ func (s *Service) Send(ctx context.Context, p *Permission, body string) (*Messag
 	var recent bool
 	if err := s.db.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM order_messages
-		               WHERE order_id = $1 AND sender_id = $2
+		               WHERE order_id = $1 AND sender_id = $2 AND NOT auto
 		                 AND created_at > now() - $3::interval)`,
 		p.OrderID, p.SelfID, MinGap.String()).Scan(&recent); err != nil {
 		return nil, err

@@ -672,6 +672,7 @@
     "order_not_preparing": "الطلب ليس قيد التحضير",
     "claim_already_settled": "حسمت هذه المطالبة سلفا",
     "delivery_proof_required": "صور مكان التسليم أولا، أو اكتب لماذا تعذر",
+    "proof_not_at_door": "صورة التسليم تلتقط عند باب الزبون فقط",
     "dispute_party_has_no_wallet": "لا محفظة لهذا الطرف — لا يمكن الخصم",
     "order_still_open": "الطلب لم يغلق بعد",
     "driver_has_open_orders": "بيده طلب حي — أسنده أولا",

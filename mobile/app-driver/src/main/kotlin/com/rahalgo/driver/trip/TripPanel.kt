@@ -176,7 +176,8 @@ internal fun TripPanel(state: TripState) {
             )
             // **و«لدي توصيلة» بلا نقطةٍ على الخريطة** (الخطوة ١٨) — المسارُ
             // المرسومُ إلى نقطة المتجر لا إلى المستلِم، **فيُقال له ألّا يتبعه.**
-            if (state.step >= TripStep.PICKED_UP && !order.dropoffKnown) {
+            val noPoint = state.step >= TripStep.PICKED_UP && !order.dropoffKnown
+            if (noPoint) {
                 Text(
                     text = stringResource(R.string.detail_no_point),
                     color = Color.White,
@@ -210,7 +211,11 @@ internal fun TripPanel(state: TripState) {
             // «غيرُ معروف» لا «صفرُ أمتار».**
             val meters = if (state.routeM > 0) state.routeM else state.remainingM
             val routeReady = meters > 0
-            if (!routeReady) {
+            // **ولا «جاري حساب الطريق…» إلى بابٍ لا يُعرف** — لا طريقَ يُحسب أصلاً
+            // (الخادمُ لا يردّه)، **فانتظارٌ لا ينتهي يُقرأ عطباً.**
+            if (noPoint) {
+                Unit
+            } else if (!routeReady) {
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PanelChip(R.drawable.ic_navigation, stringResource(R.string.trip_route_loading))

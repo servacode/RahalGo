@@ -469,7 +469,47 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
         keepRoute(out.route, out.mine)
-        if (out.error == null) autoFollow(out.mine)
+        if (out.error == null) {
+            autoFollow(out.mine)
+            trackDepartures(out.mine)
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وطلبٌ خرج من يده يُقال لماذا** (٢٠٢٦-١٠-٠٢) — انظر `Departures`
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **ما كان في يده في آخر قراءة** — وفارغٌ قبل الأولى: لا مقارنةَ بلا أصل. */
+    private var knownIds: List<String>? = null
+
+    /** **طلبٌ لم يعد معه وسببُه** — نافذةٌ تُقرأ ثمّ تُغلق. */
+    var lostTrip by mutableStateOf<LostTrip?>(null)
+        private set
+
+    fun dismissLost() {
+        lostTrip = null
+    }
+
+    private fun trackDepartures(mine: List<DriverOrder>) {
+        val prev = knownIds
+        knownIds = mine.map { it.id }
+        if (prev == null) return
+        for (id in Departures.departed(prev, mine)) {
+            viewModelScope.launch {
+                val o = try {
+                    backend.driver.outcome(id)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("RahalGo/lost", "تعذّرت قراءةُ مآل الطلب", e)
+                    return@launch
+                }
+                // **وفارغٌ: فعلُه هو** — سلّم أو أعاد، ولا نافذةَ بما فعله للتوّ.
+                if (o.reason.isNotEmpty()) {
+                    lostTrip = LostTrip(id, o.number, o.reason, o.message)
+                }
+            }
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -924,9 +964,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.transition(id, to)
+                // **بمفتاحٍ يُعاد بعينه إن ضاع الردّ** — انظر `StepRetry`.
+                StepRetry.send(StepRetry.newKey()) { key ->
+                    backend.driver.transition(id, to, idempotencyKey = key)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                // **وبعد الخطأ تُقرأ الحالُ من المحرّك** (٢٠٢٦-١٠-٠٢) — قد تكون
+                // الخطوةُ ثبتت، أو أُلغي الطلبُ، **وشاشةٌ تبقى على ما كان تُضغط ثانيةً.**
+                refresh()
                 return@launch
             }
             // ══════════════════════════════════════════════════════════
@@ -944,7 +992,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // الزمنيّ لا واحدة — **ووقتُ الانطلاق يُقرأ في الشكوى**،
             // إنّما تقعان بضغطةٍ واحدة.
             if (to == "picked_up") {
-                runCatching { backend.driver.transition(id, "on_the_way") }
+                runCatching {
+                    StepRetry.send(StepRetry.newKey()) { key ->
+                        backend.driver.transition(id, "on_the_way", idempotencyKey = key)
+                    }
+                }
             }
             // **والتسليم يُغلق الطلب** — فيُعاد إلى القائمة لا إلى شاشة
             // طلب لم يعد له وجود فيها.
@@ -1019,10 +1071,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(failReasons = null, busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.transition(id, "failed", reason = reason)
+                StepRetry.send(StepRetry.newKey()) { key ->
+                    backend.driver.transition(id, "failed", reason = reason, idempotencyKey = key)
+                }
                 openId = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1039,6 +1096,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 openId = null
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1124,8 +1182,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     away(driver, order.navLat, order.navLng)
                         .takeIf { it >= 0 } ?: order.toPickupM
 
-                else -> away(driver, order.lat, order.lng)
-                    .takeIf { it >= 0 } ?: order.legM
+                // **ونقطةٌ مجهولةٌ لا مسافةَ إليها** — المكتوبُ موقعُ المتجر.
+                else -> com.rahalgo.driver.trip.dropoffPoint(order)?.let { (la, ln) ->
+                    away(driver, la, ln).takeIf { it >= 0 } ?: order.legM
+                } ?: -1.0
             },
             // **والسرعة من المحرّك لا من الشيفرة** — تُضبط للمدينة كلّها.
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
@@ -1177,7 +1237,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
             // **فتُرسم الرحلة بنقطتين** بدل أن تسقط الشاشة.
             pickup = order.navLat?.let { la -> order.navLng?.let { ln -> LatLng(la, ln) } },
-            dropoff = LatLng(order.lat, order.lng),
+            // **ولا دبّوسَ لبابٍ لا يُعرف** — «لدي توصيلة» بلا نقطة.
+            dropoff = com.rahalgo.driver.trip.dropoffPoint(order)?.let { (la, ln) -> LatLng(la, ln) },
             busy = detail.busy,
             // ══════════════════════════════════════════════════════════
             // **وخطأُ قبولِ العرض يصل الرحلةَ أيضاً**
@@ -1196,6 +1257,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **وزرٌّ يُضغط فلا يقع شيءٌ ولا يُقال لماذا يُقرأ عطباً في
             // التطبيق** — ثمّ يُعاد الضغطُ ويُعاد.
             error = detail.error.ifEmpty { state.actionError },
+            suspended = state.me?.suspended == true,
         )
     }
 
@@ -1235,23 +1297,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun near(shift: LastPoint.Point?, order: DriverOrder): Boolean? {
         val fix = if (following) navSession.lastGoodFix else null
         val driver = fix?.let { LastPoint.Point(it.lat, it.lng) } ?: shift ?: return null
-        val lat: Double
-        val lng: Double
-        when (order.status) {
-            "assigned" -> {
-                lat = order.navLat ?: return false
-                lng = order.navLng ?: return false
-            }
-
-            "on_the_way" -> {
-                lat = order.lat
-                lng = order.lng
-            }
-
-            else -> return false
+        // **والوجهةُ من دالّةٍ صافيةٍ تُختبر** (`arrivalPoint`) — ونقطةٌ مجهولةٌ
+        // («لدي توصيلة» بلا نقطة) «لا يُعرف» لا «بعيد»: **الزرُّ يبقى ظاهراً.**
+        val target = when (val p = com.rahalgo.driver.trip.arrivalPoint(order)) {
+            com.rahalgo.driver.trip.ArrivalPoint.NotArriving -> return false
+            com.rahalgo.driver.trip.ArrivalPoint.Unknown -> return null
+            is com.rahalgo.driver.trip.ArrivalPoint.At -> p
         }
         val out = FloatArray(1)
-        android.location.Location.distanceBetween(driver.lat, driver.lng, lat, lng, out)
+        android.location.Location.distanceBetween(driver.lat, driver.lng, target.lat, target.lng, out)
         return out[0] <= ARRIVAL_SHOW_M
     }
 
@@ -1270,10 +1324,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 backend.driver.sendProof(
                     id, jpeg, point?.lat, point?.lng, point?.mocked == true,
                 )
-                backend.driver.transition(id, "delivered")
+                StepRetry.send(StepRetry.newKey()) { key ->
+                    backend.driver.transition(id, "delivered", idempotencyKey = key)
+                }
                 openId = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1675,6 +1734,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     messages = th.messages,
                     peerName = th.peerName,
                     open = th.open,
+                    // **وخطأُ إرسالٍ قائمٌ لا تمحوه قراءةٌ حيّة** — يبقى حتّى يُرسَل غيرُه.
+                    error = chat?.error.orEmpty(),
+                    unsent = chat?.unsent.orEmpty(),
                 )
                 // **وما قُرئ لا يبقى في الشارة** — فتحُ الحديث يوسمه.
                 chatUnread = 0
@@ -1695,11 +1757,18 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     fun sendMessage(body: String) {
         val id = currentId() ?: return
         if (body.isBlank()) return
+        chat = chat?.copy(error = "", unsent = "")
         viewModelScope.launch {
             try {
                 backend.chat.send(id, body)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
+                // **ولا يُبتلع** (٢٠٢٦-١٠-٠٢) — يُقال بنصّ الخادم («أسرعت» ·
+                // «الحديثُ مغلق») ويعود النصُّ إلى الحقل.
                 Log.w("RahalGo/chat", "تعذّر إرسال الرسالة", e)
+                chat = (chat ?: ChatState()).copy(busy = false, error = describe(e), unsent = body)
+                return@launch
             }
             loadChat(id)
         }
@@ -1823,6 +1892,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 openId = null
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1851,6 +1921,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 backend.driver.agree(id, goods, fee)
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1877,7 +1948,21 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private var offerSpent by mutableStateOf(false)
 
     fun dismissOffer() {
-        state.offers.firstOrNull { it.id !in dismissedOffers }?.let { dismissedOffers += it.id }
+        state.offers.firstOrNull { it.id !in dismissedOffers }?.let { offer ->
+            dismissedOffers += offer.id
+            // ══════════════════════════════════════════════════════════
+            // **والتركُ يُقال للخادم** (٢٠٢٦-١٠-٠٢)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان إخفاءً محلّيّاً وحدَه** — فيبقى الطلبُ معروضاً عليه في دوره
+            // خمساً وأربعين ثانيةً لا يراها، **والطلباتُ التاليةُ تُعرَض عليه
+            // كذلك** وهو مشغولٌ لا يقرؤها. **والرفضُ ينقل الدورَ فوراً**، وفي
+            // «للجميع» يُخفيه عنه. **وسقوطُه صامت**: عرضٌ انقضى أو أخذه غيرُه.
+            viewModelScope.launch {
+                runCatching { backend.driver.decline(offer.id) }
+                    .onFailure { Log.i("RahalGo/offer", "رفضُ العرض لم يُقبل: " + it.message) }
+            }
+        }
         // **ورفضةٌ واحدةٌ تُنهي عرضَ الرحلة** — لا تنقله إلى التالي.
         offerSpent = true
         // **ولمسةٌ للحالة** — لتُعاد قراءة الشاشة.
@@ -1903,6 +1988,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     // على طلب لم يعد له.
                     if (found == null) openId = null else detail = detail.copy(order = found)
                 }
+                trackDepartures(mine)
                 // **وساقٌ جديدةٌ تطلب طريقَها الآن** (فحصُ الملاحة ١.٥) — كان طريقُ المتجر
                 // يُعاد تركيبُه بعد الاستلام حتّى تحديثٍ لاحق.
                 if (legOf(mine) != routeLeg) refresh()

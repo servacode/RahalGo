@@ -13,8 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
-import com.rahalgo.driver.orders.DetailActions
-import com.rahalgo.driver.orders.OrderDetailScreen
 import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalLoader
@@ -400,6 +398,10 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         knowsKey(MenuItem.entries.map(MenuItem::asDrawerItem), key)
     }
     val home: HomeViewModel = viewModel()
+    // **والخروجُ ببوّابة** (٢٠٢٦-١٠-٠٢) — لا يخرج وفي يده طلب، وتُنهى ورديّتُه
+    // وتقف خدمةُ الموقع قبل الخروج (`HomeViewModel.logout`). **وحذفُ الحساب
+    // يخرج بلا بوّابة** — لا حسابَ يُسأل عنه.
+    val gatedLogout: () -> Unit = { home.logout(onLogout) }
     val orders: OrdersViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
     val ratingVm: RatingViewModel = viewModel()
@@ -541,6 +543,30 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         if (!hasTrip && tab == 0) tab = 1
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وطلبٌ خرج من يده يُقال لماذا — لا قفزةٌ صامتة** (٢٠٢٦-١٠-٠٢)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان يُعاد إلى «الطلبات» بلا كلمة** حين يُلغى طلبُه أو يُعاد إلى الطابور
+    // — فيظنّ عطباً في هاتفه. **والسببُ من سجلّ الطلب** (`Departures`).
+    orders.lostTrip?.let { lost ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = orders::dismissLost,
+            title = { Text(stringResource(R.string.lost_title, lost.number.toInt())) },
+            text = {
+                Text(
+                    com.rahalgo.driver.orders.Departures.reasonRes(lost.reason)
+                        ?.let { stringResource(it) } ?: lost.message,
+                )
+            },
+            confirmButton = {
+                com.rahalgo.ui.RahalTextButton(onClick = orders::dismissLost) {
+                    Text(stringResource(R.string.lost_ok))
+                }
+            },
+        )
+    }
+
     // **ومن قبِل طلبا فُتحت رحلته** — (قرار المالك ٢٠٢٦-٠٨-١٢).
     LaunchedEffect(orders.startTrip) {
         if (orders.startTrip) {
@@ -643,7 +669,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         overlay.show(Overlay.Menu(key))
                         scope.launch { drawer.close() }
                     },
-                    onLogout = onLogout,
+                    onLogout = gatedLogout,
                     // **ومبدّلُ السمة هنا** — (قرارُ المالك
                     // ٢٠٢٦-٠٨-١٥: «نخلّيها بالقائمة الجانبيّة»).
                     dark = dark,
@@ -1126,7 +1152,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                             }
                         },
                         openAppSettings = { LocationPermission.openSettings(context) },
-                        logout = onLogout,
+                        logout = gatedLogout,
                     ),
                 )
 

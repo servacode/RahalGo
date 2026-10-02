@@ -268,13 +268,15 @@ fun TripScreen(
      * و`lat/lng` للزبون — **وهي نفسُ ما تقيس عليه `near()`**،
      * فلا رقمان لحقيقةٍ واحدة.
      */
-    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng) {
+    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng, state.order?.dropoffKnown) {
         val o = state.order
         navSession.setArrivalTarget(
             when {
                 o == null -> null
+                // **ولا وصولَ إلى بابٍ لا يُعرف** — «لدي توصيلة» بلا نقطةٍ يُكتب
+                // مكانَها موقعُ المتجر، **فتُعلن الملاحةُ وصولَه وهو عند المتجر.**
                 state.step >= TripStep.PICKED_UP ->
-                    com.rahalgo.navigation.GeoPoint(o.lat, o.lng)
+                    dropoffPoint(o)?.let { (la, ln) -> com.rahalgo.navigation.GeoPoint(la, ln) }
                 o.navLat != null && o.navLng != null ->
                     com.rahalgo.navigation.GeoPoint(o.navLat!!, o.navLng!!)
                 else -> null
@@ -549,6 +551,7 @@ fun TripScreen(
     val autoStatus = autoArrivalTarget(
         status = state.order?.status.orEmpty(),
         custom = state.order?.kind == "custom",
+        dropoffKnown = state.order?.dropoffKnown != false,
     )
     // **ومرّةً واحدةً لكلّ طور** — والمفتاحُ الحالُ نفسُه:
     // **فمن سُجّل وصولُه إلى المتجر لا يُعاد تسجيلُه**، ووصولُ
@@ -827,6 +830,25 @@ fun TripScreen(
             if (state.stops.size > 1) {
                 StopsRow(stops = state.stops, current = order.id, onPick = actions.pickStop)
             }
+            // **وحسابٌ موقوفٌ يُقال فوق الرحلة** (٢٠٢٦-١٠-٠٢) — يُكمل هذا الطلبَ
+            // وحدَه، **ولا يُفاجأ بعده بأبوابٍ مغلقةٍ بلا سبب.**
+            if (state.suspended) {
+                TopNotice(stringResource(R.string.suspended_banner), Rahal.colors.danger)
+            }
+            // ══════════════════════════════════════════════════════════
+            // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان يُكتب في البطاقة وحدَها** — ومن طواها ليرى الطريقَ ثمّ سقط
+            // وصولٌ تلقائيٌّ أو خطوةٌ **لم يرَ شيئاً، فظنّ أنّها وقعت.** (ولافتةُ
+            // العرض تقول خطأها بنفسها.)
+            if (!TripCollapse.bottom && state.onRouteOffer == null) {
+                if (state.error.isNotEmpty()) {
+                    TopNotice(state.error, Rahal.colors.danger)
+                } else if (state.notice.isNotEmpty()) {
+                    TopNotice(state.notice, Rahal.colors.brand)
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -1074,8 +1096,12 @@ private fun OnRouteBanner(
         Spacer(Modifier.height(2.dp))
         Text(
             // **واسمُ المصدر أو «طلب خاصّ»** — لا سطرٌ يبدأ بنقطة.
+            // **وأجرتُه هو لا نقدُ الزبون** (٢٠٢٦-١٠-٠٢) — كان يُعرض `cash_due`
+            // فيقرأ ما يقبضه للمتجر على أنّه ما يكسبه. **وكما في بطاقة الطلب**:
+            // الخاصُّ أجرتُه تُتّفق لاحقاً.
             text = offer.merchantName.ifBlank { stringResource(R.string.nav_custom_order) } +
-                " · " + money(offer.cashDue),
+                " · " + stringResource(R.string.card_fee) + " " +
+                if (offer.kind == "custom") stringResource(R.string.card_agreed_later) else money(offer.deliveryFee),
             color = Color.White.copy(alpha = 0.9f),
         )
         Spacer(Modifier.height(10.dp))
@@ -1089,12 +1115,9 @@ private fun OnRouteBanner(
         //
         // # وهذا الزرُّ لم يكن رفضاً أصلا
         //
-        // **`dismissOffer` إخفاءٌ محلّيٌّ لا نداءٌ للمحرّك** — الطلبُ
-        // يبقى في الطابور **وعدّادُه يجري.** فاسمُ «رفض» كذبٌ على
-        // صاحبه: **من ضغطه ظنّ أنّه ردّ الطلبَ وهو لم يفعل.**
-        //
         // **و«لاحقاً» تقول ما يقع فعلا** — تُزيح الشريطَ عن الطريق وهو
-        // يقود، **والطلبُ لمن يأخذه.**
+        // يقود، **والطلبُ لمن يأخذه**: يُقال للخادم فينتقل الدورُ فوراً
+        // (٢٠٢٦-١٠-٠٢) — **كان إخفاءً محلّيّاً يُبقي العرضَ عليه مهلتَه كلَّها.**
         //
         // **وفعلٌ واحدٌ باسمين في شاشتين يُقرأ فعلين** — من تعلّم
         // «موافق» في الطلبات يتردّد أمام «خذ الطلب» في الرحلة.
@@ -1169,6 +1192,23 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
 
 /** محطّة في قائمة من يحمل أكثر من طلب. */
 data class Stop(val id: String, val number: Long)
+
+/** **سطرُ خبرٍ فوق الخريطة** — يُقرأ ولو طُويت البطاقة. */
+@Composable
+internal fun TopNotice(text: String, ground: Color) {
+    Text(
+        text = text,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(Rahal.shape.md)
+            .background(ground)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    )
+}
 
 /**
  * **البطاقة السفليّة.**
@@ -1308,7 +1348,75 @@ private fun TripCard(
         //
         // **ويظهر حين يصير له معنى**: بعد الاستلام، وهو ماضٍ إلى من
         // يقبض منه.
-        if (state.step >= TripStep.PICKED_UP) {
+        // ══════════════════════════════════════════════════════════════
+        // **و«لدي توصيلة»: ما يحمل، وممّن يقبض، وأين الباب** (٢٠٢٦-١٠-٠٢)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كانت الثلاثةُ في شاشةٍ لا تُفتح** (`OrderDetailScreen`، حُذفت) — والبطاقةُ
+        // هنا هي ما يقرؤه. **ومن قبض «أنا نقداً» يقبضها من المتجر قبل أن يمضي.**
+        val pickedUp = state.step >= TripStep.PICKED_UP
+        val cashFrom = cashFrom(order, pickedUp)
+        // ══════════════════════════════════════════════════════════════
+        // **وفي الطريق إلى المتجر: متى يجهز، ورقمُه** (٢٠٢٦-١٠-٠٢)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان `ready_at` و`prep_minutes` و`merchant_phone` تصل ولا تُعرض** —
+        // فيقف عند المطبخ لا يعرف متى، **ولا يملك أن يسأل.** **ورقمُ المتجر
+        // مكشوفٌ للسائق عمداً** (`authz.FieldPolicy`)؛ **ورقمُ الزبون لا يصله أبداً.**
+        if (!pickedUp && order.kind != "custom") {
+            val prep = when (val p = prepState(order)) {
+                PrepState.Ready -> stringResource(R.string.trip_store_ready)
+                is PrepState.Around -> stringResource(R.string.trip_store_ready_at, p.hhmm)
+                PrepState.Unknown -> ""
+            }
+            val phone = order.merchantPhone?.takeIf { it.isNotBlank() }
+            if (prep.isNotEmpty() || phone != null) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(prep, color = Rahal.colors.inkMuted, modifier = Modifier.weight(1f))
+                    if (phone != null) {
+                        val ctx = LocalContext.current
+                        RahalTextButton(onClick = {
+                            runCatching {
+                                ctx.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_DIAL,
+                                        android.net.Uri.parse("tel:$phone"),
+                                    ),
+                                )
+                            }
+                        }) { Text(stringResource(R.string.trip_call_store)) }
+                    }
+                }
+            }
+        }
+        if (order.parcelNote.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.detail_parcel), color = Rahal.colors.inkMuted)
+                Text(order.parcelNote, fontWeight = FontWeight.Bold)
+            }
+        }
+        if (cashFrom == CashFrom.STORE) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    stringResource(R.string.detail_fee_from_store),
+                    color = Rahal.colors.inkMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(money(order.cashDue), fontWeight = FontWeight.Bold, color = Rahal.colors.brand)
+            }
+        }
+        if (!order.dropoffKnown) {
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.detail_no_point), color = Rahal.colors.danger, fontWeight = FontWeight.Bold)
+        }
+        if (pickedUp) {
         Spacer(Modifier.height(10.dp))
         Row(
             Modifier.fillMaxWidth(),
@@ -1327,7 +1435,8 @@ private fun TripCard(
             //
             // **ومن حمل ثلاثة طلبات** يقرأ ثلاثةَ أسطرٍ متشابهةٍ تقول
             // كلُّها «تقبض نقدا» — **ولا يعرف أيُّها لهذا الباب.**
-            val due = order.cashDue > 0
+            // **و«أنا نقداً» قُبضت عند المتجر** — فلا يُطلب من المستلِم شيء.
+            val due = cashFrom == CashFrom.RECIPIENT
             Text(
                 text = if (due) {
                     stringResource(

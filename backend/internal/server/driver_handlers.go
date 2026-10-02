@@ -114,6 +114,10 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// **والمصغَّرةُ لا الأصل**: دائرةٌ بعرض ثمانيةٍ وعشرين نقطة،
 		// **وصورةُ هاتفٍ كاملةٌ لملئها** ميغابايتٌ يُحمَّل في كلّ إقلاع.
 		AvatarURL *string `json:"avatar_url"`
+
+		// Suspended **أحسابُه موقوف؟** (٢٠٢٦-١٠-٠٢) — يُكمل طلبَه القائمَ وحدَه،
+		// **ويُقال له ذلك** بدل أن تُردّ عليه الأبوابُ واحداً واحداً بلا سبب.
+		Suspended bool `json:"suspended"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -150,14 +154,14 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		                 WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL), 0),
 		       (SELECT count(*) FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
 		        WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL),
-		       am.thumb_path
+		       am.thumb_path, u.status = 'suspended'
 		FROM users u
 		LEFT JOIN media am ON am.id = u.avatar_media_id
 		WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&out.FullName, &out.OnShift, &out.ShiftStartedAt, &out.CashHeld, &out.CashLimit,
 			&out.Balance, &out.TodayDelivered, &out.TodayFailed, &out.TodayEarned,
 			&out.TodayCompensated, &out.ActiveOrders, &out.Rating, &out.RatingCount,
-			&out.AvatarURL)
+			&out.AvatarURL, &out.Suspended)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -330,6 +334,22 @@ type driverOrder struct {
 	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
 	QuoteVersion             int64  `json:"quote_version"`
 	QuoteConfirmedVersion    *int64 `json:"quote_confirmed_version"`
+	// ══════════════════════════════════════════════════════════════════
+	// **«لدي توصيلة» كما يحتاجها من يحملها** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت الثلاثةُ في القاعدة ولا تُرسَل** — والتطبيقُ يفترض «النقطةُ
+	// معروفة» حين يغيب الحقل: **فيُقاد السائقُ إلى نقطة المتجر نفسِه على
+	// أنّها باب المستلِم، ويُعلَن وصولُه عند المتجر**، ولا يقرأ ما يحمل ولا
+	// ممّن يقبض الأجرة.
+	//
+	// DropoffKnown **أنقطةُ التسليم معروفة؟** — وغيرُ المعروفة يُكتب مكانَها
+	// موقعُ المتجر (`0170`)، **فلا يُمشى إليها ولا يُقاس عليها.**
+	DropoffKnown bool `json:"dropoff_known"`
+	// ParcelNote **ما يحمله** — كتبه المتجر.
+	ParcelNote string `json:"parcel_note"`
+	// FeePayer **من يدفع الأجرة** — و`merchant_cash` يقبضها من المتجر عند الاستلام.
+	FeePayer string `json:"fee_payer"`
 }
 
 const driverOrderSelect = `
@@ -371,7 +391,11 @@ const driverOrderSelect = `
 	              AND du.last_location_at > now() - make_interval(mins => $2::int)),
 	           COALESCE(o.pickup_override, m.location)), -1),
 	       -- **وطولُ المشوار** — من الاستلام إلى الباب.
-	       COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1),
+	       -- **ونقطةٌ غيرُ معروفةٍ لا طولَ إليها** — المكتوبُ مكانَها موقعُ المتجر،
+	       -- **فيُقرأ المشوارُ صفراً وهو مجهول.**
+	       CASE WHEN o.dropoff_known
+	            THEN COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1)
+	            ELSE -1 END,
 	       -- **ومهلةُ دورِه — يراها ولا تنقضي عليه صامتة.**
 	       --
 	       -- (جردُ ٢٠٢٦-٠٨-٠٩.) **كان العمودُ مكتوباً في القاعدة ولا يُرسَل**:
@@ -429,7 +453,9 @@ const driverOrderSelect = `
 	           WHEN COALESCE(o.pickup_override_note, '') <> ''
 	               THEN o.pickup_override_note
 	           ELSE COALESCE(m.address_text, '')
-	       END
+	       END,
+	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
+	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, '')
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -456,7 +482,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
-			&o.DeliveryFee, &o.PickupAddress); err != nil {
+			&o.DeliveryFee, &o.PickupAddress,
+			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -489,6 +516,18 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := userIDFrom(r)
+
+	// **والمعلَّقُ لا عروضَ له** (٢٠٢٦-١٠-٠٢) — يُفتح له البابُ ليُكمل طلبَه
+	// (`holdingRoutes`) فيردّ فارغاً: **عرضٌ يراه ولا يستطيع قبولَه خداع.**
+	var status string
+	if err := s.pg.QueryRow(ctx, `SELECT status FROM users WHERE id = $1`, uid).Scan(&status); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if status != "active" {
+		httpx.JSON(w, http.StatusOK, []driverOrder{})
+		return
+	}
 
 	// **في «بالترتيب» لا يرى السائقُ إلّا ما عُرض عليه باسمه** — و`OfferNext`
 	// صار يختار بالقرب، فالطابورُ في هذا الوضع قريبٌ سلفاً.
@@ -552,15 +591,15 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 		  -- **حديثٌ داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ
 		  --  تُقاس** — عندها لا يُحجب بالمسافة، **والحداثةُ مضمونةٌ فوق.**
 		  AND (
-		    COALESCE(o.pickup_override, m.location) IS NULL
-		    OR ST_DWithin(`+freshLoc+`, COALESCE(o.pickup_override, m.location), `+radiusExpr+`)
+		    `+orders.DispatchAnchorSQL+` IS NULL
+		    OR ST_DWithin(`+freshLoc+`, `+orders.DispatchAnchorSQL+`, `+radiusExpr+`)
 		    OR $8 <= 0
 		    OR `+radiusExpr+` >= $6::float8
 		  )
 		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
 		ORDER BY
-		  CASE WHEN `+freshLoc+` IS NOT NULL AND COALESCE(o.pickup_override, m.location) IS NOT NULL
-		       THEN ST_Distance(`+freshLoc+`, COALESCE(o.pickup_override, m.location))
+		  CASE WHEN `+freshLoc+` IS NOT NULL AND `+orders.DispatchAnchorSQL+` IS NOT NULL
+		       THEN ST_Distance(`+freshLoc+`, `+orders.DispatchAnchorSQL+`)
 		       ELSE NULL END NULLS LAST,
 		  o.ready_at NULLS LAST, o.created_at
 		LIMIT 50`,
@@ -757,10 +796,6 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 // handleDriverTransition ينقل الطلب في مساره — والمحرّك يحكم ما يُسمح.
 func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
-	if !s.driverOwnsOrder(r, orderID) {
-		s.respondErr(w, errNotYourOrder)
-		return
-	}
 	req, err := decode[struct {
 		To   string `json:"to"`
 		Note string `json:"note"`
@@ -770,6 +805,15 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	if !s.driverOwnsOrder(r, orderID) {
+		// **وإعادةُ «تعذّر» عند المتجر بعد ضياع ردّها** — الطلبُ عاد إلى المكتب
+		// فلم يعد له، **وخطوتُه ثبتت.**
+		if s.replayOwnTransition(w, r, orderID, req.To) {
+			return
+		}
+		s.respondErr(w, errNotYourOrder)
 		return
 	}
 	// **سببٌ مصنَّفٌ لا نصٌّ حرّ.**
@@ -824,10 +868,37 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	o, err := s.orders.TransitionWithReason(r.Context(), userIDFrom(r), []string{"driver"},
 		orderID, req.To, clip(note, 300), req.Reason)
 	if err != nil {
+		if errors.Is(err, orders.ErrBadTransition) && s.replayOwnTransition(w, r, orderID, req.To) {
+			return
+		}
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, o)
+}
+
+// replayOwnTransition **إعادةُ خطوةٍ ثبتت وضاع ردُّها** (٢٠٢٦-١٠-٠٢).
+//
+// **تطبيقٌ أرسل «استلمت» فانقطعت الشبكةُ قبل الردّ** — يُعيدها بالمفتاح نفسِه
+// (`Idempotency-Key`) **فيُردّ عليه بالطلب كما هو الآن لا بـ«انتقالٌ غيرُ
+// جائز».** والسجلُّ يشهد أنّها خطوتُه هو (`orders.RepeatsOwnTransition`).
+//
+// **ولا يُعاد بلا مفتاح**: نسخةٌ قديمةٌ لا ترسله تُردّ كما كانت، **وضغطةٌ ثانيةٌ
+// متعمَّدةٌ على زرٍّ قديمٍ تبقى خطأً يُقال.**
+func (s *Server) replayOwnTransition(w http.ResponseWriter, r *http.Request, orderID, to string) bool {
+	if strings.TrimSpace(r.Header.Get(idempotencyHeader)) == "" || to == "" {
+		return false
+	}
+	if !s.orders.RepeatsOwnTransition(r.Context(), orderID, userIDFrom(r), to) {
+		return false
+	}
+	o, err := s.orders.GetByID(r.Context(), orderID)
+	if err != nil {
+		return false
+	}
+	w.Header().Set("Idempotent-Replay", "true")
+	httpx.JSON(w, http.StatusOK, o)
+	return true
 }
 
 // handleDriverRelease يفكّ إسناده فيعود الطلب إلى الطابور.
@@ -899,10 +970,11 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if _, err := q.Exec(ctx, `
-			INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
-			VALUES ($1, $2, 'driver', $3, $2)`,
+			INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+			VALUES ($1, $2, 'driver', $3, $2, true)`,
 			orderID, uid,
-			"اعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
+			// **«أعتذر» بهمزة المتكلّم** (٢٠٢٦-١٠-٠٢) — كانت «اعتذر» فتُقرأ أمراً للزبون.
+			"أعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
 			noteFailed = true
 			_, rbErr := q.Exec(ctx, `ROLLBACK TO SAVEPOINT release_apology`)
 			return rbErr

@@ -62,6 +62,7 @@
     <string name="err_order_taken">سبقك غيرك إلى هذا الطلب</string>
     <string name="err_otp_send_failed">تعذر إرسال الرمز — جرب بعد قليل</string>
     <string name="err_proof_required">يلزم صورة تسليم — وهي لم تبن بعد</string>
+    <string name="err_proof_not_at_door">صورة التسليم تلتقط عند باب الزبون فقط</string>
     <string name="err_rate_limited">محاولات كثيرة — انتظر قليلا</string>
     <string name="err_too_many_active">معك طلبات بعدد حدك</string>
     <string name="err_unauthorized">رقم الهاتف أو كلمة المرور غير صحيحة</string>

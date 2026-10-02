@@ -466,4 +466,30 @@
     <string name="map_no_package">لا حزمة باسم %1$s</string>
     <!-- **تحديثٌ إلزاميٌّ — توزيعٌ مباشرٌ لا Google Play** (٢٠٢٦-٠٩-٢٧). -->
     <string name="update_body_driver">صدر تحديثٌ إلزاميٌّ لتطبيق السائق. نزّله من موقع رحّال غو لتتابع عملك.</string>
+    <!-- **طلبٌ خرج من يده — يُقال لماذا** (٢٠٢٦-١٠-٠٢). -->
+    <string name="lost_title">الطلب #%1$d لم يعد معك</string>
+    <string name="lost_cancelled_customer">ألغى الزبون الطلب.</string>
+    <string name="lost_cancelled_merchant">ألغى المتجر الطلب.</string>
+    <string name="lost_cancelled_ops">ألغت الإدارة الطلب.</string>
+    <string name="lost_requeued_ops">أعادته الإدارة إلى الطابور — لم يعد عليك شيء فيه.</string>
+    <string name="lost_requeued_system">أعادته المنصة إلى الطابور — لم يعد عليك شيء فيه.</string>
+    <string name="lost_merchant_blocked">عاد الطلب إلى الإدارة لتبديل المتجر، وتعويضك بعد موافقتها.</string>
+    <string name="lost_failed_ops">أنهته الإدارة — تعذّر التسليم.</string>
+    <string name="lost_ok">حسناً</string>
+    <!-- **الخروجُ ببوّابة** (٢٠٢٦-١٠-٠٢). -->
+    <string name="logout_has_order">لا يمكنك تسجيل الخروج وفي يدك طلب — أكمله أو أعده إلى الطابور أولاً.</string>
+    <string name="logout_check_failed">تعذّر التحقق من طلباتك قبل الخروج: %1$s</string>
+    <!-- **إقلاعُ الهاتف وسط الورديّة** (٢٠٢٦-١٠-٠٢). -->
+    <string name="boot_channel">استئناف الوردية</string>
+    <string name="boot_title">ورديتك ما زالت مفتوحة</string>
+    <string name="boot_text">أعيد تشغيل الهاتف فتوقف إرسال موقعك. افتح التطبيق ليعود، وإلا فلن تصلك طلبات.</string>
+    <!-- **متى يجهز ورقمُ المتجر** (٢٠٢٦-١٠-٠٢). -->
+    <string name="trip_store_ready">الطلب جاهز في المتجر</string>
+    <string name="trip_store_ready_at">يجهز حوالي %1$s</string>
+    <string name="trip_call_store">اتصل بالمتجر</string>
+    <!-- **الحسابُ موقوفٌ وفي يده طلب** (٢٠٢٦-١٠-٠٢). -->
+    <string name="suspended_banner">حسابك موقوف — أكمل الطلب الحالي فقط، ولن تصلك طلبات جديدة.</string>
+    <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
+    <string name="gps_lost_title">إشارة الموقع مفقودة</string>
+    <string name="gps_lost_text">لم يصل الهاتفَ موضعٌ منذ دقائق، فلن تُعرض عليك طلبات حتى تعود. اخرج إلى مكان مكشوف أو أعد تشغيل الموقع.</string>
 </resources>
