@@ -34,6 +34,8 @@ var t = struct {
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
+	// **وتبدّلُ السائق يُقال** — (قرارُ المالك ٢٠٢٦-١٠-٠٢).
+	driverChanged, newDriverIs string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -63,6 +65,8 @@ var t = struct {
 	merchantEarned:           "مستحق مبيعاتك في محفظتك",
 	refunded2:                "أُعيد المبلغ إلى محفظتك",
 	compensated:              "تعويض في محفظتك",
+	driverChanged:            "تم تغيير السائق",
+	newDriverIs:              "سائقك الجديد: ",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -277,6 +281,24 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 	if note != "" && (to == StRejected || to == StCancelled || to == StFailed) {
 		body = ref + " — " + note // **والسببُ يُقال**: من أُلغي طلبُه يستحقّ لماذا
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وسائقٌ ثانٍ يُقال إنّه ثانٍ** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان الزبونُ يقرأ «أُسند سائقٌ لطلبك» مرّتين** — ولا يعلم أنّ الثانيةَ
+	// رجلٌ آخر، **فيكتب لسائقه ما كان يكتبه للأوّل.** **ولا يُقال السبب**:
+	// تركه السائقُ أو نزعه المكتبُ أو صمت — شأنُ المنصّة لا الزبون.
+	//
+	// **والإسنادُ الأوّلُ يبقى بنصّه.**
+	if to == StAssigned {
+		if changed, name := s.driverChange(ctx, orderID); changed {
+			title = t.driverChanged
+			body = ref
+			if name != "" {
+				body = ref + " — " + t.newDriverIs + name
+			}
+		}
+	}
 	// **والرابطُ إلى القائمة لا إلى صفحةِ طلبٍ منفردة.**
 	//
 	// صفحةُ التفاصيل حُذفت — **البطاقةُ صارت تحمل كلَّ ما كان فيها.** وإشعارٌ
@@ -324,6 +346,26 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 			Apps: []string{notifications.AppMerchant},
 		})
 	}
+}
+
+// driverChange **أكان للطلب سائقٌ غيرُ حامله الآن؟** — واسمُ الحامل.
+//
+// **ومن سجلّ الانتقالات لا من الحديث**: كلُّ إسنادٍ يمرّ بالمحرّك فيُكتب
+// حاملُه في حدثه (`order_events.driver_id`)، **والحديثُ قد لا يُكتب فيه سطر.**
+// **وسائقٌ يعود إليه الطلبُ نفسُه ليس تبديلاً.**
+func (s *Service) driverChange(ctx context.Context, orderID string) (bool, string) {
+	var changed bool
+	var name string
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM order_events e
+		               WHERE e.order_id = o.id AND e.to_status = 'assigned'
+		                 AND e.driver_id IS NOT NULL AND e.driver_id <> o.driver_id),
+		       COALESCE(u.full_name, '')
+		FROM orders o LEFT JOIN users u ON u.id = o.driver_id
+		WHERE o.id = $1`, orderID).Scan(&changed, &name); err != nil {
+		return false, ""
+	}
+	return changed, name
 }
 
 // notifyCommission المندوب يعرف بعمولته لحظة قيدها — مصدر دخله لا يُترك للاكتشاف.

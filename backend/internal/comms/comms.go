@@ -131,6 +131,15 @@ type Permission struct {
 	Open bool
 	// ClosesAt متى تُغلق — للعرض، `nil` إن لم تُحدَّد بعد.
 	ClosesAt *time.Time
+	// DriverID **ولايةُ من يُقرأ حديثُها** — سائقٌ بعينه.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٢: «حديثٌ جديدٌ لكلّ سائق».) **فالسائقُ الثاني
+	// لا يقرأ ما قيل للأوّل، والأوّلُ لا يقرأ ما قيل بعده.** والزبونُ يقرأ
+	// ولايةَ سائقه الآن، **وإن لم يكن له سائقٌ فآخرَ ولايةٍ مقفلةً.**
+	DriverID string
+	// Former **سائقٌ ترك الطلبَ** — يقرأ ولايتَه وحدَها ولا يكتب، **ولا يَسِم
+	// شيئاً مقروءاً**: «قُرئت» منه كذبٌ على الزبون.
+	Former bool
 }
 
 // Service قارئُ الصلاحية وحاملُ الرسائل.
@@ -200,28 +209,36 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 				return p, ErrNoDriverYet
 			}
 			p.PeerID, p.PeerName = peerID, peerName
+			p.DriverID = peerID
 			return p, nil // **مقفلةٌ للكتابة** — `Send` يردّ عند `Open` كاذبة.
 		}
 		p.PeerID, p.PeerName = *driverID, driverName
+		p.DriverID = *driverID
 	case driverID != nil && userID == *driverID:
 		p.Me = RoleDriver
 		p.PeerID, p.PeerName = customerID, customerName
+		p.DriverID = userID
 	default:
 		// **ولا الإدارةُ طرف** — ترى السجلَّ من بابها لا من هذا.
 		//
-		// **ومن كتب في هذا الحديث يقرؤه ولو خرج من الطلب**: السائقُ يُسحب
-		// منه الطلبُ فيُعاد إلى الطابور، **فتصير كلماتُه هو حجّةً على
-		// الزبون وحدَه** — يراها ولا يراها قائلُها. **ولا يكتب**: القناةُ
-		// مقفلةٌ في وجهه، **إنّما يُحتجّ بها.**
-		wrote, err := s.wroteHere(ctx, orderID, userID)
+		// **ومن كانت له ولايةٌ في هذا الحديث يقرؤها ولو خرج من الطلب**:
+		// السائقُ يُسحب منه الطلبُ فيُعاد إلى الطابور، **فتصير كلماتُه هو
+		// حجّةً على الزبون وحدَه** — يراها ولا يراها قائلُها. **ولا يكتب**:
+		// القناةُ مقفلةٌ في وجهه، **إنّما يُحتجّ بها.**
+		//
+		// **وولايتُه وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٠٢): **ما قاله الزبونُ
+		// للسائق الذي بعده ليس له** — كان يقرؤه كلَّه ويَسِمه مقروءاً.
+		had, err := s.hadTenure(ctx, orderID, userID)
 		if err != nil {
 			return nil, err
 		}
-		if !wrote {
+		if !had {
 			return nil, ErrNotParty
 		}
 		p.Me = RoleDriver
 		p.PeerID, p.PeerName = customerID, customerName
+		p.DriverID = userID
+		p.Former = true
 		return p, nil
 	}
 
@@ -229,19 +246,21 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 	return p, nil
 }
 
-// formerPeer **من كتب في هذا الحديث غيري** — واسمُه.
+// formerPeer **آخرُ سائقٍ كانت له ولايةٌ في هذا الحديث** — واسمُه.
 //
 // **يُسأل حين لا يكون للطلب سائقٌ الآن**: الصفُّ يحمل من يحمل الطلبَ، **والحديثُ
-// يحمل من قاله.** ويردّ فراغاً إن لم يكتب أحدٌ سواي — **وهو «لا سائقَ بعد»
-// حقّاً.**
+// يحمل ولاياتِ من حملوه.** **والآخرُ لا الأوّل**: زبونٌ تبدّل سائقُه مرّتين
+// يقرأ حديثَ من كان معه قبل قليل، **لا حديثَ من تركه أوّلَ النهار.**
+//
+// ويردّ فراغاً إن لم تكن ولاية — **وهو «لا سائقَ بعد» حقّاً.**
 func (s *Service) formerPeer(ctx context.Context, orderID, userID string) (string, string, error) {
 	var id, name string
 	err := s.db.QueryRow(ctx, `
-		SELECT x.sender_id::text, COALESCE(u.full_name, '')
+		SELECT x.driver_id::text, COALESCE(u.full_name, '')
 		FROM order_messages x
-		JOIN users u ON u.id = x.sender_id
-		WHERE x.order_id = $1 AND x.sender_id <> $2
-		ORDER BY x.created_at
+		JOIN users u ON u.id = x.driver_id
+		WHERE x.order_id = $1 AND x.driver_id <> $2
+		ORDER BY x.created_at DESC
 		LIMIT 1`, orderID, userID).Scan(&id, &name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", nil
@@ -252,15 +271,16 @@ func (s *Service) formerPeer(ctx context.Context, orderID, userID string) (strin
 	return id, name, nil
 }
 
-// wroteHere **هل كتبتُ في هذا الحديث؟**
+// hadTenure **هل حملتُ هذا الطلبَ يوماً وفي ولايتي حديث؟**
 //
-// **والكتابةُ لا تقع إلّا من طرف** — يمنعها `Permit` نفسُها ساعتَها. **فمن كتب
-// كان طرفاً يوماً**، ويبقى له أن يقرأ ما قال.
-func (s *Service) wroteHere(ctx context.Context, orderID, userID string) (bool, error) {
+// **والولايةُ لا تقع إلّا لسائقٍ حمل الطلب** — رسالتُه أو رسالةُ الزبون إليه
+// تُنسب إليه ساعتَها. **فمن له ولايةٌ كان طرفاً يوماً**، ويبقى له أن يقرأ
+// ما قيل فيها.
+func (s *Service) hadTenure(ctx context.Context, orderID, userID string) (bool, error) {
 	var yes bool
 	err := s.db.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM order_messages
-		               WHERE order_id = $1 AND sender_id = $2)`,
+		               WHERE order_id = $1 AND driver_id = $2)`,
 		orderID, userID).Scan(&yes)
 	return yes, err
 }

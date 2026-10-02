@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -857,16 +859,7 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	if req != nil {
 		note = clip(req.Note, 300)
 	}
-	if _, err := s.orders.Transition(r.Context(), userIDFrom(r), []string{"driver"},
-		orderID, orders.StDispatching, note); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if _, err := s.pg.Exec(r.Context(),
-		`UPDATE orders SET driver_id = NULL WHERE id = $1`, orderID); err != nil {
-		s.respondErr(w, err)
-		return
-	}
+	uid := userIDFrom(r)
 
 	// ══════════════════════════════════════════════════════════════════
 	// **واعتذارٌ للزبون في حديثه**
@@ -878,16 +871,51 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	// **والزبونُ كان يقرأ «في طريقي إليك» ثمّ لا شيء** — والطلبُ يعود
 	// إلى الطابور بلا أن يعلم. **فيبقى ينتظر من لن يأتي.**
 	//
-	// **والحديثُ نفسُه يبقى** — هو حديثُ الطلب لا حديثُ السائق: **يقرؤه
-	// الثاني فيعرف ما جرى**، ويكتب فيه تحيّتَه فوق الاعتذار.
-	if _, err := s.pg.Exec(r.Context(), `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body)
-		VALUES ($1, $2, 'driver', $3)`,
-		orderID, userIDFrom(r),
-		"اعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
-		// **ولا يُفشل الإرجاع**: الطلبُ عاد إلى الطابور فعلاً،
-		// **وسطرُ حديثٍ يسقط لا يُبقيه في يدِ من تركه.**
+	// # وفي ولاية من تركه — لا في حديث من بعده
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٢: «حديثٌ جديدٌ لكلّ سائق».) **فالاعتذارُ آخرُ
+	// سطرٍ في حديث التارك** — يقرؤه الزبونُ ما دام بلا سائق، **والثاني يبدأ
+	// حديثاً فارغاً لا يبدأ باعتذار غيره.**
+	//
+	// **ويُكتب داخلَ معاملة الانتقال لا بعدها**: بعد التثبيت يقع العرضُ
+	// التالي (`OfferNext`) وقد يُسنَد الطلبُ لغيره قبل أن يُكتب السطر.
+	// **والولايةُ تُكتب صريحةً** فلا تُقرأ من حامل الطلب ساعتَها.
+	//
+	// **ولا يُفشل الإرجاع**: نقطةُ حفظٍ تحيط به — **وسطرُ حديثٍ يسقط لا
+	// يُبقي الطلبَ في يدِ من تركه.**
+	noteFailed := false
+	apology := func(ctx context.Context, q dbtx.Querier) error {
+		if _, err := q.Exec(ctx, `SAVEPOINT release_apology`); err != nil {
+			return err
+		}
+		if _, err := q.Exec(ctx, `
+			INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
+			VALUES ($1, $2, 'driver', $3, $2)`,
+			orderID, uid,
+			"اعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
+			noteFailed = true
+			_, rbErr := q.Exec(ctx, `ROLLBACK TO SAVEPOINT release_apology`)
+			return rbErr
+		}
+		_, err := q.Exec(ctx, `RELEASE SAVEPOINT release_apology`)
+		return err
+	}
+	if _, err := s.orders.TransitionAudited(r.Context(), uid, []string{"driver"},
+		orderID, orders.StDispatching, note, apology); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if noteFailed {
 		s.audit(r, "driver.release_note_failed", "order", orderID, nil)
+	}
+	// **والمحرّكُ يُصفّي السائقَ بنفسه** (`driver_id = NULL` في الانتقال إلى
+	// الطابور). **وهذا احتياطٌ مشروطٌ بأنّه ما زال له** — بعد التثبيت قد
+	// يكون العرضُ التالي أسنده لغيره، **وتصفيرٌ بلا شرطٍ ينزعه من الثاني.**
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE orders SET driver_id = NULL WHERE id = $1 AND driver_id = $2`,
+		orderID, uid); err != nil {
+		s.respondErr(w, err)
+		return
 	}
 
 	s.touch("order", "ops")

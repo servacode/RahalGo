@@ -731,6 +731,12 @@ func (s *Service) reclaimSilentAssignments(ctx context.Context) {
 		}
 		s.pub.Publish("driver:"+x.driverID, map[string]any{"type": "order"})
 		s.pub.Publish("ops", map[string]any{"type": "order"})
+		// **والزبونُ يرى طلبَه عاد إلى الطابور** — كما في كلّ مسارٍ يمرّ
+		// بالمحرّك (`publishOrder`). **كان النزعُ وحدَه يسكت عنه**، فتبقى
+		// شاشتُه على سائقٍ نُزع منه الطلب حتّى يُحدّثها بيده.
+		if o, err := s.GetByID(ctx, x.orderID); err == nil {
+			s.publishOrder(o)
+		}
 		if err := s.OfferNext(ctx, x.orderID, skip); err != nil {
 			s.logger.Error("الترتيب: تعذّر نقلُ الدور بعد النزع",
 				"order", x.orderID, "error", err)
