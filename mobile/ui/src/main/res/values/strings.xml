@@ -38,6 +38,12 @@
     <string name="chat_today">اليوم</string>
     <string name="chat_yesterday">أمس</string>
     <string name="err_bad_fail_reason">اختر سببا من القائمة</string>
+    <string name="err_door_needs_ops">عند باب الزبون الإدارة هي التي تنهي الطلب — بلّغها بالمشكلة</string>
+    <string name="err_order_not_at_door">الطلب لم يعد عند باب الزبون</string>
+    <string name="err_door_bad_action">قرار غير صالح — أعد المحاولة</string>
+    <string name="err_release_reason_required">اختر سبب ترك الطلب</string>
+    <string name="err_release_wrong_stage">بعد الاستلام لا يُترك الطلب — استعمل زر الطوارئ</string>
+    <string name="err_driver_excluded">تركت هذا الطلب، فلا يُعرض عليك مرة ثانية</string>
     <string name="err_fail_reason_wrong_stage">هذا السبب لا يخص مرحلة الطلب الحالية</string>
     <string name="err_door_wait">انتظر عند الباب قليلا — الإدارة تحاول الاتصال بالزبون</string>
     <string name="err_cash_limit">النقد الذي بذمتك بلغ السقف — سلم للمكتب</string>
