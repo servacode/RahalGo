@@ -423,7 +423,7 @@ func (s *Service) orderDispatchInfo(ctx context.Context, orderID string) (hasPic
 	// وكلُّ مرّةٍ تُصلَح واحدةً ويبقى الباقي.** وهذه السادسة — **وموضعُها
 	// محرّكُ التوزيع لا شاشةُ عرض.**
 	err = s.db.QueryRow(ctx, `
-		SELECT COALESCE(o.pickup_override, m.location) IS NOT NULL,
+		SELECT `+DispatchAnchorSQL+` IS NOT NULL,
 		       GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at))))
 		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).Scan(&hasPickup, &wait)
@@ -513,7 +513,7 @@ const proximityCTE = `
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
 		CROSS JOIN (
-		    SELECT COALESCE(o.pickup_override, m.location) AS pickup,
+		    SELECT ` + DispatchAnchorSQL + ` AS pickup,
 		           COALESCE(o.cash_due, 0) AS cash_due
 		    FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		    WHERE o.id = $4
@@ -663,6 +663,21 @@ func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note st
 
 // autoAssignNote نصُّ حدثِ الإسناد التلقائيّ — **يُقرأ في سجلّ الطلب.**
 const autoAssignNote = "إسنادٌ تلقائيٌّ بالدور"
+
+// ══════════════════════════════════════════════════════════════════════
+// DispatchAnchorSQL **النقطةُ التي يُقاس منها قربُ السائق عند التوزيع**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **موضعُ الاستلام البديلُ إن وُجد، وإلّا المتجر، وإلّا — في الطلب الخاصّ —
+// باب الزبون** (٢٠٢٦-١٠-٠٢).
+//
+// **كان الخاصُّ بلا نقطةٍ تُقاس** (لا متجرَ له) — فيُعرض بالعدل وحدَه على
+// سائقٍ في أقصى المدينة **وقريبٌ من الزبون واقفٌ بجانبه.** والسائقُ يشتري من
+// سوقٍ قريبٍ من الزبون في الغالب، **فالزبونُ أصدقُ مرساةٍ لا لاشيء.**
+//
+// **وفي المحرّك وبابِ الطابور نصٌّ واحد** — قياسان يفترقان يعرضان على واحدٍ
+// ويُظهران لآخر.
+const DispatchAnchorSQL = `COALESCE(o.pickup_override, m.location, CASE WHEN o.kind = 'custom' THEN o.dropoff END)`
 
 // reclaimNote نصُّ حدثِ نزعِ إسنادٍ صامت.
 const reclaimNote = "نُزع لعدم التحرّك — عاد إلى الطابور"

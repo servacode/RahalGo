@@ -34,7 +34,7 @@
     "behaviour_settings": 132,
     "order_fields": 87,
     "test_files": 442,
-    "test_funcs": 1846
+    "test_funcs": 1848
   },
   "flows": [
     {
@@ -23251,6 +23251,12 @@
       "orphan": true
     },
     {
+      "name": "TestCustomOrder_CustomerCancelTellsTheDriver",
+      "file": "internal/server/dispatch_custom_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestCustomOrder_FreshPreferredOverStale",
       "file": "internal/server/dispatch_custom_test.go",
       "package": "server",
@@ -23258,6 +23264,12 @@
     },
     {
       "name": "TestCustomOrder_IsOfferedToEligibleDriver",
+      "file": "internal/server/dispatch_custom_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomOrder_NearestToCustomerIsOffered",
       "file": "internal/server/dispatch_custom_test.go",
       "package": "server",
       "orphan": true

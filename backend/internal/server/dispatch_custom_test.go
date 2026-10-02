@@ -22,6 +22,7 @@ package server
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -94,6 +95,58 @@ func TestCustomOrder_FreshPreferredOverStale(t *testing.T) {
 	f.offer(t, ord, nil)
 
 	want(t, f.offeredDriver(t, ord), fresh, "الحديثُ يسبق الشائخَ في الخاصّ")
+}
+
+// ── ب٢ · والقربُ يُقاس من باب الزبون في الخاصّ (٢٠٢٦-١٠-٠٢) ──────────────────
+//
+// **كان الخاصُّ بلا نقطةٍ تُقاس** — فيُعرض بالعدل وحدَه على سائقٍ بعيدٍ أقدمَ
+// دوراً، **وآخرُ واقفٌ بجانب الزبون.**
+func TestCustomOrder_NearestToCustomerIsOffered(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	armProximity(t, f)
+	byCustomer, far := f.drivers[0], f.drivers[1]
+	f.onShift(t, byCustomer, true)
+	f.onShift(t, far, true)
+	f.standAt(t, byCustomer, pdLat+0.0003, pdLng+0.0003) // ~٤٠م من الزبون
+	f.standAt(t, far, pmLat, pmLng)                      // ~١٫٤كم منه
+	// **والعدلُ يفضّل البعيدَ لولا القرب.**
+	f.lastAssignedAgo(t, far, 99999)
+	f.lastAssignedAgo(t, byCustomer, 10)
+
+	ord := f.customOrderAt(t, pdLat, pdLng, "dispatching")
+	f.offer(t, ord, nil)
+
+	want(t, f.offeredDriver(t, ord), byCustomer, "الأقربُ إلى الزبون في الخاصّ")
+}
+
+// ── ب٣ · وإلغاءُ الزبون والسائقُ في السوق يُقال للسائق (٢٠٢٦-١٠-٠٢) ─────────
+//
+// **الزبونُ يملك الإلغاءَ حتّى «اشتريتُ»** (قرارُ المالك ٢٠٢٦-٠٨-١٠) — **والسائقُ
+// قد يكون في السوق.** فكان يُلغى عليه صامتاً.
+func TestCustomOrder_CustomerCancelTellsTheDriver(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	d := f.drivers[0]
+	f.srv.orders.SetSettings(settings.NewStore(f.pool))
+	f.srv.orders.SetNotifier(notifications.New(f.pool, f.srv.hub, f.srv.logger))
+	ord := f.customOrderAt(t, pdLat, pdLng, "dispatching")
+	var customer string
+	if err := f.pool.QueryRow(context.Background(), `
+		UPDATE orders SET status = 'assigned', driver_id = $2, accepted_at = now()
+		WHERE id = $1 RETURNING customer_id::text`, ord, d).Scan(&customer); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.srv.orders.Transition(context.Background(), customer, []string{"customer"}, ord, "cancelled", ""); err != nil {
+		t.Fatalf("تعذّر الإلغاء: %v", err)
+	}
+	var body string
+	if err := f.pool.QueryRow(context.Background(), `
+		SELECT body FROM notifications WHERE user_id = $1 AND entity_id = $2
+		ORDER BY created_at DESC LIMIT 1`, d, ord).Scan(&body); err != nil {
+		t.Fatalf("لم يُخبَر السائقُ بالإلغاء: %v", err)
+	}
+	if !strings.Contains(body, "ألغى الزبون الطلب") {
+		t.Errorf("النصّ %q", body)
+	}
 }
 
 // ── ج · والراصدُ يرى الخاصَّ العالق ──────────────────────────────────────────

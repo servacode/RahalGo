@@ -575,15 +575,15 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 		  -- **حديثٌ داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ
 		  --  تُقاس** — عندها لا يُحجب بالمسافة، **والحداثةُ مضمونةٌ فوق.**
 		  AND (
-		    COALESCE(o.pickup_override, m.location) IS NULL
-		    OR ST_DWithin(`+freshLoc+`, COALESCE(o.pickup_override, m.location), `+radiusExpr+`)
+		    `+orders.DispatchAnchorSQL+` IS NULL
+		    OR ST_DWithin(`+freshLoc+`, `+orders.DispatchAnchorSQL+`, `+radiusExpr+`)
 		    OR $8 <= 0
 		    OR `+radiusExpr+` >= $6::float8
 		  )
 		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
 		ORDER BY
-		  CASE WHEN `+freshLoc+` IS NOT NULL AND COALESCE(o.pickup_override, m.location) IS NOT NULL
-		       THEN ST_Distance(`+freshLoc+`, COALESCE(o.pickup_override, m.location))
+		  CASE WHEN `+freshLoc+` IS NOT NULL AND `+orders.DispatchAnchorSQL+` IS NOT NULL
+		       THEN ST_Distance(`+freshLoc+`, `+orders.DispatchAnchorSQL+`)
 		       ELSE NULL END NULLS LAST,
 		  o.ready_at NULLS LAST, o.created_at
 		LIMIT 50`,
