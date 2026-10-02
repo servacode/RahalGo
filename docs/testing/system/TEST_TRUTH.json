@@ -33,8 +33,8 @@
     "setting_defs": 166,
     "behaviour_settings": 132,
     "order_fields": 87,
-    "test_files": 439,
-    "test_funcs": 1837
+    "test_files": 440,
+    "test_funcs": 1839
   },
   "flows": [
     {
@@ -23385,6 +23385,18 @@
     {
       "name": "TestLocationBatch_StaleDoesNotRewindPosition",
       "file": "internal/server/driver_location_batch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverOrders_MerchantDeliveryFields",
+      "file": "internal/server/driver_merchant_delivery_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverRoute_NoRouteToUnknownDropoff",
+      "file": "internal/server/driver_merchant_delivery_test.go",
       "package": "server",
       "orphan": true
     },

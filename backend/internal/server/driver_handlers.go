@@ -330,6 +330,22 @@ type driverOrder struct {
 	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
 	QuoteVersion             int64  `json:"quote_version"`
 	QuoteConfirmedVersion    *int64 `json:"quote_confirmed_version"`
+	// ══════════════════════════════════════════════════════════════════
+	// **«لدي توصيلة» كما يحتاجها من يحملها** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت الثلاثةُ في القاعدة ولا تُرسَل** — والتطبيقُ يفترض «النقطةُ
+	// معروفة» حين يغيب الحقل: **فيُقاد السائقُ إلى نقطة المتجر نفسِه على
+	// أنّها باب المستلِم، ويُعلَن وصولُه عند المتجر**، ولا يقرأ ما يحمل ولا
+	// ممّن يقبض الأجرة.
+	//
+	// DropoffKnown **أنقطةُ التسليم معروفة؟** — وغيرُ المعروفة يُكتب مكانَها
+	// موقعُ المتجر (`0170`)، **فلا يُمشى إليها ولا يُقاس عليها.**
+	DropoffKnown bool `json:"dropoff_known"`
+	// ParcelNote **ما يحمله** — كتبه المتجر.
+	ParcelNote string `json:"parcel_note"`
+	// FeePayer **من يدفع الأجرة** — و`merchant_cash` يقبضها من المتجر عند الاستلام.
+	FeePayer string `json:"fee_payer"`
 }
 
 const driverOrderSelect = `
@@ -371,7 +387,11 @@ const driverOrderSelect = `
 	              AND du.last_location_at > now() - make_interval(mins => $2::int)),
 	           COALESCE(o.pickup_override, m.location)), -1),
 	       -- **وطولُ المشوار** — من الاستلام إلى الباب.
-	       COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1),
+	       -- **ونقطةٌ غيرُ معروفةٍ لا طولَ إليها** — المكتوبُ مكانَها موقعُ المتجر،
+	       -- **فيُقرأ المشوارُ صفراً وهو مجهول.**
+	       CASE WHEN o.dropoff_known
+	            THEN COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1)
+	            ELSE -1 END,
 	       -- **ومهلةُ دورِه — يراها ولا تنقضي عليه صامتة.**
 	       --
 	       -- (جردُ ٢٠٢٦-٠٨-٠٩.) **كان العمودُ مكتوباً في القاعدة ولا يُرسَل**:
@@ -429,7 +449,9 @@ const driverOrderSelect = `
 	           WHEN COALESCE(o.pickup_override_note, '') <> ''
 	               THEN o.pickup_override_note
 	           ELSE COALESCE(m.address_text, '')
-	       END
+	       END,
+	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
+	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, '')
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -456,7 +478,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
-			&o.DeliveryFee, &o.PickupAddress); err != nil {
+			&o.DeliveryFee, &o.PickupAddress,
+			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer); err != nil {
 			s.respondErr(w, err)
 			return
 		}

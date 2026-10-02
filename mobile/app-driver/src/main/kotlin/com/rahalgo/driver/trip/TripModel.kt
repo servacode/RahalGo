@@ -363,11 +363,74 @@ data class TripActions(
  * و`on_the_way` وحدَها. **وما بينهما (`at_pickup` · `picked_up`)
  * حالٌ بلغها بيده، ولا يُعاد تسجيلُها.**
  */
-fun autoArrivalTarget(status: String, custom: Boolean): String? {
+fun autoArrivalTarget(status: String, custom: Boolean, dropoffKnown: Boolean = true): String? {
     if (custom) return null
     return when (status) {
         "assigned" -> "at_pickup"
-        "on_the_way" -> "at_dropoff"
+        // **٤ · ولا وصولَ تلقائيّاً إلى نقطةٍ غيرِ معروفة** (٢٠٢٦-١٠-٠٢) — «لدي
+        // توصيلة» بلا نقطةٍ يُكتب مكانَها موقعُ المتجر، **فيُعلَن وصولُه إلى
+        // المستلِم وهو واقفٌ عند المتجر.** فيبقى الزرُّ بيده.
+        "on_the_way" -> if (dropoffKnown) "at_dropoff" else null
         else -> null
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **إلى أين يُقاس وصولُه — أو لا يُعرف** (٢٠٢٦-١٠-٠٢)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **ثلاثةُ أجوبةٍ لا جوابان**: ليس في طورِ وصول · نقطةٌ لا تُعرف · نقطةٌ بعينها.
+ *
+ * **و«لا تُعرف» غيرُ «بعيد»**: بعيدٌ يُخفي زرَّ «وصلت» حتّى يقترب، **ومجهولٌ
+ * يُظهره** — ومن أُخفي عنه الزرُّ وهو واقفٌ عند الباب لا يجد ما يضغطه.
+ */
+sealed interface ArrivalPoint {
+    /** ليس في طورٍ يُعلَن فيه وصول. */
+    data object NotArriving : ArrivalPoint
+
+    /** **في طورِ وصولٍ والنقطةُ مجهولة** — والزرُّ ظاهرٌ بيده. */
+    data object Unknown : ArrivalPoint
+
+    data class At(val lat: Double, val lng: Double) : ArrivalPoint
+}
+
+fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
+    "assigned" -> {
+        val la = order.navLat
+        val ln = order.navLng
+        if (la == null || ln == null) ArrivalPoint.NotArriving else ArrivalPoint.At(la, ln)
+    }
+    // **«لدي توصيلة» بلا نقطةٍ** — المكتوبُ موقعُ المتجر لا باب المستلِم.
+    "on_the_way" -> if (order.dropoffKnown) ArrivalPoint.At(order.lat, order.lng) else ArrivalPoint.Unknown
+    else -> ArrivalPoint.NotArriving
+}
+
+/**
+ * **نقطةُ الباب على الخريطة** — وفارغةٌ حين لا تُعرف: **لا دبّوسَ ولا خطَّ إلى
+ * موقع المتجر على أنّه بابُ المستلِم.**
+ */
+fun dropoffPoint(order: DriverOrder): Pair<Double, Double>? =
+    if (order.dropoffKnown) order.lat to order.lng else null
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ممّن يقبض — ومتى** (٢٠٢٦-١٠-٠٢)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **«أنا نقداً» في «لدي توصيلة»**: المتجرُ يدفع الأجرةَ بيد السائق **عند
+ * الاستلام** — **وكانت البطاقةُ تقول بعد الاستلام «المطلوب من المستلِم»**
+ * فيطلبها من رجلٍ لا يدين بشيء، **وتسكت عند المتجر حيث يجب أن يقبض.**
+ */
+enum class CashFrom { NONE, STORE, RECIPIENT }
+
+fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {
+    if (order.cashDue <= 0) return CashFrom.NONE
+    val fromStore = order.kind == "merchant_delivery" && order.feePayer == "merchant_cash"
+    return when {
+        fromStore && !pickedUp -> CashFrom.STORE
+        fromStore -> CashFrom.NONE
+        pickedUp -> CashFrom.RECIPIENT
+        else -> CashFrom.NONE
     }
 }

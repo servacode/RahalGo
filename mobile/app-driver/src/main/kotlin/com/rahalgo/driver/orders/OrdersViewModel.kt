@@ -1124,8 +1124,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     away(driver, order.navLat, order.navLng)
                         .takeIf { it >= 0 } ?: order.toPickupM
 
-                else -> away(driver, order.lat, order.lng)
-                    .takeIf { it >= 0 } ?: order.legM
+                // **ونقطةٌ مجهولةٌ لا مسافةَ إليها** — المكتوبُ موقعُ المتجر.
+                else -> com.rahalgo.driver.trip.dropoffPoint(order)?.let { (la, ln) ->
+                    away(driver, la, ln).takeIf { it >= 0 } ?: order.legM
+                } ?: -1.0
             },
             // **والسرعة من المحرّك لا من الشيفرة** — تُضبط للمدينة كلّها.
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
@@ -1177,7 +1179,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
             // **فتُرسم الرحلة بنقطتين** بدل أن تسقط الشاشة.
             pickup = order.navLat?.let { la -> order.navLng?.let { ln -> LatLng(la, ln) } },
-            dropoff = LatLng(order.lat, order.lng),
+            // **ولا دبّوسَ لبابٍ لا يُعرف** — «لدي توصيلة» بلا نقطة.
+            dropoff = com.rahalgo.driver.trip.dropoffPoint(order)?.let { (la, ln) -> LatLng(la, ln) },
             busy = detail.busy,
             // ══════════════════════════════════════════════════════════
             // **وخطأُ قبولِ العرض يصل الرحلةَ أيضاً**
@@ -1235,23 +1238,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun near(shift: LastPoint.Point?, order: DriverOrder): Boolean? {
         val fix = if (following) navSession.lastGoodFix else null
         val driver = fix?.let { LastPoint.Point(it.lat, it.lng) } ?: shift ?: return null
-        val lat: Double
-        val lng: Double
-        when (order.status) {
-            "assigned" -> {
-                lat = order.navLat ?: return false
-                lng = order.navLng ?: return false
-            }
-
-            "on_the_way" -> {
-                lat = order.lat
-                lng = order.lng
-            }
-
-            else -> return false
+        // **والوجهةُ من دالّةٍ صافيةٍ تُختبر** (`arrivalPoint`) — ونقطةٌ مجهولةٌ
+        // («لدي توصيلة» بلا نقطة) «لا يُعرف» لا «بعيد»: **الزرُّ يبقى ظاهراً.**
+        val target = when (val p = com.rahalgo.driver.trip.arrivalPoint(order)) {
+            com.rahalgo.driver.trip.ArrivalPoint.NotArriving -> return false
+            com.rahalgo.driver.trip.ArrivalPoint.Unknown -> return null
+            is com.rahalgo.driver.trip.ArrivalPoint.At -> p
         }
         val out = FloatArray(1)
-        android.location.Location.distanceBetween(driver.lat, driver.lng, lat, lng, out)
+        android.location.Location.distanceBetween(driver.lat, driver.lng, target.lat, target.lng, out)
         return out[0] <= ARRIVAL_SHOW_M
     }
 

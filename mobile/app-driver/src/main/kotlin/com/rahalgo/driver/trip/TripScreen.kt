@@ -268,13 +268,15 @@ fun TripScreen(
      * و`lat/lng` للزبون — **وهي نفسُ ما تقيس عليه `near()`**،
      * فلا رقمان لحقيقةٍ واحدة.
      */
-    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng) {
+    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng, state.order?.dropoffKnown) {
         val o = state.order
         navSession.setArrivalTarget(
             when {
                 o == null -> null
+                // **ولا وصولَ إلى بابٍ لا يُعرف** — «لدي توصيلة» بلا نقطةٍ يُكتب
+                // مكانَها موقعُ المتجر، **فتُعلن الملاحةُ وصولَه وهو عند المتجر.**
                 state.step >= TripStep.PICKED_UP ->
-                    com.rahalgo.navigation.GeoPoint(o.lat, o.lng)
+                    dropoffPoint(o)?.let { (la, ln) -> com.rahalgo.navigation.GeoPoint(la, ln) }
                 o.navLat != null && o.navLng != null ->
                     com.rahalgo.navigation.GeoPoint(o.navLat!!, o.navLng!!)
                 else -> null
@@ -549,6 +551,7 @@ fun TripScreen(
     val autoStatus = autoArrivalTarget(
         status = state.order?.status.orEmpty(),
         custom = state.order?.kind == "custom",
+        dropoffKnown = state.order?.dropoffKnown != false,
     )
     // **ومرّةً واحدةً لكلّ طور** — والمفتاحُ الحالُ نفسُه:
     // **فمن سُجّل وصولُه إلى المتجر لا يُعاد تسجيلُه**، ووصولُ
@@ -1308,7 +1311,37 @@ private fun TripCard(
         //
         // **ويظهر حين يصير له معنى**: بعد الاستلام، وهو ماضٍ إلى من
         // يقبض منه.
-        if (state.step >= TripStep.PICKED_UP) {
+        // ══════════════════════════════════════════════════════════════
+        // **و«لدي توصيلة»: ما يحمل، وممّن يقبض، وأين الباب** (٢٠٢٦-١٠-٠٢)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كانت الثلاثةُ في شاشةٍ لا تُفتح** (`OrderDetailScreen`) — والبطاقةُ
+        // هنا هي ما يقرؤه. **ومن قبض «أنا نقداً» يقبضها من المتجر قبل أن يمضي.**
+        val pickedUp = state.step >= TripStep.PICKED_UP
+        val cashFrom = cashFrom(order, pickedUp)
+        if (order.parcelNote.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.detail_parcel), color = Rahal.colors.inkMuted)
+                Text(order.parcelNote, fontWeight = FontWeight.Bold)
+            }
+        }
+        if (cashFrom == CashFrom.STORE) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    stringResource(R.string.detail_fee_from_store),
+                    color = Rahal.colors.inkMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(money(order.cashDue), fontWeight = FontWeight.Bold, color = Rahal.colors.brand)
+            }
+        }
+        if (!order.dropoffKnown) {
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.detail_no_point), color = Rahal.colors.danger, fontWeight = FontWeight.Bold)
+        }
+        if (pickedUp) {
         Spacer(Modifier.height(10.dp))
         Row(
             Modifier.fillMaxWidth(),
@@ -1327,7 +1360,8 @@ private fun TripCard(
             //
             // **ومن حمل ثلاثة طلبات** يقرأ ثلاثةَ أسطرٍ متشابهةٍ تقول
             // كلُّها «تقبض نقدا» — **ولا يعرف أيُّها لهذا الباب.**
-            val due = order.cashDue > 0
+            // **و«أنا نقداً» قُبضت عند المتجر** — فلا يُطلب من المستلِم شيء.
+            val due = cashFrom == CashFrom.RECIPIENT
             Text(
                 text = if (due) {
                     stringResource(
