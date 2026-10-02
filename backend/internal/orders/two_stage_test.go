@@ -84,10 +84,8 @@ func TestFailureAfterPickup_PlatformBearsIt(t *testing.T) {
 			t.Fatalf("%s فشل: %v", st, err)
 		}
 	}
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "الزبون لم يستلم"); err != nil {
-		t.Fatalf("الإفشال فشل: %v", err)
-	}
+	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
+	f.failAtDoor(t, "platform", "")
 
 	// **المتجرُ يبقى بماله** — لا يخسر بمن أخطأ بعده.
 	if got := f.balance(t, owner); got != 81_000 {

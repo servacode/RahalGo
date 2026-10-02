@@ -25,7 +25,9 @@ func TestCanTransition(t *testing.T) {
 		{StAccepted, StDispatching, []string{"driver"}, false},
 		{StDispatching, StAssigned, []string{"driver"}, true},
 		{StAtDropoff, StDelivered, []string{"driver"}, true},
-		{StAtDropoff, StFailed, []string{"driver"}, true},
+		// **والسائقُ لا يُنهي عند الباب** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — المكتبُ يُنهي.
+		{StAtDropoff, StFailed, []string{"driver"}, false},
+		{StAtDropoff, StFailed, []string{"ops"}, true},
 		{StDelivered, StRefunded, []string{"admin"}, true},
 		{StDelivered, StRefunded, []string{"ops"}, false},
 		{StDelivered, StPending, []string{"admin"}, false},

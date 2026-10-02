@@ -39,6 +39,9 @@ const (
 	LossRequeuedSystem    = "requeued_system"
 	LossMerchantBlocked   = "merchant_blocked"
 	LossFailedOps         = "failed_ops"
+	// LossReturnToOffice **أنهته الإدارةُ عند باب الزبون — عُد بالطلب إلى المكتب**
+	// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢).
+	LossReturnToOffice = "return_to_office"
 )
 
 // lossText **جملةُ كلّ رمز** — قصيرةٌ تُقرأ من شاشةٍ مقفلة.
@@ -50,6 +53,7 @@ var lossText = map[string]string{
 	LossRequeuedSystem:    "أعادته المنصة إلى الطابور",
 	LossMerchantBlocked:   "عاد الطلب إلى الإدارة لتبديل المتجر — وتعويضك بعد موافقتها",
 	LossFailedOps:         "أنهته الإدارة — تعذّر التسليم",
+	LossReturnToOffice:    "الإدارة: عُد إلى المكتب بالطلب",
 }
 
 // LossText **جملةُ الرمز** — وفارغةٌ لرمزٍ لا يُعرف.
@@ -92,6 +96,17 @@ func DriverLossCode(to, endedBy string, byHim, system bool) string {
 	return ""
 }
 
+// DriverLossCodeFrom **كـ`DriverLossCode` ومعه الحالُ التي خرج منها.**
+//
+// **والفشلُ من باب الزبون أمرٌ لا خبر**: لا يصل إليه إلّا المكتبُ بقراره
+// (`ResolveDoor`)، **والسائقُ يحمل البضاعةَ ويحتاج أن يعرف إلى أين يعود بها.**
+func DriverLossCodeFrom(from, to, endedBy string, byHim, system bool) string {
+	if from == StAtDropoff && to == StFailed && !byHim {
+		return LossReturnToOffice
+	}
+	return DriverLossCode(to, endedBy, byHim, system)
+}
+
 // notifyDriverLost **يُخبر السائقَ بأنّ طلبَه لم يعد معه** — عاجلٌ ومحفوظ.
 //
 // **والصندوقُ يحفظه** (لا `Transient`): من كان يقود ولم يقرأ الرنّةَ يجده حين
@@ -126,6 +141,12 @@ type DriverOutcome struct {
 	// Message **جملةُ الرمز بالعربيّة** — لتطبيقٍ لا يعرف رمزاً جديداً.
 	Message string    `json:"message"`
 	At      time.Time `json:"at"`
+	// DoorInstruction **أمرُ الإدارة عند باب الزبون** — `deliver_now` أو
+	// `return_to_office` أو فارغ (مساءَ ٢٠٢٦-١٠-٠٢). **ويُقرأ والطلبُ بيده بعد**:
+	// «سلّم الآن» لا يُخرجه منه.
+	DoorInstruction string `json:"door_instruction"`
+	// DoorNote **كلمةُ الإدارة مع أمرها** — وفارغةٌ بلا أمر.
+	DoorNote string `json:"door_note"`
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -175,21 +196,23 @@ var ErrNotDriversOrder = httpx.ErrNotFound
 func (s *Service) DriverOutcomeOf(ctx context.Context, orderID, driverID string) (*DriverOutcome, error) {
 	var (
 		out      DriverOutcome
-		to       string
+		from, to string
 		actor    *string
 		endedBy  string
 		holdsNow bool
 	)
 	err := s.db.QueryRow(ctx, `
-		SELECT o.id::text, o.number, o.status, e.to_status, e.actor_id::text,
+		SELECT o.id::text, o.number, o.status, e.from_status, e.to_status, e.actor_id::text,
 		       COALESCE(o.ended_by, ''), e.created_at,
-		       (o.driver_id IS NOT DISTINCT FROM $2::uuid AND o.closed_at IS NULL)
+		       (o.driver_id IS NOT DISTINCT FROM $2::uuid AND o.closed_at IS NULL),
+		       o.door_instruction, o.door_instruction_note
 		FROM order_events e
 		JOIN orders o ON o.id = e.order_id
 		WHERE e.order_id = $1::uuid AND e.driver_id = $2::uuid
 		ORDER BY e.created_at DESC, e.id DESC
 		LIMIT 1`, orderID, driverID).
-		Scan(&out.OrderID, &out.Number, &out.Status, &to, &actor, &endedBy, &out.At, &holdsNow)
+		Scan(&out.OrderID, &out.Number, &out.Status, &from, &to, &actor, &endedBy, &out.At,
+			&holdsNow, &out.DoorInstruction, &out.DoorNote)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotDriversOrder
 	}
@@ -200,7 +223,7 @@ func (s *Service) DriverOutcomeOf(ctx context.Context, orderID, driverID string)
 		return &out, nil
 	}
 	byHim := actor != nil && *actor == driverID
-	out.Reason = DriverLossCode(to, endedBy, byHim, actor == nil)
+	out.Reason = DriverLossCodeFrom(from, to, endedBy, byHim, actor == nil)
 	out.Message = lossText[out.Reason]
 	return &out, nil
 }

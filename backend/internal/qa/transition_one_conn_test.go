@@ -269,11 +269,13 @@ func TestXG48_FailedDeliveryCompensationNeedsOneConnection(t *testing.T) {
 		t.Fatalf("أجرةُ التوصيل: %v", err)
 	}
 
+	// **وعند الباب الإدارةُ تُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — بذنبٍ تكتبه.
+	ops := h.NewUser("admin")
 	var errText string
 	code := transitionOnOneConn(t, h, "التعذّرُ والتعويض", func() int {
-		res := h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
-			map[string]any{"to": "failed", "reason": "customer_absent",
-				"note": "لا يردّ"})
+		res := h.POST("/api/v1/admin/orders/"+oid+"/door-resolution", ops.Token,
+			map[string]any{"action": "return_to_office", "fault": "customer",
+				"reason": "customer_absent", "note": "لا يردّ"})
 		errText = res.Err()
 		return res.Code
 	})

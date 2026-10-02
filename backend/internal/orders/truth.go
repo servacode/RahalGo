@@ -113,14 +113,17 @@ func FailReasonsTable() string {
 		FaultCustomer: "الزبون", FaultDriver: "السائق",
 		FaultMerchant: "المتجر", FaultPlatform: "المنصة",
 	}
-	// **وما يفعله بالطلب** (٢٠٢٦-١٠-٠٢): فشلٌ يُغلق عند الزبون وحدَه، وعند المتجر
-	// ينتظر العمليات، **والبلاغُ لا يمسّه.** وانتظارُ الباب يُكتب حيث يلزم.
+	// **وما يفعله بالطلب** (مساءَ ٢٠٢٦-١٠-٠٢): **لا سببَ بيد السائق يُغلقه** —
+	// الفشلُ عند المتجر ينتظر العمليات، **والبلاغُ لا يمسّه** (وعند باب الزبون
+	// الإدارةُ تُنهي)، **والتركُ يُعيده إلى الطابور لا إلى من تركه.**
 	effect := func(r FailReason) string {
 		switch {
+		case r.Kind == ReasonReport && r.At == StAtDropoff:
+			return "بلاغٌ — الطلبُ مع السائق والإدارةُ تُنهي"
 		case r.Kind == ReasonReport:
 			return "بلاغٌ للعمليات — الطلبُ كما هو"
-		case r.Closes() && r.DoorWait:
-			return "يُغلق — بعد انتظار الباب"
+		case r.Kind == ReasonRelease:
+			return "يعود إلى الطابور — لا إلى من تركه · ودوامُه يُغلَق"
 		case r.Closes():
 			return "يُغلق"
 		}
@@ -128,7 +131,7 @@ func FailReasonsTable() string {
 	}
 	var b strings.Builder
 	b.WriteString("| السبب | الذنب على | يُعرض عند | ما يقع |\n|---|---|---|---|\n")
-	for _, list := range [][]FailReason{FailReasons, StageReports} {
+	for _, list := range [][]FailReason{FailReasons, StageReports, ReleaseReasons} {
 		for _, r := range list {
 			b.WriteString(fmt.Sprintf("| `%s` | %s | %s | %s |\n",
 				r.Code, faultLabel[r.Fault], label(r.At), effect(r)))

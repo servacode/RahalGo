@@ -350,6 +350,13 @@ type driverOrder struct {
 	ParcelNote string `json:"parcel_note"`
 	// FeePayer **من يدفع الأجرة** — و`merchant_cash` يقبضها من المتجر عند الاستلام.
 	FeePayer string `json:"fee_payer"`
+	// DoorInstruction **أمرُ الإدارة عند باب الزبون** — `deliver_now` أو فارغ
+	// (مساءَ ٢٠٢٦-١٠-٠٢). **يُقرأ هنا ولو ضاع الإشعار**: «الإدارة: سلّم الآن».
+	// و`return_to_office` لا يظهر هنا — الطلبُ أُنهي فخرج من القائمة، **ويُقرأ
+	// من `/driver/orders/{id}/outcome`.**
+	DoorInstruction string `json:"door_instruction"`
+	// DoorNote **كلمةُ الإدارة مع أمرها.**
+	DoorNote string `json:"door_note"`
 }
 
 const driverOrderSelect = `
@@ -455,7 +462,9 @@ const driverOrderSelect = `
 	           ELSE COALESCE(m.address_text, '')
 	       END,
 	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
-	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, '')
+	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''),
+	       -- **وأمرُ الإدارة عند الباب** — مساءَ ٢٠٢٦-١٠-٠٢.
+	       o.door_instruction, o.door_instruction_note
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -483,7 +492,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
 			&o.DeliveryFee, &o.PickupAddress,
-			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer); err != nil {
+			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer,
+			&o.DoorInstruction, &o.DoorNote); err != nil {
 			s.respondErr(w, err)
 			return
 		}

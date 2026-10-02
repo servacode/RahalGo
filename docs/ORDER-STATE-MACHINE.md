@@ -10,7 +10,7 @@
 > — **وهو الذي تسأله مصفوفةُ القبول**، لا هذه الوثيقة.
 
 <!-- gen:counts -->
-**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 7 حدّاً لا يملكه أحدٌ في وضع المنصّة · 8 سببَ تعذّر.**
+**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 7 حدّاً لا يملكه أحدٌ في وضع المنصّة · 3 سببَ تعذّر.**
 <!-- /gen:counts -->
 
 ---
@@ -99,7 +99,7 @@
 | `on_the_way` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
 | `at_dropoff` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff` | `delivered` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `at_dropoff` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
+| `at_dropoff` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
 | `delivered` | `refunded` | — | المالك | المالك |
 <!-- /gen:edges-standard -->
 
@@ -138,7 +138,7 @@
 | `on_the_way ↩` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
 | `at_dropoff ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff ↩` | `delivered` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `at_dropoff ↩` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
+| `at_dropoff ↩` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
 | `delivered ↩` | `refunded` | — | المالك | المالك |
 <!-- /gen:edges-custom -->
 
@@ -190,7 +190,7 @@
 |---|---|---|
 | `P1` | وضعُ المنصّة يُسقط دورَ المتجر دائماً | `internal/orders/modes.go:131` |
 | `P2` | الدخولُ إلى preparing يُسقط ops وadmin | `internal/orders/modes.go:144` |
-| `P3` | وجهةٌ في driverOnly تُسقط ops وadmin | `internal/orders/modes.go:171` |
+| `P3` | وجهةٌ في driverOnly تُسقط ops وadmin — **إلّا at_dropoff → failed**: المكتبُ يُنهي عند الباب (مساءَ ٢٠٢٦-١٠-٠٢) | `internal/orders/modes.go:171` |
 | `P4` | **مُبتَلَعةٌ في P3** — شرطُها جزءٌ من شرطِها فلا تُسقط شيئاً جديداً | `internal/orders/modes.go:208` |
 | `P5` | الإلغاءُ بعد التسليم للسائق يُسقط ops لغير المالك | `internal/orders/modes.go:224` |
 | `M0` | وضعُ المتاجر لا يُنقّي شيئاً — يردّ الأدوارَ كما هي | `internal/orders/modes.go:123` |
@@ -221,6 +221,7 @@
 | `G4` | المخصَّصُ إلى picked_up يشترط custom_agreed_at | `internal/orders/transitions.go:128` |
 | `G5` | ويشترط قفلَ السعر quote_confirmed_version == quote_version | `internal/orders/transitions.go:141` |
 | `G6` | at_pickup → failed **يُحوَّل** إلى merchantBlocked ولا يُنفَّذ | `internal/orders/transitions.go:168` |
+| `G8` | at_dropoff → failed **بلا ذنبٍ مكتوب** يُردّ door_needs_ops (409) — بابُه ResolveDoor وحدَه | `internal/orders/transitions.go:180` |
 | `G7` | نافذةُ إلغاء الزبون — وتُقاس على الأدوار الخامّ فيتجاوزها زبونٌ يحمل ops | `internal/orders/transitions.go:301` |
 | `H1` | الأدمن يحتاج القدرة orders.intervene | `internal/server/server.go:1176` |
 | `H2` | السائقُ إلى delivered يحتاج إثباتاً إن فُعّل drivers.require_delivery_photo | `internal/server/delivery_proof.go:189` |
@@ -294,11 +295,6 @@ accepted → sent_to_merchant_at → dispatching
 <!-- gen:fail-reasons -->
 | السبب | الذنبُ على | يُعرض عند |
 |---|---|---|
-| `customer_absent` | `customer` | `at_dropoff` |
-| `customer_refused` | `customer` | `at_dropoff` |
-| `customer_unreachable` | `customer` | `at_dropoff` |
-| `address_wrong` | `customer` | `at_dropoff` |
-| `driver_late` | `driver` | `at_dropoff` |
 | `merchant_closed` | `merchant` | `at_pickup` |
 | `merchant_refused` | `merchant` | `at_pickup` |
 | `order_unknown` | `merchant` | `at_pickup` |

@@ -29,7 +29,7 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 
 // TransitionWithReason كالسابقة، ومعها سببُ التعذّر المُصنَّف.
 func (s *Service) TransitionWithReason(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason string) (*Order, error) {
-	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, failReason, nil)
+	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, failReason, "", nil)
 }
 
 // TransitionAudited **انتقالٌ يحمل أثرَه في معاملته** — `XG-20` · `AQ-4`.
@@ -49,10 +49,14 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 //
 // **و`hook` يقع قبل التثبيت** — فسقوطُه يُسقط الانتقالَ كلَّه.
 func (s *Service) TransitionAudited(ctx context.Context, actorID string, actorRoles []string, orderID, to, note string, hook func(context.Context, dbtx.Querier) error) (*Order, error) {
-	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, "", hook)
+	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, "", "", hook)
 }
 
-func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason string, hook func(context.Context, dbtx.Querier) error) (*Order, error) {
+// transitionTx **آلةُ الحال الواحدة.**
+//
+// `fault` **ذنبٌ يكتبه المكتبُ صراحةً** — وحدَه في إنهاء الإدارة عند باب الزبون
+// (`ResolveDoor`)؛ **وفارغُه يعني «من السبب»** كما كان.
+func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason, fault string, hook func(context.Context, dbtx.Querier) error) (*Order, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -166,21 +170,29 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	//
 	// **والفراغُ يمرّ** — التدخّلُ اليدويُّ الموقَّع لا رمزَ له، وسببُه نصٌّ
 	// إلزاميٌّ في بابه.
-	if to == StFailed && failReason != "" {
-		r, ok := failReasonAt(failReason, from)
-		if !ok {
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **وعند باب الزبون لا يُنهي إلّا المكتبُ بذنبٍ يكتبه** (مساءَ ٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «ويبقى الطلبُ مع السائق إلى أن تُحلّ القصّة… وقتها الإدارةُ هي تُنهي
+	// الطلبَ من عندها.» **والخارطةُ لا تعطي السائقَ هذا الانتقال**، **وانتقالُ
+	// اللوحة العامّ لا يمرّ أيضاً** — بابُه `ResolveDoor` وحدَه، **فذنبٌ لا يُكتب
+	// يُنهي طلباً لا يُعرف على من خسارتُه ولا أيُعوَّض سائقُه.**
+	if to == StFailed && from == StAtDropoff && fault == "" {
+		return nil, ErrDoorNeedsOps
+	}
+	if fault != "" {
+		if !IsFault(fault) || to != StFailed {
+			return nil, ErrBadTransition
+		}
+		// **والسببُ إن قيل فبلاغُ بابٍ** — لا رمزٌ من مرحلةٍ أخرى.
+		if failReason != "" && !IsDoorReport(failReason) {
 			return nil, ErrFailReasonStage
 		}
-		// **وانتظارُ الباب قبل «الزبونُ غير موجود»** — خمسُ دقائقَ افتراضاً،
-		// **والإدارةُ تتّصل بالزبون في أثنائها** (السائقُ لا يملك رقمَه).
-		if r.DoorWait {
-			left, err := unit.doorWaitLeft(ctx, tx, orderID)
-			if err != nil {
-				return nil, err
-			}
-			if left > 0 {
-				return nil, DoorWaitError(left, unit.settingInt(ctx, "drivers.door_wait_sec"))
-			}
+	} else if to == StFailed && failReason != "" {
+		if _, ok := failReasonAt(failReason, from); !ok {
+			return nil, ErrFailReasonStage
 		}
 	}
 
@@ -257,6 +269,12 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			set += `, driver_id = NULL`
 		}
 	}
+	// **وأمرُ الإدارة عند الباب يخصّ وقفةً واحدة** (مساءَ ٢٠٢٦-١٠-٠٢): وصولٌ
+	// جديدٌ إلى الباب أو عودةٌ إلى الطابور يمحوانه — **فلا يقرأ سائقٌ ثانٍ «سلّم
+	// الآن» قيلت لغيره.**
+	if to == StAtDropoff || to == StDispatching {
+		set += `, door_instruction = '', door_instruction_note = '', door_instruction_at = NULL`
+	}
 	if terminal(to) && to != StDelivered {
 		set += `, closed_at = now(), cancel_reason = ` + "$3"
 	}
@@ -273,10 +291,16 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	//
 	// **والذنبُ من القائمة لا من تقدير أحد**: كلُّ سببٍ يحمل ذنبَه
 	// (`failreasons.go`)، **فلا يُترك حكمٌ ماليٌّ لاجتهادٍ في لحظة.**
-	if to == StFailed && failReason != "" {
+	//
+	// **وذنبُ المكتب يسبق ذنبَ السبب** — حين يُنهي عند باب الزبون (`ResolveDoor`).
+	effFault := fault
+	if effFault == "" {
+		effFault = FaultOf(failReason)
+	}
+	if to == StFailed && (failReason != "" || fault != "") {
 		if _, err := tx.Exec(ctx,
-			`UPDATE orders SET fail_reason = $2, fault = NULLIF($3, '') WHERE id = $1`,
-			orderID, failReason, FaultOf(failReason)); err != nil {
+			`UPDATE orders SET fail_reason = NULLIF($2, ''), fault = NULLIF($3, '') WHERE id = $1`,
+			orderID, failReason, effFault); err != nil {
 			return nil, err
 		}
 	}
@@ -434,7 +458,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **وحاملُ الطلب يُخبَر حين يُؤخذ منه بفعل غيره** — إلغاءٌ أو إعادةٌ أو
 	// إنهاءٌ يدويّ (`driver_lost.go`). **وكان يُغلَق عليه الطلبُ صامتاً.**
 	if driverID != nil && (to == StCancelled || to == StDispatching || to == StFailed) {
-		code := DriverLossCode(to, endedBy, actorID == *driverID, actorID == "")
+		code := DriverLossCodeFrom(from, to, endedBy, actorID == *driverID, actorID == "")
 		s.notifyDriverLost(ctx, orderID, *driverID, code)
 	}
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
@@ -536,8 +560,8 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	//
 	// كان الفشلُ بذنبه يمرّ بلا أثر: إشعارٌ يُقرأ ويُنسى، **ولا عدٌّ ولا سجلّ.**
 	// فمن أغلق بابَه عشر مرّاتٍ والسائقُ عنده بقي بلا مخالفةٍ واحدة.
-	if to == StFailed && failReason != "" {
-		s.warnMerchantOnFault(ctx, orderID, FaultOf(failReason), failReason)
+	if to == StFailed && (failReason != "" || fault != "") {
+		s.warnMerchantOnFault(ctx, orderID, effFault, failReason)
 	}
 
 	// **الإنزال التلقائيّ إلى طابور السائقين.**
@@ -625,36 +649,6 @@ func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) err
 	_, err := s.Transition(ctx, actorID, []string{"ops"}, orderID,
 		StDispatching, autoDispatchNote)
 	return err
-}
-
-// doorWaitLeft **كم بقي من انتظار الباب** — بالثواني، وصفرٌ إن انقضى.
-//
-// **ويُقاس من حدث الوصول لا من عمودٍ يتحرّك**: `updated_at` يتبدّل مع كلّ
-// كتابةٍ على الطلب، **وحدثُ `at_dropoff` يُكتب مرّةً لحظةَ الوصول.** وآخرُه
-// يُقرأ: طلبٌ أُعيد إلى الطابور ثمّ وصل ثانيةً يبدأ انتظارُه من وصوله الثاني.
-//
-// **وطلبٌ بلا حدث وصولٍ لا يُنتظر** — لا يبلغ الحالَ إلّا عبر الانتقال، والانتقالُ
-// يكتب الحدث؛ **فغيابُه بذرةُ اختبارٍ لا سائقٌ عند باب.**
-func (s *Service) doorWaitLeft(ctx context.Context, q wallet.Querier, orderID string) (int64, error) {
-	wait := s.settingInt(ctx, "drivers.door_wait_sec")
-	if wait <= 0 {
-		return 0, nil
-	}
-	var left int64
-	err := q.QueryRow(ctx, `
-		SELECT COALESCE(GREATEST(0, CEIL($2::float8 - EXTRACT(EPOCH FROM now() - max(created_at))))::bigint, 0)
-		FROM order_events WHERE order_id = $1 AND to_status = 'at_dropoff'`,
-		orderID, wait).Scan(&left)
-	return left, err
-}
-
-// DoorWaitLeft **كم بقي من انتظار الباب لهذا الطلب** — لشاشة السائق.
-func (s *Service) DoorWaitLeft(ctx context.Context, orderID string) int64 {
-	left, err := s.doorWaitLeft(ctx, s.db, orderID)
-	if err != nil {
-		return 0
-	}
-	return left
 }
 
 // pastPickup حالاتٌ صار الطعامُ فيها بيد السائق — والمتجرُ قبض ثمنَه.

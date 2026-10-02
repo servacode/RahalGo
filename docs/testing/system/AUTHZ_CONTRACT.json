@@ -69,7 +69,7 @@
   {
    "code": "orders.intervene",
    "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
-   "guards_routes": 8
+   "guards_routes": 9
   },
   {
    "code": "orders.read",
@@ -183,7 +183,7 @@
   }
  ],
  "route_policy": {
-  "rules": 166,
+  "rules": 167,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

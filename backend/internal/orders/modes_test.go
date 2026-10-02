@@ -73,8 +73,10 @@ func TestRolesUnderMode(t *testing.T) {
 			[]string{"ops"}, true, false},
 		{"ولا تقول سلّم", platformManages, StAtDropoff, StDelivered,
 			[]string{"ops"}, true, false},
-		{"ولا تُفشل نيابةً عنه", platformManages, StAtDropoff, StFailed,
-			[]string{"ops"}, true, false},
+		// **إلّا عند باب الزبون — المكتبُ يُنهي بعد أن يتّصل** (قرارُ المالك
+		// مساءَ ٢٠٢٦-١٠-٠٢). والمحرّكُ يشترط ذنباً مكتوباً (`ResolveDoor`).
+		{"وعند الباب تُنهي الإدارة", platformManages, StAtDropoff, StFailed,
+			[]string{"ops"}, true, true},
 		// **والسائقُ يملكها كلَّها** — فالنزعُ من العمليات لا يعطّل الطريق.
 		{"والسائقُ يملكها", platformManages, StAtPickup, StPickedUp,
 			[]string{"driver"}, true, true},
@@ -205,7 +207,8 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		{StPickedUp, StOnTheWay},
 		{StOnTheWay, StAtDropoff},
 		{StAtDropoff, StDelivered},
-		{StAtDropoff, StFailed},
+		// **و`at_dropoff ← failed` خرج منها** (مساءَ ٢٠٢٦-١٠-٠٢): المكتبُ يُنهي عند
+		// الباب بذنبٍ يكتبه — `TestDoor_*`.
 	}
 	for _, c := range after {
 		if canTransition(KindStandard, c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {

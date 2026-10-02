@@ -28,6 +28,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -48,11 +49,19 @@ var errReportWrongStage = httpx.NewError(http.StatusConflict,
 const stageReportDedupSec = 60
 
 // stageReportTitles عنوانُ التنبيه لكلّ بلاغ — **ما يقرؤه المكتبُ فيتصرّف.**
+//
+// **وبلاغاتُ الباب تطلب قراراً** (مساءَ ٢٠٢٦-١٠-٠٢): السائقُ لا يُنهي الطلب،
+// **والمكتبُ يتّصل بالزبون ثمّ يأمر** — سلّم الآن أو عُد إلى المكتب
+// (`/admin/orders/{id}/door-resolution`).
 var stageReportTitles = map[string]string{
 	"merchant_not_ready":          "الطلبُ غيرُ جاهز — السائقُ ينتظر عند المتجر",
 	"customer_cancelled_by_phone": "الزبونُ يقول إنّه ألغى — والطلبُ مع السائق",
-	"customer_new_address":        "الزبونُ يريد عنواناً آخر — راجِعه",
-	"customer_no_answer":          "السائقُ عند باب الزبون — اتّصل بالزبون",
+	"customer_no_answer":          "السائقُ عند باب الزبون — لا أحد يُجيب · اتّصل وقرّر",
+	"customer_absent":             "الزبونُ غيرُ موجود عند الباب — اتّصل وقرّر",
+	"customer_refused":            "الزبونُ رفض الاستلام — قرّر: سلّم أو عُد إلى المكتب",
+	"customer_unreachable":        "الزبونُ لا يُوصَل إليه — اتّصل وقرّر",
+	"address_wrong":               "العنوانُ خطأ — اتّصل بالزبون وقرّر",
+	"driver_late":                 "السائقُ يُقرّ بتأخّره — راجِع الزبون وقرّر",
 }
 
 // handleDriverReportOrStage **بابٌ واحدٌ لبلاغين** — يُعرَف الجديدُ بـ`code`.
@@ -133,6 +142,13 @@ func (s *Server) driverStageReport(w http.ResponseWriter, r *http.Request, order
 
 	// **والعملياتُ تُنبَّه بعد التثبيت** — تنبيهٌ عن بلاغٍ لم يُسجَّل يُبحث عنه فلا يوجد.
 	body := "#" + strconv.FormatInt(number, 10)
+	// **وكم وقف عند الباب** — من حدث الوصول، **فيعرف المكتبُ كم ينتظر رجلٌ في
+	// الشارع** (مساءَ ٢٠٢٦-١٠-٠٢؛ بدل مفتاح «انتظار الباب» الذي حُذف).
+	if status == orders.StAtDropoff {
+		if m := s.doorWaitedMinutes(ctx, orderID); m >= 0 {
+			body += " · ينتظر عند الباب منذ " + strconv.FormatInt(m, 10) + " د"
+		}
+	}
 	if note != "" {
 		body += " — " + note
 	}
@@ -148,4 +164,16 @@ func (s *Server) driverStageReport(w http.ResponseWriter, r *http.Request, order
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"reported": true, "duplicate": false, "code": code, "status": status,
 	})
+}
+
+// doorWaitedMinutes **كم دقيقةً مضت منذ وصل الباب** — وسالبٌ إن لم يُعرف.
+func (s *Server) doorWaitedMinutes(ctx context.Context, orderID string) int64 {
+	var m *float64
+	if err := s.pg.QueryRow(ctx, `
+		SELECT floor(EXTRACT(EPOCH FROM now() - max(created_at)) / 60)
+		FROM order_events WHERE order_id = $1 AND to_status = 'at_dropoff'`,
+		orderID).Scan(&m); err != nil || m == nil {
+		return -1
+	}
+	return int64(*m)
 }

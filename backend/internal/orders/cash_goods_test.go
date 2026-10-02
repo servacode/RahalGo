@@ -44,9 +44,8 @@ func cashGoodsCase(t *testing.T, paid bool) (*cashFixture, string, string, strin
 	for _, to := range []string{"on_the_way", "at_dropoff"} {
 		f.transition(t, oid, to)
 	}
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"}, oid, "failed", "", "customer_refused"); err != nil {
-		t.Fatalf("الإفشال: %v", err)
-	}
+	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
+	endAtDoor(t, f.svc, f.pool, oid, orders.FaultCustomer, "customer_refused")
 	if err := f.svc.SettleGoods(ctx, oid, orders.GoodsToMerchant, f.treasury); err != nil {
 		t.Fatalf("الحسم: %v", err)
 	}

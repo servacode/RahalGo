@@ -73,7 +73,12 @@ func (s *Service) requestDriverCompensation(ctx context.Context, q wallet.Querie
 	}
 	// **ذنبُ السائق لا تعويضَ فيه** — ومن أخّر فبرد الطعامُ لا يُؤجَر على
 	// تأخيره. **والمجهولُ لا يُنسب إلى أحد.**
-	if fault != FaultCustomer && fault != FaultMerchant {
+	//
+	// **وذنبُ المنصّة يُعوَّض كذنب الزبون والمتجر** (مساءَ ٢٠٢٦-١٠-٠٢): المكتبُ
+	// صار يكتب الذنبَ حين يُنهي عند الباب (`ResolveDoor`)، **وسائقٌ لا ذنبَ له لا
+	// يخسر مشوارَه لأنّ الخطأَ خطأُ المنصّة.** وفي «لدي توصيلة» المنصّةُ تدفع
+	// أيّاً كان الذنبُ غيرَ ذنبه («المنصّة تدفع طبعاً» — `settleMerchantDelivery`).
+	if fault != FaultCustomer && fault != FaultMerchant && fault != FaultPlatform {
 		return false, nil
 	}
 	// **وما عُوِّض لا يُطلَب له ثانيةً** — قيدٌ يدويٌّ سبق للطلب نفسِه.

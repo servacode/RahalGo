@@ -202,7 +202,7 @@ func BuildMachine() Machine {
 	m.ModeRules = []MachineDeclared{
 		{"P1", "وضعُ المنصّة يُسقط دورَ المتجر دائماً", "internal/orders/modes.go:131"},
 		{"P2", "الدخولُ إلى preparing يُسقط ops وadmin", "internal/orders/modes.go:144"},
-		{"P3", "وجهةٌ في driverOnly تُسقط ops وadmin", "internal/orders/modes.go:171"},
+		{"P3", "وجهةٌ في driverOnly تُسقط ops وadmin — **إلّا at_dropoff → failed**: المكتبُ يُنهي عند الباب (مساءَ ٢٠٢٦-١٠-٠٢)", "internal/orders/modes.go:171"},
 		{"P4", "**مُبتَلَعةٌ في P3** — شرطُها جزءٌ من شرطِها فلا تُسقط شيئاً جديداً", "internal/orders/modes.go:208"},
 		{"P5", "الإلغاءُ بعد التسليم للسائق يُسقط ops لغير المالك", "internal/orders/modes.go:224"},
 		{"M0", "وضعُ المتاجر لا يُنقّي شيئاً — يردّ الأدوارَ كما هي", "internal/orders/modes.go:123"},
@@ -218,6 +218,7 @@ func BuildMachine() Machine {
 		{"G4", "المخصَّصُ إلى picked_up يشترط custom_agreed_at", "internal/orders/transitions.go:128"},
 		{"G5", "ويشترط قفلَ السعر quote_confirmed_version == quote_version", "internal/orders/transitions.go:141"},
 		{"G6", "at_pickup → failed **يُحوَّل** إلى merchantBlocked ولا يُنفَّذ", "internal/orders/transitions.go:168"},
+		{"G8", "at_dropoff → failed **بلا ذنبٍ مكتوب** يُردّ door_needs_ops (409) — بابُه ResolveDoor وحدَه", "internal/orders/transitions.go:180"},
 		{"G7", "نافذةُ إلغاء الزبون — وتُقاس على الأدوار الخامّ فيتجاوزها زبونٌ يحمل ops", "internal/orders/transitions.go:301"},
 		{"H1", "الأدمن يحتاج القدرة orders.intervene", "internal/server/server.go:1176"},
 		{"H2", "السائقُ إلى delivered يحتاج إثباتاً إن فُعّل drivers.require_delivery_photo", "internal/server/delivery_proof.go:189"},

@@ -45,10 +45,8 @@ func goodsCase(t *testing.T) (f *fixture, owner, treasury string) {
 			t.Fatalf("تعذّر الانتقالُ إلى %s: %v", to, err)
 		}
 	}
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_refused"); err != nil {
-		t.Fatalf("تعذّر الإفشال: %v", err)
-	}
+	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
+	f.failAtDoor(t, orders.FaultCustomer, "customer_refused")
 	// **٩٠٬٠٠٠ شراءً ناقصَ عمولةِ ١٠٪** — والاسترجاعُ يُقاس عليه.
 	if got := f.merchantPosted(t); got != 81_000 {
 		t.Fatalf("قُيّد للمتجر %d والمتوقّع 81000", got)

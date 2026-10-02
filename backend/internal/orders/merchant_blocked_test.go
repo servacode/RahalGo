@@ -200,10 +200,8 @@ func TestCustomerDoorFailure_StillCloses(t *testing.T) {
 	rec := &recorder{}
 	f.svc.SetNotifier(rec)
 
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_refused"); err != nil {
-		t.Fatalf("الإفشال فشل: %v", err)
-	}
+	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
+	f.failAtDoor(t, "customer", "customer_refused")
 	var status string
 	var closed bool
 	if err := f.pool.QueryRow(ctx,

@@ -86,6 +86,8 @@ var adminPolicy = []Rule{
 	{"GET", "/compensations/pending", FinanceRead},
 	{"POST", "/orders/{id}/settle-goods", FinanceManage},
 	{"POST", "/orders/{id}/goods", OrdersIntervene},
+	// **إنهاءُ الإدارة عند باب الزبون** — سلّم الآن أو عُد إلى المكتب (مساءَ ٢٠٢٦-١٠-٠٢).
+	{"POST", "/orders/{id}/door-resolution", OrdersIntervene},
 	{"POST", "/orders/{id}/whatsapp", OrdersIntervene},
 	{"GET", "/orders/{id}/breakdown", FinanceRead},
 	// **وتصديرُ الطلبات كشفُ محاسبةٍ لا تقرير** — فيه **اسمُ الزبون

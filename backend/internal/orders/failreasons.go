@@ -35,10 +35,9 @@ type FailReason struct {
 	Fault string
 	// At الحالةُ التي يظهر فيها للسائق — **ولا يُقبل في غيرها** (٢٠٢٦-١٠-٠٢)
 	At string
-	// Kind «فشلٌ» يحرّك الطلب، أو «بلاغٌ» يُنبّه العملياتِ ولا يمسّه.
+	// Kind «فشلٌ» يحرّك الطلب، أو «بلاغٌ» يُنبّه العملياتِ ولا يمسّه، أو «تركٌ»
+	// قبل الاستلام بسببٍ يخصّ السائق (`/release`).
 	Kind string
-	// DoorWait **لا يُقبل قبل أن يمضي انتظارُ الباب** (`drivers.door_wait_sec`).
-	DoorWait bool
 }
 
 const (
@@ -48,34 +47,38 @@ const (
 	FaultPlatform = "platform"
 )
 
-// نوعا السبب.
+// IsFault أهذا ذنبٌ معروف؟ — الأربعةُ وحدَها.
+func IsFault(f string) bool {
+	switch f {
+	case FaultCustomer, FaultDriver, FaultMerchant, FaultPlatform:
+		return true
+	}
+	return false
+}
+
+// أنواعُ السبب.
 const (
-	// ReasonFail يحرّك الطلب — يُغلقه عند الزبون، ويوقفه للعمليات عند المتجر.
+	// ReasonFail يحرّك الطلب — **عند المتجر وحدَه**: يعود إلى المكتب حيّاً.
 	ReasonFail = "fail"
 	// ReasonReport **بلاغٌ لا فشل** — العملياتُ تُنبَّه والطلبُ كما هو.
 	ReasonReport = "report"
+	// ReasonRelease **تركٌ قبل الاستلام بمشكلةٍ تخصّ السائق** — يُرسَل إلى
+	// `/release` لا إلى الانتقال (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٢).
+	ReasonRelease = "release"
 )
 
-// FailReasons ما يملك السائقُ اختيارَه. **والرموزُ لا تُترجَم هنا** — نصُّها
-// في `packages/i18n` تحت `driver.failReasons`.
+// FailReasons ما يملك السائقُ اختيارَه فيحرّك الطلب. **والرموزُ لا تُترجَم
+// هنا** — نصُّها في `packages/i18n` تحت `driver.failReasons`.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولا سببَ عند باب الزبون هنا بعد اليوم** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «دائماً إذا في مشكلة بين السائق والزبون يكون الردّ: انتظر، الإدارة تقوم
+// بالتواصل مع الزبون، **ويبقى الطلبُ مع السائق إلى أن تُحلّ القصّة**… وقتها
+// الإدارةُ هي تُنهي الطلبَ من عندها.» **فأسبابُ الباب كلُّها صارت بلاغاتٍ**
+// (`StageReports`) — **والإنهاءُ بابُ الإدارة** (`door.go`).
 var FailReasons = []FailReason{
-	// ── عند باب الزبون ──────────────────────────────────────────────────
-	//
-	// **والغيابُ وانقطاعُ الردّ بعد انتظارٍ لا قبله** (قرارُ المالك ٢٠٢٦-١٠-٠٢):
-	// قِيس على التجهيز فشلٌ قُبل بعد ٦٨ ثانيةً من الوصول — **وضغطةٌ واحدةٌ
-	// تمنع زبوناً من النقد شهراً.** والإدارةُ هي التي تتّصل به في الأثناء،
-	// **لأنّ السائقَ لا يملك رقمَه أصلاً** (`customer_no_answer` أدناه).
-	{Code: "customer_absent", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonFail, DoorWait: true},
-	{Code: "customer_refused", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonFail},
-	{Code: "customer_unreachable", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonFail, DoorWait: true},
-	{Code: "address_wrong", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonFail},
-	// **وذنبُ السائق يُقرّ به السائقُ نفسُه.**
-	//
-	// وقد يُظنّ أن أحداً لن يختاره — **لكنّ وجودَه يجعل غيابَه اختياراً**:
-	// من تأخّر فبرد الطعامُ يجد لفظاً يقوله بدل أن يكتب «الزبون رفض» ويحمّل
-	// زبوناً ذنبَه. **ومن لم يجد لفظاً لصدقه قال أقربَ الألفاظ إليه.**
-	{Code: "driver_late", Fault: FaultDriver, At: StAtDropoff, Kind: ReasonFail},
-
 	// ── عند باب المتجر ──────────────────────────────────────────────────
 	//
 	// **وهذه لا تُغلق الطلب** — ينتظر العمليات (تكلّم المتجرَ أو تبدّله).
@@ -97,13 +100,56 @@ var StageReports = []FailReason{
 	// المطبخُ لم ينتهِ — **السائقُ باقٍ على الطلب والعملياتُ تعلم.**
 	{Code: "merchant_not_ready", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonReport},
 	// **«الطلبُ ما بيلتغي بعد ما يصير عند السائق»** — فإلغاءُ الزبون بالهاتف
-	// وعنوانُه الجديد خبرٌ للمكتب لا فعلٌ في الطلب.
+	// خبرٌ للمكتب لا فعلٌ في الطلب. **ولا «يريد عنواناً آخر»** — الزبونُ لا
+	// يغيّر العنوانَ بعد الطلب (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٤).
 	{Code: "customer_cancelled_by_phone", Fault: FaultCustomer, At: StPickedUp, Kind: ReasonReport},
 	{Code: "customer_cancelled_by_phone", Fault: FaultCustomer, At: StOnTheWay, Kind: ReasonReport},
-	{Code: "customer_new_address", Fault: FaultCustomer, At: StPickedUp, Kind: ReasonReport},
-	{Code: "customer_new_address", Fault: FaultCustomer, At: StOnTheWay, Kind: ReasonReport},
-	// **عند الباب ولا يُجيب أحد — والإدارةُ تتّصل** (السائقُ لا يملك رقمَه).
+
+	// ── عند باب الزبون — **بلاغاتٌ كلُّها، والإدارةُ تُنهي** ──────────────
+	//
+	// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١.) **والذنبُ هنا ما يقترحه السببُ
+	// لا حكمٌ**: الحكمُ يكتبه المكتبُ حين يُنهي (`door.go`) — **فـ«تأخّرتُ أنا»
+	// ذنبُ السائق إن أقرّته الإدارة، و«رفض» ذنبُ الزبون إن أقرّته.**
+	{Code: "customer_absent", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
+	{Code: "customer_refused", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
+	{Code: "customer_unreachable", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
+	{Code: "address_wrong", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
+	// **وذنبُ السائق يُقرّ به السائقُ نفسُه** — ووجودُه يجعل غيابَه اختياراً:
+	// من تأخّر فبرد الطعامُ يجد لفظاً يقوله بدل أن يكتب «الزبون رفض».
+	{Code: "driver_late", Fault: FaultDriver, At: StAtDropoff, Kind: ReasonReport},
+	// **لا يُجيب أحد — والإدارةُ تتّصل** (السائقُ لا يملك رقمَه).
 	{Code: "customer_no_answer", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
+}
+
+// ReleaseReasons **أسبابُ ترك الطلب قبل الاستلام** — «لدي مشكلة» في الطريق إلى
+// المتجر وعنده (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٢).
+//
+// «مجرّد ما ينطلق السائق ما يصير ينعاد للطابور» — **إلّا بسببٍ من هذه**، وكلمةٍ
+// تشرحه. **والطلبُ لا يعود إلى من تركه أبداً، ودوامُه يُغلَق وحدَه**
+// (`server/driver_handlers.go` · `handleDriverRelease`).
+var ReleaseReasons = []FailReason{
+	{Code: "bike_broken", Fault: FaultDriver, At: StAssigned, Kind: ReasonRelease},
+	{Code: "accident", Fault: FaultDriver, At: StAssigned, Kind: ReasonRelease},
+	{Code: "force_majeure", Fault: FaultDriver, At: StAssigned, Kind: ReasonRelease},
+	{Code: "bike_broken", Fault: FaultDriver, At: StAtPickup, Kind: ReasonRelease},
+	{Code: "accident", Fault: FaultDriver, At: StAtPickup, Kind: ReasonRelease},
+	{Code: "force_majeure", Fault: FaultDriver, At: StAtPickup, Kind: ReasonRelease},
+}
+
+// ReleaseReasonAt **سببُ الترك إن كان يخصّ هذه المرحلة.**
+func ReleaseReasonAt(code, status string) (FailReason, bool) {
+	for _, r := range ReleaseReasons {
+		if r.Code == code && r.At == status {
+			return r, true
+		}
+	}
+	return FailReason{}, false
+}
+
+// IsDoorReport **أهذا بلاغٌ عند باب الزبون؟** — يُقبل سبباً في إنهاء الإدارة.
+func IsDoorReport(code string) bool {
+	_, ok := StageReportAt(code, StAtDropoff)
+	return ok
 }
 
 // FaultOf ذنبُ السببِ المذكور — وفراغٌ إن كان الرمزُ مجهولاً.
@@ -114,6 +160,20 @@ var StageReports = []FailReason{
 // **والبلاغاتُ ليست هنا** — لا تُغلق طلباً فلا ذنبَ يُكتب عليه.
 func FaultOf(code string) string {
 	for _, r := range FailReasons {
+		if r.Code == code {
+			return r.Fault
+		}
+	}
+	return ""
+}
+
+// SuggestedFault **الذنبُ الذي يقترحه السبب** — للفشل وبلاغات الباب. **اقتراحٌ
+// لشاشة الإدارة لا حكم**: الحكمُ يُكتب في إنهائها (`door.go`).
+func SuggestedFault(code string) string {
+	if f := FaultOf(code); f != "" {
+		return f
+	}
+	for _, r := range StageReports {
 		if r.Code == code {
 			return r.Fault
 		}
@@ -157,26 +217,24 @@ func IsStageReport(code string) bool {
 // FailReasonsAt طريقةٌ على الخدمة — لتُنادى من الخادم بلا استيراد الحزمة كلِّها.
 func (s *Service) FailReasonsAt(status string) []FailReason { return FailReasonsAt(status) }
 
-// FailReasonsAt ما يُعرض في هذه الحالة — **الفشلُ أوّلاً ثمّ البلاغات.**
+// FailReasonsAt ما يُعرض في هذه الحالة — **الفشلُ ثمّ البلاغاتُ ثمّ الترك.**
 func FailReasonsAt(status string) []FailReason {
 	out := []FailReason{}
-	for _, r := range FailReasons {
-		if r.At == status {
-			out = append(out, r)
-		}
-	}
-	for _, r := range StageReports {
-		if r.At == status {
-			out = append(out, r)
+	for _, list := range [][]FailReason{FailReasons, StageReports, ReleaseReasons} {
+		for _, r := range list {
+			if r.At == status {
+				out = append(out, r)
+			}
 		}
 	}
 	return out
 }
 
-// Closes **أيُغلق هذا السببُ الطلب؟** — الفشلُ عند الزبون وحدَه.
+// Closes **أيُغلق هذا السببُ الطلب؟** — **لا شيءَ بيد السائق يُغلقه بعد اليوم.**
 //
-// **وعند المتجر لا** (قرارُ المالك ٢٠٢٦-١٠-٠٢): الطلبُ ينتظر العمليات،
-// **والبلاغُ لا يغيّر شيئاً.** والشاشةُ تقرؤه لتقول للسائق ما سيقع قبل أن يضغط.
+// كان الفشلُ عند الزبون يُغلق — **ونُسخ** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢): الإدارةُ
+// تُنهي. **وعند المتجر لا** (٢٠٢٦-١٠-٠٢): الطلبُ ينتظر العمليات. **ويبقى الحقلُ
+// في الردّ** — الشاشةُ تقرؤه لتقول للسائق ما سيقع قبل أن يضغط.
 func (r FailReason) Closes() bool {
-	return r.Kind == ReasonFail && r.At == StAtDropoff
+	return false
 }

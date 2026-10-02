@@ -47,14 +47,8 @@ func banCashForCustomer(t *testing.T, f *fixture) {
 	})
 	// **الطلبُ الجاهزُ في العُدّة (`at_dropoff`) يفشل بذنب الزبون** — فيصير له
 	// إخفاقٌ واحدٌ يُقفل النقدَ عليه.
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "failed",
-		"customer_refused"); err != nil {
-		t.Fatalf("تعذّر إفشالُ الطلب: %v", err)
-	}
-	if _, err := f.pool.Exec(ctx,
-		`UPDATE orders SET fault = 'customer' WHERE id = $1`, f.orderID); err != nil {
-		t.Fatalf("تعذّر تثبيتُ الذنب: %v", err)
-	}
+	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
+	f.failAtDoor(t, orders.FaultCustomer, "customer_refused")
 }
 
 // placeCustom **يُنشئ طلباً خاصّاً بالمسار الحقيقيّ** (`CreateCustomTx` في
