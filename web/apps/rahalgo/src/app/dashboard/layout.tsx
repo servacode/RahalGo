@@ -157,6 +157,11 @@ const ALL_NAV: NavItem[] = [
   // فلا يوسّع البابُ على أحدٍ ما كان يراه.
   { href: "/dashboard/losses", label: m.admin.nav.moneyLost, icon: IconBalance,
     caps: ["finance.read", "support.manage"] },
+  // **تعويضاتُ السائقين بانتظار الموافقة** — (قرارُ المالك ٢٠٢٦-١٠-٠٢):
+  // **التعويضُ بعد طلبٍ لم يكتمل لا يُدفع لحظةَ الضغطة**، ينتظر يداً هنا.
+  // **وموضعُها بجانب الخسائر**: الموافقةُ عليها هي ما يصير قيدَ خسارة.
+  { href: "/dashboard/compensations", label: m.admin.compensations.navTitle, icon: IconWallet,
+    caps: ["finance.read"] },
   { href: "/dashboard/payouts", label: m.shared.payout.title, icon: IconWallet,
     caps: ["finance.read"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,
