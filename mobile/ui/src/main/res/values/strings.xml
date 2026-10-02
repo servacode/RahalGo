@@ -38,6 +38,8 @@
     <string name="chat_today">اليوم</string>
     <string name="chat_yesterday">أمس</string>
     <string name="err_bad_fail_reason">اختر سببا من القائمة</string>
+    <string name="err_fail_reason_wrong_stage">هذا السبب لا يخص مرحلة الطلب الحالية</string>
+    <string name="err_door_wait">انتظر عند الباب قليلا — الإدارة تحاول الاتصال بالزبون</string>
     <string name="err_cash_limit">النقد الذي بذمتك بلغ السقف — سلم للمكتب</string>
     <string name="err_complaint_window">مضت مهلة البلاغ على هذا الطلب</string>
     <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تسلم</string>

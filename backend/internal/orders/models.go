@@ -74,7 +74,20 @@ var (
 	ErrBadTransition      = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
 	ErrNeedsDriver        = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
 	ErrCancelWindowPassed = httpx.NewError(http.StatusConflict, "cancel_window_passed", "errors.cancel_window_passed")
+	// ErrFailReasonStage **سببٌ لا يخصّ المرحلة** — «الزبونُ غير موجود» والسائقُ
+	// عند المتجر (قرارُ المالك ٢٠٢٦-١٠-٠٢).
+	ErrFailReasonStage = httpx.NewError(http.StatusConflict, "fail_reason_wrong_stage", "errors.fail_reason_wrong_stage")
 )
+
+// DoorWaitError **لم يمضِ انتظارُ الباب** — ومعه ما بقي بالثواني.
+//
+// **نسخةٌ لكلّ ردٍّ لا خطأٌ مشترك**: التفاصيلُ تختلف بين طلبٍ وطلب، **وكتابتُها
+// في متغيّرٍ عامٍّ تسرّب ثواني طلبٍ إلى ردّ آخر.**
+func DoorWaitError(remainingSec, waitSec int64) *httpx.AppError {
+	e := httpx.NewError(http.StatusConflict, "door_wait", "errors.door_wait")
+	e.Details = map[string]any{"remaining_sec": remainingSec, "wait_sec": waitSec}
+	return e
+}
 
 type OptionSnapshot struct {
 	// معرّف الخيار — يُحفظ لتصحّ **إعادة الطلب** بخياراته كما كان.
@@ -134,6 +147,10 @@ type Order struct {
 	// DropoffKnown **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ يُكتب
 	// موقعُ المتجر ويُعلَّم هذا **فلا يُوجَّه السائقُ إلى نقطةٍ كاذبة.**
 	DropoffKnown bool `json:"dropoff_known"`
+	// PickupNote **أين البضاعةُ إن لم تكن في المتجر** — طارئٌ بعد الاستلام
+	// (٢٠٢٦-١٠-٠٢). **وكانت تصل السائقَ التالي حين التُقط موضعٌ وحدَه**، فبلا
+	// موضعٍ يذهب إلى مطعمٍ سلّم بضاعتَه وقبض ثمنَها.
+	PickupNote string `json:"pickup_note,omitempty"`
 	// Kind **نوعُ الطلب** — `standard` من متجر، و`custom` طلبٌ خاصٌّ بلا متجر.
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.

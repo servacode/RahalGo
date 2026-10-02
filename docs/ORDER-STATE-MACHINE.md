@@ -10,7 +10,7 @@
 > — **وهو الذي تسأله مصفوفةُ القبول**، لا هذه الوثيقة.
 
 <!-- gen:counts -->
-**14 حالةً · 5 نهائيّةً · 30 حدّاً قياسيّاً · 25 حدّاً مخصَّصاً · 7 حدّاً لا يملكه أحدٌ في وضع المنصّة · 9 سببَ تعذّر.**
+**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 7 حدّاً لا يملكه أحدٌ في وضع المنصّة · 8 سببَ تعذّر.**
 <!-- /gen:counts -->
 
 ---
@@ -93,15 +93,12 @@
 | `at_pickup` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `picked_up` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `picked_up` | `on_the_way` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `picked_up` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `picked_up` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
 | `on_the_way` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `on_the_way` | `at_dropoff` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `on_the_way` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `on_the_way` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
 | `at_dropoff` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff` | `delivered` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `at_dropoff` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `at_dropoff` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `delivered` | `refunded` | — | المالك | المالك |
 <!-- /gen:edges-standard -->
@@ -135,15 +132,12 @@
 | `at_pickup ↩` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `picked_up ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `picked_up ↩` | `on_the_way` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `picked_up ↩` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `picked_up ↩` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
 | `on_the_way ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `on_the_way ↩` | `at_dropoff` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `on_the_way ↩` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `on_the_way ↩` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
 | `at_dropoff ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff ↩` | `delivered` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `at_dropoff ↩` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `at_dropoff ↩` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `delivered ↩` | `refunded` | — | المالك | المالك |
 <!-- /gen:edges-custom -->
@@ -307,7 +301,6 @@ accepted → sent_to_merchant_at → dispatching
 | `driver_late` | `driver` | `at_dropoff` |
 | `merchant_closed` | `merchant` | `at_pickup` |
 | `merchant_refused` | `merchant` | `at_pickup` |
-| `merchant_not_ready` | `merchant` | `at_pickup` |
 | `order_unknown` | `merchant` | `at_pickup` |
 <!-- /gen:fail-reasons -->
 

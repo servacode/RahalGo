@@ -93,7 +93,8 @@ func TestFailReasons_EveryFailableStageHasReasons(t *testing.T) {
 func TestFailReasons_UnknownStageIsEmptyNotError(t *testing.T) {
 	f := newDriverFixture(t, 1)
 
-	if list := f.failReasonsAt(t, "on_the_way"); len(list) != 0 {
+	// **و`on_the_way` صار فيها بلاغان** (٢٠٢٦-١٠-٠٢) — فالحالُ الخاليةُ `assigned`.
+	if list := f.failReasonsAt(t, "assigned"); len(list) != 0 {
 		t.Fatalf("حالةٌ لا يُعلَن فيها التعذّرُ ردّت %d سبباً", len(list))
 	}
 	if list := f.failReasonsAt(t, ""); len(list) != 0 {

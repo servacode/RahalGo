@@ -156,6 +156,34 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		}
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **والسببُ يخصّ مرحلتَه — وإلّا رُدّ** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس على التجهيز**: «الزبونُ غير موجود» قُبل والسائقُ عند المتجر،
+	// و«المتجرُ مغلق» قُبل وهو عند باب الزبون — **وكلُّ واحدةٍ دفعت تعويضاً.**
+	// **وفي المحرّك لا في المعالِج**: بابٌ ثانٍ يُفشل طلباً يمرّ من هنا أيضاً.
+	//
+	// **والفراغُ يمرّ** — التدخّلُ اليدويُّ الموقَّع لا رمزَ له، وسببُه نصٌّ
+	// إلزاميٌّ في بابه.
+	if to == StFailed && failReason != "" {
+		r, ok := failReasonAt(failReason, from)
+		if !ok {
+			return nil, ErrFailReasonStage
+		}
+		// **وانتظارُ الباب قبل «الزبونُ غير موجود»** — خمسُ دقائقَ افتراضاً،
+		// **والإدارةُ تتّصل بالزبون في أثنائها** (السائقُ لا يملك رقمَه).
+		if r.DoorWait {
+			left, err := unit.doorWaitLeft(ctx, tx, orderID)
+			if err != nil {
+				return nil, err
+			}
+			if left > 0 {
+				return nil, DoorWaitError(left, unit.settingInt(ctx, "drivers.door_wait_sec"))
+			}
+		}
+	}
+
 	// **وتعذّرٌ عند باب المتجر ليس فشلَ تسليم.**
 	//
 	// # المسألة
@@ -173,10 +201,10 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// الحالةُ `accepted` — **حيث يظهر زرّا التحويل وتبديل المتجر.** ويُحرَّر
 	// السائقُ ويُصفَّر وسمُ الإبلاغ، **فيبدأ التحويلُ من أوّله إلى متجرٍ آخر.**
 	//
-	// **والسائقُ يُعوَّض عن مشواره** كما لو فشل: قاد وعاد بلا شيء، **والذنبُ
-	// ليس ذنبَه.**
+	// **والسائقُ يُعوَّض عن مشواره** — قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه.**
+	// **وبعد موافقة العمليات لا لحظتَها** (٢٠٢٦-١٠-٠٢): يُكتب طلباً معلَّقاً.
 	if to == StFailed && from == StAtPickup {
-		return unit.merchantBlocked(ctx, tx, orderID, actorID, from, failReason, note, driverID, deliveryFee)
+		return unit.merchantBlocked(ctx, tx, orderID, actorID, from, kind, failReason, note, driverID, deliveryFee)
 	}
 
 	set := `status = $2, updated_at = now()`
@@ -410,6 +438,10 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **بعد الإيداع لا داخلَه**: معاملةٌ تُرجَع بعد أن أُرسل إشعارُها
 	// **تُخبر صاحبَها بمالٍ لم يصله.**
 	s.notifyCredits(ctx, orderID, done.credits)
+	// **وطلبُ تعويضٍ ينتظر يصل المكتبَ** — لا يُقيَّد حتّى يوافق إنسان.
+	if done.compensationRequested {
+		s.alertCompensationPending(ctx, orderID)
+	}
 
 	// **ومكافأةُ من دعا هذا الزبون** — عند أوّل طلبٍ يُسلَّم له.
 	//
@@ -472,8 +504,12 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		//
 		// **ولا يُحرم منه أبداً**: الاستثناءُ لهذه الجولة وحدَها، فإن دار
 		// الطابورُ ولم يأخذه أحد عاد إليه مع الجميع.
+		//
+		// **ومن كلّ حالٍ لا من الأوليَين وحدَهما** (٢٠٢٦-١٠-٠٢): كان الشرطُ
+		// `assigned` و`at_pickup` — **فطارئٌ بعد الاستلام يُعيد الطلبَ إلى من
+		// أبلغ عنه نفسِه**، والمالكُ قال «لا يُعرض على السائق نفسِه ثانيةً».
 		var skip []string
-		if driverID != nil && (from == StAssigned || from == StAtPickup) {
+		if driverID != nil {
 			skip = []string{*driverID}
 		}
 		if err := s.OfferNext(ctx, orderID, skip); err != nil {
@@ -585,97 +621,34 @@ func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) err
 	return err
 }
 
-// compensateDriverOnFail يعوّض السائقَ عن مشوارٍ لم يُثمر — **بلا يد**.
+// doorWaitLeft **كم بقي من انتظار الباب** — بالثواني، وصفرٌ إن انقضى.
 //
-// # ولماذا نسبةٌ من رسم التوصيل
+// **ويُقاس من حدث الوصول لا من عمودٍ يتحرّك**: `updated_at` يتبدّل مع كلّ
+// كتابةٍ على الطلب، **وحدثُ `at_dropoff` يُكتب مرّةً لحظةَ الوصول.** وآخرُه
+// يُقرأ: طلبٌ أُعيد إلى الطابور ثمّ وصل ثانيةً يبدأ انتظارُه من وصوله الثاني.
 //
-// **الثابتُ يظلم طرفاً حتماً**: خمسةُ آلافٍ كثيرةٌ على مشوارٍ في الحيّ وقليلةٌ
-// على مشوارٍ عبر المدينة. **والنسبةُ تتبع المسافةَ لأن رسم التوصيل يتبعها.**
-//
-// # ولماذا نصفٌ لا كلّ
-//
-// **لا يُعدل أن تتحمّل المنصةُ الخسارةَ وحدها** — وقد خسرت بضاعةَ المتجر
-// أصلاً. **والنصفُ يقسم ما لا ذنبَ لأحدٍ منهما فيه.**
-//
-// # ويخرج من الخزينة في القيد نفسه
-//
-// **تعويضٌ يُقيَّد للسائق وحده يجعل المنصةَ تظهر رابحةً وهي تدفع.**
-func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
-	if in.driverID == nil || in.deliveryFee <= 0 || s.settings == nil {
-		return nil
+// **وطلبٌ بلا حدث وصولٍ لا يُنتظر** — لا يبلغ الحالَ إلّا عبر الانتقال، والانتقالُ
+// يكتب الحدث؛ **فغيابُه بذرةُ اختبارٍ لا سائقٌ عند باب.**
+func (s *Service) doorWaitLeft(ctx context.Context, q wallet.Querier, orderID string) (int64, error) {
+	wait := s.settingInt(ctx, "drivers.door_wait_sec")
+	if wait <= 0 {
+		return 0, nil
 	}
-	// ══════════════════════════════════════════════════════════════
-	// **ولا يُعوَّض السائقُ عن الطلب نفسِه مرّتين** — منعُ تكرارٍ ماليّ.
-	// ══════════════════════════════════════════════════════════════
-	//
-	// **يُنادى تلقائيّاً من مسارين**: تعذّرُ التسليم النهائيّ (حالةٌ منتهية)،
-	// **وحظرُ المتجر** (`merchant_blocked.go`) الذي **يُعيد الطلبَ إلى `accepted`
-	// ثمّ يُعاد توزيعُه** — فقد يعود السائقُ نفسُه ويُحظَر ثانيةً على المتجر
-	// نفسِه، **فيُعوَّض مرّتين والخزينةُ تُخصَم مرّتين.** والمسارُ اليدويّ
-	// (`failure_aftermath.go`) يحرسه بـ`EXISTS(ref,kind,user)`؛ **والتلقائيُّ لم
-	// يكن يحرسه.** والحارسُ لكلّ (طلب، سائق): **سائقٌ مختلفٌ يُعوَّض عن مشوارِه**
-	// (طلبٌ حُوّل إليه ثمّ حُظر)، **ونفسُه لا يُعوَّض مرّتين.** وصفُّ الطلب
-	// مقفولٌ `FOR UPDATE` في `transitionTx` فالفحصُ آمنٌ من السباق.
-	var already bool
-	if err := q.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM wallet_transactions
-		              WHERE ref = $1 AND kind = 'compensation' AND user_id = $2)`,
-		in.orderID, *in.driverID).Scan(&already); err != nil {
-		return err
-	}
-	if already {
-		return nil
-	}
-	var fault string
-	if err := q.QueryRow(ctx,
-		`SELECT COALESCE(fault, '') FROM orders WHERE id = $1`, in.orderID).
-		Scan(&fault); err != nil {
-		return err
-	}
-	// **ويُعوَّض في الحالين: ذنبُ الزبون وذنبُ المتجر.**
-	//
-	// قرارُ المالك (٢٠٢٦-٠٨-٠٣): **«نعم، المنصة تعوّضه — وبفتح نزاع مع المتجر
-	// لحلّ القصة.»**
-	//
-	// وكانت القاعدةُ سابقاً «ذنبُ المتجر لا تعويضَ فيه» — **وهي تظلم السائق**:
-	// قاد المشوارَ كاملاً **بسبب متجرٍ اعتذر متأخّراً**، وهو لا يملك من أمر
-	// ذلك شيئاً. **ومن قاد بلا مقابلٍ مرّةً يتردّد في الثانية.**
-	//
-	// **وذنبُ السائق وحدَه لا تعويضَ فيه** — ومن أخّر فبرد الطعامُ لا يُؤجَر
-	// على تأخيره.
-	if fault != FaultCustomer && fault != FaultMerchant {
-		return nil
-	}
+	var left int64
+	err := q.QueryRow(ctx, `
+		SELECT COALESCE(GREATEST(0, CEIL($2::float8 - EXTRACT(EPOCH FROM now() - max(created_at))))::bigint, 0)
+		FROM order_events WHERE order_id = $1 AND to_status = 'at_dropoff'`,
+		orderID, wait).Scan(&left)
+	return left, err
+}
 
-	pct := s.settings.GetInt(ctx, "drivers.failed_compensation_percent")
-	if pct <= 0 {
-		return nil
+// DoorWaitLeft **كم بقي من انتظار الباب لهذا الطلب** — لشاشة السائق.
+func (s *Service) DoorWaitLeft(ctx context.Context, orderID string) int64 {
+	left, err := s.doorWaitLeft(ctx, s.db, orderID)
+	if err != nil {
+		return 0
 	}
-	amount := in.deliveryFee * pct / 100
-	if amount <= 0 {
-		return nil
-	}
-	who := "الحقُّ على الزبون"
-	if fault == FaultMerchant {
-		who = "المتجرُ اعتذر"
-	}
-	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, amount, "compensation",
-		in.orderID, "تعويضٌ عن تعذّر التسليم — "+who, &in.actorID); err != nil {
-		return err
-	}
-	out.credit(*in.driverID, amount, t.compensated, notifications.AppDriver)
-	if err := s.DebitTreasury(ctx, q, amount, in.orderID,
-		"تعويضُ سائقٍ عن تعذّر تسليم", in.actorID); err != nil {
-		return err
-	}
-	// **والمطالبةُ تُفتح على المتجر** — تُدفع الآن وتُحسم في مسارها.
-	//
-	// **والمنصةُ تدفع أوّلاً لا بعد الحسم**: نزاعٌ يستغرق يوماً يترك من قاد
-	// مشوارَه بلا مقابلٍ يومَه كلَّه.
-	if fault == FaultMerchant {
-		return s.openMerchantClaim(ctx, q, in.orderID, amount)
-	}
-	return nil
+	return left
 }
 
 // pastPickup حالاتٌ صار الطعامُ فيها بيد السائق — والمتجرُ قبض ثمنَه.
@@ -712,6 +685,8 @@ type settled struct {
 	//
 	// **وهو النمطُ نفسُه الذي تسير عليه `repID` منذ زمن.**
 	credits []walletCredit
+	// compensationRequested **كُتب طلبُ تعويضٍ معلَّق** — فيُنبَّه المكتبُ بعد الإيداع.
+	compensationRequested bool
 }
 
 // walletCredit حركةُ محفظةٍ واحدةٌ تستحقّ أن يُخبَر بها صاحبُها.
@@ -860,17 +835,26 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
 
-	// (4) تعذّرُ التسليم — **تعويضُ السائق تلقائياً حين يكون الحقُّ على الزبون**
+	// (4) تعذّرُ التسليم — **طلبُ تعويضٍ معلَّقٌ لا قيد** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
 	//
-	// **بلا يد** (قرار المالك). ولو تُرك لتقديرٍ لاحق **لَصار قاعدةً تُنفَّذ
-	// بيدٍ — وقاعدةٌ تُنفَّذ بيدٍ ليست قاعدة، هي عادة.**
+	// **كان تلقائيّاً بلا يد — ونُسخ**: قِيس على التجهيز ٥٬٠٠٠ تُدفع فوراً في
+	// كلّ ضغطة، حتّى لـ«تأخّرتُ أنا». **فالذنبُ يقرّر أيستحقّ، والعملياتُ
+	// توافق** من الباب اليدويّ القائم (`server/failure_aftermath.go`).
 	//
-	// **وذنبُ السائق لا تعويضَ فيه**، وذنبُ المتجر كذلك: المنصةُ تتحمّل
-	// بضاعتَه وتعوّض سائقَها، **ولا تجمع عليها الاثنين بلا سبب**.
-	if in.to == StFailed {
-		if err := s.compensateDriverOnFail(ctx, q, in, out); err != nil {
+	// **وذنبُ السائق لا تعويضَ فيه** — فلا يُكتب له طلبٌ أصلاً.
+	if in.to == StFailed && in.driverID != nil {
+		var fault, reason string
+		if err := q.QueryRow(ctx,
+			`SELECT COALESCE(fault, ''), COALESCE(fail_reason, '') FROM orders WHERE id = $1`,
+			in.orderID).Scan(&fault, &reason); err != nil {
 			return err
 		}
+		created, err := s.requestDriverCompensation(ctx, q, in.orderID, in.driverID,
+			fault, reason, in.deliveryFee)
+		if err != nil {
+			return err
+		}
+		out.compensationRequested = out.compensationRequested || created
 	}
 
 	// (5) نهايةٌ فاشلةٌ بعد الاستلام — **الخسارةُ تُقيَّد بلا قرارٍ من أحد**
@@ -880,7 +864,8 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	if refundOnEnter(in.to) && in.from != StDelivered && pastPickup[in.from] {
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
-	// وقبل الاستلام: لا مالَ تحرّك، فلا خزينةَ تُحدَّث — **إلّا إن عُوّض سائق.**
+	// وقبل الاستلام: لا مالَ تحرّك، فلا خزينةَ تُحدَّث — **والنداءُ احتياطٌ
+	// لا يكتب شيئاً إن لم يتغيّر شيء** (التعويضُ صار بعد الموافقة).
 	if in.to == StFailed {
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}

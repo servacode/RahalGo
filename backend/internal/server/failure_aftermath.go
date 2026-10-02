@@ -10,14 +10,22 @@ package server
 // وقاعدةُ المالك «المنصةُ والزبون لا يخسران» تحسم طرفين من أربعة — **ويبقى
 // المتجرُ والسائق.** فهذان قرارُه (٢٠٢٦-٠٨-٠١):
 //
-// # ١ · السائق — تعويضٌ يدويّ دائماً
+// # ١ · السائق — **بموافقة إنسانٍ لا لحظةَ الضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
 //
-// **لا تلقائياً.** أجرُ التوصيل مقابل تسليمٍ تمّ، وما وقع رحلةٌ لا تسليم.
-// **وتقديرُ الرحلة يختلف**: مشوارٌ إلى الحيّ المجاور ليس كمشوارٍ عبر المدينة،
-// **ورقمٌ آليٌّ واحد يظلم أحدهما**. فيُقدّرها إنسانٌ ويوقّع عليها.
+// **كان هذا الرأسُ يقول «يدويٌّ دائماً» والمحرّكُ يقيّد تلقائيّاً** — نصفَ أجر
+// السائق في معاملة الفشل نفسِها (`compensateDriverOnFail`). **وثيقتان تتناقضان
+// صامتتين.** وقِيس على التجهيز: ٥٬٠٠٠ تُدفع فوراً في كلّ ضغطة، **حتّى لـ«تأخّرتُ
+// أنا».** فسائقٌ يكسب بضغطة.
 //
-// والنقطةُ هنا لا في صفحة المحفظة: **زرٌّ في مكانٍ آخر زرٌّ لا يُضغط.** ومن
-// أراد تعويضَ سائقٍ عن طلبٍ بعينه يجده عند الطلب لا في بحثٍ عن اسمه.
+// **فصارت القاعدةُ واحدةً في الموضعين**: المحرّكُ يكتب **طلبَ تعويضٍ معلَّقاً**
+// (`orders/compensation_requests.go`) — حين يكون الذنبُ على الزبون أو المتجر
+// وحدَهما، ومعه **مبلغٌ مقترَح** بالمعادلة القديمة — **ويُنبَّه المكتب.**
+// **وهذا البابُ هو الموافقة**: يقيّد المبلغَ ويُغلق الطلبَ المعلَّق في المعاملة
+// نفسِها، **ويفتح المطالبةَ على المتجر** إن كان الذنبُ ذنبَه. ورفضُه بابٌ
+// بجانبه (`handleRejectCompensation`). **ولا قيدَ تعويضٍ تلقائيٌّ في أيّ مكان.**
+//
+// **وما لا طلبَ معلَّقاً له يبقى كما كان**: تعويضٌ يدويٌّ عن طلبٍ فشل بتقدير
+// إنسان. والنقطةُ هنا لا في صفحة المحفظة: **زرٌّ في مكانٍ آخر زرٌّ لا يُضغط.**
 //
 // وتُقيَّد بمرجع الطلب — **فتعويضٌ بلا مرجع مالٌ خرج بلا سبب يُقرأ.**
 //
@@ -51,6 +59,10 @@ var (
 	// **وتعويضٌ وقع لا يقع مرّتين** — انظر الشرحَ عند `handleCompensateDriver`.
 	errAlreadyCompensated = httpx.NewError(http.StatusConflict,
 		"driver_already_compensated", "errors.driver_already_compensated")
+
+	// **ولا رفضَ لما لا ينتظر** — طلبٌ قُضي فيه أو لم يُطلَب أصلاً.
+	errCompensationNotPending = httpx.NewError(http.StatusConflict,
+		"compensation_not_pending", "errors.compensation_not_pending")
 )
 
 // handleCompensateDriver تعويضُ سائقٍ عن طلبٍ فشل — بمبلغٍ يقدّره إنسان.
@@ -109,13 +121,25 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	if status != "failed" {
-		s.respondErr(w, errNotFailed)
+	// **وطلبُ تعويضٍ معلَّقٌ يسبق كلَّ شرط** (٢٠٢٦-١٠-٠٢): تعذّرُ المتجر لا يُفشل
+	// الطلب — يعود إلى المكتب حيّاً **والسائقُ حُرّر منه** — فلا `failed` ولا
+	// `driver_id`. **والسائقُ المستحقُّ مكتوبٌ في الطلب المعلَّق نفسِه.**
+	pending, err := s.orders.PendingCompensationTx(r.Context(), tx, orderID)
+	if err != nil {
+		s.respondErr(w, err)
 		return
 	}
-	if driverID == nil {
-		s.respondErr(w, errNoDriverOnOrder)
-		return
+	if pending != nil {
+		driverID = &pending.DriverID
+	} else {
+		if status != "failed" {
+			s.respondErr(w, errNotFailed)
+			return
+		}
+		if driverID == nil {
+			s.respondErr(w, errNoDriverOnOrder)
+			return
+		}
 	}
 
 	var already bool
@@ -147,11 +171,28 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// **والطلبُ المعلَّقُ يُغلق بالموافقة في المعاملة نفسِها** — فلا يبقى في
+	// قائمة الانتظار مالٌ قُيّد. **والمطالبةُ على المتجر تُفتح بما دُفع فعلاً**
+	// (قرارُ ٢٠٢٦-٠٨-٠٣ باقٍ: المنصةُ تعوّض وتفتح نزاعاً مع المتجر).
+	if pending != nil {
+		if err := s.orders.DecideCompensationTx(r.Context(), tx, pending.ID,
+			orders.CompensationApproved, req.Amount, actor, note); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if pending.Fault == orders.FaultMerchant {
+			if err := s.orders.OpenMerchantClaimTx(r.Context(), tx, orderID, req.Amount); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+		}
+	}
 	// **والأثرُ في المعاملة نفسِها — لا بعد التثبيت** (`AQ-4`/`PF-06`): تعويضٌ
 	// خرج والخزينةُ خُصمت، **فسقوطُ سطر التدقيق بعد التثبيت يترك مالاً تحرّك
 	// بلا من ولا متى، وإعادةُ النداء تُردّ `already_compensated` فلا يُستدرَك.**
 	if err := s.auditTx(r.Context(), tx, r, "finance.driver_compensation", "order", orderID, map[string]any{
 		"driver_id": *driverID, "amount": req.Amount, "note": note,
+		"request_id": requestID(pending),
 	}); err != nil {
 		s.respondErr(w, err)
 		return
@@ -163,6 +204,81 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 	s.touch("order", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})
+}
+
+// requestID معرّفُ الطلب المعلَّق في الأثر — وفراغٌ للتعويض اليدويّ الصرف.
+func requestID(p *orders.CompensationRequest) string {
+	if p == nil {
+		return ""
+	}
+	return p.ID
+}
+
+// handleRejectCompensation **رفضُ طلب تعويضٍ معلَّق** — بسببٍ إلزاميّ.
+//
+// **والرفضُ قرارٌ يُكتب لا صمتٌ يُترك**: طلبٌ لا يُقضى فيه يبقى في القائمة أبداً،
+// **ومن سأل السائقُ عنه بعد شهرٍ لم يجد من يقول لماذا لم يُعوَّض.**
+func (s *Server) handleRejectCompensation(w http.ResponseWriter, r *http.Request) {
+	orderID := chi.URLParam(r, "id")
+	req, err := decode[struct {
+		Note string `json:"note"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	note := strings.TrimSpace(req.Note)
+	if note == "" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	ctx := r.Context()
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	pending, err := s.orders.PendingCompensationTx(ctx, tx, orderID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if pending == nil {
+		s.respondErr(w, errCompensationNotPending)
+		return
+	}
+	if err := s.orders.DecideCompensationTx(ctx, tx, pending.ID,
+		orders.CompensationRejected, 0, userIDFrom(r), clip(note, 300)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.auditTx(ctx, tx, r, "finance.driver_compensation_rejected", "order", orderID, map[string]any{
+		"driver_id": pending.DriverID, "request_id": pending.ID, "note": note,
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("order", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"rejected": true})
+}
+
+// handlePendingCompensations **ما ينتظر قراراً من طلبات التعويض** — بالأقدم أوّلاً.
+//
+// **وكلُّ صفٍّ يحمل ما يلزم القرار**: الطلبُ وحالُه، والسائقُ، والذنبُ والسبب،
+// **والمبلغُ المقترَح** — فيُوافَق عليه كما هو أو يُعدَّل أو يُرفض.
+func (s *Server) handlePendingCompensations(w http.ResponseWriter, r *http.Request) {
+	pg := pagingOf(r, 20)
+	list, total, err := s.orders.PendingCompensations(r.Context(), pg.PerPage, pg.Offset)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, paged("compensations", list, total, pg))
 }
 
 // handleSettleGoods **مهجورة** — كانت تعوّض المتجرَ عن بضاعةٍ لم يستردّها.

@@ -28,6 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 var (
@@ -128,13 +129,35 @@ func (s *Server) handleDriverReturn(w http.ResponseWriter, r *http.Request) {
 // **تفترق حين يُضاف سببٌ في أحدهما** — فيرسل السائقُ رمزاً لا يعرفه الخادم،
 // ويُردّ عليه بلا أن يفهم لماذا.
 func (s *Server) handleFailReasons(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **وكلُّ سببٍ يقول ما يفعله بالطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الحقلان الأوّلان كما كانا** — تطبيقٌ لم يُحدَّث يقرؤهما وحدَهما.
+	// **والجديدُ إضافة**: `kind` (فشلٌ أو بلاغ) · `closes` (أيُغلق الطلب) ·
+	// `available_in_sec` (كم بقي من انتظار الباب — صفرٌ متاح).
+	//
+	// **والانتظارُ يُحسب للطلب إن قيل أيُّه** (`?order=`) — وبلاه صفر،
+	// **والمحرّكُ يردّ عند الضغط** (`door_wait`) فلا يُبنى عليه حكم.
 	type reason struct {
-		Code  string `json:"code"`
-		Fault string `json:"fault"`
+		Code           string `json:"code"`
+		Fault          string `json:"fault"`
+		Kind           string `json:"kind"`
+		Closes         bool   `json:"closes"`
+		AvailableInSec int64  `json:"available_in_sec"`
+	}
+	at := r.URL.Query().Get("at")
+	var wait int64
+	if id := r.URL.Query().Get("order"); id != "" && at == orders.StAtDropoff && s.driverOwnsOrder(r, id) {
+		wait = s.orders.DoorWaitLeft(r.Context(), id)
 	}
 	out := []reason{}
-	for _, x := range s.orders.FailReasonsAt(r.URL.Query().Get("at")) {
-		out = append(out, reason{Code: x.Code, Fault: x.Fault})
+	for _, x := range s.orders.FailReasonsAt(at) {
+		item := reason{Code: x.Code, Fault: x.Fault, Kind: x.Kind, Closes: x.Closes()}
+		if x.DoorWait {
+			item.AvailableInSec = wait
+		}
+		out = append(out, item)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": out})
 }

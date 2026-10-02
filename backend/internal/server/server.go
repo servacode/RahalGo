@@ -869,7 +869,9 @@ func (s *Server) Router() http.Handler {
 			// يجد طلباً يتذكّره ليُبلّغ عنه. (انظر `driver_history.go`)
 			r.Get("/orders/history", s.handleDriverHistory)
 			r.Get("/orders/report-reasons", s.handleDriverReportReasons)
-			r.Post("/orders/{id}/report", s.handleDriverReport)
+			// **وبلاغُ المرحلة من البابِ نفسِه بحقل `code`** — «لدي مشكلة» لا
+			// تُغلق الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٢، `driver_stage_report.go`).
+			r.Post("/orders/{id}/report", s.handleDriverReportOrStage)
 			// **ومن وقف عند بابه يقيّمه** — الزبونُ يرى الطعامَ ولا يرى
 			// المطبخ. (`merchant_rating_handlers.go`)
 			r.Post("/orders/{id}/rate-merchant", s.handleDriverRateMerchant)
@@ -1263,6 +1265,10 @@ func (s *Server) Router() http.Handler {
 			// بتقدير إنسان**، وموظّفُ العمليات ليس طرفاً في المال — وهو
 			// الفصلُ نفسه المطبَّق على سجلّ الأحداث وحركات المحفظة.
 			r.Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
+			// **وطلباتُ التعويض المعلَّقة** — المحرّكُ يكتبها والإنسانُ يقضي فيها
+			// (قرارُ المالك ٢٠٢٦-١٠-٠٢). **والموافقةُ هي البابُ أعلاه نفسُه.**
+			r.Get("/compensations/pending", s.handlePendingCompensations)
+			r.Post("/orders/{id}/compensation/reject", s.handleRejectCompensation)
 			// **إذنُ استثناءِ إثبات التسليم** — كاميرا معطّلةٌ فيأذن العملياتُ
 			// بالتسليم بلا صورة (قرارُ المالك ٢٠٢٦-٠٩-٢٧). **لا يأذن السائقُ
 			// لنفسه**: سببٌ إلزاميٌّ ومُدقَّقٌ في المعاملة (delivery_proof.go).

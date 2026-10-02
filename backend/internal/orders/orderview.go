@@ -175,7 +175,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		"custom_goods_amount":          true,
 		"custom_request":               true,
 		// **«لدي توصيلة»** — ما يحمله · ومن يقبض منه · وأتُتبَع النقطة.
-		"parcel_note":              true,
+		"parcel_note": true,
+		// **وأين البضاعةُ بعد طارئ** — للسائق التالي (٢٠٢٦-١٠-٠٢).
+		"pickup_note":              true,
 		"fee_payer":                true,
 		"dropoff_known":            true,
 		"quote_confirmed_at":       true,
@@ -253,6 +255,7 @@ var audienceAllow = map[Audience]map[string]bool{
 	},
 	AudienceOps: {
 		"parcel_note":                  true,
+		"pickup_note":                  true,
 		"fee_payer":                    true,
 		"dropoff_known":                true,
 		"custom_reserved_amount":       true,

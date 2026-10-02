@@ -67,11 +67,11 @@ var Kinds = map[string]KindContract{
 	"compensation": {
 		Kind: "compensation", Sign: "+", RefRequired: false, RefTarget: "orders|tickets",
 		Creators: []string{
-			"internal/orders/transitions.go:539", "internal/orders/goods.go:148",
+			"internal/orders/goods.go:148",
 			"internal/server/failure_aftermath.go:135", "internal/server/failure_aftermath.go:290",
 			"internal/support/support.go:287",
 		},
-		Path:       "تعذّرُ التسليم تلقائيّاً · وحلُّ تذكرةٍ بتعويض",
+		Path:       "تعذّرُ التسليم بموافقة العمليات · وحلُّ تذكرةٍ بتعويض",
 		Semantics:  "تعويضُ طرفٍ عن ضررٍ لا ذنبَ له فيه — **يخرج من الخزينة.**",
 		Invariants: []string{"FI-05.a", "FI-05.b", "FI-06.a"},
 		Reachable:  true,

@@ -27,6 +27,7 @@ package server
 // ثقل عليه طلبٌ طلبَه بحجّة الطارئ. **والمنصةُ هي التي تحرّره عنه، لا هو.**
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -120,6 +121,7 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// وإعادتُها على إعادةٍ تُكرّر بلا فائدة (والانتقالُ من `dispatching`
 	// إلى `dispatching` يُخطئ). **أمّا الإخطارُ فيُعاد أدناه على الحالين.**
 	released := true
+	var others []emergencyOther
 	if fresh {
 		// **نقطةُ الاستلام البديلة — إن كانت البضاعةُ قد خرجت.**
 		//
@@ -158,6 +160,19 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// **ودوامُه يُغلق — قبل التحرير لا بعده** (٢٠٢٦-١٠-٠٢).
+		//
+		// من وقع له حادثٌ لا يُعرض عليه طلبٌ تالٍ بعد دقيقة. **وترتيبُ الطابور
+		// يقرأ `on_shift`** — فمن بقي عليه ظلّ في الدور وهو في المستشفى.
+		//
+		// **وكان يُغلق بعد التحرير** — والتحريرُ يعرض الطلبَ فوراً، **فقِيس على
+		// التجهيز: عُرض الطلبُ بعد الاستلام على من أبلغ عنه نفسِه.** والمحرّكُ
+		// صار يستثني حاملَه من كلّ حال (`transitions.go`)، **وهذا حارسٌ ثانٍ.**
+		if _, err := s.pg.Exec(ctx,
+			`UPDATE users SET on_shift = false WHERE id = $1`, driverID); err != nil {
+			s.logger.Error("الطارئ: تعذّر إغلاق الدوام", "driver", driverID, "error", err)
+		}
+
 		// **والتحريرُ بدور العمليات لا بدوره** — المنصةُ تحرّره عنه.
 		//
 		// ويُنفَّذ بعد تسجيل الطارئ: **تعثّرُ التحرير يجب ألّا يبتلع النداء.**
@@ -169,14 +184,15 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 			s.logger.Error("الطارئ: تعذّر تحرير الطلب", "order", orderID, "error", err)
 		}
 
-		// **ودوامُه يُغلق.**
+		// ══════════════════════════════════════════════════════════════
+		// **وطلباتُه الأخرى لا تُترك مع سائقٍ خرج من دوامه** (٢٠٢٦-١٠-٠٢)
+		// ══════════════════════════════════════════════════════════════
 		//
-		// من وقع له حادثٌ لا يُعرض عليه طلبٌ تالٍ بعد دقيقة. **وترتيبُ الطابور
-		// يقرأ `on_shift`** — فمن بقي عليه ظلّ في الدور وهو في المستشفى.
-		if _, err := s.pg.Exec(ctx,
-			`UPDATE users SET on_shift = false WHERE id = $1`, driverID); err != nil {
-			s.logger.Error("الطارئ: تعذّر إغلاق الدوام", "driver", driverID, "error", err)
-		}
+		// **كان الطارئُ يخصّ طلباً واحداً** — والسائقُ يحمل طلبين: **فالثاني
+		// يبقى مع رجلٍ في المستشفى ولا أحدَ يُنبَّه.** فما لم يُستلَم يُحرَّر
+		// مثلَه إلى غيره، **وما استُلم يبقى معه** (البضاعةُ في يده، ولا يعرف أين
+		// هي إلّا هو) **ويُكتب في التنبيه** ليتّصل به المكتب.
+		others = s.emergencyOtherOrders(ctx, driverID, orderID)
 	}
 
 	// **والعملياتُ تُنبَّه فوراً** — لا حين تفتح اللوحة.
@@ -188,13 +204,23 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 		body += " · " + strconv.FormatFloat(*req.Lat, 'f', 5, 64) +
 			"," + strconv.FormatFloat(*req.Lng, 'f', 5, 64)
 	}
+	// **وكلُّ طلبٍ آخرَ بيده يُذكر** — المحرَّرُ وما بقي معه.
+	otherIDs := []string{}
+	for _, o := range others {
+		otherIDs = append(otherIDs, o.ID)
+		if o.Released {
+			body += " · #" + strconv.FormatInt(o.Number, 10) + " حُرّر إلى الطابور"
+		} else {
+			body += " · #" + strconv.FormatInt(o.Number, 10) + " البضاعةُ معه — لم يُحرَّر، اتّصل به"
+		}
+	}
 	s.notify.NotifyOps(ctx, notifications.Input{
 		Kind: notifications.KindOrder, Title: notifTitles.driverEmergency, Body: body,
 		Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
 	})
 	s.audit(r, "driver.emergency", "order", orderID, map[string]any{
 		"emergency_id": emergencyID, "released": released, "status_was": status,
-		"duplicate": !fresh,
+		"duplicate": !fresh, "other_orders": otherIDs,
 	})
 	s.touch("order", "ops")
 	s.touch("driver", "ops")
@@ -202,6 +228,51 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"emergency_id": emergencyID, "released": released, "duplicate": !fresh,
 	})
+}
+
+// emergencyOther طلبٌ آخرُ بيد من وقع له الطارئ — وما صار إليه.
+type emergencyOther struct {
+	ID       string
+	Number   int64
+	Status   string
+	Released bool
+}
+
+// emergencyOtherOrders **يحرّر ما لم يُستلَم من طلباته الأخرى ويُعدّ ما استُلم.**
+//
+// **والتحريرُ كتحرير الطلب الأوّل** — بدور العمليات، والمحرّكُ يستثنيه من العرض.
+// **وتعثّرُ واحدٍ لا يوقف الباقي**: يُذكر في التنبيه غيرَ محرَّرٍ فيتصرّف إنسان.
+func (s *Server) emergencyOtherOrders(ctx context.Context, driverID, orderID string) []emergencyOther {
+	rows, err := s.pg.Query(ctx, `
+		SELECT id::text, number, status FROM orders
+		WHERE driver_id = $1 AND id <> $2 AND status = ANY($3)
+		ORDER BY created_at`, driverID, orderID,
+		[]string{orders.StAssigned, orders.StAtPickup, orders.StPickedUp,
+			orders.StOnTheWay, orders.StAtDropoff})
+	if err != nil {
+		s.logger.Error("الطارئ: تعذّرت قراءةُ طلباته الأخرى", "driver", driverID, "error", err)
+		return nil
+	}
+	var out []emergencyOther
+	for rows.Next() {
+		var o emergencyOther
+		if err := rows.Scan(&o.ID, &o.Number, &o.Status); err == nil {
+			out = append(out, o)
+		}
+	}
+	rows.Close()
+	for i, o := range out {
+		if o.Status != orders.StAssigned && o.Status != orders.StAtPickup {
+			continue
+		}
+		if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
+			o.ID, orders.StDispatching, "طارئٌ لدى السائق — طلبٌ آخرُ بيده"); err != nil {
+			s.logger.Error("الطارئ: تعذّر تحرير طلبٍ آخر", "order", o.ID, "error", err)
+			continue
+		}
+		out[i].Released = true
+	}
+	return out
 }
 
 // handleOpenEmergencies الطوارئُ المفتوحة — لتراها العملياتُ مجموعةً.

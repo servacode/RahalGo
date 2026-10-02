@@ -125,6 +125,17 @@
         "FI-13.c",
         "FI-13.d"
       ]
+    },
+    {
+      "id": "FI-14",
+      "checks": [
+        "FI-14.a",
+        "FI-14.b",
+        "FI-14.c",
+        "FI-14.d",
+        "FI-14.e",
+        "FI-14.f"
+      ]
     }
   ],
   "checks": [
@@ -363,7 +374,7 @@
     {
       "id": "FI-05.a",
       "family": "FI-05",
-      "name": "لا تعويضَ مكرَّرٌ لطلب",
+      "name": "لا تعويضَ مكرَّرٌ لمستحقٍّ عن طلب",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -516,7 +527,7 @@
     {
       "id": "FI-06.c",
       "family": "FI-06",
-      "name": "أجرُ السائقِ المقيَّد = أجرةُ الطلب",
+      "name": "أجرُ السائقِ المقيَّد = أجرُ السائقِ المعتمَد",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -919,6 +930,58 @@
       "registers": [
         "XG-31"
       ]
+    },
+    {
+      "id": "FI-14.a",
+      "family": "FI-14",
+      "name": "رصيدُ الاحتباس = المستحقُّ النقديُّ القائم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "merchant_cash_accrued",
+        "merchant_cash_paid"
+      ]
+    },
+    {
+      "id": "FI-14.b",
+      "family": "FI-14",
+      "name": "المحفظةُ والنقدُ لا يجتمعان لمصدرٍ واحد",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-14.c",
+      "family": "FI-14",
+      "name": "المعكوسُ المخزَّن = مجموعُ سطورِ العكس",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-14.d",
+      "family": "FI-14",
+      "name": "قيودُ الدفتر تطابق صفَّ التسوية النقديّة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "merchant_cash_accrued"
+      ]
+    },
+    {
+      "id": "FI-14.e",
+      "family": "FI-14",
+      "name": "الاحتباسُ لا يُسحَب ولا يُنفَق ولا يهبط تحت الصفر",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-14.f",
+      "family": "FI-14",
+      "name": "النقدُ المدفوعُ = مجموعُ المستحقّات المسوّاة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "merchant_cash_paid"
+      ]
     }
   ],
   "kinds": [
@@ -962,9 +1025,8 @@
       "sign": "+",
       "ref_required": false,
       "ref_target": "orders|tickets",
-      "path": "تعذّرُ التسليم تلقائيّاً · وحلُّ تذكرةٍ بتعويض",
+      "path": "تعذّرُ التسليم بموافقة العمليات · وحلُّ تذكرةٍ بتعويض",
       "creators": [
-        "internal/orders/transitions.go:539",
         "internal/orders/goods.go:148",
         "internal/server/failure_aftermath.go:135",
         "internal/server/failure_aftermath.go:290",
@@ -992,6 +1054,41 @@
         "FI-01.d",
         "FI-05.f",
         "FI-06.c"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "merchant_cash_accrued",
+      "semantics": "مستحقُّ المتجرِ نقداً في الاحتباس — **والسالبُ عكسٌ أو اقتطاعُ دَين.**",
+      "sign": "±",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "الاستلامُ من متجرٍ طريقتُه «نقد» · وعكسُ استردادٍ · واقتطاعُ دَين",
+      "creators": [
+        "internal/orders/cash_settlement.go"
+      ],
+      "invariants": [
+        "FI-06.a",
+        "FI-14.a",
+        "FI-14.b",
+        "FI-14.c",
+        "FI-14.d"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "merchant_cash_paid",
+      "semantics": "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.**",
+      "sign": "-",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر",
+      "creators": [
+        "internal/orders/cash_settlement.go"
+      ],
+      "invariants": [
+        "FI-14.a",
+        "FI-14.f"
       ],
       "reachable": true
     },
@@ -1178,13 +1275,13 @@
     }
   ],
   "counts": {
-    "families": 13,
-    "checks": 61,
-    "provable_now": 55,
+    "families": 14,
+    "checks": 67,
+    "provable_now": 61,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
-    "kinds": 14
+    "kinds": 16
   },
   "financial_settings": [
     "merchants.commission_percent",
@@ -1200,11 +1297,13 @@
     "delivery.custom_fee",
     "delivery.custom_driver_may_change_fee",
     "drivers.cash_limit",
+    "customers.cod_limit",
     "payouts.min_amount",
     "customers.signup_bonus",
     "referral.reward_1",
     "referral.reward_2",
     "referral.reward_3",
+    "referral.reward_4",
     "referral.reward_rest",
     "referral.reward_on",
     "drivers.target_reward",
@@ -1216,6 +1315,8 @@
     "customers.cash_ban_days",
     "customers.cash_ban_failures",
     "orders.extra_source_fee",
-    "orders.route_margin_pct"
+    "orders.route_margin_pct",
+    "drivers.failed_compensation_percent",
+    "merchants.return_support_percent"
   ]
 }

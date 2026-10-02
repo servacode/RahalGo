@@ -421,6 +421,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/compensations/pending",
+      "handler": "handlePendingCompensations",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/customers",
       "handler": "handleListCustomers",
       "auth": true,
@@ -1937,6 +1953,28 @@
         {
           "name": "compensated",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/compensation/reject",
+      "handler": "handleRejectCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "rejected",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -4549,37 +4587,10 @@
     {
       "method": "POST",
       "path": "/api/v1/driver/orders/{id}/report",
-      "handler": "handleDriverReport",
+      "handler": "handleDriverReportOrStage",
       "auth": true,
       "roles": [
         "driver"
-      ],
-      "request": [
-        {
-          "name": "reason",
-          "type": "string"
-        },
-        {
-          "name": "note",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "id",
-          "type": "unknown"
-        },
-        {
-          "name": "number",
-          "type": "unknown"
-        },
-        {
-          "name": "status",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {

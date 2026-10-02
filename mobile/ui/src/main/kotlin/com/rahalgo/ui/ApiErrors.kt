@@ -286,6 +286,10 @@ private val CODES: Map<String, Int> = mapOf(
     "not_your_order" to R.string.err_not_your_order,
     "delivery_proof_required" to R.string.err_proof_required,
     "bad_fail_reason" to R.string.err_bad_fail_reason,
+    // **زرُّ «لدي مشكلة» لكلّ مرحلةٍ عملُها** (قرارُ المالك ٢٠٢٦-١٠-٠٢).
+    "fail_reason_wrong_stage" to R.string.err_fail_reason_wrong_stage,
+    "report_wrong_stage" to R.string.err_fail_reason_wrong_stage,
+    "door_wait" to R.string.err_door_wait,
     // ── الحساب ────────────────────────────────────────────────────────
     "wrong_password" to R.string.acc_wrong_password,
     // **وكلمةُ المرور الحاليّة بعينها** — كان المحرّكُ يردّ

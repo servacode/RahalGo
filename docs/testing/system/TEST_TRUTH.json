@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 381,
+    "routes": 383,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 55,
+    "notify_sites": 58,
     "notify_targeted": 21,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 165,
-    "behaviour_settings": 131,
-    "order_fields": 86,
-    "test_files": 436,
-    "test_funcs": 1818
+    "setting_defs": 166,
+    "behaviour_settings": 132,
+    "order_fields": 87,
+    "test_files": 438,
+    "test_funcs": 1836
   },
   "flows": [
     {
@@ -3888,6 +3888,27 @@
     },
     {
       "key": "drivers.dispatch_radius_step_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.door_wait_sec",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -7820,7 +7841,7 @@
       "orphan": true
     },
     {
-      "name": "TestMerchantFault_CompensatesAndOpensClaim",
+      "name": "TestMerchantFault_PendingAndNoClaimYet",
       "file": "internal/orders/compensation_test.go",
       "package": "orders_test",
       "orphan": true
@@ -8445,6 +8466,48 @@
       "name": "TestOpsCustomTimesTakeAgreementForBuying",
       "file": "internal/orders/opscustom_test.go",
       "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestDoorWait_AbsentRefusedUntilWaited",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDoorWait_RefusedNeedsNoWait",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFailAtDropoff_NoAutoCompensation_PendingByFault",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFailReason_RefusedOutsideItsStage",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantBlocked_FaultFromReason_PendingNotPaid",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantDelivery_BlockedAtPickup_NeverStuck",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestNoCancelAfterPickup",
+      "file": "internal/orders/problem_button_test.go",
+      "package": "orders_test",
       "orphan": true
     },
     {
@@ -23682,6 +23745,72 @@
     {
       "name": "TestDriverPayloadCarriesNoCustomerPhone",
       "file": "internal/server/phone_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCompensation_AfterOpsApproval_PaysOnce",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCompensation_MerchantFault_ApprovalPaysReleasedDriverAndOpensClaim",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCompensation_RejectClosesPending",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverFail_WrongStageIs409",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergency_NotReofferedToReporter",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergency_OtherOrdersReleasedOrFlagged",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergency_PickupNoteReachesNextDriver",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFailReasons_DoorWaitCountdown",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFailReasons_KindsClosesAndReports",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStageReport_OldAppSendsNotReadyAsFail",
+      "file": "internal/server/problem_button_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStageReport_PerStatus",
+      "file": "internal/server/problem_button_test.go",
       "package": "server",
       "orphan": true
     },
