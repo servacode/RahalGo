@@ -4291,6 +4291,10 @@
         {
           "name": "mocked",
           "type": "?bool"
+        },
+        {
+          "name": "recorded_at",
+          "type": "?time.Time"
         }
       ],
       "response": [

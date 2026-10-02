@@ -319,6 +319,12 @@ class DriverApi(private val api: ApiClient) {
          * **و`false` ادّعاءُ صدقٍ لم نفحصه.**
          */
         mocked: Boolean? = null,
+        /**
+         * **متى التقطها الجهاز** — `ISO-8601`، وفارغٌ: يُختَم بوقت الوصول.
+         *
+         * (٢٠٢٦-١٠-٠٢.) **كانت تُختَم بوقت وصولها** — فموضعٌ قديمٌ يُكتب حديثاً.
+         */
+        recordedAt: String? = null,
     ) {
         // ══════════════════════════════════════════════════════════════
         // **وجسمُ النداء `JsonObject` لا `Map<String, Any>`**
@@ -366,6 +372,7 @@ class DriverApi(private val api: ApiClient) {
         val body = LocationBody(
             lat = lat, lng = lng, mocked = mocked,
             speedMps = speedMps, accuracyM = accuracyM, bearingDeg = bearingDeg,
+            recordedAt = recordedAt,
         )
         api.call<Ack>("/api/v1/driver/location", HttpMethod.Post, body)
     }
@@ -385,6 +392,7 @@ class DriverApi(private val api: ApiClient) {
         @SerialName("speed_mps") val speedMps: Double? = null,
         @SerialName("accuracy_m") val accuracyM: Double? = null,
         @SerialName("bearing_deg") val bearingDeg: Double? = null,
+        @SerialName("recorded_at") val recordedAt: String? = null,
     )
 
     /**

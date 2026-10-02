@@ -476,4 +476,7 @@
     <string name="lost_merchant_blocked">عاد الطلب إلى الإدارة لتبديل المتجر، وتعويضك بعد موافقتها.</string>
     <string name="lost_failed_ops">أنهته الإدارة — تعذّر التسليم.</string>
     <string name="lost_ok">حسناً</string>
+    <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
+    <string name="gps_lost_title">إشارة الموقع مفقودة</string>
+    <string name="gps_lost_text">لم يصل الهاتفَ موضعٌ منذ دقائق، فلن تُعرض عليك طلبات حتى تعود. اخرج إلى مكان مكشوف أو أعد تشغيل الموقع.</string>
 </resources>

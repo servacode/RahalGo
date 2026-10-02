@@ -64,10 +64,36 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		// **ومؤشّرٌ لا قيمة** — نسخةٌ لم تحدَّث لا ترسله، **وفارغٌ
 		// يُقرأ «لم يُقَس» لا «صادق».**
 		Mocked *bool `json:"mocked"`
+		// ══════════════════════════════════════════════════════════════
+		// RecordedAt **متى التقطها الجهاز** — لا متى وصلت (٢٠٢٦-١٠-٠٢)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **كانت النبضةُ تُختَم بوقت وصولها** — فنقطةٌ التُقطت قبل دقائق
+		// (شبكةٌ بطيئة، أو إعادةُ آخرِ موضعٍ والقمرُ ميت) **تُكتب «حديثةً الآن»،
+		// فيبقى السائقُ مؤهَّلاً للقرب وموضعُه قديم.** والدفعةُ تحمل وقتَها
+		// منذ زمن (`driver_location_batch.go`) — **والمفردةُ وحدَها كانت تكذب.**
+		//
+		// **ومؤشّرٌ لا قيمة**: نسخةٌ لم تحدَّث لا ترسله، فيُختَم بوقت الوصول
+		// كما كان.
+		RecordedAt *time.Time `json:"recorded_at"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **ووقتٌ في المستقبل يُردّ إلى الآن** — ساعةُ هاتفٍ تسبق لا تصنع موضعاً من
+	// الغد. **وما شاخ ساعتين لا يُكتب موضعاً حاليّاً** (حدُّ الدفعة نفسُه).
+	now := time.Now()
+	at := now
+	if req.RecordedAt != nil && !req.RecordedAt.IsZero() {
+		at = *req.RecordedAt
+		if at.After(now) {
+			at = now
+		}
+		if at.Before(now.Add(-batchMaxAge)) {
+			httpx.JSON(w, http.StatusOK, map[string]any{"saved": false})
+			return
+		}
 	}
 	// **وصفرٌ صفرٌ ليس موضعاً** — هو ما يرسله جهازٌ لم يجد إشارة، **ونقطةٌ في
 	// المحيط الأطلسيّ تجعل كلَّ مسافةٍ آلافَ الكيلومترات** فيسقط الترتيبُ
@@ -81,11 +107,13 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := userIDFrom(r)
+	// **ونقطةٌ أقدمُ ممّا كُتب لا تدهسه** — نبضتان تصلان بغير ترتيبهما.
 	if _, err := s.pg.Exec(r.Context(), `
 		UPDATE users
 		SET last_location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-		    last_location_at = now()
-		WHERE id = $1`, uid, req.Lng, req.Lat); err != nil {
+		    last_location_at = $4
+		WHERE id = $1 AND (last_location_at IS NULL OR last_location_at <= $4)`,
+		uid, req.Lng, req.Lat, at); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -101,10 +129,10 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	bearing := cleanBearing(req.BearingDeg)
 	if _, err := s.pg.Exec(r.Context(), `
 		INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg, mocked)
-		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), $4, $5, $6, $7)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $8, $4, $5, $6, $7)
 		ON CONFLICT (driver_id, recorded_at) DO NOTHING`,
 		uid, req.Lng, req.Lat, req.SpeedMps, req.AccuracyM, bearing,
-		req.Mocked != nil && *req.Mocked); err != nil {
+		req.Mocked != nil && *req.Mocked, at); err != nil {
 		s.logger.Warn("التعقّب: تعذّر كتابةُ الأثر", "driver", uid, "error", err)
 	}
 

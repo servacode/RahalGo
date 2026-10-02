@@ -189,6 +189,29 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         if (!state.locationOn) {
             LocationCard(onEnable = actions.enableLocation)
             Spacer(Modifier.height(14.dp))
+        } else if (me.onShift && com.rahalgo.driver.location.GpsSignal.lost) {
+            // ══════════════════════════════════════════════════════════
+            // **والإذنُ ممنوحٌ والإشارةُ ميّتة** (٢٠٢٦-١٠-٠٢)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كانت النبضةُ تُعيد آخرَ موضعٍ بلا حدّ** فيبقى «حديثاً» ويُعرض
+            // عليه ما لا يبلغه. **والآن تسكت — ويُقال له لماذا لا تصله طلبات.**
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.warnTint)
+                    .padding(16.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.gps_lost_title),
+                    fontWeight = FontWeight.Bold,
+                    color = Rahal.colors.accent,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.gps_lost_text), color = Rahal.colors.inkMuted)
+            }
+            Spacer(Modifier.height(14.dp))
         }
 
         // ══════════════════════════════════════════════════════════════
