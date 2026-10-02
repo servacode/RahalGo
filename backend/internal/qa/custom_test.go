@@ -354,10 +354,23 @@ func firstFailCode(t *testing.T, h *Harness, drv *User, at string) string {
 	if len(list) == 0 {
 		t.Skip("FAIL: لا أسبابَ مضبوطةٌ في هذه القاعدة — يُتخطّى")
 	}
-	first, _ := list[0].(map[string]any)
-	code, _ := first["code"].(string)
-	if code == "" {
-		t.Fatalf("FAIL: سببٌ بلا رمز: %v", first)
+	// **أوّلُ سببِ فشلٍ متاحٍ الآن** — لا بلاغٌ (لا يُغلق)، ولا ما ينتظر الباب خمسَ دقائق
+	// («الزبونُ غير موجود» — قرارُ المالك ٢٠٢٦-١٠-٠٢). **وكان يُؤخذ الأوّلُ أيّاً كان**،
+	// فسقط الاختبارُ على قاعدةٍ سليمة.
+	for _, x := range list {
+		r, _ := x.(map[string]any)
+		code, _ := r["code"].(string)
+		kind, _ := r["kind"].(string)
+		wait, _ := r["available_in_sec"].(float64)
+		if code != "" && kind != "report" && wait == 0 && !doorWaitCode(code) {
+			return code
+		}
 	}
-	return code
+	t.Fatalf("FAIL: لا سببَ فشلٍ متاحٌ الآن في %s: %v", at, list)
+	return ""
+}
+
+// doorWaitCode **ما ينتظر الباب** — والقائمةُ بلا `order=` تقول صفراً، والخادمُ يردّه.
+func doorWaitCode(code string) bool {
+	return code == "customer_absent" || code == "customer_unreachable"
 }
