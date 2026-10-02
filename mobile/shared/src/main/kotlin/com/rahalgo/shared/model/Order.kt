@@ -156,7 +156,19 @@ data class DriverOrder(
 data class FailReasons(val reasons: List<FailReasonItem> = emptyList())
 
 @Serializable
-data class FailReasonItem(val code: String = "", val fault: String = "")
+data class FailReasonItem(
+    val code: String = "",
+    val fault: String = "",
+    /**
+     * **«fail» يُغلق أو يُسلِّم الطلبَ للعمليات · «report» بلاغٌ لا يمسّه** — الخادمُ يقرّر
+     * (زرُّ «لدي مشكلة» لكلّ مرحلةٍ عملُها، ٢٠٢٦-١٠-٠٢). **وافتراضُه «fail»** لخادمٍ قديم.
+     */
+    val kind: String = "fail",
+    /** **أيُنهي الطلب؟** — وما لا يُنهيه (مشكلةُ المتجر) يبقى حيّاً تتابعه العمليات. */
+    val closes: Boolean = true,
+    /** **بعد كم ثانيةً يُتاح** — انتظارُ الباب خمسَ دقائق، وصفرٌ: متاحٌ الآن. */
+    @SerialName("available_in_sec") val availableInSec: Int = 0,
+)
 
 /**
  * ══════════════════════════════════════════════════════════════════════

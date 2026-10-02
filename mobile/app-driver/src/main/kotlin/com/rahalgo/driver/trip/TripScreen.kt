@@ -1012,9 +1012,13 @@ fun TripScreen(
     if (state.failReasons != null) {
         FailDialog(
             reasons = state.failReasons,
+            status = state.problemStatus,
+            loadedAtMs = state.reasonsAtMs,
+            error = state.problemError,
             onPick = actions.fail,
             onDismiss = actions.dismissFail,
             onMine = actions.problem,
+            onRetry = actions.retryProblem,
         )
     }
 }
@@ -1345,9 +1349,11 @@ private fun TripCard(
         }
         }
 
-        if (state.error.isNotEmpty()) {
+        // **والخطأُ يُقال في موضعٍ واحد** (كان يُعرض مرّتين — فحصُ دورة السائق)، **وهنا
+        // الخبرُ**: «وصل بلاغُك للإدارة».
+        if (state.notice.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text(state.error, color = Rahal.colors.accent)
+            Text(state.notice, color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
         }
 
         // **ولا عبارةَ «وصلت»** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «ما لها داعٍ». الزرُّ يظهر عند
@@ -1380,6 +1386,28 @@ private fun TripCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                var askRelease by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                if (askRelease) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { askRelease = false },
+                        title = { Text(stringResource(R.string.confirm_title)) },
+                        text = { Text(stringResource(R.string.confirm_release_body)) },
+                        confirmButton = {
+                            com.rahalgo.ui.RahalTextButton(
+                                onClick = {
+                                    askRelease = false
+                                    actions.release()
+                                },
+                                tone = Tone.Danger,
+                            ) { Text(stringResource(R.string.act_confirm)) }
+                        },
+                        dismissButton = {
+                            com.rahalgo.ui.RahalTextButton(onClick = { askRelease = false }) {
+                                Text(stringResource(R.string.act_cancel))
+                            }
+                        },
+                    )
+                }
                 val next = nextAction(order.status, order.kind == "custom")
                 // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
                 // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
@@ -1472,7 +1500,9 @@ private fun TripCard(
                         // الأوّلَ إلى سطرين.** والأيقونةُ تقول «إعادة».
                         label = R.string.trip_release_short,
                         tone = Tone.Accent,
-                        onClick = actions.release,
+                        // **وبتأكيدٍ لا بضغطة** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢: أُعيد طلبٌ أربعَ
+                        // مرّاتٍ بضغطاتٍ عابرة).
+                        onClick = { askRelease = true },
                         enabled = !state.busy,
                         modifier = Modifier.weight(1f),
                     )

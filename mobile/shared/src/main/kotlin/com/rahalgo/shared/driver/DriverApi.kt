@@ -270,8 +270,22 @@ class DriverApi(private val api: ApiClient) {
     }
 
     /** أسباب التعذّر المسموحة في حال بعينه — **يقولها المحرّك.** */
-    suspend fun failReasons(at: String): List<FailReasonItem> =
-        api.call<FailReasons>("/api/v1/driver/fail-reasons?at=" + at).reasons
+    suspend fun failReasons(at: String, orderId: String? = null): List<FailReasonItem> =
+        api.call<FailReasons>(
+            "/api/v1/driver/fail-reasons?at=" + at + (orderId?.let { "&order=$it" } ?: ""),
+        ).reasons
+
+    /**
+     * **بلاغُ مرحلةٍ لا يُغلق الطلب** — «الطلبُ غيرُ جاهز» · «الزبونُ ألغى بالهاتف» ·
+     * «يريد عنواناً آخر» · «لا يردّ». **يصل العمليات والطلبُ باقٍ معه** (٢٠٢٦-١٠-٠٢).
+     */
+    suspend fun stageReport(orderId: String, code: String, note: String = "") {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/report",
+            HttpMethod.Post,
+            mapOf("code" to code, "note" to note),
+        )
+    }
 
     /**
      * **يرسل نقطة موقع.**

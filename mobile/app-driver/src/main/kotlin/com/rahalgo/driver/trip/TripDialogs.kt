@@ -36,6 +36,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -306,50 +308,120 @@ private val MINE = listOf(
 @Composable
 internal fun FailDialog(
     reasons: List<FailReasonItem>,
+    status: String,
+    loadedAtMs: Long,
+    error: String,
     onPick: (String) -> Unit,
     onDismiss: () -> Unit,
     onMine: (String) -> Unit,
+    onRetry: () -> Unit,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **لكلّ مرحلةٍ عملُها — والقرارُ الذي لا يُردّ يُؤكَّد** (٢٠٢٦-١٠-٠٢)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **قرارُ المالك**: «زرّ لدي مشكلة له عملٌ معيّنٌ بكلّ مرحلة… لا يُغلق الطلبُ قبل
+    // الزبون». **فالخياراتُ ثلاثة أصناف**: بلاغٌ لا يمسّ الطلب، وسببٌ يُنهيه أو يسلّمه
+    // للعمليات (بتأكيدٍ يقول أثرَه)، و«مشكلتي» — إعادةٌ قبل الاستلام وطارئٌ بعده.
+    // **وانتظارُ الباب يُعدّ تنازليّاً** — «الزبونُ غير موجود» بعد خمس دقائق.
+    var pending by remember { mutableStateOf<Pending?>(null) }
+    var nowMs by remember { mutableStateOf(android.os.SystemClock.elapsedRealtime()) }
+    androidx.compose.runtime.LaunchedEffect(loadedAtMs) {
+        while (true) {
+            nowMs = android.os.SystemClock.elapsedRealtime()
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
+    val confirm = pending
+    if (confirm != null) {
+        val beforePickup = status == "assigned" || status == "at_pickup"
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text(stringResource(R.string.confirm_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        when (confirm) {
+                            is Pending.Mine ->
+                                if (beforePickup) R.string.confirm_release_body else R.string.confirm_emergency_body
+                            is Pending.Reason -> when {
+                                !confirm.item.closes -> R.string.confirm_merchant_body
+                                confirm.item.fault == "customer" -> R.string.confirm_customer_body
+                                else -> R.string.confirm_close_body
+                            }
+                        },
+                    ),
+                )
+            },
+            confirmButton = {
+                RahalTextButton(
+                    onClick = {
+                        pending = null
+                        when (confirm) {
+                            is Pending.Mine -> onMine(confirm.label)
+                            is Pending.Reason -> onPick(confirm.item.code)
+                        }
+                    },
+                    tone = Tone.Danger,
+                ) { Text(stringResource(R.string.act_confirm)) }
+            },
+            dismissButton = {
+                RahalTextButton(onClick = { pending = null }) { Text(stringResource(R.string.act_cancel)) }
+            },
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        // **والعنوان سؤالٌ لا حكم** — (تصحيح المالك ٢٠٢٦-٠٨-١٢):
-        // **«لماذا تعذّر» تفترض أنّ الطلب سقط**، والزرُّ يقول «لدي
-        // مشكلة» — وأكثرُ المشاكل تُحلّ بسائقٍ ثانٍ لا بإلغاء.
         title = { Text(stringResource(R.string.problem_title)) },
         text = {
-            Column {
-                for (r in reasons) {
-                    RahalTextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(reasonLabel(r.code), modifier = Modifier.fillMaxWidth())
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (error.isNotEmpty()) {
+                    Text(error, color = Rahal.colors.accent)
+                    RahalTextButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.problem_retry), modifier = Modifier.fillMaxWidth())
                     }
-                }
-                // ══════════════════════════════════════════════════════
-                // **والمشكلةُ قد تكون عنده هو — فيمضي ويأتي غيرُه**
-                // ══════════════════════════════════════════════════════
-                //
-                // (قرار المالك ٢٠٢٦-٠٨-١٢: «المنصّة هي ترسل سائقاً
-                //  ثانياً في حال حصلت مشكلة للسائق عند المتجر».)
-                //
-                // **وأسبابُ المتجر كلُّها ذنبُ متجر** — ومن عطلت
-                // درّاجتُه فاختار «المتجر مغلق» ليمضي **حمّل متجراً
-                // بريئاً ذنباً وتعويضا.**
-                //
-                // **والطلبُ لا يُلغى بل يعود للطابور**: الزبونُ ينتظر
-                // طعامه، **وسائقٌ ثانٍ يأخذه في دقيقة** — وإلغاؤه
-                // لعطلٍ في درّاجةٍ عقوبةٌ على من لا ذنب له.
-                if (reasons.isNotEmpty()) {
                     HorizontalDivider(Modifier.padding(vertical = 6.dp))
                 }
-                Text(
-                    text = stringResource(R.string.problem_mine),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(bottom = 2.dp),
-                )
+                val reports = reasons.filter { it.kind == "report" }
+                val ends = reasons.filter { it.kind != "report" }
+                if (reports.isNotEmpty()) {
+                    Section(R.string.problem_reports_title)
+                    for (r in reports) {
+                        RahalTextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(reasonLabel(r.code), modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                }
+                if (ends.isNotEmpty()) {
+                    Section(if (ends.all { it.closes }) R.string.problem_ends_title else R.string.problem_ops_title)
+                    for (r in ends) {
+                        val left = (r.availableInSec - (nowMs - loadedAtMs) / 1000).coerceAtLeast(0)
+                        RahalTextButton(
+                            onClick = { pending = Pending.Reason(r) },
+                            enabled = left == 0L,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (left > 0) {
+                                    reasonLabel(r.code) + " · " + stringResource(
+                                        R.string.problem_wait, "%d:%02d".format(left / 60, left % 60),
+                                    )
+                                } else {
+                                    reasonLabel(r.code)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                }
+                Section(R.string.problem_mine)
                 for (id in MINE) {
                     val label = stringResource(id)
                     RahalTextButton(
-                        onClick = { onMine(label) },
+                        onClick = { pending = Pending.Mine(label) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(label, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
@@ -360,6 +432,22 @@ internal fun FailDialog(
         confirmButton = {
             RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
         },
+    )
+}
+
+/** **ما ينتظر تأكيداً** — سببٌ من الخادم أو «مشكلتي». */
+private sealed interface Pending {
+    data class Reason(val item: FailReasonItem) : Pending
+    data class Mine(val label: String) : Pending
+}
+
+@Composable
+private fun Section(title: Int) {
+    Text(
+        text = stringResource(title),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(bottom = 2.dp),
     )
 }
 
@@ -375,5 +463,8 @@ internal fun reasonLabel(code: String): String = when (code) {
     "merchant_refused" -> stringResource(R.string.reason_merchant_refused)
     "merchant_not_ready" -> stringResource(R.string.reason_merchant_not_ready)
     "order_unknown" -> stringResource(R.string.reason_order_unknown)
+    "customer_cancelled_by_phone" -> stringResource(R.string.reason_customer_cancelled_by_phone)
+    "customer_new_address" -> stringResource(R.string.reason_customer_new_address)
+    "customer_no_answer" -> stringResource(R.string.reason_customer_no_answer)
     else -> code
 }

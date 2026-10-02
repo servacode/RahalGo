@@ -215,6 +215,10 @@ data class TripState(
     /** عرضٌ نزل وهو في رحلة — **وفارغ يعني لا عرض.** */
     val onRouteOffer: DriverOrder? = null,
     val failReasons: List<FailReasonItem>? = null,
+    val problemError: String = "",
+    val reasonsAtMs: Long = 0L,
+    val problemStatus: String = "",
+    val notice: String = "",
     val step: TripStep = TripStep.ACCEPTED,
     val driver: LatLng? = null,
     val pickup: LatLng? = null,
@@ -262,6 +266,8 @@ data class TripActions(
     val askFail: () -> Unit,
     val fail: (String) -> Unit,
     val dismissFail: () -> Unit,
+    /** **أعد تحميلَ خيارات «لدي مشكلة»** — بعد سقوطها. */
+    val retryProblem: () -> Unit = {},
     /** **مشكلةٌ عند السائق نفسِه** — يُكتب سببُها ويُعاد الطلبُ أو
      *  تُنبَّه العمليات، بحسب موضعه من الرحلة. */
     val problem: (String) -> Unit,

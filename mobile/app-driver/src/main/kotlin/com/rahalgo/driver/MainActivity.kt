@@ -1039,6 +1039,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         askFail = orders::askFail,
                         fail = orders::fail,
                         dismissFail = orders::dismissFail,
+                        retryProblem = orders::askFail,
                         problem = { orders.reportProblem(it, LastPoint.value) },
                         emergency = { orders.emergency(LastPoint.value) },
                         retryEmergency = orders::retryEmergency,

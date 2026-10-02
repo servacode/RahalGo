@@ -296,6 +296,14 @@ data class DetailState(
     val error: String = "",
     /** أسباب التعذّر المعروضة الآن — **وفارغ يعني لا سؤال مفتوح.** */
     val failReasons: List<FailReasonItem>? = null,
+    /** **سقط تحميلُ الخيارات** — يُقال ويُعاد، ولا يُفتح الطارئُ بدلَه. */
+    val problemError: String = "",
+    /** **متى حُمّلت** — منها يُعدّ انتظارُ الباب. */
+    val reasonsAtMs: Long = 0L,
+    /** **حالُ الطلب حين فُتحت** — يقرّر لفظَ «مشكلتي»: إعادةٌ قبل الاستلام وطارئٌ بعده. */
+    val problemStatus: String = "",
+    /** **خبرٌ لا خطأ** — «وصل بلاغُك للإدارة». */
+    val notice: String = "",
 )
 
 data class DetailActions(

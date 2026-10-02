@@ -961,25 +961,61 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val order = state.mine.firstOrNull { it.id == openId }
             ?: state.mine.firstOrNull()
             ?: detail.order
+        // ══════════════════════════════════════════════════════════════
+        // **والنافذةُ تُفتح دائماً — لا الطارئُ بدلَها** (فحصُ زرّ «لدي مشكلة» ٢٠٢٦-١٠-٠٢)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كانت القائمةُ الفارغةُ تفتح الطارئَ مباشرةً** — قبل الاستلام وبعده — فلا يرى
+        // السائقُ «تعطّلت الدرّاجة» ولا سواها، **ويُرسل فينتهي دوامُه صامتاً.** وسقوطُ الشبكة
+        // كان يفعل الشيءَ نفسَه عند المتجر والباب. **فتُفتح النافذةُ بما وُجد، وسقوطُها يُقال.**
+        detail = detail.copy(
+            order = order, failReasons = emptyList(), problemError = "",
+            problemStatus = order.status, notice = "",
+        )
         viewModelScope.launch {
-            val reasons = runCatching { backend.driver.failReasons(order.status) }
-                .getOrDefault(emptyList())
-            // **وقائمةٌ فارغةٌ ليست «لا شيء»** — هي «لا سببَ يُختار هنا»،
-            // **وبابُها الطارئ** لا نافذةٌ فارغةٌ تُغلق فورا.
-            if (reasons.isEmpty()) {
-                emergencyOpen = true
-            } else {
-                detail = detail.copy(order = order, failReasons = reasons)
+            try {
+                val reasons = backend.driver.failReasons(order.status, order.id)
+                detail = detail.copy(
+                    failReasons = reasons,
+                    reasonsAtMs = android.os.SystemClock.elapsedRealtime(),
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (detail.failReasons != null) detail = detail.copy(problemError = describe(e))
             }
         }
     }
 
     fun dismissFail() {
-        detail = detail.copy(failReasons = null)
+        detail = detail.copy(failReasons = null, problemError = "")
+    }
+
+    private fun stageReport(id: String, code: String) {
+        detail = detail.copy(failReasons = null, busy = true, error = "", notice = "")
+        viewModelScope.launch {
+            detail = try {
+                backend.driver.stageReport(id, code)
+                detail.copy(
+                    busy = false,
+                    notice = getApplication<android.app.Application>()
+                        .getString(com.rahalgo.driver.R.string.report_sent),
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                detail.copy(busy = false, error = describe(e))
+            }
+        }
     }
 
     fun fail(reason: String) {
         val id = currentId() ?: return
+        // **والبلاغُ لا يمسّ الطلب** — يصل العمليات ويبقى الطلبُ معه.
+        if (detail.failReasons?.firstOrNull { it.code == reason }?.kind == "report") {
+            stageReport(id, reason)
+            return
+        }
         detail = detail.copy(failReasons = null, busy = true, error = "")
         viewModelScope.launch {
             try {
@@ -1133,6 +1169,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             nearDestination = near(driver, order) == true,
             locationKnown = near(driver, order) != null,
             failReasons = detail.failReasons,
+            problemError = detail.problemError,
+            reasonsAtMs = detail.reasonsAtMs,
+            problemStatus = detail.problemStatus,
+            notice = detail.notice,
             driver = driver?.let { LatLng(it.lat, it.lng) },
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
             // **فتُرسم الرحلة بنقطتين** بدل أن تسقط الشاشة.
