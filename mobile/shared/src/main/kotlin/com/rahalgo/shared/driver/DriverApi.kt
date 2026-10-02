@@ -259,11 +259,22 @@ class DriverApi(private val api: ApiClient) {
         mapOf("route_id" to routeId, "fixes" to fixes),
     )
 
-    suspend fun transition(orderId: String, to: String, reason: String = "", note: String = "") {
+    suspend fun transition(
+        orderId: String,
+        to: String,
+        reason: String = "",
+        note: String = "",
+        /**
+         * **مفتاحُ المحاولة** (٢٠٢٦-١٠-٠٢) — يُعاد بعينه حين يضيع الردّ، **فيُجاب
+         * بالطلب كما هو لا بـ«انتقالٌ غيرُ جائز» على خطوةٍ ثبتت.** وفارغٌ: كما كان.
+         */
+        idempotencyKey: String? = null,
+    ) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/transition",
             HttpMethod.Post,
             mapOf("to" to to, "reason" to reason, "note" to note),
+            idempotencyKey = idempotencyKey,
         )
     }
 

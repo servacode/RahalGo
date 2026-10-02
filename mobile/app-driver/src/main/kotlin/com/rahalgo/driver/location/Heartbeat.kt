@@ -23,7 +23,7 @@ import com.rahalgo.ui.LastPoint
 internal object Heartbeat {
 
     /** **كم صمتٍ قبل النبضة** — دون حدّ الحداثة عند الخادم بهامش. */
-    const val EVERY_MS = 120_000L
+    const val EVERY_MS = LocationService.HEARTBEAT_SEC * 1000
 
     /** **أقصى عمرٍ لموضعٍ يُعاد** — وما زاد يُسأل عنه النظامُ من جديد. */
     const val MAX_RESEND_AGE_MS = 300_000L

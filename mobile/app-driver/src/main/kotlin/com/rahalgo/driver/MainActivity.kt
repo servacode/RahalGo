@@ -13,8 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
-import com.rahalgo.driver.orders.DetailActions
-import com.rahalgo.driver.orders.OrderDetailScreen
 import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalLoader

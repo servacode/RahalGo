@@ -118,6 +118,8 @@ object Backend {
                 val app = context.applicationContext
                 com.rahalgo.driver.location.LocationService.stop(app)
                 com.rahalgo.driver.location.GpsSignal.alive()
+                // **ولا ورديّةَ تُستعاد بعد إقلاعٍ لحسابٍ خرج.**
+                com.rahalgo.driver.location.ShiftMemory.forget(app)
                 // **ولا تُوقَف الوصلةُ الحيّةُ هنا** — يملكها نموذجُ الطلبات ويعيش
                 // بعد الخروج، **فيبقى الداخلُ التالي بلا تحديثٍ حيّ.**
             },

@@ -136,12 +136,15 @@ class LocationService : Service() {
         // — **والجاهزيّةُ تقول لصاحبها ما ينقص** (`Readiness`).
         if (!LocationPermission.granted(this)) {
             Log.w(TAG, "إذنُ الموقع مسحوب — تقف الخدمةُ ولا تُعاد")
+            if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) BootResume.askToOpen(this)
             stopSelf()
             return START_NOT_STICKY
         }
         // **ورفعُ الخدمة قد يُردّ من النظام** — **إذنٌ يُسحب في اللحظة
         // بين السؤال والرفع، أو حالٌ لا تسمح بخدمةٍ أماميّة.**
         if (!startForegroundSafely()) {
+            // **وبعد الإقلاع يُطلب فتحُ التطبيق** — لا تقف الخدمةُ صامتةً والورديّةُ مفتوحة.
+            if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) BootResume.askToOpen(this)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -456,7 +459,7 @@ class LocationService : Service() {
         //
         // **ومئةٌ وعشرون دون الثلاثمئة بهامشٍ يحتمل نداءً يسقط ويُعاد** —
         // **ونبضةٌ تساوي الحدَّ تصل متأخّرةً ثانيةً فتسقط.**
-        private const val HEARTBEAT_SEC = Heartbeat.EVERY_MS / 1000
+        internal const val HEARTBEAT_SEC = 120L
 
         /** **كم يُنتظر النظامُ ليردّ موضعاً جديداً** — قبل أن تُعدّ الإشارةُ مفقودة. */
         private const val FIX_TIMEOUT_MS = 30_000L
@@ -464,10 +467,14 @@ class LocationService : Service() {
         // **ومصدرُها يُسمّى** — من قرأ سجلّاً عرف أنّها إعادةٌ لا قراءة.
         private const val HEARTBEAT_PROVIDER = "rahalgo-heartbeat"
 
+        /** **من الإقلاع؟** — فإن رُدّت الخدمةُ طُلب فتحُ التطبيق (`BootResume`). */
+        private const val EXTRA_FROM_BOOT = "from_boot"
+
         /** **تبدأ مع الوردية** — والفترة من المحرّك. */
-        fun start(context: Context, pingSec: Long) {
+        fun start(context: Context, pingSec: Long, fromBoot: Boolean = false) {
             val intent = Intent(context, LocationService::class.java)
                 .putExtra(EXTRA_PING_SEC, pingSec)
+                .putExtra(EXTRA_FROM_BOOT, fromBoot)
             context.startForegroundService(intent)
         }
 

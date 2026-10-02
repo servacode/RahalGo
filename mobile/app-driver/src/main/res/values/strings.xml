@@ -479,6 +479,14 @@
     <!-- **الخروجُ ببوّابة** (٢٠٢٦-١٠-٠٢). -->
     <string name="logout_has_order">لا يمكنك تسجيل الخروج وفي يدك طلب — أكمله أو أعده إلى الطابور أولاً.</string>
     <string name="logout_check_failed">تعذّر التحقق من طلباتك قبل الخروج: %1$s</string>
+    <!-- **إقلاعُ الهاتف وسط الورديّة** (٢٠٢٦-١٠-٠٢). -->
+    <string name="boot_channel">استئناف الوردية</string>
+    <string name="boot_title">ورديتك ما زالت مفتوحة</string>
+    <string name="boot_text">أعيد تشغيل الهاتف فتوقف إرسال موقعك. افتح التطبيق ليعود، وإلا فلن تصلك طلبات.</string>
+    <!-- **متى يجهز ورقمُ المتجر** (٢٠٢٦-١٠-٠٢). -->
+    <string name="trip_store_ready">الطلب جاهز في المتجر</string>
+    <string name="trip_store_ready_at">يجهز حوالي %1$s</string>
+    <string name="trip_call_store">اتصل بالمتجر</string>
     <!-- **الحسابُ موقوفٌ وفي يده طلب** (٢٠٢٦-١٠-٠٢). -->
     <string name="suspended_banner">حسابك موقوف — أكمل الطلب الحالي فقط، ولن تصلك طلبات جديدة.</string>
     <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->

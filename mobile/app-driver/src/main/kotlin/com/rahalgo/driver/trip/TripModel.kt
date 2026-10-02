@@ -401,7 +401,9 @@ fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
     "assigned" -> {
         val la = order.navLat
         val ln = order.navLng
-        if (la == null || ln == null) ArrivalPoint.NotArriving else ArrivalPoint.At(la, ln)
+        // **ومتجرٌ بلا دبّوسٍ «لا يُعرف» لا «بعيد»** (٢٠٢٦-١٠-٠٢) — كان يُقرأ بعيداً
+        // فيُخفى زرُّ «وصلت المتجر» إلى الأبد، **ولا آليّةَ تضغطه عنه.**
+        if (la == null || ln == null) ArrivalPoint.Unknown else ArrivalPoint.At(la, ln)
     }
     // **«لدي توصيلة» بلا نقطةٍ** — المكتوبُ موقعُ المتجر لا باب المستلِم.
     "on_the_way" -> if (order.dropoffKnown) ArrivalPoint.At(order.lat, order.lng) else ArrivalPoint.Unknown
@@ -425,6 +427,32 @@ fun dropoffPoint(order: DriverOrder): Pair<Double, Double>? =
  * فيطلبها من رجلٍ لا يدين بشيء، **وتسكت عند المتجر حيث يجب أن يقبض.**
  */
 enum class CashFrom { NONE, STORE, RECIPIENT }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **متى يجهز الطلب في المتجر** (٢٠٢٦-١٠-٠٢)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كان المحرّكُ يرسل `ready_at` و`prep_minutes` ولا يُقرآن** — فيصل السائقُ
+ * فيقف عشرين دقيقةً لا يعرف أكان عليه أن يتأخّر. **و«جاهز» ختمُ المتجر،
+ * و«حوالي» القبولُ مضافاً إليه مهلةُ التحضير.**
+ */
+sealed interface PrepState {
+    data object Ready : PrepState
+    data class Around(val hhmm: String) : PrepState
+    data object Unknown : PrepState
+}
+
+fun prepState(order: DriverOrder, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): PrepState {
+    if (order.kind == "custom") return PrepState.Unknown
+    if (!order.readyAt.isNullOrBlank()) return PrepState.Ready
+    val minutes = order.prepMinutes?.takeIf { it > 0 } ?: return PrepState.Unknown
+    val accepted = order.acceptedAt?.let {
+        runCatching { java.time.OffsetDateTime.parse(it) }.getOrNull()
+    } ?: return PrepState.Unknown
+    val at = accepted.plusMinutes(minutes.toLong()).atZoneSameInstant(zone)
+    return PrepState.Around(String.format(java.util.Locale.ROOT, "%02d:%02d", at.hour, at.minute))
+}
 
 fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {
     if (order.cashDue <= 0) return CashFrom.NONE

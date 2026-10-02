@@ -128,6 +128,42 @@ type DriverOutcome struct {
 	At      time.Time `json:"at"`
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// RepeatsOwnTransition **أهذه إعادةٌ لخطوةٍ خطاها هو للتوّ؟** (٢٠٢٦-١٠-٠٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ردٌّ ضاع في الشبكة والخطوةُ ثبتت** — فيُعيدها التطبيقُ فيردّ المحرّكُ
+// «انتقالٌ غيرُ جائز»، **ويرى السائقُ خطأً على خطوةٍ وقعت.**
+//
+// **والجوابُ من السجلّ**: حدثٌ إلى الحال نفسِها بفعله في الدقائق العشر الأخيرة،
+// **ولم يمسّ الطلبَ بعده أحدٌ غيرُه** — فما بعده من فعله (استلم ثمّ انطلق). **و«تعذّر»
+// عند المتجر يُكتب «إلى المكتب»** (`merchant_blocked.go`) فيُقرأ معه.
+//
+// **ولا تُلَفّ الانتقالاتُ بمنسّق المفاتيح** (`server/idempotency.go`): آلةُ الحال
+// تفتح معاملتَها وتُطلق بعدها إشعاراتٍ وبثّاً، **والمنسّقُ يشترط أن يقع العملُ
+// وعلامتُه في معاملته هو.** والحقيقةُ هنا في السجلّ أصلاً.
+func (s *Service) RepeatsOwnTransition(ctx context.Context, orderID, driverID, to string) bool {
+	targets := []string{to}
+	if to == StFailed {
+		targets = append(targets, StAccepted)
+	}
+	var again bool
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (
+		    SELECT 1 FROM order_events e
+		    WHERE e.order_id = $1::uuid AND e.actor_id = $2::uuid
+		      AND e.to_status = ANY($3::text[])
+		      AND e.created_at > now() - interval '10 minutes'
+		      AND NOT EXISTS (
+		          SELECT 1 FROM order_events l
+		          WHERE l.order_id = e.order_id AND l.id > e.id
+		            AND l.actor_id IS DISTINCT FROM $2::uuid))`,
+		orderID, driverID, targets).Scan(&again); err != nil {
+		return false
+	}
+	return again
+}
+
 // ErrNotDriversOrder **لم يكن هذا الطلبُ بيده قطّ.**
 var ErrNotDriversOrder = httpx.ErrNotFound
 

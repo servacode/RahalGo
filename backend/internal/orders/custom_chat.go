@@ -93,8 +93,8 @@ func (s *Service) openCustomChat(ctx context.Context, orderID, customerID, drive
 	// **وفراغُ حديث هذا السائق لا حديثِ الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٢:
 	// حديثٌ جديدٌ لكلّ سائق) — **فالثاني يقرأ ما طُلب كما قرأه الأوّل.**
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
-		SELECT $1, $2, 'customer', $3, $4
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+		SELECT $1, $2, 'customer', $3, $4, true
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND driver_id = $4)`,
 		orderID, customerID, request, driverID); err != nil {
@@ -104,8 +104,8 @@ func (s *Service) openCustomChat(ctx context.Context, orderID, customerID, drive
 
 	// **والثانية: جوابُ هذا السائق — إن لم يكن قال شيئاً بعد.**
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
-		SELECT $1, $2, 'driver', $3, $2
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+		SELECT $1, $2, 'driver', $3, $2, true
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND sender_id = $2)`,
 		orderID, driverID, customGreeting); err != nil {
@@ -123,8 +123,8 @@ func (s *Service) openPlainChat(ctx context.Context, orderID, driverID string) {
 		return
 	}
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
-		SELECT $1, $2, 'driver', $3, $2
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+		SELECT $1, $2, 'driver', $3, $2, true
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND sender_id = $2)`,
 		orderID, driverID, plainGreeting); err != nil {
@@ -197,8 +197,8 @@ func (s *Service) stepLine(ctx context.Context, orderID, driverID, kind, to stri
 	// على الطلب كلِّه، **فالسائقُ الثاني يستلم ولا يقول «استلمتُ طلبك»**
 	// لأنّ الأوّلَ قالها في حديثٍ لم يعد يُقرأ.
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
-		SELECT $1, $2, 'driver', $3, $2
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+		SELECT $1, $2, 'driver', $3, $2, true
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND driver_id = $2 AND body = $3)`,
 		orderID, driverID, line); err != nil {

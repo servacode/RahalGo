@@ -964,9 +964,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.transition(id, to)
+                // **بمفتاحٍ يُعاد بعينه إن ضاع الردّ** — انظر `StepRetry`.
+                StepRetry.send(StepRetry.newKey()) { key ->
+                    backend.driver.transition(id, to, idempotencyKey = key)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                // **وبعد الخطأ تُقرأ الحالُ من المحرّك** (٢٠٢٦-١٠-٠٢) — قد تكون
+                // الخطوةُ ثبتت، أو أُلغي الطلبُ، **وشاشةٌ تبقى على ما كان تُضغط ثانيةً.**
+                refresh()
                 return@launch
             }
             // ══════════════════════════════════════════════════════════
@@ -984,7 +992,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // الزمنيّ لا واحدة — **ووقتُ الانطلاق يُقرأ في الشكوى**،
             // إنّما تقعان بضغطةٍ واحدة.
             if (to == "picked_up") {
-                runCatching { backend.driver.transition(id, "on_the_way") }
+                runCatching {
+                    StepRetry.send(StepRetry.newKey()) { key ->
+                        backend.driver.transition(id, "on_the_way", idempotencyKey = key)
+                    }
+                }
             }
             // **والتسليم يُغلق الطلب** — فيُعاد إلى القائمة لا إلى شاشة
             // طلب لم يعد له وجود فيها.
@@ -1059,10 +1071,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(failReasons = null, busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.transition(id, "failed", reason = reason)
+                StepRetry.send(StepRetry.newKey()) { key ->
+                    backend.driver.transition(id, "failed", reason = reason, idempotencyKey = key)
+                }
                 openId = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1079,6 +1096,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 openId = null
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1306,10 +1324,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 backend.driver.sendProof(
                     id, jpeg, point?.lat, point?.lng, point?.mocked == true,
                 )
-                backend.driver.transition(id, "delivered")
+                StepRetry.send(StepRetry.newKey()) { key ->
+                    backend.driver.transition(id, "delivered", idempotencyKey = key)
+                }
                 openId = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1711,6 +1734,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     messages = th.messages,
                     peerName = th.peerName,
                     open = th.open,
+                    // **وخطأُ إرسالٍ قائمٌ لا تمحوه قراءةٌ حيّة** — يبقى حتّى يُرسَل غيرُه.
+                    error = chat?.error.orEmpty(),
+                    unsent = chat?.unsent.orEmpty(),
                 )
                 // **وما قُرئ لا يبقى في الشارة** — فتحُ الحديث يوسمه.
                 chatUnread = 0
@@ -1731,11 +1757,18 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     fun sendMessage(body: String) {
         val id = currentId() ?: return
         if (body.isBlank()) return
+        chat = chat?.copy(error = "", unsent = "")
         viewModelScope.launch {
             try {
                 backend.chat.send(id, body)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
+                // **ولا يُبتلع** (٢٠٢٦-١٠-٠٢) — يُقال بنصّ الخادم («أسرعت» ·
+                // «الحديثُ مغلق») ويعود النصُّ إلى الحقل.
                 Log.w("RahalGo/chat", "تعذّر إرسال الرسالة", e)
+                chat = (chat ?: ChatState()).copy(busy = false, error = describe(e), unsent = body)
+                return@launch
             }
             loadChat(id)
         }
@@ -1859,6 +1892,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 openId = null
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)
@@ -1887,6 +1921,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 backend.driver.agree(id, goods, fee)
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
+                refresh()
                 return@launch
             }
             detail = detail.copy(busy = false)

@@ -796,10 +796,6 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 // handleDriverTransition ينقل الطلب في مساره — والمحرّك يحكم ما يُسمح.
 func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
-	if !s.driverOwnsOrder(r, orderID) {
-		s.respondErr(w, errNotYourOrder)
-		return
-	}
 	req, err := decode[struct {
 		To   string `json:"to"`
 		Note string `json:"note"`
@@ -809,6 +805,15 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	if !s.driverOwnsOrder(r, orderID) {
+		// **وإعادةُ «تعذّر» عند المتجر بعد ضياع ردّها** — الطلبُ عاد إلى المكتب
+		// فلم يعد له، **وخطوتُه ثبتت.**
+		if s.replayOwnTransition(w, r, orderID, req.To) {
+			return
+		}
+		s.respondErr(w, errNotYourOrder)
 		return
 	}
 	// **سببٌ مصنَّفٌ لا نصٌّ حرّ.**
@@ -863,10 +868,37 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	o, err := s.orders.TransitionWithReason(r.Context(), userIDFrom(r), []string{"driver"},
 		orderID, req.To, clip(note, 300), req.Reason)
 	if err != nil {
+		if errors.Is(err, orders.ErrBadTransition) && s.replayOwnTransition(w, r, orderID, req.To) {
+			return
+		}
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, o)
+}
+
+// replayOwnTransition **إعادةُ خطوةٍ ثبتت وضاع ردُّها** (٢٠٢٦-١٠-٠٢).
+//
+// **تطبيقٌ أرسل «استلمت» فانقطعت الشبكةُ قبل الردّ** — يُعيدها بالمفتاح نفسِه
+// (`Idempotency-Key`) **فيُردّ عليه بالطلب كما هو الآن لا بـ«انتقالٌ غيرُ
+// جائز».** والسجلُّ يشهد أنّها خطوتُه هو (`orders.RepeatsOwnTransition`).
+//
+// **ولا يُعاد بلا مفتاح**: نسخةٌ قديمةٌ لا ترسله تُردّ كما كانت، **وضغطةٌ ثانيةٌ
+// متعمَّدةٌ على زرٍّ قديمٍ تبقى خطأً يُقال.**
+func (s *Server) replayOwnTransition(w http.ResponseWriter, r *http.Request, orderID, to string) bool {
+	if strings.TrimSpace(r.Header.Get(idempotencyHeader)) == "" || to == "" {
+		return false
+	}
+	if !s.orders.RepeatsOwnTransition(r.Context(), orderID, userIDFrom(r), to) {
+		return false
+	}
+	o, err := s.orders.GetByID(r.Context(), orderID)
+	if err != nil {
+		return false
+	}
+	w.Header().Set("Idempotent-Replay", "true")
+	httpx.JSON(w, http.StatusOK, o)
+	return true
 }
 
 // handleDriverRelease يفكّ إسناده فيعود الطلب إلى الطابور.
@@ -938,10 +970,11 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if _, err := q.Exec(ctx, `
-			INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
-			VALUES ($1, $2, 'driver', $3, $2)`,
+			INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+			VALUES ($1, $2, 'driver', $3, $2, true)`,
 			orderID, uid,
-			"اعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
+			// **«أعتذر» بهمزة المتكلّم** (٢٠٢٦-١٠-٠٢) — كانت «اعتذر» فتُقرأ أمراً للزبون.
+			"أعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."); err != nil {
 			noteFailed = true
 			_, rbErr := q.Exec(ctx, `ROLLBACK TO SAVEPOINT release_apology`)
 			return rbErr

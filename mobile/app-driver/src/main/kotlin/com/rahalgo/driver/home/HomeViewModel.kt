@@ -108,6 +108,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun syncService(me: DriverMe) {
         val app = getApplication<Application>()
+        // **ويُحفظ آخرُ ما عُرف** — فإن أُعيد تشغيلُ الهاتف عادت الخدمةُ أو طُلب
+        // فتحُ التطبيق (`BootResume`، ٢٠٢٦-١٠-٠٢).
+        com.rahalgo.driver.location.ShiftMemory.remember(
+            app, me.onShift, me.locationPingSec.takeIf { it > 0 } ?: 20L,
+        )
         if (me.onShift && LocationPermission.granted(app)) {
             LocationService.start(app, me.locationPingSec.takeIf { it > 0 } ?: 20L)
         } else {
@@ -288,7 +293,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 } catch (e: Exception) {
                     Log.w("RahalGo/logout", "تعذّر إنهاءُ الورديّة — يُكمَل الخروج", e)
                 }
-                LocationService.stop(app)
+                // **والخدمةُ تقف مع الخروج** — إشعارُ ورديّةٍ لحسابٍ خرج يبقى في
+                // الشريط وموقعُه يُرسَل، وهو ما لا يقبله أحد.
+                LocationService.stop(getApplication())
                 proceed()
             } finally {
                 loggingOut = false

@@ -84,7 +84,7 @@ func chatThread(t *testing.T, h *Harness, tok, orderID string) map[string]any {
 	return nil
 }
 
-const releaseApology = "اعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."
+const releaseApology = "أعتذر: تعذّر عليّ إكمالُ طلبك — سيتابعه سائقٌ آخر بعد قليل."
 
 // TestCHAT_TENURE_FreshChatPerDriver **حديثٌ جديدٌ للثاني، وولايةُ الأوّل
 // له وحدَه.**
