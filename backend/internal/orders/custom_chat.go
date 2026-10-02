@@ -89,19 +89,23 @@ func (s *Service) openCustomChat(ctx context.Context, orderID, customerID, drive
 	//
 	// **والشرطُ في الاستعلام لا في نداءين** — بين السؤال والكتابة تقع كتابةٌ
 	// أخرى، **فيُكتب النصُّ مرّتين** لسائقين أخذا الطلبَ في ثانيةٍ واحدة.
+	//
+	// **وفراغُ حديث هذا السائق لا حديثِ الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٢:
+	// حديثٌ جديدٌ لكلّ سائق) — **فالثاني يقرأ ما طُلب كما قرأه الأوّل.**
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body)
-		SELECT $1, $2, 'customer', $3
-		WHERE NOT EXISTS (SELECT 1 FROM order_messages WHERE order_id = $1)`,
-		orderID, customerID, request); err != nil {
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
+		SELECT $1, $2, 'customer', $3, $4
+		WHERE NOT EXISTS (SELECT 1 FROM order_messages
+		                  WHERE order_id = $1 AND driver_id = $4)`,
+		orderID, customerID, request, driverID); err != nil {
 		s.logger.Error("الطلب الخاصّ: تعذّرت كتابةُ نصّ الطلب في الحديث",
 			"order", orderID, "error", err)
 	}
 
 	// **والثانية: جوابُ هذا السائق — إن لم يكن قال شيئاً بعد.**
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body)
-		SELECT $1, $2, 'driver', $3
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
+		SELECT $1, $2, 'driver', $3, $2
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND sender_id = $2)`,
 		orderID, driverID, customGreeting); err != nil {
@@ -119,8 +123,8 @@ func (s *Service) openPlainChat(ctx context.Context, orderID, driverID string) {
 		return
 	}
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body)
-		SELECT $1, $2, 'driver', $3
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
+		SELECT $1, $2, 'driver', $3, $2
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND sender_id = $2)`,
 		orderID, driverID, plainGreeting); err != nil {
@@ -189,11 +193,14 @@ func (s *Service) stepLine(ctx context.Context, orderID, driverID, kind, to stri
 	if !ok || driverID == "" {
 		return
 	}
+	// **ومرّةً في ولاية كلّ سائق** (قرارُ المالك ٢٠٢٦-١٠-٠٢) — كان الشرطُ
+	// على الطلب كلِّه، **فالسائقُ الثاني يستلم ولا يقول «استلمتُ طلبك»**
+	// لأنّ الأوّلَ قالها في حديثٍ لم يعد يُقرأ.
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body)
-		SELECT $1, $2, 'driver', $3
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id)
+		SELECT $1, $2, 'driver', $3, $2
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
-		                  WHERE order_id = $1 AND body = $3)`,
+		                  WHERE order_id = $1 AND driver_id = $2 AND body = $3)`,
 		orderID, driverID, line); err != nil {
 		s.logger.Error("تعذّر كتبُ سطر الخطوة", "order", orderID, "error", err)
 	}

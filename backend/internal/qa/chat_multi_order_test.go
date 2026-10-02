@@ -313,6 +313,16 @@ func TestCHAT07_MessageProducesExactlyOnePush(t *testing.T) {
 	}
 }
 
+// chatHas **أفي الحديث سطرٌ بهذا النصّ؟**
+func chatHas(msgs []map[string]any, body string) bool {
+	for _, m := range msgs {
+		if m["body"] == body {
+			return true
+		}
+	}
+	return false
+}
+
 func hasNumber(s string) bool {
 	for _, r := range s {
 		if r >= '0' && r <= '9' {
@@ -327,7 +337,8 @@ func hasNumber(s string) bool {
 // TestCHAT10_FormerDriverGetsNoNewPush **ومن سُحب منه الطلبُ لا يُخطَر.**
 //
 // **ويبقى له أن يقرأ ما كتب** — **عقدٌ قائمٌ لا يُمَسّ** — **لكنّه لا
-// يتلقّى رسالةً جديدة.**
+// يتلقّى رسالةً جديدة، ولا يقرؤها** (قرارُ المالك ٢٠٢٦-١٠-٠٢: حديثٌ جديدٌ
+// لكلّ سائق). **كان يقرأ ما يقوله الزبونُ للثاني ويَسِمه مقروءاً.**
 func TestCHAT10_FormerDriverGetsNoNewPush(t *testing.T) {
 	hh := New(t)
 	fx := newChatFx(t, hh, false)
@@ -346,8 +357,23 @@ func TestCHAT10_FormerDriverGetsNoNewPush(t *testing.T) {
 		t.Fatalf("**لم يُخطَر السائقُ الحامل**: %d", got)
 	}
 	// **ويبقى الأوّلُ يقرأ ما كتب** — **حجّةً له.**
-	if r := hh.GET("/api/v1/orders/"+fx.OrdA+"/messages", fx.DrvA.Token); r.Code != http.StatusOK {
-		t.Fatalf("**مُنع من قراءة ما كتب**: %d", r.Code)
+	got := readChat(t, hh, fx.DrvA.Token, fx.OrdA)
+	if !chatHas(got, "أنا في الطريق") {
+		t.Fatalf("**مُنع من قراءة ما كتب**: %v", got)
+	}
+	// **ولا يقرأ ما قيل لمن بعده.**
+	if chatHas(got, "أين أنت؟") {
+		t.Fatalf("**قرأ السائقُ المسحوبُ منه ما قاله الزبونُ للثاني**: %v", got)
+	}
+	// **ولا يَسِمه مقروءاً** — «قُرئت» منه كذبٌ على الزبون.
+	var readAt *string
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT read_at::text FROM order_messages
+		 WHERE order_id = $1::uuid AND body = 'أين أنت؟'`, fx.OrdA).Scan(&readAt); err != nil {
+		t.Fatalf("قراءةُ الوسم: %v", err)
+	}
+	if readAt != nil {
+		t.Fatalf("**وسم السائقُ المسحوبُ منه رسالةَ الثاني مقروءة**: %s", *readAt)
 	}
 	// **ولا يكتب.**
 	if r := say(t, hh, fx.DrvA.Token, fx.OrdA, "ما زلتُ هنا"); r.Code == http.StatusCreated {

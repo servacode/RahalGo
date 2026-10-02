@@ -287,9 +287,12 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	if actorID != "" {
 		actor = actorID
 	}
+	// **وحاملُ الطلب ساعتَها يُكتب مع الحدث** (٠١٧٢) — **فيُعرف عند الإسناد
+	// أكان للطلب سائقٌ غيرُه قبلَه** (`driverChanged`)، **والفاعلُ لا يقوله**:
+	// يُسند المكتبُ فيكون الفاعلُ موظّفاً.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
-		VALUES ($1, $2, $3, $4, $5)`, orderID, from, to, actor, note); err != nil {
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+		VALUES ($1, $2, $3, $4, $5, $6)`, orderID, from, to, actor, note, driverID); err != nil {
 		return nil, err
 	}
 

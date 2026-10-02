@@ -33,8 +33,8 @@
     "setting_defs": 165,
     "behaviour_settings": 131,
     "order_fields": 86,
-    "test_files": 435,
-    "test_funcs": 1816
+    "test_files": 436,
+    "test_funcs": 1818
   },
   "flows": [
     {
@@ -11082,6 +11082,18 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCHAT_TENURE_CustomerToldDriverChanged",
+      "file": "internal/qa/chat_driver_tenure_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCHAT_TENURE_FreshChatPerDriver",
+      "file": "internal/qa/chat_driver_tenure_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCHAT01_TwoOrdersTwoConversations",

@@ -153,8 +153,23 @@ func TestCustomChat_NotWrittenTwice(t *testing.T) {
 			greetings++
 		}
 	}
-	if requests != 1 {
-		t.Fatalf("نصُّ الطلب مكتوبٌ %d مرّةً — **ونسختان تُقرآن طلبين فيشتري مرّتين**", requests)
+	// **ونسخةٌ في ولاية كلّ سائق** (قرارُ المالك ٢٠٢٦-١٠-٠٢: حديثٌ جديدٌ لكلّ
+	// سائق) — **فالثاني يقرأ ما طُلب كما قرأه الأوّل، ولا يرى نسخةَ الأوّل.**
+	// والخطرُ الأصليُّ (نسختان تُقرآن طلبين) **يُقاس في الولاية الواحدة.**
+	if requests != 2 {
+		t.Fatalf("نصُّ الطلب مكتوبٌ %d مرّةً — والمنتظَر نسخةٌ لكلّ سائق", requests)
+	}
+	for _, d := range []string{driverA, driverB} {
+		var n int
+		if err := pool.QueryRow(ctx, `
+			SELECT count(*) FROM order_messages
+			 WHERE order_id = $1 AND driver_id = $2 AND body = $3`,
+			order, d, chatRequest).Scan(&n); err != nil {
+			t.Fatalf("عدّ: %v", err)
+		}
+		if n != 1 {
+			t.Fatalf("نصُّ الطلب في ولاية سائقٍ %d مرّةً — **ونسختان تُقرآن طلبين فيشتري مرّتين**", n)
+		}
 	}
 	// **والثاني يُحيّي** — الزبونُ يعرف أنّ الطلبَ صار في يدٍ أخرى.
 	if greetings != 2 {
