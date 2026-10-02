@@ -221,7 +221,7 @@ internal fun TripPanel(state: TripState) {
                     // **والمدّة من المحرّك إن وُجدت** — محسوبةً بسرعات
                     // الشوارع نفسِها لا بسرعةٍ واحدةٍ في الإعدادات.
                     val minutes = if (state.routeSec >= 0) {
-                        minutesShort((state.routeSec / 60).toLong().coerceAtLeast(1))
+                        minutesShort(kotlin.math.ceil(state.routeSec / 60).toLong().coerceAtLeast(1))
                     } else {
                         eta(meters, state.avgSpeedKmh).substringAfter("~")
                     }

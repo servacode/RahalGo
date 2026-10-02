@@ -438,6 +438,29 @@ class NavigationSession(
         }
     }
 
+    /**
+     * **تكملُ الرحلةُ التجريبيّةُ على الطريق الجديد** — بلا تصفير المحرّك.
+     *
+     * (بلاغُ المالك ٢٠٢٦-١٠-٠٢: «اخترتُ الطريقَ الثاني وظلّ يمشي على الافتراضيّ».)
+     * **كانت القراءاتُ تُبنى مرّةً على الطريق الأوّل** — فاختيارُ بديلٍ أو إعادةُ حسابٍ
+     * يبدّلان الطريقَ والمحاكى يمضي على القديم. **فتُبنى من موضعه الآن على الجديد.**
+     */
+    fun retargetReplay(
+        fixes: List<NavFix>,
+        scope: kotlinx.coroutines.CoroutineScope,
+        stepMs: Long = 1000L,
+    ) {
+        if (!replaying || fixes.isEmpty()) return
+        replayJob?.cancel()
+        replayJob = scope.launch {
+            for (f in fixes) {
+                consume(f)
+                kotlinx.coroutines.delay(stepMs)
+            }
+            replaying = false
+        }
+    }
+
     fun stopReplay() {
         replayJob?.cancel()
         replayJob = null

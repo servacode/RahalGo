@@ -65,11 +65,19 @@ func (v *Valhalla) RouteSet(ctx context.Context, from, to Point) ([]*Route, erro
 //
 // `service_penalty: 0` و`service_factor: 1` — **الطريقُ الخدميُّ طريقٌ
 // عاديٌّ للموتور**، وعليها أكثرُ العناوين داخلَ الأحياء.
+//
+// **وقرارُ المالك ٢٠٢٦-١٠-٠٢**: «لا شارعَ باتّجاهٍ واحدٍ للموتور في سوريا» ⇒
+// `ignore_oneways`. **والحاراتُ مفضَّلةٌ والرئيسيّةُ مخفَّفة** — قِيس على ٥٠ رحلةً
+// عشوائيّةً وسطَ الرقّة مقابلَ الإعداد السابق: **المسافةُ −٧٫١٪ والوقتُ −٦٫٩٪**،
+// أطولُ في رحلتين فقط، وأسوأُ وقتٍ ×١٫١٠. (`أقصرُ مسموح` كان −١٣٫٦٪ مسافةً لكنّه
+// أبطأُ +٣٫٩٪، فلم يُعتمد.)
 var motorScooterCosting = map[string]any{
 	"top_speed":          50,
-	"use_primary":        0.5,
-	"use_living_streets": 0.6,
+	"use_primary":        0.2,
+	"use_living_streets": 1.0,
 	"use_tracks":         0.5,
+	"use_distance":       0.5,
+	"ignore_oneways":     true,
 	"service_penalty":    0,
 	"service_factor":     1.0,
 }

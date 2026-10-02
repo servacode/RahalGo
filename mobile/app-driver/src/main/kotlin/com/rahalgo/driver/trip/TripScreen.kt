@@ -137,6 +137,7 @@ fun TripScreen(
     onFollow: (Boolean) -> Unit = {},
     /** **الرحلةُ التجريبيّة** — وقائمةٌ فارغةٌ تعني «أوقفها». */
     onReplay: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
+    onReplayRetarget: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
     /**
      * **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «تأكّد من زرّ
      * الصوت بحيث يستجيب بشكلٍ فوريّ».)
@@ -412,6 +413,7 @@ fun TripScreen(
         progressM = progressM,
         ageMs = 0L,
         healthy = navHealthy,
+        showable = com.rahalgo.navigation.RouteChoiceHealth.showable(navSession.nav),
     )
 
     /**
@@ -605,6 +607,10 @@ fun TripScreen(
             // **وما تُرسمه الملاحةُ حين تعمل** — وفارغٌ يعني «الخريطةُ
             // كما كانت حرفاً بحرف».
             nav = navSession.render,
+            // **والبوصلةُ للواقف والبطيء** — ولا في الرحلة التجريبيّة: الجهازُ لا يتحرّك فيها.
+            compass = com.rahalgo.navigation.rememberCompassHeading(
+                enabled = navSession.render != null && !navSession.replaying,
+            ),
             // **البدائلُ تُرسم ولا يُلاحَ عليها** — البند ٢٨ من ٧.
             alternatives = choiceUi.choicesOrNull?.alternatives.orEmpty().map {
                 com.rahalgo.navigation.AltRouteLayer.Drawable(it.routeId, it.route, it.engineDurationS)
@@ -679,6 +685,32 @@ fun TripScreen(
         // مصنوعةٌ على خطّ الطريق نفسِه بسرعة موتور (٨٫٣ م/ث) تدخل مجرى
         // الملاحة الحقيقيّ** — فيمشي السهمُ وتلحقه الكاميرا وينطق الصوتُ كما
         // لو كان يقود. **والإصدارُ لا يرى الزرّ** (`ReplayLabIsolationTest`).
+        // **والرحلةُ التجريبيّةُ تتبع الطريقَ إذا تبدّل** — بديلٌ اختير أو إعادةُ حساب
+        // (بلاغُ المالك ٢٠٢٦-١٠-٠٢). تكمل من أقرب نقطةٍ على الجديد إلى موضعها الآن.
+        val activeGeometry = navSession.route?.geometry
+        LaunchedEffect(navSession.generation) {
+            val g = activeGeometry ?: return@LaunchedEffect
+            val hereLat = navSession.nav?.lat
+            val hereLng = navSession.nav?.lng
+            if (!navSession.replaying || g.size < 2 || hereLat == null || hereLng == null) {
+                return@LaunchedEffect
+            }
+            var best = 0
+            var bestD = Double.MAX_VALUE
+            for (i in g.indices) {
+                val d = com.rahalgo.navigation.GpsQuality.metersBetween(hereLat, hereLng, g[i].lat, g[i].lng)
+                if (d < bestD) {
+                    bestD = d
+                    best = i
+                }
+            }
+            val rest = g.subList(best, g.size)
+            if (rest.size >= 2) {
+                onReplayRetarget(
+                    com.rahalgo.navigation.ReplayDrive.fixes(rest, startMs = System.currentTimeMillis()),
+                )
+            }
+        }
         val replayRoute = navSession.route?.geometry
             ?: state.navRoute?.geometry
             ?: state.routeLine.map { com.rahalgo.navigation.GeoPoint(it.latitude, it.longitude) }
@@ -1291,20 +1323,8 @@ private fun TripCard(
             Text(state.error, color = Rahal.colors.accent)
         }
 
-        // **واقتراحٌ لا فعل** — الزرّ نفسه تحته، **وهو من يضغطه.**
-        if (state.nearDestination) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(
-                    if (order.status == "assigned") R.string.trip_near_pickup_auto
-                    else R.string.trip_near_dropoff_auto,
-                ),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        // **ولا عبارةَ «وصلت»** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «ما لها داعٍ». الزرُّ يظهر عند
+        // الوصول ويُسجَّل وحدَه بعد ٣٠ ثانية، وذاك يكفي.
 
             // ══════════════════════════════════════════════════════════════
             // **صفٌّ واحدٌ لا ثلاثة — والبطاقةُ تقصر**
@@ -1359,12 +1379,8 @@ private fun TripCard(
                         modifier = Modifier.weight(1f),
                     )
                 } else if (arriveLater) {
-                    Text(
-                        stringResource(R.string.trip_arrive_later),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
+                    // **فراغٌ لا عبارة** — طلبُ المالك: «العبارةُ ما لها داعٍ أصلاً».
+                    Spacer(Modifier.weight(1f))
                 } else if (next != null) {
                     SmallAction(
                         icon = R.drawable.ic_check_circle,

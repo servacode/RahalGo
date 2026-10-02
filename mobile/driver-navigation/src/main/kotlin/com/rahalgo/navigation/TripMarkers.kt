@@ -385,12 +385,18 @@ object Markers {
                 // الخريطة تدور الدرّاجةُ مع الطريق، **ومع الشاشة تبقى
                 // ثابتةً والخريطةُ تدور تحتها** — وهو عكسُ المراد في
                 // الملاحة.
-                PropertyFactory.iconRotate(
-                    org.maplibre.android.style.expressions.Expression.get(PROP_ROTATE),
-                ),
+                //
+                // **ودبّوسا المتجر والزبون واقفان مقابلَ الشاشة** (بلاغُ المالك
+                // ٢٠٢٦-١٠-٠٢: «الدبّوسُ مسطّحٌ بشع»): محاذاةُ الخريطة تُنيمه على
+                // الأرض حين تميل الكاميرا ٤٥° وتُديره معها. **والسهمُ وحدَه
+                // يلتصق بالطريق** — وهو في طبقته `trip-me-icon`.
                 PropertyFactory.iconRotationAlignment(
-                    org.maplibre.android.style.layers.Property.ICON_ROTATION_ALIGNMENT_MAP,
+                    org.maplibre.android.style.layers.Property.ICON_ROTATION_ALIGNMENT_VIEWPORT,
                 ),
+                PropertyFactory.iconPitchAlignment(
+                    org.maplibre.android.style.layers.Property.ICON_PITCH_ALIGNMENT_VIEWPORT,
+                ),
+                PropertyFactory.iconAnchor(org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM),
             ),
         )
     }

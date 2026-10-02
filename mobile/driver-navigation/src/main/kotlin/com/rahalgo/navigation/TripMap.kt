@@ -85,6 +85,11 @@ fun TripMap(
     recenter: Int = 0,
     nav: NavRender? = null,
     /**
+     * **البوصلةُ** (`rememberCompassHeading`) — تقود الدورانَ والسهمَ وهو واقفٌ أو بطيء.
+     * **وفارغةٌ في الرحلة التجريبيّة**: الجهازُ لا يتحرّك فيها.
+     */
+    compass: FloatArray? = null,
+    /**
      * **بدائلُ تُرسم ولا يُلاحَ عليها** — المرحلة ٧، البند ٢٨.
      *
      * **`render-only data`** — لا تدخل `NavigationSession` ولا
@@ -140,9 +145,84 @@ fun TripMap(
     val freePan = remember { booleanArrayOf(false) }
     val camBearing = remember { floatArrayOf(Float.NaN) }
     val zoomNow = remember { doubleArrayOf(Double.NaN) }
-    val camFrameMs = remember { longArrayOf(0L) }
+    val diagMs = remember { longArrayOf(0L) }
+    val libreRef = remember { arrayOfNulls<MapLibreMap>(1) }
+    val slowRef = remember { booleanArrayOf(false) }
+    val navOn = remember { booleanArrayOf(false) }
+    val compassRef = remember { arrayOfNulls<FloatArray>(1) }
+    compassRef[0] = compass
+    slowRef[0] = nav != null && nav.speedMps < COMPASS_BELOW_MPS
+    navOn[0] = nav?.targetLat != null
+
+    /** **أين يتّجه السهمُ والكاميرا** — البوصلةُ للواقف والبطيء، والسيرُ لمن يسير. */
+    fun aim(arrow: Float): Float {
+        val c = compassRef[0]?.get(0) ?: Float.NaN
+        return if (slowRef[0] && !c.isNaN()) c else arrow
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **حلقةُ الكاميرا — ثلاثون في الثانية، لا مع حركة السهم وحدَها**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (بلاغُ المالك ٢٠٢٦-١٠-٠٢: «الكاميرا لازم تفتل ليكون الطريقُ أمامي صحيحاً».)
+    //
+    // **كانت الكاميرا تدور داخلَ حركة السهم** — وتلك تنتهي بعد ثانيةٍ من كلّ قراءة. **فمنعطفٌ
+    // من تسعين درجةً بحدّ ٩٠°/ث لا يكتمل إن تأخّرت القراءة، فتبقى الخريطةُ مائلةً** حتّى
+    // القراءة التالية. **فصارت حلقةً مستقلّةً تلاحق الهدفَ حتّى تبلغه.**
+    LaunchedEffect(Unit) {
+        var lastMs = 0L
+        var lastCamKey = Double.NaN
+        while (true) {
+            // **مع إطار الشاشة لا بمؤقّتٍ مستقلّ** (بلاغُ المالك ٢٠٢٦-١٠-٠٢: «الشاشةُ صارت
+            // ثقيلة») — مؤقّتٌ بثلاثةٍ وثلاثين ملّيّاً لا يوافق إطارَ الشاشة ولا إطارَ السهم،
+            // فتتحرّك الأرضُ والسهمُ في لحظتين مختلفتين، وذاك هو التقطّع.
+            androidx.compose.runtime.withFrameNanos { }
+            val libre = libreRef[0] ?: continue
+            if (!navOn[0] || freePan[0] || shown[0].isNaN()) {
+                lastMs = 0L
+                continue
+            }
+            val nowMs = android.os.SystemClock.uptimeMillis()
+            val step = if (lastMs == 0L) 0.0 else ((nowMs - lastMs) / 1000.0).coerceIn(0.0, 0.25)
+            lastMs = nowMs
+            val target = aim(shownBearing[0])
+            // **التقريبُ يقترب ولا يقفز.**
+            zoomNow[0] = if (zoomNow[0].isNaN()) {
+                camZoom[0]
+            } else {
+                val maxStep = NavCamera.ZOOM_RATE_PER_S * step
+                zoomNow[0] + (camZoom[0] - zoomNow[0]).coerceIn(-maxStep, maxStep)
+            }
+            // **والدورانُ يلاحق حتّى يبلغ** — ورجفةٌ دونَ المنطقة الميّتة لا تُديره.
+            camBearing[0] = if (camBearing[0].isNaN()) {
+                target
+            } else {
+                val diff = ((target - camBearing[0] + 540f) % 360f) - 180f
+                if (kotlin.math.abs(diff) < BEARING_DEADBAND_DEG) {
+                    camBearing[0]
+                } else {
+                    val maxTurn = (BEARING_RATE_DEG_S * step).toFloat()
+                    (camBearing[0] + diff.coerceIn(-maxTurn, maxTurn) + 360f) % 360f
+                }
+            }
+            // **والسهمُ مع البوصلة وهو بطيء** — وإلّا رسمته حركتُه.
+            if (slowRef[0]) {
+                libre.style?.let { Markers.moveDriver(it, LatLng(shown[0], shown[1]), target) }
+            }
+            // **ولا تُحرَّك الكاميرا إن لم يتبدّل شيء** — الواقفُ لا يكلّف إطاراً.
+            val key = shown[0] + shown[1] * 1e3 + camBearing[0] * 1e-3 + zoomNow[0] * 1e-6
+            if (key != lastCamKey) {
+                lastCamKey = key
+                com.rahalgo.map.CameraPrimitives.snap(
+                    libre, shown[0], shown[1], zoomNow[0], camBearing[0], camTilt[0],
+                    navPaddingTop(view.height),
+                )
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         view.getMapAsync { libre ->
+            libreRef[0] = libre
             libre.addOnCameraMoveStartedListener { reason ->
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
                     freePan[0] = true
@@ -211,9 +291,13 @@ fun TripMap(
     // **والمفتاحُ `route` نفسُه** يغطّي: مسارٌ يُركَّب · ساقٌ تبدأ ·
     // إعادةُ حسابٍ تبدّل الهندسة · طلبٌ أو جلسةٌ تتبدّل. **وموضعٌ واحدٌ
     // للنسيان فلا يفترق اثنان.**
+    // **والأساسُ صفرٌ حين يكون الخطُّ المرسومُ هو طريقَ المحرّك نفسَه** (فحصُ الملاحة ١.٢:
+    // صار كذلك) — التقدّمُ يُقاس على الخطّ نفسِه من أوّله. **وكان الأساسُ أوّلَ تقدّمٍ
+    // يُرى**، فإن بدأ الرسمُ والسائقُ قد مشى منه شيئاً تأخّر القصُّ عن السهم بذلك القدر
+    // (بلاغُ المالك ٢٠٢٦-١٠-٠٢: «الخطُّ يختفي بطريقةٍ بشعة، يظلّ خلفَ السهم»).
     val progressBase = remember(route) {
         Markers.resetProgress()
-        floatArrayOf(Float.NaN)
+        floatArrayOf(if (nav != null) 0f else Float.NaN)
     }
     latest[0] = TripDraw(driver, pickup, dropoff, route, icons)
 
@@ -596,16 +680,28 @@ fun TripMap(
                             } else {
                                 (walked - progressBase[0]).coerceAtLeast(0f)
                             }
-                            Markers.setTraveled(
-                                it, RouteTrim.fraction(onLine.toDouble(), routeLengthM),
-                            )
+                            val traveledFrac = RouteTrim.fraction(onLine.toDouble(), routeLengthM)
+                            Markers.setTraveled(it, traveledFrac)
+                            // **قياسُ الكاميرا والقصّ مرّةً في الثانية** (بلاغُ المالك ٢٠٢٦-١٠-٠٢:
+                            // «الخريطةُ لا تدور ليكون الطريقُ أمامي» و«الخطُّ الأزرقُ لا يختفي»).
+                            if (nowMs - diagMs[0] >= 1_000L) {
+                                diagMs[0] = nowMs
+                                android.util.Log.i(
+                                    "RahalGo/cam",
+                                    "walked=${"%.0f".format(walked)} base=${progressBase[0]} " +
+                                        "len=${"%.0f".format(routeLengthM)} frac=${"%.3f".format(traveledFrac)} " +
+                                        "arrow=${"%.0f".format(bearing)} cam=${"%.0f".format(camBearing[0])} " +
+                                        "map=${"%.0f".format(libre.cameraPosition.bearing)} free=${freePan[0]} " +
+                                        "zoom=${"%.2f".format(zoomNow[0])}",
+                                )
+                            }
                             // **والخفيفةُ أوّلاً** — انظر `moveDriver`:
                             // **إعادةُ بناء خطِّ المسار ستّين مرّةً في
                             // الثانية** وهو لم يتبدّل منه رأسٌ واحد.
-                            if (!Markers.moveDriver(it, here, bearing)) {
+                            if (!Markers.moveDriver(it, here, aim(bearing))) {
                                 Markers.draw(
                                     context, it, here, pickup, dropoff, route,
-                                    icons, bearing,
+                                    icons, aim(bearing),
                                 )
                             }
                         }
@@ -625,34 +721,7 @@ fun TripMap(
                         // **والنقلُ الفوريُّ لا حركةَ فيه** — الحركةُ
                         // كلُّها في المُحرِّك الخطّيّ، فيتّفق ما تحت
                         // السهم مع السهم.
-                        if (freePan[0]) return@animate
-                        val dt = if (camFrameMs[0] == 0L) 0.0 else (nowMs - camFrameMs[0]) / 1000.0
-                        camFrameMs[0] = nowMs
-                        val step = dt.coerceIn(0.0, 0.25)
-                        // **التقريبُ يقترب ولا يقفز.**
-                        zoomNow[0] = if (zoomNow[0].isNaN()) {
-                            camZoom[0]
-                        } else {
-                            val gap = camZoom[0] - zoomNow[0]
-                            val maxStep = NavCamera.ZOOM_RATE_PER_S * step
-                            zoomNow[0] + gap.coerceIn(-maxStep, maxStep)
-                        }
-                        // **والدورانُ لا يتبع الرجفة.**
-                        camBearing[0] = if (camBearing[0].isNaN()) {
-                            bearing
-                        } else {
-                            val diff = ((bearing - camBearing[0] + 540f) % 360f) - 180f
-                            if (kotlin.math.abs(diff) < BEARING_DEADBAND_DEG && t < 1f) {
-                                camBearing[0]
-                            } else {
-                                val maxTurn = (BEARING_RATE_DEG_S * step).toFloat()
-                                (camBearing[0] + diff.coerceIn(-maxTurn, maxTurn) + 360f) % 360f
-                            }
-                        }
-                        com.rahalgo.map.CameraPrimitives.snap(
-                            libre, lat, lng, zoomNow[0], camBearing[0], camTilt[0],
-                            navPaddingTop(view.height),
-                        )
+                        // **والكاميرا في حلقتها** (أعلاه) — تقرأ `shown` الذي كُتب هنا.
                     }
                     val cam = nav.camera(com.rahalgo.map.CameraPrimitives.bearingOf(libre))
                     camZoom[0] = cam.zoom

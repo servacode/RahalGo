@@ -116,6 +116,8 @@ object RouteChoiceMachine {
          */
         val healthy: Boolean = true,
         val tuning: RouteChoiceExpiry.Tuning = RouteChoiceExpiry.Tuning(),
+        /** **أيُرسم؟** — `RouteChoiceHealth.showable`؛ وافتراضُه حكمُ الاعتماد نفسُه. */
+        val showable: Boolean = healthy,
     )
 
     /**
@@ -129,7 +131,7 @@ object RouteChoiceMachine {
         val c = choices ?: return RouteChoiceUi.Hidden
         val alive = aliveAlternatives(c, ctx)
         if (alive.isEmpty()) return RouteChoiceUi.Hidden
-        if (!ctx.healthy) return RouteChoiceUi.Hidden
+        if (!ctx.showable) return RouteChoiceUi.Hidden
         return RouteChoiceUi.Available(c.copy(alternatives = alive))
     }
 
@@ -289,7 +291,25 @@ object RouteChoiceHealth {
     fun of(state: NavState?): Boolean {
         val s = state ?: return true
         if (s.reroute != RerouteStatus.NONE) return false
+        // **والشكُّ وحدَه لا يُخفي البدائل** (طلبُ المالك ٢٠٢٦-١٠-٠٢: «البديلُ لا يختفي
+        // إلّا إذا تجاوزناه») — رجفةُ موقعٍ تُعلن شكّاً ثمّ تعود، **فيرمش الخطُّ البديل.**
+        // **والمؤكَّدُ يُخفي**: معاكسٌ أو خارجٌ أو يُعاد حسابُه — فالمسارُ نفسُه سيتبدّل.
         return s.situation == NavSituation.ON_ROUTE
+    }
+
+    /**
+     * **أيُرسم البديل؟** — أرخى من [of] الذي يحكم الاعتماد.
+     *
+     * (طلبُ المالك ٢٠٢٦-١٠-٠٢: «البديلُ لا يختفي إلّا إذا تجاوزناه».) **والشكُّ وحدَه
+     * لا يُخفيه** — رجفةُ موقعٍ تُعلن شكّاً ثمّ تعود فيرمش الخط. **والمؤكَّدُ يُخفي**:
+     * معاكسٌ أو خارجٌ أو يُعاد حسابُه، فالمسارُ نفسُه سيتبدّل. **والاعتمادُ يبقى على [of].**
+     */
+    fun showable(state: NavState?): Boolean {
+        val s = state ?: return true
+        if (s.reroute != RerouteStatus.NONE) return false
+        return s.situation == NavSituation.ON_ROUTE ||
+            s.situation == NavSituation.SUSPECTED_OFF_ROUTE ||
+            s.situation == NavSituation.SUSPECTED_WRONG_WAY
     }
 
     /**

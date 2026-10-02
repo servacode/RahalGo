@@ -214,7 +214,10 @@ object RouteChoiceExpiry {
         val moved = GpsQuality.metersBetween(
             choices.originLat, choices.originLng, originLat, originLng,
         )
-        if (moved >= tuning.originMovedM) return Reason.ORIGIN_MOVED
+        // **والابتعادُ عن موضع الجلب لا يُسقط البدائلَ ما دام موضعُه على المسار معروفاً**
+        // (طلبُ المالك ٢٠٢٦-١٠-٠٢: «البديلُ لا يختفي إلّا إذا تجاوزنا الطريق، مثل غوغل»)
+        // — **فالحكمُ هناك لنقطة الافتراق** أدناه. والابتعادُ حكمٌ لمن لا يُعرف تقدّمُه.
+        if (progressM < 0 && moved >= tuning.originMovedM) return Reason.ORIGIN_MOVED
 
         /**
          * **والمجموعةُ تموت حين يموت آخرُ بديلٍ فيها.**

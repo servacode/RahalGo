@@ -1002,6 +1002,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     onReplay = { fixes ->
                         if (fixes.isEmpty()) orders.stopReplay() else orders.startReplay(fixes)
                     },
+                    onReplayRetarget = orders::retargetReplay,
                     voice = orders.voice,
                     // **وحالُ الكتم من نموذج العرض** — تراقبه الواجهة
                     // فيتبدّل شكلُ الزرّ في الإطار التالي للضغطة.

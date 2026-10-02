@@ -203,10 +203,16 @@ class RouteChoicesTest {
 
     @Test
     fun `حركةُ الأصل ثلاثَ مئةٍ تُبطل`() {
-        // **٣٠٠م شمالاً ≈ 0.0027°.**
+        // **٣٠٠م شمالاً ≈ 0.0027°** — **وتُبطل حين لا يُعرف تقدّمُه وحدَها.**
         assertEquals(
             RouteChoiceExpiry.Reason.ORIGIN_MOVED,
-            expiry(lat = originLat + 0.0028),
+            expiry(lat = originLat + 0.0028, progressM = -1.0),
+        )
+        // **وعلى المسار قبل الفرع يبقى البديل** — طلبُ المالك ٢٠٢٦-١٠-٠٢.
+        assertEquals(
+            "ابتعد ٣٠٠م وهو على المسار قبل الفرع",
+            RouteChoiceExpiry.Reason.FRESH,
+            expiry(lat = originLat + 0.0028, progressM = 0.0),
         )
         assertEquals(
             "ومئتان لا تُبطل",

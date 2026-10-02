@@ -242,11 +242,6 @@
     <string name="offline_map_retry">حاول مرّة أخرى</string>
     <!-- B (٢٠٢٦-٠٩-٢٧): التحضيرُ تلقائيٌّ في الخلفيّة — نبضةٌ خفيفةٌ غيرُ حاجبة، لا بطاقةَ تنزيل. -->
     <string name="offline_map_preparing">تُحضَّر خريطةُ مدينتك…</string>
-    <string name="trip_arrive_later">يظهر زر الوصول عند وصولك</string>
-    <string name="trip_near_pickup_auto">وصلت المتجر — يُسجَّل تلقائياً بعد ٣٠ ثانية</string>
-    <string name="trip_near_dropoff_auto">وصلت الزبون — يُسجَّل تلقائياً بعد ٣٠ ثانية</string>
-    <string name="trip_near_pickup">يبدو أنك وصلت المتجر</string>
-    <string name="trip_near_dropoff">يبدو أنك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
         <string name="problem_title">ما هي المشكلة؟</string>
     <string name="problem_mine">المشكلة عندي</string>

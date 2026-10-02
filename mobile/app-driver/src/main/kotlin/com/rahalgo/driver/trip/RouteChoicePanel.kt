@@ -101,53 +101,10 @@ fun RouteChoicePanel(
     var expanded by rememberSaveable(choices.recommended.routeId) {
         mutableStateOf(false)
     }
-    val best = choices.alternatives.firstOrNull()
 
-    if (!expanded && preview == null && best != null) {
-        Row(
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = RahalSpaceTokens.md, vertical = RahalSpaceTokens.sm)
-                .clip(RahalShapeTokens.md)
-                .background(Rahal.colors.surface)
-                .clickable { onSelect(best.routeId); onConfirm() }
-                .padding(RahalSpaceTokens.sm),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(RahalSpaceTokens.sm),
-        ) {
-            // **والفرقُ يُترجَم قبل أن يُوصَل** — **وكتبتُه `joinToString`
-            // على كائناتٍ لا على نصوص**، فظهر `Delta(kind=LONGER,…)`
-            // خاماً على شاشة السائق. (رآه المالكُ ٢٠٢٦-٠٩-٠١.)
-            val parts = best.let { RouteMetricText.deltasOf(it) }.map { d ->
-                stringResource(
-                    when (d.kind) {
-                        RouteMetricText.Delta.Kind.SHORTER -> R.string.route_delta_shorter
-                        RouteMetricText.Delta.Kind.LONGER -> R.string.route_delta_longer
-                        RouteMetricText.Delta.Kind.FASTER -> R.string.route_delta_faster
-                        RouteMetricText.Delta.Kind.SLOWER -> R.string.route_delta_slower
-                    },
-                    d.magnitude,
-                )
-            }
-            Text(
-                text = stringResource(R.string.route_alternative) +
-                    if (parts.isEmpty()) "" else " · " + parts.joinToString(" · "),
-                color = Rahal.colors.ink,
-                maxLines = 1,
-                modifier = Modifier.weight(1f),
-            )
-            // **ولا كلمةَ «اعتماد»** — (قرارُ المالك ٢٠٢٦-٠٩-٠١: «ما
-            // بدّي عبارة اعتماد المسار»). **واللمسةُ على السطر كلِّه
-            // تبدّله** — كما في كلّ ملاحةٍ يعرفها.
-            Icon(
-                painter = painterResource(R.drawable.ic_check_circle),
-                contentDescription = null,
-                tint = Rahal.colors.brand,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        return
-    }
+    // **ولا شريطَ «بديل»** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «ما في داعٍ لكلمة بديل، الخطُّ الأزرقُ
+    // الفاتحُ واضح». كغوغل في الملاحة: الخطوطُ وفقاعاتُ الوقت على الخريطة، **ولمسُ الخطّ يبدّل.**
+    if (!expanded && preview == null) return
 
     Column(
         modifier = modifier

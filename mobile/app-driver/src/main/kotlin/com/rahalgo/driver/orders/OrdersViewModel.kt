@@ -792,6 +792,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         resumeRealGps()
     }
 
+    /** **الرحلةُ التجريبيّةُ تتبع الطريقَ الجديد** — انظر `NavigationSession.retargetReplay`. */
+    fun retargetReplay(fixes: List<com.rahalgo.navigation.NavFix>) {
+        navSession.retargetReplay(fixes, viewModelScope)
+    }
+
     private fun resumeRealGps() {
         if (following) navSession.start()
     }

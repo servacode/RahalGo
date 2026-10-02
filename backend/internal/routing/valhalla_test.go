@@ -67,13 +67,17 @@ func TestValhallaRequestCostsAMotorcycle(t *testing.T) {
 	}
 	opts := body["costing_options"].(map[string]any)["motor_scooter"].(map[string]any)
 	want := map[string]float64{
-		"top_speed": 50, "use_primary": 0.5, "use_living_streets": 0.6,
-		"use_tracks": 0.5, "service_penalty": 0, "service_factor": 1,
+		"top_speed": 50, "use_primary": 0.2, "use_living_streets": 1.0,
+		"use_tracks": 0.5, "use_distance": 0.5, "service_penalty": 0, "service_factor": 1,
 	}
 	for k, v := range want {
 		if opts[k] != v {
 			t.Errorf("%s = %v، والمطلوب %v", k, opts[k], v)
 		}
+	}
+	// **وعكسُ الاتّجاه الواحد مسموحٌ للموتور** — قرارُ المالك ٢٠٢٦-١٠-٠٢.
+	if opts["ignore_oneways"] != true {
+		t.Errorf("ignore_oneways = %v، والمطلوب true", opts["ignore_oneways"])
 	}
 	if body["directions_options"].(map[string]any)["units"] != "kilometers" {
 		t.Errorf("الوحدات: %v", body["directions_options"])

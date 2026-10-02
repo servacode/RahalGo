@@ -90,6 +90,24 @@ class RouteChoiceHealthTest {
     }
 
     @Test
+    fun `والشكُّ لا يُخفي البديلَ ويمنع اعتماده`() {
+        // **طلبُ المالك ٢٠٢٦-١٠-٠٢**: «البديلُ لا يختفي إلّا إذا تجاوزناه».
+        for (sit in listOf(NavSituation.SUSPECTED_OFF_ROUTE, NavSituation.SUSPECTED_WRONG_WAY)) {
+            val st = state(sit)
+            assertTrue("$sit أخفى البديل", RouteChoiceHealth.showable(st))
+            val c = choices(listOf(option("a", divergeM = 800.0)))
+            val ui = RouteChoiceMachine.present(
+                c, ctx(healthy = RouteChoiceHealth.of(st)).copy(showable = RouteChoiceHealth.showable(st)),
+            )
+            assertTrue("$sit: $ui", ui is RouteChoiceUi.Available)
+        }
+        // **والمؤكَّدُ يُخفي.**
+        for (sit in listOf(NavSituation.OFF_ROUTE, NavSituation.WRONG_WAY)) {
+            assertFalse("$sit أبقاه", RouteChoiceHealth.showable(state(sit)))
+        }
+    }
+
+    @Test
     fun `والخروجُ وإعادةُ الحساب يمنعان`() {
         assertFalse(RouteChoiceHealth.of(state(NavSituation.OFF_ROUTE)))
         assertFalse(
