@@ -85,7 +85,13 @@ suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome = kotlinx.c
     val mine: List<DriverOrder>
     val me: DriverMe
     try {
-        offers = feed.queue()
+        // **والموقوفُ الذي يُكمل طلبَه يُردّ عليه الطابور** (لا عملَ جديداً له — `XG39`)،
+        // **فيُقرأ الردُّ قائمةً فارغة** ولا تسقط الدورةُ كلُّها فتختفي رحلتُه.
+        offers = try {
+            feed.queue()
+        } catch (e: com.rahalgo.shared.net.ApiClient.ApiException) {
+            if (e.status == 403) emptyList() else throw e
+        }
         mine = feed.orders()
         me = feed.me()
     } catch (e: kotlinx.coroutines.CancellationException) {

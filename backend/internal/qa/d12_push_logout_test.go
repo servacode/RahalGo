@@ -458,9 +458,14 @@ func TestD12_ClientSendsDeviceTokenOnLogout(t *testing.T) {
 	if !strings.Contains(api, `"device_token" to deviceToken`) {
 		t.Error("**نداءُ الخروج لا يحمل رمزَ الجهاز** — **وذاك `D12`.**")
 	}
+	// **وخروجُ السائق صار بوّابةً تُسلّم إلى خروج `AuthViewModel`** (٢٠٢٦-١٠-٠٢: لا خروجَ
+	// وفي يده طلب) — فبابُ الرمز واحد، **ويُشترط أنّ البوّابةَ تنتهي إليه** لا أن تكرّره.
+	main := must("../../../mobile/app-driver/src/main/kotlin/com/rahalgo/driver/MainActivity.kt")
+	if !strings.Contains(main, "onLogout = vm::logout") || !strings.Contains(main, "home.logout(onLogout)") {
+		t.Error("**بوّابةُ خروج السائق لا تنتهي إلى خروج AuthViewModel** — فلا يُرسل رمزُ الجهاز")
+	}
 	for _, f := range []string{
 		"../../../mobile/ui/src/main/kotlin/com/rahalgo/ui/AuthViewModel.kt",
-		"../../../mobile/app-driver/src/main/kotlin/com/rahalgo/driver/home/HomeViewModel.kt",
 	} {
 		src := must(f)
 		if !strings.Contains(src, "Push.currentToken()") {

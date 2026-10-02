@@ -2,7 +2,6 @@ package qa
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 )
 
@@ -227,7 +226,6 @@ func TestXG22_T11_SuspendedDriverHasWhatTheTripNeeds(t *testing.T) {
 	}{
 		{"قائمةُ طلباته", h.GET("/api/v1/driver/orders", drv.Token).Code},
 		{"حالُه", h.GET("/api/v1/driver/me", drv.Token).Code},
-		{"الطابور (فارغاً)", h.GET("/api/v1/driver/queue", drv.Token).Code},
 		{"موضعُه", h.POST("/api/v1/driver/location", drv.Token,
 			map[string]any{"lat": 35.95, "lng": 39.01}).Code},
 		{"حديثُ طلبه", h.GET("/api/v1/orders/"+oid+"/messages", drv.Token).Code},
@@ -241,12 +239,10 @@ func TestXG22_T11_SuspendedDriverHasWhatTheTripNeeds(t *testing.T) {
 	if v, _ := me.JSON()["suspended"].(bool); !v {
 		t.Errorf("**لا يُقال له إنّه موقوف**: %s", me)
 	}
-	q := h.GET("/api/v1/driver/queue", drv.Token)
-	var rows struct {
-		Data []any `json:"data"`
-	}
-	if err := json.Unmarshal(q.Body, &rows); err != nil || len(rows.Data) != 0 {
-		t.Errorf("**عُرضت على المعلَّق عروض**: %s", q)
+	// **والطابورُ عملٌ جديدٌ فيبقى محجوباً** (`XG39 S4`: «جلسةُ الموقوف لا تصير إذناً عامّاً»)
+	// — والتطبيقُ يقرأ ردَّه قائمةً فارغة (`OrdersLoader`).
+	if q := h.GET("/api/v1/driver/queue", drv.Token); q.Code < 400 {
+		t.Errorf("**فُتح الطابورُ لمعلَّق** (%d)", q.Code)
 	}
 	// **والجديدُ ممنوعٌ كما كان** — ورديّةٌ وقبول.
 	if got := h.POST("/api/v1/driver/shift", drv.Token, map[string]any{"on": true}); got.Code < 400 {
