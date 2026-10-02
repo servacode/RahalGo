@@ -59,6 +59,18 @@ func (c *CorrelationContext) Usable() bool {
 // **جلبُ العقد — نداءٌ داخليٌّ لا يُرى من خارج**
 // ══════════════════════════════════════════════════════════════════════
 
+// Correlator **عقدُ المسار ومطابقةُ الأثر** — ما يملكه OSRM وحدَه.
+//
+// **والخادمُ يمسك الواجهةَ لا الصنف** (`TestSNAP_014`) — فيُستبدل في
+// الاختبار ولا يُربط بمحرّكٍ بعينه.
+type Correlator interface {
+	Enabled() bool
+	Nodes(ctx context.Context, from, to Point) ([]int64, error)
+	Match(ctx context.Context, trace []TracePoint) (*MatchResult, error)
+}
+
+var _ Correlator = (*Client)(nil)
+
 // Nodes **عقدُ المسار بين نقطتين** — بترتيب السير.
 //
 // **وترتيبُ عقدِ الطريق في OSM اعتباطيّ** (شأنُ من رسمه لا من

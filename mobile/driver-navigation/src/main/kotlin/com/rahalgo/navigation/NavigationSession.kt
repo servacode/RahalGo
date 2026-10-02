@@ -229,6 +229,9 @@ class NavigationSession(
      */
     val lastFixAtMs: Long get() = lastFixAt
 
+    /** **آخرُ قراءةٍ مقبولة** — أصلُ طلب الطريق، لا موقعُ الدوام القديم. */
+    val lastGoodFix: NavFix? get() = engineCore.lastAcceptedFix
+
     /** **مخطِّطُ الصوت** — يُحقَن فيه طرفُ الرحلة. */
     val voicePlanner: VoicePlanner? get() = engineCore.voice
 

@@ -213,7 +213,10 @@ android {
         // تحلّ محلَّ نسخة التصحيح ولا الإصدار، **وتوقيعُها مفتاحُ التصحيح.**
         create("staging") {
             buildConfigField("String", "API_BASE_URL", quoted("https://staging-api.rahalgo.com"))
-            buildConfigField("String", "MAPS_BASE_URL", quoted("https://maps.rahalgo.com"))
+            // **وخرائطُ التجهيز لا الإنتاج** — كما في نسخة التصحيح. (كانت هنا
+            // خرائطُ الإنتاج خطأً، ففهرسُها «سوريا كلّها» وحدَها والتطبيقُ يطلب
+            // الرقّة فيفشل التنزيل — قِيس على جهاز المالك ٢٠٢٦-١٠-٠١.)
+            buildConfigField("String", "MAPS_BASE_URL", quoted("https://staging-api.rahalgo.com/maps"))
             applicationIdSuffix = ".staging"
             isMinifyEnabled = true
             proguardFiles(

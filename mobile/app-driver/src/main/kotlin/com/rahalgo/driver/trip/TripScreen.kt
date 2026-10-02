@@ -536,7 +536,9 @@ fun TripScreen(
         // **ويُعاد الفحصُ بعدها**: `arrived` يتبدّل مع كلّ قراءة،
         // **فمن ابتعد أثناء المكث أُلغيت الدورةُ** — لأنّ
         // `LaunchedEffect` يُقتل عند تبدّل مفتاحه.
-        kotlinx.coroutines.delay(6_000)
+        // **وصارت ثلاثين** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «بعد ٣٠ ثانيةً يتحوّل كأنّه
+        // ضُغط»، **وهي مدّةُ `OrdersViewModel.ARRIVAL_HOLD_MS` نفسُها** فلا مدّتان.
+        kotlinx.coroutines.delay(30_000L)
         if (navSession.nav?.arrivedAtTarget != true) return@LaunchedEffect
         autoFired.value = to
         android.util.Log.i("RahalGo/nav", "وصولٌ تلقائيّ → $to")
@@ -594,7 +596,10 @@ fun TripScreen(
             // الشاشة تجعلان الكاميرا تتّسع لتضمّهما، **فيصغر الشارعُ
             // الذي يسير فيه الآن** ليُرى مكانٌ لا شأنَ له به بعد.
             dropoff = if (state.step >= TripStep.PICKED_UP) state.dropoff else null,
-            route = state.routeLine,
+            // **والخطُّ المرسومُ هو الطريقُ الذي يُرشد عليه المحرّك** (فحصُ الملاحة
+            // ١.٢): كان من نموذج الطلبات فبقي القديمُ بعد إعادة الحساب، **وقُصَّ
+            // بتقدّمٍ يُقاس على طريقٍ آخر.**
+            route = navSession.route?.geometry?.map { LatLng(it.lat, it.lng) } ?: state.routeLine,
             follow = follow,
             recenter = recenter,
             // **وما تُرسمه الملاحةُ حين تعمل** — وفارغٌ يعني «الخريطةُ
@@ -602,7 +607,7 @@ fun TripScreen(
             nav = navSession.render,
             // **البدائلُ تُرسم ولا يُلاحَ عليها** — البند ٢٨ من ٧.
             alternatives = choiceUi.choicesOrNull?.alternatives.orEmpty().map {
-                com.rahalgo.navigation.AltRouteLayer.Drawable(it.routeId, it.route)
+                com.rahalgo.navigation.AltRouteLayer.Drawable(it.routeId, it.route, it.engineDurationS)
             },
             previewRouteId = choiceUi.previewRouteId,
             // **ولمسُ الخطّ يُعاين ولا يعتمد** — البندان ٢٤ و٢٧.
@@ -665,6 +670,32 @@ fun TripScreen(
         // **ولا لوحَ طورٍ في النافذة الطافية** — (بلاغُ المالك
         // ٢٠٢٦-٠٨-٢٤: «شريط تبع الرحلة لا يلزم أيضاً بالنافذة
         // المصغّرة»). **الخريطةُ وحدَها تقول له طريقَه.**
+        // ══════════════════════════════════════════════════════════════
+        // **«رحلة تجريبيّة» على شاشة الرحلة نفسِها — نسخُ التجربة وحدَها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-١٠-٠٢: «الرحلة التجريبيّة تكون بنفس شاشة الخريطة،
+        //  مو نخترع شاشة وأسلوب جديد» — كما في directory-platform.) **نقاطٌ
+        // مصنوعةٌ على خطّ الطريق نفسِه بسرعة موتور (٨٫٣ م/ث) تدخل مجرى
+        // الملاحة الحقيقيّ** — فيمشي السهمُ وتلحقه الكاميرا وينطق الصوتُ كما
+        // لو كان يقود. **والإصدارُ لا يرى الزرّ** (`ReplayLabIsolationTest`).
+        val replayRoute = navSession.route?.geometry
+            ?: state.navRoute?.geometry
+            ?: state.routeLine.map { com.rahalgo.navigation.GeoPoint(it.latitude, it.longitude) }
+        if (!inPip && com.rahalgo.driver.BuildConfig.BUILD_TYPE != "release") {
+            if (navSession.replaying) {
+                Text(
+                    text = stringResource(R.string.replay_banner),
+                    color = Rahal.colors.canvas,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
+                        .background(Rahal.colors.ink.copy(alpha = 0.85f), Rahal.shape.sm)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
+        }
         if (!inPip) Column(
             Modifier.align(Alignment.TopCenter).statusBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -706,7 +737,24 @@ fun TripScreen(
             // **ومنطقُ السرعة الداخليُّ باقٍ ولم يُمسّ**: `SpeedFilter`
             // و`NavigationSession.currentSpeedKmh` و`LastPoint.speedMps`
             // **تُقرأ في توقيت المناورة والصوت والتقدّم وإعادة الحساب.**
-            TripPanel(state)
+            // **والمسافةُ والوقتُ من التقدّم الحيّ** (فحصُ الملاحة ٤.٢) — كانا رقمَي
+            // الخادم الثابتين: «١٫٣ كم · ١ د» من القبول إلى الوصول.
+            val live = navSession.nav
+            // **والوقتُ يتبع سرعتَه ولا يقفز** (`EtaSmoother`).
+            val eta = androidx.compose.runtime.remember(order.id) { com.rahalgo.navigation.EtaSmoother() }
+            TripPanel(
+                if (live != null && live.remainingM >= 0) {
+                    state.copy(
+                        routeM = live.remainingM,
+                        routeSec = eta.update(
+                            live.remainingM, live.remainingSec, live.speedMps,
+                            navSession.route?.totalM ?: -1.0,
+                        ),
+                    )
+                } else {
+                    state
+                },
+            )
 
             // ══════════════════════════════════════════════════════════
             // **ومن يحمل أكثر من طلب يرى محطّاته**
@@ -807,6 +855,25 @@ fun TripScreen(
                         }
                         .padding(12.dp),
                 )
+            }
+            // **«رحلة تجريبيّة» فوق زرّ تحديد الموقع** (طلبُ المالك ٢٠٢٦-١٠-٠٢: «مشان
+            // يكون مبيّن») — في نسخ التجربة وحدَها.
+            if (com.rahalgo.driver.BuildConfig.BUILD_TYPE != "release" &&
+                (replayRoute.size >= 2 || navSession.replaying)
+            ) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    ReplayButton(
+                        running = navSession.replaying,
+                        onStart = {
+                            onReplay(
+                                com.rahalgo.navigation.ReplayDrive.fixes(
+                                    replayRoute, startMs = System.currentTimeMillis(),
+                                ),
+                            )
+                        },
+                        onStop = { onReplay(emptyList()) },
+                    )
+                }
             }
             MapButtons(
                 onRecenter = {
@@ -1229,8 +1296,8 @@ private fun TripCard(
             Spacer(Modifier.height(10.dp))
             Text(
                 text = stringResource(
-                    if (order.status == "assigned") R.string.trip_near_pickup
-                    else R.string.trip_near_dropoff,
+                    if (order.status == "assigned") R.string.trip_near_pickup_auto
+                    else R.string.trip_near_dropoff_auto,
                 ),
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
@@ -1267,6 +1334,12 @@ private fun TripCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val next = nextAction(order.status, order.kind == "custom")
+                // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
+                // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
+                // **ومن لا يُعرف موضعُه لا يُحبس عن الزرّ.**
+                val arriveLater = next != null && order.kind != "custom" &&
+                    next.status in setOf("at_pickup", "at_dropoff") &&
+                    state.locationKnown && !state.nearDestination
                 // ══════════════════════════════════════════════════════════
                 // **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ** (Batch 2c)
                 // ══════════════════════════════════════════════════════════
@@ -1281,6 +1354,13 @@ private fun TripCard(
                 if (awaitingConfirm) {
                     Text(
                         stringResource(R.string.drv_awaiting_customer),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else if (arriveLater) {
+                    Text(
+                        stringResource(R.string.trip_arrive_later),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),

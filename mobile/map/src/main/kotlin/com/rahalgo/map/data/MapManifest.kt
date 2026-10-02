@@ -127,6 +127,14 @@ data class MapRegion(
     val name: String,
     val dataVersion: String,
     val artifact: MapArtifact,
+    /**
+     * **حدودُ المحافظة الحقيقيّة — حلقاتُ `[طول، عرض]`** (اختياريّة).
+     *
+     * (قِيس ٢٠٢٦-١٠-٠١: بالمستطيل وحدَه اختار مركزُ حلب حزمةَ إدلب،
+     * والسويداءُ حزمةَ درعا — **المستطيلاتُ تتداخل والأصغرُ يغلب.**)
+     * **فيُختار بالحدود أوّلاً**، والمستطيلُ احتياطٌ لما خرج عنها.
+     */
+    val polygon: List<List<List<Double>>> = emptyList(),
 ) {
     val bbox: List<Double> get() = artifact.bbox
 
@@ -147,7 +155,26 @@ data class MapRegion(
             val dataVersion =
                 MapPaths.requireSafeId(o.optString("dataVersion", ""), "نسخةِ بيانات $id")
             val name = o.optString("name", "").ifBlank { id }
-            return MapRegion(id, name, dataVersion, MapArtifact.fromJson(o, "region $id"))
+            return MapRegion(id, name, dataVersion, MapArtifact.fromJson(o, "region $id"), polygonOf(o))
+        }
+
+        /** **الحدودُ إن وُجدت** — وما شذّ منها يُترك ولا يُسقط الفهرس. */
+        private fun polygonOf(o: JSONObject): List<List<List<Double>>> {
+            val arr = o.optJSONArray("polygon") ?: return emptyList()
+            val rings = ArrayList<List<List<Double>>>(arr.length())
+            for (i in 0 until arr.length()) {
+                val ring = arr.optJSONArray(i) ?: continue
+                val pts = ArrayList<List<Double>>(ring.length())
+                for (j in 0 until ring.length()) {
+                    val p = ring.optJSONArray(j) ?: continue
+                    if (p.length() < 2) continue
+                    val lng = p.optDouble(0); val lat = p.optDouble(1)
+                    if (lng.isNaN() || lat.isNaN()) continue
+                    pts.add(listOf(lng, lat))
+                }
+                if (pts.size >= 3) rings.add(pts)
+            }
+            return rings
         }
     }
 }

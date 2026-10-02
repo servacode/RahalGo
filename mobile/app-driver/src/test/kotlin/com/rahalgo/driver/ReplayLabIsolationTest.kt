@@ -84,10 +84,15 @@ class ReplayLabIsolationTest {
                 home.contains("com.rahalgo.driver.debug.REPLAY_LAB"),
         )
         // **وشاشةُ الرحلة الحقيقيّة: لا زرَّ «رحلة تجريبيّة» (`ReplayButton`).**
+        // **وزرُّ «رحلة تجريبيّة» على شاشة الرحلة مسموحٌ في نسخ التجربة وحدَها**
+        // (قرارُ المالك ٢٠٢٦-١٠-٠٢: «بنفس شاشة الخريطة» كما في directory-platform)
+        // — **ولا يُكتب إلّا خلفَ حارسِ نوعِ البناء، فالإصدارُ لا يراه.**
         val trip = File(mainKotlin, "trip/TripScreen.kt").readText()
-        assertFalse(
-            "**شاشةُ الرحلة تحوي زرَّ إعادةٍ** — يبلغه السائقُ على رحلةٍ حقيقيّة",
-            trip.contains("ReplayButton("),
-        )
+        if (trip.contains("ReplayButton(")) {
+            assertTrue(
+                "**زرُّ الإعادة على شاشة الرحلة بلا حارسِ الإصدار** — يبلغه سائقٌ حقيقيّ",
+                trip.contains("BuildConfig.BUILD_TYPE != \"release\""),
+            )
+        }
     }
 }

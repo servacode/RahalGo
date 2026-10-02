@@ -192,7 +192,9 @@
     <string name="trip_s_delivered">سلمت</string>
     <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
     <string name="trip_prepaid_note">مدفوع مسبقا — لا تقبض شيئا</string>
-    <string name="leg_picked">استلمت الطلب</string>
+    <string name="leg_to_store">في الطريق للمتجر</string>
+    <string name="leg_to_customer">في الطريق للزبون</string>
+    <string name="leg_picked">استلمت</string>
     <!-- **ومراحلُ الطلب الخاصّ** — توثيقٌ ثمّ شراء، لا استلامٌ من متجر. -->
     <string name="leg_agree">الاتفاق</string>
     <string name="leg_buy">الشراء</string>
@@ -240,6 +242,9 @@
     <string name="offline_map_retry">حاول مرّة أخرى</string>
     <!-- B (٢٠٢٦-٠٩-٢٧): التحضيرُ تلقائيٌّ في الخلفيّة — نبضةٌ خفيفةٌ غيرُ حاجبة، لا بطاقةَ تنزيل. -->
     <string name="offline_map_preparing">تُحضَّر خريطةُ مدينتك…</string>
+    <string name="trip_arrive_later">يظهر زر الوصول عند وصولك</string>
+    <string name="trip_near_pickup_auto">وصلت المتجر — يُسجَّل تلقائياً بعد ٣٠ ثانية</string>
+    <string name="trip_near_dropoff_auto">وصلت الزبون — يُسجَّل تلقائياً بعد ٣٠ ثانية</string>
     <string name="trip_near_pickup">يبدو أنك وصلت المتجر</string>
     <string name="trip_near_dropoff">يبدو أنك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
@@ -442,6 +447,7 @@
     <string name="map_delete_failed">تعذّر حذفُ بعض الملفّات</string>
     <string name="replay_stop">أوقف الرحلة التجريبيّة</string>
     <string name="replay_start">رحلة تجريبيّة</string>
+    <string name="replay_banner">رحلة تجريبيّة — الموقع مُحاكى ولست تتحرّك فعلاً</string>
     <!-- مداخلُ التطوير/QA — بناءُ التطوير وحدَه -->
     <string name="replay_trip_open">رحلة تجريبيّة</string>
     <string name="replay_lab_open">مختبر الملاحة (تشخيص)</string>

@@ -198,6 +198,8 @@ data class TripState(
     val avgSpeedKmh: Long = 0,
     /** **هل هو على بُعد خطوات من وجهته؟** — يُقترح ولا يُنفَّذ. */
     val nearDestination: Boolean = false,
+    /** **أيُعرف موضعُه أصلاً؟** — وإلّا لا يُخفى عنه زرُّ الوصول. */
+    val locationKnown: Boolean = true,
     /** أتلزم صورة تسليم؟ — **يقرّره المحرّك** (`drivers.require_delivery_photo`). */
     val requirePhoto: Boolean = false,
     /** أنافذة الاتّفاق مفتوحة؟ — **للطلب الخاصّ وحدَه.** */

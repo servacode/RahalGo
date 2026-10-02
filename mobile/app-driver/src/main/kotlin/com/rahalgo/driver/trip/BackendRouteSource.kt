@@ -32,6 +32,8 @@ class BackendRouteSource(
     private val scope: CoroutineScope,
     /** **رقمُ الطلب الآن** — دالّةٌ لا قيمة: **الطلبُ يتبدّل والباب واحد.** */
     private val orderId: () -> String?,
+    /** **اتّجاهُ السائق الآن** — وفارغٌ إن كان واقفاً أو لا يُعرف. */
+    private val heading: () -> Float? = { null },
 ) : RouteSource {
 
     override fun request(lat: Double, lng: Double, seq: Long, done: (RouteReply) -> Unit) {
@@ -40,12 +42,14 @@ class BackendRouteSource(
             done(RouteReply.Failed(RerouteFailure.NO_ROUTE))
             return
         }
+        // **يُقرأ على خيط النداء** — حالُ الملاحة حالةُ واجهة.
+        val h = heading()
         scope.launch(Dispatchers.IO) {
             // **ومهلةٌ صريحةٌ لا انتظارٌ مفتوح** — **وطلبٌ لا يعود
             // يُبقي المحرّكَ في `REQUESTING` أبداً**، فلا تُعاد محاولةٌ
             // ولا يُعرض إخفاق.
             val reply = withTimeoutOrNull(TIMEOUT_MS) {
-                runCatching { backend.driver.route(id, lat, lng) }.fold(
+                runCatching { backend.driver.route(id, lat, lng, heading = h) }.fold(
                     onSuccess = { r ->
                         val nav = NavRouteMapper.toNavRoute(r)
                         when {
@@ -61,7 +65,10 @@ class BackendRouteSource(
                     onFailure = { RouteReply.Failed(RerouteFailure.NETWORK) },
                 )
             } ?: RouteReply.Failed(RerouteFailure.TIMEOUT)
-            done(reply)
+            // **والردُّ يعود إلى الخيط الرئيسيّ** (فحصُ الملاحة ٢٠٢٦-١٠-٠٢، ١.٦): المحرّكُ
+            // تُغذّيه القراءاتُ على الخيط الرئيسيّ — **وتركيبُ طريقٍ من خيط الإدخال كان
+            // يعدّل حالتَه في اللحظة نفسِها بلا تزامن.**
+            kotlinx.coroutines.withContext(Dispatchers.Main) { done(reply) }
         }
     }
 

@@ -25,6 +25,7 @@ import com.rahalgo.shared.net.ApiClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -71,8 +72,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // وسماحاً مسقوفاً للدقّة** — انظر `BusinessArrival`.
         const val ARRIVAL_M = com.rahalgo.navigation.BusinessArrival.RADIUS_M.toFloat()
 
+        /**
+         * **نصفُ قطر «وصلت» للزرّ** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «زرُّ وصلت المتجر لا يظهر
+         * إلّا عند الوصول فعلاً، وبعد ٣٠ ثانيةً يتحوّل وحدَه كأنّه ضُغط».
+         *
+         * **وخمسون لا خمسةَ عشر**: دقّةُ الهاتف في السوق ١٠–٣٠م، **وزرٌّ لا يظهر
+         * أمام باب المتجر أسوأُ من زرٍّ يظهر قبله ببيتين.**
+         */
+        const val ARRIVAL_SHOW_M = 50f
+
         /** **كم بين نظرةٍ وأخرى** — والوقوفُ يُقاس بالثواني لا بالنبضات. */
-        const val ARRIVAL_TICK_MS = 5_000L
+        const val ARRIVAL_TICK_MS = 2_000L
 
         /** **كم يقف حتّى يُعدّ واصلا** — (قرار المالك: بين ٣٠ و٦٠ ثانية). */
         const val ARRIVAL_HOLD_MS = 30_000L
@@ -224,8 +234,22 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // **ويُطلب معرّفُ المسار ضمنَ النداء القائم** — المرحلة ٨ب،
         // البند ٣: لا بنداءٍ ثانٍ.
         override suspend fun route(orderId: String): com.rahalgo.shared.model.OrderRoute {
+            // **ولا يُطلب طريقٌ نملكه** (قِيس: ثلاثةُ طلباتٍ في ثانيةٍ عند القبول —
+            // `NAVIGATION-BASELINE.md` ١). **والقائمةُ لا تستبدل طريقَ الساق نفسِها**
+            // (`keepRoute`)، فطلبُه كلَّ تحديثٍ شبكةٌ تُرمى.
+            val have = route
+            val leg = routeLeg
+            if (have != null && leg != null && leg.startsWith("$orderId:") && leg == legOf(state.mine)) {
+                return have
+            }
             val t0 = android.os.SystemClock.elapsedRealtime()
-            val r = backend.driver.route(orderId, correlation = true)
+            // **والأصلُ موضعُ السائق لا ما في الخادم** (فحصُ الملاحة ١.٣ و١.٥): بلاه
+            // يأخذ الخادمُ `last_location` القديم قبل الاستلام، **ويبدأ من المتجر بعده.**
+            val here = routeOrigin()
+            val r = backend.driver.route(
+                orderId, lat = here?.first, lng = here?.second, correlation = true,
+                heading = routeHeading(),
+            )
             Log.i(
                 "RahalGo/perf",
                 "route reply ${android.os.SystemClock.elapsedRealtime() - t0}ms available=${r.available}",
@@ -306,7 +330,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     "on_the_way" -> "at_dropoff"
                     else -> null
                 }
-                if (order == null || to == null || !near(LastPoint.value, order)) {
+                if (order == null || to == null || order.kind == "custom" ||
+                    near(LastPoint.value, order) != true
+                ) {
                     nearSince = 0L
                     continue
                 }
@@ -403,7 +429,79 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 error = "",
             )
         }
-        route = out.route
+        keepRoute(out.route, out.mine)
+        if (out.error == null) autoFollow(out.mine)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والطريقُ النشطُ لا يكتب فوقه تحديثٌ ولا يمسحه فشل** — فحصُ الملاحة ١.٣–١.٥
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان `route = out.route` بلا شرط**: كلُّ تحديثٍ للقائمة يأتي بطريقٍ محسوبٍ من موضعٍ
+    // آخر فيُصفّر التقدّمَ والكاشفات، **وكلُّ ردٍّ فاشلٍ يجعله فارغاً فيختفي الخطُّ والإرشاد.**
+    // **فالطريقُ يُستبدل حين تتبدّل الساقُ وحدَها** (طلبٌ آخر، أو من المتجر إلى الزبون)،
+    // **وإعادةُ الحساب أثناء السير من شأن المحرّك لا القائمة.**
+    private var routeLeg: String? = null
+
+    private fun legOf(mine: List<com.rahalgo.shared.model.DriverOrder>): String? {
+        val id = openId ?: mine.firstOrNull()?.id ?: return null
+        val o = mine.firstOrNull { it.id == id } ?: return null
+        return id + ":" + if (o.status in TO_CUSTOMER) "customer" else "merchant"
+    }
+
+    private fun keepRoute(fresh: OrderRoute?, mine: List<com.rahalgo.shared.model.DriverOrder>) {
+        val leg = legOf(mine)
+        when {
+            // **وطريقُ الساق القديمة لا يُركَّب على الجديدة** — إن كان المُعادُ هو
+            // المحفوظَ نفسَه (لم يُطلب لأنّ الحالَ المحلّيّ لم يتبدّل بعد) يُطلب من جديد.
+            leg != routeLeg && fresh != null && fresh === route -> {
+                route = null
+                routeLeg = null
+                refresh()
+            }
+            leg != routeLeg -> { route = fresh; routeLeg = leg }
+            fresh != null && route == null -> route = fresh
+        }
+    }
+
+    /**
+     * **اتّجاهُ السائق لطلب الطريق** — وهو يسير وحدَه (≥ ٣م/ث): **اتّجاهُ الواقف رجفةُ
+     * بوصلةٍ** لا يُبنى عليها طريق.
+     */
+    private fun routeHeading(): Float? {
+        if (!following) return null
+        val nav = navSession.nav ?: return null
+        if (nav.speedMps < 3.0) return null
+        return nav.bearingDeg
+    }
+
+    /** **موضعُ السائق لطلب الطريق** — آخرُ قراءةٍ مقبولةٍ للملاحة، وإلّا موقعُ الدوام. */
+    private fun routeOrigin(): Pair<Double, Double>? {
+        if (following) navSession.lastGoodFix?.let { return it.lat to it.lng }
+        return LastPoint.value?.let { it.lat to it.lng }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والملاحةُ تبدأ مع كلّ رحلةٍ قائمة — لا مع القبول من القائمة وحدَه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **(بلاغُ المالك ٢٠٢٦-١٠-٠٢:** «ركبت متور وأخذت طلب ولكن لم يتحرّك
+    // المؤشّر ولا الخريطة، بقيت ثابتة».)
+    //
+    // **قِيس**: «اتبعني» كان يُشغَّل في `accept` وحدَه — **فالطلبُ المعروضُ
+    // عليه أو المسنَدُ إليه أو رحلةٌ قائمةٌ بعد إعادة فتح التطبيق** تبقى
+    // خريطتُها ثابتةً بلا موقعٍ ولا صوتٍ حتّى يضغط الزرّ. **وسجلُّ الجهاز لم
+    // يحمل «بدأت الملاحة» قطّ**، والموقعُ يُقرأ كلَّ دقيقتين للمكتب لا للخريطة.
+    //
+    // **فكلُّ تحميلٍ فيه رحلةٌ قائمةٌ يشغّلها — ولا إيقافَ باليد** (قرارُ المالك
+    // ٢٠٢٦-١٠-٠٢: «مافي شي اسمو ابدأ أو توقّف، تعتمد على حركة الجهاز: وقت يوقف
+    // تتوقّف ووقت يمشي يبدأ… مثل غوغل»). **والجوالُ الواقفُ لا يحرّك السهم**
+    // بطبعه — فلا حاجةَ لمفتاح.
+    private fun autoFollow(mine: List<com.rahalgo.shared.model.DriverOrder>) {
+        val active = mine.any { it.status !in FINISHED }
+        if (active && !following) follow(true)
+        // **وتنطفئ حين لا رحلة** — فلا يبقى الموقعُ كلَّ ثانيةٍ يستنزف البطّاريّة.
+        if (!active && following) follow(false)
     }
 
     /**
@@ -530,7 +628,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * يتبدّل والباب واحد.
      */
     val routeSource: com.rahalgo.navigation.RouteSource by lazy {
-        com.rahalgo.driver.trip.BackendRouteSource(backend, viewModelScope) { currentId() }
+        com.rahalgo.driver.trip.BackendRouteSource(
+            backend, viewModelScope, orderId = { currentId() }, heading = { routeHeading() },
+        )
     }
 
     /**
@@ -678,10 +778,22 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun startReplay(fixes: List<com.rahalgo.navigation.NavFix>) {
         navSession.startReplay(fixes, viewModelScope)
+        // **وحين تنتهي تعود الأقمارُ وحدَها** — الإعادةُ تُسكت مجرى الموقع
+        // الحقيقيّ ما دامت تمشي، **ورحلةٌ قائمةٌ لا تبقى بلا موقعٍ بعدها.**
+        viewModelScope.launch {
+            androidx.compose.runtime.snapshotFlow { navSession.replaying }
+                .first { !it }
+            resumeRealGps()
+        }
     }
 
     fun stopReplay() {
         navSession.stopReplay()
+        resumeRealGps()
+    }
+
+    private fun resumeRealGps() {
+        if (following) navSession.start()
     }
 
     /**
@@ -974,7 +1086,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **ولا يُحرّك الطلب بنفسه**: قربٌ ليس وصولا — قد يمرّ من
             // الشارع، **وطلبٌ يمشي خطوةً بلا أن يضغطها صاحبه** يُفقده
             // الثقة بالتطبيق كلِّه. **فيُقترح ويُضغط.**
-            nearDestination = near(driver, order),
+            nearDestination = near(driver, order) == true,
+            locationKnown = near(driver, order) != null,
             failReasons = detail.failReasons,
             driver = driver?.let { LatLng(it.lat, it.lng) },
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
@@ -1029,8 +1142,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         return out[0].toDouble()
     }
 
-    private fun near(driver: LastPoint.Point?, order: DriverOrder): Boolean {
-        if (driver == null) return false
+    /**
+     * **أهو عند وجهته؟** — `null`: لا موضعَ يُعرف (فلا يُخفى عنه الزرّ).
+     *
+     * **والموضعُ الأحدثُ أوّلاً**: قراءةُ الملاحة المقبولة (ثانيةً بثانية) قبل
+     * موضع الدوام (قد يكون عمرُه دقيقة).
+     */
+    private fun near(shift: LastPoint.Point?, order: DriverOrder): Boolean? {
+        val fix = if (following) navSession.lastGoodFix else null
+        val driver = fix?.let { LastPoint.Point(it.lat, it.lng) } ?: shift ?: return null
         val lat: Double
         val lng: Double
         when (order.status) {
@@ -1048,7 +1168,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
         val out = FloatArray(1)
         android.location.Location.distanceBetween(driver.lat, driver.lng, lat, lng, out)
-        return out[0] <= ARRIVAL_M
+        return out[0] <= ARRIVAL_SHOW_M
     }
 
     /**
@@ -1631,6 +1751,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     // على طلب لم يعد له.
                     if (found == null) openId = null else detail = detail.copy(order = found)
                 }
+                // **وساقٌ جديدةٌ تطلب طريقَها الآن** (فحصُ الملاحة ١.٥) — كان طريقُ المتجر
+                // يُعاد تركيبُه بعد الاستلام حتّى تحديثٍ لاحق.
+                if (legOf(mine) != routeLeg) refresh()
             } catch (e: Exception) {
                 state = state.copy(error = describe(e))
             }
@@ -1646,3 +1769,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
     private fun describe(e: Exception): String = apiError(getApplication(), e)
 }
+
+/** **حالاتُ الطلب التي لا ملاحةَ بعدها.** */
+private val FINISHED = setOf("delivered", "failed", "cancelled", "returned", "closed")
+
+/** **حالاتُ الساق الثانية** — بعد الاستلام يُوجَّه إلى الزبون. */
+private val TO_CUSTOMER = setOf("picked_up", "on_the_way", "at_dropoff")

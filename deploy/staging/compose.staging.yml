@@ -124,6 +124,11 @@ services:
       # **والاسمُ `osrm` في شبكة التجهيز لا في شبكة الإنتاج** —
       # **وللشبكتين خدمةٌ بالاسم نفسِه ولا تلتقيان.**
       OSRM_URL: ${STAGING_OSRM_URL:-http://osrm:5000}
+      # **ومحرّكُ الطرق في التجهيز Valhalla بتكلفة الموتور** (٢٠٢٦-١٠-٠٢، طلبُ المالك:
+      # «المتورُ يفوت بكلّ الطرق») — **وOSRM باقٍ لمطابقة الطريق وحدَها.**
+      # والعودةُ إلى OSRM: `STAGING_ROUTING_ENGINE=osrm`.
+      ROUTING_ENGINE: ${STAGING_ROUTING_ENGINE:-valhalla}
+      VALHALLA_URL: ${STAGING_VALHALLA_URL:-http://valhalla:8002}
       # **والعنونةُ مزوّدٌ عامٌّ بلا حالةٍ ولا مفتاح** — **هو نفسُه
       # الذي في الإنتاج**، **ولا بيانَ منصّةٍ يُرسَل إليه: نقطةٌ
       # تُسأل عن اسمها.**
@@ -289,6 +294,23 @@ services:
     image: ${STAGING_OSRM_IMAGE:-rahalgo-osrm}
     container_name: rahalgo-staging-osrm
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # **Valhalla — بلاطاتُ سوريا مبنيّةٌ مسبقاً** في `/srv/rahalgo-staging/valhalla`
+  # (١٥٠ م.ب) — **لا تُبنى على هذا الصندوق**: البناءُ يأكل ~٨٥٠ م.ب والإنتاجُ يشاركه.
+  # **وسقفُ ذاكرةٍ صريح** — فلا يُسقط Postgres التجهيز ولا الإنتاج.
+  valhalla:
+    image: ${STAGING_VALHALLA_IMAGE:-ghcr.io/valhalla/valhalla:3.9.0}
+    container_name: rahalgo-staging-valhalla
+    restart: unless-stopped
+    entrypoint: ["valhalla_service", "/data/valhalla.json", "1"]
+    volumes:
+      - /srv/rahalgo-staging/valhalla:/data:ro
+    mem_limit: 1g
     logging:
       driver: json-file
       options:

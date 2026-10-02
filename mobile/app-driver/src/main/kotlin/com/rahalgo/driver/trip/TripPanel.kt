@@ -360,7 +360,8 @@ internal fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(76.dp),
+        // **ستُّ مراحلَ تسعها الشاشة** (طلبُ المالك ٢٠٢٦-١٠-٠٢) — فضاق العمود.
+        modifier = Modifier.width(54.dp),
     ) {
         Box(
             Modifier.size(32.dp).clip(CircleShape).background(ground),
@@ -389,15 +390,24 @@ internal fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
     }
 }
 
+/**
+ * **ستُّ مراحل** — طلبُ المالك ٢٠٢٦-١٠-٠٢ نصّاً: «في الطريق للمتجر ← وصلت المتجر ←
+ * استلمت ← في الطريق للزبون ← وصلت ← تمّ التسليم». **وكانت أربعاً تبدأ «استلمت»**
+ * فتنقص خطوةُ الطريق إلى المتجر.
+ */
 private val LEGS = listOf(
+    R.string.leg_to_store,
+    R.string.trip_s_at_pickup,
     R.string.leg_picked,
-    R.string.ord_st_onway,
+    R.string.leg_to_customer,
     R.string.leg_arrived,
     R.string.ord_st_delivered,
 )
 
 private val LEG_ICONS = listOf(
+    R.drawable.ic_moto,
     R.drawable.ic_store,
+    R.drawable.ic_orders,
     R.drawable.ic_moto,
     R.drawable.ic_pin,
     R.drawable.ic_check_circle,
@@ -446,9 +456,11 @@ internal fun customLegOf(status: String, agreed: Boolean): Int = when (status) {
  * بينهما، **والسائقُ يقرأ ما عليه في الزرّ لا في الشريط.**
  */
 internal fun legOf(status: String): Int = when (status) {
-    "picked_up", "on_the_way" -> 1
-    "at_dropoff" -> 2
-    "delivered" -> 3
+    "at_pickup" -> 1
+    "picked_up" -> 2
+    "on_the_way" -> 3
+    "at_dropoff" -> 4
+    "delivered" -> 5
     else -> 0
 }
 

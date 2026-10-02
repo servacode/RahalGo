@@ -68,7 +68,7 @@ class MapPackageWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val regionId = inputData.getString(KEY_REGION) ?: OfflineMap.regionId
+        val requested = inputData.getString(KEY_REGION) ?: OfflineMap.regionId
         val ctx = applicationContext
 
         MapStyleRepository.init(ctx, mapConfig(ctx))
@@ -76,6 +76,8 @@ class MapPackageWorker(
         // **والفهرسُ يُجلب أوّلاً** — فلا تُنزَّل نسخةٌ يعرف الخادمُ
         // أنّها شاخت. **وإن سقط الجلبُ يُستعمل آخرُ صالح** (البند ٤٣).
         val manifestFailure = refreshManifest(ctx)
+        // **وبعد الفهرس لا قبله** — يُعرف ما يُخدَم، فلا تُطلب منطقةٌ غائبة.
+        val regionId = OfflineMap.resolveKnown(requested)
 
         val store = MapStyleRepository.store()
         val http = UrlHttpSource()

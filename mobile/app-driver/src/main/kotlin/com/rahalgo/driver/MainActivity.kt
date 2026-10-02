@@ -681,10 +681,18 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     var setupDone by rememberSaveable {
         mutableStateOf(setupPrefs.getBoolean("complete", false))
     }
+    // **واستثناءُ البطّاريّة يُعاد قراءتُه عند كلّ عودة** (بلاغُ المالك ٢٠٢٦-١٠-٠٢:
+    // «في مشكلة العمل في الخلفية دون إيقاف»). **كان يُقرأ مرّةً عند الرسم** — فمن
+    // سمح في الإعدادات ورجع بقي البندُ غيرَ مؤشَّرٍ وزرُّه ظاهراً كأنّه لم يسمح.
+    var batteryExempt by remember { mutableStateOf(com.rahalgo.ui.BatteryGuard.exempt(context)) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        batteryExempt = com.rahalgo.ui.BatteryGuard.exempt(context)
+        onPauseOrDispose { }
+    }
     if (!setupDone) {
         com.rahalgo.driver.setup.SetupWizard(
             readiness = home.state.readiness,
-            batteryExempt = com.rahalgo.ui.BatteryGuard.exempt(context),
+            batteryExempt = batteryExempt,
             onGrantLocation = { ask.launch(LocationPermission.FIRST_STEP) },
             onEnableGps = { com.rahalgo.driver.location.Readiness.openLocationSettings(context) },
             onGrantBackground = { disclose = true },

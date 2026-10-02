@@ -374,38 +374,13 @@ class VoiceTest {
         fun signals(grade: FixGrade, ms: Long) =
             planner.onState(state(grade), 1L, at(ms)).filter { it.kind == CueKind.SIGNAL }
 
-        // **قراءةٌ مقبولةٌ تبني الثقة** — ولا تقول شيئاً.
-        assertEquals(0, signals(FixGrade.ACCEPTED, 1_000L).size)
-
-        // **وأربعُ متردّياتٍ صامتة** — تحت جسرٍ أو بين بنايتين.
-        val early = (2..5).flatMap { signals(FixGrade.DEGRADED, it * 1_000L) }
-        assertEquals("أُعلن الضعفُ قبل أوانه", 0, early.size)
-
-        // **والخامسةُ ضعفٌ حقيقيّ.**
-        val weak = signals(FixGrade.DEGRADED, 6_000L)
-        assertEquals(1, weak.size)
-        assertEquals(NavClips.GPS_WEAK, weak.single().clip)
-        assertEquals(CueKind.SIGNAL, weak.single().kind)
-
-        // **ولا تُعاد ما دام الحالُ واحداً.**
-        val again = (7..12).flatMap { signals(FixGrade.DEGRADED, it * 1_000L) }
-        assertEquals("تكرّرت جملةُ الضعف", 0, again.size)
-
-        // **ورفضٌ بعد خمسَ عشرةَ ثانيةً من آخر ثقةٍ انقطاع.**
-        val lost = signals(FixGrade.REJECTED, 20_000L)
-        assertEquals(1, lost.size)
-        assertEquals(NavClips.GPS_LOST, lost.single().clip)
-
-        // **والعودةُ تُقال مرّةً واحدة.**
-        val back = signals(FixGrade.ACCEPTED, 21_000L)
-        assertEquals(1, back.size)
-        assertEquals(NavClips.GPS_RESTORED, back.single().clip)
-        assertEquals(0, signals(FixGrade.ACCEPTED, 22_000L).size)
-
-        println(
-            "VOICE-070 · ضعف=${weak.single().text} · انقطاع=${lost.single().text} " +
-                "· عودة=${back.single().text}",
-        )
+        // **والإشارةُ لا تُقال بصوتٍ أبداً** — قرارُ المالك ٢٠٢٦-١٠-٠٢: «انقطعت
+        // إشارة تحديد الموقع… مايصير». **ثقةٌ ثمّ ضعفٌ ثمّ انقطاعٌ ثمّ عودة — كلُّها صامتة.**
+        val all = listOf(signals(FixGrade.ACCEPTED, 1_000L)) +
+            (2..12).map { signals(FixGrade.DEGRADED, it * 1_000L) } +
+            listOf(signals(FixGrade.REJECTED, 20_000L), signals(FixGrade.ACCEPTED, 21_000L))
+        assertEquals("نُطقت جملةُ إشارة", 0, all.sumOf { it.size })
+        println("VOICE-070 · الإشارةُ صامتة في أطوارها الأربعة")
     }
 
     /**

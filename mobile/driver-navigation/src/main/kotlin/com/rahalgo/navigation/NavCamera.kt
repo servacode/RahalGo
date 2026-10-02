@@ -50,10 +50,16 @@ data class NavCameraState(
  * **والدورانُ يتبع اتّجاهَ السائق** — فما أمامه على الشاشة أمامه على
  * الأرض. **وهو أصلُ الفرق بين خريطةٍ وملاحة.**
  *
- * # ولا تقريبٌ ديناميكيٌّ بالسرعة
+ * # والتقريبُ يتبع السرعةَ والمنعطف (المرحلة ٣ من `docs/navigation/PLAN.md`)
  *
- * (أمرُ المالك: «لا تبنِ Dynamic Zoom المتقدّم حسب السرعة أو المناورة
- *  الآن».)
+ * (كان أمرُ المالك القديم: «لا تبنِ Dynamic Zoom الآن». **ورفعه ٢٠٢٦-١٠-٠٢**
+ *  بمواصفة الملاحة، الجزء ١٠: «zoom ديناميكيّ حسب السرعة وقرب المناورة».)
+ *
+ * - **واقفٌ أو بطيء (≤ ٤م/ث)**: ١٧٫٥ كما كان.
+ * - **وكلّما أسرع ابتعدت** عُشرَ مستوىً لكلّ م/ث — ٥٠ كم/س ≈ ١٦٫٥، ولا أبعدَ من ١٥٫٥.
+ * - **وقربَ منعطفٍ (≤ ١٥٠م) يعود ١٧٫٥** — ليُرى المنعطفُ واضحاً.
+ *
+ * **والانتقالُ بين القيم لا يقفز** — تحدّه الشاشةُ بنصف مستوىً في الثانية.
  */
 object NavCamera {
 
@@ -76,14 +82,31 @@ object NavCamera {
         bearingDeg: Float?,
         currentBearingDeg: Float,
         durationMs: Long,
+        speedMps: Double = 0.0,
+        toManeuverM: Double = -1.0,
     ): NavCameraState = NavCameraState(
         lat = lat,
         lng = lng,
         bearingDeg = bearingDeg ?: currentBearingDeg,
         tiltDeg = NAV_TILT,
-        zoom = NAV_ZOOM,
+        zoom = zoomFor(speedMps, toManeuverM),
         durationMs = durationMs,
     )
+
+    /** **التقريبُ المطلوب** — انظر الشرح أعلاه. */
+    fun zoomFor(speedMps: Double, toManeuverM: Double): Double {
+        val bySpeed = (NAV_ZOOM - ZOOM_PER_MPS * (speedMps - SLOW_MPS).coerceAtLeast(0.0))
+            .coerceIn(MIN_NAV_ZOOM, NAV_ZOOM)
+        return if (toManeuverM in 0.0..NEAR_MANEUVER_M) NAV_ZOOM else bySpeed
+    }
+
+    const val MIN_NAV_ZOOM = 15.5
+    const val SLOW_MPS = 4.0
+    const val ZOOM_PER_MPS = 0.1
+    const val NEAR_MANEUVER_M = 150.0
+
+    /** **أقصى تغيّرٍ للتقريب في الثانية** — لا قفز. */
+    const val ZOOM_RATE_PER_S = 0.5
 
     /**
      * **حالُ الخروج من الملاحة** — تُعاد الخريطةُ إلى وضعها المألوف.

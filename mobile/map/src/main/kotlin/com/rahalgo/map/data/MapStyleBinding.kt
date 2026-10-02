@@ -145,10 +145,32 @@ object MapStyleBinding {
         for (i in 0 until layers.length()) {
             val layout = layers.optJSONObject(i)?.optJSONObject("layout") ?: continue
             val fonts = layout.optJSONArray("text-font") ?: continue
-            for (j in 0 until fonts.length()) out += fonts.getString(j)
+            collectFonts(fonts, out)
         }
         return out.toList()
     }
+
+    /**
+     * **وتعبيرٌ لا مصفوفةُ أسماء** (`["case", شرط, ["literal", [..]], ..]`) — تُجمع
+     * الأسماءُ من داخل `literal` وحدَها، **ولا يُسقط الربطَ كلَّه نمطٌ يختار خطَّه بشرط.**
+     */
+    private fun collectFonts(arr: org.json.JSONArray, out: MutableSet<String>) {
+        val head = arr.opt(0)
+        if (head is String && head in EXPRESSION_OPS) {
+            for (k in 1 until arr.length()) {
+                val part = arr.opt(k) as? org.json.JSONArray ?: continue
+                if (part.opt(0) == "literal") {
+                    (part.opt(1) as? org.json.JSONArray)?.let { collectFonts(it, out) }
+                } else {
+                    collectFonts(part, out)
+                }
+            }
+            return
+        }
+        for (j in 0 until arr.length()) (arr.opt(j) as? String)?.let { out += it }
+    }
+
+    private val EXPRESSION_OPS = setOf("case", "match", "step", "coalesce", "literal")
 
     fun fontstacksOf(canonical: String): List<String> = fontstacksOf(JSONObject(canonical))
 
@@ -186,6 +208,8 @@ object MapStyleBinding {
             val layout = layers.optJSONObject(i)?.optJSONObject("layout") ?: continue
             val field = layout.opt("text-field") ?: continue
             val text = field.toString()
+            // **ورقمُ البناية ليس اسماً** — لا عربيَّ له ولا غيرَه.
+            if (!text.contains("name")) continue
             if (!text.contains("name:ar")) return false
             if (text.indexOf("name:ar") > text.indexOf("\"name\"").let {
                     if (it < 0) Int.MAX_VALUE else it

@@ -32,6 +32,8 @@ package com.rahalgo.navigation
  */
 class NavEngine(
     val pipeline: NavPipeline = NavPipeline(),
+    /** **موضعُ الملاحة** — حالةُ الحركة والتثبيتُ عند الوقوف والإلصاقُ بالطريق (المرحلة ٢). */
+    val position: PositionEngine = PositionEngine(),
     val detector: OffRouteDetector = OffRouteDetector(),
     /** **كاشفُ الاتّجاه المعاكس** — المرحلة ٥. */
     val wrongWay: WrongWayDetector = WrongWayDetector(),
@@ -224,6 +226,12 @@ class NavEngine(
      */
     fun onFix(fix: NavFix): NavState {
         val step = pipeline.onFix(fix)
+        val motion = position.classify(fix, step.grade)
+        // **والتقدّمُ لا يزحف والسائقُ واقف** (فحصُ الملاحة ٢.٣) — إلّا قربَ النهاية، فهناك
+        // يُحكم على الوصول ولو وقف.
+        val holdProgress = motion == PositionEngine.Motion.STATIONARY &&
+            state?.progress != null &&
+            (state?.progress?.remainingM ?: Double.MAX_VALUE) >= NEAR_END_M
 
         // **ولا يُغذّى التقدّمُ إلّا بما قُبل** — `RouteProgress`
         // يقول ذلك نصّاً: «ولا تُغذّى المرفوضة».
@@ -232,12 +240,17 @@ class NavEngine(
         // **ولولا هذا التمييز**: قراءةٌ مرفوضةٌ بعد تركيب مسارٍ جديدٍ
         // تُعيد تقدّمَ المسار المنتهي — **فيُقفل مِزلاجُ آخرِ ميلٍ على
         // ملاحةٍ لم تبدأ بعد.** (وقع في الرفيدة «ح».)
+        //
+        // **والتقدّمُ يُحسب دائماً — والمعروضُ وحدَه يُثبَّت عند الوقوف**: الكاشفاتُ
+        // (الخروجُ والاتّجاهُ) تحتاج القراءةَ الحيّة، **ومن ثبّت الحسابَ نفسَه أعمى
+        // كاشفَ الخروج عن واقفٍ بدأ يبتعد.**
         val fresh = if (step.grade == FixGrade.REJECTED) {
             null
         } else {
             progress?.onFix(fix, step.bearingDeg)
         }
         val p = fresh ?: state?.progress
+        val shownProgress = if (holdProgress) state?.progress else p
 
         if (step.grade == FixGrade.ACCEPTED) lastAcceptedFix = fix
 
@@ -293,15 +306,21 @@ class NavEngine(
             fix, step.grade, fresh, lastState, routeId, generation,
         )
 
+        // **وموضعُ العرض من محرّك الموضع لا القراءةُ الخامّة** (المرحلة ٢).
+        val shown = position.place(
+            fix, step.grade, step.bearingDeg, route, p,
+            offRoute = verdict.state == OffRouteDetector.State.OFF_ROUTE,
+        )
         var out = NavState(
             grade = step.grade,
             reason = step.reason,
-            lat = step.targetLat,
-            lng = step.targetLng,
-            bearingDeg = step.bearingDeg,
+            lat = shown.lat,
+            lng = shown.lng,
+            bearingDeg = shown.bearingDeg,
+            speedMps = position.speedMps,
             animationMs = step.animationMs,
             hasRoute = route != null,
-            progress = p,
+            progress = shownProgress,
             offRoute = verdict,
             wrongWay = wrong,
             // **والوصولُ يُحكم على الهدف لا على نهاية الخطّ.**
@@ -347,6 +366,7 @@ class NavEngine(
     /** **يُنسى كلُّ شيء** — عند بدء جلسةٍ جديدة. */
     fun reset() {
         pipeline.reset()
+        position.reset()
         detector.reset()
         wrongWay.reset()
         reroute?.reset()
@@ -411,6 +431,9 @@ data class NavState(
 
     /** **كم يبعد عن هدفه** — وسالبٌ: لا هدفَ أو لا قراءة. */
     val targetDistanceM: Double = -1.0,
+
+    /** **السرعةُ الملساء** — صفرٌ عند الوقوف (`PositionEngine.speedMps`). */
+    val speedMps: Double = 0.0,
 ) {
     /** **كم بقي بالمتر** — وسالبٌ يعني «لا يُعرف». */
     val remainingM: Double get() = progress?.remainingM ?: -1.0
@@ -485,3 +508,6 @@ enum class NavSituation {
     OFF_ROUTE,
     REROUTING,
 }
+
+/** **قربَ نهاية الطريق يُحسب التقدّمُ ولو وقف** — ليُحكم على الوصول. */
+private const val NEAR_END_M = 60.0

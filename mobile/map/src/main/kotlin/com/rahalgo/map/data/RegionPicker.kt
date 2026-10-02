@@ -44,10 +44,31 @@ object RegionPicker {
      *
      * @param regions ما في الفهرس، كما جاء من الشبكة.
      */
-    fun of(regions: List<MapRegion>, lat: Double, lng: Double): MapRegion? =
-        regions
+    fun of(regions: List<MapRegion>, lat: Double, lng: Double): MapRegion? {
+        // **الحدودُ أوّلاً** — المحافظةُ التي تقع النقطةُ داخلها فعلاً. **وريفُ
+        // دمشقَ يحيط بدمشق** فتقع فيهما معاً، **فالأصغرُ يغلب** كما كان.
+        val inside = regions.filter { r -> r.polygon.any { inRing(it, lat, lng) } }
+        if (inside.isNotEmpty()) return inside.minByOrNull { it.areaDeg }
+        // **والمستطيلُ لما خرج عن كلّ حدّ** — هامشٌ عند الحدود، أو فهرسٌ بلا حدود.
+        return regions
             .filter { contains(it.bbox, lat, lng) }
             .minByOrNull { it.areaDeg }
+    }
+
+    /** **أداخل الحلقة؟** — عدُّ التقاطعات، والحلقةُ `[طول، عرض]`. */
+    private fun inRing(ring: List<List<Double>>, lat: Double, lng: Double): Boolean {
+        var inside = false
+        var j = ring.size - 1
+        for (i in ring.indices) {
+            val xi = ring[i][0]; val yi = ring[i][1]
+            val xj = ring[j][0]; val yj = ring[j][1]
+            if ((yi > lat) != (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) {
+                inside = !inside
+            }
+            j = i
+        }
+        return inside
+    }
 
     /**
      * **أفي هذا الإطار؟**

@@ -39,6 +39,10 @@ data class NavRender(
      * **وسالبٌ يعني «لا تقصَّ شيئاً»** — قبل أن تبدأ الملاحة.
      */
     val progressM: Double = -1.0,
+    /** **السرعةُ الملساء** — للتقريب الديناميكيّ. */
+    val speedMps: Double = 0.0,
+    /** **كم إلى المنعطف القادم** — سالبٌ: لا يُعرف. */
+    val toManeuverM: Double = -1.0,
 ) {
     /**
      * **حالُ الكاميرا لهذه الخطوة.**
@@ -52,6 +56,8 @@ data class NavRender(
         bearingDeg = bearingDeg,
         currentBearingDeg = currentMapBearing,
         durationMs = durationMs,
+        speedMps = speedMps,
+        toManeuverM = toManeuverM,
     )
 
     companion object {
@@ -76,6 +82,8 @@ data class NavRender(
                 bearingDeg = state.bearingDeg,
                 durationMs = state.animationMs,
                 progressM = state.progress?.progressM ?: -1.0,
+                speedMps = state.speedMps,
+                toManeuverM = state.progress?.distanceToManeuverM ?: -1.0,
             )
         }
 

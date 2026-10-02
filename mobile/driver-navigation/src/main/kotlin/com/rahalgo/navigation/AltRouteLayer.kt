@@ -8,6 +8,7 @@ import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -66,8 +67,21 @@ object AltRouteLayer {
      */
     const val TOUCH_TARGET_DP = 48f
 
-    /** **بديلٌ يُرسم** — هندسةٌ ومعرِّف. */
-    data class Drawable(val routeId: String, val route: NavRoute)
+    /** **بديلٌ يُرسم** — هندسةٌ ومعرِّف، **وزمنُه** لفقاعة الوقت (سالبٌ: بلا فقاعة). */
+    data class Drawable(val routeId: String, val route: NavRoute, val durationS: Double = -1.0)
+
+    /** **فقاعاتُ الوقت** — كغوغل: على كلّ بديلٍ زمنُه (طلبُ المالك ٢٠٢٦-١٠-٠٢). */
+    const val LABEL_SOURCE = "rahalgo-alt-labels"
+    const val LABEL_LAYER = "rahalgo-alt-labels-layer"
+    private const val PROP_LABEL = "label"
+
+    /** **نصُّ الفقاعة** — دقائقُ بأرقامٍ لاتينيّة، وأقلُّه دقيقة. */
+    fun labelOf(durationS: Double): String =
+        "${kotlin.math.max(1L, kotlin.math.round(durationS / 60.0).toLong())} د"
+
+    /** **موضعُ الفقاعة** — عند ٥٥٪ من طول البديل، حيث يفترق غالباً عن الفعّال. */
+    private fun labelPoint(route: NavRoute): GeoPoint? =
+        PositionEngine.pointAt(route, route.totalM * 0.55)
 
     /**
      * **يرسم البدائلَ أو يمحوها.**
@@ -91,12 +105,22 @@ object AltRouteLayer {
                 }
             }
         val collection = FeatureCollection.fromFeatures(features)
+        val labels = FeatureCollection.fromFeatures(
+            alternatives.filter { it.durationS >= 0 }.mapNotNull { alt ->
+                val at = labelPoint(alt.route) ?: return@mapNotNull null
+                Feature.fromGeometry(GeoJsonPoint.fromLngLat(at.lng, at.lat)).apply {
+                    addStringProperty(PROP_ROUTE_ID, alt.routeId)
+                    addStringProperty(PROP_LABEL, labelOf(alt.durationS))
+                }
+            },
+        )
 
         val existing = style.getSourceAs<GeoJsonSource>(SOURCE)
         if (existing != null) {
             // **والتحديثُ لا الإضافة** — `addSource` بمعرِّفٍ موجودٍ
             // **تُسقط التطبيق** ولا تردّ خطأً (كما في `TripMarkers`).
             existing.setGeoJson(collection)
+            style.getSourceAs<GeoJsonSource>(LABEL_SOURCE)?.setGeoJson(labels)
             return
         }
 
@@ -145,10 +169,27 @@ object AltRouteLayer {
         } else {
             style.addLayer(layer)
         }
+
+        // **والفقاعةُ فوق كلّ شيء** — تُقرأ ولا تُخفيها أسماءُ الشوارع.
+        style.addSource(GeoJsonSource(LABEL_SOURCE, labels))
+        style.addLayer(
+            SymbolLayer(LABEL_LAYER, LABEL_SOURCE).withProperties(
+                PropertyFactory.textField(Expression.get(PROP_LABEL)),
+                PropertyFactory.textFont(arrayOf("RahalGo Regular")),
+                PropertyFactory.textSize(15f),
+                PropertyFactory.textColor(android.graphics.Color.parseColor(MapRoutePalette.ACTIVE_GLOW)),
+                PropertyFactory.textHaloColor(android.graphics.Color.WHITE),
+                PropertyFactory.textHaloWidth(3f),
+                PropertyFactory.textAllowOverlap(true),
+                PropertyFactory.textIgnorePlacement(true),
+            ),
+        )
     }
 
     /** **يمحو الطبقةَ ومصدرَها** — عند إخفاء الخيارات. */
     fun clear(style: Style) {
+        style.getLayer(LABEL_LAYER)?.let { style.removeLayer(LABEL_LAYER) }
+        style.getSourceAs<GeoJsonSource>(LABEL_SOURCE)?.let { style.removeSource(LABEL_SOURCE) }
         style.getLayer(LAYER)?.let { style.removeLayer(LAYER) }
         style.getSourceAs<GeoJsonSource>(SOURCE)?.let { style.removeSource(SOURCE) }
     }

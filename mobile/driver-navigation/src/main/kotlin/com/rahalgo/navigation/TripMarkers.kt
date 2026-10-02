@@ -71,6 +71,7 @@ object Markers {
     private val trim = TrimMemo()
 
     private val DRIVER = MapRoutePalette.DRIVER_PIN
+    private val CASING = MapRoutePalette.ACTIVE_GLOW
     private val PICKUP = MapRoutePalette.PICKUP_PIN
     private val DROPOFF = MapRoutePalette.DROPOFF_PIN
 
@@ -147,7 +148,7 @@ object Markers {
         //
         // **وصار بينهما**: فوق الهالة فيُرى الطريقُ حولَ المؤشّر،
         // **وتحت المثلّث** فيبقى المؤشّرُ ظاهراً لا يقطعه خطّ.
-        me(style, driver)
+        me(style, driver, driverBearingDeg ?: 0f)
         line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
         points(style, driver, pickup, dropoff, driverBearingDeg)
         // **والمثلّثُ آخرُ ما يُضاف** — فيعلو المسارَ والطرفين.
@@ -245,9 +246,9 @@ object Markers {
      * **وهي طبقةٌ وحدَها لتقع تحت العلامات كلِّها** — ولو رُسمت معها
      * لغطّت ما جاورها.
      */
-    private fun me(style: Style, driver: LatLng?) {
+    private fun me(style: Style, driver: LatLng?, bearingDeg: Float) {
         val collection = FeatureCollection.fromFeatures(
-            listOfNotNull(driver?.let { feature(it, IMG_DRIVER, 0f) }),
+            listOfNotNull(driver?.let { feature(it, IMG_DRIVER, bearingDeg) }),
         )
         val existing = style.getSourceAs<GeoJsonSource>(SRC_ME)
         if (existing != null) {
@@ -427,20 +428,26 @@ object Markers {
         )
         // **وطبقتان: هالةٌ عريضةٌ وقلبٌ ضيّق** — خطٌّ رفيعٌ وحدَه يضيع
         // في الشوارع، **وعريضٌ صلبٌ يطمس ما تحته.**
-        style.addLayer(
+        //
+        // **وكغوغل** (المرحلة ٣): حافّةٌ زرقاءُ داكنةٌ وقلبٌ أزرق، **وعرضُهما يتبع
+        // التقريب** — رفيعٌ في المنظر العامّ وعريضٌ في الملاحة. **وتحتَ مِرساة
+        // المسار في النمط** فلا يُخفي أسماءَ الشوارع ولا الأسهمَ الأحاديّة.
+        addBelowAnchor(
+            style,
             LineLayer("trip-line-glow", SRC_LINE).withProperties(
-                PropertyFactory.lineColor(DRIVER),
-                PropertyFactory.lineWidth(14f),
-                PropertyFactory.lineOpacity(0.20f),
+                PropertyFactory.lineColor(CASING),
+                PropertyFactory.lineWidth(byZoom(5f, 8f, 13f)),
+                PropertyFactory.lineOpacity(1f),
                 PropertyFactory.lineCap("round"),
                 PropertyFactory.lineJoin("round"),
             ),
         )
-        style.addLayer(
+        addBelowAnchor(
+            style,
             LineLayer("trip-line-layer", SRC_LINE).withProperties(
                 PropertyFactory.lineColor(DRIVER),
-                PropertyFactory.lineWidth(5f),
-                PropertyFactory.lineOpacity(0.95f),
+                PropertyFactory.lineWidth(byZoom(3f, 5.5f, 9f)),
+                PropertyFactory.lineOpacity(1f),
                 PropertyFactory.lineCap("round"),
                 PropertyFactory.lineJoin("round"),
             ),
@@ -501,11 +508,41 @@ object Markers {
         // مسارٍ طولُه كيلومترٌ مترٌ واحد.** وبناءُ تعبيرٍ وتسليمُه
         // للمحرّك ستّين مرّةً في الثانية ثمنٌ بلا مقابل.
         if (!trim.shouldApply(t)) return
-        // **ولونُ اللوحة نصٌّ والتعبيرُ يريد عددا** — يُحلّ مرّةً.
-        val ink = android.graphics.Color.parseColor(DRIVER)
-        // **وصفرٌ يعني لا شيءَ مقطوعا** — فلا تدرّجَ أصلاً، ويبقى
-        // اللونُ كما هو.
-        val gradient = if (t <= 0.0) {
+        var found = 0
+        // **ولكلّ طبقةٍ لونُها** — الحافّةُ زرقاءُ داكنةٌ والقلبُ أزرقُ كغوغل.
+        for ((id, color) in listOf("trip-line-glow" to CASING, "trip-line-layer" to DRIVER)) {
+            val layer = style.getLayer(id) as? LineLayer
+            if (layer != null) {
+                found++
+                layer.setProperties(
+                    PropertyFactory.lineGradient(gradientOf(android.graphics.Color.parseColor(color), t)),
+                )
+            }
+        }
+        reportTrim(style, t, found)
+    }
+
+    /** **عرضٌ يتبع التقريب** — عند ١٢ و١٥ و١٨. */
+    private fun byZoom(z12: Float, z15: Float, z18: Float): Expression =
+        Expression.interpolate(
+            Expression.exponential(1.5f), Expression.zoom(),
+            Expression.stop(12f, z12),
+            Expression.stop(15f, z15),
+            Expression.stop(18f, z18),
+        )
+
+    /** **تحتَ مِرساة المسار** إن وُجدت — وإلّا في الأعلى كما كان. */
+    private fun addBelowAnchor(style: Style, layer: LineLayer) {
+        if (style.getLayer(AltRouteLayer.ROUTE_ANCHOR) != null) {
+            style.addLayerBelow(layer, AltRouteLayer.ROUTE_ANCHOR)
+        } else {
+            style.addLayer(layer)
+        }
+    }
+
+    /** **تدرّجُ القصّ** — شفافٌ حتّى المقطوع، ثمّ اللون. */
+    private fun gradientOf(ink: Int, t: Double): Expression =
+        if (t <= 0.0) {
             Expression.interpolate(
                 Expression.linear(), Expression.lineProgress(),
                 Expression.stop(0f, Expression.color(ink)),
@@ -520,21 +557,16 @@ object Markers {
                 Expression.stop(1f, Expression.color(ink)),
             )
         }
-        var found = 0
-        for (id in listOf("trip-line-glow", "trip-line-layer")) {
-            val layer = style.getLayer(id) as? LineLayer
-            if (layer != null) {
-                found++
-                layer.setProperties(PropertyFactory.lineGradient(gradient))
-            }
-        }
+
+    private fun reportTrim(style: Style, t: Double, found: Int) {
         // **وطبقةٌ لم تُبنَ بعد لا تُسقط شيئاً** — أوّلُ إطارٍ قبل
         // أن يُرسم الخطّ. **وسطرٌ في كلّ ثانيةٍ يُغرق السجلّ**، فحُذف
         // بعد أن أثبت أنّ التدرّج يُطبَّق (٢٠٢٦-٠٨-٢٤: طبقات=2).
         // **ويُكتب الآن ما يُخفي الخطّ** — **والتدرّجُ أقدرُ ما يُخفيه**
         // (بلاغُ المالك ٢٠٢٦-٠٩-٢٨)، فلا يُسأل عنه بلا جواب.
-        android.util.Log.i("RahalGo/perf", "polyline gradient t=$t layers=$found")
-        if (found == 0) return
+        // **ولا سطرَ في كلّ إطار** (فحصُ الملاحة: ٣٫٣ سطرٍ في الثانية على الخيط
+        // الرئيسيّ) — يُكتب ما يُخفي الخطَّ وحدَه.
+        if (found == 0) android.util.Log.w("RahalGo/perf", "polyline gradient t=$t layers=0")
     }
 
     /**

@@ -129,6 +129,27 @@ fun TripMap(
     val shown = remember { doubleArrayOf(Double.NaN, Double.NaN) }
     val shownBearing = remember { floatArrayOf(0f) }
     val navKey = remember { longArrayOf(-1L) }
+    // ══════════════════════════════════════════════════════════════════
+    // **حالُ الكاميرا في الملاحة** — المرحلة ٣ من `docs/navigation/PLAN.md`
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **`freePan`**: لمسَ السائقُ الخريطةَ فتُترك حيث وضعها حتّى يضغط «موقعي»
+    // (المواصفة ١١ — كغوغل). **`camBearing`**: دورانُ الكاميرا المُعتمَد — لا يتبع
+    // كلَّ رجفةِ اتّجاه (منطقةٌ ميّتةٌ ٦° وحدٌّ ٩٠°/ث). **`zoomNow`**: التقريبُ
+    // المعروض يقترب من المطلوب بنصف مستوىً في الثانية لا يقفز.
+    val freePan = remember { booleanArrayOf(false) }
+    val camBearing = remember { floatArrayOf(Float.NaN) }
+    val zoomNow = remember { doubleArrayOf(Double.NaN) }
+    val camFrameMs = remember { longArrayOf(0L) }
+    LaunchedEffect(Unit) {
+        view.getMapAsync { libre ->
+            libre.addOnCameraMoveStartedListener { reason ->
+                if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                    freePan[0] = true
+                }
+            }
+        }
+    }
 
     /**
      * **أوّلُ تحميلٍ يُؤطّر، وما بعده يُحافظ** — البند ٢١.
@@ -436,7 +457,22 @@ fun TripMap(
             }
             // **البدائلُ أوّلاً** — فتبقى تحتَ الدبابيس.
             AltRouteLayer.draw(style, alternatives, previewRouteId)
-            Markers.draw(context, style, driver, pickup, dropoff, route, icons)
+            // ══════════════════════════════════════════════════════════
+            // **والسهمُ لا يُكتب من موقع الدوام أثناء الملاحة** — بلاغُ المالك
+            // ٢٠٢٦-١٠-٠٢: «السهمُ يختفي ويظهر، ومرّةً للخلف ومرّةً للأمام…
+            // ذهب ثمّ عاد فجأةً إلى مكانه».
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان كلُّ رسمٍ يكتبه من `driver`** (موقعُ الدوام، عمرُه حتّى
+            // دقيقةٍ وهو البيتُ في الرحلة التجريبيّة) **باتّجاه 0** — ثمّ يُعيده
+            // الإطارُ التالي. **فما دامت الملاحةُ ترسم فموضعُه ما رسمته هي.**
+            val navShown = nav != null && !shown[0].isNaN()
+            Markers.draw(
+                context, style,
+                if (navShown) LatLng(shown[0], shown[1]) else driver,
+                pickup, dropoff, route, icons,
+                driverBearingDeg = if (navShown) shownBearing[0] else null,
+            )
 
             // ══════════════════════════════════════════════════════════
             // **وأيقع الخطُّ داخلَ ما تراه العين؟**
@@ -465,7 +501,18 @@ fun TripMap(
 
             if (recenter != handled[0]) {
                 handled[0] = recenter
-                if (driver != null) {
+                // **«موقعي» يعيد المتابعة** — وأثناء الملاحة تعود الكاميرا إلى السهم
+                // في الإطار التالي بحشوتها، فلا تأطيرَ هنا يزيحها.
+                freePan[0] = false
+                if (nav != null && !shown[0].isNaN()) {
+                    com.rahalgo.map.CameraPrimitives.snap(
+                        libre, shown[0], shown[1],
+                        if (zoomNow[0].isNaN()) camZoom[0] else zoomNow[0],
+                        if (camBearing[0].isNaN()) shownBearing[0] else camBearing[0],
+                        camTilt[0], navPaddingTop(view.height),
+                    )
+                } else if (driver != null) {
+                    com.rahalgo.map.CameraPrimitives.clearPadding(libre)
                     libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 16.5))
                 } else {
                     fitAll(libre, driver, pickup, dropoff)
@@ -578,8 +625,33 @@ fun TripMap(
                         // **والنقلُ الفوريُّ لا حركةَ فيه** — الحركةُ
                         // كلُّها في المُحرِّك الخطّيّ، فيتّفق ما تحت
                         // السهم مع السهم.
+                        if (freePan[0]) return@animate
+                        val dt = if (camFrameMs[0] == 0L) 0.0 else (nowMs - camFrameMs[0]) / 1000.0
+                        camFrameMs[0] = nowMs
+                        val step = dt.coerceIn(0.0, 0.25)
+                        // **التقريبُ يقترب ولا يقفز.**
+                        zoomNow[0] = if (zoomNow[0].isNaN()) {
+                            camZoom[0]
+                        } else {
+                            val gap = camZoom[0] - zoomNow[0]
+                            val maxStep = NavCamera.ZOOM_RATE_PER_S * step
+                            zoomNow[0] + gap.coerceIn(-maxStep, maxStep)
+                        }
+                        // **والدورانُ لا يتبع الرجفة.**
+                        camBearing[0] = if (camBearing[0].isNaN()) {
+                            bearing
+                        } else {
+                            val diff = ((bearing - camBearing[0] + 540f) % 360f) - 180f
+                            if (kotlin.math.abs(diff) < BEARING_DEADBAND_DEG && t < 1f) {
+                                camBearing[0]
+                            } else {
+                                val maxTurn = (BEARING_RATE_DEG_S * step).toFloat()
+                                (camBearing[0] + diff.coerceIn(-maxTurn, maxTurn) + 360f) % 360f
+                            }
+                        }
                         com.rahalgo.map.CameraPrimitives.snap(
-                            libre, lat, lng, camZoom[0], bearing, camTilt[0],
+                            libre, lat, lng, zoomNow[0], camBearing[0], camTilt[0],
+                            navPaddingTop(view.height),
                         )
                     }
                     val cam = nav.camera(com.rahalgo.map.CameraPrimitives.bearingOf(libre))
@@ -591,7 +663,7 @@ fun TripMap(
                     // **وإلّا زحف الخطُّ من أوّل المسار في ثانيةٍ واحدة.**
                     if (progressFrom[0] < 0f) progressFrom[0] = progressTo[0]
                 }
-            } else if (follow && driver != null) {
+            } else if (follow && driver != null && !freePan[0]) {
                 libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 17.0))
             }
         }
@@ -636,6 +708,7 @@ private fun fitAll(
     dropoff: LatLng?,
 ) {
     val points = listOfNotNull(driver, pickup, dropoff)
+    com.rahalgo.map.CameraPrimitives.clearPadding(libre)
     when {
         points.size >= 2 -> libre.easeCamera(
             CameraUpdateFactory.newLatLngBounds(LatLngBounds.fromLatLngs(points), 120),
@@ -644,6 +717,18 @@ private fun fitAll(
         else -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(RAQQA, 13.0))
     }
 }
+
+/**
+ * **الحشوةُ العلويّةُ للملاحة** — ٤٠٪ من الارتفاع تُنزل مركزَ الكاميرا إلى ٧٠٪:
+ * **السهمُ في الثلث السفليّ والطريقُ أمامه** (المواصفة ١٠).
+ */
+private fun navPaddingTop(heightPx: Int): Double = heightPx * 0.4
+
+/** **منطقةُ الدوران الميّتة** — رجفةٌ أصغرُ منها لا تُدير الخريطة. */
+private const val BEARING_DEADBAND_DEG = 6f
+
+/** **أقصى دورانٍ للكاميرا في الثانية.** */
+private const val BEARING_RATE_DEG_S = 90.0
 
 /** **الهدنةُ بين إطارين** — ثلاثون في الثانية. */
 private const val FRAME_GAP_MS = 33L

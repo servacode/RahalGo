@@ -77,6 +77,7 @@ object CameraPrimitives {
         zoom: Double,
         bearingDeg: Float,
         tiltDeg: Float,
+        paddingTopPx: Double = 0.0,
     ) {
         map.moveCamera(
             CameraUpdateFactory.newCameraPosition(
@@ -85,9 +86,17 @@ object CameraPrimitives {
                     .zoom(zoom)
                     .bearing(bearingDeg.toDouble())
                     .tilt(tiltDeg.toDouble())
+                    // **حشوةٌ علويّةٌ تُنزل الهدفَ** — فيقع السهمُ في الثلث السفليّ
+                    // ويُرى الطريقُ أمامه (المرحلة ٣).
+                    .padding(0.0, paddingTopPx, 0.0, 0.0)
                     .build(),
             ),
         )
+    }
+
+    /** **تُزال الحشوة** — قبل أيّ تأطيرٍ خارجَ الملاحة، وإلّا انزاح عن مركزه. */
+    fun clearPadding(map: MapLibreMap) {
+        map.moveCamera(CameraUpdateFactory.paddingTo(0.0, 0.0, 0.0, 0.0))
     }
 
     /** **دورانُ الخريطة الحاليّ** — يقرؤه المنطقُ ليقرّر ألّا يُدير. */

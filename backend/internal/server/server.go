@@ -75,7 +75,7 @@ type Server struct {
 	routeEngine string
 	// osrm **عقدُ OSRM ومطابقتُه** — الارتباطُ ميزةُ OSRM وحدَه، فيبقى
 	// عليه وإن رسم Valhalla المسار. وبلا `OSRM_URL` يُعطَّل بهدوء.
-	osrm      *routing.Client
+	osrm      routing.Correlator
 	notify    *notifications.Service
 	push      *push.Service
 	otpStatus func() map[string]any

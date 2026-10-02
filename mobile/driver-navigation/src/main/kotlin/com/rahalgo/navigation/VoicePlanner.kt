@@ -102,6 +102,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
     fun reset() {
         lastDistanceM = Double.NaN
         lastManeuverAtM = Double.NaN
+        mergedAtM = Double.NaN
         lastGeneration = -1L
         trustedAtMs = 0L
         rerouteEpisodeSaid = false
@@ -200,6 +201,15 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             }
         }
         if (signal == was) return null
+        // ══════════════════════════════════════════════════════════════
+        // **وحالُ الإشارة لا يُقال بصوت** — قرارُ المالك ٢٠٢٦-١٠-٠٢
+        // ══════════════════════════════════════════════════════════════
+        //
+        // («أعطاني صوت انقطعت إشارة تحديد الموقع… مايصير».) **غوغل لا يتكلّم
+        // عن الإشارة** — يكتبها صامتاً. **والجوالُ داخلَ بيتٍ أو تحت سقفٍ
+        // يفقدها بطبعه**، فيصير الصوتُ ضجيجاً لا خبراً. **والحالُ يبقى
+        // محسوباً هنا** لمن يقرؤه، **والجملُ باقيةٌ في المعجم لا تُنطَق.**
+        if (SIGNAL_SILENT) return null
         val (text, clip) = when (signal) {
             Signal.GOOD -> VoicePhrases.GPS_RESTORED to NavClips.GPS_RESTORED
             Signal.WEAK -> VoicePhrases.GPS_WEAK to NavClips.GPS_WEAK
@@ -350,8 +360,11 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // (وهي الدلالةُ نفسُها التي كشفتها معايرةُ ٣أ في سماح
         //  المناورة.)
         val target = p.current ?: p.next ?: return null
+        // **ولا «تابع مستقيماً» ولا «ابدأ السير»** — كغوغل: الصمتُ على الطريق
+        // المستقيم، والكلامُ عند المنعطف وحدَه (طلبُ المالك ٢٠٢٦-١٠-٠٢: «قصير ولا يكرّر»).
+        if (target.kind == ManeuverKinds.STRAIGHT || target.kind == ManeuverKinds.DEPART) return null
         val distance = max(0.0, target.atDistanceM - p.progressM)
-        val speed = trustedSpeed(fix, p)
+        val speed = trustedSpeed(fix, p, state.speedMps)
 
         // **وتبدّلُ المناورة يمسح ذاكرةَ العبور** — فلا يُقاس عبورُ
         // عتبةٍ بين مناورتين مختلفتين.
@@ -380,6 +393,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         if (target.kind == ManeuverKinds.ARRIVE && state.hasArrivalTarget) return null
 
         val stage = stageFor(previous, distance, speed, target) ?: return null
+        // **والمناورةُ التي قيلت مدموجةً لا تُعاد تمهيداً** — قيل «يميناً ثمّ يساراً»
+        // فلا يُقال «بعد مئة متر انعطف يساراً» مرّةً ثانية؛ يبقى «الآن» وحدَه.
+        if (target.atDistanceM == mergedAtM && stage != CueStage.NOW) return null
         if (!allowed(stage, state, fix.atMs)) {
             gatedByGps++
             return null
@@ -529,9 +545,16 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
      * وشارعٌ داخليٌّ في المشوار الطويل يُحسب بسرعة الأوتوستراد لو أُخذ
      * المتوسّط.
      */
-    fun trustedSpeed(fix: NavFix, p: RouteProgress.State): Double {
+    fun trustedSpeed(fix: NavFix, p: RouteProgress.State, smoothedMps: Double = -1.0): Double {
+        // **السرعةُ الملساءُ أوّلاً** (`PositionEngine`) — ثمّ سرعةُ المزوّد بدقّةٍ جيّدةٍ وحدَها:
+        // قِيس ٢٦ كم/س داخلَ بيتٍ بدقّة ٣٠٠م (`NAVIGATION-BASELINE.md` ٤).
+        if (smoothedMps >= tuning.minTrustedSpeedMps) return smoothedMps
         val gps = fix.speedMps
-        if (gps != null && gps >= tuning.minTrustedSpeedMps) return gps.toDouble()
+        if (gps != null && gps >= tuning.minTrustedSpeedMps &&
+            fix.accuracyM <= PositionEngine.TRUST_SPEED_ACCURACY_M
+        ) {
+            return gps.toDouble()
+        }
         val step = p.current
         if (step != null && step.stepDurationS > 0 && step.stepDistanceM > 0) {
             val v = step.stepDistanceM / step.stepDurationS
@@ -618,6 +641,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             after.kind != ManeuverKinds.ARRIVE &&
             stage != CueStage.PREPARE
 
+        if (merge) mergedAtM = after!!.atDistanceM
         val spoken = if (stage == CueStage.NOW) null else roundMeters(distanceM)
         val text = if (merge) {
             VoicePhrases.combined(target, after!!, spoken)
@@ -665,6 +689,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         val n = p.next ?: return null
         return if (n.atDistanceM > target.atDistanceM) n else null
     }
+
+    /** **المناورةُ الثانيةُ التي قيلت مدموجةً** — فلا تُعاد تمهيداً. */
+    private var mergedAtM = Double.NaN
 
     /** **وهل قيل الوصولُ في هذا الجيل؟** — فلا يُعاد كلَّ ثانية. */
     private var arrivalSaid = false
@@ -833,3 +860,6 @@ data class VoiceTuning(
      */
     val lostSignalMs: Long = 15_000L,
 )
+
+/** **إعلانُ الإشارة صامت** — قرارُ المالك ٢٠٢٦-١٠-٠٢. */
+internal const val SIGNAL_SILENT = true

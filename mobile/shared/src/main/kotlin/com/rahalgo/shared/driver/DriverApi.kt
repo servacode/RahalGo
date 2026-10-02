@@ -164,6 +164,11 @@ class DriverApi(private val api: ApiClient) {
          * `GET /route` لا يتبدّل لمن لم يطلب.
          */
         correlation: Boolean = false,
+        /**
+         * **اتّجاهُ السائق بالدرجات** — فلا يُبدأ الطريقُ بالالتفاف خلفه
+         * (`heading` في الخادم، ٢٠٢٦-١٠-٠٢). **وفارغٌ: لا يُرسل.**
+         */
+        heading: Float? = null,
     ): OrderRoute {
         val base = "/api/v1/driver/orders/" + orderId + "/route"
         // **وزوجٌ أو لا شيء** — والخادمُ يردّ نصفَ زوجٍ بخطأِ تحقّق.
@@ -174,6 +179,7 @@ class DriverApi(private val api: ApiClient) {
             }
             if (alternatives) add("alternatives=true")
             if (correlation) add("correlation=true")
+            if (heading != null && lat != null && lng != null) add("heading=" + heading.toInt())
         }
         val path = if (params.isEmpty()) base else base + "?" + params.joinToString("&")
         return api.call(path)

@@ -99,6 +99,10 @@ object OfflineMap {
     // عطباً، **ومدينةُ الإطلاق أصدقُ تخمينٍ في هذه اللحظة وحدَها.**
     const val FALLBACK_REGION = "raqqa"
 
+    /** **مركزُ مدينة الإطلاق** — يختار به `resolveKnown` منطقةً من الفهرس. */
+    private const val FALLBACK_LAT = 35.9528
+    private const val FALLBACK_LNG = 39.0079
+
     /** **المنطقةُ النافذةُ الآن** — تُبدَّل حين يُعرف موضعُه. */
     var regionId: String = FALLBACK_REGION
         private set
@@ -126,6 +130,32 @@ object OfflineMap {
             status = Status(r.id, r.name, null, State.NOT_INSTALLED, 0, 0)
         }
         return true
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **ومنطقةٌ ليست في الفهرس لا تُطلب** — جهازُ المالك ٢٠٢٦-١٠-٠١
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **قِيس**: التنزيلُ بدأ قبل أن يُعرف موضعُ السائق فطلب الارتدادَ
+     * («raqqa»)، **والفهرسُ لا يحويها** (كان «سوريا كلّها» وحدَها) —
+     * فسقط بـ`INVALID_CONTRACT` غيرِ العابر، **ولم يُعَد حين عُرفت
+     * المنطقةُ الصحيحة**: بقي السائقُ بلا خريطةٍ حتّى ضغط بيده.
+     *
+     * **فإن غابت المطلوبةُ من الفهرس** أُخذت منه **المنطقةُ التي تحوي
+     * مدينةَ الإطلاق**، وإلّا أوّلُها — **ولا يُطلب ما لا يُخدَم.**
+     */
+    fun resolveKnown(requested: String): String {
+        val regions = MapStyleRepository.manifest()?.regions.orEmpty()
+        if (regions.isEmpty() || regions.any { it.id == requested }) return requested
+        val r = com.rahalgo.map.data.RegionPicker.of(regions, FALLBACK_LAT, FALLBACK_LNG)
+            ?: regions.first()
+        Log.i(TAG, "المطلوبةُ $requested ليست في الفهرس — بدلُها ${r.id}")
+        if (r.id != regionId) {
+            regionId = r.id
+            status = Status(r.id, r.name, null, State.NOT_INSTALLED, 0, 0)
+        }
+        return r.id
     }
 
     /** **وما في الفهرس كلُّه** — لمن أراد أن يختار بيده. */
@@ -168,6 +198,12 @@ object OfflineMap {
         val installed = store.installedRegions().filter { it.regionId == regionId }
         val latest = installed.maxByOrNull { it.dataVersion }
         val remote = manifest?.region(regionId)
+        // **ومواردُ النمط جزءٌ من الحزمة** (قِيس ٢٠٢٦-١٠-٠١): نُشر نمطُ غوغل في
+        // الموارد ٢ والمنطقةُ مثبَّتةٌ فبقي الجهازُ على الموارد ١ — **الفحصُ كان
+        // يقارن نسخةَ البيانات وحدَها.** فموارُد الفهرس الناقصةُ تحديثٌ متاح،
+        // **والتنزيلُ يجلبها وحدَها ويجد البلاطاتِ مثبَّتةً فلا يعيدها.**
+        val resourcesOk = manifest == null ||
+            store.resourcesComplete(manifest.resourcesVersion, MapStyleRepository.fontstacks(context))
 
         status = when {
             latest == null -> Status(
@@ -186,6 +222,15 @@ object OfflineMap {
                 State.UPDATE_AVAILABLE,
                 latest.bytes,
                 remote.artifact.bytes,
+            )
+
+            !resourcesOk -> Status(
+                regionId,
+                latest.name,
+                latest.dataVersion,
+                State.UPDATE_AVAILABLE,
+                latest.bytes,
+                latest.bytes,
             )
 
             else -> Status(
