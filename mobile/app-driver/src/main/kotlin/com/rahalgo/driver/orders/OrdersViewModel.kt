@@ -1239,6 +1239,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **وزرٌّ يُضغط فلا يقع شيءٌ ولا يُقال لماذا يُقرأ عطباً في
             // التطبيق** — ثمّ يُعاد الضغطُ ويُعاد.
             error = detail.error.ifEmpty { state.actionError },
+            suspended = state.me?.suspended == true,
         )
     }
 

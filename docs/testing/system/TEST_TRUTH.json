@@ -34,7 +34,7 @@
     "behaviour_settings": 132,
     "order_fields": 87,
     "test_files": 443,
-    "test_funcs": 1849
+    "test_funcs": 1850
   },
   "flows": [
     {
@@ -20873,6 +20873,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestXG22_T11_SuspendedDriverHasWhatTheTripNeeds",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",

@@ -95,16 +95,33 @@ object Backend {
      * — **فأربعةَ عشرَ ملفّاً تناديها**، ولا يُبدَّل نداءٌ لأجل نقل.
      */
     class Wired(context: Context) {
-        private val core: Core = AppCore.install(context, BASE_URL, CLIENT, BuildConfig.VERSION_CODE) {
-            // **ونقطةُ الإشعارات تُسجَّل بعد ثبوت الجلسة لا قبلها** —
-            // **تحتاج توكنَ حساب**، ومن سجّلها قبله سجّلها بلا صاحب:
-            // **فلا يصل إشعارٌ ولا يظهر خطأ.**
+        private val core: Core = AppCore.install(
+            context, BASE_URL, CLIENT, BuildConfig.VERSION_CODE,
+            afterSignIn = {
+                // **ونقطةُ الإشعارات تُسجَّل بعد ثبوت الجلسة لا قبلها** —
+                // **تحتاج توكنَ حساب**، ومن سجّلها قبله سجّلها بلا صاحب:
+                // **فلا يصل إشعارٌ ولا يظهر خطأ.**
+                //
+                // **وهي تخصّ السائقَ فتبقى عنده** — والنواةُ تُنادي ولا تعرف
+                // ما تُنادي.
+                val app = context.applicationContext
+                CoroutineScope(Dispatchers.IO).launch { Push.register(app) }
+            },
+            // ══════════════════════════════════════════════════════════
+            // **وحدُّ الجلسة عند الخروج** (٢٠٢٦-١٠-٠٢)
+            // ══════════════════════════════════════════════════════════
             //
-            // **وهي تخصّ السائقَ فتبقى عنده** — والنواةُ تُنادي ولا تعرف
-            // ما تُنادي.
-            val app = context.applicationContext
-            CoroutineScope(Dispatchers.IO).launch { Push.register(app) }
-        }
+            // **لم يكن للسائق مِعراضُ خروج** — فكلُّ خروجٍ (بيده أو قسريٍّ حين
+            // يرفض الخادمُ الجلسة) **يُبقي خدمةَ الموقع تعمل وإشعارَ الورديّة
+            // في الشريط لحسابٍ خرج.**
+            afterLogout = {
+                val app = context.applicationContext
+                com.rahalgo.driver.location.LocationService.stop(app)
+                com.rahalgo.driver.location.GpsSignal.alive()
+                // **ولا تُوقَف الوصلةُ الحيّةُ هنا** — يملكها نموذجُ الطلبات ويعيش
+                // بعد الخروج، **فيبقى الداخلُ التالي بلا تحديثٍ حيّ.**
+            },
+        )
 
         val session get() = core.session
         val api get() = core.api

@@ -53,6 +53,21 @@ var continuationRoutes = []struct {
 	{"POST", "/api/v1/driver/orders/", "/transition", "driver"},
 	{"POST", "/api/v1/driver/orders/", "/proof", "driver"},
 	{"GET", "/api/v1/driver/orders/", "", "driver"},
+	// ══════════════════════════════════════════════════════════════════
+	// **وما يلزم لإتمامه فعلاً** (٢٠٢٦-١٠-٠٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس**: الانتقالُ والإثباتُ وحدَهما مأذونان — **فالمعلَّقُ لا يرى
+	// طريقَه ولا يكلّم زبونَه ولا يملك «لدي مشكلة» ولا الطارئ ولا إعادةَ
+	// الطلب.** فيُحمَل على إكمالِ ما لا يستطيع أن يراه.
+	{"GET", "/api/v1/driver/orders/", "/route", "driver"},
+	{"POST", "/api/v1/driver/orders/", "/road-correlation", "driver"},
+	{"POST", "/api/v1/driver/orders/", "/emergency", "driver"},
+	{"POST", "/api/v1/driver/orders/", "/report", "driver"},
+	{"POST", "/api/v1/driver/orders/", "/release", "driver"},
+	// **وحديثُ طلبه** — الطريقُ الوحيدُ إلى زبونه (لا رقمَ معه).
+	{"GET", "/api/v1/orders/", "/messages", "driver"},
+	{"POST", "/api/v1/orders/", "/messages", "driver"},
 
 	// **المتجر** — يقبل أو يرفض ما بين يديه.
 	{"POST", "/api/v1/merchant/orders/", "/transition", "merchant"},
@@ -71,12 +86,50 @@ var continuationRoutes = []struct {
 	{"POST", "/api/v1/orders/", "/cancel", "customer"},
 }
 
+// holdingRoutes **أبوابٌ بلا معرّفِ طلب — تُفتح لسائقٍ معلَّقٍ ما دام يحمل
+// طلباً حيّاً** (٢٠٢٦-١٠-٠٢).
+//
+// **وكلُّها قراءةٌ أو موضع**: قائمةُ طلباته (والتطبيقُ لا يرى رحلتَه بلاها)،
+// وحالُه (ليقول له «حسابك موقوف»)، وموضعُه (العملياتُ والزبونُ يتبعانه)،
+// وأسبابُ «لدي مشكلة»، وقائمةُ أحاديثه. **ولا ورديّةَ ولا قبول** — والطابورُ
+// يُفتح ليردّ فارغاً (`handleDriverQueue`) فلا تسقط قراءةُ التطبيق كلُّها.
+//
+// **وتُغلق بانتهاء آخر طلب** — فيعود معلَّقاً كسائر المعلَّقين.
+var holdingRoutes = []struct{ Method, Path string }{
+	{"GET", "/api/v1/driver/orders"},
+	{"GET", "/api/v1/driver/queue"},
+	{"GET", "/api/v1/driver/me"},
+	{"POST", "/api/v1/driver/location"},
+	{"POST", "/api/v1/driver/location/batch"},
+	{"GET", "/api/v1/driver/fail-reasons"},
+	{"GET", "/api/v1/driver/orders/report-reasons"},
+	{"GET", "/api/v1/my/chats"},
+}
+
+// holdsLiveOrder **أيحمل هذا السائقُ طلباً لم يُغلق؟**
+func (s *Server) holdsLiveOrder(ctx context.Context, driverID string) bool {
+	var holds bool
+	if err := s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM orders WHERE driver_id = $1::uuid AND closed_at IS NULL)`,
+		driverID).Scan(&holds); err != nil {
+		return false
+	}
+	return holds
+}
+
 // suspendedMayContinue أيسمح لهذا النداءِ من معلَّق؟
 //
 // **ويُرجع `false` عند أدنى شكّ** — **ومن شكّ فمنع أخطأ في الأمان،
 // ومن شكّ فأذِن أخطأ في المال.**
 func (s *Server) suspendedMayContinue(ctx context.Context, r *http.Request,
 	userID string, roles []string) bool {
+	if hasRole(roles, "driver") {
+		for _, h := range holdingRoutes {
+			if r.Method == h.Method && r.URL.Path == h.Path {
+				return s.holdsLiveOrder(ctx, userID)
+			}
+		}
+	}
 	for _, c := range continuationRoutes {
 		if r.Method != c.Method || !strings.HasPrefix(r.URL.Path, c.Prefix) {
 			continue

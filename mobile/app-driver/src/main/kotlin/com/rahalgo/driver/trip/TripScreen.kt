@@ -830,6 +830,11 @@ fun TripScreen(
             if (state.stops.size > 1) {
                 StopsRow(stops = state.stops, current = order.id, onPick = actions.pickStop)
             }
+            // **وحسابٌ موقوفٌ يُقال فوق الرحلة** (٢٠٢٦-١٠-٠٢) — يُكمل هذا الطلبَ
+            // وحدَه، **ولا يُفاجأ بعده بأبوابٍ مغلقةٍ بلا سبب.**
+            if (state.suspended) {
+                TopNotice(stringResource(R.string.suspended_banner), Rahal.colors.danger)
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -1173,6 +1178,23 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
 
 /** محطّة في قائمة من يحمل أكثر من طلب. */
 data class Stop(val id: String, val number: Long)
+
+/** **سطرُ خبرٍ فوق الخريطة** — يُقرأ ولو طُويت البطاقة. */
+@Composable
+internal fun TopNotice(text: String, ground: Color) {
+    Text(
+        text = text,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(Rahal.shape.md)
+            .background(ground)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    )
+}
 
 /**
  * **البطاقة السفليّة.**

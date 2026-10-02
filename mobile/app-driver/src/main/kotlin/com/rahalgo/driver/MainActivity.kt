@@ -400,6 +400,10 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         knowsKey(MenuItem.entries.map(MenuItem::asDrawerItem), key)
     }
     val home: HomeViewModel = viewModel()
+    // **والخروجُ ببوّابة** (٢٠٢٦-١٠-٠٢) — لا يخرج وفي يده طلب، وتُنهى ورديّتُه
+    // وتقف خدمةُ الموقع قبل الخروج (`HomeViewModel.logout`). **وحذفُ الحساب
+    // يخرج بلا بوّابة** — لا حسابَ يُسأل عنه.
+    val gatedLogout: () -> Unit = { home.logout(onLogout) }
     val orders: OrdersViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
     val ratingVm: RatingViewModel = viewModel()
@@ -667,7 +671,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         overlay.show(Overlay.Menu(key))
                         scope.launch { drawer.close() }
                     },
-                    onLogout = onLogout,
+                    onLogout = gatedLogout,
                     // **ومبدّلُ السمة هنا** — (قرارُ المالك
                     // ٢٠٢٦-٠٨-١٥: «نخلّيها بالقائمة الجانبيّة»).
                     dark = dark,
@@ -1150,7 +1154,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                             }
                         },
                         openAppSettings = { LocationPermission.openSettings(context) },
-                        logout = onLogout,
+                        logout = gatedLogout,
                     ),
                 )
 

@@ -2,6 +2,7 @@ package qa
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 )
 
@@ -208,6 +209,50 @@ func TestXG22_T10_EnforcementIsServerSide(t *testing.T) {
 }
 
 var _ = context.Background
+
+// ══════════════════════════════════════════════════════════════════════
+// **T11 · والمعلَّقُ يرى طلبَه ويُرسل موضعَه ويكلّم زبونَه ويبلّغ** (٢٠٢٦-١٠-٠٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **قِيس**: الانتقالُ والإثباتُ وحدَهما كانا مأذونَين — **فلا قائمةَ طلباتٍ يرى
+// منها رحلتَه، ولا موضع، ولا حديث، ولا «لدي مشكلة».** ويبقى ممنوعاً من الجديد.
+func TestXG22_T11_SuspendedDriverHasWhatTheTripNeeds(t *testing.T) {
+	h := New(t)
+	oid, drv := activeOrderFor(t, h)
+	suspend(t, h, drv.ID, "suspended")
+
+	for _, c := range []struct {
+		name string
+		code int
+	}{
+		{"قائمةُ طلباته", h.GET("/api/v1/driver/orders", drv.Token).Code},
+		{"حالُه", h.GET("/api/v1/driver/me", drv.Token).Code},
+		{"الطابور (فارغاً)", h.GET("/api/v1/driver/queue", drv.Token).Code},
+		{"موضعُه", h.POST("/api/v1/driver/location", drv.Token,
+			map[string]any{"lat": 35.95, "lng": 39.01}).Code},
+		{"حديثُ طلبه", h.GET("/api/v1/orders/"+oid+"/messages", drv.Token).Code},
+		{"أسبابُ المشكلة", h.GET("/api/v1/driver/fail-reasons?at=assigned", drv.Token).Code},
+	} {
+		if c.code >= 400 {
+			t.Errorf("**%s محجوبٌ عن معلَّقٍ يحمل طلباً** (%d)", c.name, c.code)
+		}
+	}
+	me := h.GET("/api/v1/driver/me", drv.Token)
+	if v, _ := me.JSON()["suspended"].(bool); !v {
+		t.Errorf("**لا يُقال له إنّه موقوف**: %s", me)
+	}
+	q := h.GET("/api/v1/driver/queue", drv.Token)
+	var rows struct {
+		Data []any `json:"data"`
+	}
+	if err := json.Unmarshal(q.Body, &rows); err != nil || len(rows.Data) != 0 {
+		t.Errorf("**عُرضت على المعلَّق عروض**: %s", q)
+	}
+	// **والجديدُ ممنوعٌ كما كان** — ورديّةٌ وقبول.
+	if got := h.POST("/api/v1/driver/shift", drv.Token, map[string]any{"on": true}); got.Code < 400 {
+		t.Errorf("**المعلَّقُ فتح ورديّة** (%d)", got.Code)
+	}
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // **T5 · والزبونُ الموقوفُ يرى طلبَه الحيَّ ويُلغيه** — `CAF-04`

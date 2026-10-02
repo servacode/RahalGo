@@ -114,6 +114,10 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// **والمصغَّرةُ لا الأصل**: دائرةٌ بعرض ثمانيةٍ وعشرين نقطة،
 		// **وصورةُ هاتفٍ كاملةٌ لملئها** ميغابايتٌ يُحمَّل في كلّ إقلاع.
 		AvatarURL *string `json:"avatar_url"`
+
+		// Suspended **أحسابُه موقوف؟** (٢٠٢٦-١٠-٠٢) — يُكمل طلبَه القائمَ وحدَه،
+		// **ويُقال له ذلك** بدل أن تُردّ عليه الأبوابُ واحداً واحداً بلا سبب.
+		Suspended bool `json:"suspended"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -150,14 +154,14 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		                 WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL), 0),
 		       (SELECT count(*) FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
 		        WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL),
-		       am.thumb_path
+		       am.thumb_path, u.status = 'suspended'
 		FROM users u
 		LEFT JOIN media am ON am.id = u.avatar_media_id
 		WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&out.FullName, &out.OnShift, &out.ShiftStartedAt, &out.CashHeld, &out.CashLimit,
 			&out.Balance, &out.TodayDelivered, &out.TodayFailed, &out.TodayEarned,
 			&out.TodayCompensated, &out.ActiveOrders, &out.Rating, &out.RatingCount,
-			&out.AvatarURL)
+			&out.AvatarURL, &out.Suspended)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -512,6 +516,18 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := userIDFrom(r)
+
+	// **والمعلَّقُ لا عروضَ له** (٢٠٢٦-١٠-٠٢) — يُفتح له البابُ ليُكمل طلبَه
+	// (`holdingRoutes`) فيردّ فارغاً: **عرضٌ يراه ولا يستطيع قبولَه خداع.**
+	var status string
+	if err := s.pg.QueryRow(ctx, `SELECT status FROM users WHERE id = $1`, uid).Scan(&status); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if status != "active" {
+		httpx.JSON(w, http.StatusOK, []driverOrder{})
+		return
+	}
 
 	// **في «بالترتيب» لا يرى السائقُ إلّا ما عُرض عليه باسمه** — و`OfferNext`
 	// صار يختار بالقرب، فالطابورُ في هذا الوضع قريبٌ سلفاً.

@@ -10,7 +10,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
-import com.rahalgo.driver.push.Push
 import com.rahalgo.ui.Refresh
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
@@ -240,17 +239,60 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         inbox = null
     }
 
-    fun logout() {
-        // **والخدمة تقف مع الخروج** — إشعار وردية لحساب خرج **يبقى في
-        // الشريط وموقعه يُرسل**، وهو ما لا يقبله أحد.
-        LocationService.stop(getApplication())
-        val refresh = backend.session.refreshToken()
-        backend.session.clear()
-        // **ورمزُ الجهاز يُرسَل مع الخروج** — `D12`: **وإلّا بقي
-        // الهاتفُ هدفاً لطلباتِ سائقٍ خرج منه.**
+    // ══════════════════════════════════════════════════════════════════
+    // **الخروجُ ببوّابة — لا بضغطة** (٢٠٢٦-١٠-٠٢)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **قِيس**: كانت `logout()` هنا ميّتةً لا يناديها أحد، **والخروجُ من بوّابة
+    // الوحدة** يمسح الجلسةَ وحدَها — **فالورديّةُ تبقى مفتوحةً في الخادم، وخدمةُ
+    // الموقع تعمل بلا حساب، ومن في يده طلبٌ يخرج فيبقى الطلبُ يتيماً.**
+    //
+    // **فالترتيب**: طلبٌ في يده ⇐ يُمنع بكلمةٍ واضحة · وإلّا تُنهى الورديّةُ في
+    // الخادم · وتقف الخدمة · **ثمّ** يُمرَّر إلى خروج الوحدة (`proceed`).
+
+    /** **أيُخرَج الآن؟** — فلا يُضغط مرّتين. */
+    var loggingOut by mutableStateOf(false)
+        private set
+
+    fun logout(proceed: () -> Unit) {
+        if (loggingOut) return
+        loggingOut = true
+        val app = getApplication<Application>()
         viewModelScope.launch {
-            val device = Push.currentToken()
-            runCatching { backend.auth.logout(refresh, device) }
+            try {
+                // **والطلباتُ تُسأل من الخادم لا من شاشةٍ قديمة.**
+                val mine = try {
+                    backend.driver.orders()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // **ولا يُخرَج بلا تحقّق** — ورديّةٌ تبقى مفتوحةً بلا صاحب.
+                    com.rahalgo.ui.Flash.fail(app.getString(R.string.logout_check_failed, describe(e)))
+                    return@launch
+                }
+                LogoutGate.block(mine)?.let { res ->
+                    com.rahalgo.ui.Flash.fail(app.getString(res))
+                    return@launch
+                }
+                try {
+                    backend.driver.setShift(false)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: ApiClient.ApiException) {
+                    // **وطلبٌ أُسند في اللحظة نفسِها** — يُمنع كما مُنع أعلاه.
+                    if (e.body.code == "has_active_orders") {
+                        com.rahalgo.ui.Flash.fail(app.getString(R.string.logout_has_order))
+                        return@launch
+                    }
+                    Log.w("RahalGo/logout", "تعذّر إنهاءُ الورديّة — يُكمَل الخروج", e)
+                } catch (e: Exception) {
+                    Log.w("RahalGo/logout", "تعذّر إنهاءُ الورديّة — يُكمَل الخروج", e)
+                }
+                LocationService.stop(app)
+                proceed()
+            } finally {
+                loggingOut = false
+            }
         }
     }
 

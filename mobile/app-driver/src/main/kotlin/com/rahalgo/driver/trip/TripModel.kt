@@ -225,6 +225,8 @@ data class TripState(
     val dropoff: LatLng? = null,
     val busy: Boolean = false,
     val error: String = "",
+    /** **حسابُه موقوف** — يُكمل هذا الطلبَ وحدَه (٢٠٢٦-١٠-٠٢). */
+    val suspended: Boolean = false,
 
     // ══════════════════════════════════════════════════════════════════
     // **خياراتُ المسار — إغلاقُ واجهة ٧، ٢٠٢٦-٠٨-٢١**

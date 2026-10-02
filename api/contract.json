@@ -4707,6 +4707,9 @@
       "auth": true,
       "roles": [
         "driver"
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

@@ -186,6 +186,20 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // **وهو أوّل ما يُسأل عنه المكتب**: «لماذا لا تصلني طلبات؟»
         // — لأنّ المحرّك لا يعرف أين هو، **فلا يحسب مسافة ولا يعرض
         // عليه أقرب طلب.** والسائق لا يرى من ذلك شيئا.
+        // **والحسابُ الموقوفُ يُقال أوّلاً** (٢٠٢٦-١٠-٠٢).
+        if (me.suspended) {
+            Text(
+                text = stringResource(R.string.suspended_banner),
+                color = Rahal.colors.accent,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.warnTint)
+                    .padding(16.dp),
+            )
+            Spacer(Modifier.height(14.dp))
+        }
         if (!state.locationOn) {
             LocationCard(onEnable = actions.enableLocation)
             Spacer(Modifier.height(14.dp))
