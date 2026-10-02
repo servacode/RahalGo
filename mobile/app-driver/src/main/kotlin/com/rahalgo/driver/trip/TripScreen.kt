@@ -1468,6 +1468,20 @@ private fun TripCard(
         // **ولا عبارةَ «وصلت»** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «ما لها داعٍ». الزرُّ يظهر عند
         // الوصول ويُسجَّل وحدَه بعد ٣٠ ثانية، وذاك يكفي.
 
+        // **وأمرُ الإدارة عند الباب يُقرأ واضحاً** (٢٠٢٦-١٠-٠٢: «الطلبُ يبقى مع السائق حتّى
+        // تحلّ الإدارةُ القصّة… يصل أمرٌ للسائق»).
+        if (order.doorInstruction == "deliver_now") {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.door_deliver_now) +
+                    if (order.doorNote.isNotBlank()) " — " + order.doorNote else "",
+                color = Rahal.colors.brand,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
             // ══════════════════════════════════════════════════════════════
             // **صفٌّ واحدٌ لا ثلاثة — والبطاقةُ تقصر**
             // ══════════════════════════════════════════════════════════════
@@ -1495,28 +1509,6 @@ private fun TripCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                var askRelease by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-                if (askRelease) {
-                    androidx.compose.material3.AlertDialog(
-                        onDismissRequest = { askRelease = false },
-                        title = { Text(stringResource(R.string.confirm_title)) },
-                        text = { Text(stringResource(R.string.confirm_release_body)) },
-                        confirmButton = {
-                            com.rahalgo.ui.RahalTextButton(
-                                onClick = {
-                                    askRelease = false
-                                    actions.release()
-                                },
-                                tone = Tone.Danger,
-                            ) { Text(stringResource(R.string.act_confirm)) }
-                        },
-                        dismissButton = {
-                            com.rahalgo.ui.RahalTextButton(onClick = { askRelease = false }) {
-                                Text(stringResource(R.string.act_cancel))
-                            }
-                        },
-                    )
-                }
                 val next = nextAction(order.status, order.kind == "custom")
                 // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
                 // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
@@ -1588,35 +1580,9 @@ private fun TripCard(
                     modifier = Modifier.weight(1f),
                 )
 
-                // ══════════════════════════════════════════════════════════
-                // **والإعادةُ في الطريق وحدَه — لا عند باب المتجر**
-                // ══════════════════════════════════════════════════════════
-                //
-                // (قرار المالك ٢٠٢٦-٠٨-١٢: «بما أنّ السائق وصل للمتجر لا
-                //  يوجد داعٍ لزرّ أعِد للطابور».)
-                //
-                // **ومن وصل صار خبرُه خبرا**: المتجرُ مغلقٌ أو الطلبُ غيرُ
-                // جاهزٍ أو مشكلةٌ عنده هو — **وكلُّها تُقال بسببها في «لدي
-                // مشكلة»**، لا بزرٍّ صامتٍ يُعيد الطلبَ ولا يقول لماذا.
-                //
-                // **وسببٌ مكتوبٌ فرقُه في المال**: «المتجر مغلق» ذنبُ متجرٍ
-                // يُعوَّض عليه السائق، **وإعادةٌ بلا سبب** تُقرأ تردّداً منه.
-                if (order.status == "assigned") {
-                    SmallAction(
-                        icon = R.drawable.ic_undo,
-                        // **واللفظُ قصيرٌ هنا** — ثلاثةُ أزرارٍ في صفٍّ
-                        // على شاشةِ هاتف، **و«أعد الطلب للطابور» تدفع
-                        // الأوّلَ إلى سطرين.** والأيقونةُ تقول «إعادة».
-                        label = R.string.trip_release_short,
-                        tone = Tone.Accent,
-                        // **وبتأكيدٍ لا بضغطة** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢: أُعيد طلبٌ أربعَ
-                        // مرّاتٍ بضغطاتٍ عابرة).
-                        onClick = { askRelease = true },
-                        enabled = !state.busy,
-                        modifier = Modifier.weight(1f),
-                    )
+                // **ولا «إعادة للطابور»** — قرارُ المالك ٢٠٢٦-١٠-٠٢: «مجرّد ما ينطلق السائق ما يصير
+                // ينعاد للطابور». **والتركُ بسببٍ من «لدي مشكلة»** وحدَه (تعطّلت · حادث · ظرفٌ قاهر).
             }
-        }
 
         // ══════════════════════════════════════════════════════════════
         // **والاتّفاقُ فعلٌ أوّلٌ لا فعلٌ جانبيّ — فيُعطى شكلَه**

@@ -1063,9 +1063,16 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     fun fail(reason: String) {
         val id = currentId() ?: return
+        val kind = detail.failReasons?.firstOrNull { it.code == reason }?.kind
         // **والبلاغُ لا يمسّ الطلب** — يصل العمليات ويبقى الطلبُ معه.
-        if (detail.failReasons?.firstOrNull { it.code == reason }?.kind == "report") {
+        if (kind == "report") {
             stageReport(id, reason)
+            return
+        }
+        // **والتركُ قبل الاستلام بسببه** — يذهب الطلبُ لغيره ويُغلَق دوامُه (الخادم).
+        if (kind == "release") {
+            detail = detail.copy(failReasons = null)
+            releaseWith(reason)
             return
         }
         detail = detail.copy(failReasons = null, busy = true, error = "")
@@ -1087,22 +1094,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun release() {
-        val id = currentId() ?: return
-        detail = detail.copy(busy = true, error = "")
-        viewModelScope.launch {
-            try {
-                backend.driver.release(id)
-                openId = null
-            } catch (e: Exception) {
-                detail = detail.copy(busy = false, error = describe(e))
-                refresh()
-                return@launch
-            }
-            detail = detail.copy(busy = false)
-            reload()
-        }
-    }
 
     /**
      * ══════════════════════════════════════════════════════════════════
@@ -1340,11 +1331,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** **يعيد الطلب إلى الطابور** — قبل أن يستلم البضاعة. */
-    fun releaseCurrent() {
-        openId = currentId()
-        release()
-    }
 
     // ══════════════════════════════════════════════════════════════════
     // **حديث الطلب**
@@ -1876,19 +1862,26 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             ?: state.mine.firstOrNull()
             ?: return
         detail = detail.copy(failReasons = null)
-        if (order.status == "assigned" || order.status == "at_pickup") {
-            releaseWith(reason)
-        } else {
-            emergency(point, reason)
-        }
+        // **وقبل الاستلام تأتي أسبابُ التركِ من الخادم** (`kind = release`) فلا تمرّ من هنا؛
+        // **وبعده «مشكلتي» طارئٌ** — الطلبُ معه والعملياتُ تُنبَّه بموضعه.
+        emergency(point, reason)
     }
 
-    private fun releaseWith(note: String) {
+    private fun releaseWith(reason: String) {
         val id = currentId() ?: return
         detail = detail.copy(busy = true, error = "")
+        val app = getApplication<android.app.Application>()
+        // **والكلمةُ إلزاميّة** — نصُّ السبب نفسُه بالعربية.
+        val note = app.getString(
+            when (reason) {
+                "bike_broken" -> com.rahalgo.driver.R.string.problem_bike
+                "accident" -> com.rahalgo.driver.R.string.problem_crash
+                else -> com.rahalgo.driver.R.string.problem_force
+            },
+        )
         viewModelScope.launch {
             try {
-                backend.driver.release(id, note)
+                backend.driver.release(id, reason, note)
                 openId = null
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))

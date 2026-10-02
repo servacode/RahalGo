@@ -257,7 +257,6 @@ data class TripActions(
     val step: (String) -> Unit,
     /** يفتح الكاميرا لصورة التسليم. */
     val capture: () -> Unit,
-    val release: () -> Unit,
     val chat: () -> Unit,
     val askAgree: () -> Unit,
     val agree: (Long, Long) -> Unit,

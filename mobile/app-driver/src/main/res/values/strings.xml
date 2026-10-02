@@ -108,7 +108,6 @@
     <string name="reason_merchant_refused">المتجر رفض التسليم</string>
     <string name="reason_merchant_not_ready">الطلب غير جاهز</string>
     <string name="reason_customer_cancelled_by_phone">الزبون ألغى بالهاتف</string>
-    <string name="reason_customer_new_address">الزبون يريد عنواناً آخر</string>
     <string name="reason_customer_no_answer">الزبون لا يرد — اطلب من الإدارة الاتصال به</string>
     <string name="problem_reports_title">بلّغ الإدارة — الطلب يبقى معك</string>
     <string name="problem_ends_title">ينهي الطلب</string>
@@ -120,7 +119,8 @@
     <string name="confirm_close_body">هذا ينهي الطلب ولا يمكن التراجع عنه. متأكد؟</string>
     <string name="confirm_customer_body">هذا ينهي الطلب، ويُمنع الزبون من الدفع نقداً ٣٠ يوماً. وتعويضك بعد موافقة الإدارة. متأكد؟</string>
     <string name="confirm_merchant_body">سيبقى الطلب حياً وتتابعه الإدارة مع المتجر، وتُعفى أنت منه. وتعويضك بعد موافقة الإدارة. متأكد؟</string>
-    <string name="confirm_release_body">سيعود الطلب إلى الطابور لسائق آخر. متأكد؟</string>
+    <string name="confirm_release_body">سيذهب الطلب لسائق آخر، وينتهي دوامك، وتُبلَّغ الإدارة. متأكد؟</string>
+    <string name="door_deliver_now">الإدارة: سلّم الطلب الآن</string>
     <string name="confirm_emergency_body">ستُبلَّغ الإدارة بموقعك، ويُسحب منك الطلب، وينتهي دوامك. متأكد؟</string>
     <string name="report_sent">وصل بلاغك للإدارة — والطلب باقٍ معك</string>
     <string name="reason_order_unknown">المتجر لا يعرف الطلب</string>

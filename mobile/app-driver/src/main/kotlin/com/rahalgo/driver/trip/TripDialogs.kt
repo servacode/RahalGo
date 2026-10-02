@@ -345,6 +345,7 @@ internal fun FailDialog(
                             is Pending.Mine ->
                                 if (beforePickup) R.string.confirm_release_body else R.string.confirm_emergency_body
                             is Pending.Reason -> when {
+                                confirm.item.kind == "release" -> R.string.confirm_release_body
                                 !confirm.item.closes -> R.string.confirm_merchant_body
                                 confirm.item.fault == "customer" -> R.string.confirm_customer_body
                                 else -> R.string.confirm_close_body
@@ -384,7 +385,8 @@ internal fun FailDialog(
                     HorizontalDivider(Modifier.padding(vertical = 6.dp))
                 }
                 val reports = reasons.filter { it.kind == "report" }
-                val ends = reasons.filter { it.kind != "report" }
+                val releases = reasons.filter { it.kind == "release" }
+                val ends = reasons.filter { it.kind == "fail" }
                 if (reports.isNotEmpty()) {
                     Section(R.string.problem_reports_title)
                     for (r in reports) {
@@ -418,13 +420,26 @@ internal fun FailDialog(
                     HorizontalDivider(Modifier.padding(vertical = 6.dp))
                 }
                 Section(R.string.problem_mine)
-                for (id in MINE) {
-                    val label = stringResource(id)
-                    RahalTextButton(
-                        onClick = { pending = Pending.Mine(label) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(label, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
+                // **قبل الاستلام: أسبابُ التركِ من الخادم** (يذهب الطلبُ لغيره ويُغلَق دوامُه)؛
+                // **وبعده: «مشكلتي» طارئٌ** يبقى معه الطلبُ وتُنبَّه العمليات.
+                if (releases.isNotEmpty()) {
+                    for (r in releases) {
+                        RahalTextButton(
+                            onClick = { pending = Pending.Reason(r) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(reasonLabel(r.code), color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                } else {
+                    for (id in MINE) {
+                        val label = stringResource(id)
+                        RahalTextButton(
+                            onClick = { pending = Pending.Mine(label) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(label, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
@@ -463,8 +478,10 @@ internal fun reasonLabel(code: String): String = when (code) {
     "merchant_refused" -> stringResource(R.string.reason_merchant_refused)
     "merchant_not_ready" -> stringResource(R.string.reason_merchant_not_ready)
     "order_unknown" -> stringResource(R.string.reason_order_unknown)
+    "bike_broken" -> stringResource(R.string.problem_bike)
+    "accident" -> stringResource(R.string.problem_crash)
+    "force_majeure" -> stringResource(R.string.problem_force)
     "customer_cancelled_by_phone" -> stringResource(R.string.reason_customer_cancelled_by_phone)
-    "customer_new_address" -> stringResource(R.string.reason_customer_new_address)
     "customer_no_answer" -> stringResource(R.string.reason_customer_no_answer)
     else -> code
 }

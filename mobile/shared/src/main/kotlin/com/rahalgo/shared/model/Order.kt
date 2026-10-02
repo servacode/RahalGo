@@ -23,6 +23,12 @@ data class DriverOrder(
     val id: String = "",
     /** **رقمه المنطوق** — يُقال على الهاتف ويُكتب في الشكوى. */
     val number: Long = 0,
+    /**
+     * **أمرُ الإدارة عند الباب** — `deliver_now` («سلّم الآن») أو فارغ (٢٠٢٦-١٠-٠٢: «الطلبُ يبقى
+     * مع السائق حتّى تحلّ الإدارةُ القصّة»). و«عُد إلى المكتب» تُخرج الطلبَ فتقرؤه نافذةُ الخروج.
+     */
+    @SerialName("door_instruction") val doorInstruction: String = "",
+    @SerialName("door_note") val doorNote: String = "",
     val status: String = "",
     /**
      * **نوعه** — `standard` أو `custom`.

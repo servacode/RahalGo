@@ -280,11 +280,17 @@ class DriverApi(private val api: ApiClient) {
     }
 
     /** **يعيد الطلب إلى الطابور** — ولا يبقى معلّقا في يد من لا يقدر. */
-    suspend fun release(orderId: String, note: String = "") {
+    /**
+     * **تركُ الطلب قبل الاستلام — بسببٍ وكلمة** (قرارُ المالك ٢٠٢٦-١٠-٠٢: «لا إعادة للطابور»).
+     *
+     * `reason`: `bike_broken` · `accident` · `force_majeure`. **والدوامُ يُغلَق والطلبُ لا يعود
+     * إليه أبداً** (الخادم). وبعد الاستلام يُردّ `release_wrong_stage` — والبديلُ الطارئ.
+     */
+    suspend fun release(orderId: String, reason: String, note: String) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/release",
             HttpMethod.Post,
-            mapOf("note" to note),
+            mapOf("reason" to reason, "note" to note),
         )
     }
 

@@ -60,7 +60,6 @@ class ReplayTripActivity : ComponentActivity() {
                         actions = TripActions(
                             step = { c.onStep(it) },
                             capture = {},
-                            release = {},
                             chat = {},
                             askAgree = {},
                             agree = { _, _ -> },

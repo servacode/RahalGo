@@ -1052,7 +1052,6 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                 askCamera.launch(android.Manifest.permission.CAMERA)
                             }
                         },
-                        release = orders::releaseCurrent,
                         chat = {
                             if (orders.chat != null) orders.closeChat() else orders.openChat()
                         },
