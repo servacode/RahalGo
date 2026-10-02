@@ -254,3 +254,32 @@ func TestCHAT_TENURE_CustomerToldDriverChanged(t *testing.T) {
 		}
 	}
 }
+
+// TestCHAT_TENURE_AdminSeesEachDriverApart **والإدارةُ تقرأ حديثَ كلِّ سائقٍ في قسمه.**
+//
+// (بلاغُ المالك ٢٠٢٦-١٠-٠٢: عرضُ المحادثات في اللوحة خليطٌ واحد.) **كلُّ سطرٍ يحمل
+// سائقَه** — فيرسم الويبُ عنوانَ قسمٍ عند كلّ سائقٍ جديد.
+func TestCHAT_TENURE_AdminSeesEachDriverApart(t *testing.T) {
+	h := New(t)
+	fx := newTenureFx(t, h)
+	acceptOrder(t, h, fx.DrvA, fx.Order)
+	releaseOrder(t, h, fx.DrvA, fx.Order)
+	acceptOrder(t, h, fx.DrvB, fx.Order)
+
+	admin := h.NewUser("admin")
+	r := h.GET("/api/v1/admin/orders/"+fx.Order+"/chat", admin.Token)
+	if r.Code != http.StatusOK {
+		t.Fatalf("**حديثُ الطلب لا يُقرأ للإدارة**: %s", r)
+	}
+	lines, _ := r.JSON()["lines"].([]any)
+	seen := map[string]bool{}
+	for _, x := range lines {
+		l, _ := x.(map[string]any)
+		if id, _ := l["driver_id"].(string); id != "" {
+			seen[id] = true
+		}
+	}
+	if !seen[fx.DrvA.ID] || !seen[fx.DrvB.ID] {
+		t.Errorf("**الأسطرُ لا تحمل سائقَيها**: أ=%v ب=%v — %s", seen[fx.DrvA.ID], seen[fx.DrvB.ID], r)
+	}
+}

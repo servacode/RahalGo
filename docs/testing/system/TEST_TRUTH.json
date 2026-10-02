@@ -34,7 +34,7 @@
     "behaviour_settings": 132,
     "order_fields": 87,
     "test_files": 446,
-    "test_funcs": 1853
+    "test_funcs": 1854
   },
   "flows": [
     {
@@ -11181,6 +11181,12 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCHAT_TENURE_AdminSeesEachDriverApart",
+      "file": "internal/qa/chat_driver_tenure_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCHAT_TENURE_CustomerToldDriverChanged",

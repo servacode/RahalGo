@@ -24,7 +24,7 @@
  * فلا تُنادى نقطةٌ حتّى يُطلب تبويبُها.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
@@ -116,6 +116,9 @@ interface ChatAudit {
     created_at: string;
     flagged: boolean;
     flag_word?: string;
+    /** **حديثُ أيِّ سائق** — كلُّ سائقٍ في قسمه (٢٠٢٦-١٠-٠٢). */
+    driver_id?: string;
+    driver_name?: string;
   }[];
 }
 
@@ -432,8 +435,17 @@ function ChatLines({ orderID }: { orderID: string }) {
 
   return (
     <ul className="mt-3 space-y-1.5 border-t border-line-soft pt-3">
-      {th.lines.map((l) => (
-        <li key={l.id} className="flex items-start gap-2 text-sm">
+      {th.lines.map((l, i) => (
+        <Fragment key={l.id}>
+        {/* **وعنوانُ قسمٍ عند كلّ سائقٍ جديد** — حديثُ كلِّ سائقٍ وحدَه، لا خليطٌ واحد. */}
+        {(i === 0 || th.lines[i - 1]?.driver_id !== l.driver_id) && (
+          <li className="pt-2 text-2xs font-bold text-ink-muted">
+            {l.driver_id
+              ? R.chatTenure.replace("{name}", l.driver_name || R.chatDriver)
+              : R.chatNoDriver}
+          </li>
+        )}
+        <li className="flex items-start gap-2 text-sm">
           <Badge variant={l.role === "driver" ? "primary" : "neutral"}>
             {l.sender || (l.role === "driver" ? R.chatDriver : R.chatCustomer)}
           </Badge>
@@ -449,6 +461,7 @@ function ChatLines({ orderID }: { orderID: string }) {
             {fmtDateTime(l.created_at)}
           </span>
         </li>
+        </Fragment>
       ))}
     </ul>
   );

@@ -386,7 +386,7 @@ WEB_TAG="$(printf '%s\n' "$ART" | sed -n 's/^WEB_IMAGE_TAG=//p')"
 # bring up staging (non-api) then promote api by artifact
 export RAHALGO_API_IMAGE="$API_TAG" RAHALGO_WEB_IMAGE="$WEB_TAG"
 docker compose -p "$STAGING_PROJECT" -f "$SRC/deploy/staging/compose.staging.yml" --env-file "$ENVLF" \
-	up -d --no-build --no-deps caddy web postgres redis
+	up -d --no-build --no-deps caddy web postgres redis valhalla
 # **بعد إعادةِ إنشاء التبعيّات ننتظر أن يردّ الهدفُ ثانيةً قبل الترقية** —
 # **فإعادةُ caddy/postgres تقطع مسارَ الهويّة لحظةً، وفحصُ promote السابقُ للتبديل
 # يسقط على تلك النافذة (exit 1).** ننتظر تعافيَ المحرّك القائم قبل promote.

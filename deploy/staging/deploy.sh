@@ -92,7 +92,7 @@ IMAGE_ID="$(echo "$ARTIFACT_OUT"  | sed -n 's/^IMAGE_ID=//p')"
 # **والمحرّكُ يُرقّى بـ`promote.sh` لا بـ`up` مجرَّدةً** — **فيُقارَن
 # المنتظَرُ بالفعليّ قبلَ النشر وبعدَه.**
 export RAHALGO_API_IMAGE="$IMAGE_TAG"
-docker compose -f compose.staging.yml --env-file .env.staging up -d --no-deps caddy web postgres redis
+docker compose -f compose.staging.yml --env-file .env.staging up -d --no-deps caddy web postgres redis valhalla
 TARGET_ENV=staging ../promote.sh compose.staging.yml .env.staging "$IMAGE_TAG" 	http://localhost:8080/api/v1/public/identity "$IMAGE_ID"
 
 # ── ٥ · الهجرات ثمّ الصحّة ───────────────────────────────────────────

@@ -517,8 +517,26 @@ fun TripMap(
             return@LaunchedEffect
         }
         view.getMapAsync { libre ->
+            // ══════════════════════════════════════════════════════════
+            // **والنمطُ نفسُه لا يُحمَّل ثانيةً** (بلاغُ المالك: «الخريطةُ تتحمّل من جديد
+            // حين أعود إلى الرحلة»)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **`MapView` محفوظةٌ للنشاط** (`MapSurfaceCache`) — **لكنّ هذا الأثرَ يعود مع
+            // كلّ عودةٍ إلى التبويب فيُعيد `setStyle`**: بلاطاتٌ تُجلب وطبقاتٌ تُبنى، وثانيةٌ
+            // من الفراغ. **فإن كان النمطُ المحمَّلُ هو المطلوبَ نفسَه تُستأنف عليه.**
+            val current = libre.style
+            if (current != null && current.isFullyLoaded &&
+                view.getTag(R.id.trip_style_json) == ready.bound.json
+            ) {
+                styleRef[0] = current
+                MapStyleRepository.onStyleLoaded(binding)
+                surface.overlays.restoreAll()
+                return@getMapAsync
+            }
             val keep: CameraPosition? = if (framed[0]) libre.cameraPosition else null
             libre.setStyle(Style.Builder().fromJson(ready.bound.json)) { loaded ->
+                view.setTag(R.id.trip_style_json, ready.bound.json)
                 styleRef[0] = loaded
                 /**
                  * **وهنا يصير المطلوبُ محمَّلاً** — إغلاقُ ٦ب

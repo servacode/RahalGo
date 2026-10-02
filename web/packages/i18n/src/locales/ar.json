@@ -1302,6 +1302,8 @@
           "chatLines": "{n} رسالة",
           "chatFlagged": "{n} موسومة",
           "chatDriver": "السائق",
+          "chatTenure": "المحادثة مع السائق: {name}",
+          "chatNoDriver": "قبل إسناد أيّ سائق",
           "chatCustomer": "الزبون",
           "addresses": "عناوينه",
           "addressesEmpty": "لا عناوين محفوظة",
