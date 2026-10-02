@@ -79,7 +79,7 @@ func TestCustomerFaultDoesNotWarnMerchant(t *testing.T) {
 		t.Fatalf("تعذّر العدّ: %v", err)
 	}
 	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_absent"); err != nil {
+		f.orderID, "failed", "", "customer_refused"); err != nil {
 		t.Fatalf("الإفشال فشل: %v", err)
 	}
 	after, err := f.svc.MerchantViolations(ctx, f.pool, f.merchantID)

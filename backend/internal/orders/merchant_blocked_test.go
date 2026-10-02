@@ -164,10 +164,11 @@ func TestMerchantBlocked_StillCountsAgainstTheMerchant(t *testing.T) {
 	}
 }
 
-// TestMerchantBlocked_DriverIsStillCompensated **والسائقُ يُعوَّض عن مشواره.**
+// TestMerchantBlocked_DriverIsStillCompensated **والسائقُ يُعوَّض عن مشواره —
+// بعد موافقة العمليات** (٢٠٢٦-١٠-٠٢).
 //
-// قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه** — وبالمعادلة نفسِها التي تعوّضه عند
-// الفشل، فلا حسبةَ ثانيةً لواقعةٍ من الجنس نفسِه.
+// قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه** — وبالمعادلة نفسِها مقترَحاً، **ولا
+// يُقيَّد حتّى يوافق إنسان.**
 func TestMerchantBlocked_DriverIsStillCompensated(t *testing.T) {
 	f := setup(t, "at_pickup", 100_000, 10_000, 0)
 	ctx := context.Background()
@@ -178,9 +179,12 @@ func TestMerchantBlocked_DriverIsStillCompensated(t *testing.T) {
 		f.orderID, "failed", "", "merchant_closed"); err != nil {
 		t.Fatalf("تعذّر الإبلاغ: %v", err)
 	}
-	// **٥٠٪ من أجرة التوصيل** — والمفتاحُ مبذورٌ في العُدّة.
-	if got := f.balance(t, f.driver) - before; got != 5_000 {
-		t.Fatalf("تعويضُ السائق %d والمتوقّع 5000 — **قاد وعاد بلا شيء**", got)
+	// **لا قيدَ لحظتَها** — والمقترَحُ ٥٠٪ من أجرة التوصيل في طلبٍ معلَّق.
+	if got := f.balance(t, f.driver) - before; got != 0 {
+		t.Fatalf("قُيّد للسائق %d لحظةَ الضغطة — **والتعويضُ بموافقة العمليات**", got)
+	}
+	if _, suggested, found := f.pendingRequest(t); !found || suggested != 5_000 {
+		t.Fatalf("الطلبُ المعلَّق (%v · %d) والمتوقّع (true · 5000) — **قاد وعاد بلا شيء**", found, suggested)
 	}
 }
 
@@ -197,7 +201,7 @@ func TestCustomerDoorFailure_StillCloses(t *testing.T) {
 	f.svc.SetNotifier(rec)
 
 	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_absent"); err != nil {
+		f.orderID, "failed", "", "customer_refused"); err != nil {
 		t.Fatalf("الإفشال فشل: %v", err)
 	}
 	var status string

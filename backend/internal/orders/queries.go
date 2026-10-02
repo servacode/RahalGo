@@ -94,7 +94,9 @@ const orderSelect = `
 	                        ORDER BY oi.id)
 	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json),
 	       -- **ووصفُ الغرض ومن يدفع** — للتوصيلة وحدَها، وفراغٌ لغيرها.
-	       COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''), o.dropoff_known
+	       COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''), o.dropoff_known,
+	       -- **وأين البضاعةُ إن لم تكن في المتجر** — كلمةُ الطارئ للسائق التالي.
+	       COALESCE(o.pickup_override_note, '')
 	FROM orders o
 	-- **والزبونُ يُضمّ يساراً** — التوصيلةُ لا زبونَ لها (customer_id فارغ).
 	-- **وضمٌّ صلبٌ يُسقطها من كلّ قراءة** — وهي علّةُ الخاصِّ مع المتجر بعينها.
@@ -130,7 +132,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items,
-		&o.ParcelNote, &o.FeePayer, &o.DropoffKnown)
+		&o.ParcelNote, &o.FeePayer, &o.DropoffKnown, &o.PickupNote)
 	if err != nil {
 		return nil, err
 	}

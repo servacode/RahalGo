@@ -1518,6 +1518,14 @@ var Catalog = []Def{
 	{Key: "drivers.failed_compensation_percent", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
 
+	// **انتظارُ الباب قبل «الزبونُ غير موجود»** (قرارُ المالك ٢٠٢٦-١٠-٠٢).
+	//
+	// **قِيس قبله**: قُبل الفشلُ بعد ٦٨ ثانيةً من الوصول — **وفشلٌ بذنب الزبون
+	// يمنعه من النقد شهراً.** والإدارةُ تتّصل به في الأثناء، **لأنّ السائقَ لا
+	// يملك رقمَه.** وصفرٌ يُطفئ الانتظار.
+	{Key: "drivers.door_wait_sec", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 1800, Unit: "second", Default: 300},
+
 	// ── المتاجر ───────────────────────────────────────────────────────────
 
 	// **عمولةُ المنصة من المتاجر — نسبةٌ من سعر الشراء.**

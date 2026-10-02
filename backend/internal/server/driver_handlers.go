@@ -424,7 +424,9 @@ const driverOrderSelect = `
 	       -- **وموضعُ الاستلام البديلُ يسبق عنوانَ المتجر**: البضاعةُ
 	       -- ليست فيه، **ومن قرأ عنوانَ المتجر ذهب إلى حيث لا شيء.**
 	       CASE
-	           WHEN o.pickup_override IS NOT NULL AND o.pickup_override_note <> ''
+	           -- **والكلمةُ تصل وإن لم يُلتقط موضع** (٢٠٢٦-١٠-٠٢): طارئٌ بلا موقعٍ
+	           -- كان يكتبها ولا تظهر — **فيذهب التالي إلى مطعمٍ سلّم بضاعتَه.**
+	           WHEN COALESCE(o.pickup_override_note, '') <> ''
 	               THEN o.pickup_override_note
 	           ELSE COALESCE(m.address_text, '')
 	       END
@@ -775,6 +777,14 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	// كُتب في تجربةٍ حيّة «الزبون لا يقبل او رفض او لم اجد احد او العنوان
 	// وهمي» — **أربعةُ أحكامٍ في سطر**، وأحدُها يستوجب مراجعةَ زبونٍ والآخر
 	// لا يستوجب شيئاً. **ونصٌّ حرٌّ لا يُعدّ ولا يُقاس.**
+	//
+	// **وبلاغُ المرحلة ليس فشلاً** (قرارُ المالك ٢٠٢٦-١٠-٠٢): تطبيقٌ لم يُحدَّث
+	// يعرض «الطلبُ غيرُ جاهز» بين أسباب التعذّر ويرسله فشلاً — **فيُسجَّل بلاغاً
+	// والطلبُ كما هو**، لا يُردّ ولا يُحرَّر السائق.
+	if req.To == orders.StFailed && orders.IsStageReport(req.Reason) {
+		s.driverStageReport(w, r, orderID, req.Reason, req.Note)
+		return
+	}
 	if req.To == orders.StFailed && orders.FaultOf(req.Reason) == "" {
 		s.respondErr(w, errBadFailReason)
 		return

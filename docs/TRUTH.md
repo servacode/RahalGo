@@ -138,15 +138,12 @@
 | استلم السائق `picked_up` | في الطريق `on_the_way` | السائق |
 | استلم السائق `picked_up` | في الطابور `dispatching` | العمليات · المالك |
 | استلم السائق `picked_up` | تعذّر التسليم `failed` | **لا أحد** |
-| استلم السائق `picked_up` | ملغى `cancelled` | المالك |
 | في الطريق `on_the_way` | عند الزبون `at_dropoff` | السائق |
 | في الطريق `on_the_way` | في الطابور `dispatching` | العمليات · المالك |
 | في الطريق `on_the_way` | تعذّر التسليم `failed` | **لا أحد** |
-| في الطريق `on_the_way` | ملغى `cancelled` | المالك |
 | عند الزبون `at_dropoff` | سُلّم `delivered` | السائق |
 | عند الزبون `at_dropoff` | تعذّر التسليم `failed` | السائق |
 | عند الزبون `at_dropoff` | في الطابور `dispatching` | العمليات · المالك |
-| عند الزبون `at_dropoff` | ملغى `cancelled` | المالك |
 | سُلّم `delivered` | مُسترَدّ `refunded` | المالك |
 <!-- /gen:platform-managed -->
 
@@ -189,15 +186,12 @@
 | استلم السائق `picked_up` | في الطريق `on_the_way` | العمليات · المالك · السائق |
 | استلم السائق `picked_up` | في الطابور `dispatching` | العمليات · المالك |
 | استلم السائق `picked_up` | تعذّر التسليم `failed` | العمليات · المالك |
-| استلم السائق `picked_up` | ملغى `cancelled` | العمليات · المالك |
 | في الطريق `on_the_way` | عند الزبون `at_dropoff` | العمليات · المالك · السائق |
 | في الطريق `on_the_way` | في الطابور `dispatching` | العمليات · المالك |
 | في الطريق `on_the_way` | تعذّر التسليم `failed` | العمليات · المالك |
-| في الطريق `on_the_way` | ملغى `cancelled` | العمليات · المالك |
 | عند الزبون `at_dropoff` | سُلّم `delivered` | العمليات · المالك · السائق |
 | عند الزبون `at_dropoff` | تعذّر التسليم `failed` | العمليات · المالك · السائق |
 | عند الزبون `at_dropoff` | في الطابور `dispatching` | العمليات · المالك |
-| عند الزبون `at_dropoff` | ملغى `cancelled` | العمليات · المالك |
 | سُلّم `delivered` | مُسترَدّ `refunded` | المالك |
 <!-- /gen:self-managed -->
 
@@ -436,17 +430,22 @@
 **وأسبابُ التعذّر تحمل ذنوبَها** — والذنبُ يقرّر التعويض:
 
 <!-- gen:fail-reasons -->
-| السبب | الذنب على | يُعرض عند |
-|---|---|---|
-| `customer_absent` | الزبون | عند الزبون `at_dropoff` |
-| `customer_refused` | الزبون | عند الزبون `at_dropoff` |
-| `customer_unreachable` | الزبون | عند الزبون `at_dropoff` |
-| `address_wrong` | الزبون | عند الزبون `at_dropoff` |
-| `driver_late` | السائق | عند الزبون `at_dropoff` |
-| `merchant_closed` | المتجر | السائق عند المتجر `at_pickup` |
-| `merchant_refused` | المتجر | السائق عند المتجر `at_pickup` |
-| `merchant_not_ready` | المتجر | السائق عند المتجر `at_pickup` |
-| `order_unknown` | المتجر | السائق عند المتجر `at_pickup` |
+| السبب | الذنب على | يُعرض عند | ما يقع |
+|---|---|---|---|
+| `customer_absent` | الزبون | عند الزبون `at_dropoff` | يُغلق — بعد انتظار الباب |
+| `customer_refused` | الزبون | عند الزبون `at_dropoff` | يُغلق |
+| `customer_unreachable` | الزبون | عند الزبون `at_dropoff` | يُغلق — بعد انتظار الباب |
+| `address_wrong` | الزبون | عند الزبون `at_dropoff` | يُغلق |
+| `driver_late` | السائق | عند الزبون `at_dropoff` | يُغلق |
+| `merchant_closed` | المتجر | السائق عند المتجر `at_pickup` | ينتظر العمليات — حيّ |
+| `merchant_refused` | المتجر | السائق عند المتجر `at_pickup` | ينتظر العمليات — حيّ |
+| `order_unknown` | المتجر | السائق عند المتجر `at_pickup` | ينتظر العمليات — حيّ |
+| `merchant_not_ready` | المتجر | السائق عند المتجر `at_pickup` | بلاغٌ للعمليات — الطلبُ كما هو |
+| `customer_cancelled_by_phone` | الزبون | استلم السائق `picked_up` | بلاغٌ للعمليات — الطلبُ كما هو |
+| `customer_cancelled_by_phone` | الزبون | في الطريق `on_the_way` | بلاغٌ للعمليات — الطلبُ كما هو |
+| `customer_new_address` | الزبون | استلم السائق `picked_up` | بلاغٌ للعمليات — الطلبُ كما هو |
+| `customer_new_address` | الزبون | في الطريق `on_the_way` | بلاغٌ للعمليات — الطلبُ كما هو |
+| `customer_no_answer` | الزبون | عند الزبون `at_dropoff` | بلاغٌ للعمليات — الطلبُ كما هو |
 <!-- /gen:fail-reasons -->
 
 ---
@@ -906,6 +905,7 @@
 | `drivers.target_3` | السائقون | int | `0` |
 | `drivers.reward_3` | السائقون | money | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
+| `drivers.door_wait_sec` | السائقون | int | `300` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
 | `app.min_version.merchant` | المتاجر | int | `0` |

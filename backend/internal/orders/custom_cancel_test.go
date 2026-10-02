@@ -53,15 +53,22 @@ func TestCustomCancel_OwnerUntilBought(t *testing.T) {
 
 // TestCustomCancel_OpsAlwaysMay **والعملياتُ تُلغي في كلّ طورٍ حيّ.**
 //
-// **ومن اشترى ثمّ وقع له طارئٌ يحتاج من يُقفل طلبَه** — وإلّا بقي معلّقاً
-// في مهامّه إلى الأبد.
+// **وبعد الشراء لا إلغاءَ لأحد** (قرارُ المالك ٢٠٢٦-١٠-٠٢: «الطلبُ ما بيلتغي
+// بعد ما يصير عند السائق») — **ومن اشترى ثمّ وقع له طارئٌ** يُعاد طلبُه إلى
+// الطابور أو يُفشَل بتدخّلٍ موقَّع، **فلا يبقى معلّقاً في مهامّه.**
 func TestCustomCancel_OpsAlwaysMay(t *testing.T) {
 	ops := []string{"ops"}
-	for _, from := range []string{
-		StPending, StDispatching, StAssigned, StPickedUp, StOnTheWay, StAtDropoff,
-	} {
+	for _, from := range []string{StPending, StDispatching, StAssigned} {
 		if !canTransition(KindCustom, from, StCancelled, ops) {
 			t.Fatalf("من %q: العملياتُ لا تستطيع الإلغاء — **وطلبٌ لا يُقفل يبقى في مهامّ سائقه**", from)
+		}
+	}
+	for _, from := range []string{StPickedUp, StOnTheWay, StAtDropoff} {
+		if canTransition(KindCustom, from, StCancelled, ops) {
+			t.Fatalf("من %q: العملياتُ تُلغي بعد الشراء — **والطلبُ لا يُلغى بعد أن يصير عند السائق**", from)
+		}
+		if !canTransition(KindCustom, from, StDispatching, ops) {
+			t.Fatalf("من %q: لا مخرجَ للعمليات — **وطلبٌ لا يُقفل يبقى في مهامّ سائقه**", from)
 		}
 	}
 }

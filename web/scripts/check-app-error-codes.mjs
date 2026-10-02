@@ -100,6 +100,7 @@ const SERVER_ADMIN = new Set([
   "dispute_party_has_no_wallet", "division_in_use",
   "division_needs_governorate", "division_needs_name",
   "driver_already_compensated", "driver_has_open_orders", "duplicate_name",
+  "compensation_not_pending",
   "goods_already_settled", "goods_flow_changed", "goods_ledger_mismatch",
   "order_has_no_driver", "order_not_failed", "order_still_open",
   "role_exists", "section_has_items", "step_up_invalid", "step_up_required",

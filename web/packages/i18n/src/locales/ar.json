@@ -651,6 +651,10 @@
     "driver_already_compensated": "عوض السائق عن هذا الطلب من قبل — ولا يعوض مرتين.",
     "order_has_no_driver": "لا سائق على هذا الطلب",
     "bad_fail_reason": "اختر سبب تعذر التسليم",
+    "fail_reason_wrong_stage": "هذا السبب لا يخص مرحلة الطلب الحالية",
+    "door_wait": "انتظر عند الباب قليلا — الإدارة تحاول الاتصال بالزبون",
+    "report_wrong_stage": "هذا البلاغ لا يخص مرحلة الطلب الحالية",
+    "compensation_not_pending": "لا طلب تعويض معلق لهذا الطلب",
     "goods_flow_changed": "تغيرت آلية التعامل مع البضاعة — حدث الصفحة",
     "goods_ledger_mismatch": "ما يسترجع لا يطابق ما قيد — راجع دفتر الطلب",
     "merchant_no_returns": "هذا المتجر لا يستقبل المرتجعات",
@@ -1876,8 +1880,13 @@
         },
         "drivers.failed_compensation_percent": {
           "label": "تعويض السائق عند تعذر التسليم",
-          "hint": "",
+          "hint": "يقترح هذا المبلغ على العمليات، ولا يقيد إلا بموافقتها",
           "zero": "بلا تعويض"
+        },
+        "drivers.door_wait_sec": {
+          "label": "انتظار السائق عند باب الزبون",
+          "hint": "قبل أن يظهر «الزبون غير موجود». الإدارة تتصل بالزبون في أثنائه",
+          "zero": "بلا انتظار"
         },
         "drivers.cash_limit": {
           "label": "سقف النقد بذمة السائق",
@@ -2470,10 +2479,12 @@
         "driver.delivery_proof": "رفع سائق إثبات تسليم",
         "driver.delivery_proof_skipped": "تخطي إثبات التسليم",
         "driver.emergency": "بلاغ طوارئ من سائق",
+        "driver.stage_report": "بلاغ سائق للعمليات عن مرحلة الطلب",
         "driver.offer_declined": "رفض سائق عرض طلب",
         "driver.order_returned": "إرجاع سائق طلبا",
         "driver.release_note_failed": "تعذر كتابة سبب إعادة طلب للطابور",
         "finance.driver_compensation": "تعويض سائق",
+        "finance.driver_compensation_rejected": "رفض طلب تعويض سائق",
         "finance.driver_settle": "تسوية صندوق سائق",
         "finance.expense_added": "تسجيل مصروف تشغيل",
         "finance.expense_category": "تعديل باب مصروف",

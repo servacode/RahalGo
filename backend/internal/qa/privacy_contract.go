@@ -210,6 +210,7 @@ var OrderPrivacy = map[string]FieldRule{
 	// (`AudienceMerchantDelivery`) لا في جمهوره العامّ.
 	"parcel_note":         {Ref: "ما يحمله السائق — كتبه المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"fee_payer":           {Ref: "من يدفع الأجرة — ومن يقبض منه السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"pickup_note":         {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"dropoff_known":       {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_request":      {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_agreed_at":    {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

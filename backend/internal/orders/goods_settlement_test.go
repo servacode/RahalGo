@@ -46,7 +46,7 @@ func goodsCase(t *testing.T) (f *fixture, owner, treasury string) {
 		}
 	}
 	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "customer_absent"); err != nil {
+		f.orderID, "failed", "", "customer_refused"); err != nil {
 		t.Fatalf("تعذّر الإفشال: %v", err)
 	}
 	// **٩٠٬٠٠٠ شراءً ناقصَ عمولةِ ١٠٪** — والاسترجاعُ يُقاس عليه.

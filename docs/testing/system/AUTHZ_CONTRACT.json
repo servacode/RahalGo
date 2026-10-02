@@ -34,12 +34,12 @@
   {
    "code": "finance.manage",
    "description": "قيدُ محفظةٍ ومصروفٌ وخزينة",
-   "guards_routes": 11
+   "guards_routes": 12
   },
   {
    "code": "finance.read",
    "description": "قراءةُ المال والتقارير الماليّة",
-   "guards_routes": 15
+   "guards_routes": 16
   },
   {
    "code": "merchants.manage",
@@ -183,7 +183,7 @@
   }
  ],
  "route_policy": {
-  "rules": 164,
+  "rules": 166,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

@@ -27,10 +27,24 @@ package orders
 // **لَنزل إلى سائقٍ آخرَ يقف أمام المطعم المغلق نفسِه** — ويتكرّر إلى أن
 // ينتبه أحد.
 //
-// # والسائقُ يُعوَّض
+// # والسائقُ يُعوَّض — بعد موافقة العمليات
 //
-// قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه.** وبالمعادلة نفسِها التي تعوّضه عند
-// الفشل — **ولا حسبةَ ثانيةً لواقعةٍ من الجنس نفسِه.**
+// قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه.** وكان يُقيَّد له لحظتَها — **ونُسخ
+// ٢٠٢٦-١٠-٠٢**: يُكتب طلبَ تعويضٍ معلَّقاً، والعملياتُ توافق
+// (`compensation_requests.go`).
+//
+// # والذنبُ من السبب لا ثابتٌ
+//
+// كان يُكتب `fault = 'merchant'` لكلّ سبب — **فـ«تأخّرتُ أنا» عند المتجر صار
+// ذنبَ متجر.** والمحرّكُ اليومَ يردّ ما لا يخصّ المرحلة، **والذنبُ يُقرأ من
+// القائمة** (`FaultOf`).
+//
+// # والتوصيلةُ تبقى عند المتجر — ولا تعلق
+//
+// **`accepted` لا وجودَ لها في خارطة التوصيلة** (`withoutMerchantSteps`):
+// طلبٌ رُدّ إليها **بقي بلا مخرجٍ إلى الأبد** — لا يُحوَّل ولا يُلغى ولا يُعاد.
+// **فيبقى في `at_pickup` ينتظر العمليات** — ومنها مخرجان قائمان: الإعادةُ إلى
+// الطابور والإلغاءُ.
 
 import (
 	"context"
@@ -42,10 +56,18 @@ import (
 // merchantBlockedNote يُقرأ في سجلّ الطلب — **ومن رأى الطلبَ يعود يسأل لماذا.**
 const merchantBlockedNote = "المتجرُ تعذّر — عاد إلى المكتب للتبديل"
 
+// merchantDeliveryBlockedNote **التوصيلةُ لا تُبدَّل متجراً** — متجرُها مُنشئُها.
+const merchantDeliveryBlockedNote = "المتجرُ تعذّر — التوصيلةُ تنتظر العمليات عند المتجر"
+
 // merchantBlocked يردّ الطلبَ إلى المكتب بدل أن يُغلقه.
 func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
-	orderID, actorID, from, failReason, note string,
+	orderID, actorID, from, kind, failReason, note string,
 	driverID *string, deliveryFee int64) (*Order, error) {
+	fault := FaultOf(failReason)
+	if kind == KindMerchantDelivery {
+		return s.merchantDeliveryBlocked(ctx, tx, orderID, actorID, from, fault, failReason, note,
+			driverID, deliveryFee)
+	}
 	// **ويُحرَّر السائقُ ويُصفَّر وسمُ الإبلاغ** — فيبدأ التحويلُ من أوّله.
 	//
 	// **و`dispatched_at` يُصفَّر معهما**: منه تُقاس مهلةُ إيجاد سائق، **ولو
@@ -55,8 +77,8 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 		SET status = 'accepted', driver_id = NULL, offered_driver_id = NULL,
 		    offer_expires_at = NULL, dispatched_at = NULL,
 		    sent_to_merchant_at = NULL, updated_at = now(),
-		    fail_reason = $2, fault = 'merchant'
-		WHERE id = $1`, orderID, failReason); err != nil {
+		    fail_reason = $2, fault = NULLIF($3, '')
+		WHERE id = $1`, orderID, failReason, fault); err != nil {
 		return nil, err
 	}
 
@@ -69,23 +91,14 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 		body += " — " + note
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
-		VALUES ($1, $2, 'accepted', $3, $4)`, orderID, from, actorID, body); err != nil {
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+		VALUES ($1, $2, 'accepted', $3, $4, $5)`, orderID, from, actorID, body, driverID); err != nil {
 		return nil, err
 	}
 
-	// **ويُعوَّض السائق** — بالمعادلة نفسِها، ومن الخزينة كما دائماً.
-	// **ولا إشعارَ محفظةٍ هنا**: هذا مسارُ حظرِ متجرٍ يُنهي طلباتِه جملةً،
-	// **والتعويضاتُ تُقيَّد ويُخبَر بها من مسار الانتقال العاديّ.**
-	var noNotice settled
-	if err := s.compensateDriverOnFail(ctx, tx, settlement{
-		orderID: orderID, actorID: actorID, driverID: driverID,
-		deliveryFee: deliveryFee,
-	}, &noNotice); err != nil {
-		return nil, err
-	}
-	// **والخزينةُ تُعيد الحساب** — تعويضٌ خرج منها يُقرأ في ربح الطلب.
-	if err := s.creditTreasury(ctx, tx, orderID, actorID); err != nil {
+	// **وطلبُ تعويضٍ معلَّق** — لا قيد. والعملياتُ توافق.
+	requested, err := s.requestDriverCompensation(ctx, tx, orderID, driverID, fault, failReason, deliveryFee)
+	if err != nil {
 		return nil, err
 	}
 
@@ -100,7 +113,6 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 		return updated, err
 	}
 	s.publishOrder(updated)
-	s.publishWalletsOf(ctx, orderID)
 
 	// **والإنذارُ يُسجَّل كما كان — ووجودُ البديل لا يُبرّئ من أغلق بابَه.**
 	//
@@ -111,7 +123,7 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 	// **بل هو هنا أوجب**: الزبونُ لم يُخطَر، **فلا شكوى تكشف المتجرَ** — والعدُّ
 	// وحدَه ما يُظهره.
 	if failReason != "" {
-		s.warnMerchantOnFault(ctx, orderID, FaultOf(failReason), failReason)
+		s.warnMerchantOnFault(ctx, orderID, fault, failReason)
 	}
 
 	// **والتنبيهُ للمكتب وحدَه — لا للزبون.**
@@ -127,6 +139,70 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 			EntityID: orderID,
 			Href:     "/dashboard/orders",
 		})
+	}
+	if requested {
+		s.alertCompensationPending(ctx, orderID)
+	}
+	return updated, nil
+}
+
+// merchantDeliveryBlocked **التوصيلةُ تعذّرت عند متجرها — وتبقى حيّة.**
+//
+// **لا `accepted`**: لا وجودَ لها في خارطة التوصيلة فيعلق الطلبُ إلى الأبد.
+// **ولا تحريرَ للسائق**: هو عند الباب، والعملياتُ تكلّم المتجر — فإن حُلّ استلم،
+// **وإن لم يُحلّ أعادته العملياتُ إلى الطابور أو ألغته** (حافّتان قائمتان من
+// `at_pickup` في خارطتها). **والحالُ لا تتبدّل فلا يُكتب ذنبٌ على طلبٍ حيّ.**
+func (s *Service) merchantDeliveryBlocked(ctx context.Context, tx wallet.Querier,
+	orderID, actorID, from, fault, failReason, note string,
+	driverID *string, deliveryFee int64) (*Order, error) {
+	body := merchantDeliveryBlockedNote
+	if failReason != "" {
+		body += " (" + failReason + ")"
+	}
+	if note != "" {
+		body += " — " + note
+	}
+	var actor any
+	if actorID != "" {
+		actor = actorID
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+		VALUES ($1, $2, $2, $3, $4, $5)`, orderID, from, actor, body, driverID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE orders SET updated_at = now() WHERE id = $1`, orderID); err != nil {
+		return nil, err
+	}
+	requested, err := s.requestDriverCompensation(ctx, tx, orderID, driverID, fault, failReason, deliveryFee)
+	if err != nil {
+		return nil, err
+	}
+	if c, ok := tx.(interface{ Commit(context.Context) error }); ok {
+		if err := c.Commit(ctx); err != nil {
+			return nil, err
+		}
+	}
+	updated, err := s.GetByID(ctx, orderID)
+	if err != nil {
+		return updated, err
+	}
+	s.publishOrder(updated)
+	if failReason != "" {
+		s.warnMerchantOnFault(ctx, orderID, fault, failReason)
+	}
+	if s.notify != nil {
+		s.notify.NotifyOps(ctx, notifications.Input{
+			Kind:     notifications.KindOrder,
+			Title:    "المتجرُ تعذّر — التوصيلةُ تنتظرك",
+			Body:     "#" + itoa(updated.Number) + " — " + body,
+			Entity:   "order",
+			EntityID: orderID,
+			Href:     "/dashboard/orders",
+		})
+	}
+	if requested {
+		s.alertCompensationPending(ctx, orderID)
 	}
 	return updated, nil
 }

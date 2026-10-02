@@ -455,21 +455,6 @@
   {
    "kind": "standard",
    "from": "picked_up",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
-   ]
-  },
-  {
-   "kind": "standard",
-   "from": "picked_up",
    "to": "failed",
    "declared_roles": [
     "ops"
@@ -517,21 +502,6 @@
   {
    "kind": "standard",
    "from": "on_the_way",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
-   ]
-  },
-  {
-   "kind": "standard",
-   "from": "on_the_way",
    "to": "failed",
    "declared_roles": [
     "ops"
@@ -574,21 +544,6 @@
     "ops",
     "admin",
     "driver"
-   ]
-  },
-  {
-   "kind": "standard",
-   "from": "at_dropoff",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
    ]
   },
   {
@@ -870,22 +825,6 @@
   {
    "kind": "custom",
    "from": "picked_up",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
-   ],
-   "inherited": true
-  },
-  {
-   "kind": "custom",
-   "from": "picked_up",
    "to": "failed",
    "declared_roles": [
     "ops"
@@ -936,22 +875,6 @@
   {
    "kind": "custom",
    "from": "on_the_way",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
-   ],
-   "inherited": true
-  },
-  {
-   "kind": "custom",
-   "from": "on_the_way",
    "to": "failed",
    "declared_roles": [
     "ops"
@@ -996,22 +919,6 @@
     "ops",
     "admin",
     "driver"
-   ],
-   "inherited": true
-  },
-  {
-   "kind": "custom",
-   "from": "at_dropoff",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
    ],
    "inherited": true
   },
@@ -1241,21 +1148,6 @@
   {
    "kind": "merchant_delivery",
    "from": "picked_up",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
-   ]
-  },
-  {
-   "kind": "merchant_delivery",
-   "from": "picked_up",
    "to": "failed",
    "declared_roles": [
     "ops"
@@ -1303,21 +1195,6 @@
   {
    "kind": "merchant_delivery",
    "from": "on_the_way",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
-   ]
-  },
-  {
-   "kind": "merchant_delivery",
-   "from": "on_the_way",
    "to": "failed",
    "declared_roles": [
     "ops"
@@ -1360,21 +1237,6 @@
     "ops",
     "admin",
     "driver"
-   ]
-  },
-  {
-   "kind": "merchant_delivery",
-   "from": "at_dropoff",
-   "to": "cancelled",
-   "declared_roles": [
-    "ops"
-   ],
-   "effective_platform": [
-    "admin"
-   ],
-   "effective_merchants": [
-    "ops",
-    "admin"
    ]
   },
   {
@@ -1578,11 +1440,6 @@
   },
   {
    "code": "merchant_refused",
-   "fault": "merchant",
-   "at": "at_pickup"
-  },
-  {
-   "code": "merchant_not_ready",
    "fault": "merchant",
    "at": "at_pickup"
   },
