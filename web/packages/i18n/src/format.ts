@@ -85,3 +85,20 @@ export function fmtTime(v: string | number | Date): string {
 export function fmtLongDate(v: string | number | Date): string {
   return clean(longDateFmt.format(toDate(v)));
 }
+
+/**
+ * **يومُ دمشق بصيغة `YYYY-MM-DD`** — لمُرشِّحات التاريخ المرسَلة إلى المحرّك.
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٣: سجلُّ الطلبات بأزرار «اليوم · أمس · آخر ٧ أيّام ·
+ * هذا الشهر».) **واليومُ يومُ المنصّة لا يومُ متصفّحٍ مسافر** — والمحرّكُ
+ * يقرؤه بيوم دمشق كذلك (`orders.ListFilter`).
+ */
+const isoDayFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Damascus",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+export function damascusDay(v: string | number | Date = Date.now()): string {
+  return isoDayFmt.format(toDate(v));
+}

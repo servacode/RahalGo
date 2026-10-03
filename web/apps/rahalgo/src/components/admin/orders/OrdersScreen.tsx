@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   getMessages,
@@ -9,7 +9,7 @@ import {
   fmtNum,
   fmtDateTime,
   fmtTime,
-  fmtSpan, errorText } from "@rahalgo/i18n";
+  fmtSpan, errorText, damascusDay } from "@rahalgo/i18n";
 import {
   BrandMark,
   OrderRef,
@@ -666,7 +666,21 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
    */
   const searching = query.trim() !== "";
   const live = mode === "live";
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => Math.max(1, Number(params.get("page")) || 1));
+  // ══════════════════════════════════════════════════════════════════
+  // **مُرشِّحاتُ السجلّ — بالتاريخ والمتجر والسائق** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وكلُّها في الرابط** — تُقرأ عند الفتح وتُكتب عند التغيير، **فرابطٌ
+  // يُرسَل إلى زميلٍ يفتح عليه ما رآه صاحبُه بعينه.** واليومُ يومُ دمشق.
+  const [from, setFrom] = useState(params.get("from") ?? "");
+  const [to, setTo] = useState(params.get("to") ?? "");
+  const [merchantId, setMerchantId] = useState(params.get("merchant") ?? "");
+  const [driverId, setDriverId] = useState(params.get("driver") ?? "");
+  const [storeList, setStoreList] = useState<{ id: string; name: string }[]>([]);
+  const [driverList, setDriverList] = useState<DriverRow[]>([]);
+  const router = useRouter();
+  const pathname = usePathname();
   const [error, setError] = useState("");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   /**
@@ -734,8 +748,14 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         open: live && !searching ? "1" : "",
         closed: !live && !searching ? "1" : "",
         awaiting: awaiting ? "1" : "",
+        from: live ? "" : from,
+        to: live ? "" : to,
+        merchant_id: live ? "" : merchantId,
+        driver_id: live ? "" : driverId,
         page: String(page),
-        per_page: "12",
+        // **وخمسةٌ وعشرون في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يُقرأ ولا
+        // يُعمَل عليه، **وصفحاتٌ أقلُّ أخفُّ على من يبحث.**
+        per_page: live ? "12" : "25",
       });
       setData(await api<OrderPage>(`/api/v1/admin/orders?${params}`));
       setError("");
@@ -762,7 +782,65 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, awaiting, query, live, searching, page]);
+  }, [status, awaiting, query, live, searching, page, from, to, merchantId, driverId]);
+
+  // **والرابطُ يتبع الشاشة** — `replace` لا `push`: كلُّ حرفٍ في البحث لا
+  // يصير صفحةً في سجلّ المتصفّح يُرجَع إليها.
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    const put = (k: string, v: string) => {
+      if (v) qs.set(k, v);
+    };
+    put("q", query);
+    put("status", status);
+    if (awaiting) qs.set("awaiting", "1");
+    if (!live) {
+      put("from", from);
+      put("to", to);
+      put("merchant", merchantId);
+      put("driver", driverId);
+    }
+    if (page > 1) qs.set("page", String(page));
+    const next = qs.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [router, pathname, live, query, status, awaiting, from, to, merchantId, driverId, page]);
+
+  // **وقائمتا المتجر والسائق لمن يملك قراءتهما** — وإلّا رُدّ النداءُ ٤٠٣.
+  useEffect(() => {
+    if (live) return;
+    if (can("merchants.read")) {
+      api<{ id: string; name: string }[]>("/api/v1/admin/merchants")
+        .then((r) => setStoreList(Array.isArray(r) ? r : []))
+        // @empty-ok — **قائمةُ المرشِّح عونٌ لا شرط**: بلا متجرٍ فيها يبقى السجلُّ كلُّه.
+        .catch(() => setStoreList([]));
+    }
+    if (can("drivers.read")) {
+      api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers")
+        .then((r) => setDriverList(Array.isArray(r) ? r : r.drivers))
+        // @empty-ok — **وكذلك قائمةُ السائقين.**
+        .catch(() => setDriverList([]));
+    }
+  }, [live, can]);
+
+  /** **مدىً جاهز** — بيوم دمشق، و`to` اليومُ نفسُه. */
+  const today = damascusDay();
+  const presets: { id: string; label: string; from: string; to: string }[] = [
+    { id: "today", label: m.admin.ordersPage.range.today, from: today, to: today },
+    {
+      id: "yesterday",
+      label: m.admin.ordersPage.range.yesterday,
+      from: damascusDay(Date.now() - 86_400_000),
+      to: damascusDay(Date.now() - 86_400_000),
+    },
+    {
+      id: "last7",
+      label: m.admin.ordersPage.range.last7,
+      from: damascusDay(Date.now() - 6 * 86_400_000),
+      to: today,
+    },
+    { id: "month", label: m.admin.ordersPage.range.month, from: `${today.slice(0, 8)}01`, to: today },
+  ];
+  const filtered = from !== "" || to !== "" || merchantId !== "" || driverId !== "";
 
   useEffect(() => {
     const t = setTimeout(load, 250);
@@ -1296,6 +1374,106 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             **والبطاقةُ تحمل الكلّ بلا ضغطة** — وهي ما بُني عليه هذا
             القسمُ كلُّه في هذه الجولة. */}
       </div>
+
+      {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — مدىً جاهزٌ بضغطة،
+          أو يومان بيد، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
+      {!live && (
+        <div className="mb-4 flex flex-wrap items-end gap-2">
+          {presets.map((p) => {
+            const on = from === p.from && to === p.to;
+            return (
+              <Button
+                key={p.id}
+                variant={on ? "primary" : "secondary"}
+                aria-pressed={on}
+                onClick={() => {
+                  setFrom(on ? "" : p.from);
+                  setTo(on ? "" : p.to);
+                  setPage(1);
+                }}
+              >
+                {p.label}
+              </Button>
+            );
+          })}
+          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+            <Input
+              id="h-from"
+              label={m.admin.ordersPage.range.from}
+              type="date"
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+            <Input
+              id="h-to"
+              label={m.admin.ordersPage.range.to}
+              type="date"
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          {storeList.length > 0 && (
+            <div className="min-w-[10rem] flex-1 sm:w-48 sm:flex-none">
+              <Select
+                aria-label={m.admin.ordersPage.range.allStores}
+                value={merchantId}
+                onChange={(e) => {
+                  setMerchantId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{m.admin.ordersPage.range.allStores}</option>
+                {storeList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {driverList.length > 0 && (
+            <div className="min-w-[10rem] flex-1 sm:w-48 sm:flex-none">
+              <Select
+                aria-label={m.admin.ordersPage.range.allDrivers}
+                value={driverId}
+                onChange={(e) => {
+                  setDriverId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{m.admin.ordersPage.range.allDrivers}</option>
+                {driverList.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.full_name || d.phone}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {filtered && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+                setMerchantId("");
+                setDriverId("");
+                setPage(1);
+              }}
+            >
+              {m.admin.ordersPage.range.clear}
+            </Button>
+          )}
+        </div>
+      )}
 
       {error && <Alert className="mb-4">{error}</Alert>}
 

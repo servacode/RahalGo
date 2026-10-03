@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 
 	"github.com/jackc/pgx/v5"
@@ -258,8 +261,29 @@ type ListFilter struct {
 	// في الرئيسيّة تفتح الطلباتِ عليه (قرارُ المالك ٢٠٢٦-١٠-٠٣). **وشرطُه
 	// نصُّ العدّ نفسُه** (`awaitingOfficeSQL`).
 	AwaitingOffice bool
-	Page           int
-	PerPage        int
+	// From وTo **مدى تاريخ الإنشاء بيوم دمشق** — `YYYY-MM-DD`، وكلاهما شاملٌ.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٣: سجلُّ الطلبات يُرشَّح بالتاريخ والمتجر والسائق.)
+	//
+	// **واليومُ يومُ أهله لا يومُ غرينتش** — كما في أرقام الرئيسيّة: بفارق
+	// الثلاث ساعات تقع طلباتُ الليل في يومٍ آخر. **وفارغٌ يعني «بلا حدّ».**
+	From    string
+	To      string
+	Page    int
+	PerPage int
+}
+
+// errBadDateRange **تاريخٌ لا يُقرأ** — يُردّ ولا يُتجاهَل: **مُرشِّحٌ يسقط
+// صامتاً يعرض السجلَّ كلَّه ومن طلبه يظنّه مرشَّحاً.**
+var errBadDateRange = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+// validDay **أهو يومٌ بصيغة `YYYY-MM-DD`** — والفارغُ صالحٌ (بلا حدّ).
+func validDay(d string) bool {
+	if d == "" {
+		return true
+	}
+	_, err := time.Parse("2006-01-02", d)
+	return err == nil
 }
 
 // fillStageTimes يملأ أوقاتَ المراحل لصفحةِ طلباتٍ كاملة.
@@ -342,6 +366,9 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if f.PerPage < 1 || f.PerPage > 100 {
 		f.PerPage = 20
 	}
+	if !validDay(f.From) || !validDay(f.To) {
+		return nil, errBadDateRange
+	}
 	where := ` WHERE ($1 = '' OR o.status = $1)
 		AND ($2 = '' OR o.merchant_id::text = $2)
 		AND ($3 = '' OR o.customer_id::text = $3)
@@ -354,7 +381,13 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		-- **والضمُّ يساريٌّ فوقه** فلا يُسقط الطلبَ الخاصَّ حين
 		-- لا يُطلب هذا الشرط. **وشرطٌ على عمودٍ من ضمٍّ يساريٍّ يُقصي
 		-- بلا متجرٍ بذاته** — وهو ما نريد هنا بالضبط.
-		AND ($8 = '' OR mr.owner_user_id::text = $8)`
+		AND ($8 = '' OR mr.owner_user_id::text = $8)
+		-- **ومدى التاريخ بيوم دمشق** — وNULLIF لا OR وحدَها: Postgres لا
+		-- يَعِد بترتيب الشرطين، **وفراغٌ يُصبّ تاريخاً يُسقط الاستعلامَ كلَّه.**
+		AND ($9 = '' OR o.created_at >=
+		     (NULLIF($9, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+		AND ($10 = '' OR o.created_at <
+		     ((NULLIF($10, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))`
 	if f.SalesOnly {
 		where += `
 		AND o.kind <> 'merchant_delivery'`
@@ -370,14 +403,14 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		LEFT JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.ClosedOnly, f.OwnerID).Scan(&total); err != nil {
+		f.ClosedOnly, f.OwnerID, f.From, f.To).Scan(&total); err != nil {
 		return nil, err
 	}
 
 	rows, err := s.db.Query(ctx, orderSelect+where+`
-		ORDER BY o.created_at DESC LIMIT $9 OFFSET $10`,
+		ORDER BY o.created_at DESC LIMIT $11 OFFSET $12`,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.ClosedOnly, f.OwnerID, f.PerPage, (f.Page-1)*f.PerPage)
+		f.ClosedOnly, f.OwnerID, f.From, f.To, f.PerPage, (f.Page-1)*f.PerPage)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +464,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where+`
 			GROUP BY o.status`,
 			"", f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-			f.ClosedOnly, f.OwnerID)
+			f.ClosedOnly, f.OwnerID, f.From, f.To)
 		if err != nil {
 			return nil, err
 		}

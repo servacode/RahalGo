@@ -33,8 +33,8 @@
     "setting_defs": 165,
     "behaviour_settings": 131,
     "order_fields": 91,
-    "test_files": 456,
-    "test_funcs": 1881
+    "test_files": 457,
+    "test_funcs": 1882
   },
   "flows": [
     {
@@ -8414,6 +8414,12 @@
     {
       "name": "TestOpenNow_CrossesMidnight",
       "file": "internal/orders/hours_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestList_DateRangeMerchantDriverAndSeenAt",
+      "file": "internal/orders/list_filters_test.go",
       "package": "orders_test",
       "orphan": true
     },

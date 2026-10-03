@@ -956,6 +956,17 @@
       "driverSeen": "آخر ظهور قبل {n} د",
       "driverNeverSeen": "لم يظهر موقعه بعد",
       "callDriver": "اتصال بالسائق",
+      "range": {
+        "today": "اليوم",
+        "yesterday": "أمس",
+        "last7": "آخر ٧ أيّام",
+        "month": "هذا الشهر",
+        "from": "من",
+        "to": "إلى",
+        "allStores": "كل المتاجر",
+        "allDrivers": "كل السائقين",
+        "clear": "مسح المرشحات"
+      },
       "invoice": "الفاتورة",
       "customGoods": "ثمن البضاعة",
       "customFee": "أجرة التوصيل",
