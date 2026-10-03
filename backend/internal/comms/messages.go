@@ -276,3 +276,14 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 	}
 	return out, rows.Err()
 }
+
+// Flag **يَسِم رسالةً بلفظٍ أُخفي منها** — والرسالةُ تصل مُخفاة.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٣: «في الحديث إخفاءٌ وتنبيهٌ للإدارة».) **والحارسُ
+// المركزيّ (`textguard`) يُخفي قبل `Send`** — فلا يجد `Offense` ما يَسِمه؛
+// **فيُوسَم هنا باللفظ الذي أُخفي**، ويبقى أرشيفُ الحديث يشهد.
+func (s *Service) Flag(ctx context.Context, messageID, word string) error {
+	_, err := s.db.Exec(ctx,
+		`UPDATE order_messages SET flagged = true, flag_word = $2 WHERE id = $1`, messageID, word)
+	return err
+}

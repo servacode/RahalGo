@@ -16,6 +16,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // handleCreateCustomOrder **الزبونُ يصف ما يريد.**
@@ -51,11 +52,11 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
-	// **والنصوصُ الحرّةُ بحدودها** — انظر `text_limits.go`.
-	if err := checkTextLimits(
-		textField{"request", req.Request, maxCustomRequest},
-		textField{"address_text", req.AddressText, maxAddressText},
-		textField{"notes", req.Notes, maxOrderNotes},
+	// **والنصوصُ الحرّةُ تمرّ بالحارس** — انظر `text_limits.go`.
+	if _, err := s.guardText(r.Context(),
+		tf("request", &req.Request, maxCustomRequest, textguard.Notes),
+		tf("address_text", &req.AddressText, maxAddressText, textguard.Address),
+		tf("notes", &req.Notes, maxOrderNotes, textguard.Notes),
 	); err != nil {
 		s.respondErr(w, err)
 		return

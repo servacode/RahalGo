@@ -61,6 +61,11 @@ func (s *Server) handleCreateItem(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMenuItem(r, req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	id, err := s.catalog.CreateItem(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), *req, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
@@ -72,6 +77,11 @@ func (s *Server) handleCreateItem(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUpdateItem(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[catalog.MenuItemInput](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMenuItem(r, req); err != nil {
 		s.respondErr(w, err)
 		return
 	}

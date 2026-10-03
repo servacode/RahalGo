@@ -37,6 +37,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/routing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/support"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -52,11 +53,14 @@ type Server struct {
 	// platform **دوامُ المنصّة وإيقافُها المؤقّت** — `PH`.
 	platform *platform.Service
 	// comms **حديثُ الطلب** — قناةٌ واحدةٌ لطرفيه بلا رقمٍ بينهما.
-	comms      *comms.Service
-	wallet     *wallet.Service
-	orders     *orders.Service
-	cashbox    *cashbox.Service
-	support    *support.Service
+	comms   *comms.Service
+	wallet  *wallet.Service
+	orders  *orders.Service
+	cashbox *cashbox.Service
+	support *support.Service
+	// textguard **حارسُ النصوص** — كلُّ ما يكتبه إنسانٌ يمرّ به (`text_limits.go`).
+	// **و`nil` صالح** — يعمل بالقائمة المدمجة.
+	textguard  *textguard.Guard
 	incentives *incentives.Service
 	offers     *offers.Service
 	campaigns  *campaigns.Service
@@ -241,6 +245,10 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
+	// **وقائمةُ الألفاظ المسيئة من اللوحة** — تُقرأ عند كلّ نداء، فيُعمل بالتعديل فوراً.
+	srv.textguard = textguard.New(func(ctx context.Context) string {
+		return settingsStore.GetString(ctx, textguard.SettingKey)
+	})
 	srv.incentives.SetLogger(logger)
 	// **ومكافأةُ الهدف تُدفع عند التسليم** — محرّكُ الطلبات يناديها.
 	ordersSvc.SetTargetGranter(srv.incentives)

@@ -12,6 +12,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 var errValidation = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
@@ -377,6 +378,11 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 		Ref string `json:"ref"`
 	}](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والاسمُ يمرّ بالحارس** — انظر `text_limits.go`.
+	if _, err := s.guardText(r.Context(), tf("full_name", &req.FullName, maxPersonName, textguard.Name)); err != nil {
 		s.respondErr(w, err)
 		return
 	}

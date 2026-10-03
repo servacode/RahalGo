@@ -4,13 +4,13 @@ package server
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/support"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // handleComplaintReasons ما يملك الزبونُ اختيارَه على هذا الطلب.
@@ -38,18 +38,21 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **وتفصيلُ الشكوى يُرفض إن طال لا يُقصّ** — انظر `text_limits.go`.
-	if err := checkTextLimits(textField{"note", strings.TrimSpace(req.Note), maxComplaintNote}); err != nil {
+	// **والحارسُ المركزيّ** — الطويلُ يُرفض، **والشتيمةُ تُخفى وتصل الشكوى**:
+	// شكوى الغاضب تصل (قرارُ المالك ٢٠٢٦-١٠-٠٣). انظر `text_limits.go`.
+	masked, err := s.guardText(r.Context(), tf("note", &req.Note, maxComplaintNote, textguard.Complaint))
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	orderID := chi.URLParam(r, "id")
 	t, err := s.support.Complaint(r.Context(), userIDFrom(r), orderID,
-		req.Reason, strings.TrimSpace(req.Note))
+		req.Reason, req.Note)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	s.alertOffensive(r.Context(), masked, t.Subject, "ticket", t.ID, "/dashboard/tickets")
 
 	// **ورقمُ الشكوى يُقال له.**
 	//

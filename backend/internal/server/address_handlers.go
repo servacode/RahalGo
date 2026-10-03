@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // عناوين الزبون المحفوظة — يكتبها مرّة ويستعملها دائماً.
@@ -130,7 +131,7 @@ func (s *Server) handleCreateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := checkAddressParts(req); err != nil {
+	if err := s.guardAddress(r, req); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -218,7 +219,7 @@ func (s *Server) handleUpdateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	if err := checkAddressParts(req); err != nil {
+	if err := s.guardAddress(r, req); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -303,14 +304,15 @@ func (s *Server) handleSetDefaultAddress(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
-// checkAddressParts **أجزاءُ العنوان بحدودها** — تُرفض لا تُقصّ.
+// guardAddress **أجزاءُ العنوان تمرّ بالحارس** — تُنظَّف، وتُرفض إن طالت أو أساءت.
 //
 // **وكانت تُقصّ بالبايت** (`clip` بـ١٦٠ و١٢٠ و٢٠): **والحرفُ العربيُّ بايتان،
 // فيُكسر آخرُ حرفٍ** ويُخزَّن نصفُه — **وطابقٌ من عشرة أحرفٍ عربيّةٍ كان يُقطع.**
-func checkAddressParts(req *addressInput) error {
-	return checkTextLimits(
-		textField{"area_building", strings.TrimSpace(req.AreaBuilding), maxAddressPart},
-		textField{"street", strings.TrimSpace(req.Street), maxAddressPart},
-		textField{"floor", strings.TrimSpace(req.Floor), maxAddressFloor},
+func (s *Server) guardAddress(r *http.Request, req *addressInput) error {
+	_, err := s.guardText(r.Context(),
+		tf("area_building", &req.AreaBuilding, maxAddressPart, textguard.Address),
+		tf("street", &req.Street, maxAddressPart, textguard.Address),
+		tf("floor", &req.Floor, maxAddressFloor, textguard.Address),
 	)
+	return err
 }
