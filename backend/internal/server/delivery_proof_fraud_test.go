@@ -153,3 +153,46 @@ func TestDeliveryProof_UnknownDoorSkipsDistance(t *testing.T) {
 		t.Fatalf("بابٌ مجهولٌ رُدّت صورتُه %d: %s", w.Code, w.Body.String())
 	}
 }
+
+// TestDeliveryProof_NoLocationIsRejected **صورةٌ بلا موقعٍ تُرفض** (قرارُ المالك ٢٠٢٦-١٠-٠٤: «نطلب منه
+// تشغيل الموقع بعدها يصوّر التسليم») — **وإلّا أطفأ الـGPS وصوّر من بيته.**
+func TestDeliveryProof_NoLocationIsRejected(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	m, err := media.NewService(f.pool, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.srv.media = m
+	d := f.drivers[0]
+	id := f.problemOrderAt(t, "at_dropoff", d)
+
+	var img bytes.Buffer
+	if err := png.Encode(&img, image.NewRGBA(image.Rect(0, 0, 4, 4))); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	part, _ := mw.CreateFormFile("file", "door.png")
+	_, _ = part.Write(img.Bytes())
+	_ = mw.Close()
+	req := httptest.NewRequest(http.MethodPost, "/driver/orders/"+id+"/proof", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	rc := chi.NewRouteContext()
+	rc.URLParams.Add("id", id)
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
+	ctx = context.WithValue(ctx, ctxUserID, d)
+	ctx = context.WithValue(ctx, ctxRoles, []string{"driver"})
+	w := httptest.NewRecorder()
+	f.srv.handleDeliveryProof(w, req.WithContext(ctx))
+	if w.Code != http.StatusUnprocessableEntity || errCode(t, w) != "proof_no_location" {
+		t.Fatalf("صورةٌ بلا موقعٍ رُدّت %d: %s — **والمتوقّعُ 422 proof_no_location**", w.Code, w.Body.String())
+	}
+	var stored int
+	if err := f.pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM orders WHERE id = $1 AND pod_media_id IS NOT NULL`, id).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != 0 {
+		t.Fatal("حُفظت صورةٌ مرفوضة على الطلب")
+	}
+}

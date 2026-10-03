@@ -50,6 +50,11 @@ var errProofNotAtDoor = httpx.NewError(http.StatusConflict,
 var errProofMocked = httpx.NewError(http.StatusUnprocessableEntity,
 	"proof_mocked", "errors.proof_mocked")
 
+// errProofNoLocation **صورةٌ بلا موقعٍ تُرفض** (قرارُ المالك ٢٠٢٦-١٠-٠٤: «نطلب منه تشغيل الموقع بعدها
+// يصوّر التسليم») — **وإلّا أطفأ الـGPS وصوّر من بيته.**
+var errProofNoLocation = httpx.NewError(http.StatusUnprocessableEntity,
+	"proof_no_location", "errors.proof_no_location")
+
 // proofAccuracyCapM **أكبرُ هامشِ دقّةٍ يُضاف إلى حدّ الصورة** — قرارُ المالك ٢٠٢٦-١٠-٠٣.
 const proofAccuracyCapM = 50.0
 
@@ -115,6 +120,11 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	// لماذا: يُطفئ برنامجَ التزييف ثمّ يصوّر.
 	//
 	// **والفحوصُ قبل حفظ الملفّ** — صورةٌ مرفوضةٌ لا تترك ملفّاً بلا صاحب.
+	if !hasPoint {
+		s.audit(r, "driver.delivery_proof_rejected", "order", orderID, map[string]any{"why": "no_location"})
+		s.respondErr(w, errProofNoLocation)
+		return
+	}
 	mocked := r.FormValue("mocked") == "true"
 	if mocked {
 		s.audit(r, "driver.delivery_proof_rejected", "order", orderID, map[string]any{"why": "mocked"})

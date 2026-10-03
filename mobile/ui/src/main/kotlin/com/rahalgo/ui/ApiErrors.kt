@@ -412,6 +412,7 @@ private val CODES: Map<String, Int> = mapOf(
     "custom_goods_too_high" to R.string.err_custom_goods_too_high,
     "proof_too_far" to R.string.err_proof_too_far,
     "proof_mocked" to R.string.err_proof_mocked,
+    "proof_no_location" to R.string.err_proof_no_location,
     "merchant_closed" to R.string.err_merchant_closed,
     // **ومتجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — **حارسُ الخادم هو
     // الحُجّة**: لو أرسل التطبيقُ كتابةً رغم شاشة الإيقاف، يعود ٤٠٣
