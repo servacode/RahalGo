@@ -296,6 +296,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"driver_id":                    true,
 		"driver_name":                  true,
 		"driver_phone":                 true,
+		"driver_seen_at":               true,
 		"driver_to_pickup_m":           true,
 		"ended_by":                     true,
 		"events":                       true,

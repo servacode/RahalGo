@@ -32,9 +32,9 @@
     ],
     "setting_defs": 165,
     "behaviour_settings": 131,
-    "order_fields": 90,
-    "test_files": 454,
-    "test_funcs": 1879
+    "order_fields": 91,
+    "test_files": 456,
+    "test_funcs": 1881
   },
   "flows": [
     {
@@ -8318,6 +8318,12 @@
     {
       "name": "TestDriverLost_StrangerGetsNotFound",
       "file": "internal/orders/driver_lost_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverSeenAt_OpsOnly",
+      "file": "internal/orders/driver_seen_at_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -23069,6 +23075,12 @@
     {
       "name": "TestSectionItems_ServerSideSearchFilterAndCounts",
       "file": "internal/server/admin_section_items_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminStatsAwaitingDecision",
+      "file": "internal/server/admin_stats_awaiting_test.go",
       "package": "server",
       "orphan": true
     },

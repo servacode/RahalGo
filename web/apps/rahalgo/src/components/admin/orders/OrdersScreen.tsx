@@ -34,6 +34,7 @@ import {
   IconUser,
   IconStore,
   IconCamera,
+  IconPhone,
   IconWhatsApp,
   IconSwap,
   IconWarning,
@@ -142,6 +143,8 @@ interface OrderRow {
   /** متى استُلمت البضاعة — وبه يُقفل السعرُ على الخفض بعده. */
   picked_up_at?: string | null;
   driver_name: string | null;
+  /** **آخرُ ظهورٍ للسائق** — متى وصل آخرُ موضعٍ منه، وفارغٌ «لم يظهر». */
+  driver_seen_at?: string | null;
   /** من عُرض عليه الطلبُ ولم يقبل بعد — **يُعرض ما دام العرضُ حيّاً.** */
   offered_driver_name: string | null;
   /** إثباتُ التسليم — صورةٌ ومسافةٌ ووقت. */
@@ -1383,6 +1386,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                   id === "to_store" || id === "agreeing" ? o.driver_name : null,
               }))}
               current={o.ops_stage_at ?? -1}
+              currentAside={
+                o.driver_name ? <DriverChip o={o} /> : undefined
+              }
             />
           ) : null
         }
@@ -1431,6 +1437,48 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------- شارةُ السائق ----------
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شارةُ السائق بجانب المرحلة الحاليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **اسمُه · زرُّ اتّصال · «آخرُ ظهورٍ قبل كذا»** — فمن رأى طلباً واقفاً
+ * عرف بنظرةٍ أهو سائقٌ ساكتٌ أم هاتفٌ نام، **واتّصل من الموضع نفسِه.**
+ *
+ * **ولا سطرَ للسائق في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢): الشارةُ على
+ * المسار، **ولا شارةَ بلا سائق.**
+ */
+function DriverChip({ o }: { o: OrderRow }) {
+  const seen = o.driver_seen_at ? new Date(o.driver_seen_at).getTime() : NaN;
+  const mins = Number.isFinite(seen)
+    ? Math.max(0, Math.floor((Date.now() - seen) / 60_000))
+    : null;
+  return (
+    <span onClick={(e) => e.stopPropagation()}>
+      <Badge variant="neutral" className="flex-wrap gap-1">
+        <span className="font-medium text-ink">{o.driver_name}</span>
+        {o.driver_phone && (
+          <a
+            href={`tel:${o.driver_phone}`}
+            aria-label={m.admin.ordersPage.callDriver}
+            title={m.admin.ordersPage.callDriver}
+            className="text-accent-text"
+          >
+            <IconPhone size={12} />
+          </a>
+        )}
+        <span className={mins === null ? "text-danger" : ""}>
+          {mins === null
+            ? m.admin.ordersPage.driverNeverSeen
+            : m.admin.ordersPage.driverSeen.replace("{n}", fmtNum(mins))}
+        </span>
+      </Badge>
+    </span>
   );
 }
 
