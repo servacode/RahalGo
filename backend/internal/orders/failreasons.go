@@ -38,6 +38,8 @@ type FailReason struct {
 	// Kind «فشلٌ» يحرّك الطلب، أو «بلاغٌ» يُنبّه العملياتِ ولا يمسّه، أو «تركٌ»
 	// قبل الاستلام بسببٍ يخصّ السائق (`/release`).
 	Kind string
+	// Retired **لا يُعرض للسائق بعد اليوم** — ويبقى مقروءاً في البلاغات القديمة وسبباً للمكتب.
+	Retired bool
 }
 
 const (
@@ -119,7 +121,9 @@ var StageReports = []FailReason{
 	// ذنبُ السائق إن أقرّته الإدارة، و«رفض» ذنبُ الزبون إن أقرّته.**
 	{Code: "customer_absent", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
 	{Code: "customer_refused", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
-	{Code: "customer_unreachable", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
+	// **«لا يرد على الهاتف» يُشال من القائمة** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «اتصرّف بالمنطقي، الغيه إذا ما
+	// يلزم») — معناه معنى «الزبون لا يرد — اطلب من الإدارة الاتصال به»، والسائقُ يحتار بينهما.
+	{Code: "customer_unreachable", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport, Retired: true},
 	{Code: "address_wrong", Fault: FaultCustomer, At: StAtDropoff, Kind: ReasonReport},
 	// **وذنبُ السائق يُقرّ به السائقُ نفسُه** — ووجودُه يجعل غيابَه اختياراً:
 	// من تأخّر فبرد الطعامُ يجد لفظاً يقوله بدل أن يكتب «الزبون رفض».
@@ -278,7 +282,7 @@ func FailReasonsAt(status string) []FailReason {
 	out := []FailReason{}
 	for _, list := range [][]FailReason{FailReasons, StageReports, ReleaseReasons} {
 		for _, r := range list {
-			if r.At == status {
+			if r.At == status && !r.Retired {
 				out = append(out, r)
 			}
 		}

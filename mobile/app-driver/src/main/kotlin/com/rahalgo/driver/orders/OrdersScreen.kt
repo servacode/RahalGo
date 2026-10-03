@@ -897,6 +897,8 @@ private fun statusText(status: String): String = when (status) {
     "on_the_way" -> stringResource(R.string.status_on_the_way)
     "arrived" -> stringResource(R.string.status_arrived)
     "dispatching" -> stringResource(R.string.ord_st_dispatching)
+    // **وفي قائمته لا يظهر فاشلٌ إلّا مشوارَ إرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+    "failed" -> stringResource(R.string.status_returning)
     else -> status
 }
 

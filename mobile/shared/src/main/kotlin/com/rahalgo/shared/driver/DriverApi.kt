@@ -188,6 +188,21 @@ class DriverApi(private val api: ApiClient) {
     suspend fun orders(): List<DriverOrder> = api.call("/api/v1/driver/orders")
 
     /**
+     * **«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+     *
+     * **يكتب وقتَ التسليم وموضعَه** فتراه الإدارة، **ويخرج المشوارُ من قائمته.** والموضعُ
+     * اختياريّ — **وغيابُه يُقرأ من آخر موضعٍ عند الخادم.** وزوجٌ أو لا شيء.
+     */
+    suspend fun goodsHanded(orderId: String, lat: Double?, lng: Double?) {
+        val both = lat != null && lng != null
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/goods-handed",
+            HttpMethod.Post,
+            HandedBody(lat = if (both) lat else null, lng = if (both) lng else null),
+        )
+    }
+
+    /**
      * **لماذا خرج طلبٌ من يده** — إلغاءٌ أو إعادةٌ إلى الطابور أو ردٌّ إلى المكتب
      * (٢٠٢٦-١٠-٠٢). **ومن سجلّ الطلب لا من الدفع** — فيصل ولو لم يصل الإشعار.
      */
@@ -402,6 +417,13 @@ class DriverApi(private val api: ApiClient) {
      * يُحذَف** لا يُرسَل صفراً: **صفرُ اتّجاهٍ يوجّه الواقفَ شمالاً، وصفرُ
      * `mocked` ادّعاءُ صدقٍ لم يُفحَص.**
      */
+    /** **جسمُ «سلّمت البضاعة»** — الموضعُ اختياريّ. */
+    @Serializable
+    private data class HandedBody(
+        val lat: Double? = null,
+        val lng: Double? = null,
+    )
+
     /** **جسمُ الطارئ** — انظر [emergency]: لا `buildJsonObject` في النسخة المضغوطة. */
     @Serializable
     private data class EmergencyBody(

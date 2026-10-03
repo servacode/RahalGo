@@ -168,6 +168,13 @@ interface OrderRow {
   goods_settled_to: "merchant" | "platform" | null;
   /** أيستردّ كلُّ مصدرٍ في هذا الطلب بضاعتَه — سياسةُ متجرٍ لا قاعدةُ منصة. */
   merchant_accepts_returns: boolean;
+  /**
+   * **مشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — إلى المكتب أو المتجر،
+   * **وفارغٌ لطلبٍ لم تُعَد بضاعتُه.**
+   */
+  return_to?: "office" | "store" | null;
+  /** **متى ضغط السائقُ «سلّمت البضاعة»** — وفارغٌ مع `return_to`: في الطريق. */
+  goods_handed_at?: string | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
   status: string;
   payment_method: "cash" | "wallet";
@@ -974,6 +981,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           atStore={o.status === "at_pickup"}
           beforeStore={o.status === "assigned"}
           canTransfer={o.kind !== "merchant_delivery"}
+          acceptsReturns={o.kind !== "custom" && o.merchant_accepts_returns}
           customerPhone={o.customer_phone}
           driverPhone={o.driver_phone}
           door={o.door}
@@ -981,6 +989,30 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           onChanged={load}
           onReturned={setReturnedNumber}
         />
+      ),
+    },
+    {
+      // ══════════════════════════════════════════════════════════════
+      // **وأين البضاعة بعد العودة** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+      // ══════════════════════════════════════════════════════════════
+      //
+      // **السائقُ في مشوار إرجاعٍ ثمّ يضغط «سلّمت البضاعة»** — فتقرأ الإدارةُ هنا
+      // أين البضاعةُ الآن ومتى وصلت، **قبل أن تحسمها.**
+      id: "goodsReturn",
+      header: m.admin.ordersPage.goodsReturnTitle,
+      icon: <IconSwap />,
+      hide: (o: OrderRow) => !(o.status === "failed" && o.return_to),
+      cell: (o) => (
+        <span className="text-sm">
+          {o.goods_handed_at
+            ? (o.return_to === "store"
+                ? m.admin.ordersPage.goodsHandedStore
+                : m.admin.ordersPage.goodsHandedOffice
+              ).replace("{t}", fmtTime(o.goods_handed_at))
+            : o.return_to === "store"
+              ? m.admin.ordersPage.goodsReturningStore
+              : m.admin.ordersPage.goodsReturningOffice}
+        </span>
       ),
     },
     /* **ولا سطرَ للسائق في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢:
@@ -1470,6 +1502,12 @@ function OrderActions({
   /** نموذجُ تعويض السائق عن طلبٍ فشل */
   const [compensating, setCompensating] = useState(false);
   const [amount, setAmount] = useState("");
+  /**
+   * **«أعيدت إلى المتجر» بتعويضٍ اختياريّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم المصاري
+   * ترجع ع حالها والإدارة تقرر تعوض المتجر او لا») — لا نسبةَ تلقائيّة.
+   */
+  const [goodsBack, setGoodsBack] = useState(false);
+  const [storeComp, setStoreComp] = useState("");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
   // **إذنُ استثناء إثبات التسليم — بيدِ العمليّات لا السائق** (٢٠٢٦-٠٩-٢٧).
@@ -1632,14 +1670,16 @@ function OrderActions({
   }
 
   // **مصيرُ البضاعة** — من يحمل ثمنَ طعامٍ طُبخ ولم يُسلَّم.
-  async function settleGoods(to: "merchant" | "platform") {
+  async function settleGoods(to: "merchant" | "platform", compensation = 0) {
     setBusy("goods");
     setErr("");
     try {
       await api(`/api/v1/admin/orders/${o.id}/goods`, {
         method: "POST",
-        body: JSON.stringify({ to }),
+        body: JSON.stringify({ to, compensation }),
       });
+      setGoodsBack(false);
+      setStoreComp("");
       onChanged();
     } catch (e) {
       setErr(
@@ -1848,6 +1888,48 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
+
+  if (goodsBack) {
+    const raw = storeComp.trim();
+    const comp = raw === "" ? 0 : Number(raw);
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">
+          {m.admin.ordersPage.storeCompTitle}
+        </p>
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={m.admin.ordersPage.storeCompLabel}
+          value={storeComp}
+          onChange={(e) => {
+            setStoreComp(e.target.value);
+            setErr("");
+          }}
+        />
+        <p className="text-xs text-ink-muted">
+          {m.admin.ordersPage.storeCompHint}
+        </p>
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={busy !== ""}
+          onSave={() => {
+            if (!Number.isFinite(comp) || comp < 0) {
+              setErr(m.admin.ordersPage.storeCompBad);
+              return;
+            }
+            void settleGoods("merchant", Math.round(comp));
+          }}
+          onCancel={() => {
+            setGoodsBack(false);
+            setStoreComp("");
+            setErr("");
+          }}
+          saveLabel={m.common.confirm}
+        />
+      </div>
+    );
+  }
 
   if (compensating) {
     return (
@@ -2220,7 +2302,10 @@ function OrderActions({
                 <Button
                   variant="secondary"
                   disabled={busy !== ""}
-                  onClick={() => void settleGoods("merchant")}
+                  onClick={() => {
+                    setErr("");
+                    setGoodsBack(true);
+                  }}
                 >
                   {m.admin.ordersPage.goodsToMerchant}
                 </Button>

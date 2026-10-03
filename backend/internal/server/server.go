@@ -857,6 +857,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/proof", s.handleDeliveryProof)
 			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
 			r.Post("/orders/{id}/return", s.handleDriverReturn)
+			// **و«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣،
+			// `driver_goods_handed.go`): وقتٌ وموضعٌ تراهما الإدارة.
+			r.Post("/orders/{id}/goods-handed", s.handleDriverGoodsHanded)
 			// **وتوثيقُ ما اتُّفق عليه في الطلب الخاصّ** — بعد المحادثة.
 			r.Post("/orders/{id}/agree", s.handleAgreeCustom)
 			r.Get("/orders", s.handleDriverOrders)

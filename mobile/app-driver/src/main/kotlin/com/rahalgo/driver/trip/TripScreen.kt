@@ -1301,6 +1301,12 @@ private fun TripCard(
     // تفترقان.
     val expanded = TripCollapse.bottom
 
+    // **ومشوارُ الإرجاع بطاقتُه وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وجهةٌ وزرٌّ واحد.
+    if (isReturnTrip(order)) {
+        ReturnCard(order = order, state = state, actions = actions, modifier = modifier)
+        return
+    }
+
     Column(
         modifier
             .fillMaxWidth()
@@ -1884,3 +1890,84 @@ internal fun waNumber(phone: String): String {
         else -> digits
     }
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بطاقةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **الوجهةُ والعنوانُ وزرٌّ واحد: «سلّمت البضاعة».** لا مالَ يُقبض ولا زبونَ يُتّصل به —
+ * الطلبُ أُنهي، **والسائقُ يُرجع البضاعة إلى المكتب أو المتجر.** والزرُّ ظاهرٌ دائماً:
+ * **لا وصولَ تلقائيّاً يُنتظر** (المكتبُ قد لا يكون مدبَّساً).
+ */
+@Composable
+private fun ReturnCard(
+    order: DriverOrder,
+    state: TripState,
+    actions: TripActions,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sheet)
+            .background(Rahal.colors.canvas)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_store),
+                    contentDescription = null,
+                    tint = Rahal.colors.accent,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = returnTitle(order),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text("#${order.number}", color = Rahal.colors.inkMuted)
+        }
+        if (order.addressText.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(text = order.addressText, color = Rahal.colors.inkMuted)
+        }
+        if (!order.dropoffKnown) {
+            Spacer(Modifier.height(4.dp))
+            Text(text = stringResource(R.string.trip_return_no_point), color = Rahal.colors.inkMuted)
+        }
+        if (state.error.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text(text = state.error, color = Rahal.colors.danger)
+        }
+        Spacer(Modifier.height(10.dp))
+        SmallAction(
+            icon = R.drawable.ic_check_circle,
+            label = R.string.step_goods_handed,
+            tone = Tone.Brand,
+            onClick = actions.handGoods,
+            enabled = !state.busy,
+            busy = state.busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** **عنوانُ مشوار الإرجاع** — «أرجِع البضاعة إلى المكتب» أو «… إلى {المتجر}». */
+@Composable
+internal fun returnTitle(order: DriverOrder): String =
+    if (order.returnTo == "store") {
+        stringResource(
+            R.string.trip_return_store,
+            order.returnLabel.ifBlank { stringResource(R.string.trip_return_store_fallback) },
+        )
+    } else {
+        stringResource(R.string.trip_return_office)
+    }

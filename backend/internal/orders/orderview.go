@@ -234,6 +234,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		"total":                    true,
 		"zone_id":                  true,
 		"zone_name":                true,
+		// **ومشوارُ إرجاع البضاعة** — مشوارُه هو (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+		"return_to":       true,
+		"goods_handed_at": true,
 	},
 	AudienceRep: {
 		"accepted_at":           true,
@@ -350,6 +353,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		"wallet_paid":      true,
 		"zone_id":          true,
 		"zone_name":        true,
+		// **وأين البضاعةُ ومتى سلّمها السائق** — لبطاقة الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+		"return_to":       true,
+		"goods_handed_at": true,
 	},
 }
 

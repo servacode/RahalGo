@@ -260,6 +260,8 @@ data class TripState(
 
 data class TripActions(
     val step: (String) -> Unit,
+    /** **«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣). */
+    val handGoods: () -> Unit = {},
     /** يفتح الكاميرا لصورة التسليم. */
     val capture: () -> Unit,
     val chat: () -> Unit,
@@ -415,6 +417,25 @@ fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
     "on_the_way" -> if (order.dropoffKnown) ArrivalPoint.At(order.lat, order.lng) else ArrivalPoint.Unknown
     else -> ArrivalPoint.NotArriving
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **الزبونُ رفض أو ألغى بعد الاستلام فأعاده المكتبُ بالبضاعة** — الطلبُ أُنهي (`failed`)
+ * **ويبقى في قائمته بوجهةٍ هي المكتبُ أو المتجر** (`returnTo`)، حتّى يضغط «سلّمت البضاعة».
+ */
+fun isReturnTrip(order: DriverOrder): Boolean =
+    order.status == "failed" && order.returnTo.isNotEmpty()
+
+/**
+ * **خطوةُ الرحلة من الطلب** — ومشوارُ الإرجاع ساقٌ واحدةٌ إلى الوجهة: **«في الطريق»**، فترسم
+ * الخريطةُ والملاحةُ طريقَه إلى `lat`/`lng` كما ترسمانه إلى الزبون. **ولا وصولَ تلقائيّاً**:
+ * `autoArrivalTarget("failed")` فارغ.
+ */
+fun tripStepOf(order: DriverOrder): TripStep =
+    if (isReturnTrip(order)) TripStep.TO_CUSTOMER else TripStep.of(order.status)
 
 /**
  * **نقطةُ الباب على الخريطة** — وفارغةٌ حين لا تُعرف: **لا دبّوسَ ولا خطَّ إلى

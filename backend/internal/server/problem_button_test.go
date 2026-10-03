@@ -143,11 +143,15 @@ func TestFailReasons_KindsClosesAndReports(t *testing.T) {
 
 	// **وعند الباب بلاغاتٌ كلُّها — والإدارةُ تُنهي** (مساءَ ٢٠٢٦-١٠-٠٢).
 	door := f.reasons(t, d, "at=at_dropoff")
-	for _, code := range []string{"customer_absent", "customer_refused", "customer_unreachable",
+	for _, code := range []string{"customer_absent", "customer_refused",
 		"address_wrong", "driver_late", "customer_no_answer"} {
 		if r, ok := door[code]; !ok || r.Kind != "report" || r.Closes || r.AvailableInSec != 0 {
 			t.Errorf("%s = %+v — **عند الزبون بلاغٌ لا إغلاق**", code, r)
 		}
+	}
+	// **وخيارٌ واحدٌ لمن لا يردّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+	if _, ok := door["customer_unreachable"]; ok {
+		t.Error("«لا يرد على الهاتف» ما زال في القائمة بجانب «الزبون لا يرد»")
 	}
 	if r := door["driver_late"]; r.Fault != "driver" {
 		t.Errorf("driver_late ذنبُه المقترَح %q", r.Fault)

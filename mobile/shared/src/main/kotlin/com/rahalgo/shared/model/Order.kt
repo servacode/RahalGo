@@ -77,6 +77,14 @@ data class DriverOrder(
      * ويُعلَّم هذا **فلا يُوجَّه السائقُ إليها**: يقرأ العنوانَ ويتّصل بالمستلِم.
      */
     @SerialName("dropoff_known") val dropoffKnown: Boolean = true,
+    /**
+     * **مشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `office` أو `store`، **وفارغٌ لكلّ
+     * طلبٍ سواه.** والطلبُ معه `failed`، **ووجهتُه في `lat`/`lng`/`addressText`**، والزرُّ
+     * الوحيدُ «سلّمت البضاعة».
+     */
+    @SerialName("return_to") val returnTo: String = "",
+    /** **اسمُ المتجر في الإرجاع إليه** — وفارغٌ للمكتب. */
+    @SerialName("return_label") val returnLabel: String = "",
 
     /**
      * **ما وُثّق من ثمنٍ وأجرة** — و`null` تعني **«لم يُوثَّق بعد»**.
@@ -178,6 +186,8 @@ data class DriverOutcome(
     val reason: String = "",
     /** **جملةُ الخادم** — لرمزٍ لا يعرفه التطبيقُ بعد. */
     val message: String = "",
+    /** **مشوارُ إرجاعٍ قائم** — `office` أو `store` (قرارُ المالك ٢٠٢٦-١٠-٠٣). */
+    @SerialName("return_to") val returnTo: String = "",
 )
 
 /**

@@ -267,6 +267,12 @@ var OrderPrivacy = map[string]FieldRule{
 	"fail_reason": {Ref: "سببُ التعذّر", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"goods_settled_to": {Ref: "لمن سُلّمت البضاعةُ — تسويةٌ داخليّة",
 		Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	// **مشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — للسائق الذي يمشيه وللإدارة التي
+	// تنتظره. **والزبونُ والمتجرُ خارجه**: وجهةُ البضاعة وموضعُ تسليمها قرارٌ داخليّ.
+	"return_to": {Ref: "return_trip.go — وجهةُ مشوار الإرجاع",
+		Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"goods_handed_at": {Ref: "return_trip.go — متى سلّم السائقُ البضاعة",
+		Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── الملاحةُ والمسافات ────────────────────────────────────────
 	"to_store_eta_sec":   {Ref: "زمنُ وصول السائق — للزبون والمتجر", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},

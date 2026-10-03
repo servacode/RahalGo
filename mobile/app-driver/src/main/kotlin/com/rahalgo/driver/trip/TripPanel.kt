@@ -164,10 +164,14 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             // **وما يفعله في هذا الطور محادثةٌ واتّفاقٌ ثمّ شراء** —
             // لا سيرٌ إلى موضع. **فيُقال له ذلك.**
             val custom = order.kind == "custom"
+            // **ومشوارُ الإرجاع يقول وجهتَه** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — لا «الطريق إلى» زبونٍ رفض.
+            val returning = isReturnTrip(order)
             Text(
                 // **ووصل؟ يُقال له ذلك** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «لسّا مكتوب الطريق إلى رحال،
                 // لازم يكتب وصلت إلى وجهتك») — لا «الطريق إلى» ولا مسافةٌ وهو عند الباب.
-                text = if (arrived) {
+                text = if (returning) {
+                    returnTitle(order)
+                } else if (arrived) {
                     stringResource(R.string.trip_p_arrived)
                 } else if (custom && state.step < TripStep.PICKED_UP) {
                     stringResource(
@@ -280,7 +284,8 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             }
         }
 
-        androidx.compose.animation.AnimatedVisibility(visible = stripOpen) {
+        // **ولا شريطَ مراحل لمشوار الإرجاع** — الطلبُ أُنهي، والمراحلُ مراحلُ التوصيل.
+        androidx.compose.animation.AnimatedVisibility(visible = stripOpen && !isReturnTrip(order)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(10.dp))
                 LegStrip(

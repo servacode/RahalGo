@@ -1048,6 +1048,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     state = orders.trip(LastPoint.value),
                     actions = TripActions(
                         step = orders::step,
+                        handGoods = orders::handGoods,
                         capture = {
                             // **والإذن يُطلب عند الحاجة لا عند الدخول** —
                             // **كاميرا تُطلب في أوّل فتحة** تُرفض.

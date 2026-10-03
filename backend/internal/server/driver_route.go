@@ -149,6 +149,9 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		pickLat, pickLng *float64
 		dropLat, dropLng float64
 		dropKnown        bool
+		// **ومشوارُ الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وجهتُه المكتبُ أو المتجر.
+		returnTo           string
+		storeLat, storeLng *float64
 	)
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT o.status,
@@ -158,16 +161,35 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
 		       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
 		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
-		       o.dropoff_known
+		       o.dropoff_known,
+		       CASE WHEN o.status = 'failed' AND o.goods_handed_at IS NULL
+		            THEN COALESCE(o.return_to, '') ELSE '' END,
+		       ST_Y(m.location::geometry), ST_X(m.location::geometry)
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users du ON du.id = o.driver_id
 		WHERE o.id = $1::uuid AND o.driver_id = $2::uuid`,
 		chi.URLParam(r, "id"), userIDFrom(r)).
-		Scan(&status, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng, &dropKnown)
+		Scan(&status, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng, &dropKnown,
+			&returnTo, &storeLat, &storeLng)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ومشوارُ الإرجاع ساقٌ واحدة: من موضعه إلى المكتب أو المتجر** (٢٠٢٦-١٠-٠٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **والوجهةُ تحلّ محلّ الباب** — فيُرسم كما يُرسم إلى الزبون. **ومكتبٌ بلا
+	// موقعٍ مضبوطٍ لا طريقَ إليه** — يقرأ السائقُ العنوانَ في البطاقة.
+	if returnTo != "" {
+		p := s.orders.ReturnPointFor(r.Context(), returnTo, "", "", storeLat, storeLng)
+		if p.Lat == nil || p.Lng == nil {
+			httpx.JSON(w, http.StatusOK, map[string]any{"available": false})
+			return
+		}
+		dropLat, dropLng, dropKnown = *p.Lat, *p.Lng, true
+		pickLat, pickLng = nil, nil
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **ولا طريقَ إلى نقطةٍ غيرِ معروفة** (٢٠٢٦-١٠-٠٢)

@@ -18,8 +18,14 @@ package orders
 // # الأولى · رُدّت إلى المتجر
 //
 //	يُسترجع منه ما قُبض        —  أخذ بضاعتَه فلا يأخذ ثمنَها معها
-//	ويُدفع له دعمٌ بنسبة       —  `merchants.return_support_percent`
 //	والخزينةُ تستردّ ما دفعت    —  بالفرق، لا بقيدٍ ثانٍ
+//	وتعويضٌ إن قرّرته الإدارة  —  مبلغٌ تكتبه، **أو لا تعويض**
+//
+// **ولا دعمَ تلقائيّاً** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم المصاري ترجع ع حالها والإدارة
+// تقرر تعوض المتجر او لا»): **كانت نسبةٌ في الإعدادات تُدفع مع كلّ ردّ** —
+// `merchants.return_support_percent`، **حُذفت.** صار التعويضُ قرارَ من يحسم البضاعة
+// بمبلغه، **ويخرج من الخزينة كما كان الدعمُ يخرج**: قيدُ `compensation` للمتجر
+// و`DebitTreasury` في المعاملة نفسِها.
 //
 // # الثانية · إلى المكتب
 //
@@ -55,6 +61,9 @@ var (
 	ErrGoodsAlreadySettled = errors.New("بضاعةُ الطلب محسومةٌ سلفاً")
 	// ErrGoodsLedgerMismatch الحسابُ لا يطابق الدفتر — **ولا يُسترجع بالتقدير.**
 	ErrGoodsLedgerMismatch = errors.New("ما يُحسب لا يطابق ما قُيّد")
+	// ErrGoodsBadCompensation **تعويضٌ سالبٌ أو لبضاعةٍ لم تُردّ إلى المتجر** — التعويضُ
+	// عن بضاعةٍ رُدّت وحدَها.
+	ErrGoodsBadCompensation = errors.New("تعويضُ المتجر لبضاعةٍ رُدّت إليه وحدَها")
 )
 
 // وجهتا البضاعة.
@@ -74,7 +83,13 @@ type merchantShare struct {
 //
 // **ولا يُقبل نصفُه**: استرجاعٌ بلا تسويةِ خزينةٍ يجعل المنصةَ تبدو خاسرةً وقد
 // استُرِدّ لها، **ودفترٌ نصفُه مكتوبٌ أسوأُ من دفترٍ لم يُكتب.**
-func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string) error {
+//
+// `compensation` **تعويضُ الإدارة للمتجر** — وصفرُه لا تعويض (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+// **ولا يُقبل إلّا مع الردّ إلى المتجر**، ويُدفع مرّةً واحدة: الحسمُ نفسُه مقفول.
+func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string, compensation int64) error {
+	if compensation < 0 || (compensation > 0 && to != GoodsToMerchant) {
+		return ErrGoodsBadCompensation
+	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -97,6 +112,11 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string) 
 	}
 
 	if to == GoodsToMerchant {
+		// **التعويضُ أوّلاً ثمّ الاسترجاع** — كما كان الدعم: يرفع رصيدَه فيقلّ ما
+		// تعجز عنه المحفظةُ ويصغر الدَّين.
+		if err := s.compensateMerchant(ctx, tx, orderID, actorID, compensation); err != nil {
+			return err
+		}
 		if err := s.clawBackGoods(ctx, tx, orderID, actorID); err != nil {
 			return err
 		}
@@ -132,36 +152,44 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string) 
 	return nil
 }
 
-// clawBackGoods يسترجع ثمنَ ما رُدّ، ويدفع الدعمَ، ويقيّد ما عجزت عنه المحفظة.
+// compensateMerchant **تعويضُ الإدارة للمتجر عن بضاعةٍ رُدّت** — بمبلغٍ كتبه من يحسم.
+//
+// **لصاحب متجر الطلب** (`orders.merchant_id`)، **ويخرج من الخزينة في المعاملة نفسِها**
+// — تعويضٌ يُقيَّد للمتجر وحدَه يجعل المنصةَ تظهر رابحةً وهي تدفع. **وصفرُه لا قيد.**
+func (s *Service) compensateMerchant(ctx context.Context, q wallet.Querier, orderID, actorID string,
+	amount int64) error {
+	if amount <= 0 {
+		return nil
+	}
+	var ownerID *string
+	if err := q.QueryRow(ctx, `
+		SELECT m.owner_user_id::text FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&ownerID); err != nil || ownerID == nil {
+		// **ومتجرٌ بلا صاحبٍ لا محفظةَ له** — ولا يُدفع لمن لا يُعرف.
+		return ErrGoodsBadCompensation
+	}
+	if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, amount,
+		"compensation", orderID,
+		"تعويضُ الإدارة عن بضاعةٍ رُدّت", &actorID); err != nil {
+		return err
+	}
+	return s.DebitTreasury(ctx, q, amount, orderID,
+		"تعويضُ متجرٍ عن بضاعةٍ رُدّت", actorID)
+}
+
+// clawBackGoods يسترجع ثمنَ ما رُدّ، ويقيّد ما عجزت عنه المحفظة.
+//
+// **ولا دعمَ هنا** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — المالُ يعود كما كان، والتعويضُ قرارُ
+// الإدارة في `compensateMerchant`.
 func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	shares, err := s.goodsShares(ctx, q, orderID)
 	if err != nil {
 		return err
 	}
-	pct := int64(0)
-	if s.settings != nil {
-		pct = s.settings.GetInt(ctx, "merchants.return_support_percent")
-	}
 
 	for _, sh := range shares {
 		if sh.earned <= 0 {
 			continue
-		}
-		// **الدعمُ أوّلاً ثمّ الاسترجاع** — لا لترتيبٍ جماليّ: الدعمُ يرفع
-		// رصيدَه، **فيقلّ ما يعجز عنه ويصغر الدَّين.** ولو عُكس لَقُيّد دَينٌ
-		// أكبرُ ثمّ دُفع دعمٌ يبقى في محفظته بلا مقاصّة.
-		if support := pct * sh.earned / 100; support > 0 {
-			if _, err := s.wallet.ApplyTx(ctx, q, sh.ownerID, support,
-				"compensation", orderID,
-				"دعمُ المنصة عن بضاعةٍ رُدّت", &actorID); err != nil {
-				return err
-			}
-			// **ويخرج من الخزينة في المعاملة نفسِها** — دعمٌ يُقيَّد للمتجر
-			// وحدَه يجعل المنصةَ تظهر رابحةً وهي تدفع.
-			if err := s.DebitTreasury(ctx, q, support, orderID,
-				"دعمُ متجرٍ عن بضاعةٍ رُدّت", actorID); err != nil {
-				return err
-			}
 		}
 
 		// **ولا يُخصم إلّا ما تحتمله المحفظة**: قيدُ الصفر في القاعدة يرفض
@@ -206,7 +234,8 @@ func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, 
 
 // clawBackCashGoods **المتجرُ النقديُّ رُدّت إليه بضاعتُه** — فحصُ المتجر ٢٠٢٦-١٠-٠١.
 //
-// (قرارُ المالك: «موافق — والنسبةُ نحدّدها من لوحة الأدمن».)
+// (قرارُ المالك: «موافق — والنسبةُ نحدّدها من لوحة الأدمن» — ثمّ ٢٠٢٦-١٠-٠٣: «لازم
+// المصاري ترجع ع حالها والإدارة تقرر تعوض المتجر او لا»، فلا دعمَ هنا بعد.)
 //
 // **قِيس على التجهيز**: متجرٌ «نقداً» رُدّت إليه بضاعةٌ بـ٣٠٬٠٠٠ **فبقي مستحقُّه
 // ٢٧٬٠٠٠ كاملاً ولم يُدفع له دعم.** `clawBackGoods` يقرأ `merchant_earning` من
@@ -216,7 +245,7 @@ func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, 
 //
 //	لم يُدفع بعد (`cash_due`)   ←  يُعكس من الاحتباس (`postCashReversal`)
 //	دُفع نقداً (`cash_paid`)     ←  التزامٌ عليه يُقتطع من مستحقٍّ قادم
-//	والدعمُ                     ←  في محفظته، **والخزينةُ تدفعه** — كالمحفظيّ حرفاً
+//	وتعويضُ الإدارة إن كُتب     ←  في محفظته من الخزينة (`compensateMerchant`) — كالمحفظيّ
 //
 // **والسببُ `returned_goods`** — كان معرَّفاً في `cashReversalNote` ولا يناديه أحد.
 // **ومعرّفُ الحدث `goods:` يمنع العكسَ مرّتين** (الحسمُ نفسُه مقفولٌ أيضاً).
@@ -256,22 +285,7 @@ func (s *Service) clawBackCashGoods(ctx context.Context, q wallet.Querier, order
 	if err != nil {
 		return err
 	}
-	pct := int64(0)
-	if s.settings != nil {
-		pct = s.settings.GetInt(ctx, "merchants.return_support_percent")
-	}
 	for _, r := range list {
-		if support := pct * r.amount / 100; support > 0 {
-			if _, err := s.wallet.ApplyTx(ctx, q, r.ownerID, support,
-				"compensation", orderID,
-				"دعمُ المنصة عن بضاعةٍ رُدّت", &actorID); err != nil {
-				return err
-			}
-			if err := s.DebitTreasury(ctx, q, support, orderID,
-				"دعمُ متجرٍ عن بضاعةٍ رُدّت", actorID); err != nil {
-				return err
-			}
-		}
 		switch r.state {
 		case "cash_due":
 			if _, err := s.postCashReversal(ctx, q, r.id, hid, r.outstanding,
