@@ -532,6 +532,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun legOf(mine: List<com.rahalgo.shared.model.DriverOrder>): String? {
         val id = openId?.takeIf { oid -> mine.any { it.id == oid } } ?: mine.firstOrNull()?.id ?: return null
         val o = mine.firstOrNull { it.id == id } ?: return null
+        // **ومشوارُ الإرجاع ساقٌ ثالثة** — وجهتُه غيرُ باب الزبون، فيُطلب طريقُه من جديد.
+        if (com.rahalgo.driver.trip.isReturnTrip(o)) return "$id:return"
         return id + ":" + if (o.status in TO_CUSTOMER) "customer" else "merchant"
     }
 
@@ -584,7 +586,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     // تتوقّف ووقت يمشي يبدأ… مثل غوغل»). **والجوالُ الواقفُ لا يحرّك السهم**
     // بطبعه — فلا حاجةَ لمفتاح.
     private fun autoFollow(mine: List<com.rahalgo.shared.model.DriverOrder>) {
-        val active = mine.any { it.status !in FINISHED }
+        // **ومشوارُ الإرجاع رحلةٌ قائمة** (٢٠٢٦-١٠-٠٣) — وإن كان طلبُه `failed`.
+        val active = mine.any { it.status !in FINISHED || com.rahalgo.driver.trip.isReturnTrip(it) }
         if (active && !following) follow(true)
         // **وتنطفئ حين لا رحلة** — فلا يبقى الموقعُ كلَّ ثانيةٍ يستنزف البطّاريّة.
         if (!active && following) follow(false)
@@ -1052,6 +1055,34 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **يُرسل موضعَه إن عُرف** — والخادمُ يكتب الوقتَ والموضعَ فتراهما الإدارة.
+    // **ثمّ يخرج الطلبُ من قائمته** فيُعاد إلى الطلبات.
+    fun handGoods() {
+        val id = currentId() ?: return
+        if (detail.busy) return
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            val at = navSession.lastGoodFix?.let { it.lat to it.lng }
+                ?: LastPoint.value?.let { it.lat to it.lng }
+            try {
+                backend.driver.goodsHanded(id, at?.first, at?.second)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                detail = detail.copy(busy = false, error = describe(e))
+                refresh()
+                return@launch
+            }
+            openId = null
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
     /** يسأل المحرّك أيّ الأسباب تصلح في هذا الحال. */
     fun askFail() {
         val order = state.mine.firstOrNull { it.id == openId }
@@ -1176,7 +1207,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             choiceStale = choiceStale,
             committedRoute = committedRoute,
             installReason = lastInstallReason,
-            step = TripStep.of(order.status),
+            step = com.rahalgo.driver.trip.tripStepOf(order),
             // ══════════════════════════════════════════════════════════
             // **وما بقي يتبدّل بتبدّل الوجهة**
             // ══════════════════════════════════════════════════════════

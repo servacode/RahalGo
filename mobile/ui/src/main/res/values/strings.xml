@@ -898,4 +898,8 @@
     <string name="ow_borne_store">الخصم يُحسم من مستحق المتجر</string>
     <string name="ow_borne_me">الخصم يُحسم من مستحقك أنت</string>
     <string name="ow_offers_empty">لا عروض بعد — أنشئ عرضا على صنف ليراه الزبائن</string>
+    <string name="err_return_bad_target">وجهة إرجاع البضاعة غير معروفة</string>
+    <string name="err_return_store_refused">هذا المتجر لا يقبل إرجاع البضاعة</string>
+    <string name="err_no_return_trip">لا مشوار إرجاع على هذا الطلب</string>
+    <string name="err_goods_already_handed">سُجّل تسليم البضاعة من قبل</string>
 </resources>

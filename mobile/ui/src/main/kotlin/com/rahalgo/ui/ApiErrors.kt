@@ -465,6 +465,11 @@ private val CODES: Map<String, Int> = mapOf(
     "idempotency_key_reused" to R.string.err_key_reused,
     "too_many_addresses" to R.string.err_too_many_addresses,
     "already_returned" to R.string.err_already_returned,
+    // **مشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+    "return_bad_target" to R.string.err_return_bad_target,
+    "return_store_refused" to R.string.err_return_store_refused,
+    "no_return_trip" to R.string.err_no_return_trip,
+    "goods_already_handed" to R.string.err_goods_already_handed,
     "merchant_no_returns" to R.string.err_merchant_no_returns,
     "order_not_returnable" to R.string.err_order_not_returnable,
     "not_readyable" to R.string.err_not_readyable,

@@ -521,4 +521,11 @@
     <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
     <string name="gps_lost_title">إشارة الموقع مفقودة</string>
     <string name="gps_lost_text">لم يصل الهاتفَ موضعٌ منذ دقائق، فلن تُعرض عليك طلبات حتى تعود. اخرج إلى مكان مكشوف أو أعد تشغيل الموقع.</string>
+    <!-- مشوارُ إرجاع البضاعة (قرارُ المالك ٢٠٢٦-١٠-٠٣) -->
+    <string name="trip_return_office">أرجِع البضاعة إلى المكتب</string>
+    <string name="trip_return_store">أرجِع البضاعة إلى %1$s</string>
+    <string name="trip_return_store_fallback">المتجر</string>
+    <string name="trip_return_no_point">لا موقع للوجهة على الخريطة — اتبع العنوان</string>
+    <string name="step_goods_handed">سلّمت البضاعة</string>
+    <string name="status_returning">إرجاع البضاعة</string>
 </resources>
