@@ -45,6 +45,27 @@ var errProofRequired = httpx.NewError(http.StatusConflict,
 var errProofNotAtDoor = httpx.NewError(http.StatusConflict,
 	"proof_not_at_door", "errors.proof_not_at_door")
 
+// errProofMocked **صورةٌ بموقعٍ مزيَّفٍ تُرفض** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً: «منع — تمنع
+// احتيالَ السائق، مع تنبيهٍ للسائق»). **كانت تُحفظ بلا موضعٍ موسومةً** — فيمضي التسليم.
+var errProofMocked = httpx.NewError(http.StatusUnprocessableEntity,
+	"proof_mocked", "errors.proof_mocked")
+
+// proofAccuracyCapM **أكبرُ هامشِ دقّةٍ يُضاف إلى حدّ الصورة** — قرارُ المالك ٢٠٢٦-١٠-٠٣.
+const proofAccuracyCapM = 50.0
+
+// errProofTooFar **صورةٌ من مكانٍ بعيدٍ عن الزبون تُرفض** — والمسافةُ والحدُّ في التفصيل
+// نصّاً، فيقولهما التطبيقُ للسائق: «أنت بعيدٌ عن الزبون (٣٢٠ م) — اقترب ثمّ صوّر».
+func errProofTooFar(distM, maxM int64) error {
+	return &httpx.AppError{
+		Status: http.StatusUnprocessableEntity, Code: "proof_too_far",
+		MessageKey: "errors.proof_too_far",
+		Details: map[string]any{
+			"distance_m": strconv.FormatInt(distM, 10),
+			"max_m":      strconv.FormatInt(maxM, 10),
+		},
+	}
+}
+
 // handleDeliveryProof يحفظ صورةَ التسليم وموضعَها.
 //
 // **تُرفع قبل «سُلّم» لا بعده**: بعد الإغلاق يصير الطلبُ تاريخاً، **وصورةٌ
@@ -72,6 +93,67 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// **الإحداثياتُ تأتي مع الصورة لا بعدها.**
+	//
+	// موضعٌ يُرسَل في نداءٍ ثانٍ **قد يُرسَل من مكانٍ آخر** — والسائقُ يتحرّك.
+	lat, errLat := strconv.ParseFloat(r.FormValue("lat"), 64)
+	lng, errLng := strconv.ParseFloat(r.FormValue("lng"), 64)
+	hasPoint := errLat == nil && errLng == nil
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وموقعٌ مزيَّفٌ لا يُقبل إثباتاً — ولا الصورةُ معه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قِيس 2026-09-02: لا فحصَ للتزييف في المنصّة كلِّها.)
+	//
+	// **وإثباتُ التسليم يقول «على بعد خمسةِ أمتارٍ من العنوان»**
+	// محسوبةً من النقطة التي يرسلها الجهازُ نفسُه. **فمن زيّف موضعَه
+	// كتب الإثباتَ بيده** — والحارسُ الذي بُني للحماية يشهد له.
+	//
+	// **وكانت تُرفض النقطةُ وتُحفظ الصورة** — فيمضي التسليمُ بإثباتٍ بلا موضع. **وقرارُ
+	// المالك (٢٠٢٦-١٠-٠٣ مساءً): «منع — مع تنبيهٍ للسائق».** فتُرفض كلُّها ويُقال له
+	// لماذا: يُطفئ برنامجَ التزييف ثمّ يصوّر.
+	//
+	// **والفحوصُ قبل حفظ الملفّ** — صورةٌ مرفوضةٌ لا تترك ملفّاً بلا صاحب.
+	mocked := r.FormValue("mocked") == "true"
+	if mocked {
+		s.audit(r, "driver.delivery_proof_rejected", "order", orderID, map[string]any{"why": "mocked"})
+		s.respondErr(w, errProofMocked)
+		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وصورةٌ من بعيدٍ ليست صورةَ تسليم** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **أبعدَ من `drivers.proof_max_m` عن نقطة الزبون تُرفض** ويُقال للسائق كم هو بعيد.
+	// **وبابٌ لا يُعرف لا يُقاس عليه** — «لدي توصيلة» بلا نقطة (`dropoff_known`).
+	//
+	// **ويُضاف هامشُ دقّة الجوال لحظتَها** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «١٥٠ متر كثير» فصار ١٥،
+	// **مع هامش الدقّة** فلا يُظلَم سائقٌ بين البنايات) — **وسقفُه ٥٠ م**: جوالٌ يقول «دقّتي
+	// ألفُ متر» لا يشتري ألفَ متر. **وغيابُها هامشٌ صفر** — نسخةٌ قديمةٌ لا ترسلها تُقاس بالحدّ وحدَه.
+	if hasPoint {
+		var known bool
+		var dist *float64
+		if err := s.pg.QueryRow(r.Context(), `
+			SELECT dropoff_known,
+			       ST_Distance(dropoff, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography)
+			FROM orders WHERE id = $1`, orderID, lng, lat).Scan(&known, &dist); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		maxM := s.settings.GetInt(r.Context(), "drivers.proof_max_m")
+		if acc, err := strconv.ParseFloat(r.FormValue("accuracy"), 64); err == nil && acc > 0 {
+			maxM += int64(min(acc, proofAccuracyCapM))
+		}
+		if known && dist != nil && maxM > 0 && *dist > float64(maxM) {
+			s.audit(r, "driver.delivery_proof_rejected", "order", orderID, map[string]any{
+				"why": "too_far", "distance_m": int64(*dist), "max_m": maxM,
+			})
+			s.respondErr(w, errProofTooFar(int64(*dist), maxM))
+			return
+		}
+	}
+
 	// **الصورةُ تُرفع كسائر الوسائط** — بالفحص والحدّ نفسِهما.
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -84,31 +166,6 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
-	}
-
-	// **الإحداثياتُ تأتي مع الصورة لا بعدها.**
-	//
-	// موضعٌ يُرسَل في نداءٍ ثانٍ **قد يُرسَل من مكانٍ آخر** — والسائقُ يتحرّك.
-	lat, errLat := strconv.ParseFloat(r.FormValue("lat"), 64)
-	lng, errLng := strconv.ParseFloat(r.FormValue("lng"), 64)
-	hasPoint := errLat == nil && errLng == nil
-
-	// ══════════════════════════════════════════════════════════════════
-	// **وموقعٌ مزيَّفٌ لا يُقبل إثباتاً**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// (قِيس 2026-09-02: لا فحصَ للتزييف في المنصّة كلِّها.)
-	//
-	// **وإثباتُ التسليم يقول «على بعد خمسةِ أمتارٍ من العنوان»**
-	// محسوبةً من النقطة التي يرسلها الجهازُ نفسُه. **فمن زيّف موضعَه
-	// كتب الإثباتَ بيده** — والحارسُ الذي بُني للحماية يشهد له.
-	//
-	// **فتُرفض النقطةُ ولا تُرفض الصورة**: الصورةُ وقعت وقد تكون
-	// صادقة، **والموضعُ وحدَه كذب.** فيُحفظ الإثباتُ بلا موضعٍ
-	// موسوماً بالتزييف، **ويقرؤه المكتبُ فيعلم.**
-	mocked := r.FormValue("mocked") == "true"
-	if mocked {
-		hasPoint = false
 	}
 
 	q := `UPDATE orders SET pod_media_id = $2, pod_taken_at = now(), pod_skip_reason = '',
