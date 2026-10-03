@@ -186,7 +186,9 @@ fun OrderCard(
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
         val ctx = LocalContext.current
-        Since.text(ctx, order.createdAt).takeIf { it.isNotEmpty() }?.let {
+        // **والعمرُ يمشي والشاشةُ مفتوحة** — انظر `rememberNow`.
+        val now by com.rahalgo.ui.rememberNow()
+        Since.text(ctx, order.createdAt, now).takeIf { it.isNotEmpty() }?.let {
             KeyValue(stringResource(R.string.ord_placed), it)
         }
         KeyValue(
