@@ -12,6 +12,7 @@ package orders
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -128,4 +129,68 @@ func (s *Service) reportsSince(ctx context.Context, orderID string) time.Time {
 		return time.Time{}
 	}
 	return *last
+}
+
+// CountAwaitingOffice **كم طلباً ينتظر قرارَ المكتب على بلاغٍ من السائق.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٣: قسمُ «بانتظار قرارك» في رئيسيّة اللوحة.)
+//
+// **طلبٌ مع السائق** (عند المتجر · استلم · في الطريق · عند الباب) **آخرُ بلاغٍ
+// فيه بلاغُ رحلةٍ** (`IsTripReport`) **ولم يُرسَل بعده أمرٌ من المكتب.**
+// **والقاعدةُ نفسُها التي تُظهر لوحةَ البطاقة** — فالرقمُ يطابق ما يراه من
+// فتح الطلبات، **ولا يُحسب الحكمُ مرّتين بلفظين.**
+func (s *Service) CountAwaitingOffice(ctx context.Context) (int, error) {
+	var n int
+	err := s.db.QueryRow(ctx,
+		`SELECT count(*) FROM orders o WHERE `+awaitingOfficeSQL()).Scan(&n)
+	return n, err
+}
+
+// awaitingOfficeSQL **شرطُ «بلاغٌ ينتظر المكتب» نصّاً واحداً** — للعدّ في
+// الرئيسيّة ولمُرشِّح الطلبات معاً (`ListFilter.AwaitingOffice`)، **فلا تقول
+// البطاقةُ ثلاثةً وتعرض القائمةُ اثنين.**
+//
+// **والرموزُ والحالاتُ ثوابتُ الحزمة** (`StageReports`) لا مُدخَلُ أحد —
+// فتُكتب في النصّ بلا معاملات، **ويبقى الشرطُ صالحاً في استعلامٍ يعدّ
+// معاملاتِه هو.**
+func awaitingOfficeSQL() string {
+	// **وقبل المتجر أيضاً** (٢٠٢٦-١٠-٠٣: «أكمل الطلب» أو «ألغِ الطلب»).
+	statuses := []string{StAssigned, StAtPickup, StPickedUp, StOnTheWay, StAtDropoff}
+	codes := []string{}
+	for _, r := range StageReports {
+		if IsTripReport(r.Code) || r.Code == "customer_cancelled_by_phone" {
+			codes = append(codes, r.Code)
+		}
+	}
+	st, cs := sqlTextList(statuses), sqlTextList(codes)
+	return `o.closed_at IS NULL AND o.status IN ` + st + `
+		AND EXISTS (
+			SELECT 1 FROM (
+				SELECT a.details->>'code' AS code, a.created_at
+				FROM audit_log a
+				WHERE a.entity = 'order' AND a.entity_id = o.id::text
+				  AND a.action = 'driver.stage_report'
+				  AND a.details->>'status' IN ` + st + `
+				  -- **وبلاغُ ما قبل آخر عودةٍ إلى الطريق لا يُحسب** — بلاغُ متجرٍ حُوّل عنه (reportsSince).
+				  AND a.created_at >= COALESCE((SELECT max(e.created_at) FROM order_events e
+				        WHERE e.order_id = o.id AND e.to_status = 'assigned' AND e.from_status <> 'assigned'),
+				        '-infinity'::timestamptz)
+				ORDER BY a.created_at DESC LIMIT 1) last
+			WHERE last.code IN ` + cs + `
+			  AND (o.door_instruction_at IS NULL OR o.door_instruction_at < last.created_at))`
+}
+
+// sqlTextList قائمةُ نصوصٍ ثابتةٍ بصيغة SQL — **والاقتباسُ يُضاعَف** احتياطاً.
+func sqlTextList(xs []string) string {
+	if len(xs) == 0 {
+		return "('')"
+	}
+	out := "("
+	for i, x := range xs {
+		if i > 0 {
+			out += ", "
+		}
+		out += "'" + strings.ReplaceAll(x, "'", "''") + "'"
+	}
+	return out + ")"
 }

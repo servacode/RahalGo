@@ -227,6 +227,12 @@ type Order struct {
 	DriverAssigned bool    `json:"driver_assigned"`
 	DriverPhone    *string `json:"driver_phone"`
 	DriverName     *string `json:"driver_name"`
+	// DriverSeenAt **آخرُ ظهورٍ للسائق** — متى وصل آخرُ موضعٍ منه.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٣: شارةُ السائق على مسار الطلب — اسمُه واتّصالٌ
+	// و«آخرُ ظهورٍ قبل كذا».) **للمكتب وحدَه**: موضعُ السائق ضمناً، ولا يخرج
+	// لغير الإدارة (`privacy_contract.go`).
+	DriverSeenAt *time.Time `json:"driver_seen_at"`
 	// OfferedDriverName **من عُرض عليه الطلبُ ولم يقبل بعد.**
 	//
 	// كانت العملياتُ ترى «جارٍ إسناد سائق» **ولا تعرف على من** — فلا تعرف من

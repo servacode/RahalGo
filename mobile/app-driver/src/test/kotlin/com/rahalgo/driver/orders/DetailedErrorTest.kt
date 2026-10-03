@@ -34,7 +34,7 @@ class DetailedErrorTest {
 
     @Test
     fun codesHaveTheirText() {
-        for (code in listOf("custom_fee_out_of_range", "custom_goods_too_high", "proof_too_far", "proof_mocked")) {
+        for (code in listOf("custom_fee_out_of_range", "custom_goods_too_high", "proof_too_far", "proof_mocked", "proof_no_location")) {
             val res = com.rahalgo.ui.resolveErrorRes(code)
             org.junit.Assert.assertNotEquals("رمزٌ بلا نصّ: $code", R.string.err_internal, res)
         }

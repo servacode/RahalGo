@@ -186,7 +186,8 @@ const walk = (d, out = []) => {
     ["app/dashboard/compensations/page.tsx", 'can("finance.manage")', "قرارُ التعويض المعلَّق"],
     ["components/admin/money/disputes.tsx", 'can("finance.manage")', "تسويةُ النزاع"],
     ["components/admin/support/tickets.tsx", 'can("support.manage")', "إغلاقُ التذكرة"],
-    ["components/admin/orders/OrdersScreen.tsx", 'can("finance.manage")', "تعويضُ السائق"],
+    // **وتعويضُ السائق خرج من بطاقة الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٣):
+    // **بابُه الوحيدُ طابورُ «التعويضات» — قبولٌ أو رفض.**
     // **والأفعالُ التشغيليّةُ في الشاشة نفسِها** — **والماليّةُ تقرأ
     // ولا تُسند** (بندُ المالك ٨).
     ["components/admin/orders/OrdersScreen.tsx", 'const canIntervene = can("orders.intervene")', "التدخّلُ التشغيليّ"],

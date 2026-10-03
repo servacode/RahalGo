@@ -542,6 +542,7 @@
     <string name="err_proof_too_far">أنت بعيد عن الزبون — اقترب ثمّ صوّر</string>
     <string name="err_proof_too_far_m">أنت بعيد عن الزبون (%1$s) — اقترب ثمّ صوّر</string>
     <string name="err_proof_mocked">برامج تزييف الموقع ممنوعة — أطفئها ثمّ صوّر</string>
+    <string name="err_proof_no_location">شغّل تحديد الموقع ثمّ صوّر التسليم</string>
     <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
     <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4): المالكُ يرى متجرَه لكن
          لا يعدّل قائمتَه ولا إتاحتَه ولا عروضَه ولا ساعاتِه حتى يُرفع

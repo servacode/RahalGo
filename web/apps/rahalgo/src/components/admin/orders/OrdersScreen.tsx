@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   getMessages,
@@ -9,7 +9,7 @@ import {
   fmtNum,
   fmtDateTime,
   fmtTime,
-  fmtSpan, errorText } from "@rahalgo/i18n";
+  fmtSpan, errorText, damascusDay } from "@rahalgo/i18n";
 import {
   BrandMark,
   OrderRef,
@@ -34,6 +34,7 @@ import {
   IconUser,
   IconStore,
   IconCamera,
+  IconPhone,
   IconWhatsApp,
   IconSwap,
   IconWarning,
@@ -143,6 +144,8 @@ interface OrderRow {
   /** متى استُلمت البضاعة — وبه يُقفل السعرُ على الخفض بعده. */
   picked_up_at?: string | null;
   driver_name: string | null;
+  /** **آخرُ ظهورٍ للسائق** — متى وصل آخرُ موضعٍ منه، وفارغٌ «لم يظهر». */
+  driver_seen_at?: string | null;
   /** من عُرض عليه الطلبُ ولم يقبل بعد — **يُعرض ما دام العرضُ حيّاً.** */
   offered_driver_name: string | null;
   /** إثباتُ التسليم — صورةٌ ومسافةٌ ووقت. */
@@ -645,7 +648,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [data, setData] = useState<OrderPage | null>(null);
   /** آخرُ أعدادٍ وصلت — **تُعرض ريثما تصل الجديدة.** */
   const lastCounts = useRef<Record<string, number> | undefined>(undefined);
-  const [status, setStatus] = useState("");
+  // **والحالُ من الرابط** — بطاقاتُ «بانتظار قرارك» في الرئيسيّة تفتح الشاشةَ
+  // مرشَّحة (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+  const [status, setStatus] = useState(params.get("status") ?? "");
+  /** **بلاغُ سائقٍ ينتظر قرارَ المكتب** — شرطُ العدّ في الرئيسيّة نفسُه. */
+  const [awaiting, setAwaiting] = useState(params.get("awaiting") === "1");
   const [query, setQuery] = useState(initialQ);
   /**
    * **شاشتان لا شاشةٌ بمربّع.**
@@ -667,7 +674,21 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
    */
   const searching = query.trim() !== "";
   const live = mode === "live";
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => Math.max(1, Number(params.get("page")) || 1));
+  // ══════════════════════════════════════════════════════════════════
+  // **مُرشِّحاتُ السجلّ — بالتاريخ والمتجر والسائق** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **وكلُّها في الرابط** — تُقرأ عند الفتح وتُكتب عند التغيير، **فرابطٌ
+  // يُرسَل إلى زميلٍ يفتح عليه ما رآه صاحبُه بعينه.** واليومُ يومُ دمشق.
+  const [from, setFrom] = useState(params.get("from") ?? "");
+  const [to, setTo] = useState(params.get("to") ?? "");
+  const [merchantId, setMerchantId] = useState(params.get("merchant") ?? "");
+  const [driverId, setDriverId] = useState(params.get("driver") ?? "");
+  const [storeList, setStoreList] = useState<{ id: string; name: string }[]>([]);
+  const [driverList, setDriverList] = useState<DriverRow[]>([]);
+  const router = useRouter();
+  const pathname = usePathname();
   const [error, setError] = useState("");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   /**
@@ -734,8 +755,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         // **والبحثُ يعبر الشاشتين** — من كتب رقماً يريده حيثما كان.
         open: live && !searching ? "1" : "",
         closed: !live && !searching ? "1" : "",
+        awaiting: awaiting ? "1" : "",
+        from: live ? "" : from,
+        to: live ? "" : to,
+        merchant_id: live ? "" : merchantId,
+        driver_id: live ? "" : driverId,
         page: String(page),
-        per_page: "12",
+        // **وخمسةٌ وعشرون في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يُقرأ ولا
+        // يُعمَل عليه، **وصفحاتٌ أقلُّ أخفُّ على من يبحث.**
+        per_page: live ? "12" : "25",
       });
       setData(await api<OrderPage>(`/api/v1/admin/orders?${params}`));
       setError("");
@@ -762,7 +790,65 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, query, live, searching, page]);
+  }, [status, awaiting, query, live, searching, page, from, to, merchantId, driverId]);
+
+  // **والرابطُ يتبع الشاشة** — `replace` لا `push`: كلُّ حرفٍ في البحث لا
+  // يصير صفحةً في سجلّ المتصفّح يُرجَع إليها.
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    const put = (k: string, v: string) => {
+      if (v) qs.set(k, v);
+    };
+    put("q", query);
+    put("status", status);
+    if (awaiting) qs.set("awaiting", "1");
+    if (!live) {
+      put("from", from);
+      put("to", to);
+      put("merchant", merchantId);
+      put("driver", driverId);
+    }
+    if (page > 1) qs.set("page", String(page));
+    const next = qs.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [router, pathname, live, query, status, awaiting, from, to, merchantId, driverId, page]);
+
+  // **وقائمتا المتجر والسائق لمن يملك قراءتهما** — وإلّا رُدّ النداءُ ٤٠٣.
+  useEffect(() => {
+    if (live) return;
+    if (can("merchants.read")) {
+      api<{ id: string; name: string }[]>("/api/v1/admin/merchants")
+        .then((r) => setStoreList(Array.isArray(r) ? r : []))
+        // @empty-ok — **قائمةُ المرشِّح عونٌ لا شرط**: بلا متجرٍ فيها يبقى السجلُّ كلُّه.
+        .catch(() => setStoreList([]));
+    }
+    if (can("drivers.read")) {
+      api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers")
+        .then((r) => setDriverList(Array.isArray(r) ? r : r.drivers))
+        // @empty-ok — **وكذلك قائمةُ السائقين.**
+        .catch(() => setDriverList([]));
+    }
+  }, [live, can]);
+
+  /** **مدىً جاهز** — بيوم دمشق، و`to` اليومُ نفسُه. */
+  const today = damascusDay();
+  const presets: { id: string; label: string; from: string; to: string }[] = [
+    { id: "today", label: m.admin.ordersPage.range.today, from: today, to: today },
+    {
+      id: "yesterday",
+      label: m.admin.ordersPage.range.yesterday,
+      from: damascusDay(Date.now() - 86_400_000),
+      to: damascusDay(Date.now() - 86_400_000),
+    },
+    {
+      id: "last7",
+      label: m.admin.ordersPage.range.last7,
+      from: damascusDay(Date.now() - 6 * 86_400_000),
+      to: today,
+    },
+    { id: "month", label: m.admin.ordersPage.range.month, from: `${today.slice(0, 8)}01`, to: today },
+  ];
+  const filtered = from !== "" || to !== "" || merchantId !== "" || driverId !== "";
 
   useEffect(() => {
     const t = setTimeout(load, 250);
@@ -1279,6 +1365,24 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
+        {/* **وشاشةُ العمل مرشَّحةً من الرئيسيّة تقول ذلك** — وإلّا ظُنّ أنّ
+            الطلباتِ الأخرى اختفت. **وضغطةٌ تُعيد الكلّ.** */}
+        {live && (awaiting || status) && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setAwaiting(false);
+              setStatus("");
+              setPage(1);
+            }}
+          >
+            {awaiting
+              ? m.admin.ordersPage.awaitingFilter
+              : (STATUS_LABELS[status] ?? status)}
+            {m.common.listSeparator}
+            {m.admin.ordersPage.clearFilter}
+          </Button>
+        )}
         <div className="w-64">
           <Input
             icon={<IconSearch />}
@@ -1305,6 +1409,106 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             **والبطاقةُ تحمل الكلّ بلا ضغطة** — وهي ما بُني عليه هذا
             القسمُ كلُّه في هذه الجولة. */}
       </div>
+
+      {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — مدىً جاهزٌ بضغطة،
+          أو يومان بيد، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
+      {!live && (
+        <div className="mb-4 flex flex-wrap items-end gap-2">
+          {presets.map((p) => {
+            const on = from === p.from && to === p.to;
+            return (
+              <Button
+                key={p.id}
+                variant={on ? "primary" : "secondary"}
+                aria-pressed={on}
+                onClick={() => {
+                  setFrom(on ? "" : p.from);
+                  setTo(on ? "" : p.to);
+                  setPage(1);
+                }}
+              >
+                {p.label}
+              </Button>
+            );
+          })}
+          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+            <Input
+              id="h-from"
+              label={m.admin.ordersPage.range.from}
+              type="date"
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+            <Input
+              id="h-to"
+              label={m.admin.ordersPage.range.to}
+              type="date"
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          {storeList.length > 0 && (
+            <div className="min-w-[10rem] flex-1 sm:w-48 sm:flex-none">
+              <Select
+                aria-label={m.admin.ordersPage.range.allStores}
+                value={merchantId}
+                onChange={(e) => {
+                  setMerchantId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{m.admin.ordersPage.range.allStores}</option>
+                {storeList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {driverList.length > 0 && (
+            <div className="min-w-[10rem] flex-1 sm:w-48 sm:flex-none">
+              <Select
+                aria-label={m.admin.ordersPage.range.allDrivers}
+                value={driverId}
+                onChange={(e) => {
+                  setDriverId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{m.admin.ordersPage.range.allDrivers}</option>
+                {driverList.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.full_name || d.phone}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {filtered && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+                setMerchantId("");
+                setDriverId("");
+                setPage(1);
+              }}
+            >
+              {m.admin.ordersPage.range.clear}
+            </Button>
+          )}
+        </div>
+      )}
 
       {error && <Alert className="mb-4">{error}</Alert>}
 
@@ -1395,6 +1599,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                   id === "to_store" || id === "agreeing" ? o.driver_name : null,
               }))}
               current={o.ops_stage_at ?? -1}
+              currentAside={
+                o.driver_name ? <DriverChip o={o} /> : undefined
+              }
             />
           ) : null
         }
@@ -1443,6 +1650,48 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------- شارةُ السائق ----------
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شارةُ السائق بجانب المرحلة الحاليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **اسمُه · زرُّ اتّصال · «آخرُ ظهورٍ قبل كذا»** — فمن رأى طلباً واقفاً
+ * عرف بنظرةٍ أهو سائقٌ ساكتٌ أم هاتفٌ نام، **واتّصل من الموضع نفسِه.**
+ *
+ * **ولا سطرَ للسائق في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢): الشارةُ على
+ * المسار، **ولا شارةَ بلا سائق.**
+ */
+function DriverChip({ o }: { o: OrderRow }) {
+  const seen = o.driver_seen_at ? new Date(o.driver_seen_at).getTime() : NaN;
+  const mins = Number.isFinite(seen)
+    ? Math.max(0, Math.floor((Date.now() - seen) / 60_000))
+    : null;
+  return (
+    <span onClick={(e) => e.stopPropagation()}>
+      <Badge variant="neutral" className="flex-wrap gap-1">
+        <span className="font-medium text-ink">{o.driver_name}</span>
+        {o.driver_phone && (
+          <a
+            href={`tel:${o.driver_phone}`}
+            aria-label={m.admin.ordersPage.callDriver}
+            title={m.admin.ordersPage.callDriver}
+            className="text-accent-text"
+          >
+            <IconPhone size={12} />
+          </a>
+        )}
+        <span className={mins === null ? "text-danger" : ""}>
+          {mins === null
+            ? m.admin.ordersPage.driverNeverSeen
+            : m.admin.ordersPage.driverSeen.replace("{n}", fmtNum(mins))}
+        </span>
+      </Badge>
+    </span>
   );
 }
 
@@ -1498,16 +1747,13 @@ function OrderActions({
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   /** **حدُّ شيخوخة الموضع بالدقائق** — يأتي من المحرّك لا يُكتب هنا. */
   const [staleMin, setStaleMin] = useState(15);
-  /** تفصيلُ توزيع المال — يُجلب عند الطلب لا مع كل بطاقة */
-  /** نموذجُ تعويض السائق عن طلبٍ فشل */
-  const [compensating, setCompensating] = useState(false);
-  const [amount, setAmount] = useState("");
   /**
    * **«أعيدت إلى المتجر» بتعويضٍ اختياريّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم المصاري
    * ترجع ع حالها والإدارة تقرر تعوض المتجر او لا») — لا نسبةَ تلقائيّة.
    */
   const [goodsBack, setGoodsBack] = useState(false);
   const [storeComp, setStoreComp] = useState("");
+  /** سببُ الفعل المفتوح — يُكتب قبل أن يُنفَّذ */
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
   // **إذنُ استثناء إثبات التسليم — بيدِ العمليّات لا السائق** (٢٠٢٦-٠٩-٢٧).
@@ -1737,39 +1983,6 @@ function OrderActions({
     }
   }
 
-  // **تعويضُ السائق — بمبلغٍ يقدّره إنسان.**
-  //
-  // أجرُ التوصيل مقابل تسليمٍ تمّ، وما وقع رحلةٌ لا تسليم. وتقديرُ الرحلة
-  // يختلف: مشوارٌ إلى الحيّ المجاور ليس كمشوارٍ عبر المدينة، **ورقمٌ آليٌّ
-  // واحد يظلم أحدهما.**
-  async function compensate() {
-    const value = Number(amount);
-    if (!Number.isFinite(value) || value <= 0 || reason.trim() === "") return;
-    setBusy("compensate");
-    setErr("");
-    try {
-      await api(`/api/v1/admin/orders/${o.id}/compensate-driver`, {
-        method: "POST",
-        body: JSON.stringify({
-          amount: Math.round(value),
-          note: reason.trim(),
-        }),
-      });
-      setCompensating(false);
-      setAmount("");
-      setReason("");
-      onChanged();
-    } catch (e) {
-      setErr(
-        e instanceof ApiError
-          ? translateKey(e.body.message_key)
-          : m.errors.internal,
-      );
-    } finally {
-      setBusy("");
-    }
-  }
-
   // ══════════════════════════════════════════════════════════════════
   // **إذنُ استثناءِ إثبات التسليم — كاميرا معطّلةٌ فيأذن العملياتُ بلا صورة**
   // ══════════════════════════════════════════════════════════════════
@@ -1927,33 +2140,6 @@ function OrderActions({
           }}
           saveLabel={m.common.confirm}
         />
-      </div>
-    );
-  }
-
-  if (compensating) {
-    return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">
-          {m.admin.ordersPage.compensateTitle}
-        </p>
-        <Input
-          type="number"
-          inputMode="numeric"
-          placeholder={m.admin.ordersPage.compensateAmount}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-        <Input
-          placeholder={m.admin.ordersPage.compensateReason}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <FormActions onSave={() => void compensate()} onCancel={() => {
-              setCompensating(false);
-              setErr("");
-            }} saveLabel={m.common.confirm} />
       </div>
     );
   }
@@ -2326,26 +2512,13 @@ function OrderActions({
             </span>
           )}
           {/* ══════════════════════════════════════════════════════
-            * **وتعويضُ السائق قيدٌ ماليّ في شاشةٍ تشغيليّة**
+            * **ولا «تعويضَ سائق» بمبلغٍ حرٍّ على البطاقة** (قرارُ المالك
+            * ٢٠٢٦-١٠-٠٣ — «السائقُ لا يُوعَد بتعويض»)
             * ══════════════════════════════════════════════════════
             *
-            * **و`POST /orders/{id}/compensate-driver` بـ`finance.manage`**
-            * — **فموظّفُ العمليّات كان يرى زرّاً يُردّ ٤٠٣.**
-            * **وشرطُ المالك (بندُ ٨): العمليّاتُ تقرأ مجاميعَ الطلب
-            * ولا ترى فعلاً ماليّاً.** */}
-          {o.driver_name && can("finance.manage") && (
-            <Button
-              variant="secondary"
-              disabled={busy !== ""}
-              onClick={() => {
-                setAmount("");
-                setReason("");
-                setCompensating(true);
-              }}
-            >
-              {m.admin.ordersPage.compensateDriver}
-            </Button>
-          )}
+            * **بابُه الوحيدُ طابورُ «التعويضات»** (`/dashboard/compensations`):
+            * طلبٌ معلَّقٌ يقبله المكتبُ أو يرفضه. **وزرٌّ ثانٍ بمبلغٍ يُكتب
+            * باليد بابٌ خلفيٌّ يتجاوز الطابور.** */}
         </>
       )}
 

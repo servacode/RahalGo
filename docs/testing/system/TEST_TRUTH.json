@@ -32,9 +32,9 @@
     ],
     "setting_defs": 167,
     "behaviour_settings": 133,
-    "order_fields": 92,
-    "test_files": 464,
-    "test_funcs": 1911
+    "order_fields": 93,
+    "test_files": 467,
+    "test_funcs": 1914
   },
   "flows": [
     {
@@ -8414,6 +8414,12 @@
       "orphan": true
     },
     {
+      "name": "TestDriverSeenAt_OpsOnly",
+      "file": "internal/orders/driver_seen_at_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestZoneAt_EmptyTableIsClosed",
       "file": "internal/orders/empty_zones_test.go",
       "package": "orders_test",
@@ -8512,6 +8518,12 @@
     {
       "name": "TestOpenNow_CrossesMidnight",
       "file": "internal/orders/hours_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestList_DateRangeMerchantDriverAndSeenAt",
+      "file": "internal/orders/list_filters_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -23215,6 +23227,12 @@
     {
       "name": "TestSectionItems_ServerSideSearchFilterAndCounts",
       "file": "internal/server/admin_section_items_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminStatsAwaitingDecision",
+      "file": "internal/server/admin_stats_awaiting_test.go",
       "package": "server",
       "orphan": true
     },

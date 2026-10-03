@@ -16,7 +16,10 @@ import {
   IconDate,
   Badge,
   IconTile,
+  IconUsers,
   Money,
+  StatCard,
+  StatGrid,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -50,6 +53,21 @@ interface Report {
   top_drivers: { name: string; phone: string; delivered: number; cash: number }[];
 }
 
+/**
+ * **الزوّار — فتحةٌ وشخصٌ رقمان لا رقم** (طلبُ المالك ٢٠٢٦-٠٨-٢٥).
+ *
+ * **ونُقلت من الرئيسيّة إلى التقارير** (قرارُ المالك ٢٠٢٦-١٠-٠٣): الرئيسيّةُ
+ * لما ينتظر يداً، **والزوّارُ قراءةٌ لا فعلَ بعدها.** والمصدرُ واحد
+ * (`/admin/stats`، `admin_stats_handlers.go`).
+ */
+interface Visitors {
+  opens_today: number;
+  opens_7d: number;
+  opens_30d: number;
+  devices_today: number;
+  devices_7d: number;
+  devices_30d: number;
+}
 
 function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -166,7 +184,15 @@ export default function ReportsPage() {
   const [from, setFrom] = useState(iso(weekAgo));
   const [to, setTo] = useState(iso(today));
   const [report, setReport] = useState<Report | null>(null);
+  const [visitors, setVisitors] = useState<Visitors | null>(null);
   const [error, setError] = useState("");
+
+  // **والزوّارُ لا يتبعون المدّة** — اليومُ و٧ و٣٠ يوماً كما كانوا في الرئيسيّة.
+  useEffect(() => {
+    api<Visitors>("/api/v1/admin/stats")
+      .then(setVisitors)
+      .catch(() => setVisitors(null));
+  }, []);
 
   /**
    * تنزيلُ CSV — **بالمدّة المعروضة نفسِها.**
@@ -288,6 +314,22 @@ export default function ReportsPage() {
 
       {error && (
         <Alert className="mb-4">{error}</Alert>
+      )}
+
+      {/* **ومن فتح عشرَ مرّاتٍ اليومَ يُعدّ عشراً في الفتحات وواحداً في
+          الأجهزة** — والأوّلُ يقيس الحركةَ والثاني يقيس الناس. */}
+      {visitors && (
+        <section className="mb-6">
+          <h2 className="mb-2 text-sm font-bold">{m.admin.dash.visitors}</h2>
+          <StatGrid>
+            <StatCard icon={IconUsers} label={m.admin.dash.devicesToday} value={visitors.devices_today} />
+            <StatCard icon={IconUsers} label={m.admin.dash.devices7} value={visitors.devices_7d} />
+            <StatCard icon={IconUsers} label={m.admin.dash.devices30} value={visitors.devices_30d} />
+            <StatCard icon={IconOrder} label={m.admin.dash.opensToday} value={visitors.opens_today} />
+            <StatCard icon={IconOrder} label={m.admin.dash.opens7} value={visitors.opens_7d} />
+            <StatCard icon={IconOrder} label={m.admin.dash.opens30} value={visitors.opens_30d} />
+          </StatGrid>
+        </section>
       )}
 
       {s && (

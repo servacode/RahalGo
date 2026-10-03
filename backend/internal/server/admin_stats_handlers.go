@@ -62,6 +62,25 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 		DevicesToday int   `json:"devices_today"`
 		Devices7     int   `json:"devices_7d"`
 		Devices30    int   `json:"devices_30d"`
+
+		// ══════════════════════════════════════════════════════════
+		// **بانتظار قرارك — ما لا يتحرّك حتّى تتحرّك يد**
+		// ══════════════════════════════════════════════════════════
+		//
+		// (قرارُ المالك ٢٠٢٦-١٠-٠٣: أعلى الرئيسيّة بطاقاتٌ تُفتح كلٌّ
+		// على صفحتها.) **و`payouts_pending` و`tickets_open` من فوق** —
+		// لا تُعدّ مرّتين.
+		CompensationsPending int `json:"compensations_pending"`
+		// ReportsWaiting **بلاغُ سائقٍ ينتظر قرارَ المكتب** — `CountAwaitingOffice`.
+		ReportsWaiting  int `json:"reports_waiting"`
+		EmergenciesOpen int `json:"emergencies_open"`
+		// OrdersUnassigned **في الطابور بلا سائقٍ بعد مهلة الإسناد اليدويّ** —
+		// المهلةُ نفسُها التي تُظهر زرَّ «إسناد» في البطاقة.
+		OrdersUnassigned int `json:"orders_unassigned"`
+		LeadsNew         int `json:"leads_new"`
+		MenuPending      int `json:"menu_pending"`
+		// DriversOverCash **سائقون بلغ نقدُهم السقف** — بحساب صفحة النقد نفسِه.
+		DriversOverCash int `json:"drivers_over_cash"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		WITH day AS (
@@ -160,6 +179,38 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 		    WHERE last_seen_at >= now() - interval '30 days')
 	`).Scan(&st.OpensToday, &st.Opens7, &st.Opens30,
 		&st.DevicesToday, &st.Devices7, &st.Devices30)
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وما ينتظر القرارَ يُسقط الردَّ إن عَطِب** — لا كالزوّار
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **صفرٌ في «بانتظار قرارك» يُقرأ «لا شيءَ ينتظرك»** — وهو كذبٌ يترك
+	// سائقاً في الشارع. **والعطبُ المُعلَن أصدقُ منه.**
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT
+			(SELECT count(*) FROM driver_compensation_requests WHERE status = 'pending'),
+			(SELECT count(*) FROM driver_emergencies WHERE status = 'open'),
+			(SELECT count(*) FROM orders
+			  WHERE status = 'dispatching' AND driver_id IS NULL AND closed_at IS NULL
+			    AND dispatched_at < now() - make_interval(mins => $1::int)),
+			(SELECT count(*) FROM merchant_leads WHERE status = 'new'),
+			(SELECT count(*) FROM menu_items WHERE NOT approved),
+			(SELECT count(*) FROM (
+			    SELECT driver_id FROM driver_cash_entries GROUP BY driver_id
+			    HAVING COALESCE(sum(amount), 0) > 0 AND COALESCE(sum(amount), 0) >= $2) x)`,
+		s.settings.GetInt(r.Context(), "orders.manual_assign_after_min"),
+		s.cashbox.Limit(r.Context())).
+		Scan(&st.CompensationsPending, &st.EmergenciesOpen, &st.OrdersUnassigned,
+			&st.LeadsNew, &st.MenuPending, &st.DriversOverCash); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	n, err := s.orders.CountAwaitingOffice(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	st.ReportsWaiting = n
 
 	httpx.JSON(w, http.StatusOK, st)
 }

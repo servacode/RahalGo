@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { IconCheck, IconClose } from "./icons";
 
 /**
@@ -100,10 +101,17 @@ export function OrderTrackV({
   stages,
   /** رقمُ المرحلة الحالية — و`-1` لما انتهى قبل أن يصل. */
   current,
+  /**
+   * **ما يُقال بجانب المرحلة الحاليّة** — شارةُ السائق في لوحة المكتب
+   * (قرارُ المالك ٢٠٢٦-١٠-٠٣): اسمُه واتّصالٌ وآخرُ ظهور. **ولا شيءَ
+   * لمسارٍ انتهى** — لا مرحلةَ حاليّةً فيه.
+   */
+  currentAside,
   className = "",
 }: {
   stages: RailStage[];
   current: number;
+  currentAside?: ReactNode;
   className?: string;
 }) {
   // **والمنتهي رماديٌّ كلُّه** — لا نقطةَ مضيئةٌ في مسارٍ لم يكتمل.
@@ -152,6 +160,7 @@ export function OrderTrackV({
                 {s.label}
               </span>
             </div>
+            {now && currentAside && <div className="mt-1 ps-4">{currentAside}</div>}
 
             {/* ══════════════════════════════════════════════════════
                 **والواصلُ يُرسم تحت النقطة لا خلف العمود**
