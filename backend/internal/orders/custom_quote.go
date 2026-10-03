@@ -49,6 +49,7 @@ type customQuoteRow struct {
 	goods              int64 // custom_goods_amount الحاليّة (0 إن لم يُتَّفق بعد)
 	fee                int64 // custom_fee الحاليّة
 	hasGoods           bool  // أاتُّفق مرّةً على الأقلّ؟
+	hasFee             bool  // أوُثّقت الأجرةُ عموداً؟ — شرطُ خطوة الثمن
 	quoteVersion       int64
 	confirmedAt        *time.Time
 	confirmedTotal     *int64
@@ -84,7 +85,7 @@ func (s *Service) lockCustomRow(ctx context.Context, q wallet.Querier, orderID s
 		r.goods, r.hasGoods = *goods, true
 	}
 	if fee != nil {
-		r.fee = *fee
+		r.fee, r.hasFee = *fee, true
 	}
 	return r, nil
 }

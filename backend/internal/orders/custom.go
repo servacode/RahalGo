@@ -24,6 +24,7 @@ import (
 	"errors"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,6 +71,40 @@ var (
 	ErrCustomLocked = httpx.NewError(http.StatusConflict,
 		"custom_locked", "errors.custom_locked")
 )
+
+// CustomGoodsMax **أعلى ثمنِ بضاعةٍ يُوثَّق** (تجربةُ القبول ٢٠٢٦-١٠-٠٣) — كان يُقبل أيُّ
+// رقمٍ فيجمع المجموعُ ما لا يُدفع ويقترب من فيض العدد. **وعشرةُ ملايين أكثرُ من أيّ
+// مشوارٍ بدرّاجة.**
+const CustomGoodsMax int64 = 10_000_000
+
+// ErrCustomFeeRange **أجرةُ الطلب الخاصّ خارجَ حدَّيها** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) —
+// قِيس صفرٌ وألفُ مليار مقبولَين. **والحدّان في التفصيل نصّاً** — يقولهما التطبيقُ للسائق.
+func ErrCustomFeeRange(lo, hi int64) error {
+	return &httpx.AppError{
+		Status: http.StatusUnprocessableEntity, Code: "custom_fee_out_of_range",
+		MessageKey: "errors.custom_fee_out_of_range",
+		Details:    map[string]any{"min": strconv.FormatInt(lo, 10), "max": strconv.FormatInt(hi, 10)},
+	}
+}
+
+// ErrCustomGoodsTooHigh **ثمنُ بضاعةٍ فوق `CustomGoodsMax`.**
+func ErrCustomGoodsTooHigh() error {
+	return &httpx.AppError{
+		Status: http.StatusUnprocessableEntity, Code: "custom_goods_too_high",
+		MessageKey: "errors.custom_goods_too_high",
+		Details:    map[string]any{"max": strconv.FormatInt(CustomGoodsMax, 10)},
+	}
+}
+
+// customFeeBounds **حدّا أجرة الطلب الخاصّ من الإعدادات** — `delivery.custom_fee_min/max`.
+// **وبلا إعداداتٍ لا حدّ** (خدمةٌ في اختبارٍ لا تركّبها).
+func (s *Service) customFeeBounds(ctx context.Context) (lo, hi int64, ok bool) {
+	if s.settings == nil {
+		return 0, 0, false
+	}
+	return s.settings.GetInt(ctx, "delivery.custom_fee_min"),
+		s.settings.GetInt(ctx, "delivery.custom_fee_max"), true
+}
 
 // isCustom **أطلبٌ خاصٌّ هو؟** — سؤالٌ يُسأل قبل قرارٍ يخصّه.
 //
@@ -528,8 +563,9 @@ func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step s
 		}
 		newPending = mode == CustomModePurchase && !goodsDone
 	case AgreeStepGoods:
-		// **ثمنُ البضاعة بعد الأجرة وفي المشتريات وحدَها.**
-		if mode != CustomModePurchase || !row.hasGoods {
+		// **ثمنُ البضاعة بعد الأجرة وفي المشتريات وحدَها** — وأجرةٌ موثَّقةٌ تعني عموداً
+		// مكتوباً لا خطوةً مرّت: `hasGoods` وحدَه يُكتب صفراً منتظراً مع الأجرة.
+		if mode != CustomModePurchase || !row.hasGoods || !row.hasFee {
 			return ErrAgreeStep
 		}
 		effFee = row.fee
@@ -540,11 +576,27 @@ func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step s
 	default:
 		return ErrAgreeStep
 	}
-	if row.feeSource == "admin_defined" && !row.driverMayChangeFee {
+	forced := row.feeSource == "admin_defined" && !row.driverMayChangeFee
+	if forced {
 		effFee = 0
 		if row.feeSnapshot != nil {
 			effFee = *row.feeSnapshot
 		}
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والأجرةُ بين حدَّين والثمنُ تحت سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس في تجربة القبول**: أجرةٌ صفرٌ تُقبل — **فتُفتح خطوةُ الثمن «بعد أجرةٍ»
+	// لم توثَّق** — وألفُ مليارٍ تُقبل. **وما يكتبه السائقُ وحدَه يُحدّ**: أجرةُ المنصّة
+	// المفروضةُ قرارُ الإدارة (وصفرُها توصيلٌ مجّانيّ)، **وخطوةُ الثمن لا تمسّ الأجرة.**
+	if step != AgreeStepGoods && !forced {
+		if lo, hi, ok := s.customFeeBounds(ctx); ok && (effFee < lo || effFee > hi) {
+			return ErrCustomFeeRange(lo, hi)
+		}
+	}
+	if effGoods > CustomGoodsMax {
+		return ErrCustomGoodsTooHigh()
 	}
 
 	// **والجوهرُ في `applyCustomQuoteTx`** — كتابةُ الأعمدة، وتزايدُ النسخة

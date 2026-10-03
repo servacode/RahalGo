@@ -12,6 +12,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/servacode/rahalgo/backend/internal/httpx"
+
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
@@ -80,8 +82,8 @@ func TestCustomSteps_PurchaseFeeThenGoods(t *testing.T) {
 	}
 	// **وفي الحديث ما وُثّق وما وُوفق عليه** — بمبالغه.
 	lines := chatLines(t, orderID)
-	want := []string{"أجرة التوصيل: 3٬000 ل.س — بانتظار موافقتك.", "وافقتُ على أجرة التوصيل: 3٬000 ل.س.",
-		"ثمن البضاعة: 12٬000 ل.س — المجموع مع التوصيل 15٬000 ل.س. بانتظار موافقتك.", "وافقتُ على المجموع: 15٬000 ل.س."}
+	want := []string{"أجرة التوصيل: 3,000 ل.س — بانتظار موافقتك.", "وافقتُ على أجرة التوصيل: 3,000 ل.س.",
+		"ثمن البضاعة: 12,000 ل.س — المجموع مع التوصيل 15,000 ل.س. بانتظار موافقتك.", "وافقتُ على المجموع: 15,000 ل.س."}
 	for _, w := range want {
 		found := false
 		for _, l := range lines {
@@ -124,7 +126,7 @@ func TestCustomSteps_AmanahHasNoGoods(t *testing.T) {
 		}
 		return false
 	}
-	if !has("استلمتُ الأمانة — في طريقي إليك.") || !has("وافقتُ على أجرة التوصيل: 2٬000 ل.س.") {
+	if !has("استلمتُ الأمانة — في طريقي إليك.") || !has("وافقتُ على أجرة التوصيل: 2,000 ل.س.") {
 		t.Fatalf("سطورُ الأمانة في الحديث: %q", lines)
 	}
 }
@@ -185,5 +187,66 @@ func TestMerchantDelivery_NoChatLines(t *testing.T) {
 	}
 	if lines := chatLines(t, f.orderID); len(lines) != 0 {
 		t.Fatalf("رسائلُ في توصيلة: %q", lines)
+	}
+}
+
+// TestCustomSteps_GoodsBeforeFeeRejected **ثمنُ البضاعة بعد الأجرة لا قبلها** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٣ مساءً) — وفي الأمانة لا ثمنَ أصلاً، قبل الأجرة وبعدها.
+func TestCustomSteps_GoodsBeforeFeeRejected(t *testing.T) {
+	svc, w, customer, driver, _ := cqSetup(t)
+	ctx := context.Background()
+	for _, mode := range []string{orders.CustomModePurchase, orders.CustomModeAmanah} {
+		orderID := cqSeedOrder(t, w, customer, driver, "driver_defined", nil, true)
+		setMode(t, orderID, mode)
+		// **وأجرةٌ صفرٌ ليست أجرةً موثَّقة** — كانت تُقبل فتفتح خطوةَ الثمن (تجربةُ القبول).
+		_ = svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepFee, 0, 0)
+		if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, 12_000, 0); !errors.Is(err, orders.ErrAgreeStep) {
+			t.Fatalf("%s: ثمنُ البضاعة قبل الأجرة قُبل: %v", mode, err)
+		}
+		o, err := svc.GetByID(ctx, orderID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o.CustomGoodsAmount != nil && *o.CustomGoodsAmount > 0 {
+			t.Fatalf("%s: كُتب ثمنٌ قبل الأجرة (%d)", mode, *o.CustomGoodsAmount)
+		}
+	}
+}
+
+func errCodeOf(err error) string {
+	var ae *httpx.AppError
+	if errors.As(err, &ae) {
+		return ae.Code
+	}
+	return ""
+}
+
+// TestCustomFee_Bounds **أجرةُ السائق بين حدَّين والثمنُ تحت سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٣
+// مساءً) — قِيس في تجربة القبول: صفرٌ وألفُ مليارٍ مقبولان.
+func TestCustomFee_Bounds(t *testing.T) {
+	svc, w, customer, driver, _ := cqSetup(t)
+	ctx := context.Background()
+	orderID := cqSeedOrder(t, w, customer, driver, "driver_defined", nil, true)
+
+	for _, fee := range []int64{0, 999, 100_001, 1_000_000_000_000} {
+		if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepFee, 0, fee); errCodeOf(err) != "custom_fee_out_of_range" {
+			t.Fatalf("أجرةٌ %d: %v — والمتوقّعُ custom_fee_out_of_range", fee, err)
+		}
+	}
+	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepFee, 0, 1_000); err != nil {
+		t.Fatalf("الحدُّ الأدنى نفسُه رُفض: %v", err)
+	}
+	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, 10_000_001, 0); errCodeOf(err) != "custom_goods_too_high" {
+		t.Fatalf("ثمنٌ فوق السقف: %v — والمتوقّعُ custom_goods_too_high", err)
+	}
+	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, 10_000_000, 0); err != nil {
+		t.Fatalf("السقفُ نفسُه رُفض: %v", err)
+	}
+
+	// **وأجرةُ المنصّة المفروضةُ لا تُحدّ** — صفرُها توصيلٌ مجّانيٌّ بقرار الإدارة.
+	zero := int64(0)
+	forced := cqSeedOrder(t, w, customer, driver, "admin_defined", &zero, false)
+	if err := svc.AgreeCustomStep(ctx, forced, driver, orders.AgreeStepFee, 0, 0); err != nil {
+		t.Fatalf("أجرةُ المنصّة المفروضة رُدّت: %v", err)
 	}
 }
