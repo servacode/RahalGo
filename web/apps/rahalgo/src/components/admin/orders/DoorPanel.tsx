@@ -17,6 +17,10 @@
  *
  *	سلّم الآن       الطلبُ يبقى مع السائق ويصله أمرٌ عاجل
  *	عُد إلى المكتب  الطلبُ يُنهى فشلاً **بذنبٍ يكتبه المكتب**
+ *
+ * **ومع العودة وجهةُ البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): «جيبها للمكتب» دائماً،
+ * و«رجّع للمتجر» لمتجرٍ يقبل الإرجاع في غير الطلب الخاصّ — **ويصل السائقَ مشوارُ
+ * إرجاعٍ بطريقٍ مرسومٍ وزرّ «سلّمت البضاعة»** (`return_to` في المحرّك).
  */
 
 import { useState } from "react";
@@ -46,6 +50,7 @@ const D = m.admin.ordersPage.door;
 const REPORTS: Record<string, string> = D.reports;
 const FAULTS = ["customer", "driver", "merchant", "platform"] as const;
 type Fault = (typeof FAULTS)[number];
+type ReturnTo = "office" | "store";
 
 /** **حالُ الباب كما يرسله المحرّك** — مرآةُ `orders.DoorView`. */
 export interface DoorView {
@@ -87,6 +92,7 @@ export function DoorPanel({
   atStore = false,
   beforeStore = false,
   canTransfer = true,
+  acceptsReturns = false,
   driverPhone,
   customerPhone,
   door,
@@ -113,6 +119,11 @@ export function DoorPanel({
   beforeStore?: boolean;
   /** **و«لدي توصيلة» لا تُحوَّل** — متجرُها مُنشئُها. */
   canTransfer?: boolean;
+  /**
+   * **أيقبل المتجرُ إرجاعَ البضاعة** (`merchant_accepts_returns`) — وفي الطلب الخاصّ
+   * كاذبٌ دائماً: لا متجر. **ومنه يظهر «رجّع للمتجر»** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+   */
+  acceptsReturns?: boolean;
   customerPhone: string;
   /** **هاتفُ السائق** — المكتبُ يكلّمه في كلّ مرحلة. */
   driverPhone?: string | null;
@@ -134,6 +145,7 @@ export function DoorPanel({
   const [note, setNote] = useState("");
   const [fault, setFault] = useState<Fault | "">("");
   const [reason, setReason] = useState("");
+  const [returnTo, setReturnTo] = useState<ReturnTo>("office");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -142,6 +154,7 @@ export function DoorPanel({
     setNote("");
     setReason("");
     setFault("");
+    setReturnTo("office");
     setErr("");
     setNotice("");
     setDialog(kind);
@@ -191,7 +204,14 @@ export function DoorPanel({
         body: JSON.stringify(
           action === "deliver_now"
             ? { action, note: note.trim() }
-            : { action, fault: effFault, reason, note: note.trim() },
+            : {
+                action,
+                fault: effFault,
+                reason,
+                note: note.trim(),
+                // **ووجهةُ البضاعة مع العودة وحدَها** — والتحويلُ عند المتجر بلا بضاعة.
+                ...(atStore ? {} : { return_to: returnTo }),
+              },
         ),
       });
       setDialog("");
@@ -438,6 +458,39 @@ export function DoorPanel({
                   </p>
                 </div>
               ))}
+            </fieldset>
+          )}
+          {!atStore && (
+            <fieldset className="space-y-2">
+              <legend className="mb-1.5 text-sm font-medium text-ink">
+                {D.returnDestLabel}
+              </legend>
+              <div className="space-y-0.5">
+                <Radio
+                  id={`door-dest-${orderId}-office`}
+                  name={`door-dest-${orderId}`}
+                  checked={returnTo === "office"}
+                  onChange={() => setReturnTo("office")}
+                  label={D.returnDestOffice}
+                />
+                <p className="ps-7 text-xs text-ink-muted">
+                  {D.returnDestOfficeHint}
+                </p>
+              </div>
+              {acceptsReturns && (
+                <div className="space-y-0.5">
+                  <Radio
+                    id={`door-dest-${orderId}-store`}
+                    name={`door-dest-${orderId}`}
+                    checked={returnTo === "store"}
+                    onChange={() => setReturnTo("store")}
+                    label={D.returnDestStore}
+                  />
+                  <p className="ps-7 text-xs text-ink-muted">
+                    {D.returnDestStoreHint}
+                  </p>
+                </div>
+              )}
             </fieldset>
           )}
           <div>
