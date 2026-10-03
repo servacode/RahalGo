@@ -48,6 +48,24 @@ class VoiceTest {
         assertTrue("الصوتُ اختفى من الرحلة كلّها", cues.size >= 2)
     }
 
+    /**
+     * **VOICE-START-STILL** — «بدأت الملاحة» لا تُقال وهو واقف (بلاغُ المالك ٢٠٢٦-١٠-٠٣: قيلت
+     * بعد ثانيتين من الوصول إلى المتجر). **قراءاتٌ في موضعٍ واحدٍ بسرعةٍ مقروءةٍ عالية** —
+     * بقيّةُ الطريق السابق — **لا تكفي: يلزم تقدّمٌ على الطريق.**
+     */
+    @Test
+    fun `VOICE-START-STILL لا بدأت الملاحة وهو واقف`() {
+        val route = RouteFixtures.singleRight()
+        val (e, _) = engineWithVoice(route)
+        val p = RouteFixtures.pointAt(route, 5.0)
+        val still = (0 until 15).map { i ->
+            NavFix(p.lat, p.lng, 6f, 8f, RouteFixtures.bearingAt(route, 5.0), 1_000L + i * 1_000L)
+        }
+        val started = cuesOf(e, still).count { it.second.kind == CueKind.START }
+        println("VOICE-START-STILL · بدأت الملاحة=$started")
+        assertEquals("**قيلت «بدأت الملاحة» وهو واقف**", 0, started)
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **١ · الأطوارُ والزنادُ الديناميكيّ**
     // ══════════════════════════════════════════════════════════════════

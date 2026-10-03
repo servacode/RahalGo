@@ -437,6 +437,8 @@ data class NewCustom(
      * الآن، والحظرُ النقديُّ يحرسه المحرّك.
      */
     @SerialName("payment_method") val paymentMethod: String = "cash",
+    /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `amanah` بلا ثمنِ بضاعة. */
+    @SerialName("custom_mode") val customMode: String = "purchase",
 )
 
 /** **تأكيدُ عرض السعر** — الطريقةُ، والمبلغُ والنسخةُ اللذان رآهما الزبون. */
@@ -598,6 +600,10 @@ data class MyOrder(
     // مربوطٌ بنسخةٍ**: `quoteConfirmedVersion == quoteVersion` تعني تأكيداً
     // حيّاً، وإلّا فالعرضُ تغيّر ويجب أن يُؤكَّد من جديد. **والمحجوزُ مالُه.**
     @SerialName("custom_goods_amount") val customGoodsAmount: Long? = null,
+    /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — اختيارُه عند الطلب. */
+    @SerialName("custom_mode") val customMode: String = "purchase",
+    /** **وُثّقت الأجرةُ والثمنُ بعد الشراء** — فيُوافَق على الأجرة الآن. */
+    @SerialName("custom_goods_pending") val customGoodsPending: Boolean = false,
     @SerialName("custom_fee") val customFee: Long? = null,
     @SerialName("quote_version") val quoteVersion: Long = 0,
     @SerialName("quote_confirmed_at") val quoteConfirmedAt: String? = null,

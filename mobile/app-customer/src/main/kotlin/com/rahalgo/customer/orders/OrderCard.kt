@@ -118,7 +118,7 @@ fun OrderCard(
         if (order.stageAt >= 0 && order.stages.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             // **ودرّاجتُه تمشي ما دام جاريا** — والمنتهي لا شريطَ له.
-            Stages(order.stages.map { stageLabel(it) }, order.stageAt, live = true)
+            Stages(order.stages.map { stageLabel(it, order.customMode == "amanah") }, order.stageAt, live = true)
         }
 
         // **والسائقُ يُسمّى حين يُسنَد** — ومن يعرف اسمَ من يحمل طلبَه
@@ -285,8 +285,15 @@ private fun CustomQuoteSection(
     val confirmedCurrent =
         order.quoteConfirmedAt != null && order.quoteConfirmedVersion == order.quoteVersion
 
-    // (C) بطاقةُ المبلغ — تُعرَض دائماً حين يُعرَف.
-    KeyValue(stringResource(R.string.ord_goods), money(goods))
+    // (C) بطاقةُ المبلغ — تُعرَض دائماً حين يُعرَف. **والأمانةُ بلا ثمنِ بضاعة، والمشترياتُ قبل
+    // الشراء «بعد الشراء»** (قرارُ المالك ٢٠٢٦-١٠-٠٣: الأجرةُ أوّلاً ثمّ الثمن).
+    val amanah = order.customMode == "amanah"
+    if (!amanah) {
+        KeyValue(
+            stringResource(R.string.ord_goods),
+            if (order.customGoodsPending) stringResource(R.string.ord_goods_after_purchase) else money(goods),
+        )
+    }
     KeyValue(stringResource(R.string.ord_delivery), money(fee))
     KeyValue(stringResource(R.string.ord_total), money(total), valueColor = Rahal.colors.brand)
 
@@ -354,7 +361,14 @@ private fun CustomQuoteSection(
         if (confirming) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else {
-            Text(stringResource(R.string.ord_confirm_action))
+            Text(
+                stringResource(
+                    when {
+                        amanah || order.customGoodsPending -> R.string.ord_confirm_fee
+                        else -> R.string.ord_confirm_goods
+                    },
+                ),
+            )
         }
     }
 }
@@ -377,12 +391,14 @@ private fun ended(status: String): Boolean =
  * المحرّك تظهر بلا اسمٍ خيرٌ من أن تختفي.**
  */
 @Composable
-private fun stageLabel(key: String): String = when (key) {
+private fun stageLabel(key: String, amanah: Boolean = false): String = when (key) {
+    // **«السائقُ في طريقه للشراء»** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — لا «نبحث عن سائق» وقد قبله.
+    "buying" -> stringResource(if (amanah) R.string.st_buying_amanah else R.string.st_buying)
+    "bought" -> stringResource(if (amanah) R.string.st_bought_amanah else R.string.st_bought)
     "waiting" -> stringResource(R.string.st_pending)
     "accepted" -> stringResource(R.string.st_accepted)
     "preparing" -> stringResource(R.string.st_preparing)
     "seeking" -> stringResource(R.string.st_driver)
-    "bought" -> stringResource(R.string.st_bought)
     "on_the_way" -> stringResource(R.string.ord_st_onway)
     "arrived" -> stringResource(R.string.st_arrived)
     "delivered" -> stringResource(R.string.ord_st_delivered)

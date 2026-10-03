@@ -29,6 +29,11 @@ data class DriverOrder(
      */
     @SerialName("door_instruction") val doorInstruction: String = "",
     @SerialName("door_note") val doorNote: String = "",
+    /**
+     * **هاتفُ المستلِم في «لدي توصيلة» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — ليس على التطبيق،
+     * **فاتّصالٌ وواتساب** بدل الحديث. **وفارغٌ في العاديّ والخاصّ.**
+     */
+    @SerialName("recipient_phone") val recipientPhone: String = "",
     val status: String = "",
     /**
      * **نوعه** — `standard` أو `custom`.
@@ -93,6 +98,10 @@ data class DriverOrder(
     @SerialName("custom_fee_source") val customFeeSource: String = "driver_defined",
     @SerialName("custom_fee_snapshot") val customFeeSnapshot: Long? = null,
     @SerialName("custom_driver_may_change_fee") val customDriverMayChangeFee: Boolean = true,
+    /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `amanah` بلا ثمنِ بضاعة. */
+    @SerialName("custom_mode") val customMode: String = "purchase",
+    /** **وُثّقت الأجرةُ وثمنُ البضاعة لم يُوثَّق بعد** — خطوةُ المشتريات الثانية. */
+    @SerialName("custom_goods_pending") val customGoodsPending: Boolean = false,
     @SerialName("quote_version") val quoteVersion: Long = 0,
     @SerialName("quote_confirmed_version") val quoteConfirmedVersion: Long? = null,
 

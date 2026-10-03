@@ -213,8 +213,23 @@ internal fun TripPanel(state: TripState) {
             val routeReady = meters > 0
             // **ولا «جاري حساب الطريق…» إلى بابٍ لا يُعرف** — لا طريقَ يُحسب أصلاً
             // (الخادمُ لا يردّه)، **فانتظارٌ لا ينتهي يُقرأ عطباً.**
+            // **ولا «جاري حساب الطريق…» في الخاصّ قبل الشراء** (٢٠٢٦-١٠-٠٣) — لا متجرَ يُقصد،
+            // **فالعبارةُ تقول ما يفعله**: «اشترِ الطلب، ثمّ يُرسم الطريقُ إلى الزبون».
+            val customBefore = state.order?.kind == "custom" &&
+                state.order?.status in setOf("assigned", "dispatching")
             if (noPoint) {
                 Unit
+            } else if (customBefore) {
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PanelChip(
+                        R.drawable.ic_navigation,
+                        stringResource(
+                            if (state.order?.customMode == "amanah") R.string.custom_route_later_amanah
+                            else R.string.custom_route_later,
+                        ),
+                    )
+                }
             } else if (!routeReady) {
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {

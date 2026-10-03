@@ -877,6 +877,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **تُشغَّل التجربةُ قبل أن يوجد طريق** — الطلبُ الخاصّ قبل الشراء (طلبُ المالك ٢٠٢٦-١٠-٠٣:
+     * «زرُّ تجربة الرحلة لنشاهد كلَّ شيءٍ وكأنّه طلبٌ حقيقيّ»). **فتبدأ وحدَها حين يُرسم.**
+     */
+    fun armDemo() {
+        demoTrip = true
+    }
+
     fun stopReplay() {
         demoTrip = false
         navSession.stopReplay()
@@ -1924,10 +1932,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     fun agree(goods: Long, fee: Long) {
         val id = currentId() ?: return
         agreeOpen = false
+        // **والخطوةُ من حال الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٣): الأجرةُ أوّلاً، ثمّ ثمنُ البضاعة.
+        val order = state.mine.firstOrNull { it.id == id }
+        val step = if (order?.customFee == null) "fee" else if (order.customGoodsPending) "goods" else ""
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.agree(id, goods, fee)
+                backend.driver.agree(id, goods, fee, step)
             } catch (e: Exception) {
                 detail = detail.copy(busy = false, error = describe(e))
                 refresh()

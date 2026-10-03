@@ -108,6 +108,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         lastManeuverAtM = Double.NaN
         mergedAtM = Double.NaN
         startSaidFor = null
+        startBaseFor = null
+        startBaseGeneration = -1L
+        startBaseM = Double.NaN
         lastGeneration = -1L
         trustedAtMs = 0L
         rerouteEpisodeSaid = false
@@ -342,7 +345,22 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
      */
     private fun startCue(state: NavState, generation: Long): VoiceCue? {
         if (startSaidFor == target) return null
-        if (state.speedMps < START_MOVING_MPS || state.progress == null) return null
+        val p = state.progress ?: return null
+        // ══════════════════════════════════════════════════════════════
+        // **وتحرّكٌ فعليٌّ نحو الوجهة الجديدة — لا سرعةٌ وحدَها** (بلاغُ المالك ٢٠٢٦-١٠-٠٣)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **قِيس على جهازه**: «بدأت الملاحة» قيلت بعد ثانيتين من الوصول إلى المتجر وإلى الزبون —
+        // تبدّلت الوجهةُ عند الوصول وبقيت آخرُ سرعةٍ مقروءة. **فتُشترط مسافةٌ مقطوعةٌ على الطريق
+        // الجديد منذ أوّل قراءةٍ له**، لا سرعةٌ قد تكون بقيّةَ الطريق السابق.
+        if (startBaseFor != target || startBaseGeneration != generation) {
+            startBaseFor = target
+            startBaseGeneration = generation
+            startBaseM = p.progressM
+            return null
+        }
+        if (state.arrivedAtTarget) return null
+        if (state.speedMps < START_MOVING_MPS || p.progressM - startBaseM < START_MOVED_M) return null
         startSaidFor = target
         return VoiceCue(
             id = CueId(generation, START_KEY, CueStage.EVENT),
@@ -357,6 +375,11 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
     /** **لأيّ وجهةٍ قيلت «بدأت الملاحة»** — فلا تُعاد مع كلّ جيل. */
     private var startSaidFor: TripTarget? = null
+
+    /** **من أين بدأ القياسُ لهذه الوجهة** — أوّلُ تقدّمٍ قُرئ عليها. */
+    private var startBaseFor: TripTarget? = null
+    private var startBaseGeneration = -1L
+    private var startBaseM = Double.NaN
 
     private fun arrivalCue(state: NavState, generation: Long): VoiceCue? {
         // ══════════════════════════════════════════════════════════════
@@ -844,6 +867,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
         /** **يتحرّك فعلاً** — ٩ كم/س، كالبوصلة. */
         const val START_MOVING_MPS = 2.5
+
+        /** **ومسافةٌ مقطوعةٌ على الطريق الجديد** — عشرون متراً لا تُقطع وهو واقف. */
+        const val START_MOVED_M = 20.0
         const val REROUTE_KEY = -2.0
 
         /** **ومفتاحُ الاتّجاه المعاكس** — ورقمُ النوبة يُطرح منه. */

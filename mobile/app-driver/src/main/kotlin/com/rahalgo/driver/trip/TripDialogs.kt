@@ -108,6 +108,10 @@ internal fun AgreeDialog(
      */
     currentGoods: Long? = null,
     currentFee: Long? = null,
+    /**
+     * **أيُّ خطوة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): `fee` الأجرةُ وحدَها، `goods` ثمنُ البضاعة وحدَه.
+     */
+    step: String = "fee",
     onConfirm: (Long, Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -126,20 +130,24 @@ internal fun AgreeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.agree_title)) },
+        title = {
+            Text(stringResource(if (step == "goods") R.string.agree_goods_title else R.string.agree_fee_title))
+        },
         text = {
             Column {
-                Text(stringResource(R.string.agree_hint), color = Rahal.colors.inkMuted)
+                Text(
+                    stringResource(if (step == "goods") R.string.agree_goods_hint else R.string.agree_fee_hint),
+                    color = Rahal.colors.inkMuted,
+                )
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
+                if (step == "goods") OutlinedTextField(
                     value = goods,
                     onValueChange = { goods = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_goods)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
+                if (step != "goods") OutlinedTextField(
                     value = fee,
                     onValueChange = { if (!feeLocked) fee = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_fee)) },
@@ -161,8 +169,8 @@ internal fun AgreeDialog(
         confirmButton = {
             RahalTextButton(
                 onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
-                // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة.
-                enabled = feeLocked || fee.isNotBlank(),
+                // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة. **والثمنُ كذلك.**
+                enabled = if (step == "goods") goods.isNotBlank() else feeLocked || fee.isNotBlank(),
             ) {
                 Text(stringResource(R.string.agree_confirm))
             }

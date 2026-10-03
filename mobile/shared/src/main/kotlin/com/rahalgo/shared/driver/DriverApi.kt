@@ -504,13 +504,24 @@ class DriverApi(private val api: ApiClient) {
      * **والمنصّة توثّق ولا تحاسب**: السائق يدفع من جيبه ويستردّ عند
      * التسليم. **والتوثيق هو ما يُرجع إليه** يوم يختلفان.
      */
-    suspend fun agree(orderId: String, goodsAmount: Long, fee: Long) {
+    suspend fun agree(orderId: String, goodsAmount: Long, fee: Long, step: String = "") {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/agree",
             HttpMethod.Post,
-            mapOf("goods_amount" to goodsAmount, "fee" to fee),
+            AgreeBody(goodsAmount, fee, step),
         )
     }
+
+    /**
+     * **جسمُ التوثيق — صنفٌ موسوم** (الخطوةُ نصٌّ والمبلغان أرقام: خريطةٌ مختلطةٌ تسقط في النسخة
+     * المضغوطة، `RequestBodyGuardTest`). و`step`: `fee` ثمّ `goods` (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+     */
+    @kotlinx.serialization.Serializable
+    private data class AgreeBody(
+        @kotlinx.serialization.SerialName("goods_amount") val goodsAmount: Long,
+        val fee: Long,
+        val step: String,
+    )
 
     /**
      * يفتح الوردية أو يغلقها.

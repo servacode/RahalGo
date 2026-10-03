@@ -97,6 +97,8 @@ import org.maplibre.android.geometry.LatLng
 internal fun MapButtons(
     onRecenter: () -> Unit,
     onChat: () -> Unit,
+    /** **ولا حديثَ في «لدي توصيلة»** (٢٠٢٦-١٠-٠٣) — المستلمُ ليس على التطبيق. */
+    showChat: Boolean = true,
     chatting: Boolean,
     chatUnread: Int,
     /** **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤). */
@@ -139,14 +141,16 @@ internal fun MapButtons(
             // **وهو ما يُفتح فجأةً**: يتّصل الزبونُ ليقول «الباب الثاني»
             // — **فيكون في مرمى الإبهام دائما** لا يُبحث عنه في بطاقةٍ
             // قد تكون مطويّةً تحت.
-            MapButton(
-                icon = R.drawable.ic_chat,
-                label = R.string.trip_chat,
-                onClick = onChat,
-                on = chatting,
-                badge = chatUnread,
-            )
-            Spacer(Modifier.height(8.dp))
+            if (showChat) {
+                MapButton(
+                    icon = R.drawable.ic_chat,
+                    label = R.string.trip_chat,
+                    onClick = onChat,
+                    on = chatting,
+                    badge = chatUnread,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             // ══════════════════════════════════════════════════════════
             // **وزرُّ الصوت — واحدٌ يقول حالَه بشكله**
             // ══════════════════════════════════════════════════════════

@@ -140,6 +140,8 @@ fun TripScreen(
     onReplayRetarget: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
     /** **الرحلةُ التجريبيّةُ مشغولةٌ لهذا الطلب** — فتبدأ الساقَ التالية وحدَها. */
     demoTrip: Boolean = false,
+    /** **تشغيلُ التجربة قبل أن يوجد طريق** — الخاصُّ قبل الشراء. */
+    onArmDemo: () -> Unit = {},
     /**
      * **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «تأكّد من زرّ
      * الصوت بحيث يستجيب بشكلٍ فوريّ».)
@@ -949,18 +951,25 @@ fun TripScreen(
             }
             // **«رحلة تجريبيّة» فوق زرّ تحديد الموقع** (طلبُ المالك ٢٠٢٦-١٠-٠٢: «مشان
             // يكون مبيّن») — في نسخ التجربة وحدَها.
+            // **وفي الخاصّ قبل الشراء أيضاً** (٢٠٢٦-١٠-٠٣) — لا طريقَ بعد، **فيُشغَّل ويبدأ وحدَه**
+            // حين يُرسم الطريقُ إلى الزبون بعد «تم شراء المطلوب».
+            val customBeforeRoute = state.order?.kind == "custom" && state.order?.status == "assigned"
             if (com.rahalgo.driver.BuildConfig.BUILD_TYPE != "release" &&
-                (replayRoute.size >= 2 || navSession.replaying)
+                (replayRoute.size >= 2 || navSession.replaying || customBeforeRoute || demoTrip)
             ) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     ReplayButton(
-                        running = navSession.replaying,
+                        running = navSession.replaying || demoTrip,
                         onStart = {
-                            onReplay(
-                                com.rahalgo.navigation.ReplayDrive.fixes(
-                                    replayRoute, startMs = System.currentTimeMillis(),
-                                ),
-                            )
+                            if (replayRoute.size >= 2 && !customBeforeRoute) {
+                                onReplay(
+                                    com.rahalgo.navigation.ReplayDrive.fixes(
+                                        replayRoute, startMs = System.currentTimeMillis(),
+                                    ),
+                                )
+                            } else {
+                                onArmDemo()
+                            }
                         },
                         onStop = { onReplay(emptyList()) },
                     )
@@ -984,6 +993,7 @@ fun TripScreen(
                     }
                 },
                 onChat = actions.chat,
+                showChat = state.order?.kind != "merchant_delivery",
                 chatting = chat != null,
                 chatUnread = chatUnread,
                 voiceMuted = voiceMuted,
@@ -1028,6 +1038,7 @@ fun TripScreen(
             driverMayChange = order.customDriverMayChangeFee,
             currentGoods = order.customGoods,
             currentFee = order.customFee,
+            step = if (order.customFee == null) "fee" else "goods",
             onConfirm = actions.agree,
             onDismiss = actions.dismissAgree,
         )
@@ -1296,9 +1307,54 @@ private fun TripCard(
         )
         Spacer(Modifier.height(10.dp))
 
+        // ══════════════════════════════════════════════════════════════
+        // **الطلبُ الخاصّ على خطوتين** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — الأجرةُ ثمّ (في المشتريات)
+        // ثمنُ البضاعة، والزبونُ يوافق على كلٍّ. **والشراءُ بعدهما وحدَهما.**
+        // ══════════════════════════════════════════════════════════════
+        val customOpen = order.kind == "custom" && order.status == "assigned"
+        val feeDone = order.customFee != null
+        val quoteOk = feeDone && order.quoteConfirmedVersion == order.quoteVersion
+        val needGoods = customOpen && order.customGoodsPending
+        val buyBlocked = customOpen && (!feeDone || !quoteOk || needGoods)
+        val next = nextAction(order.status, order.kind == "custom")
+        // **واسمُ الزرّ بنوع الطلب** — «استلمت الأمانة» أو «تم شراء المطلوب».
+        val nextLabel = when {
+            next == null -> 0
+            order.kind == "custom" && next.status == "picked_up" ->
+                if (order.customMode == "amanah") R.string.step_bought_amanah else R.string.step_bought_purchase
+            else -> next.label
+        }
+        // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
+        // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
+        // **ومن لا يُعرف موضعُه لا يُحبس عن الزرّ.**
+        val arriveLater = next != null && order.kind != "custom" &&
+            next.status in setOf("at_pickup", "at_dropoff") &&
+            state.locationKnown && !state.nearDestination
+        val onNext: () -> Unit = {
+            if (next != null) {
+                // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
+                // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
+                if (next.status == "delivered" && state.requirePhoto) actions.capture() else actions.step(next.status)
+            }
+        }
+
         // **وما تحت المقبض يُطوى معه** — والمقبضُ وحدَه يبقى، **فلا
-        // يُحبَس صاحبُه عن إعادتها.**
-        if (!TripCollapse.bottom) return@Column
+        // يُحبَس صاحبُه عن إعادتها.** **إلّا الزرَّ الأساسيّ** (٢٠٢٦-١٠-٠٣): من طوى ليرى
+        // الطريقَ لا يُحبَس عن «وصلت» أو «تم التسليم».
+        if (!TripCollapse.bottom) {
+            if (next != null && !buyBlocked && !arriveLater) {
+                SmallAction(
+                    icon = R.drawable.ic_check_circle,
+                    label = nextLabel,
+                    tone = Tone.Brand,
+                    onClick = onNext,
+                    enabled = !state.busy,
+                    busy = state.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            return@Column
+        }
 
         Row(
             Modifier.fillMaxWidth(),
@@ -1487,6 +1543,62 @@ private fun TripCard(
             Text(state.notice, color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **«لدي توصيلة»: اتّصالٌ وواتساب بالمستلِم** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // «زرُّ اتّصالٍ وزرُّ واتس اب أسرع» — **والرسالةُ جاهزةٌ** بنصّ المالك واسمِ المتجر:
+        // يرسل له المستلمُ موقعَه هناك إن لم تكن نقطة، فيفتحه السائقُ كما يناسبه.
+        if (order.kind == "merchant_delivery" && order.recipientPhone.isNotBlank()) {
+            val ctx = LocalContext.current
+            val phone = order.recipientPhone
+            val hello = stringResource(R.string.recipient_wa_message, order.merchantName)
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.rahalgo.ui.RahalOutlineButton(
+                    tone = Tone.Success,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        runCatching {
+                            ctx.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_DIAL,
+                                    android.net.Uri.parse("tel:$phone"),
+                                ),
+                            )
+                        }
+                    },
+                ) {
+                    Icon(
+                        painter = painterResource(com.rahalgo.ui.R.drawable.ic_phone),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.recipient_call), fontWeight = FontWeight.Bold)
+                }
+                com.rahalgo.ui.RahalOutlineButton(
+                    tone = Tone.Success,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        runCatching {
+                            ctx.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(
+                                        "https://wa.me/" + waNumber(phone) + "?text=" +
+                                            android.net.Uri.encode(hello),
+                                    ),
+                                ),
+                            )
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.recipient_whatsapp), fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
         // **ولا عبارةَ «وصلت»** — طلبُ المالك ٢٠٢٦-١٠-٠٢: «ما لها داعٍ». الزرُّ يظهر عند
         // الوصول ويُسجَّل وحدَه بعد ٣٠ ثانية، وذاك يكفي.
 
@@ -1497,7 +1609,11 @@ private fun TripCard(
             Text(
                 // **وقبل الباب «أكمل التوصيل»** (٢٠٢٦-١٠-٠٣) — الأمرُ نفسُه والسائقُ في الطريق.
                 text = stringResource(
-                    if (order.status == "at_dropoff") R.string.door_deliver_now else R.string.door_continue,
+                    when (order.status) {
+                        "at_dropoff" -> R.string.door_deliver_now
+                        "at_pickup" -> R.string.door_collect
+                        else -> R.string.door_continue
+                    },
                 ) +
                     if (order.doorNote.isNotBlank()) " — " + order.doorNote else "",
                 color = Rahal.colors.brand,
@@ -1538,10 +1654,24 @@ private fun TripCard(
             // وزرُّ الاتّفاق. **فغطّى زرُّ الاتّفاق «اشتريتُ الطلب» و«لدي مشكلة» تماماً** في
             // الطلب الخاصّ (قِيس بتفريغ الشاشة: لا زرَّ تحته). **فيُجمعان في عمود.**
             Column(Modifier.fillMaxWidth()) {
+            // **وما وُثّق يُرى موثَّقاً** — «✓ أجرة التوصيل» ثمّ «✓ ثمن البضاعة».
+            if (customOpen && feeDone) {
+                Text(
+                    stringResource(R.string.agree_fee_done, money(order.customFee ?: 0)),
+                    color = Rahal.colors.success,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (order.customMode != "amanah" && !order.customGoodsPending) {
+                    Text(
+                        stringResource(R.string.agree_goods_done, money(order.customGoods ?: 0)),
+                        color = Rahal.colors.success,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+            }
             // **«الزبونُ أكّد الطلب — قم بالشراء»** (طلبُ المالك ٢٠٢٦-١٠-٠٣) — يعرف أنّ دورَه جاء.
-            if (order.kind == "custom" && order.status == "assigned" && order.customFee != null &&
-                order.quoteConfirmedVersion == order.quoteVersion
-            ) {
+            if (customOpen && quoteOk && !needGoods) {
                 Text(
                     stringResource(R.string.drv_customer_confirmed),
                     color = Rahal.colors.success,
@@ -1555,13 +1685,6 @@ private fun TripCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val next = nextAction(order.status, order.kind == "custom")
-                // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
-                // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
-                // **ومن لا يُعرف موضعُه لا يُحبس عن الزرّ.**
-                val arriveLater = next != null && order.kind != "custom" &&
-                    next.status in setOf("at_pickup", "at_dropoff") &&
-                    state.locationKnown && !state.nearDestination
                 // ══════════════════════════════════════════════════════════
                 // **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ** (Batch 2c)
                 // ══════════════════════════════════════════════════════════
@@ -1570,12 +1693,21 @@ private fun TripCard(
                 // (`quote_not_confirmed`) — **والشاشةُ تقول ذلك بدل أن يُضغط
                 // فيُردّ.** ويبقى زرُّ الاتّفاق ليعدّل إن لزم. **والحارسُ في
                 // المحرّك لا في إخفاء الزرّ.**
-                val awaitingConfirm = order.kind == "custom" &&
-                    order.customGoods != null && order.status == "assigned" &&
-                    order.quoteConfirmedVersion != order.quoteVersion
-                if (awaitingConfirm) {
+                val awaitingConfirm = customOpen && feeDone && !quoteOk
+                if (customOpen && !feeDone) {
+                    // **زرُّ التوثيق تحتُ يكفي** — ولا زرَّ شراءٍ قبله.
+                    Spacer(Modifier.weight(1f))
+                } else if (needGoods && quoteOk) {
                     Text(
-                        stringResource(R.string.drv_awaiting_customer),
+                        stringResource(R.string.drv_buy_then_document),
+                        color = Rahal.colors.brand,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else if (awaitingConfirm) {
+                    Text(
+                        stringResource(if (order.customGoodsPending) R.string.drv_awaiting_fee else R.string.drv_awaiting_goods),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
@@ -1586,17 +1718,9 @@ private fun TripCard(
                 } else if (next != null) {
                     SmallAction(
                         icon = R.drawable.ic_check_circle,
-                        label = next.label,
+                        label = nextLabel,
                         tone = Tone.Brand,
-                        // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
-                        // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
-                        onClick = {
-                            if (next.status == "delivered" && state.requirePhoto) {
-                                actions.capture()
-                            } else {
-                                actions.step(next.status)
-                            }
-                        },
+                        onClick = onNext,
                         enabled = !state.busy,
                         busy = state.busy,
                         modifier = Modifier.weight(1f),
@@ -1651,14 +1775,14 @@ private fun TripCard(
         // **وقبل الاستلام وحدَه** (Batch 2c) — بعده يُقفَل السعرُ ولا
         // يعدّله السائق (يفرضه المحرّك؛ والزرُّ يُخفى كذلك).
         // **ويختفي بعد التوثيق** (طلبُ المالك ٢٠٢٦-١٠-٠٣: «وثّق الاتفاق هنا لازم يختفي»).
-        if (order.kind == "custom" && order.status == "assigned" && order.customFee == null) {
+        if (customOpen && (!feeDone || (needGoods && quoteOk))) {
             Spacer(Modifier.height(12.dp))
             RahalButton(
                 onClick = actions.askAgree,
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.agree_button))
+                Text(stringResource(if (!feeDone) R.string.agree_fee_button else R.string.agree_goods_button))
             }
         }
             }
@@ -1697,3 +1821,16 @@ private fun NoTrip(onOrders: () -> Unit) {
 
 /** **كم بين بحثين عن طريقٍ أفضل** — كغوغل تقريباً. */
 private const val BETTER_ROUTE_EVERY_MS = 120_000L
+
+/**
+ * **رقمُ واتساب دوليٌّ بلا «+»** — `wa.me` لا يفهم غيرَه. **والمحلّيُّ السوريّ** (`09…`) يصير
+ * `9639…`، **والدوليُّ** (`+963…` أو `00963…`) يُنزع رأسُه.
+ */
+internal fun waNumber(phone: String): String {
+    val digits = phone.filter { it.isDigit() }
+    return when {
+        digits.startsWith("00") -> digits.drop(2)
+        digits.startsWith("0") -> "963" + digits.drop(1)
+        else -> digits
+    }
+}

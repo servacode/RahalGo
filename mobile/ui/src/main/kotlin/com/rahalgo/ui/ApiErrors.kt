@@ -370,6 +370,8 @@ private val CODES: Map<String, Int> = mapOf(
     // ── عرضُ السعر المخصَّص وتأكيدُه (Batch 2a) ──
     "quote_changed" to R.string.err_quote_changed,
     "quote_not_confirmed" to R.string.err_quote_not_confirmed,
+    "goods_not_documented" to R.string.err_goods_not_documented,
+    "agree_wrong_step" to R.string.err_agree_wrong_step,
     "custom_locked" to R.string.err_custom_locked,
     "merchant_closed" to R.string.err_merchant_closed,
     // **ومتجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — **حارسُ الخادم هو

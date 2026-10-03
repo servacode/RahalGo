@@ -1039,6 +1039,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     },
                     onReplayRetarget = orders::retargetReplay,
                     demoTrip = orders.demoTrip,
+                    onArmDemo = orders::armDemo,
                     voice = orders.voice,
                     // **وحالُ الكتم من نموذج العرض** — تراقبه الواجهة
                     // فيتبدّل شكلُ الزرّ في الإطار التالي للضغطة.

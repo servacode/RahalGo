@@ -530,6 +530,8 @@
     <string name="err_custom_not_agreed">لم يوثق المبلغ المتفق عليه بعد</string>
     <string name="err_quote_changed">تغيّر السعر. راجع العرض الجديد وأكّده.</string>
     <string name="err_quote_not_confirmed">لم يؤكّد الزبون السعر بعد.</string>
+    <string name="err_goods_not_documented">وثّق ثمن البضاعة أوّلاً، ثمّ ينتظر موافقة الزبون.</string>
+    <string name="err_agree_wrong_step">هذه الخطوة لا تخصّ هذا الطلب.</string>
     <string name="err_custom_locked">لا يمكن تعديل السعر بعد الاستلام.</string>
     <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
     <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4): المالكُ يرى متجرَه لكن

@@ -85,6 +85,17 @@
     <string name="st_preparing">قيد التحضير</string>
     <string name="st_driver">إسناد سائق</string>
     <string name="st_bought">تم الشراء</string>
+    <string name="st_bought_amanah">استُلمت الأمانة</string>
+    <string name="st_buying">السائق في طريقه لشراء طلبك</string>
+    <string name="st_buying_amanah">السائق في طريقه لاستلام الأمانة</string>
+    <string name="cst_mode_title">نوع الطلب</string>
+    <string name="cst_mode_purchase">مشتريات</string>
+    <string name="cst_mode_amanah">أمانة</string>
+    <string name="cst_mode_purchase_hint">السائق يشتري لك ما تطلبه، وتدفع ثمن البضاعة مع أجرة التوصيل.</string>
+    <string name="cst_mode_amanah_hint">السائق ينقل لك غرضاً من مكان، وتدفع أجرة التوصيل فقط.</string>
+    <string name="ord_goods_after_purchase">بعد الشراء</string>
+    <string name="ord_confirm_fee">قبول أجرة التوصيل</string>
+    <string name="ord_confirm_goods">قبول ثمن البضاعة والمجموع</string>
     <string name="st_arrived">وصل إليك</string>
 
     <!-- **وأسماءُ الحالات في الشارة.** -->

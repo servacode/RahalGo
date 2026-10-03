@@ -76,6 +76,9 @@ fun CustomScreen(
 ) {
     var request by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
+    // **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — «إذا أمانة النظامُ يفهم أنّه ما في حقُّ
+    // بضاعة، وإذا مشتريات في حقُّ بضاعة».
+    var mode by rememberSaveable { mutableStateOf("purchase") }
     // ══════════════════════════════════════════════════════════════════
     // **ولا تُختار طريقةُ الدفع هنا** — Batch 2c (قرارُ المالك)
     // ══════════════════════════════════════════════════════════════════
@@ -125,6 +128,7 @@ fun CustomScreen(
     // يُلتقط ثانيهما — يعود صفراً بعد الاستهلاك ثمّ يصير واحداً.
     LaunchedEffect(vm.sent) {
         if (vm.sent == 0) return@LaunchedEffect
+        mode = "purchase"
         request = ""
         notes = ""
         vm.consumeSent()
@@ -138,6 +142,31 @@ fun CustomScreen(
         )
 
 
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.cst_mode_title), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        ) {
+            for ((key, label) in listOf("purchase" to R.string.cst_mode_purchase, "amanah" to R.string.cst_mode_amanah)) {
+                if (mode == key) {
+                    RahalButton(onClick = { mode = key }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(label))
+                    }
+                } else {
+                    com.rahalgo.ui.RahalOutlineButton(onClick = { mode = key }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(label))
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(if (mode == "amanah") R.string.cst_mode_amanah_hint else R.string.cst_mode_purchase_hint),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
         Spacer(Modifier.height(12.dp))
         // **وحقلُ الطلب واسعٌ** — من يكتب «كيلو لحمة من ملحمة أبو أحمد
         // ونصف كيلو خبز» في سطرٍ واحدٍ لا يرى ما كتب.
@@ -219,7 +248,7 @@ fun CustomScreen(
                 address?.let {
                     // **بلا اختيار دفعٍ من الزبون** — المحرّكُ يستعمل نقداً
                     // افتراضاً آمناً، والاختيارُ الحقيقيُّ عند تأكيد العرض.
-                    vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash")
+                    vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash", mode)
                 }
             },
             enabled = !vm.busy && request.isNotBlank() && address != null,
@@ -319,6 +348,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         lng: Double,
         notes: String,
         payment: String,
+        mode: String = "purchase",
     ) {
         if (busy) return
         busy = true
@@ -332,7 +362,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val ref = api.createCustom(
-                    NewCustom(request, address, lat, lng, notes, payment),
+                    NewCustom(request, address, lat, lng, notes, payment, customMode = mode),
                     attemptKey = key,
                 )
                 com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.CUSTOM)
