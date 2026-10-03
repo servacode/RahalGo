@@ -81,6 +81,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
          */
         const val ARRIVAL_SHOW_M = 50f
 
+        /** **أبعدُ دبّوسٍ عن نهاية الطريق يُعدّ وصولاً عندها.** */
+        const val ROUTE_END_ARRIVAL_M = 150f
+
+        /** **وكم من نهاية الطريق يُعدّ وقوفاً عندها.** */
+        const val ARRIVAL_AT_ROUTE_END_M = 30f
+
         /** **كم بين نظرةٍ وأخرى** — والوقوفُ يُقاس بالثواني لا بالنبضات. */
         const val ARRIVAL_TICK_MS = 2_000L
 
@@ -452,7 +458,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         //
         // **والنموذجُ يبقى صاحبَ الحال** — يترجم الحصيلةَ إلى شاشة،
         // **والترتيبُ صار في موضعٍ يُقاس.**
-        val out = loadOnce(feed, openId)
+        // **والطلبُ المفتوحُ الحيُّ وحدَه** — `openId` لطلبٍ خرج من يده يطلب طريقَه القديم.
+        val out = loadOnce(feed, liveOpenId() ?: openId?.takeIf { state.mine.isEmpty() })
         state = if (out.error != null) {
             state.copy(loading = false, error = describe(out.error as Exception))
         } else {
@@ -523,7 +530,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private var routeLeg: String? = null
 
     private fun legOf(mine: List<com.rahalgo.shared.model.DriverOrder>): String? {
-        val id = openId ?: mine.firstOrNull()?.id ?: return null
+        val id = openId?.takeIf { oid -> mine.any { it.id == oid } } ?: mine.firstOrNull()?.id ?: return null
         val o = mine.firstOrNull { it.id == id } ?: return null
         return id + ":" + if (o.status in TO_CUSTOMER) "customer" else "merchant"
     }
@@ -692,7 +699,16 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     //
     // **وأسوأُ ما فيه أنّه صامت**: لا خطأَ ولا دوّارة — **وزرٌّ لا يفعل
     // ولا يقول** يُقرأ تطبيقاً معطوباً.
-    private fun currentId(): String? = openId ?: state.mine.firstOrNull()?.id
+    // ══════════════════════════════════════════════════════════════════
+    // **والطلبُ المفتوحُ ما دام معه — وإلّا فأوّلُ ما في يده** (قِيس على جهاز المالك ٢٠٢٦-١٠-٠٣)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **أُنهي #1357 من المكتب وبقي `openId` عليه** — فطُلب طريقُه هو (إلى زبونه) لكلّ طلبٍ تلاه:
+    // «الطريق إلى رحال» والخطُّ الأزرقُ إلى زبونٍ آخر، **و«انتهى المسار» ولا «وصلت» ولا وصولٌ تلقائيّ.**
+    private fun currentId(): String? = liveOpenId() ?: state.mine.firstOrNull()?.id
+
+    /** **`openId` إن كان الطلبُ ما زال في يده** — وإلّا لا شيء. */
+    private fun liveOpenId(): String? = openId?.takeIf { id -> state.mine.any { it.id == id } }
 
     /**
      * ══════════════════════════════════════════════════════════════════
@@ -1321,7 +1337,22 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
         val out = FloatArray(1)
         android.location.Location.distanceBetween(driver.lat, driver.lng, target.lat, target.lng, out)
-        return out[0] <= ARRIVAL_SHOW_M
+        if (out[0] <= ARRIVAL_SHOW_M) return true
+        // ══════════════════════════════════════════════════════════════
+        // **ونهايةُ الطريق قربَ الدبّوس وصولٌ أيضاً** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «لا زرّ وصلت ولم يتحوّل
+        // تلقائيّاً»)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **دبّوسُ المتجر قد يقع داخلَ بناءٍ أو خلفَه** — والطريقُ ينتهي على أقرب شارعٍ إليه. **ومن وقف
+        // عند نهاية الطريق وصل**، ولو بقي بينه وبين الدبّوس مئةُ متر. **وما زاد على ذلك نهايةُ طريقٍ
+        // لا تخصّ هذه الوجهة.**
+        val end = navSession.route?.geometry?.lastOrNull() ?: return false
+        val endToTarget = FloatArray(1)
+        android.location.Location.distanceBetween(end.lat, end.lng, target.lat, target.lng, endToTarget)
+        if (endToTarget[0] > ROUTE_END_ARRIVAL_M) return false
+        val toEnd = FloatArray(1)
+        android.location.Location.distanceBetween(driver.lat, driver.lng, end.lat, end.lng, toEnd)
+        return toEnd[0] <= ARRIVAL_AT_ROUTE_END_M
     }
 
     /**

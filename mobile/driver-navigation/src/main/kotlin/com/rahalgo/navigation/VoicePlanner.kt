@@ -107,6 +107,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         lastDistanceM = Double.NaN
         lastManeuverAtM = Double.NaN
         mergedAtM = Double.NaN
+        approachMergedAtM = Double.NaN
         startSaidFor = null
         startBaseFor = null
         startBaseGeneration = -1L
@@ -367,7 +368,8 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             kind = CueKind.START,
             stage = CueStage.EVENT,
             priority = tuning.priorityPrepare,
-            validUntilProgressM = Double.MAX_VALUE,
+            // **وتسقط إن تأخّرت** (قِيس ٢٠٢٦-١٠-٠٣: قيلت بعد سبع ثوانٍ في وسط المنعطفات) — أربعون متراً.
+            validUntilProgressM = p.progressM + START_STALE_M,
             text = VoicePhrases.NAV_STARTED,
             clip = NavClips.NAV_STARTED,
         )
@@ -475,8 +477,13 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // **وذيلُ الدمج يُحسب في العتبة** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «الصوتُ أحياناً يتأخّر
         // بعد الانعطاف») — «انعطف يميناً، ثمّ انعطف يساراً مباشرةً» خمسُ ثوانٍ لا ثانيتان،
         // **وقِيس على جهازه انتهاؤها وبقي ستّةُ أمتار.** فتُقال أبكرَ بطول ذيلها.
+        // **ذيلُ الدمج يُحسب في عتبة التمهيد وحدَها** — «الآن» لا تُدمَج بعد اليوم.
         val thenSec = mergeTailSeconds(p, target, speed)
-        val stage = stageFor(previous, distance, speed, target, thenSec) ?: return null
+        // **و«الآن» تُدمَج وحدَها إن فات التمهيدُ** — مسارٌ قصيرٌ أو بدايةٌ قربَ المنعطف (VOICE-030):
+        // فلا يضيع المنعطفُ الثاني. **وإن قيل الزوجُ في التمهيد فـ«الآن» قصيرةٌ في وقتها.**
+        val pairSaid = maneuverAfter(p, target)?.atDistanceM?.let { it == approachMergedAtM } == true
+        val nowThen = if (pairSaid) 0.0 else thenSec
+        val stage = stageFor(previous, distance, speed, target, thenSec, nowThen) ?: return null
         // ══════════════════════════════════════════════════════════════
         // **و«الآن» التي لا تنتهي قبل المنعطف لا تُقال** (٢٠٢٦-١٠-٠٣)
         // ══════════════════════════════════════════════════════════════
@@ -528,11 +535,12 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         speed: Double,
         target: NavManeuver,
         thenSec: Double = 0.0,
+        nowThenSec: Double = 0.0,
     ): CueStage? {
         // **والأدنى أولى** — من عبر العتبات الثلاثَ دفعةً واحدة يريد
         // «الآن» لا «بعد خمس مئة متر». (البند ٨.)
         return when {
-            crosses(previousM, nowM, triggerFor(CueStage.NOW, target, speed, thenSec)) -> CueStage.NOW
+            crosses(previousM, nowM, triggerFor(CueStage.NOW, target, speed, nowThenSec)) -> CueStage.NOW
             crosses(previousM, nowM, triggerFor(CueStage.APPROACH, target, speed, thenSec)) -> CueStage.APPROACH
             crosses(previousM, nowM, triggerFor(CueStage.PREPARE, target, speed)) -> CueStage.PREPARE
             else -> null
@@ -751,12 +759,22 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // هنا احترازٌ لا أكثر.
         val speed = max(speedMps, tuning.minTrustedSpeedMps.toDouble())
         val gapSec = after?.let { (it.atDistanceM - target.atDistanceM) / speed }
+        // ══════════════════════════════════════════════════════════════
+        // **والدمجُ في «بعد … متر» وحدَها — و«الآن» قصيرةٌ في وقتها** (بلاغُ المالك ٢٠٢٦-١٠-٠٣:
+        // «الصوتُ غير متناسقٍ مع الشاشة… أحياناً يختفي»)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **قِيس في سجلّ جهازه**: «الآن، ثمّ انعطف يميناً مباشرةً» عتبتُها بطول الجملتين فقيلت على
+        // **سبعين متراً** — ثماني ثوانٍ قبل المنعطف — **وابتلعت «بعد مئة متر» التي بدأت قبلها بثانية.**
+        // **فالجملةُ المدموجةُ تُقال في التمهيد** (وقتُها يتّسع)، **و«الآن» تقول المنعطفَ وحدَه** في
+        // وقته. **وهو سلوكُ غوغل**: «بعد ١٠٠ م انعطف يميناً ثمّ يساراً» ثمّ «انعطف يميناً».
         val merge = after != null && gapSec != null &&
             gapSec <= tuning.combineSeconds &&
             after.kind != ManeuverKinds.ARRIVE &&
-            stage != CueStage.PREPARE
+            (stage == CueStage.APPROACH || (stage == CueStage.NOW && approachMergedAtM != after.atDistanceM))
 
         if (merge) mergedAtM = after!!.atDistanceM
+        if (merge && stage == CueStage.APPROACH) approachMergedAtM = after!!.atDistanceM
         val spoken = if (stage == CueStage.NOW) null else roundMeters(distanceM)
         val text = if (merge) {
             VoicePhrases.combined(target, after!!, spoken)
@@ -807,6 +825,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
     /** **المناورةُ الثانيةُ التي قيلت مدموجةً** — فلا تُعاد تمهيداً. */
     private var mergedAtM = Double.NaN
+
+    /** **وقيلت مدموجةً في التمهيد** — فـ«الآن» قصيرةٌ لا تُعاد مدموجة. */
+    private var approachMergedAtM = Double.NaN
 
     /** **وهل قيل الوصولُ في هذا الجيل؟** — فلا يُعاد كلَّ ثانية. */
     private var arrivalSaid = false
@@ -870,6 +891,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
         /** **ومسافةٌ مقطوعةٌ على الطريق الجديد** — عشرون متراً لا تُقطع وهو واقف. */
         const val START_MOVED_M = 20.0
+
+        /** **و«بدأت الملاحة» تسقط إن لم تُقَل قبل هذا** — لا تُقال في وسط الطريق. */
+        const val START_STALE_M = 40.0
         const val REROUTE_KEY = -2.0
 
         /** **ومفتاحُ الاتّجاه المعاكس** — ورقمُ النوبة يُطرح منه. */
