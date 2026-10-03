@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
@@ -54,14 +54,52 @@ interface Stats {
   menu_items: number;
   zones_active: number;
   promos_active: number;
-  // الزوّار — انظر `admin_stats_handlers.go`
-  opens_today: number;
-  opens_7d: number;
-  opens_30d: number;
-  devices_today: number;
-  devices_7d: number;
-  devices_30d: number;
+  // بانتظار قرارك — انظر `admin_stats_handlers.go`
+  compensations_pending: number;
+  reports_waiting: number;
+  emergencies_open: number;
+  orders_unassigned: number;
+  leads_new: number;
+  menu_pending: number;
+  drivers_over_cash: number;
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بانتظار قرارك — ما لا يتحرّك حتّى تتحرّك يد** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كلُّ بطاقةٍ تفتح صفحتَها مرشَّحةً على ما عدّته** — فالرقمُ بابٌ لا خبر.
+ *
+ * **وكلٌّ بقدرة صفحتها** — القدرةُ نفسُها التي تُظهر بابَها في القائمة
+ * (`layout.tsx`): **بطاقةٌ تفتح صفحةً تردّ «لا صلاحية» وعدٌ يُعتذر عنه.**
+ */
+const AWAITING: {
+  key: keyof Stats;
+  label: string;
+  href: string;
+  cap: string;
+  icon: typeof IconWallet;
+}[] = [
+  { key: "reports_waiting", label: D.reportsWaiting, href: "/dashboard/orders?awaiting=1",
+    cap: "orders.read", icon: IconWarning },
+  { key: "emergencies_open", label: D.emergenciesOpen, href: "/dashboard/emergencies",
+    cap: "support.manage", icon: IconWarning },
+  { key: "orders_unassigned", label: D.ordersUnassigned, href: "/dashboard/orders?status=dispatching",
+    cap: "orders.read", icon: IconOrder },
+  { key: "compensations_pending", label: D.compensationsPending, href: "/dashboard/compensations",
+    cap: "finance.read", icon: IconWallet },
+  { key: "payouts_pending", label: D.payoutsPending, href: "/dashboard/payouts?status=pending",
+    cap: "finance.read", icon: IconWallet },
+  { key: "drivers_over_cash", label: D.driversOverCash, href: "/dashboard/cash",
+    cap: "finance.read", icon: IconBalance },
+  { key: "tickets_open", label: D.ticketsOpen, href: "/dashboard/tickets",
+    cap: "support.manage", icon: IconSupport },
+  { key: "leads_new", label: D.leadsNew, href: "/dashboard/leads",
+    cap: "merchants.verify", icon: IconStore },
+  { key: "menu_pending", label: D.menuPending, href: "/dashboard/sections",
+    cap: "content.manage", icon: IconOrder },
+];
 
 interface WhatsAppStatus {
   provider: string;
@@ -72,6 +110,7 @@ interface WhatsAppStatus {
 
 export default function DashboardPage() {
   const { user, can } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [wa, setWa] = useState<WhatsAppStatus | null>(null);
   // **وخطأُ الأرقام يُقال** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كانت الصفحةُ تبقى ترحيباً بلا شيءٍ تحته.
@@ -129,6 +168,29 @@ export default function DashboardPage() {
       )}
       {stats && (
         <div className="mt-6 space-y-6">
+          {/* **بانتظار قرارك أوّلاً** — (قرارُ المالك ٢٠٢٦-١٠-٠٣): من فتح
+              اللوحةَ يقرأ أعلاها، **وما ينتظر يداً أعجلُ من أيّ رقم.** */}
+          {AWAITING.some((a) => can(a.cap)) && (
+            <section>
+              <h2 className="mb-2 font-bold">{D.awaiting}</h2>
+              <StatGrid>
+                {AWAITING.filter((a) => can(a.cap)).map((a) => {
+                  const n = stats[a.key];
+                  return (
+                    <StatCard
+                      key={a.key}
+                      icon={a.icon}
+                      label={a.label}
+                      value={n > 0 ? fmtNum(n) : m.common.zero}
+                      tone={n > 0 ? "danger" : "success"}
+                      onClick={() => router.push(a.href)}
+                    />
+                  );
+                })}
+              </StatGrid>
+            </section>
+          )}
+
           {/*
             ثلاث طبقات بهذا الترتيب: **الآن** ثم **اليوم** ثم المخزون.
             كانت ثمانية أرقام كلُّها `count(*)` — أرقامُ مخزون تقول ماذا يملك
@@ -230,26 +292,6 @@ export default function DashboardPage() {
               <StatCard icon={IconOrder} label={m.admin.dashboard.stats.menuItems} value={stats.menu_items} />
               <StatCard icon={IconZones} label={m.admin.dashboard.stats.zonesActive} value={stats.zones_active} />
               <StatCard icon={IconPromos} label={m.admin.dashboard.stats.promosActive} value={stats.promos_active} />
-            </StatGrid>
-          </section>
-
-          {/*
-            الزوّار — **فتحةٌ وشخصٌ رقمان لا رقم.**
-
-            (طلبُ المالك ٢٠٢٦-٠٨-٢٥.)
-
-            **ومن فتح عشرَ مرّاتٍ اليومَ يُعدّ عشراً في الفتحات وواحداً
-            في الأجهزة** — والأوّلُ يقيس الحركةَ والثاني يقيس الناس.
-          */}
-          <section>
-            <h2 className="mb-2 font-bold">{D.visitors}</h2>
-            <StatGrid>
-              <StatCard icon={IconUsers} label={D.devicesToday} value={stats.devices_today} />
-              <StatCard icon={IconUsers} label={D.devices7} value={stats.devices_7d} />
-              <StatCard icon={IconUsers} label={D.devices30} value={stats.devices_30d} />
-              <StatCard icon={IconOrder} label={D.opensToday} value={stats.opens_today} />
-              <StatCard icon={IconOrder} label={D.opens7} value={stats.opens_7d} />
-              <StatCard icon={IconOrder} label={D.opens30} value={stats.opens_30d} />
             </StatGrid>
           </section>
 

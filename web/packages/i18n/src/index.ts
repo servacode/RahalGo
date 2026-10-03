@@ -33,6 +33,7 @@ export {
   fmtDateTime,
   fmtTime,
   fmtLongDate,
+  damascusDay,
 } from "./format";
 import { fmtNum } from "./format";
 

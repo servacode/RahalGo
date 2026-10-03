@@ -162,7 +162,7 @@ const ALL_NAV: NavItem[] = [
   // **وموضعُها بجانب الخسائر**: الموافقةُ عليها هي ما يصير قيدَ خسارة.
   { href: "/dashboard/compensations", label: m.admin.compensations.navTitle, icon: IconWallet,
     caps: ["finance.read"] },
-  { href: "/dashboard/payouts", label: m.shared.payout.title, icon: IconWallet,
+  { href: "/dashboard/payouts", label: m.shared.payout.adminTitle, icon: IconWallet,
     caps: ["finance.read"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,
     caps: ["audit.read"] },
