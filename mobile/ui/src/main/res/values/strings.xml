@@ -87,6 +87,9 @@
     <string name="err_offer_amount_over_price">مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً</string>
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
+    <!-- فحصُ القبول ٢٠٢٦-١٠-٠٣: حدودُ النصوص الحرّة (`text_too_long`). -->
+    <string name="err_text_too_long">النص أطول من المسموح — اختصره ثم أعد المحاولة</string>
+    <string name="err_text_too_long_max">النص أطول من المسموح (الحد %1$s حرفاً) — اختصره ثم أعد المحاولة</string>
     <string name="err_item_text_too_long">الاسم أطول من ١٢٠ حرفاً أو الوصف أطول من ٥٠٠</string>
     <string name="err_no_drivers_on_shift">لا يوجد سائقون بالدوام الآن — حاول بعد قليل</string>
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
@@ -856,6 +859,8 @@
     <string name="chat_of_order">محادثة الطلب #%d</string>
     <string name="chat_open_order">عرض الطلب</string>
     <string name="chat_read_only">انتهى — للقراءة فقط</string>
+    <!-- فحصُ القبول ٢٠٢٦-١٠-٠٣: الحديثُ المنتهي سطرٌ واحدٌ لا حقلُ كتابة. -->
+    <string name="chat_ended">انتهت المحادثة — لا يمكن إرسال رسائل جديدة</string>
     <string name="chats_open_section">محادثات جارية</string>
     <string name="chats_archive_section">محادثات سابقة</string>
     <string name="chat_unread_badge">%d جديدة</string>

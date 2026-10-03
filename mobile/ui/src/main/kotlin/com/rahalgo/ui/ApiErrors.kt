@@ -125,6 +125,13 @@ fun apiError(
         return if (back == null) base
         else context.getString(R.string.err_back_at, base, back)
     }
+    // **والنصُّ الطويلُ يُقال بحدّه** (فحصُ القبول ٢٠٢٦-١٠-٠٣) — «اختصر»
+    // بلا رقمٍ لا يعرف صاحبُها كم يحذف.
+    if (code == "text_too_long") {
+        val max = e.body.details["max"].orEmpty().trim()
+        return if (max.isEmpty()) context.getString(R.string.err_text_too_long)
+        else context.getString(R.string.err_text_too_long_max, max)
+    }
     if (code == "launch_closed") {
         // **ونصُّ المالك يغلب نصَّ التطبيق** — **ونصٌّ مكتوبٌ في حزمةٍ
         // لا يُصحَّح إلّا بنشرٍ في المتجر.** وفارغُه يقع على نصّ الرمز.
@@ -261,6 +268,7 @@ private val CODES: Map<String, Int> = mapOf(
     "offer_item_unavailable" to R.string.err_offer_item_unavailable,
     "item_price_too_high" to R.string.err_item_price_too_high,
     "item_text_too_long" to R.string.err_item_text_too_long,
+    "text_too_long" to R.string.err_text_too_long,
     "update_required" to R.string.err_update_required,
     // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
     "no_items" to R.string.err_no_items,

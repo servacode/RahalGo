@@ -29,6 +29,7 @@ import com.rahalgo.shared.customer.NewCustom
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.money
 import com.rahalgo.shared.model.Address
+import com.rahalgo.shared.model.TextLimits
 import com.rahalgo.ui.AddressCard
 import com.rahalgo.ui.Flash
 import com.rahalgo.ui.Refresh
@@ -172,7 +173,8 @@ fun CustomScreen(
         // ونصف كيلو خبز» في سطرٍ واحدٍ لا يرى ما كتب.
         OutlinedTextField(
             value = request,
-            onValueChange = { request = it },
+            // **وبحدّ المحرّك** — انظر `TextLimits`.
+            onValueChange = { request = TextLimits.fit(it, TextLimits.CUSTOM_REQUEST) },
             label = { Text(stringResource(R.string.cst_what)) },
             // **والمثالُ يقول ما يُطلب** — **وسؤالٌ مفتوحٌ بلا مثالٍ
             // يُوقف من لا يعرف ما تقبله المنصّة.**
@@ -204,7 +206,7 @@ fun CustomScreen(
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
             value = notes,
-            onValueChange = { notes = it },
+            onValueChange = { notes = TextLimits.fit(it, TextLimits.ORDER_NOTES) },
             label = { Text(stringResource(R.string.cst_notes)) },
             modifier = Modifier.fillMaxWidth(),
         )
@@ -259,6 +261,20 @@ fun CustomScreen(
             } else {
                 Text(stringResource(R.string.cst_send))
             }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وسببُ الرفض يبقى تحت الزرّ — لا ومضةٌ تختفي** (فحصُ القبول ٢٠٢٦-١٠-٠٣)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **أوقف المكتبُ المنصّةَ مؤقّتاً فضغط «أرسل الطلب» ولم يرَ سبباً** —
+        // كانت `Flash` وحدَها تقوله ثانيتين. **ومن لم يقرأ السببَ أعاد
+        // الضغطَ ثمّ خرج.** فيبقى حتّى يُرسَل من جديد — **والنصُّ نصُّ
+        // المحرّك** (`apiError`: الإيقافُ ورسالتُه وموعدُ العودة، والدوام،
+        // والإطلاق، والتغطية).
+        if (vm.error.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            com.rahalgo.ui.Note(vm.error, Rahal.colors.danger)
         }
 
         // **ويُقال ما ينقص قبل أن يُضغط** — لا زرٌّ معطّلٌ بلا سبب:
@@ -380,7 +396,10 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                 if (com.rahalgo.ui.isDecided(e)) {
                     com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.CUSTOM)
                 }
-                Flash.fail(apiError(getApplication(), e))
+                // **ويبقى تحت الزرّ** — انظر الشاشة. **والومضةُ معه** لمن
+                // نزل عن الزرّ في شاشةٍ طويلة.
+                error = apiError(getApplication(), e)
+                Flash.fail(error)
             }
             busy = false
         }
