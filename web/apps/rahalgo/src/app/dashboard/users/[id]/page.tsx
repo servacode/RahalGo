@@ -300,7 +300,13 @@ export default function UserProfilePage() {
    * **وجلبُه وحدَه أخفُّ أيضاً**: تقليبُ صفحةٍ لا يُعيد جلبَ الحساب
    * والمحفظةِ والتقييماتِ والماليّات معه.
    */
+  // **والسجلُّ لمن يملك قراءته** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — `users.sensitive.read`: كان يُنادى لكلّ
+  // أحدٍ فيُردّ ٤٠٣ ويُبتلع فيُقرأ «لا نشاط»، **والجوابُ الصحيحُ «غيرُ مسموح».**
+  const canSensitive = can("users.sensitive.read");
+  const canFinance = can("finance.read");
+  const canChats = can("orders.communications.read");
   useEffect(() => {
+    if (!canSensitive) return;
     api<{
       activity: Activity[];
       total: number;
@@ -318,7 +324,7 @@ export default function UserProfilePage() {
       })
       // @empty-ok **وسجلٌّ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
       .catch(() => setActivity([]));
-  }, [id, actPage, actFilter, actRefresh]);
+  }, [id, actPage, actFilter, actRefresh, canSensitive]);
 
   /**
    * **ودفترُ المحفظة يُجلَب وحدَه — بصفحته.**
@@ -328,6 +334,8 @@ export default function UserProfilePage() {
    * نفسِها التي أوقفت سجلَّ النشاط.
    */
   useEffect(() => {
+    // **والدفترُ لمن يملك المال** — `finance.read`.
+    if (!canFinance) return;
     api<{
       transactions: Tx[];
       total: number;
@@ -344,7 +352,7 @@ export default function UserProfilePage() {
       })
       // @empty-ok **ودفترٌ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
       .catch(() => setTxs([]));
-  }, [id, wPage, wReload]);
+  }, [id, wPage, wReload, canFinance]);
 
   /**
    * **والكشفُ الماليُّ يُجلَب حين يُفتح تبويبُه.**
@@ -666,7 +674,7 @@ export default function UserProfilePage() {
               key: "addresses",
               label: P.roleTabs.addresses,
               icon: IconLocation,
-              show: has("customer"),
+              show: has("customer") && canSensitive,
             },
             {
               key: "cashbox",
@@ -692,7 +700,7 @@ export default function UserProfilePage() {
               icon: IconStore,
               show: has("merchant") || has("sales"),
             },
-            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: true },
+            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: canFinance },
             {
               key: "financials",
               // ══════════════════════════════════════════════════════════
@@ -714,7 +722,7 @@ export default function UserProfilePage() {
               // **ومن حمل دورين يبقى له** — سائقٌ يطلب لنفسه يرى كشفَه.
               label: P.tabs.financials,
               icon: IconBalance,
-              show: has("driver") || has("merchant") || has("sales"),
+              show: (has("driver") || has("merchant") || has("sales")) && canFinance,
             },
             { key: "feedback", label: P.tabs.feedback, icon: IconStar, show: true },
             {
@@ -728,9 +736,9 @@ export default function UserProfilePage() {
               // **والقناةُ بين الزبون والسائق** — فمن ليس أحدَهما لا حديثَ له.
               label: P.tabs.chats,
               icon: IconChat,
-              show: has("customer") || has("driver"),
+              show: (has("customer") || has("driver")) && canChats,
             },
-            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: true },
+            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: canSensitive },
           ] as const)
           .filter((t) => t.show)
           .map(({ key, label, icon }) => ({ key, label, icon }))}
