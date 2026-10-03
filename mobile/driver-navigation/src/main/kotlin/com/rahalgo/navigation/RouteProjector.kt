@@ -156,7 +156,10 @@ object RouteProjector {
         val loM = if (fullScan) 0.0 else max(0.0, lastProgressM - BACK_WINDOW_M)
         val hiM = if (fullScan) route.totalM else min(route.totalM, lastProgressM + forward)
 
-        val from = indexAtOrBefore(route.cumulativeM, loM)
+        // **و`from` لا يتجاوز آخرَ قطعة** (قِيس على المحاكي ٢٠٢٦-١٠-٠٣: انهيارٌ «Index 3 out of
+        // bounds for length 3» لحظةَ قبول طلب): **مسارٌ قصيرٌ جديدٌ يحلّ محلَّ طويلٍ** — والمتجرُ على
+        // خمسين متراً — **والتقدّمُ السابقُ أبعدُ من آخر نقطة**، فيبدأ البحثُ عندها ويقرأ ما بعدها.
+        val from = min(n - 2, indexAtOrBefore(route.cumulativeM, loM))
         val to = min(n - 2, indexAtOrBefore(route.cumulativeM, hiM))
 
         var best: Hit? = null

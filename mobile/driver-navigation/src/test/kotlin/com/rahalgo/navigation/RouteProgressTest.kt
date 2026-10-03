@@ -416,4 +416,22 @@ class RouteProgressTest {
         }
         assertTrue("**منطقُ المسار يطرق بابَ الشبكة**: $bad", bad.isEmpty())
     }
+
+    /**
+     * **مسارٌ قصيرٌ والتقدّمُ السابقُ أبعدُ من آخره** — لا انهيار (قِيس على المحاكي ٢٠٢٦-١٠-٠٣:
+     * «Index 3 out of bounds for length 3» لحظةَ قبول طلبٍ والمتجرُ على خمسين متراً).
+     */
+    @Test
+    fun `مسار قصير وتقدم سابق أبعد من آخره لا ينهار`() {
+        val r = NavRoute.of(
+            (0..2).map { GeoPoint(RouteFixtures.north(it * 25.0), RouteFixtures.LNG0) },
+            listOf(
+                NavManeuver(ManeuverKinds.DEPART, null, 0.0, 0, 0.0, 0.0),
+                NavManeuver(ManeuverKinds.ARRIVE, null, 50.0, 0, 0.0, 0.0),
+            ),
+        )
+        val here = GeoPoint(RouteFixtures.north(40.0), RouteFixtures.LNG0)
+        val hit = RouteProjector.project(r, here.lat, here.lng, 900.0, 1.0, 8f, 0f)
+        println("مسارٌ قصير · إسقاطٌ=${hit?.progressM}")
+    }
 }
