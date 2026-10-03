@@ -320,6 +320,9 @@ func (s *Server) handleGoods(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	req, err := decode[struct {
 		To string `json:"to"` // merchant | platform
+		// Compensation **تعويضُ الإدارة للمتجر** عن بضاعةٍ رُدّت إليه — وصفرُه أو غيابُه
+		// لا تعويض (قرارُ المالك ٢٠٢٦-١٠-٠٣). **يُدفع من الخزينة مرّةً واحدة.**
+		Compensation int64 `json:"compensation"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -330,8 +333,11 @@ func (s *Server) handleGoods(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch err := s.orders.SettleGoods(r.Context(), orderID, req.To, userIDFrom(r)); {
+	switch err := s.orders.SettleGoods(r.Context(), orderID, req.To, userIDFrom(r), req.Compensation); {
 	case err == nil:
+	case errors.Is(err, orders.ErrGoodsBadCompensation):
+		s.respondErr(w, errValidation)
+		return
 	case errors.Is(err, orders.ErrGoodsNotFailed):
 		s.respondErr(w, errNotFailed)
 		return
@@ -349,7 +355,9 @@ func (s *Server) handleGoods(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.audit(r, "finance.goods_settled", "order", orderID, map[string]any{"to": req.To})
+	s.audit(r, "finance.goods_settled", "order", orderID, map[string]any{
+		"to": req.To, "compensation": req.Compensation,
+	})
 	s.touch("order", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"settled_to": req.To})

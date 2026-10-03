@@ -7,7 +7,8 @@ package orders_test
 //	رُدّت وله رصيد    ←  يُسترجع كاملاً، ولا يبقى له منه شيء
 //	رُدّت ولا رصيد     ←  يُخصم ما وُجد، والباقي دَينٌ عليه
 //	مستحقٌّ لاحقٌ      ←  يُقتطع منه الدَّينُ حتى يُوفّى
-//	دعمٌ منصوصٌ عليه   ←  يُدفع من الخزينة لا من أحد
+//	لا دعمَ تلقائيّاً   ←  ولو بقيت نسبةٌ قديمةٌ في القاعدة (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+//	تعويضُ الإدارة     ←  مبلغٌ تكتبه، من الخزينة، مرّةً واحدة
 //	إلى المكتب        ←  لا قيد؛ الخسارةُ مقيَّدةٌ منذ الاستلام
 //	ضغطتان            ←  الثانيةُ تُردّ
 //
@@ -104,10 +105,9 @@ func (f *fixture) merchantDebt(t *testing.T) int64 {
 // **فنسبةٌ تُغيَّر بين الاستلام والحسم تجعل المسترجَعَ غيرَ المدفوع.**
 func TestGoods_ReturnedClawsBackWhatWasPaid(t *testing.T) {
 	f, owner, treasury := goodsCase(t)
-	f.setSetting(t, "merchants.return_support_percent", 0)
 
 	if err := f.svc.SettleGoods(context.Background(), f.orderID,
-		orders.GoodsToMerchant, treasury); err != nil {
+		orders.GoodsToMerchant, treasury, 0); err != nil {
 		t.Fatalf("تعذّر الحسم: %v", err)
 	}
 
@@ -145,7 +145,6 @@ func TestGoods_ReturnedClawsBackWhatWasPaid(t *testing.T) {
 // مستحقٍّ قادم».)
 func TestGoods_ShortBalanceBecomesDebt(t *testing.T) {
 	f, owner, treasury := goodsCase(t)
-	f.setSetting(t, "merchants.return_support_percent", 0)
 	ctx := context.Background()
 
 	// **سحب مالَه قبل أن تُردّ البضاعة** — وهو الحالُ الواقع لا المفتعل.
@@ -154,7 +153,7 @@ func TestGoods_ShortBalanceBecomesDebt(t *testing.T) {
 		t.Fatalf("تعذّر تفريغُ المحفظة: %v", err)
 	}
 
-	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury); err != nil {
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 0); err != nil {
 		t.Fatalf("تعذّر الحسمُ ورصيدُه ناقص: %v — **والزرُّ لا يُرفض**", err)
 	}
 
@@ -169,14 +168,13 @@ func TestGoods_ShortBalanceBecomesDebt(t *testing.T) {
 // TestGoods_DebtIsTakenFromNextEarning **ويُستوفى من أوّل مستحقٍّ قادم.**
 func TestGoods_DebtIsTakenFromNextEarning(t *testing.T) {
 	f, owner, treasury := goodsCase(t)
-	f.setSetting(t, "merchants.return_support_percent", 0)
 	ctx := context.Background()
 
 	if _, err := f.pool.Exec(ctx,
 		`UPDATE wallets SET balance = 0 WHERE user_id = $1`, owner); err != nil {
 		t.Fatalf("تعذّر تفريغُ المحفظة: %v", err)
 	}
-	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury); err != nil {
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 0); err != nil {
 		t.Fatalf("تعذّر الحسم: %v", err)
 	}
 	if d := f.merchantDebt(t); d != 81_000 {
@@ -234,41 +232,100 @@ func (f *fixture) anotherOrder(t *testing.T, merchantPrice int64) string {
 	return id
 }
 
-// TestGoods_SupportIsPaidFromTreasury **والدعمُ من الخزينة لا من أحد.**
-func TestGoods_SupportIsPaidFromTreasury(t *testing.T) {
-	f, owner, treasury := goodsCase(t)
-	f.setSetting(t, "merchants.return_support_percent", 20)
+// compensationOf **ما قُيّد تعويضاً لصاحب المتجر عن هذا الطلب** — وما خرج من الخزينة له.
+func (f *fixture) compensationOf(t *testing.T, owner string) (paid, expense int64) {
+	t.Helper()
 	ctx := context.Background()
-
-	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury); err != nil {
-		t.Fatalf("تعذّر الحسم: %v", err)
-	}
-
-	var support int64
 	if err := f.pool.QueryRow(ctx, `
 		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
 		WHERE ref = $1 AND kind = 'compensation' AND user_id = $2`,
-		f.orderID, owner).Scan(&support); err != nil {
-		t.Fatalf("تعذّرت قراءةُ الدعم: %v", err)
+		f.orderID, owner).Scan(&paid); err != nil {
+		t.Fatalf("تعذّرت قراءةُ التعويض: %v", err)
 	}
-	if support != 16_200 { // ٢٠٪ من ٨١٬٠٠٠
-		t.Fatalf("الدعمُ %d والمتوقّع 16200 — **نسبةٌ ممّا استُرجع لا من سعر البضاعة**", support)
-	}
-	// **ولا يُعطى أكثرَ من بيعةٍ ناجحة**: أخذ بضاعتَه وبقي معه الدعمُ وحدَه.
-	if got := f.balance(t, owner); got != support {
-		t.Fatalf("بقي معه %d والمتوقّع %d — الدعمُ وحدَه", got, support)
-	}
-	// **ونفقةٌ تخرج من الخزينة** — دعمٌ يُقيَّد للمتجر وحدَه يجعل المنصةَ
-	// تظهر رابحةً وهي تدفع.
-	var expense int64
 	if err := f.pool.QueryRow(ctx, `
 		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
-		WHERE ref = $1 AND kind = 'platform_expense' AND note LIKE 'دعمُ متجر%'`,
-		f.orderID).Scan(&expense); err != nil {
+		WHERE ref = $1 AND kind = 'platform_expense'`, f.orderID).Scan(&expense); err != nil {
 		t.Fatalf("تعذّرت قراءةُ نفقة الخزينة: %v", err)
 	}
-	if expense != -support {
-		t.Fatalf("نفقةُ الخزينة %d والمتوقّع %d", expense, -support)
+	return paid, expense
+}
+
+// TestGoods_NoAutomaticSupport **لا دعمَ تلقائيّاً — والمالُ يعود كما كان** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٣: «لازم المصاري ترجع ع حالها والإدارة تقرر تعوض المتجر او لا»).
+//
+// **ولو بقيت النسبةُ القديمةُ في القاعدة** (`merchants.return_support_percent` = ٢٠) —
+// تُكتب هنا بيدٍ لأنّ الفهرسَ لم يعد يعرفها. **وكانت تدفع ١٦٬٢٠٠ من الخزينة.**
+func TestGoods_NoAutomaticSupport(t *testing.T) {
+	f, owner, treasury := goodsCase(t)
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ('merchants.return_support_percent', '20'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(),
+			`DELETE FROM app_settings WHERE key = 'merchants.return_support_percent'`)
+	})
+
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 0); err != nil {
+		t.Fatalf("تعذّر الحسم: %v", err)
+	}
+	paid, expense := f.compensationOf(t, owner)
+	if paid != 0 || expense != 0 {
+		t.Fatalf("دُفع للمتجر %d وخرج من الخزينة %d — **ولا دعمَ إلّا بقرار الإدارة**", paid, expense)
+	}
+	if got := f.balance(t, owner); got != 0 {
+		t.Fatalf("رصيدُ المتجر %d — **والمالُ يعود كما كان: صفر**", got)
+	}
+}
+
+// TestGoods_AdminCompensationFromTreasuryOnce **تعويضُ الإدارة بمبلغٍ تكتبه** — يُدفع للمتجر
+// من الخزينة في معاملة الحسم نفسِها، **ومرّةً واحدة.**
+func TestGoods_AdminCompensationFromTreasuryOnce(t *testing.T) {
+	f, owner, treasury := goodsCase(t)
+	ctx := context.Background()
+
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 7_500); err != nil {
+		t.Fatalf("تعذّر الحسم: %v", err)
+	}
+	paid, expense := f.compensationOf(t, owner)
+	if paid != 7_500 || expense != -7_500 {
+		t.Fatalf("التعويض %d ونفقةُ الخزينة %d — والمتوقّع 7500 و-7500", paid, expense)
+	}
+	// **والثمنُ استُرجع كاملاً** — والتعويضُ وحدَه بقي معه.
+	if got := f.merchantPosted(t); got != 0 {
+		t.Fatalf("بقي له %d من ثمن بضاعةٍ أخذها", got)
+	}
+	if got := f.balance(t, owner); got != 7_500 {
+		t.Fatalf("رصيدُه %d والمتوقّع 7500 — التعويضُ وحدَه", got)
+	}
+
+	// **وضغطةٌ ثانيةٌ لا تدفع ثانية.**
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 7_500); !errors.Is(err, orders.ErrGoodsAlreadySettled) {
+		t.Fatalf("مرّ الحسمُ ثانيةً: %v", err)
+	}
+	if p2, e2 := f.compensationOf(t, owner); p2 != paid || e2 != expense {
+		t.Fatalf("دُفع التعويضُ مرّتين: %d · %d", p2, e2)
+	}
+}
+
+// TestGoods_CompensationValidation **تعويضٌ سالبٌ أو لبضاعةٍ لم تُردّ إلى المتجر ⇒ يُردّ** —
+// ولا يقع شيء.
+func TestGoods_CompensationValidation(t *testing.T) {
+	f, owner, treasury := goodsCase(t)
+	ctx := context.Background()
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, -1); !errors.Is(err, orders.ErrGoodsBadCompensation) {
+		t.Fatalf("تعويضٌ سالب: %v", err)
+	}
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToOffice, treasury, 5_000); !errors.Is(err, orders.ErrGoodsBadCompensation) {
+		t.Fatalf("تعويضٌ مع «إلى المكتب»: %v", err)
+	}
+	if paid, expense := f.compensationOf(t, owner); paid != 0 || expense != 0 {
+		t.Fatalf("وقع قيدٌ مع الرفض: %d · %d", paid, expense)
+	}
+	if got := f.merchantPosted(t); got != 81_000 {
+		t.Fatalf("تحرّك قيدُ المتجر مع الرفض: %d", got)
 	}
 }
 
@@ -282,7 +339,7 @@ func TestGoods_ToOfficeChangesNoMoney(t *testing.T) {
 	ctx := context.Background()
 	before := f.balance(t, owner)
 
-	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToOffice, treasury); err != nil {
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToOffice, treasury, 0); err != nil {
 		t.Fatalf("تعذّر الحسم: %v", err)
 	}
 
@@ -311,13 +368,12 @@ func TestGoods_ToOfficeChangesNoMoney(t *testing.T) {
 // TestGoods_SettledTwiceIsRejected **وضغطتان تسترجعان الثمنَ مرّتين.**
 func TestGoods_SettledTwiceIsRejected(t *testing.T) {
 	f, _, treasury := goodsCase(t)
-	f.setSetting(t, "merchants.return_support_percent", 0)
 	ctx := context.Background()
 
-	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury); err != nil {
+	if err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 0); err != nil {
 		t.Fatalf("تعذّر الحسمُ الأوّل: %v", err)
 	}
-	err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury)
+	err := f.svc.SettleGoods(ctx, f.orderID, orders.GoodsToMerchant, treasury, 0)
 	if !errors.Is(err, orders.ErrGoodsAlreadySettled) {
 		t.Fatalf("مرّ الحسمُ ثانيةً (%v) — **والثمنُ يُسترجع مرّتين**", err)
 	}
@@ -329,7 +385,7 @@ func TestGoods_NotFailedIsRejected(t *testing.T) {
 	_, treasury := f.armTreasury(t)
 
 	err := f.svc.SettleGoods(context.Background(), f.orderID,
-		orders.GoodsToMerchant, treasury)
+		orders.GoodsToMerchant, treasury, 0)
 	if !errors.Is(err, orders.ErrGoodsNotFailed) {
 		t.Fatalf("حُسمت بضاعةُ طلبٍ قائم (%v)", err)
 	}
