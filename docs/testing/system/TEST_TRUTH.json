@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 164,
-    "behaviour_settings": 130,
+    "setting_defs": 167,
+    "behaviour_settings": 133,
     "order_fields": 92,
-    "test_files": 461,
-    "test_funcs": 1904
+    "test_files": 464,
+    "test_funcs": 1911
   },
   "flows": [
     {
@@ -3625,6 +3625,48 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "delivery.custom_fee_max",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.custom_fee_min",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "delivery.custom_fee_source",
       "group": "drivers",
       "kind": "choice",
@@ -4018,6 +4060,27 @@
     },
     {
       "key": "drivers.offer_timeout_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.proof_max_m",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -8059,6 +8122,12 @@
       "orphan": true
     },
     {
+      "name": "TestCustomFee_Bounds",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestCustomSteps_AmanahHasNoGoods",
       "file": "internal/orders/custom_steps_test.go",
       "package": "orders_test",
@@ -8066,6 +8135,12 @@
     },
     {
       "name": "TestCustomSteps_CustomerSeesBuying",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomSteps_GoodsBeforeFeeRejected",
       "file": "internal/orders/custom_steps_test.go",
       "package": "orders_test",
       "orphan": true
@@ -23409,6 +23484,18 @@
       "orphan": true
     },
     {
+      "name": "TestDeliveryProof_FarOrMockedIsRejected",
+      "file": "internal/server/delivery_proof_fraud_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDeliveryProof_UnknownDoorSkipsDistance",
+      "file": "internal/server/delivery_proof_fraud_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDirectAssign_IgnoredInQueueMode",
       "file": "internal/server/direct_assign_test.go",
       "package": "server",
@@ -23625,6 +23712,12 @@
       "orphan": true
     },
     {
+      "name": "TestDriverLocation_ImpossibleJumpIgnored",
+      "file": "internal/server/driver_location_jump_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDriverLocation_StoresCaptureTime",
       "file": "internal/server/driver_location_recorded_test.go",
       "package": "server",
@@ -23657,6 +23750,12 @@
     {
       "name": "TestDriverQueue_Responds",
       "file": "internal/server/driver_queue_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverRoute_OtherDriversOrderIsNotYours",
+      "file": "internal/server/driver_route_owner_test.go",
       "package": "server",
       "orphan": true
     },
@@ -24010,6 +24109,12 @@
     },
     {
       "name": "TestTransfer_AtStoreSendsDriverToNewStore",
+      "file": "internal/server/order_transfer_at_store_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTransfer_OldStoreReportDoesNotFollowToNewStore",
       "file": "internal/server/order_transfer_at_store_test.go",
       "package": "server",
       "orphan": true

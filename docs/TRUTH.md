@@ -1073,6 +1073,8 @@
 | `delivery.custom_fee_source` | السائقون | choice | `driver_defined` |
 | `delivery.custom_fee` | السائقون | money | `0` |
 | `delivery.custom_driver_may_change_fee` | السائقون | bool | `false` |
+| `delivery.custom_fee_min` | السائقون | money | `1000` |
+| `delivery.custom_fee_max` | السائقون | money | `100000` |
 | `delivery.default_radius_m` | السائقون | int | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `1` |
@@ -1098,6 +1100,7 @@
 | `drivers.reward_3` | السائقون | money | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
+| `drivers.proof_max_m` | السائقون | int | `15` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
 | `app.min_version.merchant` | المتاجر | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
