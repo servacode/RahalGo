@@ -65,6 +65,10 @@ func TestFailReason_RefusedOutsideItsStage(t *testing.T) {
 			if c.at == "at_dropoff" && errors.Is(err, orders.ErrBadTransition) {
 				err = orders.ErrFailReasonStage
 			}
+			// **وعند المتجر كذلك** (٢٠٢٦-١٠-٠٣): المكتبُ يقرّر — `door_needs_ops`.
+			if c.at == "at_pickup" && errors.Is(err, orders.ErrDoorNeedsOps) {
+				err = orders.ErrFailReasonStage
+			}
 			if !errors.Is(err, orders.ErrFailReasonStage) {
 				t.Fatalf("قُبل «%s» في %s (الخطأ: %v) — **وسببٌ لا يخصّ المرحلة دفع تعويضاً على التجهيز**",
 					c.reason, c.at, err)
@@ -129,8 +133,7 @@ func TestMerchantBlocked_FaultFromReason_PendingNotPaid(t *testing.T) {
 	f := setup(t, "at_pickup", 100_000, 10_000, 0)
 	ctx := context.Background()
 	_, treasury := f.armTreasury(t)
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "merchant_closed"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 		t.Fatalf("تعذّرُ المتجر رُدّ: %v", err)
 	}
 	var status, fault, reason string
@@ -201,8 +204,7 @@ func TestMerchantDelivery_BlockedAtPickup_NeverStuck(t *testing.T) {
 				WHERE id = $1`, f.orderID); err != nil {
 				t.Fatalf("تعذّر جعلُه توصيلة: %v", err)
 			}
-			if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-				f.orderID, "failed", "", "merchant_closed"); err != nil {
+			if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 				t.Fatalf("تعذّرُ المتجر رُدّ: %v", err)
 			}
 			if st := f.statusOf(t); st != "at_pickup" {

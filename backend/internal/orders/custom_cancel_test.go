@@ -35,8 +35,8 @@ func TestCustomCancel_OwnerUntilBought(t *testing.T) {
 		{"معلَّق", StPending, true},
 		// **وفي الطابور** — ولا سائقَ التزم.
 		{"في الطابور", StDispatching, true},
-		// **وبيد سائقٍ يتّفق** — ولم يشترِ بعد.
-		{"أُسند لسائق", StAssigned, true},
+		// **وبعد انطلاق السائق لا** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يكتب في الدردشة والمكتبُ يقرّر.
+		{"أُسند لسائق", StAssigned, false},
 		// **وبعد الشراء لا** — مالُ السائق خرج.
 		{"اشترى السائق", StPickedUp, false},
 		{"في الطريق", StOnTheWay, false},

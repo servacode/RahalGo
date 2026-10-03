@@ -4478,6 +4478,10 @@
         {
           "name": "fee",
           "type": "int64"
+        },
+        {
+          "name": "step",
+          "type": "string"
         }
       ],
       "response": [
@@ -6126,6 +6130,10 @@
         },
         {
           "name": "notes",
+          "type": "string"
+        },
+        {
+          "name": "custom_mode",
           "type": "string"
         }
       ]

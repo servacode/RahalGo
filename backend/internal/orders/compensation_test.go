@@ -78,8 +78,7 @@ func TestMerchantFault_PendingAndNoClaimYet(t *testing.T) {
 	ctx := context.Background()
 	f.armTreasury(t)
 
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "اعتذر عن الصنف", "merchant_refused"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_refused"); err != nil {
 		t.Fatalf("الإفشال فشل: %v", err)
 	}
 	if got := f.balance(t, f.driver); got != 0 {

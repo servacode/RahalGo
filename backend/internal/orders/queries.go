@@ -27,6 +27,7 @@ const orderSelect = `
 	       o.quote_version, o.quote_confirmed_at, o.quote_confirmed_total, o.quote_confirmed_version,
 	       -- **الحجزُ ولقطةُ سياسة الأجرة** (Batch 2b/2c).
 	       o.custom_reserved_amount, o.custom_fee_source, o.custom_fee_snapshot, o.custom_driver_may_change_fee,
+	       o.custom_mode, o.custom_goods_pending,
 	       -- **وفراغٌ لا NULL** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): الحقلان نصّان
 	       -- في البنية، **وNULL فيهما يُسقط المسحَ كلَّه** لا هذا الحقلَ وحدَه.
 	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, ''),
@@ -120,6 +121,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.Kind, &o.CustomRequest, &o.CustomAgreedAt, &o.CustomGoodsAmount, &o.CustomFee,
 		&o.QuoteVersion, &o.QuoteConfirmedAt, &o.QuoteConfirmedTotal, &o.QuoteConfirmedVersion,
 		&o.CustomReservedAmount, &o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
+		&o.CustomMode, &o.CustomGoodsPending,
 		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,

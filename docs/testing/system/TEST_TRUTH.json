@@ -32,9 +32,9 @@
     ],
     "setting_defs": 165,
     "behaviour_settings": 131,
-    "order_fields": 88,
-    "test_files": 452,
-    "test_funcs": 1871
+    "order_fields": 90,
+    "test_files": 454,
+    "test_funcs": 1879
   },
   "flows": [
     {
@@ -7206,6 +7206,12 @@
       "orphan": true
     },
     {
+      "name": "TestSessionClient_KeepNewestWebSessions",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestSessionClient_SecondPhoneKillsFirst",
       "file": "internal/identity/session_client_test.go",
       "package": "identity",
@@ -8032,6 +8038,42 @@
     {
       "name": "TestCustomQuote_WalletInsufficient",
       "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomSteps_AmanahHasNoGoods",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomSteps_CustomerSeesBuying",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomSteps_PurchaseFeeThenGoods",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantDelivery_NoChatLines",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreProblem_CustomerStaysPreparing",
+      "file": "internal/orders/custom_steps_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreProblem_OfficeSaysCollect",
+      "file": "internal/orders/custom_steps_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -23519,6 +23561,12 @@
     },
     {
       "name": "TestDriverOrders_MerchantDeliveryFields",
+      "file": "internal/server/driver_merchant_delivery_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverRoute_CustomAfterPurchase",
       "file": "internal/server/driver_merchant_delivery_test.go",
       "package": "server",
       "orphan": true

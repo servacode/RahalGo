@@ -78,16 +78,16 @@ const (
 // بالتواصل مع الزبون، **ويبقى الطلبُ مع السائق إلى أن تُحلّ القصّة**… وقتها
 // الإدارةُ هي تُنهي الطلبَ من عندها.» **فأسبابُ الباب كلُّها صارت بلاغاتٍ**
 // (`StageReports`) — **والإنهاءُ بابُ الإدارة** (`door.go`).
-var FailReasons = []FailReason{
-	// ── عند باب المتجر ──────────────────────────────────────────────────
-	//
-	// **وهذه لا تُغلق الطلب** — ينتظر العمليات (تكلّم المتجرَ أو تبدّله).
-	// انظر `merchant_blocked.go`. **و«الطلبُ غيرُ جاهز» خرج منها إلى البلاغات**
-	// (قرارُ المالك ٢٠٢٦-١٠-٠٢): السائقُ ينتظر عليه، ولا يُحرَّر منه.
-	{Code: "merchant_closed", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonFail},
-	{Code: "merchant_refused", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonFail},
-	{Code: "order_unknown", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonFail},
-}
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولا سببَ عند المتجر هنا أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «برأيي ينتظر الإدارة
+// تحلّ المشكلة أفضل»)
+// ══════════════════════════════════════════════════════════════════════
+//
+// كانت «المتجرُ مغلق · يرفض · لا يعرف الطلب» تسحب الطلبَ من السائق بكلمته — **«ويطمع
+// السائقُ ويصير يخترع مشاكل»**. **فصارت بلاغاتٍ** (`StageReports`)، **والإدارةُ تتّصل
+// بالمتجر وتقرّر** من لوحتها (`door.go`): «استلم الطلب» أو «حوّل لمتجرٍ آخر».
+var FailReasons = []FailReason{}
 
 // StageReports **بلاغاتٌ لا تغيّر الطلب** — زرُّ «لدي مشكلة» في كلّ مرحلة.
 //
@@ -99,9 +99,16 @@ var FailReasons = []FailReason{
 var StageReports = []FailReason{
 	// المطبخُ لم ينتهِ — **السائقُ باقٍ على الطلب والعملياتُ تعلم.**
 	{Code: "merchant_not_ready", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonReport},
+	// **ومشكلةُ المتجر بلاغٌ والسائقُ ينتظر** (٢٠٢٦-١٠-٠٣) — والإدارةُ تقرّر.
+	{Code: "merchant_closed", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonReport},
+	{Code: "merchant_refused", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonReport},
+	{Code: "order_unknown", Fault: FaultMerchant, At: StAtPickup, Kind: ReasonReport},
 	// **«الطلبُ ما بيلتغي بعد ما يصير عند السائق»** — فإلغاءُ الزبون بالهاتف
 	// خبرٌ للمكتب لا فعلٌ في الطلب. **ولا «يريد عنواناً آخر»** — الزبونُ لا
 	// يغيّر العنوانَ بعد الطلب (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٤).
+	// **وقبل الشراء في الخاصّ أيضاً** (٢٠٢٦-١٠-٠٣): لا إلغاءَ للزبون بعد انطلاق السائق — يكتب في
+	// الدردشة، والسائقُ يبلّغ، والمكتبُ يلغي أو يُكمل.
+	{Code: "customer_cancelled_by_phone", Fault: FaultCustomer, At: StAssigned, Kind: ReasonReport},
 	{Code: "customer_cancelled_by_phone", Fault: FaultCustomer, At: StPickedUp, Kind: ReasonReport},
 	{Code: "customer_cancelled_by_phone", Fault: FaultCustomer, At: StOnTheWay, Kind: ReasonReport},
 
@@ -161,10 +168,32 @@ func AfterPickup(status string) bool {
 	return status == StPickedUp || status == StOnTheWay || status == StAtDropoff
 }
 
-// IsTripReport **بلاغٌ بعد الاستلام** — في الطريق أو عند الباب. **يُقبل سبباً في
-// إنهاء الإدارة** («عُد إلى المكتب»).
-func IsTripReport(code string) bool {
+// OfficeReasonAt **سببُ إنهاء المكتب يخصّ ضفّتَه** — بلاغُ المتجر عند المتجر، وبلاغُ
+// الطريق والباب بعد الاستلام. **فلا يُنهى طلبٌ عند الباب بـ«المتجرُ مغلق».**
+func OfficeReasonAt(code, from string) bool {
+	if from == StAtPickup {
+		_, ok := StageReportAt(code, StAtPickup)
+		return ok
+	}
 	for _, st := range []string{StPickedUp, StOnTheWay, StAtDropoff} {
+		if _, ok := StageReportAt(code, st); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// OfficeDecides **مراحلُ يقرّر فيها المكتبُ لا السائق** — عند المتجر، وبعد الاستلام.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٣: مشكلةُ المتجر «ينتظر الإدارة تحلّ المشكلة».)
+func OfficeDecides(status string) bool {
+	return status == StAtPickup || AfterPickup(status)
+}
+
+// IsTripReport **بلاغٌ يقرّر فيه المكتب** — عند المتجر أو في الطريق أو عند الباب.
+// **يُقبل سبباً في إنهاء الإدارة.**
+func IsTripReport(code string) bool {
+	for _, st := range []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff} {
 		if _, ok := StageReportAt(code, st); ok {
 			return true
 		}

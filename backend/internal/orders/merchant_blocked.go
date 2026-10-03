@@ -61,9 +61,12 @@ const merchantDeliveryBlockedNote = "المتجرُ تعذّر — التوصي�
 
 // merchantBlocked يردّ الطلبَ إلى المكتب بدل أن يُغلقه.
 func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
-	orderID, actorID, from, kind, failReason, note string,
+	orderID, actorID, from, kind, failReason, fault, note string,
 	driverID *string, deliveryFee int64) (*Order, error) {
-	fault := FaultOf(failReason)
+	// **والذنبُ يكتبه المكتب** (٢٠٢٦-١٠-٠٣) — وإلّا فما يقترحه البلاغ.
+	if fault == "" {
+		fault = SuggestedFault(failReason)
+	}
 	if kind == KindMerchantDelivery {
 		return s.merchantDeliveryBlocked(ctx, tx, orderID, actorID, from, fault, failReason, note,
 			driverID, deliveryFee)

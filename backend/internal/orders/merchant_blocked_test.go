@@ -65,8 +65,7 @@ func TestMerchantBlocked_ReturnsToOfficeNotClosed(t *testing.T) {
 	ctx := context.Background()
 	f.armTreasury(t)
 
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "المطعمُ مغلق", "merchant_closed"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 		t.Fatalf("تعذّر الإبلاغ: %v", err)
 	}
 
@@ -104,14 +103,12 @@ func TestMerchantBlocked_ReturnsToOfficeNotClosed(t *testing.T) {
 // **وهذا جوهرُ التصويب**: طلبُه قائمٌ ويُحوَّل إلى مطبخٍ آخر.
 func TestMerchantBlocked_CustomerIsNotTold(t *testing.T) {
 	f := setup(t, "at_pickup", 100_000, 10_000, 0)
-	ctx := context.Background()
 	f.armTreasury(t)
 
 	rec := &recorder{}
 	f.svc.SetNotifier(rec)
 
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "merchant_refused"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_refused"); err != nil {
 		t.Fatalf("تعذّر الإبلاغ: %v", err)
 	}
 
@@ -142,8 +139,7 @@ func TestMerchantBlocked_StillCountsAgainstTheMerchant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("تعذّر العدّ: %v", err)
 	}
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "merchant_closed"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 		t.Fatalf("تعذّر الإبلاغ: %v", err)
 	}
 	after, err := f.svc.MerchantViolations(ctx, f.pool, f.merchantID)
@@ -171,12 +167,10 @@ func TestMerchantBlocked_StillCountsAgainstTheMerchant(t *testing.T) {
 // يُقيَّد حتّى يوافق إنسان.**
 func TestMerchantBlocked_DriverIsStillCompensated(t *testing.T) {
 	f := setup(t, "at_pickup", 100_000, 10_000, 0)
-	ctx := context.Background()
 	f.armTreasury(t)
 
 	before := f.balance(t, f.driver)
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "merchant_closed"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 		t.Fatalf("تعذّر الإبلاغ: %v", err)
 	}
 	// **لا قيدَ لحظتَها** — والمقترَحُ ٥٠٪ من أجرة التوصيل في طلبٍ معلَّق.

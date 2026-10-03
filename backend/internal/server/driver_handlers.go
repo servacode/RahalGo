@@ -261,6 +261,10 @@ type driverOrder struct {
 	Lat           float64 `json:"lat"`
 	Lng           float64 `json:"lng"`
 	CustomerName  string  `json:"customer_name"`
+	// RecipientPhone **هاتفُ المستلِم في «لدي توصيلة» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — ليس على
+	// التطبيق، **فاتّصالٌ وواتساب** بدل الحديث. **وفي الطلب العاديّ والخاصّ لا يُرسَل**: الزبونُ
+	// يُوصَل إليه بالحديث، ورقمُه لا يصل السائق.
+	RecipientPhone string `json:"recipient_phone,omitempty"`
 	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
@@ -334,8 +338,11 @@ type driverOrder struct {
 	CustomFeeSource          string `json:"custom_fee_source"`
 	CustomFeeSnapshot        *int64 `json:"custom_fee_snapshot"`
 	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
-	QuoteVersion             int64  `json:"quote_version"`
-	QuoteConfirmedVersion    *int64 `json:"quote_confirmed_version"`
+	// **أمانةٌ أم مشتريات، وخطوةُ البضاعة** (٢٠٢٦-١٠-٠٣).
+	CustomMode            string `json:"custom_mode"`
+	CustomGoodsPending    bool   `json:"custom_goods_pending"`
+	QuoteVersion          int64  `json:"quote_version"`
+	QuoteConfirmedVersion *int64 `json:"quote_confirmed_version"`
 	// ══════════════════════════════════════════════════════════════════
 	// **«لدي توصيلة» كما يحتاجها من يحملها** (٢٠٢٦-١٠-٠٢)
 	// ══════════════════════════════════════════════════════════════════
@@ -381,7 +388,9 @@ const driverOrderSelect = `
 	       -- بياناتٌ قرارُ مالكٍ لا تنظيفُ شيفرة.
 	       NULLIF(mo.phone::text, ''),
 	       o.address_text, ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
-	       COALESCE(cu.full_name, o.recipient_name, ''), o.total, o.cash_due,
+	       COALESCE(cu.full_name, o.recipient_name, ''),
+	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.recipient_phone, '') ELSE '' END,
+	       o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
 	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
@@ -429,6 +438,7 @@ const driverOrderSelect = `
 	       o.custom_goods_amount, o.custom_fee,
 	       -- **لقطةُ سياسة الأجرة وعرضُ السعر** (Batch 2c) — سلطةُ الأجرة وحالُ التأكيد.
 	       o.custom_fee_source, o.custom_fee_snapshot, o.custom_driver_may_change_fee,
+	       o.custom_mode, o.custom_goods_pending,
 	       o.quote_version, o.quote_confirmed_version,
 	       -- ══════════════════════════════════════════════════════════
 	       -- **ما تقوله البطاقةُ قبل أن يقرّر**
@@ -484,7 +494,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 	for rows.Next() {
 		var o driverOrder
 		if err := rows.Scan(&o.ID, &o.Number, &o.Status, &o.MerchantName, &o.MerchantPhone,
-			&o.AddressText, &o.Lat, &o.Lng, &o.CustomerName,
+			&o.AddressText, &o.Lat, &o.Lng, &o.CustomerName, &o.RecipientPhone,
 			&o.Total, &o.CashDue, &o.ItemsCount, &o.ReadyAt, &o.PrepMinutes,
 			&o.AcceptedAt, &o.CreatedAt,
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
@@ -492,6 +502,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.OfferExpiresAt, &o.NavLat, &o.NavLng,
 			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
+			&o.CustomMode, &o.CustomGoodsPending,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
 			&o.DeliveryFee, &o.PickupAddress,
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer,

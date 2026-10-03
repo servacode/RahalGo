@@ -31,8 +31,7 @@ func TestFaultFailureCountsAsViolation(t *testing.T) {
 	}
 
 	// **متجرٌ مغلقٌ والسائقُ عند بابه** — ذنبُه من القائمة لا من تقدير أحد.
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "المحل مغلق", "merchant_closed"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 		t.Fatalf("الإفشال فشل: %v", err)
 	}
 

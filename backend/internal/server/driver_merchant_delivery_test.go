@@ -145,3 +145,42 @@ func TestDriverRoute_NoRouteToUnknownDropoff(t *testing.T) {
 		t.Errorf("نقطةٌ معروفة: available=%v", r["available"])
 	}
 }
+
+// TestDriverRoute_CustomAfterPurchase **الطلبُ الخاصّ بعد الشراء يُرسم طريقُه إلى الزبون** —
+// (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «الطريقُ على الزبون مستقيم»). **كانت نقطةُ المتجر الغائبةُ تُقرأ
+// رقماً فيسقط المسحُ بـ٥٠٠** والشاشةُ ترسم مستقيماً. **وقبل الشراء لا طريق** — لا متجرَ يُقصد.
+func TestDriverRoute_CustomAfterPurchase(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	d := f.drivers[0]
+	f.srv.route = &fakeRoutes{}
+	ord := f.customOrderAt(t, pdLat, pdLng, "dispatching")
+	if _, err := f.pool.Exec(context.Background(), `
+		UPDATE orders SET status = 'on_the_way', driver_id = $2 WHERE id = $1`, ord, d); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(context.Background(), `
+		UPDATE users SET last_location = ST_SetSRID(ST_MakePoint(39.01, 35.95), 4326)::geography WHERE id = $1`, d); err != nil {
+		t.Fatal(err)
+	}
+	call := func() map[string]any {
+		w := f.call(f.srv.handleDriverOrderRoute, http.MethodGet, "/driver/orders/"+ord+"/route", ord, d,
+			[]string{"driver"}, "")
+		if w.Code != http.StatusOK {
+			t.Fatalf("المسارُ ردّ %d: %s", w.Code, w.Body.String())
+		}
+		var body struct {
+			Data map[string]any `json:"data"`
+		}
+		_ = json.Unmarshal(w.Body.Bytes(), &body)
+		return body.Data
+	}
+	if r := call(); r["available"] != true {
+		t.Errorf("بعد الشراء: available=%v — **والطريقُ إلى الزبون يُرسم**", r["available"])
+	}
+	if _, err := f.pool.Exec(context.Background(), `UPDATE orders SET status = 'assigned' WHERE id = $1`, ord); err != nil {
+		t.Fatal(err)
+	}
+	if r := call(); r["available"] != false {
+		t.Errorf("قبل الشراء: available=%v — **ولا متجرَ يُقصد**", r["available"])
+	}
+}

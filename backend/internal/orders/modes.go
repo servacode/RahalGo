@@ -267,7 +267,7 @@ const (
 // **وفي الطريق كذلك** (٢٠٢٦-١٠-٠٣): الزبونُ طلب الإلغاءَ والسائقُ ماشٍ — المكتبُ
 // يتّصل ويقرّر «عُد إلى المكتب» **بذنبٍ مكتوبٍ أيضاً** (الحارسُ في `transitions.go`).
 func officeEndsAtDoor(from, to string) bool {
-	return AfterPickup(from) && to == StFailed
+	return OfficeDecides(from) && to == StFailed
 }
 
 // driverOnly مراحلُ الطريق — لا يملكها إلّا من يسير فيها.

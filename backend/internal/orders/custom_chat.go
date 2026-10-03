@@ -38,6 +38,7 @@ package orders
 
 import (
 	"context"
+	"fmt"
 )
 
 // customGreeting **جوابُ السائق الأوّل — باسمه لأنّه واقعُه.**
@@ -152,6 +153,37 @@ func (s *Service) openPlainChat(ctx context.Context, orderID, driverID string) {
 // **`at_pickup` ليست خبراً للزبون**: وقوفُ السائق عند المتجر شأنُ
 // السائق. **وأربعةٌ تكفي**: مشى · استلم · وصل · سلّم. **ومن كتب سطراً
 // لكلّ انتقالٍ** حوّل الحديثَ إلى سجلٍّ لا يُقرأ.
+// agreeLine **سطرُ التوثيق في الحديث** — بمبلغه.
+func agreeLine(step, mode string, goods, fee int64) string {
+	switch {
+	case step == AgreeStepGoods:
+		return fmt.Sprintf("ثمن البضاعة: %s ل.س — المجموع مع التوصيل %s ل.س. بانتظار موافقتك.",
+			groupDigits(goods), groupDigits(goods+fee))
+	case step == AgreeStepFee || mode == CustomModeAmanah || goods == 0:
+		return fmt.Sprintf("أجرة التوصيل: %s ل.س — بانتظار موافقتك.", groupDigits(fee))
+	default:
+		return fmt.Sprintf("ثمن البضاعة: %s ل.س · أجرة التوصيل: %s ل.س — المجموع %s ل.س. بانتظار موافقتك.",
+			groupDigits(goods), groupDigits(fee), groupDigits(goods+fee))
+	}
+}
+
+// quoteLine **سطرٌ تلقائيٌّ في حديث الطلب الخاصّ** — من السائق حين يوثّق، ومن الزبون حين يؤكّد.
+func (s *Service) quoteLine(ctx context.Context, orderID, senderID, role, line string) {
+	if senderID == "" || line == "" {
+		return
+	}
+	var driverID *string
+	if err := s.db.QueryRow(ctx, `SELECT driver_id::text FROM orders WHERE id = $1`, orderID).
+		Scan(&driverID); err != nil || driverID == nil {
+		return
+	}
+	if _, err := s.db.Exec(ctx, `
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+		VALUES ($1, $2, $3, $4, $5, true)`, orderID, senderID, role, line, *driverID); err != nil {
+		s.logger.Error("تعذّر كتبُ سطر التوثيق", "order", orderID, "error", err)
+	}
+}
+
 var stepLines = map[string]string{
 	StAssigned:  "استلمتُ طلبك — في طريقي إلى المتجر.",
 	StPickedUp:  "استلمتُ طلبك من المتجر — في طريقي إليك.",

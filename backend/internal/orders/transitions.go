@@ -143,14 +143,19 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		var agreed *time.Time
 		var confVersion *int64
 		var quoteVersion int64
+		var goodsPending bool
 		if err := tx.QueryRow(ctx,
-			`SELECT custom_agreed_at, quote_confirmed_version, quote_version
+			`SELECT custom_agreed_at, quote_confirmed_version, quote_version, custom_goods_pending
 			 FROM orders WHERE id = $1`, orderID).
-			Scan(&agreed, &confVersion, &quoteVersion); err != nil {
+			Scan(&agreed, &confVersion, &quoteVersion, &goodsPending); err != nil {
 			return nil, err
 		}
 		if agreed == nil {
 			return nil, ErrCustomNotAgreed
+		}
+		// **وفي المشتريات لا «تم شراء المطلوب» قبل توثيق الثمن** (٢٠٢٦-١٠-٠٣).
+		if goodsPending {
+			return nil, ErrGoodsPending
 		}
 		// **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ الحاليّ** — Batch 2a:
 		// **تأكيدٌ لنسخةٍ سابقةٍ لا يُقفِل السعرَ الحاليّ** (قفلُ السعر، قرارُ
@@ -179,7 +184,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// الطلبَ من عندها.» **والخارطةُ لا تعطي السائقَ هذا الانتقال**، **وانتقالُ
 	// اللوحة العامّ لا يمرّ أيضاً** — بابُه `ResolveDoor` وحدَه، **فذنبٌ لا يُكتب
 	// يُنهي طلباً لا يُعرف على من خسارتُه ولا أيُعوَّض سائقُه.**
-	if to == StFailed && AfterPickup(from) && fault == "" {
+	if to == StFailed && OfficeDecides(from) && fault == "" {
 		return nil, ErrDoorNeedsOps
 	}
 	if fault != "" {
@@ -187,7 +192,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			return nil, ErrBadTransition
 		}
 		// **والسببُ إن قيل فبلاغُ بابٍ** — لا رمزٌ من مرحلةٍ أخرى.
-		if failReason != "" && !IsTripReport(failReason) {
+		if failReason != "" && !OfficeReasonAt(failReason, from) {
 			return nil, ErrFailReasonStage
 		}
 	} else if to == StFailed && failReason != "" {
@@ -216,7 +221,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **والسائقُ يُعوَّض عن مشواره** — قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه.**
 	// **وبعد موافقة العمليات لا لحظتَها** (٢٠٢٦-١٠-٠٢): يُكتب طلباً معلَّقاً.
 	if to == StFailed && from == StAtPickup {
-		return unit.merchantBlocked(ctx, tx, orderID, actorID, from, kind, failReason, note, driverID, deliveryFee)
+		return unit.merchantBlocked(ctx, tx, orderID, actorID, from, kind, failReason, fault, note, driverID, deliveryFee)
 	}
 
 	set := `status = $2, updated_at = now()`
@@ -419,7 +424,14 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	//
 	// **وقبل النشر** — فالفقّاعةُ تُحدَّث بحدث الطلب، **ولو كُتب الحديثُ بعده
 	// لَبقيت الشارةُ صفراً حتّى الحدث التالي.**
-	if to == StAssigned && driverID != nil {
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا حديثَ في «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «الزبونُ مو مشتركٌ بتطبيقنا، معناه الرسائلُ ما لها معنى». **وقِيس**: ثلاثُ رسائلَ
+	// تلقائيّةٍ كُتبت لزبونٍ لا وجودَ له (#1342). **فاتّصالٌ وواتساب** في شاشة السائق.
+	chatty := kind != KindMerchantDelivery
+	if chatty && to == StAssigned && driverID != nil {
 		if kind == KindCustom {
 			s.openCustomChat(ctx, orderID, customerID, *driverID)
 		} else {
@@ -430,7 +442,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 
 	// **وسطرٌ في الحديث عند كلّ خطوةٍ تهمّ الزبون** — (قرارُ المالك
 	// ٢٠٢٦-٠٨-١٢). **والإشعارُ يمرّ ويُمحى، والحديثُ يبقى.**
-	if driverID != nil {
+	if chatty && driverID != nil {
 		s.stepLine(ctx, orderID, *driverID, kind, to)
 	}
 
@@ -1738,8 +1750,9 @@ func (s *Service) CancelSecondsLeft(ctx context.Context, o *Order) int {
 	// **حدُّه حدثٌ لا ساعة**: خروجُ المال من جيب السائق. **ورقمٌ ينقص
 	// على الشاشة يستعجل صاحبَه بلا سبب** — لا مطبخَ بدأ يطبخ.
 	if o.Kind == KindCustom {
+		// **وبعد انطلاق السائق لا إلغاء** (٢٠٢٦-١٠-٠٣) — `assigned` خرجت من هنا.
 		switch o.Status {
-		case StPending, StDispatching, StAssigned:
+		case StPending, StDispatching:
 			return -1
 		default:
 			return 0

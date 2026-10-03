@@ -28,6 +28,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -411,6 +412,12 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 		// يرى «بانتظار الشراء» ولا أحدَ يشتري.
 		if o.DriverID != nil {
 			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total)
+			// **وتأكيدُ الزبون يُقال في الحديث أيضاً** (٢٠٢٦-١٠-٠٣) — بمجموعه.
+			line := fmt.Sprintf("وافقتُ على المجموع: %s ل.س.", groupDigits(o.Total))
+			if o.CustomGoodsPending {
+				line = fmt.Sprintf("وافقتُ على أجرة التوصيل: %s ل.س.", groupDigits(o.Total))
+			}
+			s.quoteLine(ctx, orderID, customerID, "customer", line)
 		}
 	}
 	return o, err

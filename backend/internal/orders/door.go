@@ -89,6 +89,9 @@ var doorTitle = map[string]string{
 // الأمرُ نفسُه، والسائقُ ما زال في الطريق.
 const doorContinueTitle = "الإدارة: أكمل التوصيل"
 
+// doorCollectTitle **وعند المتجر «استلم الطلب»** (٢٠٢٦-١٠-٠٣) — اتّصلت الإدارةُ بالمتجر فحُلّ.
+const doorCollectTitle = "الإدارة: استلم الطلب"
+
 // DoorTitle **نصُّ الأمر** — وفارغٌ لأمرٍ لا يُعرف.
 func DoorTitle(action string) string { return doorTitle[action] }
 
@@ -119,7 +122,7 @@ func (s *Service) ResolveDoor(ctx context.Context, actorID string, actorRoles []
 			}
 			return nil, err
 		}
-		if !AfterPickup(status) {
+		if !OfficeDecides(status) {
 			return nil, ErrNotAtDoor
 		}
 		// **والأمرُ يُكتب مع الانتقال في معاملته** — فلا يُقرأ «فشل» بلا أمر.
@@ -171,7 +174,7 @@ func (s *Service) doorDeliverNow(ctx context.Context, orderID string, in DoorRes
 		}
 		return nil, err
 	}
-	if !AfterPickup(status) || driverID == nil {
+	if !OfficeDecides(status) || driverID == nil {
 		return nil, ErrNotAtDoor
 	}
 	if _, err := tx.Exec(ctx, `
@@ -195,7 +198,10 @@ func (s *Service) doorDeliverNow(ctx context.Context, orderID string, in DoorRes
 	}
 	s.publishOrder(o)
 	title := doorTitle[DoorDeliverNow]
-	if status != StAtDropoff {
+	switch status {
+	case StAtPickup:
+		title = doorCollectTitle
+	case StPickedUp, StOnTheWay:
 		title = doorContinueTitle
 	}
 	s.notifyDoorInstruction(ctx, orderID, *driverID, number, title, in.Note)
@@ -231,8 +237,8 @@ func (s *Service) lastDoorReport(ctx context.Context, orderID string) string {
 	_ = s.db.QueryRow(ctx, `
 		SELECT details->>'code' FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
-		  AND details->>'status' IN ($2, $3, $4)
-		ORDER BY created_at DESC LIMIT 1`, orderID, StPickedUp, StOnTheWay, StAtDropoff).Scan(&code)
+		  AND details->>'status' IN ($2, $3, $4, $5)
+		ORDER BY created_at DESC LIMIT 1`, orderID, StAtPickup, StPickedUp, StOnTheWay, StAtDropoff).Scan(&code)
 	if !IsTripReport(code) {
 		return ""
 	}

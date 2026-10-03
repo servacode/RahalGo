@@ -144,7 +144,9 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	var (
 		status           string
 		fromLat, fromLng *float64
-		pickLat, pickLng float64
+		// **ونقطةُ الاستلام قد تغيب** — الطلبُ الخاصّ بلا متجر (٢٠٢٦-١٠-٠٣): كانت تُقرأ رقماً
+		// فيسقط المسحُ بـ٥٠٠، **والشاشةُ ترسم خطّاً مستقيماً إلى الزبون بعد الشراء.**
+		pickLat, pickLng *float64
 		dropLat, dropLng float64
 		dropKnown        bool
 	)
@@ -202,8 +204,22 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	// **واختياريّان بالكامل** — نسخةٌ منشورةٌ لا ترسلهما تعمل حرفاً
 	// بحرفٍ كما كانت.
 	picked := status != "assigned" && status != "at_pickup"
-	from := routing.Point{Lat: pickLat, Lng: pickLng}
-	if !picked && fromLat != nil && fromLng != nil {
+	// **ولا متجرَ يُقصد قبل الشراء في الخاصّ** — «اشترِ الطلب، ثمّ يُرسم الطريق».
+	if pickLat == nil || pickLng == nil {
+		if !picked {
+			httpx.JSON(w, http.StatusOK, map[string]any{"available": false})
+			return
+		}
+		if local == nil && (fromLat == nil || fromLng == nil) {
+			httpx.JSON(w, http.StatusOK, map[string]any{"available": false})
+			return
+		}
+	}
+	var from routing.Point
+	if pickLat != nil && pickLng != nil {
+		from = routing.Point{Lat: *pickLat, Lng: *pickLng}
+	}
+	if (!picked || pickLat == nil) && fromLat != nil && fromLng != nil {
 		from = routing.Point{Lat: *fromLat, Lng: *fromLng}
 	}
 	if local != nil {
@@ -215,7 +231,10 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	if local != nil || (!picked && fromLat != nil && fromLng != nil) {
 		from.Bearing = clientHeading(r)
 	}
-	to := routing.Point{Lat: pickLat, Lng: pickLng}
+	var to routing.Point
+	if pickLat != nil && pickLng != nil {
+		to = routing.Point{Lat: *pickLat, Lng: *pickLng}
+	}
 	if picked {
 		to = routing.Point{Lat: dropLat, Lng: dropLng}
 	}

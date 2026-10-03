@@ -69,8 +69,7 @@ func TestCompensation_MerchantBlockedTwiceSameDriver_CompensatesOnce(t *testing.
 				t.Fatalf("إعادةُ التوزيع: %v", err)
 			}
 		}
-		if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-			f.orderID, "failed", "", "merchant_refused"); err != nil {
+		if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_refused"); err != nil {
 			t.Fatalf("الحظرُ %d فشل: %v", round, err)
 		}
 	}
@@ -90,8 +89,7 @@ func TestCompensation_MerchantBlockedDifferentDrivers_EachCompensatedOnce(t *tes
 	f.armTreasury(t)
 	driverB := testdb.NewUser(t, f.pool, "driver")
 
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "merchant_refused"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_refused"); err != nil {
 		t.Fatalf("حظرُ أ: %v", err)
 	}
 	if _, err := f.pool.Exec(ctx,
@@ -99,8 +97,7 @@ func TestCompensation_MerchantBlockedDifferentDrivers_EachCompensatedOnce(t *tes
 		f.orderID, driverB); err != nil {
 		t.Fatalf("إعادةُ التوزيع إلى ب: %v", err)
 	}
-	if _, err := f.svc.TransitionWithReason(ctx, driverB, []string{"driver"},
-		f.orderID, "failed", "", "merchant_refused"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_refused"); err != nil {
 		t.Fatalf("حظرُ ب: %v", err)
 	}
 	// **كلٌّ له طلبُه** — صفٌّ لكلّ سائق، ولا مالَ قبل الموافقة.

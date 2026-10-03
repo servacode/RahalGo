@@ -230,6 +230,9 @@ var OrderPrivacy = map[string]FieldRule{
 	"custom_fee_source":            {Ref: "من يحدّد أجرةَ المخصَّص", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_fee_snapshot":          {Ref: "لقطةُ أجرة المنصة على الطلب", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_driver_may_change_fee": {Ref: "أيغيّر السائقُ الأجرة", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **أمانةٌ أم مشتريات، وخطوةُ البضاعة** (٢٠٢٦-١٠-٠٣) — للزبون (اختيارُه) والسائق (خطوتُه) والأدمن.
+	"custom_mode":          {Ref: "أمانةٌ أم مشتريات", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_goods_pending": {Ref: "ثمنُ البضاعة لم يُوثَّق بعد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── الأصنافُ والتوقيتات ───────────────────────────────────────
 	"items":                 {Ref: "الأصناف — والمتجرُ يحضّرها", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},

@@ -44,6 +44,8 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		// تُرسَل ولا تُفكّ فتُهمَل صامتةً، **فيشتري السائقُ بلا تعليماتِ
 		// صاحبها.** فتُفكّ الآن وتُخزَّن كالعاديّ (عمودُ `orders.notes`).
 		Notes string `json:"notes"`
+		// Mode **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وما عداهما مشتريات.
+		Mode string `json:"custom_mode"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -55,6 +57,14 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 			req.AddressText, req.Payment, req.Notes, req.Lat, req.Lng)
 		if err != nil {
 			return IdempotentBody{}, err
+		}
+		// **والأمانةُ تُكتب في معاملة الإنشاء نفسِها** — فلا يراها سائقٌ مشترياتٍ لحظة.
+		if req.Mode == orders.CustomModeAmanah {
+			if _, err := q.Exec(ctx, `UPDATE orders SET custom_mode = $2 WHERE id = $1`,
+				o.ID, orders.CustomModeAmanah); err != nil {
+				return IdempotentBody{}, err
+			}
+			o.CustomMode = orders.CustomModeAmanah
 		}
 		// **وردُّ الخاصّ يُشكَّل كالعاديّ** — **ولا بابَ يُعفى.**
 		view, err := orderView(orders.AudienceCustomer, o)
@@ -81,14 +91,16 @@ func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Goods int64 `json:"goods_amount"`
 		Fee   int64 `json:"fee"`
+		// Step **خطوةُ التوثيق** (٢٠٢٦-١٠-٠٣): `fee` ثمّ `goods` — وفارغٌ الاثنان معاً.
+		Step string `json:"step"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	orderID := chi.URLParam(r, "id")
-	if err := s.orders.AgreeCustom(r.Context(), orderID, userIDFrom(r),
-		req.Goods, req.Fee); err != nil {
+	if err := s.orders.AgreeCustomStep(r.Context(), orderID, userIDFrom(r),
+		req.Step, req.Goods, req.Fee); err != nil {
 		s.respondErr(w, err)
 		return
 	}

@@ -66,6 +66,8 @@ const (
 var audienceAllow = map[Audience]map[string]bool{
 	AudienceCustomer: {
 		"custom_reserved_amount":   true,
+		"custom_goods_pending":     true,
+		"custom_mode":              true,
 		"accepted_at":              true,
 		"address_text":             true,
 		"blocked_reason":           true,
@@ -162,6 +164,8 @@ var audienceAllow = map[Audience]map[string]bool{
 	},
 	AudienceDriver: {
 		"custom_fee_source":            true,
+		"custom_goods_pending":         true,
+		"custom_mode":                  true,
 		"custom_fee_snapshot":          true,
 		"custom_driver_may_change_fee": true,
 		"accepted_at":                  true,
@@ -260,6 +264,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		"dropoff_known":                true,
 		"custom_reserved_amount":       true,
 		"custom_fee_source":            true,
+		"custom_goods_pending":         true,
+		"custom_mode":                  true,
 		"custom_fee_snapshot":          true,
 		"custom_driver_may_change_fee": true,
 		"accepted_at":                  true,

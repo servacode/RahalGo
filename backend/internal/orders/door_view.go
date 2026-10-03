@@ -35,6 +35,9 @@ type DoorView struct {
 	InstructionNote string `json:"instruction_note"`
 	// InstructionAt متى أُرسل.
 	InstructionAt *time.Time `json:"instruction_at"`
+	// StorePhone **هاتفُ المتجر** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — «ينتظر الإدارةَ تتّصل بالمتجر»: كانت
+	// اللوحةُ عند المتجر تعرض هاتفَ الزبون وحدَه. **وفارغٌ للخاصّ بلا متجر.**
+	StorePhone string `json:"store_phone"`
 }
 
 // DoorViewOf **حالُ باب طلبٍ** — ولا خطأ: ما تعذّرت قراءتُه يبقى فارغاً،
@@ -47,8 +50,8 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 	if err := s.db.QueryRow(ctx, `
 		SELECT details->>'code', details->>'note', created_at FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
-		  AND details->>'status' IN ($2, $3, $4)
-		ORDER BY created_at DESC LIMIT 1`, orderID, StPickedUp, StOnTheWay, StAtDropoff).
+		  AND details->>'status' IN ($2, $3, $4, $5)
+		ORDER BY created_at DESC LIMIT 1`, orderID, StAtPickup, StPickedUp, StOnTheWay, StAtDropoff).
 		Scan(&code, &note, &at); err == nil && code != nil && IsTripReport(*code) {
 		v.ReportCode = *code
 		if note != nil {
@@ -58,16 +61,29 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 		v.SuggestedFault = SuggestedFault(*code)
 	}
 
+	// **وكم ينتظر عند الباب الذي هو عنده** — بابُ المتجر أو بابُ الزبون (٢٠٢٦-١٠-٠٣).
+	waitAt := StAtDropoff
+	var status string
+	if err := s.db.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err == nil &&
+		status == StAtPickup {
+		waitAt = StAtPickup
+	}
 	var arrived *time.Time
 	var waited *float64
 	if err := s.db.QueryRow(ctx, `
 		SELECT max(created_at),
 		       floor(EXTRACT(EPOCH FROM now() - max(created_at)) / 60)
 		FROM order_events WHERE order_id = $1 AND to_status = $2`,
-		orderID, StAtDropoff).Scan(&arrived, &waited); err == nil && arrived != nil && waited != nil {
+		orderID, waitAt).Scan(&arrived, &waited); err == nil && arrived != nil && waited != nil {
 		v.ArrivedAt = arrived
 		v.WaitedMin = int64(*waited)
 	}
+
+	_ = s.db.QueryRow(ctx, `
+		SELECT COALESCE(u.phone::text, '') FROM orders o
+		JOIN merchants m ON m.id = o.merchant_id
+		JOIN users u ON u.id = m.owner_user_id
+		WHERE o.id = $1`, orderID).Scan(&v.StorePhone)
 
 	var instr, instrNote *string
 	var instrAt *time.Time

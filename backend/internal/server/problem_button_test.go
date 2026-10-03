@@ -130,8 +130,9 @@ func TestFailReasons_KindsClosesAndReports(t *testing.T) {
 	d := f.drivers[0]
 
 	pickup := f.reasons(t, d, "at=at_pickup")
-	if r := pickup["merchant_closed"]; r.Kind != "fail" || r.Closes || r.Fault != "merchant" {
-		t.Errorf("merchant_closed = %+v — **عند المتجر لا يُغلق الطلب**", r)
+	// **مشكلةُ المتجر بلاغٌ والسائقُ ينتظر** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+	if r := pickup["merchant_closed"]; r.Kind != "report" || r.Closes || r.Fault != "merchant" {
+		t.Errorf("merchant_closed = %+v — **بلاغٌ والإدارةُ تقرّر**", r)
 	}
 	if r, ok := pickup["merchant_not_ready"]; !ok || r.Kind != "report" || r.Closes {
 		t.Errorf("merchant_not_ready = %+v — **بلاغٌ لا فشل** (قرارُ المالك)", r)
@@ -392,7 +393,15 @@ func TestCompensation_MerchantFault_ApprovalPaysReleasedDriverAndOpensClaim(t *t
 	orderID := f.problemOrderAt(t, "at_pickup", d)
 
 	if w := f.fail(d, orderID, "merchant_closed", ""); w.Code != http.StatusOK {
-		t.Fatalf("التعذّرُ ردّ %d: %s", w.Code, w.Body.String())
+		t.Fatalf("البلاغُ ردّ %d: %s", w.Code, w.Body.String())
+	}
+	// **والسائقُ ينتظر — والمكتبُ يقرّر «حوّل لمتجرٍ آخر»** (٢٠٢٦-١٠-٠٣).
+	if st, _ := f.orderRow(t, orderID); st != "at_pickup" {
+		t.Fatalf("الحالُ %q بعد البلاغ — **والطلبُ يبقى مع السائق حتّى تقرّر الإدارة**", st)
+	}
+	if w := f.call(f.srv.handleDoorResolution, http.MethodPost, "/x", orderID, admin, []string{"admin"},
+		`{"action":"return_to_office","fault":"merchant","note":"اتّصلنا — المتجرُ مغلق"}`); w.Code != http.StatusOK {
+		t.Fatalf("قرارُ المكتب ردّ %d: %s", w.Code, w.Body.String())
 	}
 	if st, drv := f.orderRow(t, orderID); st != "accepted" || drv != nil {
 		t.Fatalf("(%s · %v) — والمتوقّع العودةُ إلى المكتب بلا سائق", st, drv)

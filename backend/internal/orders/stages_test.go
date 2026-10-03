@@ -64,13 +64,17 @@ func TestCustomerFoldsTheStoreLeg(t *testing.T) {
 
 // TestStagesForPicksTheRightPath **ولا مطبخَ في الطلب الخاصّ.**
 func TestStagesForPicksTheRightPath(t *testing.T) {
-	if _, at := StagesFor("custom", StPickedUp); at != 2 {
-		t.Errorf("«اشترى» ليست الثالثة في الطلب الخاصّ: %d", at)
+	// **و«في طريقه للشراء» قبلها** (٢٠٢٦-١٠-٠٣) — فـ«اشترى» الرابعة.
+	if _, at := StagesFor("custom", StPickedUp); at != 3 {
+		t.Errorf("«اشترى» ليست الرابعة في الطلب الخاصّ: %d", at)
+	}
+	if _, at := StagesFor("custom", StAssigned); at != 2 {
+		t.Errorf("«في طريقه للشراء» ليست الثالثة في الطلب الخاصّ: %d", at)
 	}
 	if _, at := StagesFor("", StPickedUp); at != 3 {
 		t.Errorf("«في الطريق» ليست الرابعة في الطلب العاديّ: %d", at)
 	}
-	if list, _ := StagesFor("custom", StPending); list[2] != StageBought {
+	if list, _ := StagesFor("custom", StPending); list[3] != StageBought {
 		t.Error("مسارُ الطلب الخاصّ فيه «قيد التجهيز»")
 	}
 }

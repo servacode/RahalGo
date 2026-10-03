@@ -53,6 +53,12 @@ var (
 	ErrQuoteChanged = httpx.NewError(http.StatusConflict,
 		"quote_changed", "errors.quote_changed")
 
+	// ErrGoodsPending **ولا «تم شراء المطلوب» قبل توثيق ثمن البضاعة** (٢٠٢٦-١٠-٠٣) — في المشتريات.
+	ErrGoodsPending = httpx.NewError(http.StatusConflict,
+		"goods_not_documented", "errors.goods_not_documented")
+	// ErrAgreeStep **خطوةُ توثيقٍ لا تصحّ هنا** — ثمنُ بضاعةٍ في أمانة، أو قبل الأجرة.
+	ErrAgreeStep = httpx.NewError(http.StatusConflict,
+		"agree_wrong_step", "errors.agree_wrong_step")
 	// ErrQuoteNotConfirmed **ولا يبدأ الشراءُ قبل أن يؤكّد الزبونُ العرضَ الحاليّ** — Batch 2a.
 	ErrQuoteNotConfirmed = httpx.NewError(http.StatusConflict,
 		"quote_not_confirmed", "errors.quote_not_confirmed")
@@ -443,6 +449,26 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 // حرفين.
 func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 	goods, fee int64) error {
+	return s.AgreeCustomStep(ctx, orderID, driverID, "", goods, fee)
+}
+
+// أنواعُ الطلب الخاصّ (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+const (
+	CustomModePurchase = "purchase"
+	CustomModeAmanah   = "amanah"
+)
+
+// خطواتُ التوثيق — «أوّلَ شي يوثّق أجرةَ التوصيل… وبعد الشراء ثمنَ البضاعة».
+const (
+	AgreeStepFee   = "fee"
+	AgreeStepGoods = "goods"
+)
+
+// AgreeCustomStep **توثيقُ خطوة** — `fee` الأجرةُ وحدَها، و`goods` ثمنُ البضاعة بعد الشراء،
+// **والفارغُ الاثنان معاً** (النسخُ القديمة). **وكلُّ خطوةٍ نسخةُ عرضٍ يؤكّدها الزبون** —
+// فالمالُ يمرّ بالمسار القائم نفسِه (`applyCustomQuoteTx`) قبل الاستلام، **ولا يُمسّ الدفتر.**
+func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step string,
+	goods, fee int64) error {
 	if goods < 0 || fee < 0 {
 		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
@@ -484,7 +510,36 @@ func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 	// السائق — **خادمٌ يُغلق البابَ لا شاشةٌ تُخفي الحقل.** **وما عداه أجرةُ
 	// السائق** (سائقيَّ المصدر، أو أدمنيَّه بإذنٍ للتغيير). **والبضاعةُ للسائق
 	// دائماً** — هو من اشتراها.
+	var mode string
+	var pending bool
+	if err := tx.QueryRow(ctx, `SELECT custom_mode, custom_goods_pending FROM orders WHERE id = $1`,
+		orderID).Scan(&mode, &pending); err != nil {
+		return err
+	}
+	goodsDone := row.hasGoods && !pending
 	effGoods, effFee := goods, fee
+	newPending := false
+	switch step {
+	case AgreeStepFee:
+		// **الأجرةُ وحدَها** — والبضاعةُ كما وُثّقت إن وُثّقت، وإلّا صفرٌ ينتظرها.
+		effGoods = 0
+		if goodsDone {
+			effGoods = row.goods
+		}
+		newPending = mode == CustomModePurchase && !goodsDone
+	case AgreeStepGoods:
+		// **ثمنُ البضاعة بعد الأجرة وفي المشتريات وحدَها.**
+		if mode != CustomModePurchase || !row.hasGoods {
+			return ErrAgreeStep
+		}
+		effFee = row.fee
+	case "":
+		if mode == CustomModeAmanah {
+			effGoods = 0
+		}
+	default:
+		return ErrAgreeStep
+	}
 	if row.feeSource == "admin_defined" && !row.driverMayChangeFee {
 		effFee = 0
 		if row.feeSnapshot != nil {
@@ -500,9 +555,16 @@ func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 	}); err != nil {
 		return err
 	}
+	if _, err := tx.Exec(ctx, `UPDATE orders SET custom_goods_pending = $2 WHERE id = $1`,
+		orderID, newPending); err != nil {
+		return err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
+	// **وما وُثّق يُقال في الحديث** (طلبُ المالك ٢٠٢٦-١٠-٠٣: «بالدردشة لازم يظهر السعرُ كم تمّ
+	// توثيقُه»).
+	s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(step, mode, effGoods, effFee))
 
 	// **ويصل صاحبَ الطلب ما وُثّق باسمه** (`D22`) — بعد التثبيت لا داخلَه.
 	// **ومحفظتُه إن تحرّك حجزُها.**

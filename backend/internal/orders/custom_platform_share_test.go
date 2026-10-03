@@ -27,6 +27,7 @@ package orders_test
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/testdb"
 	"testing"
 )
 
@@ -190,7 +191,9 @@ func TestCustomShare_CancelAfterQuoteLeavesNoMoney(t *testing.T) {
 	if _, err := svc.ConfirmQuote(ctx, orderID, customer, "wallet", 10_000, 1); err != nil {
 		t.Fatalf("التأكيد: %v", err)
 	}
-	if _, err := svc.Transition(ctx, customer, []string{"customer"}, orderID, "cancelled", "عدلتُ"); err != nil {
+	// **والإلغاءُ بعد انطلاق السائق للمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — الزبونُ كتب في الدردشة.
+	ops := testdb.NewUser(t, testdb.Pool(t), "admin")
+	if _, err := svc.Transition(ctx, ops, []string{"admin"}, orderID, "cancelled", "الزبونُ عدل"); err != nil {
 		t.Fatalf("الإلغاء: %v", err)
 	}
 	if got := cqTreasury(t); got != 0 {

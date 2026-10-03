@@ -172,7 +172,11 @@ type Order struct {
 	CustomReservedAmount int64 `json:"custom_reserved_amount"`
 	// لقطةُ سياسة الأجرة على الطلب (Batch 2b/2c) — لا تتبع الإعدادَ العامّ:
 	// المصدرُ، والقيمةُ الملتقَطةُ للأدمن، وهل يغيّرها السائق. يراها السائقُ والأدمن.
-	CustomFeeSource          string `json:"custom_fee_source"`
+	CustomFeeSource string `json:"custom_fee_source"`
+	// CustomMode **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `amanah` بلا حقِّ بضاعة.
+	CustomMode string `json:"custom_mode"`
+	// CustomGoodsPending **وُثّقت الأجرةُ وثمنُ البضاعة لم يُوثَّق بعد** — خطوةُ المشتريات الثانية.
+	CustomGoodsPending       bool   `json:"custom_goods_pending"`
 	CustomFeeSnapshot        *int64 `json:"custom_fee_snapshot"`
 	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
 	MerchantID               string `json:"merchant_id"`
@@ -416,6 +420,25 @@ func (o *Order) SetStage() {
 	} else {
 		o.Stage = StageOf(o.Status)
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وتبديلُ المتجر لا يُرى رجوعاً** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «نخلّيها بقيد التحضير»)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// طلبٌ عاد إلى المكتب لتبديل متجره (`merchant_blocked.go`) حالُه `accepted` — **والزبونُ
+	// كان يرى «قيد التحضير» ثمّ «مقبول» واختفاءَ السائق.** فيبقى على «قيد التحضير».
+	if o.Kind != "custom" && o.Status == StAccepted && IsStoreProblem(o.FailReason) {
+		o.Stage = StagePreparing
+		for i, st := range o.Stages {
+			if st == StagePreparing {
+				o.StageAt = i
+			}
+		}
+	}
+}
+
+// IsStoreProblem **سببٌ عند باب المتجر يُعيد الطلبَ إلى المكتب لتبديله.**
+func IsStoreProblem(code string) bool {
+	return code == "merchant_closed" || code == "merchant_refused" || code == "order_unknown"
 }
 
 type OrderPage struct {

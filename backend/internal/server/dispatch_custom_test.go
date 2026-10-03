@@ -22,6 +22,7 @@ package server
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/testdb"
 	"strings"
 	"testing"
 
@@ -135,7 +136,9 @@ func TestCustomOrder_CustomerCancelTellsTheDriver(t *testing.T) {
 		WHERE id = $1 RETURNING customer_id::text`, ord, d).Scan(&customer); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.srv.orders.Transition(context.Background(), customer, []string{"customer"}, ord, "cancelled", ""); err != nil {
+	// **والإلغاءُ بعد انطلاق السائق للمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — طلبه الزبونُ في الدردشة.
+	admin := testdb.NewUser(t, f.pool, "admin")
+	if _, err := f.srv.orders.Transition(context.Background(), admin, []string{"admin"}, ord, "cancelled", "طلبه الزبون"); err != nil {
 		t.Fatalf("تعذّر الإلغاء: %v", err)
 	}
 	var body string
@@ -144,7 +147,7 @@ func TestCustomOrder_CustomerCancelTellsTheDriver(t *testing.T) {
 		ORDER BY created_at DESC LIMIT 1`, d, ord).Scan(&body); err != nil {
 		t.Fatalf("لم يُخبَر السائقُ بالإلغاء: %v", err)
 	}
-	if !strings.Contains(body, "ألغى الزبون الطلب") {
+	if !strings.Contains(body, "ألغت الإدارة الطلب") {
 		t.Errorf("النصّ %q", body)
 	}
 }

@@ -133,10 +133,13 @@ const (
 	StageBought Stage = "bought"
 )
 
+// **و«السائقُ في طريقه للشراء» للزبون أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `StageBuying`
+// (أدناه في مسار المكتب) لا «نبحث عن سائق» وقد قبله سائق.
+
 // CustomStages مسارُ الطلب الخاصّ.
 func CustomStages() []Stage {
 	return []Stage{
-		StageWaiting, StageSeeking, StageBought,
+		StageWaiting, StageSeeking, StageBuying, StageBought,
 		StageOnTheWay, StageArrived, StageDelivered,
 	}
 }
@@ -146,8 +149,10 @@ func CustomStageOf(status string) Stage {
 	switch status {
 	case StPending:
 		return StageWaiting
-	case StAccepted, StPreparing, StDispatching, StAssigned, StAtPickup:
+	case StAccepted, StPreparing, StDispatching:
 		return StageSeeking
+	case StAssigned, StAtPickup:
+		return StageBuying
 	case StPickedUp:
 		return StageBought
 	case StOnTheWay:

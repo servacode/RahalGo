@@ -10,7 +10,7 @@
 > — **وهو الذي تسأله مصفوفةُ القبول**، لا هذه الوثيقة.
 
 <!-- gen:counts -->
-**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 1 حدّاً لا يملكه أحدٌ في وضع المنصّة · 3 سببَ تعذّر.**
+**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 1 حدّاً لا يملكه أحدٌ في وضع المنصّة · 0 سببَ تعذّر.**
 <!-- /gen:counts -->
 
 ---
@@ -90,7 +90,7 @@
 | `at_pickup` | `dispatching` | `driver`, `ops` | العمليات · المالك · السائق | العمليات · المالك · السائق |
 | `at_pickup` | `picked_up` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `at_pickup` | `cancelled` | `ops` | المالك | العمليات · المالك |
-| `at_pickup` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
+| `at_pickup` | `failed` | `driver`, `ops` | العمليات · المالك · السائق | العمليات · المالك · السائق |
 | `picked_up` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `picked_up` | `on_the_way` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `picked_up` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
@@ -125,11 +125,11 @@
 | `dispatching` | `cancelled` | `customer`, `ops` | الزبون · المالك | الزبون · العمليات · المالك |
 | `assigned` | `dispatching` | `driver`, `ops` | العمليات · المالك · السائق | العمليات · المالك · السائق |
 | `assigned` | `picked_up` | `driver` | السائق | المالك · السائق |
-| `assigned` | `cancelled` | `customer`, `ops` | الزبون · المالك | الزبون · العمليات · المالك |
+| `assigned` | `cancelled` | `ops` | المالك | العمليات · المالك |
 | `at_pickup ↩` | `dispatching` | `driver`, `ops` | العمليات · المالك · السائق | العمليات · المالك · السائق |
 | `at_pickup ↩` | `picked_up` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `at_pickup ↩` | `cancelled` | `ops` | المالك | العمليات · المالك |
-| `at_pickup ↩` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
+| `at_pickup ↩` | `failed` | `driver`, `ops` | العمليات · المالك · السائق | العمليات · المالك · السائق |
 | `picked_up ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `picked_up ↩` | `on_the_way` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `picked_up ↩` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
@@ -289,9 +289,6 @@ accepted → sent_to_merchant_at → dispatching
 <!-- gen:fail-reasons -->
 | السبب | الذنبُ على | يُعرض عند |
 |---|---|---|
-| `merchant_closed` | `merchant` | `at_pickup` |
-| `merchant_refused` | `merchant` | `at_pickup` |
-| `order_unknown` | `merchant` | `at_pickup` |
 <!-- /gen:fail-reasons -->
 
 **والذنبُ يحكم المال**: التعويضُ يُدفع للسائق إذا كان الذنبُ على الزبون أو

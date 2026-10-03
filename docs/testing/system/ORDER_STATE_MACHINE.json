@@ -411,6 +411,8 @@
     "ops"
    ],
    "effective_platform": [
+    "ops",
+    "admin",
     "driver"
    ],
    "effective_merchants": [
@@ -705,15 +707,12 @@
    "from": "assigned",
    "to": "cancelled",
    "declared_roles": [
-    "customer",
     "ops"
    ],
    "effective_platform": [
-    "customer",
     "admin"
    ],
    "effective_merchants": [
-    "customer",
     "ops",
     "admin"
    ]
@@ -781,6 +780,8 @@
     "ops"
    ],
    "effective_platform": [
+    "ops",
+    "admin",
     "driver"
    ],
    "effective_merchants": [
@@ -1110,6 +1111,8 @@
     "ops"
    ],
    "effective_platform": [
+    "ops",
+    "admin",
     "driver"
    ],
    "effective_merchants": [
@@ -1421,23 +1424,7 @@
    "source": "internal/orders/merchant_blocked.go:46"
   }
  ],
- "fail_reasons": [
-  {
-   "code": "merchant_closed",
-   "fault": "merchant",
-   "at": "at_pickup"
-  },
-  {
-   "code": "merchant_refused",
-   "fault": "merchant",
-   "at": "at_pickup"
-  },
-  {
-   "code": "order_unknown",
-   "fault": "merchant",
-   "at": "at_pickup"
-  }
- ],
+ "fail_reasons": null,
  "requires_reason": [
   "rejected",
   "cancelled",

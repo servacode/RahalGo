@@ -130,7 +130,8 @@ func TestDriverLost_HisOwnReleaseIsSilent(t *testing.T) {
 	}
 }
 
-// TestDriverLost_MerchantBlockedOutcome **بلاغُه عن المتجر يُقال له مآلُه** — وبلا رنّة.
+// TestDriverLost_MerchantBlockedOutcome **قرارُ المكتب بتبديل المتجر يُقال للسائق** — برنّة،
+// **فهو لم يُنهِ شيئاً بيده** (٢٠٢٦-١٠-٠٣: السائقُ يُبلّغ وينتظر، والمكتبُ يقرّر).
 func TestDriverLost_MerchantBlockedOutcome(t *testing.T) {
 	f := setup(t, "at_pickup", 100_000, 10_000, 0)
 	ctx := context.Background()
@@ -138,14 +139,17 @@ func TestDriverLost_MerchantBlockedOutcome(t *testing.T) {
 	b := &inbox{}
 	f.svc.SetNotifier(b)
 
-	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
-		f.orderID, "failed", "", "merchant_closed"); err != nil {
+	if _, err := officeStoreBlock(t, f.svc, f.pool, f.orderID, "merchant_closed"); err != nil {
 		t.Fatalf("تعذّر البلاغ: %v", err)
 	}
+	rang := false
 	for _, in := range b.of(f.driver) {
 		if in.Title == "طلبٌ لم يعد معك" {
-			t.Fatalf("رنّةٌ بما فعله للتوّ: %+v", in)
+			rang = true
 		}
+	}
+	if !rang {
+		t.Fatal("قرّر المكتبُ ولم يعلم السائقُ الواقفُ عند المتجر أنّ الطلبَ عاد")
 	}
 	out, err := f.svc.DriverOutcomeOf(ctx, f.orderID, f.driver)
 	if err != nil {

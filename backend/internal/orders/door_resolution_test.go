@@ -180,8 +180,8 @@ func TestDoor_Validation(t *testing.T) {
 		t.Fatalf("تبدّلت الحالُ إلى %q مع الرفض", st)
 	}
 
-	// **وقبل الاستلام لا أمر** — البضاعةُ لم تخرج، وبابُه «لدي مشكلة» عند المتجر.
-	g := setup(t, "at_pickup", 100_000, 10_000, 0)
+	// **وقبل الوصول إلى المتجر لا أمر** — وعند المتجر صار للمكتب أمرُه (٢٠٢٦-١٠-٠٣).
+	g := setup(t, "assigned", 100_000, 10_000, 0)
 	if _, err := g.svc.ResolveDoor(ctx, ops, []string{"ops"}, g.orderID,
 		orders.DoorResolution{Action: orders.DoorDeliverNow}, nil); !errors.Is(err, orders.ErrNotAtDoor) {
 		t.Errorf("أمرٌ لطلبٍ لم يُستلم بعد: %v", err)

@@ -55,6 +55,9 @@ const stageReportDedupSec = 60
 // (`/admin/orders/{id}/door-resolution`).
 var stageReportTitles = map[string]string{
 	"merchant_not_ready":          "الطلبُ غيرُ جاهز — السائقُ ينتظر عند المتجر",
+	"merchant_closed":             "المتجرُ مغلق — السائقُ ينتظر عند الباب: اتّصل بالمتجر وقرّر",
+	"merchant_refused":            "المتجرُ يرفض التسليم — السائقُ ينتظر: اتّصل بالمتجر وقرّر",
+	"order_unknown":               "المتجرُ لا يعرف الطلب — السائقُ ينتظر: اتّصل بالمتجر وقرّر",
 	"customer_cancelled_by_phone": "الزبونُ طلب الإلغاء (من الدردشة غالباً) — والطلبُ مع السائق: يكمل أم يعود؟",
 	"customer_no_answer":          "السائقُ عند باب الزبون — لا أحد يُجيب · اتّصل وقرّر",
 	"customer_absent":             "الزبونُ غيرُ موجود عند الباب — اتّصل وقرّر",
