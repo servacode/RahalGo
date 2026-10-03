@@ -17,11 +17,19 @@ package server
 // فيُحدَّث `merchant_price` وحدَه — **ما سندفعه للمتجر الجديد** — ويبقى
 // `unit_price` كما رآه الزبون. **والهامشُ قد يصير سالباً، وتلك خسارةٌ مقصودة.**
 //
-// # والمطابقةُ بالاسم — ولا تُخمَّن
+// # والمقابلُ يختاره الموظّف — والمطابقةُ تقترح ولا تقرّر
 //
-// **صنفٌ لا يُطابق يُوقف التحويلَ كلَّه ويُقال أيُّه.** والبديلُ أن نُخمّن
-// «الأقرب» — **وشاورما بعشرين مكانَ شاورما باثني عشر تصل الزبونَ فيعرف الفرقَ
-// ولو لم يعرف السبب.**
+// **صنفٌ لا مقابلَ له يُوقف التحويلَ كلَّه ويُقال أيُّه.** وكانت المطابقةُ
+// **بالاسم حرفاً بحرف** — فـ«رز مصري» لا يجد «أرز مصري». **وقرارُ المالك
+// (٢٠٢٦-١٠-٠٣)**: «المفروض ما يكون نفس الاسم بالضبط». **فصار للتحويل طريقان:**
+//
+//   - **بمقابلٍ صريح** (`items`): الموظّفُ رأى المقترحَ من
+//     `transfer-candidates` (`order_transfer_candidates.go`) **فأكّده أو بدّله
+//     بيده** — ويُتحقَّق منه في `transferMapping`.
+//   - **وبلا مقابل**: المطابقةُ بالاسم كما كانت — **لمن ينادي المسارَ بالشكل القديم.**
+//
+// **ولا يُقرّر الخادمُ وحدَه «الأقرب»** — وشاورما بعشرين مكانَ شاورما باثني
+// عشر تصل الزبونَ فيعرف الفرقَ ولو لم يعرف السبب. **فالاقتراحُ يُعرض والإنسانُ يقرّر.**
 
 import (
 	"fmt"
@@ -29,6 +37,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -47,6 +56,8 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		MerchantID string `json:"merchant_id"`
 		Note       string `json:"note"`
+		// **المقابلُ الذي اختاره الموظّف** — اختياريّ. انظر `transferMapping`.
+		Items []transferPick `json:"items"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -105,20 +116,6 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// **المطابقةُ بالاسم — والفشلُ يُسمّي.**
-	// **والمعرّفُ نصٌّ لا رقم**: `order_items.id` من نوع `uuid`. **وقراءتُه في
-	// عددٍ صحيحٍ تنهار عند أوّل صفّ** — لا في الترجمة بل في التشغيل، **فيُردّ
-	// `500` على تحويلٍ صحيحٍ تماماً.** كشفه فحصٌ حيٌّ لا اختبار.
-	rows, err := tx.Query(r.Context(), `
-		SELECT oi.id::text, oi.name, ni.id::text, ni.merchant_price
-		FROM order_items oi
-		LEFT JOIN menu_items ni
-		       ON ni.merchant_id = $2 AND ni.name = oi.name AND ni.available
-		WHERE oi.order_id = $1`, orderID, req.MerchantID)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
 	type row struct {
 		itemID   string
 		name     string
@@ -127,27 +124,58 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	list := []row{}
 	missing := []string{}
-	for rows.Next() {
-		var x row
-		if err := rows.Scan(&x.itemID, &x.name, &x.newID, &x.newPrice); err != nil {
-			rows.Close()
+	if len(req.Items) > 0 {
+		// **مقابلٌ اختاره الموظّف** — يُتحقَّق منه ولا يُخمَّن فوقه.
+		mapped, miss, err := s.transferMapping(r, tx, orderID, req.MerchantID, req.Items)
+		if err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		if x.newID == nil {
-			missing = append(missing, x.name)
+		missing = miss
+		for _, m := range mapped {
+			list = append(list, row{itemID: m.itemID, name: m.name, newID: &m.menuID, newPrice: &m.price})
 		}
-		list = append(list, x)
+	} else {
+		// **المطابقةُ بالاسم — والفشلُ يُسمّي.**
+		// **والمعرّفُ نصٌّ لا رقم**: `order_items.id` من نوع `uuid`. **وقراءتُه في
+		// عددٍ صحيحٍ تنهار عند أوّل صفّ** — لا في الترجمة بل في التشغيل، **فيُردّ
+		// `500` على تحويلٍ صحيحٍ تماماً.** كشفه فحصٌ حيٌّ لا اختبار.
+		rows, err := tx.Query(r.Context(), `
+			SELECT oi.id::text, oi.name, ni.id::text, ni.merchant_price
+			FROM order_items oi
+			LEFT JOIN menu_items ni
+			       ON ni.merchant_id = $2 AND ni.name = oi.name AND ni.available
+			WHERE oi.order_id = $1`, orderID, req.MerchantID)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		for rows.Next() {
+			var x row
+			if err := rows.Scan(&x.itemID, &x.name, &x.newID, &x.newPrice); err != nil {
+				rows.Close()
+				s.respondErr(w, err)
+				return
+			}
+			if x.newID == nil {
+				missing = append(missing, x.name)
+			}
+			list = append(list, x)
+		}
+		rows.Close()
 	}
-	rows.Close()
 	if len(missing) > 0 {
 		// **ويُقال أيُّها** — «لا يُطابق» وحدَها تترك الموظّفَ يفتح قائمتين
 		// ويقارن بعينه.
-		httpx.JSON(w, http.StatusConflict, map[string]any{
-			"error": map[string]any{
-				"code": "transfer_items_unmatched", "message_key": "errors.transfer_items_unmatched",
-				"items": missing,
-			}})
+		//
+		// **والأسماءُ في `error.details.items`** — كان الردُّ يُكتب بـ`httpx.JSON`
+		// **فيُدفن الخطأُ في `data`**، فتقرأ اللوحةُ «خطأً داخليّاً» **ولا تعرض
+		// الأسماءَ قطّ.** (انظر `httpx.ErrorWith`.)
+		httpx.Error(w, &httpx.AppError{
+			Status: http.StatusConflict, Code: "transfer_items_unmatched",
+			MessageKey: "errors.transfer_items_unmatched",
+			Details:    map[string]any{"items": missing},
+		})
 		return
 	}
 
@@ -239,4 +267,125 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"transferred": true, "items": len(list), "status": orders.StAccepted,
 	})
+}
+
+// transferPick **صنفُ الطلب ومقابلُه في المتجر الجديد** — كما اختاره الموظّف.
+type transferPick struct {
+	OrderItemID string `json:"order_item_id"`
+	MenuItemID  string `json:"menu_item_id"`
+}
+
+type transferMapped struct {
+	itemID, name, menuID string
+	price                int64
+}
+
+var (
+	errTransferMapping = httpx.NewError(http.StatusBadRequest,
+		"transfer_mapping_invalid", "errors.transfer_mapping_invalid")
+	errTransferWrongStore = httpx.NewError(http.StatusUnprocessableEntity,
+		"transfer_item_wrong_store", "errors.transfer_item_wrong_store")
+	errTransferUnavailable = httpx.NewError(http.StatusConflict,
+		"transfer_item_unavailable", "errors.transfer_item_unavailable")
+)
+
+// transferMapping **يتحقّق من المقابل الذي اختاره الموظّف** — ويردّه جاهزاً للتحديث.
+//
+// **وكلُّ شرطٍ يُوقف التحويلَ كلَّه** لا البندَ وحدَه — نصفُ طلبٍ في متجرٍ
+// ونصفُه في آخر طلبان لا واحد:
+//
+//   - **صنفٌ من متجرٍ آخر** (أو لا وجودَ له) ← `422 transfer_item_wrong_store`.
+//   - **صنفٌ غيرُ متاحٍ أو غيرُ مُقرّ** ← `409 transfer_item_unavailable` — لا يُشترى
+//     ما نفد، **ولا ما لم تراجعه المنصّة.**
+//   - **بندٌ من الطلب بلا مقابل** ← يُردّ اسمُه في `missing`، **فيُقال
+//     `transfer_items_unmatched` كما في المطابقة بالاسم.**
+//   - **معرّفٌ مكرّرٌ أو ليس من هذا الطلب** ← `400 transfer_mapping_invalid`.
+//
+// **وسعرُ الشراء من الصنف المختار** — وسعرُ الزبون لا يُقرأ هنا أصلاً.
+func (s *Server) transferMapping(r *http.Request, tx pgx.Tx, orderID, merchantID string,
+	picks []transferPick) ([]transferMapped, []string, error) {
+	ctx := r.Context()
+	chosen := map[string]string{}
+	menuIDs := []string{}
+	for _, p := range picks {
+		if !isUUID(p.OrderItemID) || !isUUID(p.MenuItemID) {
+			return nil, nil, errTransferMapping
+		}
+		if _, dup := chosen[p.OrderItemID]; dup {
+			return nil, nil, errTransferMapping
+		}
+		chosen[p.OrderItemID] = p.MenuItemID
+		menuIDs = append(menuIDs, p.MenuItemID)
+	}
+
+	type menuRow struct {
+		merchant  string
+		available bool
+		price     int64
+	}
+	menu := map[string]menuRow{}
+	rows, err := tx.Query(ctx, `
+		SELECT id::text, merchant_id::text, available AND approved, merchant_price
+		FROM menu_items WHERE id = ANY($1::uuid[])`, menuIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	for rows.Next() {
+		var id string
+		var m menuRow
+		if err := rows.Scan(&id, &m.merchant, &m.available, &m.price); err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
+		menu[id] = m
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	type orderItem struct{ id, name string }
+	items := []orderItem{}
+	irows, err := tx.Query(ctx,
+		`SELECT id::text, name FROM order_items WHERE order_id = $1 ORDER BY name, id`, orderID)
+	if err != nil {
+		return nil, nil, err
+	}
+	for irows.Next() {
+		var it orderItem
+		if err := irows.Scan(&it.id, &it.name); err != nil {
+			irows.Close()
+			return nil, nil, err
+		}
+		items = append(items, it)
+	}
+	irows.Close()
+	if err := irows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	out := []transferMapped{}
+	missing := []string{}
+	seen := 0
+	for _, it := range items {
+		mid, ok := chosen[it.id]
+		if !ok {
+			missing = append(missing, it.name)
+			continue
+		}
+		seen++
+		m, found := menu[mid]
+		if !found || m.merchant != merchantID {
+			return nil, nil, errTransferWrongStore
+		}
+		if !m.available {
+			return nil, nil, errTransferUnavailable
+		}
+		out = append(out, transferMapped{itemID: it.id, name: it.name, menuID: mid, price: m.price})
+	}
+	// **ومعرّفُ بندٍ ليس من هذا الطلب** — خطأُ مُرسِلٍ لا يُتجاهل.
+	if seen != len(chosen) {
+		return nil, nil, errTransferMapping
+	}
+	return out, missing, nil
 }

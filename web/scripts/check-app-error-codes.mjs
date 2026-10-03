@@ -106,6 +106,8 @@ const SERVER_ADMIN = new Set([
   "role_exists", "section_has_items", "step_up_invalid", "step_up_required",
    "transfer_same_merchant",
   "transfer_too_late", "bad_channel", "no_merchant_phone",
+  // **مقابلُ التحويل يختاره الموظّف** (٢٠٢٦-١٠-٠٣) — بابُ الإدارة وحدَه.
+  "transfer_mapping_invalid", "transfer_item_wrong_store", "transfer_item_unavailable",
   // ── staging-only QA fixtures (qa/* endpoints; never reach a real mobile client) ──
   "qa_bad_target", "qa_fault_injected", "qa_flag_not_allowed",
   "qa_needs_custom_cash", "qa_no_backward", "qa_no_driver",

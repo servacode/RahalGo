@@ -2166,13 +2166,13 @@
         {
           "name": "note",
           "type": "string"
+        },
+        {
+          "name": "items",
+          "type": "[]transferPick"
         }
       ],
       "response": [
-        {
-          "name": "error",
-          "type": "object"
-        },
         {
           "name": "items",
           "type": "unknown"
@@ -2187,7 +2187,30 @@
         }
       ],
       "statuses": [
-        "StatusConflict",
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/transfer-candidates",
+      "handler": "handleTransferCandidates",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "distance_from",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
         "StatusOK"
       ]
     },

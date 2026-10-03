@@ -79,6 +79,8 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/custom-quote", OrdersIntervene}, // تدخّلُ الأدمن على عرض المخصَّص — Batch 2a
 	{"POST", "/orders/{id}/assign", OrdersIntervene},
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
+	// **ومرشّحو التحويل يُقرؤون لمن يحوّل** — فيهم أسعارُ الشراء.
+	{"GET", "/orders/{id}/transfer-candidates", OrdersIntervene},
 	{"POST", "/orders/{id}/recompute", OrdersIntervene},
 	{"POST", "/orders/{id}/proof-exception", OrdersIntervene}, // إذنُ تسليمٍ بلا صورةٍ — عملياتٌ مُخوَّلةٌ لا السائق (٢٠٢٦-٠٩-٢٧)
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},

@@ -43,6 +43,7 @@ import {
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { DoorPanel, type DoorView } from "./DoorPanel";
+import { TransferPanel } from "./TransferPanel";
 
 const m = getMessages(defaultLocale);
 
@@ -1457,9 +1458,6 @@ function OrderActions({
   const [transferring, setTransferring] = useState(false);
   /** تنبيهُ «لا سائقَ في الدوام» — يُقال قبل التحويل لا بعده. */
   const [noDriverWarn, setNoDriverWarn] = useState(false);
-  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
-  const [target, setTarget] = useState("");
-  const [unmatched, setUnmatched] = useState<string[]>([]);
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
   // **وأزرارُ هذه البطاقة تُبوَّب بالقدرة** — **والفعلُ الماليُّ فيها
   // ليس من عمل العمليّات** (بندُ المالك ٨).
@@ -1823,39 +1821,6 @@ function OrderActions({
     }
   }
 
-  /**
-   * **التحويلُ إلى متجرٍ آخر** — حين يعتذر المتجرُ على الواتساب.
-   *
-   * **وسعرُ الزبون لا يُمسّ**: الفرقُ على المنصة ولو كان الجديدُ أغلى. والزبونُ
-   * **لا يعلم أنّ مصدراً تبدّل** — وفاتورةٌ تتغيّر بعد الطلب تنقض ذلك في سطر.
-   *
-   * **وصنفٌ لا يُطابق يُوقف التحويلَ ويُسمّى** — لا يُخمَّن «الأقرب».
-   */
-  async function transfer() {
-    if (!target || !reason.trim()) return;
-    setBusy("transfer");
-    setErr("");
-    setUnmatched([]);
-    try {
-      await api(`/api/v1/admin/orders/${o.id}/transfer`, {
-        method: "POST",
-        body: JSON.stringify({ merchant_id: target, note: reason.trim() }),
-      });
-      setTransferring(false);
-      setReason("");
-      setTarget("");
-      onChanged();
-    } catch (e) {
-      if (e instanceof ApiError) {
-        const items = (e.body as { items?: string[] }).items;
-        if (items?.length) setUnmatched(items);
-        else setErr(translateKey(e.body.message_key));
-      } else setErr(m.errors.internal);
-    } finally {
-      setBusy("");
-    }
-  }
-
   async function go(to: string, note: string) {
     setBusy(to);
     setErr("");
@@ -1974,52 +1939,18 @@ function OrderActions({
     );
   }
 
+  // **التحويلُ في مكوّنه** — مرشّحون مرتّبون ثمّ مقابلُ كلِّ صنف
+  // (قرارُ المالك ٢٠٢٦-١٠-٠٣). انظر `TransferPanel.tsx`.
   if (transferring) {
     return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-primary-dark">
-          {m.admin.ordersPage.transferTitle}
-        </p>
-        <p className="text-xs text-ink-muted">
-          {m.admin.ordersPage.transferHint}
-        </p>
-        <Select
-          id={`t-${o.id}`}
-          value={target}
-          onChange={(e) => {
-            setTarget(e.target.value);
-            setUnmatched([]);
-          }}
-        >
-          <option value="">{m.admin.ordersPage.transferPick}</option>
-          {stores.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.name}
-            </option>
-          ))}
-        </Select>
-        <Input
-          id={`tr-${o.id}`}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder={m.admin.ordersPage.transferReason}
-        />
-        {/* **وصنفٌ لا يُطابق يُسمّى** — «لا يُطابق» وحدَها تترك الموظّفَ
-            يفتح قائمتين ويقارن بعينه. */}
-        {unmatched.length > 0 && (
-          <Alert>
-            {m.admin.ordersPage.transferUnmatched} {unmatched.join(" · ")}
-          </Alert>
-        )}
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <FormActions onSave={() => void transfer()} onCancel={() => {
-              setTransferring(false);
-              setReason("");
-              setTarget("");
-              setUnmatched([]);
-              setErr("");
-            }} saveLabel={m.admin.ordersPage.transferConfirm} />
-      </div>
+      <TransferPanel
+        orderId={o.id}
+        onDone={() => {
+          setTransferring(false);
+          onChanged();
+        }}
+        onClose={() => setTransferring(false)}
+      />
     );
   }
 
@@ -2462,24 +2393,7 @@ function OrderActions({
         <Button
           variant="secondary"
           disabled={busy !== ""}
-          onClick={() => {
-            setTransferring(true);
-            if (stores.length === 0) {
-              void api<{ id: string; name: string }[]>(
-                "/api/v1/admin/merchants",
-              )
-                .then((r) =>
-                  setStores(
-                    (Array.isArray(r) ? r : []).filter(
-                      (x) => x.id !== o.merchant_id,
-                    ),
-                  ),
-                )
-                // @empty-ok — **قائمةُ متاجرِ التحويل تُفتح بطلب**: من فتحها فوجدها
-                // فارغةً يُغلق ويُعيد، **ولا قرارَ يُبنى على فراغها.**
-                .catch(() => setStores([]));
-            }
-          }}
+          onClick={() => setTransferring(true)}
         >
           {/* **وسهمان متبادلان يقولان «تبديل» قبل الكلمة** — وسهمٌ واحدٌ
               يُقرأ «إرسالاً» لا «استبدالاً». */}

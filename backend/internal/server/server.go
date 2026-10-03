@@ -1226,6 +1226,9 @@ func (s *Server) Router() http.Handler {
 			// **تحويلُ الطلب إلى متجرٍ آخر** — قاعدةٌ احتياطية، وسعرُ الزبون
 			// لا يُمسّ. (انظر `order_transfer.go`)
 			r.Post("/orders/{id}/transfer", s.handleTransferOrder)
+			// **والمتاجرُ المرشّحةُ له مرتّبةً بما تقدّمه من أصنافه** — مع مقابلٍ
+			// مقترحٍ لكلّ صنف (قرارُ المالك ٢٠٢٦-١٠-٠٣). انظر `order_transfer_candidates.go`.
+			r.Get("/orders/{id}/transfer-candidates", s.handleTransferCandidates)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/transition", s.handleOrderTransition)
 			// **وعند باب الزبون الإدارةُ تُنهي** — السائقُ يُبلّغ ولا يُغلق
