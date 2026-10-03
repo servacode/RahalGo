@@ -128,6 +128,12 @@ import com.rahalgo.ui.DrawerGestures
  */
 class MainActivity : ComponentActivity() {
 
+    // **والأرقامُ بالأجنبيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — انظر `WesternDigits`.
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(base))
+    }
+
+
     /**
      * ══════════════════════════════════════════════════════════════════
      * **حالُ النافذة الطافية — تُقرأ في الشاشة**

@@ -23,31 +23,21 @@ import (
 )
 
 func TestGroupDigitsIsReadable(t *testing.T) {
+	// **أرقامٌ أجنبيّةٌ وفاصلُ الآلاف «,»** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — كان «٬» العربيّ.
 	cases := map[int64]string{
-		0:       "٠",
-		7:       "٧",
-		999:     "٩٩٩",
-		1000:    "١٬٠٠٠",
-		500000:  "٥٠٠٬٠٠٠",
-		2061000: "٢٬٠٦١٬٠٠٠",
-		-1500:   "-١٬٥٠٠",
+		0:       "0",
+		7:       "7",
+		999:     "999",
+		1000:    "1,000",
+		500000:  "500,000",
+		2061000: "2,061,000",
+		-1500:   "-1,500",
 	}
 	for in, want := range cases {
-		got := groupDigits(in)
-		// **والأرقامُ لاتينيّةٌ في `strconv`** — فيُقارَن بعد التحويل.
-		if got != arabize(want) {
-			t.Errorf("%d → %q، والمنتظَر %q", in, got, arabize(want))
+		if got := groupDigits(in); got != want {
+			t.Errorf("%d → %q، والمنتظَر %q", in, got, want)
 		}
 	}
-}
-
-// arabize يحوّل الأرقامَ العربيّةَ في التوقّع إلى لاتينيّةٍ لتُقارَن بما تنتجه
-// `strconv` — **والفاصلةُ وحدَها هي ما نختبر، لا شكلُ الرقم.**
-func arabize(s string) string {
-	r := strings.NewReplacer(
-		"٠", "0", "١", "1", "٢", "2", "٣", "3", "٤", "4",
-		"٥", "5", "٦", "6", "٧", "7", "٨", "8", "٩", "9")
-	return r.Replace(s)
 }
 
 // TestNoEligibleMessageCarriesBothNumbers **الرقمان في الرسالة نفسِها.**
