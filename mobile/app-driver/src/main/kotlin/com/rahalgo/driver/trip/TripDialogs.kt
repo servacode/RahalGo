@@ -112,6 +112,10 @@ internal fun AgreeDialog(
      * **أيُّ خطوة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): `fee` الأجرةُ وحدَها، `goods` ثمنُ البضاعة وحدَه.
      */
     step: String = "fee",
+    /** **ردُّ الخادم بعربيّة** — يبقى في النافذة ليصحّح الرقمَ ولا يُعاد كتابتُه. */
+    error: String = "",
+    /** **يُرسل** — فلا يُضغط التأكيدُ مرّتين. */
+    busy: Boolean = false,
     onConfirm: (Long, Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -164,13 +168,17 @@ internal fun AgreeDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                if (error.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(error, color = Rahal.colors.accent, style = MaterialTheme.typography.bodySmall)
+                }
             }
         },
         confirmButton = {
             RahalTextButton(
                 onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
                 // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة. **والثمنُ كذلك.**
-                enabled = if (step == "goods") goods.isNotBlank() else feeLocked || fee.isNotBlank(),
+                enabled = !busy && if (step == "goods") goods.isNotBlank() else feeLocked || fee.isNotBlank(),
             ) {
                 Text(stringResource(R.string.agree_confirm))
             }

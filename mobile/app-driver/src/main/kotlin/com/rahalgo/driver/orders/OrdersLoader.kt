@@ -64,6 +64,30 @@ data class LoadOutcome(
  *
  * @param openId الطلبُ المفتوحُ على الشاشة، أو فارغٌ فيُؤخذ أوّلُ ما في يده.
  */
+/**
+ * **الطابورُ — وردُّ الموقوف قائمةٌ فارغة** (`XG39`): لا عملَ جديداً له، **ولا تسقط القراءةُ
+ * كلُّها فتختفي رحلتُه.**
+ */
+suspend fun queueOrEmpty(feed: OrdersFeed): List<DriverOrder> = try {
+    feed.queue()
+} catch (e: com.rahalgo.shared.net.ApiClient.ApiException) {
+    if (e.status == 403) emptyList() else throw e
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **القراءةُ بعد الفعل — طلباتُه أوّلاً والطابورُ بعدها** (تجربةُ القبول ٢٠٢٦-١٠-٠٣)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **قِيس**: سائقٌ موقوفٌ ضغط «سلّمت البضاعة» فكتبها الخادم — **وبقيت الشاشةُ على مشوار
+ * الإرجاع و«جاري حساب الطريق…» ستَّ عشرةَ ثانيةً وأكثر.** كانت `reload` تسأل الطابورَ
+ * أوّلاً بلا حارس الـ٤٠٣ الذي في `loadOnce` — **فيسقط النداءُ ولا تُقرأ طلباتُه أبداً.**
+ */
+suspend fun reloadLists(feed: OrdersFeed): Pair<List<DriverOrder>, List<DriverOrder>> {
+    val mine = feed.orders()
+    return queueOrEmpty(feed) to mine
+}
+
 suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome = kotlinx.coroutines.coroutineScope {
     // ══════════════════════════════════════════════════════════════════
     // **والمسارُ متوازياً حين يُعرَف الطلبُ سلفاً** (`openId`) — لا خلفَ القائمتين
@@ -87,11 +111,7 @@ suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome = kotlinx.c
     try {
         // **والموقوفُ الذي يُكمل طلبَه يُردّ عليه الطابور** (لا عملَ جديداً له — `XG39`)،
         // **فيُقرأ الردُّ قائمةً فارغة** ولا تسقط الدورةُ كلُّها فتختفي رحلتُه.
-        offers = try {
-            feed.queue()
-        } catch (e: com.rahalgo.shared.net.ApiClient.ApiException) {
-            if (e.status == 403) emptyList() else throw e
-        }
+        offers = queueOrEmpty(feed)
         mine = feed.orders()
         me = feed.me()
     } catch (e: kotlinx.coroutines.CancellationException) {

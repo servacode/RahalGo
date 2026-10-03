@@ -132,10 +132,44 @@ fun apiError(
         if (notice.isNotEmpty()) return notice
         return context.getString(R.string.err_launch_closed)
     }
+    // **وأرقامٌ يقولها الخادمُ في التفصيل** — «أنت بعيد عن الزبون (320 م)».
+    if (code !in extra) {
+        detailedErrorText(context, code, e.body.details)?.let { return it }
+    }
     if (e.status >= 500 || (code !in CODES && code !in extra && code.isNotEmpty())) {
         Crash.soft(e, "api " + e.status + " " + code)
     }
     return context.getString(errorResFor(e.status, code, e.body.messageKey, extra))
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الخطأُ بأرقامه — لا «خارج الحدود» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * «منع — مع تنبيهٍ للسائق»: **سائقٌ يُقال له «بعيد» ولا يُقال كم** لا يعرف كم يمشي،
+ * **ومن يُقال له «خارج الحدود» ولا يُقال أيُّها** يجرّب رقماً بعد رقم.
+ * فالأرقامُ من تفصيل الخادم نصّاً، **وغيابُها يقع على نصّ الرمز العامّ.**
+ */
+fun detailedErrorText(context: Context, code: String, details: Map<String, String>): String? {
+    val res = detailedErrorRes(code, details) ?: return null
+    return context.getString(res.first, *res.second.toTypedArray())
+}
+
+/** **دالّةٌ صافيةٌ بلا سياق** — النصُّ ووسائطُه، فتُقاس بلا جهاز. */
+fun detailedErrorRes(code: String, details: Map<String, String>): Pair<Int, List<String>>? = when (code) {
+    "proof_too_far" -> details["distance_m"]?.toLongOrNull()?.let {
+        R.string.err_proof_too_far_m to listOf(dist(it.toDouble()))
+    }
+    "custom_fee_out_of_range" -> {
+        val lo = details["min"]?.toLongOrNull()
+        val hi = details["max"]?.toLongOrNull()
+        if (lo != null && hi != null) R.string.err_custom_fee_between to listOf(money(lo), money(hi)) else null
+    }
+    "custom_goods_too_high" -> details["max"]?.toLongOrNull()?.let {
+        R.string.err_custom_goods_max to listOf(money(it))
+    }
+    else -> null
 }
 
 /**
@@ -373,6 +407,11 @@ private val CODES: Map<String, Int> = mapOf(
     "goods_not_documented" to R.string.err_goods_not_documented,
     "agree_wrong_step" to R.string.err_agree_wrong_step,
     "custom_locked" to R.string.err_custom_locked,
+    // ── حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) ──
+    "custom_fee_out_of_range" to R.string.err_custom_fee_out_of_range,
+    "custom_goods_too_high" to R.string.err_custom_goods_too_high,
+    "proof_too_far" to R.string.err_proof_too_far,
+    "proof_mocked" to R.string.err_proof_mocked,
     "merchant_closed" to R.string.err_merchant_closed,
     // **ومتجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — **حارسُ الخادم هو
     // الحُجّة**: لو أرسل التطبيقُ كتابةً رغم شاشة الإيقاف، يعود ٤٠٣

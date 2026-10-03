@@ -4364,6 +4364,10 @@
       ],
       "response": [
         {
+          "name": "ignored",
+          "type": "string"
+        },
+        {
           "name": "saved",
           "type": "bool"
         }

@@ -66,6 +66,12 @@ import kotlinx.coroutines.launch
  */
 class LocationService : Service() {
 
+    // **والأرقامُ بالأجنبيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — انظر `WesternDigits`.
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(base))
+    }
+
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private var lastSentAt = 0L
@@ -105,6 +111,7 @@ class LocationService : Service() {
             mocked = point.isMocked(),
             speedMps = if (point.hasSpeed()) point.speed else null,
             atMs = android.os.SystemClock.elapsedRealtime(),
+            accuracyM = if (point.hasAccuracy()) point.accuracy else null,
         )
         GpsSignal.alive()
         send(point)

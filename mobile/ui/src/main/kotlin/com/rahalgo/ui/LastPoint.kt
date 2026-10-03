@@ -41,8 +41,9 @@ object LastPoint {
         mocked: Boolean = false,
         speedMps: Float? = null,
         atMs: Long = 0L,
+        accuracyM: Float? = null,
     ) {
-        value = Point(lat, lng, name, mocked, speedMps, atMs)
+        value = Point(lat, lng, name, mocked, speedMps, atMs, accuracyM)
     }
 
     data class Point(
@@ -66,5 +67,10 @@ object LastPoint {
         val speedMps: Float? = null,
         /** **متى قِيست** — `elapsedRealtime` بالملّي، وصفرٌ يعني لا وقت. */
         val atMs: Long = 0L,
+        /**
+         * **دقّةُ الجوال لحظتَها** بالمتر — وفارغٌ إن لم يقلها (قرارُ المالك ٢٠٢٦-١٠-٠٣): تُرسل
+         * مع صورة التسليم **هامشاً فوق حدّ الـ١٥ م** فلا يُظلَم سائقٌ بين البنايات.
+         */
+        val accuracyM: Float? = null,
     )
 }

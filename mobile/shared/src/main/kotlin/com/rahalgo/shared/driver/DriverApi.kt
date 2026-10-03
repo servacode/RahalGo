@@ -494,6 +494,11 @@ class DriverApi(private val api: ApiClient) {
          * المحرّكُ النقطةَ فلا تُقاس منها مسافة.
          */
         mocked: Boolean = false,
+        /**
+         * **دقّةُ الجوال لحظتَها** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يضيفها المحرّكُ هامشاً فوق حدّ
+         * المسافة (سقفُه ٥٠ م). **وفارغةٌ لا تُرسل** — فيُقاس بالحدّ وحدَه.
+         */
+        accuracyM: Float? = null,
     ) {
         api.upload(
             "/api/v1/driver/orders/" + orderId + "/proof",
@@ -505,6 +510,7 @@ class DriverApi(private val api: ApiClient) {
                     put("lng", lng.toString())
                 }
                 if (mocked) put("mocked", "true")
+                if (accuracyM != null && accuracyM > 0f) put("accuracy", accuracyM.toString())
             },
         )
     }

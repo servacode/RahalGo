@@ -38,6 +38,8 @@ class OrdersLoaderTest {
         val failList: Boolean = false,
         val failRoute: Boolean = false,
         val routeAvailable: Boolean = true,
+        /** **سائقٌ موقوف** — الطابورُ يُردّ ٤٠٣ (`XG39`). */
+        val queueForbidden: Boolean = false,
     ) : OrdersFeed {
         val calls = mutableListOf<String>()
         var routedId: String? = null
@@ -45,6 +47,11 @@ class OrdersLoaderTest {
         override suspend fun queue(): List<DriverOrder> {
             calls += "queue"
             if (failList) throw RuntimeException("الشبكة")
+            if (queueForbidden) {
+                throw com.rahalgo.shared.net.ApiClient.ApiException(
+                    403, com.rahalgo.shared.model.ApiErrorBody(code = "user_suspended"),
+                )
+            }
             return emptyList()
         }
 
@@ -163,5 +170,17 @@ class OrdersLoaderTest {
         val out = loadOnce(Feed(failList = true), null)
         assertNotNull("سقطت القائمةُ بلا سببٍ يُقال", out.error)
         assertTrue(out.mine.isEmpty())
+    }
+
+    /**
+     * **«سلّمت البضاعة» من سائقٍ موقوفٍ تُخرج المشوارَ من يده** (تجربةُ القبول ٢٠٢٦-١٠-٠٣) —
+     * كانت القراءةُ بعد الفعل تسأل الطابورَ أوّلاً فيُردّ ٤٠٣ **ولا تُقرأ طلباتُه أبداً.**
+     */
+    @Test
+    fun reloadAfterActionSurvivesSuspendedQueue() = runBlocking {
+        val left = DriverOrder(id = "o2", status = "assigned")
+        val (offers, mine) = reloadLists(Feed(mine = listOf(left), queueForbidden = true))
+        assertTrue(offers.isEmpty())
+        assertEquals(listOf("o2"), mine.map { it.id })
     }
 }

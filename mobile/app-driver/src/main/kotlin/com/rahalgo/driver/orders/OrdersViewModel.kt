@@ -477,6 +477,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
         keepRoute(out.route, out.mine)
         if (out.error == null) {
+            forgetNetworkError()
             forgetStaleNotice(out.mine)
             autoFollow(out.mine)
             trackDepartures(out.mine)
@@ -502,6 +503,21 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **«وصل بلاغك» يُمحى حين يتبدّل طلبُه** (`ReportNotice`) — تحويلٌ لمتجرٍ آخر يُعيده إلى
      * الطريق، **فلا يلحقه الخبرُ إلى المتجر الجديد ولا يُخبّئ «استلمت الطلب».**
      */
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **«لا اتصال بالإنترنت» تُمحى حين تعود الشبكة** (تجربةُ القبول ٢٠٢٦-١٠-٠٣)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **قِيس**: عادت الشبكةُ وضُغط «حاول مرة ثانية» أربعَ مرّات — **وبقيت الرسالة** حتّى أُعيد
+     * تشغيلُ التطبيق. **خطأُ الفعل** (`actionError` · `detail.error`) **لا يمحوه نجاحُ القراءة**
+     * — وذاك صحيحٌ لـ«سبقك غيرُك» — **وخطأُ الشبكة وحدَه يجيب عنه نجاحُ أيّ نداء** (`NetworkNotice`).
+     */
+    private fun forgetNetworkError() {
+        val net = getApplication<android.app.Application>().getString(com.rahalgo.ui.R.string.err_network)
+        if (NetworkNotice.clears(state.actionError, net)) state = state.copy(actionError = "")
+        if (NetworkNotice.clears(detail.error, net)) detail = detail.copy(error = "")
+    }
+
     private fun forgetStaleNotice(mine: List<DriverOrder>) {
         if (ReportNotice.stale(detail.noticeFor, mine)) {
             detail = detail.copy(notice = "", noticeFor = "")
@@ -1089,6 +1105,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             openId = null
+            // **ويخرج المشوارُ من يده الآن لا بعد القراءة** (تجربةُ القبول ٢٠٢٦-١٠-٠٣): سائقٌ
+            // موقوفٌ بقي على «جاري حساب الطريق…» ستَّ عشرةَ ثانية والخادمُ قد كتب التسليم.
+            state = state.copy(mine = state.mine.filterNot { it.id == id })
             detail = detail.copy(busy = false)
             reload()
         }
@@ -1270,6 +1289,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
             requirePhoto = state.me?.requirePhoto ?: false,
             agreeOpen = agreeOpen,
+            agreeError = agreeError,
             emergencyOpen = emergencyOpen,
             emergencyBusy = emergencyBusy,
             emergencyError = emergencyError,
@@ -1425,6 +1445,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 backend.driver.sendProof(
                     id, jpeg, point?.lat, point?.lng, point?.mocked == true,
+                    accuracyM = point?.accuracyM,
                 )
                 StepRetry.send(StepRetry.newKey()) { key ->
                     backend.driver.transition(id, "delivered", idempotencyKey = key)
@@ -2007,18 +2028,27 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var agreeOpen by mutableStateOf(false)
         private set
 
+    /**
+     * **خطأُ التوثيق داخلَ نافذته** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً: حدّا الأجرة) — كانت النافذةُ
+     * تُغلق قبل الردّ **فيُكتب الخطأُ خلفها** ويُعاد فتحُها فارغةَ الخطأ. **فتبقى مفتوحةً ويُقال فيها.**
+     */
+    var agreeError by mutableStateOf("")
+        private set
+
     fun askAgree() {
+        agreeError = ""
         agreeOpen = true
     }
 
     fun dismissAgree() {
+        agreeError = ""
         agreeOpen = false
     }
 
     /** **يوثّق ما اتُّفق عليه** — ثمّ يعيد قراءة الطلب بسعره الجديد. */
     fun agree(goods: Long, fee: Long) {
         val id = currentId() ?: return
-        agreeOpen = false
+        agreeError = ""
         // **والخطوةُ من حال الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٣): الأجرةُ أوّلاً، ثمّ ثمنُ البضاعة.
         val order = state.mine.firstOrNull { it.id == id }
         val step = if (order?.customFee == null) "fee" else if (order.customGoodsPending) "goods" else ""
@@ -2026,11 +2056,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 backend.driver.agree(id, goods, fee, step)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                detail = detail.copy(busy = false, error = describe(e))
+                agreeError = describe(e)
+                detail = detail.copy(busy = false)
                 refresh()
                 return@launch
             }
+            agreeOpen = false
             detail = detail.copy(busy = false)
             reload()
         }
@@ -2080,13 +2114,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun reload() {
         viewModelScope.launch {
             try {
-                val mine = backend.driver.orders()
+                val (offers, mine) = reloadLists(feed)
                 state = state.copy(
-                    offers = backend.driver.queue(),
+                    offers = offers,
                     mine = mine,
                     loading = false,
                     error = "",
                 )
+                forgetNetworkError()
                 val id = openId
                 if (id != null) {
                     val found = mine.firstOrNull { it.id == id }

@@ -1053,6 +1053,8 @@ fun TripScreen(
             currentGoods = order.customGoods,
             currentFee = order.customFee,
             step = if (order.customFee == null) "fee" else "goods",
+            error = state.agreeError,
+            busy = state.busy,
             onConfirm = actions.agree,
             onDismiss = actions.dismissAgree,
         )

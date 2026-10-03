@@ -80,14 +80,14 @@
     <string name="err_user_suspended">هذا الحساب موقوف</string>
     <string name="err_validation">تحقق من البيانات المدخلة</string>
     <string name="err_item_already_discounted">هذا الصنف عليه عرض قائم — أوقفه أولاً أو اختر صنفاً آخر</string>
-    <string name="err_bad_offer_discount">قيمة الخصم غير صحيحة — النسبة من ١ إلى ٩٠، والمبلغ أكبر من صفر</string>
+    <string name="err_bad_offer_discount">قيمة الخصم غير صحيحة — النسبة من 1 إلى 90، والمبلغ أكبر من صفر</string>
     <string name="err_bad_offer_window">مدة العرض غير صحيحة — اختر مدة تنتهي بعد الآن</string>
     <string name="err_offer_needs_title">العرض يحتاج عنواناً</string>
     <string name="err_bad_offer_kind">نوع العرض غير معروف</string>
     <string name="err_offer_amount_over_price">مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً</string>
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
-    <string name="err_item_text_too_long">الاسم أطول من ١٢٠ حرفاً أو الوصف أطول من ٥٠٠</string>
+    <string name="err_item_text_too_long">الاسم أطول من 120 حرفاً أو الوصف أطول من 500</string>
     <string name="err_no_drivers_on_shift">لا يوجد سائقون بالدوام الآن — حاول بعد قليل</string>
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
     <string name="update_title">يوجد إصدار جديد</string>
@@ -104,7 +104,7 @@
     <string name="err_no_address">اختر عنوان التوصيل أولاً</string>
     <string name="err_bad_merchant">تعذّر تحديد المتجر — أعد فتح السلة</string>
     <string name="err_bad_payment">اختر طريقة دفع: نقداً أو من المحفظة</string>
-    <string name="err_bad_qty">الكمية يجب أن تكون بين ١ و٥٠</string>
+    <string name="err_bad_qty">الكمية يجب أن تكون بين 1 و50</string>
     <string name="err_item_gone">أحد الأصناف لم يعد متوفراً — احذفه وأعد المحاولة</string>
     <string name="err_whatsapp_required">وثق حسابك أولا</string>
     <string name="hist_already_open">لك بلاغ مفتوح على هذا الطلب — تتابعه العمليات</string>
@@ -533,6 +533,15 @@
     <string name="err_goods_not_documented">وثّق ثمن البضاعة أوّلاً، ثمّ ينتظر موافقة الزبون.</string>
     <string name="err_agree_wrong_step">هذه الخطوة لا تخصّ هذا الطلب.</string>
     <string name="err_custom_locked">لا يمكن تعديل السعر بعد الاستلام.</string>
+    <!-- **حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) —
+         النصُّ العامُّ إن غاب التفصيل، والمفصَّلُ بأرقام الخادم. -->
+    <string name="err_custom_fee_out_of_range">أجرة التوصيل خارج الحدود المسموحة.</string>
+    <string name="err_custom_fee_between">أجرة التوصيل لازم تكون بين %1$s و%2$s.</string>
+    <string name="err_custom_goods_too_high">ثمن البضاعة أكبر من المسموح.</string>
+    <string name="err_custom_goods_max">ثمن البضاعة أكبر من المسموح (الحد %1$s).</string>
+    <string name="err_proof_too_far">أنت بعيد عن الزبون — اقترب ثمّ صوّر</string>
+    <string name="err_proof_too_far_m">أنت بعيد عن الزبون (%1$s) — اقترب ثمّ صوّر</string>
+    <string name="err_proof_mocked">برامج تزييف الموقع ممنوعة — أطفئها ثمّ صوّر</string>
     <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
     <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4): المالكُ يرى متجرَه لكن
          لا يعدّل قائمتَه ولا إتاحتَه ولا عروضَه ولا ساعاتِه حتى يُرفع

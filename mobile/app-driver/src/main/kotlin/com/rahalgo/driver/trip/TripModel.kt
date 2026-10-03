@@ -204,6 +204,8 @@ data class TripState(
     val requirePhoto: Boolean = false,
     /** أنافذة الاتّفاق مفتوحة؟ — **للطلب الخاصّ وحدَه.** */
     val agreeOpen: Boolean = false,
+    /** **خطأُ التوثيق داخلَ نافذته** — «أجرة التوصيل لازم تكون بين…». */
+    val agreeError: String = "",
     /** محطّاته كلّها — **وواحدةٌ منها هي المعروضة.** */
     val stops: List<Stop> = emptyList(),
     /** **أنافذة الطارئ مفتوحة؟** — تُفتح حين لا سببَ يُختار. */

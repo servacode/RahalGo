@@ -1218,6 +1218,13 @@ var Catalog = []Def{
 	{Key: "delivery.custom_driver_may_change_fee", Group: GroupDrivers, Kind: KindBool, Default: false,
 		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
 
+	// **وحدّا أجرة الطلب الخاصّ التي يكتبها السائق** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) — قِيس
+	// صفرٌ وألفُ مليارٍ مقبولَين. **وأجرةُ المنصّة المفروضةُ لا تُحدّ بهما** — قرارُ الإدارة.
+	{Key: "delivery.custom_fee_min", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10_000_000, Unit: "currency", Default: 1000},
+	{Key: "delivery.custom_fee_max", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10_000_000, Unit: "currency", Default: 100000},
+
 	// ══════════════════════════════════════════════════════════════════
 	// **ومدى التوصيل الافتراضيّ — أوّلُ درجاتِ السُّلّم الثلاث**
 	// ══════════════════════════════════════════════════════════════════
@@ -1784,6 +1791,13 @@ var Catalog = []Def{
 	{Key: "drivers.require_delivery_photo", Group: GroupDrivers, Kind: KindBool,
 		Default: true},
 
+	// **وأبعدُ ما تُلتقط منه صورةُ التسليم عن نقطة الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً:
+	// «منع — تمنع احتيالَ السائق، مع تنبيهٍ للسائق»). **وأبعدُ منها تُرفض ويُقال له كم.**
+	// **وخمسةَ عشرَ متراً لا مئةٌ وخمسون** («١٥٠ متر كثير») — **ويُضاف إليها هامشُ دقّة الجوال
+	// لحظتَها** (حتّى ٥٠ م، `delivery_proof.go`) فلا يُظلَم سائقٌ بين البنايات.
+	{Key: "drivers.proof_max_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 5, Max: 5000, Unit: "meters", Default: 15},
+
 	// ── المتاجر ───────────────────────────────────────
 	//
 	// **وحظرُ الإلغاء ثلاثةُ مقابضَ لا واحد**: كم إلغاءً، وكم يوماً، وأيدوياً
@@ -2177,7 +2191,7 @@ func Validate(key string, v any) (any, error) {
 			return nil, ErrInvalidValue{Key: key, Reason: "ليست نصاً"}
 		}
 		if len([]rune(t)) > 20000 {
-			return nil, ErrInvalidValue{Key: key, Reason: "أطول من ٢٠٠٠٠ محرف"}
+			return nil, ErrInvalidValue{Key: key, Reason: "أطول من 20000 محرف"}
 		}
 		return t, nil
 
