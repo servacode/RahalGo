@@ -2033,6 +2033,10 @@
         {
           "name": "note",
           "type": "string"
+        },
+        {
+          "name": "return_to",
+          "type": "string"
         }
       ],
       "response": [
@@ -2055,6 +2059,10 @@
         {
           "name": "to",
           "type": "string"
+        },
+        {
+          "name": "compensation",
+          "type": "int64"
         }
       ],
       "response": [
@@ -4550,6 +4558,24 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/goods-handed",
+      "handler": "handleDriverGoodsHanded",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "handed_at",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

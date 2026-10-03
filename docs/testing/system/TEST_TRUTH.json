@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 385,
+    "routes": 386,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 165,
-    "behaviour_settings": 131,
-    "order_fields": 90,
-    "test_files": 456,
-    "test_funcs": 1881
+    "setting_defs": 164,
+    "behaviour_settings": 130,
+    "order_fields": 92,
+    "test_files": 458,
+    "test_funcs": 1894
   },
   "flows": [
     {
@@ -4657,25 +4657,6 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "merchants.return_support_percent",
-      "group": "merchants",
-      "kind": "int",
-      "sensitive": true,
-      "money": false,
-      "flows": [
-        "F-04",
-        "F-05",
-        "F-28"
-      ],
-      "apps": [
-        "admin",
-        "customer",
-        "merchant"
-      ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
-    },
-    {
       "key": "notify.engagement_daily_cap",
       "group": "platform",
       "kind": "int",
@@ -7718,6 +7699,12 @@
       "orphan": true
     },
     {
+      "name": "TestSETG3_CashAdminCompensation",
+      "file": "internal/orders/cash_goods_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestSET06_SnapshotIsFutureOnly",
       "file": "internal/orders/cash_settlement_test.go",
       "package": "orders_test",
@@ -8358,7 +8345,25 @@
       "orphan": true
     },
     {
+      "name": "TestGoods_AdminCompensationFromTreasuryOnce",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_CompensationValidation",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestGoods_DebtIsTakenFromNextEarning",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_NoAutomaticSupport",
       "file": "internal/orders/goods_settlement_test.go",
       "package": "orders_test",
       "orphan": true
@@ -8383,12 +8388,6 @@
     },
     {
       "name": "TestGoods_ShortBalanceBecomesDebt",
-      "file": "internal/orders/goods_settlement_test.go",
-      "package": "orders_test",
-      "orphan": true
-    },
-    {
-      "name": "TestGoods_SupportIsPaidFromTreasury",
       "file": "internal/orders/goods_settlement_test.go",
       "package": "orders_test",
       "orphan": true
@@ -8720,6 +8719,48 @@
       "name": "TestRequeuedOrderShowsTheDriverWhoKeptIt",
       "file": "internal/orders/requeue_test.go",
       "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestParseGeoSetting",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_HandGoods_NoTrip",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_HandGoods_OnceByDriver",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_HandGoods_ServerLocation",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_OfficeWithoutLocation",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_StoreRefusedWithoutReturns",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_ToOfficeCreatesTrip",
+      "file": "internal/orders/return_trip_test.go",
+      "package": "orders_test",
       "orphan": true
     },
     {
@@ -24252,6 +24293,24 @@
     {
       "name": "TestRepMenuGuard_OnlyOwnClients",
       "file": "internal/server/rep_menu_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_DriverSeesReturnLegThenHandsGoods",
+      "file": "internal/server/return_trip_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_NoTripNoHandover",
+      "file": "internal/server/return_trip_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_StoreRefusedHTTP",
+      "file": "internal/server/return_trip_test.go",
       "package": "server",
       "orphan": true
     },
