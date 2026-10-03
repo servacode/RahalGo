@@ -5,7 +5,10 @@ package server
 // ══════════════════════════════════════════════════════════════════════
 //
 //	POST /admin/orders/{id}/door-resolution
-//	{action: "deliver_now" | "return_to_office", fault, reason, note}
+//	{action: "deliver_now" | "return_to_office", fault, reason, note, return_to}
+//
+// **و`return_to`** (قرارُ المالك ٢٠٢٦-١٠-٠٣): `office` (وفارغُه) أو `store` لمتجرٍ يقبل
+// الاسترداد — **وجهةُ مشوار الإرجاع** الذي يراه السائق (`orders/return_trip.go`).
 //
 // **السائقُ لا يُنهي الطلبَ عند الباب** — يُبلّغ (`/driver/orders/{id}/report`)
 // وينتظر. **والمكتبُ يتّصل بالزبون ثمّ يأمر**: «سلّم الآن» أو «عُد إلى المكتب».
@@ -31,6 +34,8 @@ func (s *Server) handleDoorResolution(w http.ResponseWriter, r *http.Request) {
 		Fault  string `json:"fault"`
 		Reason string `json:"reason"`
 		Note   string `json:"note"`
+		// ReturnTo **إلى أين يُرجع البضاعة** — `office` أو `store`.
+		ReturnTo string `json:"return_to"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -38,15 +43,17 @@ func (s *Server) handleDoorResolution(w http.ResponseWriter, r *http.Request) {
 	}
 	oid := chi.URLParam(r, "id")
 	in := orders.DoorResolution{
-		Action: strings.TrimSpace(req.Action),
-		Fault:  strings.TrimSpace(req.Fault),
-		Reason: strings.TrimSpace(req.Reason),
-		Note:   clip(strings.TrimSpace(req.Note), 300),
+		Action:   strings.TrimSpace(req.Action),
+		Fault:    strings.TrimSpace(req.Fault),
+		Reason:   strings.TrimSpace(req.Reason),
+		Note:     clip(strings.TrimSpace(req.Note), 300),
+		ReturnTo: strings.TrimSpace(req.ReturnTo),
 	}
 	o, err := s.orders.ResolveDoor(r.Context(), userIDFrom(r), rolesFrom(r), oid, in,
 		func(ctx context.Context, q dbtx.Querier) error {
 			return s.auditTx(ctx, q, r, "ops.door_resolution", "order", oid, map[string]any{
 				"action": in.Action, "fault": in.Fault, "reason": in.Reason, "note": in.Note,
+				"return_to": in.ReturnTo,
 			})
 		})
 	if err != nil {

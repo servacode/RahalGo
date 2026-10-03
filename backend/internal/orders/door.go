@@ -77,6 +77,10 @@ type DoorResolution struct {
 	Reason string
 	// Note **كلمةُ المكتب** — تصل السائقَ مع الأمر، **وتلزم مع العودة.**
 	Note string
+	// ReturnTo **إلى أين يُرجع السائقُ البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `office`
+	// (وفارغُه) أو `store` لمتجرٍ يقبل الاسترداد. **ويُكتب مشوارَ إرجاعٍ إن كانت البضاعةُ
+	// معه** (`return_trip.go`)؛ وقبل الاستلام لا بضاعةَ فلا مشوار.
+	ReturnTo string
 }
 
 // doorTitle **عنوانُ الأمر كما يقرؤه السائقُ من شاشةٍ مقفلة.**
@@ -131,12 +135,34 @@ func (s *Service) ResolveDoor(ctx context.Context, actorID string, actorRoles []
 		if !OfficeDecides(status) {
 			return nil, ErrNotAtDoor
 		}
+		// ══════════════════════════════════════════════════════════════
+		// **والبضاعةُ معه ⇒ مشوارُ إرجاعٍ لا إغلاقٌ صامت** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **والمالُ والذنبُ والحالُ كما كانت** — المشوارُ عمودٌ يُقرأ لا انتقال.
+		// **و«رجّع للمتجر» لمن يقبل الاسترداد وحدَه** — وإلّا رُدّ قبل أن يُنهى شيء.
+		returnTo, err := normalizeReturnTo(in.ReturnTo)
+		if err != nil {
+			return nil, err
+		}
+		if !AfterPickup(status) {
+			returnTo = ""
+		}
+		if returnTo == ReturnToStore {
+			ok, err := storeTakesReturns(ctx, s.db, orderID)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				return nil, ErrReturnStoreRefused
+			}
+		}
 		// **والأمرُ يُكتب مع الانتقال في معاملته** — فلا يُقرأ «فشل» بلا أمر.
 		mark := func(ctx context.Context, q dbtx.Querier) error {
 			if _, err := q.Exec(ctx, `
 				UPDATE orders SET door_instruction = $2, door_instruction_note = $3,
-				                  door_instruction_at = now()
-				WHERE id = $1`, orderID, DoorReturnToOffice, in.Note); err != nil {
+				                  door_instruction_at = now(), return_to = NULLIF($4, '')
+				WHERE id = $1`, orderID, DoorReturnToOffice, in.Note, returnTo); err != nil {
 				return err
 			}
 			if hook != nil {

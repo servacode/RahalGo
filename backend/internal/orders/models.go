@@ -331,6 +331,11 @@ type Order struct {
 	// GoodsSettledTo مصيرُ بضاعة طلبٍ فشل: merchant استردّها · platform
 	// تحمّلتها المنصةُ ودفعت للمتجر · فارغٌ يعني **لم يُحسم بعد**.
 	GoodsSettledTo *string `json:"goods_settled_to"`
+	// ReturnTo **إلى أين يُرجع السائقُ البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `office` أو
+	// `store`، **وفارغٌ لطلبٍ لم يُعَد بضاعتُه.** (`return_trip.go`)
+	ReturnTo *string `json:"return_to"`
+	// GoodsHandedAt **متى ضغط السائقُ «سلّمت البضاعة»** — وفارغٌ مع `ReturnTo`: المشوارُ قائم.
+	GoodsHandedAt *time.Time `json:"goods_handed_at"`
 	// ToStoreETASec كم قالت الخريطةُ إنّ طريقَ السائق إلى المتجر يستغرق.
 	//
 	// **يُلتقط لحظةَ الإسناد ويُجمَّد** — وفارغٌ يعني «لم يُقَس»، **فيبقى

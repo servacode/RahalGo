@@ -48,7 +48,8 @@ func (f *driverFixture) driverOrders(t *testing.T, driverID string) []map[string
 	return body.Data
 }
 
-// TestDriverOrders_FailedLeavesTheList **ما فشل خرج** — ولو بقيت بضاعتُه.
+// TestDriverOrders_FailedLeavesTheList **ما فشل خرج** — ولو بقيت بضاعتُه، **بعد أن يُسلّمها**
+// (مشوارُ الإرجاع، قرارُ المالك ٢٠٢٦-١٠-٠٣).
 func TestDriverOrders_FailedLeavesTheList(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	driver := f.drivers[0]
@@ -65,8 +66,17 @@ func TestDriverOrders_FailedLeavesTheList(t *testing.T) {
 		t.Fatalf("تعذّرَ الإنهاء: %d — %s", w.Code, w.Body.String())
 	}
 
-	// **وبعد**: لا شيء. **ولم تُحسم البضاعةُ عمداً** — `returned_at`
-	// و`goods_settled_to` فارغان، وهو الحالُ الذي كان يُبقيه ظاهراً.
+	// **وبعد**: مشوارُ الإرجاع وحدَه (قرارُ المالك ٢٠٢٦-١٠-٠٣) — البضاعةُ معه،
+	// **وفيه فعلٌ واحد: «سلّمت البضاعة».** ثمّ لا شيء.
+	if mid := f.driverOrders(t, driver); len(mid) != 1 || mid[0]["return_to"] != "office" {
+		t.Fatalf("بعد العودة: %v — **والبضاعةُ معه ومشوارُ الإرجاع لا يُرى**", mid)
+	}
+	if code, ec := f.goodsHanded(driver, orderID, ""); code != http.StatusOK {
+		t.Fatalf("«سلّمت البضاعة» رُدّ: %d %s", code, ec)
+	}
+
+	// **ولم تُحسم البضاعةُ عمداً** — `returned_at` و`goods_settled_to` فارغان، وهو
+	// الحالُ الذي كان يُبقيه ظاهراً.
 	after := f.driverOrders(t, driver)
 	if len(after) != 0 {
 		t.Fatalf("بقيت %d مهمّةٍ بعد التعذّر — **والطلبُ مُغلَق** (`closed_at`)، "+

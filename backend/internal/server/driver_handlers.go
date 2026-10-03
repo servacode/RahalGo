@@ -364,11 +364,21 @@ type driverOrder struct {
 	FeePayer string `json:"fee_payer"`
 	// DoorInstruction **أمرُ الإدارة عند باب الزبون** — `deliver_now` أو فارغ
 	// (مساءَ ٢٠٢٦-١٠-٠٢). **يُقرأ هنا ولو ضاع الإشعار**: «الإدارة: سلّم الآن».
-	// و`return_to_office` لا يظهر هنا — الطلبُ أُنهي فخرج من القائمة، **ويُقرأ
-	// من `/driver/orders/{id}/outcome`.**
+	// و`return_to_office` يظهر هنا مع مشوار الإرجاع وحدَه (`ReturnTo`) — **ويُقرأ
+	// كذلك من `/driver/orders/{id}/outcome`.**
 	DoorInstruction string `json:"door_instruction"`
 	// DoorNote **كلمةُ الإدارة مع أمرها.**
 	DoorNote string `json:"door_note"`
+	// ReturnTo **مشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `office` أو `store`،
+	// **وفارغٌ لكلّ طلبٍ سواه.** والطلبُ معه `failed`، **ووجهتُه في `lat`/`lng`
+	// و`address_text`** (و`dropoff_known` كاذبٌ إن لم تُعرف النقطة) — فيُرسم طريقُه
+	// كما يُرسم إلى الزبون، **والزرُّ الوحيدُ «سلّمت البضاعة»** (`goods-handed`).
+	ReturnTo string `json:"return_to"`
+	// ReturnLabel **اسمُ المتجر في الإرجاع إليه** — وفارغٌ للمكتب.
+	ReturnLabel string `json:"return_label"`
+	// مقروءاتُ الوجهة — لا تُرسَل.
+	storeLat, storeLng *float64
+	storeAddr          string
 }
 
 const driverOrderSelect = `
@@ -480,7 +490,11 @@ const driverOrderSelect = `
 	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''),
 	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.notes, '') ELSE '' END,
 	       -- **وأمرُ الإدارة عند الباب** — مساءَ ٢٠٢٦-١٠-٠٢.
-	       o.door_instruction, o.door_instruction_note
+	       o.door_instruction, o.door_instruction_note,
+	       -- **ومشوارُ الإرجاع القائم** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وفارغٌ لما سواه.
+	       CASE WHEN o.status = 'failed' AND o.goods_handed_at IS NULL
+	            THEN COALESCE(o.return_to, '') ELSE '' END,
+	       ST_Y(m.location::geometry), ST_X(m.location::geometry), COALESCE(m.address_text, '')
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -510,9 +524,13 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
 			&o.DeliveryFee, &o.PickupAddress,
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
-			&o.DoorInstruction, &o.DoorNote); err != nil {
+			&o.DoorInstruction, &o.DoorNote,
+			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr); err != nil {
 			s.respondErr(w, err)
 			return
+		}
+		if o.ReturnTo != "" {
+			s.asReturnTrip(r.Context(), &o)
 		}
 		out = append(out, o)
 	}
@@ -631,11 +649,37 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 // **والبضاعةُ تُتابَع من جهة المنصة** — أثرُها قائمٌ في `orders` (`returned_at`
 // و`goods_settled_to` و`fault`)، **وحسمُها قرارُ من يستلمها في المكتب** لا
 // إقرارُ من يحملها. وهذا ما لم يُبنَ بعد (انظر `failure_aftermath.go`).
+//
+// # إلّا مشوارَ إرجاع البضاعة (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+//
+// **طلبٌ أُنهي فشلاً والبضاعةُ معه** (`return_to`) يبقى حتّى يضغط «سلّمت البضاعة» —
+// **بطاقةٌ فيها فعلٌ واحدٌ وطريقٌ مرسوم**، لا ركام. **ويخرج بالضغطة نفسِها.**
 func (s *Server) handleDriverOrders(w http.ResponseWriter, r *http.Request) {
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.driver_id = $1
-		  AND o.closed_at IS NULL
+		  AND (o.closed_at IS NULL
+		       OR (o.status = 'failed' AND o.return_to IS NOT NULL AND o.goods_handed_at IS NULL))
 		ORDER BY o.created_at`, userIDFrom(r), staleLocationMinutes)
+}
+
+// asReturnTrip **يحوّل صفَّ مشوار الإرجاع إلى وجهته** — المكتبُ أو المتجر.
+//
+// **والوجهةُ في حقول الباب نفسِها** (`lat`/`lng`/`address_text`/`dropoff_known`): التطبيقُ
+// يرسم طريقَه إليها كما يرسمه إلى الزبون، **فلا يبقى عنوانُ زبونٍ رفض على شاشته.**
+// **ولا نقطةَ استلام** — المشوارُ ساقٌ واحدة. **ولا نقدَ يُقبض** — الطلبُ أُنهي.
+func (s *Server) asReturnTrip(ctx context.Context, o *driverOrder) {
+	p := s.orders.ReturnPointFor(ctx, o.ReturnTo, o.MerchantName, o.storeAddr, o.storeLat, o.storeLng)
+	o.ReturnLabel = p.Label
+	o.AddressText = p.Address
+	o.Lat, o.Lng, o.DropoffKnown = 0, 0, false
+	if p.Lat != nil && p.Lng != nil {
+		o.Lat, o.Lng, o.DropoffKnown = *p.Lat, *p.Lng, true
+	}
+	o.NavLat, o.NavLng = nil, nil
+	o.PickupLat, o.PickupLng = nil, nil
+	o.CustomerName, o.RecipientPhone = "", ""
+	o.CashDue = 0
+	o.LegM, o.ToPickupM = -1, -1
 }
 
 // handleDriverAccept يأخذ السائق طلباً من الطابور.

@@ -42,6 +42,8 @@ const (
 	// LossReturnToOffice **أنهته الإدارةُ عند باب الزبون — عُد بالطلب إلى المكتب**
 	// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢).
 	LossReturnToOffice = "return_to_office"
+	// LossReturnToStore **وإلى المتجر الذي يقبل الاسترداد** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+	LossReturnToStore = "return_to_store"
 )
 
 // lossText **جملةُ كلّ رمز** — قصيرةٌ تُقرأ من شاشةٍ مقفلة.
@@ -54,6 +56,7 @@ var lossText = map[string]string{
 	LossMerchantBlocked:   "عاد الطلب إلى الإدارة لتبديل المتجر",
 	LossFailedOps:         "أنهته الإدارة — تعذّر التسليم",
 	LossReturnToOffice:    "الإدارة: عُد إلى المكتب بالطلب",
+	LossReturnToStore:     "الإدارة: أرجِع البضاعة إلى المتجر",
 }
 
 // LossText **جملةُ الرمز** — وفارغةٌ لرمزٍ لا يُعرف.
@@ -118,8 +121,14 @@ func (s *Service) notifyDriverLost(ctx context.Context, orderID, driverID, code 
 		return
 	}
 	var number int64
-	if err := s.db.QueryRow(ctx, `SELECT number FROM orders WHERE id = $1`, orderID).Scan(&number); err != nil {
+	var returnTo string
+	if err := s.db.QueryRow(ctx, `SELECT number, COALESCE(return_to, '') FROM orders WHERE id = $1`,
+		orderID).Scan(&number, &returnTo); err != nil {
 		return
+	}
+	// **ووجهةُ الإرجاع تُقال باسمها** — «إلى المتجر» غيرُ «إلى المكتب».
+	if code == LossReturnToOffice && returnTo == ReturnToStore {
+		code = LossReturnToStore
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: driverID, Kind: notifications.KindOrder,
@@ -149,6 +158,9 @@ type DriverOutcome struct {
 	DoorInstruction string `json:"door_instruction"`
 	// DoorNote **كلمةُ الإدارة مع أمرها** — وفارغةٌ بلا أمر.
 	DoorNote string `json:"door_note"`
+	// ReturnTo **مشوارُ إرجاعٍ قائم** — `office` أو `store`، **وفارغٌ بلا مشوار أو بعد
+	// «سلّمت البضاعة»** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+	ReturnTo string `json:"return_to"`
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -202,19 +214,23 @@ func (s *Service) DriverOutcomeOf(ctx context.Context, orderID, driverID string)
 		actor    *string
 		endedBy  string
 		holdsNow bool
+		handed   bool
 	)
 	err := s.db.QueryRow(ctx, `
 		SELECT o.id::text, o.number, o.status, e.from_status, e.to_status, e.actor_id::text,
 		       COALESCE(o.ended_by, ''), e.created_at,
 		       (o.driver_id IS NOT DISTINCT FROM $2::uuid AND o.closed_at IS NULL),
-		       o.door_instruction, o.door_instruction_note
+		       o.door_instruction, o.door_instruction_note,
+		       CASE WHEN o.status = 'failed' AND o.goods_handed_at IS NULL
+		            THEN COALESCE(o.return_to, '') ELSE '' END,
+		       o.goods_handed_at IS NOT NULL
 		FROM order_events e
 		JOIN orders o ON o.id = e.order_id
 		WHERE e.order_id = $1::uuid AND e.driver_id = $2::uuid
 		ORDER BY e.created_at DESC, e.id DESC
 		LIMIT 1`, orderID, driverID).
 		Scan(&out.OrderID, &out.Number, &out.Status, &from, &to, &actor, &endedBy, &out.At,
-			&holdsNow, &out.DoorInstruction, &out.DoorNote)
+			&holdsNow, &out.DoorInstruction, &out.DoorNote, &out.ReturnTo, &handed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotDriversOrder
 	}
@@ -224,8 +240,15 @@ func (s *Service) DriverOutcomeOf(ctx context.Context, orderID, driverID string)
 	if holdsNow {
 		return &out, nil
 	}
+	// **ومن سلّم البضاعةَ أنهى مشوارَه بيده** — لا خبرَ له عمّا فعله للتوّ.
+	if handed {
+		return &out, nil
+	}
 	byHim := actor != nil && *actor == driverID
 	out.Reason = DriverLossCodeFrom(from, to, endedBy, byHim, actor == nil)
+	if out.Reason == LossReturnToOffice && out.ReturnTo == ReturnToStore {
+		out.Reason = LossReturnToStore
+	}
 	out.Message = lossText[out.Reason]
 	return &out, nil
 }
