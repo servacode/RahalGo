@@ -269,6 +269,9 @@ private val CODES: Map<String, Int> = mapOf(
     "item_price_too_high" to R.string.err_item_price_too_high,
     "item_text_too_long" to R.string.err_item_text_too_long,
     "text_too_long" to R.string.err_text_too_long,
+    // **حارسُ النصوص** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — لفظٌ مسيءٌ أو رمزٌ في اسمٍ أو عنوان.
+    "text_offensive" to R.string.err_text_offensive,
+    "text_bad_chars" to R.string.err_text_bad_chars,
     "update_required" to R.string.err_update_required,
     // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
     "no_items" to R.string.err_no_items,

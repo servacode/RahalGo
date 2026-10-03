@@ -89,6 +89,8 @@
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
     <!-- فحصُ القبول ٢٠٢٦-١٠-٠٣: حدودُ النصوص الحرّة (`text_too_long`). -->
     <string name="err_text_too_long">النص أطول من المسموح — اختصره ثم أعد المحاولة</string>
+    <string name="err_text_offensive">يرجى عدم استخدام ألفاظ مسيئة</string>
+    <string name="err_text_bad_chars">الرموز والإيموجي غير مسموحة في الاسم والعنوان</string>
     <string name="err_text_too_long_max">النص أطول من المسموح (الحد %1$s حرفاً) — اختصره ثم أعد المحاولة</string>
     <string name="err_item_text_too_long">الاسم أطول من ١٢٠ حرفاً أو الوصف أطول من ٥٠٠</string>
     <string name="err_no_drivers_on_shift">لا يوجد سائقون بالدوام الآن — حاول بعد قليل</string>

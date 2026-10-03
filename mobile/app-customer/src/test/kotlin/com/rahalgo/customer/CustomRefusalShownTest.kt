@@ -27,7 +27,7 @@ class CustomRefusalShownTest {
         for (code in listOf(
             "temporarily_unavailable", "platform_closed_now", "zone_closed_now",
             "launch_closed", "out_of_zone", "city_not_supported", "coverage_unavailable",
-            "text_too_long",
+            "text_too_long", "text_offensive", "text_bad_chars",
         )) {
             assertNotEquals("الرمز $code بلا نصّ", R.string.err_internal, resolveErrorRes(code))
         }
