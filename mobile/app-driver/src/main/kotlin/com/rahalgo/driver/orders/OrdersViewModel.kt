@@ -375,7 +375,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     "on_the_way" -> "at_dropoff"
                     else -> null
                 }
-                if (order == null || to == null || order.kind == "custom" ||
+                if (order == null || to == null || (order.kind == "custom" && to != "at_dropoff") ||
                     near(LastPoint.value, order) != true
                 ) {
                     nearSince = 0L
@@ -879,8 +879,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var demoTrip by mutableStateOf(false)
         private set
 
+    /** **نهايةُ الساق التي مشتها التجربة** — فلا تُعاد هي نفسُها حين يُعاد تركيبُ طريقها. */
+    var demoLegEnd by mutableStateOf<com.rahalgo.navigation.GeoPoint?>(null)
+        private set
+
     fun startReplay(fixes: List<com.rahalgo.navigation.NavFix>) {
         demoTrip = true
+        fixes.lastOrNull()?.let { demoLegEnd = com.rahalgo.navigation.GeoPoint(it.lat, it.lng) }
         navSession.startReplay(fixes, viewModelScope)
         // **وحين تنتهي تعود الأقمارُ وحدَها** — الإعادةُ تُسكت مجرى الموقع
         // الحقيقيّ ما دامت تمشي، **ورحلةٌ قائمةٌ لا تبقى بلا موقعٍ بعدها.**
@@ -903,6 +908,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     fun stopReplay() {
         demoTrip = false
+        demoLegEnd = null
         navSession.stopReplay()
         resumeRealGps()
     }
@@ -924,6 +930,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     fun closeNav() {
         following = false
         demoTrip = false
+        demoLegEnd = null
         navSession.stopReplay()
         navSession.stop()
         voice.stop()
@@ -1263,7 +1270,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             reasonsAtMs = detail.reasonsAtMs,
             problemStatus = detail.problemStatus,
             // **والخبرُ لطلبه ومرحلته وحدَهما** — لا يتبع السائقَ إلى الطلب التالي.
-            notice = if (detail.noticeFor == order.id + "/" + order.status) detail.notice else "",
+            awaitingOffice = order.status == "at_pickup" && order.doorInstruction.isEmpty() &&
+                detail.noticeFor == order.id + "/" + order.status && detail.notice.isNotEmpty(),
+            // **وردُّ الإدارة يُنهي «وصل بلاغك»** (٢٠٢٦-١٠-٠٣) — كان يبقى فوق أمرها.
+            notice = if (detail.noticeFor == order.id + "/" + order.status && order.doorInstruction.isEmpty()) {
+                detail.notice
+            } else {
+                ""
+            },
             driver = driver?.let { LatLng(it.lat, it.lng) },
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
             // **فتُرسم الرحلة بنقطتين** بدل أن تسقط الشاشة.

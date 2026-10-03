@@ -70,6 +70,12 @@ class VoiceOrchestrator(
     private val queue = ArrayList<VoiceCue>(4)
     private var speaking: VoiceCue? = null
 
+    /** **متى بدأ ما يُقال الآن** — لحارس العلوق (انظر `pump`). */
+    private var speakingSinceNs = 0L
+
+    /** **الساعة** — تُحقن في الاختبار فلا ينتظر اثنتي عشرةَ ثانيةً حقيقيّة. */
+    internal var nowNs: () -> Long = System::nanoTime
+
     /**
      * **بابُ السجلّ — ولا يعرف المنسّقُ أندرويد.**
      *
@@ -146,6 +152,19 @@ class VoiceOrchestrator(
         queue.sortByDescending { it.priority }
         val next = queue[0]
 
+        // ══════════════════════════════════════════════════════════════
+        // **ولا يعلق الصوتُ على جملةٍ لم يُعلَن انتهاؤها** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «الصوت
+        // أحياناً يختفي»)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **قِيس على جهازه**: «بدأ «turn_left_in_150m»» ولا «نُطق» بعده — والمشغّلُ لم يُعلن
+        // الانتهاء، **فبقيت `speaking` مشغولةً وسكت الصوتُ رحلتين كاملتين.** وأطولُ مقطعٍ
+        // ثوانٍ معدودة، **فما جاوز `STUCK_MS` عالقٌ يُترك** ويُكمل الطابور.
+        if (speaking != null && nowNs() - speakingSinceNs > STUCK_MS * 1_000_000) {
+            log("علِق «${speaking?.clip}» — يُترك ويُكمل الصوت")
+            speaker.stop()
+            speaking = null
+        }
         val busy = speaking
         if (busy != null) {
             // ══════════════════════════════════════════════════════════
@@ -161,6 +180,7 @@ class VoiceOrchestrator(
         }
         queue.removeAt(0)
         speaking = next
+        speakingSinceNs = nowNs()
         spoken++
         val flush = busy != null
         // **واللاحقةُ تُمرَّر لمن يعرفها** — ومن لا يعرفها يقول الأولى
@@ -233,5 +253,8 @@ class VoiceOrchestrator(
          * تعني ثلاثَ ثوانٍ من التأخّر.
          */
         const val MAX_QUEUE = 3
+
+        /** **أطولُ مقطعٍ ثوانٍ معدودة** — وما جاوز هذا لم يُعلَن انتهاؤه فهو عالق. */
+        const val STUCK_MS = 12_000L
     }
 }

@@ -140,6 +140,7 @@ fun TripScreen(
     onReplayRetarget: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
     /** **الرحلةُ التجريبيّةُ مشغولةٌ لهذا الطلب** — فتبدأ الساقَ التالية وحدَها. */
     demoTrip: Boolean = false,
+    demoLegEnd: com.rahalgo.navigation.GeoPoint? = null,
     /** **تشغيلُ التجربة قبل أن يوجد طريق** — الخاصُّ قبل الشراء. */
     onArmDemo: () -> Unit = {},
     /**
@@ -729,7 +730,17 @@ fun TripScreen(
             // **وانتهت عند المتجر والتجربةُ مشغولة؟ تبدأ الساقَ الجديدةَ من أوّلها** (٢٠٢٦-١٠-٠٣) —
             // بعد الاستلام يُرسم الطريقُ إلى الزبون فتمشي عليه بلا ضغطة.
             if (!navSession.replaying) {
-                if (demoTrip && g.size >= 2) {
+                // **ولا تُعاد الساقُ نفسُها** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «وصلت المتجر ولكن عاد الرحلة من
+                // البداية») — عند «وصلت المتجر» يُعاد تركيبُ الطريق إلى المتجر نفسِه، **ونهايتُه تحت السهم.**
+                // فلا تبدأ إلّا ساقٌ نهايتُها بعيدةٌ عن موضعه — الطريقُ إلى الزبون بعد الاستلام.
+                // **والمقارنةُ بنهاية الساق التي مُشيت لا بموضع السهم** — السهمُ يضيع بعد انتهاء
+                // الإعادة (قِيس ٢٠٢٦-١٠-٠٣: أُعيدت الساقُ رغم الشرط الأوّل).
+                val done = demoLegEnd
+                val endFar = done == null ||
+                    com.rahalgo.navigation.GpsQuality.metersBetween(
+                        done.lat, done.lng, g.last().lat, g.last().lng,
+                    ) > 150.0
+                if (demoTrip && g.size >= 2 && endFar) {
                     onReplay(com.rahalgo.navigation.ReplayDrive.fixes(g, startMs = System.currentTimeMillis()))
                 }
                 return@LaunchedEffect
@@ -816,8 +827,11 @@ fun TripScreen(
             val live = navSession.nav
             // **والوقتُ يتبع سرعتَه ولا يقفز** (`EtaSmoother`).
             val eta = androidx.compose.runtime.remember(order.id) { com.rahalgo.navigation.EtaSmoother() }
+            // **ووصل إلى الهدف؟** — كان يُعرض رقمُ الخادم «١٫١ كم» بعد أن انتهى الخطّ (قِيس ٢٠٢٦-١٠-٠٣).
+            val arrivedHere = live != null && (live.arrivedAtTarget || live.progress?.arrived == true)
             TripPanel(
-                if (live != null && live.remainingM >= 0) {
+                arrived = arrivedHere,
+                state = if (live != null && live.remainingM >= 0) {
                     state.copy(
                         routeM = live.remainingM,
                         routeSec = eta.update(
@@ -1054,6 +1068,16 @@ fun TripScreen(
         )
     }
 
+    // **والقائمةُ لا تتبدّل تحت إصبعه** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣) — فتحها في الطريق ثمّ
+    // سُجّل وصولُه فصارت أسبابُ الباب مكانَ أسباب الطريق وهو يقرأ. **فتُغلق ويُقال له لماذا.**
+    val stageNow = state.order?.status.orEmpty()
+    val stageChanged = stringResource(R.string.problem_stage_changed)
+    LaunchedEffect(stageNow) {
+        if (state.failReasons != null && state.problemStatus.isNotEmpty() && stageNow != state.problemStatus) {
+            actions.dismissFail()
+            com.rahalgo.ui.Flash.ok(stageChanged)
+        }
+    }
     if (state.failReasons != null) {
         FailDialog(
             reasons = state.failReasons,
@@ -1327,9 +1351,12 @@ private fun TripCard(
         // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
         // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
         // **ومن لا يُعرف موضعُه لا يُحبس عن الزرّ.**
-        val arriveLater = next != null && order.kind != "custom" &&
+        // **والخاصُّ عند الزبون كالعاديّ** (٢٠٢٦-١٠-٠٣).
+        val arriveLater = next != null && (order.kind != "custom" || next.status == "at_dropoff") &&
             next.status in setOf("at_pickup", "at_dropoff") &&
-            state.locationKnown && !state.nearDestination
+            state.locationKnown && !state.nearDestination ||
+            // **ولا «استلمت الطلب» وقرارُ المتجر بيد الإدارة** (٢٠٢٦-١٠-٠٣).
+            state.awaitingOffice && next?.status == "picked_up"
         val onNext: () -> Unit = {
             if (next != null) {
                 // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
@@ -1479,6 +1506,20 @@ private fun TripCard(
                 Text(order.parcelNote, fontWeight = FontWeight.Bold)
             }
         }
+        if (order.driverNote.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.detail_driver_note), color = Rahal.colors.inkMuted)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    order.driverNote,
+                    fontWeight = FontWeight.Bold,
+                    color = Rahal.colors.brand,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
         if (cashFrom == CashFrom.STORE) {
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -1612,6 +1653,8 @@ private fun TripCard(
                     when (order.status) {
                         "at_dropoff" -> R.string.door_deliver_now
                         "at_pickup" -> R.string.door_collect
+                        // **وقبل المتجر «أكمل الطلب»** (٢٠٢٦-١٠-٠٣) — الزبونُ لم يُلغِ.
+                        "assigned" -> R.string.door_keep
                         else -> R.string.door_continue
                     },
                 ) +
@@ -1673,7 +1716,10 @@ private fun TripCard(
             // **«الزبونُ أكّد الطلب — قم بالشراء»** (طلبُ المالك ٢٠٢٦-١٠-٠٣) — يعرف أنّ دورَه جاء.
             if (customOpen && quoteOk && !needGoods) {
                 Text(
-                    stringResource(R.string.drv_customer_confirmed),
+                    stringResource(
+                        if (order.customMode == "amanah") R.string.drv_customer_confirmed_amanah
+                        else R.string.drv_customer_confirmed,
+                    ),
                     color = Rahal.colors.success,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,

@@ -959,7 +959,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       hide: (o: OrderRow) =>
         !(
           o.status === "at_dropoff" ||
-          ((o.status === "at_pickup" ||
+          ((o.status === "assigned" ||
+            o.status === "at_pickup" ||
             o.status === "picked_up" ||
             o.status === "on_the_way") &&
             !!(o.door?.report_code || o.door?.instruction))
@@ -970,6 +971,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           orderNumber={o.number}
           atDoor={o.status === "at_dropoff"}
           atStore={o.status === "at_pickup"}
+          beforeStore={o.status === "assigned"}
           canTransfer={o.kind !== "merchant_delivery"}
           customerPhone={o.customer_phone}
           driverPhone={o.driver_phone}

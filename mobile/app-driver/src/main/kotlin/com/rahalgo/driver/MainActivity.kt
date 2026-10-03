@@ -1039,6 +1039,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     },
                     onReplayRetarget = orders::retargetReplay,
                     demoTrip = orders.demoTrip,
+                    demoLegEnd = orders.demoLegEnd,
                     onArmDemo = orders::armDemo,
                     voice = orders.voice,
                     // **وحالُ الكتم من نموذج العرض** — تراقبه الواجهة

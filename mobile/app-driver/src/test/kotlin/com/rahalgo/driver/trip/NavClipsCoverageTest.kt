@@ -149,6 +149,7 @@ class NavClipsCoverageTest {
             NavClips.WRONG_WAY, NavClips.ROUTE_END,
             NavClips.arrival(TripTarget.PICKUP), NavClips.arrival(TripTarget.DROPOFF),
             NavClips.GPS_LOST, NavClips.GPS_WEAK, NavClips.GPS_RESTORED,
+            NavClips.NAV_STARTED,
         )
 
         // **وهذه بيدِ المالك لا بيدِ المحرّك** — تُنطق بحدثٍ لا

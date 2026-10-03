@@ -190,6 +190,13 @@ func OfficeDecides(status string) bool {
 	return status == StAtPickup || AfterPickup(status)
 }
 
+// OfficeAnswers **يردّ المكتبُ على بلاغٍ في هذا الحال** — ما يقرّر فيه، **وقبل المتجر أيضاً**
+// (قرارُ المالك ٢٠٢٦-١٠-٠٣: «الإلغاءُ قبل المتجر الإدارةُ تقرّره، لأنّ الزبونَ لا يبقى عنده
+// زرُّ إلغاء»): «ألغِ الطلب» أو «أكمل الطلب». **ولا «عُد إلى المكتب» قبل المتجر** — لا بضاعةَ معه.
+func OfficeAnswers(status string) bool {
+	return status == StAssigned || OfficeDecides(status)
+}
+
 // IsTripReport **بلاغٌ يقرّر فيه المكتب** — عند المتجر أو في الطريق أو عند الباب.
 // **يُقبل سبباً في إنهاء الإدارة.**
 func IsTripReport(code string) bool {

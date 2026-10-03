@@ -277,7 +277,9 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **وأمرُ الإدارة عند الباب يخصّ وقفةً واحدة** (مساءَ ٢٠٢٦-١٠-٠٢): وصولٌ
 	// جديدٌ إلى الباب أو عودةٌ إلى الطابور يمحوانه — **فلا يقرأ سائقٌ ثانٍ «سلّم
 	// الآن» قيلت لغيره.**
-	if to == StAtDropoff || to == StDispatching {
+	// **وكلُّ مرحلةٍ وقفةٌ جديدة** (٢٠٢٦-١٠-٠٣): «أكمل الطلب» قبل المتجر لا تُقرأ عنده
+	// «استلم الطلب»، **فيُمحى الأمرُ بكلّ انتقال.**
+	if to != from {
 		set += `, door_instruction = '', door_instruction_note = '', door_instruction_at = NULL`
 	}
 	if terminal(to) && to != StDelivered {

@@ -113,11 +113,11 @@ class TripFlowTest {
         assertEquals("at_dropoff", autoArrivalTarget("on_the_way", custom = false))
     }
 
-    /** **ولا وصولَ تلقائيٌّ في الطلب الخاصّ** — في طرفيه معاً. */
+    /** **والخاصُّ لا يصل المتجرَ تلقائيّاً، ويصل الزبونَ كالعاديّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣). */
     @Test
-    fun `a custom order never auto-arrives`() {
+    fun `a custom order auto-arrives at the customer only`() {
         assertNull(autoArrivalTarget("assigned", custom = true))
-        assertNull(autoArrivalTarget("on_the_way", custom = true))
+        assertEquals("at_dropoff", autoArrivalTarget("on_the_way", custom = true))
     }
 
     /**

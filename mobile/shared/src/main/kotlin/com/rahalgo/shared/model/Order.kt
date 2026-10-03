@@ -63,6 +63,12 @@ data class DriverOrder(
      */
     @SerialName("parcel_note") val parcelNote: String = "",
 
+    /**
+     * **ملاحظةُ المتجر للسائق في «لدي توصيلة»** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣) — «اتّصل قبل
+     * الوصول»: كان المتجرُ يكتبها ولا تصل السائق.
+     */
+    @SerialName("driver_note") val driverNote: String = "",
+
     /** **من يدفع أجرةَ التوصيلة** — و`merchant_cash`: يقبضها السائقُ من المتجر عند الاستلام. */
     @SerialName("fee_payer") val feePayer: String = "",
 

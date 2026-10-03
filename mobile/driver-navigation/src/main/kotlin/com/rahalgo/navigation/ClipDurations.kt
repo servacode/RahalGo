@@ -215,5 +215,5 @@ object ClipDurations {
         "_right_in_500m:2978,turn_right_in_50m:3082,turn_right_in_700m:3265,turn_right_now:1881,utu" +
         "rn:3082,uturn_in_1000m:5460,uturn_in_100m:4519,uturn_in_1500m:5355,uturn_in_150m:6322,utur" +
         "n_in_2000m:4885,uturn_in_200m:4624,uturn_in_250m:5721,uturn_in_300m:5642,uturn_in_400m:530" +
-        "3,uturn_in_500m:5407,uturn_in_50m:5303,uturn_in_700m:5355,uturn_now:3553,wrong_way:2612"
+        "3,uturn_in_500m:5407,uturn_in_50m:5303,uturn_in_700m:5355,uturn_now:3553,wrong_way:2612,trip_started:1515"
 }

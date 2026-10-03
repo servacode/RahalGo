@@ -97,7 +97,12 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         arrivalCue(state, generation)?.let { out += it }
         routeEndCue(state, generation)?.let { out += it }
         signalCue(state, generation, fix)?.let { out += it }
-        maneuverCue(state, generation, fix)?.let { out += it }
+        maneuverCue(state, generation, fix)?.let {
+            out += it
+            // **ومنعطفٌ قيل قبلها يُغني عنها** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣: «بعد مئة متر انعطف
+            // يساراً» ثمّ «بدأت الملاحة») — **فلا تأتي بعده متأخّرةً عن موضعها.**
+            if (out.none { c -> c.kind == CueKind.START }) startSaidFor = target
+        }
         emitted += out.size
         return out
     }

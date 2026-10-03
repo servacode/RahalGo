@@ -47,11 +47,28 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 
 	var code, note *string
 	var at *time.Time
+	// **وبلاغُ ما قبل المتجر من هذا الطور وحدَه** (٢٠٢٦-١٠-٠٣) — بعد تحويلٍ يعود الطلبُ إلى
+	// الطريق، **فلا يُقرأ بلاغُ المتجر القديم بلاغاً قبل الجديد.**
+	var cur string
+	_ = s.db.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&cur)
+	statuses := []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff}
+	since := time.Time{}
+	if cur == StAssigned {
+		statuses = []string{StAssigned}
+		var last *time.Time
+		_ = s.db.QueryRow(ctx, `
+			SELECT max(created_at) FROM order_events
+			WHERE order_id = $1 AND to_status = 'assigned' AND from_status <> 'assigned'`,
+			orderID).Scan(&last)
+		if last != nil {
+			since = *last
+		}
+	}
 	if err := s.db.QueryRow(ctx, `
 		SELECT details->>'code', details->>'note', created_at FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
-		  AND details->>'status' IN ($2, $3, $4, $5)
-		ORDER BY created_at DESC LIMIT 1`, orderID, StAtPickup, StPickedUp, StOnTheWay, StAtDropoff).
+		  AND details->>'status' = ANY($2) AND created_at >= $3
+		ORDER BY created_at DESC LIMIT 1`, orderID, statuses, since).
 		Scan(&code, &note, &at); err == nil && code != nil && IsTripReport(*code) {
 		v.ReportCode = *code
 		if note != nil {

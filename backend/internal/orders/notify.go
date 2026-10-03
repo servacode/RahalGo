@@ -27,11 +27,13 @@ var t = struct {
 	// **مفصلا الطلب الخاصّ** — كلٌّ منهما يوقف الطلبَ على فعلِ طرفٍ بعينه،
 	// **فمن عليه الدورُ يُخبَر أنّ الدورَ عليه.**
 	customQuoted, customConfirmed, driverAssignedToCustomer string
-	rejected, cancelled, failed, refunded                   string
-	merchantDelivered, commission                           string
-	targetReached                                           string
-	violationsWarn, violationsBanned                        string
-	endedOps, warningIssued                                 string
+	// customConfirmedAmanah **والأمانةُ تُستلم لا تُشترى** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣).
+	customConfirmedAmanah                 string
+	rejected, cancelled, failed, refunded string
+	merchantDelivered, commission         string
+	targetReached                         string
+	violationsWarn, violationsBanned      string
+	endedOps, warningIssued               string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
@@ -50,6 +52,7 @@ var t = struct {
 	// خبراً فيُؤجَّل، **و«أكّده ليبدأ» تُقرأ طلباً فيُفتح التطبيق.**
 	customQuoted:             "سعر طلبك جاهز — أكّده ليبدأ الشراء",
 	customConfirmed:          "أكّد الزبون السعر — ابدأ الشراء",
+	customConfirmedAmanah:    "أكّد الزبون الأجرة — استلم الأمانة",
 	driverAssignedToCustomer: "أُسند سائقٌ لطلبك",
 	rejected:                 "اعتذر المتجر عن طلبك",
 	cancelled:                "أُلغي طلبك",
@@ -241,13 +244,18 @@ func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID s
 		return
 	}
 	var number int64
+	var mode string
 	if err := s.db.QueryRow(ctx,
-		`SELECT number FROM orders WHERE id = $1`, orderID).Scan(&number); err != nil {
+		`SELECT number, COALESCE(custom_mode, '') FROM orders WHERE id = $1`, orderID).Scan(&number, &mode); err != nil {
 		return
+	}
+	title := t.customConfirmed
+	if mode == CustomModeAmanah {
+		title = t.customConfirmedAmanah
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: driverID, Kind: notifications.KindOrder,
-		Title:  t.customConfirmed,
+		Title:  title,
 		Body:   fmt.Sprintf("#%d — %s ل.س", number, groupDigits(total)),
 		Entity: "order", EntityID: orderID, Href: "/portal",
 		// **وتطبيقُ السائق وحدَه يرنّ** — الحسابُ نفسُه قد يكون زبوناً.

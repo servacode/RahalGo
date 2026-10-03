@@ -24,12 +24,14 @@ package server
 // ولو لم يعرف السبب.**
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -175,9 +177,57 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وسائقٌ واقفٌ عند المتجر الأوّل يعود إلى الطريق** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس على جهازه**: بقي الطلبُ «وصلت المتجر» وهو عند المتجر القديم — **فظهر له
+	// «استلمت الطلب» لمتجرٍ لم يصله**، ولا طريقَ إليه. **فيعود «في الطريق للمتجر»**
+	// ويبقى الطلبُ معه، ويُرسم طريقُه إلى الجديد ويُسجَّل وصولُه إليه من جديد.
+	//
+	// **ولا يمرّ بجدول الانتقالات** — `at_pickup → assigned` ليس انتقالاً يطلبه أحد،
+	// **وإنّما أثرُ التحويل وحدَه**، فيُكتب هنا ويُسجَّل حدثاً باسمه.
+	var driverID *string
+	if status == string(orders.StAtPickup) {
+		if err := tx.QueryRow(r.Context(), `
+			UPDATE orders SET status = 'assigned', updated_at = now(),
+			       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL
+			WHERE id = $1 RETURNING driver_id::text`, orderID).Scan(&driverID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if _, err := tx.Exec(r.Context(), `
+			INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
+			VALUES ($1, 'at_pickup', 'assigned', $2, $3)`,
+			orderID, actor, "إلى المتجر الجديد بعد التحويل"); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **ويُخبَر السائقُ باسم المتجر الجديد** — كان اسمُ المتجر يتبدّل في بطاقته صامتاً،
+	// **ومن يقود لا يقرأ بطاقته.**
+	if driverID == nil {
+		_ = s.pg.QueryRow(r.Context(), `SELECT driver_id::text FROM orders WHERE id = $1`,
+			orderID).Scan(&driverID)
+	}
+	if driverID != nil && *driverID != "" {
+		var number int64
+		var newName string
+		_ = s.pg.QueryRow(r.Context(), `
+			SELECT o.number, m.name FROM orders o JOIN merchants m ON m.id = o.merchant_id
+			WHERE o.id = $1`, orderID).Scan(&number, &newName)
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: *driverID, Kind: notifications.KindOrder,
+			Title:  notifTitles.driverTransferred,
+			Body:   fmt.Sprintf("#%d — اتّجه إلى %s", number, newName),
+			Entity: "order", EntityID: orderID, Href: "/portal",
+			Apps: []string{notifications.AppDriver},
+		})
+		s.hub.Publish("driver:"+*driverID, map[string]any{"type": "order"})
 	}
 
 	s.audit(r, "ops.order_transferred", "order", orderID, map[string]any{

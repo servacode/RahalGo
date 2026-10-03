@@ -49,14 +49,14 @@ func (f *driverFixture) deliveryOrderAt(t *testing.T, status, driverID string, k
 	var id string
 	if err := f.pool.QueryRow(ctx, `
 		INSERT INTO orders (kind, merchant_id, status, address_text, dropoff, dropoff_known,
-			recipient_name, recipient_phone, parcel_note, fee_payer,
+			recipient_name, recipient_phone, parcel_note, fee_payer, notes,
 			payment_method, subtotal, delivery_fee, driver_fee, total, wallet_paid, cash_due,
 			driver_id, accepted_at,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders)
 		VALUES ('merchant_delivery', $1, $2, 'حيّ الفردوس قرب الجامع',
 			ST_SetSRID(ST_MakePoint(39.0100, 35.9500), 4326)::geography, $3,
-			'أبو سامر', '0999000111', 'كيس طعام ساخن', $4,
+			'أبو سامر', '0999000111', 'كيس طعام ساخن', $4, 'اتصل قبل الوصول',
 			'cash', 0, 5000, 4500, 5000, 0, $5,
 			$6, now(), `+qaSnapSQL()+`)
 		RETURNING id`, f.merchantID, status, known, payer, cash, driverID).Scan(&id); err != nil {
@@ -96,6 +96,10 @@ func TestDriverOrders_MerchantDeliveryFields(t *testing.T) {
 	}
 	if row["parcel_note"] != "كيس طعام ساخن" {
 		t.Errorf("parcel_note = %v — **لا يعرف ما يحمل**", row["parcel_note"])
+	}
+	// **وملاحظةُ المتجر للسائق تصله** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣).
+	if row["driver_note"] != "اتصل قبل الوصول" {
+		t.Errorf("driver_note = %v — **كتبها المتجرُ ولا يراها السائق**", row["driver_note"])
 	}
 	if row["fee_payer"] != "merchant_cash" {
 		t.Errorf("fee_payer = %v — **لا يعرف أنّه يقبض الأجرةَ من المتجر**", row["fee_payer"])

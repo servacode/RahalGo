@@ -92,6 +92,12 @@ const doorContinueTitle = "الإدارة: أكمل التوصيل"
 // doorCollectTitle **وعند المتجر «استلم الطلب»** (٢٠٢٦-١٠-٠٣) — اتّصلت الإدارةُ بالمتجر فحُلّ.
 const doorCollectTitle = "الإدارة: استلم الطلب"
 
+// doorKeepTitle **وقبل المتجر «أكمل الطلب»** (٢٠٢٦-١٠-٠٣) — اتّصلت الإدارةُ بالزبون فلم يُلغِ.
+const doorKeepTitle = "الإدارة: أكمل الطلب"
+
+// DoorKeepTitle **نصُّ «أكمل الطلب»** — يُقرأ في الاختبار.
+func DoorKeepTitle() string { return doorKeepTitle }
+
 // DoorTitle **نصُّ الأمر** — وفارغٌ لأمرٍ لا يُعرف.
 func DoorTitle(action string) string { return doorTitle[action] }
 
@@ -174,7 +180,7 @@ func (s *Service) doorDeliverNow(ctx context.Context, orderID string, in DoorRes
 		}
 		return nil, err
 	}
-	if !OfficeDecides(status) || driverID == nil {
+	if !OfficeAnswers(status) || driverID == nil {
 		return nil, ErrNotAtDoor
 	}
 	if _, err := tx.Exec(ctx, `
@@ -201,6 +207,8 @@ func (s *Service) doorDeliverNow(ctx context.Context, orderID string, in DoorRes
 	switch status {
 	case StAtPickup:
 		title = doorCollectTitle
+	case StAssigned:
+		title = doorKeepTitle
 	case StPickedUp, StOnTheWay:
 		title = doorContinueTitle
 	}

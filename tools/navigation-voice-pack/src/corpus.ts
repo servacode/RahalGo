@@ -142,6 +142,8 @@ const STEMS: readonly Stem[] = [
   // **و«عادت» تقابل «انقطعت»** — والأولى كانت «تمّ استعادة» بتذكيرٍ خطأ.
   { id: 'gps_restored', category: 'status', display: 'عادت إشارة تحديد الموقع.', tts: 'عادَت إِشارَة تَحديد المَوقِع.', file: 'gps_restored', type: null, modifier: null, withDistance: false },
   { id: 'navigation_started', category: 'status', display: 'بدأت الملاحة.', tts: 'بَدَأَت المِلاحَة.', file: 'navigation_started', type: 'depart', modifier: null, withDistance: false },
+  // **«بدأت الرحلة» بدل «بدأت الملاحة»** — طلبُ المالك ٢٠٢٦-١٠-٠٢.
+  { id: 'trip_started', category: 'status', display: 'بدأت الرحلة.', tts: 'بَدَأَت الرِّحلَة.', file: 'trip_started', type: 'depart', modifier: null, withDistance: false },
 
   // ── ما ينطقه التطبيقُ وليس في مواصفة ٢٠٢٦-٠٨-٢٣ ────────────────────
   //

@@ -219,6 +219,11 @@ data class TripState(
     val reasonsAtMs: Long = 0L,
     val problemStatus: String = "",
     val notice: String = "",
+    /**
+     * **ينتظر قرارَ الإدارة عند المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «السائقُ ينتظر والمكتبُ يقرّر»)
+     * — بلّغ عن المتجر ولم يصل أمر، **فلا «استلمت الطلب» يتخطّى المكتب.**
+     */
+    val awaitingOffice: Boolean = false,
     val step: TripStep = TripStep.ACCEPTED,
     val driver: LatLng? = null,
     val pickup: LatLng? = null,
@@ -365,7 +370,9 @@ data class TripActions(
  * حالٌ بلغها بيده، ولا يُعاد تسجيلُها.**
  */
 fun autoArrivalTarget(status: String, custom: Boolean, dropoffKnown: Boolean = true): String? {
-    if (custom) return null
+    // **والخاصُّ يصل الزبونَ وحدَه كالعاديّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «وصلت الزبون تظهر فقط وقت
+    // يوصل، مثل الطلب العاديّ، وتتحوّل تلقائيّاً بعد ٣٠ ثانية») — **والمتجرُ وحدَه يبقى خارجه.**
+    if (custom && status != "on_the_way") return null
     return when (status) {
         "assigned" -> "at_pickup"
         // **٤ · ولا وصولَ تلقائيّاً إلى نقطةٍ غيرِ معروفة** (٢٠٢٦-١٠-٠٢) — «لدي

@@ -124,8 +124,8 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		// **وعند باب الزبون يقرّر المكتب** — فيرى ما قال السائقُ وكم ينتظر
 		// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١، `orders/door_view.go`).
 		// **وفي الطريق أيضاً** (٢٠٢٦-١٠-٠٣): الزبونُ يطلب الإلغاءَ والسائقُ ماشٍ.
-		if orders.OfficeDecides(res.Orders[i].Status) {
-			res.Orders[i].Door = s.orders.DoorViewOf(r.Context(), res.Orders[i].ID)
+		if orders.OfficeAnswers(res.Orders[i].Status) {
+			res.Orders[i].Door = s.officeDoor(r, res.Orders[i].ID, res.Orders[i].Status)
 		}
 	}
 	httpx.JSON(w, http.StatusOK, res)
@@ -146,8 +146,8 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if orders.OfficeDecides(o.Status) {
-		o.Door = s.orders.DoorViewOf(r.Context(), o.ID)
+	if orders.OfficeAnswers(o.Status) {
+		o.Door = s.officeDoor(r, o.ID, o.Status)
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **ومسارُه كاملاً بأوقاته ومن فعله**
@@ -335,4 +335,14 @@ func (s *Server) handleRecomputeSettlement(w http.ResponseWriter, r *http.Reques
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"before": before, "after": after, "delta": after - before,
 	})
+}
+
+// officeDoor **لوحةُ ردّ المكتب** — وقبل المتجر لا لوحةَ إلّا ببلاغٍ أو أمر (٢٠٢٦-١٠-٠٣):
+// **كلُّ طلبٍ في طريقه إلى المتجر لا يحتاج قراراً.**
+func (s *Server) officeDoor(r *http.Request, orderID, status string) *orders.DoorView {
+	v := s.orders.DoorViewOf(r.Context(), orderID)
+	if status == orders.StAssigned && v.ReportCode == "" && v.Instruction == "" {
+		return nil
+	}
+	return v
 }

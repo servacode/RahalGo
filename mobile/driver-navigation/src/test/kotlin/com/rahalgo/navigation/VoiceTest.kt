@@ -66,6 +66,32 @@ class VoiceTest {
         assertEquals("**قيلت «بدأت الملاحة» وهو واقف**", 0, started)
     }
 
+    /**
+     * **VOICE-START-ORDER** — «بدأت الملاحة» لا تأتي بعد أوّل منعطف (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣:
+     * «بعد مئة متر انعطف يساراً» ثمّ «بدأت الملاحة»). **منعطفٌ قريبٌ قيل أوّلاً يُغني عنها.**
+     */
+    @Test
+    fun `VOICE-START-ORDER لا بدأت الملاحة بعد أول منعطف`() {
+        val base = RouteFixtures.long(vertices = 30)
+        val turnAt = 90.0
+        val route = NavRoute(
+            base.geometry,
+            base.cumulativeM,
+            listOf(
+                NavManeuver(ManeuverKinds.DEPART, null, 0.0, 0, turnAt, turnAt / 8),
+                NavManeuver(ManeuverKinds.TURN_LEFT, "left", turnAt, 0, 500.0, 50.0),
+                NavManeuver(ManeuverKinds.ARRIVE, null, base.totalM, 0, 0.0, 0.0),
+            ),
+        )
+        val (e, _) = engineWithVoice(route)
+        val cues = cuesOf(e, RouteFixtures.driveAlong(route, speedMps = 8f)).map { it.second }
+        val firstTurn = cues.indexOfFirst { it.kind == CueKind.MANEUVER }
+        val start = cues.indexOfFirst { it.kind == CueKind.START }
+        println("VOICE-START-ORDER · منعطف=$firstTurn بدأت=$start")
+        assertTrue("لم يُنبَّه عن المنعطف", firstTurn >= 0)
+        assertTrue("**«بدأت الملاحة» بعد المنعطف**", start == -1 || start < firstTurn)
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **١ · الأطوارُ والزنادُ الديناميكيّ**
     // ══════════════════════════════════════════════════════════════════

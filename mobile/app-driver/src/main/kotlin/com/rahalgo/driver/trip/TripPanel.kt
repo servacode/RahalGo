@@ -95,7 +95,7 @@ import org.maplibre.android.geometry.LatLng
  * وهو واقفٌ فيه. **لكنّه يبقى يريد أن يعرف أين صار من الرحلة.**
  */
 @Composable
-internal fun TripPanel(state: TripState) {
+internal fun TripPanel(state: TripState, arrived: Boolean = false) {
     val order = state.order ?: return
     val moving = state.step == TripStep.TO_PICKUP || state.step == TripStep.TO_CUSTOMER ||
         state.step == TripStep.PICKED_UP
@@ -165,8 +165,14 @@ internal fun TripPanel(state: TripState) {
             // لا سيرٌ إلى موضع. **فيُقال له ذلك.**
             val custom = order.kind == "custom"
             Text(
-                text = if (custom && state.step < TripStep.PICKED_UP) {
-                    stringResource(R.string.trip_p_custom)
+                // **ووصل؟ يُقال له ذلك** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «لسّا مكتوب الطريق إلى رحال،
+                // لازم يكتب وصلت إلى وجهتك») — لا «الطريق إلى» ولا مسافةٌ وهو عند الباب.
+                text = if (arrived) {
+                    stringResource(R.string.trip_p_arrived)
+                } else if (custom && state.step < TripStep.PICKED_UP) {
+                    stringResource(
+                        if (order.customMode == "amanah") R.string.trip_p_custom_amanah else R.string.trip_p_custom,
+                    )
                 } else {
                     stringResource(phaseLabel(state.step), name)
                 },
@@ -217,7 +223,7 @@ internal fun TripPanel(state: TripState) {
             // **فالعبارةُ تقول ما يفعله**: «اشترِ الطلب، ثمّ يُرسم الطريقُ إلى الزبون».
             val customBefore = state.order?.kind == "custom" &&
                 state.order?.status in setOf("assigned", "dispatching")
-            if (noPoint) {
+            if (noPoint || arrived) {
                 Unit
             } else if (customBefore) {
                 Spacer(Modifier.height(4.dp))
@@ -283,6 +289,7 @@ internal fun TripPanel(state: TripState) {
                     // **وعلامةُ الطور أنّ الثمنَ وُثّق** — لا حالٌ ثانيةٌ
                     // في المحرّك: يبقى `assigned` قبل التوثيق وبعده.
                     agreed = order.customFee != null,
+                    amanah = order.customMode == "amanah",
                 )
             }
         }
@@ -332,7 +339,7 @@ internal fun PanelChip(icon: Int, text: String) {
  * يبحث عن موضعه بين أربعةٍ متشابهة.
  */
 @Composable
-internal fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean = false) {
+internal fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean = false, amanah: Boolean = false) {
     // ══════════════════════════════════════════════════════════════════
     // **ومراحلُ الخاصّ غيرُ مراحل العاديّ**
     // ══════════════════════════════════════════════════════════════════
@@ -347,7 +354,14 @@ internal fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean =
     // **والمحرّكُ يعرف مراحلَ الخاصّ وحدَها** (`OpsCustomStages`):
     // توثيقٌ ثمّ شراءٌ ثمّ طريقٌ ثمّ وصولٌ ثمّ تسليم. **فتُقرأ منه لا
     // تُخترع هنا.**
-    val legs = if (custom) CUSTOM_LEGS else LEGS
+    // **والأمانةُ تُستلم ولا تُشترى** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣).
+    val legs = if (custom && amanah) {
+        CUSTOM_LEGS.map { if (it == R.string.leg_buy) R.string.leg_take_amanah else it }
+    } else if (custom) {
+        CUSTOM_LEGS
+    } else {
+        LEGS
+    }
     val icons = if (custom) CUSTOM_LEG_ICONS else LEG_ICONS
     val at = if (custom) customLegOf(status, agreed) else legOf(status)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {

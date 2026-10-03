@@ -219,4 +219,25 @@ class VoiceOrchestratorTest {
         println("VORCH-042 · قيلت=${s.said.size}")
         assertEquals(0, s.said.size)
     }
+
+    /**
+     * **VORCH-STUCK** — جملةٌ لم يُعلَن انتهاؤها لا تُسكت الصوتَ إلى الأبد (قِيس على جهاز المالك
+     * ٢٠٢٦-١٠-٠٣: «بدأ» بلا «نُطق»، وصمتُ رحلتين).
+     */
+    @Test
+    fun `VORCH-STUCK جملة عالقة تترك بعد المهلة ويكمل الصوت`() {
+        val s = FakeSpeaker().apply { instant = false }
+        val o = VoiceOrchestrator(s)
+        var t = 0L
+        o.nowNs = { t }
+        o.offer(listOf(cue(500.0, CueStage.PREPARE, 1, "الأولى")), 0.0)
+        o.offer(listOf(cue(900.0, CueStage.PREPARE, 1, "الثانية")), 10.0)
+        assertEquals(listOf("الأولى"), s.said)
+        t = 5_000_000_000L
+        o.pump(20.0)
+        assertEquals("قبل المهلة لا يُقطع", listOf("الأولى"), s.said)
+        t = 13_000_000_000L
+        o.pump(30.0)
+        assertEquals(listOf("الأولى", "الثانية"), s.said)
+    }
 }

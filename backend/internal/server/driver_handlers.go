@@ -357,6 +357,9 @@ type driverOrder struct {
 	DropoffKnown bool `json:"dropoff_known"`
 	// ParcelNote **ما يحمله** — كتبه المتجر.
 	ParcelNote string `json:"parcel_note"`
+	// DriverNote **ملاحظةُ المتجر للسائق في «لدي توصيلة»** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣: «اتّصل قبل
+	// الوصول» كتبها المتجرُ ولم تصل السائق). **وفارغةٌ لغيرها** — ملاحظاتُ الزبون شأنٌ آخر.
+	DriverNote string `json:"driver_note"`
 	// FeePayer **من يدفع الأجرة** — و`merchant_cash` يقبضها من المتجر عند الاستلام.
 	FeePayer string `json:"fee_payer"`
 	// DoorInstruction **أمرُ الإدارة عند باب الزبون** — `deliver_now` أو فارغ
@@ -475,6 +478,7 @@ const driverOrderSelect = `
 	       END,
 	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
 	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''),
+	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.notes, '') ELSE '' END,
 	       -- **وأمرُ الإدارة عند الباب** — مساءَ ٢٠٢٦-١٠-٠٢.
 	       o.door_instruction, o.door_instruction_note
 	FROM orders o
@@ -505,7 +509,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.CustomMode, &o.CustomGoodsPending,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion,
 			&o.DeliveryFee, &o.PickupAddress,
-			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer,
+			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
 			&o.DoorInstruction, &o.DoorNote); err != nil {
 			s.respondErr(w, err)
 			return

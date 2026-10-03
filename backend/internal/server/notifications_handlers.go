@@ -53,8 +53,10 @@ const currencyWord = "ل.س"
 var notifTitles = struct {
 	walletCredit, walletDebit, ratingNew, accountSuspended, accountActivated string
 	ticketOpened, ticketNewOps, ticketReply, ticketResolved, driverAssigned  string
-	storeClosed, storeReopened, cashSettled, roleGranted, roleRevoked        string
-	leadRejected, commissionEarned, passwordReset, sessionsRevoked           string
+	// driverTransferred **تحوّل طلبُه إلى متجرٍ آخر** — فيتّجه إليه (٢٠٢٦-١٠-٠٣).
+	driverTransferred                                                 string
+	storeClosed, storeReopened, cashSettled, roleGranted, roleRevoked string
+	leadRejected, commissionEarned, passwordReset, sessionsRevoked    string
 	// targetReached **بلغ مرحلةً من هدفه الشهريّ فنال مكافأتها.**
 	//
 	// **والمالُ يُقيَّد في محفظته آليّاً** ولا شيءَ يقول له — **فيراه
@@ -102,6 +104,7 @@ var notifTitles = struct {
 	ticketReply:         "رد جديد على شكواك",
 	ticketResolved:      "تم حل شكواك",
 	driverAssigned:      "أُسند إليك طلب جديد",
+	driverTransferred:   "تحوّل طلبك إلى متجر آخر",
 	targetReached:       "أنجزت هدف الشهر — نالتك مكافأته",
 	storeClosed:         "إغلاق طارئ لمتجر",
 	storeReopened:       "عاد متجر للعمل",

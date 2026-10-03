@@ -20,7 +20,13 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtTime, errorText } from "@rahalgo/i18n";
+import {
+  getMessages,
+  defaultLocale,
+  fmtNum,
+  fmtTime,
+  errorText,
+} from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
@@ -79,6 +85,7 @@ export function DoorPanel({
   orderNumber,
   atDoor,
   atStore = false,
+  beforeStore = false,
   canTransfer = true,
   driverPhone,
   customerPhone,
@@ -99,6 +106,11 @@ export function DoorPanel({
    * أو «حوّل لمتجرٍ آخر» بدل «سلّم» و«عُد إلى المكتب».
    */
   atStore?: boolean;
+  /**
+   * **قبل المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «الإلغاءُ قبل المتجر الإدارةُ تقرّره، لأنّ الزبونَ لا
+   * يبقى عنده زرُّ إلغاء») — «أكمل الطلب» أو «ألغِ الطلب»، **ولا «عُد إلى المكتب»: لا بضاعةَ معه.**
+   */
+  beforeStore?: boolean;
   /** **و«لدي توصيلة» لا تُحوَّل** — متجرُها مُنشئُها. */
   canTransfer?: boolean;
   customerPhone: string;
@@ -116,7 +128,9 @@ export function DoorPanel({
 }) {
   const { can } = useAuth();
   const canResolve = can("orders.intervene");
-  const [dialog, setDialog] = useState<"" | "deliver" | "return">("");
+  const [dialog, setDialog] = useState<"" | "deliver" | "return" | "cancel">(
+    "",
+  );
   const [note, setNote] = useState("");
   const [fault, setFault] = useState<Fault | "">("");
   const [reason, setReason] = useState("");
@@ -124,13 +138,35 @@ export function DoorPanel({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
 
-  function open(kind: "deliver" | "return") {
+  function open(kind: "deliver" | "return" | "cancel") {
     setNote("");
     setReason("");
     setFault("");
     setErr("");
     setNotice("");
     setDialog(kind);
+  }
+
+  // **والإلغاءُ قبل المتجر انتقالٌ عامّ** — لا أمرَ باب: الطلبُ يُغلق ويُخبَر السائق.
+  async function cancelOrder() {
+    if (note.trim() === "") {
+      setErr(D.noteMissing);
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${orderId}/transition`, {
+        method: "POST",
+        body: JSON.stringify({ to: "cancelled", note: note.trim() }),
+      });
+      setDialog("");
+      onChanged();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function send() {
@@ -183,18 +219,29 @@ export function DoorPanel({
       onClick={(e) => e.stopPropagation()}
     >
       {/* **والعنوانُ تسميةُ الحقل فوق اللوحة** (`header` في البطاقة) —
-          **فأوّلُ سطرٍ فيها كم ينتظر رجلٌ في الشارع.** */}
+       **فأوّلُ سطرٍ فيها كم ينتظر رجلٌ في الشارع.** */}
       <p className="text-sm font-semibold text-warning">
-        {atStore
-          ? D.atStore.replace("{n}", fmtNum(Math.max(door?.waited_min ?? 0, 0)))
-          : !atDoor
-            ? D.onTheWay
-            : door && door.waited_min >= 0
-              ? D.waited.replace("{n}", fmtNum(door.waited_min))
-              : D.waitedUnknown}
+        {beforeStore
+          ? D.beforeStore
+          : atStore
+            ? D.atStore.replace(
+                "{n}",
+                fmtNum(Math.max(door?.waited_min ?? 0, 0)),
+              )
+            : !atDoor
+              ? D.onTheWay
+              : door && door.waited_min >= 0
+                ? D.waited.replace("{n}", fmtNum(door.waited_min))
+                : D.waitedUnknown}
       </p>
       <p className="text-xs text-ink-muted">
-        {atStore ? D.hintStore : atDoor ? D.hint : D.hintTrip}
+        {beforeStore
+          ? D.hintBefore
+          : atStore
+            ? D.hintStore
+            : atDoor
+              ? D.hint
+              : D.hintTrip}
       </p>
 
       <div className="space-y-1 text-sm">
@@ -226,18 +273,24 @@ export function DoorPanel({
       {/* **ومن يُكلَّم يتبع الموضع** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): عند المتجر المتجرُ، وفي الطريق وعند
           الباب الزبون — **والسائقُ في كلّ مرّة.** */}
       {atStore
-        ? door?.store_phone && <PhoneLink label={D.storePhone} phone={door.store_phone} />
-        : customerPhone && <PhoneLink label={D.customerPhone} phone={customerPhone} />}
+        ? door?.store_phone && (
+            <PhoneLink label={D.storePhone} phone={door.store_phone} />
+          )
+        : customerPhone && (
+            <PhoneLink label={D.customerPhone} phone={customerPhone} />
+          )}
       {driverPhone && <PhoneLink label={D.driverPhone} phone={driverPhone} />}
 
       {door?.instruction === "deliver_now" && (
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="success">
-            {atStore
-              ? D.instructionSentCollect
-              : atDoor
-                ? D.instructionSent
-                : D.instructionSentContinue}
+            {beforeStore
+              ? D.instructionSentKeep
+              : atStore
+                ? D.instructionSentCollect
+                : atDoor
+                  ? D.instructionSent
+                  : D.instructionSentContinue}
           </Badge>
           {door.instruction_at && (
             <span className="text-xs text-ink-muted">
@@ -255,10 +308,29 @@ export function DoorPanel({
       {canResolve && (
         <div className="flex flex-wrap gap-2">
           <Button disabled={busy} onClick={() => open("deliver")}>
-            {atStore ? D.collect : atDoor ? D.deliverNow : D.continue}
+            {beforeStore
+              ? D.keep
+              : atStore
+                ? D.collect
+                : atDoor
+                  ? D.deliverNow
+                  : D.continue}
           </Button>
-          {(!atStore || canTransfer) && (
-            <Button variant="danger" disabled={busy} onClick={() => open("return")}>
+          {beforeStore && (
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => open("cancel")}
+            >
+              {D.cancelOrder}
+            </Button>
+          )}
+          {!beforeStore && (!atStore || canTransfer) && (
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => open("return")}
+            >
               {atStore ? D.transfer : D.returnToOffice}
             </Button>
           )}
@@ -268,11 +340,25 @@ export function DoorPanel({
       <Modal
         open={dialog === "deliver"}
         onClose={() => setDialog("")}
-        title={atStore ? D.collectTitle : atDoor ? D.deliverTitle : D.continueTitle}
+        title={
+          beforeStore
+            ? D.keepTitle
+            : atStore
+              ? D.collectTitle
+              : atDoor
+                ? D.deliverTitle
+                : D.continueTitle
+        }
       >
         <div className="space-y-3">
           <p className="text-sm text-ink-muted">
-            {atStore ? D.collectHint : atDoor ? D.deliverHint : D.continueHint}
+            {beforeStore
+              ? D.keepHint
+              : atStore
+                ? D.collectHint
+                : atDoor
+                  ? D.deliverHint
+                  : D.continueHint}
           </p>
           <Textarea
             id={`door-deliver-${orderId}`}
@@ -293,34 +379,67 @@ export function DoorPanel({
       </Modal>
 
       <Modal
+        open={dialog === "cancel"}
+        onClose={() => setDialog("")}
+        title={D.cancelTitle}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">{D.cancelHint}</p>
+          <Textarea
+            id={`door-cancel-${orderId}`}
+            label={D.cancelNote}
+            value={note}
+            maxLength={300}
+            autoGrow
+            onChange={(e) => {
+              setNote(e.target.value);
+              setErr("");
+            }}
+          />
+          {err && <Alert>{err}</Alert>}
+          <FormActions
+            busy={busy}
+            onSave={() => void cancelOrder()}
+            onCancel={() => setDialog("")}
+            saveLabel={D.cancelSend}
+            tone="danger"
+          />
+        </div>
+      </Modal>
+
+      <Modal
         open={dialog === "return"}
         onClose={() => setDialog("")}
         title={atStore ? D.transferTitle : D.returnTitle}
       >
         <div className="space-y-4">
-          <p className="text-sm text-ink-muted">{atStore ? D.transferHint : D.returnHint}</p>
-          {!atStore && <fieldset className="space-y-2">
-            <legend className="mb-1.5 text-sm font-medium text-ink">
-              {D.faultLabel}
-            </legend>
-            {FAULTS.map((f) => (
-              <div key={f} className="space-y-0.5">
-                <Radio
-                  id={`door-fault-${orderId}-${f}`}
-                  name={`door-fault-${orderId}`}
-                  checked={fault === f}
-                  onChange={() => {
-                    setFault(f);
-                    setErr("");
-                  }}
-                  label={D.faults[f]}
-                />
-                <p className="ps-7 text-xs text-ink-muted">
-                  {D.faultEffects[f].replace("{days}", fmtNum(cashBanDays))}
-                </p>
-              </div>
-            ))}
-          </fieldset>}
+          <p className="text-sm text-ink-muted">
+            {atStore ? D.transferHint : D.returnHint}
+          </p>
+          {!atStore && (
+            <fieldset className="space-y-2">
+              <legend className="mb-1.5 text-sm font-medium text-ink">
+                {D.faultLabel}
+              </legend>
+              {FAULTS.map((f) => (
+                <div key={f} className="space-y-0.5">
+                  <Radio
+                    id={`door-fault-${orderId}-${f}`}
+                    name={`door-fault-${orderId}`}
+                    checked={fault === f}
+                    onChange={() => {
+                      setFault(f);
+                      setErr("");
+                    }}
+                    label={D.faults[f]}
+                  />
+                  <p className="ps-7 text-xs text-ink-muted">
+                    {D.faultEffects[f].replace("{days}", fmtNum(cashBanDays))}
+                  </p>
+                </div>
+              ))}
+            </fieldset>
+          )}
           <div>
             <label
               htmlFor={`door-reason-${orderId}`}
@@ -334,7 +453,9 @@ export function DoorPanel({
               onChange={(e) => setReason(e.target.value)}
             >
               <option value="">
-                {reportLabel ? `${D.reasonLast} — ${reportLabel}` : D.reasonLast}
+                {reportLabel
+                  ? `${D.reasonLast} — ${reportLabel}`
+                  : D.reasonLast}
               </option>
               {Object.entries(REPORTS).map(([code, label]) => (
                 <option key={code} value={code}>

@@ -216,11 +216,14 @@
     <!-- **ومراحلُ الطلب الخاصّ** — توثيقٌ ثمّ شراء، لا استلامٌ من متجر. -->
     <string name="leg_agree">الاتفاق</string>
     <string name="leg_buy">الشراء</string>
+    <string name="leg_take_amanah">الاستلام</string>
     <string name="leg_arrived">وصلت</string>
     <string name="trip_p_to_store">الطريق إلى %1$s</string>
+    <string name="trip_p_arrived">وصلت إلى وجهتك</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
     <!-- **والخاصُّ قبل الشراء**: اتّفاقٌ ثمّ شراء، لا سيرٌ إلى متجر. -->
     <string name="trip_p_custom">اتفق مع الزبون ثم اشتر</string>
+    <string name="trip_p_custom_amanah">اتفق مع الزبون ثم استلم الأمانة</string>
     <string name="trip_route_loading">جاري حساب الطريق…</string>
     <string name="trip_speed_kmh">%1$s كم/س</string>
     <string name="trip_p_to_customer">الطريق إلى %1$s</string>
@@ -298,11 +301,15 @@
     <string name="custom_route_later">اشترِ الطلب، ثمّ يُرسم الطريق إلى الزبون</string>
     <string name="custom_route_later_amanah">استلم الأمانة، ثمّ يُرسم الطريق إلى الزبون</string>
     <string name="door_collect">الإدارة: استلم الطلب</string>
+    <string name="door_keep">الإدارة: أكمل الطلب</string>
+    <string name="detail_driver_note">ملاحظة المتجر</string>
+    <string name="problem_stage_changed">تغيّرت مرحلة الطلب — افتح «لدي مشكلة» من جديد</string>
     <string name="recipient_call">اتّصل</string>
     <string name="recipient_whatsapp">واتساب</string>
     <string name="recipient_wa_message">مرحباً بك، أنا كابتن من فريق رحّال غو. لقد قام متجر %1$s بإرسال طلبيّة لك، هل يمكنك إرسال موقعك إليّ؟</string>
     <string name="drv_awaiting_customer">بانتظار تأكيد الزبون للتكلفة</string>
     <string name="drv_customer_confirmed">الزبون أكّد الطلب — قم بالشراء</string>
+    <string name="drv_customer_confirmed_amanah">الزبون أكّد الطلب — استلم الأمانة</string>
     <string name="trip_on_route">طلب على طريقك</string>
     <string name="order_agree">موافق</string>
     <!-- **ولا «رفض»** — (قرارُ المالك ٢٠٢٦-٠٨-١٤): يوافق أو يترك.

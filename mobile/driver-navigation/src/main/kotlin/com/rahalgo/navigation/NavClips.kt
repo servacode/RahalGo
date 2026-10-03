@@ -59,8 +59,8 @@ object NavClips {
     /** **«لقد وصلت إلى وجهتك.»** — من مكتبة المقاطع (`corpus.ts`). */
     const val ARRIVED = "arrived"
 
-    /** **«بدأت الملاحة.»** */
-    const val NAV_STARTED = "navigation_started"
+    /** **«بدأت الرحلة.»** — بطلب المالك ٢٠٢٦-١٠-٠٢، سُجّل بالصوت نفسِه ٢٠٢٦-١٠-٠٣. */
+    const val NAV_STARTED = "trip_started"
 
     /**
      * **مسافاتُ الإعلان المسجَّلة** — ولا مقطعَ لسواها.
