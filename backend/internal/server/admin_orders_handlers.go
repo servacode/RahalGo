@@ -123,7 +123,8 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		}
 		// **وعند باب الزبون يقرّر المكتب** — فيرى ما قال السائقُ وكم ينتظر
 		// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١، `orders/door_view.go`).
-		if res.Orders[i].Status == orders.StAtDropoff {
+		// **وفي الطريق أيضاً** (٢٠٢٦-١٠-٠٣): الزبونُ يطلب الإلغاءَ والسائقُ ماشٍ.
+		if orders.AfterPickup(res.Orders[i].Status) {
 			res.Orders[i].Door = s.orders.DoorViewOf(r.Context(), res.Orders[i].ID)
 		}
 	}
@@ -145,7 +146,7 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if o.Status == orders.StAtDropoff {
+	if orders.AfterPickup(o.Status) {
 		o.Door = s.orders.DoorViewOf(r.Context(), o.ID)
 	}
 	// ══════════════════════════════════════════════════════════════════

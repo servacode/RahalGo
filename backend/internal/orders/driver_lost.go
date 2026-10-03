@@ -51,7 +51,7 @@ var lossText = map[string]string{
 	LossCancelledOps:      "ألغت الإدارة الطلب",
 	LossRequeuedOps:       "أعادته الإدارة إلى الطابور",
 	LossRequeuedSystem:    "أعادته المنصة إلى الطابور",
-	LossMerchantBlocked:   "عاد الطلب إلى الإدارة لتبديل المتجر — وتعويضك بعد موافقتها",
+	LossMerchantBlocked:   "عاد الطلب إلى الإدارة لتبديل المتجر",
 	LossFailedOps:         "أنهته الإدارة — تعذّر التسليم",
 	LossReturnToOffice:    "الإدارة: عُد إلى المكتب بالطلب",
 }
@@ -69,7 +69,8 @@ func LossText(code string) string { return lossText[code] }
 //	system   بلا فاعلٍ إنسان (كانسٌ أو مهلة)
 func DriverLossCode(to, endedBy string, byHim, system bool) string {
 	// **والردُّ إلى المكتب لتبديل المتجر يُقال ولو كان بضغطته** — بلاغُه عن
-	// المتجر لا يقول له إنّ الطلبَ صار عند الإدارة وإنّ تعويضَه ينتظرها.
+	// المتجر لا يقول له إنّ الطلبَ صار عند الإدارة. **ولا ذكرَ للتعويض** — قرارُ المالك
+	// ٢٠٢٦-١٠-٠٣: «الإدارة هي تقرّر بدون أيّ شيء»، والسائقُ لا يُوعَد فلا يطمع.
 	if to == StAccepted {
 		return LossMerchantBlocked
 	}
@@ -101,7 +102,8 @@ func DriverLossCode(to, endedBy string, byHim, system bool) string {
 // **والفشلُ من باب الزبون أمرٌ لا خبر**: لا يصل إليه إلّا المكتبُ بقراره
 // (`ResolveDoor`)، **والسائقُ يحمل البضاعةَ ويحتاج أن يعرف إلى أين يعود بها.**
 func DriverLossCodeFrom(from, to, endedBy string, byHim, system bool) string {
-	if from == StAtDropoff && to == StFailed && !byHim {
+	// **وفي الطريق كذلك** (٢٠٢٦-١٠-٠٣): البضاعةُ معه أينما أُنهي الطلب.
+	if AfterPickup(from) && to == StFailed && !byHim {
 		return LossReturnToOffice
 	}
 	return DriverLossCode(to, endedBy, byHim, system)

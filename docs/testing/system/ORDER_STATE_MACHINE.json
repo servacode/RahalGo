@@ -459,12 +459,14 @@
    "declared_roles": [
     "ops"
    ],
-   "effective_platform": [],
-   "effective_merchants": [
+   "effective_platform": [
     "ops",
     "admin"
    ],
-   "nobody_in_platform": true
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
   },
   {
    "kind": "standard",
@@ -506,12 +508,14 @@
    "declared_roles": [
     "ops"
    ],
-   "effective_platform": [],
-   "effective_merchants": [
+   "effective_platform": [
     "ops",
     "admin"
    ],
-   "nobody_in_platform": true
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
   },
   {
    "kind": "standard",
@@ -828,13 +832,15 @@
    "declared_roles": [
     "ops"
    ],
-   "effective_platform": [],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
    "effective_merchants": [
     "ops",
     "admin"
    ],
-   "inherited": true,
-   "nobody_in_platform": true
+   "inherited": true
   },
   {
    "kind": "custom",
@@ -878,13 +884,15 @@
    "declared_roles": [
     "ops"
    ],
-   "effective_platform": [],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
    "effective_merchants": [
     "ops",
     "admin"
    ],
-   "inherited": true,
-   "nobody_in_platform": true
+   "inherited": true
   },
   {
    "kind": "custom",
@@ -1150,12 +1158,14 @@
    "declared_roles": [
     "ops"
    ],
-   "effective_platform": [],
-   "effective_merchants": [
+   "effective_platform": [
     "ops",
     "admin"
    ],
-   "nobody_in_platform": true
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
   },
   {
    "kind": "merchant_delivery",
@@ -1197,12 +1207,14 @@
    "declared_roles": [
     "ops"
    ],
-   "effective_platform": [],
-   "effective_merchants": [
+   "effective_platform": [
     "ops",
     "admin"
    ],
-   "nobody_in_platform": true
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
   },
   {
    "kind": "merchant_delivery",

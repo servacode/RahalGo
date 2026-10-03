@@ -105,12 +105,42 @@ func TestAdminOrders_DoorViewAndAlertHref(t *testing.T) {
 	}
 }
 
-// TestAdminOrders_DoorViewOnlyAtDoor **ولا `door` لطلبٍ ليس عند الباب.**
-func TestAdminOrders_DoorViewOnlyAtDoor(t *testing.T) {
+// TestAdminOrders_DoorViewOnlyAfterPickup **`door` بعد الاستلام وحدَه** — في الطريق
+// يحمل بلاغَ الطريق (٢٠٢٦-١٠-٠٣)، **وقبل الاستلام لا لوحة.**
+func TestAdminOrders_DoorViewOnlyAfterPickup(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	ops := f.armOps(t)
-	orderID := f.problemOrderAt(t, "on_the_way", f.drivers[0])
-	w := f.call(f.srv.handleListOrders, http.MethodGet, "/admin/orders?status=on_the_way",
+	d := f.drivers[0]
+	way := f.problemOrderAt(t, "on_the_way", d)
+	w := f.call(f.srv.handleDriverReportOrStage, http.MethodPost,
+		"/driver/orders/"+way+"/report", way, d, []string{"driver"},
+		`{"code":"customer_cancelled_by_phone","note":"كتب في الدردشة: ألغوا"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("بلاغُ الطريق ردّ %d: %s", w.Code, w.Body.String())
+	}
+	w = f.call(f.srv.handleListOrders, http.MethodGet, "/admin/orders?status=on_the_way",
+		"", ops, []string{"ops"}, "")
+	var wayEnv struct {
+		Data orders.OrderPage `json:"data"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &wayEnv); err != nil {
+		t.Fatal(err)
+	}
+	seen := false
+	for _, o := range wayEnv.Data.Orders {
+		if o.ID == way {
+			seen = true
+			if o.Door == nil || o.Door.ReportCode != "customer_cancelled_by_phone" {
+				t.Fatalf("طلبٌ في الطريق ببلاغٍ ولوحتُه %+v", o.Door)
+			}
+		}
+	}
+	if !seen {
+		t.Fatalf("طلبُ الطريق غائبٌ عن القائمة: %s", w.Body.String())
+	}
+
+	orderID := f.problemOrderAt(t, "assigned", d)
+	w = f.call(f.srv.handleListOrders, http.MethodGet, "/admin/orders?status=assigned",
 		"", ops, []string{"ops"}, "")
 	var env struct {
 		Data orders.OrderPage `json:"data"`
@@ -124,7 +154,7 @@ func TestAdminOrders_DoorViewOnlyAtDoor(t *testing.T) {
 		if o.ID == orderID {
 			found = true
 			if o.Door != nil {
-				t.Fatalf("طلبٌ في الطريق يحمل `door`: %+v", o.Door)
+				t.Fatalf("طلبٌ قبل الاستلام يحمل `door`: %+v", o.Door)
 			}
 		}
 	}

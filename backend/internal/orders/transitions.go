@@ -179,7 +179,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// الطلبَ من عندها.» **والخارطةُ لا تعطي السائقَ هذا الانتقال**، **وانتقالُ
 	// اللوحة العامّ لا يمرّ أيضاً** — بابُه `ResolveDoor` وحدَه، **فذنبٌ لا يُكتب
 	// يُنهي طلباً لا يُعرف على من خسارتُه ولا أيُعوَّض سائقُه.**
-	if to == StFailed && from == StAtDropoff && fault == "" {
+	if to == StFailed && AfterPickup(from) && fault == "" {
 		return nil, ErrDoorNeedsOps
 	}
 	if fault != "" {
@@ -187,7 +187,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			return nil, ErrBadTransition
 		}
 		// **والسببُ إن قيل فبلاغُ بابٍ** — لا رمزٌ من مرحلةٍ أخرى.
-		if failReason != "" && !IsDoorReport(failReason) {
+		if failReason != "" && !IsTripReport(failReason) {
 			return nil, ErrFailReasonStage
 		}
 	} else if to == StFailed && failReason != "" {

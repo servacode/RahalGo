@@ -17,7 +17,7 @@ import (
 
 // DoorView **حالُ الباب كما يقرؤه المكتب.**
 type DoorView struct {
-	// ReportCode **آخرُ بلاغٍ من السائق عند الباب** — وفارغٌ إن لم يُبلّغ.
+	// ReportCode **آخرُ بلاغٍ من السائق بعد الاستلام** — في الطريق أو عند الباب.
 	ReportCode string `json:"report_code"`
 	// ReportNote كلمةُ السائق مع البلاغ.
 	ReportNote string `json:"report_note"`
@@ -47,9 +47,9 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 	if err := s.db.QueryRow(ctx, `
 		SELECT details->>'code', details->>'note', created_at FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
-		  AND details->>'status' = $2
-		ORDER BY created_at DESC LIMIT 1`, orderID, StAtDropoff).
-		Scan(&code, &note, &at); err == nil && code != nil && IsDoorReport(*code) {
+		  AND details->>'status' IN ($2, $3, $4)
+		ORDER BY created_at DESC LIMIT 1`, orderID, StPickedUp, StOnTheWay, StAtDropoff).
+		Scan(&code, &note, &at); err == nil && code != nil && IsTripReport(*code) {
 		v.ReportCode = *code
 		if note != nil {
 			v.ReportNote = *note

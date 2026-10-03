@@ -58,6 +58,7 @@ export interface DoorView {
 export function DoorPanel({
   orderId,
   orderNumber,
+  atDoor,
   customerPhone,
   door,
   cashBanDays,
@@ -66,6 +67,11 @@ export function DoorPanel({
 }: {
   orderId: string;
   orderNumber: number;
+  /**
+   * **عند الباب أم في الطريق** (٢٠٢٦-١٠-٠٣) — الأمرُ نفسُه، ونصُّه «سلّم الآن» عند
+   * الباب و«أكمل التوصيل» قبله.
+   */
+  atDoor: boolean;
   customerPhone: string;
   door: DoorView | undefined;
   /** **مدّةُ منع النقد من الإعدادات** — لا رقمٌ مكتوبٌ هنا. */
@@ -146,11 +152,13 @@ export function DoorPanel({
       {/* **والعنوانُ تسميةُ الحقل فوق اللوحة** (`header` في البطاقة) —
           **فأوّلُ سطرٍ فيها كم ينتظر رجلٌ في الشارع.** */}
       <p className="text-sm font-semibold text-warning">
-        {door && door.waited_min >= 0
-          ? D.waited.replace("{n}", fmtNum(door.waited_min))
-          : D.waitedUnknown}
+        {!atDoor
+          ? D.onTheWay
+          : door && door.waited_min >= 0
+            ? D.waited.replace("{n}", fmtNum(door.waited_min))
+            : D.waitedUnknown}
       </p>
-      <p className="text-xs text-ink-muted">{D.hint}</p>
+      <p className="text-xs text-ink-muted">{atDoor ? D.hint : D.hintTrip}</p>
 
       <div className="space-y-1 text-sm">
         <p className="text-xs text-ink-muted">{D.lastReport}</p>
@@ -194,7 +202,9 @@ export function DoorPanel({
 
       {door?.instruction === "deliver_now" && (
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="success">{D.instructionSent}</Badge>
+          <Badge variant="success">
+            {atDoor ? D.instructionSent : D.instructionSentContinue}
+          </Badge>
           {door.instruction_at && (
             <span className="text-xs text-ink-muted">
               {D.instructionAt.replace("{t}", fmtTime(door.instruction_at))}
@@ -211,7 +221,7 @@ export function DoorPanel({
       {canResolve && (
         <div className="flex flex-wrap gap-2">
           <Button disabled={busy} onClick={() => open("deliver")}>
-            {D.deliverNow}
+            {atDoor ? D.deliverNow : D.continue}
           </Button>
           <Button variant="danger" disabled={busy} onClick={() => open("return")}>
             {D.returnToOffice}
@@ -222,10 +232,10 @@ export function DoorPanel({
       <Modal
         open={dialog === "deliver"}
         onClose={() => setDialog("")}
-        title={D.deliverTitle}
+        title={atDoor ? D.deliverTitle : D.continueTitle}
       >
         <div className="space-y-3">
-          <p className="text-sm text-ink-muted">{D.deliverHint}</p>
+          <p className="text-sm text-ink-muted">{atDoor ? D.deliverHint : D.continueHint}</p>
           <Textarea
             id={`door-deliver-${orderId}`}
             label={D.deliverNote}

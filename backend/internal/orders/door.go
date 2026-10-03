@@ -85,6 +85,10 @@ var doorTitle = map[string]string{
 	DoorReturnToOffice: "الإدارة: عُد إلى المكتب بالطلب",
 }
 
+// doorContinueTitle **«سلّم الآن» قبل الباب تُقرأ «أكمل التوصيل»** (٢٠٢٦-١٠-٠٣) —
+// الأمرُ نفسُه، والسائقُ ما زال في الطريق.
+const doorContinueTitle = "الإدارة: أكمل التوصيل"
+
 // DoorTitle **نصُّ الأمر** — وفارغٌ لأمرٍ لا يُعرف.
 func DoorTitle(action string) string { return doorTitle[action] }
 
@@ -115,7 +119,7 @@ func (s *Service) ResolveDoor(ctx context.Context, actorID string, actorRoles []
 			}
 			return nil, err
 		}
-		if status != StAtDropoff {
+		if !AfterPickup(status) {
 			return nil, ErrNotAtDoor
 		}
 		// **والأمرُ يُكتب مع الانتقال في معاملته** — فلا يُقرأ «فشل» بلا أمر.
@@ -167,7 +171,7 @@ func (s *Service) doorDeliverNow(ctx context.Context, orderID string, in DoorRes
 		}
 		return nil, err
 	}
-	if status != StAtDropoff || driverID == nil {
+	if !AfterPickup(status) || driverID == nil {
 		return nil, ErrNotAtDoor
 	}
 	if _, err := tx.Exec(ctx, `
@@ -190,14 +194,18 @@ func (s *Service) doorDeliverNow(ctx context.Context, orderID string, in DoorRes
 		return nil, err
 	}
 	s.publishOrder(o)
-	s.notifyDoorInstruction(ctx, orderID, *driverID, number, DoorDeliverNow, in.Note)
+	title := doorTitle[DoorDeliverNow]
+	if status != StAtDropoff {
+		title = doorContinueTitle
+	}
+	s.notifyDoorInstruction(ctx, orderID, *driverID, number, title, in.Note)
 	return o, nil
 }
 
 // notifyDoorInstruction **الأمرُ يصل السائقَ عاجلاً ومحفوظاً** — يوقظ الهاتفَ
 // المقفل، **ويُقرأ في صندوقه إن فاتته الرنّة.**
 func (s *Service) notifyDoorInstruction(ctx context.Context, orderID, driverID string,
-	number int64, action, note string) {
+	number int64, title, note string) {
 	if s.notify == nil || driverID == "" {
 		return
 	}
@@ -207,14 +215,14 @@ func (s *Service) notifyDoorInstruction(ctx context.Context, orderID, driverID s
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: driverID, Kind: notifications.KindOrder,
-		Title: doorTitle[action], Body: body,
+		Title: title, Body: body,
 		Entity: "order", EntityID: orderID, Href: "/portal",
 		Apps: []string{notifications.AppDriver},
 	})
 	s.pub.Publish("driver:"+driverID, map[string]any{"type": "order"})
 }
 
-// lastDoorReport **آخرُ بلاغٍ عند الباب لهذا الطلب** — سببُ الإنهاء إن لم يُذكر.
+// lastDoorReport **آخرُ بلاغٍ بعد الاستلام لهذا الطلب** — سببُ الإنهاء إن لم يُذكر.
 //
 // **ومن سجلّ التدقيق** (`driver.stage_report`) — هناك يُكتب البلاغ. **وفارغٌ إن
 // لم يُبلَّغ شيء**: إنهاءٌ بلا بلاغٍ قرارُ مكتبٍ بكلمته وحدَها.
@@ -223,9 +231,9 @@ func (s *Service) lastDoorReport(ctx context.Context, orderID string) string {
 	_ = s.db.QueryRow(ctx, `
 		SELECT details->>'code' FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
-		  AND details->>'status' = $2
-		ORDER BY created_at DESC LIMIT 1`, orderID, StAtDropoff).Scan(&code)
-	if !IsDoorReport(code) {
+		  AND details->>'status' IN ($2, $3, $4)
+		ORDER BY created_at DESC LIMIT 1`, orderID, StPickedUp, StOnTheWay, StAtDropoff).Scan(&code)
+	if !IsTripReport(code) {
 		return ""
 	}
 	return code

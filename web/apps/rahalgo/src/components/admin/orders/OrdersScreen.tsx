@@ -442,8 +442,10 @@ const OPS_NEXT: Record<string, string[]> = {
   // **و«تمّ التسليم» تبقى للسائق وحدَه** — من ادّعاها عن غيره
   // سجّل تسليماً لم يقع، **وذاك كذبٌ في دفتر.**
   at_pickup: ["picked_up", "failed"],
-  picked_up: ["on_the_way", "failed"],
-  on_the_way: ["at_dropoff", "failed"],
+  // **وبعد الاستلام لا «فشل» من هنا أيضاً** (٢٠٢٦-١٠-٠٣): الإنهاءُ «عُد إلى المكتب»
+  // بذنبٍ يكتبه المكتب من لوحة «الطلب مع السائق» — والمحرّكُ يردّ غيرَه.
+  picked_up: ["on_the_way"],
+  on_the_way: ["at_dropoff"],
   // **وعند الباب لا «فشل» من هنا** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ١):
   // المحرّكُ يردّ `door_needs_ops` على الانتقال العامّ — **والإنهاءُ من لوحة
   // «عند باب الزبون»** بذنبٍ يكتبه المكتب (`DoorPanel`).
@@ -949,11 +951,20 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: m.admin.ordersPage.door.title,
       icon: <IconWarning />,
       block: true,
-      hide: (o: OrderRow) => o.status !== "at_dropoff",
+      // **وفي الطريق حين يُبلّغ السائق** (٢٠٢٦-١٠-٠٣: الزبونُ طلب الإلغاءَ من
+      // الدردشة — «وين ألاقي الموضوع بلوحة الإدارة مشان أحلّه؟»). **وبلا بلاغٍ
+      // لا لوحة** — كلُّ طلبٍ في الطريق لا يحتاج قراراً.
+      hide: (o: OrderRow) =>
+        !(
+          o.status === "at_dropoff" ||
+          ((o.status === "picked_up" || o.status === "on_the_way") &&
+            !!(o.door?.report_code || o.door?.instruction))
+        ),
       cell: (o) => (
         <DoorPanel
           orderId={o.id}
           orderNumber={o.number}
+          atDoor={o.status === "at_dropoff"}
           customerPhone={o.customer_phone}
           door={o.door}
           cashBanDays={cashBanDays}

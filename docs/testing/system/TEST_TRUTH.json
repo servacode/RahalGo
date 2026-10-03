@@ -34,7 +34,7 @@
     "behaviour_settings": 131,
     "order_fields": 88,
     "test_files": 452,
-    "test_funcs": 1870
+    "test_funcs": 1871
   },
   "flows": [
     {
@@ -8227,6 +8227,12 @@
     },
     {
       "name": "TestMerchantDelivery_FailAtDoor_PlatformPays",
+      "file": "internal/orders/door_resolution_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTrip_OnTheWay_OpsDecides",
       "file": "internal/orders/door_resolution_test.go",
       "package": "orders_test",
       "orphan": true
@@ -22959,7 +22965,7 @@
       "orphan": true
     },
     {
-      "name": "TestAdminOrders_DoorViewOnlyAtDoor",
+      "name": "TestAdminOrders_DoorViewOnlyAfterPickup",
       "file": "internal/server/admin_door_view_test.go",
       "package": "server",
       "orphan": true

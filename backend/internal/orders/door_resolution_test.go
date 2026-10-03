@@ -180,11 +180,59 @@ func TestDoor_Validation(t *testing.T) {
 		t.Fatalf("تبدّلت الحالُ إلى %q مع الرفض", st)
 	}
 
-	g := setup(t, "on_the_way", 100_000, 10_000, 0)
+	// **وقبل الاستلام لا أمر** — البضاعةُ لم تخرج، وبابُه «لدي مشكلة» عند المتجر.
+	g := setup(t, "at_pickup", 100_000, 10_000, 0)
 	if _, err := g.svc.ResolveDoor(ctx, ops, []string{"ops"}, g.orderID,
 		orders.DoorResolution{Action: orders.DoorDeliverNow}, nil); !errors.Is(err, orders.ErrNotAtDoor) {
-		t.Errorf("أمرٌ لطلبٍ ليس عند الباب: %v", err)
+		t.Errorf("أمرٌ لطلبٍ لم يُستلم بعد: %v", err)
 	}
+}
+
+// TestTrip_OnTheWay_OpsDecides **وفي الطريق الإدارةُ تقرّر كذلك** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٣): الزبونُ طلب الإلغاءَ من الدردشة والسائقُ ماشٍ — «أكمل» يبقي الطلبَ
+// معه بأمرٍ مكتوب، و«عُد إلى المكتب» يُنهيه بذنبٍ وسببٍ من بلاغ الطريق.
+func TestTrip_OnTheWay_OpsDecides(t *testing.T) {
+	t.Run("continue", func(t *testing.T) {
+		f := setup(t, "on_the_way", 100_000, 10_000, 0)
+		ctx := context.Background()
+		ops := testdb.NewUser(t, f.pool, "ops")
+		if _, err := f.svc.ResolveDoor(ctx, ops, []string{"ops"}, f.orderID,
+			orders.DoorResolution{Action: orders.DoorDeliverNow, Note: "الزبونُ تراجع"}, nil); err != nil {
+			t.Fatalf("«أكمل» في الطريق رُدّ: %v", err)
+		}
+		if st := f.statusOf(t); st != "on_the_way" {
+			t.Fatalf("الحالُ %q — **والطلبُ يبقى معه في الطريق**", st)
+		}
+		var instr string
+		if err := f.pool.QueryRow(ctx, `SELECT door_instruction FROM orders WHERE id = $1`,
+			f.orderID).Scan(&instr); err != nil {
+			t.Fatal(err)
+		}
+		if instr != orders.DoorDeliverNow {
+			t.Fatalf("الأمرُ %q — **والسائقُ يقرأ «أكمل» من طلبه**", instr)
+		}
+	})
+	t.Run("return", func(t *testing.T) {
+		f := setup(t, "on_the_way", 100_000, 10_000, 0)
+		ctx := context.Background()
+		f.armTreasury(t)
+		endAtDoor(t, f.svc, f.pool, f.orderID, orders.FaultCustomer, "customer_cancelled_by_phone")
+		var status, reason string
+		if err := f.pool.QueryRow(ctx, `SELECT status, COALESCE(fail_reason,'') FROM orders WHERE id = $1`,
+			f.orderID).Scan(&status, &reason); err != nil {
+			t.Fatal(err)
+		}
+		if status != "failed" || reason != "customer_cancelled_by_phone" {
+			t.Fatalf("(%s · %s) والمتوقّعُ (failed · customer_cancelled_by_phone)", status, reason)
+		}
+		out, err := f.svc.DriverOutcomeOf(ctx, f.orderID, f.driver)
+		if err != nil {
+			t.Fatalf("المخرَج: %v", err)
+		}
+		if out.Reason != orders.LossReturnToOffice {
+			t.Errorf("المخرَجُ %q — **والبضاعةُ معه، فأمرُه العودةُ إلى المكتب**", out.Reason)
+		}
+	})
 }
 
 // TestMerchantDelivery_FailAtDoor_PlatformPays **فشلُ «لدي توصيلة» عند الزبون —

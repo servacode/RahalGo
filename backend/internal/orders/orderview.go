@@ -335,12 +335,15 @@ var audienceAllow = map[Audience]map[string]bool{
 		"stages":                       true,
 		"status":                       true,
 		"subtotal":                     true,
-		"to_door_eta_sec":              true,
-		"to_store_eta_sec":             true,
-		"total":                        true,
-		"wallet_paid":                  true,
-		"zone_id":                      true,
-		"zone_name":                    true,
+		// **ولوحةُ «الطلب مع السائق» للمكتب** — يُجيزها العقد (`privacy_contract.go`)،
+		// واللوحةُ تعيد القراءةَ عند كلّ بثّ فتأتيها من ردّ القائمة.
+		"door":             true,
+		"to_door_eta_sec":  true,
+		"to_store_eta_sec": true,
+		"total":            true,
+		"wallet_paid":      true,
+		"zone_id":          true,
+		"zone_name":        true,
 	},
 }
 

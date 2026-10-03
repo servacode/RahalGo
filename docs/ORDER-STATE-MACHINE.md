@@ -10,7 +10,7 @@
 > — **وهو الذي تسأله مصفوفةُ القبول**، لا هذه الوثيقة.
 
 <!-- gen:counts -->
-**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 7 حدّاً لا يملكه أحدٌ في وضع المنصّة · 3 سببَ تعذّر.**
+**14 حالةً · 5 نهائيّةً · 27 حدّاً قياسيّاً · 22 حدّاً مخصَّصاً · 1 حدّاً لا يملكه أحدٌ في وضع المنصّة · 3 سببَ تعذّر.**
 <!-- /gen:counts -->
 
 ---
@@ -93,10 +93,10 @@
 | `at_pickup` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `picked_up` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `picked_up` | `on_the_way` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `picked_up` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
+| `picked_up` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
 | `on_the_way` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `on_the_way` | `at_dropoff` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `on_the_way` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
+| `on_the_way` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff` | `delivered` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `at_dropoff` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
@@ -132,10 +132,10 @@
 | `at_pickup ↩` | `failed` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `picked_up ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `picked_up ↩` | `on_the_way` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `picked_up ↩` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
+| `picked_up ↩` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
 | `on_the_way ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `on_the_way ↩` | `at_dropoff` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
-| `on_the_way ↩` | `failed` | `ops` | **لا أحد** | العمليات · المالك |
+| `on_the_way ↩` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff ↩` | `dispatching` | `ops` | العمليات · المالك | العمليات · المالك |
 | `at_dropoff ↩` | `delivered` | `driver`, `ops` | السائق | العمليات · المالك · السائق |
 | `at_dropoff ↩` | `failed` | `ops` | العمليات · المالك | العمليات · المالك |
@@ -155,12 +155,6 @@
 | النوع | من | إلى | الأدوارُ المُصرَّحة | ومن أسقطها |
 |---|---|---|---|---|
 | `standard` | `accepted` | `preparing` | `merchant`, `ops` | `P2` (وقبلَها `P1` للمتجر) |
-| `standard` | `picked_up` | `failed` | `ops` | `P3` |
-| `standard` | `on_the_way` | `failed` | `ops` | `P3` |
-| `custom` | `picked_up` | `failed` | `ops` | `P3` |
-| `custom` | `on_the_way` | `failed` | `ops` | `P3` |
-| `merchant_delivery` | `picked_up` | `failed` | `ops` | `P3` |
-| `merchant_delivery` | `on_the_way` | `failed` | `ops` | `P3` |
 <!-- /gen:nobody-platform -->
 
 **وهذا أهمُّ جدولٍ في الوثيقة.**

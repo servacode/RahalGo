@@ -146,10 +146,30 @@ func ReleaseReasonAt(code, status string) (FailReason, bool) {
 	return FailReason{}, false
 }
 
-// IsDoorReport **أهذا بلاغٌ عند باب الزبون؟** — يُقبل سبباً في إنهاء الإدارة.
+// IsDoorReport **أهذا بلاغٌ عند باب الزبون؟**
 func IsDoorReport(code string) bool {
 	_, ok := StageReportAt(code, StAtDropoff)
 	return ok
+}
+
+// AfterPickup **البضاعةُ في يد السائق** — من الاستلام إلى باب الزبون.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٣: الزبونُ طلب الإلغاءَ والسائقُ في الطريق — «وين ألاقي
+// الموضوع بلوحة الإدارة مشان أحلّه؟». **فلوحةُ الإدارة وأمراها في كلّ هذه المراحل**
+// لا عند الباب وحدَه.)
+func AfterPickup(status string) bool {
+	return status == StPickedUp || status == StOnTheWay || status == StAtDropoff
+}
+
+// IsTripReport **بلاغٌ بعد الاستلام** — في الطريق أو عند الباب. **يُقبل سبباً في
+// إنهاء الإدارة** («عُد إلى المكتب»).
+func IsTripReport(code string) bool {
+	for _, st := range []string{StPickedUp, StOnTheWay, StAtDropoff} {
+		if _, ok := StageReportAt(code, st); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // FaultOf ذنبُ السببِ المذكور — وفراغٌ إن كان الرمزُ مجهولاً.
