@@ -206,6 +206,9 @@ var stepLines = map[string]string{
 // **والإسنادُ بلا سطرٍ هنا**: `openCustomChat` تكتب تحيّتَها لحظتَه
 // («سوف تصلك تفاصيل السعر وأجرة التوصيل») — **وسطرٌ ثانٍ في اللحظة
 // نفسِها يقول الشيءَ مرّتين.**
+// amanahPickedLine **والأمانةُ تُستلم لا تُشترى** (قِيس في دورة المحاكي ٢٠٢٦-١٠-٠٣).
+const amanahPickedLine = "استلمتُ الأمانة — في طريقي إليك."
+
 var customStepLines = map[string]string{
 	StPickedUp:  "اشتريتُ طلبك — في طريقي إليك.",
 	StAtDropoff: "وصلتُ إليك.",
@@ -224,6 +227,13 @@ func (s *Service) stepLine(ctx context.Context, orderID, driverID, kind, to stri
 	line, ok := table[to]
 	if !ok || driverID == "" {
 		return
+	}
+	if kind == KindCustom && to == StPickedUp {
+		var mode string
+		if err := s.db.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, orderID).Scan(&mode); err == nil &&
+			mode == CustomModeAmanah {
+			line = amanahPickedLine
+		}
 	}
 	// **ومرّةً في ولاية كلّ سائق** (قرارُ المالك ٢٠٢٦-١٠-٠٢) — كان الشرطُ
 	// على الطلب كلِّه، **فالسائقُ الثاني يستلم ولا يقول «استلمتُ طلبك»**

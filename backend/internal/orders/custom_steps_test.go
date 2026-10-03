@@ -114,6 +114,19 @@ func TestCustomSteps_AmanahHasNoGoods(t *testing.T) {
 	if _, err := svc.Transition(ctx, driver, []string{"driver"}, orderID, "picked_up", ""); err != nil {
 		t.Fatalf("«استلمت الأمانة»: %v", err)
 	}
+	// **والأمانةُ تُستلم لا تُشترى** — والموافقةُ على الأجرة لا «المجموع» (دورةُ المحاكي ٢٠٢٦-١٠-٠٣).
+	lines := chatLines(t, orderID)
+	has := func(want string) bool {
+		for _, l := range lines {
+			if l == want {
+				return true
+			}
+		}
+		return false
+	}
+	if !has("استلمتُ الأمانة — في طريقي إليك.") || !has("وافقتُ على أجرة التوصيل: 2٬000 ل.س.") {
+		t.Fatalf("سطورُ الأمانة في الحديث: %q", lines)
+	}
 }
 
 // TestCustomSteps_CustomerSeesBuying **والزبونُ يرى «في طريقه للشراء» لا «نبحث عن سائق».**

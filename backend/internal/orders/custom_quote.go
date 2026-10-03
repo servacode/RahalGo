@@ -414,7 +414,7 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total)
 			// **وتأكيدُ الزبون يُقال في الحديث أيضاً** (٢٠٢٦-١٠-٠٣) — بمجموعه.
 			line := fmt.Sprintf("وافقتُ على المجموع: %s ل.س.", groupDigits(o.Total))
-			if o.CustomGoodsPending {
+			if o.CustomGoodsPending || o.CustomMode == CustomModeAmanah {
 				line = fmt.Sprintf("وافقتُ على أجرة التوصيل: %s ل.س.", groupDigits(o.Total))
 			}
 			s.quoteLine(ctx, orderID, customerID, "customer", line)

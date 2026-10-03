@@ -1707,7 +1707,11 @@ private fun TripCard(
                     )
                 } else if (awaitingConfirm) {
                     Text(
-                        stringResource(if (order.customGoodsPending) R.string.drv_awaiting_fee else R.string.drv_awaiting_goods),
+                        // **والأمانةُ بلا ثمن** (قِيس في دورة المحاكي ٢٠٢٦-١٠-٠٣): كانت تقول «ثمن البضاعة».
+                        stringResource(
+                            if (order.customGoodsPending || order.customMode == "amanah") R.string.drv_awaiting_fee
+                            else R.string.drv_awaiting_goods,
+                        ),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),

@@ -365,6 +365,9 @@ internal fun FailDialog(
                                 if (beforePickup) R.string.confirm_release_body else R.string.confirm_emergency_body
                             is Pending.Reason -> when {
                                 confirm.item.kind == "release" -> R.string.confirm_release_body
+                                // **والبلاغُ لا يُعفيه** (قِيس في دورة المحاكي ٢٠٢٦-١٠-٠٣): مشكلةُ المتجر صارت
+                                // بلاغاً والطلبُ معه — وكان النصُّ «وتُعفى أنت منه».
+                                confirm.item.kind == "report" -> R.string.confirm_report_body
                                 !confirm.item.closes -> R.string.confirm_merchant_body
                                 confirm.item.fault == "customer" -> R.string.confirm_customer_body
                                 else -> R.string.confirm_close_body

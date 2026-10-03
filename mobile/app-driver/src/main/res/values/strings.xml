@@ -118,6 +118,7 @@
     <string name="act_confirm">نعم، تأكيد</string>
     <string name="confirm_close_body">هذا ينهي الطلب ولا يمكن التراجع عنه. متأكد؟</string>
     <string name="confirm_customer_body">هذا ينهي الطلب، ويُمنع الزبون من الدفع نقداً ٣٠ يوماً. متأكد؟</string>
+    <string name="confirm_report_body">يصل بلاغك للإدارة، والطلب يبقى معك حتى تقرّر. متأكد؟</string>
     <string name="confirm_merchant_body">سيبقى الطلب حياً وتتابعه الإدارة مع المتجر، وتُعفى أنت منه. متأكد؟</string>
     <string name="confirm_release_body">سيذهب الطلب لسائق آخر، وينتهي دوامك، وتُبلَّغ الإدارة. متأكد؟</string>
     <string name="door_deliver_now">الإدارة: سلّم الطلب الآن</string>
