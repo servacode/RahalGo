@@ -148,13 +148,31 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	// بآخرِ ما وصله قد يكتب موضعاً قديماً فوق حديث.**
 	sort.Slice(good, func(i, j int) bool { return good[i].At.Before(good[j].At) })
 
-	if err := s.saveTrackBatch(r.Context(), userIDFrom(r), good); err != nil {
+	// **وقفزةٌ أسرعُ من مركبةٍ تُهمَل** (`driver_location_jump.go`) — كلُّ نقطةٍ تُقاس على
+	// آخرِ ما قُبل قبلها، **فنقطةٌ مزيَّفةٌ واحدةٌ في الدفعة لا تصير مرجعاً لما بعدها.**
+	uid := userIDFrom(r)
+	ref := s.lastFixOf(r.Context(), uid)
+	kept := good[:0]
+	for _, p := range good {
+		if impossibleJump(ref, p.Lat, p.Lng, p.At) {
+			s.logJump(uid, ref, p.Lat, p.Lng, p.At)
+			continue
+		}
+		kept = append(kept, p)
+		ref = lastFix{lat: p.Lat, lng: p.Lng, at: p.At, ok: true}
+	}
+	if len(kept) == 0 {
+		httpx.JSON(w, http.StatusOK, map[string]any{"accepted": 0, "rejected": len(req.Points)})
+		return
+	}
+
+	if err := s.saveTrackBatch(r.Context(), uid, kept); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"accepted": len(good),
-		"rejected": len(req.Points) - len(good),
+		"accepted": len(kept),
+		"rejected": len(req.Points) - len(kept),
 	})
 }
 

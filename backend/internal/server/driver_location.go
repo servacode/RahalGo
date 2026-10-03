@@ -107,6 +107,12 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := userIDFrom(r)
+	// **وقفزةٌ أسرعُ من مركبةٍ تُهمَل** (`driver_location_jump.go`) — نجاحٌ بلا كتابة.
+	if from := s.lastFixOf(r.Context(), uid); impossibleJump(from, req.Lat, req.Lng, at) {
+		s.logJump(uid, from, req.Lat, req.Lng, at)
+		httpx.JSON(w, http.StatusOK, map[string]any{"saved": false, "ignored": "impossible_jump"})
+		return
+	}
 	// **ونقطةٌ أقدمُ ممّا كُتب لا تدهسه** — نبضتان تصلان بغير ترتيبهما.
 	if _, err := s.pg.Exec(r.Context(), `
 		UPDATE users
