@@ -951,6 +951,8 @@
       "proofNoGps": "بلا موقع",
       "proofSkipped": "تعذر التصوير:",
       "historyTitle": "سجل الطلبات",
+      "awaitingFilter": "بلاغات بانتظار قرارك",
+      "clearFilter": "عرض الكل",
       "invoice": "الفاتورة",
       "customGoods": "ثمن البضاعة",
       "customFee": "أجرة التوصيل",
@@ -2646,7 +2648,15 @@
       "devices30": "أجهزة نشطة — ٣٠ يوماً",
       "opensToday": "فتحات اليوم",
       "opens7": "فتحات — ٧ أيّام",
-      "opens30": "فتحات — ٣٠ يوماً"
+      "opens30": "فتحات — ٣٠ يوماً",
+      "awaiting": "بانتظار قرارك",
+      "compensationsPending": "تعويضات معلقة",
+      "reportsWaiting": "بلاغات سائقين تنتظر قرارا",
+      "emergenciesOpen": "طوارئ مفتوحة",
+      "ordersUnassigned": "طلبات بلا سائق بعد المهلة",
+      "leadsNew": "طلبات انضمام جديدة",
+      "menuPending": "أصناف تنتظر المراجعة",
+      "driversOverCash": "سائقون تجاوزوا سقف النقد"
     },
     "cashOutstanding": {
       "title": "نقد بيد السائقين",

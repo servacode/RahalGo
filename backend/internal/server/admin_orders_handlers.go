@@ -105,8 +105,10 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		//
 		// (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «يجب أن نفصل بين الطلبات الجديدة والسابقة».)
 		ClosedOnly: q.Get("closed") == "1",
-		Page:       page,
-		PerPage:    perPage,
+		// **وبلاغٌ ينتظر المكتب** — من بطاقة «بانتظار قرارك» في الرئيسيّة.
+		AwaitingOffice: q.Get("awaiting") == "1",
+		Page:           page,
+		PerPage:        perPage,
 	})
 	if err != nil {
 		s.respondErr(w, err)

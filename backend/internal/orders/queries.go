@@ -252,8 +252,12 @@ type ListFilter struct {
 	// وشاشةٌ تُشاهَد ولا تُلمَس تُربك أكثرَ ممّا تُفيد. **وسؤالُه الحقيقيّ
 	// «ماذا بعتُ اليومَ وبكم؟» — وجوابُه في السجلّ.**
 	ClosedOnly bool
-	Page       int
-	PerPage    int
+	// AwaitingOffice **بلاغُ سائقٍ ينتظر قرارَ المكتب** — بطاقةُ «بانتظار قرارك»
+	// في الرئيسيّة تفتح الطلباتِ عليه (قرارُ المالك ٢٠٢٦-١٠-٠٣). **وشرطُه
+	// نصُّ العدّ نفسُه** (`awaitingOfficeSQL`).
+	AwaitingOffice bool
+	Page           int
+	PerPage        int
 }
 
 // fillStageTimes يملأ أوقاتَ المراحل لصفحةِ طلباتٍ كاملة.
@@ -352,6 +356,10 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if f.SalesOnly {
 		where += `
 		AND o.kind <> 'merchant_delivery'`
+	}
+	if f.AwaitingOffice {
+		where += `
+		AND ` + awaitingOfficeSQL()
 	}
 
 	var total int

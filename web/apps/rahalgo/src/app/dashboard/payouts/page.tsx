@@ -67,7 +67,13 @@ export default function PayoutsPage() {
   const canDecide = can("payouts.decide");
   /** **والشحنُ اليدويُّ للأدمن والمالية** — كحارس الخادم نفسِه. */
   const canCredit = canDecide;
-  const [status, setStatus] = useState("");
+  // **والحالُ من الرابط عند الفتح** — بطاقةُ «بانتظار قرارك» في الرئيسيّة تفتح
+  // المعلَّقَ وحدَه (قرارُ المالك ٢٠٢٦-١٠-٠٣). **ويُقرأ مرّةً** — ثمّ هو بيد الناظر.
+  const [status, setStatus] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (new URLSearchParams(window.location.search).get("status") ?? ""),
+  );
   const [deciding, setDeciding] = useState<{ p: Payout; approve: boolean } | null>(null);
   /** **إضافةُ الرصيد** — اختيارٌ ثمّ شحن. */
   const [creditOpen, setCreditOpen] = useState(false);

@@ -637,7 +637,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [data, setData] = useState<OrderPage | null>(null);
   /** آخرُ أعدادٍ وصلت — **تُعرض ريثما تصل الجديدة.** */
   const lastCounts = useRef<Record<string, number> | undefined>(undefined);
-  const [status, setStatus] = useState("");
+  // **والحالُ من الرابط** — بطاقاتُ «بانتظار قرارك» في الرئيسيّة تفتح الشاشةَ
+  // مرشَّحة (قرارُ المالك ٢٠٢٦-١٠-٠٣).
+  const [status, setStatus] = useState(params.get("status") ?? "");
+  /** **بلاغُ سائقٍ ينتظر قرارَ المكتب** — شرطُ العدّ في الرئيسيّة نفسُه. */
+  const [awaiting, setAwaiting] = useState(params.get("awaiting") === "1");
   const [query, setQuery] = useState(initialQ);
   /**
    * **شاشتان لا شاشةٌ بمربّع.**
@@ -726,6 +730,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         // **والبحثُ يعبر الشاشتين** — من كتب رقماً يريده حيثما كان.
         open: live && !searching ? "1" : "",
         closed: !live && !searching ? "1" : "",
+        awaiting: awaiting ? "1" : "",
         page: String(page),
         per_page: "12",
       });
@@ -754,7 +759,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, query, live, searching, page]);
+  }, [status, awaiting, query, live, searching, page]);
 
   useEffect(() => {
     const t = setTimeout(load, 250);
@@ -1244,6 +1249,24 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
+        {/* **وشاشةُ العمل مرشَّحةً من الرئيسيّة تقول ذلك** — وإلّا ظُنّ أنّ
+            الطلباتِ الأخرى اختفت. **وضغطةٌ تُعيد الكلّ.** */}
+        {live && (awaiting || status) && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setAwaiting(false);
+              setStatus("");
+              setPage(1);
+            }}
+          >
+            {awaiting
+              ? m.admin.ordersPage.awaitingFilter
+              : (STATUS_LABELS[status] ?? status)}
+            {m.common.listSeparator}
+            {m.admin.ordersPage.clearFilter}
+          </Button>
+        )}
         <div className="w-64">
           <Input
             icon={<IconSearch />}
