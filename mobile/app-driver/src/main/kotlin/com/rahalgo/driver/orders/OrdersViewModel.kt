@@ -477,6 +477,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
         keepRoute(out.route, out.mine)
         if (out.error == null) {
+            forgetStaleNotice(out.mine)
             autoFollow(out.mine)
             trackDepartures(out.mine)
         }
@@ -495,6 +496,16 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissLost() {
         lostTrip = null
+    }
+
+    /**
+     * **«وصل بلاغك» يُمحى حين يتبدّل طلبُه** (`ReportNotice`) — تحويلٌ لمتجرٍ آخر يُعيده إلى
+     * الطريق، **فلا يلحقه الخبرُ إلى المتجر الجديد ولا يُخبّئ «استلمت الطلب».**
+     */
+    private fun forgetStaleNotice(mine: List<DriverOrder>) {
+        if (ReportNotice.stale(detail.noticeFor, mine)) {
+            detail = detail.copy(notice = "", noticeFor = "")
+        }
     }
 
     private fun trackDepartures(mine: List<DriverOrder>) {
@@ -1119,7 +1130,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun stageReport(id: String, code: String) {
-        val key = id + "/" + (state.mine.firstOrNull { it.id == id }?.status ?: "")
+        val key = state.mine.firstOrNull { it.id == id }?.let(ReportNotice::key) ?: (id + "/")
         detail = detail.copy(failReasons = null, busy = true, error = "", notice = "")
         viewModelScope.launch {
             detail = try {
@@ -1302,9 +1313,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             problemStatus = detail.problemStatus,
             // **والخبرُ لطلبه ومرحلته وحدَهما** — لا يتبع السائقَ إلى الطلب التالي.
             awaitingOffice = order.status == "at_pickup" && order.doorInstruction.isEmpty() &&
-                detail.noticeFor == order.id + "/" + order.status && detail.notice.isNotEmpty(),
+                detail.noticeFor == ReportNotice.key(order) && detail.notice.isNotEmpty(),
             // **وردُّ الإدارة يُنهي «وصل بلاغك»** (٢٠٢٦-١٠-٠٣) — كان يبقى فوق أمرها.
-            notice = if (detail.noticeFor == order.id + "/" + order.status && order.doorInstruction.isEmpty()) {
+            notice = if (detail.noticeFor == ReportNotice.key(order) && order.doorInstruction.isEmpty()) {
                 detail.notice
             } else {
                 ""
@@ -2085,6 +2096,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     if (found == null) openId = null else detail = detail.copy(order = found)
                 }
                 trackDepartures(mine)
+                forgetStaleNotice(mine)
                 // **وساقٌ جديدةٌ تطلب طريقَها الآن** (فحصُ الملاحة ١.٥) — كان طريقُ المتجر
                 // يُعاد تركيبُه بعد الاستلام حتّى تحديثٍ لاحق.
                 if (legOf(mine) != routeLeg) refresh()

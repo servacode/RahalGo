@@ -52,18 +52,10 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 	var cur string
 	_ = s.db.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&cur)
 	statuses := []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff}
-	since := time.Time{}
 	if cur == StAssigned {
 		statuses = []string{StAssigned}
-		var last *time.Time
-		_ = s.db.QueryRow(ctx, `
-			SELECT max(created_at) FROM order_events
-			WHERE order_id = $1 AND to_status = 'assigned' AND from_status <> 'assigned'`,
-			orderID).Scan(&last)
-		if last != nil {
-			since = *last
-		}
 	}
+	since := s.reportsSince(ctx, orderID)
 	if err := s.db.QueryRow(ctx, `
 		SELECT details->>'code', details->>'note', created_at FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
@@ -117,4 +109,23 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 		v.InstructionAt = instrAt
 	}
 	return v
+}
+
+// reportsSince **من أين تُقرأ البلاغات** — من آخر عودةٍ إلى «في الطريق للمتجر».
+//
+// **كان المرشّحُ للطور `assigned` وحدَه** (تجربةُ القبول ٢٠٢٦-١٠-٠٣، مرّتين على المحاكي):
+// «المتجر مغلق» عند الأوّل ← تحويل ← وصل الجديد ← **فقُرئ بلاغُ القديم بلاغاً عند الجديد**،
+// ولوحةُ الإدارة تطلب قراراً حُسم، والسائقُ بلا «استلمت الطلب». **والتحويلُ وحدَه يُعيد
+// الطلبَ من عند المتجر إلى الطريق** (`server/order_transfer.go`) — **فكلُّ بلاغٍ قبله يخصّ
+// متجراً لم يعد متجرَه.** والإسنادُ الأوّل أقدمُ من كلّ بلاغ، فلا يحجب شيئاً.
+func (s *Service) reportsSince(ctx context.Context, orderID string) time.Time {
+	var last *time.Time
+	_ = s.db.QueryRow(ctx, `
+		SELECT max(created_at) FROM order_events
+		WHERE order_id = $1 AND to_status = 'assigned' AND from_status <> 'assigned'`,
+		orderID).Scan(&last)
+	if last == nil {
+		return time.Time{}
+	}
+	return *last
 }

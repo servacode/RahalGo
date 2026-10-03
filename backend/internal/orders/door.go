@@ -263,6 +263,7 @@ func (s *Service) notifyDoorInstruction(ctx context.Context, orderID, driverID s
 }
 
 // lastDoorReport **آخرُ بلاغٍ بعد الاستلام لهذا الطلب** — سببُ الإنهاء إن لم يُذكر.
+// **ولا بلاغَ متجرٍ قبل تحويلٍ** (`reportsSince`) — لا يصير سببَ إنهاءٍ عند غيره.
 //
 // **ومن سجلّ التدقيق** (`driver.stage_report`) — هناك يُكتب البلاغ. **وفارغٌ إن
 // لم يُبلَّغ شيء**: إنهاءٌ بلا بلاغٍ قرارُ مكتبٍ بكلمته وحدَها.
@@ -271,8 +272,9 @@ func (s *Service) lastDoorReport(ctx context.Context, orderID string) string {
 	_ = s.db.QueryRow(ctx, `
 		SELECT details->>'code' FROM audit_log
 		WHERE action = 'driver.stage_report' AND entity = 'order' AND entity_id = $1
-		  AND details->>'status' IN ($2, $3, $4, $5)
-		ORDER BY created_at DESC LIMIT 1`, orderID, StAtPickup, StPickedUp, StOnTheWay, StAtDropoff).Scan(&code)
+		  AND details->>'status' IN ($2, $3, $4, $5) AND created_at >= $6
+		ORDER BY created_at DESC LIMIT 1`, orderID, StAtPickup, StPickedUp, StOnTheWay, StAtDropoff,
+		s.reportsSince(ctx, orderID)).Scan(&code)
 	if !IsTripReport(code) {
 		return ""
 	}
