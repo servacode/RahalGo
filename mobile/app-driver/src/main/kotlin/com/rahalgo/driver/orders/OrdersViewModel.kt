@@ -855,18 +855,30 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * نموذج العرض فلا يمسّها ذلك** — لكنّ المختبَر يجب أن يشبه
      * الميدان، **وإلّا اختُبر شيءٌ وشُحن آخر.**
      */
+    /**
+     * **الرحلةُ التجريبيّةُ تكمل وحدَها بعد الاستلام** (طلبُ المالك ٢٠٢٦-١٠-٠٣: «وقت أوصل
+     * المتجر تتوقّف بشكلٍ مؤقّت، بمجرّد ما أستلم الطلب تكمل المسار لحالها») — **تبقى مشغولةً
+     * للطلب كلِّه** حتّى يوقفها أو ينتهي الطلب.
+     */
+    var demoTrip by mutableStateOf(false)
+        private set
+
     fun startReplay(fixes: List<com.rahalgo.navigation.NavFix>) {
+        demoTrip = true
         navSession.startReplay(fixes, viewModelScope)
         // **وحين تنتهي تعود الأقمارُ وحدَها** — الإعادةُ تُسكت مجرى الموقع
         // الحقيقيّ ما دامت تمشي، **ورحلةٌ قائمةٌ لا تبقى بلا موقعٍ بعدها.**
         viewModelScope.launch {
             androidx.compose.runtime.snapshotFlow { navSession.replaying }
                 .first { !it }
-            resumeRealGps()
+            // **والتجربةُ المشغولةُ تقف عند المتجر ولا تعود إلى الأقمار** — وإلّا قفز السهمُ إلى
+            // موضع الهاتف الحقيقيّ فأُعيد الحسابُ وبدأت الرحلةُ من أوّلها (قِيس ٢٠٢٦-١٠-٠٣).
+            if (!demoTrip) resumeRealGps()
         }
     }
 
     fun stopReplay() {
+        demoTrip = false
         navSession.stopReplay()
         resumeRealGps()
     }
@@ -887,6 +899,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun closeNav() {
         following = false
+        demoTrip = false
         navSession.stopReplay()
         navSession.stop()
         voice.stop()
@@ -1044,6 +1057,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun stageReport(id: String, code: String) {
+        val key = id + "/" + (state.mine.firstOrNull { it.id == id }?.status ?: "")
         detail = detail.copy(failReasons = null, busy = true, error = "", notice = "")
         viewModelScope.launch {
             detail = try {
@@ -1052,6 +1066,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     busy = false,
                     notice = getApplication<android.app.Application>()
                         .getString(com.rahalgo.driver.R.string.report_sent),
+                    noticeFor = key,
                 )
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1223,7 +1238,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             problemError = detail.problemError,
             reasonsAtMs = detail.reasonsAtMs,
             problemStatus = detail.problemStatus,
-            notice = detail.notice,
+            // **والخبرُ لطلبه ومرحلته وحدَهما** — لا يتبع السائقَ إلى الطلب التالي.
+            notice = if (detail.noticeFor == order.id + "/" + order.status) detail.notice else "",
             driver = driver?.let { LatLng(it.lat, it.lng) },
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
             // **فتُرسم الرحلة بنقطتين** بدل أن تسقط الشاشة.

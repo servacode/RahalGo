@@ -102,6 +102,12 @@ internal fun AgreeDialog(
     feeSnapshot: Long?,
     /** **أيجوز للسائق تعديلُها** — حين تحدّدها المنصة. */
     driverMayChange: Boolean,
+    /**
+     * **ما وُثّق قبلُ يُملأ سلفاً** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «أضغط زرَّ التوثيق يرجعلي الخانات
+     * فاضية، كان بدّي أرجع أكتب السعرَ من جديد») — فالتعديلُ يبدأ ممّا اتُّفق عليه.
+     */
+    currentGoods: Long? = null,
+    currentFee: Long? = null,
     onConfirm: (Long, Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -109,9 +115,14 @@ internal fun AgreeDialog(
     // **مفروضةٌ لا تُعدَّل** حين تحدّدها المنصةُ ولا تأذن للسائق (2c) —
     // **والمحرّكُ يفرضها على كلّ حال**، والحقلُ المقفلُ يقول ذلك للسائق.
     val feeLocked = adminDefined && !driverMayChange
-    var goods by remember { mutableStateOf("") }
+    var goods by remember { mutableStateOf(currentGoods?.takeIf { it > 0 }?.toString() ?: "") }
     // **تُملأ سلفاً من لقطة المنصة إن حدّدتها** — مقفلةً أو قابلةً للتعديل.
-    var fee by remember { mutableStateOf(if (adminDefined) (feeSnapshot?.toString() ?: "0") else "") }
+    var fee by remember {
+        mutableStateOf(
+            currentFee?.toString()
+                ?: if (adminDefined) (feeSnapshot?.toString() ?: "0") else "",
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,

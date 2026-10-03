@@ -227,6 +227,30 @@ class VoiceTest {
         assertTrue("**ثمانيةُ أمتارٍ لم تُدمج**", cues.any { it.second.text.contains("ثمّ") })
     }
 
+    /**
+     * **VOICE-034** — «الآن» تنتهي قبل المنعطف لا بعده (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «الصوتُ
+     * أحياناً يتأخّر بعد الانعطاف»). **قِيس على جهازه**: الثانيةُ من منعطفين متلاصقين قيلت
+     * على ١٠م بسرعة ٣٠ كم/س فانتهت بعد المنعطف بثمانية.
+     */
+    @Test
+    fun `VOICE-034 الآن لا تنتهي بعد المنعطف`() {
+        val mps = 8.3
+        for (gap in listOf(15.0, 25.0, 40.0)) {
+            val route = twoTurns(gap)
+            val (e, _) = engineWithVoice(route)
+            val cues = cuesOf(e, RouteFixtures.driveAlong(route, speedMps = mps.toFloat()))
+            for ((_, c) in cues) {
+                if (c.stage != CueStage.NOW || c.kind != CueKind.MANEUVER) continue
+                val speechM = ClipDurations.seconds(c.clip) * mps
+                println("VOICE-034 · فجوة=${"%.0f".format(gap)} · «${c.text}» على ${"%.0f".format(c.firedAtM)}م ونطقُها ${"%.0f".format(speechM)}م")
+                assertTrue(
+                    "**«${c.text}» بدأت على ${"%.0f".format(c.firedAtM)}م وتنتهي بعد المنعطف**",
+                    c.firedAtM >= speechM,
+                )
+            }
+        }
+    }
+
     private fun twoTurns(gapM: Double): NavRoute {
         val pts = (0..8).map { GeoPoint(RouteFixtures.north(it * 25.0), RouteFixtures.LNG0) } +
             listOf(GeoPoint(RouteFixtures.north(200.0), RouteFixtures.east(gapM))) +

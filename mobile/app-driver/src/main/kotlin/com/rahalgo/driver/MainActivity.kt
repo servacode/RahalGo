@@ -1008,7 +1008,13 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                 // يجب أن تُتمّ.**
                                 null -> Unit
                                 MenuItem.History -> HistoryScreen(vm = historyVm)
-                                MenuItem.Chats -> ChatsScreen(chatsVm)
+                                // **والفتحُ يطلب القائمة** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «يتمّ تحميلُ
+                                // الصفحة وتتأخّر… تعذّر التحميل») — **كان لا يُطلَب شيءٌ أصلاً**،
+                                // فتدور الدوّارةُ عشرين ثانيةً ثمّ «تعذّر»، وزرُّ الإعادة وحدَه يحمّل.
+                                MenuItem.Chats -> {
+                                    LaunchedEffect(Unit) { chatsVm.load(force = true) }
+                                    ChatsScreen(chatsVm)
+                                }
                                 MenuItem.Rewards -> {
                                     LaunchedEffect(Unit) { goalsVm.load() }
                                     IncentivesScreen(goalsVm)
@@ -1032,6 +1038,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         if (fixes.isEmpty()) orders.stopReplay() else orders.startReplay(fixes)
                     },
                     onReplayRetarget = orders::retargetReplay,
+                    demoTrip = orders.demoTrip,
                     voice = orders.voice,
                     // **وحالُ الكتم من نموذج العرض** — تراقبه الواجهة
                     // فيتبدّل شكلُ الزرّ في الإطار التالي للضغطة.

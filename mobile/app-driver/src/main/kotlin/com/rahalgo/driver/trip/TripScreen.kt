@@ -138,6 +138,8 @@ fun TripScreen(
     /** **الرحلةُ التجريبيّة** — وقائمةٌ فارغةٌ تعني «أوقفها». */
     onReplay: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
     onReplayRetarget: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
+    /** **الرحلةُ التجريبيّةُ مشغولةٌ لهذا الطلب** — فتبدأ الساقَ التالية وحدَها. */
+    demoTrip: Boolean = false,
     /**
      * **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «تأكّد من زرّ
      * الصوت بحيث يستجيب بشكلٍ فوريّ».)
@@ -722,7 +724,15 @@ fun TripScreen(
             val g = activeGeometry ?: return@LaunchedEffect
             val hereLat = navSession.nav?.lat
             val hereLng = navSession.nav?.lng
-            if (!navSession.replaying || g.size < 2 || hereLat == null || hereLng == null) {
+            // **وانتهت عند المتجر والتجربةُ مشغولة؟ تبدأ الساقَ الجديدةَ من أوّلها** (٢٠٢٦-١٠-٠٣) —
+            // بعد الاستلام يُرسم الطريقُ إلى الزبون فتمشي عليه بلا ضغطة.
+            if (!navSession.replaying) {
+                if (demoTrip && g.size >= 2) {
+                    onReplay(com.rahalgo.navigation.ReplayDrive.fixes(g, startMs = System.currentTimeMillis()))
+                }
+                return@LaunchedEffect
+            }
+            if (g.size < 2 || hereLat == null || hereLng == null) {
                 return@LaunchedEffect
             }
             var best = 0
@@ -1016,6 +1026,8 @@ fun TripScreen(
             feeSource = order.customFeeSource,
             feeSnapshot = order.customFeeSnapshot,
             driverMayChange = order.customDriverMayChangeFee,
+            currentGoods = order.customGoods,
+            currentFee = order.customFee,
             onConfirm = actions.agree,
             onDismiss = actions.dismissAgree,
         )
@@ -1380,7 +1392,9 @@ private fun TripCard(
                     Text(prep, color = Rahal.colors.inkMuted, modifier = Modifier.weight(1f))
                     if (phone != null) {
                         val ctx = LocalContext.current
-                        RahalTextButton(onClick = {
+                        // **زرُّ اتّصالٍ يُرى زرَّ اتّصال** (طلبُ المالك ٢٠٢٦-١٠-٠٣) — إطارٌ أخضرُ
+                        // وسمّاعة، لا نصٌّ يُقرأ رابطاً.
+                        com.rahalgo.ui.RahalOutlineButton(tone = Tone.Success, onClick = {
                             runCatching {
                                 ctx.startActivity(
                                     android.content.Intent(
@@ -1389,7 +1403,15 @@ private fun TripCard(
                                     ),
                                 )
                             }
-                        }) { Text(stringResource(R.string.trip_call_store)) }
+                        }) {
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_phone),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.trip_call_store), fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1473,7 +1495,10 @@ private fun TripCard(
         if (order.doorInstruction == "deliver_now") {
             Spacer(Modifier.height(10.dp))
             Text(
-                text = stringResource(R.string.door_deliver_now) +
+                // **وقبل الباب «أكمل التوصيل»** (٢٠٢٦-١٠-٠٣) — الأمرُ نفسُه والسائقُ في الطريق.
+                text = stringResource(
+                    if (order.status == "at_dropoff") R.string.door_deliver_now else R.string.door_continue,
+                ) +
                     if (order.doorNote.isNotBlank()) " — " + order.doorNote else "",
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
@@ -1504,6 +1529,27 @@ private fun TripCard(
             Spacer(Modifier.height(14.dp))
             }
             androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.bottom) {
+            // ══════════════════════════════════════════════════════════════
+            // **عمودٌ لا تراكُب** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «الشاشة واقفة على وثّق الاتفاق
+            // ولا يستطيع السائقُ فعلَ شيء»)
+            // ══════════════════════════════════════════════════════════════
+            //
+            // **`AnimatedVisibility` يضع أبناءَه فوق بعضهم** — وكان فيه ابنان: صفُّ الأفعال
+            // وزرُّ الاتّفاق. **فغطّى زرُّ الاتّفاق «اشتريتُ الطلب» و«لدي مشكلة» تماماً** في
+            // الطلب الخاصّ (قِيس بتفريغ الشاشة: لا زرَّ تحته). **فيُجمعان في عمود.**
+            Column(Modifier.fillMaxWidth()) {
+            // **«الزبونُ أكّد الطلب — قم بالشراء»** (طلبُ المالك ٢٠٢٦-١٠-٠٣) — يعرف أنّ دورَه جاء.
+            if (order.kind == "custom" && order.status == "assigned" && order.customFee != null &&
+                order.quoteConfirmedVersion == order.quoteVersion
+            ) {
+                Text(
+                    stringResource(R.string.drv_customer_confirmed),
+                    color = Rahal.colors.success,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                )
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1604,7 +1650,8 @@ private fun TripCard(
         // **وزرٌّ يظهر فيه يسأل عمّا لا يُسأل عنه.**
         // **وقبل الاستلام وحدَه** (Batch 2c) — بعده يُقفَل السعرُ ولا
         // يعدّله السائق (يفرضه المحرّك؛ والزرُّ يُخفى كذلك).
-        if (order.kind == "custom" && order.status == "assigned") {
+        // **ويختفي بعد التوثيق** (طلبُ المالك ٢٠٢٦-١٠-٠٣: «وثّق الاتفاق هنا لازم يختفي»).
+        if (order.kind == "custom" && order.status == "assigned" && order.customFee == null) {
             Spacer(Modifier.height(12.dp))
             RahalButton(
                 onClick = actions.askAgree,
@@ -1614,6 +1661,7 @@ private fun TripCard(
                 Text(stringResource(R.string.agree_button))
             }
         }
+            }
             }
 
         if (state.error.isNotEmpty()) {
