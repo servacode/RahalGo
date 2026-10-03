@@ -114,7 +114,7 @@ object StatementPrint {
             val cls = if (t.amount >= 0) "in" else "out"
             rows.append(
                 """<tr>
-                     <td class="cell"><span class="n">${DocPrint.esc(t.createdAt.take(10))}</span></td>
+                     <td class="cell"><span class="n">${DocPrint.esc(whenText(t.createdAt).take(10))}</span></td>
                      <td>${DocPrint.esc(kindName(c, t.kind))}</td>
                      <td class="note">${DocPrint.esc(t.note.ifEmpty { t.orderNumber?.let { "#$it" } ?: "" })}</td>
                      <td class="cell $cls">${DocPrint.amount(kotlin.math.abs(t.amount), sign)}</td>

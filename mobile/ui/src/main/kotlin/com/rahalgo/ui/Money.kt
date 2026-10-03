@@ -94,21 +94,51 @@ fun etaText(meters: Double, avgSpeedKmh: Long): String {
 // يتبدّل شكلُ التاريخ في واحدةٍ منها.**
 
 /**
+ * ══════════════════════════════════════════════════════════════════════
+ * **وقتُ سوريا — منطقةٌ واحدةٌ لكلّ ما يُعرض**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (فحصُ القبول ٢٠٢٦-١٠-٠٣: الشكوى قالت «فُتحت 16:51» والساعةُ 19:51،
+ *  والمحفظةُ «18:09» والساعةُ 21:09 — **ثلاثُ ساعاتٍ متأخّرة**، والدردشةُ
+ *  وحدَها صحيحة.)
+ *
+ * **وكان النصُّ يُقصّ بلا تحويل** على ظنِّ أنّ الطابعَ يحمل إزاحةَ دمشق —
+ * **والمحرّكُ يرسله بتوقيت غرينتش (`…Z`)**، فتُقرأ ساعةُ غرينتش ساعةَ دمشق.
+ *
+ * **فيُحلَّل الطابعُ ويُحوَّل إلى دمشق** — وهي منطقةُ الدردشة نفسُها
+ * (`ChatBubble`) التي كانت صحيحة. **وطابعٌ بإزاحة دمشق أصلاً لا يتزحزح:
+ * التحويلُ من الشيء إلى نفسه لا يغيّره.**
+ */
+val SYRIA_ZONE: java.time.ZoneId = java.time.ZoneId.of("Asia/Damascus")
+
+/**
+ * **الطابعُ بتوقيت سوريا** — و`null` إن لم يُفهم.
+ *
+ * **ويُقبل بإزاحةٍ أو بـ`Z`** — وهما ما يرسله المحرّك.
+ */
+fun syriaTime(iso: String): java.time.ZonedDateTime? =
+    runCatching { java.time.OffsetDateTime.parse(iso.trim()).atZoneSameInstant(SYRIA_ZONE) }.getOrNull()
+
+private val DATE_FMT = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd", java.util.Locale.US)
+private val TIME_FMT = java.time.format.DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.US)
+
+/**
  * **تاريخُ الحركة ووقتُها** — كما يقرؤها صاحبُها: «2026-08-13 · 03:12».
  *
- * **والمحرّكُ يرسله بصيغة ISO** — وهي صيغةُ آلةٍ لا تُعرض.
- *
- * **ويُقصّ بلا تحويل مناطق**: الطابعُ يحمل إزاحةَ دمشقَ أصلا، **وتحويلٌ
- * ثانٍ يزيحها ساعتين** — فتُقرأ حركةُ الليل في اليوم التالي.
+ * **والمحرّكُ يرسله بصيغة ISO** — وهي صيغةُ آلةٍ لا تُعرض. **ويُحوَّل إلى
+ * توقيت سوريا** (`syriaTime`). **وما لا يُحلَّل يُقصّ كما كان** — ولا يُخترَع.
  */
 fun whenText(iso: String): String {
+    syriaTime(iso)?.let { return it.format(DATE_FMT) + " · " + it.format(TIME_FMT) }
     if (iso.length < 16) return iso
     return iso.substring(0, 10) + " · " + iso.substring(11, 16)
 }
 
 /** **الوقتُ وحدَه** — «03:12»، لِما يقع تحت عنوان يومٍ يقول تاريخَه. */
-fun timeText(iso: String): String =
-    if (iso.length < 16) iso else iso.substring(11, 16)
+fun timeText(iso: String): String {
+    syriaTime(iso)?.let { return it.format(TIME_FMT) }
+    return if (iso.length < 16) iso else iso.substring(11, 16)
+}
 
 /**
  * **اسمُ اليوم** — «اليوم» و«أمس» ثمّ التاريخ.
@@ -116,11 +146,13 @@ fun timeText(iso: String): String =
  * **ومن راجع ورديّتَه مساءً يريد أن يرى «اليوم» وحدَه** — وكشفٌ متّصلٌ
  * من مئة سطرٍ لا يُراجَع. **وهو نصُّ شاشة الويب نفسُه.**
  */
-fun dayText(iso: String): String {
-    val date = iso.take(10)
-    if (date.length < 10) return iso
-    val today = java.time.LocalDate.now()
-    val at = runCatching { java.time.LocalDate.parse(date) }.getOrNull() ?: return date
+fun dayText(iso: String, today: java.time.LocalDate = java.time.LocalDate.now(SYRIA_ZONE)): String {
+    // **واليومُ يومُ دمشق لا يومُ غرينتش** — حركةُ الواحدة ليلاً بتوقيت
+    // دمشق هي العاشرةُ مساءَ أمسِ بغرينتش، **فتُعدّ في يومٍ ليس يومَها.**
+    val at = syriaTime(iso)?.toLocalDate()
+        ?: runCatching { java.time.LocalDate.parse(iso.take(10)) }.getOrNull()
+        ?: return iso
+    val date = at.format(DATE_FMT)
     return when (java.time.temporal.ChronoUnit.DAYS.between(at, today)) {
         in Long.MIN_VALUE..0L -> "اليوم"
         1L -> "أمس"
