@@ -51,8 +51,10 @@ import {
   IconAdd,
   IconStatus,
   FormActions,
+  Confirm,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const X = m.admin.expenses;
@@ -105,6 +107,12 @@ export default function ExpensesPage() {
   const [adding, setAdding] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
   const [error, setError] = useState("");
+  // **وأزرارُ المال لمن يملكها** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): الصفحةُ تُفتح بـ`finance.read` والكتابةُ
+  // تحتاج `finance.manage` — **فكان الموظّفُ يملأ النموذجَ ثمّ يُردّ ٤٠٣.**
+  const { can } = useAuth();
+  const canManage = can("finance.manage");
+  // **وإلغاءُ المصروف بتأكيد** — يمسّ الخزينة، وكان ضغطةً واحدةً بلا سؤال.
+  const [voiding, setVoiding] = useState<Row | null>(null);
   /** **وسببُ الخادم يُعرض كما قاله** — [ReloadState]. */
   const [why, setWhy] = useState("");
 
@@ -144,7 +152,7 @@ export default function ExpensesPage() {
         title={X.title}
         subtitle={X.hint}
         actions={
-          <div className="flex flex-wrap gap-2">
+          canManage && <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setCatsOpen(true)}>
               {X.manageCats}
             </Button>
@@ -227,23 +235,11 @@ export default function ExpensesPage() {
               </span>
               {/* **والخطأُ يُلغى ولا يُمحى** — **وحذفُ الصفّ يترك قيدَه في
                   الخزينة بلا صاحب**: مالٌ خرج ولا يُعرف لماذا. */}
-              <Button
-                variant="ghost"
-                className="!px-2 text-xs"
-                onClick={() => {
-                  void (async () => {
-                    try {
-                      await api(`/api/v1/admin/expenses/${e.id}/void`, { method: "POST" });
-                      setError("");
-                    } catch (err) {
-                      setError(errorText(err));
-                    }
-                    load();
-                  })();
-                }}
-              >
-                {X.void}
-              </Button>
+              {canManage && (
+                <Button variant="ghost" className="!px-2 text-xs" onClick={() => setVoiding(e)}>
+                  {X.void}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -271,6 +267,27 @@ export default function ExpensesPage() {
           }}
         />
       )}
+      <Confirm
+        open={voiding !== null}
+        title={X.voidConfirmTitle}
+        body={X.voidConfirmBody}
+        confirmLabel={X.void}
+        onCancel={() => setVoiding(null)}
+        onConfirm={() => {
+          const e = voiding;
+          setVoiding(null);
+          if (!e) return;
+          void (async () => {
+            try {
+              await api(`/api/v1/admin/expenses/${e.id}/void`, { method: "POST" });
+              setError("");
+            } catch (err) {
+              setError(errorText(err));
+            }
+            load();
+          })();
+        }}
+      />
     </PageContainer>
   );
 }

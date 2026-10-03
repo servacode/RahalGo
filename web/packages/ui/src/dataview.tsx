@@ -9,6 +9,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconList, IconGrid } from "./icons";
+import { LoadingState } from "./layout";
 
 const L = getMessages(defaultLocale).common;
 
@@ -199,6 +200,7 @@ export function DataView<T>({
   onRowClick,
   card,
   rail,
+  loading = false,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -244,7 +246,16 @@ export function DataView<T>({
    * **زرٌّ يخصّ الطلبَ كلَّه لا نصفَه.**
    */
   rail?: (item: T) => ReactNode;
+  /**
+   * **ما زال يُحمَّل — فلا «لا يوجد»** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣، الحالاتُ الأربع في
+   * `GROUND-RULES` §٧): كانت كلُّ قائمةٍ تقول «لا طلبات» لحظةَ الفتح، **وعلى خطٍّ بطيءٍ يظنّ
+   * الموظّفُ أنّ الطابورَ فارغ.**
+   */
+  loading?: boolean;
 }) {
+  if (loading && items.length === 0) {
+    return <LoadingState />;
+  }
   if (items.length === 0) {
     return (
       <div className="surface p-10 text-center text-ink-muted">{empty}</div>

@@ -265,7 +265,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (loading || !capsLoaded || landed.current) return;
     const first = nav[0];
-    if (!first || nav.some((i) => i.href === pathname)) return;
+    // **والردُّ لبابٍ في القائمة لا يملكه وحدَه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان الشرطُ «ليس في
+    // قائمته» فرُدّ كلُّ بابِ تفصيلٍ — ملفُّ حساب، متجر، قسم، حسابي، الإشعارات — **إلى الرئيسيّة عند
+    // أوّل فتحٍ في الجلسة**: الضغطةُ الأولى على ملفٍّ «لا تفعل شيئاً»، والتحديثُ يرمي إلى البيت.
+    // **وأبوابُ التفصيل يحرسها المحرّك** (٤٠٣) كما يحرس كلَّ باب.
+    if (!first || !ALL_NAV.some((i) => i.href === pathname)) return;
+    if (nav.some((i) => i.href === pathname)) return;
     landed.current = true;
     router.replace(first.href);
   }, [loading, capsLoaded, pathname, nav, router]);

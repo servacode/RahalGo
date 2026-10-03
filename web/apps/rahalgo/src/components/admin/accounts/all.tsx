@@ -497,6 +497,7 @@ export default function AllAccountsTable() {
 
       <DataView
         items={data?.users ?? []}
+        loading={data === null && !error}
         getKey={(u) => u.id}
         columns={columns}
         view={view}
@@ -506,14 +507,15 @@ export default function AllAccountsTable() {
           canCreateUser
             ? (u) => (
                 <>
-                  <Button
+                  {/* **والمحفظةُ لمن يملك المال** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — `finance.manage`. */}
+                  {can("finance.manage") && <Button
                     variant="secondary"
                     onClick={() => setWalletUser(u)}
                     className="flex items-center gap-1.5"
                   >
                     <IconWallet size={15} />
                     {m.admin.users.wallet}
-                  </Button>
+                  </Button>}
                   {/* **وأفعالُ السائق مع سائقٍ وحدَه** — (قرارُ المالك
                       ٢٠٢٦-٠٨-١٥). **و«إنهاءُ الورديّة» و«التسوية»
                       يُفعلان على عجل**: من فتح ملفَّه ليضغط زرّاً

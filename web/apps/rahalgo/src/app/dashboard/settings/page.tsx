@@ -336,6 +336,9 @@ export default function SettingsPage() {
     );
   }, [q, list, visible]);
 
+  // **والخطأُ قبل الدوّارة** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان ٤٠٣ أو انقطاعٌ يُبقي الصفحةَ تدور
+  // إلى الأبد، **والسببُ مكتوبٌ تحتها ولا يُرى.**
+  if (!list && error) return <Alert>{error}</Alert>;
   if (!list) return <LoadingState variant="text" />;
 
   /**

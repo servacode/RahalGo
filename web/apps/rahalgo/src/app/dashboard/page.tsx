@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtNum, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   StatCard,
@@ -20,6 +20,8 @@ import {
   IconWallet,
   IconBalance,
   IconSupport,
+  Alert,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -72,6 +74,8 @@ export default function DashboardPage() {
   const { user, can } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [wa, setWa] = useState<WhatsAppStatus | null>(null);
+  // **وخطأُ الأرقام يُقال** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كانت الصفحةُ تبقى ترحيباً بلا شيءٍ تحته.
+  const [statsError, setStatsError] = useState("");
 
   // ══════════════════════════════════════════════════════════════════
   // **وحالُ واتساب إعدادٌ أمنيّ** — `settings.security.manage`
@@ -83,7 +87,15 @@ export default function DashboardPage() {
   // **وردٌّ مُنِعَ في كلّ فتحةِ شاشةٍ يُغرِق السجلَّ** — **فيُفقَد فيه
   // المنعُ الذي يعني شيئاً.**
   const load = useCallback(() => {
-    api<Stats>("/api/v1/admin/stats").then(setStats).catch(() => setStats(null));
+    api<Stats>("/api/v1/admin/stats")
+      .then((s) => {
+        setStats(s);
+        setStatsError("");
+      })
+      .catch((e) => {
+        setStats(null);
+        setStatsError(errorText(e));
+      });
     if (!can("settings.security.manage")) {
       setWa(null);
       return;
@@ -105,6 +117,16 @@ export default function DashboardPage() {
         {user?.full_name ? `${m.common.listSeparator}${user.full_name}` : ""}
       </h1>
 
+      {!stats && statsError && (
+        <div className="mt-6">
+          <Alert>{statsError}</Alert>
+        </div>
+      )}
+      {!stats && !statsError && (
+        <div className="mt-6">
+          <LoadingState variant="stats" />
+        </div>
+      )}
       {stats && (
         <div className="mt-6 space-y-6">
           {/*
@@ -231,7 +253,9 @@ export default function DashboardPage() {
             </StatGrid>
           </section>
 
-          {/* حالة واتساب — كرت مركزي لا مربّع مرتجل */}
+          {/* حالة واتساب — كرت مركزي لا مربّع مرتجل. **ولمن يملك قدرتَه وحدَه** (تدقيقُ اللوحة
+              ٢٠٢٦-١٠-٠٣): كان يُرسم لكلّ أحدٍ «جارٍ التحميل» إلى الأبد بنقطةٍ حمراء. */}
+          {can("settings.security.manage") && (
           <Card>
             <div className="flex items-center gap-3">
               <span
@@ -259,6 +283,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </Card>
+          )}
         </div>
       )}
     </div>

@@ -108,6 +108,8 @@ export default function PromosPage() {
 
 function CodesTab({ isAdmin }: { isAdmin: boolean }) {
   const [promos, setPromos] = useState<Promo[]>([]);
+  // **ولا «لا عروض» قبل أن يصل الردّ** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣).
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useViewMode("promos");
@@ -115,6 +117,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
   const load = useCallback(async () => {
     try {
       setPromos(await api<Promo[]>("/api/v1/admin/promos"));
+      setLoaded(true);
       setError("");
     } catch (err) {
       setError(errorText(err));
@@ -217,6 +220,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
       )}
       <DataView
         items={promos}
+        loading={!loaded && !error}
         getKey={(p) => p.id}
         columns={columns}
         view={view}

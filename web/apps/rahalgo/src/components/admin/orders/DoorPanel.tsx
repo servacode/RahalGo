@@ -53,12 +53,34 @@ export interface DoorView {
   instruction: string;
   instruction_note: string;
   instruction_at: string | null;
+  /** **هاتفُ المتجر** — للّوحة عند المتجر (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣). */
+  store_phone?: string;
+}
+
+/** **رقمٌ يُتّصل به** — زرٌّ واحدُ الشكل للزبون والمتجر والسائق. */
+function PhoneLink({ label, phone }: { label: string; phone: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-xs text-ink-muted">{label}</span>
+      <a
+        href={`tel:${phone}`}
+        className="inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink"
+      >
+        <IconPhone size={15} />
+        <span dir="ltr">{phone}</span>
+        <span className="text-xs text-ink-muted">{D.call}</span>
+      </a>
+    </div>
+  );
 }
 
 export function DoorPanel({
   orderId,
   orderNumber,
   atDoor,
+  atStore = false,
+  canTransfer = true,
+  driverPhone,
   customerPhone,
   door,
   cashBanDays,
@@ -72,7 +94,16 @@ export function DoorPanel({
    * الباب و«أكمل التوصيل» قبله.
    */
   atDoor: boolean;
+  /**
+   * **عند المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «ينتظر الإدارة تحلّ المشكلة») — «استلم الطلب»
+   * أو «حوّل لمتجرٍ آخر» بدل «سلّم» و«عُد إلى المكتب».
+   */
+  atStore?: boolean;
+  /** **و«لدي توصيلة» لا تُحوَّل** — متجرُها مُنشئُها. */
+  canTransfer?: boolean;
   customerPhone: string;
+  /** **هاتفُ السائق** — المكتبُ يكلّمه في كلّ مرحلة. */
+  driverPhone?: string | null;
   door: DoorView | undefined;
   /** **مدّةُ منع النقد من الإعدادات** — لا رقمٌ مكتوبٌ هنا. */
   cashBanDays: number;
@@ -104,8 +135,10 @@ export function DoorPanel({
 
   async function send() {
     const action = dialog === "deliver" ? "deliver_now" : "return_to_office";
+    // **وعند المتجر الذنبُ ذنبُه** — والمكتبُ اتّصل به فعرف.
+    const effFault = atStore ? "merchant" : fault;
     if (action === "return_to_office") {
-      if (!fault) {
+      if (!effFault) {
         setErr(D.faultMissing);
         return;
       }
@@ -122,7 +155,7 @@ export function DoorPanel({
         body: JSON.stringify(
           action === "deliver_now"
             ? { action, note: note.trim() }
-            : { action, fault, reason, note: note.trim() },
+            : { action, fault: effFault, reason, note: note.trim() },
         ),
       });
       setDialog("");
@@ -152,13 +185,17 @@ export function DoorPanel({
       {/* **والعنوانُ تسميةُ الحقل فوق اللوحة** (`header` في البطاقة) —
           **فأوّلُ سطرٍ فيها كم ينتظر رجلٌ في الشارع.** */}
       <p className="text-sm font-semibold text-warning">
-        {!atDoor
-          ? D.onTheWay
-          : door && door.waited_min >= 0
-            ? D.waited.replace("{n}", fmtNum(door.waited_min))
-            : D.waitedUnknown}
+        {atStore
+          ? D.atStore.replace("{n}", fmtNum(Math.max(door?.waited_min ?? 0, 0)))
+          : !atDoor
+            ? D.onTheWay
+            : door && door.waited_min >= 0
+              ? D.waited.replace("{n}", fmtNum(door.waited_min))
+              : D.waitedUnknown}
       </p>
-      <p className="text-xs text-ink-muted">{atDoor ? D.hint : D.hintTrip}</p>
+      <p className="text-xs text-ink-muted">
+        {atStore ? D.hintStore : atDoor ? D.hint : D.hintTrip}
+      </p>
 
       <div className="space-y-1 text-sm">
         <p className="text-xs text-ink-muted">{D.lastReport}</p>
@@ -186,24 +223,21 @@ export function DoorPanel({
         )}
       </div>
 
-      {customerPhone && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-xs text-ink-muted">{D.customerPhone}</span>
-          <a
-            href={`tel:${customerPhone}`}
-            className="inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink"
-          >
-            <IconPhone size={15} />
-            <span dir="ltr">{customerPhone}</span>
-            <span className="text-xs text-ink-muted">{D.call}</span>
-          </a>
-        </div>
-      )}
+      {/* **ومن يُكلَّم يتبع الموضع** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): عند المتجر المتجرُ، وفي الطريق وعند
+          الباب الزبون — **والسائقُ في كلّ مرّة.** */}
+      {atStore
+        ? door?.store_phone && <PhoneLink label={D.storePhone} phone={door.store_phone} />
+        : customerPhone && <PhoneLink label={D.customerPhone} phone={customerPhone} />}
+      {driverPhone && <PhoneLink label={D.driverPhone} phone={driverPhone} />}
 
       {door?.instruction === "deliver_now" && (
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="success">
-            {atDoor ? D.instructionSent : D.instructionSentContinue}
+            {atStore
+              ? D.instructionSentCollect
+              : atDoor
+                ? D.instructionSent
+                : D.instructionSentContinue}
           </Badge>
           {door.instruction_at && (
             <span className="text-xs text-ink-muted">
@@ -221,21 +255,25 @@ export function DoorPanel({
       {canResolve && (
         <div className="flex flex-wrap gap-2">
           <Button disabled={busy} onClick={() => open("deliver")}>
-            {atDoor ? D.deliverNow : D.continue}
+            {atStore ? D.collect : atDoor ? D.deliverNow : D.continue}
           </Button>
-          <Button variant="danger" disabled={busy} onClick={() => open("return")}>
-            {D.returnToOffice}
-          </Button>
+          {(!atStore || canTransfer) && (
+            <Button variant="danger" disabled={busy} onClick={() => open("return")}>
+              {atStore ? D.transfer : D.returnToOffice}
+            </Button>
+          )}
         </div>
       )}
 
       <Modal
         open={dialog === "deliver"}
         onClose={() => setDialog("")}
-        title={atDoor ? D.deliverTitle : D.continueTitle}
+        title={atStore ? D.collectTitle : atDoor ? D.deliverTitle : D.continueTitle}
       >
         <div className="space-y-3">
-          <p className="text-sm text-ink-muted">{atDoor ? D.deliverHint : D.continueHint}</p>
+          <p className="text-sm text-ink-muted">
+            {atStore ? D.collectHint : atDoor ? D.deliverHint : D.continueHint}
+          </p>
           <Textarea
             id={`door-deliver-${orderId}`}
             label={D.deliverNote}
@@ -257,11 +295,11 @@ export function DoorPanel({
       <Modal
         open={dialog === "return"}
         onClose={() => setDialog("")}
-        title={D.returnTitle}
+        title={atStore ? D.transferTitle : D.returnTitle}
       >
         <div className="space-y-4">
-          <p className="text-sm text-ink-muted">{D.returnHint}</p>
-          <fieldset className="space-y-2">
+          <p className="text-sm text-ink-muted">{atStore ? D.transferHint : D.returnHint}</p>
+          {!atStore && <fieldset className="space-y-2">
             <legend className="mb-1.5 text-sm font-medium text-ink">
               {D.faultLabel}
             </legend>
@@ -282,7 +320,7 @@ export function DoorPanel({
                 </p>
               </div>
             ))}
-          </fieldset>
+          </fieldset>}
           <div>
             <label
               htmlFor={`door-reason-${orderId}`}

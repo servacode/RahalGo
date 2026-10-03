@@ -286,6 +286,7 @@ export function TicketsView() {
           والكرتُ لمن يقرأ واحداً. */}
       <DataView
         items={data?.tickets ?? []}
+        loading={data === null && !error}
         getKey={(t) => t.id}
         columns={columns}
         view={view}

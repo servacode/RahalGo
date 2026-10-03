@@ -68,6 +68,8 @@ const FILTERS: { key: string; label: string }[] = [
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  // **ولا «لا طلبات» قبل أن يصل الردّ** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣).
+  const [loaded, setLoaded] = useState(false);
   /**
    * **والقسمُ للمعلَّق لا للمنتهي.**
    *
@@ -117,6 +119,7 @@ export default function LeadsPage() {
       `/api/v1/admin/leads?status=${filter}&page=${page}`,
     );
     setLeads(res?.leads ?? []);
+    setLoaded(true);
     setCount(res?.total ?? 0);
     setPerPage(res?.per_page || 20);
   }, [filter, page]);
@@ -288,6 +291,7 @@ export default function LeadsPage() {
 
       <DataView
         items={leads}
+        loading={!loaded && !error}
         getKey={(l) => l.id}
         columns={columns}
         view={view}

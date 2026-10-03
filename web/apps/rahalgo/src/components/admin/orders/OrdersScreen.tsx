@@ -441,7 +441,8 @@ const OPS_NEXT: Record<string, string[]> = {
   //
   // **و«تمّ التسليم» تبقى للسائق وحدَه** — من ادّعاها عن غيره
   // سجّل تسليماً لم يقع، **وذاك كذبٌ في دفتر.**
-  at_pickup: ["picked_up", "failed"],
+  // **وعند المتجر لا «فشل» من هنا** (٢٠٢٦-١٠-٠٣) — «حوّل لمتجرٍ آخر» من لوحة الطلب.
+  at_pickup: ["picked_up"],
   // **وبعد الاستلام لا «فشل» من هنا أيضاً** (٢٠٢٦-١٠-٠٣): الإنهاءُ «عُد إلى المكتب»
   // بذنبٍ يكتبه المكتب من لوحة «الطلب مع السائق» — والمحرّكُ يردّ غيرَه.
   picked_up: ["on_the_way"],
@@ -954,10 +955,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **وفي الطريق حين يُبلّغ السائق** (٢٠٢٦-١٠-٠٣: الزبونُ طلب الإلغاءَ من
       // الدردشة — «وين ألاقي الموضوع بلوحة الإدارة مشان أحلّه؟»). **وبلا بلاغٍ
       // لا لوحة** — كلُّ طلبٍ في الطريق لا يحتاج قراراً.
+      // **وعند المتجر حين يُبلّغ** (٢٠٢٦-١٠-٠٣: «ينتظر الإدارة تحلّ المشكلة»).
       hide: (o: OrderRow) =>
         !(
           o.status === "at_dropoff" ||
-          ((o.status === "picked_up" || o.status === "on_the_way") &&
+          ((o.status === "at_pickup" ||
+            o.status === "picked_up" ||
+            o.status === "on_the_way") &&
             !!(o.door?.report_code || o.door?.instruction))
         ),
       cell: (o) => (
@@ -965,7 +969,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           orderId={o.id}
           orderNumber={o.number}
           atDoor={o.status === "at_dropoff"}
+          atStore={o.status === "at_pickup"}
+          canTransfer={o.kind !== "merchant_delivery"}
           customerPhone={o.customer_phone}
+          driverPhone={o.driver_phone}
           door={o.door}
           cashBanDays={cashBanDays}
           onChanged={load}
@@ -1294,6 +1301,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
       <DataView
         items={data?.orders ?? []}
+        loading={data === null && !error}
         getKey={(o) => o.id}
         columns={columns}
         // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ

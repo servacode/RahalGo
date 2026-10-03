@@ -19,6 +19,7 @@ import {
   Money,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
@@ -157,6 +158,9 @@ function Stat({
 }
 
 export default function ReportsPage() {
+  // **والتصديرُ لمن يملكه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — `finance.export`، والصفحةُ تُفتح بـ`analytics.read`.
+  const { can } = useAuth();
+  const canExport = can("finance.export");
   const today = new Date();
   const weekAgo = new Date(today.getTime() - 6 * 86400000);
   const [from, setFrom] = useState(iso(weekAgo));
@@ -269,12 +273,16 @@ export default function ReportsPage() {
 
               وكان التصديرُ للحسابات وحدَها — **ومحاسبٌ يريد كشفاً شهرياً لا
               يجد ما يأخذه**، فينسخ من الشاشة صفحةً صفحة. */}
-          <Button variant="secondary" onClick={() => download("orders")}>
-            {r.exportOrders}
-          </Button>
-          <Button variant="secondary" onClick={() => download("ledger")}>
-            {r.exportLedger}
-          </Button>
+          {canExport && (
+            <>
+              <Button variant="secondary" onClick={() => download("orders")}>
+                {r.exportOrders}
+              </Button>
+              <Button variant="secondary" onClick={() => download("ledger")}>
+                {r.exportLedger}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

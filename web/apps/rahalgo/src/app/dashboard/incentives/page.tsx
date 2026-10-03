@@ -38,6 +38,7 @@ import {
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.incentives;
@@ -57,6 +58,9 @@ type Role = "driver" | "sales";
 
 export default function IncentivesPage() {
   const [role, setRole] = useState<Role>("driver");
+  // **و«منح» لمن يملك المال** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — `POST /users/{id}/incentive` بـ`finance.manage`.
+  const { can } = useAuth();
+  const canGrant = can("finance.manage");
   /**
    * ══════════════════════════════════════════════════════════════════
    * **والفشلُ ليس فراغاً — والفراغُ ليس فشلاً**
@@ -189,7 +193,7 @@ export default function IncentivesPage() {
                     {fmtNum(x.penalized)}
                   </td>
                   <td className="p-3 text-end">
-                    <Button
+                    {canGrant && <Button
                       variant="secondary"
                       onClick={() => {
                         setKind("reward");
@@ -200,7 +204,7 @@ export default function IncentivesPage() {
                       }}
                     >
                       {P.grant}
-                    </Button>
+                    </Button>}
                   </td>
                 </tr>
               ))}
