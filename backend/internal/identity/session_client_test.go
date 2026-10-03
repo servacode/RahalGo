@@ -267,3 +267,42 @@ func (r *Repo) mustActive(ctx context.Context, t *testing.T, userID string) map[
 	}
 	return out
 }
+
+// TestSessionClient_KeepNewestWebSessions **جلستا الأدمن على التجهيز** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٣): الإبطالُ يُبقي أحدثَ عائلةٍ ويُبطل الأقدم — **فدخولٌ ثالثٌ يُخرج الأوّلَ
+// لا الثاني**، و`keep = 0` يُبطل الكلَّ كما كان.
+func TestSessionClient_KeepNewestWebSessions(t *testing.T) {
+	pool := testdb.Pool(t)
+	repo := NewRepo(pool)
+	ctx := context.Background()
+	uid := testdb.NewUser(t, pool, "admin")
+
+	oldSID, err := repo.StoreRefresh(ctx, uid, "hash-web-old", testSessionTTL, "متصفّح ١", "1.1.1.1", "", ClientWeb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE refresh_tokens SET created_at = now() - interval '1 hour'
+		WHERE session_id = $1`, oldSID); err != nil {
+		t.Fatal(err)
+	}
+	newSID, err := repo.StoreRefresh(ctx, uid, "hash-web-new", testSessionTTL, "متصفّح ٢", "1.1.1.2", "", ClientWeb)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sids, _, err := repo.RevokeClientSessionsKeep(ctx, uid, ClientWeb, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sids) != 1 || sids[0] != oldSID {
+		t.Fatalf("المُبطَلُ %v — والمنتظَرُ الأقدمُ وحدَه [%s]، **والأحدثُ (%s) يبقى**", sids, oldSID, newSID)
+	}
+
+	sids, _, err = repo.RevokeClientSessionsKeep(ctx, uid, ClientWeb, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sids) != 1 || sids[0] != newSID {
+		t.Fatalf("`keep = 0` أبطل %v — والمنتظَرُ الباقيةُ [%s]", sids, newSID)
+	}
+}

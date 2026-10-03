@@ -116,7 +116,14 @@ type Service struct {
 	// logoutNotifier **إشعارُ أمانٍ لمرّةٍ واحدةٍ لجهازٍ أُزيح** (Obs 3.1) — يُنادى
 	// برموزِ الدفعِ المحذوفةِ بعد الإبطال. احتياطيّاً `nil` (لا إشعار).
 	logoutNotifier func(ctx context.Context, tokens []string)
+	// adminWebSessions **كم جلسةَ متصفّحٍ يحتفظ بها الأدمن** — واحدةٌ افتراضاً، **واثنتان على
+	// التجهيز وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «أنا وأنت ما نطالع بعض»). **ويُعاد واحدةً قبل
+	// الإطلاق** — بندٌ في بوّابة R1.
+	adminWebSessions int
 }
+
+// SetAdminWebSessions **عددُ جلسات متصفّح الأدمن** — `server.go` يضعه ٢ على التجهيز.
+func (s *Service) SetAdminWebSessions(n int) { s.adminWebSessions = n }
 
 // Publisher **ما يكفي من المُسرِّع** — إشارةٌ إلى موضوع (نفسُ نمط orders/notifications).
 type Publisher interface {
@@ -913,7 +920,11 @@ func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip
 	// **دخولٌ جديدٌ يُبطل ما سبق من نوعه** — والإبطال يشمل قائمة Redis
 	// كي يسري فوراً على توكنات الوصول القائمة.
 	if sessionID == "" {
-		if _, err := s.revokeClientSessions(ctx, user.ID, client); err != nil {
+		keep := 0
+		if client == ClientWeb && s.adminWebSessions > 1 && slices.Contains(user.Roles, "admin") {
+			keep = s.adminWebSessions - 1
+		}
+		if _, err := s.revokeClientSessions(ctx, user.ID, client, keep); err != nil {
 			return nil, err
 		}
 	}
@@ -1012,10 +1023,10 @@ func (s *Service) revokeSession(ctx context.Context, userID, sid string) error {
 // **وRedis شرطٌ لا زينة**: القاعدةُ تُبطل توكنَ التجديد، **وتوكنُ الوصول
 // القائمُ يبقى صالحاً حتّى تنتهي مهلتُه** — والوسيطُ يسأل Redis في كلّ
 // طلبٍ ليعرف أنّ الجلسةَ ماتت.
-func (s *Service) revokeClientSessions(ctx context.Context, userID, client string) ([]string, error) {
+func (s *Service) revokeClientSessions(ctx context.Context, userID, client string, keep int) ([]string, error) {
 	// **إبطالٌ وقطعُ وجهةٍ في معاملةٍ واحدة** (Obs 3) — والسببُ `superseded` يُثبَت
 	// في القاعدة فيدوم، ووجهاتُ العائلاتِ المُبطَلةِ وحدَها تُقطَع.
-	sids, tokens, err := s.repo.RevokeClientSessionsAtomic(ctx, userID, client)
+	sids, tokens, err := s.repo.RevokeClientSessionsKeep(ctx, userID, client, keep)
 	if err != nil {
 		return nil, err
 	}

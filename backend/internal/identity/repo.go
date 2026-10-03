@@ -1073,6 +1073,12 @@ func (r *Repo) RevokeClientTokens(ctx context.Context, userID, client string) (i
 // واحدةٍ للجهازِ المُزاح **بعد** حذفِها من الجدول — فلا يُعاد إدراجُها ولا
 // يُختار بالمستخدم في دفعٍ خاصٍّ لاحق.
 func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client string) (sids []string, tokens []string, err error) {
+	return r.RevokeClientSessionsKeep(ctx, userID, client, 0)
+}
+
+// RevokeClientSessionsKeep **كـ`RevokeClientSessionsAtomic` ويُبقي أحدثَ `keep` عائلة** —
+// جلستا الأدمن على التجهيز (قرارُ المالك ٢٠٢٦-١٠-٠٣). و`keep = 0` يُبطل الكلّ.
+func (r *Repo) RevokeClientSessionsKeep(ctx context.Context, userID, client string, keep int) (sids []string, tokens []string, err error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -1084,7 +1090,12 @@ func (r *Repo) RevokeClientSessionsAtomic(ctx context.Context, userID, client st
 		   SET revoked_at = now(), revoked_reason = 'superseded'
 		 WHERE user_id = $1 AND client = $2
 		   AND revoked_at IS NULL AND expires_at > now()
-		RETURNING session_id::text`, userID, client)
+		   AND session_id NOT IN (
+		       SELECT session_id FROM refresh_tokens
+		        WHERE user_id = $1 AND client = $2
+		          AND revoked_at IS NULL AND expires_at > now()
+		        GROUP BY session_id ORDER BY max(created_at) DESC LIMIT $3)
+		RETURNING session_id::text`, userID, client, keep)
 	if err != nil {
 		return nil, nil, err
 	}
