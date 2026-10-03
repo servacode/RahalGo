@@ -1466,10 +1466,7 @@ function OrderActions({
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   /** **حدُّ شيخوخة الموضع بالدقائق** — يأتي من المحرّك لا يُكتب هنا. */
   const [staleMin, setStaleMin] = useState(15);
-  /** تفصيلُ توزيع المال — يُجلب عند الطلب لا مع كل بطاقة */
-  /** نموذجُ تعويض السائق عن طلبٍ فشل */
-  const [compensating, setCompensating] = useState(false);
-  const [amount, setAmount] = useState("");
+  /** سببُ الفعل المفتوح — يُكتب قبل أن يُنفَّذ */
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
   // **إذنُ استثناء إثبات التسليم — بيدِ العمليّات لا السائق** (٢٠٢٦-٠٩-٢٧).
@@ -1697,39 +1694,6 @@ function OrderActions({
     }
   }
 
-  // **تعويضُ السائق — بمبلغٍ يقدّره إنسان.**
-  //
-  // أجرُ التوصيل مقابل تسليمٍ تمّ، وما وقع رحلةٌ لا تسليم. وتقديرُ الرحلة
-  // يختلف: مشوارٌ إلى الحيّ المجاور ليس كمشوارٍ عبر المدينة، **ورقمٌ آليٌّ
-  // واحد يظلم أحدهما.**
-  async function compensate() {
-    const value = Number(amount);
-    if (!Number.isFinite(value) || value <= 0 || reason.trim() === "") return;
-    setBusy("compensate");
-    setErr("");
-    try {
-      await api(`/api/v1/admin/orders/${o.id}/compensate-driver`, {
-        method: "POST",
-        body: JSON.stringify({
-          amount: Math.round(value),
-          note: reason.trim(),
-        }),
-      });
-      setCompensating(false);
-      setAmount("");
-      setReason("");
-      onChanged();
-    } catch (e) {
-      setErr(
-        e instanceof ApiError
-          ? translateKey(e.body.message_key)
-          : m.errors.internal,
-      );
-    } finally {
-      setBusy("");
-    }
-  }
-
   // ══════════════════════════════════════════════════════════════════
   // **إذنُ استثناءِ إثبات التسليم — كاميرا معطّلةٌ فيأذن العملياتُ بلا صورة**
   // ══════════════════════════════════════════════════════════════════
@@ -1881,33 +1845,6 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
-
-  if (compensating) {
-    return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">
-          {m.admin.ordersPage.compensateTitle}
-        </p>
-        <Input
-          type="number"
-          inputMode="numeric"
-          placeholder={m.admin.ordersPage.compensateAmount}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-        <Input
-          placeholder={m.admin.ordersPage.compensateReason}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <FormActions onSave={() => void compensate()} onCancel={() => {
-              setCompensating(false);
-              setErr("");
-            }} saveLabel={m.common.confirm} />
-      </div>
-    );
-  }
 
   if (proofExcepting) {
     return (
@@ -2308,26 +2245,13 @@ function OrderActions({
             </span>
           )}
           {/* ══════════════════════════════════════════════════════
-            * **وتعويضُ السائق قيدٌ ماليّ في شاشةٍ تشغيليّة**
+            * **ولا «تعويضَ سائق» بمبلغٍ حرٍّ على البطاقة** (قرارُ المالك
+            * ٢٠٢٦-١٠-٠٣ — «السائقُ لا يُوعَد بتعويض»)
             * ══════════════════════════════════════════════════════
             *
-            * **و`POST /orders/{id}/compensate-driver` بـ`finance.manage`**
-            * — **فموظّفُ العمليّات كان يرى زرّاً يُردّ ٤٠٣.**
-            * **وشرطُ المالك (بندُ ٨): العمليّاتُ تقرأ مجاميعَ الطلب
-            * ولا ترى فعلاً ماليّاً.** */}
-          {o.driver_name && can("finance.manage") && (
-            <Button
-              variant="secondary"
-              disabled={busy !== ""}
-              onClick={() => {
-                setAmount("");
-                setReason("");
-                setCompensating(true);
-              }}
-            >
-              {m.admin.ordersPage.compensateDriver}
-            </Button>
-          )}
+            * **بابُه الوحيدُ طابورُ «التعويضات»** (`/dashboard/compensations`):
+            * طلبٌ معلَّقٌ يقبله المكتبُ أو يرفضه. **وزرٌّ ثانٍ بمبلغٍ يُكتب
+            * باليد بابٌ خلفيٌّ يتجاوز الطابور.** */}
         </>
       )}
 
