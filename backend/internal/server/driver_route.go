@@ -141,6 +141,12 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, perr)
 		return
 	}
+	// **وطلبُ غيره لا طريقَ له** (تجربةُ القبول ٢٠٢٦-١٠-٠٣) — كان المسحُ أسفلُه لا يجد صفّاً
+	// **فيُردّ «لا صفّ» خطأَ خادمٍ ٥٠٠.** والجوابُ كبقيّة أبواب السائق.
+	if !s.driverOwnsOrder(r, chi.URLParam(r, "id")) {
+		s.respondErr(w, errNotYourOrder)
+		return
+	}
 	var (
 		status           string
 		fromLat, fromLng *float64
