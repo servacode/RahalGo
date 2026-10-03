@@ -36,7 +36,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtClockTime, errorText } from "@rahalgo/i18n";
 import { Alert, Badge, Button, Card, IconStatus } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -274,7 +274,7 @@ export default function OpsHealthPage() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-ink-muted">
             {O.lastUpdate}:{" "}
-            {at ? at.toLocaleTimeString("ar", { hour12: false }) : busy ? O.loading : "—"}
+            {at ? fmtClockTime(at) : busy ? O.loading : "—"}
           </span>
           <Button variant="secondary" onClick={() => void load()} disabled={busy}>
             {O.refresh}

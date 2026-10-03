@@ -32,6 +32,8 @@ export {
   fmtDate,
   fmtDateTime,
   fmtTime,
+  fmtClockTime,
+  westernDigits,
   fmtLongDate,
 } from "./format";
 import { fmtNum } from "./format";
