@@ -187,7 +187,7 @@ export default function PayoutsPage() {
           وللسائقين».) */}
       <PageHeader
         icon={IconWallet}
-        title={P.titleWithCredit}
+        title={P.adminTitle}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canCredit && (
