@@ -149,3 +149,34 @@ func errCodeOf(b []byte) string {
 	_ = json.Unmarshal(b, &body)
 	return body.Error.Code
 }
+
+// TestReturnTrip_SuspendedDriverMayHandGoods **والموقوفُ يُرجع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣:
+// «تسليمُ البضاعة لمصلحة المنصّة») — كان البابُ مقفولاً عليه لأنّ الطلبَ مغلق.
+func TestReturnTrip_SuspendedDriverMayHandGoods(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	driver := f.drivers[0]
+	f.armOffice(t, "35.9600,39.0100", "مكتب رحّال — شارع الاختبار")
+	orderID := f.atDropoffOrder(t, driver)
+	if w := f.endAtDoor(t, orderID, "customer", "customer_refused"); w.Code != http.StatusOK {
+		t.Fatalf("العودةُ رُدّت: %d — %s", w.Code, w.Body.String())
+	}
+	ctx := context.Background()
+	for _, path := range []string{"/goods-handed", "/route"} {
+		r, _ := http.NewRequest(http.MethodPost, "/api/v1/driver/orders/"+orderID+path, nil)
+		if !f.srv.suspendedMayContinue(ctx, r, driver, []string{"driver"}) {
+			t.Fatalf("%s مقفولٌ على الموقوف — **والبضاعةُ معه**", path)
+		}
+	}
+	r, _ := http.NewRequest(http.MethodGet, "/api/v1/driver/orders", nil)
+	if !f.srv.suspendedMayContinue(ctx, r, driver, []string{"driver"}) {
+		t.Fatal("قائمةُ طلباته مقفولةٌ على الموقوف — **فلا يرى مشوارَ الإرجاع**")
+	}
+	if code, ec := f.goodsHanded(driver, orderID, `{"lat":35.96,"lng":39.01}`); code != http.StatusOK {
+		t.Fatalf("«سلّمت البضاعة» رُدّ: %d %s", code, ec)
+	}
+	// **وبعد التسليم يعود معلَّقاً كسائر المعلَّقين.**
+	if f.srv.suspendedMayContinue(ctx, r, driver, []string{"driver"}) {
+		t.Fatal("بقي البابُ مفتوحاً بعد التسليم")
+	}
+	_ = testdb.NewUser
+}

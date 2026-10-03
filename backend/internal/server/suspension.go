@@ -109,8 +109,11 @@ var holdingRoutes = []struct{ Method, Path string }{
 // holdsLiveOrder **أيحمل هذا السائقُ طلباً لم يُغلق؟**
 func (s *Server) holdsLiveOrder(ctx context.Context, driverID string) bool {
 	var holds bool
+	// **ومشوارُ إرجاعٍ لم يُسلَّم حملٌ كذلك** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «تسليمُ البضاعة لمصلحة
+	// المنصّة») — الطلبُ أُغلق والبضاعةُ ما زالت معه.
 	if err := s.pg.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM orders WHERE driver_id = $1::uuid AND closed_at IS NULL)`,
+		SELECT EXISTS (SELECT 1 FROM orders WHERE driver_id = $1::uuid
+		               AND (closed_at IS NULL OR (return_to IS NOT NULL AND goods_handed_at IS NULL)))`,
 		driverID).Scan(&holds); err != nil {
 		return false
 	}
@@ -127,6 +130,21 @@ func (s *Server) suspendedMayContinue(ctx context.Context, r *http.Request,
 		for _, h := range holdingRoutes {
 			if r.Method == h.Method && r.URL.Path == h.Path {
 				return s.holdsLiveOrder(ctx, userID)
+			}
+		}
+	}
+	// **والموقوفُ يُرجع البضاعةَ ويرى طريقَه إليها** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — كان «سلّمت البضاعة»
+	// مقفولاً عليه لأنّ الطلبَ مغلق، **فتبقى البضاعةُ معه ولا بابَ يُسلّمها منه.**
+	if hasRole(roles, "driver") && r.Method != "" {
+		for _, suf := range []string{"/goods-handed", "/route"} {
+			rest, ok := strings.CutPrefix(r.URL.Path, "/api/v1/driver/orders/")
+			if !ok {
+				break
+			}
+			if id, ok := strings.CutSuffix(rest, suf); ok && isUUID(id) && !strings.Contains(id, "/") {
+				if s.pendingReturn(ctx, id, userID) {
+					return true
+				}
 			}
 		}
 	}
@@ -186,4 +204,16 @@ func hasRole(roles []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// pendingReturn **أعليه مشوارُ إرجاعٍ لهذا الطلب لم يُسلَّم بعد؟**
+func (s *Server) pendingReturn(ctx context.Context, orderID, driverID string) bool {
+	var pending bool
+	if err := s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM orders WHERE id = $1::uuid AND driver_id = $2::uuid
+		               AND return_to IS NOT NULL AND goods_handed_at IS NULL)`,
+		orderID, driverID).Scan(&pending); err != nil {
+		return false
+	}
+	return pending
 }

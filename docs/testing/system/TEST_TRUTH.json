@@ -34,7 +34,7 @@
     "behaviour_settings": 130,
     "order_fields": 92,
     "test_files": 461,
-    "test_funcs": 1903
+    "test_funcs": 1904
   },
   "flows": [
     {
@@ -24364,6 +24364,12 @@
     },
     {
       "name": "TestReturnTrip_StoreRefusedHTTP",
+      "file": "internal/server/return_trip_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReturnTrip_SuspendedDriverMayHandGoods",
       "file": "internal/server/return_trip_test.go",
       "package": "server",
       "orphan": true
