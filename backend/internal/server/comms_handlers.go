@@ -24,6 +24,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -90,6 +91,11 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 		Body string `json:"body"`
 	}](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والرسالةُ الطويلةُ تُرفض لا تُقصّ صامتة** — انظر `text_limits.go`.
+	if err := checkTextLimits(textField{"body", strings.TrimSpace(req.Body), maxChatBody}); err != nil {
 		s.respondErr(w, err)
 		return
 	}

@@ -51,6 +51,15 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
+	// **والنصوصُ الحرّةُ بحدودها** — انظر `text_limits.go`.
+	if err := checkTextLimits(
+		textField{"request", req.Request, maxCustomRequest},
+		textField{"address_text", req.AddressText, maxAddressText},
+		textField{"notes", req.Notes, maxOrderNotes},
+	); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		o, after, err := s.orders.CreateCustomTx(ctx, q, userIDFrom(r), req.Request,

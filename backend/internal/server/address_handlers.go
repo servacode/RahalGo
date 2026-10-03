@@ -130,6 +130,10 @@ func (s *Server) handleCreateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	if err := checkAddressParts(req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	uid := userIDFrom(r)
 	// **والمنطقةُ والمبنى وحدَهما إلزاميّان** — الشارعُ يُنسى في أحياءٍ
 	// بلا لافتات، **والطابقُ لا يخصّ بيتاً أرضيّا.**
@@ -168,9 +172,9 @@ func (s *Server) handleCreateAddress(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	area := clip(strings.TrimSpace(req.AreaBuilding), 160)
-	street := clip(strings.TrimSpace(req.Street), 120)
-	floor := clip(strings.TrimSpace(req.Floor), 20)
+	area := strings.TrimSpace(req.AreaBuilding)
+	street := strings.TrimSpace(req.Street)
+	floor := strings.TrimSpace(req.Floor)
 	var id string
 	if err := tx.QueryRow(r.Context(), `
 		INSERT INTO user_addresses
@@ -214,9 +218,13 @@ func (s *Server) handleUpdateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	area := clip(strings.TrimSpace(req.AreaBuilding), 160)
-	street := clip(strings.TrimSpace(req.Street), 120)
-	floor := clip(strings.TrimSpace(req.Floor), 20)
+	if err := checkAddressParts(req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	area := strings.TrimSpace(req.AreaBuilding)
+	street := strings.TrimSpace(req.Street)
+	floor := strings.TrimSpace(req.Floor)
 
 	// **والنقطةُ تُبدَّل إن أُرسلت وحدَها** — `COALESCE` على الموضع لا
 	// يصلح مع `geography`، فيُفصَل الشرطُ في الاستعلام.
@@ -293,4 +301,16 @@ func (s *Server) handleSetDefaultAddress(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// checkAddressParts **أجزاءُ العنوان بحدودها** — تُرفض لا تُقصّ.
+//
+// **وكانت تُقصّ بالبايت** (`clip` بـ١٦٠ و١٢٠ و٢٠): **والحرفُ العربيُّ بايتان،
+// فيُكسر آخرُ حرفٍ** ويُخزَّن نصفُه — **وطابقٌ من عشرة أحرفٍ عربيّةٍ كان يُقطع.**
+func checkAddressParts(req *addressInput) error {
+	return checkTextLimits(
+		textField{"area_building", strings.TrimSpace(req.AreaBuilding), maxAddressPart},
+		textField{"street", strings.TrimSpace(req.Street), maxAddressPart},
+		textField{"floor", strings.TrimSpace(req.Floor), maxAddressFloor},
+	)
 }

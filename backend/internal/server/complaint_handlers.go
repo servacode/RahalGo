@@ -4,6 +4,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -37,9 +38,14 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وتفصيلُ الشكوى يُرفض إن طال لا يُقصّ** — انظر `text_limits.go`.
+	if err := checkTextLimits(textField{"note", strings.TrimSpace(req.Note), maxComplaintNote}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	orderID := chi.URLParam(r, "id")
 	t, err := s.support.Complaint(r.Context(), userIDFrom(r), orderID,
-		req.Reason, clip(req.Note, 1000))
+		req.Reason, strings.TrimSpace(req.Note))
 	if err != nil {
 		s.respondErr(w, err)
 		return

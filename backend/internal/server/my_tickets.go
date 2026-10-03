@@ -165,6 +165,10 @@ func (s *Server) handleMyTicketReply(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
+	if err := checkTextLimits(textField{"body", strings.TrimSpace(req.Body), maxTicketReply}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	id := chi.URLParam(r, "id")
 	t0, err := s.support.Get(r.Context(), id)
 	if err != nil {

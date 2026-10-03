@@ -442,6 +442,18 @@ func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
+	// **والنصوصُ الحرّةُ بحدودها** — انظر `text_limits.go`.
+	limits := []textField{
+		{"address_text", in.AddressText, maxAddressText},
+		{"notes", in.Notes, maxOrderNotes},
+	}
+	for _, it := range in.Items {
+		limits = append(limits, textField{"items.note", it.Note, maxItemNote})
+	}
+	if err := checkTextLimits(limits...); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	in.CustomerID = userIDFrom(r) // الطلب باسم صاحب الحساب حصراً
 	in.CustomerPhone = ""
 	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
