@@ -187,6 +187,26 @@ func OfficeReasonAt(code, from string) bool {
 	return false
 }
 
+// OfficeReasonsAt **رموزُ البلاغ التي يقبلها إنهاءُ المكتب في هذه المرحلة** —
+// بقاعدة `OfficeReasonAt` نفسِها، **بلا المحذوف** (`Retired`) وبلا تكرار.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٦: قائمةُ النافذة تأتي من المحرّك.)
+func OfficeReasonsAt(status string) []string {
+	out := []string{}
+	if !OfficeDecides(status) {
+		return out
+	}
+	seen := map[string]bool{}
+	for _, r := range StageReports {
+		if r.Retired || seen[r.Code] || !OfficeReasonAt(r.Code, status) {
+			continue
+		}
+		seen[r.Code] = true
+		out = append(out, r.Code)
+	}
+	return out
+}
+
 // OfficeDecides **مراحلُ يقرّر فيها المكتبُ لا السائق** — عند المتجر، وبعد الاستلام.
 //
 // (قرارُ المالك ٢٠٢٦-١٠-٠٣: مشكلةُ المتجر «ينتظر الإدارة تحلّ المشكلة».)

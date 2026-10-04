@@ -127,6 +127,17 @@ const (
 	// عكسُ التخصّص.**
 	SupportManage Capability = "support.manage"
 
+	// EmergenciesManage **قراءةُ الطوارئ واستلامُها وإغلاقُها** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٧).
+	//
+	// **وكانت داخلَ `support.manage`** — **فموظّفُ العمليّات الذي يوزّع
+	// الطلبات لا يعلم أنّ سائقاً صدمته سيّارة.** **ومنحُه `support.manage`
+	// كلَّها يفتح له التذاكرَ والنزاعاتِ والتقييمات** — فقدرةٌ بعينها.
+	EmergenciesManage Capability = "emergencies.manage"
+
+	// FinanceRecompute **«إعادةُ حساب التسوية»** — قيدٌ ماليٌّ يُنشأ بيد
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٥): **لصاحب المنصّة ومديرها وحدَهما.**
+	FinanceRecompute Capability = "finance.recompute"
+
 	// SafetyManage **الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر.**
 	//
 	// **وكانت داخلَ `merchants.manage`** — **ومعها تحريرُ القائمة
@@ -255,6 +266,8 @@ var catalog = map[Capability]string{
 	AnalyticsRead:            "قراءةُ التحليلات",
 	PlatformOverview:         "رئيسيّةُ مدير المنصّة بأرقامها ومالِها",
 	SupportManage:            "التذاكرُ والنزاعاتُ والطوارئ",
+	EmergenciesManage:        "قراءةُ الطوارئ واستلامُها",
+	FinanceRecompute:         "إعادةُ حساب تسوية طلبٍ مُغلق",
 	SafetyManage:             "الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر",
 	MerchantsVerify:          "مراجعةُ المرشَّحين والقوائم",
 	AuditRead:                "قراءةُ سجلّ التدقيق",

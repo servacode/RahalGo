@@ -44,9 +44,11 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { TransferPanel } from "./TransferPanel";
 
 const m = getMessages(defaultLocale);
 const D = m.admin.ordersPage.door;
+const BD = m.admin.ordersPage.board;
 const REPORTS: Record<string, string> = D.reports;
 const FAULTS = ["customer", "driver", "merchant", "platform"] as const;
 type Fault = (typeof FAULTS)[number];
@@ -66,6 +68,12 @@ export interface DoorView {
   instruction_at: string | null;
   /** **هاتفُ المتجر** — للّوحة عند المتجر (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣). */
   store_phone?: string;
+  /**
+   * **أسبابُ الإنهاء الصالحةُ في هذه المرحلة** — من المحرّك (قرارُ المالك
+   * ٢٠٢٦-١٠-٠٤، الطلبات ١٦). **كانت القائمةُ البلاغاتِ الإحدى عشرةَ كلَّها**
+   * والمحرّكُ يردّ ما لا يخصّ المرحلة، ومنها المحذوفُ بقرار المالك.
+   */
+  reasons?: string[];
 }
 
 /** **رقمٌ يُتّصل به** — زرٌّ واحدُ الشكل للزبون والمتجر والسائق. */
@@ -142,6 +150,13 @@ export function DoorPanel({
   const [dialog, setDialog] = useState<"" | "deliver" | "return" | "cancel">(
     "",
   );
+  /**
+   * **«حوّل لمتجر آخر» عند المتجر هو التحويلُ الذكيّ نفسُه** (قرارُ المالك
+   * ٢٠٢٦-١٠-٠٣، ثبّته ٢٠٢٦-١٠-٠٤): **السائقُ يبقى مع الطلب** ويُرسم له طريقٌ إلى
+   * المتجر الجديد. **كان زرُّ اللوحة يُحرّر السائقَ ويفتح له تعويضاً** وزرُّ
+   * البطاقة يُبقيه — زرّان بالاسم نفسِه لفعلين.
+   */
+  const [transferring, setTransferring] = useState(false);
   const [note, setNote] = useState("");
   const [fault, setFault] = useState<Fault | "">("");
   const [reason, setReason] = useState("");
@@ -345,13 +360,37 @@ export function DoorPanel({
               {D.cancelOrder}
             </Button>
           )}
-          {!beforeStore && (!atStore || canTransfer) && (
+          {/* **وعند المتجر: التحويلُ الذكيُّ والسائقُ معه** — لا عودةَ إلى المكتب. */}
+          {atStore && canTransfer && (
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => {
+                setNotice("");
+                setTransferring(true);
+              }}
+            >
+              {D.transfer}
+            </Button>
+          )}
+          {/* **و«لدي توصيلة» لا تُحوَّل — مخرجُها الإلغاءُ بسبب** (قرارُ المالك
+              ٢٠٢٦-١٠-٠٤، البند ١١). كانت «استلم» وحدَها والمتجرُ مغلق. */}
+          {atStore && !canTransfer && (
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => open("cancel")}
+            >
+              {BD.deliveryCancel.button}
+            </Button>
+          )}
+          {!beforeStore && !atStore && (
             <Button
               variant="danger"
               disabled={busy}
               onClick={() => open("return")}
             >
-              {atStore ? D.transfer : D.returnToOffice}
+              {D.returnToOffice}
             </Button>
           )}
         </div>
@@ -398,16 +437,29 @@ export function DoorPanel({
         </div>
       </Modal>
 
+      {transferring && (
+        <TransferPanel
+          orderId={orderId}
+          onDone={() => {
+            setTransferring(false);
+            onChanged();
+          }}
+          onClose={() => setTransferring(false)}
+        />
+      )}
+
       <Modal
         open={dialog === "cancel"}
         onClose={() => setDialog("")}
-        title={D.cancelTitle}
+        title={atStore ? BD.deliveryCancel.title : D.cancelTitle}
       >
         <div className="space-y-3">
-          <p className="text-sm text-ink-muted">{D.cancelHint}</p>
+          <p className="text-sm text-ink-muted">
+            {atStore ? BD.deliveryCancel.hint : D.cancelHint}
+          </p>
           <Textarea
             id={`door-cancel-${orderId}`}
-            label={D.cancelNote}
+            label={atStore ? BD.deliveryCancel.note : D.cancelNote}
             value={note}
             maxLength={300}
             autoGrow
@@ -421,7 +473,7 @@ export function DoorPanel({
             busy={busy}
             onSave={() => void cancelOrder()}
             onCancel={() => setDialog("")}
-            saveLabel={D.cancelSend}
+            saveLabel={atStore ? BD.deliveryCancel.send : D.cancelSend}
             tone="danger"
           />
         </div>
@@ -510,9 +562,11 @@ export function DoorPanel({
                   ? `${D.reasonLast} — ${reportLabel}`
                   : D.reasonLast}
               </option>
-              {Object.entries(REPORTS).map(([code, label]) => (
+              {/* **والأسبابُ من المحرّك لهذه المرحلة** — وبلا قائمةٍ منه لا يُعرض شيء
+                  يردّه، فيبقى «آخر بلاغ» وحدَه. */}
+              {(door?.reasons ?? []).map((code) => (
                 <option key={code} value={code}>
-                  {label}
+                  {REPORTS[code] ?? code}
                 </option>
               ))}
             </Select>

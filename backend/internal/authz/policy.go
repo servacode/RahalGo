@@ -81,13 +81,20 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	// **ومرشّحو التحويل يُقرؤون لمن يحوّل** — فيهم أسعارُ الشراء.
 	{"GET", "/orders/{id}/transfer-candidates", OrdersIntervene},
-	{"POST", "/orders/{id}/recompute", OrdersIntervene},
+	// **وإعادةُ حساب التسوية للمالك والأدمن وحدَهما** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٥).
+	{"POST", "/orders/{id}/recompute", FinanceRecompute},
+	// **ومرشّحو الإسناد اليدويّ** — بالقرب والنقد والطلبات (البند ١٠).
+	{"GET", "/orders/{id}/assign-candidates", OrdersIntervene},
+	// **و«استلمتها» على الطلب الجديد** — يُسكت رنينَه عند المكتب كلِّه (البند ٥).
+	{"POST", "/orders/{id}/seen", OrdersIntervene},
 	{"POST", "/orders/{id}/proof-exception", OrdersIntervene}, // إذنُ تسليمٍ بلا صورةٍ — عملياتٌ مُخوَّلةٌ لا السائق (٢٠٢٦-٠٩-٢٧)
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},
 	{"POST", "/orders/{id}/compensation/reject", FinanceManage},
 	{"GET", "/compensations/pending", FinanceRead},
 	{"POST", "/orders/{id}/settle-goods", FinanceManage},
+	// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب التعويض** (البند ١٢).
 	{"POST", "/orders/{id}/goods", OrdersIntervene},
+	{"POST", "/orders/{id}/goods/compensation", FinanceManage},
 	// **إنهاءُ الإدارة عند باب الزبون** — سلّم الآن أو عُد إلى المكتب (مساءَ ٢٠٢٦-١٠-٠٢).
 	{"POST", "/orders/{id}/door-resolution", OrdersIntervene},
 	{"POST", "/orders/{id}/whatsapp", OrdersIntervene},
@@ -99,6 +106,8 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/export", FinanceExport},
 	{"GET", "/orders", OrdersRead},
 	{"GET", "/orders/alerts", OrdersRead},
+	// **عدّاداتُ اللوحة بالشرط الذي تُرشِّح به** (البند ٣).
+	{"GET", "/orders/board", OrdersRead},
 	{"GET", "/orders/{id}", OrdersRead},
 	// **وكلامُ الناس صنفٌ بذاته** — ومن يسوّي حساباً لا يقرؤه.
 	{"GET", "/orders/{id}/chat", OrdersCommunicationsRead},
@@ -174,12 +183,14 @@ var adminPolicy = []Rule{
 	{"GET", "/tickets/{id}", SupportManage},
 	{"POST", "/tickets/{id}/replies", SupportManage},
 	{"POST", "/tickets/{id}/resolve", SupportManage},
-	{"GET", "/emergencies", SupportManage},
-	{"POST", "/emergencies/{id}/resolve", SupportManage},
+	// **والطوارئُ بقدرتها** — يبلغها الدعمُ والعمليّاتُ معاً (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+	// قسمُ «الطلبات»، البند ٧): **من يوزّع الطلبات يرى الحادث ويستلمه.**
+	{"GET", "/emergencies", EmergenciesManage},
+	{"POST", "/emergencies/{id}/resolve", EmergenciesManage},
 	// **وشريطُ الطوارئ أعلى كلّ صفحةٍ وزرُّ «استلمتها»** (٢٠٢٦-١٠-٠٤).
-	{"GET", "/emergencies/banner", SupportManage},
-	{"POST", "/emergencies/{id}/ack", SupportManage},
-	{"POST", "/emergencies/stores/{id}/ack", SupportManage},
+	{"GET", "/emergencies/banner", EmergenciesManage},
+	{"POST", "/emergencies/{id}/ack", EmergenciesManage},
+	{"POST", "/emergencies/stores/{id}/ack", EmergenciesManage},
 	{"GET", "/disputes", SupportManage},
 	{"POST", "/disputes", SupportManage},
 	{"POST", "/disputes/{id}/settle", FinanceManage},

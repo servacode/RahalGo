@@ -27,6 +27,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
@@ -48,6 +50,7 @@ func goodsCase(t *testing.T) (f *fixture, owner, treasury string) {
 	}
 	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
 	f.failAtDoor(t, orders.FaultCustomer, "customer_refused")
+	dropReturnTrip(t, f.pool, f.orderID)
 	// **٩٠٬٠٠٠ شراءً ناقصَ عمولةِ ١٠٪** — والاسترجاعُ يُقاس عليه.
 	if got := f.merchantPosted(t); got != 81_000 {
 		t.Fatalf("قُيّد للمتجر %d والمتوقّع 81000", got)
@@ -388,5 +391,20 @@ func TestGoods_NotFailedIsRejected(t *testing.T) {
 		orders.GoodsToMerchant, treasury, 0)
 	if !errors.Is(err, orders.ErrGoodsNotFailed) {
 		t.Fatalf("حُسمت بضاعةُ طلبٍ قائم (%v)", err)
+	}
+}
+
+// dropReturnTrip **طلبٌ فشل بلا مشوار إرجاع** — كطلبات ما قبل المشوار (٢٠٢٦-١٠-٠٣).
+//
+// **هذه الفحوصُ تقيس الدفترَ لا المشوار**: والحسمُ على طلبٍ له مشوارٌ يُشترط فيه
+// «سلّمت البضاعة» ووجهةُ المشوار (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٤) — **ويُفحص
+// ذلك وحدَه في `goods_trip_test.go`.**
+func dropReturnTrip(t *testing.T, pool interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}, orderID string) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(),
+		`UPDATE orders SET return_to = NULL, goods_handed_at = NULL WHERE id = $1`, orderID); err != nil {
+		t.Fatalf("تعذّر محوُ مشوار الإرجاع: %v", err)
 	}
 }

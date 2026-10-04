@@ -33,6 +33,7 @@ func cashGoodsCase(t *testing.T, paid bool, compensation int64) (*cashFixture, s
 	}
 	// **وعند الباب المكتبُ يُنهي** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢) — السائقُ لا يُغلق.
 	endAtDoor(t, f.svc, f.pool, oid, orders.FaultCustomer, "customer_refused")
+	dropReturnTrip(t, f.pool, oid)
 	if err := f.svc.SettleGoods(ctx, oid, orders.GoodsToMerchant, f.treasury, compensation); err != nil {
 		t.Fatalf("الحسم: %v", err)
 	}

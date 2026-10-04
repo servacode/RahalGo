@@ -1220,6 +1220,8 @@ func (s *Server) Router() http.Handler {
 			// الإنشاء حصراً عبر واجهات الزبون (الموقع/التطبيق)
 			r.Get("/orders", s.handleListOrders)
 			r.Get("/orders/alerts", s.handleOrderAlerts)
+			// **عدّاداتُ لوحة الطلبات وإعداداتُها** — بشرط فلاترها (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Get("/orders/board", s.handleOrdersBoard)
 			r.Get("/orders/{id}", s.handleGetOrder)
 			// **وحديثُ طرفيه — يُقرأ ولا يُكتب.** (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «في حال حصول أيّ تجاوزٍ يمكننا الرجوع إليه».)
@@ -1284,6 +1286,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/roles/{code}/capabilities", s.handleGrantCapability)
 			r.Delete("/roles/{code}/capabilities/{cap}", s.handleRevokeCapability)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
+			// **ومرشّحو الإسناد اليدويّ بالقرب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠).
+			r.Get("/orders/{id}/assign-candidates", s.handleAssignCandidates)
+			// **و«استلمتها» على الطلب الجديد** — يُسكت الرنين (البند ٥).
+			r.Post("/orders/{id}/seen", s.handleOrderSeen)
 
 			// **ما بعد فشل الطلب** — من يحمل الخسارة (failure_aftermath.go).
 			//
@@ -1307,6 +1313,8 @@ func (s *Server) Router() http.Handler {
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
 			r.Post("/orders/{id}/goods", s.handleGoods)
+			// **والتعويضُ للماليّة بخطوةٍ ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٢).
+			r.Post("/orders/{id}/goods/compensation", s.handleGoodsCompensation)
 
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			// **العروضُ والخصومات** — لافتةٌ تُرى وخصمٌ يُطبَّق في الدفتر.

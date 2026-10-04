@@ -64,6 +64,16 @@ var (
 	// ErrGoodsBadCompensation **تعويضٌ سالبٌ أو لبضاعةٍ لم تُردّ إلى المتجر** — التعويضُ
 	// عن بضاعةٍ رُدّت وحدَها.
 	ErrGoodsBadCompensation = errors.New("تعويضُ المتجر لبضاعةٍ رُدّت إليه وحدَها")
+	// ErrGoodsNotHanded **السائقُ لم يضغط «سلّمت البضاعة» بعد** — فلا يُحسم ما لم
+	// يصل (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٤).
+	ErrGoodsNotHanded = errors.New("البضاعةُ لم تُسلَّم بعد")
+	// ErrGoodsWrongPlace **الحسمُ لا يطابق وجهةَ مشوار الإرجاع** — المشوارُ إلى
+	// المتجر والحسمُ «إلى المكتب» أو العكس.
+	ErrGoodsWrongPlace = errors.New("الوجهةُ لا تطابق مشوارَ الإرجاع")
+	// ErrGoodsCompensationCap **التعويضُ فوق سعر شراء البضاعة الراجعة** (البند ١٣).
+	ErrGoodsCompensationCap = errors.New("التعويضُ أكبرُ من سعر شراء البضاعة")
+	// ErrGoodsAlreadyCompensated **عُوّض المتجرُ عن هذه البضاعة سلفاً.**
+	ErrGoodsAlreadyCompensated = errors.New("عُوّض المتجرُ سلفاً")
 )
 
 // وجهتا البضاعة.
@@ -98,10 +108,12 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string, 
 
 	// **القفلُ داخل المعاملة**: ضغطتان متزامنتان تسترجعان الثمنَ مرّتين لولاه.
 	var status string
-	var settled *string
+	var settled, returnTo *string
+	var handed bool
 	if err := tx.QueryRow(ctx,
-		`SELECT status, goods_settled_to FROM orders WHERE id = $1 FOR UPDATE`,
-		orderID).Scan(&status, &settled); err != nil {
+		`SELECT status, goods_settled_to, return_to, goods_handed_at IS NOT NULL
+		   FROM orders WHERE id = $1 FOR UPDATE`,
+		orderID).Scan(&status, &settled, &returnTo, &handed); err != nil {
 		return err
 	}
 	if status != StFailed {
@@ -109,6 +121,37 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string, 
 	}
 	if settled != nil {
 		return ErrGoodsAlreadySettled
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا حسمَ قبل «سلّمت البضاعة» — والوجهةُ وجهةُ المشوار** (البند ١٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان الزرّان يظهران والبضاعةُ في صندوق السائق**، ويقبلان «إلى المكتب»
+	// والمشوارُ كان إلى المتجر. **فيُسترجع ثمنُ بضاعةٍ لم تصل المتجرَ بعد** — أو
+	// يُقال «تحمّلتها المنصّة» وهي على رفّه.
+	//
+	// **وطلبٌ فشل قبل مشوار الإرجاع (`return_to` فارغ) يبقى كما كان** — لا
+	// مشوارَ يُنتظَر ولا وجهةَ تُطابَق.
+	if returnTo != nil {
+		if !handed {
+			return ErrGoodsNotHanded
+		}
+		want := GoodsToOffice
+		if *returnTo == ReturnToStore {
+			want = GoodsToMerchant
+		}
+		if to != want {
+			return ErrGoodsWrongPlace
+		}
+	}
+	if compensation > 0 {
+		cost, err := goodsCost(ctx, tx, orderID)
+		if err != nil {
+			return err
+		}
+		if compensation > cost {
+			return ErrGoodsCompensationCap
+		}
 	}
 
 	if to == GoodsToMerchant {
@@ -432,4 +475,74 @@ func sharesOf(list []merchantShare, ownerID string) int64 {
 		}
 	}
 	return sum
+}
+
+// goodsCost **سعرُ شراء بضاعة الطلب** — ما يقبضه المتجرُ عنها، **وهو سقفُ تعويضه**
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٣): «حدا بيكتب ٥٠٠٠٠٠ بدل ٥٠٠٠٠ وبينقيّد».
+func goodsCost(ctx context.Context, q wallet.Querier, orderID string) (int64, error) {
+	var cost int64
+	err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(merchant_price * qty), 0) FROM order_items WHERE order_id = $1`,
+		orderID).Scan(&cost)
+	return cost, err
+}
+
+// CompensateGoods **تعويضُ الإدارة للمتجر عن بضاعةٍ رُدّت إليه** — خطوةُ الماليّة.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب المبلغ** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الحسمُ والتعويضُ ضغطةً واحدةً بقدرة `orders.intervene`** — فموظّفُ
+// العمليّات يدفع من الخزينة، **وموظّفُ الماليّة يرى الزرَّ وكلُّ ضغطةٍ «ممنوع».**
+//
+// **فصارا خطوتين**: `SettleGoods` (العمليّات — الوجهةُ وحدَها) ثمّ هذه
+// (الماليّة — المبلغ). **ولا تُقبل إلّا لبضاعةٍ حُسمت «إلى المتجر»**، ومرّةً
+// واحدة، **وبسقفِ سعر الشراء**، والقيدان (`compensateMerchant`) كما كانا.
+func (s *Service) CompensateGoods(ctx context.Context, orderID, actorID string, amount int64) error {
+	if amount <= 0 {
+		return ErrGoodsBadCompensation
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var settled *string
+	if err := tx.QueryRow(ctx,
+		`SELECT goods_settled_to FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&settled); err != nil {
+		return err
+	}
+	if settled == nil || *settled != GoodsToMerchant {
+		return ErrGoodsBadCompensation
+	}
+	var paid int64
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(sum(wt.amount), 0) FROM wallet_transactions wt
+		JOIN merchants m ON m.owner_user_id = wt.user_id
+		JOIN orders o ON o.merchant_id = m.id AND o.id = $1
+		WHERE wt.ref = $1::text AND wt.kind = 'compensation'`, orderID).Scan(&paid); err != nil {
+		return err
+	}
+	if paid > 0 {
+		return ErrGoodsAlreadyCompensated
+	}
+	cost, err := goodsCost(ctx, tx, orderID)
+	if err != nil {
+		return err
+	}
+	if amount > cost {
+		return ErrGoodsCompensationCap
+	}
+	if err := s.compensateMerchant(ctx, tx, orderID, actorID, amount); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	s.publishWalletsOf(ctx, orderID)
+	s.pub.Publish("ops", map[string]any{"type": "order"})
+	return nil
 }

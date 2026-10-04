@@ -49,6 +49,11 @@ var (
 		"transfer_too_late", "errors.transfer_too_late")
 	errSameMerchant = httpx.NewError(http.StatusConflict,
 		"transfer_same_merchant", "errors.transfer_same_merchant")
+	// errTransferDeliveryKind **«لدي توصيلة» لا تُحوَّل لمتجرٍ آخر** (قرارُ المالك
+	// ٢٠٢٦-١٠-٠٤، البند ١١): **المتجرُ مُنشئُها وصاحبُ بضاعتها** — وتوصيلةٌ بلا
+	// أصنافٍ كانت تُنقل بلا مطابقةٍ أصلاً. **ومخرجُها «ألغِ التوصيلة» بسبب.**
+	errTransferDeliveryKind = httpx.NewError(http.StatusConflict,
+		"transfer_delivery_kind", "errors.transfer_delivery_kind")
 )
 
 // handleTransferOrder ينقل طلباً إلى متجرٍ آخر قبل خروج البضاعة.
@@ -79,13 +84,17 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
-	var status, oldMerchant string
+	var status, oldMerchant, kind string
 	// **القفلُ داخل المعاملة**: تحويلان متزامنان يتركان بنوداً موزّعةً على
 	// ثلاثة متاجر.
 	if err := tx.QueryRow(r.Context(),
-		`SELECT status, merchant_id::text FROM orders WHERE id = $1 FOR UPDATE`,
-		orderID).Scan(&status, &oldMerchant); err != nil {
+		`SELECT status, merchant_id::text, kind FROM orders WHERE id = $1 FOR UPDATE`,
+		orderID).Scan(&status, &oldMerchant, &kind); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if kind == orders.KindMerchantDelivery {
+		s.respondErr(w, errTransferDeliveryKind)
 		return
 	}
 	if oldMerchant == req.MerchantID {

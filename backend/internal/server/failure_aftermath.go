@@ -332,11 +332,27 @@ func (s *Server) handleGoods(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والتعويضُ ليس من هذا الباب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب المبلغ** — بابُه
+	// `POST /orders/{id}/goods/compensation` بقدرة `finance.manage` وتأكيدِ كلمة السرّ.
+	if req.Compensation != 0 {
+		s.respondErr(w, errGoodsCompFinance)
+		return
+	}
 
-	switch err := s.orders.SettleGoods(r.Context(), orderID, req.To, userIDFrom(r), req.Compensation); {
+	switch err := s.orders.SettleGoods(r.Context(), orderID, req.To, userIDFrom(r), 0); {
 	case err == nil:
 	case errors.Is(err, orders.ErrGoodsBadCompensation):
 		s.respondErr(w, errValidation)
+		return
+	case errors.Is(err, orders.ErrGoodsNotHanded):
+		s.respondErr(w, errGoodsNotHanded)
+		return
+	case errors.Is(err, orders.ErrGoodsWrongPlace):
+		s.respondErr(w, errGoodsWrongPlace)
 		return
 	case errors.Is(err, orders.ErrGoodsNotFailed):
 		s.respondErr(w, errNotFailed)
@@ -356,11 +372,62 @@ func (s *Server) handleGoods(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.audit(r, "finance.goods_settled", "order", orderID, map[string]any{
-		"to": req.To, "compensation": req.Compensation,
+		"to": req.To,
 	})
 	s.touch("order", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"settled_to": req.To})
+}
+
+var (
+	errGoodsCompFinance = httpx.NewError(http.StatusForbidden,
+		"goods_compensation_finance", "errors.goods_compensation_finance")
+	errGoodsNotHanded = httpx.NewError(http.StatusConflict,
+		"goods_not_handed", "errors.goods_not_handed")
+	errGoodsWrongPlace = httpx.NewError(http.StatusConflict,
+		"goods_wrong_place", "errors.goods_wrong_place")
+	errGoodsCompCap = httpx.NewError(http.StatusBadRequest,
+		"goods_compensation_cap", "errors.goods_compensation_cap")
+	errGoodsCompensated = httpx.NewError(http.StatusConflict,
+		"goods_already_compensated", "errors.goods_already_compensated")
+)
+
+// handleGoodsCompensation **تعويضُ الماليّة للمتجر عن بضاعةٍ رُدّت إليه.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١٢ و١٣.) **بقدرة `finance.manage`، وتأكيدِ
+// كلمة السرّ** (`authz/sensitive.go` — كأخيه تعويضِ السائق)، **وسقفُه سعرُ شراء
+// البضاعة الراجعة** — «حدا بيكتب ٥٠٠٠٠٠ بدل ٥٠٠٠٠ وبينقيّد». والحسابُ في المحرّك
+// (`orders.CompensateGoods`).
+func (s *Server) handleGoodsCompensation(w http.ResponseWriter, r *http.Request) {
+	orderID := chi.URLParam(r, "id")
+	req, err := decode[struct {
+		Amount int64 `json:"amount"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	switch err := s.orders.CompensateGoods(r.Context(), orderID, userIDFrom(r), req.Amount); {
+	case err == nil:
+	case errors.Is(err, orders.ErrGoodsBadCompensation):
+		s.respondErr(w, errValidation)
+		return
+	case errors.Is(err, orders.ErrGoodsCompensationCap):
+		s.respondErr(w, errGoodsCompCap)
+		return
+	case errors.Is(err, orders.ErrGoodsAlreadyCompensated):
+		s.respondErr(w, errGoodsCompensated)
+		return
+	default:
+		s.respondErr(w, err)
+		return
+	}
+	s.audit(r, "finance.goods_compensation", "order", orderID, map[string]any{
+		"amount": req.Amount,
+	})
+	s.touch("order", "ops")
+	s.touch("wallet", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})
 }
 
 // handleSettleGoodsLegacy الجسدُ القديم — يبقى للقراءة لا للنداء.

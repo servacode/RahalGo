@@ -112,7 +112,11 @@ export function TransferPanel({
         `/api/v1/admin/orders/${orderId}/transfer-candidates?merchant_id=${id}`,
       );
       const s = r.stores[0];
-      if (!s) return;
+      // **ومتجرٌ لم يعد في القائمة يُقال** (المشكلة ٣٤) — كانت الضغطةُ لا تفعل شيئاً.
+      if (!s) {
+        setErr(t.board.transferStoreGone);
+        return;
+      }
       const p: Record<string, string> = {};
       for (const it of s.items) p[it.order_item_id] = it.match?.menu_item_id ?? "";
       setPicks(p);
@@ -125,7 +129,12 @@ export function TransferPanel({
   }
 
   async function submit() {
-    if (!store || !data || !reason.trim()) return;
+    if (!store || !data) return;
+    // **والسببُ الناقصُ يُقال لا يُعطَّل الزرُّ صامتاً** (المشكلة ٣٤).
+    if (!reason.trim()) {
+      setErr(t.board.transferReasonNeeded);
+      return;
+    }
     const missing = data.items.filter((it) => !picks[it.order_item_id]);
     if (missing.length > 0) {
       setErr(t.transferMapMissing);
@@ -192,9 +201,15 @@ export function TransferPanel({
         <Input
           id={`tr-${orderId}`}
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErr("");
+          }}
           placeholder={t.transferReason}
         />
+        {!reason.trim() && (
+          <p className="text-xs text-ink-muted">{t.board.transferReasonNeeded}</p>
+        )}
         {/* **وصنفٌ بلا مقابلٍ يُسمّى** — كما ردّه الخادم. */}
         {unmatched.length > 0 && (
           <Alert>
@@ -203,7 +218,7 @@ export function TransferPanel({
         )}
         {err && <p className="text-xs text-danger">{err}</p>}
         <FormActions
-          busy={busy || !reason.trim()}
+          busy={busy}
           onSave={() => void submit()}
           onCancel={() => {
             setStore(null);

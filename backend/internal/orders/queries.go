@@ -268,6 +268,14 @@ type ListFilter struct {
 	// المدير تفتح الطلباتِ عليها (قرارُ المالك ٢٠٢٦-١٠-٠٤). **وشرطُها نصُّ
 	// العدّ نفسُه** (`LiveStageSQL`)، ومرحلةٌ لا تُعرف تُردّ لا تُتجاهَل.
 	Stage string
+	// Board **فلترٌ من فلاتر اللوحة** (`BoardFilterSQL`) — وفارغُه بلا فلتر.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣: كلُّ عدّادٍ يُضغط فيفتح القائمةَ
+	// **بالشرط الذي عدّه بعينه.**)
+	Board string
+	// Priority **ترتيبُ اللوحة بالأولويّة** (`PriorityOrderSQL`، البند ١) —
+	// وبدونه الأحدثُ أوّلاً كما في السجلّ.
+	Priority bool
 	// From وTo **مدى تاريخ الإنشاء بيوم دمشق** — `YYYY-MM-DD`، وكلاهما شاملٌ.
 	//
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٣: سجلُّ الطلبات يُرشَّح بالتاريخ والمتجر والسائق.)
@@ -283,6 +291,9 @@ type ListFilter struct {
 // errBadDateRange **تاريخٌ لا يُقرأ** — يُردّ ولا يُتجاهَل: **مُرشِّحٌ يسقط
 // صامتاً يعرض السجلَّ كلَّه ومن طلبه يظنّه مرشَّحاً.**
 var errBadDateRange = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+// errBadBoardFilter **فلترُ لوحةٍ لا يُعرف** — يُردّ ولا يُتجاهَل، كأخيه أعلاه.
+var errBadBoardFilter = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 
 // validDay **أهو يومٌ بصيغة `YYYY-MM-DD`** — والفارغُ صالحٌ (بلا حدّ).
 func validDay(d string) bool {
@@ -410,6 +421,23 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		where += `
 		AND ` + LiveStageSQL(f.Stage)
 	}
+	// **والمهلُ تُقرأ مرّةً للنداء** — للفلتر وللترتيب معاً.
+	var lim StuckLimits
+	if f.Board != "" || f.Priority {
+		lim = s.StuckLimitsOf(ctx)
+	}
+	if f.Board != "" {
+		cond, ok := BoardFilterSQL(f.Board, lim)
+		if !ok {
+			return nil, errBadBoardFilter
+		}
+		where += `
+		AND ` + cond
+	}
+	orderBy := `o.created_at DESC`
+	if f.Priority {
+		orderBy = PriorityOrderSQL(lim)
+	}
 
 	var total int
 	if err := s.db.QueryRow(ctx, `
@@ -422,7 +450,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	}
 
 	rows, err := s.db.Query(ctx, orderSelect+where+`
-		ORDER BY o.created_at DESC LIMIT $11 OFFSET $12`,
+		ORDER BY `+orderBy+` LIMIT $11 OFFSET $12`,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
 		f.ClosedOnly, f.OwnerID, f.From, f.To, f.PerPage, (f.Page-1)*f.PerPage)
 	if err != nil {

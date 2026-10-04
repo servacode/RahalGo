@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -107,6 +108,10 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		ClosedOnly: q.Get("closed") == "1",
 		// **وبلاغٌ ينتظر المكتب** — من بطاقة «بانتظار قرارك» في الرئيسيّة.
 		AwaitingOffice: q.Get("awaiting") == "1",
+		// **وفلاترُ اللوحة بعدّاداتها** — الشرطُ الذي عدّها بعينه (البند ٣).
+		Board: q.Get("filter"),
+		// **والأولويّةُ لشاشة العمل** — المُنذَرُ أوّلاً ثمّ المتأخّرُ ثمّ الأقدم (البند ١).
+		Priority: q.Get("sort") == "priority",
 		// **ومرحلةُ الجاري** — من بطاقات «الآن» في رئيسيّة المدير (٢٠٢٦-١٠-٠٤).
 		Stage: q.Get("stage"),
 		// **ومدى التاريخ بيوم دمشق** — سجلُّ الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٣).
@@ -135,7 +140,66 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 			res.Orders[i].Door = s.officeDoor(r, res.Orders[i].ID, res.Orders[i].Status)
 		}
 	}
+	// **وما يحتاجه المكتبُ وحدَه** — سببُ العلوق والعرضُ الحيّ وسقفُ التعويض،
+	// **في رحلةٍ واحدةٍ للصفحة كلِّها.**
+	s.fillBoard(r, res.Orders)
 	httpx.JSON(w, http.StatusOK, res)
+}
+
+// fillBoard يملأ `Board` لصفحةٍ من الطلبات — **وتعذّرُه لا يُسقط القائمة**:
+// البطاقةُ تُعرض بلا سببِ علوقٍ خيرٌ من شاشةٍ بيضاء.
+func (s *Server) fillBoard(r *http.Request, list []orders.Order) {
+	ids := make([]string, len(list))
+	for i := range list {
+		ids[i] = list[i].ID
+	}
+	info, err := s.orders.BoardInfoOf(r.Context(), ids)
+	if err != nil {
+		s.logger.Warn("لوحةُ الطلبات: تعذّرت معلوماتُ المكتب", "error", err)
+		return
+	}
+	for i := range list {
+		list[i].Board = info[list[i].ID]
+	}
+}
+
+// boardMeta **إعداداتُ اللوحة التي تقرؤها الشاشة** — من الخادم لا من `/settings`.
+//
+// (البند ٣٢: دورٌ مخصّصٌ بلا `settings.read` كان يأخذ افتراضاتٍ مكتوبةً في
+// الشاشة — مهلةَ ١٠ و«المنصّة تدير» — **وقد تخالف إعداداتِ المالك.**)
+type boardMeta struct {
+	ManualAssignAfterMin int64  `json:"manual_assign_after_min"`
+	OfferTimeoutSec      int64  `json:"offer_timeout_sec"`
+	OrdersMode           string `json:"orders_mode"`
+	CashBanDays          int64  `json:"cash_ban_days"`
+	// StaleLocationMin **متى يُعدّ موضعُ السائق متوقّفاً** — الحدُّ نفسُه الذي يحجب به
+	// المحرّكُ الإسنادَ الآليّ، **فلا تقول الشاشةُ «ظاهر» عمّن حجبه المحرّك.**
+	StaleLocationMin int `json:"stale_location_minutes"`
+}
+
+// handleOrdersBoard **عدّاداتُ لوحة الطلبات وإعداداتُها** — `GET /admin/orders/board`.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣: «كلُّ عدّادٍ يُضغط فيفتح القائمةَ بالشرط
+// الذي عدّه بعينه».) **والعدُّ من `orders.BoardFilterSQL`** — نصُّ القائمة نفسُه.
+func (s *Server) handleOrdersBoard(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	counts, err := s.orders.BoardCounts(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	meta := boardMeta{
+		ManualAssignAfterMin: s.settings.GetInt(ctx, "orders.manual_assign_after_min"),
+		OfferTimeoutSec:      s.settings.GetInt(ctx, "drivers.offer_timeout_sec"),
+		OrdersMode:           s.settings.GetString(ctx, "platform.orders_mode"),
+		CashBanDays:          s.settings.GetInt(ctx, "customers.cash_ban_days"),
+		StaleLocationMin:     staleLocationMinutes,
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"counts":  counts,
+		"filters": orders.BoardFilters,
+		"meta":    meta,
+	})
 }
 
 func (s *Server) handleOrderAlerts(w http.ResponseWriter, r *http.Request) {
@@ -156,6 +220,9 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	if orders.OfficeAnswers(o.Status) {
 		o.Door = s.officeDoor(r, o.ID, o.Status)
 	}
+	one := []orders.Order{*o}
+	s.fillBoard(r, one)
+	o.Board = one[0].Board
 	// ══════════════════════════════════════════════════════════════════
 	// **ومسارُه كاملاً بأوقاته ومن فعله**
 	// ══════════════════════════════════════════════════════════════════
@@ -246,7 +313,18 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 	}
 	o, err := s.orders.AssignDriver(r.Context(), userIDFrom(r), rolesFrom(r),
 		chi.URLParam(r, "id"), req.DriverID, req.Note)
-	if err != nil {
+	switch {
+	case err == nil:
+	case errors.Is(err, orders.ErrDriverOffShift):
+		s.respondErr(w, errAssignOffShift)
+		return
+	case errors.Is(err, orders.ErrDriverExcluded):
+		s.respondErr(w, errAssignExcluded)
+		return
+	case errors.Is(err, orders.ErrOrderTaken):
+		s.respondErr(w, errAssignTaken)
+		return
+	default:
 		s.respondErr(w, err)
 		return
 	}
@@ -267,6 +345,96 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 	})
 	httpx.JSON(w, http.StatusOK, o)
 }
+
+// handleOrderSeen **«استلمتها» على طلبٍ جديد** — `POST /admin/orders/{id}/seen`.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥: «رنينٌ متكرّرٌ للطلب الجديد حتّى يضغط
+// موظّفٌ استلمتها».) **والضغطةُ تُكتب في الطلب** فيسكت الرنينُ عند المكتب كلِّه.
+func (s *Server) handleOrderSeen(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	changed, err := s.orders.MarkSeen(r.Context(), id, userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"seen": true, "changed": changed})
+}
+
+// assignCandidate سائقٌ يصلح للإسناد اليدويّ — بما يُقرَّر به.
+type assignCandidate struct {
+	ID         string   `json:"id"`
+	FullName   string   `json:"full_name"`
+	Phone      string   `json:"phone"`
+	DistanceM  *float64 `json:"distance_m"`
+	CashHeld   int64    `json:"cash_held"`
+	OpenOrders int      `json:"open_orders"`
+	// LocationAt **آخرُ موضعٍ وصل منه** — والفارغُ «لم يصل قطّ».
+	LocationAt *time.Time `json:"location_at"`
+}
+
+// handleAssignCandidates **مرشّحو الإسناد اليدويّ** — `GET /admin/orders/{id}/assign-candidates`.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠ — و٣٥: «مرتّبةً بالقرب، فيها المسافةُ
+// والنقدُ والطلبات».) **ومن في الدوام وحدَه، ولا من ترك الطلب** — الشرطان
+// اللذان يفرضهما المحرّكُ عند الإسناد (`AssignDriver`)، **فلا يُعرض من سيُردّ.**
+//
+// **والمسافةُ من نقطة الاستلام** (البديلة إن كانت، وإلّا المتجر) **إلى آخر
+// موضعٍ للسائق** — وموضعٌ لا يُعرف يقع آخرَ القائمة لا أوّلَها: **الجهلُ ليس قرباً.**
+func (s *Server) handleAssignCandidates(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT u.id::text, COALESCE(u.full_name, ''), COALESCE(u.phone, ''),
+		       CASE WHEN u.last_location IS NOT NULL
+		             AND COALESCE(o.pickup_override, m.location) IS NOT NULL
+		            THEN ST_Distance(u.last_location, COALESCE(o.pickup_override, m.location)) END,
+		       COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = u.id), 0),
+		       (SELECT count(*) FROM orders oo WHERE oo.driver_id = u.id AND oo.closed_at IS NULL),
+		       u.last_location_at
+		FROM orders o
+		LEFT JOIN merchants m ON m.id = o.merchant_id
+		JOIN users u ON u.on_shift AND u.status = 'active'
+		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
+		WHERE o.id = $1
+		  AND NOT (u.id = ANY(o.excluded_drivers))
+		ORDER BY 4 ASC NULLS LAST, 6 ASC, 2`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+	list := []assignCandidate{}
+	for rows.Next() {
+		var c assignCandidate
+		if err := rows.Scan(&c.ID, &c.FullName, &c.Phone, &c.DistanceM, &c.CashHeld,
+			&c.OpenOrders, &c.LocationAt); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		list = append(list, c)
+	}
+	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"drivers":                list,
+		"stale_location_minutes": staleLocationMinutes,
+	})
+}
+
+// حرّاسُ الإسناد اليدويّ بلغة الإدارة (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠).
+var (
+	errAssignOffShift = httpx.NewError(http.StatusConflict,
+		"driver_off_shift", "errors.driver_off_shift")
+	errAssignExcluded = httpx.NewError(http.StatusConflict,
+		"driver_excluded", "errors.driver_excluded")
+	errAssignTaken = httpx.NewError(http.StatusConflict,
+		"order_already_taken", "errors.order_already_taken")
+)
 
 // handleRecomputeSettlement **يُعيد حسابَ نصيب المنصة من طلبٍ بعينه.**
 //

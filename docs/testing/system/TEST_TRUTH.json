@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 391,
+    "routes": 395,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 63,
+    "notify_sites": 62,
     "notify_targeted": 24,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 169,
-    "behaviour_settings": 134,
-    "order_fields": 93,
-    "test_files": 470,
-    "test_funcs": 1929
+    "setting_defs": 172,
+    "behaviour_settings": 137,
+    "order_fields": 94,
+    "test_files": 474,
+    "test_funcs": 1941
   },
   "flows": [
     {
@@ -4060,21 +4060,18 @@
     },
     {
       "key": "drivers.offer_timeout_sec",
-      "group": "drivers",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
-        "F-07",
-        "F-08",
-        "F-13",
-        "F-27"
+        "F-33"
       ],
       "apps": [
-        "admin",
         "customer",
         "driver",
-        "merchant"
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -4775,26 +4772,25 @@
     },
     {
       "key": "orders.accept_timeout_min",
-      "group": "merchants",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
-        "F-04",
-        "F-05",
-        "F-28"
+        "F-33"
       ],
       "apps": [
-        "admin",
         "customer",
-        "merchant"
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "orders.auto_accept_min",
-      "group": "platform",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -4897,7 +4893,7 @@
     },
     {
       "key": "orders.delivery_timeout_min",
-      "group": "platform",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -4915,21 +4911,18 @@
     },
     {
       "key": "orders.driver_timeout_min",
-      "group": "drivers",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
-        "F-07",
-        "F-08",
-        "F-13",
-        "F-27"
+        "F-33"
       ],
       "apps": [
-        "admin",
         "customer",
         "driver",
-        "merchant"
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -4969,6 +4962,24 @@
         "customer",
         "driver",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.manual_assign_after_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -5035,6 +5046,42 @@
     {
       "key": "orders.source_proximity_m",
       "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.staff_presence_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.unattended_auto_accept_min",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -6038,6 +6085,12 @@
       "name": "TestContract_CoversEveryRoute",
       "file": "internal/apidoc/contract_test.go",
       "package": "apidoc",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersBoardPolicy",
+      "file": "internal/authz/orders_board_policy_test.go",
+      "package": "authz",
       "orphan": true
     },
     {
@@ -7782,6 +7835,48 @@
     {
       "name": "TestAgreeCustom_WritesTotals",
       "file": "internal/orders/agree_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestStuckAlert_RoutesByCapabilityAndRealertsOnNewReason",
+      "file": "internal/orders/board_notify_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAssign_ServerGuards",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoAccept_WhenOfficeEmpty",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestBoard_CountsMatchFilteredLists",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestBoard_PriorityOrder",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_CompensationCappedAndOnce",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_OnlyAfterHandedAndToTripDestination",
+      "file": "internal/orders/board_rules_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -24212,6 +24307,30 @@
     {
       "name": "TestTransfer_MappingValidation",
       "file": "internal/server/order_transfer_mapping_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergencyAfterPickup_OfficeDecides",
+      "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_OperationsCannotWriteCompensation",
+      "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersBoardGrants",
+      "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTransfer_MerchantDeliveryRefused",
+      "file": "internal/server/orders_board_rules_test.go",
       "package": "server",
       "orphan": true
     },

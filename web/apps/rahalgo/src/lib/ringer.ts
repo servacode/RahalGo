@@ -2,31 +2,76 @@
 
 /**
  * الرنين المستمر لطلب جديد — نغمة مولّدة بـ WebAudio (بلا ملفات صوتية):
- * جرس ثنائي النغمة يتكرر ما دام هناك طلب بانتظار القبول والصوت مفعّلاً.
+ * جرس ثنائي النغمة يتكرر ما دام هناك ما ينتظر والصوت مفعّلاً.
  * سياسة المتصفحات تتطلب تفاعلاً قبل الصوت — زر التفعيل يستأنف السياق.
+ *
+ * **ويستعمله لوحُ الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥): رنينٌ متكرّرٌ
+ * للطلب الجديد حتّى يضغط موظّفٌ «استلمتها». **و`unlocked` يقول أيسمع المتصفّحُ
+ * أصلاً** — فإن لم يسمع ظهر زرُّ «شغّل صوت التنبيه» بدل صمتٍ لا يُرى.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const SOUND_KEY = "rahalgo_merchant_sound";
+const DEFAULT_KEY = "rahalgo_merchant_sound";
 
-export function useRinger(active: boolean) {
+/** **قراءةُ المتصفّح قد تُرمى** (نافذةٌ خاصّة · تخزينٌ محجوب) — فلا تُسقط الشاشة. */
+function readPref(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writePref(key: string, v: string) {
+  try {
+    localStorage.setItem(key, v);
+  } catch {
+    // **تفضيلٌ لا يُحفظ لا يُسقط شيئاً** — يعود الافتراضُ في الفتحة التالية.
+  }
+}
+
+export function useRinger(active: boolean, storageKey: string = DEFAULT_KEY) {
   const [enabled, setEnabledState] = useState(true);
+  /** **أيسمح المتصفّحُ بالصوت الآن؟** — يصير صادقاً بعد أوّل ضغطةٍ تستأنف السياق. */
+  const [unlocked, setUnlocked] = useState(false);
   const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    setEnabledState(localStorage.getItem(SOUND_KEY) !== "off");
+    setEnabledState(readPref(storageKey) !== "off");
+  }, [storageKey]);
+
+  const context = useCallback((): AudioContext | null => {
+    if (ctxRef.current) return ctxRef.current;
+    const Ctx =
+      typeof window === "undefined"
+        ? undefined
+        : (window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext);
+    if (!Ctx) return null;
+    ctxRef.current = new Ctx();
+    ctxRef.current.onstatechange = () =>
+      setUnlocked(ctxRef.current?.state === "running");
+    setUnlocked(ctxRef.current.state === "running");
+    return ctxRef.current;
   }, []);
+
+  /** **يُنادى من ضغطة المستخدم** — اللحظةُ التي يسمح فيها المتصفّحُ بالصوت. */
+  const unlock = useCallback(() => {
+    const ctx = context();
+    if (!ctx) return;
+    void ctx
+      .resume()
+      .then(() => setUnlocked(ctx.state === "running"))
+      .catch(() => undefined);
+  }, [context]);
 
   function setEnabled(on: boolean) {
     setEnabledState(on);
-    localStorage.setItem(SOUND_KEY, on ? "on" : "off");
-    if (on) {
-      // استدعاء من نقرة المستخدم — اللحظة الصحيحة لإنشاء/استئناف السياق
-      ctxRef.current ??= new AudioContext();
-      void ctxRef.current.resume();
-    }
+    writePref(storageKey, on ? "on" : "off");
+    if (on) unlock();
   }
 
   useEffect(() => {
@@ -38,11 +83,12 @@ export function useRinger(active: boolean) {
       return;
     }
 
-    ctxRef.current ??= new AudioContext();
-    const ctx = ctxRef.current;
+    const ctx = context();
+    if (!ctx) return;
     void ctx.resume().catch(() => undefined);
 
     function chime(freq: number, at: number) {
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
@@ -56,7 +102,7 @@ export function useRinger(active: boolean) {
     }
 
     function ring() {
-      if (ctx.state !== "running") return;
+      if (!ctx || ctx.state !== "running") return;
       const t = ctx.currentTime;
       chime(880, t);
       chime(660, t + 0.28);
@@ -70,7 +116,7 @@ export function useRinger(active: boolean) {
         timerRef.current = null;
       }
     };
-  }, [active, enabled]);
+  }, [active, enabled, context]);
 
-  return { enabled, setEnabled };
+  return { enabled, setEnabled, unlocked, unlock };
 }

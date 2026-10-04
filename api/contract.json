@@ -712,7 +712,7 @@
       "path": "/api/v1/admin/emergencies",
       "handler": "handleOpenEmergencies",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "@paged",
@@ -728,7 +728,7 @@
       "path": "/api/v1/admin/emergencies/banner",
       "handler": "handleEmergencyBanner",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "@b",
@@ -744,7 +744,7 @@
       "path": "/api/v1/admin/emergencies/stores/{id}/ack",
       "handler": "handleAckStoreEmergency",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "acknowledged",
@@ -760,7 +760,7 @@
       "path": "/api/v1/admin/emergencies/{id}/ack",
       "handler": "handleAckEmergency",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "acknowledged",
@@ -776,7 +776,7 @@
       "path": "/api/v1/admin/emergencies/{id}/resolve",
       "handler": "handleResolveEmergency",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "request": [
         {
           "name": "resolution",
@@ -1872,6 +1872,30 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/orders/board",
+      "handler": "handleOrdersBoard",
+      "auth": true,
+      "capability": "orders.read",
+      "response": [
+        {
+          "name": "counts",
+          "type": "unknown"
+        },
+        {
+          "name": "filters",
+          "type": "unknown"
+        },
+        {
+          "name": "meta",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/orders/export",
       "handler": "handleOrdersExport",
       "auth": true,
@@ -1906,6 +1930,26 @@
       "response": [
         {
           "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/assign-candidates",
+      "handler": "handleAssignCandidates",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "stale_location_minutes",
           "type": "unknown"
         }
       ],
@@ -2124,6 +2168,28 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/goods/compensation",
+      "handler": "handleGoodsCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "compensated",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
@@ -2182,7 +2248,7 @@
       "path": "/api/v1/admin/orders/{id}/recompute",
       "handler": "handleRecomputeSettlement",
       "auth": true,
-      "capability": "orders.intervene",
+      "capability": "finance.recompute",
       "response": [
         {
           "name": "after",
@@ -2195,6 +2261,26 @@
         {
           "name": "delta",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/seen",
+      "handler": "handleOrderSeen",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "changed",
+          "type": "unknown"
+        },
+        {
+          "name": "seen",
+          "type": "bool"
         }
       ],
       "statuses": [

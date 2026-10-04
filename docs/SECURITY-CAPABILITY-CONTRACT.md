@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**29 قدرةً · 172 صفَّ سياسةٍ للمسارات · 2 استثناءً · 22 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**31 قدرةً · 176 صفَّ سياسةٍ للمسارات · 2 استثناءً · 24 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -60,16 +60,18 @@
 | `content.manage` | 20 | — | لافتاتٌ وعروضٌ ومحتوى |
 | `drivers.manage` | 1 | — | إدارةُ السائقين وتشغيلُهم |
 | `drivers.read` | 2 | — | قراءةُ سجلّ السائقين ومواضعهم |
+| `emergencies.manage` | 5 | — | قراءةُ الطوارئ واستلامُها |
 | `finance.export` | 2 | — | سحبُ الدفتر وكشفِ الطلبات ملفّاً |
-| `finance.manage` | 12 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
+| `finance.manage` | 13 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
 | `finance.read` | 16 | — | قراءةُ المال والتقارير الماليّة |
+| `finance.recompute` | 1 | — | إعادةُ حساب تسوية طلبٍ مُغلق |
 | `merchants.manage` | 10 | — | إدارةُ المتاجر وتعليقُها |
 | `merchants.read` | 4 | — | قراءةُ سجلّ المتاجر وقوائمها |
 | `merchants.verify` | 4 | — | مراجعةُ المرشَّحين والقوائم |
 | `observability.read` | 1 | — | قراءةُ صحّة المنصّة الداخليّة |
 | `orders.communications.read` | 3 | — | قراءةُ محادثات الطلب ورسائله |
-| `orders.intervene` | 10 | — | تدخّلٌ في طلبٍ نيابةً عن طرفه |
-| `orders.read` | 10 | — | قراءةُ الطلبات ولوحةِ العمليّات |
+| `orders.intervene` | 11 | — | تدخّلٌ في طلبٍ نيابةً عن طرفه |
+| `orders.read` | 11 | — | قراءةُ الطلبات ولوحةِ العمليّات |
 | `payouts.decide` | 1 | — | قرارُ السحب |
 | `platform.overview` | 1 | — | رئيسيّةُ مدير المنصّة بأرقامها ومالِها |
 | `roles.manage` | 7 | — | منحُ الأدوار وسحبُها |
@@ -78,7 +80,7 @@
 | `settings.general.manage` | 20 | — | إعداداتٌ عامّةٌ ومحتوى |
 | `settings.read` | 2 | — | قراءةُ لوح الإعدادات |
 | `settings.security.manage` | 3 | — | إعداداتُ الأمن والجلسات |
-| `support.manage` | 13 | — | التذاكرُ والنزاعاتُ والطوارئ |
+| `support.manage` | 8 | — | التذاكرُ والنزاعاتُ والطوارئ |
 | `users.contact.read` | **0** | **7** | قراءةُ رقم الاتّصال |
 | `users.export` | 1 | — | سحبُ دليل الحسابات ملفّاً |
 | `users.read` | 6 | — | قراءةُ الحسابات |
@@ -149,9 +151,11 @@
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
 | `finance.expense_voided` | `POST` | `/expenses/{id}/void` | — | دائماً | `finance.manage` |
+| `finance.goods_compensation` | `POST` | `/orders/{id}/goods/compensation` | `amount` | دائماً | `finance.manage` |
 | `finance.incentive` | `POST` | `/users/{id}/incentive` | `amount` | دائماً | `finance.manage` |
 | `finance.merchant_cash_paid` | `POST` | `/merchant-cash-settlements/{id}/pay` | — | دائماً | `finance.manage` |
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `approve`, `amount` | دائماً | `payouts.decide` |
+| `finance.settlement_recomputed` | `POST` | `/orders/{id}/recompute` | — | دائماً | `finance.recompute` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
 | `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |
 | `ops.delivery_proof_exception` | `POST` | `/orders/{id}/proof-exception` | `reason` | دائماً | `orders.intervene` |

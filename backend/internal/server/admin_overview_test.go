@@ -401,7 +401,8 @@ func TestOverview_AckLeavesBannerButKeepsEmergencyOpen(t *testing.T) {
 	if w := callAs(srv.handleAckEmergency, "POST", "/x", staff, id, nil); w.Code != http.StatusNotFound {
 		t.Fatalf("الاستلامُ الثاني ردّ %d لا ٤٠٤", w.Code)
 	}
-	if need, ok := authz.LookupAdmin("POST", "/emergencies/{id}/ack"); !ok || need != authz.SupportManage {
+	if need, ok := authz.LookupAdmin("POST", "/emergencies/{id}/ack"); !ok || need != authz.EmergenciesManage {
+		// **والاستلامُ بقدرة الطوارئ** — تبلغها العمليّاتُ والدعمُ معاً (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ٧).
 		t.Fatalf("سياسةُ الاستلام %q", need)
 	}
 }

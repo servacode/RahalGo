@@ -108,6 +108,11 @@ const SERVER_ADMIN = new Set([
   "transfer_too_late", "bad_channel", "no_merchant_phone",
   // **مقابلُ التحويل يختاره الموظّف** (٢٠٢٦-١٠-٠٣) — بابُ الإدارة وحدَه.
   "transfer_mapping_invalid", "transfer_item_wrong_store", "transfer_item_unavailable",
+  // **لوحةُ الطلبات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — «لدي توصيلة» لا تُحوَّل،
+  // وحسمُ البضاعة وتعويضُ المتجر بابان للإدارة وحدَها.
+  "transfer_delivery_kind", "goods_compensation_finance", "goods_not_handed",
+  "goods_wrong_place", "goods_compensation_cap", "goods_already_compensated",
+  "driver_off_shift", "order_already_taken",
   // ── staging-only QA fixtures (qa/* endpoints; never reach a real mobile client) ──
   "qa_bad_target", "qa_fault_injected", "qa_flag_not_allowed",
   "qa_needs_custom_cash", "qa_no_backward", "qa_no_driver",

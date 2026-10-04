@@ -2,6 +2,7 @@ package orders
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -69,10 +70,16 @@ var (
 	ErrBelowMinOrder    = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
 	ErrWhatsAppRequired = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
 	// ErrTooManyOpen بيده من الطلبات ما يكفي — **وسقفُه في الإعدادات.**
-	ErrTooManyOpen        = httpx.NewError(http.StatusConflict, "too_many_open_orders", "errors.too_many_open_orders")
-	ErrInvalidPromo       = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
-	ErrBadTransition      = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
-	ErrNeedsDriver        = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
+	ErrTooManyOpen   = httpx.NewError(http.StatusConflict, "too_many_open_orders", "errors.too_many_open_orders")
+	ErrInvalidPromo  = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
+	ErrBadTransition = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
+	ErrNeedsDriver   = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
+	// **حرّاسُ الإسناد اليدويّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠) — **أخطاءُ
+	// نطاقٍ لا ردودٌ**: البابُ بابُ الإدارة وحدَه، **ويترجمها معالِجُه**
+	// (`server.handleOrderAssign`) فلا تُطلب لها عربيّةٌ في تطبيقٍ لا يبلغها.
+	ErrDriverOffShift     = errors.New("السائقُ خارج الدوام")
+	ErrDriverExcluded     = errors.New("السائقُ ترك هذا الطلب من قبل")
+	ErrOrderTaken         = errors.New("أخذ سائقٌ الطلبَ قبل لحظة")
 	ErrCancelWindowPassed = httpx.NewError(http.StatusConflict, "cancel_window_passed", "errors.cancel_window_passed")
 	// ErrFailReasonStage **سببٌ لا يخصّ المرحلة** — «الزبونُ غير موجود» والسائقُ
 	// عند المتجر (قرارُ المالك ٢٠٢٦-١٠-٠٢).
@@ -322,6 +329,10 @@ type Order struct {
 	// (`door_view.go`). **يُملأ في ردّ الإدارة وحدَه** لطلبٍ عند الباب، وغائبٌ
 	// عن كلّ ما سواه.
 	Door *DoorView `json:"door,omitempty"`
+	// Board **ما يحتاجه المكتبُ وحدَه** (`board.go`) — سببُ العلوق ومنذ متى، والعرضُ
+	// الحيُّ ومن مرّ عليهم، وسقفُ تعويض المتجر. **يُملأ في ردّ الإدارة وحدَه**،
+	// فلا يصل سعرُ الشراء تطبيقَ الزبون.
+	Board *BoardInfo `json:"board,omitempty"`
 	// EndedBy الدورُ الذي أنهى الطلب: customer · merchant · ops · driver.
 	//
 	// **كان يُكتب ولا يُقرأ**: ترى العملياتُ «ملغي» ولا تعرف من ألغاه —
@@ -483,6 +494,9 @@ type OrderPage struct {
 	//
 	// **وتغيب في شاشة العمل** (`omitempty`) — لا حالَ منتهيةً فيها.
 	Counts map[string]int `json:"counts,omitempty"`
+	// BoardCounts **عدّاداتُ لوحة العمل** — كلٌّ بشرط فلتره (`BoardFilterSQL`)،
+	// **ولا تتبع بحثاً ولا فلتراً** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+	BoardCounts map[string]int `json:"board_counts,omitempty"`
 }
 
 // CreateInput مدخلات إنشاء الطلب — الأسعار تُحسب في الخادم حصراً، لا تُقبل من العميل.

@@ -27,6 +27,11 @@
    "guards_routes": 2
   },
   {
+   "code": "emergencies.manage",
+   "description": "قراءةُ الطوارئ واستلامُها",
+   "guards_routes": 5
+  },
+  {
    "code": "finance.export",
    "description": "سحبُ الدفتر وكشفِ الطلبات ملفّاً",
    "guards_routes": 2
@@ -34,12 +39,17 @@
   {
    "code": "finance.manage",
    "description": "قيدُ محفظةٍ ومصروفٌ وخزينة",
-   "guards_routes": 12
+   "guards_routes": 13
   },
   {
    "code": "finance.read",
    "description": "قراءةُ المال والتقارير الماليّة",
    "guards_routes": 16
+  },
+  {
+   "code": "finance.recompute",
+   "description": "إعادةُ حساب تسوية طلبٍ مُغلق",
+   "guards_routes": 1
   },
   {
    "code": "merchants.manage",
@@ -69,12 +79,12 @@
   {
    "code": "orders.intervene",
    "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
-   "guards_routes": 10
+   "guards_routes": 11
   },
   {
    "code": "orders.read",
    "description": "قراءةُ الطلبات ولوحةِ العمليّات",
-   "guards_routes": 10
+   "guards_routes": 11
   },
   {
    "code": "payouts.decide",
@@ -119,7 +129,7 @@
   {
    "code": "support.manage",
    "description": "التذاكرُ والنزاعاتُ والطوارئ",
-   "guards_routes": 13
+   "guards_routes": 8
   },
   {
    "code": "users.contact.read",
@@ -188,7 +198,7 @@
   }
  ],
  "route_policy": {
-  "rules": 172,
+  "rules": 176,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -196,9 +206,11 @@
    "content.manage",
    "drivers.manage",
    "drivers.read",
+   "emergencies.manage",
    "finance.export",
    "finance.manage",
    "finance.read",
+   "finance.recompute",
    "merchants.manage",
    "merchants.read",
    "merchants.verify",
@@ -382,6 +394,17 @@
   },
   {
    "method": "POST",
+   "pattern": "/orders/{id}/goods/compensation",
+   "action": "finance.goods_compensation",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
    "pattern": "/users/{id}/incentive",
    "action": "finance.incentive",
    "target_type": "user",
@@ -411,6 +434,15 @@
     "amount"
    ],
    "need": "payouts.decide"
+  },
+  {
+   "method": "POST",
+   "pattern": "/orders/{id}/recompute",
+   "action": "finance.settlement_recomputed",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.recompute"
   },
   {
    "method": "POST",
