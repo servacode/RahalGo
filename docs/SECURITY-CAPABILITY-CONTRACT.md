@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**29 قدرةً · 172 صفَّ سياسةٍ للمسارات · 2 استثناءً · 22 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**30 قدرةً · 186 صفَّ سياسةٍ للمسارات · 2 استثناءً · 25 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -58,11 +58,11 @@
 | `analytics.read` | 6 | — | قراءةُ التحليلات |
 | `audit.read` | 1 | — | قراءةُ سجلّ التدقيق |
 | `content.manage` | 20 | — | لافتاتٌ وعروضٌ ومحتوى |
-| `drivers.manage` | 1 | — | إدارةُ السائقين وتشغيلُهم |
+| `drivers.manage` | 3 | — | إدارةُ السائقين وتشغيلُهم |
 | `drivers.read` | 2 | — | قراءةُ سجلّ السائقين ومواضعهم |
 | `finance.export` | 2 | — | سحبُ الدفتر وكشفِ الطلبات ملفّاً |
-| `finance.manage` | 12 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
-| `finance.read` | 16 | — | قراءةُ المال والتقارير الماليّة |
+| `finance.manage` | 14 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
+| `finance.read` | 17 | — | قراءةُ المال والتقارير الماليّة |
 | `merchants.manage` | 10 | — | إدارةُ المتاجر وتعليقُها |
 | `merchants.read` | 4 | — | قراءةُ سجلّ المتاجر وقوائمها |
 | `merchants.verify` | 4 | — | مراجعةُ المرشَّحين والقوائم |
@@ -74,16 +74,17 @@
 | `platform.overview` | 1 | — | رئيسيّةُ مدير المنصّة بأرقامها ومالِها |
 | `roles.manage` | 7 | — | منحُ الأدوار وسحبُها |
 | `safety.manage` | 8 | — | الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر |
-| `settings.financial.manage` | 2 | — | إعداداتٌ تدخل حساباً ماليّاً |
+| `settings.financial.manage` | 3 | — | إعداداتٌ تدخل حساباً ماليّاً |
 | `settings.general.manage` | 20 | — | إعداداتٌ عامّةٌ ومحتوى |
 | `settings.read` | 2 | — | قراءةُ لوح الإعدادات |
 | `settings.security.manage` | 3 | — | إعداداتُ الأمن والجلسات |
 | `support.manage` | 13 | — | التذاكرُ والنزاعاتُ والطوارئ |
+| `users.cashban.lift` | 1 | — | رفعُ منع الدفع نقداً عن زبون |
 | `users.contact.read` | **0** | **7** | قراءةُ رقم الاتّصال |
 | `users.export` | 1 | — | سحبُ دليل الحسابات ملفّاً |
-| `users.read` | 6 | — | قراءةُ الحسابات |
+| `users.read` | 10 | — | قراءةُ الحسابات |
 | `users.sensitive.read` | 2 | — | قراءةُ عناوين المرء وأثرِه |
-| `users.status.manage` | 4 | — | إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته |
+| `users.status.manage` | 7 | — | إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته |
 <!-- /gen:capabilities -->
 
 **وقدرةٌ تحرس صفرَ مساراتٍ ليست سهواً بالضرورة.** `users.contact.read` لا
@@ -135,16 +136,19 @@
 <!-- gen:sensitive -->
 | الفعل | الطريقة | المسار | بصمةُ الجسم | بشرط | القدرة |
 |---|---|---|---|---|---|
+| `admin.cash_ban_lifted` | `POST` | `/users/{id}/cash-ban/lift` | — | دائماً | `users.cashban.lift` |
+| `admin.driver_cash_limit` | `PATCH` | `/users/{id}/cash-limit` | `limit` | دائماً | `settings.financial.manage` |
 | `admin.merchant_delivery_credit` | `PATCH` | `/merchants/{id}/delivery-credit` | `limit` | دائماً | `settings.financial.manage` |
 | `admin.merchant_settlement_update` | `PATCH` | `/merchants/{id}/settlement-method` | `method` | دائماً | `settings.financial.manage` |
 | `admin.password_reset` | `POST` | `/users/{id}/password` | — | دائماً | `users.status.manage` |
+| `admin.phone_change` | `POST` | `/phone-requests/{id}/approve` | — | دائماً | `users.status.manage` |
 | `admin.role_capability_grant` | `POST` | `/roles/{code}/capabilities` | `capability` | دائماً | `roles.manage` |
 | `admin.role_capability_revoke` | `DELETE` | `/roles/{code}/capabilities/{cap}` | — | دائماً | `roles.manage` |
 | `admin.role_create` | `POST` | `/roles` | `code` | دائماً | `roles.manage` |
 | `admin.role_grant` | `POST` | `/users/{id}/roles` | `role` | دائماً | `roles.manage` |
 | `admin.role_revoke` | `DELETE` | `/users/{id}/roles/{role}` | — | دائماً | `roles.manage` |
 | `admin.setting_update` | `PUT` | `/settings/{key}` | `value` | `settingSensitivity` | *بحسب المفتاح* |
-| `admin.user_update` | `PATCH` | `/users/{id}` | `status` | `statusIsStrong` | `users.status.manage` |
+| `admin.user_update` | `PATCH` | `/users/{id}` | `phone`, `status` | `userUpdateStrong` | `users.status.manage` |
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
@@ -153,7 +157,7 @@
 | `finance.merchant_cash_paid` | `POST` | `/merchant-cash-settlements/{id}/pay` | — | دائماً | `finance.manage` |
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `approve`, `amount` | دائماً | `payouts.decide` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
-| `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |
+| `finance.wallet_request_approved` | `POST` | `/wallet-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `ops.delivery_proof_exception` | `POST` | `/orders/{id}/proof-exception` | `reason` | دائماً | `orders.intervene` |
 | `ops.dispute_settled` | `POST` | `/disputes/{id}/settle` | `settlement` | دائماً | `finance.manage` |
 | `ops.order_transition` | `POST` | `/orders/{id}/transition` | `to` | `transitionRefund` | `orders.intervene` |

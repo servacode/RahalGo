@@ -198,8 +198,22 @@ func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 		Apps: s.payeeWorkerApps(r.Context(), userID),
 	})
 	s.audit(r, "ops.warning_issued", "user", userID, map[string]any{"reason": reason})
+	// **ولا إيقافَ آليّاً بعد عددٍ من الإنذارات** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — **تنبيهٌ
+	// للموظّفين** حين يبلغ الحسابُ الحدَّ في ثلاثين يوماً، **والقرارُ لإنسان.**
+	recent := 0
+	if limit := s.settings.GetInt(r.Context(), "safety.warnings_alert_count"); limit > 0 {
+		_ = s.pg.QueryRow(r.Context(), `SELECT count(*) FROM warnings
+			WHERE user_id = $1 AND created_at > now() - interval '30 days'`, userID).Scan(&recent)
+		if int64(recent) >= limit {
+			s.notify.NotifyOps(r.Context(), notifications.Input{
+				Kind: notifications.KindAccount, Title: notifTitles.warningsThreshold,
+				Body: support.WarnReasonAr(reason), Entity: "user", EntityID: userID,
+				Href: "/dashboard/users/" + userID,
+			})
+		}
+	}
 	s.touch("user", "ops")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id, "recent_30d": recent})
 }
 
 // handleIssueUserWarning **إنذارٌ على حسابٍ — أيَّ دورٍ كان.**

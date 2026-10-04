@@ -11,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
@@ -23,35 +22,83 @@ func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
-	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"), q.Get("online") == "true", q.Get("status"), page, perPage)
+	res, err := s.identity.AdminListUsersFiltered(r.Context(), identity.ListFilter{
+		Query: q.Get("query"), Role: q.Get("role"), Online: q.Get("online") == "true",
+		Status: q.Get("status"), PhoneSearch: hasCap(r, authz.UsersContactRead),
+	}, page, perPage)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	hideMoney(r, res)
 	httpx.JSON(w, http.StatusOK, res)
 }
 
-func (s *Server) handleAdminCreateUser(w http.ResponseWriter, r *http.Request) {
-	req, err := decode[identity.CreateUserInput](r)
-	if err != nil {
-		s.respondErr(w, err)
+// hideMoney يحجب الأرقامَ الماليّة عمّن لا يملكها — في المحرّك لا في الشاشة.
+func hideMoney(r *http.Request, res *identity.UserPage) {
+	if canSeeMoney(r) {
 		return
 	}
-	user, err := s.identity.AdminCreateUser(r.Context(), userIDFrom(r), *req, clientIP(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
+	res.MoneyHidden = true
+	for i := range res.Users {
+		res.Users[i].Balance, res.Users[i].OrdersSpent, res.Users[i].Commissions = 0, 0, 0
 	}
-	httpx.JSON(w, http.StatusCreated, user)
 }
 
+func (s *Server) handleAdminCreateUser(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		identity.CreateUserInput
+		// WelcomeApp **أيُّ رابطٍ في رسالة الدخول** — للموظّف يُمنَح دورُه بعد الإنشاء
+		// فيصير الرابطُ بابَ اللوحة: `panel`. وفارغُه يُستنتج من صفة الحساب.
+		WelcomeApp string `json:"welcome_app"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **ولا كلمةَ يكتبها الموظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها ويرسلها.
+	in := req.CreateUserInput
+	in.Password = ""
+	user, err := s.identity.AdminCreateUser(r.Context(), userIDFrom(r), in, clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	sent, expires, werr := s.issueWelcomeFor(r.Context(), userIDFrom(r), user.ID, clientIP(r), req.WelcomeApp)
+	if werr != nil {
+		s.logger.Error("تعذّر توليدُ كلمة الدخول للحساب الجديد", "user", user.ID, "error", werr)
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{
+		"id": user.ID, "phone": user.Phone, "full_name": user.FullName, "roles": user.Roles,
+		"welcome": map[string]any{"sent": sent, "expires_at": expires, "ok": werr == nil},
+	})
+}
+
+// handleAdminUpdateUser تعديلُ حساب — والرقمُ مسارُه الخاصّ.
+//
+// **تغييرُ الرقم ينقل الحسابَ كلَّه بمحفظته** (قرارُ المالك ٢٠٢٦-١٠-٠٤): بكلمةِ سرِّ
+// الموظّف (خطوةُ تحقّق)، ويُخرج كلَّ الجلسات، ويُبلَّغ الرقمُ القديم، ويُسجَّل القديمُ
+// والجديد. **وفوق حدِّ رصيدٍ ينتظر موافقةَ شخصٍ ثانٍ.**
 func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[identity.UpdateUserInput](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	user, err := s.identity.AdminUpdateUser(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), *req, clientIP(r))
+	id := chi.URLParam(r, "id")
+	// **والملاحظاتُ سجلٌّ لا نصٌّ يُستبدَل** — لها بابُها (`/users/{id}/notes`).
+	req.AdminNotes = nil
+	newPhone := req.Phone
+	req.Phone = nil
+	var phoneResult map[string]any
+	if newPhone != nil && strings.TrimSpace(*newPhone) != "" {
+		phoneResult, err = s.changePhone(r, id, *newPhone)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	user, err := s.identity.AdminUpdateUser(r.Context(), userIDFrom(r), id, *req, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -67,6 +114,11 @@ func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			Title: title, Body: derefOr(req.StatusReason, ""),
 			Entity: "user", EntityID: user.ID,
 		})
+		s.afterStatusChange(r, user.ID, *req.Status)
+	}
+	if phoneResult != nil {
+		httpx.JSON(w, http.StatusOK, map[string]any{"user": user, "phone_change": phoneResult})
+		return
 	}
 	httpx.JSON(w, http.StatusOK, user)
 }
@@ -183,6 +235,21 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 	}
 	counts["staff"] = staff
 	counts["online"] = online
+	// **و«الزبون» زبونٌ فقط** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — بمُسنَد القائمة نفسِه (`role=customer`).
+	// **و«موقوفٌ أو محظور» بطاقةٌ لها** — والقائمةُ تُرشَّح بـ`status=restricted`.
+	var customers, restricted int
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_roles c
+		                                       WHERE c.user_id = u.id AND c.role_code = 'customer')
+		                          AND NOT EXISTS (SELECT 1 FROM user_roles n
+		                                       WHERE n.user_id = u.id AND n.role_code <> 'customer')),
+		       count(*) FILTER (WHERE u.status IN ('suspended', 'blocked'))
+		FROM users u`).Scan(&customers, &restricted); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	counts["customer"] = customers
+	counts["restricted"] = restricted
 	httpx.JSON(w, http.StatusOK, map[string]any{"total": total, "roles": counts})
 }
 
@@ -230,6 +297,37 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		// حُذف من البطاقة). **وهو غيرُ المجموع**: ذاك يقول «كم عمل في
 		// عمره» وهذا يقول «أيعمل اليوم؟».
 		DeliveredToday int `json:"delivered_today"`
+
+		// ══════════════════════════════════════════════════════════════
+		// **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// MoneyHidden **الأرصدةُ والإنفاقُ والعمولاتُ تُحجب من المحرّك** عمّن لا يملك
+		// المالَ ولا خدمةَ العملاء — **لا تُخفى في الشاشة وتصل في الردّ.**
+		MoneyHidden bool `json:"money_hidden"`
+		// TempPassword **كلمةٌ مؤقّتةٌ لم تُبدَّل** — «لم يدخل بعد · تنتهي بعد …».
+		TempPending   bool    `json:"temp_password_pending"`
+		TempExpiresAt *string `json:"temp_password_expires_at"`
+		WelcomeSentAt *string `json:"welcome_sent_at"`
+		EverLoggedIn  bool    `json:"ever_logged_in"`
+		// **السائق**: المركبةُ · سقفُ النقد العامُّ والخاصّ · قفلُ ما بعد الحادث.
+		VehicleType      string  `json:"vehicle_type"`
+		VehiclePlate     string  `json:"vehicle_plate"`
+		VehicleColor     string  `json:"vehicle_color"`
+		CashLimit        int64   `json:"cash_limit"`
+		CashLimitGeneral int64   `json:"cash_limit_general"`
+		CashLimitCustom  *int64  `json:"cash_limit_override"`
+		AccidentLocked   bool    `json:"accident_locked"`
+		AccidentLockAt   *string `json:"accident_lock_at"`
+		AccidentCleared  *string `json:"accident_cleared_at"`
+		AccidentClearer  *string `json:"accident_cleared_by"`
+		// **المندوب**: عمولاتٌ محجوزةٌ ما دام موقوفاً.
+		HeldCommission  int64 `json:"held_commission"`
+		HeldCommissions int   `json:"held_commissions_count"`
+		// **تغييرُ رقمٍ ينتظر شخصاً ثانياً.**
+		PendingPhone *phoneRequestRow `json:"pending_phone_change"`
+		// **متاجرُه بمعرّفاتها** — للربط بملفّ المتجر.
+		Stores []map[string]any `json:"stores"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code, u.status_reason, u.admin_notes,
@@ -261,40 +359,87 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out.AvatarThumb = media.SignedURLPtr(out.AvatarThumb)
+	ctx := r.Context()
+	out.CashLimitGeneral = s.cashbox.Limit(ctx)
+	_ = s.pg.QueryRow(ctx, `
+		SELECT u.temp_password_expires_at::text, u.welcome_sent_at::text,
+		       EXISTS (SELECT 1 FROM refresh_tokens rt WHERE rt.user_id = u.id),
+		       u.vehicle_type, u.vehicle_plate, u.vehicle_color, u.cash_limit_override,
+		       u.accident_lock_at IS NOT NULL
+		         AND (u.accident_cleared_at IS NULL OR u.accident_cleared_at < u.accident_lock_at),
+		       u.accident_lock_at::text, u.accident_cleared_at::text,
+		       NULLIF(COALESCE(NULLIF(c.full_name, ''), c.phone, ''), '')
+		FROM users u LEFT JOIN users c ON c.id = u.accident_cleared_by
+		WHERE u.id = $1`, id).
+		Scan(&out.TempExpiresAt, &out.WelcomeSentAt, &out.EverLoggedIn,
+			&out.VehicleType, &out.VehiclePlate, &out.VehicleColor, &out.CashLimitCustom,
+			&out.AccidentLocked, &out.AccidentLockAt, &out.AccidentCleared, &out.AccidentClearer)
+	pending, _ := s.identity.TempPasswordPending(ctx, id)
+	out.TempPending = pending
+	if !pending {
+		out.TempExpiresAt = nil
+	}
+	out.CashLimit = out.CashLimitGeneral
+	if out.CashLimitCustom != nil {
+		out.CashLimit = *out.CashLimitCustom
+	}
+	out.HeldCommission, out.HeldCommissions = s.orders.HeldCommissionTotal(ctx, id)
+	var pr phoneRequestRow
+	if err := s.pg.QueryRow(ctx, `
+		SELECT pr.id::text, pr.user_id::text, pr.old_phone, pr.new_phone, pr.balance, pr.status,
+		       pr.proposed_by::text, COALESCE(NULLIF(p.full_name, ''), p.phone, ''), pr.created_at
+		FROM phone_change_requests pr JOIN users p ON p.id = pr.proposed_by
+		WHERE pr.user_id = $1 AND pr.status = 'pending'`, id).
+		Scan(&pr.ID, &pr.UserID, &pr.OldPhone, &pr.NewPhone, &pr.Balance, &pr.Status,
+			&pr.ProposedBy, &pr.Proposer, &pr.CreatedAt); err == nil {
+		out.PendingPhone = &pr
+	}
+	out.Stores = []map[string]any{}
+	if rows, err := s.pg.Query(ctx, `SELECT id::text, name, status FROM merchants
+		WHERE owner_user_id = $1 ORDER BY created_at`, id); err == nil {
+		for rows.Next() {
+			var mid, name, st string
+			if rows.Scan(&mid, &name, &st) == nil {
+				out.Stores = append(out.Stores, map[string]any{"id": mid, "name": name, "status": st})
+			}
+		}
+		rows.Close()
+	}
+	if !canSeeMoney(r) {
+		out.MoneyHidden = true
+		out.Balance, out.OrdersSpent, out.Commissions, out.ReferralsEarned = 0, 0, 0, 0
+		out.HeldCommission = 0
+	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// handleAdminResetPassword تعيين كلمة مرور جديدة لحساب — أدمن حصراً، وتُسجل تدقيقاً.
+// canSeeMoney **من يرى أرصدةَ الناس وإنفاقَهم وعمولاتِهم** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
+// مديرُ المنصّة والماليّة (`finance.read`) وخدمةُ العملاء (`support.manage`) — تتابع
+// «رصيدي ناقص». **ومن سواهم يُحجب عنه في المحرّك.**
+func canSeeMoney(r *http.Request) bool {
+	return hasCap(r, authz.FinanceRead) || hasCap(r, authz.SupportManage)
+}
+
+// handleAdminResetPassword **إعادةُ كلمة المرور — يولّدها النظام ويرسلها** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٤). **ولا يكتبها الموظّف**: تُقطَع الجلساتُ، وتنتهي بعد ٧٢ ساعة، وتُبدَّل عند
+// أوّل دخول. والجسمُ يُتجاهَل — **كلمةٌ يرسلها عميلٌ قديمٌ لا تُقبَل.**
 func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	req, err := decode[struct {
-		Password string `json:"password"`
-	}](r)
-	if err != nil || len(req.Password) < s.minPasswordLen(r.Context()) {
-		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	hash, err := auth.HashPassword(req.Password)
+	// **ولا يعيد الموظّفُ كلمتَه هو من ملفّه** — فيُخرج نفسَه. بابُه «حسابي».
+	if id == userIDFrom(r) {
+		s.respondErr(w, identity.ErrSelfAction)
+		return
+	}
+	sent, expires, err := s.issueWelcome(r.Context(), userIDFrom(r), id, clientIP(r), true)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	// ══════════════════════════════════════════════════════════════
-	// **والإعادةُ فعلُ استردادٍ لا كتابةُ بصمة** — `R13`
-	// ══════════════════════════════════════════════════════════════
-	//
-	// **كانت هنا جملةُ `UPDATE` تتجاوز خدمةَ الهويّة**: **بصمةٌ
-	// تُكتب ولا جلسةٌ تُبطَل** — **فيبقى صاحبُ الوصول القديمِ داخلاً
-	// ورمزُ تجديده يدور.**
-	//
-	// **وكلمةُ الأدمن مؤقّتة**: يُجبَر صاحبُ الحساب على تبديلها عند
-	// أوّل دخول، **فلا تبقى كلمةٌ يعرفها غيرُه.**
-	if err := s.identity.AdminResetPassword(r.Context(), userIDFrom(r),
-		id, hash, clientIP(r)); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "sent": sent, "expires_at": expires})
 }
 
 // handleAdminUserActivity سجل نشاط الحساب: ما فعله وما فُعل به (من سجل التدقيق).
@@ -399,6 +544,11 @@ func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request)
 
 // handleAdminLogoutAll إنهاء كل جلسات الحساب فوراً.
 func (s *Server) handleAdminLogoutAll(w http.ResponseWriter, r *http.Request) {
+	// **ولا يُخرج الموظّفُ نفسَه من ملفّه** — بابُه «حسابي».
+	if chi.URLParam(r, "id") == userIDFrom(r) {
+		s.respondErr(w, identity.ErrSelfAction)
+		return
+	}
 	n, err := s.identity.AdminLogoutAll(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
@@ -676,21 +826,36 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// handleAdminUsersExport تصدير الحسابات المفلترة إلى CSV (بلا ترقيم — كلها).
+// handleAdminUsersExport **تصديرُ الحسابات المرشَّحة** — لمديرِ المنصّة وحدَه (`users.export`).
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤): **عربيٌّ كلُّه** — العناوينُ والأدوارُ والحال، **ومحميٌّ من
+// صيغ إكسل** (اسمٌ يبدأ بـ`=` كان يُنفَّذ حين يُفتح الملفّ)، **ولا قصَّ صامتاً**: يُقرأ
+// كلُّ ما طابق الترشيحَ صفحةً بعد صفحة.
 func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"),
-		q.Get("online") == "true", q.Get("status"), 1, 10000)
-	if err != nil {
-		s.respondErr(w, err)
-		return
+	filter := identity.ListFilter{Query: q.Get("query"), Role: q.Get("role"),
+		Online: q.Get("online") == "true", Status: q.Get("status"),
+		PhoneSearch: hasCap(r, authz.UsersContactRead)}
+	var all []identity.User
+	for page := 1; ; page++ {
+		res, err := s.identity.AdminListUsersFiltered(r.Context(), filter, page, 100)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		hideMoney(r, res)
+		all = append(all, res.Users...)
+		if len(res.Users) < res.PerPage || len(all) >= res.Total {
+			break
+		}
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="accounts.csv"`)
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF}) // BOM لعرض العربية في Excel
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"الاسم", "الهاتف", "الأدوار", "الحالة", "كود الدعوة", "آخر ظهور", "تاريخ التسجيل"})
-	for _, u := range res.Users {
+	_ = cw.Write([]string{"الاسم", "الهاتف", "الأدوار", "المتاجر", "الحالة", "كود الدعوة",
+		"آخر ظهور", "تاريخ التسجيل"})
+	for _, u := range all {
 		lastSeen := ""
 		if u.LastSeenAt != nil {
 			lastSeen = u.LastSeenAt.Format("2006-01-02 15:04")
@@ -699,12 +864,58 @@ func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) 
 		if u.InviteCode != nil {
 			invite = *u.InviteCode
 		}
+		roles := make([]string, 0, len(u.Roles))
+		for _, rc := range u.Roles {
+			roles = append(roles, roleLabelAr(rc))
+		}
 		_ = cw.Write([]string{
-			u.FullName, u.Phone, strings.Join(u.Roles, "+"), u.Status, invite,
+			csvSafe(u.FullName), csvSafe(u.Phone), strings.Join(roles, " + "),
+			csvSafe(strings.Join(u.StoreNames, " · ")), statusLabelAr(u.Status), csvSafe(invite),
 			lastSeen, u.CreatedAt.Format("2006-01-02"),
 		})
 	}
 	cw.Flush()
+}
+
+// csvSafe **يُبطل صيغَ إكسل** — خليّةٌ تبدأ بـ`= + - @` أو جدولةٍ أو رجوعٍ تُسبَق بفاصلةٍ عليا
+// فتُقرأ نصّاً. **والرقمُ الدوليُّ يبدأ بـ`+`** فيُحمى كذلك ويبقى مقروءاً.
+func csvSafe(v string) string {
+	if v == "" {
+		return v
+	}
+	switch v[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + v
+	}
+	return v
+}
+
+// roleLabelAr اسمُ الدور بالعربيّة في الملفّ — والمجهولُ يبقى رمزَه.
+func roleLabelAr(code string) string {
+	if l, ok := map[string]string{
+		"customer": "زبون", "driver": "سائق", "merchant": "صاحب متجر", "sales": "مندوب",
+		"admin": "مدير المنصة", "owner_super_admin": "المالك", "finance": "المالية",
+		"operations": "العمليات", "ops": "العمليات", "customer_support": "دعم العملاء",
+		"trust_safety": "الثقة والسلامة", "analytics": "التحليلات",
+		"marketing_content": "التسويق والمحتوى", "driver_verification": "التحقق من السائقين",
+		"merchant_verification": "التحقق من المتاجر", "platform_monitor": "مراقب المنصة",
+	}[code]; ok {
+		return l
+	}
+	return code
+}
+
+// statusLabelAr حالُ الحساب بالعربيّة.
+func statusLabelAr(st string) string {
+	switch st {
+	case "active":
+		return "فعّال"
+	case "suspended":
+		return "موقوف"
+	case "blocked":
+		return "محظور"
+	}
+	return st
 }
 
 // derefOr يقرأ مؤشراً نصياً بأمان.

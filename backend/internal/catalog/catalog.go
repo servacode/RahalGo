@@ -598,6 +598,10 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 	return s.merchantByID(ctx, id)
 }
 
+// ErrMerchantBanLocked **متجرٌ محظورٌ لا يُفتح ولا يُغلق من هنا** — بابُ الحظر وحدَه.
+var ErrMerchantBanLocked = httpx.NewError(http.StatusConflict,
+	"merchant_ban_locked", "errors.merchant_ban_locked")
+
 func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in MerchantInput, ip string) (*Merchant, error) {
 	// `suspended` تُقبل هنا للأدمن، ولها نقطتُها الخاصّة (merchant_violations.go)
 	// التي تُسجّل السبب. **وقبولُها هنا يمنع حالةً لا تُرفع إلا بجراحةٍ في
@@ -605,6 +609,28 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 	if in.Status != nil && *in.Status != "active" && *in.Status != "inactive" &&
 		*in.Status != "suspended" {
 		return nil, ErrNameRequired
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **و«فتح» لا يرفع حظراً أبداً** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان زرُّ «فتح» يبعث `active` فيرفع الحظرَ من الباب الخلفيّ** — بلا سببٍ ولا
+	// قيدِ «رفع حظر» وبصلاحية «إدارة المتاجر» لا «السلامة». **فالحالُ من هنا لا
+	// تُمسّ ما دام المتجرُ محظوراً، ولا يُحظر من هنا**: بابُهما `/suspend` بسببٍ وإشعار.
+	if in.Status != nil {
+		if *in.Status == "suspended" {
+			return nil, ErrMerchantBanLocked
+		}
+		var cur string
+		if err := s.db.QueryRow(ctx, `SELECT status FROM merchants WHERE id = $1`, id).Scan(&cur); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, httpx.ErrNotFound
+			}
+			return nil, err
+		}
+		if cur == "suspended" {
+			return nil, ErrMerchantBanLocked
+		}
 	}
 	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, in.OwnerPassword, ip)
 	if err != nil {

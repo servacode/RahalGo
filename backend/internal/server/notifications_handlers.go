@@ -87,7 +87,18 @@ var notifTitles = struct {
 	customAgreed string
 	// offensiveText **لفظٌ مسيءٌ أُخفي في حديثٍ أو شكوى** — للإدارة (٢٠٢٦-١٠-٠٣).
 	offensiveText string
+	// **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): طلبُ حركةٍ ينتظر الماليّة ·
+	// تغييرُ رقمٍ ينتظر شخصاً ثانياً · حظرُ المتجر ورفعُه · السائقُ بخيرٍ بعد حادث ·
+	// وإنذاراتٌ بلغت الحدَّ تنبّه الموظّفين ولا توقف أحداً.
+	walletRequest, phoneChangeRequest, storeBanned, storeUnbanned string
+	driverCleared, warningsThreshold                              string
 }{
+	walletRequest:       "طلب حركة على محفظة ينتظر موافقة المالية",
+	phoneChangeRequest:  "طلب تغيير رقم حساب ينتظر موافقة ثانية",
+	storeBanned:         "حُظر متجرك",
+	storeUnbanned:       "رُفع الحظر عن متجرك",
+	driverCleared:       "يمكنك فتح دوامك الآن — تأكدت الإدارة أنك بخير",
+	warningsThreshold:   "حساب بلغ حد الإنذارات — يحتاج قرار موظف",
 	offensiveText:       "لفظ مسيء في حديث أو شكوى — أُخفي عن الطرف الآخر",
 	warningOnYou:        "إنذار على حسابك",
 	emergencyResolved:   "تابعنا بلاغَ الطوارئ الخاصّ بك",

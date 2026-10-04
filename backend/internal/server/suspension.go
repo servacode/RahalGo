@@ -84,6 +84,10 @@ var continuationRoutes = []struct {
 	// بـ`isLiveParticipant` (صاحبُه + حيّ).
 	{"GET", "/api/v1/my/orders/", "", "customer"},
 	{"POST", "/api/v1/orders/", "/cancel", "customer"},
+	// **والزبونُ الموقوفُ يراسل سائقَ طلبه الحيّ حتّى ينتهي** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+	// **سائقٌ عند الباب لا يُترك بلا جواب.** وينغلق مع انتهاء الطلب (`isLiveParticipant`).
+	{"GET", "/api/v1/orders/", "/messages", "customer"},
+	{"POST", "/api/v1/orders/", "/messages", "customer"},
 }
 
 // holdingRoutes **أبوابٌ بلا معرّفِ طلب — تُفتح لسائقٍ معلَّقٍ ما دام يحمل
@@ -160,7 +164,9 @@ func (s *Server) suspendedMayContinue(ctx context.Context, r *http.Request,
 		if !ok || id == "" || strings.Contains(id, "/") || !isUUID(id) {
 			continue
 		}
-		return s.isLiveParticipant(ctx, id, userID, c.Role)
+		if s.isLiveParticipant(ctx, id, userID, c.Role) {
+			return true
+		}
 	}
 	return false
 }

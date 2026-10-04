@@ -65,6 +65,9 @@ const (
 	// CondStatusIsStrong **الحظرُ والحذفُ يلزمهما تأكيد**،
 	// **والإيقافُ العاديُّ لا** — وهو فرقُ دورةِ ١٧ بعينه.
 	CondStatusIsStrong = "statusIsStrong"
+	// CondUserUpdateStrong **حظرٌ أو حذفٌ أو تغييرُ رقم** — تغييرُ الرقم ينقل الحسابَ
+	// كلَّه بمحفظته، فيُؤكَّد بكلمة الموظّف (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	CondUserUpdateStrong = "userUpdateStrong"
 	// CondTransitionRefund **نقلٌ إداريٌّ يعكس مالاً يلزمه تأكيد** — قرارُ
 	// المالك ٢٠٢٦-٠٩-٢٧: `delivered→refunded` يعكس العمولاتِ والتسوياتِ
 	// النقديّةَ ويردّ للزبون كاملاً، **فهو فعلٌ ماليٌّ حسّاس.** وبقيّةُ
@@ -94,13 +97,19 @@ var sensitiveActions = []Sensitive{
 	// ── استعادةُ الاعتماد وحالُ الحساب ──────────────────────────
 	{"POST", "/users/{id}/password", "admin.password_reset", "user", 1, nil, ""},
 	{"PATCH", "/users/{id}", "admin.user_update", "user", 1,
-		[]string{"status"}, CondStatusIsStrong},
+		[]string{"phone", "status"}, CondUserUpdateStrong},
+	// **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): تغييرُ الرقم وموافقتُه الثانية ·
+	// سقفُ النقد الخاصّ · رفعُ منع النقد.
+	{"POST", "/phone-requests/{id}/approve", "admin.phone_change", "phone_request", 1, nil, ""},
+	{"PATCH", "/users/{id}/cash-limit", "admin.driver_cash_limit", "user", 1,
+		[]string{"limit"}, ""},
+	{"POST", "/users/{id}/cash-ban/lift", "admin.cash_ban_lifted", "user", 1, nil, ""},
 
 	// ── مالٌ يتحرّك ─────────────────────────────────────────────
 	//
 	// **والقراءةُ الماليّةُ لا تُؤكَّد** — **ولا يتحرّك بها شيء.**
-	{"POST", "/users/{id}/wallet", "finance.wallet_apply", "user", 1,
-		[]string{"amount", "kind"}, ""},
+	{"POST", "/wallet-requests/{id}/approve", "finance.wallet_request_approved",
+		"wallet_request", 1, nil, ""},
 	{"POST", "/users/{id}/incentive", "finance.incentive", "user", 1,
 		[]string{"amount"}, ""},
 	{"POST", "/payouts/{id}/decide", "finance.payout_decide", "payout", 1,

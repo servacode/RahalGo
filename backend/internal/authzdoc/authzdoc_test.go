@@ -141,3 +141,14 @@ func TestRoleClassesCoverEveryClassifiedRole(t *testing.T) {
 		t.Fatal("لا أدوارَ مصنَّفة")
 	}
 }
+
+// TestWebPolicyIsCurrent **صلاحيّاتُ الواجهة لا تشيخ عن جدول المحرّك.**
+func TestWebPolicyIsCurrent(t *testing.T) {
+	cur, err := os.ReadFile(WebPolicyPath)
+	if err != nil {
+		t.Fatalf("لم يُقرأ %s: %v", WebPolicyPath, err)
+	}
+	if string(cur) != WebPolicyTS() {
+		t.Errorf("**%s شاخ** — نادِ: cd backend && go run ./cmd/authzdoc", WebPolicyPath)
+	}
+}

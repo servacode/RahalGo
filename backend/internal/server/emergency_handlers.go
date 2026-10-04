@@ -53,6 +53,9 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 		Lat  *float64 `json:"lat"`
 		Lng  *float64 `json:"lng"`
 		Note string   `json:"note"`
+		// Kind **نوعُ الطارئ إن قاله التطبيق** — `accident` يقفل الدوامَ حتّى «السائقُ
+		// بخير» (قرارُ المالك ٢٠٢٦-١٠-٠٤). وغيابُه لا يقفل شيئاً.
+		Kind string `json:"kind"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -61,6 +64,9 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 
 	driverID := userIDFrom(r)
 	ctx := r.Context()
+	if req.Kind == "accident" {
+		s.lockDriverAfterAccident(ctx, driverID)
+	}
 
 	var status string
 	var number int64

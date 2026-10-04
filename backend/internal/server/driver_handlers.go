@@ -125,7 +125,7 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       -- **وسقفُ النقد يُمرَّر من المخزن** — لا يُقرأ هنا برقمٍ مكتوب.
-		       $2::bigint,
+		       COALESCE(u.cash_limit_override, $2::bigint),
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
 		          AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')),
@@ -225,6 +225,12 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والتحقّقُ في الخادم لا في الشاشة**: الشاشةُ تُخفي الزرّ، **ومن
 	// ينادي النقطةَ مباشرةً لا يوقفه إخفاءُ زرّ.**
+	// **وبعد الحادث لا دوامَ حتّى «السائقُ بخير»** — يؤكّدها موظّفُ عمليّاتٍ باسمه
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤). **والخروجُ من الدوام لا يُمنع.**
+	if req.On && s.driverAccidentLocked(r.Context(), userIDFrom(r)) {
+		s.respondErr(w, errAccidentCheck)
+		return
+	}
 	if req.On && s.settings.RequireWhatsApp(r.Context(), "drivers.require_whatsapp") {
 		var verified bool
 		if err := s.pg.QueryRow(r.Context(),
@@ -1042,6 +1048,10 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 		`UPDATE users SET on_shift = false WHERE id = $1`, uid); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وبعد الحادث لا يفتح دوامَه حتّى تؤكّد العمليّاتُ أنّه بخير** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	if reason == "accident" {
+		s.lockDriverAfterAccident(ctx, uid)
 	}
 	// **والاستثناءُ والأثرُ في معاملة الترك** — فالعرضُ التالي بعد التثبيت يقرؤه.
 	hook := func(ctx context.Context, q dbtx.Querier) error {

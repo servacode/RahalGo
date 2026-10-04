@@ -135,6 +135,23 @@ func (r *Repo) CreateCustomerWithPassword(ctx context.Context, phone, fullName, 
 
 // ListUsers بحث وترشيح وترقيم صفحات لإدارة المستخدمين.
 func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly bool, status string, limit, offset int) ([]User, int, error) {
+	return r.ListUsersFiltered(ctx, ListFilter{Query: query, Role: role, Online: onlineOnly,
+		Status: status, Limit: limit, Offset: offset, PhoneSearch: true})
+}
+
+// ListFilter **ترشيحُ قائمة الحسابات** (قسمُ الحسابات، قراراتُ المالك ٢٠٢٦-١٠-٠٤).
+type ListFilter struct {
+	Query, Role, Status string
+	Online              bool
+	Limit, Offset       int
+	// PhoneSearch **أيُطابَق البحثُ بالرقم؟** — لا لمن لا يملك قراءةَ الأرقام: كان
+	// البحثُ بالرقم يكشف صاحبَه لمن مُنع من رؤيته.
+	PhoneSearch bool
+}
+
+// ListUsersFiltered **القائمةُ بالترشيح** — والأرقامُ تُجمَع لحسابات الصفحة وحدَها.
+func (r *Repo) ListUsersFiltered(ctx context.Context, f ListFilter) ([]User, int, error) {
+	query, role, onlineOnly, status, limit, offset := f.Query, f.Role, f.Online, f.Status, f.Limit, f.Offset
 	// role الخاص "staff" = موظفو المنصة (عمليات + مالية)
 	//
 	// ══════════════════════════════════════════════════════════════════
@@ -206,89 +223,94 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 	// الحساب أربعةٌ مستقرّة، وما عداها عمل.
 	accountTypes := authz.RolesInClass(authz.ClassAccountType)
 
-	where := `WHERE ($1 = '' OR u.phone ILIKE '%'||$1||'%' OR u.phone ILIKE '%'||$5||'%'
-	               OR u.full_name ILIKE '%'||$1||'%' OR u.invite_code ILIKE '%'||$1||'%')
-	          AND ($2 = '' OR EXISTS (
+	// ══════════════════════════════════════════════════════════════════
+	//  **واسمُ المتجر في البحث** — (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **قِيس على التجهيز: أسماءُ خمسة متاجر حقيقيّة ⇒ صفرُ نتائج** — والحساباتُ
+	// صارت البابَ الوحيدَ لأيّ متجر. **فيُطابَق اسمُ متجرٍ يملكه.**
+	//
+	// **و«الزبون» زبونٌ فقط** — من لا دورَ له غيرُ الزبون (قرار ١١): كانت البطاقةُ
+	// تعدّ ٥٥ والفعليُّ ١٥، **وتُخرج سائقين ومتاجرَ وموظّفين.**
+	where := `WHERE ($1 = '' OR ($9 AND (u.phone ILIKE '%'||$1||'%' OR u.phone ILIKE '%'||$5||'%'))
+	               OR u.full_name ILIKE '%'||$1||'%' OR u.invite_code ILIKE '%'||$1||'%'
+	               OR EXISTS (SELECT 1 FROM merchants sm WHERE sm.owner_user_id = u.id
+	                          AND sm.name ILIKE '%'||$1||'%'))
+	          AND ($2 = '' OR ($2 = 'customer' AND EXISTS (
+	                  SELECT 1 FROM user_roles cr WHERE cr.user_id = u.id AND cr.role_code = 'customer')
+	                AND NOT EXISTS (
+	                  SELECT 1 FROM user_roles nr WHERE nr.user_id = u.id AND nr.role_code <> 'customer'))
+	            OR ($2 <> 'customer' AND EXISTS (
 	              SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
-	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code <> ALL($6)))))
+	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code <> ALL($6))))))
 	          AND (NOT $3 OR u.last_seen_at > now() - interval '2 minutes')
-	          AND ($4 = '' OR u.status = $4)`
+	          AND ($4 = '' OR u.status = $4 OR ($4 = 'restricted' AND u.status IN ('suspended', 'blocked')))`
 
 	var total int
-	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where,
-		query, role, onlineOnly, status, phoneQ, accountTypes).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where+` AND $7::int >= 0 AND $8::int >= 0`,
+		query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset, f.PhoneSearch).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	//  **والأرقامُ لحسابات الصفحة وحدَها** — (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت كلُّ فتحةٍ وكلُّ حرفٍ في البحث يجمع كلَّ طلبات المنصّة وعمولاتها** ثمّ
+	// يعرض عشرة. **فالصفحةُ تُختار أوّلاً** (`pg`)، **والتجميعُ يقتصر عليها.**
 	rows, err := r.db.Query(ctx, `
+		WITH pg AS (
+		    SELECT u.id, u.created_at FROM users u `+where+`
+		    ORDER BY u.created_at DESC LIMIT $7 OFFSET $8
+		)
 		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, am.thumb_path, u.last_seen_at, u.created_at,
-		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}'),
-		       -- ══════════════════════════════════════════════════════
-		       -- **وأرقامُه كزبون — بضمٍّ واحدٍ مجمَّع**
-		       -- ══════════════════════════════════════════════════════
-		       --
-		       -- (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذف تبويبُ الزبائن ونزلت
-		       --  أرقامُه إلى هنا.)
-		       --
-		       -- **ولا جملةٌ مرتبطةٌ لكلّ صفّ**: تلك تُحسب مرّةً لكلّ
-		       -- سطرٍ فتنمو الكلفةُ بعدد الصفوف — **وهي التي أبطأت
-		       -- سجلَّ المحادثات** (٢٠٢٦-٠٨-١٥). **والتجميعُ يمرّ على
-		       -- الطلبات مرّةً واحدةً مهما كثر الحساباتُ في الصفحة.**
+		       COALESCE((SELECT array_agg(ur.role_code ORDER BY ur.role_code) FROM user_roles ur
+		                  WHERE ur.user_id = u.id), '{}'),
 		       COALESCE(w.balance, 0),
 		       COALESCE(oc.cnt, 0), COALESCE(oc.spent, 0), oc.last_at,
-		       -- **وأرقامُه كمندوب** — متاجرُ جلبها وعمولاتٌ نالها.
 		       COALESCE(rp.stores, 0), COALESCE(cm.total, 0),
-		       -- **وحالُه كسائق** — ورديّتُه ونقدُه وما في يده وما سلّم اليوم.
 		       u.on_shift, COALESCE(cb.held, 0),
 		       COALESCE(dv.open_cnt, 0), COALESCE(dv.today_cnt, 0),
-		       -- **وحسابٌ نظاميٌّ يُوسَم ولا يُخفى** — والوسمُ من القاعدة:
-		       -- محفظةُ الاحتباس. **ولا يُقرأ من is_treasury** فالخزينةُ
-		       -- على محفظة المالك، وهو إنسانٌ لا نظام.
-		       COALESCE(w.is_cash_holding, false)
-		FROM users u
-		LEFT JOIN user_roles ur ON ur.user_id = u.id
+		       COALESCE(w.is_cash_holding, false),
+		       -- **واسمُ متجره تحت اسمه** (قرار ٧).
+		       COALESCE((SELECT array_agg(sm.name ORDER BY sm.created_at) FROM merchants sm
+		                  WHERE sm.owner_user_id = u.id), '{}')
+		FROM pg
+		JOIN users u ON u.id = pg.id
 		LEFT JOIN media am ON am.id = u.avatar_media_id
 		LEFT JOIN wallets w ON w.user_id = u.id
 		LEFT JOIN (
 		    SELECT o.customer_id,
 		           count(*) AS cnt,
-		           -- **والإنفاقُ ما سُلّم وحدَه** — طلبٌ أُلغي لم يُنفَق
-		           -- فيه شيء، **ورقمٌ يعدّ الملغى يُقرأ زبوناً أنفق
-		           -- وهو لم يستلم.**
+		           -- **والإنفاقُ ما سُلّم وحدَه** — طلبٌ أُلغي لم يُنفَق فيه شيء.
 		           COALESCE(sum(o.total) FILTER (WHERE o.status = 'delivered'), 0) AS spent,
 		           max(o.created_at) AS last_at
-		    FROM orders o GROUP BY o.customer_id
+		    FROM orders o WHERE o.customer_id IN (SELECT id FROM pg)
+		    GROUP BY o.customer_id
 		) oc ON oc.customer_id = u.id
 		LEFT JOIN (
 		    SELECT mr.sales_rep_user_id AS uid, count(*) AS stores
-		    FROM merchants mr WHERE mr.sales_rep_user_id IS NOT NULL
+		    FROM merchants mr WHERE mr.sales_rep_user_id IN (SELECT id FROM pg)
 		    GROUP BY mr.sales_rep_user_id
 		) rp ON rp.uid = u.id
 		LEFT JOIN (
 		    SELECT t.user_id AS uid, sum(t.amount) AS total
-		    FROM wallet_transactions t WHERE t.kind = 'commission'
+		    FROM wallet_transactions t
+		    WHERE t.kind = 'commission' AND t.user_id IN (SELECT id FROM pg)
 		    GROUP BY t.user_id
 		) cm ON cm.uid = u.id
 		LEFT JOIN driver_cash_boxes cb ON cb.driver_id = u.id
 		LEFT JOIN (
 		    SELECT o.driver_id AS uid,
 		           count(*) FILTER (WHERE o.closed_at IS NULL) AS open_cnt,
-		           -- **وسُلّم اليومَ لا سُلّم كلَّه** — رقمُ اليوم يقول
-		           -- «أيعمل الآن؟»، **والكلُّ يقول «كم عمل في عمره»**
-		           -- وهو سؤالٌ آخرُ موضعُه ملفُّه.
 		           count(*) FILTER (
 		               WHERE o.status = 'delivered'
 		                 AND o.delivered_at >= date_trunc('day', now())
 		           ) AS today_cnt
-		    FROM orders o WHERE o.driver_id IS NOT NULL
+		    FROM orders o WHERE o.driver_id IN (SELECT id FROM pg)
 		    GROUP BY o.driver_id
 		) dv ON dv.uid = u.id
-		`+where+`
-		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at,
-		         rp.stores, cm.total, u.on_shift, cb.held, dv.open_cnt, dv.today_cnt,
-		         w.is_cash_holding
-		ORDER BY u.created_at DESC
-		LIMIT $7 OFFSET $8`, query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset)
+		ORDER BY pg.created_at DESC`, query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset, f.PhoneSearch)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -301,7 +323,7 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 			&u.Balance, &u.OrdersCount, &u.OrdersSpent, &u.LastOrderAt,
 			&u.RepStores, &u.Commissions,
 			&u.OnShift, &u.DriverCash, &u.OpenOrders, &u.DeliveredToday,
-			&u.IsSystem); err != nil {
+			&u.IsSystem, &u.StoreNames); err != nil {
 			return nil, 0, err
 		}
 		u.AvatarURL = media.SignedURLPtr(u.AvatarURL)

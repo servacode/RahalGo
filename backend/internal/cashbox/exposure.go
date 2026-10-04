@@ -126,6 +126,13 @@ func (s *Service) GuardTx(ctx context.Context, q Querier, driverID string, incom
 	if err != nil {
 		return err
 	}
+	// **وسقفٌ خاصٌّ بالسائق يغلب العامّ إن ضُبط** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — يُقرأ
+	// من المعاملة نفسِها، فلا اتّصالَ ثانٍ.
+	var override *int64
+	if err := q.QueryRow(ctx, `SELECT cash_limit_override FROM users WHERE id = $1`,
+		driverID).Scan(&override); err == nil && override != nil {
+		limit = *override
+	}
 	if current+incoming > limit {
 		return ErrLimitExceed
 	}

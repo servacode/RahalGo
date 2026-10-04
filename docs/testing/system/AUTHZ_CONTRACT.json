@@ -19,7 +19,7 @@
   {
    "code": "drivers.manage",
    "description": "إدارةُ السائقين وتشغيلُهم",
-   "guards_routes": 1
+   "guards_routes": 3
   },
   {
    "code": "drivers.read",
@@ -34,12 +34,12 @@
   {
    "code": "finance.manage",
    "description": "قيدُ محفظةٍ ومصروفٌ وخزينة",
-   "guards_routes": 12
+   "guards_routes": 14
   },
   {
    "code": "finance.read",
    "description": "قراءةُ المال والتقارير الماليّة",
-   "guards_routes": 16
+   "guards_routes": 17
   },
   {
    "code": "merchants.manage",
@@ -99,7 +99,7 @@
   {
    "code": "settings.financial.manage",
    "description": "إعداداتٌ تدخل حساباً ماليّاً",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "settings.general.manage",
@@ -120,6 +120,11 @@
    "code": "support.manage",
    "description": "التذاكرُ والنزاعاتُ والطوارئ",
    "guards_routes": 13
+  },
+  {
+   "code": "users.cashban.lift",
+   "description": "رفعُ منع الدفع نقداً عن زبون",
+   "guards_routes": 1
   },
   {
    "code": "users.contact.read",
@@ -144,7 +149,7 @@
   {
    "code": "users.read",
    "description": "قراءةُ الحسابات",
-   "guards_routes": 6
+   "guards_routes": 10
   },
   {
    "code": "users.sensitive.read",
@@ -154,7 +159,7 @@
   {
    "code": "users.status.manage",
    "description": "إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته",
-   "guards_routes": 4
+   "guards_routes": 7
   }
  ],
  "field_policy": [
@@ -188,7 +193,7 @@
   }
  ],
  "route_policy": {
-  "rules": 172,
+  "rules": 186,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -215,6 +220,7 @@
    "settings.read",
    "settings.security.manage",
    "support.manage",
+   "users.cashban.lift",
    "users.export",
    "users.read",
    "users.sensitive.read",
@@ -232,6 +238,26 @@
   }
  ],
  "sensitive_actions": [
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/cash-ban/lift",
+   "action": "admin.cash_ban_lifted",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "users.cashban.lift"
+  },
+  {
+   "method": "PATCH",
+   "pattern": "/users/{id}/cash-limit",
+   "action": "admin.driver_cash_limit",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "limit"
+   ],
+   "need": "settings.financial.manage"
+  },
   {
    "method": "PATCH",
    "pattern": "/merchants/{id}/delivery-credit",
@@ -259,6 +285,15 @@
    "pattern": "/users/{id}/password",
    "action": "admin.password_reset",
    "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "users.status.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/phone-requests/{id}/approve",
+   "action": "admin.phone_change",
+   "target_type": "phone_request",
    "target_segment": 1,
    "fingerprint_params": [],
    "need": "users.status.manage"
@@ -332,9 +367,10 @@
    "target_type": "user",
    "target_segment": 1,
    "fingerprint_params": [
+    "phone",
     "status"
    ],
-   "conditional": "statusIsStrong",
+   "conditional": "userUpdateStrong",
    "need": "users.status.manage"
   },
   {
@@ -425,14 +461,11 @@
   },
   {
    "method": "POST",
-   "pattern": "/users/{id}/wallet",
-   "action": "finance.wallet_apply",
-   "target_type": "user",
+   "pattern": "/wallet-requests/{id}/approve",
+   "action": "finance.wallet_request_approved",
+   "target_type": "wallet_request",
    "target_segment": 1,
-   "fingerprint_params": [
-    "amount",
-    "kind"
-   ],
+   "fingerprint_params": [],
    "need": "finance.manage"
   },
   {

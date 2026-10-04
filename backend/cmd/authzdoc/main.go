@@ -25,5 +25,10 @@ func main() {
 	if err := authzdoc.Write(doc, js); err != nil {
 		log.Fatal(err)
 	}
+	// **وصلاحيّاتُ الواجهة من الجدول نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	web := filepath.Join("..", "web", "apps", "rahalgo", "src", "lib", "adminPolicy.gen.ts")
+	if err := authzdoc.WriteWebPolicy(web); err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println("✔ SECURITY-CAPABILITY-CONTRACT.md و AUTHZ_CONTRACT.json وُلِّدا")
 }

@@ -30,6 +30,24 @@ type UserPage struct {
 	Total   int    `json:"total"`
 	Page    int    `json:"page"`
 	PerPage int    `json:"per_page"`
+	// MoneyHidden **الأرصدةُ والإنفاقُ والعمولاتُ محجوبةٌ عن السائل** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	MoneyHidden bool `json:"money_hidden"`
+}
+
+// AdminListUsersFiltered كـ`AdminListUsers` بترشيحٍ كامل.
+func (s *Service) AdminListUsersFiltered(ctx context.Context, f ListFilter, page, perPage int) (*UserPage, error) {
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
+	f.Limit, f.Offset = perPage, (page-1)*perPage
+	users, total, err := s.repo.ListUsersFiltered(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	return &UserPage{Users: users, Total: total, Page: page, PerPage: perPage}, nil
 }
 
 func (s *Service) AdminListUsers(ctx context.Context, query, role string, onlineOnly bool, status string, page, perPage int) (*UserPage, error) {
@@ -89,7 +107,9 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 			return nil, err
 		}
 	}
-	if int64(len(in.Password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) { // إلزامية — لا حساب موظف بلا كلمة مرور
+	// **والكلمةُ يولّدها النظامُ بعد الإنشاء** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فالفراغُ هنا
+	// مقبول، ومن أرسل كلمةً (مسارٌ داخليٌّ قديم) تُفحص بطولها.
+	if in.Password != "" && int64(len(in.Password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) {
 		return nil, ErrWeakPassword
 	}
 

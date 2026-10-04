@@ -1203,6 +1203,10 @@ func (s *Server) Router() http.Handler {
 			// `RBAC-01`.
 			r.With(s.RequireCapability(authz.FinanceManage)).
 				Post("/users/{id}/wallet", s.idempotent(s.handleAdminWalletApply))
+			// **وطلباتُ الحركة اليدويّة تنتظر الماليّة** — (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Get("/wallet-requests", s.handleListWalletRequests)
+			r.Post("/wallet-requests/{id}/approve", s.handleDecideWalletRequest(true))
+			r.Post("/wallet-requests/{id}/reject", s.handleDecideWalletRequest(false))
 			// **وعناوينُه في ملفّه** — من يتابع شكوى «لم يصلني» يحتاج أن يرى
 			// أين يسكن قبل أن يسأل.
 			// **ورابطٌ موقَّعٌ لوسيطٍ شخصيّ** — `D13`.
@@ -1425,6 +1429,18 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/users/{id}", s.handleAdminUpdateUser)
 				r.Post("/users/{id}/password", s.handleAdminResetPassword)
 				r.Post("/users/{id}/logout-all", s.handleAdminLogoutAll)
+				// **قسمُ الحسابات** — قراراتُ المالك ٢٠٢٦-١٠-٠٤ (`accounts_users.go`).
+				r.Post("/users/{id}/resend-welcome", s.handleAdminResendWelcome)
+				r.Get("/phone-requests", s.handleListPhoneRequests)
+				r.Post("/phone-requests/{id}/approve", s.handleDecidePhoneRequest(true))
+				r.Post("/phone-requests/{id}/reject", s.handleDecidePhoneRequest(false))
+				r.Get("/users/{id}/notes", s.handleUserNotes)
+				r.Post("/users/{id}/notes", s.handleAddUserNote)
+				r.Get("/users/{id}/cash-ban", s.handleUserCashBan)
+				r.Post("/users/{id}/cash-ban/lift", s.handleLiftCashBan)
+				r.Post("/users/{id}/driver-ok", s.handleDriverOK)
+				r.Patch("/users/{id}/vehicle", s.handleDriverVehicle)
+				r.Patch("/users/{id}/cash-limit", s.handleDriverCashLimit)
 				r.Post("/categories", s.handleCreateCategory)
 				r.Patch("/categories/{id}", s.handleUpdateCategory)
 				r.Post("/merchants", s.handleCreateMerchant)

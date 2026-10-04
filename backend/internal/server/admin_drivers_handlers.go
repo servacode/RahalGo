@@ -118,6 +118,14 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return IdempotentBody{}, err
 		}
+		// **والنقدُ المستلَمُ دخل صندوقَ المكتب** (قرارُ الخزينة ٢٠٢٦-١٠-٠٤) — سطرٌ بالمبلغ
+		// الذي استُلم فعلاً، لا بما كان بذمّته.
+		if _, err := q.Exec(ctx, `
+			INSERT INTO office_cash_entries (direction, amount, source, ref, user_id, recorded_by, note)
+			VALUES ('in', $1, 'driver_settle', gen_random_uuid()::text, $2, $3, $4)`,
+			req.Amount, driverID, userIDFrom(r), req.Note); err != nil {
+			return IdempotentBody{}, err
+		}
 		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`.
 		if err := s.auditTx(ctx, q, r, "finance.driver_settle", "user", driverID,
 			map[string]any{

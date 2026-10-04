@@ -176,8 +176,9 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// والقيدُ هنا باقٍ**، فيُجبَر كلُّ حسابٍ أنشأه مندوبٌ أو إدارة
 		// مهما قال الزرّ. **والثمنُ معلومٌ للمالك**: من وضع الكلمةَ يعرفها
 		// حتّى يبدّلها صاحبُها. **وتشغيلُ الزرّ يعيد القيدَ كما كان.**
-		if mustChange && s.settings.GetBool(r.Context(), "security.force_password_change") &&
-			!passwordChangePathAllowed(r.URL.Path) {
+		if mustChange && !passwordChangePathAllowed(r.URL.Path) &&
+			(s.settings.GetBool(r.Context(), "security.force_password_change") ||
+				s.tempPending(r.Context(), claims.Subject)) {
 			httpx.Error(w, errPasswordChangeRequired)
 			return
 		}
@@ -249,4 +250,11 @@ func isUUID(v string) bool {
 		}
 	}
 	return true
+}
+
+// tempPending **كلمةٌ مؤقّتةٌ من النظام لم تُبدَّل** — تُجبَر مهما قال الزرّ
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤). **ولا يُسأل إلّا حين يكون العلَمُ مرفوعاً** — نادرٌ.
+func (s *Server) tempPending(ctx context.Context, userID string) bool {
+	pending, _ := s.identity.TempPasswordPending(ctx, userID)
+	return pending
 }

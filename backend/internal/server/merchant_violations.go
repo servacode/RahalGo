@@ -28,11 +28,13 @@ package server
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // handleMerchantViolations عدّادُ المخالفات وحدُّها — لتراه العملياتُ قبل أن يبلغ.
@@ -85,6 +87,12 @@ func (s *Server) handleSuspendMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	// **والحظرُ ورفعُه بسببٍ مكتوب** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — والشروطُ تَعِد صاحبَه بالسبب.
+	req.Note = strings.TrimSpace(req.Note)
+	if req.Note == "" {
+		s.respondErr(w, errReasonRequired)
+		return
+	}
 
 	// **رفعُ الحظر يعيده `active` لا إلى ما كان.** ولو حُفظت حالتُه السابقة
 	// وأُعيدت لعاد متجرٌ حُظر وهو مُغلَقٌ إلى الإغلاق — فيظنّ أن الحظر باقٍ.
@@ -108,6 +116,19 @@ func (s *Server) handleSuspendMerchant(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وصاحبُه يُبلَّغ بالسبب** — كما يُبلَّغ صاحبُ الحساب الموقوف.
+	var owner *string
+	_ = s.pg.QueryRow(r.Context(), `SELECT owner_user_id::text FROM merchants WHERE id = $1`, id).Scan(&owner)
+	if owner != nil {
+		title := notifTitles.storeUnbanned
+		if req.Suspended {
+			title = notifTitles.storeBanned
+		}
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: *owner, Kind: notifications.KindAccount, Title: title, Body: req.Note,
+			Entity: "merchant", EntityID: id,
+		})
 	}
 	s.touch("merchant", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"status": status})

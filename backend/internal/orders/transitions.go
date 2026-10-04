@@ -1245,6 +1245,11 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	if repCommission <= 0 {
 		return nil
 	}
+	// **والمندوبُ الموقوفُ تُحجَز عمولتُه ولا تُدفع** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — تُصرف
+	// إن عاد فعّالاً (`ReleaseHeldCommissions`). **وتبقى في ربح المنصّة حتّى ذلك.**
+	if held, err := s.holdRepCommissionIfInactive(ctx, q, *repID, orderID, repCommission); err != nil || held {
+		return err
+	}
 	if _, err := s.wallet.ApplyTx(ctx, q, *repID, repCommission, "commission",
 		orderID, "عمولة عن طلب تم تسليمه", &actorID); err != nil {
 		return err

@@ -204,6 +204,11 @@ const (
 	// **وعنوانُ الطلب في الطلب** — **وهذا دفترُ بيوته كلِّها.**
 	// **ومن يوزّع طلباً قائماً لا يحتاجه.**
 	UsersSensitiveRead Capability = "users.sensitive.read"
+
+	// UsersCashBanLift **رفعُ منع النقد عن زبون** — لمديرِ المنصّة وحدَه وبسببٍ مكتوب
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤). **والمنعُ يُحسب من الطلبات الفاشلة بذنبه**، ورفعُه
+	// يُسقط ما قبله من العدّ ولا يمحوه.
+	UsersCashBanLift Capability = "users.cashban.lift"
 )
 
 // FieldPolicy **معجمُ الحقول المحميّة وقدرةُ كلٍّ** — `XG-42`.
@@ -264,6 +269,7 @@ var catalog = map[Capability]string{
 	OrdersCommunicationsRead: "قراءةُ محادثات الطلب ورسائله",
 	UsersContactRead:         "قراءةُ رقم الاتّصال",
 	UsersSensitiveRead:       "قراءةُ عناوين المرء وأثرِه",
+	UsersCashBanLift:         "رفعُ منع الدفع نقداً عن زبون",
 }
 
 // Known **أهذه قدرةٌ مسجَّلة؟** — **ومجهولُها يُمنَع.**

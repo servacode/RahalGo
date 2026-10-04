@@ -77,6 +77,9 @@ type User struct {
 	// **ولا يُقرأ من `is_treasury`** — فالخزينةُ على محفظة المالك،
 	// **وهو إنسانٌ لا نظام.**
 	IsSystem bool `json:"is_system"`
+
+	// StoreNames **متاجرُه بأسمائها** — تحت اسمه في القائمة (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	StoreNames []string `json:"store_names,omitempty"`
 }
 
 type TokenPair struct {

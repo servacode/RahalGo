@@ -104,7 +104,11 @@ func (s *Service) cashBlocked(ctx context.Context, q dbtx.Querier, customerID st
 		  -- **والمدّةُ تُضرَب لا تُلصَق نصّاً** — لصقُ رقمٍ في تعبيرٍ
 		  -- نصّيٍّ يجعل pgx يعجز عن ترميزه فيسقط النداءُ كلُّه
 		  -- (cannot find encode plan). **وكشفه أوّلُ اختبارٍ ناداه.**
-		  AND e.created_at > now() - ($2::int * interval '1 day')`,
+		  AND e.created_at > now() - ($2::int * interval '1 day')
+		  -- **وما قبل رفعِ المنع لا يُعدّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤: يرفعه مديرُ المنصّة
+		  -- بسببٍ مكتوب) — **ولا يُمحى من الطلبات شيء.**
+		  AND e.created_at > COALESCE((SELECT cash_ban_lifted_at FROM users
+		                               WHERE id = $1), '-infinity'::timestamptz)`,
 		customerID, days).Scan(&failures)
 	if err != nil {
 		return false, err

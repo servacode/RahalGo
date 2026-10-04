@@ -1954,6 +1954,26 @@ var Catalog = []Def{
 	{Key: "security.force_password_change", Group: GroupPlatform, Kind: KindBool,
 		Default: false},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **مهلةُ الكلمة المؤقّتة** التي يولّدها النظامُ ويرسلها — بعدها لا تفتح الحساب،
+	// وتُرسَل غيرُها من الملفّ بضغطة.
+	{Key: "security.temp_password_hours", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 168, Unit: "hour", Default: 72},
+	// **حدُّ الرصيد الذي يجعل تغييرَ الرقم ينتظر موافقةَ شخصٍ ثانٍ** — الرقمُ ينقل
+	// الحسابَ بمحفظته. وصفرُه: كلُّ تغييرٍ بموظّفٍ واحدٍ وكلمةِ سرّه.
+	{Key: "security.phone_change_approval_balance", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 100000, Sensitive: true},
+	// **سقفُ الحركة اليدويّة الواحدة على محفظة** — والحركةُ طلبٌ تقرّره الماليّة.
+	{Key: "finance.manual_wallet_max", Group: GroupPlatform, Kind: KindMoney,
+		Min: 1, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+	// **عددُ الإنذارات في ثلاثين يوماً الذي ينبّه الموظّفين** — ولا إيقافَ آليّاً أبداً:
+	// القرارُ لموظّف (قرارُ المالك ٢٠٢٦-١٠-٠٤). وصفرُه: بلا تنبيه.
+	{Key: "safety.warnings_alert_count", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 50, Unit: "warning", Default: 3},
+
 	// **وطولُ الجلسة قبل أن يُطلب الدخولُ من جديد.**
 	//
 	// (قرارُ المالك 2026-08-09 بعد جردِ الثوابت: «نطبّقها كلَّها».)

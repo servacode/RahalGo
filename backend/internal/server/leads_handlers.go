@@ -481,8 +481,11 @@ func (s *Server) grantSalesTargetTx(ctx context.Context, q dbtx.Querier,
 		return 0, nil
 	}
 	var repID *string
+	// **والمندوبُ غيرُ الفعّال لا يُحسب له هدفٌ ولا مكافأة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	if err := q.QueryRow(ctx,
-		`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`,
+		`SELECT m.sales_rep_user_id::text FROM merchants m
+		   JOIN users u ON u.id = m.sales_rep_user_id AND u.status = 'active'
+		  WHERE m.id = $1`,
 		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
 		return 0, nil
 	}
@@ -644,15 +647,9 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	}
 	// كلمة المرور وضعها طرف ثالث (المندوب أو نموذج التسجيل) — مؤقتة يُجبَر
 	// صاحب المتجر على تبديلها عند أول دخول قبل الوصول إلى بوابته.
-	if !ownerExisted && pwHash != "" {
-		if _, err := tx.Exec(ctx, `
-			UPDATE users SET password_hash = $2, must_change_password = true, updated_at = now()
-			WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)
-			  AND COALESCE(password_hash,'') = ''`,
-			merchantNewID, pwHash); err != nil {
-			return err
-		}
-	}
+	// **ولا كلمةَ من المندوب بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها
+	// ويرسلها بعد التثبيت (أسفل). **وبصمةُ مرشَّحٍ قديمٍ تُهمَل.**
+	_ = pwHash
 	// ══════════════════════════════════════════════════════════════════
 	// **والمنطقةُ تنتقل إلى المتجر مع الموافقة**
 	// ══════════════════════════════════════════════════════════════════
@@ -694,6 +691,16 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	// **ولا تُرسَل من داخل المعاملة**: **إشعارٌ خرج ثمّ ارتدّت المعاملةُ
 	// كذبٌ لا يُسحَب** — يقرأ المندوبُ «قُبل متجرُك» ولا متجرَ.
 	s.notifySalesTargetPaid(ctx, merchantNewID, paid)
+	// **ورسالةُ الدخول لصاحب المتجر** — جديدٌ: كلمةٌ مؤقّتةٌ ورابط · قائمٌ: «صار عندك متجر».
+	var ownerID *string
+	_ = s.pg.QueryRow(ctx, `SELECT owner_user_id::text FROM merchants WHERE id = $1`, merchantNewID).Scan(&ownerID)
+	if ownerID != nil {
+		if ownerExisted {
+			s.notifyNewStoreOwner(ctx, actorID, *ownerID, storeName, ip)
+		} else if _, _, err := s.issueWelcomeFor(ctx, actorID, *ownerID, ip, "merchant"); err != nil {
+			s.logger.Error("تعذّر توليدُ كلمة الدخول لصاحب المتجر", "merchant", merchantNewID, "error", err)
+		}
+	}
 	// المندوب يعرف فوراً أن عميله اعتُمد (مصدر عمولته)
 	var repID *string
 	_ = s.pg.QueryRow(ctx, `SELECT sales_rep_user_id FROM merchant_leads WHERE id = $1`, leadID).Scan(&repID)

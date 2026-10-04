@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
@@ -57,7 +58,11 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, res)
+	// **والنسبةُ العامّةُ معها** — «١٠٪ (عام)» لا «٠٪» حين لا نسبةَ خاصّة (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	httpx.JSON(w, http.StatusOK, struct {
+		*catalog.MerchantPage
+		General int64 `json:"general_commission_percent"`
+	}{res, s.settings.GetInt(r.Context(), "merchants.commission_percent")})
 }
 
 func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +94,19 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا كلمةَ يكتبها الموظّفُ لصاحب المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **صاحبٌ جديدٌ تُولَّد له كلمةٌ وتُرسَل** مع رابط تطبيق المتجر؛ **ومن له حسابٌ
+	// قائمٌ** تصله «صار عندك متجر» بلا كلمةٍ جديدة.
+	req.OwnerPassword = nil
+	existed := false
+	if req.OwnerPhone != nil {
+		if ph, ok := identity.NormalizePhone(*req.OwnerPhone); ok {
+			_ = s.pg.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM users WHERE phone = $1)`, ph).Scan(&existed)
+		}
+	}
 	m, err := s.catalog.CreateMerchant(r.Context(), userIDFrom(r), *req, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
@@ -96,7 +114,19 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 	}
 	// **والإدارةُ تفتح متاجرَ برمز مندوبٍ أيضاً** — وهي تُحسب له.
 	s.grantSalesTargetIfAny(r.Context(), m.ID)
-	httpx.JSON(w, http.StatusCreated, m)
+	welcome := map[string]any{"sent": false, "existing_owner": existed}
+	if m.OwnerUserID != nil {
+		if existed {
+			welcome["sent"] = s.notifyNewStoreOwner(r.Context(), userIDFrom(r), *m.OwnerUserID, m.Name, clientIP(r))
+		} else {
+			sent, exp, werr := s.issueWelcomeFor(r.Context(), userIDFrom(r), *m.OwnerUserID, clientIP(r), "merchant")
+			welcome["sent"], welcome["expires_at"], welcome["ok"] = sent, exp, werr == nil
+		}
+	}
+	httpx.JSON(w, http.StatusCreated, struct {
+		*catalog.Merchant
+		Welcome map[string]any `json:"welcome"`
+	}{m, welcome})
 }
 
 func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
@@ -139,5 +169,8 @@ func (s *Server) handleAdminGetMerchant(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, mr)
+	httpx.JSON(w, http.StatusOK, struct {
+		*catalog.Merchant
+		General int64 `json:"general_commission_percent"`
+	}{mr, s.settings.GetInt(r.Context(), "merchants.commission_percent")})
 }

@@ -208,6 +208,11 @@ func (s *Service) applyForcePolicy(ctx context.Context, u *User) {
 		return
 	}
 	if s.intSetting(ctx, "security.force_password_change", 0) == 0 {
+		// **إلّا كلمةً ولّدها النظام** (قرارُ المالك ٢٠٢٦-١٠-٠٤): تُبدَّل عند أوّل دخولٍ
+		// مهما قال الزرّ — **فقد مرّت برسالةٍ يقرؤها غيرُ صاحبها.**
+		if pending, _ := s.TempPasswordPending(ctx, u.ID); pending {
+			return
+		}
 		u.MustChangePassword = false
 	}
 }
@@ -778,6 +783,12 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 		s.repo.Audit(ctx, nil, "auth.password_failed", "user", user.ID, ip, nil)
 		return nil, ErrInvalidCredentials
 	}
+	// **والكلمةُ المؤقّتةُ تنتهي** (قرارُ المالك ٢٠٢٦-١٠-٠٤: ٧٢ ساعة) — صحيحةٌ ومنتهيةٌ
+	// لا تفتح، **وتُطلب غيرُها من الإدارة بضغطة.**
+	if s.tempExpired(ctx, user.ID) {
+		s.repo.Audit(ctx, nil, "auth.temp_password_expired", "user", user.ID, ip, nil)
+		return nil, ErrTempPasswordExpired
+	}
 	// نجاح: يمسح عدّاد الرقم فلا يُعاقَب صاحبه بمحاولاته السابقة
 	pk, _ := loginKeys(phone, ip)
 	s.rdb.Del(ctx, pk)
@@ -1236,11 +1247,19 @@ func (s *Service) SalesRepByInviteCode(ctx context.Context, code string) (*User,
 	}
 	for _, r := range user.Roles {
 		if r == "sales" {
+			// **ورمزُ المندوب الموقوف أو المحظور لا يُقبل** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+			// برسالةٍ واضحة، **ولا متجرَ يُحسب له في الهدف ولا مكافأة.**
+			if user.Status != "active" {
+				return nil, ErrRepInactive
+			}
 			return user, nil
 		}
 	}
 	return nil, ErrInvalidInviteCode
 }
+
+// ErrRepInactive **رمزُ مندوبٍ موقوفٍ أو محظور** — يُرفض لمتاجرَ جديدة.
+var ErrRepInactive = httpx.NewError(http.StatusConflict, "rep_inactive", "errors.rep_inactive")
 
 // EnsureUserWithRole يجد المستخدم برقم هاتفه (أو ينشئه) ويضمن حمله الدور المطلوب.
 // تستخدمه الوحدات الأخرى لربط الحسابات (صاحب متجر، سائق...) — مع تدقيق كامل.
@@ -1441,6 +1460,9 @@ func (s *Service) ActiveStatus(ctx context.Context, userID string) string {
 }
 
 func (s *Service) invalidateStatusCache(ctx context.Context, userID string) {
+	if s.rdb == nil {
+		return
+	}
 	s.rdb.Del(ctx, "ustatus:"+userID)
 }
 

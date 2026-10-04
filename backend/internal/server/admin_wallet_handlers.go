@@ -1,16 +1,12 @@
 package server
 
 import (
-	"context"
-	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
-	"slices"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
-	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -29,84 +25,4 @@ func (s *Server) handleAdminWalletStatement(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	httpx.JSON(w, http.StatusOK, st)
-}
-
-// حركة يدوية على المحفظة (شحن/تعويض/تسوية/سحب) — أدمن/مالية فقط.
-func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) {
-	req, err := decode[struct {
-		Amount int64  `json:"amount"`
-		Kind   string `json:"kind"`
-		Debit  bool   `json:"debit"` // للتسوية فقط: سحب بدل إيداع
-		Note   string `json:"note"`
-	}](r)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// الحركات اليدوية المسموحة من اللوحة فقط — حركات الطلبات يصدرها المحرك
-	if !slices.Contains([]string{"topup", "compensation", "adjustment", "payout"}, req.Kind) {
-		s.respondErr(w, errValidation)
-		return
-	}
-	// المبلغ يُرسل موجباً دائماً، والإشارة تُشتق في الخادم من النوع —
-	// لا نثق بإشارة العميل (دفتر قيود سلامته حرجة).
-	if req.Amount <= 0 {
-		s.respondErr(w, wallet.ErrInvalidAmount)
-		return
-	}
-	amount := req.Amount
-	if req.Kind == "payout" || (req.Kind == "adjustment" && req.Debit) {
-		amount = -amount
-	}
-	if !isUUID(chi.URLParam(r, "id")) {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
-	actor := userIDFrom(r)
-	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
-	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
-		balance, err := s.wallet.ApplyTx(ctx, q, chi.URLParam(r, "id"),
-			amount, req.Kind, "", req.Note, &actor)
-		if err != nil {
-			return IdempotentBody{}, err
-		}
-		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`:
-		// **فعلٌ حسّاسٌ نجح بلا أثرٍ لا يُراجَع ولا يُنازَع فيه.**
-		// **وسقوطُ القيد يُسقط الفعلَ كلَّه** — وذلك هو المقصود.
-		if err := s.auditTx(ctx, q, r, "finance.wallet_apply", "user",
-			chi.URLParam(r, "id"), map[string]any{
-				"amount": amount, "kind": req.Kind, "note": req.Note,
-				"balance_after": balance,
-			}); err != nil {
-			return IdempotentBody{}, err
-		}
-		return IdempotentBody{
-			Status:  http.StatusOK,
-			Payload: map[string]any{"balance": balance},
-			AfterCommit: func() {
-				// أخطر زرٍّ في المنصة: هو المخرج الوحيد حين يخطئ النظام،
-				// ولذلك وجب أن يترك أثراً. والدفتر لا يُعدَّل عندنا بل
-				// يُصحَّح بقيدٍ مضادّ — وهذا الزرّ هو ذلك القيد، فمن ضغطه
-				// ولماذا سؤالٌ يُطرح يوماً.
-				//
-				// **وبعد التثبيت لا قبله**: **تدقيقٌ لعمليّةٍ ارتدّت
-				// يقول إنّ مالاً تحرّك ولم يتحرّك.**
-
-				// صاحب المحفظة يعرف فوراً بأي إيداع/خصم — شفافية مالية بلا تحديث صفحة.
-				title := notifTitles.walletCredit
-				if amount < 0 {
-					title = notifTitles.walletDebit
-				}
-				s.notify.Notify(r.Context(), notifications.Input{
-					UserID: chi.URLParam(r, "id"), Kind: notifications.KindWallet,
-					Title: title, Body: req.Note,
-					Entity: "wallet", Href: "/portal/wallet",
-				})
-				// **والرقمُ في شريطه يتغيّر معه** — إشعارٌ يقول «أُودع لك»
-				// ورصيدٌ لا يتحرّك **يجعل صاحبَه يشكّ في أحدهما.**
-				s.touchUser(chi.URLParam(r, "id"), "wallet")
-				s.touch("wallet", "ops")
-			},
-		}, nil
-	})
 }
