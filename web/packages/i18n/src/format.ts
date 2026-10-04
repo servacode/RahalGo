@@ -15,6 +15,12 @@ const numFmt = new Intl.NumberFormat(LOCALE);
 const dateFmt = new Intl.DateTimeFormat(LOCALE, { dateStyle: "short" });
 const dateTimeFmt = new Intl.DateTimeFormat(LOCALE, { dateStyle: "short", timeStyle: "short" });
 const timeFmt = new Intl.DateTimeFormat(LOCALE, { timeStyle: "short" });
+const clock24Fmt = new Intl.DateTimeFormat(LOCALE, {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
 const longDateFmt = new Intl.DateTimeFormat(LOCALE, {
   day: "numeric",
   month: "long",
@@ -79,6 +85,31 @@ export function fmtDateTime(v: string | number | Date): string {
 /** وقت فقط: 2:05 م */
 export function fmtTime(v: string | number | Date): string {
   return clean(timeFmt.format(toDate(v)));
+}
+
+/**
+ * **ساعةٌ بأربعٍ وعشرين: 21:09:05** — لِما يُحدَّث لحظةً بلحظة (لوحة العمليّات).
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٣: «الأرقام كلُّها بالأجنبيّة في كلّ مكان، مركزيّاً».)
+ * **وكانت لوحةُ العمليّات تكتب `toLocaleTimeString("ar")`** — فتخرج «٢١:٠٩:٠٥»
+ * بأرقامٍ هنديّة في شاشةٍ كلُّ أرقامها لاتينيّة.
+ */
+export function fmtClockTime(v: string | number | Date): string {
+  return clean(clock24Fmt.format(toDate(v)));
+}
+
+/**
+ * **أيُّ رقمٍ هنديٍّ أو فارسيٍّ في نصٍّ يصير لاتينيّاً** — وفاصلُ الآلاف «٬» يصير «,».
+ *
+ * لنصٍّ لم نصنعه نحن (من خادمٍ أو مكتبةٍ أو حافظة) — **وما نصنعه يمرّ بالدوال
+ * أعلاه أصلاً.**
+ */
+export function westernDigits(s: string): string {
+  return s
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/\u066C/g, ",")
+    .replace(/\u066B/g, ".");
 }
 
 /** تاريخ طويل بأشهر عربية وأرقام إنجليزية: 31 تموز 2026 */

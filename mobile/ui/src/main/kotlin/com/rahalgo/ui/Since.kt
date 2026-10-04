@@ -1,6 +1,9 @@
 package com.rahalgo.ui
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.produceState
 import java.time.Duration
 import java.time.Instant
 
@@ -68,3 +71,30 @@ object Since {
         return Duration.between(at, now).toMinutes().coerceAtLeast(1L)
     }
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الساعةُ تمشي ما دامت الشاشةُ مفتوحة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (فحصُ القبول ٢٠٢٦-١٠-٠٣: «منذ 1 د» بقيت كما هي دقائقَ طويلةً والشاشةُ
+ *  مفتوحة.)
+ *
+ * **وكان `Since.text` يُنادى بـ`Instant.now()` لحظةَ الرسم وحدَها** — ولا
+ * شيءَ يُعيد الرسم إن لم يتبدّل الطلب، **فيقف العمرُ عند أوّل قراءة.**
+ *
+ * **فحالٌ تتجدّد كلَّ نصف دقيقة** — والعمرُ يُقاس بالدقيقة، **فلا يتأخّر
+ * أكثرَ من نصفها.** **وتقف حين تخرج الشاشةُ من التركيب** — لا ساعةَ تدقّ
+ * لشاشةٍ لا يراها أحد.
+ */
+@Composable
+fun rememberNow(periodMs: Long = NOW_TICK_MS): State<Instant> =
+    produceState(Instant.now(), periodMs) {
+        while (true) {
+            kotlinx.coroutines.delay(periodMs)
+            value = Instant.now()
+        }
+    }
+
+/** **نصفُ دقيقة** — والعمرُ بالدقيقة. */
+const val NOW_TICK_MS = 30_000L

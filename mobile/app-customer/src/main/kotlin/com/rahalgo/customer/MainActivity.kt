@@ -125,6 +125,14 @@ import com.rahalgo.ui.DrawerGestures
  */
 class MainActivity : ComponentActivity() {
 
+    /**
+     * **الأرقامُ لاتينيّةٌ في كلّ نصٍّ من الموارد** — انظر `WesternDigits`.
+     * (قرارُ المالك ٢٠٢٦-١٠-٠٣.)
+     */
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ

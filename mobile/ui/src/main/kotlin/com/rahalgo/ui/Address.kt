@@ -651,7 +651,8 @@ private fun AddressFields(
     FieldLabel(R.string.addr_area, required = true)
     OutlinedTextField(
         value = area,
-        onValueChange = onArea,
+        // **وبحدّ المحرّك** — انظر `TextLimits`.
+        onValueChange = { onArea(com.rahalgo.shared.model.TextLimits.fit(it, com.rahalgo.shared.model.TextLimits.ADDRESS_PART)) },
         placeholder = { Text(stringResource(R.string.addr_area_hint)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
@@ -663,7 +664,7 @@ private fun AddressFields(
             FieldLabel(R.string.addr_street, required = true)
             OutlinedTextField(
                 value = street,
-                onValueChange = onStreet,
+                onValueChange = { onStreet(com.rahalgo.shared.model.TextLimits.fit(it, com.rahalgo.shared.model.TextLimits.ADDRESS_PART)) },
                 placeholder = { Text(stringResource(R.string.addr_street_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -673,7 +674,14 @@ private fun AddressFields(
             FieldLabel(R.string.addr_floor, required = false)
             OutlinedTextField(
                 value = floor,
-                onValueChange = { v -> onFloor(v.filter { c -> c.isDigit() }) },
+                onValueChange = { v ->
+                    onFloor(
+                        com.rahalgo.shared.model.TextLimits.fit(
+                            v.filter { c -> c.isDigit() },
+                            com.rahalgo.shared.model.TextLimits.ADDRESS_FLOOR,
+                        ),
+                    )
+                },
                 placeholder = { Text(stringResource(R.string.addr_floor_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),

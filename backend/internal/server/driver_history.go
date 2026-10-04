@@ -30,6 +30,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/support"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // handleDriverHistory طلباتُه المنتهية — الأحدثُ أوّلاً.
@@ -135,11 +136,18 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وملاحظةُ البلاغ تمرّ بالحارس** — الشتيمةُ تُخفى وتُنبَّه بها الإدارة (`text_limits.go`).
+	masked, err := s.guardText(r.Context(), tf("note", &req.Note, maxComplaintNote, textguard.Complaint))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	t, err := s.support.DriverReport(r.Context(), userIDFrom(r), orderID, req.Reason, req.Note)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	s.alertOffensive(r.Context(), masked, t.Subject, "ticket", t.ID, "/dashboard/tickets")
 	// **والعملياتُ تُنبَّه** — بلاغٌ لا يراه أحدٌ حتى يفتح الشاشةَ صدفةً بلاغٌ
 	// لم يُقدَّم.
 	s.touch("ticket", "ops")

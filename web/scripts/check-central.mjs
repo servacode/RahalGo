@@ -209,6 +209,15 @@ for (const file of files) {
       "text-on-solid فوق تعبئةٍ صلبة · text-ink للنصّ العاديّ · text-shell فوق البرتقاليّ");
   }
 
+  // ٣ · تنسيقُ رقمٍ أو وقتٍ بلغة المتصفّح — **يُخرج «٢١:٠٩» بأرقامٍ هنديّة.**
+  //
+  // (قرارُ المالك ٢٠٢٦-١٠-٠٣: «الأرقام كلُّها بالأجنبيّة، مركزيّاً».) **والمركزُ
+  // `packages/i18n/src/format.ts` وحدَه** — `fmtNum` و`fmtDate` و`fmtClockTime`.
+  if (isCode && file !== "packages/i18n/src/format.ts") {
+    scan(file, /\.toLocale(?:Time|Date)?String\(|new Intl\.(?:NumberFormat|DateTimeFormat)\(/,
+      "تنسيقٌ بلغة المتصفّح", "fmtNum · fmtDate · fmtTime · fmtClockTime من @rahalgo/i18n");
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   //  **مبلغٌ مكتوبٌ بيده — رقمٌ ورمزٌ متجاوران**
   // ═══════════════════════════════════════════════════════════════════

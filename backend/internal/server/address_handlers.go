@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // عناوين الزبون المحفوظة — يكتبها مرّة ويستعملها دائماً.
@@ -130,6 +131,10 @@ func (s *Server) handleCreateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.guardAddress(r, req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	uid := userIDFrom(r)
 	// **والمنطقةُ والمبنى وحدَهما إلزاميّان** — الشارعُ يُنسى في أحياءٍ
 	// بلا لافتات، **والطابقُ لا يخصّ بيتاً أرضيّا.**
@@ -168,9 +173,9 @@ func (s *Server) handleCreateAddress(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	area := clip(strings.TrimSpace(req.AreaBuilding), 160)
-	street := clip(strings.TrimSpace(req.Street), 120)
-	floor := clip(strings.TrimSpace(req.Floor), 20)
+	area := strings.TrimSpace(req.AreaBuilding)
+	street := strings.TrimSpace(req.Street)
+	floor := strings.TrimSpace(req.Floor)
 	var id string
 	if err := tx.QueryRow(r.Context(), `
 		INSERT INTO user_addresses
@@ -214,9 +219,13 @@ func (s *Server) handleUpdateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	area := clip(strings.TrimSpace(req.AreaBuilding), 160)
-	street := clip(strings.TrimSpace(req.Street), 120)
-	floor := clip(strings.TrimSpace(req.Floor), 20)
+	if err := s.guardAddress(r, req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	area := strings.TrimSpace(req.AreaBuilding)
+	street := strings.TrimSpace(req.Street)
+	floor := strings.TrimSpace(req.Floor)
 
 	// **والنقطةُ تُبدَّل إن أُرسلت وحدَها** — `COALESCE` على الموضع لا
 	// يصلح مع `geography`، فيُفصَل الشرطُ في الاستعلام.
@@ -293,4 +302,17 @@ func (s *Server) handleSetDefaultAddress(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// guardAddress **أجزاءُ العنوان تمرّ بالحارس** — تُنظَّف، وتُرفض إن طالت أو أساءت.
+//
+// **وكانت تُقصّ بالبايت** (`clip` بـ١٦٠ و١٢٠ و٢٠): **والحرفُ العربيُّ بايتان،
+// فيُكسر آخرُ حرفٍ** ويُخزَّن نصفُه — **وطابقٌ من عشرة أحرفٍ عربيّةٍ كان يُقطع.**
+func (s *Server) guardAddress(r *http.Request, req *addressInput) error {
+	_, err := s.guardText(r.Context(),
+		tf("area_building", &req.AreaBuilding, maxAddressPart, textguard.Address),
+		tf("street", &req.Street, maxAddressPart, textguard.Address),
+		tf("floor", &req.Floor, maxAddressFloor, textguard.Address),
+	)
+	return err
 }

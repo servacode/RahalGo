@@ -13,6 +13,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // واجهة الزبون: نقاط عامة للتصفح (بلا حساب) ونقاط الطلب/التتبع/المحفظة
@@ -439,6 +440,18 @@ func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Reques
 	}
 	in, err := decode[orders.CreateInput](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والنصوصُ الحرّةُ تمرّ بالحارس** — انظر `text_limits.go`.
+	fields := []textguard.Field{
+		tf("address_text", &in.AddressText, maxAddressText, textguard.Address),
+		tf("notes", &in.Notes, maxOrderNotes, textguard.Notes),
+	}
+	for i := range in.Items {
+		fields = append(fields, tf("items.note", &in.Items[i].Note, maxItemNote, textguard.Notes))
+	}
+	if _, err := s.guardText(r.Context(), fields...); err != nil {
 		s.respondErr(w, err)
 		return
 	}

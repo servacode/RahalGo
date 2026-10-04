@@ -526,6 +526,15 @@ data class TicketsPage(val tickets: List<Ticket> = emptyList())
 @Serializable
 data class Ticket(
     val id: String = "",
+    /**
+     * **رقمُ الشكوى كما يعرفه المكتب** — «#511». (فحصُ القبول ٢٠٢٦-١٠-٠٣:
+     * كانت تُعرض «#08d6f3» من معرّفها.)
+     *
+     * **والمحرّكُ يرسله منذ بُني** (`handleMyTickets`) — **والنموذجُ لم يقرأه.**
+     */
+    val number: Long = 0,
+    /** **رقمُ الطلب إن كانت على طلب** — و`null` لشكوى بلا طلب. */
+    @SerialName("order_number") val orderNumber: Long? = null,
     val subject: String = "",
     val reason: String = "",
     val status: String = "",

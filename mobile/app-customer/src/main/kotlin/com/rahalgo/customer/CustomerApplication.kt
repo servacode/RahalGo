@@ -35,6 +35,8 @@ class CustomerApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // **والأرقامُ لاتينيّةٌ فيما يُنسَّق بلا سياق** — انظر `WesternDigits`.
+        com.rahalgo.ui.WesternDigits.applyDefault()
         // ══════════════════════════════════════════════════════════
         // **وقنواتُ الإشعار قبل أن تصل رسالة**
         // ══════════════════════════════════════════════════════════

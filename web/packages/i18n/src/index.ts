@@ -32,6 +32,8 @@ export {
   fmtDate,
   fmtDateTime,
   fmtTime,
+  fmtClockTime,
+  westernDigits,
   fmtLongDate,
   damascusDay,
 } from "./format";

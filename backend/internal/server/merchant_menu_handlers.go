@@ -108,6 +108,11 @@ func (s *Server) handleMerchantCreateItem(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMenuItem(r, req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// القسم يجب أن يكون من متجره هو — وإلا دسّ صنفاً في قائمة غيره
 	if req.SectionID != nil && *req.SectionID != "" && !s.ownsSection(r, *req.SectionID) {
 		s.respondErr(w, errForbidden)
@@ -144,6 +149,11 @@ func (s *Server) handleMerchantUpdateItem(w http.ResponseWriter, r *http.Request
 	}
 	req, err := decode[catalog.MenuItemInput](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMenuItem(r, req); err != nil {
 		s.respondErr(w, err)
 		return
 	}

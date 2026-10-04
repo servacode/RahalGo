@@ -24,6 +24,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // handleMerchantDeliveryQuote **أجرةُ النقطة ومقدرةُ المتجر** — قبل الإرسال.
@@ -85,6 +86,16 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		FeePayer   string   `json:"fee_payer"`
 	}](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **ونصوصُ المستلِم تمرّ بالحارس** — انظر `text_limits.go`.
+	if _, err := s.guardText(r.Context(),
+		tf("recipient_name", &req.RecipientName, maxPersonName, textguard.Name),
+		tf("address_text", &req.AddressText, maxAddressText, textguard.Address),
+		tf("parcel_note", &req.ParcelNote, maxOrderNotes, textguard.Notes),
+		tf("driver_note", &req.DriverNote, maxOrderNotes, textguard.Notes),
+	); err != nil {
 		s.respondErr(w, err)
 		return
 	}

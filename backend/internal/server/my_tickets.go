@@ -30,6 +30,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/support"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -165,6 +166,11 @@ func (s *Server) handleMyTicketReply(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
+	masked, err := s.guardText(r.Context(), tf("body", &req.Body, maxTicketReply, textguard.Complaint))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	id := chi.URLParam(r, "id")
 	t0, err := s.support.Get(r.Context(), id)
 	if err != nil {
@@ -184,5 +190,6 @@ func (s *Server) handleMyTicketReply(w http.ResponseWriter, r *http.Request) {
 		Kind: notifications.KindTicket, Title: notifTitles.ticketReply, Body: t.Subject,
 		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
 	})
+	s.alertOffensive(r.Context(), masked, t.Subject, "ticket", t.ID, "/dashboard/tickets")
 	httpx.JSON(w, http.StatusOK, customerTicketView(t, userIDFrom(r)))
 }

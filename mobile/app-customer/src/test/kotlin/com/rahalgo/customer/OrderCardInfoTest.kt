@@ -40,7 +40,7 @@ class OrderCardInfoTest {
         val s = read(card)
         assertTrue(
             "**البطاقةُ لا تُظهر وقتَ الطلب**",
-            s.contains("R.string.ord_placed") && s.contains("Since.text(ctx, order.createdAt)"),
+            s.contains("R.string.ord_placed") && s.contains("Since.text(ctx, order.createdAt, now)"),
         )
     }
 

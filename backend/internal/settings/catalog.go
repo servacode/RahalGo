@@ -25,6 +25,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // Kind نوع الإعداد — يحدّد الحقل الذي تعرضه اللوحة والتحقق الذي يجريه الخادم.
@@ -362,6 +364,16 @@ var Catalog = []Def{
 
 	{Key: "platform.orders_mode", Group: GroupPlatform, Kind: KindChoice,
 		Options: []string{"platform", "merchants"}, Default: "platform"},
+
+	// ══════════════════════════════════════════════════════════════════
+	// **الألفاظُ المسيئة — قائمةٌ تُعدَّل من اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **لفظٌ في كلّ سطر** — ويقرؤها حارسُ النصوص (`textguard`) عند كلّ نداء،
+	// **فيُعمل بالتعديل فوراً بلا نشر.** **والافتراضُ القائمةُ المدمجة** —
+	// يراها المالكُ ويعدّل عليها، **وفارغُها يعيدها.**
+	{Key: "moderation.banned_words", Group: GroupPlatform, Kind: KindLongText,
+		Default: strings.Join(textguard.DefaultWords, "\n")},
 
 	// ── هويّةُ المنصة — تُقرأ في الشروط والخصوصية والمساعدة ──────────────
 	//

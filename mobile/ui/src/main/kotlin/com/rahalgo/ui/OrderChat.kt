@@ -40,6 +40,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.model.ChatMessage
 import com.rahalgo.shared.model.ChatThread
+import com.rahalgo.shared.model.TextLimits
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -326,27 +327,52 @@ fun OrderChatSheet(
                 }
 
                 Spacer(Modifier.height(10.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        placeholder = { Text(stringResource(R.string.chat_write)) },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
+                // ══════════════════════════════════════════════════════
+                // **والحديثُ المنتهي لا حقلَ كتابةٍ فيه** (فحصُ القبول ٢٠٢٦-١٠-٠٣)
+                // ══════════════════════════════════════════════════════
+                //
+                // **رآه المالك**: الرأسُ يقول «انتهى — للقراءة فقط» والحقلُ
+                // تحته يقبل الكتابة، **ثمّ لا يحدث شيء.** **وحقلٌ يُكتب فيه
+                // ولا يُرسل يُقرأ عطباً** — فسطرٌ واحدٌ يقول إنّها انتهت.
+                if (chatCanWrite(vm.head)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedTextField(
+                            value = draft,
+                            // **وبحدّ المحرّك** — انظر `TextLimits`.
+                            onValueChange = { draft = TextLimits.fit(it, TextLimits.CHAT_BODY) },
+                            placeholder = { Text(stringResource(R.string.chat_write)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        RahalButton(
+                            onClick = {
+                                vm.send(orderId, draft)
+                                draft = ""
+                            },
+                            enabled = !vm.busy && draft.isNotBlank(),
+                            compact = true,
+                        ) { Text(stringResource(R.string.chat_send)) }
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.chat_ended),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    RahalButton(
-                        onClick = {
-                            vm.send(orderId, draft)
-                            draft = ""
-                        },
-                        enabled = !vm.busy && draft.isNotBlank(),
-                        compact = true,
-                    ) { Text(stringResource(R.string.chat_send)) }
                 }
             }
         }
     }
 }
+
+/**
+ * **أيُكتب في هذا الحديث؟** — لا إن قال المحرّكُ إنّه انتهى (`open = false`).
+ *
+ * **وقبل أن يصل الرأسُ يبقى الحقل** — حديثٌ يُحمَّل لا يُحكم عليه بالانتهاء،
+ * **والمحرّكُ يردّ `comms_closed` إن كُتب في منتهٍ على أيّ حال.**
+ */
+fun chatCanWrite(head: ChatThread?): Boolean = head?.open != false

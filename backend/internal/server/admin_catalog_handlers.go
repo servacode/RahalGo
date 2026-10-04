@@ -66,6 +66,11 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMerchant(r, req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// ══════════════════════════════════════════════════════════════════
 	// **ومنطقتُه تُفحص كما تُفحص في البابين الآخرين**
 	// ══════════════════════════════════════════════════════════════════
@@ -97,6 +102,11 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[catalog.MerchantInput](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMerchant(r, req); err != nil {
 		s.respondErr(w, err)
 		return
 	}

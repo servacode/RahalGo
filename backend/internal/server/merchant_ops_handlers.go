@@ -10,6 +10,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/support"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // إدارة المتجر لتشغيله: الجاهزية، وساعات العمل، وإعداداته.
@@ -158,6 +159,14 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		Lng         *float64 `json:"lng"`
 	}](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **واسمُ المتجر وعنوانُه يمرّان بالحارس** — انظر `text_limits.go`.
+	if _, err := s.guardText(r.Context(),
+		tf("name", req.Name, maxStoreName, textguard.Name),
+		tf("address_text", req.AddressText, maxAddressText, textguard.Address),
+	); err != nil {
 		s.respondErr(w, err)
 		return
 	}

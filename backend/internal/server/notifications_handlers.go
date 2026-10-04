@@ -85,7 +85,10 @@ var notifTitles = struct {
 	complaintOnYou string
 	// **وما اتُّفق عليه في الطلب الخاصّ** — يبقى مكتوباً حيث يراه صاحبُه.
 	customAgreed string
+	// offensiveText **لفظٌ مسيءٌ أُخفي في حديثٍ أو شكوى** — للإدارة (٢٠٢٦-١٠-٠٣).
+	offensiveText string
 }{
+	offensiveText:       "لفظ مسيء في حديث أو شكوى — أُخفي عن الطرف الآخر",
 	warningOnYou:        "إنذار على حسابك",
 	emergencyResolved:   "تابعنا بلاغَ الطوارئ الخاصّ بك",
 	complaintOnYou:      "شكوى على خدمتك",

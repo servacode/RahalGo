@@ -227,7 +227,9 @@ private fun ThreadCard(
             }
             row.lastAt?.let {
                 Text(
-                    text = it,
+                    // **بتوقيت سوريا لا طابعاً خامّاً** — كان يُطبع كما وصل
+                    // (`2026-10-03T16:52:00Z`). (فحصُ القبول ٢٠٢٦-١٠-٠٣.)
+                    text = whenText(it),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.labelSmall,
                 )

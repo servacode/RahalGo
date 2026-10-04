@@ -487,9 +487,10 @@ private fun Tickets(vm: MineViewModel) {
         mine = list.map { t ->
             TicketRow(
                 id = t.id,
-                key = "#" + t.orderCode.ifEmpty { t.id.take(6) },
+                key = ticketKey(t),
                 title = t.subject.ifEmpty { t.reason },
                 status = t.status,
+                orderNumber = t.orderNumber?.toString().orEmpty(),
                 resolution = t.resolution,
             )
         },
@@ -539,3 +540,15 @@ private fun TicketDetail(vm: MineViewModel) {
     )
 }
 
+
+/**
+ * **رقمُ الشكوى في القائمة** — «#511» كما يعرفه المكتبُ ويسأل به.
+ *
+ * (فحصُ القبول ٢٠٢٦-١٠-٠٣: عُرضت «#08d6f3» — ستّةُ أحرفٍ من معرّفها، **لأنّ
+ *  النموذجَ كان يقرأ `order_code` الذي لا يرسله المحرّك.**) **ورقمٌ لا يعرفه
+ * المكتبُ لا يُسأل به عن شكوى.**
+ *
+ * **والمعرّفُ احتياطٌ لردٍّ قديمٍ بلا رقم** — لا يُترك السطرُ بلا مفتاح.
+ */
+internal fun ticketKey(t: com.rahalgo.shared.customer.Ticket): String =
+    "#" + if (t.number > 0) t.number.toString() else t.id.take(6)

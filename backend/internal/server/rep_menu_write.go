@@ -112,6 +112,11 @@ func (s *Server) handleRepCreateItem(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMenuItem(r, req); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// **والإدراجُ وعلامةُ منع التكرار في معاملةٍ واحدة** (`DUP-LEAD`) —
 	// صنفٌ أُدرج وضاع ردُّه فأُعيد **لا يُدرج ثانيةً**: يُعاد ردُّ الأوّل.
 	pending := s.menuNeedsApproval(r)
@@ -139,6 +144,11 @@ func (s *Server) handleRepUpdateItem(w http.ResponseWriter, r *http.Request) {
 	itemID := chi.URLParam(r, "itemID")
 	req, err := decode[catalog.MenuItemInput](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والنصوصُ تمرّ بالحارس المركزيّ** — انظر `text_limits.go`.
+	if err := s.guardMenuItem(r, req); err != nil {
 		s.respondErr(w, err)
 		return
 	}

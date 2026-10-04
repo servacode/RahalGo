@@ -6,6 +6,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // handleMeSummary بيانات التوب بار الموحّدة لأي مستخدم: الاسم، الصورة، رصيد المحفظة.
@@ -79,6 +80,11 @@ func (s *Server) handleSetMyName(w http.ResponseWriter, r *http.Request) {
 		FullName string `json:"full_name"`
 	}](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والاسمُ يمرّ بالحارس** — لا شتيمةَ ولا إيموجي ولا رموزَ خفيّة.
+	if _, err := s.guardText(r.Context(), tf("full_name", &req.FullName, maxPersonName, textguard.Name)); err != nil {
 		s.respondErr(w, err)
 		return
 	}

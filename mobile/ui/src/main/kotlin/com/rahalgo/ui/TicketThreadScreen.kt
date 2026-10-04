@@ -129,7 +129,10 @@ fun TicketThreadScreen(
             }
             OutlinedTextField(
                 value = draft,
-                onValueChange = onDraftChange,
+                // **وبحدّ المحرّك** — انظر `TextLimits`.
+                onValueChange = {
+                    onDraftChange(com.rahalgo.shared.model.TextLimits.fit(it, com.rahalgo.shared.model.TextLimits.TICKET_REPLY))
+                },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text(stringResource(R.string.tik_reply_hint)) },
                 minLines = 2,

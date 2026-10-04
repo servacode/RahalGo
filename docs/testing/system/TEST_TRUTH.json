@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 62,
+    "notify_sites": 63,
     "notify_targeted": 24,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 167,
+    "setting_defs": 168,
     "behaviour_settings": 133,
     "order_fields": 93,
-    "test_files": 467,
-    "test_funcs": 1914
+    "test_files": 469,
+    "test_funcs": 1924
   },
   "flows": [
     {
@@ -23508,6 +23508,12 @@
       "orphan": true
     },
     {
+      "name": "TestDeliveryProof_NoLocationIsRejected",
+      "file": "internal/server/delivery_proof_fraud_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDeliveryProof_UnknownDoorSkipsDistance",
       "file": "internal/server/delivery_proof_fraud_test.go",
       "package": "server",
@@ -24600,6 +24606,30 @@
       "orphan": true
     },
     {
+      "name": "TestAddressLine_FitsOrderLimit",
+      "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerText_TooLongIsRejected",
+      "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOffensiveText_RejectOrMask",
+      "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTextLimits_CountsLettersNotBytes",
+      "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestWALink",
       "file": "internal/server/wa_link_test.go",
       "package": "server",
@@ -24914,6 +24944,36 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestApply_RejectVsMask",
+      "file": "internal/textguard/textguard_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestClean",
+      "file": "internal/textguard/textguard_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestFilter_CatchesEvasions",
+      "file": "internal/textguard/textguard_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestFilter_NoFalsePositives",
+      "file": "internal/textguard/textguard_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestGuard_ListFromSetting",
+      "file": "internal/textguard/textguard_test.go",
+      "package": "textguard",
+      "orphan": true
     },
     {
       "name": "TestEverySectionHasAnchor",

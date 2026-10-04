@@ -30,6 +30,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/comms"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // handleOrderMessages **يقرأ الحديثَ ويَسِمُ ما وصل.**
@@ -93,6 +94,13 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// **والحارسُ المركزيّ** — الطويلُ يُرفض، **والشتيمةُ تُخفى «***»** وتُنبَّه بها
+	// الإدارة (قرارُ المالك ٢٠٢٦-١٠-٠٣). انظر `text_limits.go`.
+	masked, err := s.guardText(r.Context(), tf("body", &req.Body, maxChatBody, textguard.Chat))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	p, err := s.comms.Permit(r.Context(), chi.URLParam(r, "id"), userIDFrom(r))
 	if err != nil {
 		s.respondErr(w, err)
@@ -102,6 +110,13 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وما أُخفي يُوسَم في السجلّ ويُنبَّه به المكتب** — والرسالةُ تصل مُخفاة.
+	if len(masked) > 0 {
+		if err := s.comms.Flag(r.Context(), msg.ID, masked[0]); err != nil {
+			s.logger.Warn("الحديث: تعذّر وسمُ لفظٍ مسيء", "error", err)
+		}
+		s.alertOffensive(r.Context(), masked, orderRef(p.Number), "order", p.OrderID, "/dashboard/orders")
 	}
 
 	// ══════════════════════════════════════════════════════════════════

@@ -115,7 +115,7 @@ fun chatDay(iso: String): String {
     }
 }
 
-private val DAMASCUS: java.time.ZoneId = java.time.ZoneId.of("Asia/Damascus")
+private val DAMASCUS: java.time.ZoneId = SYRIA_ZONE
 private val HOUR = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
 private val DAY = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
 

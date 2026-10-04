@@ -403,7 +403,10 @@ private fun ComplainDialog(
                 if (pick.isNotEmpty()) {
                     OutlinedTextField(
                         value = note,
-                        onValueChange = { note = it },
+                        // **وبحدّ المحرّك** — انظر `TextLimits`.
+                        onValueChange = {
+                            note = com.rahalgo.shared.model.TextLimits.fit(it, com.rahalgo.shared.model.TextLimits.COMPLAINT_NOTE)
+                        },
                         label = {
                             Text(
                                 stringResource(
