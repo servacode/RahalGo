@@ -511,7 +511,15 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	tag, err := s.pg.Exec(r.Context(), `
-		UPDATE merchants SET emergency_closed = $3, updated_at = now()
+		UPDATE merchants SET emergency_closed = $3, updated_at = now(),
+		       -- **وكلُّ إغلاقٍ جديدٍ طارئٌ جديدٌ يُستلَم** — شريطُ اللوحة
+		       -- يعرضه حتّى يضغط موظّفٌ «استلمتها» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+		       emergency_closed_at = CASE WHEN $3 AND NOT emergency_closed
+		                                  THEN now() ELSE emergency_closed_at END,
+		       emergency_ack_at = CASE WHEN $3 AND NOT emergency_closed
+		                               THEN NULL ELSE emergency_ack_at END,
+		       emergency_ack_by = CASE WHEN $3 AND NOT emergency_closed
+		                               THEN NULL ELSE emergency_ack_by END
 		WHERE id = $1 AND owner_user_id = $2`,
 		merchantID, userIDFrom(r), *req.Closed)
 	if err != nil {
@@ -534,6 +542,7 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 		Entity: "merchant", EntityID: merchantID, Href: "/dashboard/merchants",
 	})
 	s.touch("merchant", "ops", "merchant:"+merchantID)
+	s.touch("emergency", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"emergency_closed": *req.Closed})
 }
 

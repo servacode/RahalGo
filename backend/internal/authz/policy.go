@@ -176,6 +176,10 @@ var adminPolicy = []Rule{
 	{"POST", "/tickets/{id}/resolve", SupportManage},
 	{"GET", "/emergencies", SupportManage},
 	{"POST", "/emergencies/{id}/resolve", SupportManage},
+	// **وشريطُ الطوارئ أعلى كلّ صفحةٍ وزرُّ «استلمتها»** (٢٠٢٦-١٠-٠٤).
+	{"GET", "/emergencies/banner", SupportManage},
+	{"POST", "/emergencies/{id}/ack", SupportManage},
+	{"POST", "/emergencies/stores/{id}/ack", SupportManage},
 	{"GET", "/disputes", SupportManage},
 	{"POST", "/disputes", SupportManage},
 	{"POST", "/disputes/{id}/settle", FinanceManage},
@@ -284,6 +288,8 @@ var adminPolicy = []Rule{
 	{"POST", "/launch/preset", SettingsGeneralManage},
 	{"GET", "/audit", AuditRead},
 	{"GET", "/stats", AnalyticsRead},
+	// **ورئيسيّةُ المدير بقدرتها** — فيها المالُ كلُّه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/overview", PlatformOverview},
 	{"GET", "/reports", AnalyticsRead},
 	{"GET", "/whatsapp", SettingsSecurityManage},
 	{"POST", "/whatsapp/pair", SettingsSecurityManage},

@@ -1162,6 +1162,8 @@ func (s *Server) Router() http.Handler {
 			// **وحالُ التطبيق تُقرأ مع لوح الإعدادات** — قراءةٌ لا تبديل.
 			r.Get("/launch", s.handleLaunchState)
 			r.Get("/stats", s.handleAdminStats)
+			// **رئيسيّةُ مدير المنصّة** — `platform.overview` (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Get("/overview", s.handleAdminOverview)
 			r.Get("/reports", s.handleReports)
 			// سجلّ الأحداث — للأدمن والمالية دون العمليات: يحوي مبالغ التعويضات
 			// والسحوبات وأرصدة المحافظ، وموظّف العمليات ليس طرفاً في المال.
@@ -1383,6 +1385,10 @@ func (s *Server) Router() http.Handler {
 			// يُنسى، **ومن سأل عنه بعد يومين لم يجد من يقول ماذا جرى.**
 			r.Get("/emergencies", s.handleOpenEmergencies)
 			r.Post("/emergencies/{id}/resolve", s.handleResolveEmergency)
+			// **شريطُ الطوارئ وزرُّ «استلمتها»** — (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Get("/emergencies/banner", s.handleEmergencyBanner)
+			r.Post("/emergencies/{id}/ack", s.handleAckEmergency)
+			r.Post("/emergencies/stores/{id}/ack", s.handleAckStoreEmergency)
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
 			// **والأرباحُ بتبويباتها** — (قرارُ المالك ٢٠٢٦-٠٨-١٦):

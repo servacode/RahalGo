@@ -435,28 +435,41 @@ export function StatCard({
   tone = "default",
   onClick,
   selected = false,
+  emphasis = false,
 }: {
   icon?: IconType;
   label: string;
   value: string | number;
   sub?: string;
-  tone?: "default" | "success" | "danger" | "accent";
+  /** **و`muted` للصفر الهادئ** — رماديٌّ لا أخضر: «لا شيء» ليس إنجازاً. */
+  tone?: "default" | "success" | "danger" | "accent" | "muted" | "warning";
   onClick?: () => void;
   selected?: boolean;
+  /** **بطاقةٌ تستدعي يداً الآن** — خلفيّةٌ بلون نبرتها (أحمر أو أصفر). */
+  emphasis?: boolean;
 }) {
   const toneCls = {
     default: "text-ink",
     success: "text-success",
     danger: "text-danger",
     accent: "text-accent-dark",
+    muted: "text-ink-muted",
+    warning: "text-ink",
   }[tone];
+  const frame = selected
+    ? "border-primary ring-1 ring-primary-edge bg-surface"
+    : emphasis && tone === "danger"
+      ? "border-danger-edge bg-danger-tint"
+      : emphasis && tone === "warning"
+        ? "border-warning-edge bg-warning-tint"
+        : "border-line bg-surface";
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       onClick={onClick}
-      className={`rounded-card border bg-surface p-4 text-start transition-colors ${
-        selected ? "border-primary ring-1 ring-primary-edge" : "border-line"
-      } ${onClick ? "hover:border-primary-edge" : ""}`}
+      className={`rounded-card border p-4 text-start transition-colors ${frame} ${
+        onClick ? "hover:border-primary-edge" : ""
+      }`}
     >
       {Icon && <Icon size={18} className="mb-1 text-ink-muted" />}
       <p className={`figure ${toneCls}`}>

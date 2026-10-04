@@ -724,6 +724,54 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/emergencies/banner",
+      "handler": "handleEmergencyBanner",
+      "auth": true,
+      "capability": "support.manage",
+      "response": [
+        {
+          "name": "@b",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/stores/{id}/ack",
+      "handler": "handleAckStoreEmergency",
+      "auth": true,
+      "capability": "support.manage",
+      "response": [
+        {
+          "name": "acknowledged",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/{id}/ack",
+      "handler": "handleAckEmergency",
+      "auth": true,
+      "capability": "support.manage",
+      "response": [
+        {
+          "name": "acknowledged",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/emergencies/{id}/resolve",
       "handler": "handleResolveEmergency",
@@ -2272,6 +2320,22 @@
         {
           "name": "sent",
           "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/overview",
+      "handler": "handleAdminOverview",
+      "auth": true,
+      "capability": "platform.overview",
+      "response": [
+        {
+          "name": "@buildOverview",
+          "type": "unknown"
         }
       ],
       "statuses": [

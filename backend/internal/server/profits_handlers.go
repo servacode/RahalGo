@@ -31,6 +31,7 @@ package server
 */
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -87,7 +88,37 @@ func (s *Server) handleProfits(w http.ResponseWriter, r *http.Request) {
 //
 // ══════════════════════════════════════════════════════════════════════
 func (s *Server) profitsPlatform(w http.ResponseWriter, r *http.Request, from, to string) {
-	ctx := r.Context()
+	p, err := s.platformProfit(r.Context(), from, to)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"orders": p.Orders, "sales": p.Sales,
+		"margin": p.Margin, "commission": p.Commission, "discount": p.Discount,
+		"losses": p.Losses, "opex": p.Opex, "referrals": p.Referrals,
+		"penalties": p.Penalties,
+		// **والدخلُ المحصَّلُ من الطلبات** — ما بقي للخزينة بعد أنصبة
+		// الأطراف، **وهو الرقمُ الذي يُطرح منه ما خرج.**
+		"net": p.Net,
+	})
+}
+
+// platformProfit **أرباحُ المنصّة في مدًى — حسابٌ واحدٌ لا ثلاثة.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وصفحةُ الأرباح ورئيسيّةُ المدير تقرآنه معاً** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان «صافي المنصة» يُحسب في ثلاثة مواضع بثلاث معادلات** — والرئيسيّةُ
+// تقول رقماً وصفحةُ الأرباح غيرَه لليوم نفسِه. **فصار الحسابُ هنا وحدَه**،
+// والرئيسيّةُ تناديه بمدى «اليوم» فتطابق الصفحةَ حرفاً.
+//
+// **والمدى بيوم دمشق** — `YYYY-MM-DD` شاملٌ طرفيه، وفارغٌ بلا حدّ. **وكان
+// يُصبّ تاريخاً بمنطقة القاعدة** (UTC)، فتقع حركةُ منتصف الليل حتّى
+// الثالثة في يومٍ آخر عند أهل المنصّة.
+func (s *Server) platformProfit(ctx context.Context, from, to string) (platformProfitSum, error) {
+	var p platformProfitSum
 
 	// **والطلباتُ المسلَّمةُ وحدَها** — **وطلبٌ أُلغيَ لا هامشَ فيه ولا
 	// عمولة**، وعدُّه يجعل الشاشةَ تَعِد بمالٍ لم يُقبض.
@@ -97,20 +128,19 @@ func (s *Server) profitsPlatform(w http.ResponseWriter, r *http.Request, from, t
 	const orderScope = `
 		FROM orders o
 		WHERE o.status = 'delivered'
-		  AND ($1 = '' OR o.delivered_at >= $1::date)
-		  AND ($2 = '' OR o.delivered_at < ($2::date + 1))`
+		  AND ($1 = '' OR o.delivered_at >=
+		       (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+		  AND ($2 = '' OR o.delivered_at <
+		       ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))`
 
-	var ordersN int
-	var margin, commission, discount, sales int64
 	if err := s.pg.QueryRow(ctx, `
 		SELECT count(*),
 		       COALESCE(sum(`+orders.OrderMarginSQL("o.id")+`), 0),
 		       COALESCE(sum(o.platform_commission), 0),
 		       COALESCE(sum(o.discount), 0),
 		       COALESCE(sum(o.total), 0)`+orderScope, from, to).
-		Scan(&ordersN, &margin, &commission, &discount, &sales); err != nil {
-		s.respondErr(w, err)
-		return
+		Scan(&p.Orders, &p.Margin, &p.Commission, &p.Discount, &p.Sales); err != nil {
+		return p, err
 	}
 
 	// **وما خرج من الخزينة بأنواعه** — يُقرأ من الدفتر لا من معادلة:
@@ -121,11 +151,12 @@ func (s *Server) profitsPlatform(w http.ResponseWriter, r *http.Request, from, t
 		FROM wallet_transactions t
 		JOIN wallets wl ON wl.user_id = t.user_id
 		WHERE wl.is_treasury
-		  AND ($1 = '' OR t.created_at >= $1::date)
-		  AND ($2 = '' OR t.created_at < ($2::date + 1))`
+		  AND ($1 = '' OR t.created_at >=
+		       (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+		  AND ($2 = '' OR t.created_at <
+		       ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))`
 
-	var losses, opex, referrals, penalties, net int64
-	if err := s.pg.QueryRow(ctx, `
+	err := s.pg.QueryRow(ctx, `
 		SELECT
 			COALESCE(sum(-t.amount) FILTER (WHERE t.kind = 'platform_expense'), 0),
 			COALESCE(sum(-t.amount) FILTER (WHERE t.kind = 'operating_expense'), 0),
@@ -138,20 +169,22 @@ func (s *Server) profitsPlatform(w http.ResponseWriter, r *http.Request, from, t
 			-- **فيطابق رصيدَ الخزينة دائماً**، ولا يُقرأ رقمان متناقضان
 			-- في شاشةٍ واحدة. **ومعادلةٌ تُكتب بيدٍ تنسى نوعاً يُضاف غدا.**
 			COALESCE(sum(t.amount), 0)`+ledgerScope, from, to).
-		Scan(&losses, &opex, &referrals, &penalties, &net); err != nil {
-		s.respondErr(w, err)
-		return
-	}
+		Scan(&p.Losses, &p.Opex, &p.Referrals, &p.Penalties, &p.Net)
+	return p, err
+}
 
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"orders": ordersN, "sales": sales,
-		"margin": margin, "commission": commission, "discount": discount,
-		"losses": losses, "opex": opex, "referrals": referrals,
-		"penalties": penalties,
-		// **والدخلُ المحصَّلُ من الطلبات** — ما بقي للخزينة بعد أنصبة
-		// الأطراف، **وهو الرقمُ الذي يُطرح منه ما خرج.**
-		"net": net,
-	})
+// platformProfitSum **أرقامُ تبويب المنصّة** — انظر platformProfit.
+type platformProfitSum struct {
+	Orders     int
+	Sales      int64
+	Margin     int64
+	Commission int64
+	Discount   int64
+	Losses     int64
+	Opex       int64
+	Referrals  int64
+	Penalties  int64
+	Net        int64
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -194,8 +227,8 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 			       COALESCE(sum(t.amount) FILTER (WHERE t.kind IN (` + earnKinds + `)), 0) AS got,
 			       COALESCE(sum(-t.amount) FILTER (WHERE t.kind = 'penalty'), 0) AS lost
 			FROM wallet_transactions t
-			WHERE ($1 = '' OR t.created_at >= $1::date)
-			  AND ($2 = '' OR t.created_at < ($2::date + 1))
+			WHERE ($1 = '' OR t.created_at >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+			  AND ($2 = '' OR t.created_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
 			GROUP BY t.user_id
 		), spent AS (
 			-- **وما أنفقه عبر المنصّة** — المسلَّمُ وحدَه: **طلبٌ أُلغيَ لم
@@ -203,8 +236,8 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 			SELECT o.customer_id AS uid, COALESCE(sum(o.total), 0) AS paid
 			FROM orders o
 			WHERE o.status = 'delivered'
-			  AND ($1 = '' OR o.delivered_at >= $1::date)
-			  AND ($2 = '' OR o.delivered_at < ($2::date + 1))
+			  AND ($1 = '' OR o.delivered_at >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+			  AND ($2 = '' OR o.delivered_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
 			GROUP BY o.customer_id
 		)`
 
@@ -265,8 +298,8 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 	const scope = `
 		FROM merchants m
 		LEFT JOIN orders o ON o.merchant_id = m.id AND o.status = 'delivered'
-		  AND ($1 = '' OR o.delivered_at >= $1::date)
-		  AND ($2 = '' OR o.delivered_at < ($2::date + 1))`
+		  AND ($1 = '' OR o.delivered_at >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+		  AND ($2 = '' OR o.delivered_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))`
 
 	var count int
 	if err := s.pg.QueryRow(r.Context(),

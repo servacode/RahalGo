@@ -90,9 +90,13 @@ export default function AllAccountsTable() {
 
   const [data, setData] = useState<UserPage | null>(null);
   const [query, setQuery] = useState("");
-  const [role, setRole] = useState("");
+  // **والدورُ والحالُ من الرابط** — أرقامُ «المنصّة بالأرقام» في رئيسيّة المدير
+  // تفتح الحساباتِ عليها (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const urlParam = (k: string) =>
+    typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get(k) ?? "");
+  const [role, setRole] = useState(() => urlParam("role"));
   const [onlineOnly, setOnlineOnly] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(() => urlParam("status"));
   const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
   // **والأدوارُ من المحرّك** — للمرشِّح ولنافذة الإنشاء معاً.
   const [allRoles, setAllRoles] = useState<Role[]>([]);

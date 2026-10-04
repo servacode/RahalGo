@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -147,6 +148,16 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			&st.Customers, &st.Drivers, &st.SalesReps, &st.MerchantsActive,
 			&st.MerchantsTotal, &st.MenuItems, &st.ZonesActive, &st.PromosActive)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والصافي من حساب صفحة الأرباح نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — كانت
+	// معادلةٌ هنا تنسى الهامشَ فتقول ربحاً غيرَ ما تقوله صفحةُ الأرباح.
+	today, _, _ := overviewDays(time.Now())
+	day := today.Format("2006-01-02")
+	if p, err := s.platformProfit(r.Context(), day, day); err == nil {
+		st.NetToday = p.Net
+	} else {
 		s.respondErr(w, err)
 		return
 	}

@@ -107,6 +107,8 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		ClosedOnly: q.Get("closed") == "1",
 		// **وبلاغٌ ينتظر المكتب** — من بطاقة «بانتظار قرارك» في الرئيسيّة.
 		AwaitingOffice: q.Get("awaiting") == "1",
+		// **ومرحلةُ الجاري** — من بطاقات «الآن» في رئيسيّة المدير (٢٠٢٦-١٠-٠٤).
+		Stage: q.Get("stage"),
 		// **ومدى التاريخ بيوم دمشق** — سجلُّ الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٣).
 		From:    q.Get("from"),
 		To:      q.Get("to"),

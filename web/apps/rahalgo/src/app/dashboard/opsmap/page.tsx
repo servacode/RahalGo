@@ -287,9 +287,19 @@ export default function OpsMapPage() {
     });
   }, []);
 
-  const [onShift, setOnShift] = useState<"" | "true" | "false">("");
+  // **والمرشِّحاتُ من الرابط** — بطاقاتُ السائقين في رئيسيّة المدير تفتح هنا
+  // على «على الدوام · فعّال · متفرّغ أو معه طلب» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const tri = (k: string): "" | "true" | "false" => {
+    if (typeof window === "undefined") return "";
+    const v = new URLSearchParams(window.location.search).get(k);
+    return v === "true" || v === "false" ? v : "";
+  };
+  const [onShift, setOnShift] = useState<"" | "true" | "false">(() => tri("on_shift"));
   const [stale, setStale] = useState<"" | "true" | "false">("");
-  const [hasActive, setHasActive] = useState<"" | "true" | "false">("");
+  const [hasActive, setHasActive] = useState<"" | "true" | "false">(() => tri("has_active"));
+  const [driverStatus] = useState(() =>
+    typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("status") ?? ""),
+  );
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Picked | null>(null);
 
@@ -336,10 +346,11 @@ export default function OpsMapPage() {
     if (onShift) q.set("on_shift", onShift);
     if (stale) q.set("stale", stale);
     if (hasActive) q.set("has_active", hasActive);
+    if (driverStatus) q.set("status", driverStatus);
     if (search.trim()) q.set("q", search.trim());
     const s = q.toString();
     return s ? `?${s}` : "";
-  }, [onShift, stale, hasActive, search]);
+  }, [onShift, stale, hasActive, driverStatus, search]);
 
   const drivers = useLiveData<{ drivers: Driver[]; count: number }>(
     () =>

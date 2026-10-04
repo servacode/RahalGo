@@ -69,6 +69,13 @@ export default function CashOutstandingPage() {
   const canSettle = can("finance.manage");
   const [view, setView] = useViewMode("cash-outstanding");
   const [target, setTarget] = useState<Holder | null>(null);
+  // **ومن بلغ السقفَ وحدَه** — بطاقةُ «سائقون تجاوزوا سقف النقد» في رئيسيّة
+  // المدير تفتح هنا على العدد نفسِه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [overOnly, setOverOnly] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("over") === "1",
+  );
 
   const { data, reload } = useLiveData<{
     holders: Holder[];
@@ -77,7 +84,9 @@ export default function CashOutstandingPage() {
   }>(() => api("/api/v1/admin/cash/outstanding"), ["wallet", "order"]);
 
   if (!data) return <LoadingState />;
-  const holders = data.holders ?? [];
+  const all = data.holders ?? [];
+  const overCount = all.filter((h) => h.held >= data.limit).length;
+  const holders = overOnly ? all.filter((h) => h.held >= data.limit) : all;
 
   const columns: DataColumn<Holder>[] = [
     {
@@ -152,7 +161,16 @@ export default function CashOutstandingPage() {
           icon={IconWallet}
           tone={data.total > 0 ? "danger" : "default"}
         />
-        <StatCard label={C.holders} value={fmtNum(holders.length)} icon={IconUser} />
+        <StatCard label={C.holders} value={fmtNum(all.length)} icon={IconUser} />
+        <StatCard
+          label={m.admin.home.driversOverCash}
+          value={fmtNum(overCount)}
+          icon={IconWallet}
+          tone={overCount > 0 ? "danger" : "muted"}
+          selected={overOnly}
+          sub={overOnly ? m.admin.home.showAll : m.admin.home.overCashFilter}
+          onClick={() => setOverOnly((v) => !v)}
+        />
       </StatGrid>
 
       {holders.length === 0 ? (

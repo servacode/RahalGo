@@ -1212,7 +1212,9 @@
       "resolvedAt": "حلت في",
       "noCompensation": "بدون تعويض",
       "empty": "لا شكاوى مطابقة",
-      "viewOrder": "عرض الطلب"
+      "viewOrder": "عرض الطلب",
+      "filterUnresolved": "كل غير المحلولة",
+      "filterLate": "المتأخرة بلا رد"
     },
     "sales": {
       "title": "المندوبون",
@@ -2109,6 +2111,10 @@
           "label": "نافذة فتح الشكوى",
           "hint": "بعدها يغلق باب الشكوى على الطلب. وطويلة تعني نزاعا على طلب نسي، وقصيرة تعني من اكتشف متأخرا لا يسمع."
         },
+        "support.late_reply_hours": {
+          "label": "مهلة الرد على الشكوى",
+          "hint": "شكوى ما فتحها أحد من المكتب بعد هذه الساعات تظهر متأخرة بالأحمر في الرئيسية."
+        },
         "payouts.min_amount": {
           "label": "أدنى مبلغ لطلب السحب",
           "hint": "يستثنى منه من يسحب رصيده كله — فمن بقي له مبلغ صغير لا يحبس عنه."
@@ -2696,7 +2702,9 @@
         "user.self_delete": "حذف الحساب بطلب صاحبه",
         "ops.campaign_create": "إنشاء حملة إشعار",
         "ops.campaign_send": "إرسال حملة إشعار",
-        "ops.campaign_cancel": "إلغاء حملة إشعار"
+        "ops.campaign_cancel": "إلغاء حملة إشعار",
+        "ops.emergency_ack": "استلام حالة طوارئ",
+        "ops.store_emergency_ack": "استلام إغلاق طارئ لمتجر"
       }
     },
     "dash": {
@@ -3600,6 +3608,118 @@
         "launch.merchant_orders": "طلبات المتجر",
         "launch.rep_acquisition": "استقطاب المندوب"
       }
+    },
+    "emergencyBanner": {
+      "title": "طوارئ تنتظر من يستلمها",
+      "driver": "طارئ عند السائق {name}",
+      "order": "طلب {n}",
+      "store": "المتجر {name} أغلق إغلاقا طارئا",
+      "halted": "المنصة متوقفة الآن عن استقبال الطلبات",
+      "ack": "استلمتها",
+      "open": "افتح",
+      "since": "منذ {t}",
+      "ackFailed": "تعذر الاستلام — حاول مرة ثانية"
+    },
+    "home": {
+      "title": "الرئيسية",
+      "unknown": "غير معروف",
+      "updatedAgo": "آخر تحديث قبل {t}",
+      "updatedNow": "آخر تحديث الآن",
+      "refresh": "تحديث",
+      "refreshFailed": "تعذر التحديث، والأرقام المعروضة هي آخر ما وصل",
+      "missing": "بعض الأرقام لم تقرأ وتظهر «غير معروف»",
+      "awaiting": "بانتظار قرارك",
+      "awaitingHint": "كل بطاقة تفتح صفحتها وفيها الرقم نفسه",
+      "reportsWaiting": "بلاغات سائقين تنتظر المكتب",
+      "emergenciesOpen": "طوارئ مفتوحة",
+      "ordersUnassigned": "طلبات بلا سائق",
+      "compensationsPending": "تعويضات تنتظر الموافقة",
+      "payoutsPending": "طلبات سحب معلقة",
+      "driversOverCash": "سائقون تجاوزوا سقف النقد",
+      "ticketsOpen": "شكاوى مفتوحة",
+      "ticketsLate": "شكاوى متأخرة (أكثر من {h} ساعة بلا رد)",
+      "leadsNew": "طلبات انضمام متاجر",
+      "expansionWaiting": "طلبات توسع لم يبلغ أصحابها",
+      "now": "الآن",
+      "liveOrders": "الطلبات الجارية",
+      "stage": {
+        "at_store_prep": "جديدة وقيد التحضير",
+        "dispatching": "تبحث عن سائق",
+        "to_store": "السائق في الطريق إلى المتجر",
+        "at_store": "السائق عند المتجر",
+        "to_customer": "في الطريق إلى الزبون"
+      },
+      "stuck": "طلبات عالقة تجاوزت مهلتها",
+      "drivers": "السائقون",
+      "driversOnShift": "على الدوام",
+      "driversFree": "متفرغون",
+      "driversBusy": "معهم طلب",
+      "driversNote": "الحسابات الفعالة فقط",
+      "storesOpen": "متاجر مفتوحة الآن حسب دوامها",
+      "storesOf": "من {n} متجر فعال",
+      "health": "صحة النظام",
+      "healthApi": "الخادم",
+      "healthDb": "قاعدة البيانات",
+      "healthWa": "بوت واتساب",
+      "healthRouting": "الخرائط والطرق",
+      "healthState": {
+        "ok": "يعمل",
+        "down": "متوقف",
+        "off": "غير مفعل",
+        "dev": "وضع التطوير",
+        "not_paired": "غير مقترن",
+        "unknown": "غير معروف"
+      },
+      "today": "اليوم مقابل أمس",
+      "todayNote": "بتوقيت دمشق",
+      "colToday": "اليوم",
+      "colYesterday": "أمس",
+      "rowOrders": "طلبات جديدة",
+      "rowDelivered": "مسلمة",
+      "rowFailed": "ملغاة أو فاشلة",
+      "rowAvgDelivery": "متوسط زمن التوصيل",
+      "rowNewCustomers": "زبائن جدد",
+      "rowPlatformRating": "تقييم المنصة",
+      "rowDriverRating": "تقييم السائقين",
+      "minutes": "{n} دقيقة",
+      "stars": "{n} من 5",
+      "failuresTitle": "سبب الإلغاء والفشل اليوم",
+      "noFailures": "لا إلغاء ولا فشل اليوم",
+      "noReason": "بلا سبب مسجل",
+      "money": "المال اليوم",
+      "sales": "مبيعات اليوم",
+      "net": "صافي المنصة اليوم",
+      "netHint": "الرقم نفسه في صفحة الأرباح",
+      "treasury": "رصيد الخزينة",
+      "cashHeld": "نقد مع السائقين",
+      "compensations": "تعويضات اليوم",
+      "compensationsSub": "{n} تعويض",
+      "losses": "خسائر اليوم",
+      "events": "آخر الأحداث المهمة",
+      "noEvents": "لا أحداث مهمة بعد",
+      "by": "بيد {name}",
+      "platform": "المنصة بالأرقام",
+      "colTotal": "المجموع",
+      "colNewToday": "جديد اليوم",
+      "colNewWeek": "جديد آخر 7 أيام",
+      "group": {
+        "customer": "الزبائن",
+        "driver": "السائقون",
+        "sales": "المندوبون",
+        "stores": "المتاجر",
+        "items": "الأصناف",
+        "zones": "مناطق التغطية الفعالة",
+        "promos": "أكواد الخصم الفعالة"
+      },
+      "staffTitle": "الموظفون حسب الدور",
+      "customersOrderedWeek": "زبائن طلبوا خلال آخر 7 أيام",
+      "driversActive": "سائقون فعالون",
+      "driversSuspended": "سائقون موقوفون",
+      "driversBlocked": "سائقون محظورون",
+      "storesActive": "متاجر فعالة",
+      "storesNotActive": "متاجر غير فعالة أو موقوفة",
+      "overCashFilter": "تجاوزوا السقف فقط",
+      "showAll": "اعرض الكل"
     }
   },
   "merchant": {

@@ -105,7 +105,14 @@ const textareaCls =
 
 export function TicketsView() {
   const [data, setData] = useState<TicketPage | null>(null);
-  const [status, setStatus] = useState("");
+  // **والحالُ من الرابط** — بطاقتا «شكاوى مفتوحة» و«متأخّرة» في رئيسيّة المدير
+  // تفتحان هنا على العدد نفسِه (قرارُ المالك ٢٠٢٦-١٠-٠٤). و`late` حالٌ مُركَّبةٌ
+  // في القائمة: غيرُ محلولةٍ لم يردّ عليها أحدٌ بعد مهلة الإعدادات.
+  const [status, setStatus] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const q = new URLSearchParams(window.location.search);
+    return q.get("late") === "1" ? "late" : (q.get("status") ?? "");
+  });
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -132,7 +139,12 @@ export function TicketsView() {
 
   const load = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ status, page: String(page), per_page: "12" });
+      const params = new URLSearchParams({
+        status: status === "late" ? "" : status,
+        late: status === "late" ? "1" : "",
+        page: String(page),
+        per_page: "12",
+      });
       setData(await api<TicketPage>(`/api/v1/admin/tickets?${params}`));
       setError("");
     } catch (err) {
@@ -266,6 +278,8 @@ export function TicketsView() {
           }}
         >
           <option value="">{m.admin.tickets.allStatuses}</option>
+          <option value="unresolved">{m.admin.tickets.filterUnresolved}</option>
+          <option value="late">{m.admin.tickets.filterLate}</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
