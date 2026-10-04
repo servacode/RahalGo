@@ -470,6 +470,10 @@ func (s *Service) legacyRotationCandidate(ctx context.Context, orderID string, s
 		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0)
 		      -- **وسقفٌ خاصٌّ بالسائق يغلب العامّ إن ضُبط** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 		      <= COALESCE(u.cash_limit_override, $2)
+		  -- **ومن تأخّر بتسليم نقده والإيقافُ مُشعَل لا يُعرض عليه طلبٌ نقديّ**
+		  --  (قرارُ المالك ٢٠٢٦-١٠-٠٤) — الدالّةُ نفسُها التي يسألها حارسُ القبول.
+		  AND (COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0) = 0
+		       OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o
 		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
 		  -- **وعرضٌ حيٌّ واحدٌ لكلّ سائق.**
@@ -511,6 +515,8 @@ const proximityEligibleWhere = `
 		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
 		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
 		      + ord.cash_due <= COALESCE(u.cash_limit_override, $2)
+		  -- **والمتأخّرُ بتسليم نقده لا يُعرض عليه نقديّ إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
+		  AND (ord.cash_due = 0 OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o2
 		       WHERE o2.driver_id = u.id AND o2.closed_at IS NULL) < $3
 		  AND NOT EXISTS (

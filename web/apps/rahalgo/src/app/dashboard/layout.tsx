@@ -153,7 +153,7 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/profits", label: m.admin.nav.profits, icon: IconWallet,
     caps: ["finance.read"] },
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
-  { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
+  { href: "/dashboard/cash", label: m.admin.cashOutstanding.tabTitle, icon: IconWallet,
     caps: ["finance.read"] },
   // **والالتزاماتُ الماليّة تُقرأ هنا** — الدَّينُ على المتاجر والمناديب
   // (`financial_obligations`): على من وكم ومن أين وكم بقي. **قراءةٌ فقط**،

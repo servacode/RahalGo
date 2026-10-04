@@ -190,14 +190,18 @@ var All = []Check{
 		Name:  "كلُّ طلبٍ مسلَّمٍ له مستحقُّ متجر",
 		Why:   "طلبٌ سُلّم ولم يُقيَّد مستحقُّ متجره — فالمتجرُ لم يُدفع له",
 		Flows: []string{"F-12", "F-14"},
-		Kinds: []string{"merchant_earning"},
+		Kinds: []string{"merchant_earning", "merchant_cash_accrued"},
+		// **والمتجرُ المُسوّى نقداً مستحقُّه قيدُ احتباسٍ لا قيدُ محفظة**
+		// (`merchant_cash_accrued`، تسويةُ ٢٠٢٦-٠٩-٢٧) — كان الفحصُ لا يعرفه، فكلُّ
+		// طلبٍ نقديِّ التسوية سُلّم يُقرأ خرقاً. (كشفه قسمُ النقد ٢٠٢٦-١٠-٠٤.)
 		SQL: `
 			SELECT o.number, o.total, o.status
 			FROM orders o
 			WHERE o.status = 'delivered' AND o.kind <> 'custom'
 			  AND NOT EXISTS (
 				SELECT 1 FROM wallet_transactions t
-				WHERE t.ref = o.id::text AND t.kind = 'merchant_earning')`,
+				WHERE t.ref = o.id::text
+				  AND t.kind IN ('merchant_earning', 'merchant_cash_accrued'))`,
 	},
 	{
 		ID: "FI-04.b", Family: FI04, Status: ProvableNow, Ops: true,

@@ -148,3 +148,36 @@ func TestCashKindsHaveAppLabels(t *testing.T) {
 		}
 	}
 }
+
+// TestCashKindsHaveAdminLabels **وتبويبُ الصندوق في ملفّ السائق باللوحة كذلك.**
+//
+// (فحصُ قسم النقد ٢٠٢٦-١٠-٠٤، المشكلة ٤: المعجمُ هناك يسمّي `collect/settle/adjust`
+// والمحرّكُ يكتب `order_collection/settlement` — فيرى الأدمنُ النصَّ الخام.)
+func TestCashKindsHaveAdminLabels(t *testing.T) {
+	src, err := os.ReadFile("cashbox.go")
+	if err != nil {
+		t.Fatalf("cashbox.go: %v", err)
+	}
+	re := regexp.MustCompile(`apply\([^)]*?"([a-z_]+)"`)
+	found := map[string]bool{}
+	for _, mm := range re.FindAllStringSubmatch(string(src), -1) {
+		found[mm[1]] = true
+	}
+	raw, err := os.ReadFile("../../../web/packages/i18n/src/locales/ar.json")
+	if err != nil {
+		t.Skipf("ar.json: %v", err)
+	}
+	var dict map[string]any
+	if err := json.Unmarshal(raw, &dict); err != nil {
+		t.Fatalf("ar.json: %v", err)
+	}
+	labels := dig(dict, "admin", "users", "profile", "roleTabs", "cashKinds")
+	if labels == nil {
+		t.Fatal("admin.users.profile.roleTabs.cashKinds missing")
+	}
+	for kind := range found {
+		if s, ok := labels[kind]; !ok || strings.ContainsAny(s, "abcdefghijklmnopqrstuvwxyz") {
+			t.Errorf("kind %q has no Arabic admin label (%q)", kind, s)
+		}
+	}
+}

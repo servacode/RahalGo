@@ -1183,6 +1183,8 @@ kosom` |
 | `delivery.default_radius_m` | السائقون | int | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `1` |
+| `drivers.cash_overdue_days` | السائقون | int | `3` |
+| `drivers.cash_overdue_stop` | السائقون | bool | `false` |
 | `drivers.same_route_extra` | السائقون | int | `1` |
 | `drivers.proximity_enabled` | السائقون | bool | `true` |
 | `drivers.location_fresh_sec` | السائقون | int | `300` |
@@ -1783,3 +1785,33 @@ kosom` |
 6. **غرفةُ الطوارئ للعمليّات والدعم** — قائمةٌ منذ قسم «الطلبات» (`emergencies.manage`)، ولا تغيير.
 7. **تعويضُ الشكوى طلبٌ للماليّة** — **لم يُنفَّذ في هذه الدفعة** (قسمُ الدعم): حلُّ التذكرة ما زال يقيّد التعويضَ مباشرةً،
    **وحين يُحوَّل يقرأ `approval.Check`.**
+
+### قراراتُ المالك ٢٠٢٦-١٠-٠٤ — **قسمُ «النقد والصندوق»** (`/dashboard/cash`)
+
+(وافق المالكُ على المقترحات. الرابطُ باقٍ، والصفحةُ تبويبُ «النقد والصندوق» في الخزينة؛ **وصندوقُ المكتب والإغلاقُ اليوميّ
+لقسم الخزينة لا هنا**.)
+
+1. **«منذ» = أقدمُ مالٍ باقٍ بيد السائق، والأقدمُ يُسدَّد أوّلاً** — دالّةُ القاعدة `driver_cash_oldest_unpaid` (هجرة `0330`).
+   كانت «أقدمَ قبضٍ بعد آخر تسليم» فتصفّرها التسليمةُ الجزئيّة («٠ يوم» لمالٍ عمرُه أسبوع). يحرسه
+   `TestCASH_SinceSurvivesPartialHandover`.
+2. **السقفُ يُعرض كما يمنع**: ما بالجيب + نقدُ طلباتٍ بيده لم تُغلق، مقابلَ سقفه الخاصّ (`cash_limit_override`) أو العامّ —
+   صيغةُ `cashbox.Exposure`. **و«فوق السقف» = بلغه** (لا يأخذ نقديّاً جديداً). وعدُّ الرئيسيّة وإحصاءاتُ اللوحة من الحساب نفسِه
+   (`cashOverviewOf`). يحرسه `TestCASH_CapCountsOpenOrderCash`.
+3. **تنبيهُ «لم يسلّم منذ أيّام»** بعد `drivers.cash_overdue_days` (افتراضُه ٣) — بطاقةٌ في «بانتظار قرارك»
+   (`drivers_cash_overdue`) تفتح الصفحةَ مصفّاةً `?filter=overdue`. **وإيقافُ الطلبات النقديّة عن المتأخّر اختياريٌّ ومطفأٌ
+   افتراضاً** (`drivers.cash_overdue_stop`)؛ مُشعَلاً يمنعه حارسُ القبول (`cashbox.GuardTx`) **ومرشَّحُ الدور والطابور
+   والمسارُ نفسُه معاً** بدالّةٍ واحدة `driver_cash_overdue_stopped`، والردُّ برمز `cash_limit_exceeded` (تطبيقُ السائق مجمَّدٌ
+   ويعرفه) ومفتاحِ رسالة `errors.cash_overdue`. يحرسه `TestCASH_OverdueAlertAndOptionalStop` و`TestCASH_OverdueDefaultsMatchCatalog`.
+4. **الجدول**: السائقُ (رابطٌ لملفّه) · بذمّته · نقدُ طلباتٍ مفتوحة · المجموعُ مقابلَ السقف (شريط) · منذ («اليوم» · «يوم واحد» ·
+   «يومان» · «٣ أيام» · «١١ يوماً») · آخرُ استلام · الدوام · «استلام». **وترشيحٌ بالرابط**: الكلّ / فوق السقف / متأخّرون /
+   على الدوام، وبحثٌ بالاسم والرقم، **وتصديرٌ** (`GET /admin/cash/outstanding/export` بقدرة `finance.export`،
+   `finance.cash_exported` في السجلّ). **وبطاقةُ الرئيسيّة تفتح `?filter=over`** (و`?over=1` القديمُ يبقى يعمل).
+5. **نافذةُ استلامٍ واحدة** (`components/admin/DriverCashReceive.tsx`): المبلغُ (افتراضُه الكلّ) · ملاحظة · تأكيدٌ بما سيُكتب
+   وما يبقى · ثمّ كلمةُ السرّ — **من الصفحة ومن تبويب الصندوق في ملفّ السائق**. والنقدُ المستلَمُ يدخل صندوقَ المكتب من موضعٍ
+   واحد (`handleDriverSettle`)، **ويحوّله قسمُ الخزينة إلى `officecash.Record` حين يُدمَج.**
+6. **مستحقّاتُ المتاجر نقداً كلُّها في تبويب** (`GET /admin/cash/merchant-dues`) **أيّاً كانت طريقةُ المتجر اليوم**، **وملفُّ
+   المتجر لا يُخفي مستحقّه القديم** إن صارت طريقتُه محفظة. يحرسه `TestCASH_MerchantDuesListedRegardlessOfMethod`.
+7. **صغائر**: نوعُ الحركة في تبويب صندوق السائق بالعربيّة (`order_collection/settlement/adjustment`، يحرسه
+   `TestCashKindsHaveAdminLabels`) ورقمُ الطلب بجانبه (`order_number`، `TestCASH_StatementCarriesOrderNumber`) ·
+   الخطأُ يُعرض ولا يبقى «جارٍ التحميل» · **وإشعارُ السائق بالفواصل والعملة** («استُلم منك 50,000 ل.س — والباقي بذمّتك
+   106,650 ل.س»، `TestCASH_SettleNotificationFormatsMoney`).

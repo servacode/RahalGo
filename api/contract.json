@@ -341,6 +341,26 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/cash/merchant-dues",
+      "handler": "handleMerchantCashDues",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "merchants",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/cash/outstanding",
       "handler": "handleCashOutstanding",
       "auth": true,
@@ -355,6 +375,18 @@
           "type": "unknown"
         },
         {
+          "name": "over_count",
+          "type": "unknown"
+        },
+        {
+          "name": "overdue_count",
+          "type": "unknown"
+        },
+        {
+          "name": "overdue_days",
+          "type": "unknown"
+        },
+        {
           "name": "total",
           "type": "unknown"
         }
@@ -362,6 +394,13 @@
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cash/outstanding/export",
+      "handler": "handleCashOutstandingExport",
+      "auth": true,
+      "capability": "finance.export"
     },
     {
       "method": "GET",

@@ -1284,6 +1284,19 @@ var Catalog = []Def{
 	{Key: "drivers.max_active_orders", Group: GroupDrivers, Kind: KindInt,
 		Min: 1, Max: 20, Unit: "order", Default: 1},
 
+	// **مالٌ بيد السائق لم يُسلَّم منذ أيّام** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	//
+	// بعد هذا العدد من الأيّام يظهر السائقُ في «بانتظار قرارك» بالرئيسيّة.
+	// والعدُّ من أقدم مالٍ باقٍ بيده (الأقدمُ يُسدَّد أوّلاً) — دالّةُ
+	// `driver_cash_oldest_unpaid` في الهجرة 0330.
+	{Key: "drivers.cash_overdue_days", Group: GroupDrivers, Kind: KindInt,
+		Min: 1, Max: 60, Unit: "day", Default: 3},
+
+	// **وإيقافُ الطلبات النقديّة عنه تلقائيّاً بعد المدّة نفسِها** — اختياريٌّ
+	// ومطفأٌ افتراضاً بقرار المالك. يقرؤه حارسُ القبول ومرشَّحُ الدور معاً
+	// (`driver_cash_overdue_stopped`).
+	{Key: "drivers.cash_overdue_stop", Group: GroupDrivers, Kind: KindBool, Default: false},
+
 	// ══════════════════════════════════════════════════════════════════
 	// **وطلبُ المسار يتجاوز السقفَ بواحد**
 	// ══════════════════════════════════════════════════════════════════

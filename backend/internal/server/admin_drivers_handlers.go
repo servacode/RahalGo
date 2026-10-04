@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
@@ -146,10 +145,7 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 				// وصل السائقَ «سُلّم صندوقك» بلا رقم. **وخبرُ مالٍ لا يقول كم مالٌ خبرٌ
 				// يجب أن يُتحقّق منه في مكانٍ آخر** — فلا يُغني عن السؤال الذي وُضع
 				// ليمنعه، **ويترك بابَ الخلاف مفتوحاً: «سلّمتُ خمسين» «بل أربعين».**
-				body := fmt.Sprintf("%d — والباقي بذمّتك %d", req.Amount, held)
-				if req.Note != "" {
-					body += " · " + req.Note
-				}
+				body := cashSettledBody(req.Amount, held, req.Note)
 				s.notify.Notify(r.Context(), notifications.Input{
 					UserID: driverID, Kind: notifications.KindWallet,
 					Title: notifTitles.cashSettled, Body: body,

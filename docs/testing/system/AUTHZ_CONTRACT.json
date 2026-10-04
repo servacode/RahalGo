@@ -39,7 +39,7 @@
   {
    "code": "finance.export",
    "description": "تصدير الدفتر وكشف الطلبات ملفا",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "finance.manage",
@@ -49,7 +49,7 @@
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 17
+   "guards_routes": 18
   },
   {
    "code": "finance.recompute",
@@ -221,7 +221,7 @@
   }
  ],
  "route_policy": {
-  "rules": 205,
+  "rules": 207,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

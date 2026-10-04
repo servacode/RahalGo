@@ -57,10 +57,12 @@ type ovAwaiting struct {
 	CompensationsPending num `json:"compensations_pending"`
 	PayoutsPending       num `json:"payouts_pending"`
 	DriversOverCash      num `json:"drivers_over_cash"`
-	TicketsOpen          num `json:"tickets_open"`
-	TicketsLate          num `json:"tickets_late"`
-	LeadsNew             num `json:"leads_new"`
-	ExpansionWaiting     num `json:"expansion_waiting"`
+	// DriversCashOverdue **سائقون لم يسلّموا نقدَهم منذ أيّام** (`drivers.cash_overdue_days`).
+	DriversCashOverdue num `json:"drivers_cash_overdue"`
+	TicketsOpen        num `json:"tickets_open"`
+	TicketsLate        num `json:"tickets_late"`
+	LeadsNew           num `json:"leads_new"`
+	ExpansionWaiting   num `json:"expansion_waiting"`
 }
 
 type ovLive struct {
@@ -267,16 +269,12 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 	} else {
 		ov.Missing = append(ov.Missing, "tickets")
 	}
-	if holders, total, err := s.cashHolders(ctx); !miss("cash", err) {
-		limit := s.cashbox.Limit(ctx)
-		var over int64
-		for _, h := range holders {
-			if h.Held >= limit {
-				over++
-			}
-		}
-		a.DriversOverCash = n64(over)
-		ov.Money.CashHeld = n64(total)
+	// **بحساب صفحة النقد نفسِه**: السقفُ على ما بالجيب + نقدِ الطلبات المفتوحة،
+	// وبسقف السائق الخاصّ إن ضُبط (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	if cash, err := s.cashOverviewOf(ctx); !miss("cash", err) {
+		a.DriversOverCash = n64(cash.OverCount)
+		a.DriversCashOverdue = n64(cash.OverdueCount)
+		ov.Money.CashHeld = n64(cash.Total)
 	}
 
 	// ── الآن ───────────────────────────────────────────────────────

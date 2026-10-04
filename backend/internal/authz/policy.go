@@ -181,6 +181,8 @@ var adminPolicy = []Rule{
 	{"POST", "/drivers/{id}/settle", FinanceManage},
 	{"GET", "/drivers/{id}/cash", FinanceRead},
 	{"GET", "/cash/outstanding", FinanceRead},
+	{"GET", "/cash/outstanding/export", FinanceExport},
+	{"GET", "/cash/merchant-dues", FinanceRead},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
 	{"GET", "/drivers", DriversRead},
 
