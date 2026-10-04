@@ -55,5 +55,5 @@ func qaSnapSQLX() string {
 	// **والمصدرُ والعتبةُ ثابتان كما في `snapshotNow`** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	return fmt.Sprintf("%d, %d, '%s', %d",
 		c.Int("merchants.commission_percent"), c.Int("sales.commission_percent"),
-		pricing.RepCommissionSourceFixed, ActivationFromFirstOrder)
+		pricing.RepCommissionSourceFixed, 1)
 }

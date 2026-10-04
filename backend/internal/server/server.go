@@ -1192,6 +1192,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/promos", s.handleListPromos)
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
+			// **مثالٌ ماليٌّ حيٌّ بجانب مفاتيح المال** — يحسبه المحرّكُ لا الشاشة (٢٠٢٦-١٠-٠٤).
+			r.Get("/settings/money-example", s.handleSettingsMoneyExample)
 			// **وحالُ التطبيق تُقرأ مع لوح الإعدادات** — قراءةٌ لا تبديل.
 			r.Get("/launch", s.handleLaunchState)
 			r.Get("/stats", s.handleAdminStats)

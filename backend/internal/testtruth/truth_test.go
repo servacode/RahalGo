@@ -295,8 +295,14 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `ops.stuck_ack_snooze_min` — **«أنا عليه» تُسكت التذكيرَ ساعةً لا للأبد.**
 	// **وواحدٌ أُضيف بغرفة الطوارئ** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `ops.emergency_unacked_red_min`
 	// — **طارئٌ بلا مستلِمٍ عشرَ دقائق يحمرّ.**
-	if d.BehaviourSettings != 145 {
-		t.Errorf("إعداداتُ السلوك = %d لا 145 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **ونقصت أربعةً بقسم الإعدادات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): حُذف مصدرُ عمولة
+	// المندوب `sales.commission_source` وعتبةُ التفعيل `sales.activation_orders` ورمزُ
+	// دعوة المنصّة `platform.invite_code` والمفتاحان القديمان للتطبيق
+	// `platform.app_url`/`platform.app_file`، **وصارت حصّةُ المنصّة مفتاحاً واحداً
+	// لكلّ الأنواع** `delivery.platform_percent` بدل القديم، **وأُضيف قالبُ الترحيب**
+	// `accounts.welcome_template` (نصٌّ طويلٌ — عرضٌ لا سلوك).
+	if d.BehaviourSettings != 141 {
+		t.Errorf("إعداداتُ السلوك = %d لا 141 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

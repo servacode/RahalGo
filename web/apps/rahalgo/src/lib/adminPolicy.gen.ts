@@ -1,7 +1,7 @@
 // مولَّدٌ من `backend/internal/authz/policy.go` — لا يُحرَّر باليد.
 // cd backend && go run ./cmd/authzdoc
 export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
-  ["", "/app-file", "content.manage"],
+  ["", "/app-file", "settings.general.manage"],
   ["GET", "/approvals", "finance.read"],
   ["GET", "/audit", "audit.read"],
   ["GET", "/audit/actors", "audit.read"],
@@ -176,6 +176,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["", "/sections/{id}", "content.manage"],
   ["GET", "/sections/{id}/items", "content.manage"],
   ["GET", "/settings", "settings.read"],
+  ["GET", "/settings/money-example", "settings.read"],
   ["GET", "/stats", "analytics.read"],
   ["GET", "/tickets", "support.manage"],
   ["POST", "/tickets", "support.manage"],

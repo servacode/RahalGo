@@ -11,9 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
-	"github.com/servacode/rahalgo/backend/internal/release"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/release"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 

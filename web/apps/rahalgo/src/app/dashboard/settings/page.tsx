@@ -3,21 +3,32 @@
 /**
  * الإعدادات — أخطر شاشة في المنصة.
  *
- * كانت محرّر JSON خاماً: اسمٌ لاتينيّ (`drivers.share_value`) وقيمةٌ في مربّع
- * نصٍّ حرّ. ويُطلب من صاحب المنصة — رجلٍ في الرقة لا مبرمج — أن يكتب JSON
- * صحيحاً في حقلٍ يحكم رواتب سائقيه. وحرفٌ زائد يكسر خطّ التوصيل كلَّه.
+ * **والتعريفُ كلُّه من الخادم**: نوعُ الحقل ومداه وخياراته، **وخطورتُه**
+ * (`risk` من قائمة الخطورة الواحدة) **وبيتُه في العمود الجانبيّ** (`topic`).
+ * ولو كُتب شيءٌ منها هنا لانحرف عن المحرّك يوماً.
  *
- * والتعريف كلُّه من الخادم: نوع الحقل ومداه وخياراته. **المدى الذي يحرسه
- * الخادم هو المدى الذي يعرضه الحقل** — ولو كُتب هنا لانحرف عنه يوماً، فيرى
- * المالك حقلاً يقبل ما يرفضه الحفظ.
+ * ══════════════════════════════════════════════════════════════════════
+ * **قراراتُ المالك ٢٠٢٦-١٠-٠٤ (قسم الإعدادات)**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ *  - **عمودٌ جانبيٌّ بالموضوع** بدل ستّة عشر تبويباً (البند ١٧)، **وكلُّ إعدادٍ
+ *    في مكانٍ واحد** — المكرّرُ يُضبط في لوحه المخصَّص (البند ١٢).
+ *  - **مثالٌ ماليٌّ حيٌّ يحسبه المحرّك** فوق مفاتيح المال.
+ *  - **«كان ← يصير» قبل حفظ أيّ مفتاحٍ ماليّ** ثمّ كلمةُ المرور (البند ٨).
+ *  - **رابطُ «السجل» على كلّ بطاقة** (البند ٩).
+ *  - **كلُّ بابِ إطلاقٍ يُبدَّل بتأكيد** (البند ١٠).
+ *  - **رسالةٌ لكلّ حالة فشل، ورجوعُ الحقل إلى المحفوظ، ولا حفظَ بلا تغيير.**
+ *  - **بحثٌ لا يفهم التشكيل يدوّر في الألواح أيضاً.**
+ *  - **ومن لا يملك التعديل يُقال له أيُّ صلاحيّةٍ تلزم.**
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
-  PageHeader, Button, Input, Textarea, Select, Switch, Badge, Card, EmptyState, FormSection,
+  Confirm,
+  PageHeader, Button, Input, Textarea, Switch, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
   LoadingState,
 } from "@rahalgo/ui";
@@ -30,8 +41,6 @@ import ZonesPanel from "@/components/admin/settings/zones";
 import HoursPanel from "@/components/admin/settings/hours";
 import CitiesPanel from "@/components/admin/settings/cities";
 import DivisionsPanel from "@/components/admin/settings/divisions";
-import SitePagesPanel from "@/components/admin/settings/site-pages";
-import BannersPanel from "@/components/admin/settings/banners";
 import WhatsAppPanel from "@/components/admin/settings/whatsapp";
 import AppStatusPanel from "@/components/admin/settings/app-status";
 import ReleasePanel from "@/components/admin/settings/release";
@@ -49,50 +58,12 @@ function geoOf(v: string): [number, number] | null {
 
 const m = getMessages(defaultLocale);
 
-
 /* **والخريطةُ لا تُصيَّر في الخادم** — `leaflet` يقرأ `window` عند التحميل. */
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
   ssr: false,
 });
 const S = m.admin.settings;
-
-/**
- * **يقسّم مفاتيحَ المجموعة إلى صناديق.**
- *
- * **وموضعُ الصندوق أوّلُ ظهورٍ لاسمه** — فترتيبُ الفهرس هو ما يُرى، **ولا
- * فرزَ بالاسم** يقلب ما قصده من كتبه.
- *
- * **ويُجمع المتفرّقُ تحت اسمه.**
- *
- * (عطبٌ ظهر ٢٠٢٦-٠٨-٠٩ بعد نقل مفاتيحَ إلى «إعدادات الموقع»: كان الجمعُ
- *  بالتجاور — **فمفاتيحُ الهويّة جاءت في دفعتين بينهما مفاتيحُ التواصل،
- *  فظهر صندوقُ «الهويّة البصريّة» مرّتين.**)
- *
- * **وترتيبُ الفهرس لا يُملي أن يكون كلُّ قسمٍ متلاصقاً** — ومن أضاف مفتاحاً
- * في موضعه المنطقيّ لا يجب أن يشقّ صندوقاً بلا أن يدري.
- */
-function sectionsOf(items: Setting[]): { name: string; items: Setting[] }[] {
-  const out: { name: string; items: Setting[] }[] = [];
-  const at = new Map<string, number>();
-  for (const it of items) {
-    const name = it.section ?? "";
-    const i = at.get(name);
-    if (i === undefined) {
-      at.set(name, out.length);
-      out.push({ name, items: [it] });
-    } else {
-      out[i]!.items.push(it);
-    }
-  }
-  return out;
-}
-
-
-/** **واسمُ الصندوق من المعجم** — وغيابُه يُظهر مفتاحَه لا فراغاً. */
-function sectionLabel(name: string): string {
-  return (S.sections as Record<string, string>)?.[name] ?? name;
-}
-
+const U = S.ui;
 
 /** **يطابق أنواعَ الكتالوج في المحرّك** — ونوعٌ يُضاف هناك ولا يُضاف هنا يسقط إلى الحقل النصّيّ. */
 type Kind =
@@ -109,11 +80,10 @@ type Kind =
 
 interface Setting {
   key: string;
-  /** **مسارُ الصورة المشتقُّ من المعرّف** — يُرسله الخادمُ مع إعدادات الصور. */
   media_url?: string | null;
   group: string;
   kind: Kind;
-  /** **صندوقٌ داخل المجموعة** — وفارغٌ يعني «في المجرى». */
+  /** **صندوقٌ قديمٌ داخل المجموعة** — صفحاتُ الموقع (`page.*`). */
   section?: string;
   min?: number;
   max?: number;
@@ -121,88 +91,61 @@ interface Setting {
   unit?: string;
   default: unknown;
   sensitive?: boolean;
+  /** **مستوى الخطورة من قائمة الخادم الواحدة** — «money» أو «security» أو فراغ. */
+  risk?: "money" | "security" | "";
+  /** **بيتُه في العمود الجانبيّ** — بقواعد البادئة في المحرّك. */
+  topic: string;
+  topic_section?: string;
+  /** **لا بطاقةَ له** — يُضبط في لوحٍ مخصَّص (البند ١٢). */
+  panel?: string;
+  /** **مخفيٌّ** — إعداداتُ الموقع العامّ بعد أن صار الويبُ للموظّفين (البند ١٤). */
+  hidden?: boolean;
   value: unknown;
   updated_at: string | null;
   updated_by: string | null;
-  /**
-   * **أيُحرَّر هذا المفتاحُ لمن يسأل؟** — **يقوله المحرّكُ لا اللوحة.**
-   *
-   * **وقدرةُ المفتاح تتبع أثرَه**: أمنيٌّ أو ماليٌّ أو عامّ. **وكان
-   * التحريرُ يُفتح باسم `admin`** — **فالماليّةُ لا تُحرّر مفتاحَها
-   * الماليّ، ومن لا يملك الأمنيَّ يرى حقلاً يُردّ ٤٠٣.**
-   */
+  /** **أيُحرَّر هذا المفتاحُ لمن يسأل؟** — يقوله المحرّكُ لا اللوحة. */
   editable?: boolean;
-  /** **شرطُ الظهور** — مفتاحٌ آخرُ بإحدى قيمٍ بعينها. */
-  /**
-   * شرطُ الظهور من الفهرس.
-   *
-   * **و`equals` قد تصل `null`**: Go تُسلسل `[]string` الفارغةَ `null` لا `[]`
-   * — **فشرطٌ بلا قيمٍ يُسقط الصفحةَ كلَّها** بـ«Cannot read properties of
-   * null». (وقع فعلاً ٢٠٢٦-٠٨-٠٦ عند إضافة `not_empty`.)
-   */
+  /** شرطُ الظهور — و`equals` قد تصل `null`. */
   show_when?: { key: string; equals: string[] | null; not_empty?: boolean };
 }
 
-/* **والتلميحُ اختياريّ**: مفتاحٌ يُفهم من عنوانه لا يُشرح. */
 const label = (k: string) =>
   (S.keys as Record<string, { label?: string; hint?: string }>)[k]?.label ?? k;
 const hint = (k: string) =>
   (S.keys as Record<string, { label?: string; hint?: string }>)[k]?.hint ?? "";
 const unitText = (u?: string) => (u ? (S.units as Record<string, string>)[u] ?? "" : "");
 const choiceText = (c: string) => (S.choices as Record<string, string>)[c] ?? c;
-/**
- * **ما يعنيه الصفرُ في هذا المفتاح** — إن كان له معنًى خاصّ.
- *
- * «أجرة التوصيل = ٠» رقمٌ صحيحٌ لا خطأ، **ومعناه «التوصيل مجّانيّ»** — وهو
- * قرارٌ كبيرٌ يُتّخذ بحرفٍ واحد. **ورقمٌ لا يقول ما يفعله يُترك على صفره سهواً
- * ويُكتشف في آخر الشهر.**
- *
- * **ولا يُقال إلّا حين يقع**: شرحٌ دائمٌ تحت الحقل زحامٌ، **وشارةٌ تظهر عند
- * الصفر وحدَه تُقرأ.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
- */
 const zeroNote = (k: string) =>
   (S.keys as Record<string, { zero?: string }>)[k]?.zero ?? "";
-/**
- * حالُ مفتاحٍ منطقيّ بالكلمات — **«المنصة تدير الطلبات» لا «مُطفأ».**
- *
- * **و«نعم/لا» لا تقول شيئاً**: من قرأ «لا» تحت «المتجر يدير طلباته» عرف أنّه
- * لا يديرها **ولم يعرف من يديرها.** والبديلُ العامّ يبقى لمفاتيحَ لم تُوصَف
- * بعد — فلا تُفرَض كتابةُ وصفين لكلّ مفتاح.
- */
 const boolText = (k: string, side: "on" | "off") =>
   (S.boolStates as Record<string, { on: string; off: string }>)[k]?.[side] ??
   (side === "on" ? S.boolOn : S.boolOff);
+const topicLabel = (t: string) => (S.topics as Record<string, string>)[t] ?? t;
+const topicSectionLabel = (t: string) => (S.topicSections as Record<string, string>)[t] ?? "";
+const sectionLabel = (name: string) => (S.sections as Record<string, string>)?.[name] ?? name;
 
 /**
- * **نوعُ الوسيط لكلّ مفتاحِ صورة** — مصدرٌ واحدٌ يطابق `validKinds` في المحرّك.
- *
- * **ومفتاحٌ جديدٌ بلا سطرٍ هنا يرفع بنوعٍ خطأ** — فالافتراضُ مكتوبٌ عند
- * الاستعمال ليُرى.
+ * **بحثٌ لا يفهم التشكيل** (البند ٣٤): «عمولة المندوب» تجد «مصدرُ احتساب
+ * عمولةِ المندوب». **ويُسوّى الهمزُ والتاءُ المربوطةُ والألفُ المقصورة.**
  */
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **شبكةُ بطاقاتٍ لا كومةٌ بعرض الصفحة**
- * ══════════════════════════════════════════════════════════════════════
- *
- * (قرارُ المالك ٢٠٢٦-٠٩-٠٥: «كل Setting كسطر/كرت أفقي بعرض الصفحة… يجعل
- *  صفحات الإعدادات طويلة جداً وصعبة الإدارة».)
- *
- * **وثمانيةَ عشرَ مفتاحاً في كومةٍ واحدةٍ صفحةٌ لا تُقرأ** — و`platform`
- * وحدَها ٣١، و`site` ٢٩، و`drivers` ٢٧.
- *
- * **والعددُ يتبع المساحةَ لا الجهاز**: `minmax` مع `auto-fill` تختار
- * بنفسها كم بطاقةً تسع، **فلا رقمَ مثبَّتٌ يضيّق حقلاً في شاشةٍ متوسّطة.**
- * والحدُّ الأدنى `20rem` — أضيقُ منه يقصّ حقلَ الرقم ولافتتَه.
- */
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[\u0622\u0623\u0625]/g, "\u0627")
+    .replace(/\u0629/g, "\u0647")
+    .replace(/\u0649/g, "\u064A");
+}
+
+/** **اسمُ الصلاحيّة اللازمة لتحرير المفتاح** — بالمنطق نفسِه في المحرّك. */
+function capOf(s: Setting): string {
+  if (s.key.startsWith("security.")) return "settings.security.manage";
+  if (s.risk) return "settings.financial.manage";
+  return "settings.general.manage";
+}
+const capName = (c: string) => (U.capNames as Record<string, string>)[c] ?? c;
+
 const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]";
-
-/**
- * **وما لا يسع عموداً واحداً يمتدّ على الصفّ كلِّه.**
- *
- * **الخريطةُ والصورةُ والنصُّ الطويلُ والملفّ** — أربعةٌ لو حُشرت في
- * `20rem` لصارت غيرَ صالحةٍ للاستعمال: **دبّوسٌ يُلتقط في نافذةٍ بعرض
- * إبهام.** **والباقي كلُّه يسع عموداً** — رقمٌ ولافتةٌ وزرّ.
- */
 const WIDE: ReadonlySet<Kind> = new Set<Kind>(["geo", "media", "longtext", "file"]);
 
 const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_background"> = {
@@ -210,52 +153,64 @@ const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_bac
   "auth.background": "auth_background",
   "auth.background_mobile": "auth_background",
   "platform.background": "site_background",
-  /* **والنسخُ الجوّالةُ من نوع أخواتها.**
-
-     (كُشف ٢٠٢٦-٠٨-٠٩ عند مراجعة الشاشة: أربعةُ مفاتيحَ جديدةٍ تسقط إلى
-      `platform_logo` — **فتُرفع خلفيّةُ صفحةٍ بحدودِ شعارٍ ومصغَّرتِه.**)
-
-     **والنوعُ يحكم الحدَّ والمصغَّرة**: شعارٌ يُصغَّر إلى مئتين، وخلفيّةٌ
-     تحتاج ألفين. **ولا يظهر الخطأُ إلّا صورةً باهتةً ممطوطة.** */
   "platform.background_mobile": "site_background",
 };
 
+/** **الألواحُ المخصَّصةُ في العمود** — والبحثُ يجدها بأسمائها. */
+const PANELS: { key: string; topic: string; label: string; adminOnly?: boolean }[] = [
+  { key: "appStatus", topic: "launch", label: m.admin.appStatus.title },
+  { key: "hours", topic: "launch", label: m.admin.platformHours.title },
+  { key: "release", topic: "apps", label: m.admin.release.title },
+  { key: "divisions", topic: "coverage", label: m.admin.divisions.title },
+  { key: "cities", topic: "coverage", label: m.admin.cities.title },
+  { key: "zones", topic: "coverage", label: m.terms.zones },
+  { key: "whatsapp", topic: "whatsapp", label: m.admin.nav.whatsapp },
+  { key: "broadcast", topic: "whatsapp", label: m.admin.broadcast.title, adminOnly: true },
+];
+
+/** **الألواحُ تُضاف بعد مواضيع المفاتيح.** */
+const PANEL_TOPICS = ["coverage", "whatsapp"];
+
+function visibleIn(s: Setting, all: Setting[]): boolean {
+  if (!s.show_when) return true;
+  const on = all.find((x) => x.key === s.show_when!.key);
+  if (!on) return false;
+  if (s.show_when.not_empty) return on.value !== "" && on.value != null;
+  return (s.show_when.equals ?? []).includes(String(on.value));
+}
+
+/** **أقسامٌ بترتيب أوّل ظهور** — فترتيبُ الفهرس هو ما يُرى. */
+function groupBy(items: Setting[], f: (s: Setting) => string): { name: string; items: Setting[] }[] {
+  const out: { name: string; items: Setting[] }[] = [];
+  const at = new Map<string, number>();
+  for (const it of items) {
+    const name = f(it);
+    const i = at.get(name);
+    if (i === undefined) {
+      at.set(name, out.length);
+      out.push({ name, items: [it] });
+    } else {
+      out[i]!.items.push(it);
+    }
+  }
+  return out;
+}
+
 export default function SettingsPage() {
-  const { user: me, can } = useAuth();
-  // **وتحريرُ لوح الإعدادات العامّ** — `settings.general.manage`.
-  // **والمحرّكُ يحسم كلَّ مفتاحٍ بأثره** (`settingCapability`)،
-  // **وهذه عينٌ لا يد.**
+  const { can } = useAuth();
   const isAdmin = can("settings.general.manage");
   const [list, setList] = useState<Setting[] | null>(null);
+  const [topics, setTopics] = useState<string[]>([]);
   const [error, setError] = useState("");
-  /** التبويبُ المفتوح — وفراغُه يعني «أوّلَ مجموعةٍ يرسلها الخادم». */
-  const [tab, setTab] = useState("");
-  /** **القسمُ المفتوح داخلَ المجموعة** — وفارغٌ يعني «أوّلُه». */
-  const [sec, setSec] = useState("");
-  /** **ترتيبُ الأقسام من الخادم** — فيه القسمُ الفارغُ الذي لا مفتاحَ فيه بعد. */
-  const [order, setOrder] = useState<string[]>([]);
-  /**
-   * ══════════════════════════════════════════════════════════════════
-   * **والبحثُ يتخطّى التبويبات كلَّها**
-   * ══════════════════════════════════════════════════════════════════
-   *
-   * (قرارُ المالك ٢٠٢٦-٠٩-٠٥: «نتيجة البحث يجب أن تعرض Cards المطابقة
-   *  بصورة صحيحة حتى لو كانت Sections مطوية».)
-   *
-   * **ومئةٌ وثمانيةَ عشرَ مفتاحاً في سبعة تبويباتٍ وصناديقَ داخلها**:
-   * من يعرف ما يريد يبحث عنه، **ولا يتنقّل في سبعةِ ألسنةٍ يفتّش.**
-   *
-   * **ويبحث في الاسم المعروض وفي المفتاح الخام معاً** — فمن قرأ
-   * `sales.commission_percent` في وثيقةٍ يجده بها، **ومن يعرف «عمولة
-   * المندوب» وحدَها يجده بها.**
-   */
+  const [topic, setTopic] = useState("");
+  const [sub, setSub] = useState("");
   const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const res = await api<{ settings: Setting[]; groups: string[] }>("/api/v1/admin/settings");
+      const res = await api<{ settings: Setting[]; topics?: string[] }>("/api/v1/admin/settings");
       setList(res.settings ?? []);
-      setOrder(res.groups ?? []);
+      setTopics(res.topics ?? []);
       setError("");
     } catch (err) {
       setError(errorText(err));
@@ -264,150 +219,59 @@ export default function SettingsPage() {
 
   useEffect(() => {
     void load();
+    // **ورابطٌ من الرئيسيّة يفتح موضوعَه** (`?topic=site`).
+    if (typeof window !== "undefined") {
+      const t = new URLSearchParams(window.location.search).get("topic");
+      if (t) setTopic(t);
+    }
   }, [load]);
 
-  // **نمطُ الهامش يُقرأ مرّةً للصفحة** — تتبعه لافتةُ حقل القيمة.
-  const marginMode = String(
-    list?.find((x) => x.key === "pricing.margin_mode")?.value ?? "percent",
-  );
+  const allTopics = useMemo(() => [...topics, ...PANEL_TOPICS], [topics]);
 
-  /**
-   * المجموعات **بترتيب الخادم** لا بترتيب أبجديّ: المفاتيح مجموعةٌ بالموضوع،
-   * وبعثرتُها تفصل «مهلة القبول» عن «مهلة التوصيل».
-   *
-   * **والترتيبُ يأتي قائمةً صريحةً لا مشتقّاً من المفاتيح.** كان يُشتقّ —
-   * أوّلُ ظهورٍ للمجموعة هو موضعُها — **فقسمٌ بلا مفاتيحَ لا يظهر أصلاً**،
-   * ولا يُبنى قسمٌ يُملأ على مراحل.
-   */
-  /**
-   * **ولا يُعرض مفتاحٌ لا أثرَ له في الوضع الحاليّ.**
-   *
-   * مهلةُ العرض لا تُستعمل في «الأسرع» — **وحقلٌ لا أثرَ له يُضبط ثمّ
-   * يُنتظر أثرُه فلا يقع**، فيُشكّ في الشاشة كلِّها.
-   *
-   * **والشرطُ من الخادم لا من هنا**: الفهرسُ يقوله (`ShowWhen`)، **ولو كُتب
-   * في الواجهة لَافترق عمّا يعمل به المحرّك.**
-   *
-   * (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «مهلةُ العرض يجب أن تظهر فقط بوضع التساوي».)
-   */
-  const visible = useCallback(
-    (s: Setting, all: Setting[]) => {
-      if (!s.show_when) return true;
-      const on = all.find((x) => x.key === s.show_when!.key);
-      if (!on) return false;
-      // **وشرطُ «غيرِ الفارغ» للوسائط**: معرّفُ الصورة نصٌّ عشوائيّ لا يُقارن
-      // بقائمة، **والسؤالُ الوحيدُ المفيدُ عنه أرُفعت أم لا.**
-      if (s.show_when!.not_empty) return on.value !== "" && on.value != null;
-      return (s.show_when!.equals ?? []).includes(String(on.value));
-    },
-    [],
-  );
-
-  const groups = useMemo(() => {
-    if (!list) return [];
-    return order.map((g) => ({
-      g,
-      items: list.filter((s) => s.group === g && visible(s, list)),
-    }));
-  }, [list, order, visible]);
-
-  /* **والخطّافُ فوق الخروج المبكّر لا تحته.**
-
-     **وُضع تحته أوّلَ مرّة** (٢٠٢٦-٠٩-٠٥) — **فأوّلُ رسمةٍ تخرج قبل أن
-     يُنادى والثانيةُ تناديه**، فيتبدّل عددُ الخطّافات بين رسمتين
-     ويرمي React: «Rendered more hooks than during the previous render».
-     **والشاشةُ تُقرأ عطباً في المتصفّح وحدَه** — لا البناءُ يمسكه ولا
-     الأنواع. */
-/**
-   * **نتائجُ البحث من القائمة كلِّها — لا من التبويب المفتوح.**
-   *
-   * **و`visible` تُحترم كما هي**: مفتاحٌ أخفاه `show_when` لا يظهر في
-   * البحث أيضاً، **وإلّا فُتح بابٌ لضبط ما لا أثرَ له.**
-   */
   const found = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = norm(q.trim());
     if (!needle || !list) return null;
-    return list.filter(
+    const keys = list.filter(
       (s) =>
-        visible(s, list) &&
-        (s.key.toLowerCase().includes(needle) ||
-          label(s.key).toLowerCase().includes(needle) ||
-          hint(s.key).toLowerCase().includes(needle)),
+        !s.hidden &&
+        visibleIn(s, list) &&
+        (norm(s.key).includes(needle) ||
+          norm(label(s.key)).includes(needle) ||
+          norm(hint(s.key)).includes(needle)),
     );
-  }, [q, list, visible]);
+    const panels = PANELS.filter(
+      (p) => (!p.adminOnly || isAdmin) && norm(p.label).includes(needle),
+    );
+    return { keys, panels };
+  }, [q, list, isAdmin]);
 
-  // **والخطأُ قبل الدوّارة** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان ٤٠٣ أو انقطاعٌ يُبقي الصفحةَ تدور
-  // إلى الأبد، **والسببُ مكتوبٌ تحتها ولا يُرى.**
   if (!list && error) return <Alert>{error}</Alert>;
   if (!list) return <LoadingState variant="text" />;
 
-  /**
-   * **التبويباتُ نوعان في شريطٍ واحد.**
-   *
-   * مجموعاتُ المفاتيح تأتي من الخادم — **ولا مجموعةَ اليومَ**، فالفهرسُ فارغٌ
-   * يُبنى بقرار. **وشاشتان ليستا مفاتيح**: المناطقُ وبوتُ واتساب. وكانتا
-   * قسمين مستقلّين في القائمة الجانبية **وهما ضبطٌ لا تشغيل** — ومن يفتح
-   * «الإعدادات» يبحث فيهما عمّا لا يجده.
-   *
-   * قرارُ المالك (٢٠٢٦-٠٨-٠٣): «مناطقُ التغطية تكون بالإعدادات · بوتُ واتساب
-   * أيضاً بالإعدادات · الإعداداتُ تكون تبويباتٍ لكلّ قسمٍ زرُّ تبويب».
-   *
-   * # ولماذا ذهب تبويبُ العمولات
-   *
-   * كان صفحةً تجمع نسبَ المال كلَّها في نظرةٍ واحدة **لأنّ مفاتيحَها كانت
-   * متفرّقةً بين أربع مجموعات** — فلولاه لَضاعت النظرةُ الجامعة.
-   *
-   * **وقد ذهب سببُه**: لا مفتاحَ في المنصة يجمعه، **وشاشةٌ تجمع لا شيءَ
-   * تُفتح فتُقرأ عطباً.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «قسم العمولات احذفه،
-   * وقسم جديد أيضاً — فقط البوت والمناطق اتركها».)
-   *
-   * **وحين تعود مفاتيحُ المال يُقرَّر عندها**: أتُجمع في شاشةٍ أم تكفيها
-   * مجموعتُها؟ — **والجوابُ يتبع أين وقعت، لا ما كان.**
-   */
-  /* **وأقسامٌ ليست مفاتيحَ** — محرّرٌ للمناطق، وضبطٌ لبوت واتساب، **وإعلانُ
-     المنصة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «إعلان المنصة انقله على الإعدادات
-     قسمٌ لوحده».)
+  const active = topic && allTopics.includes(topic) ? topic : (allTopics[0] ?? "");
+  const readOnlyAll = list.length > 0 && list.every((s) => !(s.editable ?? false));
+  const goPanel = (t: string, panel: string) => {
+    setTopic(t);
+    setSub(panel);
+    setQ("");
+  };
 
-     **وموضعُه كان مبدئيّاً بنصّه**: نُقل إلى بابٍ مستقلٍّ ٢٠٢٦-٠٨-٠٧
-     «مبدئيّاً لبين ما ننتقل إلى لوحة الأدمن ونرتّبها» — وهذا أوانُه.
-
-     **والإرسالُ للمالك وحدَه**: كان البابُ محجوزاً بـ`roles: ["admin"]`،
-     **فيبقى محجوزاً تبويباً** — لا يُرسَم لغيره أصلاً. */
-  const extra = [
-    // **وحالُ التطبيق أوّلُ ما يُسأل عنه قبل الافتتاح** — **ومن أراد
-    // أن يعرف «هل فُتحنا؟» لا ينبغي أن يفتّش في سبعِ رايات.**
-    { key: "appStatus", label: m.admin.appStatus.title },
-    // **وحدُّ نسخةِ التطبيق — تحديثٌ إلزاميٌّ بخطوةِ تحقّق** (F، ٢٠٢٦-٠٩-٢٧).
-    { key: "release", label: m.admin.release.title },
-    // **والمدنُ قبل المناطق** — **المنطقةُ بنتُ المدينة**، ومن قرأ
-    // «مناطق» قبل أن يعرف أنّ للمنصّة مدناً ظنّ التغطيةَ طبقةً واحدة.
-    { key: "divisions", label: m.admin.divisions.title },
-    { key: "cities", label: m.admin.cities.title },
-    { key: "zones", label: m.terms.zones },
-    // **ودوامُ المنصّة بعد المناطق** — **التغطيةُ مكانٌ وهذا وقت.**
-    { key: "hours", label: m.admin.platformHours.title },
-    { key: "whatsapp", label: m.admin.nav.whatsapp },
-    ...(isAdmin ? [{ key: "broadcast", label: m.admin.broadcast.title }] : []),
-  ];
-  const extraKeys = extra.map((x) => x.key);
-  // **وأوّلُ تبويبٍ مفتوحٍ أوّلُ ما يُعرض فعلاً.**
-  //
-  // كان `groups[0]` — **والمجموعاتُ فارغةٌ اليوم**، فيبقى `active` فراغاً
-  // ولا يُفتح شيء: **شريطُ تبويباتٍ وتحته بياض.**
-  const active = tab || groups[0]?.g || extraKeys[0] || "";
-  const activeGroup = groups.find((x) => x.g === active);
-
+  const row = (s: Setting) => (
+    <SettingRow key={s.key} s={s} all={list} editable={s.editable ?? false} onSaved={load} />
+  );
 
   return (
     <div>
       <PageHeader icon={IconSettings} title={m.admin.settingsPage.title} />
       <p className="mb-4 text-sm text-ink-muted">{m.admin.settingsPage.hint}</p>
 
-      {error && (
-        <Alert className="mb-4">{error}</Alert>
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {readOnlyAll && (
+        <Alert tone="info" className="mb-4">
+          {U.readOnly.replace("{cap}", capName("settings.general.manage"))}
+        </Alert>
       )}
 
-      {/* **وحقلُ البحث فوق التبويبات لا داخلَ واحدٍ منها** — فهو يعبرها. */}
       <div className="mb-4">
         <Input
           id="settings-search"
@@ -420,268 +284,328 @@ export default function SettingsPage() {
       </div>
 
       {found !== null ? (
-        found.length === 0 ? (
+        found.keys.length === 0 && found.panels.length === 0 ? (
           <EmptyState icon={IconSettings} title={S.searchNoResults} />
         ) : (
-          <>
-            <p className="mb-3 text-xs text-ink-muted">
-              {S.searchCount.replace("{n}", String(found.length))}
+          <div className="space-y-3">
+            <p className="text-xs text-ink-muted">
+              {S.searchCount.replace("{n}", fmtNum(found.keys.length + found.panels.length))}
             </p>
+            {found.panels.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {found.panels.map((p) => (
+                  <Button key={p.key} variant="secondary" onClick={() => goPanel(p.topic, p.key)}>
+                    {p.label} · {U.searchIn.replace("{topic}", topicLabel(p.topic))}
+                  </Button>
+                ))}
+              </div>
+            )}
             <div className={GRID}>
-              {found.map((s) => (
-                <SettingRow
-                  key={s.key}
-                  s={s}
-                  editable={s.editable ?? false}
-                  onSaved={load}
-                  marginMode={marginMode}
-                />
-              ))}
+              {found.keys.map((s) =>
+                s.panel ? (
+                  <Card key={s.key}>
+                    <p className="font-medium">{label(s.key)}</p>
+                    <p className="mt-1 text-xs text-ink-muted">
+                      {U.searchIn.replace("{topic}", topicLabel(s.topic))}
+                    </p>
+                    <Button
+                      variant="secondary"
+                      className="mt-2"
+                      onClick={() => goPanel(s.topic, s.panel!)}
+                    >
+                      {U.openPanel.replace(
+                        "{panel}",
+                        PANELS.find((p) => p.key === s.panel)?.label ?? s.panel!,
+                      )}
+                    </Button>
+                  </Card>
+                ) : (
+                  <div key={s.key} className={WIDE.has(s.kind) ? "col-span-full" : ""}>
+                    <p className="mb-1 text-xs text-ink-muted">
+                      {U.searchIn.replace("{topic}", topicLabel(s.topic))}
+                    </p>
+                    {row(s)}
+                  </div>
+                ),
+              )}
             </div>
-          </>
+          </div>
         )
       ) : (
-      <>
-      <Tabs
-        className="mb-4"
-        items={[
-          ...groups.map((x) => ({ key: x.g, label: (S.groups as Record<string, string>)[x.g] ?? x.g })),
-          ...extra,
-        ]}
-        value={active}
-        /* **وتبديلُ المجموعة يُصفّر القسمَ المفتوح** — وإلّا حُمل اسمُ
-           قسمٍ من مجموعةٍ إلى أخرى لا وجودَ له فيها، **فيسقط الاختيارُ إلى
-           أوّلها بلا سبب يُرى.** */
-        onChange={(k) => {
-          setTab(k);
-          setSec("");
-        }}
-      />
+        <div className="flex flex-col gap-4 md:flex-row">
+          {/* **العمودُ الجانبيّ بالموضوع** — وفي الشاشة الضيّقة شريطٌ يُمرَّر أفقيّاً. */}
+          <nav className="flex shrink-0 gap-1 overflow-x-auto md:w-56 md:flex-col md:overflow-visible">
+            {allTopics.map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-current={active === t}
+                onClick={() => {
+                  setTopic(t);
+                  setSub("");
+                }}
+                className={`whitespace-nowrap rounded-control px-3 py-2 text-start text-sm transition-colors ${
+                  active === t
+                    ? "bg-primary font-bold text-on-bright elev-1"
+                    : "text-ink-muted hover:bg-row-hover hover:text-ink"
+                }`}
+              >
+                {topicLabel(t)}
+              </button>
+            ))}
+          </nav>
 
-      {activeGroup &&
-        (activeGroup.items.length === 0 ? (
-          /* **قسمٌ فارغٌ يقول إنّه فارغٌ عمداً.**
-
-             شاشةٌ بيضاءُ تُقرأ عطباً: يظنّ من فتحها أنّ التحميل تعثّر فيُعيد،
-             **أو أنّ إعداداتِه اختفت.** والفراغُ هنا مرحلةٌ لا خلل — يُملأ
-             مفتاحاً مفتاحاً. */
-          <EmptyState
-            icon={IconSettings}
-            title={S.emptyGroup}
-            action={<p className="text-xs text-ink-muted">{S.emptyGroupHint}</p>}
-          />
-        ) : (
-          /* ══════════════════════════════════════════════════════════
-             **وأقسامُ المجموعة تبويباتٌ متجاورةٌ لا صناديقُ متراكمة**
-             ══════════════════════════════════════════════════════════
-
-             (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «صفحات الموقع يجب أن تكون جانب الهويّة
-              البصريّة لا تحتها — لأنّ هيك بدنا نظلّ ننزل لتحت كلّ ما بدنا
-              تعديل، مو معقولة. نخلّي التبويبات الرئيسيّة بجانب بعض، وإذا في
-              داخل التبويب تبويبات فرعيّة».)
-
-             **وصندوقان متراكمان يعني تمريراً في كلّ تعديل** — ومن أراد
-             الثاني مرّ بالأوّل كلِّه. **والتبويبُ يُظهر واحداً ويُخفي ما
-             سواه**، فيبقى ما تضبطه في أعلى الشاشة أبداً.
-
-             **ولا تظهر التبويباتُ إلّا حين تُغني**: قسمٌ واحدٌ لا يُبوَّب —
-             **شريطُ تبويبٍ فيه واحدٌ زينةٌ تأخذ سطراً.** والمجموعاتُ القديمةُ
-             بلا أقسامٍ تبقى كما كانت: مفاتيحُ في مجرًى واحد.
-
-             **وما لا قسمَ له يعلو التبويبات** — لا يُدفن في أحدها ولا
-             يُخترع له بيت. */
-          <div className="space-y-3">
-            {(() => {
-              const secs = sectionsOf(activeGroup.items);
-              const loose = secs.find((x) => !x.name);
-              /* ══════════════════════════════════════════════════════
-                 **وأقسامُ الصفحات لا تصعد إلى الشريط الأعلى**
-                 ══════════════════════════════════════════════════════
-
-                 (شكوى المالك ٢٠٢٦-٠٨-٠٩: «خلفيّة شاشة الدخول وخلفيّة الموقع
-                  ضفتهنّ بمكانين — بتبويبٍ لحالهنّ وبنفس الوقت بإعدادات
-                  الموقع، وهذا غلط».)
-
-                 **وسببُه أنّي جمعتُ كلَّ اسمِ قسمٍ في الشريط** — وأقسامُ
-                 الصفحات أسماءٌ كغيرها (`page.auth`)، **فصعدت مرّةً بنفسها
-                 ومرّةً داخلَ «صفحات الموقع».** وظهرت بمفاتيحها خامّةً لأنّه
-                 لا اسمَ لها في المعجم: **اسمُ الصفحة هناك لا اسمُ القسم.**
-
-                 **فما بدأ بـ`page.` بيتُه واحد**: لوحُ الصفحات. */
-              const names = [
-                ...secs.filter((x) => x.name && !x.name.startsWith("page.")).map((x) => x.name),
-                ...(active === "site" ? ["pages"] : []),
-              ];
-              const at = names.includes(sec) ? sec : (names[0] ?? "");
-
-              return (
-                <>
-                  {!!loose?.items.length && (
-                    <div className={GRID}>
-                      {loose.items.map((s) => (
-                        <SettingRow
-                          key={s.key}
-                          s={s}
-                          editable={s.editable ?? false}
-                          onSaved={load}
-                          marginMode={marginMode}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {names.length > 1 && (
-                    <Tabs
-                      items={names.map((n) => ({ key: n, label: sectionLabel(n) }))}
-                      value={at}
-                      onChange={setSec}
-                    />
-                  )}
-
-                  {names.length === 1 && (
-                    <h2 className="heading-card">{sectionLabel(at)}</h2>
-                  )}
-
-                  {at === "pages" ? (
-                    <SitePagesPanel
-                      render={(section) => {
-                        const rows = activeGroup.items.filter((s) => s.section === section);
-                        /* **ولافتاتُ التسوّق فوق مفاتيحها.**
-
-                           (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «نضيف السلايدر بالإعدادات
-                            لصفحة التسوّق مع العمل التلقائيّ حسب الثواني».)
-
-                           **واللافتاتُ ليست مفاتيحَ إعدادات** — صفوفٌ تُضاف
-                           وتُحذف. **والمهلةُ تحتها**: من بدّل لافتةً يبدّل
-                           مهلتَها في الشاشة نفسِها. */
-                        const shop = section === "page.shop";
-                        /* **ولافتاتُ الرئيسيّة في قسمها** — (تصحيحُ المالك
-                           ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
-                           الرئيسيّة»). **والضبطُ يُطلب حيث يُرى أثرُه.** */
-                        const home = section === "page.home";
-                        if (!shop && !home && rows.length === 0) return null;
-                        return (
-                          <div className="space-y-4">
-                            {/* **وبطاقةُ لافتات التسوّق حُذفت** — (قرارُ المالك
-                                ٢٠٢٦-٠٨-١٨: «أريد حذفَ سلايدر التسوّق وربطَ
-                                التطبيق بسلايدر الرئيسيّة»).
-
-                                **وبطاقةٌ تبقى لموضعٍ لا يقرؤه أحدٌ بابٌ يُفتح
-                                فتُرفع فيه صورةٌ لا تُرى** — وهي عائلةُ الخلل
-                                نفسُها التي نُظّفت في «أبوابٌ لا ينادِيها أحد». */}
-                            {(shop || home) && <BannersPanel isAdmin={isAdmin} placement="home" />}
-                            <div className={GRID}>
-                            {rows.map((s) => (
-                              <SettingRow
-                                key={s.key}
-                                s={s}
-                                editable={s.editable ?? false}
-                                onSaved={load}
-                                marginMode={marginMode}
-                              />
-                            ))}
-                            </div>
-                          </div>
-                        );
-                      }}
-                    />
-                  ) : (
-                    <div className={GRID}>
-                      {/* **وما لا قسمَ له لا يُرسم مرّتين.**
-
-                          (شكوى المالك ٢٠٢٦-٠٨-٠٩ على قسم «التطبيق»: «ليش
-                           مكرّرٌ مرّتين».)
-
-                          **مجموعةٌ بلا أقسامٍ اسمُ قسمها فارغ** — فتُرسم
-                          مرّةً بوصفها «سائبة» فوق التبويبات، **ومرّةً لأنّ
-                          القسمَ المفتوح فارغٌ هو أيضاً** فيطابقها.
-
-                          **فيُشترط اسمٌ غيرُ فارغ** — والسائبةُ لها موضعُها
-                          أعلاه. */}
-                      {(at ? (secs.find((x) => x.name === at)?.items ?? []) : []).map((s) => (
-                        <SettingRow
-                          key={s.key}
-                          s={s}
-                          editable={s.editable ?? false}
-                          onSaved={load}
-                          marginMode={marginMode}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+          <div className="min-w-0 flex-1 space-y-4">
+            <TopicBody
+              topic={active}
+              list={list}
+              sub={sub}
+              setSub={setSub}
+              isAdmin={isAdmin}
+              row={row}
+            />
           </div>
-        ))}
-      {active === "divisions" && <DivisionsPanel />}
-      {active === "cities" && <CitiesPanel />}
-      {active === "zones" && <ZonesPanel />}
-      {active === "hours" && <HoursPanel />}
-      {active === "appStatus" && <AppStatusPanel />}
-      {active === "release" && <ReleasePanel />}
-      {active === "whatsapp" && <WhatsAppPanel />}
-      {/* **والإعلانُ فعلٌ لا إعداد** — فيُقال ما هو قبل نموذجه: رسالةٌ تُرسل
-          ولا تُسحب. واللوحُ نفسُه يسأل قبل الإرسال ويقول كم حساباً ستصل. */}
-      {active === "broadcast" && isAdmin && (
-        <div className="space-y-3">
-          <p className="text-sm text-ink-muted">{m.admin.broadcast.hint}</p>
-          <BroadcastPanel />
-          {/* **ومركزُ الحملات بجانبه** — **الإعلانُ يُرسل في الحال،
-              وهذه تُجدوَل وتُلغى ويبقى لها أثرٌ يُقرأ.** */}
-          <CampaignsPanel />
         </div>
-      )}
-      </>
       )}
     </div>
   );
 }
 
+function TopicBody({
+  topic,
+  list,
+  sub,
+  setSub,
+  isAdmin,
+  row,
+}: {
+  topic: string;
+  list: Setting[];
+  sub: string;
+  setSub: (v: string) => void;
+  isAdmin: boolean;
+  row: (s: Setting) => React.ReactNode;
+}) {
+  const items = list.filter(
+    (s) => s.topic === topic && !s.hidden && !s.panel && visibleIn(s, list),
+  );
+
+  if (topic === "coverage") {
+    const tabs = PANELS.filter((p) => p.topic === "coverage");
+    const at = tabs.some((p) => p.key === sub) ? sub : tabs[0]!.key;
+    return (
+      <>
+        <Tabs items={tabs.map((p) => ({ key: p.key, label: p.label }))} value={at} onChange={setSub} />
+        {at === "divisions" && <DivisionsPanel />}
+        {at === "cities" && <CitiesPanel />}
+        {at === "zones" && <ZonesPanel />}
+      </>
+    );
+  }
+  if (topic === "whatsapp") {
+    return (
+      <>
+        <WhatsAppPanel />
+        {isAdmin && (
+          <div className="space-y-3">
+            <h2 className="heading-card">{m.admin.broadcast.title}</h2>
+            <p className="text-sm text-ink-muted">{m.admin.broadcast.hint}</p>
+            <BroadcastPanel />
+            <CampaignsPanel />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  /* **صفحاتُ الموقع تبويباتٌ بأسمائها** — ومنها «من نحن» وتعليماتُ السائق
+     والمندوب والمتجر (البند ٢٧): كانت لا تُبلَغ إلّا بالبحث. */
+  const sections = groupBy(items, (s) => s.topic_section ?? "");
+  return (
+    <>
+      {topic === "money" && <MoneyExample version={list} />}
+      {topic === "launch" && <AppStatusPanel />}
+      {topic === "apps" && <ReleasePanel />}
+
+      {sections.map((sec) => {
+        if (sec.name === "site.pages") {
+          const pages = groupBy(sec.items, (s) => s.section ?? "");
+          const at = pages.some((p) => p.name === sub) ? sub : (pages[0]?.name ?? "");
+          return (
+            <section key={sec.name} className="space-y-3">
+              <h2 className="heading-card">{topicSectionLabel(sec.name)}</h2>
+              <Tabs
+                items={pages.map((p) => ({ key: p.name, label: sectionLabel(p.name) }))}
+                value={at}
+                onChange={setSub}
+              />
+              <div className={GRID}>{pages.find((p) => p.name === at)?.items.map(row)}</div>
+            </section>
+          );
+        }
+        if (sec.name === "site.office") {
+          return (
+            <section key={sec.name} className="space-y-2">
+              <h2 className="heading-card">{U.office.title}</h2>
+              <Alert tone="info">{U.office.hint}</Alert>
+              <div className={GRID}>{sec.items.map(row)}</div>
+            </section>
+          );
+        }
+        return (
+          <section key={sec.name || "_"} className="space-y-2">
+            {sec.name && topicSectionLabel(sec.name) && (
+              <h2 className="heading-card">{topicSectionLabel(sec.name)}</h2>
+            )}
+            <div className={GRID}>{sec.items.map(row)}</div>
+          </section>
+        );
+      })}
+
+      {topic === "launch" && <HoursPanel />}
+      {sections.length === 0 && topic !== "launch" && topic !== "apps" && (
+        <EmptyState icon={IconSettings} title={S.emptyGroup} />
+      )}
+    </>
+  );
+}
+
+interface Example {
+  amount: number;
+  delivery_fee: number;
+  customer_pays: number;
+  merchant_gets: number;
+  driver_gets: number;
+  rep_gets: number;
+  platform_gets: number;
+}
+
+/**
+ * **مثالٌ ماليٌّ حيٌّ** — يحسبه المحرّكُ بدوالّ الطلب نفسِها
+ * (`/admin/settings/money-example`)، ويُعاد بعد كلّ حفظ.
+ */
+function MoneyExample({ version }: { version: unknown }) {
+  const [ex, setEx] = useState<Example | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    api<Example>("/api/v1/admin/settings/money-example?amount=50000")
+      .then((r) => {
+        setEx(r);
+        setFailed(false);
+      })
+      .catch(() => setFailed(true));
+  }, [version]);
+  const money = (n: number) => fmtMoney(n);
+  if (failed) return <Alert tone="warning">{U.example.failed}</Alert>;
+  if (!ex) return <LoadingState variant="text" />;
+  const lines: [string, number][] = [
+    [U.example.customer, ex.customer_pays],
+    [U.example.merchant, ex.merchant_gets],
+    [U.example.driver, ex.driver_gets],
+    [U.example.rep, ex.rep_gets],
+    [U.example.platform, ex.platform_gets],
+  ];
+  return (
+    <Card tone="accent">
+      <p className="mb-1 font-medium">{U.example.title}</p>
+      <p className="mb-2 text-sm text-ink-muted">
+        {U.example.intro.replace("{amount}", money(ex.amount)).replace("{fee}", money(ex.delivery_fee))}
+      </p>
+      <ul className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
+        {lines.map(([k, v]) => (
+          <li key={k} className="flex justify-between gap-3">
+            <span className="text-ink-muted">{k}</span>
+            <span className="font-medium tabular-nums">{money(v)}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/** **قيمةٌ بكلماتها** — للتأكيد «كان ← يصير». */
+function valueText(s: Setting, v: unknown): string {
+  if (s.kind === "bool") return boolText(s.key, v === true ? "on" : "off");
+  if (s.kind === "choice") return choiceText(String(v ?? ""));
+  if (s.kind === "percent") return `${fmtNum(Number(v ?? 0))}${unitText("percent")}`;
+  if (s.kind === "int" || s.kind === "money") {
+    const u = unitText(s.unit);
+    return u ? `${fmtNum(Number(v ?? 0))} ${u}` : fmtNum(Number(v ?? 0));
+  }
+  return String(v ?? "");
+}
+
+/** **أهي القيمةُ المحفوظةُ نفسُها؟** — فلا يُحفظ ما لم يتغيّر. */
+function same(s: Setting, raw: unknown): boolean {
+  if (s.kind === "int" || s.kind === "money" || s.kind === "percent") {
+    return Number(raw) === Number(s.value);
+  }
+  return raw === s.value || String(raw) === String(s.value ?? "");
+}
+
+/** **رسالةٌ لكلّ حالة فشل** (البند ١١) — لا «المدى المسموح» لكلّ رفض. */
+function saveError(s: Setting, err: unknown): string {
+  if (!(err instanceof ApiError)) return U.errors.network;
+  const code = err.body?.code ?? "";
+  const details = (err.body?.details ?? {}) as Record<string, unknown>;
+  if (code === "step_up_required") return U.errors.cancelled;
+  if (code.startsWith("step_up") || code === "invalid_password" || code === "wrong_password") {
+    return U.errors.wrongPassword;
+  }
+  if (err.status === 403) return U.errors.forbidden;
+  if (code === "setting_conflict") {
+    return U.errors.conflict.replace("{other}", label(String(details.with ?? "")));
+  }
+  if (code === "setting_placeholder_missing") {
+    return U.errors.placeholder.replace("{p}", String(details.placeholder ?? ""));
+  }
+  if (code === "validation") {
+    if ((s.kind === "int" || s.kind === "money" || s.kind === "percent") && s.max !== undefined) {
+      return U.errors.range
+        .replace("{min}", fmtNum(s.min ?? 0))
+        .replace("{max}", fmtNum(s.max));
+    }
+    return U.errors.invalid;
+  }
+  return errorText(err);
+}
+
 /**
  * صفٌّ واحد — يحرّر نفسه في مكانه.
- *
- * ولا نافذة منبثقة: النافذة تُخفي بقية الإعدادات، ومن يضبط «مهلة القبول» يريد
- * أن يرى «مهلة السائق» وهو يضبطها. والحفظ لكل صفٍّ على حدة لا زرّ واحد في
- * الأسفل — كي لا يحفظ من غيّر رقماً واحداً عشرين رقماً بلا قصد.
  */
 function SettingRow({
   s,
+  all,
   editable,
   onSaved,
-  marginMode,
 }: {
   s: Setting;
+  all: Setting[];
   editable: boolean;
   onSaved: () => void;
-  /** نمطُ الهامش — **تتبعه لافتةُ حقل القيمة**: «٪» أو «ل.س». */
-  marginMode: string;
 }) {
   const [draft, setDraft] = useState<string>(() => String(s.value ?? ""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [note, setNote] = useState("");
   const [saved, setSaved] = useState(false);
+  /** **ما ينتظر تأكيداً** — قيمةٌ ماليّةٌ أو بابُ إطلاق. */
+  const [pending, setPending] = useState<{ raw: unknown } | null>(null);
+  void all;
 
   useEffect(() => {
     setDraft(String(s.value ?? ""));
   }, [s.value]);
 
   const numeric = s.kind === "int" || s.kind === "money";
-  /**
-   * **هل يُنتظر حفظ؟**
-   *
-   * **والمفاتيحُ التي تُحفظ بالضغطة لا تنتظر شيئاً**: المنطقيُّ والخيارُ
-   * يُرسلان لحظةَ اللمس، **وزرُّ «حفظ» يظهر بجانبهما يقول إنّ شيئاً لم
-   * يُحفظ بعد** — فيُضغط مرّةً ثانية على ما حُفظ.
-   */
+  const gate = s.topic_section === "launch.gates" && s.kind === "bool";
   const dirty =
-    s.kind === "bool" || s.kind === "choice"
-      ? false
-      : draft !== String(s.value ?? "");
+    s.kind === "bool" || s.kind === "choice" ? false : draft !== String(s.value ?? "");
 
-  async function save(raw: unknown) {
+  async function doSave(raw: unknown) {
     setBusy(true);
     setError("");
+    setNote("");
     try {
       await api(`/api/v1/admin/settings/${s.key}`, {
         method: "PUT",
@@ -691,55 +615,64 @@ function SettingRow({
       setTimeout(() => setSaved(false), 2000);
       onSaved();
     } catch (err) {
-      // الخادم يردّ `validation` لكل رفض — والمدى معروفٌ هنا، فنقول السبب
-      setError(
-        err instanceof ApiError && numeric
-          ? S.range.replace("{min}", fmtNum(s.min ?? 0)).replace("{max}", fmtNum(s.max ?? 0))
-          : m.errors.validation,
-      );
+      setError(saveError(s, err));
+      // **والحقلُ يرجع إلى المحفوظ** (البند ١٥) — لا يبقى عارضاً ما لم يُحفظ.
+      setDraft(String(s.value ?? ""));
     } finally {
       setBusy(false);
+      setPending(null);
     }
+  }
+
+  /** **الحفظُ يمرّ من هنا** — بلا تغييرٍ لا نداء، والماليُّ والبابُ بتأكيد. */
+  function requestSave(raw: unknown) {
+    if (same(s, raw)) {
+      setDraft(String(s.value ?? ""));
+      setNote(U.unchanged);
+      setTimeout(() => setNote(""), 1500);
+      return;
+    }
+    if (s.risk === "money" || gate) {
+      setPending({ raw });
+      return;
+    }
+    void doSave(raw);
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (numeric) {
       const n = Number(draft);
-      if (!Number.isInteger(n)) return setError(m.errors.validation);
-      // الفحص قبل الشبكة: رحلةٌ إلى الخادم لتُردّ برسالة نعرفها سلفاً بطءٌ بلا سبب
+      if (!Number.isInteger(n)) return setError(U.errors.invalid);
       if ((s.min !== undefined && n < s.min) || (s.max !== undefined && n > s.max)) {
         return setError(
-          S.range.replace("{min}", fmtNum(s.min ?? 0)).replace("{max}", fmtNum(s.max ?? 0)),
+          U.errors.range.replace("{min}", fmtNum(s.min ?? 0)).replace("{max}", fmtNum(s.max ?? 0)),
         );
       }
-      return void save(n);
+      return requestSave(n);
     }
-    void save(draft);
+    requestSave(draft);
   }
 
+  const sliderMax = s.max && s.max > 0 ? s.max : 100;
+  const sliderMin = s.min ?? 0;
+  const commitSlider = () => requestSave(Number(draft === "" ? 0 : draft));
+
+  const gateOpen = pending?.raw === true;
+
   return (
-    /* **والحسّاسُ يُعرَف بحرفه لا بلونِ صفحةٍ كاملة.**
-
-       (قرارُ المالك ٢٠٢٦-٠٩-٠٥: «Distinction بصرياً واضحاً ولكن غير مزعج…
-        لا تجعل كل الصفحة حمراء».)
-
-       **والشارةُ تقول «حسّاس» والحدُّ يقوله قبل أن تُقرأ** — أربعةَ عشرَ
-       مفتاحاً من ١١٨، **فالحدُّ الملوَّنُ يبقى استثناءً يُرى.**
-
-       **والامتدادُ على الصفّ للأربعة الواسعة** — انظر `WIDE`. */
     <Card
-      tone={s.sensitive ? "accent" : "default"}
+      tone={s.risk ? "accent" : "default"}
       className={WIDE.has(s.kind) ? "col-span-full" : ""}
     >
       <form onSubmit={submit}>
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="font-medium">{label(s.key)}</span>
-          {s.sensitive && (
-            <Badge variant="warning">
+          {s.risk && (
+            <Badge variant={s.risk === "money" ? "warning" : "info"}>
               <span className="flex items-center gap-1">
                 <IconWarning size={12} />
-                {S.sensitive}
+                {s.risk === "money" ? U.riskMoney : U.riskSecurity}
               </span>
             </Badge>
           )}
@@ -754,59 +687,31 @@ function SettingRow({
               </span>
             </Badge>
           )}
+          {/* **رابطُ «السجل»** (البند ٩) — تاريخُ هذا المفتاح وحدَه، بلا سطر «آخر تغيير». */}
+          <a
+            href={`/dashboard/audit?entity=setting&entity_id=${encodeURIComponent(s.key)}`}
+            className="ms-auto text-xs text-ink-muted underline hover:text-ink"
+          >
+            {U.history}
+          </a>
         </div>
-        {/* **وشرحٌ فارغٌ لا يترك مكانَه.**
-
-            كان السطرُ يُرسَم دائماً — **فمفتاحٌ بلا شرحٍ يخلّف فراغاً بين
-            اسمه وزرّه** يُقرأ نقصاً: أين الجملةُ التي كانت هنا؟
-
-            **ولا كلَّ مفتاحٍ يحتاج شرحاً**: «وضع المنصة / وضع المتاجر» يقول
-            نفسَه، **وجملةٌ تشرح ما لا يحتاج شرحاً تُعلّم العينَ أن تتخطّى
-            الشروحَ كلَّها.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «بدون أيّ شرحٍ
-            وأشياءَ مزعجة، فقط زرٌّ ذكيّ».) */}
-        {hint(s.key) && (
+        {hint(s.key) && s.kind !== "geo" && (
           <p className="mb-3 text-xs leading-relaxed text-ink-muted">{hint(s.key)}</p>
         )}
 
         <div className="flex flex-wrap items-end gap-2">
           {s.kind === "bool" ? (
-            /* ══════════════════════════════════════════════════════════
-               **ومفتاحٌ واحدٌ يقول الحالَ بشكله**
-               ══════════════════════════════════════════════════════════
-
-               (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «سوِّهنّ أزراراً ذكيّة — زرٌّ ذكيّ:
-                مفعَّل، معطَّل، وخلص. ما بدّها كلّ هالشي».)
-
-               **كان ثلاثةَ أسطرٍ لمعنًى واحد**: اسمُ الإعداد في رأس الصفّ،
-               ثمّ سطرُ «الآن: مُفعَّل»، ثمّ مربّعُ اختيارٍ يحمل الاسمَ ثانية.
-
-               **والسطرُ الأوسطُ وُضع بحقٍّ يومَها** (قرارُ المالك ٢٠٢٦-٠٨-٠٤):
-               **مربّعُ اختيارٍ لا يقول أهو وصفُ الحال أم وصفُ ما سيصير.**
-               **والمفتاحُ يقوله بموضعه ولونه** — فلا يحتاج سطراً يترجمه.
-
-               **والاسمُ في رأس الصفّ وحدَه** — فيُمرَّر فارغاً هنا. */
             <Switch
               id={s.key}
               label=""
               checked={s.value === true}
               disabled={!editable || busy}
-              onChange={(next) => void save(next)}
+              onChange={(next) => requestSave(next)}
             />
           ) : s.kind === "choice" ? (
-            /* **أزرارٌ متجاورةٌ لا قائمةٌ منسدلة — والبدائلُ تُرى كلُّها.**
-
-               المنسدلةُ تعرض المختارَ وتُخفي ما سواه: **من فتح الصفحة لا
-               يعرف أنّ للإعداد بديلاً أصلاً** حتى يضغط. و«الأسرع التقاطاً»
-               وحدَها في مربّعٍ تُقرأ عنواناً لا خياراً.
-
-               **والمتجاورةُ تقول الحالَ والبديلَ معاً**: هذا ما يعمل الآن،
-               وهذا ما يصير إن ضغطت — وهو معنى الزرّ الذكيّ.
-
-               (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «خيارُ الطلبات تلقائي أو الأسرع
-               أيضاً لازم يكون زرّاً ذكيّاً».) */
             <div className="flex flex-wrap gap-1 rounded-control border border-line bg-field p-1">
               {(s.options ?? []).map((o) => {
-                const on = draft === o;
+                const on = String(s.value ?? "") === o;
                 return (
                   <button
                     key={o}
@@ -815,8 +720,7 @@ function SettingRow({
                     aria-pressed={on}
                     onClick={() => {
                       if (on) return;
-                      setDraft(o);
-                      void save(o);
+                      requestSave(o);
                     }}
                     className={`rounded-control px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
                       on
@@ -830,95 +734,50 @@ function SettingRow({
               })}
             </div>
           ) : s.kind === "percent" ? (
-            /* **شريطٌ يُسحب فيُرى الأثر.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «شريط
-               من ٠ إلى ١٠٠».)
-
-               **وحقلُ الرقم يُكتب ثمّ يُحفظ ثمّ يُنظر** — ثلاثُ خطواتٍ لضبط
-               شيءٍ يُحكَم عليه بالعين. **والرقمُ بجانبه يبقى** لمن أراد قيمةً
-               بعينها أو أراد أن ينقلها إلى منصّةٍ أخرى.
-
-               **ويُحفظ عند الإفلات لا مع كلّ بكسل** (`onMouseUp`/`onTouchEnd`
-               عبر `change`): **وإلّا صار سحبُ الشريط مئةَ نداءٍ للخادم.** */
+            /* **والشريطُ يحترم حدَّ الفهرس** (البند ١٣) — حصّةُ المنصّة تسعون لا
+               مئة. **ويُحفظ عند الإفلات وحدَه، وبلا تغييرٍ لا يُحفظ** (البند ١٤). */
             <div className="flex flex-1 items-center gap-3">
               <input
                 id={s.key}
                 type="range"
-                min={0}
-                max={100}
+                min={sliderMin}
+                max={sliderMax}
                 value={draft === "" ? 0 : Number(draft)}
                 disabled={!editable || busy}
                 onChange={(e) => setDraft(e.target.value)}
-                onMouseUp={() => void save(Number(draft))}
-                onTouchEnd={() => void save(Number(draft))}
-                onKeyUp={() => void save(Number(draft))}
+                onMouseUp={commitSlider}
+                onTouchEnd={commitSlider}
+                onKeyUp={(e) => {
+                  if (e.key.startsWith("Arrow") || e.key === "Home" || e.key === "End") commitSlider();
+                }}
                 className="h-1.5 flex-1 cursor-pointer appearance-none rounded-badge bg-field accent-accent"
               />
-              <span className="w-12 shrink-0 text-end text-sm font-medium tabular-nums text-primary-dark">
-                {draft === "" ? 0 : Number(draft)}%
+              <span className="w-14 shrink-0 text-end text-sm font-medium tabular-nums text-primary-dark">
+                {fmtNum(draft === "" ? 0 : Number(draft))}
+                {unitText("percent")}
               </span>
             </div>
           ) : s.kind === "file" ? (
-            /* **وملفٌّ يُرفع لا اسمٌ يُكتب.**
-
-               (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «رفع التطبيق بشكلٍ مباشر من خيار
-                رفع أيضاً».)
-
-               **والقيمةُ اسمُ الملفّ المخزَّن** يكتبه الخادمُ عند الرفع —
-               **واسمٌ يُكتب خطأً يعني زرَّ تنزيلٍ يقود إلى لا شيء.** */
+            /* **والرفعُ يذهب إلى مفتاحه** (البند ٥) — كان يذهب إلى المفتاح القديم. */
             <FileUpload
-              /* **ولا اسمَ ولا تلميحَ هنا** — رأسُ الصفّ كتبهما.
-                 (شكوى المالك ٢٠٢٦-٠٨-٠٩.) */
               label=""
               hint=""
               accept=".apk"
               present={typeof s.value === "string" && s.value !== ""}
-              path="/api/v1/admin/app-file"
+              path={`/api/v1/admin/app-file?key=${encodeURIComponent(s.key)}`}
               api={api}
-              errorText={(e) => (e instanceof ApiError ? e.message : m.errors.internal)}
+              errorText={(e) => (e instanceof ApiError ? errorText(e) : m.errors.internal)}
               onChange={onSaved}
             />
           ) : s.kind === "media" ? (
-            /* **وصورةٌ تُرفع لا معرّفٌ يُكتب.**
-
-               (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تنسَ إضافة هوية المنصة أيضاً —
-               الاسم واللوغو».)
-
-               **وقيمةُ الإعداد معرّفُ الوسيط**: المسارُ يتغيّر إن نُقل
-               التخزينُ، **والمعرّفُ يبقى** — والمسارُ يُشتقّ منه عند العرض.
-
-               **والرافعُ هو رافعُ اللوحة نفسُه** (`ImageUpload`) — بحدوده
-               وفحصه ومصغَّرته. **ورافعٌ ثانٍ يعني حدَّ حجمٍ ثانياً يفترق.** */
             <ImageUpload
-              /* **ونوعُ الوسيط من المفتاح لا مثبَّتاً.**
-
-                 كان `"platform_logo"` لكلّ مفتاحٍ من نوع `media` — **وكان
-                 صحيحاً يومَ كان المفتاحُ واحداً.** ولمّا جاءت خلفيّةُ الدخول
-                 **كانت سترفع صورتَها باسم «شعار المنصة»** — فتُخزَّن بنوعٍ
-                 ليس نوعَها، **ولا يظهر الخطأُ إلّا لمن يقرأ القاعدة.** */
               kind={MEDIA_KIND[s.key] ?? "platform_logo"}
-              /* **ولا اسمَ هنا** — رأسُ الصفّ كتبه.
-                 (شكوى المالك ٢٠٢٦-٠٨-٠٩: «هون مكرّرٌ الاسمُ مرّتين بدون
-                  سبب».) **والرافعُ مكوّنٌ عامٌّ يُستعمل في نماذجَ لا رأسَ
-                 لها**، فيحمل اسمَه — **وفي صفِّ إعدادٍ يصير الثاني.** */
               label=""
               initialUrl={typeof s.value === "string" && s.value ? s.media_url : null}
-              onChange={(id) => void save(id)}
+              onChange={(id) => requestSave(id)}
             />
           ) : s.kind === "longtext" ? (
-            /* ══════════════════════════════════════════════════════════
-                **ونصُّ صفحةٍ يُكتب في صندوقٍ لا في سطر**
-                ══════════════════════════════════════════════════════════
-
-               (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «جهّز الصفحات لتكون ديناميكيّةً
-                أتحكّم بها من لوحة التحكّم، أعدّل النصوص الموجودة».)
-
-               **والاتّفاقُ بسيط**: سطرٌ فارغٌ يفصل كرتاً عن كرت، **وأوّلُ
-               سطرٍ في الكرت عنوانُه** وما بعده فقراتُه.
-
-               **وفارغُه يعرض النصَّ الأصليّ** — فمن لم يمسّه لا ينكسر عنده
-               شيء، **ومن أفرغه بعد أن كتب يعود إلى الأصل** لا إلى صفحةٍ
-               بيضاء. */
-            <div className="space-y-2">
+            <div className="w-full space-y-2">
               <Textarea
                 id={s.key}
                 rows={12}
@@ -933,20 +792,7 @@ function SettingRow({
               <p className="text-xs leading-relaxed text-ink-muted">{S.longTextHint}</p>
             </div>
           ) : s.kind === "geo" ? (
-            /* ══════════════════════════════════════════════════════════
-                **وموقعٌ يُنقر لا رقمان يُكتبان**
-                ══════════════════════════════════════════════════════════
-
-               (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «صفحة تواصل معنا لازم صفحة خاصّة
-                فيها خريطة المكتب».)
-
-               **من يضبط موقعَ مكتبٍ لا يحفظ إحداثيّاته** — ومن كتبها بيده
-               وضع فاصلةً في غير موضعها **فوقع المكتبُ في بحر**، ولا يُقال
-               له لماذا لا تظهر الخريطة.
-
-               **والقيمةُ تُبنى من النقرة** بستّ منازلَ عشريّة — نحو عشرة
-               سنتيمترات، **وهو أدقُّ ممّا يحتاجه بابُ مكتب.** */
-            <div className="space-y-2">
+            <div className="w-full space-y-2">
               <div className="overflow-hidden rounded-control border border-line">
                 <PickMap
                   api={api}
@@ -955,27 +801,25 @@ function SettingRow({
                   height="h-56"
                   onPick={(la, ln) => {
                     if (!editable || busy) return;
-                    void save(`${la.toFixed(6)},${ln.toFixed(6)}`);
+                    requestSave(`${la.toFixed(6)},${ln.toFixed(6)}`);
                   }}
                 />
               </div>
-              <p className="text-xs leading-relaxed text-ink-muted">{hint(s.key)}</p>
               {draft ? (
-                <p className="text-xs text-ink-muted" dir="ltr">
-                  {draft}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-ink-muted" dir="ltr">
+                    {draft}
+                  </p>
+                  {editable && (
+                    <Button variant="ghost" disabled={busy} onClick={() => requestSave("")}>
+                      {U.clear}
+                    </Button>
+                  )}
+                </div>
               ) : null}
             </div>
           ) : (
             <>
-              {/* **وحقلُ النصّ يملأ السطر.**
-
-                  (شكوى المالك ٢٠٢٦-٠٨-٠٩: «حقلُ عنوان المكتب صغير».)
-
-                  **الصفُّ `flex`** — وحقلُ النصّ فيه لا ينمو إلّا إن قيل له،
-                  **فيبقى بعرضه الطبيعيّ** ويترك نصفَ الصفّ فارغاً.
-                  **والرقمُ يبقى ضيّقاً**: حقلٌ لثلاثةِ أرقامٍ بعرض الشاشة
-                  يُقرأ حقلَ نصّ. */}
               <Input
                 id={s.key}
                 type={numeric ? "number" : "text"}
@@ -991,62 +835,71 @@ function SettingRow({
                 className={numeric ? "w-40" : "w-full"}
                 wrapperClassName={numeric ? "" : "min-w-0 flex-1"}
               />
-              {/* **ولافتةُ الهامش تتبع نمطَه.**
-
-                  مفتاحٌ واحدٌ بمعنيين: «٣٠٠٠» ثلاثةُ آلاف ليرةٍ في الثابت،
-                  **وواحدٌ وثلاثون ضعفاً في النسبة.** وقد وقع فعلاً في تجربةٍ
-                  حيّة: كُتب ٣٠٠٠ قصداً للّيرة **فبِيع طلبٌ تكلفتُه ٦٥ ألفاً
-                  بمليونين** — والحقلُ لا يقول أيَّهما يُكتب. */}
-              {s.key === "pricing.margin_value" ? (
-                <span className="pb-2 text-sm font-medium text-primary-dark">
-                  {marginMode === "fixed" ? m.common.currency : "%"}
-                </span>
-              ) : (
-                s.unit && (
-                  <span className="pb-2 text-sm text-ink-muted">{unitText(s.unit)}</span>
-                )
-              )}
-              {editable && dirty && (
-                <Button type="submit" disabled={busy}>
-                  {m.common.save}
-                </Button>
-              )}
+              {s.unit && <span className="pb-2 text-sm text-ink-muted">{unitText(s.unit)}</span>}
             </>
+          )}
+          {editable && dirty && s.kind !== "percent" && s.kind !== "geo" && (
+            <Button type="submit" disabled={busy}>
+              {m.common.save}
+            </Button>
           )}
         </div>
 
-        {numeric && s.min !== undefined && s.max !== undefined && (
+        {(numeric || s.kind === "percent") && s.min !== undefined && s.max !== undefined && (
           <p className="mt-1.5 text-xs text-ink-muted">
             {S.range.replace("{min}", fmtNum(s.min)).replace("{max}", fmtNum(s.max))}
             {" · "}
-            {S.defaultIs.replace("{v}", fmtNum(Number(s.default)))}
+            {S.defaultIs.replace("{v}", valueText(s, s.default))}
           </p>
         )}
 
         {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
-
-        {/* **ولا سطرَ «آخر تغيير» تحت أيّ مفتاح.**
-
-            كان يقول «مدير المنصة — ٤/٨/٢٠٢٦، ٣:٥٦ م». **وهو خبرٌ يُقرأ مرّةً
-            ثمّ يشغل سطراً تحت كلّ بطاقةٍ إلى الأبد** — ومن يفتح الإعدادات
-            يريد أن يضبط لا أن يقرأ تاريخاً.
-
-            **ولا يُفقَد شيء**: `admin.setting_update` يُقيَّد في سجلّ الأحداث
-            بـ«كان» و«صار» ومن فعل — **وهو موضعُ المراجعة، لا بطاقةُ الضبط.**
-
-            (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لا يوجد داعٍ لهذا بأيّ إعداد».) */}
-
-        {/* **وما يُحفظ باللمس يقول ذلك قبل أن يُلمس.**
-
-            التنبيهُ كان يظهر حين يُنتظر حفظ. **والزرُّ الذكيُّ لا ينتظر** —
-            يُضغط فيسري، **فلا فرصةَ لتنبيهٍ يظهر بعده.** فيُقال دائماً في
-            المفاتيح التي تمسّ المال وتُحفظ باللمس. */}
-        {s.sensitive && (dirty || s.kind === "bool" || s.kind === "choice") && (
+        {note && <p className="mt-1.5 text-xs text-ink-muted">{note}</p>}
+        {!editable && (
+          <p className="mt-1.5 text-xs text-ink-muted">
+            {U.readOnly.replace("{cap}", capName(capOf(s)))}
+          </p>
+        )}
+        {s.risk && editable && (dirty || s.kind === "bool" || s.kind === "choice" || s.kind === "percent") && (
           <Alert tone="warning" className="mt-2">
-            {S.sensitiveHint}
+            {s.risk === "money" ? U.moneyHint : U.securityHint}
           </Alert>
         )}
       </form>
+
+      {/* **«كان ← يصير» قبل حفظ المال** (البند ٨)، **وتأكيدٌ لكلّ باب إطلاق** (البند ١٠).
+          ثمّ يطلب المحرّكُ كلمةَ المرور لمفاتيح المال. */}
+      <Confirm
+        open={pending !== null}
+        title={
+          gate
+            ? (gateOpen ? U.gate.openTitle : U.gate.closeTitle).replace("{name}", label(s.key))
+            : U.confirmTitle
+        }
+        body={
+          gate ? (
+            gateOpen ? U.gate.openBody : U.gate.closeBody
+          ) : (
+            <>
+              <p className="font-medium">
+                {label(s.key)}:{" "}
+                {U.confirmBody
+                  .replace("{from}", valueText(s, s.value))
+                  .replace("{to}", valueText(s, pending?.raw))}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">{U.confirmNote}</p>
+            </>
+          )
+        }
+        confirmLabel={gate ? (gateOpen ? U.gate.open : U.gate.close) : U.confirmAction}
+        tone={gate && !gateOpen ? "danger" : "primary"}
+        busy={busy}
+        onConfirm={() => void doSave(pending?.raw)}
+        onCancel={() => {
+          setPending(null);
+          setDraft(String(s.value ?? ""));
+        }}
+      />
     </Card>
   );
 }

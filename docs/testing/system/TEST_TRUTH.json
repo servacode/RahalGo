@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 448,
+    "routes": 449,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 180,
-    "behaviour_settings": 145,
+    "setting_defs": 176,
+    "behaviour_settings": 141,
     "order_fields": 95,
-    "test_files": 490,
-    "test_funcs": 2048
+    "test_files": 493,
+    "test_funcs": 2064
   },
   "flows": [
     {
@@ -140,7 +140,6 @@
         "TestCDEF003_OpenHoursUsesRealStoreNotSupplied",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -217,7 +216,6 @@
         "TestEV_CustomOrderOwnerRealtime",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -671,11 +669,6 @@
         "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
         "TestR24_F6_NoMerchantPhoneAfterAccept",
         "TestR24_F7_DispatchFailureIsVisible",
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
         "TestXG42_CapabilityUnionCustomRoleAndRevoke",
@@ -698,7 +691,6 @@
         "TestOBL_ReplayCreatesNoDuplicate",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -1049,18 +1041,12 @@
       ],
       "tests": [
         "TestRepTarget_GrantedOnDelivery",
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RepCommissionReversal",
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -1577,11 +1563,6 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract",
         "TestXG20_A2_AuditFailureRollsBackBusiness",
         "TestXG20_A3_FailedBusinessLeavesNoAudit",
         "TestXG20_C1C2_ConcurrentMutationsCorrelate",
@@ -1594,7 +1575,6 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -2771,11 +2751,6 @@
       "severity": "HIGH",
       "fixed": "**صار `sales.commission_source` مفتاحاً كانونيّاً** بثلاث قيمٍ لا رابعَ لها (`platform_commission` · `pricing_margin` · `both`)، **افتراضُه `pricing_margin` بقرار المالك** — **أقلُّ فارقٍ ماليٍّ عن السلوك القائم.** **ويُصنَّف ماليّاً حسّاساً** فيدخل `FinancialSettings` وتحكمه قدرةُ الإعدادات الماليّة **ويلزمه تأكيدٌ** (`ADG-3`) **وأثرُه معامليّ** (`AQ-4`). **ومجهولُ القيمة يُردّ ولا يرتدّ إلى افتراض** — **وقيمةٌ فاسدةٌ تُقرأ افتراضاً تدفع مالاً لا يقصده أحد.** (قِيس: قيمةٌ خارج المعجم ⇒ `400`.)",
       "tests": [
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_SnapshotVsLiveEconomics"
       ],
@@ -2786,14 +2761,8 @@
       "title": "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة",
       "severity": "CRITICAL",
       "fixed": "**نُزعت البوّابةُ وصارت القاعدةُ بالوضع المعتمد** (دورةُ ٣١). **وكان السلوكُ لا يطابق وضعاً**: `platformCommission == 0` تمنع كلَّ شيءٍ **ثمّ يُحسَب من الهامش** — **فأضيقُ من الوضعين**، **ومتجرٌ عمولتُه صفرٌ وهامشُه ألفٌ لا يُعطي مندوبَه شيئاً.** **والأوضاعُ الثلاثةُ مقيسةٌ بعشر حالات** (١٠٠ · ١٠٠ · ٢٠٠)، **والعكسُ نُزعت بوّابتُه معها** فلا يبقى قيدٌ لا يُعكَس. **وأُعيدت مانعةً في دورةِ ٣٢** لأنّ قراءةَ الوضع عند التسوية كانت تخالف `XQ-2` — **فطلبٌ أُنشئ بوضعٍ وسُلّم بآخر أعطى ٢٠٠ بدل ١٠٠.** **ثمّ أُغلقت بلقطة الاقتصاد**: **الوضعُ يُلتقَط لحظةَ الإنشاء ويُقرأ منه** — والقائمُ باقتصاده والجديدُ بالجديد.",
-      "tests": [
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract"
-      ],
-      "status": "COVERED"
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
     },
     {
       "id": "XG-15",
@@ -2918,7 +2887,6 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -2933,7 +2901,6 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -2948,7 +2915,6 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -2963,7 +2929,6 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -3546,7 +3511,7 @@
       "key": "customers.signup_bonus",
       "group": "customers",
       "kind": "money",
-      "sensitive": false,
+      "sensitive": true,
       "money": true,
       "flows": [
         "F-01",
@@ -3628,7 +3593,7 @@
       "key": "delivery.custom_fee_max",
       "group": "drivers",
       "kind": "money",
-      "sensitive": false,
+      "sensitive": true,
       "money": true,
       "flows": [
         "F-07",
@@ -3649,7 +3614,7 @@
       "key": "delivery.custom_fee_min",
       "group": "drivers",
       "kind": "money",
-      "sensitive": false,
+      "sensitive": true,
       "money": true,
       "flows": [
         "F-07",
@@ -3756,9 +3721,9 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "delivery.merchant_delivery_platform_percent",
+      "key": "delivery.per_km",
       "group": "drivers",
-      "kind": "percent",
+      "kind": "money",
       "sensitive": true,
       "money": true,
       "flows": [
@@ -3777,9 +3742,9 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "delivery.per_km",
+      "key": "delivery.platform_percent",
       "group": "drivers",
-      "kind": "money",
+      "kind": "percent",
       "sensitive": true,
       "money": true,
       "flows": [
@@ -4668,7 +4633,6 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -5001,7 +4965,7 @@
     {
       "key": "orders.extra_source_fee",
       "group": "platform",
-      "kind": "int",
+      "kind": "money",
       "sensitive": false,
       "money": true,
       "flows": [
@@ -5171,7 +5135,7 @@
     {
       "key": "payouts.min_amount",
       "group": "platform",
-      "kind": "int",
+      "kind": "money",
       "sensitive": true,
       "money": true,
       "flows": [
@@ -5203,42 +5167,6 @@
         "TestXG12_TreasuryCannotReserve"
       ],
       "status": "REGRESSION_TEST_PRESENT"
-    },
-    {
-      "key": "platform.app_url",
-      "group": "app",
-      "kind": "text",
-      "sensitive": false,
-      "money": false,
-      "flows": [
-        "F-33"
-      ],
-      "apps": [
-        "customer",
-        "driver",
-        "merchant",
-        "rep"
-      ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
-    },
-    {
-      "key": "platform.invite_code",
-      "group": "platform",
-      "kind": "text",
-      "sensitive": false,
-      "money": false,
-      "flows": [
-        "F-33"
-      ],
-      "apps": [
-        "customer",
-        "driver",
-        "merchant",
-        "rep"
-      ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "platform.orders_mode",
@@ -5563,36 +5491,6 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "sales.activation_orders",
-      "group": "sales",
-      "kind": "int",
-      "sensitive": false,
-      "money": false,
-      "flows": [
-        "F-23",
-        "F-33"
-      ],
-      "apps": [
-        "admin",
-        "customer",
-        "driver",
-        "merchant",
-        "rep"
-      ],
-      "tests": [
-        "TestFIN_MoneyTimingByStatus",
-        "TestFIN_CommissionSourceMatrix",
-        "TestFIN_RepCommissionReversal",
-        "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
-        "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
-        "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
-        "TestXQ2_S3_RefundUsesOriginalEconomics",
-        "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
-      ],
-      "status": "REGRESSION_TEST_PRESENT"
-    },
-    {
       "key": "sales.commission_percent",
       "group": "sales",
       "kind": "int",
@@ -5612,11 +5510,6 @@
         "rep"
       ],
       "tests": [
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RefundNotConditionedOnRepBalance",
@@ -5624,43 +5517,12 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
         "TestFIN_XG10_DebtOffsetFromNextCommission",
         "TestFIN_XG10_RepCommissionReversedOnRefund",
         "TestFIN_XG10_RepWithdrewThenRefund"
-      ],
-      "status": "REGRESSION_TEST_PRESENT"
-    },
-    {
-      "key": "sales.commission_source",
-      "group": "sales",
-      "kind": "choice",
-      "sensitive": true,
-      "money": true,
-      "flows": [
-        "F-21",
-        "F-23"
-      ],
-      "apps": [
-        "admin",
-        "merchant",
-        "rep"
-      ],
-      "tests": [
-        "TestXG13_DefaultIsPricingMargin",
-        "TestXG13_InvalidStoredValueFailsSafe",
-        "TestXG13_UnknownModeIsRejected",
-        "TestXG14_ReversalMirrorsSettlementInEveryMode",
-        "TestXG14_ThreeModesGiveTheirContract",
-        "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
-        "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
-        "TestXQ2_F3_UnreadableSettingBlocksCreation",
-        "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
-        "TestXQ2_S3_RefundUsesOriginalEconomics",
-        "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -8904,13 +8766,13 @@
       "orphan": true
     },
     {
-      "name": "TestMerchantDeliveryPercentKeyMatchesCatalog",
+      "name": "TestMerchantDeliveryShare",
       "file": "internal/orders/merchant_delivery_share_test.go",
       "package": "orders",
       "orphan": true
     },
     {
-      "name": "TestMerchantDeliveryShare",
+      "name": "TestPlatformDeliveryPercentKeyMatchesCatalog",
       "file": "internal/orders/merchant_delivery_share_test.go",
       "package": "orders",
       "orphan": true
@@ -12098,129 +11960,22 @@
       "orphan": true
     },
     {
-      "name": "TestXG13_DefaultIsPricingMargin",
+      "name": "TestSETTINGS_CommissionSourceToggleRemoved",
       "file": "internal/qa/commission_source_test.go",
       "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-14",
-        "F-23",
-        "F-33"
-      ],
-      "gaps": [
-        "XG-13",
-        "XG-14"
-      ],
-      "settings": [
-        "sales.commission_source",
-        "sales.commission_percent"
-      ],
-      "modes": [
-        "FINANCIAL",
-        "FULL",
-        "RELEASE"
-      ],
-      "orphan": false
+      "orphan": true
     },
     {
-      "name": "TestXG13_InvalidStoredValueFailsSafe",
+      "name": "TestSETTINGS_RepCommissionFromWholePlatformProfit",
       "file": "internal/qa/commission_source_test.go",
       "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-14",
-        "F-23",
-        "F-33"
-      ],
-      "gaps": [
-        "XG-13",
-        "XG-14"
-      ],
-      "settings": [
-        "sales.commission_source",
-        "sales.commission_percent"
-      ],
-      "modes": [
-        "FINANCIAL",
-        "FULL",
-        "RELEASE"
-      ],
-      "orphan": false
+      "orphan": true
     },
     {
-      "name": "TestXG13_UnknownModeIsRejected",
+      "name": "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
       "file": "internal/qa/commission_source_test.go",
       "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-14",
-        "F-23",
-        "F-33"
-      ],
-      "gaps": [
-        "XG-13",
-        "XG-14"
-      ],
-      "settings": [
-        "sales.commission_source",
-        "sales.commission_percent"
-      ],
-      "modes": [
-        "FINANCIAL",
-        "FULL",
-        "RELEASE"
-      ],
-      "orphan": false
-    },
-    {
-      "name": "TestXG14_ReversalMirrorsSettlementInEveryMode",
-      "file": "internal/qa/commission_source_test.go",
-      "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-14",
-        "F-23",
-        "F-33"
-      ],
-      "gaps": [
-        "XG-13",
-        "XG-14"
-      ],
-      "settings": [
-        "sales.commission_source",
-        "sales.commission_percent"
-      ],
-      "modes": [
-        "FINANCIAL",
-        "FULL",
-        "RELEASE"
-      ],
-      "orphan": false
-    },
-    {
-      "name": "TestXG14_ThreeModesGiveTheirContract",
-      "file": "internal/qa/commission_source_test.go",
-      "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-14",
-        "F-23",
-        "F-33"
-      ],
-      "gaps": [
-        "XG-13",
-        "XG-14"
-      ],
-      "settings": [
-        "sales.commission_source",
-        "sales.commission_percent"
-      ],
-      "modes": [
-        "FINANCIAL",
-        "FULL",
-        "RELEASE"
-      ],
-      "orphan": false
+      "orphan": true
     },
     {
       "name": "TestCONC_BarrierReleasesTogether",
@@ -17744,37 +17499,10 @@
       "orphan": false
     },
     {
-      "name": "TestXQ2_F3_UnreadableSettingBlocksCreation",
+      "name": "TestXQ2_F3_StaleSourceRowIgnored",
       "file": "internal/qa/order_snapshot_test.go",
       "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-01",
-        "F-02",
-        "F-14",
-        "F-23",
-        "F-33"
-      ],
-      "gaps": [
-        "XG-25",
-        "XG-26",
-        "XG-27",
-        "XG-28"
-      ],
-      "settings": [
-        "merchants.commission_percent",
-        "sales.commission_percent",
-        "sales.commission_source",
-        "sales.activation_orders"
-      ],
-      "modes": [
-        "FINANCIAL",
-        "CONCURRENCY",
-        "FAILURE",
-        "FULL",
-        "RELEASE"
-      ],
-      "orphan": false
+      "orphan": true
     },
     {
       "name": "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
@@ -20984,6 +20712,48 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestSETTINGS_ListCarriesRiskAndTopic",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_MerchantDeliveryFeeFromGeneralFee",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_MoneyExampleFromEngine",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_OTPTemplateNeedsCode",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_PlatformShareAppliesToStandardOrder",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_RelatedKeysRejectedWithReason",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_UnchangedValueNotSaved",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestSU01_ExistingAccountsAreNotTakenOverWhenVerifyIsOff",
@@ -25492,6 +25262,24 @@
       "orphan": true
     },
     {
+      "name": "TestSETTINGS_BadgeImpliesRiskList",
+      "file": "internal/server/settings_risk_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_RiskLevelsDriveCapabilityAndStepUp",
+      "file": "internal/server/settings_risk_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_SameValueNormalised",
+      "file": "internal/server/settings_risk_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestSiteDoors_ReachThePublicPayload",
       "file": "internal/server/site_doors_test.go",
       "package": "server",
@@ -25692,6 +25480,54 @@
     {
       "name": "TestMediaSetting_AcceptsIDAndEmptyOnly",
       "file": "internal/settings/media_kind_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_CodeDefaultsAreOwnerDecisions",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_DeadKeysRemoved",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_DefaultLegalTextsMatchDecisions",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_DriverCashLimitZeroForbidden",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_EveryKeyHasATopic",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_PercentRespectsCatalogMax",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_RelatedKeysChecked",
+      "file": "internal/settings/owner_1004_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_TemplatesRequirePlaceholders",
+      "file": "internal/settings/owner_1004_test.go",
       "package": "settings",
       "orphan": true
     },
@@ -25976,7 +25812,15 @@
       "orphan": true
     }
   ],
-  "stale": [],
+  "stale": [
+    "TestMap يشير إلى \"TestXG13_DefaultIsPricingMargin\" ولا وجودَ لها",
+    "TestMap يشير إلى \"TestXG13_InvalidStoredValueFailsSafe\" ولا وجودَ لها",
+    "TestMap يشير إلى \"TestXG13_UnknownModeIsRejected\" ولا وجودَ لها",
+    "TestMap يشير إلى \"TestXG14_ReversalMirrorsSettlementInEveryMode\" ولا وجودَ لها",
+    "TestMap يشير إلى \"TestXG14_ThreeModesGiveTheirContract\" ولا وجودَ لها",
+    "TestMap يشير إلى \"TestXQ2_F3_UnreadableSettingBlocksCreation\" ولا وجودَ لها",
+    "XG-15 يوقظه مفتاحٌ \"sales.activation_orders\" لا وجودَ له"
+  ],
   "coverage_gaps": [
     "D11 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",

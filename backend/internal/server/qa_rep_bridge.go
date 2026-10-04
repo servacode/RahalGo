@@ -123,11 +123,10 @@ var qaRepMoneyKeys = map[string]bool{
 	"sales.commission_percent":     true, // نسبةُ المندوب (عدد)
 	"merchants.commission_percent": true, // نسبةُ المنصّة من المتجر (عدد)
 	"pricing.margin_fixed":         true, // الهامشُ الثابت (مال)
-	"sales.commission_source":      true, // مصدرُ العمولة (اختيار، نصّ)
-	"sales.activation_orders":      true, // طلباتُ تفعيلِ المتجر (عدد)
-	"sales.monthly_target":         true, // هدفُ المندوب الشهريّ (عدد)
-	"sales.target_reward":          true, // مكافأةُ بلوغِ الهدف (مال)
-	"payouts.min_amount":           true, // أدنى مبلغِ سحب (عدد)
+	// **ومصدرُ العمولة وعتبةُ التفعيل حُذفا من الفهرس** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	"sales.monthly_target": true, // هدفُ المندوب الشهريّ (عدد)
+	"sales.target_reward":  true, // مكافأةُ بلوغِ الهدف (مال)
+	"payouts.min_amount":   true, // أدنى مبلغِ سحب (عدد)
 }
 
 // qaRepMoneySet **يضبط مفتاحَ مالِ مندوبٍ مسموحاً مؤقّتاً عبر مسار الإعدادات

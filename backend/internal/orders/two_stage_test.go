@@ -59,12 +59,14 @@ func TestMerchantPaidAtPickup(t *testing.T) {
 	if got := f.balance(t, f.driver); got != 10_000 {
 		t.Errorf("أجرُ السائق = %d، والمتوقّع 10000 — أجرةُ التوصيل كلُّها", got)
 	}
-	if got := f.balance(t, f.rep); got != 1_000 {
-		t.Errorf("عمولة المندوب = %d، والمتوقّع 1000", got)
+	// **ومن ربح المنصّة كلِّه** (قرارُ المالك ٢٠٢٦-١٠-٠٤): ١٠٪ × (هامش ١٠٬٠٠٠ + عمولة ٩٬٠٠٠) = ١٬٩٠٠.
+	if got := f.balance(t, f.rep); got != 1_900 {
+		t.Errorf("عمولة المندوب = %d، والمتوقّع 1900", got)
 	}
 	// **١١٠٬٠٠٠ − (٨١٬٠٠٠ + ٧٬٠٠٠ + ١٬٠٠٠) = ٢١٬٠٠٠** — نفسُ رقمٍ قبل التقسيم.
-	if got := f.balance(t, treasury); got != 18_000 {
-		t.Errorf("الخزينة بعد التسليم = %d، والمتوقّع 18000", got)
+	// **والخزينةُ تنقص بفرق عمولة المندوب** — ١٨٬٠٠٠ − ٩٠٠ = ١٧٬١٠٠.
+	if got := f.balance(t, treasury); got != 17_100 {
+		t.Errorf("الخزينة بعد التسليم = %d، والمتوقّع 17100", got)
 	}
 }
 
@@ -131,8 +133,8 @@ func TestWalletOrder_TwoStagesSameTotal(t *testing.T) {
 	if got := f.balance(t, owner); got != 81_000 {
 		t.Errorf("مستحقّ المتجر = %d", got)
 	}
-	if got := f.balance(t, treasury); got != 18_000 {
-		t.Errorf("الخزينة = %d، والمتوقّع 18000 — نفسُ رقم النقديّ", got)
+	if got := f.balance(t, treasury); got != 17_100 {
+		t.Errorf("الخزينة = %d، والمتوقّع 17100 — نفسُ رقم النقديّ", got)
 	}
 }
 

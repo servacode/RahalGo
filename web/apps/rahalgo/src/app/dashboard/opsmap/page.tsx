@@ -875,7 +875,7 @@ export default function OpsMapPage() {
       await api("/api/v1/admin/ops-map/coverage", {
         method: "POST",
         body: JSON.stringify({
-          name: zoneName.trim(), ring: draft, delivery_fee: 0, min_order: 0,
+          name: zoneName.trim(), ring: draft, min_order: 0,
         }),
       });
       setDrawing(false);

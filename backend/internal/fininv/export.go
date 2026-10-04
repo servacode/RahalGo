@@ -97,10 +97,10 @@ var FinancialSettings = []string{
 	// **قائمةُ الخطورة الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٧):
 	// كلُّ مفتاحٍ عليه شارةُ «يمسّ المال» هنا — وحارسٌ يُسقط البناءَ إن غاب.
 	// **وحُذف منها مصدرُ عمولة المندوب وعتبةُ التفعيل** — صارا ثابتين.
-	"delivery.platform_percent",  // orders — حصّةُ المنصّة من الأجرة لكلّ الأنواع
-	"delivery.custom_fee_min",    // orders/custom.go — أدنى أجرةِ الخاصّ
-	"delivery.custom_fee_max",    // orders/custom.go — أعلاها
-	"finance.manual_wallet_max",  // accounts — سقفُ الحركة اليدويّة
+	"delivery.platform_percent", // orders — حصّةُ المنصّة من الأجرة لكلّ الأنواع
+	"delivery.custom_fee_min",   // orders/custom.go — أدنى أجرةِ الخاصّ
+	"delivery.custom_fee_max",   // orders/custom.go — أعلاها
+	"finance.manual_wallet_max", // accounts — سقفُ الحركة اليدويّة
 }
 
 // Snapshot يبني الصورة.

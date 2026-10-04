@@ -64,7 +64,10 @@ export default function ReleasePanel() {
 
   const load = useCallback(async () => {
     try {
-      const rows = await api<SettingRow[]>("/api/v1/admin/settings");
+      // **والردُّ كائنٌ لا قائمة** (`{settings, groups, topics}`) — كان يُقرأ قائمةً
+      // فيسقط اللوحُ على `rows.find` (كشفه فحصُ الإعدادات ٢٠٢٦-١٠-٠٤).
+      const res = await api<{ settings?: SettingRow[] } | SettingRow[]>("/api/v1/admin/settings");
+      const rows: SettingRow[] = Array.isArray(res) ? res : (res.settings ?? []);
       const cur = {} as Record<AppName, number>;
       const edit = {} as Record<AppName, boolean>;
       const dft = {} as Record<AppName, string>;
@@ -123,7 +126,7 @@ export default function ReleasePanel() {
       <p className="mb-4 text-sm text-ink-muted">{S.hint}</p>
 
       {error && <Alert className="mb-4">{error}</Alert>}
-      {notice && <Alert className="mb-4">{notice}</Alert>}
+      {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
 
       {/* **والسائقُ توزيعٌ مباشرٌ — لا متجر Play.** */}
       <Card className="mb-4 p-4">

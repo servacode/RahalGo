@@ -30,10 +30,10 @@ import {
   Alert,
   Button,
   Card,
+  Confirm,
   Input,
   Switch,
   Textarea,
-  Badge,
   LoadingState,
 } from "@rahalgo/ui";
 import WeekHours, { type Win } from "./WeekHours";
@@ -50,17 +50,28 @@ interface Closure {
 }
 
 /**
- * **لحظةٌ بصيغة الحقل المحلّيّ** — و`""` إن لم تكن.
+ * **لحظةٌ بصيغة الحقل بتوقيت دمشق دائماً** — و`""` إن لم تكن.
  *
- * **و`datetime-local` لا يقبل منطقةً** — **فيُحوَّل ما جاء من الخادم
- * إلى ساعة المتصفّح ثمّ يُعاد إلى لحظةٍ مطلقةٍ عند الحفظ.**
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ١١: «موعدُ العودة بتوقيت دمشق
+ * دائماً».) **كان الحقلُ يقرأ ساعةَ المتصفّح** — فموظّفٌ جهازُه على توقيتٍ آخر
+ * يُزحلق الموعدَ ساعات. **ودمشقُ على +03:00 ثابتةً** (لا توقيتَ صيفيّ منذ ٢٠٢٢).
  */
-function toLocalInput(iso?: string): string {
+const DAMASCUS_OFFSET_MS = 3 * 60 * 60 * 1000;
+function toDamascusInput(iso?: string): string {
   if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  // **الساعةُ بإزاحةِ دمشق الثابتة ثمّ تُقرأ أجزاؤها بالعالميّ** — فلا تدخل ساعةُ الجهاز.
+  const d = new Date(t + DAMASCUS_OFFSET_MS);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
+/** **حقلُ دمشق ← لحظةٌ مطلقة.** */
+function fromDamascusInput(v: string): string {
+  if (!v) return "";
+  const d = new Date(`${v}:00+03:00`);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
 export default function HoursPanel() {
@@ -76,6 +87,9 @@ export default function HoursPanel() {
   const [error, setError] = useState("");
   const [savedHours, setSavedHours] = useState(false);
   const [savedClosure, setSavedClosure] = useState(false);
+  /** **التأكيدُ قبل الإيقاف أو الإعادة** — `stop` أو `resume` أو لا شيء. */
+  const [ask, setAsk] = useState<"stop" | "resume" | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,7 +102,7 @@ export default function HoursPanel() {
       setEnforced(Boolean(h.enforced));
       const c = await api<Closure>("/api/v1/admin/platform/closure");
       setClosure(c);
-      setEndsLocal(toLocalInput(c.ends_at));
+      setEndsLocal(toDamascusInput(c.ends_at));
     } catch (e) {
       setError(errorText(e, m));
     } finally {
@@ -121,22 +135,33 @@ export default function HoursPanel() {
     }
   }
 
-  async function saveClosure() {
+  /**
+   * **حفظُ الإيقاف بحاله** — `active` صريحٌ في النداء لا من مفتاحٍ يُلمس.
+   *
+   * (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ١١: زرٌّ أحمر «أوقف المنصّة الآن»
+   * وتأكيدٌ وشريطٌ أحمر ودخولُ غرفة الطوارئ.) **كان مفتاحاً مع «احفظ» بلا
+   * تأكيد** — ولمسةٌ خاطئةٌ توقف الطلباتِ في البلد كلِّه.
+   */
+  async function saveClosure(active: boolean) {
     setError("");
+    setBusy(true);
     try {
       await api("/api/v1/admin/platform/closure", {
         method: "PUT",
         body: JSON.stringify({
-          active: closure.active,
+          active,
           message: closure.message ?? "",
-          ends_at: endsLocal ? new Date(endsLocal).toISOString() : "",
+          ends_at: fromDamascusInput(endsLocal),
         }),
       });
       setSavedClosure(true);
       setTimeout(() => setSavedClosure(false), 2000);
+      setAsk(null);
       await load();
     } catch (e) {
       setError(errorText(e, m));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -177,17 +202,12 @@ export default function HoursPanel() {
         </div>
       </Card>
 
-      <Card>
+      <Card tone={closure.active ? "danger" : "default"}>
         <div className="space-y-3 p-4">
           <h3 className="font-medium">{P.closure.title}</h3>
           <p className="text-sm text-ink-muted">{P.closure.hint}</p>
 
-          <Switch
-            checked={closure.active}
-            onChange={(v: boolean) => setClosure((c) => ({ ...c, active: v }))}
-            label={P.closure.active}
-            disabled={!may}
-          />
+          {closure.active && <Alert tone="error">{P.closure.banner}</Alert>}
 
           <div className="grid grid-cols-1 gap-3">
             <label className="block text-sm">
@@ -207,13 +227,28 @@ export default function HoursPanel() {
                 disabled={!may}
                 onChange={(e) => setEndsLocal(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-ink-muted">{P.closure.endsHint}</span>
+              <span className="mt-1 block text-xs text-ink-muted">
+                {P.closure.endsDamascus} · {P.closure.endsHint}
+              </span>
             </label>
           </div>
 
           {may && (
-            <div className="flex items-center gap-3">
-              <Button onClick={saveClosure}>{P.closure.save}</Button>
+            <div className="flex flex-wrap items-center gap-3">
+              {closure.active ? (
+                <>
+                  <Button onClick={() => void saveClosure(true)} disabled={busy} variant="secondary">
+                    {P.closure.save}
+                  </Button>
+                  <Button onClick={() => setAsk("resume")} disabled={busy}>
+                    {P.closure.resume}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="danger" onClick={() => setAsk("stop")} disabled={busy}>
+                  {P.closure.stopNow}
+                </Button>
+              )}
               {savedClosure && (
                 <span className="text-sm text-ink-muted">{P.closure.saved}</span>
               )}
@@ -221,6 +256,17 @@ export default function HoursPanel() {
           )}
         </div>
       </Card>
+
+      <Confirm
+        open={ask !== null}
+        title={ask === "stop" ? P.closure.confirmStopTitle : P.closure.confirmResumeTitle}
+        body={ask === "stop" ? P.closure.confirmStopBody : P.closure.confirmResumeBody}
+        confirmLabel={ask === "stop" ? P.closure.stopNow : P.closure.resume}
+        tone={ask === "stop" ? "danger" : "primary"}
+        busy={busy}
+        onConfirm={() => void saveClosure(ask === "stop")}
+        onCancel={() => setAsk(null)}
+      />
     </div>
   );
 }

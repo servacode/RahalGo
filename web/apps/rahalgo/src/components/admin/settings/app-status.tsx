@@ -145,7 +145,7 @@ export default function AppStatusPanel() {
       <p className="mb-4 text-sm text-ink-muted">{S.hint}</p>
 
       {error && <Alert className="mb-4">{error}</Alert>}
-      {notice && <Alert className="mb-4">{notice}</Alert>}
+      {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
 
       {/* **والحالُ الآن أوّلُ ما يُقرأ** — **ومن لا يعرف أين هو لا يختار.** */}
       <Card className="mb-4 p-4">

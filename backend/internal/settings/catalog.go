@@ -1729,7 +1729,6 @@ var Catalog = []Def{
 	{Key: "sales.commission_percent", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 10, Sensitive: true},
 
-
 	// **هدفُ المندوب الشهريّ — طلباتٌ سُلّمت من متاجرَ جلبها هو.**
 	//
 	// **وهو المقياسُ نفسُه بمعناه عنده**: السائقُ يُقاس بما وصّل، والمندوبُ

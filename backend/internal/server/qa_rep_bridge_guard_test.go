@@ -110,8 +110,6 @@ func TestRepMoneySeed_RegisteredAndBounded(t *testing.T) {
 		"sales.commission_percent":     true,
 		"merchants.commission_percent": true,
 		"pricing.margin_fixed":         true,
-		"sales.commission_source":      true,
-		"sales.activation_orders":      true,
 		"sales.monthly_target":         true,
 		"sales.target_reward":          true,
 		"payouts.min_amount":           true,

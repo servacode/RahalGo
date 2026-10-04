@@ -49,7 +49,7 @@ const qaStagingPhone2 = "+963900555002"
 
 // qaStagingEnabled **أعلى التجهيز نحن؟** — الشرطان معاً، لا أحدُهما.
 func (s *Server) qaStagingEnabled() bool {
-	return s.cfg.Env == "staging" && os.Getenv("RAHALGO_STAGING") == "1"
+	return s.cfg != nil && s.cfg.Env == "staging" && os.Getenv("RAHALGO_STAGING") == "1"
 }
 
 // handleQAStagingSession يُصدر جلسةَ زبون QA — على التجهيز وحدَه.
