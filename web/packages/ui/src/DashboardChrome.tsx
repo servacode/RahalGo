@@ -81,6 +81,11 @@ export interface ChromeNavItem {
    * السوق). **والصفرُ لا يُرسم**: عدّادٌ يختفي حين يُفتح البابُ هو الخبر.
    */
   badge?: number;
+  /**
+   * **نبرةُ العدّاد** — `danger` لما ينتظر يداً الآن (طارئٌ بلا مستلِمٍ بعد مهلته،
+   * قرارُ المالك ٢٠٢٦-١٠-٠٤). وافتراضُه النبرةُ العاديّة.
+   */
+  badgeTone?: "accent" | "danger";
 }
 
 interface Summary {
@@ -345,7 +350,7 @@ export function DashboardChrome({
               >
                 <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
                 <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {!!item.badge && <CountBadge count={item.badge} />}
+                {!!item.badge && <CountBadge count={item.badge} tone={item.badgeTone} />}
               </Link>
             </div>
           );

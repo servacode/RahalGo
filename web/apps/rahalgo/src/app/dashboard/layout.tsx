@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -268,14 +268,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     [canMarket],
   );
   const inMarket = pathname.startsWith("/dashboard/sections");
+  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ** إن
+  // بقي طارئٌ بلا مستلِمٍ أطولَ من مهلته (`ops.emergency_unacked_red_min`).
+  const canEmergencies = capabilities.includes("emergencies.manage");
+  // **والاحمرارُ بمرور الوقت لا بحدث** — فيُعاد السؤالُ كلَّ دقيقة.
+  const [minuteTick, setMinuteTick] = useState(0);
+  useEffect(() => {
+    if (!canEmergencies) return;
+    const t = window.setInterval(() => setMinuteTick((x) => x + 1), 60_000);
+    return () => window.clearInterval(t);
+  }, [canEmergencies]);
+  const { data: emergencyCount } = useLiveData<{ open: number; stale: number }>(
+    () =>
+      canEmergencies
+        ? api("/api/v1/admin/emergencies/count")
+        : Promise.resolve({ open: 0, stale: 0 }),
+    ["emergency"],
+    [canEmergencies, minuteTick],
+  );
   const navShown = useMemo(
     () =>
-      nav.map((i) =>
-        i.href === "/dashboard/sections"
-          ? { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) }
-          : i,
-      ),
-    [nav, marketNew, inMarket],
+      nav.map((i) => {
+        if (i.href === "/dashboard/sections")
+          return { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) };
+        if (i.href === "/dashboard/emergencies")
+          return {
+            ...i,
+            badge: emergencyCount?.open ?? 0,
+            badgeTone: (emergencyCount?.stale ?? 0) > 0 ? ("danger" as const) : undefined,
+          };
+        return i;
+      }),
+    [nav, marketNew, inMarket, emergencyCount],
   );
 
   useEffect(() => {

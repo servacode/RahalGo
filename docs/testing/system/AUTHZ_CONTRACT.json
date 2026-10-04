@@ -34,7 +34,7 @@
   {
    "code": "emergencies.manage",
    "description": "غرفة الطوارئ: القراءة والاستلام والإغلاق",
-   "guards_routes": 5
+   "guards_routes": 12
   },
   {
    "code": "finance.export",
@@ -221,7 +221,7 @@
   }
  ],
  "route_policy": {
-  "rules": 205,
+  "rules": 212,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

@@ -147,6 +147,15 @@ func (s *Server) handleAckEmergency(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	// **وإغلاقُ المتجر في الصندوق نفسِه** (0280) — فيُستلَم في الموضعين معاً.
+	if _, err := s.pg.Exec(r.Context(), `
+		UPDATE merchants m SET emergency_ack_at = now(), emergency_ack_by = $2
+		  FROM driver_emergencies e
+		 WHERE e.id = $1 AND e.kind = 'store_closure' AND m.id = e.merchant_id
+		   AND m.emergency_ack_at IS NULL`, id, userIDFrom(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	s.audit(r, "ops.emergency_ack", "emergency", id, map[string]any{})
 	s.touch("emergency", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"acknowledged": true})
@@ -170,6 +179,13 @@ func (s *Server) handleAckStoreEmergency(w http.ResponseWriter, r *http.Request)
 	}
 	if tag.RowsAffected() == 0 {
 		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(), `
+		UPDATE driver_emergencies SET acknowledged_at = now(), acknowledged_by = $2
+		 WHERE merchant_id = $1 AND kind = 'store_closure' AND status = 'open'
+		   AND acknowledged_at IS NULL`, id, userIDFrom(r)); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	s.audit(r, "ops.store_emergency_ack", "merchant", id, map[string]any{})

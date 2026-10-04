@@ -1165,6 +1165,7 @@ kosom` |
 | `orders.manual_assign_after_min` | التوزيع والتنبيهات | int | `10` |
 | `ops.stuck_reminder_min` | التوزيع والتنبيهات | int | `15` |
 | `ops.stuck_ack_snooze_min` | التوزيع والتنبيهات | int | `60` |
+| `ops.emergency_unacked_red_min` | التوزيع والتنبيهات | int | `10` |
 | `app.min_version.driver` | السائقون | int | `0` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.assigned_silence_sec` | السائقون | int | `180` |
@@ -1397,6 +1398,20 @@ kosom` |
   لا تُرسَل آليّاً إلى سائقٍ جديدٍ يأخذها من موضع الأوّل.
 - **ومتجرٌ أُغلق طارئاً وعنده طلباتٌ مقبولة** تظهر طلباتُه في الغرفة، والإدارةُ تحوّلها (التحويلُ الذكيّ) أو تلغيها.
 - **و«تعطّلت درّاجتي» قبل الاستلام تُحرّر طلباتِه الأخرى غيرَ المستلَمة أيضاً** — كما يفعل الطارئُ بعده.
+- **نُفّذت (٢٠٢٦-١٠-٠٤)**: الهجرة `0280_emergency_room.sql` — `driver_emergencies` صار الصندوقَ الواحد بعمود `kind`
+  (accident · breakdown · force_majeure · store_closure · platform_halt) و`stage` و`merchant_id`، وأعمدةِ الخطوات
+  (`driver_ok_at` · `outcome` · `money_request_id`/`money_skipped`)، وجدولِ `emergency_notes` يُضاف إليه ولا يُعدَّل.
+  **«لدي مشكلة» قبل الاستلام** يكتب صفّاً في الصندوق ويحرّر طلباتِه الأخرى غيرَ المستلَمة (للأسباب الثلاثة كلّها، لأنّ
+  دوامَه يُغلق فيها كلّها) · **إغلاقُ المتجر الطارئ** صفٌّ بطلباته المفتوحة (تحويلٌ ذكيٌّ أو إلغاءٌ من الصفحة) ·
+  **توقّفُ المنصّة** صفٌّ يُغلق وحده بعودتها. الأبواب في `backend/internal/server/emergency_room.go`:
+  `GET /admin/emergencies/count` (عدّادُ القائمة، ويحمرّ بإعداد `ops.emergency_unacked_red_min` = ١٠) ·
+  `GET /admin/emergencies/map` (طبقةٌ على خريطة العمليّات) · `GET /admin/emergencies/{id}` (صفحةُ الطارئ) ·
+  `POST …/{id}/driver-ok` (يرفع قفلَ الحادث بالباب نفسِه في الحسابات `clearAccidentLockTx`) · `POST …/{id}/outcome`
+  (يأخذه سائقٌ آخر · تعود للمتجر · يُلغى · لا شيء) · `POST …/{id}/money` (**طلبُ تعويضٍ معلَّقٌ** في
+  `driver_compensation_requests` بذنب المنصّة، **والموافقةُ في الماليّة لا هنا**) · `POST …/{id}/notes`.
+  **و«تمّ» تُردّ قبل الخطوات** (`emergency_steps_pending`). **والزبونُ يُخبَر**: «طرأ ظرفٌ على السائق، ونرسل لك سائقاً
+  آخر الآن» عند التحرير أو الإرسال لسائقٍ آخر، و«الإدارة تتابع طلبك» بعد الاستلام، ورسالةُ إلغاءٍ عند الإنهاء.
+  **وما قبل الهجرة يُقرأ «حادثاً»** (الأشدّ). الاختبارات: `emergency_room_test.go`.
 
 ### قراراتُ المالك ٢٠٢٦-١٠-٠٤ — **طلباتُ الانضمام والحساباتُ الجديدة**
 

@@ -1006,7 +1006,8 @@ func (s *Server) handleDriverDecline(w http.ResponseWriter, r *http.Request) {
 //	المكتبُ  ←  يُنبَّه بالسبب والكلمة
 //
 // **ولا سطرَ اعتذارٍ في حديث الزبون بعد اليوم** (البند ٣): «اعتذر: تعذّر عليّ
-// إكمالُ طلبك» حُذف — **والزبونُ لا يُخبَر بتبديل السائق أصلاً.**
+// إكمالُ طلبك» حُذف. **ويُخبَر الزبونُ بإشعارٍ من المنصّة لا بسطرٍ من السائق**
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): «طرأ ظرفٌ على السائق، ونرسل لك سائقاً آخر الآن».
 func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	if !s.driverOwnsOrder(r, orderID) {
@@ -1078,11 +1079,40 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وغرفةُ الطوارئ تراه** (قراراتُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الحادثُ والعطلُ والظرفُ القاهرُ قبل الاستلام صفٌّ في الصندوق** — كان التركُ
+	// يحرّر وينبّه ويمضي بلا أثرٍ في الغرفة. **وطلباتُه الأخرى غيرُ المستلَمة تُحرَّر
+	// معه** (كما يفعل الطارئُ بعد الاستلام) — دوامُه أُغلق، **ولا يُترك طلبٌ مع من خرج.**
+	emergencyID := s.recordReleaseEmergency(ctx, uid, orderID, emergencyKindOf(reason), note)
+	others := s.emergencyOtherOrders(ctx, uid, orderID)
+
 	body := "#" + strconv.FormatInt(number, 10) + " — " + releaseReasonLabels[reason] + " · " + note
+	for _, o := range others {
+		if o.Released {
+			body += " · #" + strconv.FormatInt(o.Number, 10) + " حُرّر إلى الطابور"
+		} else {
+			body += " · #" + strconv.FormatInt(o.Number, 10) + " البضاعةُ معه — لم يُحرَّر، اتّصل به"
+		}
+	}
+	href := "/dashboard/orders"
+	if emergencyID != "" {
+		href = "/dashboard/emergencies/" + emergencyID
+	}
 	s.notify.NotifyOps(ctx, notifications.Input{
 		Kind: notifications.KindOrder, Title: notifTitles.driverReleased, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+		Entity: "order", EntityID: orderID, Href: href,
 	})
+	// **ويُخبَر الزبون** — «طرأ ظرفٌ على السائق، ونرسل لك سائقاً آخر الآن».
+	s.notifyCustomerEmergency(ctx, orderID, emergencyCustomerRedispatch)
+	for _, o := range others {
+		if o.Released {
+			s.notifyCustomerEmergency(ctx, o.ID, emergencyCustomerRedispatch)
+		}
+	}
+	s.touch("emergency", "ops")
 	s.touch("order", "ops")
 	s.touch("driver", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"released": true, "shift_ended": true})
