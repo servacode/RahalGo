@@ -221,6 +221,16 @@ func numericCell(v string) bool {
 //
 // **وقيدٌ لكلّ سطر**: من، وكم، ولماذا، وبأيّ مرجع. **ولا يُجمَع هنا** — من
 // أراد مجموعاً جمعه في جدوله، **ومن أراد أن يتحقّق وجد السطر.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وكالتصدير الآخر** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (التقارير، القرار ١)
+// ══════════════════════════════════════════════════════════════════════
+//
+//   - **عمودُ الهاتف لمن يملك `users.contact.read` وحدَه** — الماليّةُ
+//     تملك التصديرَ ومحرومةٌ من الأرقام عمداً، **وكان الملفُّ يُخرجها كاملة.**
+//   - **ونوعُ القيد بالعربيّة** (ledgerKindAr) — كان merchant_earning.
+//   - **والمدى والوقتُ بيوم دمشق** — كانا بتوقيت القاعدة.
+//   - **ولا معادلةَ في خليّة** (csvSafe).
 func (s *Server) handleLedgerExport(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	from, to := q.Get("from"), q.Get("to")
@@ -228,24 +238,33 @@ func (s *Server) handleLedgerExport(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	if _, err := time.Parse("2006-01-02", from); err != nil {
+	fd, err := time.Parse("2006-01-02", from)
+	if err != nil {
 		s.respondErr(w, errValidation)
 		return
 	}
-	if _, err := time.Parse("2006-01-02", to); err != nil {
+	td, err := time.Parse("2006-01-02", to)
+	if err != nil {
 		s.respondErr(w, errValidation)
 		return
 	}
+	if fd.After(td) {
+		s.respondErr(w, errReportRangeInverted)
+		return
+	}
+	withPhone := s.hasCapability(r, authz.UsersContactRead)
 
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT t.created_at, u.full_name, u.phone::text, t.kind, t.amount,
+		SELECT to_char(t.created_at AT TIME ZONE 'Asia/Damascus', 'YYYY-MM-DD HH24:MI'),
+		       COALESCE(u.full_name, ''), u.phone::text, t.kind, t.amount,
 		       COALESCE(t.note, ''), COALESCE(o.number::text, ''),
 		       COALESCE(b.full_name, '')
 		FROM wallet_transactions t
 		JOIN users u ON u.id = t.user_id
 		LEFT JOIN orders o ON o.id::text = t.ref
 		LEFT JOIN users b ON b.id = t.created_by
-		WHERE t.created_at >= $1::date AND t.created_at < ($2::date + 1)
+		WHERE t.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Damascus')
+		  AND t.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')
 		ORDER BY t.created_at`, from, to)
 	if err != nil {
 		s.respondErr(w, err)
@@ -254,28 +273,66 @@ func (s *Server) handleLedgerExport(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="ledger.csv"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="ledger-`+from+"_"+to+`.csv"`)
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{
-		"التاريخ", "الاسم", "الهاتف", "النوع", "المبلغ", "الملاحظة", "رقم الطلب", "بيد",
-	})
+	head := []string{"التاريخ (دمشق)", "الاسم"}
+	if withPhone {
+		head = append(head, "الهاتف")
+	}
+	head = append(head, "النوع", "المبلغ", "الملاحظة", "رقم الطلب", "بيد")
+	_ = cw.Write(head)
+	count := 0
 	for rows.Next() {
-		var created time.Time
-		var name, phone, kind, note, orderNo, by string
+		var created, name, phone, kind, note, orderNo, by string
 		var amount int64
 		if err := rows.Scan(&created, &name, &phone, &kind, &amount, &note, &orderNo, &by); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		_ = cw.Write([]string{
-			created.Format("2006-01-02 15:04"), name, phone, kind,
-			strconv.FormatInt(amount, 10), note, orderNo, by,
-		})
+		line := []string{created, csvSafe(name)}
+		if withPhone {
+			line = append(line, csvSafe(phone))
+		}
+		line = append(line, ledgerKindAr(kind), strconv.FormatInt(amount, 10),
+			csvSafe(note), orderNo, csvSafe(by))
+		_ = cw.Write(line)
+		count++
 	}
 	cw.Flush()
 	if err := rows.Err(); err != nil {
 		s.logger.Error("ledger export", "error", err)
 	}
-	s.audit(r, "finance.ledger_exported", "wallet", "", map[string]any{"from": from, "to": to})
+	s.audit(r, "finance.ledger_exported", "wallet", "", map[string]any{
+		"from": from, "to": to, "phone": withPhone, "rows": count,
+	})
+}
+
+// ledgerKinds **أسماءُ أنواع القيد بالعربيّة** — كما في معجم الشاشة
+// (shared.txKinds)، **ويحرسها اختبارٌ يطابق الاثنين ويطابق قيدَ القاعدة.**
+var ledgerKinds = map[string]string{
+	"topup":                 "شحن رصيد",
+	"order_payment":         "دفع طلب",
+	"refund":                "استرجاع",
+	"compensation":          "تعويض",
+	"commission":            "عمولة",
+	"platform_profit":       "ربح المنصة",
+	"platform_expense":      "نفقة المنصة",
+	"payout":                "سحب رصيد",
+	"adjustment":            "تسوية إدارية",
+	"operating_expense":     "مصروف تشغيل",
+	"merchant_earning":      "مستحق مبيعات",
+	"driver_earning":        "أجر توصيل",
+	"reward":                "مكافأة",
+	"penalty":               "عقوبة",
+	"merchant_cash_accrued": "مستحق نقدي للمتجر",
+	"merchant_cash_paid":    "دفع نقدي للمتجر",
+}
+
+// ledgerKindAr نوعُ القيد بالعربيّة — والمجهولُ يبقى كما هو لا فراغاً.
+func ledgerKindAr(k string) string {
+	if v, ok := ledgerKinds[k]; ok {
+		return v
+	}
+	return k
 }

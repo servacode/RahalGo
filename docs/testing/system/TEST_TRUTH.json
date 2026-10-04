@@ -33,8 +33,8 @@
     "setting_defs": 174,
     "behaviour_settings": 139,
     "order_fields": 95,
-    "test_files": 479,
-    "test_funcs": 1966
+    "test_files": 480,
+    "test_funcs": 1976
   },
   "flows": [
     {
@@ -23393,6 +23393,66 @@
     {
       "name": "TestAdminRatings_IncludesStores",
       "file": "internal/server/admin_ratings_stores_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLedgerExport_PhoneGatedAndArabic",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLedgerKindsCoverEveryKind",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_DamascusDayBucketing",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_DefaultRangeEndsOnDamascusToday",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_MoneyHiddenForNonFinance",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_PlatformProfitEqualsProfitsPage",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_RefundedAndPreviousPeriod",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_RejectsInvertedAndLongRanges",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_TopStoresCreditEachSource",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_VisitorsCountCustomerDevicesOnly",
+      "file": "internal/server/admin_reports_test.go",
       "package": "server",
       "orphan": true
     },
