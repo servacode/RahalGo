@@ -18,11 +18,20 @@ import com.rahalgo.design.Rahal
  * ميّتٌ يوهم أنّ الحالةَ مغطّاة.**
  */
 @Composable
-fun ticketStatusText(status: String): String = when (status) {
-    "open" -> stringResource(R.string.tik_open)
-    "in_progress" -> stringResource(R.string.tik_progress)
-    "resolved" -> stringResource(R.string.tik_resolved)
-    else -> status
+fun ticketStatusText(status: String): String =
+    ticketStatusRes(status)?.let { stringResource(it) } ?: status
+
+/**
+ * **و«بانتظار المالية» تُقرأ «قيد المعالجة»** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+ * حالٌ داخليّةٌ للمكتب. **و`/me/tickets` يحوّلها في المحرّك، لكنّ كشفَ
+ * الشكاوى على السائق (`me_reputation`) وتقاريرَ المتجر يمرّرانها كما هي**،
+ * فكانت تُعرض بمفتاحها الإنكليزيّ `awaiting_finance`.
+ */
+fun ticketStatusRes(status: String): Int? = when (status) {
+    "open" -> R.string.tik_open
+    "in_progress", "awaiting_finance" -> R.string.tik_progress
+    "resolved" -> R.string.tik_resolved
+    else -> null
 }
 
 @Composable
