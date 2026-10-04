@@ -38,7 +38,7 @@ type KindContract struct {
 	Reachable bool
 }
 
-// Kinds العقودُ — **ستّةَ عشرَ نوعاً، بعددِ ما يسمح به قيدُ القاعدة.**
+// Kinds العقودُ — **كلُّ نوعٍ يسمح به قيدُ القاعدة له عقدٌ هنا — ولا عددَ ثابتاً يُكتب بيد.**
 var Kinds = map[string]KindContract{
 	"topup": {
 		Kind: "topup", Sign: "+", RefRequired: false,
@@ -113,6 +113,16 @@ var Kinds = map[string]KindContract{
 		Path:       "PATCH /admin/payouts/{id}",
 		Semantics:  "خروجُ مالٍ من محفظةٍ إلى صاحبها خارجَ المنظومة.",
 		Invariants: []string{"FI-01.e", "FI-04.c", "FI-05.d", "FI-11.a", "FI-11.b", "FI-11.c"},
+		Reachable:  true,
+	},
+	// **إرجاعُ سحبٍ مدفوع** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (قسمُ طلبات السحب).
+	// كان يُكتب `refund` — وذاك لاسترجاع الطلبات ويشترط طلباً قائماً.
+	"payout_reversal": {
+		Kind: "payout_reversal", Sign: "+", RefRequired: true, RefTarget: "payout_requests",
+		Creators:   []string{"internal/server/payout_handlers.go"},
+		Path:       "POST /admin/payouts/{id}/decide (reversed)",
+		Semantics:  "سحبٌ صُرف ثمّ ارتدّ — **يعود المبلغُ إلى المحفظة ويبقى قيدُ الصرف الأوّل في الدفتر.**",
+		Invariants: []string{"FI-01.g", "FI-05.k", "FI-11.h"},
 		Reachable:  true,
 	},
 	"adjustment": {

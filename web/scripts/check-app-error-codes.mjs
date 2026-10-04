@@ -99,6 +99,8 @@ const SERVER_ADMIN = new Set([
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
   "report_range_inverted", "report_range_too_long",
+  // قسمُ طلبات السحب (٢٠٢٦-١٠-٠٤) — قرارُ المالية من اللوحة.
+  "payout_reason_required", "payout_amount_changed",
   "app_file_missing", "app_not_android", "app_too_large", "bad_json",
   "bad_placement", "city_bad_point", "city_bad_radius", "city_bad_reach",
   "city_has_merchants", "city_needs_name", "claim_already_settled",

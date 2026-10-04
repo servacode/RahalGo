@@ -79,6 +79,21 @@ var All = []Check{
 			  AND NOT EXISTS (SELECT 1 FROM payout_requests p WHERE p.id::text = t.ref)`,
 	},
 	{
+		ID: "FI-01.g", Family: FI01, Status: ProvableNow, Ops: true,
+		Name: "قيدُ إرجاعِ السحب يشير إلى سحبٍ مرتجعٍ بقيمته",
+		Why: "مالٌ رجع إلى محفظةٍ باسم «إرجاع سحب» ولا سحبَ ارتدّ بهذا المبلغ — " +
+			"**مالٌ دخل بلا ورقةٍ تسنده.**",
+		Flows: []string{"F-24"},
+		Kinds: []string{"payout_reversal"},
+		SQL: `
+			SELECT t.id, t.ref, t.amount
+			FROM wallet_transactions t
+			WHERE t.kind = 'payout_reversal'
+			  AND NOT EXISTS (SELECT 1 FROM payout_requests p
+			                   WHERE p.id::text = t.ref AND p.status = 'reversed'
+			                     AND p.user_id = t.user_id AND p.amount = t.amount)`,
+	},
+	{
 		ID: "FI-01.f", Family: FI01, Status: ProvableNow, Ops: true,
 		Name:      "قيدُ المصروفِ يشير إلى مصروفٍ قائم",
 		Why:       "خصمُ خزينةٍ بلا مصروفٍ يسنده — **خسارةٌ بلا سبب.**",
@@ -322,6 +337,18 @@ var All = []Check{
 			SELECT t.ref, count(*)::bigint AS مرّات
 			FROM wallet_transactions t
 			WHERE t.kind = 'payout' AND t.ref <> ''
+			GROUP BY t.ref HAVING count(*) > 1`,
+	},
+	{
+		ID: "FI-05.k", Family: FI05, Status: ProvableNow, Ops: true,
+		Name:  "لا إرجاعَ سحبٍ مكرَّر",
+		Why:   "سحبٌ ارتدّ فرجع مالُه مرّتين — **وصاحبُه قبض ضعفَ ما خرج منه.**",
+		Flows: []string{"F-24"},
+		Kinds: []string{"payout_reversal"},
+		SQL: `
+			SELECT t.ref, count(*)::bigint AS مرّات
+			FROM wallet_transactions t
+			WHERE t.kind = 'payout_reversal'
 			GROUP BY t.ref HAVING count(*) > 1`,
 	},
 	{
@@ -894,16 +921,18 @@ var All = []Check{
 	},
 	{
 		ID: "FI-11.h", Family: FI11, Status: ProvableNow, Ops: true,
-		Name: "سحبٌ ارتدّ له قيدٌ مقابلٌ يُعيد المال",
+		Name: "سحبٌ ارتدّ له قيدُ «إرجاع سحب» يُعيد المال",
 		Why: "**والارتدادُ لا يمحو الخصمَ الأوّل** — **دفترٌ يُمحى منه " +
-			"سطرٌ لا يُراجَع.** **فيُقيَّد ردٌّ بقيمته.**",
+			"سطرٌ لا يُراجَع.** **فيُقيَّد ردٌّ بقيمته** بنوعه `payout_reversal` " +
+			"(قرارُ المالك ٢٠٢٦-١٠-٠٤؛ كان `refund`).",
 		Flows:     []string{"F-24"},
+		Kinds:     []string{"payout_reversal"},
 		Registers: []string{"XG-12"},
 		SQL: `SELECT p.id::text, p.amount
 		        FROM payout_requests p
 		       WHERE p.status = 'reversed'
 		         AND NOT EXISTS (SELECT 1 FROM wallet_transactions t
-		                          WHERE t.ref = p.id::text AND t.kind = 'refund'
+		                          WHERE t.ref = p.id::text AND t.kind = 'payout_reversal'
 		                            AND t.amount = p.amount)`,
 	},
 	// ══════════════════════════════════════════════════════════════

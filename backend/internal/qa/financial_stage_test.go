@@ -275,14 +275,20 @@ func TestFIN_LedgerKindGuardFailsOnNewKind(t *testing.T) {
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 
+	// **والقائمةُ تُقرأ من القيد الحيّ** لا تُكتب بيد — فأقسامٌ تضيف أنواعها
+	// (إرجاعُ السحب ٢٠٢٦-١٠-٠٤، وغيرُه)، وعددٌ ثابتٌ هنا يسقط مع كلّ نوعٍ مشروع.
+	before, err := fininv.SchemaKinds(ctxBG(), tx)
+	if err != nil {
+		t.Fatalf("قراءةُ القيد قبل الإضافة: %v", err)
+	}
+	list := "'cashback'"
+	for _, k := range before {
+		list += ",'" + k + "'"
+	}
 	if _, err := tx.Exec(ctxBG(), `
 		ALTER TABLE wallet_transactions DROP CONSTRAINT wallet_transactions_kind_check;
 		ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_kind_check
-		  CHECK (kind = ANY (ARRAY['topup','order_payment','refund','compensation',
-		    'commission','merchant_earning','driver_earning','payout','adjustment',
-		    'platform_profit','platform_expense','operating_expense','reward','penalty',
-		    'merchant_cash_accrued','merchant_cash_paid',
-		    'cashback']));`); err != nil {
+		  CHECK (kind = ANY (ARRAY[`+list+`]));`); err != nil {
 		t.Fatalf("إضافةُ النوع تجريبيّاً: %v", err)
 	}
 
@@ -290,10 +296,9 @@ func TestFIN_LedgerKindGuardFailsOnNewKind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("قراءةُ القيد: %v", err)
 	}
-	// **ستّةَ عشرَ نوعاً معتمَداً + `cashback` التجريبيُّ** = ١٧
-	// (كانت ١٤+cashback؛ أُضيف نوعا التسويةِ النقديّة ٢٠٢٦-٠٩-٢٧).
-	if len(schema) != 17 {
-		t.Fatalf("قُرئ %d نوعاً — يُنتظر 17", len(schema))
+	// **الأنواعُ المعتمَدةُ + `cashback` التجريبيُّ.**
+	if len(schema) != len(before)+1 {
+		t.Fatalf("قُرئ %d نوعاً — يُنتظر %d", len(schema), len(before)+1)
 	}
 	missing, stale := fininv.KindDrift(schema)
 	if len(missing) != 1 || missing[0] != "cashback" {
@@ -312,7 +317,7 @@ func TestFIN_LedgerKindGuardFailsOnNewKind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("قراءةٌ بعد الإرجاع: %v", err)
 	}
-	if len(after) != 16 {
+	if len(after) != len(before) {
 		t.Errorf("القاعدةُ لم تعد كما كانت: %d نوعاً", len(after))
 	}
 	if m, s := fininv.KindDrift(after); len(m) != 0 || len(s) != 0 {
