@@ -385,7 +385,7 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 	// **والصافي من حساب صفحة الأرباح نفسِه** (`platformProfit`) بمدى اليوم —
 	// **لا معادلةٌ ثالثة.**
 	if p, err := s.platformProfit(ctx, ov.Today, ov.Today); !miss("profit", err) {
-		ov.Money.Sales, ov.Money.Net, ov.Money.Losses = n64(p.Sales), n64(p.Net), n64(p.Losses)
+		ov.Money.Sales, ov.Money.Net, ov.Money.Losses = n64(p.Sales), n64(p.Net), n64(p.Losses())
 		ov.Money.DeliveredOrdersCount = n64(int64(p.Orders))
 	}
 	{
