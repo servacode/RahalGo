@@ -68,6 +68,12 @@ var approvalSources = []approvalSource{
 	{Key: "driver_compensations", Table: "driver_compensation_requests", Section: "compensations",
 		Capability: authz.FinanceManage, Href: "/dashboard/compensations",
 		AmountCol: "suggested_amount", NoteCol: "fail_reason", ProposerCol: "-"},
+	// **مصروفاتُ التشغيل فوق السقف** — موافقةٌ ثانيةٌ بكلمة السرّ.
+	{Key: "expenses", Table: "expense_requests", Section: "expenses",
+		Capability:  authz.FinanceManage,
+		ApprovePath: "/api/v1/admin/expense-requests/{id}/approve",
+		RejectPath:  "/api/v1/admin/expense-requests/{id}/reject",
+		Href:        "/dashboard/expenses"},
 }
 
 var approvalIdent = regexp.MustCompile(`^[a-z_]+$`)

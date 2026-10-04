@@ -47,6 +47,8 @@ import (
 var protectedKinds = map[string]bool{
 	"avatar":         true,
 	"delivery_proof": true,
+	// إيصالُ مصروفٍ تشغيليّ — ورقةٌ ماليّةٌ لا تُقرأ برابطٍ عارٍ (هجرة ٠٣١٠).
+	"expense_receipt": true,
 }
 
 // signTTL عمرُ الرابط الموقَّع.

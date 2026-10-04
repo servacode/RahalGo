@@ -1495,6 +1495,13 @@ func (s *Server) Router() http.Handler {
 			r.Post("/expenses", s.handleCreateExpense)
 			r.Post("/expenses/categories", s.handleSaveExpenseCategory)
 			r.Post("/expenses/{id}/void", s.handleVoidExpense)
+			// **قراراتُ المالك ٢٠٢٦-١٠-٠٤**: تصديرٌ بالمرشّحات · صورةُ إيصال ·
+			// واقتراحاتٌ فوق السقف يوافق عليها شخصٌ آخر.
+			r.Get("/expenses/export", s.handleExportExpenses)
+			r.Post("/expenses/receipt", s.handleUploadExpenseReceipt)
+			r.Get("/expense-requests", s.handleListExpenseRequests)
+			r.Post("/expense-requests/{id}/approve", s.handleApproveExpenseRequest)
+			r.Post("/expense-requests/{id}/reject", s.handleRejectExpenseRequest)
 			r.Post("/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))
 			r.Group(func(r chi.Router) {
 				// **وحارسُ الأدوار نُزع** — `ADG-2`: **السياسةُ

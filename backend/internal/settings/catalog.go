@@ -2043,6 +2043,11 @@ var Catalog = []Def{
 	// **سقفُ الحركة اليدويّة الواحدة على محفظة** — والحركةُ طلبٌ تقرّره الماليّة.
 	{Key: "finance.manual_wallet_max", Group: GroupPlatform, Kind: KindMoney,
 		Min: 1, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+	// **سقفُ المصروف التشغيليّ الذي يحتاج موافقةً ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
+	// ما فوقه اقتراحٌ يوافق عليه شخصٌ آخر وصورةُ إيصاله إلزاميّة، وما دونه يُقيَّد
+	// مباشرة. وصفرُه: كلُّ مصروفٍ بموافقةٍ ثانية.
+	{Key: "finance.expense_approval_threshold", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
 	// **عددُ الإنذارات في ثلاثين يوماً الذي ينبّه الموظّفين** — ولا إيقافَ آليّاً أبداً:
 	// القرارُ لموظّف (قرارُ المالك ٢٠٢٦-١٠-٠٤). وصفرُه: بلا تنبيه.
 	{Key: "safety.warnings_alert_count", Group: GroupPlatform, Kind: KindInt,

@@ -123,7 +123,10 @@ var (
 // (هجرة ٠٠٨٣ · طلبُ المالك ٢٠٢٦-٠٨-٠٧.)
 var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "menu_section": true,
 	"banner": true, "avatar": true, "delivery_proof": true, "platform_logo": true,
-	"auth_background": true, "site_background": true}
+	"auth_background": true, "site_background": true,
+	// **و`expense_receipt` صورةُ إيصال مصروفٍ تشغيليّ** — صنفٌ محميّ (هجرة ٠٣١٠،
+	// قرارُ المالك ٢٠٢٦-١٠-٠٤): اختياريّةٌ، وإلزاميّةٌ فوق سقف الموافقة.
+	"expense_receipt": true}
 
 type Media struct {
 	ID       string `json:"id"`

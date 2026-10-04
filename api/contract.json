@@ -1231,6 +1231,78 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/expense-requests",
+      "handler": "handleListExpenseRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        },
+        {
+          "name": "threshold",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expense-requests/{id}/approve",
+      "handler": "handleApproveExpenseRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "expense_id",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expense-requests/{id}/reject",
+      "handler": "handleRejectExpenseRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/expenses",
       "handler": "handleListExpenses",
       "auth": true,
@@ -1267,12 +1339,20 @@
         {
           "name": "spent_at",
           "type": "string"
+        },
+        {
+          "name": "receipt_media_id",
+          "type": "string"
         }
       ],
       "response": [
         {
           "name": "id",
           "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
         }
       ],
       "statuses": [
@@ -1335,11 +1415,40 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/expenses/export",
+      "handler": "handleExportExpenses",
+      "auth": true,
+      "capability": "finance.export"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expenses/receipt",
+      "handler": "handleUploadExpenseReceipt",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/expenses/{id}/void",
       "handler": "handleVoidExpense",
       "auth": true,
       "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
       "response": [
         {
           "name": "voided",

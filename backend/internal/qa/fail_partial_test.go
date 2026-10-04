@@ -230,6 +230,15 @@ func TestFAIL_D5_ExpenseTreasuryPartial(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		ctx := context.Background()
+		// **وقيدُ إعادة المحاولة يُحذف مع مصروفه** — كان يبقى يتيماً فيُسقط `FI-01.f` في moneycheck.
+		// **ورصيدُ الخزينة يُردّ معه** — وإلّا سقط `FI-02.a` (الرصيدُ = مجموعُ الحركات).
+		_, _ = h.Pool.Exec(ctx, `
+			WITH d AS (DELETE FROM wallet_transactions WHERE kind = 'operating_expense'
+			             AND ref IN (SELECT id::text FROM expenses WHERE category_id = $1::uuid)
+			           RETURNING user_id, amount)
+			UPDATE wallets w SET balance = w.balance - s.total
+			FROM (SELECT user_id, sum(amount) AS total FROM d GROUP BY user_id) s
+			WHERE w.user_id = s.user_id`, catID)
 		_, _ = h.Pool.Exec(ctx, `DELETE FROM expenses WHERE category_id = $1::uuid`, catID)
 		_, _ = h.Pool.Exec(ctx, `DELETE FROM expense_categories WHERE id = $1::uuid`, catID)
 	})

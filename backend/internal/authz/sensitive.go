@@ -127,6 +127,9 @@ var sensitiveActions = []Sensitive{
 	{"POST", "/expenses", "finance.expense_added", "expense", -1,
 		[]string{"amount", "category_id"}, ""},
 	{"POST", "/expenses/{id}/void", "finance.expense_voided", "expense", 1, nil, ""},
+	// **وموافقةُ مصروفٍ فوق السقف بكلمة صاحبها** — كموافقة حركة المحفظة.
+	{"POST", "/expense-requests/{id}/approve", "finance.expense_request_approved",
+		"expense_request", 1, nil, ""},
 	{"POST", "/orders/{id}/compensate-driver", "finance.compensate_driver",
 		"order", 1, []string{"amount"}, ""},
 	// **وتعويضُ المتجر عن بضاعةٍ رُدّت — كأخيه تعويضِ السائق** (قرارُ المالك

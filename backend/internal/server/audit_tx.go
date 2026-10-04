@@ -54,6 +54,8 @@ var criticalAuditActions = map[string]bool{
 	"finance.driver_settle":  true,
 	"finance.expense_added":  true,
 	"finance.expense_voided": true,
+	// موافقةُ مصروفٍ فوق السقف — تُخرج المالَ من الخزينة (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	"finance.expense_request_approved": true,
 
 	// ── نطاقُ `AQ-4` الباقي — دورةُ إصلاحٍ ٢١ (`XG-20`) ──────────
 	//

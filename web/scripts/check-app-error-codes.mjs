@@ -98,6 +98,8 @@ const SERVER_MOBILE = new Set([
 const SERVER_ADMIN = new Set([
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
+  "expense_future_date", "expense_receipt_required", "expense_void_reason_required",
+  "expense_void_self", "expense_category_inactive", "expense_bad_range",
   "report_range_inverted", "report_range_too_long",
   // قسمُ طلبات السحب (٢٠٢٦-١٠-٠٤) — قرارُ المالية من اللوحة.
   "payout_reason_required", "payout_amount_changed",

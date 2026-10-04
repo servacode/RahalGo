@@ -100,6 +100,12 @@ var TxBoundaries = []TxBoundary{
 			"وردُّ المال في معاملةٍ واحدة.",
 	},
 	{
+		Op: "handleApproveExpenseRequest", File: "internal/server/expenses_handlers.go",
+		Sig: "func (s *Server) handleApproveExpenseRequest(", Class: "ATOMIC",
+		Note: "**قرارُ المالك ٢٠٢٦-١٠-٠٤**: موافقةُ مصروفٍ فوق السقف — صفُّ المصروف " +
+			"وقيدُ الخزينة ووسمُ الاقتراح «موافَق» في معاملةٍ واحدة.",
+	},
+	{
 		Op: "handleAdminWalletApply", File: "internal/server/accounts_wallet_requests.go",
 		Sig: "func (s *Server) handleAdminWalletApply(", Class: "INHERITS_TX",
 		Note: "**دورةُ إصلاحٍ ٩** — صار يرث معاملةَ " +
