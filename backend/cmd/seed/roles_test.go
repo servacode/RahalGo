@@ -25,3 +25,24 @@ func TestSeedRolesExist(t *testing.T) {
 		}
 	}
 }
+
+// TestSeedStorePlatformSectionsExist **كلُّ قسمِ سوقٍ يُسنَد إليه صنفُ المطعم موجود.**
+//
+// صار «حلويات» «حلويّات» في جدول أقسام السوق، وبقيت الزراعةُ تطلب القديم —
+// فسقط `seed -store` قبل أن يُنشئ قسمَ الحلويات وأصنافَه.
+func TestSeedStorePlatformSectionsExist(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	for _, sec := range restaurant.Sections {
+		if sec.Platform == "" {
+			continue
+		}
+		var ok bool
+		if err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM platform_sections WHERE name = $1)`, sec.Platform).Scan(&ok); err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Errorf("قسمُ «%s» يُسنَد إلى قسمِ سوقٍ «%s» غيرِ موجود", sec.Name, sec.Platform)
+		}
+	}
+}
