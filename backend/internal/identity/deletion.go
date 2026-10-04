@@ -120,6 +120,17 @@ func (r *Repo) AnonymizeUser(ctx context.Context, userID string) error {
 		userID); err != nil {
 		return err
 	}
+	// **ومن له طلباتٌ تُحجز بصمةُ رقمه قبل أن يُمحى** — فلا يعود بالرقم نفسِه
+	// فيأخذ كودَ «أوّل طلب» من جديد (قرارُ المالك ٢٠٢٦-١٠-٠٤، العروض البند ٣).
+	if _, err := r.db.Exec(ctx, `
+		INSERT INTO phone_claims (phone_hash, kind)
+		SELECT phone_hash_of($1::uuid), 'promo_first_order'
+		WHERE phone_hash_of($1::uuid) IS NOT NULL
+		  AND EXISTS (SELECT 1 FROM orders WHERE customer_id = $1::uuid
+		                AND status NOT IN ('cancelled','rejected','failed'))
+		ON CONFLICT DO NOTHING`, userID); err != nil {
+		return err
+	}
 	// الهاتف يُستبدل برمز مجهول: يتحرّر الرقم الأصلي فيستطيع صاحبه التسجيل
 	// من جديد، ولا يبقى رقم شخصي في قاعدة بيانات حساب محذوف.
 	//

@@ -96,6 +96,13 @@ var approvalSources = []approvalSource{
 		ApprovePath: "/api/v1/admin/dispute-resolutions/{id}/approve",
 		RejectPath:  "/api/v1/admin/dispute-resolutions/{id}/reject",
 		Href:        "/dashboard/losses"},
+	// **العروضُ فوق حدّ المحتوى** (فوق ٢٠٪ أو ٥٠ استخداماً) — موافقةُ الماليّة (هجرة 0390).
+	// والمبلغُ أقصى كلفةٍ متوقّعة، وصفرُه «بلا سقفٍ معروف».
+	{Key: "promos", Table: "promo_approvals", Section: "promos",
+		Capability:  authz.FinanceManage,
+		ApprovePath: "/api/v1/admin/promo-approvals/{id}/approve",
+		RejectPath:  "/api/v1/admin/promo-approvals/{id}/reject",
+		Href:        "/dashboard/promos"},
 }
 
 var approvalIdent = regexp.MustCompile(`^[a-z_]+$`)

@@ -600,11 +600,18 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// `once_per_user` و`max_uses` — لأنّه يُسلسل من يقرأ العدّاد.
 	var promoID *string
 	var discount int64
+	// deliveryWaived **ما أُعفي منه الزبون بكود «توصيل مجاني»** — سطرٌ لحاله
+	// في الأرباح (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦): يُكتب مع الطلب فيُقرأ.
+	var deliveryWaived int64
 	promoCode := strings.TrimSpace(strings.ToUpper(in.PromoCode))
 	if promoCode != "" {
+		feeBefore := deliveryFee
 		promoID, discount, err = s.validatePromo(ctx, tx, promoCode, customerID, subtotal, &deliveryFee)
 		if err != nil {
 			return nil, nil, err
+		}
+		if feeBefore > deliveryFee {
+			deliveryWaived = feeBefore - deliveryFee
 		}
 	}
 
@@ -655,16 +662,18 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			payment_method, subtotal, delivery_fee, discount, total, wallet_paid, cash_due,
 			promo_code, notes, created_by,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
-			snap_commission_source, snap_activation_orders, driver_fee)
+			snap_commission_source, snap_activation_orders, driver_fee,
+			promo_delivery_waived)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21)
+			$17, $18, $19, $20, $21, $22)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders, driverFee).Scan(&orderID)
+		snap.CommissionSource, snap.ActivationOrders, driverFee,
+		deliveryWaived).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -742,18 +751,21 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
 			                         merchant_price, merchant_id, qty, note, options,
-			                         merchant_settlement_method)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			                         merchant_settlement_method, offer_cut, offer_borne_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULLIF($12,''))`,
 			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
 			it.MerchantID, it.Qty, it.Note,
-			marshalOptions(it.Options), method); err != nil {
+			marshalOptions(it.Options), method, it.OfferCut, it.OfferBorneBy); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	if promoID != nil {
+		// **وبصمةُ الرقم مع الاستعمال** — «مرّةً لكلّ مستخدم» بالرقم لا بالحساب
+		// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO promo_redemptions (promo_id, order_id, user_id) VALUES ($1, $2, $3)`,
+			INSERT INTO promo_redemptions (promo_id, order_id, user_id, phone_hash)
+			VALUES ($1, $2, $3, phone_hash_of($3::uuid))`,
 			*promoID, orderID, customerID); err != nil {
 			return nil, nil, err
 		}
@@ -890,6 +902,10 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 			if offers.Cut(it.UnitPrice, pctP, amtP) > 0 {
 				before := it.UnitPrice
 				it.UnitPrice = offers.AfterCut(before, pctP, amtP)
+				// **والخصمُ يُكتب في البند** — فتُقرأ كلفتُه على المنصّة أو
+				// على المتجر بلا إعادة حساب (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+				it.OfferCut = before - it.UnitPrice
+				it.OfferBorneBy = by
 				if by == offers.ByMerchant {
 					// **وينزل سعرُ الشراء بالمقدار نفسِه لا بالنسبة نفسِها**:
 					// النسبةُ على سعرِ بيعٍ أكبرَ تُنتج خصماً أكبر، **فيتحمّل
@@ -1035,14 +1051,16 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	var maxUses *int
 	var usedCount int
 	var expiresAt *time.Time
+	var maxDiscount *int64
+	var approvalState string
 	// **و`FOR UPDATE` هي القفل**: من وصل ثانياً ينتظر أن تُودَع الأولى، **ثمّ
 	// يقرأ عدّاداً محدَّثاً وقيداً مكتوباً** — فيُردّ كما يجب.
 	err := q.QueryRow(ctx, `
 		SELECT id, kind, value, min_order, first_order_only, once_per_user,
-		       max_uses, used_count, expires_at, active
+		       max_uses, used_count, expires_at, active, max_discount, approval_state
 		FROM promo_codes WHERE code = $1 FOR UPDATE`, code).
 		Scan(&id, &kind, &value, &minOrder, &firstOnly, &oncePerUser,
-			&maxUses, &usedCount, &expiresAt, &active)
+			&maxUses, &usedCount, &expiresAt, &active, &maxDiscount, &approvalState)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, 0, ErrInvalidPromo
 	}
@@ -1051,17 +1069,29 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	}
 
 	switch {
-	case !active,
+	case !active, approvalState != "ok",
 		expiresAt != nil && time.Now().After(*expiresAt),
 		maxUses != nil && usedCount >= *maxUses,
 		subtotal < minOrder:
 		return nil, 0, ErrInvalidPromo
 	}
 
+	// ══════════════════════════════════════════════════════════════
+	// **«مرّةً لكلّ مستخدم» و«أوّلُ طلب» بالرقم لا بالحساب**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣ — كهديّة التسجيل والدعوة.) **من حذف
+	// حسابَه وعاد بالرقم نفسِه لا يأخذ الكودَ مرّةً ثانية**: الاستعمالُ يحمل
+	// بصمةَ الرقم (`phone_hash_of`)، **والحذفُ يحجز بصمةَ من له طلبات**
+	// (`promo_first_order` في `phone_claims`).
 	if oncePerUser {
 		var used bool
 		if err := q.QueryRow(ctx, `
-			SELECT EXISTS(SELECT 1 FROM promo_redemptions WHERE promo_id = $1 AND user_id = $2)`,
+			SELECT EXISTS(SELECT 1 FROM promo_redemptions
+			              WHERE promo_id = $1
+			                AND (user_id = $2::uuid
+			                     OR (phone_hash IS NOT NULL
+			                         AND phone_hash = phone_hash_of($2::uuid))))`,
 			id, customerID).Scan(&used); err != nil {
 			return nil, 0, err
 		}
@@ -1072,8 +1102,11 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	if firstOnly {
 		var hasOrders bool
 		if err := q.QueryRow(ctx, `
-			SELECT EXISTS(SELECT 1 FROM orders WHERE customer_id = $1
-				AND status NOT IN ('cancelled','rejected','failed'))`,
+			SELECT EXISTS(SELECT 1 FROM orders WHERE customer_id = $1::uuid
+				AND status NOT IN ('cancelled','rejected','failed'))
+			    OR EXISTS(SELECT 1 FROM phone_claims
+			              WHERE kind = 'promo_first_order'
+			                AND phone_hash = phone_hash_of($1::uuid))`,
 			customerID).Scan(&hasOrders); err != nil {
 			return nil, 0, err
 		}
@@ -1086,10 +1119,25 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	switch kind {
 	case "percent":
 		discount = subtotal * value / 100
+		// **وسقفٌ بالليرة لكود النسبة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٢).
+		if maxDiscount != nil && discount > *maxDiscount {
+			discount = *maxDiscount
+		}
 	case "fixed":
-		discount = min64(value, subtotal)
+		discount = value
 	case "free_delivery":
 		*deliveryFee = 0
+	}
+	// ══════════════════════════════════════════════════════════════
+	// **والخصمُ لا يتجاوز سعرَ البضاعة — أيّاً كان الكود**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// كودٌ بنسبة ١٥٠ كان يخصم ١٥٠٠٠ من بضاعةٍ بـ١٠٠٠٠ **فيأكل التوصيلَ
+	// ويصير المجموعُ صفراً** — **وينكسر فحصُ الدفتر** (المجموع = البضاعة +
+	// التوصيل − الخصم). **والحارسُ هنا لا في الشاشة وحدَها.**
+	discount = min64(discount, subtotal)
+	if discount < 0 {
+		discount = 0
 	}
 	return &id, discount, nil
 }

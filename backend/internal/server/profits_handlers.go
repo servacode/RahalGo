@@ -172,16 +172,17 @@ func (s *Server) profitsPlatform(w http.ResponseWriter, r *http.Request, from, t
 		// الأساس مكتوب في الرد — والشاشة تقوله (القرار ١).
 		"basis":  "ledger_entry_damascus",
 		"orders": p.Orders, "sales": p.Sales,
-		"income":        p.Income(),
-		"lines":         p.Lines(),
-		"lines_sum":     sum,
-		"net":           p.Net,
-		"check_ok":      sum == p.Net,
-		"check_diff":    p.Net - sum,
-		"pending":       p.Pending,
-		"outside":       p.Outside,
-		"losses":        p.Losses(),
-		"expenses_paid": p.Opex,
+		"income":               p.Income(),
+		"lines":                p.Lines(),
+		"lines_sum":            sum,
+		"net":                  p.Net,
+		"check_ok":             sum == p.Net,
+		"check_diff":           p.Net - sum,
+		"store_item_discounts": p.StoreItemDiscounts,
+		"pending":              p.Pending,
+		"outside":              p.Outside,
+		"losses":               p.Losses(),
+		"expenses_paid":        p.Opex,
 	})
 }
 
@@ -237,16 +238,27 @@ func (s *Server) platformProfit(ctx context.Context, from, to string) (platformP
 		       COALESCE(sum(o.total), 0),
 		       COALESCE(sum(`+orders.OrderMarginSQL("o.id")+`), 0),
 		       COALESCE(sum(o.platform_commission), 0),
-		       COALESCE(sum(o.delivery_fee - o.driver_fee), 0),
+		       COALESCE(sum(o.delivery_fee + o.promo_delivery_waived - o.driver_fee), 0),
 		       COALESCE(sum(o.discount), 0),
-		       COALESCE(sum(rep.amt), 0)
+		       COALESCE(sum(rep.amt), 0),
+		       COALESCE(sum(o.promo_delivery_waived), 0),
+		       COALESCE(sum(it.platform_cut), 0),
+		       COALESCE(sum(it.store_cut), 0)
 		FROM od
 		JOIN orders o ON o.id = od.order_id
-		LEFT JOIN rep ON rep.order_id = o.id`, from, to).Scan(
+		LEFT JOIN rep ON rep.order_id = o.id
+		-- **وخصمُ الصنف من البند** (قسمُ العروض ٢٠٢٦-١٠-٠٤): ما تحمّلته المنصّةُ نقص
+		-- هامشَها فيُعاد إليه ويُكتب سطراً لحاله، وما تحمّله المتجرُ لا يمسّ ربحَها.
+		LEFT JOIN LATERAL (
+			SELECT COALESCE(sum(oi.offer_cut * oi.qty) FILTER (WHERE oi.offer_borne_by = 'platform'), 0) AS platform_cut,
+			       COALESCE(sum(oi.offer_cut * oi.qty) FILTER (WHERE oi.offer_borne_by = 'merchant'), 0) AS store_cut
+			  FROM order_items oi WHERE oi.order_id = o.id) it ON true`, from, to).Scan(
 		&p.Orders, &p.Sales, &p.Margin, &p.Commission, &p.DeliveryShare,
-		&p.Discount, &p.RepShare); err != nil {
+		&p.Discount, &p.RepShare, &p.FreeDelivery, &p.ItemDiscounts, &p.StoreItemDiscounts); err != nil {
 		return p, err
 	}
+	// الهامشُ قبل خصم الصنف — والخصمُ سطرُه.
+	p.Margin += p.ItemDiscounts
 	return p, nil
 }
 
@@ -261,6 +273,13 @@ type platformProfitSum struct {
 	DeliveryShare int64 // delivery_fee − driver_fee
 	Discount      int64
 	RepShare      int64 // ما قُيّد للمندوبين عن هذه الطلبات
+	// **كلفةُ العروض سطورٌ لحالها** (قسمُ العروض ٢٠٢٦-١٠-٠٤): التوصيلُ المجانيّ
+	// (`orders.promo_delivery_waived`) · وخصمُ الصنف على حساب المنصّة
+	// (`order_items.offer_cut × qty`، `offer_borne_by = 'platform'`). والهامشُ
+	// والتوصيلُ قبلهما، فالمجموعُ هو نفسُه. وخصمُ المتجر للعرض لا يدخل الكشف.
+	FreeDelivery       int64
+	ItemDiscounts      int64
+	StoreItemDiscounts int64
 
 	orderLedger int64 // ما قيّدته الخزينة عن الطلبات المسلّمة (بعد نصيب المندوب)
 
@@ -281,7 +300,8 @@ type platformProfitSum struct {
 
 // SettleDiff ما قيّده الدفتر عن الطلبات المسلّمة ولا تشرحه أعمدتها.
 func (p platformProfitSum) SettleDiff() int64 {
-	return p.orderLedger + p.RepShare - (p.Margin + p.Commission + p.DeliveryShare - p.Discount)
+	return p.orderLedger + p.RepShare - (p.Margin + p.Commission + p.DeliveryShare - p.Discount -
+		p.FreeDelivery - p.ItemDiscounts)
 }
 
 // Income دخل الطلبات المسلّمة قبل نصيب المندوب.
@@ -300,6 +320,8 @@ func (p platformProfitSum) Lines() []profitLine {
 		{"commission", p.Commission},
 		{"delivery_share", p.DeliveryShare},
 		{"discount", -p.Discount},
+		{"free_delivery", -p.FreeDelivery},
+		{"item_discounts", -p.ItemDiscounts},
 		{"settle_diff", p.SettleDiff()},
 		{"rep_share", -p.RepShare},
 		{"lost_failed", p.LostFailed},

@@ -308,8 +308,8 @@ func seedDemo(ctx context.Context, tx pgx.Tx, ids map[string]string) {
 
 	// ---------- كود خصم ترحيبي ----------
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO promo_codes (code, kind, value, min_order, first_order_only, once_per_user, max_uses)
-		VALUES ('WELCOME50', 'percent', 50, 30000, true, true, 100)
+		INSERT INTO promo_codes (code, kind, value, max_discount, min_order, first_order_only, once_per_user, max_uses)
+		VALUES ('WELCOME50', 'percent', 50, 15000, 30000, true, true, 100)
 		ON CONFLICT (code) DO NOTHING`); err != nil {
 		log.Fatal(err)
 	}

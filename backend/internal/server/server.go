@@ -1195,6 +1195,12 @@ func (s *Server) Router() http.Handler {
 			r.Get("/merchants/{id}/warnings", s.handleAdminMerchantWarnings)
 			r.Get("/zones", s.handleListZones)
 			r.Get("/promos", s.handleListPromos)
+			// **ملخّصُ العروض وموافقاتُها وجدولُ الدعوات** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Get("/promos/summary", s.handlePromoSummary)
+			r.Get("/promo-approvals", s.handleListPromoApprovals)
+			r.Post("/promo-approvals/{id}/approve", s.handleDecidePromoApproval(true))
+			r.Post("/promo-approvals/{id}/reject", s.handleDecidePromoApproval(false))
+			r.Get("/referrals", s.handleAdminReferrals)
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
 			// **وحالُ التطبيق تُقرأ مع لوح الإعدادات** — قراءةٌ لا تبديل.
@@ -1384,6 +1390,7 @@ func (s *Server) Router() http.Handler {
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			// **العروضُ والخصومات** — لافتةٌ تُرى وخصمٌ يُطبَّق في الدفتر.
 			r.Get("/offers", s.handleAdminOffers)
+			r.Get("/offers/audience", s.handleOfferAudience)
 			r.Post("/offers", s.handleCreateOffer)
 			r.Post("/offers/{id}/active", s.handleSetOfferActive)
 			r.Get("/customers", s.handleListCustomers)

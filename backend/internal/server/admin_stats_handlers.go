@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"net/http"
 	"time"
 
@@ -137,7 +138,7 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT count(*) FROM merchants),
 			(SELECT count(*) FROM menu_items),
 			(SELECT count(*) FROM delivery_zones WHERE active),
-			(SELECT count(*) FROM promo_codes WHERE active)`,
+			(SELECT count(*) FROM promo_codes p WHERE `+catalog.PromoLiveSQL+`)`,
 		s.settings.GetInt(r.Context(), "orders.accept_timeout_min"),
 		s.settings.GetInt(r.Context(), "orders.driver_timeout_min"),
 		s.settings.GetInt(r.Context(), "orders.delivery_timeout_min")).

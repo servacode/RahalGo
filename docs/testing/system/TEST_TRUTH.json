@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 475,
+    "routes": 481,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 74,
+    "notify_sites": 75,
     "notify_targeted": 27,
     "publish_rooms": [
       "customer",
@@ -33,8 +33,8 @@
     "setting_defs": 188,
     "behaviour_settings": 153,
     "order_fields": 95,
-    "test_files": 502,
-    "test_funcs": 2106
+    "test_files": 505,
+    "test_funcs": 2122
   },
   "flows": [
     {
@@ -9248,6 +9248,36 @@
     {
       "name": "TestPromo_OncePerUserSurvivesConcurrency",
       "file": "internal/orders/promo_race_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_FreeDeliveryCostRecorded",
+      "file": "internal/orders/promos_owner_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_ItemDiscountRecordedOnLine",
+      "file": "internal/orders/promos_owner_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_OncePerPhoneAndFirstOrderByPhone",
+      "file": "internal/orders/promos_owner_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_PercentCapInSYP",
+      "file": "internal/orders/promos_owner_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_PercentOver90Refused",
+      "file": "internal/orders/promos_owner_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -25324,6 +25354,30 @@
       "orphan": true
     },
     {
+      "name": "TestMERGE_DebtRepaidFromTopupIsRecovered",
+      "file": "internal/server/merge_integrations_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMERGE_EveryApprovalSourceTableHasTheContract",
+      "file": "internal/server/merge_integrations_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMERGE_LossesShowWrittenOffDebtsOutsideTotal",
+      "file": "internal/server/merge_integrations_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMERGE_PromoCostsAreTheirOwnProfitLines",
+      "file": "internal/server/merge_integrations_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestOffer_AllowsWhatFitsUnderLimit",
       "file": "internal/server/offer_cash_limit_test.go",
       "package": "server",
@@ -25680,6 +25734,48 @@
     {
       "name": "TestProfits_WithdrawalsAndManualDepositsExcluded",
       "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_AdminCannotDiscountUnavailableItem",
+      "file": "internal/server/promos_owner_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_AdminOfferRules",
+      "file": "internal/server/promos_owner_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_EditClearsAndEndOfDayDamascus",
+      "file": "internal/server/promos_owner_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_OverLimitNeedsFinanceApproval",
+      "file": "internal/server/promos_owner_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_RealStatusAndHomeCount",
+      "file": "internal/server/promos_owner_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_ServerValidatesCode",
+      "file": "internal/server/promos_owner_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMOS_SummaryAndReferralsRead",
+      "file": "internal/server/promos_owner_test.go",
       "package": "server",
       "orphan": true
     },

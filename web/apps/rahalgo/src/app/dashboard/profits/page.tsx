@@ -79,6 +79,8 @@ const LINE_LABEL: Record<string, string> = {
   commission: P.lineCommission,
   delivery_share: P.lineDeliveryShare,
   discount: P.lineDiscount,
+  free_delivery: P.lineFreeDelivery,
+  item_discounts: P.lineItemDiscounts,
   settle_diff: P.lineSettleDiff,
   rep_share: P.lineRepShare,
   lost_failed: P.lineLostFailed,
@@ -92,7 +94,15 @@ const LINE_LABEL: Record<string, string> = {
   penalties: P.linePenalties,
 };
 /** سطور الدخل — والباقي «ناقص» أو «زائد» بإشارته. */
-const INCOME_KEYS = new Set(["margin", "commission", "delivery_share", "discount", "settle_diff"]);
+const INCOME_KEYS = new Set([
+  "margin",
+  "commission",
+  "delivery_share",
+  "discount",
+  "free_delivery",
+  "item_discounts",
+  "settle_diff",
+]);
 /** سطور تظهر حتى لو صفر — لأنّها أبواب الكشف الأساسيّة. */
 const ALWAYS = new Set(["margin", "commission", "delivery_share", "rep_share", "opex"]);
 
