@@ -525,6 +525,11 @@ private val CODES: Map<String, Int> = mapOf(
     "order_not_returnable" to R.string.err_order_not_returnable,
     "not_readyable" to R.string.err_not_readyable,
     "reason_required" to R.string.err_reason_required,
+    // ── قسمُ الحسابات (قراراتُ المالك ٢٠٢٦-١٠-٠٤) ─────────────────────
+    "temp_password_expired" to R.string.err_temp_password_expired,
+    "rep_inactive" to R.string.err_rep_inactive,
+    "merchant_ban_locked" to R.string.err_merchant_ban_locked,
+    "accident_check_required" to R.string.err_accident_check_required,
     "never_picked_up" to R.string.err_never_picked_up,
     "payout_below_min" to R.string.err_payout_below_min,
     "payout_closed" to R.string.err_payout_closed,

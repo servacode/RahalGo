@@ -461,6 +461,18 @@
   },
   {
    "method": "POST",
+   "pattern": "/users/{id}/wallet",
+   "action": "finance.wallet_apply",
+   "target_type": "user",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount",
+    "kind"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
    "pattern": "/wallet-requests/{id}/approve",
    "action": "finance.wallet_request_approved",
    "target_type": "wallet_request",

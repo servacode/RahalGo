@@ -298,7 +298,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       err.body.code === "step_up_required" &&
       err.stepUp &&
       stepUpAsker &&
-      !init.headers
+      // **ولا يُسأل مرّتين لنداءٍ يحمل إثباتاً** — وترويساتٌ أخرى (مفتاحُ عدمِ التكرار)
+      // لا تمنع السؤال (قسمُ الحسابات ٢٠٢٦-١٠-٠٤: طلبُ حركة المحفظة يحملهما معاً).
+      !new Headers(init.headers).has("X-Step-Up")
     ) {
       const grant = await stepUpAsker(err.stepUp, {
         method: (init.method ?? "GET").toUpperCase(),
@@ -307,7 +309,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       });
       // **وإلغاءُ التأكيد يُبقي الخطأ كما هو** — ولا يُبتلَع صامتاً.
       if (!grant) throw err;
-      return rawRequest<T>(path, { ...init, headers: { "X-Step-Up": grant } }, tokenStore.access);
+      const headers = new Headers(init.headers);
+      headers.set("X-Step-Up", grant);
+      return rawRequest<T>(path, { ...init, headers }, tokenStore.access);
     }
     throw err;
   }

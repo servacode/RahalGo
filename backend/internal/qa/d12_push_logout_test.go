@@ -237,7 +237,7 @@ func TestD12_DispatcherNoLongerTargetsLoggedOutDevice(t *testing.T) {
 		t.Fatalf("الخروج: %d", code)
 	}
 
-	got := h.POST("/api/v1/admin/users/"+owner.ID+"/wallet", admin.Token,
+	got := h.adminWallet(admin, owner.ID,
 		map[string]any{"amount": 5000, "kind": "topup", "note": "D12"})
 	if got.Code >= 400 {
 		t.Fatalf("القيد: %s", got)
@@ -625,7 +625,7 @@ func TestD12_DispatcherSilentAfterTokenlessLogout(t *testing.T) {
 		t.Fatalf("الخروج: %d", code)
 	}
 
-	got := h.POST("/api/v1/admin/users/"+owner.ID+"/wallet", admin.Token,
+	got := h.adminWallet(admin, owner.ID,
 		map[string]any{"amount": 5000, "kind": "topup", "note": "D12/60"})
 	if got.Code >= 400 {
 		t.Fatalf("القيد: %s", got)

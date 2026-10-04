@@ -1280,12 +1280,6 @@
       "handler": "handleListMerchants",
       "auth": true,
       "capability": "merchants.read",
-      "response": [
-        {
-          "name": "@res",
-          "type": "unknown"
-        }
-      ],
       "statuses": [
         "StatusOK"
       ]
@@ -1296,12 +1290,6 @@
       "handler": "handleCreateMerchant",
       "auth": true,
       "capability": "merchants.manage",
-      "response": [
-        {
-          "name": "@m",
-          "type": "unknown"
-        }
-      ],
       "statuses": [
         "StatusCreated"
       ]
@@ -1312,12 +1300,6 @@
       "handler": "handleAdminGetMerchant",
       "auth": true,
       "capability": "merchants.read",
-      "response": [
-        {
-          "name": "@mr",
-          "type": "unknown"
-        }
-      ],
       "statuses": [
         "StatusOK"
       ]
@@ -2378,6 +2360,62 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/phone-requests",
+      "handler": "handleListPhoneRequests",
+      "auth": true,
+      "capability": "users.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/phone-requests/{id}/approve",
+      "handler": "handleDecidePhoneRequest",
+      "auth": true,
+      "capability": "users.status.manage",
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/phone-requests/{id}/reject",
+      "handler": "handleDecidePhoneRequest",
+      "auth": true,
+      "capability": "users.status.manage",
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/platform/closure",
       "handler": "handleGetServiceClosure",
       "auth": true,
@@ -3101,10 +3139,32 @@
       "handler": "handleAdminCreateUser",
       "auth": true,
       "capability": "users.status.manage",
+      "request": [
+        {
+          "name": "welcome_app",
+          "type": "string"
+        }
+      ],
       "response": [
         {
-          "name": "@user",
+          "name": "full_name",
           "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "phone",
+          "type": "unknown"
+        },
+        {
+          "name": "roles",
+          "type": "unknown"
+        },
+        {
+          "name": "welcome",
+          "type": "object"
         }
       ],
       "statuses": [
@@ -3164,6 +3224,14 @@
         {
           "name": "@user",
           "type": "unknown"
+        },
+        {
+          "name": "phone_change",
+          "type": "unknown"
+        },
+        {
+          "name": "user",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -3195,6 +3263,66 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/users/{id}/cash-ban",
+      "handler": "handleUserCashBan",
+      "auth": true,
+      "capability": "users.read",
+      "response": [
+        {
+          "name": "@info",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/cash-ban/lift",
+      "handler": "handleLiftCashBan",
+      "auth": true,
+      "capability": "users.cashban.lift",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "lifted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}/cash-limit",
+      "handler": "handleDriverCashLimit",
+      "auth": true,
+      "capability": "settings.financial.manage",
+      "request": [
+        {
+          "name": "limit",
+          "type": "?int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "limit",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/users/{id}/chats",
       "handler": "handleAdminUserChats",
       "auth": true,
@@ -3203,6 +3331,28 @@
         {
           "name": "@paged",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/driver-ok",
+      "handler": "handleDriverOK",
+      "auth": true,
+      "capability": "drivers.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "cleared",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -3300,21 +3450,81 @@
       ]
     },
     {
-      "method": "POST",
-      "path": "/api/v1/admin/users/{id}/password",
-      "handler": "handleAdminResetPassword",
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/notes",
+      "handler": "handleUserNotes",
       "auth": true,
-      "capability": "users.status.manage",
+      "capability": "users.read",
+      "response": [
+        {
+          "name": "notes",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/notes",
+      "handler": "handleAddUserNote",
+      "auth": true,
+      "capability": "users.read",
       "request": [
         {
-          "name": "password",
+          "name": "body",
           "type": "string"
         }
       ],
       "response": [
         {
+          "name": "@n",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/password",
+      "handler": "handleAdminResetPassword",
+      "auth": true,
+      "capability": "users.status.manage",
+      "response": [
+        {
+          "name": "expires_at",
+          "type": "unknown"
+        },
+        {
+          "name": "sent",
+          "type": "unknown"
+        },
+        {
           "name": "updated",
           "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/resend-welcome",
+      "handler": "handleAdminResendWelcome",
+      "auth": true,
+      "capability": "users.status.manage",
+      "response": [
+        {
+          "name": "expires_at",
+          "type": "unknown"
+        },
+        {
+          "name": "sent",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -3356,6 +3566,36 @@
       "response": [
         {
           "name": "revoked",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}/vehicle",
+      "handler": "handleDriverVehicle",
+      "auth": true,
+      "capability": "drivers.manage",
+      "request": [
+        {
+          "name": "vehicle_type",
+          "type": "string"
+        },
+        {
+          "name": "vehicle_plate",
+          "type": "string"
+        },
+        {
+          "name": "vehicle_color",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "saved",
           "type": "bool"
         }
       ],
@@ -3451,6 +3691,78 @@
           "name": "ticket_id",
           "type": "?string"
         }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/wallet-requests",
+      "handler": "handleListWalletRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/wallet-requests/{id}/approve",
+      "handler": "handleDecideWalletRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/wallet-requests/{id}/reject",
+      "handler": "handleDecideWalletRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {
@@ -4630,6 +4942,10 @@
         },
         {
           "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "kind",
           "type": "string"
         }
       ],

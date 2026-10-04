@@ -12,10 +12,8 @@ import {
   Alert,
   Badge,
   Button,
-  Input,
   Select,
   Checkbox,
-  Modal,
   Pagination,
   FormSection,
   IconUser,
@@ -33,18 +31,18 @@ import {
   IconStatus,
   IconStar,
   IconSupport,
-  IconEdit,
   IconBlock,
   IconUnblock,
   IconBalance,
   IconLocation,
   IconChat,
   LoadingState,
-  usePlatform,
   Money,
-  FormActions,
+  Confirm,
+  ActionMenu,
+  type ActionMenuItem,
 } from "@rahalgo/ui";
-import { api, ApiError, type AuthUser } from "@/lib/api";
+import { api, type AuthUser } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
 import {
   OrdersTab,
@@ -52,7 +50,20 @@ import {
   AddressesTab,
   CashboxTab,
   StoresTab,
+  EndShiftButton,
 } from "@/components/admin/ProfileRoleTabs";
+import { useCanCall } from "@/lib/policy";
+import {
+  NotAllowed,
+  NotesLog,
+  CashBanCard,
+  DriverPanel,
+  TempPasswordBadge,
+  PendingPhoneBanner,
+  ChangePhoneModal,
+  ResetPasswordModal,
+  type PendingPhoneChange,
+} from "@/components/admin/accounts/ProfileParts";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
 import { ManageRolesModal } from "@/components/admin/ManageRolesModal";
@@ -62,7 +73,10 @@ import RoleBadge from "@/components/admin/RoleBadge";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.users.profile;
-const KINDS: Record<string, string> = m.admin.users.txKinds;
+// **وأنواعُ الحركة من المعجم المشترك أوّلاً** — كان `driver_earning` يظهر إنكليزيّاً ٦٨ مرّةً
+// في محفظة سائق (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+const KINDS: Record<string, string> = { ...m.admin.users.txKinds, ...m.shared.txKinds };
+const A = m.admin.acc;
 /** **والرصيدان اسمُهما واحدٌ في المنصّة** — معجمُ الكشف المشترك. */
 const ST = m.shared.statement;
 /**
@@ -131,6 +145,27 @@ interface Profile {
   driver_cash: number;
   deliveries: number;
   delivered_today: number;
+  // ── قسمُ الحسابات (قراراتُ المالك ٢٠٢٦-١٠-٠٤) ──
+  money_hidden: boolean;
+  open_orders: number;
+  temp_password_pending: boolean;
+  temp_password_expires_at: string | null;
+  temp_password_hours: number;
+  ever_logged_in: boolean;
+  vehicle_type: string;
+  vehicle_plate: string;
+  vehicle_color: string;
+  cash_limit: number;
+  cash_limit_general: number;
+  cash_limit_override: number | null;
+  accident_locked: boolean;
+  accident_lock_at: string | null;
+  accident_cleared_at: string | null;
+  accident_cleared_by: string | null;
+  held_commission: number;
+  held_commissions_count: number;
+  pending_phone_change: PendingPhoneChange | null;
+  stores: { id: string; name: string; status: string }[];
 }
 
 interface Activity {
@@ -192,10 +227,21 @@ export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user: me, can } = useAuth();
-  // **وبابُ الأدوار في بطاقة الحساب** — `roles.manage`.
-  const isAdmin = can("roles.manage");
-  // **ولوحُ المحفظة قراءةُ مال** — `finance.read`.
-  const canWallet = can("finance.read");
+  // ══════════════════════════════════════════════════════════════════
+  // **وكلُّ زرٍّ بقدرة بابه من جدول المحرّك** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت أزرارُ الإيقاف والحظر والرقم والكلمة والجلسات تفحص «إدارة الأدوار»**
+  // والمحرّكُ يطلب «إدارة حالة الحساب» — فدورُ «الثقة والسلامة» لا يرى زرَّه، ومن
+  // معه «إدارة الأدوار» وحدَها يراه ويُردّ.
+  const canCall = useCanCall();
+  const canStatus = canCall("PATCH", "/users/{id}");
+  const canRoles = canCall("POST", "/users/{id}/roles");
+  const canReset = canCall("POST", "/users/{id}/password");
+  const canLogout = canCall("POST", "/users/{id}/logout-all");
+  const canResend = canCall("POST", "/users/{id}/resend-welcome");
+  const canWalletRead = canCall("GET", "/users/{id}/wallet");
+  const canWalletPropose = canCall("POST", "/users/{id}/wallet");
 
   const [p, setP] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
@@ -258,11 +304,19 @@ export default function UserProfilePage() {
     | "activity"
   >("overview");
   const [notice, setNotice] = useState("");
+  const [feedbackError, setFeedbackError] = useState("");
+  const [walletError, setWalletError] = useState("");
+  const [finError, setFinError] = useState("");
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [confirmActivate, setConfirmActivate] = useState(false);
+  const [busyAction, setBusyAction] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [rolesOpen, setRolesOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState("");
 
+  // **والخطأُ يُرمى لنافذة السبب فتعرضه** — كانت تبقى مفتوحةً بلا تفسير.
   async function setStatus(status: string, reason: string) {
     await api(`/api/v1/admin/users/${id}`, {
       method: "PATCH",
@@ -275,20 +329,32 @@ export default function UserProfilePage() {
   const load = useCallback(async () => {
     try {
       setP(await api<Profile>(`/api/v1/admin/users/${id}`));
+      setError("");
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }, [id]);
+
+  // **والشكاوى وحدَها** — فشلُها لا يُسقط الملفَّ كلَّه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const loadFeedback = useCallback(async () => {
+    try {
       setFeedback(
         await api<Feedback>(
           `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&a_page=${aPage}&g_page=${gPage}&r_page=${rPage}`,
         ),
       );
-      setError("");
+      setFeedbackError("");
     } catch (err) {
-      setError(errorText(err));
+      setFeedbackError(errorText(err));
     }
   }, [id, tPage, aPage, gPage, rPage]);
 
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    void loadFeedback();
+  }, [loadFeedback]);
 
   /**
    * **وسجلُّ النشاط يُجلَب وحدَه — بصفحته.**
@@ -349,9 +415,13 @@ export default function UserProfilePage() {
         setTxPer(st?.per_page || 50);
         setTxOpening(st?.opening ?? 0);
         setTxClosing(st?.closing ?? 0);
+        setWalletError("");
       })
-      // @empty-ok **ودفترٌ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
-      .catch(() => setTxs([]));
+      // **والفشلُ يُقال** — كان يُقرأ «لا حركات».
+      .catch((err) => {
+        setTxs([]);
+        setWalletError(errorText(err));
+      });
   }, [id, wPage, wReload, canFinance]);
 
   /**
@@ -361,25 +431,34 @@ export default function UserProfilePage() {
    * بأربعة نداءاتٍ للقاعدة**، وتبويبُه محجوبٌ عنه أصلاً فلا يراها أحد.
    */
   useEffect(() => {
-    if (tab !== "financials") return;
+    if (tab !== "financials" || !canFinance) return;
     api<FinData>(`/api/v1/admin/users/${id}/financials`)
-      .then(setFin)
-      // @empty-ok **وكشفٌ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
-      .catch(() => setFin(null));
-  }, [id, tab]);
+      .then((f) => {
+        setFin(f);
+        setFinError("");
+      })
+      // **والفشلُ يُقال** — كان صفحةً فارغةً بلا مؤشّر.
+      .catch((err) => {
+        setFin(null);
+        setFinError(errorText(err));
+      });
+  }, [id, tab, canFinance]);
 
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!p) return <LoadingState variant="text" />;
 
   const has = (r: string) => p.roles.includes(r);
 
-  const stats: { label: string; value: string; icon: React.ReactNode; onClick?: () => void }[] = [
-    {
+  const isMe = me?.id === p.id;
+  const money = !p.money_hidden;
+  const stats: { label: string; value: string; icon: React.ReactNode; onClick?: () => void }[] = [];
+  if (money) {
+    stats.push({
       label: `${m.admin.customers.balance} (${m.common.currency})`,
       value: fmtNum(p.balance),
       icon: <IconWallet className="text-primary" />,
-    },
-  ];
+    });
+  }
   // ══════════════════════════════════════════════════════════════════
   // **وكم دعا وكم قبض** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
   // ══════════════════════════════════════════════════════════════════
@@ -399,11 +478,15 @@ export default function UserProfilePage() {
         value: fmtNum(p.referrals_count),
         icon: <IconLink />,
       },
-      {
-        label: `${P.referralsEarned} (${m.common.currency})`,
-        value: fmtNum(p.referrals_earned),
-        icon: <IconWallet className="text-success" />,
-      }
+      ...(money
+        ? [
+            {
+              label: `${P.referralsEarned} (${m.common.currency})`,
+              value: fmtNum(p.referrals_earned),
+              icon: <IconWallet className="text-success" />,
+            },
+          ]
+        : []),
     );
   }
   if (has("customer") || p.orders_count > 0) {
@@ -419,32 +502,40 @@ export default function UserProfilePage() {
         value: fmtNum(p.orders_count),
         icon: <IconOrder />,
       },
-      {
-        label: `${P.spent} (${m.common.currency})`,
-        value: fmtNum(p.orders_spent),
-        icon: <IconOrder className="text-success" />,
-      }
+      ...(money
+        ? [
+            {
+              label: `${P.spent} (${m.common.currency})`,
+              value: fmtNum(p.orders_spent),
+              icon: <IconOrder className="text-success" />,
+            },
+          ]
+        : []),
     );
   }
   // **وورديّتُه هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذفت من البطاقة).
   // **ومن سأل «من يعمل الآن؟» يسأله في شاشة الطلبات**، ومن فتح ملفَّ
   // سائقٍ بعينه يريد أن يعرف حالَه.
-  if (has("driver")) {
-    stats.push({
-      label: m.terms.onShift,
-      value: p.on_shift ? m.terms.onShift : m.terms.offShift,
-      icon: <IconDriver className={p.on_shift ? "text-success" : ""} />,
-    });
-  }
   if (has("sales")) {
     stats.push(
       { label: P.repStores, value: fmtNum(p.rep_stores), icon: <IconStore /> },
-      {
-        label: `${P.commissions} (${m.common.currency})`,
-        value: fmtNum(p.commissions),
-        icon: <IconWallet className="text-success" />,
-      }
+      ...(money
+        ? [
+            {
+              label: `${P.commissions} (${m.common.currency})`,
+              value: fmtNum(p.commissions),
+              icon: <IconWallet className="text-success" />,
+            },
+          ]
+        : []),
     );
+    if (money && p.held_commission > 0) {
+      stats.push({
+        label: `${A.heldCommission} (${m.common.currency})`,
+        value: fmtNum(p.held_commission),
+        icon: <IconWallet className="text-warning" />,
+      });
+    }
   }
   if (feedback?.avg_received != null) {
     stats.push({
@@ -468,12 +559,36 @@ export default function UserProfilePage() {
         value: fmtNum(p.deliveries),
         icon: <IconDriver />,
       },
-      {
-        label: `${P.driverCash} (${m.common.currency})`,
-        value: fmtNum(p.driver_cash),
-        icon: <IconWallet className="text-accent-dark" />,
-      }
     );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // **إجراءاتُ الحساب — قائمةٌ واحدة، والخطرُ بالأحمر في آخرها**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (قرارُ المالك ٢٠٢٦-١٠-٠٤.) **ولا يعيد الموظّفُ كلمتَه ولا يُخرج نفسَه ولا يوقفها
+  // من ملفّه** — بابُه «حسابي».
+  const actions: ActionMenuItem[] = [];
+  if (canRoles) actions.push({ key: "roles", label: m.admin.users.manageRoles, icon: IconRoles, onSelect: () => setRolesOpen(true) });
+  if (canReset && !isMe) actions.push({ key: "reset", label: P.passwordBtn, icon: IconLock, onSelect: () => setResetOpen(true) });
+  if (canStatus && !isMe) actions.push({ key: "phone", label: P.changePhone, icon: IconPhone, onSelect: () => setPhoneOpen(true) });
+  if (canLogout && !isMe)
+    actions.push({
+      key: "logout",
+      label: `${P.logoutAllShort} (${fmtNum(p.active_sessions)})`,
+      icon: IconLogout,
+      danger: true,
+      onSelect: () => setConfirmLogout(true),
+    });
+  if (canStatus && !isMe) {
+    if (p.status === "active") {
+      actions.push(
+        { key: "suspend", label: m.admin.users.suspend, icon: IconBlock, danger: true, hint: A.statusExplain.suspended, onSelect: () => setStatusModal("suspended") },
+        { key: "block", label: m.admin.users.block, icon: IconBlock, danger: true, hint: A.statusExplain.blocked, onSelect: () => setStatusModal("blocked") },
+      );
+    } else {
+      actions.push({ key: "activate", label: m.admin.users.activate, icon: IconUnblock, onSelect: () => setConfirmActivate(true) });
+    }
   }
 
   return (
@@ -496,7 +611,8 @@ export default function UserProfilePage() {
               <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-muted">
                 <span className="inline-flex items-center gap-1">
                   <IconPhone size={12} />
-                  <span dir="ltr">{p.phone}</span>
+                  {/* **والرقمُ المحجوبُ يُقال** — كان فراغاً جنبَ الأيقونة. */}
+                  {p.phone ? <span dir="ltr">{p.phone}</span> : <span>{A.phoneHidden}</span>}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <IconDate size={12} />
@@ -531,6 +647,15 @@ export default function UserProfilePage() {
                   {m.admin.users.lastSeen}:{" "}
                   {p.last_seen_at ? fmtDateTime(p.last_seen_at) : m.admin.users.neverSeen}
                 </span>
+                {/* **«لم يدخل بعد · تنتهي بعد …»** و«إعادة إرسال» (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
+                {p.temp_password_pending && p.temp_password_expires_at && (
+                  <TempPasswordBadge
+                    userID={p.id}
+                    expiresAt={p.temp_password_expires_at}
+                    canResend={canResend && !isMe}
+                    onDone={() => void load()}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -555,100 +680,21 @@ export default function UserProfilePage() {
               **و`whitespace-nowrap` تبقى** — تمنع كسرَ الكلمة داخلَ الزرّ،
               **ولا علاقةَ لها بالتفاف الصفّ.** */}
           <div className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
-            {canWallet && (
+            {(canWalletRead || canWalletPropose) && (
               <Button onClick={() => setWalletOpen(true)} className="flex items-center gap-1.5 !px-2.5">
                 <IconWallet size={15} />
                 {m.admin.users.wallet}
               </Button>
             )}
-            {isAdmin && (
-              <>
-                {/* ══════════════════════════════════════════════════
-                    **وبابُ الأدوار هنا لا في كلّ بطاقة**
-                    ══════════════════════════════════════════════════
-
-                    (قرارُ المالك ٢٠٢٦-٠٨-١٥: «زرُّ الأدوار بلا معنًى
-                     داخل الكرت — نحدّد دورَ المستخدم بداية تسجيل
-                     حسابٍ جديد فقط».)
-
-                    **ودورُ الزبون ممنوحٌ تلقائيّاً لكلّ عامل**، ودورٌ
-                    ميدانيٌّ ثانٍ يرفضه المحرّك، ودورُ التاجر لا يُمنح
-                    بيد — **فلا يبقى إلّا زبونٌ صار سائقاً أو مندوباً**،
-                    وتقع مرّةً في العمر. **فموضعُها ملفُّه لا بطاقتُه.** */}
-                <Button
-                  variant="secondary"
-                  onClick={() => setRolesOpen(true)}
-                  className="flex items-center gap-1.5 !px-2.5"
-                >
-                  <IconRoles size={15} />
-                  {m.admin.users.manageRoles}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setResetOpen(true)}
-                  className="flex items-center gap-1.5 !px-2.5"
-                >
-                  <IconLock size={15} />
-                  {P.passwordBtn}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setPhoneOpen(true)}
-                  className="flex items-center gap-1.5 !px-2.5"
-                >
-                  <IconPhone size={15} />
-                  {P.changePhone}
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={async () => {
-                    const res = await api<{ revoked_sessions: number }>(
-                      `/api/v1/admin/users/${p.id}/logout-all`,
-                      { method: "POST" }
-                    );
-                    setNotice(P.logoutAllDone.replace("{n}", String(res.revoked_sessions)));
-                    await load();
-                  }}
-                  className="flex items-center gap-1.5 !px-2.5"
-                >
-                  <IconLogout size={15} />
-                  {P.logoutAllShort} ({fmtNum(p.active_sessions)})
-                </Button>
-                {me?.id !== p.id &&
-                  (p.status === "active" ? (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => setStatusModal("suspended")}
-                        className="flex items-center gap-1.5 !px-2.5 !text-warning"
-                      >
-                        <IconBlock size={15} />
-                        {m.admin.users.suspend}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => setStatusModal("blocked")}
-                        className="flex items-center gap-1.5 !px-2.5"
-                      >
-                        <IconBlock size={15} />
-                        {m.admin.users.block}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() => void setStatus("active", "")}
-                      className="flex items-center gap-1.5 !px-2.5"
-                    >
-                      <IconUnblock size={15} />
-                      {m.admin.users.activate}
-                    </Button>
-                  ))}
-              </>
-            )}
+            <ActionMenu label={A.actions} items={actions} />
           </div>
         </div>
       </div>
+
+      {actionError && <Alert className="mb-3">{actionError}</Alert>}
+      {p.pending_phone_change && (
+        <PendingPhoneBanner req={p.pending_phone_change} onDone={() => void load()} />
+      )}
 
       {notice && (
         <Alert tone="success" className="mb-4">{notice}</Alert>
@@ -674,7 +720,7 @@ export default function UserProfilePage() {
               key: "addresses",
               label: P.roleTabs.addresses,
               icon: IconLocation,
-              show: has("customer") && canSensitive,
+              show: has("customer"),
             },
             {
               key: "cashbox",
@@ -700,7 +746,7 @@ export default function UserProfilePage() {
               icon: IconStore,
               show: has("merchant") || has("sales"),
             },
-            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: canFinance },
+            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: true },
             {
               key: "financials",
               // ══════════════════════════════════════════════════════════
@@ -722,7 +768,7 @@ export default function UserProfilePage() {
               // **ومن حمل دورين يبقى له** — سائقٌ يطلب لنفسه يرى كشفَه.
               label: P.tabs.financials,
               icon: IconBalance,
-              show: (has("driver") || has("merchant") || has("sales")) && canFinance,
+              show: has("driver") || has("merchant") || has("sales"),
             },
             { key: "feedback", label: P.tabs.feedback, icon: IconStar, show: true },
             {
@@ -736,9 +782,9 @@ export default function UserProfilePage() {
               // **والقناةُ بين الزبون والسائق** — فمن ليس أحدَهما لا حديثَ له.
               label: P.tabs.chats,
               icon: IconChat,
-              show: (has("customer") || has("driver")) && canChats,
+              show: has("customer") || has("driver"),
             },
-            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: canSensitive },
+            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: true },
           ] as const)
           .filter((t) => t.show)
           .map(({ key, label, icon }) => ({ key, label, icon }))}
@@ -746,15 +792,31 @@ export default function UserProfilePage() {
         onChange={(k) => setTab(k as typeof tab)}
       />
 
-      {tab === "orders" && <OrdersTab userID={id} roles={p.roles} />}
-      {tab === "addresses" && <AddressesTab userID={id} />}
-      {tab === "cashbox" && (
-        <CashboxTab userID={id} canSettle={canWallet} onSettled={() => void load()} />
-      )}
-      {tab === "stores" && <StoresTab userID={id} roles={p.roles} />}
+      {tab === "orders" && (canCall("GET", "/orders") ? <OrdersTab userID={id} roles={p.roles} /> : <NotAllowed />)}
+      {tab === "addresses" && (canSensitive ? <AddressesTab userID={id} /> : <NotAllowed />)}
+      {tab === "cashbox" && <CashboxTab userID={id} onSettled={() => void load()} />}
+      {tab === "stores" && (canCall("GET", "/merchants") ? <StoresTab userID={id} roles={p.roles} /> : <NotAllowed />)}
+      {tab === "wallet" && !canFinance && <NotAllowed />}
+      {tab === "financials" && !canFinance && <NotAllowed />}
+      {tab === "chats" && !canChats && <NotAllowed />}
+      {tab === "activity" && !canSensitive && <NotAllowed />}
 
       {tab === "overview" && (
       <>
+      {p.money_hidden && <p className="mb-2 text-xs text-ink-muted">{A.moneyHidden}</p>}
+      {has("driver") && (
+        <DriverPanel
+          d={p}
+          onChanged={() => void load()}
+          endShift={p.on_shift ? <EndShiftButton userID={p.id} onDone={() => void load()} /> : null}
+        />
+      )}
+      {has("customer") && <CashBanCard userID={p.id} />}
+      {has("sales") && p.held_commissions_count > 0 && (
+        <Alert tone="warning" className="mb-3">
+          {A.heldCommissionHint}
+        </Alert>
+      )}
       {/* المؤشرات حسب الأدوار */}
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
@@ -772,17 +834,25 @@ export default function UserProfilePage() {
         ))}
       </div>
 
-      {p.merchants.length > 0 && (
+      {p.stores.length > 0 && (
         <div className="mb-3 surface p-3">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-bold">
             <IconStore size={15} className="text-primary" />
             {P.merchantsOwned}
           </p>
+          {/* **ومتجرُه يُفتح** — ملفُّ المتجر بابُه. */}
           <div className="flex flex-wrap gap-2">
-            {p.merchants.map((name) => (
-              <Badge key={name} variant="primary">
-                {name}
-              </Badge>
+            {p.stores.map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => router.push(`/dashboard/merchants/${st.id}`)}
+                className="rounded-badge"
+              >
+                <Badge variant={st.status === "active" ? "primary" : st.status === "suspended" ? "danger" : "neutral"}>
+                  {st.name}
+                </Badge>
+              </button>
             ))}
           </div>
         </div>
@@ -795,23 +865,18 @@ export default function UserProfilePage() {
           رصيده وطلباته وتقييماته. */}
       <WarningsSection userID={p.id} />
 
-      <FormSection title={P.notes} icon={<IconEdit />}>
-        <NotesEditor
-          userID={p.id}
-          initial={p.admin_notes}
-          onSaved={load}
-        />
-      </FormSection>
+      <NotesLog userID={p.id} />
       </>
       )}
 
-      {tab === "wallet" && (
+      {tab === "wallet" && canFinance && (
       <FormSection
         title={`${P.statement} (${fmtNum(txTotal)})`}
         icon={<IconWallet />}
       >
+        {walletError && <Alert className="mb-2">{walletError}</Alert>}
         {txs.length === 0 ? (
-          <p className="py-6 text-center text-sm text-ink-muted">{P.statementEmpty}</p>
+          <p className="py-6 text-center text-sm text-ink-muted">{walletError ? "" : P.statementEmpty}</p>
         ) : (
           <ul className="space-y-1.5">
             {txs.map((t) => (
@@ -890,7 +955,9 @@ export default function UserProfilePage() {
       </FormSection>
       )}
 
-      {tab === "financials" && fin && (
+      {tab === "financials" && canFinance && finError && <Alert>{finError}</Alert>}
+      {tab === "financials" && canFinance && !fin && !finError && <LoadingState variant="text" />}
+      {tab === "financials" && canFinance && fin && (
         <div className="space-y-4">
           {/* النِسَب المطبّقة */}
           {fin.rates.length > 0 && (
@@ -1023,6 +1090,8 @@ export default function UserProfilePage() {
         </div>
       )}
 
+      {tab === "feedback" && feedbackError && <Alert>{feedbackError}</Alert>}
+      {tab === "feedback" && !feedback && !feedbackError && <LoadingState variant="text" />}
       {tab === "feedback" && feedback && (
         <div className="space-y-4">
           {/* ══════════════════════════════════════════════════════════
@@ -1226,9 +1295,9 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {tab === "chats" && <ChatsTab userID={id} />}
+      {tab === "chats" && canChats && <ChatsTab userID={id} />}
 
-      {tab === "activity" && (
+      {tab === "activity" && canSensitive && (
       <div>
         <FormSection title={`${P.activity} (${fmtNum(actCount)})`} icon={<IconStatus />}>
           {/* ══════════════════════════════════════════════════════════
@@ -1346,6 +1415,7 @@ export default function UserProfilePage() {
       {statusModal && (
         <StatusReasonModal
           status={statusModal}
+          holds={has("driver") ? { orders: p.open_orders, cash: p.driver_cash } : undefined}
           onSubmit={(reason) => setStatus(statusModal, reason)}
           onClose={() => setStatusModal(null)}
         />
@@ -1355,8 +1425,9 @@ export default function UserProfilePage() {
           userID={p.id}
           current={p.phone}
           onClose={() => setPhoneOpen(false)}
-          onDone={() => {
+          onDone={(msg) => {
             setPhoneOpen(false);
+            setNotice(msg);
             void load();
           }}
         />
@@ -1364,7 +1435,7 @@ export default function UserProfilePage() {
       {walletOpen && (
         <WalletModal
           user={{ id: p.id, phone: p.phone, full_name: p.full_name }}
-          isAdmin={canWallet}
+          isAdmin={canWalletPropose}
           onClose={() => {
             setWalletOpen(false);
             // **والدفترُ يُعاد جلبُه** — وإلّا شُحن الرصيدُ ولم يظهر قيدُه.
@@ -1374,8 +1445,57 @@ export default function UserProfilePage() {
         />
       )}
       {resetOpen && (
-        <ResetPasswordModal userID={p.id} onClose={() => setResetOpen(false)} />
+        <ResetPasswordModal
+          userID={p.id}
+          hours={p.temp_password_hours}
+          onClose={() => setResetOpen(false)}
+          onDone={() => void load()}
+        />
       )}
+      {/* **وإخراجٌ من كلّ الأجهزة خلف تأكيد** — كان يقع من أوّل كبسة. */}
+      <Confirm
+        open={confirmLogout}
+        title={A.logoutTitle}
+        body={A.logoutBody}
+        confirmLabel={A.logoutConfirm}
+        busy={busyAction}
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={async () => {
+          setBusyAction(true);
+          try {
+            const res = await api<{ revoked_sessions: number }>(`/api/v1/admin/users/${p.id}/logout-all`, {
+              method: "POST",
+            });
+            setNotice(P.logoutAllDone.replace("{n}", String(res.revoked_sessions)));
+            await load();
+          } catch (err) {
+            setActionError(errorText(err));
+          } finally {
+            setBusyAction(false);
+            setConfirmLogout(false);
+          }
+        }}
+      />
+      <Confirm
+        open={confirmActivate}
+        tone="primary"
+        title={A.activateTitle}
+        body={A.activateBody}
+        confirmLabel={m.admin.users.activate}
+        busy={busyAction}
+        onCancel={() => setConfirmActivate(false)}
+        onConfirm={async () => {
+          setBusyAction(true);
+          try {
+            await setStatus("active", "");
+          } catch (err) {
+            setActionError(errorText(err));
+          } finally {
+            setBusyAction(false);
+            setConfirmActivate(false);
+          }
+        }}
+      />
       <ManageRolesModal
         user={
           rolesOpen
@@ -1388,171 +1508,6 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () => void }) {
-  // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
-  const { passwordMinLength: minLen } = usePlatform();
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/users/${userID}/password`, {
-        method: "POST",
-        body: JSON.stringify({ password }),
-      });
-      setDone(true);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={P.resetPassword}>
-      {done ? (
-        <div className="space-y-4 text-center">
-          <Alert tone="success">{P.resetDone}</Alert>
-          <Button onClick={onClose}>{m.common.confirm}</Button>
-        </div>
-      ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <Input
-            id="new-pw"
-            label={P.newPassword}
-            dir="ltr"
-            required
-            minLength={minLen}
-            autoFocus
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="font-mono"
-          />
-          {error && (
-            <Alert>{error}</Alert>
-          )}
-          <FormActions submit onCancel={onClose} busy={busy} />
-        </form>
-      )}
-    </Modal>
-  );
-}
-
-function ChangePhoneModal({
-  userID,
-  current,
-  onClose,
-  onDone,
-}: {
-  userID: string;
-  current: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [phone, setPhone] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/users/${userID}`, {
-        method: "PATCH",
-        body: JSON.stringify({ phone }),
-      });
-      onDone();
-    } catch (err) {
-      setError(errorText(err));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={P.changePhone}>
-      <form onSubmit={submit} className="space-y-4">
-        <p className="text-sm text-ink-muted" dir="ltr">{current}</p>
-        <Input
-          id="new-phone"
-          label={P.newPhone}
-          icon={<IconPhone />}
-          dir="ltr"
-          required
-          autoFocus
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="text-end"
-          placeholder="09xxxxxxxx"
-        />
-        <p className="rounded-control bg-field px-3 py-2 text-xs leading-relaxed text-ink-muted">
-          {P.phoneHint}
-        </p>
-        {error && (
-          <Alert>{error}</Alert>
-        )}
-        <FormActions submit onCancel={onClose} busy={busy} />
-      </form>
-    </Modal>
-  );
-}
-
-function NotesEditor({
-  userID,
-  initial,
-  onSaved,
-}: {
-  userID: string;
-  initial: string;
-  onSaved: () => void;
-}) {
-  const [notes, setNotes] = useState(initial);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs text-ink-muted">{P.notesHint}</p>
-      <textarea
-        value={notes}
-        onChange={(e) => {
-          setNotes(e.target.value);
-          setSaved(false);
-        }}
-        rows={3}
-        className="w-full surface-inset px-3 py-2 text-sm outline-none focus:border-primary"
-      />
-      <div className="flex items-center justify-end gap-2">
-        {saved && <span className="text-xs text-success">{P.notesSaved}</span>}
-        <Button
-          disabled={busy || notes === initial}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              await api(`/api/v1/admin/users/${userID}`, {
-                method: "PATCH",
-                body: JSON.stringify({ admin_notes: notes }),
-              });
-              setSaved(true);
-              onSaved();
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          {m.common.save}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 
 const DETAIL_KEYS: Record<string, string> = P.detailKeys;
 // **والاسمُ من `rolemeta`** — مصدرٌ واحدٌ لكلّ شاشة.

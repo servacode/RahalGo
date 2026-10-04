@@ -117,9 +117,14 @@ func (s *Server) issueWelcomeApp(ctx context.Context, actor, userID, ip, app str
 	if err != nil {
 		return false, time.Time{}, err
 	}
+	return s.sendWelcome(ctx, actor, userID, ip, plain, app, reset), expires, nil
+}
+
+// sendWelcome **يرسل رسالةَ الدخول بكلمةٍ وُضعت سلفاً** — والكلمةُ لا تُكتب في سجلّ.
+func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app string, reset bool) bool {
 	var phone string
 	if err := s.pg.QueryRow(ctx, `SELECT phone FROM users WHERE id = $1`, userID).Scan(&phone); err != nil {
-		return false, expires, err
+		return false
 	}
 	key := appKeyForRoles(s.rolesOf(ctx, userID))
 	switch app {
@@ -136,7 +141,7 @@ func (s *Server) issueWelcomeApp(ctx context.Context, actor, userID, ip, app str
 	}
 	s.auditCtx(ctx, actor, ip, "admin.welcome_message", "user", userID,
 		map[string]any{"sent": sent, "reset": reset, "link": link})
-	return sent, expires, nil
+	return sent
 }
 
 // notifyNewStoreOwner **«صار عندك متجر»** — لمن له حسابٌ قائم: لا كلمةَ تُولَّد.

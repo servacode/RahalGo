@@ -100,13 +100,20 @@ var TxBoundaries = []TxBoundary{
 			"وردُّ المال في معاملةٍ واحدة.",
 	},
 	{
-		Op: "handleAdminWalletApply", File: "internal/server/admin_wallet_handlers.go",
+		Op: "handleAdminWalletApply", File: "internal/server/accounts_wallet_requests.go",
 		Sig: "func (s *Server) handleAdminWalletApply(", Class: "INHERITS_TX",
 		Note: "**دورةُ إصلاحٍ ٩** — صار يرث معاملةَ " +
 			"`WithIdempotentTx`: قيدُ المحفظة **وعلامةُ تثبيتِ منع " +
 			"التكرار** في معاملةٍ واحدة (`XG-33`). " +
 			"**والتدقيقُ والإشعارُ بعد التثبيت** — تدقيقٌ لعمليّةٍ ارتدّت " +
 			"يقول إنّ مالاً تحرّك ولم يتحرّك.",
+	},
+	{
+		Op: "postWalletRequest", File: "internal/server/accounts_wallet_requests.go",
+		Sig: "func (s *Server) postWalletRequest(", Class: "INHERITS_TX",
+		Note: "**قرارُ المالك ٢٠٢٦-١٠-٠٤** — الحركةُ اليدويّةُ طلبٌ يوافق عليه غيرُ مقترِحه، " +
+			"**وعند الموافقة قيدٌ بطرفين** (المحفظةُ والخزينةُ أو صندوقُ المكتب) " +
+			"**مع وسم الطلب والتدقيق في معاملة الموافقة نفسِها.**",
 	},
 	{
 		Op: "convertLead", File: "internal/server/leads_handlers.go",

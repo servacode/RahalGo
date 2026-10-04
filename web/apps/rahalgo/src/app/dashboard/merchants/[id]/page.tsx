@@ -45,6 +45,8 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
+import { storeStatusVariant } from "@/components/admin/StoreActions";
+import { commissionText } from "@/components/admin/ProfileRoleTabs";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.merchantProfile;
@@ -66,7 +68,9 @@ interface Merchant {
   owner_phone: string | null;
   sales_rep_phone: string | null;
   violations: number;
-  commission_percent: number;
+  /** **نسبتُه الخاصّة** — وفراغُها: يتبع العامّة (قرارُ المالك ٢٠٢٦-١٠-٠٤). */
+  commission_percent: number | null;
+  general_commission_percent: number;
   emergency_closed: boolean;
   /** أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — وعليه يظهر زرُّ الردّ في الطلبات. */
   accepts_returns: boolean;
@@ -158,7 +162,7 @@ export default function MerchantProfilePage() {
           <p className="text-xs text-ink-muted">{mr.address_text}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant={mr.status === "active" ? "success" : "danger"}>
+          <Badge variant={storeStatusVariant(mr.status)}>
             {MERCHANT_STATUS[mr.status] ?? mr.status}
           </Badge>
           {/* **والإغلاقُ الطارئ يُعلَن** — يتجاوز الجدولَ ويُظهره مغلقاً فوراً. */}
@@ -169,7 +173,7 @@ export default function MerchantProfilePage() {
       <StatGrid>
         <StatCard
           label={m.admin.merchants.commission}
-          value={`${fmtNum(mr.commission_percent)}%`}
+          value={commissionText(mr.commission_percent, mr.general_commission_percent)}
           icon={IconBalance}
         />
         <StatCard label={P.violations} value={fmtNum(mr.violations)} icon={IconWarning} />

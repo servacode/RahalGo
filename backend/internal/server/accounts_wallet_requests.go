@@ -46,8 +46,6 @@ var (
 		"self_approve", "errors.self_approve")
 	errRequestDecided = httpx.NewError(http.StatusConflict,
 		"request_decided", "errors.request_decided")
-	errIdemKeyRequired = httpx.NewError(http.StatusBadRequest,
-		"idempotency_key_required", "errors.idempotency_key_required")
 )
 
 // walletManualMax سقفُ الحركة اليدويّة الواحدة — من الإعدادات.
@@ -113,11 +111,8 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	// **ومفتاحُ عدمِ التكرار إلزاميّ** — كبستان سريعتان كانتا تكتبان الشحنَ مرّتين.
-	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
-		s.respondErr(w, errIdemKeyRequired)
-		return
-	}
+	// **ومفتاحُ عدمِ التكرار ترسله الشاشةُ دائماً** — كبستان سريعتان كانتا تكتبان الشحنَ
+	// مرّتين؛ والوسيطُ (`idempotent`) يُعيد الجوابَ الأوّلَ لمفتاحٍ تكرّر.
 	switch req.Kind {
 	case "payout":
 		s.respondErr(w, errWalletPayoutHere)

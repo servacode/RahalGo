@@ -26,7 +26,9 @@ import {
   fmtDateTime,
   errorText,
 } from "@rahalgo/i18n";
+import { WalletRequestsList } from "@/components/admin/WalletRequests";
 import {
+  FormSection,
   Alert,
   Button,
   Input,
@@ -239,6 +241,15 @@ export default function CompensationsPage() {
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
+
+      {/* **وطلباتُ حركة المحفظة اليدويّة هنا أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — يقترحها
+          الموظّفُ من ملفّ الحساب، **ويوافق عليها غيرُه** فتُقيَّد بطرفين. */}
+      <div className="mt-6">
+        <FormSection title={m.admin.acc.requestsTitle} icon={<IconWallet />}>
+          <p className="mb-2 text-xs text-ink-muted">{m.admin.acc.requestsHint}</p>
+          <WalletRequestsList />
+        </FormSection>
+      </div>
 
       {deciding && (
         <DecideModal

@@ -93,9 +93,15 @@ func TestACC_WalletRequestRules(t *testing.T) {
 	target := f.NewUserWith("customer")
 	path := "/api/v1/admin/users/" + target.ID + "/wallet"
 
-	// **بلا مفتاحِ عدمِ تكرار يُرفض** — كبستان سريعتان كانتا تكتبان مرّتين.
-	if r := h.POST(path, fin.Token, map[string]any{"amount": 100, "kind": "topup", "note": "x"}); r.Err() != "idempotency_key_required" {
-		t.Errorf("بلا مفتاح: %s", r)
+	// **والمفتاحُ نفسُه مرّتين لا يكتب طلبين** — كبستان سريعتان كانتا تكتبان مرّتين.
+	key := uniq("dup")
+	body := map[string]any{"amount": 100, "kind": "topup", "note": "x"}
+	first := h.POSTKey(path, fin.Token, key, body)
+	second := h.POSTKey(path, fin.Token, key, body)
+	var n int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM wallet_requests WHERE user_id = $1`, target.ID).Scan(&n)
+	if first.Code != 201 || n != 1 {
+		t.Errorf("**المفتاحُ المكرَّرُ كتب %d طلباً** (%s / %s)", n, first, second)
 	}
 	// **ولا سحبَ من هنا** — بابُه صفحةُ السحب.
 	if r := walletPropose(h, fin, target.ID, map[string]any{"amount": 100, "kind": "payout", "note": "x"}); r.Err() != "wallet_payout_not_here" {
@@ -633,3 +639,31 @@ func TestACC_CashBanVisibleAndOnlyAdminLiftsWithReason(t *testing.T) {
 }
 
 func urlQ(v string) string { return url.QueryEscape(v) }
+
+// adminWallet **حركةُ محفظةٍ يدويّةٌ كما صارت** (قرارُ المالك ٢٠٢٦-١٠-٠٤): يقترحها موظّفٌ
+// ماليٌّ ويوافق عليها `admin` — ويُرجع ردَّ الموافقة (أو ردَّ الاقتراح إن رُدّ).
+func (h *Harness) adminWallet(admin *User, uid string, body map[string]any) Res {
+	h.T.Helper()
+	proposer := h.NewUser("finance")
+	r := h.POSTKey("/api/v1/admin/users/"+uid+"/wallet", proposer.Token, uniq("w"), body)
+	if r.Code >= 400 {
+		return r
+	}
+	id, _ := r.JSON()["request_id"].(string)
+	return h.POST("/api/v1/admin/wallet-requests/"+id+"/approve", admin.Token, map[string]any{})
+}
+
+// setKnownPassword **كلمةٌ معروفةٌ لاختبار** — الإدارةُ لم تعد تكتب كلمات (قرارُ المالك
+// ٢٠٢٦-١٠-٠٤)، فتُكتب بصمتُها هنا كما يكتبها المحرّكُ بلا مهلةٍ ولا إجبار.
+func setKnownPassword(t *testing.T, h *Harness, userID, pw string) {
+	t.Helper()
+	hash, err := auth.HashPassword(pw)
+	if err != nil {
+		t.Fatalf("بصمُ الكلمة: %v", err)
+	}
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET password_hash = $2,
+		must_change_password = false, temp_password_expires_at = NULL WHERE id = $1::uuid`,
+		userID, hash); err != nil {
+		t.Fatalf("ضبطُ الكلمة: %v", err)
+	}
+}

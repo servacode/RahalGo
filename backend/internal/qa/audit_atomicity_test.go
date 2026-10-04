@@ -43,12 +43,21 @@ func walletBalance(t *testing.T, h *Harness, userID string) int64 {
 	return v
 }
 
+// applyWallet **حركةُ المحفظة طلبٌ ثمّ موافقة** (قرارُ المالك ٢٠٢٦-١٠-٠٤): يقترحها موظّفٌ
+// ماليٌّ ويوافق عليها `admin` — **والمالُ يتحرّك عند الموافقة وحدَها**، فأثرُها قيدُ
+// `finance.wallet_request_approved` باسم الموافِق.
 func applyWallet(t *testing.T, h *Harness, admin *User, target string, amount int64) int {
 	t.Helper()
-	return h.POSTKey("/api/v1/admin/users/"+target+"/wallet", admin.Token,
+	proposer := h.NewUser("finance")
+	r := h.POSTKey("/api/v1/admin/users/"+target+"/wallet", proposer.Token,
 		uniq("aq4"), map[string]any{
 			"amount": amount, "kind": "topup", "note": "PF-06",
-		}).Code
+		})
+	if r.Code >= 400 {
+		return r.Code
+	}
+	id, _ := r.JSON()["request_id"].(string)
+	return h.POST("/api/v1/admin/wallet-requests/"+id+"/approve", admin.Token, map[string]any{}).Code
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -62,7 +71,7 @@ func TestAQ4_A1_SuccessCommitsBoth(t *testing.T) {
 
 	code := applyWallet(t, h, admin, target.ID, 12_000)
 	bal := walletBalance(t, h, target.ID)
-	rows := auditRows(t, h, "finance.wallet_apply", target.ID)
+	rows := auditRows(t, h, "finance.wallet_request_approved", target.ID)
 	t.Logf("نجاحٌ: الردُّ %d · رصيدٌ %d · قيودُ تدقيقٍ %d", code, bal, rows)
 
 	if code >= 400 || bal != 12_000 {
@@ -77,7 +86,7 @@ func TestAQ4_A1_SuccessCommitsBoth(t *testing.T) {
 	var details string
 	if err := h.Pool.QueryRow(ctxBG(), `
 		SELECT COALESCE(actor_user_id::text, ''), entity, details::text
-		  FROM audit_log WHERE action = 'finance.wallet_apply' AND entity_id = $1`,
+		  FROM audit_log WHERE action = 'finance.wallet_request_approved' AND entity_id = $1`,
 		target.ID).Scan(&actor, &entity, &details); err != nil {
 		t.Fatalf("قراءةُ الأثر: %v", err)
 	}
@@ -107,7 +116,7 @@ func TestAQ4_A2_AuditFailureRollsBackMoney(t *testing.T) {
 	fp.MustFire(t)
 
 	bal := walletBalance(t, h, target.ID)
-	rows := auditRows(t, h, "finance.wallet_apply", target.ID)
+	rows := auditRows(t, h, "finance.wallet_request_approved", target.ID)
 	t.Logf("سقوطُ الأثر: الردُّ %d · رصيدٌ %d · قيودُ تدقيقٍ %d", code, bal, rows)
 
 	if bal != 0 {
@@ -137,7 +146,7 @@ func TestAQ4_A3_BusinessFailureLeavesNoAudit(t *testing.T) {
 	fp.MustFire(t)
 
 	bal := walletBalance(t, h, target.ID)
-	rows := auditRows(t, h, "finance.wallet_apply", target.ID)
+	rows := auditRows(t, h, "finance.wallet_request_approved", target.ID)
 	t.Logf("سقوطُ الفعل: الردُّ %d · رصيدٌ %d · قيودُ تدقيقٍ %d", code, bal, rows)
 	if bal != 0 || rows != 0 {
 		t.Errorf("**أثرٌ أو مالٌ بقي**: رصيدٌ %d · قيودٌ %d", bal, rows)
@@ -159,7 +168,7 @@ func TestAQ4_A5_RetryGivesOneOfEach(t *testing.T) {
 
 	code := applyWallet(t, h, admin, target.ID, 12_000)
 	bal := walletBalance(t, h, target.ID)
-	rows := auditRows(t, h, "finance.wallet_apply", target.ID)
+	rows := auditRows(t, h, "finance.wallet_request_approved", target.ID)
 	t.Logf("بعد الإعادة: الردُّ %d · رصيدٌ %d · قيودُ تدقيقٍ %d", code, bal, rows)
 
 	if bal != 12_000 {
@@ -192,8 +201,8 @@ func TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit(t *testing.T) {
 	if r.TimedOut {
 		t.Fatalf("السباقُ عَلِق — %s", r)
 	}
-	ra := auditRows(t, h, "finance.wallet_apply", a.ID)
-	rb := auditRows(t, h, "finance.wallet_apply", b.ID)
+	ra := auditRows(t, h, "finance.wallet_request_approved", a.ID)
+	rb := auditRows(t, h, "finance.wallet_request_approved", b.ID)
 	t.Logf("متزامنان: رصيدُ أ=%d أثرُه=%d · رصيدُ ب=%d أثرُه=%d — %s",
 		walletBalance(t, h, a.ID), ra, walletBalance(t, h, b.ID), rb, r)
 

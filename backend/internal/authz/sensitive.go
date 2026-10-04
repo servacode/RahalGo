@@ -108,6 +108,9 @@ var sensitiveActions = []Sensitive{
 	// ── مالٌ يتحرّك ─────────────────────────────────────────────
 	//
 	// **والقراءةُ الماليّةُ لا تُؤكَّد** — **ولا يتحرّك بها شيء.**
+	// **واقتراحُ الحركة بكلمة السرّ كذلك** — والموافقةُ بكلمة صاحبها (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"POST", "/users/{id}/wallet", "finance.wallet_apply", "user", 1,
+		[]string{"amount", "kind"}, ""},
 	{"POST", "/wallet-requests/{id}/approve", "finance.wallet_request_approved",
 		"wallet_request", 1, nil, ""},
 	{"POST", "/users/{id}/incentive", "finance.incentive", "user", 1,

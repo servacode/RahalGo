@@ -90,6 +90,8 @@ const SERVER_MOBILE = new Set([
   // **ومتجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — **يبلغ تطبيقَ المتجر**:
   // إن حاول كتابةً رغم شاشة الإيقاف يعود ٤٠٣، **فيُطلب له نصٌّ عربيّ.**
   "store_suspended",
+  // **ولا دوامَ بعد حادثٍ قبل «السائقُ بخير»** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — يبلغ تطبيقَ السائق.
+  "accident_check_required",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
@@ -120,6 +122,10 @@ const SERVER_ADMIN = new Set([
   "qa_coverage_zone_exists",
   "qa_no_closed_order",
   "qa_boundary_near_midnight", "qa_no_default_address", "qa_no_zone_for_address",
+  // **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — أبوابُ اللوحة وحدَها.
+  "phone_change_pending", "second_person_required", "wallet_note_required",
+  "wallet_over_cap", "wallet_payout_not_here", "self_approve", "request_decided",
+  "idempotency_key_required",
 ]);
 
 const found = new Map();

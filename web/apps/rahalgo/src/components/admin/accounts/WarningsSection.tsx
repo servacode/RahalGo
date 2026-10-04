@@ -20,7 +20,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDateTime, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -32,7 +32,8 @@ import {
   IconWarning,
   FormActions,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const W = m.admin.warnings;
@@ -66,19 +67,29 @@ export function WarningsSection({ userID }: { userID: string }) {
   const [reasons, setReasons] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [alertN, setAlertN] = useState(0);
   const [error, setError] = useState("");
+  // **وتعذّرُ القراءة يُقال لا يُقرأ «لا إنذارات»** (قرارُ المالك ٢٠٢٦-١٠-٠٤): موظّفُ
+  // الماليّة كان يرى «لا إنذارات» على سائقٍ عنده ثلاثة.
+  const [loadError, setLoadError] = useState("");
+  const canCall = useCanCall();
+  const canRead = canCall("GET", "/users/{id}/warnings");
+  const canIssue = canCall("POST", "/users/{id}/warnings");
 
   const load = useCallback(async () => {
+    if (!canRead) return;
     try {
       const r = await api<{ warnings: WarningItem[] }>(
         `/api/v1/admin/users/${userID}/warnings`,
       );
       setRows(r.warnings ?? []);
-    } catch {
-      // **وتعذّرُ القراءة لا يُسقط الملفّ** — بقيّةُ الصفحة تُقرأ.
+      setLoadError("");
+    } catch (err) {
+      // **وتعذّرُ القراءة لا يُسقط الملفّ** — ويُقال سببُه.
       setRows([]);
+      setLoadError(errorText(err));
     }
-  }, [userID]);
+  }, [userID, canRead]);
 
   useEffect(() => {
     void load();
@@ -91,7 +102,7 @@ export function WarningsSection({ userID }: { userID: string }) {
       `/api/v1/admin/users/${userID}/warn-reasons`,
     )
       .then((r) => setReasons((r.reasons ?? []).map((x) => x.code)))
-      .catch((e) => setError(e instanceof ApiError ? m.errors.validation : m.errors.internal));
+      .catch((e) => setError(errorText(e)));
   }, [open, reasons.length, userID]);
 
   async function issue() {
@@ -100,24 +111,40 @@ export function WarningsSection({ userID }: { userID: string }) {
     setBusy(true);
     setError("");
     try {
-      await api(`/api/v1/admin/users/${userID}/warnings`, {
+      const res = await api<{ recent_30d?: number }>(`/api/v1/admin/users/${userID}/warnings`, {
         method: "POST",
         body: JSON.stringify({ reason: reason.trim(), note: note.trim() }),
       });
+      // **ولا إيقافَ آليّاً** — تنبيهٌ يقول العدد، والقرارُ للموظّف.
+      setAlertN(res?.recent_30d ?? 0);
       setReason("");
       setNote("");
       setOpen(false);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? m.errors.validation : m.errors.internal);
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
   }
 
+  if (!canRead) {
+    return (
+      <FormSection title={W.title} icon={<IconWarning />}>
+        <Alert tone="warning">{m.admin.acc.notAllowed}</Alert>
+      </FormSection>
+    );
+  }
+
   return (
     <FormSection title={W.title} icon={<IconWarning />}>
-      {rows.length === 0 ? (
+      {loadError && <Alert className="mb-2">{loadError}</Alert>}
+      {alertN >= 3 && (
+        <Alert tone="warning" className="mb-2">
+          {m.admin.acc.warnAlert.replace("{n}", fmtNum(alertN))}
+        </Alert>
+      )}
+      {loadError ? null : rows.length === 0 ? (
         <p className="py-4 text-center text-sm text-ink-muted">{W.empty}</p>
       ) : (
         <ul className="mb-3 space-y-1.5">
@@ -152,9 +179,11 @@ export function WarningsSection({ userID }: { userID: string }) {
         </ul>
       )}
 
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        {W.issue}
-      </Button>
+      {canIssue && (
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          {W.issue}
+        </Button>
+      )}
 
       <Modal open={open} onClose={() => setOpen(false)} title={W.issue}>
         <div className="space-y-3">

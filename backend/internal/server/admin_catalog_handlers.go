@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
-	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +100,12 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 	//
 	// **صاحبٌ جديدٌ تُولَّد له كلمةٌ وتُرسَل** مع رابط تطبيق المتجر؛ **ومن له حسابٌ
 	// قائمٌ** تصله «صار عندك متجر» بلا كلمةٍ جديدة.
-	req.OwnerPassword = nil
+	plain, perr := identity.GenerateTempPassword(s.minPasswordLen(r.Context()))
+	if perr != nil {
+		s.respondErr(w, perr)
+		return
+	}
+	req.OwnerPassword = &plain
 	existed := false
 	if req.OwnerPhone != nil {
 		if ph, ok := identity.NormalizePhone(*req.OwnerPhone); ok {
@@ -119,7 +124,9 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		if existed {
 			welcome["sent"] = s.notifyNewStoreOwner(r.Context(), userIDFrom(r), *m.OwnerUserID, m.Name, clientIP(r))
 		} else {
-			sent, exp, werr := s.issueWelcomeFor(r.Context(), userIDFrom(r), *m.OwnerUserID, clientIP(r), "merchant")
+			// **والكلمةُ كُتبت مع الحساب** — تُضبط مهلتُها ثمّ تُرسَل.
+			exp, werr := s.identity.SetTempExpiry(r.Context(), *m.OwnerUserID)
+			sent := s.sendWelcome(r.Context(), userIDFrom(r), *m.OwnerUserID, clientIP(r), plain, "merchant", false)
 			welcome["sent"], welcome["expires_at"], welcome["ok"] = sent, exp, werr == nil
 		}
 	}

@@ -69,6 +69,8 @@ type CreateUserInput struct {
 	FullName string   `json:"full_name"`
 	Roles    []string `json:"roles"`
 	Password string   `json:"password"`
+	// TempHours **مهلةُ الكلمة المؤقّتة** — يضعها الخادمُ لا العميل (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	TempHours int64 `json:"-"`
 }
 
 func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in CreateUserInput, ip string) (*User, error) {
@@ -130,7 +132,7 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 	// تمرّ كلمةُ المتجر بيد المندوب. **ومن اعتمدها نهائيّةً ترك موظّفَ
 	// المنصّة بكلمةٍ يعرفها غيرُه إلى الأبد.**
 	user, err := s.repo.AdminCreateUserFull(ctx, phone, in.FullName, in.Roles,
-		hash, &actorID)
+		hash, &actorID, in.TempHours)
 	if isUniqueViolation(err) {
 		return nil, ErrPhoneTaken
 	}

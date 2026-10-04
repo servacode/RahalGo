@@ -1,60 +1,64 @@
 "use client";
 
 /**
- * **نافذةُ سبب الإيقاف والحظر — واحدةٌ لكلّ من يوقف حساباً.**
+ * **نافذةُ سبب الإيقاف أو الحظر.**
  *
- * (شهده المالك ٢٠٢٦-٠٨-١٠: «زرُّ إيقاف حساب لا يعمل… وزرُّ الحظر لا يعمل.
- *  طبعاً الحظرُ والإيقافُ لا تعملان بالكرت الخارجيّ، أمّا داخل التفاصيل
- *  فتعمل بشكلٍ ممتاز».)
- *
- * # ولماذا اجتمعت في ملفٍّ واحد
- *
- * **كانت ثلاثَ حالات**: نسخةٌ في صفحة تفاصيل الحساب، ونسخةٌ ثانيةٌ باسمٍ
- * آخرَ في جدول المندوبين، **ولا شيءَ في جدول الحسابات** — الزرُّ يُضغط
- * ويُخزَّن الاختيارُ في حالةٍ **لا يقرؤها أحد.**
- *
- * **ولا خطأ ولا سطرٌ في سجلّ**: يضغط الموظّفُ فلا يقع شيء، **فيضغط ثانيةً
- * وثالثة**، ثمّ يظنّ الحسابَ محظوراً وهو يعمل.
- *
- * **وهو ما يقع حين يُنسخ المكوّن**: تُصلَح نسخةٌ وتبقى الأخرى، **ويُنسى
- * الثالث فلا يُكتب أصلاً.**
- *
- * # والسببُ إلزاميّ
- *
- * **حسابٌ يُوقَف بلا سببٍ مكتوبٍ لا يُراجَع**: صاحبُه يسأل «لماذا؟» ولا
- * جوابَ عند من أوقفه بعد شهر. **ويُعرض للموقوف نفسِه** في شاشته — فيعرف ما
- * يُصلح.
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٤.) **تقول للموظّف لحظةَ الضغط الفرقَ بين الإيقاف والحظر**،
+ * **وما بيد الشخص الآن** (طلبٌ مفتوحٌ ونقدٌ مع سائق) — ليعرف ما يتابعه بعدها.
+ * **وخطأُ المحرّك يُعرض فيها** — كانت تبقى مفتوحةً بلا تفسيرٍ إن رُدّ الفعل
+ * (كإيقاف حساب المالك المحميّ).
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, Modal, FormActions} from "@rahalgo/ui";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText } from "@rahalgo/i18n";
+import { Alert, Input, Modal, FormActions } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
 const U = m.admin.users;
+const A = m.admin.acc;
 
 export function StatusReasonModal({
   status,
   onSubmit,
   onClose,
+  holds,
 }: {
   /** `suspended` إيقافٌ مؤقّت · `blocked` حظرٌ نهائيّ. */
   status: string;
-  onSubmit: (reason: string) => void;
+  onSubmit: (reason: string) => void | Promise<void>;
   onClose: () => void;
+  /** **ما بيده الآن** — طلباتٌ مفتوحةٌ ونقدٌ بذمّته (للسائق). */
+  holds?: { orders: number; cash: number };
 }) {
   const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const label = status === "suspended" ? U.suspend : U.block;
+  const explain = status === "suspended" ? A.statusExplain.suspended : A.statusExplain.blocked;
 
   return (
     <Modal open onClose={onClose} title={U.statusReasonTitle.replace("{action}", label)}>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          onSubmit(reason);
+          setBusy(true);
+          setError("");
+          try {
+            await onSubmit(reason.trim());
+          } catch (err) {
+            setError(errorText(err));
+          } finally {
+            setBusy(false);
+          }
         }}
         className="space-y-4"
       >
+        <p className="rounded-control bg-field px-3 py-2 text-xs leading-relaxed text-ink-muted">{explain}</p>
+        {holds && (holds.orders > 0 || holds.cash > 0) && (
+          <Alert tone="warning">
+            {A.holdsNow.replace("{orders}", fmtNum(holds.orders)).replace("{cash}", fmtMoney(holds.cash))}
+          </Alert>
+        )}
         <Input
           id="status-reason"
           label={U.statusReasonLabel}
@@ -63,11 +67,13 @@ export function StatusReasonModal({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
+        {error && <Alert>{error}</Alert>}
         {/* **والحظرُ أحمرُ والإيقافُ ليس كذلك** — فعلان في نافذةٍ واحدةٍ
             ومعناهما مختلف، **ولونٌ واحدٌ لهما يجعل الضغطةَ قرعة.** */}
         <FormActions
           submit
           onCancel={onClose}
+          busy={busy}
           saveLabel={label}
           tone={status === "blocked" ? "danger" : undefined}
         />

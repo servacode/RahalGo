@@ -22,10 +22,8 @@ func aprUser(t *testing.T, h *Harness, role string) string {
 	t.Helper()
 	u := h.NewUser(role)
 	admin := h.NewUser("admin")
-	if set := h.POST("/api/v1/admin/users/"+u.ID+"/password", admin.Token,
-		map[string]any{"password": aprPassword}); set.Code >= 400 {
-		t.Fatalf("وضعُ الكلمة: %s", set)
-	}
+	_ = admin
+	setKnownPassword(t, h, u.ID, aprPassword)
 	// **وكلمةُ الإدارة تُلزم بالتغيير** — وليس ذاك ما يُقاس هنا.
 	if _, err := h.Pool.Exec(ctxBG(),
 		`UPDATE users SET must_change_password = false WHERE id = $1::uuid`, u.ID); err != nil {

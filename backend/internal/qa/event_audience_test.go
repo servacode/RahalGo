@@ -71,7 +71,7 @@ func TestEV_WalletAudience(t *testing.T) {
 	before := evNotifCount(t, h, owner.ID)
 	beforeOther := evNotifCount(t, h, other.ID)
 
-	got := h.POST("/api/v1/admin/users/"+owner.ID+"/wallet", admin.Token,
+	got := h.adminWallet(admin, owner.ID,
 		map[string]any{"amount": 7000, "kind": "topup", "note": "P-7"})
 	if got.Code >= 400 {
 		t.Fatalf("القيد: %s", got)
@@ -222,7 +222,7 @@ func TestEV_PushTokenTargeting(t *testing.T) {
 	addToken(t, h, owner.ID, "tok-owner-2")
 	addToken(t, h, other.ID, "tok-other")
 
-	got := h.POST("/api/v1/admin/users/"+owner.ID+"/wallet", admin.Token,
+	got := h.adminWallet(admin, owner.ID,
 		map[string]any{"amount": 5000, "kind": "topup", "note": "P-7"})
 	if got.Code >= 400 {
 		t.Fatalf("القيد: %s", got)
@@ -306,7 +306,7 @@ func TestEV_R23PushFailureIsLost(t *testing.T) {
 	}
 
 	for i, label := range []string{"HTTP 500", "TIMEOUT", "CONNECTION RESET"} {
-		got := h.POST("/api/v1/admin/users/"+u.ID+"/wallet", admin.Token,
+		got := h.adminWallet(admin, u.ID,
 			map[string]any{"amount": 1000, "kind": "topup", "note": "P-7"})
 		fake.WaitCalls(i+1, 2*time.Second)
 		t.Logf("%-18s ← الفعلُ ردّ %d", label, got.Code)

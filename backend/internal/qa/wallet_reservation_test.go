@@ -42,7 +42,7 @@ func walletLayers(t *testing.T, hh *Harness, uid string) (balance, reserved, ava
 // fundWallet يشحن محفظةً عبر المسار الحقيقيّ.
 func fundWallet(t *testing.T, hh *Harness, admin *User, uid string, amount int) {
 	t.Helper()
-	res := hh.POST("/api/v1/admin/users/"+uid+"/wallet", admin.Token,
+	res := hh.adminWallet(admin, uid,
 		map[string]any{"amount": amount, "kind": "topup", "note": "XG-12"})
 	if res.Code >= 400 {
 		t.Fatalf("الشحن: %s", res)
@@ -68,7 +68,7 @@ func decidePayout(hh *Harness, admin *User, id, status string) Res {
 
 // spend ينفق من محفظةٍ عبر المسار الحقيقيّ.
 func spend(hh *Harness, admin *User, uid string, amount int) Res {
-	return hh.POST("/api/v1/admin/users/"+uid+"/wallet", admin.Token,
+	return hh.adminWallet(admin, uid,
 		map[string]any{"amount": amount, "kind": "adjustment", "debit": true, "note": "XG-12"})
 }
 

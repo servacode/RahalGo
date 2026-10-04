@@ -235,3 +235,13 @@ func (s *Service) AdminChangePhone(ctx context.Context, actorID, userID, rawPhon
 func (s *Service) AuditBestEffort(ctx context.Context, actorID *string, action, entity, entityID, ip string, details map[string]any) {
 	s.repo.Audit(ctx, actorID, action, entity, entityID, ip, details)
 }
+
+// SetTempExpiry **يضبط مهلةَ كلمةٍ مؤقّتةٍ كُتبت سلفاً** — لصاحب متجرٍ أُنشئ مع متجره.
+func (s *Service) SetTempExpiry(ctx context.Context, userID string) (time.Time, error) {
+	var exp time.Time
+	err := s.repo.pool().QueryRow(ctx, `
+		UPDATE users SET temp_password_expires_at = now() + ($2::int * interval '1 hour')
+		 WHERE id = $1::uuid AND must_change_password
+		RETURNING temp_password_expires_at`, userID, s.TempPasswordHours(ctx)).Scan(&exp)
+	return exp, err
+}

@@ -1,6 +1,8 @@
 package qa
 
 import (
+	"github.com/servacode/rahalgo/backend/internal/auth"
+
 	"context"
 	"net/http"
 	"path/filepath"
@@ -34,6 +36,16 @@ func resetPassword(t *testing.T, h *Harness, userID, pw string) Res {
 		map[string]any{"password": pw})
 	if got.Code >= 400 {
 		t.Fatalf("إعادةُ الكلمة: %s", got)
+	}
+	// **والكلمةُ يولّدها النظامُ ويرسلها** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فلا يعرفها الاختبار.
+	// **فتُكتب بصمةُ كلمةٍ معروفةٍ بعد الإعادة** مع بقاء الإجبار ومهلته، ليُقاس الدخولُ بها.
+	hash, err := auth.HashPassword(pw)
+	if err != nil {
+		t.Fatalf("بصمُ الكلمة: %v", err)
+	}
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET password_hash = $2 WHERE id = $1::uuid`,
+		userID, hash); err != nil {
+		t.Fatalf("ضبطُ الكلمة: %v", err)
 	}
 	return got
 }
@@ -235,7 +247,9 @@ func TestR13_ResetGoesThroughIdentityService(t *testing.T) {
 	end := strings.Index(h[start:], "\n}\n")
 	body := h[start : start+end]
 
-	if !strings.Contains(body, "s.identity.AdminResetPassword(") {
+	// **والإعادةُ صارت كلمةً يولّدها النظام** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — `issueWelcome`
+	// ينادي `identity.IssueTempPassword` (بصمةٌ وحِقبةٌ وإبطالٌ في معاملةٍ واحدة).
+	if !strings.Contains(body, "s.issueWelcome(") && !strings.Contains(body, "s.identity.AdminResetPassword(") {
 		t.Error("**المعالِجُ لا ينادي خدمةَ الهويّة** — " +
 			"**فبصمةٌ تُكتب بلا إبطالِ جلسة.** (`R13`)")
 	}

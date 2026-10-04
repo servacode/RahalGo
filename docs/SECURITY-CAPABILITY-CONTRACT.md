@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**30 قدرةً · 186 صفَّ سياسةٍ للمسارات · 2 استثناءً · 25 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**30 قدرةً · 186 صفَّ سياسةٍ للمسارات · 2 استثناءً · 26 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -157,6 +157,7 @@
 | `finance.merchant_cash_paid` | `POST` | `/merchant-cash-settlements/{id}/pay` | — | دائماً | `finance.manage` |
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `approve`, `amount` | دائماً | `payouts.decide` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
+| `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |
 | `finance.wallet_request_approved` | `POST` | `/wallet-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `ops.delivery_proof_exception` | `POST` | `/orders/{id}/proof-exception` | `reason` | دائماً | `orders.intervene` |
 | `ops.dispute_settled` | `POST` | `/disputes/{id}/settle` | `settlement` | دائماً | `finance.manage` |

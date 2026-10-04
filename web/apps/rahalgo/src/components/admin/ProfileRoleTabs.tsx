@@ -26,7 +26,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   LoadingState,
@@ -44,12 +44,17 @@ import {
   IconLogout,
   Money,
   FormActions,
+  Modal,
+  Input,
+  Confirm,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { StoreActions, type StoreTarget } from "@/components/admin/StoreActions";
+import { useCanCall } from "@/lib/policy";
+import { StoreActions, storeStatusVariant, type StoreTarget } from "@/components/admin/StoreActions";
 
 const m = getMessages(defaultLocale);
 const R = m.admin.users.profile.roleTabs;
+const A = m.admin.acc;
 // **ومفاتيحُ السائق من بابها** — كانت مترجَمةً ولا زرَّ يستعملها.
 const D = m.admin.drivers;
 const STATUS_LABELS: Record<string, string> = m.orders.status;
@@ -214,6 +219,8 @@ function OrderList({
   onOpen: (o: OrderRow) => void;
 }) {
   const [rows, setRows] = useState<OrderRow[] | null | "failed">(null);
+  // **والفشلُ يقول سببَه** — «غيرُ مسموح» لا «لا اتصال» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [why, setWhy] = useState("");
   // **والمجموعُ من المحرّك لا من طول الصفحة** — طولُها عشرون دائماً،
   // **ولو كُتب في العنوان لقال «طلباته (٢٠)» لمن طلب مئة.**
   const [total, setTotal] = useState(0);
@@ -229,13 +236,17 @@ function OrderList({
         setRows(r.orders ?? []);
         setTotal(r.total ?? 0);
       })
-      .catch(() => alive && setRows("failed"));
+      .catch((err) => {
+        if (!alive) return;
+        setWhy(errorText(err));
+        setRows("failed");
+      });
     return () => {
       alive = false;
     };
   }, [filter, page]);
 
-  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (rows === null) return <LoadingState variant="text" />;
 
   return (
@@ -343,6 +354,8 @@ function OrderList({
  */
 export function ChatsTab({ userID }: { userID: string }) {
   const [rows, setRows] = useState<ChatThread[] | null | "failed">(null);
+  // **والفشلُ يقول سببَه** — «غيرُ مسموح» لا «لا اتصال» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [why, setWhy] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState("");
@@ -357,13 +370,17 @@ export function ChatsTab({ userID }: { userID: string }) {
         setRows(r.threads ?? []);
         setTotal(r.total ?? 0);
       })
-      .catch(() => alive && setRows("failed"));
+      .catch((err) => {
+        if (!alive) return;
+        setWhy(errorText(err));
+        setRows("failed");
+      });
     return () => {
       alive = false;
     };
   }, [userID, page]);
 
-  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (rows === null) return <LoadingState variant="text" />;
 
   return (
@@ -419,18 +436,24 @@ const CHATS_PER_PAGE = 10;
  */
 function ChatLines({ orderID }: { orderID: string }) {
   const [th, setTh] = useState<ChatAudit | null | "failed">(null);
+  // **والفشلُ يقول سببَه** — «غيرُ مسموح» لا «لا اتصال» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [why, setWhy] = useState("");
 
   useEffect(() => {
     let alive = true;
     api<ChatAudit>(`/api/v1/admin/orders/${orderID}/chat`)
       .then((r) => alive && setTh(r))
-      .catch(() => alive && setTh("failed"));
+      .catch((err) => {
+        if (!alive) return;
+        setWhy(errorText(err));
+        setTh("failed");
+      });
     return () => {
       alive = false;
     };
   }, [orderID]);
 
-  if (th === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (th === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (th === null) return <LoadingState variant="text" />;
 
   return (
@@ -470,15 +493,20 @@ function ChatLines({ orderID }: { orderID: string }) {
 /** **عناوينُه** — قراءةً لا كتابة: عنوانُ بيتِ إنسانٍ يكتبه هو. */
 export function AddressesTab({ userID }: { userID: string }) {
   const [rows, setRows] = useState<AddressRow[] | null | "failed">(null);
+  // **والفشلُ يقول سببَه** — «غيرُ مسموح» لا «لا اتصال» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [why, setWhy] = useState("");
 
   useEffect(() => {
     api<AddressRow[]>(`/api/v1/admin/users/${userID}/addresses`)
       .then(setRows)
-      .catch(() => setRows("failed"));
+      .catch((err) => {
+        setWhy(errorText(err));
+        setRows("failed");
+      });
   }, [userID]);
 
   // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
-  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (!rows) return <LoadingState variant="text" />;
 
   return (
@@ -518,75 +546,74 @@ export function AddressesTab({ userID }: { userID: string }) {
  */
 export function CashboxTab({
   userID,
-  canSettle,
   onSettled,
 }: {
   userID: string;
-  canSettle: boolean;
   onSettled: () => void;
 }) {
+  const canCall = useCanCall();
+  // **والتسويةُ بقدرة بابها** — `finance.manage` (كان يُعرض لمن يقرأ المال فيُردّ).
+  const canSettle = canCall("POST", "/drivers/{id}/settle");
+  const canRead = canCall("GET", "/drivers/{id}/cash");
   const [held, setHeld] = useState(0);
   const [rows, setRows] = useState<CashEntry[] | null | "failed">(null);
+  const [why, setWhy] = useState("");
   const [busy, setBusy] = useState(false);
-  // **وإغلاقُ الدوام خلف تأكيد** — فعلٌ يُخرج إنساناً من عمله، **وضغطةٌ
-  // بلا رجعةٍ على زرٍّ يجاور «تسليم الصندوق» تقع سهواً.**
-  const [ending, setEnding] = useState(false);
-  const [shiftNote, setShiftNote] = useState("");
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState("");
 
   const load = useCallback(() => {
+    if (!canRead) return;
     api<{ held: number; entries: CashEntry[] }>(`/api/v1/admin/drivers/${userID}/cash`)
       .then((r) => {
         setHeld(r.held ?? 0);
         setRows(r.entries ?? []);
       })
-      .catch(() => setRows("failed"));
-  }, [userID]);
+      .catch((err) => {
+        setWhy(errorText(err));
+        setRows("failed");
+      });
+  }, [userID, canRead]);
 
   useEffect(load, [load]);
 
+  // ══════════════════════════════════════════════════════════════════
+  // **التسويةُ بما استُلم فعلاً — لا بكامل ما بذمّته** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت كبسةً واحدةً بكامل المبلغ بلا تأكيد، وأخطاؤها تضيع**: سائقٌ جاب مئةً من
+  // مئةٍ وستّةٍ وخمسين، فكُتب أنّه سلّم الكلَّ. **والآن نافذةٌ تسأل «كم استلمتَ؟» ثمّ
+  // تأكيدٌ يقول ما سيُكتب وما يبقى بذمّته، والخطأُ يُعرض.**
+  const value = Number(amount) || 0;
   async function settle() {
+    // **والتأكيدُ يُغلق قبل النداء** — التسويةُ تطلب كلمةَ السرّ، ونافذتُها تحته.
+    setConfirming(false);
     setBusy(true);
+    setError("");
     try {
-      await api(`/api/v1/admin/drivers/${userID}/settle`, {
+      const r = await api<{ held: number }>(`/api/v1/admin/drivers/${userID}/settle`, {
         method: "POST",
-        body: JSON.stringify({ amount: held, note: R.settleNote }),
+        body: JSON.stringify({ amount: value, note: R.settleNote }),
       });
+      setConfirming(false);
+      setOpen(false);
+      setAmount("");
+      setDone(A.settleDone.replace("{rest}", fmtMoney(r?.held ?? Math.max(held - value, 0))));
       load();
       onSettled();
+    } catch (err) {
+      setConfirming(false);
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // **وإغلاقُ الدوام من هنا** — (بُني ٢٠٢٦-٠٨-٢٣)
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **كانت النقطةُ في المحرّك واسمُها مترجَماً منذ زمنٍ ولا زرَّ
-  // يستعملهما** — قِيس بمقارنة أبواب المحرّك بما تناديه اللوحة.
-  //
-  // **ومن ذهب ونسي علمَه يبقى في الدور، فيتأخّر كلُّ طلبٍ بمقدار
-  // غيابه** — والعملياتُ تراه متاحاً ولا تملك أن تُخرجه.
-  //
-  // **وموضعُه ملفُّ السائق لا شاشةٌ ثانية**: من فتحه ليعرف لماذا لا
-  // تصل طلباتُه هو من يحتاج الزرّ.
-  async function endShift() {
-    setBusy(true);
-    try {
-      await api(`/api/v1/admin/drivers/${userID}/end-shift`, {
-        method: "POST",
-        body: JSON.stringify({ note: shiftNote.trim() }),
-      });
-      setShiftNote("");
-      setEnding(false);
-      onSettled();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
-  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (!canRead) return <Alert tone="warning">{A.notAllowed}</Alert>;
+  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (!rows) return <LoadingState variant="text" />;
 
   return (
@@ -597,7 +624,14 @@ export function CashboxTab({
           <Money value={held} small />
         </span>
         {canSettle && held > 0 && (
-          <Button disabled={busy} onClick={() => void settle()}>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setAmount(String(held));
+              setError("");
+              setOpen(true);
+            }}
+          >
             <span className="flex items-center gap-1.5">
               <IconCheck size={14} />
               {R.settle}
@@ -605,35 +639,11 @@ export function CashboxTab({
           </Button>
         )}
       </div>
-      {/* ══════════════════════════════════════════════════════════
-          **إغلاقُ دوامه** — انظر `endShift` أعلاه
-          ══════════════════════════════════════════════════════════ */}
-      <div className="mb-3 rounded-control border border-line px-3 py-2">
-        {!ending ? (
-          <>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
-              onClick={() => setEnding(true)}
-            >
-              <IconLogout size={14} />
-              {D.endShift}
-            </button>
-            <p className="mt-1 text-xs text-ink-muted">{D.endShiftHint}</p>
-          </>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs text-ink-muted">{D.endShiftHint}</p>
-            <input
-              className="w-full rounded-control border border-line bg-field px-2 py-1.5 text-sm"
-              placeholder={D.endShiftNote}
-              value={shiftNote}
-              onChange={(e) => setShiftNote(e.target.value)}
-            />
-            <FormActions onSave={() => void endShift()} onCancel={() => setEnding(false)} busy={busy} saveLabel={D.endShift} />
-          </div>
-        )}
-      </div>
+      {done && (
+        <Alert tone="success" className="mb-3">
+          {done}
+        </Alert>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState icon={IconBalance} title={R.cashEmpty} />
@@ -665,7 +675,98 @@ export function CashboxTab({
           ))}
         </ul>
       )}
+
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title={A.settleTitle}>
+          <form
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (value > 0 && value <= held) setConfirming(true);
+            }}
+          >
+            <p className="flex items-center justify-between rounded-control bg-field px-3 py-2 text-sm">
+              <span className="text-ink-muted">{A.settleHeld}</span>
+              <Money value={held} small />
+            </p>
+            <Input
+              id="settle-amount"
+              label={`${A.settleAmount} (${m.common.currency})`}
+              type="number"
+              min="1"
+              max={held}
+              required
+              autoFocus
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            <p className="text-xs text-ink-muted">{A.settleHint}</p>
+            {error && <Alert>{error}</Alert>}
+            <FormActions submit onCancel={() => setOpen(false)} busy={busy} saveLabel={R.settle} />
+          </form>
+        </Modal>
+      )}
+      <Confirm
+        open={confirming}
+        tone="primary"
+        title={A.settleConfirm}
+        body={A.settleConfirmBody
+          .replace("{amount}", fmtMoney(value))
+          .replace("{rest}", fmtMoney(Math.max(held - value, 0)))}
+        confirmLabel={A.settleConfirm}
+        busy={busy}
+        onConfirm={() => void settle()}
+        onCancel={() => setConfirming(false)}
+      />
     </FormSection>
+  );
+}
+
+/**
+ * **إنهاءُ دوام السائق من ملفّه** — بقدرة بابه (`drivers.manage`)، **وفي مكانٍ ظاهر**
+ * لا مخبوءٍ داخل تبويب الصندوق المحجوب عمّن لا يقرأ المال (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+ */
+export function EndShiftButton({ userID, onDone }: { userID: string; onDone: () => void }) {
+  const canCall = useCanCall();
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (!canCall("POST", "/drivers/{id}/end-shift")) return null;
+  async function end() {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/drivers/${userID}/end-shift`, {
+        method: "POST",
+        body: JSON.stringify({ note: note.trim() }),
+      });
+      setOpen(false);
+      setNote("");
+      onDone();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Button variant="secondary" className="flex items-center gap-1.5 !px-2.5" onClick={() => setOpen(true)}>
+        <IconLogout size={14} />
+        {D.endShift}
+      </Button>
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title={D.endShift}>
+          <div className="space-y-3">
+            <p className="text-sm text-ink-muted">{D.endShiftHint}</p>
+            <Input id="end-shift-note" label={D.endShiftNote} value={note} onChange={(e) => setNote(e.target.value)} />
+            {error && <Alert>{error}</Alert>}
+            <FormActions onSave={() => void end()} onCancel={() => setOpen(false)} busy={busy} saveLabel={D.endShift} />
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 
@@ -677,7 +778,13 @@ export function CashboxTab({
  */
 export function StoresTab({ userID, roles }: { userID: string; roles: string[] }) {
   const router = useRouter();
+  const canCall = useCanCall();
   const [rows, setRows] = useState<StoreRow[] | null | "failed">(null);
+  // **والفشلُ يقول سببَه** — «غيرُ مسموح» لا «لا اتصال» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [why, setWhy] = useState("");
+  // **والنسبةُ العامّةُ من المحرّك** — «١٠٪ (عام)» لا «٠٪» حين لا نسبةَ خاصّة.
+  const [general, setGeneral] = useState(0);
+  const [total, setTotal] = useState(0);
   const isRep = roles.includes("sales");
 
   // ══════════════════════════════════════════════════════════════════
@@ -697,22 +804,29 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
   // **ويُعاد الجلبُ بعد كلّ فعل** — وإلّا بقي السطرُ يقول ما بطل: يُحظر
   // المتجرُ ويبقى «فعّال» أمام من حظره.
   const reload = useCallback(() => {
-    api<{ merchants: StoreRow[] }>(
+    api<{ merchants: StoreRow[]; total: number; general_commission_percent: number }>(
       `/api/v1/admin/merchants?${isRep ? `rep_id=${userID}` : `owner_id=${userID}`}&per_page=100`,
     )
-      .then((r) => setRows(r.merchants ?? []))
-      .catch(() => setRows("failed"));
+      .then((r) => {
+        setRows(r.merchants ?? []);
+        setTotal(r.total ?? 0);
+        setGeneral(r.general_commission_percent ?? 0);
+      })
+      .catch((err) => {
+        setWhy(errorText(err));
+        setRows("failed");
+      });
   }, [userID, isRep]);
 
   useEffect(reload, [reload]);
 
   // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
-  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (!rows) return <LoadingState variant="text" />;
 
   return (
     <>
-    <FormSection title={isRep ? R.storesBrought : R.storesOwned} icon={<IconStore />}>
+    <FormSection title={`${isRep ? R.storesBrought : R.storesOwned} (${fmtNum(total || rows.length)})`} icon={<IconStore />}>
       {rows.length === 0 ? (
         <EmptyState icon={IconStore} title={R.storesEmpty} />
       ) : (
@@ -722,7 +836,7 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
               <div className="flex w-full flex-wrap items-center gap-3 py-2">
                 <IconStore size={16} className="shrink-0 text-ink-muted" />
                 <span className="min-w-0 flex-1 truncate font-medium">{s.name}</span>
-                <Badge variant={s.status === "active" ? "success" : "danger"}>
+                <Badge variant={storeStatusVariant(s.status)}>
                   {MERCHANT_STATUS[s.status] ?? s.status}
                 </Badge>
                 {/* **وعدّادُ مخالفاته معه** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
@@ -735,8 +849,8 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
                     {R.violations.replace("{n}", fmtNum(s.violations))}
                   </Badge>
                 )}
-                <span dir="ltr" className="shrink-0 text-sm tabular-nums text-ink-muted">
-                  {fmtNum(s.commission_percent)}%
+                <span className="shrink-0 text-sm text-ink-muted">
+                  {commissionText(s.commission_percent, general)}
                 </span>
                 {/* ══════════════════════════════════════════════════════
                     **وأفعالُ المتجر معه — لا في شاشةٍ أخرى**
@@ -756,13 +870,19 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
           ))}
         </ul>
       )}
+      {/* **والقائمةُ المقصوصةُ تقول ذلك** — لا تكتب العددَ كأنّه الكلّ. */}
+      {total > rows.length && (
+        <p className="mt-2 text-center text-xs text-ink-muted">
+          {A.showingOf.replace("{n}", fmtNum(rows.length)).replace("{all}", fmtNum(total))}
+        </p>
+      )}
     </FormSection>
     {/* **وعملاؤه المحتملون معهم** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
 
         **وهي عملُ المندوب الأوّل**: الملفُّ كان يقول «كم متجراً جلب»
         **ولا يقول كم رشّح وكم رُفض له.** وشاشتُها منفصلة، **وهو داءُ
         الأربعة الذي عولج أمس.** */}
-    {isRep && <LeadsList userID={userID} />}
+    {isRep && canCall("GET", "/leads") && <LeadsList userID={userID} />}
     </>
   );
 }
@@ -775,20 +895,29 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
  */
 function LeadsList({ userID }: { userID: string }) {
   const [rows, setRows] = useState<LeadRow[] | null | "failed">(null);
+  const [leadTotal, setLeadTotal] = useState(0);
+  // **والفشلُ يقول سببَه** — «غيرُ مسموح» لا «لا اتصال» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  const [why, setWhy] = useState("");
 
   useEffect(() => {
-    api<{ leads: LeadRow[] }>(`/api/v1/admin/leads?rep_id=${userID}&per_page=50`)
-      .then((r) => setRows(r.leads ?? []))
-      .catch(() => setRows("failed"));
+    api<{ leads: LeadRow[]; total?: number }>(`/api/v1/admin/leads?rep_id=${userID}&per_page=50`)
+      .then((r) => {
+        setRows(r.leads ?? []);
+        setLeadTotal(r.total ?? (r.leads ?? []).length);
+      })
+      .catch((err) => {
+        setWhy(errorText(err));
+        setRows("failed");
+      });
   }, [userID]);
 
-  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (!rows) return <LoadingState variant="text" />;
   // **ولا يُرسم فارغاً** — عنوانٌ صفريٌّ يُقرأ عطباً.
   if (rows.length === 0) return null;
 
   return (
-    <FormSection title={`${R.leads} (${fmtNum(rows.length)})`} icon={<IconStore />}>
+    <FormSection title={`${R.leads} (${fmtNum(Math.max(leadTotal, rows.length))})`} icon={<IconStore />}>
       <ul className="divide-y divide-line">
         {rows.map((l) => (
           <li key={l.id} className="flex items-center gap-3 py-2">
@@ -801,8 +930,24 @@ function LeadsList({ userID }: { userID: string }) {
           </li>
         ))}
       </ul>
+      {leadTotal > rows.length && (
+        <p className="mt-2 text-center text-xs text-ink-muted">
+          {A.showingOf.replace("{n}", fmtNum(rows.length)).replace("{all}", fmtNum(leadTotal))}
+        </p>
+      )}
     </FormSection>
   );
+}
+
+/**
+ * **نسبةُ عمولة المتجر — «١٠٪ (عام)» أو «١٢٪ (خاص)»** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+ *
+ * **كانت تُكتب «٠٪» لمتجرٍ يتبع النسبةَ العامّة** — ٢٤ متجراً من ٢٦ على التجهيز.
+ */
+export function commissionText(own: number | null | undefined, general: number): string {
+  return own == null
+    ? A.commissionGeneral.replace("{p}", fmtNum(general))
+    : A.commissionCustom.replace("{p}", fmtNum(own));
 }
 
 /** **ولونُ الحال يُقرأ قبل حرفه.** */

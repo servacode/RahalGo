@@ -52,6 +52,7 @@ import {
   IconOrder as IconMenu,
   IconDate,
   Checkbox,
+  Radio,
   LoadingState,
   FormActions,
 } from "@rahalgo/ui";
@@ -97,7 +98,8 @@ export interface Merchant {
   status: string;
   /** إلغاءاتُ المتجر داخل نافذة الحظر وبعد آخر عفو */
   violations: number;
-  commission_percent: number;
+  /** **نسبتُه الخاصّة** — وفراغُها: يتبع النسبةَ العامّة (قرارُ المالك ٢٠٢٦-١٠-٠٤). */
+  commission_percent: number | null;
   emergency_closed: boolean;
   /** **منطقتُه الإداريّة** — يرسلها المحرّكُ لتُعرض مختارةً في النموذج. */
   district_id?: string | null;
@@ -160,10 +162,10 @@ export function MerchantModal({
   // **واسمُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): كان الحسابُ يُنشأ باسمٍ
   // فارغ، **فيصير في الحسابات صفٌّ برقمٍ بلا اسم.**
   const [ownerName, setOwnerName] = useState("");
-  // **وكلمتُه المؤقّتة** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): يخرج من النموذج
-  // **حسابٌ جاهزٌ ومتجرٌ جاهز.**
-  const [ownerPass, setOwnerPass] = useState("");
-  const [ownerPass2, setOwnerPass2] = useState("");
+  // **ولا كلمةَ يكتبها الموظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها
+  // ويرسلها إلى صاحب المتجر مع رابط تطبيق المتجر، **ومن له حسابٌ قائمٌ تصله
+  // «صار عندك متجر» بلا كلمةٍ جديدة.**
+  const [welcome, setWelcome] = useState<{ sent: boolean; existing_owner: boolean } | null>(null);
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
   // **سببُ نقل المتجر إلى مندوبٍ آخر** — إلزاميٌّ عند تغيير مندوب متجرٍ قائم،
   // لأنّ النقل يحوّل عمولةَ الطلبات القادمة ونسبةَ الهدف ويُسجَّل في التدقيق.
@@ -176,7 +178,24 @@ export function MerchantModal({
   const [districtId, setDistrictId] = useState(merchant?.district_id ?? "");
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
-  const [commission, setCommission] = useState(String(merchant?.commission_percent ?? 10));
+  // ══════════════════════════════════════════════════════════════════
+  // **«عام» أو «خاص» — خيارٌ واضحٌ لا رقمٌ يُرسَل دائماً** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت النافذةُ تبعث ١٠ دائماً** — فأيُّ تعديلٍ بسيطٍ يثبّت نسبةً خاصّةً بلا أن
+  // ينتبه أحد، **ولا طريقَ يعيد المتجرَ إلى النسبة العامّة.** والآن: «يتبع العامّة»
+  // يُرسل ‎-1 (يمحو الخاصّة)، و«خاصّة» تُرسل رقمها.
+  const [commissionMode, setCommissionMode] = useState<"general" | "special">(
+    merchant?.commission_percent == null ? "general" : "special",
+  );
+  const [commission, setCommission] = useState(String(merchant?.commission_percent ?? ""));
+  const [generalPct, setGeneralPct] = useState<number | null>(null);
+  useEffect(() => {
+    void api<{ general_commission_percent: number }>("/api/v1/admin/merchants?per_page=1")
+      .then((r) => setGeneralPct(r?.general_commission_percent ?? null))
+      // @empty-ok **والنسبةُ العامّةُ تلميحٌ** — الخيارُ يعمل بدونها.
+      .catch(() => setGeneralPct(null));
+  }, []);
   // null = لم يُلمس (لا يُرسل)، "" = إزالة، معرف = شعار جديد
   const [logoID, setLogoID] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -227,12 +246,6 @@ export function MerchantModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    // **والتطابقُ يُفحص قبل النداء** — **ومن أخطأ في التأكيد يعرفها
-    // هنا لا بعد أن يُنشأ الحسابُ بكلمةٍ لا يعرفها.**
-    if (!merchant && ownerPass !== ownerPass2) {
-      setError(m.admin.merchants.passwordMismatch);
-      return;
-    }
     // **ونقلُ متجرٍ قائمٍ إلى مندوبٍ آخر يلزمه سبب** — الخادمُ يفرضه
     // (transfer_reason_required)، والواجهةُ تطلبه هنا قبل النداء.
     const isRepTransfer =
@@ -253,12 +266,15 @@ export function MerchantModal({
       address_text: address,
       owner_phone: ownerPhone,
       owner_name: ownerName,
-      owner_password: ownerPass,
       sales_rep_code: repCode,
       lat,
       lng,
       district_id: districtId,
-      commission_percent: Number(commission) || 0,
+      ...(commissionMode === "special"
+        ? { commission_percent: Number(commission) || 0 }
+        : merchant && merchant.commission_percent != null
+          ? { commission_percent: -1 }
+          : {}),
       ...(logoID !== null ? { logo_media_id: logoID } : {}),
       ...(isRepTransfer ? { transfer_reason: transferReason.trim() } : {}),
     };
@@ -269,7 +285,13 @@ export function MerchantModal({
           body: JSON.stringify(body),
         });
       } else {
-        await api("/api/v1/admin/merchants", { method: "POST", body: JSON.stringify(body) });
+        const made = await api<{ welcome?: { sent: boolean; existing_owner: boolean } }>(
+          "/api/v1/admin/merchants",
+          { method: "POST", body: JSON.stringify(body) },
+        );
+        // **ويُقال ما وقع لرسالة الدخول** قبل أن تُغلق النافذة.
+        setWelcome(made?.welcome ?? { sent: false, existing_owner: false });
+        return;
       }
       onSaved();
     } catch (err) {
@@ -300,6 +322,14 @@ export function MerchantModal({
 
           **فالبياناتُ والحساباتُ في عمود، والموقعُ في عمود** — والخريطةُ
           هي أطولُ ما في النموذج فتقف وحدها بدل أن تُضاف إلى الطول. */}
+      {welcome ? (
+        <div className="space-y-4">
+          <Alert tone={welcome.sent ? "success" : "warning"}>
+            {welcome.sent ? m.admin.acc.welcomeSent : m.admin.acc.welcomeNotSent}
+          </Alert>
+          <FormActions onSave={onSaved} saveLabel={m.common.confirm} />
+        </div>
+      ) : (
       <form onSubmit={submit} className="space-y-6">
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-5">
@@ -336,31 +366,9 @@ export function MerchantModal({
                 بكلمته التي يعرفها، **وتبديلُها من نافذة متجرٍ يُوقفه
                 على بابه ولا يعرف لماذا.** */}
             {!merchant && (
-              <>
-                <div>
-                  <Input
-                    id="m-owner-pass"
-                    label={m.admin.merchants.ownerPassword}
-                    type="password"
-                    required
-                    value={ownerPass}
-                    onChange={(e) => setOwnerPass(e.target.value)}
-                  />
-                  <p className="mt-1 text-xs text-ink-muted">
-                    {m.admin.merchants.ownerPasswordHint}
-                  </p>
-                </div>
-                <div>
-                  <Input
-                    id="m-owner-pass2"
-                    label={m.admin.merchants.ownerPasswordConfirm}
-                    type="password"
-                    required
-                    value={ownerPass2}
-                    onChange={(e) => setOwnerPass2(e.target.value)}
-                  />
-                </div>
-              </>
+              <p className="rounded-control bg-field px-3 py-2 text-xs leading-relaxed text-ink-muted sm:col-span-2">
+                {m.admin.acc.noPasswordHint.replace("{h}", fmtNum(72))}
+              </p>
             )}
             <div>
               <Input
@@ -434,15 +442,38 @@ export function MerchantModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-            <Input
-              id="m-commission"
-              label={m.admin.merchants.commission}
-              type="number"
-              min="0"
-              max="100"
-              value={commission}
-              onChange={(e) => setCommission(e.target.value)}
-            />
+            <div className="space-y-1.5">
+              <span className="block text-sm font-medium">{m.admin.acc.commissionMode}</span>
+              <Radio
+                id="m-com-general"
+                name="m-com-mode"
+                checked={commissionMode === "general"}
+                onChange={() => setCommissionMode("general")}
+                label={m.admin.acc.commissionFollowGeneral.replace(
+                  "{p}",
+                  generalPct === null ? "…" : fmtNum(generalPct),
+                )}
+              />
+              <Radio
+                id="m-com-special"
+                name="m-com-mode"
+                checked={commissionMode === "special"}
+                onChange={() => setCommissionMode("special")}
+                label={m.admin.acc.commissionSpecial}
+              />
+              {commissionMode === "special" && (
+                <Input
+                  id="m-commission"
+                  label={m.admin.merchants.commission}
+                  type="number"
+                  min="0"
+                  max="100"
+                  required
+                  value={commission}
+                  onChange={(e) => setCommission(e.target.value)}
+                />
+              )}
+            </div>
             <ImageUpload
               kind="merchant_logo"
               label={m.admin.merchants.logo}
@@ -555,6 +586,7 @@ export function MerchantModal({
             يمنع الضغطة، **وذاك يمنع الالتفاف من أيّ واجهةٍ أخرى.** */}
         <FormActions submit onCancel={onClose} busy={busy || lat == null || lng == null} />
       </form>
+      )}
     </Modal>
   );
 }

@@ -72,7 +72,7 @@ func deliveriesOf(t *testing.T, h *Harness, uid, title string) map[string]delive
 // **ومسارٌ حقيقيٌّ لا نداءٌ داخليّ** — **فالفحصُ يقيس ما يقع في المنصّة.**
 func notifyUser(t *testing.T, h *Harness, admin *User, uid string, amount int64) {
 	t.Helper()
-	got := h.POST("/api/v1/admin/users/"+uid+"/wallet", admin.Token,
+	got := h.adminWallet(admin, uid,
 		map[string]any{"amount": amount, "kind": "topup", "note": "PF-09"})
 	if got.Code >= 400 {
 		t.Fatalf("قيدُ المحفظة: %s", got)
@@ -507,7 +507,7 @@ func TestPF09_N11_ProviderOutageDoesNotRollbackBusiness(t *testing.T) {
 		t.Skip("جدولُ رموز الدفع غيرُ متاح")
 	}
 
-	got := h.POST("/api/v1/admin/users/"+u.ID+"/wallet", admin.Token,
+	got := h.adminWallet(admin, u.ID,
 		map[string]any{"amount": 7000, "kind": "topup", "note": "PF-09"})
 	settle(t, h, u.ID, 1)
 	h.API.DeliverPushOnce(ctxBG())

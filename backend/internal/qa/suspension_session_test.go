@@ -181,11 +181,9 @@ func issuedRefreshMode(t *testing.T, h *Harness, userID, client string, strict b
 	}
 	admin := h.NewUser("admin")
 	const pw = "Qa!Refresh-2026"
-	set := h.POST("/api/v1/admin/users/"+userID+"/password", admin.Token,
-		map[string]any{"password": pw})
-	if set.Code >= 400 {
-		give("لا مسارَ لوضع كلمةٍ بهذا الشكل: %s", set)
-	}
+	_ = admin
+	_ = give
+	setKnownPassword(t, h, userID, pw)
 	var phone string
 	if err := h.Pool.QueryRow(ctxBG(),
 		`SELECT phone FROM users WHERE id = $1::uuid`, userID).Scan(&phone); err != nil {

@@ -302,6 +302,9 @@ var (
 	corsAllowedHeaders = []string{
 		"Accept", "Authorization", "Content-Type",
 		"X-Request-ID", "X-RahalGo-Client", "X-Step-Up",
+		// **ومفتاحُ عدمِ التكرار يرسله الويبُ في طلب حركة المحفظة** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+		// — قِيس في متصفّحٍ عبر أصلين: كان الطلبُ يُحجب قبل أن يُرسَل.
+		"Idempotency-Key",
 	}
 )
 

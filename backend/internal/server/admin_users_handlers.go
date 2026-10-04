@@ -56,21 +56,26 @@ func (s *Server) handleAdminCreateUser(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **ولا كلمةَ يكتبها الموظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها ويرسلها.
+	// **ولا كلمةَ يكتبها الموظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها، **وتُكتب مع
+	// الحساب في معاملته نفسِها** (`D15`: لا حسابَ بلا كلمة)، ثمّ تُرسَل.
 	in := req.CreateUserInput
-	in.Password = ""
+	plain, err := identity.GenerateTempPassword(s.minPasswordLen(r.Context()))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	in.Password = plain
+	in.TempHours = s.identity.TempPasswordHours(r.Context())
 	user, err := s.identity.AdminCreateUser(r.Context(), userIDFrom(r), in, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	sent, expires, werr := s.issueWelcomeFor(r.Context(), userIDFrom(r), user.ID, clientIP(r), req.WelcomeApp)
-	if werr != nil {
-		s.logger.Error("تعذّر توليدُ كلمة الدخول للحساب الجديد", "user", user.ID, "error", werr)
-	}
+	sent := s.sendWelcome(r.Context(), userIDFrom(r), user.ID, clientIP(r), plain, req.WelcomeApp, false)
+	_, expires := s.identity.TempPasswordPending(r.Context(), user.ID)
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"id": user.ID, "phone": user.Phone, "full_name": user.FullName, "roles": user.Roles,
-		"welcome": map[string]any{"sent": sent, "expires_at": expires, "ok": werr == nil},
+		"welcome": map[string]any{"sent": sent, "expires_at": expires, "ok": true},
 	})
 }
 
@@ -305,9 +310,12 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		// MoneyHidden **الأرصدةُ والإنفاقُ والعمولاتُ تُحجب من المحرّك** عمّن لا يملك
 		// المالَ ولا خدمةَ العملاء — **لا تُخفى في الشاشة وتصل في الردّ.**
 		MoneyHidden bool `json:"money_hidden"`
+		// OpenOrders **طلباتُه المفتوحةُ كسائق** — تُقال في نافذة الإيقاف ليُتابَع ما بيده.
+		OpenOrders int `json:"open_orders"`
 		// TempPassword **كلمةٌ مؤقّتةٌ لم تُبدَّل** — «لم يدخل بعد · تنتهي بعد …».
 		TempPending   bool    `json:"temp_password_pending"`
 		TempExpiresAt *string `json:"temp_password_expires_at"`
+		TempHours     int64   `json:"temp_password_hours"`
 		WelcomeSentAt *string `json:"welcome_sent_at"`
 		EverLoggedIn  bool    `json:"ever_logged_in"`
 		// **السائق**: المركبةُ · سقفُ النقد العامُّ والخاصّ · قفلُ ما بعد الحادث.
@@ -376,6 +384,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 			&out.AccidentLocked, &out.AccidentLockAt, &out.AccidentCleared, &out.AccidentClearer)
 	pending, _ := s.identity.TempPasswordPending(ctx, id)
 	out.TempPending = pending
+	out.TempHours = s.identity.TempPasswordHours(ctx)
 	if !pending {
 		out.TempExpiresAt = nil
 	}
@@ -384,6 +393,8 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		out.CashLimit = *out.CashLimitCustom
 	}
 	out.HeldCommission, out.HeldCommissions = s.orders.HeldCommissionTotal(ctx, id)
+	_ = s.pg.QueryRow(ctx, `SELECT count(*) FROM orders WHERE driver_id = $1 AND closed_at IS NULL`, id).
+		Scan(&out.OpenOrders)
 	var pr phoneRequestRow
 	if err := s.pg.QueryRow(ctx, `
 		SELECT pr.id::text, pr.user_id::text, pr.old_phone, pr.new_phone, pr.balance, pr.status,
@@ -836,6 +847,16 @@ func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) 
 	filter := identity.ListFilter{Query: q.Get("query"), Role: q.Get("role"),
 		Online: q.Get("online") == "true", Status: q.Get("status"),
 		PhoneSearch: hasCap(r, authz.UsersContactRead)}
+	// **وتصديرُ المحدّد** — معرّفاتٌ مفصولةٌ بفاصلة، وغيرُ الصالح منها يُردّ.
+	if raw := strings.TrimSpace(q.Get("ids")); raw != "" {
+		for _, id := range strings.Split(raw, ",") {
+			if id = strings.TrimSpace(id); !isUUID(id) {
+				s.respondErr(w, errValidation)
+				return
+			}
+			filter.IDs = append(filter.IDs, strings.TrimSpace(id))
+		}
+	}
 	var all []identity.User
 	for page := 1; ; page++ {
 		res, err := s.identity.AdminListUsersFiltered(r.Context(), filter, page, 100)

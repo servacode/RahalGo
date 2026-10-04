@@ -1,9 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **قائمةُ الحسابات — بابٌ واحدٌ لكلّ من في المنصّة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — قسمُ الحسابات.)
+ *
+ *	«إضافة ▾»         زرٌّ واحدٌ بقائمة أنواع (سائق · مندوب · متجر · موظّف) بحسب الصلاحيّة،
+ *	                   ودورٌ واحدٌ للحساب، **ولا كلمةَ سرٍّ يكتبها الموظّف**
+ *	البحث             بالاسم والهاتف وكود الدعوة **واسمِ المتجر**، واسمُ المتجر تحت صاحبه
+ *	الشارة            للموقوف والمحظور وحدَهما
+ *	التحديدُ الجماعيّ  إيقافٌ وتفعيلٌ وتصديرٌ فقط — **ولا فعلَ ماليّاً**
+ *	التصدير           لمديرِ المنصّة وحدَه (`users.export`)، عربيٌّ ومحميٌّ من صيغ إكسل
+ *	الأرصدة           تُحجب في المحرّك عمّن لا يملك المالَ ولا خدمةَ العملاء
+ *
+ * **وكلُّ زرٍّ بقدرة بابه من جدول المحرّك** (`useCanCall`).
+ */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate, errorText} from "@rahalgo/i18n";
-import { creatableAtSignup, roleLabelByCode, signupGroups } from "@/lib/rolemeta";
+import { getMessages, defaultLocale, fmtNum, fmtDate, errorText } from "@rahalgo/i18n";
+import { roleLabelByCode, signupGroups, ACCOUNT_TYPE_ROLE_CODES } from "@/lib/rolemeta";
 import { listRoles, roleLabel, type Role } from "@/lib/rbac";
 import {
   Pagination,
@@ -13,11 +31,14 @@ import {
   Input,
   Select,
   Badge,
-  Chips,
   Modal,
+  Confirm,
+  Checkbox,
   DataView,
   ViewToggle,
   useViewMode,
+  ActionMenu,
+  type ActionMenuItem,
   type DataColumn,
   IconUser,
   IconPhone,
@@ -27,20 +48,19 @@ import {
   IconAdd,
   IconBlock,
   IconUnblock,
-  IconLock,
   IconWallet,
   IconOrder,
-  IconLink,
   IconStore,
   IconDriver,
   IconGrid,
-  CopyCode,
   IconView,
-  usePlatform,
+  IconReceipt,
+  IconUsers,
   FormActions,
 } from "@rahalgo/ui";
-import { api, apiFile, ApiError, type AuthUser } from "@/lib/api";
+import { api, apiFile, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanCall } from "@/lib/policy";
 import WalletModal from "@/components/admin/WalletModal";
 import { MerchantModal, CategoriesModal } from "@/components/admin/MerchantModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
@@ -48,75 +68,74 @@ import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
 
 const m = getMessages(defaultLocale);
+const A = m.admin.acc;
 
-// **والاسمُ من `rolemeta`** — ولا معجمَ ثانياً هنا.
-//
-// **ولا مصفوفةَ رموزٍ في هذه الشاشة بعد اليوم** (٢٠٢٦-٠٩-١٢، بندُ ٧):
-// **كانت `ASSIGNABLE_ROLE_CODES` سبعةَ رموزٍ مكتوبةً في الواجهة**،
-// **فدورٌ يُنشئه المالكُ من اللوحة لا يظهر في «مستخدم جديد» ولا في
-// المرشِّح حتّى تُبنى الواجهةُ من جديد.** **والأدوارُ تُقرأ من
-// المحرّك، والسياسةُ ترتّبها في `rolemeta`.**
+type Row = AuthUser & { store_names?: string[] };
 
 interface UserPage {
-  users: AuthUser[];
+  users: Row[];
   total: number;
   page: number;
   per_page: number;
+  money_hidden: boolean;
 }
 
-function translateKey(key: string): string {
-  let node: unknown = m;
-  for (const part of key.split(".")) {
-    if (typeof node !== "object" || node === null) return m.errors.internal;
-    node = (node as Record<string, unknown>)[part];
-  }
-  return typeof node === "string" ? node : m.errors.internal;
-}
-
+type NewKind = "driver" | "sales" | "staff";
 
 export default function AllAccountsTable() {
   const { user: me, can } = useAuth();
   const router = useRouter();
-  // ════════════════════════════════════════════════════════════════
-  // **وكلُّ زرٍّ بقدرةِ ندائه** (٢٠٢٦-٠٩-١٣)
-  // ════════════════════════════════════════════════════════════════
-  //
-  // **وكان الثلاثةُ خلفَ اسم `admin` واحدٍ** — **إنشاءُ حسابٍ
-  // وإنشاءُ متجرٍ وأفعالُ الصفّ** — **فمن ملك واحدةً لم ينلها،
-  // ومن ملك الاسمَ نالها كلَّها.**
-  const canCreateUser = can("users.status.manage");
-  const canCreateStore = can("merchants.manage");
-  const isAdmin = canCreateUser || canCreateStore;
+  const canCall = useCanCall();
+  const canCreateUser = canCall("POST", "/users");
+  const canGrant = canCall("POST", "/users/{id}/roles");
+  const canCreateStore = canCall("POST", "/merchants");
+  const canCategories = canCall("POST", "/categories");
+  const canStatus = canCall("PATCH", "/users/{id}");
+  const canWallet = canCall("POST", "/users/{id}/wallet");
+  // **والتصديرُ لمديرِ المنصّة وحدَه** — الزرُّ يُخفى عن غيره (قرار ١١).
+  const canExport = can("users.export");
+  const canPhone = can("users.contact.read");
 
-  const [data, setData] = useState<UserPage | null>(null);
-  const [query, setQuery] = useState("");
-  // **والدورُ والحالُ من الرابط** — أرقامُ «المنصّة بالأرقام» في رئيسيّة المدير
-  // تفتح الحساباتِ عليها (قرارُ المالك ٢٠٢٦-١٠-٠٤).
   const urlParam = (k: string) =>
     typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get(k) ?? "");
+  const [data, setData] = useState<UserPage | null>(null);
+  const [query, setQuery] = useState("");
   const [role, setRole] = useState(() => urlParam("role"));
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [statusFilter, setStatusFilter] = useState(() => urlParam("status"));
   const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
-  // **والأدوارُ من المحرّك** — للمرشِّح ولنافذة الإنشاء معاً.
   const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [walletUser, setWalletUser] = useState<AuthUser | null>(null);
-  // **ونافذتا السائق** — نُقلتا من شاشتهم كما هما.
-  // **ونافذةُ المتجر** — صاحبُه أعلاها وبياناتُه أسفلَها.
+  const [createKind, setCreateKind] = useState<NewKind | null>(null);
+  const [walletUser, setWalletUser] = useState<Row | null>(null);
   const [storeOpen, setStoreOpen] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
-  const [statusModal, setStatusModal] = useState<{ user: AuthUser; status: string } | null>(null);
+  const [statusModal, setStatusModal] = useState<{ users: Row[]; status: string } | null>(null);
+  const [activateRows, setActivateRows] = useState<Row[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkMsg, setBulkMsg] = useState("");
+  const [busy, setBusy] = useState(false);
   const [view, setView] = useViewMode("users");
+
+  // **والإحصاءاتُ مرّةً لا مع كلّ حرف** — كانت تُعاد مع كلّ ضغطةٍ في البحث.
+  const loadStats = useCallback(() => {
+    api<{ total: number; roles: Record<string, number> }>("/api/v1/admin/users/stats")
+      .then(setRoleCounts)
+      // @empty-ok **والبطاقاتُ تلميح** — القائمةُ تعمل بدونها.
+      .catch(() => undefined);
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "", page: String(page), per_page: "10" });
-      api<{ total: number; roles: Record<string, number> }>("/api/v1/admin/users/stats")
-        .then(setRoleCounts)
-        .catch(() => undefined);
+      const params = new URLSearchParams({
+        query,
+        role,
+        status: statusFilter,
+        online: onlineOnly ? "true" : "",
+        page: String(page),
+        per_page: "10",
+      });
       setData(await api<UserPage>(`/api/v1/admin/users?${params}`));
       setError("");
     } catch (err) {
@@ -128,42 +147,33 @@ export default function AllAccountsTable() {
     const t = setTimeout(load, 250); // تهدئة البحث
     return () => clearTimeout(t);
   }, [load]);
+  useEffect(loadStats, [loadStats]);
 
-  // **والأدوارُ تُقرأ مرّةً عند فتح الشاشة** — **ولا تُخترَع قائمةٌ من
-  // الواجهة بديلاً عند التعذّر**: تبقى فارغةً فيُقال ذلك.
+  const canRolesList = canCall("GET", "/roles");
   useEffect(() => {
     let alive = true;
+    // **ومن لا يقرأ الأدوار يُرشِّح بصفات الحساب وحدَها** — كان يُنادى فيُردّ ٤٠٣.
+    if (!canRolesList) {
+      setAllRoles(ACCOUNT_TYPE_ROLE_CODES.map((code) => ({ code, name_key: `roles.${code}` }) as Role));
+      return;
+    }
     void listRoles()
-      .then((r) => {
-        if (alive) setAllRoles(r);
-      })
-      .catch(() => {
-        if (alive) setAllRoles([]);
-      });
+      .then((r) => alive && setAllRoles(r))
+      .catch(() => alive && setAllRoles([]));
     return () => {
       alive = false;
     };
-  }, []);
+  }, [canRolesList]);
 
-  useLiveRefresh(["account"], load);
+  const refresh = useCallback(() => {
+    void load();
+    loadStats();
+  }, [load, loadStats]);
+  useLiveRefresh(["account"], refresh);
 
-  /**
-   * ══════════════════════════════════════════════════════════════════
-   * **والتنزيلُ يمرّ بالعميل — وكان يتجاوزه ولا يفحص النجاح**
-   * ══════════════════════════════════════════════════════════════════
-   *
-   * (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
-   *
-   * **كان `fetch` خامّاً بلا تجديدِ توكنٍ ولا فحصِ `res.ok`** — **فعند
-   * انتهاء الجلسة يُنزَّل ملفٌّ اسمُه `accounts.csv` وفيه رسالةُ خطأ**:
-   * يُفتح في جدولٍ فيُقرأ سطراً غريباً، **أو يُحفظ ويُرسَل وفيه ما ليس
-   * فيه.**
-   *
-   * **وملفٌّ يبدو تصديراً وهو خطأٌ أسوأُ من تنزيلٍ فشل** — الفشلُ يُرى
-   * والملفُّ يُصدَّق.
-   */
-  async function exportCsv() {
+  async function exportCsv(ids?: string[]) {
     const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "" });
+    if (ids && ids.length) params.set("ids", ids.join(","));
     try {
       const res = await apiFile(`/api/v1/admin/users/export?${params}`);
       const blob = await res.blob();
@@ -179,22 +189,53 @@ export default function AllAccountsTable() {
     }
   }
 
-  async function setStatus(u: AuthUser, status: string, reason = "") {
-    try {
-      await api(`/api/v1/admin/users/${u.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, status_reason: reason }),
-      });
-      setStatusModal(null);
-      await load();
-    } catch (err) {
-      setError(errorText(err));
+  /** **فعلٌ على حسابٍ أو أكثر** — والخطأُ يُعدّ ويُقال لا يُبتلع. */
+  async function applyStatus(rows: Row[], status: string, reason = "") {
+    setBusy(true);
+    let ok = 0;
+    let lastErr = "";
+    for (const u of rows) {
+      try {
+        await api(`/api/v1/admin/users/${u.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status, status_reason: reason }),
+        });
+        ok++;
+      } catch (err) {
+        lastErr = errorText(err);
+      }
     }
+    setBusy(false);
+    const failed = rows.length - ok;
+    if (rows.length > 1 || failed > 0) {
+      setBulkMsg(
+        [A.bulkDone.replace("{n}", fmtNum(ok)), failed > 0 ? `${A.bulkFailed.replace("{n}", fmtNum(failed))} — ${lastErr}` : ""]
+          .filter(Boolean)
+          .join(" · "),
+      );
+    }
+    setSelected(new Set());
+    refresh();
+    if (failed > 0 && rows.length === 1) throw new Error(lastErr);
   }
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
+  const rows = useMemo(() => data?.users ?? [], [data]);
+  const money = data ? !data.money_hidden : true;
+  const selectable = canStatus || canExport;
+  const pageIds = rows.filter((u) => !u.is_system && u.id !== me?.id).map((u) => u.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((i) => selected.has(i));
+  const selRows = rows.filter((u) => selected.has(u.id));
 
-  const columns: DataColumn<AuthUser>[] = [
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const columns: DataColumn<Row>[] = [
     {
       id: "name",
       header: m.admin.users.table.name,
@@ -203,11 +244,33 @@ export default function AllAccountsTable() {
       cell: (u) => (
         <span className="flex w-full items-center justify-between gap-2">
           <span className="inline-flex min-w-0 items-center gap-2">
+            {selectable && !u.is_system && u.id !== me?.id && (
+              <span onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  id={`sel-${u.id}`}
+                  label={<span className="sr-only">{A.selectRow}</span>}
+                  checked={selected.has(u.id)}
+                  onChange={() => toggle(u.id)}
+                />
+              </span>
+            )}
             <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || m.terms.avatarFallback} size={32} />
-            <span className="truncate">{u.full_name || "—"}</span>
-            {/* **حسابٌ نظاميٌّ يُوسَم ولا يُخفى** — سأل المالكُ عنه فظنّه
-                بلا عمل، **والعيبُ في العرض لا في الحساب.** */}
-            {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5">
+                <span className="truncate">{u.full_name || "—"}</span>
+                {/* **شارةٌ صغيرةٌ للموقوف والمحظور وحدَهما** (قرار ٨). */}
+                {u.status === "suspended" && <Badge variant="warning">{m.admin.users.suspended}</Badge>}
+                {u.status === "blocked" && <Badge variant="danger">{m.admin.users.blocked}</Badge>}
+                {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
+              </span>
+              {/* **واسمُ متجره تحت اسمه** (قرار ٧). */}
+              {u.store_names && u.store_names.length > 0 && (
+                <span className="flex items-center gap-1 truncate text-xs text-ink-muted">
+                  <IconStore size={11} />
+                  {u.store_names.join(" · ")}
+                </span>
+              )}
+            </span>
           </span>
           <button
             type="button"
@@ -228,11 +291,14 @@ export default function AllAccountsTable() {
       header: m.admin.users.table.phone,
       icon: <IconPhone />,
       primary: true,
-      cell: (u) => (
-        <span dir="ltr" className="font-medium">
-          {u.phone}
-        </span>
-      ),
+      cell: (u) =>
+        u.phone ? (
+          <span dir="ltr" className="font-medium">
+            {u.phone}
+          </span>
+        ) : (
+          <span className="text-ink-muted">{A.phoneHidden}</span>
+        ),
     },
     {
       id: "roles",
@@ -246,22 +312,6 @@ export default function AllAccountsTable() {
         </div>
       ),
     },
-    // ══════════════════════════════════════════════════════════════
-    // **وأرقامُه كزبون — هنا لا في تبويبٍ ثانٍ**
-    // ══════════════════════════════════════════════════════════════
-    //
-    // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «تبويبٌ منفصلٌ باسم الزبائن لا يلزم
-    //  أساساً — كلُّ شيءٍ نريده موجودٌ بكلّ الحسابات».)
-    //
-    // **ولا نقدَ ولا «سلّم اليوم» هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥):
-    // **رقمان يخصّان يومَ السائق لا هُويّتَه**، وموضعُهما ملفُّه
-    // وشاشةُ الصندوق. **والبطاقةُ تقول من هو.**
-    //
-    // **ولا تُعرض لمن لا طلبَ له**: موظّفٌ وسائقٌ ومتجرٌ أصفارُهم
-    // صادقةٌ ولا تعني شيئاً — **وحقلٌ يظهر فارغاً دائماً يُتعلَّم
-    // تجاهلُه، ثمّ يمتلئ يوماً فلا يُنظر إليه.**
-    //
-    // **والرصيدُ للجميع** — كلُّ حسابٍ له محفظة.
     {
       id: "orders_count",
       header: m.admin.customers.ordersCount,
@@ -269,19 +319,23 @@ export default function AllAccountsTable() {
       hide: (u) => !u.orders_count,
       cell: (u) => fmtNum(u.orders_count ?? 0),
     },
-    {
-      id: "orders_spent",
-      header: `${m.admin.customers.totalSpent} (${m.common.currency})`,
-      icon: <IconOrder />,
-      hide: (u) => !u.orders_count,
-      cell: (u) => fmtNum(u.orders_spent ?? 0),
-    },
-    {
-      id: "balance",
-      header: `${m.admin.customers.balance} (${m.common.currency})`,
-      icon: <IconWallet />,
-      cell: (u) => fmtNum(u.balance ?? 0),
-    },
+    ...(money
+      ? ([
+          {
+            id: "orders_spent",
+            header: `${m.admin.customers.totalSpent} (${m.common.currency})`,
+            icon: <IconOrder />,
+            hide: (u: Row) => !u.orders_count,
+            cell: (u: Row) => fmtNum(u.orders_spent ?? 0),
+          },
+          {
+            id: "balance",
+            header: `${m.admin.customers.balance} (${m.common.currency})`,
+            icon: <IconWallet />,
+            cell: (u: Row) => fmtNum(u.balance ?? 0),
+          },
+        ] as DataColumn<Row>[])
+      : []),
     {
       id: "last_order",
       header: m.admin.customers.lastOrder,
@@ -289,35 +343,24 @@ export default function AllAccountsTable() {
       hide: (u) => !u.last_order_at,
       cell: (u) => (u.last_order_at ? fmtDate(u.last_order_at) : "—"),
     },
-    // ══════════════════════════════════════════════════════════════
-    // **وأرقامُه كمندوب — بلا رمز دعوته**
-    // ══════════════════════════════════════════════════════════════
-    //
-    // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «احذفه من كرت المندوب، لا يلزم أصلاً
-    //  أن يكون بالكرت».)
-    //
-    // **ورمزُه في ملفّه** — ومن أراد أن يمليه على أحدٍ يفتحه، **ولا
-    // يُملى رمزٌ من قائمةٍ يُمسح فيها بالعين.**
     {
       id: "rep_stores",
-      header: m.admin.sales.merchantsCount,
+      header: A.storesBroughtCol,
       icon: <IconStore />,
       hide: (u) => !u.rep_stores,
       cell: (u) => fmtNum(u.rep_stores ?? 0),
     },
-    {
-      id: "commissions",
-      header: `${m.admin.sales.totalCommissions} (${m.common.currency})`,
-      icon: <IconWallet />,
-      hide: (u) => !u.commissions,
-      cell: (u) => fmtNum(u.commissions ?? 0),
-    },
-    // ══════════════════════════════════════════════════════════════
-    // **وحالُه كسائق — بلا ورديّته**
-    // ══════════════════════════════════════════════════════════════
-    //
-    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.) **وموضعُها ملفُّه** — ومن سأل «من
-    // يعمل الآن؟» يسأله في شاشة الطلبات لا في جدول الحسابات.
+    ...(money
+      ? ([
+          {
+            id: "commissions",
+            header: `${m.admin.sales.totalCommissions} (${m.common.currency})`,
+            icon: <IconWallet />,
+            hide: (u: Row) => !u.commissions,
+            cell: (u: Row) => fmtNum(u.commissions ?? 0),
+          },
+        ] as DataColumn<Row>[])
+      : []),
     {
       id: "open_orders",
       header: m.admin.drivers.openOrders,
@@ -325,113 +368,101 @@ export default function AllAccountsTable() {
       hide: (u) => !u.open_orders,
       cell: (u) => <Badge variant="primary">{fmtNum(u.open_orders ?? 0)}</Badge>,
     },
-    // ══════════════════════════════════════════════════════════════
-    // **ولا حالةٌ ولا آخرُ ظهورٍ في البطاقة**
-    // ══════════════════════════════════════════════════════════════
-    //
-    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
-    //
-    // **والحالةُ تقولها الأزرارُ نفسُها**: من كان فعّالاً ظهر له
-    // «إيقاف» و«حظر»، ومن أُوقف ظهر له «تفعيل». **ورقاقةٌ تقول ما
-    // يقوله الزرُّ تحتها زينةٌ لا خبر.**
-    //
-    // **و«آخرُ ظهور» يقولها ما فوق**: بطاقةُ «المتّصلون الآن»
-    // وتصفيةُ الاتّصال. **و«لم يظهر بعد» في كلّ صفٍّ عمودٌ من نصٍّ
-    // واحد.**
-    //
-    // **وكلتاهما في ملفّه** — والبطاقةُ تقول من هو، والملفُّ يفصّل.
   ];
+
+  // ── «إضافة ▾» ─────────────────────────────────────────────────────────
+  const addItems: ActionMenuItem[] = [];
+  if (canCreateUser) {
+    addItems.push(
+      { key: "driver", label: A.addDriver, icon: IconDriver, onSelect: () => setCreateKind("driver") },
+      { key: "sales", label: A.addRep, icon: IconUsers, onSelect: () => setCreateKind("sales") },
+    );
+  }
+  if (canCreateStore) addItems.push({ key: "store", label: A.addStore, icon: IconStore, onSelect: () => setStoreOpen(true) });
+  if (canCreateUser && canGrant) addItems.push({ key: "staff", label: A.addStaff, icon: IconRoles, onSelect: () => setCreateKind("staff") });
+
+  const cards = [
+    { key: "staff", label: m.admin.users.staffCard, style: ROLE_STYLES.ops },
+    { key: "sales", label: roleLabelByCode("sales"), style: ROLE_STYLES.sales },
+    { key: "driver", label: roleLabelByCode("driver"), style: ROLE_STYLES.driver },
+    { key: "merchant", label: roleLabelByCode("merchant"), style: ROLE_STYLES.merchant },
+    { key: "customer", label: A.cardCustomers, style: ROLE_STYLES.customer },
+  ] as const;
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="heading-page">{m.admin.users.title}</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={exportCsv}
-            className="flex items-center gap-1.5"
-          >
-            <IconView size={16} />
-            {m.admin.users.export}
-          </Button>
-          {isAdmin && (
-            <>
-              {/* ══════════════════════════════════════════════════════
-                  **زرّان لا واحد — والمتجرُ ليس حساباً**
-                  ══════════════════════════════════════════════════════
-
-                  (قرارُ المالك ٢٠٢٦-٠٨-١٥: «يصبح لدينا إضافةُ متجرٍ
-                   وإضافةُ مستخدم — المستخدمُ لباقي المستخدمين، أمّا
-                   المتجرُ فهو لحساب صاحب المتجر والمتجرِ نفسِه».)
-
-                  **و«مستخدم جديد» لا يمنح دورَ التاجر أصلاً**
-                  (`checkGrantable`) — **فمن أراد تاجراً وجد البابَ
-                  مغلقاً ولا يعرف أين يفتحه.** فصار البابُ هنا. */}
-              <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5">
-                <IconAdd size={16} />
-                {m.admin.users.create}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setStoreOpen(true)}
-                className="flex items-center gap-1.5"
-              >
-                <IconStore size={16} />
-                {m.admin.merchants.create}
-              </Button>
-              {/* **وإدارةُ التصنيفات من شؤون المنصّة لا من شؤون متجر**
-                  — (قرارُ المالك ٢٠٢٦-٠٨-١٥). **وكانت مدفونةً في
-                  تبويب المتاجر**: من أراد تصنيفاً جديداً فتح المتاجر
-                  ليصل إلى ما لا يخصّها. */}
-              <Button
-                variant="secondary"
-                onClick={() => setCatsOpen(true)}
-                className="flex items-center gap-1.5"
-              >
-                <IconGrid size={16} />
-                {m.admin.merchants.categoriesTitle}
-              </Button>
-            </>
+        <div className="flex flex-wrap gap-2">
+          {canExport && (
+            <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
+              <IconReceipt size={16} />
+              {A.exportCsv}
+            </Button>
           )}
+          {canCategories && (
+            <Button variant="secondary" onClick={() => setCatsOpen(true)} className="flex items-center gap-1.5">
+              <IconGrid size={16} />
+              {A.categories}
+            </Button>
+          )}
+          <ActionMenu label={A.add} icon={IconAdd} variant="primary" items={addItems} width={200} />
         </div>
       </div>
 
       {roleCounts && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
           <button
-            onClick={() => setRole("")}
-            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
+            onClick={() => {
+              setRole("");
+              setStatusFilter("");
+              setOnlineOnly(false);
+              setPage(1);
+            }}
+            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" && statusFilter === "" && !onlineOnly ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
           >
-            <p className="figure">{roleCounts.total}</p>
+            <p className="figure">{fmtNum(roleCounts.total)}</p>
             <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
           </button>
-          {([
-            { key: "staff", label: m.admin.users.staffCard, style: ROLE_STYLES.ops },
-            { key: "sales", label: roleLabelByCode("sales"), style: ROLE_STYLES.sales },
-            { key: "driver", label: roleLabelByCode("driver"), style: ROLE_STYLES.driver },
-            { key: "merchant", label: roleLabelByCode("merchant"), style: ROLE_STYLES.merchant },
-            { key: "customer", label: roleLabelByCode("customer"), style: ROLE_STYLES.customer },
-          ] as const).map(({ key, label, style }) => (
+          {cards.map(({ key, label, style }) => (
             <button
               key={key}
-              onClick={() => { setRole(role === key ? "" : key); setPage(1); }}
+              onClick={() => {
+                setRole(role === key ? "" : key);
+                setPage(1);
+              }}
               className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
             >
               <p className={`figure inline-flex items-center gap-1 ${style ? style.text : ""}`}>
                 {style && <style.Icon size={15} />}
-                {roleCounts.roles[key] ?? 0}
+                {fmtNum(roleCounts.roles[key] ?? 0)}
               </p>
               <p className="text-xs text-ink-muted">{label}</p>
             </button>
           ))}
           <button
-            onClick={() => { setOnlineOnly(!onlineOnly); setPage(1); }}
+            onClick={() => {
+              setStatusFilter(statusFilter === "restricted" ? "" : "restricted");
+              setPage(1);
+            }}
+            className={`rounded-card border p-2.5 text-center transition-colors ${statusFilter === "restricted" ? "border-danger bg-danger-tint" : "border-line bg-surface hover:border-danger-edge"}`}
+          >
+            <p className="figure inline-flex items-center gap-1 text-danger">
+              <IconBlock size={15} />
+              {fmtNum(roleCounts.roles.restricted ?? 0)}
+            </p>
+            <p className="text-xs text-ink-muted">{A.cardRestricted}</p>
+          </button>
+          <button
+            onClick={() => {
+              setOnlineOnly(!onlineOnly);
+              setPage(1);
+            }}
             className={`rounded-card border p-2.5 text-center transition-colors ${onlineOnly ? "border-success bg-success-tint" : "border-line bg-surface hover:border-success-edge"}`}
           >
             <p className="figure inline-flex items-center gap-1.5 text-success">
               <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
-              {roleCounts.roles.online ?? 0}
+              {fmtNum(roleCounts.roles.online ?? 0)}
             </p>
             <p className="text-xs text-ink-muted">{m.admin.users.onlineCard}</p>
           </button>
@@ -439,10 +470,10 @@ export default function AllAccountsTable() {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="w-64">
+        <div className="w-full sm:w-80">
           <Input
             icon={<IconSearch />}
-            placeholder={m.admin.users.searchPlaceholder}
+            placeholder={canPhone ? A.searchPlaceholder : A.searchPlaceholderNoPhone}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -450,7 +481,7 @@ export default function AllAccountsTable() {
             }}
           />
         </div>
-        <div className="w-44">
+        <div className="w-[calc(50%-0.375rem)] sm:w-44">
           <Select
             value={role}
             onChange={(e) => {
@@ -459,19 +490,18 @@ export default function AllAccountsTable() {
             }}
           >
             <option value="">{m.admin.users.allRoles}</option>
-            {/* **والمرشِّحُ يعرض كلَّ ما في المحرّك** — **وترشيحٌ ليس
-                إسناداً**، فلا سياسةَ أهليّةٍ تُطبَّق هنا: **من أراد أن
-                يرى مَن يحمل دوراً محميّاً يحتاج أن يرشِّح به.** */}
+            {/* **و«موظّفو المنصّة» خيارٌ هنا أيضاً** — كانت البطاقةُ تُرشّح والقائمةُ تقول «كلّ الأدوار». */}
+            <option value="staff">{m.admin.users.staffCard}</option>
             {[...allRoles]
               .sort((a, b) => roleLabel(a).localeCompare(roleLabel(b), "ar"))
               .map((r) => (
                 <option key={r.code} value={r.code}>
-                  {roleLabel(r)}
+                  {r.code === "customer" ? A.cardCustomers : roleLabel(r)}
                 </option>
               ))}
           </Select>
         </div>
-        <div className="w-36">
+        <div className="w-[calc(50%-0.375rem)] sm:w-40">
           <Select
             value={statusFilter}
             onChange={(e) => {
@@ -481,123 +511,155 @@ export default function AllAccountsTable() {
           >
             <option value="">{m.admin.users.statusFilter.all}</option>
             <option value="active">{m.admin.users.statusFilter.active}</option>
+            <option value="restricted">{A.restricted}</option>
             <option value="suspended">{m.admin.users.statusFilter.suspended}</option>
             <option value="blocked">{m.admin.users.statusFilter.blocked}</option>
           </Select>
         </div>
         <div className="ms-auto">
-          <ViewToggle
-            view={view}
-            onChange={setView}
-            tableLabel={m.common.viewTable}
-            cardsLabel={m.common.viewCards}
-          />
+          <ViewToggle view={view} onChange={setView} tableLabel={m.common.viewTable} cardsLabel={m.common.viewCards} />
         </div>
       </div>
 
+      {/* ══════════════════════════════════════════════════════════════
+          **التحديدُ الجماعيّ — إيقافٌ وتفعيلٌ وتصديرٌ فقط** (قرار ١٠)
+          ══════════════════════════════════════════════════════════════ */}
+      {selectable && rows.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
+          <Checkbox
+            id="sel-all"
+            label={A.selectAll}
+            checked={allOnPage}
+            onChange={() =>
+              setSelected((prev) => {
+                const next = new Set(prev);
+                if (allOnPage) pageIds.forEach((i) => next.delete(i));
+                else pageIds.forEach((i) => next.add(i));
+                return next;
+              })
+            }
+          />
+          {selected.size > 0 && (
+            <>
+              <span className="text-ink-muted">{A.selectedN.replace("{n}", fmtNum(selected.size))}</span>
+              {canStatus && (
+                <>
+                  <Button
+                    variant="secondary"
+                    className="flex items-center gap-1.5 !px-2.5"
+                    disabled={busy}
+                    onClick={() => setStatusModal({ users: selRows, status: "suspended" })}
+                  >
+                    <IconBlock size={14} />
+                    {A.bulkSuspend}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex items-center gap-1.5 !px-2.5"
+                    disabled={busy}
+                    onClick={() => setActivateRows(selRows)}
+                  >
+                    <IconUnblock size={14} />
+                    {A.bulkActivate}
+                  </Button>
+                </>
+              )}
+              {canExport && (
+                <Button variant="secondary" className="!px-2.5" onClick={() => void exportCsv([...selected])}>
+                  {A.exportSelected}
+                </Button>
+              )}
+              <Button variant="ghost" className="!px-2.5" onClick={() => setSelected(new Set())}>
+                {A.bulkClear}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+      {bulkMsg && (
+        <Alert tone="info" className="mb-3">
+          {bulkMsg}
+        </Alert>
+      )}
+      {data?.money_hidden && <p className="mb-2 text-xs text-ink-muted">{A.moneyHidden}</p>}
+
       {error && (
-        <Alert className="mb-4">{error}</Alert>
+        <Alert className="mb-4">
+          <span>{error}</span>{" "}
+          <button type="button" onClick={() => void load()} className="font-bold underline">
+            {A.retry}
+          </button>
+        </Alert>
       )}
 
       <DataView
-        items={data?.users ?? []}
+        items={rows}
         loading={data === null && !error}
         getKey={(u) => u.id}
         columns={columns}
         view={view}
-        empty={m.admin.users.noResults}
+        // **و«لا نتائج» لا تُكتب تحت رسالة خطأ** — كانت تقول «لا أحد» والسببُ عطب.
+        empty={error ? "" : m.admin.users.noResults}
         onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
         actions={
-          canCreateUser
-            ? (u) => (
-                <>
-                  {/* **والمحفظةُ لمن يملك المال** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — `finance.manage`. */}
-                  {can("finance.manage") && <Button
-                    variant="secondary"
-                    onClick={() => setWalletUser(u)}
-                    className="flex items-center gap-1.5"
-                  >
-                    <IconWallet size={15} />
-                    {m.admin.users.wallet}
-                  </Button>}
-                  {/* **وأفعالُ السائق مع سائقٍ وحدَه** — (قرارُ المالك
-                      ٢٠٢٦-٠٨-١٥). **و«إنهاءُ الورديّة» و«التسوية»
-                      يُفعلان على عجل**: من فتح ملفَّه ليضغط زرّاً
-                      واحداً دفع ثمنَ صفحةٍ كاملة. */}
-                  {/* **ولا أفعالَ سائقٍ في البطاقة** — (قرارُ المالك
-                      ٢٠٢٦-٠٨-١٥): كشفُ الصندوق وإنهاءُ الورديّة في
-                      ملفّه. **والبطاقةُ تقول من هو، والملفُّ يفعل
-                      به.** */}
-                  {u.id !== me?.id &&
-                    (u.status === "active" ? (
-                      <>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setStatusModal({ user: u, status: "suspended" })}
-                          className="flex items-center gap-1.5 !text-warning"
-                        >
-                          <IconBlock size={15} />
-                          {m.admin.users.suspend}
-                        </Button>
-                        <Button
-                          variant="danger"
-                          onClick={() => setStatusModal({ user: u, status: "blocked" })}
-                          className="flex items-center gap-1.5"
-                        >
-                          <IconBlock size={15} />
-                          {m.admin.users.block}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        onClick={() => setStatus(u, "active")}
-                        className="flex items-center gap-1.5"
-                      >
-                        <IconUnblock size={15} />
-                        {m.admin.users.activate}
+          canWallet || canStatus
+            ? (u) =>
+                u.is_system ? null : (
+                  <>
+                    {/* **والمحفظةُ بقدرة المال وحدَها** — كانت مربوطةً بالإيقاف أيضاً فلا تراها الماليّة. */}
+                    {canWallet && (
+                      <Button variant="secondary" onClick={() => setWalletUser(u)} className="flex items-center gap-1.5">
+                        <IconWallet size={15} />
+                        {m.admin.users.wallet}
                       </Button>
-                    ))}
-                </>
-              )
+                    )}
+                    {canStatus &&
+                      u.id !== me?.id &&
+                      (u.status === "active" ? (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setStatusModal({ users: [u], status: "suspended" })}
+                            className="flex items-center gap-1.5 !text-warning"
+                          >
+                            <IconBlock size={15} />
+                            {m.admin.users.suspend}
+                          </Button>
+                          <Button
+                            variant="danger"
+                            onClick={() => setStatusModal({ users: [u], status: "blocked" })}
+                            className="flex items-center gap-1.5"
+                          >
+                            <IconBlock size={15} />
+                            {m.admin.users.block}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button variant="secondary" onClick={() => setActivateRows([u])} className="flex items-center gap-1.5">
+                          <IconUnblock size={15} />
+                          {m.admin.users.activate}
+                        </Button>
+                      ))}
+                  </>
+                )
             : undefined
         }
       />
 
-      {/* **ولا «إجمالي» أسفلَ الجدول** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
-
-          **وبطاقاتُ الأعلى تقول العدَّ أصلاً**، وهذا يقول عددَ ما
-          طابق التصفية — **فيُقرأ رقمان مختلفان في شاشةٍ واحدة**
-          (`4` فوق و`1` تحت) فلا يُصدَّق أيُّهما. */}
       {data && (
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2 text-sm text-ink-muted">
-          {/* **والترقيمُ من المكوّن المشترك.**
-
-              كان مكتوباً هنا وفي ثلاثة ملفّاتٍ أخرى بالشكل نفسِه، **وأرقامُه
-              لاتينيّةٌ في واجهةٍ عربية** (`{page} / {totalPages}`) لأنّها لم
-              تمرّ بـ`fmtNum`. */}
-          <Pagination
-            page={page}
-            total={data.total}
-            perPage={data.per_page}
-            onChange={setPage}
-          />
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
 
-      <CreateUserModal
-        open={createOpen}
-        allRoles={allRoles}
-        onClose={() => setCreateOpen(false)}
-        /* **تحديثٌ لا يُغلق** — **و`onCreated` تُغلق النافذة**، فلو
-           نُوديت عند نصفِ العمل ضاع اللوحُ قبل أن يُقرأ. (قِيس في
-           متصفّح: الحسابُ أُنشئ والمنحُ رُدّ ولم يُعرَض شيء.) */
-        onRefresh={() => void load()}
-        onCreated={() => {
-          setCreateOpen(false);
-          void load();
-        }}
-      />
+      {createKind && (
+        <CreateAccountModal
+          kind={createKind}
+          allRoles={allRoles}
+          onClose={() => setCreateKind(null)}
+          onCreated={() => refresh()}
+        />
+      )}
       <CategoriesModal open={catsOpen} onClose={() => setCatsOpen(false)} />
       {storeOpen && (
         <MerchantModal
@@ -606,302 +668,225 @@ export default function AllAccountsTable() {
           onClose={() => setStoreOpen(false)}
           onSaved={() => {
             setStoreOpen(false);
-            void load();
+            refresh();
           }}
         />
       )}
-      {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={can("finance.manage")} />}
+      {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={canWallet} />}
 
-      {/* **ونافذةُ السبب تُرسَم** — (شهده المالك ٢٠٢٦-٠٨-١٠: «زرُّ إيقاف
-          حساب لا يعمل… وزرُّ الحظر لا يعمل»).
-
-          **كانت مكتوبةً في هذا الملفّ كاملةً ولا تُنادى**: الزرُّ يضع
-          الاختيارَ في `statusModal` **ولا يقرؤه أحد.** فيضغط الموظّفُ فلا يقع
-          شيء — **ولا خطأ ولا سطرٌ في سجلّ** — فيضغط ثانيةً وثالثة، **ثمّ
-          يظنّ الحسابَ محظوراً وهو يعمل.** */}
       {statusModal && (
         <StatusReasonModal
           status={statusModal.status}
-          onSubmit={(reason) => void setStatus(statusModal.user, statusModal.status, reason)}
+          holds={
+            statusModal.users.length === 1 && statusModal.users[0]?.roles.includes("driver")
+              ? { orders: statusModal.users[0].open_orders ?? 0, cash: statusModal.users[0].driver_cash ?? 0 }
+              : undefined
+          }
+          onSubmit={async (reason) => {
+            await applyStatus(statusModal.users, statusModal.status, reason);
+            setStatusModal(null);
+          }}
           onClose={() => setStatusModal(null)}
         />
       )}
+      {/* **والتفعيلُ خلف تأكيد** — كان يقع من أوّل كبسة. */}
+      <Confirm
+        open={activateRows !== null}
+        tone="primary"
+        title={activateRows && activateRows.length > 1 ? A.bulkActivateTitle : A.activateTitle}
+        body={activateRows && activateRows.length > 1 ? A.bulkActivateBody : A.activateBody}
+        confirmLabel={m.admin.users.activate}
+        busy={busy}
+        onCancel={() => setActivateRows(null)}
+        onConfirm={async () => {
+          const list = activateRows ?? [];
+          setActivateRows(null);
+          try {
+            await applyStatus(list, "active");
+          } catch (err) {
+            setError(errorText(err));
+          }
+        }}
+      />
     </div>
   );
 }
 
-function CreateUserModal({
-  open,
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **حسابٌ جديد — سائقٌ أو مندوبٌ أو موظّف، بدورٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **ولا خانةَ كلمةِ سرّ**: النظامُ يولّدها ويرسلها برسالةٍ إلى الرقم مع رابط التطبيق
+ * (أو باب اللوحة للموظّف)، تنتهي بعد مهلتها وتُبدَّل عند أوّل دخول.
+ *
+ * **والموظّفُ خطوتان في المحرّك بقصد**: حسابٌ يُخلَق ثمّ دورٌ يُمنَح بمساره المخوَّل
+ * (`roles.manage` وتأكيد). **ونصفُ عملٍ يُقال كما هو.**
+ */
+function CreateAccountModal({
+  kind,
   allRoles,
   onClose,
-  onRefresh,
   onCreated,
 }: {
-  open: boolean;
-  /** **أدوارُ المحرّك** — والسياسةُ ترتّبها، والواجهةُ لا تخترعها. */
+  kind: NewKind;
   allRoles: readonly Role[];
   onClose: () => void;
-  /** **يُحدّث الجدولَ ولا يُغلق** — لحالة نصفِ العمل. */
-  onRefresh: () => void;
   onCreated: () => void;
 }) {
-  // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
-  const { passwordMinLength: minLen } = usePlatform();
-  // **وأدوارُ المشغّل** — **فـ«الإدارة المرتفعة» تُعرَض للمالك وحدَه**،
-  // **ولا تُعرَض نقرةٌ يردُّها المحرّك** (بندُ ط).
   const { user: me } = useAuth();
-  const actorRoles = me?.roles ?? [];
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
-  const [roles, setRoles] = useState<string[]>(["driver"]);
-  const [password, setPassword] = useState("");
-  const [password2, setPassword2] = useState("");
+  const [staffRole, setStaffRole] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-
-  // ══════════════════════════════════════════════════════════════════
-  // **نصفُ عملٍ يُقال كما هو** (بندُ ط)
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **وتخويلُ العمل خطوتان في المحرّك بقصد** (بندُ هـ): **حسابٌ
-  // يُخلَق بصفته، ثمّ دورٌ يُمنَح بمساره المخوَّل** — `roles.manage`
-  // وتأكيدٌ وقيدُ تدقيق. **والشاشةُ تنظّمهما تدفّقاً واحداً.**
-  //
-  // **فإن نجحت الأولى وسقطت الثانية لا يُقال «تمّ»**: **يبقى
-  // الحسابُ قائماً ويُعلَن ما لم يقع**، ويُعرَض بابان — إعادةُ المنح
-  // أو ملفُّ الحساب.
+  const [done, setDone] = useState<{ id: string; sent: boolean } | null>(null);
   const [partial, setPartial] = useState<{ id: string; role: string; why: string } | null>(null);
 
-  function toggleRole(r: string) {
-    setRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
-  }
+  // **أدوارُ الموظّفين التي يملك المشغّلُ منحَها** — ولا متجرَ ولا صفةَ حساب.
+  const staffOptions = signupGroups(allRoles, me?.roles ?? [])
+    .filter((g) => g.viaGrant)
+    .flatMap((g) => g.roles.filter((r) => !r.locked));
 
-  /** **الدورُ الذي يلزمه منحٌ بعد الإنشاء** — إن اختير. */
-  const grantRole = roles.find((r) => !creatableAtSignup(r));
-  /** **وصفةُ الحساب** — وهي ما يُخلَق به. `customer` حين لا تُختار. */
-  const signupRoles = roles.filter((r) => creatableAtSignup(r));
-
-  /** grant **الخطوةُ الثانية** — بمسارها المخوَّل وحدَه. */
   async function grant(userID: string, role: string) {
     await api(`/api/v1/admin/users/${userID}/roles`, {
       method: "POST",
-      body: JSON.stringify({ role, reason: m.admin.users.createTitle }),
+      body: JSON.stringify({ role, reason: A.createTitle.staff }),
     });
-  }
-
-  async function retryGrant() {
-    if (!partial) return;
-    setBusy(true);
-    try {
-      await grant(partial.id, partial.role);
-      setPartial(null);
-      setPhone("");
-      setFullName("");
-      setRoles(["driver"]);
-      setPassword("");
-      onCreated();
-    } catch (err) {
-      setPartial({ ...partial, why: errorText(err) });
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password !== password2) {
-      setError(m.errors.password_mismatch);
-      return;
-    }
     setBusy(true);
     setError("");
     setPartial(null);
-    let created = "";
+    let made: { id: string; welcome?: { sent: boolean } };
     try {
-      // **الخطوةُ الأولى** — **بصفةِ حسابٍ وحدَها**: بابُ الإنشاء
-      // قدرتُه `users.status.manage`، **فلو حمل دورَ عملٍ صار منحاً
-      // بقدرةٍ أخرى** — وذاك بابُ التصعيد الذي أُغلق.
-      const body = {
-        phone,
-        full_name: fullName,
-        roles: signupRoles.length > 0 ? signupRoles : ["customer"],
-        password,
-      };
-      const u = await api<{ id: string }>("/api/v1/admin/users", {
+      made = await api<{ id: string; welcome?: { sent: boolean } }>("/api/v1/admin/users", {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          phone,
+          full_name: fullName,
+          roles: [kind === "staff" ? "customer" : kind],
+          welcome_app: kind === "staff" ? "panel" : "",
+        }),
       });
-      created = u.id;
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
       return;
     }
-    // **والخطوةُ الثانية إن لزمت** — **وسقوطُها لا يُخفي نجاحَ الأولى.**
-    if (grantRole) {
+    if (kind === "staff") {
       try {
-        await grant(created, grantRole);
+        await grant(made.id, staffRole);
       } catch (err) {
-        // **ولا يُنادى `onCreated` هنا** — **هي تُغلق النافذة**،
-        // **فيضيع اللوحُ قبل أن يُقرأ.** (قِيس، ٢٠٢٦-٠٩-١٢.)
-        setPartial({ id: created, role: grantRole, why: errorText(err) });
+        setPartial({ id: made.id, role: staffRole, why: errorText(err) });
         setBusy(false);
-        onRefresh();
+        onCreated();
         return;
       }
     }
-    setPhone("");
-    setFullName("");
-    setRoles(["driver"]);
-    setPassword("");
     setBusy(false);
+    setDone({ id: made.id, sent: !!made.welcome?.sent });
     onCreated();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={m.admin.users.createTitle}>
-      {/* ══════════════════════════════════════════════════════════════
-          **ولا تعبئةَ تلقائيّةً في نموذجٍ يُنشئ حسابَ غيرك**
-          ══════════════════════════════════════════════════════════════
-
-          (شهده المالك ٢٠٢٦-٠٨-٠٨: فتح النافذةَ فوجد **رقمَه هو في حقل
-           الاسم الكامل** ورقمُ الهاتف فارغ.)
-
-          **كروم يرى نموذجاً فيه كلمتا مرورٍ فيَعُدّه تسجيلَ دخول**، فيبحث
-          عن حقل «اسم المستخدم» — **ويقع على أوّل حقلٍ نصّيٍّ يجده**، وهو
-          هنا الاسمُ لا الهاتف. فيحشو فيه ما حفظه لهذا الموقع.
-
-          **والحسابُ المُنشَأ حسابُ غيره**: فلا شيءَ محفوظٌ يصلح له —
-          **وكلُّ ما يُحشى خطأٌ يُحفظ في القاعدة إن لم يُنتبَه.**
-
-          `off` على النصوص، **و`new-password` على الكلمتين**: هي التي تقول
-          لكروم «هذه كلمةٌ تُنشأ لا تُستعاد»، فلا يعرض المحفوظةَ ولا يعرض
-          الحفظ. */}
-      <form onSubmit={submit} className="space-y-4" autoComplete="off">
-        <Input
-          id="new-phone"
-          label={m.auth.phone}
-          icon={<IconPhone />}
-          dir="ltr"
-          required
-          autoComplete="off"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="09xxxxxxxx"
-          className="text-end"
-        />
-        <Input
-          id="new-name"
-          label={m.admin.users.fullName}
-          icon={<IconUser />}
-          autoComplete="off"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-        />
-        <div>
-          <span className="mb-1 block text-sm font-medium">{m.admin.users.rolesLabel}</span>
-          {/* **والحبّاتُ مركزيّة** — كانت هنا بـ`px-3 py-1` وفي نافذة الأدوار
-              بـ`px-3 py-1.5` وفي صفحة الصنف بثالث. (طلبُ المالك ٢٠٢٦-٠٨-٠٧.) */}
-          {/* **والأدوارُ تلتفّ ولا تنزلق** — من لم يرَ «مدير المنصة»
-              لأنّها خارج الإطار لا يعرف أنّها موجودة. (٢٠٢٦-٠٨-٠٨.)
-
-              **والسياسةُ واحدةٌ مع نافذة أدوار الحساب** — `assignmentGroups`:
-              **فدورُ عملٍ يُنشَأ اليومَ يظهر في المكانين معاً، ولا
-              `owner_super_admin` في واحدٍ منهما.** (٢٠٢٦-٠٩-١٢.) */}
-          {signupGroups(allRoles, actorRoles).map((g) => (
-            <div key={g.cls} className="mb-3">
-              <p className="mb-0.5 text-xs font-bold">{g.title}</p>
-              {/* **والفرقُ الجوهريُّ مُعلَنٌ لا مخبوء**: صفةٌ تُخلَق
-                  مباشرةً، ودورُ عملٍ خطوتان. */}
-              <p
-                className={`mb-1.5 text-[11px] ${
-                  g.viaGrant ? "text-warning" : "text-ink-muted"
-                }`}
-              >
-                {g.viaGrant
-                  ? m.admin.users.signupViaGrantHint
-                  : m.admin.users.signupDirectHint}
-              </p>
-              <Chips
-                items={g.roles.map((r) => ({
-                  id: r.code,
-                  disabled: r.locked,
-                  label: (
-                    <span className="flex items-center gap-1.5">
-                      {r.label}
-                      <span className="font-mono text-[10px] opacity-60">{r.code}</span>
-                    </span>
-                  ),
-                }))}
-                value={roles}
-                onChange={toggleRole}
-                wrap
-              />
-            </div>
-          ))}
-          {allRoles.length === 0 && (
-            <Alert className="mt-2">{m.admin.users.rolesUnavailable}</Alert>
+    <Modal open onClose={onClose} title={A.createTitle[kind]}>
+      {done ? (
+        <div className="space-y-4">
+          <Alert tone={done.sent ? "success" : "warning"}>{done.sent ? A.welcomeSent : A.welcomeNotSent}</Alert>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onClose();
+                router.push(`/dashboard/users/${done.id}`);
+              }}
+            >
+              {A.openProfile}
+            </Button>
+            <Button onClick={onClose}>{m.common.confirm}</Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4" autoComplete="off">
+          <Input
+            id="new-phone"
+            label={m.auth.phone}
+            icon={<IconPhone />}
+            dir="ltr"
+            required
+            autoComplete="off"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="09xxxxxxxx"
+            className="text-end"
+          />
+          <Input
+            id="new-name"
+            label={m.admin.users.fullName}
+            icon={<IconUser />}
+            autoComplete="off"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+          {kind === "staff" && (
+            <Select id="new-staff-role" label={A.staffRole} required value={staffRole} onChange={(e) => setStaffRole(e.target.value)}>
+              <option value="">{A.pickStaffRole}</option>
+              {staffOptions.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.label}
+                </option>
+              ))}
+            </Select>
           )}
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            id="new-password"
-            label={m.admin.users.passwordRequired}
-            icon={<IconLock />}
-            type="password"
-            required
-            autoComplete="new-password"
-            minLength={minLen}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Input
-            id="new-password2"
-            label={m.admin.users.confirmPassword}
-            icon={<IconLock />}
-            type="password"
-            required
-            autoComplete="new-password"
-            minLength={minLen}
-            value={password2}
-            onChange={(e) => setPassword2(e.target.value)}
-          />
-        </div>
-        {/* ══════════════════════════════════════════════════════════
-            **نصفُ عملٍ يُقال كما هو** (بندُ ط)
-
-            **والحسابُ أُنشئ والدورُ لم يُمنَح** — **ولا يُقال «تمّ»
-            عن نصف.** ويُعرَض بابان: إعادةُ المنح، أو ملفُّ الحساب
-            حيث يُمنَح باليد. ══════════════════════════════════════ */}
-        {partial && (
-          <Alert className="mb-3">
-            <span className="block font-bold">
-              {m.admin.users.signupPartial}: {roleLabelByCode(partial.role)}
-            </span>
-            <span className="mt-1 block text-xs">{m.admin.users.signupPartialHelp}</span>
-            <span className="mt-1 block text-xs opacity-80">{partial.why}</span>
-            <span className="mt-2 flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => void retryGrant()} disabled={busy}>
-                {m.admin.users.signupRetryGrant}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  onClose();
-                  router.push(`/dashboard/users/${partial.id}`);
-                }}
-              >
-                {m.admin.users.signupOpenProfile}
-              </Button>
-            </span>
-          </Alert>
-        )}
-        {error && (
-          <Alert>{error}</Alert>
-        )}
-        <FormActions submit onCancel={onClose} />
-      </form>
+          <p className="rounded-control bg-field px-3 py-2 text-xs leading-relaxed text-ink-muted">
+            {A.noPasswordHint.replace("{h}", fmtNum(72))}
+          </p>
+          {partial && (
+            <Alert className="mb-3">
+              <span className="block font-bold">
+                {m.admin.users.signupPartial}: {roleLabelByCode(partial.role)}
+              </span>
+              <span className="mt-1 block text-xs">{m.admin.users.signupPartialHelp}</span>
+              <span className="mt-1 block text-xs opacity-80">{partial.why}</span>
+              <span className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await grant(partial.id, partial.role);
+                      setDone({ id: partial.id, sent: false });
+                      setPartial(null);
+                    } catch (err) {
+                      setPartial({ ...partial, why: errorText(err) });
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {m.admin.users.signupRetryGrant}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    onClose();
+                    router.push(`/dashboard/users/${partial.id}`);
+                  }}
+                >
+                  {m.admin.users.signupOpenProfile}
+                </Button>
+              </span>
+            </Alert>
+          )}
+          {error && <Alert>{error}</Alert>}
+          <FormActions submit onCancel={onClose} busy={busy} />
+        </form>
+      )}
     </Modal>
   );
 }

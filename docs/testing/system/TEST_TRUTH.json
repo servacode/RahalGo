@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 391,
+    "routes": 405,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 63,
+    "notify_sites": 69,
     "notify_targeted": 24,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 169,
-    "behaviour_settings": 134,
+    "setting_defs": 173,
+    "behaviour_settings": 138,
     "order_fields": 93,
-    "test_files": 470,
-    "test_funcs": 1929
+    "test_files": 472,
+    "test_funcs": 1952
   },
   "flows": [
     {
@@ -4374,6 +4374,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "finance.manual_wallet_max",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "home.banner_auto",
       "group": "site",
       "kind": "bool",
@@ -5427,6 +5445,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "safety.warnings_alert_count",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "sales.activation_orders",
       "group": "sales",
       "kind": "int",
@@ -5746,7 +5782,43 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "security.phone_change_approval_balance",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "security.session_days",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.temp_password_hours",
       "group": "platform",
       "kind": "int",
       "sensitive": false,
@@ -6096,6 +6168,12 @@
     },
     {
       "name": "TestStepUpIsPasswordNotPin",
+      "file": "internal/authzdoc/authzdoc_test.go",
+      "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPolicyIsCurrent",
       "file": "internal/authzdoc/authzdoc_test.go",
       "package": "authzdoc",
       "orphan": true
@@ -9721,6 +9799,132 @@
       "name": "TestForbiddenIsNotADeadToken",
       "file": "internal/push/status_test.go",
       "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_AccidentLocksShiftUntilOpsConfirms",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_BannedRepStoresMoveToPlatform",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_CashBanVisibleAndOnlyAdminLiftsWithReason",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_CustomerCardCountsCustomersOnly",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_ExpiredTempPasswordDoesNotOpen",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_ExportAdminOnlyArabicInjectionSafeNoTruncation",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_MoneyHiddenFromNonFinanceStaff",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_NotesAreAppendOnlyWithAuthor",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_OwnerWithNoStoresLosesMerchantRole",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_PhoneChangeAboveBalanceNeedsSecondPerson",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_PhoneChangeNeedsStepUpRevokesSessionsAndAudits",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_ResetIssuesSystemTempPasswordWithExpiry",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_SearchFindsOwnerByStoreName",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_StoreBanNeedsReasonAndOpenNeverLiftsIt",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_SuspendedCustomerCanChatOnLiveOrder",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_SuspendedRepCodeRejectedForNewStores",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_SuspendedRepCommissionHeldThenReleased",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_TempPasswordForcesChangeEvenWhenSwitchIsOff",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_WalletRequestIsProposalThenTwoSidedApproval",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_WalletRequestRules",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_WalletTopupEntersOfficeCashbox",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
       "orphan": true
     },
     {
@@ -23162,6 +23366,12 @@
       "name": "TestValhallaRouteSetAsksAlternates",
       "file": "internal/routing/valhalla_test.go",
       "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantCashSettlements_EmptyIsArrayNotNull",
+      "file": "internal/server/accounts_store_profile_test.go",
+      "package": "server",
       "orphan": true
     },
     {

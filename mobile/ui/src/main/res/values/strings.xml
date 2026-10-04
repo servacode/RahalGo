@@ -805,6 +805,10 @@
     <string name="err_order_not_returnable">الإرجاع لطلب تعذر تسليمه فقط</string>
     <string name="err_not_readyable">لا يمكن إعلان الجاهزية في هذه الحالة.</string>
     <string name="err_reason_required">اكتب السبب أولا</string>
+    <string name="err_temp_password_expired">انتهت مدة كلمة المرور المؤقتة — اطلب من الإدارة إرسال كلمة جديدة</string>
+    <string name="err_rep_inactive">رمز المندوب هذا موقوف ولا يقبل متاجر جديدة</string>
+    <string name="err_merchant_ban_locked">المتجر محظور من الإدارة — لا يُفتح ولا يُغلق إلا برفع الحظر</string>
+    <string name="err_accident_check_required">لا يمكنك فتح الدوام بعد الحادث حتى تتأكد الإدارة أنك بخير — تواصل مع العمليات</string>
     <string name="err_never_picked_up">لم تستلم من هذا المتجر — ولا تقييم بلا وقوف عند بابه</string>
     <string name="err_payout_below_min">المبلغ دون الحد الأدنى للسحب</string>
     <string name="err_payout_closed">هذا الطلب مبتوت فيه مسبقا</string>

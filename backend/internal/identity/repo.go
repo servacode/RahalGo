@@ -147,11 +147,17 @@ type ListFilter struct {
 	// PhoneSearch **أيُطابَق البحثُ بالرقم؟** — لا لمن لا يملك قراءةَ الأرقام: كان
 	// البحثُ بالرقم يكشف صاحبَه لمن مُنع من رؤيته.
 	PhoneSearch bool
+	// IDs **حساباتٌ بعينها** — «تصدير المحدّد» (قرارُ المالك ٢٠٢٦-١٠-٠٤). وفراغُها: بلا قيد.
+	IDs []string
 }
 
 // ListUsersFiltered **القائمةُ بالترشيح** — والأرقامُ تُجمَع لحسابات الصفحة وحدَها.
 func (r *Repo) ListUsersFiltered(ctx context.Context, f ListFilter) ([]User, int, error) {
 	query, role, onlineOnly, status, limit, offset := f.Query, f.Role, f.Online, f.Status, f.Limit, f.Offset
+	ids := f.IDs
+	if ids == nil {
+		ids = []string{}
+	}
 	// role الخاص "staff" = موظفو المنصة (عمليات + مالية)
 	//
 	// ══════════════════════════════════════════════════════════════════
@@ -244,11 +250,12 @@ func (r *Repo) ListUsersFiltered(ctx context.Context, f ListFilter) ([]User, int
 	              SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
 	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code <> ALL($6))))))
 	          AND (NOT $3 OR u.last_seen_at > now() - interval '2 minutes')
-	          AND ($4 = '' OR u.status = $4 OR ($4 = 'restricted' AND u.status IN ('suspended', 'blocked')))`
+	          AND ($4 = '' OR u.status = $4 OR ($4 = 'restricted' AND u.status IN ('suspended', 'blocked')))
+	          AND (cardinality($10::uuid[]) = 0 OR u.id = ANY($10::uuid[]))`
 
 	var total int
 	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where+` AND $7::int >= 0 AND $8::int >= 0`,
-		query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset, f.PhoneSearch).Scan(&total); err != nil {
+		query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset, f.PhoneSearch, ids).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -310,7 +317,7 @@ func (r *Repo) ListUsersFiltered(ctx context.Context, f ListFilter) ([]User, int
 		    FROM orders o WHERE o.driver_id IN (SELECT id FROM pg)
 		    GROUP BY o.driver_id
 		) dv ON dv.uid = u.id
-		ORDER BY pg.created_at DESC`, query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset, f.PhoneSearch)
+		ORDER BY pg.created_at DESC`, query, role, onlineOnly, status, phoneQ, accountTypes, limit, offset, f.PhoneSearch, ids)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -518,7 +525,7 @@ func SetTempPasswordTx(ctx context.Context, q dbtx.Querier, userID, hash string)
 }
 
 func (r *Repo) AdminCreateUserFull(ctx context.Context, phone, fullName string,
-	roles []string, passwordHash string, grantedBy *string) (*User, error) {
+	roles []string, passwordHash string, grantedBy *string, tempHours int64) (*User, error) {
 	if len(roles) == 0 {
 		return nil, errors.New("لا دورَ للمستخدِم")
 	}
@@ -554,10 +561,13 @@ func (r *Repo) AdminCreateUserFull(ctx context.Context, phone, fullName string,
 	}
 	if passwordHash != "" {
 		// **مؤقّتةٌ لا نهائيّة** — الأدمنُ وضعها فمرّت بيدِ ثالث.
+		// **ومهلتُها معها** — كلمةٌ ولّدها النظامُ تنتهي (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 		if _, err := tx.Exec(ctx, `
 			UPDATE users SET password_hash = $2, must_change_password = true,
+			                 temp_password_expires_at = CASE WHEN $3::int > 0
+			                     THEN now() + ($3::int * interval '1 hour') END,
 			                 updated_at = now()
-			WHERE id = $1`, id, passwordHash); err != nil {
+			WHERE id = $1`, id, passwordHash, tempHours); err != nil {
 			return nil, err
 		}
 	}

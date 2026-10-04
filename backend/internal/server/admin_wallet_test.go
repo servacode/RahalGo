@@ -14,9 +14,14 @@ package server
 //	المعرّف    ← ليس UUID فلا يُقيَّد شيء
 //
 // **والرصيدُ لا يهبط تحت الصفر** — قيدُ القاعدة يمنعه، والخطأُ يُترجَم.
+//
+// **ومنذ ٢٠٢٦-١٠-٠٤ صارت الحركةُ طلباً** يقترحه موظّفٌ ويوافق عليه غيرُه — فـ`apply`
+// هنا خطوتان: اقتراحٌ ثمّ موافقة، **والقيدُ عند الموافقة وحدَها.** والسحبُ لم يعد
+// من هنا (بابُه صفحةُ السحب).
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
@@ -35,9 +41,10 @@ import (
 )
 
 type adminWalletFixture struct {
-	pool  *pgxpool.Pool
-	srv   *Server
-	admin string
+	pool     *pgxpool.Pool
+	srv      *Server
+	admin    string
+	approver string
 }
 
 func newAdminWalletFixture(t *testing.T) *adminWalletFixture {
@@ -45,34 +52,64 @@ func newAdminWalletFixture(t *testing.T) *adminWalletFixture {
 	pool := testdb.Pool(t)
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 	hub := realtime.NewHub(quiet)
+	walletSvc := wallet.NewService(pool)
 	return &adminWalletFixture{
 		pool: pool,
 		srv: &Server{
 			pg:       pool,
 			logger:   quiet,
 			hub:      hub,
-			wallet:   wallet.NewService(pool),
+			wallet:   walletSvc,
+			orders:   orders.NewService(pool, nil, walletSvc, nil, nil, quiet),
 			settings: settings.NewStore(pool),
 			notify:   notifications.New(pool, hub, quiet),
 		},
-		admin: testdb.NewUser(t, pool, "admin"),
+		admin:    testdb.NewUser(t, pool, "admin"),
+		approver: testdb.NewUser(t, pool, "admin"),
 	}
 }
 
+func (f *adminWalletFixture) call(actor, method, path string, params map[string]string, body string,
+	h func(http.ResponseWriter, *http.Request), headers map[string]string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	rc := chi.NewRouteContext()
+	for k, v := range params {
+		rc.URLParams.Add(k, v)
+	}
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
+	ctx = context.WithValue(ctx, ctxUserID, actor)
+	ctx = context.WithValue(ctx, ctxRoles, []string{"admin", "finance"})
+	w := httptest.NewRecorder()
+	h(w, req.WithContext(ctx))
+	return w
+}
+
+// apply **يقترح ثمّ يوافق غيرُ المقترِح** — ويُرجع رمزَ الخطوة التي حسمت.
 func (f *adminWalletFixture) apply(target, kind string, amount int64, debit bool) int {
 	body := `{"amount":` + itoa64(amount) + `,"kind":"` + kind + `","debit":` +
 		map[bool]string{true: "true", false: "false"}[debit] + `,"note":"تسويةُ اختبار"}`
-	req := httptest.NewRequest(http.MethodPost, "/admin/users/"+target+"/wallet",
-		strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rc := chi.NewRouteContext()
-	rc.URLParams.Add("id", target)
-	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
-	ctx = context.WithValue(ctx, ctxUserID, f.admin)
-	ctx = context.WithValue(ctx, ctxRoles, []string{"admin", "finance"})
-	w := httptest.NewRecorder()
-	f.srv.handleAdminWalletApply(w, req.WithContext(ctx))
-	return w.Code
+	w := f.call(f.admin, http.MethodPost, "/admin/users/"+target+"/wallet",
+		map[string]string{"id": target}, body, f.srv.handleAdminWalletApply,
+		map[string]string{"Idempotency-Key": "k-" + target + "-" + kind + itoa64(amount)})
+	if w.Code >= 400 {
+		return w.Code
+	}
+	var res struct {
+		Data struct {
+			RequestID string `json:"request_id"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &res)
+	a := f.call(f.approver, http.MethodPost, "/admin/wallet-requests/"+res.Data.RequestID+"/approve",
+		map[string]string{"id": res.Data.RequestID}, `{}`, f.srv.handleDecideWalletRequest(true), nil)
+	if a.Code == http.StatusOK {
+		return http.StatusOK
+	}
+	return a.Code
 }
 
 func (f *adminWalletFixture) balance(t *testing.T, uid string) int64 {
@@ -88,11 +125,11 @@ func (f *adminWalletFixture) balance(t *testing.T, uid string) int64 {
 func TestAdminWalletApplyGuardsAndDirections(t *testing.T) {
 	f := newAdminWalletFixture(t)
 
-	t.Run("النوعُ من قائمةٍ مغلقة", func(t *testing.T) {
+	t.Run("النوعُ من قائمةٍ مغلقة — والسحبُ ليس منها", func(t *testing.T) {
 		uid := testdb.NewUser(t, f.pool, "driver")
-		for _, kind := range []string{"order_payment", "commission", "refund", "", "TOPUP", "drop"} {
+		for _, kind := range []string{"order_payment", "commission", "refund", "", "TOPUP", "drop", "payout"} {
 			if code := f.apply(uid, kind, 1000, false); code < 400 {
-				t.Fatalf("قُبل النوعُ %q برمز %d — **والقائمةُ أربعةٌ لا غير.**", kind, code)
+				t.Fatalf("قُبل النوعُ %q برمز %d — **والقائمةُ ثلاثةٌ لا غير.**", kind, code)
 			}
 		}
 		if b := f.balance(t, uid); b != 0 {
@@ -100,11 +137,7 @@ func TestAdminWalletApplyGuardsAndDirections(t *testing.T) {
 		}
 	})
 
-	// **ورصيدٌ قائمٌ قبل التجربة عمداً.**
-	//
-	// برصيدٍ صفرٍ يسقط السالبُ على قيد القاعدة فيُقرأ «مُنع» — **وهو ممنوعٌ
-	// بغير ما نظنّ.** وبرصيدٍ قائمٍ يظهر الفرق: بلا الفحص **يصير الشحنُ
-	// السالبُ خصماً صامتاً.**
+	// **ورصيدٌ قائمٌ قبل التجربة عمداً** — بلا الفحص يصير الشحنُ السالبُ خصماً صامتاً.
 	t.Run("لا صفرَ ولا سالب", func(t *testing.T) {
 		uid := testdb.NewUser(t, f.pool, "driver")
 		if code := f.apply(uid, "topup", 20000, false); code != http.StatusOK {
@@ -123,23 +156,6 @@ func TestAdminWalletApplyGuardsAndDirections(t *testing.T) {
 	t.Run("معرّفٌ ليس UUID لا يُقيَّد", func(t *testing.T) {
 		if code := f.apply("not-a-uuid", "topup", 1000, false); code != http.StatusNotFound {
 			t.Fatalf("رمزٌ %d لمعرّفٍ غيرِ صالح — والمنتظَر ٤٠٤", code)
-		}
-	})
-
-	// **والاتّجاهُ من النوع لا من إشارة الرقم** — والرقمُ موجبٌ دائماً.
-	t.Run("الشحنُ يودع والسحبُ يخصم", func(t *testing.T) {
-		uid := testdb.NewUser(t, f.pool, "driver")
-		if code := f.apply(uid, "topup", 20000, false); code != http.StatusOK {
-			t.Fatalf("رُفض الشحنُ برمز %d", code)
-		}
-		if b := f.balance(t, uid); b != 20000 {
-			t.Fatalf("بعد الشحن: %d — والمنتظَر 20000", b)
-		}
-		if code := f.apply(uid, "payout", 5000, false); code != http.StatusOK {
-			t.Fatalf("رُفض السحبُ برمز %d", code)
-		}
-		if b := f.balance(t, uid); b != 15000 {
-			t.Fatalf("بعد السحب: %d — والمنتظَر 15000. **و`payout` يخصم ولو كُتب موجباً.**", b)
 		}
 	})
 
@@ -164,11 +180,11 @@ func TestAdminWalletApplyGuardsAndDirections(t *testing.T) {
 	t.Run("لا رصيدَ سالب", func(t *testing.T) {
 		uid := testdb.NewUser(t, f.pool, "driver")
 		_ = f.apply(uid, "topup", 5000, false)
-		if code := f.apply(uid, "payout", 9000, false); code < 400 {
-			t.Fatalf("قُبل سحبٌ يتجاوز الرصيدَ برمز %d — **وهو مالٌ لا وجودَ له.**", code)
+		if code := f.apply(uid, "adjustment", 9000, true); code < 400 {
+			t.Fatalf("قُبل خصمٌ يتجاوز الرصيدَ برمز %d — **وهو مالٌ لا وجودَ له.**", code)
 		}
 		if b := f.balance(t, uid); b != 5000 {
-			t.Fatalf("تبدّل الرصيدُ إلى %d بعد سحبٍ مرفوض", b)
+			t.Fatalf("تبدّل الرصيدُ إلى %d بعد خصمٍ مرفوض", b)
 		}
 	})
 }
