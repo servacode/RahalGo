@@ -115,10 +115,16 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		// **ومرحلةُ الجاري** — من بطاقات «الآن» في رئيسيّة المدير (٢٠٢٦-١٠-٠٤).
 		Stage: q.Get("stage"),
 		// **ومدى التاريخ بيوم دمشق** — سجلُّ الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٣).
-		From:    q.Get("from"),
-		To:      q.Get("to"),
-		Page:    page,
-		PerPage: perPage,
+		From: q.Get("from"),
+		To:   q.Get("to"),
+		// **ونوعُ الطلب** — عاديٌّ أو خاصٌّ أو توصيلة (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤).
+		Kind: q.Get("kind"),
+		// **والمتجرُ أيُّ مصدرٍ شارك** — لا صاحبُ الطلب الأوّلُ وحدَه (البند ٧).
+		AnySource: true,
+		// **والأعدادُ تتبع البحثَ والفلاتر** — يطلبها السجلّ.
+		WithCounts: q.Get("counts") == "1",
+		Page:       page,
+		PerPage:    perPage,
 	})
 	if err != nil {
 		s.respondErr(w, err)
@@ -143,7 +149,8 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	// **وما يحتاجه المكتبُ وحدَه** — سببُ العلوق والعرضُ الحيّ وسقفُ التعويض،
 	// **في رحلةٍ واحدةٍ للصفحة كلِّها.**
 	s.fillBoard(r, res.Orders)
-	httpx.JSON(w, http.StatusOK, res)
+	// **وتفاصيلُ الزبون لثلاثةٍ وحدَهم** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+	s.writeOrdersJSON(w, s.maskOrderDetails(r, res.Orders), res)
 }
 
 // fillBoard يملأ `Board` لصفحةٍ من الطلبات — **وتعذّرُه لا يُسقط القائمة**:
@@ -222,7 +229,8 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	one := []orders.Order{*o}
 	s.fillBoard(r, one)
-	o.Board = one[0].Board
+	strip := s.maskOrderDetails(r, one)
+	o = &one[0]
 	// ══════════════════════════════════════════════════════════════════
 	// **ومسارُه كاملاً بأوقاته ومن فعله**
 	// ══════════════════════════════════════════════════════════════════
@@ -232,7 +240,7 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والبياناتُ محفوظةٌ منذ اليوم الأوّل** في `order_events` — **ولا
 	// أحدَ يعرضها**: فلا يُعرف أين ضاع الوقتُ في طلبٍ تأخّر.
-	httpx.JSON(w, http.StatusOK, struct {
+	s.writeOrdersJSON(w, strip, struct {
 		*orders.Order
 		Timeline []TimelineStep `json:"timeline"`
 	}{o, s.timeline(r.Context(), o.ID, true)})

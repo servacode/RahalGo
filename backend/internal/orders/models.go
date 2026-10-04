@@ -140,7 +140,11 @@ type Order struct {
 	Number        int64  `json:"number"`
 	CustomerID    string `json:"customer_id"`
 	CustomerPhone string `json:"customer_phone"`
-	CustomerName  string `json:"customer_name"`
+	// CustomerPhoneMasked **هاتفُ الزبون مخفيّاً جزئيّاً** (`+963 9•• ••• 123`) — لمن يقرأ
+	// السجلَّ ولا يملك `orders.customer_details.read` (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+	// **ويُملأ في ردّ الإدارة وحدَه**، وفارغُه لا يخرج.
+	CustomerPhoneMasked string `json:"customer_phone_masked,omitempty"`
+	CustomerName        string `json:"customer_name"`
 	// ParcelNote **وصفُ الغرض في «لدي توصيلة»** — يقرؤه السائقُ ليعرف ما يحمل.
 	// وفي التوصيلة يُقرأ `CustomerName`/`CustomerPhone` اسمَ المستلِم ورقمَه.
 	ParcelNote string `json:"parcel_note,omitempty"`

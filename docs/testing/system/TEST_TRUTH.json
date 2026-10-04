@@ -32,9 +32,9 @@
     ],
     "setting_defs": 178,
     "behaviour_settings": 143,
-    "order_fields": 94,
-    "test_files": 479,
-    "test_funcs": 1984
+    "order_fields": 95,
+    "test_files": 481,
+    "test_funcs": 1989
   },
   "flows": [
     {
@@ -8732,6 +8732,18 @@
     {
       "name": "TestGoods_ToOfficeChangesNoMoney",
       "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestHistoryFilters_SearchSourcesCountsKind",
+      "file": "internal/orders/history_filters_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestNormalizeSearch",
+      "file": "internal/orders/history_filters_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -24384,6 +24396,24 @@
     {
       "name": "TestGeoSeed_NoGovernorateWithoutDistricts",
       "file": "internal/server/geo_seed_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMaskPhone",
+      "file": "internal/server/history_export_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersExport_CustomDamascusArabicPhoneGate",
+      "file": "internal/server/history_export_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersList_CustomerDetailsByCapability",
+      "file": "internal/server/history_export_privacy_test.go",
       "package": "server",
       "orphan": true
     },

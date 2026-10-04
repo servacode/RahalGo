@@ -23,29 +23,58 @@ import (
 	"encoding/csv"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/authz"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // handleOrdersExport يُخرج طلباتِ مدّةٍ بأنصبتها — CSV بترميزٍ يقرؤه Excel.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **والملفُّ هو الشاشة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (سجلُّ الطلبات، البند ٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+//   - **بشرط السجلّ نفسِه** (`orders.ListWhere`) — الحالُ والبحثُ والمتجرُ
+//     والسائقُ والنوعُ ومدى التاريخ. **فالرقمُ في الشاشة هو الرقمُ في الملف.**
+//   - **والطلبُ الخاصُّ فيه** — كان المتجرُ يُضمّ ضمّاً صلباً **فيسقط كلُّ طلبٍ
+//     بلا متجر** (١٧ من ١٧٩ على التجهيز) ومالُه معه.
+//   - **واليومُ يومُ دمشق** في الشرط وفي عمود التاريخ — كان بتوقيت القاعدة.
+//   - **والقيمُ بالعربيّة** — الحالُ والدفعُ والنوع.
+//   - **وعمودُ الهاتف لمن يملك `users.contact.read` وحدَه.**
+//   - **ولا معادلةَ في خليّة** — نصٌّ يبدأ بـ`=` أو `+` أو `-` أو `@` يُسبَق
+//     بفاصلةٍ عليا (حقنُ CSV)، **والأرقامُ والهواتفُ تبقى أرقاماً.**
 func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	from, to := q.Get("from"), q.Get("to")
-	if from == "" || to == "" {
-		s.respondErr(w, errValidation)
+	f := orders.ListFilter{
+		MerchantID: q.Get("merchant_id"),
+		DriverID:   q.Get("driver_id"),
+		Query:      q.Get("query"),
+		ClosedOnly: q.Get("closed") == "1",
+		From:       from,
+		To:         to,
+		Kind:       q.Get("kind"),
+		AnySource:  true,
+	}
+	where, args, err := orders.ListWhere(f, orders.StuckLimits{})
+	if err != nil {
+		s.respondErr(w, err)
 		return
 	}
-	if _, err := time.Parse("2006-01-02", from); err != nil {
-		s.respondErr(w, errValidation)
-		return
+	if st := q.Get("status"); st != "" {
+		args = append(args, st)
+		where += ` AND o.status = $` + strconv.Itoa(len(args))
 	}
-	if _, err := time.Parse("2006-01-02", to); err != nil {
-		s.respondErr(w, errValidation)
-		return
-	}
+	withPhone := s.hasCapability(r, authz.UsersContactRead)
 
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT o.number, o.created_at, o.status, o.payment_method,
-		       COALESCE(cu.full_name, o.recipient_name, ''), COALESCE(cu.phone::text, o.recipient_phone, ''), mm.name,
+		SELECT o.number,
+		       to_char(o.created_at AT TIME ZONE 'Asia/Damascus', 'YYYY-MM-DD HH24:MI'),
+		       o.status, o.payment_method, o.kind,
+		       COALESCE(cu.full_name, o.recipient_name, ''), COALESCE(cu.phone::text, o.recipient_phone, ''),
+		       COALESCE(mr.name, ''),
 		       COALESCE(dr.full_name, ''),
 		       o.subtotal, o.delivery_fee, o.discount, o.total,
 		       o.wallet_paid, o.cash_due,
@@ -60,53 +89,131 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(o.cancel_reason, '')
 		FROM orders o
 		LEFT JOIN users cu ON cu.id = o.customer_id
-		JOIN merchants mm ON mm.id = o.merchant_id
-		LEFT JOIN users dr ON dr.id = o.driver_id
-		WHERE o.created_at >= $1::date AND o.created_at < ($2::date + 1)
-		ORDER BY o.number`, from, to)
+		-- **والمتجرُ يُضمّ يساراً** — الطلبُ الخاصُّ لا متجرَ له (٢٠٢٦-١٠-٠٤).
+		LEFT JOIN merchants mr ON mr.id = o.merchant_id
+		LEFT JOIN users dr ON dr.id = o.driver_id`+where+`
+		ORDER BY o.number`, args...)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	defer rows.Close()
 
+	name := "orders.csv"
+	if from != "" || to != "" {
+		name = "orders-" + from + "_" + to + ".csv"
+	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="orders.csv"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	// **BOM** — بدونه يقرأ Excel العربيةَ رموزاً.
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{
-		"رقم الطلب", "التاريخ", "الحالة", "الدفع",
-		"الزبون", "هاتف الزبون", "المتجر", "السائق",
+	head := []string{"رقم الطلب", "التاريخ (دمشق)", "الحالة", "الدفع", "النوع", "الزبون"}
+	if withPhone {
+		head = append(head, "هاتف الزبون")
+	}
+	head = append(head, "المتجر", "السائق",
 		"الأصناف", "التوصيل", "الخصم", "الإجمالي",
 		"من المحفظة", "نقداً", "مستحق المتجر", "أجر السائق",
-		"عمولة المندوب", "نصيب المنصة", "سبب الإنهاء",
-	})
+		"عمولة المندوب", "نصيب المنصة", "سبب الإنهاء")
+	_ = cw.Write(head)
 
+	count := 0
 	for rows.Next() {
 		var number int64
-		var created time.Time
-		var status, pay, customer, phone, merchant, driver, reason string
+		var created, status, pay, kind, customer, phone, merchant, driver, reason string
 		var sub, fee, disc, total, wallet, cash, mEarn, dEarn, comm, plat int64
-		if err := rows.Scan(&number, &created, &status, &pay, &customer, &phone,
+		if err := rows.Scan(&number, &created, &status, &pay, &kind, &customer, &phone,
 			&merchant, &driver, &sub, &fee, &disc, &total, &wallet, &cash,
 			&mEarn, &dEarn, &comm, &plat, &reason); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		n := func(v int64) string { return strconv.FormatInt(v, 10) }
-		_ = cw.Write([]string{
-			n(number), created.Format("2006-01-02 15:04"), status, pay,
-			customer, phone, merchant, driver,
+		if merchant == "" && kind == "custom" {
+			merchant = exportNoStore
+		}
+		line := []string{n(number), created, orders.StatusAr(status), exportPay(pay), exportKind(kind),
+			csvSafe(customer)}
+		if withPhone {
+			line = append(line, csvSafe(phone))
+		}
+		line = append(line, csvSafe(merchant), csvSafe(driver),
 			n(sub), n(fee), n(disc), n(total),
-			n(wallet), n(cash), n(mEarn), n(dEarn), n(comm), n(plat), reason,
-		})
+			n(wallet), n(cash), n(mEarn), n(dEarn), n(comm), n(plat), csvSafe(reason))
+		_ = cw.Write(line)
+		count++
 	}
 	cw.Flush()
 	if err := rows.Err(); err != nil {
 		s.logger.Error("orders export", "error", err)
 	}
-	s.audit(r, "finance.orders_exported", "order", "", map[string]any{"from": from, "to": to})
+	s.audit(r, "finance.orders_exported", "order", "", map[string]any{
+		"from": from, "to": to, "status": q.Get("status"), "query": q.Get("query"),
+		"merchant_id": f.MerchantID, "driver_id": f.DriverID, "kind": f.Kind,
+		"closed": f.ClosedOnly, "phone": withPhone, "rows": count,
+	})
+}
+
+// exportNoStore **المتجرُ في الطلب الخاصّ** — لا متجرَ له، فيُقال ذلك لا خليّةٌ فارغة.
+const exportNoStore = "طلب خاص — بلا متجر"
+
+// exportPay طريقةُ الدفع بالعربيّة.
+func exportPay(p string) string {
+	switch p {
+	case "cash":
+		return "نقداً"
+	case "wallet":
+		return "محفظة"
+	case "mixed":
+		return "محفظة ونقد"
+	}
+	return p
+}
+
+// exportKind نوعُ الطلب بالعربيّة.
+func exportKind(k string) string {
+	switch k {
+	case "standard":
+		return "طلب متجر"
+	case "custom":
+		return "طلب خاص"
+	case "merchant_delivery":
+		return "توصيلة متجر"
+	}
+	return k
+}
+
+// csvSafe **لا معادلةَ في خليّة** — حقنُ CSV (`=HYPERLINK(...)` في اسم زبون).
+//
+// **والرقمُ والهاتفُ يبقيان كما هما**: `+963…` و`-500` أرقامٌ لا معادلات،
+// **وفاصلةٌ عليا قبل الهاتف تُفسده لمن ينسخه.**
+func csvSafe(v string) string {
+	if v == "" {
+		return v
+	}
+	switch v[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		if numericCell(v) {
+			return v
+		}
+		return "'" + v
+	}
+	return v
+}
+
+// numericCell أهي أرقامٌ بعلامةٍ اختياريّةٍ ومسافات — هاتفٌ أو مبلغ.
+func numericCell(v string) bool {
+	body := strings.TrimLeft(v, "+-")
+	if body == "" || len(v)-len(body) > 1 {
+		return false
+	}
+	for _, r := range body {
+		if (r < '0' || r > '9') && r != ' ' {
+			return false
+		}
+	}
+	return true
 }
 
 // handleLedgerExport يُخرج قيودَ الدفتر في مدّةٍ — **الأصلُ الذي تُبنى عليه

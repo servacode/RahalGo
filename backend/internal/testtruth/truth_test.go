@@ -287,8 +287,12 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `security.audit_session_retention_days` — **سطورُ الدخول والجلسة تُحذف بعدها، وما سواها للأبد.**
 	// **واثنان أُضيفا بمراقبة التشغيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤): تكرارُ تذكير العالق
 	// `ops.stuck_reminder_min` **وإشعارُ تعطّل الخادم** `ops.outage_notify_min`.
-	if d.BehaviourSettings != 139 {
-		t.Errorf("إعداداتُ السلوك = %d لا 139 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وأربعةٌ أُضيفت بقسم الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٤): مهلةُ الكلمة المؤقّتة
+	// `security.temp_password_hours` · حدُّ الرصيد لموافقةٍ ثانيةٍ على تغيير الرقم
+	// `security.phone_change_approval_balance` · سقفُ الحركة اليدويّة `finance.manual_wallet_max`
+	// · وحدُّ تنبيه الإنذارات `safety.warnings_alert_count`.
+	if d.BehaviourSettings != 143 {
+		t.Errorf("إعداداتُ السلوك = %d لا 143 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

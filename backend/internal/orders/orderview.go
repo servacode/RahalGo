@@ -290,6 +290,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"customer_id":                  true,
 		"customer_name":                true,
 		"customer_phone":               true,
+		"customer_phone_masked":        true,
 		"delivered_at":                 true,
 		"delivery_estimate_min":        true,
 		"delivery_fee":                 true,
@@ -357,6 +358,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وأين البضاعةُ ومتى سلّمها السائق** — لبطاقة الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٣).
 		"return_to":       true,
 		"goods_handed_at": true,
+		// **وسطرُ لوحة العمل** (لمن عُرض الطلب · باقي المهلة · سببُ العلوق) —
+		// يُجيزه العقد، وبثٌّ بلاه يعرض قديماً حتّى يُعاد الجلب.
+		"board": true,
 	},
 }
 

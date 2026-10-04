@@ -30,6 +30,8 @@ import (
 // يوزّع الطلبات يرى الحادثَ ويستلمه — **والطوارئُ وحدَها لا `support.manage`.**
 var opsFinalCaps = []string{
 	"analytics.read", "drivers.manage", "drivers.read", "emergencies.manage", "merchants.read",
+	// **و`orders.customer_details.read` بقرار المالك ٢٠٢٦-١٠-٠٤** (سجلُّ الطلبات، البند ٣).
+	"orders.customer_details.read",
 	"orders.intervene", "orders.read", "settings.read",
 	"users.contact.read", "users.read",
 }

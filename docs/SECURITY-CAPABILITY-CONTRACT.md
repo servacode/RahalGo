@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**32 قدرةً · 203 صفَّ سياسةٍ للمسارات · 3 استثناءً · 28 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**33 قدرةً · 203 صفَّ سياسةٍ للمسارات · 3 استثناءً · 28 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -70,6 +70,7 @@
 | `merchants.verify` | 2 | — | مراجعةُ المرشَّحين والقوائم |
 | `observability.read` | 1 | — | قراءةُ صحّة المنصّة الداخليّة |
 | `orders.communications.read` | 3 | — | قراءةُ محادثات الطلب ورسائله |
+| `orders.customer_details.read` | **0** | **1** | هاتفُ زبون الطلب وموقعُه وصورةُ تسليمه |
 | `orders.intervene` | 12 | — | تدخّلٌ في طلبٍ نيابةً عن طرفه |
 | `orders.read` | 12 | — | قراءةُ الطلبات ولوحةِ العمليّات |
 | `payouts.decide` | 1 | — | قرارُ السحب |
@@ -108,6 +109,7 @@
 | `owner_phone` | `users.contact.read` |
 | `party_phone` | `users.contact.read` |
 | `phone` | `users.contact.read` |
+| `proof_url` | `orders.customer_details.read` |
 | `sales_rep_phone` | `users.contact.read` |
 | `user_phone` | `users.contact.read` |
 <!-- /gen:field-policy -->

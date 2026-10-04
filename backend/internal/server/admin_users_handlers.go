@@ -898,19 +898,6 @@ func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) 
 	cw.Flush()
 }
 
-// csvSafe **يُبطل صيغَ إكسل** — خليّةٌ تبدأ بـ`= + - @` أو جدولةٍ أو رجوعٍ تُسبَق بفاصلةٍ عليا
-// فتُقرأ نصّاً. **والرقمُ الدوليُّ يبدأ بـ`+`** فيُحمى كذلك ويبقى مقروءاً.
-func csvSafe(v string) string {
-	if v == "" {
-		return v
-	}
-	switch v[0] {
-	case '=', '+', '-', '@', '\t', '\r':
-		return "'" + v
-	}
-	return v
-}
-
 // roleLabelAr اسمُ الدور بالعربيّة في الملفّ — والمجهولُ يبقى رمزَه.
 func roleLabelAr(code string) string {
 	if l, ok := map[string]string{

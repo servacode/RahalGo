@@ -21,7 +21,9 @@ export {
 export { Tabs, Chips, Pagination, Breadcrumb, type TabDef, type ChipDef } from "./navigation";
 // **ما يعلو الصفحة** — ورقةٌ تصعد على الجوّال، وتلميحٌ لِما قُصّ، ومفتاحٌ
 // لِما يقع فوراً.
-export { Sheet, Tooltip, Switch } from "./overlay";
+export { Sheet, Drawer, Tooltip, Switch } from "./overlay";
+/** **اختيارٌ مع بحث** — سجلُّ الطلبات (٢٠٢٦-١٠-٠٤). */
+export { SearchSelect, type SearchSelectOption } from "./searchselect";
 // **التنقّلُ السفليُّ على الجوّال** — الإبهامُ يصل الثلثَ السفليَّ وحدَه،
 // وسائقُنا يمسك هاتفَه بيدٍ وهو واقفٌ في الشارع.
 export { MobileNav, MobileNavSpacer, type NavItem } from "./MobileNav";

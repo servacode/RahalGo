@@ -33,6 +33,10 @@ const (
 //
 // **ولا يُترجَم هنا شيءٌ آخر**: هذه هي النصوصُ الوحيدةُ التي يكتبها المحرّك
 // في المال، **وما عداها يأتي من المعجم في الواجهة.**
+// StatusAr **اسمُ الحالة بالعربيّة** — لتصدير الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٤):
+// كان عمودُ الحال في الملفّ `delivered` و`cancelled` والعناوينُ عربيّة.
+func StatusAr(status string) string { return statusAr(status) }
+
 func statusAr(status string) string {
 	switch status {
 	case StPending:
