@@ -159,6 +159,12 @@ var sensitiveActions = []Sensitive{
 		"dispute", 1, []string{"settlement"}, ""},
 	{"POST", "/tickets/{id}/resolve", "finance.ticket_resolve",
 		"ticket", 1, []string{"compensation"}, ""},
+	// **سحبُ الأدمن من رصيد الخزينة · ونقصُ الصندوق خسارةً على المنصّة** — مالٌ
+	// يخرج من الخزينة بقرار إنسان (قرارُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة).
+	{"POST", "/treasury/withdrawals", "finance.treasury_withdrawal",
+		"treasury_withdrawal", -1, []string{"amount"}, ""},
+	{"POST", "/cashbox/shortfalls/{id}/approve", "finance.cash_shortfall_loss",
+		"office_cash_shortfall", 2, nil, ""},
 
 	// ── الإعداداتُ ذاتُ الأثر ───────────────────────────────────
 	{"PUT", "/settings/{key}", "admin.setting_update", "setting", 1,

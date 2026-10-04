@@ -34,6 +34,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -310,11 +311,10 @@ func (s *Server) postWalletRequest(ctx context.Context, q dbtx.Querier, wr walle
 			return err
 		}
 		// **والنقدُ دخل المكتب** — سطرٌ في صندوقه بالمرجع نفسِه.
-		_, err := q.Exec(ctx, `
-			INSERT INTO office_cash_entries (direction, amount, source, ref, user_id, recorded_by, note)
-			VALUES ('in', $1, 'wallet_topup', $2, $3, $4, $5)`,
-			wr.Amount, wr.ID, wr.UserID, actor, wr.Note)
-		return err
+		return officecash.Record(ctx, q, officecash.Entry{
+			Direction: officecash.In, Amount: wr.Amount, Source: officecash.SourceWalletTopup,
+			Ref: wr.ID, UserID: wr.UserID, Actor: actor, Note: wr.Note,
+		})
 	case wr.Kind == "adjustment" && wr.Debit:
 		if _, err := s.wallet.ApplyTx(ctx, q, wr.UserID, -wr.Amount, "adjustment", wr.ID, wr.Note, &actor); err != nil {
 			return err

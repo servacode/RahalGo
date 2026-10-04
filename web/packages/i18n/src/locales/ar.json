@@ -154,7 +154,8 @@
       "roles.manage": "إدارة الأدوار والصلاحيات",
       "audit.read": "سجل الأحداث",
       "audit.export": "تصدير سجل الأحداث",
-      "safety.manage": "السلامة وتعليق المتاجر"
+      "safety.manage": "السلامة وتعليق المتاجر",
+      "treasury.manage": "قرارات الخزينة"
     },
     "roleGroups": {
       "staff": "أدوار الموظفين",
@@ -206,7 +207,8 @@
       "audit.read": "قراءة سجل الأحداث",
       "audit.export": "تصدير سجل الأحداث ملفا",
       "observability.read": "قراءة صحة المنصة الداخلية",
-      "safety.manage": "الإنذارات والمخالفات وتعليق المتاجر"
+      "safety.manage": "الإنذارات والمخالفات وتعليق المتاجر",
+      "treasury.manage": "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة"
     },
     "capabilityGroups": {
       "orders": "الطلبات",
@@ -295,7 +297,8 @@
       "reward": "مكافأة",
       "penalty": "عقوبة",
       "merchant_cash_accrued": "مستحق نقدي للمتجر",
-      "merchant_cash_paid": "دفع نقدي للمتجر"
+      "merchant_cash_paid": "دفع نقدي للمتجر",
+      "treasury_withdrawal": "سحب الأدمن من رصيد الخزينة"
     },
     "live": "مباشر",
     "liveOff": "غير متصل",
@@ -906,7 +909,13 @@
     "roles_manage_owner_only": "صلاحية إدارة الأدوار يمنحها المالك فقط",
     "role_not_deletable": "هذا الدور أساسي في المنصة ولا يُحذف",
     "role_not_empty": "على هذا الدور حسابات — انزعه عنها أولا",
-    "last_roles_manage": "لا يمكن نزع آخر من يدير الأدوار — وإلا انقفلت اللوحة"
+    "last_roles_manage": "لا يمكن نزع آخر من يدير الأدوار — وإلا انقفلت اللوحة",
+    "cash_close_pending": "يوجد إغلاق ينتظر المراجعة — راجعه أولاً",
+    "cash_close_day_done": "أُغلق صندوق اليوم وروجع — الإغلاق التالي غداً",
+    "shortfall_not_due": "لم يمض يوم على النقص بعد — قد يوجد المال",
+    "note_required": "اكتب السبب — الملاحظة إلزامية",
+    "treasury_missing": "لم تُحدَّد محفظة الخزينة بعد",
+    "treasury_over_balance": "المبلغ أكبر من رصيد الخزينة"
   },
   "admin": {
     "profits": {
@@ -3146,7 +3155,15 @@
         "finance.wallet_request_rejected": "رفض حركة محفظة",
         "ops.driver_cleared_after_accident": "تأكيد أن السائق بخير بعد حادث",
         "system.merchant_role_dropped": "سحب دور المتجر لعدم وجود متجر",
-        "admin.role_delete": "حذف دور"
+        "admin.role_delete": "حذف دور",
+        "finance.treasury_withdrawal": "سحب الأدمن من رصيد الخزينة",
+        "finance.treasury_statement_exported": "تصدير كشف الخزينة",
+        "finance.cash_close": "إغلاق صندوق المكتب",
+        "finance.cash_close_approved": "مراجعة إغلاق الصندوق",
+        "finance.cash_close_rejected": "رفض إغلاق الصندوق",
+        "finance.cash_shortfall_resolved": "نقص الصندوق وُجد",
+        "finance.cash_shortfall_loss": "نقص الصندوق صار خسارة",
+        "finance.cash_shortfall_rejected": "رفض اعتماد نقص الصندوق خسارة"
       }
     },
     "dash": {
@@ -4553,6 +4570,178 @@
         "adjustment": "تسوية"
       },
       "txUnknown": "حركة"
+    },
+    "treasury": {
+      "title": "الخزينة",
+      "subtitle": "رصيد المنصة وصندوق المكتب والموافقات في مكان واحد",
+      "tabs": {
+        "overview": "نظرة عامة",
+        "statement": "كشف الحساب",
+        "cashbox": "النقد والصندوق",
+        "approvals": "الموافقات",
+        "health": "صحة الدفتر"
+      },
+      "links": {
+        "title": "صفحات المال",
+        "cash": "نقد بيد السائقين",
+        "payouts": "السحوبات والشحن",
+        "obligations": "الديون",
+        "profits": "الأرباح والخسائر",
+        "expenses": "مصروفات التشغيل",
+        "losses": "الخسائر والنزاعات",
+        "compensations": "التعويضات",
+        "myWallet": "محفظتي"
+      },
+      "overview": {
+        "treasuryBalance": "رصيد الخزينة",
+        "cashboxExpected": "المتوقع في درج المكتب",
+        "todayIn": "دخل الصندوق اليوم",
+        "todayOut": "خرج من الصندوق اليوم",
+        "cashInStreet": "نقد بيد السائقين",
+        "merchantCashDue": "مستحق للمتاجر نقداً",
+        "pendingPayouts": "سحوبات تنتظر الصرف",
+        "withdrawalsMonth": "سحب الأدمن هذا الشهر",
+        "openShortfalls": "نقص صندوق مفتوح",
+        "pendingApprovals": "بانتظار الموافقة",
+        "lastClose": "آخر إغلاق للصندوق",
+        "noClose": "لم يُغلق الصندوق بعد",
+        "noTreasury": "لم تُحدَّد محفظة الخزينة بعد",
+        "seeAll": "كل الموافقات"
+      },
+      "withdraw": {
+        "button": "سحب من رصيد الخزينة",
+        "title": "سحب الأدمن من رصيد الخزينة",
+        "hint": "يظهر السحب في كشف الخزينة باسمك، ولا يُحسب خسارة ولا مصروفاً.",
+        "amount": "المبلغ",
+        "note": "السبب",
+        "fromCashbox": "أخذته نقداً من درج المكتب",
+        "confirm": "سحب",
+        "done": "سُجّل السحب باسمك في كشف الخزينة",
+        "list": "سحوبات الأدمن",
+        "empty": "لا سحوبات بعد",
+        "cashbox": "من الدرج",
+        "notCashbox": "ليس من الدرج"
+      },
+      "statement": {
+        "kind": "النوع",
+        "allKinds": "كل الأنواع",
+        "export": "تصدير CSV",
+        "opening": "رصيد أول المدة",
+        "closing": "رصيد آخر المدة",
+        "in": "داخل",
+        "out": "خارج",
+        "colDate": "التاريخ",
+        "colKind": "النوع",
+        "colAmount": "المبلغ",
+        "colBalance": "الرصيد بعده",
+        "colNote": "الملاحظة",
+        "colBy": "بيد",
+        "colOrder": "الطلب",
+        "empty": "لا قيود في هذه المدة",
+        "tz": "الأوقات بتوقيت دمشق"
+      },
+      "cashbox": {
+        "expected": "المتوقع في الدرج",
+        "opening": "معدود آخر إغلاق",
+        "in": "دخل منذ آخر إغلاق",
+        "out": "خرج منذ آخر إغلاق",
+        "openLines": "حركات لم يُغلق عليها",
+        "closeDay": "إغلاق اليوم",
+        "counted": "المبلغ المعدود في الدرج",
+        "closeNote": "ملاحظة",
+        "closeHint": "عُدّ النقد في الدرج واكتب المبلغ. يراجع الإغلاقَ موظفٌ آخر.",
+        "difference": "الفرق",
+        "over": "زيادة",
+        "short": "نقص",
+        "balanced": "مطابق",
+        "pendingClose": "إغلاق ينتظر المراجعة",
+        "approveClose": "تأكيد المراجعة",
+        "rejectClose": "رفض وإعادة العد",
+        "rejectReason": "سبب الرفض",
+        "ownClose": "سجّلتَ هذا الإغلاق — يراجعه موظف آخر",
+        "closes": "سجل الإغلاقات",
+        "noCloses": "لا إغلاقات بعد",
+        "entries": "حركات الصندوق",
+        "showAll": "كل الحركات",
+        "showOpen": "منذ آخر إغلاق",
+        "noEntries": "لا حركات",
+        "directionIn": "داخل",
+        "directionOut": "خارج",
+        "colDay": "اليوم",
+        "colCounted": "المعدود",
+        "colExpected": "المتوقع",
+        "colStatus": "الحال",
+        "colBy": "سجّله",
+        "colReviewer": "راجعه",
+        "colSource": "المصدر",
+        "colParty": "الطرف",
+        "sources": {
+          "driver_settle": "تسليم سائق",
+          "wallet_topup": "شحن محفظة نقداً",
+          "merchant_cash_paid": "دفع نقدي لمتجر",
+          "payout_paid": "صرف سحب",
+          "payout_reversed": "سحب مرتد",
+          "treasury_withdrawal": "سحب الأدمن",
+          "shortfall_found": "نقص وُجد",
+          "obligation_cash": "دفعة دين نقداً",
+          "expense_cash": "مصروف نقداً"
+        },
+        "statuses": {
+          "pending": "ينتظر المراجعة",
+          "approved": "مُراجَع",
+          "rejected": "مرفوض"
+        },
+        "shortfall": "نقص",
+        "shortfallStatuses": {
+          "pending": "مفتوح",
+          "approved": "صار خسارة",
+          "rejected": "على المسؤول",
+          "resolved": "وُجد"
+        },
+        "resolve": "وُجد المال",
+        "resolveNote": "أين وُجد؟",
+        "dueAt": "يمكن اعتماده خسارة بعد",
+        "cashPage": "نقد بيد السائقين"
+      },
+      "approvals": {
+        "empty": "لا شيء ينتظر الموافقة",
+        "count": "طلبات تنتظر",
+        "total": "مجموع ما ينتظر",
+        "proposedBy": "اقترحه",
+        "system": "النظام",
+        "approve": "موافقة",
+        "reject": "رفض",
+        "rejectNote": "سبب الرفض",
+        "open": "افتح في قسمه",
+        "own": "اقتراحك — يوافق عليه موظف آخر",
+        "selfFlag": "لا يوجد غيرك يوافق — ستُسجَّل موافقتك على اقتراحك",
+        "notDue": "لم يحن بعد",
+        "approveTitle": "تأكيد الموافقة",
+        "approveBody": "توافق على {amount} — {section}؟",
+        "rejectTitle": "رفض الطلب",
+        "sections": {
+          "walletRequests": "حركات المحافظ",
+          "cashCloses": "إغلاق الصندوق",
+          "cashShortfalls": "نقص الصندوق خسارةً",
+          "compensations": "تعويضات السائقين",
+          "expenses": "المصروفات",
+          "obligations": "شطب الديون",
+          "incentives": "المكافآت",
+          "promos": "العروض",
+          "disputes": "النزاعات",
+          "other": "قسم آخر"
+        }
+      },
+      "health": {
+        "ok": "سليم",
+        "bad": "خرق",
+        "failing": "فحوص فيها خرق",
+        "allGreen": "كل الفحوص سليمة",
+        "run": "إعادة الفحص",
+        "rows": "صفوف",
+        "error": "تعذّر الفحص",
+        "checks": "عدد الفحوص"
+      }
     }
   },
   "merchant": {

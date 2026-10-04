@@ -1449,6 +1449,27 @@ func (s *Server) Router() http.Handler {
 			// **وللمالك والماليّة** — فيها أنصبةُ الناس وأرباحُ المنصّة.
 			r.Get("/profits", s.handleProfits)
 			// ══════════════════════════════════════════════════════════
+			// **قسمُ الخزينة الموحّد** — (قراراتُ المالك ٢٠٢٦-١٠-٠٤)
+			// ══════════════════════════════════════════════════════════
+			//
+			// نظرةٌ عامّة · كشفٌ برصيدٍ جارٍ وتصدير · سحبُ الأدمن · صحّةُ الدفتر ·
+			// صندوقُ المكتب والإغلاقُ اليوميّ · والموافقاتُ الموحّدة.
+			r.Get("/treasury/overview", s.handleTreasuryOverview)
+			r.Get("/treasury/statement", s.handleTreasuryStatement)
+			r.Get("/treasury/statement/export", s.handleTreasuryStatementExport)
+			r.Get("/treasury/withdrawals", s.handleTreasuryWithdrawals)
+			r.Post("/treasury/withdrawals", s.idempotent(s.handleTreasuryWithdraw))
+			r.Get("/treasury/health", s.handleTreasuryHealth)
+			r.Get("/cashbox", s.handleCashbox)
+			r.Get("/cashbox/closes", s.handleListCashCloses)
+			r.Post("/cashbox/closes", s.handleCreateCashClose)
+			r.Post("/cashbox/closes/{id}/approve", s.handleDecideCashClose(true))
+			r.Post("/cashbox/closes/{id}/reject", s.handleDecideCashClose(false))
+			r.Post("/cashbox/shortfalls/{id}/resolve", s.handleResolveShortfall)
+			r.Post("/cashbox/shortfalls/{id}/approve", s.handleDecideShortfall(true))
+			r.Post("/cashbox/shortfalls/{id}/reject", s.handleDecideShortfall(false))
+			r.Get("/approvals", s.handleApprovals)
+			// ══════════════════════════════════════════════════════════
 			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
 			// ══════════════════════════════════════════════════════════
 			//

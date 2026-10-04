@@ -39,17 +39,17 @@
   {
    "code": "finance.export",
    "description": "تصدير الدفتر وكشف الطلبات ملفا",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 15
+   "guards_routes": 19
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 17
+   "guards_routes": 24
   },
   {
    "code": "finance.recompute",
@@ -146,6 +146,11 @@
    "guards_routes": 8
   },
   {
+   "code": "treasury.manage",
+   "description": "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة",
+   "guards_routes": 3
+  },
+  {
    "code": "users.cashban.lift",
    "description": "رفع منع الدفع نقدا عن زبون",
    "guards_routes": 1
@@ -221,7 +226,7 @@
   }
  ],
  "route_policy": {
-  "rules": 205,
+  "rules": 220,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -251,6 +256,7 @@
    "settings.read",
    "settings.security.manage",
    "support.manage",
+   "treasury.manage",
    "users.cashban.lift",
    "users.export",
    "users.read",
@@ -419,6 +425,15 @@
   },
   {
    "method": "POST",
+   "pattern": "/cashbox/shortfalls/{id}/approve",
+   "action": "finance.cash_shortfall_loss",
+   "target_type": "office_cash_shortfall",
+   "target_segment": 2,
+   "fingerprint_params": [],
+   "need": "treasury.manage"
+  },
+  {
+   "method": "POST",
    "pattern": "/orders/{id}/compensate-driver",
    "action": "finance.compensate_driver",
    "target_type": "order",
@@ -522,6 +537,17 @@
     "compensation"
    ],
    "need": "support.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/treasury/withdrawals",
+   "action": "finance.treasury_withdrawal",
+   "target_type": "treasury_withdrawal",
+   "target_segment": -1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "treasury.manage"
   },
   {
    "method": "POST",

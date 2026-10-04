@@ -610,12 +610,12 @@ var All = []Check{
 			"مسارَ كتابةٍ لا يعرفه أحد.**",
 		Flows:     []string{"F-26"},
 		Registers: []string{"XOB-9"},
-		Kinds:     []string{"platform_profit", "platform_expense", "operating_expense"},
+		Kinds:     []string{"platform_profit", "platform_expense", "operating_expense", "treasury_withdrawal"},
 		SQL: `
 			SELECT t.id, t.kind, t.user_id::text, t.amount
 			FROM wallet_transactions t
 			JOIN wallets w ON w.user_id = t.user_id
-			WHERE t.kind IN ('platform_profit','platform_expense','operating_expense')
+			WHERE t.kind IN ('platform_profit','platform_expense','operating_expense','treasury_withdrawal')
 			  AND NOT w.is_treasury`,
 	},
 	{
@@ -633,6 +633,140 @@ var All = []Check{
 			  AND NOT EXISTS (
 				SELECT 1 FROM expenses e
 				WHERE e.id::text = t.ref AND e.voided_at IS NOT NULL)`,
+	},
+
+	// **سحبُ الأدمن من رصيد الخزينة** (قرارُ المالك ٢٠٢٦-١٠-٠٤): خصمٌ من الخزينة
+	// وحدَها، بمقدار ورقته، **وورقةٌ بلا قيدٍ أو قيدٌ بلا ورقة خرق.**
+	{
+		ID: "FI-12.d", Family: FI12, Status: ProvableNow, Ops: true,
+		Name: "سحبُ الأدمن خصمٌ من الخزينة بمقدار ورقته",
+		Why: "قيدُ سحبٍ في غير الخزينة أو موجبٌ أو بلا ورقةٍ أو بغير مقدارها — " +
+			"**مالٌ خرج باسم مدير المنصّة ولا يطابق ما وقّعه.**",
+		Kinds: []string{"treasury_withdrawal"},
+		SQL: `
+			SELECT t.id, t.user_id::text, t.amount, t.ref
+			FROM wallet_transactions t
+			JOIN wallets w ON w.user_id = t.user_id
+			LEFT JOIN treasury_withdrawals tw ON tw.id::text = t.ref
+			WHERE t.kind = 'treasury_withdrawal'
+			  AND (NOT w.is_treasury OR t.amount >= 0 OR tw.id IS NULL OR tw.amount <> -t.amount)`,
+	},
+	{
+		ID: "FI-12.e", Family: FI12, Status: ProvableNow, Ops: true,
+		Name:  "كلُّ ورقةِ سحبٍ من الخزينة لها قيدٌ واحد",
+		Why:   "ورقةُ سحبٍ بلا قيدٍ أو بقيدين — **الكشفُ يقول غيرَ ما وقع.**",
+		Kinds: []string{"treasury_withdrawal"},
+		SQL: `
+			SELECT tw.id::text, tw.amount, count(t.id)::int AS القيود
+			FROM treasury_withdrawals tw
+			LEFT JOIN wallet_transactions t
+			       ON t.kind = 'treasury_withdrawal' AND t.ref = tw.id::text
+			GROUP BY tw.id, tw.amount
+			HAVING count(t.id) <> 1`,
+	},
+
+	// ═══════════════════════════════════════════════════════════════════
+	// FI-15 — صندوقُ المكتب (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ═══════════════════════════════════════════════════════════════════
+	//
+	// **كلُّ نقدٍ دخل الدرجَ أو خرج منه له سطرٌ بمرجع قيده** — وإلّا لم يطابق
+	// الإغلاقُ اليوميُّ ما في اليد. **والقديمُ قبل الهجرة `0300` لا يُحاسَب**:
+	// لم يكن للصندوق وجودٌ يومَها.
+	{
+		ID: "FI-15.a", Family: FI15, Status: ProvableNow, Ops: true,
+		Name: "نقدٌ سلّمه سائقٌ دخل صندوقَ المكتب",
+		Why:  "تسليمٌ من صندوق السائق بلا سطرٍ داخلٍ بمقداره — **مالٌ خرج من يده ولم يصل الدرج.**",
+		SQL: `
+			SELECT e.id, e.driver_id::text, -e.amount AS المبلغ
+			FROM driver_cash_entries e
+			WHERE e.kind = 'settlement'
+			  AND e.created_at >= ` + officeCashSince + `
+			  AND NOT EXISTS (SELECT 1 FROM office_cash_entries c
+			                  WHERE c.source = 'driver_settle' AND c.direction = 'in'
+			                    AND c.ref = e.id::text AND c.amount = -e.amount)`,
+	},
+	{
+		ID: "FI-15.b", Family: FI15, Status: ProvableNow, Ops: true,
+		Name:  "مستحقٌّ نقديٌّ دُفع لمتجرٍ خرج من الصندوق",
+		Why:   "تأكيدُ دفعٍ نقديٍّ لمتجرٍ بلا سطرٍ خارج — **الدرجُ يقول أكثرَ ممّا فيه.**",
+		Kinds: []string{"merchant_cash_paid"},
+		SQL: `
+			SELECT ms.id::text, ms.paid_at
+			FROM merchant_settlements ms
+			WHERE ms.state = 'cash_paid'
+			  AND ms.paid_at >= ` + officeCashSince + `
+			  AND NOT EXISTS (SELECT 1 FROM office_cash_entries c
+			                  WHERE c.source = 'merchant_cash_paid' AND c.direction = 'out'
+			                    AND c.ref = ms.id::text)`,
+	},
+	{
+		ID: "FI-15.c", Family: FI15, Status: ProvableNow, Ops: true,
+		Name:  "سحبٌ صُرف خرج من الصندوق بمقداره",
+		Why:   "سحبٌ مدفوعٌ بلا سطرٍ خارجٍ بمقداره — **الإغلاقُ اليوميُّ لا يطابق.**",
+		Flows: []string{"F-24"},
+		Kinds: []string{"payout"},
+		SQL: `
+			SELECT t.ref, -t.amount AS المبلغ
+			FROM wallet_transactions t
+			WHERE t.kind = 'payout' AND t.ref <> ''
+			  AND t.created_at >= ` + officeCashSince + `
+			  AND NOT EXISTS (SELECT 1 FROM office_cash_entries c
+			                  WHERE c.source = 'payout_paid' AND c.direction = 'out'
+			                    AND c.ref = t.ref AND c.amount = -t.amount)`,
+	},
+	{
+		ID: "FI-15.d", Family: FI15, Status: ProvableNow, Ops: true,
+		Name:  "سحبُ الأدمن من الدرج خرج من الصندوق",
+		Why:   "سحبٌ من الخزينة نقداً بلا سطرٍ خارج — **أو سطرٌ لسحبٍ لم يكن من الدرج.**",
+		Kinds: []string{"treasury_withdrawal"},
+		SQL: `
+			SELECT tw.id::text, tw.amount, tw.from_cashbox
+			FROM treasury_withdrawals tw
+			LEFT JOIN office_cash_entries c
+			       ON c.source = 'treasury_withdrawal' AND c.ref = tw.id::text
+			WHERE (tw.from_cashbox AND (c.id IS NULL OR c.direction <> 'out' OR c.amount <> tw.amount))
+			   OR (NOT tw.from_cashbox AND c.id IS NOT NULL)`,
+	},
+	{
+		ID: "FI-15.e", Family: FI15, Status: ProvableNow, Ops: true,
+		Name: "مصدرُ كلّ سطرٍ في الصندوق معروفٌ باتّجاهه",
+		Why:  "سطرٌ بمصدرٍ لا يعرفه أحدٌ أو باتّجاهٍ يخالف معناه — **نقدٌ تحرّك بلا تفسير.**",
+		SQL: `
+			SELECT c.id::text, c.source, c.direction, c.amount
+			FROM office_cash_entries c
+			WHERE (c.source, c.direction) NOT IN (` + officeCashSourcesSQL + `)`,
+	},
+	{
+		ID: "FI-15.f", Family: FI15, Status: ProvableNow, Ops: true,
+		Name: "نقصُ الصندوق: الخسارةُ بقيدها والموجودُ بسطره",
+		Why: "نقصٌ اعتُمد خسارةً بلا قيدٍ في الخزينة، أو وُجد بلا سطرٍ داخل، " +
+			"أو قيدُ خسارةٍ لنقصٍ لم يُعتمَد — **الخسائرُ تقول غيرَ ما قُرّر.**",
+		Kinds: []string{"platform_expense"},
+		SQL: `
+			SELECT s.id::text, s.status, s.amount
+			FROM office_cash_shortfalls s
+			WHERE (s.status = 'approved' AND NOT EXISTS (
+			          SELECT 1 FROM wallet_transactions t
+			           WHERE t.kind = 'platform_expense' AND t.ref = s.id::text AND t.amount = -s.amount))
+			   OR (s.status = 'resolved' AND NOT EXISTS (
+			          SELECT 1 FROM office_cash_entries c
+			           WHERE c.source = 'shortfall_found' AND c.ref = s.id::text AND c.amount = s.amount))
+			   OR (s.status IN ('pending', 'rejected') AND EXISTS (
+			          SELECT 1 FROM wallet_transactions t
+			           WHERE t.kind = 'platform_expense' AND t.ref = s.id::text))`,
+	},
+	{
+		ID: "FI-15.g", Family: FI15, Status: ProvableNow, Ops: true,
+		Name:  "شحنٌ نقديٌّ مُوافَقٌ عليه دخل الصندوق",
+		Why:   "شحنُ محفظةٍ نقداً بلا سطرٍ داخل — **مالٌ في محفظةٍ لم يصل الدرج.**",
+		Kinds: []string{"topup"},
+		SQL: `
+			SELECT wr.id::text, wr.amount
+			FROM wallet_requests wr
+			WHERE wr.kind = 'topup' AND wr.status = 'approved'
+			  AND NOT EXISTS (SELECT 1 FROM office_cash_entries c
+			                  WHERE c.source = 'wallet_topup' AND c.direction = 'in'
+			                    AND c.ref = wr.id::text AND c.amount = wr.amount)`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════
