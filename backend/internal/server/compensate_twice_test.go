@@ -104,19 +104,33 @@ func TestCompensateDriverOnlyOnce(t *testing.T) {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, orderID)
 	})
 
+	// **ولا تعويضَ مباشرٌ بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٤): المالُ يخرج بموافقةٍ
+	// على طلبٍ معلَّق — **فالضغطةُ المكرّرةُ تُقاس على الموافقة نفسِها.**
+	pending := func(order string) string {
+		var id string
+		if err := pool.QueryRow(ctx, `
+			INSERT INTO driver_compensation_requests (order_id, driver_id, fault, fail_reason, suggested_amount)
+			VALUES ($1, $2, 'customer', 'customer_refused', 3000) RETURNING id::text`,
+			order, driver).Scan(&id); err != nil {
+			t.Fatalf("طلبُ التعويض: %v", err)
+		}
+		return id
+	}
+	firstReq := pending(orderID)
+
 	const amount int64 = 3000
 	call := func() int {
 		body := `{"amount":` + itoa64(amount) + `,"note":"تعويضٌ عن طلبٍ فشل"}`
-		req := httptest.NewRequest(http.MethodPost, "/admin/orders/"+orderID+"/compensate-driver",
+		req := httptest.NewRequest(http.MethodPost, "/admin/compensations/"+firstReq+"/approve",
 			strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		rc := chi.NewRouteContext()
-		rc.URLParams.Add("id", orderID)
+		rc.URLParams.Add("id", firstReq)
 		c := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
 		c = context.WithValue(c, ctxUserID, admin)
 		c = context.WithValue(c, ctxRoles, []string{"admin", "finance"})
 		w := httptest.NewRecorder()
-		srv.handleCompensateDriver(w, req.WithContext(c))
+		srv.handleApproveCompensation(w, req.WithContext(c))
 		return w.Code
 	}
 
@@ -170,6 +184,7 @@ func TestCompensateDriverOnlyOnce(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, second2)
 	})
+	secondReq := pending(second2)
 
 	// **وأربعةٌ لا ثمانية.**
 	//
@@ -187,17 +202,17 @@ func TestCompensateDriverOnlyOnce(t *testing.T) {
 			defer done.Done()
 			start.Wait()
 			body := `{"amount":` + itoa64(amount) + `,"note":"تعويضٌ متزامن"}`
-			req := httptest.NewRequest(http.MethodPost, "/admin/orders/"+second2+"/compensate-driver",
+			req := httptest.NewRequest(http.MethodPost, "/admin/compensations/"+secondReq+"/approve",
 				strings.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			rc := chi.NewRouteContext()
-			rc.URLParams.Add("id", second2)
+			rc.URLParams.Add("id", secondReq)
 			c, cancel := context.WithTimeout(req.Context(), 25*time.Second)
 			defer cancel()
 			c = context.WithValue(c, chi.RouteCtxKey, rc)
 			c = context.WithValue(c, ctxUserID, admin)
 			c = context.WithValue(c, ctxRoles, []string{"admin", "finance"})
-			srv.handleCompensateDriver(httptest.NewRecorder(), req.WithContext(c))
+			srv.handleApproveCompensation(httptest.NewRecorder(), req.WithContext(c))
 		}()
 	}
 	start.Done()

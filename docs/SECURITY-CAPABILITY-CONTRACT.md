@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**35 قدرةً · 234 صفَّ سياسةٍ للمسارات · 3 استثناءً · 32 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**35 قدرةً · 238 صفَّ سياسةٍ للمسارات · 3 استثناءً · 33 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -63,8 +63,8 @@
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
 | `finance.export` | 5 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 22 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 26 | — | قراءة المال والتقارير المالية |
+| `finance.manage` | 25 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 27 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `merchants.manage` | 10 | — | إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق) |
 | `merchants.read` | 4 | — | قراءة سجل المتاجر وقوائمها |
@@ -159,6 +159,7 @@
 | `admin.user_update` | `PATCH` | `/users/{id}` | `phone`, `status` | `userUpdateStrong` | `users.status.manage` |
 | `finance.cash_shortfall_loss` | `POST` | `/cashbox/shortfalls/{id}/approve` | — | دائماً | `treasury.manage` |
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
+| `finance.compensation_approved` | `POST` | `/compensations/{id}/approve` | `amount` | دائماً | `finance.manage` |
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
 | `finance.expense_request_approved` | `POST` | `/expense-requests/{id}/approve` | — | دائماً | `finance.manage` |

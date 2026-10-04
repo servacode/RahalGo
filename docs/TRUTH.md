@@ -774,6 +774,10 @@ kosom` |
 | `referral.reward_4` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
 | `auth.require_whatsapp` | المنصة | bool | `true` |
+| `compensations.cap_driver` | المنصة | money | `50000` |
+| `compensations.cap_merchant_goods` | المنصة | money | `50000` |
+| `compensations.cap_complaint` | المنصة | money | `50000` |
+| `compensations.overdue_hours` | المنصة | int | `24` |
 | `ops.outage_notify_min` | المنصة | int | `5` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | int | `0` |
@@ -1206,7 +1210,7 @@ kosom` |
 | `drivers.reward_2` | السائقون | money | `0` |
 | `drivers.target_3` | السائقون | int | `0` |
 | `drivers.reward_3` | السائقون | money | `0` |
-| `drivers.failed_compensation_percent` | السائقون | int | `0` |
+| `drivers.failed_compensation_percent` | السائقون | int | `50` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `drivers.proof_max_m` | السائقون | int | `15` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
@@ -1930,3 +1934,36 @@ kosom` |
    `TestCashKindsHaveAdminLabels`) ورقمُ الطلب بجانبه (`order_number`، `TestCASH_StatementCarriesOrderNumber`) ·
    الخطأُ يُعرض ولا يبقى «جارٍ التحميل» · **وإشعارُ السائق بالفواصل والعملة** («استُلم منك 50,000 ل.س — والباقي بذمّتك
    106,650 ل.س»، `TestCASH_SettleNotificationFormatsMoney`).
+### قراراتُ المالك ٢٠٢٦-١٠-٠٤ — **صفحةُ «التعويضات»** (`/dashboard/compensations`)
+
+(وافق المالكُ على القرارات الستّة.)
+
+1. **صفحةٌ واحدةٌ وطريقُ موافقةٍ واحدٌ لكلّ تعويض** — كلُّها صفوفٌ في `driver_compensation_requests` (الاسمُ باقٍ؛ هجرة `0360`
+   أضافت `kind` = سائق · `merchant_goods` · `complaint`، و`ticket_id`، و`proposed_by` (فراغُه = النظام)، و`note`، و`self_approved`؛
+   **و`driver_id` صار «المستفيد»**). **من يقترح**: المحرّكُ للسائق (أو المكتب `POST /admin/compensations`، أو غرفةُ الطوارئ)،
+   **والماليّةُ لتعويض البضاعة** (`POST /orders/{id}/goods/compensation` صار **اقتراحاً** يردّ `202` ولا يدفع — والسقفُ سعرُ الشراء
+   يُفحص عند الاقتراح والموافقة)، **والدعمُ لتعويض الشكوى** بالدالّة الواحدة `orders.ProposeCompensationTx`. **والموافقةُ** بمعرّف طلب
+   التعويض (`POST /admin/compensations/{id}/approve` · كلمةُ السرّ · `finance.manage`)، **ولا يوافق أحدٌ على ما اقترحه**
+   (`approval.Check`؛ وموافقةُ المالك على نفسه تُعلَّم في الطلب والسجلّ). **والمالُ من الخزينة دائماً**: +المستفيد `compensation` ·
+   −الخزينة `platform_expense` في المعاملة نفسِها — **وتعويضُ الشكوى لصاحبها** (سائقاً أو متجراً أو زبوناً) بمرجع التذكرة،
+   و`tickets.compensation` = المدفوع. يحرسه `TestCOMP_ComplaintPaysOwnerFromTreasury` و`TestCOMP_GoodsCompensationGoesThroughQueue`
+   و`TestCOMP_ProposerCannotApproveOwn`. **وتحويلُ زرّ «حلّ الشكوى» إلى هذه الدالّة عند قسم الشكاوى** (`support.CompensationProposer`).
+2. **سقفٌ لكلّ نوعٍ من الإعدادات** — `compensations.cap_driver` · `cap_merchant_goods` · `cap_complaint` (٥٠٬٠٠٠ افتراضاً، والصفرُ
+   بلا سقف). **فوقه مديرُ المنصّة (`owner_super_admin`) وحدَه يوافق** (`403 compensation_above_cap`). يحرسه `TestCOMP_AboveCapOnlyOwner`.
+3. **السائقُ يرى «تسوية من الإدارة» ولا يرى ملاحظةَ المكتب** — سطرُ المحفظة يُكتب بلا ملاحظة، **وتطبيقُ السائق وحدَه** يعرض
+   `compensation` باسم «تسوية من الإدارة» بلا ملاحظة (`WalletScreen(neutralCompensation = true)`؛ المتجرُ والمندوبُ والزبونُ كما هم).
+4. **المعلَّقُ فوق المهلة يحمرّ ويُنبَّه المالك** — `compensations.overdue_hours` (٢٤)؛ عمودُ «ينتظر منذ»، وتنبيهٌ لمدير المنصّة
+   مرّةً لكلّ طلب (كلَّ خمس دقائق، `overdue_alerted_at`). يحرسه `TestCOMP_OverdueAlertsOwnerOnce`.
+5. **النسبةُ صفرٌ تكتب طلباً بمقترَحٍ صفر والماليّةُ تقرّر** — **والافتراضيُّ في الفهرس ٥٠** كالقاعدة (كان صفراً: «رجّع للافتراضي»
+   كان يوقف كلَّ طلبٍ بصمت). يحرسه `TestCOMP_ZeroPercentStillCreatesRequest`.
+6. **الطلباتُ العشرةُ التجريبيّةُ على التجهيز تُرفض بسبب «بيانات تجربة»** — من الصفحة بعد نشر هذه الدفعة (زرُّ «رفض» على كلّ
+   صفٍّ بمعرّفه)، **ولم تُمسّ من هنا.**
+
+**وعيوبُ الفحص التي أُصلحت معها:**
+- **الزرُّ بمعرّف طلب التعويض لا برقم الطلب** — كان طلبٌ تعذّر مع سائقَين يدفع للأقدم والنافذةُ تعرض الثاني. والبابُ القديمُ
+  (`/orders/{id}/compensate-driver`) يوافق على المعلَّق وحدَه، **ومع معلَّقَين يردّ `409 compensation_ambiguous`**، **ولا يدفع
+  تعويضاً بلا طلبٍ معلَّق بعد اليوم.** يحرسه `TestCOMP_ApproveByRequestID_PaysTheShownDriver` و`TestCompensateDriverOnlyOnce`.
+- **سجلُّ القرارات**: تبويباتُ «بانتظار القرار · تمت الموافقة · مرفوضة · الكل»، وبطاقاتُ (ما ينتظر عدداً ومجموعاً · ما قُبل هذا الشهر ·
+  ما رُفض هذا الشهر · ما تأخّر)، وفلاترُ في الرابط (النوع · الجهة المذنبة · المستفيد · التاريخ) — `GET /admin/compensations`.
+- **السببُ بالعربيّة في الصفحة والإشعار** (`orders.ReasonLabel`) — لا رمزَ آلة («بلا سبب مكتوب» للفارغ).
+- **تحذيرٌ إن خالف الذنبُ السبب** (`fault_mismatch` — «المتجرُ مغلق» وذنبُه «الزبون»). يحرسه `TestCOMP_HistoryTabsSummaryMismatch`.

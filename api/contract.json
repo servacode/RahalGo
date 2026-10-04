@@ -724,6 +724,64 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/compensations",
+      "handler": "handleListCompensations",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/compensations",
+      "handler": "handleProposeCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "order_id",
+          "type": "string"
+        },
+        {
+          "name": "user_id",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "fault",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "proposed",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusAccepted"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/compensations/pending",
       "handler": "handlePendingCompensations",
       "auth": true,
@@ -732,6 +790,62 @@
         {
           "name": "@paged",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/compensations/{id}/approve",
+      "handler": "handleApproveCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "compensated",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/compensations/{id}/reject",
+      "handler": "handleRejectCompensationByID",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "rejected",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -2780,6 +2894,10 @@
         {
           "name": "note",
           "type": "string"
+        },
+        {
+          "name": "request_id",
+          "type": "string"
         }
       ],
       "response": [
@@ -2801,6 +2919,10 @@
       "request": [
         {
           "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "request_id",
           "type": "string"
         }
       ],
@@ -2922,12 +3044,12 @@
       ],
       "response": [
         {
-          "name": "compensated",
+          "name": "proposed",
           "type": "unknown"
         }
       ],
       "statuses": [
-        "StatusOK"
+        "StatusAccepted"
       ]
     },
     {

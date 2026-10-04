@@ -39,12 +39,14 @@ package server
 // **فلا تربح من فشل** بل تتحمّل التوصيل كلَّه.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
@@ -65,139 +67,73 @@ var (
 		"compensation_not_pending", "errors.compensation_not_pending")
 )
 
-// handleCompensateDriver تعويضُ سائقٍ عن طلبٍ فشل — بمبلغٍ يقدّره إنسان.
+// handleCompensateDriver **الموافقةُ على تعويضِ سائقٍ معلَّق — بالبابِ القديم.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولا تعويضَ مباشرٌ بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٤: طريقُ موافقةٍ واحد)
+// ══════════════════════════════════════════════════════════════════════
+//
+// كان هذا البابُ يدفع مباشرةً إن لم يجد طلباً معلَّقاً — **موظّفٌ واحدٌ يقترح
+// ويوافق.** والآن يوافق على المعلَّق وحدَه، **ومن أراد تعويضاً جديداً اقترحه**
+// (`POST /compensations`) فوافق غيرُه.
+//
+// **وإن كان للطلب أكثرُ من معلَّقٍ لزم `request_id`** — كان يأخذ الأقدمَ فيدفع
+// لسائقٍ غيرِ المعروض. **والصفحةُ تستعمل `POST /compensations/{id}/approve`.**
+//
+// **وتعويضٌ وقع لا يقع مرّتين** (فحصُ التغطية ٢٠٢٦-٠٨-٠٨): القفلُ على صفّ الطلب
+// المعلَّق، وفحصُ القيد السابق بالمرجع نفسِه، في المعاملة نفسِها.
 func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	req, err := decode[struct {
-		Amount int64  `json:"amount"`
-		Note   string `json:"note"`
+		Amount    int64  `json:"amount"`
+		Note      string `json:"note"`
+		RequestID string `json:"request_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	// **السببُ إلزاميّ**: مالٌ يخرج من المنصة بتقدير موظّف، وبلا كلمةٍ لا
-	// يُراجَع ولا يُقاس من يُكثره.
 	note := strings.TrimSpace(req.Note)
 	if req.Amount <= 0 || note == "" {
 		s.respondErr(w, errValidation)
 		return
 	}
-
-	/* ══════════════════════════════════════════════════════════════════
-	   **وتعويضٌ وقع لا يقع مرّتين**
-	   ══════════════════════════════════════════════════════════════════
-
-	   (كشفه فحصُ التغطية ٢٠٢٦-٠٨-٠٨، وأُصلح بقرار المالك: «نعم ابدأ بالخمسة».)
-
-	   كانت الحالةُ تُقرأ خارجَ المعاملة وبلا قفل، **ولا شيءَ يُعلَّم بعدها**:
-	   الطلبُ يبقى `failed` بعد التعويض كما كان قبله.
-
-	   **فمن نادى مرّتين دُفع التعويضُ مرّتين وخُصمت الخزينةُ مرّتين.**
-	   قِيس: نداءان متتاليان ← ٦٠٠٠ بدل ٣٠٠٠، وكلاهما ٢٠٠.
-
-	   **وليس سباقاً**: ضغطةٌ مكرّرةٌ أو شبكةٌ أعادت الإرسال تكفي. **والسباقُ
-	   يزيده سوءاً فقط.**
-
-	   **والعادةُ موجودةٌ في المشروع**: `settleMerchant` تفحص وجودَ قيدٍ
-	   بالمرجع نفسِه قبل أن تقيّد. **وهذا المسلكُ كان خارجَها.**
-
-	   **والقفلُ على صفّ الطلب هو ما يجعل الفحصَ صادقاً**: فحصٌ بلا قفلٍ يمرّ
-	   عليه اثنان معاً — وهو الدرسُ نفسُه من دفعة السحب.
-	   ══════════════════════════════════════════════════════════════════ */
-	actor := userIDFrom(r)
-	tx, err := s.pg.Begin(r.Context())
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
-
-	var status string
-	var driverID *string
-	if err := tx.QueryRow(r.Context(),
-		`SELECT status, driver_id FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&status, &driverID); err != nil {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
-	// **وطلبُ تعويضٍ معلَّقٌ يسبق كلَّ شرط** (٢٠٢٦-١٠-٠٢): تعذّرُ المتجر لا يُفشل
-	// الطلب — يعود إلى المكتب حيّاً **والسائقُ حُرّر منه** — فلا `failed` ولا
-	// `driver_id`. **والسائقُ المستحقُّ مكتوبٌ في الطلب المعلَّق نفسِه.**
-	pending, err := s.orders.PendingCompensationTx(r.Context(), tx, orderID)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if pending != nil {
-		driverID = &pending.DriverID
-	} else {
-		if status != "failed" {
-			s.respondErr(w, errNotFailed)
-			return
-		}
-		if driverID == nil {
-			s.respondErr(w, errNoDriverOnOrder)
-			return
-		}
-	}
-
-	var already bool
-	if err := tx.QueryRow(r.Context(), `
-		SELECT EXISTS(SELECT 1 FROM wallet_transactions
-		              WHERE ref = $1 AND kind = 'compensation' AND user_id = $2)`,
-		orderID, *driverID).Scan(&already); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if already {
-		s.respondErr(w, errAlreadyCompensated)
-		return
-	}
-
-	// **بمرجع الطلب** — فيُقرأ لاحقاً في كشف السائق وفي تفصيل الطلب معاً.
-	if _, err := s.wallet.ApplyTx(r.Context(), tx, *driverID, req.Amount,
-		"compensation", orderID, note, &actor); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// **ويخرج من الخزينة في القيد نفسه.**
-	//
-	// تعويضٌ يُقيَّد للسائق وحده يجعل المنصةَ تظهر رابحةً وهي تدفع — **والربحُ
-	// الذي لا يعرف مصاريفه ليس ربحاً.** ومعاً في معاملةٍ واحدة: أحدُهما بلا
-	// الآخر دفترٌ لا يتوازن.
-	if err := s.orders.DebitTreasury(r.Context(), tx, req.Amount,
-		orderID, "تعويضُ سائقٍ عن طلبٍ فشل", actor); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// **والطلبُ المعلَّقُ يُغلق بالموافقة في المعاملة نفسِها** — فلا يبقى في
-	// قائمة الانتظار مالٌ قُيّد. **والمطالبةُ على المتجر تُفتح بما دُفع فعلاً**
-	// (قرارُ ٢٠٢٦-٠٨-٠٣ باقٍ: المنصةُ تعوّض وتفتح نزاعاً مع المتجر).
-	if pending != nil {
-		if err := s.orders.DecideCompensationTx(r.Context(), tx, pending.ID,
-			orders.CompensationApproved, req.Amount, actor, note); err != nil {
-			s.respondErr(w, err)
-			return
-		}
-		if pending.Fault == orders.FaultMerchant {
-			if err := s.orders.OpenMerchantClaimTx(r.Context(), tx, orderID, req.Amount); err != nil {
-				s.respondErr(w, err)
-				return
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		var c *orders.CompensationRequest
+		var err error
+		if req.RequestID != "" {
+			if !isUUID(req.RequestID) {
+				return errValidation
 			}
+			c, err = s.orders.CompensationByIDTx(ctx, q, req.RequestID)
+			if err == nil && c != nil && c.OrderID != orderID {
+				c = nil
+			}
+		} else {
+			c, err = s.orders.PendingCompensationTx(ctx, q, orderID)
 		}
-	}
-	// **والأثرُ في المعاملة نفسِها — لا بعد التثبيت** (`AQ-4`/`PF-06`): تعويضٌ
-	// خرج والخزينةُ خُصمت، **فسقوطُ سطر التدقيق بعد التثبيت يترك مالاً تحرّك
-	// بلا من ولا متى، وإعادةُ النداء تُردّ `already_compensated` فلا يُستدرَك.**
-	if err := s.auditTx(r.Context(), tx, r, "finance.driver_compensation", "order", orderID, map[string]any{
-		"driver_id": *driverID, "amount": req.Amount, "note": note,
-		"request_id": requestID(pending),
+		if err != nil {
+			return compensationErr(err)
+		}
+		if c == nil {
+			// **وما عُوِّض يُقال إنّه عُوِّض** — لا «لا معلَّق» يُحيّر.
+			var already bool
+			if err := q.QueryRow(ctx, `
+				SELECT EXISTS(SELECT 1 FROM wallet_transactions t
+				              JOIN orders o ON o.id::text = t.ref AND o.driver_id = t.user_id
+				              WHERE t.ref = $1::text AND t.kind = 'compensation')
+				    OR EXISTS(SELECT 1 FROM driver_compensation_requests
+				              WHERE order_id = $1::uuid AND kind = 'driver' AND status = 'approved')`,
+				orderID).Scan(&already); err != nil {
+				return err
+			}
+			if already {
+				return errAlreadyCompensated
+			}
+			return errCompensationNotPending
+		}
+		return s.approveCompensationTx(ctx, q, r, c, req.Amount, note)
 	}); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -206,22 +142,14 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})
 }
 
-// requestID معرّفُ الطلب المعلَّق في الأثر — وفراغٌ للتعويض اليدويّ الصرف.
-func requestID(p *orders.CompensationRequest) string {
-	if p == nil {
-		return ""
-	}
-	return p.ID
-}
-
-// handleRejectCompensation **رفضُ طلب تعويضٍ معلَّق** — بسببٍ إلزاميّ.
+// handleRejectCompensation **رفضُ طلب تعويضٍ معلَّق بالبابِ القديم** — بسببٍ إلزاميّ.
 //
-// **والرفضُ قرارٌ يُكتب لا صمتٌ يُترك**: طلبٌ لا يُقضى فيه يبقى في القائمة أبداً،
-// **ومن سأل السائقُ عنه بعد شهرٍ لم يجد من يقول لماذا لم يُعوَّض.**
+// **والرفضُ قرارٌ يُكتب لا صمتٌ يُترك.** وللطلب أكثرُ من معلَّقٍ ⇒ `request_id`.
 func (s *Server) handleRejectCompensation(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	req, err := decode[struct {
-		Note string `json:"note"`
+		Note      string `json:"note"`
+		RequestID string `json:"request_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -232,34 +160,25 @@ func (s *Server) handleRejectCompensation(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, errValidation)
 		return
 	}
-	ctx := r.Context()
-	tx, err := s.pg.Begin(ctx)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	pending, err := s.orders.PendingCompensationTx(ctx, tx, orderID)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if pending == nil {
-		s.respondErr(w, errCompensationNotPending)
-		return
-	}
-	if err := s.orders.DecideCompensationTx(ctx, tx, pending.ID,
-		orders.CompensationRejected, 0, userIDFrom(r), clip(note, 300)); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if err := s.auditTx(ctx, tx, r, "finance.driver_compensation_rejected", "order", orderID, map[string]any{
-		"driver_id": pending.DriverID, "request_id": pending.ID, "note": note,
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		var c *orders.CompensationRequest
+		var err error
+		if req.RequestID != "" && isUUID(req.RequestID) {
+			c, err = s.orders.CompensationByIDTx(ctx, q, req.RequestID)
+			if err == nil && c != nil && c.OrderID != orderID {
+				c = nil
+			}
+		} else {
+			c, err = s.orders.PendingCompensationTx(ctx, q, orderID)
+		}
+		if err != nil {
+			return compensationErr(err)
+		}
+		if c == nil {
+			return errCompensationNotPending
+		}
+		return s.rejectCompensationTx(ctx, q, r, c, note)
 	}); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if err := tx.Commit(ctx); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -267,10 +186,7 @@ func (s *Server) handleRejectCompensation(w http.ResponseWriter, r *http.Request
 	httpx.JSON(w, http.StatusOK, map[string]any{"rejected": true})
 }
 
-// handlePendingCompensations **ما ينتظر قراراً من طلبات التعويض** — بالأقدم أوّلاً.
-//
-// **وكلُّ صفٍّ يحمل ما يلزم القرار**: الطلبُ وحالُه، والسائقُ، والذنبُ والسبب،
-// **والمبلغُ المقترَح** — فيُوافَق عليه كما هو أو يُعدَّل أو يُرفض.
+// handlePendingCompensations **ما ينتظر قراراً** — بالأقدم أوّلاً (يبقى للرئيسيّة).
 func (s *Server) handlePendingCompensations(w http.ResponseWriter, r *http.Request) {
 	pg := pagingOf(r, 20)
 	list, total, err := s.orders.PendingCompensations(r.Context(), pg.PerPage, pg.Offset)
@@ -407,27 +323,44 @@ func (s *Server) handleGoodsCompensation(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
-	switch err := s.orders.CompensateGoods(r.Context(), orderID, userIDFrom(r), req.Amount); {
-	case err == nil:
-	case errors.Is(err, orders.ErrGoodsBadCompensation):
-		s.respondErr(w, errValidation)
-		return
-	case errors.Is(err, orders.ErrGoodsCompensationCap):
-		s.respondErr(w, errGoodsCompCap)
-		return
-	case errors.Is(err, orders.ErrGoodsAlreadyCompensated):
-		s.respondErr(w, errGoodsCompensated)
-		return
-	default:
+	// ══════════════════════════════════════════════════════════════════
+	// **والمبلغُ اقتراحٌ يمرّ بصفحة «التعويضات»** (قرارُ المالك ٢٠٢٦-١٠-٠٤:
+	// طريقُ موافقةٍ واحدٌ لكلّ تعويض) — كان يُدفع بضغطة كاتبه. **والسقفُ يُفحص
+	// هنا وعند الموافقة معاً**، ولا يوافق عليه كاتبُه.
+	// ══════════════════════════════════════════════════════════════════
+	var id string
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		if err := orders.GoodsCompensableTx(ctx, q, orderID, req.Amount); err != nil {
+			return compensationErr(err)
+		}
+		var owner *string
+		var fault string
+		if err := q.QueryRow(ctx, `
+			SELECT m.owner_user_id::text, COALESCE(o.fault, '')
+			FROM orders o JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`,
+			orderID).Scan(&owner, &fault); err != nil {
+			return err
+		}
+		if owner == nil {
+			return errValidation
+		}
+		var e error
+		id, e = orders.ProposeCompensationTx(ctx, q, orders.CompensationProposal{
+			Kind: orders.CompKindMerchantGoods, OrderID: orderID, BeneficiaryID: *owner,
+			Fault: fault, Amount: req.Amount, ProposedBy: userIDFrom(r),
+		})
+		if e != nil {
+			return compensationErr(e)
+		}
+		return s.auditTx(ctx, q, r, "finance.compensation_proposed", "order", orderID, map[string]any{
+			"request_id": id, "kind": orders.CompKindMerchantGoods, "amount": req.Amount,
+		})
+	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "finance.goods_compensation", "order", orderID, map[string]any{
-		"amount": req.Amount,
-	})
 	s.touch("order", "ops")
-	s.touch("wallet", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})
+	httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id})
 }
 
 // handleSettleGoodsLegacy الجسدُ القديم — يبقى للقراءة لا للنداء.

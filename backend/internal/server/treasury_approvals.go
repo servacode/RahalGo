@@ -64,10 +64,13 @@ var approvalSources = []approvalSource{
 		ApprovePath: "/api/v1/admin/cashbox/shortfalls/{id}/approve",
 		RejectPath:  "/api/v1/admin/cashbox/shortfalls/{id}/reject",
 		Href:        "/dashboard/treasury?tab=cashbox", DueCol: "eligible_at"},
-	// **تعويضاتُ السائقين** — يقترحها النظامُ ويقرّر المبلغَ الموظّفُ في صفحتها.
+	// **التعويضاتُ كلُّها** (سائق · بضاعة متجر · شكوى — طابورٌ واحد، هجرة 0360) —
+	// يقترحها النظامُ أو موظّف، **ويقرّر المبلغَ الموظّفُ في صفحتها** (الموافقةُ تحمل
+	// المبلغ)، فهي رابطٌ لا زرّ. والمبلغُ المقترحُ `suggested_amount` ما دام معلّقاً،
+	// و`proposed_by` الفارغُ هو النظام.
 	{Key: "driver_compensations", Table: "driver_compensation_requests", Section: "compensations",
 		Capability: authz.FinanceManage, Href: "/dashboard/compensations",
-		AmountCol: "suggested_amount", NoteCol: "fail_reason", ProposerCol: "-"},
+		AmountCol: "suggested_amount"},
 	// **مصروفاتُ التشغيل فوق السقف** — موافقةٌ ثانيةٌ بكلمة السرّ.
 	{Key: "expenses", Table: "expense_requests", Section: "expenses",
 		Capability:  authz.FinanceManage,

@@ -132,6 +132,9 @@ var sensitiveActions = []Sensitive{
 		"expense_request", 1, nil, ""},
 	{"POST", "/orders/{id}/compensate-driver", "finance.compensate_driver",
 		"order", 1, []string{"amount"}, ""},
+	// **وموافقةُ صفحة «التعويضات» بمعرّف الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"POST", "/compensations/{id}/approve", "finance.compensation_approved",
+		"compensation", 1, []string{"amount"}, ""},
 	// **وتعويضُ المتجر عن بضاعةٍ رُدّت — كأخيه تعويضِ السائق** (قرارُ المالك
 	// ٢٠٢٦-١٠-٠٤، البند ١٣): مالٌ يخرج من الخزينة بتقدير إنسان.
 	{"POST", "/orders/{id}/goods/compensation", "finance.goods_compensation",

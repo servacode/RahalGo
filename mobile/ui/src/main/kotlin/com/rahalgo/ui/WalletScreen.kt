@@ -225,9 +225,20 @@ fun WalletScreen(
      * تنسيقُ حركةٍ في إحداهما **وتبقى الأخرى تعرضها كما كانت.**
      */
     payouts: Boolean = true,
+    /**
+     * **«تسوية من الإدارة» بدل «تعويض» — وبلا ملاحظة المكتب** (قرارُ المالك
+     * ٢٠٢٦-١٠-٠٤، البند ٣): ولا كلمةَ «تعويض» في نصٍّ يراه السائق، **وملاحظةُ
+     * الموظّف داخليّةٌ لا تُعرض له**. تطبيقُ السائق وحدَه يمرّرها.
+     */
+    neutralCompensation: Boolean = false,
 ) {
     val s = vm.state
-    val st = s.statement
+    val st = s.statement?.let { raw ->
+        if (!neutralCompensation) raw
+        else raw.copy(transactions = raw.transactions.map { t ->
+            if (t.kind == "compensation") t.copy(kind = "adjustment", note = "") else t
+        })
+    }
     if (st == null) {
         // **وإعادةُ التحميل بضغطة** — لا سطرٌ أحمرُ بلا مخرج.
         LoadState(loading = s.error.isEmpty(), error = s.error, onRetry = vm::load)

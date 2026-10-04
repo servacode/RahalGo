@@ -309,6 +309,10 @@ func run(logger *slog.Logger) error {
 			// المسارُ الحيّ.
 			go srv.RunAutoTransferSweeper(ctx, 30*time.Second)
 
+			// **وتنبيهُ المالك إلى تعويضٍ تأخّر القرارُ فيه** (قرارُ المالك
+			// ٢٠٢٦-١٠-٠٤، البند ٤) — مرّةً لكلّ طلب، وكلَّ خمس دقائق تكفي.
+			go srv.RunCompensationOverdueSweeper(ctx, 5*time.Minute)
+
 			// **وعاملُ دفع الإشعارات** — `PF-09`.
 			//
 			// **والنبضةُ بعد كلّ إشعارٍ تعجيلٌ لا مصدرَ حقيقة**:

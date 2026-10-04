@@ -1349,6 +1349,12 @@ func (s *Server) Router() http.Handler {
 			// (قرارُ المالك ٢٠٢٦-١٠-٠٢). **والموافقةُ هي البابُ أعلاه نفسُه.**
 			r.Get("/compensations/pending", s.handlePendingCompensations)
 			r.Post("/orders/{id}/compensation/reject", s.handleRejectCompensation)
+			// **صفحةُ «التعويضات» الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — بمعرّف طلب
+			// التعويض لا برقم الطلب (compensations.go).
+			r.Get("/compensations", s.handleListCompensations)
+			r.Post("/compensations", s.handleProposeCompensation)
+			r.Post("/compensations/{id}/approve", s.handleApproveCompensation)
+			r.Post("/compensations/{id}/reject", s.handleRejectCompensationByID)
 			// **إذنُ استثناءِ إثبات التسليم** — كاميرا معطّلةٌ فيأذن العملياتُ
 			// بالتسليم بلا صورة (قرارُ المالك ٢٠٢٦-٠٩-٢٧). **لا يأذن السائقُ
 			// لنفسه**: سببٌ إلزاميٌّ ومُدقَّقٌ في المعاملة (delivery_proof.go).

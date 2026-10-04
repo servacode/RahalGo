@@ -299,8 +299,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `finance.expense_approval_threshold`.
 	// **واثنان أُضيفا بقسم النقد** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `drivers.cash_overdue_days`
 	// و`drivers.cash_overdue_stop`.
-	if d.BehaviourSettings != 148 {
-		t.Errorf("إعداداتُ السلوك = %d لا 148 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وأربعةٌ أُضيفت بقسم التعويضات** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سقوفُ الأنواع الثلاثة
+	// `compensations.cap_driver|cap_merchant_goods|cap_complaint` و`compensations.overdue_hours`.
+	if d.BehaviourSettings != 152 {
+		t.Errorf("إعداداتُ السلوك = %d لا 152 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.
