@@ -55,7 +55,7 @@ func TestConvertLead_RefusesDriverPhoneAndSaysWhy(t *testing.T) {
 		_, _ = f.pool.Exec(c, `DELETE FROM merchants WHERE name = 'متجرُ التعارض'`)
 	})
 
-	err := f.srv.convertLead(ctx, driver, leadID, "1.1.1.1")
+	_, err := f.srv.convertLead(ctx, driver, leadID, "1.1.1.1")
 	if err == nil {
 		t.Fatal("حُوّل طلبٌ برقمِ سائق — **فصار سائقاً وصاحبَ متجرٍ معاً**")
 	}

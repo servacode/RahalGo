@@ -1115,7 +1115,7 @@
       "capability": "merchants.verify",
       "response": [
         {
-          "name": "@paged",
+          "name": "@res",
           "type": "unknown"
         }
       ],
@@ -1143,6 +1143,10 @@
         {
           "name": "updated",
           "type": "bool"
+        },
+        {
+          "name": "welcome",
+          "type": "unknown"
         }
       ],
       "statuses": [

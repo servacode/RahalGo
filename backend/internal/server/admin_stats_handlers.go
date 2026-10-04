@@ -190,7 +190,7 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT count(*) FROM driver_emergencies WHERE status = 'open'),
 			(SELECT count(*) FROM orders
 			  WHERE status = 'dispatching' AND driver_id IS NULL AND closed_at IS NULL),
-			(SELECT count(*) FROM merchant_leads WHERE status = 'new'),
+			(SELECT count(*) FROM merchant_leads WHERE status = 'new' AND sales_rep_user_id IS NOT NULL),
 			(SELECT count(*) FROM menu_items WHERE NOT approved),
 			(SELECT count(*) FROM (
 			    SELECT driver_id FROM driver_cash_entries GROUP BY driver_id
