@@ -1668,6 +1668,120 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-alerts/{id}/decide",
+      "handler": "handleDecideIncentiveAlert",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "decision",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "decided",
+          "type": "bool"
+        },
+        {
+          "name": "request_id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-failures/{id}/retry",
+      "handler": "handleRetryIncentiveFailure",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "paid",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/incentive-requests",
+      "handler": "handleListIncentiveRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-requests/{id}/approve",
+      "handler": "handleDecideIncentiveRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-requests/{id}/reject",
+      "handler": "handleDecideIncentiveRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/incentives/{role}",
       "handler": "handleIncentiveStandings",
@@ -1675,13 +1789,40 @@
       "capability": "finance.read",
       "response": [
         {
+          "name": "alerts",
+          "type": "unknown"
+        },
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "levels",
+          "type": "unknown"
+        },
+        {
+          "name": "month",
+          "type": "unknown"
+        },
+        {
           "name": "standings",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
           "type": "unknown"
         }
       ],
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/incentives/{role}/export",
+      "handler": "handleIncentiveExport",
+      "auth": true,
+      "capability": "finance.read"
     },
     {
       "method": "GET",

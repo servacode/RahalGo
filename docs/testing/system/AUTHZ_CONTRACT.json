@@ -44,12 +44,12 @@
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 29
+   "guards_routes": 33
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 28
+   "guards_routes": 30
   },
   {
    "code": "finance.recompute",
@@ -231,7 +231,7 @@
   }
  ],
  "route_policy": {
-  "rules": 244,
+  "rules": 250,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -513,12 +513,22 @@
   },
   {
    "method": "POST",
-   "pattern": "/users/{id}/incentive",
+   "pattern": "/incentive-requests/{id}/approve",
    "action": "finance.incentive",
+   "target_type": "incentive_request",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/incentive",
+   "action": "finance.incentive_request",
    "target_type": "user",
    "target_segment": 1,
    "fingerprint_params": [
-    "amount"
+    "amount",
+    "kind"
    ],
    "need": "finance.manage"
   },

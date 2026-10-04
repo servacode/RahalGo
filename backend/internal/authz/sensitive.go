@@ -119,8 +119,10 @@ var sensitiveActions = []Sensitive{
 	// **وموافقةُ دفعِ دينٍ بالمكتب أو شطبِه** — مالٌ يُقرّ (قسمُ الديون ٢٠٢٦-١٠-٠٤).
 	{"POST", "/obligation-requests/{id}/approve", "finance.obligation_request_approved",
 		"obligation_request", 1, nil, ""},
-	{"POST", "/users/{id}/incentive", "finance.incentive", "user", 1,
-		[]string{"amount"}, ""},
+	{"POST", "/users/{id}/incentive", "finance.incentive_request", "user", 1,
+		[]string{"amount", "kind"}, ""},
+	{"POST", "/incentive-requests/{id}/approve", "finance.incentive",
+		"incentive_request", 1, nil, ""},
 	// **والبصمةُ على الحال والمبلغ وطريقة الصرف** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤):
 	// كانت على `approve` — حقلٌ لا يُرسَل، فلا تفرّق بين «اصرف» و«ارفض».
 	{"POST", "/payouts/{id}/decide", "finance.payout_decide", "payout", 1,

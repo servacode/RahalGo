@@ -84,6 +84,12 @@ var approvalSources = []approvalSource{
 		ApprovePath: "/api/v1/admin/obligation-requests/{id}/approve",
 		RejectPath:  "/api/v1/admin/obligation-requests/{id}/reject",
 		Href:        "/dashboard/obligations"},
+	// **المكافآتُ والعقوباتُ اليدويّة** — اقتراحٌ يوافق عليه موظّفٌ آخر (هجرة 0380).
+	{Key: "incentives", Table: "incentive_requests", Section: "incentives",
+		Capability:  authz.FinanceManage,
+		ApprovePath: "/api/v1/admin/incentive-requests/{id}/approve",
+		RejectPath:  "/api/v1/admin/incentive-requests/{id}/reject",
+		Href:        "/dashboard/incentives"},
 }
 
 var approvalIdent = regexp.MustCompile(`^[a-z_]+$`)

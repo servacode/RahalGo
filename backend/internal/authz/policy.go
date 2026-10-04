@@ -83,6 +83,11 @@ var adminPolicy = []Rule{
 	{"POST", "/wallet-requests/{id}/reject", FinanceManage},
 	{"POST", "/users/{id}/incentive", FinanceManage},
 	{"GET", "/users/{id}/incentives", FinanceRead},
+	{"GET", "/incentive-requests", FinanceRead},
+	{"POST", "/incentive-requests/{id}/approve", FinanceManage},
+	{"POST", "/incentive-requests/{id}/reject", FinanceManage},
+	{"POST", "/incentive-alerts/{id}/decide", FinanceManage},
+	{"POST", "/incentive-failures/{id}/retry", FinanceManage},
 	{"GET", "/users", UsersRead},
 	{"GET", "/users/stats", UsersRead},
 	// **والتصديرُ إخراجُ القاعدة لا قراءةٌ أكثر.**
@@ -366,6 +371,7 @@ var adminPolicy = []Rule{
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},
+	{"GET", "/incentives/{role}/export", FinanceRead},
 
 	// ── الإعدادات والتقارير والتشخيص ─────────────────────────────
 	//

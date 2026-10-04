@@ -113,39 +113,54 @@ func (s *Service) LevelsOf(ctx context.Context, role string) []Level {
 	return out
 }
 
-// GrantTargetIfReached **يُكافئ من بلغ — ويصمت عمّن لم يبلغ أو كوفئ.**
-//
-// **يردّ المبلغَ إن دُفع الآن، وصفراً في كلّ ما عداه** — فيُعرَف متى يُحتفَل.
-//
-// **ولا يُنادى إلّا بعد تسليمٍ يُغلَق**: هي اللحظةُ الوحيدةُ التي يتبدّل فيها
-// العدّاد. **ونداؤها في كلّ فتحةِ شاشةٍ يجعل القراءةَ تكتب** — وشاشةٌ تُصرف
-// مالاً بمجرّد أن تُفتح لا تُراجَع.
-// GrantTargetIfReachedTx كـ`GrantTargetIfReached` **في معاملةٍ مُمرَّرة**.
+// GrantTargetIfReachedTx كـ`GrantTargetIfReached` **في معاملةٍ مُمرَّرة** — للشهر الجاري.
 //
 // **وُجدت لأجل تحويل المرشَّح** (`PF-01`): **كانت المكافأةُ تُدفع قبل
 // تثبيت التحويل** — **فيُدفَع مالٌ عن تحويلٍ لم يقع.**
 //
-// **ويُردّ الخطأُ هنا ولا يُبتلَع**: **القائمةُ تصمت عن العثرة لأنّها
-// خارجَ عمليّةٍ أكبر** — **وهذه داخلَها، فصمتُها يترك المعاملةَ تُثبَّت
-// بلا مكافأة.**
+// **ويُردّ الخطأُ هنا ولا يُبتلَع**: هذه داخلَ عمليّةٍ أكبر، **فصمتُها يترك
+// المعاملةَ تُثبَّت بلا مكافأة.**
 func (s *Service) GrantTargetIfReachedTx(ctx context.Context, tx dbtx.Querier,
 	userID, role string) (int64, error) {
+	return s.grantForMonthTx(ctx, tx, userID, role, PeriodOf(time.Now()))
+}
+
+// grantForMonthTx **يكافئ على مراحل شهرٍ بعينه** — المصدرُ الواحدُ للصرف الآليّ.
+//
+// **وشهرٌ بعينه لا «الشهرُ الجاري» دائماً**: إعادةُ مكافأةٍ تعثّرت في آخر
+// أيلول تُحسب على أيلول ولو أُعيدت في تشرين.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وكلُّ مرحلةٍ بلغها تُدفع — لا الأعلى وحدَها** (قرارُ المالك ٢٠٢٦-٠٨-٣١)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **والوسمُ يحمل رقمَ المرحلة** (`2026-08#2`) — فالفهرسُ الفريدُ يمنع تكرارَ
+// كلِّ واحدةٍ وحدَها.
+//
+// **والحسابُ الموقوفُ لا يُكافأ** (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأهداف):
+// مكافأةٌ تُصرف لموقوفٍ تُقرأ مكافأةً على ما أوقف بسببه.
+func (s *Service) grantForMonthTx(ctx context.Context, tx dbtx.Querier,
+	userID, role, month string) (int64, error) {
 	levels := s.levelsFor(ctx, role)
 	if len(levels) == 0 {
 		return 0, nil
 	}
+	active, err := isActive(ctx, tx, userID)
+	if err != nil || !active {
+		return 0, err
+	}
 	// **ويُعَدُّ بالمعاملة نفسِها** — `XG-32`: **وإلّا لم يُرَ متجرُها.**
-	done, err := s.doneThisMonthOn(ctx, tx, userID, role)
+	done, err := s.doneInMonthOn(ctx, tx, userID, role, month)
 	if err != nil {
 		return 0, err
 	}
-	period := PeriodOf(time.Now())
 	var paid int64
 	for _, l := range levels {
 		if l.Target <= 0 || l.Reward <= 0 || done < l.Target {
+			// **مطفأةٌ أو لم تُبلَغ** — والهدفُ يبقى عدّاداً بلا مال.
 			continue
 		}
-		if err := s.grantTargetTx(ctx, tx, userID, role, l, period); err != nil {
+		if err := s.grantTargetTx(ctx, tx, userID, role, l, month); err != nil {
 			// **والمكرَّرُ ليس عثرة** — كوفئ عن هذه المرحلة سابقاً.
 			if isDuplicate(err) {
 				continue
@@ -157,110 +172,101 @@ func (s *Service) GrantTargetIfReachedTx(ctx context.Context, tx dbtx.Querier,
 	return paid, nil
 }
 
+// GrantTargetIfReached **يُكافئ من بلغ — ويصمت عمّن لم يبلغ أو كوفئ.**
+//
+// **يردّ المبلغَ إن دُفع الآن، وصفراً في كلّ ما عداه** — فيُعرَف متى يُحتفَل.
+//
+// **ولا يُنادى إلّا بعد تسليمٍ يُغلَق**: هي اللحظةُ الوحيدةُ التي يتبدّل فيها
+// العدّاد. **ونداؤها في كلّ فتحةِ شاشةٍ يجعل القراءةَ تكتب.**
+//
+// **وعثرتُه لا تُسقط التسليم — ولا تُبلَع**: تُكتب في السجلّ وفي
+// `incentive_grant_failures` فتُعاد دوريّاً (`RetryFailures`) ومن زرٍّ في الصفحة.
 func (s *Service) GrantTargetIfReached(ctx context.Context, userID, role string) int64 {
-	levels := s.levelsFor(ctx, role)
-	if len(levels) == 0 {
-		return 0
-	}
-
-	done, err := s.doneThisMonth(ctx, userID, role)
+	month := PeriodOf(time.Now())
+	paid, err := s.grantForMonth(ctx, userID, role, month)
 	if err != nil {
+		s.RecordFailure(ctx, userID, role, month, err)
 		return 0
-	}
-
-	// ══════════════════════════════════════════════════════════════════
-	// **وكلُّ مرحلةٍ بلغها تُدفع — لا الأعلى وحدَها**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «إذا بلغ الأولى يأخذها، ثمّ الثانية
-	// يأخذها، ثمّ الثالثة يأخذها».)
-	//
-	// **ومن قفز من صفرٍ إلى العشرين في يومٍ واحدٍ نال الثلاثَ معاً** —
-	// بلغها كلَّها فعلاً. **ومن يُحرَم ما استحقّه لأنّه تجاوزه يتعلّم أن
-	// يقف عند الحدّ.**
-	//
-	// **والوسمُ يحمل رقمَ المرحلة** (`2026-08#2`) — **فالفهرسُ الفريدُ
-	// القائمُ يمنع تكرارَ كلِّ واحدةٍ وحدَها**، بلا فهرسٍ جديدٍ ولا هجرة.
-	period := PeriodOf(time.Now())
-	var paid int64
-	for _, l := range levels {
-		if l.Target <= 0 || l.Reward <= 0 || done < l.Target {
-			// **مطفأةٌ أو لم تُبلَغ** — والهدفُ يبقى عدّاداً بلا مال.
-			continue
-		}
-		if err := s.grantTarget(ctx, userID, role, l, period); err != nil {
-			// **والتصادمُ ليس خطأً** — هو الضمانةُ تعمل: نالها من قبل.
-			if isDuplicate(err) {
-				continue
-			}
-			s.logf("مكافأةُ الهدف تعذّرت", "user", userID, "level", l.N, "error", err)
-			continue
-		}
-		paid += l.Reward
 	}
 	return paid
 }
 
-// doneThisMonth ما أنجزه في شهره — **بالمعنى الذي يخصّ دورَه.**
-//
-// # والمعنيان مختلفان اختلافاً تامّاً
-//
-// **السائقُ يُنجز بما وصّل** — فعلُه ينتهي بالتسليم.
-//
-// **والمندوبُ يُنجز بما فتح من متاجر** — **وعملُه ينتهي يومَ يوقّع
-// العميل**، ولا يملك بعدها أن يجعله يبيع.
-//
-// # ولماذا تبدّل
-//
-// **كان يعدّ طلبات متاجره المسلَّمة** — **فمندوبٌ فتح عشرةَ متاجرَ في
-// أسبوعٍ عدّادُه صفر** حتّى يشتري الناسُ منها. **وذلك يقيس السوقَ لا
-// المندوب.**
-//
-// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ الشهريّ هو عددُ العملاء
-// المسجَّلين» · «كلُّ عميل — بالأساس كلُّ عميلٍ راح توافق عليه
-// الإدارة، لن ترفض أيَّ عميلٍ أصلاً».) **فلا يُشترط قبولٌ ولا بيع.**
-//
-// **وأنا من ثبّت الخطأ**: رأيتُ اللوحةَ تقول «عميل» والشيفرةَ تعدّ
-// طلبات، **فجعلتُ الكلمةَ تتبع الشيفرة** بدل أن تتبع الشيفرةُ القصد.
-func (s *Service) doneThisMonth(ctx context.Context, userID, role string) (int64, error) {
-	return s.doneThisMonthOn(ctx, s.db, userID, role)
+// grantForMonth **بمعاملته** — للمنادي المنفرد.
+func (s *Service) grantForMonth(ctx context.Context, userID, role, month string) (int64, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	paid, err := s.grantForMonthTx(ctx, tx, userID, role, month)
+	if err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	return paid, nil
 }
 
-// doneThisMonthOn العدُّ نفسُه **بالمنفّذ المُمرَّر**.
+// isActive **أفعّالٌ هو؟** — الموقوفُ والمحذوفُ لا يُكافآن.
+func isActive(ctx context.Context, q dbtx.Querier, userID string) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM users
+		                WHERE id = $1::uuid AND status = 'active' AND deleted_at IS NULL)`,
+		userID).Scan(&ok)
+	return ok, err
+}
+
+// monthRangeSQL **حدّا الشهر بتوقيت دمشق** من وسمٍ «2026-09» في المعلَمة `$N`.
 //
-// ══════════════════════════════════════════════════════════════════════
-// **ولماذا يلزم أن يقرأ من المعاملة** — `XG-32`
-// ══════════════════════════════════════════════════════════════════════
+// **تعبيرٌ واحدٌ للعرض وللصرف وللتنبيه** — ورقمٌ يُرى غيرُ الذي يُدفع عليه
+// أسوأُ من رقمٍ لا يُرى.
+func monthFromSQL(p string) string {
+	return `((` + p + ` || '-01')::timestamp AT TIME ZONE 'Asia/Damascus')`
+}
+
+func monthToSQL(p string) string {
+	return `(((` + p + ` || '-01')::timestamp + interval '1 month') AT TIME ZONE 'Asia/Damascus')`
+}
+
+// doneSQL **ما أنجزه في شهرٍ — بالمعنى الذي يخصّ دورَه.**
 //
-// **كان العدُّ يقرأ من المَسبَح دائماً** — **والمتجرُ الذي يُنشأ داخلَ
-// معاملة التحويل غيرُ مُثبَّتٍ بعدُ فلا يراه.** فيُحسَب الهدفُ على ما
-// قبلَه، **وتتأخّر المكافأةُ تحويلاً كاملاً.**
+// **السائقُ يُنجز بما وصّل** — والمسترجَعُ لم يعد مسلَّماً فيخرج.
 //
-// **ومقيسٌ بالأرقام**: هدفٌ=1 · تحويلٌ أوّلُ ⇒ **مكافآتُ=0**، وثانٍ
-// ⇒ 5000. **ومن بلغ هدفَه بالضبط ووقف لا يُكافأ أبداً** — **وإن دار
-// الشهرُ عاد العدُّ صفراً فضاع المالُ ولا يُقرأ له أثر.**
+// **والمندوبُ يُنجز بما فتح من متاجر** (قرارُ المالك ٢٠٢٦-٠٨-٣١) — **ويُحسب
+// للمندوب الذي فتحه للأبد** (`opened_by_rep_id`، قرارُ المالك ٢٠٢٦-١٠-٠٤):
+// **كان العدُّ على المندوب الحاليّ، فالمتجرُ المنقولُ يدخل عدّادَ الجديد
+// والقديمُ قبض عليه — مكافأةٌ مرّتين.** والنقلُ ينقل العمولةَ القادمةَ وحدَها.
 //
-// **وهي تراجعٌ أدخلته دورةُ إصلاحٍ ٤** حين جُمع التحويلُ في معاملةٍ
-// واحدة (`PF-01`): **قبلَها كان المنحُ يقع والمتجرُ مُثبَّتٌ فيُعَدّ.**
+// `who` تعبيرُ المستخدم، و`month` تعبيرُ وسم الشهر.
+func doneSQL(role, who, month string) string {
+	if role == "sales" {
+		return `(SELECT count(*) FROM merchants mm
+		          WHERE mm.opened_by_rep_id = ` + who + `
+		            AND mm.created_at >= ` + monthFromSQL(month) + `
+		            AND mm.created_at <  ` + monthToSQL(month) + `)`
+	}
+	return `(SELECT count(*) FROM orders o
+	          WHERE o.driver_id = ` + who + ` AND o.status = 'delivered'
+	            AND o.delivered_at >= ` + monthFromSQL(month) + `
+	            AND o.delivered_at <  ` + monthToSQL(month) + `)`
+}
+
+// doneThisMonthOn العدُّ للشهر الجاري **بالمنفّذ المُمرَّر** — `XG-32`.
 //
-// **ولا يُصلَح بتثبيتٍ مبكّر**: **تثبيتُ المتجر قبل تمام التحويل يعيد
-// `PF-01` نفسَها** — متجرٌ قائمٌ ومرشَّحٌ لم يُحوَّل. **فالقراءةُ هي
-// التي تنضمّ إلى المعاملة، لا العملُ الذي يخرج منها.**
+// **كان العدُّ يقرأ من المَسبَح دائماً** — والمتجرُ الذي يُنشأ داخلَ معاملة
+// التحويل غيرُ مُثبَّتٍ بعدُ فلا يراه. **فالقراءةُ هي التي تنضمّ إلى
+// المعاملة، لا العملُ الذي يخرج منها.**
 func (s *Service) doneThisMonthOn(ctx context.Context, q dbtx.Querier,
 	userID, role string) (int64, error) {
-	sql := `SELECT count(*) FROM orders o
-	      WHERE o.driver_id = $1 AND o.status = 'delivered'
-	        AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
-	if role == "sales" {
-		// **ولا تُستثنى حالة** — `active` و`inactive` و`suspended`
-		// كلُّها متاجرُ فتحها، **وليس في الجدول حذفٌ ناعمٌ أصلاً.**
-		// **ومتجرٌ عُوقب بعد شهرٍ لا يُسحب من رصيد من جلبه.**
-		sql = `SELECT count(*) FROM merchants m
-		     WHERE m.sales_rep_user_id = $1
-		       AND m.created_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
-	}
+	return s.doneInMonthOn(ctx, q, userID, role, PeriodOf(time.Now()))
+}
+
+func (s *Service) doneInMonthOn(ctx context.Context, q dbtx.Querier,
+	userID, role, month string) (int64, error) {
 	var n int64
-	err := q.QueryRow(ctx, sql, userID).Scan(&n)
+	err := q.QueryRow(ctx, `SELECT `+doneSQL(role, "$1::uuid", "$2::text"), userID, month).Scan(&n)
 	return n, err
 }
 
@@ -317,10 +323,11 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 	// **والحارسُ في المخطَّط كما هو، والمعاملةُ تمضي.** **ومن لم يُدخَل
 	// له صفٌّ لا يُقيَّد له مال.**
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO incentives (user_id, kind, amount, reason, for_target, period, created_by)
-		VALUES ($1, $2, $3, $4, true, $5, NULL)
+		INSERT INTO incentives (user_id, kind, amount, reason, for_target, period, created_by,
+		                        target_count, target_role)
+		VALUES ($1, $2, $3, $4, true, $5, NULL, $6, $7)
 		ON CONFLICT DO NOTHING`,
-		userID, KindReward, reward, reason, period)
+		userID, KindReward, reward, reason, period, l.Target, role)
 	if err != nil {
 		return err
 	}

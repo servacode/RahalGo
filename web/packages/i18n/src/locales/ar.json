@@ -986,7 +986,8 @@
     "expense_bad_range": "تاريخ «من» بعد تاريخ «إلى»",
     "compensation_above_cap": "المبلغ فوق سقف هذا النوع — مدير المنصة وحده يوافق",
     "compensation_ambiguous": "للطلب أكثر من تعويض معلق — وافق من صفحة التعويضات على الصف المقصود",
-    "compensation_duplicate": "يوجد اقتراح تعويض قائم لهذا الطلب أو الشكوى"
+    "compensation_duplicate": "يوجد اقتراح تعويض قائم لهذا الطلب أو الشكوى",
+    "incentive_user_inactive": "الحساب موقوف أو ليس سائقا ولا مندوبا — لا تُعطى له مكافأة ولا عقوبة من هنا"
   },
   "admin": {
     "profits": {
@@ -3418,7 +3419,12 @@
         "finance.expense_request_approved": "موافقة على مصروف تشغيل",
         "finance.expense_request_rejected": "رفض اقتراح مصروف تشغيل",
         "finance.compensation_proposed": "اقتراح تعويض",
-        "finance.compensation_approved": "الموافقة على تعويض"
+        "finance.compensation_approved": "الموافقة على تعويض",
+        "finance.incentive_request": "طلب مكافأة أو عقوبة",
+        "finance.incentive_request_rejected": "رفض مكافأة أو عقوبة",
+        "finance.incentive_alert": "قرار على تنبيه مكافأة",
+        "finance.incentive_retry": "إعادة مكافأة هدف تعثرت",
+        "finance.incentive_export": "تصدير الأهداف والمكافآت"
       }
     },
     "dash": {
@@ -3903,7 +3909,7 @@
     },
     "incentives": {
       "title": "الأهداف والمكافآت",
-      "subtitle": "من بلغ هدفه هذا الشهر — والمكافأة بيدك",
+      "subtitle": "تقدّم كل سائق ومندوب نحو هدف الشهر — مكافأة الهدف تنصرف لحالها، واليدوية بموافقة",
       "tabDrivers": "السائقون",
       "tabSales": "المندوبون",
       "person": "الاسم",
@@ -3919,7 +3925,64 @@
       "reason": "السبب — يسجل ويراه صاحبه",
       "forTarget": "عن بلوغ الهدف",
       "send": "اعتمد",
-      "sent": "قيد"
+      "sent": "قيد",
+      "month": "الشهر",
+      "export": "تصدير",
+      "search": "بحث بالاسم أو الرقم",
+      "stageReached": "وصل للمرحلة {n} من {total}",
+      "stageNone": "لم يصل لمرحلة بعد",
+      "cardStage": "وصلوا للمرحلة {n}",
+      "cardAuto": "مكافآت الهدف (آلي)",
+      "cardManual": "مكافآت يدوية",
+      "cardPenalties": "عقوبات",
+      "stagesTitle": "مراحل الهدف",
+      "stageLine": "المرحلة {n}: {target} {unit} = {reward}",
+      "unitDriver": "طلب",
+      "unitSales": "متجر",
+      "editInSettings": "تعديل من الإعدادات",
+      "noStages": "لا مراحل مضبوطة لهذا الدور",
+      "auto": "آلي",
+      "manual": "يدوي",
+      "balance": "المتاح في محفظته",
+      "amountHint": "رقم صحيح أكبر من صفر، وحتى {cap}",
+      "errAmount": "اكتب مبلغا صحيحا أكبر من صفر",
+      "errOverCap": "المبلغ فوق سقف الحركة اليدوية ({cap})",
+      "errReason": "اكتب السبب",
+      "errBalance": "رصيده المتاح {b} لا يكفي لهذه العقوبة",
+      "confirmTitle": "تأكيد الطلب",
+      "confirmBody": "{kind} بمبلغ {amount} إلى {name}. يذهب الطلب لموظف آخر يوافق عليه قبل أن يتحرك المال.",
+      "sendForApproval": "أرسل للموافقة",
+      "requestSent": "أُرسل الطلب — يتحرك المال بعد موافقة موظف آخر",
+      "pendingTitle": "طلبات بانتظار الموافقة",
+      "pendingEmpty": "لا طلبات معلقة",
+      "proposedBy": "اقترحه",
+      "approve": "وافق",
+      "reject": "ارفض",
+      "approveTitle": "موافقة على الطلب",
+      "approveBody": "{kind} بمبلغ {amount} إلى {name} — السبب: {reason}. يتحرك المال من الخزينة الآن.",
+      "rejectTitle": "رفض الطلب",
+      "rejectNote": "سبب الرفض",
+      "decided": "تم",
+      "alertsTitle": "تنبيهات تحتاج قرار المالية",
+      "alertDropped": "{name} قبض مكافأة المرحلة {level} ({month}) على {target}، وصار العدد الآن {current}",
+      "alertRefunded": "طلبات مسترجعة في ذلك الشهر: {n}",
+      "alertFake": "متاجر تجريبية: {names}",
+      "alertRemoved": "متاجر حُذفت أو لم تعد تُحسب",
+      "alertFailed": "مكافأة هدف {name} لشهر {month} تعثرت ({attempts} محاولة)",
+      "keep": "تبقى",
+      "clawback": "تُسترجع",
+      "retry": "أعد المحاولة",
+      "decideTitle": "قرار على المكافأة",
+      "decideNote": "السبب",
+      "clawbackHint": "الاسترجاع يصير طلب عقوبة بالمبلغ نفسه ويحتاج موافقة موظف آخر",
+      "ledgerTitle": "كشف الحركات",
+      "ledgerEmpty": "لا مكافآت ولا عقوبات",
+      "system": "النظام (آلي)",
+      "appreciation": "تقدير",
+      "targetBonus": "مكافأة هدف",
+      "openLedger": "الكشف",
+      "noResults": "لا أحد يطابق البحث",
+      "listSep": "، "
     },
     "offersPage": {
       "title": "العروض والخصومات",
@@ -4330,7 +4393,8 @@
         "admin.role_create": "إنشاءُ دورٍ جديد",
         "admin.role_delete": "حذف دور فارغ",
         "finance.expense_request_approved": "موافقةُ مصروفٍ فوق السقف",
-        "finance.compensation_approved": "الموافقة على تعويض"
+        "finance.compensation_approved": "الموافقة على تعويض",
+        "finance.incentive_request": "طلب مكافأة أو عقوبة"
       }
     },
     "roles": {

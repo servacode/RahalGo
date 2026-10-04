@@ -1362,7 +1362,13 @@ func (s *Server) Router() http.Handler {
 			// **المكافآتُ والعقوبات** — مالٌ يخرج بتقدير إنسان،
 			// **وموظّفُ العمليات ليس طرفاً في المال**: الحارسُ نفسُه الذي
 			// على تعويض السائق.
+			// **واليدويُّ طلبٌ يوافق عليه شخصٌ ثانٍ** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Post("/users/{id}/incentive", s.idempotent(s.handleIncentiveGrant))
+			r.Get("/incentive-requests", s.handleListIncentiveRequests)
+			r.Post("/incentive-requests/{id}/approve", s.handleDecideIncentiveRequest(true))
+			r.Post("/incentive-requests/{id}/reject", s.handleDecideIncentiveRequest(false))
+			r.Post("/incentive-alerts/{id}/decide", s.handleDecideIncentiveAlert)
+			r.Post("/incentive-failures/{id}/retry", s.handleRetryIncentiveFailure)
 			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
@@ -1376,8 +1382,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/offers", s.handleCreateOffer)
 			r.Post("/offers/{id}/active", s.handleSetOfferActive)
 			r.Get("/customers", s.handleListCustomers)
-			// **الأهدافُ تُقرأ ولا تُدفع** — تقول من بلغ، ولا تُعطي.
+			// **الأهدافُ لشهرٍ يُختار** — ومكافأةُ الهدف تنصرف لحالها (`incentives/target.go`).
 			r.Get("/incentives/{role}", s.handleIncentiveStandings)
+			r.Get("/incentives/{role}/export", s.handleIncentiveExport)
 			r.Get("/users/{id}/incentives", s.handleIncentiveList)
 			r.Get("/salesreps", s.handleListSalesReps)
 			r.Get("/leads", s.handleAdminLeads)
