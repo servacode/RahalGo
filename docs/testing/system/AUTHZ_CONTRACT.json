@@ -498,8 +498,9 @@
    "target_type": "payout",
    "target_segment": 1,
    "fingerprint_params": [
-    "approve",
-    "amount"
+    "status",
+    "amount",
+    "method"
    ],
    "need": "payouts.decide"
   },

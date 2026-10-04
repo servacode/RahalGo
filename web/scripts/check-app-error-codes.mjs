@@ -97,6 +97,8 @@ const SERVER_MOBILE = new Set([
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
   "report_range_inverted", "report_range_too_long",
+  // قسمُ طلبات السحب (٢٠٢٦-١٠-٠٤) — قرارُ المالية من اللوحة.
+  "payout_reason_required", "payout_amount_changed",
   "app_file_missing", "app_not_android", "app_too_large", "bad_json",
   "bad_placement", "city_bad_point", "city_bad_radius", "city_bad_reach",
   "city_has_merchants", "city_needs_name", "claim_already_settled",

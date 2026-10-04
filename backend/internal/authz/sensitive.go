@@ -118,8 +118,10 @@ var sensitiveActions = []Sensitive{
 		"wallet_request", 1, nil, ""},
 	{"POST", "/users/{id}/incentive", "finance.incentive", "user", 1,
 		[]string{"amount"}, ""},
+	// **والبصمةُ على الحال والمبلغ وطريقة الصرف** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤):
+	// كانت على `approve` — حقلٌ لا يُرسَل، فلا تفرّق بين «اصرف» و«ارفض».
 	{"POST", "/payouts/{id}/decide", "finance.payout_decide", "payout", 1,
-		[]string{"approve", "amount"}, ""},
+		[]string{"status", "amount", "method"}, ""},
 	{"POST", "/drivers/{id}/settle", "finance.driver_settle", "user", 1,
 		[]string{"amount"}, ""},
 	{"POST", "/expenses", "finance.expense_added", "expense", -1,

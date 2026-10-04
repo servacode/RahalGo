@@ -33,8 +33,8 @@
     "setting_defs": 179,
     "behaviour_settings": 144,
     "order_fields": 95,
-    "test_files": 486,
-    "test_funcs": 2024
+    "test_files": 487,
+    "test_funcs": 2032
   },
   "flows": [
     {
@@ -24996,6 +24996,54 @@
     {
       "name": "TestAdminPayouts_PagesAndSumsPending",
       "file": "internal/server/payouts_paging_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_AmountChangedIsRefused",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_CashLeavesOfficeCashbox",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_ListCardsAndRole",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_NoManualPayoutKind",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_NoSelfApproval",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_NotificationTitlePerState",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_ReasonRequired",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_ReversalHasItsOwnKind",
+      "file": "internal/server/payouts_section_test.go",
       "package": "server",
       "orphan": true
     },

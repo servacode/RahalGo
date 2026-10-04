@@ -8,6 +8,7 @@
         "FI-01.c",
         "FI-01.d",
         "FI-01.e",
+        "FI-01.g",
         "FI-01.f"
       ]
     },
@@ -46,6 +47,7 @@
         "FI-05.b",
         "FI-05.c",
         "FI-05.d",
+        "FI-05.k",
         "FI-05.e",
         "FI-05.f",
         "FI-05.g",
@@ -208,6 +210,19 @@
       ],
       "kinds": [
         "operating_expense"
+      ]
+    },
+    {
+      "id": "FI-01.g",
+      "family": "FI-01",
+      "name": "قيدُ إرجاعِ السحب يشير إلى سحبٍ مرتجعٍ بقيمته",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout_reversal"
       ]
     },
     {
@@ -500,6 +515,19 @@
       ]
     },
     {
+      "id": "FI-05.k",
+      "family": "FI-05",
+      "name": "لا إرجاعَ سحبٍ مكرَّر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout_reversal"
+      ]
+    },
+    {
       "id": "FI-06.a",
       "family": "FI-06",
       "name": "صافي دفترِ الطلب = نقدُ السائق منه",
@@ -758,7 +786,7 @@
     {
       "id": "FI-11.h",
       "family": "FI-11",
-      "name": "سحبٌ ارتدّ له قيدٌ مقابلٌ يُعيد المال",
+      "name": "سحبٌ ارتدّ له قيدُ «إرجاع سحب» يُعيد المال",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -766,6 +794,9 @@
       ],
       "registers": [
         "XG-12"
+      ],
+      "kinds": [
+        "payout_reversal"
       ]
     },
     {
@@ -987,12 +1018,12 @@
   "kinds": [
     {
       "kind": "adjustment",
-      "semantics": "تسويةٌ يدويّةٌ بقرارِ إداريّ — **بلا سقفٍ ولا مصادقةٍ ثانية.**",
+      "semantics": "تسويةٌ يدويّةٌ بموافقة غيرِ مقترِحها وتحت سقف — **ويقابلها قيدٌ في الخزينة.**",
       "sign": "±",
       "ref_required": false,
-      "path": "POST /admin/users/{id}/wallet · ومطالبةُ المنصّة في نزاع",
+      "path": "POST /admin/wallet-requests/{id}/approve · ومطالبةُ المنصّة في نزاع",
       "creators": [
-        "internal/server/admin_wallet_handlers.go:64",
+        "internal/server/accounts_wallet_requests.go",
         "internal/server/disputes.go:280"
       ],
       "invariants": [
@@ -1158,10 +1189,9 @@
       "sign": "-",
       "ref_required": false,
       "ref_target": "payout_requests",
-      "path": "PATCH /admin/payouts/{id} · وPOST /admin/users/{id}/wallet",
+      "path": "PATCH /admin/payouts/{id}",
       "creators": [
-        "internal/server/payout_handlers.go:290",
-        "internal/server/admin_wallet_handlers.go:64"
+        "internal/server/payout_handlers.go:290"
       ],
       "invariants": [
         "FI-01.e",
@@ -1170,6 +1200,23 @@
         "FI-11.a",
         "FI-11.b",
         "FI-11.c"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "payout_reversal",
+      "semantics": "سحبٌ صُرف ثمّ ارتدّ — **يعود المبلغُ إلى المحفظة ويبقى قيدُ الصرف الأوّل في الدفتر.**",
+      "sign": "+",
+      "ref_required": true,
+      "ref_target": "payout_requests",
+      "path": "POST /admin/payouts/{id}/decide (reversed)",
+      "creators": [
+        "internal/server/payout_handlers.go"
+      ],
+      "invariants": [
+        "FI-01.g",
+        "FI-05.k",
+        "FI-11.h"
       ],
       "reachable": true
     },
@@ -1261,12 +1308,12 @@
     },
     {
       "kind": "topup",
-      "semantics": "شحنٌ يدويٌّ لمحفظةٍ من الإدارة — **مالٌ يدخل المنظومةَ من خارجها.**",
+      "semantics": "شحنٌ نقديٌّ لمحفظةٍ بموافقة الماليّة — **ويقابله سطرٌ داخلٌ في صندوق المكتب.**",
       "sign": "+",
       "ref_required": false,
-      "path": "POST /admin/users/{id}/wallet",
+      "path": "POST /admin/wallet-requests/{id}/approve",
       "creators": [
-        "internal/server/admin_wallet_handlers.go:64"
+        "internal/server/accounts_wallet_requests.go"
       ],
       "invariants": [
         "FI-02.a"
@@ -1276,12 +1323,12 @@
   ],
   "counts": {
     "families": 14,
-    "checks": 67,
-    "provable_now": 61,
+    "checks": 69,
+    "provable_now": 63,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
-    "kinds": 16
+    "kinds": 17
   },
   "financial_settings": [
     "merchants.commission_percent",
@@ -1316,7 +1363,6 @@
     "customers.cash_ban_failures",
     "orders.extra_source_fee",
     "orders.route_margin_pct",
-    "drivers.failed_compensation_percent",
-    "merchants.return_support_percent"
+    "drivers.failed_compensation_percent"
   ]
 }

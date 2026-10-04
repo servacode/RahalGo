@@ -2672,6 +2672,14 @@
         {
           "name": "decision",
           "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "method",
+          "type": "string"
         }
       ]
     },
