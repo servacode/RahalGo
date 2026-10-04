@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -296,9 +296,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // **والشرطُ من القائمة لا من اسم دور**: **ما ليس في قائمته لا
   // يملكه** — **ودورٌ مخصَّصٌ يُنشَأ غداً يُنزَل على بابه بلا سطرٍ
   // يُكتب له.**
-  const landed = useRef(false);
   useEffect(() => {
-    if (loading || !capsLoaded || landed.current) return;
+    if (loading || !capsLoaded) return;
     const first = nav[0];
     // **والردُّ لبابٍ في القائمة لا يملكه وحدَه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان الشرطُ «ليس في
     // قائمته» فرُدّ كلُّ بابِ تفصيلٍ — ملفُّ حساب، متجر، قسم، حسابي، الإشعارات — **إلى الرئيسيّة عند
@@ -306,9 +305,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // **وأبوابُ التفصيل يحرسها المحرّك** (٤٠٣) كما يحرس كلَّ باب.
     if (!first || !ALL_NAV.some((i) => i.href === pathname)) return;
     if (nav.some((i) => i.href === pathname)) return;
-    landed.current = true;
     router.replace(first.href);
   }, [loading, capsLoaded, pathname, nav, router]);
+
+  // **وبابٌ لا يملكه لا تُركَّب صفحتُه أصلاً** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥): كان الردُّ
+  // يجري بعد أن تُركَّب الصفحةُ فتنادي بابَها **فيُردّ ٤٠٣ في الطرفيّة** قبل أن يُنقل —
+  // **وصفحةُ التقارير تبدّل عنوانَها بنفسها فتسبق الردَّ وتبقى** معطوبةً لمن لا يملكها.
+  const forbiddenHere =
+    !!nav[0] && ALL_NAV.some((i) => i.href === pathname) && !nav.some((i) => i.href === pathname);
 
   // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
   // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**
@@ -372,7 +376,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         canOpen={capabilities.includes("orders.read") || capabilities.includes("observability.read")}
       />
       {capabilities.includes("emergencies.manage") && <EmergencyBanner />}
-      {children}
+      {forbiddenHere ? <BootScreen /> : children}
     </DashboardChrome>
     </PasswordGate>
   );
