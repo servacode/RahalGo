@@ -116,8 +116,13 @@ var sensitiveActions = []Sensitive{
 		[]string{"amount", "kind"}, ""},
 	{"POST", "/wallet-requests/{id}/approve", "finance.wallet_request_approved",
 		"wallet_request", 1, nil, ""},
-	{"POST", "/users/{id}/incentive", "finance.incentive", "user", 1,
-		[]string{"amount"}, ""},
+	// **وموافقةُ دفعِ دينٍ بالمكتب أو شطبِه** — مالٌ يُقرّ (قسمُ الديون ٢٠٢٦-١٠-٠٤).
+	{"POST", "/obligation-requests/{id}/approve", "finance.obligation_request_approved",
+		"obligation_request", 1, nil, ""},
+	{"POST", "/users/{id}/incentive", "finance.incentive_request", "user", 1,
+		[]string{"amount", "kind"}, ""},
+	{"POST", "/incentive-requests/{id}/approve", "finance.incentive",
+		"incentive_request", 1, nil, ""},
 	// **والبصمةُ على الحال والمبلغ وطريقة الصرف** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤):
 	// كانت على `approve` — حقلٌ لا يُرسَل، فلا تفرّق بين «اصرف» و«ارفض».
 	{"POST", "/payouts/{id}/decide", "finance.payout_decide", "payout", 1,
@@ -127,8 +132,14 @@ var sensitiveActions = []Sensitive{
 	{"POST", "/expenses", "finance.expense_added", "expense", -1,
 		[]string{"amount", "category_id"}, ""},
 	{"POST", "/expenses/{id}/void", "finance.expense_voided", "expense", 1, nil, ""},
+	// **وموافقةُ مصروفٍ فوق السقف بكلمة صاحبها** — كموافقة حركة المحفظة.
+	{"POST", "/expense-requests/{id}/approve", "finance.expense_request_approved",
+		"expense_request", 1, nil, ""},
 	{"POST", "/orders/{id}/compensate-driver", "finance.compensate_driver",
 		"order", 1, []string{"amount"}, ""},
+	// **وموافقةُ صفحة «التعويضات» بمعرّف الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"POST", "/compensations/{id}/approve", "finance.compensation_approved",
+		"compensation", 1, []string{"amount"}, ""},
 	// **وتعويضُ المتجر عن بضاعةٍ رُدّت — كأخيه تعويضِ السائق** (قرارُ المالك
 	// ٢٠٢٦-١٠-٠٤، البند ١٣): مالٌ يخرج من الخزينة بتقدير إنسان.
 	{"POST", "/orders/{id}/goods/compensation", "finance.goods_compensation",

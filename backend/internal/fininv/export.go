@@ -101,6 +101,11 @@ var FinancialSettings = []string{
 	"delivery.custom_fee_min",   // orders/custom.go — أدنى أجرةِ الخاصّ
 	"delivery.custom_fee_max",   // orders/custom.go — أعلاها
 	"finance.manual_wallet_max", // accounts — سقفُ الحركة اليدويّة
+	// **وما وسمته أقسامٌ أخرى «يمسّ المال»** (كشفه الحارسُ عند الدمج ٢٠٢٦-١٠-٠٤):
+	"compensations.cap_driver",
+	"compensations.cap_merchant_goods",
+	"compensations.cap_complaint",
+	"finance.expense_approval_threshold",
 }
 
 // Snapshot يبني الصورة.

@@ -7,14 +7,10 @@ package incentives
 //	الأجرُ والعمولة  ←  معادلةٌ تقع وحدَها (`orders`)
 //	المكافأةُ والعقوبة ←  تقديرُ إنسانٍ يُقيَّد بكلمة
 //
-// **والهدفُ بينهما**: يُحسب آلياً ولا يدفع شيئاً — **يقول من يستحقّ، ولا
-// يُعطي.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «بيدك، والشاشةُ تقول من بلغ».)
-//
-// # ولماذا لا تقع المكافأةُ وحدَها
-//
-// **رقمٌ يدفع بلا يدٍ لا يُراجَع.** ومن بلغ الهدفَ بثلاثين طلباً صغيراً ليس
-// كمن بلغه بثلاثين في ليالي المطر — **والفرقُ يراه إنسانٌ ولا تراه معادلة.**
-// وخطأٌ في رقمٍ تلقائيٍّ يُصرف على الجميع قبل أن يُلاحظ.
+// **والهدفُ بينهما**: يُحسب آلياً **ومكافأتُه تنصرف لحالها** عند بلوغ كلّ
+// مرحلة (قرارُ المالك ٢٠٢٦-٠٨-٠٩ ثمّ ٢٠٢٦-٠٨-٣١: ثلاثُ مراحل) — `target.go`.
+// **والمكافأةُ والعقوبةُ اليدويّة طلبٌ يوافق عليه شخصٌ ثانٍ** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٤) — `requests.go`، **وهي «تقدير» دائماً لا «عن الهدف».**
 //
 // # والشهرُ يبدأ بتوقيت دمشق
 //
@@ -28,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -81,86 +78,115 @@ func New(db *pgxpool.Pool, w *wallet.Service, st Settings,
 	return &Service{db: db, wallet: w, settings: st, treasury: treasury}
 }
 
-// Standing حالُ شخصٍ هذا الشهر — هدفُه وما بلغ وما ناله.
+// Standing حالُ شخصٍ في شهرٍ — هدفُه وما بلغ وما ناله.
 type Standing struct {
 	UserID string `json:"user_id"`
 	Name   string `json:"name"`
 	Phone  string `json:"phone"`
-	// Done ما أنجزه هذا الشهر — طلباتٌ سُلّمت.
+	// Done ما أنجزه في الشهر — طلباتٌ سُلّمت، أو متاجرُ فتحها.
 	Done int `json:"done"`
-	// Target هدفُه — **وصفرٌ يعني لا هدف**، فلا شارةَ ولا شريط.
+	// Target مرحلتُه القادمة — **وصفرٌ يعني لا هدف**، فلا شارةَ ولا شريط.
 	Target int `json:"target"`
-	// Reached بلغ أم لا — **يقوله الخادمُ ولا يُستنتج في الشاشة**: شرطٌ
-	// يُحسب في موضعين يفترق يوماً، فتُهنّئ الشاشةُ من لم يبلغ.
+	// Reached بلغ كلَّ المراحل — **يقوله الخادمُ ولا يُستنتج في الشاشة.**
 	Reached bool `json:"reached"`
-	// Rewarded ما نال هذا الشهر، و Penalized ما خُصم منه.
+	// Level **كم مرحلةً بلغ** و Levels كم مرحلةً مضبوطة — «وصل للمرحلة ٢ من ٣».
+	//
+	// **كانت الشارةُ لا تظهر إلّا لمن أتمّ الكلّ** — فمن بلغ الأولى وقبضها
+	// يظهر كمن لم يبلغ شيئاً.
+	Level  int `json:"level"`
+	Levels int `json:"levels"`
+	// Rewarded كلُّ ما نال في الشهر، و Penalized ما خُصم منه.
 	Rewarded  int64 `json:"rewarded"`
 	Penalized int64 `json:"penalized"`
+	// AutoPaid مكافآتُ الهدف الآليّة، و ManualPaid اليدويّةُ («تقدير»).
+	AutoPaid   int64 `json:"auto_paid"`
+	ManualPaid int64 `json:"manual_paid"`
+	// Balance **المتاحُ في محفظته** (الرصيدُ ناقصَ المحجوز) — يُرى قبل العقوبة.
+	Balance int64 `json:"balance"`
 }
 
-// monthStart بدايةُ الشهر بتوقيت دمشق — **تعبيرٌ واحدٌ يُعاد استعماله.**
-const monthStart = `date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')`
+// Summary **كروتُ رأس الصفحة**: كم بلغ كلَّ مرحلة · الآليّ · اليدويّ · العقوبات.
+type Summary struct {
+	ReachedPerLevel []int `json:"reached_per_level"`
+	AutoPaid        int64 `json:"auto_paid"`
+	ManualPaid      int64 `json:"manual_paid"`
+	Penalties       int64 `json:"penalties"`
+}
 
-// Standings حالُ كلّ من في هذا الدور.
+// ErrBadMonth **شهرٌ بغير صيغة «2026-09»** أو في المستقبل.
+var ErrBadMonth = httpx.NewError(http.StatusBadRequest, "bad_month", "errors.validation")
+
+// NormalizeMonth **يقبل «2026-09» أو فراغاً (الجاري)** — ولا مستقبل.
+func NormalizeMonth(m string) (string, error) {
+	cur := PeriodOf(time.Now())
+	if m == "" {
+		return cur, nil
+	}
+	if _, err := time.Parse("2006-01", m); err != nil || len(m) != 7 || m > cur {
+		return "", ErrBadMonth
+	}
+	return m, nil
+}
+
+// Standings حالُ كلّ من في هذا الدور للشهر الجاري.
+func (s *Service) Standings(ctx context.Context, role string) ([]Standing, error) {
+	return s.StandingsFor(ctx, role, PeriodOf(time.Now()))
+}
+
+// StandingsFor حالُ كلّ من في هذا الدور **في شهرٍ بعينه** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٤: اختيارُ شهرٍ وتصدير).
 //
 // # ولماذا استعلامٌ واحد
 //
-// نداءٌ لكلّ سائقٍ يعني عشرين نداءً لشاشةٍ واحدة. **وشاشةٌ بطيئةٌ لا تُفتح**،
-// فلا تُقرأ الأهدافُ أصلاً.
-func (s *Service) Standings(ctx context.Context, role string) ([]Standing, error) {
-	// ══════════════════════════════════════════════════════════════════
-	// **والهدفُ المعروضُ مرحلتُه القادمة — لا الأولى دائماً**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** ثلاثُ مراحل.)
-	//
-	// **ومن بلغ الأولى فرأى «٥ / ٥» إلى آخر الشهر ظنّ أنّه انتهى** —
-	// والثانيةُ أمامه. **فيُعرض ما لم يبلغه بعد**، وإن بلغ الكلَّ عُرضت
-	// الأخيرةُ مبلوغةً.
+// نداءٌ لكلّ سائقٍ يعني عشرين نداءً لشاشةٍ واحدة. **وشاشةٌ بطيئةٌ لا تُفتح.**
+//
+// # والموقوفُ لا يظهر
+//
+// **(قرارُ المالك ٢٠٢٦-١٠-٠٤)**: الاستعلامُ كان يستثني المحذوفَ وحدَه، فيبقى
+// الموقوفُ في القائمة وزرُّ المكافأة أمامه. **والآن الفعّالُ وحدَه.**
+func (s *Service) StandingsFor(ctx context.Context, role, month string) ([]Standing, error) {
 	levels := s.levelsFor(ctx, role)
 	if len(levels) == 0 {
 		return nil, httpx.ErrNotFound
 	}
-	nextTarget := func(done int) int {
-		last := 0
-		for _, l := range levels {
-			if l.Target <= 0 {
-				continue
-			}
-			last = int(l.Target)
-			if done < last {
-				return last
-			}
+	// **والهدفُ المعروضُ مرحلتُه القادمة** (قرارُ المالك ٢٠٢٦-٠٨-٣١) — ومن
+	// بلغ الكلَّ عُرضت الأخيرةُ مبلوغة.
+	set := []int{}
+	for _, l := range levels {
+		if l.Target > 0 {
+			set = append(set, int(l.Target))
 		}
-		return last
+	}
+	place := func(done int) (next, level int) {
+		for _, t := range set {
+			next = t
+			if done < t {
+				return t, level
+			}
+			level++
+		}
+		return next, level
 	}
 
-	// **والإنجازُ يختلف بالدور** — السائقُ بما وصّل، **والمندوبُ بما فتح
-	// من متاجر.** (`doneThisMonth` تحمل الشرحَ كاملاً — **والاستعلامان
-	// يجب أن يتطابقا**: هذا يُري الرقمَ وذاك يدفع عليه، **ورقمٌ يُرى
-	// غيرُ الذي يُدفع عليه أسوأُ من رقمٍ لا يُرى.**)
-	done := `(SELECT count(*) FROM orders o
-	          WHERE o.driver_id = u.id AND o.status = 'delivered'
-	            AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart + `)`
-	if role == "sales" {
-		done = `(SELECT count(*) FROM merchants mm
-		          WHERE mm.sales_rep_user_id = u.id
-		            AND mm.created_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart + `)`
-	}
-
+	inMonth := `i.created_at >= ` + monthFromSQL("$2::text") +
+		` AND i.created_at < ` + monthToSQL("$2::text")
 	rows, err := s.db.Query(ctx, `
 		SELECT u.id::text, COALESCE(NULLIF(u.full_name, ''), ''), u.phone::text,
-		       `+done+`,
+		       `+doneSQL(role, "u.id", "$2::text")+`,
 		       COALESCE((SELECT sum(i.amount) FROM incentives i
-		                 WHERE i.user_id = u.id AND i.kind = 'reward'
-		                   AND i.created_at AT TIME ZONE 'Asia/Damascus' >= `+monthStart+`), 0),
+		                 WHERE i.user_id = u.id AND i.kind = 'reward' AND i.for_target
+		                   AND `+inMonth+`), 0),
+		       COALESCE((SELECT sum(i.amount) FROM incentives i
+		                 WHERE i.user_id = u.id AND i.kind = 'reward' AND NOT i.for_target
+		                   AND `+inMonth+`), 0),
 		       COALESCE((SELECT sum(i.amount) FROM incentives i
 		                 WHERE i.user_id = u.id AND i.kind = 'penalty'
-		                   AND i.created_at AT TIME ZONE 'Asia/Damascus' >= `+monthStart+`), 0)
+		                   AND `+inMonth+`), 0),
+		       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = u.id), 0)
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = $1
-		WHERE u.deleted_at IS NULL
-		ORDER BY 4 DESC, u.full_name`, role)
+		WHERE u.deleted_at IS NULL AND u.status = 'active'
+		ORDER BY 4 DESC, u.full_name`, role, month)
 	if err != nil {
 		return nil, err
 	}
@@ -170,19 +196,41 @@ func (s *Service) Standings(ctx context.Context, role string) ([]Standing, error
 	for rows.Next() {
 		var x Standing
 		if err := rows.Scan(&x.UserID, &x.Name, &x.Phone, &x.Done,
-			&x.Rewarded, &x.Penalized); err != nil {
+			&x.AutoPaid, &x.ManualPaid, &x.Penalized, &x.Balance); err != nil {
 			return nil, err
 		}
-		x.Target = nextTarget(x.Done)
-		// **وبلوغٌ بلا هدفٍ ليس بلوغاً** — صفرٌ يعني «لا هدف»، ومن أنجز
-		// طلباً واحداً ليس بالغاً شيئاً.
+		x.Rewarded = x.AutoPaid + x.ManualPaid
+		x.Target, x.Level = place(x.Done)
+		x.Levels = len(set)
+		// **وبلوغٌ بلا هدفٍ ليس بلوغاً** — صفرٌ يعني «لا هدف».
 		x.Reached = x.Target > 0 && x.Done >= x.Target
 		out = append(out, x)
 	}
 	return out, rows.Err()
 }
 
-// MyStanding حالُ صاحب الحساب نفسِه.
+// SummaryOf **كروتُ الشهر** — والمالُ من كلّ صاحب دور، موقوفاً كان أو فعّالاً:
+// ما صُرف صُرف.
+func (s *Service) SummaryOf(ctx context.Context, role, month string, rows []Standing) (Summary, error) {
+	sum := Summary{ReachedPerLevel: make([]int, len(s.LevelsOf(ctx, role)))}
+	for _, r := range rows {
+		for n := 0; n < r.Level && n < len(sum.ReachedPerLevel); n++ {
+			sum.ReachedPerLevel[n]++
+		}
+	}
+	err := s.db.QueryRow(ctx, `
+		SELECT COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'reward' AND i.for_target), 0),
+		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'reward' AND NOT i.for_target), 0),
+		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'penalty'), 0)
+		  FROM incentives i
+		 WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = i.user_id AND ur.role_code = $1)
+		   AND i.created_at >= `+monthFromSQL("$2::text")+`
+		   AND i.created_at < `+monthToSQL("$2::text"), role, month).
+		Scan(&sum.AutoPaid, &sum.ManualPaid, &sum.Penalties)
+	return sum, err
+}
+
+// MyStanding حالُ صاحب الحساب نفسِه — للشهر الجاري.
 func (s *Service) MyStanding(ctx context.Context, userID, role string) (*Standing, error) {
 	all, err := s.Standings(ctx, role)
 	if err != nil {
@@ -238,81 +286,45 @@ func (s *Service) List(ctx context.Context, userID string, limit int) ([]Entry, 
 
 // Grant يقيّد مكافأةً أو عقوبةً — **في معاملةٍ واحدة، والخزينةُ الطرفُ المقابل.**
 //
-// **ودفترٌ يأخذ من طرفٍ ولا يعطي آخرَ لا يتوازن**: مكافأةٌ تُقيَّد للسائق وحدَه
-// تجعل المنصةَ تظهر رابحةً وهي تدفع، **وعقوبةٌ تُخصم منه ولا تعود إليها تجعلها
-// تظهر خاسرةً وقد قبضت.**
+// **ودفترٌ يأخذ من طرفٍ ولا يعطي آخرَ لا يتوازن.** ولا يُنادى من الصفحة:
+// اليدويُّ طلبٌ يوافق عليه شخصٌ ثانٍ (`DecideRequest` ⇒ `GrantTx`).
 func (s *Service) Grant(ctx context.Context, actorID, userID, kind string,
-	amount int64, reason string, forTarget bool) (*Entry, error) {
-	if kind != KindReward && kind != KindPenalty {
-		return nil, ErrBadKind
-	}
-	if amount <= 0 {
-		return nil, ErrBadAmount
-	}
-	if reason = strings.TrimSpace(reason); reason == "" {
-		return nil, ErrNeedsReason
-	}
-
+	amount int64, reason string) (*Entry, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-
-	// **والعقوبةُ تُفحص قبل أن تُقيَّد**: قيدُ القاعدة يرفض السالبَ كلَّه،
-	// **فيُردّ الطلبُ برسالةٍ تُقرأ بدل خطأٍ لا يفهمه الموظّف.**
-	signed := amount
-	if kind == KindPenalty {
-		// **والغرامةُ تأخذ من المتاح لا من المحجوز** — `XG-12`.
-		var balance int64
-		if err := tx.QueryRow(ctx,
-			`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
-			      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`, userID).
-			Scan(&balance); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, err
-		}
-		if balance < amount {
-			return nil, ErrNoBalance
-		}
-		signed = -amount
-	}
-
-	if _, err := s.wallet.ApplyTx(ctx, tx, userID, signed, kind, "", reason, &actorID); err != nil {
-		return nil, err
-	}
-	// **والخزينةُ الطرفُ المقابل** — تدفع المكافأةَ وتقبض العقوبة.
-	if tid := s.treasury(ctx); tid != "" {
-		note := "مكافأةٌ صُرفت"
-		if kind == KindPenalty {
-			note = "عقوبةٌ حُصّلت"
-		}
-		if _, err := s.wallet.ApplyTx(ctx, tx, tid, -signed, kind, "", note, &actorID); err != nil {
-			return nil, err
-		}
-	}
-
-	var e Entry
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO incentives (user_id, kind, amount, reason, for_target, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id::text, kind, amount, reason, for_target, created_at::text`,
-		userID, kind, amount, reason, forTarget, actorID).
-		Scan(&e.ID, &e.Kind, &e.Amount, &e.Reason, &e.ForTarget, &e.CreatedAt); err != nil {
+	e, err := s.GrantTx(ctx, tx, actorID, userID, kind, amount, reason)
+	if err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	return &e, nil
+	return e, nil
+}
+
+// AvailableOn **المتاحُ في محفظته** — الرصيدُ ناقصَ المحجوز (`XG-12`).
+func AvailableOn(ctx context.Context, q dbtx.Querier, userID string) (int64, error) {
+	var balance int64
+	err := q.QueryRow(ctx,
+		`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
+		      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`, userID).
+		Scan(&balance)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	return balance, err
 }
 
 // GrantTx كـ`Grant` **في معاملةٍ مُمرَّرة** — `XG-33`.
 //
-// **والقائمةُ تفوّض إليها** فلا نداءَ واحدٌ تبدّل، **ولا معاملةَ داخل
-// معاملة**: منحُ الحافز وعلامةُ تثبيت منع التكرار يُثبَّتان معاً.
+// **واليدويُّ «تقدير» دائماً** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦): لا
+// `for_target` هنا أبداً — **مكافأةُ الهدف الآليّةُ وحدَها لها شهرٌ ومرحلة**،
+// وتقاريرُ «كم صرفنا على الأهداف» تبقى صادقة.
 func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
-	actorID, userID, kind string, amount int64, reason string,
-	forTarget bool) (*Entry, error) {
+	actorID, userID, kind string, amount int64, reason string) (*Entry, error) {
 	if kind != KindReward && kind != KindPenalty {
 		return nil, ErrBadKind
 	}
@@ -323,14 +335,12 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 		return nil, ErrNeedsReason
 	}
 
-	// **والعقوبةُ تُفحص قبل أن تُقيَّد**: قيدُ القاعدة يرفض السالبَ كلَّه،
-	// **فيُردّ الطلبُ برسالةٍ تُقرأ بدل خطأٍ لا يفهمه الموظّف.**
+	// **والعقوبةُ تُفحص قبل أن تُقيَّد** — **من المتاح لا من المحجوز** (`XG-12`):
+	// قيدُ القاعدة يرفض السالبَ كلَّه، **فيُردّ الطلبُ برسالةٍ تُقرأ.**
 	signed := amount
 	if kind == KindPenalty {
-		var balance int64
-		if err := q.QueryRow(ctx,
-			`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`, userID).
-			Scan(&balance); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		balance, err := AvailableOn(ctx, q, userID)
+		if err != nil {
 			return nil, err
 		}
 		if balance < amount {
@@ -356,9 +366,9 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 	var e Entry
 	if err := q.QueryRow(ctx, `
 		INSERT INTO incentives (user_id, kind, amount, reason, for_target, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, false, $5)
 		RETURNING id::text, kind, amount, reason, for_target, created_at::text`,
-		userID, kind, amount, reason, forTarget, actorID).
+		userID, kind, amount, reason, actorID).
 		Scan(&e.ID, &e.Kind, &e.Amount, &e.Reason, &e.ForTarget, &e.CreatedAt); err != nil {
 		return nil, err
 	}

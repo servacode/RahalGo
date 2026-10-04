@@ -83,6 +83,11 @@ var adminPolicy = []Rule{
 	{"POST", "/wallet-requests/{id}/reject", FinanceManage},
 	{"POST", "/users/{id}/incentive", FinanceManage},
 	{"GET", "/users/{id}/incentives", FinanceRead},
+	{"GET", "/incentive-requests", FinanceRead},
+	{"POST", "/incentive-requests/{id}/approve", FinanceManage},
+	{"POST", "/incentive-requests/{id}/reject", FinanceManage},
+	{"POST", "/incentive-alerts/{id}/decide", FinanceManage},
+	{"POST", "/incentive-failures/{id}/retry", FinanceManage},
 	{"GET", "/users", UsersRead},
 	{"GET", "/users/stats", UsersRead},
 	// **والتصديرُ إخراجُ القاعدة لا قراءةٌ أكثر.**
@@ -115,6 +120,11 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},
 	{"POST", "/orders/{id}/compensation/reject", FinanceManage},
 	{"GET", "/compensations/pending", FinanceRead},
+	// **صفحةُ «التعويضات» الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/compensations", FinanceRead},
+	{"POST", "/compensations", FinanceManage},
+	{"POST", "/compensations/{id}/approve", FinanceManage},
+	{"POST", "/compensations/{id}/reject", FinanceManage},
 	{"POST", "/orders/{id}/settle-goods", FinanceManage},
 	// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب التعويض** (البند ١٢).
 	{"POST", "/orders/{id}/goods", OrdersIntervene},
@@ -181,20 +191,35 @@ var adminPolicy = []Rule{
 	{"POST", "/drivers/{id}/settle", FinanceManage},
 	{"GET", "/drivers/{id}/cash", FinanceRead},
 	{"GET", "/cash/outstanding", FinanceRead},
+	{"GET", "/cash/outstanding/export", FinanceExport},
+	{"GET", "/cash/merchant-dues", FinanceRead},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
 	{"GET", "/drivers", DriversRead},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},
 	{"GET", "/payouts", FinanceRead},
-	// **والالتزاماتُ الماليّة قراءةٌ ماليّة** — تُقرأ ولا تُكتب، فلا تأكيد.
+	// **والديون** — القراءةُ ماليّة، والتصديرُ بقدرته، والدفعُ والشطبُ اقتراحٌ
+	// بـ`finance.manage`. **وموافقةُ الشطب تشترط `finance.writeoff.approve` داخلَ
+	// الباب** (الدفعةُ بـ`finance.manage`)، فالمسارُ واحدٌ بحدّه الأدنى.
 	{"GET", "/obligations", FinanceRead},
+	{"GET", "/obligations/export", FinanceExport},
+	{"POST", "/obligations/{id}/office-cash", FinanceManage},
+	{"POST", "/obligations/{id}/write-off", FinanceManage},
+	{"GET", "/obligation-requests", FinanceRead},
+	{"POST", "/obligation-requests/{id}/approve", FinanceManage},
+	{"POST", "/obligation-requests/{id}/reject", FinanceManage},
 	{"GET", "/profits", FinanceRead},
 	{"GET", "/expenses", FinanceRead},
 	{"GET", "/expenses/categories", FinanceRead},
 	{"POST", "/expenses", FinanceManage},
 	{"POST", "/expenses/categories", FinanceManage},
 	{"POST", "/expenses/{id}/void", FinanceManage},
+	{"GET", "/expenses/export", FinanceExport},
+	{"POST", "/expenses/receipt", FinanceManage},
+	{"GET", "/expense-requests", FinanceRead},
+	{"POST", "/expense-requests/{id}/approve", FinanceManage},
+	{"POST", "/expense-requests/{id}/reject", FinanceManage},
 	{"GET", "/ledger/export", FinanceExport},
 	{"GET", "/treasury-candidates", FinanceManage},
 	{"GET", "/reports/losses", FinanceRead},
@@ -348,6 +373,7 @@ var adminPolicy = []Rule{
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},
+	{"GET", "/incentives/{role}/export", FinanceRead},
 
 	// ── الإعدادات والتقارير والتشخيص ─────────────────────────────
 	//

@@ -99,6 +99,8 @@ const SERVER_ADMIN = new Set([
   "setting_conflict", "setting_placeholder_missing",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
+  "expense_future_date", "expense_receipt_required", "expense_void_reason_required",
+  "expense_void_self", "expense_category_inactive", "expense_bad_range",
   "report_range_inverted", "report_range_too_long",
   // قسمُ طلبات السحب (٢٠٢٦-١٠-٠٤) — قرارُ المالية من اللوحة.
   "payout_reason_required", "payout_amount_changed",
@@ -123,6 +125,7 @@ const SERVER_ADMIN = new Set([
   // وحسمُ البضاعة وتعويضُ المتجر بابان للإدارة وحدَها.
   "transfer_delivery_kind", "goods_compensation_finance", "goods_not_handed",
   "goods_wrong_place", "goods_compensation_cap", "goods_already_compensated",
+  "compensation_above_cap", "compensation_ambiguous", "compensation_duplicate",
   "driver_off_shift", "order_already_taken",
   // ── staging-only QA fixtures (qa/* endpoints; never reach a real mobile client) ──
   "qa_bad_target", "qa_fault_injected", "qa_flag_not_allowed",
@@ -139,6 +142,8 @@ const SERVER_ADMIN = new Set([
   // **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — أبوابُ اللوحة وحدَها.
   "phone_change_pending", "second_person_required", "wallet_note_required",
   "wallet_over_cap", "wallet_payout_not_here", "self_approve", "request_decided",
+  "obligation_closed", "obligation_over_amount", "obligation_note_required",
+  "obligation_request_pending", "writeoff_owner_only",
   "idempotency_key_required",
   // «طلبات التوسّع» — إبلاغُ مكانٍ لم يُغطَّ بعد (لوحةٌ لا هاتف).
   "not_covered",

@@ -190,17 +190,21 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT count(*) FROM driver_emergencies WHERE status = 'open'),
 			(SELECT count(*) FROM orders
 			  WHERE status = 'dispatching' AND driver_id IS NULL AND closed_at IS NULL),
-			(SELECT count(*) FROM merchant_leads WHERE status = 'new'),
-			(SELECT count(*) FROM menu_items WHERE NOT approved),
-			(SELECT count(*) FROM (
-			    SELECT driver_id FROM driver_cash_entries GROUP BY driver_id
-			    HAVING COALESCE(sum(amount), 0) > 0 AND COALESCE(sum(amount), 0) >= $1) x)`,
-		s.cashbox.Limit(r.Context())).
+			(SELECT count(*) FROM merchant_leads WHERE status = 'new' AND sales_rep_user_id IS NOT NULL),
+			(SELECT count(*) FROM menu_items WHERE NOT approved)`).
 		Scan(&st.CompensationsPending, &st.EmergenciesOpen, &st.OrdersUnassigned,
-			&st.LeadsNew, &st.MenuPending, &st.DriversOverCash); err != nil {
+			&st.LeadsNew, &st.MenuPending); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	// **وفوق السقف بحساب صفحة النقد نفسِه** — الجيبُ + نقدُ الطلبات المفتوحة
+	// مقابلَ سقف السائق الفعليّ (قرارُ المالك ٢٠٢٦-١٠-٠٤). كان يعدّ الجيبَ وحدَه.
+	cash, err := s.cashOverviewOf(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	st.DriversOverCash = int(cash.OverCount)
 	n, err := s.orders.CountAwaitingOffice(r.Context())
 	if err != nil {
 		s.respondErr(w, err)

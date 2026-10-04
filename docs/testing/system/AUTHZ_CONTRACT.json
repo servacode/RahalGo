@@ -39,22 +39,27 @@
   {
    "code": "finance.export",
    "description": "تصدير الدفتر وكشف الطلبات ملفا",
-   "guards_routes": 3
+   "guards_routes": 6
   },
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 19
+   "guards_routes": 33
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 24
+   "guards_routes": 30
   },
   {
    "code": "finance.recompute",
    "description": "إعادة حساب تسوية طلب مغلق",
    "guards_routes": 1
+  },
+  {
+   "code": "finance.writeoff.approve",
+   "description": "الموافقة على شطب دين متجر أو مندوب لن يسدد",
+   "guards_routes": 0
   },
   {
    "code": "merchants.manage",
@@ -226,7 +231,7 @@
   }
  ],
  "route_policy": {
-  "rules": 228,
+  "rules": 251,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -445,6 +450,17 @@
   },
   {
    "method": "POST",
+   "pattern": "/compensations/{id}/approve",
+   "action": "finance.compensation_approved",
+   "target_type": "compensation",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
    "pattern": "/drivers/{id}/settle",
    "action": "finance.driver_settle",
    "target_type": "user",
@@ -464,6 +480,15 @@
     "amount",
     "category_id"
    ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/expense-requests/{id}/approve",
+   "action": "finance.expense_request_approved",
+   "target_type": "expense_request",
+   "target_segment": 1,
+   "fingerprint_params": [],
    "need": "finance.manage"
   },
   {
@@ -488,12 +513,22 @@
   },
   {
    "method": "POST",
-   "pattern": "/users/{id}/incentive",
+   "pattern": "/incentive-requests/{id}/approve",
    "action": "finance.incentive",
+   "target_type": "incentive_request",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/users/{id}/incentive",
+   "action": "finance.incentive_request",
    "target_type": "user",
    "target_segment": 1,
    "fingerprint_params": [
-    "amount"
+    "amount",
+    "kind"
    ],
    "need": "finance.manage"
   },
@@ -502,6 +537,15 @@
    "pattern": "/merchant-cash-settlements/{id}/pay",
    "action": "finance.merchant_cash_paid",
    "target_type": "merchant_settlement",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/obligation-requests/{id}/approve",
+   "action": "finance.obligation_request_approved",
+   "target_type": "obligation_request",
    "target_segment": 1,
    "fingerprint_params": [],
    "need": "finance.manage"

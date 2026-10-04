@@ -365,6 +365,26 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/cash/merchant-dues",
+      "handler": "handleMerchantCashDues",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "merchants",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/cash/outstanding",
       "handler": "handleCashOutstanding",
       "auth": true,
@@ -379,6 +399,18 @@
           "type": "unknown"
         },
         {
+          "name": "over_count",
+          "type": "unknown"
+        },
+        {
+          "name": "overdue_count",
+          "type": "unknown"
+        },
+        {
+          "name": "overdue_days",
+          "type": "unknown"
+        },
+        {
           "name": "total",
           "type": "unknown"
         }
@@ -386,6 +418,13 @@
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cash/outstanding/export",
+      "handler": "handleCashOutstandingExport",
+      "auth": true,
+      "capability": "finance.export"
     },
     {
       "method": "GET",
@@ -685,6 +724,64 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/compensations",
+      "handler": "handleListCompensations",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/compensations",
+      "handler": "handleProposeCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "order_id",
+          "type": "string"
+        },
+        {
+          "name": "user_id",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "fault",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "proposed",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusAccepted"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/compensations/pending",
       "handler": "handlePendingCompensations",
       "auth": true,
@@ -693,6 +790,62 @@
         {
           "name": "@paged",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/compensations/{id}/approve",
+      "handler": "handleApproveCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "compensated",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/compensations/{id}/reject",
+      "handler": "handleRejectCompensationByID",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "rejected",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -1231,6 +1384,78 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/expense-requests",
+      "handler": "handleListExpenseRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        },
+        {
+          "name": "threshold",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expense-requests/{id}/approve",
+      "handler": "handleApproveExpenseRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "expense_id",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expense-requests/{id}/reject",
+      "handler": "handleRejectExpenseRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/expenses",
       "handler": "handleListExpenses",
       "auth": true,
@@ -1267,12 +1492,20 @@
         {
           "name": "spent_at",
           "type": "string"
+        },
+        {
+          "name": "receipt_media_id",
+          "type": "string"
         }
       ],
       "response": [
         {
           "name": "id",
           "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
         }
       ],
       "statuses": [
@@ -1335,11 +1568,40 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/expenses/export",
+      "handler": "handleExportExpenses",
+      "auth": true,
+      "capability": "finance.export"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expenses/receipt",
+      "handler": "handleUploadExpenseReceipt",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/expenses/{id}/void",
       "handler": "handleVoidExpense",
       "auth": true,
       "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
       "response": [
         {
           "name": "voided",
@@ -1406,6 +1668,120 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-alerts/{id}/decide",
+      "handler": "handleDecideIncentiveAlert",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "decision",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "decided",
+          "type": "bool"
+        },
+        {
+          "name": "request_id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-failures/{id}/retry",
+      "handler": "handleRetryIncentiveFailure",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "paid",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/incentive-requests",
+      "handler": "handleListIncentiveRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-requests/{id}/approve",
+      "handler": "handleDecideIncentiveRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/incentive-requests/{id}/reject",
+      "handler": "handleDecideIncentiveRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/incentives/{role}",
       "handler": "handleIncentiveStandings",
@@ -1413,13 +1789,40 @@
       "capability": "finance.read",
       "response": [
         {
+          "name": "alerts",
+          "type": "unknown"
+        },
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "levels",
+          "type": "unknown"
+        },
+        {
+          "name": "month",
+          "type": "unknown"
+        },
+        {
           "name": "standings",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
           "type": "unknown"
         }
       ],
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/incentives/{role}/export",
+      "handler": "handleIncentiveExport",
+      "auth": true,
+      "capability": "finance.read"
     },
     {
       "method": "GET",
@@ -1495,7 +1898,7 @@
       "capability": "merchants.verify",
       "response": [
         {
-          "name": "@paged",
+          "name": "@res",
           "type": "unknown"
         }
       ],
@@ -1523,6 +1926,10 @@
         {
           "name": "updated",
           "type": "bool"
+        },
+        {
+          "name": "welcome",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -2130,6 +2537,82 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/obligation-requests",
+      "handler": "handleListObligationRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligation-requests/{id}/approve",
+      "handler": "handleDecideObligationRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligation-requests/{id}/reject",
+      "handler": "handleDecideObligationRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/obligations",
       "handler": "handleListObligations",
       "auth": true,
@@ -2143,6 +2626,44 @@
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/obligations/export",
+      "handler": "handleExportObligations",
+      "auth": true,
+      "capability": "finance.export",
+      "response": [
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "obligations",
+          "type": "unknown"
+        },
+        {
+          "name": "truncated",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligations/{id}/office-cash",
+      "handler": "handleProposeObligationCash",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligations/{id}/write-off",
+      "handler": "handleProposeObligationWriteoff",
+      "auth": true,
+      "capability": "finance.manage"
     },
     {
       "method": "GET",
@@ -2632,6 +3153,10 @@
         {
           "name": "note",
           "type": "string"
+        },
+        {
+          "name": "request_id",
+          "type": "string"
         }
       ],
       "response": [
@@ -2653,6 +3178,10 @@
       "request": [
         {
           "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "request_id",
           "type": "string"
         }
       ],
@@ -2774,12 +3303,12 @@
       ],
       "response": [
         {
-          "name": "compensated",
+          "name": "proposed",
           "type": "unknown"
         }
       ],
       "statuses": [
-        "StatusOK"
+        "StatusAccepted"
       ]
     },
     {
@@ -7477,7 +8006,7 @@
       "auth": true,
       "response": [
         {
-          "name": "@st",
+          "name": "@out",
           "type": "unknown"
         }
       ],
@@ -8522,7 +9051,7 @@
       ],
       "response": [
         {
-          "name": "@st",
+          "name": "@out",
           "type": "unknown"
         }
       ],

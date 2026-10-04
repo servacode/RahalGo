@@ -1289,6 +1289,19 @@ var Catalog = []Def{
 	{Key: "drivers.max_active_orders", Group: GroupDrivers, Kind: KindInt,
 		Min: 1, Max: 20, Unit: "order", Default: 1},
 
+	// **مالٌ بيد السائق لم يُسلَّم منذ أيّام** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	//
+	// بعد هذا العدد من الأيّام يظهر السائقُ في «بانتظار قرارك» بالرئيسيّة.
+	// والعدُّ من أقدم مالٍ باقٍ بيده (الأقدمُ يُسدَّد أوّلاً) — دالّةُ
+	// `driver_cash_oldest_unpaid` في الهجرة 0330.
+	{Key: "drivers.cash_overdue_days", Group: GroupDrivers, Kind: KindInt,
+		Min: 1, Max: 60, Unit: "day", Default: 3},
+
+	// **وإيقافُ الطلبات النقديّة عنه تلقائيّاً بعد المدّة نفسِها** — اختياريٌّ
+	// ومطفأٌ افتراضاً بقرار المالك. يقرؤه حارسُ القبول ومرشَّحُ الدور معاً
+	// (`driver_cash_overdue_stopped`).
+	{Key: "drivers.cash_overdue_stop", Group: GroupDrivers, Kind: KindBool, Default: false},
+
 	// ══════════════════════════════════════════════════════════════════
 	// **وطلبُ المسار يتجاوز السقفَ بواحد**
 	// ══════════════════════════════════════════════════════════════════
@@ -1551,10 +1564,24 @@ var Catalog = []Def{
 	{Key: "drivers.reward_3", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
 
-	// **والافتراضُ نصفُ أجره** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٣):
-	// كان صفراً فلا يُفتح طلبُ تسويةٍ أصلاً في قاعدةٍ جديدة.
+	// **والافتراضيُّ ٥٠ كالقاعدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥): كان صفراً،
+	// **فمن ضغط «رجّع للافتراضي» أوقف كلَّ طلب تعويضٍ بصمت.** وصفرُه الآن مقترَحٌ
+	// صفرٌ والماليّةُ تقرّر — لا طلبَ يُترك.
 	{Key: "drivers.failed_compensation_percent", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 50, Sensitive: true},
+
+	// ── التعويضات (قرارُ المالك ٢٠٢٦-١٠-٠٤) ─────────────────────────────
+	//
+	// **سقفٌ لكلّ نوع** — وفوقه مديرُ المنصّة وحدَه يوافق. **ومهلةُ الانتظار**
+	// قبل أن يحمرّ الطلبُ ويُنبَّه المالك.
+	{Key: "compensations.cap_driver", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+	{Key: "compensations.cap_merchant_goods", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+	{Key: "compensations.cap_complaint", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+	{Key: "compensations.overdue_hours", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 720, Unit: "hour", Default: 24},
 
 	// **ولا انتظارَ بابٍ بعد اليوم** (`drivers.door_wait_sec` حُذف — قرارُ المالك
 	// مساءَ ٢٠٢٦-١٠-٠٢): السائقُ لا يُنهي الطلبَ عند الباب أصلاً، **والإدارةُ
@@ -2027,6 +2054,15 @@ var Catalog = []Def{
 	// **سقفُ الحركة اليدويّة الواحدة على محفظة** — والحركةُ طلبٌ تقرّره الماليّة.
 	{Key: "finance.manual_wallet_max", Group: GroupPlatform, Kind: KindMoney,
 		Min: 1, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+	// **سقفُ المصروف التشغيليّ الذي يحتاج موافقةً ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
+	// ما فوقه اقتراحٌ يوافق عليه شخصٌ آخر وصورةُ إيصاله إلزاميّة، وما دونه يُقيَّد
+	// مباشرة. وصفرُه: كلُّ مصروفٍ بموافقةٍ ثانية.
+	{Key: "finance.expense_approval_threshold", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+	// **بعد كم يوماً ينبّه الدينُ المفتوح في الرئيسيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+	// قسمُ الديون: «رقمٌ من الإعدادات ويبدأ بثلاثين»). وصفرُه: بلا تنبيه.
+	{Key: "finance.obligation_alert_days", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 365, Unit: "day", Default: 30},
 	// **عددُ الإنذارات في ثلاثين يوماً الذي ينبّه الموظّفين** — ولا إيقافَ آليّاً أبداً:
 	// القرارُ لموظّف (قرارُ المالك ٢٠٢٦-١٠-٠٤). وصفرُه: بلا تنبيه.
 	{Key: "safety.warnings_alert_count", Group: GroupPlatform, Kind: KindInt,

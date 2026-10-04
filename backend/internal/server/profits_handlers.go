@@ -84,6 +84,9 @@ var treasuryEntriesCTE = `
 				WHEN j.kind = 'platform_profit' AND j.order_id IS NOT NULL AND j.ostatus IN ('cancelled','rejected') THEN 'lost_cancelled'
 				WHEN j.kind = 'platform_profit' AND j.order_id IS NOT NULL AND j.ostatus = 'refunded' THEN 'lost_refunded'
 				WHEN j.kind = 'platform_profit' AND j.order_id IS NOT NULL THEN 'pending'
+				-- سدادُ دَينٍ من شحن المحفظة (قسمُ الديون ٢٠٢٦-١٠-٠٤): قيدُ الخزينة مرجعُه طلبُ
+				-- الشحن، وهو مالٌ مستردٌّ كسداد الدَّين نقداً بالمكتب — لا حركةٌ يدويّة.
+				WHEN j.kind = 'platform_profit' AND j.wr_kind = 'topup' THEN 'recovered'
 				WHEN j.kind IN ('platform_profit','platform_expense') AND j.wr_kind IN ('adjustment','topup') THEN 'outside'
 				WHEN j.kind = 'platform_profit' THEN 'recovered'
 				WHEN j.kind = 'platform_expense' THEN 'compensation'

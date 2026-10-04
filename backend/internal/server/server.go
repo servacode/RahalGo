@@ -1351,6 +1351,12 @@ func (s *Server) Router() http.Handler {
 			// (قرارُ المالك ٢٠٢٦-١٠-٠٢). **والموافقةُ هي البابُ أعلاه نفسُه.**
 			r.Get("/compensations/pending", s.handlePendingCompensations)
 			r.Post("/orders/{id}/compensation/reject", s.handleRejectCompensation)
+			// **صفحةُ «التعويضات» الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — بمعرّف طلب
+			// التعويض لا برقم الطلب (compensations.go).
+			r.Get("/compensations", s.handleListCompensations)
+			r.Post("/compensations", s.handleProposeCompensation)
+			r.Post("/compensations/{id}/approve", s.handleApproveCompensation)
+			r.Post("/compensations/{id}/reject", s.handleRejectCompensationByID)
 			// **إذنُ استثناءِ إثبات التسليم** — كاميرا معطّلةٌ فيأذن العملياتُ
 			// بالتسليم بلا صورة (قرارُ المالك ٢٠٢٦-٠٩-٢٧). **لا يأذن السائقُ
 			// لنفسه**: سببٌ إلزاميٌّ ومُدقَّقٌ في المعاملة (delivery_proof.go).
@@ -1358,7 +1364,13 @@ func (s *Server) Router() http.Handler {
 			// **المكافآتُ والعقوبات** — مالٌ يخرج بتقدير إنسان،
 			// **وموظّفُ العمليات ليس طرفاً في المال**: الحارسُ نفسُه الذي
 			// على تعويض السائق.
+			// **واليدويُّ طلبٌ يوافق عليه شخصٌ ثانٍ** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Post("/users/{id}/incentive", s.idempotent(s.handleIncentiveGrant))
+			r.Get("/incentive-requests", s.handleListIncentiveRequests)
+			r.Post("/incentive-requests/{id}/approve", s.handleDecideIncentiveRequest(true))
+			r.Post("/incentive-requests/{id}/reject", s.handleDecideIncentiveRequest(false))
+			r.Post("/incentive-alerts/{id}/decide", s.handleDecideIncentiveAlert)
+			r.Post("/incentive-failures/{id}/retry", s.handleRetryIncentiveFailure)
 			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
@@ -1372,8 +1384,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/offers", s.handleCreateOffer)
 			r.Post("/offers/{id}/active", s.handleSetOfferActive)
 			r.Get("/customers", s.handleListCustomers)
-			// **الأهدافُ تُقرأ ولا تُدفع** — تقول من بلغ، ولا تُعطي.
+			// **الأهدافُ لشهرٍ يُختار** — ومكافأةُ الهدف تنصرف لحالها (`incentives/target.go`).
 			r.Get("/incentives/{role}", s.handleIncentiveStandings)
+			r.Get("/incentives/{role}/export", s.handleIncentiveExport)
 			r.Get("/users/{id}/incentives", s.handleIncentiveList)
 			r.Get("/salesreps", s.handleListSalesReps)
 			r.Get("/leads", s.handleAdminLeads)
@@ -1382,10 +1395,17 @@ func (s *Server) Router() http.Handler {
 			// طلبات سحب الرصيد: القراءة لمكتب المنصة، والصرف للأدمن والمالية
 			r.Get("/payouts", s.handleAdminPayouts)
 			r.Post("/payouts/{id}/decide", s.idempotent(s.handleDecidePayout))
-			// **الالتزاماتُ الماليّة — قراءةٌ فقط** (`financial_obligations`):
+			// **الديون** (`financial_obligations`) — تبويبُ «الديون» في الخزينة:
 			// الدَّينُ على المتاجر والمناديب، على من وكم ومن أين وكم بقي.
-			// **ولا فعلَ هنا** — التسويةُ من بابها (استرداد أو نزاع).
+			// **ودفعٌ بالمكتب وشطبٌ — اقتراحٌ يوافق عليه غيرُ مقترِحه** (قراراتُ
+			// المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/obligations", s.handleListObligations)
+			r.Get("/obligations/export", s.handleExportObligations)
+			r.Post("/obligations/{id}/office-cash", s.handleProposeObligationCash)
+			r.Post("/obligations/{id}/write-off", s.handleProposeObligationWriteoff)
+			r.Get("/obligation-requests", s.handleListObligationRequests)
+			r.Post("/obligation-requests/{id}/approve", s.handleDecideObligationRequest(true))
+			r.Post("/obligation-requests/{id}/reject", s.handleDecideObligationRequest(false))
 
 			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
 			r.Get("/tickets", s.handleListTickets)
@@ -1402,6 +1422,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/drivers/{id}/end-shift", s.handleAdminEndShift)
 			// **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
 			r.Get("/cash/outstanding", s.handleCashOutstanding)
+			// **وكشفُ النقد ملفّاً، ومستحقّاتُ المتاجر النقديّة كلُّها** (٢٠٢٦-١٠-٠٤).
+			r.Get("/cash/outstanding/export", s.handleCashOutstandingExport)
+			r.Get("/cash/merchant-dues", s.handleMerchantCashDues)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.
@@ -1497,6 +1520,13 @@ func (s *Server) Router() http.Handler {
 			r.Post("/expenses", s.handleCreateExpense)
 			r.Post("/expenses/categories", s.handleSaveExpenseCategory)
 			r.Post("/expenses/{id}/void", s.handleVoidExpense)
+			// **قراراتُ المالك ٢٠٢٦-١٠-٠٤**: تصديرٌ بالمرشّحات · صورةُ إيصال ·
+			// واقتراحاتٌ فوق السقف يوافق عليها شخصٌ آخر.
+			r.Get("/expenses/export", s.handleExportExpenses)
+			r.Post("/expenses/receipt", s.handleUploadExpenseReceipt)
+			r.Get("/expense-requests", s.handleListExpenseRequests)
+			r.Post("/expense-requests/{id}/approve", s.handleApproveExpenseRequest)
+			r.Post("/expense-requests/{id}/reject", s.handleRejectExpenseRequest)
 			r.Post("/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))
 			r.Group(func(r chi.Router) {
 				// **وحارسُ الأدوار نُزع** — `ADG-2`: **السياسةُ

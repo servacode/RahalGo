@@ -253,7 +253,8 @@ var Gaps = []GapDecl{
 			"بدل ١٠٠.** **ثمّ أُغلقت بلقطة الاقتصاد**: **الوضعُ يُلتقَط " +
 			"لحظةَ الإنشاء ويُقرأ منه** — والقائمُ باقتصاده والجديدُ " +
 			"بالجديد."},
-	{ID: "XG-15", Title: "عتبةُ التفعيل تُسقط الطلباتِ السابقة", Severity: "HIGH", WokenBy: "sales.activation_orders"},
+	// **ولا مفتاحَ يوقظها بعد اليوم** — العتبةُ ثابتةٌ «أوّلُ طلبٍ ناجح» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{ID: "XG-15", Title: "عتبةُ التفعيل تُسقط الطلباتِ السابقة", Severity: "HIGH"},
 	{ID: "XG-16", Title: "المندوبُ يرى عمولةَ المنصّة", Severity: "HIGH"},
 	{ID: "XG-17", Title: "لا سجلَّ نقلِ متجرٍ بين مندوبين", Severity: "HIGH"},
 	{ID: "XG-18", Title: "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين", Severity: "BLOCKER",
@@ -3030,7 +3031,7 @@ var TestMap = map[string]TestDecl{
 	"TestXQ2_S3_RefundUsesOriginalEconomics":                    snapshotTest(),
 	"TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss":                snapshotTest(),
 	"TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder":                 snapshotTest(),
-	"TestXQ2_F3_UnreadableSettingBlocksCreation":                snapshotTest(),
+	"TestXQ2_F3_StaleSourceRowIgnored":                          snapshotTest(),
 	"TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot":   snapshotTest(),
 
 	// ── رموزُ الخطأ تبلغ الهاتفَ بعربيّة (دورةُ ٤٢) — `XG-45` ────
@@ -3063,11 +3064,10 @@ var TestMap = map[string]TestDecl{
 	"TestXG43_NoInvariantUsesDisplayIdentity":          identityTest(),
 
 	// ── مصدرُ احتساب العمولة (دورةُ ٣١) — `XG-13` · `XG-14` ──────
-	"TestXG14_ThreeModesGiveTheirContract":          commissionSourceTest(),
-	"TestXG14_ReversalMirrorsSettlementInEveryMode": commissionSourceTest(),
-	"TestXG13_DefaultIsPricingMargin":               commissionSourceTest(),
-	"TestXG13_UnknownModeIsRejected":                commissionSourceTest(),
-	"TestXG13_InvalidStoredValueFailsSafe":          commissionSourceTest(),
+	// **ثمّ ثُبّت المصدرُ «ربحُ المنصّة كلُّه» وحُذف زرُّه** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	"TestSETTINGS_RepCommissionFromWholePlatformProfit":   commissionSourceTest(),
+	"TestSETTINGS_RepCommissionReversalMirrorsSettlement": commissionSourceTest(),
+	"TestSETTINGS_CommissionSourceToggleRemoved":          commissionSourceTest(),
 
 	// ── طبقاتُ الرصيد (دورةُ إصلاحٍ ٣٠) — `XG-12` · `AQ-3` ───────
 	"TestXG12_T1_RequestReservesAndSpendSeesAvailable": reserveTest(),

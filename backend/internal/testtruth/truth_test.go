@@ -295,14 +295,21 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `ops.stuck_ack_snooze_min` — **«أنا عليه» تُسكت التذكيرَ ساعةً لا للأبد.**
 	// **وواحدٌ أُضيف بغرفة الطوارئ** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `ops.emergency_unacked_red_min`
 	// — **طارئٌ بلا مستلِمٍ عشرَ دقائق يحمرّ.**
+	// **وواحدٌ أُضيف بمصروفات التشغيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سقفُ الموافقة الثانية
+	// `finance.expense_approval_threshold`.
+	// **واثنان أُضيفا بقسم النقد** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `drivers.cash_overdue_days`
+	// و`drivers.cash_overdue_stop`.
+	// **وأربعةٌ أُضيفت بقسم التعويضات** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سقوفُ الأنواع الثلاثة
+	// `compensations.cap_driver|cap_merchant_goods|cap_complaint` و`compensations.overdue_hours`.
+	// **وواحدٌ أُضيف بقسم الديون** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `finance.obligation_alert_days`.
 	// **ونقصت أربعةً بقسم الإعدادات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): حُذف مصدرُ عمولة
 	// المندوب `sales.commission_source` وعتبةُ التفعيل `sales.activation_orders` ورمزُ
 	// دعوة المنصّة `platform.invite_code` والمفتاحان القديمان للتطبيق
 	// `platform.app_url`/`platform.app_file`، **وصارت حصّةُ المنصّة مفتاحاً واحداً
 	// لكلّ الأنواع** `delivery.platform_percent` بدل القديم، **وأُضيف قالبُ الترحيب**
 	// `accounts.welcome_template` (نصٌّ طويلٌ — عرضٌ لا سلوك).
-	if d.BehaviourSettings != 141 {
-		t.Errorf("إعداداتُ السلوك = %d لا 141 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	if d.BehaviourSettings != 149 {
+		t.Errorf("إعداداتُ السلوك = %d لا 149 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

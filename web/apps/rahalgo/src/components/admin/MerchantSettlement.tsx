@@ -89,7 +89,14 @@ export function MerchantSettlement({
   const [payId, setPayId] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
 
-  const showCash = method === "cash" && canReadCash;
+  // **والمستحقُّ القديمُ لا يختفي بتغيير الطريقة** (فحصُ قسم النقد ٢٠٢٦-١٠-٠٤، المشكلة ٣):
+  // كان الكشفُ لا يُعرض إلّا إن كانت الطريقةُ اليومَ «نقد» — فمتجرٌ له مئتا ألفٍ
+  // حُوّل إلى المحفظة صار مستحقُّه بلا من يراه أو يؤكّد دفعه. فيُحمَّل لمن يقرأ
+  // المال دائماً، ويُعرض إن كانت الطريقةُ نقداً أو كان له تاريخٌ نقديّ.
+  const loadCashAllowed = canReadCash;
+  const showCash =
+    canReadCash &&
+    (method === "cash" || (summary?.settlements.length ?? 0) > 0 || (summary?.outstanding_total ?? 0) > 0);
 
   const loadCash = useCallback(async () => {
     try {
@@ -103,8 +110,8 @@ export function MerchantSettlement({
   }, [merchantId]);
 
   useEffect(() => {
-    if (showCash) void loadCash();
-  }, [showCash, loadCash]);
+    if (loadCashAllowed) void loadCash();
+  }, [loadCashAllowed, loadCash]);
 
   async function applyChange(target: Method) {
     setPendingMethod(null);

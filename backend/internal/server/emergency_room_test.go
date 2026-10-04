@@ -99,7 +99,7 @@ func TestRoom_ReleaseBeforePickup_EntersRoom_FreesOthers_TellsCustomer(t *testin
 func TestRoom_StepsInOrder_MoneyIsRequestNotPayment(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	f.armOps(t)
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	d := f.drivers[0]
 	ctx := context.Background()
 	order := f.problemOrderAt(t, "picked_up", d)
@@ -213,7 +213,7 @@ func TestRoom_StoreClosure_CountStale_Halt(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	ctx := context.Background()
 	owner := testdb.NewUser(t, f.pool, "merchant")
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET owner_user_id = $2 WHERE id = $1`,
 		f.merchantID, owner); err != nil {
 		t.Fatal(err)

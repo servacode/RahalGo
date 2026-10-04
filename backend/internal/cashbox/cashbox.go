@@ -19,16 +19,24 @@ import (
 var (
 	ErrOverSettle  = httpx.NewError(http.StatusConflict, "over_settle", "errors.over_settle")
 	ErrLimitExceed = httpx.NewError(http.StatusConflict, "cash_limit_exceeded", "errors.cash_limit_exceeded")
+	// ErrCashOverdue **نقدٌ بيده لم يُسلَّم منذ المدّة والإيقافُ مُشعَل** — قرارُ المالك ٢٠٢٦-١٠-٠٤.
+	//
+	// **والرمزُ رمزُ السقف نفسُه** — تطبيقُ السائق مجمَّدٌ ويعرف هذا الرمزَ بنصٍّ عربيّ
+	// («سلّم صندوقك أوّلاً»)، **والفعلُ المطلوب منه واحد**. ومفتاحُ الرسالة مختلف،
+	// فاللوحةُ تقول السببَ الدقيق.
+	ErrCashOverdue = httpx.NewError(http.StatusConflict, "cash_limit_exceeded", "errors.cash_overdue")
 )
 
 type Entry struct {
-	ID        int64     `json:"id"`
-	Amount    int64     `json:"amount"`
-	Kind      string    `json:"kind"`
-	Ref       string    `json:"ref"`
-	Note      string    `json:"note"`
-	CreatedBy *string   `json:"created_by"`
-	CreatedAt time.Time `json:"created_at"`
+	ID     int64  `json:"id"`
+	Amount int64  `json:"amount"`
+	Kind   string `json:"kind"`
+	Ref    string `json:"ref"`
+	// OrderNumber **رقمُ الطلب الذي جاء منه المبلغ** — لقيود التحصيل وحدَها.
+	OrderNumber *int64    `json:"order_number"`
+	Note        string    `json:"note"`
+	CreatedBy   *string   `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Statement struct {
@@ -82,16 +90,19 @@ func (s *Service) StatementFor(ctx context.Context, driverID string, limit int) 
 		return nil, err
 	}
 	rows, err := s.db.Query(ctx, `
-		SELECT id, amount, kind, ref, note, created_by, created_at
-		FROM driver_cash_entries WHERE driver_id = $1
-		ORDER BY id DESC LIMIT $2`, driverID, limit)
+		SELECT e.id, e.amount, e.kind, e.ref,
+		       (SELECT o.number FROM orders o
+		         WHERE e.kind = 'order_collection' AND o.id::text = e.ref),
+		       e.note, e.created_by, e.created_at
+		FROM driver_cash_entries e WHERE e.driver_id = $1
+		ORDER BY e.id DESC LIMIT $2`, driverID, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var e Entry
-		if err := rows.Scan(&e.ID, &e.Amount, &e.Kind, &e.Ref, &e.Note, &e.CreatedBy, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Amount, &e.Kind, &e.Ref, &e.OrderNumber, &e.Note, &e.CreatedBy, &e.CreatedAt); err != nil {
 			return nil, err
 		}
 		st.Entries = append(st.Entries, e)

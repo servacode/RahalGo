@@ -57,10 +57,16 @@ type ovAwaiting struct {
 	CompensationsPending num `json:"compensations_pending"`
 	PayoutsPending       num `json:"payouts_pending"`
 	DriversOverCash      num `json:"drivers_over_cash"`
-	TicketsOpen          num `json:"tickets_open"`
-	TicketsLate          num `json:"tickets_late"`
-	LeadsNew             num `json:"leads_new"`
-	ExpansionWaiting     num `json:"expansion_waiting"`
+	// DriversCashOverdue **سائقون لم يسلّموا نقدَهم منذ أيّام** (`drivers.cash_overdue_days`).
+	DriversCashOverdue num `json:"drivers_cash_overdue"`
+	TicketsOpen        num `json:"tickets_open"`
+	TicketsLate        num `json:"tickets_late"`
+	LeadsNew           num `json:"leads_new"`
+	ExpansionWaiting   num `json:"expansion_waiting"`
+	// **ديونٌ مفتوحةٌ تجاوزت مهلةَ التنبيه** (`finance.obligation_alert_days`) ·
+	// **وطلباتُ دفعٍ بالمكتب أو شطبٍ تنتظر** — قسمُ الديون ٢٠٢٦-١٠-٠٤.
+	ObligationsOverdue num `json:"obligations_overdue"`
+	ObligationRequests num `json:"obligation_requests"`
 }
 
 type ovLive struct {
@@ -243,7 +249,7 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 				(SELECT count(*) FROM driver_compensation_requests WHERE status = 'pending'),
 				(SELECT count(*) FROM driver_emergencies WHERE status = 'open'),
 				(SELECT count(*) FROM payout_requests p WHERE p.status = 'pending'),
-				(SELECT count(*) FROM merchant_leads l WHERE l.status = 'new'),
+				(SELECT count(*) FROM merchant_leads l WHERE l.status = 'new' AND l.sales_rep_user_id IS NOT NULL),
 				-- **«ينتظرون ولم يُبلَّغوا» بشرط صفحة التوسّع نفسِه** (expWaitingSQL):
 				-- لا الملغى ولا المرفوض ولا من لا حسابَ له.
 				(SELECT count(*) FROM coverage_requests r WHERE `+expWaitingSQL+`)`).
@@ -252,6 +258,9 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 			a.CompensationsPending, a.EmergenciesOpen = n64(comp), n64(emerg)
 			a.PayoutsPending, a.LeadsNew, a.ExpansionWaiting = n64(pay), n64(leads), n64(exp)
 		}
+	}
+	if sum, err := s.obligationsSummary(ctx); !miss("obligations", err) {
+		a.ObligationsOverdue, a.ObligationRequests = n64(sum.Overdue), n64(sum.PendingRequests)
 	}
 	if n, err := s.orders.CountAwaitingOffice(ctx); !miss("reports_waiting", err) {
 		a.ReportsWaiting = n64(int64(n))
@@ -267,16 +276,12 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 	} else {
 		ov.Missing = append(ov.Missing, "tickets")
 	}
-	if holders, total, err := s.cashHolders(ctx); !miss("cash", err) {
-		limit := s.cashbox.Limit(ctx)
-		var over int64
-		for _, h := range holders {
-			if h.Held >= limit {
-				over++
-			}
-		}
-		a.DriversOverCash = n64(over)
-		ov.Money.CashHeld = n64(total)
+	// **بحساب صفحة النقد نفسِه**: السقفُ على ما بالجيب + نقدِ الطلبات المفتوحة،
+	// وبسقف السائق الخاصّ إن ضُبط (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	if cash, err := s.cashOverviewOf(ctx); !miss("cash", err) {
+		a.DriversOverCash = n64(cash.OverCount)
+		a.DriversCashOverdue = n64(cash.OverdueCount)
+		ov.Money.CashHeld = n64(cash.Total)
 	}
 
 	// ── الآن ───────────────────────────────────────────────────────

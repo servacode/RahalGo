@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 449,
+    "routes": 472,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 67,
-    "notify_targeted": 24,
+    "notify_sites": 73,
+    "notify_targeted": 27,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 176,
-    "behaviour_settings": 141,
+    "setting_defs": 184,
+    "behaviour_settings": 149,
     "order_fields": 95,
-    "test_files": 493,
-    "test_funcs": 2064
+    "test_files": 500,
+    "test_funcs": 2106
   },
   "flows": [
     {
@@ -140,6 +140,7 @@
         "TestCDEF003_OpenHoursUsesRealStoreNotSupplied",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -216,6 +217,7 @@
         "TestEV_CustomOrderOwnerRealtime",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -669,6 +671,9 @@
         "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
         "TestR24_F6_NoMerchantPhoneAfterAccept",
         "TestR24_F7_DispatchFailureIsVisible",
+        "TestSETTINGS_CommissionSourceToggleRemoved",
+        "TestSETTINGS_RepCommissionFromWholePlatformProfit",
+        "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
         "TestXG42_CapabilityUnionCustomRoleAndRevoke",
@@ -691,6 +696,7 @@
         "TestOBL_ReplayCreatesNoDuplicate",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -1041,12 +1047,16 @@
       ],
       "tests": [
         "TestRepTarget_GrantedOnDelivery",
+        "TestSETTINGS_CommissionSourceToggleRemoved",
+        "TestSETTINGS_RepCommissionFromWholePlatformProfit",
+        "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RepCommissionReversal",
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -1563,6 +1573,9 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestSETTINGS_CommissionSourceToggleRemoved",
+        "TestSETTINGS_RepCommissionFromWholePlatformProfit",
+        "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
         "TestXG20_A2_AuditFailureRollsBackBusiness",
         "TestXG20_A3_FailedBusinessLeavesNoAudit",
         "TestXG20_C1C2_ConcurrentMutationsCorrelate",
@@ -1575,6 +1588,7 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -2751,6 +2765,9 @@
       "severity": "HIGH",
       "fixed": "**صار `sales.commission_source` مفتاحاً كانونيّاً** بثلاث قيمٍ لا رابعَ لها (`platform_commission` · `pricing_margin` · `both`)، **افتراضُه `pricing_margin` بقرار المالك** — **أقلُّ فارقٍ ماليٍّ عن السلوك القائم.** **ويُصنَّف ماليّاً حسّاساً** فيدخل `FinancialSettings` وتحكمه قدرةُ الإعدادات الماليّة **ويلزمه تأكيدٌ** (`ADG-3`) **وأثرُه معامليّ** (`AQ-4`). **ومجهولُ القيمة يُردّ ولا يرتدّ إلى افتراض** — **وقيمةٌ فاسدةٌ تُقرأ افتراضاً تدفع مالاً لا يقصده أحد.** (قِيس: قيمةٌ خارج المعجم ⇒ `400`.)",
       "tests": [
+        "TestSETTINGS_CommissionSourceToggleRemoved",
+        "TestSETTINGS_RepCommissionFromWholePlatformProfit",
+        "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_SnapshotVsLiveEconomics"
       ],
@@ -2761,14 +2778,17 @@
       "title": "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة",
       "severity": "CRITICAL",
       "fixed": "**نُزعت البوّابةُ وصارت القاعدةُ بالوضع المعتمد** (دورةُ ٣١). **وكان السلوكُ لا يطابق وضعاً**: `platformCommission == 0` تمنع كلَّ شيءٍ **ثمّ يُحسَب من الهامش** — **فأضيقُ من الوضعين**، **ومتجرٌ عمولتُه صفرٌ وهامشُه ألفٌ لا يُعطي مندوبَه شيئاً.** **والأوضاعُ الثلاثةُ مقيسةٌ بعشر حالات** (١٠٠ · ١٠٠ · ٢٠٠)، **والعكسُ نُزعت بوّابتُه معها** فلا يبقى قيدٌ لا يُعكَس. **وأُعيدت مانعةً في دورةِ ٣٢** لأنّ قراءةَ الوضع عند التسوية كانت تخالف `XQ-2` — **فطلبٌ أُنشئ بوضعٍ وسُلّم بآخر أعطى ٢٠٠ بدل ١٠٠.** **ثمّ أُغلقت بلقطة الاقتصاد**: **الوضعُ يُلتقَط لحظةَ الإنشاء ويُقرأ منه** — والقائمُ باقتصاده والجديدُ بالجديد.",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSETTINGS_CommissionSourceToggleRemoved",
+        "TestSETTINGS_RepCommissionFromWholePlatformProfit",
+        "TestSETTINGS_RepCommissionReversalMirrorsSettlement"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-15",
       "title": "عتبةُ التفعيل تُسقط الطلباتِ السابقة",
       "severity": "HIGH",
-      "woken_by": "sales.activation_orders",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -2887,6 +2907,7 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -2901,6 +2922,7 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -2915,6 +2937,7 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -2929,6 +2952,7 @@
       "tests": [
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss"
@@ -3408,6 +3432,78 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "compensations.cap_complaint",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.cap_driver",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.cap_merchant_goods",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.overdue_hours",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "customers.cash_ban_days",
       "group": "customers",
       "kind": "int",
@@ -3829,6 +3925,48 @@
         "TestRACE_TwoDriversSameOrder"
       ],
       "status": "REGRESSION_TEST_PRESENT"
+    },
+    {
+      "key": "drivers.cash_overdue_days",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.cash_overdue_stop",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "drivers.direct_assign",
@@ -4336,11 +4474,47 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "finance.expense_approval_threshold",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "finance.manual_wallet_max",
       "group": "platform",
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "finance.obligation_alert_days",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-33"
       ],
@@ -4633,6 +4807,7 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -5510,6 +5685,9 @@
         "rep"
       ],
       "tests": [
+        "TestSETTINGS_CommissionSourceToggleRemoved",
+        "TestSETTINGS_RepCommissionFromWholePlatformProfit",
+        "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RefundNotConditionedOnRepBalance",
@@ -5517,6 +5695,7 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot",
         "TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder",
+        "TestXQ2_F3_StaleSourceRowIgnored",
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
@@ -6022,6 +6201,12 @@
       "orphan": true
     },
     {
+      "name": "TestReset_ReseedsExpenseCategories",
+      "file": "cmd/stagingctl/reseed_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
       "name": "TestDeviceCasesAreNotClaimedRun",
       "file": "internal/androidmap/androidmap_test.go",
       "package": "androidmap",
@@ -6294,6 +6479,12 @@
       "name": "TestSettle_RejectsMoreThanHeld",
       "file": "internal/cashbox/cashbox_test.go",
       "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCashKindsHaveAdminLabels",
+      "file": "internal/cashbox/kinds_test.go",
+      "package": "cashbox",
       "orphan": true
     },
     {
@@ -11744,6 +11935,48 @@
       "orphan": false
     },
     {
+      "name": "TestCASH_CapCountsOpenOrderCash",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_MerchantDuesListedRegardlessOfMethod",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_OverdueAlertAndOptionalStop",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_OverdueDefaultsMatchCatalog",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_SettleNotificationFormatsMoney",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_SinceSurvivesPartialHandover",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_StatementCarriesOrderNumber",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCHAT_TENURE_AdminSeesEachDriverApart",
       "file": "internal/qa/chat_driver_tenure_test.go",
       "package": "qa",
@@ -11963,19 +12196,76 @@
       "name": "TestSETTINGS_CommissionSourceToggleRemoved",
       "file": "internal/qa/commission_source_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSETTINGS_RepCommissionFromWholePlatformProfit",
       "file": "internal/qa/commission_source_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSETTINGS_RepCommissionReversalMirrorsSettlement",
       "file": "internal/qa/commission_source_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCONC_BarrierReleasesTogether",
@@ -16438,6 +16728,48 @@
       "orphan": true
     },
     {
+      "name": "TestOBLX_OfficeCashPaymentEntersCashboxAndTreasury",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_OffsetNoteNamesTheRealCause",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_SearchTotalsAndOverdueAlert",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_TopupPaysDebtFirst",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_VoidedDebtIsNotPaid",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_WalletShowsDebtToOwner",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_WriteoffNeedsPlatformOwner",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestOBL_BothInsufficient_AtomicOrigins",
       "file": "internal/qa/obligations_test.go",
       "package": "qa",
@@ -17502,7 +17834,34 @@
       "name": "TestXQ2_F3_StaleSourceRowIgnored",
       "file": "internal/qa/order_snapshot_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-02",
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-25",
+        "XG-26",
+        "XG-27",
+        "XG-28"
+      ],
+      "settings": [
+        "merchants.commission_percent",
+        "sales.commission_percent",
+        "sales.commission_source",
+        "sales.activation_orders"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
@@ -23804,6 +24163,60 @@
       "orphan": true
     },
     {
+      "name": "TestCOMP_AboveCapOnlyOwner",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ApproveByRequestID_PaysTheShownDriver",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ComplaintPaysOwnerFromTreasury",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_GoodsCompensationGoesThroughQueue",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_HistoryTabsSummaryMismatch",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_OverdueAlertsOwnerOnce",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ProposerCannotApproveOwn",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ReasonsArabicEverywhere",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ZeroPercentStillCreatesRequest",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestCORS_ProductionPreflightAllowsStepUp",
       "file": "internal/server/cors_headers_test.go",
       "package": "server",
@@ -24362,6 +24775,48 @@
       "orphan": true
     },
     {
+      "name": "TestEXPENSES_AboveThresholdNeedsSecondApprover",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_AtThresholdPostsDirectlyAndNamesCategory",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_CategoryAuditIsComplete",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_InvertedRangeIsSaid",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_MonthIsBySpendDate",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_NoFutureSpendDate",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_VoidNeedsReasonAndAnotherPersonAndStaysVisible",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestExpenses_LeaveTreasuryAndStayOutOfLosses",
       "file": "internal/server/expenses_test.go",
       "package": "server",
@@ -24494,6 +24949,36 @@
       "orphan": true
     },
     {
+      "name": "TestINC_FailedStoreBonusIsRecordedAndRetried",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_ManualGrantIsARequestApprovedByAnother",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_RefundAndFakeStoreRaiseAlerts",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_StagesMonthAndSuspended",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_TransferredStoreStaysWithOpener",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestConvertLead_RefusesDriverPhoneAndSaysWhy",
       "file": "internal/server/lead_convert_conflict_test.go",
       "package": "server",
@@ -24508,6 +24993,36 @@
     {
       "name": "TestValidDistrict_AcceptsLiveRejectsOff",
       "file": "internal/server/lead_district_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminLeads_RepOnlyFiltersAndWarnings",
+      "file": "internal/server/lead_page_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadConvert_ExistingAccountGetsNoNewPassword",
+      "file": "internal/server/lead_page_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadConvert_NewOwnerGetsTempPasswordInSameFlow",
+      "file": "internal/server/lead_page_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadConvert_TargetAtCreationCommissionAtDelivery",
+      "file": "internal/server/lead_page_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadNeedsInfo_ReturnsToRepWithNote",
+      "file": "internal/server/lead_page_decisions_test.go",
       "package": "server",
       "orphan": true
     },
@@ -25812,15 +26327,7 @@
       "orphan": true
     }
   ],
-  "stale": [
-    "TestMap يشير إلى \"TestXG13_DefaultIsPricingMargin\" ولا وجودَ لها",
-    "TestMap يشير إلى \"TestXG13_InvalidStoredValueFailsSafe\" ولا وجودَ لها",
-    "TestMap يشير إلى \"TestXG13_UnknownModeIsRejected\" ولا وجودَ لها",
-    "TestMap يشير إلى \"TestXG14_ReversalMirrorsSettlementInEveryMode\" ولا وجودَ لها",
-    "TestMap يشير إلى \"TestXG14_ThreeModesGiveTheirContract\" ولا وجودَ لها",
-    "TestMap يشير إلى \"TestXQ2_F3_UnreadableSettingBlocksCreation\" ولا وجودَ لها",
-    "XG-15 يوقظه مفتاحٌ \"sales.activation_orders\" لا وجودَ له"
-  ],
+  "stale": [],
   "coverage_gaps": [
     "D11 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",

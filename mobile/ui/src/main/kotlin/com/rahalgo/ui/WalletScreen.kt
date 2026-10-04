@@ -225,9 +225,20 @@ fun WalletScreen(
      * تنسيقُ حركةٍ في إحداهما **وتبقى الأخرى تعرضها كما كانت.**
      */
     payouts: Boolean = true,
+    /**
+     * **«تسوية من الإدارة» بدل «تعويض» — وبلا ملاحظة المكتب** (قرارُ المالك
+     * ٢٠٢٦-١٠-٠٤، البند ٣): ولا كلمةَ «تعويض» في نصٍّ يراه السائق، **وملاحظةُ
+     * الموظّف داخليّةٌ لا تُعرض له**. تطبيقُ السائق وحدَه يمرّرها.
+     */
+    neutralCompensation: Boolean = false,
 ) {
     val s = vm.state
-    val st = s.statement
+    val st = s.statement?.let { raw ->
+        if (!neutralCompensation) raw
+        else raw.copy(transactions = raw.transactions.map { t ->
+            if (t.kind == "compensation") t.copy(kind = "adjustment", note = "") else t
+        })
+    }
     if (st == null) {
         // **وإعادةُ التحميل بضغطة** — لا سطرٌ أحمرُ بلا مخرج.
         LoadState(loading = s.error.isEmpty(), error = s.error, onRetry = vm::load)
@@ -275,6 +286,13 @@ fun WalletScreen(
                 color = Rahal.colors.brand,
                 style = MaterialTheme.typography.headlineLarge,
             )
+        }
+
+        // **والدينُ سطرٌ بسيطٌ تحت الرصيد** — للمتجر والمندوب، ولا يظهر لغيرهما.
+        // (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الدين اللي ما بينفهم بيصير شكوى».)
+        if (st.debtTotal > 0) {
+            Spacer(Modifier.height(10.dp))
+            DebtLineText(st)
         }
 
         Spacer(Modifier.height(14.dp))
@@ -531,6 +549,26 @@ private fun fmtWhen(iso: String): String = whenText(iso)
  * **والمدى ثلاثةُ أزرارٍ لا منتقي تاريخٍ** — سائقٌ يقف في الشارع لا
  * يفتح تقويماً، **وأكثرُ ما يُسأل عنه شهرٌ مضى أو هذا الشهر.**
  */
+/** **«عليك كذا، بسبب كذا، وبينقطع من أول أرباح جاية».** */
+@Composable
+private fun DebtLineText(st: WalletStatement) {
+    val causes = st.debts.map { debtCause(it.cause) }.distinct().joinToString("، ")
+    Text(
+        text = stringResource(R.string.wal_debt_line, money(st.debtTotal), causes),
+        color = Rahal.colors.inkMuted,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun debtCause(cause: String): String = when (cause) {
+    "refund_merchant_earning", "refund_rep_commission" -> stringResource(R.string.wal_debt_refund)
+    "returned_goods" -> stringResource(R.string.wal_debt_returned)
+    "merchant_delivery_fee" -> stringResource(R.string.wal_debt_delivery)
+    else -> stringResource(R.string.wal_debt_old)
+}
+
 @Composable
 private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current

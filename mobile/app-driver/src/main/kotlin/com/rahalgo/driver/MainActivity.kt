@@ -992,7 +992,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         showAddresses = false,
                     )
                     Overlay.Rating -> RatingScreen(vm = ratingVm)
-                    Overlay.Wallet -> WalletScreen(vm = walletVm)
+                    Overlay.Wallet -> WalletScreen(vm = walletVm, neutralCompensation = true)
                     // **وصندوقُ الإشعارات يُقرأ ثمّ يُغلق** — وفارغٌ
                     // حتّى يصل، **فلا تُعرض قائمةٌ فارغةٌ على أنّها
                     // «لا إشعارات».**

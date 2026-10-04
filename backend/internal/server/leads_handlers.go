@@ -26,9 +26,10 @@ var errLeadConverted = httpx.NewError(http.StatusConflict,
 	"lead_already_converted", "errors.lead_already_converted")
 
 // نصوص إشعارات هذا القسم — مجمّعة كي لا تتناثر في الكود.
-var m = struct{ leadNewOps, leadApproved string }{
-	leadNewOps:   "طلب انضمام متجر جديد",
-	leadApproved: "تمت الموافقة على عميلك",
+var m = struct{ leadNewOps, leadApproved, leadNeedsInfo string }{
+	leadNewOps:    "طلب انضمام متجر جديد",
+	leadApproved:  "تمت الموافقة على عميلك",
+	leadNeedsInfo: "طلب انضمام بحاجة معلومات",
 }
 
 // حدود طول الحقول — نقطة عامة بلا حساب، نمنع تخزين حمولات ضخمة لكل صف.
@@ -112,9 +113,42 @@ const leadSelect = `
 	LEFT JOIN districts d ON d.id = l.district_id
 	LEFT JOIN governorates g ON g.id = d.governorate_id`
 
-// handleAdminLeads كل طلبات الانضمام (ترشيح بالحالة اختياري).
+// adminLead **طلبٌ كما يراه المكتب** — الطلبُ نفسُه وتحذيراتُه.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤.) **والتحذيراتُ للمكتب وحدَه** — لا تُرسَل إلى
+// المندوب: من عرف أنّ رقماً له حسابٌ عندنا عرف شيئاً عن صاحبه.
+type adminLead struct {
+	lead
+	GovernorateID *string `json:"governorate_id"`
+	// DuplicatePhone **أسماءُ متاجرَ أو طلباتٍ مفتوحةٍ بالرقم نفسِه.**
+	DuplicatePhone []string `json:"duplicate_phone"`
+	// NearbySameName **متاجرُ قائمةٌ بالاسم نفسِه قريبةٌ منه** — ضمن
+	// ألفِ مترٍ من نقطته (`adminLeadSelect`)، أو في منطقته إن لم تكن له نقطة.
+	NearbySameName []string `json:"nearby_same_name"`
+	// ExistingAccount **للرقم حسابٌ قائم** — فلا كلمةَ سرٍّ تُولَّد له:
+	// تصله «صار عندك متجر». يُقال قبل الموافقة.
+	ExistingAccount bool      `json:"existing_account"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// leadStatuses **الحالاتُ الأربع** — و`needs_info` تعود للمندوب بملاحظة.
+var leadStatuses = map[string]bool{"new": true, "needs_info": true, "converted": true, "rejected": true}
+
+// handleAdminLeads طلباتُ الانضمام — **للمتاجر التي يضيفها المندوبون وحدَها.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤: «وصفحةُ طلبات الانضمام للمتاجر التي يضيفها
+// المندوبون وحدَها».) **وما أنشأته الإدارةُ بيدها لا يمرّ من هنا أصلاً**،
+// **وصفٌّ بلا مندوبٍ بقيّةُ بابِ الانضمام العامّ الذي رُفع** (`JOIN-0`).
+//
+// **والترشيحُ كلُّه في الخادم** — بحثٌ ومندوبٌ ومحافظةٌ وتصنيفٌ وتاريخ —
+// فالعددُ والصفحاتُ صادقةٌ لما يُعرض.
 func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
-	status := r.URL.Query().Get("status")
+	qp := r.URL.Query()
+	status := qp.Get("status")
+	if status != "" && !leadStatuses[status] {
+		s.respondErr(w, errValidation)
+		return
+	}
 	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
 	//
 	// **ومئتان بلا كلمةٍ تُقرأ «هذا كلُّ من طلب الانضمام»** — فيُظنّ أنّ
@@ -122,34 +156,137 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 	pg := pagingOf(r, 20)
 	// **ومندوبُه مُرشِّحٌ** — (قرارُ المالك ٢٠٢٦-٠٨-١٦): **عملاؤه المحتملون
 	// في ملفّه.**
-	//
-	// **وهي عملُ المندوب الأوّل**: الملفُّ كان يقول «كم متجراً جلب» **ولا
-	// يقول كم رشّح وكم رُفض له.**
-	repID := r.URL.Query().Get("rep_id")
-	const leadWhere = ` WHERE ($1 = '' OR l.status = $1)
-		AND ($2 = '' OR l.sales_rep_user_id::text = $2)`
+	repID := qp.Get("rep_id")
+	govID := qp.Get("governorate_id")
+	catID := qp.Get("category_id")
+	for _, id := range []string{repID, govID, catID} {
+		if id != "" && !isUUID(id) {
+			s.respondErr(w, errValidation)
+			return
+		}
+	}
+	// **والتاريخُ يومٌ بتوقيت دمشق** — من «من» إلى «إلى» شاملَين.
+	var from, to *time.Time
+	for _, p := range []struct {
+		raw string
+		dst **time.Time
+	}{{qp.Get("from"), &from}, {qp.Get("to"), &to}} {
+		if p.raw == "" {
+			continue
+		}
+		d, err := time.Parse("2006-01-02", p.raw)
+		if err != nil {
+			s.respondErr(w, errValidation)
+			return
+		}
+		*p.dst = &d
+	}
+	q := clip(qp.Get("q"), leadMaxShort)
+	qPhone := ""
+	if ph, ok := identity.NormalizePhone(q); ok {
+		qPhone = ph
+	}
+	const leadWhere = ` WHERE l.sales_rep_user_id IS NOT NULL
+		AND ($1 = '' OR l.status = $1)
+		AND ($2 = '' OR l.sales_rep_user_id::text = $2)
+		AND ($3 = '' OR d.governorate_id::text = $3)
+		AND ($4 = '' OR l.category_id::text = $4)
+		AND ($5::date IS NULL OR (l.created_at AT TIME ZONE 'Asia/Damascus')::date >= $5::date)
+		AND ($6::date IS NULL OR (l.created_at AT TIME ZONE 'Asia/Damascus')::date <= $6::date)
+		AND ($7 = '' OR strpos(lower(l.store_name), lower($7)) > 0
+		             OR strpos(lower(l.owner_name), lower($7)) > 0
+		             OR strpos(l.phone, $7) > 0
+		             OR ($8 <> '' AND l.phone = $8))`
+	args := []any{status, repID, govID, catID, from, to, q, qPhone}
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM merchant_leads l`+leadWhere,
-		status, repID).Scan(&count); err != nil {
+		`SELECT count(*) FROM merchant_leads l
+		 LEFT JOIN districts d ON d.id = l.district_id`+leadWhere,
+		args...).Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	rows, err := s.pg.Query(r.Context(),
-		leadSelect+leadWhere+`
-		ORDER BY l.created_at DESC LIMIT $3 OFFSET $4`, status, repID, pg.PerPage, pg.Offset)
+		adminLeadSelect+leadWhere+`
+		ORDER BY l.created_at DESC LIMIT $9 OFFSET $10`,
+		append(args, pg.PerPage, pg.Offset)...)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	defer rows.Close()
-	out, err := scanLeads(rows)
-	if err != nil {
+	out := []adminLead{}
+	for rows.Next() {
+		var a adminLead
+		l := &a.lead
+		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area, &l.District,
+			&l.CategoryName, &l.CategoryIcon, &l.Lat, &l.Lng,
+			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt,
+			&l.Note, &l.DecisionNote,
+			&a.GovernorateID, &a.DuplicatePhone, &a.NearbySameName, &a.ExistingAccount,
+			&a.UpdatedAt); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, a)
+	}
+	if err := rows.Err(); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, paged("leads", out, count, pg))
+	res := paged("leads", out, count, pg)
+	// **ومندوبو المرشِّح من أصحاب الطلبات أنفسِهم** — لا قائمةُ كلّ مندوب.
+	reps := []map[string]string{}
+	if rr, err := s.pg.Query(r.Context(), `
+		SELECT DISTINCT u.id::text, COALESCE(NULLIF(u.full_name, ''), u.phone::text)
+		  FROM merchant_leads l JOIN users u ON u.id = l.sales_rep_user_id
+		 ORDER BY 2`); err == nil {
+		for rr.Next() {
+			var id, name string
+			if rr.Scan(&id, &name) == nil {
+				reps = append(reps, map[string]string{"id": id, "name": name})
+			}
+		}
+		rr.Close()
+	}
+	res["reps"] = reps
+	httpx.JSON(w, http.StatusOK, res)
 }
+
+// adminLeadSelect **الطلبُ وتحذيراتُه** — `leadSelect` نفسُه وأعمدةٌ بعده.
+const adminLeadSelect = `
+	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area,
+	       COALESCE(d.name || '، ' || g.name, ''),
+	       c.name, c.icon, l.lat, l.lng,
+	       NULLIF(COALESCE(u.full_name, u.phone::text), ''), u.invite_code, l.status, l.created_at,
+	       l.note, l.decision_note,
+	       g.id::text,
+	       COALESCE((SELECT array_agg(x.name) FROM (
+	           SELECT m2.name FROM merchants m2
+	             LEFT JOIN users o ON o.id = m2.owner_user_id
+	            WHERE m2.id IS DISTINCT FROM l.merchant_id
+	              AND (m2.phone = l.phone OR o.phone::text = l.phone)
+	           UNION
+	           SELECT l2.store_name FROM merchant_leads l2
+	            WHERE l2.phone = l.phone AND l2.id <> l.id
+	              AND l2.status IN ('new', 'needs_info')
+	           LIMIT 5) x), '{}'),
+	       COALESCE((SELECT array_agg(n.name) FROM (
+	           SELECT m3.name FROM merchants m3
+	            WHERE m3.id IS DISTINCT FROM l.merchant_id
+	              AND lower(btrim(m3.name)) = lower(btrim(l.store_name))
+	              AND ((l.lat IS NOT NULL AND l.lng IS NOT NULL AND m3.location IS NOT NULL
+	                    AND ST_DWithin(m3.location,
+	                        ST_SetSRID(ST_MakePoint(l.lng, l.lat), 4326)::geography, 1000))
+	                   OR (l.district_id IS NOT NULL AND m3.district_id = l.district_id))
+	           LIMIT 5) n), '{}'),
+	       EXISTS (SELECT 1 FROM users ux WHERE ux.phone::text = l.phone),
+	       l.updated_at
+	FROM merchant_leads l
+	LEFT JOIN users u ON u.id = l.sales_rep_user_id
+	LEFT JOIN categories c ON c.id = l.category_id
+	LEFT JOIN districts d ON d.id = l.district_id
+	LEFT JOIN governorates g ON g.id = d.governorate_id`
 
 // handleRepCreateLead تسجيل عميل جديد من بوابة المندوب مباشرة.
 //
@@ -352,7 +489,7 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		Status string `json:"status"`
 		Note   string `json:"note"`
 	}](r)
-	if err != nil || (req.Status != "converted" && req.Status != "rejected" && req.Status != "new") {
+	if err != nil || !leadStatuses[req.Status] {
 		s.respondErr(w, errValidation)
 		return
 	}
@@ -365,7 +502,9 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 	// والاسترجاعُ وحسمُ النزاع وردُّ صنفٍ في المراجعة. **والفرصةُ وحدَها كانت
 	// تُردّ صامتة.**
 	note := strings.TrimSpace(req.Note)
-	if req.Status == "rejected" && note == "" {
+	// **و«بحاجة معلومات» كالردّ** — ملاحظةٌ تقول للمندوب ما الناقص
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤)، **وإلّا عاد إليه طلبٌ لا يعرف ما يصلح فيه.**
+	if (req.Status == "rejected" || req.Status == "needs_info") && note == "" {
 		s.respondErr(w, errReasonRequired)
 		return
 	}
@@ -375,11 +514,14 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Status == "converted" {
-		if err := s.convertLead(r.Context(), userIDFrom(r), id, clientIP(r)); err != nil {
+		welcome, err := s.convertLead(r.Context(), userIDFrom(r), id, clientIP(r))
+		if err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+		// **ورسالةُ الدخول تُقال في جواب الموافقة نفسِه** — أوصلت أم لا، فإن لم
+		// تصل ضغط المكتبُ «إعادة إرسال» من ملفّ صاحب المتجر.
+		httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "welcome": welcome})
 		return
 	}
 	// ══════════════════════════════════════════════════════════════════
@@ -429,8 +571,11 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 	//
 	// كان التحديثُ بلا أثر — **والمندوبُ يسأل «مين رفض متجري؟» ولا جواب.**
 	leadAction := "ops.lead_rejected"
-	if req.Status == "new" {
+	switch req.Status {
+	case "new":
 		leadAction = "ops.lead_reopened"
+	case "needs_info":
+		leadAction = "ops.lead_needs_info"
 	}
 	leadMeta := map[string]any{"name": storeName}
 	if note != "" {
@@ -448,6 +593,16 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 			Title: notifTitles.leadRejected, Body: storeName + " — " + note,
 			Entity: "lead", EntityID: id, Href: "/portal/leads",
 			// **إلى تطبيق المندوب وحدَه** (OBS-R7) — لا يرنّ على تطبيق زبونه.
+			Apps: []string{notifications.AppRep},
+		})
+	}
+	// **و«بحاجة معلومات» تصل المندوبَ بملاحظتها** — والطلبُ يبقى في قائمته
+	// (`GET /rep/leads`) بحالته `needs_info` وملاحظتِه `decision_note`.
+	if req.Status == "needs_info" && repID != nil {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: *repID, Kind: notifications.KindLead,
+			Title: m.leadNeedsInfo, Body: storeName + " — " + note,
+			Entity: "lead", EntityID: id, Href: "/portal/leads",
 			Apps: []string{notifications.AppRep},
 		})
 	}
@@ -478,12 +633,37 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 //
 // **وخطؤها لا يُسقط الإنشاء**: المتجرُ فُتح، **ومكافأةٌ تأخّرت أهونُ
 // من عميلٍ ضاع.** والقاعدةُ تمنع التكرار — فهرسٌ فريدٌ لكلّ شهر.
+//
+// **وكان خطؤها يُبلَع** (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأهداف): لا سطرَ في
+// السجلّ، **ومن وقف عند الهدف بالضبط لا يقبضها أبداً.** والآن بمعاملتها،
+// وعثرتُها تُكتب في السجلّ وفي `incentive_grant_failures` فتُعاد دوريّاً.
 func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
-	paid, err := s.grantSalesTargetTx(ctx, s.pg, merchantID)
-	if err != nil {
+	if s.incentives == nil || merchantID == "" {
 		return
 	}
+	rep := s.salesOpenerOf(ctx, s.pg, merchantID)
+	if rep == "" {
+		return
+	}
+	paid := s.incentives.GrantTargetIfReached(ctx, rep, "sales")
 	s.notifySalesTargetPaid(ctx, merchantID, paid)
+}
+
+// salesOpenerOf **المندوبُ الذي فتح المتجر** — فعّالاً؛ وإلّا فراغ.
+//
+// **ويُحسب له للأبد** (`opened_by_rep_id`، قرارُ المالك ٢٠٢٦-١٠-٠٤): النقلُ
+// ينقل العمولةَ القادمةَ وحدَها لا رصيدَ الهدف.
+func (s *Server) salesOpenerOf(ctx context.Context, q dbtx.Querier, merchantID string) string {
+	var repID *string
+	// **والمندوبُ غيرُ الفعّال لا يُحسب له هدفٌ ولا مكافأة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	if err := q.QueryRow(ctx,
+		`SELECT m.opened_by_rep_id::text FROM merchants m
+		   JOIN users u ON u.id = m.opened_by_rep_id AND u.status = 'active'
+		  WHERE m.id = $1`,
+		merchantID).Scan(&repID); err != nil || repID == nil {
+		return ""
+	}
+	return *repID
 }
 
 // grantSalesTargetTx يمنح المكافأةَ **في معاملةٍ مُمرَّرة** ويُرجع ما دُفع.
@@ -495,16 +675,11 @@ func (s *Server) grantSalesTargetTx(ctx context.Context, q dbtx.Querier,
 	if s.incentives == nil || merchantID == "" {
 		return 0, nil
 	}
-	var repID *string
-	// **والمندوبُ غيرُ الفعّال لا يُحسب له هدفٌ ولا مكافأة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
-	if err := q.QueryRow(ctx,
-		`SELECT m.sales_rep_user_id::text FROM merchants m
-		   JOIN users u ON u.id = m.sales_rep_user_id AND u.status = 'active'
-		  WHERE m.id = $1`,
-		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
+	rep := s.salesOpenerOf(ctx, q, merchantID)
+	if rep == "" {
 		return 0, nil
 	}
-	return s.incentives.GrantTargetIfReachedTx(ctx, q, *repID, "sales")
+	return s.incentives.GrantTargetIfReachedTx(ctx, q, rep, "sales")
 }
 
 // notifySalesTargetPaid يخبر المندوبَ ببلوغ هدفه.
@@ -528,7 +703,7 @@ func (s *Server) notifySalesTargetPaid(ctx context.Context, merchantID string, p
 	}
 	var repID *string
 	if err := s.pg.QueryRow(ctx,
-		`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`,
+		`SELECT opened_by_rep_id::text FROM merchants WHERE id = $1`,
 		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
 		return
 	}
@@ -541,7 +716,7 @@ func (s *Server) notifySalesTargetPaid(ctx context.Context, merchantID string, p
 	})
 }
 
-func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) error {
+func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (map[string]any, error) {
 	var (
 		storeName, ownerName, phone, area string
 		categoryID                        *string
@@ -558,13 +733,13 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 		WHERE l.id = $1`, leadID).
 		Scan(&storeName, &ownerName, &phone, &area, &categoryID, &lat, &lng, &pwHash, &repCode, &merchantID)
 	if err != nil {
-		return httpx.ErrNotFound
+		return nil, httpx.ErrNotFound
 	}
 	if merchantID != nil {
-		return nil // محوّل مسبقاً — لا تكرار
+		return nil, nil // محوّل مسبقاً — لا تكرار
 	}
 	if categoryID == nil {
-		return errValidation // لا متجر بلا تصنيف
+		return nil, errValidation // لا متجر بلا تصنيف
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **والعنوانُ يُبنى من المنطقة والتفصيل معاً**
@@ -584,6 +759,34 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 			addr = label + " — " + addr
 		}
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وكلمةُ الدخول تُولَّد قبل المعاملة وتُكتب فيها** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت خطوةً ثانيةً بعد التثبيت** (`issueWelcomeFor`) — معاملةٌ أخرى
+	// تكتب الكلمةَ ومهلتَها. **فإن سقطت بقي صاحبُ متجرٍ جديدٌ بحسابٍ بلا
+	// كلمةٍ يعرفها أحد**، والمتجرُ قائمٌ والطلبُ محوَّل، وجوابُ الموافقة لا
+	// يقول أوصلت الرسالةُ أم لا.
+	//
+	// **والآن الحسابُ والكلمةُ المؤقّتةُ ومهلتُها والمتجرُ والتحويلُ معاملةٌ
+	// واحدة** — كما في إنشاء المتجر من اللوحة. **والرسالةُ وحدَها بعد
+	// التثبيت في النداء نفسِه**: رسالةٌ خرجت ثمّ ارتدّت المعاملةُ كذبٌ لا يُسحَب.
+	//
+	// **ولا كلمةَ من المندوب** — بصمةُ مرشَّحٍ قديمٍ تُهمَل.
+	_ = pwHash
+	plain, err := identity.GenerateTempPassword(s.minPasswordLen(ctx))
+	if err != nil {
+		return nil, err
+	}
+	// **والمهلةُ تُقرأ قبل المعاملة** — قراءةُ إعدادٍ من المَسبَح وهي مفتوحةٌ تحجز
+	// اتّصالاً ثانياً، **ونداءان متزاحمان على مَسبَحٍ ضيّقٍ يحبس كلٌّ منهما الآخر.**
+	tempHours := s.identity.TempPasswordHours(ctx)
+	// **والبصمةُ قبلها أيضاً** — وتُكتب بيدنا داخل المعاملة لا بـ`EnsureUserWithRoleTx`
+	// (ذاك يقرأ حدَّ الطول من المَسبَح وهو داخلَها).
+	tempHash, err := auth.HashPassword(plain)
+	if err != nil {
+		return nil, err
+	}
 	in := catalog.MerchantInput{
 		Name:        &storeName,
 		CategoryID:  categoryID,
@@ -596,11 +799,6 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	if repCode != nil {
 		in.SalesRepCode = repCode
 	}
-	// هل يملك الرقم حساباً مسبقاً؟ حرج أمنياً: كلمة المرور من نموذج التسجيل يجب ألّا
-	// تُطبَّق على حساب قائم (وإلا يمكن لمهاجم "التسجيل" برقم ضحية بلا كلمة مرور ثم
-	// يستولي على حسابها عند الموافقة). نطبّق كلمة المرور على الحسابات الجديدة فقط.
-	var ownerExisted bool
-	_ = s.pg.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE phone = $1)`, phone).Scan(&ownerExisted)
 
 	// ══════════════════════════════════════════════════════════════
 	// **التحويلُ يقع كلُّه أو لا يقع** — `PF-01` · `D2` · `D25` · `XG-18`
@@ -618,7 +816,7 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	// أسوأُ من لا معاملة** — تُخفي العطبَ وتدّعي الذرّيّة.
 	tx, err := s.pg.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -639,32 +837,61 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	if err := tx.QueryRow(ctx,
 		`SELECT merchant_id::text FROM merchant_leads WHERE id = $1 FOR UPDATE`,
 		leadID).Scan(&lockedMerchant); err != nil {
-		return err
+		return nil, err
 	}
 	if lockedMerchant != nil {
 		// **ونتيجةٌ حتميّةٌ لا خطأ**: **العقدُ القائمُ يعدّ التحويلَ
 		// المكرَّرَ لا شيءَ يُفعَل** — والمرشَّحُ محوَّلٌ فعلاً.
-		return nil
+		return nil, nil
+	}
+
+	// هل يملك الرقم حساباً مسبقاً؟ حرج أمنياً: الكلمةُ المولَّدة يجب ألّا تُطبَّق
+	// على حسابٍ قائم (وإلا أمكن لمهاجمٍ «التسجيلُ» برقم ضحيّة ثمّ الاستيلاءُ على
+	// حسابها عند الموافقة). **و`EnsureUserWithRoleTx` لا يمسّ كلمةَ القائم** —
+	// والسؤالُ هنا داخلَ المعاملة ليقول الجوابُ ما وقع فعلاً.
+	normPhone, _ := identity.NormalizePhone(phone)
+	var ownerExisted bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE phone = $1)`,
+		normPhone).Scan(&ownerExisted); err != nil {
+		return nil, err
 	}
 
 	merchantNewID, err := s.catalog.CreateMerchantTx(ctx, tx, actorID, in, ip)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// الاسم يُملأ إن كان فارغاً (غير حسّاس). كلمة المرور للحساب الجديد حصراً.
-	if _, err := tx.Exec(ctx, `
+	// الاسم يُملأ إن كان فارغاً (غير حسّاس).
+	var ownerID *string
+	if err := tx.QueryRow(ctx, `
 		UPDATE users SET
 			full_name  = CASE WHEN full_name = '' THEN $2 ELSE full_name END,
 			updated_at = now()
-		WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)`,
-		merchantNewID, ownerName); err != nil {
-		return err
+		WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)
+		RETURNING id::text`,
+		merchantNewID, ownerName).Scan(&ownerID); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
 	}
-	// كلمة المرور وضعها طرف ثالث (المندوب أو نموذج التسجيل) — مؤقتة يُجبَر
-	// صاحب المتجر على تبديلها عند أول دخول قبل الوصول إلى بوابته.
-	// **ولا كلمةَ من المندوب بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها
-	// ويرسلها بعد التثبيت (أسفل). **وبصمةُ مرشَّحٍ قديمٍ تُهمَل.**
-	_ = pwHash
+	// **ومهلةُ الكلمة المؤقّتة في المعاملة نفسِها** — ٧٢ ساعةً من الإعدادات.
+	// للحساب الجديد وحدَه: **القائمُ لم تُكتب له كلمة.** **و`created_at = now()`
+	// حارسٌ ثانٍ**: لا تُكتب الكلمةُ إلّا لحسابٍ وُلد في هذه المعاملة نفسِها.
+	var expires *time.Time
+	if ownerID != nil && !ownerExisted {
+		var exp time.Time
+		err := tx.QueryRow(ctx, `
+			UPDATE users SET password_hash = $3, must_change_password = true,
+			       temp_password_expires_at = now() + ($2::int * interval '1 hour')
+			 WHERE id = $1::uuid AND created_at = now()
+			RETURNING temp_password_expires_at`,
+			*ownerID, tempHours, tempHash).Scan(&exp)
+		switch {
+		case err == nil:
+			expires = &exp
+		case errors.Is(err, pgx.ErrNoRows):
+			ownerExisted = true // وُجد قبلنا — فرسالتُه «صار عندك متجر»
+		default:
+			return nil, err
+		}
+	}
 	// ══════════════════════════════════════════════════════════════════
 	// **والمنطقةُ تنتقل إلى المتجر مع الموافقة**
 	// ══════════════════════════════════════════════════════════════════
@@ -673,8 +900,6 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	// **ولا منطقةَ في نموذجها.** ومن أضاف حقلاً إليها لأجل هذا الباب
 	// جعل كلَّ من يناديها يمرّ بحقلٍ لا يعنيه.
 	//
-	// **وسطرٌ بعد الإنشاء لا يُفقد شيئاً**: المتجرُ أُنشئ في المعاملة
-	// نفسِها، **ومنطقتُه عنوانٌ لا يمنع بيعاً إن تأخّر سطراً.**
 	// **والمتجرُ يقول من أيّ مرشَّحٍ جاء** — **وعليه فهرسٌ فريد**
 	// (`merchants_lead_uq`)، **فثانٍ للمرشَّح نفسِه يُرفض في لحظة
 	// إدخاله ولو سقط القفلُ أعلاه.** **حارسان لا واحد.**
@@ -684,21 +909,25 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 			district_id = COALESCE(district_id,
 				(SELECT district_id FROM merchant_leads WHERE id = $2))
 		WHERE id = $1`, merchantNewID, leadID); err != nil {
-		return err
+		return nil, err
 	}
 
+	// **وهدفُ المندوب الشهريّ يُحسب لحظةَ إنشاء المتجر** (قرارُ المالك
+	// ٢٠٢٦-١٠-٠٤: «مو ذنب المندوب إذا ما صار طلب») — **والعمولةُ لا**:
+	// تُقيَّد عند تسليم أوّل طلبٍ ناجح (`settleRep`). ويحرسهما
+	// `TestLeadConvert_TargetAtCreationCommissionAtDelivery`.
 	paid, err := s.grantSalesTargetTx(ctx, tx, merchantNewID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()
 		WHERE id = $1`, leadID, merchantNewID); err != nil {
-		return err
+		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
 	// ── وبعد التثبيت تُرسَل الإشعارات ──────────────────────────
@@ -706,14 +935,19 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	// **ولا تُرسَل من داخل المعاملة**: **إشعارٌ خرج ثمّ ارتدّت المعاملةُ
 	// كذبٌ لا يُسحَب** — يقرأ المندوبُ «قُبل متجرُك» ولا متجرَ.
 	s.notifySalesTargetPaid(ctx, merchantNewID, paid)
-	// **ورسالةُ الدخول لصاحب المتجر** — جديدٌ: كلمةٌ مؤقّتةٌ ورابط · قائمٌ: «صار عندك متجر».
-	var ownerID *string
-	_ = s.pg.QueryRow(ctx, `SELECT owner_user_id::text FROM merchants WHERE id = $1`, merchantNewID).Scan(&ownerID)
+	// **ورسالةُ الدخول لصاحب المتجر في النداء نفسِه** — جديدٌ: كلمتُه
+	// المؤقّتةُ التي كُتبت في المعاملة ورابطُ تطبيق المتجر · قائمٌ: «صار
+	// عندك متجر» بلا كلمة.
+	welcome := map[string]any{"sent": false, "existing_owner": ownerExisted}
 	if ownerID != nil {
+		welcome["user_id"] = *ownerID
 		if ownerExisted {
-			s.notifyNewStoreOwner(ctx, actorID, *ownerID, storeName, ip)
-		} else if _, _, err := s.issueWelcomeFor(ctx, actorID, *ownerID, ip, "merchant"); err != nil {
-			s.logger.Error("تعذّر توليدُ كلمة الدخول لصاحب المتجر", "merchant", merchantNewID, "error", err)
+			welcome["sent"] = s.notifyNewStoreOwner(ctx, actorID, *ownerID, storeName, ip)
+		} else {
+			welcome["sent"] = s.sendWelcome(ctx, actorID, *ownerID, ip, plain, "merchant", false)
+			if expires != nil {
+				welcome["expires_at"] = *expires
+			}
 		}
 	}
 	// المندوب يعرف فوراً أن عميله اعتُمد (مصدر عمولته)
@@ -726,5 +960,5 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 			Entity: "merchant", EntityID: merchantNewID, Href: "/portal/merchants",
 		})
 	}
-	return nil
+	return welcome, nil
 }

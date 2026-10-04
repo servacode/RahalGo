@@ -875,17 +875,19 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 			return errEmergencyNoOrder
 		}
 		orderID = *e.OrderID
+		// **طلبٌ قائمٌ للطلب والسائق نفسِهما يُربط ولا يُكرَّر** — ويُقرأ أوّلاً، فخطأُ
+		// التكرار داخل المعاملة يُفسدها. **وما سواه يُكتب من البابِ الواحد**
+		// `orders.ProposeCompensationTx` (طابورُ التعويضات الموحّد، هجرة 0360) —
+		// باقتراحِ موظّف الغرفة ونوعِ «سائق».
 		err = q.QueryRow(ctx, `
-			INSERT INTO driver_compensation_requests
-			    (order_id, driver_id, fault, fail_reason, suggested_amount)
-			VALUES ($1, $2, 'platform', $3, $4)
-			ON CONFLICT (order_id, driver_id) DO NOTHING
-			RETURNING id::text`, orderID, *e.DriverID, "emergency_"+e.Kind, req.Amount).
-			Scan(&requestID)
+			SELECT id::text FROM driver_compensation_requests
+			 WHERE order_id = $1 AND driver_id = $2`, orderID, *e.DriverID).Scan(&requestID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			err = q.QueryRow(ctx, `
-				SELECT id::text FROM driver_compensation_requests
-				 WHERE order_id = $1 AND driver_id = $2`, orderID, *e.DriverID).Scan(&requestID)
+			requestID, err = orders.ProposeCompensationTx(ctx, q, orders.CompensationProposal{
+				Kind: orders.CompKindDriver, OrderID: orderID, BeneficiaryID: *e.DriverID,
+				Fault: orders.FaultPlatform, Reason: "emergency_" + e.Kind,
+				Amount: req.Amount, Note: note, ProposedBy: actor,
+			})
 		}
 		if err != nil {
 			return err

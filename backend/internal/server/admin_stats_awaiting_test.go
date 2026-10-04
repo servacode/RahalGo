@@ -168,8 +168,9 @@ func TestAdminStatsAwaitingDecision(t *testing.T) {
 	// ── طلبُ انضمام ───────────────────────────────────────────────
 	var leadID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO merchant_leads (store_name, phone) VALUES ('متجرٌ يطلب الانضمام', '+963900000000')
-		RETURNING id`).Scan(&leadID); err != nil {
+		INSERT INTO merchant_leads (store_name, phone, sales_rep_user_id)
+		VALUES ('متجرٌ يطلب الانضمام', '+963900000000', $1)
+		RETURNING id`, testdb.NewUser(t, pool, "sales")).Scan(&leadID); err != nil {
 		t.Fatalf("تعذّر طلبُ الانضمام: %v", err)
 	}
 	t.Cleanup(func() {
@@ -198,8 +199,16 @@ func TestAdminStatsAwaitingDecision(t *testing.T) {
 		driver, srv.cashbox.Limit(ctx)); err != nil {
 		t.Fatalf("تعذّر قيدُ النقد: %v", err)
 	}
+	// **والعدُّ يقرأ رصيدَ الصندوق** (قسمُ النقد ٢٠٢٦-١٠-٠٤) — يُكتب معه.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO driver_cash_boxes (driver_id, held) VALUES ($1, $2)
+		ON CONFLICT (driver_id) DO UPDATE SET held = EXCLUDED.held`,
+		driver, srv.cashbox.Limit(ctx)); err != nil {
+		t.Fatalf("تعذّر الصندوق: %v", err)
+	}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM driver_cash_entries WHERE driver_id = $1`, driver)
+		_, _ = pool.Exec(context.Background(), `UPDATE driver_cash_boxes SET held = 0 WHERE driver_id = $1`, driver)
 	})
 
 	after := read()
