@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 426,
+    "routes": 431,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 179,
-    "behaviour_settings": 144,
+    "setting_defs": 180,
+    "behaviour_settings": 145,
     "order_fields": 95,
-    "test_files": 486,
-    "test_funcs": 2024
+    "test_files": 488,
+    "test_funcs": 2032
   },
   "flows": [
     {
@@ -4371,6 +4371,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "finance.expense_approval_threshold",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "finance.manual_wallet_max",
       "group": "platform",
       "kind": "money",
@@ -6138,6 +6156,12 @@
     {
       "name": "TestQAFlags_OnlyExpectedKeys",
       "file": "cmd/stagingctl/flag_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
+      "name": "TestReset_ReseedsExpenseCategories",
+      "file": "cmd/stagingctl/reseed_test.go",
       "package": "main",
       "orphan": true
     },
@@ -24546,6 +24570,48 @@
     {
       "name": "TestExpansion_WaitingEqualsHomeFigure",
       "file": "internal/server/expansion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_AboveThresholdNeedsSecondApprover",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_AtThresholdPostsDirectlyAndNamesCategory",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_CategoryAuditIsComplete",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_InvertedRangeIsSaid",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_MonthIsBySpendDate",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_NoFutureSpendDate",
+      "file": "internal/server/expenses_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXPENSES_VoidNeedsReasonAndAnotherPersonAndStaysVisible",
+      "file": "internal/server/expenses_decisions_test.go",
       "package": "server",
       "orphan": true
     },

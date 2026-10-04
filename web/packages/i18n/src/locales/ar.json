@@ -906,7 +906,13 @@
     "roles_manage_owner_only": "صلاحية إدارة الأدوار يمنحها المالك فقط",
     "role_not_deletable": "هذا الدور أساسي في المنصة ولا يُحذف",
     "role_not_empty": "على هذا الدور حسابات — انزعه عنها أولا",
-    "last_roles_manage": "لا يمكن نزع آخر من يدير الأدوار — وإلا انقفلت اللوحة"
+    "last_roles_manage": "لا يمكن نزع آخر من يدير الأدوار — وإلا انقفلت اللوحة",
+    "expense_future_date": "تاريخ الصرف لا يكون بعد اليوم",
+    "expense_receipt_required": "المبلغ فوق سقف الموافقة — أرفق صورة الإيصال",
+    "expense_void_reason_required": "اكتب سبب الإلغاء",
+    "expense_void_self": "لا تلغي مصروفاً سجّلته أنت — يلغيه موظف آخر",
+    "expense_category_inactive": "هذا الباب مطفأ — اختر باباً مفعّلاً",
+    "expense_bad_range": "تاريخ «من» بعد تاريخ «إلى»"
   },
   "admin": {
     "profits": {
@@ -941,9 +947,9 @@
     },
     "expenses": {
       "title": "مصروفات التشغيل",
-      "hint": "إيجار المكتب والرواتب والكهرباء — تخرج من خزينة المنصة وتسجل هنا.",
+      "hint": "إيجار المكتب والرواتب والكهرباء — تخرج من خزينة المنصة وتسجل هنا، والشهر بتاريخ الصرف.",
       "add": "تسجيل مصروف",
-      "addHint": "المبلغ يخرج من خزينة المنصة فور التسجيل — وينقص رصيدها به.",
+      "addHint": "تحت سقف الموافقة يخرج المبلغ من الخزينة فوراً، وفوقه ينتظر موافقة موظف آخر.",
       "manageCats": "أبواب المصروف",
       "category": "الباب",
       "amount": "المبلغ",
@@ -954,10 +960,59 @@
       "empty": "لا مصروفات في هذه المدة",
       "void": "إلغاء",
       "voidConfirmTitle": "إلغاء المصروف؟",
-      "voidConfirmBody": "يُلغى المصروف ويعود مبلغه إلى الخزينة، ويبقى في السجل ملغى.",
+      "voidConfirmBody": "يعود المبلغ إلى الخزينة، ويبقى المصروف ظاهراً مشطوباً في القائمة.",
       "catName": "اسم الباب",
       "catActive": "مفعل",
-      "usedCount": "{n} بند"
+      "usedCount": "{n} بند",
+      "monthTotal": "مجموع الشهر",
+      "vsLastMonth": "الفرق عن الشهر الماضي",
+      "lastMonthWas": "الشهر الماضي: {n}",
+      "topCategory": "أكبر باب",
+      "none": "—",
+      "pendingNote": "{n} بانتظار الموافقة بمبلغ {amount}",
+      "colDate": "تاريخ الصرف",
+      "colCategory": "الباب",
+      "colAmount": "المبلغ",
+      "colNote": "الملاحظة",
+      "colBy": "سجّله",
+      "colStatus": "الحالة",
+      "colReceipt": "الإيصال",
+      "viewReceipt": "عرض",
+      "status": {
+        "posted": "مصروف",
+        "voided": "ملغى",
+        "pending": "بانتظار الموافقة",
+        "rejected": "مرفوض"
+      },
+      "allCategories": "كل الأبواب",
+      "allStatuses": "كل الحالات",
+      "search": "بحث بالملاحظة أو الباب أو الاسم",
+      "export": "تصدير",
+      "invertedRange": "تاريخ «من» بعد تاريخ «إلى» — صحّح المدة",
+      "voidReason": "سبب الإلغاء",
+      "voidedBy": "ألغاه {name}: {reason}",
+      "receipt": "صورة الإيصال",
+      "receiptRequired": "صورة الإيصال (إلزامية فوق السقف)",
+      "receiptOptional": "صورة الإيصال (اختياري)",
+      "amountInvalid": "اكتب المبلغ أرقاماً فقط، مثل 150000",
+      "amountZero": "المبلغ يجب أن يكون أكبر من صفر",
+      "noCategory": "لا يوجد باب مفعّل — أضف باباً من «أبواب المصروف» أولاً",
+      "futureDate": "تاريخ الصرف لا يكون بعد اليوم",
+      "reviewTitle": "راجع قبل الحفظ",
+      "reviewAmount": "المبلغ",
+      "reviewBalanceAfter": "رصيد الخزينة بعد الخصم",
+      "reviewNeedsApproval": "المبلغ فوق سقف الموافقة ({cap}) — سيُرسل لموظف آخر ليوافق عليه، ولا يخرج من الخزينة قبل ذلك.",
+      "reviewDirect": "المبلغ يخرج من الخزينة فور الحفظ.",
+      "confirmSave": "تأكيد",
+      "back": "رجوع",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "sentForApproval": "أُرسل المصروف للموافقة",
+      "catRename": "تعديل الاسم",
+      "catUp": "أعلى",
+      "catDown": "أدنى",
+      "catSpent": "صُرف عليه {amount}",
+      "treasuryTab": "من الخزينة"
     },
     "appTitle": "{platform} — لوحة التحكم",
     "appDescription": "لوحة إدارة منصة {platform} للتوصيل",
@@ -2867,6 +2922,11 @@
           "label": "عدد الإنذارات خلال ٣٠ يوماً الذي ينبّه الموظفين",
           "hint": "لا إيقاف آلي أبداً — يصل تنبيه، والقرار لموظف.",
           "zero": "بلا تنبيه"
+        },
+        "finance.expense_approval_threshold": {
+          "label": "سقف المصروف الذي يحتاج موافقة ثانية",
+          "hint": "مصروف التشغيل فوق هذا المبلغ ينتظر موافقة موظف آخر وصورة الإيصال فيه إلزامية، وما دونه يسجل مباشرة.",
+          "zero": "كل مصروف بموافقة ثانية"
         }
       },
       "treasuryNone": "— لم تختر بعد —",
@@ -3146,7 +3206,10 @@
         "finance.wallet_request_rejected": "رفض حركة محفظة",
         "ops.driver_cleared_after_accident": "تأكيد أن السائق بخير بعد حادث",
         "system.merchant_role_dropped": "سحب دور المتجر لعدم وجود متجر",
-        "admin.role_delete": "حذف دور"
+        "admin.role_delete": "حذف دور",
+        "finance.expense_request": "اقتراح مصروف تشغيل فوق السقف",
+        "finance.expense_request_approved": "موافقة على مصروف تشغيل",
+        "finance.expense_request_rejected": "رفض اقتراح مصروف تشغيل"
       }
     },
     "dash": {
@@ -3899,7 +3962,8 @@
         "finance.compensate_driver": "تعويضُ سائق",
         "admin.setting_update": "تبديلُ إعدادٍ حسّاس",
         "admin.role_create": "إنشاءُ دورٍ جديد",
-        "admin.role_delete": "حذف دور فارغ"
+        "admin.role_delete": "حذف دور فارغ",
+        "finance.expense_request_approved": "موافقةُ مصروفٍ فوق السقف"
       }
     },
     "roles": {

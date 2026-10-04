@@ -293,8 +293,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// · وحدُّ تنبيه الإنذارات `safety.warnings_alert_count`.
 	// **وواحدٌ أُضيف بعودة التذكير بعد «أنا عليه»** (قرارُ المالك 2026-10-04):
 	// `ops.stuck_ack_snooze_min` — **«أنا عليه» تُسكت التذكيرَ ساعةً لا للأبد.**
-	if d.BehaviourSettings != 144 {
-		t.Errorf("إعداداتُ السلوك = %d لا 144 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بمصروفات التشغيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سقفُ الموافقة الثانية
+	// `finance.expense_approval_threshold`.
+	if d.BehaviourSettings != 145 {
+		t.Errorf("إعداداتُ السلوك = %d لا 145 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

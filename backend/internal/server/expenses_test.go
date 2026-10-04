@@ -36,7 +36,8 @@ import (
 func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 	f := newDriverFixture(t, 0)
 	ctx := context.Background()
-	actor, _, _ := twoCustomers(t, f)
+	// **والإلغاءُ من شخصٍ غيرِ من سجّل** (قرارُ المالك ٢٠٢٦-١٠-٠٤، المصروفات ٥).
+	actor, voider, _ := twoCustomers(t, f)
 
 	// ══════════════════════════════════════════════════════════════════
 	// **والخزينةُ تُنشأ إن لم تكن — ولا يُتخطّى الفحص**
@@ -85,7 +86,11 @@ func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 			rc.URLParams.Add("id", path[i+1:])
 		}
 		c := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
-		c = context.WithValue(c, ctxUserID, actor)
+		who := actor
+		if strings.HasPrefix(path, "void|") {
+			who = voider
+		}
+		c = context.WithValue(c, ctxUserID, who)
 		c = context.WithValue(c, ctxRoles, []string{"admin"})
 		w := httptest.NewRecorder()
 		if strings.HasPrefix(path, "void|") {
@@ -133,7 +138,7 @@ func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 	}
 
 	// ── ٣ · ويُلغى فيُردّ المال ─────────────────────────────────────
-	if v := post("void|"+created.Data.ID, ""); v.Code != 200 {
+	if v := post("void|"+created.Data.ID, `{"reason":"خطأ في المبلغ"}`); v.Code != 200 {
 		t.Fatalf("تعذّر الإلغاء: %d — %s", v.Code, v.Body.String())
 	}
 	back, _ := f.srv.wallet.Balance(ctx, treasury)
@@ -141,7 +146,7 @@ func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 		t.Fatalf("بعد الإلغاء %d وكان %d", back, before)
 	}
 	// **ولا يُلغى مرّتين** — **وإلّا رُدّ المالُ ضِعفَه إلى الخزينة.**
-	if v := post("void|"+created.Data.ID, ""); v.Code == 200 {
+	if v := post("void|"+created.Data.ID, `{"reason":"خطأ في المبلغ"}`); v.Code == 200 {
 		t.Fatal("أُلغيَ مرّتين — **فيُردّ المالُ ضِعفَه**")
 	}
 	twice, _ := f.srv.wallet.Balance(ctx, treasury)
@@ -175,8 +180,9 @@ func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 	if err := json.Unmarshal(lw.Body.Bytes(), &list); err != nil {
 		t.Fatalf("ردٌّ لا يُفكّ: %v", err)
 	}
-	if list.Data.Total != 0 || list.Data.TotalAmount != 0 {
-		t.Fatalf("الملغى يُعدّ: %d صفّاً و%d مبلغاً",
+	// **والملغى يبقى ظاهراً سطراً مشطوباً** (القرار ٥) — **ولا يُعدّ في المجموع.**
+	if list.Data.Total != 1 || list.Data.TotalAmount != 0 {
+		t.Fatalf("الملغى: %d صفّاً و%d مبلغاً — يُنتظر سطرٌ ظاهرٌ ومبلغٌ صفر",
 			list.Data.Total, list.Data.TotalAmount)
 	}
 }

@@ -39,17 +39,17 @@
   {
    "code": "finance.export",
    "description": "تصدير الدفتر وكشف الطلبات ملفا",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 15
+   "guards_routes": 18
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 17
+   "guards_routes": 18
   },
   {
    "code": "finance.recompute",
@@ -221,7 +221,7 @@
   }
  ],
  "route_policy": {
-  "rules": 205,
+  "rules": 210,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -449,6 +449,15 @@
     "amount",
     "category_id"
    ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/expense-requests/{id}/approve",
+   "action": "finance.expense_request_approved",
+   "target_type": "expense_request",
+   "target_segment": 1,
+   "fingerprint_params": [],
    "need": "finance.manage"
   },
   {

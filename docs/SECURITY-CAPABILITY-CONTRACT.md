@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**34 قدرةً · 205 صفَّ سياسةٍ للمسارات · 3 استثناءً · 29 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**34 قدرةً · 210 صفَّ سياسةٍ للمسارات · 3 استثناءً · 30 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -62,9 +62,9 @@
 | `drivers.manage` | 3 | — | إدارة السائقين وتشغيلهم |
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 5 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
-| `finance.export` | 2 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 15 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 17 | — | قراءة المال والتقارير المالية |
+| `finance.export` | 3 | — | تصدير الدفتر وكشف الطلبات ملفا |
+| `finance.manage` | 18 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 18 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `merchants.manage` | 10 | — | إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق) |
 | `merchants.read` | 4 | — | قراءة سجل المتاجر وقوائمها |
@@ -159,6 +159,7 @@
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
+| `finance.expense_request_approved` | `POST` | `/expense-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `finance.expense_voided` | `POST` | `/expenses/{id}/void` | — | دائماً | `finance.manage` |
 | `finance.goods_compensation` | `POST` | `/orders/{id}/goods/compensation` | `amount` | دائماً | `finance.manage` |
 | `finance.incentive` | `POST` | `/users/{id}/incentive` | `amount` | دائماً | `finance.manage` |

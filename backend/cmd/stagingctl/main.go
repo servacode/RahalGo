@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/envguard"
@@ -177,7 +178,41 @@ func reset() error {
 		return fmt.Errorf("الإفراغ: %w", err)
 	}
 	fmt.Printf("✓ أُفرغ %d جدولاً — والمخطَّطُ والهجراتُ كما هي\n", len(tables))
+	n, err := reseedDefaults(ctx, db)
+	if err != nil {
+		return fmt.Errorf("إعادةُ البذور الافتراضيّة: %w", err)
+	}
+	fmt.Printf("✓ أُعيدت أبوابُ المصروف الافتراضيّة (%d)\n", n)
 	return nil
+}
+
+// defaultExpenseCategories **أبوابُ المصروف الثمانية** — كما تزرعها الهجرة ٠١٠٩.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، المصروفات البند ٦.) **والإفراغُ كان يمحوها ولا
+// يعيدها**: قائمةُ الباب فارغةٌ على التجهيز فلا يُسجَّل مصروفٌ أصلاً.
+var defaultExpenseCategories = []struct {
+	Name string
+	Sort int
+}{
+	{"إيجار", 1}, {"رواتب", 2}, {"كهرباء ومولّدة", 3}, {"إنترنت", 4},
+	{"وقود", 5}, {"صيانة", 6}, {"قرطاسية", 7}, {"أخرى", 99},
+}
+
+// execer **ما يلزم البذرَ** — مجمّعٌ أو معاملة.
+type execer interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+// reseedDefaults **يعيد ما زرعته الهجراتُ وتمحوه إعادةُ الضبط** — ويردّ عددَ أبواب المصروف.
+func reseedDefaults(ctx context.Context, db execer) (int, error) {
+	for _, c := range defaultExpenseCategories {
+		if _, err := db.Exec(ctx, `
+			INSERT INTO expense_categories (name, sort_order) VALUES ($1, $2)
+			ON CONFLICT (name) DO NOTHING`, c.Name, c.Sort); err != nil {
+			return 0, err
+		}
+	}
+	return len(defaultExpenseCategories), nil
 }
 
 // ══════════════════════════════════════════════════════════════════════

@@ -48,7 +48,8 @@ export type MediaKind =
   | "avatar"
   | "platform_logo"
   | "auth_background"
-  | "site_background";
+  | "site_background"
+  | "expense_receipt";
 
 export function ImageUpload({
   kind,
