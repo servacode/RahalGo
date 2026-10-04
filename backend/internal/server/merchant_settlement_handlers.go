@@ -14,6 +14,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 type setSettlementMethodReq struct {
@@ -75,6 +76,12 @@ func (s *Server) handleMerchantCashSettlements(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **والقائمةُ الفارغةُ مصفوفةٌ لا null** (بلاغُ المالك ٢٠٢٦-١٠-٠٤: «ملفُّ المتجر لا يُفتح»):
+	// متجرٌ بلا مستحقٍّ نقديٍّ كان يُردّ له `"settlements": null`، **فتقرأ الشاشةُ طولَه فتسقط
+	// الصفحةُ كلُّها** قبل أن ترسم اسمَ المتجر.
+	if sum.Settlements == nil {
+		sum.Settlements = []orders.CashSettlementRow{}
 	}
 	httpx.JSON(w, http.StatusOK, sum)
 }

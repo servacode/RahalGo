@@ -93,9 +93,9 @@ export function MerchantSettlement({
 
   const loadCash = useCallback(async () => {
     try {
-      setSummary(
-        await api<CashSummary>(`/api/v1/admin/merchants/${merchantId}/cash-settlements`),
-      );
+      const got = await api<CashSummary>(`/api/v1/admin/merchants/${merchantId}/cash-settlements`);
+      // **والقائمةُ الفارغةُ قد تصل null** — كانت تُسقط ملفَّ المتجر كلَّه (بلاغُ المالك ٢٠٢٦-١٠-٠٤).
+      setSummary({ outstanding_total: got?.outstanding_total ?? 0, settlements: got?.settlements ?? [] });
       setCashError("");
     } catch (err) {
       setCashError(errorText(err));
@@ -187,7 +187,7 @@ export function MerchantSettlement({
             <p className="py-6 text-center text-sm text-ink-muted">{S.empty}</p>
           ) : (
             <ul className="divide-y divide-line">
-              {summary?.settlements.map((s) => (
+              {(summary?.settlements ?? []).map((s) => (
                 <li
                   key={s.id}
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm"
