@@ -89,7 +89,7 @@ func TestOneRole_EveryRoleBringsCustomer(t *testing.T) {
 	repo := NewRepo(pool)
 	ctx := context.Background()
 
-	for _, role := range []string{"driver", "sales", "merchant", "ops", "finance", "admin"} {
+	for _, role := range []string{"driver", "sales", "merchant", "operations", "finance", "admin"} {
 		t.Run(role, func(t *testing.T) {
 			u := testdb.NewUser(t, pool, "customer")
 			// **يُنزع دورُ الزبون أوّلاً** ليُقاس أنّ المنحَ هو من أعاده.

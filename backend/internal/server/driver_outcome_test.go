@@ -14,7 +14,7 @@ func TestDriverOutcome_SaysWhyTheOrderLeft(t *testing.T) {
 	f := newDriverFixture(t, 2)
 	d, other := f.drivers[0], f.drivers[1]
 	id := f.problemOrderAt(t, "assigned", d)
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	if _, err := f.srv.orders.Transition(context.Background(), ops, []string{"ops"}, id, "dispatching", ""); err != nil {
 		t.Fatalf("تعذّرت الإعادة: %v", err)
 	}

@@ -298,27 +298,14 @@ func TestCUB3_AccountTypesCreateAndStaffGrantFlow(t *testing.T) {
 		t.Errorf("**دورٌ أنشأه المالكُ من اللوحة لا يُسند** (%d) — %s", ugr.Code, ugr)
 	}
 
-	// ── ١٢ · **و`ops` إرثٌ لا يُمنَح جديداً** (`OPS-5`) ───────────
+	// ── ١٢ · **و`ops` حُذف** (قرارُ المالك ٢٠٢٦-١٠-٠٤، هجرة 0270) ─────
 	ops := hh.POST(grantPath(vic.ID), tok, map[string]any{
 		"role": "ops", "reason": "CUB-3"})
-	t.Logf("CUB-3: منحُ ops جديداً ⇒ %d · %s", ops.Code, ops)
-	if ops.Code != http.StatusForbidden || ops.Err() != "role_grant_retired" {
-		t.Errorf("**`ops` يُمنَح جديداً** (%d / %q) — "+
-			"**واسمُه العربيُّ «العمليات» كاسم `operations` وقدراتُهما مختلفة**",
-			ops.Code, ops.Err())
+	t.Logf("CUB-3: منحُ ops المحذوف ⇒ %d · %s", ops.Code, ops)
+	if ops.Code < 400 {
+		t.Errorf("**`ops` يُمنَح بعد حذفه** (%d / %q)", ops.Code, ops.Err())
 	}
 	if holdsRole(t, hh, vic.ID, "ops") {
 		t.Error("**مُنع منحُ `ops` ووقع**")
-	}
-	// **ومن يحمله يُنزَع منه** — فالإرثُ يُفرَّغ تدريجاً لا يُجمَّد.
-	if _, err := hh.Pool.Exec(ctxBG(), `
-		INSERT INTO user_roles (user_id, role_code) VALUES ($1::uuid, 'ops')
-		ON CONFLICT DO NOTHING`, vic.ID); err != nil {
-		t.Fatalf("تهيئةُ حاملِ `ops`: %v", err)
-	}
-	orv := hh.Call("DELETE", revokePath(vic.ID, "ops"), tok, nil, nil)
-	t.Logf("CUB-3: نزعُ ops من حامله ⇒ %d", orv.Code)
-	if orv.Code >= 400 {
-		t.Errorf("**`ops` لا يُنزَع من حامله** (%d) — **فالإرثُ يُجمَّد ولا يُفرَّغ**", orv.Code)
 	}
 }

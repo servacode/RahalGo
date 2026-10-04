@@ -16,7 +16,7 @@ import (
 // officeStoreBlock **المكتبُ يقرّر «حوّل لمتجرٍ آخر»** بسبب البلاغ — بذنب المتجر.
 func officeStoreBlock(t *testing.T, svc *orders.Service, pool *pgxpool.Pool, orderID, reason string) (*orders.Order, error) {
 	t.Helper()
-	ops := testdb.NewUser(t, pool, "ops")
+	ops := testdb.NewUser(t, pool, "operations")
 	return svc.ResolveDoor(context.Background(), ops, []string{"ops"}, orderID,
 		orders.DoorResolution{Action: orders.DoorReturnToOffice, Fault: orders.FaultMerchant,
 			Reason: reason, Note: "اتّصلنا بالمتجر — مغلق"}, nil)

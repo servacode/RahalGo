@@ -73,7 +73,7 @@ func (f *driverFixture) fail(driverID, orderID, reason, note string) *httptest.R
 // endAtDoor **المكتبُ يُنهي عند الباب من بابه** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢).
 func (f *driverFixture) endAtDoor(t *testing.T, orderID, fault, reason string) *httptest.ResponseRecorder {
 	t.Helper()
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	return f.call(f.srv.handleDoorResolution, http.MethodPost,
 		"/admin/orders/"+orderID+"/door-resolution", orderID, ops, []string{"ops"},
 		`{"action":"return_to_office","fault":"`+fault+`","reason":"`+reason+`","note":"اتّصلنا بالزبون"}`)

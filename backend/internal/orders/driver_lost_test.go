@@ -62,7 +62,7 @@ func TestDriverLost_OpsRequeueTellsTheDriver(t *testing.T) {
 	ctx := context.Background()
 	b := &inbox{}
 	f.svc.SetNotifier(b)
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 
 	if _, err := f.svc.Transition(ctx, ops, []string{"ops"}, f.orderID, "dispatching", "سائقٌ أقرب"); err != nil {
 		t.Fatalf("تعذّرت الإعادة: %v", err)

@@ -43,12 +43,49 @@ export interface Role {
   name_key: string;
   capabilities: string[];
   members: number;
+  /** **صنفُ الدور من المحرّك** (`authz.ClassOf`) — يرتّب الأقسام. */
+  class?: "protected" | "elevated" | "staff" | "custom" | "account_type" | "legacy";
+  /** **أتُبدَّل قدراتُه؟** — لا للمالك الأعلى ولا لأنواع الحسابات. */
+  editable?: boolean;
+  /** **أيُحذَف؟** — مخصَّصٌ أو قديمٌ بلا حامل. */
+  deletable?: boolean;
 }
 
 /** Capability **قدرةٌ من معجم الشيفرة** — تُسنَد ولا تُخترَع. */
 export interface Capability {
   code: string;
   description?: string;
+  /** مجموعتُها في المصفوفة — سبعٌ بترتيبٍ ثابت. */
+  group?: string;
+  /** خطرُها: `money` أو `power` — يُعلَّم بالأحمر. */
+  risk?: "" | "money" | "power";
+}
+
+/** مجموعاتُ القدرات بترتيب المالك (قرارُ ٢٠٢٦-١٠-٠٤). */
+export const CAPABILITY_GROUPS = [
+  "orders",
+  "accounts",
+  "money",
+  "stores_drivers",
+  "settings",
+  "content",
+  "security",
+] as const;
+
+/** RoleMember **حاملُ الدور** — بلا هاتف (الرقمُ قدرةٌ لحالها). */
+export interface RoleMember {
+  id: string;
+  full_name: string;
+  status: string;
+  granted_at: string;
+}
+
+/** RoleImpact **أثرُ المنح قبل وقوعه.** */
+export interface RoleImpact {
+  active_members: number;
+  would_gain: number;
+  risk: "" | "money" | "power";
+  block: string;
 }
 
 /** listRoles **كلُّ الأدوار وقدراتُها وعددُ أصحابها.** */
@@ -80,18 +117,47 @@ export function createRole(code: string, name: string): Promise<Role> {
   });
 }
 
-/** grantCapability **منحُ قدرةٍ لدور** — فعلٌ يحتاج تأكيداً. */
-export function grantCapability(role: string, capability: string): Promise<unknown> {
+/**
+ * grantCapability **منحُ قدرةٍ لدور** — فعلٌ يحتاج تأكيداً بكلمة السرّ،
+ * **وسببٌ مكتوبٌ إلزاميٌّ يُحفظ في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+ */
+export function grantCapability(
+  role: string,
+  capability: string,
+  reason: string,
+): Promise<{ granted: boolean; changed: boolean }> {
   return api(`/api/v1/admin/roles/${encodeURIComponent(role)}/capabilities`, {
     method: "POST",
-    body: JSON.stringify({ capability }),
+    body: JSON.stringify({ capability, reason }),
   });
 }
 
 /** revokeCapability **نزعُها** — وفعلٌ يحتاج تأكيداً كذلك. */
-export function revokeCapability(role: string, capability: string): Promise<unknown> {
+export function revokeCapability(
+  role: string,
+  capability: string,
+  reason = "",
+): Promise<{ revoked: boolean; changed: boolean }> {
+  const q = reason ? `?reason=${encodeURIComponent(reason)}` : "";
   return api(
-    `/api/v1/admin/roles/${encodeURIComponent(role)}/capabilities/${encodeURIComponent(capability)}`,
+    `/api/v1/admin/roles/${encodeURIComponent(role)}/capabilities/${encodeURIComponent(capability)}${q}`,
     { method: "DELETE" },
+  );
+}
+
+/** deleteRole **حذفُ دورٍ فارغ** — مخصَّصٌ أو قديمٌ بلا حامل. */
+export function deleteRole(role: string): Promise<unknown> {
+  return api(`/api/v1/admin/roles/${encodeURIComponent(role)}`, { method: "DELETE" });
+}
+
+/** roleMembers **مَن يحمل الدور.** */
+export function roleMembers(role: string): Promise<RoleMember[]> {
+  return api<RoleMember[]>(`/api/v1/admin/roles/${encodeURIComponent(role)}/members`);
+}
+
+/** roleImpact **كم حساباً سيكسب القدرةَ فعلاً لو مُنحت.** */
+export function roleImpact(role: string, capability: string): Promise<RoleImpact> {
+  return api<RoleImpact>(
+    `/api/v1/admin/roles/${encodeURIComponent(role)}/impact?capability=${encodeURIComponent(capability)}`,
   );
 }

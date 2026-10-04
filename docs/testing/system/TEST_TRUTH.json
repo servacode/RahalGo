@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 423,
+    "routes": 426,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 179,
     "behaviour_settings": 144,
     "order_fields": 95,
-    "test_files": 482,
-    "test_funcs": 2003
+    "test_files": 486,
+    "test_funcs": 2024
   },
   "flows": [
     {
@@ -6213,6 +6213,30 @@
       "orphan": true
     },
     {
+      "name": "TestAPR_AdminAloneCannotSelfApprove",
+      "file": "internal/approval/approval_test.go",
+      "package": "approval",
+      "orphan": true
+    },
+    {
+      "name": "TestAPR_OtherApproverPasses",
+      "file": "internal/approval/approval_test.go",
+      "package": "approval",
+      "orphan": true
+    },
+    {
+      "name": "TestAPR_OwnerAloneSelfApprovesFlagged",
+      "file": "internal/approval/approval_test.go",
+      "package": "approval",
+      "orphan": true
+    },
+    {
+      "name": "TestAPR_SelfApproveRefusedWhenAnotherExists",
+      "file": "internal/approval/approval_test.go",
+      "package": "approval",
+      "orphan": true
+    },
+    {
       "name": "TestOrdersBoardPolicy",
       "file": "internal/authz/orders_board_policy_test.go",
       "package": "authz",
@@ -6239,6 +6263,42 @@
     {
       "name": "TestRoleAssignmentNeedsRolesManage",
       "file": "internal/authz/role_assignment_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_AccountTypeRolesTakeNoAdminCapability",
+      "file": "internal/authz/roles_section_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_CapabilityDescriptionsPlainAndAccurate",
+      "file": "internal/authz/roles_section_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_DeletableOnlyCustomAndLegacy",
+      "file": "internal/authz/roles_section_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_EveryCapabilityHasAGroup",
+      "file": "internal/authz/roles_section_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_OwnerRoleCapabilitiesFrozen",
+      "file": "internal/authz/roles_section_test.go",
+      "package": "authz",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_RolesManageOnlyForAdminAndOwner",
+      "file": "internal/authz/roles_section_test.go",
       "package": "authz",
       "orphan": true
     },
@@ -17038,7 +17098,7 @@
       "orphan": true
     },
     {
-      "name": "TestOFM6_OpsIsLegacyRetired",
+      "name": "TestOFM6_OpsRoleIsDeleted",
       "file": "internal/qa/ops_retirement_test.go",
       "package": "qa",
       "orphan": true
@@ -20411,6 +20471,60 @@
       "orphan": true
     },
     {
+      "name": "TestROLES_AccountTypeRolesRejectAdminCapabilities",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_DeleteEmptyRoleOnly",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_GrantNeedsReasonAndAuditsOnlyChanges",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_ListCarriesClassAndGroups",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_MembersAndImpactPreview",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_OwnerAssignedByMigration",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_OwnerRoleCapabilitiesUntouchable",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_RevokePathsGuardLastRolesManage",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestROLES_RolesManageOnlyAdminOwnerAndOnlyByOwner",
+      "file": "internal/qa/roles_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestRNAV_001_CacheKeyIsVersioned",
       "file": "internal/qa/route_nav_test.go",
       "package": "qa",
@@ -23022,6 +23136,18 @@
       "name": "TestCustomerDirectOnlyOnStaging",
       "file": "internal/release/public_staging_test.go",
       "package": "release",
+      "orphan": true
+    },
+    {
+      "name": "TestLastRolesManage_CapabilityRevokeRefused",
+      "file": "internal/rolesguard/rolesguard_test.go",
+      "package": "rolesguard",
+      "orphan": true
+    },
+    {
+      "name": "TestLastRolesManage_UserRoleRevokeRefused",
+      "file": "internal/rolesguard/rolesguard_test.go",
+      "package": "rolesguard",
       "orphan": true
     },
     {

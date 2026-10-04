@@ -31,7 +31,7 @@ func (f *fixture) officeAt(t *testing.T, location, address string) {
 // returnAtDoor **المكتبُ يعيد السائقَ بالبضاعة من الباب** — إلى `to`.
 func (f *fixture) returnAtDoor(t *testing.T, to string) (*orders.Order, error) {
 	t.Helper()
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	return f.svc.ResolveDoor(context.Background(), ops, []string{"ops"}, f.orderID,
 		orders.DoorResolution{Action: orders.DoorReturnToOffice, Fault: orders.FaultCustomer,
 			Reason: "customer_refused", Note: "الزبونُ رفض — ارجع بالبضاعة", ReturnTo: to}, nil)

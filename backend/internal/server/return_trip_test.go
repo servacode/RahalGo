@@ -112,7 +112,7 @@ func TestReturnTrip_StoreRefusedHTTP(t *testing.T) {
 		`UPDATE merchants SET accepts_returns = false WHERE id = $1`, f.merchantID); err != nil {
 		t.Fatal(err)
 	}
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	w := f.call(f.srv.handleDoorResolution, http.MethodPost,
 		"/admin/orders/"+orderID+"/door-resolution", orderID, ops, []string{"ops"},
 		`{"action":"return_to_office","fault":"customer","note":"رفض","return_to":"store"}`)

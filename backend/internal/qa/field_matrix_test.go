@@ -96,7 +96,6 @@ func TestXG42_ContactFieldsFollowCapabilityNotRoute(t *testing.T) {
 
 	readers := []matrixReader{
 		{Role: "owner_super_admin", Contact: true, Details: true},
-		{Role: "ops", Contact: true, Details: true},
 		{Role: "operations", Contact: true, Details: true},
 		{Role: "customer_support", Contact: true, Details: true},
 		{Role: "trust_safety", Contact: true},

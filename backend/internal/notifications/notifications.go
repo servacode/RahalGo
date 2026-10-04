@@ -412,7 +412,10 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 
 // OpsDesk أدوار مكتب المنصة — من يجب أن يعرف بأي حركة تشغيلية جديدة.
 // مصدر واحد: لا يقرر كل معالِج بنفسه من يُبلَّغ.
-var OpsDesk = []string{"admin", "ops"}
+//
+// **و`ops` حُذف** (هجرةُ `0270`، قرارُ المالك ٢٠٢٦-١٠-٠٤) ونُقل حاملوه إلى
+// `operations` — **فالمكتبُ اليومَ: مديرُ المنصّة والمالكُ الأعلى والعمليّات.**
+var OpsDesk = []string{"admin", "owner_super_admin", "operations"}
 
 // NotifyWallet إشعار حركة مالية — يُرضي واجهة orders.Notifier.
 func (s *Service) NotifyWallet(ctx context.Context, userID, title, body, href string) {

@@ -51,7 +51,7 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 
 	cells := []rbacCell{
 		// ── الإعداداتُ الحسّاسةُ ماليّاً ───────────────────────────
-		{"ops", "settings.sensitive", "PUT",
+		{"operations", "settings.sensitive", "PUT",
 			"/api/v1/admin/settings/merchants.commission_percent",
 			map[string]any{"value": 11}, true},
 		// ══════════════════════════════════════════════════════════
@@ -77,7 +77,7 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 			map[string]any{"value": 11}, false},
 
 		// ── إدارةُ الأدوار ────────────────────────────────────────
-		{"ops", "roles.manage", "POST",
+		{"operations", "roles.manage", "POST",
 			"/api/v1/admin/users/" + victim.ID + "/roles",
 			map[string]any{"role": "finance", "reason": "RBAC-01"}, true},
 		{"finance", "roles.manage", "POST",
@@ -85,7 +85,7 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 			map[string]any{"role": "admin", "reason": "RBAC-01"}, true},
 
 		// ── المالُ: قيدُ محفظة ─────────────────────────────────────
-		{"ops", "finance.manage", "POST",
+		{"operations", "finance.manage", "POST",
 			"/api/v1/admin/users/" + victim.ID + "/wallet",
 			map[string]any{"amount": 1000, "kind": "topup", "note": "RBAC-01"}, true},
 		{"finance", "finance.manage", "POST",
@@ -93,7 +93,7 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 			map[string]any{"amount": 1000, "kind": "topup", "note": "RBAC-01"}, false},
 
 		// ── تبديلُ حالِ حساب ──────────────────────────────────────
-		{"ops", "users.manage", "PATCH",
+		{"operations", "users.manage", "PATCH",
 			"/api/v1/admin/users/" + victim.ID,
 			map[string]any{"status": "suspended", "status_reason": "RBAC-01"}, true},
 		{"finance", "users.manage", "PATCH",
@@ -101,7 +101,7 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 			map[string]any{"status": "suspended", "status_reason": "RBAC-01"}, true},
 
 		// ── قراءةٌ إداريّةٌ عامّة ──────────────────────────────────
-		{"ops", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, false},
+		{"operations", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, false},
 		{"finance", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, false},
 
 		// ── ودورٌ غيرُ إداريٍّ أصلاً ───────────────────────────────

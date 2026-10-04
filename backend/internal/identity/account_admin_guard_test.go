@@ -85,7 +85,7 @@ func TestAccountGuard_OrdinaryAccountsUnaffected(t *testing.T) {
 	ctx := context.Background()
 
 	staff := testdb.NewUser(t, pool, "trust_safety")
-	for _, role := range []string{"customer", "driver", "merchant", "sales", "ops"} {
+	for _, role := range []string{"customer", "driver", "merchant", "sales", "operations"} {
 		target := testdb.NewUser(t, pool, role)
 		if err := guardAccountAdmin(ctx, pool, staff, target); err != nil {
 			t.Errorf("**مُنع مسُّ حسابِ %s**: %v — والحارسُ للمحميِّ والمرتفعِ وحدَهما", role, err)

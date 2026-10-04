@@ -135,6 +135,9 @@ const SERVER_ADMIN = new Set([
   "idempotency_key_required",
   // «طلبات التوسّع» — إبلاغُ مكانٍ لم يُغطَّ بعد (لوحةٌ لا هاتف).
   "not_covered",
+  // **قسمُ الأدوار والصلاحيّات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — شاشةُ الأدوار وحدَها.
+  "role_protected", "role_account_type", "role_legacy", "roles_manage_scope",
+  "roles_manage_owner_only", "role_not_deletable", "role_not_empty",
 ]);
 
 const found = new Map();

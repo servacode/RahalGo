@@ -1,7 +1,6 @@
 package qa
 
 import (
-	"net/http"
 	"sort"
 	"strings"
 	"testing"
@@ -21,8 +20,7 @@ import (
 //
 //	operations   تسعُ قدراتٍ بعينها — ولا `support.manage`
 //	finance      تسعُ قدراتٍ بعينها — ولا تدخّلَ تشغيليّ
-//	ops          إرثٌ متقاعد: يُقرأ ويُنزَع، ولا يُمنَح ولا يُنشَأ به حساب
-//	             **ولا يُحذَف صفُّه** — وذاك دورةُ تنظيفٍ أخرى.
+//	ops          إرثٌ متقاعد — **ثمّ حُذف** بقرار المالك ٢٠٢٦-١٠-٠٤ (هجرة 0270)
 
 // opsFinalCaps **قدراتُ العمليّات كما أقرّها المالك** — لا أكثرَ ولا أقلّ.
 //
@@ -103,72 +101,43 @@ func TestOFM5_DepartmentCapabilitiesAreExactlyApproved(t *testing.T) {
 	}
 }
 
-// TestOFM6_OpsIsLegacyRetired **`ops` يُقرأ ويُنزَع ولا يُمنَح.**
+// TestOFM6_OpsRoleIsDeleted **`ops` حُذف** (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأدوار، البند ٣).
 //
-// **وخمسةُ بنودٍ في قرار المالك تُقاس واحداً واحداً** — **ولا يُقرأ
-// نجاحُ واحدٍ إثباتاً للبقيّة.**
-func TestOFM6_OpsIsLegacyRetired(t *testing.T) {
+// **كان إرثاً يُقرأ ويُنزَع ولا يُمنَح** (٢٠٢٦-٠٩-١٣) — **وقرّر المالكُ حذفَه**
+// بعد نقل حامليه إلى `operations` (هجرةُ `0270`). **فيُقاس**: لا صفَّ له، ولا
+// يُمنَح، ولا يُنشَأ به حساب، و`operations` هو الدورُ العامل.
+func TestOFM6_OpsRoleIsDeleted(t *testing.T) {
 	hh := New(t)
 
-	// ── ١ · صفُّ الدور باقٍ — ولا حذفَ في هذه الدورة ────────────────
+	// ── ١ · صفُّ الدور محذوف ───────────────────────────────────────────
 	var exists bool
 	if err := hh.Pool.QueryRow(ctxBG(),
 		`SELECT EXISTS (SELECT 1 FROM roles WHERE code = 'ops')`).Scan(&exists); err != nil {
 		t.Fatalf("وجودُ الدور: %v", err)
 	}
-	if !exists {
-		t.Fatal("**صفُّ `ops` حُذف** — والمالكُ منع الحذفَ الفيزيائيَّ في هذه الدورة.")
+	if exists {
+		t.Fatal("**صفُّ `ops` باقٍ** — والمالكُ قرّر حذفَه (هجرة 0270).")
 	}
-	t.Log("✓ صفُّ `ops` باقٍ — ولا حذف")
 
-	// ── ٢ · ولا منحَ جديد — ولو كان المانحُ المالك ──────────────────
-	//
-	// **والمالكُ أوسعُ سلطةٍ في المنصّة** — **فإن رُدَّ هو رُدَّ كلُّ
-	// أحد.**
+	// ── ٢ · ولا منحَ له — ولو من المالك ────────────────────────────────
 	victim := hh.NewUser("customer")
 	_, ownerTok := roleUser(t, hh, "owner_super_admin")
 	res := hh.POST("/api/v1/admin/users/"+victim.ID+"/roles", ownerTok,
 		map[string]any{"role": "ops", "reason": "OFM6"})
-	if res.Code != http.StatusForbidden || res.Err() != "role_grant_retired" {
-		t.Errorf("**منحُ `ops` لم يُردَّ كدورِ إرث**: %d / %s", res.Code, res.Err())
-	} else {
-		t.Log("✓ منحُ `ops` ⇒ 403 role_grant_retired — ولو من المالك")
+	if res.Code < 400 {
+		t.Errorf("**مُنح `ops` بعد حذفه**: %d / %s", res.Code, res.Err())
 	}
 
 	// ── ٣ · ولا حسابٌ يُنشَأ به ─────────────────────────────────────
 	create := hh.POST("/api/v1/admin/users", ownerTok, map[string]any{
-		"phone": "+963900000931", "full_name": "قياسُ التقاعد",
+		"phone": "+963900000931", "full_name": "قياسُ الحذف",
 		"password": "Ops#Retired2026", "roles": []string{"ops"},
 	})
 	if create.Code < 400 {
-		t.Errorf("**حسابٌ أُنشئ بدورٍ متقاعد** (%d) — وبابُ الإنشاء ليس ثغرةَ منح.", create.Code)
-	} else {
-		t.Logf("✓ إنشاءُ حسابٍ بـ`ops` ⇒ %d / %s", create.Code, create.Err())
+		t.Errorf("**حسابٌ أُنشئ بدورٍ محذوف** (%d)", create.Code)
 	}
 
-	// ── ٤ · وحاملٌ قائمٌ يُقرأ ويعمل ────────────────────────────────
-	//
-	// **والتوافقُ مع حاملٍ قائمٍ شرطُ المالك** — **ولا يُكسَر من كان
-	// يعمل لأنّ الدورَ تقاعد.**
-	p := probes(t, hh)
-	checkRole(t, hh, "ops",
-		[]probe{p["قراءةُ الطلبات"], p["تدخّلٌ في طلب"], p["إدارةُ المتاجر"]},
-		[]probe{p["قيدُ محفظة"], p["منحُ دور"], p["إعدادٌ ماليّ"]})
-
-	// ── ٥ · ويُنزَع عمّن يحمله ──────────────────────────────────────
-	//
-	// **ومتقاعدٌ لا يُنزَع سجنٌ لا تقاعد.**
-	holder, _ := roleUser(t, hh, "ops")
-	del := hh.DEL("/api/v1/admin/users/"+holder.ID+"/roles/ops", ownerTok)
-	if del.Code >= 400 && del.Code != http.StatusConflict {
-		// **و409 جوابُ منطقٍ لا منعُ تخويل** — تُسأل الكلمةُ أوّلاً.
-		if del.Err() == "role_grant_retired" {
-			t.Errorf("**نزعُ `ops` رُدَّ بحجّة التقاعد** — والتقاعدُ يمنع المنحَ لا النزع.")
-		}
-	}
-	t.Logf("✓ نزعُ `ops` ⇒ %d / %s (ولا يُردّ بحجّة التقاعد)", del.Code, del.Err())
-
-	// ── ٦ · و`operations` هو الدورُ العامل ──────────────────────────
+	// ── ٤ · و`operations` هو الدورُ العامل ──────────────────────────
 	if got := roleCaps(t, hh, "operations"); len(got) == 0 {
 		t.Error("**`operations` بلا قدرات** — وهو الدورُ العاملُ للتشغيل.")
 	}

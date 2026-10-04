@@ -194,7 +194,7 @@ func TestOpsMap_PrivacyMoneyHiddenWithoutPermission(t *testing.T) {
 	cust := h.Customer()
 	_ = placeMapOrder(t, h, cust, item)
 
-	ops := h.NewUser("ops").Token
+	ops := h.NewUser("operations").Token
 	for _, o := range ordersOf(t, h, ops, "") {
 		if o.Total != nil {
 			t.Fatalf("العملياتُ ترى إجماليَّ الطلب %d", *o.Total)
@@ -220,7 +220,7 @@ func TestOpsMap_LayerPermissionsAreEnforcedPerLayer(t *testing.T) {
 	}
 	// **والعملياتُ تراها.**
 	if res := h.GET("/api/v1/admin/ops-map/drivers",
-		h.NewUser("ops").Token); res.Code != http.StatusOK {
+		h.NewUser("operations").Token); res.Code != http.StatusOK {
 		t.Errorf("العملياتُ حُجبت عن طبقة السائقين — %d", res.Code)
 	}
 }

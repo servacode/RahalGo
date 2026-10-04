@@ -229,7 +229,7 @@ func newOpsUser(t *testing.T, f *driverFixture) string {
 		t.Fatalf("تعذّر إنشاءُ موظّف: %v", err)
 	}
 	if _, err := f.pool.Exec(ctx,
-		`INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'ops')`, id); err != nil {
+		`INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'operations')`, id); err != nil {
 		t.Fatalf("تعذّر منحُ دور ops: %v", err)
 	}
 	t.Cleanup(func() {

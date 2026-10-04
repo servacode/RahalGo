@@ -162,3 +162,72 @@ func AuthorityToGrant(code string) GrantAuthority {
 func CreatableAtSignup(code string) bool {
 	return ClassOf(code) == ClassAccountType
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  **ومن يحمل أيَّ قدرة؟ — حرّاسُ منح القدرات للأدوار**
+//  (قرارُ المالك ٢٠٢٦-١٠-٠٤ — قسمُ الأدوار والصلاحيّات)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان منحُ القدرة للدور لا يسأل عن نوع الدور أبداً**: قيدُ محفظةٍ لدور
+// «الزبون» يجعل كلَّ زبونٍ موظّفاً ماليّاً، و`roles.manage` لدور «الدعم» تجعل
+// موظّفَ الدعم يمنح نفسَه كلَّ شيء، ودورُ المالك الأعلى نفسُه يُحرَّر.
+
+// CapBlock **سببُ منعِ تبديلِ قدرةٍ على دور** — فارغٌ يعني «يجوز».
+type CapBlock string
+
+const (
+	CapOK CapBlock = ""
+	// CapBlockProtected **لا أحدَ يحرّر قدرات دور المالك الأعلى** — ولا المالكُ نفسُه.
+	CapBlockProtected CapBlock = "role_protected"
+	// CapBlockAccountType **أدوارُ الحسابات (زبون · سائق · متجر · مندوب) لا تحمل
+	// قدرةً إداريّة** — وكلُّ قدرةٍ في المعجم إداريّة.
+	CapBlockAccountType CapBlock = "role_account_type"
+	// CapBlockLegacy **دورُ إرثٍ لا يُزاد** — يُنزَع منه ولا يُمنَح.
+	CapBlockLegacy CapBlock = "role_legacy"
+	// CapBlockRolesManageScope **`roles.manage` لمدير المنصّة والمالك الأعلى وحدَهما.**
+	CapBlockRolesManageScope CapBlock = "roles_manage_scope"
+)
+
+// CanGrantCapability **أيجوز أن يحمل هذا الدورُ هذه القدرة؟** — بلا نظرٍ في الفاعل.
+//
+// **وسلطةُ الفاعل منفصلة** (`GrantCapabilityNeedsOwner`): `roles.manage` لا
+// يمنحها إلّا حاملُ دور المالك الأعلى.
+func CanGrantCapability(role string, c Capability) CapBlock {
+	switch ClassOf(role) {
+	case ClassProtected:
+		return CapBlockProtected
+	case ClassAccountType:
+		return CapBlockAccountType
+	case ClassLegacy:
+		return CapBlockLegacy
+	}
+	if c == RolesManage && role != RoleAdmin && role != RoleOwnerSuperAdmin {
+		return CapBlockRolesManageScope
+	}
+	return CapOK
+}
+
+// CanRevokeCapability **أيجوز نزعُ قدرةٍ من هذا الدور؟** — المحميُّ لا يُمسّ.
+//
+// **وآخرُ `roles.manage` في المنصّة حارسٌ في القاعدة لا هنا** — يحتاج عدّاً.
+func CanRevokeCapability(role string) CapBlock {
+	if ClassOf(role) == ClassProtected {
+		return CapBlockProtected
+	}
+	return CapOK
+}
+
+// GrantCapabilityNeedsOwner **أيلزم منحَ هذه القدرة حاملُ دور المالك الأعلى؟**
+func GrantCapabilityNeedsOwner(c Capability) bool { return c == RolesManage }
+
+// RoleDeletable **أيُحذَف هذا الدورُ إن خلا من الحاملين؟**
+//
+// **المخصَّصُ والإرثُ وحدَهما** — أدوارُ الموظّفين والحسابات والإدارة كانونيّةٌ
+// تقرؤها الشيفرة، **وحذفُها يكسر ما يُبذَر عليه.**
+func RoleDeletable(role string) bool {
+	switch ClassOf(role) {
+	case ClassCustom, ClassLegacy:
+		return true
+	}
+	return false
+}

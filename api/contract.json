@@ -3089,6 +3089,22 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/admin/roles/{code}",
+      "handler": "handleDeleteRole",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/roles/{code}",
       "handler": "handleRoleDetail",
@@ -3096,15 +3112,7 @@
       "capability": "roles.manage",
       "response": [
         {
-          "name": "capabilities",
-          "type": "unknown"
-        },
-        {
-          "name": "code",
-          "type": "unknown"
-        },
-        {
-          "name": "name_key",
+          "name": "@newRoleOut",
           "type": "unknown"
         }
       ],
@@ -3122,9 +3130,17 @@
         {
           "name": "capability",
           "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
         }
       ],
       "response": [
+        {
+          "name": "changed",
+          "type": "unknown"
+        },
         {
           "name": "granted",
           "type": "bool"
@@ -3142,8 +3158,64 @@
       "capability": "roles.manage",
       "response": [
         {
+          "name": "changed",
+          "type": "unknown"
+        },
+        {
           "name": "revoked",
           "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/roles/{code}/impact",
+      "handler": "handleRoleImpact",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "active_members",
+          "type": "unknown"
+        },
+        {
+          "name": "block",
+          "type": "unknown"
+        },
+        {
+          "name": "capability",
+          "type": "unknown"
+        },
+        {
+          "name": "risk",
+          "type": "unknown"
+        },
+        {
+          "name": "role",
+          "type": "unknown"
+        },
+        {
+          "name": "would_gain",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/roles/{code}/members",
+      "handler": "handleRoleMembers",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
         }
       ],
       "statuses": [

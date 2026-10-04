@@ -63,7 +63,7 @@ func (f *driverFixture) armOps(t *testing.T) string {
 	t.Helper()
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 	f.srv.notify = notifications.New(f.pool, f.srv.hub, quiet)
-	return testdb.NewUser(t, f.pool, "ops")
+	return testdb.NewUser(t, f.pool, "operations")
 }
 
 func (f *driverFixture) opsAlerts(t *testing.T, opsID, orderID string) []string {

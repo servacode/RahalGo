@@ -339,7 +339,7 @@ func TestAuditLog_RetentionPrunesOnlyOldSessionRows(t *testing.T) {
 		t.Fatalf("قائمتا الدخول افترقتا:\nالقاعدة %v\nالشيفرة %v", sqlList, goList)
 	}
 
-	actor := testdb.NewUser(t, f.pool, "ops")
+	actor := testdb.NewUser(t, f.pool, "operations")
 	day := 24 * time.Hour
 	now := time.Now()
 	auditInsert(t, f, actor, "auth.otp_login", "user", "old-login", `{}`, now.Add(-100*day))
@@ -482,7 +482,7 @@ func TestAuditLog_ExportWritesItself(t *testing.T) {
 	f := newDriverFixture(t, 0)
 	ctx := context.Background()
 	exporter := testdb.NewUser(t, f.pool, "admin")
-	subject := testdb.NewUser(t, f.pool, "ops")
+	subject := testdb.NewUser(t, f.pool, "operations")
 	auditInsert(t, f, subject, "ops.order_assign", "order", "x", `{}`, time.Now())
 
 	data := auditGet(t, f, f.srv.handleAdminAuditExport, exporter, []string{"admin"},

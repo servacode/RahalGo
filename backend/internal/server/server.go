@@ -1322,6 +1322,11 @@ func (s *Server) Router() http.Handler {
 			// والمُوجِّهُ لم يسجّل إلّا القراءة.**
 			r.Post("/roles", s.handleCreateRole)
 			r.Get("/roles/{code}", s.handleRoleDetail)
+			// **حذفُ دورٍ خالٍ · مَن يحمله · أثرُ المنح قبل وقوعه**
+			// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — قسمُ الأدوار والصلاحيّات).
+			r.Delete("/roles/{code}", s.handleDeleteRole)
+			r.Get("/roles/{code}/members", s.handleRoleMembers)
+			r.Get("/roles/{code}/impact", s.handleRoleImpact)
 			r.Get("/capabilities", s.handleListCapabilities)
 			r.Post("/roles/{code}/capabilities", s.handleGrantCapability)
 			r.Delete("/roles/{code}/capabilities/{cap}", s.handleRevokeCapability)

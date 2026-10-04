@@ -16,8 +16,8 @@ package server
 //
 // **ولا سحبَ من هنا** — السحبُ بابُه صفحةُ السحب وحدَها.
 //
-// **وصاحبُ الاقتراح لا يوافق عليه** — إلّا مديرُ المنصّة إن لم يكن في المنصّة
-// من يملك الموافقةَ غيرُه، **ويُعلَّم ذلك في الطلب والسجلّ.**
+// **وصاحبُ الاقتراح لا يوافق عليه** — إلّا المالكُ الأعلى إن لم يكن في المنصّة
+// من يملك الموافقةَ غيرُه، **ويُعلَّم ذلك في الطلب والسجلّ** (`approval.Check`).
 
 import (
 	"context"
@@ -29,6 +29,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/approval"
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -42,8 +44,6 @@ var (
 		"wallet_over_cap", "errors.wallet_over_cap")
 	errWalletPayoutHere = httpx.NewError(http.StatusBadRequest,
 		"wallet_payout_not_here", "errors.wallet_payout_not_here")
-	errSelfApprove = httpx.NewError(http.StatusForbidden,
-		"self_approve", "errors.self_approve")
 	errRequestDecided = httpx.NewError(http.StatusConflict,
 		"request_decided", "errors.request_decided")
 )
@@ -205,25 +205,9 @@ func (s *Server) handleListWalletRequests(w http.ResponseWriter, r *http.Request
 		"cap": s.walletManualMax(r.Context())})
 }
 
-// canSelfApprove **أيجوز لصاحب الاقتراح أن يوافق عليه؟**
-//
-// **مديرُ المنصّة وحدَه، وحين لا يوجد في المنصّة حسابٌ فعّالٌ آخرُ يملك الموافقة** —
-// (قرارُ الخزينة ٢٠٢٦-١٠-٠٤: «ومديرُ المنصّة يوافق وحده إن لم يكن في الماليّة غيرُه، مسجَّلاً»).
-func canSelfApprove(ctx context.Context, q dbtx.Querier, actor string) (bool, error) {
-	var elevated, others bool
-	if err := q.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM user_roles WHERE user_id = $1
-		                 AND role_code IN ('admin', 'owner_super_admin')),
-		       EXISTS (SELECT 1 FROM users u
-		                 JOIN user_roles ur ON ur.user_id = u.id
-		                 JOIN role_capabilities rc ON rc.role_code = ur.role_code
-		                WHERE u.id <> $1 AND u.status = 'active'
-		                  AND rc.capability_code = 'finance.manage')`, actor).
-		Scan(&elevated, &others); err != nil {
-		return false, err
-	}
-	return elevated && !others, nil
-}
+// **وحكمُ «المقترحُ غيرُ الموافق» في `approval.Check`** — مصدرٌ واحدٌ لكلّ أقسام
+// المال (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأدوار، البند ٦): الموافقةُ الذاتيّةُ
+// للمالك الأعلى وحدَه وحين لا يوجد غيرُه، وتُعلَّم في السجلّ.
 
 // handleDecideWalletRequest يوافق على الطلب أو يرفضه.
 func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
@@ -254,16 +238,18 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 			if row.Status != "pending" {
 				return errRequestDecided
 			}
-			self := row.ProposedBy == actor
-			if self && approve {
-				ok, err := canSelfApprove(ctx, q, actor)
+			var verdict approval.Verdict
+			if approve {
+				v, err := approval.Check(ctx, q, approval.Request{
+					ProposedBy: row.ProposedBy, Actor: actor,
+					Capability: authz.FinanceManage,
+				})
 				if err != nil {
 					return err
 				}
-				if !ok {
-					return errSelfApprove
-				}
+				verdict = v
 			}
+			self := verdict.SelfApproved
 			status := "rejected"
 			if approve {
 				status = "approved"
@@ -286,10 +272,13 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 			row.Status = status
 			row.SelfApproved = self && approve
 			wr = row
-			return s.auditTx(ctx, q, r, action, "user", row.UserID, map[string]any{
+			details := map[string]any{
 				"request_id": id, "kind": row.Kind, "debit": row.Debit, "amount": row.Amount,
-				"proposed_by": row.ProposedBy, "self_approved": self && approve,
-				"note": strings.TrimSpace(req.Note)})
+				"proposed_by": row.ProposedBy, "note": strings.TrimSpace(req.Note)}
+			for k, v := range verdict.AuditFields() {
+				details[k] = v
+			}
+			return s.auditTx(ctx, q, r, action, "user", row.UserID, details)
 		}); err != nil {
 			s.respondErr(w, err)
 			return

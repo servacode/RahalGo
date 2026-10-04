@@ -250,7 +250,12 @@ func TestRep_ActivityFromExistingDataOnly(t *testing.T) {
 		}
 	}
 	// **والعملياتُ تراقب النشاطَ ولا ترى المال** (البند ٢٦).
-	res2 := h.GET("/api/v1/admin/ops-map/reps", h.NewUser("ops").Token)
+	//
+	// **وبابُ نشاط المندوبين بـ`merchants.manage`** — وكان يحملها `ops` المحذوف
+	// (هجرة 0270). **فيُقاس بدورٍ يملك البابَ ولا يملك المال.**
+	capRole(t, h, "qa_rep_watch", "merchants.manage")
+	_, watchTok := capUser(t, h, "qa_rep_watch")
+	res2 := h.GET("/api/v1/admin/ops-map/reps", watchTok)
 	if res2.Code != http.StatusOK {
 		t.Fatalf("العملياتُ حُجبت عن نشاط المندوبين: %d", res2.Code)
 	}

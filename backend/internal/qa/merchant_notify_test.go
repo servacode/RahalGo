@@ -29,7 +29,7 @@ import (
 // الرسائل شهوراً في المحرّك لا يناديها أحد.**
 func TestMDIS_001_SMSChannelIsGone(t *testing.T) {
 	h := New(t)
-	ops := h.NewUser("ops")
+	ops := h.NewUser("operations")
 	item := h.NewItem(1000)
 	cust := h.Customer()
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
@@ -51,7 +51,9 @@ func TestMDIS_001_SMSChannelIsGone(t *testing.T) {
 // ثمّ يُقرأ يوماً على أنّه حقيقة.
 func TestMDIS_010_MessageCarriesNoSMSFlag(t *testing.T) {
 	h := New(t)
-	ops := h.NewUser("ops")
+	// **ونصُّ الرسالة يُقرأ بـ`orders.communications.read`** — وكان يحملها `ops`
+	// المحذوف (هجرة 0270)، **ويحملها دعمُ العملاء لا العمليّات.**
+	ops := h.NewUser("customer_support")
 	item := h.NewItem(1000)
 	cust := h.Customer()
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))

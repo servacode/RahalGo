@@ -50,7 +50,7 @@ func TestGrantRole_RefusesSecondPrimaryFromAnyPath(t *testing.T) {
 	// ══════════════════════════════════════════════════════════════════
 	// **والثاني يُردّ — وهذا هو البابُ الذي كان مفتوحا**
 	// ══════════════════════════════════════════════════════════════════
-	for _, role := range []string{"merchant", "sales", "ops"} {
+	for _, role := range []string{"merchant", "sales", "operations"} {
 		if err := repo.GrantRole(ctx, driver, role, nil); !errors.Is(err, ErrRoleConflict) {
 			t.Fatalf("مُنح %q لسائقٍ: %v — **وتضاربُ المصالح لا يُكشف في مراجعة**",
 				role, err)

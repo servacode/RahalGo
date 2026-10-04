@@ -3,87 +3,87 @@
  "capabilities": [
   {
    "code": "analytics.read",
-   "description": "قراءةُ التحليلات",
+   "description": "قراءة التحليلات",
    "guards_routes": 8
   },
   {
    "code": "audit.export",
-   "description": "تصديرُ سجلّ التدقيق ملفّاً",
+   "description": "تصدير سجل الأحداث ملفا",
    "guards_routes": 1
   },
   {
    "code": "audit.read",
-   "description": "قراءةُ سجلّ التدقيق",
+   "description": "قراءة سجل الأحداث",
    "guards_routes": 2
   },
   {
    "code": "content.manage",
-   "description": "لافتاتٌ وعروضٌ ومحتوى",
+   "description": "اللافتات والعروض والمحتوى",
    "guards_routes": 28
   },
   {
    "code": "drivers.manage",
-   "description": "إدارةُ السائقين وتشغيلُهم",
+   "description": "إدارة السائقين وتشغيلهم",
    "guards_routes": 3
   },
   {
    "code": "drivers.read",
-   "description": "قراءةُ سجلّ السائقين ومواضعهم",
+   "description": "قراءة سجل السائقين ومواقعهم",
    "guards_routes": 2
   },
   {
    "code": "emergencies.manage",
-   "description": "قراءةُ الطوارئ واستلامُها",
+   "description": "غرفة الطوارئ: القراءة والاستلام والإغلاق",
    "guards_routes": 5
   },
   {
    "code": "finance.export",
-   "description": "سحبُ الدفتر وكشفِ الطلبات ملفّاً",
+   "description": "تصدير الدفتر وكشف الطلبات ملفا",
    "guards_routes": 2
   },
   {
    "code": "finance.manage",
-   "description": "قيدُ محفظةٍ ومصروفٌ وخزينة",
+   "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
    "guards_routes": 15
   },
   {
    "code": "finance.read",
-   "description": "قراءةُ المال والتقارير الماليّة",
+   "description": "قراءة المال والتقارير المالية",
    "guards_routes": 17
   },
   {
    "code": "finance.recompute",
-   "description": "إعادةُ حساب تسوية طلبٍ مُغلق",
+   "description": "إعادة حساب تسوية طلب مغلق",
    "guards_routes": 1
   },
   {
    "code": "merchants.manage",
-   "description": "إدارةُ المتاجر وتعليقُها",
+   "description": "إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق)",
    "guards_routes": 10
   },
   {
    "code": "merchants.read",
-   "description": "قراءةُ سجلّ المتاجر وقوائمها",
+   "description": "قراءة سجل المتاجر وقوائمها",
    "guards_routes": 4
   },
   {
    "code": "merchants.verify",
-   "description": "مراجعةُ المرشَّحين والقوائم",
+   "description": "مراجعة المتاجر المرشحة والقوائم قبل النشر",
    "guards_routes": 2
   },
   {
    "code": "observability.read",
-   "description": "قراءةُ صحّة المنصّة الداخليّة",
+   "description": "قراءة صحة المنصة الداخلية",
    "guards_routes": 1
   },
   {
    "code": "orders.communications.read",
-   "description": "قراءةُ محادثات الطلب ورسائله",
+   "description": "قراءة محادثات الطلب ورسائله",
    "guards_routes": 3
   },
   {
    "code": "orders.customer_details.read",
-   "description": "هاتفُ زبون الطلب وموقعُه وصورةُ تسليمه",
+   "description": "هاتف زبون الطلب وموقعه وصورة التسليم",
    "guards_routes": 0,
    "guards_fields": [
     "proof_url"
@@ -92,67 +92,67 @@
   },
   {
    "code": "orders.intervene",
-   "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
+   "description": "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
    "guards_routes": 12
   },
   {
    "code": "orders.read",
-   "description": "قراءةُ الطلبات ولوحةِ العمليّات",
+   "description": "قراءة الطلبات ولوحة العمليات",
    "guards_routes": 12
   },
   {
    "code": "payouts.decide",
-   "description": "قرارُ السحب",
+   "description": "الموافقة على طلبات السحب أو رفضها",
    "guards_routes": 1
   },
   {
    "code": "platform.overview",
-   "description": "رئيسيّةُ مدير المنصّة بأرقامها ومالِها",
+   "description": "رئيسية مدير المنصة بأرقامها ومالها",
    "guards_routes": 1
   },
   {
    "code": "roles.manage",
-   "description": "منحُ الأدوار وسحبُها",
-   "guards_routes": 7
+   "description": "إدارة الأدوار والصلاحيات — أقوى صلاحية بالمنصة، تعطي صاحبها كل شيء",
+   "guards_routes": 9
   },
   {
    "code": "safety.manage",
-   "description": "الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر",
+   "description": "الإنذارات والمخالفات وتعليق المتاجر",
    "guards_routes": 8
   },
   {
    "code": "settings.financial.manage",
-   "description": "إعداداتٌ تدخل حساباً ماليّاً",
+   "description": "إعدادات تدخل بحساب المال: العمولات والرسوم والسقوف",
    "guards_routes": 3
   },
   {
    "code": "settings.general.manage",
-   "description": "إعداداتٌ عامّةٌ ومحتوى",
+   "description": "إعدادات عامة: المناطق والمدن ودوام المنصة",
    "guards_routes": 21
   },
   {
    "code": "settings.read",
-   "description": "قراءةُ لوح الإعدادات",
+   "description": "قراءة الإعدادات",
    "guards_routes": 2
   },
   {
    "code": "settings.security.manage",
-   "description": "إعداداتُ الأمن والجلسات",
+   "description": "إعدادات الأمان والجلسات",
    "guards_routes": 3
   },
   {
    "code": "support.manage",
-   "description": "التذاكرُ والنزاعاتُ والطوارئ",
+   "description": "التذاكر والنزاعات والتقييمات",
    "guards_routes": 8
   },
   {
    "code": "users.cashban.lift",
-   "description": "رفعُ منع الدفع نقداً عن زبون",
+   "description": "رفع منع الدفع نقدا عن زبون",
    "guards_routes": 1
   },
   {
    "code": "users.contact.read",
-   "description": "قراءةُ رقم الاتّصال",
+   "description": "رؤية أرقام الهواتف",
    "guards_routes": 0,
    "guards_fields": [
     "customer_phone",
@@ -167,22 +167,22 @@
   },
   {
    "code": "users.export",
-   "description": "سحبُ دليل الحسابات ملفّاً",
+   "description": "تصدير دليل الحسابات ملفا",
    "guards_routes": 1
   },
   {
    "code": "users.read",
-   "description": "قراءةُ الحسابات",
+   "description": "قراءة الحسابات",
    "guards_routes": 10
   },
   {
    "code": "users.sensitive.read",
-   "description": "قراءةُ عناوين المرء وأثرِه",
+   "description": "رؤية عناوين الشخص وسجل تحركاته",
    "guards_routes": 2
   },
   {
    "code": "users.status.manage",
-   "description": "إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته",
+   "description": "إيقاف حساب أو حظره أو تعديل بياناته",
    "guards_routes": 7
   }
  ],
@@ -221,7 +221,7 @@
   }
  ],
  "route_policy": {
-  "rules": 203,
+  "rules": 205,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -362,6 +362,15 @@
    "fingerprint_params": [
     "code"
    ],
+   "need": "roles.manage"
+  },
+  {
+   "method": "DELETE",
+   "pattern": "/roles/{code}",
+   "action": "admin.role_delete",
+   "target_type": "role",
+   "target_segment": 1,
+   "fingerprint_params": [],
    "need": "roles.manage"
   },
   {

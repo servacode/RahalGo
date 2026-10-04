@@ -252,12 +252,12 @@ func TestBranch_ManagePermissionRequired(t *testing.T) {
 
 	// **والعملياتُ لا تفتح فرعاً** — قرارُ عملٍ لا تشغيلٌ يوميّ.
 	if _, code, _ := postID(t, h, "/api/v1/admin/ops-map/branches",
-		h.NewUser("ops").Token, body); code != http.StatusForbidden {
+		h.NewUser("operations").Token, body); code != http.StatusForbidden {
 		t.Errorf("العملياتُ فتحت فرعاً — %d", code)
 	}
 	// **وتقرأ الفروع.**
 	if res := h.GET("/api/v1/admin/ops-map/branches",
-		h.NewUser("ops").Token); res.Code != http.StatusOK {
+		h.NewUser("operations").Token); res.Code != http.StatusOK {
 		t.Errorf("العملياتُ حُجبت عن قراءة الفروع — %d", res.Code)
 	}
 }

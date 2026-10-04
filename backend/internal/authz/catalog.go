@@ -271,44 +271,125 @@ var FieldPolicy = map[string]Capability{
 }
 
 // catalog **المعجمُ المُعرَّفُ في الشيفرة** — ووصفٌ لكلٍّ يُقرأ في اللوحة.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — قسمُ الأدوار): **الوصفُ بعربيٍّ بسيطٍ بلا تشكيلٍ
+// ثقيل، ويقول ما تفتحه القدرةُ بالضبط** — «إعدادات عامة» هي المناطقُ والمدنُ
+// ودوامُ المنصّة لا المحتوى، و«إدارة المتاجر» بلا تعليق (التعليقُ للسلامة)،
+// و`roles.manage` تُوصَف بأنّها أقوى صلاحيّة. **والاسمُ المعروضُ في اللوحة من
+// المعجم (`terms.capabilityNames`)** — وهذا الوصفُ للعقد المولَّد والاحتياط.
 var catalog = map[Capability]string{
-	OrdersRead:               "قراءةُ الطلبات ولوحةِ العمليّات",
-	OrdersIntervene:          "تدخّلٌ في طلبٍ نيابةً عن طرفه",
-	UsersRead:                "قراءةُ الحسابات",
-	UsersStatusManage:        "إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته",
-	RolesManage:              "منحُ الأدوار وسحبُها",
-	FinanceRead:              "قراءةُ المال والتقارير الماليّة",
-	FinanceManage:            "قيدُ محفظةٍ ومصروفٌ وخزينة",
-	PayoutsDecide:            "قرارُ السحب",
-	MerchantsManage:          "إدارةُ المتاجر وتعليقُها",
-	MerchantsRead:            "قراءةُ سجلّ المتاجر وقوائمها",
-	DriversManage:            "إدارةُ السائقين وتشغيلُهم",
-	DriversRead:              "قراءةُ سجلّ السائقين ومواضعهم",
-	SettingsRead:             "قراءةُ لوح الإعدادات",
-	SettingsGeneralManage:    "إعداداتٌ عامّةٌ ومحتوى",
-	SettingsFinancialManage:  "إعداداتٌ تدخل حساباً ماليّاً",
-	SettingsSecurityManage:   "إعداداتُ الأمن والجلسات",
-	ContentManage:            "لافتاتٌ وعروضٌ ومحتوى",
-	AnalyticsRead:            "قراءةُ التحليلات",
-	PlatformOverview:         "رئيسيّةُ مدير المنصّة بأرقامها ومالِها",
-	SupportManage:            "التذاكرُ والنزاعاتُ والطوارئ",
-	EmergenciesManage:        "قراءةُ الطوارئ واستلامُها",
-	FinanceRecompute:         "إعادةُ حساب تسوية طلبٍ مُغلق",
-	SafetyManage:             "الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر",
-	MerchantsVerify:          "مراجعةُ المرشَّحين والقوائم",
-	AuditRead:                "قراءةُ سجلّ التدقيق",
-	AuditExport:              "تصديرُ سجلّ التدقيق ملفّاً",
-	ObservabilityRead:        "قراءةُ صحّة المنصّة الداخليّة",
-	UsersExport:              "سحبُ دليل الحسابات ملفّاً",
-	FinanceExport:            "سحبُ الدفتر وكشفِ الطلبات ملفّاً",
-	OrdersCommunicationsRead: "قراءةُ محادثات الطلب ورسائله",
-	UsersContactRead:         "قراءةُ رقم الاتّصال",
-	UsersSensitiveRead:       "قراءةُ عناوين المرء وأثرِه",
-	UsersCashBanLift:         "رفعُ منع الدفع نقداً عن زبون",
+	OrdersRead:               "قراءة الطلبات ولوحة العمليات",
+	OrdersIntervene:          "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
+	UsersRead:                "قراءة الحسابات",
+	UsersStatusManage:        "إيقاف حساب أو حظره أو تعديل بياناته",
+	RolesManage:              "إدارة الأدوار والصلاحيات — أقوى صلاحية بالمنصة، تعطي صاحبها كل شيء",
+	FinanceRead:              "قراءة المال والتقارير المالية",
+	FinanceManage:            "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
+	PayoutsDecide:            "الموافقة على طلبات السحب أو رفضها",
+	MerchantsManage:          "إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق)",
+	MerchantsRead:            "قراءة سجل المتاجر وقوائمها",
+	DriversManage:            "إدارة السائقين وتشغيلهم",
+	DriversRead:              "قراءة سجل السائقين ومواقعهم",
+	SettingsRead:             "قراءة الإعدادات",
+	SettingsGeneralManage:    "إعدادات عامة: المناطق والمدن ودوام المنصة",
+	SettingsFinancialManage:  "إعدادات تدخل بحساب المال: العمولات والرسوم والسقوف",
+	SettingsSecurityManage:   "إعدادات الأمان والجلسات",
+	ContentManage:            "اللافتات والعروض والمحتوى",
+	AnalyticsRead:            "قراءة التحليلات",
+	PlatformOverview:         "رئيسية مدير المنصة بأرقامها ومالها",
+	SupportManage:            "التذاكر والنزاعات والتقييمات",
+	EmergenciesManage:        "غرفة الطوارئ: القراءة والاستلام والإغلاق",
+	FinanceRecompute:         "إعادة حساب تسوية طلب مغلق",
+	SafetyManage:             "الإنذارات والمخالفات وتعليق المتاجر",
+	MerchantsVerify:          "مراجعة المتاجر المرشحة والقوائم قبل النشر",
+	AuditRead:                "قراءة سجل الأحداث",
+	AuditExport:              "تصدير سجل الأحداث ملفا",
+	ObservabilityRead:        "قراءة صحة المنصة الداخلية",
+	UsersExport:              "تصدير دليل الحسابات ملفا",
+	FinanceExport:            "تصدير الدفتر وكشف الطلبات ملفا",
+	OrdersCommunicationsRead: "قراءة محادثات الطلب ورسائله",
+	UsersContactRead:         "رؤية أرقام الهواتف",
+	UsersSensitiveRead:       "رؤية عناوين الشخص وسجل تحركاته",
+	UsersCashBanLift:         "رفع منع الدفع نقدا عن زبون",
 
 	// سجلُّ الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
-	OrdersCustomerDetailsRead: "هاتفُ زبون الطلب وموقعُه وصورةُ تسليمه",
+	OrdersCustomerDetailsRead: "هاتف زبون الطلب وموقعه وصورة التسليم",
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **مجموعاتُ القدرات وخطرُها — لمصفوفة شاشة الأدوار** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+// ══════════════════════════════════════════════════════════════════════
+
+// Group **مجموعةُ القدرة في المصفوفة** — سبعٌ بترتيبٍ ثابت.
+type Group string
+
+const (
+	GroupOrders        Group = "orders"
+	GroupAccounts      Group = "accounts"
+	GroupMoney         Group = "money"
+	GroupStoresDrivers Group = "stores_drivers"
+	GroupSettings      Group = "settings"
+	GroupContent       Group = "content"
+	GroupSecurity      Group = "security"
+)
+
+// Groups **الترتيبُ الثابت** — كما سمّاه المالك.
+var Groups = []Group{GroupOrders, GroupAccounts, GroupMoney, GroupStoresDrivers,
+	GroupSettings, GroupContent, GroupSecurity}
+
+var groupOf = map[Capability]Group{
+	OrdersRead: GroupOrders, OrdersIntervene: GroupOrders,
+	OrdersCommunicationsRead: GroupOrders, OrdersCustomerDetailsRead: GroupOrders,
+	SupportManage: GroupOrders, EmergenciesManage: GroupOrders,
+
+	UsersRead: GroupAccounts, UsersStatusManage: GroupAccounts, UsersExport: GroupAccounts,
+	UsersContactRead: GroupAccounts, UsersSensitiveRead: GroupAccounts,
+	UsersCashBanLift: GroupAccounts,
+
+	FinanceRead: GroupMoney, FinanceManage: GroupMoney, PayoutsDecide: GroupMoney,
+	FinanceExport: GroupMoney, FinanceRecompute: GroupMoney, PlatformOverview: GroupMoney,
+
+	MerchantsManage: GroupStoresDrivers, MerchantsRead: GroupStoresDrivers,
+	MerchantsVerify: GroupStoresDrivers, DriversManage: GroupStoresDrivers,
+	DriversRead: GroupStoresDrivers,
+
+	SettingsRead: GroupSettings, SettingsGeneralManage: GroupSettings,
+	SettingsFinancialManage: GroupSettings, SettingsSecurityManage: GroupSettings,
+
+	ContentManage: GroupContent, AnalyticsRead: GroupContent,
+
+	RolesManage: GroupSecurity, AuditRead: GroupSecurity, AuditExport: GroupSecurity,
+	SafetyManage: GroupSecurity, ObservabilityRead: GroupSecurity,
+}
+
+// GroupOf **مجموعةُ القدرة** — والمجهولةُ «الأمان» احتياطاً.
+func GroupOf(c Capability) Group {
+	if g, ok := groupOf[c]; ok {
+		return g
+	}
+	return GroupSecurity
+}
+
+// Risk **خطرُ القدرة** — يُعلَّم بالأحمر في المصفوفة.
+type Risk string
+
+const (
+	RiskNone  Risk = ""
+	RiskMoney Risk = "money" // تحرّك مالاً حقيقيّاً
+	RiskPower Risk = "power" // سلطةٌ على الناس أو على المنصّة، أو إخراجُ بياناتها
+)
+
+var riskOf = map[Capability]Risk{
+	FinanceManage: RiskMoney, PayoutsDecide: RiskMoney, FinanceRecompute: RiskMoney,
+	SettingsFinancialManage: RiskMoney, UsersCashBanLift: RiskMoney,
+	SupportManage: RiskMoney, OrdersIntervene: RiskMoney,
+
+	RolesManage: RiskPower, UsersStatusManage: RiskPower, SettingsSecurityManage: RiskPower,
+	UsersExport: RiskPower, FinanceExport: RiskPower, AuditExport: RiskPower,
+}
+
+// RiskOf **خطرُ القدرة** — فارغٌ للعاديّة.
+func RiskOf(c Capability) Risk { return riskOf[c] }
 
 // Known **أهذه قدرةٌ مسجَّلة؟** — **ومجهولُها يُمنَع.**
 func Known(c Capability) bool { _, ok := catalog[c]; return ok }

@@ -69,7 +69,7 @@ func alertState(t *testing.T, h *Harness, oid string) (marked bool, intents int)
 // ══════════════════════════════════════════════════════════════════════
 func TestR22_W1_AlertMarksAndCreatesIntent(t *testing.T) {
 	h := New(t)
-	_ = h.NewUser("ops") // **ولا وسمَ بلا مكتبٍ يُنذَر**
+	_ = h.NewUser("operations") // **ولا وسمَ بلا مكتبٍ يُنذَر**
 	oid := alertableOrder(t, h)
 
 	h.Orders.EscalateAlertsOnce(ctxBG())
@@ -88,7 +88,7 @@ func TestR22_W1_AlertMarksAndCreatesIntent(t *testing.T) {
 // **وهو `PF-07` بعينه**: كان الوسمُ يبقى فيصمت الإنذارُ أبداً.
 func TestR22_W2_IntentFailureLeavesNoMarker(t *testing.T) {
 	h := New(t)
-	_ = h.NewUser("ops")
+	_ = h.NewUser("operations")
 	oid := alertableOrder(t, h)
 
 	fp := h.ArmAny("R22/notify-write", "notifications", "INSERT")
@@ -119,7 +119,7 @@ func TestR22_W2_IntentFailureLeavesNoMarker(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 func TestR22_W5_SecondSweepDoesNotDuplicate(t *testing.T) {
 	h := New(t)
-	_ = h.NewUser("ops")
+	_ = h.NewUser("operations")
 	oid := alertableOrder(t, h)
 
 	h.Orders.EscalateAlertsOnce(ctxBG())
@@ -138,7 +138,7 @@ func TestR22_W5_SecondSweepDoesNotDuplicate(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 func TestR22_W6_TwoWatchdogsAlertOnce(t *testing.T) {
 	h := New(t)
-	_ = h.NewUser("ops")
+	_ = h.NewUser("operations")
 	oid := alertableOrder(t, h)
 
 	r := Race(t, DefaultRaceTimeout,

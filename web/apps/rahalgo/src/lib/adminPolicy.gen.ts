@@ -152,6 +152,8 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["", "/roles/{code}", "roles.manage"],
   ["", "/roles/{code}/capabilities", "roles.manage"],
   ["", "/roles/{code}/capabilities/{cap}", "roles.manage"],
+  ["GET", "/roles/{code}/impact", "roles.manage"],
+  ["GET", "/roles/{code}/members", "roles.manage"],
   ["GET", "/salesreps", "users.read"],
   ["", "/sections", "content.manage"],
   ["PUT", "/sections/order", "content.manage"],

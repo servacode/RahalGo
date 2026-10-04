@@ -186,6 +186,8 @@ func TestADG2_RoleMatrix(t *testing.T) {
 		p["إعدادٌ ماليّ"], p["قراءةُ الطلبات"],
 		// **وكشفُ المحاسبة عملُها المكتوب.**
 		p["تصديرُ الطلبات"],
+		// **وسجلُّ الأحداث تقرؤه** (قرارُ المالك 2026-10-04 — هجرة `0260`).
+		p["سجلُّ التدقيق"],
 	}, []probe{
 		p["منحُ دور"], p["إعدادٌ أمنيّ"], p["تعليقُ متجر"],
 		p["تبديلُ حال"], p["تدخّلٌ في طلب"],
@@ -193,7 +195,7 @@ func TestADG2_RoleMatrix(t *testing.T) {
 		// — **ولا دفترَ بيوتهم** — **ولا تذكرةً تُغلقها**: **وتلك
 		// علّةُ `support.manage` التي أُنشئت لرفعها.**
 		p["تصديرُ الحسابات"], p["محادثةُ طلب"],
-		p["عناوينُ المرء"], p["الدعم"], p["سجلُّ التدقيق"],
+		p["عناوينُ المرء"], p["الدعم"],
 	})
 
 	// ── R16+R17 · الثقةُ والسلامة ────────────────────────────────
@@ -278,9 +280,7 @@ func TestADG2_R28_LegacyRolesKeepDocumentedAccess(t *testing.T) {
 		p["إعدادٌ ماليّ"], p["إعدادٌ أمنيّ"], p["سجلُّ التدقيق"],
 	}, nil)
 
-	checkRole(t, hh, "ops", []probe{
-		p["قراءةُ الطلبات"], p["تدخّلٌ في طلب"], p["إدارةُ المتاجر"],
-	}, []probe{p["قيدُ محفظة"], p["منحُ دور"], p["إعدادٌ ماليّ"]})
+	// **و`ops` حُذف** (قرارُ المالك ٢٠٢٦-١٠-٠٤، هجرة 0270) — فلا يُقاس هنا.
 
 	// **و`sales` ليس دورَ سطحٍ إداريّ** — لا صفَّ له في القدرات.
 	checkRole(t, hh, "sales", nil, []probe{
@@ -321,9 +321,9 @@ func TestADG2_Management(t *testing.T) {
 
 	// ── M2+M9 · منحُ قدرةٍ — ومكرَّرٌ آمن ────────────────────────
 	g1 := hh.POST("/api/v1/admin/roles/qa_managed/capabilities", owner,
-		map[string]any{"capability": string(authz.FinanceManage)})
+		map[string]any{"capability": string(authz.FinanceManage), "reason": "ADG-2"})
 	g2 := hh.POST("/api/v1/admin/roles/qa_managed/capabilities", owner,
-		map[string]any{"capability": string(authz.FinanceManage)})
+		map[string]any{"capability": string(authz.FinanceManage), "reason": "ADG-2"})
 	t.Logf("M2/M9: منحٌ ⇒ %d · مكرَّرٌ ⇒ %d", g1.Code, g2.Code)
 	if g1.Code != http.StatusOK || g2.Code != http.StatusOK {
 		t.Errorf("**المنحُ أو تكرارُه أخفق**: %d · %d", g1.Code, g2.Code)

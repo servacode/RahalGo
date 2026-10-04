@@ -185,7 +185,7 @@ func TestU1_A5_NewRoleIsAssignableToUser(t *testing.T) {
 
 	// **وتُمنَح قدرةٌ واحدةٌ لا غير.**
 	if r := hh.POST(rolesPath+"/u1_watcher/capabilities", mgr, map[string]any{
-		"capability": string(authz.ObservabilityRead),
+		"capability": string(authz.ObservabilityRead), "reason": "U1-A5",
 	}); r.Code != http.StatusOK {
 		t.Fatalf("**منحُ القدرة** — %d: %s", r.Code, r.Body)
 	}

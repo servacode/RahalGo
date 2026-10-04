@@ -146,8 +146,8 @@ func TestOffensiveText_RejectOrMask(t *testing.T) {
 	f.srv.support = support.NewService(f.pool, f.srv.identity, f.srv.wallet)
 	f.srv.notify = notifications.New(f.pool, f.srv.hub, f.srv.logger)
 	ctx := context.Background()
-	ops := testdb.NewUser(t, f.pool, "ops")
-	if _, err := f.pool.Exec(ctx, `INSERT INTO user_roles (user_id, role_code) VALUES ($1::uuid, 'ops') ON CONFLICT DO NOTHING`, ops); err != nil {
+	ops := testdb.NewUser(t, f.pool, "operations")
+	if _, err := f.pool.Exec(ctx, `INSERT INTO user_roles (user_id, role_code) VALUES ($1::uuid, 'operations') ON CONFLICT DO NOTHING`, ops); err != nil {
 		t.Fatal(err)
 	}
 	orderID := f.problemOrderAt(t, "on_the_way", d)

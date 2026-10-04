@@ -85,6 +85,9 @@ var sensitiveActions = []Sensitive{
 	// لاحقاً**، **ومن أنشأ دوراً بلا تأكيدٍ مهّد لمنحٍ بلا تأكيد.**
 	{"POST", "/roles", "admin.role_create",
 		"role", -1, []string{"code"}, ""},
+	// **وحذفُ دورٍ خالٍ** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فعلٌ لا يُعاد، فيُؤكَّد.
+	{"DELETE", "/roles/{code}", "admin.role_delete",
+		"role", 1, nil, ""},
 	{"POST", "/roles/{code}/capabilities", "admin.role_capability_grant",
 		"role", 1, []string{"capability"}, ""},
 	{"DELETE", "/roles/{code}/capabilities/{cap}", "admin.role_capability_revoke",

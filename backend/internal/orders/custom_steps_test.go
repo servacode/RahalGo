@@ -157,7 +157,7 @@ func TestStoreProblem_CustomerStaysPreparing(t *testing.T) {
 // TestStoreProblem_OfficeSaysCollect **«استلم الطلب» — الطلبُ يبقى معه عند المتجر.**
 func TestStoreProblem_OfficeSaysCollect(t *testing.T) {
 	f := setup(t, "at_pickup", 100_000, 10_000, 0)
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	if _, err := f.svc.ResolveDoor(context.Background(), ops, []string{"ops"}, f.orderID,
 		orders.DoorResolution{Action: orders.DoorDeliverNow, Note: "المتجرُ فتح"}, nil); err != nil {
 		t.Fatalf("«استلم الطلب»: %v", err)

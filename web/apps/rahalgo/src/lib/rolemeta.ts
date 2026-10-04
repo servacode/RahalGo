@@ -54,6 +54,17 @@ export const ROLE_DESCRIPTIONS: Record<string, string> = m.terms.roleDescription
  */
 export const CAPABILITY_LABELS: Record<string, string> = m.terms.capabilityNames;
 
+/** **وصفُ القدرة من المعجم** — بعربيٍّ بسيطٍ يقول ما تفتحه (قرارُ المالك ٢٠٢٦-١٠-٠٤). */
+export const CAPABILITY_DESCRIPTIONS: Record<string, string> = m.terms.capabilityDescriptions;
+
+/** **أسماءُ مجموعات القدرات** في المصفوفة. */
+export const CAPABILITY_GROUP_LABELS: Record<string, string> = m.terms.capabilityGroups;
+
+/** capabilityDescription **وصفٌ من المعجم، وإلّا وصفُ المحرّك.** */
+export function capabilityDescription(code: string, backendDescription?: string): string {
+  return CAPABILITY_DESCRIPTIONS[code] ?? (backendDescription ?? "").trim();
+}
+
 /** **مفتاحُ ترجمةٍ لا اسمُ إنسان** — `roles.admin` لا يُعرَض. */
 function isTranslationKey(s: string): boolean {
   return /^[a-z_]+\.[a-z_.]+$/.test(s);

@@ -39,6 +39,9 @@ var adminPolicy = []Rule{
 	{"", "/roles/{code}", RolesManage},
 	{"", "/roles/{code}/capabilities", RolesManage},
 	{"", "/roles/{code}/capabilities/{cap}", RolesManage},
+	// **مَن يحمل الدور، وأثرُ المنح قبل وقوعه** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/roles/{code}/members", RolesManage},
+	{"GET", "/roles/{code}/impact", RolesManage},
 	{"", "/capabilities", RolesManage},
 	{"POST", "/users/{id}/roles", RolesManage},
 	{"DELETE", "/users/{id}/roles/{role}", RolesManage},

@@ -448,7 +448,7 @@ func TestADG3_HighRiskMatrix(t *testing.T) {
 		{"H4", "نزعُ دورٍ من حساب", "DELETE",
 			"/api/v1/admin/users/" + v.ID + "/roles/analytics", nil, false},
 		{"H1", "منحُ قدرةٍ لدور", "POST", "/api/v1/admin/roles/analytics/capabilities",
-			map[string]any{"capability": "users.read"}, true},
+			map[string]any{"capability": "users.read", "reason": "ADG-3"}, true},
 		{"H2", "نزعُ قدرةٍ من دور", "DELETE",
 			"/api/v1/admin/roles/analytics/capabilities/users.read", nil, true},
 		{"H5", "إعادةُ كلمةٍ إداريّة", "POST",

@@ -121,7 +121,7 @@ func TestR22_W9_NoOpsRecipientLeavesNoMarker(t *testing.T) {
 		"**فمن عيّن موظّفَ عمليّاتٍ أُنذر عنه في الجولة التالية.**")
 
 	// **والدليلُ على ذلك بالفعل**: يُعيَّن موظّفٌ **بعد** القياس، فيقع.
-	_ = h.NewUser("ops")
+	_ = h.NewUser("operations")
 	h.Orders.EscalateAlertsOnce(ctxBG())
 	marked3, intents3 := alertState(t, h, oid)
 	t.Logf("بعد تعيين موظّف: موسومٌ=%v · نيّاتٌ=%d", marked3, intents3)

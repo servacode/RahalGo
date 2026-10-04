@@ -303,12 +303,12 @@ func TestCoverage_ManagePermissionRequired(t *testing.T) {
 		{39.0, 35.9}, {39.1, 35.9}, {39.1, 36.0}}}
 	// **والعملياتُ لا تُدير التغطية** — رسمُ مضلَّعٍ يبدّل من تصله المنصّة.
 	if res := h.POST("/api/v1/admin/ops-map/coverage",
-		h.NewUser("ops").Token, body); res.Code != http.StatusForbidden {
+		h.NewUser("operations").Token, body); res.Code != http.StatusForbidden {
 		t.Errorf("العملياتُ رسمت منطقةً — %d", res.Code)
 	}
 	// **وتقرؤها.**
 	if res := h.GET("/api/v1/admin/ops-map/coverage",
-		h.NewUser("ops").Token); res.Code != http.StatusOK {
+		h.NewUser("operations").Token); res.Code != http.StatusOK {
 		t.Errorf("العملياتُ حُجبت عن قراءة التغطية — %d", res.Code)
 	}
 }

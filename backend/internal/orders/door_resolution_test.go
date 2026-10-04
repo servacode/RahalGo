@@ -28,7 +28,7 @@ func (f *fixture) failAtDoor(t *testing.T, fault, reason string) {
 // endAtDoor **كـ`failAtDoor` لأيّ عُدّة** — المحرّكُ والقاعدةُ ومعرّفُ الطلب.
 func endAtDoor(t *testing.T, svc *orders.Service, pool *pgxpool.Pool, orderID, fault, reason string) {
 	t.Helper()
-	ops := testdb.NewUser(t, pool, "ops")
+	ops := testdb.NewUser(t, pool, "operations")
 	if _, err := svc.ResolveDoor(context.Background(), ops, []string{"ops"}, orderID,
 		orders.DoorResolution{Action: orders.DoorReturnToOffice, Fault: fault,
 			Reason: reason, Note: "قرارُ المكتب بعد الاتّصال بالزبون"}, nil); err != nil {
@@ -59,7 +59,7 @@ func TestDoor_DriverCannotEndOrder(t *testing.T) {
 func TestDoor_GenericOpsTransitionRefused(t *testing.T) {
 	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
 	ctx := context.Background()
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	_, err := f.svc.Transition(ctx, ops, []string{"ops"}, f.orderID, "failed", "تعذّر")
 	if !errors.Is(err, orders.ErrDoorNeedsOps) {
 		t.Fatalf("انتقالُ اللوحة العامّ أنهى الطلبَ عند الباب (%v) — **بلا ذنبٍ لا يُعرف على من الخسارة**", err)
@@ -133,7 +133,7 @@ func TestDoor_DeliverNow_OrderStaysWithDriver(t *testing.T) {
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "at_dropoff", ""); err != nil {
 		t.Fatalf("الوصول: %v", err)
 	}
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	if _, err := f.svc.ResolveDoor(ctx, ops, []string{"ops"}, f.orderID,
 		orders.DoorResolution{Action: orders.DoorDeliverNow, Note: "الزبونُ نازل"}, nil); err != nil {
 		t.Fatalf("«سلّم الآن» رُدّ: %v", err)
@@ -158,7 +158,7 @@ func TestDoor_DeliverNow_OrderStaysWithDriver(t *testing.T) {
 func TestDoor_Validation(t *testing.T) {
 	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
 	ctx := context.Background()
-	ops := testdb.NewUser(t, f.pool, "ops")
+	ops := testdb.NewUser(t, f.pool, "operations")
 	try := func(in orders.DoorResolution) error {
 		_, err := f.svc.ResolveDoor(ctx, ops, []string{"ops"}, f.orderID, in, nil)
 		return err
@@ -200,7 +200,7 @@ func TestTrip_OnTheWay_OpsDecides(t *testing.T) {
 	t.Run("continue", func(t *testing.T) {
 		f := setup(t, "on_the_way", 100_000, 10_000, 0)
 		ctx := context.Background()
-		ops := testdb.NewUser(t, f.pool, "ops")
+		ops := testdb.NewUser(t, f.pool, "operations")
 		if _, err := f.svc.ResolveDoor(ctx, ops, []string{"ops"}, f.orderID,
 			orders.DoorResolution{Action: orders.DoorDeliverNow, Note: "الزبونُ تراجع"}, nil); err != nil {
 			t.Fatalf("«أكمل» في الطريق رُدّ: %v", err)

@@ -9,8 +9,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/rolesguard"
 	"time"
 )
 
@@ -310,18 +312,21 @@ func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, rea
 	// **فحصٌ قبل الكتابة لا بعدها**، وقد وقعا سلفاً.
 	return s.criticalRoleTx(ctx, actorID, userID, ip, "admin.role_grant",
 		map[string]any{"role": role, "reason": reason},
-		func(ctx context.Context, q dbtx.Querier) error {
+		func(ctx context.Context, q dbtx.Querier) (bool, error) {
 			// **والدورُ المحميُّ لا يكفيه `roles.manage`** — **فحصٌ
 			// داخلَ المعاملة قبل الكتابة**، انظر `protected_role.go`.
 			// **وقِيس قبله**: أدمنٌ رقّى نفسَه مالكاً ⇒ `200 granted`.
 			if err := guardProtectedGrant(ctx, q, actorID, role); err != nil {
-				return err
+				return false, err
 			}
-			_, err := q.Exec(ctx, `
+			tag, err := q.Exec(ctx, `
 				INSERT INTO user_roles (user_id, role_code, granted_by)
 				VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
 				userID, role, &actorID)
-			return err
+			if err != nil {
+				return false, err
+			}
+			return tag.RowsAffected() > 0, nil
 		})
 }
 
@@ -337,15 +342,32 @@ func (s *Service) AdminRevokeRole(ctx context.Context, actorID, userID, role, re
 	// **وهو يمسّ التخويلَ في اللحظة** (`R15`) — **فأولى أن يُقيَّد.**
 	return s.criticalRoleTx(ctx, actorID, userID, ip, "admin.role_revoke",
 		map[string]any{"role": role, "reason": reason},
-		func(ctx context.Context, q dbtx.Querier) error {
+		func(ctx context.Context, q dbtx.Querier) (bool, error) {
 			// **ونزعُ الدور المحميِّ من مالكٍ، وما دام يبقى مالك.**
 			if err := guardProtectedRevoke(ctx, q, actorID, role); err != nil {
-				return err
+				return false, err
 			}
-			_, err := q.Exec(ctx,
+			// **ولا يُنزَع آخرُ من يدير الأدوار** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			var managesRoles bool
+			if err := q.QueryRow(ctx, `
+				SELECT EXISTS (SELECT 1 FROM role_capabilities
+				                WHERE role_code = $1 AND capability_code = $2)`,
+				role, string(authz.RolesManage)).Scan(&managesRoles); err != nil {
+				return false, err
+			}
+			if managesRoles {
+				if err := rolesguard.GuardRolesManageRemains(ctx, q, rolesguard.RolesManageLoss{
+					UserID: userID, UserRole: role}); err != nil {
+					return false, err
+				}
+			}
+			tag, err := q.Exec(ctx,
 				`DELETE FROM user_roles WHERE user_id = $1 AND role_code = $2`,
 				userID, role)
-			return err
+			if err != nil {
+				return false, err
+			}
+			return tag.RowsAffected() > 0, nil
 		})
 }
 
@@ -354,15 +376,21 @@ func (s *Service) AdminRevokeRole(ctx context.Context, actorID, userID, role, re
 // **ولا نداءَ خارجيٌّ داخلَها**: **قفلٌ ينتظر شبكةً قفلٌ ينتظر الأبد.**
 func (s *Service) criticalRoleTx(ctx context.Context, actorID, userID, ip,
 	action string, details map[string]any,
-	do func(context.Context, dbtx.Querier) error) error {
+	do func(context.Context, dbtx.Querier) (bool, error)) error {
 	tx, err := s.repo.pool().Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := do(ctx, tx); err != nil {
+	changed, err := do(ctx, tx)
+	if err != nil {
 		return err
+	}
+	// **ولا سطرَ في السجلّ لما لم يقع** (قرارُ المالك ٢٠٢٦-١٠-٠٤): منحُ دورٍ
+	// موجودٍ أو نزعُ دورٍ غائبٍ لا يُكتب «مُنح/نُزع».
+	if !changed {
+		return tx.Commit(ctx)
 	}
 	if err := AuditTx(ctx, tx, &actorID, action, "user", userID, ip, details); err != nil {
 		return err

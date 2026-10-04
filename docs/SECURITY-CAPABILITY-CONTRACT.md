@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**34 قدرةً · 203 صفَّ سياسةٍ للمسارات · 3 استثناءً · 28 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**34 قدرةً · 205 صفَّ سياسةٍ للمسارات · 3 استثناءً · 29 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -55,40 +55,40 @@
 <!-- gen:capabilities -->
 | القدرة | تحرس مسارات | تحرس حقولاً | الوصف |
 |---|---|---|---|
-| `analytics.read` | 8 | — | قراءةُ التحليلات |
-| `audit.export` | 1 | — | تصديرُ سجلّ التدقيق ملفّاً |
-| `audit.read` | 2 | — | قراءةُ سجلّ التدقيق |
-| `content.manage` | 28 | — | لافتاتٌ وعروضٌ ومحتوى |
-| `drivers.manage` | 3 | — | إدارةُ السائقين وتشغيلُهم |
-| `drivers.read` | 2 | — | قراءةُ سجلّ السائقين ومواضعهم |
-| `emergencies.manage` | 5 | — | قراءةُ الطوارئ واستلامُها |
-| `finance.export` | 2 | — | سحبُ الدفتر وكشفِ الطلبات ملفّاً |
-| `finance.manage` | 15 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
-| `finance.read` | 17 | — | قراءةُ المال والتقارير الماليّة |
-| `finance.recompute` | 1 | — | إعادةُ حساب تسوية طلبٍ مُغلق |
-| `merchants.manage` | 10 | — | إدارةُ المتاجر وتعليقُها |
-| `merchants.read` | 4 | — | قراءةُ سجلّ المتاجر وقوائمها |
-| `merchants.verify` | 2 | — | مراجعةُ المرشَّحين والقوائم |
-| `observability.read` | 1 | — | قراءةُ صحّة المنصّة الداخليّة |
-| `orders.communications.read` | 3 | — | قراءةُ محادثات الطلب ورسائله |
-| `orders.customer_details.read` | **0** | **1** | هاتفُ زبون الطلب وموقعُه وصورةُ تسليمه |
-| `orders.intervene` | 12 | — | تدخّلٌ في طلبٍ نيابةً عن طرفه |
-| `orders.read` | 12 | — | قراءةُ الطلبات ولوحةِ العمليّات |
-| `payouts.decide` | 1 | — | قرارُ السحب |
-| `platform.overview` | 1 | — | رئيسيّةُ مدير المنصّة بأرقامها ومالِها |
-| `roles.manage` | 7 | — | منحُ الأدوار وسحبُها |
-| `safety.manage` | 8 | — | الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر |
-| `settings.financial.manage` | 3 | — | إعداداتٌ تدخل حساباً ماليّاً |
-| `settings.general.manage` | 21 | — | إعداداتٌ عامّةٌ ومحتوى |
-| `settings.read` | 2 | — | قراءةُ لوح الإعدادات |
-| `settings.security.manage` | 3 | — | إعداداتُ الأمن والجلسات |
-| `support.manage` | 8 | — | التذاكرُ والنزاعاتُ والطوارئ |
-| `users.cashban.lift` | 1 | — | رفعُ منع الدفع نقداً عن زبون |
-| `users.contact.read` | **0** | **7** | قراءةُ رقم الاتّصال |
-| `users.export` | 1 | — | سحبُ دليل الحسابات ملفّاً |
-| `users.read` | 10 | — | قراءةُ الحسابات |
-| `users.sensitive.read` | 2 | — | قراءةُ عناوين المرء وأثرِه |
-| `users.status.manage` | 7 | — | إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته |
+| `analytics.read` | 8 | — | قراءة التحليلات |
+| `audit.export` | 1 | — | تصدير سجل الأحداث ملفا |
+| `audit.read` | 2 | — | قراءة سجل الأحداث |
+| `content.manage` | 28 | — | اللافتات والعروض والمحتوى |
+| `drivers.manage` | 3 | — | إدارة السائقين وتشغيلهم |
+| `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
+| `emergencies.manage` | 5 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
+| `finance.export` | 2 | — | تصدير الدفتر وكشف الطلبات ملفا |
+| `finance.manage` | 15 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 17 | — | قراءة المال والتقارير المالية |
+| `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
+| `merchants.manage` | 10 | — | إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق) |
+| `merchants.read` | 4 | — | قراءة سجل المتاجر وقوائمها |
+| `merchants.verify` | 2 | — | مراجعة المتاجر المرشحة والقوائم قبل النشر |
+| `observability.read` | 1 | — | قراءة صحة المنصة الداخلية |
+| `orders.communications.read` | 3 | — | قراءة محادثات الطلب ورسائله |
+| `orders.customer_details.read` | **0** | **1** | هاتف زبون الطلب وموقعه وصورة التسليم |
+| `orders.intervene` | 12 | — | التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه |
+| `orders.read` | 12 | — | قراءة الطلبات ولوحة العمليات |
+| `payouts.decide` | 1 | — | الموافقة على طلبات السحب أو رفضها |
+| `platform.overview` | 1 | — | رئيسية مدير المنصة بأرقامها ومالها |
+| `roles.manage` | 9 | — | إدارة الأدوار والصلاحيات — أقوى صلاحية بالمنصة، تعطي صاحبها كل شيء |
+| `safety.manage` | 8 | — | الإنذارات والمخالفات وتعليق المتاجر |
+| `settings.financial.manage` | 3 | — | إعدادات تدخل بحساب المال: العمولات والرسوم والسقوف |
+| `settings.general.manage` | 21 | — | إعدادات عامة: المناطق والمدن ودوام المنصة |
+| `settings.read` | 2 | — | قراءة الإعدادات |
+| `settings.security.manage` | 3 | — | إعدادات الأمان والجلسات |
+| `support.manage` | 8 | — | التذاكر والنزاعات والتقييمات |
+| `users.cashban.lift` | 1 | — | رفع منع الدفع نقدا عن زبون |
+| `users.contact.read` | **0** | **7** | رؤية أرقام الهواتف |
+| `users.export` | 1 | — | تصدير دليل الحسابات ملفا |
+| `users.read` | 10 | — | قراءة الحسابات |
+| `users.sensitive.read` | 2 | — | رؤية عناوين الشخص وسجل تحركاته |
+| `users.status.manage` | 7 | — | إيقاف حساب أو حظره أو تعديل بياناته |
 <!-- /gen:capabilities -->
 
 **وقدرةٌ تحرس صفرَ مساراتٍ ليست سهواً بالضرورة.** `users.contact.read` لا
@@ -151,6 +151,7 @@
 | `admin.role_capability_grant` | `POST` | `/roles/{code}/capabilities` | `capability` | دائماً | `roles.manage` |
 | `admin.role_capability_revoke` | `DELETE` | `/roles/{code}/capabilities/{cap}` | — | دائماً | `roles.manage` |
 | `admin.role_create` | `POST` | `/roles` | `code` | دائماً | `roles.manage` |
+| `admin.role_delete` | `DELETE` | `/roles/{code}` | — | دائماً | `roles.manage` |
 | `admin.role_grant` | `POST` | `/users/{id}/roles` | `role` | دائماً | `roles.manage` |
 | `admin.role_revoke` | `DELETE` | `/users/{id}/roles/{role}` | — | دائماً | `roles.manage` |
 | `admin.setting_update` | `PUT` | `/settings/{key}` | `value` | `settingSensitivity` | *بحسب المفتاح* |
