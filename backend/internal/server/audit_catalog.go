@@ -59,9 +59,9 @@ var auditGroups = []auditGroup{
 	{Key: "customer", Prefixes: []string{"customer"}},
 	{Key: "user", Prefixes: []string{"user"}},
 	{Key: "menu", Prefixes: []string{"menu"}},
-	{Key: "catalog", Prefixes: []string{"catalog"}},
+	{Key: "catalog", Prefixes: []string{"catalog", "market"}},
 	{Key: "platform", Prefixes: []string{"platform"}},
-	{Key: "geo", Prefixes: []string{"coverage", "coverage_request", "operational_area", "branch"}},
+	{Key: "geo", Prefixes: []string{"coverage", "coverage_request", "operational_area", "branch", "expansion"}},
 }
 
 // auditGroupByKey التبويبُ باسمه — **والاسمُ القديمُ `auth` يُقرأ «الدخول».**
