@@ -17,6 +17,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 )
 
 // طلبات سحب الرصيد — تُغلق دورة المال: يطلب صاحب الرصيد، وتصرف المالية بقيد
@@ -477,11 +478,12 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 				id, clip(req.Decision, 300), &actor); err != nil {
 				return IdempotentBody{}, err
 			}
-			// **والنقدُ من المكتب يخرج من صندوقه** (البند ٦) — وإلّا لم
-			// يطابق الإغلاقُ اليوميُّ ما في الدرج.
+			// **والنقدُ من المكتب يخرج من صندوقه** (البند ٦) — والحوالةُ لا سطرَ لها.
 			if method == "cash" {
-				if err := s.officeCashPayout(ctx, q, "out", amount, "payout_paid", id, userID, actor,
-					clip(req.Decision, 300)); err != nil {
+				if err := officecash.Record(ctx, q, officecash.Entry{
+					Direction: officecash.Out, Amount: amount, Source: officecash.SourcePayoutPaid,
+					Ref: id, UserID: userID, Actor: actor, Note: clip(req.Decision, 300),
+				}); err != nil {
 					return IdempotentBody{}, err
 				}
 			}
@@ -511,8 +513,10 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 			}
 			// **ونقدٌ خرج من المكتب ثمّ رجع يعود إلى صندوقه.**
 			if paidVia == "cash" {
-				if err := s.officeCashPayout(ctx, q, "in", amount, "payout_reversed", id, userID, actor,
-					clip(req.Decision, 300)); err != nil {
+				if err := officecash.Record(ctx, q, officecash.Entry{
+					Direction: officecash.In, Amount: amount, Source: officecash.SourcePayoutReversed,
+					Ref: id, UserID: userID, Actor: actor, Note: clip(req.Decision, 300),
+				}); err != nil {
 					return IdempotentBody{}, err
 				}
 			}

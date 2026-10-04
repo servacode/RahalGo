@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**34 قدرةً · 212 صفَّ سياسةٍ للمسارات · 3 استثناءً · 29 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**35 قدرةً · 227 صفَّ سياسةٍ للمسارات · 3 استثناءً · 31 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -62,9 +62,9 @@
 | `drivers.manage` | 3 | — | إدارة السائقين وتشغيلهم |
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
-| `finance.export` | 2 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 15 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 17 | — | قراءة المال والتقارير المالية |
+| `finance.export` | 3 | — | تصدير الدفتر وكشف الطلبات ملفا |
+| `finance.manage` | 19 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 24 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `merchants.manage` | 10 | — | إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق) |
 | `merchants.read` | 4 | — | قراءة سجل المتاجر وقوائمها |
@@ -83,6 +83,7 @@
 | `settings.read` | 2 | — | قراءة الإعدادات |
 | `settings.security.manage` | 3 | — | إعدادات الأمان والجلسات |
 | `support.manage` | 8 | — | التذاكر والنزاعات والتقييمات |
+| `treasury.manage` | 3 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
 | `users.cashban.lift` | 1 | — | رفع منع الدفع نقدا عن زبون |
 | `users.contact.read` | **0** | **7** | رؤية أرقام الهواتف |
 | `users.export` | 1 | — | تصدير دليل الحسابات ملفا |
@@ -156,6 +157,7 @@
 | `admin.role_revoke` | `DELETE` | `/users/{id}/roles/{role}` | — | دائماً | `roles.manage` |
 | `admin.setting_update` | `PUT` | `/settings/{key}` | `value` | `settingSensitivity` | *بحسب المفتاح* |
 | `admin.user_update` | `PATCH` | `/users/{id}` | `phone`, `status` | `userUpdateStrong` | `users.status.manage` |
+| `finance.cash_shortfall_loss` | `POST` | `/cashbox/shortfalls/{id}/approve` | — | دائماً | `treasury.manage` |
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
@@ -166,6 +168,7 @@
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `status`, `amount`, `method` | دائماً | `payouts.decide` |
 | `finance.settlement_recomputed` | `POST` | `/orders/{id}/recompute` | — | دائماً | `finance.recompute` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
+| `finance.treasury_withdrawal` | `POST` | `/treasury/withdrawals` | `amount` | دائماً | `treasury.manage` |
 | `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |
 | `finance.wallet_request_approved` | `POST` | `/wallet-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `ops.delivery_proof_exception` | `POST` | `/orders/{id}/proof-exception` | `reason` | دائماً | `orders.intervene` |

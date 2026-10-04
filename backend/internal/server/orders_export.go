@@ -328,6 +328,7 @@ var ledgerKinds = map[string]string{
 	"merchant_cash_accrued": "مستحق نقدي للمتجر",
 	"merchant_cash_paid":    "دفع نقدي للمتجر",
 	"payout_reversal":       "إرجاع سحب",
+	"treasury_withdrawal":   "سحب الأدمن من رصيد الخزينة",
 }
 
 // ledgerKindAr نوعُ القيد بالعربيّة — والمجهولُ يبقى كما هو لا فراغاً.
