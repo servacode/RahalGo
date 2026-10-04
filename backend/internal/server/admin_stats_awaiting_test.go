@@ -168,8 +168,9 @@ func TestAdminStatsAwaitingDecision(t *testing.T) {
 	// ── طلبُ انضمام ───────────────────────────────────────────────
 	var leadID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO merchant_leads (store_name, phone) VALUES ('متجرٌ يطلب الانضمام', '+963900000000')
-		RETURNING id`).Scan(&leadID); err != nil {
+		INSERT INTO merchant_leads (store_name, phone, sales_rep_user_id)
+		VALUES ('متجرٌ يطلب الانضمام', '+963900000000', $1)
+		RETURNING id`, testdb.NewUser(t, pool, "sales")).Scan(&leadID); err != nil {
 		t.Fatalf("تعذّر طلبُ الانضمام: %v", err)
 	}
 	t.Cleanup(func() {
