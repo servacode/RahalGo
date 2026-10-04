@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**35 قدرةً · 238 صفَّ سياسةٍ للمسارات · 3 استثناءً · 33 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**36 قدرةً · 244 صفَّ سياسةٍ للمسارات · 3 استثناءً · 34 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 1 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -62,10 +62,11 @@
 | `drivers.manage` | 3 | — | إدارة السائقين وتشغيلهم |
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
-| `finance.export` | 5 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 25 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 27 | — | قراءة المال والتقارير المالية |
+| `finance.export` | 6 | — | تصدير الدفتر وكشف الطلبات ملفا |
+| `finance.manage` | 29 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 28 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
+| `finance.writeoff.approve` | **0** | — | الموافقة على شطب دين متجر أو مندوب لن يسدد |
 | `merchants.manage` | 10 | — | إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق) |
 | `merchants.read` | 4 | — | قراءة سجل المتاجر وقوائمها |
 | `merchants.verify` | 2 | — | مراجعة المتاجر المرشحة والقوائم قبل النشر |
@@ -167,6 +168,7 @@
 | `finance.goods_compensation` | `POST` | `/orders/{id}/goods/compensation` | `amount` | دائماً | `finance.manage` |
 | `finance.incentive` | `POST` | `/users/{id}/incentive` | `amount` | دائماً | `finance.manage` |
 | `finance.merchant_cash_paid` | `POST` | `/merchant-cash-settlements/{id}/pay` | — | دائماً | `finance.manage` |
+| `finance.obligation_request_approved` | `POST` | `/obligation-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `status`, `amount`, `method` | دائماً | `payouts.decide` |
 | `finance.settlement_recomputed` | `POST` | `/orders/{id}/recompute` | — | دائماً | `finance.recompute` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |

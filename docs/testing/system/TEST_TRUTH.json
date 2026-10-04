@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 459,
+    "routes": 465,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 68,
+    "notify_sites": 70,
     "notify_targeted": 24,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 187,
-    "behaviour_settings": 152,
+    "setting_defs": 188,
+    "behaviour_settings": 153,
     "order_fields": 95,
-    "test_files": 494,
-    "test_funcs": 2073
+    "test_files": 495,
+    "test_funcs": 2080
   },
   "flows": [
     {
@@ -4508,6 +4508,24 @@
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "finance.obligation_alert_days",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-33"
       ],
@@ -16865,6 +16883,48 @@
     {
       "name": "TestNOTIF_001_OfferSkipsStaff",
       "file": "internal/qa/notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_OfficeCashPaymentEntersCashboxAndTreasury",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_OffsetNoteNamesTheRealCause",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_SearchTotalsAndOverdueAlert",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_TopupPaysDebtFirst",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_VoidedDebtIsNotPaid",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_WalletShowsDebtToOwner",
+      "file": "internal/qa/obligations_actions_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOBLX_WriteoffNeedsPlatformOwner",
+      "file": "internal/qa/obligations_actions_test.go",
       "package": "qa",
       "orphan": true
     },

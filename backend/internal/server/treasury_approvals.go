@@ -77,6 +77,13 @@ var approvalSources = []approvalSource{
 		ApprovePath: "/api/v1/admin/expense-requests/{id}/approve",
 		RejectPath:  "/api/v1/admin/expense-requests/{id}/reject",
 		Href:        "/dashboard/expenses"},
+	// **الديون: دفعٌ نقداً بالمكتب أو شطب** — والشطبُ يحتاج فوقها
+	// `finance.writeoff.approve` (يردّه البابُ نفسُه `403 writeoff_owner_only`).
+	{Key: "obligations", Table: "obligation_requests", Section: "obligations",
+		Capability:  authz.FinanceManage,
+		ApprovePath: "/api/v1/admin/obligation-requests/{id}/approve",
+		RejectPath:  "/api/v1/admin/obligation-requests/{id}/reject",
+		Href:        "/dashboard/obligations"},
 }
 
 var approvalIdent = regexp.MustCompile(`^[a-z_]+$`)

@@ -301,8 +301,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// و`drivers.cash_overdue_stop`.
 	// **وأربعةٌ أُضيفت بقسم التعويضات** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سقوفُ الأنواع الثلاثة
 	// `compensations.cap_driver|cap_merchant_goods|cap_complaint` و`compensations.overdue_hours`.
-	if d.BehaviourSettings != 152 {
-		t.Errorf("إعداداتُ السلوك = %d لا 152 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بقسم الديون** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `finance.obligation_alert_days`.
+	if d.BehaviourSettings != 153 {
+		t.Errorf("إعداداتُ السلوك = %d لا 153 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

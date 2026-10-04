@@ -194,8 +194,16 @@ var adminPolicy = []Rule{
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},
 	{"GET", "/payouts", FinanceRead},
-	// **والالتزاماتُ الماليّة قراءةٌ ماليّة** — تُقرأ ولا تُكتب، فلا تأكيد.
+	// **والديون** — القراءةُ ماليّة، والتصديرُ بقدرته، والدفعُ والشطبُ اقتراحٌ
+	// بـ`finance.manage`. **وموافقةُ الشطب تشترط `finance.writeoff.approve` داخلَ
+	// الباب** (الدفعةُ بـ`finance.manage`)، فالمسارُ واحدٌ بحدّه الأدنى.
 	{"GET", "/obligations", FinanceRead},
+	{"GET", "/obligations/export", FinanceExport},
+	{"POST", "/obligations/{id}/office-cash", FinanceManage},
+	{"POST", "/obligations/{id}/write-off", FinanceManage},
+	{"GET", "/obligation-requests", FinanceRead},
+	{"POST", "/obligation-requests/{id}/approve", FinanceManage},
+	{"POST", "/obligation-requests/{id}/reject", FinanceManage},
 	{"GET", "/profits", FinanceRead},
 	{"GET", "/expenses", FinanceRead},
 	{"GET", "/expenses/categories", FinanceRead},

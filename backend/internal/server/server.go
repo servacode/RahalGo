@@ -1386,10 +1386,17 @@ func (s *Server) Router() http.Handler {
 			// طلبات سحب الرصيد: القراءة لمكتب المنصة، والصرف للأدمن والمالية
 			r.Get("/payouts", s.handleAdminPayouts)
 			r.Post("/payouts/{id}/decide", s.idempotent(s.handleDecidePayout))
-			// **الالتزاماتُ الماليّة — قراءةٌ فقط** (`financial_obligations`):
+			// **الديون** (`financial_obligations`) — تبويبُ «الديون» في الخزينة:
 			// الدَّينُ على المتاجر والمناديب، على من وكم ومن أين وكم بقي.
-			// **ولا فعلَ هنا** — التسويةُ من بابها (استرداد أو نزاع).
+			// **ودفعٌ بالمكتب وشطبٌ — اقتراحٌ يوافق عليه غيرُ مقترِحه** (قراراتُ
+			// المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/obligations", s.handleListObligations)
+			r.Get("/obligations/export", s.handleExportObligations)
+			r.Post("/obligations/{id}/office-cash", s.handleProposeObligationCash)
+			r.Post("/obligations/{id}/write-off", s.handleProposeObligationWriteoff)
+			r.Get("/obligation-requests", s.handleListObligationRequests)
+			r.Post("/obligation-requests/{id}/approve", s.handleDecideObligationRequest(true))
+			r.Post("/obligation-requests/{id}/reject", s.handleDecideObligationRequest(false))
 
 			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
 			r.Get("/tickets", s.handleListTickets)

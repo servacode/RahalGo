@@ -224,5 +224,11 @@ func (s *Server) handleRepWallet(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, st)
+	// **ودينُه معه** — «عليك كذا، بسبب كذا، وبينقطع من أول أرباح جاية» (قسمُ الديون).
+	out, err := s.statementWithDebts(r.Context(), userIDFrom(r), st)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }

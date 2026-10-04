@@ -2077,6 +2077,10 @@ var Catalog = []Def{
 	// مباشرة. وصفرُه: كلُّ مصروفٍ بموافقةٍ ثانية.
 	{Key: "finance.expense_approval_threshold", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+	// **بعد كم يوماً ينبّه الدينُ المفتوح في الرئيسيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+	// قسمُ الديون: «رقمٌ من الإعدادات ويبدأ بثلاثين»). وصفرُه: بلا تنبيه.
+	{Key: "finance.obligation_alert_days", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 365, Unit: "day", Default: 30},
 	// **عددُ الإنذارات في ثلاثين يوماً الذي ينبّه الموظّفين** — ولا إيقافَ آليّاً أبداً:
 	// القرارُ لموظّف (قرارُ المالك ٢٠٢٦-١٠-٠٤). وصفرُه: بلا تنبيه.
 	{Key: "safety.warnings_alert_count", Group: GroupPlatform, Kind: KindInt,

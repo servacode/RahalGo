@@ -1150,8 +1150,13 @@ func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 	if take <= 0 {
 		return nil
 	}
+	// **والوصفُ من أسباب ما يُسدَّد فعلاً** — لا «بضاعةٌ رُدّت» لكلّ دين.
+	note, err := obligations.OffsetNote(ctx, q, obligations.PartyMerchant, merchantID, take)
+	if err != nil {
+		return err
+	}
 	_, txID, err := s.wallet.ApplyTxID(ctx, q, ownerID, -take, "merchant_earning",
-		orderID, "اقتطاعُ دَينٍ عن بضاعةٍ رُدّت سابقاً", &actorID)
+		orderID, note, &actorID)
 	if err != nil {
 		return err
 	}
@@ -1558,8 +1563,12 @@ func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
 	if take <= 0 {
 		return nil
 	}
+	note, err := obligations.OffsetNote(ctx, q, obligations.PartyRep, repID, take)
+	if err != nil {
+		return err
+	}
 	_, txID, err := s.wallet.ApplyTxID(ctx, q, repID, -take, "commission",
-		orderID, "اقتطاعُ التزامٍ عن طلبٍ استُرِدّ سابقاً", &actorID)
+		orderID, note, &actorID)
 	if err != nil {
 		return err
 	}

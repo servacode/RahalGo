@@ -221,3 +221,21 @@ func (s *Service) CreditTreasuryDirect(ctx context.Context, q wallet.Querier,
 	_, err := s.wallet.ApplyTx(ctx, q, tid, amount, "platform_profit", ref, note, &actorID)
 	return err
 }
+
+// CreditTreasuryDirectID كـ`CreditTreasuryDirect` **ويُرجع رقمَ القيد** — صفرٌ إن
+// لم تكن خزينة.
+//
+// (قسمُ الديون ٢٠٢٦-١٠-٠٤: دينٌ يُسدَّد بالمكتب أو من شحنٍ يعود إلى الخزينة،
+// **وسطرُ تسويته يُوصَل بقيدِه** كما يُوصَل اقتطاعُ المستحقّ.)
+func (s *Service) CreditTreasuryDirectID(ctx context.Context, q wallet.Querier,
+	amount int64, ref, note, actorID string) (int64, error) {
+	if amount <= 0 {
+		return 0, nil
+	}
+	tid := s.treasuryOn(ctx, q)
+	if tid == "" {
+		return 0, nil
+	}
+	_, txID, err := s.wallet.ApplyTxID(ctx, q, tid, amount, "platform_profit", ref, note, &actorID)
+	return txID, err
+}
