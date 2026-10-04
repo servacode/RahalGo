@@ -34,7 +34,7 @@
     "behaviour_settings": 145,
     "order_fields": 95,
     "test_files": 488,
-    "test_funcs": 2035
+    "test_funcs": 2040
   },
   "flows": [
     {
@@ -25168,7 +25168,37 @@
       "orphan": true
     },
     {
-      "name": "TestProfits_NetMatchesTreasuryLedger",
+      "name": "TestProfits_FailedAndCancelledLossLine",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_InvertedRangeRejected",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_LinesReconcileToNet",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_PendingProfitOutsideNet",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_RepSeparateFromCustomers",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_WithdrawalsAndManualDepositsExcluded",
       "file": "internal/server/profits_test.go",
       "package": "server",
       "orphan": true
