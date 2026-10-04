@@ -659,13 +659,16 @@ function SettingRow({
   const commitSlider = () => requestSave(Number(draft === "" ? 0 : draft));
 
   const gateOpen = pending?.raw === true;
+  const Wrap = s.kind === "geo" ? "div" : "form";
 
   return (
     <Card
       tone={s.risk ? "accent" : "default"}
       className={WIDE.has(s.kind) ? "col-span-full" : ""}
     >
-      <form onSubmit={submit}>
+      {/* **والموقعُ ليس نموذجاً** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥): لاقطُه فيه نموذجُ بحثه، **ونموذجٌ
+          داخلَ نموذجٍ خطأُ ترطيبٍ في الطرفيّة** — وهو يُحفظ بالضغط على الخريطة لا بزرّ. */}
+      <Wrap onSubmit={s.kind === "geo" ? undefined : submit}>
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="font-medium">{label(s.key)}</span>
           {s.risk && (
@@ -865,7 +868,7 @@ function SettingRow({
             {s.risk === "money" ? U.moneyHint : U.securityHint}
           </Alert>
         )}
-      </form>
+      </Wrap>
 
       {/* **«كان ← يصير» قبل حفظ المال** (البند ٨)، **وتأكيدٌ لكلّ باب إطلاق** (البند ١٠).
           ثمّ يطلب المحرّكُ كلمةَ المرور لمفاتيح المال. */}
