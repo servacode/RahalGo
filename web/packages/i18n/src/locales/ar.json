@@ -4685,6 +4685,13 @@
       "placeholder": "كلمةُ المرور",
       "confirm": "تأكيد",
       "failed": "تعذّر التأكيد. حاول ثانيةً.",
+      "facts": {
+        "amount": "المبلغ",
+        "role": "الدور",
+        "capability": "الصلاحية",
+        "status": "الحالة",
+        "value": "القيمة الجديدة"
+      },
       "actions": {
         "admin.role_capability_grant": "منحُ قدرةٍ لدور",
         "admin.role_capability_revoke": "نزعُ قدرةٍ من دور",
