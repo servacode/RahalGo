@@ -98,7 +98,20 @@ const statusText = (s: string) =>
 
 /** نوعُ حركةِ المحفظة بالعربيّة — `topup` تُقرأ «شحن رصيد». */
 const kindText = (k: string) =>
-  (m.shared.txKinds as Record<string, string>)[k] ?? k;
+  (m.shared.txKinds as Record<string, string>)[k] ??
+  // **ونوعُ الطارئ أيضاً** — `driver.emergency` يكتب `kind: accident` (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥).
+  (m.admin.emergencyRoom.kinds as Record<string, string>)[k] ??
+  k;
+
+/** **اسمٌ قد يكون مفتاحَ ترجمة** — حذفُ الأدوار (`0270`) يكتب `name: roles.ops`. */
+const nameText = (n: string) => (n.startsWith("roles.") ? roleLabelByCode(n.slice(6)) : n);
+
+/** **سببُ الشكوى رمزٌ** (`customer.complaint_opened` يكتب `reason: late`) — وغيرُه نصٌّ حرّ. */
+const reasonText = (r: string) => (m.site.complaint.reasons as Record<string, string>)[r] ?? r;
+
+/** قيمةُ حقلٍ في التفاصيل بالعربيّة — بحسب مفتاحها. */
+const detailValue = (k: string, v: string) =>
+  k === "kind" ? kindText(v) : k === "name" ? nameText(v) : k === "reason" ? reasonText(v) : statusText(v);
 
 /** **قيمةُ الإعداد كما يقرؤها إنسان** — لا `null` ولا علاماتُ اقتباس. */
 const settingValue = (v: unknown): string => {
@@ -163,10 +176,10 @@ function summaryOf(e: Entry): string {
     if (typeof d.status === "string") bits.push(statusText(d.status));
     if (typeof d.to === "string") bits.push(statusText(d.to));
     if (typeof d.kind === "string") bits.push(kindText(d.kind));
-    if (typeof d.name === "string" && d.name) bits.push(d.name);
+    if (typeof d.name === "string" && d.name) bits.push(nameText(d.name));
     if (typeof d.title === "string" && d.title) bits.push(d.title);
     if (typeof d.note === "string" && d.note) bits.push(d.note);
-    if (typeof d.reason === "string" && d.reason) bits.push(d.reason);
+    if (typeof d.reason === "string" && d.reason) bits.push(reasonText(d.reason));
     if (typeof d.resolution === "string" && d.resolution) bits.push(d.resolution);
     // تغيير الإعداد: الفرق لا النتيجة — «صار ٧٠» بلا «كان ٥٠» يُثبت الفعل ولا يُظهر أثره
     if (d.before !== undefined || d.after !== undefined)
@@ -253,7 +266,7 @@ function DetailPanel({
                 <span key={k} className="flex flex-wrap gap-2">
                   <span className="text-ink-muted" dir="ltr">{k}</span>
                   <span className="break-all">
-                    {typeof v === "string" ? statusText(v) : typeof v === "number" ? fmtNum(v) : JSON.stringify(v)}
+                    {typeof v === "string" ? detailValue(k, v) : typeof v === "number" ? fmtNum(v) : JSON.stringify(v)}
                   </span>
                 </span>
               ))}
