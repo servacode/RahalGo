@@ -992,7 +992,8 @@
     "incentive_user_inactive": "الحساب موقوف أو ليس سائقا ولا مندوبا — لا تُعطى له مكافأة ولا عقوبة من هنا",
     "dispute_party_mismatch": "الطرف المختار لا يحمل هذا الدور — اختره من القائمة",
     "dispute_resolution_pending": "على هذا النزاع اقتراح ينتظر الموافقة — يبت فيه أولا",
-    "dispute_nothing_to_charge": "رصيد الطرف صفر الآن — لا شيء يخصم، والنزاع يبقى مفتوحا"
+    "dispute_nothing_to_charge": "رصيد الطرف صفر الآن — لا شيء يخصم، والنزاع يبقى مفتوحا",
+    "ticket_awaiting_finance": "تعويض هذه الشكوى بانتظار قرار المالية"
   },
   "admin": {
     "profits": {
@@ -1621,6 +1622,7 @@
       "status": {
         "open": "مفتوحة",
         "in_progress": "قيد المعالجة",
+        "awaiting_finance": "بانتظار المالية",
         "resolved": "محلولة"
       },
       "table": {

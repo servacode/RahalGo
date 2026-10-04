@@ -23,6 +23,14 @@ import (
 
 var ErrTicketClosed = httpx.NewError(http.StatusConflict, "ticket_resolved", "errors.ticket_resolved")
 
+// ErrTicketAwaitingFinance **تعويضُها معلَّقٌ عند الماليّة** — لا حلَّ ثانياً حتّى تقرّر
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤): الموافقةُ تحلّها، والرفضُ يعيدها إلى الدعم.
+var ErrTicketAwaitingFinance = httpx.NewError(http.StatusConflict,
+	"ticket_awaiting_finance", "errors.ticket_awaiting_finance")
+
+// StatusAwaitingFinance **«بانتظار المالية»** — شكوى حلُّها تعويضٌ لم تقرّره الماليّةُ بعد.
+const StatusAwaitingFinance = "awaiting_finance"
+
 type Reply struct {
 	ID        int64     `json:"id"`
 	AuthorID  *string   `json:"author_id"`
@@ -465,6 +473,9 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 	if status == "resolved" {
 		return nil, ErrTicketClosed
 	}
+	if status == StatusAwaitingFinance {
+		return nil, ErrTicketAwaitingFinance
+	}
 
 	if compensation < 0 {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
@@ -493,15 +504,34 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 
 	// **وعمودُ `compensation` يبقى صفراً** — ما دُفع يُقرأ من الطلب بعد الموافقة
 	// (`PaidCompensationSQL`)، فلا تقول التذكرةُ «عُوِّض» قبل أن يُدفع.
-	if _, err := tx.Exec(ctx, `
+	//
+	// **وبتعويضٍ لا تُغلق** (قرارُ المالك ٢٠٢٦-١٠-٠٤): تبقى «بانتظار المالية» ظاهرةً،
+	// **والماليّةُ تحلّها بالموافقة أو تعيدها إلى الدعم بالرفض.** وبلا تعويضٍ تُحلّ الآن.
+	if requestID != nil {
+		if _, err := tx.Exec(ctx, `
+			UPDATE tickets SET status = $4, resolution = $2,
+				compensation_request_id = $3, resolved_at = NULL, updated_at = now()
+			WHERE id = $1`, ticketID, resolution, requestID, StatusAwaitingFinance); err != nil {
+			return nil, err
+		}
+	} else if _, err := tx.Exec(ctx, `
 		UPDATE tickets SET status = 'resolved', resolution = $2,
-			compensation_request_id = $3,
 			resolved_at = now(), updated_at = now()
-		WHERE id = $1`, ticketID, resolution, requestID); err != nil {
+		WHERE id = $1`, ticketID, resolution); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 	return s.Get(ctx, ticketID)
+}
+
+// BackToSupportTx **رفضت الماليّةُ التعويضَ — فتعود الشكوى إلى الدعم** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٤): «قيد المعالجة» بلا إغلاق، ويبقى ربطُ الطلب المرفوض ظاهراً حتّى يُقترح غيرُه.
+// **وتُنادى في معاملة الرفض نفسِها.**
+func BackToSupportTx(ctx context.Context, q dbtx.Querier, ticketID string) error {
+	_, err := q.Exec(ctx, `
+		UPDATE tickets SET status = 'in_progress', resolved_at = NULL, updated_at = now()
+		 WHERE id = $1 AND status = $2`, ticketID, StatusAwaitingFinance)
+	return err
 }

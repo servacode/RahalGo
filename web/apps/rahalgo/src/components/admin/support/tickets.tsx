@@ -59,7 +59,7 @@ interface Ticket {
   complainant_name?: string;
   complainant_phone?: string;
   complainant_kind?: "customer" | "driver" | "merchant";
-  status: "open" | "in_progress" | "resolved";
+  status: "open" | "in_progress" | "awaiting_finance" | "resolved";
   /** ما دُفع فعلاً — بعد موافقة الماليّة. */
   compensation: number;
   /** ما اقترحه الدعمُ على الماليّة، وحالُه. */
@@ -127,6 +127,7 @@ function CompensationCell({ t }: { t: Ticket }) {
 const STATUS_VARIANT: Record<string, "warning" | "primary" | "success"> = {
   open: "warning",
   in_progress: "primary",
+  awaiting_finance: "warning",
   resolved: "success",
 };
 
@@ -672,7 +673,7 @@ function TicketDetailModal({
           )}
         </FormSection>
 
-        {ticket.status === "resolved" ? (
+        {ticket.status === "resolved" || ticket.status === "awaiting_finance" ? (
           <FormSection title={m.admin.tickets.resolveTitle} icon={<IconCheck />}>
             <div className="space-y-2 text-sm">
               {ticket.resolution && <p className="whitespace-pre-wrap">{ticket.resolution}</p>}

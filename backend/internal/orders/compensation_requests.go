@@ -515,8 +515,11 @@ func (s *Service) ApproveCompensationTx(ctx context.Context, q wallet.Querier,
 		if err := s.DebitTreasury(ctx, q, amount, c.TicketID, label, actorID); err != nil {
 			return err
 		}
-		if _, err := q.Exec(ctx,
-			`UPDATE tickets SET compensation = $2, updated_at = now() WHERE id = $1`,
+		// **والموافقةُ تحلّ الشكوى بالمبلغ** — كانت «بانتظار المالية» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+		if _, err := q.Exec(ctx, `
+			UPDATE tickets SET compensation = $2, status = 'resolved',
+			       resolved_at = COALESCE(resolved_at, now()), updated_at = now()
+			 WHERE id = $1`,
 			c.TicketID, amount); err != nil {
 			return err
 		}

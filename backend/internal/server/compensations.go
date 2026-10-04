@@ -28,8 +28,10 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
+	"github.com/servacode/rahalgo/backend/internal/support"
 )
 
 var (
@@ -201,6 +203,7 @@ func (s *Server) handleRejectCompensationByID(w http.ResponseWriter, r *http.Req
 		s.respondErr(w, errValidation)
 		return
 	}
+	var rejected *orders.CompensationRequest
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		c, err := s.orders.CompensationByIDTx(ctx, q, id)
 		if err != nil {
@@ -209,10 +212,26 @@ func (s *Server) handleRejectCompensationByID(w http.ResponseWriter, r *http.Req
 		if c == nil {
 			return httpx.ErrNotFound
 		}
+		rejected = c
 		return s.rejectCompensationTx(ctx, q, r, c, note)
 	}); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **ورفضُ تعويض الشكوى يُخبر الدعم** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — صاحبَ الاقتراح،
+	// وإن لم يُعرف فمن يملك إدارةَ الدعم: الشكوى عادت إليهم ليقترحوا ثانيةً أو يحلّوها.
+	if rejected != nil && rejected.Kind == orders.CompKindComplaint {
+		in := notifications.Input{
+			Kind: notifications.KindTicket, Title: notifTitles.complaintCompRejected, Body: note,
+			Entity: "ticket", EntityID: rejected.TicketID, Href: "/dashboard/support",
+		}
+		if rejected.ProposedBy != nil && *rejected.ProposedBy != "" {
+			in.UserID = *rejected.ProposedBy
+			s.notify.Notify(r.Context(), in)
+		} else {
+			s.notify.NotifyCaps(r.Context(), []string{string(authz.SupportManage)}, in)
+		}
+		s.touch("ticket", "ops")
 	}
 	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"rejected": true, "id": id})
@@ -231,6 +250,10 @@ func (s *Server) rejectCompensationTx(ctx context.Context, q dbtx.Querier, r *ht
 	entity, entityID := "order", c.OrderID
 	if c.Kind == orders.CompKindComplaint {
 		entity, entityID = "ticket", c.TicketID
+		// **والشكوى تعود إلى الدعم** — كانت «بانتظار المالية» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+		if err := support.BackToSupportTx(ctx, q, c.TicketID); err != nil {
+			return err
+		}
 	}
 	return s.auditTx(ctx, q, r, "finance.driver_compensation_rejected", entity, entityID, map[string]any{
 		"driver_id": c.DriverID, "request_id": c.ID, "kind": c.Kind, "note": note,

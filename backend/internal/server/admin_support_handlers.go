@@ -165,9 +165,14 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		"customer_id": t.CustomerID, "complainant_id": t.ComplainantID,
 	})
 
+	// **وبتعويضٍ معلَّقٍ لم تُحلّ بعد** — «بانتظار المالية» لا «تم حل شكواك».
+	title := notifTitles.ticketResolved
+	if t.Status == support.StatusAwaitingFinance {
+		title = notifTitles.ticketAwaitingFinance
+	}
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: t.ComplainantID, Kind: notifications.KindTicket,
-		Title: notifTitles.ticketResolved, Body: t.Resolution,
+		Title: title, Body: t.Resolution,
 		// **إلى صفحة شكاواه** — حيث يرى حالَها وردَّنا والتعويض.
 		Entity: "ticket", EntityID: t.ID, Href: "/portal/complaints",
 	})

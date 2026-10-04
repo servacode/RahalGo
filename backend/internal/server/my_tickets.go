@@ -68,7 +68,7 @@ func customerTicketView(t *support.Ticket, viewerID string) myTicketView {
 		ID:          t.ID,
 		Number:      t.Number,
 		Subject:     t.Subject,
-		Status:      t.Status,
+		Status:      myTicketStatus(t.Status),
 		Resolution:  t.Resolution,
 		OrderNumber: t.OrderNumber,
 		CreatedAt:   t.CreatedAt,
@@ -85,11 +85,22 @@ func customerTicketView(t *support.Ticket, viewerID string) myTicketView {
 	return v
 }
 
+// **«بانتظار المالية» تُقرأ في التطبيقات «قيد المعالجة»** — حالٌ داخليّةٌ للمكتب
+// (٢٠٢٦-١٠-٠٤)، والتطبيقاتُ تعرف ثلاثاً (`TicketStatus.kt`) وتطبيقا المتجر والمندوب مجمّدان.
+const myTicketStatusSQL = `(CASE WHEN t.status = 'awaiting_finance' THEN 'in_progress' ELSE t.status END)`
+
+func myTicketStatus(st string) string {
+	if st == support.StatusAwaitingFinance {
+		return "in_progress"
+	}
+	return st
+}
+
 // handleMyTickets شكاوى الزبون نفسِه — الأحدثُ أوّلاً.
 func (s *Server) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT t.id::text, t.number, o.number, t.subject, COALESCE(t.reason, ''),
-		       t.status, COALESCE(`+support.PaidCompensationSQL+`, 0), COALESCE(t.resolution, ''),
+		       `+myTicketStatusSQL+`, COALESCE(`+support.PaidCompensationSQL+`, 0), COALESCE(t.resolution, ''),
 		       t.created_at, t.resolved_at
 		FROM tickets t
 		LEFT JOIN orders o ON o.id = t.order_id

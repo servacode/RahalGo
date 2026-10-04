@@ -107,6 +107,8 @@ const SERVER_ADMIN = new Set([
   "treasury_missing", "treasury_over_balance",
   "app_file_missing", "app_not_android", "app_too_large", "bad_json",
   "bad_placement", "city_bad_point", "city_bad_radius", "city_bad_reach",
+  // شكوى تعويضُها بانتظار المالية (٢٠٢٦-١٠-٠٤) — قرارٌ من اللوحة.
+  "ticket_awaiting_finance",
   "city_has_merchants", "city_needs_name", "claim_already_settled",
   "dispute_party_has_no_wallet", "division_in_use",
   "dispute_party_mismatch", "dispute_resolution_pending", "dispute_nothing_to_charge",

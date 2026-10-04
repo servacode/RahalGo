@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 73,
+    "notify_sites": 74,
     "notify_targeted": 27,
     "publish_rooms": [
       "customer",
@@ -34,7 +34,7 @@
     "behaviour_settings": 153,
     "order_fields": 95,
     "test_files": 501,
-    "test_funcs": 2104
+    "test_funcs": 2105
   },
   "flows": [
     {
@@ -12238,6 +12238,12 @@
     {
       "name": "TestCMP_CustomerRatingNotTheMerchants",
       "file": "internal/qa/cmp_ratings_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_PendingCompensationWaitsForFinance",
+      "file": "internal/qa/cmp_unified_compensation_test.go",
       "package": "qa",
       "orphan": true
     },
