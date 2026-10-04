@@ -77,6 +77,15 @@
    "guards_routes": 3
   },
   {
+   "code": "orders.customer_details.read",
+   "description": "هاتفُ زبون الطلب وموقعُه وصورةُ تسليمه",
+   "guards_routes": 0,
+   "guards_fields": [
+    "proof_url"
+   ],
+   "field_scoped_only": true
+  },
+  {
    "code": "orders.intervene",
    "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
    "guards_routes": 11
@@ -187,6 +196,10 @@
   {
    "field": "phone",
    "need": "users.contact.read"
+  },
+  {
+   "field": "proof_url",
+   "need": "orders.customer_details.read"
   },
   {
    "field": "sales_rep_phone",

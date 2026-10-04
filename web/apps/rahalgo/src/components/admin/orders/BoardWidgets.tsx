@@ -277,12 +277,15 @@ export function DriverLine({
   seenAt,
   now,
   staleMin,
+  hideSeen = false,
 }: {
   name: string;
   phone: string | null;
   seenAt: string | null | undefined;
   now: number;
   staleMin: number;
+  /** **لا شارةَ ظهورٍ على طلبٍ انتهى** — «لم يظهر موقعه» عن طلبٍ سُلّم أمس يُقرأ عطلاً. */
+  hideSeen?: boolean;
 }) {
   const mins = minutesSince(seenAt, now);
   const tone = seenTone(mins, staleMin);
@@ -305,6 +308,7 @@ export function DriverLine({
           </span>
         </a>
       )}
+      {!hideSeen && (
       <Badge variant={tone}>
         {mins === null
           ? B.driverNever
@@ -312,6 +316,7 @@ export function DriverLine({
             ? B.driverSeenNow
             : B.driverSeen.replace("{n}", fmtNum(mins))}
       </Badge>
+      )}
     </span>
   );
 }

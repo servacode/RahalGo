@@ -290,6 +290,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"customer_id":                  true,
 		"customer_name":                true,
 		"customer_phone":               true,
+		"customer_phone_masked":        true,
 		"delivered_at":                 true,
 		"delivery_estimate_min":        true,
 		"delivery_fee":                 true,

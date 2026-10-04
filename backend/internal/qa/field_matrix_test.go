@@ -75,6 +75,9 @@ func realValuesIn(t *testing.T, body []byte, keys []string) map[string][]string 
 type matrixReader struct {
 	Role    string
 	Contact bool // **أيملك `users.contact.read`؟**
+	// Details **أيملك `orders.customer_details.read`؟** — هاتفُ زبون الطلب في
+	// قائمة الطلبات له وحدَه (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+	Details bool
 }
 
 func TestXG42_ContactFieldsFollowCapabilityNotRoute(t *testing.T) {
@@ -92,10 +95,10 @@ func TestXG42_ContactFieldsFollowCapabilityNotRoute(t *testing.T) {
 	}
 
 	readers := []matrixReader{
-		{Role: "owner_super_admin", Contact: true},
-		{Role: "ops", Contact: true},
-		{Role: "operations", Contact: true},
-		{Role: "customer_support", Contact: true},
+		{Role: "owner_super_admin", Contact: true, Details: true},
+		{Role: "ops", Contact: true, Details: true},
+		{Role: "operations", Contact: true, Details: true},
+		{Role: "customer_support", Contact: true, Details: true},
 		{Role: "trust_safety", Contact: true},
 		{Role: "driver_verification", Contact: true},
 		// **والماليّةُ تجد الحسابَ ولا تتّصل به** — قيدٌ لا مكالمة.
@@ -130,8 +133,13 @@ func TestXG42_ContactFieldsFollowCapabilityNotRoute(t *testing.T) {
 			for _, v := range found {
 				total += len(v)
 			}
+			// **وقائمةُ الطلبات تحرسها قدرتان** — رقمُ الاتّصال وتفاصيلُ زبون الطلب.
+			allowed := rd.Contact
+			if route == "/api/v1/admin/orders" {
+				allowed = rd.Contact && rd.Details
+			}
 			switch {
-			case rd.Contact && total == 0:
+			case allowed && total == 0:
 				// **وما يجب أن يحمل رقماً يُدان إن لم يحمله** —
 				// **وحمايةٌ تُفقِر المسموحَ عطبٌ لا إصلاح.**
 				if mustCarryContact[route] {
@@ -141,7 +149,7 @@ func TestXG42_ContactFieldsFollowCapabilityNotRoute(t *testing.T) {
 				} else {
 					t.Logf("  %s → %s: مسموحٌ ولا رقمَ في الردّ (جدولٌ فارغ)", rd.Role, route)
 				}
-			case rd.Contact:
+			case allowed:
 				t.Logf("  %s → %s: مسموحٌ · أرقامٌ=%d ✓", rd.Role, route, total)
 			case total > 0:
 				t.Errorf("**%s نال رقمَ اتّصالٍ ولا يملك `users.contact.read`** — "+

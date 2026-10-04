@@ -1978,16 +1978,7 @@
       "path": "/api/v1/admin/orders",
       "handler": "handleListOrders",
       "auth": true,
-      "capability": "orders.read",
-      "response": [
-        {
-          "name": "@res",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "capability": "orders.read"
     },
     {
       "method": "GET",
@@ -2041,10 +2032,7 @@
       "path": "/api/v1/admin/orders/{id}",
       "handler": "handleGetOrder",
       "auth": true,
-      "capability": "orders.read",
-      "statuses": [
-        "StatusOK"
-      ]
+      "capability": "orders.read"
     },
     {
       "method": "POST",
