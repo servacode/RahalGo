@@ -154,14 +154,18 @@ func seedOrders(ctx context.Context, tx pgx.Tx) {
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
 				payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
-				notes, cancel_reason, created_at, updated_at)
+				notes, cancel_reason, created_at, updated_at,
+				picked_up_at, delivered_at, closed_at)
 			VALUES ($1, $2, $3, $4, $5,
 				ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography,
-				$8, $9, $10, $11, $12, $13, $14, $15, $16, $16)
+				$8, $9, $10, $11, $12, $13, $14, $15, $16, $16,
+				CASE WHEN $17 THEN $16::timestamptz END,
+				CASE WHEN $4 = 'delivered' THEN $16::timestamptz END,
+				CASE WHEN $18 THEN $16::timestamptz END)
 			RETURNING id`,
 			customer, merchant, drv, o.Status, addr, lng, lat,
 			o.Pay, subtotal, deliveryFee, total, walletPaid, cashDue,
-			o.Note, o.Reason, when).Scan(&id); err != nil {
+			o.Note, o.Reason, when, pickedUp(o.Status), closed(o.Status)).Scan(&id); err != nil {
 			log.Fatalf("طلب %s: %v", o.Status, err)
 		}
 
@@ -285,6 +289,26 @@ func seedAftermath(ctx context.Context, tx pgx.Tx, customer, owner string) {
 	}
 
 	fmt.Println("   وتقييماتٌ وشكويان وطلبُ سحبٍ معلَّق")
+}
+
+// pickedUp **البضاعةُ مع السائق** — وطلبٌ «في الطريق» بلا `picked_up_at` تقول عنه
+// غرفةُ الطوارئ «في المتجر» (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥).
+func pickedUp(status string) bool {
+	switch status {
+	case "picked_up", "on_the_way", "at_dropoff", "delivered", "failed":
+		return true
+	}
+	return false
+}
+
+// closed **الطلبُ انتهى** — والمنتهي بلا `closed_at` يُعدّ مفتوحاً في كلّ قائمة
+// (طلباتُ السائق الأخرى في الطارئ عرضت المسلَّمَ منذ أيّام).
+func closed(status string) bool {
+	switch status {
+	case "delivered", "cancelled", "rejected", "failed":
+		return true
+	}
+	return false
 }
 
 func hasDriver(status string) bool {
