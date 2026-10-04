@@ -241,12 +241,19 @@ func TestOverview_CountsMatchTheirPages(t *testing.T) {
 		VALUES ($1, $2, 'adjustment', 'اختبار السقف')`, driver, srv.cashbox.Limit(ctx)); err != nil {
 		t.Fatal(err)
 	}
+	// **وصفحةُ النقد تقرأ رصيدَ الصندوق** (قسمُ النقد ٢٠٢٦-١٠-٠٤) — يُكتب معه.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO driver_cash_boxes (driver_id, held) VALUES ($1, $2)
+		ON CONFLICT (driver_id) DO UPDATE SET held = EXCLUDED.held`, driver, srv.cashbox.Limit(ctx)); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		bg := context.Background()
 		_, _ = pool.Exec(bg, `DELETE FROM merchant_leads WHERE id = $1`, leadID)
 		_, _ = pool.Exec(bg, `DELETE FROM payout_requests WHERE id = $1`, payoutID)
 		_, _ = pool.Exec(bg, `DELETE FROM tickets WHERE id IN ($1, $2)`, lateTicket, freshTicket)
 		_, _ = pool.Exec(bg, `DELETE FROM driver_cash_entries WHERE driver_id = $1`, driver)
+		_, _ = pool.Exec(bg, `UPDATE driver_cash_boxes SET held = 0 WHERE driver_id = $1`, driver)
 	})
 
 	ov := readOverview(t, srv)

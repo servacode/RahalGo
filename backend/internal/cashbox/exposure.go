@@ -136,6 +136,16 @@ func (s *Service) GuardTx(ctx context.Context, q Querier, driverID string, incom
 	if current+incoming > limit {
 		return ErrLimitExceed
 	}
+	// **ونقدٌ لم يُسلَّم منذ أيّام والإيقافُ مُشعَل** (قرارُ المالك ٢٠٢٦-١٠-٠٤، مطفأٌ
+	// افتراضاً) — الدالّةُ نفسُها التي يقرؤها مرشَّحُ الدور، ومن المعاملة نفسِها.
+	var stopped bool
+	if err := q.QueryRow(ctx, `SELECT driver_cash_overdue_stopped($1::uuid)`,
+		driverID).Scan(&stopped); err != nil {
+		return err
+	}
+	if stopped {
+		return ErrCashOverdue
+	}
 	return nil
 }
 

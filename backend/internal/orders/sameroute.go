@@ -128,6 +128,8 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
 		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
 		      + nw.cash_due <= $4
+		  -- **والمتأخّرُ بتسليم نقده لا يُعرض عليه نقديّ إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
+		  AND (nw.cash_due = 0 OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o2
 		       WHERE o2.driver_id = u.id AND o2.closed_at IS NULL) < $5
 		-- **والأقربُ أوّلاً** — وقفتان متلاصقتان خيرٌ من متباعدتين.

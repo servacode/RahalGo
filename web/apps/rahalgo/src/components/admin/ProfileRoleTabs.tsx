@@ -46,11 +46,11 @@ import {
   FormActions,
   Modal,
   Input,
-  Confirm,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
 import { StoreActions, storeStatusVariant, type StoreTarget } from "@/components/admin/StoreActions";
+import { DriverCashReceive } from "@/components/admin/DriverCashReceive";
 
 const m = getMessages(defaultLocale);
 const R = m.admin.users.profile.roleTabs;
@@ -558,11 +558,7 @@ export function CashboxTab({
   const [held, setHeld] = useState(0);
   const [rows, setRows] = useState<CashEntry[] | null | "failed">(null);
   const [why, setWhy] = useState("");
-  const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState("");
   const [done, setDone] = useState("");
 
   const load = useCallback(() => {
@@ -580,38 +576,6 @@ export function CashboxTab({
 
   useEffect(load, [load]);
 
-  // ══════════════════════════════════════════════════════════════════
-  // **التسويةُ بما استُلم فعلاً — لا بكامل ما بذمّته** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **كانت كبسةً واحدةً بكامل المبلغ بلا تأكيد، وأخطاؤها تضيع**: سائقٌ جاب مئةً من
-  // مئةٍ وستّةٍ وخمسين، فكُتب أنّه سلّم الكلَّ. **والآن نافذةٌ تسأل «كم استلمتَ؟» ثمّ
-  // تأكيدٌ يقول ما سيُكتب وما يبقى بذمّته، والخطأُ يُعرض.**
-  const value = Number(amount) || 0;
-  async function settle() {
-    // **والتأكيدُ يُغلق قبل النداء** — التسويةُ تطلب كلمةَ السرّ، ونافذتُها تحته.
-    setConfirming(false);
-    setBusy(true);
-    setError("");
-    try {
-      const r = await api<{ held: number }>(`/api/v1/admin/drivers/${userID}/settle`, {
-        method: "POST",
-        body: JSON.stringify({ amount: value, note: R.settleNote }),
-      });
-      setConfirming(false);
-      setOpen(false);
-      setAmount("");
-      setDone(A.settleDone.replace("{rest}", fmtMoney(r?.held ?? Math.max(held - value, 0))));
-      load();
-      onSettled();
-    } catch (err) {
-      setConfirming(false);
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (!canRead) return <Alert tone="warning">{A.notAllowed}</Alert>;
   if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
   if (!rows) return <LoadingState variant="text" />;
@@ -625,10 +589,8 @@ export function CashboxTab({
         </span>
         {canSettle && held > 0 && (
           <Button
-            disabled={busy}
             onClick={() => {
-              setAmount(String(held));
-              setError("");
+              setDone("");
               setOpen(true);
             }}
           >
@@ -652,13 +614,15 @@ export function CashboxTab({
           {rows.map((e, i) => (
             <li key={i} className="flex items-center gap-3 py-2 text-sm">
               <span className="min-w-0 flex-1">
+                {/* **النوعُ بالعربيّة دائماً، ورقمُ الطلب بجانبه إن وُجد** (فحصُ ٢٠٢٦-١٠-٠٤). */}
+                <span className="text-ink-muted">
+                  {R.cashKinds[e.kind as keyof typeof R.cashKinds] ?? e.kind}
+                </span>
                 {e.order_number ? (
-                  <span dir="ltr" className="font-bold tabular-nums">
+                  <span dir="ltr" className="ms-2 font-bold tabular-nums">
                     #{fmtRef(e.order_number)}
                   </span>
-                ) : (
-                  <span className="text-ink-muted">{R.cashKinds[e.kind as keyof typeof R.cashKinds] ?? e.kind}</span>
-                )}
+                ) : null}
                 {e.note && <span className="block text-xs text-ink-muted">{e.note}</span>}
               </span>
               <span
@@ -676,48 +640,20 @@ export function CashboxTab({
         </ul>
       )}
 
+      {/* **النافذةُ نفسُها التي في صفحة «النقد والصندوق»** — طريقٌ واحد (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
       {open && (
-        <Modal open onClose={() => setOpen(false)} title={A.settleTitle}>
-          <form
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (value > 0 && value <= held) setConfirming(true);
-            }}
-          >
-            <p className="flex items-center justify-between rounded-control bg-field px-3 py-2 text-sm">
-              <span className="text-ink-muted">{A.settleHeld}</span>
-              <Money value={held} small />
-            </p>
-            <Input
-              id="settle-amount"
-              label={`${A.settleAmount} (${m.common.currency})`}
-              type="number"
-              min="1"
-              max={held}
-              required
-              autoFocus
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            <p className="text-xs text-ink-muted">{A.settleHint}</p>
-            {error && <Alert>{error}</Alert>}
-            <FormActions submit onCancel={() => setOpen(false)} busy={busy} saveLabel={R.settle} />
-          </form>
-        </Modal>
+        <DriverCashReceive
+          driverID={userID}
+          held={held}
+          onClose={() => setOpen(false)}
+          onDone={(rest) => {
+            setOpen(false);
+            setDone(A.settleDone.replace("{rest}", fmtMoney(rest)));
+            load();
+            onSettled();
+          }}
+        />
       )}
-      <Confirm
-        open={confirming}
-        tone="primary"
-        title={A.settleConfirm}
-        body={A.settleConfirmBody
-          .replace("{amount}", fmtMoney(value))
-          .replace("{rest}", fmtMoney(Math.max(held - value, 0)))}
-        confirmLabel={A.settleConfirm}
-        busy={busy}
-        onConfirm={() => void settle()}
-        onCancel={() => setConfirming(false)}
-      />
     </FormSection>
   );
 }

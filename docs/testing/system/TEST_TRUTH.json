@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 453,
+    "routes": 455,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 181,
-    "behaviour_settings": 146,
+    "setting_defs": 183,
+    "behaviour_settings": 148,
     "order_fields": 95,
-    "test_files": 492,
-    "test_funcs": 2056
+    "test_files": 493,
+    "test_funcs": 2064
   },
   "flows": [
     {
@@ -3866,6 +3866,48 @@
       "status": "REGRESSION_TEST_PRESENT"
     },
     {
+      "key": "drivers.cash_overdue_days",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.cash_overdue_stop",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.direct_assign",
       "group": "drivers",
       "kind": "bool",
@@ -6456,6 +6498,12 @@
       "name": "TestSettle_RejectsMoreThanHeld",
       "file": "internal/cashbox/cashbox_test.go",
       "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCashKindsHaveAdminLabels",
+      "file": "internal/cashbox/kinds_test.go",
+      "package": "cashbox",
       "orphan": true
     },
     {
@@ -11904,6 +11952,48 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCASH_CapCountsOpenOrderCash",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_MerchantDuesListedRegardlessOfMethod",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_OverdueAlertAndOptionalStop",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_OverdueDefaultsMatchCatalog",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_SettleNotificationFormatsMoney",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_SinceSurvivesPartialHandover",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH_StatementCarriesOrderNumber",
+      "file": "internal/qa/cash_section_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCHAT_TENURE_AdminSeesEachDriverApart",

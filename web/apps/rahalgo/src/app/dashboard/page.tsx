@@ -92,6 +92,7 @@ interface Overview {
     | "compensations_pending"
     | "payouts_pending"
     | "drivers_over_cash"
+    | "drivers_cash_overdue"
     | "tickets_open"
     | "tickets_late"
     | "leads_new"
@@ -195,7 +196,9 @@ const AWAITING: {
   { key: "reports_waiting", label: H.reportsWaiting, href: "/dashboard/orders?awaiting=1", urgent: true, icon: IconWarning },
   { key: "orders_unassigned", label: H.ordersUnassigned, href: "/dashboard/orders?filter=no_driver", urgent: true, icon: IconOrder },
   { key: "tickets_late", label: "", href: "/dashboard/tickets?late=1", urgent: true, icon: IconSupport },
-  { key: "drivers_over_cash", label: H.driversOverCash, href: "/dashboard/cash?over=1", urgent: true, icon: IconBalance },
+  { key: "drivers_over_cash", label: H.driversOverCash, href: "/dashboard/cash?filter=over", urgent: true, icon: IconBalance },
+  // **نقدٌ لم يُسلَّم منذ أيّام** — بعد عدد الأيّام في الإعدادات (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+  { key: "drivers_cash_overdue", label: H.driversCashOverdue, href: "/dashboard/cash?filter=overdue", urgent: true, icon: IconBalance },
   { key: "tickets_open", label: H.ticketsOpen, href: "/dashboard/tickets?status=unresolved", urgent: false, icon: IconSupport },
   { key: "compensations_pending", label: H.compensationsPending, href: "/dashboard/compensations", urgent: false, icon: IconWallet },
   { key: "payouts_pending", label: H.payoutsPending, href: "/dashboard/payouts?status=pending", urgent: false, icon: IconWallet },

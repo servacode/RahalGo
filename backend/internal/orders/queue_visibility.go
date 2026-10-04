@@ -57,6 +57,8 @@ func QueueVisibleSQL(drv string, p int) string {
 		                  WHERE oi.driver_id = ` + drv + ` AND oi.closed_at IS NULL), 0)
 		      + o.cash_due <= COALESCE((SELECT cu.cash_limit_override FROM users cu
 		                                WHERE cu.id = ` + drv + `), ` + cash + `)
+		  -- **والمتأخّرُ بتسليم نقده لا يرى نقديّاً إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
+		  AND (o.cash_due = 0 OR NOT driver_cash_overdue_stopped(` + drv + `))
 		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = ` + drv + ` AND oo.closed_at IS NULL) < ` + maxActive + `
 		  -- **حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك ٢٠٢٦-٠٩-٢٨).
 		  AND ` + freshLoc + ` IS NOT NULL

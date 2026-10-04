@@ -33,8 +33,12 @@ func TestCashOutstanding_OldestFirst(t *testing.T) {
 	if _, err := f.pool.Exec(ctx, `DELETE FROM driver_cash_entries`); err != nil {
 		t.Fatalf("تعذّر الإخلاء: %v", err)
 	}
+	if _, err := f.pool.Exec(ctx, `UPDATE driver_cash_boxes SET held = 0`); err != nil {
+		t.Fatalf("تعذّر الإخلاء: %v", err)
+	}
 	t.Cleanup(func() {
 		_, _ = f.pool.Exec(context.Background(), `DELETE FROM driver_cash_entries`)
+		_, _ = f.pool.Exec(context.Background(), `UPDATE driver_cash_boxes SET held = 0`)
 	})
 
 	hold := func(driver string, amount int64, daysAgo int) {
@@ -43,6 +47,14 @@ func TestCashOutstanding_OldestFirst(t *testing.T) {
 			VALUES ($1, $2, 'order_collection', now() - ($3::int || ' days')::interval)`,
 			driver, amount, daysAgo); err != nil {
 			t.Fatalf("تعذّر القيد: %v", err)
+		}
+		// **والصفحةُ تقرأ رصيدَ الصندوق** (`driver_cash_boxes.held`، قسمُ النقد
+		// ٢٠٢٦-١٠-٠٤) — فالقيدُ وحدَه لا يكفي، وهذا ما يكتبه `cashbox` معاً.
+		if _, err := f.pool.Exec(ctx, `
+			INSERT INTO driver_cash_boxes (driver_id, held) VALUES ($1, $2)
+			ON CONFLICT (driver_id) DO UPDATE SET held = EXCLUDED.held`,
+			driver, amount); err != nil {
+			t.Fatalf("تعذّر الصندوق: %v", err)
 		}
 	}
 	// **عشرون ألفاً منذ ثمانية أيام** — وهو المسألة.

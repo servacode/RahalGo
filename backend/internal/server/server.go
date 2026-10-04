@@ -1400,6 +1400,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/drivers/{id}/end-shift", s.handleAdminEndShift)
 			// **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
 			r.Get("/cash/outstanding", s.handleCashOutstanding)
+			// **وكشفُ النقد ملفّاً، ومستحقّاتُ المتاجر النقديّة كلُّها** (٢٠٢٦-١٠-٠٤).
+			r.Get("/cash/outstanding/export", s.handleCashOutstandingExport)
+			r.Get("/cash/merchant-dues", s.handleMerchantCashDues)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.

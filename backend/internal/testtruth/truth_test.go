@@ -297,8 +297,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// — **طارئٌ بلا مستلِمٍ عشرَ دقائق يحمرّ.**
 	// **وواحدٌ أُضيف بمصروفات التشغيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سقفُ الموافقة الثانية
 	// `finance.expense_approval_threshold`.
-	if d.BehaviourSettings != 146 {
-		t.Errorf("إعداداتُ السلوك = %d لا 146 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **واثنان أُضيفا بقسم النقد** (قرارُ المالك ٢٠٢٦-١٠-٠٤): `drivers.cash_overdue_days`
+	// و`drivers.cash_overdue_stop`.
+	if d.BehaviourSettings != 148 {
+		t.Errorf("إعداداتُ السلوك = %d لا 148 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.
