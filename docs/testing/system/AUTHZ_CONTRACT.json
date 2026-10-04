@@ -14,7 +14,7 @@
   {
    "code": "content.manage",
    "description": "لافتاتٌ وعروضٌ ومحتوى",
-   "guards_routes": 20
+   "guards_routes": 28
   },
   {
    "code": "drivers.manage",
@@ -54,7 +54,7 @@
   {
    "code": "merchants.verify",
    "description": "مراجعةُ المرشَّحين والقوائم",
-   "guards_routes": 4
+   "guards_routes": 2
   },
   {
    "code": "observability.read",
@@ -188,7 +188,7 @@
   }
  ],
  "route_policy": {
-  "rules": 172,
+  "rules": 178,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

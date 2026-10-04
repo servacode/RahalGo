@@ -91,8 +91,9 @@ const PAIRS = [
   [web.confirmDeleteItem, "item_delete_ask"],
   [web.platformSection, "mn_platform_section"],
   [web.noPlatformSectionHint, "mn_no_platform_section_hint"],
-  [web.pendingReview, "mn_pending_review"],
-  [web.rejected, "mn_rejected"],
+  // **ولا «بانتظار المراجعة» ولا «مرفوض» في الويب** — رُفعت مراجعةُ الأصناف
+  // (قرارُ المالك ٢٠٢٦-١٠-٠٤). وبقيت نصوصُها في تطبيقَي المتجر والمندوب
+  // المغلقَين بلا أثر: لا صنفَ معلَّقاً بعد هجرة ٠٢٠٠.
   [web.modifiers, "mod_title"],
   [web.addGroup, "mod_add_group"],
   [web.groupName, "mn_group_name"],

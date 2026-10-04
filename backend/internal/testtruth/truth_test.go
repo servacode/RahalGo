@@ -278,8 +278,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// الخاصّ `delivery.custom_fee_min/max` **وحدُّ صورة التسليم** `drivers.proof_max_m`.
 	// **وواحدٌ أُضيف بمهلة الردّ على الشكوى** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
 	// `support.late_reply_hours` — **شكوى بلا ردٍّ بعدها تُعدّ متأخّرةً في الرئيسيّة.**
-	if d.BehaviourSettings != 134 {
-		t.Errorf("إعداداتُ السلوك = %d لا 134 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ حُذف بمراجعة الأصناف** (قرارُ المالك ٢٠٢٦-١٠-٠٤: «ما في داعي للموافقة
+	// على الصنف أساساً»): `merchants.menu_requires_approval` — هجرة ٠٢٠٠.
+	if d.BehaviourSettings != 133 {
+		t.Errorf("إعداداتُ السلوك = %d لا 133 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

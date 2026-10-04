@@ -1101,6 +1101,170 @@
       "capability": "finance.export"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/market/items",
+      "handler": "handleMarketItems",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@body",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/items/bulk",
+      "handler": "handleMarketItemsBulk",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "ids",
+          "type": "[]string"
+        },
+        {
+          "name": "action",
+          "type": "string"
+        },
+        {
+          "name": "section_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "affected",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/market/new-count",
+      "handler": "handleMarketNewCount",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/market/quality",
+      "handler": "handleMarketQuality",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "items_without_image",
+          "type": "unknown"
+        },
+        {
+          "name": "items_without_image_count",
+          "type": "unknown"
+        },
+        {
+          "name": "limit",
+          "type": "unknown"
+        },
+        {
+          "name": "stores_without_hours",
+          "type": "unknown"
+        },
+        {
+          "name": "test_items",
+          "type": "unknown"
+        },
+        {
+          "name": "test_items_count",
+          "type": "unknown"
+        },
+        {
+          "name": "test_stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/seen",
+      "handler": "handleMarketSeen",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "seen",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/market/stores",
+      "handler": "handleMarketStores",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/test-data/delete",
+      "handler": "handleMarketTestDataDelete",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "item_ids",
+          "type": "[]string"
+        },
+        {
+          "name": "store_ids",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "items_deleted",
+          "type": "unknown"
+        },
+        {
+          "name": "stores_deleted",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/media",
       "handler": "handleUploadMedia",
@@ -1158,56 +1322,6 @@
         {
           "name": "updated",
           "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/admin/menu/items/{itemID}/review",
-      "handler": "handleReviewMenuItem",
-      "auth": true,
-      "capability": "merchants.verify",
-      "request": [
-        {
-          "name": "approve",
-          "type": "bool"
-        },
-        {
-          "name": "note",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "approved",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/admin/menu/pending",
-      "handler": "handlePendingMenuItems",
-      "auth": true,
-      "capability": "merchants.verify",
-      "response": [
-        {
-          "name": "count",
-          "type": "unknown"
-        },
-        {
-          "name": "items",
-          "type": "unknown"
-        },
-        {
-          "name": "limit",
-          "type": "unknown"
         }
       ],
       "statuses": [
@@ -2808,6 +2922,28 @@
       ]
     },
     {
+      "method": "PUT",
+      "path": "/api/v1/admin/sections/order",
+      "handler": "handleOrderPlatformSections",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "ids",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ordered",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "DELETE",
       "path": "/api/v1/admin/sections/{id}",
       "handler": "handleDeletePlatformSection",
@@ -2817,6 +2953,10 @@
         {
           "name": "deleted",
           "type": "bool"
+        },
+        {
+          "name": "moved_items",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -5258,10 +5398,6 @@
       ],
       "response": [
         {
-          "name": "pending_review",
-          "type": "unknown"
-        },
-        {
           "name": "updated",
           "type": "bool"
         }
@@ -7093,10 +7229,6 @@
         "sales"
       ],
       "response": [
-        {
-          "name": "pending_review",
-          "type": "unknown"
-        },
         {
           "name": "updated",
           "type": "bool"

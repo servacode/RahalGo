@@ -118,8 +118,6 @@ func (s *Server) handleMerchantCreateItem(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, errForbidden)
 		return
 	}
-	// **وصنفٌ جديدٌ يُراجَع كلَّه** — لا شيءَ منه رآه أحدٌ بعد.
-	pending := s.menuNeedsApproval(r)
 	// **والإدراجُ وعلامةُ منع التكرار في معاملةٍ واحدة** — كبابِ المندوب:
 	// صنفٌ أُدرج وضاع ردُّه فأُعيد **لا يُدرج ثانيةً**.
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
@@ -129,12 +127,12 @@ func (s *Server) handleMerchantCreateItem(w http.ResponseWriter, r *http.Request
 		}
 		return IdempotentBody{
 			Status:  http.StatusCreated,
-			Payload: map[string]any{"id": id, "pending_review": pending},
+			Payload: map[string]any{"id": id},
 			AfterCommit: func() {
 				s.catalog.AuditItemCreate(r.Context(), userIDFrom(r), id, clientIP(r))
-				if pending {
-					s.holdForReview(r, id)
-				}
+				// **ويظهر في السوق فوراً — بلا مراجعة** (قرارُ المالك ٢٠٢٦-١٠-٠٤)،
+				// **ويُبَثّ لتعدّه «المضافُ حديثاً» في لوحة الإدارة.**
+				s.touch("menu", "ops")
 			},
 		}, nil
 	})
@@ -165,13 +163,7 @@ func (s *Server) handleMerchantUpdateItem(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	// **والإتاحةُ وحدَها لا تُعلّق الصنف** — «نفد» قرارُ مطبخٍ في لحظته،
-	// **ومراجعتُه تجعل المتجرَ يبيع ما نفد حتى نستيقظ.**
-	pending := s.menuNeedsApproval(r) && touchesContent(*req)
-	if pending {
-		s.holdForReview(r, itemID)
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "pending_review": pending})
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
 func (s *Server) handleMerchantDeleteItem(w http.ResponseWriter, r *http.Request) {

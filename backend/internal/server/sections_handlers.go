@@ -80,11 +80,10 @@ type publicItem struct {
 // **وسعرُ البيع يُحسب في Go لا في SQL** — فالمعادلةُ في `pricing` وحدَها،
 // **ولو كُتبت هنا لَافترقت عن حسبةِ الطلب** فيرى الزبونُ سعراً ويُحاسَب بغيره.
 //
-// # ولا يُعرض ما لم يُنشَر بعد
+// # ولا مراجعةَ قبل الظهور
 //
-// شرطُ `i.approved` يحرس مراجعةَ القائمة. **والعمودُ يبقى صادقاً لكلّ ما وُجد
-// قبل الهجرة ٠٠٦٤ ولكلّ ما يُنشأ والمفتاحُ مُطفأ** — فالشرطُ لا يُخفي شيئاً
-// حتى يُرفع المفتاح، **ولا يُطفئ سوقاً قائماً في لحظة.**
+// **رُفعت مراجعةُ الأصناف** (قرارُ المالك ٢٠٢٦-١٠-٠٤، هجرة ٠٢٠٠): ما يضيفه
+// المتجرُ يظهر فوراً، **فلا شرطَ «مُقَرّ» في التصفّح.**
 // itemFrom الأعمدةُ والضمُّ بلا شرطِ ظهور — **كي تُعيد استعمالَه المفضّلةُ
 // بشرطٍ آخر.**
 //
@@ -99,7 +98,7 @@ const itemFrom = `
 	       -- **والشرطُ كان في WHERE وحدَه**: ما سقط منه لا يُعرض أصلاً،
 	       -- **والمفضّلةُ تعرض ما سقط** — لأنّه يعود. فلو بقيت «متاح» عمودَ
 	       -- المتجر وحدَه **لَظهر صنفُ متجرٍ موقوفٍ قابلاً للطلب.**
-	       (i.available AND i.approved AND m.status = 'active' AND ps.active),
+	       (i.available AND m.status = 'active' AND ps.active),
 	       ps.id, ps.name, ps.margin_override,
 	       ` + orders.OpenNowSQL + `, ` + orders.NextOpenSQL + `,
 	       o.discount_percent, o.discount_amount,
@@ -122,8 +121,7 @@ const itemFrom = `
 
 // itemSelect ما يُقرأ لكلّ صنفٍ معروضٍ في التصفّح.
 const itemSelect = itemFrom + `
-	WHERE m.status = 'active' AND ps.active
-	  AND i.approved`
+	WHERE m.status = 'active' AND ps.active`
 
 // favoritesSelect أصنافُ صاحبِ الشاشة المحفوظة — **بالأعمدة نفسِها.**
 //
@@ -297,8 +295,8 @@ func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 	// ما يُطلب في هذه اللحظة.** **ولا محرّكَ إتاحةٍ ثانٍ.**
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT ps.id, ps.name, ps.icon, sm.path, sm.thumb_path,
-		       count(i.id) FILTER (WHERE i.approved`+seen+`),
-		       count(i.id) FILTER (WHERE i.approved AND i.available AND `+orders.OpenNowSQL+seen+`)
+		       count(i.id) FILTER (WHERE true`+seen+`),
+		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+seen+`)
 		FROM platform_sections ps
 		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
 		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'`+where+`

@@ -11,6 +11,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
 import { BrandMark } from "./platform";
 import { isStagingEnv } from "./runtimeconfig";
+import { CountBadge } from "./components";
 import {
   TopBar,
   TopBarChip,
@@ -75,6 +76,11 @@ export interface ChromeNavItem {
   group?: string;
   /** يُخفى عن قائمة الجوّال — **لِما يُفتح من داخل صفحةٍ أخرى.** */
   hideOnMobile?: boolean;
+  /**
+   * **عدّادٌ بجانب البند** — ما ينتظر النظرَ فيه (مثلاً «المضافُ حديثاً» في
+   * السوق). **والصفرُ لا يُرسم**: عدّادٌ يختفي حين يُفتح البابُ هو الخبر.
+   */
+  badge?: number;
 }
 
 interface Summary {
@@ -338,7 +344,8 @@ export function DashboardChrome({
                 }`}
               >
                 <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
-                {item.label}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {!!item.badge && <CountBadge count={item.badge} />}
               </Link>
             </div>
           );
