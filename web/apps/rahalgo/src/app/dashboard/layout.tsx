@@ -107,7 +107,7 @@ const ALL_NAV: NavItem[] = [
     caps: ["support.manage"] },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning,
-    caps: ["support.manage"] },
+    caps: ["emergencies.manage"] },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink,
     caps: ["merchants.verify"] },
   // ══════════════════════════════════════════════════════════════════
@@ -360,7 +360,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }}
     >
       {/* **شريطُ الطوارئ أعلى كلّ صفحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — لمن يملكها. */}
-      {capabilities.includes("support.manage") && <EmergencyBanner />}
+      {capabilities.includes("emergencies.manage") && <EmergencyBanner />}
       {children}
     </DashboardChrome>
     </PasswordGate>
