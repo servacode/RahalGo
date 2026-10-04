@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 426,
+    "routes": 432,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 65,
-    "notify_targeted": 23,
+    "notify_sites": 67,
+    "notify_targeted": 25,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 179,
     "behaviour_settings": 144,
     "order_fields": 95,
-    "test_files": 486,
-    "test_funcs": 2024
+    "test_files": 487,
+    "test_funcs": 2029
   },
   "flows": [
     {
@@ -24678,6 +24678,36 @@
     {
       "name": "TestIdempotency_RunsOnce",
       "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_FailedStoreBonusIsRecordedAndRetried",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_ManualGrantIsARequestApprovedByAnother",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_RefundAndFakeStoreRaiseAlerts",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_StagesMonthAndSuspended",
+      "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC_TransferredStoreStaysWithOpener",
+      "file": "internal/server/incentives_decisions_test.go",
       "package": "server",
       "orphan": true
     },

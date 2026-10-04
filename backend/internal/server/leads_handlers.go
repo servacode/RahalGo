@@ -478,12 +478,37 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 //
 // **وخطؤها لا يُسقط الإنشاء**: المتجرُ فُتح، **ومكافأةٌ تأخّرت أهونُ
 // من عميلٍ ضاع.** والقاعدةُ تمنع التكرار — فهرسٌ فريدٌ لكلّ شهر.
+//
+// **وكان خطؤها يُبلَع** (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأهداف): لا سطرَ في
+// السجلّ، **ومن وقف عند الهدف بالضبط لا يقبضها أبداً.** والآن بمعاملتها،
+// وعثرتُها تُكتب في السجلّ وفي `incentive_grant_failures` فتُعاد دوريّاً.
 func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
-	paid, err := s.grantSalesTargetTx(ctx, s.pg, merchantID)
-	if err != nil {
+	if s.incentives == nil || merchantID == "" {
 		return
 	}
+	rep := s.salesOpenerOf(ctx, s.pg, merchantID)
+	if rep == "" {
+		return
+	}
+	paid := s.incentives.GrantTargetIfReached(ctx, rep, "sales")
 	s.notifySalesTargetPaid(ctx, merchantID, paid)
+}
+
+// salesOpenerOf **المندوبُ الذي فتح المتجر** — فعّالاً؛ وإلّا فراغ.
+//
+// **ويُحسب له للأبد** (`opened_by_rep_id`، قرارُ المالك ٢٠٢٦-١٠-٠٤): النقلُ
+// ينقل العمولةَ القادمةَ وحدَها لا رصيدَ الهدف.
+func (s *Server) salesOpenerOf(ctx context.Context, q dbtx.Querier, merchantID string) string {
+	var repID *string
+	// **والمندوبُ غيرُ الفعّال لا يُحسب له هدفٌ ولا مكافأة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	if err := q.QueryRow(ctx,
+		`SELECT m.opened_by_rep_id::text FROM merchants m
+		   JOIN users u ON u.id = m.opened_by_rep_id AND u.status = 'active'
+		  WHERE m.id = $1`,
+		merchantID).Scan(&repID); err != nil || repID == nil {
+		return ""
+	}
+	return *repID
 }
 
 // grantSalesTargetTx يمنح المكافأةَ **في معاملةٍ مُمرَّرة** ويُرجع ما دُفع.
@@ -495,16 +520,11 @@ func (s *Server) grantSalesTargetTx(ctx context.Context, q dbtx.Querier,
 	if s.incentives == nil || merchantID == "" {
 		return 0, nil
 	}
-	var repID *string
-	// **والمندوبُ غيرُ الفعّال لا يُحسب له هدفٌ ولا مكافأة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
-	if err := q.QueryRow(ctx,
-		`SELECT m.sales_rep_user_id::text FROM merchants m
-		   JOIN users u ON u.id = m.sales_rep_user_id AND u.status = 'active'
-		  WHERE m.id = $1`,
-		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
+	rep := s.salesOpenerOf(ctx, q, merchantID)
+	if rep == "" {
 		return 0, nil
 	}
-	return s.incentives.GrantTargetIfReachedTx(ctx, q, *repID, "sales")
+	return s.incentives.GrantTargetIfReachedTx(ctx, q, rep, "sales")
 }
 
 // notifySalesTargetPaid يخبر المندوبَ ببلوغ هدفه.
@@ -528,7 +548,7 @@ func (s *Server) notifySalesTargetPaid(ctx context.Context, merchantID string, p
 	}
 	var repID *string
 	if err := s.pg.QueryRow(ctx,
-		`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`,
+		`SELECT opened_by_rep_id::text FROM merchants WHERE id = $1`,
 		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
 		return
 	}

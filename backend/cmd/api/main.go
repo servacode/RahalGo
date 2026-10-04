@@ -337,6 +337,10 @@ func run(logger *slog.Logger) error {
 			// البند ٣): **يقيس كلَّ نصف دقيقة** فيظهر الشريطُ الأحمر، ويُشعر
 			// المالكَ إن طال العطب. **ولا يُغني عن مراقبٍ من خارج الخادم.**
 			go srv.RunOpsWatch(ctx, 30*time.Second)
+
+			// **ومكافآتُ هدفٍ تعثّرت تُعاد لشهرها** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+			// قسمُ الأهداف) — كان خطؤها يُبلَع فلا يقبضها من وقف عند الهدف.
+			go srv.RunIncentiveRetries(ctx, 10*time.Minute)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

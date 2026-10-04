@@ -92,7 +92,12 @@ var notifTitles = struct {
 	// وإنذاراتٌ بلغت الحدَّ تنبّه الموظّفين ولا توقف أحداً.
 	walletRequest, phoneChangeRequest, storeBanned, storeUnbanned string
 	driverCleared, warningsThreshold                              string
+	// **مكافأةٌ أو عقوبةٌ يدويّةٌ وافقت عليها الماليّة** — والسببُ في المتن
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأهداف).
+	incentiveReward, incentivePenalty string
 }{
+	incentiveReward:     "مكافأة من الإدارة في محفظتك",
+	incentivePenalty:    "عقوبة من الإدارة على حسابك",
 	walletRequest:       "طلب حركة على محفظة ينتظر موافقة المالية",
 	phoneChangeRequest:  "طلب تغيير رقم حساب ينتظر موافقة ثانية",
 	storeBanned:         "حُظر متجرك",
