@@ -1065,6 +1065,14 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/coverage-requests/{id}",
 					s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapRequestUpdate))
 
+				// **«طلباتُ التوسّع» قسمٌ مستقلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+				// **والإبلاغُ بزرٍّ يدويٍّ لمن يملك التغطية.**
+				r.Get("/expansion", s.requirePerm(opsmap.PermViewDemand, s.handleExpansion))
+				r.Get("/expansion/reminder",
+					s.requirePerm(opsmap.PermViewDemand, s.handleExpansionReminder))
+				r.Post("/expansion/notify",
+					s.requirePerm(opsmap.PermManageCoverage, s.handleExpansionNotify))
+
 				// **والفروعُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **وافتتاحُ فرعٍ قرارُ عملٍ لا تشغيلٌ يوميّ.**
 				r.Get("/branches", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapBranches))

@@ -575,6 +575,7 @@
     }
   },
   "errors": {
+    "not_covered": "هالمكان لسا مو مغطّى، فما في حدا يتبلّغ.",
     "conflict": "تعذّرت العمليّة بسبب تعارضٍ في الحالة، أعد المحاولة.",
     "duplicate_name": "هذا الاسم موجود مسبقا",
     "name_too_short": "الاسم قصير — حرفان على الأقل",
@@ -883,7 +884,8 @@
       "groupOps": "التشغيل اليومي",
       "groupMoney": "المال",
       "groupBuild": "البناء والإعداد",
-      "opsMap": "خريطة العمليات"
+      "opsMap": "خريطة العمليات",
+      "expansion": "طلبات التوسع"
     },
     "ordersPage": {
       "title": "الطلبات",
@@ -2642,6 +2644,7 @@
         "catalog.section_update": "تعديل قسم سوق",
         "coverage.create": "رسم منطقة تغطية",
         "coverage.set_active": "تفعيل/إيقاف منطقة تغطية",
+        "expansion.notify": "تبليغ منتظري التوسع",
         "coverage.update": "تعديل منطقة تغطية",
         "coverage_request.update": "تغيير حال طلب تغطية",
         "customer.complaint_opened": "فتح زبون شكوى",
@@ -3184,6 +3187,50 @@
       "deleteGovernorate": "حذف المحافظة؟",
       "deleteDistrict": "حذف المنطقة؟",
       "offHint": "المطفأ لا يظهر في نموذج التسجيل — وما نُسب إليه يبقى"
+    },
+    "expansion": {
+      "title": "طلبات التوسع",
+      "subtitle": "ناس طلبوا الخدمة بمكان ما منوصله، أو بمدينة لسا ما انطلقت. الطلبات الملغاة ما بتنحسب.",
+      "people": "أشخاص",
+      "newThisWeek": "جديد هالأسبوع",
+      "cities": "مدن",
+      "waitingNotNotified": "ينتظرون ولم يُبلَّغوا",
+      "reminderTitle": "في ناس صارت منطقتهم مغطاة وما انبلغوا",
+      "reminderBody": "{n} شخص بـ {p} مكان — اضغط «بلّغ المنتظرين الآن» على كل صف.",
+      "filterAll": "الكل",
+      "filterWaiting": "ينتظرون ولم يُبلَّغوا",
+      "filterReady": "مغطاة وجاهزة للإبلاغ",
+      "filterUncovered": "خارج التغطية",
+      "governorate": "المحافظة",
+      "city": "المدينة",
+      "zone": "المنطقة",
+      "kind": "النوع",
+      "kindCoverage": "أضف منطقتي",
+      "kindInterest": "أخبرني بالمدينة",
+      "peopleCol": "الأشخاص",
+      "requests": "الطلبات",
+      "firstAt": "أول طلب",
+      "lastAt": "آخر طلب",
+      "status": "الحالة",
+      "st": {
+        "uncovered": "غير مغطاة",
+        "ready": "مغطاة — ينتظرون الإبلاغ",
+        "covered": "مغطاة"
+      },
+      "outside": "خارج كل منطقة",
+      "wholeCity": "المدينة كلها",
+      "unresolved": "غير محدد",
+      "showOnMap": "اعرض على الخريطة",
+      "drawHere": "ارسم تغطية هنا",
+      "notifyNow": "بلّغ المنتظرين الآن",
+      "notifyCount": "سيُبلَّغ {n} شخص",
+      "notifyNone": "لا أحد ينتظر الإبلاغ",
+      "confirmTitle": "تبليغ المنتظرين؟",
+      "confirmBody": "رح يوصل إشعار لـ {n} شخص إنو الخدمة صارت متاحة عندهم. ما بينبعت مرتين لنفس الشخص.",
+      "confirm": "بلّغهم",
+      "done": "انبلغ {n} شخص.",
+      "empty": "ما في طلبات توسع.",
+      "emptyFilter": "ما في صفوف بهالفلتر."
     },
     "placeDemand": {
       "title": "طلبُ التوسّع بالمكان",

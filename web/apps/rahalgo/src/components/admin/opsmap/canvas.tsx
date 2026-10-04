@@ -86,6 +86,7 @@ export function OpsMapCanvas({
   onMapClick,
   height = "h-full",
   unavailableLabel,
+  focus,
 }: {
   layers: LayerSpec[];
   onFeatureClick?: (layerID: string, props: Record<string, unknown>) => void;
@@ -94,6 +95,8 @@ export function OpsMapCanvas({
   onMapClick?: (lng: number, lat: number) => void;
   height?: string;
   unavailableLabel: string;
+  /** **موضعٌ تُفتح عليه الخريطة** — من «اعرض على الخريطة» في «طلبات التوسّع». */
+  focus?: { lng: number; lat: number; zoom?: number };
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -125,8 +128,8 @@ export function OpsMapCanvas({
         instance = new maplibre.Map({
           container: box.current,
           style: source.styleUrl,
-          center: RAQQA,
-          zoom: 12,
+          center: focus ? [focus.lng, focus.lat] : RAQQA,
+          zoom: focus?.zoom ?? 12,
           attributionControl: { customAttribution: MAP_ATTRIBUTION_FALLBACK },
         });
         instance.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-left");

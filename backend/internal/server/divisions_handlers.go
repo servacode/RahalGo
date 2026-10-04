@@ -329,10 +329,8 @@ func (s *Server) handleUpdateGovernorate(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	// **إشعارُ إطلاق المحافظة** (Batch 3d) — تُشعَر مدنُها النشطةُ المُطلَقةُ فعليّاً.
-	if in.live() {
-		s.notifyGovernorateLaunch(r.Context(), chi.URLParam(r, "id"))
-	}
+	// **ولا إبلاغَ آليّاً عند الإطلاق** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — بزرّ
+	// «بلّغ المنتظرين الآن» في «طلبات التوسّع».
 	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 

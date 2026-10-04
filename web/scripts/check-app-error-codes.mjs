@@ -120,6 +120,8 @@ const SERVER_ADMIN = new Set([
   "qa_coverage_zone_exists",
   "qa_no_closed_order",
   "qa_boundary_near_midnight", "qa_no_default_address", "qa_no_zone_for_address",
+  // «طلبات التوسّع» — إبلاغُ مكانٍ لم يُغطَّ بعد (لوحةٌ لا هاتف).
+  "not_covered",
 ]);
 
 const found = new Map();
