@@ -80,23 +80,25 @@ func TestResolveCompensatesOnlyOnce(t *testing.T) {
 		start.Done()
 		done.Wait()
 
+		// **ومنذ ٢٠٢٦-١٠-٠٤ الحلُّ يقترح ولا يدفع** (الدعمُ يقترح والماليّةُ
+		// توافق) — **فالمكرَّرُ الذي يُخشى اقتراحان لا قيدان**: طلبان معلَّقان
+		// لشكوى واحدة توافق الماليّةُ على كليهما فيُدفع التعويضُ مرّتين.
 		var paid int
-		if err := pool.QueryRow(ctx, `
-			SELECT count(*) FROM wallet_transactions
-			WHERE user_id = $1 AND kind = 'compensation' AND ref = $2`, customer, ticketID).Scan(&paid); err != nil {
-			t.Fatalf("تعذّر عدُّ القيود: %v", err)
+		var proposed int64
+		if err := pool.QueryRow(ctx, `SELECT count(*), COALESCE(sum(amount),0) FROM wallet_requests
+			WHERE user_id = $1 AND kind = 'compensation'`, customer).Scan(&paid, &proposed); err != nil {
+			t.Fatalf("تعذّر عدُّ الطلبات: %v", err)
 		}
-		// **والفرقُ لا الرصيدُ المطلق** — الزبونُ نفسُه يعبر الجولاتِ كلَّها.
-		var balance int64
-		_ = pool.QueryRow(ctx, `SELECT COALESCE(balance,0) FROM wallets WHERE user_id = $1`, customer).Scan(&balance)
-		gained := balance - seen
-		seen = balance
+		// **والفرقُ لا العددُ المطلق** — الزبونُ نفسُه يعبر الجولاتِ كلَّها.
+		gained := proposed - seen
+		seen = proposed
+		paid -= round
 
 		if paid > worst {
 			worst = paid
 		}
 		if paid != 1 || gained != compensation {
-			t.Fatalf("الجولةُ %d: **التعويضُ دُفع %d مرّةً والرصيدُ %d** — والمنتظَر مرّةً واحدةً و%d. "+
+			t.Fatalf("الجولةُ %d: **التعويضُ اقتُرح %d مرّةً ومجموعُه %d** — والمنتظَر مرّةً واحدةً و%d. "+
 				"**والعلاجُ معاملةٌ واحدةٌ تلفّ القراءةَ والحالةَ والقيد، وقفلٌ "+
 				"`FOR UPDATE` على صفّ التذكرة، والمالُ قبل الحالة لا بعدها.**",
 				round+1, paid, gained, compensation)

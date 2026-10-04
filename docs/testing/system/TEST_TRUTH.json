@@ -33,8 +33,8 @@
     "setting_defs": 179,
     "behaviour_settings": 144,
     "order_fields": 95,
-    "test_files": 486,
-    "test_funcs": 2024
+    "test_files": 488,
+    "test_funcs": 2029
   },
   "flows": [
     {
@@ -12004,6 +12004,12 @@
     {
       "name": "TestPH_ClosureWritesEvenWithoutRow",
       "file": "internal/qa/closure_missing_row_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_CustomerRatingNotTheMerchants",
+      "file": "internal/qa/cmp_ratings_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -25567,6 +25573,30 @@
       "name": "TestEveryComplaintReasonDeclaresItsTarget",
       "file": "internal/support/against_test.go",
       "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_CompensationGoesToComplainant",
+      "file": "internal/support/cmp_decisions_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_ComplainantReplyKeepsItLate",
+      "file": "internal/support/cmp_decisions_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_LateTicketsFlaggedAndFirst",
+      "file": "internal/support/cmp_decisions_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_ResolveProposesCompensationNotPays",
+      "file": "internal/support/cmp_decisions_test.go",
+      "package": "support_test",
       "orphan": true
     },
     {

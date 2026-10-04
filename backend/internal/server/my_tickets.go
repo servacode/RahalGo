@@ -89,7 +89,7 @@ func customerTicketView(t *support.Ticket, viewerID string) myTicketView {
 func (s *Server) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT t.id::text, t.number, o.number, t.subject, COALESCE(t.reason, ''),
-		       t.status, COALESCE(t.compensation, 0), COALESCE(t.resolution, ''),
+		       t.status, COALESCE(`+support.PaidCompensationSQL+`, 0), COALESCE(t.resolution, ''),
 		       t.created_at, t.resolved_at
 		FROM tickets t
 		LEFT JOIN orders o ON o.id = t.order_id

@@ -1,6 +1,6 @@
 // Package support نظام التذاكر والتعويضات (PLAN §6.7):
-// شكوى تُفتح لزبون (مرتبطة بطلب اختيارياً)، خيط ردود، وحلّ بتعويض
-// اختياري يُقيَّد لمحفظته فوراً — أسرع طريقة لإرضاء زبون غاضب.
+// شكوى تُفتح لزبون (مرتبطة بطلب اختيارياً)، خيط ردود، وحلّ بتعويضٍ
+// اختياريٍّ **يقترحه الدعمُ وتقرّره الماليّة** لصاحب الشكوى (٢٠٢٦-١٠-٠٤).
 package support
 
 import (
@@ -8,11 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -52,20 +54,42 @@ type Ticket struct {
 	// ولا يُسمّى في الردّ.)
 	AgainstUserID *string `json:"-"`
 
-	OpenedByCustomer bool       `json:"opened_by_customer"`
-	Status           string     `json:"status"`
-	Compensation     int64      `json:"compensation"`
-	Resolution       string     `json:"resolution"`
-	CreatedAt        time.Time  `json:"created_at"`
-	ResolvedAt       *time.Time `json:"resolved_at"`
-	Replies          []Reply    `json:"replies,omitempty"`
+	OpenedByCustomer bool `json:"opened_by_customer"`
+	// ComplainantID **صاحبُ الشكوى** — من يُعوَّض ومن يُخبَر بالردّ.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤: «التعويضُ لصاحب الشكوى — السائقُ أو المتجرُ
+	// إن كانا هما من اشتكى».) **كان التعويضُ يُقيَّد للزبون دائماً** — وبلاغُ
+	// سائقٍ على زبونٍ يُعوِّض الزبونَ المشتكى عليه.
+	ComplainantID    string `json:"complainant_id"`
+	ComplainantName  string `json:"complainant_name"`
+	ComplainantPhone string `json:"complainant_phone"`
+	// ComplainantKind `customer` · `driver` · `merchant`.
+	ComplainantKind string `json:"complainant_kind"`
+	Status          string `json:"status"`
+	// Compensation **ما دُفع فعلاً** — لا ما اقتُرح: طلبٌ معلَّقٌ أو مرفوضٌ صفر.
+	Compensation int64 `json:"compensation"`
+	// CompensationProposed المبلغُ الذي اقترحه الدعمُ على الماليّة (صفرٌ بلا اقتراح).
+	CompensationProposed int64 `json:"compensation_proposed"`
+	// CompensationStatus حالُ الاقتراح: `pending` · `approved` · `rejected` · وفارغٌ بلا اقتراح.
+	CompensationStatus string `json:"compensation_status"`
+	// Late **تأخّر الردّ** — مفتوحةٌ لم يردّ عليها المكتبُ بعد مهلة الإعدادات
+	// (`support.late_reply_hours`، ساعتان) — تُعلَّم بالأحمر في اللوحة.
+	Late       bool       `json:"late"`
+	Resolution string     `json:"resolution"`
+	CreatedAt  time.Time  `json:"created_at"`
+	ResolvedAt *time.Time `json:"resolved_at"`
+	Replies    []Reply    `json:"replies,omitempty"`
 }
 
 type TicketPage struct {
 	Tickets []Ticket `json:"tickets"`
 	Total   int      `json:"total"`
-	Page    int      `json:"page"`
-	PerPage int      `json:"per_page"`
+	// Late **كم شكوى متأخّرةً الآن** — كلُّها لا ما في الصفحة، والمهلةُ `LateHours`.
+	Late int `json:"late"`
+	// LateHours المهلةُ التي حُسب عليها التأخّر — تقولها الشاشةُ بجانب العدد.
+	LateHours int `json:"late_hours"`
+	Page      int `json:"page"`
+	PerPage   int `json:"per_page"`
 }
 
 type Service struct {
@@ -74,6 +98,8 @@ type Service struct {
 	wallet   *wallet.Service
 	// settings مهلةُ الشكوى وما يتبعها — يملك المالكُ ضبطَها من اللوحة.
 	settings *settings.Store
+	// compProposer بابُ اقتراح التعويض — فارغُه طلبُ محفظة (`walletRequestProposer`).
+	compProposer CompensationProposer
 }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service) *Service {
@@ -83,27 +109,130 @@ func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wall
 // SetSettings يحقن مخزن الإعدادات (يُنادى مرّة عند الإقلاع).
 func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 
+// ══════════════════════════════════════════════════════════════════════
+// **بابُ اقتراح التعويض — نداءٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+// ══════════════════════════════════════════════════════════════════════
+
+// ErrCompensationOverCap مبلغٌ فوق سقف الحركة اليدويّة (`finance.manual_wallet_max`).
+var ErrCompensationOverCap = httpx.NewError(http.StatusBadRequest,
+	"wallet_over_cap", "errors.wallet_over_cap")
+
+// CompensationProposal ما يقترحه الدعمُ على الماليّة من تذكرة.
+type CompensationProposal struct {
+	TicketID      string
+	BeneficiaryID string // صاحبُ الشكوى
+	Amount        int64
+	Note          string
+	ProposedBy    string
+}
+
+// CompensationProposer **يكتب الاقتراحَ معلَّقاً ويردّ معرّفَه** — داخل معاملة الحلّ.
+// **ولا يدفع شيئاً**: الدفعُ عند موافقة الماليّة، من الخزينة.
+type CompensationProposer interface {
+	ProposeCompensation(ctx context.Context, q dbtx.Querier, p CompensationProposal) (string, error)
+}
+
+// SetCompensationProposer يبدّل بابَ الاقتراح — لبابِ التعويضات الموحّد حين يُنشر.
+func (s *Service) SetCompensationProposer(p CompensationProposer) { s.compProposer = p }
+
+func (s *Service) proposer() CompensationProposer {
+	if s.compProposer != nil {
+		return s.compProposer
+	}
+	return walletRequestProposer{}
+}
+
+// compensationCap سقفُ الاقتراح الواحد — سقفُ الحركة اليدويّة نفسُه.
+func (s *Service) compensationCap(ctx context.Context) int64 {
+	if s.settings == nil {
+		return 500000
+	}
+	return s.settings.GetNum(ctx, "finance.manual_wallet_max", 500000)
+}
+
+// walletRequestProposer **الافتراض**: طلبُ محفظةٍ من نوع `compensation` في
+// `wallet_requests` — تقرّره الماليّةُ من بابه القائم (`/admin/wallet-requests`)،
+// **وعند الموافقة يُقيَّد بطرفين: +المحفظة −الخزينة.**
+type walletRequestProposer struct{}
+
+func (walletRequestProposer) ProposeCompensation(ctx context.Context, q dbtx.Querier,
+	p CompensationProposal) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `
+		INSERT INTO wallet_requests (user_id, kind, amount, note, proposed_by)
+		VALUES ($1, 'compensation', $2, $3, $4) RETURNING id::text`,
+		p.BeneficiaryID, p.Amount, p.Note, p.ProposedBy).Scan(&id)
+	return id, err
+}
+
+// ComplainantSQL **صاحبُ الشكوى نصّاً واحداً** — على اسم الجدول `t`.
+//
+// شكوى الزبون (`opened_by_customer`) وتذكرةُ الموظّف صاحبُهما الزبون. **وبلاغُ
+// السائق أو المتجر** (سببٌ مصنَّفٌ وليس من الزبون) صاحبُه كاتبُه `created_by`.
+const ComplainantSQL = `(CASE WHEN NOT t.opened_by_customer AND COALESCE(t.reason, '') <> ''
+	AND t.created_by IS NOT NULL THEN t.created_by ELSE t.customer_id END)`
+
+// PaidCompensationSQL **ما دُفع فعلاً من تعويض التذكرة** — على اسم الجدول `t`.
+//
+// **عمودُ `compensation` أوّلاً** — دُفع لحظةَ الحلّ قبل ٢٠٢٦-١٠-٠٤، **ويكتبه
+// بابُ التعويضات الموحّد عند الموافقة.** وإن بقي صفراً قُرئ طلبُ المحفظة
+// المعتمَد (بابُ الاقتراح الافتراضيّ). **ولا شيءَ قبل موافقة الماليّة.**
+const PaidCompensationSQL = `(CASE WHEN t.compensation > 0 OR t.compensation_request_id IS NULL
+	THEN t.compensation
+	ELSE COALESCE((SELECT wrq.amount FROM wallet_requests wrq
+		WHERE wrq.id = t.compensation_request_id AND wrq.status = 'approved'), 0) END)`
+
 const ticketSelect = `
 	SELECT t.id, t.number, t.customer_id, cu.phone, cu.full_name,
 	       t.order_id, o.number, t.subject, COALESCE(t.reason,''), t.against_user_id::text,
 	       t.opened_by_customer,
-	       t.status, t.compensation, t.resolution,
-	       t.created_at, t.resolved_at
+	       cp.id::text, COALESCE(cp.full_name, ''), COALESCE(cp.phone, ''),
+	       CASE WHEN cp.id = t.customer_id THEN 'customer'
+	            WHEN EXISTS (SELECT 1 FROM merchants mm
+	                         WHERE mm.id = o.merchant_id AND mm.owner_user_id = cp.id) THEN 'merchant'
+	            ELSE 'driver' END,
+	       t.status, ` + PaidCompensationSQL + `,
+	       COALESCE(wr.amount, dcr.suggested_amount, 0), COALESCE(wr.status, dcr.status, ''),
+	       t.resolution, t.created_at, t.resolved_at
 	FROM tickets t
 	JOIN users cu ON cu.id = t.customer_id
-	LEFT JOIN orders o ON o.id = t.order_id`
+	JOIN users cp ON cp.id = ` + ComplainantSQL + `
+	LEFT JOIN orders o ON o.id = t.order_id
+	LEFT JOIN wallet_requests wr ON wr.id = t.compensation_request_id
+	-- **وطابورُ التعويضات الموحّد** — حين يُبدَّل بابُ الاقتراح إليه.
+	LEFT JOIN driver_compensation_requests dcr ON dcr.id = t.compensation_request_id`
 
 func scanTicket(row pgx.Row) (*Ticket, error) {
 	var t Ticket
 	err := row.Scan(&t.ID, &t.Number, &t.CustomerID, &t.CustomerPhone, &t.CustomerName,
 		&t.OrderID, &t.OrderNumber, &t.Subject, &t.Reason, &t.AgainstUserID,
 		&t.OpenedByCustomer,
-		&t.Status, &t.Compensation, &t.Resolution,
-		&t.CreatedAt, &t.ResolvedAt)
+		&t.ComplainantID, &t.ComplainantName, &t.ComplainantPhone, &t.ComplainantKind,
+		&t.Status, &t.Compensation, &t.CompensationProposed, &t.CompensationStatus,
+		&t.Resolution, &t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &t, nil
+}
+
+// LateHours **مهلةُ الردّ على الشكوى بالساعات** — من الإعدادات
+// (`support.late_reply_hours`)، **وساعتان** إن لم تُضبط (قرارُ المالك ٢٠٢٦-١٠-٠٤:
+// «ساعتين تمام»).
+func (s *Service) LateHours(ctx context.Context) int {
+	if s.settings == nil {
+		return 2
+	}
+	h := int(s.settings.GetInt(ctx, "support.late_reply_hours"))
+	if h <= 0 {
+		h = 2
+	}
+	return h
+}
+
+// markLate يعلّم المتأخّرةَ بالشرط نفسِه الذي يعدّها (`ticketWhere`).
+func markLate(t *Ticket, hours int, now time.Time) {
+	t.Late = t.Status == "open" && t.CreatedAt.Before(now.Add(-time.Duration(hours)*time.Hour))
 }
 
 type CreateInput struct {
@@ -200,23 +329,38 @@ func (s *Service) ListFiltered(ctx context.Context, f TicketFilter, page, perPag
 	if err != nil {
 		return nil, err
 	}
+	hours := s.LateHours(ctx)
+	late, err := s.Count(ctx, TicketFilter{LateHours: hours})
+	if err != nil {
+		return nil, err
+	}
+	// **والمتأخّرةُ أوّلاً** — أقدمُها في الرأس، ثمّ غيرُ المحلولة، ثمّ المحلولة.
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤: مهلةُ الردّ ساعتان، وبعدها تُعلَّم بالأحمر.)
 	rows, err := s.db.Query(ctx, ticketSelect+ticketWhere+`
-		ORDER BY (t.status = 'resolved'), t.created_at DESC LIMIT $3 OFFSET $4`,
-		f.Status, f.LateHours, perPage, (page-1)*perPage)
+		ORDER BY (t.status = 'resolved'),
+		         NOT (t.status = 'open' AND t.created_at < now() - make_interval(hours => $5::int)),
+		         CASE WHEN t.status = 'open' AND t.created_at < now() - make_interval(hours => $5::int)
+		              THEN t.created_at END ASC,
+		         t.created_at DESC
+		LIMIT $3 OFFSET $4`,
+		f.Status, f.LateHours, perPage, (page-1)*perPage, hours)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	now := time.Now()
 	tickets := []Ticket{}
 	for rows.Next() {
 		t, err := scanTicket(rows)
 		if err != nil {
 			return nil, err
 		}
+		markLate(t, hours, now)
 		tickets = append(tickets, *t)
 	}
-	return &TicketPage{Tickets: tickets, Total: total, Page: page, PerPage: perPage}, rows.Err()
+	return &TicketPage{Tickets: tickets, Total: total, Late: late, LateHours: hours,
+		Page: page, PerPage: perPage}, rows.Err()
 }
 
 func (s *Service) Get(ctx context.Context, id string) (*Ticket, error) {
@@ -227,6 +371,7 @@ func (s *Service) Get(ctx context.Context, id string) (*Ticket, error) {
 	if err != nil {
 		return nil, err
 	}
+	markLate(t, s.LateHours(ctx), time.Now())
 	rows, err := s.db.Query(ctx, `
 		SELECT id, author_id, body, created_at FROM ticket_replies
 		WHERE ticket_id = $1 ORDER BY id`, id)
@@ -262,15 +407,22 @@ func (s *Service) Reply(ctx context.Context, actorID, ticketID, body string) (*T
 		ticketID, actorID, body); err != nil {
 		return nil, err
 	}
+	// **وردُّ صاحب الشكوى لا يُخرجها من «متأخّرة»** — المهلةُ مهلةُ ردّ
+	// المكتب (قرارُ المالك ٢٠٢٦-١٠-٠٤). كان كلُّ ردٍّ يقلبها `in_progress`،
+	// **فزبونٌ يكتب «ما زلتُ أنتظر» يُخفي شكواه عن عدّاد التأخّر.**
 	if _, err := s.db.Exec(ctx, `
-		UPDATE tickets SET status = 'in_progress', updated_at = now()
-		WHERE id = $1 AND status = 'open'`, ticketID); err != nil {
+		UPDATE tickets t SET status = 'in_progress', updated_at = now()
+		WHERE t.id = $1 AND t.status = 'open' AND $2::uuid <> `+ComplainantSQL,
+		ticketID, actorID); err != nil {
 		return nil, err
 	}
 	return s.Get(ctx, ticketID)
 }
 
-// Resolve يحل التذكرة — والتعويض (إن وُجد) يُقيَّد لمحفظة الزبون فوراً.
+// Resolve يحلّ التذكرة — **والتعويضُ (إن وُجد) اقتراحٌ للماليّة لا دفع.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الدعم يحوّل التعويض للماليّة، إذا وافقت تدفع،
+// وإذا شافت السبب مو مستاهل ترفض».) **ولصاحب الشكوى** لا للزبون دائماً.
 func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution string, compensation int64, ip string) (*Ticket, error) {
 	/* ══════════════════════════════════════════════════════════════════
 	   **الحلُّ خطوةٌ واحدةٌ — لا أربع**
@@ -299,11 +451,11 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var status, customerID string
+	var status, complainantID string
 	var number int64
 	err = tx.QueryRow(ctx,
-		`SELECT status, customer_id, number FROM tickets WHERE id = $1 FOR UPDATE`, ticketID).
-		Scan(&status, &customerID, &number)
+		`SELECT t.status, `+ComplainantSQL+`::text, t.number FROM tickets t WHERE t.id = $1 FOR UPDATE`, ticketID).
+		Scan(&status, &complainantID, &number)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -314,18 +466,38 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 		return nil, ErrTicketClosed
 	}
 
-	// **والمالُ قبل الحالة** — فلو سقط لم يبقَ سطرٌ يقول «عُوِّض» بلا تعويض.
+	if compensation < 0 {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	// **الاقتراحُ قبل الحالة وفي معاملتها** — فلو سقط لم تُغلق الشكوى بلا طلبها.
+	// **ونداءٌ واحدٌ لبابٍ واحد** (`CompensationProposer`) — يُبدَّل حين يُنشر
+	// بابُ التعويضات الموحّد ولا يُمسّ هنا شيء.
+	var requestID *string
 	if compensation > 0 {
-		if _, err := s.wallet.ApplyTx(ctx, tx, customerID, compensation, "compensation",
-			ticketID, fmt.Sprintf("تعويض تذكرة #%d", number), &actorID); err != nil {
+		if max := s.compensationCap(ctx); compensation > max {
+			return nil, ErrCompensationOverCap
+		}
+		note := fmt.Sprintf("تعويض شكوى #%d", number)
+		if r := strings.TrimSpace(resolution); r != "" {
+			note += " — " + r
+		}
+		id, err := s.proposer().ProposeCompensation(ctx, tx, CompensationProposal{
+			TicketID: ticketID, BeneficiaryID: complainantID, Amount: compensation,
+			Note: note, ProposedBy: actorID,
+		})
+		if err != nil {
 			return nil, err
 		}
+		requestID = &id
 	}
 
+	// **وعمودُ `compensation` يبقى صفراً** — ما دُفع يُقرأ من الطلب بعد الموافقة
+	// (`PaidCompensationSQL`)، فلا تقول التذكرةُ «عُوِّض» قبل أن يُدفع.
 	if _, err := tx.Exec(ctx, `
-		UPDATE tickets SET status = 'resolved', resolution = $2, compensation = $3,
+		UPDATE tickets SET status = 'resolved', resolution = $2,
+			compensation_request_id = $3,
 			resolved_at = now(), updated_at = now()
-		WHERE id = $1`, ticketID, resolution, compensation); err != nil {
+		WHERE id = $1`, ticketID, resolution, requestID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {

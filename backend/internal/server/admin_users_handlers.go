@@ -16,6 +16,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/support"
 )
 
 func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
@@ -636,7 +637,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	// ملفَّ زبونٍ آخر، **فمن فتح ملفَّ سائقٍ رفع عشرةَ بلاغاتٍ قرأ «لا
 	// شكاوى».**
 	const ticketCols = `
-		SELECT t.id::text, t.number, t.subject, t.status, t.compensation,
+		SELECT t.id::text, t.number, t.subject, t.status, ` + support.PaidCompensationSQL + `,
 		       COALESCE(t.reason, ''),
 		       -- **ومن فتحها يُقال** — والعنوانُ وحدَه لا يقوله.
 		       COALESCE(NULLIF(cb.full_name, ''), cb.phone::text, ''),
@@ -731,21 +732,17 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	}
 	rows.Close()
 
-	// الواردة: كسائق (نجوم السائق على طلباته) + كصاحب متاجر (نجوم متاجره)
+	// الواردة: كسائق (نجوم السائق على طلباته) — وحدَها
 	rows, err = s.pg.Query(r.Context(), `
 		SELECT o.number, COALESCE(m.name, ''), rt.driver_stars, rt.created_at, 'driver'
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.driver_id = $1 AND rt.driver_stars IS NOT NULL
-		UNION ALL
-		-- **وهذا الضمُّ صلبٌ بحقّ** — شرطُه `+"`m.owner_user_id`"+` نفسُه،
-		-- **فلا صفَّ بلا متجرٍ يُطلب هنا أصلاً.**
-		SELECT o.number, m.name, rt.platform_stars, rt.created_at, 'platform'
-		FROM order_ratings rt
-		JOIN orders o ON o.id = rt.order_id
-		JOIN merchants m ON m.id = o.merchant_id
-		WHERE m.owner_user_id = $1
+		-- **ولا نجومَ المنصّة على متاجره** — الزبونُ يقيّم السائقَ والمنصّة
+		-- فقط (قرارُ المالك ٢٠٢٦-١٠-٠٤: «ما يعرف المتجرَ ليقيّمه»). **كانت
+		-- نجمةُ المنصّة تُعرض «واردةً» لصاحب المتجر** كأنّها حكمٌ عليه؛ وما
+		-- قاله السائقون عن متجره له قسمُه أدناه (merchant_ratings).
 		ORDER BY 4 DESC LIMIT $2 OFFSET $3`, id, rp.PerPage, rp.Offset)
 	if err != nil {
 		s.respondErr(w, err)
@@ -766,12 +763,6 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 			SELECT rt.driver_stars AS s
 			FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
 			WHERE o.driver_id = $1 AND rt.driver_stars IS NOT NULL
-			UNION ALL
-			SELECT rt.platform_stars
-			FROM order_ratings rt
-			JOIN orders o ON o.id = rt.order_id
-			JOIN merchants m ON m.id = o.merchant_id
-			WHERE m.owner_user_id = $1
 		) x`
 	var recvAvg, avgSpeed, avgConduct float64
 	if err := s.pg.QueryRow(r.Context(), recvAgg, id).Scan(&out.RecvCount, &recvAvg); err == nil &&

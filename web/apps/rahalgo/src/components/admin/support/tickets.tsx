@@ -55,8 +55,18 @@ interface Ticket {
   /** رمزُ سببٍ مصنَّف — فارغٌ في تذكرةٍ فتحها موظّف. */
   reason?: string;
   opened_by_customer?: boolean;
+  /** صاحبُ الشكوى — من يُعوَّض ومن يُخبَر (قرارُ المالك ٢٠٢٦-١٠-٠٤). */
+  complainant_name?: string;
+  complainant_phone?: string;
+  complainant_kind?: "customer" | "driver" | "merchant";
   status: "open" | "in_progress" | "resolved";
+  /** ما دُفع فعلاً — بعد موافقة الماليّة. */
   compensation: number;
+  /** ما اقترحه الدعمُ على الماليّة، وحالُه. */
+  compensation_proposed?: number;
+  compensation_status?: "" | "pending" | "approved" | "rejected";
+  /** تأخّر ردُّ المكتب عن المهلة (`support.late_reply_hours`). */
+  late?: boolean;
   resolution: string;
   created_at: string;
   resolved_at: string | null;
@@ -66,6 +76,8 @@ interface Ticket {
 interface TicketPage {
   tickets: Ticket[];
   total: number;
+  late?: number;
+  late_hours?: number;
   page: number;
   per_page: number;
 }
@@ -85,6 +97,33 @@ const REASONS: Record<string, string> = {
   ...m.site.complaint.reasons,
   ...m.driver.history.reportReasons,
 };
+const KIND_LABELS: Record<string, string> = m.admin.tickets.complainantKind;
+
+/**
+ * **التعويضُ كما هو الآن** — مدفوعٌ · بانتظار الماليّة · رفضته · أو بلا تعويض.
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الدعم يحوّل التعويض للماليّة».)
+ */
+function CompensationCell({ t }: { t: Ticket }) {
+  if (t.compensation > 0) {
+    return (
+      <Badge variant="primary">
+        <Money value={t.compensation} />
+      </Badge>
+    );
+  }
+  if (t.compensation_status === "pending") {
+    return (
+      <Badge variant="warning">
+        {m.admin.tickets.compPending} · <Money value={t.compensation_proposed ?? 0} />
+      </Badge>
+    );
+  }
+  if (t.compensation_status === "rejected") {
+    return <Badge variant="neutral">{m.admin.tickets.compRejected}</Badge>;
+  }
+  return <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>;
+}
+
 const STATUS_VARIANT: Record<string, "warning" | "primary" | "success"> = {
   open: "warning",
   in_progress: "primary",
@@ -167,15 +206,19 @@ export function TicketsView() {
       cell: (t) => <span className="font-bold">#{fmtRef(t.number)}</span>,
     },
     {
+      // **صاحبُ الشكوى لا زبونُ الطلب** — بلاغُ السائق صاحبُه السائق.
       id: "customer",
-      header: m.admin.tickets.table.customer,
+      header: m.admin.tickets.complainant,
       icon: <IconUser />,
       primary: true,
       cell: (t) => (
-        <span>
-          {t.customer_name || "—"}{" "}
+        <span className="flex flex-wrap items-center gap-1.5">
+          {t.complainant_kind && (
+            <Badge variant="neutral">{KIND_LABELS[t.complainant_kind]}</Badge>
+          )}
+          {t.complainant_name || t.customer_name || "—"}{" "}
           <span dir="ltr" className="text-xs text-ink-muted">
-            {t.customer_phone}
+            {t.complainant_phone || t.customer_phone}
           </span>
         </span>
       ),
@@ -227,14 +270,7 @@ export function TicketsView() {
       id: "compensation",
       header: m.admin.tickets.table.compensation,
       icon: <IconWallet />,
-      cell: (t) =>
-        t.compensation > 0 ? (
-          <Badge variant="primary">
-            <Money value={t.compensation} />
-          </Badge>
-        ) : (
-          <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>
-        ),
+      cell: (t) => <CompensationCell t={t} />,
     },
     {
       id: "created",
@@ -246,7 +282,13 @@ export function TicketsView() {
       id: "status",
       header: m.admin.ordersPage.statusCol,
       icon: <IconStatus />,
-      cell: (t) => <Badge variant={STATUS_VARIANT[t.status]}>{STATUS_LABELS[t.status]}</Badge>,
+      cell: (t) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Badge variant={STATUS_VARIANT[t.status]}>{STATUS_LABELS[t.status]}</Badge>
+          {/* **متأخّرةٌ بالأحمر** — مهلةُ الردّ ساعتان (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
+          {t.late && <Badge variant="danger">{m.admin.tickets.lateBadge}</Badge>}
+        </span>
+      ),
     },
   ];
 
@@ -267,6 +309,25 @@ export function TicketsView() {
           </Button>
         </div>
       </div>
+
+      {/* **عددُ المتأخّرة كلِّها** — يُنقر فيصفّي عليها. */}
+      {data && (data.late ?? 0) > 0 && (
+        <Alert className="mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("late");
+              setPage(1);
+            }}
+            className="font-bold hover:underline"
+          >
+            {m.admin.tickets.lateCount.replace("{n}", fmtNum(data.late ?? 0))}
+          </button>{" "}
+          <span className="text-xs">
+            {m.admin.tickets.lateRule.replace("{h}", fmtNum(data.late_hours ?? 2))}
+          </span>
+        </Alert>
+      )}
 
       <div className="mb-4 w-52">
         <Select
@@ -553,13 +614,19 @@ function TicketDetailModal({
       title={`${m.admin.tickets.detail} #${fmtRef(ticket.number)}`}
     >
       <div className="space-y-5">
-        <FormSection title={m.admin.tickets.table.customer} icon={<IconUser />}>
+        <FormSection title={m.admin.tickets.complainant} icon={<IconUser />}>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-            <span className="font-medium">{ticket.customer_name || "—"}</span>
+            {ticket.complainant_kind && (
+              <Badge variant="neutral">{KIND_LABELS[ticket.complainant_kind]}</Badge>
+            )}
+            <span className="font-medium">
+              {ticket.complainant_name || ticket.customer_name || "—"}
+            </span>
             <span dir="ltr" className="text-ink-muted">
-              {ticket.customer_phone}
+              {ticket.complainant_phone || ticket.customer_phone}
             </span>
             <Badge variant={STATUS_VARIANT[ticket.status]}>{STATUS_LABELS[ticket.status]}</Badge>
+            {ticket.late && <Badge variant="danger">{m.admin.tickets.lateBadge}</Badge>}
             {ticket.order_number && (
               <button
                 type="button"
@@ -611,14 +678,7 @@ function TicketDetailModal({
               {ticket.resolution && <p className="whitespace-pre-wrap">{ticket.resolution}</p>}
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
                 <span>
-                  {m.admin.tickets.table.compensation}:{" "}
-                  {ticket.compensation > 0 ? (
-                    <Badge variant="primary">
-                      <Money value={ticket.compensation} />
-                    </Badge>
-                  ) : (
-                    <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>
-                  )}
+                  {m.admin.tickets.table.compensation}: <CompensationCell t={ticket} />
                 </span>
                 {ticket.resolved_at && (
                   <span className="text-xs text-ink-muted">
@@ -647,14 +707,14 @@ function TicketDetailModal({
                 </div>
                 <Input
                   id="t-compensation"
-                  label={m.admin.tickets.compensationAmount}
+                  label={m.admin.tickets.compProposedAmount}
                   icon={<IconWallet />}
                   dir="ltr"
                   inputMode="numeric"
                   value={compensation}
                   onChange={(e) => setCompensation(e.target.value.replace(/\D/g, ""))}
                 />
-                <p className="text-xs text-ink-muted">{m.admin.tickets.compensationHint}</p>
+                <p className="text-xs text-ink-muted">{m.admin.tickets.compProposedHint}</p>
                 <div className="flex justify-end">
                   <Button type="submit" disabled={busy || !resolution.trim()}>
                     {m.admin.tickets.resolveButton}
