@@ -45,19 +45,15 @@ func qaSnapStoreXOf() *settings.Store {
 func qaSnapSQLX() string {
 	st := qaSnapStoreXOf()
 	if st == nil {
-		return fmt.Sprintf("0, 0, '%s', 1", pricing.SourcePricingMargin)
+		return fmt.Sprintf("0, 0, '%s', 1", pricing.RepCommissionSourceFixed)
 	}
 	c, err := st.ReadCoherent(context.Background(),
-		"merchants.commission_percent", "sales.commission_percent",
-		pricing.CommissionSourceKey, "sales.activation_orders")
+		"merchants.commission_percent", "sales.commission_percent")
 	if err != nil {
-		return fmt.Sprintf("0, 0, '%s', 1", pricing.SourcePricingMargin)
+		return fmt.Sprintf("0, 0, '%s', 1", pricing.RepCommissionSourceFixed)
 	}
-	src := c.String(pricing.CommissionSourceKey)
-	if src == "" {
-		src = string(pricing.SourcePricingMargin)
-	}
+	// **والمصدرُ والعتبةُ ثابتان كما في `snapshotNow`** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	return fmt.Sprintf("%d, %d, '%s', %d",
 		c.Int("merchants.commission_percent"), c.Int("sales.commission_percent"),
-		src, c.Int("sales.activation_orders"))
+		pricing.RepCommissionSourceFixed, 1)
 }

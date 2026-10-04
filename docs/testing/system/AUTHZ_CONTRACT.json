@@ -19,7 +19,7 @@
   {
    "code": "content.manage",
    "description": "اللافتات والعروض والمحتوى",
-   "guards_routes": 31
+   "guards_routes": 30
   },
   {
    "code": "disputes.manage",
@@ -138,12 +138,12 @@
   {
    "code": "settings.general.manage",
    "description": "إعدادات عامة: المناطق والمدن ودوام المنصة",
-   "guards_routes": 21
+   "guards_routes": 22
   },
   {
    "code": "settings.read",
    "description": "قراءة الإعدادات",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "settings.security.manage",
@@ -236,7 +236,7 @@
   }
  ],
  "route_policy": {
-  "rules": 260,
+  "rules": 261,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

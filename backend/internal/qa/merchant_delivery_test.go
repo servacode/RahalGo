@@ -20,7 +20,8 @@ import (
 	"time"
 )
 
-const mdPct = "delivery.merchant_delivery_platform_percent"
+// mdPct **حصّةُ المنصّة من الأجرة — مفتاحٌ واحدٌ للأنواع كلّها** (٢٠٢٦-١٠-٠٤).
+const mdPct = "delivery.platform_percent"
 
 type mdFx struct {
 	f        *Factory
@@ -47,6 +48,8 @@ func newMDFxBare(t *testing.T, h *Harness, name string) mdFx {
 	treasury(t, h)
 	z := zoneForDemand(t, h, name)
 	h.Setting(mdPct, "10")
+	// **والأجرةُ من `delivery.fee` لا من عمود المنطقة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	h.Setting("delivery.fee", "500")
 	f := h.Factory()
 	m := mdFx{
 		f:  f,

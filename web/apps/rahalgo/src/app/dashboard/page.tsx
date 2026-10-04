@@ -54,6 +54,7 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
+import ContactTestAlert from "@/components/admin/settings/contact-check";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.home;
@@ -347,6 +348,8 @@ export default function DashboardPage() {
       </div>
       {error && <Alert tone="warning">{H.refreshFailed}</Alert>}
       {data.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
+      {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
+      <ContactTestAlert />
 
       {/* ── ١ · بانتظار قرارك ── */}
       <Section title={H.awaiting} note={H.awaitingHint}>

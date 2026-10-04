@@ -215,9 +215,14 @@ func SavePolygonZone(ctx context.Context, e Execer, id string, in ZoneInput) (st
 		    shape = 'polygon',
 		    area = ST_Multi(ST_GeomFromText($3, 4326))::geography,
 		    center = ST_Centroid(ST_GeomFromText($3, 4326))::geography,
-		    delivery_fee = $4, min_order = $5, active = $6, city_id = $7::uuid
+		    min_order = $4, active = $5, city_id = $6::uuid
 		WHERE id = $1::uuid`,
-		id, in.Name, poly, in.DeliveryFee, in.MinOrder, active, in.CityID)
+		// **ولا تُكتب أجرةُ المنطقة عند التعديل** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+		// الإعدادات البند ٢): كانت الشاشةُ ترسل صفراً فيُكتب صفرٌ في كلّ تعديل،
+		// **و«لدي توصيلة» كانت تقرأ هذا العمود** — فتعديلُ اسم منطقةٍ جعل
+		// توصيلاتِها مجّانيّةً وأجرَ السائق صفراً. **والأجرةُ من مكانٍ واحد**:
+		// `delivery.fee` (`orders.DeliveryAt`).
+		id, in.Name, poly, in.MinOrder, active, in.CityID)
 	if err != nil {
 		return "", err
 	}

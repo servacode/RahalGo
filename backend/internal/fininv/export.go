@@ -60,8 +60,6 @@ type Counts struct {
 var FinancialSettings = []string{
 	"merchants.commission_percent",          // pricing.go:153 — عمولةُ المنصّة
 	"sales.commission_percent",              // pricing.go:164 — عمولةُ المندوب
-	"sales.commission_source",               // pricing.go — مصدرُ احتساب عمولته
-	"sales.activation_orders",               // merchantActivated — عتبةُ التفعيل
 	"pricing.margin_fixed",                  // pricing.go:69  — هامشُ التسعير
 	"delivery.fee",                          // pricing.go:195 — أجرةُ التوصيل
 	"delivery.per_km",                       // pricing.go:229
@@ -96,6 +94,18 @@ var FinancialSettings = []string{
 	// **ودعمُ المتجر عن بضاعةٍ رُدّت حُذف** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — صار مبلغاً
 	// تكتبه الإدارةُ عند الحسم لا نسبةً في الإعدادات.
 	"drivers.failed_compensation_percent",
+	// **قائمةُ الخطورة الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٧):
+	// كلُّ مفتاحٍ عليه شارةُ «يمسّ المال» هنا — وحارسٌ يُسقط البناءَ إن غاب.
+	// **وحُذف منها مصدرُ عمولة المندوب وعتبةُ التفعيل** — صارا ثابتين.
+	"delivery.platform_percent", // orders — حصّةُ المنصّة من الأجرة لكلّ الأنواع
+	"delivery.custom_fee_min",   // orders/custom.go — أدنى أجرةِ الخاصّ
+	"delivery.custom_fee_max",   // orders/custom.go — أعلاها
+	"finance.manual_wallet_max", // accounts — سقفُ الحركة اليدويّة
+	// **وما وسمته أقسامٌ أخرى «يمسّ المال»** (كشفه الحارسُ عند الدمج ٢٠٢٦-١٠-٠٤):
+	"compensations.cap_driver",
+	"compensations.cap_merchant_goods",
+	"compensations.cap_complaint",
+	"finance.expense_approval_threshold",
 }
 
 // Snapshot يبني الصورة.

@@ -52,9 +52,6 @@ const (
 	// (نُقل إلى اللوحة 2026-08-09 بقرار المالك.)
 	maxAppBytes = 100 << 20
 
-	// appFileSetting مفتاحُ الإعداد الذي يحمل اسمَ الملفّ المخزَّن.
-	appFileSetting = "platform.app_file"
-
 	// appDir مجلّدُ الملفّ داخلَ مجلّد الرفع.
 	appDir = "app"
 )
@@ -84,13 +81,9 @@ var zipMagic = []byte{'P', 'K', 3, 4}
 // لبابِ الموقع القائم.
 func appFileTarget(r *http.Request) (string, bool) {
 	raw := strings.TrimSpace(r.URL.Query().Get("key"))
-	if raw == "" {
-		// **والغيابُ يعني القديمَ** — **فلا ينكسر رافعٌ منشورٌ يعمل.**
-		return appFileSetting, true
-	}
-	if raw == appFileSetting {
-		return raw, true
-	}
+	// **ولا مفتاحَ افتراضيّ بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات):
+	// كان الرفعُ بلا `key` يذهب إلى `platform.app_file` القديم — **فتُرفع نسخةُ
+	// السائق من بطاقتها ويبقى مركزُ التنزيل على القديمة.** والآن يُردّ.
 	for _, a := range release.Apps {
 		if raw == release.ApkKey(a.Key) {
 			return raw, true
@@ -199,28 +192,9 @@ func (s *Server) handleDeleteAppFile(w http.ResponseWriter, r *http.Request) {
 // **واسمُ التنزيل ثابتٌ مقروء**: المخزَّنُ معرّفٌ عشوائيّ، **ومن نزّله
 // وجده في مجلّده باسمٍ لا يقول ما هو.**
 func (s *Server) handleDownloadApp(w http.ResponseWriter, r *http.Request) {
-	name := s.settings.GetString(r.Context(), appFileSetting)
-	if name == "" {
-		s.respondErr(w, errNoAppFile)
-		return
-	}
-	path := filepath.Join(s.media.Dir(), appDir, filepath.Base(name))
-	f, err := os.Open(path)
-	if err != nil {
-		s.respondErr(w, errNoAppFile)
-		return
-	}
-	defer func() { _ = f.Close() }()
-	st, err := f.Stat()
-	if err != nil {
-		s.respondErr(w, errNoAppFile)
-		return
-	}
-	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
-	w.Header().Set("Content-Disposition", `attachment; filename="rahalgo.apk"`)
-	// **ولا يُخبَّأ** — الرابطُ نفسُه يخدم كلَّ ملفٍّ يُرفع (انظر أدناه).
-	w.Header().Set("Cache-Control", "no-store")
-	http.ServeContent(w, r, "rahalgo.apk", st.ModTime(), f)
+	// **والرابطُ القديمُ يقود إلى تطبيق الزبون في مركز التنزيل** — حُذف مفتاحُه
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤)، **ورابطٌ أُرسل يوماً لا ينكسر.**
+	http.Redirect(w, r, release.PublicPath("customer"), http.StatusFound)
 }
 
 // ══════════════════════════════════════════════════════════════════════

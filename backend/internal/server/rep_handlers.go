@@ -198,7 +198,10 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		OffersCount int `json:"offers_count"`
 	}
 	// **العتبةُ تُقرأ مرّةً لا لكل متجر** — وهي إعدادُ منصةٍ لا خاصّيةُ متجر.
-	activationNeeded := s.settings.GetInt(r.Context(), "sales.activation_orders")
+	//
+	// **وصارت ثابتةً «أوّلُ طلبٍ ناجح»** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — حُذف مفتاحُها،
+	// **وقراءتُه بعد الحذف تردّ صفراً** فيقرأ المندوبُ عتبةً لا وجودَ لها.
+	activationNeeded := int64(1) // orders.ActivationFromFirstOrder
 	out := []repMerchant{}
 	for rows.Next() {
 		var m repMerchant

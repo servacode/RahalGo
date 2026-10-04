@@ -57,6 +57,38 @@ func criticalSettingKey(key string) bool {
 	return false
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **قائمةُ الخطورة الواحدة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات، البند ٧)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت الشارةُ من قائمةٍ والحمايةُ من أخرى**: «حصّةُ المنصّة من الأجرة»
+// عليها شارةُ «يمسّ المال» ويغيّرها من يملك الإعداداتِ العامّة بلا كلمة سرّ،
+// **وستّةٌ وعشرون مفتاحاً تطلب كلمةَ السرّ بلا شارة.**
+//
+// **فصارت هذه الدالّةُ مصدرَ الثلاثة**: الشارةُ في اللوحة (`risk`)، والقدرةُ
+// (`settingCapability`)، وخطوةُ التحقّق والتدقيقُ في المعاملة
+// (`criticalSettingKey`). **وحارسٌ يُسقط البناءَ إن حمل مفتاحٌ شارةَ
+// `Sensitive` في الفهرس وليس هنا** (`TestSETTINGS_BadgeImpliesRiskList`).
+//
+//	security   security.* وأدنى نسخةِ التطبيق — حدودُ الدخول وقفلُ التطبيقات
+//	money      fininv.FinancialSettings — ما يدخل حساباً ماليّاً
+//	""         ما سواهما — عامّ
+const (
+	riskMoney    = "money"
+	riskSecurity = "security"
+)
+
+// settingRisk **مستوى خطورة المفتاح** — «money» أو «security» أو فراغ.
+func settingRisk(key string) string {
+	if strings.HasPrefix(key, "security.") || strings.HasPrefix(key, "app.min_version.") {
+		return riskSecurity
+	}
+	if criticalSettingKey(key) {
+		return riskMoney
+	}
+	return ""
+}
+
 // redactSettingValue **قيمةٌ سرّيّةٌ لا تُكتب في سجلّ يُقرأ.**
 //
 // **ولا مفتاحَ سرٍّ في المعجم اليوم** — **والحارسُ موضوعٌ سلفاً**:

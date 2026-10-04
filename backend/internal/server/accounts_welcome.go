@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 // appKeyForRoles **أيُّ تطبيقٍ لهذا الحساب** — بدوره الأساسيّ. فارغٌ: لوحةُ الإدارة.
@@ -73,17 +74,24 @@ func (s *Server) rolesOf(ctx context.Context, userID string) []string {
 }
 
 // welcomeText نصُّ الرسالة — **لا شيءَ فيها يُخمَّن**: الرقمُ والكلمةُ والمهلةُ والرابط.
-func welcomeText(phone, password, link string, hours int64, reset bool) string {
+func welcomeText(tpl, phone, password, link string, hours int64, reset bool) string {
 	head := "أهلاً بك في رحّال غو — أُنشئ حسابك."
 	if reset {
 		head = "رحّال غو — أُعيد ضبط كلمة مرور حسابك."
 	}
-	return head + "\n" +
-		"الرقم: " + phone + "\n" +
-		"كلمة المرور المؤقتة: " + password + "\n" +
-		"تنتهي بعد " + strconv.FormatInt(hours, 10) + " ساعة إن لم تُستعمل، " +
-		"وعليك تغييرها عند أول دخول.\n" +
-		"حمّل التطبيق من: " + link
+	// **والقالبُ من الإعدادات** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٢٠) —
+	// **وقالبٌ بلا كلمة السرّ أو بلا الرابط يسقط إلى الأصل**: الخادمُ يرفض حفظَه
+	// أصلاً، وهذا حرسٌ ثانٍ لقيمةٍ كُتبت بغير الباب.
+	if !strings.Contains(tpl, "{password}") || !strings.Contains(tpl, "{link}") {
+		tpl = settings.WelcomeTemplateDefault
+	}
+	return strings.NewReplacer(
+		"{title}", head,
+		"{phone}", phone,
+		"{password}", password,
+		"{hours}", strconv.FormatInt(hours, 10),
+		"{link}", link,
+	).Replace(tpl)
 }
 
 // sendText يُرسل رسالةً حرّةً بالبوت — ويقول أوصلت أم لا.
@@ -134,7 +142,7 @@ func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app 
 		key = app
 	}
 	link := s.appLink(key)
-	sent := s.sendText(ctx, phone, welcomeText(phone, plain, link,
+	sent := s.sendText(ctx, phone, welcomeText(s.settings.GetString(ctx, "accounts.welcome_template"), phone, plain, link,
 		s.identity.TempPasswordHours(ctx), reset))
 	if sent {
 		_, _ = s.pg.Exec(ctx, `UPDATE users SET welcome_sent_at = now() WHERE id = $1`, userID)

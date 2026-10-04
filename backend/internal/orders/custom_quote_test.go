@@ -39,6 +39,15 @@ func cqSetup(t *testing.T) (*orders.Service, *wallet.Service, string, string, fu
 			t.Fatalf("SQL: %v — %s", err, sql)
 		}
 	}
+	// **وحصّةُ المنصّة عشرةٌ صراحةً** — كانت افتراضاً، **وصار الافتراضُ صفراً**
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤)، وهذه الاختباراتُ تقيس القسمةَ بعشرة.
+	exec(context.Background(), `INSERT INTO app_settings (key, value) VALUES
+	           ('delivery.platform_percent', '10'::jsonb)
+	           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(),
+			`DELETE FROM app_settings WHERE key = 'delivery.platform_percent'`)
+	})
 	return svc, w, customer, driver, exec
 }
 

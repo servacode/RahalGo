@@ -49,8 +49,8 @@ func newAppFixture(t *testing.T) *appFixture {
 	store := settings.NewStore(pool)
 	// **ولا يُترك أثرُ اختبارٍ في الإعدادات** — المفتاحُ مشتركٌ مع بقيّة الحزمة.
 	t.Cleanup(func() {
-		_ = store.SetInternal(context.Background(), appFileSetting, "")
-		_ = store.SetInternal(context.Background(), "platform.app_url", "")
+		_ = store.SetInternal(context.Background(), testApkKey, "")
+		_ = store.SetInternal(context.Background(), "release.customer.play_url", "")
 	})
 	return &appFixture{
 		srv: &Server{
@@ -65,14 +65,25 @@ func newAppFixture(t *testing.T) *appFixture {
 	}
 }
 
+// testApkKey **مفتاحُ ملفّ السائق** — والرفعُ يحمل مفتاحَه دائماً (٢٠٢٦-١٠-٠٤).
+const testApkKey = "release.driver.apk"
+
 func (f *appFixture) upload(filename string, body []byte) *httptest.ResponseRecorder {
+	return f.uploadTo(testApkKey, filename, body)
+}
+
+func (f *appFixture) uploadTo(key, filename string, body []byte) *httptest.ResponseRecorder {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	part, _ := mw.CreateFormFile("file", filename)
 	_, _ = part.Write(body)
 	_ = mw.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/admin/app-file", &buf)
+	target := "/admin/app-file"
+	if key != "" {
+		target += "?key=" + key
+	}
+	req := httptest.NewRequest(http.MethodPost, target, &buf)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	ctx := context.WithValue(req.Context(), ctxUserID, f.admin)
 	ctx = context.WithValue(ctx, ctxRoles, []string{"admin"})
@@ -117,11 +128,22 @@ func TestAppFileUploadDownloadAndPriority(t *testing.T) {
 		}
 	})
 
+	// **ورفعٌ بلا مفتاحٍ يُردّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات): كان يذهب
+	// إلى المفتاح القديم فيبقى مركزُ التنزيل على النسخة السابقة.
+	t.Run("والرفعُ بلا مفتاحٍ يُردّ", func(t *testing.T) {
+		if code := f.uploadTo("", "rahalgo.apk", apk(64)).Code; code != http.StatusBadRequest {
+			t.Fatalf("قُبل رفعٌ بلا مفتاحٍ برمز %d — **ويذهب إلى مفتاحٍ لا يقرؤه أحد.**", code)
+		}
+		if code := f.uploadTo("platform.app_file", "rahalgo.apk", apk(64)).Code; code != http.StatusBadRequest {
+			t.Fatalf("قُبل المفتاحُ القديمُ برمز %d", code)
+		}
+	})
+
 	t.Run("الرفعُ يحفظ ويضبط الإعداد", func(t *testing.T) {
 		if code := f.upload("rahalgo-1.0.apk", apk(512)).Code; code != http.StatusCreated {
 			t.Fatalf("رُفض الرفعُ الصحيحُ برمز %d", code)
 		}
-		name := f.srv.settings.GetString(context.Background(), appFileSetting)
+		name := f.srv.settings.GetString(context.Background(), testApkKey)
 		if name == "" {
 			t.Fatal("رُفع الملفُّ ولم يُضبط الإعداد")
 		}
@@ -132,33 +154,25 @@ func TestAppFileUploadDownloadAndPriority(t *testing.T) {
 		if name == "rahalgo-1.0.apk" {
 			t.Fatal("حُفظ باسم الرافع — **واسمٌ من جهازٍ غريبٍ قد يحمل مساراً.**")
 		}
-		if h := f.href(); h != "/api/v1/public/app" {
-			t.Fatalf("الوجهةُ %q بعد الرفع — والمنتظَر مسارَ التنزيل", h)
+		// **وتطبيقُ السائق ليس زرَّ الزبون** — الزرُّ العلويُّ لتطبيق الزبون وحدَه.
+		if h := f.href(); h != "" {
+			t.Fatalf("الوجهةُ %q بعد رفع تطبيق السائق — والزرُّ لتطبيق الزبون", h)
 		}
 	})
 
-	t.Run("والتنزيلُ ملفٌّ باسمٍ مقروء", func(t *testing.T) {
+	t.Run("والرابطُ القديمُ يقود إلى مركز التنزيل", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/public/app", nil)
 		w := httptest.NewRecorder()
 		f.srv.handleDownloadApp(w, req)
-		if w.Code != http.StatusOK {
-			t.Fatalf("التنزيلُ ردّ %d", w.Code)
-		}
-		if ct := w.Header().Get("Content-Type"); ct != "application/vnd.android.package-archive" {
-			t.Fatalf("النوعُ %q", ct)
-		}
-		if cd := w.Header().Get("Content-Disposition"); cd == "" || !bytes.Contains([]byte(cd), []byte("rahalgo.apk")) {
-			t.Fatalf("الترويسةُ %q — **والمخزَّنُ معرّفٌ عشوائيّ، فمن نزّله يجده باسمٍ لا يقول ما هو.**", cd)
-		}
-		if w.Body.Len() != 516 {
-			t.Fatalf("الحجمُ %d — والمنتظَر 516", w.Body.Len())
+		if w.Code != http.StatusFound || w.Header().Get("Location") != "/api/v1/public/app/customer" {
+			t.Fatalf("الرابطُ القديمُ ردّ %d إلى %q", w.Code, w.Header().Get("Location"))
 		}
 	})
 
-	// **والرابطُ يسبق**: من رفع تطبيقَه إلى المتجر فالمتجرُ أولى.
-	t.Run("والرابطُ يسبق الملفَّ", func(t *testing.T) {
+	// **والزرُّ العلويُّ يقرأ مركزَ التنزيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦).
+	t.Run("والزرُّ من رابط بلاي لتطبيق الزبون", func(t *testing.T) {
 		const link = "https://play.google.com/store/apps/details?id=com.rahalgo"
-		if err := f.srv.settings.SetInternal(context.Background(), "platform.app_url", link); err != nil {
+		if err := f.srv.settings.SetInternal(context.Background(), "release.customer.play_url", link); err != nil {
 			t.Fatalf("تعذّر ضبطُ الرابط: %v", err)
 		}
 		if h := f.href(); h != link {
@@ -167,8 +181,8 @@ func TestAppFileUploadDownloadAndPriority(t *testing.T) {
 	})
 
 	t.Run("والحذفُ يمسح الملفَّ", func(t *testing.T) {
-		name := f.srv.settings.GetString(context.Background(), appFileSetting)
-		req := httptest.NewRequest(http.MethodDelete, "/admin/app-file", nil)
+		name := f.srv.settings.GetString(context.Background(), testApkKey)
+		req := httptest.NewRequest(http.MethodDelete, "/admin/app-file?key="+testApkKey, nil)
 		ctx := context.WithValue(req.Context(), ctxUserID, f.admin)
 		ctx = context.WithValue(ctx, ctxRoles, []string{"admin"})
 		w := httptest.NewRecorder()
@@ -179,7 +193,7 @@ func TestAppFileUploadDownloadAndPriority(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(f.dir, appDir, name)); err == nil {
 			t.Fatal("الإعدادُ فُرِّغ والملفُّ باقٍ على القرص")
 		}
-		if f.srv.settings.GetString(context.Background(), appFileSetting) != "" {
+		if f.srv.settings.GetString(context.Background(), testApkKey) != "" {
 			t.Fatal("الملفُّ مُسح والإعدادُ ما زال يشير إليه")
 		}
 	})

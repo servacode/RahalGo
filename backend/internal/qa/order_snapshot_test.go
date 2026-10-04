@@ -59,10 +59,8 @@ func TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
 	// ── T0 · الإعداداتُ «أ» ──────────────────────────────────────
-	h.Setting("merchants.commission_percent", "20")          // XG-25
-	h.Setting("sales.commission_percent", "10")              // XG-26
-	h.Setting("sales.commission_source", `"pricing_margin"`) // XG-27
-	h.Setting("sales.activation_orders", "0")                // XG-28
+	h.Setting("merchants.commission_percent", "20") // XG-25
+	h.Setting("sales.commission_percent", "10")     // XG-26
 	h.Setting("pricing.margin_fixed", "1000")
 
 	f := h.Factory()
@@ -73,16 +71,16 @@ func TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew(t *testing.T) {
 	oid, snap := snapOrder(t, h, m, 5000)
 	t.Logf("S1: لقطةُ الطلب — عمولةٌ=%d%% · مندوبٌ=%d%% · مصدرٌ=%q · عتبةٌ=%d",
 		snap.MerchantPct, snap.RepPct, snap.Source, snap.Activation)
+	// **والمصدرُ والعتبةُ ثابتان** (قرارُ المالك ٢٠٢٦-١٠-٠٤): ربحُ المنصّة كلُّه
+	// ومن أوّل طلب — **ويُلقَطان كما كانا** فتبقى التسويةُ من اللقطة.
 	if snap.MerchantPct != 20 || snap.RepPct != 10 ||
-		snap.Source != "pricing_margin" || snap.Activation != 0 {
+		snap.Source != "both" || snap.Activation != 1 {
 		t.Fatalf("**S1: اللقطةُ لا تطابق إعداداتِ الإنشاء** — %+v", snap)
 	}
 
 	// ── T2 · تُبدَّل الإعداداتُ إلى «ب» والطلبُ قائم ────────────
 	h.Setting("merchants.commission_percent", "40")
 	h.Setting("sales.commission_percent", "20")
-	h.Setting("sales.commission_source", `"both"`)
-	h.Setting("sales.activation_orders", "99")
 
 	// ── T3 · يُسوّى الطلبُ القديم ───────────────────────────────
 	deliverOrder(t, h, oid, h.driverOf(oid))
@@ -91,12 +89,12 @@ func TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew(t *testing.T) {
 		oldPlatform, oldRep)
 
 	// **بإعدادات «أ»**: عمولةُ المنصّة = ٢٠٪ × ٥٠٠٠ = ١٠٠٠ ·
-	// والمندوبُ ١٠٪ من الهامش (١٠٠٠) = ١٠٠.
+	// والمندوبُ ١٠٪ من ربح المنصّة (١٠٠٠ هامش + ١٠٠٠ عمولة) = ٢٠٠.
 	if oldPlatform != 1000 {
 		t.Errorf("**XG-25: عمولةُ المنصّة %d — واللقطةُ توجب 1000**", oldPlatform)
 	}
-	if oldRep != 100 {
-		t.Errorf("**XG-26/XG-27: عمولةُ المندوب %d — واللقطةُ توجب 100**", oldRep)
+	if oldRep != 200 {
+		t.Errorf("**XG-26/XG-27: عمولةُ المندوب %d — واللقطةُ توجب 200**", oldRep)
 	}
 
 	// ── T4 · طلبٌ جديدٌ يأخذ «ب» ────────────────────────────────
@@ -105,7 +103,7 @@ func TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew(t *testing.T) {
 	t.Logf("S2: لقطةُ الجديد — عمولةٌ=%d%% · مندوبٌ=%d%% · مصدرٌ=%q · عتبةٌ=%d",
 		nsnap.MerchantPct, nsnap.RepPct, nsnap.Source, nsnap.Activation)
 	if nsnap.MerchantPct != 40 || nsnap.RepPct != 20 ||
-		nsnap.Source != "both" || nsnap.Activation != 99 {
+		nsnap.Source != "both" || nsnap.Activation != 1 {
 		t.Errorf("**S2: الطلبُ الجديدُ لم يأخذ الإعداداتِ الجديدة** — %+v", nsnap)
 	}
 	_ = nid
@@ -205,7 +203,8 @@ func TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss(t *testing.T) {
 	platform, repCom := economicsOf(t, h, oid)
 	t.Logf("S5/S6: سُوّي بلا إعداداتٍ صالحة — عمولةُ المنصّة=%d · مندوبٌ=%d",
 		platform, repCom)
-	if platform != 1000 || repCom != 100 {
+	// **والمندوبُ من ربح المنصّة كلِّه** (٢٠٢٦-١٠-٠٤): ١٠٪ × (١٠٠٠ + ١٠٠٠) = ٢٠٠.
+	if platform != 1000 || repCom != 200 {
 		t.Errorf("**S5/S6: التسويةُ اعتمدت على المخزن لا على اللقطة** — %d · %d",
 			platform, repCom)
 	}
@@ -252,9 +251,12 @@ func TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder(t *testing.T) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// **F3 · وضعٌ لا يُقرأ ⇒ لا لقطةَ ولا طلب**
+// **F3 · صفُّ مصدرٍ قديمٌ أو فاسدٌ لا أثرَ له** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
 // ══════════════════════════════════════════════════════════════════════
-func TestXQ2_F3_UnreadableSettingBlocksCreation(t *testing.T) {
+//
+// **كان وضعٌ مجهولٌ يمنع الإنشاء** — والمصدرُ اليومَ ثابتٌ لا يُقرأ من المخزن،
+// **فصفٌّ بقي في قاعدةٍ لم تُهاجَر لا يمنع طلباً ولا يبدّل لقطة.**
+func TestXQ2_F3_StaleSourceRowIgnored(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
 	f := h.Factory()
@@ -264,15 +266,12 @@ func TestXQ2_F3_UnreadableSettingBlocksCreation(t *testing.T) {
 
 	cust := h.Customer()
 	res := h.POSTKey("/api/v1/orders", cust.Token, uniq("xq2g"), orderBody(item, 1))
-	var rows int
-	_ = h.Pool.QueryRow(ctxBG(),
-		`SELECT count(*) FROM orders WHERE customer_id = $1::uuid`, cust.ID).Scan(&rows)
-	t.Logf("F3: وضعٌ مجهولٌ ⇒ الإنشاءُ %d · طلباتٌ=%d", res.Code, rows)
-	if res.Code < 400 {
-		t.Errorf("**F3: أُنشئ طلبٌ بلقطةٍ لا تُقرأ** — %d", res.Code)
+	if res.Code >= 400 {
+		t.Fatalf("**F3: صفٌّ ميّتٌ منع الإنشاء** — %s", res)
 	}
-	if rows != 0 {
-		t.Errorf("**F3: بقي طلبٌ بلا اقتصادٍ معلوم** — %d", rows)
+	oid, _ := res.JSON()["id"].(string)
+	if snap := readSnap(t, h, oid); snap.Source != "both" {
+		t.Errorf("**F3: اللقطةُ أخذت المصدرَ من صفٍّ ميّت** — %+v", snap)
 	}
 }
 

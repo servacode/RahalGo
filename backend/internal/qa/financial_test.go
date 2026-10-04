@@ -760,11 +760,11 @@ func TestFIN_CommissionSourceMatrix(t *testing.T) {
 			// شيئاً». **وذاك ما وثّقه هذا الفحصُ عيباً ومرّ ما دام
 			// قائماً.**
 			//
-			// **والافتراضُ `pricing_margin`** — فالقاعدةُ الهامشُ
-			// وحدَه، **بلا بوّابةِ عمولة.**
-			want := margin * int64(c.repP) / 100
+			// **والقاعدةُ اليومَ ثابتة** (قرارُ المالك ٢٠٢٦-١٠-٠٤): ربحُ المنصّة
+			// كلُّه — الهامشُ مع عمولة المتجر.
+			want := (margin + platform) * int64(c.repP) / 100
 			if repCom != want {
-				t.Errorf("عمولةُ المندوب %d — والوضعُ الافتراضيُّ يعطي %d", repCom, want)
+				t.Errorf("عمولةُ المندوب %d — والقاعدةُ تعطي %d", repCom, want)
 			}
 			assertNewViolations(t, h, base, "FI-06", "FI-05", "FI-04")
 		})

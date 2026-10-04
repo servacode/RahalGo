@@ -150,11 +150,11 @@ func TestCustomShare_SnapshotSurvivesSettingChange(t *testing.T) {
 	// ولا يُردّ يجعل اختباراً آخرَ يقرأ نسبةً لم يضعها، **فيسقط بسببٍ لا
 	// يخصّه ويُبحَث عن العلّة في الموضع الخطأ.** (وقع فعلاً في هذه الدفعة.)
 	exec(ctx, `INSERT INTO app_settings (key, value) VALUES
-	           ('delivery.merchant_delivery_platform_percent', '50'::jsonb)
+	           ('delivery.platform_percent', '50'::jsonb)
 	           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 	t.Cleanup(func() {
 		exec(context.Background(),
-			`DELETE FROM app_settings WHERE key = 'delivery.merchant_delivery_platform_percent'`)
+			`DELETE FROM app_settings WHERE key = 'delivery.platform_percent'`)
 	})
 
 	for _, to := range []string{"picked_up", "on_the_way", "at_dropoff", "delivered"} {

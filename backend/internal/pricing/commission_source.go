@@ -45,6 +45,13 @@ const (
 // CommissionSourceKey مفتاحُ الوضع — **واحدٌ لا اثنان.**
 const CommissionSourceKey = "sales.commission_source"
 
+// RepCommissionSourceFixed **مصدرُ عمولة المندوب الثابت** — ربحُ المنصّة كلُّه.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٤: «زرُّ المصدر يُحذف ويُثبَّت
+// من ربح المنصّة كلِّه».) **والمفتاحُ `CommissionSourceKey` لم يعد في الفهرس**
+// — يبقى اسمُه لقراءة لقطاتٍ قديمة وللهجرة التي تمحوه.
+const RepCommissionSourceFixed = SourceBoth
+
 // RepCommissionSource يقرأ الوضعَ المعتمد.
 //
 // **ويردّ خطأً لمجهولٍ** — ولا يُخمَّن.
@@ -52,12 +59,8 @@ func RepCommissionSource(ctx context.Context, st Store) (CommissionSource, error
 	if st == nil {
 		return "", fmt.Errorf("pricing: لا مخزنَ إعدادات — ولا وضعَ يُقرأ")
 	}
-	switch v := CommissionSource(st.GetString(ctx, CommissionSourceKey)); v {
-	case SourcePlatformCommission, SourcePricingMargin, SourceBoth:
-		return v, nil
-	default:
-		return "", fmt.Errorf("pricing: وضعُ احتسابٍ مجهول: %q", v)
-	}
+	_ = ctx
+	return RepCommissionSourceFixed, nil
 }
 
 // RepCommissionBase **قاعدةُ الحساب بحسب الوضع** — لا بوّابةَ فيها.

@@ -217,14 +217,8 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	//
 	// **ويُعاد الحسابُ مع كلّ تعديلِ اتّفاق** — فالأجرةُ تتبدّل، **ونصيبٌ
 	// محسوبٌ على أجرةٍ قديمةٍ يكذب.**
-	pct := s.settingInt(ctx, SettingMerchantDeliveryPlatformPercent)
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 90 {
-		pct = 90
-	}
-	driverFee := newFee - (newFee * pct / 100)
+	pct := s.platformDeliveryPercent(ctx, q)
+	driverFee := DriverFeeAfterShare(newFee, pct)
 
 	set := `custom_goods_amount = $2, custom_fee = $3,
 	        subtotal = $2, delivery_fee = $3, driver_fee = $5,

@@ -277,6 +277,15 @@ export default function AuditPage() {
   /** **والتجديدُ مخفيٌّ افتراضاً** — تكتبه الساعةُ لا الإنسان. */
   const [withRefresh, setWithRefresh] = useState(false);
   const [page, setPage] = useState(1);
+  /**
+   * **رابطُ «السجل» من بطاقة الإعداد** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٩):
+   * `?entity=setting&entity_id=<المفتاح>` يفتح تاريخَ ذلك الإعداد وحدَه.
+   */
+  const [target] = useState<{ entity: string; entityId: string }>(() => {
+    if (typeof window === "undefined") return { entity: "", entityId: "" };
+    const sp = new URLSearchParams(window.location.search);
+    return { entity: sp.get("entity") ?? "", entityId: sp.get("entity_id") ?? "" };
+  });
 
   const [data, setData] = useState<Page | null>(null);
   const [loading, setLoading] = useState(true);
@@ -293,7 +302,9 @@ export default function AuditPage() {
   const [view, setView] = useViewMode("audit");
 
   const params = useCallback(() => {
-    const qs = new URLSearchParams({ group });
+    const qs = new URLSearchParams({ group: target.entityId ? "all" : group });
+    if (target.entity) qs.set("entity", target.entity);
+    if (target.entityId) qs.set("entity_id", target.entityId);
     if (withRefresh) qs.set("refresh", "true");
     if (from) qs.set("from", from);
     if (to) qs.set("to", to);
@@ -313,7 +324,7 @@ export default function AuditPage() {
       }
     }
     return qs;
-  }, [group, withRefresh, from, to, actor, action, q]);
+  }, [group, withRefresh, from, to, actor, action, q, target]);
 
   const load = useCallback(() => {
     setLoading(true);

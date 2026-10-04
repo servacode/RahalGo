@@ -32,6 +32,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // MaxParcelNote حدُّ وصفِ الغرض — **يقرؤه السائقُ ليعرف ما يحمل.**
@@ -145,16 +146,14 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	//
 	// **والبقيّةُ للسائق** — و`creditTreasury` تُخرج الفرقَ إلى الخزينة من
 	// نفسِها (مدفوعٌ − مستردٌّ − ما وصل الأطراف). **فلا قيدَ مخترَع.**
-	fee := zone.DeliveryFee
-	pct := s.settingInt(ctx, SettingMerchantDeliveryPlatformPercent)
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 90 {
-		pct = 90
-	}
-	platformShare := fee * pct / 100
-	driverFee := fee - platformShare
+	//
+	// **ثمّ صارت الأجرةُ العامّةَ نفسَها** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات
+	// البند ٢): كانت تُقرأ من عمود المنطقة **ولوحةُ المناطق تكتبه صفراً في كلّ
+	// تعديل** — فتعديلُ اسم منطقةٍ جعل كلَّ توصيلةٍ فيها مجّانيّةً وأجرَ السائق
+	// صفراً بلا خطأ. **والأجرةُ من `delivery.fee` كالطلب العاديّ** (`DeliveryAt`).
+	fee := pricing.DeliveryFeeAt(ctx, s.settings.On(tx), zone.DistanceM)
+	pct := s.platformDeliveryPercent(ctx, tx)
+	driverFee := DriverFeeAfterShare(fee, pct)
 
 	snap, err := s.snapshotNow(ctx, tx)
 	if err != nil {
@@ -257,10 +256,39 @@ const (
 	FeePayerMerchantCash = "merchant_cash"
 )
 
-// SettingMerchantDeliveryPlatformPercent مفتاحُ نصيب المنصّة — **مكانٌ واحدٌ
+// SettingPlatformDeliveryPercent مفتاحُ حصّة المنصّة من أجرة التوصيل — **لكلّ
+// أنواع الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ١). **مكانٌ واحدٌ
 // لا نصٌّ يتكرّر**: مفتاحٌ يُكتب بيده في موضعين يفترق أحدُهما بخطأٍ مطبعيّ،
 // **فيُقرأ صفراً بصمت** (`GetInt` تردّ الافتراضَ لمفتاحٍ مجهول).
-const SettingMerchantDeliveryPlatformPercent = "delivery.merchant_delivery_platform_percent"
+const SettingPlatformDeliveryPercent = "delivery.platform_percent"
+
+// platformDeliveryPercentMax **لا أجرَ للسائق عند المئة** — فالحدُّ تسعون.
+const platformDeliveryPercentMax = 90
+
+// platformDeliveryPercent **الحصّةُ النافذةُ الآن** — تُلقَط على الطلب لحظةَ
+// إنشائه (`snap_platform_delivery_percent`) فلا تمسّ طلباً قائماً.
+func (s *Service) platformDeliveryPercent(ctx context.Context, q dbtx.Querier) int64 {
+	if s.settings == nil {
+		return 0
+	}
+	pct := s.settings.On(q).GetInt(ctx, SettingPlatformDeliveryPercent)
+	if pct < 0 {
+		return 0
+	}
+	if pct > platformDeliveryPercentMax {
+		return platformDeliveryPercentMax
+	}
+	return pct
+}
+
+// DriverFeeAfterShare **أجرُ السائق بعد حصّة المنصّة** — الحسبةُ الواحدةُ للأنواع
+// الثلاثة. **والكسرُ للسائق**: الحصّةُ تُقرَّب إلى أسفل.
+func DriverFeeAfterShare(fee, pct int64) int64 {
+	if fee <= 0 || pct <= 0 {
+		return fee
+	}
+	return fee - fee*pct/100
+}
 
 // IsMerchantDelivery **أتوصيلةُ متجرٍ هي؟** — يُقرأ من الصفّ لا يُخمَّن.
 func (s *Service) IsMerchantDelivery(ctx context.Context, orderID string) bool {
@@ -317,7 +345,7 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 	if err := s.requireDriverOnShift(ctx, s.db); err != nil {
 		return nil, err
 	}
-	q := &MerchantDeliveryQuote{Fee: zone.DeliveryFee, ZoneName: zone.Name}
+	q := &MerchantDeliveryQuote{Fee: pricing.DeliveryFeeAt(ctx, s.settings.On(s.db), zone.DistanceM), ZoneName: zone.Name}
 	if err := s.db.QueryRow(ctx, `
 		SELECT COALESCE((SELECT balance FROM wallets w WHERE w.user_id = m.owner_user_id), 0),
 		       m.delivery_credit_limit

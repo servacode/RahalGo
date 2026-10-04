@@ -316,7 +316,9 @@ var adminPolicy = []Rule{
 	{"", "/campaigns/{id}/cancel", ContentManage},
 	{"POST", "/broadcast", ContentManage},
 	{"GET", "/broadcast/count", ContentManage},
-	{"", "/app-file", ContentManage},
+	// **وملفُّ التطبيق إعدادٌ لا محتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات):
+	// كان بقدرة المحتوى — **فموظّفُ المحتوى يبدّل تطبيقَ السائق عند كلّ الكباتن.**
+	{"", "/app-file", SettingsGeneralManage},
 
 	// ── الجغرافيا ───────────────────────────────────────────────
 	// **ودوامُ المنصّة وإيقافُها المؤقّت من باب المناطق نفسِه** —
@@ -397,6 +399,7 @@ var adminPolicy = []Rule{
 	// الطلبات تقرأ مفتاحين تشغيليّين** — **وكانت تطلب لأجلهما رسمَ
 	// المناطق والمدن والمحافظات.**
 	{"GET", "/settings", SettingsRead},
+	{"GET", "/settings/money-example", SettingsRead},
 	// **وحالُ التطبيق قراءتُها قراءةُ لوح**، **وتبديلُها تبديلُ
 	// مفاتيحِه** — **ولا قدرةَ جديدةً لبابٍ يكتب ما يكتبه `PUT`.**
 	{"GET", "/launch", SettingsRead},

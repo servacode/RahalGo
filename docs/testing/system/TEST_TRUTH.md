@@ -12,25 +12,25 @@
 
 | ما هو | العدد |
 |---|---|
-| أبوابٌ في الموجّه | **481** |
+| أبوابٌ في الموجّه | **482** |
 | انتقالاتُ الطلب | **55** |
 | أنواعُ قيدِ المحفظة | **16** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_cash_accrued` · `merchant_cash_paid` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **75** — منها **27** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
-| تعريفاتُ الإعدادات | **188** — منها **153** مُغيِّرٌ للسلوك |
+| تعريفاتُ الإعدادات | **184** — منها **149** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **95** — من عقد `P-1` |
-| ملفّاتُ اختبار | **505** |
-| دوالُّ اختبار | **2122** |
+| ملفّاتُ اختبار | **508** |
+| دوالُّ اختبار | **2138** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 2122
-MAPPED     = 459
+TOTAL      = 2138
+MAPPED     = 457
 INFRA      = 123
-ORPHAN     = 1540
+ORPHAN     = 1558
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -38,15 +38,15 @@ ORPHAN     = 1540
 
 | الحزمة | يتيمٌ |
 |---|---|
-| `qa` | 552 |
-| `server` | 363 |
+| `qa` | 559 |
+| `server` | 366 |
 | `orders_test` | 151 |
 | `routing` | 86 |
 | `platform` | 65 |
 | `orders` | 63 |
 | `identity` | 36 |
+| `settings` | 22 |
 | `push` | 14 |
-| `settings` | 14 |
 | `deploycheck_test` | 13 |
 
 ---
@@ -59,7 +59,7 @@ ORPHAN     = 1540
 | **العيوب** | 28 | 22 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 47 | 29 | 18 |
-| **إعداداتُ السلوك** | 153 | 15 | 138 |
+| **إعداداتُ السلوك** | 149 | 13 | 136 |
 
 ---
 
@@ -110,9 +110,9 @@ ORPHAN     = 1540
 | **XG-10** | `BLOCKER` | — | `COVERED` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` · `TestFIN_XG10_DebtOffsetFromNextCommission` · `TestFIN_XG10_RepCommissionReversedOnRefund` · `TestFIN_XG10_RepWithdrewThenRefund` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 | **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` · `TestFIN_XG10_RepWithdrewThenRefund` |
 | **XG-12** | `CRITICAL` | — | `COVERED` | `TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated` · `TestXG12_C1_ConcurrentRequestsCannotOverReserve` · `TestXG12_C2_ReserveVsSpend` · `TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit` · `TestXG12_F1F2_CreationIsOneUnit` · `TestXG12_F3F5_TerminalStateNeedsItsMoneyTruth` · `TestXG12_F4_AuditFailureRollsBackPayout` · `TestXG12_T1_RequestReservesAndSpendSeesAvailable` · `TestXG12_T2_PaidDebitsAndReleases` · `TestXG12_T3_RejectAndFailReleaseWithoutDebit` · `TestXG12_T4_ProcessingHoldsWithoutDebit` · `TestXG12_T5_ReversedCompensates` · `TestXG12_TreasuryCannotReserve` |
-| **XG-13** | `HIGH` | — | `COVERED` | `TestXG13_DefaultIsPricingMargin` · `TestXG13_InvalidStoredValueFailsSafe` · `TestXG13_UnknownModeIsRejected` · `TestXG14_ReversalMirrorsSettlementInEveryMode` · `TestXG14_ThreeModesGiveTheirContract` · `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
-| **XG-14** | `CRITICAL` | — | `COVERED` | `TestXG13_DefaultIsPricingMargin` · `TestXG13_InvalidStoredValueFailsSafe` · `TestXG13_UnknownModeIsRejected` · `TestXG14_ReversalMirrorsSettlementInEveryMode` · `TestXG14_ThreeModesGiveTheirContract` |
-| **XG-15** | `HIGH` | `sales.activation_orders` | `NOT_IMPLEMENTED` | — |
+| **XG-13** | `HIGH` | — | `COVERED` | `TestSETTINGS_CommissionSourceToggleRemoved` · `TestSETTINGS_RepCommissionFromWholePlatformProfit` · `TestSETTINGS_RepCommissionReversalMirrorsSettlement` · `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
+| **XG-14** | `CRITICAL` | — | `COVERED` | `TestSETTINGS_CommissionSourceToggleRemoved` · `TestSETTINGS_RepCommissionFromWholePlatformProfit` · `TestSETTINGS_RepCommissionReversalMirrorsSettlement` |
+| **XG-15** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-16** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-17** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-18** | `BLOCKER` | — | `COVERED` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
@@ -122,10 +122,10 @@ ORPHAN     = 1540
 | **XG-22** | `BLOCKER` | — | `COVERED` | `TestXG22_SuspendDuringTransitionIsDeterministic` · `TestXG22_T10_EnforcementIsServerSide` · `TestXG22_T1_SuspendedWithoutActiveOrderIsDenied` · `TestXG22_T2_SuspendedDriverCanFinishActiveOrder` · `TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder` · `TestXG22_T4_ExceptionEndsAtTerminalState` · `TestXG22_T6_NormalActorUnchanged` · `TestXG22_T7_OpsCanStillResolveTheOrder` · `TestXG22_T8_BlockedHasNoException` · `TestXG22_T9_ExceptionDoesNotLeakAcrossRoles` |
 | **XG-23** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-24** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-25** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
-| **XG-26** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
-| **XG-27** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
-| **XG-28** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-25** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_StaleSourceRowIgnored` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-26** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_StaleSourceRowIgnored` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-27** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_StaleSourceRowIgnored` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-28** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_StaleSourceRowIgnored` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
 | **XG-29** | `BLOCKER` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-32** | `CRITICAL` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` · `TestXG32_ConcurrentTargetCrossingGrantsOnce` · `TestXG32_FailureRollbackThenRetryGrantsOnce` · `TestXG32_FirstConversionGrantsRewardImmediately` · `TestXG32_FurtherConversionsDoNotRepeatReward` · `TestXG32_PreviousMonthDoesNotSatisfyTarget` · `TestXG32_TargetTwoGrantsOnSecondOnly` |

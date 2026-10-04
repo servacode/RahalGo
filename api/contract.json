@@ -6,7 +6,7 @@
       "path": "/api/v1/admin/app-file",
       "handler": "handleDeleteAppFile",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "removed",
@@ -22,7 +22,7 @@
       "path": "/api/v1/admin/app-file",
       "handler": "handleUploadAppFile",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "bytes",
@@ -4563,6 +4563,26 @@
         {
           "name": "settings",
           "type": "unknown"
+        },
+        {
+          "name": "topics",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/settings/money-example",
+      "handler": "handleSettingsMoneyExample",
+      "auth": true,
+      "capability": "«بحسب المفتاح»",
+      "response": [
+        {
+          "name": "@computeMoneyExample",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -4582,6 +4602,10 @@
         }
       ],
       "response": [
+        {
+          "name": "unchanged",
+          "type": "bool"
+        },
         {
           "name": "updated",
           "type": "bool"

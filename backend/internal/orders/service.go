@@ -577,7 +577,13 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// `validatePromo` أدناه، **والسائقُ يأخذ هذا الأساسَ لا الصفرَ** — قرارُ
 	// المالك: **العرضُ مموَّلٌ من المنصّة**، والفرقُ يخرج من الخزينة بالحساب
 	// الفرقيّ تلقائيّاً. فيُلتقَط هنا قبل الخصم، ويُثبَّت مع الطلب (`driver_fee`).
-	driverFee := deliveryFee
+	//
+	// **وحصّةُ المنصّة من الأجرة تُقتطع منه** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات
+	// البند ١): **نسبةٌ واحدةٌ لكلّ الأنواع** — كان العاديُّ لا يقرؤها أبداً.
+	// **وتُلقَط على الطلب** (`snap_platform_delivery_percent`) فلا يمسّ رفعُها
+	// غداً طلبَ اليوم. **وافتراضُها صفر** — فلا يتبدّل شيءٌ حتّى تُضبط.
+	platformPct := unit.platformDeliveryPercent(ctx, tx)
+	driverFee := DriverFeeAfterShare(deliveryFee, platformPct)
 
 	// الإنشاء الذرّي
 
@@ -663,17 +669,17 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			promo_code, notes, created_by,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders, driver_fee,
-			promo_delivery_waived)
+			promo_delivery_waived, snap_platform_delivery_percent)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21, $22)
+			$17, $18, $19, $20, $21, $22, $23)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
-		deliveryWaived).Scan(&orderID)
+		deliveryWaived, platformPct).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}
