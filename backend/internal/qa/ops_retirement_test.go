@@ -25,8 +25,11 @@ import (
 //	             **ولا يُحذَف صفُّه** — وذاك دورةُ تنظيفٍ أخرى.
 
 // opsFinalCaps **قدراتُ العمليّات كما أقرّها المالك** — لا أكثرَ ولا أقلّ.
+//
+// **و`emergencies.manage` بقرار المالك ٢٠٢٦-١٠-٠٤** (قسمُ «الطلبات»، البند ٧): من
+// يوزّع الطلبات يرى الحادثَ ويستلمه — **والطوارئُ وحدَها لا `support.manage`.**
 var opsFinalCaps = []string{
-	"analytics.read", "drivers.manage", "drivers.read", "merchants.read",
+	"analytics.read", "drivers.manage", "drivers.read", "emergencies.manage", "merchants.read",
 	"orders.intervene", "orders.read", "settings.read",
 	"users.contact.read", "users.read",
 }

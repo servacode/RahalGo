@@ -4,17 +4,17 @@
   {
    "code": "analytics.read",
    "description": "قراءةُ التحليلات",
-   "guards_routes": 6
+   "guards_routes": 8
   },
   {
    "code": "audit.read",
    "description": "قراءةُ سجلّ التدقيق",
-   "guards_routes": 1
+   "guards_routes": 3
   },
   {
    "code": "content.manage",
    "description": "لافتاتٌ وعروضٌ ومحتوى",
-   "guards_routes": 20
+   "guards_routes": 28
   },
   {
    "code": "drivers.manage",
@@ -27,6 +27,11 @@
    "guards_routes": 2
   },
   {
+   "code": "emergencies.manage",
+   "description": "قراءةُ الطوارئ واستلامُها",
+   "guards_routes": 5
+  },
+  {
    "code": "finance.export",
    "description": "سحبُ الدفتر وكشفِ الطلبات ملفّاً",
    "guards_routes": 2
@@ -34,12 +39,17 @@
   {
    "code": "finance.manage",
    "description": "قيدُ محفظةٍ ومصروفٌ وخزينة",
-   "guards_routes": 14
+   "guards_routes": 15
   },
   {
    "code": "finance.read",
    "description": "قراءةُ المال والتقارير الماليّة",
    "guards_routes": 17
+  },
+  {
+   "code": "finance.recompute",
+   "description": "إعادةُ حساب تسوية طلبٍ مُغلق",
+   "guards_routes": 1
   },
   {
    "code": "merchants.manage",
@@ -54,7 +64,7 @@
   {
    "code": "merchants.verify",
    "description": "مراجعةُ المرشَّحين والقوائم",
-   "guards_routes": 4
+   "guards_routes": 2
   },
   {
    "code": "observability.read",
@@ -69,12 +79,12 @@
   {
    "code": "orders.intervene",
    "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
-   "guards_routes": 10
+   "guards_routes": 12
   },
   {
    "code": "orders.read",
    "description": "قراءةُ الطلبات ولوحةِ العمليّات",
-   "guards_routes": 10
+   "guards_routes": 12
   },
   {
    "code": "payouts.decide",
@@ -104,7 +114,7 @@
   {
    "code": "settings.general.manage",
    "description": "إعداداتٌ عامّةٌ ومحتوى",
-   "guards_routes": 20
+   "guards_routes": 21
   },
   {
    "code": "settings.read",
@@ -119,7 +129,7 @@
   {
    "code": "support.manage",
    "description": "التذاكرُ والنزاعاتُ والطوارئ",
-   "guards_routes": 13
+   "guards_routes": 8
   },
   {
    "code": "users.cashban.lift",
@@ -193,7 +203,7 @@
   }
  ],
  "route_policy": {
-  "rules": 186,
+  "rules": 203,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -201,9 +211,11 @@
    "content.manage",
    "drivers.manage",
    "drivers.read",
+   "emergencies.manage",
    "finance.export",
    "finance.manage",
    "finance.read",
+   "finance.recompute",
    "merchants.manage",
    "merchants.read",
    "merchants.verify",
@@ -228,6 +240,10 @@
   ]
  },
  "exemptions": [
+  {
+   "pattern": "/ops/status",
+   "reason": "**حالُ الخادم بكلمات لكلّ موظّف** — الشريطُ الأحمرُ أعلى اللوحة؛ يكفيه `RequireAnyCapability`، **ولا رقمَ ولا سببَ تقنيّاً في ردّه.**"
+  },
   {
    "pattern": "/settings/{key}",
    "reason": "**القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`)."
@@ -418,6 +434,17 @@
   },
   {
    "method": "POST",
+   "pattern": "/orders/{id}/goods/compensation",
+   "action": "finance.goods_compensation",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
    "pattern": "/users/{id}/incentive",
    "action": "finance.incentive",
    "target_type": "user",
@@ -447,6 +474,15 @@
     "amount"
    ],
    "need": "payouts.decide"
+  },
+  {
+   "method": "POST",
+   "pattern": "/orders/{id}/recompute",
+   "action": "finance.settlement_recomputed",
+   "target_type": "order",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.recompute"
   },
   {
    "method": "POST",

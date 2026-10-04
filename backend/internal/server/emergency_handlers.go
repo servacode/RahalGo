@@ -127,6 +127,8 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// وإعادتُها على إعادةٍ تُكرّر بلا فائدة (والانتقالُ من `dispatching`
 	// إلى `dispatching` يُخطئ). **أمّا الإخطارُ فيُعاد أدناه على الحالين.**
 	released := true
+	afterPickup := status == orders.StPickedUp || status == orders.StOnTheWay ||
+		status == orders.StAtDropoff
 	var others []emergencyOther
 	if fresh {
 		// **نقطةُ الاستلام البديلة — إن كانت البضاعةُ قد خرجت.**
@@ -134,8 +136,6 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 		// قبل الاستلام الطعامُ في المتجر، **فالبديلُ يذهب إليه كما كان.** وبعده
 		// الطعامُ مع المصاب، **فمن ذهب إلى المطعم استلم طلباً ثانياً من مطبخٍ
 		// حضّر واحداً** — فتُدفع البضاعةُ مرّتين.
-		afterPickup := status == orders.StPickedUp || status == orders.StOnTheWay ||
-			status == orders.StAtDropoff
 		if afterPickup {
 			if hasPoint {
 				if _, err := s.pg.Exec(ctx, `
@@ -189,7 +189,19 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 		if err := s.orders.ExcludeDriverTx(ctx, s.pg, orderID, driverID); err != nil {
 			s.logger.Error("الطارئ: تعذّر استثناءُ السائق", "order", orderID, "error", err)
 		}
-		if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
+		// ══════════════════════════════════════════════════════════════
+		// **والبضاعةُ مع المصاب تقرّر الإدارةُ مصيرَها** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// «لا تُرسَل آليّاً إلى سائقٍ جديدٍ يأخذها من موضع الأوّل» — **يأخذها
+		// سائقٌ آخر، أو تعود للمتجر، أو يُنهى الطلب: والقرارُ في كلّ مرّةٍ
+		// للمكتب.** فيبقى الطلبُ حيث هو بعلامة الطارئ في لوحة الطلبات، **ومن
+		// هناك يُرسَل لسائقٍ آخر بضغطةٍ** (`→ dispatching` بسببٍ إلزاميّ).
+		//
+		// **وقبل الاستلام يُحرَّر كما كان** — الطعامُ في المتجر، ولا قرارَ يُنتظَر.
+		if afterPickup {
+			released = false
+		} else if _, err := s.orders.Transition(ctx, driverID, []string{"ops"},
 			orderID, orders.StDispatching, "طارئٌ لدى السائق"); err != nil {
 			released = false
 			s.logger.Error("الطارئ: تعذّر تحرير الطلب", "order", orderID, "error", err)
@@ -225,9 +237,12 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 			body += " · #" + strconv.FormatInt(o.Number, 10) + " البضاعةُ معه — لم يُحرَّر، اتّصل به"
 		}
 	}
-	s.notify.NotifyOps(ctx, notifications.Input{
+	// **ومن يُنذَر بقدرته لا باسم دوره** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦): من
+	// يتدخّل في الطلبات ومن يملك الدعمَ أو الطوارئ. **والرابطُ يفتح غرفةَ
+	// الطوارئ** — كان يفتح صفحةَ الطلبات (البند ٢٦).
+	s.notify.NotifyCaps(ctx, orders.EmergencyAlertCaps, notifications.Input{
 		Kind: notifications.KindOrder, Title: notifTitles.driverEmergency, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+		Entity: "order", EntityID: orderID, Href: "/dashboard/emergencies",
 	})
 	s.audit(r, "driver.emergency", "order", orderID, map[string]any{
 		"emergency_id": emergencyID, "released": released, "status_was": status,

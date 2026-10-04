@@ -199,34 +199,26 @@ func TestML12_WithdrawingLastProductHidesSection(t *testing.T) {
 		t.Fatalf("**القسمُ لم يُولد عامراً**: عدٌّ %d موجودٌ %v", count, ok)
 	}
 
-	// **ثلاثُ صورٍ للسحب** — **وكلُّها تُخرج الصنفَ من عدّ الوجود.**
+	// **صورتا السحب**: نفادٌ يُخرجه من الطلب، **وحذفٌ يُخرجه من الوجود.**
 	for _, step := range []struct {
 		name string
 		sql  string
 	}{
 		{"غيرُ متوفّر", `UPDATE menu_items SET available = false WHERE id = $1::uuid`},
-		{"غيرُ معتمَد", `UPDATE menu_items SET available = true, approved = false WHERE id = $1::uuid`},
 	} {
 		if _, err := hh.Pool.Exec(ctxBG(), step.sql, it.ID); err != nil {
 			t.Fatalf("%s: %v", step.name, err)
 		}
-		got, orderable, _ := sectionCounts(t, hh, it.SectionID, "")
-		switch step.name {
-		case "غيرُ معتمَد":
-			if got != 0 {
-				t.Errorf("**آخرُ صنفٍ %s وعدُّ القسم %d** — "+
-					"**فيُفتح القسمُ على فراغ.**", step.name, got)
-			}
-		default:
-			// **وغيرُ المتوفّر يبقى في الوجود ويخرج من الطلب** —
-			// **وهو قرارُ المالك عينُه**: **البنيةُ للوجود لا للدوام.**
-			if orderable != 0 {
-				t.Errorf("**صنفٌ غيرُ متوفّرٍ ما زال يُعَدّ مطلوباً**: %d", orderable)
-			}
+		_, orderable, _ := sectionCounts(t, hh, it.SectionID, "")
+		// **وغيرُ المتوفّر يبقى في الوجود ويخرج من الطلب** —
+		// **وهو قرارُ المالك عينُه**: **البنيةُ للوجود لا للدوام.**
+		// (**ولا «غيرُ معتمَد» بعد اليوم** — رُفعت المراجعة ٢٠٢٦-١٠-٠٤.)
+		if orderable != 0 {
+			t.Errorf("**صنفٌ غيرُ متوفّرٍ ما زال يُعَدّ مطلوباً**: %d", orderable)
 		}
 		// **ويُعاد الحالُ قبل الخطوة التالية.**
 		if _, err := hh.Pool.Exec(ctxBG(),
-			`UPDATE menu_items SET available = true, approved = true WHERE id = $1::uuid`,
+			`UPDATE menu_items SET available = true WHERE id = $1::uuid`,
 			it.ID); err != nil {
 			t.Fatalf("إعادةُ الصنف: %v", err)
 		}

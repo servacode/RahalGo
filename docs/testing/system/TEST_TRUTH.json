@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 405,
+    "routes": 423,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 69,
-    "notify_targeted": 24,
+    "notify_sites": 66,
+    "notify_targeted": 23,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 173,
-    "behaviour_settings": 138,
-    "order_fields": 93,
-    "test_files": 472,
-    "test_funcs": 1952
+    "setting_defs": 178,
+    "behaviour_settings": 143,
+    "order_fields": 94,
+    "test_files": 479,
+    "test_funcs": 1984
   },
   "flows": [
     {
@@ -4060,21 +4060,18 @@
     },
     {
       "key": "drivers.offer_timeout_sec",
-      "group": "drivers",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
-        "F-07",
-        "F-08",
-        "F-13",
-        "F-27"
+        "F-33"
       ],
       "apps": [
-        "admin",
         "customer",
         "driver",
-        "merchant"
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -4719,25 +4716,6 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "merchants.menu_requires_approval",
-      "group": "merchants",
-      "kind": "bool",
-      "sensitive": false,
-      "money": false,
-      "flows": [
-        "F-04",
-        "F-05",
-        "F-28"
-      ],
-      "apps": [
-        "admin",
-        "customer",
-        "merchant"
-      ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
-    },
-    {
       "key": "notify.engagement_daily_cap",
       "group": "platform",
       "kind": "int",
@@ -4792,27 +4770,62 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "orders.accept_timeout_min",
-      "group": "merchants",
+      "key": "ops.outage_notify_min",
+      "group": "platform",
       "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
-        "F-04",
-        "F-05",
-        "F-28"
+        "F-33"
       ],
       "apps": [
-        "admin",
         "customer",
-        "merchant"
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "ops.stuck_reminder_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.accept_timeout_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "orders.auto_accept_min",
-      "group": "platform",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -4915,7 +4928,7 @@
     },
     {
       "key": "orders.delivery_timeout_min",
-      "group": "platform",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -4933,21 +4946,18 @@
     },
     {
       "key": "orders.driver_timeout_min",
-      "group": "drivers",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
-        "F-07",
-        "F-08",
-        "F-13",
-        "F-27"
+        "F-33"
       ],
       "apps": [
-        "admin",
         "customer",
         "driver",
-        "merchant"
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -4987,6 +4997,24 @@
         "customer",
         "driver",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.manual_assign_after_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -5053,6 +5081,42 @@
     {
       "key": "orders.source_proximity_m",
       "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.staff_presence_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.unattended_auto_accept_min",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -5692,6 +5756,24 @@
       "status": "REGRESSION_TEST_PRESENT"
     },
     {
+      "key": "security.audit_session_retention_days",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "security.force_password_change",
       "group": "platform",
       "kind": "bool",
@@ -6110,6 +6192,12 @@
       "name": "TestContract_CoversEveryRoute",
       "file": "internal/apidoc/contract_test.go",
       "package": "apidoc",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersBoardPolicy",
+      "file": "internal/authz/orders_board_policy_test.go",
+      "package": "authz",
       "orphan": true
     },
     {
@@ -7864,6 +7952,48 @@
       "orphan": true
     },
     {
+      "name": "TestStuckAlert_RoutesByCapabilityAndRealertsOnNewReason",
+      "file": "internal/orders/board_notify_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAssign_ServerGuards",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoAccept_WhenOfficeEmpty",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestBoard_CountsMatchFilteredLists",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestBoard_PriorityOrder",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_CompensationCappedAndOnce",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_OnlyAfterHandedAndToTripDestination",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestDriverQueueTopic",
       "file": "internal/orders/broadcast_test.go",
       "package": "orders",
@@ -9159,6 +9289,12 @@
     {
       "name": "TestTerminal",
       "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestStuckReminder_RepeatsEveryNMinutesUntilSomeoneActs",
+      "file": "internal/orders/stuck_reminder_internal_test.go",
       "package": "orders",
       "orphan": true
     },
@@ -23543,6 +23679,42 @@
       "orphan": true
     },
     {
+      "name": "TestAuditLog_AppendOnlyAtDatabase",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_ExportWritesItself",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_MissingActionsAreLogged",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_MoneyHiddenWithoutFinanceRead",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_RetentionPrunesOnlyOldSessionRows",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_SearchFiltersAndDamascusDay",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestXG41B_AuthUnavailableHasItsOwnMessage",
       "file": "internal/server/auth_unavailable_message_test.go",
       "package": "server",
@@ -24108,6 +24280,36 @@
       "orphan": true
     },
     {
+      "name": "TestExpansion_GroupsAndExcludesCancelled",
+      "file": "internal/server/expansion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExpansion_ManualNotifyOnceForZoneOnly",
+      "file": "internal/server/expansion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExpansion_NoAutomaticNotifyOnSave",
+      "file": "internal/server/expansion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExpansion_ReminderCountsCoveredNotNotified",
+      "file": "internal/server/expansion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExpansion_WaitingEqualsHomeFigure",
+      "file": "internal/server/expansion_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestExpenses_LeaveTreasuryAndStayOutOfLosses",
       "file": "internal/server/expenses_test.go",
       "package": "server",
@@ -24258,8 +24460,32 @@
       "orphan": true
     },
     {
-      "name": "TestPendingMenu_CountsWholeQueueNotThePage",
-      "file": "internal/server/menu_pending_count_test.go",
+      "name": "TestMKT1_NoApprovalNeededForNewItems",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT2_DuplicateSectionNameRefusedNormalized",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT3_DeleteSectionMovesItemsToChosenSection",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT4_MergeDuplicateSectionsKeepsOneWithAllItems",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT5_NewItemsFirstAndCounterResetsOnOpen",
+      "file": "internal/server/market_test.go",
       "package": "server",
       "orphan": true
     },
@@ -24390,6 +24616,42 @@
       "orphan": true
     },
     {
+      "name": "TestJudgeOps_DegradedOnFailingPushAndPoolWaits",
+      "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsHealth_FailingPushDegradesTheEndpoint",
+      "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMonitor_CapabilitySplit",
+      "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMonitor_StuckListEqualsBoardFilter",
+      "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOutage_NotifiesOwnerAfterThreshold",
+      "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOverview_NoDriverCardEqualsFilter",
+      "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestTransfer_AtStoreSendsDriverToNewStore",
       "file": "internal/server/order_transfer_at_store_test.go",
       "package": "server",
@@ -24422,6 +24684,30 @@
     {
       "name": "TestTransfer_MappingValidation",
       "file": "internal/server/order_transfer_mapping_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergencyAfterPickup_OfficeDecides",
+      "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_OperationsCannotWriteCompensation",
+      "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersBoardGrants",
+      "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTransfer_MerchantDeliveryRefused",
+      "file": "internal/server/orders_board_rules_test.go",
       "package": "server",
       "orphan": true
     },
@@ -24716,18 +25002,6 @@
     {
       "name": "TestRepMenuRoutes_NoSectionDoors",
       "file": "internal/server/rep_media_route_test.go",
-      "package": "server",
-      "orphan": true
-    },
-    {
-      "name": "TestRepMenuWrite_AvailabilityIsNotHeld",
-      "file": "internal/server/rep_menu_review_test.go",
-      "package": "server",
-      "orphan": true
-    },
-    {
-      "name": "TestRepMenuWrite_HeldForReviewLikeMerchant",
-      "file": "internal/server/rep_menu_review_test.go",
       "package": "server",
       "orphan": true
     },

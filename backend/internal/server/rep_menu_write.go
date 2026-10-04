@@ -10,30 +10,13 @@ package server
 //  الأدمن والمتجر نفسه والزبون أيضاً».)
 //
 // **والجوابُ نعم — وفوراً**: الثلاثةُ يكتبون في `menu_items` نفسِه،
-// **والزبونُ يقرأ منه بشرطَي `available AND approved`.**
+// **والزبونُ يقرأ منه بشرط `available`.**
 //
-// # لكنّ بابَ المندوب كان يحمل حارساً واحداً
+// # ولا مراجعةَ قبل النشر
 //
-// **كان يستعمل معالجاتِ الإدارة حرفاً** (`handleCreateItem` وأختيها)،
-// **فورث إعفاءَ الأدمن من المراجعة.** والتعليقُ في `menu_approval.go`
-// يقول لماذا أُعفي الأدمن:
-//
-//     «الحارسُ في باب المتجر لا في `catalog`: **الأدمنُ هو المُراجِع**،
-//      وما يكتبه منشورٌ لحظتَه.»
-//
-// **وهو صحيحٌ في الأدمن — والمندوبُ ليس أدمن.**
-//
-// **فمفتاحُ `merchants.menu_requires_approval` كان يحرس نصفَ الأبواب**:
-// يُشغَّل فيُحجب ما يكتبه المتجر، **ويمرّ ما يكتبه المندوبُ إلى السوق
-// بلا مراجعة.**
-//
-// **وإعدادٌ يحرس نصفَ الأبواب أخطرُ من إعدادٍ لا يحرس شيئاً**: من شغّله
-// ظنّ القوائمَ كلَّها محروسة، **فبنى عليه.** (وهي علّةُ الهجرة ٠٠٦٤
-// نفسُها في مرآتها — عادت في بابٍ ثانٍ.)
-//
-// **والمندوبُ أَولى بالمراجعة من المتجر**: هو من يكتب على هاتفه واقفاً
-// في السوق بسرعة، **وحجّةُ الهجرة تخصّه قبل غيره**: «سعرٌ كُتب بخطأ
-// صفرٍ زائدٍ يُباع به».
+// **كان هنا حارسُ مراجعةٍ يقرأ `merchants.menu_requires_approval`** —
+// **ورُفع هو ومفتاحُه** بقرار المالك ٢٠٢٦-١٠-٠٤: «ما في داعي للموافقة
+// على الصنف أساساً». **فما يكتبه المندوبُ أو المتجرُ يظهر فوراً.**
 //
 // # وصاحبُ المتجر يُخطَر بما يجري في قائمته
 //
@@ -41,9 +24,7 @@ package server
 // المتجر شيء** — يكتشفه إن فتح تطبيقَه ونظر. **وقائمتُه مصدرُ رزقه، لا
 // دفترُ ملاحظاتٍ يُكتب فيه بلا علمه.**
 //
-// **والقاعدةُ واحدةٌ في الاثنين: ما يُراجَع هو ما يُخطَر به.**
-//
-// **والتوفّرُ خارجَهما** — «نفد الصنف» قرارُ مطبخٍ في لحظته (الهجرة
+// **والتوفّرُ لا يُخطَر به** — «نفد الصنف» قرارُ مطبخٍ في لحظته (الهجرة
 // ٠٠٦٤). **ومندوبٌ يقلب التوفّرَ عشرين مرّةً يرسل عشرين إشعاراً**
 // فيُطفئها صاحبُ المتجر، **فيخسر الإشعارَ المهمّ معها.**
 
@@ -69,7 +50,7 @@ const (
 // notifyMerchantOfRepEdit **يُخبر صاحبَ المتجر.**
 //
 // **ويُنادى بعد نجاح الكتابة لا داخلها** — تعثّرُ الإشعار لا يُبطل
-// تعديلاً وقع. **وهو النمطُ نفسُه الذي تسير عليه `holdForReview`.**
+// تعديلاً وقع.
 func (s *Server) notifyMerchantOfRepEdit(r *http.Request, merchantID, title string) {
 	if merchantID == "" || s.notify == nil {
 		return
@@ -85,9 +66,7 @@ func (s *Server) notifyMerchantOfRepEdit(r *http.Request, merchantID, title stri
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: *owner,
 		Kind:   notifications.KindAccount, Title: title,
-		// **والوجهةُ قائمتُه** — هي نفسُها التي تقصدها مراجعةُ الصنف
-		// حين يُنشر أو يُردّ (`menu_approval.go`). **ووجهةٌ ثانيةٌ لشيءٍ
-		// واحدٍ تفترق يوماً.**
+		// **والوجهةُ قائمتُه.**
 		Entity: "merchant", EntityID: merchantID, Href: "/portal/menu",
 	})
 }
@@ -104,7 +83,7 @@ func (s *Server) merchantOfItem(ctx context.Context, itemID string) string {
 
 // handleRepCreateItem **صنفٌ جديدٌ يبنيه المندوبُ لعميله.**
 //
-// **ويُراجَع كلُّه** — لا شيءَ منه رآه أحدٌ بعد.
+// **ويظهر فوراً بلا مراجعة** — كصنف المتجر (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 func (s *Server) handleRepCreateItem(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
 	req, err := decode[catalog.MenuItemInput](r)
@@ -119,7 +98,6 @@ func (s *Server) handleRepCreateItem(w http.ResponseWriter, r *http.Request) {
 	}
 	// **والإدراجُ وعلامةُ منع التكرار في معاملةٍ واحدة** (`DUP-LEAD`) —
 	// صنفٌ أُدرج وضاع ردُّه فأُعيد **لا يُدرج ثانيةً**: يُعاد ردُّ الأوّل.
-	pending := s.menuNeedsApproval(r)
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		id, err := s.catalog.CreateItemIn(ctx, q, merchantID, *req)
 		if err != nil {
@@ -127,16 +105,21 @@ func (s *Server) handleRepCreateItem(w http.ResponseWriter, r *http.Request) {
 		}
 		return IdempotentBody{
 			Status:  http.StatusCreated,
-			Payload: map[string]any{"id": id, "pending_review": pending},
+			Payload: map[string]any{"id": id},
 			AfterCommit: func() {
 				s.catalog.AuditItemCreate(r.Context(), userIDFrom(r), id, clientIP(r))
-				if pending {
-					s.holdForReview(r, id)
-				}
+				s.touch("menu", "ops")
 				s.notifyMerchantOfRepEdit(r, merchantID, notifRepItemAdded)
 			},
 		}, nil
 	})
+}
+
+// touchesContent أيمسّ هذا التعديلُ ما يراه الزبون؟ — **والإتاحةُ وحدَها لا تمسّه.**
+func touchesContent(in catalog.MenuItemInput) bool {
+	return in.Name != nil || in.Description != nil || in.Price != nil ||
+		in.ImageMediaID != nil || in.PlatformSectionID != nil ||
+		in.MarginOverride != nil || in.SectionID != nil || in.Modifiers != nil
 }
 
 // handleRepUpdateItem **تعديلُ صنفٍ في قائمة عميله.**
@@ -156,17 +139,12 @@ func (s *Server) handleRepUpdateItem(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **والتوفّرُ وحدَه لا يُعلّق ولا يُخطِر** — الشرطُ واحدٌ للاثنين.
-	content := touchesContent(*req)
-	pending := s.menuNeedsApproval(r) && content
-	if pending {
-		s.holdForReview(r, itemID)
-	}
-	if content {
+	// **والتوفّرُ وحدَه لا يُخطِر** — «نفد» قرارُ مطبخٍ في لحظته.
+	if touchesContent(*req) {
 		s.notifyMerchantOfRepEdit(r,
 			s.merchantOfItem(r.Context(), itemID), notifRepItemChanged)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "pending_review": pending})
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
 // handleRepDeleteItem **حذفُ صنفٍ من قائمة عميله.**

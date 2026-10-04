@@ -124,6 +124,13 @@ var sensitiveActions = []Sensitive{
 	{"POST", "/expenses/{id}/void", "finance.expense_voided", "expense", 1, nil, ""},
 	{"POST", "/orders/{id}/compensate-driver", "finance.compensate_driver",
 		"order", 1, []string{"amount"}, ""},
+	// **وتعويضُ المتجر عن بضاعةٍ رُدّت — كأخيه تعويضِ السائق** (قرارُ المالك
+	// ٢٠٢٦-١٠-٠٤، البند ١٣): مالٌ يخرج من الخزينة بتقدير إنسان.
+	{"POST", "/orders/{id}/goods/compensation", "finance.goods_compensation",
+		"order", 1, []string{"amount"}, ""},
+	// **وإعادةُ حساب التسوية قيدٌ في الدفتر** (البند ١٥).
+	{"POST", "/orders/{id}/recompute", "finance.settlement_recomputed",
+		"order", 1, nil, ""},
 	// **والنقلُ الإداريُّ إلى `refunded` يعكس مالاً** (قرارُ المالك ٢٠٢٦-٠٩-٢٧):
 	// شرطيٌّ — يُؤكَّد حين `to=refunded` وحدَها، لا في كلّ انتقال. والاسمُ اسمُ
 	// أثرِ التدقيق (`ops.order_transition`).

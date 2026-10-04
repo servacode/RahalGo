@@ -75,7 +75,6 @@ interface SectionItem {
   /** **سعرُ الشراء** — ما وضعه المتجر، وأصلُ الحسبتين. */
   merchant_price: number;
   available: boolean;
-  approved: boolean;
   merchant_name: string;
   merchant_status: string;
   thumb_url: string | null;
@@ -102,11 +101,10 @@ interface SectionItem {
 /**
  * **حالُ الصنف — وسببُ ظهوره أو غيابه.**
  *
- * **والترتيبُ مقصود**: يُقرأ أوّلُ سببٍ يمنع الظهور. صنفٌ غيرُ مُقَرٍّ ومتجرُه
- * مُطفأٌ **لا يُقال عنه «متجرُه مُطفأ»** — المراجعةُ أوّلُ بابٍ يجب أن يُفتح.
+ * **والترتيبُ مقصود**: يُقرأ أوّلُ سببٍ يمنع الظهور. **ولا «بانتظار المراجعة»**
+ * — رُفعت المراجعة (قرارُ المالك ٢٠٢٦-١٠-٠٤).
  */
 function itemState(it: SectionItem): { label: string; variant: "success" | "warning" | "danger" } {
-  if (!it.approved) return { label: S.itemPending, variant: "warning" };
   if (it.merchant_status !== "active") return { label: S.itemStoreOff, variant: "danger" };
   if (!it.available) return { label: S.itemOut, variant: "warning" };
   return { label: S.itemLive, variant: "success" };
@@ -264,7 +262,6 @@ export default function SectionPage() {
           >
             <option value="">{S.allStates}</option>
             <option value="live">{S.itemLive}</option>
-            <option value="pending">{S.itemPending}</option>
             <option value="out">{S.itemOut}</option>
             <option value="store_off">{S.itemStoreOff}</option>
           </Select>

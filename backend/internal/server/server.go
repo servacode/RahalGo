@@ -100,6 +100,9 @@ type Server struct {
 	// (`OTP_PROVIDER=dev`)، **وحقلٌ يُلزم نوعاً واحداً يجعل التطويرَ
 	// يحمل واتساباً لا يحتاجه.**
 	merchant MerchantNotifier
+	// opsT **ذاكرةُ مراقبة التشغيل** — نافذةُ الحكم وحالُ الانقطاع
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). انظر `ops_health.go`.
+	opsT opsTracker
 }
 
 // MerchantNotifier **من يبلّغ متجراً بطلب** — يُرضيه البوت.
@@ -1034,6 +1037,10 @@ func (s *Server) Router() http.Handler {
 			// حراسةً ثانيةً بجانب القائمة بنى معجمَ صلاحيّاتٍ
 			// ثانياً ينحرف.**
 			r.Get("/ops/health", s.handleOpsHealth)
+			// **وشاشةُ المراقب لمن يرى الطلبات، وحالُ الخادم لكلّ موظّف**
+			// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البندان ٢ و٣).
+			r.Get("/ops/monitor", s.handleOpsMonitor)
+			r.Get("/ops/status", s.handleOpsStatus)
 
 			// ══════════════════════════════════════════════════════
 			// **خريطةُ العمليات**
@@ -1067,6 +1074,14 @@ func (s *Server) Router() http.Handler {
 					s.requirePerm(opsmap.PermViewDemand, s.handleOpsMapRequests))
 				r.Patch("/coverage-requests/{id}",
 					s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapRequestUpdate))
+
+				// **«طلباتُ التوسّع» قسمٌ مستقلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+				// **والإبلاغُ بزرٍّ يدويٍّ لمن يملك التغطية.**
+				r.Get("/expansion", s.requirePerm(opsmap.PermViewDemand, s.handleExpansion))
+				r.Get("/expansion/reminder",
+					s.requirePerm(opsmap.PermViewDemand, s.handleExpansionReminder))
+				r.Post("/expansion/notify",
+					s.requirePerm(opsmap.PermManageCoverage, s.handleExpansionNotify))
 
 				// **والفروعُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **وافتتاحُ فرعٍ قرارُ عملٍ لا تشغيلٌ يوميّ.**
@@ -1151,6 +1166,21 @@ func (s *Server) Router() http.Handler {
 			// **وأصنافُ القسم كما هي** — لا كما يراها الزبون: من يفتح قسماً
 			// ليقرّر إطفاءَه يريد ما فيه كلَّه، **بما لا يظهر ولماذا.**
 			r.Get("/sections/{id}/items", s.handleSectionItems)
+			// ══════════════════════════════════════════════════════════
+			// **«السوق» — أصنافُ كلّ المتاجر** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **والأحدثُ أوّلاً بعلامة «جديد»** — وعدّادُ القائمة الجانبيّة
+			// يُقرأ من `new-count` ويُصفَّر بـ`seen` حين يُفتح السوق.
+			r.Get("/market/items", s.handleMarketItems)
+			r.Post("/market/items/bulk", s.handleMarketItemsBulk)
+			r.Get("/market/new-count", s.handleMarketNewCount)
+			r.Post("/market/seen", s.handleMarketSeen)
+			r.Get("/market/stores", s.handleMarketStores)
+			r.Get("/market/quality", s.handleMarketQuality)
+			// **وحذفُ البيانات التجريبيّة بقائمةٍ صريحةٍ أكّدها الموظّف** —
+			// لا حذفَ آليّاً ولا بنمطٍ يُرسَل.
+			r.Post("/market/test-data/delete", s.handleMarketTestDataDelete)
 			r.Get("/merchants", s.handleListMerchants)
 			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
 			// **ومتجران متشابها الاسم يُخلطان.**
@@ -1168,9 +1198,12 @@ func (s *Server) Router() http.Handler {
 			// **رئيسيّةُ مدير المنصّة** — `platform.overview` (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/overview", s.handleAdminOverview)
 			r.Get("/reports", s.handleReports)
-			// سجلّ الأحداث — للأدمن والمالية دون العمليات: يحوي مبالغ التعويضات
-			// والسحوبات وأرصدة المحافظ، وموظّف العمليات ليس طرفاً في المال.
+			// سجلّ الأحداث — لكلّ من ملك `audit.read`، **والمبالغُ تُحذف في
+			// الخادم عمّن لا يملك قراءةَ المال** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/audit", s.handleAdminAudit)
+			r.Get("/audit/actors", s.handleAdminAuditActors)
+			// **والتصديرُ يُكتب في السجلّ نفسِه قبل أن يُسلَّم.**
+			r.Get("/audit/export", s.handleAdminAuditExport)
 			// حاملو الخزينة المحتملون — للأدمن وحده (merchant_violations.go)
 			r.Get("/treasury-candidates", s.handleTreasuryCandidates)
 			// **والمدنُ تُدار من اللوحة لا بهجرة** — من أراد دمشقَ غداً
@@ -1227,6 +1260,8 @@ func (s *Server) Router() http.Handler {
 			// الإنشاء حصراً عبر واجهات الزبون (الموقع/التطبيق)
 			r.Get("/orders", s.handleListOrders)
 			r.Get("/orders/alerts", s.handleOrderAlerts)
+			// **عدّاداتُ لوحة الطلبات وإعداداتُها** — بشرط فلاترها (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Get("/orders/board", s.handleOrdersBoard)
 			r.Get("/orders/{id}", s.handleGetOrder)
 			// **وحديثُ طرفيه — يُقرأ ولا يُكتب.** (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «في حال حصول أيّ تجاوزٍ يمكننا الرجوع إليه».)
@@ -1291,6 +1326,13 @@ func (s *Server) Router() http.Handler {
 			r.Post("/roles/{code}/capabilities", s.handleGrantCapability)
 			r.Delete("/roles/{code}/capabilities/{cap}", s.handleRevokeCapability)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
+			// **ومرشّحو الإسناد اليدويّ بالقرب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠).
+			r.Get("/orders/{id}/assign-candidates", s.handleAssignCandidates)
+			// **و«استلمتها» على الطلب الجديد** — يُسكت الرنين (البند ٥).
+			r.Post("/orders/{id}/seen", s.handleOrderSeen)
+			// **«أنا عليه» على طلبٍ عالق** — يوقف تكرارَ تذكيره (قرارُ المالك
+			// ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٤).
+			r.Post("/orders/{id}/alert-ack", s.handleAlertAck)
 
 			// **ما بعد فشل الطلب** — من يحمل الخسارة (failure_aftermath.go).
 			//
@@ -1314,6 +1356,8 @@ func (s *Server) Router() http.Handler {
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
 			r.Post("/orders/{id}/goods", s.handleGoods)
+			// **والتعويضُ للماليّة بخطوةٍ ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٢).
+			r.Post("/orders/{id}/goods/compensation", s.handleGoodsCompensation)
 
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			// **العروضُ والخصومات** — لافتةٌ تُرى وخصمٌ يُطبَّق في الدفتر.
@@ -1363,10 +1407,6 @@ func (s *Server) Router() http.Handler {
 			// **التقييماتُ مجموعةً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا
 			// جوابَ له إلّا بفتح عشرين ملفّاً، **فلا يُفتح فلا يُعرف.**
 			r.Get("/ratings", s.handleAdminRatings)
-			// **طابورُ مراجعة القائمة** — يعمل حين يُرفع مفتاحُ
-			// `merchants.menu_requires_approval`، وكان المفتاحُ يَعِد ولا يفعل.
-			r.Get("/menu/pending", s.handlePendingMenuItems)
-			r.Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
 			// ══════════════════════════════════════════════════════════
 			// **ومركزُ الإشعارات** (`NT`، ٢٠٢٦-٠٩-١٥)
 			// ══════════════════════════════════════════════════════════
@@ -1425,6 +1465,8 @@ func (s *Server) Router() http.Handler {
 				// **وحارسُ الأدوار نُزع** — `ADG-2`: **السياسةُ
 				// المركزيّةُ تحكم كلَّ مسارٍ بقدرته**، **وحارسٌ
 				// بأسماء أدوارٍ فوقها يُعطّل دوراً مُنح.**
+				// **وترتيبُ الأقسام بالسحب** — هو ترتيبُها عند الزبون.
+				r.Put("/sections/order", s.handleOrderPlatformSections)
 				r.Post("/sections", s.handleCreatePlatformSection)
 				r.Patch("/sections/{id}", s.handleUpdatePlatformSection)
 				r.Delete("/sections/{id}", s.handleDeletePlatformSection)

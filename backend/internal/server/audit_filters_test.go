@@ -38,12 +38,9 @@ func TestAdminAudit_PagesHidesRefreshAndFiltersByDate(t *testing.T) {
 	ctx := context.Background()
 	actor, _, _ := twoCustomers(t, f)
 
-	if _, err := f.pool.Exec(ctx, `DELETE FROM audit_log`); err != nil {
-		t.Fatalf("تعذّر الإخلاء: %v", err)
-	}
-	t.Cleanup(func() {
-		_, _ = f.pool.Exec(context.Background(), `DELETE FROM audit_log`)
-	})
+	// **ولا إخلاءَ للسجلّ** — صار إضافةً فقط في القاعدة (الهجرة ٠٢٢٠، قرارُ
+	// المالك ٢٠٢٦-١٠-٠٤). **فيُقاس بفاعلٍ وُلد لهذا الفحص** (`actor=`)
+	// وتبويبِ «الكل» — والتبويبُ الافتراضيُّ صار «الأفعال الحساسة».
 
 	mk := func(action string, n, daysAgo int) {
 		for range n {
@@ -71,7 +68,7 @@ func TestAdminAudit_PagesHidesRefreshAndFiltersByDate(t *testing.T) {
 		} `json:"data"`
 	}
 	get := func(q string) res {
-		req := httptest.NewRequest(http.MethodGet, "/x?"+q, nil)
+		req := httptest.NewRequest(http.MethodGet, "/x?"+q+"&group=all&actor="+actor, nil)
 		c := context.WithValue(req.Context(), ctxRoles, []string{"admin"})
 		w := httptest.NewRecorder()
 		f.srv.handleAdminAudit(w, req.WithContext(c))

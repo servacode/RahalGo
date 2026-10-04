@@ -3,6 +3,8 @@ package qa
 import (
 	"context"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -54,8 +56,8 @@ func alertState(t *testing.T, h *Harness, oid string) (marked bool, intents int)
 		SELECT (SELECT alerted_at IS NOT NULL FROM orders WHERE id = $1::uuid),
 		       (SELECT count(*) FROM notifications
 		         WHERE entity = 'order' AND entity_id = $1::text
-		           AND title IN ('طلبٌ لم يقبله متجره', 'طلبٌ بلا سائق',
-		                         'طلبٌ تأخّر عن موعده'))`,
+		           AND title IN ('طلبٌ ينتظر قبولَ المكتب', 'طلبٌ مقبولٌ لم يُرسَل للمتجر',
+		                         'طلبٌ بلا سائق', 'طلبٌ تأخّر عن موعده'))`,
 		oid).Scan(&marked, &intents); err != nil {
 		t.Fatalf("قراءةُ حال الإنذار: %v", err)
 	}
@@ -159,10 +161,12 @@ func TestR22_W6_TwoWatchdogsAlertOnce(t *testing.T) {
 	// **فمقياسُ التكرار أن تزيد على عدد المستقبِلين.**
 	var desk int
 	if err := h.Pool.QueryRow(ctxBG(), `
+		-- **والمستقبِلون بالقدرة لا باسم الدور** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ٦).
 		SELECT count(DISTINCT u.id) FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id
-		WHERE ur.role_code = ANY($1) AND u.status = 'active'`,
-		[]string{"admin", "ops"}).Scan(&desk); err != nil {
+		JOIN role_capabilities rc ON rc.role_code = ur.role_code
+		WHERE rc.capability_code = ANY($1) AND u.status = 'active'`,
+		orders.StuckAlertCaps).Scan(&desk); err != nil {
 		t.Fatalf("عدُّ المكتب: %v", err)
 	}
 	t.Logf("مستقبِلو المكتب=%d", desk)

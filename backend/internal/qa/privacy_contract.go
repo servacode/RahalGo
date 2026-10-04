@@ -262,7 +262,9 @@ var OrderPrivacy = map[string]FieldRule{
 	"ended_by":       {Ref: "من أنهى — حكمٌ تشغيليٌّ للإدارة", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	// **لوحةُ الباب للإدارة وحدَها** (٢٠٢٦-١٠-٠٢): آخرُ بلاغٍ من السائق ومدّةُ انتظاره وأمرُ المكتب —
 	// **والسائقُ يقرأ أمرَه من `door_instruction`**، لا من هذا.
-	"door":        {Ref: "door_view.go · لوحةُ «عند باب الزبون»", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"door": {Ref: "door_view.go · لوحةُ «عند باب الزبون»", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	// **وما يحتاجه المكتبُ وحدَه** (`orders.BoardInfo`) — سعرُ الشراء والعرضُ الحيّ (٢٠٢٦-١٠-٠٤).
+	"board":       {Ref: "board.go · لوحةُ العمل", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"fault":       {Ref: "نسبةُ الخطأ — حكمٌ على طرف", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"fail_reason": {Ref: "سببُ التعذّر", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"goods_settled_to": {Ref: "لمن سُلّمت البضاعةُ — تسويةٌ داخليّة",

@@ -65,7 +65,11 @@ UPDATE driver_cash_boxes b SET held = COALESCE(
 DELETE FROM media WHERE kind = 'delivery_proof';
 
 -- ٥ · وسجلُّ التدقيق لما مُحي
+-- **والسجلُّ إضافةٌ فقط منذ الهجرة ٠٢٢٠** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فالمسحُ هنا
+-- يُطفئ حارسَه علناً ثمّ يعيده في المعاملة نفسِها. **ولا يُفعل هذا على الإنتاج.**
+ALTER TABLE audit_log DISABLE TRIGGER audit_log_append_only;
 DELETE FROM audit_log WHERE entity = 'order';
+ALTER TABLE audit_log ENABLE TRIGGER audit_log_append_only;
 
 -- ٦ · والإشعاراتُ — **كلُّها**، فهي عن أحداثٍ لم تعد موجودة
 DELETE FROM notifications;

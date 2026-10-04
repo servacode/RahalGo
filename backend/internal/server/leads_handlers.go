@@ -425,6 +425,21 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **ومَن ردّ الفرصةَ أو أعادها يُكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الرابع).
+	//
+	// كان التحديثُ بلا أثر — **والمندوبُ يسأل «مين رفض متجري؟» ولا جواب.**
+	leadAction := "ops.lead_rejected"
+	if req.Status == "new" {
+		leadAction = "ops.lead_reopened"
+	}
+	leadMeta := map[string]any{"name": storeName}
+	if note != "" {
+		leadMeta["note"] = note
+	}
+	if repID != nil {
+		leadMeta["sales_rep_id"] = *repID
+	}
+	s.audit(r, leadAction, "lead", id, leadMeta)
 	// الرفض يخصّ المندوب بقدر ما تخصّه الموافقة — وإلا بقي يلاحق عميلاً ميتاً.
 	// **والسببُ في متن الإشعار** — لا في صفحةٍ يُطلب منه أن يفتحها.
 	if req.Status == "rejected" && repID != nil {

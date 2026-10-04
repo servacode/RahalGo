@@ -1601,8 +1601,11 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 
 	var from string
 	var cashDue int64
-	err = s.db.QueryRow(ctx, `SELECT status, cash_due FROM orders WHERE id = $1`, orderID).
-		Scan(&from, &cashDue)
+	var hasDriver, excluded bool
+	err = s.db.QueryRow(ctx, `
+		SELECT status, cash_due, driver_id IS NOT NULL, $2::uuid = ANY(excluded_drivers)
+		FROM orders WHERE id = $1`, orderID, driverID).
+		Scan(&from, &cashDue, &hasDriver, &excluded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -1612,6 +1615,29 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	// الإسناد اليدوي مسموح من التحضير أو البحث عن سائق
 	if from != StPreparing && from != StDispatching {
 		return nil, ErrBadTransition
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وحرّاسُ الإسناد اليدويّ في المحرّك لا في الشاشة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت الشاشةُ وحدَها تُرشِّح** — فمن نادى المسارَ مباشرةً أسند طلباً:
+	//
+	//	لسائقٍ تركه        ← «لا يعود الطلبُ إلى من تركه أبداً» (مساءَ ٢٠٢٦-١٠-٠٢)
+	//	لسائقٍ خارج دوامه  ← يُخفى عن الطابور ولا يوصله أحد
+	//	لطلبٍ أخذه سائق    ← يكتب فوق من قبله في الثانية نفسِها
+	if hasDriver {
+		return nil, ErrOrderTaken
+	}
+	if excluded {
+		return nil, ErrDriverExcluded
+	}
+	var onShift bool
+	if err := s.db.QueryRow(ctx,
+		`SELECT COALESCE(on_shift, false) FROM users WHERE id = $1`, driverID).Scan(&onShift); err != nil {
+		return nil, err
+	}
+	if !onShift {
+		return nil, ErrDriverOffShift
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **السقفُ النقديُّ — والفحصُ والإسنادُ في معاملةٍ واحدة**
@@ -1646,10 +1672,22 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	}); err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE orders SET driver_id = $2, updated_at = now() WHERE id = $1`,
-		orderID, driverID); err != nil {
+	// **والكتابةُ مشروطةٌ — لا تكتب فوق سائقٍ قبل في الثانية نفسِها** (البند ١٣).
+	//
+	// **والعرضُ الحيُّ لغيره يُمحى معها**: سائقٌ ثانٍ يرنّ هاتفُه بطلبٍ أُسند —
+	// يضغط «قبول» فيُردّ، **ويقرأ المنصّةَ تعبث به.**
+	tag, err := tx.Exec(ctx, `
+		UPDATE orders SET driver_id = $2, updated_at = now(),
+		       offered_driver_id = NULL, offer_expires_at = NULL
+		 WHERE id = $1 AND driver_id IS NULL
+		   AND status IN ('preparing','dispatching')
+		   AND NOT ($2::uuid = ANY(excluded_drivers))`,
+		orderID, driverID)
+	if err != nil {
 		return nil, err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, ErrOrderTaken
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err

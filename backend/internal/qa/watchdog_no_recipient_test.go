@@ -1,6 +1,10 @@
 package qa
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/orders"
+)
 
 // ══════════════════════════════════════════════════════════════════════
 // **W9 · ولا موظّفَ عمليّاتٍ يُنذَر** — `PF-07` · `R22`
@@ -44,26 +48,32 @@ func TestR22_W9_NoOpsRecipientLeavesNoMarker(t *testing.T) {
 	//
 	// **و`suspended` لا `deleted`**: **حالٌ قائمةٌ في المنتَج**،
 	// **والاستعلامُ الذي يُنذِر يشترط `active`.**
-	emptied, err := h.Pool.Exec(ctxBG(), `
-		UPDATE users SET status = 'suspended'
-		 WHERE status = 'active' AND id IN (
-		   SELECT ur.user_id FROM user_roles ur WHERE ur.role_code = ANY($1))`,
-		[]string{"admin", "ops"})
-	if err != nil {
+	//
+	// **والمكتبُ من يملك `orders.intervene`** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ٦) —
+	// والمعطَّلون يُحفظون بأعيانهم فلا يُعاد غيرُهم.
+	var emptiedIDs []string
+	if err := h.Pool.QueryRow(ctxBG(), `
+		WITH s AS (
+		  UPDATE users SET status = 'suspended'
+		   WHERE status = 'active' AND id IN (
+		     SELECT ur.user_id FROM user_roles ur
+		     JOIN role_capabilities rc ON rc.role_code = ur.role_code
+		     WHERE rc.capability_code = ANY($1))
+		  RETURNING id::text)
+		SELECT COALESCE(array_agg(id), '{}') FROM s`,
+		orders.StuckAlertCaps).Scan(&emptiedIDs); err != nil {
 		t.Fatalf("إخلاءُ المكتب: %v", err)
 	}
 	t.Cleanup(func() {
 		if _, err := h.Pool.Exec(ctxBG(), `
 			UPDATE users SET status = 'active'
-			 WHERE status = 'suspended' AND id IN (
-			   SELECT ur.user_id FROM user_roles ur
-			    WHERE ur.role_code = ANY($1))`,
-			[]string{"admin", "ops"}); err != nil {
+			 WHERE status = 'suspended' AND id = ANY($1::uuid[])`,
+			emptiedIDs); err != nil {
 			t.Errorf("**تعذّرت إعادةُ المكتب** — **وما بعده يعمل بلا "+
 				"موظّفين**: %v", err)
 		}
 	})
-	t.Logf("عُطّل %d موظّفاً مؤقّتاً", emptied.RowsAffected())
+	t.Logf("عُطّل %d موظّفاً مؤقّتاً", len(emptiedIDs))
 
 	// **والقياسُ في لحظة الجولة لا قبل بناء التركيبة.**
 	desk := deskSize(t, h)
@@ -128,8 +138,9 @@ func deskSize(t *testing.T, h *Harness) int {
 	if err := h.Pool.QueryRow(ctxBG(), `
 		SELECT count(DISTINCT u.id) FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id
-		WHERE ur.role_code = ANY($1) AND u.status = 'active'`,
-		[]string{"admin", "ops"}).Scan(&n); err != nil {
+		JOIN role_capabilities rc ON rc.role_code = ur.role_code
+		WHERE rc.capability_code = ANY($1) AND u.status = 'active'`,
+		orders.StuckAlertCaps).Scan(&n); err != nil {
 		t.Fatalf("عدُّ المكتب: %v", err)
 	}
 	return n

@@ -49,6 +49,14 @@
           "type": "unknown"
         },
         {
+          "name": "group",
+          "type": "unknown"
+        },
+        {
+          "name": "money_visible",
+          "type": "unknown"
+        },
+        {
           "name": "page",
           "type": "unknown"
         },
@@ -58,6 +66,50 @@
         },
         {
           "name": "total",
+          "type": "unknown"
+        },
+        {
+          "name": "total_capped",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit/actors",
+      "handler": "handleAdminAuditActors",
+      "auth": true,
+      "capability": "audit.read",
+      "response": [
+        {
+          "name": "actors",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit/export",
+      "handler": "handleAdminAuditExport",
+      "auth": true,
+      "capability": "audit.read",
+      "response": [
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "entries",
+          "type": "unknown"
+        },
+        {
+          "name": "truncated",
           "type": "unknown"
         }
       ],
@@ -712,7 +764,7 @@
       "path": "/api/v1/admin/emergencies",
       "handler": "handleOpenEmergencies",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "@paged",
@@ -728,7 +780,7 @@
       "path": "/api/v1/admin/emergencies/banner",
       "handler": "handleEmergencyBanner",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "@b",
@@ -744,7 +796,7 @@
       "path": "/api/v1/admin/emergencies/stores/{id}/ack",
       "handler": "handleAckStoreEmergency",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "acknowledged",
@@ -760,7 +812,7 @@
       "path": "/api/v1/admin/emergencies/{id}/ack",
       "handler": "handleAckEmergency",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "response": [
         {
           "name": "acknowledged",
@@ -776,7 +828,7 @@
       "path": "/api/v1/admin/emergencies/{id}/resolve",
       "handler": "handleResolveEmergency",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "emergencies.manage",
       "request": [
         {
           "name": "resolution",
@@ -1101,6 +1153,170 @@
       "capability": "finance.export"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/market/items",
+      "handler": "handleMarketItems",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@body",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/items/bulk",
+      "handler": "handleMarketItemsBulk",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "ids",
+          "type": "[]string"
+        },
+        {
+          "name": "action",
+          "type": "string"
+        },
+        {
+          "name": "section_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "affected",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/market/new-count",
+      "handler": "handleMarketNewCount",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/market/quality",
+      "handler": "handleMarketQuality",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "items_without_image",
+          "type": "unknown"
+        },
+        {
+          "name": "items_without_image_count",
+          "type": "unknown"
+        },
+        {
+          "name": "limit",
+          "type": "unknown"
+        },
+        {
+          "name": "stores_without_hours",
+          "type": "unknown"
+        },
+        {
+          "name": "test_items",
+          "type": "unknown"
+        },
+        {
+          "name": "test_items_count",
+          "type": "unknown"
+        },
+        {
+          "name": "test_stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/seen",
+      "handler": "handleMarketSeen",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "seen",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/market/stores",
+      "handler": "handleMarketStores",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/test-data/delete",
+      "handler": "handleMarketTestDataDelete",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "item_ids",
+          "type": "[]string"
+        },
+        {
+          "name": "store_ids",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "items_deleted",
+          "type": "unknown"
+        },
+        {
+          "name": "stores_deleted",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/media",
       "handler": "handleUploadMedia",
@@ -1158,56 +1374,6 @@
         {
           "name": "updated",
           "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/v1/admin/menu/items/{itemID}/review",
-      "handler": "handleReviewMenuItem",
-      "auth": true,
-      "capability": "merchants.verify",
-      "request": [
-        {
-          "name": "approve",
-          "type": "bool"
-        },
-        {
-          "name": "note",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "approved",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/admin/menu/pending",
-      "handler": "handlePendingMenuItems",
-      "auth": true,
-      "capability": "merchants.verify",
-      "response": [
-        {
-          "name": "count",
-          "type": "unknown"
-        },
-        {
-          "name": "items",
-          "type": "unknown"
-        },
-        {
-          "name": "limit",
-          "type": "unknown"
         }
       ],
       "statuses": [
@@ -1764,6 +1930,27 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/expansion",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "analytics.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/expansion/notify",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/expansion/reminder",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "analytics.read"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/merchants",
       "handler": "requirePerm",
       "auth": true,
@@ -1812,7 +1999,39 @@
       "capability": "observability.read",
       "response": [
         {
-          "name": "@out",
+          "name": "@collectOps",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops/monitor",
+      "handler": "handleOpsMonitor",
+      "auth": true,
+      "capability": "orders.read",
+      "response": [
+        {
+          "name": "@buildOpsMonitor",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops/status",
+      "handler": "handleOpsStatus",
+      "auth": true,
+      "capability": "«بحسب المفتاح»",
+      "response": [
+        {
+          "name": "@systemWords",
           "type": "unknown"
         }
       ],
@@ -1854,6 +2073,30 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/orders/board",
+      "handler": "handleOrdersBoard",
+      "auth": true,
+      "capability": "orders.read",
+      "response": [
+        {
+          "name": "counts",
+          "type": "unknown"
+        },
+        {
+          "name": "filters",
+          "type": "unknown"
+        },
+        {
+          "name": "meta",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/orders/export",
       "handler": "handleOrdersExport",
       "auth": true,
@@ -1865,6 +2108,26 @@
       "handler": "handleGetOrder",
       "auth": true,
       "capability": "orders.read",
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/alert-ack",
+      "handler": "handleAlertAck",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "acked",
+          "type": "bool"
+        },
+        {
+          "name": "changed",
+          "type": "unknown"
+        }
+      ],
       "statuses": [
         "StatusOK"
       ]
@@ -1888,6 +2151,26 @@
       "response": [
         {
           "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/assign-candidates",
+      "handler": "handleAssignCandidates",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "stale_location_minutes",
           "type": "unknown"
         }
       ],
@@ -2106,6 +2389,28 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/goods/compensation",
+      "handler": "handleGoodsCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "compensated",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
@@ -2164,7 +2469,7 @@
       "path": "/api/v1/admin/orders/{id}/recompute",
       "handler": "handleRecomputeSettlement",
       "auth": true,
-      "capability": "orders.intervene",
+      "capability": "finance.recompute",
       "response": [
         {
           "name": "after",
@@ -2177,6 +2482,26 @@
         {
           "name": "delta",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/seen",
+      "handler": "handleOrderSeen",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "changed",
+          "type": "unknown"
+        },
+        {
+          "name": "seen",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -2846,6 +3171,28 @@
       ]
     },
     {
+      "method": "PUT",
+      "path": "/api/v1/admin/sections/order",
+      "handler": "handleOrderPlatformSections",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "ids",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ordered",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "DELETE",
       "path": "/api/v1/admin/sections/{id}",
       "handler": "handleDeletePlatformSection",
@@ -2855,6 +3202,10 @@
         {
           "name": "deleted",
           "type": "bool"
+        },
+        {
+          "name": "moved_items",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -5574,10 +5925,6 @@
       ],
       "response": [
         {
-          "name": "pending_review",
-          "type": "unknown"
-        },
-        {
           "name": "updated",
           "type": "bool"
         }
@@ -7409,10 +7756,6 @@
         "sales"
       ],
       "response": [
-        {
-          "name": "pending_review",
-          "type": "unknown"
-        },
         {
           "name": "updated",
           "type": "bool"

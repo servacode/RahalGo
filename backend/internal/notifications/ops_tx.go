@@ -112,3 +112,87 @@ func (s *Service) PublishToUsers(ctx context.Context, q dbtx.Querier, roles []st
 		}
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **الإنذارُ بالقدرة لا باسم الدور** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان العالقُ والطارئُ يذهبان إلى `admin` و`ops`** — **و`ops` دورٌ إرثيٌّ
+// فارغٌ على التجهيز**، وموظّفُ العمليّات الحقيقيُّ (`operations`) والدعمُ
+// (`customer_support`) لا يصلهما شيء. **فمن يملك القدرةَ يُنذَر أيَّ دورٍ حمل.**
+
+// capHoldersSQL **من يملك إحدى القدرات** — حسابٌ نشطٌ وأدوارُه × قدراتُ أدواره.
+const capHoldersSQL = `
+	SELECT DISTINCT u.id FROM users u
+	JOIN user_roles ur ON ur.user_id = u.id
+	JOIN role_capabilities rc ON rc.role_code = ur.role_code
+	WHERE rc.capability_code = ANY($1) AND u.status = 'active'`
+
+// CapHolders **معرّفاتُ من يملك إحدى القدرات** — للفحص ولمن يحتاج القائمة.
+func (s *Service) CapHolders(ctx context.Context, q dbtx.Querier, caps []string) ([]string, error) {
+	rows, err := q.Query(ctx, capHoldersSQL, caps)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// NotifyCaps **يبلّغ من يملك إحدى القدرات** — مرّةً لكلّ شخص.
+func (s *Service) NotifyCaps(ctx context.Context, caps []string, in Input) {
+	if s == nil {
+		return
+	}
+	s.notifyQuery(ctx, in, capHoldersSQL, caps)
+}
+
+// NotifyCapsTx كـ`NotifyCaps` **في معاملةٍ مُمرَّرة** — ويُرجع عددَ من أُشعِروا،
+// **فلا يُوسَم إنذارٌ لم يقع.**
+func (s *Service) NotifyCapsTx(ctx context.Context, q dbtx.Querier, caps []string, in Input) (int, error) {
+	if s == nil || in.Title == "" {
+		return 0, nil
+	}
+	ids, err := s.CapHolders(ctx, q, caps)
+	if err != nil {
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	if in.Transient {
+		return len(ids), nil
+	}
+	tag, err := q.Exec(ctx, `
+		INSERT INTO notifications (user_id, kind, title, body, entity,
+		            entity_id, href, push_pending, push_apps)
+		SELECT u, $2, $3, $4, $5, $6, $7, $8, $9
+		  FROM unnest($1::uuid[]) AS u`,
+		ids, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href,
+		!in.Silent, apps(in.Apps))
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
+// PublishToCaps يبثّ إلى من يملك القدرة — **بعد التثبيت.**
+func (s *Service) PublishToCaps(ctx context.Context, q dbtx.Querier, caps []string, in Input) {
+	if s == nil || s.hub == nil {
+		return
+	}
+	ids, err := s.CapHolders(ctx, q, caps)
+	if err != nil {
+		return
+	}
+	for _, id := range ids {
+		s.hub.Publish("user:"+id, map[string]any{"type": "notification_refresh"})
+	}
+}

@@ -43,8 +43,22 @@ import {
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useRinger } from "@/lib/ringer";
+import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 import { DoorPanel, type DoorView } from "./DoorPanel";
 import { TransferPanel } from "./TransferPanel";
+import { AssignDialog } from "./AssignDialog";
+import { GoodsBox } from "./GoodsBox";
+import {
+  BoardCounters,
+  DriverLine,
+  NewOrdersBar,
+  OfferLine,
+  SoundButton,
+  minutesSince,
+  useNow,
+  type NewOrder,
+} from "./BoardWidgets";
 
 const m = getMessages(defaultLocale);
 
@@ -73,27 +87,6 @@ interface DriverRow {
    *  الآليّة، واللوحةُ لا تراه — فيُسنَد إليه بيد.)**
    */
   last_location_at?: string | null;
-}
-
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **وموضعٌ شاخ والورديّةُ مفتوحة**
- * ══════════════════════════════════════════════════════════════════════
- *
- * **ونظامُ الهاتف يقتل خدمةَ الموقع** — سامسونغ تُنيم التطبيقات
- * وشاومي أشرس. **فيقفل السائقُ الشاشةَ فيقف موضعُه وورديّتُه
- * مفتوحة.**
- *
- * **والمحرّكُ يحجبه عن الإسناد الآليّ** ولا يحجبه عن يد المكتب —
- * **فيُسنَد إليه طلبٌ ولا يصله**، ويبقى واقفاً حتّى يسأل أحد.
- *
- * **والحدُّ يأتي من المحرّك** — رقمٌ واحدٌ يقرّره موضعٌ واحد.
- */
-function staleLocation(iso: string | null | undefined, limitMin: number): boolean {
-  if (!iso) return true;
-  const at = new Date(iso).getTime();
-  if (!Number.isFinite(at)) return true;
-  return Date.now() - at > limitMin * 60_000;
 }
 
 interface OrderRow {
@@ -167,6 +160,11 @@ interface OrderRow {
   blocked_reason?: string;
   /** **حالُ باب الزبون** — يرسله المحرّكُ لطلبٍ عند الباب وحدَه. */
   door?: DoorView;
+  /**
+   * **ما يحتاجه المكتبُ وحدَه** (`orders.BoardInfo`) — سببُ العلوق ومنذ متى،
+   * والعرضُ الحيّ، وسقفُ تعويض المتجر، و«استلمتها».
+   */
+  board?: BoardInfo;
   /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
   goods_settled_to: "merchant" | "platform" | null;
   /** أيستردّ كلُّ مصدرٍ في هذا الطلب بضاعتَه — سياسةُ متجرٍ لا قاعدةُ منصة. */
@@ -212,6 +210,26 @@ interface OrderRow {
   }[];
 }
 
+interface BoardInfo {
+  alert_reason: string;
+  alert_since: string | null;
+  emergency_open: boolean;
+  offer_expires_at: string | null;
+  offer_passed: number;
+  goods_cost: number;
+  store_compensated: number;
+  seen_at: string | null;
+}
+
+/** **إعداداتُ اللوحة من الخادم** (`GET /orders/board`) — لا من `/settings` (المشكلة ٣٢). */
+interface BoardMeta {
+  manual_assign_after_min: number;
+  offer_timeout_sec: number;
+  orders_mode: string;
+  cash_ban_days: number;
+  stale_location_minutes: number;
+}
+
 interface OrderPage {
   orders: OrderRow[];
   /**
@@ -232,8 +250,10 @@ interface Alert {
   status: string;
   merchant_name: string;
   customer_phone: string;
-  reason: "no_accept" | "no_driver" | "too_long";
+  reason: "emergency" | "no_accept" | "not_sent" | "no_driver" | "too_long";
   minutes: number;
+  /** **منذ متى يصدق السبب** — والدقائقُ تُعدّ منه حيّةً (المشكلة ١٩). */
+  since?: string;
 }
 
 const STATUS_LABELS: Record<string, string> = m.orders.status;
@@ -259,6 +279,9 @@ const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
  * ومن يُسأل عنه.**
  */
 const STAGE_LABELS: Record<string, string> = m.admin.ordersPage.stage;
+/** **أسماءُ الحالات بلفظ المكتب** — لا «في الطريق إليك» (المشكلة ٢٣). */
+const OFFICE_STATUS: Record<string, string> = m.admin.ordersPage.board.status;
+const BOARD = m.admin.ordersPage.board;
 
 /**
  * **ما استُهلك في الوصول إلى هذه المرحلة** — منسّقاً، و`null` لا يُعرف.
@@ -631,6 +654,23 @@ function opsNext(
   return next;
 }
 
+/**
+ * **أتظهر لوحةُ «الطلب مع السائق»؟** — عند الباب دائماً، وقبله ببلاغٍ أو أمر.
+ *
+ * **ودالّةٌ واحدةٌ للوحة ولزرّ البطاقة**: حين تظهر عند المتجر يكون «حوّل لمتجر
+ * آخر» فيها، **فلا يُعرض زرّان بالاسم نفسِه** (المشكلة ٤).
+ */
+function doorVisible(o: OrderRow): boolean {
+  return (
+    o.status === "at_dropoff" ||
+    ((o.status === "assigned" ||
+      o.status === "at_pickup" ||
+      o.status === "picked_up" ||
+      o.status === "on_the_way") &&
+      !!(o.door?.report_code || o.door?.instruction))
+  );
+}
+
 function translateKey(key: string): string {
   let node: unknown = m;
   for (const part of key.split(".")) {
@@ -655,6 +695,17 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [awaiting, setAwaiting] = useState(params.get("awaiting") === "1");
   /** **مرحلةُ الجاري** — بطاقاتُ «الآن» في رئيسيّة المدير (٢٠٢٦-١٠-٠٤). */
   const [stage, setStage] = useState(params.get("stage") ?? "");
+  /**
+   * **فلترُ اللوحة** — عدّادٌ ضُغط (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣). **وشرطُه في
+   * الخادم نفسُه الذي عدّه** (`orders.BoardFilterSQL`) — فالرقمُ يطابق القائمة.
+   */
+  const [board, setBoard] = useState(params.get("filter") ?? "");
+  /**
+   * **طلبٌ بعينه** (`?id=`) — من خريطة العمليّات والإشعار والتنبيه (المشكلة ٢١).
+   * يُجلب ويُبحث برقمه ويُعلَّم في بطاقته.
+   */
+  const [focusId, setFocusId] = useState(params.get("id") ?? "");
+  const [focusMissing, setFocusMissing] = useState(false);
   const [query, setQuery] = useState(initialQ);
   /**
    * **شاشتان لا شاشةٌ بمربّع.**
@@ -723,31 +774,65 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const { user: me, can } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
 
-  useEffect(() => {
-    api<{ settings: { key: string; value: unknown }[] }>(
-      "/api/v1/admin/settings",
-    )
-      .then(({ settings: all }) => {
-        const delay = all.find(
-          (x) => x.key === "orders.manual_assign_after_min",
-        );
-        setAssignAfterMin(typeof delay?.value === "number" ? delay.value : 10);
-        const banDays = all.find((x) => x.key === "customers.cash_ban_days");
-        if (typeof banDays?.value === "number") setCashBanDays(banDays.value);
-        // **ومن المفتاح الحيّ لا المحذوف.**
-        //
-        // كان يقرأ `merchants.self_manage_orders` — **وقد صار
-        // `platform.orders_mode` بوضعين.** فلم يُوجَد الصفُّ فسقط على `true`،
-        // **فظنّت الشاشةُ أنّ المتاجر تدير وهي لا تدير** — فعادت أزرارُ وضعٍ
-        // آخر إلى بطاقةٍ صُحّحت مرّاتٍ من قبل.
-        //
-        // **ومفتاحٌ يُقرأ باسمه القديم لا يصرخ**: لا خطأَ ولا سجلّ، **بل
-        // احتياطيٌّ صامتٌ يقلب السلوك.**
-        const row = all.find((x) => x.key === "platform.orders_mode");
-        setSelfManage(row?.value === "merchants");
-      })
-      .catch(() => setSelfManage(false));
+  // ══════════════════════════════════════════════════════════════════
+  // **عدّاداتُ اللوحة وإعداداتُها من بابٍ واحد** (`GET /orders/board`)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت الشاشةُ تقرأ `/settings`** — ودورٌ مخصّصٌ بلا `settings.read` يأخذ
+  // افتراضاتٍ مكتوبةً هنا (مهلةَ ١٠ و«المنصّة تدير») **قد تخالف إعداداتِ المالك**
+  // (المشكلة ٣٢). **والآن يرسلها الخادمُ مع العدّادات** لمن يقرأ الطلبات.
+  const [counts0, setCounts0] = useState<Record<string, number> | null>(null);
+  /** **حدُّ توقّف موضع السائق** — من المحرّك لا رقمٌ هنا. */
+  const [staleMin, setStaleMin] = useState(15);
+  const [countsFailed, setCountsFailed] = useState(false);
+  const loadBoard = useCallback(async () => {
+    try {
+      const r = await api<{ counts: Record<string, number>; meta: BoardMeta }>(
+        "/api/v1/admin/orders/board",
+      );
+      setCounts0(r.counts);
+      setCountsFailed(false);
+      setAssignAfterMin(r.meta.manual_assign_after_min);
+      setCashBanDays(r.meta.cash_ban_days);
+      setStaleMin(r.meta.stale_location_minutes);
+      setSelfManage(r.meta.orders_mode === "merchants");
+    } catch {
+      setCountsFailed(true);
+      setSelfManage((v) => (v === null ? false : v));
+    }
   }, []);
+  useEffect(() => {
+    void loadBoard();
+  }, [loadBoard]);
+
+  /**
+   * **الطلباتُ الجديدةُ التي لم يُضغط عليها «استلمتها»** — وهي ما يرنّ (البند ٥).
+   *
+   * **من فلتر الخادم `new`** — لا من الصفحة المعروضة: طلبٌ جديدٌ في الصفحة
+   * الثانية أو خارج فلترٍ مفتوحٍ يرنّ أيضاً.
+   */
+  const [newOrders, setNewOrders] = useState<NewOrder[]>([]);
+  const loadNew = useCallback(async () => {
+    if (!live) return;
+    try {
+      const r = await api<OrderPage>(
+        "/api/v1/admin/orders?open=1&filter=new&sort=priority&per_page=20",
+      );
+      setNewOrders(
+        r.orders.map((o) => ({
+          id: o.id,
+          number: o.number,
+          merchant_name: o.merchant_name,
+          created_at: o.created_at,
+        })),
+      );
+    } catch {
+      // **ولا يُسكت الرنينُ لأنّ الجلبَ تعثّر** — تبقى القائمةُ كما كانت.
+    }
+  }, [live]);
+  useEffect(() => {
+    void loadNew();
+  }, [loadNew]);
 
   const load = useCallback(async () => {
     try {
@@ -759,6 +844,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         closed: !live && !searching ? "1" : "",
         awaiting: awaiting ? "1" : "",
         stage: live ? stage : "",
+        filter: live ? board : "",
+        // **والأولويّةُ لشاشة العمل** — المُنذَرُ أوّلاً ثمّ المتأخّرُ ثمّ الأقدم
+        // (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١). **والسجلُّ يبقى الأحدثَ أوّلاً.**
+        sort: live ? "priority" : "",
         from: live ? "" : from,
         to: live ? "" : to,
         merchant_id: live ? "" : merchantId,
@@ -766,7 +855,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         page: String(page),
         // **وخمسةٌ وعشرون في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يُقرأ ولا
         // يُعمَل عليه، **وصفحاتٌ أقلُّ أخفُّ على من يبحث.**
-        per_page: live ? "12" : "25",
+        // **وخمسون في شاشة العمل** (البند ٢) — فلا ينزل طلبٌ عالقٌ إلى الصفحة الثانية.
+        per_page: live ? "50" : "25",
       });
       setData(await api<OrderPage>(`/api/v1/admin/orders?${params}`));
       setError("");
@@ -793,7 +883,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, awaiting, stage, query, live, searching, page, from, to, merchantId, driverId]);
+  }, [status, awaiting, stage, board, query, live, searching, page, from, to, merchantId, driverId]);
 
   // **والرابطُ يتبع الشاشة** — `replace` لا `push`: كلُّ حرفٍ في البحث لا
   // يصير صفحةً في سجلّ المتصفّح يُرجَع إليها.
@@ -805,7 +895,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     put("q", query);
     put("status", status);
     if (awaiting) qs.set("awaiting", "1");
-    if (live) put("stage", stage);
+    if (live) {
+      put("stage", stage);
+      put("filter", board);
+      put("id", focusId);
+    }
     if (!live) {
       put("from", from);
       put("to", to);
@@ -815,7 +909,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     if (page > 1) qs.set("page", String(page));
     const next = qs.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [router, pathname, live, query, status, awaiting, stage, from, to, merchantId, driverId, page]);
+  }, [router, pathname, live, query, status, awaiting, stage, board, focusId, from, to, merchantId, driverId, page]);
 
   // **وقائمتا المتجر والسائق لمن يملك قراءتهما** — وإلّا رُدّ النداءُ ٤٠٣.
   useEffect(() => {
@@ -859,17 +953,126 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     return () => clearTimeout(t);
   }, [load]);
 
-  // البث الحي: تحديثات الطلبات تعيد التحميل فوراً، والتنبيهات تُستبدل مباشرة
-  useLiveEvent((event) => {
-    if (event.type === "order") void load();
-    if (event.type === "alerts") setAlerts((event.alerts as Alert[]) ?? []);
-  });
-  const liveConnected = useLiveStatus();
-  useEffect(() => {
-    api<Alert[]>("/api/v1/admin/orders/alerts")
-      .then(setAlerts)
-      .catch(() => undefined);
+  // ══════════════════════════════════════════════════════════════════
+  // **التنبيهاتُ — وفشلُها يُقال** (المشكلة ٣١)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كان فشلُ الجلب يُخفي الشريطَ كأنّ شيئاً لم يعلق.**
+  const [alertsFailed, setAlertsFailed] = useState(false);
+  const loadAlerts = useCallback(async () => {
+    try {
+      setAlerts(await api<Alert[]>("/api/v1/admin/orders/alerts"));
+      setAlertsFailed(false);
+    } catch {
+      setAlertsFailed(true);
+    }
   }, []);
+  useEffect(() => {
+    void loadAlerts();
+  }, [loadAlerts]);
+
+  // ══════════════════════════════════════════════════════════════════
+  // **البثُّ الحيّ — مجموعاً لا نداءً لكلّ حدث** (المشكلة ٢٩)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كان كلُّ تغييرٍ في أيّ طلبٍ يُعيد جلبَ الطلبات والسائقين فوراً** — عشراتُ
+  // النداءات في الدقيقة وقت الزحمة. **فتُجمع الأحداثُ المتتاليةُ نصفَ ثانية.**
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshAll = useCallback(() => {
+    void load();
+    void loadBoard();
+    void loadNew();
+  }, [load, loadBoard, loadNew]);
+  useLiveEvent((event) => {
+    if (event.type === "order") {
+      if (pending.current) clearTimeout(pending.current);
+      pending.current = setTimeout(refreshAll, 500);
+    }
+    if (event.type === "alerts") {
+      setAlerts((event.alerts as Alert[]) ?? []);
+      setAlertsFailed(false);
+    }
+  });
+  useEffect(
+    () => () => {
+      if (pending.current) clearTimeout(pending.current);
+    },
+    [],
+  );
+  const liveConnected = useLiveStatus();
+  // ══════════════════════════════════════════════════════════════════
+  // **ورجوعُ القناة جلبٌ كامل** (المشكلة ٨)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت الشارةُ تعود «مباشر» والبطاقاتُ قديمة** — ما وقع أثناء الانقطاع
+  // لا يصل حدثُه أبداً.
+  const wasConnected = useRef(liveConnected);
+  useEffect(() => {
+    if (liveConnected && !wasConnected.current) {
+      refreshAll();
+      void loadAlerts();
+    }
+    wasConnected.current = liveConnected;
+  }, [liveConnected, refreshAll, loadAlerts]);
+  // **وجلبٌ احتياطيٌّ كلَّ دقيقة** — العدّاداتُ والتنبيهاتُ دائماً، **والقائمةُ
+  // حين تنقطع القناة.** وهو أيضاً نبضُ «في المكتب أحد» (`users.last_seen_at`)
+  // الذي يقرؤه القبولُ التلقائيُّ ليلاً (البند ٨).
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => {
+      void loadBoard();
+      void loadNew();
+      void loadAlerts();
+      if (!liveConnected) void load();
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [live, liveConnected, load, loadBoard, loadNew, loadAlerts]);
+
+  /** **ساعةُ الشاشة** — آخرُ ظهورٍ ومهلةُ الإسناد ودقائقُ التنبيه تُحسب منها (المشكلة ١٨). */
+  const now = useNow(30_000);
+
+  // ══════════════════════════════════════════════════════════════════
+  // **الصوتُ — للطلب الجديد حتّى «استلمتها»** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والعالقُ لا يرنّ** — شريطٌ أحمرُ بلا صوت. **والطارئُ يرنّ في شريطه**
+  // (`EmergencyBanner`) أعلى كلّ صفحة.
+  const canAck = can("orders.intervene");
+  const ringer = useRinger(live && canAck && newOrders.length > 0, "rahalgo_orders_sound");
+
+  // **`?id=` يفتح الطلب** — يُجلب فيُبحث برقمه ويُعلَّم (المشكلة ٢١).
+  useEffect(() => {
+    if (!focusId) return;
+    let alive = true;
+    api<{ number: number }>(`/api/v1/admin/orders/${focusId}`)
+      .then((o) => {
+        if (!alive) return;
+        setFocusMissing(false);
+        setStatus("");
+        setAwaiting(false);
+        setStage("");
+        setBoard("");
+        setQuery(String(o.number));
+        setPage(1);
+      })
+      .catch(() => {
+        if (alive) setFocusMissing(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [focusId]);
+
+  /** **افتح طلباً بعينه** — تمسح الفلاترَ كلَّها أوّلاً (المشكلة ٢٠). */
+  function openOrder(id: string, number: number) {
+    setStatus("");
+    setAwaiting(false);
+    setStage("");
+    setBoard("");
+    setFocusId(id);
+    setQuery(String(number));
+    setPage(1);
+  }
 
   // ══════════════════════════════════════════════════════════════════
   // **والأعدادُ تُحفَظ بين الجلبات**
@@ -950,6 +1153,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               {o.ended_by && ENDED_BY[o.ended_by] && (
                 <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
               )}
+              {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
+              {focusId === o.id && <Badge variant="accent">{BOARD.focused}</Badge>}
+              {o.board?.emergency_open && (
+                <Badge variant="danger">{BOARD.emergencyBadge}</Badge>
+              )}
+              {live && o.board?.alert_reason && !o.board.emergency_open && (
+                <Badge variant="danger">
+                  {(m.admin.ordersPage.alertReasons as Record<string, string>)[
+                    o.board.alert_reason
+                  ] ?? o.board.alert_reason}
+                </Badge>
+              )}
             </span>
             {/* ══════════════════════════════════════════════════════
                 **وبابُ الفاتورة أيقونةٌ ملاصقةٌ للرقم**
@@ -984,6 +1199,66 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         </span>
       ),
+    },
+    {
+      // ══════════════════════════════════════════════════════════════
+      // **سطرُ السائق تحت الترويسة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤)
+      // ══════════════════════════════════════════════════════════════
+      //
+      // **كان شارةً تحت المرحلة في عمودٍ عرضُه ستّةٌ وتسعون بكسلاً** — تلتفّ على
+      // ثلاثة أسطر، والاسمُ مكرّرٌ على خطّ المرحلة فوقها. **وفي الطابور يقول
+      // لمن معروضٌ الطلبُ الآن وكم بقي** (المشكلة ٢٤).
+      id: "driverLine",
+      header: BOARD.driverLine,
+      icon: <IconUser />,
+      noLabel: true,
+      hide: (o: OrderRow) =>
+        !o.driver_name &&
+        !(o.status === "dispatching" &&
+          (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0)),
+      cell: (o) =>
+        o.driver_name ? (
+          <DriverLine
+            name={o.driver_name}
+            phone={o.driver_phone}
+            seenAt={o.driver_seen_at}
+            now={now}
+            staleMin={staleMin}
+          />
+        ) : (
+          <OfferLine
+            name={o.offered_driver_name}
+            expiresAt={o.board?.offer_expires_at}
+            passed={o.board?.offer_passed ?? 0}
+          />
+        ),
+    },
+    {
+      // **وعلى الجوّال مرحلةُ الطلب سطراً** (البند ١٥) — العمودُ الجانبيُّ يُطوى هناك.
+      id: "mobileStage",
+      header: BOARD.mobileStage,
+      noLabel: true,
+      mobileOnly: true,
+      only: "cards",
+      hide: (o: OrderRow) => !o.ops_stages?.length,
+      cell: (o) => {
+        const at = o.ops_stage_at ?? -1;
+        const ids = o.ops_stages ?? [];
+        const label = (i: number) => (ids[i] ? (STAGE_LABELS[ids[i]] ?? ids[i]) : "");
+        return (
+          <span className="flex flex-wrap items-center gap-1.5 text-xs">
+            {at > 0 && <span className="text-ink-muted">{label(at - 1)}</span>}
+            {at > 0 && <span aria-hidden>←</span>}
+            <Badge variant={o.ops_stage_late?.[at] ? "danger" : "accent"}>
+              {at >= 0 ? label(at) : "—"}
+            </Badge>
+            {at >= 0 && at < ids.length - 1 && <span aria-hidden>←</span>}
+            {at >= 0 && at < ids.length - 1 && (
+              <span className="text-ink-muted">{label(at + 1)}</span>
+            )}
+          </span>
+        );
+      },
     },
     {
       id: "customer",
@@ -1054,15 +1329,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // الدردشة — «وين ألاقي الموضوع بلوحة الإدارة مشان أحلّه؟»). **وبلا بلاغٍ
       // لا لوحة** — كلُّ طلبٍ في الطريق لا يحتاج قراراً.
       // **وعند المتجر حين يُبلّغ** (٢٠٢٦-١٠-٠٣: «ينتظر الإدارة تحلّ المشكلة»).
-      hide: (o: OrderRow) =>
-        !(
-          o.status === "at_dropoff" ||
-          ((o.status === "assigned" ||
-            o.status === "at_pickup" ||
-            o.status === "picked_up" ||
-            o.status === "on_the_way") &&
-            !!(o.door?.report_code || o.door?.instruction))
-        ),
+      hide: (o: OrderRow) => !doorVisible(o),
       cell: (o) => (
         <DoorPanel
           orderId={o.id}
@@ -1249,14 +1516,49 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               : m.admin.ordersPage.liveOff}
           </Badge>
         </h1>
+        {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
+        {live && canAck && (
+          <SoundButton
+            enabled={ringer.enabled}
+            unlocked={ringer.unlocked}
+            onEnable={ringer.unlock}
+            onToggle={ringer.setEnabled}
+          />
+        )}
       </div>
+
+      {/* **والطارئُ لمن يبلغه ولا يرى شريطَ اللوحة العامّ** — موظّفُ العمليّات
+          يملك الطوارئ (البند ٧) والشريطُ أعلى الصفحات لمن يملك الدعم. */}
+      {live && can("emergencies.manage") && !can("support.manage") && <EmergencyBanner />}
+
+      {live && (
+        <NewOrdersBar
+          orders={newOrders}
+          now={now}
+          canAck={canAck}
+          onAcked={refreshAll}
+          onOpen={(o) => openOrder(o.id, o.number)}
+        />
+      )}
+
+      {/* **وفشلُ جلب التنبيهات يُقال** (المشكلة ٣١) — لا يختفي الشريطُ كأنّ شيئاً لم يعلق. */}
+      {live && alertsFailed && (
+        <Alert tone="warning" className="mb-4">
+          <span className="flex flex-wrap items-center gap-2">
+            {BOARD.alertsFailed}
+            <Button variant="secondary" onClick={() => void loadAlerts()}>
+              {BOARD.retry}
+            </Button>
+          </span>
+        </Alert>
+      )}
 
       {/* تنبيهات التصعيد */}
       {alerts.length > 0 && (
         <div className="mb-4 rounded-card border-2 border-danger-edge bg-danger-tint p-4">
           <p className="mb-2 flex items-center gap-2 font-bold text-danger">
             <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
-            {m.admin.ordersPage.alertsTitle} ({alerts.length})
+            {m.admin.ordersPage.alertsTitle} ({fmtNum(alerts.length)})
           </p>
           <ul className="space-y-1.5">
             {alerts.map((a) => (
@@ -1269,29 +1571,32 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                     كانت تُخفي بقيّة الطلبات وهي مفتوحة. */}
                 <button
                   onClick={() => {
-                    // **والبحثُ بالرقم يعبر الشاشتين** — فلا يحتاج إلى إطفاء
-                    // مُرشِّحٍ لم يعد له وجود.
-                    setQuery(String(a.number));
-                    setPage(1);
+                    // **والضغطةُ تمسح الفلاترَ وتفتح الطلب** (المشكلة ٢٠) — كانت
+                    // تكتب الرقمَ والفلترُ قائمٌ فتعود القائمةُ فارغة.
+                    openOrder(a.order_id, a.number);
                   }}
                   className="font-bold text-danger underline-offset-2 hover:underline"
                 >
                   #{a.number}
                 </button>
                 <Badge variant="danger">
-                  {m.admin.ordersPage.alertReasons[a.reason]}
+                  {(m.admin.ordersPage.alertReasons as Record<string, string>)[a.reason] ??
+                    a.reason}
                 </Badge>
                 <span>{a.merchant_name}</span>
                 <span dir="ltr" className="text-xs text-ink-muted">
                   {a.customer_phone}
                 </span>
+                {/* **والدقائقُ تُعدّ في الشاشة من لحظة السبب** (المشكلة ١٩) — كانت
+                    «منذ ٣٢٣ دقيقة» تبقى ساعات، وبأرقامٍ خارج المنسِّق المركزيّ. */}
                 <span className="text-xs text-ink-muted">
-                  {m.admin.ordersPage.sinceMinutes.replace(
-                    "{m}",
-                    String(a.minutes),
+                  {BOARD.since.replace(
+                    "{n}",
+                    fmtNum(minutesSince(a.since, now) ?? a.minutes),
                   )}
                 </span>
-                <Badge variant="warning">{STATUS_LABELS[a.status]}</Badge>
+                {/* **بلفظ المكتب لا الزبون** (المشكلة ٢٣). */}
+                <Badge variant="warning">{OFFICE_STATUS[a.status] ?? a.status}</Badge>
               </li>
             ))}
           </ul>
@@ -1368,29 +1673,57 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </div>
       )}
 
+      {/* **عدّاداتُ المراحل فوق اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣) — كلٌّ
+          يُضغط فيفتح القائمةَ بشرطه في الخادم نفسِه. */}
+      {live && (
+        <BoardCounters
+          counts={counts0}
+          active={board}
+          failed={countsFailed}
+          onRetry={() => void loadBoard()}
+          onPick={(k) => {
+            setBoard(k);
+            setStatus("");
+            setAwaiting(false);
+            setStage("");
+            setFocusId("");
+            setQuery("");
+            setPage(1);
+          }}
+        />
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         {/* **وشاشةُ العمل مرشَّحةً من الرئيسيّة تقول ذلك** — وإلّا ظُنّ أنّ
             الطلباتِ الأخرى اختفت. **وضغطةٌ تُعيد الكلّ.** */}
-        {live && (awaiting || status || stage) && (
+        {live && (awaiting || status || stage || board || focusId) && (
           <Button
             variant="secondary"
             onClick={() => {
               setAwaiting(false);
               setStatus("");
               setStage("");
+              setBoard("");
+              setFocusId("");
+              setFocusMissing(false);
+              if (focusId) setQuery("");
               setPage(1);
             }}
           >
             {awaiting
               ? m.admin.ordersPage.awaitingFilter
-              : stage
-                ? ((m.admin.home.stage as Record<string, string>)[stage] ?? stage)
-                : (STATUS_LABELS[status] ?? status)}
+              : board
+                ? ((BOARD.counters as Record<string, string>)[board] ?? board)
+                : stage
+                  ? ((m.admin.home.stage as Record<string, string>)[stage] ?? stage)
+                  : focusId
+                    ? BOARD.focused
+                    : (OFFICE_STATUS[status] ?? status)}
             {m.common.listSeparator}
             {m.admin.ordersPage.clearFilter}
           </Button>
         )}
-        <div className="w-64">
+        <div className="w-full sm:w-64">
           <Input
             icon={<IconSearch />}
             placeholder={m.admin.ordersPage.searchPlaceholder}
@@ -1517,7 +1850,37 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </div>
       )}
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && (
+        <Alert className="mb-4">
+          <span className="flex flex-wrap items-center gap-2">
+            {BOARD.loadFailed}
+            {m.common.listSeparator}
+            {error}
+            <Button variant="secondary" onClick={() => void load()}>
+              {BOARD.retry}
+            </Button>
+          </span>
+        </Alert>
+      )}
+      {/* **وحالٌ منتهيةٌ على شاشة العمل تُفسَّر** (المشكلة ٣٠) — كانت تعود فارغةً بلا كلمة. */}
+      {live && status && CLOSED_STATUSES.has(status) && (
+        <Alert tone="info" className="mb-4">
+          <span className="flex flex-wrap items-center gap-2">
+            {BOARD.closedOnLive}
+            <Link
+              href={`/dashboard/history?status=${status}`}
+              className="font-medium underline"
+            >
+              {BOARD.openHistory}
+            </Link>
+          </span>
+        </Alert>
+      )}
+      {focusMissing && (
+        <Alert tone="warning" className="mb-4">
+          {BOARD.focusMissing}
+        </Alert>
+      )}
 
       {/* **وبعد «عُد إلى المكتب» تبقى البضاعةُ معلّقة** — تُسوّى حين تصل
           المكتب، **ومن يملك المالَ يسوّيها من الطلب نفسِه.** */}
@@ -1532,13 +1895,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           onDismiss={() => setReturnedNumber(null)}
         >
           <p>{m.admin.ordersPage.door.returnedBody}</p>
-          {can("finance.manage") ? (
-            <Link
-              href={`/dashboard/history?q=${returnedNumber}`}
-              className="mt-1 inline-block font-medium underline"
-            >
-              {m.admin.ordersPage.door.settleGoods}
-            </Link>
+          {/* **والعمليّاتُ تؤكّد مكانَ البضاعة بعد «سلّمت البضاعة»، والماليّةُ تكتب
+              التعويض** (البند ١٢) — فالرابطُ لمن يملك أيّاً منهما. */}
+          {can("orders.intervene") || can("finance.manage") ? (
+            <>
+              <p className="mt-1">{BOARD.returnedOps}</p>
+              <Link
+                href={`/dashboard/history?q=${returnedNumber}`}
+                className="mt-1 inline-block font-medium underline"
+              >
+                {m.admin.ordersPage.door.settleGoods}
+              </Link>
+            </>
           ) : (
             <p className="mt-1">{m.admin.ordersPage.door.returnedFinanceOnly}</p>
           )}
@@ -1602,17 +1970,22 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 // **ومرحلةُ الإسناد تختلف باختلاف المسار**: «السائق
                 // إلى المتجر» في العاديّ، **و«توثيق السعر» في الخاصّ**
                 // — ولا متجرَ فيه يُذهَب إليه.
-                note:
-                  id === "to_store" || id === "agreeing" ? o.driver_name : null,
+                // **ولا اسمَ سائقٍ في العمود** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤) —
+                // سطرُه تحت ترويسة البطاقة، **والعمودُ للمراحل وحدَها.**
+                note: null,
               }))}
               current={o.ops_stage_at ?? -1}
-              currentAside={
-                o.driver_name ? <DriverChip o={o} /> : undefined
-              }
             />
           ) : null
         }
-        empty={m.admin.ordersPage.empty}
+        // **والفراغُ يقول لماذا** — لا طلباتَ مفتوحةً أصلاً، أم الفلترُ وحدَه.
+        empty={
+          !live || searching
+            ? m.admin.ordersPage.empty
+            : board || status || awaiting || stage
+              ? BOARD.emptyFiltered
+              : BOARD.emptyLive
+        }
         actions={(o) => (
           <OrderActions
             o={o}
@@ -1626,6 +1999,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             isAdmin={isAdmin}
             assignAfterMin={assignAfterMin}
             onShift={onShift}
+            now={now}
           />
         )}
       />
@@ -1660,48 +2034,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   );
 }
 
-// ---------- شارةُ السائق ----------
-
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **شارةُ السائق بجانب المرحلة الحاليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣)
- * ══════════════════════════════════════════════════════════════════════
- *
- * **اسمُه · زرُّ اتّصال · «آخرُ ظهورٍ قبل كذا»** — فمن رأى طلباً واقفاً
- * عرف بنظرةٍ أهو سائقٌ ساكتٌ أم هاتفٌ نام، **واتّصل من الموضع نفسِه.**
- *
- * **ولا سطرَ للسائق في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢): الشارةُ على
- * المسار، **ولا شارةَ بلا سائق.**
- */
-function DriverChip({ o }: { o: OrderRow }) {
-  const seen = o.driver_seen_at ? new Date(o.driver_seen_at).getTime() : NaN;
-  const mins = Number.isFinite(seen)
-    ? Math.max(0, Math.floor((Date.now() - seen) / 60_000))
-    : null;
-  return (
-    <span onClick={(e) => e.stopPropagation()}>
-      <Badge variant="neutral" className="flex-wrap gap-1">
-        <span className="font-medium text-ink">{o.driver_name}</span>
-        {o.driver_phone && (
-          <a
-            href={`tel:${o.driver_phone}`}
-            aria-label={m.admin.ordersPage.callDriver}
-            title={m.admin.ordersPage.callDriver}
-            className="text-accent-text"
-          >
-            <IconPhone size={12} />
-          </a>
-        )}
-        <span className={mins === null ? "text-danger" : ""}>
-          {mins === null
-            ? m.admin.ordersPage.driverNeverSeen
-            : m.admin.ordersPage.driverSeen.replace("{n}", fmtNum(mins))}
-        </span>
-      </Badge>
-    </span>
-  );
-}
-
 // ---------- تفاصيل الطلب ----------
 
 /**
@@ -1725,9 +2057,12 @@ function OrderActions({
   isAdmin,
   assignAfterMin,
   onShift,
+  now,
 }: {
   o: OrderRow;
   onChanged: () => void;
+  /** **ساعةُ الشاشة** — فتظهر مهلةُ الإسناد بلا حدث (المشكلة ١٨). */
+  now: number;
   /** حين تكون `false` تُدير المنصةُ الطلبات وتُرسلها للمتجر على واتساب */
   selfManage: boolean;
   /** الأدمن فوق القاعدة — تجاوزُ المالك، وهو مُسجَّل */
@@ -1750,16 +2085,12 @@ function OrderActions({
   // **وأزرارُ هذه البطاقة تُبوَّب بالقدرة** — **والفعلُ الماليُّ فيها
   // ليس من عمل العمليّات** (بندُ المالك ٨).
   const { can } = useAuth();
+  /** **نافذةُ الإسناد اليدويّ** — بالقرب وبتأكيدٍ وسبب (`AssignDialog`). */
   const [assigning, setAssigning] = useState(false);
-  const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  /** **حدُّ شيخوخة الموضع بالدقائق** — يأتي من المحرّك لا يُكتب هنا. */
-  const [staleMin, setStaleMin] = useState(15);
   /**
-   * **«أعيدت إلى المتجر» بتعويضٍ اختياريّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم المصاري
-   * ترجع ع حالها والإدارة تقرر تعوض المتجر او لا») — لا نسبةَ تلقائيّة.
+   * **«أرسلها مع سائق آخر»** — طارئٌ بعد الاستلام يبقى لقرار المكتب (المشكلة ٢٦).
    */
-  const [goodsBack, setGoodsBack] = useState(false);
-  const [storeComp, setStoreComp] = useState("");
+  const [releasing, setReleasing] = useState(false);
   /** سببُ الفعل المفتوح — يُكتب قبل أن يُنفَّذ */
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
@@ -1812,9 +2143,13 @@ function OrderActions({
   // التي أُصلحت للعمليات **وبقيت للمالك**، وهو أكثرُ من يفتح اللوحة.
   //
   // **والاحتياطُ يبقى**: المهلةُ في الإعدادات — من أرادها دقيقةً جعلها دقيقة.
+  //
+  // **وفي «التحضير» من إرساله إلى المتجر** (المشكلة ٣٥) — لا `dispatched_at` له
+  // بعد، فكان الزرُّ لا يظهر أبداً. **ومع ساعة الشاشة** لا لحظةِ الرسم وحدَها.
+  const waitingSince = o.dispatched_at ?? o.sent_to_merchant_at ?? o.created_at;
   const assignReady =
-    !!o.dispatched_at &&
-    Date.now() - new Date(o.dispatched_at).getTime() >= assignAfterMin * 60_000;
+    !!waitingSince &&
+    now - new Date(waitingSince).getTime() >= assignAfterMin * 60_000;
 
   // **الإسنادُ اليدوي مخرجٌ لا طريق.** السائقون يلتقطون من الطابور بأنفسهم
   // (تطبيق :3005)، وهذا لمن لم يلتقطه أحد. ولذلك يُجلب السائقون **عند فتح
@@ -1833,25 +2168,9 @@ function OrderActions({
   // **فرأت الماليّةُ الزرَّ ولا تملك `orders.intervene`.**
   const canIntervene = can("orders.intervene");
   const canAssign =
-    canIntervene && (o.status === "preparing" || o.status === "dispatching");
-
-  async function openAssign() {
-    setAssigning(true);
-    try {
-      const res = await api<
-        { drivers: DriverRow[]; stale_location_minutes?: number } | DriverRow[]
-      >(
-        "/api/v1/admin/drivers",
-      );
-      const list = Array.isArray(res) ? res : res.drivers;
-      setDrivers(list.filter((x) => x.on_shift && x.status === "active"));
-      if (!Array.isArray(res) && typeof res.stale_location_minutes === "number") {
-        setStaleMin(res.stale_location_minutes);
-      }
-    } catch {
-      setDrivers([]);
-    }
-  }
+    canIntervene &&
+    (o.status === "preparing" || o.status === "dispatching") &&
+    !o.driver_name;
 
   // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ والرابطُ من الخادم
   // لا من هنا: لو رُكّبا في الواجهة لأمكن أن يفترقا عمّا يصل المتجر، ولا
@@ -1922,29 +2241,6 @@ function OrderActions({
     }
   }
 
-  // **مصيرُ البضاعة** — من يحمل ثمنَ طعامٍ طُبخ ولم يُسلَّم.
-  async function settleGoods(to: "merchant" | "platform", compensation = 0) {
-    setBusy("goods");
-    setErr("");
-    try {
-      await api(`/api/v1/admin/orders/${o.id}/goods`, {
-        method: "POST",
-        body: JSON.stringify({ to, compensation }),
-      });
-      setGoodsBack(false);
-      setStoreComp("");
-      onChanged();
-    } catch (e) {
-      setErr(
-        e instanceof ApiError
-          ? translateKey(e.body.message_key)
-          : m.errors.internal,
-      );
-    } finally {
-      setBusy("");
-    }
-  }
-
   // ══════════════════════════════════════════════════════════════════
   // **إعادةُ حساب التسوية — البابُ كان مفتوحاً بلا زرّ**
   // ══════════════════════════════════════════════════════════════════
@@ -1998,7 +2294,11 @@ function OrderActions({
   // وخطوةُ تحقّقٍ مركزيّةٌ يلتقطها `StepUpGate`، وتدقيقٌ دائمٌ في الخادم،
   // **وإعادةُ النداء آمنة** — الخادمُ هو الحَكَم (`proof-exception`).
   async function authorizeProofException() {
-    if (reason.trim() === "") return;
+    // **والسببُ الفارغُ يُقال** (المشكلة ٣٣) — كانت الضغطةُ لا تفعل شيئاً بلا كلمة.
+    if (reason.trim() === "") {
+      setErr(BOARD.reasonMissing);
+      return;
+    }
     setBusy("proof");
     setErr("");
     try {
@@ -2060,28 +2360,12 @@ function OrderActions({
     }
   }
 
-  async function assign(driverID: string) {
-    setBusy("assign");
-    setErr("");
-    try {
-      await api(`/api/v1/admin/orders/${o.id}/assign`, {
-        method: "POST",
-        body: JSON.stringify({ driver_id: driverID, note: "" }),
-      });
-      setAssigning(false);
-      onChanged();
-    } catch (e) {
-      setErr(
-        e instanceof ApiError
-          ? translateKey(e.body.message_key)
-          : m.errors.internal,
-      );
-    } finally {
-      setBusy("");
-    }
-  }
-
   async function go(to: string, note: string) {
+    // **وما يلزمه سببٌ لا يُرسَل بلا سبب** (المشكلة ٣٣) — يُقال لا يُبتلع.
+    if ((DESTRUCTIVE.has(to) || releasing) && note.trim() === "") {
+      setErr(BOARD.reasonMissing);
+      return;
+    }
     setBusy(to);
     setErr("");
     try {
@@ -2090,6 +2374,7 @@ function OrderActions({
         body: JSON.stringify({ to, note }),
       });
       setAsking("");
+      setReleasing(false);
       setReason("");
       onChanged();
     } catch (e) {
@@ -2103,53 +2388,25 @@ function OrderActions({
     }
   }
 
+  // **«استلمتها» على طلبٍ جديد** — يُسكت رنينَه عند المكتب كلِّه (البند ٥).
+  async function markSeen() {
+    setBusy("seen");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" });
+      onChanged();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
   // **السببُ بدل الضغطتين العمياوين.**
   //
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
-
-  if (goodsBack) {
-    const raw = storeComp.trim();
-    const comp = raw === "" ? 0 : Number(raw);
-    return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">
-          {m.admin.ordersPage.storeCompTitle}
-        </p>
-        <Input
-          type="number"
-          inputMode="numeric"
-          placeholder={m.admin.ordersPage.storeCompLabel}
-          value={storeComp}
-          onChange={(e) => {
-            setStoreComp(e.target.value);
-            setErr("");
-          }}
-        />
-        <p className="text-xs text-ink-muted">
-          {m.admin.ordersPage.storeCompHint}
-        </p>
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <FormActions
-          busy={busy !== ""}
-          onSave={() => {
-            if (!Number.isFinite(comp) || comp < 0) {
-              setErr(m.admin.ordersPage.storeCompBad);
-              return;
-            }
-            void settleGoods("merchant", Math.round(comp));
-          }}
-          onCancel={() => {
-            setGoodsBack(false);
-            setStoreComp("");
-            setErr("");
-          }}
-          saveLabel={m.common.confirm}
-        />
-      </div>
-    );
-  }
 
   if (proofExcepting) {
     return (
@@ -2167,6 +2424,7 @@ function OrderActions({
         />
         {err && <p className="text-xs text-danger">{err}</p>}
         <FormActions
+          busy={busy !== ""}
           onSave={() => void authorizeProofException()}
           onCancel={() => {
             setProofExcepting(false);
@@ -2174,42 +2432,6 @@ function OrderActions({
           }}
           saveLabel={m.common.confirm}
         />
-      </div>
-    );
-  }
-
-  if (assigning) {
-    return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">{m.admin.ordersPage.chooseDriver}</p>
-        {drivers.length === 0 ? (
-          <p className="text-xs text-ink-muted">
-            {m.admin.ordersPage.noDriversOnShift}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {drivers.map((dv) => (
-              <Button
-                key={dv.id}
-                variant="secondary"
-                disabled={busy !== ""}
-                onClick={() => void assign(dv.id)}
-              >
-                {dv.full_name || dv.phone}
-                {dv.open_orders > 0 && ` (${fmtNum(dv.open_orders)})`}
-                {staleLocation(dv.last_location_at, staleMin) && (
-                  <span className="ms-1.5 text-2xs text-danger">
-                    {m.admin.ordersPage.staleLocation}
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
-        )}
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <Button variant="secondary" onClick={() => setAssigning(false)}>
-          {m.common.cancel}
-        </Button>
       </div>
     );
   }
@@ -2257,11 +2479,49 @@ function OrderActions({
           {m.admin.ordersPage.reasonHint}
         </p>
         {err && <p className="text-xs text-danger">{err}</p>}
-        <FormActions onSave={() => void go(asking, reason.trim())} onCancel={() => {
-              setAsking("");
-              setReason("");
-              setErr("");
-            }} saveLabel={m.admin.ordersPage.confirm} tone="danger" />
+        <FormActions
+          busy={busy !== ""}
+          onSave={() => void go(asking, reason.trim())}
+          onCancel={() => {
+            setAsking("");
+            setReason("");
+            setErr("");
+          }}
+          saveLabel={m.admin.ordersPage.confirm}
+          tone="danger"
+        />
+      </div>
+    );
+  }
+
+  // **طارئٌ بعد الاستلام — المكتبُ يرسل الطلبَ لسائقٍ آخر بقراره** (المشكلة ٢٦).
+  if (releasing) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium text-danger">{BOARD.release.title}</p>
+        <p className="text-xs text-ink-muted">{BOARD.release.hint}</p>
+        <Input
+          id={`release-${o.id}`}
+          autoFocus
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErr("");
+          }}
+          placeholder={BOARD.release.reason}
+        />
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={busy !== ""}
+          onSave={() => void go("dispatching", reason.trim())}
+          onCancel={() => {
+            setReleasing(false);
+            setReason("");
+            setErr("");
+          }}
+          saveLabel={BOARD.release.send}
+          tone="danger"
+        />
       </div>
     );
   }
@@ -2481,52 +2741,22 @@ function OrderActions({
         * **والجوابُ عن «أاستردّ المتجرُ؟» يُعطيه من رأى** — **لكنّ
         * القيدَ يكتبه من يملك المال.** **ومن رأى ولا يملك يُبلّغ ولا
         * يقيّد.** */}
-      {o.status === "failed" && can("finance.manage") && (
-        <>
-          {o.goods_settled_to === null ? (
-            <>
-              {/* **والزرّان معاً لمن يستردّ.**
-
-                  متجرٌ يستردّ نظاماً **قد يكون مغلقاً يومَها أو يرفض هذه
-                  بعينها** — فلو تبع الزرُّ بندَ الاسترداد حرفياً لَبقي الطلبُ
-                  معلّقاً بلا مخرج. **ومن لا يستردّ يرى «إلى المكتب» وحدَه**:
-                  لا يُعرض عليه ما لا يقع. */}
-              {o.merchant_accepts_returns && (
-                <Button
-                  variant="secondary"
-                  disabled={busy !== ""}
-                  onClick={() => {
-                    setErr("");
-                    setGoodsBack(true);
-                  }}
-                >
-                  {m.admin.ordersPage.goodsToMerchant}
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                disabled={busy !== ""}
-                onClick={() => void settleGoods("platform")}
-              >
-                {m.admin.ordersPage.goodsToPlatform}
-              </Button>
-            </>
-          ) : (
-            <span className="text-xs text-ink-muted">
-              {o.goods_settled_to === "merchant"
-                ? m.admin.ordersPage.goodsSettledMerchant
-                : m.admin.ordersPage.goodsSettledPlatform}
-            </span>
-          )}
-          {/* ══════════════════════════════════════════════════════
-            * **ولا «تعويضَ سائق» بمبلغٍ حرٍّ على البطاقة** (قرارُ المالك
-            * ٢٠٢٦-١٠-٠٣ — «السائقُ لا يُوعَد بتعويض»)
-            * ══════════════════════════════════════════════════════
-            *
-            * **بابُه الوحيدُ طابورُ «التعويضات»** (`/dashboard/compensations`):
-            * طلبٌ معلَّقٌ يقبله المكتبُ أو يرفضه. **وزرٌّ ثانٍ بمبلغٍ يُكتب
-            * باليد بابٌ خلفيٌّ يتجاوز الطابور.** */}
-        </>
+      {/* **والبضاعةُ الراجعةُ في صندوقها** (`GoodsBox`، قرارُ المالك ٢٠٢٦-١٠-٠٤،
+          البنود ١٢–١٤): **العمليّاتُ تؤكّد مكانها بعد «سلّمت البضاعة»، والماليّةُ
+          تكتب تعويضَ المتجر بسقفٍ وتأكيد.** كانت الصلاحيّةُ معكوسة. */}
+      {o.status === "failed" && (canIntervene || can("finance.manage")) && (
+        <GoodsBox
+          orderId={o.id}
+          settledTo={o.goods_settled_to}
+          returnTo={o.return_to}
+          handedAt={o.goods_handed_at}
+          acceptsReturns={o.merchant_accepts_returns}
+          goodsCost={o.board?.goods_cost ?? 0}
+          compensated={o.board?.store_compensated ?? 0}
+          canIntervene={canIntervene}
+          canFinance={can("finance.manage")}
+          onChanged={onChanged}
+        />
       )}
 
       {/* ══════════════════════════════════════════════════════════════
@@ -2654,7 +2884,12 @@ function OrderActions({
           **وزرٌّ يُعرض ولا يفعل شيئاً أسوأُ من زرٍّ غائب**: من ضغطه في
           طارئٍ فتح قائمةَ متاجرَ لا علاقةَ لها بطلبٍ اشتراه سائقٌ من سوق،
           **فيظنّ أنّ الشاشةَ انكسرت أو أنّه أخطأ الطلب.** */}
-      {canIntervene && TRANSFERABLE.has(o.status) && o.kind !== "custom" && (
+      {canIntervene && TRANSFERABLE.has(o.status) &&
+        o.kind !== "custom" &&
+        // **و«لدي توصيلة» لا تُحوَّل** (البند ١١) — **وعند المتجر ببلاغٍ الزرُّ في
+        // لوحة «الطلب مع السائق»** فلا يُعرض زرّان بالاسم نفسِه (المشكلة ٤).
+        o.kind !== "merchant_delivery" &&
+        !(o.status === "at_pickup" && doorVisible(o)) && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
@@ -2675,7 +2910,9 @@ function OrderActions({
 
           **وثانويٌّ في هيئته**: فعلٌ ماليٌّ يُنشئ قيداً بيد،
           **وزرٌّ بلون العلامة بين أزرار العمل يُضغط سهوا.** */}
-      {canIntervene && o.closed_at != null && (
+      {/* **للمالك والأدمن وحدَهما وبتأكيد كلمة السرّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+          البند ١٥) — قيدٌ في الدفتر، وكان بيد موظّف العمليّات بلا تأكيد. */}
+      {can("finance.recompute") && o.closed_at != null && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
@@ -2690,9 +2927,40 @@ function OrderActions({
         <Button
           variant="secondary"
           disabled={busy !== ""}
-          onClick={() => void openAssign()}
+          onClick={() => setAssigning(true)}
         >
           {m.admin.ordersPage.assignHere}
+        </Button>
+      )}
+      {assigning && (
+        <AssignDialog
+          orderId={o.id}
+          orderNumber={o.number}
+          onClose={() => setAssigning(false)}
+          onDone={() => {
+            setAssigning(false);
+            onChanged();
+          }}
+        />
+      )}
+      {canIntervene &&
+        o.board?.emergency_open &&
+        (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
+          <Button
+            variant="danger"
+            disabled={busy !== ""}
+            onClick={() => {
+              setReason("");
+              setErr("");
+              setReleasing(true);
+            }}
+          >
+            {BOARD.release.button}
+          </Button>
+        )}
+      {canIntervene && o.status === "pending" && o.board && !o.board.seen_at && (
+        <Button variant="primary" disabled={busy !== ""} onClick={() => void markSeen()}>
+          {BOARD.newAck}
         </Button>
       )}
       {err && <p className="w-full text-xs text-danger">{err}</p>}

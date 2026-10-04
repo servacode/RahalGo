@@ -82,16 +82,16 @@ func probes(t *testing.T, hh *Harness) map[string]probe {
 	m := hh.Factory().Merchant()
 	oid, dr := activeOrderFor(t, hh)
 	return map[string]probe{
-		"قراءةُ الحسابات": {"قراءةِ الحسابات", "GET", "/api/v1/admin/users?limit=1", nil},
-		"قراءةُ الطلبات":  {"قراءةِ الطلبات", "GET", "/api/v1/admin/orders?limit=1", nil},
-		"تدخّلٌ في طلب":   {"تدخّلٍ في طلب", "POST", "/api/v1/admin/orders/" + oid + "/transition", map[string]any{"to": "cancelled", "note": "ADG-2"}},
-		"قيدُ محفظة":      {"قيدِ محفظة", "POST", "/api/v1/admin/users/" + v.ID + "/wallet", map[string]any{"amount": 100, "kind": "topup", "note": "ADG-2"}},
-		"قراءةٌ ماليّة":   {"قراءةٍ ماليّة", "GET", "/api/v1/admin/expenses?limit=1", nil},
-		"منحُ دور":        {"منحِ دور", "POST", "/api/v1/admin/users/" + v.ID + "/roles", map[string]any{"role": "finance", "reason": "ADG-2"}},
-		"تبديلُ حال":      {"تبديلِ حالِ حساب", "PATCH", "/api/v1/admin/users/" + v.ID, map[string]any{"status": "suspended", "status_reason": "ADG-2"}},
-		"تعليقُ متجر":     {"تعليقِ متجر", "POST", "/api/v1/admin/merchants/" + m.ID + "/suspend", map[string]any{"suspended": true, "note": "ADG-2"}},
-		"مراجعةُ القوائم": {"مراجعةِ القوائم", "GET", "/api/v1/admin/menu/pending", nil},
-		"إدارةُ المتاجر":  {"إدارةِ المتاجر", "PATCH", "/api/v1/admin/merchants/" + m.ID, map[string]any{"name": "ADG-2"}},
+		"قراءةُ الحسابات":   {"قراءةِ الحسابات", "GET", "/api/v1/admin/users?limit=1", nil},
+		"قراءةُ الطلبات":    {"قراءةِ الطلبات", "GET", "/api/v1/admin/orders?limit=1", nil},
+		"تدخّلٌ في طلب":     {"تدخّلٍ في طلب", "POST", "/api/v1/admin/orders/" + oid + "/transition", map[string]any{"to": "cancelled", "note": "ADG-2"}},
+		"قيدُ محفظة":        {"قيدِ محفظة", "POST", "/api/v1/admin/users/" + v.ID + "/wallet", map[string]any{"amount": 100, "kind": "topup", "note": "ADG-2"}},
+		"قراءةٌ ماليّة":     {"قراءةٍ ماليّة", "GET", "/api/v1/admin/expenses?limit=1", nil},
+		"منحُ دور":          {"منحِ دور", "POST", "/api/v1/admin/users/" + v.ID + "/roles", map[string]any{"role": "finance", "reason": "ADG-2"}},
+		"تبديلُ حال":        {"تبديلِ حالِ حساب", "PATCH", "/api/v1/admin/users/" + v.ID, map[string]any{"status": "suspended", "status_reason": "ADG-2"}},
+		"تعليقُ متجر":       {"تعليقِ متجر", "POST", "/api/v1/admin/merchants/" + m.ID + "/suspend", map[string]any{"suspended": true, "note": "ADG-2"}},
+		"مراجعةُ المرشّحين": {"مراجعةِ المرشّحين", "GET", "/api/v1/admin/leads", nil},
+		"إدارةُ المتاجر":    {"إدارةِ المتاجر", "PATCH", "/api/v1/admin/merchants/" + m.ID, map[string]any{"name": "ADG-2"}},
 		// **وسجلُّ السائقين قراءةٌ، وإنهاءُ الوردية تشغيل** — ولا يُقاسان
 		// بمجسٍّ واحد. (مصالحةُ دورةِ ٢٦.)
 		"قراءةُ السائقين": {"قراءةِ سجلّ السائقين", "GET", "/api/v1/admin/drivers?limit=1", nil},
@@ -161,7 +161,7 @@ func TestADG2_RoleMatrix(t *testing.T) {
 		p["قراءةُ السائقين"],
 	}, []probe{
 		p["قيدُ محفظة"], p["منحُ دور"], p["تعليقُ متجر"],
-		p["إعدادٌ ماليّ"], p["مراجعةُ القوائم"],
+		p["إعدادٌ ماليّ"], p["مراجعةُ المرشّحين"],
 		// **ومن وُظّف للتوثيق لا يُخرج سائقاً من عمله.**
 		p["إنهاءُ وردية"],
 		// **و`GET /drivers` تُخرج الاسمَ والهاتفَ والحال** — **فلا
@@ -172,11 +172,11 @@ func TestADG2_RoleMatrix(t *testing.T) {
 
 	// ── R10+R11 · توثيقُ المتاجر ─────────────────────────────────
 	checkRole(t, hh, "merchant_verification", []probe{
-		p["مراجعةُ القوائم"],
+		p["مراجعةُ المرشّحين"],
 	}, []probe{
 		p["قيدُ محفظة"], p["منحُ دور"], p["إدارةُ المتاجر"],
 		p["قراءةُ السائقين"], p["تعليقُ متجر"],
-		// **ولا مسارَ مراجعةٍ يقرأ طلباً ولا دليلَ حسابات.**
+		// **ولا مسارَ توثيقٍ يقرأ طلباً ولا دليلَ حسابات.**
 		p["قراءةُ الطلبات"], p["قراءةُ الحسابات"],
 	})
 

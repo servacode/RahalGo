@@ -17,6 +17,7 @@ import {
   IconUsers,
   IconStore,
   IconZones,
+  IconLocation,
   IconPromos,
   IconStatus,
   IconSupport,
@@ -27,12 +28,15 @@ import {
   IconWallet,
   BootScreen,
   IconRoles,
+  IconShieldCheck,
   wsBase,
+  useLiveData,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
+import { OutageBanner } from "@/components/admin/OutageBanner";
 
 const m = getMessages(defaultLocale);
 
@@ -105,7 +109,7 @@ const ALL_NAV: NavItem[] = [
     caps: ["support.manage"] },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning,
-    caps: ["support.manage"] },
+    caps: ["emergencies.manage"] },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink,
     caps: ["merchants.verify"] },
   // ══════════════════════════════════════════════════════════════════
@@ -122,6 +126,10 @@ const ALL_NAV: NavItem[] = [
   // رسمٍ فقط**، ومن رآه ولا يملك شيئاً فيه رأى صفحةَ «لا صلاحية».
   { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
     caps: ["orders.read"] },
+  // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
+  // ٢٠٢٦-١٠-٠٤). **وقراءتُها تحليليّة** كبابها في المحرّك.
+  { href: "/dashboard/expansion", label: m.admin.nav.expansion, icon: IconLocation,
+    caps: ["analytics.read"] },
   // **خزينةُ المنصة — أصلُ كلّ حركة.**
   //
   // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
@@ -167,7 +175,7 @@ const ALL_NAV: NavItem[] = [
     caps: ["finance.read"] },
   { href: "/dashboard/payouts", label: m.shared.payout.adminTitle, icon: IconWallet,
     caps: ["finance.read"] },
-  { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,
+  { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,
     caps: ["analytics.read"] },
@@ -190,11 +198,13 @@ const ALL_NAV: NavItem[] = [
   //
   // **وموضعُها قبل الإعدادات**: سؤالُ صحّةٍ لا سؤالُ تهيئة — **ويُفتح
   // عند الشكوى لا كلَّ يوم.**
+  // **وصارت شاشةَ المراقب** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سيرُ الطلبات لمن يملك
+  // `orders.read` — موظّفُ العمليّات — والتفاصيلُ التقنيّةُ داخلها لـ`observability.read`.
   {
     href: "/dashboard/ops",
     label: m.admin.ops.navTitle,
     icon: IconStatus,
-    caps: ["observability.read"],
+    caps: ["orders.read", "observability.read"],
   },
   { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings,
     caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"] },
@@ -248,6 +258,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const nav = useMemo(() => navFor(user?.roles, capabilities), [user?.roles, capabilities]);
+
+  // **عدّادُ «المضافُ حديثاً» على بند السوق** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+  // ما أُضيف بعد آخر فتحٍ للسوق، **ويختفي حين يُفتح.** (إضافةٌ من دفعة السوق.)
+  const canMarket = capabilities.includes("content.manage");
+  const { data: marketNew } = useLiveData<{ count: number }>(
+    () => (canMarket ? api("/api/v1/admin/market/new-count") : Promise.resolve({ count: 0 })),
+    ["menu", "market_seen"],
+    [canMarket],
+  );
+  const inMarket = pathname.startsWith("/dashboard/sections");
+  const navShown = useMemo(
+    () =>
+      nav.map((i) =>
+        i.href === "/dashboard/sections"
+          ? { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) }
+          : i,
+      ),
+    [nav, marketNew, inMarket],
+  );
 
   useEffect(() => {
     if (!loading && capsLoaded && !canAccessPanel(user, capabilities))
@@ -310,7 +339,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
          من يفتحها يفتحها عشرَ مرّاتٍ في اليوم، **فالعلامةُ تقول له ما
          يعرف** وتأخذ سطراً من قائمةٍ طويلة. **وتبقى في البوّابات الأربع.** */
       showBrand={false}
-      nav={nav}
+      nav={navShown}
       pathname={pathname}
       homeHref="/dashboard"
       accountHref="/dashboard/account"
@@ -335,7 +364,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }}
     >
       {/* **شريطُ الطوارئ أعلى كلّ صفحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — لمن يملكها. */}
-      {capabilities.includes("support.manage") && <EmergencyBanner />}
+      {/* **وشريطُ تعطّل الخادم لكلّ موظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). */}
+      <OutageBanner
+        canOpen={capabilities.includes("orders.read") || capabilities.includes("observability.read")}
+      />
+      {capabilities.includes("emergencies.manage") && <EmergencyBanner />}
       {children}
     </DashboardChrome>
     </PasswordGate>

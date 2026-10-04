@@ -67,6 +67,8 @@ func settingsTable() string {
 		settings.GroupDrivers:   "السائقون",
 		settings.GroupMerchants: "المتاجر",
 		settings.GroupSales:     "المندوبون",
+		// **وقسمُ مهل الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ٣٦).
+		settings.GroupDispatch: "التوزيع والتنبيهات",
 	}
 	var b strings.Builder
 	b.WriteString("| المفتاح | المجموعة | النوع | الافتراضيّ |\n|---|---|---|---|\n")

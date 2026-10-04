@@ -193,14 +193,14 @@ const AWAITING: {
 }[] = [
   { key: "emergencies_open", label: H.emergenciesOpen, href: "/dashboard/emergencies", urgent: true, icon: IconWarning },
   { key: "reports_waiting", label: H.reportsWaiting, href: "/dashboard/orders?awaiting=1", urgent: true, icon: IconWarning },
-  { key: "orders_unassigned", label: H.ordersUnassigned, href: "/dashboard/orders?status=dispatching", urgent: true, icon: IconOrder },
+  { key: "orders_unassigned", label: H.ordersUnassigned, href: "/dashboard/orders?filter=no_driver", urgent: true, icon: IconOrder },
   { key: "tickets_late", label: "", href: "/dashboard/tickets?late=1", urgent: true, icon: IconSupport },
   { key: "drivers_over_cash", label: H.driversOverCash, href: "/dashboard/cash?over=1", urgent: true, icon: IconBalance },
   { key: "tickets_open", label: H.ticketsOpen, href: "/dashboard/tickets?status=unresolved", urgent: false, icon: IconSupport },
   { key: "compensations_pending", label: H.compensationsPending, href: "/dashboard/compensations", urgent: false, icon: IconWallet },
   { key: "payouts_pending", label: H.payoutsPending, href: "/dashboard/payouts?status=pending", urgent: false, icon: IconWallet },
   { key: "leads_new", label: H.leadsNew, href: "/dashboard/leads", urgent: false, icon: IconLink },
-  { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/opsmap", urgent: false, icon: IconZones },
+  { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/expansion?filter=waiting", urgent: false, icon: IconZones },
 ];
 
 const STAGES = ["at_store_prep", "dispatching", "to_store", "at_store", "to_customer"] as const;

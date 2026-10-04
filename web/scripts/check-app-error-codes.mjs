@@ -105,11 +105,17 @@ const SERVER_ADMIN = new Set([
   "compensation_not_pending",
   "goods_already_settled", "goods_flow_changed", "goods_ledger_mismatch",
   "order_has_no_driver", "order_not_failed", "order_still_open",
-  "role_exists", "section_has_items", "step_up_invalid", "step_up_required",
+  "role_exists", "section_has_items", "section_name_taken", "section_move_target",
+  "not_test_data", "test_store_has_orders", "step_up_invalid", "step_up_required",
    "transfer_same_merchant",
   "transfer_too_late", "bad_channel", "no_merchant_phone",
   // **مقابلُ التحويل يختاره الموظّف** (٢٠٢٦-١٠-٠٣) — بابُ الإدارة وحدَه.
   "transfer_mapping_invalid", "transfer_item_wrong_store", "transfer_item_unavailable",
+  // **لوحةُ الطلبات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — «لدي توصيلة» لا تُحوَّل،
+  // وحسمُ البضاعة وتعويضُ المتجر بابان للإدارة وحدَها.
+  "transfer_delivery_kind", "goods_compensation_finance", "goods_not_handed",
+  "goods_wrong_place", "goods_compensation_cap", "goods_already_compensated",
+  "driver_off_shift", "order_already_taken",
   // ── staging-only QA fixtures (qa/* endpoints; never reach a real mobile client) ──
   "qa_bad_target", "qa_fault_injected", "qa_flag_not_allowed",
   "qa_needs_custom_cash", "qa_no_backward", "qa_no_driver",
@@ -126,6 +132,8 @@ const SERVER_ADMIN = new Set([
   "phone_change_pending", "second_person_required", "wallet_note_required",
   "wallet_over_cap", "wallet_payout_not_here", "self_approve", "request_decided",
   "idempotency_key_required",
+  // «طلبات التوسّع» — إبلاغُ مكانٍ لم يُغطَّ بعد (لوحةٌ لا هاتف).
+  "not_covered",
 ]);
 
 const found = new Map();

@@ -39,12 +39,17 @@ type DoorView struct {
 	// StorePhone **هاتفُ المتجر** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣) — «ينتظر الإدارةَ تتّصل بالمتجر»: كانت
 	// اللوحةُ عند المتجر تعرض هاتفَ الزبون وحدَه. **وفارغٌ للخاصّ بلا متجر.**
 	StorePhone string `json:"store_phone"`
+	// Reasons **أسبابُ الإنهاء الصالحةُ في هذه المرحلة** — من المحرّك لا من الشاشة
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٦). **كانت قائمةُ النافذة البلاغاتِ كلَّها**:
+	// أسبابُ المتجر عند الباب، والمحذوفُ بقرار المالك — **والمحرّكُ يردّها
+	// «السببُ لا يخصّ هذه المرحلة».**
+	Reasons []string `json:"reasons"`
 }
 
 // DoorViewOf **حالُ باب طلبٍ** — ولا خطأ: ما تعذّرت قراءتُه يبقى فارغاً،
 // **فلا تسقط قائمةُ الطلبات كلُّها لأنّ سطراً في سجلّ التدقيق غاب.**
 func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
-	v := &DoorView{WaitedMin: -1}
+	v := &DoorView{WaitedMin: -1, Reasons: []string{}}
 
 	var code, note *string
 	var at *time.Time
@@ -52,6 +57,7 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 	// الطريق، **فلا يُقرأ بلاغُ المتجر القديم بلاغاً قبل الجديد.**
 	var cur string
 	_ = s.db.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&cur)
+	v.Reasons = OfficeReasonsAt(cur)
 	statuses := []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff}
 	if cur == StAssigned {
 		statuses = []string{StAssigned}

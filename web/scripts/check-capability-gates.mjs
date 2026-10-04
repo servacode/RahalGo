@@ -192,10 +192,15 @@ const walk = (d, out = []) => {
     // ولا تُسند** (بندُ المالك ٨).
     ["components/admin/orders/OrdersScreen.tsx", 'const canIntervene = can("orders.intervene")', "التدخّلُ التشغيليّ"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && TRANSFERABLE', "تحويلُ الطلب"],
-    ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && o.closed_at', "إعادةُ الحساب"],
+    // **وإعادةُ الحساب للمالك والأدمن وحدَهما** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ١٥).
+    ["components/admin/orders/OrdersScreen.tsx", 'can("finance.recompute") && o.closed_at', "إعادةُ الحساب"],
     ["components/admin/orders/OrdersScreen.tsx", 'can("drivers.read")', "عدّادُ الوردية"],
     ["components/admin/orders/OrdersScreen.tsx", "canIntervene && next.map", "أزرارُ تبديل الحال"],
-    ["components/admin/orders/OrdersScreen.tsx", 'o.status === "failed" && can("finance.manage")', "تسويةُ البضاعة"],
+    // **والبضاعةُ الراجعة: العمليّاتُ تقول أين والماليّةُ تكتب كم** (الطلبات ١٢).
+    ["components/admin/orders/OrdersScreen.tsx", 'o.status === "failed" && (canIntervene || can("finance.manage"))', "تسويةُ البضاعة"],
+    ["components/admin/orders/GoodsBox.tsx", "if (!canIntervene) {", "وجهةُ البضاعة للعمليّات"],
+    ["components/admin/orders/GoodsBox.tsx", "compensated === 0 && canFinance", "تعويضُ المتجر للماليّة"],
+    ["components/admin/orders/OrdersScreen.tsx", "{canAssign && assignReady && (", "الإسنادُ اليدويّ"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && (o.status === "accepted"', "إخبارُ المتجر"],
     // **وإنهاءُ الباب بقدرة التدخّل** (مساءَ ٢٠٢٦-١٠-٠٢، البند ١) — المحرّكُ
     // يردّ ٤٠٣ لمن لا يملكها، **فلا يُعرض له زرٌّ يُعتذر عنه.**

@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**30 قدرةً · 186 صفَّ سياسةٍ للمسارات · 2 استثناءً · 26 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**32 قدرةً · 203 صفَّ سياسةٍ للمسارات · 3 استثناءً · 28 فعلاً حسّاساً · 7 حقلاً محروساً · 1 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -55,30 +55,32 @@
 <!-- gen:capabilities -->
 | القدرة | تحرس مسارات | تحرس حقولاً | الوصف |
 |---|---|---|---|
-| `analytics.read` | 6 | — | قراءةُ التحليلات |
-| `audit.read` | 1 | — | قراءةُ سجلّ التدقيق |
-| `content.manage` | 20 | — | لافتاتٌ وعروضٌ ومحتوى |
+| `analytics.read` | 8 | — | قراءةُ التحليلات |
+| `audit.read` | 3 | — | قراءةُ سجلّ التدقيق |
+| `content.manage` | 28 | — | لافتاتٌ وعروضٌ ومحتوى |
 | `drivers.manage` | 3 | — | إدارةُ السائقين وتشغيلُهم |
 | `drivers.read` | 2 | — | قراءةُ سجلّ السائقين ومواضعهم |
+| `emergencies.manage` | 5 | — | قراءةُ الطوارئ واستلامُها |
 | `finance.export` | 2 | — | سحبُ الدفتر وكشفِ الطلبات ملفّاً |
-| `finance.manage` | 14 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
+| `finance.manage` | 15 | — | قيدُ محفظةٍ ومصروفٌ وخزينة |
 | `finance.read` | 17 | — | قراءةُ المال والتقارير الماليّة |
+| `finance.recompute` | 1 | — | إعادةُ حساب تسوية طلبٍ مُغلق |
 | `merchants.manage` | 10 | — | إدارةُ المتاجر وتعليقُها |
 | `merchants.read` | 4 | — | قراءةُ سجلّ المتاجر وقوائمها |
-| `merchants.verify` | 4 | — | مراجعةُ المرشَّحين والقوائم |
+| `merchants.verify` | 2 | — | مراجعةُ المرشَّحين والقوائم |
 | `observability.read` | 1 | — | قراءةُ صحّة المنصّة الداخليّة |
 | `orders.communications.read` | 3 | — | قراءةُ محادثات الطلب ورسائله |
-| `orders.intervene` | 10 | — | تدخّلٌ في طلبٍ نيابةً عن طرفه |
-| `orders.read` | 10 | — | قراءةُ الطلبات ولوحةِ العمليّات |
+| `orders.intervene` | 12 | — | تدخّلٌ في طلبٍ نيابةً عن طرفه |
+| `orders.read` | 12 | — | قراءةُ الطلبات ولوحةِ العمليّات |
 | `payouts.decide` | 1 | — | قرارُ السحب |
 | `platform.overview` | 1 | — | رئيسيّةُ مدير المنصّة بأرقامها ومالِها |
 | `roles.manage` | 7 | — | منحُ الأدوار وسحبُها |
 | `safety.manage` | 8 | — | الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر |
 | `settings.financial.manage` | 3 | — | إعداداتٌ تدخل حساباً ماليّاً |
-| `settings.general.manage` | 20 | — | إعداداتٌ عامّةٌ ومحتوى |
+| `settings.general.manage` | 21 | — | إعداداتٌ عامّةٌ ومحتوى |
 | `settings.read` | 2 | — | قراءةُ لوح الإعدادات |
 | `settings.security.manage` | 3 | — | إعداداتُ الأمن والجلسات |
-| `support.manage` | 13 | — | التذاكرُ والنزاعاتُ والطوارئ |
+| `support.manage` | 8 | — | التذاكرُ والنزاعاتُ والطوارئ |
 | `users.cashban.lift` | 1 | — | رفعُ منع الدفع نقداً عن زبون |
 | `users.contact.read` | **0** | **7** | قراءةُ رقم الاتّصال |
 | `users.export` | 1 | — | سحبُ دليل الحسابات ملفّاً |
@@ -120,6 +122,7 @@
 <!-- gen:exemptions -->
 | النمط | السبب |
 |---|---|
+| `/ops/status` | **حالُ الخادم بكلمات لكلّ موظّف** — الشريطُ الأحمرُ أعلى اللوحة؛ يكفيه `RequireAnyCapability`، **ولا رقمَ ولا سببَ تقنيّاً في ردّه.** |
 | `/settings/{key}` | **القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`). |
 | `/step-up` | **قدرتُه قدرةُ الفعل المُؤكَّد** — تُقاس في المعالِج من `LookupAdmin` نفسِها. (`ADG-3`.) |
 <!-- /gen:exemptions -->
@@ -153,9 +156,11 @@
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
 | `finance.expense_voided` | `POST` | `/expenses/{id}/void` | — | دائماً | `finance.manage` |
+| `finance.goods_compensation` | `POST` | `/orders/{id}/goods/compensation` | `amount` | دائماً | `finance.manage` |
 | `finance.incentive` | `POST` | `/users/{id}/incentive` | `amount` | دائماً | `finance.manage` |
 | `finance.merchant_cash_paid` | `POST` | `/merchant-cash-settlements/{id}/pay` | — | دائماً | `finance.manage` |
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `approve`, `amount` | دائماً | `payouts.decide` |
+| `finance.settlement_recomputed` | `POST` | `/orders/{id}/recompute` | — | دائماً | `finance.recompute` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
 | `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |
 | `finance.wallet_request_approved` | `POST` | `/wallet-requests/{id}/approve` | — | دائماً | `finance.manage` |

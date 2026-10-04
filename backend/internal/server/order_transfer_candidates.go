@@ -23,6 +23,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/itemmatch"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 type transferOrderItem struct {
@@ -72,16 +73,22 @@ func (s *Server) handleTransferCandidates(w http.ResponseWriter, r *http.Request
 
 	// **نقطةُ القياس**: موضعُ السائق إن كان الطلبُ معه وموضعُه معروف —
 	// **فهو من سيقود إلى المتجر الجديد** — وإلّا المتجرُ الحاليّ.
-	var current, from string
+	var current, from, kind string
 	if err := s.pg.QueryRow(ctx, `
 		SELECT o.merchant_id::text,
 		       CASE WHEN u.last_location IS NOT NULL THEN 'driver'
-		            WHEN m.location IS NOT NULL THEN 'store' ELSE '' END
+		            WHEN m.location IS NOT NULL THEN 'store' ELSE '' END,
+		       o.kind
 		FROM orders o
 		JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users u ON u.id = o.driver_id
-		WHERE o.id = $1`, orderID).Scan(&current, &from); err != nil {
+		WHERE o.id = $1`, orderID).Scan(&current, &from, &kind); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	// **و«لدي توصيلة» لا تُحوَّل** — متجرُها مُنشئُها (البند ١١).
+	if kind == orders.KindMerchantDelivery {
+		s.respondErr(w, errTransferDeliveryKind)
 		return
 	}
 

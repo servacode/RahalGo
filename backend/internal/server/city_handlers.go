@@ -200,11 +200,8 @@ func (s *Server) handleUpdateCity(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	// **إشعارُ إطلاق المدينة** (Batch 3d) — لمشترِكي «أشعرني» إن صارت مُطلَقةً
-	// فعليّاً (تُتحقَّق سلطةُ الهرم داخلَ المُشعِر). آمنٌ ومرّةً واحدة.
-	if active {
-		s.notifyCityLaunch(r.Context(), id)
-	}
+	// **ولا إبلاغَ آليّاً عند الإطلاق** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — مشترِكو
+	// «أشعرني» يُبلَّغون بزرّ «بلّغ المنتظرين الآن» في «طلبات التوسّع».
 	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestTransfer_AtStoreSendsDriverToNewStore(t *testing.T) {
@@ -82,12 +83,10 @@ func TestTransfer_OldStoreReportDoesNotFollowToNewStore(t *testing.T) {
 		!strings.Contains(w.Body.String(), `"reported":true`) {
 		t.Fatalf("البلاغُ ردّ %d: %s", w.Code, w.Body.String())
 	}
-	// **والبلاغُ قبل التحويل بدقيقة** — لا يتساوى الطابعان فيُخفيا العطب.
-	if _, err := f.pool.Exec(ctx, `
-		UPDATE audit_log SET created_at = created_at - interval '1 minute'
-		WHERE action = 'driver.stage_report' AND entity_id = $1`, orderID); err != nil {
-		t.Fatal(err)
-	}
+	// **والبلاغُ قبل التحويل** — لا يتساوى الطابعان فيُخفيا العطب. (كان
+	// يُرجَّع دقيقةً بتعديل سطره؛ والسجلُّ صار إضافةً فقط — الهجرة ٠٢٢٠ —
+	// فيُفصل بينهما بمهلةٍ قصيرة بدل التعديل.)
+	time.Sleep(20 * time.Millisecond)
 	if v := f.srv.orders.DoorViewOf(ctx, orderID); v.ReportCode != "merchant_closed" {
 		t.Fatalf("قبل التحويل البلاغُ %q — والمتوقّعُ merchant_closed", v.ReportCode)
 	}

@@ -47,6 +47,10 @@ var adminPolicy = []Rule{
 	//
 	// **وبابٌ واحدٌ يُقرأ ولا يُكتب** (دورةُ ٧٠أ).
 	{"GET", "/ops/health", ObservabilityRead},
+	// **وشاشةُ المراقب — سيرُ الطلبات بكلمات الخادم بلا أرقامه** (قرارُ المالك
+	// ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٢): **موظّفُ العمليّات يراها،
+	// والتفاصيلُ التقنيّةُ تبقى خلف `observability.read`.**
+	{"GET", "/ops/monitor", OrdersRead},
 
 	// ── حساباتُ الموظّفين والمستخدمين ────────────────────────────
 	{"POST", "/users", UsersStatusManage},
@@ -96,13 +100,22 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	// **ومرشّحو التحويل يُقرؤون لمن يحوّل** — فيهم أسعارُ الشراء.
 	{"GET", "/orders/{id}/transfer-candidates", OrdersIntervene},
-	{"POST", "/orders/{id}/recompute", OrdersIntervene},
+	// **وإعادةُ حساب التسوية للمالك والأدمن وحدَهما** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٥).
+	{"POST", "/orders/{id}/recompute", FinanceRecompute},
+	// **ومرشّحو الإسناد اليدويّ** — بالقرب والنقد والطلبات (البند ١٠).
+	{"GET", "/orders/{id}/assign-candidates", OrdersIntervene},
+	// **و«استلمتها» على الطلب الجديد** — يُسكت رنينَه عند المكتب كلِّه (البند ٥).
+	{"POST", "/orders/{id}/seen", OrdersIntervene},
+	// **و«أنا عليه» على العالق** — يوقف تكرارَ تذكيره («مراقبة التشغيل»، البند ٤).
+	{"POST", "/orders/{id}/alert-ack", OrdersIntervene},
 	{"POST", "/orders/{id}/proof-exception", OrdersIntervene}, // إذنُ تسليمٍ بلا صورةٍ — عملياتٌ مُخوَّلةٌ لا السائق (٢٠٢٦-٠٩-٢٧)
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},
 	{"POST", "/orders/{id}/compensation/reject", FinanceManage},
 	{"GET", "/compensations/pending", FinanceRead},
 	{"POST", "/orders/{id}/settle-goods", FinanceManage},
+	// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب التعويض** (البند ١٢).
 	{"POST", "/orders/{id}/goods", OrdersIntervene},
+	{"POST", "/orders/{id}/goods/compensation", FinanceManage},
 	// **إنهاءُ الإدارة عند باب الزبون** — سلّم الآن أو عُد إلى المكتب (مساءَ ٢٠٢٦-١٠-٠٢).
 	{"POST", "/orders/{id}/door-resolution", OrdersIntervene},
 	{"POST", "/orders/{id}/whatsapp", OrdersIntervene},
@@ -114,6 +127,8 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/export", FinanceExport},
 	{"GET", "/orders", OrdersRead},
 	{"GET", "/orders/alerts", OrdersRead},
+	// **عدّاداتُ اللوحة بالشرط الذي تُرشِّح به** (البند ٣).
+	{"GET", "/orders/board", OrdersRead},
 	{"GET", "/orders/{id}", OrdersRead},
 	// **وكلامُ الناس صنفٌ بذاته** — ومن يسوّي حساباً لا يقرؤه.
 	{"GET", "/orders/{id}/chat", OrdersCommunicationsRead},
@@ -126,8 +141,6 @@ var adminPolicy = []Rule{
 	{"GET", "/merchants/{id}/violations", SafetyManage},
 	{"GET", "/merchants/{id}/warnings", SafetyManage},
 	{"POST", "/leads/{id}/status", MerchantsVerify},
-	{"POST", "/menu/items/{itemID}/review", MerchantsVerify},
-	{"GET", "/menu/pending", MerchantsVerify},
 	{"GET", "/leads", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
@@ -189,12 +202,14 @@ var adminPolicy = []Rule{
 	{"GET", "/tickets/{id}", SupportManage},
 	{"POST", "/tickets/{id}/replies", SupportManage},
 	{"POST", "/tickets/{id}/resolve", SupportManage},
-	{"GET", "/emergencies", SupportManage},
-	{"POST", "/emergencies/{id}/resolve", SupportManage},
+	// **والطوارئُ بقدرتها** — يبلغها الدعمُ والعمليّاتُ معاً (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+	// قسمُ «الطلبات»، البند ٧): **من يوزّع الطلبات يرى الحادث ويستلمه.**
+	{"GET", "/emergencies", EmergenciesManage},
+	{"POST", "/emergencies/{id}/resolve", EmergenciesManage},
 	// **وشريطُ الطوارئ أعلى كلّ صفحةٍ وزرُّ «استلمتها»** (٢٠٢٦-١٠-٠٤).
-	{"GET", "/emergencies/banner", SupportManage},
-	{"POST", "/emergencies/{id}/ack", SupportManage},
-	{"POST", "/emergencies/stores/{id}/ack", SupportManage},
+	{"GET", "/emergencies/banner", EmergenciesManage},
+	{"POST", "/emergencies/{id}/ack", EmergenciesManage},
+	{"POST", "/emergencies/stores/{id}/ack", EmergenciesManage},
 	{"GET", "/disputes", SupportManage},
 	{"POST", "/disputes", SupportManage},
 	{"POST", "/disputes/{id}/settle", FinanceManage},
@@ -207,9 +222,19 @@ var adminPolicy = []Rule{
 	{"", "/banners/{id}", ContentManage},
 	{"", "/offers", ContentManage},
 	{"", "/offers/{id}/active", ContentManage},
+	// **وترتيبُ الأقسام بالسحب قبل `{id}`** — الأخصُّ أوّلاً.
+	{"PUT", "/sections/order", ContentManage},
 	{"", "/sections", ContentManage},
 	{"", "/sections/{id}", ContentManage},
 	{"GET", "/sections/{id}/items", ContentManage},
+	// ── «السوق» — أصنافُ كلّ المتاجر (قرارُ المالك ٢٠٢٦-١٠-٠٤) ──
+	{"GET", "/market/items", ContentManage},
+	{"POST", "/market/items/bulk", ContentManage},
+	{"GET", "/market/new-count", ContentManage},
+	{"POST", "/market/seen", ContentManage},
+	{"GET", "/market/stores", ContentManage},
+	{"GET", "/market/quality", ContentManage},
+	{"POST", "/market/test-data/delete", ContentManage},
 	{"", "/categories", ContentManage},
 	{"", "/categories/{id}", ContentManage},
 	{"POST", "/media", ContentManage},
@@ -266,6 +291,11 @@ var adminPolicy = []Rule{
 	{"GET", "/ops-map/coverage-demand/places", AnalyticsRead},
 	{"GET", "/ops-map/coverage-requests", AnalyticsRead},
 	{"", "/ops-map/coverage-requests/{id}", SettingsGeneralManage},
+	// **«طلباتُ التوسّع»** — قراءتُها تحليليّةٌ كأختها، **وإبلاغُ المنتظرين
+	// لمن يملك التغطية** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/ops-map/expansion", AnalyticsRead},
+	{"GET", "/ops-map/expansion/reminder", AnalyticsRead},
+	{"", "/ops-map/expansion/notify", SettingsGeneralManage},
 	{"GET", "/ops-map/branches", OrdersRead},
 	{"", "/ops-map/branches", SettingsGeneralManage},
 	{"", "/ops-map/branches/{id}", SettingsGeneralManage},
@@ -302,6 +332,9 @@ var adminPolicy = []Rule{
 	{"GET", "/launch", SettingsRead},
 	{"POST", "/launch/preset", SettingsGeneralManage},
 	{"GET", "/audit", AuditRead},
+	{"GET", "/audit/actors", AuditRead},
+	// **وتصديرُ السجلّ قراءتُه في ملفّ** — والتصديرُ نفسُه يُقيَّد فيه.
+	{"GET", "/audit/export", AuditRead},
 	{"GET", "/stats", AnalyticsRead},
 	// **ورئيسيّةُ المدير بقدرتها** — فيها المالُ كلُّه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	{"GET", "/overview", PlatformOverview},
@@ -313,6 +346,10 @@ var adminPolicy = []Rule{
 
 // Exempt **مساراتٌ لا تُحكَم بالجدول — ولكلٍّ سببٌ مكتوب.**
 var Exempt = map[string]string{
+	// **وحالُ الخادم لكلّ موظّفٍ في اللوحة** — كلماتٌ بلا أرقام، يقرؤها
+	// الشريطُ الأحمر (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٣).
+	"/ops/status": "**حالُ الخادم بكلمات لكلّ موظّف** — الشريطُ الأحمرُ أعلى " +
+		"اللوحة؛ يكفيه `RequireAnyCapability`، **ولا رقمَ ولا سببَ تقنيّاً في ردّه.**",
 	"/settings/{key}": "**القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو " +
 		"ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`).",
 	// **وبابُ التأكيد ليس فعلاً بذاته** — **قدرتُه قدرةُ الفعل الذي
