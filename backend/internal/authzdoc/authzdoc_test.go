@@ -48,7 +48,7 @@ func TestEveryCapabilityIsAccountedFor(t *testing.T) {
 		if r.Description == "" {
 			t.Errorf("قدرةٌ بلا وصف: %s", r.Code)
 		}
-		if r.GuardsRoutes == 0 && len(r.GuardsFields) == 0 {
+		if r.GuardsRoutes == 0 && len(r.GuardsFields) == 0 && len(r.GuardsInHandler) == 0 {
 			t.Errorf("**القدرةُ %q لا تحرس باباً ولا حقلاً** — يتيمةٌ حقّاً", r.Code)
 		}
 		if r.FieldScopedOnly && r.GuardsRoutes != 0 {

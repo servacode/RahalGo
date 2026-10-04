@@ -68,6 +68,9 @@ type CapabilityRow struct {
 	GuardsFields []string `json:"guards_fields,omitempty"`
 	// FieldScopedOnly **قدرةٌ لا تحرس باباً بل حقلاً** — وليست سهواً.
 	FieldScopedOnly bool `json:"field_scoped_only,omitempty"`
+	// GuardsInHandler **أبوابٌ تسأل القدرةَ من داخلها** فوق قدرة مسارها
+	// (`authz.HandlerChecks`) — كموافقةِ الشطب.
+	GuardsInHandler []string `json:"guards_in_handler,omitempty"`
 }
 
 type FieldRow struct {
@@ -154,13 +157,19 @@ func Build() Contract {
 		routeCount[string(r.Need)]++
 	}
 
+	inHandler := map[string][]string{}
+	for _, h := range authz.HandlerChecks() {
+		inHandler[string(h.Need)] = append(inHandler[string(h.Need)], h.Method+" "+h.Pattern)
+	}
+
 	for _, cap := range authz.All() {
 		code := string(cap)
 		row := CapabilityRow{
-			Code:         code,
-			Description:  authz.Describe(cap),
-			GuardsRoutes: routeCount[code],
-			GuardsFields: fieldsOf[code],
+			Code:            code,
+			Description:     authz.Describe(cap),
+			GuardsRoutes:    routeCount[code],
+			GuardsFields:    fieldsOf[code],
+			GuardsInHandler: inHandler[code],
 		}
 		// **قدرةٌ بلا مسارٍ وبحقول** ليست يتيمةً بل حقليّة
 		// (`catalog.go:182`): **حقلٌ في ردٍّ لا بابٌ في موجّه.**
@@ -279,6 +288,9 @@ func capabilitiesTable() string {
 		if r.GuardsRoutes == 0 {
 			routes = "**0**"
 		}
+		if len(r.GuardsInHandler) > 0 {
+			routes += fmt.Sprintf(" + %d داخلَ الباب", len(r.GuardsInHandler))
+		}
 		b.WriteString(fmt.Sprintf("| `%s` | %s | %s | %s |\n",
 			r.Code, routes, fields, r.Description))
 	}
@@ -364,7 +376,7 @@ func countsLine() string {
 		if r.FieldScopedOnly {
 			orphanFields++
 		}
-		if r.GuardsRoutes == 0 && len(r.GuardsFields) == 0 {
+		if r.GuardsRoutes == 0 && len(r.GuardsFields) == 0 && len(r.GuardsInHandler) == 0 {
 			noRoute++
 		}
 	}

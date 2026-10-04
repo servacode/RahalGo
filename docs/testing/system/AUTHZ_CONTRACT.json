@@ -64,7 +64,10 @@
   {
    "code": "finance.writeoff.approve",
    "description": "الموافقة على شطب دين متجر أو مندوب لن يسدد",
-   "guards_routes": 0
+   "guards_routes": 0,
+   "guards_in_handler": [
+    "POST /obligation-requests/{id}/approve"
+   ]
   },
   {
    "code": "merchants.manage",

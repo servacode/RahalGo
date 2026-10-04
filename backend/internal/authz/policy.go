@@ -526,3 +526,27 @@ func PolicyCount() int { return len(adminPolicy) }
 // `/meta` · `/opportunities` · `/reps` · `/search`) **كتبتُها
 // من ذاكرةِ مسارٍ لا من الموجِّه.**
 func Rules() []Rule { return adminPolicy }
+
+// HandlerRule **قدرةٌ يشترطها البابُ من داخله فوق قدرةِ مساره.**
+//
+// **والمسارُ واحدٌ بحدّه الأدنى** (`Rules`)، **والقدرةُ الأعلى تُسأل داخلَ
+// المعالِج** لأنّها تتبع الصفَّ لا المسار — كموافقةِ الشطب: الطلبُ نفسُه
+// دفعةٌ أو شطب، **والدفعةُ بـ`finance.manage` والشطبُ بقدرته.**
+type HandlerRule struct {
+	Method  string
+	Pattern string
+	// Need القدرةُ التي يسألها المعالِجُ فوق قدرة المسار.
+	Need Capability
+	// Where موضعُ السؤال في الشيفرة — ليُقرأ ولا يُظنّ.
+	Where string
+}
+
+// handlerChecks **القدراتُ المسؤولةُ داخلَ الأبواب** — كلُّ سطرٍ مسارٌ قائمٌ
+// في `adminPolicy` (يحرسه `TestHandlerChecksHaveRoutes`).
+var handlerChecks = []HandlerRule{
+	{"POST", "/obligation-requests/{id}/approve", FinanceWriteoffApprove,
+		"server/obligations_actions.go handleDecideObligationRequest"},
+}
+
+// HandlerChecks القدراتُ التي تُسأل داخلَ المعالِج — **للعقد والحرّاس.**
+func HandlerChecks() []HandlerRule { return handlerChecks }

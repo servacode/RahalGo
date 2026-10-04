@@ -493,6 +493,11 @@ func TestADG2_EveryCapabilityHasARoute(t *testing.T) {
 	for _, need := range authz.FieldPolicy {
 		used[need] = true
 	}
+	// **وقدرةٌ يسألها البابُ من داخله** فوق قدرة مساره (`authz.HandlerChecks`)
+	// — كموافقةِ الشطب على `/obligation-requests/{id}/approve`.
+	for _, h := range authz.HandlerChecks() {
+		used[h.Need] = true
+	}
 	var orphans []string
 	for _, c := range authz.All() {
 		if !used[c] {
