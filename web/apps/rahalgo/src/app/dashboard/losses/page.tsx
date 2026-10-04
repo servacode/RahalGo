@@ -26,33 +26,37 @@
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { TabCards } from "@rahalgo/ui";
-import { useAuth, hasRole } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
+import { useCanCall } from "@/lib/policy";
 import { LossesView } from "@/components/admin/money/losses";
 import { DisputesView } from "@/components/admin/money/disputes";
 
 const m = getMessages(defaultLocale);
 
 export default function MoneyLostPage() {
-  const { user, can } = useAuth();
-  /* **ومن لا يملك الخسائرَ لا يُرسَم له تبويبُها** — لا يُعطَّل ولا يُخفى
-     بعد ظهور: **لا يوجد أصلاً.** */
-  // **وتبويبُ الخسائر قراءةُ مال** — `finance.read`.
-  const canSeeLosses = can("finance.read");
+  useAuth();
+  const canCall = useCanCall();
+  /* **ومن لا يملك التبويبَ لا يُرسَم له** — لا يُعطَّل ولا يُخفى بعد ظهور.
+     **والسؤالُ سؤالُ المحرّك** (`useCanCall`): أيُّ قدرةٍ تفتح هذا الباب؟
+     (قرارُ المالك ٢٠٢٦-١٠-٠٤: الماليّةُ ترى النزاعات وتحسم، والدعمُ يرى ويفتح.) */
+  const canSeeLosses = canCall("GET", "/reports/losses");
+  const canSeeDisputes = canCall("GET", "/disputes");
   const tabs = [
     ...(canSeeLosses ? [{ key: "losses", label: m.admin.nav.losses }] : []),
-    { key: "disputes", label: m.admin.nav.claims },
+    ...(canSeeDisputes ? [{ key: "disputes", label: m.admin.nav.claims }] : []),
   ];
-  const [tab, setTab] = useState<string>(canSeeLosses ? "losses" : "disputes");
+  const [tab, setTab] = useState<string>("losses");
   /* **والصلاحيّةُ تصل بعد أوّل رسم** (`useAuth` تُحمّل): فتبويبٌ اختِيرَ قبل
      وصولها قد لا يوجد بعده — **فيُصحَّح إلى الموجود لا يُترك معلّقاً.** */
-  const active = tabs.some((t) => t.key === tab) ? tab : "disputes";
+  const active = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "");
 
   return (
     <div className="space-y-5">
       {/* **وتبويبٌ واحدٌ ليس تبويباً** — من لا خيارَ له لا يُعرض عليه صفٌّ
           فيه زرٌّ واحدٌ مضغوطٌ أبداً. */}
       {tabs.length > 1 && <TabCards items={tabs} active={active} onChange={setTab} />}
-      {active === "losses" ? <LossesView /> : <DisputesView />}
+      {active === "losses" && <LossesView />}
+      {active === "disputes" && <DisputesView />}
     </div>
   );
 }

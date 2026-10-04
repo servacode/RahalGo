@@ -50,8 +50,8 @@ func opsFinanceProbes(t *testing.T, hh *Harness) map[string]probe {
 		"مرشَّحو الخزينة": {"مرشَّحي الخزينة", "GET",
 			"/api/v1/admin/treasury-candidates", nil},
 		"تسويةُ نزاع": {"تسويةِ نزاع", "POST",
-			"/api/v1/admin/disputes/00000000-0000-0000-0000-000000000001/settle",
-			map[string]any{"amount": 100}},
+			"/api/v1/admin/disputes/00000000-0000-0000-0000-000000000001/propose",
+			map[string]any{"action": "charge", "note": "OFM"}},
 
 		// ── أفعالٌ تشغيليّةٌ لا تخصّ الماليّة ─────────────────────
 		"إسنادُ سائق": {"إسنادِ سائقٍ لطلب", "POST",

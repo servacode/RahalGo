@@ -76,7 +76,9 @@ var criticalAuditActions = map[string]bool{
 	// الخادم، والنقديُّ في طبقة الطلبات).
 	"finance.driver_compensation": true,
 	"ops.dispute_settled":         true,
-	"finance.merchant_cash_paid":  true,
+	// **ومنذ ٢٠٢٦-١٠-٠٤ يتحرّك مالُ النزاع عند الموافقة على اقتراحه.**
+	"finance.dispute_resolution_approved": true,
+	"finance.merchant_cash_paid":          true,
 }
 
 // conditionalAuditActions **أفعالٌ صنفُها يتقرّر بمعاملها لا باسمها.**

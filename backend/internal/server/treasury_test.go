@@ -155,8 +155,15 @@ func TestTREASURY_AdminWithdrawalIsLabelledAndLeavesCashbox(t *testing.T) {
 		} `json:"data"`
 	}
 	_ = json.Unmarshal(w.Body.Bytes(), &st)
+	// **والرصيدُ الجاري ما في الدفتر حتّى ذلك القيد** — لا رصيدُ المحفظة الآن: القاعدةُ
+	// مشتركة، وفحوصٌ أخرى تكتب قيوداً بتواريخَ لاحقةٍ أو سابقة.
+	running := f.one(t, `
+		SELECT COALESCE(sum(t.amount), 0) FROM wallet_transactions t
+		  JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
+		 WHERE (t.created_at, t.id) <= (SELECT created_at, id FROM wallet_transactions
+		                                 WHERE kind = 'treasury_withdrawal' AND ref = $1)`, res.Data.ID)
 	if len(st.Data.Lines) == 0 || st.Data.Lines[0].KindAr != "سحب الأدمن من رصيد الخزينة" ||
-		st.Data.Lines[0].Balance != bal-7000 {
+		st.Data.Lines[0].Balance != running {
 		t.Fatalf("الكشف: %+v", st.Data.Lines)
 	}
 	// **والتصديرُ لا معادلةَ فيه.**

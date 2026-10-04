@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**36 قدرةً · 250 صفَّ سياسةٍ للمسارات · 3 استثناءً · 35 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 1 قدرةً لا تحرس شيئاً.**
+**37 قدرةً · 254 صفَّ سياسةٍ للمسارات · 3 استثناءً · 36 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 1 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -59,12 +59,13 @@
 | `audit.export` | 1 | — | تصدير سجل الأحداث ملفا |
 | `audit.read` | 2 | — | قراءة سجل الأحداث |
 | `content.manage` | 28 | — | اللافتات والعروض والمحتوى |
+| `disputes.manage` | 3 | — | عرض النزاعات وفتح نزاع يدوي (الحسم للمالية) |
 | `drivers.manage` | 3 | — | إدارة السائقين وتشغيلهم |
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
 | `finance.export` | 6 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 33 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 30 | — | قراءة المال والتقارير المالية |
+| `finance.manage` | 35 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 31 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `finance.writeoff.approve` | **0** | — | الموافقة على شطب دين متجر أو مندوب لن يسدد |
 | `merchants.manage` | 10 | — | إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق) |
@@ -83,7 +84,7 @@
 | `settings.general.manage` | 21 | — | إعدادات عامة: المناطق والمدن ودوام المنصة |
 | `settings.read` | 2 | — | قراءة الإعدادات |
 | `settings.security.manage` | 3 | — | إعدادات الأمان والجلسات |
-| `support.manage` | 8 | — | التذاكر والنزاعات والتقييمات |
+| `support.manage` | 6 | — | التذاكر والنزاعات والتقييمات |
 | `treasury.manage` | 3 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
 | `users.cashban.lift` | 1 | — | رفع منع الدفع نقدا عن زبون |
 | `users.contact.read` | **0** | **7** | رؤية أرقام الهواتف |
@@ -161,6 +162,8 @@
 | `finance.cash_shortfall_loss` | `POST` | `/cashbox/shortfalls/{id}/approve` | — | دائماً | `treasury.manage` |
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
 | `finance.compensation_approved` | `POST` | `/compensations/{id}/approve` | `amount` | دائماً | `finance.manage` |
+| `finance.dispute_proposed` | `POST` | `/disputes/{id}/propose` | `action` | دائماً | `finance.manage` |
+| `finance.dispute_resolution_approved` | `POST` | `/dispute-resolutions/{id}/approve` | — | دائماً | `finance.manage` |
 | `finance.driver_settle` | `POST` | `/drivers/{id}/settle` | `amount` | دائماً | `finance.manage` |
 | `finance.expense_added` | `POST` | `/expenses` | `amount`, `category_id` | دائماً | `finance.manage` |
 | `finance.expense_request_approved` | `POST` | `/expense-requests/{id}/approve` | — | دائماً | `finance.manage` |
@@ -177,7 +180,6 @@
 | `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |
 | `finance.wallet_request_approved` | `POST` | `/wallet-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `ops.delivery_proof_exception` | `POST` | `/orders/{id}/proof-exception` | `reason` | دائماً | `orders.intervene` |
-| `ops.dispute_settled` | `POST` | `/disputes/{id}/settle` | `settlement` | دائماً | `finance.manage` |
 | `ops.order_transition` | `POST` | `/orders/{id}/transition` | `to` | `transitionRefund` | `orders.intervene` |
 <!-- /gen:sensitive -->
 

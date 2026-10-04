@@ -156,7 +156,8 @@
       "audit.read": "سجل الأحداث",
       "audit.export": "تصدير سجل الأحداث",
       "safety.manage": "السلامة وتعليق المتاجر",
-      "treasury.manage": "قرارات الخزينة"
+      "treasury.manage": "قرارات الخزينة",
+      "disputes.manage": "عرض النزاعات وفتحها"
     },
     "roleGroups": {
       "staff": "أدوار الموظفين",
@@ -210,7 +211,8 @@
       "audit.export": "تصدير سجل الأحداث ملفا",
       "observability.read": "قراءة صحة المنصة الداخلية",
       "safety.manage": "الإنذارات والمخالفات وتعليق المتاجر",
-      "treasury.manage": "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة"
+      "treasury.manage": "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة",
+      "disputes.manage": "عرض النزاعات وفتح نزاع يدوي — والحسم للمالية باقتراح وموافقة شخص آخر"
     },
     "capabilityGroups": {
       "orders": "الطلبات",
@@ -729,7 +731,7 @@
     "invalid_zone": "بيانات المنطقة غير صالحة",
     "invite_required": "التسجيل بدعوة من مندوب رحال غو فقط. تواصل مع الدعم ليصلك رابط الدعوة.",
     "invalid_placement": "موضع اللافتة غير معروف — التسوق أو الرئيسية.",
-    "insufficient_balance": "رصيده لا يكفي لهذه العقوبة",
+    "insufficient_balance": "الرصيد لا يكفي لهذه الحركة",
     "invalid_amount": "المبلغ غير صالح",
     "merchant_closed": "هذا المتجر مغلق الآن",
     "item_unavailable": "أحد الأصناف غير متوفر حاليا",
@@ -987,7 +989,10 @@
     "compensation_above_cap": "المبلغ فوق سقف هذا النوع — مدير المنصة وحده يوافق",
     "compensation_ambiguous": "للطلب أكثر من تعويض معلق — وافق من صفحة التعويضات على الصف المقصود",
     "compensation_duplicate": "يوجد اقتراح تعويض قائم لهذا الطلب أو الشكوى",
-    "incentive_user_inactive": "الحساب موقوف أو ليس سائقا ولا مندوبا — لا تُعطى له مكافأة ولا عقوبة من هنا"
+    "incentive_user_inactive": "الحساب موقوف أو ليس سائقا ولا مندوبا — لا تُعطى له مكافأة ولا عقوبة من هنا",
+    "dispute_party_mismatch": "الطرف المختار لا يحمل هذا الدور — اختره من القائمة",
+    "dispute_resolution_pending": "على هذا النزاع اقتراح ينتظر الموافقة — يبت فيه أولا",
+    "dispute_nothing_to_charge": "رصيد الطرف صفر الآن — لا شيء يخصم، والنزاع يبقى مفتوحا"
   },
   "admin": {
     "profits": {
@@ -3424,7 +3429,10 @@
         "finance.incentive_request_rejected": "رفض مكافأة أو عقوبة",
         "finance.incentive_alert": "قرار على تنبيه مكافأة",
         "finance.incentive_retry": "إعادة مكافأة هدف تعثرت",
-        "finance.incentive_export": "تصدير الأهداف والمكافآت"
+        "finance.incentive_export": "تصدير الأهداف والمكافآت",
+        "finance.dispute_proposed": "اقتراح حسم نزاع",
+        "finance.dispute_resolution_approved": "موافقة على حسم نزاع",
+        "finance.dispute_resolution_rejected": "رفض اقتراح حسم نزاع"
       }
     },
     "dash": {
@@ -3530,7 +3538,16 @@
       "amount": "المبلغ",
       "reason": "السبب",
       "date": "التاريخ",
-      "empty": "لا خسائر في هذه الفترة"
+      "empty": "لا خسائر في هذه الفترة",
+      "lost": "خرج من الخزينة",
+      "recovered": "رجع من النزاعات",
+      "net": "الخسارة الصافية",
+      "owed": "لنا عند الأطراف الآن",
+      "party": "الطرف",
+      "status": "النزاع",
+      "noDispute": "لا نزاع",
+      "loadError": "تعذر تحميل الخسائر",
+      "writtenOff": "ديون مشطوبة"
     },
     "compensations": {
       "navTitle": "تعويضات بانتظار الموافقة",
@@ -3738,7 +3755,51 @@
       "reason": "السبب",
       "pickParty": "اختر من هو الطرف",
       "settledBadge": "محسوم",
-      "waivedBadge": "مسقط"
+      "waivedBadge": "مسقط",
+      "loadError": "تعذر تحميل النزاعات",
+      "emptyBy": {
+        "open": "لا نزاعات مفتوحة",
+        "settled": "لا نزاعات محسومة",
+        "waived": "لا نزاعات مسقطة",
+        "all": "لا نزاعات"
+      },
+      "partyOne": {
+        "merchant": "متجر",
+        "driver": "سائق",
+        "sales": "مندوب",
+        "customer": "زبون"
+      },
+      "statusOne": {
+        "open": "مفتوح",
+        "settled": "انخصم",
+        "waived": "انسقط"
+      },
+      "partyFilter": "الطرف",
+      "statusFilter": "الحالة",
+      "colAction": "الإجراء",
+      "openCount": "نزاعات مفتوحة",
+      "recovered": "استرد {n}",
+      "remaining": "بقي {n}",
+      "waivedBefore": "انسقط عنه قبل {n} مرات",
+      "proposeChargeTitle": "اقتراح خصم",
+      "proposeWaiveTitle": "اقتراح إسقاط",
+      "proposeHint": "الاقتراح لا يحرك مالا — يوافق عليه موظف آخر من المالية",
+      "proposeConfirm": "أرسل الاقتراح",
+      "pendingCharge": "بانتظار الموافقة: خصم",
+      "pendingWaive": "بانتظار الموافقة: إسقاط",
+      "proposedBy": "اقترحه {name}",
+      "approve": "وافق",
+      "reject": "ارفض",
+      "approveTitle": "الموافقة على الحسم",
+      "approveChargeBody": "يخصم من محفظة {party} حتى {amount} ويعود إلى الخزينة. وإن لم يكف رصيده يخصم الموجود ويبقى الباقي مفتوحا.",
+      "approveWaiveBody": "يسقط عن {party} مبلغ {amount} وتتحمله المنصة.",
+      "rejectTitle": "رفض الاقتراح",
+      "rejectNote": "سبب الرفض",
+      "chargedPartial": "خصم {charged} — وبقي {remaining} مفتوحا",
+      "pickRole": "دور الطرف",
+      "searchParty": "ابحث بالاسم أو الهاتف",
+      "noParties": "لا أحد بهذا الدور بهذا الاسم",
+      "pickedParty": "الطرف المختار"
     },
     "obligations": {
       "title": "الديون",

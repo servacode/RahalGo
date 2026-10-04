@@ -1454,8 +1454,14 @@ func (s *Server) Router() http.Handler {
 			r.Post("/app-file", s.handleUploadAppFile)
 			r.Delete("/app-file", s.handleDeleteAppFile)
 			r.Get("/disputes", s.handleListDisputes)
-			r.Post("/disputes", s.handleCreateDispute)
-			r.Post("/disputes/{id}/settle", s.handleSettleDispute)
+			r.Get("/disputes/parties", s.handleDisputeParties)
+			// **ومحميٌّ من الضغطتين** — مفتاحُ عدمِ التكرار من الشاشة (المشكلة ١٤).
+			r.Post("/disputes", s.idempotent(s.handleCreateDispute))
+			// **والحسمُ اقتراحٌ وموافقةُ غيرِ المقترِح** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+			r.Post("/disputes/{id}/propose", s.handleProposeDisputeResolution)
+			r.Get("/dispute-resolutions", s.handleListDisputeResolutions)
+			r.Post("/dispute-resolutions/{id}/approve", s.handleDecideDisputeResolution(true))
+			r.Post("/dispute-resolutions/{id}/reject", s.handleDecideDisputeResolution(false))
 			// **الطوارئُ مجموعةً** — ولا تُغلق بمرور الوقت: طارئٌ يختفي وحدَه
 			// يُنسى، **ومن سأل عنه بعد يومين لم يجد من يقول ماذا جرى.**
 			r.Get("/emergencies", s.handleOpenEmergencies)

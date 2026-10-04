@@ -153,7 +153,7 @@ const ALL_NAV: NavItem[] = [
   // **والصلاحيّةُ أوسعُهما** — وتبويبُ الخسائر لا يُرسَم إلّا لمن يملكه،
   // فلا يوسّع البابُ على أحدٍ ما كان يراه.
   { href: "/dashboard/losses", label: m.admin.nav.moneyLost, icon: IconBalance,
-    caps: ["finance.read", "support.manage"] },
+    caps: ["finance.read", "disputes.manage"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,

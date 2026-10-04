@@ -153,15 +153,31 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 
 	// **والنزاعُ في جدوله، ومرجعُه إنذارُه.**
 	//
-	// `ON CONFLICT` على (الطلب · الطرف) يحرس التكرار: **التعويضُ قد يُنادى
-	// مرّتين لطلبٍ واحد** (طارئٌ ثمّ فشل)، فيُطالَب المتجرُ مرّتين بالواقعة
+	// `ON CONFLICT` على (الطلب · الطرف) **المفتوح** يحرس التكرار: **التعويضُ قد
+	// يُنادى مرّتين لطلبٍ واحد** (طارئٌ ثمّ فشل)، فيُطالَب المتجرُ مرّتين بالواقعة
 	// نفسِها. **ويُجمع لا يُستبدل** — كلفتان وقعتا فعلاً.
+	//
+	// # ونزاعٌ محسومٌ لا يكبر (قراراتُ ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» المشكلة ٤)
+	//
+	// كان التعارضُ على النزاع أيّاً كانت حالُه — **فتعويضٌ ثانٍ بعد الحسم يُضاف
+	// إلى نزاعٍ «محسوم» فلا يُطالَب به أبداً ولا يُرى في المفتوح.** والفهرسُ
+	// الفريدُ صار على المفتوح وحدَه (`0350`): **تعويضٌ جديدٌ يفتح نزاعاً جديداً.**
+	//
+	// # والسببُ من طلب التعويض الذي وُوفق عليه (المشكلة ٥)
+	//
+	// كان من `orders.fail_reason` — **وتعذّرُ المتجر لا يُفشل الطلب**: يعود إلى
+	// المكتب حيّاً ثمّ قد يفشل لاحقاً بسببٍ آخر («الزبون غير موجود»)، **فيُطالَب
+	// المتجرُ بذنبٍ ليس ذنبَه.** والسببُ الصادقُ ما كُتب في طلب التعويض الذي
+	// ذنبُه على المتجر.
 	_, err = q.Exec(ctx, `
 		INSERT INTO disputes (party_role, merchant_id, order_id, warning_id, reason, amount)
 		SELECT 'merchant', o.merchant_id, o.id, $3,
-		       COALESCE(o.fail_reason, 'merchant_refused'), $2
+		       COALESCE((SELECT NULLIF(r.fail_reason, '') FROM driver_compensation_requests r
+		                  WHERE r.order_id = o.id AND r.fault = 'merchant'
+		                  ORDER BY r.decided_at DESC NULLS FIRST, r.created_at DESC LIMIT 1),
+		                o.fail_reason, 'merchant_refused'), $2
 		FROM orders o WHERE o.id = $1
-		ON CONFLICT (order_id, party_role) WHERE order_id IS NOT NULL
+		ON CONFLICT (order_id, party_role) WHERE order_id IS NOT NULL AND status = 'open'
 		DO UPDATE SET amount = disputes.amount + $2`,
 		orderID, amount, warningID)
 	return err

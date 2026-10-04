@@ -90,6 +90,12 @@ var approvalSources = []approvalSource{
 		ApprovePath: "/api/v1/admin/incentive-requests/{id}/approve",
 		RejectPath:  "/api/v1/admin/incentive-requests/{id}/reject",
 		Href:        "/dashboard/incentives"},
+	// **حسمُ النزاعات: خصمٌ أو إسقاط** — اقتراحٌ من الماليّة وموافقةُ غيرِ المقترِح (هجرة 0350).
+	{Key: "disputes", Table: "dispute_resolutions", Section: "disputes",
+		Capability:  authz.FinanceManage,
+		ApprovePath: "/api/v1/admin/dispute-resolutions/{id}/approve",
+		RejectPath:  "/api/v1/admin/dispute-resolutions/{id}/reject",
+		Href:        "/dashboard/losses"},
 }
 
 var approvalIdent = regexp.MustCompile(`^[a-z_]+$`)

@@ -109,6 +109,7 @@ const SERVER_ADMIN = new Set([
   "bad_placement", "city_bad_point", "city_bad_radius", "city_bad_reach",
   "city_has_merchants", "city_needs_name", "claim_already_settled",
   "dispute_party_has_no_wallet", "division_in_use",
+  "dispute_party_mismatch", "dispute_resolution_pending", "dispute_nothing_to_charge",
   "division_needs_governorate", "division_needs_name",
   "driver_already_compensated", "driver_has_open_orders", "duplicate_name",
   "compensation_not_pending",

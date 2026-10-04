@@ -38,7 +38,8 @@ var opsFinalCaps = []string{
 //
 // **و`audit.read` بقرار المالك 2026-10-04** (سجلُّ الأحداث — هجرة `0260`).
 var financeFinalCaps = []string{
-	"analytics.read", "audit.read", "finance.export", "finance.manage", "finance.read",
+	// **و`disputes.manage`** — الماليّةُ ترى النزاعاتِ التي تحسمها (قرارُ المالك ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» البند ١).
+	"analytics.read", "audit.read", "disputes.manage", "finance.export", "finance.manage", "finance.read",
 	"orders.read", "payouts.decide", "settings.financial.manage",
 	"settings.read", "users.read",
 }
