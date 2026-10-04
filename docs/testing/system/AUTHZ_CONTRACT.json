@@ -4,7 +4,7 @@
   {
    "code": "analytics.read",
    "description": "قراءةُ التحليلات",
-   "guards_routes": 6
+   "guards_routes": 8
   },
   {
    "code": "audit.read",
@@ -14,7 +14,7 @@
   {
    "code": "content.manage",
    "description": "لافتاتٌ وعروضٌ ومحتوى",
-   "guards_routes": 20
+   "guards_routes": 28
   },
   {
    "code": "drivers.manage",
@@ -64,7 +64,7 @@
   {
    "code": "merchants.verify",
    "description": "مراجعةُ المرشَّحين والقوائم",
-   "guards_routes": 4
+   "guards_routes": 2
   },
   {
    "code": "observability.read",
@@ -114,7 +114,7 @@
   {
    "code": "settings.general.manage",
    "description": "إعداداتٌ عامّةٌ ومحتوى",
-   "guards_routes": 20
+   "guards_routes": 21
   },
   {
    "code": "settings.read",
@@ -198,7 +198,7 @@
   }
  ],
  "route_policy": {
-  "rules": 176,
+  "rules": 185,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

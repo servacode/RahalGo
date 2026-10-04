@@ -10,7 +10,7 @@ package server
 // الصفحة الثالثة **قرأ «لا أصناف»**. **وبحثٌ يقول «غيرُ موجود» عمّا هو
 // موجودٌ أخطرُ من رقمٍ يكذب**: فيُضاف الصنفُ مرّتين.
 //
-// **والترشيحُ بالحال مثلُه** — «أرِني ما ينتظر المراجعة» يردّ ما في
+// **والترشيحُ بالحال مثلُه** — «أرِني ما نفد» يردّ ما في
 // الصفحة الحاليّة وحدَها.
 //
 // **والبطاقاتُ كانت تعدّ الصفحة**: قسمٌ فيه ثلاثمئة يقول «الكلّ: ٥٠»،
@@ -18,7 +18,7 @@ package server
 //
 // # والبطاقتان لا تتبعان مُرشِّحَ الحال
 //
-// **وبطاقةٌ تتبعه تقول «المعروضُ صفر» لمن رشّح «ينتظر المراجعة»** — وهي
+// **وبطاقةٌ تتبعه تقول «المعروضُ صفر» لمن رشّح «نفد»** — وهي
 // لا تخصّه: **سؤالُها عن القسم لا عن الترشيح.**
 
 import (
@@ -58,18 +58,18 @@ func TestSectionItems_ServerSideSearchFilterAndCounts(t *testing.T) {
 	// **سبعون صنفاً** — أكثرُ من صفحةٍ واحدة (خمسون)، **فالصفحةُ الثانيةُ
 	// هي ما كان يختفي عن البحث.**
 	//
-	// **وواحدٌ فيها ينتظر المراجعة** — واسمُه فريدٌ ليُبحث عنه.
+	// **وواحدٌ فيها نفد** — واسمُه فريدٌ ليُبحث عنه.
 	for i := range 70 {
 		name := fmt.Sprintf("صنفٌ %02d", i)
-		approved := true
+		available := true
 		if i == 65 {
-			name, approved = "شاورما عربي", false
+			name, available = "شاورما عربي", false
 		}
 		if _, err := f.pool.Exec(ctx, `
 			INSERT INTO menu_items (merchant_id, section_id, platform_section_id,
-				name, price, merchant_price, approved, available)
-			VALUES ($1, $2, $3, $4, 1000, 1000, $5, true)`,
-			f.merchantID, menuSectionID, sectionID, name, approved); err != nil {
+				name, price, merchant_price, available)
+			VALUES ($1, $2, $3, $4, 1000, 1000, $5)`,
+			f.merchantID, menuSectionID, sectionID, name, available); err != nil {
 			t.Fatalf("تعذّر الصنف %d: %v", i, err)
 		}
 	}
@@ -130,9 +130,9 @@ func TestSectionItems_ServerSideSearchFilterAndCounts(t *testing.T) {
 	}
 
 	// ── ٣ · والترشيحُ بالحال يعمل على القسم كلِّه ────────────────────
-	pending := get("page=1&state=pending")
+	pending := get("page=1&state=out")
 	if pending.Data.Count != 1 || pending.Data.Items[0].Name != "شاورما عربي" {
-		t.Fatalf("«ينتظر المراجعة» ردَّ %d — **وترشيحٌ فوق صفحةٍ وعدٌ بترشيح**",
+		t.Fatalf("«نفد» ردَّ %d — **وترشيحٌ فوق صفحةٍ وعدٌ بترشيح**",
 			pending.Data.Count)
 	}
 	// **وبطاقتُه لا تتبعه** — **وإلّا قالت «المعروضُ صفر» وهي لا تخصّ ترشيحَه.**

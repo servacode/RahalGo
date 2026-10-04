@@ -103,7 +103,8 @@ const SERVER_ADMIN = new Set([
   "compensation_not_pending",
   "goods_already_settled", "goods_flow_changed", "goods_ledger_mismatch",
   "order_has_no_driver", "order_not_failed", "order_still_open",
-  "role_exists", "section_has_items", "step_up_invalid", "step_up_required",
+  "role_exists", "section_has_items", "section_name_taken", "section_move_target",
+  "not_test_data", "test_store_has_orders", "step_up_invalid", "step_up_required",
    "transfer_same_merchant",
   "transfer_too_late", "bad_channel", "no_merchant_phone",
   // **مقابلُ التحويل يختاره الموظّف** (٢٠٢٦-١٠-٠٣) — بابُ الإدارة وحدَه.
@@ -125,6 +126,8 @@ const SERVER_ADMIN = new Set([
   "qa_coverage_zone_exists",
   "qa_no_closed_order",
   "qa_boundary_near_midnight", "qa_no_default_address", "qa_no_zone_for_address",
+  // «طلبات التوسّع» — إبلاغُ مكانٍ لم يُغطَّ بعد (لوحةٌ لا هاتف).
+  "not_covered",
 ]);
 
 const found = new Map();

@@ -17,6 +17,7 @@ import {
   IconUsers,
   IconStore,
   IconZones,
+  IconLocation,
   IconPromos,
   IconStatus,
   IconSupport,
@@ -28,6 +29,7 @@ import {
   BootScreen,
   IconRoles,
   wsBase,
+  useLiveData,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -122,6 +124,10 @@ const ALL_NAV: NavItem[] = [
   // رسمٍ فقط**، ومن رآه ولا يملك شيئاً فيه رأى صفحةَ «لا صلاحية».
   { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
     caps: ["orders.read"] },
+  // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
+  // ٢٠٢٦-١٠-٠٤). **وقراءتُها تحليليّة** كبابها في المحرّك.
+  { href: "/dashboard/expansion", label: m.admin.nav.expansion, icon: IconLocation,
+    caps: ["analytics.read"] },
   // **خزينةُ المنصة — أصلُ كلّ حركة.**
   //
   // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
@@ -249,6 +255,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const nav = useMemo(() => navFor(user?.roles, capabilities), [user?.roles, capabilities]);
 
+  // **عدّادُ «المضافُ حديثاً» على بند السوق** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+  // ما أُضيف بعد آخر فتحٍ للسوق، **ويختفي حين يُفتح.** (إضافةٌ من دفعة السوق.)
+  const canMarket = capabilities.includes("content.manage");
+  const { data: marketNew } = useLiveData<{ count: number }>(
+    () => (canMarket ? api("/api/v1/admin/market/new-count") : Promise.resolve({ count: 0 })),
+    ["menu", "market_seen"],
+    [canMarket],
+  );
+  const inMarket = pathname.startsWith("/dashboard/sections");
+  const navShown = useMemo(
+    () =>
+      nav.map((i) =>
+        i.href === "/dashboard/sections"
+          ? { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) }
+          : i,
+      ),
+    [nav, marketNew, inMarket],
+  );
+
   useEffect(() => {
     if (!loading && capsLoaded && !canAccessPanel(user, capabilities))
       router.replace("/adminrahalgo");
@@ -310,7 +335,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
          من يفتحها يفتحها عشرَ مرّاتٍ في اليوم، **فالعلامةُ تقول له ما
          يعرف** وتأخذ سطراً من قائمةٍ طويلة. **وتبقى في البوّابات الأربع.** */
       showBrand={false}
-      nav={nav}
+      nav={navShown}
       pathname={pathname}
       homeHref="/dashboard"
       accountHref="/dashboard/account"
