@@ -115,6 +115,11 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},
 	{"POST", "/orders/{id}/compensation/reject", FinanceManage},
 	{"GET", "/compensations/pending", FinanceRead},
+	// **صفحةُ «التعويضات» الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/compensations", FinanceRead},
+	{"POST", "/compensations", FinanceManage},
+	{"POST", "/compensations/{id}/approve", FinanceManage},
+	{"POST", "/compensations/{id}/reject", FinanceManage},
 	{"POST", "/orders/{id}/settle-goods", FinanceManage},
 	// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب التعويض** (البند ١٢).
 	{"POST", "/orders/{id}/goods", OrdersIntervene},

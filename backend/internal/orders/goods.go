@@ -508,7 +508,34 @@ func (s *Service) CompensateGoods(ctx context.Context, orderID, actorID string, 
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if err := s.CompensateGoodsTx(ctx, tx, orderID, actorID, amount); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	s.publishWalletsOf(ctx, orderID)
+	s.pub.Publish("ops", map[string]any{"type": "order"})
+	return nil
+}
 
+// CompensateGoodsTx **القيدان داخل معاملة المستدعي** — موافقةُ صفحة «التعويضات»
+// على طلبِ تعويضِ بضاعة (قرارُ المالك ٢٠٢٦-١٠-٠٤: طريقُ موافقةٍ واحد).
+func (s *Service) CompensateGoodsTx(ctx context.Context, q wallet.Querier, orderID, actorID string, amount int64) error {
+	if err := GoodsCompensableTx(ctx, q, orderID, amount); err != nil {
+		return err
+	}
+	return s.compensateMerchant(ctx, q, orderID, actorID, amount)
+}
+
+// GoodsCompensableTx **أيجوز تعويضُ هذه البضاعة بهذا المبلغ؟** — ويقفل صفَّ الطلب.
+//
+// يُقرأ عند الاقتراح وعند الموافقة معاً: **بضاعةٌ حُسمت «إلى المتجر»، ولم يُعوَّض
+// عنها، والمبلغُ لا يتجاوز سعرَ شرائها.**
+func GoodsCompensableTx(ctx context.Context, tx wallet.Querier, orderID string, amount int64) error {
+	if amount <= 0 {
+		return ErrGoodsBadCompensation
+	}
 	var settled *string
 	if err := tx.QueryRow(ctx,
 		`SELECT goods_settled_to FROM orders WHERE id = $1 FOR UPDATE`, orderID).
@@ -536,13 +563,5 @@ func (s *Service) CompensateGoods(ctx context.Context, orderID, actorID string, 
 	if amount > cost {
 		return ErrGoodsCompensationCap
 	}
-	if err := s.compensateMerchant(ctx, tx, orderID, actorID, amount); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return err
-	}
-	s.publishWalletsOf(ctx, orderID)
-	s.pub.Publish("ops", map[string]any{"type": "order"})
 	return nil
 }

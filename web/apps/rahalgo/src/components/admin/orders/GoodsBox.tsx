@@ -95,7 +95,7 @@ export function GoodsBox({
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-xs font-medium">{G.compTitle}</p>
         <p className="text-xs text-ink-muted">
-          {G.compHint.replace("{max}", fmtMoney(goodsCost))}
+          {G.compHintQueue.replace("{max}", fmtMoney(goodsCost))}
         </p>
         <Input
           type="number"
@@ -115,7 +115,7 @@ export function GoodsBox({
             setComp(null);
             setErr("");
           }}
-          saveLabel={G.compSend}
+          saveLabel={G.compSendQueue}
         />
       </div>
     );

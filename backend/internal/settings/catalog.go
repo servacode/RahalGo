@@ -1546,8 +1546,24 @@ var Catalog = []Def{
 	{Key: "drivers.reward_3", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
 
+	// **والافتراضيُّ ٥٠ كالقاعدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥): كان صفراً،
+	// **فمن ضغط «رجّع للافتراضي» أوقف كلَّ طلب تعويضٍ بصمت.** وصفرُه الآن مقترَحٌ
+	// صفرٌ والماليّةُ تقرّر — لا طلبَ يُترك.
 	{Key: "drivers.failed_compensation_percent", Group: GroupDrivers, Kind: KindInt,
-		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
+		Min: 0, Max: 100, Unit: "percent", Default: 50, Sensitive: true},
+
+	// ── التعويضات (قرارُ المالك ٢٠٢٦-١٠-٠٤) ─────────────────────────────
+	//
+	// **سقفٌ لكلّ نوع** — وفوقه مديرُ المنصّة وحدَه يوافق. **ومهلةُ الانتظار**
+	// قبل أن يحمرّ الطلبُ ويُنبَّه المالك.
+	{Key: "compensations.cap_driver", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+	{Key: "compensations.cap_merchant_goods", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+	{Key: "compensations.cap_complaint", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+	{Key: "compensations.overdue_hours", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 720, Unit: "hour", Default: 24},
 
 	// **ولا انتظارَ بابٍ بعد اليوم** (`drivers.door_wait_sec` حُذف — قرارُ المالك
 	// مساءَ ٢٠٢٦-١٠-٠٢): السائقُ لا يُنهي الطلبَ عند الباب أصلاً، **والإدارةُ

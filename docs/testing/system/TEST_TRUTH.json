@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 426,
+    "routes": 430,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 65,
+    "notify_sites": 66,
     "notify_targeted": 23,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 179,
-    "behaviour_settings": 144,
+    "setting_defs": 183,
+    "behaviour_settings": 148,
     "order_fields": 95,
-    "test_files": 486,
-    "test_funcs": 2024
+    "test_files": 487,
+    "test_funcs": 2033
   },
   "flows": [
     {
@@ -3428,6 +3428,78 @@
       "key": "auth.sms_template",
       "group": "platform",
       "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.cap_complaint",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.cap_driver",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.cap_merchant_goods",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "compensations.overdue_hours",
+      "group": "platform",
+      "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -24006,6 +24078,60 @@
     {
       "name": "TestCompensateDriverOnlyOnce",
       "file": "internal/server/compensate_twice_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_AboveCapOnlyOwner",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ApproveByRequestID_PaysTheShownDriver",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ComplaintPaysOwnerFromTreasury",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_GoodsCompensationGoesThroughQueue",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_HistoryTabsSummaryMismatch",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_OverdueAlertsOwnerOnce",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ProposerCannotApproveOwn",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ReasonsArabicEverywhere",
+      "file": "internal/server/compensations_unified_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCOMP_ZeroPercentStillCreatesRequest",
+      "file": "internal/server/compensations_unified_test.go",
       "package": "server",
       "orphan": true
     },

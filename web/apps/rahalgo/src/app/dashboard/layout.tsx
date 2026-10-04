@@ -171,7 +171,7 @@ const ALL_NAV: NavItem[] = [
   // **تعويضاتُ السائقين بانتظار الموافقة** — (قرارُ المالك ٢٠٢٦-١٠-٠٢):
   // **التعويضُ بعد طلبٍ لم يكتمل لا يُدفع لحظةَ الضغطة**، ينتظر يداً هنا.
   // **وموضعُها بجانب الخسائر**: الموافقةُ عليها هي ما يصير قيدَ خسارة.
-  { href: "/dashboard/compensations", label: m.admin.compensations.navTitle, icon: IconWallet,
+  { href: "/dashboard/compensations", label: m.admin.compensations.navTitleAll, icon: IconWallet,
     caps: ["finance.read"] },
   { href: "/dashboard/payouts", label: m.shared.payout.adminTitle, icon: IconWallet,
     caps: ["finance.read"] },

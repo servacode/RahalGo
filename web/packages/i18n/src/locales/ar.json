@@ -906,7 +906,10 @@
     "roles_manage_owner_only": "صلاحية إدارة الأدوار يمنحها المالك فقط",
     "role_not_deletable": "هذا الدور أساسي في المنصة ولا يُحذف",
     "role_not_empty": "على هذا الدور حسابات — انزعه عنها أولا",
-    "last_roles_manage": "لا يمكن نزع آخر من يدير الأدوار — وإلا انقفلت اللوحة"
+    "last_roles_manage": "لا يمكن نزع آخر من يدير الأدوار — وإلا انقفلت اللوحة",
+    "compensation_above_cap": "المبلغ فوق سقف هذا النوع — مدير المنصة وحده يوافق",
+    "compensation_ambiguous": "للطلب أكثر من تعويض معلق — وافق من صفحة التعويضات على الصف المقصود",
+    "compensation_duplicate": "يوجد اقتراح تعويض قائم لهذا الطلب أو الشكوى"
   },
   "admin": {
     "profits": {
@@ -1307,7 +1310,9 @@
           "compLabel": "مبلغ التعويض",
           "compBad": "اكتب مبلغا أكبر من صفر ولا يتجاوز الحد الأقصى",
           "compensated": "عوّض المتجر بمبلغ {amount}",
-          "compSend": "ادفع التعويض"
+          "compSend": "ادفع التعويض",
+          "compHintQueue": "يذهب الاقتراح إلى صفحة التعويضات، وتوافق عليه المالية بكلمة السر (موظف غيرك). يدفع من الخزينة إلى محفظة المتجر مرة واحدة. الحد الأقصى سعر شراء البضاعة: {max}",
+          "compSendQueue": "أرسل للموافقة"
         },
         "transferReasonNeeded": "اكتب السبب ليتفعّل التحويل",
         "transferStoreGone": "هذا المتجر لم يعد متاحا للتحويل — اختر غيره",
@@ -2867,6 +2872,25 @@
           "label": "عدد الإنذارات خلال ٣٠ يوماً الذي ينبّه الموظفين",
           "hint": "لا إيقاف آلي أبداً — يصل تنبيه، والقرار لموظف.",
           "zero": "بلا تنبيه"
+        },
+        "compensations.cap_driver": {
+          "label": "سقف تعويض السائق الواحد",
+          "hint": "فوق هذا المبلغ يوافق مدير المنصة وحده",
+          "zero": "بلا سقف"
+        },
+        "compensations.cap_merchant_goods": {
+          "label": "سقف تعويض المتجر عن بضاعة راجعة",
+          "hint": "فوق هذا المبلغ يوافق مدير المنصة وحده، ولا يتجاوز سعر شراء البضاعة أبدا",
+          "zero": "بلا سقف"
+        },
+        "compensations.cap_complaint": {
+          "label": "سقف تعويض الشكوى الواحدة",
+          "hint": "فوق هذا المبلغ يوافق مدير المنصة وحده",
+          "zero": "بلا سقف"
+        },
+        "compensations.overdue_hours": {
+          "label": "مهلة قرار التعويض",
+          "hint": "بعدها يظهر الطلب بالأحمر ويصل تنبيه لمدير المنصة"
         }
       },
       "treasuryNone": "— لم تختر بعد —",
@@ -3146,7 +3170,9 @@
         "finance.wallet_request_rejected": "رفض حركة محفظة",
         "ops.driver_cleared_after_accident": "تأكيد أن السائق بخير بعد حادث",
         "system.merchant_role_dropped": "سحب دور المتجر لعدم وجود متجر",
-        "admin.role_delete": "حذف دور"
+        "admin.role_delete": "حذف دور",
+        "finance.compensation_proposed": "اقتراح تعويض",
+        "finance.compensation_approved": "الموافقة على تعويض"
       }
     },
     "dash": {
@@ -3246,7 +3272,63 @@
       "rejectNotePlaceholder": "مثال: الزبون كان حاضرا والسائق لم يتصل",
       "merchantClaimHint": "الذنب على المتجر — تفتح مطالبة عليه بالمبلغ المدفوع",
       "empty": "لا تعويضات تنتظر قرارا",
-      "loadFailed": "تعذر تحميل القائمة"
+      "loadFailed": "تعذر تحميل القائمة",
+      "titleAll": "التعويضات",
+      "navTitleAll": "التعويضات",
+      "hintAll": "كل تعويض في المنصة يمر من هنا: سائق، متجر عن بضاعة راجعة، صاحب شكوى. المالية توافق بكلمة السر، ولا أحد يوافق على ما اقترحه، والمبلغ يخصم من الخزينة.",
+      "tabs": {
+        "pending": "بانتظار القرار",
+        "approved": "تمت الموافقة",
+        "rejected": "مرفوضة",
+        "all": "الكل"
+      },
+      "kinds": {
+        "driver": "سائق",
+        "merchant_goods": "متجر — بضاعة راجعة",
+        "complaint": "صاحب شكوى"
+      },
+      "roles": {
+        "driver": "سائق",
+        "merchant": "متجر",
+        "customer": "زبون",
+        "rep": "مندوب"
+      },
+      "statuses": {
+        "pending": "بانتظار القرار",
+        "approved": "تمت الموافقة",
+        "rejected": "مرفوض"
+      },
+      "cardPending": "بانتظار القرار",
+      "cardPendingSub": "المجموع {amount}",
+      "cardApproved": "تمت الموافقة هذا الشهر",
+      "cardApprovedSub": "{n} طلب",
+      "cardRejected": "مرفوضة هذا الشهر",
+      "cardOverdue": "تأخر أكثر من {h} ساعة",
+      "colKind": "النوع",
+      "colBeneficiary": "المستفيد",
+      "colRef": "الطلب أو الشكوى",
+      "colProposedBy": "اقترحه",
+      "colWaiting": "ينتظر منذ",
+      "colStatus": "الحال",
+      "colDecision": "القرار",
+      "engine": "النظام",
+      "overdueBadge": "متأخر",
+      "filterKind": "كل الأنواع",
+      "filterFault": "كل الجهات",
+      "filterPerson": "اسم أو هاتف المستفيد",
+      "filterFrom": "من تاريخ",
+      "filterTo": "إلى تاريخ",
+      "clearFilters": "مسح الفلاتر",
+      "mismatch": "انتبه: السبب «{reason}» يدل عادة على ذنب {expected}، والمكتوب {fault}. تأكد قبل القرار.",
+      "aboveCap": "المبلغ فوق سقف هذا النوع ({cap}) — مدير المنصة وحده يوافق",
+      "internalNote": "ملاحظة داخلية — لا يراها المستفيد",
+      "approveTitleAll": "الموافقة على التعويض",
+      "ticketRef": "شكوى #{n}",
+      "decidedBy": "قرره",
+      "selfApproved": "وافق المالك على اقتراحه لعدم وجود موافق غيره",
+      "proposalNote": "ملاحظة المقترح",
+      "emptyHistory": "لا قرارات مطابقة",
+      "approveNotePlaceholderAll": "مثال: الزبون لم يحضر — نصف الأجرة"
     },
     "emergencies": {
       "tabOpen": "المفتوحة",
@@ -3899,7 +3981,8 @@
         "finance.compensate_driver": "تعويضُ سائق",
         "admin.setting_update": "تبديلُ إعدادٍ حسّاس",
         "admin.role_create": "إنشاءُ دورٍ جديد",
-        "admin.role_delete": "حذف دور فارغ"
+        "admin.role_delete": "حذف دور فارغ",
+        "finance.compensation_approved": "الموافقة على تعويض"
       }
     },
     "roles": {
