@@ -17,7 +17,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtSpan, fmtNum, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtSpan, fmtRef, errorText } from "@rahalgo/i18n";
 import { Button, useLiveData, useRepeatingChime, IconWarning } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -79,7 +79,7 @@ export function EmergencyBanner() {
             <span className="min-w-0 flex-1 text-ink">
               {B.driver.replace("{name}", d.driver_name)}
               {d.order_number != null &&
-                `${m.common.listSeparator}${B.order.replace("{n}", fmtNum(d.order_number))}`}
+                `${m.common.listSeparator}${B.order.replace("{n}", fmtRef(d.order_number))}`}
               {`${m.common.listSeparator}${since(d.created_at)}`}
             </span>
             <Link href={`/dashboard/emergencies/${d.id}`} className="text-xs underline">
