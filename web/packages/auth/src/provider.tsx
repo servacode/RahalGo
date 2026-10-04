@@ -7,7 +7,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AuthTransition, type AuthTransitionKind } from "@rahalgo/ui";
-import { authApi, tokenStore, type AuthUser } from "./client";
+import { ApiError, authApi, tokenStore, type AuthUser } from "./client";
+
+/** **رفضُ الجلسة** — لا انقطاعُ الخادم ولا الشبكة. */
+function sessionRejected(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 401 || err.status === 403);
+}
 import { LEGACY_PANEL_ROLES } from "./webaccess";
 
 interface AuthState {
@@ -75,23 +80,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    authApi
-      .me()
-      .then(setUser)
-      .catch(() => tokenStore.clear())
-      .finally(() => setLoading(false));
+    // ══════════════════════════════════════════════════════════════
+    // **والجلسةُ لا تُمسَح إلّا إن رفضها الخادم** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥)
+    // ══════════════════════════════════════════════════════════════
+    //
+    // **كانت كلُّ علّةٍ تمسح التوكن** — فانقطاعُ القاعدة دقيقةً (٥٠٣)
+    // **أخرج كلَّ موظّفٍ فتح صفحةً في تلك الدقيقة إلى شاشة الدخول.**
+    // **والآن**: ٤٠١/٤٠٣ (جلسةٌ مرفوضةٌ بعد محاولة التجديد) تُنهيها،
+    // **وما سواها انقطاعٌ يُعاد بعده النداءُ والجلسةُ باقية.**
+    let stopped = false;
+    const retry = (attempt: number, again: () => void) => {
+      if (!stopped) setTimeout(again, Math.min(15000, 1000 * 2 ** attempt));
+    };
+    const loadMe = (attempt: number) => {
+      authApi
+        .me()
+        .then((u) => {
+          if (stopped) return;
+          setUser(u);
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (stopped) return;
+          if (sessionRejected(err)) {
+            tokenStore.clear();
+            setLoading(false);
+            return;
+          }
+          retry(attempt, () => loadMe(attempt + 1));
+        });
+    };
+    loadMe(0);
     // **والقدراتُ بابٌ ثانٍ** — **ولا تُجمَع مع `me` في نداءٍ واحد**:
     // **عقدُ `me` تقرؤه أربعةُ تطبيقاتٍ ولوحة**، وإضافةُ حقلٍ فيه تمسّ
     // ما يعمل. **وسقوطُها لا يُخرِج أحداً**: يبقى الفراغُ ويُعلَن أنّه
     // لم يُقرَأ، فلا بابَ يُخفى على مالكه بلا خبر.
-    authApi
-      .capabilities()
-      .then(setCapabilities)
-      // **والفراغُ ليس غياباً** — `capsLoaded` يقول إن وصلت،
-      // **والصفحةُ نفسُها تعرض عطبَها بنصّه** (٤٠٣ · ٤٠١ · انقطاع).
-      // @empty-ok **وتنبيهٌ في كلّ صفحةٍ لأجل بندِ قائمةٍ واحدٍ ضجيج.**
-      .catch(() => setCapabilities([]))
-      .finally(() => setCapsLoaded(true));
+    // **والقدراتُ كذلك**: انقطاعٌ لا يُخفي القائمةَ كلَّها — يُعاد النداء.
+    const loadCaps = (attempt: number) => {
+      authApi
+        .capabilities()
+        .then((c) => {
+          if (stopped) return;
+          setCapabilities(c);
+          setCapsLoaded(true);
+        })
+        .catch((err) => {
+          if (stopped) return;
+          if (sessionRejected(err)) {
+            // **والفراغُ ليس غياباً** — `capsLoaded` يقول إن وصلت،
+            // **والصفحةُ نفسُها تعرض عطبَها بنصّه** (٤٠٣ · ٤٠١ · انقطاع).
+            // @empty-ok **وتنبيهٌ في كلّ صفحةٍ لأجل بندِ قائمةٍ واحدٍ ضجيج.**
+            setCapabilities([]);
+            setCapsLoaded(true);
+            return;
+          }
+          retry(attempt, () => loadCaps(attempt + 1));
+        });
+    };
+    loadCaps(0);
+    return () => {
+      stopped = true;
+    };
   }, []);
 
   const login = useCallback(async (phone: string, password: string) => {

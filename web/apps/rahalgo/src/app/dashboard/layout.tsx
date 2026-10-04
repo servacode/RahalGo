@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -296,9 +296,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // **والشرطُ من القائمة لا من اسم دور**: **ما ليس في قائمته لا
   // يملكه** — **ودورٌ مخصَّصٌ يُنشَأ غداً يُنزَل على بابه بلا سطرٍ
   // يُكتب له.**
-  const landed = useRef(false);
+  // **وكلَّ مرّةٍ لا أوّلَها فقط**: الصفحةُ لا تُرسَم ما دام البابُ ليس له
+  // (`mustLand` تحت)، فبابٌ ثانٍ يُفتح برابطٍ مباشر يُحوَّل كذلك ولا يبقى
+  // على شاشة الإقلاع. **ولا حلقة**: الوجهةُ من قائمته.
   useEffect(() => {
-    if (loading || !capsLoaded || landed.current) return;
+    if (loading || !capsLoaded) return;
     const first = nav[0];
     // **والردُّ لبابٍ في القائمة لا يملكه وحدَه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان الشرطُ «ليس في
     // قائمته» فرُدّ كلُّ بابِ تفصيلٍ — ملفُّ حساب، متجر، قسم، حسابي، الإشعارات — **إلى الرئيسيّة عند
@@ -306,13 +308,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // **وأبوابُ التفصيل يحرسها المحرّك** (٤٠٣) كما يحرس كلَّ باب.
     if (!first || !ALL_NAV.some((i) => i.href === pathname)) return;
     if (nav.some((i) => i.href === pathname)) return;
-    landed.current = true;
     router.replace(first.href);
   }, [loading, capsLoaded, pathname, nav, router]);
 
   // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
   // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**
-  if (loading || !capsLoaded || !canAccessPanel(user, capabilities)) {
+  // **وصفحةٌ لا يملكها الدورُ لا تُرسَم قبل التحويل** (فحصُ المتصفّح
+  // ٢٠٢٦-١٠-٠٥): كانت الرئيسيةُ تُركَّب لحظةً عند المالية والدعم فتنادي
+  // `overview` و`settings` فيردّها المحرّكُ ٤٠٣ — **ضجيجٌ وأخطاءُ طرفيّةٍ
+  // في كلّ دخول.** فتبقى شاشةُ الإقلاع حتى يصل التحويل.
+  const mustLand =
+    !!nav[0] && ALL_NAV.some((i) => i.href === pathname) && !nav.some((i) => i.href === pathname);
+
+  if (loading || !capsLoaded || !canAccessPanel(user, capabilities) || mustLand) {
     return (
       <BootScreen />
     );
