@@ -17,6 +17,7 @@ import {
   IconUsers,
   IconStore,
   IconZones,
+  IconLocation,
   IconPromos,
   IconStatus,
   IconSupport,
@@ -123,6 +124,10 @@ const ALL_NAV: NavItem[] = [
   // رسمٍ فقط**، ومن رآه ولا يملك شيئاً فيه رأى صفحةَ «لا صلاحية».
   { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
     caps: ["orders.read"] },
+  // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
+  // ٢٠٢٦-١٠-٠٤). **وقراءتُها تحليليّة** كبابها في المحرّك.
+  { href: "/dashboard/expansion", label: m.admin.nav.expansion, icon: IconLocation,
+    caps: ["analytics.read"] },
   // **خزينةُ المنصة — أصلُ كلّ حركة.**
   //
   // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ

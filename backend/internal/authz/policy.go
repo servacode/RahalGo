@@ -259,6 +259,11 @@ var adminPolicy = []Rule{
 	{"GET", "/ops-map/coverage-demand/places", AnalyticsRead},
 	{"GET", "/ops-map/coverage-requests", AnalyticsRead},
 	{"", "/ops-map/coverage-requests/{id}", SettingsGeneralManage},
+	// **«طلباتُ التوسّع»** — قراءتُها تحليليّةٌ كأختها، **وإبلاغُ المنتظرين
+	// لمن يملك التغطية** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/ops-map/expansion", AnalyticsRead},
+	{"GET", "/ops-map/expansion/reminder", AnalyticsRead},
+	{"", "/ops-map/expansion/notify", SettingsGeneralManage},
 	{"GET", "/ops-map/branches", OrdersRead},
 	{"", "/ops-map/branches", SettingsGeneralManage},
 	{"", "/ops-map/branches/{id}", SettingsGeneralManage},

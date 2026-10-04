@@ -77,6 +77,25 @@ async function registerProtocol(
  */
 const WORKER_URL = "/maplibre-gl-worker.mjs";
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **العربيّةُ على الخريطة موصولةً من اليمين** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وكانت أسماءُ الأماكن حروفاً مقطّعةً معكوسة** — MapLibre لا يشكّل
+ * العربيّةَ ولا يقلب اتّجاهها بنفسه، **ويحتاج إضافةَ الاتّجاه.**
+ *
+ * **والإضافةُ من خادمنا لا من خارجه** — نسخةٌ محفوظةٌ في الأصول العامّة
+ * (`@mapbox/mapbox-gl-rtl-text` 0.3.0، رخصة BSD-2، بصمتُها
+ * `d1c69035…3f589e`). **ولا شبكةَ خارجيّة**: خريطةٌ تنتظر موقعاً لا نملكه
+ * تسقط معه.
+ *
+ * **وتُضبط هنا وحدَه** — كلُّ خريطةٍ في اللوحة تمرّ بهذا الملفّ، فتُصلَح
+ * كلُّها بسطرٍ واحد. **وتُضبط مرّةً في عمر الصفحة** — ضبطُها مرّتين يرمي.
+ */
+export const RTL_PLUGIN_URL = "/vendor/mapbox-gl-rtl-text-0.3.0.js";
+let rtlSet = false;
+
 export async function loadMapEngine(styleUrl: string) {
   if (!enginePromise) enginePromise = import("maplibre-gl");
   const maplibre = await enginePromise;
@@ -84,6 +103,17 @@ export async function loadMapEngine(styleUrl: string) {
   if (!workerSet) {
     maplibre.setWorkerUrl(WORKER_URL);
     workerSet = true;
+  }
+  if (!rtlSet) {
+    rtlSet = true;
+    // **وفوريّةٌ لا كسولة** (`lazy = false`): خرائطُنا كلُّها عربيّةُ الأسماء،
+    // فلا يُنتظَر أوّلُ نصٍّ — **وتُجلب قبل أن يُرسم حرفٌ مقطّع.**
+    // **وسقوطُها لا يُسقط الخريطة** — تبقى الحروفُ كما كانت ويُكتب العطب.
+    if (maplibre.getRTLTextPluginStatus() === "unavailable") {
+      maplibre
+        .setRTLTextPlugin(new URL(RTL_PLUGIN_URL, window.location.origin).href, false)
+        .catch((e: unknown) => console.error("rtl-text plugin", e));
+    }
   }
   if (!protocolPromise) protocolPromise = registerProtocol(maplibre, styleUrl);
   await protocolPromise;

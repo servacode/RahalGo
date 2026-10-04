@@ -200,7 +200,7 @@ const AWAITING: {
   { key: "compensations_pending", label: H.compensationsPending, href: "/dashboard/compensations", urgent: false, icon: IconWallet },
   { key: "payouts_pending", label: H.payoutsPending, href: "/dashboard/payouts?status=pending", urgent: false, icon: IconWallet },
   { key: "leads_new", label: H.leadsNew, href: "/dashboard/leads", urgent: false, icon: IconLink },
-  { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/opsmap", urgent: false, icon: IconZones },
+  { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/expansion?filter=waiting", urgent: false, icon: IconZones },
 ];
 
 const STAGES = ["at_store_prep", "dispatching", "to_store", "at_store", "to_customer"] as const;

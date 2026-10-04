@@ -307,7 +307,21 @@ export default function OpsMapPage() {
   //
   // **والرسمُ حالٌ صريحةٌ لا وضعٌ خفيّ** — **ومن نقر الأرضَ وهو لا
   // يرسم فتح معلَماً، ومن نقرها وهو يرسم أضاف نقطة.**
-  const [drawing, setDrawing] = useState(false);
+  //
+  // **و«ارسم تغطيةً هنا» من «طلبات التوسّع»** يفتح الخريطةَ على الموضع
+  // والرسمُ قائم (`?focus=lat,lng&draw=1`).
+  const [focus] = useState<{ lng: number; lat: number; zoom: number } | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const [lat = NaN, lng = NaN] = (new URLSearchParams(window.location.search).get("focus") ?? "")
+      .split(",")
+      .map(Number);
+    return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
+      ? { lat, lng, zoom: 15 }
+      : undefined;
+  });
+  const [drawing, setDrawing] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("draw") === "1",
+  );
   const [draft, setDraft] = useState<[number, number][]>([]);
   const [zoneName, setZoneName] = useState("");
   const [saveErr, setSaveErr] = useState("");
@@ -1191,6 +1205,7 @@ export default function OpsMapPage() {
             onFeatureClick={onFeature}
             onMapClick={onGround}
             unavailableLabel={T.unavailable}
+            focus={focus}
           />
           {selected && (
             <aside

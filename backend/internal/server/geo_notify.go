@@ -16,6 +16,10 @@ package server
 //
 // **ومرّةً واحدةً ولو تكرّر حفظُ الأدمن**: `notified_at` هو القفل — يُختَم الصفُّ
 // أوّلاً (`WHERE notified_at IS NULL` ذرّيّاً) **ثمّ** يُرسَل، فلا يُشعَر أحدٌ مرّتين.
+//
+// **ولا يُنادى عند الحفظ بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٤): الإبلاغُ بزرّ
+// «بلّغ المنتظرين الآن» في «طلبات التوسّع» (`expansion.go`) — **قد تُرسم التغطيةُ
+// قبل تجهيز السائقين.** ويبقى بابُ QA على التجهيز يُطلقه كضغطةِ الزرّ.
 
 import (
 	"context"
@@ -32,17 +36,17 @@ const (
 //
 // **ولا يُرسَل إن لم تُطلَق فعليّاً** (مدينةٌ نشطةٌ تحت محافظةٍ مُطفأةٍ ليست
 // مُطلَقةً بعد). **وآمنٌ لكلّ حفظٍ متكرّر** — القفلُ `notified_at`.
-func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) {
+func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) int {
 	if s.notify == nil || s.orders == nil {
-		return
+		return 0
 	}
 	launched, err := s.orders.CityEffectivelyLaunched(ctx, s.pg, cityID)
 	if err != nil {
 		s.logger.Error("geo-notify: تعذّر فحصُ إطلاق المدينة", "city", cityID, "error", err)
-		return
+		return 0
 	}
 	if !launched {
-		return
+		return 0
 	}
 	target := "city:" + cityID
 	rows, err := s.pg.Query(ctx, `
@@ -51,7 +55,7 @@ func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) {
 		   AND target_key = $1 AND notified_at IS NULL`, target)
 	if err != nil {
 		s.logger.Error("geo-notify: تعذّر جلبُ مشترِكي المدينة", "city", cityID, "error", err)
-		return
+		return 0
 	}
 	var uids []string
 	for rows.Next() {
@@ -62,8 +66,9 @@ func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) {
 	}
 	rows.Close()
 	if rows.Err() != nil {
-		return
+		return 0
 	}
+	sent := 0
 	for _, uid := range uids {
 		// **الختمُ هو القفل** — من ختمتُ صفَّه (RowsAffected=1) أُرسل إليه وحدَه.
 		tag, uerr := s.pg.Exec(ctx, `
@@ -78,7 +83,9 @@ func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) {
 			Title: msgCityLaunched, Entity: "city_launch", EntityID: cityID,
 			Apps: []string{notifications.AppCustomer},
 		})
+		sent++
 	}
+	return sent
 }
 
 // notifyGovernorateLaunch **محافظةٌ صارت نشطةً ⇒ تُشعَر مدنُها النشطةُ.**
@@ -128,13 +135,9 @@ func (s *Server) notifyAreaCoverage(ctx context.Context) {
 		s.logger.Error("geo-notify: تعذّر جلبُ طلبات التغطية", "error", err)
 		return
 	}
-	type pending struct {
-		id, uid  string
-		lat, lng float64
-	}
-	var list []pending
+	var list []pendingCoverage
 	for rows.Next() {
-		var p pending
+		var p pendingCoverage
 		if rows.Scan(&p.id, &p.uid, &p.lat, &p.lng) == nil {
 			list = append(list, p)
 		}
@@ -143,6 +146,21 @@ func (s *Server) notifyAreaCoverage(ctx context.Context) {
 	if rows.Err() != nil {
 		return
 	}
+	s.sendAreaCoverage(ctx, list)
+}
+
+// pendingCoverage طلبُ «أضف منطقتي» ينتظر الإبلاغ.
+type pendingCoverage struct {
+	id, uid  string
+	lat, lng float64
+}
+
+// sendAreaCoverage **يُبلّغ من صارت نقطتُه مُغطّاةً فعليّاً** — ويُرجع كم بُلّغ.
+//
+// **والختمُ قبل الإرسال** (`notified_at IS NULL` ذرّيّاً) — فلا يُبلَّغ
+// أحدٌ مرّتين ولو ضُغط الزرُّ مرّتين معاً.
+func (s *Server) sendAreaCoverage(ctx context.Context, list []pendingCoverage) int {
+	sent := 0
 	for _, p := range list {
 		coverable, cerr := s.orders.CoverableAt(ctx, s.pg, p.lat, p.lng)
 		if cerr != nil || !coverable {
@@ -159,5 +177,7 @@ func (s *Server) notifyAreaCoverage(ctx context.Context) {
 			Title: msgAreaCoverable, Entity: "area_coverage", EntityID: p.id,
 			Apps: []string{notifications.AppCustomer},
 		})
+		sent++
 	}
+	return sent
 }
