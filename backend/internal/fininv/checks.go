@@ -486,8 +486,11 @@ var All = []Check{
 			       COALESCE(l.net, 0)::bigint AS صافي_الدفتر
 			FROM orders o
 			LEFT JOIN LATERAL (
+				-- **واسترجاعُ طلبٍ انتهى قبل الاستلام ليس مالاً تحرّك** —
+				-- هو ردُّ الخصمِ نفسِه (refundOnEnter)، **فلا يُجمَع معه**
+				-- وإلّا قُرئ كلُّ طلبِ محفظةٍ أُلغي أو رُفض خرقاً.
 				SELECT sum(t.amount) AS net FROM wallet_transactions t
-				WHERE t.ref = o.id::text
+				WHERE t.ref = o.id::text AND t.kind <> 'refund'
 			) l ON true
 			WHERE NOT EXISTS (SELECT 1 FROM wallet_transactions p
 			                  WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
