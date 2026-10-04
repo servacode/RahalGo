@@ -99,17 +99,27 @@ func (s *Server) handleCreatePlatformSection(w http.ResponseWriter, r *http.Requ
 	if req.Icon != nil {
 		icon = *req.Icon
 	}
-	sort := 0
+	// **والقسمُ الجديدُ آخرَ القائمة** — لا أوّلَها بصفرٍ يزاحم «شاورما».
+	sort := -1
 	if req.SortOrder != nil {
 		sort = *req.SortOrder
+	}
+	name := strings.TrimSpace(*req.Name)
+	if err := s.sectionNameFree(r, name, ""); err != nil {
+		s.respondErr(w, err)
+		return
 	}
 	var id string
 	if err := s.pg.QueryRow(r.Context(), `
 		INSERT INTO platform_sections (name, icon, sort_order, margin_override, image_media_id)
-		VALUES ($1, $2, $3, $4, NULLIF(COALESCE($5, ''), '')::uuid) RETURNING id`,
-		strings.TrimSpace(*req.Name), icon, sort, req.MarginOverride,
+		VALUES ($1, $2,
+		        CASE WHEN $3::int < 0
+		             THEN (SELECT COALESCE(max(sort_order), 0) + 1 FROM platform_sections)
+		             ELSE $3 END,
+		        $4, NULLIF(COALESCE($5, ''), '')::uuid) RETURNING id`,
+		name, icon, sort, req.MarginOverride,
 		req.ImageMediaID).Scan(&id); err != nil {
-		s.respondErr(w, err)
+		s.respondErr(w, sectionWriteErr(err))
 		return
 	}
 	s.audit(r, "catalog.section_create", "section", id, map[string]any{"name": *req.Name})
@@ -124,6 +134,22 @@ func (s *Server) handleUpdatePlatformSection(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if req.Name != nil {
+		trimmed := strings.TrimSpace(*req.Name)
+		if trimmed == "" {
+			s.respondErr(w, errValidation)
+			return
+		}
+		req.Name = &trimmed
+		if err := s.sectionNameFree(r, trimmed, id); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
 	tag, err := s.pg.Exec(r.Context(), `
 		UPDATE platform_sections SET
 			name       = COALESCE($2, name),
@@ -140,7 +166,7 @@ func (s *Server) handleUpdatePlatformSection(w http.ResponseWriter, r *http.Requ
 		id, req.Name, req.Icon, req.SortOrder, req.Active, req.MarginOverride,
 		req.ImageMediaID)
 	if err != nil {
-		s.respondErr(w, err)
+		s.respondErr(w, sectionWriteErr(err))
 		return
 	}
 	if tag.RowsAffected() == 0 {
@@ -152,30 +178,111 @@ func (s *Server) handleUpdatePlatformSection(w http.ResponseWriter, r *http.Requ
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
-// errSectionHasItems **قسمٌ مشغولٌ لا يُحذف** — **والتقاعدُ إطفاءٌ لا حذف.**
+// errSectionHasItems **قسمٌ مشغولٌ لا يُحذف بلا وجهةٍ لأصنافه.**
 var errSectionHasItems = httpx.NewError(http.StatusConflict,
 	"section_has_items", "errors.section_has_items")
 
-// handleDeletePlatformSection يحذف قسماً فارغاً — **والمشغولُ يُرفض ويُقال لماذا.**
+// errSectionNameTaken **اسمٌ موجودٌ ولو اختلف التشكيل** — «حلويات» = «حلويّات».
+var errSectionNameTaken = httpx.NewError(http.StatusConflict,
+	"section_name_taken", "errors.section_name_taken")
+
+// errSectionMoveTarget **وجهةُ النقل قسمٌ آخرُ موجود** — لا القسمُ نفسُه.
+var errSectionMoveTarget = httpx.NewError(http.StatusBadRequest,
+	"section_move_target", "errors.section_move_target")
+
+// sectionNameFree **أهذا الاسمُ حرٌّ بعد التطبيع؟**
 //
-// # ولا يُحذف معه صنف
+// **والتطبيعُ في القاعدة لا هنا** (`section_name_key`، هجرة ٠٢٠٠) — وهو
+// نفسُه ما يحرسه الفهرسُ الفريد. **وتطبيعان في موضعين يفترقان يوماً.**
 //
-// **ولو ذهبت أصنافُه معه لَضاعت أسعارٌ وخياراتٌ بُنيت على مدى شهور
-// بضغطةٍ واحدةٍ لا تُردّ.** **ولا يُفرَّغ قسمُ الصنف**: **قرارُ المالك
-// ٢٠٢٦-٠٨-٢٢ جعله إلزاميّاً** (هجرة ٠١١٨)، **وصنفٌ بلا قسمٍ لا يراه
-// أحد** — لا في السوق ولا في قائمة متجره.
+// `except` قسمٌ يُعدَّل — **فإعادةُ حفظه باسمه لا تُرفض.**
+func (s *Server) sectionNameFree(r *http.Request, name, except string) error {
+	var taken bool
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT EXISTS (
+			SELECT 1 FROM platform_sections
+			 WHERE section_name_key(name) = section_name_key($1)
+			   AND ($2 = '' OR id <> $2::uuid))`, name, except).Scan(&taken); err != nil {
+		return err
+	}
+	if taken {
+		return errSectionNameTaken
+	}
+	return nil
+}
+
+// sectionWriteErr **سباقُ طلبين بالاسم نفسِه يردّه الفهرسُ** — فيُقال السبب.
+func sectionWriteErr(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return errSectionNameTaken
+	}
+	return err
+}
+
+// handleDeletePlatformSection **يحذف قسماً — وأصنافُه تُنقل أوّلاً.**
 //
-// **فلم يبقَ إلّا المنع** (`RESTRICT`، هجرة ٠١٥٧).
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤: «يُضاف زرُّ حذف القسم — وقسمٌ فيه أصنافٌ تُنقل
+// أصنافُه أوّلاً إلى قسمٍ يختاره الموظّف ثمّ يُحذف؛ والفارغُ يُحذف مباشرة».)
 //
-// **وكان هذا يردّ خمسَمئة**: المفتاحُ يحاول الكتابةَ فراغاً فيصطدم
-// بـ`NOT NULL`، **ورمزٌ لا يعرفه `respondErr`.** **فالأدمن يقرأ «عطبٌ
-// في الخادم» ولا يعلم أنّ القسمَ مشغول.**
+//	فارغ                      ←  يُحذف
+//	فيه أصناف + `?move_to=`   ←  تُنقل كلُّها إلى الوجهة ثمّ يُحذف — **بمعاملةٍ واحدة**
+//	فيه أصنافٌ بلا وجهة       ←  ٤٠٩ `section_has_items` — **ولا صنفَ يُحذف معه أبداً**
 //
-// **ومن أراد تقاعدَ قسمٍ عامرٍ يُطفئه** — `PATCH active=false`، **وهو
-// وحدَه ما تناديه اللوحة.**
+// **ولا يُفرَّغ قسمُ الصنف**: قرارُ المالك ٢٠٢٦-٠٨-٢٢ جعله إلزاميّاً (هجرة
+// ٠١١٨)، **والمفتاحُ `RESTRICT`** (هجرة ٠١٥٧) يمنع حذفاً يترك صنفاً يتيماً.
+// **وإعلانُ المتاجر أنّها تبيع في القسم يُنقل مع الأصناف** — وإلّا ضاق
+// اختيارُ متجرٍ أعلن قسماً ثمّ اختفى.
 func (s *Server) handleDeletePlatformSection(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	tag, err := s.pg.Exec(r.Context(), `DELETE FROM platform_sections WHERE id = $1`, id)
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	moveTo := strings.TrimSpace(r.URL.Query().Get("move_to"))
+	if moveTo != "" && (!isUUID(moveTo) || moveTo == id) {
+		s.respondErr(w, errSectionMoveTarget)
+		return
+	}
+	ctx := r.Context()
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var moved int64
+	if moveTo != "" {
+		var ok bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM platform_sections WHERE id = $1)`, moveTo).
+			Scan(&ok); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if !ok {
+			s.respondErr(w, errSectionMoveTarget)
+			return
+		}
+		tag, err := tx.Exec(ctx, `
+			UPDATE menu_items SET platform_section_id = $2, updated_at = now()
+			 WHERE platform_section_id = $1`, id, moveTo)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		moved = tag.RowsAffected()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO store_sections (store_id, section_id)
+			SELECT store_id, $2 FROM store_sections WHERE section_id = $1
+			ON CONFLICT DO NOTHING`, id, moveTo); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+
+	tag, err := tx.Exec(ctx, `DELETE FROM platform_sections WHERE id = $1`, id)
 	if err != nil {
 		// **والمنعُ حالُ الطالب لا حالُ المنصّة** — `23503` من `RESTRICT`،
 		// **و`23502` من قاعدةٍ لم تبلغها `0157` بعد.**
@@ -192,9 +299,62 @@ func (s *Server) handleDeletePlatformSection(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	s.audit(r, "catalog.section_delete", "section", id, nil)
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.audit(r, "catalog.section_delete", "section", id, map[string]any{
+		"move_to": moveTo, "moved_items": moved,
+	})
 	s.touch("catalog", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
+	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true, "moved_items": moved})
+}
+
+// handleOrderPlatformSections **ترتيبُ الأقسام بالسحب — وهو ترتيبُها عند الزبون.**
+//
+// **يُرسَل الترتيبُ كلُّه لا خطوةً واحدة** — فلا يبقى قسمان على رقمٍ واحد،
+// **ولا يتوقّف الصوابُ على أن تصل الطلباتُ بترتيبها.** والقسمُ الغائبُ عن
+// القائمة يُدفع بعدها بترتيبه القديم.
+func (s *Server) handleOrderPlatformSections(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		IDs []string `json:"ids"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if len(req.IDs) == 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	seen := map[string]bool{}
+	for _, id := range req.IDs {
+		if !isUUID(id) || seen[id] {
+			s.respondErr(w, errValidation)
+			return
+		}
+		seen[id] = true
+	}
+	if _, err := s.pg.Exec(r.Context(), `
+		WITH wanted AS (
+			SELECT t.id::uuid AS id, t.ord::int AS ord
+			  FROM unnest($1::text[]) WITH ORDINALITY AS t(id, ord)
+		), rest AS (
+			SELECT ps.id, ((SELECT count(*) FROM wanted)
+			            + row_number() OVER (ORDER BY ps.sort_order, ps.name))::int AS ord
+			  FROM platform_sections ps
+			 WHERE ps.id NOT IN (SELECT id FROM wanted)
+		), all_rows AS (
+			SELECT id, ord FROM wanted UNION ALL SELECT id, ord FROM rest
+		)
+		UPDATE platform_sections ps SET sort_order = a.ord
+		  FROM all_rows a WHERE a.id = ps.id`, req.IDs); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.audit(r, "catalog.section_order", "section", "", map[string]any{"ids": req.IDs})
+	s.touch("catalog", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"ordered": len(req.IDs)})
 }
 
 // handleSectionItems أصنافُ قسمٍ بعينه — **كما هي لا كما يراها الزبون.**
@@ -237,10 +397,8 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 
 	// **وترتيبُ الحال هو ترتيبُ الشاشة نفسُه** — يُقرأ أوّلُ سببٍ يمنع
-	// الظهور: **صنفٌ غيرُ مُقَرٍّ ومتجرُه مُطفأٌ لا يُقال عنه «متجرُه
-	// مُطفأ»**، فالمراجعةُ أوّلُ بابٍ يجب أن يُفتح.
+	// الظهور. **ولا حالَ «ينتظر المراجعة»** — رُفعت المراجعة (٢٠٢٦-١٠-٠٤).
 	const stateExpr = `CASE
-		WHEN NOT i.approved THEN 'pending'
 		WHEN m.status <> 'active' THEN 'store_off'
 		WHEN NOT i.available THEN 'out'
 		ELSE 'live' END`
@@ -262,7 +420,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	// **حالةٌ تُعالَج، ورقمٌ واحدٌ يخفيها.**
 	//
 	// **وتُحسب قبل الترشيح بالحال** — **وبطاقةٌ تتبع مُرشِّحَها تقول
-	// «المعروضُ صفر» لمن رشّح «ينتظر المراجعة»**، وهي لا تخصّه.
+	// «المعروضُ صفر» لمن رشّح «نفد»**، وهي لا تخصّه.
 	var count, all, live int
 	if err := s.pg.QueryRow(r.Context(), `SELECT count(*)`+scope, id, q, state).
 		Scan(&count); err != nil {
@@ -276,7 +434,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT i.id::text, i.name, i.merchant_price, i.available, i.approved,
+		SELECT i.id::text, i.name, i.merchant_price, i.available,
 		       m.name, m.status, im.thumb_path, im.path,
 		       m.commission_percent, i.margin_override, ps.margin_override
 		FROM menu_items i
@@ -300,7 +458,6 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		// MerchantPrice **سعرُ الشراء** — ما وضعه المتجر، وأصلُ الحسبتين.
 		MerchantPrice  int64   `json:"merchant_price"`
 		Available      bool    `json:"available"`
-		Approved       bool    `json:"approved"`
 		MerchantName   string  `json:"merchant_name"`
 		MerchantStatus string  `json:"merchant_status"`
 		ThumbURL       *string `json:"thumb_url"`
@@ -343,7 +500,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		var sectionMargin *int64
 		var commOverride *int64
 		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
-			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL,
+			&x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL,
 			&commOverride, &x.MarginOverride, &sectionMargin); err != nil {
 			s.respondErr(w, err)
 			return

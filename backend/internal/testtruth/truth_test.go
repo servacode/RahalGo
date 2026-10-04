@@ -276,8 +276,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `merchants.return_support_percent` — **صار التعويضُ مبلغاً تكتبه الإدارةُ عند الحسم.**
 	// **وثلاثةٌ أُضيفت بمنع احتيال السائق** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً): حدّا أجرة الطلب
 	// الخاصّ `delivery.custom_fee_min/max` **وحدُّ صورة التسليم** `drivers.proof_max_m`.
-	if d.BehaviourSettings != 133 {
-		t.Errorf("إعداداتُ السلوك = %d لا 133 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ حُذف بمراجعة الأصناف** (قرارُ المالك ٢٠٢٦-١٠-٠٤: «ما في داعي للموافقة
+	// على الصنف أساساً»): `merchants.menu_requires_approval` — هجرة ٠٢٠٠.
+	if d.BehaviourSettings != 132 {
+		t.Errorf("إعداداتُ السلوك = %d لا 132 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

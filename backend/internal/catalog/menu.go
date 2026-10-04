@@ -120,17 +120,10 @@ type MenuItem struct {
 	ImageURL            *string `json:"image_url"`
 	ImageThumbURL       *string `json:"image_thumb_url"`
 	Available           bool    `json:"available"`
-	// Approved أنُشر الصنفُ للزبائن؟ — **حين يُرفع مفتاحُ مراجعة القائمة.**
-	//
-	// **ويراه المتجرُ معلّقاً لا مختفياً**: من أضاف صنفاً فلم يجده في قائمته
-	// يضيفه ثانيةً وثالثة، **فيمتلئ الطابورُ بنسخٍ من الشيء الواحد.**
-	Approved bool `json:"approved"`
-	// ReviewNote سببُ الردّ — **يُقال لصاحبه.**
-	//
-	// «رُدّ» بلا كلمةٍ يُعاد إرسالُه كما هو، **فيدور المتجرُ والمكتبُ في حلقة.**
-	ReviewNote string          `json:"review_note"`
-	SortOrder  int             `json:"sort_order"`
-	Modifiers  []ModifierGroup `json:"modifiers"`
+	// **ولا حقلَ «مُقَرّ» ولا «سببَ ردّ»** — قرارُ المالك ٢٠٢٦-١٠-٠٤: «ما في داعي
+	// للموافقة على الصنف أساساً». يُضيفه المتجرُ فيظهر فوراً (هجرة ٠٢٠٠).
+	SortOrder int             `json:"sort_order"`
+	Modifiers []ModifierGroup `json:"modifiers"`
 }
 
 type MenuSection struct {
@@ -251,7 +244,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		SELECT i.id, COALESCE(i.section_id::text, ''), i.name, i.description,
 		       i.merchant_price, i.margin_override, ps.margin_override,
 		       i.platform_section_id, COALESCE(ps.name, ''),
-		       im.path, im.thumb_path, i.available, i.approved, i.review_note, i.sort_order
+		       im.path, im.thumb_path, i.available, i.sort_order
 		FROM menu_items i
 		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -265,7 +258,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
 			&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
 			&it.PlatformSectionID, &it.PlatformSectionName,
-			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.Approved, &it.ReviewNote, &it.SortOrder); err != nil {
+			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder); err != nil {
 			rows.Close()
 			return nil, err
 		}

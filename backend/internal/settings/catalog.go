@@ -1832,10 +1832,8 @@ var Catalog = []Def{
 	{Key: "merchants.max_item_price", Group: GroupMerchants, Kind: KindInt,
 		Min: 1000, Max: 100000000, Unit: "currency", Default: 100000},
 
-	// **ومراجعةُ الأصناف قبل ظهورها** — تُطفأ حين يُوثَق بالمتاجر، وتُشعل
-	// حين يكثر الجدد.
-	{Key: "merchants.menu_requires_approval", Group: GroupMerchants, Kind: KindBool,
-		Default: false},
+	// **ولا مفتاحَ لمراجعة الأصناف** — رُفع بقرار المالك ٢٠٢٦-١٠-٠٤: «ما في
+	// داعي للموافقة على الصنف أساساً» (هجرة ٠٢٠٠ تمحو قيمتَه المحفوظة).
 
 	// ── الطلبات ───────────────────────────────────────
 	//

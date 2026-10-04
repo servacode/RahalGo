@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 387,
+    "routes": 393,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 63,
-    "notify_targeted": 24,
+    "notify_sites": 61,
+    "notify_targeted": 23,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 168,
-    "behaviour_settings": 133,
+    "setting_defs": 167,
+    "behaviour_settings": 132,
     "order_fields": 93,
-    "test_files": 469,
-    "test_funcs": 1924
+    "test_files": 468,
+    "test_funcs": 1926
   },
   "flows": [
     {
@@ -4685,25 +4685,6 @@
       "key": "merchants.max_item_price",
       "group": "merchants",
       "kind": "int",
-      "sensitive": false,
-      "money": false,
-      "flows": [
-        "F-04",
-        "F-05",
-        "F-28"
-      ],
-      "apps": [
-        "admin",
-        "customer",
-        "merchant"
-      ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
-    },
-    {
-      "key": "merchants.menu_requires_approval",
-      "group": "merchants",
-      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -24000,8 +23981,32 @@
       "orphan": true
     },
     {
-      "name": "TestPendingMenu_CountsWholeQueueNotThePage",
-      "file": "internal/server/menu_pending_count_test.go",
+      "name": "TestMKT1_NoApprovalNeededForNewItems",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT2_DuplicateSectionNameRefusedNormalized",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT3_DeleteSectionMovesItemsToChosenSection",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT4_MergeDuplicateSectionsKeepsOneWithAllItems",
+      "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMKT5_NewItemsFirstAndCounterResetsOnOpen",
+      "file": "internal/server/market_test.go",
       "package": "server",
       "orphan": true
     },
@@ -24458,18 +24463,6 @@
     {
       "name": "TestRepMenuRoutes_NoSectionDoors",
       "file": "internal/server/rep_media_route_test.go",
-      "package": "server",
-      "orphan": true
-    },
-    {
-      "name": "TestRepMenuWrite_AvailabilityIsNotHeld",
-      "file": "internal/server/rep_menu_review_test.go",
-      "package": "server",
-      "orphan": true
-    },
-    {
-      "name": "TestRepMenuWrite_HeldForReviewLikeMerchant",
-      "file": "internal/server/rep_menu_review_test.go",
       "package": "server",
       "orphan": true
     },

@@ -1148,6 +1148,21 @@ func (s *Server) Router() http.Handler {
 			// **وأصنافُ القسم كما هي** — لا كما يراها الزبون: من يفتح قسماً
 			// ليقرّر إطفاءَه يريد ما فيه كلَّه، **بما لا يظهر ولماذا.**
 			r.Get("/sections/{id}/items", s.handleSectionItems)
+			// ══════════════════════════════════════════════════════════
+			// **«السوق» — أصنافُ كلّ المتاجر** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **والأحدثُ أوّلاً بعلامة «جديد»** — وعدّادُ القائمة الجانبيّة
+			// يُقرأ من `new-count` ويُصفَّر بـ`seen` حين يُفتح السوق.
+			r.Get("/market/items", s.handleMarketItems)
+			r.Post("/market/items/bulk", s.handleMarketItemsBulk)
+			r.Get("/market/new-count", s.handleMarketNewCount)
+			r.Post("/market/seen", s.handleMarketSeen)
+			r.Get("/market/stores", s.handleMarketStores)
+			r.Get("/market/quality", s.handleMarketQuality)
+			// **وحذفُ البيانات التجريبيّة بقائمةٍ صريحةٍ أكّدها الموظّف** —
+			// لا حذفَ آليّاً ولا بنمطٍ يُرسَل.
+			r.Post("/market/test-data/delete", s.handleMarketTestDataDelete)
 			r.Get("/merchants", s.handleListMerchants)
 			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
 			// **ومتجران متشابها الاسم يُخلطان.**
@@ -1354,10 +1369,6 @@ func (s *Server) Router() http.Handler {
 			// **التقييماتُ مجموعةً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا
 			// جوابَ له إلّا بفتح عشرين ملفّاً، **فلا يُفتح فلا يُعرف.**
 			r.Get("/ratings", s.handleAdminRatings)
-			// **طابورُ مراجعة القائمة** — يعمل حين يُرفع مفتاحُ
-			// `merchants.menu_requires_approval`، وكان المفتاحُ يَعِد ولا يفعل.
-			r.Get("/menu/pending", s.handlePendingMenuItems)
-			r.Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
 			// ══════════════════════════════════════════════════════════
 			// **ومركزُ الإشعارات** (`NT`، ٢٠٢٦-٠٩-١٥)
 			// ══════════════════════════════════════════════════════════
@@ -1412,6 +1423,8 @@ func (s *Server) Router() http.Handler {
 				// **وحارسُ الأدوار نُزع** — `ADG-2`: **السياسةُ
 				// المركزيّةُ تحكم كلَّ مسارٍ بقدرته**، **وحارسٌ
 				// بأسماء أدوارٍ فوقها يُعطّل دوراً مُنح.**
+				// **وترتيبُ الأقسام بالسحب** — هو ترتيبُها عند الزبون.
+				r.Put("/sections/order", s.handleOrderPlatformSections)
 				r.Post("/sections", s.handleCreatePlatformSection)
 				r.Patch("/sections/{id}", s.handleUpdatePlatformSection)
 				r.Delete("/sections/{id}", s.handleDeletePlatformSection)
