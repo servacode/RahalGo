@@ -326,6 +326,11 @@ func run(logger *slog.Logger) error {
 			//
 			// **وبإيقاع المنصّة نفسِه** — ثلاثون ثانية.
 			go srv.RunCampaignWorker(ctx, 30*time.Second)
+
+			// **وراصدُ الخادم** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»،
+			// البند ٣): **يقيس كلَّ نصف دقيقة** فيظهر الشريطُ الأحمر، ويُشعر
+			// المالكَ إن طال العطب. **ولا يُغني عن مراقبٍ من خارج الخادم.**
+			go srv.RunOpsWatch(ctx, 30*time.Second)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

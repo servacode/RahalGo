@@ -312,23 +312,25 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 				}
 				lv.Stages[stage] = n64(c)
 			}
-			// **«طلباتٌ بلا سائق» هي مرحلةُ البحث عن سائق** — وتُفتح على
-			// `?status=dispatching` بالعدد نفسِه.
-			a.OrdersUnassigned = lv.Stages["dispatching"]
 		}
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **«طلباتٌ بلا سائق» بشرط لوحة الطلبات نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كانت مرحلةَ «البحث عن سائق» كلَّها وتُفتح على `?status=dispatching` —
+	// **وفلترُ اللوحة «بلا سائق» يعدّ ما تجاوز مهلةَ إيجاد السائق**، فيقول
+	// الرقمُ شيئاً والقائمةُ غيرَه. **وصارت تُعدّ بـ`orders.NoDriverSQL`** عبر
+	// `BoardCounts` وتُفتح على `?filter=no_driver`.
+	if c, err := s.orders.BoardCounts(ctx); !miss("no_driver", err) {
+		a.OrdersUnassigned = n64(int64(c[orders.BoardNoDriver]))
 	}
 	if al, err := s.orders.Alerts(ctx); !miss("stuck", err) {
 		lv.OrdersStuck = n64(int64(len(al)))
 	}
 	{
-		var onShift, busy int64
-		err := s.pg.QueryRow(ctx, `
-			SELECT count(*) FILTER (WHERE u.on_shift),
-			       count(*) FILTER (WHERE u.on_shift AND EXISTS (
-			           SELECT 1 FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL))
-			FROM users u
-			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-			WHERE u.status = 'active'`).Scan(&onShift, &busy)
+		// **ونصُّ العدِّ واحدٌ مع شاشة المراقب** (`driverShiftCounts`).
+		onShift, busy, err := s.driverShiftCounts(ctx)
 		if !miss("drivers", err) {
 			lv.DriversOnShift, lv.DriversBusy, lv.DriversFree = n64(onShift), n64(busy), n64(onShift-busy)
 		}

@@ -193,7 +193,7 @@ const AWAITING: {
 }[] = [
   { key: "emergencies_open", label: H.emergenciesOpen, href: "/dashboard/emergencies", urgent: true, icon: IconWarning },
   { key: "reports_waiting", label: H.reportsWaiting, href: "/dashboard/orders?awaiting=1", urgent: true, icon: IconWarning },
-  { key: "orders_unassigned", label: H.ordersUnassigned, href: "/dashboard/orders?status=dispatching", urgent: true, icon: IconOrder },
+  { key: "orders_unassigned", label: H.ordersUnassigned, href: "/dashboard/orders?filter=no_driver", urgent: true, icon: IconOrder },
   { key: "tickets_late", label: "", href: "/dashboard/tickets?late=1", urgent: true, icon: IconSupport },
   { key: "drivers_over_cash", label: H.driversOverCash, href: "/dashboard/cash?over=1", urgent: true, icon: IconBalance },
   { key: "tickets_open", label: H.ticketsOpen, href: "/dashboard/tickets?status=unresolved", urgent: false, icon: IconSupport },

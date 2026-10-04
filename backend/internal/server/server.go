@@ -100,6 +100,9 @@ type Server struct {
 	// (`OTP_PROVIDER=dev`)، **وحقلٌ يُلزم نوعاً واحداً يجعل التطويرَ
 	// يحمل واتساباً لا يحتاجه.**
 	merchant MerchantNotifier
+	// opsT **ذاكرةُ مراقبة التشغيل** — نافذةُ الحكم وحالُ الانقطاع
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). انظر `ops_health.go`.
+	opsT opsTracker
 }
 
 // MerchantNotifier **من يبلّغ متجراً بطلب** — يُرضيه البوت.
@@ -1031,6 +1034,10 @@ func (s *Server) Router() http.Handler {
 			// حراسةً ثانيةً بجانب القائمة بنى معجمَ صلاحيّاتٍ
 			// ثانياً ينحرف.**
 			r.Get("/ops/health", s.handleOpsHealth)
+			// **وشاشةُ المراقب لمن يرى الطلبات، وحالُ الخادم لكلّ موظّف**
+			// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البندان ٢ و٣).
+			r.Get("/ops/monitor", s.handleOpsMonitor)
+			r.Get("/ops/status", s.handleOpsStatus)
 
 			// ══════════════════════════════════════════════════════
 			// **خريطةُ العمليات**
@@ -1313,6 +1320,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders/{id}/assign-candidates", s.handleAssignCandidates)
 			// **و«استلمتها» على الطلب الجديد** — يُسكت الرنين (البند ٥).
 			r.Post("/orders/{id}/seen", s.handleOrderSeen)
+			// **«أنا عليه» على طلبٍ عالق** — يوقف تكرارَ تذكيره (قرارُ المالك
+			// ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٤).
+			r.Post("/orders/{id}/alert-ack", s.handleAlertAck)
 
 			// **ما بعد فشل الطلب** — من يحمل الخسارة (failure_aftermath.go).
 			//

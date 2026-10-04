@@ -9,9 +9,12 @@
  *	١ · **بابُ القائمة بالقدرة لا باسم الدور** — `observability.read`
  *	٢ · **ولا اسمَ دورٍ في شرط الظهور** — `role === "observability"`
  *	    يُسقط البناء
- *	٣ · **ولا زرَّ يُبدّل شيئاً** — لا `POST` ولا `PATCH` ولا `DELETE`
- *	    ولا «إعادة تشغيل» ولا «مسح» ولا «إصلاح»
- *	٤ · **والصفحةُ تستهلك الباب القائم وحدَه** — `/admin/ops/health`
+ *	٣ · **ولا زرَّ يُبدّل شيئاً في الخادم** — لا `POST` ولا `PATCH` ولا `DELETE`
+ *	    ولا «إعادة تشغيل» ولا «مسح» ولا «إصلاح». **والاستثناءُ الوحيد «أنا عليه»**
+ *	    على الطلب العالق (`/alert-ack`) — قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤:
+ *	    يوقف تكرارَ التذكير ولا يبدّل في الطلب ولا في الخادم شيئاً.
+ *	٤ · **والصفحةُ تستهلك بابيها وحدَهما** — `/admin/ops/monitor` لسير الطلبات
+ *	    و`/admin/ops/health` للتفاصيل (قرارُ المالك ٢٠٢٦-١٠-٠٤، البندان ١ و٢)
  *	٥ · **ولا حقلٌ يُخترَع**: كلُّ حقلٍ تقرؤه الصفحةُ موجودٌ في عقد
  *	    المحرّك (`ops_health.go`)
  *	٦ · **ولا سرٌّ يُعرَض**: هاتفٌ ولا رمزُ جلسةٍ ولا بصمةٌ ولا موقع
@@ -53,7 +56,9 @@ if (layout === "") problems.push("تخطيطُ اللوحة لم يُقرأ");
 
 // ── ١ · بابُ القائمة بالقدرة ─────────────────────────────────────────
 {
-  if (!/caps:\s*\["observability\.read"\]/.test(layout)) {
+  // **وصارت شاشةَ المراقب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٢): يراها من يملك
+  // `orders.read` أو `observability.read`.
+  if (!/caps:\s*\["orders\.read",\s*"observability\.read"\]/.test(layout)) {
     problems.push(
       "بندُ «مراقبة التشغيل» غيرُ مبوَّبٍ بالقدرة — " +
         "**فدورٌ يُمنَح `observability.read` غداً لا يرى بابَه**",
@@ -81,8 +86,14 @@ if (layout === "") problems.push("تخطيطُ اللوحة لم يُقرأ");
     /method:\s*["'](POST|PUT|PATCH|DELETE)["']/i,
     /\bapi\([^)]*,\s*\{\s*method/i,
   ];
+  // **و«أنا عليه» وحدَها تُستثنى** — نداءٌ واحدٌ بعينه، ويُشترط أن يبقى واحداً.
+  const ackCall =
+    /api\(`\/api\/v1\/admin\/orders\/\$\{[a-zA-Z_.]+\}\/alert-ack`,\s*\{\s*method:\s*"POST",\s*body:\s*"\{\}"\s*\}\)/g;
+  const acks = page.match(ackCall) ?? [];
+  if (acks.length > 1) problems.push("**أكثرُ من نداء «أنا عليه» في الشاشة** — والمسموحُ واحد");
+  const pageNoAck = page.replace(ackCall, "");
   for (const re of mutating) {
-    const hit = page.match(re);
+    const hit = pageNoAck.match(re);
     if (hit) {
       problems.push(
         `**نداءٌ يُبدّل في شاشةِ قراءة**: ${hit[0]} — ` +
@@ -110,11 +121,15 @@ if (layout === "") problems.push("تخطيطُ اللوحة لم يُقرأ");
 
 // ── ٤ · وتستهلك البابَ القائمَ وحدَه ─────────────────────────────────
 {
-  if (!page.includes("/api/v1/admin/ops/health")) {
-    problems.push("الصفحةُ لا تنادي `/api/v1/admin/ops/health`");
+  for (const door of ["/api/v1/admin/ops/health", "/api/v1/admin/ops/monitor"]) {
+    if (!page.includes(door)) problems.push(`الصفحةُ لا تنادي \`${door}\``);
   }
   const calls = [...page.matchAll(/api<[^>]*>\(\s*"([^"]+)"/g)].map((m) => m[1]);
-  const allowed = new Set(["/api/v1/admin/ops/health", "/api/v1/public/identity"]);
+  const allowed = new Set([
+    "/api/v1/admin/ops/health",
+    "/api/v1/admin/ops/monitor",
+    "/api/v1/public/identity",
+  ]);
   for (const c of calls) {
     if (!allowed.has(c)) {
       problems.push(`**بابٌ ثالثٌ في شاشة الصحّة**: ${c} — ولا حسابَ صحّةٍ ثانٍ`);

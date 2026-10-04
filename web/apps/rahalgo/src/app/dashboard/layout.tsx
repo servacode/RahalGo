@@ -35,6 +35,7 @@ import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
+import { OutageBanner } from "@/components/admin/OutageBanner";
 
 const m = getMessages(defaultLocale);
 
@@ -196,11 +197,13 @@ const ALL_NAV: NavItem[] = [
   //
   // **وموضعُها قبل الإعدادات**: سؤالُ صحّةٍ لا سؤالُ تهيئة — **ويُفتح
   // عند الشكوى لا كلَّ يوم.**
+  // **وصارت شاشةَ المراقب** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سيرُ الطلبات لمن يملك
+  // `orders.read` — موظّفُ العمليّات — والتفاصيلُ التقنيّةُ داخلها لـ`observability.read`.
   {
     href: "/dashboard/ops",
     label: m.admin.ops.navTitle,
     icon: IconStatus,
-    caps: ["observability.read"],
+    caps: ["orders.read", "observability.read"],
   },
   { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings,
     caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"] },
@@ -360,6 +363,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }}
     >
       {/* **شريطُ الطوارئ أعلى كلّ صفحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — لمن يملكها. */}
+      {/* **وشريطُ تعطّل الخادم لكلّ موظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). */}
+      <OutageBanner
+        canOpen={capabilities.includes("orders.read") || capabilities.includes("observability.read")}
+      />
       {capabilities.includes("emergencies.manage") && <EmergencyBanner />}
       {children}
     </DashboardChrome>
