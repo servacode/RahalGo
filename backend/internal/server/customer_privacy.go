@@ -61,5 +61,9 @@ func redactOffersForCustomer(rows []offers.Offer) {
 	for i := range rows {
 		rows[i].MerchantName = ""
 		rows[i].MerchantID = nil
+		// **ومن عمل العرضَ وحالُ موافقته شأنُ الإدارة** (٢٠٢٦-١٠-٠٤).
+		rows[i].CreatedByName = ""
+		rows[i].CreatedByKind = ""
+		rows[i].ApprovalState = ""
 	}
 }

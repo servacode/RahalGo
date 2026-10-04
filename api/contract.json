@@ -1797,6 +1797,22 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/offers/audience",
+      "handler": "handleOfferAudience",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/offers/{id}/active",
       "handler": "handleSetOfferActive",
@@ -1805,6 +1821,10 @@
       "request": [
         {
           "name": "active",
+          "type": "bool"
+        },
+        {
+          "name": "notify",
           "type": "bool"
         }
       ],
@@ -2832,6 +2852,74 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/promo-approvals",
+      "handler": "handleListPromoApprovals",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "approvals",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/promo-approvals/{id}/approve",
+      "handler": "handleDecidePromoApproval",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/promo-approvals/{id}/reject",
+      "handler": "handleDecidePromoApproval",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/promos",
       "handler": "handleListPromos",
       "auth": true,
@@ -2860,6 +2948,22 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/promos/summary",
+      "handler": "handlePromoSummary",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "@p",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {
@@ -2908,6 +3012,46 @@
         {
           "name": "stores",
           "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/referrals",
+      "handler": "handleAdminReferrals",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "paid",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "referrals",
+          "type": "unknown"
+        },
+        {
+          "name": "rewarded",
+          "type": "unknown"
+        },
+        {
+          "name": "settings",
+          "type": "object"
         },
         {
           "name": "total",

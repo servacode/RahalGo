@@ -19,7 +19,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
-	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
@@ -47,13 +46,14 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	o, err := s.offers.Create(r.Context(), userIDFrom(r), *in, s.saleOf(r))
+	// **على المنصّة دائماً، وفوق ٢٠٪ بموافقة الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	o, pending, err := s.offers.CreatePlatform(r.Context(), userIDFrom(r), *in, s.saleOf(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	s.audit(r, "catalog.offer_create", "offer", o.ID, map[string]any{
-		"kind": o.Kind, "title": o.Title,
+		"kind": o.Kind, "title": o.Title, "pending_approval": pending, "notify": in.Notify,
 	})
 	// **والزبائنُ يرونه فوراً** — عرضٌ يُنزَل ولا يظهر حتى يُحدَّث المتصفّحُ
 	// عرضٌ نصفُ منزَّل.
@@ -64,19 +64,13 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	// **والزبونُ لا يفتح شاشةَ العروض كلَّ صباحٍ ليرى أجديدٌ فيها** — يفتح
 	// التطبيقَ حين يجوع. **فيُبلَّغ في حينه أو يفوته.**
 	//
-	// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «بمجرّد عرضه تصل إشعاراتٌ لكلّ المشتركين».)
+	// **والإشعارُ خيارٌ في النافذة بعدد مستلميه، ولزبائن منطقة المتجر
+	// وحدَهم** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥ — كان لكلّ الزبائن بلا سؤال).
 	//
 	// **ولا يُبلَّغ عرضٌ منزَّل**: يُنشأ بلا تفعيلٍ ليُراجَع، **وإشعارٌ عن عرضٍ
 	// لا يجده حين يفتحه أسوأُ من صمت.**
-	if o.Live {
-		s.notify.NotifyShoppers(r.Context(), notifications.Input{
-			Kind:     "offer",
-			Title:    o.Title,
-			Body:     offerBody(o),
-			Entity:   "offer",
-			EntityID: o.ID,
-			Href:     offerHref,
-		})
+	if in.Notify {
+		s.notifyOfferArea(r.Context(), o)
 	}
 	httpx.JSON(w, http.StatusOK, o)
 }
@@ -86,10 +80,13 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 // **وعنوانٌ يقول «عرضُ الريش» لا يُغري أحداً**: من قرأه لا يعرف أوفّر عشرةً
 // أم نصفَ الثمن. **والنسبةُ هي الخبر.**
 func offerBody(o *offers.Offer) string {
-	if o.DiscountPercent == nil {
-		return o.Body
+	switch {
+	case o.DiscountPercent != nil:
+		return o.ItemName + " — " + strconv.Itoa(*o.DiscountPercent) + "٪"
+	case o.DiscountAmount != nil:
+		return o.ItemName + " — " + strconv.FormatInt(o.PriceAfter, 10) + " ل.س"
 	}
-	return o.ItemName + " — " + strconv.Itoa(*o.DiscountPercent) + "٪"
+	return o.Body
 }
 
 // handleSetOfferActive يرفع العرضَ أو ينزله — **ولا حذف.**
@@ -99,6 +96,8 @@ func offerBody(o *offers.Offer) string {
 func (s *Server) handleSetOfferActive(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Active bool `json:"active"`
+		// Notify **إعادةُ التفعيل لا تُبلّغ إلّا إن اختير** (البند ٥).
+		Notify bool `json:"notify"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -113,11 +112,8 @@ func (s *Server) handleSetOfferActive(w http.ResponseWriter, r *http.Request) {
 	s.touch("offer", "ops")
 	// **ومن رُفع بعد إنزالٍ عرضٌ جديدٌ في نظر من لم يره** — فيُبلَّغ كما
 	// يُبلَّغ أوّلُ مرّة. **وإنزالٌ لا يُبلَّغ**: لا خبرَ في أنّ شيئاً اختفى.
-	if req.Active && o.Live {
-		s.notify.NotifyShoppers(r.Context(), notifications.Input{
-			Kind: "offer", Title: o.Title, Body: offerBody(o),
-			Entity: "offer", EntityID: o.ID, Href: offerHref,
-		})
+	if req.Active && req.Notify {
+		s.notifyOfferArea(r.Context(), o)
 	}
 	httpx.JSON(w, http.StatusOK, o)
 }

@@ -33,6 +33,7 @@ package server
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"net/http"
 	"sync"
 	"time"
@@ -522,7 +523,8 @@ func (s *Server) overviewPlatform(ctx context.Context, today, week time.Time) (o
 		{"stores", "merchants", "true"},
 		{"items", "menu_items", "true"},
 		{"zones", "delivery_zones", "active"},
-		{"promos", "promo_codes", "active"},
+		// **السارية فعلاً** — لا المنتهي ولا ما خلص سقفُه (٢٠٢٦-١٠-٠٤).
+		{"promos", "promo_codes p", catalog.PromoLiveSQL},
 	} {
 		c := ovCount{Key: t.key}
 		// **والأسماءُ ثوابتُ هنا لا مُدخَل** — فتُركَّب في النصّ بلا معاملات.

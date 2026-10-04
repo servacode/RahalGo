@@ -57,10 +57,24 @@ func TestNOTIF_001_OfferSkipsStaff(t *testing.T) {
 		}
 	}
 
+	// **والإشعارُ لزبائن منطقة المتجر وحدَهم** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+	// العروض البند ٥) — فلكلٍّ منهم عنوانٌ عند المتجر، **والفريقُ يُستثنى
+	// وإن كان في المنطقة.**
+	for _, u := range []*User{shopper, driver, merchant, rep} {
+		if _, err := h.Pool.Exec(t.Context(), `
+			INSERT INTO user_addresses (user_id, label, address_text, area_building, location)
+			VALUES ($1::uuid, 'البيت', 'الرقة', 'حي التجربة', ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography)`,
+			u.ID); err != nil {
+			t.Fatalf("NOTIF: تعذّر العنوان: %v", err)
+		}
+	}
+
 	admin := h.NewUser("admin")
 	item := h.NewItem(1000)
 	made := h.POST("/api/v1/admin/offers", admin.Token, map[string]any{
-		"kind": "discount", "title": "عرضُ اختبارٍ آليّ",
+		// **والإشعارُ خيارٌ في النافذة** — يُطلب صراحةً.
+		"notify": true,
+		"kind":   "discount", "title": "عرضُ اختبارٍ آليّ",
 		"body":         "حسمٌ للتحقّق من وجهة الإشعار",
 		"menu_item_id": item.ID, "discount_percent": 15,
 		// **وسارٍ الآن** — **وعرضٌ منزَّلٌ لا يُبثّ عمداً**: يُنشأ

@@ -125,6 +125,10 @@ type OrderItem struct {
 	Qty        int              `json:"qty"`
 	Note       string           `json:"note"`
 	Options    []OptionSnapshot `json:"options"`
+	// OfferCut و OfferBorneBy **خصمُ العرض على الوحدة ومن يتحمّله** — لقطةٌ
+	// تُكتب مع البند ولا تصل الزبون.
+	OfferCut     int64  `json:"-"`
+	OfferBorneBy string `json:"-"`
 }
 
 type Event struct {

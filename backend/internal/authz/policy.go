@@ -219,11 +219,20 @@ var adminPolicy = []Rule{
 	{"GET", "/ratings", SupportManage},
 
 	// ── المحتوى والتسويق ────────────────────────────────────────
+	// **ملخّصُ العروض** — قبل `/promos/{id}` (الأخصُّ أوّلاً).
+	{"GET", "/promos/summary", ContentManage},
 	{"", "/promos", ContentManage},
 	{"", "/promos/{id}", ContentManage},
 	{"", "/banners", ContentManage},
 	{"", "/banners/{id}", ContentManage},
+	{"GET", "/offers/audience", ContentManage},
 	{"", "/offers", ContentManage},
+	// **«ادعُ صديقاً»** — تبويبٌ في صفحة العروض (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	{"GET", "/referrals", ContentManage},
+	// **موافقاتُ الماليّة على العروض فوق حدّ المحتوى** — على عقد الموافقات.
+	{"GET", "/promo-approvals", FinanceRead},
+	{"POST", "/promo-approvals/{id}/approve", FinanceManage},
+	{"POST", "/promo-approvals/{id}/reject", FinanceManage},
 	{"", "/offers/{id}/active", ContentManage},
 	// **وترتيبُ الأقسام بالسحب قبل `{id}`** — الأخصُّ أوّلاً.
 	{"PUT", "/sections/order", ContentManage},

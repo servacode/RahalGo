@@ -51,6 +51,51 @@ var (
 	ErrAmountOverPrice = httpx.NewError(http.StatusBadRequest, "offer_amount_over_price", "errors.offer_amount_over_price")
 )
 
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**موافقةُ الماليّة على خصمٍ تتحمّله المنصّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **دورُ المحتوى يُنزل خصماً على المنصّة بحرّيّةٍ حتّى ٢٠٪**، وفوقه يُنشأ
+// العرضُ نازلاً وينتظر الماليّة (`promo_approvals`). **ولا يُفعَّل قبلها.**
+const (
+	ApprovalOK       = "ok"
+	ApprovalPending  = "pending"
+	ApprovalRejected = "rejected"
+
+	// FreePercent **أعلى نسبةٍ بلا موافقة** — للكود ولخصم الصنف.
+	FreePercent = 20
+	// FreeUses **أعلى سقف استخداماتٍ بلا موافقة** — للكود.
+	FreeUses = 50
+)
+
+var (
+	// ErrNeedsApproval **ينتظر موافقةَ الماليّة أو رفضته** — لا يُفعَّل.
+	ErrNeedsApproval = httpx.NewError(http.StatusConflict,
+		"promo_pending_approval", "errors.promo_pending_approval")
+	// ErrOfferExpired **انتهت مدّتُه** — يُنشأ عرضٌ جديدٌ بدل تفعيله.
+	ErrOfferExpired = httpx.NewError(http.StatusConflict,
+		"offer_expired", "errors.offer_expired")
+	// ErrAdminChargesStore **الإدارةُ لا تحمّل الخصمَ على المتجر** — المتجرُ
+	// يعمل خصمَه من تطبيقه (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤).
+	ErrAdminChargesStore = httpx.NewError(http.StatusBadRequest,
+		"offer_admin_cannot_charge_store", "errors.offer_admin_cannot_charge_store")
+)
+
+// NeedsApproval **أيحتاج خصمُ المنصّة هذا موافقةَ الماليّة؟**
+//
+// النسبةُ فوق ٢٠، أو المبلغُ الثابتُ فوق ٢٠٪ من سعر البيع اليوم.
+func NeedsApproval(salePrice int64, percent *int, amount *int64) bool {
+	if percent != nil && *percent > FreePercent {
+		return true
+	}
+	if amount != nil && *amount*100 > salePrice*FreePercent {
+		return true
+	}
+	return false
+}
+
 // KindDiscount النوعُ الوحيدُ الباقي — **واللافتاتُ في جدولها** (`banners`).
 //
 // **وشيءٌ واحدٌ في مكانين يفترق**: كانت لافتةٌ هنا ولافتةٌ هناك، فتُضاف في
@@ -111,6 +156,16 @@ type Offer struct {
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 
+	// CreatedByName و CreatedByKind **مين عمل العرض** — `merchant` أو `rep`
+	// أو `admin` (قرارُ المالك ٢٠٢٦-١٠-٠٤). **ولا يصلان الزبون**
+	// (`redactOffersForCustomer`).
+	CreatedByName string `json:"created_by_name,omitempty"`
+	CreatedByKind string `json:"created_by_kind,omitempty"`
+	// ApprovalState `ok` أو `pending` (بانتظار الماليّة) أو `rejected`.
+	ApprovalState string `json:"approval_state,omitempty"`
+	// ItemAvailable **أمتوفّرٌ الصنفُ الآن؟** — للإدارة.
+	ItemAvailable bool `json:"item_available"`
+
 	// HasOptions للصنف خياراتٌ تُختار قبل الطلب — **حجمٌ أو إضافات.**
 	//
 	// **وشاشةُ العروض تُدخل الصنفَ السلّةَ بضغطةٍ واحدة** — فصنفٌ بحجمٍ
@@ -139,8 +194,16 @@ const offerSelect = `
 	       COALESCE(mi.price, 0),
 	       o.discount_percent, o.discount_amount, o.borne_by,
 	       o.starts_at, o.ends_at, o.active, ` + LiveCond + `, o.created_at,
-	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = mi.id)
+	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = mi.id),
+	       COALESCE(cu.full_name, ''),
+	       CASE WHEN EXISTS (SELECT 1 FROM user_roles r
+	                          WHERE r.user_id = o.created_by AND r.role_code = 'sales') THEN 'rep'
+	            WHEN EXISTS (SELECT 1 FROM user_roles r
+	                          WHERE r.user_id = o.created_by AND r.role_code = 'merchant') THEN 'merchant'
+	            ELSE 'admin' END,
+	       o.approval_state, COALESCE(mi.available, false)
 	FROM offers o
+	LEFT JOIN users cu ON cu.id = o.created_by
 	LEFT JOIN media mm ON mm.id = o.media_id
 	LEFT JOIN menu_items mi ON mi.id = o.menu_item_id
 	LEFT JOIN merchants mr ON mr.id = mi.merchant_id
@@ -156,7 +219,8 @@ func scan(rows interface {
 		&o.MenuItemID, &o.ItemName, &o.MerchantName, &o.MerchantID, &o.ItemImageURL,
 		&cost, &o.DiscountPercent, &o.DiscountAmount, &o.BorneBy,
 		&o.StartsAt, &o.EndsAt, &o.Active, &o.Live, &o.CreatedAt,
-		&o.HasOptions); err != nil {
+		&o.HasOptions, &o.CreatedByName, &o.CreatedByKind,
+		&o.ApprovalState, &o.ItemAvailable); err != nil {
 		return nil, err
 	}
 	// **والحالُ تُشتقّ من الحقول نفسِها التي يقرؤها `LiveCond`** —
@@ -323,6 +387,11 @@ type Input struct {
 	StartsAt        *time.Time `json:"starts_at"`
 	EndsAt          *time.Time `json:"ends_at"`
 	Active          *bool      `json:"active"`
+	// EndsOn **يومُ النهاية** `YYYY-MM-DD` — يُقرأ آخرَ اليوم بتوقيت دمشق
+	// (`EndOfDay`)، ويغلب `ends_at` إن حضرا.
+	EndsOn string `json:"ends_on,omitempty"`
+	// Notify **أيُبلَّغ زبائنُ منطقة المتجر؟** — خيارٌ في النافذة (البند ٥).
+	Notify bool `json:"notify,omitempty"`
 }
 
 // Create ينشئ عرضاً في معاملته — انظر `CreateIn`.
@@ -402,18 +471,29 @@ func (s *Service) CreateIn(ctx context.Context, q dbtx.Querier, actorID string, 
 	//
 	// **والسقفُ سعرُ الزبون اليوم** — **ومن رفع المتجرُ سعرَه بعدها فالعرضُ
 	// أصغرُ لا أكبر**، ومن خفضه فـ`Cut` يقصّ عند الصفر كما كان.
-	if hasAmt {
-		var price int64
-		if err := q.QueryRow(ctx,
-			`SELECT price FROM menu_items WHERE id = $1::uuid`, *in.MenuItemID).Scan(&price); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, ErrBadDiscount
-			}
-			return nil, err
+	// **والصنفُ يُقرأ مرّةً** — سعرُه وتوفّرُه معاً.
+	var price int64
+	var available bool
+	if err := q.QueryRow(ctx,
+		`SELECT price, available FROM menu_items WHERE id = $1::uuid`, *in.MenuItemID).
+		Scan(&price, &available); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrBadDiscount
 		}
-		if *in.DiscountAmount >= price {
-			return nil, ErrAmountOverPrice
-		}
+		return nil, err
+	}
+	// ══════════════════════════════════════════════════════════════════
+	//  **ولا خصمَ على صنفٍ «غير متوفر» — من أيّ باب** (٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كان الفحصُ في بابَي المتجر والمندوب وحدَهما، **فالإدارةُ تُنزل عرضاً
+	// على صنفٍ لا يُباع.** (نصُّ المالك ٢٠٢٦-١٠-٠١: «مو معقول ينزل عرض
+	// لصنف مو موجود».) **فصار هنا حيث تمرّ الأبوابُ كلُّها.**
+	if !available {
+		return nil, ErrItemUnavailable
+	}
+	if hasAmt && *in.DiscountAmount >= price {
+		return nil, ErrAmountOverPrice
 	}
 
 	active := true
@@ -473,6 +553,31 @@ func (s *Service) CreateIn(ctx context.Context, q dbtx.Querier, actorID string, 
 // عروض رمضان؟» لم يجد ما يقرؤه.**
 func (s *Service) SetActive(ctx context.Context, id string, active bool,
 	marginOf func(int64) int64) (*Offer, error) {
+	// ══════════════════════════════════════════════════════════════════
+	//  **ولا يُفعَّل منتهٍ ولا ما ينتظر الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كان «فعّل» على عرضٍ منتهٍ يُقبَل ولا يغيّر شيئاً — **الزرُّ ينقلب
+	// «أنزل» والعرضُ باقٍ منتهياً.** **فيُقال السببُ بدل أن يُقبَل صامتاً.**
+	if active {
+		var approvalState string
+		var endsAt *time.Time
+		err := s.db.QueryRow(ctx,
+			`SELECT approval_state, ends_at FROM offers WHERE id = $1`, id).
+			Scan(&approvalState, &endsAt)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, httpx.ErrNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		if approvalState != ApprovalOK {
+			return nil, ErrNeedsApproval
+		}
+		if endsAt != nil && !endsAt.After(time.Now()) {
+			return nil, ErrOfferExpired
+		}
+	}
 	_, err := s.db.Exec(ctx,
 		`UPDATE offers SET active = $2, updated_at = now() WHERE id = $1`, id, active)
 	if err != nil && strings.Contains(err.Error(), "offers_one_live_per_item") {
