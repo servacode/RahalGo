@@ -117,7 +117,7 @@ var Kinds = map[string]KindContract{
 	},
 	"adjustment": {
 		Kind: "adjustment", Sign: "±", RefRequired: false,
-		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go:280"},
+		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go"},
 		Path:       "POST /admin/wallet-requests/{id}/approve · ومطالبةُ المنصّة في نزاع",
 		Semantics:  "تسويةٌ يدويّةٌ بموافقة غيرِ مقترِحها وتحت سقف — **ويقابلها قيدٌ في الخزينة.**",
 		Invariants: []string{"FI-02.a", "FI-02.b"},

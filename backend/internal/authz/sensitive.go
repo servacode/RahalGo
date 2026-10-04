@@ -155,8 +155,11 @@ var sensitiveActions = []Sensitive{
 	// **وتسويةُ نزاعٍ وحلُّ تذكرةٍ بتعويض — مالٌ يتحرّك بلا خطوةٍ ثانية** (جردُ
 	// ٢٠٢٦-٠٩-٢٧): خصمُ مطالبةٍ من متجر/إعفاؤها، ودفعُ تعويضِ شكوى — **وكلُّ
 	// نظرائهما من محرّكات المال مؤكَّدون.** والاسمُ نفسُه اسمُ أثرِ التدقيق.
-	{"POST", "/disputes/{id}/settle", "ops.dispute_settled",
-		"dispute", 1, []string{"settlement"}, ""},
+	// **ومنذ ٢٠٢٦-١٠-٠٤ صار الحسمُ اقتراحاً وموافقة** — والمالُ يتحرّك عند الموافقة.
+	{"POST", "/disputes/{id}/propose", "finance.dispute_proposed",
+		"dispute", 1, []string{"action"}, ""},
+	{"POST", "/dispute-resolutions/{id}/approve", "finance.dispute_resolution_approved",
+		"dispute_resolution", 1, nil, ""},
 	{"POST", "/tickets/{id}/resolve", "finance.ticket_resolve",
 		"ticket", 1, []string{"compensation"}, ""},
 

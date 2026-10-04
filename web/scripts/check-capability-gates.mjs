@@ -181,10 +181,12 @@ const walk = (d, out = []) => {
 {
   const MUST = [
     ["app/dashboard/cash/page.tsx", 'can("finance.manage")', "تسويةُ نقد السائق"],
-    ["app/dashboard/losses/page.tsx", 'can("finance.read")', "تبويبُ الخسائر"],
+    ["app/dashboard/losses/page.tsx", 'canCall("GET", "/reports/losses")', "تبويبُ الخسائر"],
     ["app/dashboard/payouts/page.tsx", 'can("payouts.decide")', "قرارُ السحب"],
     ["app/dashboard/compensations/page.tsx", 'can("finance.manage")', "قرارُ التعويض المعلَّق"],
-    ["components/admin/money/disputes.tsx", 'can("finance.manage")', "تسويةُ النزاع"],
+    // **والنزاعاتُ من جدول المحرّك نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤): اقتراحُ الحسم والموافقةُ عليه.
+    ["components/admin/money/disputes.tsx", 'canCall("POST", "/disputes/{id}/propose")', "اقتراحُ حسم النزاع"],
+    ["components/admin/money/disputes.tsx", 'canCall("POST", "/dispute-resolutions/{id}/approve")', "الموافقةُ على حسم النزاع"],
     ["components/admin/support/tickets.tsx", 'can("support.manage")', "إغلاقُ التذكرة"],
     // **وتعويضُ السائق خرج من بطاقة الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٣):
     // **بابُه الوحيدُ طابورُ «التعويضات» — قبولٌ أو رفض.**

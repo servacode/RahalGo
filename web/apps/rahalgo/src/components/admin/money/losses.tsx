@@ -3,180 +3,156 @@
 /**
  * **خسائرُ المنصة** — من الدفتر لا من تقدير.
  *
- * قاعدةُ المالك: «نحسب الخسارة الفعلية فقط وليس الخسارة الافتراضية».
+ * قاعدةُ المالك: «نحسب الخسارة الفعلية فقط وليس الخسارة الافتراضية». فما يُعرض
+ * هنا **قيودُ مصروفٍ خرجت من الخزينة فعلاً**: بضاعةٌ لم يستردّها متجر، وتعويضُ
+ * سائقٍ عن طلبٍ فشل.
  *
- * **والفرقُ ليس لفظياً**: طلبٌ أُلغي قبل التحضير خسارتُه صفر — لم يُطبخ طعامٌ
- * ولم يقد سائق. **وشاشةٌ تعدّه خسارةً تجعل المنصةَ تبدو خاسرةً وهي لم تدفع
- * شيئاً**، فيُتّخذ قرارٌ على رقمٍ لا وجود له.
+ * # وأربعةُ أرقامٍ جنباً إلى جنب (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤)
  *
- * فما يُعرض هنا **قيودُ مصروفٍ خرجت من الخزينة فعلاً**: بضاعةٌ لم يستردّها
- * متجر، وتعويضُ سائقٍ عن طلبٍ فشل.
+ * خرج من الخزينة · رجع من النزاعات · **الخسارةُ الصافية** · ولنا عند الأطراف الآن.
+ * **وكان المجموعُ إجماليّاً وحدَه** — فلا يُعرف كم خسرنا فعلاً بعد الاسترجاع.
+ * **وسطرُ الخسارة يحمل حالَ نزاعه** (مفتوح · انخصم · انسقط · لا نزاع).
  *
- * **والرصيدُ بجانبها** — خسارةٌ بلا ما يقابلها رقمٌ يُفزع بلا معنى.
+ * **والأيّامُ بتوقيت دمشق** — الخادمُ يحسب حدَّي اليوم بها.
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   PageContainer,
   Pagination,
   PageHeader,
-  EmptyState,
   LoadingState,
+  ReloadState,
   StatGrid,
   StatCard,
   Input,
-  DataView,
-  ViewToggle,
-  useViewMode,
-  type DataColumn,
   useLiveData,
   IconWallet,
-  IconDate,
-  IconStatus,
-  IconOrder,
+  IconBalance,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { CaseTable, CaseFilters, type CaseRow, type CaseStatus } from "./caseTable";
 
 const m = getMessages(defaultLocale);
 const L = m.admin.losses;
 
 interface Loss {
+  order_id: string | null;
   order_number: number | null;
   amount: number;
   note: string;
   created_at: string;
+  dispute_id: string | null;
+  dispute_status: CaseStatus | null;
+  party_role: string | null;
+  party_id: string | null;
+  party_name: string | null;
 }
 
-/** تاريخُ اليوم بصيغة الاستعلام — بلا مناطق زمنية تُزحزح اليوم. */
-function isoDay(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+interface LossPage {
+  losses: Loss[];
+  /** **مجموعُ خسائر المدّة كلِّها** — لا مجموعُ الصفحة. */
+  total: number;
+  recovered: number;
+  net: number;
+  owed: number;
+  count: number;
+  per_page: number;
+}
+
+/** **يومُ دمشق** — لا يومُ جهاز المتصفّح ولا غرينتش. */
+function damascusDay(offsetDays = 0): string {
+  const d = new Date(Date.now() + 3 * 3600_000 + offsetDays * 86400_000);
+  return d.toISOString().slice(0, 10);
 }
 
 export function LossesView() {
-  const today = new Date();
-  const [to, setTo] = useState(isoDay(today));
-  const [from, setFrom] = useState(
-    isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)),
-  );
-  const [view, setView] = useViewMode("losses");
-
+  const [to, setTo] = useState(damascusDay());
+  const [from, setFrom] = useState(damascusDay(-29));
   /** **صفحةُ الكشف** — (قرارُ المالك ٢٠٢٦-٠٨-١٠). */
   const [page, setPage] = useState(1);
 
-  const { data } = useLiveData<{
-    losses: Loss[];
-    /** **مجموعُ خسائر المدّة كلِّها** — لا مجموعُ الصفحة. */
-    total: number;
-    count: number;
-    per_page: number;
-    treasury_balance: number;
-  }>(
+  const { data, error, reload } = useLiveData<LossPage>(
     () => api(`/api/v1/admin/reports/losses?from=${from}&to=${to}&page=${page}`),
-    ["wallet", "order"],
+    ["wallet", "order", "dispute"],
     [from, to, page],
   );
 
-  const columns: DataColumn<Loss>[] = [
-    {
-      id: "amount",
-      header: L.amount,
-      icon: <IconWallet />,
-      cell: (x) => (
-        <span dir="ltr" className="font-bold text-danger">
-          {fmtNum(x.amount)}
-        </span>
-      ),
-    },
-    {
-      id: "reason",
-      header: L.reason,
-      icon: <IconStatus />,
-      cell: (x) => <span className="line-clamp-2">{x.note}</span>,
-    },
-    {
-      id: "order",
-      header: m.terms.order,
-      icon: <IconOrder />,
-      cell: (x) => (x.order_number === null ? "—" : <span dir="ltr">#{fmtRef(x.order_number)}</span>),
-    },
-    {
-      id: "date",
-      header: L.date,
-      icon: <IconDate />,
-      cell: (x) => (
-        <span dir="ltr" className="text-xs text-ink-muted">
-          {fmtDateTime(x.created_at)}
-        </span>
-      ),
-    },
-  ];
+  const rows: CaseRow[] = (data?.losses ?? []).map((x, i) => ({
+    key: `${x.created_at}-${x.amount}-${i}`,
+    amount: x.amount,
+    partyRole: x.party_role,
+    partyId: x.party_id,
+    partyName: x.party_name,
+    reason: x.note,
+    orderId: x.order_id,
+    orderNumber: x.order_number,
+    date: x.created_at,
+    status: x.dispute_status,
+  }));
 
   return (
     <PageContainer>
       <PageHeader icon={IconWallet} title={L.title} subtitle={L.hint} />
 
-      <div className="mb-4 flex flex-wrap items-end gap-2">
+      <CaseFilters>
         <Input
           label={m.shared.statement.from}
           type="date"
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setFrom(e.target.value);
+          }}
         />
-        <Input label={m.shared.statement.to} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-      </div>
+        <Input
+          label={m.shared.statement.to}
+          type="date"
+          value={to}
+          onChange={(e) => {
+            setPage(1);
+            setTo(e.target.value);
+          }}
+        />
+      </CaseFilters>
 
-      {!data ? (
+      {/* **الخطأُ غيرُ التحميل** — كان الفشلُ يُبقي «جاري التحميل» للأبد. */}
+      {error ? (
+        <ReloadState label={L.loadError} onRetry={reload} />
+      ) : !data ? (
         <LoadingState />
       ) : (
         <>
           <StatGrid>
+            <StatCard label={L.lost} value={fmtNum(data.total)} icon={IconWallet} tone={data.total > 0 ? "danger" : "muted"} />
             <StatCard
-              label={L.total}
-              value={fmtNum(data.total)}
-              icon={IconWallet}
-              tone={data.total > 0 ? "danger" : "default"}
+              label={L.recovered}
+              value={fmtNum(data.recovered)}
+              icon={IconBalance}
+              tone={data.recovered > 0 ? "success" : "muted"}
             />
-            {/* **رصيدُ الخزينة لا مجموعُ قيود**: هو الصافي بعد كلّ ما دخل
-                وخرج، **ولا يحتاج جمعاً ثانياً يُخطئ.** */}
             <StatCard
-              label={L.treasury}
-              value={fmtNum(data.treasury_balance)}
+              label={L.net}
+              value={fmtNum(data.net)}
               icon={IconWallet}
-              tone={data.treasury_balance < 0 ? "danger" : "success"}
+              tone={data.net > 0 ? "danger" : "muted"}
+              emphasis
             />
+            <StatCard label={L.owed} value={fmtNum(data.owed)} icon={IconBalance} tone={data.owed > 0 ? "warning" : "muted"} />
           </StatGrid>
 
-          {data.losses.length === 0 ? (
-            <EmptyState icon={IconStatus} title={L.empty} />
-          ) : (
-            <>
-              <div className="mb-2 flex justify-end">
-                <ViewToggle
-                  view={view}
-                  onChange={setView}
-                  tableLabel={m.common.viewTable}
-                  cardsLabel={m.common.viewCards}
-                />
-              </div>
-              <DataView
-                items={data.losses}
-                getKey={(x) => x.created_at + String(x.amount)}
-                columns={columns}
-                view={view}
-                empty={L.empty}
-              />
-            </>
+          <div className="mt-4">
+            <CaseTable screen="losses" rows={rows} empty={L.empty} noDisputeLabel={L.noDispute} />
+          </div>
+
+          {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
+          {data.count > data.per_page && (
+            <div className="mt-4 flex justify-center">
+              <Pagination page={page} total={data.count} perPage={data.per_page} onChange={setPage} />
+            </div>
           )}
         </>
-      )}
-
-      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة.
-          **والمجموعُ فوقه لا يتبدّل بتقليبه** — هو عن المدّة لا عن الصفحة. */}
-      {data && data.count > data.per_page && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={data.count} perPage={data.per_page} onChange={setPage} />
-        </div>
       )}
     </PageContainer>
   );

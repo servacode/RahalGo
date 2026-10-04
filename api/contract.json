@@ -521,10 +521,102 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/dispute-resolutions",
+      "handler": "handleListDisputeResolutions",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "resolutions",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/dispute-resolutions/{id}/approve",
+      "handler": "handleDecideDisputeResolution",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "action",
+          "type": "unknown"
+        },
+        {
+          "name": "charged",
+          "type": "unknown"
+        },
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/dispute-resolutions/{id}/reject",
+      "handler": "handleDecideDisputeResolution",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "action",
+          "type": "unknown"
+        },
+        {
+          "name": "charged",
+          "type": "unknown"
+        },
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/disputes",
       "handler": "handleListDisputes",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "disputes.manage",
       "response": [
         {
           "name": "count",
@@ -532,6 +624,10 @@
         },
         {
           "name": "disputes",
+          "type": "unknown"
+        },
+        {
+          "name": "open_count",
           "type": "unknown"
         },
         {
@@ -560,7 +656,8 @@
       "path": "/api/v1/admin/disputes",
       "handler": "handleCreateDispute",
       "auth": true,
-      "capability": "support.manage",
+      "capability": "disputes.manage",
+      "idempotent": true,
       "request": [
         {
           "name": "party_role",
@@ -582,26 +679,33 @@
           "name": "note",
           "type": "string"
         }
-      ],
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/disputes/parties",
+      "handler": "handleDisputeParties",
+      "auth": true,
+      "capability": "disputes.manage",
       "response": [
         {
-          "name": "id",
+          "name": "parties",
           "type": "unknown"
         }
       ],
       "statuses": [
-        "StatusCreated"
+        "StatusOK"
       ]
     },
     {
       "method": "POST",
-      "path": "/api/v1/admin/disputes/{id}/settle",
-      "handler": "handleSettleDispute",
+      "path": "/api/v1/admin/disputes/{id}/propose",
+      "handler": "handleProposeDisputeResolution",
       "auth": true,
       "capability": "finance.manage",
       "request": [
         {
-          "name": "settlement",
+          "name": "action",
           "type": "string"
         },
         {
@@ -611,12 +715,16 @@
       ],
       "response": [
         {
-          "name": "settled",
+          "name": "resolution_id",
           "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
         }
       ],
       "statuses": [
-        "StatusOK"
+        "StatusCreated"
       ]
     },
     {
@@ -3010,11 +3118,23 @@
           "type": "unknown"
         },
         {
+          "name": "net",
+          "type": "unknown"
+        },
+        {
+          "name": "owed",
+          "type": "unknown"
+        },
+        {
           "name": "page",
           "type": "unknown"
         },
         {
           "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "recovered",
           "type": "unknown"
         },
         {

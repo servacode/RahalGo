@@ -213,9 +213,15 @@ var adminPolicy = []Rule{
 	{"GET", "/emergencies/banner", EmergenciesManage},
 	{"POST", "/emergencies/{id}/ack", EmergenciesManage},
 	{"POST", "/emergencies/stores/{id}/ack", EmergenciesManage},
-	{"GET", "/disputes", SupportManage},
-	{"POST", "/disputes", SupportManage},
-	{"POST", "/disputes/{id}/settle", FinanceManage},
+	// **النزاعاتُ بقدرتها** (قرارُ المالك ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» البندان ١ و٢):
+	// الدعمُ والماليّةُ يريان ويفتحان، **والحسمُ اقتراحٌ من الماليّة وموافقةُ غيرِ المقترِح.**
+	{"GET", "/disputes", DisputesManage},
+	{"POST", "/disputes", DisputesManage},
+	{"GET", "/disputes/parties", DisputesManage},
+	{"POST", "/disputes/{id}/propose", FinanceManage},
+	{"GET", "/dispute-resolutions", FinanceRead},
+	{"POST", "/dispute-resolutions/{id}/approve", FinanceManage},
+	{"POST", "/dispute-resolutions/{id}/reject", FinanceManage},
 	{"GET", "/ratings", SupportManage},
 
 	// ── المحتوى والتسويق ────────────────────────────────────────

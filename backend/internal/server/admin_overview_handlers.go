@@ -168,6 +168,7 @@ var overviewEvents = []string{
 	"finance.incentive", "finance.ticket_resolve",
 	"ops.merchant_suspend", "ops.warning_issued", "ops.merchant_warning_issued",
 	"ops.dispute_opened", "ops.dispute_settled", "ops.emergency_resolved",
+	"finance.dispute_proposed", "finance.dispute_resolution_approved",
 	"ops.emergency_ack", "ops.store_emergency_ack", "ops.order_transferred",
 	"ops.door_resolution", "ops.campaign_send", "ops.broadcast",
 	"driver.emergency", "customer.complaint_opened", "platform.app_upload",

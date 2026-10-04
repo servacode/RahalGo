@@ -22,6 +22,11 @@
    "guards_routes": 28
   },
   {
+   "code": "disputes.manage",
+   "description": "عرض النزاعات وفتح نزاع يدوي (الحسم للمالية)",
+   "guards_routes": 3
+  },
+  {
    "code": "drivers.manage",
    "description": "إدارة السائقين وتشغيلهم",
    "guards_routes": 3
@@ -44,12 +49,12 @@
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 15
+   "guards_routes": 17
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 17
+   "guards_routes": 18
   },
   {
    "code": "finance.recompute",
@@ -143,7 +148,7 @@
   {
    "code": "support.manage",
    "description": "التذاكر والنزاعات والتقييمات",
-   "guards_routes": 8
+   "guards_routes": 6
   },
   {
    "code": "users.cashban.lift",
@@ -221,13 +226,14 @@
   }
  ],
  "route_policy": {
-  "rules": 205,
+  "rules": 209,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
    "audit.export",
    "audit.read",
    "content.manage",
+   "disputes.manage",
    "drivers.manage",
    "drivers.read",
    "emergencies.manage",
@@ -430,6 +436,26 @@
   },
   {
    "method": "POST",
+   "pattern": "/disputes/{id}/propose",
+   "action": "finance.dispute_proposed",
+   "target_type": "dispute",
+   "target_segment": 1,
+   "fingerprint_params": [
+    "action"
+   ],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/dispute-resolutions/{id}/approve",
+   "action": "finance.dispute_resolution_approved",
+   "target_type": "dispute_resolution",
+   "target_segment": 1,
+   "fingerprint_params": [],
+   "need": "finance.manage"
+  },
+  {
+   "method": "POST",
    "pattern": "/drivers/{id}/settle",
    "action": "finance.driver_settle",
    "target_type": "user",
@@ -554,17 +580,6 @@
     "reason"
    ],
    "need": "orders.intervene"
-  },
-  {
-   "method": "POST",
-   "pattern": "/disputes/{id}/settle",
-   "action": "ops.dispute_settled",
-   "target_type": "dispute",
-   "target_segment": 1,
-   "fingerprint_params": [
-    "settlement"
-   ],
-   "need": "finance.manage"
   },
   {
    "method": "POST",

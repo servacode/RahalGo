@@ -127,6 +127,12 @@ const (
 	// عكسُ التخصّص.**
 	SupportManage Capability = "support.manage"
 
+	// DisputesManage **عرضُ النزاعات وفتحُ نزاعٍ يدويّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
+	// «الخسائر والنزاعات» البند ١): **الدعمُ يرى ويفتح، والماليّةُ ترى وتفتح
+	// وتحسم.** وكانت داخلَ `support.manage` — والماليّةُ لا تملكها، **فكانت
+	// تحسم ما لا تراه.** والحسمُ نفسُه يبقى `finance.manage` باقتراحٍ وموافقة.
+	DisputesManage Capability = "disputes.manage"
+
 	// EmergenciesManage **قراءةُ الطوارئ واستلامُها وإغلاقُها** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٧).
 	//
 	// **وكانت داخلَ `support.manage`** — **فموظّفُ العمليّات الذي يوزّع
@@ -298,6 +304,7 @@ var catalog = map[Capability]string{
 	AnalyticsRead:            "قراءة التحليلات",
 	PlatformOverview:         "رئيسية مدير المنصة بأرقامها ومالها",
 	SupportManage:            "التذاكر والنزاعات والتقييمات",
+	DisputesManage:           "عرض النزاعات وفتح نزاع يدوي (الحسم للمالية)",
 	EmergenciesManage:        "غرفة الطوارئ: القراءة والاستلام والإغلاق",
 	FinanceRecompute:         "إعادة حساب تسوية طلب مغلق",
 	SafetyManage:             "الإنذارات والمخالفات وتعليق المتاجر",
@@ -341,6 +348,7 @@ var groupOf = map[Capability]Group{
 	OrdersRead: GroupOrders, OrdersIntervene: GroupOrders,
 	OrdersCommunicationsRead: GroupOrders, OrdersCustomerDetailsRead: GroupOrders,
 	SupportManage: GroupOrders, EmergenciesManage: GroupOrders,
+	DisputesManage: GroupMoney,
 
 	UsersRead: GroupAccounts, UsersStatusManage: GroupAccounts, UsersExport: GroupAccounts,
 	UsersContactRead: GroupAccounts, UsersSensitiveRead: GroupAccounts,
