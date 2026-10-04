@@ -172,13 +172,22 @@ func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
 		// **ولا تُكتب السياسةُ مرّتين**: **الحقلُ من الدالّة نفسِها
 		// التي تحرس الكتابة** — **فلا تفترقان.**
 		Editable bool `json:"editable"`
+		// Risk **مستوى الخطورة من القائمة الواحدة** (`settingRisk`) — «money»
+		// أو «security» أو فراغ. **ومنه وحدَه الشارةُ في اللوحة**، فلا تفترق
+		// عن الحماية (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٧).
+		Risk string `json:"risk"`
+		// Placement **بيتُه في العمود الجانبيّ** — بقواعد البادئة (البند ١٧).
+		settings.Placement
 	}
 	// الترتيب ترتيبُ الكتالوج لا ترتيب القاعدة: المفاتيح مجموعةٌ بالموضوع،
 	// وترتيبُها الأبجدي يبعثر «مهلة القبول» عن «مهلة التوصيل».
 	out := make([]setting, 0, len(settings.Catalog))
 	for _, d := range settings.Catalog {
-		item := setting{Def: d}
+		item := setting{Def: d, Placement: settings.PlacementOf(d)}
 		item.Editable = s.hasCapability(r, settingCapability(d.Key))
+		item.Risk = settingRisk(d.Key)
+		// **والشارةُ القديمةُ تتبع القائمةَ لا الفهرس** — فلا تُرسَل شارةٌ بلا حماية.
+		item.Sensitive = item.Risk != ""
 		if st, ok := current[d.Key]; ok {
 			item.Value = st.value
 			item.UpdatedAt = &st.updatedAt
@@ -213,6 +222,7 @@ func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"settings": out,
 		"groups":   settings.Groups,
+		"topics":   settings.Topics,
 	})
 }
 
@@ -254,6 +264,27 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 	// يُثبت الفعل ولا يُظهر أثره — ومن يراجع الدفتر يريد الفرق لا النتيجة.
 	before, _ := s.settings.GetRaw(r.Context(), key)
 
+	// **ولا حفظَ بلا تغيير** (البند ١٤): كان الشريطُ يحفظ مع كلّ ضغطةِ سهمٍ
+	// فيُكتب في السجلّ «١٠ ← ١٠» وتُطلب كلمةُ السرّ لكلّ ضغطة. **والمقارنةُ
+	// بالقيمة المطبَّعة** — `10` و`10.0` سواء.
+	norm, verr := settings.Validate(key, v)
+	if verr == nil {
+		if cur, ok := s.currentSettingValue(r.Context(), key); ok && sameSettingValue(cur, norm) {
+			httpx.JSON(w, http.StatusOK, map[string]any{"updated": false, "unchanged": true})
+			return
+		}
+		// **والمرتبطُ يُفحص قبل الكتابة** (البند ١٦).
+		if err := settings.CheckRelated(r.Context(), s.settings, key, norm); err != nil {
+			var conflict settings.ErrConflict
+			if errors.As(err, &conflict) {
+				s.respondErr(w, settingConflictErr(conflict.With))
+				return
+			}
+			s.respondErr(w, err)
+			return
+		}
+	}
+
 	// التحقق كلُّه في الكتالوج: المفتاح المجهول مرفوض، والقيمة خارج المدى
 	// مرفوضة، والنوع الخاطئ مرفوض. وكان هنا شرطان لمفتاحين من اثنين وعشرين.
 	// ══════════════════════════════════════════════════════════════
@@ -288,6 +319,11 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 	if setErr != nil {
 		var unknown settings.ErrUnknownKey
 		var invalid settings.ErrInvalidValue
+		var missing settings.ErrMissingPlaceholder
+		if errors.As(setErr, &missing) {
+			s.respondErr(w, settingPlaceholderErr(missing.Placeholder))
+			return
+		}
 		if errors.As(setErr, &unknown) || errors.As(setErr, &invalid) {
 			s.respondErr(w, errValidation)
 			return

@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/release"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
@@ -620,12 +621,19 @@ func (s *Server) handleCustomerCancelOrder(w http.ResponseWriter, r *http.Reques
 //
 // **ويُحلّ هنا لا في الواجهة**: خمسُ بوّاباتٍ تعرض الزرّ، **وقاعدةُ
 // أولويّةٍ تُكتب خمسَ مرّاتٍ تفترق في الرابعة.**
+//
+// **ومن مركز التنزيل لا من مفتاحين قديمين** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات
+// البند ٦): **تطبيقُ الزبون** — رابطُ بلاي إن وُجد ثمّ ملفُّه. كان الزرُّ يقرأ
+// `platform.app_url`/`platform.app_file` الفارغين **فيختفي والملفّاتُ الأربعةُ
+// مرفوعة.**
 func (s *Server) appHref(r *http.Request) string {
-	if link := s.settings.GetString(r.Context(), "platform.app_url"); link != "" {
-		return link
+	app, ok := release.Find("customer")
+	if !ok {
+		return ""
 	}
-	if s.settings.GetString(r.Context(), appFileSetting) != "" {
-		return "/api/v1/public/app"
+	pub := release.ResolveOne(r.Context(), s.releaseStore(), app)
+	if pub.PlayURL != "" {
+		return pub.PlayURL
 	}
-	return ""
+	return pub.DownloadURL
 }

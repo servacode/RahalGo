@@ -54,6 +54,12 @@ type EconomicsSnapshot struct {
 //
 // **ولا ارتدادَ إلى إعدادات اليوم** — **وذاك بعينه ما يمنعه `XQ-2`**:
 // **اقتصادٌ يُخترَع بعد شهرٍ ليس اقتصادَ الطلب.**
+// ActivationFromFirstOrder **عتبةُ تفعيل المتجر ثابتةٌ: أوّلُ طلبٍ ناجح.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — حُذف `sales.activation_orders`.) **وواحدٌ يعني
+// «مفعَّلٌ دائماً»** في `merchantActivated`.
+const ActivationFromFirstOrder int64 = 1
+
 var ErrNoSnapshot = fmt.Errorf("orders: طلبٌ بلا لقطةِ اقتصاد — ولا تُقرأ إعداداتُ اليوم بدلاً منها")
 
 // snapshotNow يقرأ المقدّماتِ الأربعَ من صورةٍ واحدةٍ للإعدادات.
@@ -71,23 +77,19 @@ func (s *Service) snapshotNow(ctx context.Context, q dbtx.Querier) (EconomicsSna
 	// **نسبةُ المنصّة من الإعداد الجديد ونسبةُ المندوب من القديم**،
 	// **وذاك عقدٌ لم يوافق عليه أحد.**
 	c, err := s.settings.On(q).ReadCoherent(ctx,
-		"merchants.commission_percent", "sales.commission_percent",
-		pricing.CommissionSourceKey, "sales.activation_orders")
+		"merchants.commission_percent", "sales.commission_percent")
 	if err != nil {
 		return EconomicsSnapshot{}, err
 	}
-	src := pricing.CommissionSource(c.String(pricing.CommissionSourceKey))
-	switch src {
-	case pricing.SourcePlatformCommission, pricing.SourcePricingMargin, pricing.SourceBoth:
-	default:
-		// **ومجهولُ الوضع يُردّ** — **فلا تُكتب لقطةٌ لا تُقرأ.**
-		return EconomicsSnapshot{}, fmt.Errorf("orders: وضعُ احتسابٍ مجهول: %q", src)
-	}
+	// **والمصدرُ والعتبةُ ثابتان بقرار المالك** (٢٠٢٦-١٠-٠٤، الإعدادات البندان
+	// ٤ و٦): **عمولةُ المندوب من ربح المنصّة كلِّه** (الهامش + عمولة المتجر)
+	// **ومن أوّل طلبٍ ناجح**. **ويُكتبان في اللقطة كما كانا** — فالتسويةُ
+	// تقرأ اللقطةَ لا الإعداد، **والطلباتُ القديمةُ تبقى على ما لُقط لها.**
 	return EconomicsSnapshot{
 		MerchantCommissionPercent: c.Int("merchants.commission_percent"),
 		RepCommissionPercent:      c.Int("sales.commission_percent"),
-		CommissionSource:          string(src),
-		ActivationOrders:          c.Int("sales.activation_orders"),
+		CommissionSource:          string(pricing.RepCommissionSourceFixed),
+		ActivationOrders:          ActivationFromFirstOrder,
 	}, nil
 }
 

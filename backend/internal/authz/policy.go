@@ -250,7 +250,9 @@ var adminPolicy = []Rule{
 	{"", "/campaigns/{id}/cancel", ContentManage},
 	{"POST", "/broadcast", ContentManage},
 	{"GET", "/broadcast/count", ContentManage},
-	{"", "/app-file", ContentManage},
+	// **وملفُّ التطبيق إعدادٌ لا محتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات):
+	// كان بقدرة المحتوى — **فموظّفُ المحتوى يبدّل تطبيقَ السائق عند كلّ الكباتن.**
+	{"", "/app-file", SettingsGeneralManage},
 
 	// ── الجغرافيا ───────────────────────────────────────────────
 	// **ودوامُ المنصّة وإيقافُها المؤقّت من باب المناطق نفسِه** —

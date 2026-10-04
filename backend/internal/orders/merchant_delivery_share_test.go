@@ -29,8 +29,8 @@ func TestMerchantDeliveryShare(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			platform := c.fee * c.pct / 100
-			driver := c.fee - platform
+			driver := DriverFeeAfterShare(c.fee, c.pct)
+			platform := c.fee - driver
 			if platform != c.wantPlatform || driver != c.wantDrv {
 				t.Fatalf("أجرةٌ %d بنسبة %d%%: المنصّة %d والسائق %d — والمتوقّع %d و%d",
 					c.fee, c.pct, platform, driver, c.wantPlatform, c.wantDrv)
@@ -45,14 +45,15 @@ func TestMerchantDeliveryShare(t *testing.T) {
 	}
 }
 
-// **والمفتاحُ واحدٌ لا يُكتب بيده مرّتين.**
+// **والمفتاحُ واحدٌ لا يُكتب بيده مرّتين** — وهو مفتاحُ الأنواع الثلاثة
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ١).
 //
 // **`GetInt` تردّ الافتراضَ لمفتاحٍ مجهول** — **فخطأٌ مطبعيٌّ في أحد
 // الموضعين يُقرأ نسبةً افتراضيّةً بصمت، ولا يظهر في أيّ خطأ.**
-func TestMerchantDeliveryPercentKeyMatchesCatalog(t *testing.T) {
-	const inCatalog = "delivery.merchant_delivery_platform_percent"
-	if SettingMerchantDeliveryPlatformPercent != inCatalog {
+func TestPlatformDeliveryPercentKeyMatchesCatalog(t *testing.T) {
+	const inCatalog = "delivery.platform_percent"
+	if SettingPlatformDeliveryPercent != inCatalog {
 		t.Fatalf("المفتاحُ %q والفهرسُ %q — **ويُقرأ الافتراضُ بصمت**",
-			SettingMerchantDeliveryPlatformPercent, inCatalog)
+			SettingPlatformDeliveryPercent, inCatalog)
 	}
 }
