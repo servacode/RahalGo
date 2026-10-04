@@ -30,6 +30,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 	"io"
 	"net/http"
 	"strconv"
@@ -131,7 +132,11 @@ func (s *Server) driverStageReport(w http.ResponseWriter, r *http.Request, order
 		})
 		return
 	}
-	note = clip(strings.TrimSpace(note), 300)
+	// **ملاحظةُ السائق تمرّ بالحارس المركزيّ** — تُقرأ في لوحة الإدارة كأيّ نصّ.
+	if _, err := s.guardText(ctx, tf("note", &note, maxStageNote, textguard.Notes)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if err := s.auditTx(ctx, tx, r, "driver.stage_report", "order", orderID, map[string]any{
 		"code": code, "status": status, "note": note,
 	}); err != nil {

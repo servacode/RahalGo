@@ -327,7 +327,9 @@ func TestNAVB_035_BatchStillMovesDriver(t *testing.T) {
 	drv := h.NewUser("driver")
 	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
 		map[string]any{"lat": 35.9506, "lng": 39.0094, "bearing_deg": 10.0},
-		map[string]any{"lat": 35.9600, "lng": 39.0200, "bearing_deg": 20.0},
+		// **وخطوةٌ يقطعها سائق** (٠٫٦ كم في عشرين ثانية) — فالقفزةُ الأسرعُ من مركبةٍ
+		// تُهمَل (`driver_location_jump.go`)، وكانت النقطةُ هنا ١٫٤ كم.
+		map[string]any{"lat": 35.9550, "lng": 39.0140, "bearing_deg": 20.0},
 	))
 	if res.Code != 200 {
 		t.Fatalf("NAVB-035 الدفعةُ رُدّت: %s", res)
@@ -338,7 +340,7 @@ func TestNAVB_035_BatchStillMovesDriver(t *testing.T) {
 		  FROM users WHERE id = $1::uuid`, drv.ID).Scan(&lat, &lng); err != nil {
 		t.Fatalf("NAVB-035 تعذّرت قراءةُ الموضع: %v", err)
 	}
-	if int(lat*1000) != 35960 || int(lng*1000) != 39020 {
+	if int(lat*1000) != 35955 || int(lng*1000) != 39014 {
 		t.Errorf("NAVB-035 **الموضعُ الأخيرُ خطأ**: %f,%f", lat, lng)
 	}
 }

@@ -191,14 +191,12 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT count(*) FROM driver_compensation_requests WHERE status = 'pending'),
 			(SELECT count(*) FROM driver_emergencies WHERE status = 'open'),
 			(SELECT count(*) FROM orders
-			  WHERE status = 'dispatching' AND driver_id IS NULL AND closed_at IS NULL
-			    AND dispatched_at < now() - make_interval(mins => $1::int)),
+			  WHERE status = 'dispatching' AND driver_id IS NULL AND closed_at IS NULL),
 			(SELECT count(*) FROM merchant_leads WHERE status = 'new'),
 			(SELECT count(*) FROM menu_items WHERE NOT approved),
 			(SELECT count(*) FROM (
 			    SELECT driver_id FROM driver_cash_entries GROUP BY driver_id
-			    HAVING COALESCE(sum(amount), 0) > 0 AND COALESCE(sum(amount), 0) >= $2) x)`,
-		s.settings.GetInt(r.Context(), "orders.manual_assign_after_min"),
+			    HAVING COALESCE(sum(amount), 0) > 0 AND COALESCE(sum(amount), 0) >= $1) x)`,
 		s.cashbox.Limit(r.Context())).
 		Scan(&st.CompensationsPending, &st.EmergenciesOpen, &st.OrdersUnassigned,
 			&st.LeadsNew, &st.MenuPending, &st.DriversOverCash); err != nil {
