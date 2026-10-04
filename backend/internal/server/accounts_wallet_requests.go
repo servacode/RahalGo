@@ -157,14 +157,9 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		return IdempotentBody{
 			Status:  http.StatusCreated,
 			Payload: map[string]any{"request_id": id, "status": "pending"},
-			AfterCommit: func() {
-				s.notify.NotifyOps(context.WithoutCancel(r.Context()), notifications.Input{
-					Kind: notifications.KindWallet, Title: notifTitles.walletRequest,
-					Body: note, Entity: "wallet_request", EntityID: id,
-					Href: "/dashboard/compensations",
-				})
-				s.touch("wallet", "ops")
-			},
+			// **ولا إشعارَ لكلّ مكتب العمليّات عن كلّ اقتراح** — يظهر في لوح الطلبات حيّاً
+			// (`touch`)، **وإشعارٌ لكلّ الطاقم عن كلّ حركةٍ يُغرق جرسَهم وطابورَ الدفع.**
+			AfterCommit: func() { s.touch("wallet", "ops") },
 		}, nil
 	})
 }
