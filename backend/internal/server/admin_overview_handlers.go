@@ -61,6 +61,10 @@ type ovAwaiting struct {
 	TicketsLate          num `json:"tickets_late"`
 	LeadsNew             num `json:"leads_new"`
 	ExpansionWaiting     num `json:"expansion_waiting"`
+	// **ديونٌ مفتوحةٌ تجاوزت مهلةَ التنبيه** (`finance.obligation_alert_days`) ·
+	// **وطلباتُ دفعٍ بالمكتب أو شطبٍ تنتظر** — قسمُ الديون ٢٠٢٦-١٠-٠٤.
+	ObligationsOverdue num `json:"obligations_overdue"`
+	ObligationRequests num `json:"obligation_requests"`
 }
 
 type ovLive struct {
@@ -252,6 +256,9 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 			a.CompensationsPending, a.EmergenciesOpen = n64(comp), n64(emerg)
 			a.PayoutsPending, a.LeadsNew, a.ExpansionWaiting = n64(pay), n64(leads), n64(exp)
 		}
+	}
+	if sum, err := s.obligationsSummary(ctx); !miss("obligations", err) {
+		a.ObligationsOverdue, a.ObligationRequests = n64(sum.Overdue), n64(sum.PendingRequests)
 	}
 	if n, err := s.orders.CountAwaitingOffice(ctx); !miss("reports_waiting", err) {
 		a.ReportsWaiting = n64(int64(n))

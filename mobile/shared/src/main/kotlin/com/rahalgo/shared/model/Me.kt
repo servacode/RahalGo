@@ -45,6 +45,21 @@ data class WalletStatement(
     val closing: Long = 0,
     /** **قُصّ الكشفُ عند السقف** — وناقصٌ يجب أن يقول إنّه ناقص. */
     val truncated: Boolean = false,
+    /**
+     * **ديونُه المفتوحة بأسبابها** — للمتجر والمندوب وحدَهما، وفارغةٌ لغيرهما.
+     *
+     * (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الديون: «عليك كذا، بسبب كذا، وبينقطع من
+     *  أول أرباح جاية».)
+     */
+    val debts: List<DebtLine> = emptyList(),
+    @SerialName("debt_total") val debtTotal: Long = 0,
+)
+
+/** **دينٌ مفتوحٌ بسببه** — والسببُ رمزٌ يُترجَم في الشاشة. */
+@Serializable
+data class DebtLine(
+    val amount: Long = 0,
+    val cause: String = "",
 )
 
 /**

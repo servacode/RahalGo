@@ -138,6 +138,11 @@ const (
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٥): **لصاحب المنصّة ومديرها وحدَهما.**
 	FinanceRecompute Capability = "finance.recompute"
 
+	// FinanceWriteoffApprove **الموافقةُ على شطب دينٍ لن يُسدَّد** — متجرٌ سكّر أو
+	// مندوبٌ ترك. (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الديون: «الماليّةُ تقترح بسببٍ
+	// مكتوب ومديرُ المنصّة يوافق».) **والاقتراحُ بـ`finance.manage`.**
+	FinanceWriteoffApprove Capability = "finance.writeoff.approve"
+
 	// SafetyManage **الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر.**
 	//
 	// **وكانت داخلَ `merchants.manage`** — **ومعها تحريرُ القائمة
@@ -300,6 +305,7 @@ var catalog = map[Capability]string{
 	SupportManage:            "التذاكر والنزاعات والتقييمات",
 	EmergenciesManage:        "غرفة الطوارئ: القراءة والاستلام والإغلاق",
 	FinanceRecompute:         "إعادة حساب تسوية طلب مغلق",
+	FinanceWriteoffApprove:   "الموافقة على شطب دين متجر أو مندوب لن يسدد",
 	SafetyManage:             "الإنذارات والمخالفات وتعليق المتاجر",
 	MerchantsVerify:          "مراجعة المتاجر المرشحة والقوائم قبل النشر",
 	AuditRead:                "قراءة سجل الأحداث",
@@ -348,6 +354,7 @@ var groupOf = map[Capability]Group{
 
 	FinanceRead: GroupMoney, FinanceManage: GroupMoney, PayoutsDecide: GroupMoney,
 	FinanceExport: GroupMoney, FinanceRecompute: GroupMoney, PlatformOverview: GroupMoney,
+	FinanceWriteoffApprove: GroupMoney,
 
 	MerchantsManage: GroupStoresDrivers, MerchantsRead: GroupStoresDrivers,
 	MerchantsVerify: GroupStoresDrivers, DriversManage: GroupStoresDrivers,
@@ -381,6 +388,7 @@ const (
 
 var riskOf = map[Capability]Risk{
 	FinanceManage: RiskMoney, PayoutsDecide: RiskMoney, FinanceRecompute: RiskMoney,
+	FinanceWriteoffApprove:  RiskMoney,
 	SettingsFinancialManage: RiskMoney, UsersCashBanLift: RiskMoney,
 	SupportManage: RiskMoney, OrdersIntervene: RiskMoney,
 

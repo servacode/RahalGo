@@ -117,7 +117,7 @@ var Kinds = map[string]KindContract{
 	},
 	"adjustment": {
 		Kind: "adjustment", Sign: "±", RefRequired: false,
-		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go:280"},
+		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go:280", "internal/server/obligations_actions.go"},
 		Path:       "POST /admin/wallet-requests/{id}/approve · ومطالبةُ المنصّة في نزاع",
 		Semantics:  "تسويةٌ يدويّةٌ بموافقة غيرِ مقترِحها وتحت سقف — **ويقابلها قيدٌ في الخزينة.**",
 		Invariants: []string{"FI-02.a", "FI-02.b"},
@@ -125,7 +125,7 @@ var Kinds = map[string]KindContract{
 	},
 	"platform_profit": {
 		Kind: "platform_profit", Sign: "±", RefRequired: false, RefTarget: "orders|disputes",
-		Creators:   []string{"internal/orders/treasury.go:166", "internal/orders/treasury.go:215"},
+		Creators:   []string{"internal/orders/treasury.go:166", "internal/orders/treasury.go:215", "internal/orders/treasury.go:CreditTreasuryDirectID"},
 		Path:       "كلُّ انتقالٍ ماليٍّ للطلب — creditTreasury",
 		Semantics:  "ما بقي للمنصّة بعد كلّ الأنصبة — **يُعاد حسابُه لا يُضاف تراكماً.**",
 		Invariants: []string{"FI-06.a", "FI-12.a"},

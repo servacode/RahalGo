@@ -226,6 +226,8 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 		}
 		actor := userIDFrom(r)
 		var wr walletRequestRow
+		// **ما سدّه الشحنُ من دينٍ** — يُبلَّغ صاحبُه بعد الإيداع (قسمُ الديون).
+		var debtPaid int64
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 			row, err := scanWalletRequest(q.QueryRow(ctx, walletRequestCols+`
 				WHERE wr.id = $1 FOR UPDATE OF wr`, id))
@@ -253,9 +255,11 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 			status := "rejected"
 			if approve {
 				status = "approved"
-				if err := s.postWalletRequest(ctx, q, row, actor); err != nil {
+				paid, err := s.postWalletRequest(ctx, q, row, actor)
+				if err != nil {
 					return err
 				}
+				debtPaid = paid
 			}
 			if _, err := q.Exec(ctx, `
 				UPDATE wallet_requests
@@ -292,6 +296,14 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 				UserID: wr.UserID, Kind: notifications.KindWallet,
 				Title: title, Body: wr.Note, Entity: "wallet", Href: "/portal/wallet",
 			})
+			if debtPaid > 0 {
+				s.notify.Notify(r.Context(), notifications.Input{
+					UserID: wr.UserID, Kind: notifications.KindWallet,
+					Title:  "انسدّ من دينك من الشحن",
+					Body:   "شحنتك سدّت " + fmtMoneyAr(debtPaid) + " من الدين اللي عليك، والباقي بمحفظتك.",
+					Entity: "wallet", Href: "/portal/wallet",
+				})
+			}
 			s.touchUser(wr.UserID, "wallet")
 		}
 		s.touch("wallet", "ops")
@@ -303,27 +315,31 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 // postWalletRequest **القيدُ بطرفين** — داخلَ معاملة الموافقة.
 //
 // **ومرجعُ القيدين معرّفُ الطلب** — فيُقرأ من الدفتر من أين جاء كلُّ طرف.
-func (s *Server) postWalletRequest(ctx context.Context, q dbtx.Querier, wr walletRequestRow, actor string) error {
+//
+// **ويُرجع ما سدّه الشحنُ من دين** — الشحنُ يسدّ الدينَ أوّلاً (قسمُ الديون).
+func (s *Server) postWalletRequest(ctx context.Context, q dbtx.Querier, wr walletRequestRow, actor string) (int64, error) {
 	switch {
 	case wr.Kind == "topup":
 		if _, err := s.wallet.ApplyTx(ctx, q, wr.UserID, wr.Amount, "topup", wr.ID, wr.Note, &actor); err != nil {
-			return err
+			return 0, err
 		}
 		// **والنقدُ دخل المكتب** — سطرٌ في صندوقه بالمرجع نفسِه.
-		_, err := q.Exec(ctx, `
+		if _, err := q.Exec(ctx, `
 			INSERT INTO office_cash_entries (direction, amount, source, ref, user_id, recorded_by, note)
 			VALUES ('in', $1, 'wallet_topup', $2, $3, $4, $5)`,
-			wr.Amount, wr.ID, wr.UserID, actor, wr.Note)
-		return err
+			wr.Amount, wr.ID, wr.UserID, actor, wr.Note); err != nil {
+			return 0, err
+		}
+		return s.payDebtFromTopup(ctx, q, wr.UserID, wr.Amount, wr.ID, actor)
 	case wr.Kind == "adjustment" && wr.Debit:
 		if _, err := s.wallet.ApplyTx(ctx, q, wr.UserID, -wr.Amount, "adjustment", wr.ID, wr.Note, &actor); err != nil {
-			return err
+			return 0, err
 		}
-		return s.orders.CreditTreasuryDirect(ctx, q, wr.Amount, wr.ID, "تسويةٌ يدويّة — خصمٌ من محفظة", actor)
+		return 0, s.orders.CreditTreasuryDirect(ctx, q, wr.Amount, wr.ID, "تسويةٌ يدويّة — خصمٌ من محفظة", actor)
 	default: // compensation · adjustment إيداعاً
 		if _, err := s.wallet.ApplyTx(ctx, q, wr.UserID, wr.Amount, wr.Kind, wr.ID, wr.Note, &actor); err != nil {
-			return err
+			return 0, err
 		}
-		return s.orders.DebitTreasury(ctx, q, wr.Amount, wr.ID, "حركةٌ يدويّةٌ بموافقة — "+wr.Note, actor)
+		return 0, s.orders.DebitTreasury(ctx, q, wr.Amount, wr.ID, "حركةٌ يدويّةٌ بموافقة — "+wr.Note, actor)
 	}
 }

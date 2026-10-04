@@ -95,7 +95,9 @@ interface Overview {
     | "tickets_open"
     | "tickets_late"
     | "leads_new"
-    | "expansion_waiting",
+    | "expansion_waiting"
+    | "obligations_overdue"
+    | "obligation_requests",
     N
   >;
   live: {
@@ -201,6 +203,8 @@ const AWAITING: {
   { key: "payouts_pending", label: H.payoutsPending, href: "/dashboard/payouts?status=pending", urgent: false, icon: IconWallet },
   { key: "leads_new", label: H.leadsNew, href: "/dashboard/leads", urgent: false, icon: IconLink },
   { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/expansion?filter=waiting", urgent: false, icon: IconZones },
+  { key: "obligations_overdue", label: H.obligationsOverdue, href: "/dashboard/obligations?overdue=1", urgent: false, icon: IconBalance },
+  { key: "obligation_requests", label: H.obligationRequests, href: "/dashboard/obligations?state=open", urgent: false, icon: IconBalance },
 ];
 
 const STAGES = ["at_store_prep", "dispatching", "to_store", "at_store", "to_customer"] as const;

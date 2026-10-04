@@ -1750,6 +1750,82 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/obligation-requests",
+      "handler": "handleListObligationRequests",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligation-requests/{id}/approve",
+      "handler": "handleDecideObligationRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligation-requests/{id}/reject",
+      "handler": "handleDecideObligationRequest",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/obligations",
       "handler": "handleListObligations",
       "auth": true,
@@ -1763,6 +1839,44 @@
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/obligations/export",
+      "handler": "handleExportObligations",
+      "auth": true,
+      "capability": "finance.export",
+      "response": [
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "obligations",
+          "type": "unknown"
+        },
+        {
+          "name": "truncated",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligations/{id}/office-cash",
+      "handler": "handleProposeObligationCash",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/obligations/{id}/write-off",
+      "handler": "handleProposeObligationWriteoff",
+      "auth": true,
+      "capability": "finance.manage"
     },
     {
       "method": "GET",
@@ -6960,7 +7074,7 @@
       "auth": true,
       "response": [
         {
-          "name": "@st",
+          "name": "@out",
           "type": "unknown"
         }
       ],
@@ -8005,7 +8119,7 @@
       ],
       "response": [
         {
-          "name": "@st",
+          "name": "@out",
           "type": "unknown"
         }
       ],

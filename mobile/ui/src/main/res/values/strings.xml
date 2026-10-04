@@ -252,6 +252,11 @@
     <string name="wal_ask_payout">سحب الأموال</string>
     <string name="wal_bad_amount">مبلغ غير صحيح</string>
     <string name="wal_balance">الرصيد</string>
+    <string name="wal_debt_line">عليك %1$s، بسبب %2$s، وبينقطع من أول أرباح جاية</string>
+    <string name="wal_debt_refund">طلب انسترجع بعد ما انصرف حقه</string>
+    <string name="wal_debt_returned">بضاعة رجعت</string>
+    <string name="wal_debt_delivery">أجرة توصيلة</string>
+    <string name="wal_debt_old">دين سابق</string>
     <string name="wal_closing">رصيد آخر المدة</string>
     <string name="wal_doc_title">كشف حساب المحفظة</string>
     <string name="wal_k_adjustment">تسوية من الإدارة</string>

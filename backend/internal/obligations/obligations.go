@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -35,7 +36,78 @@ const (
 	CauseRefundRep      = "refund_rep_commission"
 	CauseReturnedGoods  = "returned_goods"
 	CauseLegacy         = "legacy_opening"
+	// CauseDeliveryFee أجرةُ «لدي توصيلة» لم تحملها محفظةُ المتجر (هجرة `0170`).
+	CauseDeliveryFee = "merchant_delivery_fee"
 )
+
+// طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الديون: «يتفرّق بوضوح ما انسدّ من مستحقّ وما
+// انشطب لأنّ الطلب ما صار وما دُفع بالمكتب».)
+const (
+	MethodEarning    = "earning"      // اقتُطع من مستحقٍّ أو عمولةٍ جديدة
+	MethodVoided     = "voided"       // أُسقط لأنّ الطلب لم يقع — لا مالَ تحرّك
+	MethodOfficeCash = "office_cash"  // دفعه نقداً بالمكتب — دخل صندوقَ المكتب
+	MethodTopup      = "wallet_topup" // اقتُطع من شحنِ محفظته — الشحنُ يسدّ الدينَ أوّلاً
+	MethodWrittenOff = "written_off"  // شُطب بموافقة مدير المنصّة — خسارةٌ على المنصّة
+)
+
+// causeWords **السببُ كما يُقرأ في كشف المحفظة** — بلغة المكتب البسيطة.
+var causeWords = map[string]string{
+	CauseRefundMerchant: "استرجاع طلب بعد صرف مستحقه",
+	CauseRefundRep:      "استرجاع طلب بعد صرف عمولته",
+	CauseReturnedGoods:  "بضاعة رجعت",
+	CauseLegacy:         "دين سابق",
+	CauseDeliveryFee:    "أجرة توصيلة",
+}
+
+// CauseWords السببُ بالعربيّ — ومجهولُه «دين».
+func CauseWords(cause string) string {
+	if w, ok := causeWords[cause]; ok {
+		return w
+	}
+	return "دين"
+}
+
+// OffsetNote **وصفُ الاقتطاع في كشف المحفظة — من أسباب ما سيُسدَّد فعلاً.**
+//
+// (فحصُ قسم الديون ٢٠٢٦-١٠-٠٤، المشكلة ٥: كان الوصفُ ثابتاً «عن بضاعةٍ رُدّت»
+// ولو كان الدينُ أجرةَ توصيلة — **فيقرأ المتجرُ في كشفه سبباً لم يقع.**)
+//
+// **يقرأ الالتزاماتِ المفتوحةَ بالترتيب نفسِه الذي يسدّها به `Settle`** (الأقدمُ
+// أوّلاً) حتّى يبلغ `take`، ويجمع أسبابَها بلا تكرار.
+func OffsetNote(ctx context.Context, q Querier, partyKind, partyID string, take int64) (string, error) {
+	rows, err := q.Query(ctx, `
+		SELECT cause, amount - settled FROM financial_obligations
+		 WHERE party_kind = $1 AND party_id = $2 AND closed_at IS NULL
+		 ORDER BY created_at, id`, partyKind, partyID)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var words []string
+	seen := map[string]bool{}
+	for rows.Next() && take > 0 {
+		var cause string
+		var rest int64
+		if err := rows.Scan(&cause, &rest); err != nil {
+			return "", err
+		}
+		take -= rest
+		w := CauseWords(cause)
+		if !seen[w] {
+			seen[w] = true
+			words = append(words, w)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if len(words) == 0 {
+		return "اقتطاع دين", nil
+	}
+	return "اقتطاع دين — " + strings.Join(words, "، "), nil
+}
 
 // الأطراف.
 const (
@@ -98,6 +170,15 @@ func Create(ctx context.Context, q Querier, partyKind, partyID string,
 // يُرجع مجموعَ ما اقتُطع.
 func Settle(ctx context.Context, q Querier, partyKind, partyID string,
 	available int64, orderID string, ledgerTx int64, actorID *string) (int64, error) {
+	return SettleBy(ctx, q, partyKind, partyID, available, orderID, ledgerTx, actorID,
+		MethodEarning, "")
+}
+
+// SettleBy كـ`Settle` **بطريقةِ تسويةٍ ومرجعٍ صريحين** — شحنُ المحفظة مثلاً
+// (`MethodTopup` ومرجعُه طلبُ الشحن).
+func SettleBy(ctx context.Context, q Querier, partyKind, partyID string,
+	available int64, orderID string, ledgerTx int64, actorID *string,
+	method, ref string) (int64, error) {
 	if available <= 0 {
 		return 0, nil
 	}
@@ -148,9 +229,10 @@ func Settle(ctx context.Context, q Querier, partyKind, partyID string,
 		}
 		if _, err := q.Exec(ctx, `
 			INSERT INTO obligation_settlements
-			       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			o.id, take, order, tx, remaining, actorID); err != nil {
+			       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by,
+			        method, ref)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			o.id, take, order, tx, remaining, actorID, method, ref); err != nil {
 			return 0, err
 		}
 		// **والإغلاقُ لحظةَ بلوغِ الصفر** — **ولا يُمحى السطر.**
@@ -198,8 +280,9 @@ func VoidForOrder(ctx context.Context, q Querier, partyKind, partyID, orderID, c
 	}
 	if _, err := q.Exec(ctx, `
 		INSERT INTO obligation_settlements
-		       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by)
-		VALUES ($1, $2, $3, NULL, 0, $4)`, id, remaining, orderID, actorID); err != nil {
+		       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by, method)
+		VALUES ($1, $2, $3, NULL, 0, $4, $5)`, id, remaining, orderID, actorID,
+		MethodVoided); err != nil {
 		return err
 	}
 	if _, err := q.Exec(ctx, `
@@ -208,6 +291,56 @@ func VoidForOrder(ctx context.Context, q Querier, partyKind, partyID, orderID, c
 		return err
 	}
 	return bumpCache(ctx, q, partyKind, partyID, -remaining)
+}
+
+// ErrClosed **الالتزامُ مغلقٌ أو لا باقيَ يكفي** — سُدّ بين الاقتراح والموافقة.
+var ErrClosed = errors.New("obligation closed or short")
+
+// SettleOne **يسدّ التزاماً بعينه بمبلغٍ بعينه** — دفعةُ المكتب والشطب.
+//
+// **ولا يمسّ غيرَه**: دفعةٌ نقديّةٌ على دينٍ سمّاه الموظّفُ لا تُوزَّع على
+// الأقدم. **ولا تتجاوز الباقي** — `ErrClosed` إن كان أقلَّ من المبلغ.
+//
+// يُرجع الطرفَ وما بقي بعد السداد.
+func SettleOne(ctx context.Context, q Querier, obligationID string, amount int64,
+	method, ref string, ledgerTx int64, actorID *string) (partyKind, partyID string, remaining int64, err error) {
+	if amount <= 0 {
+		return "", "", 0, errors.New("سدادٌ بمبلغٍ غيرِ موجب")
+	}
+	var rest int64
+	err = q.QueryRow(ctx, `
+		SELECT party_kind, party_id::text, amount - settled FROM financial_obligations
+		 WHERE id = $1 AND closed_at IS NULL FOR UPDATE`, obligationID).
+		Scan(&partyKind, &partyID, &rest)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", 0, ErrClosed
+	}
+	if err != nil {
+		return "", "", 0, err
+	}
+	if amount > rest {
+		return "", "", 0, ErrClosed
+	}
+	remaining = rest - amount
+	var tx any
+	if ledgerTx > 0 {
+		tx = ledgerTx
+	}
+	if _, err = q.Exec(ctx, `
+		INSERT INTO obligation_settlements
+		       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by, method, ref)
+		VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)`,
+		obligationID, amount, tx, remaining, actorID, method, ref); err != nil {
+		return "", "", 0, err
+	}
+	if _, err = q.Exec(ctx, `
+		UPDATE financial_obligations
+		   SET settled = settled + $2,
+		       closed_at = CASE WHEN settled + $2 >= amount THEN now() END
+		 WHERE id = $1`, obligationID, amount); err != nil {
+		return "", "", 0, err
+	}
+	return partyKind, partyID, remaining, bumpCache(ctx, q, partyKind, partyID, -amount)
 }
 
 // Balance الباقي على طرفٍ — **من الوقائع لا من الصورة.**
