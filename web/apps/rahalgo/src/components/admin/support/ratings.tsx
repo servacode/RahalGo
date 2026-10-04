@@ -238,10 +238,10 @@ export function RatingsView() {
       )}
 
       <section>
-        <h2 className="mb-3 font-bold">{R.commentsTitle}</h2>
-        <p className="mb-3 text-xs text-ink-muted">{R.commentsHint}</p>
+        <h2 className="mb-3 font-bold">{R.lowTitle}</h2>
+        <p className="mb-3 text-xs text-ink-muted">{R.lowHint}</p>
         {data.comments.length === 0 ? (
-          <EmptyState icon={IconStar} title={R.noComments} />
+          <EmptyState icon={IconStar} title={R.noLow} />
         ) : (
           <ul className="space-y-2">
             {data.comments.map((c, i) => (

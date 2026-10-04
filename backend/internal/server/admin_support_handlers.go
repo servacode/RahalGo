@@ -28,13 +28,13 @@ func (s *Server) handleRateOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// المتجر والسائق يعرفان بالتقييم فوراً (السمعة تتغيّر لحظياً)
-	var ownerID, driverID *string
+	// **السائقُ وحدَه يعرف بالتقييم** — الزبونُ يقيّم السائقَ والمنصّة فقط
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤: «ما يعرف المتجرَ ليقيّمه»). **كان صاحبُ المتجر
+	// يُخبَر بتقييمٍ جديدٍ ليس فيه نجمةٌ له.**
+	var driverID *string
 	_ = s.pg.QueryRow(r.Context(), `
-		SELECT mm.owner_user_id, o.driver_id
-		FROM orders o JOIN merchants mm ON mm.id = o.merchant_id
-		WHERE o.id = $1`, chi.URLParam(r, "id")).Scan(&ownerID, &driverID)
-	for _, uid := range []*string{ownerID, driverID} {
+		SELECT o.driver_id FROM orders o WHERE o.id = $1`, chi.URLParam(r, "id")).Scan(&driverID)
+	for _, uid := range []*string{driverID} {
 		if uid != nil {
 			s.notify.Notify(r.Context(), notifications.Input{
 				UserID: *uid, Kind: notifications.KindRating,
@@ -131,10 +131,11 @@ func (s *Server) handleTicketReply(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, "ops.ticket_replied", "ticket", t.ID, map[string]any{
 		"title": t.Subject, "note": string(replyNote),
 	})
-	// الطرف الآخر يعرف بالرد فوراً (لا يردّ الموظف على نفسه)
-	if t.CustomerID != userIDFrom(r) {
+	// **صاحبُ الشكوى يعرف بالردّ فوراً** (لا يردّ الموظف على نفسه) — لا زبونُ
+	// الطلب: بلاغُ سائقٍ على زبونٍ كان يُخبر الزبونَ المشتكى عليه بردّ المكتب.
+	if t.ComplainantID != userIDFrom(r) {
 		s.notify.Notify(r.Context(), notifications.Input{
-			UserID: t.CustomerID, Kind: notifications.KindTicket,
+			UserID: t.ComplainantID, Kind: notifications.KindTicket,
 			Title: notifTitles.ticketReply, Body: t.Subject,
 			Entity: "ticket", EntityID: t.ID, Href: "/portal/orders",
 		})
@@ -157,22 +158,22 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// التعويض مالٌ يخرج من المنصة بقرار موظّف — يُسجَّل حتى لو كان صفراً،
-	// فحلُّ الشكوى بلا تعويض قرارٌ أيضاً وقد يُراجَع.
+	// **التعويضُ اقتراحٌ لا دفع** — يُسجَّل حتى لو كان صفراً، فحلُّ الشكوى بلا
+	// تعويضٍ قرارٌ أيضاً وقد يُراجَع. والدفعُ يُسجَّل عند موافقة الماليّة.
 	s.audit(r, "finance.ticket_resolve", "ticket", t.ID, map[string]any{
-		"compensation": req.Compensation, "resolution": t.Resolution,
-		"customer_id": t.CustomerID,
+		"compensation_proposed": req.Compensation, "resolution": t.Resolution,
+		"customer_id": t.CustomerID, "complainant_id": t.ComplainantID,
 	})
 
 	s.notify.Notify(r.Context(), notifications.Input{
-		UserID: t.CustomerID, Kind: notifications.KindTicket,
+		UserID: t.ComplainantID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketResolved, Body: t.Resolution,
 		// **إلى صفحة شكاواه** — حيث يرى حالَها وردَّنا والتعويض.
 		Entity: "ticket", EntityID: t.ID, Href: "/portal/complaints",
 	})
-	// **ورصيدُه يتحدّث في شريطه فوراً** — عُوّض فنظر فوجده كما كان،
-	// **فحدّث الصفحةَ بيده أو ظنّ التعويضَ لم يقع.**
-	s.touchUser(t.CustomerID, "wallet", "ticket")
+	// **ولا رصيدَ يتحرّك هنا** — الاقتراحُ يظهر حيّاً في لوح طلبات المحفظة
+	// للماليّة، **ورصيدُه يتحدّث حين توافق** (`handleDecideWalletRequest`).
+	s.touchUser(t.ComplainantID, "ticket")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, t)
 }

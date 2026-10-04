@@ -245,6 +245,11 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
 		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient,
 		routeEngine: cfg.RoutingEngine, osrm: osrmClient}
+	// **وتعويضُ الشكوى يدخل طابورَ التعويضات الموحّد** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+	// لا طلبَ محفظة: صفحةُ التعويضات والموافقاتُ الموحّدة تريانه.
+	if supportSvc != nil {
+		supportSvc.SetCompensationProposer(complaintCompensationProposer{})
+	}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
