@@ -27,6 +27,7 @@ import {
   IconWallet,
   BootScreen,
   IconRoles,
+  IconShieldCheck,
   wsBase,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
@@ -167,7 +168,7 @@ const ALL_NAV: NavItem[] = [
     caps: ["finance.read"] },
   { href: "/dashboard/payouts", label: m.shared.payout.adminTitle, icon: IconWallet,
     caps: ["finance.read"] },
-  { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,
+  { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,
     caps: ["analytics.read"] },

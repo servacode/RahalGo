@@ -39,10 +39,6 @@ func TestRepTransfer_RequiresReasonAndWritesAudit(t *testing.T) {
 	repA := f.RepAccount()
 	repB := f.RepAccount()
 	m := f.Merchant(OwnedByRep(repA.ID)) // منسوبٌ إلى repA اليوم
-	t.Cleanup(func() {
-		_, _ = h.Pool.Exec(ctxBG(),
-			`DELETE FROM audit_log WHERE entity = 'merchant' AND entity_id = $1`, m.ID)
-	})
 
 	// ── أ · نقلٌ بلا سبب ⇒ يُرفض ولا يُكتب تدقيقُ نقل ────────────────
 	noReason := h.PATCH("/api/v1/admin/merchants/"+m.ID, admin.Token,
@@ -100,10 +96,6 @@ func TestRepTransfer_NonRepFieldNeedsNoReason(t *testing.T) {
 
 	repA := f.RepAccount()
 	m := f.Merchant(OwnedByRep(repA.ID))
-	t.Cleanup(func() {
-		_, _ = h.Pool.Exec(ctxBG(),
-			`DELETE FROM audit_log WHERE entity = 'merchant' AND entity_id = $1`, m.ID)
-	})
 
 	// **تبديلُ اسمٍ فقط** — بلا كود مندوب، فلا نقل، فلا سبب مطلوب.
 	res := h.PATCH("/api/v1/admin/merchants/"+m.ID, admin.Token,

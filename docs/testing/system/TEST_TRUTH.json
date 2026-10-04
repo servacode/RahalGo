@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 391,
+    "routes": 393,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 169,
-    "behaviour_settings": 134,
+    "setting_defs": 170,
+    "behaviour_settings": 135,
     "order_fields": 93,
-    "test_files": 470,
-    "test_funcs": 1929
+    "test_files": 471,
+    "test_funcs": 1935
   },
   "flows": [
     {
@@ -5654,6 +5654,24 @@
         "TestFAIL_D2_ConvertLeadPartialStates"
       ],
       "status": "REGRESSION_TEST_PRESENT"
+    },
+    {
+      "key": "security.audit_session_retention_days",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "security.force_password_change",
@@ -23329,6 +23347,42 @@
     {
       "name": "TestAuditActionsHaveArabicLabels",
       "file": "internal/server/audit_labels_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_AppendOnlyAtDatabase",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_ExportWritesItself",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_MissingActionsAreLogged",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_MoneyHiddenWithoutFinanceRead",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_RetentionPrunesOnlyOldSessionRows",
+      "file": "internal/server/audit_log_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditLog_SearchFiltersAndDamascusDay",
+      "file": "internal/server/audit_log_test.go",
       "package": "server",
       "orphan": true
     },

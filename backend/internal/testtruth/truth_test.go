@@ -278,8 +278,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// الخاصّ `delivery.custom_fee_min/max` **وحدُّ صورة التسليم** `drivers.proof_max_m`.
 	// **وواحدٌ أُضيف بمهلة الردّ على الشكوى** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
 	// `support.late_reply_hours` — **شكوى بلا ردٍّ بعدها تُعدّ متأخّرةً في الرئيسيّة.**
-	if d.BehaviourSettings != 134 {
-		t.Errorf("إعداداتُ السلوك = %d لا 134 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بمدّة حفظ سطور الدخول** (قرارُ المالك ٢٠٢٦-١٠-٠٤ على سجلّ الأحداث):
+	// `security.audit_session_retention_days` — **سطورُ الدخول والجلسة تُحذف بعدها، وما سواها للأبد.**
+	if d.BehaviourSettings != 135 {
+		t.Errorf("إعداداتُ السلوك = %d لا 135 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

@@ -49,6 +49,14 @@
           "type": "unknown"
         },
         {
+          "name": "group",
+          "type": "unknown"
+        },
+        {
+          "name": "money_visible",
+          "type": "unknown"
+        },
+        {
           "name": "page",
           "type": "unknown"
         },
@@ -58,6 +66,50 @@
         },
         {
           "name": "total",
+          "type": "unknown"
+        },
+        {
+          "name": "total_capped",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit/actors",
+      "handler": "handleAdminAuditActors",
+      "auth": true,
+      "capability": "audit.read",
+      "response": [
+        {
+          "name": "actors",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit/export",
+      "handler": "handleAdminAuditExport",
+      "auth": true,
+      "capability": "audit.read",
+      "response": [
+        {
+          "name": "cap",
+          "type": "unknown"
+        },
+        {
+          "name": "entries",
+          "type": "unknown"
+        },
+        {
+          "name": "truncated",
           "type": "unknown"
         }
       ],

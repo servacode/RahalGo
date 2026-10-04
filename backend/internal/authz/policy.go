@@ -287,6 +287,9 @@ var adminPolicy = []Rule{
 	{"GET", "/launch", SettingsRead},
 	{"POST", "/launch/preset", SettingsGeneralManage},
 	{"GET", "/audit", AuditRead},
+	{"GET", "/audit/actors", AuditRead},
+	// **وتصديرُ السجلّ قراءتُه في ملفّ** — والتصديرُ نفسُه يُقيَّد فيه.
+	{"GET", "/audit/export", AuditRead},
 	{"GET", "/stats", AnalyticsRead},
 	// **ورئيسيّةُ المدير بقدرتها** — فيها المالُ كلُّه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	{"GET", "/overview", PlatformOverview},

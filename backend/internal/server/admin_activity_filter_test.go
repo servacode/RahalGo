@@ -34,10 +34,6 @@ func TestActivity_HidesRefreshAndFilters(t *testing.T) {
 	f := newDriverFixture(t, 0)
 	ctx := context.Background()
 	user, _, _ := twoCustomers(t, f)
-	t.Cleanup(func() {
-		_, _ = f.pool.Exec(context.Background(),
-			`DELETE FROM audit_log WHERE actor_user_id = $1`, user)
-	})
 
 	mk := func(action string, n int) {
 		for range n {

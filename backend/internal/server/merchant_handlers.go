@@ -530,6 +530,13 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errForbidden)
 		return
 	}
+	// **ومَن أغلق ومتى أعاد الفتح يبقى أثراً دائماً** (قرارُ المالك
+	// ٢٠٢٦-١٠-٠٤، الرابع) — كان يصل إشعارٌ للعمليّات ويمضي.
+	emergencyAction := "merchant.emergency_reopen"
+	if *req.Closed {
+		emergencyAction = "merchant.emergency_close"
+	}
+	s.audit(r, emergencyAction, "merchant", merchantID, map[string]any{"closed": *req.Closed})
 	// إغلاق متجر وسط الذروة حدث تشغيلي حرج: مكتب المنصة يعرف فوراً، وواجهة
 	// الزبون تسقط المتجر من القائمة بلا إعادة تحميل.
 	title := notifTitles.storeReopened

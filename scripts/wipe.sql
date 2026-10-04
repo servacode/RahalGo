@@ -51,7 +51,11 @@ DELETE FROM user_addresses;
 DELETE FROM notifications;
 DELETE FROM refresh_tokens;
 DELETE FROM otp_codes;
+-- **والسجلُّ إضافةٌ فقط منذ الهجرة ٠٢٢٠** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فالمسحُ هنا
+-- يُطفئ حارسَه علناً ثمّ يعيده في المعاملة نفسِها. **ولا يُفعل هذا على الإنتاج.**
+ALTER TABLE audit_log DISABLE TRIGGER audit_log_append_only;
 DELETE FROM audit_log;
+ALTER TABLE audit_log ENABLE TRIGGER audit_log_append_only;
 DELETE FROM user_roles;
 
 -- الوسائط: شعارات متاجر حُذفت وصور حسابات حُذفت. واللافتات صفرٌ فلا يتيم.

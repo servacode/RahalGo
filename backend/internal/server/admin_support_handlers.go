@@ -84,6 +84,11 @@ func (s *Server) handleCreateTicket(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **فتحُ تذكرةٍ من اللوحة يُكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الرابع) — كان
+	// الإغلاقُ وحدَه يُكتب.
+	s.audit(r, "ops.ticket_created", "ticket", t.ID, map[string]any{
+		"title": t.Subject, "customer_id": t.CustomerID,
+	})
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketOpened, Body: t.Subject,
@@ -118,6 +123,14 @@ func (s *Server) handleTicketReply(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والردُّ يُكتب بنصّه** — مقصوصاً عند خمسمئة حرف.
+	replyNote := []rune(req.Body)
+	if len(replyNote) > 500 {
+		replyNote = replyNote[:500]
+	}
+	s.audit(r, "ops.ticket_replied", "ticket", t.ID, map[string]any{
+		"title": t.Subject, "note": string(replyNote),
+	})
 	// الطرف الآخر يعرف بالرد فوراً (لا يردّ الموظف على نفسه)
 	if t.CustomerID != userIDFrom(r) {
 		s.notify.Notify(r.Context(), notifications.Input{

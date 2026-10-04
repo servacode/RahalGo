@@ -32,6 +32,7 @@ import (
 func (s *Server) audit(r *http.Request, action, entity, entityID string, meta map[string]any) {
 	actor := userIDFrom(r)
 	ip := clientIP(r)
+	ua := auditUserAgent(r)
 	// ══════════════════════════════════════════════════════════════════
 	// **وفعلٌ بلا تفصيلٍ يُقيَّد بتفصيلٍ فارغ — لا بفراغ**
 	// ══════════════════════════════════════════════════════════════════
@@ -54,10 +55,25 @@ func (s *Server) audit(r *http.Request, action, entity, entityID string, meta ma
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if _, err := s.pg.Exec(ctx, `
-			INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
-			VALUES (NULLIF($1,'')::uuid, $2, $3, $4, NULLIF($5,''), $6)`,
-			actor, action, entity, entityID, ip, raw); err != nil {
+			INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details, user_agent)
+			VALUES (NULLIF($1,'')::uuid, $2, $3, $4, NULLIF($5,''), $6, $7)`,
+			actor, action, entity, entityID, ip, raw, ua); err != nil {
 			s.logger.Error("audit: تعذّر قيد الحدث", "action", action, "error", err)
 		}
 	}()
+}
+
+// auditUserAgent **جهازُ الفاعل كما قاله متصفّحُه أو تطبيقُه** — للّوحة
+// الجانبيّة في «سجل الأحداث» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+//
+// **ويُقصّ عند ثلاثمئة حرف** — نصٌّ يكتبه العميلُ لا يُحفظ بلا حدّ.
+func auditUserAgent(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	ua := r.UserAgent()
+	if len(ua) > 300 {
+		ua = ua[:300]
+	}
+	return ua
 }
