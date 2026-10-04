@@ -403,16 +403,19 @@ func (s *Server) handleDriverOK(w http.ResponseWriter, r *http.Request) {
 		note = strings.TrimSpace(req.Note)
 	}
 	err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-		tag, err := q.Exec(ctx, `
-			UPDATE users SET accident_cleared_at = now(), accident_cleared_by = $2
-			 WHERE id = $1 AND accident_lock_at IS NOT NULL
-			   AND (accident_cleared_at IS NULL OR accident_cleared_at < accident_lock_at)`,
-			id, userIDFrom(r))
+		cleared, err := s.clearAccidentLockTx(ctx, q, id, userIDFrom(r))
 		if err != nil {
 			return err
 		}
-		if tag.RowsAffected() == 0 {
+		if !cleared {
 			return errRequestDecided
+		}
+		// **وغرفةُ الطوارئ تقرأ الخطوةَ مقطوعة** — حادثُه المفتوحُ صار «السائقُ بخير».
+		if _, err := q.Exec(ctx, `
+			UPDATE driver_emergencies SET driver_ok_at = now(), driver_ok_by = $2
+			 WHERE driver_id = $1 AND status = 'open' AND driver_ok_at IS NULL`,
+			id, userIDFrom(r)); err != nil {
+			return err
 		}
 		return s.auditTx(ctx, q, r, "ops.driver_cleared_after_accident", "user", id,
 			map[string]any{"note": note})
@@ -428,6 +431,20 @@ func (s *Server) handleDriverOK(w http.ResponseWriter, r *http.Request) {
 	s.touchUser(id, "account")
 	s.touch("driver", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"cleared": true})
+}
+
+// clearAccidentLockTx **يرفع قفلَ ما بعد الحادث باسم من أكّد** — ويردّ `false` إن لم
+// يكن مقفولاً. **بابٌ واحدٌ** لقسم الحسابات ولغرفة الطوارئ.
+func (s *Server) clearAccidentLockTx(ctx context.Context, q dbtx.Querier, driverID, actor string) (bool, error) {
+	tag, err := q.Exec(ctx, `
+		UPDATE users SET accident_cleared_at = now(), accident_cleared_by = $2
+		 WHERE id = $1 AND accident_lock_at IS NOT NULL
+		   AND (accident_cleared_at IS NULL OR accident_cleared_at < accident_lock_at)`,
+		driverID, actor)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // driverAccidentLocked **أمقفولٌ بعد حادثٍ لم يؤكَّد بعدُ أنّه بخير؟**

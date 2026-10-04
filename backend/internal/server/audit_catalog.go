@@ -92,6 +92,7 @@ var auditSensitiveExtra = []string{
 	// ── الطوارئ ───────────────────────────────────────────────────
 	"driver.emergency", "ops.emergency_ack", "ops.emergency_resolved",
 	"ops.store_emergency_ack",
+	"ops.emergency_driver_ok", "ops.emergency_outcome", "ops.emergency_money", "ops.emergency_note",
 	// ── مالٌ أو أثرُه ─────────────────────────────────────────────
 	"admin.merchant_rep_transfer", "merchant.settlement_update",
 	"admin.launch_preset",

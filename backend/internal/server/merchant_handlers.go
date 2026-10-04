@@ -510,6 +510,10 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errValidation)
 		return
 	}
+	// **أكان مغلقاً قبلها؟** — فالإغلاقُ الجديدُ وحدَه طارئٌ جديدٌ في الغرفة.
+	var wasClosed bool
+	_ = s.pg.QueryRow(r.Context(),
+		`SELECT emergency_closed FROM merchants WHERE id = $1`, merchantID).Scan(&wasClosed)
 	tag, err := s.pg.Exec(r.Context(), `
 		UPDATE merchants SET emergency_closed = $3, updated_at = now(),
 		       -- **وكلُّ إغلاقٍ جديدٍ طارئٌ جديدٌ يُستلَم** — شريطُ اللوحة
@@ -537,6 +541,10 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 		emergencyAction = "merchant.emergency_close"
 	}
 	s.audit(r, emergencyAction, "merchant", merchantID, map[string]any{"closed": *req.Closed})
+	// **ويدخل غرفةَ الطوارئ** (٢٠٢٦-١٠-٠٤) — بطلباته المقبولة يحوّلها المكتبُ أو يلغيها.
+	if *req.Closed && !wasClosed {
+		s.recordStoreClosureEmergency(r.Context(), merchantID)
+	}
 	// إغلاق متجر وسط الذروة حدث تشغيلي حرج: مكتب المنصة يعرف فوراً، وواجهة
 	// الزبون تسقط المتجر من القائمة بلا إعادة تحميل.
 	title := notifTitles.storeReopened

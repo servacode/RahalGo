@@ -136,5 +136,7 @@ func (s *Server) handleSetServiceClosure(w http.ResponseWriter, r *http.Request)
 		meta["ends_at"] = c.EndsAt.Format(time.RFC3339)
 	}
 	s.audit(r, "admin.platform_closure", "platform", "", meta)
+	// **وتوقّفُ المنصّة في غرفة الطوارئ** (٢٠٢٦-١٠-٠٤) — ويُغلق بعودتها.
+	s.recordPlatformHalt(r.Context(), c.Active, c.Message, userIDFrom(r))
 	httpx.JSON(w, http.StatusOK, out)
 }

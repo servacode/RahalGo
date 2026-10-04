@@ -1436,6 +1436,15 @@ func (s *Server) Router() http.Handler {
 			r.Get("/emergencies/banner", s.handleEmergencyBanner)
 			r.Post("/emergencies/{id}/ack", s.handleAckEmergency)
 			r.Post("/emergencies/stores/{id}/ack", s.handleAckStoreEmergency)
+			// **غرفةُ الطوارئ** (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — `emergency_room.go`): عدّادُ القائمة ·
+			// طبقةُ الخريطة · صفحةُ الطارئ · خطواتُ الحلّ · سجلُّ الملاحظات.
+			r.Get("/emergencies/count", s.handleEmergencyCount)
+			r.Get("/emergencies/map", s.handleEmergencyMap)
+			r.Get("/emergencies/{id}", s.handleEmergencyDetail)
+			r.Post("/emergencies/{id}/driver-ok", s.handleEmergencyDriverOK)
+			r.Post("/emergencies/{id}/outcome", s.handleEmergencyOutcome)
+			r.Post("/emergencies/{id}/money", s.handleEmergencyMoney)
+			r.Post("/emergencies/{id}/notes", s.handleEmergencyNote)
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
 			// **والأرباحُ بتبويباتها** — (قرارُ المالك ٢٠٢٦-٠٨-١٦):

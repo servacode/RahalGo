@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 423,
+    "routes": 430,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 65,
-    "notify_targeted": 23,
+    "notify_sites": 67,
+    "notify_targeted": 24,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 179,
-    "behaviour_settings": 144,
+    "setting_defs": 180,
+    "behaviour_settings": 145,
     "order_fields": 95,
-    "test_files": 482,
-    "test_funcs": 2003
+    "test_files": 483,
+    "test_funcs": 2006
   },
   "flows": [
     {
@@ -4754,6 +4754,24 @@
     {
       "key": "notify.quiet_to",
       "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "ops.emergency_unacked_red_min",
+      "group": "dispatch",
       "kind": "int",
       "sensitive": false,
       "money": false,
@@ -24378,6 +24396,24 @@
     {
       "name": "TestEmergencies_OldestFirstResolvedTabAndResolution",
       "file": "internal/server/emergency_resolve_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRoom_ReleaseBeforePickup_EntersRoom_FreesOthers_TellsCustomer",
+      "file": "internal/server/emergency_room_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRoom_StepsInOrder_MoneyIsRequestNotPayment",
+      "file": "internal/server/emergency_room_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRoom_StoreClosure_CountStale_Halt",
+      "file": "internal/server/emergency_room_test.go",
       "package": "server",
       "orphan": true
     },

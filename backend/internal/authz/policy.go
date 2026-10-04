@@ -210,6 +210,15 @@ var adminPolicy = []Rule{
 	{"GET", "/emergencies/banner", EmergenciesManage},
 	{"POST", "/emergencies/{id}/ack", EmergenciesManage},
 	{"POST", "/emergencies/stores/{id}/ack", EmergenciesManage},
+	// **وغرفةُ الطوارئ بخطواتها** (٢٠٢٦-١٠-٠٤) — والمالُ طلبُ تعويضٍ لا دفع،
+	// **والموافقةُ عليه في الماليّة** (`/orders/{id}/compensate-driver`).
+	{"GET", "/emergencies/count", EmergenciesManage},
+	{"GET", "/emergencies/map", EmergenciesManage},
+	{"GET", "/emergencies/{id}", EmergenciesManage},
+	{"POST", "/emergencies/{id}/driver-ok", EmergenciesManage},
+	{"POST", "/emergencies/{id}/outcome", EmergenciesManage},
+	{"POST", "/emergencies/{id}/money", EmergenciesManage},
+	{"POST", "/emergencies/{id}/notes", EmergenciesManage},
 	{"GET", "/disputes", SupportManage},
 	{"POST", "/disputes", SupportManage},
 	{"POST", "/disputes/{id}/settle", FinanceManage},

@@ -26,6 +26,7 @@
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
@@ -43,6 +44,7 @@ import {
 } from "@rahalgo/ui";
 import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 
 const OpsMapCanvas = dynamic(
@@ -217,6 +219,17 @@ interface SearchHit {
   label: string;
   lat?: number;
   lng?: number;
+}
+
+/** **طارئٌ مفتوحٌ على الخريطة** — غرفةُ الطوارئ (٢٠٢٦-١٠-٠٤). */
+interface EmergencyPin {
+  id: string;
+  kind: string;
+  lat: number;
+  lng: number;
+  label: string;
+  order_number: number | null;
+  stale: boolean;
 }
 
 /** **ما هو المُحدَّد؟** — واللوحةُ الجانبيّةُ واحدةٌ لكلّ الطبقات. */
@@ -493,8 +506,36 @@ export default function OpsMapPage() {
     [hunt],
   );
 
+  // ── الطوارئ طبقةٌ على الخريطة (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ) ──
+  //
+  // **لمن يملك الطوارئ** — والنقرةُ تفتح صفحةَ الطارئ.
+  const router = useRouter();
+  const { capabilities } = useAuth();
+  const canEmergencies = capabilities.includes("emergencies.manage");
+  const emergencies = useLiveData<{ emergencies: EmergencyPin[]; count: number }>(
+    () =>
+      canEmergencies && visible.emergencies
+        ? api<{ emergencies: EmergencyPin[]; count: number }>("/api/v1/admin/emergencies/map")
+        : Promise.resolve({ emergencies: [], count: 0 }),
+    ["emergency"],
+    [canEmergencies, visible.emergencies],
+  );
+
   const layers = useMemo<LayerSpec[]>(() => {
     const out: LayerSpec[] = [];
+    out.push({
+      id: "emergencies",
+      kind: "point",
+      cluster: false,
+      order: 90,
+      visible: !!visible.emergencies,
+      color: themeColor("danger-solid"),
+      data: fc(
+        (emergencies.data?.emergencies ?? []).map((x) =>
+          pt(x.lng, x.lat, { id: x.id, kind: x.kind }),
+        ),
+      ),
+    });
     const C = freshColors();
     const list = drivers.data?.drivers ?? [];
     out.push({
@@ -777,10 +818,14 @@ export default function OpsMapPage() {
     return out;
   }, [drivers.data, merchants.data, orders.data, zones.data, requests.data,
       branches.data, reps.data, demand.data, opportunities.data,
-      visible, selected, draft]);
+      visible, selected, draft, emergencies.data]);
 
   const onFeature = useCallback(
     (layerID: string, props: Record<string, unknown>) => {
+      if (layerID === "emergencies" && typeof props.id === "string") {
+        router.push(`/dashboard/emergencies/${props.id}`);
+        return;
+      }
       if (layerID === "drivers") {
         const d = drivers.data?.drivers.find((x) => x.id === props.id);
         if (d) setSelected({ kind: "driver", v: d });
@@ -813,7 +858,7 @@ export default function OpsMapPage() {
       }
     },
     [drivers.data, merchants.data, orders.data, zones.data, requests.data,
-     branches.data, opportunities.data],
+     branches.data, opportunities.data, router],
   );
 
   // ── نقرُ الأرض ───────────────────────────────────────────────
@@ -934,6 +979,15 @@ export default function OpsMapPage() {
           <Card>
             <h3 className="mb-2 text-sm font-bold">{T.layers}</h3>
             <div className="flex flex-col gap-1">
+              {canEmergencies && (
+                <LayerToggle
+                  id="emergencies"
+                  label={m.admin.emergencyRoom.mapLayer}
+                  on={!!visible.emergencies}
+                  count={emergencies.data?.count}
+                  onToggle={toggle}
+                />
+              )}
               {can("VIEW_DRIVER_LOCATIONS") && (
                 <LayerToggle
                   id="drivers"
