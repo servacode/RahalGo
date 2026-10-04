@@ -60,6 +60,8 @@ interface Page {
   total_capped: boolean;
   per_page: number;
   money_visible: boolean;
+  /** **زرُّ التصدير لمدير المنصّة ومالكها وحدَهما** (`audit.export` — قرارُ المالك 2026-10-04). */
+  can_export: boolean;
 }
 
 /** **التبويباتُ بترتيب الخادم** (`auditGroups`) — والأوّلُ الافتراضيّ. */
@@ -440,11 +442,11 @@ export default function AuditPage() {
       <PageHeader
         icon={IconShieldCheck}
         title={A.title}
-        actions={(
+        actions={data?.can_export ? (
           <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
             {exporting ? A.exporting : A.export}
           </Button>
-        )}
+        ) : undefined}
       />
       <p className="mb-4 text-sm text-ink-muted">{A.hint}</p>
       {exportNote && (

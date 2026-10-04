@@ -45,6 +45,10 @@
       "capability": "audit.read",
       "response": [
         {
+          "name": "can_export",
+          "type": "unknown"
+        },
+        {
           "name": "entries",
           "type": "unknown"
         },
@@ -98,7 +102,7 @@
       "path": "/api/v1/admin/audit/export",
       "handler": "handleAdminAuditExport",
       "auth": true,
-      "capability": "audit.read",
+      "capability": "audit.export",
       "response": [
         {
           "name": "cap",

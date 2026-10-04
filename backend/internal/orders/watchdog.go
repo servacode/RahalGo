@@ -213,11 +213,17 @@ func (s *Service) escalateOne(ctx context.Context, a Alert) {
 	//	يتغيّر سائقُه                     (alerted_driver_id)
 	//	يضغط موظّفٌ «أنا عليه»             (alert_ack_at)
 	//
+	// **و«أنا عليه» تُسكته `ops.stuck_ack_snooze_min` دقيقة لا للأبد**
+	// (قرارُ المالك 2026-10-04 — افتراضُه 60، وصفرُه «لا عودة»): إن بقي الطلبُ
+	// عالقاً بالسبب نفسِه بعدها **عاد التذكيرُ ومُسحت «أنا عليه»** — فيضغطها من
+	// جديدٍ من بقي عليه، ويعود التذكيرُ كلَّ `ops.stuck_reminder_min` ما لم يفعل.
+	//
 	// **والسببُ الجديدُ كما كان**: إنذارٌ فوراً، ويمسح «أنا عليه» القديمة.
 	// **والطارئُ لا يُكرَّر من هنا** — له شريطُه وصوتُه حتّى يُستلَم.
 	// **وما أُنذر قبل هذه الأعمدة** (`alerted_status` فارغ) يُذكَّر به — لا نعرف
 	// أتغيّر أم لا، **وتذكيرٌ زائدٌ أهونُ من طلبٍ منسيّ.**
 	every := s.settingInt(ctx, "ops.stuck_reminder_min")
+	snooze := s.settingInt(ctx, "ops.stuck_ack_snooze_min")
 	var repeats int
 	err = tx.QueryRow(ctx,
 		`UPDATE orders SET alerted_at = now(), alerted_reason = $2,
@@ -225,19 +231,21 @@ func (s *Service) escalateOne(ctx context.Context, a Alert) {
 		        alert_repeats = CASE WHEN alerted_at IS NOT NULL
 		                              AND alerted_reason IS NOT DISTINCT FROM $2
 		                             THEN alert_repeats + 1 ELSE 0 END,
-		        alert_ack_at = CASE WHEN alerted_reason IS DISTINCT FROM $2
-		                            THEN NULL ELSE alert_ack_at END,
-		        alert_ack_by = CASE WHEN alerted_reason IS DISTINCT FROM $2
-		                            THEN NULL ELSE alert_ack_by END
+		        -- **كلُّ إنذارٍ يمرّ من هنا يمسح «أنا عليه»**: سببٌ جديد، أو
+		        -- تذكيرٌ بلا «أنا عليه» أصلاً، أو «أنا عليه» انقضت مدّتُها.
+		        alert_ack_at = NULL,
+		        alert_ack_by = NULL
 		  WHERE id = $1 AND (alerted_at IS NULL OR alerted_reason IS DISTINCT FROM $2
 		        OR ($3::int > 0 AND $2 <> '`+StuckEmergency+`'
 		            AND alerted_at < now() - make_interval(mins => $3::int)
-		            AND alert_ack_at IS NULL
+		            AND (alert_ack_at IS NULL
+		                 OR ($4::int > 0
+		                     AND alert_ack_at < now() - make_interval(mins => $4::int)))
 		            AND (alerted_status IS NULL
 		                 OR (alerted_status = status
 		                     AND alerted_driver_id IS NOT DISTINCT FROM driver_id))))
 		  RETURNING alert_repeats`,
-		a.OrderID, a.Reason, every).Scan(&repeats)
+		a.OrderID, a.Reason, every, snooze).Scan(&repeats)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return // أُنذر سابقاً — ولم يحِن التذكير
 	}

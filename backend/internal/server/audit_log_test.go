@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
@@ -245,9 +246,9 @@ func TestAuditLog_MoneyHiddenWithoutFinanceRead(t *testing.T) {
 		t.Fatalf("قيمةُ إعدادٍ ماليٍّ (%s) وصلت: %v", key, sd)
 	}
 
-	// **والتصديرُ يحذف كما تحذف الصفحة.**
+	// **والتصديرُ يحذف كما تحذف الصفحة** — لمن مُنح التصديرَ ولا يقرأ المال.
 	exp := auditGet(t, f, f.srv.handleAdminAuditExport, actor, []string{"trust_safety"},
-		[]string{"audit.read"}, q)
+		[]string{"audit.read", "audit.export"}, q)
 	for _, e := range auditEntries(t, exp) {
 		if dd, _ := e["details"].(map[string]any); dd["amount"] != nil {
 			t.Fatalf("التصديرُ حمل المبلغ: %v", e)
@@ -485,7 +486,7 @@ func TestAuditLog_ExportWritesItself(t *testing.T) {
 	auditInsert(t, f, subject, "ops.order_assign", "order", "x", `{}`, time.Now())
 
 	data := auditGet(t, f, f.srv.handleAdminAuditExport, exporter, []string{"admin"},
-		[]string{"audit.read"}, "group=all&actor="+subject)
+		[]string{"audit.read", "audit.export"}, "group=all&actor="+subject)
 	if es := auditEntries(t, data); len(es) != 1 || es[0]["action"] != "ops.order_assign" {
 		t.Fatalf("التصديرُ حمل %v", es)
 	}
@@ -500,5 +501,96 @@ func TestAuditLog_ExportWritesItself(t *testing.T) {
 	_ = json.Unmarshal(details, &meta)
 	if meta["rows"] != float64(1) || meta["actor"] != subject || meta["group"] != "all" {
 		t.Fatalf("سطرُ التصدير بلا مرشّحاته: %v", meta)
+	}
+}
+
+// ── قرارا المالك الثانيان (2026-10-04) ─────────────────────────────────
+//
+//	الماليّةُ تقرأ السجلَّ (`audit.read` — هجرة 0260) وترى مبالغَه
+//	والتصديرُ لمدير المنصّة ومالكها وحدَهما (`audit.export`)
+
+// TestAuditLog_FinanceReadsAndSeesMoney **الماليّةُ تملك `audit.read` وترى المبالغ.**
+func TestAuditLog_FinanceReadsAndSeesMoney(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	for _, c := range []string{"audit.read", "finance.read"} {
+		var ok bool
+		if err := f.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM role_capabilities
+			WHERE role_code = 'finance' AND capability_code = $1)`, c).Scan(&ok); err != nil || !ok {
+			t.Fatalf("الماليّةُ لا تملك %s (err=%v)", c, err)
+		}
+	}
+	if need, ok := authz.LookupAdmin("GET", "/audit"); !ok || need != authz.AuditRead {
+		t.Fatalf("بابُ السجلّ بقدرة %q لا audit.read", need)
+	}
+	fin := testdb.NewUser(t, f.pool, "finance")
+	auditInsert(t, f, fin, "finance.wallet_apply", "user", fin, `{"amount": 7000}`, time.Now())
+	data := auditGet(t, f, f.srv.handleAdminAudit, fin, []string{"finance"},
+		[]string{"audit.read", "finance.read"}, "group=all&actor="+fin)
+	if data["money_visible"] != true {
+		t.Fatalf("الماليّةُ لا ترى المبالغ: money_visible=%v", data["money_visible"])
+	}
+	es := auditEntries(t, data)
+	if len(es) != 1 {
+		t.Fatalf("سطورُ الماليّة: %v", es)
+	}
+	if d, _ := es[0]["details"].(map[string]any); d["amount"] != float64(7000) {
+		t.Fatalf("المبلغُ حُذف عن الماليّة: %v", es[0])
+	}
+}
+
+// TestAuditLog_ExportOnlyForPlatformAdmin **من يقرأ لا يُصدّر.**
+func TestAuditLog_ExportOnlyForPlatformAdmin(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	if need, ok := authz.LookupAdmin("GET", "/audit/export"); !ok || need != authz.AuditExport {
+		t.Fatalf("بابُ التصدير بقدرة %q لا audit.export", need)
+	}
+	// **في القاعدة: الأدمنُ والمالكُ الأعلى وحدَهما.**
+	rows, err := f.pool.Query(ctx, `SELECT role_code FROM role_capabilities
+		WHERE capability_code = 'audit.export' ORDER BY role_code`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var roles []string
+	for rows.Next() {
+		var r string
+		_ = rows.Scan(&r)
+		roles = append(roles, r)
+	}
+	rows.Close()
+	if strings.Join(roles, ",") != "admin,owner_super_admin" {
+		t.Fatalf("audit.export لأدوار %v — والقرارُ الأدمنُ والمالكُ وحدَهما", roles)
+	}
+
+	reader := testdb.NewUser(t, f.pool, "finance")
+	call := func(h http.HandlerFunc, roles, caps []string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/x?group=all", nil)
+		c := context.WithValue(req.Context(), ctxUserID, reader)
+		c = context.WithValue(c, ctxRoles, roles)
+		c = context.WithValue(c, ctxCaps, caps)
+		w := httptest.NewRecorder()
+		h(w, req.WithContext(c))
+		return w
+	}
+	for _, role := range []string{"finance", "trust_safety", "platform_monitor"} {
+		w := call(f.srv.handleAdminAuditExport, []string{role}, []string{"audit.read", "finance.read"})
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("%s صدّر السجلَّ بـaudit.read وحدَها: %d", role, w.Code)
+		}
+	}
+	// **وزرُّ التصدير يُخفى لمن لا يملكه** — والعرضُ له.
+	data := auditGet(t, f, f.srv.handleAdminAudit, reader, []string{"finance"},
+		[]string{"audit.read", "finance.read"}, "group=all")
+	if data["can_export"] != false {
+		t.Fatalf("can_export = %v لمن يقرأ فقط", data["can_export"])
+	}
+	data = auditGet(t, f, f.srv.handleAdminAudit, reader, []string{"admin"},
+		[]string{"audit.read", "audit.export"}, "group=all")
+	if data["can_export"] != true {
+		t.Fatalf("can_export = %v للأدمن", data["can_export"])
+	}
+	if w := call(f.srv.handleAdminAuditExport, []string{"admin"}, []string{"audit.read", "audit.export"}); w.Code != http.StatusOK {
+		t.Fatalf("الأدمنُ لم يُصدّر: %d — %s", w.Code, w.Body.String())
 	}
 }

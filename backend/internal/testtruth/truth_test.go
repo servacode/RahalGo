@@ -287,8 +287,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `security.audit_session_retention_days` — **سطورُ الدخول والجلسة تُحذف بعدها، وما سواها للأبد.**
 	// **واثنان أُضيفا بمراقبة التشغيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤): تكرارُ تذكير العالق
 	// `ops.stuck_reminder_min` **وإشعارُ تعطّل الخادم** `ops.outage_notify_min`.
-	if d.BehaviourSettings != 139 {
-		t.Errorf("إعداداتُ السلوك = %d لا 139 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بعودة التذكير بعد «أنا عليه»** (قرارُ المالك 2026-10-04):
+	// `ops.stuck_ack_snooze_min` — **«أنا عليه» تُسكت التذكيرَ ساعةً لا للأبد.**
+	if d.BehaviourSettings != 140 {
+		t.Errorf("إعداداتُ السلوك = %d لا 140 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

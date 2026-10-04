@@ -19,6 +19,11 @@ import sys
 
 import requests
 
+# **حارسُ الإنتاج** — التنظيفُ آخرَ الدورة يُطفئ حارسَ السجلّ (`DISABLE TRIGGER`)،
+# وذاك للتجهيز والتطوير وحدَهما ولا يُفعل على الإنتاج أبداً (قرارُ المالك 2026-10-04).
+if __import__("os").environ.get("APP_ENV", "").strip().lower() == "production":
+    sys.exit("refused: APP_ENV=production — هذه الدورة للتجهيز والتطوير وحدهما")
+
 API = "http://localhost:8080/api/v1"
 S = requests.Session()
 FAILS, STEP = [], 0

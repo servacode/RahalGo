@@ -19,6 +19,9 @@ package server
 //   - **الهدفُ يُقرأ**: رقمُ الطلب واسمُ المتجر واسمُ المستخدم.
 //   - **عدٌّ محدود**: لا يُعَدّ الجدولُ كلُّه عند كلّ فتح.
 //   - **تصديرٌ يُكتب في السجلّ نفسِه.**
+//   - **والتصديرُ لمدير المنصّة ومالكها وحدَهما** (`audit.export` — قرارٌ ثانٍ
+//     في اليوم نفسِه)، **والعرضُ يبقى لكلّ من ملك `audit.read`** — والماليّةُ
+//     منهم منذ الهجرة `0260`.
 
 import (
 	"encoding/json"
@@ -27,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/platform"
 )
@@ -331,6 +335,8 @@ func (s *Server) handleAdminAudit(w http.ResponseWriter, r *http.Request) {
 		"entries": out, "total": count, "total_capped": capped,
 		"page": page, "per_page": limit, "group": echo["group"],
 		"money_visible": s.canSeeAuditMoney(r),
+		// **زرُّ التصدير يظهر لمن يملكه وحدَه** — والخادمُ يرفض غيرَه على أيّ حال.
+		"can_export": s.hasCapability(r, authz.AuditExport),
 	})
 }
 
@@ -377,7 +383,7 @@ func (s *Server) handleAdminAuditActors(w http.ResponseWriter, r *http.Request) 
 // handleAdminAuditExport **تصديرُ ما يراه** — بالمرشّحات نفسِها.
 //
 // (قرارُ المالك السادس: «تصدير لمن معه الصلاحية، والتصدير نفسه ينكتب
-// بالسجل».)
+// بالسجل».) **والصلاحيّةُ `audit.export`** — للأدمن والمالك وحدَهما.
 //
 // **والتصديرُ يُقيَّد قبل أن يُسلَّم** — في المعاملة نفسِها لا في الخلفيّة:
 // ملفٌّ خرج بلا أثرٍ هو بعينه ما وُجد السجلُّ ليمنعه. فإن تعذّر القيدُ
@@ -387,6 +393,13 @@ func (s *Server) handleAdminAuditActors(w http.ResponseWriter, r *http.Request) 
 // وحدَه، فالشاشةُ تبني الملفَّ بعناوين عربيّة وتوقيت دمشق وحمايةٍ من حقن
 // الصيغ. **والمبالغُ محذوفةٌ هنا كما في الصفحة.**
 func (s *Server) handleAdminAuditExport(w http.ResponseWriter, r *http.Request) {
+	// **والقدرةُ تُفحص هنا أيضاً لا في الجدول وحدَه** (قرارُ المالك 2026-10-04:
+	// التصديرُ للأدمن والمالك فقط) — فمعالِجٌ يُركَّب غداً خلف وسيطٍ آخر لا
+	// يُخرج السجلَّ ملفّاً لمن يقرؤه فقط.
+	if !s.hasCapability(r, authz.AuditExport) {
+		s.respondErr(w, errForbidden)
+		return
+	}
 	b, echo, err := auditFilter(r)
 	if err != nil {
 		s.respondErr(w, err)
