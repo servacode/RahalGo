@@ -201,16 +201,6 @@ ${DocPrint.foot(c, platform, support)}
      */
 
     /** **اسمُ النوع بالعربيّة** — والمجهولُ بمفتاحه ليُعرف. */
-    private fun kindName(c: Context, kind: String): String = when (kind) {
-        "payout" -> c.getString(R.string.wal_k_payout)
-        "driver_earning" -> c.getString(R.string.wal_k_driver_earning)
-        "commission" -> c.getString(R.string.wal_k_commission)
-        "compensation" -> c.getString(R.string.wal_k_compensation)
-        "penalty" -> c.getString(R.string.wal_k_penalty)
-        "refund" -> c.getString(R.string.wal_k_refund)
-        "adjustment" -> c.getString(R.string.wal_k_adjustment)
-        "reward" -> c.getString(R.string.wal_k_reward)
-        "settlement" -> c.getString(R.string.wal_k_settlement)
-        else -> kind
-    }
+    private fun kindName(c: Context, kind: String): String =
+        WalletLabels.kindRes(kind)?.let { c.getString(it) } ?: kind
 }
