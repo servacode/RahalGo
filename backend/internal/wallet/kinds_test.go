@@ -34,6 +34,8 @@ var walletKinds = []string{
 	"platform_profit", "platform_expense", "operating_expense",
 	// **وهذان هما اللذان كانا مرفوضين** (٢٠٢٦-٠٨-١٦).
 	"reward", "penalty",
+	// **إرجاعُ سحبٍ مدفوع** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (قسمُ طلبات السحب).
+	"payout_reversal",
 }
 
 func TestWalletKinds_AllAcceptedByTheDatabase(t *testing.T) {

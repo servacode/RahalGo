@@ -12,6 +12,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 )
 
 // errDriverHasOpenOrders **لا يُغلق دوامُ من بيده طلبٌ حيّ** — الطلبُ في صندوقه
@@ -120,10 +121,19 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		}
 		// **والنقدُ المستلَمُ دخل صندوقَ المكتب** (قرارُ الخزينة ٢٠٢٦-١٠-٠٤) — سطرٌ بالمبلغ
 		// الذي استُلم فعلاً، لا بما كان بذمّته.
-		if _, err := q.Exec(ctx, `
-			INSERT INTO office_cash_entries (direction, amount, source, ref, user_id, recorded_by, note)
-			VALUES ('in', $1, 'driver_settle', gen_random_uuid()::text, $2, $3, $4)`,
-			req.Amount, driverID, userIDFrom(r), req.Note); err != nil {
+		//
+		// **ومرجعُه سطرُ التسليم في صندوق السائق** — فيُقرأ من أيّ تسليمٍ جاء
+		// (`FI-15.a`).
+		var entryID string
+		if err := q.QueryRow(ctx, `
+			SELECT max(id)::text FROM driver_cash_entries
+			 WHERE driver_id = $1 AND kind = 'settlement'`, driverID).Scan(&entryID); err != nil {
+			return IdempotentBody{}, err
+		}
+		if err := officecash.Record(ctx, q, officecash.Entry{
+			Direction: officecash.In, Amount: req.Amount, Source: officecash.SourceDriverSettle,
+			Ref: entryID, UserID: driverID, Actor: userIDFrom(r), Note: req.Note,
+		}); err != nil {
 			return IdempotentBody{}, err
 		}
 		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`.

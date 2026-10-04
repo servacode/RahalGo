@@ -35,8 +35,9 @@ func TestEmergencies_OldestFirstResolvedTabAndResolution(t *testing.T) {
 	mk := func(note string, minutesAgo int) string {
 		var id string
 		if err := f.pool.QueryRow(ctx, `
-			INSERT INTO driver_emergencies (driver_id, note, created_at)
-			VALUES ($1, $2, now() - ($3::int || ' minutes')::interval)
+			INSERT INTO driver_emergencies (driver_id, note, created_at,
+			                                acknowledged_at, driver_ok_at)
+			VALUES ($1, $2, now() - ($3::int || ' minutes')::interval, now(), now())
 			RETURNING id::text`, driver, note, minutesAgo).Scan(&id); err != nil {
 			t.Fatalf("تعذّر البلاغُ %q: %v", note, err)
 		}

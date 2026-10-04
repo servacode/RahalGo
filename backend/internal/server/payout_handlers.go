@@ -13,8 +13,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/servacode/rahalgo/backend/internal/approval"
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 )
 
 // طلبات سحب الرصيد — تُغلق دورة المال: يطلب صاحب الرصيد، وتصرف المالية بقيد
@@ -26,6 +29,11 @@ var (
 	errPayoutBelowMin   = httpx.NewError(http.StatusConflict, "payout_below_min", "errors.payout_below_min")
 	errPayoutNotAllowed = httpx.NewError(http.StatusForbidden, "payout_not_allowed", "errors.payout_not_allowed")
 	errPayoutClosed     = httpx.NewError(http.StatusConflict, "payout_closed", "errors.payout_closed")
+	// **قسمُ طلبات السحب** (٢٠٢٦-١٠-٠٤).
+	errPayoutReasonRequired = httpx.NewError(http.StatusBadRequest,
+		"payout_reason_required", "errors.payout_reason_required")
+	errPayoutAmountChanged = httpx.NewError(http.StatusConflict,
+		"payout_amount_changed", "errors.payout_amount_changed")
 )
 
 type payout struct {
@@ -44,7 +52,17 @@ type payout struct {
 	Available int64      `json:"available"` // = المُقيَّد − المحجوز
 	CreatedAt time.Time  `json:"created_at"`
 	DecidedAt *time.Time `json:"decided_at"`
+	// **قسمُ طلبات السحب** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): دورُ الطالب ·
+	// مين قرّر · وطريقةُ الصرف (نقداً من المكتب أو حوالة).
+	UserRole      string `json:"user_role"`
+	DecidedByName string `json:"decided_by_name"`
+	PaidVia       string `json:"paid_via"`
 }
+
+// payoutRoleSQL **دورُ الطالب** — أوّلُ أدوار السحب الثلاثة عنده.
+const payoutRoleSQL = `COALESCE((SELECT ur.role_code FROM user_roles ur
+	         WHERE ur.user_id = p.user_id AND ur.role_code IN ('driver','merchant','sales')
+	         ORDER BY ur.role_code LIMIT 1), '')`
 
 const payoutSelect = `
 	SELECT p.id, p.user_id, COALESCE(NULLIF(u.full_name,''), u.phone::text), u.phone,
@@ -52,7 +70,11 @@ const payoutSelect = `
 	       COALESCE((SELECT w.balance  FROM wallets w WHERE w.user_id = p.user_id), 0),
 	       COALESCE((SELECT w.reserved FROM wallets w WHERE w.user_id = p.user_id), 0),
 	       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = p.user_id), 0),
-	       p.created_at, p.decided_at
+	       p.created_at, p.decided_at,
+	       ` + payoutRoleSQL + `,
+	       COALESCE((SELECT COALESCE(NULLIF(d.full_name,''), d.phone::text) FROM users d
+	                  WHERE d.id = p.decided_by), ''),
+	       p.paid_via
 	FROM payout_requests p JOIN users u ON u.id = p.user_id`
 
 func scanPayouts(rows interface {
@@ -64,7 +86,7 @@ func scanPayouts(rows interface {
 		var p payout
 		if err := rows.Scan(&p.ID, &p.UserID, &p.UserName, &p.UserPhone, &p.Amount,
 			&p.Status, &p.Note, &p.Decision, &p.Balance, &p.Reserved, &p.Available,
-			&p.CreatedAt, &p.DecidedAt); err != nil {
+			&p.CreatedAt, &p.DecidedAt, &p.UserRole, &p.DecidedByName, &p.PaidVia); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -231,13 +253,16 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	// «مدفوع» ليراجع ما صُرف **يرى آخرَ مئتين ويظنّها كلَّ ما دُفع**.
 	// **وهذا مالٌ خرج، ومراجعتُه ناقصةً أسوأُ من عدمها.**
 	status := r.URL.Query().Get("status")
+	// **والدورُ فلترٌ ثانٍ** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤): سائق · متجر · مندوب.
+	role := r.URL.Query().Get("role")
 	pg := pagingOf(r, 25)
 
 	// **والعدُّ بشرط القائمة نفسِه** — نصّان يفترقان يوماً.
+	const where = ` WHERE ($1 = '' OR p.status = $1) AND ($2 = '' OR ` + payoutRoleSQL + ` = $2)`
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM payout_requests p WHERE ($1 = '' OR p.status = $1)`,
-		status).Scan(&count); err != nil {
+		`SELECT count(*) FROM payout_requests p`+where,
+		status, role).Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -255,18 +280,54 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	// **وللمعلَّق وحدَه ولا يتبع الترشيح**: سؤالُه «كم عليّ الآن؟» —
 	// **ومجموعٌ يتبع مُرشِّحاً يقول صفراً لمن يقرأ المرفوضَ**، وهو لا
 	// يخصّه.
-	var pending int64
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT COALESCE(sum(amount), 0) FROM payout_requests WHERE status = 'pending'`).
-		Scan(&pending); err != nil {
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **والبطاقاتُ الأربع** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (قسمُ طلبات السحب)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	//	بانتظار الصرف     معلَّقٌ + قيدُ الصرف (عددٌ ومبلغ) — مالٌ محجوزٌ لم يخرج
+	//	قيد الصرف         وحدَه
+	//	مصروف هالشهر      بتاريخ القرار، بتوقيت دمشق
+	//	مرتجع/فاشل هالشهر
+	//
+	// **و«قيد الصرف» داخلَ «بانتظار الصرف»** — كان خارجَه وهو مالٌ محجوزٌ
+	// لم يُصرف بعد، فيقول المجموعُ أقلَّ ممّا على المنصّة أن تدفع.
+	type payoutStats struct {
+		WaitingCount    int   `json:"waiting_count"`
+		WaitingSum      int64 `json:"waiting_sum"`
+		ProcessingCount int   `json:"processing_count"`
+		ProcessingSum   int64 `json:"processing_sum"`
+		PaidMonthCount  int   `json:"paid_month_count"`
+		PaidMonthSum    int64 `json:"paid_month_sum"`
+		ReturnedCount   int   `json:"returned_month_count"`
+		ReturnedSum     int64 `json:"returned_month_sum"`
+	}
+	var st payoutStats
+	if err := s.pg.QueryRow(r.Context(), `
+		WITH m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Damascus') AS start)
+		SELECT count(*) FILTER (WHERE status IN ('pending','processing')),
+		       COALESCE(sum(amount) FILTER (WHERE status IN ('pending','processing')), 0),
+		       count(*) FILTER (WHERE status = 'processing'),
+		       COALESCE(sum(amount) FILTER (WHERE status = 'processing'), 0),
+		       count(*) FILTER (WHERE status = 'paid'
+		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start),
+		       COALESCE(sum(amount) FILTER (WHERE status = 'paid'
+		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start), 0),
+		       count(*) FILTER (WHERE status IN ('failed','reversed')
+		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start),
+		       COALESCE(sum(amount) FILTER (WHERE status IN ('failed','reversed')
+		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start), 0)
+		  FROM payout_requests CROSS JOIN m`).
+		Scan(&st.WaitingCount, &st.WaitingSum, &st.ProcessingCount, &st.ProcessingSum,
+			&st.PaidMonthCount, &st.PaidMonthSum, &st.ReturnedCount, &st.ReturnedSum); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	pending := st.WaitingSum
 
-	rows, err := s.pg.Query(r.Context(), payoutSelect+`
-		WHERE ($1 = '' OR p.status = $1)
-		ORDER BY (p.status = 'pending') DESC, p.created_at DESC
-		LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset)
+	rows, err := s.pg.Query(r.Context(), payoutSelect+where+`
+		ORDER BY (p.status = 'pending') DESC, (p.status = 'processing') DESC, p.created_at DESC
+		LIMIT $3 OFFSET $4`, status, role, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -279,6 +340,7 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	}
 	res := paged("payouts", out, count, pg)
 	res["pending_total"] = pending
+	res["stats"] = st
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -288,12 +350,37 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Status   string `json:"status"`
 		Decision string `json:"decision"`
+		// Amount **المبلغُ الذي رآه القرِّرُ في النافذة** — اختياريّ؛ وإن
+		// أُرسل طوبق بالمحفوظ. وهو حقلٌ في بصمة تأكيد كلمة السرّ.
+		Amount int64 `json:"amount"`
+		// Method **طريقةُ الصرف** للمدفوع: `cash` نقداً من صندوق المكتب ·
+		// `transfer` حوالة. وغيابُه يعني حوالة (نداءاتُ ما قبل القسم).
+		Method string `json:"method"`
 	}](r)
 	// **والحالاتُ ستٌّ بعقد `AQ-3`** — ولا يُقبَل ما ليس منها.
 	if err != nil || !slices.Contains(
 		[]string{"processing", "paid", "rejected", "failed", "reversed"}, req.Status) {
 		s.respondErr(w, errValidation)
 		return
+	}
+	// **والرفضُ والفشلُ والارتدادُ بسببٍ مكتوب** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
+	// صاحبُ المال يقرأ السببَ في إشعاره، وقرارٌ بلا سببٍ لا يُراجَع.
+	if slices.Contains([]string{"rejected", "failed", "reversed"}, req.Status) &&
+		strings.TrimSpace(req.Decision) == "" {
+		s.respondErr(w, errPayoutReasonRequired)
+		return
+	}
+	method := ""
+	if req.Status == "paid" {
+		switch req.Method {
+		case "", "transfer":
+			method = "transfer"
+		case "cash":
+			method = "cash"
+		default:
+			s.respondErr(w, errValidation)
+			return
+		}
 	}
 	id := chi.URLParam(r, "id")
 	if !isUUID(id) {
@@ -331,11 +418,16 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		var userID string
 		var amount int64
-		var status string
+		var status, paidVia string
 		if err := q.QueryRow(ctx,
-			`SELECT user_id, amount, status FROM payout_requests WHERE id = $1 FOR UPDATE`, id).
-			Scan(&userID, &amount, &status); err != nil {
+			`SELECT user_id, amount, status, paid_via FROM payout_requests WHERE id = $1 FOR UPDATE`, id).
+			Scan(&userID, &amount, &status, &paidVia); err != nil {
 			return IdempotentBody{}, httpx.ErrNotFound
+		}
+		// **والمبلغُ الذي أُكِّد بكلمة السرّ هو المحفوظ** — نافذةٌ قديمةٌ
+		// بمبلغٍ آخرَ تُردّ ولا يُقرَّر على ما لم يُرَ.
+		if req.Amount != 0 && req.Amount != amount {
+			return IdempotentBody{}, errPayoutAmountChanged
 		}
 		// ══════════════════════════════════════════════════════════
 		// **وآلةُ الحالات تُحرَس بمصدرها لا بوجهتها وحدَها**
@@ -357,6 +449,14 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 		}
 
 		actor := userIDFrom(r)
+		// **ولا أحدَ يقرّر في سحبه هو** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥) —
+		// إلّا مالكُ المنصّة حين لا يوجد غيرُه يملك القرار، ويُعلَّم في السجلّ.
+		verdict, err := approval.Check(ctx, q, approval.Request{
+			ProposedBy: userID, Actor: actor, Capability: authz.PayoutsDecide,
+		})
+		if err != nil {
+			return IdempotentBody{}, err
+		}
 		// ══════════════════════════════════════════════════════════
 		// **وكلُّ حالٍ تفعل بالحجز ما يوجبه معناها** — `XG-12`
 		// ══════════════════════════════════════════════════════════
@@ -378,6 +478,15 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 				id, clip(req.Decision, 300), &actor); err != nil {
 				return IdempotentBody{}, err
 			}
+			// **والنقدُ من المكتب يخرج من صندوقه** (البند ٦) — والحوالةُ لا سطرَ لها.
+			if method == "cash" {
+				if err := officecash.Record(ctx, q, officecash.Entry{
+					Direction: officecash.Out, Amount: amount, Source: officecash.SourcePayoutPaid,
+					Ref: id, UserID: userID, Actor: actor, Note: clip(req.Decision, 300),
+				}); err != nil {
+					return IdempotentBody{}, err
+				}
+			}
 		case "rejected", "failed":
 			if err := s.wallet.ReleaseTx(ctx, q, userID, amount); err != nil {
 				return IdempotentBody{}, err
@@ -394,25 +503,45 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 			// المالَ إلى صاحبه.**
 			//
 			// **ولا حجزَ يُفكّ**: فُكّ يومَ `paid`.
-			if _, err := s.wallet.ApplyTx(ctx, q, userID, amount, "refund",
+			//
+			// **وبنوعه «إرجاع سحب»** (`payout_reversal`، قرارُ المالك
+			// ٢٠٢٦-١٠-٠٤): كان `refund` — وذاك لاسترجاع الطلبات ويشترط طلباً
+			// قائماً، فعدّه فحصُ الدفتر FI-01.d قيداً بلا طلب.
+			if _, err := s.wallet.ApplyTx(ctx, q, userID, amount, "payout_reversal",
 				id, clip(req.Decision, 300), &actor); err != nil {
 				return IdempotentBody{}, err
 			}
+			// **ونقدٌ خرج من المكتب ثمّ رجع يعود إلى صندوقه.**
+			if paidVia == "cash" {
+				if err := officecash.Record(ctx, q, officecash.Entry{
+					Direction: officecash.In, Amount: amount, Source: officecash.SourcePayoutReversed,
+					Ref: id, UserID: userID, Actor: actor, Note: clip(req.Decision, 300),
+				}); err != nil {
+					return IdempotentBody{}, err
+				}
+			}
 		}
 		if _, err := q.Exec(ctx, `
-			UPDATE payout_requests SET status = $2, decision = $3, decided_by = $4, decided_at = now()
-			WHERE id = $1`, id, req.Status, clip(req.Decision, 300), actor); err != nil {
+			UPDATE payout_requests SET status = $2, decision = $3, decided_by = $4, decided_at = now(),
+			       paid_via = CASE WHEN $5 = '' THEN paid_via ELSE $5 END
+			WHERE id = $1`, id, req.Status, clip(req.Decision, 300), actor, method); err != nil {
 			return IdempotentBody{}, err
 		}
 
 		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`:
 		// **فعلٌ حسّاسٌ نجح بلا أثرٍ لا يُراجَع ولا يُنازَع فيه.**
 		// **وسقوطُ القيد يُسقط الفعلَ كلَّه** — وذلك هو المقصود.
-		if err := s.auditTx(ctx, q, r, "finance.payout_decide", "payout", id,
-			map[string]any{
-				"status": req.Status, "amount": amount, "user_id": userID,
-				"decision": req.Decision,
-			}); err != nil {
+		details := map[string]any{
+			"status": req.Status, "amount": amount, "user_id": userID,
+			"decision": req.Decision, "from_status": status,
+		}
+		if method != "" {
+			details["method"] = method
+		}
+		for k, v := range verdict.AuditFields() {
+			details[k] = v
+		}
+		if err := s.auditTx(ctx, q, r, "finance.payout_decide", "payout", id, details); err != nil {
 			return IdempotentBody{}, err
 		}
 		return IdempotentBody{
@@ -438,9 +567,14 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 					body = "أُعيد " + fmtMoneyAr(amount) + " إلى رصيدك"
 				case "failed", "reversed":
 					// **رُدّ المالُ إلى الرصيد** — فُشل الصرفُ أو ارتدّ.
+					title = notifTitles.payoutFailed
+					if req.Status == "reversed" {
+						title = notifTitles.payoutReversed
+					}
 					body = "أُعيد " + fmtMoneyAr(amount) + " إلى رصيدك"
 				case "processing":
-					body = "طلبُ سحبك قيد الصرف"
+					title = notifTitles.payoutProcessing
+					body = "بدأ صرف " + fmtMoneyAr(amount) + " — المبلغ محجوز لك حتى يتم"
 				}
 				if note := strings.TrimSpace(req.Decision); note != "" {
 					body += " · " + note

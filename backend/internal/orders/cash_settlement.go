@@ -25,6 +25,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -411,6 +412,14 @@ func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, admi
 		   SET state = 'cash_paid', paid_tx_id = $2, paid_by = $3,
 		       paid_owner_user_id = $4, paid_at = now(), note = $5
 		 WHERE id = $1`, settlementID, txID, adminID, currentOwner, note); err != nil {
+		return res, err
+	}
+	// **والنقدُ خرج من درج المكتب إلى المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — سطرٌ في
+	// الصندوق بمرجع التسوية، **في معاملة القيد نفسِها.**
+	if err := officecash.Record(ctx, tx, officecash.Entry{
+		Direction: officecash.Out, Amount: outstanding, Source: officecash.SourceMerchantCashPaid,
+		Ref: settlementID, UserID: currentOwner, Actor: adminID, Note: note,
+	}); err != nil {
 		return res, err
 	}
 	// **والأثرُ في المعاملة نفسِها — لا بعد التثبيت** (`AQ-4`/`PF-06`): نقدٌ

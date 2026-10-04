@@ -67,6 +67,15 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	if req.Kind == "accident" {
 		s.lockDriverAfterAccident(ctx, driverID)
 	}
+	// **ونوعُه مخزَّنٌ** (غرفةُ الطوارئ ٢٠٢٦-١٠-٠٤) — من `kind`، أو من رمزٍ في الكلمة،
+	// **وما لا يُعرف يُقرأ حادثاً**: الإنذارُ الأشدُّ خيرٌ من الأخفّ لما لا نعرف نوعَه.
+	kind := emergencyKindOf(req.Kind)
+	if kind == "" {
+		kind = emergencyKindOf(req.Note)
+	}
+	if kind == "" {
+		kind = EmergencyAccident
+	}
 
 	var status string
 	var number int64
@@ -82,6 +91,10 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// جهازٌ مرفوضُ الإذن، أو داخلَ بناءٍ لا إشارةَ فيه — **وطارئٌ يُردّ لأن
 	// الموقعَ لم يُقرأ طارئٌ ضاع.** والعملياتُ تتّصل به فتعرف أين هو.
 	hasPoint := req.Lat != nil && req.Lng != nil
+	stage := "before_pickup"
+	if orders.AfterPickup(status) {
+		stage = "after_pickup"
+	}
 	// ══════════════════════════════════════════════════════════════════
 	// **بلاغٌ مفتوحٌ واحدٌ لكلّ طلب** (`DRV-DEF-001`، حارس `0158`)
 	// ══════════════════════════════════════════════════════════════════
@@ -95,18 +108,18 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	fresh := true
 	if hasPoint {
 		err = s.pg.QueryRow(ctx, `
-			INSERT INTO driver_emergencies (driver_id, order_id, at, note)
-			VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
+			INSERT INTO driver_emergencies (driver_id, order_id, at, note, kind, stage)
+			VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5, $6, $7)
 			ON CONFLICT (order_id) WHERE status = 'open' DO NOTHING
-			RETURNING id`, driverID, orderID, *req.Lng, *req.Lat, clip(req.Note, 500)).
+			RETURNING id`, driverID, orderID, *req.Lng, *req.Lat, clip(req.Note, 500), kind, stage).
 			Scan(&emergencyID)
 	} else {
 		err = s.pg.QueryRow(ctx, `
-			INSERT INTO driver_emergencies (driver_id, order_id, note)
-			VALUES ($1, $2, $3)
+			INSERT INTO driver_emergencies (driver_id, order_id, note, kind, stage)
+			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT (order_id) WHERE status = 'open' DO NOTHING
 			RETURNING id`,
-			driverID, orderID, clip(req.Note, 500)).Scan(&emergencyID)
+			driverID, orderID, clip(req.Note, 500), kind, stage).Scan(&emergencyID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		// **طارئٌ مفتوحٌ قائمٌ لهذا الطلب** — إعادةٌ، لا حادثةٌ ثانية.
@@ -242,11 +255,25 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// الطوارئ** — كان يفتح صفحةَ الطلبات (البند ٢٦).
 	s.notify.NotifyCaps(ctx, orders.EmergencyAlertCaps, notifications.Input{
 		Kind: notifications.KindOrder, Title: notifTitles.driverEmergency, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/dashboard/emergencies",
+		Entity: "order", EntityID: orderID, Href: "/dashboard/emergencies/" + emergencyID,
 	})
+	// **ويُخبَر الزبون** (غرفةُ الطوارئ ٢٠٢٦-١٠-٠٤) — كان طلبُه يرجع خطوةً بلا كلمة.
+	// **قبل الاستلام** حُرّر إلى سائقٍ آخر، **وبعده** تقرّر الإدارةُ مصيرَه.
+	if fresh {
+		if released {
+			s.notifyCustomerEmergency(ctx, orderID, emergencyCustomerRedispatch)
+		} else {
+			s.notifyCustomerEmergency(ctx, orderID, emergencyCustomerFollowing)
+		}
+		for _, o := range others {
+			if o.Released {
+				s.notifyCustomerEmergency(ctx, o.ID, emergencyCustomerRedispatch)
+			}
+		}
+	}
 	s.audit(r, "driver.emergency", "order", orderID, map[string]any{
 		"emergency_id": emergencyID, "released": released, "status_was": status,
-		"duplicate": !fresh, "other_orders": otherIDs,
+		"duplicate": !fresh, "other_orders": otherIDs, "kind": kind,
 	})
 	s.touch("order", "ops")
 	s.touch("driver", "ops")
@@ -350,17 +377,28 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والصندوقُ واحدٌ بأنواعه** (غرفةُ الطوارئ ٢٠٢٦-١٠-٠٤) — فالسائقُ والمتجرُ
+	// اختياريّان، **وما بلا مستلِمٍ بعد المهلة يُعلَّم ليحمرّ.**
+	staleMin := s.settings.GetNum(r.Context(), emergencyStaleSetting, 10)
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT e.id, u.full_name, u.phone, o.number, e.note,
+		SELECT e.id, u.full_name, COALESCE(u.phone::text, ''), o.number, e.note,
 		       ST_Y(e.at::geometry), ST_X(e.at::geometry), e.created_at,
 		       e.resolution, e.resolved_at,
-		       COALESCE(NULLIF(rb.full_name, ''), rb.phone::text, '')
+		       COALESCE(NULLIF(rb.full_name, ''), rb.phone::text, ''),
+		       e.kind, e.stage, COALESCE(m.name, ''),
+		       e.acknowledged_at, COALESCE(NULLIF(ab.full_name, ''), ab.phone::text, ''),
+		       e.status = 'open' AND e.acknowledged_at IS NULL
+		         AND e.created_at < now() - make_interval(mins => $4::int),
+		       e.driver_ok_at IS NOT NULL, e.outcome,
+		       e.money_request_id IS NOT NULL OR e.money_skipped
 		FROM driver_emergencies e
-		JOIN users u ON u.id = e.driver_id
+		LEFT JOIN users u ON u.id = e.driver_id
 		LEFT JOIN orders o ON o.id = e.order_id
+		LEFT JOIN merchants m ON m.id = e.merchant_id
 		LEFT JOIN users rb ON rb.id = e.resolved_by
+		LEFT JOIN users ab ON ab.id = e.acknowledged_by
 		WHERE e.status = $1
-		ORDER BY `+order+` LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset)
+		ORDER BY `+order+` LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset, staleMin)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -398,6 +436,16 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		Resolution string     `json:"resolution"`
 		ResolvedAt *time.Time `json:"resolved_at"`
 		ResolvedBy string     `json:"resolved_by"`
+		// **النوعُ والخطوات** — غرفةُ الطوارئ (٢٠٢٦-١٠-٠٤).
+		Kind           string     `json:"kind"`
+		Stage          string     `json:"stage"`
+		MerchantName   string     `json:"merchant_name"`
+		AcknowledgedAt *time.Time `json:"acknowledged_at"`
+		AcknowledgedBy string     `json:"acknowledged_by"`
+		Stale          bool       `json:"stale"`
+		DriverOK       bool       `json:"driver_ok"`
+		Outcome        string     `json:"outcome"`
+		MoneyDone      bool       `json:"money_done"`
 	}
 	out := []row{}
 	for rows.Next() {
@@ -405,7 +453,9 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		var name *string
 		if err := rows.Scan(&x.ID, &name, &x.DriverPhone, &x.OrderNumber,
 			&x.Note, &x.Lat, &x.Lng, &x.CreatedAt,
-			&x.Resolution, &x.ResolvedAt, &x.ResolvedBy); err != nil {
+			&x.Resolution, &x.ResolvedAt, &x.ResolvedBy,
+			&x.Kind, &x.Stage, &x.MerchantName, &x.AcknowledgedAt, &x.AcknowledgedBy,
+			&x.Stale, &x.DriverOK, &x.Outcome, &x.MoneyDone); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -438,6 +488,25 @@ func (s *Server) handleResolveEmergency(w http.ResponseWriter, r *http.Request) 
 		resolution = clip(strings.TrimSpace(req.Resolution), 500)
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **و«تمّ» آخرُ الخطوات لا أوّلُها** (غرفةُ الطوارئ ٢٠٢٦-١٠-٠٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// استلمتها ← السائقُ بخير؟ ← مصيرُ الطلب ← المال ← تمّ. **وإغلاقٌ يقفز فوقها يُعيد
+	// السؤالَ «ماذا جرى؟» بلا جواب** — فيُردّ بأوّل خطوةٍ لم تُقطع.
+	e, err := loadEmergency(r.Context(), s.pg, id, false)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if e.Status != "open" {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if e.missingStep() != "" {
+		s.respondErr(w, errEmergencyStepsPending)
+		return
+	}
 	// **ومن أُغلق بلاغُه يُعلَم** — يُقرأ اسمُ سائقه قبل التبديل.
 	var driverID string
 	tag, err := s.pg.Exec(r.Context(), `
@@ -458,9 +527,11 @@ func (s *Server) handleResolveEmergency(w http.ResponseWriter, r *http.Request) 
 	//
 	// **من ضغط زرَّ الطوارئ ينتظر** — ولا شيءَ كان يقول له «وصلنا».
 	// **وانتظارٌ بلا جوابٍ يُقرأ إهمالاً**، ومن قرأه لا يضغط ثانيةً.
+	var drv *string
 	if err := s.pg.QueryRow(r.Context(),
 		`SELECT driver_id::text FROM driver_emergencies WHERE id = $1`, id).
-		Scan(&driverID); err == nil {
+		Scan(&drv); err == nil && drv != nil {
+		driverID = *drv
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: driverID, Kind: notifications.KindAccount,
 			Title: notifTitles.emergencyResolved, Body: resolution,

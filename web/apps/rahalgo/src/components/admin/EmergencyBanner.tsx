@@ -82,7 +82,7 @@ export function EmergencyBanner() {
                 `${m.common.listSeparator}${B.order.replace("{n}", fmtNum(d.order_number))}`}
               {`${m.common.listSeparator}${since(d.created_at)}`}
             </span>
-            <Link href="/dashboard/emergencies" className="text-xs underline">
+            <Link href={`/dashboard/emergencies/${d.id}`} className="text-xs underline">
               {B.open}
             </Link>
             <Button

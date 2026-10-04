@@ -236,6 +236,14 @@ const (
 	// **ولا تُخلَط بـ`users.contact.read`**: تلك رقمُ حسابٍ يُتّصل عليه، **وهذه
 	// تفاصيلُ طلبٍ بعينه** — والثقةُ والأمانُ يملكان الأولى ولا يملكان هذه.
 	OrdersCustomerDetailsRead Capability = "orders.customer_details.read"
+
+	// TreasuryManage **قرارُ مدير المنصّة على الخزينة** — سحبُه من رصيدها،
+	// واعتمادُ نقص صندوق المكتب خسارةً على المنصّة.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة: «هو المسؤول الوحيد، وحتّى لو دفع من
+	// المحفظة رح يكون واضح إنّ الأدمن سحب من رصيد الخزينة».) **للأدمن والمالك
+	// الأعلى وحدَهما** — هجرة `0300`.
+	TreasuryManage Capability = "treasury.manage"
 )
 
 // FieldPolicy **معجمُ الحقول المحميّة وقدرةُ كلٍّ** — `XG-42`.
@@ -314,6 +322,9 @@ var catalog = map[Capability]string{
 
 	// سجلُّ الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
 	OrdersCustomerDetailsRead: "هاتف زبون الطلب وموقعه وصورة التسليم",
+
+	// الخزينة (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	TreasuryManage: "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة",
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -348,6 +359,7 @@ var groupOf = map[Capability]Group{
 
 	FinanceRead: GroupMoney, FinanceManage: GroupMoney, PayoutsDecide: GroupMoney,
 	FinanceExport: GroupMoney, FinanceRecompute: GroupMoney, PlatformOverview: GroupMoney,
+	TreasuryManage: GroupMoney,
 
 	MerchantsManage: GroupStoresDrivers, MerchantsRead: GroupStoresDrivers,
 	MerchantsVerify: GroupStoresDrivers, DriversManage: GroupStoresDrivers,
@@ -381,6 +393,7 @@ const (
 
 var riskOf = map[Capability]Risk{
 	FinanceManage: RiskMoney, PayoutsDecide: RiskMoney, FinanceRecompute: RiskMoney,
+	TreasuryManage:          RiskMoney,
 	SettingsFinancialManage: RiskMoney, UsersCashBanLift: RiskMoney,
 	SupportManage: RiskMoney, OrdersIntervene: RiskMoney,
 

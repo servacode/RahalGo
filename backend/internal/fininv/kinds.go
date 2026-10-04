@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 )
 
 // KindContract عقدُ نوعِ قيدٍ واحد — **ولا نوعَ بلا عقد.**
@@ -38,7 +40,7 @@ type KindContract struct {
 	Reachable bool
 }
 
-// Kinds العقودُ — **ستّةَ عشرَ نوعاً، بعددِ ما يسمح به قيدُ القاعدة.**
+// Kinds العقودُ — **كلُّ نوعٍ يسمح به قيدُ القاعدة له عقدٌ هنا — ولا عددَ ثابتاً يُكتب بيد.**
 var Kinds = map[string]KindContract{
 	"topup": {
 		Kind: "topup", Sign: "+", RefRequired: false,
@@ -115,6 +117,16 @@ var Kinds = map[string]KindContract{
 		Invariants: []string{"FI-01.e", "FI-04.c", "FI-05.d", "FI-11.a", "FI-11.b", "FI-11.c"},
 		Reachable:  true,
 	},
+	// **إرجاعُ سحبٍ مدفوع** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (قسمُ طلبات السحب).
+	// كان يُكتب `refund` — وذاك لاسترجاع الطلبات ويشترط طلباً قائماً.
+	"payout_reversal": {
+		Kind: "payout_reversal", Sign: "+", RefRequired: true, RefTarget: "payout_requests",
+		Creators:   []string{"internal/server/payout_handlers.go"},
+		Path:       "POST /admin/payouts/{id}/decide (reversed)",
+		Semantics:  "سحبٌ صُرف ثمّ ارتدّ — **يعود المبلغُ إلى المحفظة ويبقى قيدُ الصرف الأوّل في الدفتر.**",
+		Invariants: []string{"FI-01.g", "FI-05.k", "FI-11.h"},
+		Reachable:  true,
+	},
 	"adjustment": {
 		Kind: "adjustment", Sign: "±", RefRequired: false,
 		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go:280"},
@@ -132,11 +144,26 @@ var Kinds = map[string]KindContract{
 		Reachable:  true,
 	},
 	"platform_expense": {
-		Kind: "platform_expense", Sign: "-", RefRequired: false, RefTarget: "orders",
-		Creators:   []string{"internal/orders/treasury.go:184"},
-		Path:       "تعويضُ سائقٍ · ودعمُ متجرٍ عن بضاعةٍ رُدّت",
+		Kind: "platform_expense", Sign: "-", RefRequired: false, RefTarget: "orders|office_cash_shortfalls",
+		Creators:   []string{"internal/orders/treasury.go:184", "internal/server/treasury_cashbox.go"},
+		Path:       "تعويضُ سائقٍ · ودعمُ متجرٍ عن بضاعةٍ رُدّت · ونقصُ صندوقٍ صار خسارة",
 		Semantics:  "مالٌ خرج من الخزينة خارجَ تسويةِ الطلب.",
-		Invariants: []string{"FI-06.a", "FI-12.a"},
+		Invariants: []string{"FI-06.a", "FI-12.a", "FI-15.f"},
+		Reachable:  true,
+	},
+	// ══════════════════════════════════════════════════════════════════
+	// **سحبُ الأدمن من رصيد الخزينة** — قرارُ المالك ٢٠٢٦-١٠-٠٤
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «حتّى لو دفع من المحفظة رح يكون واضح إنّ الأدمن سحب من رصيد الخزينة».
+	// **نوعٌ خاصٌّ لا `platform_expense`**: فلا يُقرأ خسارةً ولا مصروفاً
+	// ولا ينقص الربح — يظهر في كشف الخزينة وحدَه.
+	"treasury_withdrawal": {
+		Kind: "treasury_withdrawal", Sign: "-", RefRequired: true, RefTarget: "treasury_withdrawals",
+		Creators:   []string{"internal/server/treasury_handlers.go"},
+		Path:       "POST /admin/treasury/withdrawals",
+		Semantics:  "سحبُ مدير المنصّة من رصيد الخزينة باسمه — **لا خسارةٌ ولا مصروف.**",
+		Invariants: []string{"FI-12.a", "FI-12.d", "FI-12.e", "FI-15.d"},
 		Reachable:  true,
 	},
 	"operating_expense": {
@@ -267,3 +294,17 @@ func KindDrift(schema []string) (missingContract, staleContract []string) {
 	sort.Strings(staleContract)
 	return
 }
+
+// officeCashSince **لحظةُ ميلاد صندوق المكتب** — ما قبلها لم يكن يُسجَّل.
+const officeCashSince = `(SELECT applied_at FROM schema_migrations WHERE version = '0300_treasury_cashbox.sql')`
+
+// officeCashSourcesSQL **المصادرُ المعروفةُ باتّجاهها** — مولَّدةٌ من
+// `officecash.Sources` لا مكتوبةٌ بيدٍ ثانية.
+var officeCashSourcesSQL = func() string {
+	var parts []string
+	for src, dir := range officecash.Sources {
+		parts = append(parts, "('"+src+"','"+string(dir)+"')")
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ",")
+}()

@@ -237,7 +237,7 @@ func TestXG12_T5_ReversedCompensates(t *testing.T) {
 	var debits, credits int
 	_ = hh.Pool.QueryRow(ctxBG(),
 		`SELECT count(*) FILTER (WHERE kind = 'payout'),
-		        count(*) FILTER (WHERE kind = 'refund')
+		        count(*) FILTER (WHERE kind = 'payout_reversal')
 		   FROM wallet_transactions WHERE ref = $1`, id).Scan(&debits, &credits)
 	t.Logf("T5: الارتدادُ ⇒ %d · %d/%d/%d · خصمٌ=%d · ردٌّ=%d",
 		rev.Code, b, res, av, debits, credits)

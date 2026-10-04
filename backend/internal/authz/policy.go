@@ -198,6 +198,23 @@ var adminPolicy = []Rule{
 	{"GET", "/ledger/export", FinanceExport},
 	{"GET", "/treasury-candidates", FinanceManage},
 	{"GET", "/reports/losses", FinanceRead},
+	// **الخزينةُ وصندوقُ المكتب والإغلاقُ اليوميّ والموافقاتُ الموحّدة**
+	// (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة).
+	{"GET", "/treasury/overview", FinanceRead},
+	{"GET", "/treasury/statement", FinanceRead},
+	{"GET", "/treasury/statement/export", FinanceExport},
+	{"GET", "/treasury/withdrawals", FinanceRead},
+	{"POST", "/treasury/withdrawals", TreasuryManage},
+	{"GET", "/treasury/health", FinanceRead},
+	{"GET", "/cashbox", FinanceRead},
+	{"GET", "/cashbox/closes", FinanceRead},
+	{"POST", "/cashbox/closes", FinanceManage},
+	{"POST", "/cashbox/closes/{id}/approve", FinanceManage},
+	{"POST", "/cashbox/closes/{id}/reject", FinanceManage},
+	{"POST", "/cashbox/shortfalls/{id}/resolve", FinanceManage},
+	{"POST", "/cashbox/shortfalls/{id}/approve", TreasuryManage},
+	{"POST", "/cashbox/shortfalls/{id}/reject", TreasuryManage},
+	{"GET", "/approvals", FinanceRead},
 
 	// ── الدعمُ والنزاعاتُ والطوارئ ───────────────────────────────
 	{"GET", "/tickets", SupportManage},
@@ -213,6 +230,15 @@ var adminPolicy = []Rule{
 	{"GET", "/emergencies/banner", EmergenciesManage},
 	{"POST", "/emergencies/{id}/ack", EmergenciesManage},
 	{"POST", "/emergencies/stores/{id}/ack", EmergenciesManage},
+	// **وغرفةُ الطوارئ بخطواتها** (٢٠٢٦-١٠-٠٤) — والمالُ طلبُ تعويضٍ لا دفع،
+	// **والموافقةُ عليه في الماليّة** (`/orders/{id}/compensate-driver`).
+	{"GET", "/emergencies/count", EmergenciesManage},
+	{"GET", "/emergencies/map", EmergenciesManage},
+	{"GET", "/emergencies/{id}", EmergenciesManage},
+	{"POST", "/emergencies/{id}/driver-ok", EmergenciesManage},
+	{"POST", "/emergencies/{id}/outcome", EmergenciesManage},
+	{"POST", "/emergencies/{id}/money", EmergenciesManage},
+	{"POST", "/emergencies/{id}/notes", EmergenciesManage},
 	{"GET", "/disputes", SupportManage},
 	{"POST", "/disputes", SupportManage},
 	{"POST", "/disputes/{id}/settle", FinanceManage},

@@ -118,8 +118,10 @@ var sensitiveActions = []Sensitive{
 		"wallet_request", 1, nil, ""},
 	{"POST", "/users/{id}/incentive", "finance.incentive", "user", 1,
 		[]string{"amount"}, ""},
+	// **والبصمةُ على الحال والمبلغ وطريقة الصرف** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤):
+	// كانت على `approve` — حقلٌ لا يُرسَل، فلا تفرّق بين «اصرف» و«ارفض».
 	{"POST", "/payouts/{id}/decide", "finance.payout_decide", "payout", 1,
-		[]string{"approve", "amount"}, ""},
+		[]string{"status", "amount", "method"}, ""},
 	{"POST", "/drivers/{id}/settle", "finance.driver_settle", "user", 1,
 		[]string{"amount"}, ""},
 	{"POST", "/expenses", "finance.expense_added", "expense", -1,
@@ -159,6 +161,12 @@ var sensitiveActions = []Sensitive{
 		"dispute", 1, []string{"settlement"}, ""},
 	{"POST", "/tickets/{id}/resolve", "finance.ticket_resolve",
 		"ticket", 1, []string{"compensation"}, ""},
+	// **سحبُ الأدمن من رصيد الخزينة · ونقصُ الصندوق خسارةً على المنصّة** — مالٌ
+	// يخرج من الخزينة بقرار إنسان (قرارُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة).
+	{"POST", "/treasury/withdrawals", "finance.treasury_withdrawal",
+		"treasury_withdrawal", -1, []string{"amount"}, ""},
+	{"POST", "/cashbox/shortfalls/{id}/approve", "finance.cash_shortfall_loss",
+		"office_cash_shortfall", 2, nil, ""},
 
 	// ── الإعداداتُ ذاتُ الأثر ───────────────────────────────────
 	{"PUT", "/settings/{key}", "admin.setting_update", "setting", 1,

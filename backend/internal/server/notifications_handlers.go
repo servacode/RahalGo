@@ -63,7 +63,10 @@ var notifTitles = struct {
 	// رقماً زاد بلا سبب.** وهدفٌ لا يُبشَّر ببلوغه لا يحفّز.
 	targetReached                               string
 	payoutRequested, payoutPaid, payoutRejected string
-	warningIssued, driverEmergency              string
+	// **ولكلّ حالٍ من أحوال السحب عنوانُها** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤) —
+	// كان الفشلُ والارتدادُ وقيدُ الصرف تُعنوَن «صُرف طلب السحب».
+	payoutProcessing, payoutFailed, payoutReversed string
+	warningIssued, driverEmergency                 string
 	// **سائقٌ ترك طلباً قبل الاستلام بسبب** — ودوامُه أُغلق (مساءَ ٢٠٢٦-١٠-٠٢).
 	driverReleased string
 	// **رسالةٌ في حديث الطلب — والعنوانُ يقول من كتب لا ماذا كتب.**
@@ -132,6 +135,9 @@ var notifTitles = struct {
 	payoutRequested:     "طلب سحب رصيد جديد",
 	payoutPaid:          "صُرف طلب السحب",
 	payoutRejected:      "رُفض طلب السحب",
+	payoutProcessing:    "طلب سحبك قيد الصرف",
+	payoutFailed:        "تعذّر صرف طلب السحب",
+	payoutReversed:      "ارتدّ طلب السحب",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

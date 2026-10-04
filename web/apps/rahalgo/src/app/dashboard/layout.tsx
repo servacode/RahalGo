@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -135,25 +135,11 @@ const ALL_NAV: NavItem[] = [
   // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
   // المالك ٢٠٢٦-٠٨-٠٤.) وهي محفظةُ الحساب الحامل لها — فيراها صاحبُها
   // كشفاً كاملاً، **ويرى غيرُه محفظتَه هو.**
-  { href: "/dashboard/wallet", label: m.admin.nav.treasury, icon: IconWallet,
-    caps: ["finance.read"] },
-  // ══════════════════════════════════════════════════════════════════
-  // **ومصروفاتُ التشغيل تليها** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
-  // ══════════════════════════════════════════════════════════════════
   //
-  // **إيجارُ المكتب والرواتبُ والكهرباء** — تخرج من الخزينة، **فموضعُها
-  // بعدها مباشرةً**: من قرأ رصيدَها سأل «وأين ذهب؟».
-  //
-  // **وليست في «الخسائر»**: الخسارةُ ما لم يكن يجب أن يقع، **وهذه كلفةُ
-  // تشغيلٍ مخطَّطة** — وخلطُهما يضخّم تقريرَ الخسائر بالإيجار.
-  { href: "/dashboard/expenses", label: m.admin.nav.expenses, icon: IconWallet,
-    caps: ["finance.read"] },
-  // **والأرباحُ تُقرأ بعدهما** — (قرارُ المالك ٢٠٢٦-٠٨-١٦): **دخلُ الطلبات
-  // ناقصَ الخسائر والمصاريف والدعوات**، ولكلِّ إنسانٍ نصيبُه في تبويبه.
-  { href: "/dashboard/profits", label: m.admin.nav.profits, icon: IconWallet,
-    caps: ["finance.read"] },
-  // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
-  { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
+  // **وصار قسماً موحّداً** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة): نظرةٌ عامّة · كشفٌ برصيدٍ
+  // جارٍ · النقدُ والصندوق · الموافقات · صحّةُ الدفتر، **وصفحاتُ المال تُفتح منه** —
+  // المصروفاتُ والأرباحُ والنقدُ والسحوباتُ والتعويضاتُ لم تعد بنوداً في القائمة.
+  { href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet,
     caps: ["finance.read"] },
   // **والالتزاماتُ الماليّة تُقرأ هنا** — الدَّينُ على المتاجر والمناديب
   // (`financial_obligations`): على من وكم ومن أين وكم بقي. **قراءةٌ فقط**،
@@ -168,13 +154,6 @@ const ALL_NAV: NavItem[] = [
   // فلا يوسّع البابُ على أحدٍ ما كان يراه.
   { href: "/dashboard/losses", label: m.admin.nav.moneyLost, icon: IconBalance,
     caps: ["finance.read", "support.manage"] },
-  // **تعويضاتُ السائقين بانتظار الموافقة** — (قرارُ المالك ٢٠٢٦-١٠-٠٢):
-  // **التعويضُ بعد طلبٍ لم يكتمل لا يُدفع لحظةَ الضغطة**، ينتظر يداً هنا.
-  // **وموضعُها بجانب الخسائر**: الموافقةُ عليها هي ما يصير قيدَ خسارة.
-  { href: "/dashboard/compensations", label: m.admin.compensations.navTitle, icon: IconWallet,
-    caps: ["finance.read"] },
-  { href: "/dashboard/payouts", label: m.shared.payout.adminTitle, icon: IconWallet,
-    caps: ["finance.read"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,
@@ -268,14 +247,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     [canMarket],
   );
   const inMarket = pathname.startsWith("/dashboard/sections");
+  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ** إن
+  // بقي طارئٌ بلا مستلِمٍ أطولَ من مهلته (`ops.emergency_unacked_red_min`).
+  const canEmergencies = capabilities.includes("emergencies.manage");
+  // **والاحمرارُ بمرور الوقت لا بحدث** — فيُعاد السؤالُ كلَّ دقيقة.
+  const [minuteTick, setMinuteTick] = useState(0);
+  useEffect(() => {
+    if (!canEmergencies) return;
+    const t = window.setInterval(() => setMinuteTick((x) => x + 1), 60_000);
+    return () => window.clearInterval(t);
+  }, [canEmergencies]);
+  const { data: emergencyCount } = useLiveData<{ open: number; stale: number }>(
+    () =>
+      canEmergencies
+        ? api("/api/v1/admin/emergencies/count")
+        : Promise.resolve({ open: 0, stale: 0 }),
+    ["emergency"],
+    [canEmergencies, minuteTick],
+  );
   const navShown = useMemo(
     () =>
-      nav.map((i) =>
-        i.href === "/dashboard/sections"
-          ? { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) }
-          : i,
-      ),
-    [nav, marketNew, inMarket],
+      nav.map((i) => {
+        if (i.href === "/dashboard/sections")
+          return { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) };
+        if (i.href === "/dashboard/emergencies")
+          return {
+            ...i,
+            badge: emergencyCount?.open ?? 0,
+            badgeTone: (emergencyCount?.stale ?? 0) > 0 ? ("danger" as const) : undefined,
+          };
+        return i;
+      }),
+    [nav, marketNew, inMarket, emergencyCount],
   );
 
   useEffect(() => {

@@ -39,6 +39,30 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/approvals",
+      "handler": "handleApprovals",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/audit",
       "handler": "handleAdminAudit",
       "auth": true,
@@ -357,6 +381,190 @@
         {
           "name": "total",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cashbox",
+      "handler": "handleCashbox",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cashbox/closes",
+      "handler": "handleListCashCloses",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "closes",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/closes",
+      "handler": "handleCreateCashClose",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "counted",
+          "type": "?int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "close",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/closes/{id}/approve",
+      "handler": "handleDecideCashClose",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/closes/{id}/reject",
+      "handler": "handleDecideCashClose",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/shortfalls/{id}/approve",
+      "handler": "handleDecideShortfall",
+      "auth": true,
+      "capability": "treasury.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/shortfalls/{id}/reject",
+      "handler": "handleDecideShortfall",
+      "auth": true,
+      "capability": "treasury.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/shortfalls/{id}/resolve",
+      "handler": "handleResolveShortfall",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "status",
+          "type": "string"
         }
       ],
       "statuses": [
@@ -796,6 +1004,54 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/emergencies/count",
+      "handler": "handleEmergencyCount",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "response": [
+        {
+          "name": "open",
+          "type": "unknown"
+        },
+        {
+          "name": "stale",
+          "type": "unknown"
+        },
+        {
+          "name": "stale_after_min",
+          "type": "unknown"
+        },
+        {
+          "name": "unacked",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/emergencies/map",
+      "handler": "handleEmergencyMap",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "emergencies",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/emergencies/stores/{id}/ack",
       "handler": "handleAckStoreEmergency",
@@ -812,6 +1068,22 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/emergencies/{id}",
+      "handler": "handleEmergencyDetail",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "response": [
+        {
+          "name": "@d",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/emergencies/{id}/ack",
       "handler": "handleAckEmergency",
@@ -821,6 +1093,114 @@
         {
           "name": "acknowledged",
           "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/{id}/driver-ok",
+      "handler": "handleEmergencyDriverOK",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "driver_ok",
+          "type": "bool"
+        },
+        {
+          "name": "lock_cleared",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/{id}/money",
+      "handler": "handleEmergencyMoney",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "skip",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "request_id",
+          "type": "unknown"
+        },
+        {
+          "name": "skipped",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/{id}/notes",
+      "handler": "handleEmergencyNote",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "request": [
+        {
+          "name": "body",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "added",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/{id}/outcome",
+      "handler": "handleEmergencyOutcome",
+      "auth": true,
+      "capability": "emergencies.manage",
+      "request": [
+        {
+          "name": "outcome",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "outcome",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -2672,6 +3052,14 @@
         {
           "name": "decision",
           "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "method",
+          "type": "string"
         }
       ]
     },
@@ -3566,6 +3954,111 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/health",
+      "handler": "handleTreasuryHealth",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "checked_at",
+          "type": "unknown"
+        },
+        {
+          "name": "checks",
+          "type": "unknown"
+        },
+        {
+          "name": "failing",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/overview",
+      "handler": "handleTreasuryOverview",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/statement",
+      "handler": "handleTreasuryStatement",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/statement/export",
+      "handler": "handleTreasuryStatementExport",
+      "auth": true,
+      "capability": "finance.export"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/withdrawals",
+      "handler": "handleTreasuryWithdrawals",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "withdrawals",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/treasury/withdrawals",
+      "handler": "handleTreasuryWithdraw",
+      "auth": true,
+      "capability": "treasury.manage",
+      "idempotent": true,
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "from_cashbox",
+          "type": "?bool"
+        }
       ]
     },
     {

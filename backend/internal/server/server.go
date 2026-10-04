@@ -1441,6 +1441,15 @@ func (s *Server) Router() http.Handler {
 			r.Get("/emergencies/banner", s.handleEmergencyBanner)
 			r.Post("/emergencies/{id}/ack", s.handleAckEmergency)
 			r.Post("/emergencies/stores/{id}/ack", s.handleAckStoreEmergency)
+			// **غرفةُ الطوارئ** (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — `emergency_room.go`): عدّادُ القائمة ·
+			// طبقةُ الخريطة · صفحةُ الطارئ · خطواتُ الحلّ · سجلُّ الملاحظات.
+			r.Get("/emergencies/count", s.handleEmergencyCount)
+			r.Get("/emergencies/map", s.handleEmergencyMap)
+			r.Get("/emergencies/{id}", s.handleEmergencyDetail)
+			r.Post("/emergencies/{id}/driver-ok", s.handleEmergencyDriverOK)
+			r.Post("/emergencies/{id}/outcome", s.handleEmergencyOutcome)
+			r.Post("/emergencies/{id}/money", s.handleEmergencyMoney)
+			r.Post("/emergencies/{id}/notes", s.handleEmergencyNote)
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
 			// **والأرباحُ بتبويباتها** — (قرارُ المالك ٢٠٢٦-٠٨-١٦):
@@ -1448,6 +1457,27 @@ func (s *Server) Router() http.Handler {
 			//
 			// **وللمالك والماليّة** — فيها أنصبةُ الناس وأرباحُ المنصّة.
 			r.Get("/profits", s.handleProfits)
+			// ══════════════════════════════════════════════════════════
+			// **قسمُ الخزينة الموحّد** — (قراراتُ المالك ٢٠٢٦-١٠-٠٤)
+			// ══════════════════════════════════════════════════════════
+			//
+			// نظرةٌ عامّة · كشفٌ برصيدٍ جارٍ وتصدير · سحبُ الأدمن · صحّةُ الدفتر ·
+			// صندوقُ المكتب والإغلاقُ اليوميّ · والموافقاتُ الموحّدة.
+			r.Get("/treasury/overview", s.handleTreasuryOverview)
+			r.Get("/treasury/statement", s.handleTreasuryStatement)
+			r.Get("/treasury/statement/export", s.handleTreasuryStatementExport)
+			r.Get("/treasury/withdrawals", s.handleTreasuryWithdrawals)
+			r.Post("/treasury/withdrawals", s.idempotent(s.handleTreasuryWithdraw))
+			r.Get("/treasury/health", s.handleTreasuryHealth)
+			r.Get("/cashbox", s.handleCashbox)
+			r.Get("/cashbox/closes", s.handleListCashCloses)
+			r.Post("/cashbox/closes", s.handleCreateCashClose)
+			r.Post("/cashbox/closes/{id}/approve", s.handleDecideCashClose(true))
+			r.Post("/cashbox/closes/{id}/reject", s.handleDecideCashClose(false))
+			r.Post("/cashbox/shortfalls/{id}/resolve", s.handleResolveShortfall)
+			r.Post("/cashbox/shortfalls/{id}/approve", s.handleDecideShortfall(true))
+			r.Post("/cashbox/shortfalls/{id}/reject", s.handleDecideShortfall(false))
+			r.Get("/approvals", s.handleApprovals)
 			// ══════════════════════════════════════════════════════════
 			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
 			// ══════════════════════════════════════════════════════════

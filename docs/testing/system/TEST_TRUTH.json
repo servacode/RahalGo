@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 426,
+    "routes": 448,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 65,
-    "notify_targeted": 23,
+    "notify_sites": 67,
+    "notify_targeted": 24,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 179,
-    "behaviour_settings": 144,
+    "setting_defs": 180,
+    "behaviour_settings": 145,
     "order_fields": 95,
-    "test_files": 486,
-    "test_funcs": 2024
+    "test_files": 490,
+    "test_funcs": 2048
   },
   "flows": [
     {
@@ -4770,6 +4770,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "ops.emergency_unacked_red_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "ops.outage_notify_min",
       "group": "platform",
       "kind": "int",
@@ -8098,6 +8116,12 @@
     {
       "name": "TestSETG3_CashAdminCompensation",
       "file": "internal/orders/cash_goods_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_MerchantCashPaidLeavesOfficeCashbox",
+      "file": "internal/orders/cash_officebox_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -24508,6 +24532,24 @@
       "orphan": true
     },
     {
+      "name": "TestRoom_ReleaseBeforePickup_EntersRoom_FreesOthers_TellsCustomer",
+      "file": "internal/server/emergency_room_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRoom_StepsInOrder_MoneyIsRequestNotPayment",
+      "file": "internal/server/emergency_room_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRoom_StoreClosure_CountStale_Halt",
+      "file": "internal/server/emergency_room_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestEveryErrorKeyHasArabicMessage",
       "file": "internal/server/error_keys_test.go",
       "package": "server",
@@ -25000,6 +25042,54 @@
       "orphan": true
     },
     {
+      "name": "TestPAYOUTS_AmountChangedIsRefused",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_CashLeavesOfficeCashbox",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_ListCardsAndRole",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_NoManualPayoutKind",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_NoSelfApproval",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_NotificationTitlePerState",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_ReasonRequired",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_ReversalHasItsOwnKind",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestCustomerPayloadCarriesNoDriverPhone",
       "file": "internal/server/phone_privacy_test.go",
       "package": "server",
@@ -25084,7 +25174,37 @@
       "orphan": true
     },
     {
-      "name": "TestProfits_NetMatchesTreasuryLedger",
+      "name": "TestProfits_FailedAndCancelledLossLine",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_InvertedRangeRejected",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_LinesReconcileToNet",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_PendingProfitOutsideNet",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_RepSeparateFromCustomers",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_WithdrawalsAndManualDepositsExcluded",
       "file": "internal/server/profits_test.go",
       "package": "server",
       "orphan": true
@@ -25416,6 +25536,48 @@
     {
       "name": "TestTextLimits_CountsLettersNotBytes",
       "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_AdminWithdrawalIsLabelledAndLeavesCashbox",
+      "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_ApprovalsPageBlocksProposer",
+      "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_DailyCloseReviewAndShortfallLoss",
+      "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_DriverSettleRefIsItsCashEntry",
+      "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_HealthRunsLedgerChecks",
+      "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_PayoutPaidAndReversedMoveOfficeCashbox",
+      "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_WalletKindsAddKeepsLiveKinds",
+      "file": "internal/server/treasury_test.go",
       "package": "server",
       "orphan": true
     },
