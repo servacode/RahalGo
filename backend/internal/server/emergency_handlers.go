@@ -229,6 +229,7 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	})
 	s.touch("order", "ops")
 	s.touch("driver", "ops")
+	s.touch("emergency", "ops")
 
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"emergency_id": emergencyID, "released": released, "duplicate": !fresh,
@@ -448,5 +449,6 @@ func (s *Server) handleResolveEmergency(w http.ResponseWriter, r *http.Request) 
 	s.audit(r, "ops.emergency_resolved", "emergency", id,
 		map[string]any{"resolution": resolution})
 	s.touch("driver", "ops")
+	s.touch("emergency", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"resolved": true})
 }

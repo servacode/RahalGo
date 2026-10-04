@@ -264,6 +264,10 @@ type ListFilter struct {
 	// في الرئيسيّة تفتح الطلباتِ عليه (قرارُ المالك ٢٠٢٦-١٠-٠٣). **وشرطُه
 	// نصُّ العدّ نفسُه** (`awaitingOfficeSQL`).
 	AwaitingOffice bool
+	// Stage **مرحلةُ الطلب الجاري** (`LiveStages`) — بطاقاتُ «الآن» في رئيسيّة
+	// المدير تفتح الطلباتِ عليها (قرارُ المالك ٢٠٢٦-١٠-٠٤). **وشرطُها نصُّ
+	// العدّ نفسُه** (`LiveStageSQL`)، ومرحلةٌ لا تُعرف تُردّ لا تُتجاهَل.
+	Stage string
 	// From وTo **مدى تاريخ الإنشاء بيوم دمشق** — `YYYY-MM-DD`، وكلاهما شاملٌ.
 	//
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٣: سجلُّ الطلبات يُرشَّح بالتاريخ والمتجر والسائق.)
@@ -398,6 +402,13 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if f.AwaitingOffice {
 		where += `
 		AND ` + awaitingOfficeSQL()
+	}
+	if f.Stage != "" {
+		if LiveStageStatuses(f.Stage) == nil {
+			return nil, errBadDateRange
+		}
+		where += `
+		AND ` + LiveStageSQL(f.Stage)
 	}
 
 	var total int

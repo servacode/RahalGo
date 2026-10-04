@@ -59,7 +59,13 @@ func (s *Server) handleListTickets(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
-	res, err := s.support.List(r.Context(), q.Get("status"), page, perPage)
+	// **والمتأخّرةُ بمهلة الإعدادات** — بطاقةُ «شكاوى متأخّرة» في رئيسيّة
+	// المدير تفتح هنا على العدد نفسِه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	f := support.TicketFilter{Status: q.Get("status")}
+	if q.Get("late") == "1" {
+		f.LateHours = s.ticketLateHours(r.Context())
+	}
+	res, err := s.support.ListFiltered(r.Context(), f, page, perPage)
 	if err != nil {
 		s.respondErr(w, err)
 		return

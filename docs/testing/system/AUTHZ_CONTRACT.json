@@ -82,6 +82,11 @@
    "guards_routes": 1
   },
   {
+   "code": "platform.overview",
+   "description": "رئيسيّةُ مدير المنصّة بأرقامها ومالِها",
+   "guards_routes": 1
+  },
+  {
    "code": "roles.manage",
    "description": "منحُ الأدوار وسحبُها",
    "guards_routes": 7
@@ -114,7 +119,7 @@
   {
    "code": "support.manage",
    "description": "التذاكرُ والنزاعاتُ والطوارئ",
-   "guards_routes": 10
+   "guards_routes": 13
   },
   {
    "code": "users.contact.read",
@@ -183,7 +188,7 @@
   }
  ],
  "route_policy": {
-  "rules": 168,
+  "rules": 172,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -202,6 +207,7 @@
    "orders.intervene",
    "orders.read",
    "payouts.decide",
+   "platform.overview",
    "roles.manage",
    "safety.manage",
    "settings.financial.manage",

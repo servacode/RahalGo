@@ -18,6 +18,7 @@ package server
 // وخمسون ألفاً منذ أسبوعٍ مسألةٌ أخرى. **والقِدَمُ هو الإشارة لا المقدار.**
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -36,7 +37,22 @@ type cashHolder struct {
 
 // handleCashOutstanding من يحمل نقداً ولم يورّده — مرتّبين بالأكبر.
 func (s *Server) handleCashOutstanding(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pg.Query(r.Context(), `
+	out, total, err := s.cashHolders(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"holders": out, "total": total, "limit": s.cashbox.Limit(r.Context()),
+	})
+}
+
+// cashHolders **من يحمل نقداً ومجموعُه** — لصفحة النقد ولرئيسيّة المدير معاً.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤: «النقد مع السائقين» في الرئيسيّة **هو رقمُ صفحة
+// النقد نفسُه** — لا جمعٌ ثانٍ من جدولٍ آخر.)
+func (s *Server) cashHolders(ctx context.Context) ([]cashHolder, int64, error) {
+	rows, err := s.pg.Query(ctx, `
 		SELECT u.id, COALESCE(u.full_name,''), u.phone,
 		       COALESCE(sum(e.amount), 0) AS held,
 		       -- **أقدمُ قبضٍ بعد آخر تسوية** — ما قبلها سُلّم فلا يُعدّ.
@@ -71,8 +87,7 @@ func (s *Server) handleCashOutstanding(w http.ResponseWriter, r *http.Request) {
 		-- **ليس أقدمَ الناس**، وفارغٌ يتصدّر في ترتيبٍ صاعدٍ بلا حارس.
 		ORDER BY oldest_at ASC NULLS LAST, held DESC`)
 	if err != nil {
-		s.respondErr(w, err)
-		return
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -82,13 +97,10 @@ func (s *Server) handleCashOutstanding(w http.ResponseWriter, r *http.Request) {
 		var x cashHolder
 		if err := rows.Scan(&x.DriverID, &x.Name, &x.Phone, &x.Held,
 			&x.OldestAt, &x.OnShift); err != nil {
-			s.respondErr(w, err)
-			return
+			return nil, 0, err
 		}
 		total += x.Held
 		out = append(out, x)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"holders": out, "total": total, "limit": s.cashbox.Limit(r.Context()),
-	})
+	return out, total, rows.Err()
 }

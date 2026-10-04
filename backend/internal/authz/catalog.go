@@ -107,6 +107,12 @@ const (
 	ContentManage Capability = "content.manage"
 	AnalyticsRead Capability = "analytics.read"
 
+	// PlatformOverview **رئيسيّةُ مدير المنصّة** — كلُّ ما يجري بأرقامه
+	// ومالِه في صفحةٍ واحدة. (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الرئيسيّة لمدير
+	// المنصّة وحدَه».) **ولا تكفي `analytics.read`**: يملكها من ليس طرفاً
+	// في المال.
+	PlatformOverview Capability = "platform.overview"
+
 	// ══════════════════════════════════════════════════════════════
 	// **وثلاثٌ أُضيفت في دورةِ ٢٥ — تفرضها مساراتٌ قائمة**
 	// ══════════════════════════════════════════════════════════════
@@ -247,6 +253,7 @@ var catalog = map[Capability]string{
 	SettingsSecurityManage:   "إعداداتُ الأمن والجلسات",
 	ContentManage:            "لافتاتٌ وعروضٌ ومحتوى",
 	AnalyticsRead:            "قراءةُ التحليلات",
+	PlatformOverview:         "رئيسيّةُ مدير المنصّة بأرقامها ومالِها",
 	SupportManage:            "التذاكرُ والنزاعاتُ والطوارئ",
 	SafetyManage:             "الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر",
 	MerchantsVerify:          "مراجعةُ المرشَّحين والقوائم",

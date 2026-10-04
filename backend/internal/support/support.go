@@ -155,22 +155,54 @@ func (s *Service) Create(ctx context.Context, actorID string, in CreateInput, ip
 	return s.Get(ctx, ticketID)
 }
 
+// TicketFilter **مُرشِّحُ قائمة الشكاوى.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤: رئيسيّةُ المدير تعدّ الشكاوى المفتوحةَ
+// والمتأخّرةَ، **وكلُّ بطاقةٍ تفتح صفحةً فيها الرقمُ نفسُه.**)
+type TicketFilter struct {
+	// Status حالٌ بعينها · أو `unresolved` لكلّ ما لم يُحلّ · وفارغٌ للكلّ.
+	Status string
+	// LateHours **متأخّرةٌ**: لم يُحلّ ولم يردّ عليها أحدٌ من المكتب
+	// (حالُها ما زال `open`) **بعد هذا العدد من الساعات** — وصفرٌ يعني بلا شرط.
+	LateHours int
+}
+
+// ticketWhere **شرطُ القائمة والعدّ نصّاً واحداً** — `$1` الحال و`$2` الساعات.
+const ticketWhere = ` WHERE ($1 = '' OR t.status = $1
+		OR ($1 = 'unresolved' AND t.status <> 'resolved'))
+	AND ($2::int = 0 OR (t.status = 'open'
+		AND t.created_at < now() - make_interval(hours => $2::int)))`
+
+// Count **كم شكوى تحت هذا المُرشِّح** — بالشرط نفسِه الذي تعرضه القائمة.
+func (s *Service) Count(ctx context.Context, f TicketFilter) (int, error) {
+	var n int
+	// **وبوصلة القائمة نفسِها** — فلا يُعدّ ما لا يُعرض.
+	err := s.db.QueryRow(ctx, `SELECT count(*) FROM tickets t
+		JOIN users cu ON cu.id = t.customer_id`+ticketWhere,
+		f.Status, f.LateHours).Scan(&n)
+	return n, err
+}
+
 func (s *Service) List(ctx context.Context, status string, page, perPage int) (*TicketPage, error) {
+	return s.ListFiltered(ctx, TicketFilter{Status: status}, page, perPage)
+}
+
+// ListFiltered القائمةُ بمُرشِّحها — انظر TicketFilter.
+func (s *Service) ListFiltered(ctx context.Context, f TicketFilter, page, perPage int) (*TicketPage, error) {
 	if page < 1 {
 		page = 1
 	}
 	if perPage < 1 || perPage > 100 {
 		perPage = 20
 	}
-	where := ` WHERE ($1 = '' OR t.status = $1)`
 
-	var total int
-	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM tickets t`+where, status).Scan(&total); err != nil {
+	total, err := s.Count(ctx, f)
+	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(ctx, ticketSelect+where+`
-		ORDER BY (t.status = 'resolved'), t.created_at DESC LIMIT $2 OFFSET $3`,
-		status, perPage, (page-1)*perPage)
+	rows, err := s.db.Query(ctx, ticketSelect+ticketWhere+`
+		ORDER BY (t.status = 'resolved'), t.created_at DESC LIMIT $3 OFFSET $4`,
+		f.Status, f.LateHours, perPage, (page-1)*perPage)
 	if err != nil {
 		return nil, err
 	}

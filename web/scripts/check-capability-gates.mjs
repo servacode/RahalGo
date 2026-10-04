@@ -202,7 +202,9 @@ const walk = (d, out = []) => {
     ["components/admin/orders/DoorPanel.tsx", 'const canResolve = can("orders.intervene")', "إنهاءُ الباب"],
     ["components/admin/orders/DoorPanel.tsx", "{canResolve && (", "زرّا الباب"],
     ["components/admin/orders/OrdersScreen.tsx", 'can("finance.manage") ? (', "رابطُ تسوية البضاعة بعد الإعادة"],
-    ["app/dashboard/page.tsx", 'can("settings.security.manage")', "حالُ واتساب في الرئيسيّة"],
+    // **وحالُ واتساب في الرئيسيّة صارت من ردّ المدير** (`/admin/overview`، قدرةُ
+    // `platform.overview`) — حالةٌ بلا رمز الربط، **ولا نداءَ لبابِ الإعداد الأمنيّ.**
+    ["app/dashboard/page.tsx", '"/api/v1/admin/overview"', "رئيسيّةُ المدير من بابها"],
     // **ورايةُ تحرير الإعداد من المحرّك لا من اسم الناظر.**
     ["app/dashboard/settings/page.tsx", "s.editable ?? false", "تحريرُ مفتاح الإعداد"],
   ];

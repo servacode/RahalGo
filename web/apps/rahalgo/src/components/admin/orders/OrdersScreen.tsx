@@ -653,6 +653,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [status, setStatus] = useState(params.get("status") ?? "");
   /** **بلاغُ سائقٍ ينتظر قرارَ المكتب** — شرطُ العدّ في الرئيسيّة نفسُه. */
   const [awaiting, setAwaiting] = useState(params.get("awaiting") === "1");
+  /** **مرحلةُ الجاري** — بطاقاتُ «الآن» في رئيسيّة المدير (٢٠٢٦-١٠-٠٤). */
+  const [stage, setStage] = useState(params.get("stage") ?? "");
   const [query, setQuery] = useState(initialQ);
   /**
    * **شاشتان لا شاشةٌ بمربّع.**
@@ -756,6 +758,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         open: live && !searching ? "1" : "",
         closed: !live && !searching ? "1" : "",
         awaiting: awaiting ? "1" : "",
+        stage: live ? stage : "",
         from: live ? "" : from,
         to: live ? "" : to,
         merchant_id: live ? "" : merchantId,
@@ -790,7 +793,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, awaiting, query, live, searching, page, from, to, merchantId, driverId]);
+  }, [status, awaiting, stage, query, live, searching, page, from, to, merchantId, driverId]);
 
   // **والرابطُ يتبع الشاشة** — `replace` لا `push`: كلُّ حرفٍ في البحث لا
   // يصير صفحةً في سجلّ المتصفّح يُرجَع إليها.
@@ -802,6 +805,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     put("q", query);
     put("status", status);
     if (awaiting) qs.set("awaiting", "1");
+    if (live) put("stage", stage);
     if (!live) {
       put("from", from);
       put("to", to);
@@ -811,7 +815,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     if (page > 1) qs.set("page", String(page));
     const next = qs.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [router, pathname, live, query, status, awaiting, from, to, merchantId, driverId, page]);
+  }, [router, pathname, live, query, status, awaiting, stage, from, to, merchantId, driverId, page]);
 
   // **وقائمتا المتجر والسائق لمن يملك قراءتهما** — وإلّا رُدّ النداءُ ٤٠٣.
   useEffect(() => {
@@ -1367,18 +1371,21 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         {/* **وشاشةُ العمل مرشَّحةً من الرئيسيّة تقول ذلك** — وإلّا ظُنّ أنّ
             الطلباتِ الأخرى اختفت. **وضغطةٌ تُعيد الكلّ.** */}
-        {live && (awaiting || status) && (
+        {live && (awaiting || status || stage) && (
           <Button
             variant="secondary"
             onClick={() => {
               setAwaiting(false);
               setStatus("");
+              setStage("");
               setPage(1);
             }}
           >
             {awaiting
               ? m.admin.ordersPage.awaitingFilter
-              : (STATUS_LABELS[status] ?? status)}
+              : stage
+                ? ((m.admin.home.stage as Record<string, string>)[stage] ?? stage)
+                : (STATUS_LABELS[status] ?? status)}
             {m.common.listSeparator}
             {m.admin.ordersPage.clearFilter}
           </Button>

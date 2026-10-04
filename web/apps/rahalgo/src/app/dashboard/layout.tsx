@@ -32,6 +32,7 @@ import {
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
+import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 
 const m = getMessages(defaultLocale);
 
@@ -58,8 +59,10 @@ const m = getMessages(defaultLocale);
 type NavItem = ChromeNavItem & { roles?: string[]; caps?: string[] };
 
 const ALL_NAV: NavItem[] = [
+  // **الرئيسيّةُ لمدير المنصّة وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فيها المالُ
+  // كلُّه، **وبقيّةُ الموظّفين يهبطون على أوّل بابٍ يملكونه** كما كانوا.
   { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard,
-    caps: ["analytics.read"] },
+    caps: ["platform.overview"] },
   // التشغيل اليومي — مشتركٌ بين الثلاثة
   { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder,
     caps: ["orders.read"] },
@@ -255,8 +258,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // **ومن هبط على بابٍ لا يملكه يُنزَل على أوّلِ ما يملك**
   // ══════════════════════════════════════════════════════════════════
   //
-  // **و«الرئيسيّة» تنادي `/admin/stats` فتُردّ ٤٠٣** لمن لا يملك
-  // `analytics.read` (قِيس) — **فمن هبط عليها رأى عطباً لا شاشة.**
+  // **و«الرئيسيّة» تنادي `/admin/overview` فتُردّ ٤٠٣** لمن لا يملك
+  // `platform.overview` — **فمن هبط عليها رأى عطباً لا شاشة.**
   //
   // **والشرطُ من القائمة لا من اسم دور**: **ما ليس في قائمته لا
   // يملكه** — **ودورٌ مخصَّصٌ يُنشَأ غداً يُنزَل على بابه بلا سطرٍ
@@ -331,6 +334,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         router.replace("/adminrahalgo");
       }}
     >
+      {/* **شريطُ الطوارئ أعلى كلّ صفحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — لمن يملكها. */}
+      {capabilities.includes("support.manage") && <EmergencyBanner />}
       {children}
     </DashboardChrome>
     </PasswordGate>
