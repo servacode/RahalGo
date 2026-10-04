@@ -40,8 +40,10 @@ import {
   IconWarning,
   Invoice,
   FormActions,
+  SearchSelect,
+  EmptyState,
 } from "@rahalgo/ui";
-import { api, ApiError, mediaUrl } from "@/lib/api";
+import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRinger } from "@/lib/ringer";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
@@ -49,6 +51,7 @@ import { DoorPanel, type DoorView } from "./DoorPanel";
 import { TransferPanel } from "./TransferPanel";
 import { AssignDialog } from "./AssignDialog";
 import { GoodsBox } from "./GoodsBox";
+import { OrderDetailPanel } from "./OrderDetailPanel";
 import {
   BoardCounters,
   DriverLine,
@@ -93,6 +96,11 @@ interface OrderRow {
   id: string;
   number: number;
   customer_phone: string;
+  /**
+   * **هاتفُ الزبون مخفيّاً جزئيّاً** — لمن لا يملك `orders.customer_details.read`
+   * (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣). **ويحجبه الخادمُ لا الشاشة.**
+   */
+  customer_phone_masked?: string;
   customer_name: string;
   /** **مسارُ المكتب** — يحسبه المحرّك، **ولا يُطوى كما يُطوى للزبون.** */
   ops_stages?: string[];
@@ -282,6 +290,8 @@ const STAGE_LABELS: Record<string, string> = m.admin.ordersPage.stage;
 /** **أسماءُ الحالات بلفظ المكتب** — لا «في الطريق إليك» (المشكلة ٢٣). */
 const OFFICE_STATUS: Record<string, string> = m.admin.ordersPage.board.status;
 const BOARD = m.admin.ordersPage.board;
+/** **نصوصُ سجلّ الطلبات** — قراراتُ المالك ٢٠٢٦-١٠-٠٤. */
+const H = m.admin.ordersPage.history;
 
 /**
  * **ما استُهلك في الوصول إلى هذه المرحلة** — منسّقاً، و`null` لا يُعرف.
@@ -740,6 +750,26 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [driverId, setDriverId] = useState(params.get("driver") ?? "");
   const [storeList, setStoreList] = useState<{ id: string; name: string }[]>([]);
   const [driverList, setDriverList] = useState<DriverRow[]>([]);
+  /**
+   * **حالُ قائمتَي المرشِّح** — كان فشلُهما أو غيابُ الصلاحية يُخفي المرشِّحَ صامتاً
+   * (سجلُّ الطلبات، المشكلة ١٩). **فيُقال لماذا غاب.**
+   */
+  const [storesState, setStoresState] = useState<"ok" | "failed" | "denied">("ok");
+  const [driversState, setDriversState] = useState<"ok" | "failed" | "denied">("ok");
+  /** **نوعُ الطلب** — عاديٌّ أو خاصٌّ أو توصيلة (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤). */
+  const [kind, setKind] = useState(params.get("kind") ?? "");
+  /** **الطلبُ المفتوحُ في اللوحة الجانبيّة** — `?order=` رابطٌ يُرسَل لزميل (البند ٤). */
+  const [panelId, setPanelId] = useState(params.get("order") ?? "");
+  /** **ما زال يُحمَّل** — كلُّ تغيير فلترٍ يقول ذلك (المشكلة ١٧). */
+  const [loading, setLoading] = useState(true);
+  /**
+   * **في طلباتٍ جديدة** — السجلُّ لا يتحدّث وحدَه (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦):
+   * يُقرأ ولا يُعمَل عليه، **وقائمةٌ تتحرّك تحت عين من يقرأ تُضيّعه.** فيُقال إنّ
+   * شيئاً تغيّر ويُحدَّث بضغطة.
+   */
+  const [stale, setStale] = useState(false);
+  const [exportErr, setExportErr] = useState("");
+  const [exporting, setExporting] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const [error, setError] = useState("");
@@ -834,7 +864,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     void loadNew();
   }, [loadNew]);
 
+  /** **مدىً مقلوب** — «من» بعد «إلى» (المشكلة ١٣). لا يُجلب ويُقال لماذا. */
+  const inverted = !live && from !== "" && to !== "" && from > to;
+
   const load = useCallback(async () => {
+    if (inverted) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     try {
       const params = new URLSearchParams({
         status,
@@ -852,6 +890,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         to: live ? "" : to,
         merchant_id: live ? "" : merchantId,
         driver_id: live ? "" : driverId,
+        // **ونوعُ الطلب** (المشكلة ٢٠) **والأعدادُ تتبع البحثَ والفلاتر** (المشكلة ٨).
+        kind: live ? "" : kind,
+        counts: live ? "" : "1",
         page: String(page),
         // **وخمسةٌ وعشرون في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يُقرأ ولا
         // يُعمَل عليه، **وصفحاتٌ أقلُّ أخفُّ على من يبحث.**
@@ -860,9 +901,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       });
       setData(await api<OrderPage>(`/api/v1/admin/orders?${params}`));
       setError("");
+      setStale(false);
     } catch (err) {
       setError(errorText(err));
     }
+    setLoading(false);
+    // **والسجلُّ لا يحتاج عدّادَ الوردية** (البند ٦) — كان يجلب السائقين كلَّهم مع كلّ حركة.
+    if (!live) return;
     // **ويُقرأ مع كلّ تحديث** — سائقٌ يفتح دوامَه أو يُغلقه لا يُنتظر تحديثُ صفحة.
     // **وعدّادُ الوردية لمن يقرأ سجلَّ السائقين** — **والماليّةُ لا
     // تقرؤه، فكان النداءُ يُردّ ٤٠٣ في كلّ فتحةِ شاشة.** (قِيس.)
@@ -883,7 +928,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, awaiting, stage, board, query, live, searching, page, from, to, merchantId, driverId]);
+  }, [status, awaiting, stage, board, query, live, searching, page, from, to, merchantId, driverId, kind, inverted]);
 
   // **والرابطُ يتبع الشاشة** — `replace` لا `push`: كلُّ حرفٍ في البحث لا
   // يصير صفحةً في سجلّ المتصفّح يُرجَع إليها.
@@ -905,26 +950,54 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       put("to", to);
       put("merchant", merchantId);
       put("driver", driverId);
+      put("kind", kind);
+      put("order", panelId);
     }
     if (page > 1) qs.set("page", String(page));
     const next = qs.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [router, pathname, live, query, status, awaiting, stage, board, focusId, from, to, merchantId, driverId, page]);
+  }, [router, pathname, live, query, status, awaiting, stage, board, focusId, from, to, merchantId, driverId, kind, panelId, page]);
 
-  // **وقائمتا المتجر والسائق لمن يملك قراءتهما** — وإلّا رُدّ النداءُ ٤٠٣.
+  // ══════════════════════════════════════════════════════════════════
+  // **وقائمتا المتجر والسائق — كاملتين، لمن يملك قراءتهما**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤، المشكلة ١.) **كانت الشاشةُ تنتظر قائمةً والمحرّكُ
+  // يردّ غلافاً `{merchants:[…]}`** فتبقى فارغةً ويختفي المرشِّح — **وأوّلَ عشرين
+  // متجراً وحدَها** ولو قُرئ. **فتُقرأ الصفحاتُ كلُّها بالغلاف.** وتُجلب مرّةً عند
+  // الفتح لا مع كلّ حركة (البند ٦).
   useEffect(() => {
     if (live) return;
-    if (can("merchants.read")) {
-      api<{ id: string; name: string }[]>("/api/v1/admin/merchants")
-        .then((r) => setStoreList(Array.isArray(r) ? r : []))
-        // @empty-ok — **قائمةُ المرشِّح عونٌ لا شرط**: بلا متجرٍ فيها يبقى السجلُّ كلُّه.
-        .catch(() => setStoreList([]));
+    if (!can("merchants.read")) {
+      setStoresState("denied");
+    } else {
+      void (async () => {
+        try {
+          const all: { id: string; name: string }[] = [];
+          for (let p = 1; p <= 50; p++) {
+            const r = await api<{ merchants: { id: string; name: string }[]; total: number }>(
+              `/api/v1/admin/merchants?per_page=100&page=${p}`,
+            );
+            const got = r.merchants ?? [];
+            all.push(...got);
+            if (all.length >= r.total || got.length === 0) break;
+          }
+          setStoreList(all);
+          setStoresState("ok");
+        } catch {
+          setStoresState("failed");
+        }
+      })();
     }
-    if (can("drivers.read")) {
+    if (!can("drivers.read")) {
+      setDriversState("denied");
+    } else {
       api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers")
-        .then((r) => setDriverList(Array.isArray(r) ? r : r.drivers))
-        // @empty-ok — **وكذلك قائمةُ السائقين.**
-        .catch(() => setDriverList([]));
+        .then((r) => {
+          setDriverList(Array.isArray(r) ? r : r.drivers);
+          setDriversState("ok");
+        })
+        .catch(() => setDriversState("failed"));
     }
   }, [live, can]);
 
@@ -946,7 +1019,53 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     },
     { id: "month", label: m.admin.ordersPage.range.month, from: `${today.slice(0, 8)}01`, to: today },
   ];
-  const filtered = from !== "" || to !== "" || merchantId !== "" || driverId !== "";
+  const filtered =
+    from !== "" || to !== "" || merchantId !== "" || driverId !== "" || kind !== "";
+  /** **امسح الفلاترَ كلَّها** — والبحثَ والحال (المشكلة ١٨). */
+  const clearAll = () => {
+    setFrom("");
+    setTo("");
+    setMerchantId("");
+    setDriverId("");
+    setKind("");
+    setStatus("");
+    setQuery("");
+    setPage(1);
+  };
+
+  /**
+   * **تصديرُ هذه القائمة** — بالفلاتر الظاهرة نفسِها (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٢).
+   * **فالرقمُ في الشاشة هو الرقمُ في الملف.** للمالك والماليّة (`finance.export`).
+   */
+  async function exportList() {
+    setExporting(true);
+    setExportErr("");
+    try {
+      const qs = new URLSearchParams();
+      const put = (k: string, v: string) => {
+        if (v) qs.set(k, v);
+      };
+      put("status", status);
+      put("query", query);
+      if (!searching) qs.set("closed", "1");
+      put("from", from);
+      put("to", to);
+      put("merchant_id", merchantId);
+      put("driver_id", driverId);
+      put("kind", kind);
+      const res = await apiFile(`/api/v1/admin/orders/export?${qs}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `orders-${from || "all"}_${to || today}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportErr(errorText(err));
+    }
+    setExporting(false);
+  }
 
   useEffect(() => {
     const t = setTimeout(load, 250);
@@ -960,13 +1079,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   // **كان فشلُ الجلب يُخفي الشريطَ كأنّ شيئاً لم يعلق.**
   const [alertsFailed, setAlertsFailed] = useState(false);
   const loadAlerts = useCallback(async () => {
+    // **ولا تنبيهاتِ تصعيدٍ في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦).
+    if (!live) return;
     try {
       setAlerts(await api<Alert[]>("/api/v1/admin/orders/alerts"));
       setAlertsFailed(false);
     } catch {
       setAlertsFailed(true);
     }
-  }, []);
+  }, [live]);
   useEffect(() => {
     void loadAlerts();
   }, [loadAlerts]);
@@ -985,10 +1106,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   }, [load, loadBoard, loadNew]);
   useLiveEvent((event) => {
     if (event.type === "order") {
+      // **والسجلُّ لا يتحدّث وحدَه** (البند ٦) — يقول «في طلبات جديدة» ويُحدَّث بضغطة.
+      if (!live) {
+        setStale(true);
+        return;
+      }
       if (pending.current) clearTimeout(pending.current);
       pending.current = setTimeout(refreshAll, 500);
     }
-    if (event.type === "alerts") {
+    if (event.type === "alerts" && live) {
       setAlerts((event.alerts as Alert[]) ?? []);
       setAlertsFailed(false);
     }
@@ -1008,12 +1134,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   // لا يصل حدثُه أبداً.
   const wasConnected = useRef(liveConnected);
   useEffect(() => {
-    if (liveConnected && !wasConnected.current) {
+    if (live && liveConnected && !wasConnected.current) {
       refreshAll();
       void loadAlerts();
     }
     wasConnected.current = liveConnected;
-  }, [liveConnected, refreshAll, loadAlerts]);
+  }, [live, liveConnected, refreshAll, loadAlerts]);
   // **وجلبٌ احتياطيٌّ كلَّ دقيقة** — العدّاداتُ والتنبيهاتُ دائماً، **والقائمةُ
   // حين تنقطع القناة.** وهو أيضاً نبضُ «في المكتب أحد» (`users.last_seen_at`)
   // الذي يقرؤه القبولُ التلقائيُّ ليلاً (البند ٨).
@@ -1191,6 +1317,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 قبل أن تبرد. **وبابٌ يُفتح في وقتٍ لا ينفع فيه** يزاحم
                 أزراراً تنفع الآن. */}
             <span className="ms-auto flex items-center gap-2">
+              {!live && (
+                <Button variant="secondary" onClick={() => setPanelId(o.id)}>
+                  {H.openDetails}
+                </Button>
+              )}
               {!live && !NO_INVOICE.has(o.status) && (
                 <InvoiceButton order={o} />
               )}
@@ -1224,6 +1355,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             seenAt={o.driver_seen_at}
             now={now}
             staleMin={staleMin}
+            hideSeen={!!o.closed_at}
           />
         ) : (
           <OfferLine
@@ -1296,8 +1428,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {/* **ولا أيقونةَ على الرقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
               **ورقمٌ بهذا الشكل لا يُقرأ إلّا هاتفا**: أربعةَ عشرَ رقماً
               تبدأ بعلامة زائد، **ورقمُ الطلب في مربّعه فوق.** */}
-          <span dir="ltr" className="shrink-0 text-xs text-ink-muted">
-            {o.customer_phone}
+          <span
+            dir="ltr"
+            className="shrink-0 text-xs text-ink-muted"
+            title={o.customer_phone ? undefined : H.maskedPhone}
+          >
+            {o.customer_phone || o.customer_phone_masked}
           </span>
         </span>
       ),
@@ -1504,18 +1640,39 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         <h1 className="heading-page flex items-center gap-2">
           <IconOrder className="text-primary" />
           {live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
-          <Badge
-            variant={liveConnected ? "success" : "danger"}
-            className="gap-1.5 py-1"
-          >
-            <span
-              className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`}
-            />
-            {liveConnected
-              ? m.admin.ordersPage.live
-              : m.admin.ordersPage.liveOff}
-          </Badge>
+          {/* **والشارةُ للشاشة الحيّة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦) —
+              السجلُّ لا يتحدّث وحدَه فلا يقول «مباشر». */}
+          {live && (
+            <Badge
+              variant={liveConnected ? "success" : "danger"}
+              className="gap-1.5 py-1"
+            >
+              <span
+                className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`}
+              />
+              {liveConnected
+                ? m.admin.ordersPage.live
+                : m.admin.ordersPage.liveOff}
+            </Badge>
+          )}
         </h1>
+        {!live && (
+          <span className="flex flex-wrap items-center gap-2">
+            {can("finance.export") && (
+              <Button
+                variant="secondary"
+                disabled={exporting || inverted}
+                title={H.exportHint}
+                onClick={() => void exportList()}
+              >
+                {H.export}
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => void load()}>
+              {H.refresh}
+            </Button>
+          </span>
+        )}
         {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
         {live && canAck && (
           <SoundButton
@@ -1553,8 +1710,24 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </Alert>
       )}
 
-      {/* تنبيهات التصعيد */}
-      {alerts.length > 0 && (
+      {!live && stale && (
+        <Alert tone="info" className="mb-4">
+          <span className="flex flex-wrap items-center gap-2">
+            {H.newStrip}
+            <Button variant="secondary" onClick={() => void load()}>
+              {H.refresh}
+            </Button>
+          </span>
+        </Alert>
+      )}
+      {exportErr && (
+        <Alert tone="warning" className="mb-4" onDismiss={() => setExportErr("")}>
+          {exportErr}
+        </Alert>
+      )}
+
+      {/* تنبيهات التصعيد — **للشاشة الحيّة وحدَها** (البند ٦). */}
+      {live && alerts.length > 0 && (
         <div className="mb-4 rounded-card border-2 border-danger-edge bg-danger-tint p-4">
           <p className="mb-2 flex items-center gap-2 font-bold text-danger">
             <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
@@ -1616,7 +1789,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
           **وفي السجلّ وحدَه**: شاشةُ العمل حالاتُها جاريةٌ كلُّها
           معروضة — **ولا حالَ منتهيةً فيها تُعَدّ.** */}
-      {!live && counts && (
+      {!live && counts && !inverted && (
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {/* ══════════════════════════════════════════════════════
               **و«الكلّ» بطاقةٌ أولى لا ضغطةٌ ثانيةٌ تُطفئ**
@@ -1726,7 +1899,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         <div className="w-full sm:w-64">
           <Input
             icon={<IconSearch />}
-            placeholder={m.admin.ordersPage.searchPlaceholder}
+            placeholder={live ? m.admin.ordersPage.searchPlaceholder : H.searchPlaceholder}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -1795,44 +1968,50 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               }}
             />
           </div>
-          {storeList.length > 0 && (
-            <div className="min-w-[10rem] flex-1 sm:w-48 sm:flex-none">
-              <Select
-                aria-label={m.admin.ordersPage.range.allStores}
+          {storesState === "ok" && storeList.length > 0 && (
+            <div className="min-w-[10rem] flex-1 sm:w-52 sm:flex-none">
+              <SearchSelect
+                ariaLabel={m.admin.ordersPage.range.allStores}
+                allLabel={m.admin.ordersPage.range.allStores}
                 value={merchantId}
-                onChange={(e) => {
-                  setMerchantId(e.target.value);
+                options={storeList.map((x) => ({ value: x.id, label: x.name }))}
+                onChange={(v) => {
+                  setMerchantId(v);
                   setPage(1);
                 }}
-              >
-                <option value="">{m.admin.ordersPage.range.allStores}</option>
-                {storeList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
           )}
-          {driverList.length > 0 && (
-            <div className="min-w-[10rem] flex-1 sm:w-48 sm:flex-none">
-              <Select
-                aria-label={m.admin.ordersPage.range.allDrivers}
+          {driversState === "ok" && driverList.length > 0 && (
+            <div className="min-w-[10rem] flex-1 sm:w-52 sm:flex-none">
+              <SearchSelect
+                ariaLabel={m.admin.ordersPage.range.allDrivers}
+                allLabel={m.admin.ordersPage.range.allDrivers}
                 value={driverId}
-                onChange={(e) => {
-                  setDriverId(e.target.value);
+                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
+                onChange={(v) => {
+                  setDriverId(v);
                   setPage(1);
                 }}
-              >
-                <option value="">{m.admin.ordersPage.range.allDrivers}</option>
-                {driverList.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.full_name || d.phone}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
           )}
+          {/* **ونوعُ الطلب** — والطلباتُ الخاصّةُ لحالها (المشكلة ٢٠). */}
+          <div className="min-w-[9rem] flex-1 sm:w-44 sm:flex-none">
+            <Select
+              aria-label={H.kindAll}
+              value={kind}
+              onChange={(e) => {
+                setKind(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">{H.kindAll}</option>
+              <option value="standard">{H.kindStandard}</option>
+              <option value="custom">{H.kindCustom}</option>
+              <option value="merchant_delivery">{H.kindDelivery}</option>
+            </Select>
+          </div>
           {filtered && (
             <Button
               variant="secondary"
@@ -1841,13 +2020,38 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 setTo("");
                 setMerchantId("");
                 setDriverId("");
+                setKind("");
                 setPage(1);
               }}
             >
               {m.admin.ordersPage.range.clear}
             </Button>
           )}
+          {/* **والتاريخُ تاريخُ إنشاء الطلب بيوم دمشق** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١)
+              — كالساعة المكتوبة على البطاقة. */}
+          <p className="w-full text-2xs text-ink-muted">{H.byOrderTime}</p>
+          {/* **وما غاب من المرشِّحات يُقال لماذا** (المشكلة ١٩). */}
+          {(storesState !== "ok" || driversState !== "ok") && (
+            <p className="w-full text-2xs text-ink-muted">
+              {[
+                storesState === "denied" ? H.noStoresPerm : storesState === "failed" ? H.storesFailed : "",
+                driversState === "denied"
+                  ? H.noDriversPerm
+                  : driversState === "failed"
+                    ? H.driversFailed
+                    : "",
+              ]
+                .filter(Boolean)
+                .join(m.common.listSeparator)}
+            </p>
+          )}
         </div>
+      )}
+
+      {inverted && (
+        <Alert tone="warning" className="mb-4">
+          {H.invertedRange}
+        </Alert>
       )}
 
       {error && (
@@ -1913,9 +2117,26 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </Alert>
       )}
 
+      {/* **والخطأُ وحدَه لا «لا طلبات» تحته** (المشكلة ١٦) · **وفراغُ الفلتر يقول
+          «امسح الفلاتر»** (المشكلة ١٨) · **والمدى المقلوبُ لا قائمةَ له.** */}
+      {inverted || (error && !(data?.orders.length ?? 0)) ? null : !live &&
+        !loading &&
+        data &&
+        data.orders.length === 0 ? (
+        <EmptyState
+          title={filtered || searching || status ? H.emptyFiltered : H.emptyAll}
+          action={
+            filtered || searching || status ? (
+              <Button variant="secondary" onClick={clearAll}>
+                {H.clearFilters}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
       <DataView
-        items={data?.orders ?? []}
-        loading={data === null && !error}
+        items={!live && loading ? [] : (data?.orders ?? [])}
+        loading={live ? data === null && !error : loading}
         getKey={(o) => o.id}
         columns={columns}
         // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ
@@ -2003,8 +2224,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           />
         )}
       />
+      )}
 
-      {data && (
+      {!live && panelId && (
+        <OrderDetailPanel orderId={panelId} onClose={() => setPanelId("")} />
+      )}
+
+      {data && !inverted && (
         /* ══════════════════════════════════════════════════════════
            **ولا سطرَ إجماليٍّ تحت القائمة**
            ══════════════════════════════════════════════════════════

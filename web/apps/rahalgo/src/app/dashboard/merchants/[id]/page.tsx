@@ -260,7 +260,9 @@ export default function MerchantProfilePage() {
            هنا يجعل زرّاً يُصلَح في موضعٍ ويبقى معطوباً في الآخر.** */
         <div className="surface p-6 text-center">
           <p className="mb-3 text-sm text-ink-muted">{P.ordersHint}</p>
-          <Button onClick={() => router.push(`/dashboard/history?q=${encodeURIComponent(mr.name)}`)}>
+          {/* **بمعرّف المتجر لا باسمه** (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤، المشكلة ٢) — البحثُ
+              لا يعرف أسماءَ المتاجر، فكان يفتح سجلّاً فارغاً دائماً. */}
+          <Button onClick={() => router.push(`/dashboard/history?merchant=${encodeURIComponent(mr.id)}`)}>
             {P.openOrders}
           </Button>
         </div>

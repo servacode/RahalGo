@@ -215,6 +215,15 @@ const (
 	// **وعنوانُ الطلب في الطلب** — **وهذا دفترُ بيوته كلِّها.**
 	// **ومن يوزّع طلباً قائماً لا يحتاجه.**
 	UsersSensitiveRead Capability = "users.sensitive.read"
+
+	// OrdersCustomerDetailsRead **هاتفُ زبون الطلب وموقعُ بابه وصورةُ تسليمه.**
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — سجلُّ الطلبات، البند ٣: «للمالك والعمليّات وخدمة
+	// الزبائن وحدَهم، والباقي يرى الهاتفَ مخفيّاً جزئيّاً بلا إحداثيّاتٍ ولا صورة».)
+	//
+	// **ولا تُخلَط بـ`users.contact.read`**: تلك رقمُ حسابٍ يُتّصل عليه، **وهذه
+	// تفاصيلُ طلبٍ بعينه** — والثقةُ والأمانُ يملكان الأولى ولا يملكان هذه.
+	OrdersCustomerDetailsRead Capability = "orders.customer_details.read"
 )
 
 // FieldPolicy **معجمُ الحقول المحميّة وقدرةُ كلٍّ** — `XG-42`.
@@ -240,6 +249,11 @@ var FieldPolicy = map[string]Capability{
 	"user_phone":      UsersContactRead,
 	"owner_phone":     UsersContactRead,
 	"sales_rep_phone": UsersContactRead,
+
+	// **وصورةُ إثبات التسليم** — صورةُ باب بيت الزبون (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+	// **والإحداثيّاتُ وهاتفُ الطلب يُشكَّلان في بابه** (`order_details_privacy.go`):
+	// `lat` و`lng` أسماءٌ عامّةٌ للمتاجر والمناطق فلا تُحجَب هنا.
+	"proof_url": OrdersCustomerDetailsRead,
 	// **ولا يُدرَج `merchant_phone`**: هاتفُ المتجرِ يُكشَف للسائق عمداً
 	// ليتّصل بالمطعم — بابٌ مقصودٌ لا تسريب.
 }
@@ -277,6 +291,9 @@ var catalog = map[Capability]string{
 	OrdersCommunicationsRead: "قراءةُ محادثات الطلب ورسائله",
 	UsersContactRead:         "قراءةُ رقم الاتّصال",
 	UsersSensitiveRead:       "قراءةُ عناوين المرء وأثرِه",
+
+	// سجلُّ الطلبات (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+	OrdersCustomerDetailsRead: "هاتفُ زبون الطلب وموقعُه وصورةُ تسليمه",
 }
 
 // Known **أهذه قدرةٌ مسجَّلة؟** — **ومجهولُها يُمنَع.**

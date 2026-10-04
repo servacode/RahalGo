@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
@@ -282,10 +284,159 @@ type ListFilter struct {
 	//
 	// **واليومُ يومُ أهله لا يومُ غرينتش** — كما في أرقام الرئيسيّة: بفارق
 	// الثلاث ساعات تقع طلباتُ الليل في يومٍ آخر. **وفارغٌ يعني «بلا حدّ».**
-	From    string
-	To      string
-	Page    int
-	PerPage int
+	From string
+	To   string
+	// Kind **نوعُ الطلب** — `standard` · `custom` · `merchant_delivery`، وفارغُه الكلّ.
+	//
+	// (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤: «لا طريقةَ تجيب الطلباتِ الخاصّة لحالها».)
+	Kind string
+	// AnySource **المتجرُ مصدرٌ في الطلب لا صاحبُه الأوّلُ وحدَه** — للإدارة.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٧: الطلبُ متعدّدُ المصادر يظهر تحت كلّ
+	// متجرٍ شارك فيه.) **وبوّابةُ المتجر لا تطلبه** — سجلُّه ما باعه هو.
+	AnySource bool
+	// WithCounts **أعدادُ الحالات بالشرط نفسِه** — تتبع البحثَ والفلاتر.
+	WithCounts bool
+	Page       int
+	PerPage    int
+}
+
+// errDateRangeInverted **«من» بعد «إلى»** — يُردّ ولا يُعرض سجلٌّ فارغٌ صامت.
+var errDateRangeInverted = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+// listKinds أنواعُ الطلب التي يُرشَّح بها.
+var listKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true}
+
+// validUUID **أهو معرّفٌ صالح؟** — فلا يُصبّ نصٌّ فاسدٌ `uuid` فيسقط الاستعلام.
+func validUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i, r := range s {
+		switch i {
+		case 8, 13, 18, 23:
+			if r != '-' {
+				return false
+			}
+		default:
+			if !strings.ContainsRune("0123456789abcdefABCDEF", r) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ListWhere **شرطُ القائمة كلُّه إلّا الحال** — نصٌّ واحدٌ للقائمة والعدّ والتصدير.
+//
+// (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤.) **يُكتب على الأسماء المستعارة `o` و`cu` و`mr`**،
+// ومن قرأ به (التصدير) ضمّها بأسمائها — **فالرقمُ في الشاشة هو الرقمُ في الملف.**
+//
+// # ولا تحويلَ لنصّ
+//
+// **كانت المقارناتُ `o.merchant_id::text = $2`** — والتحويلُ يُعطّل الفهارس.
+// **والشرطُ يُبنى بما طُلب وحدَه**، لا `($2 = ” OR …)` لكلّ فلتر: **الخطّةُ
+// تُبنى للمُرشِّح الحاضر.** ومعرّفٌ فاسدٌ لا يطابق شيئاً كما كان.
+func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
+	if !validDay(f.From) || !validDay(f.To) {
+		return "", nil, errBadDateRange
+	}
+	if f.From != "" && f.To != "" && f.From > f.To {
+		return "", nil, errDateRangeInverted
+	}
+	if f.Kind != "" && !listKinds[f.Kind] {
+		return "", nil, errBadDateRange
+	}
+	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+	var b strings.Builder
+	b.WriteString(` WHERE TRUE`)
+	and := func(cond string) {
+		b.WriteString("\n\t\tAND ")
+		b.WriteString(cond)
+	}
+	byID := func(col, id string) {
+		if !validUUID(id) {
+			and(`FALSE`)
+			return
+		}
+		and(col + ` = ` + arg(id) + `::uuid`)
+	}
+	if f.MerchantID != "" {
+		if f.AnySource && validUUID(f.MerchantID) {
+			// **وأيُّ متجرٍ شارك** (البند ٧) — صاحبُ الطلب أو مصدرُ صنفٍ فيه.
+			p := arg(f.MerchantID)
+			and(`(o.merchant_id = ` + p + `::uuid OR EXISTS (SELECT 1 FROM order_items oi
+			     WHERE oi.order_id = o.id AND oi.merchant_id = ` + p + `::uuid))`)
+		} else {
+			byID(`o.merchant_id`, f.MerchantID)
+		}
+	}
+	if f.CustomerID != "" {
+		byID(`o.customer_id`, f.CustomerID)
+	}
+	if f.DriverID != "" {
+		byID(`o.driver_id`, f.DriverID)
+	}
+	// **وصاحبُ المتجر يجمع متاجرَه كلَّها** — (٢٠٢٦-٠٨-١٦). **والضمُّ يساريٌّ**
+	// فلا يُسقط الطلبَ الخاصَّ حين لا يُطلب هذا الشرط.
+	if f.OwnerID != "" {
+		byID(`mr.owner_user_id`, f.OwnerID)
+	}
+	if t := NormalizeSearch(f.Query); t != (SearchTerms{}) {
+		var or []string
+		if t.Number > 0 {
+			or = append(or, `o.number = `+arg(t.Number))
+		}
+		if t.Phone != "" {
+			or = append(or, `COALESCE(cu.phone::text, o.recipient_phone, '') LIKE '%' || `+
+				arg(EscapeLike(t.Phone))+` || '%' ESCAPE '\'`)
+		}
+		if t.Name != "" {
+			or = append(or, `COALESCE(cu.full_name, o.recipient_name, '') ILIKE '%' || `+
+				arg(t.Name)+` || '%' ESCAPE '\'`)
+		}
+		and(`(` + strings.Join(or, ` OR `) + `)`)
+	}
+	if f.OpenOnly {
+		and(`o.closed_at IS NULL`)
+	}
+	if f.ClosedOnly {
+		and(`o.closed_at IS NOT NULL`)
+	}
+	// **ومدى التاريخ بيوم دمشق** — يومُ إنشاء الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١).
+	if f.From != "" {
+		and(`o.created_at >= (` + arg(f.From) + `::date::timestamp AT TIME ZONE 'Asia/Damascus')`)
+	}
+	if f.To != "" {
+		and(`o.created_at < ((` + arg(f.To) + `::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')`)
+	}
+	if f.Kind != "" {
+		and(`o.kind = ` + arg(f.Kind))
+	}
+	if f.SalesOnly {
+		and(`o.kind <> 'merchant_delivery'`)
+	}
+	if f.AwaitingOffice {
+		and(awaitingOfficeSQL())
+	}
+	if f.Stage != "" {
+		if LiveStageStatuses(f.Stage) == nil {
+			return "", nil, errBadDateRange
+		}
+		and(LiveStageSQL(f.Stage))
+	}
+	if f.Board != "" {
+		cond, ok := BoardFilterSQL(f.Board, lim)
+		if !ok {
+			return "", nil, errBadBoardFilter
+		}
+		and(cond)
+	}
+	return b.String(), args, nil
 }
 
 // errBadDateRange **تاريخٌ لا يُقرأ** — يُردّ ولا يُتجاهَل: **مُرشِّحٌ يسقط
@@ -384,55 +535,20 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if f.PerPage < 1 || f.PerPage > 100 {
 		f.PerPage = 20
 	}
-	if !validDay(f.From) || !validDay(f.To) {
-		return nil, errBadDateRange
-	}
-	where := ` WHERE ($1 = '' OR o.status = $1)
-		AND ($2 = '' OR o.merchant_id::text = $2)
-		AND ($3 = '' OR o.customer_id::text = $3)
-		AND ($4 = '' OR o.driver_id::text = $4)
-		AND ($5 = '' OR o.number::text = $5 OR COALESCE(cu.phone, o.recipient_phone) ILIKE '%'||$5||'%')
-		AND (NOT $6 OR o.closed_at IS NULL)
-		AND (NOT $7 OR o.closed_at IS NOT NULL)
-		-- **وصاحبُ المتجر يجمع متاجرَه كلَّها** — (٢٠٢٦-٠٨-١٦).
-		--
-		-- **والضمُّ يساريٌّ فوقه** فلا يُسقط الطلبَ الخاصَّ حين
-		-- لا يُطلب هذا الشرط. **وشرطٌ على عمودٍ من ضمٍّ يساريٍّ يُقصي
-		-- بلا متجرٍ بذاته** — وهو ما نريد هنا بالضبط.
-		AND ($8 = '' OR mr.owner_user_id::text = $8)
-		-- **ومدى التاريخ بيوم دمشق** — وNULLIF لا OR وحدَها: Postgres لا
-		-- يَعِد بترتيب الشرطين، **وفراغٌ يُصبّ تاريخاً يُسقط الاستعلامَ كلَّه.**
-		AND ($9 = '' OR o.created_at >=
-		     (NULLIF($9, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
-		AND ($10 = '' OR o.created_at <
-		     ((NULLIF($10, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))`
-	if f.SalesOnly {
-		where += `
-		AND o.kind <> 'merchant_delivery'`
-	}
-	if f.AwaitingOffice {
-		where += `
-		AND ` + awaitingOfficeSQL()
-	}
-	if f.Stage != "" {
-		if LiveStageStatuses(f.Stage) == nil {
-			return nil, errBadDateRange
-		}
-		where += `
-		AND ` + LiveStageSQL(f.Stage)
-	}
 	// **والمهلُ تُقرأ مرّةً للنداء** — للفلتر وللترتيب معاً.
 	var lim StuckLimits
 	if f.Board != "" || f.Priority {
 		lim = s.StuckLimitsOf(ctx)
 	}
-	if f.Board != "" {
-		cond, ok := BoardFilterSQL(f.Board, lim)
-		if !ok {
-			return nil, errBadBoardFilter
-		}
-		where += `
-		AND ` + cond
+	base, args, err := ListWhere(f, lim)
+	if err != nil {
+		return nil, err
+	}
+	// **والحالُ آخرُ الشروط** — فتُعدّ الحالاتُ بالشرط نفسِه بدونه (أسفل).
+	where, wargs := base, append([]any{}, args...)
+	if f.Status != "" {
+		wargs = append(wargs, f.Status)
+		where += ` AND o.status = $` + strconv.Itoa(len(wargs))
 	}
 	orderBy := `o.created_at DESC`
 	if f.Priority {
@@ -443,16 +559,14 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if err := s.db.QueryRow(ctx, `
 		SELECT count(*) FROM orders o
 		LEFT JOIN users cu ON cu.id = o.customer_id
-		LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where,
-		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.ClosedOnly, f.OwnerID, f.From, f.To).Scan(&total); err != nil {
+		LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where, wargs...).Scan(&total); err != nil {
 		return nil, err
 	}
 
+	largs := append(append([]any{}, wargs...), f.PerPage, (f.Page-1)*f.PerPage)
 	rows, err := s.db.Query(ctx, orderSelect+where+`
-		ORDER BY `+orderBy+` LIMIT $11 OFFSET $12`,
-		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.ClosedOnly, f.OwnerID, f.From, f.To, f.PerPage, (f.Page-1)*f.PerPage)
+		ORDER BY `+orderBy+` LIMIT $`+strconv.Itoa(len(wargs)+1)+` OFFSET $`+strconv.Itoa(len(wargs)+2),
+		largs...)
 	if err != nil {
 		return nil, err
 	}
@@ -494,19 +608,20 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	// **فتقول البطاقةُ اثنين وتعرض القائمةُ ثلاثة** — ولا أحدَ يعرف
 	// أيُّهما الصواب.
 	//
-	// **والحالُ يُمرَّر فارغاً** فيسقط شرطُه وحدَه (`$1 = ''`) — وهو
-	// بالضبط ما نريد: **عدٌّ لا يراه الترشيح.**
+	// **والحالُ لا يدخل `base`** — يُضاف للقائمة وحدَها، وهو بالضبط ما نريد:
+	// **عدٌّ لا يراه ترشيحُ الحال.**
 	//
 	// **وللمنتهية وحدَها**: شاشةُ العمل لا حالَ منتهيةً فيها،
 	// **واستعلامٌ يردّ أصفاراً كلَّها نداءٌ بلا جواب.**
-	if f.ClosedOnly {
+	// **وتتبع البحثَ والفلاترَ دائماً** (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤، البند «البطاقاتُ
+	// تتبع البحث»): كانت تُحسب للمنتهية وحدَها **فتقول «الكلّ 179» والقائمةُ فيها
+	// طلبٌ واحد** وقت البحث. **و`WithCounts` يطلبها صراحةً.**
+	if f.ClosedOnly || f.WithCounts {
 		cRows, err := s.db.Query(ctx, `
 			SELECT o.status, count(*) FROM orders o
 			LEFT JOIN users cu ON cu.id = o.customer_id
-			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where+`
-			GROUP BY o.status`,
-			"", f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-			f.ClosedOnly, f.OwnerID, f.From, f.To)
+			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+base+`
+			GROUP BY o.status`, args...)
 		if err != nil {
 			return nil, err
 		}

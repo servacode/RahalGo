@@ -121,6 +121,70 @@ export function Sheet({
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  Drawer — لوحةٌ جانبيّةٌ فوق القائمة
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * **لوحةٌ جانبيّةٌ تُفتح فوق القائمة ولا تُضيّع موضعَك فيها.**
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٤ — سجلُّ الطلبات، البند ٤: «الضغطُ على الطلب يفتح
+ * لوحةً جانبيّة».) **تلتصق بطرف البداية** (يميناً في العربيّة) بعرضٍ ثابتٍ على
+ * الواسع، **وعلى الجوّال تملأ الشاشة.** والقائمةُ خلفها باقيةٌ كما تركتها.
+ */
+export function Drawer({
+  open,
+  onClose,
+  title,
+  children,
+  actions,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  /** أزرارٌ صغيرةٌ بجانب العنوان — نسخُ الرابط مثلاً. */
+  actions?: ReactNode;
+}) {
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[65] flex justify-start scrim" onClick={onClose}>
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={id}
+        onClick={(e) => e.stopPropagation()}
+        className="surface-sheet flex h-full w-full flex-col sm:max-w-xl"
+      >
+        <div className="flex shrink-0 items-start gap-2 border-b border-line-soft px-5 py-3">
+          <h2 id={id} className="heading-card min-w-0 flex-1">
+            {title}
+          </h2>
+          {actions}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={m.common.close}
+            className="-me-1 shrink-0 rounded-control p-1.5 text-ink-muted transition-colors hover:text-ink"
+          >
+            <IconClose size={18} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+      </aside>
+    </div>,
+    document.body,
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Tooltip
 // ══════════════════════════════════════════════════════════════════════
 
