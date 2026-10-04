@@ -264,7 +264,7 @@ func TestOverview_CountsMatchTheirPages(t *testing.T) {
 		}
 	}
 	eq("بلاغات", a.ReportsWaiting, page(srv.handleListOrders, "/x?awaiting=1&open=1&per_page=1"))
-	eq("بلا سائق", a.OrdersUnassigned, page(srv.handleListOrders, "/x?status=dispatching&open=1&per_page=1"))
+	eq("بلا سائق", a.OrdersUnassigned, page(srv.handleListOrders, "/x?filter="+orders.BoardNoDriver+"&per_page=1"))
 	eq("طوارئ", a.EmergenciesOpen, page(srv.handleOpenEmergencies, "/x"))
 	eq("تعويضات", a.CompensationsPending, page(srv.handlePendingCompensations, "/x"))
 	eq("سحوبات", a.PayoutsPending, page(srv.handleAdminPayouts, "/x?status=pending"))

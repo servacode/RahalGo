@@ -2,7 +2,10 @@ package orders
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -22,6 +25,11 @@ type Alert struct {
 	// **وكان الرقمُ يُرسل مرّةً فيبقى «منذ ٣٢٣ دقيقة» ساعاتٍ** — الراصدُ لا
 	// يبثّ إلّا إن تبدّلت القائمة.
 	Since time.Time `json:"since"`
+	// AckedAt **متى ضغط موظّفٌ «أنا عليه»** — والفارغُ لم يضغط أحد، فالتذكيرُ
+	// يتكرّر (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٤).
+	AckedAt *time.Time `json:"acked_at"`
+	// Reminders **كم مرّةً ذُكّر المكتبُ بالسبب نفسِه** بعد الإنذار الأوّل.
+	Reminders int `json:"reminders"`
 }
 
 // Alerts يفحص الطلبات العالقة وفق المهل الديناميكية (PLAN §6.1).
@@ -43,7 +51,10 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 			-- **والخاصُّ لا متجرَ له** — فاسمُه طلبٌ خاصٌّ لا NULL.
 			COALESCE(m.name, 'طلبٌ خاصّ') AS merchant_name, COALESCE(cu.phone, o.recipient_phone, ''),
 			r.reason, r.since,
-			round(EXTRACT(EPOCH FROM now() - r.since) / 60)
+			round(EXTRACT(EPOCH FROM now() - r.since) / 60),
+			-- **«أنا عليه» تخصّ السببَ الذي أُنذر به** — سببٌ جديدٌ لم يستلمه أحد.
+			CASE WHEN o.alerted_reason IS NOT DISTINCT FROM r.reason THEN o.alert_ack_at END,
+			CASE WHEN o.alerted_reason IS NOT DISTINCT FROM r.reason THEN o.alert_repeats ELSE 0 END
 		FROM orders o
 		CROSS JOIN LATERAL (SELECT `+StuckReasonSQL(l)+` AS reason,
 		                           `+StuckSinceSQL(l)+` AS since) r
@@ -60,7 +71,7 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 	for rows.Next() {
 		var a Alert
 		if err := rows.Scan(&a.OrderID, &a.Number, &a.Status, &a.MerchantName,
-			&a.CustomerPhone, &a.Reason, &a.Since, &a.Minutes); err != nil {
+			&a.CustomerPhone, &a.Reason, &a.Since, &a.Minutes, &a.AckedAt, &a.Reminders); err != nil {
 			return nil, err
 		}
 		alerts = append(alerts, a)
@@ -99,6 +110,12 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 				s.logger.Error("watchdog scan failed", "error", err)
 				continue
 			}
+			// **والإنذارُ في كلّ نبضة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة
+			// التشغيل»، البند ٤): التذكيرُ يحين بالوقت لا بتبدّل القائمة،
+			// **والقاعدةُ تقرّر من يستحقّه** (`escalateOne`) — فلا تكرارَ قبل وقته.
+			if len(alerts) > 0 {
+				s.escalate(ctx, alerts)
+			}
 			key := ""
 			for _, a := range alerts {
 				key += a.OrderID + a.Reason + "|"
@@ -110,7 +127,6 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 			s.pub.Publish("ops", map[string]any{"type": "alerts", "alerts": alerts})
 			if len(alerts) > 0 {
 				s.logger.Warn("watchdog escalation", "count", len(alerts))
-				s.escalate(ctx, alerts)
 			}
 		}
 	}
@@ -186,16 +202,48 @@ func (s *Service) escalateOne(ctx context.Context, a Alert) {
 	// كان `alerted_at IS NULL` — **مرّةً للطلب كلِّه**: طلبٌ أُنذر لأنّه لم يُقبل
 	// ثمّ علق «بلا سائق» لا يصل عنه إنذارٌ ثانٍ. **والسببُ يُحفظ مع الوسم**،
 	// والسببُ نفسُه لا يُنذَر مرّتين.
-	tag, err := tx.Exec(ctx,
-		`UPDATE orders SET alerted_at = now(), alerted_reason = $2
-		  WHERE id = $1 AND (alerted_at IS NULL OR alerted_reason IS DISTINCT FROM $2)`,
-		a.OrderID, a.Reason)
+	// ══════════════════════════════════════════════════════════════════
+	// **والتذكيرُ يتكرّر حتّى يتصرّف أحد** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كان الإنذارُ مرّةً للسبب — **فمن لم يرَه ترك ‎#1400‎ عالقاً خمسَ ساعات.**
+	// وصار السببُ نفسُه يُعاد كلَّ `ops.stuck_reminder_min` دقيقة **ما لم**:
+	//
+	//	تتغيّر حالةُ الطلب منذ آخر إنذار   (alerted_status)
+	//	يتغيّر سائقُه                     (alerted_driver_id)
+	//	يضغط موظّفٌ «أنا عليه»             (alert_ack_at)
+	//
+	// **والسببُ الجديدُ كما كان**: إنذارٌ فوراً، ويمسح «أنا عليه» القديمة.
+	// **والطارئُ لا يُكرَّر من هنا** — له شريطُه وصوتُه حتّى يُستلَم.
+	// **وما أُنذر قبل هذه الأعمدة** (`alerted_status` فارغ) يُذكَّر به — لا نعرف
+	// أتغيّر أم لا، **وتذكيرٌ زائدٌ أهونُ من طلبٍ منسيّ.**
+	every := s.settingInt(ctx, "ops.stuck_reminder_min")
+	var repeats int
+	err = tx.QueryRow(ctx,
+		`UPDATE orders SET alerted_at = now(), alerted_reason = $2,
+		        alerted_status = status, alerted_driver_id = driver_id,
+		        alert_repeats = CASE WHEN alerted_at IS NOT NULL
+		                              AND alerted_reason IS NOT DISTINCT FROM $2
+		                             THEN alert_repeats + 1 ELSE 0 END,
+		        alert_ack_at = CASE WHEN alerted_reason IS DISTINCT FROM $2
+		                            THEN NULL ELSE alert_ack_at END,
+		        alert_ack_by = CASE WHEN alerted_reason IS DISTINCT FROM $2
+		                            THEN NULL ELSE alert_ack_by END
+		  WHERE id = $1 AND (alerted_at IS NULL OR alerted_reason IS DISTINCT FROM $2
+		        OR ($3::int > 0 AND $2 <> '`+StuckEmergency+`'
+		            AND alerted_at < now() - make_interval(mins => $3::int)
+		            AND alert_ack_at IS NULL
+		            AND (alerted_status IS NULL
+		                 OR (alerted_status = status
+		                     AND alerted_driver_id IS NOT DISTINCT FROM driver_id))))
+		  RETURNING alert_repeats`,
+		a.OrderID, a.Reason, every).Scan(&repeats)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return // أُنذر سابقاً — ولم يحِن التذكير
+	}
 	if err != nil {
 		s.logger.Error("watchdog: تعذّر وسم الإنذار", "order", a.OrderID, "error", err)
 		return
-	}
-	if tag.RowsAffected() == 0 {
-		return // أُنذر سابقاً
 	}
 	// **والطارئُ أُنذر لحظةَ وقوعه** (`handleDriverEmergency`) — فيُوسَم ولا
 	// يُعاد إنذارُه من الراصد.
@@ -207,7 +255,7 @@ func (s *Service) escalateOne(ctx context.Context, a Alert) {
 	}
 	in := notifications.Input{
 		Kind:     notifications.KindOrder,
-		Title:    alertTitles[a.Reason],
+		Title:    alertTitle(a.Reason, repeats),
 		Body:     a.MerchantName,
 		Entity:   "order",
 		EntityID: a.OrderID,
@@ -269,6 +317,37 @@ var alertTitles = map[string]string{
 	StuckNotSent:  "طلبٌ مقبولٌ لم يُرسَل للمتجر",
 	StuckNoDriver: "طلبٌ بلا سائق",
 	StuckTooLong:  "طلبٌ تأخّر عن موعده",
+}
+
+// reminderPrefix **يسبق عنوانَ التذكير** — فيُعرف أنّه الطلبُ نفسُه لم يتحرّك.
+const reminderPrefix = "تذكير: "
+
+// alertTitle **عنوانُ الإنذار** — والتذكيرُ بالسبب نفسِه يُقال تذكيراً.
+func alertTitle(reason string, repeats int) string {
+	if repeats > 0 {
+		return reminderPrefix + alertTitles[reason]
+	}
+	return alertTitles[reason]
+}
+
+// AckAlert **«أنا عليه» على طلبٍ عالق** — يوقف تكرارَ التذكير بسببه الحاليّ
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٤).
+//
+// **ولا يُغلق شيئاً ولا يُخفي الطلبَ من قائمة العالق** — يقول «رآه أحدٌ وهو
+// عليه». **وسببٌ جديدٌ يمسحها** فيُنذَر المكتبُ من جديد. ويُردّ `false` لطلبٍ
+// لم يُنذَر بعد أو أُغلق أو استُلم سلفاً.
+func (s *Service) AckAlert(ctx context.Context, orderID, actorID string) (bool, error) {
+	tag, err := s.db.Exec(ctx, `
+		UPDATE orders SET alert_ack_at = now(), alert_ack_by = NULLIF($2, '')::uuid
+		 WHERE id = $1 AND closed_at IS NULL AND alerted_at IS NOT NULL
+		   AND alert_ack_at IS NULL`, orderID, actorID)
+	if err != nil {
+		return false, err
+	}
+	if tag.RowsAffected() > 0 && s.pub != nil {
+		s.pub.Publish("ops", map[string]any{"type": "order"})
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // autoAcceptNote **يُكتب في سجلّ الطلب** — فيُعرف أنّ يداً لم تقبله.

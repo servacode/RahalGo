@@ -332,6 +332,11 @@ func run(logger *slog.Logger) error {
 			// للأبد. (قرارُ المالك ٢٠٢٦-١٠-٠٤.) **وستُّ ساعاتٍ تكفي**: يومٌ
 			// زائدٌ في سطر دخولٍ لا يضرّ.
 			go srv.RunAuditRetention(ctx, 6*time.Hour)
+
+			// **وراصدُ الخادم** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»،
+			// البند ٣): **يقيس كلَّ نصف دقيقة** فيظهر الشريطُ الأحمر، ويُشعر
+			// المالكَ إن طال العطب. **ولا يُغني عن مراقبٍ من خارج الخادم.**
+			go srv.RunOpsWatch(ctx, 30*time.Second)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

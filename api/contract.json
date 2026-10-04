@@ -2017,7 +2017,39 @@
       "capability": "observability.read",
       "response": [
         {
-          "name": "@out",
+          "name": "@collectOps",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops/monitor",
+      "handler": "handleOpsMonitor",
+      "auth": true,
+      "capability": "orders.read",
+      "response": [
+        {
+          "name": "@buildOpsMonitor",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops/status",
+      "handler": "handleOpsStatus",
+      "auth": true,
+      "capability": "«بحسب المفتاح»",
+      "response": [
+        {
+          "name": "@systemWords",
           "type": "unknown"
         }
       ],
@@ -2094,6 +2126,26 @@
       "handler": "handleGetOrder",
       "auth": true,
       "capability": "orders.read",
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/alert-ack",
+      "handler": "handleAlertAck",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "acked",
+          "type": "bool"
+        },
+        {
+          "name": "changed",
+          "type": "unknown"
+        }
+      ],
       "statuses": [
         "StatusOK"
       ]

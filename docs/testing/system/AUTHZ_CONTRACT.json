@@ -79,12 +79,12 @@
   {
    "code": "orders.intervene",
    "description": "تدخّلٌ في طلبٍ نيابةً عن طرفه",
-   "guards_routes": 11
+   "guards_routes": 12
   },
   {
    "code": "orders.read",
    "description": "قراءةُ الطلبات ولوحةِ العمليّات",
-   "guards_routes": 11
+   "guards_routes": 12
   },
   {
    "code": "payouts.decide",
@@ -198,7 +198,7 @@
   }
  ],
  "route_policy": {
-  "rules": 187,
+  "rules": 189,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -234,6 +234,10 @@
   ]
  },
  "exemptions": [
+  {
+   "pattern": "/ops/status",
+   "reason": "**حالُ الخادم بكلمات لكلّ موظّف** — الشريطُ الأحمرُ أعلى اللوحة؛ يكفيه `RequireAnyCapability`، **ولا رقمَ ولا سببَ تقنيّاً في ردّه.**"
+  },
   {
    "pattern": "/settings/{key}",
    "reason": "**القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`)."

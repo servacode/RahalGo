@@ -285,8 +285,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `orders.unattended_auto_accept_min` و`orders.staff_presence_min`.
 	// **وواحدٌ أُضيف بمدّة حفظ سطور الدخول** (قرارُ المالك ٢٠٢٦-١٠-٠٤ على سجلّ الأحداث):
 	// `security.audit_session_retention_days` — **سطورُ الدخول والجلسة تُحذف بعدها، وما سواها للأبد.**
-	if d.BehaviourSettings != 137 {
-		t.Errorf("إعداداتُ السلوك = %d لا 137 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **واثنان أُضيفا بمراقبة التشغيل** (قرارُ المالك ٢٠٢٦-١٠-٠٤): تكرارُ تذكير العالق
+	// `ops.stuck_reminder_min` **وإشعارُ تعطّل الخادم** `ops.outage_notify_min`.
+	if d.BehaviourSettings != 139 {
+		t.Errorf("إعداداتُ السلوك = %d لا 139 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

@@ -47,6 +47,10 @@ var adminPolicy = []Rule{
 	//
 	// **وبابٌ واحدٌ يُقرأ ولا يُكتب** (دورةُ ٧٠أ).
 	{"GET", "/ops/health", ObservabilityRead},
+	// **وشاشةُ المراقب — سيرُ الطلبات بكلمات الخادم بلا أرقامه** (قرارُ المالك
+	// ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٢): **موظّفُ العمليّات يراها،
+	// والتفاصيلُ التقنيّةُ تبقى خلف `observability.read`.**
+	{"GET", "/ops/monitor", OrdersRead},
 
 	// ── حساباتُ الموظّفين والمستخدمين ────────────────────────────
 	{"POST", "/users", UsersStatusManage},
@@ -87,6 +91,8 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/{id}/assign-candidates", OrdersIntervene},
 	// **و«استلمتها» على الطلب الجديد** — يُسكت رنينَه عند المكتب كلِّه (البند ٥).
 	{"POST", "/orders/{id}/seen", OrdersIntervene},
+	// **و«أنا عليه» على العالق** — يوقف تكرارَ تذكيره («مراقبة التشغيل»، البند ٤).
+	{"POST", "/orders/{id}/alert-ack", OrdersIntervene},
 	{"POST", "/orders/{id}/proof-exception", OrdersIntervene}, // إذنُ تسليمٍ بلا صورةٍ — عملياتٌ مُخوَّلةٌ لا السائق (٢٠٢٦-٠٩-٢٧)
 	{"POST", "/orders/{id}/compensate-driver", FinanceManage},
 	{"POST", "/orders/{id}/compensation/reject", FinanceManage},
@@ -325,6 +331,10 @@ var adminPolicy = []Rule{
 
 // Exempt **مساراتٌ لا تُحكَم بالجدول — ولكلٍّ سببٌ مكتوب.**
 var Exempt = map[string]string{
+	// **وحالُ الخادم لكلّ موظّفٍ في اللوحة** — كلماتٌ بلا أرقام، يقرؤها
+	// الشريطُ الأحمر (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٣).
+	"/ops/status": "**حالُ الخادم بكلمات لكلّ موظّف** — الشريطُ الأحمرُ أعلى " +
+		"اللوحة؛ يكفيه `RequireAnyCapability`، **ولا رقمَ ولا سببَ تقنيّاً في ردّه.**",
 	"/settings/{key}": "**القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو " +
 		"ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`).",
 	// **وبابُ التأكيد ليس فعلاً بذاته** — **قدرتُه قدرةُ الفعل الذي
