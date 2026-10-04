@@ -253,6 +253,97 @@ func TestExpansion_WaitingEqualsHomeFigure(t *testing.T) {
 	}
 }
 
+// ── 4ب · المرفوضُ كالملغى، ومن لا حسابَ له لا يُعدّ منتظراً ─────────────
+//
+// (قرارا المالك 2026-10-04.) طلبٌ بلا حسابٍ لا أحدَ يُبلَّغ عنه، فلا يدخل
+// «ينتظرون ولم يُبلَّغوا» ولا رقمَ الرئيسة ولا التذكير؛ **وما رفضه المكتبُ
+// يخرج من كلّ رقمٍ ومن الإبلاغ** كما يخرج الملغى.
+
+// expAnonReq طلبُ «أضف منطقتي» بلا حساب.
+func expAnonReq(t *testing.T, lat, lng float64, cityID string) string {
+	t.Helper()
+	pool := testdb.Pool(t)
+	var id string
+	if err := pool.QueryRow(context.Background(), `
+		INSERT INTO coverage_requests (user_id, at, kind, target_key, active, status, source, requests, city_id, address_text)
+		VALUES (NULL, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, 'coverage_request', $4, true, 'new', 'customer_app', 1, $3, 'بلا حساب')
+		RETURNING id::text`, lat, lng, cityID, fmt.Sprintf("cell:anon:%d", gnN())).Scan(&id); err != nil {
+		t.Fatalf("expAnonReq: %v", err)
+	}
+	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM coverage_requests WHERE id=$1`, id) })
+	return id
+}
+
+func expReject(t *testing.T, id string) {
+	t.Helper()
+	if _, err := testdb.Pool(t).Exec(context.Background(),
+		`UPDATE coverage_requests SET status = 'rejected' WHERE id = $1::uuid`, id); err != nil {
+		t.Fatalf("رفضُ الطلب: %v", err)
+	}
+}
+
+func TestExpansion_NoOwnerAndRejectedAreNotWaiting(t *testing.T) {
+	s := expServer(t)
+	f := expPlaceFixture(t)
+	reminder := func() int {
+		var m struct {
+			Pending int `json:"pending_notify"`
+		}
+		if err := json.Unmarshal(dataOf(t, callAs(s.handleExpansionReminder, "GET",
+			"/admin/ops-map/expansion/reminder", "", "", nil)), &m); err != nil {
+			t.Fatal(err)
+		}
+		return m.Pending
+	}
+	before := readExpansion(t, s).WaitingNotNotified
+	homeBefore := must(t, "expansion_waiting", readOverview(t, s).Awaiting.ExpansionWaiting)
+	remBefore := reminder()
+
+	cell := fmt.Sprintf("cell:exp:%d", gnN())
+	expReq(t, "coverage_request", cell+"a", f.lat, f.lng, true, 1, f.city) // يُعدّ
+	anon := expAnonReq(t, f.lat+0.001, f.lng, f.city)                      // بلا حساب
+	rej, _ := expReq(t, "coverage_request", cell+"r", f.lat, f.lng+0.001, true, 2, f.city)
+	expReject(t, rej)
+	si, _ := expReq(t, "service_interest", "city:"+f.city, f.lat, f.lng, true, 1, f.city)
+	expReject(t, si)
+
+	sum := readExpansion(t, s)
+	if got := sum.WaitingNotNotified - before; got != 1 {
+		t.Fatalf("«ينتظرون ولم يُبلَّغوا» زاد %d لا 1 — عُدّ من لا حسابَ له أو المرفوض", got)
+	}
+	home := must(t, "expansion_waiting", readOverview(t, s).Awaiting.ExpansionWaiting)
+	if home-homeBefore != 1 || int64(sum.WaitingNotNotified) != home {
+		t.Fatalf("الرئيسةُ %d→%d والصفحةُ %d", homeBefore, home, sum.WaitingNotNotified)
+	}
+	if got := reminder() - remBefore; got != 1 {
+		t.Fatalf("التذكيرُ زاد %d لا 1", got)
+	}
+	z := rowOf(sum, "zone:"+f.zone)
+	if z == nil {
+		t.Fatalf("لا صفَّ للمنطقة: %+v", sum.Rows)
+	}
+	// **وطلبُ من لا حسابَ له يبقى طلباً وقع** — والمرفوضُ لا يُحسب أصلاً.
+	if z.People != 2 || z.Requests != 2 || z.Notifiable != 1 {
+		t.Fatalf("صفُّ المنطقة: أشخاص %d طلبات %d يُبلَّغ %d", z.People, z.Requests, z.Notifiable)
+	}
+	if c := rowOf(sum, "city:"+f.city); c != nil {
+		t.Fatalf("«أخبرني» المرفوضُ ظهر صفّاً: %+v", c)
+	}
+
+	// **والإبلاغُ لا يمسّ المرفوض.**
+	if got := pressNotify(t, s, "zone:"+f.zone); got != 1 {
+		t.Fatalf("أُبلغ %d لا 1", got)
+	}
+	if got := pressNotify(t, s, "city:"+f.city); got != 0 {
+		t.Fatalf("أُبلغ مشترِكٌ مرفوض: %d", got)
+	}
+	for _, id := range []string{rej, si, anon} {
+		if gnNotified(t, id) {
+			t.Fatalf("خُتم %s وهو مرفوضٌ أو بلا حساب", id)
+		}
+	}
+}
+
 // ── ٥ · لا إبلاغَ آليّاً ─────────────────────────────────────────────────
 
 func TestExpansion_NoAutomaticNotifyOnSave(t *testing.T) {

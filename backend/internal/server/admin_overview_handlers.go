@@ -244,8 +244,9 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 				(SELECT count(*) FROM driver_emergencies WHERE status = 'open'),
 				(SELECT count(*) FROM payout_requests p WHERE p.status = 'pending'),
 				(SELECT count(*) FROM merchant_leads l WHERE l.status = 'new'),
-				(SELECT count(*) FROM coverage_requests
-				  WHERE kind = 'coverage_request' AND active AND notified_at IS NULL)`).
+				-- **«ينتظرون ولم يُبلَّغوا» بشرط صفحة التوسّع نفسِه** (expWaitingSQL):
+				-- لا الملغى ولا المرفوض ولا من لا حسابَ له.
+				(SELECT count(*) FROM coverage_requests r WHERE `+expWaitingSQL+`)`).
 			Scan(&comp, &emerg, &pay, &leads, &exp)
 		if !miss("awaiting", err) {
 			a.CompensationsPending, a.EmergenciesOpen = n64(comp), n64(emerg)

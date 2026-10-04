@@ -27,6 +27,20 @@
 -- **هي ميزةٌ لا بيانات**: تُعاد بضغطة حين نختبر تعدّدَ المصادر. **وحذفُها
 -- يجعل إعادتَها عملاً، وإطفاؤها يجعلها قراراً.**
 
+-- ══ حارسُ الإنتاج ══════════════════════════════════════════════════════
+-- **هذا السكربتُ يُطفئ حارسَ السجلّ** (`DISABLE TRIGGER audit_log_append_only`)،
+-- وذاك مسموحٌ على التجهيز والتطوير وحدَهما **ولا يُفعل على الإنتاج أبداً**
+-- (قرارُ المالك 2026-10-04). **فإن كان `APP_ENV=production` رفض قبل أن يمسّ
+-- شيئاً.** والمتغيّرُ يُقرأ من بيئة psql — فيُمرَّر إلى الحاوية:
+-- `docker exec -e APP_ENV rahalgo-postgres psql ...`
+\set ON_ERROR_STOP on
+\set rahalgo_app_env ''
+\getenv rahalgo_app_env APP_ENV
+SELECT (:'rahalgo_app_env' = 'production') AS rahalgo_is_production \gset
+\if :rahalgo_is_production
+DO $$ BEGIN RAISE EXCEPTION 'refused: APP_ENV=production — هذا السكربت للتجهيز والتطوير وحدهما'; END $$;
+\endif
+
 BEGIN;
 
 -- ١ · المتاجرُ التي ليست عن طريق زياد — **وأصنافُها معها**

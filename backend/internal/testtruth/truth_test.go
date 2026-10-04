@@ -291,8 +291,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `security.temp_password_hours` · حدُّ الرصيد لموافقةٍ ثانيةٍ على تغيير الرقم
 	// `security.phone_change_approval_balance` · سقفُ الحركة اليدويّة `finance.manual_wallet_max`
 	// · وحدُّ تنبيه الإنذارات `safety.warnings_alert_count`.
-	if d.BehaviourSettings != 143 {
-		t.Errorf("إعداداتُ السلوك = %d لا 143 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بعودة التذكير بعد «أنا عليه»** (قرارُ المالك 2026-10-04):
+	// `ops.stuck_ack_snooze_min` — **«أنا عليه» تُسكت التذكيرَ ساعةً لا للأبد.**
+	if d.BehaviourSettings != 144 {
+		t.Errorf("إعداداتُ السلوك = %d لا 144 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

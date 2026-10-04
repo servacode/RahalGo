@@ -51,7 +51,7 @@ func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) int {
 	target := "city:" + cityID
 	rows, err := s.pg.Query(ctx, `
 		SELECT user_id::text FROM coverage_requests
-		 WHERE kind = 'service_interest' AND active AND user_id IS NOT NULL
+		 WHERE kind = 'service_interest' AND active AND status <> 'rejected' AND user_id IS NOT NULL
 		   AND target_key = $1 AND notified_at IS NULL`, target)
 	if err != nil {
 		s.logger.Error("geo-notify: تعذّر جلبُ مشترِكي المدينة", "city", cityID, "error", err)
@@ -74,7 +74,8 @@ func (s *Server) notifyCityLaunch(ctx context.Context, cityID string) int {
 		tag, uerr := s.pg.Exec(ctx, `
 			UPDATE coverage_requests SET notified_at = now(), updated_at = now()
 			 WHERE user_id = $1::uuid AND kind = 'service_interest'
-			   AND target_key = $2 AND active AND notified_at IS NULL`, uid, target)
+			   AND target_key = $2 AND active AND status <> 'rejected'
+			   AND notified_at IS NULL`, uid, target)
 		if uerr != nil || tag.RowsAffected() != 1 {
 			continue
 		}
@@ -128,9 +129,8 @@ func (s *Server) notifyAreaCoverage(ctx context.Context) {
 	}
 	rows, err := s.pg.Query(ctx, `
 		SELECT id::text, user_id::text, ST_Y(at::geometry), ST_X(at::geometry)
-		  FROM coverage_requests
-		 WHERE kind = 'coverage_request' AND active AND user_id IS NOT NULL
-		   AND notified_at IS NULL`)
+		  FROM coverage_requests r
+		 WHERE `+expWaitingSQL)
 	if err != nil {
 		s.logger.Error("geo-notify: تعذّر جلبُ طلبات التغطية", "error", err)
 		return

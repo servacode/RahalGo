@@ -333,8 +333,9 @@ var adminPolicy = []Rule{
 	{"POST", "/launch/preset", SettingsGeneralManage},
 	{"GET", "/audit", AuditRead},
 	{"GET", "/audit/actors", AuditRead},
-	// **وتصديرُ السجلّ قراءتُه في ملفّ** — والتصديرُ نفسُه يُقيَّد فيه.
-	{"GET", "/audit/export", AuditRead},
+	// **وتصديرُ السجلّ لمدير المنصّة ومالكها وحدَهما** (قرارُ المالك 2026-10-04)
+	// — والتصديرُ نفسُه يُقيَّد فيه.
+	{"GET", "/audit/export", AuditExport},
 	{"GET", "/stats", AnalyticsRead},
 	// **ورئيسيّةُ المدير بقدرتها** — فيها المالُ كلُّه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	{"GET", "/overview", PlatformOverview},

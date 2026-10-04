@@ -154,3 +154,75 @@ func TestStuckReminder_RepeatsEveryNMinutesUntilSomeoneActs(t *testing.T) {
 		t.Fatalf("الطلبُ العالقُ ليس في القائمة")
 	}
 }
+
+// TestStuckReminder_AckSnoozesThenResumes **«أنا عليه» تُسكت التذكيرَ مدّةً لا للأبد**
+// (قرارُ المالك 2026-10-04): بعد `ops.stuck_ack_snooze_min` (افتراضُه 60) والطلبُ
+// عالقٌ بالسبب نفسِه يعود التذكير، **وتُمسح «أنا عليه»** فيضغطها من جديدٍ من بقي عليه.
+func TestStuckReminder_AckSnoozesThenResumes(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	ops := testdb.NewUser(t, pool, "operations")
+	ns := notifications.New(pool, noopPublisher{}, quietLogger())
+	svc := &Service{db: pool, logger: quietLogger(), notify: ns, pub: noopPublisher{}}
+
+	if got := svc.settingInt(ctx, "ops.stuck_ack_snooze_min"); got != 60 {
+		t.Fatalf("مدّةُ إسكات «أنا عليه» الافتراضيّة %d لا 60", got)
+	}
+	count := func(oid string) int {
+		t.Helper()
+		var n int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM notifications
+			WHERE user_id = $1 AND entity = 'order' AND entity_id = $2`, ops, oid).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	// ageBoth **يُرجع الإنذارَ و«أنا عليه» إلى الوراء** — بدل انتظار ساعة.
+	ageBoth := func(oid string, alertMins, ackMins int) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, `UPDATE orders
+			SET alerted_at = now() - make_interval(mins => $2),
+			    alert_ack_at = now() - make_interval(mins => $3)
+			WHERE id = $1`, oid, alertMins, ackMins); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	oid := seedAlertableOrder(t, pool)
+	alert := Alert{OrderID: oid, Number: 7, Status: "pending", MerchantName: "متجر", Reason: StuckNoAccept}
+	svc.escalate(ctx, []Alert{alert})
+	if count(oid) != 1 {
+		t.Fatalf("الإنذارُ الأوّل: %d", count(oid))
+	}
+	if ok, err := svc.AckAlert(ctx, oid, ops); err != nil || !ok {
+		t.Fatalf("«أنا عليه»: ok=%v err=%v", ok, err)
+	}
+
+	// **قبل الساعة: لا تذكير.**
+	ageBoth(oid, 59, 59)
+	svc.escalate(ctx, []Alert{alert})
+	if count(oid) != 1 {
+		t.Fatalf("**ذُكّر بعد 59 دقيقةً من «أنا عليه»**: %d", count(oid))
+	}
+
+	// **بعد الساعة والطلبُ عالقٌ بالسبب نفسِه: يعود التذكير.**
+	ageBoth(oid, 61, 61)
+	svc.escalate(ctx, []Alert{alert})
+	if count(oid) != 2 {
+		t.Fatalf("**مضت ساعةٌ على «أنا عليه» والطلبُ عالقٌ ولم يعد التذكير**: %d", count(oid))
+	}
+	var acked bool
+	_ = pool.QueryRow(ctx, `SELECT alert_ack_at IS NOT NULL FROM orders WHERE id = $1`, oid).Scan(&acked)
+	if acked {
+		t.Fatal("«أنا عليه» بقيت بعد عودة التذكير — فلا تُضغط من جديد")
+	}
+	// **وتُضغط من جديدٍ فتُسكته ساعةً أخرى.**
+	if ok, err := svc.AckAlert(ctx, oid, ops); err != nil || !ok {
+		t.Fatalf("«أنا عليه» الثانية: ok=%v err=%v", ok, err)
+	}
+	ageBoth(oid, 30, 0)
+	svc.escalate(ctx, []Alert{alert})
+	if count(oid) != 2 {
+		t.Fatalf("**ذُكّر بعد «أنا عليه» الثانية مباشرةً**: %d", count(oid))
+	}
+}

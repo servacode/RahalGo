@@ -4,7 +4,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["", "/app-file", "content.manage"],
   ["GET", "/audit", "audit.read"],
   ["GET", "/audit/actors", "audit.read"],
-  ["GET", "/audit/export", "audit.read"],
+  ["GET", "/audit/export", "audit.export"],
   ["", "/banners", "content.manage"],
   ["", "/banners/{id}", "content.manage"],
   ["POST", "/broadcast", "content.manage"],

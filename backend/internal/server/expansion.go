@@ -12,6 +12,16 @@ package server
 // **من ألغى «أخبرني» خرج من كلّ رقمٍ هنا** (`active = false`) — والصفُّ
 // باقٍ في الكثافة التاريخيّة وحدَها.
 //
+// # والمرفوضُ كالملغى، ومن لا حسابَ له لا يُعدّ منتظراً
+//
+// (قرارا المالك 2026-10-04 على طلبات التوسّع.)
+//
+//   - **ما رفضه المكتبُ** (`status = 'rejected'`) يخرج من كلّ رقمٍ ومن
+//     الإبلاغ — **كالملغى تماماً** (`expCountedSQL`).
+//   - **وطلبٌ بلا حسابٍ** (`user_id` فارغ) لا أحدَ يُبلَّغ عنه — **فلا يدخل
+//     «ينتظرون ولم يُبلَّغوا» ولا رقمَ الرئيسة ولا التذكير** (`expPending`).
+//     ويبقى في الأشخاص والطلبات: هو طلبٌ وقع.
+//
 // # والإبلاغُ بزرٍّ لا آليّاً
 //
 // **قد تُرسم التغطيةُ قبل تجهيز السائقين** — فلا يُبلَّغ أحدٌ عند حفظ
@@ -103,6 +113,16 @@ type expRaw struct {
 	zoneID, zoneName, zoneCityID string
 }
 
+// expCountedSQL **أيُّ صفٍّ يُحسب أصلاً** — ساري (لم يُلغَ) ولم يرفضه المكتب.
+//
+// **شرطٌ واحدٌ يقرؤه الجدولُ والرئيسةُ والإبلاغ** — فلا يفترق رقمٌ عن رقم.
+const expCountedSQL = `r.active AND r.status <> 'rejected'`
+
+// expWaitingSQL **«ينتظرون ولم يُبلَّغوا»** — طلبُ «أضف منطقتي» محسوبٌ، له
+// صاحبُ حسابٍ يُبلَّغ، ولم يُبلَّغ بعد. **وهو عينُ `expPending` في الشيفرة.**
+const expWaitingSQL = `r.kind = 'coverage_request' AND ` + expCountedSQL + `
+	   AND r.user_id IS NOT NULL AND r.notified_at IS NULL`
+
 // expZoneJoin **المنطقةُ التي تحكم النقطة** — بترتيب `ZoneAt` عينِه.
 const expZoneJoin = `
 	LEFT JOIN LATERAL (
@@ -124,7 +144,7 @@ func (s *Server) expansionRaw(ctx context.Context) ([]expRaw, error) {
 		       r.target_key,
 		       COALESCE(z.id::text, ''), COALESCE(z.name, ''), COALESCE(z.city_id::text, '')
 		  FROM coverage_requests r`+expZoneJoin+`
-		 WHERE r.active
+		 WHERE `+expCountedSQL+`
 		 ORDER BY r.created_at
 		 LIMIT 50000`)
 	if err != nil {
@@ -195,6 +215,8 @@ func expKey(x expRaw) string {
 }
 
 // expPending **أينتظر الإبلاغَ ويمكن إبلاغُه؟** — حسابٌ لم يُختَم.
+//
+// **وبلا حسابٍ لا أحدَ يُبلَّغ** — فلا يُعدّ منتظراً (قرارُ المالك 2026-10-04).
 func expPending(x expRaw) bool { return x.uid != nil && x.notified == nil }
 
 // expansion **يبني الأرقامَ والجدول.**
@@ -232,7 +254,7 @@ func (s *Server) expansion(ctx context.Context) (expansionSummary, error) {
 		if x.created.After(weekAgo) {
 			newPeople[who] = true
 		}
-		if x.kind == opsmap.KindCoverage && x.notified == nil {
+		if x.kind == opsmap.KindCoverage && expPending(x) {
 			sum.WaitingNotNotified++
 		}
 
@@ -381,8 +403,7 @@ func (s *Server) notifyZoneWaiting(ctx context.Context, zoneID string) (int, err
 	rows, err := s.pg.Query(ctx, `
 		SELECT r.id::text, r.user_id::text, ST_Y(r.at::geometry), ST_X(r.at::geometry)
 		  FROM coverage_requests r`+expZoneJoin+`
-		 WHERE r.kind = 'coverage_request' AND r.active AND r.user_id IS NOT NULL
-		   AND r.notified_at IS NULL AND z.id = $1::uuid`, zoneID)
+		 WHERE `+expWaitingSQL+` AND z.id = $1::uuid`, zoneID)
 	if err != nil {
 		return 0, err
 	}

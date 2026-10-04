@@ -45,6 +45,10 @@
       "capability": "audit.read",
       "response": [
         {
+          "name": "can_export",
+          "type": "unknown"
+        },
+        {
           "name": "entries",
           "type": "unknown"
         },
@@ -98,7 +102,7 @@
       "path": "/api/v1/admin/audit/export",
       "handler": "handleAdminAuditExport",
       "auth": true,
-      "capability": "audit.read",
+      "capability": "audit.export",
       "response": [
         {
           "name": "cap",
@@ -2922,11 +2926,39 @@
       "capability": "analytics.read",
       "response": [
         {
+          "name": "city_id",
+          "type": "unknown"
+        },
+        {
           "name": "daily",
           "type": "unknown"
         },
         {
           "name": "from",
+          "type": "unknown"
+        },
+        {
+          "name": "kind",
+          "type": "unknown"
+        },
+        {
+          "name": "money_visible",
+          "type": "unknown"
+        },
+        {
+          "name": "previous",
+          "type": "unknown"
+        },
+        {
+          "name": "previous_from",
+          "type": "unknown"
+        },
+        {
+          "name": "previous_to",
+          "type": "unknown"
+        },
+        {
+          "name": "profit_unfiltered",
           "type": "unknown"
         },
         {
@@ -2943,6 +2975,14 @@
         },
         {
           "name": "top_merchants",
+          "type": "unknown"
+        },
+        {
+          "name": "visitors",
+          "type": "unknown"
+        },
+        {
+          "name": "visitors_failed",
           "type": "unknown"
         }
       ],

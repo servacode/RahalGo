@@ -13,7 +13,7 @@ docker exec rahalgo-postgres pg_dump -U rahalgo -d rahalgo -Fc -f /tmp/before-wi
 
 # ٢) المسح (داخل معاملة واحدة: إمّا كلُّه أو لا شيء)
 docker cp scripts/wipe.sql rahalgo-postgres:/tmp/wipe.sql
-docker exec rahalgo-postgres psql -U rahalgo -d rahalgo -v ON_ERROR_STOP=1 -f /tmp/wipe.sql
+docker exec -e APP_ENV rahalgo-postgres psql -U rahalgo -d rahalgo -v ON_ERROR_STOP=1 -f /tmp/wipe.sql
 
 # ٣) ملفات الوسائط اليتيمة على القرص
 rm -rf backend/uploads
@@ -22,5 +22,7 @@ rm -rf backend/uploads
 cd backend && go run ./cmd/seed -staff
 ```
 
-**ولا يُشغَّل على إنتاج.** لا حارس في `wipe.sql` نفسه — هو نصُّ SQL خام لا
-يعرف بيئته، وحمايتُه أن يُنسخ إلى الحاوية يدوياً في كل مرّة.
+**ولا يُشغَّل على إنتاج.** وفي رأس `wipe.sql` حارسٌ (قرارُ المالك 2026-10-04):
+إن كان `APP_ENV=production` في بيئة psql رفض قبل أن يمسّ شيئاً — **فيُمرَّر
+المتغيّرُ إلى الحاوية** (`docker exec -e APP_ENV ...`). ومثلُه في
+`backend/scripts/reset-trial.sql` و`field-single-merchant.sql` و`e2e/cycle.py`.

@@ -171,25 +171,12 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ولا يُسقَط الردُّ إن عَطِبا**: من عجز عن عدّ الزوّار يبقى يرى
 	// طلباتِه وسائقيه. **والصفرُ هنا أهونُ من شاشةٍ فارغة.**
-	_ = s.pg.QueryRow(r.Context(), `
-		WITH d AS (
-			SELECT (now() AT TIME ZONE 'Asia/Damascus')::date AS today
-		)
-		SELECT
-		  COALESCE((SELECT sum(opens) FROM app_opens_daily, d
-		            WHERE day = d.today), 0),
-		  COALESCE((SELECT sum(opens) FROM app_opens_daily, d
-		            WHERE day > d.today - 7), 0),
-		  COALESCE((SELECT sum(opens) FROM app_opens_daily, d
-		            WHERE day > d.today - 30), 0),
-		  (SELECT count(*) FROM device_tokens
-		    WHERE last_seen_at >= now() - interval '1 day'),
-		  (SELECT count(*) FROM device_tokens
-		    WHERE last_seen_at >= now() - interval '7 days'),
-		  (SELECT count(*) FROM device_tokens
-		    WHERE last_seen_at >= now() - interval '30 days')
-	`).Scan(&st.OpensToday, &st.Opens7, &st.Opens30,
-		&st.DevicesToday, &st.Devices7, &st.Devices30)
+	// **ومن المصدر نفسِه الذي تقرؤه صفحةُ التقارير** (customerVisitors) —
+	// أجهزةُ الزبائن وحدَها وبيومٍ تقويميٍّ بدمشق (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	if v, err := s.customerVisitors(r.Context()); err == nil {
+		st.OpensToday, st.Opens7, st.Opens30 = v.OpensToday, v.Opens7, v.Opens30
+		st.DevicesToday, st.Devices7, st.Devices30 = v.DevicesToday, v.Devices7, v.Devices30
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **وما ينتظر القرارَ يُسقط الردَّ إن عَطِب** — لا كالزوّار

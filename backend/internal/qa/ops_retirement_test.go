@@ -37,8 +37,10 @@ var opsFinalCaps = []string{
 }
 
 // financeFinalCaps **قدراتُ الماليّة كما أقرّها المالك.**
+//
+// **و`audit.read` بقرار المالك 2026-10-04** (سجلُّ الأحداث — هجرة `0260`).
 var financeFinalCaps = []string{
-	"analytics.read", "finance.export", "finance.manage", "finance.read",
+	"analytics.read", "audit.read", "finance.export", "finance.manage", "finance.read",
 	"orders.read", "payouts.decide", "settings.financial.manage",
 	"settings.read", "users.read",
 }
