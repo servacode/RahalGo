@@ -283,8 +283,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **وثلاثةٌ أُضيفت بلوحة الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٤): مهلةُ الإسناد اليدويّ
 	// `orders.manual_assign_after_min` (كانت تُقرأ ولا فهرسَ لها) **والقبولُ حين يفرغ المكتب**
 	// `orders.unattended_auto_accept_min` و`orders.staff_presence_min`.
-	if d.BehaviourSettings != 136 {
-		t.Errorf("إعداداتُ السلوك = %d لا 136 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بمدّة حفظ سطور الدخول** (قرارُ المالك ٢٠٢٦-١٠-٠٤ على سجلّ الأحداث):
+	// `security.audit_session_retention_days` — **سطورُ الدخول والجلسة تُحذف بعدها، وما سواها للأبد.**
+	if d.BehaviourSettings != 137 {
+		t.Errorf("إعداداتُ السلوك = %d لا 137 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

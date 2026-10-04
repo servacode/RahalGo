@@ -281,7 +281,7 @@ finally:
     sql(f"DELETE FROM menu_items WHERE merchant_id = '{state.get('merchant_id')}'")
     sql(f"DELETE FROM menu_sections WHERE merchant_id = '{state.get('merchant_id')}'")
     sql(f"DELETE FROM merchants WHERE id = '{state.get('merchant_id')}'")
-    sql(f"DELETE FROM audit_log WHERE actor_user_id IN (SELECT id FROM users WHERE phone IN ({phones}))")
+    sql(f"BEGIN; ALTER TABLE audit_log DISABLE TRIGGER audit_log_append_only; DELETE FROM audit_log WHERE actor_user_id IN (SELECT id FROM users WHERE phone IN ({phones})); ALTER TABLE audit_log ENABLE TRIGGER audit_log_append_only; COMMIT;")  # السجلُّ إضافةٌ فقط (0220)
     sql(f"DELETE FROM payout_requests WHERE user_id IN (SELECT id FROM users WHERE phone IN ({phones}))")
     sql(f"DELETE FROM driver_cash_entries WHERE driver_id IN (SELECT id FROM users WHERE phone IN ({phones}))")
     sql(f"DELETE FROM driver_cash_boxes WHERE driver_id IN (SELECT id FROM users WHERE phone IN ({phones}))")

@@ -122,7 +122,6 @@ func TestAdminStatsAwaitingDecision(t *testing.T) {
 		}
 		t.Cleanup(func() {
 			_, _ = pool.Exec(context.Background(), `DELETE FROM driver_emergencies WHERE order_id = $1`, id)
-			_, _ = pool.Exec(context.Background(), `DELETE FROM audit_log WHERE entity = 'order' AND entity_id = $1`, id)
 			_, _ = pool.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, id)
 		})
 		return id

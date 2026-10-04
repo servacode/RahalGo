@@ -9,7 +9,7 @@
   {
    "code": "audit.read",
    "description": "قراءةُ سجلّ التدقيق",
-   "guards_routes": 1
+   "guards_routes": 3
   },
   {
    "code": "content.manage",
@@ -198,7 +198,7 @@
   }
  ],
  "route_policy": {
-  "rules": 185,
+  "rules": 187,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

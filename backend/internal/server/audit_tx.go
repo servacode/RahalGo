@@ -136,8 +136,8 @@ func (s *Server) auditTx(ctx context.Context, q dbtx.Querier, r *http.Request,
 		ip = v
 	}
 	_, err := q.Exec(ctx, `
-		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		actor, action, entity, entityID, ip, raw)
+		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		actor, action, entity, entityID, ip, raw, auditUserAgent(r))
 	return err
 }

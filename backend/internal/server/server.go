@@ -1188,9 +1188,12 @@ func (s *Server) Router() http.Handler {
 			// **رئيسيّةُ مدير المنصّة** — `platform.overview` (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/overview", s.handleAdminOverview)
 			r.Get("/reports", s.handleReports)
-			// سجلّ الأحداث — للأدمن والمالية دون العمليات: يحوي مبالغ التعويضات
-			// والسحوبات وأرصدة المحافظ، وموظّف العمليات ليس طرفاً في المال.
+			// سجلّ الأحداث — لكلّ من ملك `audit.read`، **والمبالغُ تُحذف في
+			// الخادم عمّن لا يملك قراءةَ المال** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/audit", s.handleAdminAudit)
+			r.Get("/audit/actors", s.handleAdminAuditActors)
+			// **والتصديرُ يُكتب في السجلّ نفسِه قبل أن يُسلَّم.**
+			r.Get("/audit/export", s.handleAdminAuditExport)
 			// حاملو الخزينة المحتملون — للأدمن وحده (merchant_violations.go)
 			r.Get("/treasury-candidates", s.handleTreasuryCandidates)
 			// **والمدنُ تُدار من اللوحة لا بهجرة** — من أراد دمشقَ غداً
