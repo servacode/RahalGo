@@ -2013,7 +2013,16 @@
             "cancelled": "ملغى",
             "rejected": "مرفوض",
             "failed": "فاشل",
-            "refunded": "مسترجع"
+            "refunded": "مسترجع",
+            "open": "مفتوح",
+            "resolved": "مغلق",
+            "pending": "معلّق",
+            "processing": "قيد التنفيذ",
+            "paid": "مدفوع",
+            "reversed": "مُعاد",
+            "approved": "مقبول",
+            "settled": "مُسوّى",
+            "waived": "مُعفى"
           },
           "showingLatest": "المعروض أحدث {n} من {all}"
         },
