@@ -33,8 +33,8 @@
     "setting_defs": 184,
     "behaviour_settings": 149,
     "order_fields": 95,
-    "test_files": 512,
-    "test_funcs": 2145
+    "test_files": 515,
+    "test_funcs": 2149
   },
   "flows": [
     {
@@ -8993,6 +8993,12 @@
       "orphan": true
     },
     {
+      "name": "TestMerchantDelivery_DeliveredHasNoMerchantDueViolation",
+      "file": "internal/orders/merchant_delivery_moneycheck_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestMerchantDeliveryShare",
       "file": "internal/orders/merchant_delivery_share_test.go",
       "package": "orders",
@@ -9577,6 +9583,12 @@
       "name": "TestAuthorizingRole",
       "file": "internal/orders/violations_test.go",
       "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrderCancelledBeforeSettlement_NoFI06dViolation",
+      "file": "internal/orders/wallet_cancel_moneycheck_test.go",
+      "package": "orders_test",
       "orphan": true
     },
     {
@@ -24487,6 +24499,12 @@
       "orphan": true
     },
     {
+      "name": "TestDeliveryProof_NaNOrInfLocationIsRejected",
+      "file": "internal/server/delivery_proof_nan_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDirectAssign_IgnoredInQueueMode",
       "file": "internal/server/direct_assign_test.go",
       "package": "server",
@@ -25988,6 +26006,12 @@
     },
     {
       "name": "TestSETTINGS_BadgeImpliesRiskList",
+      "file": "internal/server/settings_risk_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSETTINGS_ExpenseThresholdNotOwnedByFinance",
       "file": "internal/server/settings_risk_test.go",
       "package": "server",
       "orphan": true

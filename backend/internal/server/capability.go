@@ -107,6 +107,11 @@ func settingCapability(key string) authz.Capability {
 	switch {
 	case strings.HasPrefix(key, "security."):
 		return authz.SettingsSecurityManage
+	// **وسقفُ الموافقة الثانية لا يرفعه من يُقيّده** (فحصُ الهجوم ٢٠٢٦-١٠-٠٥):
+	// كان بقدرة الماليّة نفسِها، **فرفع موظّفُ ماليّةٍ السقفَ ثمّ قيّد مصروفاً
+	// بتسعة ملايين وحدَه** — والقاعدةُ «فوق السقف شخصٌ آخر» صارت بلا معنى.
+	case key == "finance.expense_approval_threshold":
+		return authz.SettingsSecurityManage
 	case criticalSettingKey(key):
 		return authz.SettingsFinancialManage
 	default:

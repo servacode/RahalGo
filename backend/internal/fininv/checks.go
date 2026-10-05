@@ -209,10 +209,12 @@ var All = []Check{
 		// **والمتجرُ المُسوّى نقداً مستحقُّه قيدُ احتباسٍ لا قيدُ محفظة**
 		// (`merchant_cash_accrued`، تسويةُ ٢٠٢٦-٠٩-٢٧) — كان الفحصُ لا يعرفه، فكلُّ
 		// طلبٍ نقديِّ التسوية سُلّم يُقرأ خرقاً. (كشفه قسمُ النقد ٢٠٢٦-١٠-٠٤.)
+		// **وتوصيلةُ المتجر لا بضاعةَ فيها فلا مستحقَّ لها** — كانت كلُّ
+		// توصيلةٍ مسلَّمةٍ تُقرأ خرقاً. (كشفته الدورةُ الحيّة ٢٠٢٦-١٠-٠٥.)
 		SQL: `
 			SELECT o.number, o.total, o.status
 			FROM orders o
-			WHERE o.status = 'delivered' AND o.kind <> 'custom'
+			WHERE o.status = 'delivered' AND o.kind NOT IN ('custom', 'merchant_delivery')
 			  AND NOT EXISTS (
 				SELECT 1 FROM wallet_transactions t
 				WHERE t.ref = o.id::text
@@ -494,7 +496,12 @@ var All = []Check{
 			) l ON true
 			WHERE NOT EXISTS (SELECT 1 FROM wallet_transactions p
 			                  WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
-			  AND COALESCE(l.net, 0) <> -o.wallet_paid`,
+			  -- **والمنتهي قبل المحاسبة يُستردّ له خصمُه** فصافيه صفر — وعمودُ wallet_paid
+			  -- يبقى شاهداً على ما دُفع. (كشفته الدورةُ الحيّة ٢٠٢٦-١٠-٠٥: كلُّ إلغاءٍ
+			  -- سليمٍ من المحفظة كان يُقرأ خرقاً.)
+			  AND COALESCE(l.net, 0) <> CASE
+			        WHEN o.status IN ('cancelled', 'rejected', 'failed', 'refunded') THEN 0
+			        ELSE -o.wallet_paid END`,
 	},
 	{
 		ID: "FI-06.b", Family: FI06, Status: ProvableNow, Ops: true,
