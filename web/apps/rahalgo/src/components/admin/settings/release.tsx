@@ -46,12 +46,21 @@ interface SettingRow {
   editable: boolean;
 }
 
+interface FileInfo {
+  present: boolean;
+  code: number;
+  name: string;
+  auto: boolean;
+}
+
 // **أربعُ نسخٍ لأربعةِ أدوار** — والسائقُ أوّلاً فهو موضعُ الشهادة اليوم.
 const APPS = ["driver", "customer", "merchant", "rep"] as const;
 type AppName = (typeof APPS)[number];
 
 export default function ReleasePanel() {
   const [current, setCurrent] = useState<Record<AppName, number> | null>(null);
+  /** **ما في الملفّ المرفوع** — يُقرأ منه عند الرفع (٢٠٢٦-١٠-٠٦). */
+  const [file, setFile] = useState<Record<AppName, FileInfo>>({} as Record<AppName, FileInfo>);
   const [editable, setEditable] = useState<Record<AppName, boolean>>(
     {} as Record<AppName, boolean>,
   );
@@ -71,7 +80,18 @@ export default function ReleasePanel() {
       const cur = {} as Record<AppName, number>;
       const edit = {} as Record<AppName, boolean>;
       const dft = {} as Record<AppName, string>;
+      const fi = {} as Record<AppName, FileInfo>;
+      const val = (k: string) => rows.find((r) => r.key === k)?.value;
       for (const app of APPS) {
+        const code = val(`release.${app}.version_code`);
+        const name = val(`release.${app}.version`);
+        const apk = val(`release.${app}.apk`);
+        fi[app] = {
+          present: typeof apk === "string" && apk !== "",
+          code: typeof code === "number" ? code : 0,
+          name: typeof name === "string" ? name : "",
+          auto: val(`release.${app}.auto_force`) !== false,
+        };
         const row = rows.find((r) => r.key === `app.min_version.${app}`);
         const n = typeof row?.value === "number" ? row.value : 0;
         cur[app] = n;
@@ -79,6 +99,7 @@ export default function ReleasePanel() {
         dft[app] = String(n);
       }
       setCurrent(cur);
+      setFile(fi);
       setEditable(edit);
       setDraft(dft);
       setError("");
@@ -139,8 +160,25 @@ export default function ReleasePanel() {
             <div className="mb-2 font-medium">
               {(S.apps as Record<string, string>)[app]}
             </div>
+            {/* **ما في الملفّ والحدُّ النافذ** — الحدُّ أكبرُ الرقمين حين يكون الفرضُ مشغّلاً. */}
+            <p className="mb-1 text-xs text-ink-muted">
+              {S.fileLabel}:{" "}
+              {file[app]?.present && file[app].code > 0
+                ? `${file[app].name} (${file[app].code})`
+                : S.fileNone}
+            </p>
+            <p className="mb-1 text-xs text-ink-muted">
+              {file[app]?.auto ? S.autoOn : S.autoOff}
+            </p>
+            <p className="mb-1 text-xs text-ink-muted">
+              {S.effectiveLabel}:{" "}
+              {Math.max(
+                current[app],
+                file[app]?.auto && file[app]?.present ? file[app].code : 0,
+              )}
+            </p>
             <p className="mb-3 text-xs text-ink-muted">
-              {S.currentLabel}: {current[app]}
+              {S.currentLabel}: {current[app]} — {S.manualHint}
             </p>
             <div className="flex items-end gap-2">
               <div className="flex-1">

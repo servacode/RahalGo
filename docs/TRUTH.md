@@ -1146,15 +1146,23 @@ kosom` |
 | `release.customer.play_url` |  | text | `` |
 | `release.customer.apk` |  | file | `` |
 | `release.customer.version` |  | text | `` |
+| `release.customer.version_code` |  | int | `0` |
+| `release.customer.auto_force` |  | bool | `true` |
 | `release.driver.play_url` |  | text | `` |
 | `release.driver.apk` |  | file | `` |
 | `release.driver.version` |  | text | `` |
+| `release.driver.version_code` |  | int | `0` |
+| `release.driver.auto_force` |  | bool | `true` |
 | `release.merchant.play_url` |  | text | `` |
 | `release.merchant.apk` |  | file | `` |
 | `release.merchant.version` |  | text | `` |
+| `release.merchant.version_code` |  | int | `0` |
+| `release.merchant.auto_force` |  | bool | `true` |
 | `release.rep.play_url` |  | text | `` |
 | `release.rep.apk` |  | file | `` |
 | `release.rep.version` |  | text | `` |
+| `release.rep.version_code` |  | int | `0` |
+| `release.rep.auto_force` |  | bool | `true` |
 | `app.max_file_mb` |  | int | `100` |
 | `orders.max_sources` |  | int | `2` |
 | `meals.enabled` |  | bool | `true` |
@@ -2292,3 +2300,21 @@ kosom` |
   (`orders.merchantDeliveryFee`).
 
 يحرسها `TestMDA0*` و`TestMD0*` في `qa`.
+
+### قرارُ المالك ٢٠٢٦-١٠-٠٦ — **التحديثُ الإلزاميُّ تلقائيٌّ من الملفّ المرفوع** — تنسخ ما يخالفها أعلاه
+
+**الشكوى**: «رفعتُ التطبيقات الجديدة وحدّدتُ الإصدارات وما طلب منّي جوّالي التحديث» — **لأنّ الهاتفَ بلا دخولٍ لا ينادي إلّا
+`/api/v1/public/*`، وكانت كلُّها مفتوحةً للنسخة القديمة.** والطلب: «بدون ما ظلّ أبدّل إصدارات وأرقام».
+
+- **رفعُ الملفّ يقرأ بيانَ الحزمة** (`release.ReadAPKManifest`، قارئُ `AXML` صغيرٌ بلا أدوات أندرويد): معرّفُ الحزمة ورقمُها
+  (`versionCode`) واسمُها (`versionName`). **ومعرّفٌ لا يطابق الخانة يُردّ ولا يُكتب شيء** (`app_wrong_package`): تطبيقُ السائق
+  في خانة الزبون، أو نسخةُ `.staging` على غير التجهيز (والتجهيزُ يقبل `.staging` وحدَها).
+- **`release.<app>.version_code` و`release.<app>.version` يكتبهما الخادمُ من الملفّ** — للعرض في اللوحة لا للتحرير
+  (`ReadOnly`، والتحريرُ يُردّ `setting_read_only`). **والملفُّ المرفوعُ قبل اليوم يُقرأ مرّةً عند أوّل حاجة.** وحذفُ الملفّ يُفرغهما.
+- **`release.<app>.auto_force`** (افتراضُه مشغّل، حسّاسٌ كأدنى نسخة): **الحدُّ الأدنى = أكبرُ (`app.min_version.<app>`) و(رقمِ
+  الملفّ المرفوع)**، **ولا رقمَ بلا ملفّ.** والرقمُ اليدويُّ يبقى حدّاً إضافيّاً.
+- **والتطبيقُ القديمُ يُردّ ٤٢٦ على كلّ شيءٍ إلّا أبوابَ النجاة**: `/public/releases` و`/public/app/*` و`/public/identity`
+  و`/health*` و`/media/*`. **ومنه `/public/platform`**: أوّلُ نداءٍ في التطبيقات الأربعة عند الإقلاع، **وأيُّ ٤٢٦ من أيِّ نداءٍ
+  يرفع شاشةَ التحديث** (`ApiClient.raw`)، **وشاشةُ التحديث لا تنادي المحرّك.** والويبُ لا يرسل ترويسةَ النسخة فلا يمسّه شيء.
+
+يحرسها `TestUpdateGate_*` في `qa` و`TestAPKManifest_*` في `release` (على الملفّات الحقيقيّة إن وُجدت).

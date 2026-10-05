@@ -107,6 +107,7 @@ const SERVER_ADMIN = new Set([
   "cash_close_pending", "cash_close_day_done", "shortfall_not_due", "note_required",
   "treasury_missing", "treasury_over_balance",
   "app_file_missing", "app_not_android", "app_too_large", "bad_json",
+  "app_wrong_package", "app_manifest_unreadable", "setting_read_only",
   "bad_placement", "city_bad_point", "city_bad_radius", "city_bad_reach",
   // شكوى تعويضُها بانتظار المالية (٢٠٢٦-١٠-٠٤) — قرارٌ من اللوحة.
   "ticket_awaiting_finance",

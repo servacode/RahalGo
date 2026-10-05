@@ -21,6 +21,9 @@ package server
     يعطيهم ملفّاً لا يُثبَّت.
   - **الامتداد**: `.apk` وحدَه.
 
+  - **الهويّة** (٢٠٢٦-١٠-٠٦): يُقرأ بيانُ الحزمة (`release.ReadAPKManifest`)
+    — **معرّفٌ لا يطابق الخانة يُردّ**، ورقمُ النسخة واسمُها يُكتبان منه.
+
 **ولا يُفحص التوقيع**: ذاك يحتاج أدواتِ أندرويد على الخادم — **والمنصّةُ
 تخدم ما رفعه صاحبُها، لا ما رفعه غريب.**
 
@@ -133,6 +136,15 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errAppNotAndroid)
 		return
 	}
+	// **وهويّةُ الحزمة تُقرأ من الملفّ وتُطابَق بخانتها** (٢٠٢٦-١٠-٠٦) —
+	// تطبيقُ السائق لا يُرفع في خانة الزبون، **ونسخةُ التجهيز لا تُرفع في
+	// الإنتاج.** **ورقمُ النسخة واسمُها يُكتبان من الملفّ لا من يد.**
+	app, _ := releaseAppOfKey(target)
+	man, aerr := s.checkAPKIdentity(app, raw)
+	if aerr != nil {
+		s.respondErr(w, aerr)
+		return
+	}
 
 	dir := filepath.Join(s.media.Dir(), appDir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -156,13 +168,21 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 	if old != "" && old != name {
 		_ = os.Remove(filepath.Join(dir, filepath.Base(old)))
 	}
+	if err := s.storeReleaseMeta(r.Context(), app, man); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 
 	s.audit(r, "platform.app_upload", "settings", target, map[string]any{
 		"file": header.Filename, "bytes": len(raw),
+		"package": man.Package, "version_code": man.VersionCode, "version": man.VersionName,
 	})
 	httpx.JSON(w, http.StatusCreated, map[string]any{
-		"name":  header.Filename,
-		"bytes": len(raw),
+		"name":         header.Filename,
+		"bytes":        len(raw),
+		"package":      man.Package,
+		"version_code": man.VersionCode,
+		"version":      man.VersionName,
 	})
 }
 
@@ -183,6 +203,9 @@ func (s *Server) handleDeleteAppFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = os.Remove(filepath.Join(s.media.Dir(), appDir, filepath.Base(name)))
+	if app, ok := releaseAppOfKey(target); ok {
+		s.clearReleaseMeta(r.Context(), app)
+	}
 	s.audit(r, "platform.app_delete", "settings", target, nil)
 	httpx.JSON(w, http.StatusOK, map[string]any{"removed": true})
 }
@@ -210,6 +233,8 @@ func (s *Server) handleDownloadApp(w http.ResponseWriter, r *http.Request) {
 // أربعُ صفحاتٍ**، **وقاعدةُ أولويّةٍ تُكتب في كلٍّ منها تفترق في
 // الرابعة.**
 func (s *Server) handleReleases(w http.ResponseWriter, r *http.Request) {
+	// **والملفُّ المرفوعُ قبل قراءة الأرقام تُقرأ نسختُه هنا مرّةً.**
+	s.backfillAllReleases(r.Context())
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"apps": release.Resolve(r.Context(), s.releaseStore()),
 	})

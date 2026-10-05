@@ -316,8 +316,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// — **ورسائلُ التطبيق `app_text.*` نصوصٌ لا تُعدّ.**
 	// **وواحدٌ أُضيف بـ«لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٥): أجرتُها `delivery.merchant_fee`.
 	// **وواحدٌ بدين «لدي توصيلة» المفتوح** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `delivery.merchant_debt_open`.
-	if d.BehaviourSettings != 157 {
-		t.Errorf("إعداداتُ السلوك = %d لا 157 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وثمانيةٌ بالتحديث التلقائيّ** (قرارُ المالك ٢٠٢٦-١٠-٠٦): لكلّ تطبيقٍ
+	// `release.<app>.version_code` (رقمُ الملفّ المرفوع — حدٌّ أدنى) و`release.<app>.auto_force`.
+	if d.BehaviourSettings != 165 {
+		t.Errorf("إعداداتُ السلوك = %d لا 165 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

@@ -38,6 +38,14 @@ import (
 //
 // **لافتةٌ أو تصنيفٌ أو نصُّ صفحةٍ سقط سطرُه لا يُساوي إسقاطَ العملية.**
 
+// updateGateSetting **أيحكم هذا المفتاحُ بوّابةَ التحديث؟** — أدنى نسخةٍ
+// يدويّاً، **و«فرضُ التحديث تلقائيّاً»** (٢٠٢٦-١٠-٠٦): تشغيلُه يجعل رقمَ الملفّ
+// المرفوع حدّاً أدنى فيقفل كلَّ من دونه — فهو مثلُ رفع الرقم بيد.
+func updateGateSetting(key string) bool {
+	return strings.HasPrefix(key, "app.min_version.") ||
+		(strings.HasPrefix(key, "release.") && strings.HasSuffix(key, ".auto_force"))
+}
+
 // criticalSettingKey **أهذا المفتاحُ من الصنف `A`؟**
 func criticalSettingKey(key string) bool {
 	if strings.HasPrefix(key, "security.") {
@@ -46,7 +54,7 @@ func criticalSettingKey(key string) bool {
 	// **وحدُّ نسخةِ التطبيق فعلٌ تشغيليٌّ خطير** (٢٠٢٦-٠٩-٢٧): رفعُ
 	// `app.min_version.driver` يقفل تطبيقَ كلِّ سائقٍ دون النسخة على شاشةِ
 	// تحديثٍ إلزاميّ — فيلزمه خطوةُ تحقّقٍ وتدقيقٌ في المعاملة كالمال.
-	if strings.HasPrefix(key, "app.min_version.") {
+	if updateGateSetting(key) {
 		return true
 	}
 	for _, k := range fininv.FinancialSettings {
@@ -80,7 +88,7 @@ const (
 
 // settingRisk **مستوى خطورة المفتاح** — «money» أو «security» أو فراغ.
 func settingRisk(key string) string {
-	if strings.HasPrefix(key, "security.") || strings.HasPrefix(key, "app.min_version.") {
+	if strings.HasPrefix(key, "security.") || updateGateSetting(key) {
 		return riskSecurity
 	}
 	if criticalSettingKey(key) {

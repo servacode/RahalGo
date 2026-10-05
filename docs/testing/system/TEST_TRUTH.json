@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 200,
-    "behaviour_settings": 157,
+    "setting_defs": 208,
+    "behaviour_settings": 165,
     "order_fields": 95,
-    "test_files": 527,
-    "test_funcs": 2190
+    "test_files": 529,
+    "test_funcs": 2197
   },
   "flows": [
     {
@@ -5659,6 +5659,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "release.customer.auto_force",
+      "group": "app",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "release.customer.play_url",
       "group": "app",
       "kind": "text",
@@ -5680,6 +5698,42 @@
       "key": "release.customer.version",
       "group": "app",
       "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.customer.version_code",
+      "group": "app",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.driver.auto_force",
+      "group": "app",
+      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -5731,6 +5785,42 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "release.driver.version_code",
+      "group": "app",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.merchant.auto_force",
+      "group": "app",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "release.merchant.play_url",
       "group": "app",
       "kind": "text",
@@ -5767,6 +5857,42 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "release.merchant.version_code",
+      "group": "app",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.rep.auto_force",
+      "group": "app",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "release.rep.play_url",
       "group": "app",
       "kind": "text",
@@ -5788,6 +5914,24 @@
       "key": "release.rep.version",
       "group": "app",
       "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "release.rep.version_code",
+      "group": "app",
+      "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -22861,6 +23005,24 @@
       "orphan": true
     },
     {
+      "name": "TestUpdateGate_AutoForceOffFallsBackToManual",
+      "file": "internal/qa/update_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestUpdateGate_OutdatedCustomerLoggedOut",
+      "file": "internal/qa/update_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestUpdateGate_UploadSetsVersionAndRejectsWrongPackage",
+      "file": "internal/qa/update_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestBOOK06_EveryRoleCardMatchesItsFilter",
       "file": "internal/qa/user_counts_match_list_test.go",
       "package": "qa",
@@ -23756,6 +23918,30 @@
       "name": "TestGrantSignupBonus_Credits",
       "file": "internal/referrals/signup_bonus_test.go",
       "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAPKManifest_RealProductionAndStaging",
+      "file": "internal/release/apkmeta_test.go",
+      "package": "release",
+      "orphan": true
+    },
+    {
+      "name": "TestAPKManifest_RejectsNonAPK",
+      "file": "internal/release/apkmeta_test.go",
+      "package": "release",
+      "orphan": true
+    },
+    {
+      "name": "TestAPKManifest_Synthetic",
+      "file": "internal/release/apkmeta_test.go",
+      "package": "release",
+      "orphan": true
+    },
+    {
+      "name": "TestExpectedPackage",
+      "file": "internal/release/apkmeta_test.go",
+      "package": "release",
       "orphan": true
     },
     {

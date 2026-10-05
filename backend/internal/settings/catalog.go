@@ -265,6 +265,14 @@ type Def struct {
 	//
 	// **والاسمُ في المعجم لا هنا** — كالمجموعات: `admin.settings.sections.*`.
 	Section string `json:"section,omitempty"`
+
+	// ReadOnly **يكتبه الخادمُ وحدَه — ويُعرض ولا يُحرَّر.**
+	//
+	// (طلبُ المالك ٢٠٢٦-١٠-٠٦: «بدون ما ظلّ أبدّل إصدارات وأرقام».) **رقمُ
+	// النسخة واسمُها يُقرآن من ملفّ التطبيق عند رفعه** — **ويدٌ تكتبهما
+	// تكتب ما ليس في الملفّ** («كابتن رحّال غو» في حقل النسخة).
+	// **ويُردّ تحريرُه من اللوحة في المحرّك** (`handleSetSetting`).
+	ReadOnly bool `json:"read_only,omitempty"`
 }
 
 // Condition شرطُ ظهورِ مفتاحٍ — مفتاحٌ آخرُ بإحدى قيمٍ بعينها.
@@ -461,23 +469,33 @@ var Catalog = []Def{
 	// **ولا مفتاحَ للبصمة**: **تُحسب من الملفّ نفسِه** (`release.Resolve`)
 	// — **وإعدادٌ تكتبه يدٌ يكذب، والمحسوبُ من القرص لا يكذب.**
 	//
-	// **والنسخةُ نصٌّ اختياريّ**: **تُعرض إن كُتبت ويُسكَت عنها إن لم
-	// تُكتب** — **ولا يُخترَع رقمٌ.**
+	// **والنسخةُ ورقمُها يُقرآن من الملفّ عند رفعه** (٢٠٢٦-١٠-٠٦) — كانت
+	// النسخةُ نصّاً يكتبه المالك فكُتب فيه اسمُ التطبيق. **فصارا للعرض وحدَه**
+	// (`ReadOnly`)، **و`auto_force` يجعل رقمَ الملفّ المرفوع حدّاً أدنى**:
+	// من دونه يُطلب منه التحديث بلا أن يُرفع رقمٌ بيد. انظر `min_version.go`.
 	{Key: "release.customer.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
 	{Key: "release.customer.apk", Group: GroupApp, Kind: KindFile, Default: ""},
-	{Key: "release.customer.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+	{Key: "release.customer.version", Group: GroupApp, Kind: KindText, Max: 40, Default: "", ReadOnly: true},
+	{Key: "release.customer.version_code", Group: GroupApp, Kind: KindInt, Min: 0, Max: 2100000000, Unit: "versionCode", Default: 0, ReadOnly: true},
+	{Key: "release.customer.auto_force", Group: GroupApp, Kind: KindBool, Default: true},
 
 	{Key: "release.driver.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
 	{Key: "release.driver.apk", Group: GroupApp, Kind: KindFile, Default: ""},
-	{Key: "release.driver.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+	{Key: "release.driver.version", Group: GroupApp, Kind: KindText, Max: 40, Default: "", ReadOnly: true},
+	{Key: "release.driver.version_code", Group: GroupApp, Kind: KindInt, Min: 0, Max: 2100000000, Unit: "versionCode", Default: 0, ReadOnly: true},
+	{Key: "release.driver.auto_force", Group: GroupApp, Kind: KindBool, Default: true},
 
 	{Key: "release.merchant.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
 	{Key: "release.merchant.apk", Group: GroupApp, Kind: KindFile, Default: ""},
-	{Key: "release.merchant.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+	{Key: "release.merchant.version", Group: GroupApp, Kind: KindText, Max: 40, Default: "", ReadOnly: true},
+	{Key: "release.merchant.version_code", Group: GroupApp, Kind: KindInt, Min: 0, Max: 2100000000, Unit: "versionCode", Default: 0, ReadOnly: true},
+	{Key: "release.merchant.auto_force", Group: GroupApp, Kind: KindBool, Default: true},
 
 	{Key: "release.rep.play_url", Group: GroupApp, Kind: KindText, Max: 300, Default: ""},
 	{Key: "release.rep.apk", Group: GroupApp, Kind: KindFile, Default: ""},
-	{Key: "release.rep.version", Group: GroupApp, Kind: KindText, Max: 40, Default: ""},
+	{Key: "release.rep.version", Group: GroupApp, Kind: KindText, Max: 40, Default: "", ReadOnly: true},
+	{Key: "release.rep.version_code", Group: GroupApp, Kind: KindInt, Min: 0, Max: 2100000000, Unit: "versionCode", Default: 0, ReadOnly: true},
+	{Key: "release.rep.auto_force", Group: GroupApp, Kind: KindBool, Default: true},
 
 	// ══════════════════════════════════════════════════════════════════════
 	// **هويّةُ المنصة — الاسمُ والشعار**

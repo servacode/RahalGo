@@ -193,7 +193,7 @@ func redactAuditMoney(action, entityID string, raw json.RawMessage) (json.RawMes
 	}
 	hit := false
 	if action == "admin.setting_update" && criticalSettingKey(entityID) &&
-		!strings.HasPrefix(entityID, "security.") && !strings.HasPrefix(entityID, "app.min_version.") {
+		!strings.HasPrefix(entityID, "security.") && !updateGateSetting(entityID) {
 		if m, ok := v.(map[string]any); ok {
 			for _, k := range []string{"before", "after", "value"} {
 				if _, ok := m[k]; ok {
