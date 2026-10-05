@@ -77,6 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!tokenStore.refresh) {
+      // **ولا جلسةَ فلا قدراتِ تُنتظَر** (المالك ٢٠٢٦-١٠-٠٥: «لوحة الأدمن
+      // تظلّ تعلق») — **كانت اللوحةُ تنتظر `capsLoaded` وهو لا يأتي أبداً**،
+      // فتبقى على «جارِ التحميل» بدل أن تحوّل إلى صفحة الدخول.
+      setCapsLoaded(true);
       setLoading(false);
       return;
     }
