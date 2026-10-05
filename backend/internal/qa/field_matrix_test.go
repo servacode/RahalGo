@@ -128,6 +128,13 @@ func TestXG42_ContactFieldsFollowCapabilityNotRoute(t *testing.T) {
 				continue
 			}
 			found := realValuesIn(t, got.Body, contactKeys)
+			// **وفي قائمة الطلبات تحجب قدرةُ التفاصيل هاتفَ الزبون وحدَه** (قرارُ
+			// المالك ٢٠٢٦-١٠-٠٤، سجلُّ الطلبات البند ٣) — **وهاتفُ السائق يتبع
+			// `users.contact.read`** كما في كلّ ردٍّ إداريّ. فمن يملك الاتّصالَ
+			// بلا التفاصيل يُقاس بهاتف الزبون لا بهاتف السائق.
+			if route == "/api/v1/admin/orders" && rd.Contact && !rd.Details {
+				delete(found, "driver_phone")
+			}
 			total := 0
 			for _, v := range found {
 				total += len(v)
