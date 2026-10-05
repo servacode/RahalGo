@@ -38,6 +38,9 @@ type obligationPending struct {
 	Kind   string `json:"kind"`
 	Amount int64  `json:"amount"`
 	Note   string `json:"note"`
+	// ProposedBy مقترحُ الطلب — **فلا يُعرَض له زرُّ موافقةٍ يردّه المحرّك**
+	// (فحصُ المال ٢٠٢٦-١٠-٠٥: كان المقترحُ يرى «موافقة» فيُسأل كلمةَ سرّه ثمّ يُردّ ٤٠٣).
+	ProposedBy string `json:"proposed_by"`
 }
 
 // obligationRow دينٌ واحدٌ كما يُعرَض — **بلا هاتفٍ ولا سرّ.**
@@ -244,7 +247,7 @@ func (s *Server) queryObligations(ctx context.Context, f oblFilter, limit, offse
 		       o.order_id::text, ord.number, o.created_at,
 		       (extract(epoch FROM (COALESCE(o.closed_at, now()) - o.created_at)) / 86400)::bigint,
 		       `+oblStateSQL+`,
-		       rq.id::text, rq.kind, rq.amount, rq.note
+		       rq.id::text, rq.kind, rq.amount, rq.note, rq.proposed_by::text
 		`+oblFrom+`
 		LEFT JOIN obligation_requests rq ON rq.obligation_id = o.id AND rq.status = 'pending'`+
 		oblWhere+`
@@ -259,16 +262,19 @@ func (s *Server) queryObligations(ctx context.Context, f oblFilter, limit, offse
 	byID := map[string]int{}
 	for rows.Next() {
 		var x obligationRow
-		var pID, pKind, pNote *string
+		var pID, pKind, pNote, pBy *string
 		var pAmount *int64
 		x.Settlements = []obligationSettlement{}
 		if err := rows.Scan(&x.ID, &x.PartyKind, &x.PartyID, &x.PartyUserID, &x.PartyName,
 			&x.Amount, &x.Outstanding, &x.Cause, &x.OrderID, &x.OrderNo, &x.CreatedAt,
-			&x.AgeDays, &x.State, &pID, &pKind, &pAmount, &pNote); err != nil {
+			&x.AgeDays, &x.State, &pID, &pKind, &pAmount, &pNote, &pBy); err != nil {
 			return nil, err
 		}
 		if pID != nil {
 			x.Pending = &obligationPending{ID: *pID, Kind: *pKind, Amount: *pAmount, Note: *pNote}
+			if pBy != nil {
+				x.Pending.ProposedBy = *pBy
+			}
 		}
 		byID[x.ID] = len(out)
 		out = append(out, x)

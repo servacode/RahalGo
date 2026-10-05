@@ -49,6 +49,7 @@ import {
   IconDate,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.obligations;
@@ -71,6 +72,8 @@ interface Pending {
   kind: "office_cash" | "write_off";
   amount: number;
   note: string;
+  /** مقترحُ الطلب — لا يرى زرَّ الموافقة عليه. */
+  proposed_by?: string;
 }
 
 interface Obligation {
@@ -203,6 +206,7 @@ const partyHref = (o: Obligation) =>
   o.party_kind === "merchant" ? `/dashboard/merchants/${o.party_id}` : `/dashboard/users/${o.party_id}`;
 
 export default function ObligationsPage() {
+  const { user: me } = useAuth();
   const [f, setF] = useState<Filters>(EMPTY);
   const [ready, setReady] = useState(false);
   const [page, setPage] = useState(1);
@@ -505,6 +509,7 @@ export default function ObligationsPage() {
                         <span className="block text-xs text-ink-muted">{o.pending.note}</span>
                       </span>
                       {data?.can_manage &&
+                        me?.id !== o.pending.proposed_by &&
                         (o.pending.kind === "office_cash" || data.can_approve_writeoff) && (
                           <Button onClick={() => decide(o.pending!, true)}>{O.approve}</Button>
                         )}
