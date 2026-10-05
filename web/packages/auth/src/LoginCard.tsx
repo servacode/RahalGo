@@ -481,6 +481,7 @@ export function LoginCard({
             onChange={setPinDraft}
             length={4}
             autoFocus
+            masked
             boxLabel={A.otpBoxLabel}
             onComplete={done}
           />

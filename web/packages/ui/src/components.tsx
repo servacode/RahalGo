@@ -426,11 +426,15 @@ export function OtpInput({
   autoFocus,
   boxLabel,
   onComplete,
+  masked,
 }: {
   value: string;
   onChange: (v: string) => void;
   length?: number;
   autoFocus?: boolean;
+  /** **مخفيٌّ كالكلمة** — رمزُ الأدمن (طلبُ المالك ٢٠٢٦-١٠-٠٥: «إذا كتبته قدّام
+   *  حدا ما يكون مكشوف»). نقاطٌ لا أرقام، **ولا يقترحه المتصفّح.** */
+  masked?: boolean;
   /** تسمية وصفية لكل خانة (تُمرَّر من المعجم) — {n} يُستبدل برقم الخانة */
   boxLabel: string;
   /** يُستدعى عند اكتمال كل الخانات — لتقديم الإرسال بلا نقرة إضافية */
@@ -472,7 +476,8 @@ export function OtpInput({
           }}
           value={d.trim()}
           inputMode="numeric"
-          autoComplete={i === 0 ? "one-time-code" : "off"}
+          type={masked ? "password" : "text"}
+          autoComplete={masked ? "off" : i === 0 ? "one-time-code" : "off"}
           autoFocus={autoFocus && i === 0}
           aria-label={boxLabel.replace("{n}", String(i + 1))}
           maxLength={1}
