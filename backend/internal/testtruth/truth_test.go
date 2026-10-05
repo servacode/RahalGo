@@ -312,8 +312,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `customers.welcome_whatsapp` — **والقالبُ نصٌّ طويلٌ لا يُعدّ.**
 	// **وأربعةٌ أُضيفت بإشعارات الوجبات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `meals.enabled`
 	// ومواعيدُ `meals.breakfast_at|lunch_at|dinner_at` — **والنصوصُ طويلةٌ لا تُعدّ.**
-	if d.BehaviourSettings != 154 {
-		t.Errorf("إعداداتُ السلوك = %d لا 154 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بإظهار السلايدر** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `home.banner_enabled`
+	// — **ورسائلُ التطبيق `app_text.*` نصوصٌ لا تُعدّ.**
+	if d.BehaviourSettings != 155 {
+		t.Errorf("إعداداتُ السلوك = %d لا 155 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

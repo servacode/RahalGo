@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
@@ -29,7 +31,7 @@ func decode[T any](r *http.Request) (*T, error) {
 func (s *Server) respondErr(w http.ResponseWriter, err error) {
 	var appErr *httpx.AppError
 	if errors.As(err, &appErr) {
-		httpx.Error(w, appErr)
+		httpx.Error(w, s.withAppText(appErr))
 		return
 	}
 	// ══════════════════════════════════════════════════════════════════
@@ -61,6 +63,36 @@ func (s *Server) respondErr(w http.ResponseWriter, err error) {
 	}
 	s.logger.Error("internal error", "error", err)
 	httpx.Error(w, httpx.ErrInternal)
+}
+
+// withAppText **يضع نصَّ المالك في `details.notice` لرموز الرفض التي يقرؤها
+// الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٥: `app_text.*`) — خارجَ التغطية، التوصيلُ
+// متوقّف، المتجرُ مغلق، صنفٌ غيرُ متوفّر.
+//
+// **وهو آليّةُ `launch_closed` نفسُها** (`launchError`): الرمزُ عقدٌ، **والنصُّ
+// حالٌ يضبطها المالك.** **وفي موضعٍ واحدٍ لا عند كلّ مُنشئ خطأ** — رمزٌ يُرمى
+// من بابٍ جديدٍ غداً يحمل النصَّ بلا تذكّر.
+//
+// **ولا يُكتب فوق `notice` موجود**، **ولا يُمسّ الخطأُ المشترك**: نسخةٌ تُعدَّل.
+func (s *Server) withAppText(e *httpx.AppError) *httpx.AppError {
+	key := settings.AppTextKeyFor(e.Code)
+	if key == "" || s.settings == nil {
+		return e
+	}
+	if _, has := e.Details["notice"]; has {
+		return e
+	}
+	notice := strings.TrimSpace(s.settings.GetString(context.Background(), key))
+	if notice == "" {
+		return e
+	}
+	out := *e
+	out.Details = make(map[string]any, len(e.Details)+1)
+	for k, v := range e.Details {
+		out.Details[k] = v
+	}
+	out.Details["notice"] = notice
+	return &out
 }
 
 func (s *Server) handleOTPRequest(w http.ResponseWriter, r *http.Request) {
@@ -397,9 +429,23 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ورمزٌ خاطئٌ لا يُسقط تسجيلاً**: من كتب حرفاً زائداً في الرابط يفتح
 	// حسابَه ويُحرَم المكافأةَ وحدَها، **ولا يُردّ على بابٍ قطعه كلَّه.**
-	if req.Ref != "" && res != nil && res.User.ID != "" {
-		if err := s.referrals.Attach(r.Context(), res.User.ID, req.Ref); err != nil {
-			s.logger.Warn("الدعوة: تعذّر النسب", "code", req.Ref, "error", err)
+	//
+	// **وبلا `ref` يُقرأ حجزُ الرقم** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — صديقٌ كتب
+	// رقمَه في صفحة الدعوة ثمّ نزّل ملفّاً مباشراً لا يحمل الرمز. **ويُحذف
+	// الحجزُ عند أخذه** فلا يُقرأ مرّتين. انظر `referrals/claims.go`.
+	if res != nil && res.User.ID != "" {
+		ref := strings.TrimSpace(req.Ref)
+		if ref == "" {
+			code, err := s.referrals.TakeClaim(r.Context(), res.User.Phone)
+			if err != nil {
+				s.logger.Warn("الدعوة: تعذّرت قراءةُ الحجز", "error", err)
+			}
+			ref = code
+		}
+		if ref != "" {
+			if err := s.referrals.Attach(r.Context(), res.User.ID, ref); err != nil {
+				s.logger.Warn("الدعوة: تعذّر النسب", "code", ref, "error", err)
+			}
 		}
 	}
 

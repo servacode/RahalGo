@@ -632,6 +632,9 @@ func (s *Server) Router() http.Handler {
 		// **قد لا يكون سجّل بعد** — **ورفضُ طلبه يمحو أصدقَ إشارةِ
 		// طلبٍ عندنا.** (انظر `opsmap/requests.go`.)
 		r.Post("/public/coverage-request", s.handleCoverageRequestCreate)
+		// **وحجزُ الدعوة برقم الصديق** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — صفحةُ
+		// الدعوة الساكنة تناديه، **فلا يُنسخ رمز.** انظر `referral_handlers.go`.
+		r.Post("/public/invite/claim", s.handleInviteClaim)
 
 		// ══════════════════════════════════════════════════════════
 		// **ونيّةُ التوسّع تُسجَّل بعد أن يُعيد الخادمُ الحكم** (`CR`)

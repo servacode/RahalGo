@@ -315,6 +315,11 @@ func behaviour(d SettingDef) bool {
 	if strings.HasPrefix(d.Key, "page.") {
 		return false
 	}
+	// **ورسائلُ التطبيق نصوصٌ تُقرأ** (`app_text.*`، ٢٠٢٦-١٠-٠٥) — الرمزُ
+	// هو السلوك، والنصُّ عرضٌ فوقه.
+	if strings.HasPrefix(d.Key, "app_text.") {
+		return false
+	}
 	// **وتعتيمُ خلفيّةٍ عرضٌ كخلفيّتِه.**
 	//
 	// **واستثناءُ الصورة دون نسبةِ تعتيمها تفريقٌ بلا معنى** — كلاهما

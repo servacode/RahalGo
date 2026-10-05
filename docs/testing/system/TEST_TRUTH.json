@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 483,
+    "routes": 484,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 193,
-    "behaviour_settings": 154,
+    "setting_defs": 198,
+    "behaviour_settings": 155,
     "order_fields": 95,
-    "test_files": 521,
-    "test_funcs": 2162
+    "test_files": 523,
+    "test_funcs": 2169
   },
   "flows": [
     {
@@ -4548,6 +4548,24 @@
     },
     {
       "key": "home.banner_auto",
+      "group": "site",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "home.banner_enabled",
       "group": "site",
       "kind": "bool",
       "sensitive": false,
@@ -10760,6 +10778,24 @@
       "orphan": true
     },
     {
+      "name": "TestAPPTEXT01_OutOfZoneCarriesEditableNotice",
+      "file": "internal/qa/app_text_banner_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPPTEXT02_EveryCustomerCodeHasItsKey",
+      "file": "internal/qa/app_text_banner_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBANNER01_DisabledSliderReturnsEmptyList",
+      "file": "internal/qa/app_text_banner_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestATOMIC_AdminUserCreationIsOneUnit",
       "file": "internal/qa/atomicity_test.go",
       "package": "qa",
@@ -16083,6 +16119,30 @@
     {
       "name": "TestIDEM_006_MissingKeyStillWorks",
       "file": "internal/qa/idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestINVCLAIM01_ClaimThenSignupWithoutRefAttaches",
+      "file": "internal/qa/invite_claim_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestINVCLAIM02_InvalidCodeRejectedAndExpiredClaimIgnored",
+      "file": "internal/qa/invite_claim_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestINVCLAIM03_ExistingUserPhoneRejected",
+      "file": "internal/qa/invite_claim_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestINVCLAIM04_LatestClaimWins",
+      "file": "internal/qa/invite_claim_test.go",
       "package": "qa",
       "orphan": true
     },

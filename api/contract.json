@@ -8743,6 +8743,31 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/public/invite/claim",
+      "handler": "handleInviteClaim",
+      "auth": false,
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/public/items/{id}",
       "handler": "handlePublicItem",

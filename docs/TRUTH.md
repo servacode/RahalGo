@@ -1138,6 +1138,7 @@ kosom` |
 من «متجري» زرُّ الطارئ — تقرؤه الإدارةُ فوراً ولا يُحسب رفضاً عليك.
 
 وللتواصل: {phone}` |
+| `home.banner_enabled` |  | bool | `true` |
 | `home.banner_auto` |  | bool | `true` |
 | `home.banner_seconds` |  | int | `6` |
 | `shop.rail_auto` |  | bool | `true` |
@@ -1186,6 +1187,10 @@ kosom` |
 
 نتمنالك تجربة حلوة 🤍` |
 | `customers.welcome_whatsapp` |  | bool | `true` |
+| `app_text.out_of_zone` |  | text | `العنوان خارج مناطق التغطية الحالية` |
+| `app_text.coverage_unavailable` |  | text | `التوصيل غير متوفر مؤقتاً — حاول مرة أخرى لاحقاً` |
+| `app_text.merchant_closed` |  | text | `هذا المتجر مغلق الآن` |
+| `app_text.item_unavailable` |  | text | `أحد الأصناف غير متوفر حاليا` |
 | `orders.delivery_timeout_min` | التوزيع والتنبيهات | int | `60` |
 | `drivers.offer_timeout_sec` | التوزيع والتنبيهات | int | `60` |
 | `orders.driver_timeout_min` | التوزيع والتنبيهات | int | `10` |
