@@ -47,6 +47,8 @@ import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
+import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
+import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.merchantProfile;
@@ -97,15 +99,21 @@ export default function MerchantProfilePage() {
   const [violationsOpen, setViolationsOpen] = useState(false);
   const [error, setError] = useState("");
   const [savingReturns, setSavingReturns] = useState(false);
+  // **ومن لا يملك قراءةَ المتجر لا يُنادي بابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
+  // المالية تصل الصفحةَ من ملفّ صاحب المتجر، فكانت تُردّ ٤٠٣ وتُعرض
+  // رسالةَ الخطأ حمراءَ بدل «غير مسموح».
+  const canCall = useCanCall();
+  const canRead = canCall("GET", "/merchants/{id}");
 
   const load = useCallback(async () => {
+    if (!canRead) return;
     try {
       setMr(await api<Merchant>(`/api/v1/admin/merchants/${id}`));
       setError("");
     } catch (err) {
       setError(errorText(err));
     }
-  }, [id]);
+  }, [id, canRead]);
 
   /** بندُ الاسترداد — يُحفظ فوراً ثمّ يُعاد التحميلُ ليُقرأ من القاعدة. */
   const setAcceptsReturns = useCallback(
@@ -130,6 +138,7 @@ export default function MerchantProfilePage() {
     void load();
   }, [load]);
 
+  if (!canRead) return <NotAllowed />;
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!mr) return <LoadingState />;
 
