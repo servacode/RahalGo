@@ -711,7 +711,10 @@ private fun ItemCard(
             // **والتعتيمُ وحدَه لا يكفي** — قد يُقرأ ظلَّ تصميم.
             // **والنصُّ وحدَه لا يكفي** — يضيع في الألوان. **فاجتماعُهما
             // هو ما يُرى من مترين.**
-            if (item.sourceClosed) {
+            // **والخلصانُ كالمغلق: صورةٌ تغمق وكلمةٌ بيضاءُ في وسطها** (قرارُ المالك
+            // ٢٠٢٦-١٠-٠٥) — **كانت شارةً رماديّةً على رماديٍّ شفّافٍ في الزاوية**،
+            // فلا تُقرأ فوق صورة طعامٍ ملوّنة.
+            if (closed) {
                 Box(
                     Modifier
                         .matchParentSize()
@@ -722,7 +725,9 @@ private fun ItemCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = stringResource(R.string.shop_closed_now),
+                        text = stringResource(
+                            if (item.sourceClosed) R.string.shop_closed_now else R.string.mn_unavailable,
+                        ),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -861,14 +866,7 @@ private fun ItemCard(
                 // **ومغلقٌ يُقال على الصورة** — لا يُكتشف عند الضغط.
                 // **والمغلقُ صار لافتةً وسطى** (٢٠٢٦-٠٨-٢٦) — انظر
                 // أعلاه. **وشارتان لشيءٍ واحدٍ تشوّشان.**
-                if (!item.sourceClosed) {
-                    Box(Modifier.align(Alignment.BottomStart).padding(6.dp)) {
-                        Chip(
-                            stringResource(R.string.mn_unavailable),
-                            Rahal.colors.inkMuted,
-                        )
-                    }
-                }
+                // **والخلصانُ قيل في وسط الصورة** أعلاه — ولا شارةَ ثانية.
             }
         }
         Spacer(Modifier.height(5.dp))
