@@ -131,7 +131,8 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 	}
 	// **والقائمُ والجديدُ يُقاسان معاً** — **ومن قاس الجديدَ وحدَه سمح
 	// بألفٍ مرّةً بعد مرّةٍ وسقفُه ألف.**
-	if owed+fee > limit {
+	// **إلّا والدينُ مفتوحٌ بقرار المالك** — فيُقيَّد مهما بلغ (`SettingMerchantDebtOpen`).
+	if owed+fee > limit && !s.merchantDebtOpen(ctx, q) {
 		return ErrDeliveryCreditExhausted
 	}
 	if _, err := obligations.Create(ctx, q, obligations.PartyMerchant, merchantID,

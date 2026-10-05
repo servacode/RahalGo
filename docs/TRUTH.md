@@ -1209,6 +1209,7 @@ kosom` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `delivery.merchant_fee` | السائقون | money | `0` |
+| `delivery.merchant_debt_open` | السائقون | bool | `true` |
 | `delivery.by_distance` | السائقون | bool | `false` |
 | `delivery.platform_percent` | السائقون | percent | `0` |
 | `delivery.per_km` | السائقون | money | `0` |

@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 199,
-    "behaviour_settings": 156,
+    "setting_defs": 200,
+    "behaviour_settings": 157,
     "order_fields": 95,
     "test_files": 525,
-    "test_funcs": 2180
+    "test_funcs": 2181
   },
   "flows": [
     {
@@ -3820,6 +3820,27 @@
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.merchant_debt_open",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -16773,6 +16794,12 @@
     },
     {
       "name": "TestMDA05_AutoAcceptSweepCharges",
+      "file": "internal/qa/merchant_delivery_approval_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDA06_OpenDebtAcceptsWithoutBalance",
       "file": "internal/qa/merchant_delivery_approval_test.go",
       "package": "qa",
       "orphan": true

@@ -241,6 +241,7 @@ func TestMD02_CancelBeforePickupRefundsWallet(t *testing.T) {
 // TestMD03_DebtPathAndVoid **لا تكفي المحفظة ⇒ دينٌ تحت السقف · والإلغاءُ يُسقطه.**
 func TestMD03_DebtPathAndVoid(t *testing.T) {
 	h := New(t)
+	h.Setting("delivery.merchant_debt_open", "false") // **السقفُ موضوعُ الفحص**
 	m := newMDFx(t, h, "منطقةُ MD-03")
 	// **بلا سقفٍ لا دين** — يُردّ بلفظه لا بـ٥٠٠.
 	r := h.POSTKey(m.url("/deliveries"), m.fx.Tok, uniq("md03a"), m.body("merchant"))

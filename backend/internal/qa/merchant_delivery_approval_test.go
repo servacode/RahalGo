@@ -170,6 +170,8 @@ func TestMDA02_OfficeRejectsStoreNotifiedNoMoney(t *testing.T) {
 // TestMDA03_WalletChargedAtAcceptanceNotCreation **الخصمُ عند القبول — وإن لم تكفِ رُدّ القبول.**
 func TestMDA03_WalletChargedAtAcceptanceNotCreation(t *testing.T) {
 	h := New(t)
+	// **والسقفُ يحكم هنا** — الدينُ المفتوحُ (افتراضُ ٢٠٢٦-١٠-٠٥) يُطفأ لهذا الفحص.
+	h.Setting("delivery.merchant_debt_open", "false")
 	m := newMDFx(t, h, "منطقةُ MDA-03")
 	owner := m.fx.M.Owner.ID
 	fundWallet(t, h, m.admin, owner, 500)
@@ -269,4 +271,31 @@ func TestMDA05_AutoAcceptSweepCharges(t *testing.T) {
 	if got := walletOf(t, h, owner); got != 500 {
 		t.Fatalf("**القبولُ التلقائيُّ لم يخصم**: %d والمنتظَر 500", got)
 	}
+}
+
+// TestMDA06_OpenDebtAcceptsWithoutBalance **الدينُ المفتوح** (قرارُ المالك ٢٠٢٦-١٠-٠٥:
+// «نقبل الرقم السالب وبعدها المتجر يسوّي الحساب»): **لا محفظةَ ولا سقف — ويُقبل
+// القبولُ ويُقيَّد ديناً على المتجر.**
+func TestMDA06_OpenDebtAcceptsWithoutBalance(t *testing.T) {
+	h := New(t)
+	h.Setting("delivery.merchant_debt_open", "true")
+	m := newMDFx(t, h, "منطقةُ MDA-06")
+	base := mdaBaseline(t, h)
+
+	id := m.create(t, h, "merchant", uniq("mda06"))
+	m.accept(t, h, id)
+	if st := h.statusOf(id); st == "pending" {
+		t.Fatalf("**الدينُ مفتوحٌ والقبولُ رُدّ** — الحال %s", st)
+	}
+	var owed int64
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT COALESCE(sum(amount), 0) FROM financial_obligations
+		 WHERE party_kind = 'merchant' AND party_id = $1::uuid AND order_id = $2::uuid`,
+		m.fx.M.ID, id).Scan(&owed); err != nil {
+		t.Fatalf("الدين: %v", err)
+	}
+	if owed <= 0 {
+		t.Fatalf("**قُبلت ولم يُقيَّد دين** — %d", owed)
+	}
+	mdaNoNewViolations(t, h, base)
 }

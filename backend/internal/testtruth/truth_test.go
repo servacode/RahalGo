@@ -315,8 +315,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **وواحدٌ أُضيف بإظهار السلايدر** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `home.banner_enabled`
 	// — **ورسائلُ التطبيق `app_text.*` نصوصٌ لا تُعدّ.**
 	// **وواحدٌ أُضيف بـ«لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٥): أجرتُها `delivery.merchant_fee`.
-	if d.BehaviourSettings != 156 {
-		t.Errorf("إعداداتُ السلوك = %d لا 156 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ بدين «لدي توصيلة» المفتوح** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `delivery.merchant_debt_open`.
+	if d.BehaviourSettings != 157 {
+		t.Errorf("إعداداتُ السلوك = %d لا 157 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

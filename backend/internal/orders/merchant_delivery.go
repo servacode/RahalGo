@@ -376,7 +376,8 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 		return nil, err
 	}
 	q.CreditOwed = owed
-	q.MerchantCanPay = merchantCanCover(q.WalletBalance, q.CreditOwed, q.CreditLimit, q.Fee)
+	q.MerchantCanPay = s.merchantDebtOpen(ctx, s.db) ||
+		merchantCanCover(q.WalletBalance, q.CreditOwed, q.CreditLimit, q.Fee)
 	return q, nil
 }
 
@@ -441,6 +442,17 @@ func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, dista
 	return pricing.DeliveryFeeAt(ctx, st, distanceM)
 }
 
+// SettingMerchantDebtOpen **دينُ «لدي توصيلة» بلا سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٥:
+// «نقبل الرقم السالب وبعدها المتجر يسوّي الحساب… صاحب المتجر ما بيختفي، ونحنا ما
+// رح نتركه يسحب على كيفه»). **مشتعلٌ افتراضاً**: ما لم تكفِ المحفظةُ قُيّد ديناً
+// على المتجر بلا حدّ، **ويُتابَع في «الديون»**. ومطفأً يعود سقفُ كلّ متجرٍ حاكماً.
+const SettingMerchantDebtOpen = "delivery.merchant_debt_open"
+
+// merchantDebtOpen **أيُقيَّد الدينُ بلا سقف؟**
+func (s *Service) merchantDebtOpen(ctx context.Context, q dbtx.Querier) bool {
+	return s.settings != nil && s.settings.On(q).GetBool(ctx, SettingMerchantDebtOpen)
+}
+
 // merchantCanCover **أيقدر المتجرُ أن يدفع؟** — محفظةً تكفي، أو ديناً تحت سقفه.
 //
 // **قاعدةُ `chargeMerchantDelivery` نفسُها** — تُقرأ في عرض السعر وفي الإنشاء
@@ -457,6 +469,9 @@ func (s *Service) merchantCanPay(ctx context.Context, q dbtx.Querier, merchantID
 		       m.delivery_credit_limit
 		  FROM merchants m WHERE m.id = $1`, merchantID).Scan(&balance, &limit); err != nil {
 		return false, err
+	}
+	if s.merchantDebtOpen(ctx, q) {
+		return true, nil
 	}
 	owed, err := obligations.Balance(ctx, q, obligations.PartyMerchant, merchantID)
 	if err != nil {

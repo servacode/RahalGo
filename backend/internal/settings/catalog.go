@@ -1185,6 +1185,8 @@ var Catalog = []Def{
 	// الإنشاءُ وعرضُ السعر من دالّةٍ واحدة.
 	{Key: "delivery.merchant_fee", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	// **ودينُ «لدي توصيلة» بلا سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر `orders.SettingMerchantDebtOpen`.
+	{Key: "delivery.merchant_debt_open", Group: GroupDrivers, Kind: KindBool, Default: true, Sensitive: true},
 
 	// **والأجرةُ بالمسافة — مفتاحٌ يُشعَل يومَ يُراد.**
 	//
