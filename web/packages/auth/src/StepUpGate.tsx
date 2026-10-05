@@ -90,7 +90,7 @@ export function StepUpGate() {
     .join(" · ");
 
   return (
-    <Modal open onClose={close} title={S.title}>
+    <Modal open top onClose={close} title={S.title}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();

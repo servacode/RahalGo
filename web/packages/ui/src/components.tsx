@@ -761,12 +761,17 @@ export function Modal({
   onClose,
   title,
   size = "md",
+  top = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   size?: keyof typeof modalSizes;
+  /** **فوق كلّ نافذة** — لسؤالٍ يقطع نافذةً مفتوحة (كلمةُ السرّ فوق «تأكيد»، وهو `z-[70]`).
+   *  كان التأكيدُ يبقى مفتوحاً بانتظار الحفظ فيغطّي سؤالَ كلمة السرّ ولا يُضغط زرُّه
+   *  (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥: تغييرُ مفتاحٍ ماليّ من الإعدادات). */
+  top?: boolean;
   children: ReactNode;
 }) {
   const mounted = useMounted();
@@ -781,7 +786,7 @@ export function Modal({
   if (!open || !mounted) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center scrim p-4"
+      className={`fixed inset-0 ${top ? "z-[80]" : "z-50"} flex items-center justify-center scrim p-4`}
       onClick={onClose}
     >
       <div
