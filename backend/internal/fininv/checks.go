@@ -944,11 +944,24 @@ var All = []Check{
 				  ON t.ref = o.id::text AND t.kind = 'commission'
 				WHERE o.status = 'refunded'
 				GROUP BY t.user_id
+			),
+			-- **والدَّينُ المسدَّد يغطّي كما يغطّي القائم** — نقداً بالمكتب أو
+			-- بشحنٍ أو اقتطاعاً من عمولةٍ قادمة أو شطباً. **وكان الفحصُ يقرأ
+			-- نقصَ الدَّين بسداده عمولةً لم تُعكَس** (فحصُ المال ٢٠٢٦-١٠-٠٥).
+			-- والمُسقَطُ لأنّ الطلبَ لم يقع ليس سداداً.
+			مسدَّد AS (
+				SELECT f.party_id AS user_id, sum(s.amount)::bigint AS المسدَّد
+				FROM obligation_settlements s
+				JOIN financial_obligations f ON f.id = s.obligation_id
+				WHERE f.party_kind = 'rep' AND f.cause = 'refund_rep_commission'
+				  AND s.method <> 'voided'
+				GROUP BY f.party_id
 			)
-			SELECT u.full_name, r.الباقي, u.commission_debt
+			SELECT u.full_name, r.الباقي, u.commission_debt, COALESCE(p.المسدَّد, 0) AS المسدَّد
 			FROM بالمندوب r
 			JOIN users u ON u.id = r.user_id
-			WHERE r.الباقي > COALESCE(u.commission_debt, 0)`,
+			LEFT JOIN مسدَّد p ON p.user_id = r.user_id
+			WHERE r.الباقي > COALESCE(u.commission_debt, 0) + COALESCE(p.المسدَّد, 0)`,
 	},
 	{
 		ID: "FI-12.c", Family: FI12, Status: DeferredP6, Ops: false,
