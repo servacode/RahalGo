@@ -33,9 +33,11 @@ import { StatementTab } from "@/components/admin/treasury/Statement";
 import { CashboxTab } from "@/components/admin/treasury/Cashbox";
 import { ApprovalsTab } from "@/components/admin/treasury/Approvals";
 import { HealthTab } from "@/components/admin/treasury/Health";
+import { TopupTab } from "@/components/admin/treasury/Topup";
+import { useCanCall } from "@/lib/policy";
 
-type Tab = "overview" | "statement" | "cashbox" | "approvals" | "health";
-const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "health"];
+type Tab = "overview" | "statement" | "cashbox" | "approvals" | "topup" | "health";
+const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "topup", "health"];
 
 /** **صفحاتُ المال التي لها بابُها** — تُفتح من هنا. */
 const LINKS: { href: string; label: string }[] = [
@@ -60,6 +62,8 @@ export default function TreasuryPage() {
 function TreasuryHub() {
   const router = useRouter();
   const params = useSearchParams();
+  // **«شحن محفظة» لمن يقترح الحركة** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — بقدرة بابه.
+  const canTopup = useCanCall()("GET", "/treasury/wallet-lookup");
   const fromUrl = params.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(fromUrl && TABS.includes(fromUrl) ? fromUrl : "overview");
 
@@ -78,6 +82,7 @@ function TreasuryHub() {
     { key: "statement", label: T.tabs.statement, icon: IconStatus },
     { key: "cashbox", label: T.tabs.cashbox, icon: IconBalance },
     { key: "approvals", label: T.tabs.approvals, icon: IconCheck },
+    ...(canTopup ? [{ key: "topup" as const, label: T.topup.tab, icon: IconWallet }] : []),
     { key: "health", label: T.tabs.health, icon: IconShieldCheck },
   ];
 
@@ -96,6 +101,7 @@ function TreasuryHub() {
       {tab === "statement" && <StatementTab />}
       {tab === "cashbox" && <CashboxTab />}
       {tab === "approvals" && <ApprovalsTab />}
+      {tab === "topup" && canTopup && <TopupTab />}
       {tab === "health" && <HealthTab />}
     </PageContainer>
   );

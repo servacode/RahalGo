@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 486,
+    "routes": 488,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -34,7 +34,7 @@
     "behaviour_settings": 155,
     "order_fields": 95,
     "test_files": 524,
-    "test_funcs": 2173
+    "test_funcs": 2175
   },
   "flows": [
     {
@@ -17484,7 +17484,19 @@
       "orphan": true
     },
     {
+      "name": "TestFinSections_GoodsCompensationFromLosses",
+      "file": "internal/qa/ops_finance_sections_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestFinSections_NavEqualsOwnerList",
+      "file": "internal/qa/ops_finance_sections_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFinSections_WalletTopupFromTreasury",
       "file": "internal/qa/ops_finance_sections_test.go",
       "package": "qa",
       "orphan": true

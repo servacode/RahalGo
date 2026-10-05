@@ -1504,6 +1504,11 @@ func (s *Server) Router() http.Handler {
 			r.Post("/emergencies/{id}/notes", s.handleEmergencyNote)
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
+			// **وبضاعةٌ رجعت لمتجرها ولم تُعوَّض** — في «الخسائر والنزاعات» (قرارُ المالك
+			// ٢٠٢٦-١٠-٠٥): الماليّةُ لا ترى لوحَ الطلبات. انظر `finance_section_handlers.go`.
+			r.Get("/losses/goods-compensations", s.handleGoodsCompensations)
+			// **وبحثُ «شحن محفظة» في الخزينة** — حقولٌ خمسةٌ لا ملفّ (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+			r.Get("/treasury/wallet-lookup", s.handleWalletLookup)
 			// **والأرباحُ بتبويباتها** — (قرارُ المالك ٢٠٢٦-٠٨-١٦):
 			// المنصّةُ والزبائنُ والمندوبون والسائقون والمتاجر.
 			//

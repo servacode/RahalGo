@@ -2257,3 +2257,14 @@ kosom` |
   سحبُ الخزينة وقبولُ عجز الصندوق (`treasury.manage`) · الشطبُ (`finance.writeoff.approve`) · إعادةُ الحساب (`finance.recompute`).
 
 يحرسها `TestOpsSections_ForwardToStoreAndTransfer` و`TestOpsSections_EveryButtonWorks` و`TestFinSections_*` و`TestOFM5_*` في `qa`.
+
+**وأجوبةُ المالك على الأسئلة المفتوحة (٢٠٢٦-١٠-٠٥):**
+
+- **«شحن محفظة» تبويبٌ في الخزينة**: بحثٌ ضيّق `GET /treasury/wallet-lookup?q=` بقدرة `finance.manage` (لا `users.read`) —
+  حرفان على الأقلّ وعشرون سطراً، **ويردّ المعرّفَ والاسمَ والأدوارَ والرصيد** (والهاتفُ يُحذف لمن لا يملك
+  `users.contact.read` — `XG-42`)، **ثمّ نافذةُ المحفظة نفسُها**: الطلبُ من `POST /users/{id}/wallet`، بسقف
+  `finance.manual_wallet_max`، **ولا يوافق عليه مقترحُه.**
+- **«تعويض البضاعة» تبويبٌ في الخسائر والنزاعات**: `GET /losses/goods-compensations` (`finance.read`) — طلباتٌ حسمت
+  العمليّاتُ بضاعتَها «إلى المتجر» ولم تُعوَّض، بحال طلب التعويض إن كُتب. **والتعويضُ من بابه**
+  (`POST /orders/{id}/goods/compensation`): سقفُه سعرُ الشراء، ويمرّ بصفحة التعويضات.
+- **تعديلُ مراحل الأهداف ومكافآت الدعوة يبقى للمالك ومدير المنصّة**، **والتقاريرُ وسجلُّ الأحداث خارجَ الماليّة.**

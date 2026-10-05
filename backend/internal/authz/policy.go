@@ -227,6 +227,12 @@ var adminPolicy = []Rule{
 	{"GET", "/ledger/export", FinanceExport},
 	{"GET", "/treasury-candidates", FinanceManage},
 	{"GET", "/reports/losses", FinanceRead},
+	// **وتعويضُ البضاعة الراجعة من «الخسائر والنزاعات»** (قرارُ المالك ٢٠٢٦-١٠-٠٥) —
+	// قائمةٌ تُقرأ، **والتعويضُ من بابه** (`/orders/{id}/goods/compensation`، `finance.manage`).
+	{"GET", "/losses/goods-compensations", FinanceRead},
+	// **و«شحن محفظة» من الخزينة** — بحثٌ بخمسة حقول بقدرة من يقترح الحركة،
+	// **لا بـ`users.read`**: الماليّةُ لا ترى الحسابات (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+	{"GET", "/treasury/wallet-lookup", FinanceManage},
 	// **الخزينةُ وصندوقُ المكتب والإغلاقُ اليوميّ والموافقاتُ الموحّدة**
 	// (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة).
 	{"GET", "/treasury/overview", FinanceRead},

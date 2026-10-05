@@ -49,12 +49,12 @@
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 37
+   "guards_routes": 38
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 32
+   "guards_routes": 33
   },
   {
    "code": "finance.recompute",
@@ -249,7 +249,7 @@
   }
  ],
  "route_policy": {
-  "rules": 265,
+  "rules": 267,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

@@ -30,6 +30,7 @@ import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { LossesView } from "@/components/admin/money/losses";
 import { DisputesView } from "@/components/admin/money/disputes";
+import { GoodsCompensationView } from "@/components/admin/money/goodsCompensation";
 
 const m = getMessages(defaultLocale);
 
@@ -41,9 +42,12 @@ export default function MoneyLostPage() {
      (قرارُ المالك ٢٠٢٦-١٠-٠٤: الماليّةُ ترى النزاعات وتحسم، والدعمُ يرى ويفتح.) */
   const canSeeLosses = canCall("GET", "/reports/losses");
   const canSeeDisputes = canCall("GET", "/disputes");
+  // **وتعويضُ البضاعة الراجعة هنا** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — الماليّةُ لا ترى لوحَ الطلبات.
+  const canGoods = canCall("GET", "/losses/goods-compensations");
   const tabs = [
     ...(canSeeLosses ? [{ key: "losses", label: m.admin.nav.losses }] : []),
     ...(canSeeDisputes ? [{ key: "disputes", label: m.admin.nav.claims }] : []),
+    ...(canGoods ? [{ key: "goods", label: m.admin.losses.goodsTab }] : []),
   ];
   const [tab, setTab] = useState<string>("losses");
   /* **والصلاحيّةُ تصل بعد أوّل رسم** (`useAuth` تُحمّل): فتبويبٌ اختِيرَ قبل
@@ -57,6 +61,7 @@ export default function MoneyLostPage() {
       {tabs.length > 1 && <TabCards items={tabs} active={active} onChange={setTab} />}
       {active === "losses" && <LossesView />}
       {active === "disputes" && <DisputesView />}
+      {active === "goods" && <GoodsCompensationView />}
     </div>
   );
 }

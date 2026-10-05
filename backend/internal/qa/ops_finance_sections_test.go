@@ -281,6 +281,10 @@ func TestFinSections_EveryButtonWorks(t *testing.T) {
 		{"POST", a + "/cashbox/closes/" + none + "/approve", map[string]any{}},
 		{"POST", a + "/cashbox/shortfalls/" + none + "/resolve", map[string]any{}},
 		{"GET", a + "/approvals", nil}, {"GET", a + "/treasury-candidates", nil},
+		// **«شحن محفظة» من الخزينة** (قرارُ المالك ٢٠٢٦-١٠-٠٥): بحثٌ ضيّقٌ ثمّ نافذةُ المحفظة.
+		{"GET", a + "/treasury/wallet-lookup?q=QA", nil},
+		{"GET", a + "/users/" + drv.ID + "/wallet", nil},
+		{"POST", a + "/users/" + drv.ID + "/wallet", map[string]any{}},
 		// ── صفحاتُ المال التي تُفتح من الخزينة ──
 		{"GET", a + "/cash/outstanding", nil}, {"GET", a + "/cash/outstanding/export", nil},
 		{"GET", a + "/cash/merchant-dues", nil},
@@ -306,6 +310,9 @@ func TestFinSections_EveryButtonWorks(t *testing.T) {
 		{"POST", a + "/obligation-requests/" + none + "/approve", map[string]any{}},
 		// ── الخسائر والنزاعات ──
 		{"GET", a + "/reports/losses", nil}, {"GET", a + "/disputes", nil},
+		// **وتعويضُ البضاعة الراجعة من هنا** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — لا من لوح الطلبات.
+		{"GET", a + "/losses/goods-compensations", nil},
+		{"POST", a + "/orders/" + oid + "/goods/compensation", map[string]any{"amount": 0}},
 		{"GET", a + "/disputes/parties", nil}, {"POST", a + "/disputes", map[string]any{}},
 		{"POST", a + "/disputes/" + none + "/propose", map[string]any{}},
 		{"GET", a + "/dispute-resolutions", nil},
@@ -349,4 +356,153 @@ func TestFinSections_EveryButtonWorks(t *testing.T) {
 		{"POST", a + "/orders/" + oid + "/assign", map[string]any{"driver_id": drv.ID}},
 	}
 	walkCalls(t, hh, "finance", tok, allowed, denied)
+}
+
+// TestFinSections_WalletTopupFromTreasury **«شحن محفظة» من الخزينة** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٥، السؤال ١): الماليّةُ تجد الحسابَ ببحثٍ ضيّق — **خمسةُ حقولٍ لا ملفّ** —
+// ثمّ تقترح الحركةَ من بابها القائم، **بسقفها، ولا توافق على ما اقترحته.**
+func TestFinSections_WalletTopupFromTreasury(t *testing.T) {
+	hh := New(t)
+	treasury(t, hh)
+	fin := hh.NewUser("finance")
+	target := hh.Factory().NewUserWith("customer", Named("زبون شحن QA"))
+	const a = "/api/v1/admin"
+
+	// ── ١ · البحثُ يردّ خمسةَ حقولٍ لا غير ─────────────────────────────
+	res := hh.GET(a+"/treasury/wallet-lookup?q="+target.Phone[len(target.Phone)-8:], fin.Token)
+	if res.Code != http.StatusOK {
+		t.Fatalf("**بحثُ «شحن محفظة» رُدّ للماليّة**: %s", res)
+	}
+	list, _ := res.JSON()["accounts"].([]any)
+	var row map[string]any
+	for _, x := range list {
+		if r, _ := x.(map[string]any); r != nil && r["id"] == target.ID {
+			row = r
+		}
+	}
+	if row == nil {
+		t.Fatalf("الحسابُ لم يُوجد برقمه: %s", res)
+	}
+	// **والهاتفُ يُحذف عند حدّ الخروج لمن لا يملك `users.contact.read`** (`XG-42`،
+	// `response_shape.go`) — والماليّةُ لا تملكها: **تجد الحسابَ برقمه ولا تقرأ الرقم.**
+	want := map[string]bool{"id": true, "name": true, "roles": true, "balance": true}
+	for k := range row {
+		if !want[k] {
+			t.Errorf("**البحثُ يُسرّب حقلاً فوق المطلوب للماليّة**: %q", k)
+		}
+	}
+	for k := range want {
+		if _, ok := row[k]; !ok {
+			t.Errorf("حقلٌ لازمٌ غاب عن البحث: %q — %v", k, row)
+		}
+	}
+	// **ومن يملك قدرةَ الاتّصال يرى الرقمَ في الحقل الخامس لا أكثر.**
+	_, both := capUser(t, hh, "finance", "customer_support")
+	r2 := hh.GET(a+"/treasury/wallet-lookup?q="+target.Phone[len(target.Phone)-8:], both)
+	if !strings.Contains(string(r2.Body), target.Phone) {
+		t.Errorf("قارئُ الاتّصال لم يرَ الرقم: %s", r2)
+	}
+	for _, leak := range []string{"address", "email", "status", "created_at", "activity", "wallet_requests"} {
+		if strings.Contains(string(r2.Body), `"`+leak+`"`) {
+			t.Errorf("**البحثُ يُسرّب %q**", leak)
+		}
+	}
+	// **وبالاسم أيضاً — وحرفٌ واحدٌ لا يُصفّح الحسابات.**
+	if r := hh.GET(a+"/treasury/wallet-lookup?q=%D8%B2%D8%A8%D9%88%D9%86%20%D8%B4%D8%AD%D9%86", fin.Token); r.Code != http.StatusOK ||
+		!strings.Contains(string(r.Body), target.ID) {
+		t.Errorf("البحثُ بالاسم لم يجد الحساب: %s", r)
+	}
+	if r := hh.GET(a+"/treasury/wallet-lookup?q=9", fin.Token).JSON(); len(r["accounts"].([]any)) != 0 {
+		t.Errorf("**حرفٌ واحدٌ صفّح الحسابات**: %v", r)
+	}
+	// **ولا يفتحه من لا يقترح الحركة** — ولا يُغني عنه دليلُ الحسابات.
+	for _, role := range []string{"operations", "customer_support"} {
+		if r := hh.GET(a+"/treasury/wallet-lookup?q=QA", hh.NewUser(role).Token); !capDenied(r) {
+			t.Errorf("**`%s` فتح بحثَ «شحن محفظة»**: %d", role, r.Code)
+		}
+	}
+	// **والماليّةُ ما زالت لا تفتح ملفَّ الحساب.**
+	if r := hh.GET(a+"/users/"+target.ID, fin.Token); !capDenied(r) {
+		t.Errorf("**الماليّةُ فتحت ملفَّ الحساب**: %d", r.Code)
+	}
+
+	// ── ٢ · الاقتراحُ من بابه — بالسقف، ولا يوافق عليه مقترحُه ─────────────
+	over := hh.POSTKey(a+"/users/"+target.ID+"/wallet", fin.Token, uniq("w"),
+		map[string]any{"amount": 999999999, "kind": "topup", "note": "فوق السقف"})
+	if over.Code < 400 || over.Err() != "wallet_over_cap" {
+		t.Errorf("**حركةٌ فوق `finance.manual_wallet_max` قُبلت**: %s", over)
+	}
+	made := hh.POSTKey(a+"/users/"+target.ID+"/wallet", fin.Token, uniq("w"),
+		map[string]any{"amount": 5000, "kind": "topup", "note": "نقد في المكتب"})
+	if made.Code >= 400 {
+		t.Fatalf("**اقتراحُ الشحن رُدّ للماليّة**: %s", made)
+	}
+	var reqID string
+	if err := hh.Pool.QueryRow(ctxBG(), `SELECT id::text FROM wallet_requests
+		WHERE user_id = $1::uuid AND status = 'pending'`, target.ID).Scan(&reqID); err != nil {
+		t.Fatalf("الطلبُ المعلَّق: %v", err)
+	}
+	if r := hh.POST(a+"/wallet-requests/"+reqID+"/approve", fin.Token, map[string]any{}); r.Code < 400 {
+		t.Errorf("**المقترحُ وافق على اقتراحه**: %s", r)
+	}
+}
+
+// TestFinSections_GoodsCompensationFromLosses **تعويضُ البضاعة الراجعة من «الخسائر
+// والنزاعات»** (قرارُ المالك ٢٠٢٦-١٠-٠٥، السؤال ٢): العمليّاتُ حسمت البضاعةَ «إلى
+// المتجر»، **والماليّةُ تراها هنا وتكتب التعويضَ بلا لوح الطلبات.**
+func TestFinSections_GoodsCompensationFromLosses(t *testing.T) {
+	hh := New(t)
+	treasury(t, hh)
+	fin := hh.NewUser("finance")
+	oid, _ := activeOrderFor(t, hh)
+	const a = "/api/v1/admin"
+	// **ما تكتبه العمليّاتُ بزرّها** (`POST /orders/{id}/goods`) — يُزرع هنا مباشرة:
+	// موضوعُ الاختبار خطوةُ الماليّة لا مشوارُ الإرجاع.
+	if _, err := hh.Pool.Exec(ctxBG(),
+		`UPDATE orders SET status = 'failed', goods_settled_to = 'merchant' WHERE id = $1::uuid`, oid); err != nil {
+		t.Fatalf("حسمُ البضاعة: %v", err)
+	}
+
+	find := func() map[string]any {
+		t.Helper()
+		r := hh.GET(a+"/losses/goods-compensations", fin.Token)
+		if r.Code != http.StatusOK {
+			t.Fatalf("**قائمةُ البضاعة الراجعة رُدّت للماليّة**: %s", r)
+		}
+		list, _ := r.JSON()["orders"].([]any)
+		for _, x := range list {
+			if row, _ := x.(map[string]any); row != nil && row["order_id"] == oid {
+				return row
+			}
+		}
+		return nil
+	}
+	row := find()
+	if row == nil {
+		t.Fatal("**بضاعةٌ رجعت لمتجرها لا تظهر في «الخسائر والنزاعات»**")
+	}
+	cost, _ := row["goods_cost"].(float64)
+	if cost <= 0 || row["request_status"] != "" {
+		t.Fatalf("السطرُ بلا كلفةٍ أو بطلبٍ سابق: %v", row)
+	}
+	// **وفوق سعر الشراء يُردّ.**
+	if r := hh.POST(a+"/orders/"+oid+"/goods/compensation", fin.Token,
+		map[string]any{"amount": int64(cost) + 1}); r.Code < 400 {
+		t.Errorf("**تعويضٌ فوق سعر الشراء قُبل**: %s", r)
+	}
+	if r := hh.POST(a+"/orders/"+oid+"/goods/compensation", fin.Token,
+		map[string]any{"amount": int64(cost)}); r.Code >= 400 {
+		t.Fatalf("**تعويضُ البضاعة رُدّ للماليّة من «الخسائر»**: %s", r)
+	}
+	if row = find(); row == nil || row["request_status"] != "pending" {
+		t.Fatalf("الطلبُ لم يظهر معلَّقاً: %v", row)
+	}
+	// **ولا يُكتب ثانيةً** — ولا تملكه العمليّات.
+	if r := hh.POST(a+"/orders/"+oid+"/goods/compensation", fin.Token,
+		map[string]any{"amount": 1}); r.Code < 400 {
+		t.Errorf("**طلبُ تعويضٍ ثانٍ كُتب للبضاعة نفسِها**: %s", r)
+	}
+	if r := hh.GET(a+"/losses/goods-compensations", hh.NewUser("operations").Token); !capDenied(r) {
+		t.Errorf("**العمليّاتُ قرأت قائمةَ التعويض**: %d", r.Code)
+	}
 }

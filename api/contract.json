@@ -2053,6 +2053,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/losses/goods-compensations",
+      "handler": "handleGoodsCompensations",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "orders",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/market/items",
       "handler": "handleMarketItems",
       "auth": true,
@@ -4891,6 +4907,22 @@
       "handler": "handleTreasuryStatementExport",
       "auth": true,
       "capability": "finance.export"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/wallet-lookup",
+      "handler": "handleWalletLookup",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "accounts",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",
