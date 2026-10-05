@@ -42,6 +42,7 @@ export default function AdminMenuPage() {
   // كلُّها ٤٠٣.
   const canCall = useCanCall();
   const canRead = canCall("GET", "/merchants/{id}/menu");
+  const canEdit = canCall("POST", "/merchants/{id}/menu/items");
 
   useEffect(() => {
     if (!canRead) return;
@@ -72,6 +73,7 @@ export default function AdminMenuPage() {
 
       {!canRead ? <NotAllowed /> : <MenuManager
         showSalePrice
+        readOnly={!canEdit}
         api={api}
         paths={PATHS}
         merchantID={id}

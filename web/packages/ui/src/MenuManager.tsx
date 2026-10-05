@@ -123,11 +123,17 @@ export function MenuManager({
    * بالفاتورة.)
    */
   showSalePrice = false,
+  /**
+   * **عرضٌ بلا تعديل** — لمن يقرأ القائمةَ ولا يملك تعديلَها (فحصُ المتصفّح
+   * ٢٠٢٦-١٠-٠٥: العمليات ترى «صنف جديد» والمحرّكُ يردّ حفظَه ٤٠٣).
+   */
+  readOnly = false,
 }: {
   api: ApiFn;
   paths: MenuPaths;
   merchantID: string;
   showSalePrice?: boolean;
+  readOnly?: boolean;
   title?: ReactNode;
   /** رافع الصور — يبقى محقوناً لأنه يعتمد على عميل الرفع الخاص بكل تطبيق */
   imageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
@@ -281,10 +287,12 @@ export function MenuManager({
             icon={IconStore}
             title={L.empty}
             action={
-              <Button onClick={() => setEditing({ item: null, sectionId: "" })} className="flex items-center gap-1.5">
-                <IconAdd size={15} />
-                {L.addItem}
-              </Button>
+              readOnly ? undefined : (
+                <Button onClick={() => setEditing({ item: null, sectionId: "" })} className="flex items-center gap-1.5">
+                  <IconAdd size={15} />
+                  {L.addItem}
+                </Button>
+              )
             }
           />
         ) : (
@@ -335,14 +343,16 @@ export function MenuManager({
               {thumb?.(openSec.image_thumb_url ?? null, openSec.name)}
               <span className="truncate">{openSec.name}</span>
             </h2>
-            <Button
-              variant="secondary"
-              onClick={() => setEditing({ item: null, sectionId: openSec.id })}
-              className="flex items-center gap-1.5"
-            >
-              <IconAdd size={15} />
-              {L.addItem}
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="secondary"
+                onClick={() => setEditing({ item: null, sectionId: openSec.id })}
+                className="flex items-center gap-1.5"
+              >
+                <IconAdd size={15} />
+                {L.addItem}
+              </Button>
+            )}
           </div>
 
               {openSec.items.length === 0 ? (
@@ -406,7 +416,7 @@ export function MenuManager({
                       <Badge variant={item.available ? "success" : "warning"}>
                         {item.available ? L.available : L.unavailable}
                       </Badge>
-                      <div className="flex gap-1.5">
+                      {!readOnly && <div className="flex gap-1.5">
                         <Button variant="secondary" onClick={() => toggleAvailable(item)}>
                           {item.available ? L.markUnavailable : L.markAvailable}
                         </Button>
@@ -419,7 +429,7 @@ export function MenuManager({
                         <Button variant="ghost" onClick={() => setPendingDelete(item)}>
                           <IconDelete size={15} className="text-danger" />
                         </Button>
-                      </div>
+                      </div>}
                     </li>
                   ))}
                 </ul>

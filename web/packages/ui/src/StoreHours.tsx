@@ -51,12 +51,15 @@ export function StoreHours({
   emergency,
   onEmergencyChange,
   onSaved,
+  /** **عرضٌ بلا تعديل** — لمن يقرأ الدوامَ ولا يملك حفظَه (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥). */
+  readOnly = false,
 }: {
   api: ApiFn;
   path: string;
   emergency?: { value: boolean; save: (v: boolean) => Promise<void> };
   onEmergencyChange?: (v: boolean) => void;
   onSaved?: () => void;
+  readOnly?: boolean;
 }) {
   const [days, setDays] = useState<DayHours[] | null>(null);
   const [closed, setClosed] = useState(emergency?.value ?? false);
@@ -99,7 +102,7 @@ export function StoreHours({
   }
 
   return (
-    <div>
+    <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
       {emergency && (
         <Checkbox
           id="hours-emergency"
@@ -201,11 +204,13 @@ export function StoreHours({
         </Alert>
       )}
 
-      <div className="mt-4 flex justify-end">
-        <Button disabled={busy || !days} onClick={() => void save()}>
-          {m.common.save}
-        </Button>
-      </div>
-    </div>
+      {!readOnly && (
+        <div className="mt-4 flex justify-end">
+          <Button disabled={busy || !days} onClick={() => void save()}>
+            {m.common.save}
+          </Button>
+        </div>
+      )}
+    </fieldset>
   );
 }

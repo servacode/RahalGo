@@ -104,6 +104,10 @@ export default function MerchantProfilePage() {
   // رسالةَ الخطأ حمراءَ بدل «غير مسموح».
   const canCall = useCanCall();
   const canRead = canCall("GET", "/merchants/{id}");
+  const canEditMenu = canCall("POST", "/merchants/{id}/menu/items");
+  const canEdit = canCall("PATCH", "/merchants/{id}");
+  const canEditHours = canCall("PUT", "/merchants/{id}/hours");
+  const canViolations = canCall("GET", "/merchants/{id}/violations");
 
   const load = useCallback(async () => {
     if (!canRead) return;
@@ -190,12 +194,14 @@ export default function MerchantProfilePage() {
       </StatGrid>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => setViolationsOpen(true)}>
-          <span className="flex items-center gap-1.5">
-            <IconWarning size={15} />
-            {m.admin.merchants.violationsLog.viewLog}
-          </span>
-        </Button>
+        {canViolations && (
+          <Button variant="secondary" onClick={() => setViolationsOpen(true)}>
+            <span className="flex items-center gap-1.5">
+              <IconWarning size={15} />
+              {m.admin.merchants.violationsLog.viewLog}
+            </span>
+          </Button>
+        )}
         {/* **وصاحبُه حسابٌ آخر له ملفُّه** — والرابطُ ظاهرٌ ولا يُدمجان. */}
         {mr.owner_user_id && (
           <Button
@@ -232,7 +238,7 @@ export default function MerchantProfilePage() {
                 <button
                   key={String(v)}
                   type="button"
-                  disabled={savingReturns}
+                  disabled={savingReturns || !canEdit}
                   onClick={() => void setAcceptsReturns(v)}
                   className={`rounded-control border px-3 py-1 text-sm transition-colors ${
                     mr.accepts_returns === v
@@ -249,13 +255,14 @@ export default function MerchantProfilePage() {
         <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
         </>
       )}
-      {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice />}
+      {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice readOnly={!canEditMenu} />}
       {tab === "hours" && (
         <div className="surface p-4">
           <StoreHours
             api={api}
             path={`/api/v1/admin/merchants/${mr.id}/hours`}
-            emergency={{
+            readOnly={!canEditHours}
+            emergency={canEdit ? {
               value: mr.emergency_closed,
               save: async (v) => {
                 await api(`/api/v1/admin/merchants/${mr.id}`, {
@@ -264,7 +271,7 @@ export default function MerchantProfilePage() {
                 });
                 await load();
               },
-            }}
+            } : undefined}
           />
         </div>
       )}
