@@ -493,7 +493,12 @@ var All = []Check{
 			) l ON true
 			WHERE NOT EXISTS (SELECT 1 FROM wallet_transactions p
 			                  WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
-			  AND COALESCE(l.net, 0) <> -o.wallet_paid`,
+			  -- **والمنتهي قبل المحاسبة يُستردّ له خصمُه** فصافيه صفر — وعمودُ wallet_paid
+			  -- يبقى شاهداً على ما دُفع. (كشفته الدورةُ الحيّة ٢٠٢٦-١٠-٠٥: كلُّ إلغاءٍ
+			  -- سليمٍ من المحفظة كان يُقرأ خرقاً.)
+			  AND COALESCE(l.net, 0) <> CASE
+			        WHEN o.status IN ('cancelled', 'rejected', 'failed', 'refunded') THEN 0
+			        ELSE -o.wallet_paid END`,
 	},
 	{
 		ID: "FI-06.b", Family: FI06, Status: ProvableNow, Ops: true,
