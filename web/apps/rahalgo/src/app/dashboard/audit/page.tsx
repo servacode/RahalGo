@@ -101,6 +101,8 @@ const kindText = (k: string) =>
   (m.shared.txKinds as Record<string, string>)[k] ??
   // **ونوعُ الطارئ أيضاً** — `driver.emergency` يكتب `kind: accident` (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥).
   (m.admin.emergencyRoom.kinds as Record<string, string>)[k] ??
+  // **ونوعُ التعويض** — السجلُّ الموحّد يكتب `kind: complaint` لتعويض صاحب شكوى.
+  (m.admin.compensations.kinds as Record<string, string>)[k] ??
   k;
 
 /** **اسمٌ قد يكون مفتاحَ ترجمة** — حذفُ الأدوار (`0270`) يكتب `name: roles.ops`. */
