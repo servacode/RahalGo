@@ -134,7 +134,10 @@ export default function Header({
   const [summary, setSummary] = useState<Summary | null>(null);
 
   const loadSummary = useCallback(() => {
-    if (logged) api<Summary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
+    if (logged)
+      api<Summary>("/api/v1/me/summary")
+        .then(setSummary)
+        .catch(() => undefined);
   }, [logged]);
 
   useEffect(() => {
@@ -300,10 +303,7 @@ export default function Header({
           href={l.href}
           title={l.label}
           tone={pathname === l.href ? "active" : "plain"}
-          /* **و«التطبيقات» تُرى على الجوّال أيضاً** (طلبُ المالك ٢٠٢٦-١٠-٠٥:
-             «على الجوّال ما بيطلع للرئيسيّة ولا تحميل التطبيق») — **والرئيسيّةُ
-             الشعار، وتواصلُ معنا في التذييل.** */
-          className="ms-0.5 flex !px-2 sm:!px-3 lg:ms-1"
+          className="ms-1 hidden lg:flex"
         >
           <span>{l.label}</span>
         </TopBarLink>
@@ -312,9 +312,10 @@ export default function Header({
   );
 
   return (
-    <TopBar start={brand} sticky>
-      {logged ? (
-        /* ══════════════════════════════════════════════════════════════
+    <>
+      <TopBar start={brand} sticky>
+        {logged ? (
+          /* ══════════════════════════════════════════════════════════════
            **ولا شريطَ حسابٍ على الويب بعد اليوم**
            ══════════════════════════════════════════════════════════════
 
@@ -326,34 +327,60 @@ export default function Header({
            شريطٍ فارغ.**
 
            **ومن بقي داخلاً فموظّف** — فيبقى له بابُ لوحته وحدَه. */
-        <>
-          {portal && (
+          <>
+            {portal && (
+              <TopBarChip
+                tone="accent"
+                onClick={backToDashboard}
+                title={m.shared.backToDashboard}
+              >
+                <IconOverview size={TOPBAR_ICON} />
+                <span className="hidden md:inline">
+                  {m.shared.backToDashboard}
+                </span>
+              </TopBarChip>
+            )}
             <TopBarChip
-              tone="accent"
-              onClick={backToDashboard}
-              title={m.shared.backToDashboard}
+              onClick={() => {
+                logout();
+                router.push("/");
+              }}
+              title={m.auth.logout}
             >
-              <IconOverview size={TOPBAR_ICON} />
-              <span className="hidden md:inline">{m.shared.backToDashboard}</span>
+              <span>{m.auth.logout}</span>
             </TopBarChip>
-          )}
-          <TopBarChip
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-            title={m.auth.logout}
-          >
-            <span>{m.auth.logout}</span>
-          </TopBarChip>
-        </>
-      ) : (
-        /* **ولا «دخول»** — (قرارُ المالك ٢٠٢٦-١٠-٠١). **و«حمّل التطبيق» رجع**
+          </>
+        ) : (
+          /* **ولا «دخول»** — (قرارُ المالك ٢٠٢٦-١٠-٠١). **و«حمّل التطبيق» رجع**
            (طلبُ المالك ٢٠٢٦-١٠-٠٥: «زر بالموقع حمّل التطبيق لتطبيق الزبون بشكل
            مباشر، مشان ما يضطر يفوت ع التطبيقات») — **ينزّل ملفَّ الزبون من
            أوّل ضغطة.** */
-        <AppDownloadChip label={m.site.appGate.title} />
-      )}
-    </TopBar>
+          <AppDownloadChip label={m.site.appGate.title} />
+        )}
+      </TopBar>
+      {/* ══════════════════════════════════════════════════════════════════
+        **وأبوابُ الموقع على الجوّال سطرٌ ثانٍ تحت الشريط** (طلبُ المالك ٢٠٢٦-١٠-٠٥:
+        «الموقع على الجوّال ما يفتح مثل اللابتوب، ما في تواصل معنا ولا التطبيقات»)
+        ══════════════════════════════════════════════════════════════════
+
+        **وقِيس على ٣٦٠**: الشعارُ والأبوابُ الثلاثةُ وزرُّ التحميل ٤٤٦ بكسلاً
+        **فتراكبت.** فالشريطُ للشعار وزرِّ التحميل، **والأبوابُ سطرٌ تحته.** */}
+      <nav
+        className="flex justify-center gap-1 px-4 py-1.5 lg:hidden"
+        aria-label={N.home}
+      >
+        {MARKETING.map((l) => (
+          <TopBarLink
+            key={l.href}
+            Link={Link}
+            href={l.href}
+            title={l.label}
+            tone={pathname === l.href ? "active" : "plain"}
+          >
+            <span>{l.label}</span>
+          </TopBarLink>
+        ))}
+      </nav>
+    </>
   );
 }
