@@ -159,12 +159,12 @@ const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_bac
 /** **الألواحُ المخصَّصةُ في العمود** — والبحثُ يجدها بأسمائها. */
 const PANELS: { key: string; topic: string; label: string; adminOnly?: boolean }[] = [
   { key: "appStatus", topic: "launch", label: m.admin.appStatus.title },
-  { key: "hours", topic: "launch", label: m.admin.platformHours.title },
+  { key: "hours", topic: "launch", label: m.admin.platformHours.title, adminOnly: true },
   { key: "release", topic: "apps", label: m.admin.release.title },
-  { key: "divisions", topic: "coverage", label: m.admin.divisions.title },
-  { key: "cities", topic: "coverage", label: m.admin.cities.title },
-  { key: "zones", topic: "coverage", label: m.terms.zones },
-  { key: "whatsapp", topic: "whatsapp", label: m.admin.nav.whatsapp },
+  { key: "divisions", topic: "coverage", label: m.admin.divisions.title, adminOnly: true },
+  { key: "cities", topic: "coverage", label: m.admin.cities.title, adminOnly: true },
+  { key: "zones", topic: "coverage", label: m.terms.zones, adminOnly: true },
+  { key: "whatsapp", topic: "whatsapp", label: m.admin.nav.whatsapp, adminOnly: true },
   { key: "broadcast", topic: "whatsapp", label: m.admin.broadcast.title, adminOnly: true },
 ];
 
@@ -226,7 +226,13 @@ export default function SettingsPage() {
     }
   }, [load]);
 
-  const allTopics = useMemo(() => [...topics, ...PANEL_TOPICS], [topics]);
+  // **وموضوعا اللوحات لمن يملك الإعدادَ العامّ** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥): الماليّةُ
+  // ترى صفحةَ الإعدادات بمفاتيحها الماليّة، **وكانت التغطيةُ وواتساب وساعاتُ المنصّة
+  // تُفتح لها فتُردّ ٤٠٣** — لوحاتُها تنادي أبواباً بـ`settings.general.manage`.
+  const allTopics = useMemo(
+    () => [...topics, ...(isAdmin ? PANEL_TOPICS : [])],
+    [topics, isAdmin],
+  );
 
   const found = useMemo(() => {
     const needle = norm(q.trim());
@@ -462,7 +468,7 @@ function TopicBody({
         );
       })}
 
-      {topic === "launch" && <HoursPanel />}
+      {topic === "launch" && isAdmin && <HoursPanel />}
       {sections.length === 0 && topic !== "launch" && topic !== "apps" && (
         <EmptyState icon={IconSettings} title={S.emptyGroup} />
       )}
@@ -659,13 +665,16 @@ function SettingRow({
   const commitSlider = () => requestSave(Number(draft === "" ? 0 : draft));
 
   const gateOpen = pending?.raw === true;
+  const Wrap = s.kind === "geo" ? "div" : "form";
 
   return (
     <Card
       tone={s.risk ? "accent" : "default"}
       className={WIDE.has(s.kind) ? "col-span-full" : ""}
     >
-      <form onSubmit={submit}>
+      {/* **والموقعُ ليس نموذجاً** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥): لاقطُه فيه نموذجُ بحثه، **ونموذجٌ
+          داخلَ نموذجٍ خطأُ ترطيبٍ في الطرفيّة** — وهو يُحفظ بالضغط على الخريطة لا بزرّ. */}
+      <Wrap onSubmit={s.kind === "geo" ? undefined : submit}>
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="font-medium">{label(s.key)}</span>
           {s.risk && (
@@ -865,7 +874,7 @@ function SettingRow({
             {s.risk === "money" ? U.moneyHint : U.securityHint}
           </Alert>
         )}
-      </form>
+      </Wrap>
 
       {/* **«كان ← يصير» قبل حفظ المال** (البند ٨)، **وتأكيدٌ لكلّ باب إطلاق** (البند ١٠).
           ثمّ يطلب المحرّكُ كلمةَ المرور لمفاتيح المال. */}

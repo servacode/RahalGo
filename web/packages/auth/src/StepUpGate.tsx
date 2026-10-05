@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Input, Modal, FormActions } from "@rahalgo/ui";
 import { setStepUpAsker, requestStepUp, type StepUpNeed, type StepUpRequest } from "./client";
 
@@ -65,18 +65,32 @@ export function StepUpGate() {
   if (!pending) return null;
 
   const { need, req } = pending;
-  const what = (S.actions as Record<string, string>)[need.action] ?? need.action;
-  // **والهدفُ يُعرَض إن وُجد** — **ومن يؤكّد يرى على من يقع الفعل.**
-  const on = need.target_id ? ` — ${need.target_id}` : "";
-  // **وحقولُ التبديل الجوهريّةُ تُعرَض** — **فمن أكّد مبلغاً رآه.**
+  // **واسمُ الفعل من معجم السجلّ إن غاب هنا** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥): سبعةَ عشرَ فعلاً
+  // حسّاساً — منها «حلُّ شكوى» بتعويض — كانت تُعرَض برمزها `finance.ticket_resolve`.
+  const what =
+    (S.actions as Record<string, string>)[need.action] ??
+    (m.admin.audit.actions as Record<string, string>)[need.action] ??
+    need.action;
+  // **والهدفُ يُعرَض إن وُجد** — **ومن يؤكّد يرى على من يقع الفعل.** **والإعدادُ باسمه**
+  // لا بمفتاحه (`delivery.base_fee`).
+  const settingName = need.target_id
+    ? (m.admin.settings.keys as Record<string, { label?: string }>)[need.target_id]?.label
+    : undefined;
+  // **ومعرّفٌ داخليٌّ لا يُعرَض** — `58afe86c-…` لا يقول لأحدٍ شيئاً.
+  const opaque = !!need.target_id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(need.target_id);
+  const on = need.target_id && !opaque ? ` — ${settingName ?? need.target_id}` : "";
+  // **وحقولُ التبديل الجوهريّةُ تُعرَض** — **فمن أكّد مبلغاً رآه.** **وبأسمائها العربيّة**:
+  // كانت «value: 11000».
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const facts = ["amount", "role", "capability", "status", "value"]
+  const show = (v: unknown) =>
+    typeof v === "number" ? fmtNum(v) : typeof v === "string" ? v : JSON.stringify(v);
+  const facts = (["amount", "role", "capability", "status", "value"] as const)
     .filter((k) => body[k] !== undefined)
-    .map((k) => `${k}: ${JSON.stringify(body[k])}`)
+    .map((k) => `${S.facts[k]}: ${show(body[k])}`)
     .join(" · ");
 
   return (
-    <Modal open onClose={close} title={S.title}>
+    <Modal open top onClose={close} title={S.title}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
