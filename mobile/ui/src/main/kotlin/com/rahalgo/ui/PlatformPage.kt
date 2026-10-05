@@ -89,9 +89,18 @@ fun PlatformPage(
         address = contact.address,
     )
 
+    // ══════════════════════════════════════════════════════════════════
+    // **و«من نحن» تنتهي بـ«أين تجدنا»** (قرارُ المالك ٢٠٢٦-١٠-٠٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **من قرأ من نحن يسأل: وأين أنتم؟** — فالقسمُ نفسُه الذي في «تواصل
+    // معنا» (`ContactSection`) لا نسخةٌ ثانية. **ومنصّةٌ لم تُضبط وسائلُها
+    // لا يُعرض لها عنوانُ قسمٍ فارغ.**
+    val findUs = vm.platform?.takeIf { item.key == PlatformPages.ABOUT && hasContact(it) }
+
     Screen {
         ScreenTitle(stringResource(item.label), stringResource(pageHint(item.key)))
-        if (blocks.isEmpty()) {
+        if (blocks.isEmpty() && findUs == null) {
             Empty(stringResource(R.string.page_empty))
             return@Screen
         }
@@ -112,6 +121,10 @@ fun PlatformPage(
                     Text(p, style = MaterialTheme.typography.bodyMedium)
                 }
             }
+        }
+        if (findUs != null) {
+            SectionTitle(stringResource(R.string.about_find_us))
+            ContactSection(findUs)
         }
     }
 }
