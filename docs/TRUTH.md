@@ -1165,6 +1165,14 @@ kosom` |
 | `customers.cod_limit` |  | money | `0` |
 | `customers.require_whatsapp` |  | bool | `false` |
 | `customers.signup_bonus` |  | money | `0` |
+| `customers.welcome_template` |  | longtext | `أهلاً فيك بعائلة رحّال غو 🌿
+صار عندك حساب، وفيك تطلب من مطاعم ومحلات الرقة ويوصلك طلبك لباب بيتك.
+
+🛒 كل الطلبات من التطبيق بس — ما منستقبل طلبات بالاتصال ولا عالواتساب.
+💬 أي مشكلة أو شكوى: ابعتها من التطبيق (طلباتي ← الطلب ← شكوى)، أو من صفحة «تواصل معنا»: rahalgo.com/contact
+
+نتمنالك تجربة حلوة 🤍` |
+| `customers.welcome_whatsapp` |  | bool | `true` |
 | `orders.delivery_timeout_min` | التوزيع والتنبيهات | int | `60` |
 | `drivers.offer_timeout_sec` | التوزيع والتنبيهات | int | `60` |
 | `orders.driver_timeout_min` | التوزيع والتنبيهات | int | `10` |

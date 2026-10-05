@@ -2193,6 +2193,12 @@ var Catalog = []Def{
 	//	{shop_link} رابطُ تطبيق الزبون — للمندوب والمتجر والسائق وحدَهم
 	//	            (قرارُ المالك ٢٠٢٦-١٠-٠٥: «يتسوّق بنفس الحساب»)، **وسطرُه يُحذف
 	//	            لمن لا يلزمه**، **ويُضاف آخرَ الرسالة إن غاب عن قالبٍ قديم.**
+	// **ترحيبُ الزبون الجديد** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — يصل في التطبيق دائماً،
+	// **وبالواتساب إن شُغّل المفتاح.** والسطرُ الأوّلُ عنوانُ الإشعار. وفارغُه يعيد الأصل (`GetString`).
+	{Key: "customers.welcome_template", Group: GroupCustomers, Kind: KindLongText,
+		Default: CustomerWelcomeDefault},
+	{Key: "customers.welcome_whatsapp", Group: GroupCustomers, Kind: KindBool, Default: true},
+
 	{Key: "accounts.welcome_template", Group: GroupPlatform, Kind: KindLongText,
 		Default: WelcomeTemplateDefault, Requires: []string{"{password}", "{link}"}},
 
@@ -2292,6 +2298,13 @@ func missingPlaceholder(d Def, v string) string {
 	}
 	return ""
 }
+
+// CustomerWelcomeDefault **ترحيبُ الزبون الجديد كما كتبه المالك** — ٢٠٢٦-١٠-٠٥.
+const CustomerWelcomeDefault = "أهلاً فيك بعائلة رحّال غو 🌿\n" +
+	"صار عندك حساب، وفيك تطلب من مطاعم ومحلات الرقة ويوصلك طلبك لباب بيتك.\n\n" +
+	"🛒 كل الطلبات من التطبيق بس — ما منستقبل طلبات بالاتصال ولا عالواتساب.\n" +
+	"💬 أي مشكلة أو شكوى: ابعتها من التطبيق (طلباتي ← الطلب ← شكوى)، أو من صفحة «تواصل معنا»: rahalgo.com/contact\n\n" +
+	"نتمنالك تجربة حلوة 🤍"
 
 // WelcomeTemplateDefault **نصُّ الترحيب الأصليّ** — هو ما كان مكتوباً في الشيفرة.
 const WelcomeTemplateDefault = "{title}\nالرقم: {phone}\nكلمة المرور المؤقتة: {password}\n" +

@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 75,
-    "notify_targeted": 27,
+    "notify_sites": 76,
+    "notify_targeted": 28,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 184,
-    "behaviour_settings": 149,
+    "setting_defs": 186,
+    "behaviour_settings": 150,
     "order_fields": 95,
-    "test_files": 519,
-    "test_funcs": 2157
+    "test_files": 520,
+    "test_funcs": 2159
   },
   "flows": [
     {
@@ -3609,6 +3609,25 @@
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.welcome_whatsapp",
+      "group": "customers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-01",
         "F-17"
@@ -13060,6 +13079,18 @@
     {
       "name": "TestFAIL_010_NoMoveAfterFailed",
       "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCW01_NewCustomerGetsWelcomeInApp",
+      "file": "internal/qa/customer_welcome_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCW02_EditedTemplateIsWhatArrives",
+      "file": "internal/qa/customer_welcome_test.go",
       "package": "qa",
       "orphan": true
     },

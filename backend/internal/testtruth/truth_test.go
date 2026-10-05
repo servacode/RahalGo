@@ -308,8 +308,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `platform.app_url`/`platform.app_file`، **وصارت حصّةُ المنصّة مفتاحاً واحداً
 	// لكلّ الأنواع** `delivery.platform_percent` بدل القديم، **وأُضيف قالبُ الترحيب**
 	// `accounts.welcome_template` (نصٌّ طويلٌ — عرضٌ لا سلوك).
-	if d.BehaviourSettings != 149 {
-		t.Errorf("إعداداتُ السلوك = %d لا 149 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بترحيب الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٥): مفتاحُ الواتساب
+	// `customers.welcome_whatsapp` — **والقالبُ نصٌّ طويلٌ لا يُعدّ.**
+	if d.BehaviourSettings != 150 {
+		t.Errorf("إعداداتُ السلوك = %d لا 150 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

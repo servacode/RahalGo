@@ -178,9 +178,15 @@ func TestSETTINGS_EveryKeyHasATopic(t *testing.T) {
 		}
 	}
 	// **وإعداداتُ الموقع العامّ مخفيّة** (البند ١٤) — والهويّةُ والتواصلُ ظاهرة.
-	for _, k := range []string{"site.show_login", "platform.background", "home.banner_auto"} {
+	for _, k := range []string{"site.show_login", "platform.background", "shop.rail_auto"} {
 		if !PlacementOf(Def{Key: k}).Hidden {
 			t.Errorf("%s ظاهرٌ والقرارُ إخفاؤه", k)
+		}
+	}
+	// **وتقليبُ سلايدر التطبيق رجع مع لوحه** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — التطبيقُ يقرؤه.
+	for _, k := range []string{"home.banner_auto", "home.banner_seconds"} {
+		if p := PlacementOf(Def{Key: k}); p.Hidden || p.Panel != "slider" {
+			t.Errorf("%s ⇒ %+v والمنتظَرُ لوحُ السلايدر ظاهراً", k, p)
 		}
 	}
 	for _, k := range []string{"platform.name", "platform.support_phone", "page.terms_text"} {

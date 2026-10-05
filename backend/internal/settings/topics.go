@@ -121,6 +121,8 @@ var placeRules = []placeRule{
 	{prefix: "auth.otp_channel", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "auth.sms_template", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "accounts.welcome_template", exact: true, topic: TopicMessages, section: "messages.templates"},
+	{prefix: "customers.welcome_template", exact: true, topic: TopicMessages, section: "messages.templates"},
+	{prefix: "customers.welcome_whatsapp", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "notify.", topic: TopicMessages, section: "messages.notifications"},
 
 	// ── الأمان والدخول ──
@@ -152,6 +154,9 @@ var placeRules = []placeRule{
 	{prefix: "platform.background", topic: TopicSite, hidden: true},
 	{prefix: "auth.background", topic: TopicSite, hidden: true},
 	{prefix: "site.", topic: TopicSite, hidden: true},
+	// **وتقليبُ سلايدر التطبيق يرجع مع لوحه** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — التطبيقُ يقرؤه.
+	{prefix: "home.banner_auto", exact: true, topic: TopicSite, panel: "slider"},
+	{prefix: "home.banner_seconds", exact: true, topic: TopicSite, panel: "slider"},
 	{prefix: "home.", topic: TopicSite, hidden: true},
 	{prefix: "shop.", topic: TopicSite, hidden: true},
 	{prefix: "platform.", topic: TopicSite, section: "site.contact"},

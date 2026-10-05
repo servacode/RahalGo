@@ -435,6 +435,9 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 
 		// **والهديّةُ بعد الحساب لا قبله** — انظر `GrantSignupBonus`.
 		s.referrals.GrantSignupBonus(r.Context(), res.User.ID, res.User.ID)
+
+		// **والترحيبُ آخرَ شيء** — بعد حسابٍ تمّ وهديّةٍ وصلت. انظر `customer_welcome.go`.
+		s.welcomeCustomer(r.Context(), res.User.ID, res.User.Phone)
 	}
 	// **شاهدُ «ضاع الرد» — على التجهيز وحدَه** (Batch 4، `qa_batch4_witness.go`):
 	// بعد إتمامِ المنطقِ وإنشاءِ الحساب، يُسقَط الردُّ عن العميلِ مرّةً واحدةً

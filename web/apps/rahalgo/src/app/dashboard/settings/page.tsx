@@ -162,6 +162,7 @@ const PANELS: { key: string; topic: string; label: string; adminOnly?: boolean }
   { key: "appStatus", topic: "launch", label: m.admin.appStatus.title },
   { key: "hours", topic: "launch", label: m.admin.platformHours.title, adminOnly: true },
   { key: "release", topic: "apps", label: m.admin.release.title },
+  { key: "slider", topic: "site", label: m.admin.sliderPanel.title },
   { key: "divisions", topic: "coverage", label: m.admin.divisions.title, adminOnly: true },
   { key: "cities", topic: "coverage", label: m.admin.cities.title, adminOnly: true },
   { key: "zones", topic: "coverage", label: m.terms.zones, adminOnly: true },
@@ -442,6 +443,10 @@ function TopicBody({
         <section className="space-y-2">
           <h2 className="heading-card">{m.admin.sliderPanel.title}</h2>
           <p className="text-sm text-ink-muted">{m.admin.sliderPanel.hint}</p>
+          {/* **وتقليبُه ومدّتُه معه** — التطبيقُ يقرؤهما (`banner_auto` · `banner_every_ms`). */}
+          <div className={GRID}>
+            {list.filter((s) => s.panel === "slider" && visibleIn(s, list)).map(row)}
+          </div>
           <BannersPanel isAdmin placement="home" />
         </section>
       )}
