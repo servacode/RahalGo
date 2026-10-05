@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -204,6 +204,25 @@ const ALL_NAV: NavItem[] = [
  * فإن حُجب البندُ عن دورٍ **ضاع العنوانُ وبقي ما تحته معلَّقاً بلا رأس** —
  * فكان يُنقل إلى أوّل من نجا. **ولا عنوانَ اليومَ فلا فخّ**، والترشيحُ سطرٌ.
  */
+// **وصفحاتُ المال التي تُفتح من الخزينة ليست بنوداً في القائمة** — فلا يردّ عنها
+// شرطُ القائمة. **ومن لا يملك قراءةَ المال يُنزَل عنها كما يُنزَل عن بنود القائمة**،
+// لا تُرسَم له صفحةٌ تنادي المحرّكَ فتُردّ ٤٠٣. (فحصُ المال ٢٠٢٦-١٠-٠٥: موظّفُ
+// العمليّات والدعم فتحا المصروفاتِ والأرباحَ والنقدَ والسحوباتِ والتعويضاتِ برابطٍ مباشر.)
+const MONEY_SUBPAGES: Record<string, string[]> = {
+  "/dashboard/expenses": ["finance.read"],
+  "/dashboard/profits": ["finance.read"],
+  "/dashboard/cash": ["finance.read"],
+  "/dashboard/payouts": ["finance.read"],
+  "/dashboard/compensations": ["finance.read"],
+};
+
+/** **بابٌ معروفٌ لا يملكه صاحبُ الجلسة** — بندٌ في القائمة ليس في قائمته، أو صفحةُ مالٍ بلا قدرتها. */
+function barredFrom(pathname: string, nav: ChromeNavItem[], caps: readonly string[]): boolean {
+  if (ALL_NAV.some((i) => i.href === pathname)) return !nav.some((i) => i.href === pathname);
+  const need = MONEY_SUBPAGES[pathname];
+  return !!need && !need.some((c) => caps.includes(c));
+}
+
 function navFor(
   roles: string[] | undefined,
   caps: readonly string[],
@@ -296,27 +315,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // **والشرطُ من القائمة لا من اسم دور**: **ما ليس في قائمته لا
   // يملكه** — **ودورٌ مخصَّصٌ يُنشَأ غداً يُنزَل على بابه بلا سطرٍ
   // يُكتب له.**
-  const landed = useRef(false);
+  // **ويُردّ كلّما هبط على بابٍ لا يملكه — لا مرّةً في الجلسة**: الصفحةُ تنتظر على شاشة
+  // الإقلاع حتّى يقع الردّ (`leaving` تحت)، **فردٌّ لا يقع يُبقيها هناك.**
   useEffect(() => {
-    if (loading || !capsLoaded || landed.current) return;
+    if (loading || !capsLoaded) return;
     const first = nav[0];
     // **والردُّ لبابٍ في القائمة لا يملكه وحدَه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان الشرطُ «ليس في
     // قائمته» فرُدّ كلُّ بابِ تفصيلٍ — ملفُّ حساب، متجر، قسم، حسابي، الإشعارات — **إلى الرئيسيّة عند
     // أوّل فتحٍ في الجلسة**: الضغطةُ الأولى على ملفٍّ «لا تفعل شيئاً»، والتحديثُ يرمي إلى البيت.
     // **وأبوابُ التفصيل يحرسها المحرّك** (٤٠٣) كما يحرس كلَّ باب.
-    if (!first || !ALL_NAV.some((i) => i.href === pathname)) return;
-    if (nav.some((i) => i.href === pathname)) return;
-    landed.current = true;
+    if (!first || !barredFrom(pathname, nav, capabilities)) return;
     router.replace(first.href);
-  }, [loading, capsLoaded, pathname, nav, router]);
+  }, [loading, capsLoaded, pathname, nav, capabilities, router]);
 
   // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
   // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**
   // **وبابٌ سيُرَدّ عنه لا يُرسَم قبل الردّ** — وإلّا نادت صفحتُه ما لا
   // يملكه صاحبُها فسُجّل ٤٠٣ في كلّ هبوطٍ للماليّة على «الرئيسيّة»
   // (فحصُ المال ٢٠٢٦-١٠-٠٥).
-  const leaving =
-    nav.length > 0 && ALL_NAV.some((i) => i.href === pathname) && !nav.some((i) => i.href === pathname);
+  const leaving = nav.length > 0 && barredFrom(pathname, nav, capabilities);
   if (loading || !capsLoaded || !canAccessPanel(user, capabilities) || leaving) {
     return (
       <BootScreen />
