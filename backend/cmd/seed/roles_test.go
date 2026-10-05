@@ -26,6 +26,39 @@ func TestSeedRolesExist(t *testing.T) {
 	}
 }
 
+// TestSeedCustomerGetsBalance **زبونُ الزراعة يُودَع رصيدُه فعلاً.**
+//
+// كان الإيداعُ مشروطاً بـ«لا محفظةَ بعد»، والمحفظةُ يُنشئها مشغّلُ
+// `users_wallet_trigger` مع المستخدم — فبقي الرصيدُ صفراً والزراعةُ تطبع غيره.
+func TestSeedCustomerGetsBalance(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	seedCustomer(ctx, tx)
+	var bal, sum int64
+	if err := tx.QueryRow(ctx, `
+		SELECT w.balance, COALESCE((SELECT sum(amount) FROM wallet_transactions t WHERE t.user_id = u.id), 0)
+		FROM users u JOIN wallets w ON w.user_id = u.id WHERE u.phone = $1`, customer.Phone).Scan(&bal, &sum); err != nil {
+		t.Fatal(err)
+	}
+	if bal != customer.Balance || sum != customer.Balance {
+		t.Fatalf("رصيدُ زبون الزراعة %d ومجموعُ قيوده %d — والمطلوب %d", bal, sum, customer.Balance)
+	}
+	// **والإعادةُ لا تودع ثانيةً.**
+	seedCustomer(ctx, tx)
+	if err := tx.QueryRow(ctx, `SELECT w.balance FROM users u JOIN wallets w ON w.user_id = u.id WHERE u.phone = $1`,
+		customer.Phone).Scan(&bal); err != nil {
+		t.Fatal(err)
+	}
+	if bal != customer.Balance {
+		t.Fatalf("إعادةُ الزراعة أودعت ثانيةً: %d", bal)
+	}
+}
+
 // TestSeedStorePlatformSectionsExist **كلُّ قسمِ سوقٍ يُسنَد إليه صنفُ المطعم موجود.**
 //
 // صار «حلويات» «حلويّات» في جدول أقسام السوق، وبقيت الزراعةُ تطلب القديم —

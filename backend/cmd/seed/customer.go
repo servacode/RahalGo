@@ -95,31 +95,13 @@ func seedCustomer(ctx context.Context, tx pgx.Tx) {
 	}
 
 	// المحفظة: **قيدٌ أوّلاً ثم رصيدٌ يطابقه** — لا رصيدٌ بلا مصدر.
-	var walletExists bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM wallets WHERE user_id = $1)`, id).Scan(&walletExists); err != nil {
-		log.Fatal(err)
-	}
-	if !walletExists {
-		// المُودِع هو الأدمن إن وُجد — وإلّا فارغٌ (زراعةُ الزبون وحده)
-		var adminID *string
-		_ = tx.QueryRow(ctx, `
-			SELECT u.id FROM users u JOIN user_roles r ON r.user_id = u.id
-			WHERE r.role_code = 'admin' AND u.password_hash IS NOT NULL
-			ORDER BY u.created_at LIMIT 1`).Scan(&adminID)
-
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO wallet_transactions (user_id, amount, kind, note, created_by)
-			VALUES ($1, $2, 'topup', 'إيداع نقديّ في مكتب المنصة', $3)`,
-			id, customer.Balance, adminID); err != nil {
-			log.Fatalf("topup: %v", err)
-		}
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO wallets (user_id, balance) VALUES ($1, $2)`,
-			id, customer.Balance); err != nil {
-			log.Fatalf("wallet: %v", err)
-		}
-	}
+	// المُودِع هو الأدمن إن وُجد — وإلّا فارغٌ (زراعةُ الزبون وحده)
+	var adminID *string
+	_ = tx.QueryRow(ctx, `
+		SELECT u.id FROM users u JOIN user_roles r ON r.user_id = u.id
+		WHERE r.role_code = 'admin' AND u.password_hash IS NOT NULL
+		ORDER BY u.created_at LIMIT 1`).Scan(&adminID)
+	seedTopup(ctx, tx, id, customer.Balance, "إيداع نقديّ في مكتب المنصة", adminID)
 
 	// تحقّقٌ في المكان نفسه: الرصيد يساوي مجموع قيوده، وإلّا فالمعاملة تسقط
 	// كلُّها. **وزراعةٌ تكسر ثابتاً محاسبياً أسوأ من زراعةٍ لا تعمل** — الأولى
@@ -149,4 +131,35 @@ func seedCustomer(ctx context.Context, tx pgx.Tx) {
 	fmt.Println()
 	fmt.Println("   والعنوانان في منطقتَين مختلفتين: رسم التوصيل ١٠٬٠٠٠ للبيت")
 	fmt.Println("   و١٥٬٠٠٠ للمحل — فيُرى أن الرسم يتبع الموقع لا المتجر.")
+}
+
+// seedTopup **يودع رصيدَ الزراعة مرّةً واحدة: قيدٌ ثمّ رصيدٌ يطابقه.**
+//
+// كان الشرطُ «لا محفظةَ بعد» — **والمحفظةُ يُنشئها `users_wallet_trigger`
+// مع المستخدم نفسِه**، فلم يُودَع شيءٌ قطّ: زبونا الزراعة برصيدٍ صفر وهي
+// تطبع «٢٥٠٬٠٠٠». **فصار الشرطُ «لا قيدَ له بعد»** — وتبقى الزراعةُ
+// تُعاد بلا إيداعٍ ثانٍ.
+func seedTopup(ctx context.Context, tx pgx.Tx, userID string, amount int64, note string, by *string) {
+	if amount <= 0 {
+		return
+	}
+	var has bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM wallet_transactions WHERE user_id = $1)`, userID).Scan(&has); err != nil {
+		log.Fatal(err)
+	}
+	if has {
+		return
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO wallet_transactions (user_id, amount, kind, note, created_by)
+		VALUES ($1, $2, 'topup', $3, $4)`, userID, amount, note, by); err != nil {
+		log.Fatalf("topup: %v", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO wallets (user_id, balance) VALUES ($1, $2)
+		ON CONFLICT (user_id) DO UPDATE SET balance = wallets.balance + excluded.balance`,
+		userID, amount); err != nil {
+		log.Fatalf("wallet: %v", err)
+	}
 }

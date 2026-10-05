@@ -177,20 +177,8 @@ func main() {
 			}
 		}
 		if a.WalletBalance > 0 {
-			var exists bool
-			_ = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM wallets WHERE user_id = $1)`, id).Scan(&exists)
-			if !exists {
-				if _, err := tx.Exec(ctx,
-					`INSERT INTO wallets (user_id, balance) VALUES ($1, $2)`, id, a.WalletBalance); err != nil {
-					log.Fatal(err)
-				}
-				if _, err := tx.Exec(ctx, `
-					INSERT INTO wallet_transactions (user_id, amount, kind, note, created_by)
-					VALUES ($1, $2, 'topup', 'رصيد تجريبي — زراعة بيانات التطوير', $3)`,
-					id, a.WalletBalance, ids["+963999000001"]); err != nil {
-					log.Fatal(err)
-				}
-			}
+			admin := ids["+963999000001"]
+			seedTopup(ctx, tx, id, a.WalletBalance, "رصيد تجريبي — زراعة بيانات التطوير", &admin)
 		}
 	}
 
