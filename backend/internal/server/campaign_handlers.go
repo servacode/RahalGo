@@ -174,8 +174,21 @@ func campaignFingerprint(in campaigns.Input) string {
 }
 
 // RunCampaignWorker **حلقةُ الحملات المستحقّة** — **تُنادى عند الإقلاع.**
+//
+// **وإشعاراتُ الوجبات في الدورة نفسِها** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **ولا
+// عاملَ ثانٍ يُقلَع.** انظر `meal_reminders.go`.
 func (s *Server) RunCampaignWorker(ctx context.Context, interval time.Duration) {
-	s.campaigns.RunWorker(ctx, interval)
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			s.campaigns.DueOnce(ctx)
+			s.mealsOnce(ctx)
+		}
+	}
 }
 
 // ══════════════════════════════════════════════════════════════════════

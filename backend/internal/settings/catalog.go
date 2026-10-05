@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -839,8 +840,30 @@ var Catalog = []Def{
 	// صوتَها** — **ومن كفّ عن قراءة إشعاراتنا لا يقرأ ما يهمّه.**
 	//
 	// **وصفرٌ يعني منعاً تامّاً للتفاعل** — **ضبطٌ مشروعٌ في أزمة.**
+	// **والافتراضيُّ ثلاثة** (قرارُ المالك ٢٠٢٦-١٠-٠٥): فطورٌ وغداءٌ وعشاء — **وكان
+	// اثنين فيُؤجَّل العشاءُ كلَّ يوم.**
 	{Key: "notify.engagement_daily_cap", Group: GroupPlatform, Kind: KindInt,
-		Min: 0, Max: 20, Unit: "notification", Default: 2},
+		Min: 0, Max: 20, Unit: "notification", Default: 3},
+
+	// ══════════════════════════════════════════════════════════════════
+	// **إشعاراتُ الوجبات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر `campaigns/meals.go`.
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **موعدٌ بصيغة «09:00» بتوقيت دمشق، وفارغُه يطفئ الوجبة.** **ونصوصُها سطرٌ
+	// لكلّ رسالة** تدور يوماً بعد يوم، و«العنوان | النصّ» إن أُريد سطرٌ ثانٍ.
+	{Key: "meals.enabled", Group: GroupCustomers, Kind: KindBool, Default: true},
+	{Key: "meals.breakfast_at", Group: GroupCustomers, Kind: KindText, Max: 5, Default: "09:00",
+		ShowWhen: &Condition{Key: "meals.enabled", Equals: []string{"true"}}},
+	{Key: "meals.breakfast_texts", Group: GroupCustomers, Kind: KindLongText, Default: MealsBreakfastDefault,
+		ShowWhen: &Condition{Key: "meals.enabled", Equals: []string{"true"}}},
+	{Key: "meals.lunch_at", Group: GroupCustomers, Kind: KindText, Max: 5, Default: "13:30",
+		ShowWhen: &Condition{Key: "meals.enabled", Equals: []string{"true"}}},
+	{Key: "meals.lunch_texts", Group: GroupCustomers, Kind: KindLongText, Default: MealsLunchDefault,
+		ShowWhen: &Condition{Key: "meals.enabled", Equals: []string{"true"}}},
+	{Key: "meals.dinner_at", Group: GroupCustomers, Kind: KindText, Max: 5, Default: "20:00",
+		ShowWhen: &Condition{Key: "meals.enabled", Equals: []string{"true"}}},
+	{Key: "meals.dinner_texts", Group: GroupCustomers, Kind: KindLongText, Default: MealsDinnerDefault,
+		ShowWhen: &Condition{Key: "meals.enabled", Equals: []string{"true"}}},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **أدنى نسخةٍ مقبولةٍ من كلّ تطبيق**
@@ -2299,7 +2322,20 @@ func missingPlaceholder(d Def, v string) string {
 	return ""
 }
 
-// CustomerWelcomeDefault **ترحيبُ الزبون الجديد كما كتبه المالك** — ٢٠٢٦-١٠-٠٥.
+// **نصوصُ الوجبات الأولى** — تُعدَّل من الإعدادات، سطرٌ لكلّ رسالة.
+const (
+	MealsBreakfastDefault = "صباح الخير ☀️ شو بدك تفطر اليوم؟ | فول، فطاير، منقوشة… اطلب ويوصلك لعندك\n" +
+		"يومك بيبلش بفطور طيب 🥐 | افتح رحّال غو واختار فطورك\n" +
+		"الفطور جاهز؟ 🍳 | إذا لا، نحنا منجيبلك ياه"
+	MealsLunchDefault = "شو بدك تتغدى اليوم؟ 🍽️ | مطاعم الرقة كلها بتطبيق واحد\n" +
+		"وقت الغدا 😋 | لا تطبخ اليوم، اطلب ويوصلك سخن\n" +
+		"جوعان؟ 🍗 | شاورما، مشاوي، طبخ بيتي… اختار وخلّي الباقي علينا"
+	MealsDinnerDefault = "شو بدك تتعشى الليلة؟ 🌙 | اطلب من رحّال غو ويوصلك لباب البيت\n" +
+		"سهرة حلوة بدها عشا طيب 🍕 | بيتزا، برغر، حلويات… كلشي بضغطة\n" +
+		"العشا علينا اليوم 😉 | افتح التطبيق واختار"
+)
+
+// CustomerWelcomeDefault**ترحيبُ الزبون الجديد كما كتبه المالك** — ٢٠٢٦-١٠-٠٥.
 const CustomerWelcomeDefault = "أهلاً فيك بعائلة رحّال غو 🌿\n" +
 	"صار عندك حساب، وفيك تطلب من مطاعم ومحلات الرقة ويوصلك طلبك لباب بيتك.\n\n" +
 	"🛒 كل الطلبات من التطبيق بس — ما منستقبل طلبات بالاتصال ولا عالواتساب.\n" +
@@ -2369,6 +2405,13 @@ func Validate(key string, v any) (any, error) {
 		}
 		if miss := missingPlaceholder(d, s); miss != "" {
 			return nil, ErrMissingPlaceholder{Key: key, Placeholder: miss}
+		}
+		// **وموعدُ الوجبة «09:00» أو فارغ** — **وموعدٌ لا يُفهم يُطفئ الوجبةَ
+		// بصمت**، فيُردّ عند الحفظ لا يوم لا يصل الإشعار.
+		if strings.HasPrefix(key, "meals.") && strings.HasSuffix(key, "_at") && s != "" {
+			if _, err := time.Parse("15:04", s); err != nil {
+				return nil, ErrInvalidValue{Key: key, Reason: "الموعد بصيغة 09:00"}
+			}
 		}
 		return s, nil
 

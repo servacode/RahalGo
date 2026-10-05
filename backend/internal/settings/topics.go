@@ -124,6 +124,7 @@ var placeRules = []placeRule{
 	{prefix: "customers.welcome_template", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "customers.welcome_whatsapp", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "notify.", topic: TopicMessages, section: "messages.notifications"},
+	{prefix: "meals.", topic: TopicMessages, section: "messages.meals"},
 
 	// ── الأمان والدخول ──
 	{prefix: "security.", topic: TopicSecurity, section: "security.login"},

@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 186,
-    "behaviour_settings": 150,
+    "setting_defs": 193,
+    "behaviour_settings": 154,
     "order_fields": 95,
-    "test_files": 520,
-    "test_funcs": 2159
+    "test_files": 521,
+    "test_funcs": 2161
   },
   "flows": [
     {
@@ -4727,6 +4727,82 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "meals.breakfast_at",
+      "group": "customers",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "meals.dinner_at",
+      "group": "customers",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "meals.enabled",
+      "group": "customers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "meals.lunch_at",
+      "group": "customers",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "media.max_upload_mb",
       "group": "platform",
       "kind": "int",
@@ -6462,6 +6538,18 @@
       "name": "TestWebPolicyIsCurrent",
       "file": "internal/authzdoc/authzdoc_test.go",
       "package": "authzdoc",
+      "orphan": true
+    },
+    {
+      "name": "TestMealDueWindow",
+      "file": "internal/campaigns/meals_test.go",
+      "package": "campaigns",
+      "orphan": true
+    },
+    {
+      "name": "TestMealTextRotatesAndSplits",
+      "file": "internal/campaigns/meals_test.go",
+      "package": "campaigns",
       "orphan": true
     },
     {

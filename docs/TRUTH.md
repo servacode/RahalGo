@@ -764,7 +764,7 @@ kosom` |
 | `auth.signup_verify` | المنصة | bool | `true` |
 | `notify.quiet_from` | المنصة | int | `22` |
 | `notify.quiet_to` | المنصة | int | `8` |
-| `notify.engagement_daily_cap` | المنصة | int | `2` |
+| `notify.engagement_daily_cap` | المنصة | int | `3` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
 | `orders.auto_transfer` | المنصة | bool | `false` |
 | `referral.reward_on` | المنصة | choice | `signup` |
@@ -1156,6 +1156,19 @@ kosom` |
 | `release.rep.version` |  | text | `` |
 | `app.max_file_mb` |  | int | `100` |
 | `orders.max_sources` |  | int | `2` |
+| `meals.enabled` |  | bool | `true` |
+| `meals.breakfast_at` |  | text | `09:00` |
+| `meals.breakfast_texts` |  | longtext | `صباح الخير ☀️ شو بدك تفطر اليوم؟ | فول، فطاير، منقوشة… اطلب ويوصلك لعندك
+يومك بيبلش بفطور طيب 🥐 | افتح رحّال غو واختار فطورك
+الفطور جاهز؟ 🍳 | إذا لا، نحنا منجيبلك ياه` |
+| `meals.lunch_at` |  | text | `13:30` |
+| `meals.lunch_texts` |  | longtext | `شو بدك تتغدى اليوم؟ 🍽️ | مطاعم الرقة كلها بتطبيق واحد
+وقت الغدا 😋 | لا تطبخ اليوم، اطلب ويوصلك سخن
+جوعان؟ 🍗 | شاورما، مشاوي، طبخ بيتي… اختار وخلّي الباقي علينا` |
+| `meals.dinner_at` |  | text | `20:00` |
+| `meals.dinner_texts` |  | longtext | `شو بدك تتعشى الليلة؟ 🌙 | اطلب من رحّال غو ويوصلك لباب البيت
+سهرة حلوة بدها عشا طيب 🍕 | بيتزا، برغر، حلويات… كلشي بضغطة
+العشا علينا اليوم 😉 | افتح التطبيق واختار` |
 | `app.min_version.customer` |  | int | `0` |
 | `orders.max_open_per_customer` |  | int | `3` |
 | `orders.customer_cancel_window_sec` |  | int | `120` |
