@@ -43,3 +43,40 @@ func TestROLES_EveryCapabilityHasArabicLabel(t *testing.T) {
 		}
 	}
 }
+
+// TestSTEPUP_EverySensitiveActionHasArabicLabel **ولكلّ فعلٍ حسّاسٍ اسمٌ عربيّ
+// في نافذة التأكيد** (`admin.stepUp.actions`).
+//
+// (كشفه فحصُ المال ٢٠٢٦-١٠-٠٥: نافذةُ «تأكيدُ فعلٍ حسّاس» كانت تعرض رمزَ الفعل
+// الإنجليزيَّ لأفعالٍ أُضيفت إلى `sensitiveActions` بلا سطرٍ في المعجم.)
+func TestSTEPUP_EverySensitiveActionHasArabicLabel(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "packages", "i18n", "src", "locales", "ar.json"))
+	if err != nil {
+		t.Fatalf("المعجم: %v", err)
+	}
+	var dict struct {
+		Admin struct {
+			StepUp struct {
+				Actions map[string]string `json:"actions"`
+				Facts   map[string]string `json:"facts"`
+			} `json:"stepUp"`
+		} `json:"admin"`
+	}
+	if err := json.Unmarshal(raw, &dict); err != nil {
+		t.Fatalf("المعجم لا يُقرأ: %v", err)
+	}
+	if len(sensitiveActions) == 0 {
+		t.Fatal("لا فعلَ حسّاسٌ في الكتالوج — والحارسُ بلا مرجع")
+	}
+	for _, s := range sensitiveActions {
+		if n := dict.Admin.StepUp.Actions[s.Action]; !arabicLetter.MatchString(n) {
+			t.Errorf("الفعل الحسّاس %s بلا اسمٍ عربيٍّ في admin.stepUp.actions", s.Action)
+		}
+	}
+	// **وحقولُ الفعل المعروضةُ في النافذة بأسمائها العربيّة** — `StepUpGate.tsx`.
+	for _, k := range []string{"amount", "role", "capability", "status", "value"} {
+		if !arabicLetter.MatchString(dict.Admin.StepUp.Facts[k]) {
+			t.Errorf("حقلُ التأكيد %s بلا اسمٍ عربيٍّ في admin.stepUp.facts", k)
+		}
+	}
+}

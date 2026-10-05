@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtMoney } from "@rahalgo/i18n";
 import { Input, Modal, FormActions } from "@rahalgo/ui";
 import { setStepUpAsker, requestStepUp, type StepUpNeed, type StepUpRequest } from "./client";
 
@@ -70,9 +70,20 @@ export function StepUpGate() {
   const on = need.target_id ? ` — ${need.target_id}` : "";
   // **وحقولُ التبديل الجوهريّةُ تُعرَض** — **فمن أكّد مبلغاً رآه.**
   const body = (req.body ?? {}) as Record<string, unknown>;
+  // **وبأسمائها العربيّة لا برموزها** (فحصُ المال ٢٠٢٦-١٠-٠٥: كانت «amount: 25000»).
+  const names: Record<string, Record<string, string>> = {
+    role: m.terms.roleNames as Record<string, string>,
+    capability: m.terms.capabilityNames as Record<string, string>,
+    status: S.statusValues as Record<string, string>,
+  };
+  const factValue = (k: string, v: unknown): string => {
+    if (k === "amount" && typeof v === "number") return fmtMoney(v);
+    if (typeof v === "string") return names[k]?.[v] ?? v;
+    return JSON.stringify(v);
+  };
   const facts = ["amount", "role", "capability", "status", "value"]
     .filter((k) => body[k] !== undefined)
-    .map((k) => `${k}: ${JSON.stringify(body[k])}`)
+    .map((k) => `${(S.facts as Record<string, string>)[k] ?? k}: ${factValue(k, body[k])}`)
     .join(" · ");
 
   return (

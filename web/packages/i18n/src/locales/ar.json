@@ -4696,7 +4696,42 @@
         "admin.role_delete": "حذف دور فارغ",
         "finance.expense_request_approved": "موافقةُ مصروفٍ فوق السقف",
         "finance.compensation_approved": "الموافقة على تعويض",
-        "finance.incentive_request": "طلب مكافأة أو عقوبة"
+        "finance.incentive_request": "طلب مكافأة أو عقوبة",
+        "admin.phone_change": "تغيير رقم حساب",
+        "admin.driver_cash_limit": "تغيير سقف نقد السائق",
+        "admin.cash_ban_lifted": "رفع منع الدفع النقدي",
+        "finance.wallet_request_approved": "الموافقة على قيد محفظة",
+        "finance.obligation_request_approved": "الموافقة على تسوية دَين",
+        "finance.goods_compensation": "تعويض عن بضاعة",
+        "finance.settlement_recomputed": "إعادة حساب تسوية طلب",
+        "ops.order_transition": "تغيير حال طلب",
+        "ops.delivery_proof_exception": "إعفاء من صورة التسليم",
+        "admin.merchant_settlement_update": "تغيير طريقة تسوية متجر",
+        "admin.merchant_delivery_credit": "رصيد توصيل لمتجر",
+        "finance.merchant_cash_paid": "دفع مستحق متجر نقداً",
+        "finance.dispute_proposed": "اقتراح حل نزاع",
+        "finance.dispute_resolution_approved": "الموافقة على حل نزاع",
+        "finance.ticket_resolve": "حل شكوى بتعويض",
+        "finance.treasury_withdrawal": "سحب من الخزينة",
+        "finance.cash_shortfall_loss": "تسجيل نقص الصندوق خسارة"
+      },
+      "facts": {
+        "amount": "المبلغ",
+        "role": "الدور",
+        "capability": "الصلاحية",
+        "status": "الحال",
+        "value": "القيمة"
+      },
+      "statusValues": {
+        "approved": "موافقة",
+        "rejected": "رفض",
+        "paid": "مدفوع",
+        "processing": "قيد التنفيذ",
+        "pending": "بانتظار القرار",
+        "failed": "فشل",
+        "active": "نشط",
+        "suspended": "موقوف",
+        "blocked": "محظور"
       }
     },
     "roles": {
