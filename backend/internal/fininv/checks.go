@@ -209,10 +209,12 @@ var All = []Check{
 		// **والمتجرُ المُسوّى نقداً مستحقُّه قيدُ احتباسٍ لا قيدُ محفظة**
 		// (`merchant_cash_accrued`، تسويةُ ٢٠٢٦-٠٩-٢٧) — كان الفحصُ لا يعرفه، فكلُّ
 		// طلبٍ نقديِّ التسوية سُلّم يُقرأ خرقاً. (كشفه قسمُ النقد ٢٠٢٦-١٠-٠٤.)
+		// **وتوصيلةُ المتجر لا بضاعةَ فيها فلا مستحقَّ لها** — كانت كلُّ
+		// توصيلةٍ مسلَّمةٍ تُقرأ خرقاً. (كشفته الدورةُ الحيّة ٢٠٢٦-١٠-٠٥.)
 		SQL: `
 			SELECT o.number, o.total, o.status
 			FROM orders o
-			WHERE o.status = 'delivered' AND o.kind <> 'custom'
+			WHERE o.status = 'delivered' AND o.kind NOT IN ('custom', 'merchant_delivery')
 			  AND NOT EXISTS (
 				SELECT 1 FROM wallet_transactions t
 				WHERE t.ref = o.id::text
