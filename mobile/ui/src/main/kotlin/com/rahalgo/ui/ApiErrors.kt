@@ -118,9 +118,8 @@ fun apiError(
     if (code == "temporarily_unavailable" || code == "platform_closed_now" ||
         code == "zone_closed_now"
     ) {
-        val notice = e.body.details["notice"].orEmpty().trim()
-        val base = if (notice.isNotEmpty()) notice
-        else context.getString(resolveErrorRes(code, e.body.messageKey, extra))
+        val base = serverNotice(e.body.details)
+            ?: context.getString(resolveErrorRes(code, e.body.messageKey, extra))
         val back = backAtText(e.body.details["next_available_at"])
         return if (back == null) base
         else context.getString(R.string.err_back_at, base, back)
@@ -132,13 +131,22 @@ fun apiError(
         return if (max.isEmpty()) context.getString(R.string.err_text_too_long)
         else context.getString(R.string.err_text_too_long_max, max)
     }
-    if (code == "launch_closed") {
-        // **ونصُّ المالك يغلب نصَّ التطبيق** — **ونصٌّ مكتوبٌ في حزمةٍ
-        // لا يُصحَّح إلّا بنشرٍ في المتجر.** وفارغُه يقع على نصّ الرمز.
-        val notice = e.body.details["notice"].orEmpty().trim()
-        if (notice.isNotEmpty()) return notice
-        return context.getString(R.string.err_launch_closed)
+    // ══════════════════════════════════════════════════════════════════
+    // **ونصُّ الخادم يغلب نصَّ الحزمة — لكلّ رمزٍ لا لبعضها**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-١٠-٠٥.) **كان `notice` يُقرأ في أربعة رموزٍ
+    // وحدَها** — **والمحرّكُ صار يرسله مع `out_of_zone` و`coverage_unavailable`
+    // و`merchant_closed` و`item_unavailable`.** ونصٌّ في حزمةٍ لا يُصحَّح
+    // إلّا بنشرٍ في المتجر، **ونصُّ الخادم يُبدَّل من اللوحة.**
+    //
+    // **وفارغُه يقع على نصّ الرمز** كما كان (`launch_closed` منها).
+    // **والخمسمئةُ تُبلَّغ وإن حملت نصّاً** — نصٌّ مهذّبٌ لا يُخفي باباً مكسورا.
+    serverNotice(e.body.details)?.let { notice ->
+        if (e.status >= 500) Crash.soft(e, "api " + e.status + " " + code)
+        return notice
     }
+    if (code == "launch_closed") return context.getString(R.string.err_launch_closed)
     // **وأرقامٌ يقولها الخادمُ في التفصيل** — «أنت بعيد عن الزبون (320 م)».
     if (code !in extra) {
         detailedErrorText(context, code, e.body.details)?.let { return it }
@@ -162,6 +170,14 @@ fun detailedErrorText(context: Context, code: String, details: Map<String, Strin
     val res = detailedErrorRes(code, details) ?: return null
     return context.getString(res.first, *res.second.toTypedArray())
 }
+
+/**
+ * **نصُّ الخادم لهذا الخطأ** — `details.notice` مشذَّباً، و`null` إن غاب أو فرغ.
+ *
+ * **دالّةٌ صافيةٌ بلا سياق** — فتُقاس بلا جهاز. انظر `apiError`.
+ */
+fun serverNotice(details: Map<String, String>): String? =
+    details["notice"]?.trim()?.takeIf { it.isNotEmpty() }
 
 /** **دالّةٌ صافيةٌ بلا سياق** — النصُّ ووسائطُه، فتُقاس بلا جهاز. */
 fun detailedErrorRes(code: String, details: Map<String, String>): Pair<Int, List<String>>? = when (code) {

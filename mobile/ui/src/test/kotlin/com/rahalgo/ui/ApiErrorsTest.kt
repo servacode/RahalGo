@@ -180,4 +180,41 @@ class ApiErrorsTest {
     fun genericDiffersFromKnown() {
         assertNotEquals(R.string.err_internal, R.string.err_auth_unavailable)
     }
+
+    /**
+     * **A8 · نصُّ الخادم يُقرأ لأيّ رمز** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+     *
+     * **والفارغُ والمسافاتُ وحدَها غيابٌ** — فيقع على نصّ الرمز في الحزمة.
+     */
+    @Test
+    fun serverNoticeIsTrimmedAndBlankIsAbsent() {
+        assertEquals("notice text", serverNotice(mapOf("notice" to "  notice text \n")))
+        assertEquals(null, serverNotice(mapOf("notice" to "   ")))
+        assertEquals(null, serverNotice(mapOf("notice" to "")))
+        assertEquals(null, serverNotice(emptyMap()))
+        assertEquals(null, serverNotice(mapOf("max" to "120")))
+    }
+
+    /**
+     * **A9 · و`apiError` يسأل عن نصّ الخادم قبل نصوص الرموز** — لا في
+     * أربعة رموزٍ وحدَها كما كان.
+     *
+     * **فحصُ مصدرٍ لا تشغيل**: `apiError` يحتاج `Context`. **والترتيبُ هو
+     * الحكم**: نصُّ الخادم قبل التفصيل وقبل الخريطة، **ولا قراءةَ ثانيةً
+     * لـ`details["notice"]` خارج الدالّة الصافية.**
+     */
+    @Test
+    fun apiErrorPrefersServerNoticeForAnyCode() {
+        var dir = java.io.File("").absoluteFile
+        while (!java.io.File(dir, "settings.gradle.kts").exists()) {
+            dir = dir.parentFile ?: throw AssertionError("mobile root not found")
+        }
+        val src = java.io.File(dir, "ui/src/main/kotlin/com/rahalgo/ui/ApiErrors.kt").readText()
+        val body = src.substringAfter("fun apiError(").substringBefore("\nfun ")
+        val notice = body.indexOf("serverNotice(e.body.details)?.let")
+        assertTrue("apiError must consult serverNotice generically", notice > 0)
+        assertTrue(notice < body.indexOf("detailedErrorText("))
+        assertTrue(notice < body.indexOf("errorResFor("))
+        assertFalse(body.contains("details[\"notice\"]"))
+    }
 }
