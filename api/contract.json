@@ -5268,6 +5268,10 @@
           "type": "unknown"
         },
         {
+          "name": "temp_password",
+          "type": "unknown"
+        },
+        {
           "name": "updated",
           "type": "bool"
         }
@@ -5289,6 +5293,10 @@
         },
         {
           "name": "sent",
+          "type": "unknown"
+        },
+        {
+          "name": "temp_password",
           "type": "unknown"
         }
       ],

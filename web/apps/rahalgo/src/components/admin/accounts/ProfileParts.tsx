@@ -38,6 +38,7 @@ import {
   IconPhone,
   IconLock,
 } from "@rahalgo/ui";
+import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
@@ -517,20 +518,20 @@ export function TempPasswordBadge({
 }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ tone: "success" | "warning" | "danger"; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ tone: "success" | "warning" | "danger"; text: string; temp?: string } | null>(null);
   const left = hoursLeft(expiresAt);
 
   async function resend() {
     setBusy(true);
     try {
-      const r = await api<{ sent: boolean; expires_at: string }>(`/api/v1/admin/users/${userID}/resend-welcome`, {
+      const r = await api<{ sent: boolean; expires_at: string; temp_password?: string }>(`/api/v1/admin/users/${userID}/resend-welcome`, {
         method: "POST",
         body: "{}",
       });
       setMsg(
         r.sent
           ? { tone: "success", text: A.resendDone.replace("{h}", fmtNum(hoursLeft(r.expires_at))) }
-          : { tone: "warning", text: A.resendNotSent },
+          : { tone: "warning", text: A.resendNotSent, temp: r.temp_password },
       );
       onDone();
     } catch (err) {
@@ -555,6 +556,7 @@ export function TempPasswordBadge({
         </button>
       )}
       {msg && <span className={`text-xs ${msg.tone === "success" ? "text-success" : "text-danger"}`}>{msg.text}</span>}
+      {msg && <TempPasswordNote value={msg.temp} />}
       <Confirm
         open={confirm}
         tone="primary"
@@ -693,7 +695,7 @@ export function ResetPasswordModal({
   onDone: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ sent: boolean; expires_at: string } | null>(null);
+  const [result, setResult] = useState<{ sent: boolean; expires_at: string; temp_password?: string } | null>(null);
   const [error, setError] = useState("");
 
   async function go() {
@@ -701,7 +703,7 @@ export function ResetPasswordModal({
     setError("");
     try {
       setResult(
-        await api<{ sent: boolean; expires_at: string }>(`/api/v1/admin/users/${userID}/password`, {
+        await api<{ sent: boolean; expires_at: string; temp_password?: string }>(`/api/v1/admin/users/${userID}/password`, {
           method: "POST",
           body: "{}",
         }),
@@ -721,6 +723,7 @@ export function ResetPasswordModal({
           <Alert tone={result.sent ? "success" : "warning"}>
             {result.sent ? A.resendDone.replace("{h}", fmtNum(hoursLeft(result.expires_at))) : A.resendNotSent}
           </Alert>
+          <TempPasswordNote value={result.temp_password} />
           <FormActions onSave={onClose} saveLabel={m.common.confirm} />
         </div>
       ) : (

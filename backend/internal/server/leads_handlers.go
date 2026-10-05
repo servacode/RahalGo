@@ -944,7 +944,9 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (m
 		if ownerExisted {
 			welcome["sent"] = s.notifyNewStoreOwner(ctx, actorID, *ownerID, storeName, ip)
 		} else {
-			welcome["sent"] = s.sendWelcome(ctx, actorID, *ownerID, ip, plain, "merchant", false)
+			sent := s.sendWelcome(ctx, actorID, *ownerID, ip, plain, "merchant", false)
+			welcome["sent"] = sent
+			welcome["temp_password"] = s.revealTemp(sent, plain)
 			if expires != nil {
 				welcome["expires_at"] = *expires
 			}

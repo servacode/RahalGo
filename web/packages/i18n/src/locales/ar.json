@@ -5514,7 +5514,11 @@
         "compensation": "تعويض",
         "adjustment": "تسوية"
       },
-      "txUnknown": "حركة"
+      "txUnknown": "حركة",
+      "tempPasswordLabel": "كلمة السر المؤقتة",
+      "tempPasswordHint": "الرسالة لم تصل — أعطِ هذه الكلمة لصاحب الحساب بنفسك. يُطلب منه تغييرها عند أوّل دخول.",
+      "tempPasswordCopy": "نسخ",
+      "tempPasswordCopied": "نُسخت"
     },
     "treasury": {
       "title": "الخزينة",

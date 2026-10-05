@@ -76,7 +76,8 @@ func (s *Server) handleAdminCreateUser(w http.ResponseWriter, r *http.Request) {
 	_, expires := s.identity.TempPasswordPending(r.Context(), user.ID)
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"id": user.ID, "phone": user.Phone, "full_name": user.FullName, "roles": user.Roles,
-		"welcome": map[string]any{"sent": sent, "expires_at": expires, "ok": true},
+		"welcome": map[string]any{"sent": sent, "expires_at": expires, "ok": true,
+			"temp_password": s.revealTemp(sent, plain)},
 	})
 }
 
@@ -446,12 +447,13 @@ func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, identity.ErrSelfAction)
 		return
 	}
-	sent, expires, err := s.issueWelcome(r.Context(), userIDFrom(r), id, clientIP(r), true)
+	sent, expires, temp, err := s.issueWelcome(r.Context(), userIDFrom(r), id, clientIP(r), true)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "sent": sent, "expires_at": expires})
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "sent": sent, "expires_at": expires,
+		"temp_password": temp})
 }
 
 // handleAdminUserActivity سجل نشاط الحساب: ما فعله وما فُعل به (من سجل التدقيق).

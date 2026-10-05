@@ -45,6 +45,7 @@ import {
   FormActions,
   Chips,
 } from "@rahalgo/ui";
+import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -141,7 +142,7 @@ function LeadsScreen() {
   const [count, setCount] = useState(0);
   const [perPage, setPerPage] = useState(20);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState<{ tone: "success" | "warning"; text: string; owner?: string } | null>(null);
+  const [notice, setNotice] = useState<{ tone: "success" | "warning"; text: string; owner?: string; temp?: string } | null>(null);
   const [busy, setBusy] = useState("");
   /** حقلُ البحث يُكتب محلّيّاً ثمّ يُرسَل للرابط بعد توقّفٍ قصير. */
   const [q, setQ] = useState(get("q"));
@@ -208,7 +209,7 @@ function LeadsScreen() {
     setError("");
     setNotice(null);
     try {
-      const res = await api<{ welcome?: { sent?: boolean; user_id?: string } }>(
+      const res = await api<{ welcome?: { sent?: boolean; user_id?: string; temp_password?: string } }>(
         `/api/v1/admin/leads/${id}/status`,
         { method: "POST", body: JSON.stringify({ status: next, note: text }) },
       );
@@ -217,7 +218,7 @@ function LeadsScreen() {
         setNotice(
           w?.sent
             ? { tone: "success", text: L.approvedSent }
-            : { tone: "warning", text: L.approvedNotSent, owner: w?.user_id },
+            : { tone: "warning", text: L.approvedNotSent, owner: w?.user_id, temp: w?.temp_password },
         );
       }
       setDeciding(null);
@@ -388,6 +389,7 @@ function LeadsScreen() {
       {notice && (
         <Alert tone={notice.tone} className="mb-4" onDismiss={() => setNotice(null)}>
           {notice.text}
+          <TempPasswordNote value={notice.temp} />
           {notice.owner && (
             <>
               {" — "}

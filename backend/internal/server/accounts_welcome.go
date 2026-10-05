@@ -107,25 +107,37 @@ func (s *Server) sendText(ctx context.Context, phone, text string) bool {
 }
 
 // issueWelcome **يولّد كلمةً مؤقّتةً ويرسلها** — لحسابٍ جديدٍ أو لإعادةِ كلمة.
-func (s *Server) issueWelcome(ctx context.Context, actor, userID, ip string, reset bool) (bool, time.Time, error) {
+func (s *Server) issueWelcome(ctx context.Context, actor, userID, ip string, reset bool) (bool, time.Time, string, error) {
 	return s.issueWelcomeApp(ctx, actor, userID, ip, "", reset)
 }
 
+// revealTemp **الكلمةُ المؤقّتةُ تُعرض على شاشة الموظّف — في التجهيز وحده، وحين
+// لم تصل الرسالة** (قرارُ المالك ٢٠٢٦-١٠-٠٥: «بوت واتساب لا يعمل بوضع التطوير»).
+//
+// **والإنتاجُ لا يُظهرها أبداً** — هناك تصل بالواتساب وحدَه. **ولا تُكتب في سجلّ.**
+func (s *Server) revealTemp(sent bool, plain string) string {
+	if sent || s.cfg == nil || s.cfg.Env == "production" {
+		return ""
+	}
+	return plain
+}
+
 // issueWelcomeFor رسالةُ حسابٍ جديد — و`app` يختار الرابط (`panel` للموظّف).
-func (s *Server) issueWelcomeFor(ctx context.Context, actor, userID, ip, app string) (bool, time.Time, error) {
+func (s *Server) issueWelcomeFor(ctx context.Context, actor, userID, ip, app string) (bool, time.Time, string, error) {
 	return s.issueWelcomeApp(ctx, actor, userID, ip, app, false)
 }
 
-func (s *Server) issueWelcomeApp(ctx context.Context, actor, userID, ip, app string, reset bool) (bool, time.Time, error) {
+func (s *Server) issueWelcomeApp(ctx context.Context, actor, userID, ip, app string, reset bool) (bool, time.Time, string, error) {
 	action := "admin.welcome_issued"
 	if reset {
 		action = "admin.password_reset"
 	}
 	plain, expires, err := s.identity.IssueTempPassword(ctx, actor, userID, ip, action)
 	if err != nil {
-		return false, time.Time{}, err
+		return false, time.Time{}, "", err
 	}
-	return s.sendWelcome(ctx, actor, userID, ip, plain, app, reset), expires, nil
+	sent := s.sendWelcome(ctx, actor, userID, ip, plain, app, reset)
+	return sent, expires, s.revealTemp(sent, plain), nil
 }
 
 // sendWelcome **يرسل رسالةَ الدخول بكلمةٍ وُضعت سلفاً** — والكلمةُ لا تُكتب في سجلّ.
@@ -183,10 +195,10 @@ func (s *Server) handleAdminResendWelcome(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	sent, expires, err := s.issueWelcome(r.Context(), userIDFrom(r), id, clientIP(r), false)
+	sent, expires, temp, err := s.issueWelcome(r.Context(), userIDFrom(r), id, clientIP(r), false)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"sent": sent, "expires_at": expires})
+	httpx.JSON(w, http.StatusOK, map[string]any{"sent": sent, "expires_at": expires, "temp_password": temp})
 }

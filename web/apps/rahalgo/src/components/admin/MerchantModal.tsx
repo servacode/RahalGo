@@ -60,6 +60,7 @@ import { api, ApiError } from "@/lib/api";
 import { StoreActions } from "@/components/admin/StoreActions";
 import { useAuth } from "@/lib/auth";
 import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
+import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 
 const m = getMessages(defaultLocale);
 
@@ -165,7 +166,7 @@ export function MerchantModal({
   // **ولا كلمةَ يكتبها الموظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها
   // ويرسلها إلى صاحب المتجر مع رابط تطبيق المتجر، **ومن له حسابٌ قائمٌ تصله
   // «صار عندك متجر» بلا كلمةٍ جديدة.**
-  const [welcome, setWelcome] = useState<{ sent: boolean; existing_owner: boolean } | null>(null);
+  const [welcome, setWelcome] = useState<{ sent: boolean; existing_owner: boolean; temp_password?: string } | null>(null);
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
   // **سببُ نقل المتجر إلى مندوبٍ آخر** — إلزاميٌّ عند تغيير مندوب متجرٍ قائم،
   // لأنّ النقل يحوّل عمولةَ الطلبات القادمة ونسبةَ الهدف ويُسجَّل في التدقيق.
@@ -285,7 +286,7 @@ export function MerchantModal({
           body: JSON.stringify(body),
         });
       } else {
-        const made = await api<{ welcome?: { sent: boolean; existing_owner: boolean } }>(
+        const made = await api<{ welcome?: { sent: boolean; existing_owner: boolean; temp_password?: string } }>(
           "/api/v1/admin/merchants",
           { method: "POST", body: JSON.stringify(body) },
         );
@@ -327,6 +328,7 @@ export function MerchantModal({
           <Alert tone={welcome.sent ? "success" : "warning"}>
             {welcome.sent ? m.admin.acc.welcomeSent : m.admin.acc.welcomeNotSent}
           </Alert>
+          <TempPasswordNote value={welcome.temp_password} />
           <FormActions onSave={onSaved} saveLabel={m.common.confirm} />
         </div>
       ) : (

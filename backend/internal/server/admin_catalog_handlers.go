@@ -128,6 +128,7 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 			exp, werr := s.identity.SetTempExpiry(r.Context(), *m.OwnerUserID)
 			sent := s.sendWelcome(r.Context(), userIDFrom(r), *m.OwnerUserID, clientIP(r), plain, "merchant", false)
 			welcome["sent"], welcome["expires_at"], welcome["ok"] = sent, exp, werr == nil
+			welcome["temp_password"] = s.revealTemp(sent, plain)
 		}
 	}
 	httpx.JSON(w, http.StatusCreated, struct {

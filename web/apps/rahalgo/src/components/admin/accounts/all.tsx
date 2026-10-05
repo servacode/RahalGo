@@ -66,6 +66,7 @@ import { MerchantModal, CategoriesModal } from "@/components/admin/MerchantModal
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
+import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.acc;
@@ -741,7 +742,7 @@ function CreateAccountModal({
   const [staffRole, setStaffRole] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ id: string; sent: boolean } | null>(null);
+  const [done, setDone] = useState<{ id: string; sent: boolean; temp?: string } | null>(null);
   const [partial, setPartial] = useState<{ id: string; role: string; why: string } | null>(null);
 
   // **أدوارُ الموظّفين التي يملك المشغّلُ منحَها** — ولا متجرَ ولا صفةَ حساب.
@@ -761,9 +762,9 @@ function CreateAccountModal({
     setBusy(true);
     setError("");
     setPartial(null);
-    let made: { id: string; welcome?: { sent: boolean } };
+    let made: { id: string; welcome?: { sent: boolean; temp_password?: string } };
     try {
-      made = await api<{ id: string; welcome?: { sent: boolean } }>("/api/v1/admin/users", {
+      made = await api<{ id: string; welcome?: { sent: boolean; temp_password?: string } }>("/api/v1/admin/users", {
         method: "POST",
         body: JSON.stringify({
           phone,
@@ -788,7 +789,7 @@ function CreateAccountModal({
       }
     }
     setBusy(false);
-    setDone({ id: made.id, sent: !!made.welcome?.sent });
+    setDone({ id: made.id, sent: !!made.welcome?.sent, temp: made.welcome?.temp_password });
     onCreated();
   }
 
@@ -797,6 +798,7 @@ function CreateAccountModal({
       {done ? (
         <div className="space-y-4">
           <Alert tone={done.sent ? "success" : "warning"}>{done.sent ? A.welcomeSent : A.welcomeNotSent}</Alert>
+          <TempPasswordNote value={done.temp} />
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"
