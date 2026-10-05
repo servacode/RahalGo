@@ -787,6 +787,17 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		own = `AND offered_driver_id = $2`
 	}
 
+	// **وإعداداتُ بوّابة «الأسرع» تُقرأ قبل المعاملة** — قراءتُها من المسبح وهي
+	// ممسكةٌ بوصلةٍ تطلب وصلةً ثانيةً فيجمد القبولُ تحت الضغط (`XG46`).
+	gateQueue := !offeredToMe && s.orders.AssignmentMode(r.Context()) != "rotation"
+	cond := orders.QueueBaseSQL("$1::uuid")
+	args := []any{uid, orderID}
+	if gateQueue && s.orders.ProximityEnabled(r.Context()) {
+		dp := s.orders.DispatchProximity(r.Context())
+		cond = orders.QueueVisibleSQL("$1::uuid", 3)
+		args = append(args, dp.CashLimit, dp.MaxActive, dp.FreshSec,
+			dp.MaxM, dp.InitialM, dp.StepM, dp.TimeoutSec)
+	}
 	tx, err := s.pg.Begin(r.Context())
 	if err != nil {
 		s.respondErr(w, err)
@@ -808,6 +819,26 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		}
 		s.respondErr(w, errCashLimitFull)
 		return
+	}
+	// **ولا يُقبل إلّا ما عُرض عليه الآن** (فحصُ الهجوم ٢٠٢٦-١٠-٠٥، بموافقة المالك):
+	// «الإخفاءُ في قائمةٍ ليس منعاً» — كان سائقٌ خارجَ الحلقة أو بموضعٍ شائخٍ أو
+	// تخطّى العرضَ يأخذ بمعرّفه طلباً لا يراه، فيسبق القريبَ. **والعرضُ في
+	// «للجميع» هو الطابورُ نفسُه**، فيُسأل بشرطه؛ **وما عُرض عليه باسمه يمرّ.**
+	// **وبعد الحكم بالنقد والعدد** — فسببُهما يصل السائقَ باسمه لا «أُخذ».
+	if gateQueue {
+		var visible bool
+		if err := tx.QueryRow(r.Context(), `
+			SELECT EXISTS (SELECT 1 FROM orders o
+			               LEFT JOIN merchants m ON m.id = o.merchant_id
+			               WHERE o.id = $2 AND o.status = 'dispatching' AND o.driver_id IS NULL
+			                 AND `+cond+`)`, args...).Scan(&visible); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if !visible {
+			s.respondErr(w, errOrderTaken)
+			return
+		}
 	}
 
 	// **والحارسُ نفسُه في القبول لا في العرض وحده.**

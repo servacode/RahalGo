@@ -401,6 +401,9 @@ func (r Res) String() string { return fmt.Sprintf("%d %s", r.Code, strings.TrimS
 // Call **نداءٌ خامٌ بترويسات** — وبه تُبنى كلُّ المساعدات.
 func (h *Harness) Call(method, path, token string, body any, headers map[string]string) Res {
 	h.T.Helper()
+	if method == "POST" && strings.HasPrefix(path, "/api/v1/driver/orders/") && strings.HasSuffix(path, "/accept") {
+		h.standAtPickup(token, strings.TrimSuffix(strings.TrimPrefix(path, "/api/v1/driver/orders/"), "/accept"))
+	}
 	var rdr io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -716,4 +719,29 @@ func (w *testLogWriter) stop() {
 	w.mu.Lock()
 	w.done = true
 	w.mu.Unlock()
+}
+
+// standAtPickup **يضع السائقَ عند نقطة الالتقاط بموضعٍ طازج قبل أن يقبل.**
+//
+// **والقبولُ لا يقبل إلّا ما يُرى** (فحصُ الهجوم ٢٠٢٦-١٠-٠٥، بموافقة المالك): في
+// «الأسرع» مع القرب لا يرى الطلبَ إلّا سائقٌ حديثُ الموضع داخلَ الحلقة — **وكانت
+// اختباراتُ القبول تقبل بسائقٍ بلا موضع، وهو بعينه الثغرةُ التي سُدّت.** فيُوقَف
+// السائقُ حيث يكون في الواقع، **ولا يُمَسّ ما سوى ذلك.** ومن أراد اختبارَ الرفض
+// (`TestProximity_Accept*`) يناديه في حزمة الخادم بلا هذا التمهيد.
+func (h *Harness) standAtPickup(token, orderID string) {
+	claims := jwt.MapClaims{}
+	if _, _, err := jwt.NewParser().ParseUnverified(token, claims); err != nil {
+		return
+	}
+	uid, _ := claims["sub"].(string)
+	if uid == "" || orderID == "" {
+		return
+	}
+	_, _ = h.Pool.Exec(context.Background(), `
+		UPDATE users SET
+			last_location = COALESCE((SELECT COALESCE(o.pickup_override, m.location, o.dropoff)
+			                          FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
+			                          WHERE o.id::text = $2), last_location),
+			last_location_at = now()
+		WHERE id::text = $1`, uid, orderID)
 }
