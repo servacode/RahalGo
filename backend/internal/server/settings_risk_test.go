@@ -47,6 +47,18 @@ func TestSETTINGS_RiskLevelsDriveCapabilityAndStepUp(t *testing.T) {
 	}
 }
 
+// TestSETTINGS_ExpenseThresholdNotOwnedByFinance **سقفُ الموافقة الثانية على
+// المصروف لا يغيّره دورُ الماليّة** — وإلّا رفعه موظّفُها ثمّ صرف وحدَه.
+func TestSETTINGS_ExpenseThresholdNotOwnedByFinance(t *testing.T) {
+	const key = "finance.expense_approval_threshold"
+	if got := settingCapability(key); got != authz.SettingsSecurityManage {
+		t.Fatalf("%s بقدرة %q — **والماليّةُ تملكها فترفع سقفَ نفسها**", key, got)
+	}
+	if !criticalSettingKey(key) {
+		t.Fatalf("%s بلا خطوةِ تحقّق", key)
+	}
+}
+
 // **والتساوي بالقيمة المطبَّعة** — `10` و`10.0` سواء فلا يُحفظ «١٠ ← ١٠».
 func TestSETTINGS_SameValueNormalised(t *testing.T) {
 	if !sameSettingValue(float64(10), int64(10)) {
