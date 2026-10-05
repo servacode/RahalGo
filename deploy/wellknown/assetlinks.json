@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.rahalgo.customer",
       "sha256_cert_fingerprints": [
-        "23:EE:CD:F3:D9:13:F1:3A:B9:31:B9:DC:22:0A:1A:F8:AF:24:53:E7:3D:94:58:EC:8C:49:E5:FE:29:EB:DF:63"
+        "23:EE:CD:F3:D9:13:F1:3A:B9:31:B9:DC:22:0A:1A:F8:AF:24:53:E7:3D:94:58:EC:8C:49:E5:FE:29:EB:DF:63",
+        "BF:8B:46:0B:2E:65:5E:79:B1:95:1F:E1:B9:66:A2:6C:E3:7B:91:27:B9:E0:11:8A:1F:65:FA:7D:07:2C:EE:C1"
       ]
     }
   }

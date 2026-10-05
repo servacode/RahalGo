@@ -638,8 +638,10 @@ func (s *Server) appHref(r *http.Request) string {
 		return ""
 	}
 	pub := release.ResolveOne(r.Context(), s.releaseStore(), app)
-	if pub.PlayURL != "" {
-		return pub.PlayURL
+	// **والملفُّ المباشرُ أوّلاً** (طلبُ المالك ٢٠٢٦-١٠-٠٥): غوغل بلاي لا يعمل في
+	// سوريا، **وزرٌّ يفتح متجراً محجوباً لزبون الرقّة زرٌّ ميّت.** والمتجرُ احتياط.
+	if pub.DownloadURL != "" {
+		return pub.DownloadURL
 	}
-	return pub.DownloadURL
+	return pub.PlayURL
 }

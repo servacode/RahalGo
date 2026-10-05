@@ -6,6 +6,7 @@
  * مختلفة، فصار المصدر هنا وكلٌّ يمرّر محتواه فقط.
  */
 
+import { apiBase } from "./runtimeconfig";
 import {
   useCallback,
   useEffect,
@@ -340,9 +341,12 @@ export function AppDownloadChip({ label }: { label: string }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted || !appUrl) return null;
+  // **ومسارُ التنزيل نسبيٌّ إلى المحرّك لا إلى الموقع** (٢٠٢٦-١٠-٠٥): كان يفتح
+  // `rahalgo.com/api/…` فيردّ ٤٠٤ — **والمحرّكُ على نطاقه.**
+  const href = appUrl.startsWith("/") ? apiBase() + appUrl : appUrl;
   return (
     <a
-      href={appUrl}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       title={label}

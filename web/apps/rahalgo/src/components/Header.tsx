@@ -28,6 +28,7 @@ import {
   BrandMark,
   TopBarLink,
   TopBarChip,
+  AppDownloadChip,
   TopBarActions,
   TOPBAR_ICON,
   LiveNotifications,
@@ -299,7 +300,10 @@ export default function Header({
           href={l.href}
           title={l.label}
           tone={pathname === l.href ? "active" : "plain"}
-          className="ms-1 hidden lg:flex"
+          /* **و«التطبيقات» تُرى على الجوّال أيضاً** (طلبُ المالك ٢٠٢٦-١٠-٠٥:
+             «على الجوّال ما بيطلع للرئيسيّة ولا تحميل التطبيق») — **والرئيسيّةُ
+             الشعار، وتواصلُ معنا في التذييل.** */
+          className={l.href === "/download" ? "ms-1 flex" : "ms-1 hidden lg:flex"}
         >
           <span>{l.label}</span>
         </TopBarLink>
@@ -344,9 +348,11 @@ export default function Header({
           </TopBarChip>
         </>
       ) : (
-        /* **ولا «دخول» ولا «حمّل التطبيق»** — (قرارُ المالك ٢٠٢٦-١٠-٠١). الزائرُ
-           يجد «التطبيقات» في الشريط نفسِه، **وزرّان لمعنًى واحدٍ زحمة.** */
-        null
+        /* **ولا «دخول»** — (قرارُ المالك ٢٠٢٦-١٠-٠١). **و«حمّل التطبيق» رجع**
+           (طلبُ المالك ٢٠٢٦-١٠-٠٥: «زر بالموقع حمّل التطبيق لتطبيق الزبون بشكل
+           مباشر، مشان ما يضطر يفوت ع التطبيقات») — **ينزّل ملفَّ الزبون من
+           أوّل ضغطة.** */
+        <AppDownloadChip label={m.site.appGate.title} />
       )}
     </TopBar>
   );
