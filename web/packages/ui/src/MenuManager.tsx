@@ -166,11 +166,14 @@ export function MenuManager({
       const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
 
   useEffect(() => {
+    // **وأقسامُ السوق لنافذة التحرير وحدَها** — والعرضُ بلا تعديلٍ لا يفتحها،
+    // **ومن لا يملك السوقَ يُردّ نداؤه ٤٠٣.**
+    if (readOnly) return;
     api<{ sections: PlatformSection[] }>(paths.platformSections())
       .then((r) => setPlatformSections(r.sections ?? []))
       // **وتعذّرُها لا يمنع تحرير القائمة** — يبقى الحقلُ مخفيّاً والباقي يعمل.
       .catch(() => undefined);
-  }, [api, paths]);
+  }, [api, paths, readOnly]);
 
   const load = useCallback(async () => {
     try {
