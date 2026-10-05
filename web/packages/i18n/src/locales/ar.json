@@ -5638,6 +5638,7 @@
         "notDue": "لم يحن بعد",
         "approveTitle": "تأكيد الموافقة",
         "approveBody": "توافق على {amount} — {section}؟",
+        "party": "لـ {name}",
         "rejectTitle": "رفض الطلب",
         "sections": {
           "walletRequests": "حركات المحافظ",

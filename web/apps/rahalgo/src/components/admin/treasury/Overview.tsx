@@ -179,6 +179,7 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
                 <span dir="ltr" className="font-bold">
                   {fmtMoney(a.amount)}
                 </span>
+                {a.party_name && <span className="font-medium">{T.approvals.party.replace("{name}", a.party_name)}</span>}
                 <span className="min-w-0 flex-1 truncate text-ink-muted">{a.note}</span>
               </li>
             ))}
