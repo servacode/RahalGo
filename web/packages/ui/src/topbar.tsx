@@ -358,10 +358,12 @@ export function AppDownloadChip({ label }: { label: string }) {
 
          **واسمُها وحدَه يُخفى على الضيّق** والأيقونةُ تبقى: **صفٌّ من
          أيقوناتٍ يسع، وصفٌّ من أسماءٍ لا يسع.** */
-      className={`${chipBase} ${chipTones.plain} border border-line`}
+      className={`${chipBase} ${chipTones.accent} border border-line`}
     >
       <IconApp size={TOPBAR_ICON} />
-      <span className="hidden sm:inline">{label}</span>
+      {/* **والاسمُ يُرى على الجوّال أيضاً** (طلبُ المالك ٢٠٢٦-١٠-٠٥) — أيقونةٌ
+          وحدَها لا تقول «حمّل»، **وهو أوّلُ ما يبحث عنه زائرُ الهاتف.** */}
+      <span>{label}</span>
     </a>
   );
 }
