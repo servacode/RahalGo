@@ -314,8 +314,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// ومواعيدُ `meals.breakfast_at|lunch_at|dinner_at` — **والنصوصُ طويلةٌ لا تُعدّ.**
 	// **وواحدٌ أُضيف بإظهار السلايدر** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `home.banner_enabled`
 	// — **ورسائلُ التطبيق `app_text.*` نصوصٌ لا تُعدّ.**
-	if d.BehaviourSettings != 155 {
-		t.Errorf("إعداداتُ السلوك = %d لا 155 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ أُضيف بـ«لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٥): أجرتُها `delivery.merchant_fee`.
+	if d.BehaviourSettings != 156 {
+		t.Errorf("إعداداتُ السلوك = %d لا 156 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

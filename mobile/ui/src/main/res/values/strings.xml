@@ -585,6 +585,7 @@
     <string name="err_out_of_zone">العنوان خارج مناطق التغطية الحالية</string>
     <string name="err_below_min_order">قيمة الطلب أقل من الحد الأدنى لهذه المنطقة</string>
     <string name="err_delivery_credit_exhausted">لا يكفي رصيد متجرك لأجرة التوصيلة، وقد بلغت حد الدين المسموح. اشحن محفظتك أو راجع الإدارة لرفع الحد.</string>
+    <string name="err_merchant_delivery_unpaid">لا تكفي محفظة المتجر أجرة التوصيلة، وسقف دينه لا يسمح.</string>
     <string name="err_too_many_open_orders">لديك طلبات لم تسلم بعد. أكملها أولا ثم اطلب من جديد.</string>
     <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقا</string>
     <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>
@@ -644,6 +645,7 @@
     <string name="ord_st_onway">في الطريق</string>
     <string name="ord_st_failed">تعذر</string>
     <string name="ord_st_dispatching">بانتظار سائق</string>
+    <string name="ord_st_awaiting_platform">بانتظار موافقة المنصة</string>
     <string name="mn_available">متوفر</string>
     <string name="mn_unavailable">غير متوفر</string>
     <string name="mn_pending_review">بانتظار المراجعة</string>

@@ -124,8 +124,8 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		return IdempotentBody{
 			Status:  http.StatusCreated,
 			Payload: map[string]any{"id": id},
-			// **والعرضُ على السائقين بعد التثبيت لا داخلَه** — عرضٌ خرج ثمّ
-			// ارتدّت المعاملةُ يوقظ سائقاً لتوصيلةٍ لا وجودَ لها.
+			// **وإخطارُ المكتب بعد التثبيت لا داخلَه** — التوصيلةُ «بانتظار
+			// موافقة المنصّة» (٢٠٢٦-١٠-٠٥)، **ولا تُعرض على سائقٍ قبل القبول.**
 			AfterCommit: func() {
 				if _, err := s.orders.AfterMerchantDelivery(context.WithoutCancel(r.Context()), id); err != nil {
 					s.logger.Error("التوصيلة: بعد الإنشاء", "order", id, "error", err)

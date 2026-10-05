@@ -524,6 +524,20 @@ const CUSTOM_NEXT: Record<string, string[]> = {
   pending: ["dispatching", "rejected"],
 };
 
+/**
+ * **و«لدي توصيلة» تمرّ بالمكتب كأيّ طلب** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+ *
+ * **قبولٌ أو رفضٌ في الوضعين** — المتجرُ هو من طلبها فلا يقبلها من نفسِه،
+ * **ولا «تحويلَ للمتجر»**: بعد القبول تنزل الطابورَ بنفسها، **وإن لم تنزل
+ * (`orders.auto_dispatch` مطفأ) فزرُّ «إلى السائقين» هنا.**
+ *
+ * **ومرآةُ `merchantDeliveryHead` في المحرّك** — والمحرّكُ يحكم، وهذه تعرض.
+ */
+const MERCHANT_DELIVERY_NEXT: Record<string, string[]> = {
+  pending: ["accepted", "rejected"],
+  accepted: ["dispatching"],
+};
+
 /** مراحلُ الطريق — لا يملكها إلّا من يسير فيها (مرآةُ `driverOnly`). */
 /**
  * **ولا تدخّلَ يدويٌّ في مراحل الطريق — لا في شيءٍ منها.**
@@ -625,6 +639,9 @@ function opsNext(
   // واحدةٌ تُنزله الطابور. **ولا «مقبول» ولا «تحضير»** — لا متجرَ يقبل ولا
   // مطبخَ يحضّر.
   if (kind === "custom") return CUSTOM_NEXT[status] ?? [];
+  if (kind === "merchant_delivery" && MERCHANT_DELIVERY_NEXT[status]) {
+    return MERCHANT_DELIVERY_NEXT[status];
+  }
 
   let next = OPS_NEXT[status] ?? [];
 

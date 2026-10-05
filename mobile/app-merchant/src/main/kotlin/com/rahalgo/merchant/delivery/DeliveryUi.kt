@@ -57,13 +57,17 @@ import com.rahalgo.ui.ConfirmDialog
  *   يُلغي من أوّل لمسة.
  */
 
-/** **ما يُلغى من المتجر** — ما دام الغرضُ عنده (الخادمُ يحكم أيضاً). */
-internal val cancellable = setOf("dispatching", "assigned", "at_pickup")
+/**
+ * **ما يُلغى من المتجر** — ما دام الغرضُ عنده (الخادمُ يحكم أيضاً).
+ *
+ * **ومنها ما ينتظر موافقةَ المنصّة** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `pending` و`accepted`.
+ */
+internal val cancellable = setOf("pending", "accepted", "dispatching", "assigned", "at_pickup")
 
 internal enum class Tone { Waiting, Moving, Done, Ended }
 
 internal fun toneOf(status: String): Tone = when (status) {
-    "dispatching" -> Tone.Waiting
+    "pending", "accepted", "dispatching" -> Tone.Waiting
     "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff" -> Tone.Moving
     "delivered" -> Tone.Done
     else -> Tone.Ended
@@ -80,6 +84,10 @@ internal fun toneColor(t: Tone): Color = when (t) {
 @Composable
 internal fun deliveryStatusText(status: String): String = stringResource(
     when (status) {
+        // **بانتظار موافقة المنصّة** — تمرّ بالمكتب كأيّ طلب (٢٠٢٦-١٠-٠٥).
+        "pending" -> com.rahalgo.ui.R.string.ord_st_awaiting_platform
+        "accepted" -> R.string.md_platform_accepted
+        "rejected" -> R.string.md_platform_rejected
         "dispatching" -> R.string.md_searching
         "assigned" -> R.string.os_assigned
         "at_pickup" -> R.string.os_at_pickup

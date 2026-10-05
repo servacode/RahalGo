@@ -32,6 +32,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
@@ -55,12 +56,17 @@ type MerchantDeliveryInput struct {
 	HasPoint bool
 }
 
-// CreateMerchantDelivery **يُنشئ التوصيلةَ في الطابور مباشرةً.**
+// CreateMerchantDelivery **يُنشئ التوصيلةَ «بانتظار موافقة المنصّة».**
 //
-// # ولا «معلَّق» لها
+// # وتمرّ بالمكتب كأيّ طلب (قرارُ المالك ٢٠٢٦-١٠-٠٥)
 //
-// **المتجرُ هو المُنشئ لا القابل** — والغرضُ جاهزٌ عنده قبل أن يضغط،
-// **وخطوةُ قبولٍ يطلبها من نفسِه عبثٌ يُبطئ سائقاً.**
+// **كانت تُولد في الطابور بلا «معلَّق»** — بحجّة أنّ المتجرَ مُنشئٌ لا قابل.
+// **فصارت تُولد `pending`** وتظهر في لوحة الطلبات بالرنين نفسِه، **ولا تنزل
+// إلى السائقين إلّا بعد قبول المكتب** (أو قبولٍ تلقائيٍّ بقواعده). **وللمكتب
+// أن يرفضها** فيُخبَر المتجرُ بالسبب.
+//
+// **ولا مالَ يتحرّك عند الإنشاء**: أجرةُ «المتجر يدفع» تُخصم عند القبول لا
+// قبله (`settleMerchantDelivery`) — **فالرفضُ لا يحتاج ردّاً لأنّ شيئاً لم يُؤخذ.**
 //
 // # والتغطيةُ تُفحص كما تُفحص لكلّ طلب
 //
@@ -151,13 +157,31 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	// البند ٢): كانت تُقرأ من عمود المنطقة **ولوحةُ المناطق تكتبه صفراً في كلّ
 	// تعديل** — فتعديلُ اسم منطقةٍ جعل كلَّ توصيلةٍ فيها مجّانيّةً وأجرَ السائق
 	// صفراً بلا خطأ. **والأجرةُ من `delivery.fee` كالطلب العاديّ** (`DeliveryAt`).
-	fee := pricing.DeliveryFeeAt(ctx, s.settings.On(tx), zone.DistanceM)
+	//
+	// **ولها أجرتُها الخاصّة إن ضُبطت** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر
+	// `merchantDeliveryFee`.
+	fee := s.merchantDeliveryFee(ctx, tx, zone.DistanceM)
 	pct := s.platformDeliveryPercent(ctx, tx)
 	driverFee := DriverFeeAfterShare(fee, pct)
 
 	snap, err := s.snapshotNow(ctx, tx)
 	if err != nil {
 		return "", err
+	}
+
+	// **وقدرةُ المتجر تُفحص الآن ولا يُؤخذ شيء** — والخصمُ عند قبول المكتب.
+	//
+	// **ومن لا يقدر يُقال له الآن لا بعد ساعة**: توصيلةٌ تنتظر المكتبَ ثمّ
+	// تُردّ لأنّ المحفظةَ فارغةٌ تُضيّع وقتَ الاثنين. **والقاعدةُ قاعدةُ الخصم
+	// نفسُها** (`merchantCanCover`) — ويُعاد فحصُها بقفلٍ عند القبول.
+	if in.FeePayer == FeePayerMerchant {
+		can, err := s.merchantCanPay(ctx, tx, merchantID, fee)
+		if err != nil {
+			return "", err
+		}
+		if !can {
+			return "", ErrDeliveryCreditExhausted
+		}
 	}
 
 	// **ومن يدفع يحدّد أين يقع المال**: المتجرُ ⇐ يُخصم أو يُقيَّد ديناً
@@ -177,13 +201,13 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 		                    total, cash_due, notes,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders,
-		                    snap_platform_delivery_percent, dispatched_at, dropoff_known)
+		                    snap_platform_delivery_percent, dropoff_known)
 		VALUES ('merchant_delivery', $1, $2,
 		        ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
 		        $5, $6, $7, $8,
-		        'dispatching', 'cash', 0, $9, $10,
+		        'pending', 'cash', 0, $9, $10,
 		        $9, $11, $12,
-		        $13, $14, $15, $16, $17, now(), $18)
+		        $13, $14, $15, $16, $17, $18)
 		RETURNING id::text`,
 		merchantID, in.AddressText, in.Lat, in.Lng,
 		in.RecipientName, in.RecipientPhone, nullIfEmpty(in.ParcelNote), in.FeePayer,
@@ -194,43 +218,36 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 		return "", err
 	}
 
-	// ── دفعُ المتجر — في المعاملة نفسِها ──────────────────────────────
+	// ── دفعُ المتجر — عند قبول المكتب لا هنا ─────────────────────────
 	//
-	// **ولا توصيلةَ بلا دفعِها**: لو أُودع الصفُّ ثمّ سقط الخصمُ لخرج سائقٌ
-	// لتوصيلةٍ لم يُدفع أجرُها، **ولو سقط الدينُ على السقف لبقي طلبٌ في
-	// الطابور يُعرض على السائقين وهو مرفوض.**
-	//
-	// **والمستلِمُ دافعاً لا شيءَ هنا** — نقدُه يُقبَض عند التسليم.
-	if in.FeePayer == FeePayerMerchant {
-		if err := s.chargeMerchantDelivery(ctx, tx, id, merchantID, actorID, fee); err != nil {
-			return "", err
-		}
-	}
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٥.) **كان يُخصم هنا** — والتوصيلةُ تنزل الطابورَ
+	// فوراً. **وصار للمكتب أن يرفضها**، فخصمٌ عند الإنشاء يعني ردّاً عند كلّ
+	// رفض: **قيدان لا قيدٌ، وبابٌ لخطأٍ في كلّ رفض.** فيُخصم في معاملة القبول
+	// (`settleMerchantDelivery`) بقفل المحفظة نفسِه، **وإن لم تكفِ رُدّ القبول.**
 
 	// **ولحظةُ الميلاد تُقيَّد** — **وسجلُّ حالاتٍ يبدأ من أوّل انتقالٍ لا من
 	// الإنشاء يُقرأ طلباً بلا نشأة** (وهي علّةُ الخاصِّ التي أُصلحت).
 	// **والفاعلُ صاحبُ المتجر** — هو من أنشأها.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
-		VALUES ($1, '', 'dispatching', $2, 'لدي توصيلة')`, id, actorID); err != nil {
+		VALUES ($1, '', 'pending', $2, 'لدي توصيلة')`, id, actorID); err != nil {
 		return "", err
 	}
 
 	return id, nil
 }
 
-// AfterMerchantDelivery **ما لا يقع إلّا بعد التثبيت** — القراءةُ والبثُّ وأوّلُ عرض.
+// AfterMerchantDelivery **ما لا يقع إلّا بعد التثبيت** — القراءةُ والبثُّ وإخطارُ المكتب.
+//
+// **ولا عرضَ على سائق** — التوصيلةُ «بانتظار موافقة المنصّة» (قرارُ المالك
+// ٢٠٢٦-١٠-٠٥)، **والعرضُ الأوّلُ يقع حين تنزل الطابور** (`transitionTx`).
 func (s *Service) AfterMerchantDelivery(ctx context.Context, id string) (*Order, error) {
 	o, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	s.publishOrder(o)
-	// **وأوّلُ عرضٍ بعد الإيداع لا داخلَه** — **عرضٌ خرج ثمّ ارتدّت المعاملةُ
-	// يُوقظ سائقاً لطلبٍ لا وجودَ له.**
-	if err := s.OfferNext(ctx, id, nil); err != nil {
-		s.logger.Error("التوصيلة: تعذّر أوّلُ عرض", "order", id, "error", err)
-	}
+	s.notifyMerchantDeliveryCreated(ctx, o)
 	return o, nil
 }
 
@@ -345,7 +362,8 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 	if err := s.requireDriverOnShift(ctx, s.db); err != nil {
 		return nil, err
 	}
-	q := &MerchantDeliveryQuote{Fee: pricing.DeliveryFeeAt(ctx, s.settings.On(s.db), zone.DistanceM), ZoneName: zone.Name}
+	// **والرقمُ بدالّة الإنشاء نفسِها** — فلا يُعرض رقمٌ ويُخصم غيرُه.
+	q := &MerchantDeliveryQuote{Fee: s.merchantDeliveryFee(ctx, s.db, zone.DistanceM), ZoneName: zone.Name}
 	if err := s.db.QueryRow(ctx, `
 		SELECT COALESCE((SELECT balance FROM wallets w WHERE w.user_id = m.owner_user_id), 0),
 		       m.delivery_credit_limit
@@ -358,7 +376,7 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 		return nil, err
 	}
 	q.CreditOwed = owed
-	q.MerchantCanPay = q.WalletBalance >= q.Fee || q.CreditOwed+q.Fee <= q.CreditLimit
+	q.MerchantCanPay = merchantCanCover(q.WalletBalance, q.CreditOwed, q.CreditLimit, q.Fee)
 	return q, nil
 }
 
@@ -405,4 +423,44 @@ func (s *Service) merchantPoint(ctx context.Context, q dbtx.Querier, merchantID 
 		return 0, 0, ErrBadPoint
 	}
 	return *lat, *lng, nil
+}
+
+// SettingMerchantDeliveryFee **أجرةُ «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+const SettingMerchantDeliveryFee = "delivery.merchant_fee"
+
+// merchantDeliveryFee **أجرةُ التوصيلة** — الإنشاءُ وعرضُ السعر من هنا وحدَه.
+//
+// **مفتاحُها إن كان فوق الصفر**، وإلّا فالقاعدةُ العامّة (`delivery.fee`
+// ومعها التسعيرُ بالمسافة إن اشتعل). **وصفرٌ «لا أجرةَ خاصّة» لا «مجّاناً»**:
+// افتراضُه صفرٌ فلا يتبدّل شيءٌ يومَ يُنشَر.
+func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, distanceM float64) int64 {
+	st := s.settings.On(q)
+	if own := st.GetInt(ctx, SettingMerchantDeliveryFee); own > 0 {
+		return own
+	}
+	return pricing.DeliveryFeeAt(ctx, st, distanceM)
+}
+
+// merchantCanCover **أيقدر المتجرُ أن يدفع؟** — محفظةً تكفي، أو ديناً تحت سقفه.
+//
+// **قاعدةُ `chargeMerchantDelivery` نفسُها** — تُقرأ في عرض السعر وفي الإنشاء
+// بلا قفل، **ويُعاد حسابُها بقفلٍ عند القبول** حيث يقع الخصم.
+func merchantCanCover(balance, owed, limit, fee int64) bool {
+	return fee <= 0 || balance >= fee || owed+fee <= limit
+}
+
+// merchantCanPay **قدرةُ المتجر الآن** — قراءةٌ بلا قفلٍ ولا خصم.
+func (s *Service) merchantCanPay(ctx context.Context, q dbtx.Querier, merchantID string, fee int64) (bool, error) {
+	var balance, limit int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE((SELECT balance FROM wallets w WHERE w.user_id = m.owner_user_id), 0),
+		       m.delivery_credit_limit
+		  FROM merchants m WHERE m.id = $1`, merchantID).Scan(&balance, &limit); err != nil {
+		return false, err
+	}
+	owed, err := obligations.Balance(ctx, q, obligations.PartyMerchant, merchantID)
+	if err != nil {
+		return false, err
+	}
+	return merchantCanCover(balance, owed, limit, fee), nil
 }

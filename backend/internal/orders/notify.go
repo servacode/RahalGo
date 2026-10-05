@@ -39,6 +39,9 @@ var t = struct {
 	driverEarned, merchantEarned, refunded2, compensated string
 	// **والسائقُ يُخبَر حين يُؤخذ منه طلبُه** — انظر `driver_lost.go`.
 	driverLost string
+	// **«لدي توصيلة» تمرّ بالمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **والمتجرُ
+	// يُخبَر بقرار المكتب** فيها، والمكتبُ بوصولها.
+	mdNewOps, mdAccepted, mdRejected, mdCancelled string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -70,6 +73,10 @@ var t = struct {
 	refunded2:                "أُعيد المبلغ إلى محفظتك",
 	compensated:              "تعويض في محفظتك",
 	driverLost:               "طلبٌ لم يعد معك",
+	mdNewOps:                 "توصيلة جديدة من متجر",
+	mdAccepted:               "وافقت المنصة على توصيلتك",
+	mdRejected:               "اعتذرت المنصة عن توصيلتك",
+	mdCancelled:              "أُلغيت توصيلتك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -94,6 +101,7 @@ type orderParties struct {
 	itemCount     int
 	subtotal      int64
 	customerID    string
+	kind          string
 	merchantOwner *string
 	merchantName  string
 	repID         *string
@@ -102,7 +110,9 @@ type orderParties struct {
 func (s *Service) parties(ctx context.Context, orderID string) (orderParties, error) {
 	var p orderParties
 	err := s.db.QueryRow(ctx, `
-		SELECT o.number, o.customer_id, mm.owner_user_id,
+		-- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ كان يُسقط
+		-- القراءةَ كلَّها فتصمت إشعاراتُها جميعاً، **ومنها «سُلّم طلبٌ من متجرك».**
+		SELECT o.number, COALESCE(o.customer_id::text, ''), mm.owner_user_id, o.kind,
 		       -- **واسمُ المتجر فارغٌ في الطلب الخاصّ** — لا متجرَ له.
 		       COALESCE(mm.name, ''), mm.sales_rep_user_id,
 		       -- **عددُ الأصناف والمبلغ** — لإشعار الطلب الجديد.
@@ -116,7 +126,7 @@ func (s *Service) parties(ctx context.Context, orderID string) (orderParties, er
 		-- الدالّةُ تردّ «لا صفوف» فيُبتلع.
 		FROM orders o LEFT JOIN merchants mm ON mm.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
-		Scan(&p.number, &p.customerID, &p.merchantOwner, &p.merchantName, &p.repID,
+		Scan(&p.number, &p.customerID, &p.merchantOwner, &p.kind, &p.merchantName, &p.repID,
 			&p.itemCount, &p.subtotal)
 	return p, err
 }
@@ -160,6 +170,25 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 	s.notify.NotifyRoles(ctx, notifications.OpsDesk, notifications.Input{
 		Kind: notifications.KindOrder, Title: t.newOrderOps,
 		Body:   ref + " — " + p.merchantName,
+		Entity: "order", EntityID: o.ID, Href: "/dashboard/orders",
+	})
+}
+
+// notifyMerchantDeliveryCreated **توصيلةٌ تنتظر المكتب** — كطلبٍ جديدٍ تماماً.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٥: «تظهر في لوحة الطلبات كسائر الطلبات الجديدة».)
+// **ولا يُخبَر المتجرُ بطلبٍ «قادمٍ إليه»** — هو من أرسله.
+func (s *Service) notifyMerchantDeliveryCreated(ctx context.Context, o *Order) {
+	if s.notify == nil || o == nil {
+		return
+	}
+	p, err := s.parties(ctx, o.ID)
+	if err != nil {
+		return
+	}
+	s.notify.NotifyRoles(ctx, notifications.OpsDesk, notifications.Input{
+		Kind: notifications.KindOrder, Title: t.mdNewOps,
+		Body:   fmt.Sprintf("#%d — %s", p.number, p.merchantName),
 		Entity: "order", EntityID: o.ID, Href: "/dashboard/orders",
 	})
 }
@@ -305,15 +334,34 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 	// صفحةُ التفاصيل حُذفت — **البطاقةُ صارت تحمل كلَّ ما كان فيها.** وإشعارٌ
 	// يفتح صفحةً غيرَ موجودة أسوأُ من إشعارٍ بلا رابط: **يُضغط فيصل إلى لا
 	// شيء**، فيُقرأ عطباً في المنصة.
-	s.notify.Notify(ctx, notifications.Input{
-		UserID: p.customerID, Kind: notifications.KindOrder,
-		Title: title, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/portal/orders",
-		// **«طلبُك في الطريق» يخصّ تطبيقَ الزبون** — ولو كان صاحبُه سائقاً.
-		Apps: []string{notifications.AppCustomer},
-		// **وتقدّمُ الطلب يرنّ ولا يُحفَظ** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
-		Transient: passingTitles[to],
-	})
+	if p.customerID != "" {
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: p.customerID, Kind: notifications.KindOrder,
+			Title: title, Body: body,
+			Entity: "order", EntityID: orderID, Href: "/portal/orders",
+			// **«طلبُك في الطريق» يخصّ تطبيقَ الزبون** — ولو كان صاحبُه سائقاً.
+			Apps: []string{notifications.AppCustomer},
+			// **وتقدّمُ الطلب يرنّ ولا يُحفَظ** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+			Transient: passingTitles[to],
+		})
+	}
+
+	// **و«لدي توصيلة»: صاحبُها المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — يُخبَر بقبول
+	// المكتب ورفضِه **وبالسبب**، وبإلغاءٍ لم يفعله هو. **ولا يُخبَر بفعل نفسِه.**
+	if p.kind == KindMerchantDelivery && p.merchantOwner != nil {
+		mdTitle := map[string]string{
+			StAccepted: t.mdAccepted, StRejected: t.mdRejected, StCancelled: t.mdCancelled,
+		}[to]
+		if mdTitle != "" && endedBy != "merchant" {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID: *p.merchantOwner, Kind: notifications.KindOrder,
+				Title: mdTitle, Body: body,
+				Entity: "order", EntityID: orderID, Href: "/portal",
+				Apps:      []string{notifications.AppMerchant},
+				Transient: to == StAccepted,
+			})
+		}
+	}
 
 	// **والعملياتُ تُخبَر بمن أنهى** — لا بأنّ الطلب انتهى.
 	//

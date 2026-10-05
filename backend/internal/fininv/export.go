@@ -62,6 +62,7 @@ var FinancialSettings = []string{
 	"sales.commission_percent",              // pricing.go:164 — عمولةُ المندوب
 	"pricing.margin_fixed",                  // pricing.go:69  — هامشُ التسعير
 	"delivery.fee",                          // pricing.go:195 — أجرةُ التوصيل
+	"delivery.merchant_fee",                 // orders/merchant_delivery.go — أجرةُ «لدي توصيلة» (٢٠٢٦-١٠-٠٥)
 	"delivery.per_km",                       // pricing.go:229
 	"delivery.max_fee",                      // pricing.go:236
 	"delivery.by_distance",                  // pricing.go:226

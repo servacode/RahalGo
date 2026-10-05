@@ -116,6 +116,8 @@
       "checks": [
         "FI-12.a",
         "FI-12.b",
+        "FI-12.d",
+        "FI-12.e",
         "FI-12.c"
       ]
     },
@@ -137,6 +139,18 @@
         "FI-14.d",
         "FI-14.e",
         "FI-14.f"
+      ]
+    },
+    {
+      "id": "FI-15",
+      "checks": [
+        "FI-15.a",
+        "FI-15.b",
+        "FI-15.c",
+        "FI-15.d",
+        "FI-15.e",
+        "FI-15.f",
+        "FI-15.g"
       ]
     }
   ],
@@ -309,7 +323,8 @@
         "F-14"
       ],
       "kinds": [
-        "merchant_earning"
+        "merchant_earning",
+        "merchant_cash_accrued"
       ]
     },
     {
@@ -879,7 +894,8 @@
       "kinds": [
         "platform_profit",
         "platform_expense",
-        "operating_expense"
+        "operating_expense",
+        "treasury_withdrawal"
       ]
     },
     {
@@ -909,6 +925,26 @@
       ],
       "registers": [
         "D5"
+      ]
+    },
+    {
+      "id": "FI-12.d",
+      "family": "FI-12",
+      "name": "سحبُ الأدمن خصمٌ من الخزينة بمقدار ورقته",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "treasury_withdrawal"
+      ]
+    },
+    {
+      "id": "FI-12.e",
+      "family": "FI-12",
+      "name": "كلُّ ورقةِ سحبٍ من الخزينة لها قيدٌ واحد",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "treasury_withdrawal"
       ]
     },
     {
@@ -1013,6 +1049,73 @@
       "kinds": [
         "merchant_cash_paid"
       ]
+    },
+    {
+      "id": "FI-15.a",
+      "family": "FI-15",
+      "name": "نقدٌ سلّمه سائقٌ دخل صندوقَ المكتب",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-15.b",
+      "family": "FI-15",
+      "name": "مستحقٌّ نقديٌّ دُفع لمتجرٍ خرج من الصندوق",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "merchant_cash_paid"
+      ]
+    },
+    {
+      "id": "FI-15.c",
+      "family": "FI-15",
+      "name": "سحبٌ صُرف نقداً خرج من الصندوق بمقداره",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-15.d",
+      "family": "FI-15",
+      "name": "سحبُ الأدمن من الدرج خرج من الصندوق",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "treasury_withdrawal"
+      ]
+    },
+    {
+      "id": "FI-15.e",
+      "family": "FI-15",
+      "name": "مصدرُ كلّ سطرٍ في الصندوق معروفٌ باتّجاهه",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-15.f",
+      "family": "FI-15",
+      "name": "نقصُ الصندوق: الخسارةُ بقيدها والموجودُ بسطره",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "platform_expense"
+      ]
+    },
+    {
+      "id": "FI-15.g",
+      "family": "FI-15",
+      "name": "شحنٌ نقديٌّ مُوافَقٌ عليه دخل الصندوق",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "topup"
+      ]
     }
   ],
   "kinds": [
@@ -1024,7 +1127,8 @@
       "path": "POST /admin/wallet-requests/{id}/approve · ومطالبةُ المنصّة في نزاع",
       "creators": [
         "internal/server/accounts_wallet_requests.go",
-        "internal/server/disputes.go:280"
+        "internal/server/disputes.go",
+        "internal/server/obligations_actions.go"
       ],
       "invariants": [
         "FI-02.a",
@@ -1151,10 +1255,11 @@
       "sign": "±",
       "ref_required": true,
       "ref_target": "expenses",
-      "path": "POST /admin/expenses · وDELETE /admin/expenses/{id}",
+      "path": "POST /admin/expenses · وPOST /admin/expense-requests/{id}/approve · وPOST /admin/expenses/{id}/void",
       "creators": [
-        "internal/server/expenses_handlers.go:281",
-        "internal/server/expenses_handlers.go:313"
+        "internal/server/expenses_handlers.go:689",
+        "internal/server/expenses_handlers.go:846",
+        "internal/server/expenses_handlers.go:989"
       ],
       "invariants": [
         "FI-01.f",
@@ -1241,14 +1346,16 @@
       "semantics": "مالٌ خرج من الخزينة خارجَ تسويةِ الطلب.",
       "sign": "-",
       "ref_required": false,
-      "ref_target": "orders",
-      "path": "تعويضُ سائقٍ · ودعمُ متجرٍ عن بضاعةٍ رُدّت",
+      "ref_target": "orders|office_cash_shortfalls",
+      "path": "تعويضُ سائقٍ · ودعمُ متجرٍ عن بضاعةٍ رُدّت · ونقصُ صندوقٍ صار خسارة",
       "creators": [
-        "internal/orders/treasury.go:184"
+        "internal/orders/treasury.go:184",
+        "internal/server/treasury_cashbox.go"
       ],
       "invariants": [
         "FI-06.a",
-        "FI-12.a"
+        "FI-12.a",
+        "FI-15.f"
       ],
       "reachable": true
     },
@@ -1261,7 +1368,8 @@
       "path": "كلُّ انتقالٍ ماليٍّ للطلب — creditTreasury",
       "creators": [
         "internal/orders/treasury.go:166",
-        "internal/orders/treasury.go:215"
+        "internal/orders/treasury.go:215",
+        "internal/orders/treasury.go:CreditTreasuryDirectID"
       ],
       "invariants": [
         "FI-06.a",
@@ -1319,24 +1427,41 @@
         "FI-02.a"
       ],
       "reachable": true
+    },
+    {
+      "kind": "treasury_withdrawal",
+      "semantics": "سحبُ مدير المنصّة من رصيد الخزينة باسمه — **لا خسارةٌ ولا مصروف.**",
+      "sign": "-",
+      "ref_required": true,
+      "ref_target": "treasury_withdrawals",
+      "path": "POST /admin/treasury/withdrawals",
+      "creators": [
+        "internal/server/treasury_handlers.go"
+      ],
+      "invariants": [
+        "FI-12.a",
+        "FI-12.d",
+        "FI-12.e",
+        "FI-15.d"
+      ],
+      "reachable": true
     }
   ],
   "counts": {
-    "families": 14,
-    "checks": 69,
-    "provable_now": 63,
+    "families": 15,
+    "checks": 78,
+    "provable_now": 72,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
-    "kinds": 17
+    "kinds": 18
   },
   "financial_settings": [
     "merchants.commission_percent",
     "sales.commission_percent",
-    "sales.commission_source",
-    "sales.activation_orders",
     "pricing.margin_fixed",
     "delivery.fee",
+    "delivery.merchant_fee",
     "delivery.per_km",
     "delivery.max_fee",
     "delivery.by_distance",
@@ -1363,6 +1488,14 @@
     "customers.cash_ban_failures",
     "orders.extra_source_fee",
     "orders.route_margin_pct",
-    "drivers.failed_compensation_percent"
+    "drivers.failed_compensation_percent",
+    "delivery.platform_percent",
+    "delivery.custom_fee_min",
+    "delivery.custom_fee_max",
+    "finance.manual_wallet_max",
+    "compensations.cap_driver",
+    "compensations.cap_merchant_goods",
+    "compensations.cap_complaint",
+    "finance.expense_approval_threshold"
   ]
 }

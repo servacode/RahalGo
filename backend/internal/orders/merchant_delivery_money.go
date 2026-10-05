@@ -12,7 +12,8 @@ package orders
 //
 // # ودافعان لا ثالث
 //
-//	المتجرُ    ⇐ **من محفظته**، فإن لم تكفِ فدينٌ مضبوطٌ بسقفٍ إداريّ
+//	المتجرُ    ⇐ **من محفظته عند قبول المكتب** (لا عند الإنشاء — ٢٠٢٦-١٠-٠٥)،
+//	             فإن لم تكفِ فدينٌ مضبوطٌ بسقفٍ إداريّ
 //	المستلِمُ  ⇐ **نقداً بيد السائق** عند التسليم (`cash_due`)
 //
 // **ولا محفظةَ سالبةَ أبداً** (قرارُ المالك ٢) — **والدينُ مقيسٌ في
@@ -25,6 +26,7 @@ package orders
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -38,6 +40,12 @@ import (
 // **ونصٌّ يقول ما يُفعل** — «تعذّر» وحدَها تجعله يعيد المحاولة عشراً.
 var ErrDeliveryCreditExhausted = httpx.NewError(http.StatusPaymentRequired,
 	"delivery_credit_exhausted", "errors.delivery_credit_exhausted")
+
+// ErrMerchantDeliveryUnpaid **المكتبُ يقبل توصيلةً لا يقدر متجرُها على أجرتها**
+// (قرارُ المالك ٢٠٢٦-١٠-٠٥): **يُردّ القبولُ** وتبقى معلَّقةً — يرفضها المكتبُ
+// أو ينتظر شحنَ المحفظة.
+var ErrMerchantDeliveryUnpaid = httpx.NewError(http.StatusPaymentRequired,
+	"merchant_delivery_unpaid", "errors.merchant_delivery_unpaid")
 
 // chargeMerchantDelivery **يُحصّل أجرةَ التوصيلة من المتجر** — محفظةً أو ديناً.
 //
@@ -61,6 +69,12 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 	if fee <= 0 {
 		return nil
 	}
+	// **والقبولُ التلقائيُّ بلا فاعل** (`sweepAutoAccept`) — **والفارغُ ليس
+	// `uuid`** فيُسقط القيدَ والمعاملةَ معه. **فيُكتب `NULL`**: لا إنسانَ فعلها.
+	var actor *string
+	if actorID != "" {
+		actor = &actorID
+	}
 	var ownerID string
 	if err := q.QueryRow(ctx,
 		`SELECT owner_user_id::text FROM merchants WHERE id = $1`, merchantID).
@@ -81,7 +95,7 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 		// **خصمٌ من محفظة المتجر** — ونوعُه يقول لماذا نقص الرصيد
 		// (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد يتغيّر وما حدا بيعرف ليش»).
 		if _, err := s.wallet.ApplyTx(ctx, q, ownerID, -fee, "order_payment",
-			orderID, "أجرةُ توصيلةٍ من متجرك", &actorID); err != nil {
+			orderID, "أجرةُ توصيلةٍ من متجرك", actor); err != nil {
 			return err
 		}
 		// ══════════════════════════════════════════════════════════════
@@ -121,7 +135,7 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 		return ErrDeliveryCreditExhausted
 	}
 	if _, err := obligations.Create(ctx, q, obligations.PartyMerchant, merchantID,
-		fee, causeMerchantDeliveryFee, orderID, &actorID); err != nil {
+		fee, causeMerchantDeliveryFee, orderID, actor); err != nil {
 		return err
 	}
 	return nil
@@ -147,6 +161,31 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 	in settlement, out *settled) error {
 	switch {
+	// ══════════════════════════════════════════════════════════════════
+	// **قبولُ المكتب — وفيه وحدَه تُخصم أجرةُ «المتجر يدفع»** (٢٠٢٦-١٠-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **في معاملة القبول نفسِها**: إن لم تكفِ المحفظةُ ولا السقفُ سقط القبولُ
+	// كلُّه وبقيت التوصيلةُ معلَّقةً بيد المكتب — **فلا تنزل الطابورَ توصيلةٌ
+	// لم يُدفع أجرُها.** والنقدُ (المستلِمُ أو «أنا نقداً») لا شيءَ يُخصم له.
+	case in.to == StAccepted && in.from == StPending:
+		var merchantID, payer string
+		var fee int64
+		if err := q.QueryRow(ctx, `
+			SELECT merchant_id::text, COALESCE(fee_payer, ''), delivery_fee
+			  FROM orders WHERE id = $1`, in.orderID).Scan(&merchantID, &payer, &fee); err != nil {
+			return err
+		}
+		if payer != FeePayerMerchant {
+			return nil
+		}
+		err := s.chargeMerchantDelivery(ctx, q, in.orderID, merchantID, in.actorID, fee)
+		if errors.Is(err, ErrDeliveryCreditExhausted) {
+			// **والمكتبُ يُقال له ما يفعل** — لا نصُّ المتجر «اشحن محفظتك».
+			return ErrMerchantDeliveryUnpaid
+		}
+		return err
+
 	case in.to == StDelivered:
 		if in.cashDue > 0 && in.driverID != nil {
 			if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {

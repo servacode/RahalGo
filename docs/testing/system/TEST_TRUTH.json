@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 76,
-    "notify_targeted": 28,
+    "notify_sites": 78,
+    "notify_targeted": 29,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 198,
-    "behaviour_settings": 155,
+    "setting_defs": 199,
+    "behaviour_settings": 156,
     "order_fields": 95,
-    "test_files": 524,
-    "test_funcs": 2175
+    "test_files": 525,
+    "test_funcs": 2180
   },
   "flows": [
     {
@@ -3816,6 +3816,27 @@
     },
     {
       "key": "delivery.max_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.merchant_fee",
       "group": "drivers",
       "kind": "money",
       "sensitive": true,
@@ -16723,6 +16744,36 @@
     {
       "name": "TestMCM01_CardShowsMerchantMoneyWithoutOverride",
       "file": "internal/qa/merchant_card_money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDA01_PendingNotInDriverQueueUntilOfficeAccepts",
+      "file": "internal/qa/merchant_delivery_approval_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDA02_OfficeRejectsStoreNotifiedNoMoney",
+      "file": "internal/qa/merchant_delivery_approval_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDA03_WalletChargedAtAcceptanceNotCreation",
+      "file": "internal/qa/merchant_delivery_approval_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDA04_MerchantFeeSetting",
+      "file": "internal/qa/merchant_delivery_approval_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDA05_AutoAcceptSweepCharges",
+      "file": "internal/qa/merchant_delivery_approval_test.go",
       "package": "qa",
       "orphan": true
     },
