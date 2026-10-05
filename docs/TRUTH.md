@@ -806,7 +806,9 @@ kosom` |
 الرقم: {phone}
 كلمة المرور المؤقتة: {password}
 تنتهي بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.
-حمّل التطبيق من: {link}` |
+
+📱 {app}: {link}
+🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}` |
 | `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
 {items}` |
 | `whatsapp.send_delay_ms` | المنصة | int | `6000` |

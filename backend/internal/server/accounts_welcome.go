@@ -73,8 +73,34 @@ func (s *Server) rolesOf(ctx context.Context, userID string) []string {
 	return roles
 }
 
+// appPurpose **اسمُ التطبيق بغرضه** — يُكتب مكانَ `{app}`.
+func appPurpose(appKey string) string {
+	switch appKey {
+	case "rep":
+		return "لإدارة عملك حمّل تطبيق المندوب"
+	case "merchant":
+		return "لإدارة متجرك حمّل تطبيق المتجر"
+	case "driver":
+		return "لاستلام الطلبات حمّل تطبيق السائق"
+	case "customer":
+		return "حمّل تطبيق رحّال غو"
+	}
+	return "ادخل إلى لوحة التحكّم"
+}
+
+// shopLinkFor **رابطُ تطبيق الزبون لمن يعمل في الميدان** (قرارُ المالك ٢٠٢٦-١٠-٠٥):
+// المندوبُ والمتجرُ والسائقُ يتسوّقون بالحساب نفسِه. **والزبونُ معه رابطُه،
+// والموظّفُ لا يُدعى إلى التسوّق من رسالة دخول اللوحة.**
+func (s *Server) shopLinkFor(appKey string) string {
+	switch appKey {
+	case "rep", "merchant", "driver":
+		return s.appLink("customer")
+	}
+	return ""
+}
+
 // welcomeText نصُّ الرسالة — **لا شيءَ فيها يُخمَّن**: الرقمُ والكلمةُ والمهلةُ والرابط.
-func welcomeText(tpl, phone, password, link string, hours int64, reset bool) string {
+func welcomeText(tpl, phone, password, link, app, shopLink string, hours int64, reset bool) string {
 	head := "أهلاً بك في رحّال غو — أُنشئ حسابك."
 	if reset {
 		head = "رحّال غو — أُعيد ضبط كلمة مرور حسابك."
@@ -85,7 +111,22 @@ func welcomeText(tpl, phone, password, link string, hours int64, reset bool) str
 	if !strings.Contains(tpl, "{password}") || !strings.Contains(tpl, "{link}") {
 		tpl = settings.WelcomeTemplateDefault
 	}
+	// **وسطرُ رابط التسوّق** يُحذف لمن لا يلزمه، ويُضاف لقالبٍ كُتب قبله.
+	if shopLink == "" {
+		lines := strings.Split(tpl, "\n")
+		kept := lines[:0]
+		for _, l := range lines {
+			if !strings.Contains(l, "{shop_link}") {
+				kept = append(kept, l)
+			}
+		}
+		tpl = strings.TrimRight(strings.Join(kept, "\n"), "\n")
+	} else if !strings.Contains(tpl, "{shop_link}") {
+		tpl += "\n🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}"
+	}
 	return strings.NewReplacer(
+		"{app}", app,
+		"{shop_link}", shopLink,
 		"{title}", head,
 		"{phone}", phone,
 		"{password}", password,
@@ -155,7 +196,7 @@ func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app 
 	}
 	link := s.appLink(key)
 	sent := s.sendText(ctx, phone, welcomeText(s.settings.GetString(ctx, "accounts.welcome_template"), phone, plain, link,
-		s.identity.TempPasswordHours(ctx), reset))
+		appPurpose(key), s.shopLinkFor(key), s.identity.TempPasswordHours(ctx), reset))
 	if sent {
 		_, _ = s.pg.Exec(ctx, `UPDATE users SET welcome_sent_at = now() WHERE id = $1`, userID)
 	}

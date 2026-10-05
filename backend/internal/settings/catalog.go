@@ -2189,6 +2189,10 @@ var Catalog = []Def{
 	//	{password}  الكلمةُ المؤقّتة — إلزاميّ
 	//	{hours}     مهلتُها بالساعات
 	//	{link}      رابطُ التطبيق — إلزاميّ
+	//	{app}       اسمُ التطبيق بغرضه — «لإدارة عملك حمّل تطبيق المندوب»
+	//	{shop_link} رابطُ تطبيق الزبون — للمندوب والمتجر والسائق وحدَهم
+	//	            (قرارُ المالك ٢٠٢٦-١٠-٠٥: «يتسوّق بنفس الحساب»)، **وسطرُه يُحذف
+	//	            لمن لا يلزمه**، **ويُضاف آخرَ الرسالة إن غاب عن قالبٍ قديم.**
 	{Key: "accounts.welcome_template", Group: GroupPlatform, Kind: KindLongText,
 		Default: WelcomeTemplateDefault, Requires: []string{"{password}", "{link}"}},
 
@@ -2291,8 +2295,9 @@ func missingPlaceholder(d Def, v string) string {
 
 // WelcomeTemplateDefault **نصُّ الترحيب الأصليّ** — هو ما كان مكتوباً في الشيفرة.
 const WelcomeTemplateDefault = "{title}\nالرقم: {phone}\nكلمة المرور المؤقتة: {password}\n" +
-	"تنتهي بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.\n" +
-	"حمّل التطبيق من: {link}"
+	"تنتهي بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.\n\n" +
+	"📱 {app}: {link}\n" +
+	"🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}"
 
 // Validate يتحقق أن القيمة تطابق تعريف المفتاح، ويعيدها **مطبَّعة**.
 //
