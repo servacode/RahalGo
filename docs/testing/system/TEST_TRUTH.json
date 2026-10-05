@@ -34,7 +34,7 @@
     "behaviour_settings": 157,
     "order_fields": 95,
     "test_files": 527,
-    "test_funcs": 2189
+    "test_funcs": 2190
   },
   "flows": [
     {
@@ -10399,6 +10399,12 @@
     },
     {
       "name": "TestACC_CustomerCardCountsCustomersOnly",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_DeletedAccountsHaveTheirOwnBox",
       "file": "internal/qa/accounts_section_test.go",
       "package": "qa",
       "orphan": true

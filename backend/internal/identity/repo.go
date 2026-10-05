@@ -250,7 +250,10 @@ func (r *Repo) ListUsersFiltered(ctx context.Context, f ListFilter) ([]User, int
 	              SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
 	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code <> ALL($6))))))
 	          AND (NOT $3 OR u.last_seen_at > now() - interval '2 minutes')
-	          AND ($4 = '' OR u.status = $4 OR ($4 = 'restricted' AND u.status IN ('suspended', 'blocked')))
+	          -- المحذوفُ لا يُخلط بالأحياء (قرارُ المالك ٢٠٢٦-١٠-٠٦) — له مربّعُه status=deleted.
+	          AND (CASE WHEN $4 = '' THEN u.status <> 'deleted'
+	                    WHEN $4 = 'restricted' THEN u.status IN ('suspended', 'blocked')
+	                    ELSE u.status = $4 END)
 	          AND (cardinality($10::uuid[]) = 0 OR u.id = ANY($10::uuid[]))`
 
 	var total int

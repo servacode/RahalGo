@@ -673,3 +673,37 @@ func setKnownPassword(t *testing.T, h *Harness, userID, pw string) {
 		t.Fatalf("ضبطُ الكلمة: %v", err)
 	}
 }
+
+// TestACC_DeletedAccountsHaveTheirOwnBox **المحذوفُ لا يُخلط بالأحياء** (قرارُ المالك
+// ٢٠٢٦-١٠-٠٦): يغيب عن القائمة العامّة ويُعدّ في بطاقته ويظهر بترشيحها.
+func TestACC_DeletedAccountsHaveTheirOwnBox(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	admin := h.NewUser("admin")
+	gone := f.NewUserWith("customer")
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE users SET status = 'deleted', full_name = $2 WHERE id = $1`, gone.ID, "محذوف-"+gone.ID[:8]); err != nil {
+		t.Fatalf("حذف: %v", err)
+	}
+	has := func(q string) bool {
+		got := h.GET("/api/v1/admin/users?"+q, admin.Token).JSON()
+		users, _ := got["users"].([]any)
+		for _, u := range users {
+			if um, _ := u.(map[string]any); um["id"] == gone.ID {
+				return true
+			}
+		}
+		return false
+	}
+	if has("query=" + urlQ("محذوف-"+gone.ID[:8])) {
+		t.Errorf("**المحذوفُ ظهر في القائمة العامّة**")
+	}
+	if !has("status=deleted&query=" + urlQ("محذوف-"+gone.ID[:8])) {
+		t.Errorf("**المحذوفُ لا يظهر في مربّعه**")
+	}
+	counts := h.GET("/api/v1/admin/users/stats", admin.Token).JSON()
+	roles, _ := counts["roles"].(map[string]any)
+	if n, _ := roles["deleted"].(float64); n < 1 {
+		t.Errorf("**بطاقةُ المحذوفة لا تعدّه**: %v", roles["deleted"])
+	}
+}

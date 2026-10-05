@@ -235,7 +235,7 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 		       count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_roles sr
 		           WHERE sr.user_id = u.id AND sr.role_code <> ALL($1))),
 		       count(*) FILTER (WHERE u.last_seen_at > now() - interval '2 minutes')
-		FROM users u`, accountTypes).
+		FROM users u WHERE u.status <> 'deleted'`, accountTypes).
 		Scan(&total, &staff, &online); err != nil {
 		s.respondErr(w, err)
 		return
@@ -244,19 +244,22 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 	counts["online"] = online
 	// **و«الزبون» زبونٌ فقط** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — بمُسنَد القائمة نفسِه (`role=customer`).
 	// **و«موقوفٌ أو محظور» بطاقةٌ لها** — والقائمةُ تُرشَّح بـ`status=restricted`.
-	var customers, restricted int
+	var customers, restricted, deleted int
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_roles c
 		                                       WHERE c.user_id = u.id AND c.role_code = 'customer')
 		                          AND NOT EXISTS (SELECT 1 FROM user_roles n
 		                                       WHERE n.user_id = u.id AND n.role_code <> 'customer')),
-		       count(*) FILTER (WHERE u.status IN ('suspended', 'blocked'))
-		FROM users u`).Scan(&customers, &restricted); err != nil {
+		       count(*) FILTER (WHERE u.status IN ('suspended', 'blocked')),
+		       count(*) FILTER (WHERE u.status = 'deleted')
+		FROM users u`).Scan(&customers, &restricted, &deleted); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	counts["customer"] = customers
 	counts["restricted"] = restricted
+	// **والمحذوفةُ بطاقةٌ لها** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ولا تدخل المجموعَ ولا الأدوار.
+	counts["deleted"] = deleted
 	httpx.JSON(w, http.StatusOK, map[string]any{"total": total, "roles": counts})
 }
 

@@ -47,6 +47,7 @@ import {
   IconSearch,
   IconAdd,
   IconBlock,
+  IconDelete,
   IconUnblock,
   IconWallet,
   IconOrder,
@@ -453,6 +454,20 @@ export default function AllAccountsTable() {
               {fmtNum(roleCounts.roles.restricted ?? 0)}
             </p>
             <p className="text-xs text-ink-muted">{A.cardRestricted}</p>
+          </button>
+          {/* **والمحذوفةُ مربّعُها** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ولا تُخلط بالأحياء. */}
+          <button
+            onClick={() => {
+              setStatusFilter(statusFilter === "deleted" ? "" : "deleted");
+              setPage(1);
+            }}
+            className={`rounded-card border p-2.5 text-center transition-colors ${statusFilter === "deleted" ? "border-ink-muted bg-field" : "border-line bg-surface hover:border-line-soft"}`}
+          >
+            <p className="figure inline-flex items-center gap-1 text-ink-muted">
+              <IconDelete size={15} />
+              {fmtNum(roleCounts.roles.deleted ?? 0)}
+            </p>
+            <p className="text-xs text-ink-muted">{A.cardDeleted}</p>
           </button>
           <button
             onClick={() => {
