@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentType, type Reac
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { CountBadge } from "./components";
 import { IconBell, IconClose } from "./icons";
+import { useChime } from "./chime";
 
 const m = getMessages(defaultLocale);
 const N = m.shared.notifications;
@@ -192,7 +193,24 @@ export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = [], dep
  * useLiveNotifications يفتح قناة البث ويُبقي الصندوق محدّثاً لحظياً.
  * يعيد الجلب عند إعادة الاتصال كي لا تضيع الأحداث أثناء الانقطاع.
  */
+/**
+ * **صوتُ التنبيه مشغولٌ افتراضاً لكلّ إشعار** (قرارُ المالك ٢٠٢٦-١٠-٠٥: «صوت
+ * التنبيه لازم يكون افتراضي شغّال بالمنصّة لكل الإشعارات والتنبيهات»).
+ *
+ * **ويُطفأ بمفتاحٍ واحدٍ في المتصفّح** (`rahalgo_alerts_sound = off`) — **ولا
+ * يُطفأ بغيابه**: من لم يختر شيئاً يسمع.
+ */
+export const ALERTS_SOUND_KEY = "rahalgo_alerts_sound";
+function alertsSoundOn(): boolean {
+  try {
+    return localStorage.getItem(ALERTS_SOUND_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
 export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | null) {
+  const chime = useChime();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
   const [toast, setToast] = useState<AppNotification | null>(null);
@@ -255,6 +273,7 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
             // الصندوق **يُقرأ عطباً في المنصة.**
             setToast(n);
             emitKind(n.kind);
+            if (alertsSoundOn()) chime();
             if (!n.transient) {
               setItems((prev) => [n, ...prev].slice(0, 30));
               setUnread((u) => u + 1);
@@ -282,7 +301,7 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
       clearTimeout(timer);
       ws?.close();
     };
-  }, [wsUrl, token, refresh]);
+  }, [wsUrl, token, refresh, chime]);
 
   const markRead = useCallback(
     async (id?: string) => {
