@@ -472,7 +472,9 @@ sealed interface PrepState {
     data object Unknown : PrepState
 }
 
-fun prepState(order: DriverOrder, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): PrepState {
+// **وبتوقيت سوريا لا بمنطقة الجهاز** — كبقيّة ما يُعرض (`SYRIA_ZONE`). رُئي على
+// المحاكي ٢٠٢٦-١٠-٠٥: «يجهز حوالي 02:37» والمحفظةُ في الشاشة نفسِها تقول 05:02.
+fun prepState(order: DriverOrder, zone: java.time.ZoneId = com.rahalgo.ui.SYRIA_ZONE): PrepState {
     if (order.kind == "custom") return PrepState.Unknown
     if (!order.readyAt.isNullOrBlank()) return PrepState.Ready
     val minutes = order.prepMinutes?.takeIf { it > 0 } ?: return PrepState.Unknown

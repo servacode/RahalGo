@@ -281,6 +281,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // هذا السائق تقرّره نقطة الطابور** بحسب ورديّته ونمط التوزيع.
         watchArrival()
         pollWhileDown()
+        // **وفتحُ الورديّة يُعيد قراءةَ الطابور** — انظر `QueuePulse`.
+        viewModelScope.launch { QueuePulse.flow.collect { refresh() } }
         backend.live.start(
             scope = viewModelScope,
             onState = { up ->

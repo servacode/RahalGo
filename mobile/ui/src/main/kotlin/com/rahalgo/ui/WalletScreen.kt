@@ -403,9 +403,9 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, onDone: (
 
 @Composable
 private fun PayoutRow(p: Payout) {
-    val color = when (p.status) {
-        "approved", "paid" -> Rahal.colors.success
-        "rejected" -> Rahal.colors.danger
+    val color = when {
+        WalletLabels.payoutOk(p.status) -> Rahal.colors.success
+        WalletLabels.payoutFailed(p.status) -> Rahal.colors.danger
         else -> Rahal.colors.inkMuted
     }
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
@@ -425,14 +425,8 @@ private fun PayoutRow(p: Payout) {
 }
 
 @Composable
-private fun payoutStatus(status: String): String = stringResource(
-    when (status) {
-        "approved" -> R.string.wal_st_approved
-        "paid" -> R.string.wal_st_paid
-        "rejected" -> R.string.wal_st_rejected
-        else -> R.string.wal_st_pending
-    },
-)
+private fun payoutStatus(status: String): String =
+    stringResource(WalletLabels.payoutStatusRes(status))
 
 @Composable
 private fun TxRow(t: WalletTx) {
@@ -494,38 +488,11 @@ private fun Notice(text: String, color: androidx.compose.ui.graphics.Color) {
 
 /** **اسمُ نوع الحركة بالعربيّة** — والمجهولُ يُعرض بمفتاحه ليُعرف. */
 @Composable
-private fun kindLabel(kind: String): String = when (kind) {
-    "payout" -> stringResource(R.string.wal_k_payout)
-    "driver_earning" -> stringResource(R.string.wal_k_driver_earning)
-    "commission" -> stringResource(R.string.wal_k_commission)
-    "compensation" -> stringResource(R.string.wal_k_compensation)
-    "penalty" -> stringResource(R.string.wal_k_penalty)
-    "refund" -> stringResource(R.string.wal_k_refund)
-    "adjustment" -> stringResource(R.string.wal_k_adjustment)
-    "reward" -> stringResource(R.string.wal_k_reward)
-    "settlement" -> stringResource(R.string.wal_k_settlement)
-    // ══════════════════════════════════════════════════════════════════
-    // **وستّةُ أنواعٍ كانت تُعرض بمفاتيحها الإنجليزيّة**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «الحركات بالمحفظة يوجد كتابة أجنبيّة
-    //  غير مفهومة».)
-    //
-    // **وقِيس ٢٠٢٦-٠٨-٢٦**: المحرّكُ يسمح بأربعةَ عشرَ نوعاً
-    // (`0110_reward_penalty_kinds.sql`) **والترجمةُ تغطّي تسعة.**
-    //
-    // **و`merchant_earning` من الناقصة** — وهي أكثرُ ما يراه صاحبُ
-    // المتجر في كشفه، **فكان يقرأ سطرَ دخلِه بالإنكليزيّة.**
-    "topup" -> stringResource(R.string.wal_k_topup)
-    "order_payment" -> stringResource(R.string.wal_k_order_payment)
-    "merchant_earning" -> stringResource(R.string.wal_k_merchant_earning)
-    "platform_profit" -> stringResource(R.string.wal_k_platform_profit)
-    "platform_expense" -> stringResource(R.string.wal_k_platform_expense)
-    "operating_expense" -> stringResource(R.string.wal_k_operating_expense)
+private fun kindLabel(kind: String): String =
     // **ونوعٌ لم يُترجَم يُعرض بمفتاحه** — لا يُبتلع: **من رآه أبلغ
-    // عنه**، ومن ابتلعه ترك سطراً بلا اسمٍ في كشف مال.
-    else -> kind
-}
+    // عنه**، ومن ابتلعه ترك سطراً بلا اسمٍ في كشف مال. (والقائمةُ في
+    // `WalletLabels` — مصدرٌ واحدٌ للشاشة والكشف المطبوع.)
+    WalletLabels.kindRes(kind)?.let { stringResource(it) } ?: kind
 
 /**
  * **تاريخُ الحركة ووقتُها** — كما يقرؤه صاحبُها.

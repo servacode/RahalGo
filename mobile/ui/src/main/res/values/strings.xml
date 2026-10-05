@@ -212,6 +212,7 @@
     <string name="addr_sheet_title">أين تريد التوصيل؟</string>
     <string name="addr_sheet_hint">اختر عنوان محفوظ أو أضف عنوان جديد</string>
     <string name="addr_sheet_empty">لا يوجد عناوين محفوظة</string>
+    <string name="addr_sheet_failed">تعذّر جلب عناوينك — اضغط هنا لإعادة المحاولة</string>
     <string name="addr_sheet_empty_hint">ابدأ بإضافة عنوانك الأول لتتمكن من الطلب بسرعة وسهولة</string>
     <string name="addr_sheet_add">+  إضافة عنوان جديد</string>
     <string name="addr_card_none">اضغط لاختيار عنوان أو إضافة عنوان جديد</string>
@@ -282,6 +283,9 @@
     <string name="wal_st_paid">تم الصرف</string>
     <string name="wal_st_pending">بانتظار القرار</string>
     <string name="wal_st_rejected">مرفوض</string>
+    <string name="wal_st_processing">قيد الصرف</string>
+    <string name="wal_st_failed">فشل الصرف</string>
+    <string name="wal_st_reversed">مرتجع</string>
     <string name="wal_statement">كشف حساب</string>
     <string name="wal_this_month">هذا الشهر</string>
     <string name="wal_truncated">الكشف مقصوص عند حد العرض — افتح مدى أضيق لترى الباقي</string>
@@ -615,6 +619,9 @@
     <string name="wal_k_platform_profit">ربح المنصة</string>
     <string name="wal_k_platform_expense">مصروف المنصة</string>
     <string name="wal_k_operating_expense">مصروف تشغيلي</string>
+    <string name="wal_k_payout_reversal">إرجاع سحب</string>
+    <string name="wal_k_merchant_cash_accrued">مستحق نقدي للمتجر</string>
+    <string name="wal_k_merchant_cash_paid">دفع نقدي للمتجر</string>
 
     <!-- ══════════════════════════════════════════════════════════
          **المفرداتُ المشتركة — لفظٌ واحدٌ في التطبيقات الأربعة**

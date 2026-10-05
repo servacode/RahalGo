@@ -37,6 +37,14 @@ import kotlinx.coroutines.launch
 data class AccountState(
     val me: MeSummary? = null,
     val addresses: List<Address> = emptyList(),
+    /**
+     * **سقط جلبُ العناوين** — فالقائمةُ الفارغةُ لا تعني «لا عناوين».
+     *
+     * **رُئي على المحاكي ٢٠٢٦-١٠-٠٥**: انقطاعٌ عابرٌ عند الإقلاع، **فبقيت
+     * ورقةُ «أين تريد التوصيل؟» تقول «لا يوجد عناوين محفوظة»** والخادمُ
+     * فيه عنوانان — ولا شيء يُعيد الجلب حتّى يُقلع التطبيقُ من جديد.
+     */
+    val addressesFailed: Boolean = false,
     val loading: Boolean = true,
     val busy: Boolean = false,
     val error: String = "",
@@ -104,15 +112,32 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 // لموضعٍ واحد** — ويختار الخطأَ منهما يوماً.
                 //
                 // **والفارغُ يبقى فارغاً — لكنّه يُقال في السجلّ.**
+                var failed = false
                 val list = try {
                     backend.account.addresses()
                 } catch (e: Exception) {
                     android.util.Log.w("RahalGo/account", "تعذّر جلبُ العناوين", e)
-                    emptyList()
+                    failed = true
+                    state.addresses
                 }
-                state.copy(me = me, addresses = list, loading = false, error = "")
+                state.copy(me = me, addresses = list, addressesFailed = failed, loading = false, error = "")
             } catch (e: Exception) {
                 state.copy(loading = false, error = describe(e))
+            }
+        }
+    }
+
+    /**
+     * **يُعيد جلبَ العناوين وحدَها** — تفتحه ورقةُ «أين تريد التوصيل؟» كلَّما
+     * فُتحت، **فانقطاعٌ عند الإقلاع لا يبقى «لا عناوين» إلى الأبد.**
+     */
+    fun reloadAddresses() {
+        viewModelScope.launch {
+            state = try {
+                state.copy(addresses = backend.account.addresses(), addressesFailed = false)
+            } catch (e: Exception) {
+                android.util.Log.w("RahalGo/account", "تعذّر جلبُ العناوين", e)
+                state.copy(addressesFailed = true)
             }
         }
     }

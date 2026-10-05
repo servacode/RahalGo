@@ -33,8 +33,8 @@
     "setting_defs": 184,
     "behaviour_settings": 149,
     "order_fields": 95,
-    "test_files": 509,
-    "test_funcs": 2139
+    "test_files": 510,
+    "test_funcs": 2142
   },
   "flows": [
     {
@@ -6176,6 +6176,24 @@
     }
   ],
   "tests": [
+    {
+      "name": "TestSeedCustomerGetsBalance",
+      "file": "cmd/seed/roles_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
+      "name": "TestSeedRolesExist",
+      "file": "cmd/seed/roles_test.go",
+      "package": "main",
+      "orphan": true
+    },
+    {
+      "name": "TestSeedStorePlatformSectionsExist",
+      "file": "cmd/seed/roles_test.go",
+      "package": "main",
+      "orphan": true
+    },
     {
       "name": "TestParseByKind",
       "file": "cmd/stagingctl/flag_test.go",
