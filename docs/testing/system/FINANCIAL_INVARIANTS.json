@@ -1462,6 +1462,7 @@
     "pricing.margin_fixed",
     "delivery.fee",
     "delivery.merchant_fee",
+    "delivery.merchant_debt_open",
     "delivery.per_km",
     "delivery.max_fee",
     "delivery.by_distance",
