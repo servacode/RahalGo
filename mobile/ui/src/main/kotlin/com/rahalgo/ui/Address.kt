@@ -135,8 +135,12 @@ fun AddressHost(vm: AccountViewModel, picker: PointPicker?): Boolean {
         return true
     }
     if (DeliveryAddress.picking) {
+        // **وتُجلب العناوينُ كلَّما فُتحت الورقة** — انظر `addressesFailed`.
+        androidx.compose.runtime.LaunchedEffect(Unit) { vm.reloadAddresses() }
         AddressSheet(
             addresses = vm.state.addresses,
+            failed = vm.state.addressesFailed && vm.state.addresses.isEmpty(),
+            onRetry = { vm.reloadAddresses() },
             busy = vm.state.busy,
             onPick = {
                 vm.makeDefault(it.id)
@@ -189,6 +193,9 @@ fun selectedAddress(addresses: List<Address>): Address? =
 fun AddressSheet(
     addresses: List<Address>,
     busy: Boolean,
+    /** **سقط الجلبُ ولا قائمةَ بيدنا** — فلا يُقال «لا عناوين». */
+    failed: Boolean = false,
+    onRetry: () -> Unit = {},
     /** **يُختار عنوانٌ** — فيصير الافتراضيّ. */
     onPick: (Address) -> Unit,
     /** **ويُضاف جديدٌ** — يفتح الخريطةَ ثمّ ورقةَ الوصف. */
@@ -262,7 +269,17 @@ fun AddressSheet(
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState()),
             ) {
-                if (addresses.isEmpty()) {
+                if (addresses.isEmpty() && failed) {
+                    Text(
+                        stringResource(R.string.addr_sheet_failed),
+                        color = Rahal.colors.danger,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onRetry)
+                            .padding(vertical = 24.dp),
+                    )
+                } else if (addresses.isEmpty()) {
                     EmptyAddresses()
                 } else {
                     addresses.forEach { a -> AddressChoice(a, busy, onPick) }
