@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/incentives"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
@@ -354,9 +355,13 @@ func TestLeadConvert_TargetAtCreationCommissionAtDelivery(t *testing.T) {
 	if commissions != 0 {
 		t.Errorf("**قُيّدت عمولةٌ قبل أيّ طلبٍ مُسلَّم**: %d", commissions)
 	}
-	// **والعمولةُ من أوّل طلبٍ ناجح** — عتبةُ التفعيل افتراضُها طلبٌ واحد
-	// (هجرة 0098)، **وتسليمُه يحرسه `TestDelivery_CreditsCashAndCommissions`.**
-	if d := settings.Default("sales.activation_orders"); d != 1 {
-		t.Errorf("عتبةُ التفعيل الافتراضيّة = %d — والقرار «من أوّل طلبٍ ناجح» (١)", d)
+	// **والعمولةُ من أوّل طلبٍ ناجح** — والعتبةُ ثابتةٌ في الشيفرة لا إعداد
+	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — حُذف `sales.activation_orders`)، **وتسليمُه
+	// يحرسه `TestDelivery_CreditsCashAndCommissions`.**
+	if orders.ActivationFromFirstOrder != 1 {
+		t.Errorf("عتبةُ التفعيل = %d — والقرار «من أوّل طلبٍ ناجح» (١)", orders.ActivationFromFirstOrder)
+	}
+	if _, ok := settings.Lookup("sales.activation_orders"); ok {
+		t.Error("**`sales.activation_orders` عاد إعداداً** — والقرارُ حذفه")
 	}
 }
