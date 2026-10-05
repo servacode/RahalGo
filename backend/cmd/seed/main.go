@@ -48,7 +48,7 @@ var accounts = []struct {
 	WalletBalance               int64
 }{
 	{"+963999000001", "مدير المنصة", "RahalGo@2026", "admin", "", 0},
-	{"+963955333444", "سارة العمليات", "Ops@2026", "ops", "", 0},
+	{"+963955333444", "سارة العمليات", "Ops@2026", "operations", "", 0},
 	{"+963955444555", "منى المالية", "Finance@2026", "finance", "", 0},
 	{"+963977888999", "أحمد المندوب", "Rep@2026", "sales", "RH-DEMO1", 0},
 	{"+963955111222", "محمد السائق", "Driver@2026", "driver", "", 0},
@@ -131,7 +131,7 @@ func main() {
 	ids := map[string]string{} // phone → user id
 	for _, a := range accounts {
 		// وضع الطاقم: الأدوار الثلاثة التي تُدير المنصة لا التي تستعملها
-		if *staffOnly && a.Role != "admin" && a.Role != "ops" && a.Role != "finance" {
+		if *staffOnly && a.Role != "admin" && a.Role != "operations" && a.Role != "finance" {
 			continue
 		}
 		hash, err := auth.HashPassword(a.Password)
@@ -251,7 +251,7 @@ func main() {
 
 	fmt.Println("✅ الزراعة اكتملت — الحسابات:")
 	for _, a := range accounts {
-		if *staffOnly && a.Role != "admin" && a.Role != "ops" && a.Role != "finance" {
+		if *staffOnly && a.Role != "admin" && a.Role != "operations" && a.Role != "finance" {
 			continue
 		}
 		fmt.Printf("  %-14s %-28s %-10s %s\n", a.Phone, a.Name, a.Role, a.Password)
