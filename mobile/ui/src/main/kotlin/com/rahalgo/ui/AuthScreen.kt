@@ -142,11 +142,23 @@ fun AuthScreen(
                 enabled = !state.busy,
             )
 
-            state.codeSent -> CodeField(
-                value = code,
-                onChange = { code = it },
-                enabled = !state.busy,
-            )
+            state.codeSent -> {
+                CodeField(
+                    value = code,
+                    onChange = { code = it },
+                    enabled = !state.busy,
+                )
+                // **ومن لم يصله رمزُه يطلبه من جديد هنا** — لا يعود إلى
+                // الرقم. **والحقلُ يُمحى** فلا يُرسَل رمزٌ قديمٌ للطلب الجديد.
+                ResendCodeRow(
+                    sentAt = state.codeSentAt,
+                    busy = state.busy,
+                    onResend = {
+                        code = ""
+                        actions.sendCode(phone.trim())
+                    },
+                )
+            }
         }
 
         if (state.error.isNotEmpty()) {
@@ -234,6 +246,8 @@ data class LoginState(
     val mode: LoginMode = LoginMode.PASSWORD,
     /** هل أُرسل الرمز؟ — **تُبدَّل الشاشة من «أرسل» إلى «تحقّق».** */
     val codeSent: Boolean = false,
+    /** **لحظةُ آخر إرسالٍ ناجح** — تبدأ مهلةَ «أعد إرسال الرمز» (`ResendCodeRow`). */
+    val codeSentAt: Long = 0L,
     /**
      * ══════════════════════════════════════════════════════════════════
      * **هل باب الرمز مفتوح؟ — ولا يُفترض جوابه**

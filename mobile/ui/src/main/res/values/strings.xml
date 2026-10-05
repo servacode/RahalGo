@@ -125,6 +125,11 @@
     <string name="offer_expired">انتهت مهلتك على هذا الطلب</string>
     <string name="offer_left">بقي %1$s</string>
     <string name="reset_code">الرمز</string>
+    <!-- **أعد إرسال الرمز** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — `ResendCode.kt`.
+         **وعلامةُ الاتّجاه قبل العدّاد** (U+200E) — «2:00» بين حروفٍ
+         عربيّةٍ تنقلب إلى «00:2» بلاها. -->
+    <string name="resend_wait">يمكنك طلب رمز جديد بعد ‎%1$s</string>
+    <string name="resend_code">أعد إرسال الرمز</string>
     <string name="wal_not_enough">رصيدك لا يكفي</string>
     <string name="wal_pending_exists">لديك طلب سحب لم يقرر بعد</string>
     <string name="login_change_number">تعديل الرقم</string>

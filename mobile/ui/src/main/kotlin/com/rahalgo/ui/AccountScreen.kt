@@ -368,7 +368,17 @@ private fun WhatsAppVerify(
         ),
         modifier = Modifier.fillMaxWidth(),
     )
-    Spacer(Modifier.height(8.dp))
+    // **ومن لم يصله ردُّ البوت يطلب تذكرةً جديدة** — فيُفتح واتساب من
+    // جديد (`askWhatsApp`)، **والحقلُ يُمحى قبله.**
+    ResendCodeRow(
+        sentAt = s.waSentAt,
+        busy = s.busy,
+        onResend = {
+            code = ""
+            vm.askWhatsApp()
+        },
+    )
+    Spacer(Modifier.height(4.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         RahalButton(
             onClick = { vm.confirmWhatsApp(code); code = "" },

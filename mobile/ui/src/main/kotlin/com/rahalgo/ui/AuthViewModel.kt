@@ -206,7 +206,8 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             state = try {
                 backend.auth.requestOtp(phone)
-                state.copy(codeSent = true, busy = false)
+                // **ولحظةُ النجاح تبدأ مهلةَ إعادة الإرسال** — `ResendCodeRow`.
+                state.copy(codeSent = true, codeSentAt = System.currentTimeMillis(), busy = false)
             } catch (e: ApiClient.ApiException) {
                 state.copy(busy = false, error = message(e))
             } catch (e: Exception) {
@@ -494,7 +495,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             reset = try {
                 val t = backend.auth.waTicket(current.phone.trim(), "reset")
                 openWhatsApp(t.waUrl)
-                current.copy(step = ResetStep.CODE, busy = false)
+                current.copy(step = ResetStep.CODE, codeSentAt = System.currentTimeMillis(), busy = false)
             } catch (e: ApiClient.ApiException) {
                 current.copy(busy = false, error = message(e))
             } catch (e: Exception) {
@@ -606,7 +607,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 // **ويُمحى خطأُ المحاولة السابقة عند النجاح** — `current`
                 // لقطةٌ من قبل التصفير، فنجاحٌ بعد فشلِ انقطاعٍ كان يحمل
                 // «لا اتصال بالإنترنت» إلى خطوة الرمز (`CUST-DEF-011`).
-                current.copy(step = SignupStep.CODE, busy = false, error = "", offlineError = false)
+                // **ولحظةُ النجاح تبدأ مهلةَ إعادة الإرسال** — `ResendCodeRow`.
+                val at = System.currentTimeMillis()
+                current.copy(step = SignupStep.CODE, codeSentAt = at, busy = false, error = "", offlineError = false)
             } catch (e: ApiClient.ApiException) {
                 current.copy(busy = false, error = message(e), offlineError = false)
             } catch (e: Exception) {

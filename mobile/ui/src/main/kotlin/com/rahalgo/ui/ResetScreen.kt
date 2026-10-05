@@ -88,11 +88,23 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
                 enabled = !state.busy,
             )
 
-            ResetStep.CODE -> CodeField(
-                value = code,
-                onChange = { code = it },
-                enabled = !state.busy,
-            )
+            ResetStep.CODE -> {
+                CodeField(
+                    value = code,
+                    onChange = { code = it },
+                    enabled = !state.busy,
+                )
+                // **وإعادةُ الإرسال تذكرةٌ جديدةٌ وواتساب يُفتح من جديد** —
+                // النداءُ نفسُه (`sendResetCode`)، **والحقلُ يُمحى قبله.**
+                ResendCodeRow(
+                    sentAt = state.codeSentAt,
+                    busy = state.busy,
+                    onResend = {
+                        code = ""
+                        actions.sendCode()
+                    },
+                )
+            }
 
             // **والعين هنا أيضا** — كلمة جديدة تُكتب مرّة واحدة بلا
             // تأكيد، **فمن أخطأ حرفا ضبط كلمة لا يعرفها** ثمّ عاد يستعيد
@@ -162,6 +174,8 @@ data class ResetState(
     /** يُحمل من خطوة التحقّق إلى خطوة الكلمة الجديدة — **المحرّك يطلبه
      *  مرّتين ولا يستهلكه في الأولى.** */
     val code: String = "",
+    /** **لحظةُ آخر تذكرةٍ ناجحة** — تبدأ مهلةَ «أعد إرسال الرمز» (`ResendCodeRow`). */
+    val codeSentAt: Long = 0L,
     val busy: Boolean = false,
     val error: String = "",
 )

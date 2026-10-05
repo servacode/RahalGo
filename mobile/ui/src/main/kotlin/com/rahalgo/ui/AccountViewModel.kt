@@ -71,6 +71,8 @@ data class AccountState(
     val phonePending: String = "",
     /** **ورقمُ توثيق واتساب المنتظِر** — والفارغُ لم يُطلب. */
     val waPending: String = "",
+    /** **لحظةُ آخر تذكرةٍ ناجحة** — تبدأ مهلةَ «أعد إرسال الرمز» (`ResendCodeRow`). */
+    val waSentAt: Long = 0L,
 )
 
 class AccountViewModel(app: Application) : AndroidViewModel(app) {
@@ -409,7 +411,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 val t = backend.auth.waTicket(phone, "verify")
                 openWhatsApp(t.waUrl)
-                state.copy(busy = false, waPending = phone)
+                state.copy(busy = false, waPending = phone, waSentAt = System.currentTimeMillis())
             } catch (e: Exception) {
                 Flash.fail(describe(e)).let { state.copy(busy = false) }
             }

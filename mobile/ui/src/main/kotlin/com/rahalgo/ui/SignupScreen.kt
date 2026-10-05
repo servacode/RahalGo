@@ -122,11 +122,23 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 enabled = !state.busy,
             )
 
-            SignupStep.CODE -> CodeField(
-                value = code,
-                onChange = { code = it },
-                enabled = !state.busy,
-            )
+            SignupStep.CODE -> {
+                CodeField(
+                    value = code,
+                    onChange = { code = it },
+                    enabled = !state.busy,
+                )
+                // **ومن لم يصله رمزُه يطلبه من جديد هنا** — النداءُ نفسُه
+                // (`sendSignupCode`)، **والحقلُ يُمحى قبله.**
+                ResendCodeRow(
+                    sentAt = state.codeSentAt,
+                    busy = state.busy,
+                    onResend = {
+                        code = ""
+                        actions.sendCode()
+                    },
+                )
+            }
 
             SignupStep.DETAILS -> {
                 OutlinedTextField(
@@ -308,6 +320,8 @@ data class SignupState(
      * ولا يستهلكه في الأولى.**
      */
     val code: String = "",
+    /** **لحظةُ آخر إرسالٍ ناجح** — تبدأ مهلةَ «أعد إرسال الرمز» (`ResendCodeRow`). */
+    val codeSentAt: Long = 0L,
     /**
      * **رمزُ من دعاه** — يأتي من رابط الدعوة لا من يده.
      *
