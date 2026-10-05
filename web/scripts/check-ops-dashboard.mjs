@@ -270,7 +270,9 @@ if (layout === "") problems.push("تخطيطُ اللوحة لم يُقرأ");
         "**وبندٌ بلا شرطٍ يظهر لمن لا يفتحه** (`R-34`)",
     );
   }
-  if (!lay.includes("landed.current = true; router.replace(first.href);")) {
+  // **والردُّ يقع كلّما هبط على بابٍ لا يملكه** (فحصُ المال ٢٠٢٦-١٠-٠٥) — بندَ قائمةٍ
+  // أو صفحةَ مالٍ بلا قدرتها — **لا مرّةً في الجلسة.**
+  if (!lay.includes("if (!first || !barredFrom(pathname, nav, capabilities)) return; router.replace(first.href);")) {
     problems.push("**لا هبوطَ على أوّل بابٍ مملوك** — فصاحبُ القدرةِ يرى «الرئيسيّة» تُردّ ٤٠٣");
   }
   if (problems.length === 0) notes.push("بندُ المراقبة داخلَ قاعدة القدرات — والهبوطُ على أوّل بابٍ مملوك");
