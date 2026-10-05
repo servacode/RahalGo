@@ -96,16 +96,23 @@ class DeliveryTrackViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 /** **الخطوةُ من الحال** — والمنتهيةُ بلا تسليمٍ خارجَ الخطّ (-1). */
+//
+// **وأوّلُها موافقةُ المنصّة** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — التوصيلةُ تمرّ بالمكتب.
 private fun stepOf(status: String): Int = when (status) {
-    "dispatching" -> 0
-    "assigned" -> 1
-    "at_pickup" -> 2
-    "picked_up", "on_the_way", "at_dropoff" -> 3
-    "delivered" -> 4
+    "pending" -> 0
+    "accepted", "dispatching" -> 1
+    "assigned" -> 2
+    "at_pickup" -> 3
+    "picked_up", "on_the_way", "at_dropoff" -> 4
+    "delivered" -> LAST_STEP
     else -> -1
 }
 
-private val openStatuses = setOf("dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff")
+private const val LAST_STEP = 5
+
+private val openStatuses = setOf(
+    "pending", "accepted", "dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff",
+)
 
 @Composable
 fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> Unit) {
@@ -141,7 +148,12 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             // **انتهت بلا تسليم** — تُقال بحالها وسببها، لا خطواتٌ ناقصة.
             Note(
                 stringResource(
-                    if (d.status == "failed") R.string.os_failed else R.string.os_cancelled,
+                    when (d.status) {
+                        "failed" -> R.string.os_failed
+                        // **ورفضُ المنصّة يُقال بسببه** — لا «أُلغي» مبهمة.
+                        "rejected" -> R.string.md_platform_rejected
+                        else -> R.string.os_cancelled
+                    },
                 ) + (d.cancelReason?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""),
                 Rahal.colors.danger,
             )
@@ -153,6 +165,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             }
             Card {
                 val steps = listOf(
+                    R.string.md_step_platform,
                     R.string.md_step_waiting,
                     R.string.md_step_to_you,
                     R.string.md_step_at_you,
@@ -160,8 +173,8 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                     R.string.md_step_delivered,
                 )
                 steps.forEachIndexed { i, label ->
-                    val done = i < at || (i == at && at == 4)
-                    val now = i == at && at < 4
+                    val done = i < at || (i == at && at == LAST_STEP)
+                    val now = i == at && at < LAST_STEP
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -189,8 +202,8 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                         Spacer(Modifier.weight(1f))
                         val time = when (i) {
                             0 -> d.createdAt
-                            3 -> d.pickedUpAt
-                            4 -> d.deliveredAt
+                            4 -> d.pickedUpAt
+                            LAST_STEP -> d.deliveredAt
                             else -> null
                         }
                         if ((done || now) && !time.isNullOrBlank()) {

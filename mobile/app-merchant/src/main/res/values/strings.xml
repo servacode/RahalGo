@@ -308,14 +308,14 @@
     <string name="md_pay_me">أنا (من محفظتي)</string>
     <string name="md_pay_recipient">المستلم (نقداً للسائق)</string>
     <string name="md_fee">أجرة التوصيل: %1$s ل.س</string>
-    <string name="md_fee_from_wallet">تُخصم من محفظتك — رصيدك %1$s ل.س</string>
+    <string name="md_fee_from_wallet">تُخصم من محفظتك عند موافقة المنصة — رصيدك %1$s ل.س</string>
     <string name="md_fee_cash">يدفعها المستلم نقداً للسائق عند التسليم</string>
     <string name="md_fee_choose">اختر من يدفع</string>
     <string name="md_cannot_pay">رصيد محفظتك لا يكفي — اشحنها، أو اختر «المستلم يدفع»</string>
     <string name="md_missing">ينقص قبل الإرسال: %1$s</string>
     <string name="md_send">اطلب سائقاً</string>
     <string name="md_sending">جاري الإرسال…</string>
-    <string name="md_sent">✓ أُرسلت التوصيلة إلى السائقين — تابعها في «توصيلاتي» أدناه</string>
+    <string name="md_sent">✓ أُرسلت التوصيلة — بانتظار موافقة المنصة، ثم تُعرض على السائقين. تابعها في «توصيلاتي» أدناه</string>
     <string name="md_mine">توصيلاتي</string>
     <string name="md_loading">جاري التحميل…</string>
     <string name="md_none">لا توصيلات بعد</string>
@@ -325,7 +325,10 @@
     <string name="md_track_hint">تتحدث وحدها كل عشر ثوان ما دامت جارية</string>
     <string name="md_track_open">اضغط لمتابعة حالتها</string>
     <string name="md_track_to">إلى: %1$s</string>
+    <string name="md_step_platform">بانتظار موافقة المنصة</string>
     <string name="md_step_waiting">بانتظار سائق</string>
+    <string name="md_platform_accepted">وافقت المنصة</string>
+    <string name="md_platform_rejected">اعتذرت المنصة عنها</string>
     <string name="md_step_to_you">السائق في الطريق إليك</string>
     <string name="md_step_at_you">السائق عندك</string>
     <string name="md_step_to_recipient">في الطريق إلى المستلم</string>
@@ -337,7 +340,7 @@
     <string name="settlement_yes">نعم، غيّرها</string>
     <string name="md_cancelling">جاري الإلغاء…</string>
     <string name="md_cancel_q">إلغاء التوصيلة؟</string>
-    <string name="md_cancel_body">ستتوقف عملية البحث عن سائق، ويعود أي مبلغ دُفع من محفظتك إليها.</string>
+    <string name="md_cancel_body">ستتوقف التوصيلة، ويعود أي مبلغ دُفع من محفظتك إليها.</string>
     <string name="md_cancel_yes">نعم، ألغِها</string>
     <string name="md_searching">جاري البحث عن سائق…</string>
     <string name="md_searching_hint">نعرضها الآن على السائقين القريبين — وتتغير الحالة وحدها حين يقبلها أحدهم</string>

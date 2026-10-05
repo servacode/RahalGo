@@ -962,6 +962,90 @@
   },
   {
    "kind": "merchant_delivery",
+   "from": "pending",
+   "to": "accepted",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "pending",
+   "to": "rejected",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "pending",
+   "to": "cancelled",
+   "declared_roles": [
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "merchant",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "accepted",
+   "to": "dispatching",
+   "declared_roles": [
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
+   "from": "accepted",
+   "to": "cancelled",
+   "declared_roles": [
+    "merchant",
+    "ops"
+   ],
+   "effective_platform": [
+    "ops",
+    "admin"
+   ],
+   "effective_merchants": [
+    "merchant",
+    "ops",
+    "admin"
+   ]
+  },
+  {
+   "kind": "merchant_delivery",
    "from": "dispatching",
    "to": "assigned",
    "declared_roles": [
@@ -1395,6 +1479,11 @@
    "id": "AUTO-DISPATCH",
    "what": "preparing → dispatching — وضعُ المتاجر وorders.auto_dispatch، بأدوار ops قسراً",
    "source": "internal/orders/transitions.go:559"
+  },
+  {
+   "id": "AUTO-DISPATCH-MD",
+   "what": "accepted → dispatching لـ«لدي توصيلة» بعد قبول المكتب — orders.auto_dispatch، بأدوار ops قسراً، وفي الوضعين",
+   "source": "internal/orders/transitions.go:591"
   },
   {
    "id": "AUTO-DISPATCH-EXPORTED",

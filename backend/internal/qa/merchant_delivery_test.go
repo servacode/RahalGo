@@ -94,6 +94,22 @@ func (m mdFx) create(t *testing.T, h *Harness, payer, key string) string {
 	return id
 }
 
+// accept **المكتبُ يقبل التوصيلة** — وتنزل الطابورَ بنفسها (`orders.auto_dispatch`).
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٥: «لدي توصيلة» تمرّ بموافقة المنصّة كأيّ طلب.)
+func (m mdFx) accept(t *testing.T, h *Harness, id string) {
+	t.Helper()
+	r := h.POST("/api/v1/admin/orders/"+id+"/transition", m.admin.Token,
+		map[string]any{"to": "accepted"})
+	if r.Code != http.StatusOK {
+		t.Fatalf("قبولُ المكتب: %d / %s", r.Code, r.Err())
+	}
+	// **و«أُسند» تصحّ أيضاً**: بالإسناد المباشر يأخذها السائقُ لحظةَ نزولها.
+	if st := h.statusOf(id); st != "dispatching" && st != "assigned" {
+		t.Fatalf("بعد القبول الحال %s والمنتظَر dispatching — لم تنزل الطابور", st)
+	}
+}
+
 // TestMD01_MerchantPaysEndToEnd **المتجرُ يدفع من محفظته — والدورةُ كاملة.**
 func TestMD01_MerchantPaysEndToEnd(t *testing.T) {
 	h := New(t)
@@ -125,11 +141,16 @@ func TestMD01_MerchantPaysEndToEnd(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("توصيلاتٌ %d والمنتظَرُ واحدة", n)
 	}
+	// **تولد بانتظار المكتب — ولا يُخصم شيءٌ قبل قبوله** (٢٠٢٦-١٠-٠٥).
+	if st := h.statusOf(id); st != "pending" {
+		t.Fatalf("الحال %s والمنتظَر pending — تمرّ بموافقة المنصّة", st)
+	}
+	if got := walletOf(t, h, owner); got != 2000 {
+		t.Fatalf("**محفظةُ المتجر %d قبل القبول والمنتظَر 2000** — خُصمت عند الإنشاء", got)
+	}
+	m.accept(t, h, id)
 	if got := walletOf(t, h, owner); got != 1500 {
 		t.Fatalf("**محفظةُ المتجر %d والمنتظَر 1500** — خُصمت مرّتين أو لم تُخصم", got)
-	}
-	if st := h.statusOf(id); st != "dispatching" {
-		t.Fatalf("الحال %s والمنتظَر dispatching — تولد في الطابور", st)
 	}
 
 	// ── تُقرأ — ولا ضمَّ صلباً يُخفيها ────────────────────────────────
@@ -201,8 +222,9 @@ func TestMD02_CancelBeforePickupRefundsWallet(t *testing.T) {
 	owner := m.fx.M.Owner.ID
 	fundWallet(t, h, m.admin, owner, 2000)
 	id := m.create(t, h, "merchant", uniq("md02"))
+	m.accept(t, h, id)
 	if got := walletOf(t, h, owner); got != 1500 {
-		t.Fatalf("بعد الإنشاء %d والمنتظَر 1500", got)
+		t.Fatalf("بعد القبول %d والمنتظَر 1500", got)
 	}
 	c := h.POST("/api/v1/merchant/deliveries/"+id+"/cancel", m.fx.Tok, map[string]any{})
 	if c.Code != http.StatusOK {
@@ -239,6 +261,11 @@ func TestMD03_DebtPathAndVoid(t *testing.T) {
 	id := m.create(t, h, "merchant", uniq("md03b"))
 	var debt int64
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT debt FROM merchants WHERE id = $1`, m.fx.M.ID).Scan(&debt)
+	if debt != 0 {
+		t.Fatalf("**دينٌ %d قبل قبول المكتب** — والدينُ يُكتب عند القبول", debt)
+	}
+	m.accept(t, h, id)
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT debt FROM merchants WHERE id = $1`, m.fx.M.ID).Scan(&debt)
 	if debt != 500 {
 		t.Fatalf("**دينُ المتجر %d والمنتظَر 500**", debt)
 	}
@@ -260,6 +287,7 @@ func TestMD04_RecipientPaysCash(t *testing.T) {
 	m := newMDFx(t, h, "منطقةُ MD-04")
 	owner := m.fx.M.Owner.ID
 	id := m.create(t, h, "recipient", uniq("md04"))
+	m.accept(t, h, id)
 	var cashDue int64
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT cash_due FROM orders WHERE id = $1`, id).Scan(&cashDue)
 	if cashDue != 500 {
@@ -280,6 +308,7 @@ func TestMD05_NoCancelAfterPickup(t *testing.T) {
 	h := New(t)
 	m := newMDFx(t, h, "منطقةُ MD-05")
 	id := m.create(t, h, "recipient", uniq("md05"))
+	m.accept(t, h, id)
 	drv := h.driverOf(id)
 	for _, to := range []string{"at_pickup", "picked_up"} {
 		if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": to}); r.Code >= 400 {
@@ -309,6 +338,7 @@ func TestMD06_MerchantPaysCash(t *testing.T) {
 	owner := m.fx.M.Owner.ID
 	fundWallet(t, h, m.admin, owner, 2000)
 	id := m.create(t, h, "merchant_cash", uniq("md06"))
+	m.accept(t, h, id)
 	var cashDue, walletPaid int64
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT cash_due, wallet_paid FROM orders WHERE id = $1`, id).Scan(&cashDue, &walletPaid)
 	if cashDue != 500 || walletPaid != 0 {

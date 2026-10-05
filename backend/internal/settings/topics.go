@@ -87,6 +87,7 @@ var placeRules = []placeRule{
 	{prefix: "delivery.platform_percent", exact: true, topic: TopicMoney, section: "money.profit"},
 	{prefix: "sales.commission_percent", exact: true, topic: TopicMoney, section: "money.rep"},
 	{prefix: "delivery.fee", exact: true, topic: TopicMoney, section: "money.driver"},
+	{prefix: "delivery.merchant_fee", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.by_distance", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.per_km", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.max_fee", exact: true, topic: TopicMoney, section: "money.driver"},

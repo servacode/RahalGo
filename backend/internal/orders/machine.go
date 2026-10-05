@@ -228,6 +228,7 @@ func BuildMachine() Machine {
 	m.AutoRules = []MachineDeclared{
 		{"AUTO-PREPARING", "accepted → preparing — **وضعُ المتاجر وحدَه**، بأدوار الفاعل الأصليّ", "internal/orders/transitions.go:552"},
 		{"AUTO-DISPATCH", "preparing → dispatching — وضعُ المتاجر وorders.auto_dispatch، بأدوار ops قسراً", "internal/orders/transitions.go:559"},
+		{"AUTO-DISPATCH-MD", "accepted → dispatching لـ«لدي توصيلة» بعد قبول المكتب — orders.auto_dispatch، بأدوار ops قسراً، وفي الوضعين", "internal/orders/transitions.go:591"},
 		{"AUTO-DISPATCH-EXPORTED", "AutoDispatch بلا شرطِ وضعٍ ولا علَم — **وهو طريقُ وضع المنصّة**", "internal/orders/transitions.go:568"},
 		{"AUTO-ACCEPT", "pending → accepted بعد orders.auto_accept_min (افتراضُه صفرٌ ⇒ مطفأ)", "internal/orders/watchdog.go:257"},
 		{"AUTO-TRANSFER", "pending → accepted ثمّ إنزال — orders.auto_transfer (افتراضُه لا)", "internal/server/auto_transfer.go:98"},

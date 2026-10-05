@@ -580,6 +580,28 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		s.warnMerchantOnFault(ctx, orderID, effFault, failReason)
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **والتوصيلةُ تنزل الطابورَ بعد قبول المكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **لا تحضيرَ ولا إبلاغَ متجر** — المتجرُ هو من طلبها والغرضُ جاهز.
+	// **فالقبولُ يُنزلها بنفسه** إن كان `orders.auto_dispatch` مشتعلاً (كسائر
+	// الطلبات)، **وإلّا بقيت «مقبولة» ينزلها المكتبُ بيده.** وتعثّرُ الإنزال
+	// لا يُبطل قبولاً وقع — كالإنزال العامّ أدناه.
+	if kind == KindMerchantDelivery {
+		if to == StAccepted && s.settings != nil && s.settings.GetBool(ctx, "orders.auto_dispatch") {
+			dispatched, derr := s.Transition(ctx, actorID, []string{"ops"},
+				orderID, StDispatching, autoDispatchNote)
+			if derr != nil {
+				s.logger.Warn("التوصيلة: الإنزالُ بعد القبول تعثّر — تنتظر المكتب",
+					"order", orderID, "error", derr)
+			} else {
+				return dispatched, nil
+			}
+		}
+		return updated, nil
+	}
+
 	// **الإنزال التلقائيّ إلى طابور السائقين.**
 	//
 	// **خارج المعاملة عمداً، وبعد بثّ الأوّل وإشعاره**: هو انتقالٌ ثانٍ قائمٌ

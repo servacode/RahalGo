@@ -1175,6 +1175,13 @@ var Catalog = []Def{
 	{Key: "delivery.fee", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
 
+	// **أجرةُ «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **وصفرٌ يعني «كالعامّة»**
+	// (`delivery.fee` ومعها المسافةُ إن اشتعلت) لا «مجّاناً». **فافتراضُه لا
+	// يبدّل رقماً يومَ يُنشَر.** يقرؤه `orders.merchantDeliveryFee` وحدَه —
+	// الإنشاءُ وعرضُ السعر من دالّةٍ واحدة.
+	{Key: "delivery.merchant_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+
 	// **والأجرةُ بالمسافة — مفتاحٌ يُشعَل يومَ يُراد.**
 	//
 	// (طلبُ المالك ٢٠٢٦-٠٨-١٨: «هذا الخيارُ يجب أن يتفعّل أو يُغلق… إذا
