@@ -46,6 +46,7 @@ import AppStatusPanel from "@/components/admin/settings/app-status";
 import ReleasePanel from "@/components/admin/settings/release";
 import BroadcastPanel from "@/components/admin/BroadcastPanel";
 import CampaignsPanel from "@/components/admin/CampaignsPanel";
+import BannersPanel from "@/components/admin/settings/banners";
 
 /** **«عرض,طول» ← رقمان** — وفارغٌ أو مشوَّهٌ يعني «لا موقع». */
 function geoOf(v: string): [number, number] | null {
@@ -395,6 +396,8 @@ function TopicBody({
   const items = list.filter(
     (s) => s.topic === topic && !s.hidden && !s.panel && visibleIn(s, list),
   );
+  // **والسلايدرُ بابُه `content.manage`** — لا مفتاحُ الإعدادات.
+  const canContent = useAuth().can("content.manage");
 
   if (topic === "coverage") {
     const tabs = PANELS.filter((p) => p.topic === "coverage");
@@ -432,6 +435,16 @@ function TopicBody({
       {topic === "money" && <MoneyExample version={list} />}
       {topic === "launch" && <AppStatusPanel />}
       {topic === "apps" && <ReleasePanel />}
+      {/* **وسلايدرُ التطبيق رجع إلى بيته** (قرارُ المالك ٢٠٢٦-١٠-٠٥): كان في قسم
+          الموقع، **فلمّا خُبّئت إعداداتُ الموقع ذهب معها** — والتطبيقُ ما زال
+          يقرأ لافتاتِه، فبقيت سبعُ صورٍ تُعرض ولا بابَ يُبدّلها. */}
+      {topic === "site" && canContent && (
+        <section className="space-y-2">
+          <h2 className="heading-card">{m.admin.sliderPanel.title}</h2>
+          <p className="text-sm text-ink-muted">{m.admin.sliderPanel.hint}</p>
+          <BannersPanel isAdmin placement="home" />
+        </section>
+      )}
 
       {sections.map((sec) => {
         if (sec.name === "site.pages") {
