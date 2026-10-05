@@ -170,6 +170,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 backend.driver.setShift(on)
+                // **والطابورُ يُقرأ من جديد** — ما نزل قبل الفتح لا يصله دفعٌ.
+                com.rahalgo.driver.orders.QueuePulse.bump()
                 // **ثمّ يُعاد قراءة الحال كاملا** — فتح الوردية يحرّك
                 // أرقاما أخرى، **ومن بدّل الراية وحدها** أبقى بقيّة
                 // الشاشة على حال ما قبل الضغطة.
