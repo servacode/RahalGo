@@ -540,7 +540,7 @@ export default function DashboardPage() {
                 const href = eventHref(e);
                 const what = [
                   ACTIONS[e.action] ?? e.action,
-                  e.label || (e.number != null ? fmtNum(e.number) : ""),
+                  e.label || (e.number != null ? `#${e.number}` : ""),
                 ]
                   .filter(Boolean)
                   .join(m.common.nameSeparator);
