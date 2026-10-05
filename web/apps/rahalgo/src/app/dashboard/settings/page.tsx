@@ -106,6 +106,8 @@ interface Setting {
   updated_by: string | null;
   /** **أيُحرَّر هذا المفتاحُ لمن يسأل؟** — يقوله المحرّكُ لا اللوحة. */
   editable?: boolean;
+  /** **يكتبه الخادمُ وحدَه** — رقمُ النسخة واسمُها من الملفّ المرفوع. */
+  read_only?: boolean;
   /** شرطُ الظهور — و`equals` قد تصل `null`. */
   show_when?: { key: string; equals: string[] | null; not_empty?: boolean };
 }
@@ -882,9 +884,10 @@ function SettingRow({
 
         {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
         {note && <p className="mt-1.5 text-xs text-ink-muted">{note}</p>}
+        {/* **ورقمُ النسخة واسمُها يُقرآن من الملفّ المرفوع** (٢٠٢٦-١٠-٠٦) — لا صلاحيّةَ تفتحهما. */}
         {!editable && (
           <p className="mt-1.5 text-xs text-ink-muted">
-            {U.readOnly.replace("{cap}", capName(capOf(s)))}
+            {s.read_only ? U.fromFile : U.readOnly.replace("{cap}", capName(capOf(s)))}
           </p>
         )}
         {s.risk && editable && (dirty || s.kind === "bool" || s.kind === "choice" || s.kind === "percent") && (

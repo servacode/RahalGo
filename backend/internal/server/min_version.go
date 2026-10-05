@@ -27,15 +27,30 @@ const versionHeader = "X-RahalGo-Version"
 // **`426 Upgrade Required` رمزٌ قياسيٌّ معناه: بدّل ما تكلّمني به.**
 // **ولو رُدّ 403 لَخلطه التطبيقُ بمنعِ صلاحيّة** فأخرج صاحبَه من حسابه.
 //
-// # ولا تُغلق أبوابُ النجاة
+// # ولا تُغلق أبوابُ النجاة — وتُغلق أبوابُ التصفّح (٢٠٢٦-١٠-٠٦)
 //
-// **والتحديثُ يحتاج شبكةً وقائمةً** — فمن حُبس على شاشةِ تحديثٍ وهو لا
-// يستطيع التحديثَ حُبس بلا مخرج. **فالأبوابُ العامّةُ تبقى مفتوحةً**:
-// الفهرسُ والإعداداتُ وصفحاتُ النظام، **وتُغلق أبوابُ العمل وحدَها.**
+// **كانت `‎/api/v1/public/` كلُّها مفتوحةً للقديم** — **فهاتفٌ لم يسجّل
+// دخولاً لا ينادي غيرَها**: الزبونُ يتصفّح والسائقُ ينتظر عند شاشة الدخول،
+// **ولا يرى أحدُهما شاشةَ التحديث أبداً.** (شكوى المالك ٢٠٢٦-١٠-٠٦: «رفعتُ
+// التطبيقات وحدّدتُ الإصدارات وما طلب منّي جوّالي التحديث».)
 //
-// # وصفرٌ يعني لا إجبار
+// **وقُرئ التطبيقُ قبل القرار** (`mobile/shared/.../ApiClient.kt`): **أيُّ
+// ٤٢٦ من أيِّ نداءٍ — عامٍّ أو موثَّق — يرفع شاشةَ التحديث**، **وشاشةُ
+// التحديث لا تنادي المحرّكَ أبداً** (أزرارُها روابطُ متجرٍ وتنزيلٍ ثابتة).
+// **وأوّلُ نداءٍ في التطبيقات الأربعة عند الإقلاع `‎/public/platform`.**
 //
-// **والافتراضُ صفرٌ** — فلا تُغلق بوّابةٌ حتّى يُرفع الرقمُ بيد.
+// **فصار المفتوحُ للقديم قائمةً مغلقةً** (`updateEscapeHatch`): سجلُّ
+// التوزيع وملفّاتُ التنزيل والهويّةُ والصحّةُ والوسائط — **ما يحتاجه من
+// يريد أن يحدّث من متصفّح.** **وما سواها يُردّ ٤٢٦** — ومنه
+// `‎/public/platform` نفسُه: **هو ما يجعل أوّلَ إقلاعٍ لتطبيقٍ قديمٍ يُظهر
+// الشاشةَ ولو لم يُسجَّل دخول.** **والويبُ لا يرسل ترويسةَ النسخة فلا يمسّه
+// شيء.**
+//
+// # والحدُّ من الملفّ المرفوع تلقائيّاً
+//
+// **والحدُّ أكبرُ اثنين** (`effectiveMinVersion`): رقمٌ يدويٌّ
+// (`app.min_version.<app>`) **ورقمُ الملفّ المرفوع** حين يكون
+// `release.<app>.auto_force` مشغّلاً (الافتراض). **فرفعُ نسخةٍ أحدث يكفي.**
 func (s *Server) minVersion(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := r.Header.Get(versionHeader)
@@ -51,16 +66,16 @@ func (s *Server) minVersion(next http.Handler) http.Handler {
 			return
 		}
 
-		key, kind := "", ""
+		kind := ""
 		switch {
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-customer"):
-			key, kind = "app.min_version.customer", "customer"
+			kind = "customer"
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-driver"):
-			key, kind = "app.min_version.driver", "driver"
+			kind = "driver"
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-merchant"):
-			key, kind = "app.min_version.merchant", "merchant"
+			kind = "merchant"
 		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-rep"):
-			key, kind = "app.min_version.rep", "rep"
+			kind = "rep"
 		default:
 			next.ServeHTTP(w, r)
 			return
@@ -80,17 +95,14 @@ func (s *Server) minVersion(next http.Handler) http.Handler {
 		// **ولا جهازَ ولا إنسان**: «زبونٌ نسخةُ ١١» رقمٌ للمنصّة كلِّها.
 		obs.Client(kind, have)
 
-		want := int(s.settings.GetInt(r.Context(), key))
+		want := int(s.effectiveMinVersion(r.Context(), kind))
 		if want <= 0 || have >= want {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// **وأبوابُ النجاة تبقى** — انظر الشرحَ أعلاه.
-		p := r.URL.Path
-		if strings.HasPrefix(p, "/api/v1/public/") ||
-			strings.HasPrefix(p, "/health") ||
-			strings.HasPrefix(p, "/media/") {
+		// **وأبوابُ النجاة تبقى** — انظر الشرحَ أعلاه و`updateEscapeHatch`.
+		if updateEscapeHatch(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -101,4 +113,21 @@ func (s *Server) minVersion(next http.Handler) http.Handler {
 			`{"error":{"code":"update_required","message":"errors.update_required"},` +
 				`"min_version":` + strconv.Itoa(want) + `}`))
 	})
+}
+
+// updateEscapeHatch **ما يبقى مفتوحاً لتطبيقٍ قديم** — قائمةٌ مغلقة.
+//
+// **ومن أضاف باباً عامّاً جديداً أُغلق على القديم تلقائيّاً** — وهو الصواب:
+// **تطبيقٌ قديمٌ يتصفّح بعقدٍ تبدّل ينكسر بصمت.**
+func updateEscapeHatch(p string) bool {
+	switch {
+	case p == "/api/v1/public/releases",
+		p == "/api/v1/public/identity",
+		p == "/api/v1/public/app",
+		strings.HasPrefix(p, "/api/v1/public/app/"),
+		strings.HasPrefix(p, "/health"),
+		strings.HasPrefix(p, "/media/"):
+		return true
+	}
+	return false
 }

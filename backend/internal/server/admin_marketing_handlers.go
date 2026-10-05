@@ -122,6 +122,8 @@ func (s *Server) handleDeleteBanner(w http.ResponseWriter, r *http.Request) {
 // الذي يجب أن يعرضه الحقل**. ولو كُتب في الواجهة لانحرف عنه يوماً، فيرى المالك
 // حقلاً يقبل ما يرفضه الحفظ.
 func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
+	// **ورقمُ نسخة الملفّ المرفوع قبل اليوم يُقرأ هنا مرّةً** — فتعرضه اللوحة.
+	s.backfillAllReleases(r.Context())
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT s.key, s.value, s.updated_at, u.full_name
 		FROM app_settings s
@@ -184,7 +186,9 @@ func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
 	out := make([]setting, 0, len(settings.Catalog))
 	for _, d := range settings.Catalog {
 		item := setting{Def: d, Placement: settings.PlacementOf(d)}
-		item.Editable = s.hasCapability(r, settingCapability(d.Key))
+		// **وما يكتبه الخادمُ وحدَه لا يُحرَّر لأحد** — رقمُ النسخة واسمُها
+		// يُقرآن من الملفّ (`ReadOnly`).
+		item.Editable = !d.ReadOnly && s.hasCapability(r, settingCapability(d.Key))
 		item.Risk = settingRisk(d.Key)
 		// **والشارةُ القديمةُ تتبع القائمةَ لا الفهرس** — فلا تُرسَل شارةٌ بلا حماية.
 		item.Sensitive = item.Risk != ""
@@ -256,6 +260,13 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 			"capability", string(need), "key", key,
 			"user", userIDFrom(r), "roles", rolesFrom(r))
 		s.respondErr(w, errForbiddenCap)
+		return
+	}
+
+	// **ورقمُ النسخة واسمُها يُقرآن من الملفّ** (٢٠٢٦-١٠-٠٦) — ولا تكتبهما
+	// يد. **والردُّ هنا لا في الشاشة وحدَها**: نداءٌ مباشرٌ يُردّ بالسبب نفسِه.
+	if d, ok := settings.Lookup(key); ok && d.ReadOnly {
+		s.respondErr(w, errSettingReadOnly)
 		return
 	}
 

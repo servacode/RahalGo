@@ -15,6 +15,7 @@ package server
 //	الحذف      يمسح الملفَّ ويُفرغ الإعداد
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"log/slog"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
+	"github.com/servacode/rahalgo/backend/internal/release"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
@@ -51,6 +53,8 @@ func newAppFixture(t *testing.T) *appFixture {
 	t.Cleanup(func() {
 		_ = store.SetInternal(context.Background(), testApkKey, "")
 		_ = store.SetInternal(context.Background(), "release.customer.play_url", "")
+		_ = store.SetInternal(context.Background(), release.VersionCodeKey("driver"), 0)
+		_ = store.SetInternal(context.Background(), release.VersionKey("driver"), "")
 	})
 	return &appFixture{
 		srv: &Server{
@@ -97,10 +101,21 @@ func (f *appFixture) href() string {
 	return f.srv.appHref(req)
 }
 
-// apk أصغرُ ما يبدأ ببصمة ZIP.
+// apk **حزمةُ سائقٍ صغيرةٌ ببيانٍ حقيقيّ الصيغة** — والرفعُ يقرأ هويّتَها
+// منذ ٢٠٢٦-١٠-٠٦. و`extra` حشوةٌ داخل الأرشيف.
 func apk(extra int) []byte {
-	b := []byte{'P', 'K', 3, 4}
-	return append(b, bytes.Repeat([]byte{0x41}, extra)...)
+	return apkOf("com.rahalgo.driver", 5, "1.0.0", extra)
+}
+
+func apkOf(pkg string, code uint32, name string, extra int) []byte {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, _ := zw.Create("AndroidManifest.xml")
+	_, _ = w.Write(release.BuildTestAXML(true, false, pkg, code, name))
+	w2, _ := zw.CreateHeader(&zip.FileHeader{Name: "pad.bin", Method: zip.Store})
+	_, _ = w2.Write(bytes.Repeat([]byte{0x41}, extra))
+	_ = zw.Close()
+	return buf.Bytes()
 }
 
 func TestAppFileUploadDownloadAndPriority(t *testing.T) {
@@ -180,6 +195,40 @@ func TestAppFileUploadDownloadAndPriority(t *testing.T) {
 		}
 	})
 
+	// **والهويّةُ من الملفّ** (٢٠٢٦-١٠-٠٦): الرقمُ والاسمُ يُكتبان منه.
+	t.Run("الرفعُ يكتب رقمَ النسخة واسمَها من الملفّ", func(t *testing.T) {
+		if code := f.upload("x.apk", apkOf("com.rahalgo.driver", 41, "2.3.4", 32)).Code; code != http.StatusCreated {
+			t.Fatalf("رُفض برمز %d", code)
+		}
+		ctx := context.Background()
+		if got := f.srv.settings.GetInt(ctx, release.VersionCodeKey("driver")); got != 41 {
+			t.Fatalf("version_code=%d لا 41", got)
+		}
+		if got := f.srv.settings.GetString(ctx, release.VersionKey("driver")); got != "2.3.4" {
+			t.Fatalf("version=%q لا 2.3.4", got)
+		}
+	})
+
+	t.Run("وحزمةٌ غريبةٌ تُردّ ولا يُكتب شيء", func(t *testing.T) {
+		ctx := context.Background()
+		before := f.srv.settings.GetString(ctx, testApkKey)
+		for _, pkg := range []string{"com.rahalgo.customer", "com.rahalgo.driver.staging", "com.evil.app"} {
+			w := f.upload("x.apk", apkOf(pkg, 99, "9.9.9", 8))
+			if w.Code != http.StatusBadRequest || !bytes.Contains(w.Body.Bytes(), []byte("app_wrong_package")) {
+				t.Fatalf("%s قُبل في خانة السائق: %d %s", pkg, w.Code, w.Body)
+			}
+		}
+		if f.srv.settings.GetString(ctx, testApkKey) != before ||
+			f.srv.settings.GetInt(ctx, release.VersionCodeKey("driver")) != 41 {
+			t.Fatal("رفعٌ مردودٌ بدّل الإعداد")
+		}
+		// **وأرشيفٌ بلا بيانٍ يُردّ بسببه.**
+		w := f.upload("x.apk", zipNoManifest())
+		if w.Code != http.StatusBadRequest || !bytes.Contains(w.Body.Bytes(), []byte("app_manifest_unreadable")) {
+			t.Fatalf("أرشيفٌ بلا بيانٍ: %d %s", w.Code, w.Body)
+		}
+	})
+
 	t.Run("والحذفُ يمسح الملفَّ", func(t *testing.T) {
 		name := f.srv.settings.GetString(context.Background(), testApkKey)
 		req := httptest.NewRequest(http.MethodDelete, "/admin/app-file?key="+testApkKey, nil)
@@ -196,5 +245,17 @@ func TestAppFileUploadDownloadAndPriority(t *testing.T) {
 		if f.srv.settings.GetString(context.Background(), testApkKey) != "" {
 			t.Fatal("الملفُّ مُسح والإعدادُ ما زال يشير إليه")
 		}
+		if f.srv.settings.GetInt(context.Background(), release.VersionCodeKey("driver")) != 0 {
+			t.Fatal("الملفُّ مُسح ورقمُه باقٍ حدّاً للتحديث")
+		}
 	})
+}
+
+func zipNoManifest() []byte {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, _ := zw.Create("classes.dex")
+	_, _ = w.Write([]byte("dex"))
+	_ = zw.Close()
+	return buf.Bytes()
 }
