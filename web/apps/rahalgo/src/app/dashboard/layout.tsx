@@ -100,8 +100,9 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/roles", label: m.admin.roles.navTitle, icon: IconRoles,
     caps: ["roles.manage"] },
   // **والسوقُ يليها** — ما يُعرض وما نفد وما ينتظر المراجعة.
+  // **وبقدرته لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — موظّفُ العمليّات يرتّبه.
   { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore,
-    caps: ["content.manage"] },
+    caps: ["market.manage"] },
   // **الشكاوى والتقييماتُ بابٌ واحد** — جوابان لسؤالٍ واحد: «ما رأيُ الناس
   // بنا؟». ومن رأى سائقاً هبط تقييمُه يقرأ شكاواه في المكان نفسِه.
   // (قرارُ المالك ٢٠٢٦-٠٨-٠٨.)
@@ -127,9 +128,10 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
     caps: ["orders.read"] },
   // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
-  // ٢٠٢٦-١٠-٠٤). **وقراءتُها تحليليّة** كبابها في المحرّك.
+  // ٢٠٢٦-١٠-٠٤). **وقراءتُها بـ`orders.read`** كبابها في المحرّك — قسمٌ لموظّف
+  // العمليّات لا تقريرٌ للمدير (قرارُ المالك ٢٠٢٦-١٠-٠٥).
   { href: "/dashboard/expansion", label: m.admin.nav.expansion, icon: IconLocation,
-    caps: ["analytics.read"] },
+    caps: ["orders.read"] },
   // **خزينةُ المنصة — أصلُ كلّ حركة.**
   //
   // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
@@ -240,7 +242,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // **عدّادُ «المضافُ حديثاً» على بند السوق** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
   // ما أُضيف بعد آخر فتحٍ للسوق، **ويختفي حين يُفتح.** (إضافةٌ من دفعة السوق.)
-  const canMarket = capabilities.includes("content.manage");
+  const canMarket = capabilities.includes("market.manage");
   const { data: marketNew } = useLiveData<{ count: number }>(
     () => (canMarket ? api("/api/v1/admin/market/new-count") : Promise.resolve({ count: 0 })),
     ["menu", "market_seen"],

@@ -49,7 +49,10 @@ func TestPerm_CapabilityMatrix(t *testing.T) {
 		// يُقرأ بدليل الحسابات.**
 		{"merchants.manage", PermViewRepActivity, true},
 		{"users.read", PermViewRepActivity, false},
-		{"analytics.read", PermViewDemand, true},
+		// **والطلبُ والتوسّعُ لمن يقرأ الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) —
+		// **ولا تفتحهما التحليلاتُ وحدَها**: مسارُهما بـ`orders.read` في الجدول.
+		{"orders.read", PermViewDemand, true},
+		{"analytics.read", PermViewDemand, false},
 		{"analytics.read", PermViewMap, false},
 	}
 	for _, c := range cases {

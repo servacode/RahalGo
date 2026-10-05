@@ -47,6 +47,7 @@ import {
 } from "@rahalgo/ui";
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 import { api } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const L = m.admin.leads;
@@ -110,6 +111,9 @@ function waitingFor(iso: string): string {
 
 function LeadsScreen() {
   const params = useSearchParams();
+  // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
+  // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
+  const canProfile = useCanCall()("GET", "/users/{id}");
   const router = useRouter();
   const pathname = usePathname();
   const get = (k: Key) => params.get(k) ?? "";
@@ -390,7 +394,7 @@ function LeadsScreen() {
         <Alert tone={notice.tone} className="mb-4" onDismiss={() => setNotice(null)}>
           {notice.text}
           <TempPasswordNote value={notice.temp} />
-          {notice.owner && (
+          {canProfile && notice.owner && (
             <>
               {" — "}
               <Link href={`/dashboard/users/${notice.owner}`} className="font-medium underline">

@@ -18,20 +18,24 @@ import (
 //
 // # نصُّ القرار
 //
-//	operations   تسعُ قدراتٍ بعينها — ولا `support.manage`
+//	operations   قدراتٌ بعينها لتسعة أقسام (قرارُ المالك ٢٠٢٦-١٠-٠٥)
 //	finance      تسعُ قدراتٍ بعينها — ولا تدخّلَ تشغيليّ
 //	ops          إرثٌ متقاعد — **ثمّ حُذف** بقرار المالك ٢٠٢٦-١٠-٠٤ (هجرة 0270)
 
 // opsFinalCaps **قدراتُ العمليّات كما أقرّها المالك** — لا أكثرَ ولا أقلّ.
 //
-// **و`emergencies.manage` بقرار المالك ٢٠٢٦-١٠-٠٤** (قسمُ «الطلبات»، البند ٧): من
-// يوزّع الطلبات يرى الحادثَ ويستلمه — **والطوارئُ وحدَها لا `support.manage`.**
+// **و`emergencies.manage` بقرار المالك ٢٠٢٦-١٠-٠٤** (قسمُ «الطلبات»، البند ٧).
+//
+// **وقرارُ المالك ٢٠٢٦-١٠-٠٥** (هجرة `0420`): تسعةُ أقسامٍ لا غير — فنالت
+// `market.manage` (السوق) و`support.manage` (الشكاوى والتقييمات) و`merchants.verify`
+// (طلبات الانضمام)، **ونُزعت `users.read` (الحسابات) و`analytics.read` (التقارير).**
 var opsFinalCaps = []string{
-	"analytics.read", "drivers.manage", "drivers.read", "emergencies.manage", "merchants.read",
+	"drivers.manage", "drivers.read", "emergencies.manage", "market.manage",
+	"merchants.read", "merchants.verify",
 	// **و`orders.customer_details.read` بقرار المالك ٢٠٢٦-١٠-٠٤** (سجلُّ الطلبات، البند ٣).
 	"orders.customer_details.read",
-	"orders.intervene", "orders.read", "settings.read",
-	"users.contact.read", "users.read",
+	"orders.intervene", "orders.read", "settings.read", "support.manage",
+	"users.contact.read",
 }
 
 // financeFinalCaps **قدراتُ الماليّة كما أقرّها المالك.**
@@ -87,11 +91,14 @@ func TestOFM5_DepartmentCapabilitiesAreExactlyApproved(t *testing.T) {
 		}
 	}
 
-	// **و`support.manage` بعينها ممنوعةٌ عن العمليّات** — قرارُ المالك
-	// الأوّل: **بابُ الدعم أوسعُ من مسؤوليّة التشغيل.**
+	// **ولا مالَ ولا أدوارَ ولا إعداداتٍ ولا عروضَ ولا حملاتٍ ولا سجلّ** — ولا
+	// الحساباتُ ولا التقارير (قرارُ المالك ٢٠٢٦-١٠-٠٥). **وكانت `support.manage`
+	// ممنوعةً هنا ثمّ منحها المالكُ لقسم «الشكاوى والتقييمات».**
 	for _, forbidden := range []string{
-		"support.manage", "merchants.manage", "finance.read", "finance.manage",
-		"finance.export", "payouts.decide", "roles.manage", "safety.manage",
+		"users.read", "analytics.read", "content.manage", "merchants.manage",
+		"finance.read", "finance.manage", "finance.export", "payouts.decide",
+		"roles.manage", "safety.manage", "audit.read", "platform.overview",
+		"settings.general.manage", "settings.financial.manage", "settings.security.manage",
 		"observability.read",
 	} {
 		for _, c := range roleCaps(t, hh, "operations") {

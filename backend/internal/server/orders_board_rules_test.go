@@ -119,7 +119,8 @@ func TestOrdersBoardGrants(t *testing.T) {
 		{"operations", "emergencies.manage", true},
 		{"customer_support", "emergencies.manage", true},
 		{"owner_super_admin", "emergencies.manage", true},
-		{"operations", "support.manage", false},
+		// **وصارت لها الشكاوى والتقييمات** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0420`).
+		{"operations", "support.manage", true},
 		{"operations", "finance.recompute", false},
 		{"finance", "finance.recompute", false},
 		{"owner_super_admin", "finance.recompute", true},

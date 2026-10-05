@@ -292,20 +292,24 @@ var adminPolicy = []Rule{
 	{"POST", "/promo-approvals/{id}/reject", FinanceManage},
 	{"", "/offers/{id}/active", ContentManage},
 	// **وترتيبُ الأقسام بالسحب قبل `{id}`** — الأخصُّ أوّلاً.
-	{"PUT", "/sections/order", ContentManage},
-	{"", "/sections", ContentManage},
-	{"", "/sections/{id}", ContentManage},
-	{"GET", "/sections/{id}/items", ContentManage},
+	{"PUT", "/sections/order", MarketManage},
+	{"", "/sections", MarketManage},
+	{"", "/sections/{id}", MarketManage},
+	{"GET", "/sections/{id}/items", MarketManage},
 	// ── «السوق» — أصنافُ كلّ المتاجر (قرارُ المالك ٢٠٢٦-١٠-٠٤) ──
-	{"GET", "/market/items", ContentManage},
-	{"POST", "/market/items/bulk", ContentManage},
-	{"GET", "/market/new-count", ContentManage},
-	{"POST", "/market/seen", ContentManage},
-	{"GET", "/market/stores", ContentManage},
-	{"GET", "/market/quality", ContentManage},
-	{"POST", "/market/test-data/delete", ContentManage},
-	{"", "/categories", ContentManage},
-	{"", "/categories/{id}", ContentManage},
+	// **وبقدرتها لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
+	// يرتّب السوقَ ولا يبلغ العروضَ ولا اللافتاتِ ولا الحملات.
+	// **وصورُ السوق من بابها** — يرفع صورةَ صنفٍ أو قسمٍ لا شعارَ المنصّة.
+	{"POST", "/market/media", MarketManage},
+	{"GET", "/market/items", MarketManage},
+	{"POST", "/market/items/bulk", MarketManage},
+	{"GET", "/market/new-count", MarketManage},
+	{"POST", "/market/seen", MarketManage},
+	{"GET", "/market/stores", MarketManage},
+	{"GET", "/market/quality", MarketManage},
+	{"POST", "/market/test-data/delete", MarketManage},
+	{"", "/categories", MarketManage},
+	{"", "/categories/{id}", MarketManage},
 	{"POST", "/media", ContentManage},
 	{"GET", "/media/sign", ContentManage},
 	// **ومركزُ الإشعارات بالقدرة نفسِها** — **وهي قدرةُ من يخاطب
@@ -331,6 +335,9 @@ var adminPolicy = []Rule{
 	{"", "/zones/{id}/hours", SettingsGeneralManage},
 	{"", "/cities", SettingsGeneralManage},
 	{"", "/cities/{id}", SettingsGeneralManage},
+	// **وقراءةُ أسماء المحافظات قراءةُ لوح** (٢٠٢٦-١٠-٠٥): صفحةُ طلبات الانضمام
+	// ترشّح بها — **ورسمُها وتحريرُها يبقيان بالإعدادات العامّة.**
+	{"GET", "/governorates", SettingsRead},
 	{"", "/governorates", SettingsGeneralManage},
 	{"", "/governorates/{id}", SettingsGeneralManage},
 	{"", "/districts", SettingsGeneralManage},
@@ -357,15 +364,16 @@ var adminPolicy = []Rule{
 	{"", "/ops-map/coverage", SettingsGeneralManage},
 	{"", "/ops-map/coverage/{id}", SettingsGeneralManage},
 	{"", "/ops-map/coverage/{id}/active", SettingsGeneralManage},
-	// **وكثافةُ الطلب بالمكان الإداريّ قراءةٌ تحليليّةٌ كأختها** — `CR`.
-	// **ولا قدرةَ جديدة.**
-	{"GET", "/ops-map/coverage-demand/places", AnalyticsRead},
-	{"GET", "/ops-map/coverage-requests", AnalyticsRead},
+	// **وكثافةُ الطلب بالمكان الإداريّ** — `CR`. **ولا قدرةَ جديدة.**
+	// **وكانت تحليليّةً ثمّ صارت بـ`orders.read`** (قرارُ المالك ٢٠٢٦-١٠-٠٥): «طلباتُ التوسّع» قسمٌ
+	// لموظّف العمليّات، **ولا يُمنَح `analytics.read` لأجلها** — فتلك تقاريرُ المدير.
+	{"GET", "/ops-map/coverage-demand/places", OrdersRead},
+	{"GET", "/ops-map/coverage-requests", OrdersRead},
 	{"", "/ops-map/coverage-requests/{id}", SettingsGeneralManage},
-	// **«طلباتُ التوسّع»** — قراءتُها تحليليّةٌ كأختها، **وإبلاغُ المنتظرين
+	// **«طلباتُ التوسّع»** — قراءتُها بـ`orders.read` كأختها، **وإبلاغُ المنتظرين
 	// لمن يملك التغطية** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
-	{"GET", "/ops-map/expansion", AnalyticsRead},
-	{"GET", "/ops-map/expansion/reminder", AnalyticsRead},
+	{"GET", "/ops-map/expansion", OrdersRead},
+	{"GET", "/ops-map/expansion/reminder", OrdersRead},
 	{"", "/ops-map/expansion/notify", SettingsGeneralManage},
 	{"GET", "/ops-map/branches", OrdersRead},
 	{"", "/ops-map/branches", SettingsGeneralManage},
@@ -378,8 +386,8 @@ var adminPolicy = []Rule{
 	// **ودبّوسُ المتجر سياقُ تشغيلٍ لا إدارةَ متجر** — **والماليّةُ
 	// تقرأ الخريطةَ ولا تُحرّر قائمة.**
 	{"GET", "/ops-map/merchants", OrdersRead},
-	{"GET", "/ops-map/demand", AnalyticsRead},
-	{"GET", "/ops-map/opportunities", AnalyticsRead},
+	{"GET", "/ops-map/demand", OrdersRead},
+	{"GET", "/ops-map/opportunities", OrdersRead},
 	// **ونشاطُ المندوبين لمن يبني شبكةَ المتاجر** — **ولا يُقرأ
 	// بـ`users.read`**: **الماليّةُ تملكها ولا تُراقب مندوباً.**
 	{"GET", "/ops-map/reps", MerchantsManage},

@@ -1186,6 +1186,8 @@ func (s *Server) Router() http.Handler {
 			// **وحذفُ البيانات التجريبيّة بقائمةٍ صريحةٍ أكّدها الموظّف** —
 			// لا حذفَ آليّاً ولا بنمطٍ يُرسَل.
 			r.Post("/market/test-data/delete", s.handleMarketTestDataDelete)
+			// **وصورُ السوق من بابها** بقائمةٍ بيضاء (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+			r.Post("/market/media", s.handleMarketUploadMedia)
 			r.Get("/merchants", s.handleListMerchants)
 			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
 			// **ومتجران متشابها الاسم يُخلطان.**

@@ -72,10 +72,12 @@ func All() []Perm {
 // **رسمُ التغطية قرارُ عملٍ لا تشغيلٌ يوميّ** — ومن بدّل مضلَّعاً بدّل
 // من تصله المنصّةُ أصلاً. **وهي بقدرة الإعدادات العامّة.**
 var capPerms = map[string][]Perm{
-	"orders.read":             {PermViewMap, PermViewOrders, PermViewMerchants},
+	// **والطلبُ والتوسّعُ يُقرآن لمن يقرأ الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٥):
+	// «طلباتُ التوسّع» قسمٌ لموظّف العمليّات، **وكانت بـ`analytics.read`** —
+	// وجدولُ السياسة المركزيّ يحرس مساراتها بـ`orders.read`، فلا تفترق حراستان.
+	"orders.read":             {PermViewMap, PermViewOrders, PermViewMerchants, PermViewDemand},
 	"drivers.read":            {PermViewDrivers},
 	"merchants.manage":        {PermViewRepActivity},
-	"analytics.read":          {PermViewDemand},
 	"finance.read":            {PermViewMoney},
 	"settings.general.manage": {PermManageCoverage, PermManageBranches},
 }

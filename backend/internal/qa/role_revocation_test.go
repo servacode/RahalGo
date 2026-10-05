@@ -66,7 +66,10 @@ func grantRole(t *testing.T, hh *Harness, userID, role string) Res {
 // adminPath **فعلٌ يشترط أحدَ أدوار المكتب** — قراءةٌ لا تُغيّر شيئاً.
 //
 // **والبوّابةُ `RequireRoles("admin","ops","finance")`** (`server.go:722`).
-const adminPath = "/api/v1/admin/users?limit=1"
+//
+// **وصار قراءةَ الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `operations` لم تعد تقرأ
+// دليلَ الحسابات — **والعقدُ المقيسُ هنا سحبُ الدور لا بابٌ بعينه.**
+const adminPath = "/api/v1/admin/orders?limit=1"
 
 // ══════════════════════════════════════════════════════════════════════
 // **والدورُ المستعمَلُ في التركيبات `ops` لا `admin`**

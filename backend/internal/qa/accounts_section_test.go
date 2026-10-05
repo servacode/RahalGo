@@ -155,7 +155,9 @@ func TestACC_MoneyHiddenFromNonFinanceStaff(t *testing.T) {
 	f := h.Factory()
 	target := f.NewUserWith("customer")
 	f.Credit(target.ID, 4321, "topup")
-	ops := h.NewUser("operations")
+	// **والعمليّاتُ لم تعد تقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — فالثقةُ والأمان
+	// تقيس العقدَ نفسَه: تقرأ الحسابَ ولا تملك المال (والدعمُ يراه بقرار ٢٠٢٦-١٠-٠٤).
+	ops := h.NewUser("trust_safety")
 	fin := h.NewUser("finance")
 
 	got := h.GET("/api/v1/admin/users/"+target.ID, ops.Token).JSON()
@@ -588,7 +590,9 @@ func TestACC_SuspendedCustomerCanChatOnLiveOrder(t *testing.T) {
 func TestACC_NotesAreAppendOnlyWithAuthor(t *testing.T) {
 	h := New(t)
 	f := h.Factory()
-	ops := h.NewUser("operations")
+	// **والعمليّاتُ لم تعد تقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — فموظّفُ الدعم
+	// يقيس العقدَ نفسَه: يقرأ الحسابَ ولا يملك المال.
+	ops := h.NewUser("customer_support")
 	target := f.NewUserWith("customer")
 	if r := h.POST("/api/v1/admin/users/"+target.ID+"/notes", ops.Token, map[string]any{"body": "اتصل يشتكي"}); r.Code != 201 {
 		t.Fatalf("الملاحظة: %s", r)

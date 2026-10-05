@@ -615,7 +615,7 @@
       "path": "/api/v1/admin/categories",
       "handler": "handleListCategories",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "@cats",
@@ -631,7 +631,7 @@
       "path": "/api/v1/admin/categories",
       "handler": "handleCreateCategory",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "@c",
@@ -647,7 +647,7 @@
       "path": "/api/v1/admin/categories/{id}",
       "handler": "handleUpdateCategory",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "@c",
@@ -1725,7 +1725,7 @@
       "path": "/api/v1/admin/governorates",
       "handler": "handleAdminGovernorates",
       "auth": true,
-      "capability": "settings.general.manage"
+      "capability": "settings.read"
     },
     {
       "method": "POST",
@@ -2056,7 +2056,7 @@
       "path": "/api/v1/admin/market/items",
       "handler": "handleMarketItems",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "@body",
@@ -2072,7 +2072,7 @@
       "path": "/api/v1/admin/market/items/bulk",
       "handler": "handleMarketItemsBulk",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "request": [
         {
           "name": "ids",
@@ -2098,11 +2098,27 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/market/media",
+      "handler": "handleMarketUploadMedia",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/market/new-count",
       "handler": "handleMarketNewCount",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "count",
@@ -2118,7 +2134,7 @@
       "path": "/api/v1/admin/market/quality",
       "handler": "handleMarketQuality",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "items_without_image",
@@ -2158,7 +2174,7 @@
       "path": "/api/v1/admin/market/seen",
       "handler": "handleMarketSeen",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "seen",
@@ -2174,7 +2190,7 @@
       "path": "/api/v1/admin/market/stores",
       "handler": "handleMarketStores",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "@paged",
@@ -2190,7 +2206,7 @@
       "path": "/api/v1/admin/market/test-data/delete",
       "handler": "handleMarketTestDataDelete",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "request": [
         {
           "name": "item_ids",
@@ -2908,7 +2924,7 @@
       "path": "/api/v1/admin/ops-map/coverage-demand/places",
       "handler": "handleDemandByPlace",
       "auth": true,
-      "capability": "analytics.read",
+      "capability": "orders.read",
       "response": [
         {
           "name": "places",
@@ -2924,7 +2940,7 @@
       "path": "/api/v1/admin/ops-map/coverage-requests",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "PATCH",
@@ -2952,7 +2968,7 @@
       "path": "/api/v1/admin/ops-map/demand",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "GET",
@@ -2966,7 +2982,7 @@
       "path": "/api/v1/admin/ops-map/expansion",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "POST",
@@ -2980,7 +2996,7 @@
       "path": "/api/v1/admin/ops-map/expansion/reminder",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "GET",
@@ -3001,7 +3017,7 @@
       "path": "/api/v1/admin/ops-map/opportunities",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "GET",
@@ -4428,7 +4444,7 @@
       "path": "/api/v1/admin/sections",
       "handler": "handleListPlatformSections",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "sections",
@@ -4444,7 +4460,7 @@
       "path": "/api/v1/admin/sections",
       "handler": "handleCreatePlatformSection",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "id",
@@ -4460,7 +4476,7 @@
       "path": "/api/v1/admin/sections/order",
       "handler": "handleOrderPlatformSections",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "request": [
         {
           "name": "ids",
@@ -4482,7 +4498,7 @@
       "path": "/api/v1/admin/sections/{id}",
       "handler": "handleDeletePlatformSection",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "deleted",
@@ -4502,7 +4518,7 @@
       "path": "/api/v1/admin/sections/{id}",
       "handler": "handleUpdatePlatformSection",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "updated",
@@ -4518,7 +4534,7 @@
       "path": "/api/v1/admin/sections/{id}/items",
       "handler": "handleSectionItems",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "market.manage",
       "response": [
         {
           "name": "all",

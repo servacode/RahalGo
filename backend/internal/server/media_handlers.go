@@ -73,3 +73,43 @@ func (s *Server) handleMerchantUploadMedia(w http.ResponseWriter, r *http.Reques
 	}
 	httpx.JSON(w, http.StatusCreated, m)
 }
+
+// marketKinds **ما يرفعه موظّفُ السوق** — صورةُ صنفٍ أو قسم (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+//
+// **وقسمُ السوق صورتُه من صنف `banner`** (`SectionsTab`) — **ورفعُ صورةٍ ليس نشرَ
+// لافتة**: اللافتةُ تُنشأ ببابها (`/banners`) وهو بقدرة المحتوى.
+var marketKinds = map[string]bool{"menu_item": true, "menu_section": true, "banner": true}
+
+// handleMarketUploadMedia **رفعُ صورةٍ من صفحة السوق** — `POST /admin/market/media`.
+//
+// # ولماذا بابٌ ثانٍ لا توسيعُ `POST /media`
+//
+// **`POST /media` يأخذ النوعَ من الطلب** — شعارَ المنصّة وخلفيّةَ الموقع —
+// **وهو بقدرة المحتوى.** **وجدولُ السياسة قدرةٌ واحدةٌ لكلّ مسار**: من أُعطي
+// البابَ العامَّ لأجل صورةِ صنفٍ نال تبديلَ شعار المنصّة. **فبابٌ بقائمةٍ بيضاء
+// بقدرة السوق** — كبوّابة المتجر (`handleMerchantUploadMedia`) وإيصالِ المصروف.
+func (s *Server) handleMarketUploadMedia(w http.ResponseWriter, r *http.Request) {
+	lim := s.media.MaxBytes(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, lim+64<<10)
+	if err := r.ParseMultipartForm(lim); err != nil {
+		s.respondErr(w, media.ErrTooLarge)
+		return
+	}
+	if !marketKinds[r.FormValue("kind")] {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	defer file.Close()
+
+	m, err := s.media.Save(r.Context(), userIDFrom(r), r.FormValue("kind"), file)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, m)
+}

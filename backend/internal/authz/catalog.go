@@ -107,6 +107,12 @@ const (
 	ContentManage Capability = "content.manage"
 	AnalyticsRead Capability = "analytics.read"
 
+	// MarketManage **«السوق»: الأقسامُ والأصنافُ والمتاجرُ في السوق** (قرارُ
+	// المالك ٢٠٢٦-١٠-٠٥). **وكانت داخلَ `content.manage`** — **فموظّفُ
+	// العمليّات الذي يرتّب السوقَ كان ينال معها العروضَ واللافتاتِ والحملاتِ
+	// والبثّ.** والمحتوى والتسويقُ يبقيان بقدرتهما.
+	MarketManage Capability = "market.manage"
+
 	// PlatformOverview **رئيسيّةُ مدير المنصّة** — كلُّ ما يجري بأرقامه
 	// ومالِه في صفحةٍ واحدة. (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الرئيسيّة لمدير
 	// المنصّة وحدَه».) **ولا تكفي `analytics.read`**: يملكها من ليس طرفاً
@@ -314,6 +320,7 @@ var catalog = map[Capability]string{
 	SettingsFinancialManage:  "إعدادات تدخل بحساب المال: العمولات والرسوم والسقوف",
 	SettingsSecurityManage:   "إعدادات الأمان والجلسات",
 	ContentManage:            "اللافتات والعروض والمحتوى",
+	MarketManage:             "إدارة السوق: الأقسام والأصناف والمتاجر",
 	AnalyticsRead:            "قراءة التحليلات",
 	PlatformOverview:         "رئيسية مدير المنصة بأرقامها ومالها",
 	SupportManage:            "التذاكر والنزاعات والتقييمات",
@@ -383,7 +390,7 @@ var groupOf = map[Capability]Group{
 	SettingsRead: GroupSettings, SettingsGeneralManage: GroupSettings,
 	SettingsFinancialManage: GroupSettings, SettingsSecurityManage: GroupSettings,
 
-	ContentManage: GroupContent, AnalyticsRead: GroupContent,
+	ContentManage: GroupContent, AnalyticsRead: GroupContent, MarketManage: GroupContent,
 
 	RolesManage: GroupSecurity, AuditRead: GroupSecurity, AuditExport: GroupSecurity,
 	SafetyManage: GroupSecurity, ObservabilityRead: GroupSecurity,

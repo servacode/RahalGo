@@ -101,7 +101,8 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 			map[string]any{"status": "suspended", "status_reason": "RBAC-01"}, true},
 
 		// ── قراءةٌ إداريّةٌ عامّة ──────────────────────────────────
-		{"operations", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, false},
+		// **والعمليّاتُ لا تقرأ دليلَ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0420`).
+		{"operations", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, true},
 		{"finance", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, false},
 
 		// ── ودورٌ غيرُ إداريٍّ أصلاً ───────────────────────────────

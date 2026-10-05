@@ -37,6 +37,9 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/admin/ImageUpload";
 
+/** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
+const MARKET_MEDIA = "/api/v1/admin/market/media";
+
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
 
@@ -333,6 +336,7 @@ function SectionModal({
     <Modal open title={section ? S.editTitle : S.add} onClose={onClose}>
       <div className="space-y-3">
         <ImageUpload
+          path={MARKET_MEDIA}
           kind="banner"
           label={S.image}
           initialUrl={section?.image_url}

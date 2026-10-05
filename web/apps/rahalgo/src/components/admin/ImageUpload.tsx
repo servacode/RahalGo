@@ -20,6 +20,9 @@ export default function ImageUpload(props: {
   label: string;
   initialUrl?: string | null;
   onChange: (mediaID: string) => void;
+  /** **نقطةُ الرفع** — صفحةُ السوق ترفع من بابها (`/admin/market/media`، قرارُ
+   *  المالك ٢٠٢٦-١٠-٠٥) **فلا يلزم موظّفَها `content.manage`.** */
+  path?: string;
 }) {
   return <Central {...props} api={api} mediaUrl={mediaUrl} errorText={errorText} />;
 }

@@ -4,7 +4,7 @@
   {
    "code": "analytics.read",
    "description": "قراءة التحليلات",
-   "guards_routes": 8
+   "guards_routes": 2
   },
   {
    "code": "audit.export",
@@ -19,7 +19,7 @@
   {
    "code": "content.manage",
    "description": "اللافتات والعروض والمحتوى",
-   "guards_routes": 30
+   "guards_routes": 17
   },
   {
    "code": "disputes.manage",
@@ -70,6 +70,11 @@
    ]
   },
   {
+   "code": "market.manage",
+   "description": "إدارة السوق: الأقسام والأصناف والمتاجر",
+   "guards_routes": 14
+  },
+  {
    "code": "merchants.manage",
    "description": "إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق)",
    "guards_routes": 10
@@ -111,7 +116,7 @@
   {
    "code": "orders.read",
    "description": "قراءة الطلبات ولوحة العمليات",
-   "guards_routes": 12
+   "guards_routes": 18
   },
   {
    "code": "payouts.decide",
@@ -146,7 +151,7 @@
   {
    "code": "settings.read",
    "description": "قراءة الإعدادات",
-   "guards_routes": 3
+   "guards_routes": 4
   },
   {
    "code": "settings.security.manage",
@@ -239,7 +244,7 @@
   }
  ],
  "route_policy": {
-  "rules": 261,
+  "rules": 263,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -254,6 +259,7 @@
    "finance.manage",
    "finance.read",
    "finance.recompute",
+   "market.manage",
    "merchants.manage",
    "merchants.read",
    "merchants.verify",
@@ -724,12 +730,6 @@
  ],
  "ops_map_perms": [
   {
-   "capability": "analytics.read",
-   "grants_layers": [
-    "VIEW_DEMAND_ANALYTICS"
-   ]
-  },
-  {
    "capability": "drivers.read",
    "grants_layers": [
     "VIEW_DRIVER_LOCATIONS"
@@ -752,7 +752,8 @@
    "grants_layers": [
     "VIEW_OPERATIONS_MAP",
     "VIEW_MERCHANT_LOCATIONS",
-    "VIEW_ACTIVE_ORDERS"
+    "VIEW_ACTIVE_ORDERS",
+    "VIEW_DEMAND_ANALYTICS"
    ]
   },
   {

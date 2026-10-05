@@ -24,6 +24,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCanCall } from "@/lib/policy";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
@@ -85,6 +86,9 @@ interface Data {
 
 export function RatingsView() {
   const router = useRouter();
+  // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
+  // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
+  const canProfile = useCanCall()("GET", "/users/{id}");
   const [min, setMin] = useState("3");
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
@@ -140,8 +144,9 @@ export function RatingsView() {
             {data.drivers.map((d) => (
               <li key={d.id}>
                 <button
-                  onClick={() => router.push(`/dashboard/users/${d.id}`)}
-                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start hover:bg-row-hover"
+                  onClick={canProfile ? () => router.push(`/dashboard/users/${d.id}`) : undefined}
+                  disabled={!canProfile}
+                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start enabled:hover:bg-row-hover disabled:cursor-default"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">{d.name}</span>

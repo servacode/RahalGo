@@ -59,6 +59,9 @@ import ImageUpload from "@/components/admin/ImageUpload";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
 import { useCanCall } from "@/lib/policy";
 
+/** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
+const MARKET_MEDIA = "/api/v1/admin/market/media";
+
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
 
@@ -557,7 +560,7 @@ function AddItemModal({
             </Select>
           ))}
 
-        <ImageUpload kind="menu_item" label={S.itemImage} onChange={setImageID} />
+        <ImageUpload path={MARKET_MEDIA} kind="menu_item" label={S.itemImage} onChange={setImageID} />
         <Input label={S.itemName} value={name} onChange={(e) => setName(e.target.value)} />
         {/* **سعرُ الشراء لا سعرُ البيع** — ما يقبضه المتجر، **والمنصةُ تحسب
             الهامشَ فوقه.** واللفظُ يقول أيَّهما، فـ«السعر» وحدَها تحتمل الاثنين. */}
@@ -646,6 +649,7 @@ function EditItemModal({
           {S.merchant}: <span className="font-medium text-ink">{item.merchant_name}</span>
         </p>
         <ImageUpload
+          path={MARKET_MEDIA}
           kind="menu_item"
           label={S.itemImage}
           initialUrl={item.image_url}

@@ -45,6 +45,7 @@ import {
 import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanCall } from "@/lib/policy";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 
 const OpsMapCanvas = dynamic(
@@ -512,6 +513,9 @@ export default function OpsMapPage() {
   const router = useRouter();
   const { capabilities } = useAuth();
   const canEmergencies = capabilities.includes("emergencies.manage");
+  // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
+  // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
+  const canProfile = useCanCall()("GET", "/users/{id}");
   const emergencies = useLiveData<{ emergencies: EmergencyPin[]; count: number }>(
     () =>
       canEmergencies && visible.emergencies
@@ -1301,9 +1305,11 @@ export default function OpsMapPage() {
                     )}
                   </dl>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Link href={`/dashboard/users?id=${selected.v.id}`}>
-                      <Button variant="secondary">{T.driver.openProfile}</Button>
-                    </Link>
+                    {canProfile && (
+                      <Link href={`/dashboard/users?id=${selected.v.id}`}>
+                        <Button variant="secondary">{T.driver.openProfile}</Button>
+                      </Link>
+                    )}
                     {selected.v.current_order && (
                       <Link href={`/dashboard/orders?id=${selected.v.current_order}`}>
                         <Button variant="secondary">{T.order.openPage}</Button>
@@ -1359,7 +1365,7 @@ export default function OpsMapPage() {
                     <Link href={`/dashboard/orders?id=${selected.v.id}`}>
                       <Button variant="secondary">{T.order.openPage}</Button>
                     </Link>
-                    {selected.v.driver_id && (
+                    {canProfile && selected.v.driver_id && (
                       <Link href={`/dashboard/users?id=${selected.v.driver_id}`}>
                         <Button variant="secondary">{T.driver.openProfile}</Button>
                       </Link>
