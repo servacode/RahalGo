@@ -631,6 +631,7 @@ function ActionModal({
         </p>
         {cash && (
           <Input
+            id="obl-amount"
             label={O.amountField}
             type="number"
             min={1}
@@ -639,7 +640,7 @@ function ActionModal({
             onChange={(e) => setAmount(e.target.value)}
           />
         )}
-        <Input label={O.reasonField} value={note} onChange={(e) => setNote(e.target.value)} />
+        <Input id="obl-note" label={O.reasonField} value={note} onChange={(e) => setNote(e.target.value)} />
         {err && <Alert tone="error">{err}</Alert>}
         <div className="flex gap-2">
           <Button onClick={send} disabled={busy || !note.trim() || (cash && !(Number(amount) > 0))}>

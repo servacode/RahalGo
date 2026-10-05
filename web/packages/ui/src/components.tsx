@@ -5,7 +5,7 @@
  * كل الأنماط من توكنز الثيم المركزي، وكلها RTL-جاهزة (خصائص منطقية فقط).
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, fmtNum, getDir } from "@rahalgo/i18n";
 import { IconView, IconViewOff, IconCheck, IconClose } from "./icons";
@@ -183,10 +183,15 @@ export function Input({
   const flipped = !!props.dir && props.dir !== getDir(defaultLocale);
   const padStart = icon ? (flipped ? "pe-10" : "ps-10") : flipped ? "pe-3" : "ps-3";
   const padEnd = isPassword ? (flipped ? "ps-10" : "pe-10") : flipped ? "ps-3" : "pe-3";
+  // **والعنوانُ مربوطٌ بحقله ولو لم يُعطَ معرّفاً** — حقلٌ بلا `id` كان عنوانُه
+  // نصّاً لا يُقرأ له (قارئُ الشاشة والضغطُ على العنوان). (فحصُ المال ٢٠٢٦-١٠-٠٥:
+  // نافذةُ «دفع نقدي بالمكتب» في الديون.)
+  const autoId = useId();
+  const fieldId = id ?? autoId;
   return (
     <div className={wrapperClassName}>
       {label && (
-        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
+        <label htmlFor={fieldId} className="mb-1.5 block text-sm font-medium text-ink">
           {label}
         </label>
       )}
@@ -198,7 +203,7 @@ export function Input({
           </span>
         )}
         <input
-          id={id}
+          id={fieldId}
           type={effectiveType}
           {...props}
           /* ══════════════════════════════════════════════════════════
