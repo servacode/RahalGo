@@ -9,7 +9,8 @@
  */
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { useCanOpen } from "@/lib/policy";
+import { OpenLink } from "@/components/admin/OpenLink";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
@@ -79,6 +80,8 @@ export function CaseTable({
   noDisputeLabel?: string;
 }) {
   const [view, setView] = useViewMode(screen);
+  // **وملفُّ الطرف والطلبُ لمن يُفتحان له** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+  const open = useCanOpen();
   const partyOne = C.partyOne as Record<string, string>;
   const statusOne = C.statusOne as Record<string, string>;
 
@@ -106,9 +109,13 @@ export function CaseTable({
       cell: (x) =>
         x.partyId && x.partyRole ? (
           <span>
-            <Link href={partyHref(x.partyRole, x.partyId)} className="font-medium text-primary-dark hover:underline">
+            <OpenLink
+              allowed={x.partyRole === "merchant" ? open.merchant : open.user}
+              href={partyHref(x.partyRole, x.partyId)}
+              className="font-medium text-primary-dark hover:underline"
+            >
               {x.partyName || "—"}
-            </Link>{" "}
+            </OpenLink>{" "}
             <Badge variant="neutral">{partyOne[x.partyRole] ?? x.partyRole}</Badge>
             {(x.waivedBefore ?? 0) > 0 && (
               <span className="block text-xs text-warning">
@@ -134,9 +141,14 @@ export function CaseTable({
         x.orderNumber == null ? (
           "—"
         ) : x.orderId ? (
-          <Link href={`/dashboard/orders?id=${x.orderId}`} dir="ltr" className="text-primary-dark hover:underline">
+          <OpenLink
+            allowed={open.order}
+            href={`/dashboard/orders?id=${x.orderId}`}
+            dir="ltr"
+            className="text-primary-dark hover:underline"
+          >
             #{fmtRef(x.orderNumber)}
-          </Link>
+          </OpenLink>
         ) : (
           <span dir="ltr">#{fmtRef(x.orderNumber)}</span>
         ),

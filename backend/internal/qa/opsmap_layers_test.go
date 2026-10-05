@@ -202,7 +202,9 @@ func TestOpsMap_PrivacyMoneyHiddenWithoutPermission(t *testing.T) {
 	}
 	// **واسمُ المندوب يظهر للعمليات** (لها `VIEW_REP_ACTIVITY`)
 	// **ولا يظهر للماليّة.**
-	fin := h.NewUser("finance").Token
+	// **والماليّةُ لم تعد تفتح الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — فمراقبُ المنصّة
+	// يقيس العقدَ: يقرأ الطلباتِ ولا يملك نشاطَ المندوبين.
+	fin := h.NewUser("platform_monitor").Token
 	for _, x := range merchantsOf(t, h, fin, "") {
 		if x.Rep != nil {
 			t.Fatalf("الماليّةُ ترى مندوبَ المتجر %q", *x.Rep)

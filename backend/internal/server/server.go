@@ -1188,6 +1188,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/market/test-data/delete", s.handleMarketTestDataDelete)
 			// **وصورُ السوق من بابها** بقائمةٍ بيضاء (قرارُ المالك ٢٠٢٦-١٠-٠٥).
 			r.Post("/market/media", s.handleMarketUploadMedia)
+			// **وصنفُ السوق من بابه** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — المعالِجُ نفسُه
+			// الذي يخدم ملفَّ المتجر، **بقدرة السوق لا بقدرة إدارة المتاجر.**
+			r.Post("/market/stores/{id}/items", s.handleCreateItem)
+			r.Patch("/market/items/{itemID}", s.handleUpdateItem)
 			r.Get("/merchants", s.handleListMerchants)
 			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
 			// **ومتجران متشابها الاسم يُخلطان.**

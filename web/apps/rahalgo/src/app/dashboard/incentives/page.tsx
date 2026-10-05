@@ -54,7 +54,7 @@ import {
 } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCanCall } from "@/lib/policy";
+import { useCanCall, useCanOpen } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.incentives;
@@ -151,6 +151,7 @@ export default function IncentivesPage() {
   const canCall = useCanCall();
   const canGrant = canCall("POST", "/users/{id}/incentive");
   const canDecide = canCall("POST", "/incentive-requests/{id}/approve");
+  const canSettings = useCanOpen().settings;
 
   /** **والفشلُ ليس فراغاً** — «لا أحدَ بلغ» على قراءةٍ فشلت قرارُ مالٍ على زور. */
   const [data, setData] = useState<PageData | null | "failed">(null);
@@ -397,10 +398,13 @@ export default function IncentivesPage() {
             title={P.stagesTitle}
             icon={IconTarget}
             actions={
-              <ButtonLink href="/dashboard/settings" variant="secondary">
-                <IconSettings size={14} />
-                {P.editInSettings}
-              </ButtonLink>
+              // **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها.
+              canSettings ? (
+                <ButtonLink href="/dashboard/settings" variant="secondary">
+                  <IconSettings size={14} />
+                  {P.editInSettings}
+                </ButtonLink>
+              ) : undefined
             }
           >
             {data.levels.length === 0 ? (

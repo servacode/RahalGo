@@ -158,7 +158,9 @@ func TestACC_MoneyHiddenFromNonFinanceStaff(t *testing.T) {
 	// **والعمليّاتُ لم تعد تقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — فالثقةُ والأمان
 	// تقيس العقدَ نفسَه: تقرأ الحسابَ ولا تملك المال (والدعمُ يراه بقرار ٢٠٢٦-١٠-٠٤).
 	ops := h.NewUser("trust_safety")
-	fin := h.NewUser("finance")
+	// **والماليّةُ لم تعد تقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0422`) — فقارئُ
+	// الحساب الذي يملك المالَ يقيس العقدَ: ثقةٌ وأمانٌ + ماليّة.
+	_, finTok := capUser(t, h, "trust_safety", "finance")
 
 	got := h.GET("/api/v1/admin/users/"+target.ID, ops.Token).JSON()
 	if got["money_hidden"] != true || got["balance"] != float64(0) {
@@ -168,7 +170,7 @@ func TestACC_MoneyHiddenFromNonFinanceStaff(t *testing.T) {
 	if list["money_hidden"] != true {
 		t.Errorf("**القائمةُ لم تحجب المال**: %v", list["money_hidden"])
 	}
-	if f := h.GET("/api/v1/admin/users/"+target.ID, fin.Token).JSON(); f["balance"] != float64(4321) {
+	if f := h.GET("/api/v1/admin/users/"+target.ID, finTok).JSON(); f["balance"] != float64(4321) {
 		t.Errorf("الماليّةُ لا ترى الرصيد: %v", f["balance"])
 	}
 }

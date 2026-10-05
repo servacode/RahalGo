@@ -137,7 +137,8 @@ func TestR15_A1A2A3_RevokedRoleStopsAuthorizing(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 func TestR15_A4_MultiRoleKeepsRemaining(t *testing.T) {
 	hh := New(t)
-	u, tok, _ := staffToken(t, hh, privRole, "finance")
+	// **والباقي دعمُ العملاء** — يقرأ الطلبات (والماليّةُ لم تعد تقرؤها — هجرة `0422`).
+	u, tok, _ := staffToken(t, hh, privRole, "customer_support")
 
 	if got := revokeRole(t, hh, u.ID, privRole); got.Code >= 400 {
 		t.Fatalf("سحبُ الدور: %s", got)
@@ -149,13 +150,13 @@ func TestR15_A4_MultiRoleKeepsRemaining(t *testing.T) {
 		t.Fatalf("الأدوارُ الباقية: %v", err)
 	}
 
-	// **والبابُ يقبل `finance` أيضاً** — **فيبقى مفتوحاً بدورٍ لم
+	// **والبابُ يقبل `customer_support` أيضاً** — **فيبقى مفتوحاً بدورٍ لم
 	// يُسحَب**، وذاك عينُ المقصود: **لا يُختزَل الحسابُ إلى «لا
 	// صلاحيّةَ له».**
 	shared := hh.GET(adminPath, tok)
 	t.Logf("A4: الباقي=%v · البابُ المشترك ⇒ %d", left, shared.Code)
 
-	if len(left) != 1 || left[0] != "finance" {
+	if len(left) != 1 || left[0] != "customer_support" {
 		t.Fatalf("**التركيبةُ خطأ**: الباقي %v", left)
 	}
 	if shared.Code != http.StatusOK {

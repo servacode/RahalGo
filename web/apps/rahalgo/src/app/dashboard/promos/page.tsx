@@ -89,7 +89,8 @@ const PER_PAGE = 20;
 
 export default function PromosPage() {
   const { can } = useAuth();
-  const isAdmin = can("content.manage");
+  // **وإنشاءُ الأكواد وتحريرُها بقدرة العروض** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — لا المحتوى.
+  const isAdmin = can("offers.manage");
   const isFinance = can("finance.read");
   const [tab, setTab] = useState<"codes" | "discounts" | "referrals">("codes");
   const [summary, setSummary] = useState<Summary | null>(null);

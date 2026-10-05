@@ -19,7 +19,6 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtDate, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -30,6 +29,7 @@ import {
   EmptyState,
   Input,
   LoadingState,
+  Modal,
   Money,
   PageContainer,
   PageHeader,
@@ -52,6 +52,9 @@ import {
 import { api, apiFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { DriverCashReceive } from "@/components/admin/DriverCashReceive";
+import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
+import { OpenLink } from "@/components/admin/OpenLink";
+import { useCanOpen } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.cashOutstanding;
@@ -162,6 +165,8 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
   // **وتسويةُ نقدِ السائق قيدٌ ماليّ** — بقدرة بابها لا باسم دور.
   const canSettle = can("finance.manage");
   const canExport = can("finance.export");
+  // **وملفُّ السائق لمن يفتح الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — والتسويةُ هنا.
+  const canUser = useCanOpen().user;
   const [view, setView] = useViewMode("cash-outstanding");
   const [target, setTarget] = useState<Holder | null>(null);
   const [query, setQuery] = useState("");
@@ -214,12 +219,12 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
       header: m.terms.driver,
       icon: <IconUser />,
       cell: (h) => (
-        <Link href={`/dashboard/users/${h.driver_id}`} className="flex flex-col hover:underline">
+        <OpenLink allowed={canUser} href={`/dashboard/users/${h.driver_id}`} className="flex flex-col hover:underline">
           <span className="font-medium">{h.name || h.phone}</span>
           <span className="text-2xs text-ink-muted" dir="ltr">
             {h.phone}
           </span>
-        </Link>
+        </OpenLink>
       ),
     },
     {
@@ -405,9 +410,15 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
  * **مستحقّاتُ المتاجر نقداً — كلُّها في مكانٍ واحد.**
  *
  * أيّاً كانت طريقةُ المتجر اليوم: متجرٌ له مستحقٌّ نقديٌّ ثمّ حُوّل إلى المحفظة
- * يبقى هنا حتّى يُدفع (المشكلة ٣). والدفعُ من ملفّ المتجر.
+ * يبقى هنا حتّى يُدفع (المشكلة ٣). **والدفعُ من هنا** بزرّ «المستحقات» (٢٠٢٦-١٠-٠٥).
  */
 function StoresCash() {
+  const { can } = useAuth();
+  // **ومستحقّاتُ المتجر تُدفع من هنا** (قرارُ المالك ٢٠٢٦-١٠-٠٥): كانت «تُدفع من ملفّ
+  // المتجر» — **والماليّةُ لا تفتح ملفَّ المتجر** (`merchants.read`)، فبقي الزرُّ وراء ٤٠٣.
+  const canMerchant = useCanOpen().merchant;
+  const canPayView = can("finance.read");
+  const [paying, setPaying] = useState<StoreDue | null>(null);
   const { data, error, reload } = useLiveData<{ merchants: StoreDue[]; total: number }>(
     () => api("/api/v1/admin/cash/merchant-dues"),
     ["wallet", "order"],
@@ -422,9 +433,9 @@ function StoresCash() {
       header: C.storeName,
       icon: <IconStore />,
       cell: (d) => (
-        <Link href={`/dashboard/merchants/${d.merchant_id}`} className="font-medium hover:underline">
+        <OpenLink allowed={canMerchant} href={`/dashboard/merchants/${d.merchant_id}`} className="font-medium hover:underline">
           {d.name}
-        </Link>
+        </OpenLink>
       ),
     },
     { id: "due", header: C.storeOutstanding, cell: (d) => <Money value={d.outstanding} small /> },
@@ -442,6 +453,19 @@ function StoresCash() {
         <Badge variant="neutral">{d.settlement_method === "wallet" ? C.methodWallet : C.methodCash}</Badge>
       ),
     },
+    ...(canPayView
+      ? [
+          {
+            id: "pay",
+            header: C.storePay,
+            cell: (d: StoreDue) => (
+              <Button variant="secondary" onClick={() => setPaying(d)}>
+                {C.storePay}
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -454,6 +478,11 @@ function StoresCash() {
         <EmptyState icon={IconStatus} title={C.storesEmpty} />
       ) : (
         <DataView items={rows} getKey={(d) => d.merchant_id} columns={columns} view="table" empty={C.storesEmpty} />
+      )}
+      {paying && (
+        <Modal open size="lg" onClose={() => setPaying(null)} title={C.storePayTitle.replace("{name}", paying.name)}>
+          <MerchantSettlement merchantId={paying.merchant_id} method={paying.settlement_method} onChanged={reload} />
+        </Modal>
       )}
     </>
   );

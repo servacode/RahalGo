@@ -22,6 +22,7 @@ import {
   IconWallet,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useCanOpen } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.promosOwner;
@@ -53,6 +54,7 @@ interface Resp {
 }
 
 export default function PromoReferralsTab() {
+  const canSettings = useCanOpen().settings;
   const [data, setData] = useState<Resp | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
@@ -112,9 +114,12 @@ export default function PromoReferralsTab() {
                 {O.refRest}: {fmtMoney(s.reward_rest)}
               </li>
             </ul>
-            <Link href="/dashboard/settings" className="text-accent underline">
-              {O.refEditInSettings}
-            </Link>
+            {/* **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
+            {canSettings && (
+              <Link href="/dashboard/settings" className="text-accent underline">
+                {O.refEditInSettings}
+              </Link>
+            )}
           </div>
         </>
       )}

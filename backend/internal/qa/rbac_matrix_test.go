@@ -66,9 +66,11 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 		//
 		// **والأمنيّةُ تبقى ممنوعةً عنه** — ويُقاس في
 		// `TestADG2_RoleMatrix`.
+		// **ثمّ نُزعت** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0422`): الماليّةُ لا ترى الإعدادات —
+		// **ومنها سقوفُ التعويض والمحفظة: من يُقيَّد بالسقف لا يرفعه.**
 		{"finance", "settings.financial", "PUT",
 			"/api/v1/admin/settings/merchants.commission_percent",
-			map[string]any{"value": 11}, false},
+			map[string]any{"value": 11}, true},
 		{"finance", "settings.security", "PUT",
 			"/api/v1/admin/settings/security.session_days",
 			map[string]any{"value": 20}, true},
@@ -103,7 +105,8 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 		// ── قراءةٌ إداريّةٌ عامّة ──────────────────────────────────
 		// **والعمليّاتُ لا تقرأ دليلَ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0420`).
 		{"operations", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, true},
-		{"finance", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, false},
+		// **ولا الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0422`).
+		{"finance", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, true},
 
 		// ── ودورٌ غيرُ إداريٍّ أصلاً ───────────────────────────────
 		{"driver", "users.read", "GET", "/api/v1/admin/users?limit=1", nil, true},

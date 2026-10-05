@@ -65,3 +65,29 @@ export function useCanCall(): (method: string, pattern: string) => boolean {
     [can],
   );
 }
+
+/**
+ * useCanOpen **أيُفتح ملفُّ الحساب أو المتجر أو الطلب لصاحب الجلسة؟**
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-٠٥: الماليّةُ لا ترى الطلباتِ ولا الحسابات.) **فرابطٌ إلى
+ * ملفٍّ لا يُفتح له يُرسَم نصّاً لا رابطاً** — ورؤيةُ بابٍ يُردّ ٤٠٣ أسوأُ من غيابه.
+ */
+export function useCanOpen(): {
+  user: boolean;
+  merchant: boolean;
+  order: boolean;
+  settings: boolean;
+} {
+  const { can } = useAuth();
+  const canCall = useCanCall();
+  return {
+    user: canCall("GET", "/users/{id}"),
+    merchant: canCall("GET", "/merchants/{id}"),
+    order: canCall("GET", "/orders/{id}"),
+    // **وصفحةُ الإعدادات بشرط بندها في القائمة الجانبيّة** — أيُّ درجةِ كتابة.
+    settings:
+      can("settings.general.manage") ||
+      can("settings.financial.manage") ||
+      can("settings.security.manage"),
+  };
+}

@@ -16,7 +16,6 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   getMessages,
   defaultLocale,
@@ -61,6 +60,8 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanCall, useCanOpen } from "@/lib/policy";
+import { OpenLink } from "@/components/admin/OpenLink";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.compensations;
@@ -135,6 +136,10 @@ function toQuery(f: Filters, page: number): string {
 export default function CompensationsPage() {
   const { can } = useAuth();
   const canDecide = can("finance.manage");
+  // **والحسابُ والطلبُ والشكوى لمن تُفتح له** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ
+  // لا ترى الطلباتِ ولا الحساباتِ ولا الشكاوى — فتُقرأ نصّاً لا رابطاً.
+  const open = useCanOpen();
+  const canTickets = useCanCall()("GET", "/tickets");
   const [view, setView] = useViewMode("compensations");
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>(EMPTY);
@@ -208,9 +213,9 @@ export default function CompensationsPage() {
       primary: true,
       cell: (c) => (
         <span>
-          <Link href={`/dashboard/users/${c.driver_id}`} className="text-primary-dark hover:underline">
+          <OpenLink allowed={open.user} href={`/dashboard/users/${c.driver_id}`} className="text-primary-dark hover:underline">
             {c.driver_name}
-          </Link>{" "}
+          </OpenLink>{" "}
           <span className="text-xs text-ink-muted">{ROLES[c.beneficiary_role] ?? ""}</span>
         </span>
       ),
@@ -223,18 +228,19 @@ export default function CompensationsPage() {
       cell: (c) => (
         <span className="flex flex-col">
           {c.order_number > 0 && (
-            <Link
+            <OpenLink
+              allowed={open.order}
               href={`/dashboard/orders?q=${c.order_number}`}
               className="font-bold text-primary-dark hover:underline"
               dir="ltr"
             >
               #{fmtRef(c.order_number)}
-            </Link>
+            </OpenLink>
           )}
           {c.ticket_number > 0 && (
-            <Link href="/dashboard/tickets" className="text-xs text-primary-dark hover:underline">
+            <OpenLink allowed={canTickets} href="/dashboard/tickets" className="text-xs text-primary-dark hover:underline">
               {C.ticketRef.replace("{n}", fmtNum(c.ticket_number))}
-            </Link>
+            </OpenLink>
           )}
         </span>
       ),
@@ -519,6 +525,7 @@ function DecideModal({
   onDone: () => void;
 }) {
   const [amount, setAmount] = useState(String(item.suggested_amount > 0 ? item.suggested_amount : ""));
+  const canOrder = useCanOpen().order;
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -570,13 +577,14 @@ function DecideModal({
             </p>
           )}
           {item.order_number > 0 && (
-            <Link
+            <OpenLink
+              allowed={canOrder}
               href={`/dashboard/orders?q=${item.order_number}`}
               className="text-xs text-primary-dark hover:underline"
               dir="ltr"
             >
               #{fmtRef(item.order_number)}
-            </Link>
+            </OpenLink>
           )}
         </div>
         {item.fault_mismatch && (

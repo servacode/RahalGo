@@ -12,7 +12,6 @@
  */
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   getMessages,
   defaultLocale,
@@ -50,6 +49,8 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanOpen } from "@/lib/policy";
+import { OpenLink } from "@/components/admin/OpenLink";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.obligations;
@@ -207,6 +208,8 @@ const partyHref = (o: Obligation) =>
 
 export default function ObligationsPage() {
   const { user: me } = useAuth();
+  // **وملفُّ الطرف والطلبُ لمن يُفتحان له** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+  const canOpen = useCanOpen();
   const [f, setF] = useState<Filters>(EMPTY);
   const [ready, setReady] = useState(false);
   const [page, setPage] = useState(1);
@@ -435,9 +438,14 @@ export default function ObligationsPage() {
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-1.5 font-bold">
                         {o.party_kind === "merchant" ? <IconStore size={15} /> : <IconUser size={15} />}
-                        <Link href={partyHref(o)} className="hover:underline" title={O.openParty}>
+                        <OpenLink
+                          allowed={o.party_kind === "merchant" ? canOpen.merchant : canOpen.user}
+                          href={partyHref(o)}
+                          className="hover:underline"
+                          title={O.openParty}
+                        >
                           {o.party_name || "—"}
-                        </Link>
+                        </OpenLink>
                         <Badge variant="neutral">{O.kinds[o.party_kind]}</Badge>
                         {!f.party && (
                           <button
@@ -458,14 +466,15 @@ export default function ObligationsPage() {
                     </span>
 
                     {o.order_number != null && o.order_id && (
-                      <Link
+                      <OpenLink
+                        allowed={canOpen.order}
                         href={`/dashboard/orders?id=${o.order_id}`}
                         dir="ltr"
                         title={O.openOrder}
                         className="flex shrink-0 items-center gap-1 text-sm text-ink-muted hover:underline"
                       >
                         <IconOrder size={14} />#{fmtRef(o.order_number)}
-                      </Link>
+                      </OpenLink>
                     )}
 
                     <span className="shrink-0 text-end">
