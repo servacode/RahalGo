@@ -303,7 +303,7 @@ export default function Header({
           /* **و«التطبيقات» تُرى على الجوّال أيضاً** (طلبُ المالك ٢٠٢٦-١٠-٠٥:
              «على الجوّال ما بيطلع للرئيسيّة ولا تحميل التطبيق») — **والرئيسيّةُ
              الشعار، وتواصلُ معنا في التذييل.** */
-          className={l.href === "/download" ? "ms-1 flex" : "ms-1 hidden lg:flex"}
+          className="ms-0.5 flex !px-2 sm:!px-3 lg:ms-1"
         >
           <span>{l.label}</span>
         </TopBarLink>
