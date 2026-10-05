@@ -23,9 +23,11 @@ package incentives
 import (
 	"context"
 	"errors"
-	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"strings"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 // damascus **شهرُ السائق ينتهي عنده لا في غرينتش.**
@@ -85,20 +87,36 @@ func prefixOf(role string) string {
 //
 // **وأرقامُ الدورين مستقلّة**: السائقُ يعدّ طلبات، والمندوبُ عملاء.
 func (s *Service) levelsFor(ctx context.Context, role string) []Level {
+	return levelsFrom(ctx, s.settings, role)
+}
+
+// levelsOn **المراحلُ مقروءةً بالمعاملة الممسوكة** — `XG-48`.
+//
+// **كانت تُقرأ من المَسبَح ومعاملةُ الصرف ممسكةٌ بوصلة**، فبمَسبَحٍ من وصلةٍ
+// واحدةٍ جمد تسليمُ الطلب (الصرفُ بعده يفتح معاملته ثمّ يطلب وصلةً ثانيةً
+// للإعدادات). **والمخزنُ الحقيقيُّ يُبدَّل منفّذُه**؛ وغيرُه (اختبارات) يُقرأ كما هو.
+func (s *Service) levelsOn(ctx context.Context, q dbtx.Querier, role string) []Level {
+	if st, ok := s.settings.(*settings.Store); ok && st != nil {
+		return levelsFrom(ctx, st.On(q), role)
+	}
+	return levelsFrom(ctx, s.settings, role)
+}
+
+func levelsFrom(ctx context.Context, st Settings, role string) []Level {
 	p := prefixOf(role)
 	if p == "" {
 		return nil
 	}
 	return []Level{
 		{N: 1,
-			Target: s.settings.GetInt(ctx, p+"monthly_target"),
-			Reward: s.settings.GetInt(ctx, p+"target_reward")},
+			Target: st.GetInt(ctx, p+"monthly_target"),
+			Reward: st.GetInt(ctx, p+"target_reward")},
 		{N: 2,
-			Target: s.settings.GetInt(ctx, p+"target_2"),
-			Reward: s.settings.GetInt(ctx, p+"reward_2")},
+			Target: st.GetInt(ctx, p+"target_2"),
+			Reward: st.GetInt(ctx, p+"reward_2")},
 		{N: 3,
-			Target: s.settings.GetInt(ctx, p+"target_3"),
-			Reward: s.settings.GetInt(ctx, p+"reward_3")},
+			Target: st.GetInt(ctx, p+"target_3"),
+			Reward: st.GetInt(ctx, p+"reward_3")},
 	}
 }
 
@@ -141,7 +159,7 @@ func (s *Service) GrantTargetIfReachedTx(ctx context.Context, tx dbtx.Querier,
 // مكافأةٌ تُصرف لموقوفٍ تُقرأ مكافأةً على ما أوقف بسببه.
 func (s *Service) grantForMonthTx(ctx context.Context, tx dbtx.Querier,
 	userID, role, month string) (int64, error) {
-	levels := s.levelsFor(ctx, role)
+	levels := s.levelsOn(ctx, tx, role)
 	if len(levels) == 0 {
 		return 0, nil
 	}
