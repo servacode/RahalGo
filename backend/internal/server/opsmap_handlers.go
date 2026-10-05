@@ -21,8 +21,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/opsmap"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // requirePerm حارسُ صلاحيّةٍ مسمّاة.
@@ -107,6 +109,8 @@ func (s *Server) handleOpsMapDrivers(w http.ResponseWriter, r *http.Request) {
 		OnShift:   boolParam(r, "on_shift"),
 		HasActive: boolParam(r, "has_active"),
 		Stale:     boolParam(r, "stale"),
+		// **والهاتفُ لمن يملك قراءةَ الاتّصال** — زرّا الاتّصال وواتساب.
+		WithPhone: hasCap(r, authz.UsersContactRead),
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
 
@@ -138,6 +142,7 @@ func (s *Server) handleOpsMapMerchants(w http.ResponseWriter, r *http.Request) {
 		Search:    strings.TrimSpace(q.Get("q")),
 		OpenNow:   boolParam(r, "open_now"),
 		HasActive: boolParam(r, "has_active"),
+		WithPhone: hasCap(r, authz.UsersContactRead),
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	// **واسمُ المندوب لمن يراقب نشاطَ المندوبين وحدَه** (البند ٩).
@@ -165,6 +170,9 @@ func (s *Server) handleOpsMapOrders(w http.ResponseWriter, r *http.Request) {
 		DriverID:   q.Get("driver_id"),
 		Search:     strings.TrimSpace(q.Get("q")),
 		Unassigned: boolParam(r, "unassigned"),
+		// **والعالقُ بشرط لوحة الطلبات** — والأحمرُ على الخريطة منه.
+		Stuck:        s.stuckLimits(r),
+		WithCustomer: hasCap(r, authz.OrdersCustomerDetailsRead),
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	money := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewMoney)
@@ -504,4 +512,167 @@ func (s *Server) handleOpsMapSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"hits": hits, "count": len(hits)})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الشريطُ والزبائنُ والمكتب — قرارُ المالك ٢٠٢٦-١٠-٠٥**
+// ══════════════════════════════════════════════════════════════════════
+
+// stuckLimits **مهلُ العلوق كما ضبطها المالك** — وبلا خدمةِ طلباتٍ لا حكم.
+func (s *Server) stuckLimits(r *http.Request) *orders.StuckLimits {
+	if s.orders == nil {
+		return nil
+	}
+	l := s.orders.StuckLimitsOf(r.Context())
+	return &l
+}
+
+// handleOpsMapSummary **عدّاداتُ الشريط** — `GET /admin/ops-map/summary`.
+//
+// **وكلُّ عدّادٍ بالحكم الذي يلوّن الخريطة** (`DriverTone` · `StuckReasonSQL` ·
+// `OpenNowSQL`) — فلا يقول الشريطُ رقماً وتعرض الخريطةُ غيرَه. **ولا قسمَ
+// لمن لا يملك طبقتَه**: يغيب مفتاحُه ولا يُرسَل صفراً يكذب.
+func (s *Server) handleOpsMapSummary(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	caps := capabilitiesFrom(r)
+	out := map[string]any{}
+
+	if opsmap.Allows(caps, opsmap.PermViewDrivers) {
+		ping := s.settings.GetNum(ctx, "drivers.location_ping_sec", 60)
+		list, err := opsmap.Drivers(ctx, s.pg, nil, opsmap.DriverFilter{}, ping, false, 0)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out["drivers"] = opsmap.CountDrivers(list)
+	}
+	if opsmap.Allows(caps, opsmap.PermViewOrders) {
+		f := opsmap.OrderFilter{
+			Stuck:        s.stuckLimits(r),
+			WithCustomer: hasCap(r, authz.OrdersCustomerDetailsRead),
+		}
+		money := opsmap.Allows(caps, opsmap.PermViewMoney)
+		list, err := opsmap.ActiveOrders(ctx, s.pg, nil, f, money, 0)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		stuck := 0
+		for _, o := range list {
+			if o.StuckReason != nil {
+				stuck++
+			}
+		}
+		out["orders"] = map[string]any{
+			"active": len(list), "stuck": stuck,
+			// **والأوّلُ كاملاً** — فنقرةُ «عالق» تفتح بطاقتَه ولو كانت طبقةُ
+			// الطلبات مطفأة.
+			"first_stuck": opsmap.FirstStuck(list),
+		}
+		cells, err := opsmap.CustomerCells(ctx, s.pg, nil)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		n := 0
+		for _, c := range cells {
+			n += c.Count
+		}
+		out["customers"] = map[string]any{"total": n, "cells": len(cells)}
+	}
+	if opsmap.Allows(caps, opsmap.PermViewMerchants) {
+		list, err := opsmap.Merchants(ctx, s.pg, nil, opsmap.MerchantFilter{}, false, 0)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		open := 0
+		for _, m := range list {
+			if m.OpenNow {
+				open++
+			}
+		}
+		out["merchants"] = map[string]any{"total": len(list), "open": open}
+	}
+	if opsmap.Allows(caps, opsmap.PermViewRepActivity) {
+		var n int
+		if err := s.pg.QueryRow(ctx, `
+			SELECT count(DISTINCT m.sales_rep_user_id) FROM merchants m
+			WHERE m.sales_rep_user_id IS NOT NULL AND m.location IS NOT NULL`).Scan(&n); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out["reps"] = n
+	}
+	staff, err := opsmap.OnlineStaff(ctx, s.pg,
+		authz.RolesInClass(authz.ClassAccountType), s.staffPresenceMin(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out["staff_online"] = len(staff)
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// staffPresenceMin **نافذةُ «في المكتب»** — الإعدادُ نفسُه الذي يقرؤه القبولُ
+// التلقائيُّ حين يفرغ المكتب (`orders.staff_presence_min`).
+func (s *Server) staffPresenceMin(r *http.Request) int64 {
+	n := s.settings.GetNum(r.Context(), "orders.staff_presence_min", 5)
+	if n <= 0 {
+		return 5
+	}
+	return n
+}
+
+// handleOpsMapCustomers **الزبائنُ خلايا مجمَّعة** — `GET /admin/ops-map/customers`.
+//
+// **مركزُ خليّةٍ وعددٌ لا غير** — ولا معرّفَ ولا اسمَ ولا هاتف، **وخليّةٌ دون
+// `CustomerMinCount` لا تُرسَل** (انظر `opsmap.CustomerCells`).
+func (s *Server) handleOpsMapCustomers(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	cells, err := opsmap.CustomerCells(r.Context(), s.pg, box)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	total := 0
+	for _, c := range cells {
+		total += c.Count
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"cells": cells, "count": len(cells), "total": total,
+		"cell_deg": opsmap.CustomerCellDeg, "min_count": opsmap.CustomerMinCount,
+	})
+}
+
+// handleOpsMapOffice **المكتب** — `GET /admin/ops-map/office`.
+//
+// **شعارُ المنصّة في موضعها** (`platform.logo` · `platform.location` ·
+// `platform.address` — إعداداتُ صفحة التواصل، مصدرٌ واحد)، **ومن في اللوحة
+// الآن**: اسمٌ ودورٌ لا غير، بإشارة الحضور التي يقرؤها القبولُ التلقائيّ.
+func (s *Server) handleOpsMapOffice(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	win := s.staffPresenceMin(r)
+	staff, err := opsmap.OnlineStaff(ctx, s.pg,
+		authz.RolesInClass(authz.ClassAccountType), win)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out := map[string]any{
+		"name":         s.settings.GetString(ctx, "platform.name"),
+		"address":      s.settings.GetString(ctx, "platform.address"),
+		"logo":         s.platformLogo(r),
+		"staff":        staff,
+		"presence_min": win,
+		"has_location": false,
+	}
+	if la, ln, ok := orders.ParseGeoSetting(s.settings.GetString(ctx, "platform.location")); ok {
+		out["lat"], out["lng"], out["has_location"] = la, ln, true
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }

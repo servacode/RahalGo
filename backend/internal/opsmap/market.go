@@ -21,8 +21,8 @@ import (
 
 // Merchant متجرٌ على الخريطة.
 //
-// **ولا هاتفَ ولا دَين** (البند ٣٣) — **معلوماتٌ تشغيليّةٌ مختصرة**
-// (البند ٩)، ومن أراد الملفَّ فتحه.
+// **ولا دَين، ولا هاتفَ إلّا لمن يملك `users.contact.read`** (البند ٣٣) —
+// **معلوماتٌ تشغيليّةٌ مختصرة** (البند ٩)، ومن أراد الملفَّ فتحه.
 type Merchant struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
@@ -37,6 +37,10 @@ type Merchant struct {
 	// RepName **مندوبُه** — **ولمن يملك `VIEW_REP_ACTIVITY` وحدَه**
 	// (البند ٩).
 	RepName *string `json:"rep,omitempty"`
+
+	// Phone **هاتفُ المتجر — لمن يملك `users.contact.read` وحدَه** (زرُّ
+	// الاتّصال في بطاقته).
+	Phone *string `json:"phone,omitempty"`
 }
 
 // MerchantFilter مُرشِّحاتُ طبقة المتاجر.
@@ -47,6 +51,9 @@ type MerchantFilter struct {
 	// HasActive متجرٌ عليه طلبٌ جارٍ.
 	HasActive *bool
 	Search    string
+
+	// WithPhone **أيُرسَل هاتفُ المتجر؟** — خيارُ ردٍّ بقدرة `users.contact.read`.
+	WithPhone bool
 }
 
 // Merchants متاجرُ المشهد.
@@ -102,7 +109,7 @@ func Merchants(ctx context.Context, q Querier, box *BBox, f MerchantFilter,
 		       c.name, m.address_text,
 		       (SELECT count(*) FROM orders o
 		         WHERE o.merchant_id = m.id AND o.closed_at IS NULL),
-		       rep.full_name
+		       rep.full_name, m.phone::text
 		FROM merchants m
 		LEFT JOIN cities c ON c.id = m.city_id
 		LEFT JOIN users rep ON rep.id = m.sales_rep_user_id
@@ -120,9 +127,13 @@ func Merchants(ctx context.Context, q Querier, box *BBox, f MerchantFilter,
 	for rows.Next() {
 		var x Merchant
 		var rep *string
+		var phone string
 		if err := rows.Scan(&x.ID, &x.Name, &x.Status, &x.Lat, &x.Lng,
-			&x.OpenNow, &x.CityName, &x.AreaText, &x.ActiveN, &rep); err != nil {
+			&x.OpenNow, &x.CityName, &x.AreaText, &x.ActiveN, &rep, &phone); err != nil {
 			return nil, err
+		}
+		if f.WithPhone && phone != "" {
+			x.Phone = &phone
 		}
 		if withRep {
 			x.RepName = rep
@@ -173,6 +184,15 @@ type Order struct {
 	Total         *int64  `json:"total,omitempty"`
 	PaymentMethod *string `json:"payment_method,omitempty"`
 	DeliveryFee   *int64  `json:"delivery_fee,omitempty"`
+
+	// StuckReason **سببُ العلوق أو غيابُه** — بشرط لوحة الطلبات
+	// (`orders.StuckReasonSQL`): `emergency` · `no_accept` · `not_sent` ·
+	// `no_driver` · `too_long`. **والأحمرُ على الخريطة منه وحدَه.**
+	StuckReason *string `json:"stuck_reason,omitempty"`
+
+	// CustomerName **اسمُ الزبون — لمن يملك `orders.customer_details.read`
+	// وحدَه.** ولا هاتفَ هنا لأحد.
+	CustomerName *string `json:"customer_name,omitempty"`
 }
 
 // OrderFilter مُرشِّحاتُ طبقة الطلبات.
@@ -184,6 +204,11 @@ type OrderFilter struct {
 	DriverID   string
 	// Search رقمُ طلبٍ أو جزءٌ منه.
 	Search string
+
+	// Stuck **مهلُ العلوق** — وفارغُها لا حكمَ علوق (خيارُ ردّ لا مرشِّح).
+	Stuck *orders.StuckLimits
+	// WithCustomer **أيُرسَل اسمُ الزبون؟** — بقدرة `orders.customer_details.read`.
+	WithCustomer bool
 }
 
 // ActiveOrders طلباتُ المشهد الحيّة.
@@ -239,10 +264,12 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		       d.id::text, d.full_name,
 		       ST_Y(d.last_location::geometry), ST_X(d.last_location::geometry),
 		       o.created_at, o.accepted_at, o.picked_up_at,
-		       o.total, o.payment_method, o.delivery_fee
+		       o.total, o.payment_method, o.delivery_fee,
+		       ` + stuckColumn(f.Stuck) + `, cu.full_name
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users d ON d.id = o.driver_id
+		LEFT JOIN users cu ON cu.id = o.customer_id
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY o.created_at DESC
 		LIMIT ` + fmt.Sprint(limit)
@@ -257,14 +284,17 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 	for rows.Next() {
 		var x Order
 		var total, fee *int64
-		var pay *string
+		var pay, cust *string
 		if err := rows.Scan(&x.ID, &x.Number, &x.Status, &x.Kind,
 			&x.DropLat, &x.DropLng, &x.Address,
 			&x.MerchantID, &x.MerchantName, &x.PickLat, &x.PickLng,
 			&x.DriverID, &x.DriverName, &x.DriverLat, &x.DriverLng,
 			&x.CreatedAt, &x.AcceptedAt, &x.PickedUpAt,
-			&total, &pay, &fee); err != nil {
+			&total, &pay, &fee, &x.StuckReason, &cust); err != nil {
 			return nil, err
+		}
+		if f.WithCustomer {
+			x.CustomerName = cust
 		}
 		if withMoney {
 			x.Total, x.PaymentMethod, x.DeliveryFee = total, pay, fee

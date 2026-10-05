@@ -1068,6 +1068,12 @@ func (s *Server) Router() http.Handler {
 				r.Get("/merchants", s.requirePerm(opsmap.PermViewMerchants, s.handleOpsMapMerchants))
 				r.Get("/orders", s.requirePerm(opsmap.PermViewOrders, s.handleOpsMapOrders))
 
+				// **الشريطُ والزبائنُ والمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥) —
+				// **والزبائنُ خلايا مجمَّعةٌ لا بيوت**، والمكتبُ اسمٌ ودورٌ لمن حضر.
+				r.Get("/summary", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapSummary))
+				r.Get("/customers", s.requirePerm(opsmap.PermViewOrders, s.handleOpsMapCustomers))
+				r.Get("/office", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapOffice))
+
 				// **والتغطيةُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **رسمُ مضلَّعٍ يبدّل من تصله المنصّة.**
 				r.Get("/coverage", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapCoverage))

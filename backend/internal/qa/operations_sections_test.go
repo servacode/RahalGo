@@ -130,6 +130,8 @@ func TestOpsSections_PagesWorkAndOthersDenied(t *testing.T) {
 		a + "/ops-map/orders", a + "/ops-map/drivers", a + "/ops-map/merchants",
 		a + "/ops-map/demand", a + "/ops-map/opportunities", a + "/ops-map/coverage-requests",
 		a + "/ops-map/coverage-demand/places",
+		// شريطُ الخريطة وزبائنُها المجمَّعون ومكتبُها (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+		a + "/ops-map/summary", a + "/ops-map/customers", a + "/ops-map/office",
 		// طلبات التوسّع — بلا `analytics.read`.
 		a + "/ops-map/expansion", a + "/ops-map/expansion/reminder",
 		// مراقبة التشغيل.
