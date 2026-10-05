@@ -26,29 +26,55 @@
   البيانات»** — فالقائمةُ أدناه مقيسةٌ من أذونات الحزمة ومن أعمدة
   القاعدة، لا مكتوبةٌ من عادة.
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap">
 <style>
-  :root{ --canvas:#fff; --ink:#07283a; --muted:#5a6b75; --brand:#02678f; --line:#e3e8eb; }
-  @media (prefers-color-scheme: dark){
-    :root{ --canvas:#07283a; --ink:#eef3f6; --muted:#9fb0ba; --line:#123648; }
-  }
+  /* **بلباس الموقع نفسِه** (طلبُ المالك ٢٠٢٦-١٠-٠٥: «تصميمها ماله علاقة
+     بالموقع أبداً») — الأرضُ الداكنةُ المتدرّجة وخطُّ «تجوال» والبطاقاتُ
+     الزجاجيّة. **والنصُّ لم يُمسّ**: غوغل قارنه بنموذج أمان البيانات. */
+  :root{ --ink:#ffffff; --muted:#ddeff7; --accent:#7ff0d4; --accent-text:#a8f6e2;
+         --primary:#6fd3ea; --line:rgb(255 255 255 / .22); --surface:rgb(0 12 20 / .5);
+         --danger:#ffaeb8; }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--canvas);color:var(--ink);line-height:1.9;
-    font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}
-  main{max-width:760px;margin:0 auto;padding:32px 20px 64px}
-  h1{font-size:1.6rem;margin:0 0 4px}
-  .sub{color:var(--muted);margin:0 0 28px;font-size:.9rem}
-  h2{font-size:1.1rem;margin:32px 0 8px;color:var(--brand)}
-  ul{padding-inline-start:22px;margin:8px 0}
+  html{background:#06303a}
+  body{margin:0;min-height:100vh;color:var(--ink);line-height:1.9;font-weight:500;
+    font-family:"Tajawal",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+    background:linear-gradient(135deg,#0f6b6a 0%,#0b4a6b 45%,#16397a 75%,#3a2b86 100%) fixed}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    max-width:820px;margin:0 auto;padding:18px 20px 0}
+  .brand{color:var(--ink);text-decoration:none;font-weight:800;font-size:1.25rem}
+  .home{color:var(--muted);text-decoration:none;font-size:.9rem;border:1px solid var(--line);
+    border-radius:12px;padding:6px 14px}
+  main{max-width:820px;margin:0 auto;padding:24px 20px 64px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;
+    padding:28px 24px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  h1{font-size:1.7rem;font-weight:800;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 24px;font-size:.9rem}
+  h2{font-size:1.15rem;font-weight:800;margin:30px 0 8px;color:var(--accent-text)}
+  p,li{color:var(--muted)}
+  strong{color:var(--ink)}
+  ul,ol{padding-inline-start:22px;margin:8px 0}
   li{margin:6px 0}
+  .tbl{overflow-x:auto}
   table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.92rem}
-  th,td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top}
-  th{background:color-mix(in srgb,var(--brand) 7%,transparent)}
-  a{color:var(--brand)}
-  .box{border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:24px}
+  th,td{border:1px solid var(--line);padding:10px;text-align:right;vertical-align:top;color:var(--muted)}
+  th{color:var(--ink);background:rgb(127 240 212 / .1)}
+  a{color:var(--accent-text)}
+  .box{border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:22px;
+    background:rgb(255 255 255 / .04)}
+  .warn{border-color:var(--danger);background:rgb(255 174 184 / .08)}
+  .btn{display:inline-block;background:var(--accent);color:#03202c;text-decoration:none;
+    border-radius:12px;padding:12px 20px;font-weight:800;margin-top:8px}
 </style>
 </head>
 <body>
+<header class="top">
+  <a class="brand" href="https://rahalgo.com/">رحّال غو</a>
+  <a class="home" href="https://rahalgo.com/">الرئيسية</a>
+</header>
 <main>
+<div class="card">
   <h1>سياسة الخصوصية</h1>
   <p class="sub">تطبيق رحال غو · آخر تحديث: 19 آب 2026</p>
 
@@ -59,7 +85,7 @@
   </p>
 
   <h2>ما نجمعه ولماذا</h2>
-  <table>
+  <div class="tbl"><table>
     <tr><th>البيان</th><th>لماذا</th><th>متى</th></tr>
     <tr>
       <td>رقم الهاتف</td>
@@ -91,7 +117,7 @@
       <td>لتتابع طلبك، وللرجوع إليها عند أي خلاف</td>
       <td>عند الطلب</td>
     </tr>
-  </table>
+  </table></div>
 
   <h2>ما لا نجمعه</h2>
   <ul>
@@ -134,6 +160,7 @@
       <a href="mailto:servacode@gmail.com">servacode@gmail.com</a>
     </p>
   </div>
+</div>
 </main>
 </body>
 </html>

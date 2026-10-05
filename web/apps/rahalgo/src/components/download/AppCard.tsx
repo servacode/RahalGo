@@ -20,7 +20,7 @@ import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Badge, ButtonLink } from "@rahalgo/ui";
 import type { Release } from "@/lib/releases";
-import { megabytes } from "@/lib/releases";
+import { downloadHref, megabytes } from "@/lib/releases";
 
 const m = getMessages(defaultLocale);
 const D = m.site.download;
@@ -75,10 +75,24 @@ export function AppCard({ release }: { release: Release }) {
           ) : null}
         </div>
       </dl>
-      <div className="mt-auto pt-2">
-        <ButtonLink href={`/download/${release.key}`} variant="secondary">
-          {D.open}
-        </ButtonLink>
+      {/* **وزرُّ التحميل على البطاقة نفسِها** (قرارُ المالك ٢٠٢٦-١٠-٠٥): «مافي
+          داعي افتح الصفحة، زر تحميل التطبيق وخلص». **والزبونُ زرّان**: غوغل
+          بلاي ورابطٌ مباشر — **وما لم يُرفع لا زرَّ له.** */}
+      <div className="mt-auto flex flex-wrap gap-2 pt-2">
+        {release.play_url ? <ButtonLink href={release.play_url}>{D.playCta}</ButtonLink> : null}
+        {downloadHref(release) ? (
+          <ButtonLink
+            href={downloadHref(release)}
+            variant={release.play_url ? "secondary" : "primary"}
+          >
+            {D.directCta}
+          </ButtonLink>
+        ) : null}
+        {!live ? (
+          <p className="text-sm text-ink-muted">
+            {release.channel === "play" ? D.soonPlay : D.soonDirect}
+          </p>
+        ) : null}
       </div>
     </article>
   );
