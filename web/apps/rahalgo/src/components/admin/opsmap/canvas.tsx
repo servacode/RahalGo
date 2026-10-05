@@ -62,6 +62,8 @@ export interface LayerSpec {
   visible: boolean;
   /** **ترتيبُ الرسم** — الأصغرُ أسفل. */
   order: number;
+  /** **عرضُ الخطّ بالبكسل** لطبقات `fill` و`line` — افتراضُه ٢. */
+  lineWidth?: number;
 }
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -184,12 +186,12 @@ export function OpsMapCanvas({
         } as never);
         m.addLayer({
           id: `${spec.id}-line`, type: "line", source: srcID,
-          paint: { "line-color": spec.color as never, "line-width": 2 },
+          paint: { "line-color": spec.color as never, "line-width": spec.lineWidth ?? 2 },
         } as never);
       } else if (spec.kind === "line") {
         m.addLayer({
           id: spec.id, type: "line", source: srcID,
-          paint: { "line-color": spec.color as never, "line-width": 2, "line-dasharray": [2, 2] },
+          paint: { "line-color": spec.color as never, "line-width": spec.lineWidth ?? 2, "line-dasharray": [2, 2] },
         } as never);
       } else if (spec.kind === "circle-m") {
         m.addLayer({

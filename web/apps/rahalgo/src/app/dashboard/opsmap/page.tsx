@@ -647,7 +647,10 @@ export default function OpsMapPage() {
       kind: "fill",
       order: 11,
       visible: !!visible.coverage,
-      color: themeColor("accent"),
+      // **لونٌ قويٌّ وخطٌّ عريض** (طلبُ المالك ٢٠٢٦-١٠-٠٥): النعناعيُّ الباهت
+      // كان لا يُرى على الخريطة.
+      color: themeColor("cta-end"),
+      lineWidth: 3,
       data: fc(
         zoneList
           .filter((z) => z.shape === "polygon" && z.area && z.active)
@@ -667,7 +670,8 @@ export default function OpsMapPage() {
       kind: "line",
       order: 12,
       visible: draft.length > 1,
-      color: themeColor("warning"),
+      color: themeColor("cta-end"),
+      lineWidth: 4,
       data: fc(
         draft.length > 1
           ? [
