@@ -473,8 +473,8 @@ func (s *Server) overviewDay(ctx context.Context, from, to time.Time) (ovDay, er
 			(SELECT round((avg(EXTRACT(EPOCH FROM delivered_at - created_at)) / 60)::numeric, 1)::float8
 			   FROM orders WHERE status = 'delivered'
 			   AND delivered_at >= $1 AND delivered_at < $2),
-			(SELECT count(*) FROM user_roles WHERE role_code = 'customer'
-			   AND granted_at >= $1 AND granted_at < $2),
+			(SELECT count(*) FROM user_roles ur WHERE ur.role_code = 'customer'
+			   AND ur.granted_at >= $1 AND ur.granted_at < $2 AND NOT EXISTS (SELECT 1 FROM user_roles n WHERE n.user_id = ur.user_id AND n.role_code <> 'customer')),
 			(SELECT round(avg(platform_stars)::numeric, 1)::float8 FROM order_ratings
 			   WHERE created_at >= $1 AND created_at < $2 AND platform_stars IS NOT NULL),
 			(SELECT round(avg(driver_stars)::numeric, 1)::float8 FROM order_ratings
@@ -498,7 +498,11 @@ func (s *Server) overviewPlatform(ctx context.Context, today, week time.Time) (o
 		SELECT role_code, count(*),
 		       count(*) FILTER (WHERE granted_at >= $1),
 		       count(*) FILTER (WHERE granted_at >= $2)
-		FROM user_roles GROUP BY role_code ORDER BY role_code`, today, week)
+		FROM user_roles ur
+		-- **و«الزبون» زبونٌ فقط** — لا السائقُ ولا المتجرُ ولا الموظّف وإن حملوا دورَ الزبون.
+		WHERE ur.role_code <> 'customer'
+		   OR NOT EXISTS (SELECT 1 FROM user_roles n WHERE n.user_id = ur.user_id AND n.role_code <> 'customer')
+		GROUP BY role_code ORDER BY role_code`, today, week)
 	if err != nil {
 		return p, err
 	}

@@ -131,7 +131,7 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			 FROM orders o, day WHERE o.status = 'delivered' AND o.delivered_at >= day.start),
 			(SELECT COALESCE(sum(held), 0) FROM driver_cash_boxes),
 
-			(SELECT count(*) FROM user_roles WHERE role_code = 'customer'),
+			(SELECT count(*) FROM user_roles ur WHERE ur.role_code = 'customer' AND NOT EXISTS (SELECT 1 FROM user_roles n WHERE n.user_id = ur.user_id AND n.role_code <> 'customer')),
 			(SELECT count(*) FROM user_roles WHERE role_code = 'driver'),
 			(SELECT count(*) FROM user_roles WHERE role_code = 'sales'),
 			(SELECT count(*) FROM merchants WHERE status = 'active'),

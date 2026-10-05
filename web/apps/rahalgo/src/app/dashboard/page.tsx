@@ -515,14 +515,14 @@ export default function DashboardPage() {
             value={show(data.money.compensations_amount, fmtMoney)}
             sub={known(data.money.compensations_count) ? H.compensationsSub.replace("{n}", fmtNum(data.money.compensations_count)) : undefined}
             tone={known(data.money.compensations_amount) && data.money.compensations_amount === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/losses")}
+            onClick={go("/dashboard/compensations")}
           />
           <StatCard
             icon={IconBalance}
             label={H.losses}
             value={show(data.money.losses, fmtMoney)}
             tone={known(data.money.losses) && data.money.losses === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/losses")}
+            onClick={go("/dashboard/profits")}
           />
         </StatGrid>
       </Section>
