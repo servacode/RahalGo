@@ -41,10 +41,16 @@ export default async function Page() {
       <p className="mt-2 text-muted">{D.lead}</p>
 
       {/* **وشبكةٌ تنطبق على عمودٍ في الجوّال** — والأكثرُ يفتحها منه. */}
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-        {apps.map((r) => (
-          <AppCard key={r.key} release={r} />
-        ))}
+      <div className="mx-auto mt-8 grid max-w-xl grid-cols-1 gap-4">
+        {/* **والصفحةُ العامّةُ لتطبيق رحّال غو وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥: «ما
+            بدّي أيّ شخص يتصفّح الموقع يشوف كلّ التطبيقات، ما بيهمّه غير تطبيق
+            الزبون»). **وتطبيقاتُ الفريق بروابطها المباشرة** (`/download/driver` ·
+            `/merchant` · `/rep`) — **وهي ما تحمله رسالةُ الترحيب لكلّ حساب.** */}
+        {apps
+          .filter((r) => r.key === "customer")
+          .map((r) => (
+            <AppCard key={r.key} release={r} />
+          ))}
       </div>
     </main>
   );
