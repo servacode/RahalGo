@@ -1978,7 +1978,7 @@
           "role": "الدور",
           "roles": "الأدوار",
           "phone": "الرقم",
-          "before": "مقبول",
+          "before": "قبل",
           "after": "بعد",
           "amount": "المبلغ",
           "kind": "النوع",
@@ -1988,8 +1988,15 @@
           "name": "الاسم",
           "count": "العدد",
           "to": "إلى",
-          "id": "المعرف"
+          "id": "المعرف",
+          "from": "من",
+          "rows": "عدد الصفوف",
+          "closed": "المغلقة",
+          "open": "الجارية",
+          "query": "البحث"
         },
+        "detailYes": "نعم",
+        "detailNo": "لا",
         "tabs": {
           "overview": "نظرة عامة",
           "wallet": "سجل المحفظة",
@@ -2013,7 +2020,16 @@
             "cancelled": "ملغى",
             "rejected": "مرفوض",
             "failed": "فاشل",
-            "refunded": "مسترجع"
+            "refunded": "مسترجع",
+            "open": "مفتوح",
+            "resolved": "مغلق",
+            "pending": "معلّق",
+            "processing": "قيد التنفيذ",
+            "paid": "مدفوع",
+            "reversed": "مُعاد",
+            "approved": "مقبول",
+            "settled": "مُسوّى",
+            "waived": "مُعفى"
           },
           "showingLatest": "المعروض أحدث {n} من {all}"
         },

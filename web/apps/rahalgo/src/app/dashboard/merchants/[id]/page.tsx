@@ -47,6 +47,8 @@ import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
+import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
+import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.merchantProfile;
@@ -97,15 +99,25 @@ export default function MerchantProfilePage() {
   const [violationsOpen, setViolationsOpen] = useState(false);
   const [error, setError] = useState("");
   const [savingReturns, setSavingReturns] = useState(false);
+  // **ومن لا يملك قراءةَ المتجر لا يُنادي بابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
+  // المالية تصل الصفحةَ من ملفّ صاحب المتجر، فكانت تُردّ ٤٠٣ وتُعرض
+  // رسالةَ الخطأ حمراءَ بدل «غير مسموح».
+  const canCall = useCanCall();
+  const canRead = canCall("GET", "/merchants/{id}");
+  const canEditMenu = canCall("POST", "/merchants/{id}/menu/items");
+  const canEdit = canCall("PATCH", "/merchants/{id}");
+  const canEditHours = canCall("PUT", "/merchants/{id}/hours");
+  const canViolations = canCall("GET", "/merchants/{id}/violations");
 
   const load = useCallback(async () => {
+    if (!canRead) return;
     try {
       setMr(await api<Merchant>(`/api/v1/admin/merchants/${id}`));
       setError("");
     } catch (err) {
       setError(errorText(err));
     }
-  }, [id]);
+  }, [id, canRead]);
 
   /** بندُ الاسترداد — يُحفظ فوراً ثمّ يُعاد التحميلُ ليُقرأ من القاعدة. */
   const setAcceptsReturns = useCallback(
@@ -130,6 +142,7 @@ export default function MerchantProfilePage() {
     void load();
   }, [load]);
 
+  if (!canRead) return <NotAllowed />;
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!mr) return <LoadingState />;
 
@@ -181,12 +194,14 @@ export default function MerchantProfilePage() {
       </StatGrid>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => setViolationsOpen(true)}>
-          <span className="flex items-center gap-1.5">
-            <IconWarning size={15} />
-            {m.admin.merchants.violationsLog.viewLog}
-          </span>
-        </Button>
+        {canViolations && (
+          <Button variant="secondary" onClick={() => setViolationsOpen(true)}>
+            <span className="flex items-center gap-1.5">
+              <IconWarning size={15} />
+              {m.admin.merchants.violationsLog.viewLog}
+            </span>
+          </Button>
+        )}
         {/* **وصاحبُه حسابٌ آخر له ملفُّه** — والرابطُ ظاهرٌ ولا يُدمجان. */}
         {mr.owner_user_id && (
           <Button
@@ -223,7 +238,7 @@ export default function MerchantProfilePage() {
                 <button
                   key={String(v)}
                   type="button"
-                  disabled={savingReturns}
+                  disabled={savingReturns || !canEdit}
                   onClick={() => void setAcceptsReturns(v)}
                   className={`rounded-control border px-3 py-1 text-sm transition-colors ${
                     mr.accepts_returns === v
@@ -240,13 +255,14 @@ export default function MerchantProfilePage() {
         <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
         </>
       )}
-      {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice />}
+      {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice readOnly={!canEditMenu} />}
       {tab === "hours" && (
         <div className="surface p-4">
           <StoreHours
             api={api}
             path={`/api/v1/admin/merchants/${mr.id}/hours`}
-            emergency={{
+            readOnly={!canEditHours}
+            emergency={canEdit ? {
               value: mr.emergency_closed,
               save: async (v) => {
                 await api(`/api/v1/admin/merchants/${mr.id}`, {
@@ -255,7 +271,7 @@ export default function MerchantProfilePage() {
                 });
                 await load();
               },
-            }}
+            } : undefined}
           />
         </div>
       )}

@@ -154,10 +154,14 @@ func seedOrders(ctx context.Context, tx pgx.Tx) {
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
 				payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
-				notes, cancel_reason, created_at, updated_at)
+				notes, cancel_reason, created_at, updated_at, delivered_at, closed_at)
 			VALUES ($1, $2, $3, $4, $5,
 				ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography,
-				$8, $9, $10, $11, $12, $13, $14, $15, $16, $16)
+				$8, $9, $10, $11, $12, $13, $14, $15, $16, $16,
+				-- **والمُغلَقُ يُختم بإغلاقه** — طلبٌ مسلَّمٌ بلا ختمِ إغلاق
+				-- يُعدّ في «الجاري» على الرئيسية ويُنذر به الراصدُ عالقاً.
+				CASE WHEN $4 = 'delivered' THEN $16::timestamptz END,
+				CASE WHEN $4 IN ('delivered', 'cancelled', 'failed', 'rejected') THEN $16::timestamptz END)
 			RETURNING id`,
 			customer, merchant, drv, o.Status, addr, lng, lat,
 			o.Pay, subtotal, deliveryFee, total, walletPaid, cashDue,

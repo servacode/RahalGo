@@ -48,7 +48,8 @@ var accounts = []struct {
 	WalletBalance               int64
 }{
 	{"+963999000001", "مدير المنصة", "RahalGo@2026", "admin", "", 0},
-	{"+963955333444", "سارة العمليات", "Ops@2026", "ops", "", 0},
+	{"+963955333444", "سارة العمليات", "Ops@2026", "operations", "", 0},
+	{"+963955555666", "ريم الدعم", "Support@2026", "customer_support", "", 0},
 	{"+963955444555", "منى المالية", "Finance@2026", "finance", "", 0},
 	{"+963977888999", "أحمد المندوب", "Rep@2026", "sales", "RH-DEMO1", 0},
 	{"+963955111222", "محمد السائق", "Driver@2026", "driver", "", 0},
@@ -131,7 +132,7 @@ func main() {
 	ids := map[string]string{} // phone → user id
 	for _, a := range accounts {
 		// وضع الطاقم: الأدوار الثلاثة التي تُدير المنصة لا التي تستعملها
-		if *staffOnly && a.Role != "admin" && a.Role != "ops" && a.Role != "finance" {
+		if *staffOnly && a.Role != "admin" && a.Role != "operations" && a.Role != "finance" && a.Role != "customer_support" {
 			continue
 		}
 		hash, err := auth.HashPassword(a.Password)
@@ -167,6 +168,15 @@ func main() {
 			INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
 			ON CONFLICT DO NOTHING`, id, a.Role); err != nil {
 			log.Fatalf("role %s: %v", a.Phone, err)
+		}
+		// **ومديرُ المنصة هو المالكُ الأعلى** — الترحيل 0270 يمنحه لحامل
+		// `admin` الموجود ساعتَها، وقاعدةٌ نظيفةٌ لا حاملَ فيها بعد.
+		if a.Role == "admin" {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'owner_super_admin')
+				ON CONFLICT DO NOTHING`, id); err != nil {
+				log.Fatalf("owner role %s: %v", a.Phone, err)
+			}
 		}
 		// دورُ الزبون للأدوار الميدانية — بالمفتاح المركزي لا بشرطٍ محلّي
 		for _, extra := range fieldRoles(a.Role)[1:] {
@@ -251,7 +261,7 @@ func main() {
 
 	fmt.Println("✅ الزراعة اكتملت — الحسابات:")
 	for _, a := range accounts {
-		if *staffOnly && a.Role != "admin" && a.Role != "ops" && a.Role != "finance" {
+		if *staffOnly && a.Role != "admin" && a.Role != "operations" && a.Role != "finance" && a.Role != "customer_support" {
 			continue
 		}
 		fmt.Printf("  %-14s %-28s %-10s %s\n", a.Phone, a.Name, a.Role, a.Password)

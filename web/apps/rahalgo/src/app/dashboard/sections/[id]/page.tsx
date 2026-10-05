@@ -56,6 +56,8 @@ import {
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/admin/ImageUpload";
+import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
+import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
@@ -131,8 +133,13 @@ export default function SectionPage() {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<SectionItem | null>(null);
   const [error, setError] = useState("");
+  // **ومن لا يملك السوقَ لا يُنادي أبوابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
+  // المالية تفتح رابطَ قسمٍ فتُردّ ٤٠٣ وتُعرض رسالةُ الخطأ حمراء.
+  const canCall = useCanCall();
+  const canRead = canCall("GET", "/sections");
 
   const load = useCallback(async () => {
+    if (!canRead) return;
     try {
       // **القسمُ من قائمته** — والقائمةُ قصيرةٌ دائماً (عشرةُ أقسامٍ أو نحوها)،
       // **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
@@ -165,7 +172,7 @@ export default function SectionPage() {
     } catch (err) {
       setError(errorText(err));
     }
-  }, [id, page, q, state]);
+  }, [id, page, q, state, canRead]);
 
   /**
    * **قلبُ الإتاحة — زرٌّ واحدٌ يقول الحال.**
@@ -186,6 +193,7 @@ export default function SectionPage() {
     void load();
   }, [load]);
 
+  if (!canRead) return <NotAllowed />;
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!rows || !sec) return <LoadingState />;
 

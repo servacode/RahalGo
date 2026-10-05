@@ -15,6 +15,8 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
+import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
+import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 
@@ -35,12 +37,19 @@ export default function AdminMenuPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [name, setName] = useState("");
+  // **ومن لا يقرأ قائمةَ المتجر لا يُعرض له محرّرُها** (فحصُ المتصفّح
+  // ٢٠٢٦-١٠-٠٥): كانت المالية ترى «صنف جديد» والصفحةُ تنادي أربعةَ أبوابٍ
+  // كلُّها ٤٠٣.
+  const canCall = useCanCall();
+  const canRead = canCall("GET", "/merchants/{id}/menu");
+  const canEdit = canCall("POST", "/merchants/{id}/menu/items");
 
   useEffect(() => {
+    if (!canRead) return;
     api<{ merchants: Merchant[] }>("/api/v1/admin/merchants?per_page=100")
       .then((p) => setName(p.merchants.find((x) => x.id === id)?.name ?? ""))
       .catch(() => undefined);
-  }, [id]);
+  }, [id, canRead]);
 
   return (
     <PageContainer>
@@ -62,8 +71,9 @@ export default function AdminMenuPage() {
         </Button>
       </div>
 
-      <MenuManager
+      {!canRead ? <NotAllowed /> : <MenuManager
         showSalePrice
+        readOnly={!canEdit}
         api={api}
         paths={PATHS}
         merchantID={id}
@@ -77,7 +87,7 @@ export default function AdminMenuPage() {
         )}
         thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={48} />}
         mediaUrl={mediaUrl}
-      />
+      />}
     </PageContainer>
   );
 }

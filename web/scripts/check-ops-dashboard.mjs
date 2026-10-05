@@ -270,7 +270,12 @@ if (layout === "") problems.push("تخطيطُ اللوحة لم يُقرأ");
         "**وبندٌ بلا شرطٍ يظهر لمن لا يفتحه** (`R-34`)",
     );
   }
-  if (!lay.includes("landed.current = true; router.replace(first.href);")) {
+  // **والصفحةُ لا تُرسَم قبل التحويل** (`mustLand`) — وإلّا نادت ما لا
+  // يملكه الدورُ فرُدّت ٤٠٣ قبل أن يصل التحويل.
+  if (
+    !lay.includes("if (nav.some((i) => i.href === pathname)) return; router.replace(first.href);") ||
+    !lay.includes("|| mustLand) {")
+  ) {
     problems.push("**لا هبوطَ على أوّل بابٍ مملوك** — فصاحبُ القدرةِ يرى «الرئيسيّة» تُردّ ٤٠٣");
   }
   if (problems.length === 0) notes.push("بندُ المراقبة داخلَ قاعدة القدرات — والهبوطُ على أوّل بابٍ مملوك");

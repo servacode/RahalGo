@@ -1545,6 +1545,9 @@ function detailPairs(raw: string): { k: string; v: string }[] {
       v = REASONS[String(val)] ?? WARN_REASONS[String(val)] ?? String(val);
     } else if (k === "role") {
       v = roleLabelByCode(String(val));
+    } else if (typeof val === "boolean") {
+      // **و«true/false» إنكليزيّةٌ في لوحةٍ عربيّة** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥).
+      v = val ? P.detailYes : P.detailNo;
     } else if (typeof val === "object") {
       v = JSON.stringify(val);
     } else {
