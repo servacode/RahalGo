@@ -221,8 +221,10 @@ func sumOf(path string, fi os.FileInfo) (string, error) {
 // وملفُّها تبدّل **تنزل باسم القديم نفسِه** — فيفتح صاحبُها القديمَ من مجلَّده.
 func FileName(p Public) string {
 	parts := []string{}
-	if v := strings.TrimSpace(p.Version); v != "" {
-		parts = append(parts, safeTag(v))
+	// **ونسخةٌ بلا حرفٍ لاتينيٍّ أو رقمٍ لا تدخل الاسم** (٢٠٢٦-١٠-٠٥): كُتب
+	// «كابتن رحال غو» في حقل النسخة **فصار الاسمُ شُرَطاً متتالية.**
+	if v := safeTag(strings.TrimSpace(p.Version)); strings.Trim(v, "-._") != "" {
+		parts = append(parts, v)
 	}
 	if len(p.SHA256) >= 8 {
 		parts = append(parts, p.SHA256[:8])

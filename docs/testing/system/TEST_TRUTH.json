@@ -34,7 +34,7 @@
     "behaviour_settings": 154,
     "order_fields": 95,
     "test_files": 521,
-    "test_funcs": 2161
+    "test_funcs": 2162
   },
   "flows": [
     {
@@ -14308,7 +14308,7 @@
       "orphan": true
     },
     {
-      "name": "TestDLC5_CustomerDirectIsLockedByPolicy",
+      "name": "TestDLC5_CustomerDirectIsServedOnceProven",
       "file": "internal/qa/download_center_test.go",
       "package": "qa",
       "orphan": true
@@ -23531,7 +23531,13 @@
       "orphan": true
     },
     {
-      "name": "TestCustomerDirectOnlyOnStaging",
+      "name": "TestCustomerDirectOnProductionToo",
+      "file": "internal/release/public_staging_test.go",
+      "package": "release",
+      "orphan": true
+    },
+    {
+      "name": "TestFileNameSkipsArabicVersion",
       "file": "internal/release/public_staging_test.go",
       "package": "release",
       "orphan": true

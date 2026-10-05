@@ -192,32 +192,23 @@ func TestDLC4_MissingFileClosesTheDoor(t *testing.T) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// **DLC5 · تنزيلُ الزبون المباشرُ مقفَلٌ ولو زُرع الأثر**
+// **DLC5 · تنزيلُ الزبون المباشرُ مفتوحٌ بعد إثبات التوافق** (٢٠٢٦-١٠-٠٥)
 // ══════════════════════════════════════════════════════════════════════
 //
-// **وقرارُ المالك ٢٠٢٦-٠٩-١٣**: **لا ملفَّ زبونٍ مباشرٌ قبل إثبات
-// التوافق** (هويّةُ الحزمة · التوقيعُ · التحديثُ في الاتّجاهين).
-//
-// **والقفلُ في الحساب لا في الشاشة** — **ومن أقفله في الشاشة وحدَها
-// تركه مكشوفاً بمسارٍ مباشر.**
-func TestDLC5_CustomerDirectIsLockedByPolicy(t *testing.T) {
+// **كان مقفَلاً بقرار المالك ٢٠٢٦-٠٩-١٣ حتّى يُثبَت التوافق** — **وأُثبت**:
+// الملفُّ من Play Console بتوقيع Google نفسِه (`release.CustomerDirectAllowed`).
+// **فمن رُفع له ملفٌّ ظهر زرُّه وخُدم.**
+func TestDLC5_CustomerDirectIsServedOnceProven(t *testing.T) {
 	h := New(t)
-	dlcPlant(t, h, "customer", "1.0.6")
+	dlcPlant(t, h, "customer", "1.2.0")
 
-	apps := dlcApps(t, h)
-	c := apps["customer"]
-	t.Logf("DLC5 حالٌ=%v · تنزيلٌ=%q · حجمٌ=%v",
-		c["status"], c["download_url"], c["size_bytes"])
-
-	if c["download_url"] != "" {
-		t.Errorf("DLC5 **رابطُ تنزيلٍ مباشرٍ للزبون ظهر** — " +
-			"**والإثباتُ لم يُغلَق بعد**")
+	c := dlcApps(t, h)["customer"]
+	t.Logf("DLC5 حالٌ=%v · تنزيلٌ=%q", c["status"], c["download_url"])
+	if c["download_url"] == "" {
+		t.Errorf("DLC5 **ملفُّ الزبون مرفوعٌ ولا زرَّ له**: %v", c)
 	}
-	if got := dlcGet(t, h, "/api/v1/public/app/customer"); got.Code == http.StatusOK {
-		t.Errorf("DLC5 **خُدم ملفُّ الزبون من المسار المباشر**: %d", got.Code)
-	}
-	if release.CustomerDirectAllowed {
-		t.Error("DLC5 **الثابتُ مفتوحٌ** — ولا إثباتَ توافقٍ مسجَّل")
+	if got := dlcGet(t, h, "/api/v1/public/app/customer"); got.Code != http.StatusOK {
+		t.Errorf("DLC5 **ملفُّ الزبون لم يُخدَم**: %d", got.Code)
 	}
 }
 
