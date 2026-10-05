@@ -13,21 +13,28 @@
  * يُجاب بجدول.** «سائقٌ على الدوام في الطرف الآخر من المدينة وطلبٌ
  * ينتظر هنا» **حقيقةٌ في القاعدة منذ شهور ولا شاشةَ تقولها.**
  *
+ * # وشريطٌ علويٌّ لا صندوقُ مفاتيح (قرارُ المالك ٢٠٢٦-١٠-٠٥)
+ *
+ * **عدّاداتٌ حيّةٌ** («N سائق متاح · N طلب ماشي · N عالق · N متجر مفتوح»)،
+ * **وحبّاتٌ للطبقات الستّ الرئيسيّة** بعددها ولونها، **وما سواها في «طبقات
+ * إضافية»**. **ولونٌ ورمزٌ لكلّ نوعٍ وحالٍ من موضعٍ واحد** (`palette.ts`) —
+ * الخريطةُ والحبّةُ والدليلُ والبطاقةُ تقرؤه نفسَه.
+ *
  * # واللوحةُ الجانبيّةُ لا نافذةٌ منبثقة (البند ٣٧)
  *
  * **المنبثقةُ فوق الخريطة تحجب ما جاء ينظر إليه** — **واللوحةُ تُزيح
  * ولا تحجب**، ولا تصنع تمريراً أفقيّاً.
  *
- * # ولا تُعدَّل الأشياءُ كلُّها من هنا (البند ١٠)
+ * # ولا تتحرّك الكاميرا وحدَها
  *
- * **الخريطةُ تقول وتوصّل** — ومن أراد أن يعدّل طلباً فتح صفحتَه.
+ * **إلّا بنقرةٍ صريحة** — رقمُ «عالق» يطير إلى أوّل عالقٍ ويفتح بطاقتَه.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDateTime, fmtMoney, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -37,16 +44,36 @@ import {
   LoadingState,
   Alert,
   Checkbox,
+  Chips,
+  CountBadge,
   Input,
   Select,
+  IconPhone,
+  IconWhatsApp,
   useLiveData,
   themeColor,
 } from "@rahalgo/ui";
 import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
-import { api } from "@/lib/api";
+import { AssignDialog } from "@/components/admin/orders/AssignDialog";
+import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
-import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
+import { roleLabelByCode } from "@/lib/rolemeta";
+import type {
+  FeatureCollection,
+  FlyRequest,
+  LayerSpec,
+  MapMarker,
+} from "@/components/admin/opsmap/canvas";
+import {
+  MAP_TONES,
+  type MapTone,
+  driverTone,
+  mapIcons,
+  orderTone,
+  storeTone,
+  toneColor,
+} from "@/components/admin/opsmap/palette";
 
 const OpsMapCanvas = dynamic(
   () => import("@/components/admin/opsmap/canvas").then((m) => m.OpsMapCanvas),
@@ -78,6 +105,10 @@ interface Driver {
   last_location_at: string;
   age_sec: number;
   freshness: "LIVE" | "FRESH" | "STALE" | "NO_LOCATION";
+  /** **حالُه في لون** — من الخادم (`opsmap.DriverTone`). */
+  tone: "available" | "busy" | "idle";
+  /** **لمن يملك `users.contact.read` وحدَه.** */
+  phone?: string;
   cash_held?: number;
 }
 
@@ -92,6 +123,7 @@ interface Merchant {
   area?: string;
   active_orders: number;
   rep?: string;
+  phone?: string;
 }
 
 interface OrderPin {
@@ -116,6 +148,10 @@ interface OrderPin {
   total?: number;
   payment_method?: string;
   delivery_fee?: number;
+  /** **سببُ العلوق** — بشرط لوحة الطلبات. */
+  stuck_reason?: string;
+  /** **لمن يملك `orders.customer_details.read` وحدَه.** */
+  customer_name?: string;
 }
 
 interface Zone {
@@ -233,6 +269,28 @@ interface EmergencyPin {
   stale: boolean;
 }
 
+/** **عدّاداتُ الشريط** — وكلُّ قسمٍ يغيب لمن لا يملك طبقتَه. */
+interface Summary {
+  drivers?: { total: number; available: number; busy: number; idle: number };
+  orders?: { active: number; stuck: number; first_stuck: OrderPin | null };
+  merchants?: { total: number; open: number };
+  customers?: { total: number; cells: number };
+  reps?: number;
+  staff_online: number;
+}
+
+/** **المكتب** — شعارُ المنصّة في موضعها ومن في اللوحة الآن. */
+interface Office {
+  name: string;
+  address: string;
+  logo: string | null;
+  has_location: boolean;
+  lat?: number;
+  lng?: number;
+  presence_min: number;
+  staff: Array<{ name: string; roles: string[] }>;
+}
+
 /** **ما هو المُحدَّد؟** — واللوحةُ الجانبيّةُ واحدةٌ لكلّ الطبقات. */
 type Picked =
   | { kind: "driver"; v: Driver }
@@ -241,24 +299,21 @@ type Picked =
   | { kind: "zone"; v: Zone }
   | { kind: "request"; v: CovRequest }
   | { kind: "branch"; v: BranchPin }
-  | { kind: "opportunity"; v: OpportunityCell };
+  | { kind: "opportunity"; v: OpportunityCell }
+  | { kind: "customers"; v: DemandCell }
+  | { kind: "rep"; v: RepRow }
+  | { kind: "office" };
 
-/**
- * **ألوانُ الطزاجة — من الثيم لا من هنا.**
- *
- * **ولا لوحةَ ثانيةٌ تُولد** (وهي عينُ ما حُذف من `tokens.ts`): يُبدَّل
- * اللونُ في `theme.css` **فتتبعه الخريطةُ في التحديث نفسِه.**
- *
- * **والصفحةُ تُحمَّل `ssr: false`** — فالمتصفّحُ موجودٌ حين تُنادى.
- */
-function freshColors(): Record<string, string> {
-  return {
-    LIVE: themeColor("success"),
-    FRESH: themeColor("info"),
-    STALE: themeColor("danger-solid"),
-    NO_LOCATION: themeColor("disabled"),
-  };
-}
+/** **الطبقاتُ الستُّ في الشريط — بترتيب المالك.** */
+type MainLayer = "drivers" | "orders" | "merchants" | "customers" | "reps" | "office";
+
+/** **ما يُرى أوّلَ فتحة** — والمستخدمُ يبدّله فيُحفظ له. */
+const DEFAULT_VISIBLE: Record<string, boolean> = {
+  drivers: true,
+  orders: true,
+  merchants: true,
+  office: true,
+};
 
 function fc(features: FeatureCollection["features"]): FeatureCollection {
   return { type: "FeatureCollection", features };
@@ -273,33 +328,52 @@ function pt(lng: number, lat: number, props: Record<string, unknown>) {
   };
 }
 
+/** **رابطُ واتساب** — أرقامٌ فقط، والمحلّيُّ (`09…`) يُكمَّل برمز سوريا. */
+function waLink(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, "").replace(/^0/, "963");
+  return `https://wa.me/${digits}`;
+}
+
+/** **كم دقيقةً مضت** — والسالبُ (ساعةُ جهازٍ متقدّمة) صفر. */
+function minutesSince(iso: string): number {
+  const ms = Date.now() - Date.parse(iso);
+  return Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 60000) : 0;
+}
+
 export default function OpsMapPage() {
+  const router = useRouter();
+  const { capabilities, user } = useAuth();
+
   // ── حالُ الواجهة (البند ٣٨) ──────────────────────────────────
   //
-  // **ويُحفَظ ما يختاره المستخدم** — الطبقاتُ والمرشِّحات.
-  // **ولا يُحفَظ ما يشيخ**: البياناتُ تُجلَب دائماً، **فلا تُعرض قديمةٌ
-  // على أنّها حيّة.**
-  const [visible, setVisible] = useState<Record<string, boolean>>(() => {
-    if (typeof window === "undefined") return { drivers: true };
+  // **ويُحفَظ ما يختاره المستخدم لكلّ مستخدم** — موظّفان على جهازٍ واحدٍ
+  // لا يتقاسمان طبقاتهما. **ولا يُحفَظ ما يشيخ**: البياناتُ تُجلَب دائماً،
+  // **فلا تُعرض قديمةٌ على أنّها حيّة.**
+  const storeKey = `opsmap.layers.${user?.id ?? "anon"}`;
+  const [visible, setVisible] = useState<Record<string, boolean>>(DEFAULT_VISIBLE);
+  useEffect(() => {
     try {
-      const raw = window.localStorage.getItem("opsmap.layers");
-      if (raw) return JSON.parse(raw) as Record<string, boolean>;
+      const raw =
+        window.localStorage.getItem(storeKey) ?? window.localStorage.getItem("opsmap.layers");
+      setVisible(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE);
     } catch {
       /* تخزينٌ ممنوعٌ في نافذةٍ خاصّة — والافتراضُ يكفي */
     }
-    return { drivers: true };
-  });
-  const toggle = useCallback((id: string) => {
-    setVisible((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      try {
-        window.localStorage.setItem("opsmap.layers", JSON.stringify(next));
-      } catch {
-        /* لا يضرّ */
-      }
-      return next;
-    });
-  }, []);
+  }, [storeKey]);
+  const toggle = useCallback(
+    (id: string) => {
+      setVisible((prev) => {
+        const next = { ...prev, [id]: !prev[id] };
+        try {
+          window.localStorage.setItem(storeKey, JSON.stringify(next));
+        } catch {
+          /* لا يضرّ */
+        }
+        return next;
+      });
+    },
+    [storeKey],
+  );
 
   // **والمرشِّحاتُ من الرابط** — بطاقاتُ السائقين في رئيسيّة المدير تفتح هنا
   // على «على الدوام · فعّال · متفرّغ أو معه طلب» (قرارُ المالك ٢٠٢٦-١٠-٠٤).
@@ -316,6 +390,9 @@ export default function OpsMapPage() {
   );
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Picked | null>(null);
+  const [menu, setMenu] = useState<"" | "extra" | "legend">("");
+  const [fly, setFly] = useState<FlyRequest | undefined>(undefined);
+  const [assigning, setAssigning] = useState<OrderPin | null>(null);
 
   // ── محرِّرُ المضلَّعات (البند ١٣) ──────────────────────────
   //
@@ -360,15 +437,33 @@ export default function OpsMapPage() {
     [meta.data],
   );
 
-  // ── السائقون ─────────────────────────────────────────────────
+  // ── نبضةُ الموضع ─────────────────────────────────────────────
   //
   // # ولماذا مدّةٌ لا بثّ (البندان ٨ و٤٤)
   //
   // **كاتبُ الموضع لا يبثّ** — ولا يُمسّ (البند ٤٥). **والمدّةُ ليست
-  // اعتباطاً**: هي نبضةُ السائق نفسُها من الإعدادات، **فلا تُسأل
-  // القاعدةُ عمّا لم يتغيّر بعد.**
+  // اعتباطاً**: هي نبضةُ السائق نفسُها من الإعدادات (ولا أقلَّ من نصف
+  // دقيقة)، **فلا تُسأل القاعدةُ عمّا لم يتغيّر بعد.**
   //
   // **والطلباتُ تُحدَّث ببثّ `ops` القائم** — لا بمدّة.
+  const pingSec = Math.max(30, meta.data?.location_ping_sec ?? 60);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const h = window.setInterval(() => setTick((t) => t + 1), pingSec * 1000);
+    return () => window.clearInterval(h);
+  }, [pingSec]);
+
+  // ── عدّاداتُ الشريط ─────────────────────────────────────────
+  const summary = useLiveData<Summary>(
+    () =>
+      can("VIEW_OPERATIONS_MAP")
+        ? api<Summary>("/api/v1/admin/ops-map/summary")
+        : Promise.resolve({ staff_online: 0 }),
+    ["order", "catalog"],
+    [meta.data, tick],
+  );
+
+  // ── السائقون ─────────────────────────────────────────────────
   const driverQuery = useMemo(() => {
     const q = new URLSearchParams();
     if (onShift) q.set("on_shift", onShift);
@@ -386,7 +481,7 @@ export default function OpsMapPage() {
         ? api<{ drivers: Driver[]; count: number }>(`/api/v1/admin/ops-map/drivers${driverQuery}`)
         : Promise.resolve({ drivers: [], count: 0 }),
     [],
-    [driverQuery, visible.drivers, meta.data],
+    [driverQuery, visible.drivers, meta.data, tick],
   );
 
   // ── المتاجر ──────────────────────────────────────────────────
@@ -413,14 +508,34 @@ export default function OpsMapPage() {
     [visible.orders, meta.data],
   );
 
-  // ── التغطية ─────────────────────────────────────────────────
+  // ── الزبائن — خلايا مجمَّعةٌ لا بيوت ────────────────────────
+  const customers = useLiveData<{ cells: DemandCell[]; min_count: number }>(
+    () =>
+      can("VIEW_ACTIVE_ORDERS") && visible.customers
+        ? api<{ cells: DemandCell[]; min_count: number }>("/api/v1/admin/ops-map/customers")
+        : Promise.resolve({ cells: [], min_count: 3 }),
+    [],
+    [visible.customers, meta.data],
+  );
+
+  // ── المكتب ───────────────────────────────────────────────────
+  const office = useLiveData<Office | null>(
+    () =>
+      can("VIEW_OPERATIONS_MAP") && visible.office
+        ? api<Office>("/api/v1/admin/ops-map/office")
+        : Promise.resolve(null),
+    [],
+    [visible.office, meta.data, tick],
+  );
+
+  // ── التغطية — حدودٌ رفيعةٌ دائماً لا مفتاح ───────────────────
   const zones = useLiveData<{ zones: Zone[]; count: number }>(
     () =>
-      visible.coverage
+      can("VIEW_OPERATIONS_MAP")
         ? api<{ zones: Zone[]; count: number }>("/api/v1/admin/ops-map/coverage")
         : Promise.resolve({ zones: [], count: 0 }),
     ["catalog"],
-    [visible.coverage, meta.data],
+    [meta.data],
   );
 
   // ── طلباتُ التغطية ──────────────────────────────────────────
@@ -457,7 +572,7 @@ export default function OpsMapPage() {
     [visible.areas, meta.data],
   );
 
-  // ── المندوبون ───────────────────────────────────────────────
+  // ── المندوبون — «أين يعمل»: مركزُ متاجره ─────────────────────
   const reps = useLiveData<{ reps: RepRow[]; points: RepPoint[] }>(
     () =>
       can("VIEW_REP_ACTIVITY") && visible.reps
@@ -510,9 +625,8 @@ export default function OpsMapPage() {
   // ── الطوارئ طبقةٌ على الخريطة (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ) ──
   //
   // **لمن يملك الطوارئ** — والنقرةُ تفتح صفحةَ الطارئ.
-  const router = useRouter();
-  const { capabilities } = useAuth();
   const canEmergencies = capabilities.includes("emergencies.manage");
+  const canIntervene = capabilities.includes("orders.intervene");
   // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
   // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
   const canProfile = useCanCall()("GET", "/users/{id}");
@@ -524,6 +638,9 @@ export default function OpsMapPage() {
     ["emergency"],
     [canEmergencies, visible.emergencies],
   );
+
+  // **والرموزُ تُرسم مرّةً** — لونُ كلّ حالٍ من الثيم ورمزُه من مجموعتنا.
+  const icons = useMemo(() => mapIcons(), []);
 
   const layers = useMemo<LayerSpec[]>(() => {
     const out: LayerSpec[] = [];
@@ -540,101 +657,127 @@ export default function OpsMapPage() {
         ),
       ),
     });
-    const C = freshColors();
-    const list = drivers.data?.drivers ?? [];
+
+    // ── السائقون — أخضرُ متاح · برتقاليٌّ معه طلب · رماديٌّ خامل ──
+    //
+    // **ولا يُجمَّعون**: فقّاعةٌ خضراءُ تخفي برتقاليّاً بداخلها، **والحالُ هو
+    // ما جاء المكتبُ يراه.** ومن لا موضعَ له لا يُرسَم (البند ٤).
     out.push({
       id: "drivers",
-      kind: "point",
-      cluster: true,
+      kind: "symbol",
+      cluster: false,
       order: 50,
       visible: !!visible.drivers,
-      color: [
-        "match",
-        ["get", "freshness"],
-        "LIVE", C.LIVE,
-        "FRESH", C.FRESH,
-        "STALE", C.STALE,
-        C.NO_LOCATION,
-      ],
-      // **ومن لا موضعَ له لا يُرسَم** (البند ٤) — ولا يُخترَع له دبّوس.
+      color: toneColor("driver-available"),
       data: fc(
-        list
+        (drivers.data?.drivers ?? [])
           .filter((d) => d.freshness !== "NO_LOCATION")
-          .map((d) =>
-            pt(d.lng, d.lat, {
-              id: d.id,
-              name: d.name,
-              freshness: d.freshness,
-            }),
-          ),
+          .map((d) => pt(d.lng, d.lat, { id: d.id, icon: driverTone(d.tone) })),
       ),
     });
 
-    // ── المتاجر ──────────────────────────────────────────────
+    // ── المتاجر — بنفسجيٌّ مفتوح · رماديٌّ مغلق ─────────────────
     //
     // **والمغلقُ يُرى مغلقاً** — لونٌ باهتٌ لا اختفاء: «متجرٌ مغلقٌ
     // وطلبٌ ينتظره» حقيقةٌ يريد المكتبُ أن يراها.
     out.push({
       id: "merchants",
-      kind: "point",
+      kind: "symbol",
       cluster: true,
       order: 40,
       visible: !!visible.merchants,
-      color: ["case", ["get", "open"], themeColor("accent"), themeColor("disabled")],
+      color: toneColor("store-open"),
       data: fc(
         (merchants.data?.merchants ?? []).map((x) =>
-          pt(x.lng, x.lat, { id: x.id, name: x.name, open: x.open_now }),
+          pt(x.lng, x.lat, { id: x.id, icon: storeTone(x.open_now) }),
         ),
       ),
     });
 
-    // ── الطلباتُ النشطة ──────────────────────────────────────
+    // ── الطلباتُ النشطة — أزرقُ ماشٍ · أحمرُ عالق ────────────────
     //
-    // **وتُميَّز بصريّاً بحالها** (البند ١٠): ما لا سائقَ له أحمرُ —
-    // **وهو ما يحتاج يداً الآن.**
+    // **والعالقُ بشرط لوحة الطلبات نفسِه** (`stuck_reason` من الخادم) — فلا
+    // تقول الخريطةُ «عالق» عن طلبٍ لا تعدّه اللوحة. **وخطٌّ من المتجر إلى
+    // نقطة التسليم لكلّ طلب** — «من أين إلى أين» بنظرة.
     const orderList = orders.data?.orders ?? [];
     out.push({
       id: "orders",
-      kind: "point",
-      cluster: true,
+      kind: "symbol",
+      cluster: false,
       order: 60,
       visible: !!visible.orders,
-      color: [
-        "match",
-        ["get", "state"],
-        "unassigned", themeColor("danger-solid"),
-        "picked", themeColor("success"),
-        "accepted", themeColor("warning"),
-        themeColor("violet"),
-      ],
+      color: toneColor("order"),
       data: fc(
         orderList.map((o) =>
-          pt(o.drop_lng, o.drop_lat, {
-            id: o.id,
-            number: o.number,
-            state: !o.driver_id
-              ? "unassigned"
-              : o.picked_up_at
-                ? "picked"
-                : o.accepted_at
-                  ? "accepted"
-                  : "other",
-          }),
+          pt(o.drop_lng, o.drop_lat, { id: o.id, icon: orderTone(o.stuck_reason) }),
+        ),
+      ),
+    });
+    out.push({
+      id: "order-routes",
+      kind: "line",
+      order: 55,
+      lineWidth: 1.5,
+      visible: !!visible.orders,
+      color: ["case", ["get", "stuck"], toneColor("order-stuck"), toneColor("order")],
+      data: fc(
+        orderList
+          .filter((o) => o.pick_lng != null && o.pick_lat != null)
+          .map((o) => ({
+            type: "Feature" as const,
+            geometry: {
+              type: "LineString",
+              coordinates: [[o.pick_lng, o.pick_lat], [o.drop_lng, o.drop_lat]],
+            },
+            properties: { stuck: !!o.stuck_reason },
+          })),
+      ),
+    });
+
+    // ── الزبائن — خلايا ورديّةٌ بعددها ───────────────────────────
+    out.push({
+      id: "customers",
+      kind: "bubble",
+      order: 35,
+      visible: !!visible.customers,
+      color: toneColor("customer"),
+      data: fc(
+        (customers.data?.cells ?? []).map((c) =>
+          pt(c.lng, c.lat, { lat: c.lat, lng: c.lng, count: c.count }),
         ),
       ),
     });
 
-    // ── التغطية ─────────────────────────────────────────────
+    // ── المندوبون — أصفرُ في مركز متاجرهم (البند ٢٦) ─────────────
+    //
+    // **ونقاطُ متاجرهم لا مساراتُ هواتفهم** — **ولا تتبّعَ لخطوات
+    // إنسانٍ لم يطلبه أحد.**
+    out.push({
+      id: "reps",
+      kind: "symbol",
+      order: 45,
+      visible: !!visible.reps,
+      color: toneColor("rep"),
+      data: fc(
+        (reps.data?.reps ?? [])
+          .filter((r) => r.lat != null && r.lng != null)
+          .map((r) => pt(r.lng as number, r.lat as number, { id: r.id, icon: "rep" })),
+      ),
+    });
+
+    // ── التغطية — حدودٌ رفيعةٌ دائماً ────────────────────────────
     //
     // **والدائرةُ والمضلَّعُ طبقتان لا واحدة**: MapLibre ترسم الدائرةَ
     // بنصفِ قطرٍ بالبكسل والمضلَّعَ بحشوٍ — **ولا شكلَ واحدٌ يسعهما.**
+    // **ولا مفتاحَ لها** (قرارُ المالك ٢٠٢٦-١٠-٠٥): من لا يرى أين نصل لا
+    // يقرأ الخريطةَ أصلاً، **والخطُّ الرفيعُ لا يحجب شيئاً تحته.**
     const zoneList = zones.data?.zones ?? [];
     out.push({
       id: "coverage-radius",
       kind: "circle-m",
       radiusField: "radius_m",
       order: 10,
-      visible: !!visible.coverage,
+      visible: true,
       color: themeColor("primary"),
       data: fc(
         zoneList
@@ -646,11 +789,10 @@ export default function OpsMapPage() {
       id: "coverage-polygon",
       kind: "fill",
       order: 11,
-      visible: !!visible.coverage,
-      // **لونٌ قويٌّ وخطٌّ عريض** (طلبُ المالك ٢٠٢٦-١٠-٠٥): النعناعيُّ الباهت
-      // كان لا يُرى على الخريطة.
+      visible: true,
       color: themeColor("cta-end"),
-      lineWidth: 3,
+      lineWidth: drawing ? 2.5 : 1.25,
+      fillOpacity: 0.04,
       data: fc(
         zoneList
           .filter((z) => z.shape === "polygon" && z.area && z.active)
@@ -738,23 +880,6 @@ export default function OpsMapPage() {
       ),
     });
 
-    // ── نشاطُ المندوبين (البند ٢٦) ──────────────────────────
-    //
-    // **ونقاطُ متاجرهم لا مساراتُ هواتفهم** — **ولا تتبّعَ لخطوات
-    // إنسانٍ لم يطلبه أحد.**
-    out.push({
-      id: "reps",
-      kind: "heat",
-      order: 5,
-      visible: !!visible.reps,
-      color: themeColor("violet"),
-      data: fc(
-        (reps.data?.points ?? []).map((p) =>
-          pt(p.lng, p.lat, { rep: p.rep_id }),
-        ),
-      ),
-    });
-
     // ── الكثافتان — منفصلتان (البند ١٨) ─────────────────────
     //
     // **طلبٌ نُفِّذ غيرُ طلبِ تغطيةٍ لم يُغطَّ** — **الأوّلُ يقول «هنا
@@ -795,10 +920,10 @@ export default function OpsMapPage() {
       ),
     });
 
-    // ── الربطُ الجغرافيُّ للطلب المُحدَّد (البند ١١) ─────────
+    // ── حاملُ الطلب المُحدَّد (البند ١١) ─────────────────────
     //
-    // **وخطٌّ مستقيمٌ لا مسار** — **الخريطةُ ليست محرّكَ ملاحة**، وخطٌّ
-    // يقول «من أين إلى أين ومن يحمله» يكفي المكتب.
+    // **وخطٌّ مستقيمٌ لا مسار** — **الخريطةُ ليست محرّكَ ملاحة**: من السائق
+    // إلى المتجر حين يُحدَّد الطلب، **وخطُّ المتجر إلى الزبون مرسومٌ دائماً.**
     const link: FeatureCollection["features"] = [];
     if (selected?.kind === "order") {
       const o = selected.v;
@@ -818,6 +943,7 @@ export default function OpsMapPage() {
       id: "order-link",
       kind: "line",
       order: 70,
+      lineWidth: 3,
       visible: link.length > 0,
       color: themeColor("primary"),
       data: fc(link),
@@ -825,8 +951,22 @@ export default function OpsMapPage() {
 
     return out;
   }, [drivers.data, merchants.data, orders.data, zones.data, requests.data,
-      branches.data, reps.data, demand.data, opportunities.data,
-      visible, selected, draft, emergencies.data]);
+      branches.data, reps.data, demand.data, opportunities.data, customers.data,
+      visible, selected, draft, drawing, emergencies.data]);
+
+  // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
+  const markers = useMemo<MapMarker[]>(() => {
+    const o = office.data;
+    if (!visible.office || !o || !o.has_location || o.lat == null || o.lng == null) return [];
+    return [{
+      id: "office",
+      lng: o.lng,
+      lat: o.lat,
+      imageUrl: mediaUrl(o.logo),
+      letter: o.name.trim().charAt(0),
+      label: T.office.title,
+    }];
+  }, [office.data, visible.office]);
 
   const onFeature = useCallback(
     (layerID: string, props: Record<string, unknown>) => {
@@ -846,7 +986,17 @@ export default function OpsMapPage() {
         const o = orders.data?.orders.find((y) => y.id === props.id);
         if (o) setSelected({ kind: "order", v: o });
       }
+      if (layerID === "customers") {
+        const c = customers.data?.cells.find((y) => y.lat === props.lat && y.lng === props.lng);
+        if (c) setSelected({ kind: "customers", v: c });
+      }
+      if (layerID === "reps") {
+        const r = reps.data?.reps.find((y) => y.id === props.id);
+        if (r) setSelected({ kind: "rep", v: r });
+      }
       if (layerID === "coverage-radius" || layerID === "coverage-polygon") {
+        // **والرسمُ أولى من فتح البطاقة** — نقطةٌ داخلَ منطقةٍ قائمةٍ نقطةٌ.
+        if (drawing) return;
         const z = zones.data?.zones.find((y) => y.id === props.id);
         if (z) setSelected({ kind: "zone", v: z });
       }
@@ -865,8 +1015,8 @@ export default function OpsMapPage() {
         if (o) setSelected({ kind: "opportunity", v: o });
       }
     },
-    [drivers.data, merchants.data, orders.data, zones.data, requests.data,
-     branches.data, opportunities.data, router],
+    [drivers.data, merchants.data, orders.data, customers.data, reps.data, zones.data,
+     requests.data, branches.data, opportunities.data, router, drawing],
   );
 
   // ── نقرُ الأرض ───────────────────────────────────────────────
@@ -876,6 +1026,14 @@ export default function OpsMapPage() {
     },
     [drawing],
   );
+
+  // ── «عالق» — نقرةٌ صريحةٌ تطير إلى أوّل عالقٍ وتفتح بطاقتَه ──
+  const goStuck = useCallback(() => {
+    const o = summary.data?.orders?.first_stuck;
+    if (!o) return;
+    setSelected({ kind: "order", v: o });
+    setFly({ lng: o.drop_lng, lat: o.drop_lat, zoom: 15, key: Date.now() });
+  }, [summary.data]);
 
   const savePolygon = useCallback(async () => {
     setSaveErr("");
@@ -938,333 +1096,193 @@ export default function OpsMapPage() {
   }
 
   const noLoc = (drivers.data?.drivers ?? []).filter((d) => d.freshness === "NO_LOCATION");
+  const S = summary.data;
+
+  // ── حبّاتُ الطبقات الستّ — بترتيب المالك ─────────────────────
+  const chips: Array<{ id: MainLayer; label: string; tone: MapTone | null; count?: number; show: boolean }> = [
+    { id: "drivers", label: T.chip.drivers, tone: "driver-available", count: S?.drivers?.total, show: can("VIEW_DRIVER_LOCATIONS") },
+    { id: "orders", label: T.chip.orders, tone: "order", count: S?.orders?.active, show: can("VIEW_ACTIVE_ORDERS") },
+    { id: "merchants", label: T.chip.merchants, tone: "store-open", count: S?.merchants?.total, show: can("VIEW_MERCHANT_LOCATIONS") },
+    { id: "customers", label: T.chip.customers, tone: "customer", count: S?.customers?.total, show: can("VIEW_ACTIVE_ORDERS") },
+    { id: "reps", label: T.chip.reps, tone: "rep", count: S?.reps, show: can("VIEW_REP_ACTIVITY") },
+    { id: "office", label: T.chip.office, tone: null, count: S?.staff_online, show: true },
+  ];
+
+  const stuckN = S?.orders?.stuck ?? 0;
 
   return (
     <PageContainer>
       <PageHeader title={T.title} subtitle={T.subtitle} />
 
-      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
-        {/* ── الطبقاتُ والمرشِّحات ────────────────────────────── */}
-        <div className="flex flex-col gap-4">
-          {/* ── البحث (البند ٣٦) ───────────────────────────────── */}
-          <Card>
-            <h3 className="mb-2 text-sm font-bold">{T.search}</h3>
-            <Input
-              placeholder={T.search}
-              value={hunt}
-              onChange={(e) => setHunt(e.target.value)}
-            />
-            {hunt.trim().length >= 2 && (
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {(hits.data?.hits ?? []).length === 0 ? (
-                  <li className="text-xs text-ink-muted">{T.searchNone}</li>
-                ) : (
-                  (hits.data?.hits ?? []).slice(0, 12).map((x) => (
-                    <li key={`${x.kind}-${x.id}`} className="flex items-center gap-2">
-                      <span>{x.label}</span>
-                      <span className="ms-auto text-xs text-ink-muted">
-                        {T.layer[
-                          (x.kind === "driver"
-                            ? "drivers"
-                            : x.kind === "merchant"
-                              ? "merchants"
-                              : x.kind === "order"
-                                ? "orders"
-                                : x.kind === "branch"
-                                  ? "branches"
-                                  : x.kind === "area"
-                                    ? "areas"
-                                    : "reps") as keyof typeof T.layer
-                        ]}
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            )}
-          </Card>
-
-          <Card>
-            <h3 className="mb-2 text-sm font-bold">{T.layers}</h3>
-            <div className="flex flex-col gap-1">
-              {canEmergencies && (
-                <LayerToggle
-                  id="emergencies"
-                  label={m.admin.emergencyRoom.mapLayer}
-                  on={!!visible.emergencies}
-                  count={emergencies.data?.count}
-                  onToggle={toggle}
-                />
-              )}
-              {can("VIEW_DRIVER_LOCATIONS") && (
-                <LayerToggle
-                  id="drivers"
-                  label={T.layer.drivers}
-                  on={!!visible.drivers}
-                  count={drivers.data?.count}
-                  onToggle={toggle}
-                />
-              )}
-              {can("VIEW_MERCHANT_LOCATIONS") && (
-                <LayerToggle
-                  id="merchants"
-                  label={T.layer.merchants}
-                  on={!!visible.merchants}
-                  count={merchants.data?.count}
-                  onToggle={toggle}
-                />
-              )}
-              {can("VIEW_ACTIVE_ORDERS") && (
-                <LayerToggle
-                  id="orders"
-                  label={T.layer.orders}
-                  on={!!visible.orders}
-                  count={orders.data?.count}
-                  onToggle={toggle}
-                />
-              )}
-              <LayerToggle
-                id="coverage"
-                label={T.layer.coverage}
-                on={!!visible.coverage}
-                count={zones.data?.count}
-                onToggle={toggle}
-              />
-              {can("VIEW_DEMAND_ANALYTICS") && (
-                <LayerToggle
-                  id="requests"
-                  label={T.layer.coverageRequests}
-                  on={!!visible.requests}
-                  count={requests.data?.count}
-                  onToggle={toggle}
-                />
-              )}
-              <LayerToggle
-                id="branches"
-                label={T.layer.branches}
-                on={!!visible.branches}
-                count={branches.data?.count}
-                onToggle={toggle}
-              />
-              <LayerToggle
-                id="areas"
-                label={T.layer.areas}
-                on={!!visible.areas}
-                count={areas.data?.count}
-                onToggle={toggle}
-              />
-              {can("VIEW_REP_ACTIVITY") && (
-                <LayerToggle
-                  id="reps"
-                  label={T.layer.reps}
-                  on={!!visible.reps}
-                  count={reps.data?.reps.length}
-                  onToggle={toggle}
-                />
-              )}
-              {can("VIEW_DEMAND_ANALYTICS") && (
-                <>
-                  <LayerToggle
-                    id="demand"
-                    label={T.layer.demand}
-                    on={!!visible.demand}
-                    count={demand.data?.orders.length}
-                    onToggle={toggle}
-                  />
-                  <LayerToggle
-                    id="opportunities"
-                    label={T.layer.opportunities}
-                    on={!!visible.opportunities}
-                    count={opportunities.data?.count}
-                    onToggle={toggle}
-                  />
-                </>
-              )}
-            </div>
-          </Card>
-
-          {can("VIEW_DRIVER_LOCATIONS") && visible.drivers && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.filters}</h3>
-              <div className="flex flex-col gap-2 text-sm">
-                <Input
-                  placeholder={T.search}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <Tri label={T.filter.onShift} value={onShift} onChange={setOnShift} />
-                <Tri label={T.filter.hasActive} value={hasActive} onChange={setHasActive} />
-                <Tri label={T.filter.stale} value={stale} onChange={setStale} />
-              </div>
-              <p className="mt-3 text-xs leading-5 text-ink-muted">
-                {T.freshness.explain}
-              </p>
-            </Card>
+      {/* ══ الشريطُ العلويّ — عدّاداتٌ حيّة وحبّاتُ الطبقات ══════════ */}
+      <div className="surface mb-3 flex flex-col gap-2 p-2">
+        {/* ── العدّادات — «N سائق متاح · N طلب ماشي · N عالق · N متجر مفتوح» ── */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-sm">
+          {S?.drivers && (
+            <Counter n={S.drivers.available} label={T.counter.available} tone="driver-available" />
           )}
-
-          {/* ── محرِّرُ التغطية (البند ١٣) ────────────────────────
-              **ولا يظهر لمن لا يملكه** — ورؤيةُ زرٍّ يردّ `403` أسوأُ
-              من غيابه. */}
-          {can("MANAGE_COVERAGE") && visible.coverage && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.coverage.title}</h3>
-              {!drawing ? (
-                <Button variant="secondary" onClick={() => { setDrawing(true); setDraft([]); }}>
-                  {T.coverage.draw}
-                </Button>
+          {S?.orders && (
+            <>
+              <Counter n={S.orders.active} label={T.counter.moving} tone="order" />
+              {stuckN > 0 ? (
+                <button
+                  type="button"
+                  onClick={goStuck}
+                  title={T.counter.stuckHint}
+                  className="inline-flex items-center gap-1.5 font-bold text-danger underline-offset-4 hover:underline"
+                >
+                  <Dot tone="order-stuck" />
+                  <span className="tabular-nums">{fmtNum(stuckN)}</span>
+                  <span>{T.counter.stuck}</span>
+                </button>
               ) : (
-                <div className="flex flex-col gap-2 text-sm">
-                  <Input
-                    placeholder={T.coverage.name}
-                    value={zoneName}
-                    onChange={(e) => setZoneName(e.target.value)}
-                  />
-                  <p className="text-xs text-ink-muted">
-                    {draft.length} · {T.coverage.needThree}
-                  </p>
-                  {saveErr && <Alert tone="error">{saveErr}</Alert>}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      disabled={draft.length < 3 || !zoneName.trim()}
-                      onClick={savePolygon}
-                    >
-                      {T.coverage.save}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      disabled={draft.length === 0}
-                      onClick={() => setDraft((d) => d.slice(0, -1))}
-                    >
-                      {T.coverage.undo}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => { setDrawing(false); setDraft([]); setSaveErr(""); }}
-                    >
-                      {T.coverage.cancel}
-                    </Button>
-                  </div>
-                </div>
+                <Counter n={0} label={T.counter.stuck} tone="order-stuck" />
               )}
-              <p className="mt-3 text-xs leading-5 text-ink-muted">
-                {T.coverage.legacyHint}
-              </p>
-            </Card>
+            </>
           )}
-
-          {/* ── مرشِّحُ طلبات التغطية ──────────────────────────── */}
-          {can("VIEW_DEMAND_ANALYTICS") && visible.requests && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.layer.coverageRequests}</h3>
-              <Select
-                label={T.filter.requestStatus}
-                value={reqStatus}
-                onChange={(e) => setReqStatus(e.target.value)}
-              >
-                <option value="">{T.all}</option>
-                <option value="new">{T.request.state.new}</option>
-                <option value="reviewing">{T.request.state.reviewing}</option>
-                <option value="planned">{T.request.state.planned}</option>
-                <option value="covered">{T.request.state.covered}</option>
-                <option value="rejected">{T.request.state.rejected}</option>
-              </Select>
-            </Card>
-          )}
-
-          {/* ── المدى الزمنيّ (البند ٢٩) ─────────────────────────
-              **ويخصُّ التحليلاتِ ونشاطَ المندوبين وحدَها** — **والسائقون
-              والطلباتُ «الآن» لا مدّةَ لها.** */}
-          {can("VIEW_DEMAND_ANALYTICS") &&
-            (visible.demand || visible.opportunities || visible.reps) && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.filter.range}</h3>
-              <Select
-                label={T.filter.range}
-                value={range}
-                onChange={(e) => setRange(e.target.value as "today" | "7d" | "30d")}
-              >
-                <option value="today">{T.filter.today}</option>
-                <option value="7d">{T.filter.d7}</option>
-                <option value="30d">{T.filter.d30}</option>
-              </Select>
-              <p className="mt-3 text-xs leading-5 text-ink-muted">{T.demand.separate}</p>
-            </Card>
-          )}
-
-          {/* ── المندوبون (البند ٢٦) ─────────────────────────── */}
-          {can("VIEW_REP_ACTIVITY") && visible.reps && (
-            <Card>
-              <h3 className="mb-1 text-sm font-bold">{T.layer.reps}</h3>
-              <p className="mb-2 text-xs text-ink-muted">{T.rep.noTerritory}</p>
-              <ul className="flex flex-col gap-1 text-sm">
-                {(reps.data?.reps ?? []).slice(0, 15).map((r) => (
-                  <li key={r.id} className="flex items-center gap-2">
-                    <span>{r.name}</span>
-                    <span className="ms-auto text-xs text-ink-muted">
-                      {r.merchants} · {r.converted}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-
-          {/* ── المناطقُ التشغيليّة ──────────────────────────────
-              **ولا هندسةَ لها بعد** — **فتُقرأ قائمةً ولا تُرسَم على
-              الأرض.** ومن ربطها بمنطقةِ تغطيةٍ رأى شكلَها في طبقة
-              التغطية، **ولا يُخترَع لها مضلَّعٌ لتبدو مرسومة.** */}
-          {visible.areas && (
-            <Card>
-              <h3 className="mb-1 text-sm font-bold">{T.layer.areas}</h3>
-              <p className="mb-2 text-xs text-ink-muted">{T.area.notDistrict}</p>
-              {(areas.data?.areas ?? []).length === 0 ? (
-                <p className="text-xs text-ink-muted">{T.empty}</p>
-              ) : (
-                <ul className="flex flex-col gap-1 text-sm">
-                  {(areas.data?.areas ?? []).slice(0, 20).map((a) => (
-                    <li key={a.id} className="flex items-center gap-2">
-                      <span>{a.name}</span>
-                      <span className="ms-auto text-xs text-ink-muted">
-                        {a.branch ?? "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          )}
-
-          {/* **ومن لا موضعَ له يُقال ولا يُرسَم** — وهو أهمُّ ما تقوله
-              الخريطة: تطبيقٌ أوقفه النظامُ وورديّةٌ مفتوحة. */}
-          {noLoc.length > 0 && (
-            <Card>
-              <h3 className="mb-1 text-sm font-bold">{T.freshness.NO_LOCATION}</h3>
-              <p className="mb-2 text-xs text-ink-muted">{T.driver.noLocationHint}</p>
-              <ul className="flex flex-col gap-1 text-sm">
-                {noLoc.slice(0, 12).map((d) => (
-                  <li key={d.id} className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ background: themeColor("disabled") }}
-                    />
-                    <span>{d.name}</span>
-                    {d.on_shift && (
-                      <span className="ms-auto text-xs text-ink-muted">
-                        {T.driver.onShift}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Card>
+          {S?.merchants && (
+            <Counter n={S.merchants.open} label={T.counter.open} tone="store-open" />
           )}
         </div>
 
-        {/* ── الخريطةُ واللوحةُ الجانبيّة ─────────────────────── */}
-        <div className="relative min-h-[28rem] lg:min-h-[calc(100vh-14rem)]">
+        {/* ── الحبّات — تلتفّ على الحاسوب وتنزلق على الجوّال ── */}
+        <div className="flex items-center gap-2">
+          <Chips
+            className="min-w-0 flex-1 sm:flex-wrap"
+            items={chips
+              .filter((c) => c.show)
+              .map((c) => ({
+                id: c.id,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {c.tone ? <Dot tone={c.tone} /> : <OfficeDot />}
+                    {c.label}
+                    {c.count != null && (
+                      <CountBadge count={c.count} on={!!visible[c.id]} max={99999} />
+                    )}
+                  </span>
+                ),
+              }))}
+            value={chips.filter((c) => c.show && visible[c.id]).map((c) => c.id)}
+            onChange={(id) => toggle(id)}
+          />
+
+          {/* ── طبقاتٌ إضافيّةٌ ودليلُ الألوان ── */}
+          <div className="relative flex shrink-0 items-center gap-1.5">
+            <Button
+              variant="secondary"
+              aria-expanded={menu === "extra"}
+              onClick={() => setMenu(menu === "extra" ? "" : "extra")}
+            >
+              {T.bar.extra}
+            </Button>
+            <button
+              type="button"
+              aria-label={T.bar.legend}
+              title={T.bar.legend}
+              aria-expanded={menu === "legend"}
+              onClick={() => setMenu(menu === "legend" ? "" : "legend")}
+              className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface text-sm font-bold text-ink-muted hover:text-ink"
+            >
+              {T.bar.legendMark}
+            </button>
+            {menu !== "" && (
+              <>
+                {/* **ونقرةٌ خارجَها تغلقها** — ستارٌ شفّافٌ تحت اللوحة. */}
+                <button
+                  type="button"
+                  aria-label={T.close}
+                  className="fixed inset-0 z-20 cursor-default"
+                  onClick={() => setMenu("")}
+                />
+                <div className="surface-raised absolute end-0 top-full z-30 mt-1.5 w-72 max-w-[calc(100vw-2rem)] p-3 text-sm">
+                  {menu === "extra" ? (
+                    <div className="flex flex-col gap-1">
+                      {canEmergencies && (
+                        <LayerToggle
+                          id="emergencies"
+                          label={m.admin.emergencyRoom.mapLayer}
+                          on={!!visible.emergencies}
+                          count={emergencies.data?.count}
+                          onToggle={toggle}
+                        />
+                      )}
+                      {can("VIEW_DEMAND_ANALYTICS") && (
+                        <>
+                          <LayerToggle
+                            id="demand"
+                            label={T.layer.demand}
+                            on={!!visible.demand}
+                            count={demand.data?.orders.length}
+                            onToggle={toggle}
+                          />
+                          <LayerToggle
+                            id="opportunities"
+                            label={T.layer.opportunities}
+                            on={!!visible.opportunities}
+                            count={opportunities.data?.count}
+                            onToggle={toggle}
+                          />
+                          <LayerToggle
+                            id="requests"
+                            label={T.layer.coverageRequests}
+                            on={!!visible.requests}
+                            count={requests.data?.count}
+                            onToggle={toggle}
+                          />
+                        </>
+                      )}
+                      <LayerToggle
+                        id="branches"
+                        label={T.layer.branches}
+                        on={!!visible.branches}
+                        count={branches.data?.count}
+                        onToggle={toggle}
+                      />
+                      <LayerToggle
+                        id="areas"
+                        label={T.layer.areas}
+                        on={!!visible.areas}
+                        count={areas.data?.count}
+                        onToggle={toggle}
+                      />
+                      <p className="mt-2 text-xs leading-5 text-ink-muted">{T.bar.coverageAlways}</p>
+                      {/* **ولا يظهر الرسمُ لمن لا يملكه** — ورؤيةُ زرٍّ يردّ
+                          `403` أسوأُ من غيابه. */}
+                      {can("MANAGE_COVERAGE") && !drawing && (
+                        <Button
+                          variant="secondary"
+                          className="mt-2"
+                          onClick={() => { setDrawing(true); setDraft([]); setMenu(""); }}
+                        >
+                          {T.bar.drawCoverage}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Legend />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {visible.office && office.data && !office.data.has_location && (
+          <p className="px-1 text-xs text-ink-muted">{T.office.noLocation}</p>
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+        {/* ── الخريطةُ واللوحةُ الجانبيّة — أوّلاً على الجوّال ───────── */}
+        <div className="relative order-1 h-[28rem] lg:order-2 lg:h-[calc(100vh-16rem)]">
           <OpsMapCanvas
             layers={layers}
+            icons={icons}
+            markers={markers}
+            flyTo={fly}
             onFeatureClick={onFeature}
+            onMarkerClick={() => setSelected({ kind: "office" })}
             onMapClick={onGround}
             unavailableLabel={T.unavailable}
             focus={focus}
@@ -1283,6 +1301,9 @@ export default function OpsMapPage() {
                   {selected.kind === "request" && T.request.title}
                   {selected.kind === "branch" && selected.v.name}
                   {selected.kind === "opportunity" && T.opportunity.title}
+                  {selected.kind === "customers" && T.customerCard.title}
+                  {selected.kind === "rep" && selected.v.name}
+                  {selected.kind === "office" && (office.data?.name || T.office.title)}
                 </h3>
                 <button
                   className="ms-auto text-sm text-ink-muted"
@@ -1294,6 +1315,10 @@ export default function OpsMapPage() {
 
               {selected.kind === "driver" && (
                 <>
+                  <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                    <Dot tone={driverTone(selected.v.tone)} />
+                    {T.tone[selected.v.tone] ?? T.tone.idle}
+                  </div>
                   <dl className="flex flex-col gap-2 text-sm">
                     <Row k={T.driver.status} v={selected.v.status} />
                     <Row k={T.driver.onShift} v={selected.v.on_shift ? T.yes : T.no} />
@@ -1309,14 +1334,16 @@ export default function OpsMapPage() {
                     )}
                   </dl>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {canProfile && (
-                      <Link href={`/dashboard/users?id=${selected.v.id}`}>
-                        <Button variant="secondary">{T.driver.openProfile}</Button>
-                      </Link>
-                    )}
+                    {/* **والهاتفُ لا يصل إلّا لمن يملك `users.contact.read`** — يحذفه الخادم. */}
+                    {selected.v.phone && <ContactButtons phone={selected.v.phone} />}
                     {selected.v.current_order && (
                       <Link href={`/dashboard/orders?id=${selected.v.current_order}`}>
                         <Button variant="secondary">{T.order.openPage}</Button>
+                      </Link>
+                    )}
+                    {canProfile && (
+                      <Link href={`/dashboard/users?id=${selected.v.id}`}>
+                        <Button variant="secondary">{T.driver.openProfile}</Button>
                       </Link>
                     )}
                   </div>
@@ -1325,18 +1352,26 @@ export default function OpsMapPage() {
 
               {selected.kind === "merchant" && (
                 <>
+                  <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                    <Dot tone={storeTone(selected.v.open_now)} />
+                    {selected.v.open_now ? T.merchant.open : T.merchant.closed}
+                  </div>
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.merchant.status} v={selected.v.status} />
-                    <Row
-                      k={T.merchant.open}
-                      v={selected.v.open_now ? T.merchant.open : T.merchant.closed}
-                    />
-                    {selected.v.city && <Row k={T.merchant.city} v={selected.v.city} />}
                     <Row k={T.merchant.activeOrders} v={String(selected.v.active_orders)} />
+                    <Row k={T.merchant.status} v={selected.v.status} />
+                    {selected.v.city && <Row k={T.merchant.city} v={selected.v.city} />}
                     {/* **والمندوبُ لمن يراقب نشاطَهم وحدَه** (البند ٩). */}
                     {selected.v.rep && <Row k={T.merchant.rep} v={selected.v.rep} />}
                   </dl>
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {selected.v.phone && (
+                      <a href={`tel:${selected.v.phone}`}>
+                        <Button variant="secondary">
+                          <IconPhone size={16} aria-hidden />
+                          {T.contact.call}
+                        </Button>
+                      </a>
+                    )}
                     <Link href={`/dashboard/sections?merchant=${selected.v.id}`}>
                       <Button variant="secondary">{T.merchant.openPage}</Button>
                     </Link>
@@ -1346,11 +1381,28 @@ export default function OpsMapPage() {
 
               {selected.kind === "order" && (
                 <>
+                  {selected.v.stuck_reason && (
+                    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-danger">
+                      <Dot tone="order-stuck" />
+                      {T.orderCard.stuck} ·{" "}
+                      {m.admin.ordersPage.alertReasons[
+                        selected.v.stuck_reason as keyof typeof m.admin.ordersPage.alertReasons
+                      ] ?? selected.v.stuck_reason}
+                    </div>
+                  )}
                   <dl className="flex flex-col gap-2 text-sm">
                     <Row k={T.order.state} v={selected.v.status} />
                     <Row k={T.order.merchant} v={selected.v.merchant ?? "—"} />
+                    {/* **واسمُ الزبون لمن يملك تفاصيلَه وحدَه** — يحذفه الخادم. */}
+                    {selected.v.customer_name && (
+                      <Row k={T.orderCard.customer} v={selected.v.customer_name} />
+                    )}
                     <Row k={T.order.driver} v={selected.v.driver ?? T.order.noDriver} />
                     {selected.v.address && <Row k={T.order.area} v={selected.v.address} />}
+                    <Row
+                      k={T.orderCard.age}
+                      v={T.orderCard.minutes.replace("{n}", fmtNum(minutesSince(selected.v.created_at)))}
+                    />
                     <Row k={T.order.createdAt} v={fmtDateTime(selected.v.created_at)} />
                     {/* **والمالُ بصلاحيّته** (البند ١٠). */}
                     {selected.v.total !== undefined && (
@@ -1363,9 +1415,16 @@ export default function OpsMapPage() {
                       <Row k={T.order.payment} v={selected.v.payment_method} />
                     )}
                   </dl>
-                  {/* **ولا يُعدّل الطلبُ من الخريطة** (البند ١٠) —
-                      تُوصّل إلى صفحته. */}
                   <div className="mt-4 flex flex-wrap gap-2">
+                    {/* **والإسنادُ بمساره القائم** (`AssignDialog`) — بالقرب
+                        وبتأكيدٍ وسبب، **ولمن يملك التدخّل وحدَه.** */}
+                    {canIntervene &&
+                      !selected.v.driver_id &&
+                      (selected.v.status === "preparing" || selected.v.status === "dispatching") && (
+                        <Button onClick={() => setAssigning(selected.v)}>
+                          {m.admin.ordersPage.assignHere}
+                        </Button>
+                      )}
                     <Link href={`/dashboard/orders?id=${selected.v.id}`}>
                       <Button variant="secondary">{T.order.openPage}</Button>
                     </Link>
@@ -1377,6 +1436,64 @@ export default function OpsMapPage() {
                   </div>
                 </>
               )}
+
+              {selected.kind === "customers" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row k={T.customerCard.count} v={fmtNum(selected.v.count)} />
+                  </dl>
+                  <p className="mt-3 text-xs leading-5 text-ink-muted">
+                    {T.customerCard.privacy.replace("{n}", fmtNum(customers.data?.min_count ?? 3))}
+                  </p>
+                </>
+              )}
+
+              {selected.kind === "rep" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row k={T.rep.merchants} v={fmtNum(selected.v.merchants)} />
+                    <Row k={T.rep.converted} v={fmtNum(selected.v.converted)} />
+                    {selected.v.last_activity && (
+                      <Row k={T.rep.lastActivity} v={fmtDateTime(selected.v.last_activity)} />
+                    )}
+                    {selected.v.earnings !== undefined && (
+                      <Row k={T.rep.earnings} v={fmtMoney(selected.v.earnings)} />
+                    )}
+                  </dl>
+                  <p className="mt-3 text-xs text-ink-muted">{T.repCard.where}</p>
+                </>
+              )}
+
+              {selected.kind === "office" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row k={T.office.address} v={office.data?.address || T.office.noAddress} />
+                  </dl>
+                  <h4 className="mb-1 mt-4 text-sm font-bold">{T.office.online}</h4>
+                  <p className="mb-2 text-xs text-ink-muted">
+                    {T.office.window.replace("{n}", fmtNum(office.data?.presence_min ?? 5))}
+                  </p>
+                  {(office.data?.staff ?? []).length === 0 ? (
+                    <p className="text-sm text-ink-muted">{T.office.noneOnline}</p>
+                  ) : (
+                    <ul className="flex flex-col gap-1.5 text-sm">
+                      {(office.data?.staff ?? []).map((s, i) => (
+                        <li key={`${s.name}-${i}`} className="flex items-baseline gap-2">
+                          <span
+                            className="inline-block h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: toneColor("driver-available") }}
+                          />
+                          <span className="font-medium">{s.name}</span>
+                          <span className="ms-auto text-xs text-ink-muted">
+                            {s.roles.map((r) => roleLabelByCode(r)).join(" · ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+
               {selected.kind === "zone" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
@@ -1478,7 +1595,230 @@ export default function OpsMapPage() {
             </aside>
           )}
         </div>
+
+        {/* ── البحثُ والمرشِّحاتُ والقوائم ─────────────────────────── */}
+        <div className="order-2 flex flex-col gap-4 lg:order-1">
+          {/* ── محرِّرُ التغطية (البند ١٣) — حين يُرسَم وحدَه ──────── */}
+          {can("MANAGE_COVERAGE") && drawing && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.coverage.title}</h3>
+              <div className="flex flex-col gap-2 text-sm">
+                <Input
+                  placeholder={T.coverage.name}
+                  value={zoneName}
+                  onChange={(e) => setZoneName(e.target.value)}
+                />
+                <p className="text-xs text-ink-muted">
+                  {draft.length} · {T.coverage.needThree}
+                </p>
+                {saveErr && <Alert tone="error">{saveErr}</Alert>}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={draft.length < 3 || !zoneName.trim()}
+                    onClick={savePolygon}
+                  >
+                    {T.coverage.save}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={draft.length === 0}
+                    onClick={() => setDraft((d) => d.slice(0, -1))}
+                  >
+                    {T.coverage.undo}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => { setDrawing(false); setDraft([]); setSaveErr(""); }}
+                  >
+                    {T.coverage.cancel}
+                  </Button>
+                </div>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">
+                {T.coverage.legacyHint}
+              </p>
+            </Card>
+          )}
+
+          {/* ── البحث (البند ٣٦) ───────────────────────────────── */}
+          <Card>
+            <h3 className="mb-2 text-sm font-bold">{T.search}</h3>
+            <Input
+              placeholder={T.search}
+              value={hunt}
+              onChange={(e) => setHunt(e.target.value)}
+            />
+            {hunt.trim().length >= 2 && (
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {(hits.data?.hits ?? []).length === 0 ? (
+                  <li className="text-xs text-ink-muted">{T.searchNone}</li>
+                ) : (
+                  (hits.data?.hits ?? []).slice(0, 12).map((x) => (
+                    <li key={`${x.kind}-${x.id}`} className="flex items-center gap-2">
+                      <span>{x.label}</span>
+                      <span className="ms-auto text-xs text-ink-muted">
+                        {T.layer[
+                          (x.kind === "driver"
+                            ? "drivers"
+                            : x.kind === "merchant"
+                              ? "merchants"
+                              : x.kind === "order"
+                                ? "orders"
+                                : x.kind === "branch"
+                                  ? "branches"
+                                  : x.kind === "area"
+                                    ? "areas"
+                                    : "reps") as keyof typeof T.layer
+                        ]}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+          </Card>
+
+          {can("VIEW_DRIVER_LOCATIONS") && visible.drivers && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.filters}</h3>
+              <div className="flex flex-col gap-2 text-sm">
+                <Input
+                  placeholder={T.search}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <Tri label={T.filter.onShift} value={onShift} onChange={setOnShift} />
+                <Tri label={T.filter.hasActive} value={hasActive} onChange={setHasActive} />
+                <Tri label={T.filter.stale} value={stale} onChange={setStale} />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">
+                {T.freshness.explain}
+              </p>
+            </Card>
+          )}
+
+          {/* ── مرشِّحُ طلبات التغطية ──────────────────────────── */}
+          {can("VIEW_DEMAND_ANALYTICS") && visible.requests && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.layer.coverageRequests}</h3>
+              <Select
+                label={T.filter.requestStatus}
+                value={reqStatus}
+                onChange={(e) => setReqStatus(e.target.value)}
+              >
+                <option value="">{T.all}</option>
+                <option value="new">{T.request.state.new}</option>
+                <option value="reviewing">{T.request.state.reviewing}</option>
+                <option value="planned">{T.request.state.planned}</option>
+                <option value="covered">{T.request.state.covered}</option>
+                <option value="rejected">{T.request.state.rejected}</option>
+              </Select>
+            </Card>
+          )}
+
+          {/* ── المدى الزمنيّ (البند ٢٩) ─────────────────────────
+              **ويخصُّ التحليلاتِ ونشاطَ المندوبين وحدَها** — **والسائقون
+              والطلباتُ «الآن» لا مدّةَ لها.** */}
+          {(can("VIEW_DEMAND_ANALYTICS") || can("VIEW_REP_ACTIVITY")) &&
+            (visible.demand || visible.opportunities || visible.reps) && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.filter.range}</h3>
+              <Select
+                label={T.filter.range}
+                value={range}
+                onChange={(e) => setRange(e.target.value as "today" | "7d" | "30d")}
+              >
+                <option value="today">{T.filter.today}</option>
+                <option value="7d">{T.filter.d7}</option>
+                <option value="30d">{T.filter.d30}</option>
+              </Select>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">{T.demand.separate}</p>
+            </Card>
+          )}
+
+          {/* ── المندوبون (البند ٢٦) ─────────────────────────── */}
+          {can("VIEW_REP_ACTIVITY") && visible.reps && (
+            <Card>
+              <h3 className="mb-1 text-sm font-bold">{T.layer.reps}</h3>
+              <p className="mb-2 text-xs text-ink-muted">{T.rep.noTerritory}</p>
+              <ul className="flex flex-col gap-1 text-sm">
+                {(reps.data?.reps ?? []).slice(0, 15).map((r) => (
+                  <li key={r.id} className="flex items-center gap-2">
+                    <span>{r.name}</span>
+                    <span className="ms-auto text-xs text-ink-muted">
+                      {r.merchants} · {r.converted}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* ── المناطقُ التشغيليّة ──────────────────────────────
+              **ولا هندسةَ لها بعد** — **فتُقرأ قائمةً ولا تُرسَم على
+              الأرض.** ومن ربطها بمنطقةِ تغطيةٍ رأى شكلَها في طبقة
+              التغطية، **ولا يُخترَع لها مضلَّعٌ لتبدو مرسومة.** */}
+          {visible.areas && (
+            <Card>
+              <h3 className="mb-1 text-sm font-bold">{T.layer.areas}</h3>
+              <p className="mb-2 text-xs text-ink-muted">{T.area.notDistrict}</p>
+              {(areas.data?.areas ?? []).length === 0 ? (
+                <p className="text-xs text-ink-muted">{T.empty}</p>
+              ) : (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {(areas.data?.areas ?? []).slice(0, 20).map((a) => (
+                    <li key={a.id} className="flex items-center gap-2">
+                      <span>{a.name}</span>
+                      <span className="ms-auto text-xs text-ink-muted">
+                        {a.branch ?? "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
+          {/* **ومن لا موضعَ له يُقال ولا يُرسَم** — وهو أهمُّ ما تقوله
+              الخريطة: تطبيقٌ أوقفه النظامُ وورديّةٌ مفتوحة. */}
+          {noLoc.length > 0 && (
+            <Card>
+              <h3 className="mb-1 text-sm font-bold">{T.freshness.NO_LOCATION}</h3>
+              <p className="mb-2 text-xs text-ink-muted">{T.driver.noLocationHint}</p>
+              <ul className="flex flex-col gap-1 text-sm">
+                {noLoc.slice(0, 12).map((d) => (
+                  <li key={d.id} className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ background: toneColor("driver-idle") }}
+                    />
+                    <span>{d.name}</span>
+                    {d.on_shift && (
+                      <span className="ms-auto text-xs text-ink-muted">
+                        {T.driver.onShift}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
       </div>
+
+      {assigning && (
+        <AssignDialog
+          orderId={assigning.id}
+          orderNumber={assigning.number}
+          onClose={() => setAssigning(null)}
+          onDone={() => {
+            setAssigning(null);
+            setSelected(null);
+            orders.reload();
+            summary.reload();
+          }}
+        />
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           **وطلبُ التوسّع بالمكان الإداريّ** (`CR`، ٢٠٢٦-٠٩-١٤)
@@ -1495,6 +1835,112 @@ export default function OpsMapPage() {
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/** **نقطةُ لون حالٍ** — من الموضع الواحد (`palette.ts`). */
+function Dot({ tone }: { tone: MapTone }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+      style={{ background: toneColor(tone) }}
+    />
+  );
+}
+
+/** **نقطةُ المكتب** — دائرةٌ بيضاءُ كعلامته على الخريطة. */
+function OfficeDot() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-line bg-paper"
+    />
+  );
+}
+
+/** **عدّادٌ في الشريط** — رقمٌ ولونُه واسمُه. */
+function Counter({ n, label, tone }: { n: number; label: string; tone: MapTone }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Dot tone={tone} />
+      <span className="font-bold tabular-nums">{fmtNum(n)}</span>
+      <span className="text-ink-muted">{label}</span>
+    </span>
+  );
+}
+
+/** **رمزُ حالٍ كما يُرسم على الخريطة** — دائرةٌ ورمزٌ أبيض. */
+function ToneIcon({ tone }: { tone: MapTone }) {
+  const Glyph = MAP_TONES[tone].glyph;
+  return (
+    <span
+      aria-hidden
+      className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-paper"
+      style={{ background: toneColor(tone) }}
+    >
+      <Glyph size={13} color={themeColor("on-solid")} strokeWidth={2.25} />
+    </span>
+  );
+}
+
+/** **دليلُ الألوان** — يقرأ الموضعَ الواحدَ الذي ترسم منه الخريطة. */
+function Legend() {
+  const L = T.legendItem;
+  const rows: Array<[MapTone, string]> = [
+    ["driver-available", L.driverAvailable],
+    ["driver-busy", L.driverBusy],
+    ["driver-idle", L.driverIdle],
+    ["order", L.order],
+    ["order-stuck", L.orderStuck],
+    ["store-open", L.storeOpen],
+    ["store-closed", L.storeClosed],
+    ["customer", L.customer],
+    ["rep", L.rep],
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="text-sm font-bold">{T.bar.legendTitle}</h4>
+      <ul className="flex flex-col gap-1.5 text-xs">
+        {rows.map(([tone, label]) => (
+          <li key={tone} className="flex items-center gap-2">
+            <ToneIcon tone={tone} />
+            <span>{label}</span>
+          </li>
+        ))}
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center">
+            <span className="block w-5 border-t-2 border-dashed" style={{ borderColor: toneColor("order") }} />
+          </span>
+          <span>{L.route}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border-2 border-line bg-paper" />
+          <span>{L.office}</span>
+        </li>
+      </ul>
+      <p className="text-xs leading-5 text-ink-muted">{T.bar.coverageAlways}</p>
+    </div>
+  );
+}
+
+/** **زرّا الاتّصال وواتساب** — والهاتفُ لا يصل إلّا لمن يملكه. */
+function ContactButtons({ phone }: { phone: string }) {
+  return (
+    <>
+      <a href={`tel:${phone}`}>
+        <Button variant="secondary">
+          <IconPhone size={16} aria-hidden />
+          {T.contact.call}
+        </Button>
+      </a>
+      <a href={waLink(phone)} target="_blank" rel="noopener noreferrer">
+        <Button variant="secondary">
+          <IconWhatsApp size={16} aria-hidden />
+          {T.contact.whatsapp}
+        </Button>
+      </a>
+    </>
   );
 }
 

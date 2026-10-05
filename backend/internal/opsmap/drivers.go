@@ -102,8 +102,9 @@ func (b BBox) Args() []any { return []any{b.MinLng, b.MinLat, b.MaxLng, b.MaxLat
 
 // Driver سائقٌ على الخريطة.
 //
-// **ولا هاتفَ فيه** (البند ٣٣) — **الخريطةُ تقول أين ومن، لا كيف
-// يُتَّصل به.** ومن أراد الاتّصالَ فتح بطاقتَه في «الحسابات».
+// **ولا هاتفَ فيه إلّا لمن يملك `users.contact.read`** (البند ٣٣، ثمّ قرارُ
+// المالك ٢٠٢٦-١٠-٠٥: زرّا «اتّصال» و«واتساب» في بطاقة السائق) — **والقدرةُ
+// نفسُها التي تُظهر الهاتفَ في الطلب والطارئ**، فلا بابَ ثانٍ إليه.
 type Driver struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
@@ -117,6 +118,13 @@ type Driver struct {
 	LastLocationAt time.Time `json:"last_location_at"`
 	AgeSec         int64     `json:"age_sec"`
 	Freshness      string    `json:"freshness"`
+
+	// Tone **حالُه في لون** — `available` · `busy` · `idle` (`DriverTone`).
+	Tone string `json:"tone"`
+
+	// Phone **هاتفُه — لمن يملك `users.contact.read` وحدَه** (زرّا الاتّصال
+	// وواتساب في بطاقته). **ويُحذف المفتاحُ لمن لا يملكها** لا يُفرَّغ.
+	Phone *string `json:"phone,omitempty"`
 
 	// CashHeld **ما في صندوقه** — **ويبقى فارغاً لمن لا يملك
 	// `VIEW_MAP_FINANCIALS`** (البند ٦).
@@ -140,6 +148,10 @@ type DriverFilter struct {
 	Status string
 	// Search اسمٌ أو جزءٌ منه.
 	Search string
+
+	// WithPhone **أيُرسَل الهاتف؟** — خيارُ ردٍّ لا مرشِّح: يقرّره المعالجُ
+	// بقدرة `users.contact.read`.
+	WithPhone bool
 }
 
 // Querier ما تحتاجه الحزمةُ من القاعدة.
@@ -240,7 +252,7 @@ func Drivers(ctx context.Context, q Querier, box *BBox, f DriverFilter,
 		       (SELECT o.id::text FROM orders o
 		         WHERE o.driver_id = u.id AND o.closed_at IS NULL
 		         ORDER BY o.created_at LIMIT 1),
-		       COALESCE(cb.held, 0)
+		       COALESCE(cb.held, 0), u.phone::text
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
 		LEFT JOIN driver_cash_boxes cb ON cb.driver_id = u.id
@@ -262,8 +274,9 @@ func Drivers(ctx context.Context, q Querier, box *BBox, f DriverFilter,
 		var at *time.Time
 		var cur *string
 		var held int64
+		var phone *string
 		if err := rows.Scan(&d.ID, &d.Name, &d.Status, &d.OnShift,
-			&lat, &lng, &at, &d.ActiveN, &cur, &held); err != nil {
+			&lat, &lng, &at, &d.ActiveN, &cur, &held, &phone); err != nil {
 			return nil, err
 		}
 		d.CurrentO = cur
@@ -275,6 +288,10 @@ func Drivers(ctx context.Context, q Querier, box *BBox, f DriverFilter,
 			d.AgeSec = int64(now.Sub(*at).Seconds())
 		}
 		d.Freshness = Freshness(now.Sub(deref(at, now)), lat != nil && at != nil, pingSec)
+		d.Tone = DriverTone(d.OnShift, d.ActiveN, d.Freshness)
+		if f.WithPhone && phone != nil && *phone != "" {
+			d.Phone = phone
+		}
 		if withMoney {
 			h := held
 			d.CashHeld = &h

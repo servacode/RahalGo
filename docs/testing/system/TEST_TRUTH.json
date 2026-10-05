@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 488,
+    "routes": 491,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 200,
     "behaviour_settings": 157,
     "order_fields": 95,
-    "test_files": 525,
-    "test_funcs": 2181
+    "test_files": 527,
+    "test_funcs": 2189
   },
   "flows": [
     {
@@ -8188,6 +8188,30 @@
       "name": "TestStatusAt_DerivesFromServerTime",
       "file": "internal/offers/status_test.go",
       "package": "offers",
+      "orphan": true
+    },
+    {
+      "name": "TestCountDrivers_UsesTone",
+      "file": "internal/opsmap/live_test.go",
+      "package": "opsmap",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerCells_PrivacyConstants",
+      "file": "internal/opsmap/live_test.go",
+      "package": "opsmap",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverTone_Matrix",
+      "file": "internal/opsmap/live_test.go",
+      "package": "opsmap",
+      "orphan": true
+    },
+    {
+      "name": "TestFirstStuck_OldestStuckWins",
+      "file": "internal/opsmap/live_test.go",
+      "package": "opsmap",
       "orphan": true
     },
     {
@@ -18118,6 +18142,30 @@
         "SECURITY"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestOpsMapPro_CustomersAreAggregatedCellsOnly",
+      "file": "internal/qa/opsmap_pro_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMapPro_DriverToneAndContactGate",
+      "file": "internal/qa/opsmap_pro_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMapPro_OfficeListsStaffNameAndRoleOnly",
+      "file": "internal/qa/opsmap_pro_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMapPro_OperationsCallsEveryPageEndpoint",
+      "file": "internal/qa/opsmap_pro_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCDEF003_ForeignMerchantCannotBecomeCommissionStore",

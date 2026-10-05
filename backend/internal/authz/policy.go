@@ -410,6 +410,12 @@ var adminPolicy = []Rule{
 	// بـ`users.read`**: **الماليّةُ تملكها ولا تُراقب مندوباً.**
 	{"GET", "/ops-map/reps", MerchantsManage},
 	{"GET", "/ops-map/meta", OrdersRead},
+	// **شريطُ العدّادات والزبائنُ المجمَّعون والمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥) —
+	// قراءاتٌ تشغيليّةٌ لموظّف العمليّات: **الزبائنُ خلايا لا بيوت** (حدٌّ أدنى
+	// ثلاثة)، **والمكتبُ اسمٌ ودورٌ لمن حضر** بلا هاتف.
+	{"GET", "/ops-map/summary", OrdersRead},
+	{"GET", "/ops-map/customers", OrdersRead},
+	{"GET", "/ops-map/office", OrdersRead},
 	{"GET", "/ops-map/search", OrdersRead},
 
 	// ── الحوافز ─────────────────────────────────────────────────

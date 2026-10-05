@@ -3013,6 +3013,13 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/customers",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/demand",
       "handler": "requirePerm",
       "auth": true,
@@ -3062,6 +3069,13 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/office",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/opportunities",
       "handler": "requirePerm",
       "auth": true,
@@ -3084,6 +3098,13 @@
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/search",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/summary",
       "handler": "requirePerm",
       "auth": true,
       "capability": "orders.read"
