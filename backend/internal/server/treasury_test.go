@@ -361,6 +361,14 @@ func TestTREASURY_ApprovalsPageBlocksProposer(t *testing.T) {
 	if !it.CanApprove || it.ApprovePath != "/api/v1/admin/wallet-requests/"+rid+"/approve" {
 		t.Fatalf("غيرُ المقترح: %+v", it)
 	}
+	// **ومن يوافق يرى لمن يذهب المال** (فحصُ المال ٢٠٢٦-١٠-٠٥).
+	if _, err := f.pool.Exec(context.Background(),
+		`UPDATE users SET full_name = 'صاحب المحفظة' WHERE id = $1`, u); err != nil {
+		t.Fatal(err)
+	}
+	if got := find(f.b).PartyName; got != "صاحب المحفظة" {
+		t.Fatalf("سطرُ الموافقة لا يقول لمن: party_name=%q", got)
+	}
 	if _, err := f.pool.Exec(context.Background(), `UPDATE wallet_requests SET status = 'rejected' WHERE id = $1`, rid); err != nil {
 		t.Fatal(err)
 	}

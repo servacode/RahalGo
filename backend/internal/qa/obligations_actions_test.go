@@ -91,6 +91,21 @@ func TestOBLX_OfficeCashPaymentEntersCashboxAndTreasury(t *testing.T) {
 	if s, _, _ := obligationState(t, h, ob); s != 0 {
 		t.Fatalf("**سُدّ الدينُ قبل الموافقة** (%d)", s)
 	}
+	// **والقائمةُ تقول من اقترح** — فلا تعرض الشاشةُ زرَّ موافقةٍ لمقترِحه
+	// (فحصُ المال ٢٠٢٦-١٠-٠٥: كان يُعرَض فيُسأل كلمةَ سرّه ثمّ يُردّ ٤٠٣).
+	list := h.GET("/api/v1/admin/obligations?party_kind=merchant&party_id="+m.ID, fin.Token)
+	var by string
+	for _, raw := range list.JSON()["obligations"].([]any) {
+		row := raw.(map[string]any)
+		if row["id"] == ob {
+			if p, ok := row["pending"].(map[string]any); ok {
+				by, _ = p["proposed_by"].(string)
+			}
+		}
+	}
+	if by != fin.ID {
+		t.Errorf("الطلبُ المعلَّق بلا مقترِحه في القائمة: proposed_by=%q", by)
+	}
 	// **وصاحبُ الاقتراح لا يوافق على نفسه.**
 	if self := h.POST("/api/v1/admin/obligation-requests/"+reqID+"/approve", fin.Token,
 		map[string]any{}); self.Err() != "self_approve" {

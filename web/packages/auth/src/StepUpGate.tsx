@@ -82,11 +82,17 @@ export function StepUpGate() {
   // **وحقولُ التبديل الجوهريّةُ تُعرَض** — **فمن أكّد مبلغاً رآه.** **وبأسمائها العربيّة**:
   // كانت «value: 11000».
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const show = (v: unknown) =>
-    typeof v === "number" ? fmtNum(v) : typeof v === "string" ? v : JSON.stringify(v);
+  // **والقيمُ بأسمائها لا برموزها** (فحصُ المال ٢٠٢٦-١٠-٠٥) — الدورُ والصلاحيّةُ والحالة.
+  const names: Record<string, Record<string, string> | undefined> = {
+    role: (m.terms as Record<string, unknown>).roleNames as Record<string, string> | undefined,
+    capability: (m.terms as Record<string, unknown>).capabilityNames as Record<string, string> | undefined,
+    status: (S as Record<string, unknown>).statusValues as Record<string, string> | undefined,
+  };
+  const showFact = (k: string, v: unknown) =>
+    typeof v === "number" ? fmtNum(v) : typeof v === "string" ? (names[k]?.[v] ?? v) : JSON.stringify(v);
   const facts = (["amount", "role", "capability", "status", "value"] as const)
     .filter((k) => body[k] !== undefined)
-    .map((k) => `${S.facts[k]}: ${show(body[k])}`)
+    .map((k) => `${S.facts[k]}: ${showFact(k, body[k])}`)
     .join(" · ");
 
   return (

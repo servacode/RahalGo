@@ -38,6 +38,8 @@ export interface ApprovalItem {
   note: string;
   proposed_by: string;
   proposer_name: string;
+  /** لمن يذهب المالُ أو على من يقع — فارغٌ حيث لا طرف. */
+  party_name?: string;
   created_at: string;
   due_at: string | null;
   approve_path: string;
@@ -103,6 +105,7 @@ export function ApprovalsTab() {
                 <span className="font-bold" dir="ltr">
                   {fmtMoney(it.amount)}
                 </span>
+                {it.party_name && <span className="font-medium">{T.approvals.party.replace("{name}", it.party_name)}</span>}
                 <span className="min-w-0 flex-1 truncate text-ink-muted">{it.note}</span>
                 <span className="shrink-0 text-xs text-ink-muted">
                   {T.approvals.proposedBy}: {it.proposer_name || T.approvals.system} ·{" "}
@@ -153,7 +156,12 @@ export function ApprovalsTab() {
             <div className="space-y-2">
               <p>
                 {T.approvals.approveBody
-                  .replace("{amount}", fmtMoney(approve.amount))
+                  .replace(
+                    "{amount}",
+                    approve.party_name
+                      ? `${fmtMoney(approve.amount)} ${T.approvals.party.replace("{name}", approve.party_name)}`
+                      : fmtMoney(approve.amount),
+                  )
                   .replace("{section}", sectionLabel(approve.section))}
               </p>
               {approve.self_approval && <Alert tone="warning">{T.approvals.selfFlag}</Alert>}

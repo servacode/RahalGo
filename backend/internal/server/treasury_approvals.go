@@ -45,6 +45,17 @@ type approvalSource struct {
 	Href string
 	// AmountCol · NoteCol · ProposerCol · DueCol — أعمدةٌ تخالف العقد إن وُجدت.
 	AmountCol, NoteCol, ProposerCol, DueCol string
+	// PartyCol عمودُ الطرف في الجدول، وPartyExpr اسمُه منه (على الاسم المستعار `x`).
+	//
+	// **ومن يوافق يرى لمن يذهب المال** (فحصُ المال ٢٠٢٦-١٠-٠٥): كان سطرُ الموافقة
+	// يقول المبلغَ والملاحظةَ ومن اقترح — **ولا يقول لمن**، فيُوافَق على شحن محفظةٍ
+	// أو مكافأةٍ لا يُعرف صاحبُها إلّا بفتح قسمها.
+	PartyCol, PartyExpr string
+}
+
+// partyUser اسمُ حسابٍ من عمودٍ يحمل معرّفَه.
+func partyUser(c string) string {
+	return `(SELECT COALESCE(NULLIF(u.full_name, ''), u.phone::text) FROM users u WHERE u.id = ` + c + `)`
 }
 
 // approvalSources **السجلّ** — سطرٌ لكلّ قسم.
@@ -53,7 +64,8 @@ var approvalSources = []approvalSource{
 		Capability:  authz.FinanceManage,
 		ApprovePath: "/api/v1/admin/wallet-requests/{id}/approve",
 		RejectPath:  "/api/v1/admin/wallet-requests/{id}/reject",
-		Href:        "/dashboard/treasury?tab=approvals"},
+		Href:        "/dashboard/treasury?tab=approvals",
+		PartyCol:    "user_id", PartyExpr: partyUser("x.user_id")},
 	{Key: "cash_closes", Table: "office_cash_closes", Section: "cashCloses",
 		Capability:  authz.FinanceManage,
 		ApprovePath: "/api/v1/admin/cashbox/closes/{id}/approve",
@@ -70,7 +82,8 @@ var approvalSources = []approvalSource{
 	// و`proposed_by` الفارغُ هو النظام.
 	{Key: "driver_compensations", Table: "driver_compensation_requests", Section: "compensations",
 		Capability: authz.FinanceManage, Href: "/dashboard/compensations",
-		AmountCol: "suggested_amount"},
+		AmountCol: "suggested_amount",
+		PartyCol:  "driver_id", PartyExpr: partyUser("x.driver_id")},
 	// **مصروفاتُ التشغيل فوق السقف** — موافقةٌ ثانيةٌ بكلمة السرّ.
 	{Key: "expenses", Table: "expense_requests", Section: "expenses",
 		Capability:  authz.FinanceManage,
@@ -83,19 +96,29 @@ var approvalSources = []approvalSource{
 		Capability:  authz.FinanceManage,
 		ApprovePath: "/api/v1/admin/obligation-requests/{id}/approve",
 		RejectPath:  "/api/v1/admin/obligation-requests/{id}/reject",
-		Href:        "/dashboard/obligations"},
+		Href:        "/dashboard/obligations",
+		PartyCol:    "obligation_id",
+		PartyExpr: `(SELECT CASE WHEN fo.party_kind = 'merchant'
+		                 THEN (SELECT m.name FROM merchants m WHERE m.id = fo.party_id)
+		                 ELSE ` + partyUser("fo.party_id") + ` END
+		               FROM financial_obligations fo WHERE fo.id = x.obligation_id)`},
 	// **المكافآتُ والعقوباتُ اليدويّة** — اقتراحٌ يوافق عليه موظّفٌ آخر (هجرة 0380).
 	{Key: "incentives", Table: "incentive_requests", Section: "incentives",
 		Capability:  authz.FinanceManage,
 		ApprovePath: "/api/v1/admin/incentive-requests/{id}/approve",
 		RejectPath:  "/api/v1/admin/incentive-requests/{id}/reject",
-		Href:        "/dashboard/incentives"},
+		Href:        "/dashboard/incentives",
+		PartyCol:    "user_id", PartyExpr: partyUser("x.user_id")},
 	// **حسمُ النزاعات: خصمٌ أو إسقاط** — اقتراحٌ من الماليّة وموافقةُ غيرِ المقترِح (هجرة 0350).
 	{Key: "disputes", Table: "dispute_resolutions", Section: "disputes",
 		Capability:  authz.FinanceManage,
 		ApprovePath: "/api/v1/admin/dispute-resolutions/{id}/approve",
 		RejectPath:  "/api/v1/admin/dispute-resolutions/{id}/reject",
-		Href:        "/dashboard/losses"},
+		Href:        "/dashboard/losses",
+		PartyCol:    "dispute_id",
+		PartyExpr: `(SELECT COALESCE((SELECT m.name FROM merchants m WHERE m.id = d.merchant_id),
+		                             ` + partyUser("d.party_user_id") + `)
+		               FROM disputes d WHERE d.id = x.dispute_id)`},
 	// **العروضُ فوق حدّ المحتوى** (فوق ٢٠٪ أو ٥٠ استخداماً) — موافقةُ الماليّة (هجرة 0390).
 	// والمبلغُ أقصى كلفةٍ متوقّعة، وصفرُه «بلا سقفٍ معروف».
 	{Key: "promos", Table: "promo_approvals", Section: "promos",
@@ -108,18 +131,20 @@ var approvalSources = []approvalSource{
 var approvalIdent = regexp.MustCompile(`^[a-z_]+$`)
 
 type approvalItem struct {
-	Key          string     `json:"key"`
-	Section      string     `json:"section"`
-	ID           string     `json:"id"`
-	Amount       int64      `json:"amount"`
-	Note         string     `json:"note"`
-	ProposedBy   string     `json:"proposed_by"`
-	ProposerName string     `json:"proposer_name"`
-	CreatedAt    time.Time  `json:"created_at"`
-	DueAt        *time.Time `json:"due_at"`
-	ApprovePath  string     `json:"approve_path"`
-	RejectPath   string     `json:"reject_path"`
-	Href         string     `json:"href"`
+	Key          string `json:"key"`
+	Section      string `json:"section"`
+	ID           string `json:"id"`
+	Amount       int64  `json:"amount"`
+	Note         string `json:"note"`
+	ProposedBy   string `json:"proposed_by"`
+	ProposerName string `json:"proposer_name"`
+	// PartyName لمن يذهب المالُ أو على من يقع — فارغٌ حيث لا طرفَ (مصروف، إغلاقُ صندوق).
+	PartyName   string     `json:"party_name"`
+	CreatedAt   time.Time  `json:"created_at"`
+	DueAt       *time.Time `json:"due_at"`
+	ApprovePath string     `json:"approve_path"`
+	RejectPath  string     `json:"reject_path"`
+	Href        string     `json:"href"`
 	// CanApprove **أيستطيع هذا الموظّفُ أن يوافق؟** — قدرةٌ + ليس صاحبَ الاقتراح.
 	CanApprove bool `json:"can_approve"`
 	// SelfApproval **سيوافق على اقتراحه** — المالكُ وحدَه حين لا يوجد غيرُه، ويُعلَّم.
@@ -152,6 +177,11 @@ func (s *Server) pendingApprovals(ctx context.Context, q dbtx.Querier, r *http.R
 		if src.DueCol != "" {
 			need = append(need, src.DueCol)
 		}
+		partyExpr := "''"
+		if src.PartyCol != "" {
+			need = append(need, src.PartyCol)
+			partyExpr = "COALESCE(" + src.PartyExpr + ", '')"
+		}
 		ok, err := tableHasColumns(ctx, q, src.Table, need)
 		if err != nil {
 			return nil, err
@@ -174,7 +204,7 @@ func (s *Server) pendingApprovals(ctx context.Context, q dbtx.Querier, r *http.R
 		}
 		rows, err := q.Query(ctx, `
 			SELECT x.id::text, COALESCE(x.`+amountC+`, 0)::bigint, COALESCE(x.`+noteC+`::text, ''),
-			       `+propExpr+`, `+nameExpr+`, x.created_at, `+dueExpr+`
+			       `+propExpr+`, `+nameExpr+`, x.created_at, `+dueExpr+`, `+partyExpr+`
 			  FROM `+src.Table+` x`+joinUser+`
 			 WHERE x.status = 'pending'
 			 ORDER BY x.created_at
@@ -185,7 +215,7 @@ func (s *Server) pendingApprovals(ctx context.Context, q dbtx.Querier, r *http.R
 		for rows.Next() {
 			it := approvalItem{Key: src.Key, Section: src.Section, Href: src.Href}
 			if err := rows.Scan(&it.ID, &it.Amount, &it.Note, &it.ProposedBy, &it.ProposerName,
-				&it.CreatedAt, &it.DueAt); err != nil {
+				&it.CreatedAt, &it.DueAt, &it.PartyName); err != nil {
 				rows.Close()
 				return nil, err
 			}

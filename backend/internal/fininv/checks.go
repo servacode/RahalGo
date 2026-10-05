@@ -486,8 +486,11 @@ var All = []Check{
 			       COALESCE(l.net, 0)::bigint AS صافي_الدفتر
 			FROM orders o
 			LEFT JOIN LATERAL (
+				-- **واسترجاعُ طلبٍ انتهى قبل الاستلام ليس مالاً تحرّك** —
+				-- هو ردُّ الخصمِ نفسِه (refundOnEnter)، **فلا يُجمَع معه**
+				-- وإلّا قُرئ كلُّ طلبِ محفظةٍ أُلغي أو رُفض خرقاً.
 				SELECT sum(t.amount) AS net FROM wallet_transactions t
-				WHERE t.ref = o.id::text
+				WHERE t.ref = o.id::text AND t.kind <> 'refund'
 			) l ON true
 			WHERE NOT EXISTS (SELECT 1 FROM wallet_transactions p
 			                  WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
@@ -941,11 +944,24 @@ var All = []Check{
 				  ON t.ref = o.id::text AND t.kind = 'commission'
 				WHERE o.status = 'refunded'
 				GROUP BY t.user_id
+			),
+			-- **والدَّينُ المسدَّد يغطّي كما يغطّي القائم** — نقداً بالمكتب أو
+			-- بشحنٍ أو اقتطاعاً من عمولةٍ قادمة أو شطباً. **وكان الفحصُ يقرأ
+			-- نقصَ الدَّين بسداده عمولةً لم تُعكَس** (فحصُ المال ٢٠٢٦-١٠-٠٥).
+			-- والمُسقَطُ لأنّ الطلبَ لم يقع ليس سداداً.
+			مسدَّد AS (
+				SELECT f.party_id AS user_id, sum(s.amount)::bigint AS المسدَّد
+				FROM obligation_settlements s
+				JOIN financial_obligations f ON f.id = s.obligation_id
+				WHERE f.party_kind = 'rep' AND f.cause = 'refund_rep_commission'
+				  AND s.method <> 'voided'
+				GROUP BY f.party_id
 			)
-			SELECT u.full_name, r.الباقي, u.commission_debt
+			SELECT u.full_name, r.الباقي, u.commission_debt, COALESCE(p.المسدَّد, 0) AS المسدَّد
 			FROM بالمندوب r
 			JOIN users u ON u.id = r.user_id
-			WHERE r.الباقي > COALESCE(u.commission_debt, 0)`,
+			LEFT JOIN مسدَّد p ON p.user_id = r.user_id
+			WHERE r.الباقي > COALESCE(u.commission_debt, 0) + COALESCE(p.المسدَّد, 0)`,
 	},
 	{
 		ID: "FI-12.c", Family: FI12, Status: DeferredP6, Ops: false,
