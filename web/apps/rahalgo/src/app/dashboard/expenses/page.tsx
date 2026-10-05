@@ -603,7 +603,8 @@ function VoidModal({ row, onClose, onDone }: { row: Row; onClose: () => void; on
           onSave={() => void submit()}
           onCancel={onClose}
           busy={busy}
-          saveLabel={X.void}
+          saveLabel={X.voidConfirm}
+          cancelLabel={X.back}
         />
       </div>
     </Modal>
