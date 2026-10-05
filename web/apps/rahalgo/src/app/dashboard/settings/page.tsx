@@ -159,12 +159,12 @@ const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_bac
 /** **الألواحُ المخصَّصةُ في العمود** — والبحثُ يجدها بأسمائها. */
 const PANELS: { key: string; topic: string; label: string; adminOnly?: boolean }[] = [
   { key: "appStatus", topic: "launch", label: m.admin.appStatus.title },
-  { key: "hours", topic: "launch", label: m.admin.platformHours.title },
+  { key: "hours", topic: "launch", label: m.admin.platformHours.title, adminOnly: true },
   { key: "release", topic: "apps", label: m.admin.release.title },
-  { key: "divisions", topic: "coverage", label: m.admin.divisions.title },
-  { key: "cities", topic: "coverage", label: m.admin.cities.title },
-  { key: "zones", topic: "coverage", label: m.terms.zones },
-  { key: "whatsapp", topic: "whatsapp", label: m.admin.nav.whatsapp },
+  { key: "divisions", topic: "coverage", label: m.admin.divisions.title, adminOnly: true },
+  { key: "cities", topic: "coverage", label: m.admin.cities.title, adminOnly: true },
+  { key: "zones", topic: "coverage", label: m.terms.zones, adminOnly: true },
+  { key: "whatsapp", topic: "whatsapp", label: m.admin.nav.whatsapp, adminOnly: true },
   { key: "broadcast", topic: "whatsapp", label: m.admin.broadcast.title, adminOnly: true },
 ];
 
@@ -226,7 +226,13 @@ export default function SettingsPage() {
     }
   }, [load]);
 
-  const allTopics = useMemo(() => [...topics, ...PANEL_TOPICS], [topics]);
+  // **وموضوعا اللوحات لمن يملك الإعدادَ العامّ** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥): الماليّةُ
+  // ترى صفحةَ الإعدادات بمفاتيحها الماليّة، **وكانت التغطيةُ وواتساب وساعاتُ المنصّة
+  // تُفتح لها فتُردّ ٤٠٣** — لوحاتُها تنادي أبواباً بـ`settings.general.manage`.
+  const allTopics = useMemo(
+    () => [...topics, ...(isAdmin ? PANEL_TOPICS : [])],
+    [topics, isAdmin],
+  );
 
   const found = useMemo(() => {
     const needle = norm(q.trim());
@@ -462,7 +468,7 @@ function TopicBody({
         );
       })}
 
-      {topic === "launch" && <HoursPanel />}
+      {topic === "launch" && isAdmin && <HoursPanel />}
       {sections.length === 0 && topic !== "launch" && topic !== "apps" && (
         <EmptyState icon={IconSettings} title={S.emptyGroup} />
       )}
