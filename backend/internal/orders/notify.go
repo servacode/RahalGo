@@ -41,7 +41,7 @@ var t = struct {
 	driverLost string
 	// **«لدي توصيلة» تمرّ بالمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **والمتجرُ
 	// يُخبَر بقرار المكتب** فيها، والمكتبُ بوصولها.
-	mdNewOps, mdAccepted, mdRejected, mdCancelled string
+	mdNewOps, mdAccepted, mdRejected, mdCancelled, mdAssigned, mdPickedUp string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -77,6 +77,8 @@ var t = struct {
 	mdAccepted:               "وافقت المنصة على توصيلتك",
 	mdRejected:               "اعتذرت المنصة عن توصيلتك",
 	mdCancelled:              "أُلغيت توصيلتك",
+	mdAssigned:               "سائق في طريقه لاستلام توصيلتك",
+	mdPickedUp:               "استلم السائق التوصيلة",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -351,6 +353,9 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 	if p.kind == KindMerchantDelivery && p.merchantOwner != nil {
 		mdTitle := map[string]string{
 			StAccepted: t.mdAccepted, StRejected: t.mdRejected, StCancelled: t.mdCancelled,
+			// **وإسنادُ السائق واستلامُه** (قرارُ المالك ٢٠٢٦-١٠-٠٥: «نعم») — كان لا
+			// يُرى إلّا في شاشة التتبّع.
+			StAssigned: t.mdAssigned, StPickedUp: t.mdPickedUp,
 		}[to]
 		if mdTitle != "" && endedBy != "merchant" {
 			s.notify.Notify(ctx, notifications.Input{
@@ -358,7 +363,7 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 				Title: mdTitle, Body: body,
 				Entity: "order", EntityID: orderID, Href: "/portal",
 				Apps:      []string{notifications.AppMerchant},
-				Transient: to == StAccepted,
+				Transient: to == StAccepted || to == StAssigned || to == StPickedUp,
 			})
 		}
 	}
