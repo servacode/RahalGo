@@ -28,6 +28,7 @@ package server
 // مُدقَّقٍ في المعاملة. فمن عطبت كاميرتُه يطلب من العمليّات، وهي تأذن وتُوقّع.
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -104,6 +105,13 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	lat, errLat := strconv.ParseFloat(r.FormValue("lat"), 64)
 	lng, errLng := strconv.ParseFloat(r.FormValue("lng"), 64)
 	hasPoint := errLat == nil && errLng == nil
+	// **و`NaN` و`Inf` تمرّ من `ParseFloat`** — والمقارنةُ معها كاذبةٌ دائماً،
+	// **فكانت صورةٌ بـ`lat=NaN` تتجاوز حارسَ المسافة** وتُقبل من أيّ مكان.
+	// وخارجُ المدى ليس موضعاً كذلك. (فحصُ الهجوم ٢٠٢٦-١٠-٠٥.)
+	if hasPoint && (math.IsNaN(lat) || math.IsNaN(lng) || math.IsInf(lat, 0) || math.IsInf(lng, 0) ||
+		lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+		hasPoint = false
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **وموقعٌ مزيَّفٌ لا يُقبل إثباتاً — ولا الصورةُ معه**
