@@ -46,6 +46,7 @@ import { createRoot } from "react-dom/client";
 import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "@rahalgo/ui/mapconfig";
 import { loadMapEngine } from "@rahalgo/ui/mapengine";
 import { themeColor } from "@rahalgo/ui";
+import { TWEEN_MS, anyMoved, easeInOut, positionsOf, tweenPoints, type LngLat } from "./live";
 
 /** **مركزُ الرقّة** — حيث تعمل المنصّة. */
 const RAQQA: [number, number] = [39.0079, 35.9528];
@@ -86,6 +87,22 @@ export interface LayerSpec {
   fillOpacity?: number;
   /** **خطٌّ متقطّع؟** لطبقات `line` — افتراضُه نعم. */
   dashed?: boolean;
+  /**
+   * **انزلاقٌ بين نبضتين** لطبقات النقاط (خاصّةُ `id`) — **السائقُ يمشي ولا
+   * يقفز.** ثانيةٌ واحدة، **ولا انزلاقَ لمن طلب تقليلَ الحركة.**
+   */
+  animate?: boolean;
+  /**
+   * **حلقةٌ نابضةٌ تحت الرمز** لما خاصّتُه `field` صحيحة — **«موقعُه حيٌّ
+   * الآن»** بنظرة. ولونُها تعبيرٌ كاللون.
+   */
+  pulse?: { field: string; color: unknown };
+  /** **خصائصُ التجميع** — تُجمَع في العامل (`clusterProperties`). */
+  clusterProperties?: Record<string, unknown>;
+  /** **لونُ فقّاعة التجميع** — تعبيرٌ يقرأ خصائصَ التجميع؛ وافتراضُه `color`. */
+  clusterColor?: unknown;
+  /** **حلقةُ فقّاعة التجميع** — لونُها وعرضُها تعبيران. */
+  clusterStroke?: { color: unknown; width: unknown };
 }
 
 /** **صورةُ رمزٍ تُسجَّل في الخريطة** — اسمُها قيمةُ خاصّة `icon`. */
@@ -165,6 +182,15 @@ async function drawIcon(icon: MapIcon): Promise<ImageData | null> {
  *
  * **ودائرةٌ تصف مسافةً لا حجماً** — فتكبر مع التكبير.
  */
+/** **من طلب تقليلَ الحركة لا تُحرَّك له الخريطة.** */
+function reducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
 function radiusExpression(field: string) {
   return [
     "interpolate", ["exponential", 2], ["zoom"],
@@ -210,6 +236,11 @@ export function OpsMapCanvas({
   const [failed, setFailed] = useState(false);
   const built = useRef<Set<string>>(new Set());
   const placed = useRef<Map<string, maplibregl.Marker>>(new Map());
+  // **ما يُرى الآن من مواضع كلِّ طبقةٍ منزلقة** — فانزلاقٌ يبدأ أثناءَ آخرَ
+  // يبدأ من حيث النقطةُ فعلاً، لا من حيث كانت.
+  const shown = useRef<Map<string, Map<string, LngLat>>>(new Map());
+  const tweens = useRef<Map<string, number>>(new Map());
+  const pulses = useRef<Set<string>>(new Set());
 
   // **والمُنادياتُ في مرجعٍ** — فلا يُعاد بناءُ الخريطة كلَّما تبدّلت.
   const clickRef = useRef(onFeatureClick);
@@ -232,6 +263,10 @@ export function OpsMapCanvas({
     let cancelled = false;
     let instance: maplibregl.Map | null = null;
     const markersNow = placed.current;
+    const tweensNow = tweens.current;
+    const shownNow = shown.current;
+    const pulsesNow = pulses.current;
+    let observer: ResizeObserver | null = null;
 
     (async () => {
       try {
@@ -247,6 +282,11 @@ export function OpsMapCanvas({
         });
         instance.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-left");
         map.current = instance;
+        // **والصندوقُ يتبدّل حجمُه** (ملءُ الشاشة) — فتُعاد قياساتُ اللوح.
+        if (typeof ResizeObserver !== "undefined") {
+          observer = new ResizeObserver(() => instance?.resize());
+          observer.observe(box.current);
+        }
         instance.on("load", async () => {
           // **والرموزُ قبل الطبقات** — طبقةٌ تطلب صورةً لم تُسجَّل ترسم فراغاً.
           for (const ic of iconsRef.current) {
@@ -277,11 +317,16 @@ export function OpsMapCanvas({
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
+      for (const h of tweensNow.values()) cancelAnimationFrame(h);
+      tweensNow.clear();
       for (const mk of markersNow.values()) mk.remove();
       markersNow.clear();
       instance?.remove();
       map.current = null;
       built.current.clear();
+      shownNow.clear();
+      pulsesNow.clear();
     };
   }, []);
 
@@ -296,7 +341,10 @@ export function OpsMapCanvas({
         type: "geojson",
         data: spec.data as never,
         ...(spec.cluster
-          ? { cluster: true, clusterRadius: 48, clusterMaxZoom: 14 }
+          ? {
+              cluster: true, clusterRadius: 48, clusterMaxZoom: 14,
+              ...(spec.clusterProperties ? { clusterProperties: spec.clusterProperties } : {}),
+            }
           : {}),
       } as never);
 
@@ -371,11 +419,11 @@ export function OpsMapCanvas({
             id: `${spec.id}-cluster`, type: "circle", source: srcID,
             filter: ["has", "point_count"],
             paint: {
-              "circle-color": spec.color as never,
+              "circle-color": (spec.clusterColor ?? spec.color) as never,
               "circle-opacity": 0.85,
               "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 50, 30] as never,
-              "circle-stroke-width": 2,
-              "circle-stroke-color": themeColor("paper"),
+              "circle-stroke-width": (spec.clusterStroke?.width ?? 2) as never,
+              "circle-stroke-color": (spec.clusterStroke?.color ?? themeColor("paper")) as never,
             },
           } as never);
           m.addLayer({
@@ -396,6 +444,21 @@ export function OpsMapCanvas({
             const [lng, lat] = (f.geometry as unknown as { coordinates: [number, number] }).coordinates;
             void src.getClusterExpansionZoom(id).then((z) => m.easeTo({ center: [lng, lat], zoom: z }));
           });
+        }
+        // **والحلقةُ النابضةُ تحت الرمز** — من المصدر نفسِه فتنزلق معه.
+        if (spec.pulse) {
+          m.addLayer({
+            id: `${spec.id}-pulse`, type: "circle", source: srcID,
+            filter: ["==", ["get", spec.pulse.field], true],
+            paint: {
+              "circle-radius": 17,
+              "circle-opacity": 0,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": spec.pulse.color as never,
+              "circle-stroke-opacity": 0.6,
+            },
+          } as never);
+          pulses.current.add(`${spec.id}-pulse`);
         }
         if (spec.kind === "symbol") {
           m.addLayer({
@@ -439,9 +502,34 @@ export function OpsMapCanvas({
     }
 
     const src = m.getSource(srcID) as maplibregl.GeoJSONSource | undefined;
-    src?.setData((spec.visible ? spec.data : EMPTY) as never);
+    const prevTween = tweens.current.get(spec.id);
+    if (prevTween != null) {
+      cancelAnimationFrame(prevTween);
+      tweens.current.delete(spec.id);
+    }
+    const from = shown.current.get(spec.id);
+    const still =
+      !spec.animate || !spec.visible || !from || from.size === 0 || reducedMotion() ||
+      !anyMoved(from, spec.data.features);
+    if (still) {
+      src?.setData((spec.visible ? spec.data : EMPTY) as never);
+      if (spec.animate) shown.current.set(spec.id, spec.visible ? positionsOf(spec.data.features) : new Map());
+    } else {
+      // ── الانزلاق — لقطةٌ كلَّ إطارٍ حتّى الهدف ─────────────────
+      const start = performance.now();
+      const target = spec.data.features;
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / TWEEN_MS);
+        const frame = t >= 1 ? target : tweenPoints(from, target, easeInOut(t));
+        src?.setData({ type: "FeatureCollection", features: frame } as never);
+        shown.current.set(spec.id, positionsOf(frame));
+        if (t < 1) tweens.current.set(spec.id, requestAnimationFrame(step));
+        else tweens.current.delete(spec.id);
+      };
+      tweens.current.set(spec.id, requestAnimationFrame(step));
+    }
 
-    for (const id of [spec.id, `${spec.id}-line`, `${spec.id}-cluster`, `${spec.id}-count`, `${spec.id}-label`]) {
+    for (const id of [spec.id, `${spec.id}-line`, `${spec.id}-cluster`, `${spec.id}-count`, `${spec.id}-label`, `${spec.id}-pulse`]) {
       if (m.getLayer(id)) {
         m.setLayoutProperty(id, "visibility", spec.visible ? "visible" : "none");
       }
@@ -452,6 +540,30 @@ export function OpsMapCanvas({
     if (!ready) return;
     for (const spec of [...layers].sort((a, b) => a.order - b.order)) sync(spec);
   }, [layers, ready, sync]);
+
+  // ── النبض — حلقةٌ تتّسع وتخفت، عشرين مرّةً في الثانية لا ستّين ────
+  //
+  // **وطبقةٌ بلا نبضٍ لا تدفع لوحاً يُعاد رسمُه** — والحلقةُ ساكنةٌ لمن
+  // طلب تقليلَ الحركة.
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m || pulses.current.size === 0 || reducedMotion()) return;
+    let handle = 0;
+    let last = 0;
+    const loop = (now: number) => {
+      handle = requestAnimationFrame(loop);
+      if (now - last < 50) return;
+      last = now;
+      const phase = (now % 1600) / 1600;
+      for (const id of pulses.current) {
+        if (!m.getLayer(id) || m.getLayoutProperty(id, "visibility") === "none") continue;
+        m.setPaintProperty(id, "circle-radius", 14 + 12 * phase);
+        m.setPaintProperty(id, "circle-stroke-opacity", 0.75 * (1 - phase));
+      }
+    };
+    handle = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(handle);
+  }, [ready, layers]);
 
   // ── العلامات — تُبنى وتُهدم بحسب القائمة ──────────────────────
   useEffect(() => {

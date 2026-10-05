@@ -33,8 +33,8 @@
     "setting_defs": 200,
     "behaviour_settings": 157,
     "order_fields": 95,
-    "test_files": 527,
-    "test_funcs": 2190
+    "test_files": 528,
+    "test_funcs": 2191
   },
   "flows": [
     {
@@ -18170,6 +18170,12 @@
     {
       "name": "TestOpsMapPro_OperationsCallsEveryPageEndpoint",
       "file": "internal/qa/opsmap_pro_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMap_OrderCarriesLastAssignedAt",
+      "file": "internal/qa/opsmap_timeline_test.go",
       "package": "qa",
       "orphan": true
     },

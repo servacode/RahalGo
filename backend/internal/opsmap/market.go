@@ -177,6 +177,9 @@ type Order struct {
 
 	CreatedAt  time.Time  `json:"created_at"`
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
+	// AssignedAt **آخرُ إسنادٍ إلى سائق** — من سجلّ الحالات (`order_events`)،
+	// **فلا عمودَ له في الطلب ولا يُخترَع.** يقرؤه خطُّ زمن البطاقة.
+	AssignedAt *time.Time `json:"assigned_at,omitempty"`
 	PickedUpAt *time.Time `json:"picked_up_at,omitempty"`
 
 	// Money **الإجمالُ وطريقةُ الدفع** — **لمن يملك صلاحيّتَه وحدَه**
@@ -263,7 +266,10 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
 		       d.id::text, d.full_name,
 		       ST_Y(d.last_location::geometry), ST_X(d.last_location::geometry),
-		       o.created_at, o.accepted_at, o.picked_up_at,
+		       o.created_at, o.accepted_at,
+		       (SELECT max(e.created_at) FROM order_events e
+		         WHERE e.order_id = o.id AND e.to_status = 'assigned'),
+		       o.picked_up_at,
 		       o.total, o.payment_method, o.delivery_fee,
 		       ` + stuckColumn(f.Stuck) + `, cu.full_name
 		FROM orders o
@@ -289,7 +295,7 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 			&x.DropLat, &x.DropLng, &x.Address,
 			&x.MerchantID, &x.MerchantName, &x.PickLat, &x.PickLng,
 			&x.DriverID, &x.DriverName, &x.DriverLat, &x.DriverLng,
-			&x.CreatedAt, &x.AcceptedAt, &x.PickedUpAt,
+			&x.CreatedAt, &x.AcceptedAt, &x.AssignedAt, &x.PickedUpAt,
 			&total, &pay, &fee, &x.StuckReason, &cust); err != nil {
 			return nil, err
 		}

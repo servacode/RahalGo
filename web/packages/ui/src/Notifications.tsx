@@ -201,7 +201,7 @@ export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = [], dep
  * يُطفأ بغيابه**: من لم يختر شيئاً يسمع.
  */
 export const ALERTS_SOUND_KEY = "rahalgo_alerts_sound";
-function alertsSoundOn(): boolean {
+export function alertsSoundOn(): boolean {
   try {
     return localStorage.getItem(ALERTS_SOUND_KEY) !== "off";
   } catch {

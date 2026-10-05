@@ -38,6 +38,9 @@ export {
   // «هذان طرفان يُقارَنان» قبل أن يُقرأ شيء.**
   ArrowLeftRight as IconCompare,
   Target as IconTarget,
+  // **ملءُ الشاشة والخروجُ منه** — زوجٌ من عائلةٍ واحدة (خريطةُ العمليّات).
+  Maximize as IconFullscreen,
+  Minimize as IconFullscreenExit,
   ShieldX as IconShieldX,
   ShieldCheck as IconShieldCheck,
   Receipt as IconReceipt,

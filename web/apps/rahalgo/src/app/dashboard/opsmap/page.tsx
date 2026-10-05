@@ -27,10 +27,17 @@
  *
  * # ولا تتحرّك الكاميرا وحدَها
  *
- * **إلّا بنقرةٍ صريحة** — رقمُ «عالق» يطير إلى أوّل عالقٍ ويفتح بطاقتَه.
+ * **إلّا بنقرةٍ صريحة** — رقمُ «عالق» يطير إلى أوّل عالقٍ ويفتح بطاقتَه،
+ * واختيارُ نتيجة بحثٍ يطير إليها، و«رجّع على المكتب» يطير إليه.
+ *
+ * # والحيُّ يُرى حيّاً (تحسيناتُ المالك ٢٠٢٦-١٠-٠٦)
+ *
+ * **السائقُ ينزلق بين نبضتين ولا يقفز**، **وحلقةٌ نابضةٌ حولَ من موقعُه حيّ**،
+ * **وعالقٌ جديدٌ يُومض عدّادُه ويرنّ جرسُ اللوحة** (بمفتاح الصوت نفسِه).
+ * **والحسابُ كلُّه في `opsmap/live.ts`** — دوالُّ خالصةٌ يقيسها حارس.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,8 +56,14 @@ import {
   Input,
   Select,
   IconPhone,
+  IconFullscreen,
+  IconFullscreenExit,
+  IconSearch,
+  IconTarget,
   IconWhatsApp,
   useLiveData,
+  useChime,
+  alertsSoundOn,
   themeColor,
 } from "@rahalgo/ui";
 import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
@@ -74,6 +87,15 @@ import {
   storeTone,
   toneColor,
 } from "@/components/admin/opsmap/palette";
+import {
+  type FocusMode,
+  type LngLat,
+  applyFocus,
+  orderRoute,
+  orderTimeline,
+  searchLocal,
+  stuckIncreased,
+} from "@/components/admin/opsmap/live";
 
 const OpsMapCanvas = dynamic(
   () => import("@/components/admin/opsmap/canvas").then((m) => m.OpsMapCanvas),
@@ -144,6 +166,8 @@ interface OrderPin {
   driver_lng?: number;
   created_at: string;
   accepted_at?: string;
+  /** **آخرُ إسنادٍ إلى سائق** — من سجلّ الحالات. */
+  assigned_at?: string;
   picked_up_at?: string;
   total?: number;
   payment_method?: string;
@@ -394,6 +418,22 @@ export default function OpsMapPage() {
   const [fly, setFly] = useState<FlyRequest | undefined>(undefined);
   const [assigning, setAssigning] = useState<OrderPin | null>(null);
 
+  // ── التركيزُ وملءُ الشاشة ───────────────────────────────────────
+  //
+  // **تركيزٌ واحدٌ في كلّ مرّة** — «العالقة فقط» و«المتاحون فقط» معاً
+  // لا يُبقيان شيئاً تقريباً، **ومفتاحان يُطفئ أحدُهما الآخرَ أوضحُ من
+  // خريطةٍ فارغةٍ بلا سبب.**
+  const [focusMode, setFocusMode] = useState<FocusMode>("");
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFull(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full]);
+
   // ── محرِّرُ المضلَّعات (البند ١٣) ──────────────────────────
   //
   // **والرسمُ حالٌ صريحةٌ لا وضعٌ خفيّ** — **ومن نقر الأرضَ وهو لا
@@ -426,9 +466,12 @@ export default function OpsMapPage() {
 
   // ── البحثُ في الخريطة (البند ٣٦) ──────────────────────────
   //
-  // **ويُقَصُّ في الخادم بصلاحيّات الباحث** — **ومن وجد اسمَ من لا
-  // يملك رؤيتَه عرف أنّه موجود.**
+  // **ابحث واذهب** — رقمُ طلبٍ أو اسمُ سائقٍ أو متجرٍ مما حُمِّل للخريطة،
+  // **ثمّ ما يجده الخادمُ مما لم يُحمَّل** (فروعٌ ومناطقُ ومندوبون)، **وهو
+  // يُقَصُّ بصلاحيّات الباحث** — ومن وجد اسمَ من لا يملك رؤيتَه عرف أنّه موجود.
   const [hunt, setHunt] = useState("");
+  const [huntOpen, setHuntOpen] = useState(false);
+  const [huntAt, setHuntAt] = useState(0);
 
   // ── ما يملكه من يقف أمامها ───────────────────────────────────
   const meta = useLiveData<Meta>(() => api<Meta>("/api/v1/admin/ops-map/meta"), []);
@@ -642,6 +685,77 @@ export default function OpsMapPage() {
   // **والرموزُ تُرسم مرّةً** — لونُ كلّ حالٍ من الثيم ورمزُه من مجموعتنا.
   const icons = useMemo(() => mapIcons(), []);
 
+  // ── التركيز — ما يُرسَم بعد «العالقة فقط» أو «المتاحون فقط» ─────
+  const focused = useMemo(
+    () =>
+      applyFocus(
+        focusMode,
+        drivers.data?.drivers ?? [],
+        orders.data?.orders ?? [],
+        merchants.data?.merchants ?? [],
+      ),
+    [focusMode, drivers.data, orders.data, merchants.data],
+  );
+
+  // ── المُحدَّدُ حيٌّ لا لقطة ─────────────────────────────────────
+  //
+  // **البطاقةُ تقرأ آخرَ ما جاء من الخادم** — طلبٌ أُسند وهي مفتوحةٌ يظهر
+  // سائقُه فيها، **ولا تبقى على ما كان لحظةَ النقر.**
+  const current = useMemo<Picked | null>(() => {
+    if (!selected) return null;
+    if (selected.kind === "order") {
+      const v = orders.data?.orders.find((x) => x.id === selected.v.id);
+      return v ? { kind: "order", v } : selected;
+    }
+    if (selected.kind === "driver") {
+      const v = drivers.data?.drivers.find((x) => x.id === selected.v.id);
+      return v ? { kind: "driver", v } : selected;
+    }
+    if (selected.kind === "merchant") {
+      const v = merchants.data?.merchants.find((x) => x.id === selected.v.id);
+      return v ? { kind: "merchant", v } : selected;
+    }
+    return selected;
+  }, [selected, orders.data, drivers.data, merchants.data]);
+
+  // ── عالقٌ جديد — ومضةٌ وجرس ─────────────────────────────────────
+  //
+  // **حين يزيد العددُ والشاشةُ مفتوحة** — لا حين تُفتح. **والجرسُ جرسُ
+  // اللوحة نفسُه** (`useChime`)، **ويصمت بمفتاح الصوت نفسِه**
+  // (`rahalgo_alerts_sound`) — ولا مفتاحَ ثانٍ يُنسى.
+  const chime = useChime();
+  const lastStuck = useRef<number | null>(null);
+  const [flash, setFlash] = useState(0);
+  const stuckNow = summary.data?.orders?.stuck;
+  useEffect(() => {
+    if (stuckNow == null) return;
+    if (stuckIncreased(lastStuck.current, stuckNow)) {
+      setFlash(Date.now());
+      if (alertsSoundOn()) chime();
+    }
+    lastStuck.current = stuckNow;
+  }, [stuckNow, chime]);
+  useEffect(() => {
+    if (!flash) return;
+    const h = window.setTimeout(() => setFlash(0), 4000);
+    return () => window.clearTimeout(h);
+  }, [flash]);
+
+  // ── نتائجُ «ابحث واذهب» ─────────────────────────────────────────
+  const goItems = useMemo(() => {
+    const local = searchLocal(hunt, {
+      orders: orders.data?.orders ?? [],
+      drivers: drivers.data?.drivers ?? [],
+      merchants: merchants.data?.merchants ?? [],
+    });
+    const seen = new Set(local.map((x) => `${x.kind}-${x.id}`));
+    const remote = (hunt.trim().length >= 2 ? (hits.data?.hits ?? []) : [])
+      .filter((x) => x.lat != null && x.lng != null && !seen.has(`${x.kind}-${x.id}`))
+      .slice(0, 5)
+      .map((x) => ({ kind: x.kind, id: x.id, label: x.label, lng: x.lng as number, lat: x.lat as number }));
+    return [...local.map(({ kind, id, label, lng, lat }) => ({ kind: kind as string, id, label, lng, lat })), ...remote];
+  }, [hunt, orders.data, drivers.data, merchants.data, hits.data]);
+
   const layers = useMemo<LayerSpec[]>(() => {
     const out: LayerSpec[] = [];
     out.push({
@@ -669,10 +783,21 @@ export default function OpsMapPage() {
       order: 50,
       visible: !!visible.drivers,
       color: toneColor("driver-available"),
+      // **ينزلق بين نبضتين، وحلقةٌ نابضةٌ حولَ من موقعُه حيّ** — بلون حاله.
+      animate: true,
+      pulse: {
+        field: "live",
+        color: [
+          "match", ["get", "icon"],
+          "driver-available", toneColor("driver-available"),
+          "driver-busy", toneColor("driver-busy"),
+          toneColor("driver-idle"),
+        ],
+      },
       data: fc(
-        (drivers.data?.drivers ?? [])
+        focused.drivers
           .filter((d) => d.freshness !== "NO_LOCATION")
-          .map((d) => pt(d.lng, d.lat, { id: d.id, icon: driverTone(d.tone) })),
+          .map((d) => pt(d.lng, d.lat, { id: d.id, icon: driverTone(d.tone), live: d.freshness === "LIVE" })),
       ),
     });
 
@@ -680,16 +805,36 @@ export default function OpsMapPage() {
     //
     // **والمغلقُ يُرى مغلقاً** — لونٌ باهتٌ لا اختفاء: «متجرٌ مغلقٌ
     // وطلبٌ ينتظره» حقيقةٌ يريد المكتبُ أن يراها.
+    //
+    // **والفقّاعةُ تقول القسمةَ** (تحسيناتُ ٢٠٢٦-١٠-٠٦): **لونُها لونُ
+    // الأكثر** (مفتوحٌ أو مسكّر)، **وحلقةٌ عريضةٌ بلون الأقلّ إن وُجد** —
+    // «عشرون متجراً ستّةٌ منها مسكّرة» بنظرةٍ لا بنقرة.
+    const openC = toneColor("store-open");
+    const closedC = toneColor("store-closed");
+    const opened = ["get", "open_n"];
+    const total = ["get", "point_count"];
+    const openMajority = [">=", ["*", opened, 2], total];
     out.push({
       id: "merchants",
       kind: "symbol",
       cluster: true,
       order: 40,
       visible: !!visible.merchants,
-      color: toneColor("store-open"),
+      color: openC,
+      clusterProperties: { open_n: ["+", ["case", ["==", ["get", "open"], true], 1, 0]] },
+      clusterColor: ["case", openMajority, openC, closedC],
+      clusterStroke: {
+        color: [
+          "case",
+          ["any", ["==", opened, 0], ["==", opened, total]], themeColor("paper"),
+          openMajority, closedC,
+          openC,
+        ],
+        width: ["case", ["any", ["==", opened, 0], ["==", opened, total]], 2, 5],
+      },
       data: fc(
-        (merchants.data?.merchants ?? []).map((x) =>
-          pt(x.lng, x.lat, { id: x.id, icon: storeTone(x.open_now) }),
+        focused.merchants.map((x) =>
+          pt(x.lng, x.lat, { id: x.id, icon: storeTone(x.open_now), open: x.open_now }),
         ),
       ),
     });
@@ -699,7 +844,7 @@ export default function OpsMapPage() {
     // **والعالقُ بشرط لوحة الطلبات نفسِه** (`stuck_reason` من الخادم) — فلا
     // تقول الخريطةُ «عالق» عن طلبٍ لا تعدّه اللوحة. **وخطٌّ من المتجر إلى
     // نقطة التسليم لكلّ طلب** — «من أين إلى أين» بنظرة.
-    const orderList = orders.data?.orders ?? [];
+    const orderList = focused.orders;
     out.push({
       id: "orders",
       kind: "symbol",
@@ -920,23 +1065,22 @@ export default function OpsMapPage() {
       ),
     });
 
-    // ── حاملُ الطلب المُحدَّد (البند ١١) ─────────────────────
+    // ── مسارُ الطلب المُحدَّد (البند ١١ · تحسيناتُ ٢٠٢٦-١٠-٠٦) ──────
     //
-    // **وخطٌّ مستقيمٌ لا مسار** — **الخريطةُ ليست محرّكَ ملاحة**: من السائق
-    // إلى المتجر حين يُحدَّد الطلب، **وخطُّ المتجر إلى الزبون مرسومٌ دائماً.**
+    // **سائقٌ ← متجرٌ ← زبون، خطوطٌ مستقيمةٌ متقطّعة** — **الخريطةُ ليست
+    // محرّكَ ملاحة**، ولا بابَ توجيهٍ للعمليّات. **والسائقُ من موضعه الحيّ**
+    // إن كان في الطبقة، **وبعد الاستلام لا متجرَ في الطريق.**
     const link: FeatureCollection["features"] = [];
-    if (selected?.kind === "order") {
-      const o = selected.v;
-      const line = (a: [number, number], b: [number, number]) => ({
-        type: "Feature" as const,
-        geometry: { type: "LineString", coordinates: [a, b] },
-        properties: {},
-      });
-      if (o.pick_lng != null && o.pick_lat != null) {
-        link.push(line([o.pick_lng, o.pick_lat], [o.drop_lng, o.drop_lat]));
-        if (o.driver_lng != null && o.driver_lat != null) {
-          link.push(line([o.driver_lng, o.driver_lat], [o.pick_lng, o.pick_lat]));
-        }
+    if (current?.kind === "order") {
+      const o = current.v;
+      const d = o.driver_id ? drivers.data?.drivers.find((x) => x.id === o.driver_id) : undefined;
+      const live: LngLat | null = d && d.freshness !== "NO_LOCATION" ? [d.lng, d.lat] : null;
+      for (const leg of orderRoute(o, live)) {
+        link.push({
+          type: "Feature" as const,
+          geometry: { type: "LineString", coordinates: leg.coords },
+          properties: { leg: leg.leg },
+        });
       }
     }
     out.push({
@@ -945,14 +1089,14 @@ export default function OpsMapPage() {
       order: 70,
       lineWidth: 3,
       visible: link.length > 0,
-      color: themeColor("primary"),
+      color: ["match", ["get", "leg"], "to-store", toneColor("driver-busy"), themeColor("primary")],
       data: fc(link),
     });
 
     return out;
-  }, [drivers.data, merchants.data, orders.data, zones.data, requests.data,
+  }, [drivers.data, zones.data, requests.data, focused,
       branches.data, reps.data, demand.data, opportunities.data, customers.data,
-      visible, selected, draft, drawing, emergencies.data]);
+      visible, current, draft, drawing, emergencies.data]);
 
   // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
   const markers = useMemo<MapMarker[]>(() => {
@@ -1035,6 +1179,47 @@ export default function OpsMapPage() {
     setFly({ lng: o.drop_lng, lat: o.drop_lat, zoom: 15, key: Date.now() });
   }, [summary.data]);
 
+  // ── «ابحث واذهب» — يفتح البطاقةَ ويطير ─────────────────────────
+  //
+  // **ومن اختار ما يخفيه التركيزُ رُفع التركيز** — وإلّا طار إلى فراغ.
+  const goTo = useCallback(
+    (it: { kind: string; id: string; lng: number; lat: number }) => {
+      setHunt("");
+      setHuntOpen(false);
+      setHuntAt(0);
+      if (it.kind === "order") {
+        const o = orders.data?.orders.find((x) => x.id === it.id);
+        if (o) {
+          if (!focused.orders.some((x) => x.id === it.id)) setFocusMode("");
+          setSelected({ kind: "order", v: o });
+        }
+      } else if (it.kind === "driver") {
+        const d = drivers.data?.drivers.find((x) => x.id === it.id);
+        if (d) {
+          if (!focused.drivers.some((x) => x.id === it.id)) setFocusMode("");
+          setSelected({ kind: "driver", v: d });
+        }
+      } else if (it.kind === "merchant") {
+        const x = merchants.data?.merchants.find((y) => y.id === it.id);
+        if (x) {
+          if (!focused.merchants.some((y) => y.id === it.id)) setFocusMode("");
+          setSelected({ kind: "merchant", v: x });
+        }
+      }
+      setFly({ lng: it.lng, lat: it.lat, zoom: 16, key: Date.now() });
+    },
+    [orders.data, drivers.data, merchants.data, focused],
+  );
+
+  // ── «رجّع على المكتب» ──────────────────────────────────────────
+  const officeAt = useMemo(() => {
+    const o = office.data;
+    return o?.has_location && o.lat != null && o.lng != null ? { lng: o.lng, lat: o.lat } : null;
+  }, [office.data]);
+  const recenter = useCallback(() => {
+    if (officeAt) setFly({ lng: officeAt.lng, lat: officeAt.lat, zoom: 14, key: Date.now() });
+  }, [officeAt]);
+
   const savePolygon = useCallback(async () => {
     setSaveErr("");
     try {
@@ -1110,12 +1295,39 @@ export default function OpsMapPage() {
 
   const stuckN = S?.orders?.stuck ?? 0;
 
+  // ── الطبقةُ الفارغةُ تُقال لا تُسكَت ───────────────────────────────
+  //
+  // **خريطةٌ فارغةٌ بلا كلمةٍ تُقرأ عطلاً** — «لا سائقين على الدوام الآن»
+  // تُقرأ حقيقة. **ولا تُقال قبل أن تصل البيانات** — فلا يُكذَب أثناءَ التحميل.
+  const driversFiltered = !!(onShift || stale || hasActive || driverStatus || search.trim());
+  const emptyHints: string[] = [];
+  // **وفي «العالقة فقط» بلا عالقٍ تكفي جملةُ الطلبات** — لا جملتان لفراغٍ واحد.
+  const noStuckAtAll = focusMode === "stuck" && focused.orders.length === 0;
+  if (can("VIEW_DRIVER_LOCATIONS") && visible.drivers && drivers.data && !noStuckAtAll &&
+      focused.drivers.filter((d) => d.freshness !== "NO_LOCATION").length === 0) {
+    emptyHints.push(
+      focusMode === "available" ? T.emptyHint.available
+        : focusMode === "stuck" ? T.emptyHint.stuckDrivers
+          : driversFiltered ? T.emptyHint.driversFiltered : T.emptyHint.drivers,
+    );
+  }
+  if (can("VIEW_ACTIVE_ORDERS") && visible.orders && orders.data && focused.orders.length === 0) {
+    emptyHints.push(focusMode === "stuck" ? T.emptyHint.stuck : T.emptyHint.orders);
+  }
+  if (can("VIEW_MERCHANT_LOCATIONS") && visible.merchants && merchants.data &&
+      focused.merchants.length === 0 && focusMode !== "stuck") {
+    emptyHints.push(T.emptyHint.merchants);
+  }
+
   return (
     <PageContainer>
       <PageHeader title={T.title} subtitle={T.subtitle} />
 
+      {/* ══ ملءُ الشاشة — الشريطُ والخريطةُ معاً، والقوائمُ تغيب ════════ */}
+      <div className={full ? "fixed inset-0 z-40" : ""}>
+      <div className={full ? "surface-raised flex h-full flex-col gap-2 overflow-hidden rounded-none p-2" : ""}>
       {/* ══ الشريطُ العلويّ — عدّاداتٌ حيّة وحبّاتُ الطبقات ══════════ */}
-      <div className="surface mb-3 flex flex-col gap-2 p-2">
+      <div className={`surface flex flex-col gap-2 p-2 ${full ? "shrink-0" : "mb-3"}`}>
         {/* ── العدّادات — «N سائق متاح · N طلب ماشي · N عالق · N متجر مفتوح» ── */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-sm">
           {S?.drivers && (
@@ -1129,7 +1341,9 @@ export default function OpsMapPage() {
                   type="button"
                   onClick={goStuck}
                   title={T.counter.stuckHint}
-                  className="inline-flex items-center gap-1.5 font-bold text-danger underline-offset-4 hover:underline"
+                  className={`inline-flex items-center gap-1.5 rounded-full font-bold text-danger underline-offset-4 hover:underline ${
+                    flash ? "animate-pulse bg-danger-tint px-2 ring-2 ring-danger" : ""
+                  }`}
                 >
                   <Dot tone="order-stuck" />
                   <span className="tabular-nums">{fmtNum(stuckN)}</span>
@@ -1143,6 +1357,101 @@ export default function OpsMapPage() {
           {S?.merchants && (
             <Counter n={S.merchants.open} label={T.counter.open} tone="store-open" />
           )}
+          {/* **ومضةُ العالق الجديد تُقال لقارئ الشاشة أيضاً.** */}
+          <span className="sr-only" role="status" aria-live="polite">
+            {flash ? T.counter.newStuck : ""}
+          </span>
+
+          {/* ── مفاتيحُ التركيز — بجوار العدّادات ── */}
+          {can("VIEW_ACTIVE_ORDERS") && (
+            <FocusToggle
+              on={focusMode === "stuck"}
+              label={T.focus.stuckOnly}
+              hint={T.focus.stuckHint}
+              tone="order-stuck"
+              onClick={() => {
+                // **والعالقُ يُقرأ من طبقة الطلبات** — فتُفتح معه إن كانت مطفأة.
+                if (focusMode !== "stuck" && !visible.orders) toggle("orders");
+                setFocusMode(focusMode === "stuck" ? "" : "stuck");
+              }}
+            />
+          )}
+          {can("VIEW_DRIVER_LOCATIONS") && (
+            <FocusToggle
+              on={focusMode === "available"}
+              label={T.focus.availableOnly}
+              hint={T.focus.availableHint}
+              tone="driver-available"
+              onClick={() => {
+                if (focusMode !== "available" && !visible.drivers) toggle("drivers");
+                setFocusMode(focusMode === "available" ? "" : "available");
+              }}
+            />
+          )}
+
+          {/* ── ابحث واذهب ── */}
+          <div className="relative w-full sm:ms-auto sm:w-72">
+            <Input
+              icon={<IconSearch size={16} aria-hidden />}
+              placeholder={T.searchGo}
+              aria-label={T.searchGo}
+              value={hunt}
+              onChange={(e) => {
+                setHunt(e.target.value);
+                setHuntOpen(true);
+                setHuntAt(0);
+              }}
+              onFocus={() => setHuntOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setHuntOpen(false);
+                } else if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHuntAt((i) => Math.min(i + 1, Math.max(goItems.length - 1, 0)));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHuntAt((i) => Math.max(i - 1, 0));
+                } else if (e.key === "Enter" && goItems[huntAt]) {
+                  e.preventDefault();
+                  goTo(goItems[huntAt]);
+                }
+              }}
+            />
+            {huntOpen && hunt.trim() !== "" && (
+              <>
+                <button
+                  type="button"
+                  aria-label={T.close}
+                  className="fixed inset-0 z-20 cursor-default"
+                  onClick={() => setHuntOpen(false)}
+                />
+                <ul
+                  role="listbox"
+                  className="surface-raised absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto p-1 text-sm"
+                >
+                  {goItems.length === 0 ? (
+                    <li className="px-2 py-1.5 text-xs text-ink-muted">{T.searchNone}</li>
+                  ) : (
+                    goItems.map((x, i) => (
+                      <li key={`${x.kind}-${x.id}`} role="option" aria-selected={i === huntAt}>
+                        <button
+                          type="button"
+                          onMouseEnter={() => setHuntAt(i)}
+                          onClick={() => goTo(x)}
+                          className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-start ${
+                            i === huntAt ? "bg-row-hover" : ""
+                          }`}
+                        >
+                          <span className="truncate">{x.label}</span>
+                          <span className="ms-auto shrink-0 text-xs text-ink-muted">{kindLabel(x.kind)}</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── الحبّات — تلتفّ على الحاسوب وتنزلق على الجوّال ── */}
@@ -1273,9 +1582,15 @@ export default function OpsMapPage() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+      <div className={full ? "flex min-h-0 flex-1" : "grid gap-4 lg:grid-cols-[18rem_1fr]"}>
         {/* ── الخريطةُ واللوحةُ الجانبيّة — أوّلاً على الجوّال ───────── */}
-        <div className="relative order-1 h-[28rem] lg:order-2 lg:h-[calc(100vh-16rem)]">
+        <div
+          className={
+            full
+              ? "relative h-full min-h-0 w-full"
+              : "relative order-1 h-[28rem] lg:order-2 lg:h-[calc(100vh-16rem)]"
+          }
+        >
           <OpsMapCanvas
             layers={layers}
             icons={icons}
@@ -1287,23 +1602,48 @@ export default function OpsMapPage() {
             unavailableLabel={T.unavailable}
             focus={focus}
           />
-          {selected && (
+
+          {/* ── أدواتُ الخريطة — ملءُ الشاشة والرجوعُ إلى المكتب ── */}
+          <div className="absolute start-2 top-2 z-[5] flex flex-col gap-1.5">
+            <MapTool
+              label={full ? T.bar.exitFullscreen : T.bar.fullscreen}
+              onClick={() => setFull((f) => !f)}
+            >
+              {full ? <IconFullscreenExit size={16} aria-hidden /> : <IconFullscreen size={16} aria-hidden />}
+            </MapTool>
+            {officeAt && (
+              <MapTool label={T.bar.recenter} onClick={recenter}>
+                <IconTarget size={16} aria-hidden />
+              </MapTool>
+            )}
+          </div>
+
+          {/* ── الفراغُ يُقال — نصٌّ خافتٌ لا خريطةٌ صامتة ── */}
+          {emptyHints.length > 0 && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-8 z-[5] flex justify-center px-4">
+              <p className="surface rounded-full px-3 py-1.5 text-center text-xs text-ink-muted shadow-lift">
+                {emptyHints.join(" · ")}
+              </p>
+            </div>
+          )}
+
+          {current && (
             <aside
               className="absolute inset-y-0 end-0 z-10 w-full max-w-sm overflow-y-auto
                          border-s border-line-soft bg-surface p-4 shadow-xl"
             >
               <div className="mb-3 flex items-center gap-2">
                 <h3 className="text-base font-bold">
-                  {selected.kind === "driver" && selected.v.name}
-                  {selected.kind === "merchant" && selected.v.name}
-                  {selected.kind === "order" && `#${selected.v.number}`}
-                  {selected.kind === "zone" && selected.v.name}
-                  {selected.kind === "request" && T.request.title}
-                  {selected.kind === "branch" && selected.v.name}
-                  {selected.kind === "opportunity" && T.opportunity.title}
-                  {selected.kind === "customers" && T.customerCard.title}
-                  {selected.kind === "rep" && selected.v.name}
-                  {selected.kind === "office" && (office.data?.name || T.office.title)}
+                  {current.kind === "driver" && current.v.name}
+                  {current.kind === "merchant" && current.v.name}
+                  {current.kind === "order" && `#${current.v.number}`}
+                  {current.kind === "zone" && current.v.name}
+                  {current.kind === "request" && T.request.title}
+                  {current.kind === "branch" && current.v.name}
+                  {current.kind === "opportunity" && T.opportunity.title}
+                  {current.kind === "customers" && T.customerCard.title}
+                  {current.kind === "rep" && current.v.name}
+                  {current.kind === "office" && (office.data?.name || T.office.title)}
                 </h3>
                 <button
                   className="ms-auto text-sm text-ink-muted"
@@ -1313,36 +1653,36 @@ export default function OpsMapPage() {
                 </button>
               </div>
 
-              {selected.kind === "driver" && (
+              {current.kind === "driver" && (
                 <>
                   <div className="mb-3 flex items-center gap-2 text-sm font-bold">
-                    <Dot tone={driverTone(selected.v.tone)} />
-                    {T.tone[selected.v.tone] ?? T.tone.idle}
+                    <Dot tone={driverTone(current.v.tone)} />
+                    {T.tone[current.v.tone] ?? T.tone.idle}
                   </div>
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.driver.status} v={selected.v.status} />
-                    <Row k={T.driver.onShift} v={selected.v.on_shift ? T.yes : T.no} />
-                    <Row k={T.driver.activeOrders} v={String(selected.v.active_orders)} />
+                    <Row k={T.driver.status} v={current.v.status} />
+                    <Row k={T.driver.onShift} v={current.v.on_shift ? T.yes : T.no} />
+                    <Row k={T.driver.activeOrders} v={String(current.v.active_orders)} />
                     <Row
                       k={T.driver.lastSeen}
-                      v={selected.v.last_location_at ? fmtDateTime(selected.v.last_location_at) : "—"}
+                      v={current.v.last_location_at ? fmtDateTime(current.v.last_location_at) : "—"}
                     />
-                    <Row k={T.live} v={T.freshness[selected.v.freshness]} />
+                    <Row k={T.live} v={T.freshness[current.v.freshness]} />
                     {/* **والمالُ لمن يملك صلاحيّتَه وحدَه** (البند ٦). */}
-                    {selected.v.cash_held !== undefined && (
-                      <Row k={T.driver.cashHeld} v={fmtMoney(selected.v.cash_held)} />
+                    {current.v.cash_held !== undefined && (
+                      <Row k={T.driver.cashHeld} v={fmtMoney(current.v.cash_held)} />
                     )}
                   </dl>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {/* **والهاتفُ لا يصل إلّا لمن يملك `users.contact.read`** — يحذفه الخادم. */}
-                    {selected.v.phone && <ContactButtons phone={selected.v.phone} />}
-                    {selected.v.current_order && (
-                      <Link href={`/dashboard/orders?id=${selected.v.current_order}`}>
+                    {current.v.phone && <ContactButtons phone={current.v.phone} />}
+                    {current.v.current_order && (
+                      <Link href={`/dashboard/orders?id=${current.v.current_order}`}>
                         <Button variant="secondary">{T.order.openPage}</Button>
                       </Link>
                     )}
                     {canProfile && (
-                      <Link href={`/dashboard/users?id=${selected.v.id}`}>
+                      <Link href={`/dashboard/users?id=${current.v.id}`}>
                         <Button variant="secondary">{T.driver.openProfile}</Button>
                       </Link>
                     )}
@@ -1350,86 +1690,90 @@ export default function OpsMapPage() {
                 </>
               )}
 
-              {selected.kind === "merchant" && (
+              {current.kind === "merchant" && (
                 <>
                   <div className="mb-3 flex items-center gap-2 text-sm font-bold">
-                    <Dot tone={storeTone(selected.v.open_now)} />
-                    {selected.v.open_now ? T.merchant.open : T.merchant.closed}
+                    <Dot tone={storeTone(current.v.open_now)} />
+                    {current.v.open_now ? T.merchant.open : T.merchant.closed}
                   </div>
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.merchant.activeOrders} v={String(selected.v.active_orders)} />
-                    <Row k={T.merchant.status} v={selected.v.status} />
-                    {selected.v.city && <Row k={T.merchant.city} v={selected.v.city} />}
+                    <Row k={T.merchant.activeOrders} v={String(current.v.active_orders)} />
+                    <Row k={T.merchant.status} v={current.v.status} />
+                    {current.v.city && <Row k={T.merchant.city} v={current.v.city} />}
                     {/* **والمندوبُ لمن يراقب نشاطَهم وحدَه** (البند ٩). */}
-                    {selected.v.rep && <Row k={T.merchant.rep} v={selected.v.rep} />}
+                    {current.v.rep && <Row k={T.merchant.rep} v={current.v.rep} />}
                   </dl>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {selected.v.phone && (
-                      <a href={`tel:${selected.v.phone}`}>
+                    {current.v.phone && (
+                      <a href={`tel:${current.v.phone}`}>
                         <Button variant="secondary">
                           <IconPhone size={16} aria-hidden />
                           {T.contact.call}
                         </Button>
                       </a>
                     )}
-                    <Link href={`/dashboard/sections?merchant=${selected.v.id}`}>
+                    <Link href={`/dashboard/sections?merchant=${current.v.id}`}>
                       <Button variant="secondary">{T.merchant.openPage}</Button>
                     </Link>
                   </div>
                 </>
               )}
 
-              {selected.kind === "order" && (
+              {current.kind === "order" && (
                 <>
-                  {selected.v.stuck_reason && (
+                  {current.v.stuck_reason && (
                     <div className="mb-3 flex items-center gap-2 text-sm font-bold text-danger">
                       <Dot tone="order-stuck" />
                       {T.orderCard.stuck} ·{" "}
                       {m.admin.ordersPage.alertReasons[
-                        selected.v.stuck_reason as keyof typeof m.admin.ordersPage.alertReasons
-                      ] ?? selected.v.stuck_reason}
+                        current.v.stuck_reason as keyof typeof m.admin.ordersPage.alertReasons
+                      ] ?? current.v.stuck_reason}
                     </div>
                   )}
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.order.state} v={selected.v.status} />
-                    <Row k={T.order.merchant} v={selected.v.merchant ?? "—"} />
+                    <Row k={T.order.state} v={current.v.status} />
+                    <Row k={T.order.merchant} v={current.v.merchant ?? "—"} />
                     {/* **واسمُ الزبون لمن يملك تفاصيلَه وحدَه** — يحذفه الخادم. */}
-                    {selected.v.customer_name && (
-                      <Row k={T.orderCard.customer} v={selected.v.customer_name} />
+                    {current.v.customer_name && (
+                      <Row k={T.orderCard.customer} v={current.v.customer_name} />
                     )}
-                    <Row k={T.order.driver} v={selected.v.driver ?? T.order.noDriver} />
-                    {selected.v.address && <Row k={T.order.area} v={selected.v.address} />}
+                    <Row k={T.order.driver} v={current.v.driver ?? T.order.noDriver} />
+                    {current.v.address && <Row k={T.order.area} v={current.v.address} />}
                     <Row
                       k={T.orderCard.age}
-                      v={T.orderCard.minutes.replace("{n}", fmtNum(minutesSince(selected.v.created_at)))}
+                      v={T.orderCard.minutes.replace("{n}", fmtNum(minutesSince(current.v.created_at)))}
                     />
-                    <Row k={T.order.createdAt} v={fmtDateTime(selected.v.created_at)} />
+                    <Row k={T.order.createdAt} v={fmtDateTime(current.v.created_at)} />
+                  </dl>
+                  {/* **كم مضى على كلّ مرحلة** — المراحلُ الواقعةُ وحدَها. */}
+                  <OrderSteps order={current.v} />
+                  <dl className="mt-2 flex flex-col gap-2 text-sm">
                     {/* **والمالُ بصلاحيّته** (البند ١٠). */}
-                    {selected.v.total !== undefined && (
-                      <Row k={T.order.total} v={fmtMoney(selected.v.total)} />
+                    {current.v.total !== undefined && (
+                      <Row k={T.order.total} v={fmtMoney(current.v.total)} />
                     )}
-                    {selected.v.delivery_fee !== undefined && (
-                      <Row k={T.order.delivery} v={fmtMoney(selected.v.delivery_fee)} />
+                    {current.v.delivery_fee !== undefined && (
+                      <Row k={T.order.delivery} v={fmtMoney(current.v.delivery_fee)} />
                     )}
-                    {selected.v.payment_method && (
-                      <Row k={T.order.payment} v={selected.v.payment_method} />
+                    {current.v.payment_method && (
+                      <Row k={T.order.payment} v={current.v.payment_method} />
                     )}
                   </dl>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {/* **والإسنادُ بمساره القائم** (`AssignDialog`) — بالقرب
                         وبتأكيدٍ وسبب، **ولمن يملك التدخّل وحدَه.** */}
                     {canIntervene &&
-                      !selected.v.driver_id &&
-                      (selected.v.status === "preparing" || selected.v.status === "dispatching") && (
-                        <Button onClick={() => setAssigning(selected.v)}>
+                      !current.v.driver_id &&
+                      (current.v.status === "preparing" || current.v.status === "dispatching") && (
+                        <Button onClick={() => setAssigning(current.v)}>
                           {m.admin.ordersPage.assignHere}
                         </Button>
                       )}
-                    <Link href={`/dashboard/orders?id=${selected.v.id}`}>
+                    <Link href={`/dashboard/orders?id=${current.v.id}`}>
                       <Button variant="secondary">{T.order.openPage}</Button>
                     </Link>
-                    {canProfile && selected.v.driver_id && (
-                      <Link href={`/dashboard/users?id=${selected.v.driver_id}`}>
+                    {canProfile && current.v.driver_id && (
+                      <Link href={`/dashboard/users?id=${current.v.driver_id}`}>
                         <Button variant="secondary">{T.driver.openProfile}</Button>
                       </Link>
                     )}
@@ -1437,10 +1781,10 @@ export default function OpsMapPage() {
                 </>
               )}
 
-              {selected.kind === "customers" && (
+              {current.kind === "customers" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.customerCard.count} v={fmtNum(selected.v.count)} />
+                    <Row k={T.customerCard.count} v={fmtNum(current.v.count)} />
                   </dl>
                   <p className="mt-3 text-xs leading-5 text-ink-muted">
                     {T.customerCard.privacy.replace("{n}", fmtNum(customers.data?.min_count ?? 3))}
@@ -1448,23 +1792,23 @@ export default function OpsMapPage() {
                 </>
               )}
 
-              {selected.kind === "rep" && (
+              {current.kind === "rep" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.rep.merchants} v={fmtNum(selected.v.merchants)} />
-                    <Row k={T.rep.converted} v={fmtNum(selected.v.converted)} />
-                    {selected.v.last_activity && (
-                      <Row k={T.rep.lastActivity} v={fmtDateTime(selected.v.last_activity)} />
+                    <Row k={T.rep.merchants} v={fmtNum(current.v.merchants)} />
+                    <Row k={T.rep.converted} v={fmtNum(current.v.converted)} />
+                    {current.v.last_activity && (
+                      <Row k={T.rep.lastActivity} v={fmtDateTime(current.v.last_activity)} />
                     )}
-                    {selected.v.earnings !== undefined && (
-                      <Row k={T.rep.earnings} v={fmtMoney(selected.v.earnings)} />
+                    {current.v.earnings !== undefined && (
+                      <Row k={T.rep.earnings} v={fmtMoney(current.v.earnings)} />
                     )}
                   </dl>
                   <p className="mt-3 text-xs text-ink-muted">{T.repCard.where}</p>
                 </>
               )}
 
-              {selected.kind === "office" && (
+              {current.kind === "office" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
                     <Row k={T.office.address} v={office.data?.address || T.office.noAddress} />
@@ -1494,17 +1838,17 @@ export default function OpsMapPage() {
                 </>
               )}
 
-              {selected.kind === "zone" && (
+              {current.kind === "zone" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
                     <Row
                       k={T.coverage.shape}
-                      v={selected.v.shape === "polygon" ? T.coverage.polygon : T.coverage.radius}
+                      v={current.v.shape === "polygon" ? T.coverage.polygon : T.coverage.radius}
                     />
-                    <Row k={T.coverage.active} v={selected.v.active ? T.yes : T.no} />
-                    {selected.v.city && <Row k={T.coverage.city} v={selected.v.city} />}
-                    {selected.v.shape === "radius" && (
-                      <Row k={T.coverage.radius} v={`${selected.v.radius_m} ${T.coverage.metres}`} />
+                    <Row k={T.coverage.active} v={current.v.active ? T.yes : T.no} />
+                    {current.v.city && <Row k={T.coverage.city} v={current.v.city} />}
+                    {current.v.shape === "radius" && (
+                      <Row k={T.coverage.radius} v={`${current.v.radius_m} ${T.coverage.metres}`} />
                     )}
                   </dl>
                   {/* **والمنطقةُ تُوقَف ولا تُحذف** — منطقةٌ حُذفت تترك
@@ -1513,9 +1857,9 @@ export default function OpsMapPage() {
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button
                         variant="secondary"
-                        onClick={() => setZoneActive(selected.v.id, !selected.v.active)}
+                        onClick={() => setZoneActive(current.v.id, !current.v.active)}
                       >
-                        {selected.v.active ? T.coverage.disable : T.coverage.enable}
+                        {current.v.active ? T.coverage.disable : T.coverage.enable}
                       </Button>
                     </div>
                   )}
@@ -1523,25 +1867,25 @@ export default function OpsMapPage() {
                 </>
               )}
 
-              {selected.kind === "request" && (
+              {current.kind === "request" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
                     <Row
                       k={T.request.status}
-                      v={T.request.state[selected.v.status as keyof typeof T.request.state]}
+                      v={T.request.state[current.v.status as keyof typeof T.request.state]}
                     />
-                    <Row k={T.request.createdAt} v={fmtDateTime(selected.v.created_at)} />
-                    {selected.v.address && <Row k={T.request.address} v={selected.v.address} />}
-                    {selected.v.city && <Row k={T.request.city} v={selected.v.city} />}
-                    <Row k={T.request.source} v={selected.v.source} />
-                    {selected.v.note && <Row k={T.request.note} v={selected.v.note} />}
+                    <Row k={T.request.createdAt} v={fmtDateTime(current.v.created_at)} />
+                    {current.v.address && <Row k={T.request.address} v={current.v.address} />}
+                    {current.v.city && <Row k={T.request.city} v={current.v.city} />}
+                    <Row k={T.request.source} v={current.v.source} />
+                    {current.v.note && <Row k={T.request.note} v={current.v.note} />}
                   </dl>
                   {can("MANAGE_COVERAGE") && (
                     <div className="mt-4">
                       <Select
                         label={T.request.changeStatus}
-                        value={selected.v.status}
-                        onChange={(e) => setRequestStatus(selected.v.id, e.target.value)}
+                        value={current.v.status}
+                        onChange={(e) => setRequestStatus(current.v.id, e.target.value)}
                       >
                         <option value="new">{T.request.state.new}</option>
                         <option value="reviewing">{T.request.state.reviewing}</option>
@@ -1553,34 +1897,34 @@ export default function OpsMapPage() {
                   )}
                 </>
               )}
-              {selected.kind === "branch" && (
+              {current.kind === "branch" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
                     <Row
                       k={T.branch.type}
-                      v={selected.v.type === "primary" ? T.branch.primary : T.branch.sub}
+                      v={current.v.type === "primary" ? T.branch.primary : T.branch.sub}
                     />
-                    <Row k={T.branch.status} v={selected.v.status} />
-                    {selected.v.city && <Row k={T.branch.city} v={selected.v.city} />}
-                    {selected.v.parent && <Row k={T.branch.parent} v={selected.v.parent} />}
-                    <Row k={T.layer.areas} v={String(selected.v.areas)} />
+                    <Row k={T.branch.status} v={current.v.status} />
+                    {current.v.city && <Row k={T.branch.city} v={current.v.city} />}
+                    {current.v.parent && <Row k={T.branch.parent} v={current.v.parent} />}
+                    <Row k={T.layer.areas} v={String(current.v.areas)} />
                   </dl>
                   <p className="mt-3 text-xs text-ink-muted">{T.branch.onePrimary}</p>
                 </>
               )}
-              {selected.kind === "opportunity" && (
+              {current.kind === "opportunity" && (
                 <>
                   <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.opportunity.score} v={String(selected.v.score)} />
-                    <Row k={T.layer.orders} v={String(selected.v.orders)} />
-                    <Row k={T.request.count} v={String(selected.v.requests)} />
-                    <Row k={T.layer.merchants} v={String(selected.v.merchants)} />
-                    <Row k={T.layer.drivers} v={String(selected.v.drivers)} />
+                    <Row k={T.opportunity.score} v={String(current.v.score)} />
+                    <Row k={T.layer.orders} v={String(current.v.orders)} />
+                    <Row k={T.request.count} v={String(current.v.requests)} />
+                    <Row k={T.layer.merchants} v={String(current.v.merchants)} />
+                    <Row k={T.layer.drivers} v={String(current.v.drivers)} />
                   </dl>
                   {/* **ولا درجةَ بلا سببٍ مسمّى** — والأرقامُ الخامُّ
                       فوقها، فمن لم يقبل الوزنَ حسب بنفسه. */}
                   <ul className="mt-3 flex flex-col gap-1 text-xs text-ink-muted">
-                    {selected.v.reasons.map((why) => (
+                    {current.v.reasons.map((why) => (
                       <li key={why}>
                         {why === "high_demand_low_coverage" && T.opportunity.highDemandLowCoverage}
                         {why === "high_demand_low_drivers" && T.opportunity.highDemandLowDrivers}
@@ -1596,8 +1940,8 @@ export default function OpsMapPage() {
           )}
         </div>
 
-        {/* ── البحثُ والمرشِّحاتُ والقوائم ─────────────────────────── */}
-        <div className="order-2 flex flex-col gap-4 lg:order-1">
+        {/* ── المرشِّحاتُ والقوائم — تغيب في ملء الشاشة ──────────────── */}
+        <div className={full ? "hidden" : "order-2 flex flex-col gap-4 lg:order-1"}>
           {/* ── محرِّرُ التغطية (البند ١٣) — حين يُرسَم وحدَه ──────── */}
           {can("MANAGE_COVERAGE") && drawing && (
             <Card>
@@ -1639,44 +1983,6 @@ export default function OpsMapPage() {
               </p>
             </Card>
           )}
-
-          {/* ── البحث (البند ٣٦) ───────────────────────────────── */}
-          <Card>
-            <h3 className="mb-2 text-sm font-bold">{T.search}</h3>
-            <Input
-              placeholder={T.search}
-              value={hunt}
-              onChange={(e) => setHunt(e.target.value)}
-            />
-            {hunt.trim().length >= 2 && (
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {(hits.data?.hits ?? []).length === 0 ? (
-                  <li className="text-xs text-ink-muted">{T.searchNone}</li>
-                ) : (
-                  (hits.data?.hits ?? []).slice(0, 12).map((x) => (
-                    <li key={`${x.kind}-${x.id}`} className="flex items-center gap-2">
-                      <span>{x.label}</span>
-                      <span className="ms-auto text-xs text-ink-muted">
-                        {T.layer[
-                          (x.kind === "driver"
-                            ? "drivers"
-                            : x.kind === "merchant"
-                              ? "merchants"
-                              : x.kind === "order"
-                                ? "orders"
-                                : x.kind === "branch"
-                                  ? "branches"
-                                  : x.kind === "area"
-                                    ? "areas"
-                                    : "reps") as keyof typeof T.layer
-                        ]}
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            )}
-          </Card>
 
           {can("VIEW_DRIVER_LOCATIONS") && visible.drivers && (
             <Card>
@@ -1805,6 +2111,8 @@ export default function OpsMapPage() {
           )}
         </div>
       </div>
+      </div>
+      </div>
 
       {assigning && (
         <AssignDialog
@@ -1846,6 +2154,84 @@ function Dot({ tone }: { tone: MapTone }) {
       className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
       style={{ background: toneColor(tone) }}
     />
+  );
+}
+
+/** **اسمُ نوع نتيجة البحث** — من أسماء الطبقات نفسِها. */
+function kindLabel(kind: string): string {
+  const key =
+    kind === "driver" ? "drivers"
+      : kind === "merchant" ? "merchants"
+        : kind === "order" ? "orders"
+          : kind === "branch" ? "branches"
+            : kind === "area" ? "areas"
+              : "reps";
+  return T.layer[key as keyof typeof T.layer];
+}
+
+/** **مفتاحُ تركيزٍ** — حبّةٌ صغيرةٌ بجوار العدّادات. */
+function FocusToggle({
+  on,
+  label,
+  hint,
+  tone,
+  onClick,
+}: {
+  on: boolean;
+  label: string;
+  hint: string;
+  tone: MapTone;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      title={hint}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${
+        on ? "border-primary bg-primary-tint text-ink" : "border-line bg-surface text-ink-muted hover:text-ink"
+      }`}
+    >
+      <Dot tone={tone} />
+      {label}
+    </button>
+  );
+}
+
+/** **زرُّ أداةٍ فوق الخريطة** — مربّعٌ صغيرٌ باسمه في التلميح. */
+function MapTool({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="grid h-9 w-9 place-items-center rounded-control border border-line bg-paper text-on-bright shadow-lift"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** **خطُّ زمن الطلب** — كم دقيقةً مضت على كلّ مرحلةٍ وقعت. */
+function OrderSteps({ order }: { order: OrderPin }) {
+  const steps = orderTimeline(order, Date.now());
+  if (steps.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <h4 className="mb-1.5 text-xs font-bold text-ink-muted">{T.timeline.title}</h4>
+      <ol className="flex flex-col gap-1.5 border-s-2 border-line ps-3 text-sm">
+        {steps.map((st) => (
+          <li key={st.key} className="flex items-baseline gap-2">
+            <span>{T.timeline[st.key]}</span>
+            <span className="ms-auto text-xs tabular-nums text-ink-muted">
+              {T.timeline.ago.replace("{n}", fmtNum(st.minutes))}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -1913,6 +2299,28 @@ function Legend() {
             <span className="block w-5 border-t-2 border-dashed" style={{ borderColor: toneColor("order") }} />
           </span>
           <span>{L.route}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="h-6 w-6 shrink-0 rounded-full border-2"
+            style={{ borderColor: toneColor("driver-available") }}
+          />
+          <span>{L.live}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="h-6 w-6 shrink-0 rounded-full border-4"
+            style={{ background: toneColor("store-open"), borderColor: toneColor("store-closed") }}
+          />
+          <span>{L.storeCluster}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center">
+            <span className="block w-5 border-t-2 border-dashed" style={{ borderColor: toneColor("driver-busy") }} />
+          </span>
+          <span>{L.driverLeg}</span>
         </li>
         <li className="flex items-center gap-2">
           <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border-2 border-line bg-paper" />

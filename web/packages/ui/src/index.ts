@@ -128,6 +128,8 @@ export {
   NotificationBell,
   NotificationToast,
   useLiveNotifications,
+  alertsSoundOn,
+  ALERTS_SOUND_KEY,
   useLiveRefresh,
   useLiveEvent,
   useLiveStatus,
