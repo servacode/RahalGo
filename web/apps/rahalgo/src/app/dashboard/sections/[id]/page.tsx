@@ -61,6 +61,9 @@ import { useCanCall } from "@/lib/policy";
 
 /** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
 const MARKET_MEDIA = "/api/v1/admin/market/media";
+/** **وصنفُ السوق يُعدَّل ويُطفأ من بابه** — بقدرة السوق لا بقدرة إدارة المتاجر
+ *  (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات كان يرى الزرَّ ويُردّ ٤٠٣. */
+const MARKET_ITEMS = "/api/v1/admin/market/items";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
@@ -185,7 +188,7 @@ export default function SectionPage() {
    * حتى يُفتح متجرُه.
    */
   async function toggle(it: SectionItem) {
-    await api(`/api/v1/admin/menu/items/${it.id}`, {
+    await api(`${MARKET_ITEMS}/${it.id}`, {
       method: "PATCH",
       body: JSON.stringify({ available: !it.available }),
     });
@@ -505,7 +508,7 @@ function AddItemModal({
     setBusy(true);
     setError("");
     try {
-      await api(`/api/v1/admin/merchants/${merchantID}/menu/items`, {
+      await api(`/api/v1/admin/market/stores/${merchantID}/items`, {
         method: "POST",
         body: JSON.stringify({
           section_id: menuSectionID,
@@ -621,7 +624,7 @@ function EditItemModal({
     setBusy(true);
     setError("");
     try {
-      await api(`/api/v1/admin/menu/items/${item.id}`, {
+      await api(`${MARKET_ITEMS}/${item.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           name: name.trim(),

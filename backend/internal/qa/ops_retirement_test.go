@@ -19,7 +19,7 @@ import (
 // # نصُّ القرار
 //
 //	operations   قدراتٌ بعينها لتسعة أقسام (قرارُ المالك ٢٠٢٦-١٠-٠٥)
-//	finance      تسعُ قدراتٍ بعينها — ولا تدخّلَ تشغيليّ
+//	finance      قدراتٌ بعينها لخمسة أقسام (قرارُ المالك ٢٠٢٦-١٠-٠٥) — ولا تدخّلَ تشغيليّ
 //	ops          إرثٌ متقاعد — **ثمّ حُذف** بقرار المالك ٢٠٢٦-١٠-٠٤ (هجرة 0270)
 
 // opsFinalCaps **قدراتُ العمليّات كما أقرّها المالك** — لا أكثرَ ولا أقلّ.
@@ -40,12 +40,15 @@ var opsFinalCaps = []string{
 
 // financeFinalCaps **قدراتُ الماليّة كما أقرّها المالك.**
 //
-// **و`audit.read` بقرار المالك 2026-10-04** (سجلُّ الأحداث — هجرة `0260`).
+// **وقرارُ المالك ٢٠٢٦-١٠-٠٥** (هجرة `0422`): خمسةُ أقسامٍ لا غير — الخزينة ·
+// الديون · الخسائر والنزاعات · الأهداف والمكافآت · العروض والخصومات. **فنالت
+// `offers.manage`، ونُزعت `orders.read` (الطلبات وسجلّها) و`users.read` (الحسابات)
+// و`analytics.read` (التقارير) و`audit.read` (سجلّ الأحداث) و`settings.financial.manage`
+// (الإعدادات — ومنها سقوفُ التعويض والمحفظة: من يُقيَّد بالسقف لا يرفعه).**
 var financeFinalCaps = []string{
 	// **و`disputes.manage`** — الماليّةُ ترى النزاعاتِ التي تحسمها (قرارُ المالك ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» البند ١).
-	"analytics.read", "audit.read", "disputes.manage", "finance.export", "finance.manage", "finance.read",
-	"orders.read", "payouts.decide", "settings.financial.manage",
-	"settings.read", "users.read",
+	"disputes.manage", "finance.export", "finance.manage", "finance.read",
+	"offers.manage", "payouts.decide", "settings.read",
 }
 
 // roleCaps قدراتُ دورٍ من القاعدة مرتَّبةً.
@@ -95,7 +98,7 @@ func TestOFM5_DepartmentCapabilitiesAreExactlyApproved(t *testing.T) {
 	// الحساباتُ ولا التقارير (قرارُ المالك ٢٠٢٦-١٠-٠٥). **وكانت `support.manage`
 	// ممنوعةً هنا ثمّ منحها المالكُ لقسم «الشكاوى والتقييمات».**
 	for _, forbidden := range []string{
-		"users.read", "analytics.read", "content.manage", "merchants.manage",
+		"users.read", "analytics.read", "content.manage", "offers.manage", "merchants.manage",
 		"finance.read", "finance.manage", "finance.export", "payouts.decide",
 		"roles.manage", "safety.manage", "audit.read", "platform.overview",
 		"settings.general.manage", "settings.financial.manage", "settings.security.manage",

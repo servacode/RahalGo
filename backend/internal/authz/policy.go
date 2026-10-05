@@ -145,7 +145,11 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/{id}", OrdersRead},
 	// **وكلامُ الناس صنفٌ بذاته** — ومن يسوّي حساباً لا يقرؤه.
 	{"GET", "/orders/{id}/chat", OrdersCommunicationsRead},
-	{"GET", "/orders/{id}/message", OrdersCommunicationsRead},
+	// **ورسالةُ المنصّة إلى المتجر ليست كلامَ الناس** — نصٌّ تبنيه المنصّةُ ورابطُ
+	// واتساب لزرّ «حوّل للمتجر». **وكانت بـ`orders.communications.read`** فموظّفُ
+	// العمليّات يُردّ ٤٠٣ عند التحويل (بلاغُ المالك من التجهيز ٢٠٢٦-١٠-٠٥).
+	// **فهي بقدرة الفعل الذي تخدمه** — كأختها `POST /orders/{id}/whatsapp`.
+	{"GET", "/orders/{id}/message", OrdersIntervene},
 
 	// ── المتاجر: إدارةٌ · وسلامةٌ · وتوثيق ───────────────────────
 	{"POST", "/merchants/{id}/suspend", SafetyManage},
@@ -276,21 +280,23 @@ var adminPolicy = []Rule{
 	{"GET", "/ratings", SupportManage},
 
 	// ── المحتوى والتسويق ────────────────────────────────────────
+	// **«العروض والخصومات» بقدرتها لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥):
+	// قسمٌ للماليّة — **ولا تنال معه اللافتاتِ ولا الحملاتِ ولا البثَّ ولا صورَ المنصّة.**
 	// **ملخّصُ العروض** — قبل `/promos/{id}` (الأخصُّ أوّلاً).
-	{"GET", "/promos/summary", ContentManage},
-	{"", "/promos", ContentManage},
-	{"", "/promos/{id}", ContentManage},
+	{"GET", "/promos/summary", OffersManage},
+	{"", "/promos", OffersManage},
+	{"", "/promos/{id}", OffersManage},
 	{"", "/banners", ContentManage},
 	{"", "/banners/{id}", ContentManage},
-	{"GET", "/offers/audience", ContentManage},
-	{"", "/offers", ContentManage},
+	{"GET", "/offers/audience", OffersManage},
+	{"", "/offers", OffersManage},
 	// **«ادعُ صديقاً»** — تبويبٌ في صفحة العروض (قرارُ المالك ٢٠٢٦-١٠-٠٤).
-	{"GET", "/referrals", ContentManage},
+	{"GET", "/referrals", OffersManage},
 	// **موافقاتُ الماليّة على العروض فوق حدّ المحتوى** — على عقد الموافقات.
 	{"GET", "/promo-approvals", FinanceRead},
 	{"POST", "/promo-approvals/{id}/approve", FinanceManage},
 	{"POST", "/promo-approvals/{id}/reject", FinanceManage},
-	{"", "/offers/{id}/active", ContentManage},
+	{"", "/offers/{id}/active", OffersManage},
 	// **وترتيبُ الأقسام بالسحب قبل `{id}`** — الأخصُّ أوّلاً.
 	{"PUT", "/sections/order", MarketManage},
 	{"", "/sections", MarketManage},
@@ -301,6 +307,12 @@ var adminPolicy = []Rule{
 	// يرتّب السوقَ ولا يبلغ العروضَ ولا اللافتاتِ ولا الحملات.
 	// **وصورُ السوق من بابها** — يرفع صورةَ صنفٍ أو قسمٍ لا شعارَ المنصّة.
 	{"POST", "/market/media", MarketManage},
+	// **وصنفُ السوق يُضاف ويُعدَّل ويُطفأ من بابه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): كانت
+	// صفحةُ القسم تنادي بابَي إدارة المتاجر (`/merchants/{id}/menu/items` ·
+	// `/menu/items/{id}`) — **فموظّفُ العمليّات يرى الزرَّ ويُردّ ٤٠٣.** والمعالِجُ
+	// نفسُه، **ولا تُمنح `merchants.manage`** (إنشاءُ المتاجر وتحريرُها).
+	{"POST", "/market/stores/{id}/items", MarketManage},
+	{"PATCH", "/market/items/{itemID}", MarketManage},
 	{"GET", "/market/items", MarketManage},
 	{"POST", "/market/items/bulk", MarketManage},
 	{"GET", "/market/new-count", MarketManage},

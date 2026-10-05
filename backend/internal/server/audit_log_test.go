@@ -509,15 +509,18 @@ func TestAuditLog_ExportWritesItself(t *testing.T) {
 //	الماليّةُ تقرأ السجلَّ (`audit.read` — هجرة 0260) وترى مبالغَه
 //	والتصديرُ لمدير المنصّة ومالكها وحدَهما (`audit.export`)
 
-// TestAuditLog_FinanceReadsAndSeesMoney **الماليّةُ تملك `audit.read` وترى المبالغ.**
+// TestAuditLog_FinanceReadsAndSeesMoney **قارئُ السجلّ الذي يملك المالَ يرى المبالغ.**
+//
+// **وقرارُ المالك ٢٠٢٦-١٠-٠٥** (هجرة `0422`): الماليّةُ ترى خمسةَ أقسامٍ لا غير —
+// **فنُزعت عنها `audit.read`** (سجلُّ الأحداث ليس منها). ويبقى العقدُ لقارئٍ يحمل القدرتين.
 func TestAuditLog_FinanceReadsAndSeesMoney(t *testing.T) {
 	f := newDriverFixture(t, 0)
 	ctx := context.Background()
-	for _, c := range []string{"audit.read", "finance.read"} {
+	for c, want := range map[string]bool{"audit.read": false, "finance.read": true} {
 		var ok bool
 		if err := f.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM role_capabilities
-			WHERE role_code = 'finance' AND capability_code = $1)`, c).Scan(&ok); err != nil || !ok {
-			t.Fatalf("الماليّةُ لا تملك %s (err=%v)", c, err)
+			WHERE role_code = 'finance' AND capability_code = $1)`, c).Scan(&ok); err != nil || ok != want {
+			t.Fatalf("الماليّةُ و%s: تملك=%v والمُقرَّر=%v (err=%v)", c, ok, want, err)
 		}
 	}
 	if need, ok := authz.LookupAdmin("GET", "/audit"); !ok || need != authz.AuditRead {

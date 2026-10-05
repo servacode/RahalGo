@@ -2098,6 +2098,22 @@
       ]
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/admin/market/items/{itemID}",
+      "handler": "handleUpdateItem",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/market/media",
       "handler": "handleMarketUploadMedia",
@@ -2199,6 +2215,22 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/market/stores/{id}/items",
+      "handler": "handleCreateItem",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
       ]
     },
     {
@@ -2794,7 +2826,7 @@
       "path": "/api/v1/admin/offers",
       "handler": "handleAdminOffers",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "offers",
@@ -2810,7 +2842,7 @@
       "path": "/api/v1/admin/offers",
       "handler": "handleCreateOffer",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "@o",
@@ -2826,7 +2858,7 @@
       "path": "/api/v1/admin/offers/audience",
       "handler": "handleOfferAudience",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "count",
@@ -2842,7 +2874,7 @@
       "path": "/api/v1/admin/offers/{id}/active",
       "handler": "handleSetOfferActive",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "request": [
         {
           "name": "active",
@@ -3460,7 +3492,7 @@
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
       "auth": true,
-      "capability": "orders.communications.read",
+      "capability": "orders.intervene",
       "response": [
         {
           "name": "drivers_on_shift",
@@ -3964,7 +3996,7 @@
       "path": "/api/v1/admin/promos",
       "handler": "handleListPromos",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "@promos",
@@ -3980,7 +4012,7 @@
       "path": "/api/v1/admin/promos",
       "handler": "handleCreatePromo",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "@p",
@@ -3996,7 +4028,7 @@
       "path": "/api/v1/admin/promos/summary",
       "handler": "handlePromoSummary",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "@p",
@@ -4012,7 +4044,7 @@
       "path": "/api/v1/admin/promos/{id}",
       "handler": "handleUpdatePromo",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "@p",
@@ -4068,7 +4100,7 @@
       "path": "/api/v1/admin/referrals",
       "handler": "handleAdminReferrals",
       "auth": true,
-      "capability": "content.manage",
+      "capability": "offers.manage",
       "response": [
         {
           "name": "page",

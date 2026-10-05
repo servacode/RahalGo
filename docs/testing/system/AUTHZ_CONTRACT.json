@@ -18,8 +18,8 @@
   },
   {
    "code": "content.manage",
-   "description": "اللافتات والعروض والمحتوى",
-   "guards_routes": 17
+   "description": "اللافتات والحملات والبث والمحتوى",
+   "guards_routes": 10
   },
   {
    "code": "disputes.manage",
@@ -72,7 +72,7 @@
   {
    "code": "market.manage",
    "description": "إدارة السوق: الأقسام والأصناف والمتاجر",
-   "guards_routes": 14
+   "guards_routes": 16
   },
   {
    "code": "merchants.manage",
@@ -95,9 +95,14 @@
    "guards_routes": 1
   },
   {
+   "code": "offers.manage",
+   "description": "العروض والخصومات: الأكواد والخصومات والدعوات",
+   "guards_routes": 7
+  },
+  {
    "code": "orders.communications.read",
    "description": "قراءة محادثات الطلب ورسائله",
-   "guards_routes": 3
+   "guards_routes": 2
   },
   {
    "code": "orders.customer_details.read",
@@ -111,7 +116,7 @@
   {
    "code": "orders.intervene",
    "description": "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
-   "guards_routes": 12
+   "guards_routes": 13
   },
   {
    "code": "orders.read",
@@ -244,7 +249,7 @@
   }
  ],
  "route_policy": {
-  "rules": 263,
+  "rules": 265,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -264,6 +269,7 @@
    "merchants.read",
    "merchants.verify",
    "observability.read",
+   "offers.manage",
    "orders.communications.read",
    "orders.intervene",
    "orders.read",

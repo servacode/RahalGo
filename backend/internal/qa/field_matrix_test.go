@@ -212,9 +212,11 @@ func TestXG42_CapabilityUnionCustomRoleAndRevoke(t *testing.T) {
 	// ── ١ ── **اتّحادُ دورين** ────────────────────────────────────
 	//
 	// **ماليّةٌ لا ترى الرقم، ودعمٌ يراه** — **ومن جمعهما رآه.**
-	fin := h.NewUser("finance")
+	// **والماليّةُ لم تعد تقرأ الدليل** (قرارُ المالك ٢٠٢٦-١٠-٠٥، هجرة `0422`) — فمراقبُ
+	// المنصّة يقيس العقدَ نفسَه: يقرأ الدليلَ ولا يرى الرقم.
+	fin := h.NewUser("platform_monitor")
 	if n := phones(fin.Token); n != 0 {
-		t.Errorf("**الماليّةُ وحدَها نالت %d رقماً**", n)
+		t.Errorf("**مراقبُ المنصّة وحدَه نال %d رقماً**", n)
 	}
 	if _, err := h.Pool.Exec(ctxBG(),
 		`INSERT INTO user_roles (user_id, role_code) VALUES ($1::uuid, 'customer_support')

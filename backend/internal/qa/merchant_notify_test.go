@@ -51,9 +51,10 @@ func TestMDIS_001_SMSChannelIsGone(t *testing.T) {
 // ثمّ يُقرأ يوماً على أنّه حقيقة.
 func TestMDIS_010_MessageCarriesNoSMSFlag(t *testing.T) {
 	h := New(t)
-	// **ونصُّ الرسالة يُقرأ بـ`orders.communications.read`** — وكان يحملها `ops`
-	// المحذوف (هجرة 0270)، **ويحملها دعمُ العملاء لا العمليّات.**
-	ops := h.NewUser("customer_support")
+	// **ونصُّ الرسالة يُقرأ بقدرة التحويل نفسِها** (`orders.intervene`) — رسالةُ
+	// المنصّة إلى المتجر لا كلامُ الناس (قرارُ المالك ٢٠٢٦-١٠-٠٥): **كانت
+	// بـ`orders.communications.read` فلم يحوّل موظّفُ العمليّات طلباً للمتجر.**
+	ops := h.NewUser("operations")
 	item := h.NewItem(1000)
 	cust := h.Customer()
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))

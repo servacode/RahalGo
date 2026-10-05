@@ -55,6 +55,7 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanOpen } from "@/lib/policy";
 import { roleLabelByCode } from "@/lib/rolemeta";
 
 const m = getMessages(defaultLocale);
@@ -141,6 +142,7 @@ function readParam(key: string): string {
 
 export default function PayoutsPage() {
   const { can } = useAuth();
+  const canUsers = useCanOpen().user;
   // **وقرارُ السحب قدرةٌ بذاتها** — `payouts.decide`.
   const canDecide = can("payouts.decide");
   // **والفلترُ من الرابط عند الفتح** — بطاقةُ «بانتظار قرارك» في الرئيسيّة.
@@ -295,10 +297,13 @@ export default function PayoutsPage() {
           <div className="flex flex-wrap items-center gap-2">
             {/* **«إضافة رصيد» خرجت من هنا** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣):
                 الشحنُ طلبٌ من صفحة الحساب، يوافق عليه موظفٌ آخر، ويدخل صندوقَ المكتب. */}
-            <ButtonLink href="/dashboard/users" variant="secondary" title={A.topupHint}>
-              <IconAdd size={16} />
-              {A.topupLink}
-            </ButtonLink>
+            {/* **ولمن يفتح الحسابات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
+            {canUsers && (
+              <ButtonLink href="/dashboard/users" variant="secondary" title={A.topupHint}>
+                <IconAdd size={16} />
+                {A.topupLink}
+              </ButtonLink>
+            )}
             <ViewToggle
               view={view}
               onChange={setView}

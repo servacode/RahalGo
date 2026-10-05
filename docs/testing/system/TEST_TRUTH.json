@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 484,
+    "routes": 486,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 198,
     "behaviour_settings": 155,
     "order_fields": 95,
-    "test_files": 523,
-    "test_funcs": 2169
+    "test_files": 524,
+    "test_funcs": 2173
   },
   "flows": [
     {
@@ -17474,6 +17474,30 @@
     {
       "name": "TestOFM4_CapabilityNotRoleName",
       "file": "internal/qa/ops_finance_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFinSections_EveryButtonWorks",
+      "file": "internal/qa/ops_finance_sections_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFinSections_NavEqualsOwnerList",
+      "file": "internal/qa/ops_finance_sections_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsSections_EveryButtonWorks",
+      "file": "internal/qa/ops_finance_sections_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsSections_ForwardToStoreAndTransfer",
+      "file": "internal/qa/ops_finance_sections_test.go",
       "package": "qa",
       "orphan": true
     },
