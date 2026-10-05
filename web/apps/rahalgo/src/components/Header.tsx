@@ -312,8 +312,10 @@ export default function Header({
   );
 
   return (
-    <>
-      <TopBar start={brand} sticky>
+    /* **والسطرُ الثاني يثبت مع الشريط** — الرئيسيّةُ تنزل وحدَها مع الكتابة
+       (طلبُ المالك ٢٠٢٦-٠٨-١٧)، **فسطرٌ يجري معها يختفي بعد ثلاث ثوانٍ.** */
+    <div className="sticky top-0 z-40">
+      <TopBar start={brand}>
         {logged ? (
           /* ══════════════════════════════════════════════════════════════
            **ولا شريطَ حسابٍ على الويب بعد اليوم**
@@ -366,7 +368,7 @@ export default function Header({
         **وقِيس على ٣٦٠**: الشعارُ والأبوابُ الثلاثةُ وزرُّ التحميل ٤٤٦ بكسلاً
         **فتراكبت.** فالشريطُ للشعار وزرِّ التحميل، **والأبوابُ سطرٌ تحته.** */}
       <nav
-        className="flex justify-center gap-1 px-4 py-1.5 lg:hidden"
+        className="surface-lit chrome flex justify-center gap-1 px-4 py-1.5 lg:hidden"
         aria-label={N.home}
       >
         {MARKETING.map((l) => (
@@ -381,6 +383,6 @@ export default function Header({
           </TopBarLink>
         ))}
       </nav>
-    </>
+    </div>
   );
 }
