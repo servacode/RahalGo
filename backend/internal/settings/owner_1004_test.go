@@ -184,7 +184,8 @@ func TestSETTINGS_EveryKeyHasATopic(t *testing.T) {
 		}
 	}
 	// **وتقليبُ سلايدر التطبيق رجع مع لوحه** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — التطبيقُ يقرؤه.
-	for _, k := range []string{"home.banner_auto", "home.banner_seconds"} {
+	// **وإظهارُه أصلاً معه** (قرارُ المالك ٢٠٢٦-١٠-٠٥: `home.banner_enabled`).
+	for _, k := range []string{"home.banner_enabled", "home.banner_auto", "home.banner_seconds"} {
 		if p := PlacementOf(Def{Key: k}); p.Hidden || p.Panel != "slider" {
 			t.Errorf("%s ⇒ %+v والمنتظَرُ لوحُ السلايدر ظاهراً", k, p)
 		}

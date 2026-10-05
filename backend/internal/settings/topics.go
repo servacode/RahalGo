@@ -125,6 +125,7 @@ var placeRules = []placeRule{
 	{prefix: "customers.welcome_whatsapp", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "notify.", topic: TopicMessages, section: "messages.notifications"},
 	{prefix: "meals.", topic: TopicMessages, section: "messages.meals"},
+	{prefix: "app_text.", topic: TopicMessages, section: "messages.app"},
 
 	// ── الأمان والدخول ──
 	{prefix: "security.", topic: TopicSecurity, section: "security.login"},
@@ -156,6 +157,7 @@ var placeRules = []placeRule{
 	{prefix: "auth.background", topic: TopicSite, hidden: true},
 	{prefix: "site.", topic: TopicSite, hidden: true},
 	// **وتقليبُ سلايدر التطبيق يرجع مع لوحه** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — التطبيقُ يقرؤه.
+	{prefix: "home.banner_enabled", exact: true, topic: TopicSite, panel: "slider"},
 	{prefix: "home.banner_auto", exact: true, topic: TopicSite, panel: "slider"},
 	{prefix: "home.banner_seconds", exact: true, topic: TopicSite, panel: "slider"},
 	{prefix: "home.", topic: TopicSite, hidden: true},

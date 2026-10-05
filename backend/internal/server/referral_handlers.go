@@ -8,11 +8,15 @@ package server
 // بينهما هو الفرقُ بين دعوةٍ تصل ودعوةٍ تضيع.**
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/referrals"
 )
 
@@ -63,4 +67,65 @@ func (s *Server) siteURL() string {
 		return "http://localhost:3003"
 	}
 	return "https://rahalgo.com"
+}
+
+// inviteClaimMaxPerHour **حدُّ الحجز للعنوان** — صفحةٌ عامّةٌ بلا حساب.
+const inviteClaimMaxPerHour = 20
+
+// ErrInviteClaimRateLimited حجوزٌ كثيرةٌ من عنوانٍ واحد.
+var ErrInviteClaimRateLimited = httpx.NewError(http.StatusTooManyRequests,
+	"rate_limited", "errors.rate_limited")
+
+// handleInviteClaim **يحجز الدعوةَ برقم الصديق** — `POST /public/invite/claim`.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٠٥: «بدون نسخ رمز».) صفحةُ الدعوة ترسل الرمزَ من
+// رابطها والرقمَ الذي كتبه الصديق، **وعند تسجيله بلا `ref` يُنسب بالحجز**
+// (`handleSignupConfirm`). انظر `referrals/claims.go`.
+//
+// **وعامٌّ بلا حساب** — فالحارسُ حدُّ معدّلٍ بالعنوان، **ويُعدّ ولو رُفض**:
+// وإلّا صار تخمينُ الرموز مجّانيّاً.
+func (s *Server) handleInviteClaim(w http.ResponseWriter, r *http.Request) {
+	if !s.inviteClaimAllowed(r) {
+		s.respondErr(w, ErrInviteClaimRateLimited)
+		return
+	}
+	req, err := decode[struct {
+		Code  string `json:"code"`
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, identity.ErrInvalidPhone)
+		return
+	}
+	switch err := s.referrals.ClaimInvite(r.Context(), req.Code, phone); {
+	case errors.Is(err, referrals.ErrPhoneRegistered):
+		s.respondErr(w, identity.ErrPhoneTaken)
+		return
+	case err != nil:
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// inviteClaimAllowed حدُّ معدّلٍ بالعنوان — كحارس العنونة (`geoAllowed`).
+func (s *Server) inviteClaimAllowed(r *http.Request) bool {
+	ip := clientIP(r)
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	}
+	key := "invite:claim:ip:" + ip
+	n, err := s.rdb.Incr(r.Context(), key).Result()
+	if err != nil {
+		return true // عطلُ الكاش لا يعطّل الصفحة
+	}
+	if n == 1 {
+		s.rdb.Expire(r.Context(), key, time.Hour)
+	}
+	return n <= inviteClaimMaxPerHour
 }

@@ -121,6 +121,13 @@ rahalgo.com, www.rahalgo.com {
 		try_files /index.html
 		file_server
 	}
+	# **والرابطُ القصير `/i/CODE` يفتح الصفحةَ نفسَها** (٢٠٢٦-١٠-٠٥) — تقرأ
+	# الرمزَ من المسار.
+	handle /i/* {
+		root * /srv/invite
+		try_files /index.html
+		file_server
+	}
 
 	# ══════════════════════════════════════════════════════════════════
 	# **وصفحتا الخصوصيّة وحذف الحساب — شرطا غوغل بلاي**

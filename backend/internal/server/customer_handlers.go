@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -260,7 +261,17 @@ func (s *Server) handlePublicBanners(w http.ResponseWriter, r *http.Request) {
 			active = append(active, b)
 		}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"banners": active})
+	httpx.JSON(w, http.StatusOK, map[string]any{"banners": s.bannersShown(r, active)})
+}
+
+// bannersShown **السلايدرُ مطفأٌ ⇒ قائمةٌ فارغة** (قرارُ المالك ٢٠٢٦-١٠-٠٥،
+// `home.banner_enabled`). **والصورُ تبقى في مكانها** — يُشعَل فتعود كما كانت.
+// **وقائمةٌ فارغةٌ لا `null`**: قارئٌ يفترضها مصفوفةً لا يسقط.
+func (s *Server) bannersShown(r *http.Request, active []catalog.Banner) []catalog.Banner {
+	if !s.settings.GetBool(r.Context(), "home.banner_enabled") {
+		return []catalog.Banner{}
+	}
+	return active
 }
 
 // handlePublicHome بيانات الصفحة الأولى: لافتاتٌ وتصنيفاتٌ وأقسامُ سوق.
@@ -335,7 +346,7 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"banners": active, "categories": categories,
+		"banners": s.bannersShown(r, active), "categories": categories,
 		"sections":      sections,
 		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone"),
 

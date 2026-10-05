@@ -784,6 +784,10 @@ var Catalog = []Def{
 	//
 	// **والمفتاحان يفتحان قسمَ «الصفحة الرئيسيّة» في الإعدادات** —
 	// **وقسمٌ بلا صفٍّ لا يُعرض أصلاً**، فلا يجد صاحبُه أين يرفع لافتتَه.
+	// **إظهارُ السلايدر أصلاً** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — مطفأٌ ⇒ الرئيسيّةُ
+	// واللافتاتُ العامّةُ تردّ قائمةً فارغة، **فلا تُحذف الصورُ لتُخفى.**
+	{Key: "home.banner_enabled", Group: GroupSite, Section: "page.home", Kind: KindBool,
+		Default: true},
 	{Key: "home.banner_auto", Group: GroupSite, Section: "page.home", Kind: KindBool,
 		Default: true},
 	{Key: "home.banner_seconds", Group: GroupSite, Section: "page.home", Kind: KindInt,
@@ -2222,6 +2226,18 @@ var Catalog = []Def{
 		Default: CustomerWelcomeDefault},
 	{Key: "customers.welcome_whatsapp", Group: GroupCustomers, Kind: KindBool, Default: true},
 
+	// **رسائلُ التطبيق التي يقرؤها الزبونُ عند الرفض** (قرارُ المالك ٢٠٢٦-١٠-٠٥)
+	// — كانت مكتوبةً في التطبيق لا تُصحَّح إلّا بنسخة. **وتصل في `details.notice`**
+	// مع رمز الخطأ (`respondErr`)، **والرمزُ عقدٌ لا يتبدّل.** وفارغُها يعيد الأصل.
+	{Key: "app_text.out_of_zone", Group: GroupCustomers, Kind: KindText, Max: 300,
+		Default: AppTextOutOfZoneDefault},
+	{Key: "app_text.coverage_unavailable", Group: GroupCustomers, Kind: KindText, Max: 300,
+		Default: AppTextCoverageUnavailableDefault},
+	{Key: "app_text.merchant_closed", Group: GroupCustomers, Kind: KindText, Max: 300,
+		Default: AppTextMerchantClosedDefault},
+	{Key: "app_text.item_unavailable", Group: GroupCustomers, Kind: KindText, Max: 300,
+		Default: AppTextItemUnavailableDefault},
+
 	{Key: "accounts.welcome_template", Group: GroupPlatform, Kind: KindLongText,
 		Default: WelcomeTemplateDefault, Requires: []string{"{password}", "{link}"}},
 
@@ -2341,6 +2357,23 @@ const CustomerWelcomeDefault = "أهلاً فيك بعائلة رحّال غو �
 	"🛒 كل الطلبات من التطبيق بس — ما منستقبل طلبات بالاتصال ولا عالواتساب.\n" +
 	"💬 أي مشكلة أو شكوى: ابعتها من التطبيق (طلباتي ← الطلب ← شكوى)، أو من صفحة «تواصل معنا»: rahalgo.com/contact\n\n" +
 	"نتمنالك تجربة حلوة 🤍"
+
+// **نصوصُ رسائل التطبيق الأصليّة** — هي ما كان مكتوباً في التطبيق (٢٠٢٦-١٠-٠٥).
+const (
+	AppTextOutOfZoneDefault           = "العنوان خارج مناطق التغطية الحالية"
+	AppTextCoverageUnavailableDefault = "التوصيل غير متوفر مؤقتاً — حاول مرة أخرى لاحقاً"
+	AppTextMerchantClosedDefault      = "هذا المتجر مغلق الآن"
+	AppTextItemUnavailableDefault     = "أحد الأصناف غير متوفر حاليا"
+)
+
+// AppTextKeyFor **مفتاحُ نصّ الرسالة لرمز خطأٍ يقرؤه الزبون** — وفارغٌ لما سواه.
+func AppTextKeyFor(code string) string {
+	switch code {
+	case "out_of_zone", "coverage_unavailable", "merchant_closed", "item_unavailable":
+		return "app_text." + code
+	}
+	return ""
+}
 
 // WelcomeTemplateDefault **نصُّ الترحيب الأصليّ** — هو ما كان مكتوباً في الشيفرة.
 const WelcomeTemplateDefault = "{title}\nالرقم: {phone}\nكلمة المرور المؤقتة: {password}\n" +
