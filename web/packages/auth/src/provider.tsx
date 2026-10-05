@@ -7,7 +7,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AuthTransition, type AuthTransitionKind } from "@rahalgo/ui";
-import { authApi, tokenStore, type AuthUser } from "./client";
+import { ApiError, authApi, tokenStore, type AuthUser } from "./client";
 import { LEGACY_PANEL_ROLES } from "./webaccess";
 
 interface AuthState {
@@ -78,7 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi
       .me()
       .then(setUser)
-      .catch(() => tokenStore.clear())
+      // **والجلسةُ لا تُمحى إلّا إن رفضها الخادم** (٤٠١ · ٤٠٣) — **لا عند
+      // انقطاعٍ عابر.** (كشفه فحصُ المال ٢٠٢٦-١٠-٠٥: ٥٠٣ واحدٌ من
+      // `/auth/me` أثناء تعافي القاعدة أخرج الموظّفَ من كلّ لوحة، **والتوكنُ
+      // سليم.**) فإن كان العطبُ عابراً يبقى التوكن، **وإعادةُ التحميل تُعيده.**
+      .catch((e) => {
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) tokenStore.clear();
+      })
       .finally(() => setLoading(false));
     // **والقدراتُ بابٌ ثانٍ** — **ولا تُجمَع مع `me` في نداءٍ واحد**:
     // **عقدُ `me` تقرؤه أربعةُ تطبيقاتٍ ولوحة**، وإضافةُ حقلٍ فيه تمسّ

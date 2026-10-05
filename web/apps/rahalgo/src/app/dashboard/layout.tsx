@@ -312,7 +312,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // **ولا حكمَ بالغياب قبل وصول القدرات** — **وإلّا رُدَّ صاحبُ
   // القدرةِ إلى الباب ثمّ أُدخِل، فيرى وميضَ رفضٍ لا معنى له.**
-  if (loading || !capsLoaded || !canAccessPanel(user, capabilities)) {
+  // **وبابٌ سيُرَدّ عنه لا يُرسَم قبل الردّ** — وإلّا نادت صفحتُه ما لا
+  // يملكه صاحبُها فسُجّل ٤٠٣ في كلّ هبوطٍ للماليّة على «الرئيسيّة»
+  // (فحصُ المال ٢٠٢٦-١٠-٠٥).
+  const leaving =
+    nav.length > 0 && ALL_NAV.some((i) => i.href === pathname) && !nav.some((i) => i.href === pathname);
+  if (loading || !capsLoaded || !canAccessPanel(user, capabilities) || leaving) {
     return (
       <BootScreen />
     );
