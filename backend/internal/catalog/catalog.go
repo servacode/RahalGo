@@ -217,7 +217,7 @@ func (s *Service) DeleteCategory(ctx context.Context, actorID, id, ip string) er
 		e.Details = map[string]any{"stores": stores}
 		return &e
 	}
-	if _, err := tx.Exec(ctx, `UPDATE leads SET category_id = NULL WHERE category_id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE merchant_leads SET category_id = NULL WHERE category_id = $1`, id); err != nil {
 		return err
 	}
 	tag, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, id)
