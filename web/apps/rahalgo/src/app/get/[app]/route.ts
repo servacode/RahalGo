@@ -10,14 +10,19 @@ import { APP_KEYS, type AppKey, readRelease, downloadHref } from "@/lib/releases
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, ctx: { params: Promise<{ app: string }> }) {
+// **وتحويلٌ نسبيٌّ داخل الموقع** — `req.url` خلف الوكيل عنوانٌ داخليّ (`localhost:3000`).
+function local(path: string): Response {
+  return new Response(null, { status: 302, headers: { Location: path } });
+}
+
+export async function GET(_req: Request, ctx: { params: Promise<{ app: string }> }) {
   const { app } = await ctx.params;
   if (!(APP_KEYS as readonly string[]).includes(app)) {
-    return NextResponse.redirect(new URL("/download", req.url), 302);
+    return local("/download");
   }
   const href = downloadHref(await readRelease(app as AppKey));
   if (!href) {
-    return NextResponse.redirect(new URL(`/download/${app}`, req.url), 302);
+    return local(`/download/${app}`);
   }
   return NextResponse.redirect(href, 302);
 }
