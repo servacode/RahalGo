@@ -892,7 +892,8 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, o)
+	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
+	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
 }
 
 // handleDriverTransition ينقل الطلب في مساره — والمحرّك يحكم ما يُسمح.
@@ -984,7 +985,8 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, o)
+	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
+	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
 }
 
 // replayOwnTransition **إعادةُ خطوةٍ ثبتت وضاع ردُّها** (٢٠٢٦-١٠-٠٢).
@@ -1007,7 +1009,8 @@ func (s *Server) replayOwnTransition(w http.ResponseWriter, r *http.Request, ord
 		return false
 	}
 	w.Header().Set("Idempotent-Replay", "true")
-	httpx.JSON(w, http.StatusOK, o)
+	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
+	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
 	return true
 }
 
