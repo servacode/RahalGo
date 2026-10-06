@@ -44,7 +44,6 @@ import com.rahalgo.shared.rep.RepCategory
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Note
-import com.rahalgo.ui.PasswordField
 import com.rahalgo.ui.PhoneField
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
@@ -378,22 +377,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             )
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // **وكلمةُ مرورِ صاحب المتجر**
-        // ══════════════════════════════════════════════════════════════
-        Spacer(Modifier.height(12.dp))
-        PasswordField(
-            value = vm.password,
-            onChange = { vm.password = it },
-            enabled = !vm.busy,
-            label = R.string.ac_password,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.ac_password_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        // **ولا كلمةَ مرورٍ يكتبها المندوب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — الخادمُ يولّدها عند التحويل
+        // ويرسلها لصاحب المتجر.
 
         // ══════════════════════════════════════════════════════════════
         // **وخطأُ الإرسال يُرسم فوق الزرّ لا في رأس الشاشة** (الخطوة ١٥)
@@ -418,7 +403,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             if (vm.phone.isBlank()) add(stringResource(com.rahalgo.ui.R.string.login_phone))
             if (vm.area.isBlank()) add(stringResource(R.string.ac_area))
             if (vm.point == null) add(stringResource(R.string.ac_point))
-            if (vm.password.isBlank()) add(stringResource(R.string.ac_password))
         }
 
         Spacer(Modifier.height(16.dp))
@@ -625,7 +609,7 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                         area = area.trim(),
                         districtId = pickedDistrict,
                         categoryId = pickedCategory,
-                        password = password,
+                        password = "",
                         lat = point?.first,
                         lng = point?.second,
                     ),

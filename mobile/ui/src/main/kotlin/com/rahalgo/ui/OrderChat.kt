@@ -44,6 +44,10 @@ import com.rahalgo.shared.model.TextLimits
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -186,6 +190,12 @@ fun OrderChatSheet(
     // **وفارغُه يعني «لا باب»** — **ولوحُ السائق ليس فيه شاشةُ طلبات
     // الزبون**، **وزرٌّ يفتح عدماً أسوأُ من لا زرّ.**
     onOpenOrder: (() -> Unit)? = null,
+    /**
+     * **أحاديثُ الطلبات الجارية كلُّها** — `(المعرّف، رقمُ الطلب)` (قرارُ المالك ٢٠٢٦-١٠-٠٦: «المحادثة
+     * نفسها تفتح، وفي مربّع صغير فوق لكل طلب نضغط عليه تتغيّر المحادثة»). **وواحدٌ لا مربّعاتَ له.**
+     */
+    tabs: List<Pair<String, Long>> = emptyList(),
+    onSwitch: (String) -> Unit = {},
     onClose: () -> Unit,
 ) {
     // **ويُحفظ ما كُتب بين الرسمات** — **وحالٌ بلا `remember` تعود
@@ -285,6 +295,27 @@ fun OrderChatSheet(
                             painter = painterResource(R.drawable.ic_close),
                             contentDescription = stringResource(R.string.close),
                         )
+                    }
+                }
+                if (tabs.size > 1) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        tabs.forEach { (id, number) ->
+                            val on = id == orderId
+                            Text(
+                                text = "#$number",
+                                fontWeight = FontWeight.Bold,
+                                color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
+                                modifier = Modifier
+                                    .clip(Rahal.shape.pill)
+                                    .background(if (on) Rahal.colors.brand else Rahal.colors.brand.copy(alpha = 0.12f))
+                                    .clickable(enabled = !on) { onSwitch(id) }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(6.dp))

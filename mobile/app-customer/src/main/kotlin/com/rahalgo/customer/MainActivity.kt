@@ -100,6 +100,11 @@ import com.rahalgo.ui.RahalButton
 import kotlinx.coroutines.launch
 import com.rahalgo.ui.CountBadge
 import com.rahalgo.ui.DrawerGestures
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -1197,12 +1202,9 @@ private fun SignedIn(
                         // (`CU-CHAT-03`)، **والشارةُ تقول ما يفتحه
                         // القرصُ لا مجموعَ ما لا يراه** (`CU-CHAT-04`).
                         ChatFab(unread = liveChat.badge) {
-                            val one = liveChat.single
-                            if (one != null) {
-                                liveChat.openId = one
-                            } else {
-                                overlay.show(Overlay.Menu(CustomerItems.CHATS))
-                            }
+                            // **يُفتح الحديثُ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ما فيه رسائلُ جديدةٌ أوّلاً،
+                            // **والبقيّةُ مربّعاتٌ فوقه** يُبدَّل بينها بضغطة.
+                            liveChat.openId = (liveChat.chats.firstOrNull { it.unread > 0 } ?: liveChat.chats.first()).orderId
                         }
                     }
                     liveChat.openId?.let { id ->
@@ -1217,6 +1219,8 @@ private fun SignedIn(
                                 overlay.clear()
                                 tab = Tab.Orders
                             },
+                            tabs = liveChat.chats.map { it.orderId to it.number },
+                            onSwitch = { liveChat.openId = it },
                         ) { liveChat.openId = null }
                     }
                 }

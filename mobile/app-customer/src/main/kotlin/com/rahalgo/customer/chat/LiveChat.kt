@@ -54,7 +54,7 @@ class LiveChatViewModel : ViewModel() {
         private set
 
     /** **طلبٌ جارٍ يُحادَث فيه** — ورقمُه لأنّ المعرّفَ لا يُقرأ. */
-    data class Live(val orderId: String, val unread: Int)
+    data class Live(val orderId: String, val unread: Int, val number: Long = 0)
 
     /**
      * **ما يفعله القرصُ حين يُضغط.**
@@ -71,6 +71,7 @@ class LiveChatViewModel : ViewModel() {
      * يعرض آخرَ ما حُمِّل فيه** (`CU-CHAT-07`).
      */
     var openId by mutableStateOf<String?>(null)
+
 
     /** **أمفتوحٌ لوحٌ؟** — **وبه تُكتم الرنّةُ عمّن يقرأ الآن.** */
     val open: Boolean get() = openId != null
@@ -121,7 +122,7 @@ class LiveChatViewModel : ViewModel() {
                     val live = orders.filter { !it.driverName.isNullOrEmpty() }
                     val byOrder = counts.orEmpty().associate { it.orderId to it.unread }
                     this@LiveChatViewModel.chats =
-                        live.map { Live(it.id, byOrder[it.id] ?: 0) }
+                        live.map { Live(it.id, byOrder[it.id] ?: 0, it.number) }
                     Log.i("RahalGo/chat", "طلبات=" + orders.size +
                         " أحاديثُ جارية=" + live.size)
                 }

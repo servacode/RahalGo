@@ -369,7 +369,17 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if len(req.Password) < s.minPasswordLen(r.Context()) {
+	// **ولا كلمةَ من المندوب** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «السيرفر سيقوم بتوليدها… نلغي بالفورم كلمة
+	// السر») — عند التحويل تُولَّد كلمةٌ مؤقّتةٌ وتُرسَل لصاحب المتجر. **فالفارغُ يأخذ كلمةً عشوائيّةً لا
+	// يعرفها أحد**، والنسخُ القديمةُ التي ما زالت ترسلها تُفحَص كما كانت.
+	if req.Password == "" {
+		gen, gerr := identity.GenerateTempPassword(24)
+		if gerr != nil {
+			s.respondErr(w, gerr)
+			return
+		}
+		req.Password = gen
+	} else if len(req.Password) < s.minPasswordLen(r.Context()) {
 		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
 		return
 	}
