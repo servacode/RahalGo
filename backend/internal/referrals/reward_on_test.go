@@ -230,3 +230,22 @@ func TestStanding_ShowsTheSameTiersItPays(t *testing.T) {
 			got, st.Tiers[0])
 	}
 }
+
+// TestSettlePendingVerified_PaysMissedOnce **ما فات يُصرف مرّةً** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «في ناس
+// دعت وما وصلتها هديّة»). المدعوُّ وُثّق عند التسجيل ولم يُنادَ الصرف — **فيصرفه الإقلاعُ، وإقلاعٌ
+// ثانٍ لا يصرف ثانيةً.**
+func TestSettlePendingVerified_PaysMissedOnce(t *testing.T) {
+	f := arm(t, referrals.OnSignup)
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `UPDATE users SET whatsapp_verified_at = now() WHERE id = $1`, f.invitee); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.SettlePendingVerified(ctx)
+	if got := f.balance(t); got != 5_000 {
+		t.Fatalf("رصيدُ الداعي %d والمتوقّع 5000 — **مكافأةٌ فائتةٌ لم تُصرف**", got)
+	}
+	f.svc.SettlePendingVerified(ctx)
+	if got := f.balance(t); got != 5_000 {
+		t.Fatalf("رصيدُ الداعي صار %d — **صُرفت الفائتةُ مرّتين**", got)
+	}
+}

@@ -309,6 +309,13 @@ func run(logger *slog.Logger) error {
 			// المسارُ الحيّ.
 			go srv.RunAutoTransferSweeper(ctx, 30*time.Second)
 
+			// **ومكافآتُ دعوةٍ فاتت** (٢٠٢٦-١٠-٠٦) — مرّةً عند الإقلاع، والختمُ يمنع التكرار.
+			go func() {
+				if n := srv.SettleMissedReferrals(ctx); n > 0 {
+					logger.Info("الدعوة: صُرفت مكافآتٌ فائتة", "count", n)
+				}
+			}()
+
 			// **وتنبيهُ المالك إلى تعويضٍ تأخّر القرارُ فيه** (قرارُ المالك
 			// ٢٠٢٦-١٠-٠٤، البند ٤) — مرّةً لكلّ طلب، وكلَّ خمس دقائق تكفي.
 			go srv.RunCompensationOverdueSweeper(ctx, 5*time.Minute)

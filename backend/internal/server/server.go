@@ -1699,3 +1699,9 @@ func (s *Server) allowedOrigins() []string {
 	s.logger.Error("WEB_ORIGINS غير مضبوط في الإنتاج — كلُّ نداءٍ من المتصفّح سيُحجب")
 	return []string{"https://origins.not.configured.invalid"}
 }
+
+// SettleMissedReferrals **يصرف ما فات من مكافآت الدعوة** — يُنادى مرّةً عند إقلاع المحرّك
+// (٢٠٢٦-١٠-٠٦). انظر `referrals.SettlePendingVerified`.
+func (s *Server) SettleMissedReferrals(ctx context.Context) int {
+	return s.referrals.SettlePendingVerified(ctx)
+}

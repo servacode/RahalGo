@@ -282,6 +282,38 @@ func (s *Service) SettleOnSignup(ctx context.Context, customerID, actorID string
 	s.settle(ctx, customerID, "", actorID)
 }
 
+// SettlePendingVerified **يصرف ما فات** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «في ناس دعت وما وصلتها هديّة —
+// ما بدنا نفقد ثقتنا بالناس»).
+//
+// **كان التسجيلُ يوثّق الواتسابَ بنفسه ولا يصرف** — فبقيت دعواتٌ مكتملةٌ بلا مكافأة. **فيُمرّ
+// عليها مرّةً**: كلُّ مدعوٍّ موثَّقٍ لم تُختَم دعوتُه يُصرف لداعيه الآن، **والختمُ يمنع التكرار**،
+// فإعادةُ التشغيل لا تصرف مرّتين. ويخرج صامتاً في وضع «عند أوّل طلب».
+func (s *Service) SettlePendingVerified(ctx context.Context) int {
+	if s.rewardOn(ctx) != OnSignup {
+		return 0
+	}
+	rows, err := s.db.Query(ctx, `
+		SELECT r.invitee_id::text FROM referrals r
+		JOIN users u ON u.id = r.invitee_id
+		WHERE r.rewarded_at IS NULL AND u.whatsapp_verified_at IS NOT NULL`)
+	if err != nil {
+		return 0
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	for _, id := range ids {
+		// **والفاعلُ المدعوُّ نفسُه** — كما في `SettleOnSignup`.
+		s.settle(ctx, id, "", id)
+	}
+	return len(ids)
+}
+
 // settle جسدُ الصرف — **واحدٌ للوضعين.**
 //
 // **وحسبتان لصرفٍ واحدٍ تفترقان يوماً**: يُصلَح الختمُ في أحدهما ويبقى الآخر
