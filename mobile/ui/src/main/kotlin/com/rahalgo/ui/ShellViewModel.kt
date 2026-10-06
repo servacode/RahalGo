@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.model.MeSummary
 import com.rahalgo.shared.model.Notice
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -59,6 +60,13 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         if (signedIn) wake()
+        // **والإشعارُ يُجدّد الرصيدَ والشارةَ والصندوق** (٢٠٢٦-١٠-٠٦) — كانت النبضةُ لا تصل هنا، **وما
+        // جاء من الوصلة قبل لحظةٍ لا يُعاد.**
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect {
+                if (android.os.SystemClock.elapsedRealtime() - lastLiveAt > 1_500) refresh()
+            }
+        }
         // ══════════════════════════════════════════════════════════════
         // **والوصلةُ الحيّةُ تُفتح مرّةً للتطبيق كلّه**
         // ══════════════════════════════════════════════════════════════
@@ -96,6 +104,7 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
             scope = viewModelScope,
             onState = { up ->
                 liveUp = up
+                if (up) lastLiveAt = android.os.SystemClock.elapsedRealtime()
                 Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت")
                 // ══════════════════════════════════════════════════════════
                 // **وعودةُ الوصلة تُصحّح ما فات** (Batch 3b) — `MISSED-EVT`
@@ -111,6 +120,7 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
                 }
             },
             onEvent = {
+                lastLiveAt = android.os.SystemClock.elapsedRealtime()
                 refresh()
                 Refresh.bump()
             },
@@ -120,6 +130,7 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
     /** **أقائمةٌ الوصلةُ الآن؟** — وبغيابها يُسأل المحرّكُ كلَّ دقيقة. */
     private var liveUp = false
     private var polling = false
+    @Volatile private var lastLiveAt = 0L
 
     /**
      * **سؤالٌ بطيءٌ حين تنقطع الوصلة** (٢٠٢٦-١٠-٠٦) — كان الانقطاعُ يعني أن لا شيءَ يتبدّل حتّى تعود.

@@ -223,6 +223,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private fun refreshUnread() {
         viewModelScope.launch {
             runCatching { backend.me.inbox(1).unread }.onSuccess { unread = it }
+            // **والصندوقُ المفتوحُ يُعاد معها** (٢٠٢٦-١٠-٠٦) — كان الرقمُ يتبدّل والقائمةُ لا.
+            if (inbox != null) runCatching { inbox = backend.me.inbox().items }
         }
     }
 

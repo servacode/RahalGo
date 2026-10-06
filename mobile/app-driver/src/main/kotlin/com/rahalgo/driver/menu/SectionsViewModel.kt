@@ -60,9 +60,10 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
         // **ونصوصُ الصفحات تبقى** — في عقلها هي، ولا تتبدّل بتسليم طلب.
         viewModelScope.launch {
             Refresh.tick.drop(1).collect {
-                cash = null
-                me = null
-                reputation = null
+                // **ويُعاد ما كان محمَّلاً صامتاً** (٢٠٢٦-١٠-٠٦) — كان يُمحى فيبقى المفتوحُ على دوّارٍ ثمّ
+                // «تعذّر»، **لأنّ الشاشةَ المفتوحةَ لا تطلبه ثانية.** والمطويُّ لا يُنادى له.
+                if (cash != null) runCatching { cash = backend.driver.cash(); me = backend.driver.me() }
+                if (reputation != null) runCatching { reputation = backend.me.reputation() }
             }
         }
     }

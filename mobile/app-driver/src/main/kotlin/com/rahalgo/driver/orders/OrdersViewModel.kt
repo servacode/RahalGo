@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.ui.Refresh
+import kotlinx.coroutines.flow.drop
 import com.rahalgo.ui.LastPoint
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.trip.ChatState
@@ -286,6 +287,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         pollWhileDown()
         // **وفتحُ الورديّة يُعيد قراءةَ الطابور** — انظر `QueuePulse`.
         viewModelScope.launch { QueuePulse.flow.collect { refresh() } }
+        // **والإشعارُ يُجدّد الرحلةَ والطابور** (٢٠٢٦-١٠-٠٦) — كانت النبضةُ تُجدّد الشاشاتِ الأخرى
+        // وحدَها، **فعرضٌ جديدٌ وصل إشعارُه والوصلةُ منقطعةٌ لا يظهر حتّى السؤال التالي.**
+        // **وما جاء من الوصلة نفسِها قبل لحظةٍ لا يُعاد.**
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect {
+                if (android.os.SystemClock.elapsedRealtime() - lastLiveAt > 1_500) {
+                    refresh()
+                    if (chat != null) reloadChat()
+                }
+            }
+        }
         backend.live.start(
             scope = viewModelScope,
             onState = { up ->
@@ -294,11 +306,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // **وعودةُ الوصلة تُعيد القراءة** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢): ما وقع وهي
                 // منقطعةٌ لم يصل — عرضٌ بخمسٍ وأربعين ثانيةً قد يفوت وإشعارُه وصل.
                 if (up) {
+                    lastLiveAt = android.os.SystemClock.elapsedRealtime()
                     refresh()
                     Refresh.bump()
+                    if (chat != null) reloadChat()
                 }
             },
             onEvent = {
+                lastLiveAt = android.os.SystemClock.elapsedRealtime()
                 refresh()
                 // **وما وصل الوصلةَ يُبَثّ للجميع** — (شكوى المالك
                 // ٢٠٢٦-٠٨-١٣: «لا يحدث تحديثٌ لحظيٌّ تلقائيٌّ لكثيرٍ من
@@ -319,6 +334,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     /** **أقائمةٌ الوصلةُ الحيّة؟** — وبلاها يُسأل المحرّكُ بنفسه. */
     @Volatile private var liveUp = false
 
+    /** **متى أعادت الوصلةُ القراءةَ آخرَ مرّة** — فلا تُعاد مرّتين لنبضةٍ واحدة. */
+    @Volatile private var lastLiveAt = 0L
+
     /**
      * **وحين تنقطع الوصلةُ يُسأل المحرّكُ كلَّ خمسَ عشرةَ ثانية** — شبكةُ السوق تنقطع
      * كثيراً، **والوصلةُ وحدَها كانت مصدرَ كلِّ تحديث**: فإن انقطعت بقيت الشاشةُ قديمةً
@@ -328,7 +346,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             while (true) {
                 delay(POLL_WHEN_DOWN_MS)
-                if (!liveUp) refresh()
+                if (!liveUp) {
+                    refresh()
+                    // **وتُجدَّد سائرُ الشاشات معها** (٢٠٢٦-١٠-٠٦) — الرصيدُ والسجلُّ والدردشات.
+                    Refresh.bump()
+                    if (chat != null) reloadChat()
+                }
             }
         }
     }

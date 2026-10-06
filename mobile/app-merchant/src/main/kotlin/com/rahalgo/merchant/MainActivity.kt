@@ -215,6 +215,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val walletVm: WalletViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
     val shell: ShellViewModel = viewModel()
+    // **والوصلةُ تُفتح لكلّ دخول** (٢٠٢٦-١٠-٠٦) — كانت تُفتح عند إنشاء النموذج وحدَه، **فمن خرج ودخل
+    // في الجلسة نفسِها بقي بلا وصلةٍ ولا سؤالٍ احتياطيّ.** و`wake` لا يفتح مقبسين.
+    LaunchedEffect(Unit) { shell.wake() }
     val ordersVm: OrdersViewModel = viewModel()
     val menuVm: MenuViewModel = viewModel()
     val storeVm: StoreViewModel = viewModel()
@@ -304,8 +307,12 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_STOP ->
                     com.rahalgo.merchant.push.MerchantOrderAlert.stop()
-                androidx.lifecycle.Lifecycle.Event.ON_RESUME ->
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
                     com.rahalgo.merchant.push.MerchantOrderAlert.sync(context, alerting)
+                    // **والعودةُ تُجدّد كلَّ شاشة** (٢٠٢٦-١٠-٠٦) — ما وقع في الخلفيّة لم تحمله الوصلة.
+                    shell.refresh()
+                    com.rahalgo.ui.Refresh.bump()
+                }
                 else -> {}
             }
         }

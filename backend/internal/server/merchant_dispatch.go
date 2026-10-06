@@ -299,7 +299,14 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 			"order", orderID, "error", err)
 	}
 
-	s.touch("order", "ops")
+	// **والمتجرُ يسمع التحويلَ بعينه** (٢٠٢٦-١٠-٠٦) — كان يصله صدى «تغيّر شيءٌ» العامّ وحدَه.
+	topics := []string{"ops"}
+	var mid string
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT COALESCE(merchant_id::text, '') FROM orders WHERE id = $1`, orderID).Scan(&mid); err == nil && mid != "" {
+		topics = append(topics, "merchant:"+mid)
+	}
+	s.touch("order", topics...)
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"sent": true, "phone": phone, "channel": req.Channel,
 	})

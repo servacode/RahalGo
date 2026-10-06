@@ -42,6 +42,7 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -117,6 +118,11 @@ private val openStatuses = setOf(
 @Composable
 fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> Unit) {
     BackHandler { onClose() }
+    // **والوصلةُ تُجدّد المتابعةَ فوراً** (٢٠٢٦-١٠-٠٦) — كان القرعُ كلَّ عشر ثوانٍ وحدَه، **فإسنادُ السائق
+    // واستلامُه يصلان متأخّرين.** والقرعُ يبقى احتياطاً.
+    LaunchedEffect(id) {
+        com.rahalgo.ui.Refresh.tick.drop(1).collect { vm.load(id) }
+    }
     LaunchedEffect(id) {
         vm.load(id)
         // **والقرعُ ما دامت جارية** — ويتوقّف حين تنتهي أو تُغلق الشاشة.
