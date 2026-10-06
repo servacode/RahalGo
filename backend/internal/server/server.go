@@ -779,6 +779,9 @@ func (s *Server) Router() http.Handler {
 		r.Route("/rep", func(r chi.Router) {
 			r.Use(s.RequireAuth)
 			r.Use(s.RequireRoles("sales"))
+			// **وما يكتبه المندوبُ في أصناف متجره وعروضه يُسمَع عند الزبون** (٢٠٢٦-١٠-٠٦) — كان يُبلَّغ
+			// المكتبُ وحدَه، **فيبقى السوقُ عند الزبون قديماً حتّى يُعاد فتحُه.**
+			r.Use(s.announceWrites)
 			r.Get("/me", s.handleRepMe)
 			r.Get("/merchants", s.handleRepMerchants)
 			// تفاصيل عميل: طلباته وعمولة المندوب عن كلٍّ منها — شفافية العمولة
