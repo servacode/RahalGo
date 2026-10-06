@@ -285,11 +285,17 @@ class DriverApi(private val api: ApiClient) {
          * بالطلب كما هو لا بـ«انتقالٌ غيرُ جائز» على خطوةٍ ثبتت.** وفارغٌ: كما كان.
          */
         idempotencyKey: String? = null,
+        /** **كودُ التسليم** كما أملاه الزبون — يُرسَل مع `delivered` وحدَه. */
+        deliveryCode: String = "",
     ) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/transition",
             HttpMethod.Post,
-            mapOf("to" to to, "reason" to reason, "note" to note),
+            if (deliveryCode.isEmpty()) {
+                mapOf("to" to to, "reason" to reason, "note" to note)
+            } else {
+                mapOf("to" to to, "reason" to reason, "note" to note, "delivery_code" to deliveryCode)
+            },
             idempotencyKey = idempotencyKey,
         )
     }

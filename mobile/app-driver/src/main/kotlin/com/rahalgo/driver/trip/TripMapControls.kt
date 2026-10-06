@@ -105,6 +105,8 @@ internal fun MapButtons(
     voiceMuted: Boolean = false,
     /** **زرٌّ واحدٌ يقلبه** — «إمّا الصوتُ يعمل أو لا يعمل». */
     onVoice: () -> Unit = {},
+    /** **«لدي مشكلة» قرصٌ أحمرُ عائم** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — وغيابُه يعني لا طلبَ يُبلَّغ عنه. */
+    onProblem: (() -> Unit)? = null,
 ) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
@@ -112,6 +114,22 @@ internal fun MapButtons(
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // ══════════════════════════════════════════════════════════
+            // **«لدي مشكلة» خرج من البطاقة إلى رأس الأقراص** (قرارُ المالك ٢٠٢٦-١٠-٠٦:
+            // «زرّ لدي مشكلة نخلّيه أيقونة عائمة… لمبة حمرا تعبّر عن طوارئ دائماً»)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان بعرض «استلمت الطلب» وبجانبه** — فيُضغط بالخطأ ويأكل نصفَ البطاقة.
+            // **وقرصٌ أحمرُ في أعلى العمود** يُرى في كلّ طور ولا يجاور زرَّ المرحلة.
+            if (onProblem != null) {
+                MapButton(
+                    icon = R.drawable.ic_warning,
+                    label = R.string.trip_problem,
+                    onClick = onProblem,
+                    danger = true,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             // ══════════════════════════════════════════════════════════
             // **والتوسيطُ وحدَه — و«اتبعي» حُذف**
             // ══════════════════════════════════════════════════════════
@@ -188,6 +206,8 @@ internal fun MapButton(
     on: Boolean = false,
     /** **كم ينتظره خلف هذا الزرّ** — وصفرٌ يعني لا شارة. */
     badge: Int = 0,
+    /** **قرصُ الطوارئ** — أرضٌ حمراءُ وأيقونةٌ بيضاء. */
+    danger: Boolean = false,
 ) {
     Box(contentAlignment = Alignment.TopEnd) {
         // ══════════════════════════════════════════════════════════════
@@ -217,14 +237,24 @@ internal fun MapButton(
                 .size(48.dp)
                 .shadow(3.dp, CircleShape)
                 .clip(CircleShape)
-                .background(if (on) Rahal.colors.brand else Rahal.colors.surface)
+                .background(
+                    when {
+                        danger -> Rahal.colors.danger
+                        on -> Rahal.colors.brand
+                        else -> Rahal.colors.surface
+                    },
+                )
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(icon),
                 contentDescription = stringResource(label),
-                tint = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                tint = when {
+                    danger -> Color.White
+                    on -> Rahal.colors.onBrand
+                    else -> Rahal.colors.ink
+                },
                 modifier = Modifier.size(22.dp),
             )
         }

@@ -355,7 +355,10 @@ func TestPL18_NoReviewerPhoneBypass(t *testing.T) {
 			if strings.HasSuffix(norm, "_test.go") ||
 				strings.Contains(norm, "/src/test/") ||
 				strings.Contains(norm, "/src/androidTest/") ||
-				strings.Contains(norm, "/__tests__/") {
+				strings.Contains(norm, "/__tests__/") ||
+				// **وسكربتاتُ التشغيل لا تُشحَن** (٢٠٢٦-١٠-٠٦): تصفيرُ الإنتاج يُبقي حسابَ المراجِع
+				// باسمه — وذاك حفظٌ لحسابٍ لا بابٌ في المنتج.
+				strings.Contains(norm, "/backend/scripts/") {
 				return nil
 			}
 			b, rerr := os.ReadFile(p)

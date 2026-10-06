@@ -289,6 +289,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **ومكافأةُ من دعا** — تُصرف عند أوّل طلبٍ يُسلَّم للمدعوّ.
 	srv.referrals = referrals.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID, notify, logger)
 	ordersSvc.SetReferrals(srv.referrals)
+	// **وكودُ التسليم يصل بالواتساب** — البوتُ يُحقن لاحقاً، فيُسأل عند كلّ نداء.
+	ordersSvc.SetWhatsApp(whatsAppText{srv})
 	return srv
 }
 

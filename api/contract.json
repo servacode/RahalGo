@@ -7053,6 +7053,10 @@
         {
           "name": "reason",
           "type": "string"
+        },
+        {
+          "name": "delivery_code",
+          "type": "string"
         }
       ],
       "response": [

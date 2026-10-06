@@ -240,10 +240,18 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والبياناتُ محفوظةٌ منذ اليوم الأوّل** في `order_events` — **ولا
 	// أحدَ يعرضها**: فلا يُعرف أين ضاع الوقتُ في طلبٍ تأخّر.
+	// **وكودُ التسليم لمن يملك التدخّل وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — يقرؤه موظّفُ
+	// العمليّات للسائق بعد أن يتحقّق من الزبون بالهاتف. **ولغيره يغيب الحقلُ كلُّه.**
+	var code *string
+	if s0HasOpsIntervene(r) {
+		_ = s.pg.QueryRow(r.Context(),
+			`SELECT delivery_code FROM orders WHERE id = $1`, o.ID).Scan(&code)
+	}
 	s.writeOrdersJSON(w, strip, struct {
 		*orders.Order
-		Timeline []TimelineStep `json:"timeline"`
-	}{o, s.timeline(r.Context(), o.ID, true)})
+		Timeline     []TimelineStep `json:"timeline"`
+		DeliveryCode *string        `json:"delivery_code,omitempty"`
+	}{o, s.timeline(r.Context(), o.ID, true), code})
 }
 
 // requiresReason الانتقالاتُ التي لا تُقبل بلا تعليل.

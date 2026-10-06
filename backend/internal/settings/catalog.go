@@ -1958,6 +1958,15 @@ var Catalog = []Def{
 	{Key: "drivers.proof_max_m", Group: GroupDrivers, Kind: KindInt,
 		Min: 5, Max: 5000, Unit: "meters", Default: 15},
 
+	// **كودُ التسليم** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — أربعةُ أرقامٍ تصل الزبونَ عند الاستلام،
+	// **ولا يُغلق السائقُ الطلبَ «سُلّم» حتّى يقولها له الزبون.** ومطفأٌ افتراضاً.
+	// **وكودٌ لم يصل الزبونَ بأيّ قناةٍ لا يُطلب** — يبقى التسليمُ بالصورة كما كان.
+	{Key: "delivery.code_required", Group: GroupDrivers, Kind: KindBool, Default: false},
+	// **وطريقُ وصوله**: إشعارُ التطبيق أو الواتساب أو الاثنان.
+	{Key: "delivery.code_channel", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"both", "app", "whatsapp"}, Default: "both",
+		ShowWhen: &Condition{Key: "delivery.code_required", Equals: []string{"true"}}},
+
 	// ── المتاجر ───────────────────────────────────────
 	//
 	// **وحظرُ الإلغاء ثلاثةُ مقابضَ لا واحد**: كم إلغاءً، وكم يوماً، وأيدوياً

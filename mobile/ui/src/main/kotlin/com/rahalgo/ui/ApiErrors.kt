@@ -431,6 +431,8 @@ private val CODES: Map<String, Int> = mapOf(
     // ── عرضُ السعر المخصَّص وتأكيدُه (Batch 2a) ──
     "quote_changed" to R.string.err_quote_changed,
     "quote_not_confirmed" to R.string.err_quote_not_confirmed,
+    "delivery_code_wrong" to R.string.err_delivery_code_wrong,
+    "delivery_code_locked" to R.string.err_delivery_code_locked,
     "goods_not_documented" to R.string.err_goods_not_documented,
     "agree_wrong_step" to R.string.err_agree_wrong_step,
     "custom_locked" to R.string.err_custom_locked,

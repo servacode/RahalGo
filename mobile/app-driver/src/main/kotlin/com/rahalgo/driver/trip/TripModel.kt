@@ -264,6 +264,8 @@ data class TripActions(
     val step: (String) -> Unit,
     /** **«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣). */
     val handGoods: () -> Unit = {},
+    /** **كودُ التسليم** من نافذة التأكيد — يُحفظ قبل `step`/`capture`. */
+    val setDeliveryCode: (String) -> Unit = {},
     /** يفتح الكاميرا لصورة التسليم. */
     val capture: () -> Unit,
     val chat: () -> Unit,
@@ -417,6 +419,12 @@ fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
     }
     // **«لدي توصيلة» بلا نقطةٍ** — المكتوبُ موقعُ المتجر لا باب المستلِم.
     "on_the_way" -> if (order.dropoffKnown) ArrivalPoint.At(order.lat, order.lng) else ArrivalPoint.Unknown
+    // **ومشوارُ الإرجاع يُغلق بالوصول إلى المكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — لا بزرّ.
+    "failed" -> when {
+        order.returnTo.isEmpty() -> ArrivalPoint.NotArriving
+        order.dropoffKnown -> ArrivalPoint.At(order.lat, order.lng)
+        else -> ArrivalPoint.Unknown
+    }
     else -> ArrivalPoint.NotArriving
 }
 

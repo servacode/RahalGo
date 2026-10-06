@@ -1254,6 +1254,8 @@ kosom` |
 | `drivers.failed_compensation_percent` | السائقون | int | `50` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `drivers.proof_max_m` | السائقون | int | `15` |
+| `delivery.code_required` | السائقون | bool | `false` |
+| `delivery.code_channel` | السائقون | choice | `both` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
 | `app.min_version.merchant` | المتاجر | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `10` |

@@ -405,6 +405,15 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		return nil, err
 	}
 
+	// **وكودُ التسليم يُولَّد لحظةَ الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — داخلَ
+	// المعاملة، **ويُرسَل بعد التثبيت** (`delivery_code.go`).
+	var codeRt *codeRoute
+	if to == StPickedUp {
+		if codeRt, err = unit.issueDeliveryCode(ctx, tx, orderID, kind, customerID); err != nil {
+			return nil, err
+		}
+	}
+
 	// **وأثرُ التدخّل قبل التثبيت** — `XG-20`.
 	if hook != nil {
 		if err := hook(ctx, tx); err != nil {
@@ -465,6 +474,8 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	}
 
 	s.publishOrder(updated)
+	// **وكودُ التسليم يصل الزبونَ** — بعد الإيداع: تعثّرُه لا يُسقط استلاماً وقع.
+	s.sendDeliveryCode(ctx, orderID, codeRt)
 	// **وكلُّ من تحرّكت محفظتُه يُبلَّغ** — بعد الإيداع لا داخلَه.
 	s.publishWalletsOf(ctx, orderID)
 	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً

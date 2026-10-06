@@ -44,9 +44,20 @@ class ReturnTripTest {
     }
 
     @Test
-    fun `there is no automatic arrival on a return trip`() {
+    fun `a return trip ends by arriving at the office, not by a button`() {
+        // **قرارُ المالك ٢٠٢٦-١٠-٠٦**: لا «سلّمت البضاعة» — الوصولُ إلى المكتب يُنهي المشوار.
         assertNull(autoArrivalTarget("failed", custom = false))
-        assertEquals(ArrivalPoint.NotArriving, arrivalPoint(DriverOrder(status = "failed", returnTo = "office")))
+        assertEquals(
+            ArrivalPoint.At(35.95, 39.01),
+            arrivalPoint(DriverOrder(status = "failed", returnTo = "office", lat = 35.95, lng = 39.01)),
+        )
+        // **ومكتبٌ بلا دبّوس «لا يُعرف»** — فيبقى الزرُّ له وحدَه.
+        assertEquals(
+            ArrivalPoint.Unknown,
+            arrivalPoint(DriverOrder(status = "failed", returnTo = "office", dropoffKnown = false)),
+        )
+        // **والفاشلُ بلا إرجاعٍ لا وجهةَ له.**
+        assertEquals(ArrivalPoint.NotArriving, arrivalPoint(DriverOrder(status = "failed")))
     }
 
     @Test

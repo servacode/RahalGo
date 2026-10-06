@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 78,
-    "notify_targeted": 29,
+    "notify_sites": 79,
+    "notify_targeted": 30,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 208,
-    "behaviour_settings": 165,
+    "setting_defs": 210,
+    "behaviour_settings": 167,
     "order_fields": 95,
-    "test_files": 530,
-    "test_funcs": 2198
+    "test_files": 531,
+    "test_funcs": 2203
   },
   "flows": [
     {
@@ -3643,6 +3643,48 @@
     },
     {
       "key": "delivery.by_distance",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.code_channel",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.code_required",
       "group": "drivers",
       "kind": "bool",
       "sensitive": false,
@@ -14396,6 +14438,36 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestDCODE_FiveWrongLocks",
+      "file": "internal/qa/delivery_code_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDCODE_NoChannelNoCode",
+      "file": "internal/qa/delivery_code_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDCODE_OffNoCode",
+      "file": "internal/qa/delivery_code_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDCODE_WhatsAppFailureClears",
+      "file": "internal/qa/delivery_code_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDCODE_WrongThenCorrect",
+      "file": "internal/qa/delivery_code_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestPROOF_NoCameraNeedsOpsAuthorizedException",

@@ -135,10 +135,15 @@ internal fun AgreeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(stringResource(if (step == "goods") R.string.agree_goods_title else R.string.agree_fee_title))
+            Text(
+                stringResource(if (step == "goods") R.string.agree_goods_title else R.string.agree_fee_title),
+                fontWeight = FontWeight.Bold,
+            )
         },
         text = {
-            Column {
+            // **نافذةٌ بقالب التأكيد** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «نفس المشكلة البصرية») — المبلغُ
+            // كبيرٌ بوحدته، **والزرُّ الأساسيُّ بعرض النافذة** لا نصٌّ صغيرٌ في زاويتها.
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     stringResource(if (step == "goods") R.string.agree_goods_hint else R.string.agree_fee_hint),
                     color = Rahal.colors.inkMuted,
@@ -149,6 +154,12 @@ internal fun AgreeDialog(
                     onValueChange = { goods = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_goods)) },
                     singleLine = true,
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 if (step != "goods") OutlinedTextField(
@@ -156,6 +167,12 @@ internal fun AgreeDialog(
                     onValueChange = { if (!feeLocked) fee = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_fee)) },
                     singleLine = true,
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.fillMaxWidth(),
                     readOnly = feeLocked,
                     enabled = !feeLocked,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -175,16 +192,19 @@ internal fun AgreeDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(
+            RahalButton(
                 onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
+                modifier = Modifier.fillMaxWidth(),
                 // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة. **والثمنُ كذلك.**
                 enabled = !busy && if (step == "goods") goods.isNotBlank() else feeLocked || fee.isNotBlank(),
             ) {
-                Text(stringResource(R.string.agree_confirm))
+                Text(stringResource(R.string.agree_confirm), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
+            RahalTextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.act_back))
+            }
         },
     )
 }

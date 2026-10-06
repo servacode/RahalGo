@@ -147,6 +147,16 @@ func TestOpsMapPro_OfficeListsStaffNameAndRoleOnly(t *testing.T) {
 	_, ops := roleUser(t, hh, "operations")
 	present, _ := roleUser(t, hh, "operations")
 	away, _ := roleUser(t, hh, "finance")
+	// **واسمٌ فريدٌ للحاضر** (٢٠٢٦-١٠-٠٦) — كان اسماً عامّاً يشاركه موظّفُ اختبارٍ آخرَ حضر قبله
+	// في القاعدة المشتركة، **فيُقرأ دورُ ذاك.**
+	present.Name = "حاضر-" + present.ID[:8]
+	away.Name = "غائب-" + away.ID[:8]
+	for _, u := range []struct{ id, name string }{{present.ID, present.Name}, {away.ID, away.Name}} {
+		if _, err := hh.Pool.Exec(t.Context(),
+			`UPDATE users SET full_name = $2 WHERE id = $1::uuid`, u.id, u.name); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := hh.Pool.Exec(t.Context(), `
 		UPDATE users SET last_seen_at = CASE WHEN id = $1::uuid THEN now()
 		                                    ELSE now() - interval '3 hours' END

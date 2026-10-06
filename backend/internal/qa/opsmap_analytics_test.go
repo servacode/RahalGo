@@ -355,11 +355,12 @@ func TestSearch_ScopedToPermissions(t *testing.T) {
 	}
 
 	// **والماليّةُ لا تبحث في السائقين** — لا تملك رؤيةَ مواضعهم.
+	// **ومنذ ٢٠٢٦-١٠-٠٦ لا خريطةَ للماليّة أصلاً** (قرارُ المالك: الخزينةُ والديون والخسائر
+	// والأهداف والعروض وحدَها) — فالبحثُ يُردّ ٤٠٣، **وهو أشدُّ من «لا سائقين».**
 	drv := h.NewUser("driver")
-	for _, x := range find(h.NewUser("finance").Token, "QA") {
-		if x.Kind == "driver" {
-			t.Fatalf("الماليّةُ وجدت سائقاً %q — وهي لا تملك رؤيتَهم", x.Label)
-		}
+	fin := h.GET("/api/v1/admin/ops-map/search?q=QA", h.NewUser("finance").Token)
+	if fin.Code != http.StatusForbidden {
+		t.Fatalf("الماليّةُ بحثت في الخريطة: %d · %s", fin.Code, string(fin.Body))
 	}
 	_ = drv
 

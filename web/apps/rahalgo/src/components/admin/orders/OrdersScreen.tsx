@@ -2449,10 +2449,30 @@ function OrderActions({
     void forwardToMerchant();
   }
 
+  /**
+   * **واتساب ويب مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — `wa.me` يفتح صفحةَ واتساب الرسميّة
+   * «التطبيق أم الويب» أوّلاً، **و`web.whatsapp.com/send` يفتح المحادثةَ والرسالةُ جاهزة.**
+   */
+  function toWhatsAppWeb(link: string): string {
+    try {
+      const u = new URL(link);
+      if (u.hostname !== "wa.me" && u.hostname !== "api.whatsapp.com") return link;
+      const phone = u.hostname === "wa.me" ? u.pathname.replace(/\//g, "") : (u.searchParams.get("phone") ?? "");
+      const out = new URL("https://web.whatsapp.com/send");
+      out.searchParams.set("phone", phone);
+      const text = u.searchParams.get("text");
+      if (text) out.searchParams.set("text", text);
+      return out.toString();
+    } catch {
+      return link;
+    }
+  }
+
   async function forwardToMerchant() {
     setNoDriverWarn(false);
     setErr("");
-    const win = window.open("", "_blank");
+    // **وتبويبٌ واحدٌ باسمٍ ثابت** — يُعاد استعمالُه فلا يُفتح واتساب ويب جديدٌ مع كلّ طلب.
+    const win = window.open("", "rahalgo-whatsapp");
     setBusy("wa");
     try {
       const msg = await api<MerchantMessage>(
@@ -2463,7 +2483,7 @@ function OrderActions({
         setErr(m.admin.ordersPage.noWhatsApp);
         return;
       }
-      if (win) win.location.href = msg.wa_link;
+      if (win) win.location.href = toWhatsAppWeb(msg.wa_link);
       // **الوسمُ يقع ولو حُجبت النافذة**: الموظّفُ يفتحها بنفسه، **والطلبُ
       // لا يبقى معلّقاً لأن متصفّحاً تشدّد.**
       await api(`/api/v1/admin/orders/${o.id}/whatsapp`, {

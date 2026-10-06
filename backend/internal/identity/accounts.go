@@ -35,23 +35,29 @@ import (
 var ErrTempPasswordExpired = httpx.NewError(http.StatusUnauthorized,
 	"temp_password_expired", "errors.temp_password_expired")
 
-// tempAlphabet **حروفٌ لا تلتبس** — لا `0/O` ولا `1/l/I`: تُقرأ من رسالةٍ على هاتف.
-const tempAlphabet = "abcdefghjkmnpqrstuvwxyz23456789"
+// tempLetters **حروفٌ لا تلتبس** — لا `o` ولا `l` ولا `i`: تُقرأ من رسالةٍ على هاتف.
+const tempLetters = "abcdefghjkmnpqrstuvwxyz"
 
-// GenerateTempPassword كلمةٌ عشوائيّةٌ بطولٍ لا يقلّ عن عشرة ولا عن حدِّ المنصّة.
+// GenerateTempPassword **كلمةٌ سهلةٌ تُكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «صعبة جدّاً… لازم تكون سهلة،
+// حرف وأرقام… وهو باسورد مؤقّت بالنهاية») — **حرفان ثمّ أرقام**، مثل `rk482915`، بطولِ حدِّ
+// المنصّة وثمانيةٍ على الأقلّ. **والأمانُ من غيرها**: تنتهي بعد ساعات، **ويُجبَر صاحبُها على
+// تبديلها عند أوّل دخول**، ومحاولاتُ الدخول محدودة.
 func GenerateTempPassword(minLen int) (string, error) {
-	n := 10
+	n := 8
 	if minLen > n {
 		n = minLen
 	}
 	out := make([]byte, n)
-	max := big.NewInt(int64(len(tempAlphabet)))
 	for i := range out {
-		k, err := rand.Int(rand.Reader, max)
+		alphabet := "0123456789"
+		if i < 2 {
+			alphabet = tempLetters
+		}
+		k, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
 		if err != nil {
 			return "", err
 		}
-		out[i] = tempAlphabet[k.Int64()]
+		out[i] = alphabet[k.Int64()]
 	}
 	return string(out), nil
 }

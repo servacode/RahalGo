@@ -241,14 +241,32 @@ func (s *Server) handleAuthorizeProofException(w http.ResponseWriter, r *http.Re
 
 	// **قفلُ الصفّ يجعل فحصَ التكرار صادقاً** — كنظير تعويض السائق.
 	var driverID, skipBy *string
+	var hadCode bool
 	if err := tx.QueryRow(r.Context(),
-		`SELECT driver_id::text, pod_skip_by::text FROM orders WHERE id = $1 FOR UPDATE`,
-		orderID).Scan(&driverID, &skipBy); err != nil {
+		`SELECT driver_id::text, pod_skip_by::text, delivery_code IS NOT NULL FROM orders WHERE id = $1 FOR UPDATE`,
+		orderID).Scan(&driverID, &skipBy, &hadCode); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	// **والإذنُ يفكّ كودَ التسليم كذلك** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — زبونٌ لم يصله
+	// الكودُ أو طلبٌ أُقفل بخمس محاولات: **العمليّاتُ تأذن فيمضي التسليم.**
+	if _, err := tx.Exec(r.Context(),
+		`UPDATE orders SET delivery_code = NULL, delivery_code_attempts = 0 WHERE id = $1`,
+		orderID); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	// **أُذن من قبل**: إعادةُ النداء لا تكتب ثانيةً ولا تُدقّق مرّتين.
 	if skipBy != nil {
+		// **إلّا كوداً جاء بعد الإذن** (استلامٌ ثانٍ) — محوُه فعلٌ يُدقَّق.
+		if hadCode {
+			if err := s.auditTx(r.Context(), tx, r, "ops.delivery_proof_exception", "order", orderID, map[string]any{
+				"driver_id": driverID, "reason": reason, "delivery_code_cleared": true,
+			}); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+		}
 		if err := tx.Commit(r.Context()); err != nil {
 			s.respondErr(w, err)
 			return
@@ -265,7 +283,7 @@ func (s *Server) handleAuthorizeProofException(w http.ResponseWriter, r *http.Re
 	// **الأثرُ في المعاملة نفسِها** (`AQ-4`): تخطٍّ لقاعدة سلامةٍ يجب أن يبقى
 	// أثرُه ولو سقط ما بعده.
 	if err := s.auditTx(r.Context(), tx, r, "ops.delivery_proof_exception", "order", orderID, map[string]any{
-		"driver_id": driverID, "reason": reason,
+		"driver_id": driverID, "reason": reason, "delivery_code_cleared": hadCode,
 	}); err != nil {
 		s.respondErr(w, err)
 		return

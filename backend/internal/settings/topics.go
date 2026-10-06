@@ -168,6 +168,9 @@ var placeRules = []placeRule{
 	{prefix: "page.", topic: TopicSite, section: "site.pages"},
 
 	// ── الطلبات والتوصيل: الأجرةُ الخاصّة والمهلُ والتوزيع وحدودُ الزبون ──
+	// **وكودُ التسليم مع صورة التسليم** — يُضبطان معاً (قرارُ المالك ٢٠٢٦-١٠-٠٦).
+	{prefix: "delivery.code_required", exact: true, topic: TopicDrivers, section: "drivers.work"},
+	{prefix: "delivery.code_channel", exact: true, topic: TopicDrivers, section: "drivers.work"},
 	{prefix: "delivery.custom_", topic: TopicOrders, section: "orders.custom"},
 	{prefix: "delivery.", topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.max_sources", exact: true, topic: TopicOrders, section: "orders.limits"},

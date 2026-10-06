@@ -93,8 +93,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         /** **كم بين سؤالين حين تنقطع الوصلة.** */
         const val POLL_WHEN_DOWN_MS = 15_000L
 
-        /** **كم يقف حتّى يُعدّ واصلا** — (قرار المالك: بين ٣٠ و٦٠ ثانية). */
-        const val ARRIVAL_HOLD_MS = 30_000L
+        /** **كم يقف حتّى يُعدّ واصلا** — (قرارُ المالك ٢٠٢٦-١٠-٠٦: «نزّلها لـ١٥ ثانية»؛ كانت ٣٠). */
+        const val ARRIVAL_HOLD_MS = 15_000L
+
+        /** **علامةُ نهاية مشوار الإرجاع** في مراقب الوصول — ليست حالةً في المحرّك. */
+        private const val RETURN_DONE = "goods_handed"
     }
 
 
@@ -372,12 +375,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 delay(ARRIVAL_TICK_MS)
                 val order = state.mine.firstOrNull { it.id == openId }
                     ?: state.mine.firstOrNull()
-                val to = when (order?.status) {
-                    "assigned" -> "at_pickup"
-                    "on_the_way" -> "at_dropoff"
+                val to = when {
+                    order?.status == "assigned" -> "at_pickup"
+                    order?.status == "on_the_way" -> "at_dropoff"
+                    // **والإرجاعُ ينتهي بالوصول** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «ما في تمّ التسليم… خلص
+                    // يُعتبر الطلب منتهي») — يُسجَّل تسليمُ البضاعة عند المكتب وحدَه.
+                    order != null && com.rahalgo.driver.trip.isReturnTrip(order) -> RETURN_DONE
                     else -> null
                 }
-                if (order == null || to == null || (order.kind == "custom" && to != "at_dropoff") ||
+                if (order == null || to == null || (order.kind == "custom" && to == "at_pickup") ||
                     near(LastPoint.value, order) != true
                 ) {
                     nearSince = 0L
@@ -389,7 +395,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 } else if (now - nearSince >= ARRIVAL_HOLD_MS) {
                     nearSince = 0L
                     Log.i("RahalGo/وصول", "وقوفٌ عند الوجهة — تُعلَن " + to)
-                    step(to)
+                    if (to == RETURN_DONE) {
+                        if (openId == null) openId = order.id
+                        if (currentId() == order.id) handGoods()
+                    } else {
+                        step(to)
+                    }
                 }
             }
         }
@@ -1033,16 +1044,23 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         voice.muted = voiceMuted
     }
 
+    /**
+     * **كودُ التسليم كما أملاه الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — يُكتب في نافذة التأكيد
+     * ويُرسَل مع `delivered` وحدَه، **في المسار المباشر ومسار الصورة معاً.**
+     */
+    var deliveryCode: String = ""
+
     /** يحرّك الطلب خطوة — **ثمّ يعيد قراءة كلّ شيء.** */
     fun step(to: String) {
         val id = currentId() ?: return
         if (detail.busy) return
         detail = detail.copy(busy = true, error = "")
+        val code = if (to == "delivered") deliveryCode else ""
         viewModelScope.launch {
             try {
                 // **بمفتاحٍ يُعاد بعينه إن ضاع الردّ** — انظر `StepRetry`.
                 StepRetry.send(StepRetry.newKey()) { key ->
-                    backend.driver.transition(id, to, idempotencyKey = key)
+                    backend.driver.transition(id, to, idempotencyKey = key, deliveryCode = code)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1052,6 +1070,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // الخطوةُ ثبتت، أو أُلغي الطلبُ، **وشاشةٌ تبقى على ما كان تُضغط ثانيةً.**
                 refresh()
                 return@launch
+            }
+            // **والشاشةُ تتبدّل لحظةَ قبول الخطوة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «الشاشة بقيت ثواني
+            // تقول وصلت إلى وجهتك») — لا بعد إعادة القائمة وجلب الطريق.
+            if (to != "delivered" && openId == id) {
+                detail = detail.copy(
+                    order = detail.order.copy(status = if (to == "picked_up") "on_the_way" else to),
+                    busy = false,
+                )
             }
             // ══════════════════════════════════════════════════════════
             // **ومن استلم انطلق — لا يُسأل عنه**
@@ -1450,7 +1476,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     accuracyM = point?.accuracyM,
                 )
                 StepRetry.send(StepRetry.newKey()) { key ->
-                    backend.driver.transition(id, "delivered", idempotencyKey = key)
+                    backend.driver.transition(id, "delivered", idempotencyKey = key, deliveryCode = deliveryCode)
                 }
                 openId = null
             } catch (e: kotlinx.coroutines.CancellationException) {

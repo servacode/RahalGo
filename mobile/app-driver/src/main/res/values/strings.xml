@@ -209,7 +209,14 @@
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلمت</string>
     <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
-    <string name="trip_prepaid_note">مدفوع مسبقا — لا تقبض شيئا</string>
+    <string name="trip_prepaid_note">مدفوع مسبقاً — لا تقبض شيئاً</string>
+    <string name="trip_collect_from">اقبض من %1$s</string>
+    <string name="deliver_confirm_due_title">هل قبضت المبلغ؟</string>
+    <string name="deliver_confirm_due_body">المبلغ المطلوب من %1$s</string>
+    <string name="deliver_confirm_due_yes">نعم، قبضت وسلّمت</string>
+    <string name="deliver_confirm_paid_title">تأكيد التسليم</string>
+    <string name="deliver_confirm_paid_yes">تأكيد التسليم</string>
+    <string name="deliver_code_ask">اطلب من الزبون كود الاستلام</string>
     <string name="leg_to_store">في الطريق للمتجر</string>
     <string name="leg_to_customer">في الطريق للزبون</string>
     <string name="leg_picked">استلمت</string>
@@ -284,7 +291,8 @@
     <string name="agree_goods">ثمن البضاعة</string>
     <string name="agree_fee">أجرة التوصيل</string>
     <string name="agree_fee_fixed">أجرة التوصيل محددة من المنصة.</string>
-    <string name="agree_confirm">وثق</string>
+    <string name="agree_confirm">وثّق</string>
+    <string name="currency_short">ل.س</string>
     <string name="agree_fee_title">أجرة التوصيل</string>
     <string name="agree_fee_hint">وثّق أجرة التوصيل أوّلاً، ويوافق عليها الزبون قبل أن تنطلق.</string>
     <string name="agree_goods_title">ثمن البضاعة</string>

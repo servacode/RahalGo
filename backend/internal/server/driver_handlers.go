@@ -382,6 +382,9 @@ type driverOrder struct {
 	ReturnTo string `json:"return_to"`
 	// ReturnLabel **اسمُ المتجر في الإرجاع إليه** — وفارغٌ للمكتب.
 	ReturnLabel string `json:"return_label"`
+	// DeliveryCodeRequired **أعلى الطلب كودُ تسليم؟** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — يطلبه
+	// السائقُ من الزبون قبل «سُلّم». **والكودُ نفسُه لا يُرسَل للسائق أبداً.**
+	DeliveryCodeRequired bool `json:"delivery_code_required"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -500,7 +503,9 @@ const driverOrderSelect = `
 	       -- **ومشوارُ الإرجاع القائم** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وفارغٌ لما سواه.
 	       CASE WHEN o.status = 'failed' AND o.goods_handed_at IS NULL
 	            THEN COALESCE(o.return_to, '') ELSE '' END,
-	       ST_Y(m.location::geometry), ST_X(m.location::geometry), COALESCE(m.address_text, '')
+	       ST_Y(m.location::geometry), ST_X(m.location::geometry), COALESCE(m.address_text, ''),
+	       -- **أعليه كودُ تسليم** — والكودُ نفسُه لا يُقرأ هنا.
+	       o.delivery_code IS NOT NULL
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -531,7 +536,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.DeliveryFee, &o.PickupAddress,
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
 			&o.DoorInstruction, &o.DoorNote,
-			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr); err != nil {
+			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,
+			&o.DeliveryCodeRequired); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -898,6 +904,9 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		// Reason رمزٌ من `FailReasons` — **يلزم عند التعذّر**، ومنه يُشتقّ
 		// الذنبُ الذي يقرّر التعويض.
 		Reason string `json:"reason"`
+		// DeliveryCode **كودُ التسليم من الزبون** — يلزم مع «سُلّم» إن كان على الطلب كود
+		// (قرارُ المالك ٢٠٢٦-١٠-٠٦، `delivery_code.go`).
+		DeliveryCode string `json:"delivery_code"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -956,6 +965,11 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	// سقف.** والإثباتُ صورةٌ بموقعٍ ووقت، **أو كلمةٌ تقول لماذا تعذّرت.**
 	if req.To == orders.StDelivered {
 		if err := s.requireProofBeforeDelivery(r, orderID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		// **وكودُ التسليم بعد الإثبات** — فلا تُستهلك محاولةٌ في نداءٍ يسقط لغيرها.
+		if err := s.requireDeliveryCode(r.Context(), orderID, req.DeliveryCode); err != nil {
 			s.respondErr(w, err)
 			return
 		}
