@@ -23,6 +23,7 @@ import {
   useToast,
   FormActions,
   Switch,
+  Confirm,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -44,6 +45,19 @@ export default function CategoriesTab() {
     ["catalog"],
   );
   const [editing, setEditing] = useState<Category | null | "new">(null);
+  const [removing, setRemoving] = useState<Category | null>(null);
+
+  // **والحذفُ لتصنيفٍ لا متجرَ عليه** — والمحرّكُ يردّ غيرَه بعدد متاجره.
+  async function remove(c: Category) {
+    try {
+      await api(`/api/v1/admin/categories/${c.id}`, { method: "DELETE" });
+      setRemoving(null);
+      reload();
+    } catch (e) {
+      setRemoving(null);
+      toast.push(errorText(e), "error");
+    }
+  }
 
   async function toggle(c: Category, on: boolean) {
     try {
@@ -89,10 +103,23 @@ export default function CategoriesTab() {
                 <Button variant="secondary" onClick={() => setEditing(c)}>
                   {C.edit}
                 </Button>
+                <Button variant="danger" onClick={() => setRemoving(c)}>
+                  {C.remove}
+                </Button>
               </div>
             </div>
           ))}
         </div>
+      )}
+      {removing && (
+        <Confirm
+          open
+          title={C.removeTitle}
+          body={C.removeBody.replace("{name}", removing.name)}
+          confirmLabel={C.remove}
+          onConfirm={() => void remove(removing)}
+          onCancel={() => setRemoving(null)}
+        />
       )}
       {editing && (
         <CategoryModal

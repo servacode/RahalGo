@@ -195,6 +195,45 @@ func (s *Service) UpdateCategory(ctx context.Context, actorID, id string, in Cat
 	return &c, nil
 }
 
+// ErrCategoryInUse **تصنيفٌ عليه متاجر لا يُحذف** — تُنقَل متاجرُه أوّلاً أو يُوقَف.
+var ErrCategoryInUse = httpx.NewError(http.StatusConflict, "category_in_use", "errors.category_in_use")
+
+// DeleteCategory **يحذف تصنيفاً لا متجرَ عليه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «التصنيفات لازم في حذف»).
+//
+// **ومتجرٌ قائمٌ يحمل تصنيفَه** — فيُردّ `category_in_use` بعدد متاجره. **والمرشَّحُ المعلَّق**
+// يفقد تصنيفَه (`NULL`) ولا يمنع الحذف: يختار المكتبُ له تصنيفاً عند التحويل.
+func (s *Service) DeleteCategory(ctx context.Context, actorID, id, ip string) error {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var stores int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM merchants WHERE category_id = $1`, id).Scan(&stores); err != nil {
+		return err
+	}
+	if stores > 0 {
+		e := *ErrCategoryInUse
+		e.Details = map[string]any{"stores": stores}
+		return &e
+	}
+	if _, err := tx.Exec(ctx, `UPDATE leads SET category_id = NULL WHERE category_id = $1`, id); err != nil {
+		return err
+	}
+	tag, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return httpx.ErrNotFound
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	s.audit(ctx, actorID, "admin.category_delete", "category", id, ip)
+	return nil
+}
+
 // ---------- المتاجر ----------
 
 // merchantSelect **دالّةٌ لا ثابت** — لأنّها تبني عدّادَ المخالفات من مصدره

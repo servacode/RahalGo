@@ -655,6 +655,22 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/admin/categories/{id}",
+      "handler": "handleDeleteCategory",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/admin/categories/{id}",
       "handler": "handleUpdateCategory",
@@ -6751,7 +6767,7 @@
       ],
       "response": [
         {
-          "name": "@o",
+          "name": "@ViewFor",
           "type": "unknown"
         }
       ],
@@ -7061,7 +7077,7 @@
       ],
       "response": [
         {
-          "name": "@o",
+          "name": "@ViewFor",
           "type": "unknown"
         }
       ],
@@ -9142,7 +9158,7 @@
     {
       "method": "GET",
       "path": "/api/v1/rep/categories",
-      "handler": "handleListCategories",
+      "handler": "handleRepCategories",
       "auth": true,
       "roles": [
         "sales"

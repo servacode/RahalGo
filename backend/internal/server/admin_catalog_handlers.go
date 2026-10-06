@@ -20,6 +20,17 @@ func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, cats)
 }
 
+// handleRepCategories **المندوبُ يرى الفعّالَ وحدَه** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «رغم أنها موقوفة
+// تظهر عند المندوب») — كان ينادي القائمةَ بلا `?active=1` فيرى كلَّ شيء.
+func (s *Server) handleRepCategories(w http.ResponseWriter, r *http.Request) {
+	cats, err := s.catalog.ListCategories(r.Context(), true)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, cats)
+}
+
 func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[catalog.CategoryInput](r)
 	if err != nil {
@@ -32,6 +43,15 @@ func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusCreated, c)
+}
+
+// handleDeleteCategory **حذفُ تصنيفٍ لا متجرَ عليه** — وإلّا `category_in_use`.
+func (s *Server) handleDeleteCategory(w http.ResponseWriter, r *http.Request) {
+	if err := s.catalog.DeleteCategory(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), clientIP(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
 }
 
 func (s *Server) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {

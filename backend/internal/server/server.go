@@ -787,7 +787,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/leads", s.handleRepLeads)
 			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
 			r.Post("/leads", s.idempotent(s.handleRepCreateLead))
-			r.Get("/categories", s.handleListCategories) // تصنيفات المتاجر للنموذج
+			r.Get("/categories", s.handleRepCategories) // تصنيفات المتاجر للنموذج — الفعّالةُ وحدَها
 			// **وهدفُ المندوب كهدف السائق** — المقياسُ يختلف والمعنى واحد.
 			r.Get("/incentives", s.handleMyIncentives)
 
@@ -1595,6 +1595,7 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/users/{id}/cash-limit", s.handleDriverCashLimit)
 				r.Post("/categories", s.handleCreateCategory)
 				r.Patch("/categories/{id}", s.handleUpdateCategory)
+				r.Delete("/categories/{id}", s.handleDeleteCategory)
 				r.Post("/merchants", s.handleCreateMerchant)
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go

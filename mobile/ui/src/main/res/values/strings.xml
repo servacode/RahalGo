@@ -554,6 +554,7 @@
     <string name="err_quote_changed">تغيّر السعر. راجع العرض الجديد وأكّده.</string>
     <string name="err_quote_not_confirmed">لم يؤكّد الزبون السعر بعد.</string>
     <string name="err_delivery_code_wrong">كود التسليم غير صحيح — اطلبه من الزبون مرة ثانية.</string>
+    <string name="err_category_in_use">عليه متاجر — انقلها لتصنيف آخر أولاً.</string>
     <string name="err_delivery_code_locked">انقفل كود التسليم بعد محاولات كثيرة — تواصل مع العمليات.</string>
     <string name="err_goods_not_documented">وثّق ثمن البضاعة أوّلاً، ثمّ ينتظر موافقة الزبون.</string>
     <string name="err_agree_wrong_step">هذه الخطوة لا تخصّ هذا الطلب.</string>
