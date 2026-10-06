@@ -32,6 +32,7 @@ const (
 	qaStagingDriverPhone = "+963900555003"
 	// qaStagingDriverPhoneB **سائقٌ ثانٍ** (٢٠٢٦-١٠-٠٦) — لشهود طلبين بسائقين مختلفين.
 	qaStagingDriverPhoneB = "+963900555004"
+	qaStagingDriverPhoneC = "+963900555006"
 	// qaStagingAdminPhone **أدمنُ QA الثابت** — فاعلُ تدقيقٍ لمساعد التدخّل
 	// وحدَه؛ **لا توكنَ يُصدَر له** (جلسةُ QA ترفض الأدمن)، ولا يُسجَّل دخولُه
 	// (بلا كلمة). موجودٌ ليكون `actor_user_id` صادقاً في تدقيق التدخّل.
@@ -142,14 +143,17 @@ func (s *Server) handleQACustomDriverSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	ctx := r.Context()
-	// **والجسدُ اختياريّ**: `{"slot":"b"}` ⇒ السائقُ الثاني، وغيرُه الأوّل.
+	// **والجسدُ اختياريّ**: `{"slot":"b"|"c"}` ⇒ السائقُ الثاني أو الثالث، وغيرُهما الأوّل.
 	var body struct {
 		Slot string `json:"slot"`
 	}
 	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&body)
 	phone, name := qaStagingDriverPhone, "سائق الاختبار QA"
-	if body.Slot == "b" {
+	switch body.Slot {
+	case "b":
 		phone, name = qaStagingDriverPhoneB, "سائق الاختبار الثاني QA"
+	case "c":
+		phone, name = qaStagingDriverPhoneC, "سائق الاختبار الثالث QA"
 	}
 	uid, err := s.qaFixedUser(ctx, phone, "driver", name, clientIP(r))
 	if err != nil {
