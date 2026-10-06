@@ -26,15 +26,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import {
-  Alert,
-  PageHeader,
-  Button,
-  Card,
-  Input,
-  LoadingState,
-  IconSettings,
-} from "@rahalgo/ui";
+import { Alert, PageHeader, Card, LoadingState, IconSettings, Switch } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -51,57 +43,45 @@ interface FileInfo {
   code: number;
   name: string;
   auto: boolean;
+  editable: boolean;
 }
 
-// **أربعُ نسخٍ لأربعةِ أدوار** — والسائقُ أوّلاً فهو موضعُ الشهادة اليوم.
-const APPS = ["driver", "customer", "merchant", "rep"] as const;
+// **وتطبيقُ رحّال غو أوّلاً** — هو ما يحمّله الناس.
+const APPS = ["customer", "driver", "merchant", "rep"] as const;
 type AppName = (typeof APPS)[number];
 
+/**
+ * **لوحُ التحديث — مفتاحٌ واحدٌ لكلّ تطبيق** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «ما عاد لازم
+ * أعدّل أيّ رقم إصدار بإيدي… هذول ما ظلّ إلهن داعي»).
+ *
+ * **ولا خانةَ رقمٍ يدويّة**: رقمُ النسخة يُقرأ من الملفّ المرفوع، **والفرضُ مفتاح**.
+ * وبقي الحدُّ اليدويُّ (`app.min_version.*`) في المحرّك صفراً — بابَ طوارئ لا شاشة.
+ */
 export default function ReleasePanel() {
-  const [current, setCurrent] = useState<Record<AppName, number> | null>(null);
-  /** **ما في الملفّ المرفوع** — يُقرأ منه عند الرفع (٢٠٢٦-١٠-٠٦). */
-  const [file, setFile] = useState<Record<AppName, FileInfo>>({} as Record<AppName, FileInfo>);
-  const [editable, setEditable] = useState<Record<AppName, boolean>>(
-    {} as Record<AppName, boolean>,
-  );
-  const [draft, setDraft] = useState<Record<AppName, string>>(
-    {} as Record<AppName, string>,
-  );
+  const [file, setFile] = useState<Record<AppName, FileInfo> | null>(null);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
 
   const load = useCallback(async () => {
     try {
-      // **والردُّ كائنٌ لا قائمة** (`{settings, groups, topics}`) — كان يُقرأ قائمةً
-      // فيسقط اللوحُ على `rows.find` (كشفه فحصُ الإعدادات ٢٠٢٦-١٠-٠٤).
       const res = await api<{ settings?: SettingRow[] } | SettingRow[]>("/api/v1/admin/settings");
       const rows: SettingRow[] = Array.isArray(res) ? res : (res.settings ?? []);
-      const cur = {} as Record<AppName, number>;
-      const edit = {} as Record<AppName, boolean>;
-      const dft = {} as Record<AppName, string>;
+      const row = (k: string) => rows.find((r) => r.key === k);
       const fi = {} as Record<AppName, FileInfo>;
-      const val = (k: string) => rows.find((r) => r.key === k)?.value;
       for (const app of APPS) {
-        const code = val(`release.${app}.version_code`);
-        const name = val(`release.${app}.version`);
-        const apk = val(`release.${app}.apk`);
+        const code = row(`release.${app}.version_code`)?.value;
+        const name = row(`release.${app}.version`)?.value;
+        const apk = row(`release.${app}.apk`)?.value;
+        const auto = row(`release.${app}.auto_force`);
         fi[app] = {
           present: typeof apk === "string" && apk !== "",
           code: typeof code === "number" ? code : 0,
           name: typeof name === "string" ? name : "",
-          auto: val(`release.${app}.auto_force`) !== false,
+          auto: auto?.value !== false,
+          editable: auto?.editable ?? false,
         };
-        const row = rows.find((r) => r.key === `app.min_version.${app}`);
-        const n = typeof row?.value === "number" ? row.value : 0;
-        cur[app] = n;
-        edit[app] = row?.editable ?? false;
-        dft[app] = String(n);
       }
-      setCurrent(cur);
       setFile(fi);
-      setEditable(edit);
-      setDraft(dft);
       setError("");
     } catch (e) {
       setError(errorText(e));
@@ -112,23 +92,14 @@ export default function ReleasePanel() {
     void load();
   }, [load]);
 
-  async function save(app: AppName) {
-    const raw = draft[app]?.trim() ?? "";
-    const n = Number(raw);
-    // **عددٌ صحيحٌ غيرُ سالب** — والباقي يرفضه الكتالوجُ في المحرّك أيضاً.
-    if (!Number.isInteger(n) || n < 0) {
-      setError(S.invalid);
-      return;
-    }
+  async function toggle(app: AppName, on: boolean) {
     setBusy(app);
     setError("");
-    setNotice("");
     try {
-      await api(`/api/v1/admin/settings/app.min_version.${app}`, {
+      await api(`/api/v1/admin/settings/release.${app}.auto_force`, {
         method: "PUT",
-        body: JSON.stringify({ value: n }),
+        body: JSON.stringify({ value: on }),
       });
-      setNotice(S.saved);
       await load();
     } catch (e) {
       setError(errorText(e));
@@ -137,7 +108,7 @@ export default function ReleasePanel() {
     }
   }
 
-  if (!current) {
+  if (!file) {
     return error ? <Alert>{error}</Alert> : <LoadingState />;
   }
 
@@ -145,70 +116,29 @@ export default function ReleasePanel() {
     <div>
       <PageHeader icon={IconSettings} title={S.title} />
       <p className="mb-4 text-sm text-ink-muted">{S.hint}</p>
-
       {error && <Alert className="mb-4">{error}</Alert>}
-      {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
 
-      {/* **والسائقُ توزيعٌ مباشرٌ — لا متجر Play.** */}
-      <Card className="mb-4 p-4">
-        <p className="text-sm text-ink-muted">{S.directDistribution}</p>
-      </Card>
-
-      <div className="grid gap-3">
-        {APPS.map((app) => (
-          <Card key={app} className="p-4">
-            <div className="mb-2 font-medium">
-              {(S.apps as Record<string, string>)[app]}
-            </div>
-            {/* **ما في الملفّ والحدُّ النافذ** — الحدُّ أكبرُ الرقمين حين يكون الفرضُ مشغّلاً. */}
-            <p className="mb-1 text-xs text-ink-muted">
-              {S.fileLabel}:{" "}
-              {file[app]?.present && file[app].code > 0
-                ? `${file[app].name} (${file[app].code})`
-                : S.fileNone}
-            </p>
-            <p className="mb-1 text-xs text-ink-muted">
-              {file[app]?.auto ? S.autoOn : S.autoOff}
-            </p>
-            <p className="mb-1 text-xs text-ink-muted">
-              {S.effectiveLabel}:{" "}
-              {Math.max(
-                current[app],
-                file[app]?.auto && file[app]?.present ? file[app].code : 0,
-              )}
-            </p>
-            <p className="mb-3 text-xs text-ink-muted">
-              {S.currentLabel}: {current[app]} — {S.manualHint}
-            </p>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  label={S.newLabel}
-                  value={draft[app] ?? ""}
-                  disabled={!editable[app]}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, [app]: e.target.value }))
-                  }
-                />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {APPS.map((app) => {
+          const f = file[app];
+          return (
+            <Card key={app} className="space-y-3 p-4">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-bold">{(S.apps as Record<string, string>)[app]}</span>
+                <span className="text-sm text-ink-muted" dir="ltr">
+                  {f.present && f.code > 0 ? `${f.name} (${f.code})` : S.fileNone}
+                </span>
               </div>
-              <Button
-                disabled={
-                  !editable[app] ||
-                  busy !== "" ||
-                  draft[app]?.trim() === String(current[app])
-                }
-                onClick={() => void save(app)}
-              >
-                {S.apply}
-              </Button>
-            </div>
-            {!editable[app] && (
-              <p className="mt-2 text-xs text-ink-muted">{S.noPermission}</p>
-            )}
-          </Card>
-        ))}
+              <Switch
+                checked={f.auto}
+                onChange={(v: boolean) => void toggle(app, v)}
+                label={S.autoLabel}
+                hint={f.auto ? S.autoOn : S.autoOff}
+                disabled={!f.editable || busy !== ""}
+              />
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
