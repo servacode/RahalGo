@@ -82,6 +82,7 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun wake() {
         refresh()
+        pollWhileDown()
         // ══════════════════════════════════════════════════════════════
         // **والوصلةُ الحيّةُ تُفتح مرّةً للتطبيق كلّه**
         // ══════════════════════════════════════════════════════════════
@@ -94,6 +95,7 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
         backend.live.start(
             scope = viewModelScope,
             onState = { up ->
+                liveUp = up
                 Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت")
                 // ══════════════════════════════════════════════════════════
                 // **وعودةُ الوصلة تُصحّح ما فات** (Batch 3b) — `MISSED-EVT`
@@ -115,6 +117,29 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** **أقائمةٌ الوصلةُ الآن؟** — وبغيابها يُسأل المحرّكُ كلَّ دقيقة. */
+    private var liveUp = false
+    private var polling = false
+
+    /**
+     * **سؤالٌ بطيءٌ حين تنقطع الوصلة** (٢٠٢٦-١٠-٠٦) — كان الانقطاعُ يعني أن لا شيءَ يتبدّل حتّى تعود.
+     * **دقيقةٌ بين سؤالين** وحدَها، **ولا شيءَ والوصلةُ قائمة.**
+     */
+    private fun pollWhileDown() {
+        if (polling) return
+        polling = true
+        viewModelScope.launch {
+            while (signedIn) {
+                kotlinx.coroutines.delay(60_000)
+                if (!liveUp && signedIn) {
+                    refresh()
+                    Refresh.bump()
+                }
+            }
+            polling = false
+        }
+    }
+
     fun refresh() {
         if (!signedIn) return
         viewModelScope.launch {
@@ -123,6 +148,8 @@ class ShellViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { me = backend.account.summary() }
             runCatching { balance = backend.me.wallet().balance }
             runCatching { unread = backend.me.inbox(limit = 1).unread }
+            // **والصندوقُ المفتوحُ يُعاد معها** (٢٠٢٦-١٠-٠٦) — كان الرقمُ يتبدّل والقائمةُ لا.
+            if (inbox != null) runCatching { inbox = backend.me.inbox().items }
         }
     }
 

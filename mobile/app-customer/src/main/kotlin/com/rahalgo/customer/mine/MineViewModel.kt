@@ -99,6 +99,13 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
             Refresh.tick.drop(1).collect {
                 if (favorites != null) open(CustomerItems.FAVORITES, force = true)
                 if (offers != null) open(CustomerItems.OFFERS, force = true)
+                // **والشكاوى والدعوة تتجدّد كذلك** (٢٠٢٦-١٠-٠٦) — ردُّ الموظّف ومكافأةُ الدعوة
+                // كانا لا يظهران حتّى يُعاد التطبيق. **والشكوى المفتوحةُ تُعاد صامتةً** فلا يضيع ما يكتبه.
+                if (tickets != null) open(CustomerItems.TICKETS, force = true)
+                if (referral != null) open(CustomerItems.INVITE, force = true)
+                openTicketId?.let { id ->
+                    runCatching { api.myTicket(id) }.onSuccess { if (openTicketId == id) ticketDetail = it }
+                }
             }
         }
     }

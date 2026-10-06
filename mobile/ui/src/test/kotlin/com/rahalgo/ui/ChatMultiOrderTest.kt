@@ -76,7 +76,7 @@ class ChatMultiOrderTest {
         val src = read(liveChat)
         assertTrue(
             "**ضاع العدُّ لكلّ طلب**",
-            src.contains("data class Live(val orderId: String, val unread: Int)"),
+            src.contains("data class Live(val orderId: String, val unread: Int, val number: Long = 0)"),
         )
         assertTrue("**لا يُربَط العدُّ بطلبِه**", src.contains("byOrder[it.id] ?: 0"))
     }
@@ -84,23 +84,20 @@ class ChatMultiOrderTest {
     // ═════════════ CU-CHAT-03 · ما يفتحه القرص ═════════════
 
     /**
-     * **CU-CHAT-03 · وواحدٌ يُفتَح، وأكثرُ يُعرَض ليختار.**
+     * **CU-CHAT-03 · والقرصُ يفتح الحديثَ نفسَه، وفوقه مربّعُ كلِّ طلب** (قرارُ المالك ٢٠٢٦-١٠-٠٦:
+     * «المحادثة نفسها تفتح، وفي مربّع صغير فوق لكل طلب… ما في داعي نختار ونكتّر ضغطات»).
      *
-     * **ولا يُختار عن صاحبِه ما لا يعلمه** — **فيكتب ردَّه في الطلب
-     * الخطأ ولا يدري.**
+     * **ولا يُختار عن صاحبِه ما لا يعلمه** — المربّعُ المضاءُ يقول أيَّ طلبٍ يقرأ.
      */
     @Test
-    fun `واحدٌ يُفتَح وأكثرُ يُعرَض`() {
-        assertTrue(
-            "**سقط شرطُ الواحد**",
-            read(liveChat).contains("if (chats.size == 1) chats[0].orderId else null"),
-        )
+    fun `القرصُ يفتح الحديثَ وفوقه مربّعاتُ الطلبات`() {
         val main = read(mainActivity)
         assertTrue(
-            "**لا بابَ إلى قائمة الأحاديث**",
-            main.contains("overlay.show(Overlay.Menu(CustomerItems.CHATS))"),
+            "**لا يُفتح الحديثُ من القرص مباشرةً**",
+            main.contains("liveChat.openId = (liveChat.chats.firstOrNull { it.unread > 0 } ?: liveChat.chats.first()).orderId"),
         )
-        assertTrue("**لا يُسأل عن الواحد قبل الفتح**", main.contains("val one = liveChat.single"))
+        assertTrue("**لا مربّعاتَ للطلبات**", main.contains("tabs = liveChat.chats.map { it.orderId to it.number }"))
+        assertTrue("**المربّعُ لا يبدّل الحديث**", read(sheet).contains("onSwitch(id)"))
     }
 
     // ═════════════ CU-CHAT-04 · الشارة ═════════════

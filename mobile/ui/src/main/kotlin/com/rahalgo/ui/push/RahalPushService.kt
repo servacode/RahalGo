@@ -92,6 +92,8 @@ abstract class RahalPushService : FirebaseMessagingService() {
         val title = data["title"].orEmpty().ifBlank { message.notification?.title.orEmpty() }
         val body = data["body"].orEmpty().ifBlank { message.notification?.body.orEmpty() }
         Log.i(TAG, "إشعار: $kind — $title")
+        // **والإشعارُ يُجدّد ما هو مفتوح** (٢٠٢٦-١٠-٠٦) — وصولُه دليلُ أنّ شيئاً تغيّر.
+        com.rahalgo.ui.Refresh.bump()
         // ══════════════════════════════════════════════════════════════
         // **والوجهةُ تُنقّى قبل أن تُحمَل** (`AN-02`، `AN-03`)
         // ══════════════════════════════════════════════════════════════

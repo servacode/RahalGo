@@ -29,6 +29,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.model.ChatThread
 import com.rahalgo.shared.model.ChatThreadRow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -60,6 +61,22 @@ import kotlinx.coroutines.launch
 class ChatsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = ChatApi(AppCore.get().api)
+
+    // **والقائمةُ تتجدّد بالوصلة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «لازم بدون ما يطلع يشوف كلّشي») — كانت
+    // تُجلَب مرّةً وتبقى. **وتجديدٌ صامتٌ لا يُفرغها** فلا تومض، **والمفتوحُ منها يُعاد معها.**
+    init {
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect {
+                if (rows == null) return@collect
+                runCatching {
+                    rows = api.threads().threads
+                        .sortedWith(compareByDescending<ChatThreadRow> { it.open }
+                            .thenByDescending { it.lastAt ?: "" })
+                    if (openId.isNotEmpty()) thread = api.thread(openId)
+                }
+            }
+        }
+    }
 
     var rows by mutableStateOf<List<ChatThreadRow>?>(null)
         private set
