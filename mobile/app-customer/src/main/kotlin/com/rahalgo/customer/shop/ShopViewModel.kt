@@ -209,7 +209,9 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
      * **ولا يُبنى على الدوام**: **متجرٌ نائمٌ يبقى قسمُه** (قرارُ
      * المالك ٢٠٢٦-٠٩-١٦) — **والخادمُ يفصل العدّين.**
      */
-    val visibleSections: List<Section> get() = sections.filter { it.count > 0 }
+    // **والأقسامُ كلُّها تُعرَض ولو فارغة** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «مشان الناس تشوف إنّ السوق جاهز بس
+    // الأصناف ناقصة ويتحمّس يشوف شو نزل») — والقسمُ الفارغُ يقول «جاري العمل على إضافة الأصناف».
+    val visibleSections: List<Section> get() = sections
 
     /** **أسوقٌ لم تمتلئ بعد؟** — **لا قسمَ فيه محتوىً.** */
     val marketEmpty: Boolean get() = sections.isNotEmpty() && visibleSections.isEmpty()

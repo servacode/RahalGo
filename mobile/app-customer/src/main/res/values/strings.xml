@@ -39,6 +39,8 @@
          ناجحٍ لا تُغيّر جوابَه. -->
     <string name="shop_market_empty">نعمل حاليًا على إضافة المتاجر والمنتجات</string>
     <string name="shop_market_empty_hint">ستظهر الخيارات هنا فور توفرها</string>
+    <string name="shop_section_empty">جاري العمل على إضافة الأصناف</string>
+    <string name="shop_section_empty_hint">ترقّبونا — ستظهر أصناف هذا القسم هنا قريباً</string>
     <string name="shop_no_results_hint">جرّب كلمة أقصر أو اسم المتجر</string>
     <string name="shop_no_results">لا نتائج لبحثك</string>
     <string name="shop_closed">مغلق الآن</string>

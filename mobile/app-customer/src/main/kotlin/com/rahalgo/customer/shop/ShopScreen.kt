@@ -383,7 +383,8 @@ fun ShopScreen(
             // **ولا زرَّ إعادةٍ هنا**: **الردُّ ناجحٌ بصفر متاجر**،
             // **وإعادةُ نداءٍ ناجحٍ تردّ جوابَه عينَه.** **وزرٌّ لا
             // يغيّر شيئاً يُضغط ثمّ يُفقَد الرجاءُ بالتطبيق.**
-            (vm.marketEmpty || vm.sections.isEmpty()) && !vm.searching -> {
+            // **والسوقُ الفارغةُ تُعرَض أقساماً** (٢٠٢٦-١٠-٠٦) — ولا تُطوى إلى رسالةٍ إلّا خارجَ التغطية.
+            (vm.sections.isEmpty() || (vm.marketEmpty && availability?.available == false)) && !vm.searching -> {
                 // ══════════════════════════════════════════════════════
                 // **وسوقٌ فارغةٌ خارجَ التغطيةِ ليست «قريباً»** (`CUST-07-034`)
                 // ══════════════════════════════════════════════════════
@@ -425,10 +426,10 @@ fun ShopScreen(
 
             vm.items.isEmpty() -> Empty(
                 text = stringResource(
-                    if (vm.searching) R.string.shop_no_results else R.string.mn_no_items,
+                    if (vm.searching) R.string.shop_no_results else R.string.shop_section_empty,
                 ),
                 hint = stringResource(
-                    if (vm.searching) R.string.shop_no_results_hint else R.string.mn_no_items_hint,
+                    if (vm.searching) R.string.shop_no_results_hint else R.string.shop_section_empty_hint,
                 ),
                 // **ولا زرَّ إعادةٍ على نجاحٍ بصفر** — **والخطأُ له
                 // حالُه فوق، وفيها الإعادةُ تنفع.**

@@ -41,7 +41,7 @@ class CoverageEmptyStateTest {
     /** **يُقتطع جسمُ فرعِ السوقِ الفارغة** من `when`. */
     private fun emptyBranch(): String {
         val s = read(shop)
-        val start = s.indexOf("(vm.marketEmpty || vm.sections.isEmpty()) && !vm.searching ->")
+        val start = s.indexOf("(vm.sections.isEmpty() || (vm.marketEmpty && availability?.available == false)) && !vm.searching ->")
         assertTrue("**فرعُ السوقِ الفارغةِ غائب**", start >= 0)
         // نأخذ حتّى الفرعِ التالي `vm.items.isEmpty()`
         val end = s.indexOf("vm.items.isEmpty() ->", start)
