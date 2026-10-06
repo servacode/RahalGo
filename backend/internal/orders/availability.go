@@ -87,7 +87,7 @@ type Availability struct {
 	//
 	// **ويُرسَل ليُقارَن لا ليُعرَض** — **والشاشةُ تعرض `Reason`.**
 	OrderCode string `json:"order_code,omitempty"`
-	// Message **نصُّ المالك** — للإيقاف المؤقّت وحدَه اليوم.
+	// Message **نصُّ المالك** — للإيقاف المؤقّت، ولإعلان الإطلاق قبل الافتتاح.
 	Message string `json:"message,omitempty"`
 	// NextAvailableAt **أوّلُ لحظةٍ تتقاطع فيها القيودُ كلُّها.**
 	//
@@ -126,6 +126,9 @@ type Gates struct {
 	PlatformReason string
 	// PlatformMessage **نصُّ المالك** إن كان.
 	PlatformMessage string
+	// LaunchMessage **إعلانُ الإطلاق** (`launch.notice`) — يُقال للزبون مكانَ «هذا لم يُفتح بعد»
+	// (بلاغُ المالك ٢٠٢٦-١٠-٠٦: كانت تُقرأ تحت «موقعك الحاليّ» كأنّ المنطقةَ خارجَ التوصيل).
+	LaunchMessage string
 }
 
 // AvailabilityAt **القرارُ كلُّه في موضعٍ واحد.**
@@ -148,7 +151,7 @@ func (s *Service) AvailabilityAt(ctx context.Context, q dbtx.Querier,
 
 	// ١ · **وضعُ الإطلاق** — **ولا موعدَ لبابٍ لم يُفتح بعد.**
 	if !g.LaunchOpen {
-		return Availability{Reason: ReasonLaunchClosed, OrderCode: "launch_closed"}, nil
+		return Availability{Reason: ReasonLaunchClosed, OrderCode: "launch_closed", Message: g.LaunchMessage}, nil
 	}
 
 	// ٢ · **المنصّةُ** — كما قرأتها البوّابةُ نفسُها.

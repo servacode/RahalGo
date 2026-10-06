@@ -272,7 +272,13 @@ fun ServiceBlockNotice(
     )
     // **حالُ الإغلاق المؤقّت** (منصّةٌ أو منطقة) تُعرَض بلافتةٍ تحذيريّةٍ أوضحَ
     // تنبض بهدوء (قرار المالك ٢٠٢٦-٠٩-٢٥)؛ وسائرُ أسبابِ المنع تبقى `Note`.
-    val shown = if (discovery) ctx.getString(com.rahalgo.ui.R.string.dl_current_location, body) else body
+    // **وقبل الافتتاح لا «موقعك الحاليّ»** (بلاغُ المالك ٢٠٢٦-١٠-٠٦) — كانت تُقرأ كأنّ المنطقةَ خارجَ
+    // التوصيل، **والإعلانُ يخصّ المنصّةَ كلَّها لا موضعَه.**
+    val shown = if (discovery && av.reason != com.rahalgo.ui.ServiceReason.LAUNCH_CLOSED) {
+        ctx.getString(com.rahalgo.ui.R.string.dl_current_location, body)
+    } else {
+        body
+    }
     val closedNow = !discovery &&
         (av.reason == com.rahalgo.ui.ServiceReason.ZONE_CLOSED_NOW ||
             av.reason == com.rahalgo.ui.ServiceReason.PLATFORM_CLOSED_NOW)

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -187,6 +188,7 @@ func (s *Server) orderGates(ctx context.Context) orders.Gates {
 		LaunchOpen: s.launchOpen(ctx, launchCustomerOrders) &&
 			s.launchOpen(ctx, launchMerchantOrders),
 		PlatformAvailable: true,
+		LaunchMessage:     strings.TrimSpace(s.settings.GetString(ctx, launchNotice)),
 	}
 	if st, err := s.platform.State(ctx, s.pg); err == nil {
 		g.PlatformAvailable = st.OrderingAvailable

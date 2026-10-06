@@ -21,6 +21,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -80,6 +81,7 @@ func (s *Server) demandGates(r *http.Request) orders.Gates {
 		LaunchOpen: s.launchOpen(r.Context(), launchCustomerOrders) &&
 			s.launchOpen(r.Context(), launchMerchantOrders),
 		PlatformAvailable: true,
+		LaunchMessage:     strings.TrimSpace(s.settings.GetString(r.Context(), launchNotice)),
 	}
 	if st, err := s.platform.State(r.Context(), s.pg); err == nil {
 		g.PlatformAvailable = st.OrderingAvailable

@@ -823,7 +823,7 @@
     <!-- **تأكيدُ إضافةِ الصنف** — خاطفةٌ خفيفةٌ لا نافذةَ تأكيد (قرار المالك ٢٠٢٦-٠٩-٢٥). -->
     <string name="cart_item_added">تمت إضافة الصنف إلى السلة</string>
     <string name="cart_qty_updated">تم تحديث الكمية في السلة</string>
-    <string name="err_launch_closed">هذا لم يُفتح بعد — التطبيق متاح للتصفّح، وسيُفتح استقبال الطلبات قريباً</string>
+    <string name="err_launch_closed">🎉 رحّال غو قريباً! تصفّح التطبيق الآن، واستقبال الطلبات يُفتح قريباً</string>
     <string name="err_auth_unavailable">تعذر التحقق من الجلسة الآن — حاول بعد قليل، ولا داعي لتسجيل الدخول من جديد</string>
     <string name="err_too_many_addresses">بلغت الحد الأقصى للعناوين المحفوظة. احذف عنوانا قديما أولا.</string>
     <string name="err_already_returned">أعيدت البضاعة سلفا</string>
