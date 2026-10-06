@@ -358,3 +358,19 @@ func TestAutoAccept_WhenOfficeEmpty(t *testing.T) {
 		t.Fatalf("**المكتبُ فارغٌ والطلبُ لم يُقبل بعد ١٥ دقيقة** — %s", st)
 	}
 }
+
+// TestAutoAccept_CustomGoesToDispatching **والخاصُّ يُعرَض لا «يُقبل»** (٢٠٢٦-١٠-٠٦) — كان القبولُ
+// التلقائيُّ يطلب له `accepted` فيُردّ في كلّ جولة، **ويبقى معلّقاً والمكتبُ فارغ.**
+func TestAutoAccept_CustomGoesToDispatching(t *testing.T) {
+	f := setup(t, "pending", 10_000, 1_000, 0)
+	ctx := context.Background()
+	f.setSetting(t, "orders.auto_accept_min", 10)
+	if _, err := f.pool.Exec(ctx, `UPDATE orders SET kind = 'custom', driver_id = NULL,
+		created_at = now() - interval '15 minutes' WHERE id = $1`, f.orderID); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.SweepAutoAcceptOnce(ctx)
+	if st := f.statusOf(t); st == "pending" || st == "accepted" {
+		t.Fatalf("**الطلبُ الخاصُّ لم يُعرَض بعد المهلة** — %s", st)
+	}
+}

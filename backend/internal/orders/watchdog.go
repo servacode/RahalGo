@@ -394,7 +394,7 @@ func (s *Service) sweepAutoAccept(ctx context.Context) {
 		return
 	}
 	rows, err := s.db.Query(ctx, `
-		SELECT id FROM orders
+		SELECT id, kind FROM orders
 		WHERE status = 'pending'
 		  AND closed_at IS NULL
 		  AND created_at < now() - make_interval(mins => $1::int)
@@ -406,18 +406,26 @@ func (s *Service) sweepAutoAccept(ctx context.Context) {
 		s.logger.Warn("القبولُ التلقائيّ: تعذّرت القراءة", "error", err)
 		return
 	}
-	ids := make([]string, 0, 8)
+	type pend struct{ id, kind string }
+	ids := make([]pend, 0, 8)
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err == nil {
-			ids = append(ids, id)
+		var p pend
+		if err := rows.Scan(&p.id, &p.kind); err == nil {
+			ids = append(ids, p)
 		}
 	}
 	rows.Close()
 
-	for _, id := range ids {
+	for _, p := range ids {
+		id := p.id
+		// **والخاصُّ لا «مقبولَ» له** (`customTransitions`): قبولُه هو عرضُه على السائقين.
+		// كان يُطلب له `accepted` فيُردّ كلَّ ثلاثين ثانيةً ويزاحم الخمسين (٢٠٢٦-١٠-٠٦).
+		to := StAccepted
+		if p.kind == "custom" {
+			to = StDispatching
+		}
 		if _, err := s.Transition(ctx, "", []string{"ops"}, id,
-			StAccepted, autoAcceptNote); err != nil {
+			to, autoAcceptNote); err != nil {
 			s.logger.Warn("القبولُ التلقائيّ تعثّر", "order", id, "error", err)
 			continue
 		}

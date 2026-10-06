@@ -34,7 +34,7 @@
     "behaviour_settings": 167,
     "order_fields": 95,
     "test_files": 531,
-    "test_funcs": 2203
+    "test_funcs": 2204
   },
   "flows": [
     {
@@ -8521,6 +8521,12 @@
     },
     {
       "name": "TestAssign_ServerGuards",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoAccept_CustomGoesToDispatching",
       "file": "internal/orders/board_rules_test.go",
       "package": "orders_test",
       "orphan": true
