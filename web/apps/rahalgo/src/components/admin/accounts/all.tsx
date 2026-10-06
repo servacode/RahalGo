@@ -136,7 +136,7 @@ export default function AllAccountsTable() {
         status: statusFilter,
         online: onlineOnly ? "true" : "",
         page: String(page),
-        per_page: "10",
+        per_page: "50",
       });
       setData(await api<UserPage>(`/api/v1/admin/users?${params}`));
       setError("");
