@@ -85,6 +85,8 @@ jobs:
               -o StrictHostKeyChecking=yes \
               -o UserKnownHostsFile=~/.ssh/known_hosts \
               -o BatchMode=yes \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=20 \
               "$SSH_USER@$SSH_HOST" "$SHA" < /tmp/rahalgo.bundle
 
       - name: Independently verify live staging identity == requested SHA
