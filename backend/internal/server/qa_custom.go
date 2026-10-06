@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -29,6 +30,8 @@ import (
 const (
 	// qaStagingDriverPhone **سائقُ QA الثابت** — لشهادة تطبيق السائق الحيّة.
 	qaStagingDriverPhone = "+963900555003"
+	// qaStagingDriverPhoneB **سائقٌ ثانٍ** (٢٠٢٦-١٠-٠٦) — لشهود طلبين بسائقين مختلفين.
+	qaStagingDriverPhoneB = "+963900555004"
 	// qaStagingAdminPhone **أدمنُ QA الثابت** — فاعلُ تدقيقٍ لمساعد التدخّل
 	// وحدَه؛ **لا توكنَ يُصدَر له** (جلسةُ QA ترفض الأدمن)، ولا يُسجَّل دخولُه
 	// (بلا كلمة). موجودٌ ليكون `actor_user_id` صادقاً في تدقيق التدخّل.
@@ -139,7 +142,16 @@ func (s *Server) handleQACustomDriverSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	ctx := r.Context()
-	uid, err := s.qaFixedUser(ctx, qaStagingDriverPhone, "driver", "سائق الاختبار QA", clientIP(r))
+	// **والجسدُ اختياريّ**: `{"slot":"b"}` ⇒ السائقُ الثاني، وغيرُه الأوّل.
+	var body struct {
+		Slot string `json:"slot"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&body)
+	phone, name := qaStagingDriverPhone, "سائق الاختبار QA"
+	if body.Slot == "b" {
+		phone, name = qaStagingDriverPhoneB, "سائق الاختبار الثاني QA"
+	}
+	uid, err := s.qaFixedUser(ctx, phone, "driver", name, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
