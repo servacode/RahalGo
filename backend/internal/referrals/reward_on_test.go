@@ -249,3 +249,34 @@ func TestSettlePendingVerified_PaysMissedOnce(t *testing.T) {
 		t.Fatalf("رصيدُ الداعي صار %d — **صُرفت الفائتةُ مرّتين**", got)
 	}
 }
+
+// TestSettlePendingVerified_AttachesLeftClaim **حجزٌ بقي بعد التسجيل يُربَط ويُصرف** (٢٠٢٦-١٠-٠٧: وصل
+// رمزٌ خاطئٌ مع التسجيل فبقي حجزُ الرقم برمز الداعي بلا قراءة).
+func TestSettlePendingVerified_AttachesLeftClaim(t *testing.T) {
+	f := arm(t, referrals.OnSignup)
+	ctx := context.Background()
+	// **مدعوٌّ جديدٌ لا دعوةَ له بعد** — وحجزٌ برمز الداعي قبل تسجيله.
+	invitee := testdb.NewUser(t, f.pool, "customer")
+	var phone, code string
+	if err := f.pool.QueryRow(ctx, `SELECT phone FROM users WHERE id = $1`, invitee).Scan(&phone); err != nil {
+		t.Fatal(err)
+	}
+	code, err := f.svc.MyCode(ctx, f.inviter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO invite_claims (phone, invite_code, created_at) VALUES ($1, $2, now() - interval '1 hour')`,
+		phone, code); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = f.pool.Exec(context.Background(), `DELETE FROM invite_claims WHERE phone = $1`, phone) })
+	if _, err := f.pool.Exec(ctx, `UPDATE users SET whatsapp_verified_at = now() WHERE id = $1`, invitee); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.SettlePendingVerified(ctx)
+	var n int
+	if err := f.pool.QueryRow(ctx, `SELECT count(*) FROM referrals WHERE invitee_id = $1 AND rewarded_at IS NOT NULL`, invitee).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("**الحجزُ الباقي لم يُربَط ويُصرف**: n=%d err=%v", n, err)
+	}
+}

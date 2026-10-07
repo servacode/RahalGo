@@ -434,17 +434,27 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 	// رقمَه في صفحة الدعوة ثمّ نزّل ملفّاً مباشراً لا يحمل الرمز. **ويُحذف
 	// الحجزُ عند أخذه** فلا يُقرأ مرّتين. انظر `referrals/claims.go`.
 	if res != nil && res.User.ID != "" {
+		// **ورمزٌ مرفوضٌ لا يُضيّع الحجز** (بلاغُ المالك ٢٠٢٦-١٠-٠٧: «ثناء بعثت دعوة… ما بيّن إنها دعت
+		// حدا») — وصل رمزٌ خاطئٌ («حمل») فرُفض، **وحجزُ الرقم برمز ثناء بقي لا يُقرأ.** فإن لم يُنسَب
+		// بالرمز المُرسَل قُرئ الحجز.
 		ref := strings.TrimSpace(req.Ref)
-		if ref == "" {
+		attached := false
+		if ref != "" {
+			if err := s.referrals.Attach(r.Context(), res.User.ID, ref); err != nil {
+				s.logger.Warn("الدعوة: تعذّر النسب", "code", ref, "error", err)
+			} else {
+				attached = true
+			}
+		}
+		if !attached {
 			code, err := s.referrals.TakeClaim(r.Context(), res.User.Phone)
 			if err != nil {
 				s.logger.Warn("الدعوة: تعذّرت قراءةُ الحجز", "error", err)
 			}
-			ref = code
-		}
-		if ref != "" {
-			if err := s.referrals.Attach(r.Context(), res.User.ID, ref); err != nil {
-				s.logger.Warn("الدعوة: تعذّر النسب", "code", ref, "error", err)
+			if code != "" {
+				if err := s.referrals.Attach(r.Context(), res.User.ID, code); err != nil {
+					s.logger.Warn("الدعوة: تعذّر النسب من الحجز", "code", code, "error", err)
+				}
 			}
 		}
 	}

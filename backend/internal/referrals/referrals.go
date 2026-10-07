@@ -289,6 +289,7 @@ func (s *Service) SettleOnSignup(ctx context.Context, customerID, actorID string
 // عليها مرّةً**: كلُّ مدعوٍّ موثَّقٍ لم تُختَم دعوتُه يُصرف لداعيه الآن، **والختمُ يمنع التكرار**،
 // فإعادةُ التشغيل لا تصرف مرّتين. ويخرج صامتاً في وضع «عند أوّل طلب».
 func (s *Service) SettlePendingVerified(ctx context.Context) int {
+	s.attachLeftClaims(ctx)
 	if s.rewardOn(ctx) != OnSignup {
 		return 0
 	}
@@ -312,6 +313,33 @@ func (s *Service) SettlePendingVerified(ctx context.Context) int {
 		s.settle(ctx, id, "", id)
 	}
 	return len(ids)
+}
+
+// attachLeftClaims **يربط حجزاً بقي بعد تسجيل صاحبه** (٢٠٢٦-١٠-٠٧) — رمزٌ خاطئٌ وصل مع التسجيل
+// فتُرك الحجزُ بلا قراءة. **ولا يُربَط حسابٌ أقدمُ من الحجز** — من سجّل قبل أن يفتح الرابطَ ليس مدعوّاً.
+func (s *Service) attachLeftClaims(ctx context.Context) {
+	rows, err := s.db.Query(ctx, `
+		SELECT u.id::text, c.invite_code, c.phone FROM invite_claims c
+		JOIN users u ON u.phone = c.phone
+		WHERE u.created_at >= c.created_at
+		  AND NOT EXISTS (SELECT 1 FROM referrals r WHERE r.invitee_id = u.id)`)
+	if err != nil {
+		return
+	}
+	type left struct{ uid, code, phone string }
+	var all []left
+	for rows.Next() {
+		var l left
+		if rows.Scan(&l.uid, &l.code, &l.phone) == nil {
+			all = append(all, l)
+		}
+	}
+	rows.Close()
+	for _, l := range all {
+		if err := s.Attach(ctx, l.uid, l.code); err == nil {
+			_, _ = s.db.Exec(ctx, `DELETE FROM invite_claims WHERE phone = $1`, l.phone)
+		}
+	}
 }
 
 // settle جسدُ الصرف — **واحدٌ للوضعين.**

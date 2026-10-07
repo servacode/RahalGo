@@ -34,7 +34,7 @@
     "behaviour_settings": 167,
     "order_fields": 95,
     "test_files": 533,
-    "test_funcs": 2207
+    "test_funcs": 2208
   },
   "flows": [
     {
@@ -24000,6 +24000,12 @@
     },
     {
       "name": "TestRewardOn_DefaultsToSignup",
+      "file": "internal/referrals/reward_on_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestSettlePendingVerified_AttachesLeftClaim",
       "file": "internal/referrals/reward_on_test.go",
       "package": "referrals_test",
       "orphan": true
