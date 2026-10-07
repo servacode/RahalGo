@@ -444,6 +444,8 @@ var adminPolicy = []Rule{
 	{"GET", "/stats", AnalyticsRead},
 	// **ورئيسيّةُ المدير بقدرتها** — فيها المالُ كلُّه (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	{"GET", "/overview", PlatformOverview},
+	// **وزوّارُ الموقع والتحميلاتُ على الرئيسيّة نفسِها** (طلبُ المالك ٢٠٢٦-١٠-٠٧).
+	{"GET", "/site-stats", PlatformOverview},
 	{"GET", "/reports", AnalyticsRead},
 	{"GET", "/whatsapp", SettingsSecurityManage},
 	{"POST", "/whatsapp/pair", SettingsSecurityManage},

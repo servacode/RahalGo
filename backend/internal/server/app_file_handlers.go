@@ -274,6 +274,8 @@ func (s *Server) handleDownloadAppByKey(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errNoAppFile)
 		return
 	}
+	// **ويُعدّ التحميلُ — مرّةً في اليوم للشخص، في الخلفيّة** (`site_stats.go`).
+	s.recordHitAsync(r, downloadHitKind(app))
 	// **واسمُ التنزيل يقول ما هو ويحمل هويّتَه** — **وأربعةُ تطبيقاتٍ
 	// باسم `rahalgo.apk` واحدٍ تختلط في مجلَّد التنزيل.**
 	out := release.FileName(pub)

@@ -4730,6 +4730,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/site-stats",
+      "handler": "handleSiteStats",
+      "auth": true,
+      "capability": "platform.overview",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/stats",
       "handler": "handleAdminStats",
       "auth": true,
@@ -9130,6 +9146,12 @@
       "method": "GET",
       "path": "/api/v1/public/suggest",
       "handler": "handleSuggestWith",
+      "auth": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/visit",
+      "handler": "handlePublicVisit",
       "auth": false
     },
     {

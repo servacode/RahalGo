@@ -55,6 +55,7 @@ import {
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import ContactTestAlert from "@/components/admin/settings/contact-check";
+import SiteStatsSection from "@/components/admin/SiteStatsSection";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.home;
@@ -648,6 +649,9 @@ export default function DashboardPage() {
           </StatGrid>
         </div>
       </Section>
+
+      {/* ── زوّارُ الموقع والتحميلات (طلبُ المالك ٢٠٢٦-١٠-٠٧) ── */}
+      <SiteStatsSection />
     </div>
   );
 }

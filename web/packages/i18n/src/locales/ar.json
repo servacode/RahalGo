@@ -5533,7 +5533,26 @@
       "storesActive": "متاجر فعالة",
       "storesNotActive": "متاجر غير فعالة أو موقوفة",
       "overCashFilter": "تجاوزوا السقف فقط",
-      "showAll": "اعرض الكل"
+      "showAll": "اعرض الكل",
+      "site": {
+        "title": "زوار الموقع والتحميلات",
+        "note": "كل شخص ينحسب مرة وحدة باليوم",
+        "visitsToday": "زوار اليوم",
+        "visitsAll": "كل الزوار",
+        "visitsAllSub": "مجموع الأيام: {n}",
+        "downloadsToday": "تحميلات اليوم",
+        "downloadsAll": "كل التحميلات",
+        "accountsToday": "حسابات جديدة اليوم",
+        "accountsAll": "كل الحسابات: {n}",
+        "appCustomer": "رحّال غو",
+        "appDriver": "السائقين",
+        "appMerchant": "أصحاب المتاجر",
+        "appRep": "المناديب",
+        "chartTitle": "آخر ٣٠ يوم",
+        "chartVisits": "زوار",
+        "chartDownloads": "تحميلات",
+        "failed": "ما قدرنا نجيب أرقام الزوار هلق"
+      }
     },
     "market": {
       "tabs": {

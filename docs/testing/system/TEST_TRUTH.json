@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 492,
+    "routes": 494,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 210,
     "behaviour_settings": 167,
     "order_fields": 95,
-    "test_files": 533,
-    "test_funcs": 2208
+    "test_files": 534,
+    "test_funcs": 2211
   },
   "flows": [
     {
@@ -26720,6 +26720,24 @@
     {
       "name": "TestSiteDoors_ReachThePublicPayload",
       "file": "internal/server/site_doors_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDownloadRangeRequestsCountOnce",
+      "file": "internal/server/site_stats_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPublicVisitCountsOncePerDay",
+      "file": "internal/server/site_stats_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSiteStatsShapeAndAuthz",
+      "file": "internal/server/site_stats_test.go",
       "package": "server",
       "orphan": true
     },

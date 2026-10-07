@@ -218,6 +218,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["GET", "/sections/{id}/items", "market.manage"],
   ["GET", "/settings", "settings.read"],
   ["GET", "/settings/money-example", "settings.read"],
+  ["GET", "/site-stats", "platform.overview"],
   ["GET", "/stats", "analytics.read"],
   ["GET", "/tickets", "support.manage"],
   ["POST", "/tickets", "support.manage"],

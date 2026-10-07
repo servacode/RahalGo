@@ -1,6 +1,7 @@
 import { fetchPlatform } from "@rahalgo/ui";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import VisitBeacon from "@/components/VisitBeacon";
 import { readServerConfig } from "@/lib/config";
 
 // **ويُقرأ عند الطلب لا عند البناء** — دورةُ ٧١و.
@@ -29,6 +30,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       {/* **ولا حشوةَ يميناً ويساراً** — (قاعدةُ المالك، قالها أربعَ
           مرّات): الصفحةُ تأخذ العرضَ كاملاً. **والعموديُّ في `main`
           وحدَه** لأنّ الشريطَ والفوترَ شريطان يبلغان الحافّة. */}
+      {/* **عدّادُ الزوّار** — مرّةً في الجلسة (طلبُ المالك ٢٠٢٦-١٠-٠٧). */}
+      <VisitBeacon />
       <div className="flex min-h-screen flex-col">
         <Header />
         {/* **وفسحةٌ علويّةٌ بمقدار ما يتدلّى من الشعار.**

@@ -566,6 +566,8 @@ func (s *Server) Router() http.Handler {
 		// ── مركزُ التنزيل الرسميّ — عامٌّ بلا توثيق (`DLC`) ──────────
 		r.Get("/public/releases", s.handleReleases)
 		r.Get("/public/app/{key}", s.handleDownloadAppByKey)
+		// **وزيارةُ الموقع تُعدّ** — مرّةً في اليوم للشخص (`site_stats.go`).
+		r.Post("/public/visit", s.handlePublicVisit)
 		r.Get("/public/zone", s.handlePublicZone)
 		// **وحالُ الإتاحة قبل السلّة** — انظر `quote_handlers.go`.
 		r.Get("/public/availability", s.handlePublicAvailability)
@@ -1230,6 +1232,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stats", s.handleAdminStats)
 			// **رئيسيّةُ مدير المنصّة** — `platform.overview` (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/overview", s.handleAdminOverview)
+			// **زوّارُ الموقع والتحميلات** (طلبُ المالك ٢٠٢٦-١٠-٠٧).
+			r.Get("/site-stats", s.handleSiteStats)
 			r.Get("/reports", s.handleReports)
 			// سجلّ الأحداث — لكلّ من ملك `audit.read`، **والمبالغُ تُحذف في
 			// الخادم عمّن لا يملك قراءةَ المال** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
