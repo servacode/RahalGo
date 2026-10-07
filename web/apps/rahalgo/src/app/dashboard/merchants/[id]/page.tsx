@@ -41,9 +41,11 @@ import {
   IconBalance,
   IconDate,
   IconTile,
+  IconEdit,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
+import { MerchantModal, type Merchant as EditableMerchant } from "@/components/admin/MerchantModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
@@ -97,6 +99,7 @@ export default function MerchantProfilePage() {
   const [mr, setMr] = useState<Merchant | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [violationsOpen, setViolationsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [error, setError] = useState("");
   const [savingReturns, setSavingReturns] = useState(false);
   // **ومن لا يملك قراءةَ المتجر لا يُنادي بابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
@@ -194,6 +197,16 @@ export default function MerchantProfilePage() {
       </StatGrid>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {/* **وتعديلُ المتجر من صفحته** (بلاغُ المالك ٢٠٢٦-١٠-٠٧: «ما في خيار تعديل») — الاسمُ والتصنيفُ
+            والهاتفُ والعنوان. كان الزرُّ في صفحة حساب صاحبه وحدَها. */}
+        {canEdit && (
+          <Button variant="secondary" onClick={() => setEditOpen(true)}>
+            <span className="flex items-center gap-1.5">
+              <IconEdit size={15} />
+              {m.admin.merchants.edit}
+            </span>
+          </Button>
+        )}
         {canViolations && (
           <Button variant="secondary" onClick={() => setViolationsOpen(true)}>
             <span className="flex items-center gap-1.5">
@@ -288,6 +301,16 @@ export default function MerchantProfilePage() {
         </div>
       )}
 
+      {editOpen && (
+        <MerchantModal
+          merchant={mr as unknown as EditableMerchant}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => {
+            setEditOpen(false);
+            void load();
+          }}
+        />
+      )}
       {violationsOpen && (
         <ViolationsModal
           merchant={mr}
