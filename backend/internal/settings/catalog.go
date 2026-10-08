@@ -2287,6 +2287,9 @@ var Catalog = []Def{
 	// مع رسالة الدخول ومع «صار عندك متجر». **وفارغُه يحذف السطر.**
 	{Key: "accounts.merchant_tutorial_url", Group: GroupPlatform, Kind: KindText, Max: 300,
 		Default: MerchantTutorialURLDefault},
+	// **وفيديو شرح تطبيق الزبون** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — **فارغٌ حتّى يُنشر**:
+	// وما دام فارغاً لا يظهر زرُّه في التطبيق ولا سطرُه في الترحيب.
+	{Key: "customers.tutorial_url", Group: GroupCustomers, Kind: KindText, Max: 300, Default: ""},
 
 	// **وقالبُ الطلب للمتجر** — كان مكتوباً في الشيفرة (`buildMerchantMessage`).
 	//

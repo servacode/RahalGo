@@ -32,7 +32,17 @@ object CustomerItems {
     const val OFFERS = "Offers"
     const val INVITE = "Invite"
     const val TICKETS = "Tickets"
+    /** **شرحُ التطبيق بالفيديو** — يظهر حين يُنشر رابطُه فقط (٢٠٢٦-١٠-٠٩). */
+    const val TUTORIAL = "Tutorial"
 }
+
+/** **بندُ الشرح** — يفتح يوتيوب لا شاشة. */
+val TUTORIAL_ITEM = DrawerItem(
+    CustomerItems.TUTORIAL,
+    R.string.menu_platform,
+    com.rahalgo.customer.R.string.menu_tutorial,
+    R.drawable.ic_play,
+)
 
 /**
  * **بنودُ «ما يخصّني» — أربعةٌ بأمر المالك** (٢٠٢٦-٠٨-١٤).

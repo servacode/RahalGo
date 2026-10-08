@@ -30,8 +30,8 @@
       "ops",
       "user"
     ],
-    "setting_defs": 212,
-    "behaviour_settings": 169,
+    "setting_defs": 213,
+    "behaviour_settings": 170,
     "order_fields": 95,
     "test_files": 538,
     "test_funcs": 2221
@@ -3627,6 +3627,25 @@
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.tutorial_url",
+      "group": "customers",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-01",
         "F-17"

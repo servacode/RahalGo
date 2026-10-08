@@ -193,6 +193,8 @@ data class Platform(
     val ordering: Ordering = Ordering(),
     /** **فيديو شرح تطبيق المتجر** — من الإعدادات (٢٠٢٦-١٠-٠٨). وفارغٌ: لا فيديو. */
     @SerialName("merchant_tutorial_url") val merchantTutorialUrl: String = "",
+    /** **فيديو شرح تطبيق الزبون** — فارغٌ حتّى يُنشر (٢٠٢٦-١٠-٠٩). */
+    @SerialName("customer_tutorial_url") val customerTutorialUrl: String = "",
     /**
      * **أيُّ أبواب الزبون مفتوحةٌ أصلاً؟** (`PL`، ٢٠٢٦-٠٩-١٦).
      *

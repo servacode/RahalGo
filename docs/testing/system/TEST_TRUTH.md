@@ -17,7 +17,7 @@
 | أنواعُ قيدِ المحفظة | **16** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_cash_accrued` · `merchant_cash_paid` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **82** — منها **31** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
-| تعريفاتُ الإعدادات | **212** — منها **169** مُغيِّرٌ للسلوك |
+| تعريفاتُ الإعدادات | **213** — منها **170** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **95** — من عقد `P-1` |
 | ملفّاتُ اختبار | **538** |
 | دوالُّ اختبار | **2221** |
@@ -59,7 +59,7 @@ ORPHAN     = 1641
 | **العيوب** | 28 | 22 | 6 |
 | **المخاطر** | 24 | 15 | 9 |
 | **فجواتُ العقد** | 47 | 29 | 18 |
-| **إعداداتُ السلوك** | 169 | 13 | 156 |
+| **إعداداتُ السلوك** | 170 | 13 | 157 |
 
 ---
 

@@ -29,6 +29,10 @@ func (s *Server) welcomeCustomer(ctx context.Context, userID, phone string) {
 	if text == "" {
 		return
 	}
+	// **وسطرُ فيديو الشرح إن نُشر** (٢٠٢٦-١٠-٠٩).
+	if url := strings.TrimSpace(s.settings.GetString(ctx, "customers.tutorial_url")); url != "" {
+		text += "\n\n🎬 شرح التطبيق بالفيديو: " + url
+	}
 	title, body := text, ""
 	if i := strings.Index(text, "\n"); i > 0 {
 		title, body = strings.TrimSpace(text[:i]), strings.TrimSpace(text[i+1:])

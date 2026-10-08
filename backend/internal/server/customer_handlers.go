@@ -131,6 +131,8 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
 		// **فيديو شرح تطبيق المتجر** — يفتحه زرُّ «شرح التطبيق» في درجه (٢٠٢٦-١٠-٠٨).
 		"merchant_tutorial_url": s.merchantTutorial(r.Context()),
+		// **وفيديو الزبون** — فارغٌ حتّى يُنشر، فلا يظهر زرُّه.
+		"customer_tutorial_url": strings.TrimSpace(s.settings.GetString(r.Context(), "customers.tutorial_url")),
 		// ══════════════════════════════════════════════════════════════
 		// **وحالُ الافتتاح تُقرأ هنا** — **لا تُستنتَج من خطأ** (٢٠٢٦-٠٩-١٦)
 		// ══════════════════════════════════════════════════════════════

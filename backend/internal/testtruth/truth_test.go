@@ -320,8 +320,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// `release.<app>.version_code` (رقمُ الملفّ المرفوع — حدٌّ أدنى) و`release.<app>.auto_force`.
 	// **وأربعةٌ بالتسليم والموافقة التلقائيّة** (قراراتُ المالك ٢٠٢٦-١٠-٠٧/٠٨): كودُ التسليم
 	// `delivery.code_required|code_channel`، والموافقةُ `leads.auto_approve` و`orders.auto_transfer`.
-	if d.BehaviourSettings != 169 {
-		t.Errorf("إعداداتُ السلوك = %d لا 169 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ بفيديو شرح الزبون** (طلبُ المالك ٢٠٢٦-١٠-٠٩): `customers.tutorial_url`.
+	if d.BehaviourSettings != 170 {
+		t.Errorf("إعداداتُ السلوك = %d لا 170 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

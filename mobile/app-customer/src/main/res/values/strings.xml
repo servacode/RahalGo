@@ -243,4 +243,5 @@
     <string name="prelaunch_title">قريبًا يتم افتتاح رحال غو</string>
     <string name="prelaunch_body">نعمل حاليًا على تجهيز رحال غو لاستقبال طلباتكم.\nترقبوا الافتتاح قريبًا.</string>
     <string name="prelaunch_login">تسجيل الدخول</string>
+    <string name="menu_tutorial">شرح التطبيق بالفيديو</string>
 </resources>

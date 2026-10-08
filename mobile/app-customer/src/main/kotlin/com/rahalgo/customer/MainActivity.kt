@@ -454,6 +454,12 @@ private fun SignedIn(
     val scope = rememberCoroutineScope()
     val overlay = rememberOverlay { key -> knowsKey(CUSTOMER_ITEMS, key) }
     val context = LocalContext.current
+    // **رابطُ فيديو الشرح من المحرّك** — فارغٌ حتّى يُنشر، فلا يظهر بندُه (٢٠٢٦-١٠-٠٩).
+    var tutorialUrl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        tutorialUrl = runCatching { com.rahalgo.ui.AppCore.get().auth.platform().customerTutorialUrl.trim() }
+            .getOrDefault("")
+    }
     // **والتبويبُ يبقى بعد دوران الجهاز** — من كان في طلباته لا يُردّ
     // إلى التسوّق لأنّه أمال هاتفَه.
     var tab by rememberSaveable { mutableStateOf(Tab.Shop) }
@@ -636,9 +642,19 @@ private fun SignedIn(
                     // **وبنودٌ تُعرض لتقول «تحتاج حساباً» تُطيل القائمةَ
                     // ولا تُفيد.**
                     items = (if (guest) emptyList() else CUSTOMER_ITEMS) +
+                        (if (tutorialUrl.isNotBlank()) listOf(TUTORIAL_ITEM) else emptyList()) +
                         PlatformPages.items,
                     onPick = { item ->
-                        overlay.show(Overlay.Menu(item.key))
+                        if (item.key == CustomerItems.TUTORIAL) {
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(tutorialUrl))
+                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        } else {
+                            overlay.show(Overlay.Menu(item.key))
+                        }
                         scope.launch { drawer.close() }
                     },
                     onLogout = if (guest) onAskLogin else onLogout,

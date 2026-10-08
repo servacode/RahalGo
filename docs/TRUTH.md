@@ -1200,6 +1200,7 @@ kosom` |
 | `app_text.coverage_unavailable` |  | text | `التوصيل غير متوفر مؤقتاً — حاول مرة أخرى لاحقاً` |
 | `app_text.merchant_closed` |  | text | `هذا المتجر مغلق الآن` |
 | `app_text.item_unavailable` |  | text | `أحد الأصناف غير متوفر حاليا` |
+| `customers.tutorial_url` |  | text | `` |
 | `orders.delivery_timeout_min` | التوزيع والتنبيهات | int | `60` |
 | `drivers.offer_timeout_sec` | التوزيع والتنبيهات | int | `60` |
 | `orders.driver_timeout_min` | التوزيع والتنبيهات | int | `10` |

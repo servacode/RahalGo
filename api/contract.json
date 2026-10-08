@@ -9039,6 +9039,10 @@
           "type": "object"
         },
         {
+          "name": "customer_tutorial_url",
+          "type": "unknown"
+        },
+        {
           "name": "join_open",
           "type": "unknown"
         },
