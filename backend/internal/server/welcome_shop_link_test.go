@@ -46,3 +46,19 @@ func TestWelcome_ShopLinkPerRole(t *testing.T) {
 		t.Fatalf("قالبٌ قديم: سطرُ التسوّق لم يُضَف:\n%s", msg)
 	}
 }
+
+// **فيديو الشرح لصاحب المتجر وحدَه** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — وفارغُه يحذف السطر.
+func TestWelcome_MerchantTutorialLine(t *testing.T) {
+	const url = "https://youtu.be/cIQ_dXUjZ_g"
+	if got := tutorialLine("merchant", url); !strings.Contains(got, url) {
+		t.Fatalf("صاحبُ المتجر بلا رابط الشرح: %q", got)
+	}
+	for _, k := range []string{"rep", "driver", "customer", ""} {
+		if got := tutorialLine(k, url); got != "" {
+			t.Fatalf("%q: سطرُ الشرح وصل غيرَ المتجر: %q", k, got)
+		}
+	}
+	if got := tutorialLine("merchant", "  "); got != "" {
+		t.Fatalf("رابطٌ فارغ ولم يُحذف السطر: %q", got)
+	}
+}

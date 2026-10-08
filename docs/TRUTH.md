@@ -809,6 +809,7 @@ kosom` |
 
 📱 {app}: {link}
 🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}` |
+| `accounts.merchant_tutorial_url` | المنصة | text | `https://youtu.be/cIQ_dXUjZ_g` |
 | `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
 {items}` |
 | `whatsapp.send_delay_ms` | المنصة | int | `6000` |

@@ -99,6 +99,23 @@ func (s *Server) shopLinkFor(appKey string) string {
 	return ""
 }
 
+// tutorialLine **سطرُ فيديو الشرح لصاحب المتجر** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — وفارغٌ لغيره.
+func tutorialLine(appKey, url string) string {
+	url = strings.TrimSpace(url)
+	if appKey != "merchant" || url == "" {
+		return ""
+	}
+	return "\n🎬 شرح تطبيق المتجر كامل بالفيديو — شوفه قبل ما تبلّش: " + url
+}
+
+// merchantTutorial رابطُ الشرح من الإعدادات.
+func (s *Server) merchantTutorial(ctx context.Context) string {
+	if s.settings == nil {
+		return settings.MerchantTutorialURLDefault
+	}
+	return s.settings.GetString(ctx, "accounts.merchant_tutorial_url")
+}
+
 // welcomeText نصُّ الرسالة — **لا شيءَ فيها يُخمَّن**: الرقمُ والكلمةُ والمهلةُ والرابط.
 func welcomeText(tpl, phone, password, link, app, shopLink string, hours int64, reset bool) string {
 	head := "أهلاً بك في رحّال غو — أُنشئ حسابك."
@@ -195,8 +212,10 @@ func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app 
 		key = app
 	}
 	link := s.appLink(key)
-	sent := s.sendText(ctx, phone, welcomeText(s.settings.GetString(ctx, "accounts.welcome_template"), phone, plain, link,
-		appPurpose(key), s.shopLinkFor(key), s.identity.TempPasswordHours(ctx), reset))
+	text := welcomeText(s.settings.GetString(ctx, "accounts.welcome_template"), phone, plain, link,
+		appPurpose(key), s.shopLinkFor(key), s.identity.TempPasswordHours(ctx), reset) +
+		tutorialLine(key, s.merchantTutorial(ctx))
+	sent := s.sendText(ctx, phone, text)
 	if sent {
 		_, _ = s.pg.Exec(ctx, `UPDATE users SET welcome_sent_at = now() WHERE id = $1`, userID)
 	}
@@ -213,7 +232,8 @@ func (s *Server) notifyNewStoreOwner(ctx context.Context, actor, userID, storeNa
 	}
 	text := "رحّال غو — صار عندك متجر: " + storeName + "\n" +
 		"ادخل بتطبيق المتجر برقمك وكلمة سرّك نفسها.\n" +
-		"حمّل التطبيق من: " + s.appLink("merchant")
+		"حمّل التطبيق من: " + s.appLink("merchant") +
+		tutorialLine("merchant", s.merchantTutorial(ctx))
 	sent := s.sendText(ctx, phone, text)
 	s.auditCtx(ctx, actor, ip, "admin.store_owner_notified", "user", userID,
 		map[string]any{"sent": sent, "store": storeName})

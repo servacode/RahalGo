@@ -2283,6 +2283,11 @@ var Catalog = []Def{
 	{Key: "accounts.welcome_template", Group: GroupPlatform, Kind: KindLongText,
 		Default: WelcomeTemplateDefault, Requires: []string{"{password}", "{link}"}},
 
+	// **رابطُ فيديو شرح تطبيق المتجر** (طلبُ المالك ٢٠٢٦-١٠-٠٨): يصل صاحبَ المتجر
+	// مع رسالة الدخول ومع «صار عندك متجر». **وفارغُه يحذف السطر.**
+	{Key: "accounts.merchant_tutorial_url", Group: GroupPlatform, Kind: KindText, Max: 300,
+		Default: MerchantTutorialURLDefault},
+
 	// **وقالبُ الطلب للمتجر** — كان مكتوباً في الشيفرة (`buildMerchantMessage`).
 	//
 	// **والبنودُ تُحقن في `{items}`** — لا تُكتب بيد: عددُها يتبدّل بكلّ طلب.
@@ -2416,6 +2421,9 @@ func AppTextKeyFor(code string) string {
 	}
 	return ""
 }
+
+// MerchantTutorialURLDefault فيديو شرح تطبيق المتجر على قناة رحّال غو.
+const MerchantTutorialURLDefault = "https://youtu.be/cIQ_dXUjZ_g"
 
 // WelcomeTemplateDefault **نصُّ الترحيب الأصليّ** — هو ما كان مكتوباً في الشيفرة.
 const WelcomeTemplateDefault = "{title}\nالرقم: {phone}\nكلمة المرور المؤقتة: {password}\n" +
