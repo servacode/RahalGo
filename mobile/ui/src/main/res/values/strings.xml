@@ -100,7 +100,12 @@
     <string name="update_action">تحديث الآن</string>
     <!-- **زرّان صريحان** (قرار المالك ٢٠٢٦-٠٩-٢٦): غوغل بلاي، والتنزيل المباشر. -->
     <string name="update_play">تحديث عبر Google Play</string>
-    <string name="update_direct">التنزيل المباشر</string>
+    <string name="update_direct">التنزيل من الموقع</string>
+    <string name="update_downloading">عم ننزّل التحديث… %1$d٪</string>
+    <string name="update_install">ثبّت التحديث</string>
+    <string name="update_allow">اسمح بالتثبيت</string>
+    <string name="update_install_hint">رح تطلعلك شاشة «تثبيت» من أندرويد — اكبس «تثبيت». وإذا طلب إذن، فعّل «السماح من هذا المصدر» وارجع.</string>
+    <string name="update_failed">ما قدرنا ننزّل التحديث — تأكد من الإنترنت وجرّب مرة تانية، أو نزّله من الموقع.</string>
     <string name="err_update_required">يوجد إصدار جديد — حدّث التطبيق</string>
     <!-- **وكلُّ سببٍ يقول نفسَه** — (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «ليش
          يعطي تحقق من البيانات المدخلة؟»). سبعةُ أسبابٍ كانت ترجع

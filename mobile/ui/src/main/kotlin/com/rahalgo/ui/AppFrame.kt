@@ -195,6 +195,8 @@ fun AuthGate(
     // المباشر ونصّاً ملائماً لدوره. تُمرَّر إلى `UpdateGate` أدناه.
     updateShowPlay: Boolean = true,
     updateFallbackUrl: String = "https://rahalgo.com/app",
+    /** **مفتاحُ التحديث من داخل التطبيق** — انظر `UpdateGate.selfUpdateKey`. */
+    updateSelfKey: String? = null,
     updateBody: String? = null,
 ) {
     // ══════════════════════════════════════════════════════════════════
@@ -243,6 +245,7 @@ fun AuthGate(
             fallbackUrl = updateFallbackUrl,
             showPlay = updateShowPlay,
             body = updateBody,
+            selfUpdateKey = updateSelfKey,
         )
         return
     }

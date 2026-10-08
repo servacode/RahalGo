@@ -90,6 +90,7 @@ firebase-bom = { module = "com.google.firebase:firebase-bom", version = "34.17.0
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 # **جسرٌ بين مهامّ غوغل ومعلّقات كوتلن** — `token.await()` بدل ردّ نداء.
+play-app-update = { module = "com.google.android.play:app-update-ktx", version = "2.1.0" }
 coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version = "1.11.0" }
 
 # **قائمة مواد Compose** — تضبط إصدارات مكتبات Compose كلها من رقم واحد،

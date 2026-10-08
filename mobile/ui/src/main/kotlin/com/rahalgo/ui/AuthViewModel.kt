@@ -124,6 +124,24 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         ApiClient.onSessionRejected = { code -> viewModelScope.launch { forcedLogout(code) } }
         restore()
         loadPlatform()
+        resumePendingCode()
+    }
+
+    /**
+     * **يعيده إلى خانة الرمز إن أُغلق التطبيقُ وهو في واتساب** — انظر `PendingCode`.
+     */
+    private fun resumePendingCode() {
+        val p = PendingCode.load() ?: return
+        when (p.kind) {
+            PendingCode.LOGIN -> state = state.copy(
+                mode = LoginMode.OTP, codeSent = true, codeSentAt = p.sentAt, prefillPhone = p.phone,
+            )
+            PendingCode.SIGNUP -> signup = SignupState(
+                step = SignupStep.CODE, phone = p.phone, codeSentAt = p.sentAt,
+                referral = p.referral, needsCode = true,
+            )
+            PendingCode.RESET -> reset = ResetState(step = ResetStep.CODE, phone = p.phone, codeSentAt = p.sentAt)
+        }
     }
 
     /**
@@ -186,11 +204,13 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // صاحبه إلى كلمة المرور، **فلو بقيت رايته مرفوعة** لرأى حقل رمز
         // في باب لا رمز فيه.
         state = LoginState(mode = mode, otpAvailable = state.otpAvailable)
+        PendingCode.clear()
     }
 
     /** يعيد الشاشة إلى الرقم — **لمن كتب رقما غلطا.** */
     fun clearCode() {
         state = state.copy(codeSent = false, error = "")
+        PendingCode.clear()
     }
 
     /**
@@ -207,7 +227,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 backend.auth.requestOtp(phone)
                 // **ولحظةُ النجاح تبدأ مهلةَ إعادة الإرسال** — `ResendCodeRow`.
-                state.copy(codeSent = true, codeSentAt = System.currentTimeMillis(), busy = false)
+                val at = System.currentTimeMillis()
+                PendingCode.save(PendingCode.LOGIN, phone, at)
+                state.copy(codeSent = true, codeSentAt = at, busy = false, prefillPhone = phone)
             } catch (e: ApiClient.ApiException) {
                 state.copy(busy = false, error = message(e))
             } catch (e: Exception) {
@@ -460,6 +482,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     fun closeReset() {
         reset = null
+        PendingCode.clear()
     }
 
     fun setResetPhone(phone: String) {
@@ -495,7 +518,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             reset = try {
                 val t = backend.auth.waTicket(current.phone.trim(), "reset")
                 openWhatsApp(t.waUrl)
-                current.copy(step = ResetStep.CODE, codeSentAt = System.currentTimeMillis(), busy = false)
+                val at = System.currentTimeMillis()
+                PendingCode.save(PendingCode.RESET, current.phone.trim(), at)
+                current.copy(step = ResetStep.CODE, codeSentAt = at, busy = false)
             } catch (e: ApiClient.ApiException) {
                 current.copy(busy = false, error = message(e))
             } catch (e: Exception) {
@@ -541,6 +566,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 onSignedIn(result.user)
                 reset = null
+        PendingCode.clear()
             } catch (e: ApiClient.ApiException) {
                 reset = current.copy(busy = false, error = message(e))
             } catch (e: Exception) {
@@ -571,6 +597,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     fun closeSignup() {
         signupWasAmbiguous = false
         signup = null
+        PendingCode.clear()
     }
 
     fun setSignupPhone(phone: String) {
@@ -609,6 +636,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 // «لا اتصال بالإنترنت» إلى خطوة الرمز (`CUST-DEF-011`).
                 // **ولحظةُ النجاح تبدأ مهلةَ إعادة الإرسال** — `ResendCodeRow`.
                 val at = System.currentTimeMillis()
+                PendingCode.save(PendingCode.SIGNUP, current.phone.trim(), at, current.referral)
                 current.copy(step = SignupStep.CODE, codeSentAt = at, busy = false, error = "", offlineError = false)
             } catch (e: ApiClient.ApiException) {
                 current.copy(busy = false, error = message(e), offlineError = false)
@@ -673,6 +701,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 signupWasAmbiguous = false
                 onSignedIn(result.user)
                 signup = null
+                PendingCode.clear()
             } catch (e: ApiClient.ApiException) {
                 // **جوابٌ صريحٌ من الخادم — لا غموضَ فيه.**
                 if (e.body.code == "phone_taken") {
@@ -712,6 +741,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             )
             onSignedIn(result.user)
             signup = null
+            PendingCode.clear()
             true
         } catch (e: Exception) {
             false
@@ -721,6 +751,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         val p = signup?.phone?.trim().orEmpty()
         signupWasAmbiguous = false
         signup = null
+        PendingCode.clear()
         return p
     }
 
@@ -772,6 +803,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
      * أعظمُ ما يتبدّل: **كلُّ شاشةٍ في التطبيق تعني شيئاً آخرَ بعده.**
      */
     private fun onSignedIn(u: User?) {
+        PendingCode.clear()
         user = u
         // **كلُّ دخولٍ يبدّل الجلسة — فيُعاد تسجيلُ رمز الدفع على جلسته الجديدة**
         // (Obs 3)، **ولو كان الحسابُ نفسَه على الجهاز نفسِه** (مفتاحُ المستخدمِ

@@ -367,6 +367,7 @@ private fun Destination(theme: ThemeState) {
         // ونصٌّ لدوره. (كان يرث الافتراضَ `showPlay=true` ورابطَ `/app` العامّ.)
         updateShowPlay = false,
         updateFallbackUrl = "https://rahalgo.com/download/driver",
+        updateSelfKey = "driver",
         updateBody = stringResource(R.string.update_body_driver),
     )
 }

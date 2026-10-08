@@ -1008,6 +1008,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stores/{id}/delivery-quote", s.handleMerchantDeliveryQuote)
 			r.Get("/stores/{id}/deliveries", s.handleMerchantDeliveries)
 			r.Post("/stores/{id}/deliveries", s.idempotent(s.handleMerchantCreateDelivery))
+			// **ورابطُ موقع المستلِم يُقرأ نقطة** (٢٠٢٦-١٠-٠٨) — merchant_location_link.go
+			r.Post("/stores/{id}/resolve-location", s.handleMerchantResolveLocation)
 			r.Get("/deliveries/{id}", s.handleMerchantDelivery)
 			r.Post("/deliveries/{id}/cancel", s.handleMerchantCancelDelivery)
 			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
@@ -1607,6 +1609,9 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go
 				r.Patch("/merchants/{id}/settlement-method", s.handleSetMerchantSettlementMethod)
+				// **إعدادُ المتاجر — مَن ضبط ومَن لم يضبط** — merchant_setup.go
+				r.Get("/merchants-setup", s.handleMerchantSetupStatus)
+				r.Post("/merchants/{id}/setup-reminder", s.handleMerchantSetupReminder)
 				// **سقفُ دينِ «لدي توصيلة»** — merchant_delivery_handlers.go
 				r.Get("/merchants/{id}/delivery-credit", s.handleAdminMerchantDeliveryCredit)
 				r.Patch("/merchants/{id}/delivery-credit", s.handleAdminSetMerchantDeliveryCredit)

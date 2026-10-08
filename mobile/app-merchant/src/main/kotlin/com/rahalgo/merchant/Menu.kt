@@ -34,6 +34,8 @@ object MerchantItems {
     const val WARNINGS = "Warnings"
     const val REPORTS = "Reports"
     const val SALES = "Sales"
+    /** **شرحُ التطبيق بالفيديو** — يفتح يوتيوب لا شاشة (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
+    const val TUTORIAL = "Tutorial"
 }
 
 val MERCHANT_ITEMS: List<DrawerItem> = listOf(
@@ -84,7 +86,30 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         R.string.menu_sales,
         com.rahalgo.ui.R.drawable.ic_chart,
     ),
+    DrawerItem(
+        MerchantItems.TUTORIAL,
+        com.rahalgo.ui.R.string.menu_platform,
+        R.string.menu_tutorial,
+        com.rahalgo.ui.R.drawable.ic_play,
+    ),
 )
+
+/**
+ * **يفتح فيديو الشرح** — الرابطُ من المحرّك (`/public/platform`) فيُبدَّل من اللوحة
+ * بلا نسخة، **وإن تعذّر سؤالُه فُتح الأصل.**
+ */
+suspend fun openTutorial(context: android.content.Context) {
+    val url = runCatching { com.rahalgo.ui.AppCore.get().auth.platform().merchantTutorialUrl }
+        .getOrNull()?.takeIf { it.isNotBlank() } ?: TUTORIAL_URL_DEFAULT
+    runCatching {
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+}
+
+private const val TUTORIAL_URL_DEFAULT = "https://youtu.be/cIQ_dXUjZ_g"
 
 /**
  * **«لا متجرَ مرتبطٌ بحسابك»** — من المعجم لا من الشيفرة.

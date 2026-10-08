@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -109,6 +111,16 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
     // الحُجّة** (A4) — لكن تعطيلُ الأزرار هنا أصدقُ من تركها تُضغط لتُردّ.
     val suspended = store.status == "suspended"
 
+    // **والنزولُ إلى القسم المطلوب** — كرتُ «ناقصه» يقول أين، وهذا يأخذه إليه.
+    val spots = remember { StoreSpot.entries.associateWith { BringIntoViewRequester() } }
+    androidx.compose.runtime.LaunchedEffect(vm.jumpTo) {
+        val spot = vm.jumpTo ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(150)
+        spots[spot]?.bringIntoView()
+        vm.jumpTo = null
+    }
+    fun at(spot: StoreSpot) = Modifier.bringIntoViewRequester(spots.getValue(spot))
+
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
             // ══════════════════════════════════════════════════════════
@@ -124,6 +136,41 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         color = Rahal.colors.danger,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+            // ══════════════════════════════════════════════════════════
+            // **٠·ب — «متجرك ناقصه»** (طلبُ المالك ٢٠٢٦-١٠-٠٨)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **ما تراه الإدارةُ في «إعداد المتاجر» يراه صاحبُه هنا** — وكلُّ
+            // بندٍ يُكبس فيُنزله إلى مكانه. **ويختفي حين يكتمل.**
+            val missing = buildList {
+                if (vm.mySections.isEmpty()) add(StoreSpot.Sections)
+                if (!store.hasHours) add(StoreSpot.Hours)
+                if (store.lat == null || store.addressText.isBlank()) add(StoreSpot.Address)
+                if (!store.settlementConfirmed) add(StoreSpot.Settlement)
+                if (!store.returnsConfirmed) add(StoreSpot.Returns)
+            }
+            if (missing.isNotEmpty() && !suspended) {
+                Card(tone = Rahal.colors.danger) {
+                    Text(
+                        stringResource(R.string.setup_missing_title),
+                        color = Rahal.colors.danger,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    missing.forEach { spot ->
+                        Text(
+                            "• " + stringResource(spot.label) + "  ←",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { vm.jumpTo = spot }
+                                .padding(vertical = 6.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(10.dp))
             }
@@ -292,13 +339,13 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // **والمستحقُّ النقديُّ القائمُ يبقى حتّى يُصرف.** «نقدي» يُسلَّم يداً،
             // «المحفظة» يُقيَّد في رصيده.
             Spacer(Modifier.height(10.dp))
-            Card {
+            Card(modifier = at(StoreSpot.Settlement)) {
                 KeyValue(
                     label = stringResource(R.string.store_settlement_method),
-                    value = if (store.settlementMethod == "wallet") {
-                        stringResource(R.string.store_settlement_wallet)
-                    } else {
-                        stringResource(R.string.store_settlement_cash)
+                    value = when {
+                        !store.settlementConfirmed -> stringResource(R.string.store_choose_needed)
+                        store.settlementMethod == "wallet" -> stringResource(R.string.store_settlement_wallet)
+                        else -> stringResource(R.string.store_settlement_cash)
                     },
                 )
                 if (store.settlementMethod == "cash" && store.unpaidCashDue > 0) {
@@ -312,14 +359,14 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     androidx.compose.material3.FilterChip(
-                        selected = store.settlementMethod == "cash",
-                        onClick = { if (store.settlementMethod != "cash") askMethod = "cash" },
+                        selected = store.settlementConfirmed && store.settlementMethod == "cash",
+                        onClick = { if (!store.settlementConfirmed || store.settlementMethod != "cash") askMethod = "cash" },
                         enabled = !vm.saving,
                         label = { Text(stringResource(R.string.store_settlement_cash)) },
                     )
                     androidx.compose.material3.FilterChip(
-                        selected = store.settlementMethod == "wallet",
-                        onClick = { if (store.settlementMethod != "wallet") askMethod = "wallet" },
+                        selected = store.settlementConfirmed && store.settlementMethod == "wallet",
+                        onClick = { if (!store.settlementConfirmed || store.settlementMethod != "wallet") askMethod = "wallet" },
                         enabled = !vm.saving,
                         label = { Text(stringResource(R.string.store_settlement_wallet)) },
                     )
@@ -332,6 +379,40 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         onConfirm = { vm.setSettlementMethod(m) },
                         onDismiss = { askMethod = null },
                         danger = false,
+                    )
+                }
+            }
+
+            // ══════════════════════════════════════════════════════════
+            // **٣·ج — قبولُ الاسترداد** (طلبُ المالك ٢٠٢٦-١٠-٠٨)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **إن لم يستلم الزبونُ الطلبَ أيعيد السائقُ الغرضَ إليه؟** — كان
+            // من اللوحة وحدَها، **ولا يُعرف من اختار ممّن بقي على الافتراض.**
+            Spacer(Modifier.height(10.dp))
+            Card(modifier = at(StoreSpot.Returns)) {
+                KeyValue(
+                    label = stringResource(R.string.store_returns),
+                    value = when {
+                        !store.returnsConfirmed -> stringResource(R.string.store_choose_needed)
+                        store.acceptsReturns -> stringResource(R.string.store_returns_yes)
+                        else -> stringResource(R.string.store_returns_no)
+                    },
+                )
+                Text(stringResource(R.string.store_returns_hint))
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(
+                        selected = store.returnsConfirmed && store.acceptsReturns,
+                        onClick = { vm.setAcceptsReturns(true) },
+                        enabled = !vm.saving,
+                        label = { Text(stringResource(R.string.store_returns_yes)) },
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = store.returnsConfirmed && !store.acceptsReturns,
+                        onClick = { vm.setAcceptsReturns(false) },
+                        enabled = !vm.saving,
+                        label = { Text(stringResource(R.string.store_returns_no)) },
                     )
                 }
             }
@@ -412,8 +493,8 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // ══════════════════════════════════════════════════════════
             // **٦ · الساعات — تُقرأ وتُكتب**
             // ══════════════════════════════════════════════════════════
-            HoursEditor(vm)
-            SectionsEditor(vm)
+            Box(at(StoreSpot.Hours)) { Column { HoursEditor(vm) } }
+            Box(at(StoreSpot.Sections)) { Column { SectionsEditor(vm) } }
 
             // ══════════════════════════════════════════════════════════
             // **٧ · العنوانُ والدبّوس — آخرُ الشاشة**
@@ -436,7 +517,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             //
             // **زرٌّ واحدٌ للاثنين** — **وزرّان يجعلان من كتب عنوانَه ثمّ
             // حرّك دبّوسَه يحفظ أحدَهما ويظنّ الآخرَ محفوظاً.**
-            AddressEditor(vm, onPickPoint)
+            Box(at(StoreSpot.Address)) { Column { AddressEditor(vm, onPickPoint) } }
 
             Spacer(Modifier.height(24.dp))
         }
@@ -952,4 +1033,13 @@ private fun latinDigits(context: android.content.Context): android.content.Conte
     return android.view.ContextThemeWrapper(context, 0).apply {
         applyOverrideConfiguration(config)
     }
+}
+
+/** **أقسامُ «متجري» التي يُنزَل إليها** — وبالترتيب الذي تُعرض به في «ناقصه». */
+enum class StoreSpot(val label: Int) {
+    Sections(R.string.setup_missing_sections),
+    Hours(R.string.setup_missing_hours),
+    Address(R.string.setup_missing_address),
+    Settlement(R.string.setup_missing_settlement),
+    Returns(R.string.setup_missing_returns),
 }

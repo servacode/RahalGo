@@ -75,7 +75,18 @@ data class DeliveriesPage(val deliveries: List<Delivery> = emptyList())
 @Serializable
 data class CreatedDelivery(val id: String = "")
 
+/** **رابطُ موقعٍ قُرئ نقطة** — و`found=false` رابطٌ لا موقعَ فيه (٢٠٢٦-١٠-٠٨). */
+@Serializable
+data class ResolvedLocation(val found: Boolean = false, val lat: Double = 0.0, val lng: Double = 0.0)
+
+@Serializable
+private data class ResolveLocationInput(val url: String)
+
 class DeliveriesApi(private val api: ApiClient) {
+
+    /** **يقرأ رابطَ موقعٍ شاركه الزبونُ** — نقطةً على خريطتنا (٢٠٢٦-١٠-٠٨). */
+    suspend fun resolveLocation(storeId: String, url: String): ResolvedLocation =
+        api.call("/api/v1/merchant/stores/$storeId/resolve-location", io.ktor.http.HttpMethod.Post, ResolveLocationInput(url))
 
     /** **والنقطةُ اختياريّة** — بلاها فالأجرةُ من منطقة المتجر. */
     suspend fun quote(storeId: String, lat: Double?, lng: Double?): DeliveryQuote =

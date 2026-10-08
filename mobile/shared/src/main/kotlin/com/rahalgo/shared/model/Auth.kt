@@ -191,6 +191,8 @@ data class Platform(
      * على كلّ حال**، **فالأسوأُ أن يُمنَع من الطلب بلا سببٍ حقيقيّ.**
      */
     val ordering: Ordering = Ordering(),
+    /** **فيديو شرح تطبيق المتجر** — من الإعدادات (٢٠٢٦-١٠-٠٨). وفارغٌ: لا فيديو. */
+    @SerialName("merchant_tutorial_url") val merchantTutorialUrl: String = "",
     /**
      * **أيُّ أبواب الزبون مفتوحةٌ أصلاً؟** (`PL`، ٢٠٢٦-٠٩-١٦).
      *

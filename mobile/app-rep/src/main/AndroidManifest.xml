@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- **التحديثُ من داخل التطبيق** (٢٠٢٦-١٠-٠٨) — يُنزَّل الملفُّ ثمّ تُفتح شاشةُ
+         «تثبيت». لتطبيقات التوزيع المباشر وحدَها؛ الزبونُ يُحدَّث من بلاي. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- **إذنُ الإشعارات** — انظر شرحَه في بيان الزبون.

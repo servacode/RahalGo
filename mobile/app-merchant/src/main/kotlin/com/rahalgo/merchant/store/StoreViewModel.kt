@@ -92,6 +92,12 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /** **يستقبل ما اختاره على الخريطة** — ولا يحفظ: الحفظُ بزرّه. */
+    /**
+     * **إلى أيّ قسمٍ من «متجري» يُنزَل** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — من كرت
+     * «متجرك ناقصه» أو من صفحة «اختر أقسامك أوّلاً». ويُصفَّر بعد النزول.
+     */
+    var jumpTo by mutableStateOf<StoreSpot?>(null)
+
     fun setPoint(lat: Double, lng: Double) {
         pickedLat = lat
         pickedLng = lng
@@ -180,13 +186,30 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun setSettlementMethod(method: String) {
         val id = store?.id ?: return
-        if (method == store?.settlementMethod) return
+        // **ومن لم يؤكّد بعد يؤكّد بالقيمة نفسِها** — فالافتراضُ ليس اختياراً.
+        if (method == store?.settlementMethod && store?.settlementConfirmed == true) return
         saving = true
         viewModelScope.launch {
             runCatching { api.setSettlementMethod(id, method) }
                 .onSuccess {
-                    store = store?.copy(settlementMethod = it.settlementMethod)
+                    store = store?.copy(settlementMethod = it.settlementMethod, settlementConfirmed = true)
                     Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_settlement_saved))
+                }
+                .onFailure { Flash.fail(err(it)) }
+            saving = false
+        }
+    }
+
+    /** **قبولُ الاسترداد** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
+    fun setAcceptsReturns(accepts: Boolean) {
+        val id = store?.id ?: return
+        if (accepts == store?.acceptsReturns && store?.returnsConfirmed == true) return
+        saving = true
+        viewModelScope.launch {
+            runCatching { api.settings(id, StoreSettingsInput(acceptsReturns = accepts)) }
+                .onSuccess {
+                    store = store?.copy(acceptsReturns = accepts, returnsConfirmed = true)
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_returns_saved))
                 }
                 .onFailure { Flash.fail(err(it)) }
             saving = false
@@ -317,7 +340,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         saving = true
         viewModelScope.launch {
             runCatching { api.setHours(id, days) }
-                .onSuccess { hours = days; Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_hours_saved)) }
+                .onSuccess { hours = days; store = store?.copy(hasHours = true); Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_hours_saved)) }
                 .onFailure { Flash.fail(err(it)) }
             saving = false
         }

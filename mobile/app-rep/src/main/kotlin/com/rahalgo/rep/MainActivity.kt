@@ -174,6 +174,7 @@ private fun RepApp() {
             // لا زرَّ متجرٍ، بل تنزيلٌ مباشرٌ من صفحة تطبيق المندوب، ونصٌّ لدوره.
             updateShowPlay = false,
             updateFallbackUrl = "https://rahalgo.com/download/rep",
+            updateSelfKey = "rep",
             updateBody = stringResource(R.string.update_body_rep),
         )
     }

@@ -726,6 +726,9 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			                          ELSE $13 END,
 			emergency_closed = COALESCE($8, emergency_closed),
 			accepts_returns = COALESCE($15, accepts_returns),
+			-- **واختيارُ الاسترداد من اللوحة تأكيدٌ بعد سؤال المتجر** (٢٠٢٦-١٠-٠٨).
+			returns_confirmed_at = CASE WHEN $15::bool IS NULL THEN returns_confirmed_at ELSE now() END,
+			returns_confirmed_by = CASE WHEN $15::bool IS NULL THEN returns_confirmed_by ELSE 'admin' END,
 			owner_user_id = COALESCE($9, owner_user_id),
 			sales_rep_user_id = COALESCE($10, sales_rep_user_id),
 			location      = COALESCE(
@@ -820,8 +823,10 @@ func (s *Service) SetSettlementMethodAs(ctx context.Context, actorID, id, method
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE merchants SET settlement_method = $2, updated_at = now() WHERE id = $1`,
-		id, method); err != nil {
+		`UPDATE merchants SET settlement_method = $2, updated_at = now(),
+		        settlement_confirmed_at = now(), settlement_confirmed_by = $3
+		 WHERE id = $1`,
+		id, method, confirmedBy(action)); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -830,6 +835,14 @@ func (s *Service) SetSettlementMethodAs(ctx context.Context, actorID, id, method
 	s.auditDetail(ctx, actorID, action, "merchant", id, ip,
 		map[string]any{"merchant_id": id, "from": cur, "to": method})
 	return s.merchantByID(ctx, id)
+}
+
+// confirmedBy **مَن أكّد الاختيار** — من اسم الفعل: «merchant.» بابُ صاحبه، وما عداه اللوحة.
+func confirmedBy(action string) string {
+	if strings.HasPrefix(action, "merchant.") {
+		return "merchant"
+	}
+	return "admin"
 }
 
 // MerchantByID متجرٌ بعينه — **لملفّه المفرد.**

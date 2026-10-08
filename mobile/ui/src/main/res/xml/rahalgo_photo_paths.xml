@@ -15,4 +15,6 @@
      **والنظامُ يمحو الذاكرةَ المؤقّتةَ حين يضيق القرص.** -->
 <paths>
     <cache-path name="rahalgo_photos" path="photos/" />
+    <!-- **وملفُّ التحديث المنزَّل داخل التطبيق** (٢٠٢٦-١٠-٠٨) — `SelfUpdate`. -->
+    <cache-path name="rahalgo_updates" path="updates/" />
 </paths>

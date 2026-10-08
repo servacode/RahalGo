@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 494,
+    "routes": 497,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 80,
-    "notify_targeted": 30,
+    "notify_sites": 82,
+    "notify_targeted": 31,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 212,
     "behaviour_settings": 169,
     "order_fields": 95,
-    "test_files": 535,
-    "test_funcs": 2215
+    "test_files": 538,
+    "test_funcs": 2221
   },
   "flows": [
     {
@@ -7792,6 +7792,30 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestFindURL_InSharedText",
+      "file": "internal/geolink/geolink_test.go",
+      "package": "geolink",
+      "orphan": true
+    },
+    {
+      "name": "TestParse_Shapes",
+      "file": "internal/geolink/geolink_test.go",
+      "package": "geolink",
+      "orphan": true
+    },
+    {
+      "name": "TestResolve_FollowsAndChecksEveryHop",
+      "file": "internal/geolink/geolink_test.go",
+      "package": "geolink",
+      "orphan": true
+    },
+    {
+      "name": "TestResolve_RejectsForeignHosts",
+      "file": "internal/geolink/geolink_test.go",
+      "package": "geolink",
+      "orphan": true
     },
     {
       "name": "TestAccountGuard_AdminCannotTouchOwner",
@@ -17255,6 +17279,12 @@
       "orphan": true
     },
     {
+      "name": "TestMSU01_SetupStatusAndConfirmations",
+      "file": "internal/qa/merchant_setup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestFIN_ItemPriceComesFromDB",
       "file": "internal/qa/money_test.go",
       "package": "qa",
@@ -24847,6 +24877,12 @@
     {
       "name": "TestAppFileUploadDownloadAndPriority",
       "file": "internal/server/app_file_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAppUpdateRoleCoversEveryApp",
+      "file": "internal/server/app_update_notice_test.go",
       "package": "server",
       "orphan": true
     },

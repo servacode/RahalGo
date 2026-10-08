@@ -22,6 +22,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -74,8 +76,17 @@ fun UpdateGate(
     fallbackUrl: String = "https://rahalgo.com/app",
     showPlay: Boolean = true,
     body: String? = null,
+    /**
+     * **مفتاحُ التطبيق للتحديث من داخله** (`driver`/`merchant`/`rep`) — يُنزَّل
+     * الملفُّ هنا وتُفتح شاشةُ «تثبيت» (`SelfUpdate`). وفارغٌ: بلاي أو الرابط.
+     */
+    selfUpdateKey: String? = null,
 ) {
     val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var progress by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Float?>(null) }
+    var ready by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<java.io.File?>(null) }
+    var failed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     // **والرجوعُ يخرج من التطبيق** — انظر أعلاه: لا بقاءَ عالقاً، ولا تسلّلَ للداخل.
     BackHandler(enabled = true) { (ctx as? android.app.Activity)?.finish() }
@@ -128,37 +139,115 @@ fun UpdateGate(
                 }
                 Unit
             }
-            if (showPlay) {
-                // **زرُّ Google Play** — تطبيقُ المتجر أوّلاً، فإن غاب فصفحتُه على الويب.
+            // ── التحديثُ من داخل التطبيق (التوزيعُ المباشر) ──
+            if (selfUpdateKey != null) {
+                val installOrAsk: (java.io.File) -> Unit = { f ->
+                    if (SelfUpdate.canInstall(ctx)) {
+                        SelfUpdate.install(ctx, f)
+                    } else {
+                        SelfUpdate.openInstallPermission(ctx)
+                    }
+                }
+                val p = progress
+                val file = ready
+                when {
+                    file != null -> {
+                        RahalButton(onClick = { installOrAsk(file) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                stringResource(
+                                    if (SelfUpdate.canInstall(ctx)) R.string.update_install else R.string.update_allow,
+                                ),
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.update_install_hint),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    p != null -> {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { p },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.update_downloading, (p * 100).toInt()),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    else -> {
+                        RahalButton(
+                            onClick = {
+                                failed = false
+                                progress = 0f
+                                scope.launch {
+                                    runCatching {
+                                        SelfUpdate.download(ctx, SelfUpdate.apkUrl(selfUpdateKey)) { progress = it }
+                                    }.onSuccess { f ->
+                                        ready = f
+                                        progress = null
+                                        installOrAsk(f)
+                                    }.onFailure {
+                                        progress = null
+                                        failed = true
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.update_action)) }
+                        if (failed) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.update_failed),
+                                color = Rahal.colors.danger,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                RahalTextButton(onClick = openDirect) { Text(stringResource(R.string.update_direct)) }
+            } else if (showPlay) {
+                // ── بلاي: التحديثُ داخل التطبيق، والمتجرُ احتياط ──
+                val openMarket = {
+                    val market = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("market://details?id=$pkg"),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    val ok = runCatching { ctx.startActivity(market) }.isSuccess
+                    if (!ok) {
+                        runCatching {
+                            ctx.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
+                                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    }
+                    Unit
+                }
                 RahalButton(
                     onClick = {
-                        val market = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("market://details?id=$pkg"),
-                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        val ok = runCatching { ctx.startActivity(market) }.isSuccess
-                        if (!ok) {
-                            // **بلاي غيرُ مثبَّتٍ ⇒ صفحتُه على الويب** — لا الرابطُ المباشر (له زرُّه).
-                            runCatching {
-                                ctx.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://play.google.com/store/apps/details?id=$pkg"),
-                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                )
-                            }
+                        val activity = ctx as? android.app.Activity
+                        if (activity == null) {
+                            openMarket()
+                        } else {
+                            PlayUpdate.start(activity, onUnavailable = openMarket)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.update_play)) }
+                ) { Text(stringResource(R.string.update_action)) }
                 Spacer(Modifier.height(12.dp))
-                // **زرُّ التنزيل المباشر** — للأجهزة بلا خدمات غوغل، يفتح رابطَ التنزيل المباشر.
                 RahalOutlineButton(onClick = openDirect, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.update_direct))
                 }
             } else {
-                // **توزيعٌ مباشرٌ لا غير** (المندوب) — زرٌّ واحدٌ رئيسيٌّ إلى رابط تطبيقه،
-                // ولا زرَّ Play يُوهم بمتجرٍ لا وجودَ للتطبيق فيه.
                 RahalButton(onClick = openDirect, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.update_direct))
                 }

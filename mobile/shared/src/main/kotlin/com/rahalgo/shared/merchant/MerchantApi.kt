@@ -378,6 +378,16 @@ data class Store(
      */
     @SerialName("settlement_method") val settlementMethod: String = "cash",
     @SerialName("unpaid_cash_due") val unpaidCashDue: Long = 0,
+    /**
+     * **وهل اختار بنفسه أم بقي على الافتراض** (طلبُ المالك ٢٠٢٦-١٠-٠٨) —
+     * فلا يُظهر التطبيقُ اختياراً لم يقع، **ويسأله أن يختار.** وافتراضُها
+     * `true` لمحرّكٍ أقدمَ لا يردّها — فلا يُسأل عمّا اختاره.
+     */
+    @SerialName("settlement_confirmed") val settlementConfirmed: Boolean = true,
+    @SerialName("accepts_returns") val acceptsReturns: Boolean = false,
+    @SerialName("returns_confirmed") val returnsConfirmed: Boolean = true,
+    /** **ضبط دوامَه؟** — وافتراضُها `true` لمحرّكٍ أقدمَ لا يردّها. */
+    @SerialName("has_hours") val hasHours: Boolean = true,
 )
 
 @Serializable
@@ -659,6 +669,8 @@ data class StoreSettingsInput(
     @SerialName("address_text") val addressText: String? = null,
     val lat: Double? = null,
     val lng: Double? = null,
+    /** **وقبولُ الاسترداد بيده** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
+    @SerialName("accepts_returns") val acceptsReturns: Boolean? = null,
 )
 
 @Serializable

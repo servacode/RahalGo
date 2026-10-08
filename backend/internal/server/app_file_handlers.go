@@ -168,9 +168,14 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 	if old != "" && old != name {
 		_ = os.Remove(filepath.Join(dir, filepath.Base(old)))
 	}
+	prevCode := s.settings.GetInt(r.Context(), release.VersionCodeKey(app.Key))
 	if err := s.storeReleaseMeta(r.Context(), app, man); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **ونسخةٌ أحدثُ تُعلَن لأصحابها** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — انظر app_update_notice.go.
+	if man.VersionCode > prevCode {
+		s.announceAppUpdate(r.Context(), app.Key, man.VersionName)
 	}
 
 	s.audit(r, "platform.app_upload", "settings", target, map[string]any{

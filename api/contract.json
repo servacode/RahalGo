@@ -2453,6 +2453,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/merchants-setup",
+      "handler": "handleMerchantSetupStatus",
+      "auth": true,
+      "capability": "merchants.read",
+      "response": [
+        {
+          "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/merchants/{id}",
       "handler": "handleAdminGetMerchant",
       "auth": true,
@@ -2647,6 +2663,22 @@
         {
           "name": "@m",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/setup-reminder",
+      "handler": "handleMerchantSetupReminder",
+      "auth": true,
+      "capability": "merchants.manage",
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -8047,6 +8079,38 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/resolve-location",
+      "handler": "handleMerchantResolveLocation",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "url",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "found",
+          "type": "bool"
+        },
+        {
+          "name": "lat",
+          "type": "unknown"
+        },
+        {
+          "name": "lng",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/sections",
       "handler": "handleMerchantStoreSections",
@@ -8120,6 +8184,10 @@
         {
           "name": "lng",
           "type": "?float64"
+        },
+        {
+          "name": "accepts_returns",
+          "type": "?bool"
         }
       ],
       "response": [
@@ -8984,6 +9052,10 @@
         },
         {
           "name": "logo",
+          "type": "unknown"
+        },
+        {
+          "name": "merchant_tutorial_url",
           "type": "unknown"
         },
         {

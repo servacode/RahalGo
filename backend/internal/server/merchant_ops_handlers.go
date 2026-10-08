@@ -157,6 +157,9 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		AddressText *string  `json:"address_text"`
 		Lat         *float64 `json:"lat"`
 		Lng         *float64 `json:"lng"`
+		// **وقبولُ الاسترداد بيده** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — كان من اللوحة
+		// وحدَها، **فلا يُعرف من اختار ممّن بقي على الافتراض.**
+		AcceptsReturns *bool `json:"accepts_returns"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -214,11 +217,19 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 				WHEN $5::float8 IS NOT NULL
 				THEN ST_SetSRID(ST_MakePoint($6::float8, $5::float8), 4326)::geography
 				ELSE location END,
+			accepts_returns      = COALESCE($8, accepts_returns),
+			returns_confirmed_at = CASE WHEN $8::bool IS NULL THEN returns_confirmed_at ELSE now() END,
+			returns_confirmed_by = CASE WHEN $8::bool IS NULL THEN returns_confirmed_by ELSE 'merchant' END,
 			updated_at           = now()
 		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder,
-		req.AddressText, req.Lat, req.Lng, req.Name); err != nil {
+		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	if req.AcceptsReturns != nil {
+		s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), "merchant.returns_update", "merchant", merchantID,
+			map[string]any{"accepts_returns": *req.AcceptsReturns})
+		s.touch("merchant", "ops", "merchant:"+merchantID)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }

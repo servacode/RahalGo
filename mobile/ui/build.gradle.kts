@@ -51,6 +51,8 @@ dependencies {
     api(platform(libs.firebase.bom))
     api(libs.firebase.messaging)
     implementation(libs.coroutines.play.services)
+    // **تحديثُ بلاي من داخل التطبيق** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — `UpdateGate`.
+    implementation(libs.play.app.update)
     // ══════════════════════════════════════════════════════════════════
     // **حزمةُ الواجهة — تُشغَّل على جهازٍ متّصل**
     // ══════════════════════════════════════════════════════════════════

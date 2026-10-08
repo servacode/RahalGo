@@ -103,6 +103,44 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     var pointLabel by mutableStateOf("")
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **رابطُ موقع المستلِم** (طلبُ المالك ٢٠٢٦-١٠-٠٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // «الكلّ يعطي مشاركة» — يلصق المتجرُ ما شاركه الزبونُ بواتساب، **فيُقرأ
+    // نقطةً** بدل البحث عنها في خريطةٍ لا يعرفها. **والخريطةُ احتياط.**
+    var link by mutableStateOf("")
+        private set
+    var linkState by mutableStateOf(LinkState.Idle)
+        private set
+    private var linkJob: kotlinx.coroutines.Job? = null
+
+    fun onLink(text: String) {
+        link = text.take(2000)
+        touched()
+        linkJob?.cancel()
+        if (!link.contains("http")) {
+            linkState = LinkState.Idle
+            if (pointFromLink) clearPoint()
+            return
+        }
+        linkState = LinkState.Checking
+        linkJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(400)
+            val r = runCatching { api.resolveLocation(storeId, link) }.getOrNull()
+            if (r != null && r.found) {
+                setPoint(r.lat, r.lng, "")
+                pointFromLink = true
+                linkState = LinkState.Found
+            } else {
+                if (pointFromLink) clearPoint()
+                linkState = LinkState.NotFound
+            }
+        }
+    }
+
+    private var pointFromLink = false
+
     var quote by mutableStateOf<DeliveryQuote?>(null)
         private set
     var quoteError by mutableStateOf("")
@@ -151,6 +189,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setPoint(lat: Double, lng: Double, label: String) {
+        pointFromLink = false
         point = lat to lng
         pointLabel = label.ifEmpty { "%.5f، %.5f".format(lat, lng) }
         touched()
@@ -159,6 +198,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **النقطةُ اختياريّة** — ومن أزالها عادت الأجرةُ لمنطقة المتجر. */
     fun clearPoint() {
+        pointFromLink = false
         point = null
         pointLabel = ""
         touched()
@@ -216,6 +256,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 parcel = ""
                 driverNote = ""
                 payer = ""
+                link = ""
+                linkState = LinkState.Idle
                 point = null
                 pointLabel = ""
                 load()
@@ -318,18 +360,44 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // ── نقطةُ التسليم — اختياريّة ─────────────────────────────────
-        Spacer(Modifier.height(10.dp))
-        RahalOutlineButton(
-            onClick = onPickPoint,
+        // ── موقعُ المستلِم: رابطٌ يُلصق، والخريطةُ احتياط (٢٠٢٦-١٠-٠٨) ──
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = vm.link,
+            onValueChange = { vm.onLink(it) },
+            label = { Text(stringResource(R.string.md_link)) },
+            placeholder = { Text(stringResource(R.string.md_link_hint)) },
+            leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_pin) },
+            singleLine = true,
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
-        ) {
-            FieldIcon(com.rahalgo.ui.R.drawable.ic_pin)
-            Spacer(Modifier.width(8.dp))
+        )
+        when (vm.linkState) {
+            LinkState.Checking -> Text(
+                stringResource(R.string.md_link_checking),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            LinkState.Found -> Text(
+                stringResource(R.string.md_link_found),
+                color = Rahal.colors.success,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            LinkState.NotFound -> Text(
+                stringResource(R.string.md_link_not_found),
+                color = Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            LinkState.Idle -> Text(
+                stringResource(R.string.md_link_how),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        RahalTextButton(onClick = onPickPoint, enabled = !vm.busy) {
             Text(
-                if (vm.point == null) {
-                    stringResource(R.string.md_pick_point) + " " + stringResource(R.string.md_point_optional)
+                if (vm.point == null || vm.linkState == LinkState.Found) {
+                    stringResource(R.string.md_or_pick_point)
                 } else {
                     stringResource(R.string.md_point_set, vm.pointLabel)
                 },
@@ -683,3 +751,6 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
         Spacer(Modifier.height(24.dp))
     }
 }
+
+/** **حالُ رابط الموقع** — فارغ · يُقرأ · وُجد · لا موقعَ فيه. */
+enum class LinkState { Idle, Checking, Found, NotFound }

@@ -56,12 +56,12 @@
          **القائمة**
          ══════════════════════════════════════════════════════════════ -->
     <string name="menu_title">أصنافي</string>
-    <string name="menu_hint">اضغط الصنف لتبدّل توفره</string>
+    <string name="menu_hint">اكبس على الصنف لتعدّله، والمفتاح جنبه لتوفّره</string>
     <!-- **وأقسامُ السوق لا أقسامُ مطبخه** — الزبونُ يتصفّح بها، **ومن
          رتّب أصنافَه بترتيب مطبخه لم يعرف أين تقع بضاعتُه في السوق.** -->
     <string name="menu_sections_hint">أقسام السوق التي فيها أصنافك</string>
     <string name="menu_back">‏‹ كل الأقسام</string>
-    <string name="menu_empty">لا أصناف بعد — تُضاف من لوحة الإدارة أو من مندوبك</string>
+    <string name="menu_empty">لسا ما في أصناف — اكبس «أضف صنفاً» تحت لتضيف أول صنف</string>
 
     <!-- **ولفظٌ واحدٌ في كل التطبيقات** — «متوفر / غير متوفر».
          **والزرُّ يقول الحالَ لا الفعل**: من قرأ «اجعله غير متوفر»
@@ -142,6 +142,13 @@
     <string name="reports_list_hint">ما أرسلتَه وما صار به</string>
     <string name="reports_list_empty">لم ترسل بلاغاً بعد</string>
     <string name="menu_sales">التقارير</string>
+    <string name="setup_missing_title">متجرك ناقصه شغلات — اكبس على كل وحدة لتكمّلها:</string>
+    <string name="setup_missing_sections">اختار أقسام السوق (بدونها ما فيك تضيف أصناف)</string>
+    <string name="setup_missing_hours">اضبط ساعات الدوام (بدونها متجرك بيبين فاتح ٢٤ ساعة)</string>
+    <string name="setup_missing_address">اكتب العنوان وحدّد موقعك على الخريطة</string>
+    <string name="setup_missing_settlement">اختار كيف بتستلم مصاريك</string>
+    <string name="setup_missing_returns">اختار إذا بتقبل ترجيع الغرض</string>
+    <string name="menu_tutorial">شرح التطبيق بالفيديو</string>
     <string name="sales_hint">مبيعاتك على مدًى تختاره</string>
     <string name="sales_week">٧ أيّام</string>
     <string name="sales_month">٣٠ يوماً</string>
@@ -251,9 +258,9 @@
     <string name="store_sections_empty">لا قسم بعد — متجرك لا يظهر في السوق حتى تختار</string>
     <string name="store_sections_add">أضف قسماً</string>
     <string name="store_sections_all_in">أضفت كل الأقسام</string>
-    <string name="need_sections_title">اختر أقسام متجرك أولاً</string>
-    <string name="need_sections_body">الصنف ينزل في قسم من أقسام السوق — واختيار الأقسام يمنع أن ينزل صنفك في المكان الخطأ فلا يجده الزبون</string>
-    <string name="need_sections_go">اذهب إلى متجري</string>
+    <string name="need_sections_title">لازم تختار أقسام متجرك أول شي</string>
+    <string name="need_sections_body">أصنافك بتنزل بالسوق تحت قسم، متل «شاورما» أو «مشاوي». بدون أقسام ما فيك تضيف أصناف.\n\nروح لـ«متجري» ← «أقسام السوق» ← اكبس «أضف قسماً» واختار أقسامك ← «حفظ».</string>
+    <string name="need_sections_go">روح لأقسام السوق</string>
     <string name="os_dispatching">بانتظار سائق</string>
     <string name="os_assigned">أُسند لسائق</string>
     <string name="os_on_way">في الطريق</string>
@@ -300,6 +307,13 @@
     <string name="md_phone">رقم المستلم</string>
     <string name="md_address">عنوان التسليم</string>
     <string name="md_pick_point">حدد نقطة التسليم على الخريطة</string>
+    <string name="md_link">رابط موقع الزبون</string>
+    <string name="md_link_hint">الصق هون الرابط يلي بعتلك ياه الزبون</string>
+    <string name="md_link_how">افتح موقع الزبون بالواتساب ← مشاركة ← انسخ الرابط والصقه هون</string>
+    <string name="md_link_checking">عم نقرأ الموقع…</string>
+    <string name="md_link_found">✓ تمام، قرينا الموقع — السائق رح يشوفه على الخريطة</string>
+    <string name="md_link_not_found">هالرابط ما فيه موقع — اطلب من الزبون يبعتلك موقعه من الواتساب</string>
+    <string name="md_or_pick_point">أو حدّد النقطة على الخريطة بإيدك</string>
     <string name="md_point_set">✓ %1$s — اضغط لتغييرها</string>
     <string name="md_parcel">ماذا يحمل السائق؟</string>
     <string name="md_parcel_hint">مثل: كيس طعام ساخن، لا يقلب</string>
@@ -346,4 +360,11 @@
     <string name="md_searching_hint">نعرضها الآن على السائقين القريبين — وتتغير الحالة وحدها حين يقبلها أحدهم</string>
     <string name="md_blocked_title">لا يمكن إرسال توصيلة الآن</string>
     <string name="md_track_details">تفاصيل التوصيلة</string>
+    <!-- قبولُ الاسترداد وتأكيدُ الاختيار (طلبُ المالك ٢٠٢٦-١٠-٠٨) -->
+    <string name="store_returns">ترجيع الغرض</string>
+    <string name="store_returns_yes">بقبل الترجيع</string>
+    <string name="store_returns_no">ما بقبل</string>
+    <string name="store_returns_hint">إذا الزبون ما استلم الطلب، بيرجّعلك السائق الغرض.</string>
+    <string name="store_choose_needed">اختار من تحت ⬇</string>
+    <string name="ok_returns_saved">تم حفظ اختيارك</string>
 </resources>

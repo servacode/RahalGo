@@ -171,6 +171,7 @@ private fun MerchantApp() {
             // **ولا زرَّ تخطٍّ أو تأجيل** — الإصدارُ الأدنى قرارُ المالك.
             updateShowPlay = false,
             updateFallbackUrl = "https://rahalgo.com/download/merchant",
+            updateSelfKey = "merchant",
             updateBody = stringResource(R.string.update_body_merchant),
         )
     }
@@ -258,14 +259,15 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val overlay = rememberOverlay { key -> MERCHANT_ITEMS.any { it.key == key } }
-    var tab by rememberSaveable { mutableStateOf(Tab.Orders) }
+    // **ويفتح على «متجري»** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — حالُه وما ينقصه أوّلُ ما يراه.
+    var tab by rememberSaveable { mutableStateOf(Tab.Store) }
 
     // **و«رجوع» من تبويبٍ يعود إلى الأوّل لا يُخرج** (تقريرُ فحص المتجر) — كما
     // في تطبيق المندوب. **والخريطةُ والدرجُ والشاشاتُ المفتوحةُ تغلبه** (تُسجَّل
     // بعده فتُقدَّم)، **ولا يُفعَّل وهما مفتوحتان** — فيُسبَق بشرطهما هنا.
     androidx.activity.compose.BackHandler(
-        enabled = tab != Tab.Orders && !drawer.isOpen && !picking && !pickingDelivery,
-    ) { tab = Tab.Orders; menuVm.cancelEdit() }
+        enabled = tab != Tab.Store && !drawer.isOpen && !picking && !pickingDelivery,
+    ) { tab = Tab.Store; menuVm.cancelEdit() }
 
     // ══════════════════════════════════════════════════════════════════
     // **ونقرةُ إشعارِ الطلب تفتح ذاك الطلب بعينه** (B3، ٢٠٢٦-٠٩-٢٦)
@@ -379,7 +381,11 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 Drawer(
                     items = MERCHANT_ITEMS + PlatformPages.items,
                     onPick = { item ->
-                        overlay.show(Overlay.Menu(item.key))
+                        if (item.key == MerchantItems.TUTORIAL) {
+                            scope.launch { openTutorial(context) }
+                        } else {
+                            overlay.show(Overlay.Menu(item.key))
+                        }
                         scope.launch { drawer.close() }
                     },
                     onLogout = onLogout,
@@ -701,7 +707,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                                 body = stringResource(R.string.store_suspended_banner),
                             ) { tab = Tab.Store }
                         } else if (menuVm.sections.isEmpty() && !menuVm.loading) {
-                            NeedSections { tab = Tab.Store }
+                            NeedSections { storeVm.jumpTo = com.rahalgo.merchant.store.StoreSpot.Sections; tab = Tab.Store }
                         } else {
                             MenuScreen(menuVm)
                         }

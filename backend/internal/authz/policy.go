@@ -161,6 +161,9 @@ var adminPolicy = []Rule{
 	{"GET", "/leads", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
+	// **إعدادُ المتاجر — مَن ضبط ومَن لم يضبط، والتذكيرُ بيد الموظّف** (٢٠٢٦-١٠-٠٨).
+	{"GET", "/merchants-setup", MerchantsRead},
+	{"POST", "/merchants/{id}/setup-reminder", MerchantsManage},
 	// **تسويةُ مستحقّات المتجر — صلاحيّةٌ ماليّة لا إدارةُ متجر.**
 	{"PATCH", "/merchants/{id}/settlement-method", SettingsFinancialManage},
 	// **وسقفُ دينِ التوصيلة كذلك** — رقمٌ يُدين به المتجرُ المنصّة (الخطوة ١٨).

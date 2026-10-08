@@ -26,12 +26,13 @@ import ItemsTab from "@/components/admin/market/ItemsTab";
 import StoresTab from "@/components/admin/market/StoresTab";
 import QualityTab from "@/components/admin/market/QualityTab";
 import CategoriesTab from "@/components/admin/market/CategoriesTab";
+import SetupTab from "@/components/admin/market/SetupTab";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
 const T = m.admin.market.tabs;
 
-type TabKey = "sections" | "items" | "stores" | "categories" | "quality";
+type TabKey = "sections" | "items" | "stores" | "categories" | "setup" | "quality";
 
 export default function MarketPage() {
   const [tab, setTab] = useState<TabKey>("sections");
@@ -54,6 +55,7 @@ export default function MarketPage() {
           { key: "items", label: T.items },
           { key: "stores", label: T.stores },
           { key: "categories", label: T.categories },
+          { key: "setup", label: T.setup },
           { key: "quality", label: T.quality },
         ]}
       />
@@ -61,6 +63,7 @@ export default function MarketPage() {
       {tab === "items" && <ItemsTab />}
       {tab === "stores" && <StoresTab />}
       {tab === "categories" && <CategoriesTab />}
+      {tab === "setup" && <SetupTab />}
       {tab === "quality" && <QualityTab />}
     </PageContainer>
   );

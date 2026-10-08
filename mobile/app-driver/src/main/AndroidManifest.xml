@@ -5,6 +5,9 @@
          **وبلا هذا السطر يسقط كل نداء برفض أمنيّ** لا برسالة شبكة،
          فيبحث القارئ في العنوان والخادم والعلّة في ملفّ البيان. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- **التحديثُ من داخل التطبيق** (٢٠٢٦-١٠-٠٨) — يُنزَّل الملفُّ ثمّ تُفتح شاشةُ
+         «تثبيت». لتطبيقات التوزيع المباشر وحدَها؛ الزبونُ يُحدَّث من بلاي. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- ══════════════════════════════════════════════════════════════
