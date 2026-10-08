@@ -31,40 +31,126 @@ import { useCallback, useEffect, useRef } from "react";
  * **والواحدُ يُستأنف إن علّقه المتصفّح**: كروم يوقف السياقَ حتّى أوّلِ لمسة.
  */
 let shared: AudioContext | null = null;
+const stateListeners = new Set<(running: boolean) => void>();
 
-function audio(): AudioContext | null {
+/**
+ * **السياقُ المشترك** — يُنشأ مرّةً ويُستأنف إن علّقه المتصفّح.
+ *
+ * **ويستعمله رنينُ الطلبات نفسُه** (`ringer.ts`) — فما فتحته ضغطةٌ واحدةٌ فُتح
+ * للجميع، **ولا زرَّ «فعّل الصوت» لكلّ شاشة.**
+ */
+export function sharedAudio(): AudioContext | null {
+  if (typeof window === "undefined") return null;
   const Ctx =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) return null;
-  shared ??= new Ctx();
-  if (shared.state === "suspended") void shared.resume();
+  if (!shared) {
+    try {
+      shared = new Ctx();
+    } catch {
+      return null;
+    }
+    shared.addEventListener("statechange", emitAudioState);
+    emitAudioState();
+  }
+  if (shared.state === "suspended") void shared.resume().then(emitAudioState).catch(() => undefined);
   return shared;
 }
 
-/** نغمتان صاعدتان — قصيرتان تُسمعان تحت خوذة. */
-export function useChime(): () => void {
-  return useCallback(() => {
+/**
+ * **يُبلَّغ المستمعون بالحال الحاضر** — بعد الإنشاء وبعد كلّ استئناف أيضاً:
+ * سياقٌ وُلد «يعمل» داخل ضغطةٍ لا يُطلق `statechange` أبداً.
+ */
+function emitAudioState() {
+  const running = shared?.state === "running";
+  stateListeners.forEach((fn) => {
     try {
-      const ctx = audio();
-      if (!ctx) return;
-      [880, 1175].forEach((hz, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = hz;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t = ctx.currentTime + i * 0.18;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-        osc.start(t);
-        osc.stop(t + 0.18);
-      });
+      fn(running);
     } catch {
-      // صوتٌ لا يعمل لا يُسقط الشاشة — **والبطاقةُ تظهر على أيّ حال.**
+      /* تجاهل */
     }
-  }, []);
+  });
+}
+
+/** **أيسمع المتصفّحُ الآن؟** */
+export function audioRunning(): boolean {
+  return shared?.state === "running";
+}
+
+/** يُبلَّغ كلّما تبدّل حالُ السياق — يُعيد دالّةَ الإلغاء. */
+export function onAudioState(fn: (running: boolean) => void): () => void {
+  stateListeners.add(fn);
+  return () => {
+    stateListeners.delete(fn);
+  };
+}
+
+/**
+ * **فتحُ الصوت عند أوّل لمسةٍ في أيّ مكان** (قرارُ المالك ٢٠٢٦-١٠-٠٨).
+ *
+ * المتصفّحُ يُبقي السياقَ معلّقاً حتّى يلمس المستخدمُ الصفحة — **وكان السياقُ
+ * يُنشأ لحظةَ وصول الإشعار**، أي بلا لمسة، **فيبقى صامتاً.** فيُنشأ ويُستأنف
+ * عند أوّل ضغطةٍ أو مفتاح، ثمّ تُرفع المستمعات.
+ */
+let unlockInstalled = false;
+export function installAudioUnlock(): void {
+  if (unlockInstalled || typeof window === "undefined") return;
+  unlockInstalled = true;
+  const events = ["pointerdown", "keydown", "touchstart"] as const;
+  const handler = () => {
+    const ctx = sharedAudio();
+    if (!ctx) return;
+    void ctx
+      .resume()
+      .then(() => {
+        emitAudioState();
+        if (ctx.state === "running") {
+          events.forEach((e) => window.removeEventListener(e, handler, true));
+        }
+      })
+      .catch(() => undefined);
+  };
+  events.forEach((e) => window.addEventListener(e, handler, { capture: true, passive: true }));
+}
+
+/** **لا رنّتان في ثانيةٍ ونصف** — دفعةُ إشعاراتٍ معاً تُسمع رنّةً واحدة. */
+const CHIME_GAP_MS = 1500;
+let lastChime = 0;
+
+/**
+ * نغمتان صاعدتان — قصيرتان تُسمعان تحت خوذة.
+ *
+ * @param force يتخطّى منعَ التكرار — لزرّ «جرّب الصوت».
+ */
+export function playChime(force = false): void {
+  try {
+    const now = Date.now();
+    if (!force && now - lastChime < CHIME_GAP_MS) return;
+    const ctx = sharedAudio();
+    if (!ctx) return;
+    lastChime = now;
+    [880, 1175].forEach((hz, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = hz;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      osc.start(t);
+      osc.stop(t + 0.18);
+    });
+  } catch {
+    // صوتٌ لا يعمل لا يُسقط الشاشة — **والبطاقةُ تظهر على أيّ حال.**
+  }
+}
+
+/** نغمةُ التنبيه — بمنع التكرار المتقارب. */
+export function useChime(): () => void {
+  return useCallback(() => playChime(), []);
 }
 
 /**

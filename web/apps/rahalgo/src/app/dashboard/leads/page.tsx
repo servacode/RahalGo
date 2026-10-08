@@ -48,6 +48,7 @@ import {
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
+import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
 
 const m = getMessages(defaultLocale);
 const L = m.admin.leads;
@@ -383,6 +384,13 @@ function LeadsScreen() {
         <ViewToggle view={view} onChange={setView} tableLabel={m.common.viewTable} cardsLabel={m.common.viewCards} />
       </div>
       <p className="mb-4 text-sm text-ink-muted">{L.subtitle}</p>
+
+      {/* **قبولٌ تلقائيٌّ بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — يظهر لمن يملك كتابتَه. */}
+      <AutoModeToggle
+        settingKey="leads.auto_approve"
+        label={m.admin.autoMode.leadsLabel}
+        hint={m.admin.autoMode.leadsHint}
+      />
 
       {/* **وسببُ الخادم يُعرض بنصّه** — جوابٌ يُصلَح به. */}
       {error && (

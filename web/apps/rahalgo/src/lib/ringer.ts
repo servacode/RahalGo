@@ -3,7 +3,8 @@
 /**
  * الرنين المستمر لطلب جديد — نغمة مولّدة بـ WebAudio (بلا ملفات صوتية):
  * جرس ثنائي النغمة يتكرر ما دام هناك ما ينتظر والصوت مفعّلاً.
- * سياسة المتصفحات تتطلب تفاعلاً قبل الصوت — زر التفعيل يستأنف السياق.
+ * سياسة المتصفحات تتطلب تفاعلاً قبل الصوت — **وأوّلُ لمسةٍ في اللوحة تفتحه**
+ * (السياقُ المشترك في `@rahalgo/ui/chime`)، وزرُّ التفعيل احتياطٌ لا شرط.
  *
  * **ويستعمله لوحُ الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥): رنينٌ متكرّرٌ
  * للطلب الجديد حتّى يضغط موظّفٌ «استلمتها». **و`unlocked` يقول أيسمع المتصفّحُ
@@ -11,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { sharedAudio, audioRunning, onAudioState, installAudioUnlock } from "@rahalgo/ui";
 
 const DEFAULT_KEY = "rahalgo_merchant_sound";
 
@@ -33,30 +35,27 @@ function writePref(key: string, v: string) {
 
 export function useRinger(active: boolean, storageKey: string = DEFAULT_KEY) {
   const [enabled, setEnabledState] = useState(true);
-  /** **أيسمح المتصفّحُ بالصوت الآن؟** — يصير صادقاً بعد أوّل ضغطةٍ تستأنف السياق. */
+  /** **أيسمح المتصفّحُ بالصوت الآن؟** — يصير صادقاً بعد أوّل لمسةٍ في اللوحة. */
   const [unlocked, setUnlocked] = useState(false);
-  const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setEnabledState(readPref(storageKey) !== "off");
   }, [storageKey]);
 
-  const context = useCallback((): AudioContext | null => {
-    if (ctxRef.current) return ctxRef.current;
-    const Ctx =
-      typeof window === "undefined"
-        ? undefined
-        : (window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext })
-            .webkitAudioContext);
-    if (!Ctx) return null;
-    ctxRef.current = new Ctx();
-    ctxRef.current.onstatechange = () =>
-      setUnlocked(ctxRef.current?.state === "running");
-    setUnlocked(ctxRef.current.state === "running");
-    return ctxRef.current;
+  // ══════════════════════════════════════════════════════════════════
+  // **سياقٌ واحدٌ مع جرس التنبيهات** (قرارُ المالك ٢٠٢٦-١٠-٠٨)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // كان لهذا الرنين سياقُه الخاصّ وزرُّه الخاصّ — **فيُضغط «فعّل صوت الطلبات»
+  // كلَّ دوام.** والآن يتبع السياقَ المشترك الذي تفتحه أوّلُ لمسةٍ في اللوحة.
+  useEffect(() => {
+    installAudioUnlock();
+    setUnlocked(audioRunning());
+    return onAudioState(setUnlocked);
   }, []);
+
+  const context = useCallback((): AudioContext | null => sharedAudio(), []);
 
   /** **يُنادى من ضغطة المستخدم** — اللحظةُ التي يسمح فيها المتصفّحُ بالصوت. */
   const unlock = useCallback(() => {

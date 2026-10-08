@@ -130,6 +130,7 @@ export {
   useLiveNotifications,
   alertsSoundOn,
   ALERTS_SOUND_KEY,
+  AlertSoundControl,
   useLiveRefresh,
   useLiveEvent,
   useLiveStatus,
@@ -160,7 +161,15 @@ export * from "./brand-icons";
 /** عرضُ الصفحة الرئيسيّة. */
 
 /** نغمةُ تنبيهٍ تُولَّد في المتصفّح — ومكرّرةٌ لمهمّةٍ وقعت بلا طلب. */
-export { useChime, useRepeatingChime } from "./chime";
+export {
+  useChime,
+  useRepeatingChime,
+  playChime,
+  sharedAudio,
+  audioRunning,
+  onAudioState,
+  installAudioUnlock,
+} from "./chime";
 
 /** نبضةُ موضعِ السائق ومسافةٌ مقروءة — **والدورُ عدلٌ في الوقت أعمى في المكان.** */
 export { useLocationBeacon, fmtDistance } from "./useLocationBeacon";

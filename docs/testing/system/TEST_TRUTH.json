@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 79,
+    "notify_sites": 80,
     "notify_targeted": 30,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 210,
-    "behaviour_settings": 167,
+    "setting_defs": 211,
+    "behaviour_settings": 168,
     "order_fields": 95,
-    "test_files": 534,
-    "test_funcs": 2211
+    "test_files": 535,
+    "test_funcs": 2214
   },
   "flows": [
     {
@@ -4822,6 +4822,24 @@
       "apps": [
         "customer",
         "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "leads.auto_approve",
+      "group": "sales",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
         "merchant",
         "rep"
       ],
@@ -25772,6 +25790,24 @@
     {
       "name": "TestINC_TransferredStoreStaysWithOpener",
       "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadAutoApprove_ConversionFailureKeepsLead",
+      "file": "internal/server/lead_auto_approve_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadAutoApprove_OffStaysPending",
+      "file": "internal/server/lead_auto_approve_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadAutoApprove_OnConvertsWithSystemActor",
+      "file": "internal/server/lead_auto_approve_test.go",
       "package": "server",
       "orphan": true
     },

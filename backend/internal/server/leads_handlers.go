@@ -26,10 +26,11 @@ var errLeadConverted = httpx.NewError(http.StatusConflict,
 	"lead_already_converted", "errors.lead_already_converted")
 
 // نصوص إشعارات هذا القسم — مجمّعة كي لا تتناثر في الكود.
-var m = struct{ leadNewOps, leadApproved, leadNeedsInfo string }{
+var m = struct{ leadNewOps, leadApproved, leadNeedsInfo, leadAutoOps string }{
 	leadNewOps:    "طلب انضمام متجر جديد",
 	leadApproved:  "تمت الموافقة على عميلك",
 	leadNeedsInfo: "طلب انضمام بحاجة معلومات",
+	leadAutoOps:   "قُبل طلب انضمام تلقائياً",
 }
 
 // حدود طول الحقول — نقطة عامة بلا حساب، نمنع تخزين حمولات ضخمة لكل صف.
@@ -469,6 +470,9 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 					Body: storeName, Entity: "lead", EntityID: leadID, Href: "/dashboard/leads",
 				})
 				s.touch("lead", "ops", "sales:"+repID)
+				// **والقبولُ التلقائيّ بعد التثبيت** (قرارُ المالك ٢٠٢٦-١٠-٠٨) —
+				// أفضلُ جهد: سقوطُه يُبقي الطلبَ «جديداً» للمكتب ولا يُسقط نداءَ المندوب.
+				s.autoApproveLead(context.WithoutCancel(r.Context()), leadID, storeName, repID, clientIP(r))
 			},
 		}, nil
 	})

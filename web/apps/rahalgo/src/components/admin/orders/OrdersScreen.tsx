@@ -46,6 +46,7 @@ import {
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRinger } from "@/lib/ringer";
+import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 import { DoorPanel, type DoorView } from "./DoorPanel";
 import { TransferPanel } from "./TransferPanel";
@@ -1700,6 +1701,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           />
         )}
       </div>
+
+      {/* **قبولُ الطلبات تلقائياً بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — للشاشة الحيّة. */}
+      {live && (
+        <AutoModeToggle
+          settingKey="orders.auto_transfer"
+          label={m.admin.autoMode.ordersLabel}
+          hint={m.admin.autoMode.ordersHint}
+        />
+      )}
 
       {/* **والطارئُ لمن يبلغه ولا يرى شريطَ اللوحة العامّ** — موظّفُ العمليّات
           يملك الطوارئ (البند ٧) والشريطُ أعلى الصفحات لمن يملك الدعم. */}

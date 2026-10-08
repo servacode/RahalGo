@@ -9,8 +9,8 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { CountBadge } from "./components";
-import { IconBell, IconClose } from "./icons";
-import { useChime } from "./chime";
+import { IconBell, IconBellOff, IconClose } from "./icons";
+import { useChime, installAudioUnlock, playChime } from "./chime";
 
 const m = getMessages(defaultLocale);
 const N = m.shared.notifications;
@@ -209,6 +209,55 @@ export function alertsSoundOn(): boolean {
   }
 }
 
+function setAlertsSound(on: boolean) {
+  try {
+    localStorage.setItem(ALERTS_SOUND_KEY, on ? "on" : "off");
+  } catch {
+    // **تفضيلٌ لا يُحفظ لا يُسقط شيئاً** — يعود الافتراضُ في الفتحة التالية.
+  }
+}
+
+/**
+ * **مفتاحُ صوت التنبيهات بجانب الجرس** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — كتمٌ وتشغيلٌ
+ * بضغطة، **و«جرّب الصوت» يرنّ فوراً** فيعرف الموظّفُ أنّ جهازه يسمع (والضغطةُ
+ * نفسُها تفتح الصوتَ في المتصفّح).
+ */
+export function AlertSoundControl() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    setOn(alertsSoundOn());
+  }, []);
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    setAlertsSound(next);
+    if (next) playChime(true);
+  };
+  const btn =
+    "flex items-center rounded-control p-2 text-ink-muted transition-colors hover:text-accent-text";
+  return (
+    <span className="flex items-center">
+      <button
+        type="button"
+        onClick={toggle}
+        className={btn}
+        aria-pressed={on}
+        aria-label={on ? N.soundOn : N.soundOff}
+        title={on ? N.soundOn : N.soundOff}
+      >
+        {on ? <IconBell size={17} /> : <IconBellOff size={17} />}
+      </button>
+      <button
+        type="button"
+        onClick={() => playChime(true)}
+        className="whitespace-nowrap rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:text-accent-text"
+      >
+        {N.testSound}
+      </button>
+    </span>
+  );
+}
+
 export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | null) {
   const chime = useChime();
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -342,8 +391,13 @@ export function LiveNotifications({
   allHref?: string;
 }) {
   const notif = useLiveNotifications(api, wsUrl, token);
+  // **والصوتُ يُفتح عند أوّل لمسةٍ في اللوحة** — لا لحظةَ وصول الإشعار.
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
   return (
     <>
+      <AlertSoundControl />
       <NotificationBell unread={notif.unread} Link={Link} allHref={allHref} />
       <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
     </>

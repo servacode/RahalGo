@@ -1266,6 +1266,7 @@ kosom` |
 | `merchants.max_item_price` | المتاجر | int | `100000` |
 | `app.min_version.rep` | المندوبون | int | `0` |
 | `sales.require_whatsapp` | المندوبون | bool | `true` |
+| `leads.auto_approve` | المندوبون | bool | `false` |
 | `sales.commission_percent` | المندوبون | int | `10` |
 | `sales.monthly_target` | المندوبون | int | `0` |
 | `sales.target_reward` | المندوبون | money | `0` |
