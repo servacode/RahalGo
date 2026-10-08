@@ -243,7 +243,7 @@
     <string name="menu_invite">ادع صديقا</string>
     <string name="menu_tickets">الشكاوى والبلاغات</string>
     <string name="menu_history">سجل الطلبات</string>
-    <string name="menu_chats">دردشاتي السابقة</string>
+    <string name="menu_chats">دردشاتي</string>
     <string name="acc_delete_cancel">تراجع</string>
     <string name="sheet_closing">الرصيد الختامي</string>
     <string name="sheet_col_amount">الحركة</string>
@@ -483,7 +483,7 @@
     <string name="tik_closed">هذه الشكوى مغلقة — لا يمكن الردّ عليها. إن استجدّ أمرٌ افتح شكوى جديدة.</string>
     <string name="tik_thread_hint">حالتها وردود المنصّة عليها</string>
     <string name="err_not_signed_in">هذا يحتاج حسابا — ادخل أولا</string>
-    <string name="chats_hint">أحاديث الطلبات المنتهية — تقرأ ولا يكتب فيها</string>
+    <string name="chats_hint">دردشات طلباتك — الجارية بتقدر تكتب فيها، والمنتهية للقراءة بس</string>
     <string name="chats_none">لا دردشات منتهية</string>
     <string name="chats_empty_thread">لا رسائل في هذا الحديث</string>
     <!-- **ولفظُ الزرّ هو لفظُ `PointField`** — شاشتان تسألان السؤالَ
