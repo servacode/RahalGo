@@ -472,3 +472,29 @@ func TestOFB_MerchantCannotSpendPlatformMargin(t *testing.T) {
 		t.Fatalf("**القاعدةُ تقول غيرَ الردّ**: %q", stored)
 	}
 }
+
+// **«السعرُ قبل» في العرض هو سعرُ الطلب نفسُه** (٢٠٢٦-١٠-٠٩) — بهامش الصنف لا بالعامّ
+// وحدَه. كان يُحسب بالهامش العامّ، **فيُعرض للزبون سعرٌ مشطوبٌ غيرُ الذي يدفعه.**
+func TestOFR_PriceBeforeUsesItemMargin(t *testing.T) {
+	hh := New(t)
+	f := hh.Factory()
+	hh.Setting("pricing.margin_fixed", "50")
+	fx := newOfferFx(t, hh, f, 1000)
+	if _, err := hh.Pool.Exec(ctxBG(), `UPDATE menu_items SET margin_override = 300 WHERE id = $1::uuid`, fx.Item.ID); err != nil {
+		t.Fatal(err)
+	}
+	end := time.Now().Add(2 * time.Hour)
+	r := makeOffer(t, hh, fx, fx.Tok, 10, nil, &end)
+	if r.Code >= 400 {
+		t.Fatalf("العرض: %s", r)
+	}
+	var got int64
+	for _, o := range hh.GET("/api/v1/merchant/stores/"+fx.M.ID+"/offers", fx.Tok).JSON()["offers"].([]any) {
+		if row := o.(map[string]any); row["menu_item_id"] == fx.Item.ID {
+			got = int64(row["price_before"].(float64))
+		}
+	}
+	if got != 1300 {
+		t.Fatalf("**السعرُ قبل = %d، والطلبُ يبيعه بـ1300** (١٠٠٠ + هامش الصنف ٣٠٠، لا العامّ ٥٠)", got)
+	}
+}

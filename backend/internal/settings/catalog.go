@@ -1536,7 +1536,9 @@ var Catalog = []Def{
 	// **وإطفاؤه يفتح الباب للجميع** — يُطفأ يومَ يكون الشرطُ عبئاً لا
 	// حماية.
 	{Key: "drivers.require_whatsapp", Group: GroupDrivers, Kind: KindBool,
-		Default: true},
+		Default: true,
+		// **ولا يظهر والمفتاحُ العامُّ مطفأ** — لا أثرَ له حينها (٢٠٢٦-١٠-٠٩).
+		ShowWhen: &Condition{Key: "auth.require_whatsapp", Equals: []string{"true"}}},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ومفتاحٌ واحدٌ فوقها كلِّها — يُطفئ التوثيقَ عن الجميع**
@@ -1796,7 +1798,9 @@ var Catalog = []Def{
 	//
 	// **ويتبع المفتاحَ العامّ** كما يتبعه السائقُ والزبون.
 	{Key: "sales.require_whatsapp", Group: GroupSales, Kind: KindBool,
-		Default: true},
+		Default: true,
+		// **ولا يظهر والمفتاحُ العامُّ مطفأ** — لا أثرَ له حينها (٢٠٢٦-١٠-٠٩).
+		ShowWhen: &Condition{Key: "auth.require_whatsapp", Equals: []string{"true"}}},
 
 	// **قبولُ طلبات الانضمام تلقائياً** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — مشغَّلاً
 	// يُنشأ كلُّ متجرٍ يرفعه مندوبٌ فوراً بمسار موافقة المكتب نفسِه، والفاعلُ
@@ -1932,7 +1936,9 @@ var Catalog = []Def{
 	// **ولا يُحذف الشرطُ — يُطفأ**: هو حارسٌ صحيحٌ ضدّ الأرقام الوهميّة،
 	// **ويُفعَّل بضغطةٍ يومَ يعمل البوت.**
 	{Key: "customers.require_whatsapp", Group: GroupCustomers, Kind: KindBool,
-		Default: false},
+		Default: false,
+		// **ولا يظهر والمفتاحُ العامُّ مطفأ** — لا أثرَ له حينها (٢٠٢٦-١٠-٠٩).
+		ShowWhen: &Condition{Key: "auth.require_whatsapp", Equals: []string{"true"}}},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **هديّةُ الحساب الجديد**

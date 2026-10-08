@@ -1008,6 +1008,14 @@ func (s *Service) NoEligibleReason(ctx context.Context, orderID string) string {
 	}
 
 	limit := s.settingInt(ctx, "drivers.cash_limit")
+	// **وسائقٌ سقفُه الخاصُّ أعلى يحمله** (٢٠٢٦-١٠-٠٩) — فالسببُ «فوق السقف» لا يُقال
+	// إلّا إن فاق أعلى سقفٍ لسائقٍ فعّال. كان يقارن بالعامّ وحدَه فيعطي سبباً غلطاً.
+	var top *int64
+	if err := s.db.QueryRow(ctx, `SELECT max(cash_limit_override) FROM users
+		WHERE cash_limit_override IS NOT NULL AND status = 'active'`).Scan(&top); err == nil &&
+		top != nil && *top > limit {
+		limit = *top
+	}
 	if cashDue > limit {
 		// **ويُقال بالرقمين لا بالحكم**: «فوق السقف» تُغلق الباب، **و«٢٬٠٦١٬٠٠٠
 		// والسقفُ ٥٠٠٬٠٠٠» تقول أين المخرج** — يُرفع السقفُ أو يُقسَّم الطلب.

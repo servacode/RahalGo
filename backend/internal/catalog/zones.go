@@ -114,8 +114,10 @@ func (s *Service) UpdateZone(ctx context.Context, actorID, id string, in ZoneInp
 				     THEN ST_SetSRID(ST_MakePoint($4::float8, $3::float8), 4326)::geography END,
 				center),
 			radius_m     = COALESCE($5, radius_m),
-			delivery_fee = COALESCE($6, delivery_fee),
-			min_order    = COALESCE($7, min_order),
+			-- **والأجرةُ والحدُّ الأدنى عمودان ميتان** (٢٠٢٦-١٠-٠٩) — الأجرةُ من
+			-- delivery.fee وحدَه والحدُّ ملغى، **فلا يُكتبان فيظنّ أحدٌ أنّهما يحكمان.**
+			delivery_fee = delivery_fee + 0 * COALESCE($6, 0),
+			min_order    = min_order + 0 * COALESCE($7, 0),
 			active       = COALESCE($8, active)
 		WHERE id = $1
 		RETURNING `+zoneCols,

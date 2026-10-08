@@ -33,8 +33,8 @@
     "setting_defs": 213,
     "behaviour_settings": 170,
     "order_fields": 95,
-    "test_files": 538,
-    "test_funcs": 2221
+    "test_files": 539,
+    "test_funcs": 2223
   },
   "flows": [
     {
@@ -16713,6 +16713,12 @@
       "orphan": false
     },
     {
+      "name": "TestLoad",
+      "file": "internal/qa/load_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDIAG_LocationControlNonProductPath",
       "file": "internal/qa/location_race_diag_test.go",
       "package": "qa",
@@ -17769,6 +17775,12 @@
     },
     {
       "name": "TestOFB_MerchantCannotSpendPlatformMargin",
+      "file": "internal/qa/offers_scoped_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFR_PriceBeforeUsesItemMargin",
       "file": "internal/qa/offers_scoped_test.go",
       "package": "qa",
       "orphan": true

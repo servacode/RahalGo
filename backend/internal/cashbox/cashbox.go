@@ -56,11 +56,9 @@ func NewService(db *pgxpool.Pool, settingsStore *settings.Store) *Service {
 
 // Limit السقف النقدي الحالي (إعداد ديناميكي).
 func (s *Service) Limit(ctx context.Context) int64 {
-	var v float64
-	if err := s.settings.Get(ctx, "drivers.cash_limit", &v); err != nil || v <= 0 {
-		return 500000
-	}
-	return int64(v)
+	// **والاحتياطيُّ افتراضُ الفهرس لا رقمٌ مكتوبٌ هنا** (٢٠٢٦-١٠-٠٩) — كان ٥٠٠٬٠٠٠
+	// بيدٍ، **ورقمان لمعنًى واحدٍ يفترقان** حين يتبدّل الافتراض.
+	return s.settings.GetInt(ctx, "drivers.cash_limit")
 }
 
 func (s *Service) Held(ctx context.Context, driverID string) (int64, error) {

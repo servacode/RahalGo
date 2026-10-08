@@ -208,7 +208,8 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		UPDATE merchants SET
 			name                 = COALESCE($7, name),
 			default_prep_minutes = COALESCE($2, default_prep_minutes),
-			min_order            = COALESCE($3, min_order),
+			-- **والحدُّ الأدنى ملغى في الطلب** — لا يُكتب فيُظنّ أنّه يحكم (٢٠٢٦-١٠-٠٩).
+			min_order            = min_order + 0 * COALESCE($3, 0),
 			address_text         = COALESCE($4, address_text),
 			-- **ولا يُمحى الدبّوسُ حين لا يُرسَل** — الشاشةُ قد تحفظ
 			-- مدّةَ التحضير وحدَها، **ومن كتب نقطةً من قيمٍ فارغة

@@ -83,6 +83,12 @@ var (
 		"offer_admin_cannot_charge_store", "errors.offer_admin_cannot_charge_store")
 )
 
+// PriceFn **سعرُ البيع من سعر الشراء بهامش الصنف ثمّ القسم ثمّ العامّ** (٢٠٢٦-١٠-٠٩) —
+// **بالقاعدة نفسِها التي يُبنى بها الطلب** (`pricing.Rule.SalePrice`). كان يأخذ سعرَ
+// الشراء وحدَه فيُحسب بالهامش العامّ، **فيختلف «السعرُ قبل» وحدُّ الموافقة عن الحقيقة**
+// لكلّ صنفٍ له هامشٌ خاصّ.
+type PriceFn func(cost int64, itemMargin, sectionMargin *int64) int64
+
 // NeedsApproval **أيحتاج خصمُ المنصّة هذا موافقةَ الماليّة؟**
 //
 // النسبةُ فوق ٢٠، أو المبلغُ الثابتُ فوق ٢٠٪ من سعر البيع اليوم.
@@ -201,26 +207,29 @@ const offerSelect = `
 	            WHEN EXISTS (SELECT 1 FROM user_roles r
 	                          WHERE r.user_id = o.created_by AND r.role_code = 'merchant') THEN 'merchant'
 	            ELSE 'admin' END,
-	       o.approval_state, COALESCE(mi.available, false)
+	       o.approval_state, COALESCE(mi.available, false),
+	       mi.margin_override, ps.margin_override
 	FROM offers o
 	LEFT JOIN users cu ON cu.id = o.created_by
 	LEFT JOIN media mm ON mm.id = o.media_id
 	LEFT JOIN menu_items mi ON mi.id = o.menu_item_id
 	LEFT JOIN merchants mr ON mr.id = mi.merchant_id
+	LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
 	LEFT JOIN media im ON im.id = mi.image_media_id`
 
 func scan(rows interface {
 	Scan(dest ...any) error
-}, marginOf func(cost int64) int64) (*Offer, error) {
+}, marginOf PriceFn) (*Offer, error) {
 	var o Offer
 	var cost int64
+	var itemMargin, sectionMargin *int64
 	if err := rows.Scan(&o.ID, &o.Kind, &o.Title, &o.Body,
 		&o.MediaID, &o.ImageURL, &o.Href,
 		&o.MenuItemID, &o.ItemName, &o.MerchantName, &o.MerchantID, &o.ItemImageURL,
 		&cost, &o.DiscountPercent, &o.DiscountAmount, &o.BorneBy,
 		&o.StartsAt, &o.EndsAt, &o.Active, &o.Live, &o.CreatedAt,
 		&o.HasOptions, &o.CreatedByName, &o.CreatedByKind,
-		&o.ApprovalState, &o.ItemAvailable); err != nil {
+		&o.ApprovalState, &o.ItemAvailable, &itemMargin, &sectionMargin); err != nil {
 		return nil, err
 	}
 	// **والحالُ تُشتقّ من الحقول نفسِها التي يقرؤها `LiveCond`** —
@@ -231,7 +240,7 @@ func scan(rows interface {
 	// **والسعرُ بعد الخصم يُحسب بأيّ طريقةٍ كانت** — نسبةً أو مبلغاً
 	// ثابتاً، **من المصدر الواحد** (`AfterCut`).
 	if o.DiscountPercent != nil || o.DiscountAmount != nil {
-		o.PriceBefore = marginOf(cost)
+		o.PriceBefore = marginOf(cost, itemMargin, sectionMargin)
 		o.PriceAfter = AfterCut(o.PriceBefore, o.DiscountPercent, o.DiscountAmount)
 	}
 	return &o, nil
@@ -348,7 +357,7 @@ func AfterCut(price int64, percent *int, amount *int64) int64 {
 }
 
 // List العروضُ كلُّها — للإدارة. و`liveOnly` للزبون.
-func (s *Service) List(ctx context.Context, liveOnly bool, marginOf func(int64) int64) ([]Offer, error) {
+func (s *Service) List(ctx context.Context, liveOnly bool, marginOf PriceFn) ([]Offer, error) {
 	q := offerSelect
 	if liveOnly {
 		// **والخصمُ على صنفٍ غائبٍ أو غيرِ متاحٍ لا يُعرض** — يفتحه الزبونُ
@@ -396,7 +405,7 @@ type Input struct {
 
 // Create ينشئ عرضاً في معاملته — انظر `CreateIn`.
 func (s *Service) Create(ctx context.Context, actorID string, in Input,
-	marginOf func(int64) int64) (*Offer, error) {
+	marginOf PriceFn) (*Offer, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -418,7 +427,7 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input,
 // التكرار في المعاملة نفسِها (`WithIdempotentTx`) — **فعرضٌ أُدرج وضاعت
 // علامتُه لا يقع** (`XG-33`).
 func (s *Service) CreateIn(ctx context.Context, q dbtx.Querier, actorID string, in Input,
-	marginOf func(int64) int64) (*Offer, error) {
+	marginOf PriceFn) (*Offer, error) {
 	// **والنوعُ يُفترض ولا يُسأل** — لم يبقَ إلّا واحد.
 	in.Kind = KindDiscount
 	if strings.TrimSpace(in.Title) == "" {
@@ -552,7 +561,7 @@ func (s *Service) CreateIn(ctx context.Context, q dbtx.Querier, actorID string, 
 // **ولا حذف**: عرضٌ حُذف لا يُقرأ في تقريرٍ لاحق — **ومن سأل «كم خسرنا على
 // عروض رمضان؟» لم يجد ما يقرؤه.**
 func (s *Service) SetActive(ctx context.Context, id string, active bool,
-	marginOf func(int64) int64) (*Offer, error) {
+	marginOf PriceFn) (*Offer, error) {
 	// ══════════════════════════════════════════════════════════════════
 	//  **ولا يُفعَّل منتهٍ ولا ما ينتظر الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
 	// ══════════════════════════════════════════════════════════════════
@@ -589,7 +598,7 @@ func (s *Service) SetActive(ctx context.Context, id string, active bool,
 	return s.Get(ctx, id, marginOf)
 }
 
-func (s *Service) Get(ctx context.Context, id string, marginOf func(int64) int64) (*Offer, error) {
+func (s *Service) Get(ctx context.Context, id string, marginOf PriceFn) (*Offer, error) {
 	return scan(s.db.QueryRow(ctx, offerSelect+` WHERE o.id = $1`, id), marginOf)
 }
 
@@ -620,7 +629,7 @@ var ErrItemUnavailable = httpx.NewError(http.StatusConflict,
 // **ولا يُقرأ منها متجرٌ آخر**: **الشرطُ على `mi.merchant_id` لا على ما
 // يرسله الجهاز.**
 func (s *Service) ListForMerchant(ctx context.Context, merchantID string,
-	marginOf func(int64) int64) ([]Offer, error) {
+	marginOf PriceFn) ([]Offer, error) {
 	rows, err := s.db.Query(ctx, offerSelect+`
 		WHERE mi.merchant_id = $1
 		ORDER BY o.created_at DESC`, merchantID)
@@ -674,7 +683,7 @@ func (s *Service) OwnerOf(ctx context.Context, offerID string) (string, error) {
 // الموضعَ وهو لا يُسعَّر به.** **فيُطوى في المعاملة نفسِها**: **ولا
 // يُحذف** (تقريرُ «كم خسرنا على عروض رمضان؟»).
 func (s *Service) CreateScoped(ctx context.Context, actorID, merchantID string, in Input,
-	marginOf func(int64) int64) (*Offer, error) {
+	marginOf PriceFn) (*Offer, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -692,7 +701,7 @@ func (s *Service) CreateScoped(ctx context.Context, actorID, merchantID string, 
 
 // CreateScopedIn **`CreateScoped` في معاملة من يناديه** — لبابَي المتجر والمندوب.
 func (s *Service) CreateScopedIn(ctx context.Context, q dbtx.Querier, actorID, merchantID string, in Input,
-	marginOf func(int64) int64) (*Offer, error) {
+	marginOf PriceFn) (*Offer, error) {
 	if in.MenuItemID == nil || strings.TrimSpace(*in.MenuItemID) == "" {
 		return nil, ErrBadDiscount
 	}

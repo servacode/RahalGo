@@ -114,18 +114,30 @@ export default function HoursPanel() {
     void load();
   }, [load]);
 
+  /**
+   * **السريانُ يُحفظ لحظةَ يُقلب** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — كان ينتظر «حفظ الدوام»،
+   * **فمن قلبه وخرج رجع لحاله**، وحفظُ لوحٍ قديمٍ كان يكتب سريانَه القديمَ فوق الجديد.
+   */
+  async function saveEnforced(v: boolean) {
+    setError("");
+    setEnforced(v);
+    try {
+      await api("/api/v1/admin/settings/hours.platform_enforced", {
+        method: "PUT",
+        body: JSON.stringify({ value: v }),
+      });
+    } catch (e) {
+      setEnforced(!v);
+      setError(errorText(e, m));
+    }
+  }
+
   async function saveHours() {
     setError("");
     try {
       await api("/api/v1/admin/platform/hours", {
         method: "PUT",
         body: JSON.stringify({ windows: wins }),
-      });
-      /* **والسريانُ مفتاحُ إعدادٍ يُحفَظ ببابه** — **ولا بابَ ثانٍ
-         يُخترَع لقيمةٍ يعرفها محرّرُ الإعدادات.** */
-      await api("/api/v1/admin/settings/hours.platform_enforced", {
-        method: "PUT",
-        body: JSON.stringify({ value: enforced }),
       });
       setSavedHours(true);
       setTimeout(() => setSavedHours(false), 2000);
@@ -181,7 +193,7 @@ export default function HoursPanel() {
               يُظَنّ سارياً.** */}
           <Switch
             checked={enforced}
-            onChange={(v: boolean) => setEnforced(v)}
+            onChange={(v: boolean) => void saveEnforced(v)}
             label={P.enforced}
             hint={P.enforcedHint}
             disabled={!may}

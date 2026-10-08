@@ -37,6 +37,7 @@ import {
   Textarea,
   LoadingState,
   IconSettings,
+  useLiveRefresh,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -94,6 +95,11 @@ export default function AppStatusPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+  // **ويتحدّث مع أيّ تغييرٍ في الإعدادات** — أبوابُ الإطلاق لها مربّعاتٌ ثانيةٌ في
+  // الصفحة. **ولا يمسّ نصَّ الإشعار وهو يُكتب** — الحالُ وحدَها.
+  useLiveRefresh(["settings"], () => {
+    api<LaunchState>("/api/v1/admin/launch").then(setState).catch(() => undefined);
+  });
 
   async function apply(preset: PresetName) {
     setAsking(null);

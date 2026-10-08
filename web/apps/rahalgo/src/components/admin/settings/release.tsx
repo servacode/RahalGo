@@ -26,7 +26,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, PageHeader, Card, LoadingState, IconSettings, Switch } from "@rahalgo/ui";
+import { Alert, PageHeader, Card, LoadingState, IconSettings, Switch, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -87,6 +87,8 @@ export default function ReleasePanel() {
       setError(errorText(e));
     }
   }, []);
+  // **ويتحدّث مع أيّ تغييرٍ في الإعدادات** — مفتاحُ الإجبار له مربّعٌ ثانٍ في الصفحة.
+  useLiveRefresh(["settings"], () => void load());
 
   useEffect(() => {
     void load();

@@ -1706,6 +1706,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       {live && (
         <AutoModeToggle
           settingKey="orders.auto_transfer"
+          minutesKey="orders.unattended_auto_accept_min"
           label={m.admin.autoMode.ordersLabel}
           hint={m.admin.autoMode.ordersHint}
         />

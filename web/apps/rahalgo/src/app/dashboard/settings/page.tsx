@@ -33,7 +33,7 @@ import {
   LoadingState,
 } from "@rahalgo/ui";
 import ImageUpload from "@/components/admin/ImageUpload";
-import { FileUpload } from "@rahalgo/ui";
+import { FileUpload, useLiveRefresh } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import dynamic from "next/dynamic";
@@ -220,6 +220,10 @@ export default function SettingsPage() {
       setError(errorText(err));
     }
   }, []);
+
+  // **وتتحدّث لحالها** (طلبُ المالك ٢٠٢٦-١٠-٠٩): مفتاحٌ قُلب من صفحة الطلبات أو من
+  // لوحٍ آخر **كانت تبقى تعرض قيمتَه القديمة** فيُظَنّ أنّه رجع لحاله.
+  useLiveRefresh(["settings"], () => void load());
 
   useEffect(() => {
     void load();

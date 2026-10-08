@@ -101,7 +101,7 @@ func TestCreate_ExpiredOfferDoesNotBlockItem(t *testing.T) {
 		_, err := svc.Create(ctx, actor, Input{
 			Title: "جديد", MenuItemID: &item, DiscountPercent: pct, DiscountAmount: amt,
 			BorneBy: &by, EndsAt: &ends,
-		}, func(p int64) int64 { return p })
+		}, func(p int64, _, _ *int64) int64 { return p })
 		return err
 	}
 	pct := 15

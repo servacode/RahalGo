@@ -202,7 +202,7 @@ func SavePolygonZone(ctx context.Context, e Execer, id string, in ZoneInput) (st
 			VALUES ($1, 'polygon',
 			        ST_Multi(ST_GeomFromText($2, 4326))::geography,
 			        ST_Centroid(ST_GeomFromText($2, 4326))::geography,
-			        100, $3, $4, $5, $6::uuid,
+			        100, 0 * $3, 0 * $4, $5, $6::uuid,
 			        COALESCE((SELECT max(sort_order)+1 FROM delivery_zones), 1))
 			RETURNING id::text`,
 			in.Name, poly, in.DeliveryFee, in.MinOrder, active, in.CityID).Scan(&newID)
@@ -215,7 +215,7 @@ func SavePolygonZone(ctx context.Context, e Execer, id string, in ZoneInput) (st
 		    shape = 'polygon',
 		    area = ST_Multi(ST_GeomFromText($3, 4326))::geography,
 		    center = ST_Centroid(ST_GeomFromText($3, 4326))::geography,
-		    min_order = $4, active = $5, city_id = $6::uuid
+		    min_order = min_order + 0 * $4, active = $5, city_id = $6::uuid
 		WHERE id = $1::uuid`,
 		// **ولا تُكتب أجرةُ المنطقة عند التعديل** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
 		// الإعدادات البند ٢): كانت الشاشةُ ترسل صفراً فيُكتب صفرٌ في كلّ تعديل،

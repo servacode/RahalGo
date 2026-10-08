@@ -33,15 +33,22 @@ export function AutoModeToggle({
   label,
   hint,
   className = "mb-4",
+  minutesKey,
 }: {
   settingKey: string;
   label: string;
   hint: string;
   className?: string;
+  /**
+   * **مفتاحُ دقائقَ يقبل وإن كان هذا مطفياً** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — يُذكر تحته
+   * صراحةً، **فلا يرى «مطفي» ثمّ يُفاجأ بطلبٍ قُبل لحاله.**
+   */
+  minutesKey?: string;
 }) {
   const canCall = useCanCall();
   const canRead = canCall("GET", "/settings");
   const [row, setRow] = useState<{ on: boolean; editable: boolean } | null>(null);
+  const [minutes, setMinutes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,11 +59,15 @@ export function AutoModeToggle({
       const rows: SettingRow[] = Array.isArray(res) ? res : (res.settings ?? []);
       const r = rows.find((x) => x.key === settingKey);
       setRow(r ? { on: r.value === true, editable: r.editable } : null);
+      if (minutesKey) {
+        const mv = rows.find((x) => x.key === minutesKey)?.value;
+        setMinutes(typeof mv === "number" ? mv : null);
+      }
     } catch {
       // **مفتاحٌ لا يُقرأ لا يُعرض** — والصفحةُ تعمل بلاه.
       setRow(null);
     }
-  }, [canRead, settingKey]);
+  }, [canRead, settingKey, minutesKey]);
 
   useEffect(() => {
     void load();
@@ -93,6 +104,11 @@ export function AutoModeToggle({
         hint={hint}
         disabled={busy}
       />
+      {minutesKey && minutes !== null && (
+        <p className="text-xs text-ink-muted">
+          {minutes > 0 ? A.unattended.replace("{n}", String(minutes)) : A.unattendedOff}
+        </p>
+      )}
       {error && <Alert onDismiss={() => setError("")}>{error}</Alert>}
     </Card>
   );

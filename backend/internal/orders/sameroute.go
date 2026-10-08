@@ -127,7 +127,8 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
 		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
 		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
-		      + nw.cash_due <= $4
+		      -- **وسقفُه الخاصُّ يغلب العامّ إن ضُبط** — كحارس الإسناد cashbox.GuardTx.
+		      + nw.cash_due <= COALESCE(u.cash_limit_override, $4)
 		  -- **والمتأخّرُ بتسليم نقده لا يُعرض عليه نقديّ إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
 		  AND (nw.cash_due = 0 OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o2

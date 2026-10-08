@@ -150,6 +150,12 @@ var placeRules = []placeRule{
 
 	// ── التطبيقات والتنزيل — وأدنى نسخةٍ في لوح «الإصدار» وحدَه ──
 	{prefix: "app.min_version.", topic: TopicApps, panel: "release"},
+	// **وإجبارُ التحديث من الملفّ له مفتاحٌ في لوح «الإصدار»** — فلا يُعرض مرّةً ثانيةً
+	// مربّعاً في «الملفّات» (طلبُ المالك ٢٠٢٦-١٠-٠٩: لا إعدادَ بمكانين).
+	{prefix: "release.customer.auto_force", exact: true, topic: TopicApps, panel: "release"},
+	{prefix: "release.driver.auto_force", exact: true, topic: TopicApps, panel: "release"},
+	{prefix: "release.merchant.auto_force", exact: true, topic: TopicApps, panel: "release"},
+	{prefix: "release.rep.auto_force", exact: true, topic: TopicApps, panel: "release"},
 	{prefix: "release.", topic: TopicApps, section: "apps.files"},
 	{prefix: "app.", topic: TopicApps, section: "apps.files"},
 

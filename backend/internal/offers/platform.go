@@ -42,7 +42,7 @@ func EndOfDay(date string) (time.Time, error) {
 // يردّ العرضَ و`pending` إن أُنشئ نازلاً بانتظار الماليّة. **وطلبُ الموافقة
 // يُكتب في المعاملة نفسِها** — لا عرضَ ينتظر بلا طلب، ولا طلبَ بلا عرض.
 func (s *Service) CreatePlatform(ctx context.Context, actorID string, in Input,
-	marginOf func(int64) int64) (*Offer, bool, error) {
+	marginOf PriceFn) (*Offer, bool, error) {
 	if in.BorneBy != nil && *in.BorneBy == ByMerchant {
 		return nil, false, ErrAdminChargesStore
 	}
@@ -66,11 +66,16 @@ func (s *Service) CreatePlatform(ctx context.Context, actorID string, in Input,
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var cost int64
-	if err := tx.QueryRow(ctx, `SELECT price FROM menu_items WHERE id = $1::uuid`,
-		*in.MenuItemID).Scan(&cost); err != nil {
+	var itemMargin, sectionMargin *int64
+	if err := tx.QueryRow(ctx, `
+		SELECT mi.price, mi.margin_override, ps.margin_override
+		FROM menu_items mi
+		LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
+		WHERE mi.id = $1::uuid`,
+		*in.MenuItemID).Scan(&cost, &itemMargin, &sectionMargin); err != nil {
 		return nil, false, ErrBadDiscount
 	}
-	pending := NeedsApproval(marginOf(cost), in.DiscountPercent, in.DiscountAmount)
+	pending := NeedsApproval(marginOf(cost, itemMargin, sectionMargin), in.DiscountPercent, in.DiscountAmount)
 	if pending {
 		off := false
 		in.Active = &off

@@ -24,9 +24,11 @@ import (
 )
 
 // saleOf سعرُ البيع من سعر الشراء — **بالقاعدة نفسِها التي يُبنى بها الطلب.**
-func (s *Server) saleOf(r *http.Request) func(int64) int64 {
+func (s *Server) saleOf(r *http.Request) offers.PriceFn {
 	rule := pricing.RuleFrom(r.Context(), s.settings)
-	return func(cost int64) int64 { return rule.SalePrice(cost, nil, nil) }
+	return func(cost int64, itemMargin, sectionMargin *int64) int64 {
+		return rule.SalePrice(cost, itemMargin, sectionMargin)
+	}
 }
 
 // handleAdminOffers العروضُ كلُّها — الساريةُ والمنتهيةُ والمنزَّلة.
