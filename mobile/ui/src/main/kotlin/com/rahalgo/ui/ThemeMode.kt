@@ -1,7 +1,6 @@
 package com.rahalgo.ui
 
 import android.content.Context
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,7 +76,9 @@ class ThemeState(private val context: Context, initial: ThemeMode) {
     fun isDark(): Boolean = when (mode) {
         ThemeMode.Dark -> true
         ThemeMode.Light -> false
-        ThemeMode.System -> isSystemInDarkTheme()
+        // **ومن لم يختر يرى الفاتح** (قرارُ المالك ٢٠٢٦-١٠-٠٩) — لا سمةَ الجهاز: الغامقُ
+        // كان يظهر لكلّ من جهازُه غامق، **والفاتحُ أوضحُ في الشمس.** والغامقُ بزرّه.
+        ThemeMode.System -> false
     }
 
     fun toggle(nowDark: Boolean) {

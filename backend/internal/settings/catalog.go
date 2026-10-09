@@ -2296,6 +2296,9 @@ var Catalog = []Def{
 	// **وفيديو شرح تطبيق الزبون** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — **فارغٌ حتّى يُنشر**:
 	// وما دام فارغاً لا يظهر زرُّه في التطبيق ولا سطرُه في الترحيب.
 	{Key: "customers.tutorial_url", Group: GroupCustomers, Kind: KindText, Max: 300, Default: ""},
+	// **أرقامٌ تطلب «وضع المنصة» من البوت** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — مفصولةٌ بفاصلة.
+	// **والمالكُ لا يحتاجه**: يكتب في محادثته مع نفسه على رقم البوت. انظر wa_report.go.
+	{Key: "ops.report_phones", Group: GroupPlatform, Kind: KindText, Max: 500, Default: ""},
 
 	// **وقالبُ الطلب للمتجر** — كان مكتوباً في الشيفرة (`buildMerchantMessage`).
 	//

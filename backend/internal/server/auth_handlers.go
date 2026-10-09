@@ -56,6 +56,11 @@ func (s *Server) respondErr(w http.ResponseWriter, err error) {
 	// بعضُها يحرس بـ`isUUID` وبعضُها لا.
 	//
 	// **ولا يُبتلع خطأٌ آخر**: الرمزُ محدَّدٌ بعينه، وما عداه يبقى خمسَمئة.
+	// **ونداءٌ انقضت مهلتُه والقاعدةُ لا تردّ** — «مشغولة» لا «عطبٌ داخليّ» (٢٠٢٦-١٠-٠٩).
+	if errors.Is(err, context.DeadlineExceeded) {
+		httpx.Error(w, errServiceBusy)
+		return
+	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "22P02" {
 		httpx.Error(w, httpx.ErrNotFound)

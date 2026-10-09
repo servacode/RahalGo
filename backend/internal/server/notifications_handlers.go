@@ -20,6 +20,10 @@ func (s *Server) touch(entity string, topics ...string) {
 	}
 	event := map[string]any{"type": entity}
 	for _, t := range topics {
+		// **وإشارةُ الإعدادات تُبطل ذاكرتَها** — بعد تثبيت المعاملة لا قبله.
+		if t == "settings" && s.settings != nil {
+			s.settings.Invalidate()
+		}
 		s.hub.Publish(t, event)
 	}
 }

@@ -91,6 +91,10 @@ type WhatsAppSender struct {
 	// **والردُّ الفارغُ يعني: لا تردّ.** — ومن راسلنا بكلامٍ لا يعنينا
 	// لا يُزعَج بردٍّ آليّ.
 	inbound func(ctx context.Context, from, text string) string
+	// self **أمرٌ يكتبه صاحبُ رقم البوت في محادثته مع نفسه** («وضع المنصة» — ٢٠٢٦-١٠-٠٩).
+	// **والردُّ الفارغُ يعني: لا تردّ** — فملاحظاتُه لنفسه لا يُجاب عليها.
+	self    func(ctx context.Context, text string) string
+	hooksMu sync.RWMutex
 
 	// ══════════════════════════════════════════════════════════════════
 	// **pairWanted — ولا رمزَ إلّا بطلب**
@@ -687,7 +691,28 @@ func (s *WhatsAppSender) Unpair(ctx context.Context) error {
 // فتصير رسالتان مكان واحدة.
 // SetInbound **يربط معالِجَ الرسائل الواردة** — انظر حقل `inbound`.
 func (s *WhatsAppSender) SetInbound(f func(ctx context.Context, from, text string) string) {
+	s.hooksMu.Lock()
 	s.inbound = f
+	s.hooksMu.Unlock()
+}
+
+// SetSelfCommand **يربط أوامرَ صاحب الرقم في محادثته مع نفسه** — انظر حقل `self`.
+func (s *WhatsAppSender) SetSelfCommand(f func(ctx context.Context, text string) string) {
+	s.hooksMu.Lock()
+	s.self = f
+	s.hooksMu.Unlock()
+}
+
+// isSelfChat **أهذه محادثةُ صاحب الرقم مع نفسه؟** — بالرقم أو بمعرّفه الخفيّ.
+func isSelfChat(c *whatsmeow.Client, msg *events.Message) bool {
+	if c == nil || c.Store == nil || c.Store.ID == nil || !msg.Info.IsFromMe {
+		return false
+	}
+	chat := msg.Info.Chat.User
+	if chat == c.Store.ID.User {
+		return true
+	}
+	return !c.Store.LID.IsEmpty() && chat == c.Store.LID.User
 }
 
 // onInbound **يقرأ رسالةً واردةً ويردّ إن كان فيها ما يعنينا.**
@@ -704,7 +729,14 @@ func (s *WhatsAppSender) SetInbound(f func(ctx context.Context, from, text strin
 // انتظر قاعدةَ البيانات تجمّد الوارد. **وسياقُ الحدث قصير**، وسياقُ
 // الخادم يعيش ما عاش.
 func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg *events.Message) {
-	if s.inbound == nil || msg == nil || msg.Info.IsFromMe || msg.Info.IsGroup {
+	if msg == nil || msg.Info.IsGroup {
+		return
+	}
+	s.hooksMu.RLock()
+	inbound, self := s.inbound, s.self
+	s.hooksMu.RUnlock()
+	selfChat := isSelfChat(c, msg)
+	if (msg.Info.IsFromMe && !selfChat) || (selfChat && self == nil) || (!selfChat && inbound == nil) {
 		return
 	}
 	text := msg.Message.GetConversation()
@@ -718,8 +750,16 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 	}
 	from := "+" + msg.Info.Sender.User
 	jid := msg.Info.Sender.ToNonAD()
+	if selfChat {
+		jid = msg.Info.Chat.ToNonAD()
+	}
 	go func() {
-		reply := s.inbound(ctx, from, text)
+		var reply string
+		if selfChat {
+			reply = self(ctx, text)
+		} else {
+			reply = inbound(ctx, from, text)
+		}
 		if strings.TrimSpace(reply) == "" {
 			return
 		}

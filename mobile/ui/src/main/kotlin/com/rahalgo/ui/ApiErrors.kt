@@ -516,6 +516,8 @@ private val CODES: Map<String, Int> = mapOf(
     "bad_point" to R.string.err_bad_point,
     "launch_closed" to R.string.err_launch_closed,
     "temporarily_unavailable" to R.string.err_temporarily_unavailable,
+    // **والقاعدةُ متوقّفة** — يُقال فوراً (db_watch.go، ٢٠٢٦-١٠-٠٩).
+    "service_busy" to R.string.err_service_busy,
     "platform_closed_now" to R.string.err_platform_closed_now,
     "zone_closed_now" to R.string.err_zone_closed_now,
     "no_drivers_on_shift" to R.string.err_no_drivers_on_shift,

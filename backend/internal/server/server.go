@@ -355,6 +355,8 @@ func (s *Server) Router() http.Handler {
 	//
 	// **وهي تحمي من معالجٍ يعلق، لا من زبونٍ يرفع** — وحدُّ الحجم
 	// (`MaxBytesReader`) هو حارسُ الرفع، وقد وُضع.
+	// **والقاعدةُ المتوقّفةُ يُقال عنها فوراً** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
+	r.Use(dbGate)
 	r.Use(exceptPaths(middleware.Timeout(30*time.Second),
 		"/api/v1/ws",
 		// **وما بدأ بنجمةٍ يُطابَق بذيله** — لأنّ في مسار الإثبات

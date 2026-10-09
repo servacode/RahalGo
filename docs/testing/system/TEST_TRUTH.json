@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 213,
-    "behaviour_settings": 170,
+    "setting_defs": 214,
+    "behaviour_settings": 171,
     "order_fields": 95,
-    "test_files": 539,
-    "test_funcs": 2223
+    "test_files": 541,
+    "test_funcs": 2226
   },
   "flows": [
     {
@@ -5182,6 +5182,24 @@
       "key": "ops.outage_notify_min",
       "group": "platform",
       "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "ops.report_phones",
+      "group": "platform",
+      "kind": "text",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -16719,6 +16737,12 @@
       "orphan": true
     },
     {
+      "name": "TestLoadChaos",
+      "file": "internal/qa/load_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDIAG_LocationControlNonProductPath",
       "file": "internal/qa/location_race_diag_test.go",
       "package": "qa",
@@ -23246,6 +23270,12 @@
       "orphan": true
     },
     {
+      "name": "TestWAR01_PlatformReportOverWhatsApp",
+      "file": "internal/qa/wa_report_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCUST12023_WalletOrderRejectedWhenInsufficient",
       "file": "internal/qa/wallet_order_insufficient_test.go",
       "package": "qa",
@@ -26992,6 +27022,12 @@
       "name": "TestExceptPathsSparesLivedRequests",
       "file": "internal/server/ws_timeout_test.go",
       "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCache_FreshAfterWriteAndAfterTTL",
+      "file": "internal/settings/cache_test.go",
+      "package": "settings_test",
       "orphan": true
     },
     {

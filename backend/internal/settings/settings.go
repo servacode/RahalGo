@@ -14,6 +14,7 @@ import (
 
 type Store struct {
 	db dbtx.Querier
+	c  *memo // الذاكرة — انظر cache.go
 }
 
 // NewStore مخزنٌ يقرأ من المَسبَح.
@@ -65,6 +66,12 @@ var errNoStore = errors.New("settings: لا مخزن")
 func (s *Store) Get(ctx context.Context, key string, out any) error {
 	if s == nil || s.db == nil {
 		return errNoStore
+	}
+	if raw, found, ok := s.cached(ctx, key); ok {
+		if !found {
+			return pgx.ErrNoRows
+		}
+		return json.Unmarshal(raw, out)
 	}
 	var raw []byte
 	err := s.db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key = $1`, key).Scan(&raw)
@@ -220,6 +227,7 @@ func (s *Store) SetTx(ctx context.Context, q dbtx.Querier, key string, value any
 		ON CONFLICT (key) DO UPDATE
 		SET value = EXCLUDED.value, updated_at = now(), updated_by = EXCLUDED.updated_by`,
 		key, raw, updatedBy)
+	s.Invalidate()
 	return err
 }
 
@@ -237,6 +245,7 @@ func (s *Store) set(ctx context.Context, key string, value any, updatedBy *strin
 		ON CONFLICT (key) DO UPDATE
 		SET value = EXCLUDED.value, updated_at = now(), updated_by = EXCLUDED.updated_by`,
 		key, raw, updatedBy)
+	s.Invalidate()
 	return err
 }
 
@@ -250,12 +259,19 @@ func (s *Store) SetInternal(ctx context.Context, key string, value any) error {
 		INSERT INTO app_settings (key, value) VALUES ($1, $2)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
 		key, raw)
+	s.Invalidate()
 	return err
 }
 
 var ErrNotFound = errors.New("settings: not found")
 
 func (s *Store) GetRaw(ctx context.Context, key string) (json.RawMessage, error) {
+	if raw, found, ok := s.cached(ctx, key); ok {
+		if !found {
+			return nil, ErrNotFound
+		}
+		return raw, nil
+	}
 	var raw []byte
 	err := s.db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key = $1`, key).Scan(&raw)
 	if errors.Is(err, pgx.ErrNoRows) {

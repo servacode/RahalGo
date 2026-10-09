@@ -102,6 +102,8 @@ func run(logger *slog.Logger) error {
 
 	tokens := auth.NewTokenIssuer(cfg.JWTSecret, 15*time.Minute)
 	settingsStore := settings.NewStore(pg)
+	// **والإعداداتُ في الذاكرة ثانيتين** — انظر settings/cache.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
+	settingsStore.EnableCache(2 * time.Second)
 
 	var otpSender notify.OTPSender
 	// **وبوتُ واتساب يُبلّغ المتاجر أيضاً** — انظر حيث يُحقن.
@@ -352,6 +354,19 @@ func run(logger *slog.Logger) error {
 			// **ومكافآتُ هدفٍ تعثّرت تُعاد لشهرها** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
 			// قسمُ الأهداف) — كان خطؤها يُبلَع فلا يقبضها من وقف عند الهدف.
 			go srv.RunIncentiveRetries(ctx, 10*time.Minute)
+			// **وحارسُ القاعدة** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
+			srv.StartDBWatch(ctx)
+			// **و«وضع المنصة» على الواتساب** — wa_report.go (طلبُ المالك ٢٠٢٦-١٠-٠٩):
+			// صاحبُ الرقم من محادثته مع نفسه، وأرقامُ `ops.report_phones` من رسالةٍ عاديّة.
+			if waBot != nil {
+				waBot.SetSelfCommand(srv.ReportForSelf)
+				waBot.SetInbound(func(c context.Context, from, text string) string {
+					if r := srv.ReportForPhone(c, from, text); r != "" {
+						return r
+					}
+					return identitySvc.HandleWAInbound(c, from, text)
+				})
+			}
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

@@ -52,6 +52,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
+	"github.com/servacode/rahalgo/backend/internal/database"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notify"
@@ -196,12 +197,10 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 	// `miniredis` كما كان**، فلا خادمَ خارجيٌّ يلزم في كلّ تشغيل.
 	var rdb *redis.Client
 	if addr := os.Getenv("QA_REAL_REDIS_ADDR"); addr != "" {
-		rdb = redis.NewClient(&redis.Options{
-			Addr:         addr,
-			DialTimeout:  2 * time.Second,
-			ReadTimeout:  2 * time.Second,
-			WriteTimeout: 2 * time.Second,
-		})
+		// **وبمهل الخادم الحيّ نفسِها** — فيُقاس ما يقع في الإنتاج (`database.TuneRedis`).
+		ropts := &redis.Options{Addr: addr}
+		database.TuneRedis(ropts)
+		rdb = redis.NewClient(ropts)
 	} else {
 		mr := miniredis.RunT(t)
 		rdb = redis.NewClient(&redis.Options{Addr: mr.Addr()})
@@ -234,6 +233,10 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 
 	identitySvc := identity.NewService(identity.NewRepo(pool), rdb, tokens, sender, jwtSecret, quiet)
 	settingsStore := settings.NewStore(pool)
+	// **ووضعُ الخادم الحيّ لاختبار التحمّل** — الإعداداتُ في الذاكرة (load_test.go).
+	if os.Getenv("QA_PROD_MODE") != "" {
+		settingsStore.EnableCache(2 * time.Second)
+	}
 	walletSvc := wallet.NewService(pool)
 	cashboxSvc := cashbox.NewService(pool, settingsStore)
 	hub := realtime.NewHub(quiet)
@@ -257,6 +260,11 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 		func(context.Context) error { return nil },
 		func() {}, opts...)
 
+	if os.Getenv("QA_PROD_MODE") != "" {
+		wctx, wcancel := context.WithCancel(context.Background())
+		t.Cleanup(wcancel)
+		s.StartDBWatch(wctx)
+	}
 	ts := httptest.NewServer(s.Router())
 	t.Cleanup(ts.Close)
 

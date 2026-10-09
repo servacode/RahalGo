@@ -125,6 +125,7 @@ var placeRules = []placeRule{
 	{prefix: "accounts.welcome_template", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "accounts.merchant_tutorial_url", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "customers.tutorial_url", exact: true, topic: TopicMessages, section: "messages.templates"},
+	{prefix: "ops.report_phones", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "customers.welcome_template", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "customers.welcome_whatsapp", exact: true, topic: TopicMessages, section: "messages.templates"},
 	{prefix: "notify.", topic: TopicMessages, section: "messages.notifications"},
