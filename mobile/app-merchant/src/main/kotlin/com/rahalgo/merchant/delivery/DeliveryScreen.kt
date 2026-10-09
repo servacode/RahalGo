@@ -394,26 +394,8 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        RahalTextButton(onClick = onPickPoint, enabled = !vm.busy) {
-            Text(
-                if (vm.point == null || vm.linkState == LinkState.Found) {
-                    stringResource(R.string.md_or_pick_point)
-                } else {
-                    stringResource(R.string.md_point_set, vm.pointLabel)
-                },
-            )
-        }
-        if (vm.point == null) {
-            Text(
-                stringResource(R.string.md_no_point_hint),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        } else {
-            RahalTextButton(onClick = { vm.clearPoint() }, enabled = !vm.busy) {
-                Text(stringResource(R.string.md_clear_point))
-            }
-        }
+        // **ولا تحديدَ يدويّاً على الخريطة** (طلبُ المالك ٢٠٢٦-١٠-٠٩: «صفحة نظيفة»)
+        // — الموقعُ من رابطٍ يشاركه الزبون، والعنوانُ المكتوبُ يكمّله.
 
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
@@ -436,33 +418,38 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // ── من يدفع — ثلاثةٌ بلا افتراض ───────────────────────────────
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            FieldIcon(com.rahalgo.ui.R.drawable.ic_wallet)
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.md_who_pays), fontWeight = FontWeight.Bold)
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                selected = vm.payer == "merchant",
-                onClick = { vm.pickPayer("merchant") },
-                label = { Text(stringResource(R.string.md_pay_me)) },
-            )
-            FilterChip(
-                selected = vm.payer == "merchant_cash",
-                onClick = { vm.pickPayer("merchant_cash") },
-                label = { Text(stringResource(R.string.md_pay_me_cash)) },
-            )
-            FilterChip(
-                selected = vm.payer == "recipient",
-                onClick = { vm.pickPayer("recipient") },
-                label = { Text(stringResource(R.string.md_pay_recipient)) },
-            )
+        // ── من يدفع — بطاقاتٌ واضحةٌ إجباريّة (طلبُ المالك ٢٠٢٦-١٠-٠٩) ──
+        Spacer(Modifier.height(14.dp))
+        Text(stringResource(R.string.md_who_pays_q), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(8.dp))
+        listOf(
+            Triple("merchant", R.string.md_pay_me, R.string.md_pay_me_sub),
+            Triple("merchant_cash", R.string.md_pay_me_cash, R.string.md_pay_me_cash_sub),
+            Triple("recipient", R.string.md_pay_recipient, R.string.md_pay_recipient_sub),
+        ).forEach { (key, title, sub) ->
+            val on = vm.payer == key
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clip(Rahal.shape.md)
+                    .background(if (on) Rahal.colors.brand.copy(alpha = 0.10f) else Rahal.colors.canvas)
+                    .border(
+                        if (on) 2.dp else Rahal.stroke.hair,
+                        if (on) Rahal.colors.brand else Rahal.colors.line,
+                        Rahal.shape.md,
+                    )
+                    .clickable(enabled = !vm.busy) { vm.pickPayer(key) }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.RadioButton(selected = on, onClick = { vm.pickPayer(key) }, enabled = !vm.busy)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(title), fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
+                    Text(stringResource(sub), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
 
         // ── الأجرةُ قبل الإرسال ───────────────────────────────────────
@@ -525,15 +512,6 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
         ) {
             Text(stringResource(if (vm.busy) R.string.md_sending else R.string.md_send))
         }
-        if (missing.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                stringResource(R.string.md_missing, missing.joinToString("، ")),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
         // ── آخرُ التوصيلات — والسجلُّ كلُّه في القائمة الجانبيّة ────────
         Spacer(Modifier.height(20.dp))
         SectionTitle(stringResource(R.string.md_mine))

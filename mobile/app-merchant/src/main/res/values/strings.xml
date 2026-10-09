@@ -367,4 +367,9 @@
     <string name="store_returns_hint">إذا الزبون ما استلم الطلب، بيرجّعلك السائق الغرض.</string>
     <string name="store_choose_needed">اختار من تحت ⬇</string>
     <string name="ok_returns_saved">تم حفظ اختيارك</string>
+    <!-- من يدفع — بطاقات (٢٠٢٦-١٠-٠٩) -->
+    <string name="md_who_pays_q">مين بيدفع أجرة التوصيل؟ *</string>
+    <string name="md_pay_me_sub">بتنخصم الأجرة من رصيد محفظتك</string>
+    <string name="md_pay_me_cash_sub">بتعطي الأجرة للسائق نقداً لما يستلم الغرض</string>
+    <string name="md_pay_recipient_sub">المستلم بيدفع الأجرة للسائق نقداً</string>
 </resources>
