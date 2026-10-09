@@ -82,8 +82,8 @@ android {
         // بعينه من إشعاره · وطلباتٌ حيّةٌ بالنبضة · وحالةٌ فعليّةٌ من الخادم ·
         // وواجهةُ المتجر الموقوف · ومنتقي سبب الاعتذار · ومبدّلُ الفروع ·
         // وتحديثٌ مباشرٌ لا Google Play.
-        versionCode = 9
-        versionName = "0.5.2"
+        versionCode = 10
+        versionName = "0.5.3"
     }
 
     signingConfigs {
