@@ -779,6 +779,11 @@ kosom` |
 | `compensations.cap_complaint` | المنصة | money | `50000` |
 | `compensations.overdue_hours` | المنصة | int | `24` |
 | `ops.outage_notify_min` | المنصة | int | `5` |
+| `monitoring.enabled` | المنصة | bool | `true` |
+| `monitoring.morning_report` | المنصة | bool | `true` |
+| `monitoring.morning_hour` | المنصة | int | `9` |
+| `monitoring.error_spike` | المنصة | int | `20` |
+| `monitoring.disk_alert_percent` | المنصة | int | `85` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | money | `0` |
 | `orders.source_proximity_m` | المنصة | int | `1000` |

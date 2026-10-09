@@ -55,6 +55,10 @@ type Config struct {
 	SMSOTPAuthHeader string
 	AdminPhone       string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
 	UploadsDir       string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
+	// BackupsDir **مجلّدُ نسخ القاعدة الاحتياطيّة** — يراقبه راصدُ المنصّة: إن
+	// مضى أكثرُ من يومٍ بلا نسخةٍ جديدةٍ وصل المالكَ تنبيه. **وفارغُه يعني
+	// «لا مجلّدَ معروفاً» فيُترك الفحص** — ولا نسخَ مضبوطةً على الخادم اليوم.
+	BackupsDir string
 	// خدمة العنونة (Nominatim) — تُستبدل بنسخة ذاتية الاستضافة عند النشر
 	GeocoderURL string
 	// OSRMURL محرّكُ المسارات — **وفارغٌ يعني الخطَّ المستقيمَ كما كان.**
@@ -163,6 +167,7 @@ func Load() (*Config, error) {
 		SMSOTPAuthHeader: getEnv("SMS_OTP_AUTH_HEADER", ""),
 		AdminPhone:       getEnv("ADMIN_PHONE", ""),
 		UploadsDir:       getEnv("UPLOADS_DIR", "./uploads"),
+		BackupsDir:       getEnv("BACKUPS_DIR", ""),
 		GeocoderURL:      getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
 		OSRMURL:          getEnv("OSRM_URL", ""),
 		RoutingEngine:    strings.ToLower(strings.TrimSpace(getEnv("ROUTING_ENGINE", "osrm"))),

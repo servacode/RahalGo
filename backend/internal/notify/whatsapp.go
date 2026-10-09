@@ -539,6 +539,26 @@ func (s *WhatsAppSender) SendText(ctx context.Context, phone, text string) error
 	return nil
 }
 
+// SendToSelf **يكتب في محادثة صاحب الرقم مع نفسه** — تنبيهاتُ المراقبة
+// والتقريرُ الصباحيّ (مراقبةُ المنصّة، الدفعةُ الأولى ٢٠٢٦-١٠-٠٩).
+//
+// **والبوتُ على رقم المالك نفسِه** — فلا يُراسَل أحدٌ غيرُه بهذه الدالّة:
+// **المرسَلُ إليه هو الرقمُ المقترنُ لا رقمٌ يُمرَّر.** ولا خطرَ حظرٍ في
+// رسالةٍ يكتبها الرقمُ لنفسه.
+func (s *WhatsAppSender) SendToSelf(ctx context.Context, text string) error {
+	c, _ := s.cli()
+	if !c.IsLoggedIn() || c.Store == nil || c.Store.ID == nil {
+		return errWANotReady
+	}
+	jid := c.Store.ID.ToNonAD()
+	if _, err := c.SendMessage(ctx, jid, &waE2E.Message{
+		Conversation: proto.String(text),
+	}); err != nil {
+		return fmt.Errorf("whatsapp: send to self: %w", err)
+	}
+	return nil
+}
+
 // Ready **أيستطيع البوتُ أن يرسل الآن؟**
 //
 // (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «الطلبات إمّا يدويّاً على واتساب كما هي،

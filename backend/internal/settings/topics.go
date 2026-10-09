@@ -148,6 +148,8 @@ var placeRules = []placeRule{
 	{prefix: "hours.", topic: TopicLaunch, section: "launch.ops"},
 	{prefix: "platform.orders_mode", exact: true, topic: TopicLaunch, section: "launch.ops"},
 	{prefix: "ops.", topic: TopicLaunch, section: "launch.ops"},
+	// **وراصدُ المنصّة بجانب إنذار التعطّل** (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩).
+	{prefix: "monitoring.", topic: TopicLaunch, section: "launch.ops"},
 
 	// ── التطبيقات والتنزيل — وأدنى نسخةٍ في لوح «الإصدار» وحدَه ──
 	{prefix: "app.min_version.", topic: TopicApps, panel: "release"},

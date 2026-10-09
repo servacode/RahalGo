@@ -103,6 +103,14 @@ type Server struct {
 	// opsT **ذاكرةُ مراقبة التشغيل** — نافذةُ الحكم وحالُ الانقطاع
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). انظر `ops_health.go`.
 	opsT opsTracker
+	// errs **عدّادُ أخطاء ٥xx** — والراصدُ يكتبه في الجدول. انظر `monitoring_errors.go`.
+	errs errorTracker
+	// mon **ذاكرةُ راصد المنصّة** — ما أُنذر به ومتى، وآخرُ تقريرٍ صباحيّ.
+	// انظر `monitoring_watch.go`.
+	mon monitorState
+	// alertOut **من يكتب للمالك في محادثته مع نفسه** — البوت. **وفارغٌ في
+	// التطوير** فتذهب التنبيهاتُ إلى إشعارات اللوحة وحدَها.
+	alertOut AlertSender
 }
 
 // MerchantNotifier **من يبلّغ متجراً بطلب** — يُرضيه البوت.
@@ -323,6 +331,9 @@ func (s *Server) Router() http.Handler {
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	// **وعدّادُ ٥xx قبل `Recoverer`** — فالذعرُ الذي يصير ٥٠٠ يُعدّ أيضاً.
+	// انظر `monitoring_errors.go` (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩).
+	r.Use(s.countErrors)
 	r.Use(middleware.Recoverer)
 	// **وترويساتُ الأمان على كلّ ردّ** — قبل التوجيه، فتشمل الوسائطَ
 	// والصحّةَ كما تشمل الواجهة. (انظر security_headers.go.)
@@ -1062,6 +1073,8 @@ func (s *Server) Router() http.Handler {
 			// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البندان ٢ و٣).
 			r.Get("/ops/monitor", s.handleOpsMonitor)
 			r.Get("/ops/status", s.handleOpsStatus)
+			// **وأخطاءُ الخادم مجمَّعةً** — بقدرة الرصد (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩).
+			r.Get("/monitoring/errors", s.handleMonitoringErrors)
 
 			// ══════════════════════════════════════════════════════
 			// **خريطةُ العمليات**

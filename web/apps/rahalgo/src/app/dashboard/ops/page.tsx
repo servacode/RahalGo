@@ -84,6 +84,13 @@ interface Monitor {
   missing: string[];
 }
 
+/** **أخطاءُ الخادم مجمَّعةً** — `GET /admin/monitoring/errors` (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩). */
+interface ServerErrors {
+  total: number;
+  last_hour: number;
+  groups: { route: string; code: number; count: number; last_seen: string }[];
+}
+
 /** **عقدُ التفاصيل التقنيّة** — `GET /admin/ops/health`، قِيس حيّاً. */
 interface OpsHealth {
   status?: string;
@@ -267,6 +274,15 @@ export default function OpsMonitorPage() {
     ["system"],
     [canEngineer, canFlow],
   );
+  // **وأخطاءُ الخادم لمن يرى التفاصيل التقنيّة** — تُقرأ مع كلّ تحديث.
+  const errs = useLiveData<ServerErrors | null>(
+    () =>
+      canEngineer
+        ? api<ServerErrors>("/api/v1/admin/monitoring/errors").catch(() => null)
+        : Promise.resolve(null),
+    ["system"],
+    [canEngineer],
+  );
   // **وهويّةُ النسخة مرّةً واحدة** — لا تتبدّل بين تحديثين.
   const [ident, setIdent] = useState<Identity | null>(null);
   useEffect(() => {
@@ -279,19 +295,22 @@ export default function OpsMonitorPage() {
   // **تحديثٌ محافظٌ كلَّ دقيقة** — والدقائقُ في جدول العالق تُعدّ معه.
   const reloadMon = mon.reload;
   const reloadEng = eng.reload;
+  const reloadErrs = errs.reload;
   useEffect(() => {
     const t = setInterval(() => {
       setNow(Date.now());
       reloadMon();
       reloadEng();
+      reloadErrs();
     }, 60_000);
     return () => clearInterval(t);
-  }, [reloadMon, reloadEng]);
+  }, [reloadMon, reloadEng, reloadErrs]);
 
   const refresh = () => {
     setNow(Date.now());
     reloadMon();
     reloadEng();
+    reloadErrs();
   };
 
   const ackAlert = async (id: string) => {
@@ -573,6 +592,28 @@ export default function OpsMonitorPage() {
                     <Counters map={health.clients} labels={appLabel} />
                     <Row label={O.clientsDropped} value={num(health.clients_dropped)} />
                   </Card>
+                  {errs.data && (
+                    <Card title={O.secErrors} padding="sm">
+                      {errs.data.groups.length === 0 ? (
+                        <p className="text-sm">{O.errorsNone}</p>
+                      ) : (
+                        <>
+                          <p className="mb-2 text-xs text-ink-muted">
+                            {O.errorsTotal
+                              .replace("{n}", fmtNum(errs.data.total))
+                              .replace("{h}", fmtNum(errs.data.last_hour))}
+                          </p>
+                          {errs.data.groups.slice(0, 10).map((g) => (
+                            <Row
+                              key={`${g.route}|${g.code}`}
+                              label={`${g.route} (${g.code})`}
+                              value={`${fmtNum(g.count)} · ${O.errorsLast.replace("{t}", fmtClockTime(g.last_seen))}`}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </Card>
+                  )}
                   <Card title={O.secRelease} padding="sm">
                     <Row label={O.environment} value={id?.environment ?? O.unknown} ltr />
                     <Row label={O.migration} value={id?.migration_version ?? O.unknown} ltr />

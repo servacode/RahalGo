@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 498,
+    "routes": 499,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 214,
-    "behaviour_settings": 171,
+    "setting_defs": 219,
+    "behaviour_settings": 176,
     "order_fields": 95,
-    "test_files": 542,
-    "test_funcs": 2228
+    "test_files": 544,
+    "test_funcs": 2235
   },
   "flows": [
     {
@@ -5102,6 +5102,96 @@
         "admin",
         "customer",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.disk_alert_percent",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.error_spike",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.morning_hour",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.morning_report",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -17370,6 +17460,12 @@
       "orphan": true
     },
     {
+      "name": "TestMonitoringErrors_ObservabilityOnly",
+      "file": "internal/qa/monitoring_errors_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMYC1_OwnCapabilitiesOnly",
       "file": "internal/qa/my_capabilities_test.go",
       "package": "qa",
@@ -26163,6 +26259,42 @@
     {
       "name": "TestMERGE_PromoCostsAreTheirOwnProfitLines",
       "file": "internal/server/merge_integrations_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAlertBook_DedupRepeatAndResolve",
+      "file": "internal/server/monitoring_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCountErrors_CountsOnly5xxByRoutePattern",
+      "file": "internal/server/monitoring_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestErrorTracker_FlushThenSummary",
+      "file": "internal/server/monitoring_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMonitorTick_BotAlertOnceThenResolved",
+      "file": "internal/server/monitoring_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMonitorTick_MorningReportOnce",
+      "file": "internal/server/monitoring_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMorningDue_DamascusHourOncePerDay",
+      "file": "internal/server/monitoring_test.go",
       "package": "server",
       "orphan": true
     },
