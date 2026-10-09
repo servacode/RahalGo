@@ -2,6 +2,7 @@ package server
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -64,5 +65,31 @@ func TestQASeedFailsClosedInProduction(t *testing.T) {
 	os.Unsetenv("RAHALGO_STAGING")
 	if newFaultServer(t, "staging").qaStagingEnabled() {
 		t.Fatal("staging without the flag must be disabled")
+	}
+}
+
+// TestQAVideoPhones — أرقامُ فيديو الشرح عشرةٌ في المدى الوهميّ، مسموحٌ لها
+// إصدارُ الرمز، **وخطّافُ «لا إرسال» لا يُركَّب إلّا خلف `qaStagingEnabled`.**
+func TestQAVideoPhones(t *testing.T) {
+	if len(qaVideoPhones) != 10 {
+		t.Fatalf("want 10 video phones, got %d", len(qaVideoPhones))
+	}
+	for _, p := range qaVideoPhones {
+		if !strings.HasPrefix(p, "+963900555") || !qaOTPPhones[p] || !qaIsVideoPhone(p) {
+			t.Fatalf("%s must be a fake-range OTP-allowed video phone", p)
+		}
+	}
+	if qaIsVideoPhone("+963900555001") {
+		t.Fatal("QA customer is not a video phone")
+	}
+	src, err := os.ReadFile("server.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(src)
+	gate := strings.Index(s, "if s.qaStagingEnabled() {")
+	hook := strings.Index(s, "s.identity.SetQANoSend(qaIsVideoPhone)")
+	if gate < 0 || hook < gate || hook-gate > 300 || strings.Count(s, "SetQANoSend") != 1 {
+		t.Fatal("SetQANoSend must be installed once, inside the qaStagingEnabled block")
 	}
 }

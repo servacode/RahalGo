@@ -318,6 +318,23 @@ const (
 
 // qaSignupWitnessPhones **أرقامُ تسجيلٍ إضافيّةٌ ثابتةٌ** لشاهدِ «ضاع الرد»
 // (Batch 4): كلُّ محاولةٍ تستهلك رقماً (يصير له حساب)، فيلزم عدّةٌ ثابتةٌ صغيرة.
+// qaVideoPhones **أرقامُ تصوير فيديو شرح الزبون** (٢٠٢٦-١٠-٠٩) — تسجيلٌ حقيقيٌّ كاملٌ
+// يُصوَّر، ورمزُه لا يُرسَل (`SetQANoSend`) بل يُصدَر بـ`otp_code`، **وطلباتُه تُساق بـ
+// `order_advance`** كطلبات زبون QA. التجهيزُ وحدَه.
+var qaVideoPhones = []string{
+	"+963900555770", "+963900555771", "+963900555772", "+963900555773", "+963900555774",
+	"+963900555775", "+963900555776", "+963900555777", "+963900555778", "+963900555779",
+}
+
+func qaIsVideoPhone(phone string) bool {
+	for _, p := range qaVideoPhones {
+		if p == phone {
+			return true
+		}
+	}
+	return false
+}
+
 var qaSignupWitnessPhones = []string{
 	"+963900555990", "+963900555991", "+963900555992", "+963900555993", "+963900555994",
 }
@@ -331,6 +348,9 @@ var qaOTPPhones = func() map[string]bool {
 	}
 	for _, p := range qaSignupWitnessPhones {
 		m[p] = true // أرقامُ شاهدِ «ضاع الرد» — تسجيلٌ ثابتٌ متعدّد
+	}
+	for _, p := range qaVideoPhones {
+		m[p] = true // أرقامُ تصوير فيديو الشرح (٧٧٠–٧٧٩)
 	}
 	for _, p := range qaRefWitnessPhones {
 		m[p] = true // أرقامُ شاهدِ الإحالة من الواجهة (٩٨٠–٩٨٤) — signup + whatsapp

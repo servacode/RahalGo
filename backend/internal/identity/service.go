@@ -98,12 +98,15 @@ const (
 )
 
 type Service struct {
-	repo   *Repo
-	rdb    *redis.Client
-	tokens *auth.TokenIssuer
-	sender notify.OTPSender
-	secret string // لتجزئة رموز OTP (HMAC)
-	logger *slog.Logger
+	// qaNoSend **أرقامُ تصويرٍ لا يُرسَل رمزُها** (التجهيز وحدَه، ٢٠٢٦-١٠-٠٩) — يُحفظ
+	// الرمزُ ويُصدَر بـ`QAIssueCode` ليُكتب في الفيديو، **ولا رسالةَ لرقمٍ وهميّ.**
+	qaNoSend func(phone string) bool
+	repo     *Repo
+	rdb      *redis.Client
+	tokens   *auth.TokenIssuer
+	sender   notify.OTPSender
+	secret   string // لتجزئة رموز OTP (HMAC)
+	logger   *slog.Logger
 	// setting يقرأ إعداداً عددياً من اللوحة، أو يعيد الاحتياطي.
 	//
 	// **دالّة لا مخزن**: لو حُقن `*settings.Store` لاعتمدت حزمةُ الهوية على
@@ -261,7 +264,7 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
 	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "login", s.otpLifetime(ctx)); err != nil {
 		return err
 	}
-	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
+	if err := s.sendCode(ctx, phone, code); err != nil {
 		return s.otpSendError(err)
 	}
 	return nil
@@ -298,7 +301,7 @@ func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone, ip s
 	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "phone_change", s.otpLifetime(ctx)); err != nil {
 		return err
 	}
-	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
+	if err := s.sendCode(ctx, phone, code); err != nil {
 		return s.otpSendError(err)
 	}
 	return nil
@@ -403,7 +406,7 @@ func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey, ip st
 	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), purpose, s.otpLifetime(ctx)); err != nil {
 		return err
 	}
-	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
+	if err := s.sendCode(ctx, phone, code); err != nil {
 		return s.otpSendError(err)
 	}
 	return nil
@@ -1578,3 +1581,14 @@ func checkAppRole(client string, roles []string) error {
 		return ErrNotDriverAccount
 	}
 }
+
+// sendCode يرسل الرمز — **إلّا لأرقام التصوير على التجهيز** (`qaNoSend`).
+func (s *Service) sendCode(ctx context.Context, phone, code string) error {
+	if s.qaNoSend != nil && s.qaNoSend(phone) {
+		return nil
+	}
+	return s.sender.SendOTP(ctx, phone, code)
+}
+
+// SetQANoSend **يُركَّب على التجهيز وحدَه** — انظر حقل `qaNoSend`.
+func (s *Service) SetQANoSend(f func(phone string) bool) { s.qaNoSend = f }

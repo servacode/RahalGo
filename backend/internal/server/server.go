@@ -522,6 +522,8 @@ func (s *Server) Router() http.Handler {
 		// (وحارسٌ ثانٍ في المعالِج نفسِه.) يُمكّن الاختبارَ الآليَّ الحيَّ
 		// من جلسةِ زبونٍ بلا OTP يدويّ.
 		if s.qaStagingEnabled() {
+			// **ورمزُ أرقام التصوير لا يُرسَل** — qa_reconcile.go `qaVideoPhones`.
+			s.identity.SetQANoSend(qaIsVideoPhone)
 			r.Post("/qa/session", s.handleQAStagingSession)
 			r.Post("/qa/revoke", s.handleQAStagingRevoke)
 			r.Post("/qa/setting", s.handleQAStagingSetting)

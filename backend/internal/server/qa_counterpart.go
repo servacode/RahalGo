@@ -64,8 +64,8 @@ func (s *Server) qaDriverIdentity(w http.ResponseWriter, r *http.Request) (strin
 //
 // **مساران، كلاهما نقديٌّ محايدٌ ماليّاً و QA-scoped:**
 //   - **مخصّص**: السُّلّمُ كاملاً حتّى `delivered` (يُسنِد سائقاً، يتّفق السعر).
-//   - **عاديّ**: **حتّى `accepted` فقط** — ما قبل التسوية، بلا سائقٍ ولا مال
-//     (لشهود 14-011). أيُّ هدفٍ آخرَ للعاديّ يُرفض.
+//   - **عاديّ**: حتّى `accepted` أو `dispatching` أو `assigned` — ما قبل التسوية
+//     (لشهود 14-011 ولفيديو الشرح). أيُّ هدفٍ آخرَ للعاديّ يُرفض.
 //
 // **QA-scoped**: يرفض طلباً لا يملكه زبونُ QA. **لا رجوعَ**: الهدفُ فوقَ الحالة الجارية.
 // qaResolveOpenOrder **يحلّ طلبَ QA1 المفتوحَ الوحيدَ** حين يُغفَل المعرّفُ
@@ -107,6 +107,16 @@ func (s *Server) qaResolveOpenOrder(ctx context.Context, uid string) (string, er
 	}
 }
 
+// qaOwnsOrder **طلبُ زبون QA أو زبونِ فيديو الشرح** (أرقام ٧٧٠–٧٧٩، ٢٠٢٦-١٠-٠٩).
+func (s *Server) qaOwnsOrder(ctx context.Context, custID, uid string) bool {
+	if custID == uid {
+		return true
+	}
+	var phone string
+	_ = s.pg.QueryRow(ctx, `SELECT phone FROM users WHERE id = $1::uuid`, custID).Scan(&phone)
+	return qaIsVideoPhone(phone)
+}
+
 func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, orderID, target string) {
 	ctx := r.Context()
 	// **معرّفٌ مُغفَلٌ ⇒ يُحلُّ طلبُ QA1 المفتوحُ الوحيد** (SUP-007) — لا تخمين.
@@ -134,7 +144,7 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 		return
 	}
 	// **QA-scoped**: طلبُ زبون QA وحدَه.
-	if custID != uid {
+	if !s.qaOwnsOrder(ctx, custID, uid) {
 		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_not_qa_order", "errors.forbidden"))
 		return
 	}
@@ -152,11 +162,20 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_normal_cash_only", "errors.validation"))
 			return
 		}
-		if target != "accepted" {
+		// **وحتّى السائق** (فيديو الشرح ٢٠٢٦-١٠-٠٩): قبولٌ ثمّ طابورٌ ثمّ إسنادٌ لسائق QA —
+		// **ما يفعله المكتبُ بيده**. والتسويةُ عند `picked_up` يفعلها السائقُ من تطبيقه.
+		steps := map[string][]string{
+			"accepted":    {"accepted"},
+			"dispatching": {"accepted", "dispatching"},
+			"assigned":    {"accepted", "dispatching", "assigned"},
+		}[target]
+		if steps == nil {
 			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "qa_normal_accepted_only", "errors.validation"))
 			return
 		}
-		if status != "pending" {
+		rank := map[string]int{"pending": 0, "accepted": 1, "dispatching": 2, "assigned": 3}
+		from, ok := rank[status]
+		if !ok || from >= rank[target] {
 			s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_no_backward", "errors.conflict"))
 			return
 		}
@@ -165,13 +184,24 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 			s.respondErr(w, aerr)
 			return
 		}
-		// pending ⇒ accepted (merchant/ops) — بلا سائقٍ ولا تسوية.
-		if _, err := s.orders.Transition(ctx, actor, []string{"ops"}, orderID, "accepted", "QA accept"); err != nil {
-			s.respondErr(w, err)
-			return
+		for _, to := range steps[from:] {
+			var terr error
+			if to == "assigned" {
+				driverID, ok := s.qaDriverIdentity(w, r)
+				if !ok {
+					return
+				}
+				_, terr = s.orders.AssignDriver(ctx, driverID, []string{"ops"}, orderID, driverID, "QA assign")
+			} else {
+				_, terr = s.orders.Transition(ctx, actor, []string{"ops"}, orderID, to, "QA advance")
+			}
+			if terr != nil {
+				s.respondErr(w, terr)
+				return
+			}
 		}
-		s.logger.Warn("QA normal order accepted (staging-only)", "order", orderID, "actor", actor)
-		httpx.JSON(w, http.StatusOK, map[string]any{"order_id": orderID, "status": "accepted", "was": status})
+		s.logger.Warn("QA normal order advanced (staging-only)", "order", orderID, "to", target, "actor", actor)
+		httpx.JSON(w, http.StatusOK, map[string]any{"order_id": orderID, "status": target, "was": status})
 		return
 	}
 	// **المخصّصُ: الحيادُ الماليّ** — نقديٌّ حصراً.
@@ -288,7 +318,7 @@ func (s *Server) qaOrderChatSend(w http.ResponseWriter, r *http.Request, uid, or
 		s.respondErr(w, err)
 		return
 	}
-	if custID != uid {
+	if !s.qaOwnsOrder(ctx, custID, uid) {
 		s.respondErr(w, httpx.NewError(http.StatusForbidden, "qa_not_qa_order", "errors.forbidden"))
 		return
 	}
