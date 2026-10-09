@@ -218,7 +218,9 @@ func (s *Server) qaOrderAdvance(w http.ResponseWriter, r *http.Request, uid, ord
 			// **المخصّصُ يحتاج اتّفاقَ السعر قبل الاستلام** (وإلّا `custom_not_agreed`).
 			// **قيمٌ رمزيّةٌ حتميّة، والمخصّصُ النقديُّ لا يُسوّى** (`settle` تخرج قبل
 			// قراءة الأعمدة) **فلا عمولةَ ولا مستحقَّ متجرٍ ولا خزينةَ ولا قيدَ صندوق.**
-			if err := s.orders.AgreeCustom(ctx, orderID, driverID, 5000, 1000); err != nil {
+			// **وبالليرة الجديدة** (٢٠٢٦-١٠-٠٩): الأجرةُ القديمةُ ١٠٠٠ صارت خارج المدى ١٠٠–٥٠٠
+			// فرُدّ كلُّ تقدّمٍ بـ`custom_fee_out_of_range` — بضاعةٌ ٣٠٠ وأجرةٌ ١٥٠.
+			if err := s.orders.AgreeCustom(ctx, orderID, driverID, 300, 150); err != nil {
 				s.respondErr(w, err)
 				return
 			}
