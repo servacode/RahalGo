@@ -946,11 +946,26 @@
     <string name="ow_amount_hint">يخصم هذا المبلغ من سعر الصنف</string>
     <string name="ow_percent">نسبة الخصم</string>
     <string name="ow_create">أنشئ العرض</string>
+    <!-- صفحتا العروض (طلبُ المالك ٢٠٢٦-١٠-٠٩) -->
+    <string name="ow_new_button">＋ عرض جديد</string>
+    <string name="ow_new_title">عرض جديد</string>
+    <string name="ow_back_to_list">رجوع للعروض</string>
+    <string name="ow_created_top">✓ تم إنشاء العرض — هو أول القائمة</string>
+    <string name="ow_f_item">الصنف</string>
+    <string name="ow_f_discount">الخصم</string>
+    <string name="ow_all_sections">الكل</string>
+    <string name="ow_preview_title">المعاينة</string>
+    <string name="ow_preview_pick">اختار صنف لتشوف السعر بعد الخصم</string>
+    <string name="ow_preview_for">لمدة %1$s</string>
+    <string name="offer_ends_at">ينتهي: %1$s</string>
+    <string name="ow_preview_discount">الخصم: %1$s</string>
+    <string name="ow_preview_price">سعر الصنف: %1$s</string>
+    <string name="ow_preview_final">السعر النهائي للزبون بيطلع بقائمة العروض أول ما تنشئه</string>
     <string name="ow_default_title">خصم</string>
     <string name="ow_bad_input">اختر صنفا وقيمة خصم صحيحة ومدة</string>
     <string name="ow_borne_store">الخصم يُحسم من مستحق المتجر</string>
     <string name="ow_borne_me">الخصم يُحسم من مستحقك أنت</string>
-    <string name="ow_offers_empty">لا عروض بعد — أنشئ عرضا على صنف ليراه الزبائن</string>
+    <string name="ow_offers_empty">ما في عروض لهالمتجر لسا — اكبس «عرض جديد»</string>
     <string name="err_return_bad_target">وجهة إرجاع البضاعة غير معروفة</string>
     <string name="err_return_store_refused">هذا المتجر لا يقبل إرجاع البضاعة</string>
     <string name="err_no_return_trip">لا مشوار إرجاع على هذا الطلب</string>

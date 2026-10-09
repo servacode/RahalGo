@@ -98,6 +98,10 @@ object MapStyleRepository {
             manifest = client?.cached()
             runtime = MapRuntime(pkgStore, canonical, config)
         }
+        // **والفهرسُ يُسخَّن عند الإقلاع** (رُئي على جوال المالك ٢٠٢٦-١٠-٠٩: الخريطةُ
+        // تتأخّر في أوّل فتحة) — **فلا تنتظره الشاشةُ حين تُفتح**، وهو أوّلُ نداءٍ
+        // في سلسلةٍ متتابعة. وتعثّرُه لا يضرّ: الشاشةُ تجلبه كما كانت.
+        refreshScope.launch { runCatching { ensureManifest() } }
     }
 
     fun isReady(): Boolean = runtime != null

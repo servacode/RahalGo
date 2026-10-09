@@ -99,6 +99,8 @@ fun PasswordField(
     enabled: Boolean,
     label: Int = R.string.login_password,
     modifier: Modifier = Modifier,
+    /** **«تم» في الكيبورد يُرسل** (٢٠٢٦-١٠-٠٩) — فلا يلزم إغلاقُه لبلوغ الزرّ. */
+    onDone: (() -> Unit)? = null,
 ) {
     var revealed by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -122,7 +124,12 @@ fun PasswordField(
         singleLine = true,
         visualTransformation =
             if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password,
+            imeAction = if (onDone != null) androidx.compose.ui.text.input.ImeAction.Go
+            else androidx.compose.ui.text.input.ImeAction.Default,
+        ),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onDone?.invoke() }),
         enabled = enabled,
         modifier = modifier.fillMaxWidth(),
     )

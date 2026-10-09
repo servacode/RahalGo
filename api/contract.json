@@ -9225,6 +9225,12 @@
       "auth": false
     },
     {
+      "method": "GET",
+      "path": "/api/v1/public/tiles/{z}/{x}/{y}",
+      "handler": "handleMapTile",
+      "auth": false
+    },
+    {
       "method": "POST",
       "path": "/api/v1/public/visit",
       "handler": "handlePublicVisit",

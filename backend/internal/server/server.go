@@ -502,6 +502,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/platform", s.handlePublicPlatform)
 		// **وأسلوبُ الخريطة** — يقرؤه العارضُ والمنزِّلُ معاً.
 		r.Get("/public/map-style.json", s.handleMapStyle)
+		// **وبلاطاتُها من وسيطنا** — map_tiles.go (٢٠٢٦-١٠-٠٩).
+		r.Get("/public/tiles/{z}/{x}/{y}", s.handleMapTile)
 		// ══════════════════════════════════════════════════════════
 		// **هويّةُ البيئة — `P-0` البند ٥**
 		// ══════════════════════════════════════════════════════════

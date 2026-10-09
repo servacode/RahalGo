@@ -157,6 +157,8 @@ fun OfferCard(
     amount: Long? = null,
     stopping: Boolean,
     onStop: () -> Unit,
+    /** **ينتهي متى** (٢٠٢٦-١٠-٠٩) — «ينتهي بعد ٥ ساعات» تحت السعر. وفارغٌ: لا يُقال. */
+    endsAt: String? = null,
 ) {
     val ctx = LocalContext.current
     // ══════════════════════════════════════════════════════════════════
@@ -266,6 +268,12 @@ fun OfferCard(
             )
         }
         // **وزرُّ الإيقاف حيث يُفيد** — **ولا يُعرَض على منتهٍ.**
+        if (live && endsAt != null) {
+            remainingLabel(ctx, endsAt)?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+            }
+        }
         if (OfferStatus.canStop(status)) {
             Spacer(Modifier.height(6.dp))
             RahalTextButton(onClick = onStop, enabled = !stopping) {
@@ -273,4 +281,15 @@ fun OfferCard(
             }
         }
     }
+}
+
+/**
+ * **«ينتهي …» بوقتٍ مطلق** — يومٌ وساعةٌ بتوقيت دمشق. **ولا يُقرأ زمنُ الجهاز**
+ * (`AB-05`): الحالُ من المحرّك، **وهذا وقتٌ يُقرأ كما أرسله.**
+ */
+internal fun remainingLabel(ctx: android.content.Context, endsAt: String): String? {
+    val end = runCatching { java.time.Instant.parse(endsAt) }.getOrNull() ?: return null
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("EEEE h:mm a", java.util.Locale("ar"))
+        .withZone(java.time.ZoneId.of("Asia/Damascus"))
+    return ctx.getString(R.string.offer_ends_at, fmt.format(end))
 }

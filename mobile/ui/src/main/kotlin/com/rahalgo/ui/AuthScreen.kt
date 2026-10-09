@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -91,6 +92,9 @@ fun AuthScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // **والكيبوردُ لا يغطّي الزرّ** (رُئي على جوال المالك ٢٠٢٦-١٠-٠٩) — العمودُ
+            // يقصر فوقه، فيبقى «تسجيل الدخول» ظاهراً تحت الحقل.
+            .imePadding()
             .verticalScroll(rememberScrollState())
             // **وحشوة جانبية هنا لا في الغلاف** — الحقول تحتاج هامشا،
             // والشعار لا.
@@ -140,6 +144,11 @@ fun AuthScreen(
                 value = password,
                 onChange = { password = it },
                 enabled = !state.busy,
+                onDone = {
+                    if (phone.isNotBlank() && password.isNotEmpty() && !state.busy) {
+                        actions.login(phone.trim(), password)
+                    }
+                },
             )
 
             state.codeSent -> {

@@ -71,15 +71,27 @@ const defaultTileURL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 //
 // **وهو نظيرُ `NEXT_PUBLIC_TILE_URL` في الويب** — بابٌ واحدٌ في
 // الطرفين.
-func tileURL() string {
+//
+// **وإن لم يُضبط فالبلاطاتُ من وسيطنا** (map_tiles.go، ٢٠٢٦-١٠-٠٩) — عنوانُ
+// الخادم الذي سُئل عن النمط نفسِه، فيصحّ في التجهيز والإنتاج بلا إعداد.
+func tileURL(r *http.Request) string {
 	if v := os.Getenv("MAP_TILE_URL"); v != "" {
 		return v
 	}
-	return defaultTileURL
+	if r == nil || r.Host == "" {
+		return defaultTileURL
+	}
+	scheme := "https"
+	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
+		scheme = p
+	} else if r.TLS == nil && strings.HasPrefix(r.Host, "localhost") {
+		scheme = "http"
+	}
+	return scheme + "://" + r.Host + "/api/v1/public/tiles/{z}/{x}/{y}.png"
 }
 
 func (s *Server) handleMapStyle(w http.ResponseWriter, r *http.Request) {
-	style := strings.ReplaceAll(rasterStyle, "{{TILE_URL}}", tileURL())
+	style := strings.ReplaceAll(rasterStyle, "{{TILE_URL}}", tileURL(r))
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// **ويُخزَّن يوماً في الوسيط** — الأسلوبُ لا يتبدّل كلَّ ساعة،

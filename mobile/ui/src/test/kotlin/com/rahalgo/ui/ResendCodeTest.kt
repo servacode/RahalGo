@@ -86,7 +86,9 @@ class ResendCodeTest {
         }
         val auth = File(ui, "AuthViewModel.kt").readText()
         // **الدخولُ برمزٍ والاستعادةُ والتسجيل** — ثلاثةُ نجاحاتٍ تضبط اللحظة.
-        assertEquals(3, Regex("codeSentAt = ").findAll(auth).count())
+        assertEquals(3, Regex("codeSentAt = at,").findAll(auth).count())
+        // **وخطوةُ الرمز تُستعاد بلحظتها إن أُغلق التطبيق** (`PendingCode`، ٢٠٢٦-١٠-٠٩).
+        assertEquals(3, Regex("codeSentAt = p.sentAt").findAll(auth).count())
         val acc = File(ui, "AccountViewModel.kt").readText()
         assertTrue(acc.contains("waSentAt = System.currentTimeMillis()"))
     }

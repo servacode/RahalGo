@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,6 +44,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.ui.R
 import com.rahalgo.ui.OfferCard
 import com.rahalgo.ui.OfferDuration
+import com.rahalgo.ui.money
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
 
@@ -81,84 +83,45 @@ import com.rahalgo.ui.RahalTextButton
 fun OffersWizard(vm: OffersWizardViewModel) {
     val ctx = LocalContext.current
     val focus = LocalFocusManager.current
-    // **ويبقيان مع تدوير الشاشة** (الخطوة ١٥) — رُئي على الجهاز: «15» كُتبت
-    // ثمّ دُوّرت الشاشةُ فعادت الخطوةُ ٥ إلى ٤ فارغة.
+    // ══════════════════════════════════════════════════════════════════
+    // **صفحتان لا صفحةٌ معجوقة** (طلبُ المالك ٢٠٢٦-١٠-٠٩)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // «صفحة إنشاء العرض معجوقة مو مفهومة.» — **كانت الخطواتُ والاختياراتُ
+    // ورسالةُ «تمّ» والعروضُ القديمةُ كلُّها فوق بعضها**، و«الخطوة ٣ من ٥»
+    // تتبدّل وحدَها. **فصارت**: «العروض» (القائمة وزرُّ «عرض جديد») ثمّ
+    // «عرض جديد» (نموذجٌ واحدٌ ظاهرٌ كلُّه ومعاينةٌ قبل الإنشاء)، **ومن
+    // أنشأ عاد إلى القائمة.** ويبقيان مع تدوير الشاشة.
+    var composing by rememberSaveable { mutableStateOf(false) }
     var percent by rememberSaveable { mutableStateOf("") }
     var hours by rememberSaveable { mutableStateOf(24) }
     var query by rememberSaveable { mutableStateOf("") }
 
-    // **ولوحُ العملاء يُحمَّل عند الفتح بلا متجر** — **وخطوةٌ أولى فارغةٌ
-    // تُقرأ عطباً.**
     LaunchedEffect(vm.merchantID) {
         if (vm.merchantID.isEmpty()) vm.loadClients()
     }
+    // **ونجاحُ الإنشاء يعيد إلى القائمة** — والجديدُ أوّلُها، ورسالةُ «تمّ» فوقها.
+    LaunchedEffect(vm.created) {
+        if (vm.created > 0) {
+            percent = ""
+            query = ""
+            composing = false
+        }
+    }
+    androidx.activity.compose.BackHandler(enabled = composing) { composing = false }
 
-    // **وقيمةٌ واحدةٌ تُقرأ بحسب الطريقة** — **ولا حقلان يملأ أحدَهما
-    // وينسى الآخر** فيُرسَل عرضٌ بنسبةٍ ومبلغٍ معاً ويُردّ.
     val value = percent.toLongOrNull() ?: 0L
-    // **والمبلغُ دون سعر الصنف** (`OFFER-EXP`): ٢٠٠ على ١٥٠ قُبل على الجهاز
-    // فصار الصنفُ «٠ ل.س». **والخادمُ يرفضه أيضاً** — وهذا ليُقال قبل الإرسال.
-    val itemPrice = vm.items.firstOrNull { it.id == vm.pickedItem }?.price ?: 0L
+    val picked = vm.items.firstOrNull { it.id == vm.pickedItem }
+    val itemPrice = picked?.price ?: 0L
     val valueOK = if (vm.byPercent) value in 1..90
     else value > 0 && (itemPrice <= 0 || value < itemPrice)
 
-    // **ونجاحُ الإنشاء يمسح القيمة** — **لا الضغطُ**: من رُفض عرضُه يجد
-    // رقمَه كما كتبه فيصحّحه.
-    LaunchedEffect(vm.created) { if (vm.created > 0) percent = "" }
-    // **والمتجرُ لا يختار متجراً ولا قسماً** — فخطواتُه ثلاث: الصنف ثمّ
-    // القيمة ثمّ المدّة. والمندوبُ خمس.
-    val noStore = if (vm.picksStore) 0 else 1
-    val noSection = if (vm.picksSection) 0 else 1
-    val total = 5 - noStore - noSection
-    val step = when {
-        vm.merchantID.isEmpty() -> 1
-        vm.picksSection && vm.pickedSection.isEmpty() -> 2
-        vm.pickedItem.isEmpty() -> 3
-        !valueOK -> 4
-        else -> 5
-    }
-
-    // **و`imePadding`**: لوحةُ المفاتيح كانت تغطّي «أنشئ العرض» فيقع الضغطُ
-    // عليها (`OFFER-EXP`، رُئي على الجهاز) — **فالقائمةُ تقصر فوقها.**
     LazyColumn(
         Modifier.fillMaxWidth().imePadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { StepHeader(maxOf(1, step - noStore - (if (step > 2) noSection else 0)), total) }
-
-        // **وما اختير يبقى مكتوباً** — **فتُراجَع الخطواتُ بلا رجوع**،
-        // **ولا يُنزَل خصمٌ على متجرٍ أو صنفٍ يظنّه غيرَه.**
-        if (vm.merchantID.isNotEmpty()) {
-            item {
-                ChosenBar(
-                    merchant = vm.merchantName,
-                    section = vm.sections.firstOrNull { it.id == vm.pickedSection }?.name,
-                    item = vm.items.firstOrNull { it.id == vm.pickedItem }?.name,
-                    onChangeMerchant = if (vm.picksStore) { { vm.clearMerchant() } } else null,
-                )
-            }
-        }
-
-        // **و«تمّ» يُقال** — كانت الشاشةُ تعود للخطوة ٤ صامتة.
-        if (vm.createdShown && vm.error.isEmpty()) {
-            item {
-                Text(
-                    stringResource(R.string.ow_created),
-                    color = Rahal.colors.success,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(Rahal.shape.md)
-                        .background(Rahal.colors.success.copy(alpha = 0.10f))
-                        .padding(12.dp),
-                )
-            }
-        }
-
         if (vm.error.isNotEmpty()) {
             item {
-                // **وردُّ الخادم يُقال بلفظه** — **ومنعُ التخويل يُقرأ
-                // «هذا المتجر ليس من عملائك» لا «حدث خطأ».**
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -167,7 +130,6 @@ fun OffersWizard(vm: OffersWizardViewModel) {
                         .padding(12.dp),
                 ) {
                     Text(vm.error, color = Rahal.colors.danger)
-                    // **ومن فشل تحميلُه يُعيده بضغطة** — لا يرجع ويدخل من جديد.
                     if (vm.merchantID.isNotEmpty() && vm.sections.isEmpty()) {
                         RahalTextButton(onClick = { vm.load() }, enabled = !vm.busy) {
                             Text(stringResource(R.string.act_retry))
@@ -177,43 +139,147 @@ fun OffersWizard(vm: OffersWizardViewModel) {
             }
         }
 
-        // ── ١ · المتجر ───────────────────────────────────────────────
-        if (vm.merchantID.isEmpty() && !vm.picksStore) {
-            item { if (vm.busy) Hint(stringResource(R.string.ow_loading)) }
-        }
-        if (vm.merchantID.isEmpty() && vm.picksStore) {
-            item {
-                StepCard(stringResource(R.string.ow_s1)) {
-                    if (vm.clients.isEmpty() && !vm.busy) {
-                        Hint(stringResource(R.string.ow_no_clients))
-                    }
-                    vm.clients.forEach { c ->
-                        PickRow(
-                            text = c.name,
-                            chosen = false,
-                            onClick = { vm.open(c.id, c.name) },
-                        )
+        // ── اختيارُ المتجر (للمندوب) ─────────────────────────────────
+        if (vm.merchantID.isEmpty()) {
+            if (!vm.picksStore) {
+                item { if (vm.busy) Hint(stringResource(R.string.ow_loading)) }
+            } else {
+                item {
+                    StepCard(stringResource(R.string.ow_s1)) {
+                        if (vm.clients.isEmpty() && !vm.busy) Hint(stringResource(R.string.ow_no_clients))
+                        if (vm.clients.isEmpty() && vm.busy) Hint(stringResource(R.string.ow_loading))
+                        vm.clients.forEach { c ->
+                            PickRow(text = c.name, chosen = false, onClick = { vm.open(c.id, c.name) })
+                        }
                     }
                 }
             }
+            return@LazyColumn
         }
 
-        // ── ٢ · القسم ────────────────────────────────────────────────
-        if (step == 2) {
-            item {
-                StepCard(stringResource(R.string.ow_s2)) {
-                    // **والتحميلُ يُقال، والفشلُ لا يُقرأ «لا أقسام»** (الخطوة ١٥):
-                    // رُئي بلا نت — عشرون ثانيةً فارغة، **ثمّ «لا أقسام في
-                    // قائمة هذا المتجر» والأقسامُ موجودةٌ لم تُحمَّل.**
-                    when {
-                        vm.busy -> Hint(stringResource(R.string.ow_loading))
-                        vm.sections.isEmpty() && vm.error.isEmpty() ->
-                            Hint(stringResource(R.string.ow_no_sections))
+        // ── رأسُ المتجر ───────────────────────────────────────────────
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (composing) stringResource(R.string.ow_new_title)
+                    else stringResource(if (vm.picksStore) R.string.ow_current else R.string.ow_current_mine),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Rahal.colors.ink,
+                    modifier = Modifier.weight(1f),
+                )
+                when {
+                    composing -> RahalTextButton(onClick = { composing = false }) {
+                        Text(stringResource(R.string.ow_back_to_list))
                     }
+                    vm.picksStore -> RahalTextButton(onClick = { vm.clearMerchant() }) {
+                        Text(stringResource(R.string.ow_change_store))
+                    }
+                }
+            }
+            if (vm.picksStore) {
+                Text(vm.merchantName, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        if (!composing) {
+            // ══════════════════════════════════════════════════════════
+            // **١ · العروض — القائمةُ وزرُّ «عرض جديد»**
+            // ══════════════════════════════════════════════════════════
+            if (vm.createdShown && vm.error.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.ow_created_top),
+                        color = Rahal.colors.success,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(Rahal.shape.md)
+                            .background(Rahal.colors.success.copy(alpha = 0.10f))
+                            .padding(12.dp),
+                    )
+                }
+            }
+            item {
+                RahalButton(
+                    onClick = {
+                        vm.clearCreated()
+                        vm.pickItem("")
+                        percent = ""
+                        query = ""
+                        composing = true
+                    },
+                    enabled = !vm.busy || vm.items.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.ow_new_button)) }
+            }
+            val rows = vm.rows
+            if (rows == null && vm.busy) item { Hint(stringResource(R.string.ow_loading)) }
+            if (rows != null && rows.isEmpty()) item { Hint(stringResource(R.string.ow_offers_empty)) }
+            items(rows.orEmpty(), key = { it.id }) { o ->
+                OfferCard(
+                    itemName = o.itemName,
+                    status = o.status,
+                    priceBefore = o.priceBefore,
+                    priceAfter = o.priceAfter,
+                    percent = o.discountPercent,
+                    amount = o.discountAmount,
+                    stopping = vm.stopping == o.id,
+                    onStop = { vm.stop(o.id) },
+                    endsAt = o.endsAt,
+                )
+            }
+            return@LazyColumn
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **٢ · عرضٌ جديد — نموذجٌ واحدٌ ظاهرٌ كلُّه**
+        // ══════════════════════════════════════════════════════════════
+
+        // ── الصنف: بحثٌ وأقسامٌ للفلترة ─────────────────────────────
+        item {
+            val pool = if (vm.picksSection && vm.pickedSection.isNotEmpty()) {
+                vm.sections.firstOrNull { it.id == vm.pickedSection }?.items.orEmpty()
+            } else {
+                vm.items
+            }
+            val shown = if (query.isBlank()) pool
+            else pool.filter { it.name.contains(query.trim(), ignoreCase = true) }
+            // **وصنفٌ عليه عرضٌ يُقال بجانبه** — الجديدُ يحلّ محلّه (`OFFER-EXP`).
+            val taken = vm.rows.orEmpty()
+                .filter {
+                    it.status == com.rahalgo.ui.OfferStatus.ACTIVE ||
+                        it.status == com.rahalgo.ui.OfferStatus.SCHEDULED
+                }
+                .mapNotNull { o -> o.menuItemId?.let { it to o.status } }
+                .toMap()
+            StepCard(stringResource(R.string.ow_f_item)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it.take(40) },
+                    placeholder = { Text(stringResource(R.string.ow_search)) },
+                    leadingIcon = {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(R.drawable.ic_search),
+                            contentDescription = null,
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (vm.picksSection && vm.sections.size > 1) {
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        FilterChip(
+                            selected = vm.pickedSection.isEmpty(),
+                            onClick = { vm.pickSection("") },
+                            label = { Text(stringResource(R.string.ow_all_sections)) },
+                        )
                         vm.sections.forEach { s ->
                             FilterChip(
                                 selected = vm.pickedSection == s.id,
@@ -223,345 +289,139 @@ fun OffersWizard(vm: OffersWizardViewModel) {
                         }
                     }
                 }
-            }
-        }
-
-        // ── ٣ · الصنف ────────────────────────────────────────────────
-        if (step == 3) {
-            item {
-                // **والمتجرُ يرى أصنافَه كلَّها ويبحث** — والمندوبُ أصنافَ القسم.
-                val pool = if (vm.picksSection) {
-                    vm.sections.firstOrNull { it.id == vm.pickedSection }?.items.orEmpty()
-                } else {
-                    vm.items
-                }
-                val inSection = if (query.isBlank()) pool
-                else pool.filter { it.name.contains(query.trim(), ignoreCase = true) }
-                StepCard(
-                    stringResource(R.string.ow_s3),
-                    onBack = if (vm.picksSection) { { vm.pickSection("") } } else null,
-                ) {
-                    if (!vm.picksSection) {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it.take(40) },
-                            placeholder = { Text(stringResource(R.string.ow_search)) },
-                            leadingIcon = {
-                                androidx.compose.material3.Icon(
-                                    androidx.compose.ui.res.painterResource(R.drawable.ic_search),
-                                    contentDescription = null,
-                                )
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        if (vm.busy && pool.isEmpty()) Hint(stringResource(R.string.ow_loading_items))
-                    }
-                    if (inSection.isEmpty() && !vm.busy) {
-                        Hint(
-                            stringResource(
-                                if (query.isNotBlank()) R.string.ow_no_match
-                                else if (vm.picksSection) R.string.ow_no_items
-                                else R.string.ow_no_items_store,
-                            ),
-                        )
-                    }
-                    // ══════════════════════════════════════════════════
-                    // **وصنفٌ عليه عرضٌ جارٍ يُقال قبل أن يُختار**
-                    // ══════════════════════════════════════════════════
-                    //
-                    // **قِيس حيّاً ٢٠٢٦-٠٩-٣٠** بنداءٍ إلى التجهيز:
-                    // `POST /rep/stores/{id}/offers ⇒ 409
-                    //  item_already_discounted`.
-                    //
-                    // **والمنصّةُ محقّةٌ** — «خصمان على صنفٍ واحدٍ سؤالٌ بلا
-                    // جواب» (`offers_one_live_per_item`). **والعطبُ في
-                    // الشاشة**: تُمشّي المندوبَ الخطواتِ الخمسَ كلَّها ثمّ
-                    // تردّه في آخرها، **ولا تقول لماذا.**
-                    //
-                    // **فيُوسَم المحجوزُ ويُمنَع ضغطُه** — والسببُ مكتوبٌ
-                    // بجانبه. **ومن رأى الجوابَ في أوّل الطريق لم يمشِه.**
-                    //
-                    // **ولا حجزَ بعد اليوم** (`OFFER-EXP`، قرارُ المالك
-                    // ٢٠٢٦-٠٩-٣٠: «لازم نقدر نعمل عرض إيمت ما بدنا»):
-                    // **الخادمُ يُنزل القائمَ ويُدرج الجديد.** فالصنفُ يبقى
-                    // قابلاً للاختيار، **ويُقال بجانبه إنّ الجديدَ يحلّ محلّ
-                    // عرضه** — فلا يُستبدَل خصمٌ سارٍ بلا علم.
-                    val taken = vm.rows.orEmpty()
-                        .filter {
-                            it.status == com.rahalgo.ui.OfferStatus.ACTIVE ||
-                                it.status == com.rahalgo.ui.OfferStatus.SCHEDULED
-                        }
-                        .mapNotNull { o -> o.menuItemId?.let { it to o.status } }
-                        .toMap()
-                    inSection.forEach { i ->
-                        val holder = taken[i.id]
-                        PickRow(
-                            text = i.name,
-                            chosen = vm.pickedItem == i.id,
-                            enabled = true,
-                            note = when (holder) {
-                                null -> null
-                                com.rahalgo.ui.OfferStatus.SCHEDULED ->
-                                    stringResource(R.string.ow_item_scheduled)
-                                else -> stringResource(R.string.ow_item_taken)
-                            },
-                            onClick = { vm.pickItem(i.id) },
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── ٤ و٥ · النسبة والمدّة ────────────────────────────────────
-        if (step >= 4) {
-            item {
-                StepCard(
-                    stringResource(R.string.ow_s4b),
-                    onBack = { vm.pickItem("") },
-                ) {
-                    // ══════════════════════════════════════════════════
-                    // **وطريقتان — نسبةٌ أو مبلغٌ ثابت**
-                    // ══════════════════════════════════════════════════
-                    //
-                    // (قرارُ المالك ٢٠٢٦-٠٩-٣٠.)
-                    //
-                    // **وتبديلُ الطريقة يمسح القيمة** — **و«٢٠» تعني
-                    // عشرينَ بالمئة في واحدةٍ وعشرينَ ليرةً في الأخرى**،
-                    // فرقمٌ باقٍ من طريقةٍ سابقةٍ خصمٌ لم يُقصد.
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        FilterChip(
-                            selected = vm.byPercent,
-                            onClick = { if (!vm.byPercent) { vm.pickMode(true); percent = "" } },
-                            label = { Text(stringResource(R.string.ow_mode_percent)) },
-                        )
-                        FilterChip(
-                            selected = !vm.byPercent,
-                            onClick = { if (vm.byPercent) { vm.pickMode(false); percent = "" } },
-                            label = { Text(stringResource(R.string.ow_mode_fixed)) },
-                        )
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = percent,
-                        onValueChange = { v ->
-                            // **والنسبةُ رقمان والمبلغُ تسعة** — **وحدُّ
-                            // الطولِ يمنع لصقةً بمليارٍ تصير خصماً كاملاً.**
-                            percent = v.filter { it.isDigit() }
-                                .take(if (vm.byPercent) 2 else 9)
-                            vm.clearCreated()
-                        },
-                        label = {
-                            Text(
-                                stringResource(
-                                    if (vm.byPercent) R.string.ow_percent else R.string.ow_amount,
-                                ),
-                            )
-                        },
-                        singleLine = true,
-                        isError = percent.isNotEmpty() && !valueOK,
-                        // **والخطأُ يُقال بالأحمر تحت الحقل** — كانت ٩٥٪ تُعلق
-                        // الشاشةَ بلا سبب، والسطرُ الرماديُّ وحدَه.
-                        supportingText = if (percent.isNotEmpty() && !valueOK) {
-                            {
-                                Text(
-                                    if (vm.byPercent) {
-                                        stringResource(R.string.ow_bad_percent)
-                                    } else {
-                                        stringResource(
-                                            R.string.ow_bad_amount,
-                                            itemPrice.toString(),
-                                        )
-                                    },
-                                    color = Rahal.colors.danger,
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                        // **و«تمّ» في لوحة المفاتيح يطويها.**
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done,
-                        ),
-                        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
+                if (vm.busy && pool.isEmpty()) Hint(stringResource(R.string.ow_loading_items))
+                if (shown.isEmpty() && !vm.busy) {
                     Hint(
                         stringResource(
-                            if (vm.byPercent) R.string.ow_percent_hint else R.string.ow_amount_hint,
+                            if (query.isNotBlank()) R.string.ow_no_match else R.string.ow_no_items_store,
                         ),
+                    )
+                }
+                shown.forEach { i ->
+                    PickRow(
+                        text = i.name + "  ·  " + money(i.price),
+                        chosen = vm.pickedItem == i.id,
+                        note = when (taken[i.id]) {
+                            null -> null
+                            com.rahalgo.ui.OfferStatus.SCHEDULED -> stringResource(R.string.ow_item_scheduled)
+                            else -> stringResource(R.string.ow_item_taken)
+                        },
+                        onClick = { vm.pickItem(i.id) },
                     )
                 }
             }
         }
 
-        if (step == 5) {
-            item {
-                StepCard(stringResource(R.string.ow_s5)) {
-                    Row(
-                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        // **وكلُّ المدد لا خمسٌ منها** — **والشهرُ كان
-                        // يُقصّ بـ`take(5)` فلا يبلغه المندوبُ أبداً**،
-                        // وهو مدّةٌ يقبلها المحرّكُ (`MAX_HOURS = 24*30`).
-                        OfferDuration.PRESET_HOURS.forEach { h ->
-                            FilterChip(
-                                selected = h == hours,
-                                onClick = { hours = h },
-                                label = { Text(OfferDuration.label(ctx, h)) },
-                            )
-                        }
+        // ── الخصم: نسبةٌ أو مبلغ ─────────────────────────────────────
+        item {
+            StepCard(stringResource(R.string.ow_f_discount)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = vm.byPercent,
+                        onClick = { if (!vm.byPercent) { vm.pickMode(true); percent = "" } },
+                        label = { Text(stringResource(R.string.ow_mode_percent)) },
+                    )
+                    FilterChip(
+                        selected = !vm.byPercent,
+                        onClick = { if (vm.byPercent) { vm.pickMode(false); percent = "" } },
+                        label = { Text(stringResource(R.string.ow_mode_fixed)) },
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = percent,
+                    onValueChange = { v ->
+                        percent = v.filter { it.isDigit() }.take(if (vm.byPercent) 2 else 9)
+                    },
+                    label = { Text(stringResource(if (vm.byPercent) R.string.ow_percent else R.string.ow_amount)) },
+                    singleLine = true,
+                    isError = percent.isNotEmpty() && !valueOK,
+                    supportingText = {
+                        Text(
+                            when {
+                                percent.isNotEmpty() && !valueOK && vm.byPercent ->
+                                    stringResource(R.string.ow_bad_percent)
+                                percent.isNotEmpty() && !valueOK ->
+                                    stringResource(R.string.ow_bad_amount, itemPrice.toString())
+                                vm.byPercent -> stringResource(R.string.ow_percent_hint)
+                                else -> stringResource(R.string.ow_amount_hint)
+                            },
+                            color = if (percent.isNotEmpty() && !valueOK) Rahal.colors.danger else Rahal.colors.inkMuted,
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
+        // ── المدّة ───────────────────────────────────────────────────
+        item {
+            StepCard(stringResource(R.string.ow_s5)) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OfferDuration.PRESET_HOURS.forEach { h ->
+                        FilterChip(
+                            selected = h == hours,
+                            onClick = { hours = h },
+                            label = { Text(OfferDuration.label(ctx, h)) },
+                        )
                     }
-
-                    Spacer(Modifier.height(10.dp))
-                    // **ويُقرأ ما سيقع قبل أن يقع** — **بجملةٍ واحدةٍ
-                    // فيها الصنفُ والنسبةُ والمدّة.**
-                    Text(
-                        if (vm.byPercent) {
-                            stringResource(
-                                R.string.ow_preview,
-                                vm.items.firstOrNull { it.id == vm.pickedItem }?.name.orEmpty(),
-                                value.toInt(),
-                                OfferDuration.label(ctx, hours),
-                            )
-                        } else {
-                            stringResource(
-                                R.string.ow_preview_fixed,
-                                vm.items.firstOrNull { it.id == vm.pickedItem }?.name.orEmpty(),
-                                value.toString(),
-                                OfferDuration.label(ctx, hours),
-                            )
-                        },
-                        color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(Rahal.shape.sm)
-                            .background(Rahal.colors.success.copy(alpha = 0.10f))
-                            .padding(10.dp),
-                    )
-
-                    Spacer(Modifier.height(6.dp))
-                    // **ومن يتحمّله يُقال للمندوب أيضاً** — **فهو يشرحه
-                    // لصاحب المتجر وهو واقفٌ عنده.**
-                    Hint(stringResource(if (vm.picksStore) R.string.ow_borne_store else R.string.ow_borne_me))
-
-                    Spacer(Modifier.height(8.dp))
-                    RahalButton(
-                        onClick = {
-                            focus.clearFocus()
-                            vm.create(vm.pickedItem, value, hours)
-                        },
-                        enabled = !vm.busy,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.ow_create)) }
                 }
             }
         }
 
-        // ── عروضُ المتجر القائمة ─────────────────────────────────────
-        val rows = vm.rows
-        if (vm.merchantID.isNotEmpty() && rows != null) {
-            item {
+        // ── المعاينة والإنشاء ────────────────────────────────────────
+        item {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.success.copy(alpha = 0.08f))
+                    .padding(12.dp),
+            ) {
+                Text(stringResource(R.string.ow_preview_title), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(if (vm.picksStore) R.string.ow_current else R.string.ow_current_mine),
-                    fontWeight = FontWeight.Bold,
-                    color = Rahal.colors.ink,
-                )
-            }
-            if (rows.isEmpty()) {
-                item { Hint(stringResource(R.string.ow_offers_empty)) }
-            }
-        }
-        items(rows.orEmpty(), key = { it.id }) { o ->
-            OfferCard(
-                itemName = o.itemName,
-                status = o.status,
-                priceBefore = o.priceBefore,
-                priceAfter = o.priceAfter,
-                percent = o.discountPercent,
-                amount = o.discountAmount,
-                stopping = vm.stopping == o.id,
-                onStop = { vm.stop(o.id) },
-            )
-        }
-    }
-}
-
-/** **رأسٌ يقول أين هو من الطريق** — **ومن لا يعرف كم بقي يظنّه لا ينتهي.** */
-@Composable
-private fun StepHeader(step: Int, total: Int) {
-    Column(Modifier.fillMaxWidth()) {
-        Text(
-            stringResource(R.string.ow_step, step, total),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.labelMedium,
-        )
-        Spacer(Modifier.height(6.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            repeat(total) { i ->
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .clip(Rahal.shape.sm)
-                        .background(
-                            if (i < step) Rahal.colors.brand else Rahal.colors.line,
-                        ),
-                )
-            }
-        }
-    }
-}
-
-/** **وما اختير يبقى مكتوباً** — سطرٌ واحدٌ يحمل المتجرَ والقسمَ والصنف. */
-@Composable
-private fun ChosenBar(
-    merchant: String,
-    section: String?,
-    item: String?,
-    onChangeMerchant: (() -> Unit)?,
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.surface)
-            .padding(12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                merchant,
-                fontWeight = FontWeight.Bold,
-                color = Rahal.colors.ink,
-                modifier = Modifier.weight(1f),
-            )
-            if (onChangeMerchant != null) {
-                RahalTextButton(onClick = onChangeMerchant) {
-                    Text(stringResource(R.string.ow_change_store))
+                if (picked == null) {
+                    Text(stringResource(R.string.ow_preview_pick), color = Rahal.colors.inkMuted)
+                } else {
+                    Text(picked.name, fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
+                    // **ولا يُحسب السعرُ في الجهاز** (`OffersPolicyTest`): المحرّكُ يحسبه بهامش
+                    // الصنف والقسم — **فيُقال الخصمُ وسعرُ الصنف، والنهائيُّ في القائمة.**
+                    Text(stringResource(R.string.ow_preview_price, money(itemPrice)), color = Rahal.colors.ink)
+                    if (valueOK) {
+                        Text(
+                            stringResource(
+                                R.string.ow_preview_discount,
+                                if (vm.byPercent) value.toString() + "٪" else money(value),
+                            ),
+                            fontWeight = FontWeight.Bold,
+                            color = Rahal.colors.success,
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.ow_preview_for, OfferDuration.label(ctx, hours)),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
+                Spacer(Modifier.height(4.dp))
+                if (picked != null) Hint(stringResource(R.string.ow_preview_final))
+                Hint(stringResource(if (vm.picksStore) R.string.ow_borne_store else R.string.ow_borne_me))
+                Spacer(Modifier.height(10.dp))
+                RahalButton(
+                    onClick = {
+                        focus.clearFocus()
+                        vm.create(vm.pickedItem, value, hours)
+                    },
+                    enabled = !vm.busy && picked != null && valueOK,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.ow_create)) }
             }
-        }
-        val trail = listOfNotNull(section, item).joinToString(" ← ")
-        if (trail.isNotEmpty()) {
-            Text(
-                "✓ $trail",
-                color = Rahal.colors.success,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
     }
 }
