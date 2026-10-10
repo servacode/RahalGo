@@ -358,6 +358,13 @@ func run(logger *slog.Logger) error {
 			srv.StartDBWatch(ctx)
 			// **و«وضع المنصة» على الواتساب** — wa_report.go (طلبُ المالك ٢٠٢٦-١٠-٠٩):
 			// صاحبُ الرقم من محادثته مع نفسه، وأرقامُ `ops.report_phones` من رسالةٍ عاديّة.
+			// **وراصدُ المنصّة** — monitoring_watch.go (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩):
+			// كلَّ دقيقةٍ يفحص، وينبّه المالكَ في محادثته مع نفسه على رقم البوت،
+			// ويرسل التقريرَ الصباحيّ. **وبلا بوتٍ تذهب التنبيهاتُ إلى إشعارات اللوحة.**
+			if waBot != nil {
+				srv.SetAlertSender(waBot)
+			}
+			go srv.RunMonitoring(ctx, time.Minute)
 			if waBot != nil {
 				waBot.SetSelfCommand(srv.ReportForSelf)
 				waBot.SetInbound(func(c context.Context, from, text string) string {

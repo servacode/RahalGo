@@ -124,6 +124,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["GET", "/merchants/{id}/violations", "safety.manage"],
   ["GET", "/merchants/{id}/warnings", "safety.manage"],
   ["POST", "/merchants/{id}/warnings", "safety.manage"],
+  ["GET", "/monitoring/errors", "observability.read"],
   ["GET", "/obligation-requests", "finance.read"],
   ["POST", "/obligation-requests/{id}/approve", "finance.manage"],
   ["POST", "/obligation-requests/{id}/reject", "finance.manage"],

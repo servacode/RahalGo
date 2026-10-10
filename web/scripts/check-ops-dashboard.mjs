@@ -129,6 +129,8 @@ if (layout === "") problems.push("تخطيطُ اللوحة لم يُقرأ");
     "/api/v1/admin/ops/health",
     "/api/v1/admin/ops/monitor",
     "/api/v1/public/identity",
+    // **وعدُّ أخطاء الخادم** (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩) — أعدادٌ تُقرأ، لا حسابُ صحّةٍ ثانٍ.
+    "/api/v1/admin/monitoring/errors",
   ]);
   for (const c of calls) {
     if (!allowed.has(c)) {

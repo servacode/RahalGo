@@ -54,6 +54,9 @@ var adminPolicy = []Rule{
 	// ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البند ٢): **موظّفُ العمليّات يراها،
 	// والتفاصيلُ التقنيّةُ تبقى خلف `observability.read`.**
 	{"GET", "/ops/monitor", OrdersRead},
+	// **وأخطاءُ الخادم مجمَّعةً بالمسار والرمز** (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩) —
+	// تفصيلٌ تقنيٌّ كصحّة المنصّة، فيبقى خلف `observability.read`.
+	{"GET", "/monitoring/errors", ObservabilityRead},
 
 	// ── حساباتُ الموظّفين والمستخدمين ────────────────────────────
 	{"POST", "/users", UsersStatusManage},

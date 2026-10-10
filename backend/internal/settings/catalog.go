@@ -1765,6 +1765,25 @@ var Catalog = []Def{
 	{Key: "ops.outage_notify_min", Group: GroupPlatform, Kind: KindInt,
 		Min: 1, Max: 120, Unit: "minute", Default: 5},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **راصدُ المنصّة على واتساب المالك** (مراقبةُ المنصّة — الدفعةُ الأولى ٢٠٢٦-١٠-٠٩)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كلَّ دقيقةٍ يفحص البوتَ والقاعدةَ وRedis والطلباتِ العالقةَ والقرصَ
+	// والنسخَ وأخطاءَ الخادم، **وينبّه المالكَ في محادثته مع نفسه** — مرّةً،
+	// ثمّ «رجع طبيعي» حين تُحلّ. انظر `server/monitoring_watch.go`.
+	{Key: "monitoring.enabled", Group: GroupPlatform, Kind: KindBool, Default: true},
+	{Key: "monitoring.morning_report", Group: GroupPlatform, Kind: KindBool, Default: true},
+	// **ساعةُ التقرير بتوقيت دمشق** — من ٠ إلى ٢٣.
+	{Key: "monitoring.morning_hour", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 23, Default: 9},
+	// **كم خطأَ ٥xx في عشر دقائق يُعدّ قفزة** — وصفرُه يُطفئ هذا التنبيه وحدَه.
+	{Key: "monitoring.error_spike", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 10000, Default: 20},
+	// **نسبةُ امتلاء القرص التي يُنبَّه عندها** — وصفرُه يُطفئه.
+	{Key: "monitoring.disk_alert_percent", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 99, Unit: "percent", Default: 85},
+
 	// **ولا «دعمَ المتجر عند ردّ البضاعة» بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم
 	// المصاري ترجع ع حالها والإدارة تقرر تعوض المتجر او لا») — كانت نسبةً تُدفع مع كلّ
 	// ردّ (`merchants.return_support_percent`)، **وصار التعويضُ مبلغاً يكتبه من يحسم
