@@ -36,19 +36,22 @@ for _ in $(seq 1 60); do
 	sleep 1
 done
 
-docker exec -i "$TMPC" pg_restore -U rahalgo -d rahalgo --no-owner --exit-on-error <"$dump"
+# **وفي قاعدةٍ نظيفةٍ من `template0`** — صورةُ PostGIS تخلق إضافاتها (ومنها مخطّطُ
+# `tiger`) في القاعدة الافتراضيّة، **فيسقط الاسترجاعُ عندها بـ«موجودٌ أصلاً».**
+docker exec "$TMPC" createdb -U rahalgo -T template0 verify
+docker exec -i "$TMPC" pg_restore -U rahalgo -d verify --no-owner --exit-on-error <"$dump"
 echo "استُرجعت"
 
 counts() {
-	docker exec "$1" psql -U rahalgo -d rahalgo -At -F' ' -c "
+	docker exec "$1" psql -U rahalgo -d "$2" -At -F' ' -c "
 		SELECT format('SELECT %L, count(*) FROM %I.%I', table_name, table_schema, table_name)
 		FROM information_schema.tables
 		WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1" |
-		while read -r q; do docker exec "$1" psql -U rahalgo -d rahalgo -At -F' ' -c "$q"; done
+		while read -r q; do docker exec "$1" psql -U rahalgo -d "$2" -At -F' ' -c "$q"; done
 }
 
-live=$(counts "$PG")
-rest=$(counts "$TMPC")
+live=$(counts "$PG" rahalgo)
+rest=$(counts "$TMPC" verify)
 bad=0
 tables=0
 while read -r t n; do
