@@ -1077,6 +1077,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/ops/status", s.handleOpsStatus)
 			// **وأخطاءُ الخادم مجمَّعةً** — بقدرة الرصد (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩).
 			r.Get("/monitoring/errors", s.handleMonitoringErrors)
+			// **وزرُّ «تلقائي/يدوي» لشاشتي الطلبات والانضمام** — `auto_mode.go`.
+			r.Get("/auto-mode/orders", s.handleGetAutoMode("orders"))
+			r.Put("/auto-mode/orders", s.handleSetAutoMode("orders"))
+			r.Get("/auto-mode/leads", s.handleGetAutoMode("leads"))
+			r.Put("/auto-mode/leads", s.handleSetAutoMode("leads"))
 
 			// ══════════════════════════════════════════════════════
 			// **خريطةُ العمليات**

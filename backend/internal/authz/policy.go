@@ -57,6 +57,13 @@ var adminPolicy = []Rule{
 	// **وأخطاءُ الخادم مجمَّعةً بالمسار والرمز** (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩) —
 	// تفصيلٌ تقنيٌّ كصحّة المنصّة، فيبقى خلف `observability.read`.
 	{"GET", "/monitoring/errors", ObservabilityRead},
+	// **وزرُّ «تلقائي/يدوي» لمن يعمل في الشاشة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٠،
+	// `auto_mode.go`) — **مفتاحان لا لوحُ الإعدادات**: القراءةُ بقدرةِ القراءة،
+	// والتبديلُ بقدرةِ الفعل في الشاشة نفسِها.
+	{"GET", "/auto-mode/orders", OrdersRead},
+	{"PUT", "/auto-mode/orders", OrdersIntervene},
+	{"GET", "/auto-mode/leads", MerchantsVerify},
+	{"PUT", "/auto-mode/leads", MerchantsVerify},
 
 	// ── حساباتُ الموظّفين والمستخدمين ────────────────────────────
 	{"POST", "/users", UsersStatusManage},

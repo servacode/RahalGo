@@ -8,9 +8,12 @@
  * **إعدادٌ منطقيٌّ يُقلب من صفحة عمله** لا من صفحة الإعدادات: «طلبات الانضمام»
  * (`leads.auto_approve`) و«الطلبات» (`orders.auto_transfer`).
  *
- * **والحَكَمُ الخادم**: يُقرأ من `GET /admin/settings` بحقل `editable` — فلا
- * يظهر المفتاحُ لمن لا يملك كتابتَه — ويُكتب بـ`PUT /admin/settings/{key}`،
- * **وخطوةُ التحقّق إن لزمت يتولّاها `StepUpGate` مركزيّاً.**
+ * **والحَكَمُ الخادم**: يُقرأ من `GET /admin/auto-mode/{orders|leads}` بحقل
+ * `editable` — فلا يظهر لمن لا يملك تبديلَه — ويُكتب بـ`PUT` البابِ نفسِه.
+ *
+ * **ولماذا بابٌ لا لوحُ الإعدادات** (ملاحظةُ المالك ٢٠٢٦-١٠-١٠): **كان لا يظهر
+ * لحساب العمليات** — يقرأ اللوحَ ولا يملك كتابتَه. **والبابُ يُفتح بقدرةِ
+ * الشاشة** (`orders.intervene` · `merchants.verify`) لا بقدرة الإعدادات.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -22,11 +25,10 @@ import { useCanCall } from "@/lib/policy";
 const m = getMessages(defaultLocale);
 const A = m.admin.autoMode;
 
-interface SettingRow {
-  key: string;
-  value: unknown;
-  editable: boolean;
-}
+const KIND: Record<string, "orders" | "leads"> = {
+  "orders.auto_transfer": "orders",
+  "leads.auto_approve": "leads",
+};
 
 export function AutoModeToggle({
   settingKey,
@@ -39,14 +41,11 @@ export function AutoModeToggle({
   label: string;
   hint: string;
   className?: string;
-  /**
-   * **مفتاحُ دقائقَ يقبل وإن كان هذا مطفياً** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — يُذكر تحته
-   * صراحةً، **فلا يرى «مطفي» ثمّ يُفاجأ بطلبٍ قُبل لحاله.**
-   */
   minutesKey?: string;
 }) {
+  const kind = KIND[settingKey];
   const canCall = useCanCall();
-  const canRead = canCall("GET", "/settings");
+  const canRead = !!kind && canCall("GET", `/auto-mode/${kind}`);
   const [row, setRow] = useState<{ on: boolean; editable: boolean } | null>(null);
   const [minutes, setMinutes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,19 +54,15 @@ export function AutoModeToggle({
   const load = useCallback(async () => {
     if (!canRead) return;
     try {
-      const res = await api<{ settings?: SettingRow[] } | SettingRow[]>("/api/v1/admin/settings");
-      const rows: SettingRow[] = Array.isArray(res) ? res : (res.settings ?? []);
-      const r = rows.find((x) => x.key === settingKey);
-      setRow(r ? { on: r.value === true, editable: r.editable } : null);
-      if (minutesKey) {
-        const mv = rows.find((x) => x.key === minutesKey)?.value;
-        setMinutes(typeof mv === "number" ? mv : null);
-      }
+      const res = await api<{ on: boolean; editable: boolean; minutes?: number }>(
+        `/api/v1/admin/auto-mode/${kind}`,
+      );
+      setRow({ on: res.on === true, editable: res.editable === true });
+      setMinutes(minutesKey && typeof res.minutes === "number" ? res.minutes : null);
     } catch {
-      // **مفتاحٌ لا يُقرأ لا يُعرض** — والصفحةُ تعمل بلاه.
       setRow(null);
     }
-  }, [canRead, settingKey, minutesKey]);
+  }, [canRead, kind, minutesKey]);
 
   useEffect(() => {
     void load();
@@ -78,9 +73,9 @@ export function AutoModeToggle({
     setBusy(true);
     setError("");
     try {
-      await api(`/api/v1/admin/settings/${settingKey}`, {
+      await api(`/api/v1/admin/auto-mode/${kind}`, {
         method: "PUT",
-        body: JSON.stringify({ value: next }),
+        body: JSON.stringify({ on: next }),
       });
       await load();
     } catch (e) {

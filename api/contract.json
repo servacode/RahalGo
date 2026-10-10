@@ -159,6 +159,34 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/auto-mode/leads",
+      "handler": "handleGetAutoMode",
+      "auth": true,
+      "capability": "merchants.verify"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/auto-mode/leads",
+      "handler": "handleSetAutoMode",
+      "auth": true,
+      "capability": "merchants.verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/auto-mode/orders",
+      "handler": "handleGetAutoMode",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/auto-mode/orders",
+      "handler": "handleSetAutoMode",
+      "auth": true,
+      "capability": "orders.intervene"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/banners",
       "handler": "handleListBanners",
       "auth": true,
