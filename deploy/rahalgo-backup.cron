@@ -1,0 +1,4 @@
+# النسخ الاحتياطي الليلي — منتصف الليل UTC = ٣ الصبح بدمشق (backup.sh)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 0 * * * root /usr/local/bin/rahalgo-backup >> /var/log/rahalgo-backup.log 2>&1
