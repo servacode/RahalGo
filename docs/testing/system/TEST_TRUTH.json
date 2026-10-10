@@ -33,8 +33,8 @@
     "setting_defs": 219,
     "behaviour_settings": 176,
     "order_fields": 95,
-    "test_files": 544,
-    "test_funcs": 2235
+    "test_files": 545,
+    "test_funcs": 2237
   },
   "flows": [
     {
@@ -8115,6 +8115,12 @@
     {
       "name": "TestVerifyingThenMakingItTheLoginKeepsTheProof",
       "file": "internal/identity/phone_wa_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestQANoSendSkipsOnlyHookedPhones",
+      "file": "internal/identity/qa_no_send_test.go",
       "package": "identity",
       "orphan": true
     },
@@ -26756,6 +26762,12 @@
     },
     {
       "name": "TestQASeedFailsClosedInProduction",
+      "file": "internal/server/qa_counterpart_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestQAVideoPhones",
       "file": "internal/server/qa_counterpart_test.go",
       "package": "server",
       "orphan": true
