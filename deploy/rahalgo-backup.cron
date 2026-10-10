@@ -1,4 +1,4 @@
-# النسخ الاحتياطي الليلي — منتصف الليل UTC = ٣ الصبح بدمشق (backup.sh)
+# النسخ الاحتياطي الليلي — 18:15 UTC = ٩:١٥ بالليل بدمشق، قبل صورة Hetzner اليومية (~18:45 UTC) بنص ساعة (backup.sh)
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-0 0 * * * root /usr/local/bin/rahalgo-backup >> /var/log/rahalgo-backup.log 2>&1
+15 18 * * * root /usr/local/bin/rahalgo-backup >> /var/log/rahalgo-backup.log 2>&1
