@@ -16,6 +16,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/platform"
 )
 
@@ -286,5 +288,33 @@ func TestMonitorTick_MorningReportOnce(t *testing.T) {
 	srv.monitorTick(ctx, at.Add(10*time.Minute))
 	if m := morning(); len(m) != 0 {
 		t.Fatalf("التقريرُ تكرّر في اليوم نفسِه — %d", len(m))
+	}
+}
+
+// TestCountErrors_DeliberateRefusalNotCounted — **الرفضُ المقصود ليس عطلاً**
+// (تنبيهٌ كاذبٌ ٢٠٢٦-١٠-١٠): إغلاقُ الاستقبال ولا سائقَ في الدوام ٥٠٣ لا
+// يُعدّان، **و`service_busy` يبقى يُعدّ.**
+func TestCountErrors_DeliberateRefusalNotCounted(t *testing.T) {
+	s := &Server{}
+	r := chi.NewRouter()
+	r.Use(s.countErrors)
+	r.Get("/quote", func(w http.ResponseWriter, _ *http.Request) {
+		httpx.Error(w, ErrPlatformClosedNow)
+	})
+	r.Get("/nodrivers", func(w http.ResponseWriter, _ *http.Request) {
+		httpx.Error(w, orders.ErrNoDriversOnShift)
+	})
+	r.Get("/busy", func(w http.ResponseWriter, _ *http.Request) {
+		httpx.Error(w, errServiceBusy)
+	})
+	for _, p := range []string{"/quote", "/quote", "/nodrivers", "/busy"} {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest("GET", p, nil))
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("%s ردَّ %d", p, rec.Code)
+		}
+	}
+	if n := s.errs.countSince(time.Now().Add(-time.Minute)); n != 1 {
+		t.Fatalf("عُدّ %d — والمنتظَرُ ١ (`service_busy` وحدَه)", n)
 	}
 }

@@ -34,7 +34,7 @@
     "behaviour_settings": 176,
     "order_fields": 95,
     "test_files": 546,
-    "test_funcs": 2240
+    "test_funcs": 2241
   },
   "flows": [
     {
@@ -26294,6 +26294,12 @@
     },
     {
       "name": "TestCountErrors_CountsOnly5xxByRoutePattern",
+      "file": "internal/server/monitoring_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCountErrors_DeliberateRefusalNotCounted",
       "file": "internal/server/monitoring_test.go",
       "package": "server",
       "orphan": true

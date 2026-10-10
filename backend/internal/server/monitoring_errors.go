@@ -25,6 +25,7 @@ package server
 // ولا هاتفَ ولا نصَّ استعلام.
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"sort"
@@ -145,9 +146,14 @@ func (t *errorTracker) putBack(p map[errKey]*errAgg) {
 func (s *Server) countErrors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		var head headCapture
+		ww.Tee(&head)
 		next.ServeHTTP(ww, r)
 		code := ww.Status()
 		if code < 500 {
+			return
+		}
+		if deliberateRefusal(head.buf) {
 			return
 		}
 		route := ""
@@ -269,4 +275,48 @@ func (s *Server) handleMonitoringErrors(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**الرفضُ المقصود ليس عطلاً** (تنبيهٌ كاذبٌ ٢٠٢٦-١٠-١٠)
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وصل المالكَ «٢١ خطأ بآخر عشر دقايق»** — وكلُّها `delivery-quote (503)`:
+// متجرٌ على شاشة «لدي توصيلة» يسأل عن الأجرة والاستقبالُ مغلق. **والخادمُ
+// أجاب كما ينبغي** — «لا يمكن الآن» — **فعدَّه العدّادُ عطلاً لأنّ رمزَه ٥٠٣.**
+//
+// **فما يردّه الخادمُ عمداً لا يُعدّ**: إغلاقُ المنصّة أو المنطقة، وقبلَ
+// الافتتاح، ولا تغطية، ولا سائقَ في الدوام. **والعطبُ الحقيقيُّ باقٍ
+// يُعدّ**: `service_busy` (القاعدة)، و`otp_send_failed` (الواتساب)، والذعر.
+var deliberateRefusalCodes = []string{
+	"platform_closed_now", "temporarily_unavailable", "launch_closed",
+	"zone_closed_now", "coverage_unavailable", "no_drivers_on_shift",
+}
+
+func deliberateRefusal(head []byte) bool {
+	if len(head) == 0 {
+		return false
+	}
+	for _, c := range deliberateRefusalCodes {
+		if bytes.Contains(head, []byte(`"code":"`+c+`"`)) {
+			return true
+		}
+	}
+	return false
+}
+
+// headCapture **يحفظ أوّلَ ٥١٢ بايتاً من الردّ ولا يزيد** — رمزُ الخطأ في
+// رأس الجسم، **والبثُّ والملفّاتُ لا تُنسخ.**
+type headCapture struct{ buf []byte }
+
+func (h *headCapture) Write(p []byte) (int, error) {
+	if room := 512 - len(h.buf); room > 0 {
+		if len(p) < room {
+			room = len(p)
+		}
+		h.buf = append(h.buf, p[:room]...)
+	}
+	return len(p), nil
 }
