@@ -100,35 +100,92 @@ class MapRuntime(
         decision: MapSourceResolver.Decision,
         request: MapSourceResolver.Request,
     ): Binding = when (decision) {
-        is MapSourceResolver.Decision.Online -> bindOnline(request.manifest)
+        is MapSourceResolver.Decision.Online ->
+            bindOnline(request.manifest, request.lat, request.lng, request.routeBbox)
         is MapSourceResolver.Decision.OfflineRegion -> bindOffline(decision.region)
         is MapSourceResolver.Decision.Unavailable ->
             lastGood?.let { Binding.Ready(it, decision) }
                 ?: Binding.Unavailable(decision.why)
     }
 
-    fun bindOnline(manifest: MapManifest?): Binding {
+    /**
+     * **حزمُ المدن التي ثبت وجودُها على الخادم** — بعنوانها النسبيّ.
+     *
+     * **ولا تُقرأ حزمةٌ لم يُتحقَّق منها** — فإن غابت عن الخادم (404)
+     * ابيضّت الخريطة. **والأساسُ لا يحتاج تحقّقاً**: هو ما كان يعمل.
+     * (يملؤه `MapStyleRepository` بفحصٍ في الخلفيّة؛ انظر `RegionPicker.forOnline`.)
+     */
+    private val verifiedRegions = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    /** **نتيجةُ فحص حزمةٍ على الخادم** — `true` موجودةٌ وسليمة، `false` غائبة. */
+    fun markRegion(url: String, present: Boolean) {
+        verifiedRegions[url] = present
+    }
+
+    /** **ما حُكم به على هذه الحزمة** — و`null`: لم يُحكم بعد. */
+    fun regionVerdict(url: String): Boolean? = verifiedRegions[url]
+
+    /**
+     * **حزمُ المدن التي تحتاج فحصاً** — بعنوانها المطلق للفحص.
+     *
+     * **والأساسُ ليس منها**، ولا ما حُكم عليه، ولا عنوانٌ مرفوض.
+     */
+    fun regionsToVerify(m: MapManifest): List<Pair<MapRegion, String>> =
+        m.regions
+            .filter { it.artifact.url != m.base.url && verifiedRegions[it.artifact.url] == null }
+            .mapNotNull { r ->
+                runCatching {
+                    r to MapUrls.resolveRemote(config.baseUrl, r.artifact.url, config.allowLoopbackHttp)
+                }.getOrNull()
+            }
+
+    fun bindOnline(
+        manifest: MapManifest?,
+        lat: Double? = null,
+        lng: Double? = null,
+        routeBbox: List<Double>? = null,
+    ): Binding {
         val m = manifest ?: return lastGood?.let {
             Binding.Ready(it, MapSourceResolver.Decision.Online("آخرُ ربطٍ صالح"))
         } ?: Binding.Unavailable("لا فهرسَ بعد")
 
+        // **حزمةُ المدينة إن غطّت وثبتت على الخادم — وإلّا الأساس.**
+        val region = RegionPicker.forOnline(m, lat, lng, routeBbox) {
+            verifiedRegions[it.artifact.url] == true
+        }
+        if (region != null) {
+            try {
+                return Binding.Ready(
+                    bindRemote(m, region.artifact.url),
+                    MapSourceResolver.Decision.Online("متّصل — حزمةُ ${region.id}"),
+                )
+            } catch (_: Exception) {
+                // **وعنوانٌ مرفوضٌ لا يُبيّض الخريطة** — يُقرأ الأساس.
+            }
+        }
+
         return try {
-            val tiles = MapUrls.resolveRemote(config.baseUrl, m.base.url, config.allowLoopbackHttp)
-            val resources = MapUrls.resolveRemote(config.baseUrl, m.resources.url, config.allowLoopbackHttp)
-            val bound = MapStyleBinding.online(
-                canonical = canonicalStyle,
-                tileUrl = tiles,
-                resourcesBaseUrl = resources,
-                attribution = m.attribution,
-                allowLoopbackHttp = config.allowLoopbackHttp,
-            )
-            lastGood = bound
-            Binding.Ready(bound, MapSourceResolver.Decision.Online("متّصل"))
+            Binding.Ready(bindRemote(m, m.base.url), MapSourceResolver.Decision.Online("متّصل"))
         } catch (e: Exception) {
             lastGood?.let {
                 Binding.Ready(it, MapSourceResolver.Decision.Online("آخرُ ربطٍ صالح"))
             } ?: Binding.Unavailable(e.message ?: "تعذّر ربطُ الأونلاين")
         }
+    }
+
+    /** **يربط النمطَ بأرشيفٍ بعيد** — ويحفظه آخرَ ربطٍ صالح. */
+    private fun bindRemote(m: MapManifest, archiveUrl: String): MapStyleBinding.Bound {
+        val tiles = MapUrls.resolveRemote(config.baseUrl, archiveUrl, config.allowLoopbackHttp)
+        val resources = MapUrls.resolveRemote(config.baseUrl, m.resources.url, config.allowLoopbackHttp)
+        val bound = MapStyleBinding.online(
+            canonical = canonicalStyle,
+            tileUrl = tiles,
+            resourcesBaseUrl = resources,
+            attribution = m.attribution,
+            allowLoopbackHttp = config.allowLoopbackHttp,
+        )
+        lastGood = bound
+        return bound
     }
 
     /**

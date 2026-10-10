@@ -217,8 +217,65 @@ object MapStyleRepository {
             is MapManifestClient.Result.Cached -> manifest = result.manifest
             is MapManifestClient.Result.None -> Unit
         }
+        manifest?.let { m -> refreshScope.launch { verifyRegions(m) } }
         return result
     }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **حزمةُ المدينة تُفحص على الخادم قبل أن تُقرأ أونلاين**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-١٠-٠٩: أوّلُ فتحةٍ للخريطة بطيئة — فتُقرأ حزمةُ
+     * المدينة بدل سوريا كلّها. انظر `RegionPicker.forOnline`.)
+     *
+     * **وفهرسٌ يذكر حزمةً لم تُرفع بعد (404) يعني خريطةً بيضاء** — فلا
+     * تُقرأ حزمةٌ حتّى يردّ الخادمُ بأوّل بايتاتها. **وحتّى ذلك يُقرأ
+     * الأساسُ كما كان.**
+     *
+     * **ويقع في الخلفيّة عند وصول الفهرس** — لا في طريق الخريطة. **وطلبٌ
+     * واحدٌ بستّ عشرةَ بايتاً لكلّ حزمة.**
+     */
+    private fun verifyRegions(m: MapManifest) {
+        val rt = runtime ?: return
+        for ((region, url) in rt.regionsToVerify(m)) {
+            val verdict = try {
+                val c = URL(url).openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = PROBE_TIMEOUT_MS
+                c.readTimeout = PROBE_TIMEOUT_MS
+                c.setRequestProperty("Range", "bytes=0-15")
+                try {
+                    val code = c.responseCode
+                    val head = if (code == 200 || code == 206) {
+                        // **ستّ عشرةَ بايتاً لا أكثر** — ولو تجاهل الخادمُ
+                        // المدى وردّ الملفَّ كلَّه لا يُقرأ منه سواها.
+                        c.inputStream.use { s ->
+                            val b = ByteArray(16)
+                            var n = 0
+                            while (n < b.size) {
+                                val r = s.read(b, n, b.size - n)
+                                if (r < 0) break
+                                n += r
+                            }
+                            b.copyOf(n)
+                        }
+                    } else {
+                        null
+                    }
+                    com.rahalgo.map.data.RegionPicker.verdictOf(code, head)
+                } finally {
+                    c.disconnect()
+                }
+            } catch (_: Exception) {
+                // **انقطاعٌ لا حكم** — يُقرأ الأساسُ ويُعاد الفحصُ مع الفهرس التالي.
+                null
+            }
+            if (verdict != null) rt.markRegion(region.artifact.url, verdict)
+            Log.i(TAG, "فحصُ حزمةِ ${region.id} أونلاين: ${verdict ?: "لا حكم"}")
+        }
+    }
+
+    private const val PROBE_TIMEOUT_MS = 5_000
 
     fun start(desired: MapSwitchPolicy.Desired) {
         runtime?.start(desired)

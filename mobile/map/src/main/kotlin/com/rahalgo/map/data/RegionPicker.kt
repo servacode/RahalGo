@@ -55,6 +55,77 @@ object RegionPicker {
             .minByOrNull { it.areaDeg }
     }
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **أيُّ أرشيفٍ يُقرأ أونلاين — حزمةُ المدينة أم سوريا كلُّها**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-١٠-٠٩: أوّلُ فتحةٍ للخريطة بطيئة.)
+     *
+     * **قِيس**: الأونلاين يقرأ أرشيفَ سوريا كلَّها (٥٠٢ م.ب) بطلباتٍ
+     * متتابعة — الترويسة ثمّ الفهرس الجذر ثمّ الأوراق ثمّ البلاطات،
+     * **كلُّ واحدٍ نحوَ ٠٫٦ ثانية.** **وأرشيفُ مدينةٍ فهرسُه صغير**،
+     * فتقلّ الطلباتُ وتصغر.
+     *
+     * **فإن وقع الموضعُ — والمسارُ كلُّه إن وُجد — داخلَ صندوقِ حزمةٍ
+     * في الفهرس قُرئت هي.** وإلّا `null`، **فيُقرأ الأساسُ كما كان.**
+     *
+     * # وما لا يُختار أبداً
+     *
+     * - **ما عنوانُه عنوانُ الأساس** — «سوريا كلّها» ليست أصغرَ من نفسها.
+     * - **ما مداه في التقريب أضيقُ من الأساس** — وإلّا ابيضّت الخريطةُ
+     *   عند تقريبٍ يعرفه الأساس.
+     * - **ما قيل إنّه غيرُ صالح** (`usable` يردّ `false`) — **فالملفُّ
+     *   الغائبُ عن الخادم (404) يعني خريطةً بيضاء**، والأساسُ لا يغيب.
+     *
+     * **والصندوقُ وحدَه يحكم هنا لا حدودُ المحافظة** — فالبلاطاتُ في
+     * الحزمة لا تتجاوز صندوقَها، **ونقطةٌ داخلَ المحافظة خارجَ الصندوق
+     * تقع على فراغ.**
+     */
+    fun forOnline(
+        manifest: MapManifest,
+        lat: Double?,
+        lng: Double?,
+        routeBbox: List<Double>? = null,
+        usable: (MapRegion) -> Boolean = { true },
+    ): MapRegion? {
+        if (lat == null || lng == null) return null
+        val base = manifest.base
+        return manifest.regions
+            .asSequence()
+            .filter { it.artifact.url != base.url }
+            .filter { it.artifact.minZoom <= base.minZoom && it.artifact.maxZoom >= base.maxZoom }
+            .filter { contains(it.bbox, lat, lng) }
+            .filter { r -> routeBbox == null || routeBbox.size != 4 || routeInside(r.bbox, routeBbox) }
+            .filter(usable)
+            .minByOrNull { it.areaDeg }
+    }
+
+    /**
+     * **حكمُ الفحص على حزمةٍ في الخادم** — من رمزِ الردّ وأوّلِ بايتاته.
+     *
+     * - `true`: ردٌّ ناجحٌ يبدأ بتوقيع `PMTiles` — **تُقرأ.**
+     * - `false`: 404 أو 410 أو ملفٌّ ليس أرشيفاً — **لا تُقرأ في هذه الجلسة.**
+     * - `null`: غيرُ ذلك (انقطاعٌ، 5xx) — **لا حكم**، فيُقرأ الأساسُ ويُعاد
+     *   الفحصُ مع الفهرس التالي. **فعطلٌ عابرٌ لا يحرم المدينةَ حزمتَها.**
+     */
+    fun verdictOf(httpCode: Int, head: ByteArray?): Boolean? = when {
+        httpCode == 404 || httpCode == 410 -> false
+        httpCode == 200 || httpCode == 206 ->
+            head != null && head.size >= PMTILES_MAGIC.size &&
+                PMTILES_MAGIC.indices.all { head[it] == PMTILES_MAGIC[it] }
+        else -> null
+    }
+
+    /** **توقيعُ أرشيف PMTiles** — أوّلُ سبعِ بايتاتٍ في كلّ ملفّ. */
+    val PMTILES_MAGIC: ByteArray = "PMTiles".toByteArray(Charsets.US_ASCII)
+
+    /** **أيقع المسارُ كلُّه في الصندوق؟** — وإلّا خرج السائقُ إلى فراغ. */
+    private fun routeInside(bbox: List<Double>, route: List<Double>): Boolean =
+        bbox.size >= 4 &&
+            route[0] >= bbox[0] && route[1] >= bbox[1] &&
+            route[2] <= bbox[2] && route[3] <= bbox[3]
+
     /** **أداخل الحلقة؟** — عدُّ التقاطعات، والحلقةُ `[طول، عرض]`. */
     private fun inRing(ring: List<List<Double>>, lat: Double, lng: Double): Boolean {
         var inside = false
