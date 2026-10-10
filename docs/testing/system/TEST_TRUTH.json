@@ -33,8 +33,8 @@
     "setting_defs": 219,
     "behaviour_settings": 176,
     "order_fields": 95,
-    "test_files": 546,
-    "test_funcs": 2241
+    "test_files": 547,
+    "test_funcs": 2242
   },
   "flows": [
     {
@@ -19412,6 +19412,12 @@
     {
       "name": "TestPC13_AvailabilityNeedsNoCart",
       "file": "internal/qa/precart_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPLD01_PreLaunch_CustomerBlocked_MerchantDeliveryFlows",
+      "file": "internal/qa/prelaunch_merchant_delivery_test.go",
       "package": "qa",
       "orphan": true
     },
