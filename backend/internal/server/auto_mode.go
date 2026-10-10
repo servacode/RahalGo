@@ -18,9 +18,11 @@ package server
 // **وكلُّ تبديلٍ يُكتب في سجلّ التدقيق** بالقيمتين، كما يكتبه لوحُ الإعدادات.
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/authz"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
@@ -78,13 +80,19 @@ func (s *Server) setAutoMode(w http.ResponseWriter, r *http.Request, d autoModeD
 		return
 	}
 	actor := userIDFrom(r)
-	if err := s.settings.Set(r.Context(), d.key, *req.On, &actor); err != nil {
+	// **والتبديلُ وقيدُه في معاملةٍ واحدة** (`AQ-4`) — تبديلٌ يمضي وقيدُه
+	// يسقط لا يُعرف من فعله.
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		if err := s.settings.SetTx(ctx, q, d.key, *req.On, &actor); err != nil {
+			return err
+		}
+		return s.auditTx(ctx, q, r, "admin.setting_update", "setting", d.key, map[string]any{
+			"before": before, "after": *req.On, "via": "auto_mode",
+		})
+	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "admin.setting_update", "setting", d.key, map[string]any{
-		"before": before, "after": *req.On, "via": "auto_mode",
-	})
 	s.touch("settings")
 	httpx.JSON(w, http.StatusOK, map[string]any{"on": *req.On, "updated": true})
 }
