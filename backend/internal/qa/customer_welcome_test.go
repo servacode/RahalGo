@@ -70,3 +70,17 @@ func TestCW02_EditedTemplateIsWhatArrives(t *testing.T) {
 	}
 	t.Fatalf("النصُّ المعدَّل لم يصل: %v", cwInbox(t, h, id))
 }
+
+// TestCW03_TutorialLinkRidesTheWelcome — **رابطُ فيديو الشرح يصل مع الترحيب**
+// (٢٠٢٦-١٠-١٠): متى وُضع `customers.tutorial_url` صار سطرُه في رسالة الزبون الجديد.
+func TestCW03_TutorialLinkRidesTheWelcome(t *testing.T) {
+	h := New(t)
+	h.Setting("customers.tutorial_url", `"https://youtu.be/cw03test"`)
+	id := cwSignup(t, h)
+	var body string
+	_ = h.Pool.QueryRow(ctxBG(),
+		`SELECT coalesce(string_agg(title || ' ' || body, ' | '), '') FROM notifications WHERE user_id = $1`, id).Scan(&body)
+	if !strings.Contains(body, "https://youtu.be/cw03test") {
+		t.Fatalf("رابطُ الشرح لم يصل مع الترحيب: %q", body)
+	}
+}
