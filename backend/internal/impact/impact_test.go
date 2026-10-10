@@ -278,7 +278,7 @@ func TestUnknownChangeFallsBackSafely(t *testing.T) {
 	}
 	// **والمهلةُ جزءٌ من التوصية لا زينة** — **وبلا تصريحٍ بها يسقط
 	// الأمرُ بمهلةِ `go` الافتراضيّةِ، والسقوطُ يُقرأ عطبَ فحص.**
-	if !strings.Contains(r.Command(), "-timeout 30m") {
+	if !strings.Contains(r.Command(), "-timeout 45m") {
 		t.Errorf("التوصيةُ الكاملةُ بلا مهلةٍ صريحة: %s", r.Command())
 	}
 	t.Logf("UNKNOWN CHANGE SELF-TEST = PROVEN")

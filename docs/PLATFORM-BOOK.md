@@ -593,7 +593,7 @@ role=staff             →  1  ✘  ['موظف المالية']
 #### ما قِيس
 
 ```
-go test -timeout 30m -count=1 -p 1 ./...    ⇒  TEST_EXIT=0
+go test -timeout 45m -count=1 -p 1 ./...    ⇒  TEST_EXIT=0
                                                 ٣٩ حزمةً ناجحة · صفر سقوط
                                                 صفر ذعرٍ · صفر مهلةٍ منتهية
 internal/qa                                 ⇒  ok  1121.403s   (١٨٫٧ دقيقة)

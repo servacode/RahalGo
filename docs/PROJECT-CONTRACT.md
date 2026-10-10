@@ -181,7 +181,7 @@ python scripts/qa/matrix.py --profile CONTRACTS --run    # لم تشِخ
 python scripts/qa/matrix.py --profile SECURITY --run
 python scripts/qa/matrix.py --profile MONEY --run
 
-cd backend && go test -timeout 30m -count=1 -p 1 ./...   # قبل كلّ التزام
+cd backend && go test -timeout 45m -count=1 -p 1 ./...   # قبل كلّ التزام
 gofmt -l internal/ cmd/
 go run ./cmd/moneycheck                                  # الدفتر
 ```

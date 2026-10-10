@@ -34,7 +34,7 @@
     "behaviour_settings": 176,
     "order_fields": 95,
     "test_files": 545,
-    "test_funcs": 2237
+    "test_funcs": 2238
   },
   "flows": [
     {
@@ -13683,6 +13683,12 @@
     },
     {
       "name": "TestCW02_EditedTemplateIsWhatArrives",
+      "file": "internal/qa/customer_welcome_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCW03_TutorialLinkRidesTheWelcome",
       "file": "internal/qa/customer_welcome_test.go",
       "package": "qa",
       "orphan": true
