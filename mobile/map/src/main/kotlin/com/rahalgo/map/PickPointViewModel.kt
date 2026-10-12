@@ -106,7 +106,32 @@ class PickPointViewModel(app: Application) : AndroidViewModel(app) {
         if (lastQuery.length >= MIN_CHARS) search(lastQuery)
     }
 
+    /**
+     * **من أين جاء الدبّوس** (قرارُ المالك ٢٠٢٦-١٠-١٢) — **وبه يظهر زرُّ التأكيد**: نقطةٌ
+     * محفوظةٌ من قبل، أو حرّكها إصبعُه، أو «موقعي» بدقّة ١٥ م فأقلّ. **وما عداها يُخفيه.**
+     */
+    enum class Source { NONE, SAVED, GPS, MANUAL, SEARCH }
+
+    var source by mutableStateOf(Source.NONE)
+        private set
+
+    /** **الدبّوسُ يتبع الموقعَ الحيّ** — حتّى يحرّكه إصبعُه. */
+    var following by mutableStateOf(false)
+        private set
+
+    fun startedAtSaved() {
+        if (source == Source.NONE) source = Source.SAVED
+    }
+
+    fun userMoved() {
+        following = false
+        wantingHere = false
+        source = Source.MANUAL
+    }
+
     fun goTo(place: Place) {
+        following = false
+        source = Source.SEARCH
         results = emptyList()
         searchFailed = false
         label = place.label
@@ -121,6 +146,8 @@ class PickPointViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun wantHere() {
         wantingHere = true
+        following = true
+        source = Source.GPS
     }
 
     /** **ينتظر موضعاً** — يُطفأ حين يجيء أو حين يُلغى. */

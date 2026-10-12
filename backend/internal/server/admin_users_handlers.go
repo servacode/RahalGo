@@ -213,7 +213,10 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 	accountTypes := authz.RolesInClass(authz.ClassAccountType)
 
 	rows, err := s.pg.Query(r.Context(),
-		`SELECT role_code, count(*) FROM user_roles GROUP BY role_code`)
+		// **والمحذوفُ لا يُعدّ في دوره** (٢٠٢٦-١٠-١٢) — القائمةُ تخفيه، فبطاقةٌ تعدّه
+		// تقول «٩١٤» والقائمةُ «٩١٣» (`BOOK06` كان يسقط كلّما بقي محذوفٌ في القاعدة).
+		`SELECT ur.role_code, count(*) FROM user_roles ur JOIN users u ON u.id = ur.user_id
+		 WHERE u.status <> 'deleted' GROUP BY ur.role_code`)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -246,7 +249,7 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 	// **و«موقوفٌ أو محظور» بطاقةٌ لها** — والقائمةُ تُرشَّح بـ`status=restricted`.
 	var customers, restricted, deleted int
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_roles c
+		SELECT count(*) FILTER (WHERE u.status <> 'deleted' AND EXISTS (SELECT 1 FROM user_roles c
 		                                       WHERE c.user_id = u.id AND c.role_code = 'customer')
 		                          AND NOT EXISTS (SELECT 1 FROM user_roles n
 		                                       WHERE n.user_id = u.id AND n.role_code <> 'customer')),
@@ -866,6 +869,10 @@ func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) 
 			break
 		}
 	}
+	if q.Get("format") == "vcf" {
+		writeContactsVCF(w, all, q.Get("role") == "", q.Get("since"))
+		return
+	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="accounts.csv"`)
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF}) // BOM لعرض العربية في Excel
@@ -947,4 +954,76 @@ func (s *Server) minPasswordLen(ctx context.Context) int {
 		return 8
 	}
 	return int(n)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **جهاتُ الاتصال لجوال المالك** (قرارُ المالك ٢٠٢٦-١٠-١٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «بحيث ما اتعذب واسجلهن اسم اسم على الواتس اب… ويصير يشوف حالاتي واشوف حالاته».
+// **ملفُّ vCard يُفتح على الجوال فتُحفظ كلُّها بكبسة**، والواتسابُ يقرؤها من دفتر
+// الأسماء. **لا حفظَ آليٌّ عبر بوت الواتساب** — غيرُ مضمونٍ وخطرُ حظرٍ على رقم المنصّة.
+//
+// **والاسمُ يقول من هو**: «متجر — مطعم الريّان» و«زبون — أحمد العلي». **وبلا ترشيحِ
+// دورٍ فالزبائنُ والمتاجرُ وحدَهم**، و`since` (YYYY-MM-DD) يقصره على من سجّل بعده.
+func writeContactsVCF(w http.ResponseWriter, users []identity.User, defaultRoles bool, since string) {
+	var from time.Time
+	if t, err := time.Parse("2006-01-02", strings.TrimSpace(since)); err == nil {
+		from = t
+	}
+	w.Header().Set("Content-Type", "text/vcard; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="rahalgo-contacts.vcf"`)
+	for _, u := range users {
+		if u.Phone == "" || (!from.IsZero() && u.CreatedAt.Before(from)) {
+			continue
+		}
+		name := contactName(u, defaultRoles)
+		if name == "" {
+			continue
+		}
+		_, _ = w.Write([]byte("BEGIN:VCARD\r\nVERSION:3.0\r\nFN:" + vcfEscape(name) +
+			"\r\nN:;" + vcfEscape(name) + ";;;\r\nTEL;TYPE=CELL:" + vcfEscape(u.Phone) +
+			"\r\nEND:VCARD\r\n"))
+	}
+}
+
+// contactName **اسمُ جهة الاتصال بدورها** — وفارغٌ لمن لا يُصدَّر.
+func contactName(u identity.User, defaultRoles bool) string {
+	has := func(code string) bool {
+		for _, r := range u.Roles {
+			if r == code {
+				return true
+			}
+		}
+		return false
+	}
+	who := strings.TrimSpace(u.FullName)
+	if who == "" {
+		who = u.Phone
+	}
+	switch {
+	case has("merchant"):
+		if stores := strings.TrimSpace(strings.Join(u.StoreNames, " · ")); stores != "" {
+			return "متجر — " + stores
+		}
+		return "متجر — " + who
+	case has("customer"):
+		return "زبون — " + who
+	case defaultRoles:
+		return ""
+	}
+	label := ""
+	if len(u.Roles) > 0 {
+		label = roleLabelAr(u.Roles[0])
+	}
+	if label == "" {
+		return who
+	}
+	return label + " — " + who
+}
+
+// vcfEscape **يهرّب ما يكسر سطرَ vCard** — الفاصلةُ والفاصلةُ المنقوطةُ والشرطةُ والسطر.
+func vcfEscape(v string) string {
+	r := strings.NewReplacer("\\", "\\\\", ",", "\\,", ";", "\\;", "\r", "", "\n", " ")
+	return r.Replace(v)
 }

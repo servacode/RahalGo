@@ -560,6 +560,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // **وأوّلُ الفروع لا آخرُها** — **ولو جاءت بعد
                     // تبويب «متجري» لَغطّاها هو فلا تُرى أبداً.**
                     picking -> PickPoint(
+                        // **موقعُ المتجر المحفوظ يُؤكَّد بلا تحريك** (٢٠٢٦-١٠-١٢).
+                        startIsSaved = storeVm.store?.lat != null && storeVm.store?.lng != null,
                         start = (storeVm.store?.lat to storeVm.store?.lng)
                             .let { (la, ln) ->
                                 if (la != null && ln != null) {

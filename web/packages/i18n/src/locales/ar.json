@@ -5758,6 +5758,8 @@
       "addStaff": "موظف",
       "categories": "التصنيفات",
       "exportCsv": "تصدير",
+      "exportContacts": "تنزيل جهات الاتصال",
+      "contactsSince": "من تاريخ (اختياري) — للمسجّلين الجدد فقط",
       "exportSelected": "تصدير المحدد",
       "searchPlaceholder": "ابحث بالاسم أو الهاتف أو كود الدعوة أو اسم المتجر",
       "searchPlaceholderNoPhone": "ابحث بالاسم أو كود الدعوة أو اسم المتجر",

@@ -29,7 +29,9 @@ func nmAcceptedStatus(t *testing.T, h *Harness, notify bool) string {
 	oid, _ := created.JSON()["id"].(string)
 	if r := h.POST("/api/v1/admin/orders/"+oid+"/transition", staff.Token,
 		map[string]any{"to": "accepted", "note": "NM"}); r.Code >= 400 {
-		t.Fatalf("القبول: %s", r)
+		// **وحالُ الطلب يُكتب مع السقوط** — سقط مرّةً في التشغيل الكامل (٤٠٩) ولم يتكرّر
+		// وحدَه (٢٠٢٦-١٠-١٢)؛ **فالحالُ هو ما يقول من سبق المكتبَ إلى قبوله.**
+		t.Fatalf("القبول: %s — وحالُ الطلب قبله: %s", r, h.statusOf(oid))
 	}
 	return h.statusOf(oid)
 }

@@ -101,6 +101,11 @@ fun PickPoint(
      * كان.**
      */
     locating: Locating? = null,
+    /**
+     * **«ابدأ» نقطةٌ محفوظةٌ من قبل** (موقعُ المتجر نفسه) — فتُؤكَّد بلا تحريك. **وموضعُ
+     * الجهاز ليس محفوظاً**: يمرّ بشرط الدقّة كأيّ «موقعي» (٢٠٢٦-١٠-١٢).
+     */
+    startIsSaved: Boolean = false,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **وإيماءةُ فتحِ الدرج تُقفَل ما دام هذا السطحُ حاضراً** (`DWR`)
@@ -126,9 +131,25 @@ fun PickPoint(
 
     // **وحين يجيء الموضعُ تقفز الخريطةُ إليه** — ومن ضغط «موقعي» ثمّ لم
     // تتحرّك الخريطةُ ظنّ أنّ الزرَّ لا يعمل.
-    val here = com.rahalgo.ui.LastPoint.value
-    LaunchedEffect(vm.wantingHere, here) {
-        if (vm.wantingHere && here != null) vm.jumpToPoint(here.lat, here.lng)
+    // ══════════════════════════════════════════════════════════════════
+    // **والموقعُ الحيُّ يُسمع من لحظة الفتح** (٢٠٢٦-١٠-١٢) — فإذا ضُغط «موقعي» كان
+    // الـGPS قد سخن. **والدبّوسُ يتبع كلَّ قراءةٍ أدقّ** حتّى يحرّكه إصبعُه.
+    // ══════════════════════════════════════════════════════════════════
+    val ctx0 = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        if (start != null && startIsSaved) vm.startedAtSaved()
+        // **والإذنُ قد يُمنح بعد الفتح** — فيُعاد الطلبُ كلَّ ثانيةٍ حتّى يُسمع.
+        while (true) {
+            if (!LiveFix.running) LiveFix.start(ctx0)
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { LiveFix.stop() }
+    }
+    val live = LiveFix.point
+    LaunchedEffect(vm.following, live) {
+        if (vm.following && live != null) vm.jumpToPoint(live.latitude, live.longitude)
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -139,6 +160,7 @@ fun PickPoint(
             onSettle = vm::readAddress,
             jumpTo = vm.jumpTo,
             onJumped = vm::jumped,
+            onUserMove = vm::userMoved,
             modifier = Modifier.fillMaxSize(),
             zoomTick = zoomTick,
             zoomStep = zoomStep,
@@ -302,6 +324,49 @@ fun PickPoint(
         // «حاول ثانية» وخدمتُه مطفأةٌ حاول عشراً ثمّ ترك التطبيق.**
         //
         // **وفوق الشريط السفليّ** — **حيث ينظر بعد أن ضغط الزرّ.**
+        // ══════════════════════════════════════════════════════════════
+        // **كرتُ الدقّة — كما في خرائط غوغل** (طلبُ المالك ٢٠٢٦-١٠-١٢: «كرت صغير يكتب
+        // دقة الموقع… وهيك ينتبه الزبون والمتجر ان بعيد عن موقعه»)
+        // ══════════════════════════════════════════════════════════════
+        val acc = LiveFix.accuracyM
+        if (vm.source == PickPointViewModel.Source.GPS) {
+            val good = acc != null && acc <= CONFIRM_ACCURACY_M
+            val tint = when {
+                acc == null -> Rahal.colors.inkMuted
+                good -> Rahal.colors.success
+                acc <= 50f -> Rahal.colors.accent
+                else -> Rahal.colors.danger
+            }
+            Column(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(top = 84.dp, start = 12.dp, end = 12.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Rahal.colors.canvas)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Text(
+                    text = if (acc == null) {
+                        stringResource(R.string.pick_acc_waiting)
+                    } else {
+                        stringResource(R.string.pick_acc_value, kotlin.math.ceil(acc).toInt()) +
+                            if (!good) " — " + stringResource(R.string.pick_acc_improving) else ""
+                    },
+                    color = tint,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (!good) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.pick_acc_outside),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+
         locating?.problem?.let { why ->
             val ctx = androidx.compose.ui.platform.LocalContext.current
             Column(
@@ -370,7 +435,27 @@ fun PickPoint(
             //
             // **والتعطيلُ يُقال لا يُترك صامتا**: زرٌّ باهتٌ بلا سببٍ
             // يُقرأ عطباً، **وزرٌّ يقول «جاري…» يُقرأ انتظارا.**
-            Button(
+            // ══════════════════════════════════════════════════════════
+            // **والتأكيدُ مخفيٌّ حتّى يُعرف المكانُ حقّاً** (قرارُ المالك ٢٠٢٦-١٠-١٢: «١٥ متر
+            // مقبولة بس أكثر لا» · «إذا حرّك الدبوس بإيده تمام»)
+            // ══════════════════════════════════════════════════════════
+            val canConfirm = when (vm.source) {
+                PickPointViewModel.Source.SAVED, PickPointViewModel.Source.MANUAL -> true
+                PickPointViewModel.Source.GPS -> acc != null && acc <= CONFIRM_ACCURACY_M
+                else -> false
+            }
+            if (!canConfirm) {
+                Text(
+                    text = stringResource(
+                        if (vm.source == PickPointViewModel.Source.GPS) R.string.pick_wait_accuracy
+                        else R.string.pick_choose_first,
+                    ),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                )
+            } else Button(
                 onClick = { vm.point?.let { onPick(it, vm.label) } },
                 // **ولا يُثبَّت قبل أن تُقرأ نقطة** — نقطةٌ صفريّةٌ
                 // تُرسل سائقاً إلى لا مكان.
@@ -394,6 +479,9 @@ fun PickPoint(
         }
     }
 }
+
+/** **أقصى دقّةٍ يُقبل بها «موقعي»** — قرارُ المالك ٢٠٢٦-١٠-١٢. */
+const val CONFIRM_ACCURACY_M = 15f
 
 /** **مركزُ الرقّة** — حيث تبدأ الخريطةُ لمن لا موضعَ له. */
 val RAQQA = LatLng(35.9528, 39.0079)

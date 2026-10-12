@@ -215,3 +215,23 @@ func TestBOOK06_StaffIsNotJustFinance(t *testing.T) {
 }
 
 var _ = fmt.Sprintf
+
+// TestBOOK06_DeletedNotCountedInRoleCards **المحذوفُ لا يُعدّ في بطاقة دوره** (٢٠٢٦-١٠-١٢) —
+// كان `BOOK06` يسقط كلّما بقي في القاعدة زبونٌ محذوف: البطاقةُ ٩١٤ والقائمةُ ٩١٣.
+func TestBOOK06_DeletedNotCountedInRoleCards(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	for _, role := range []string{"customer", "driver"} {
+		u := h.NewUser(role)
+		if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET status = 'deleted' WHERE id = $1::uuid`, u.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, roles := stats(t, h, admin.Token)
+	for _, role := range []string{"customer", "driver"} {
+		total, _ := listTotal(t, h, admin.Token, "role="+role)
+		if roles[role] != total {
+			t.Errorf("%s: البطاقةُ %d والقائمةُ %d — **والمحذوفُ يُعدّ ولا يُعرض**", role, roles[role], total)
+		}
+	}
+}

@@ -60,6 +60,8 @@ fun MapCanvas(
     modifier: Modifier = Modifier,
     jumpTo: LatLng? = null,
     onJumped: () -> Unit = {},
+    /** **حرّكها إصبعُه** — لا قفزةٌ برمجيّة (٢٠٢٦-١٠-١٢). */
+    onUserMove: () -> Unit = {},
     online: Boolean = true,
     /**
      * **درجاتُ تكبيرٍ تُطلب من خارج اللوحة** — زرّا `+` و`−`.
@@ -208,6 +210,11 @@ fun MapCanvas(
                 onSettle(start)
             }
             map.addOnCameraIdleListener { onSettle(map.cameraPosition.target ?: start) }
+            map.addOnCameraMoveStartedListener { reason ->
+                if (reason == org.maplibre.android.maps.MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                    onUserMove()
+                }
+            }
         }
     }
 

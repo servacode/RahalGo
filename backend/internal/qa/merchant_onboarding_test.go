@@ -79,3 +79,39 @@ func TestOB03_OffSendsNothing(t *testing.T) {
 		t.Fatalf("**أُرسل والمفتاحُ مطفأ** — %d", n)
 	}
 }
+
+// TestOB03_ReachesBeyondTheFirstThousand **كلُّ المتاجر لا أوّلُ ألفٍ منها** (٢٠٢٦-١٠-١٢) —
+// كان `LIMIT 1000` بلا ترتيبٍ ولا تكرار، فأسقط `OB01` في قاعدةٍ فيها أكثرُ من ألف متجر.
+func TestOB03_ReachesBeyondTheFirstThousand(t *testing.T) {
+	h := New(t)
+	h.Setting("merchants.onboarding_push", "true")
+	h.Setting("merchants.onboarding_push_messages", `"أول | ١\nتاني | ٢"`)
+	ctx := ctxBG()
+	var ids []string
+	rows, err := h.Pool.Query(ctx, `
+		WITH u AS (
+			INSERT INTO users (phone, full_name, created_at)
+			SELECT '+96388' || lpad(($1::int * 10000 + g)::text, 7, '0'), 'زحمة ' || g,
+			       now() - interval '1 day'
+			FROM generate_series(1, 1005) g
+			RETURNING id)
+		INSERT INTO user_roles (user_id, role_code) SELECT id, 'merchant' FROM u RETURNING user_id::text`,
+		int(time.Now().UnixNano()%900)+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var id string
+		_ = rows.Scan(&id)
+		ids = append(ids, id)
+	}
+	rows.Close()
+	t.Cleanup(func() {
+		_, _ = h.Pool.Exec(ctxBG(), `DELETE FROM users WHERE id = ANY($1::uuid[])`, ids)
+	})
+	m := h.Factory().Merchant()
+	h.API.MerchantOnboardingTickForTest(ctx, obAt(1, 11))
+	if got := obInbox(t, h, m.Owner.ID); len(got) != 1 || got[0] != "أول" {
+		t.Fatalf("**المتجرُ بعد الألف لم يصله شيء**: %v", got)
+	}
+}

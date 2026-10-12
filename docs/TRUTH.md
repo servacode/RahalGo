@@ -811,7 +811,9 @@ kosom` |
 تنتهي كلمة المرور بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.
 
 📱 {app}: {link}
-🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}` |
+🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}
+
+💾 احفظ رقمنا لتشوف عروضنا وأخبارنا على الحالة.` |
 | `accounts.merchant_tutorial_url` | المنصة | text | `https://youtu.be/cIQ_dXUjZ_g` |
 | `merchants.onboarding_push` | المنصة | bool | `false` |
 | `merchants.onboarding_push_messages` | المنصة | longtext | `🛵 صار فيك تطلب سائق | عندك طلب؟ اكبس «لدي توصيلة» والسائق بيجيك.

@@ -727,3 +727,32 @@ func TestACC_WelcomedAccountIsVerified(t *testing.T) {
 		t.Fatal("**رسالةُ الترحيب لم توثّق الحساب**")
 	}
 }
+
+// TestACC_ExportContactsVCF **جهاتُ الاتصال لجوال المالك** (٢٠٢٦-١٠-١٢) — ملفُّ vCard
+// بالزبائن والمتاجر بأسماءٍ تقول من هم، وبلا ترشيحِ دورٍ لا يدخل غيرُهم.
+func TestACC_ExportContactsVCF(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	tag := "جهة" + uniq("x")
+	cust := f.NewUserWith("customer", Named(tag+" زبونة, ومعها فاصلة"))
+	drv := f.NewUserWith("driver", Named(tag+" سائق"))
+	admin := h.NewUser("admin")
+	r := h.GET("/api/v1/admin/users/export?format=vcf&query="+urlQ(tag), admin.Token)
+	if r.Code != 200 {
+		t.Fatalf("التصدير: %s", r)
+	}
+	body := string(r.Body)
+	if !strings.Contains(r.Head.Get("Content-Type"), "text/vcard") {
+		t.Errorf("نوعُ الملفّ %q", r.Head.Get("Content-Type"))
+	}
+	if !strings.Contains(body, "BEGIN:VCARD") || !strings.Contains(body, "FN:زبون — "+tag+" زبونة\\, ومعها فاصلة") ||
+		!strings.Contains(body, "TEL;TYPE=CELL:"+cust.Phone) {
+		t.Errorf("**الزبونُ لم يُصدَّر بدوره ورقمه**:\n%s", body)
+	}
+	if strings.Contains(body, drv.Phone) {
+		t.Errorf("**صُدّر سائقٌ بلا طلب**")
+	}
+	if r := h.GET("/api/v1/admin/users/export?format=vcf&since=2999-01-01&query="+urlQ(tag), admin.Token); strings.Contains(string(r.Body), "BEGIN:VCARD") {
+		t.Errorf("**«من تاريخ» لم يُحترم**")
+	}
+}

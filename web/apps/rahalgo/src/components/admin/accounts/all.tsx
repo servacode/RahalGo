@@ -191,6 +191,25 @@ export default function AllAccountsTable() {
     }
   }
 
+  // **جهاتُ الاتصال لجوال المالك** (٢٠٢٦-١٠-١٢) — ملفٌّ يُفتح على الجوال فتُحفظ كلُّها.
+  const [contactsSince, setContactsSince] = useState("");
+  async function exportContacts() {
+    const params = new URLSearchParams({ query, role, status: statusFilter, format: "vcf", since: contactsSince });
+    try {
+      const res = await apiFile(`/api/v1/admin/users/export?${params}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rahalgo-contacts.vcf";
+      a.click();
+      URL.revokeObjectURL(url);
+      setError("");
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
   /** **فعلٌ على حسابٍ أو أكثر** — والخطأُ يُعدّ ويُقال لا يُبتلع. */
   async function applyStatus(rows: Row[], status: string, reason = "") {
     setBusy(true);
@@ -401,6 +420,21 @@ export default function AllAccountsTable() {
               <IconReceipt size={16} />
               {A.exportCsv}
             </Button>
+          )}
+          {canExport && (
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="date"
+                value={contactsSince}
+                onChange={(e) => setContactsSince(e.target.value)}
+                title={A.contactsSince}
+                aria-label={A.contactsSince}
+              />
+              <Button variant="secondary" onClick={() => void exportContacts()} className="flex items-center gap-1.5">
+                <IconReceipt size={16} />
+                {A.exportContacts}
+              </Button>
+            </div>
           )}
           {canCategories && (
             <Button variant="secondary" onClick={() => setCatsOpen(true)} className="flex items-center gap-1.5">

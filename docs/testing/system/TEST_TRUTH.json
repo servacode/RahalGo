@@ -34,7 +34,7 @@
     "behaviour_settings": 178,
     "order_fields": 95,
     "test_files": 555,
-    "test_funcs": 2260
+    "test_funcs": 2263
   },
   "flows": [
     {
@@ -10876,6 +10876,12 @@
       "orphan": true
     },
     {
+      "name": "TestACC_ExportContactsVCF",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestACC_MoneyHiddenFromNonFinanceStaff",
       "file": "internal/qa/accounts_section_test.go",
       "package": "qa",
@@ -17517,6 +17523,12 @@
       "orphan": true
     },
     {
+      "name": "TestOB03_ReachesBeyondTheFirstThousand",
+      "file": "internal/qa/merchant_onboarding_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMSS01_OwnerSwitchesSettlementMethod",
       "file": "internal/qa/merchant_settlement_switch_test.go",
       "package": "qa",
@@ -23491,6 +23503,12 @@
     {
       "name": "TestUSD04_DollarShownAsWrittenPoundRoundedTo5c",
       "file": "internal/qa/usd_pricing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBOOK06_DeletedNotCountedInRoleCards",
+      "file": "internal/qa/user_counts_match_list_test.go",
       "package": "qa",
       "orphan": true
     },

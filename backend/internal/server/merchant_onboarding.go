@@ -96,60 +96,70 @@ func (s *Server) merchantOnboardingTick(ctx context.Context, now time.Time) int 
 	if len(msgs) == 0 {
 		return 0
 	}
-	rows, err := s.pg.Query(ctx, `
-		SELECT DISTINCT u.id::text, COALESCE(p.next_step, 0)
-		FROM users u
-		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'merchant'
-		LEFT JOIN merchant_onboarding_push p ON p.user_id = u.id
-		WHERE u.status = 'active'
-		  AND COALESCE(p.next_step, 0) < $1
-		  AND COALESCE(p.last_slot, '') <> $2
-		LIMIT 1000`, len(msgs), slot)
-	if err != nil {
-		s.logger.Warn("سلسلةُ المتاجر: تعذّرت القراءة", "err", err)
-		return 0
-	}
-	type due struct {
-		id   string
-		step int
-	}
-	var list []due
-	for rows.Next() {
-		var d due
-		if rows.Scan(&d.id, &d.step) == nil {
-			list = append(list, d)
-		}
-	}
-	rows.Close()
-
+	// **كلُّ المتاجر لا أوّلُ ألفٍ منها** (٢٠٢٦-١٠-١٢) — كان `LIMIT 1000` بلا ترتيبٍ ولا تكرار،
+	// **فما بعد الألف لا يصله شيءٌ أبداً** (أسقط `OB01` في قاعدةٍ فيها أكثرُ من ألف متجر).
+	// **فدفعةٌ بعد دفعة**: كلُّ من مُرّ عليه حُجز موعدُه (`last_slot`) فلا يعود في الدفعة التالية.
 	sent := 0
-	for _, d := range list {
-		step := d.step
-		for step < len(msgs) && msgs[step].OnlyIfUnused && s.ownerUsedDelivery(ctx, d.id) {
-			step++
+	for round := 0; round < 100; round++ {
+		rows, err := s.pg.Query(ctx, `
+			SELECT DISTINCT u.id::text, COALESCE(p.next_step, 0), u.created_at
+			FROM users u
+			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'merchant'
+			LEFT JOIN merchant_onboarding_push p ON p.user_id = u.id
+			WHERE u.status = 'active'
+			  AND COALESCE(p.next_step, 0) < $1
+			  AND COALESCE(p.last_slot, '') <> $2
+			ORDER BY u.created_at
+			LIMIT 1000`, len(msgs), slot)
+		if err != nil {
+			s.logger.Warn("سلسلةُ المتاجر: تعذّرت القراءة", "err", err)
+			return sent
 		}
-		next := step
-		if step < len(msgs) {
-			next = step + 1
+		type due struct {
+			id   string
+			step int
 		}
-		// **يُحجز الموعدُ قبل الإرسال** — ومن سبقته نبضةٌ أخرى لا يُرسَل له.
-		tag, err := s.pg.Exec(ctx, `
-			INSERT INTO merchant_onboarding_push (user_id, next_step, last_slot, updated_at)
-			VALUES ($1::uuid, $2, $3, now())
-			ON CONFLICT (user_id) DO UPDATE
-			   SET next_step = EXCLUDED.next_step, last_slot = EXCLUDED.last_slot, updated_at = now()
-			 WHERE merchant_onboarding_push.last_slot <> EXCLUDED.last_slot`, d.id, next, slot)
-		if err != nil || tag.RowsAffected() == 0 || step >= len(msgs) {
-			continue
+		var list []due
+		for rows.Next() {
+			var d due
+			var at time.Time
+			if rows.Scan(&d.id, &d.step, &at) == nil {
+				list = append(list, d)
+			}
 		}
-		if s.notify != nil {
-			s.notify.Notify(ctx, notifications.Input{
-				UserID: d.id, Kind: notifications.KindAccount,
-				Title: msgs[step].Title, Body: msgs[step].Body,
-				Apps: []string{notifications.AppMerchant},
-			})
+		rows.Close()
+		if len(list) == 0 {
+			break
 		}
-		sent++
+
+		for _, d := range list {
+			step := d.step
+			for step < len(msgs) && msgs[step].OnlyIfUnused && s.ownerUsedDelivery(ctx, d.id) {
+				step++
+			}
+			next := step
+			if step < len(msgs) {
+				next = step + 1
+			}
+			// **يُحجز الموعدُ قبل الإرسال** — ومن سبقته نبضةٌ أخرى لا يُرسَل له.
+			tag, err := s.pg.Exec(ctx, `
+				INSERT INTO merchant_onboarding_push (user_id, next_step, last_slot, updated_at)
+				VALUES ($1::uuid, $2, $3, now())
+				ON CONFLICT (user_id) DO UPDATE
+				   SET next_step = EXCLUDED.next_step, last_slot = EXCLUDED.last_slot, updated_at = now()
+				 WHERE merchant_onboarding_push.last_slot <> EXCLUDED.last_slot`, d.id, next, slot)
+			if err != nil || tag.RowsAffected() == 0 || step >= len(msgs) {
+				continue
+			}
+			if s.notify != nil {
+				s.notify.Notify(ctx, notifications.Input{
+					UserID: d.id, Kind: notifications.KindAccount,
+					Title: msgs[step].Title, Body: msgs[step].Body,
+					Apps: []string{notifications.AppMerchant},
+				})
+			}
+			sent++
+		}
 	}
 	if sent > 0 {
 		s.logger.Info("سلسلةُ المتاجر: أُرسل", "slot", slot, "count", sent)
