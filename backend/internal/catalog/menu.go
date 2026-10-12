@@ -807,7 +807,7 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 	}
 
 	rows, err = s.db.Query(ctx, `
-		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order
+		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents
 		FROM modifier_options o
 		JOIN modifier_groups g ON g.id = o.group_id
 		WHERE g.item_id = $1 ORDER BY o.sort_order`, itemID)
@@ -818,8 +818,13 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 	for rows.Next() {
 		var o ModifierOption
 		var groupID string
-		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder); err != nil {
+		var optUSD *int64
+		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD); err != nil {
 			return nil, err
+		}
+		if optUSD != nil {
+			d := float64(*optUSD) / 100
+			o.PriceDeltaUSD = &d
 		}
 		if i, ok := idx[groupID]; ok {
 			groups[i].Options = append(groups[i].Options, o)

@@ -151,12 +151,16 @@ fun ItemOptionsSheet(
                 enabled = ready,
             ) {
                 // **وبالدولار لمتجرٍ اختاره، والليرةُ بجانبه** — هي ما يُدفع (٢٠٢٦-١٠-١٢).
-                val rate = item.exchangeRate
+                // **والدولارُ جمعُ دولار الصنف وإضافاته** — لا الليرةُ مقسومة، فيطابق
+                // ما رآه على البطاقة والخيارات (ملاحظةُ المالك ٢٠٢٦-١٠-١٢).
+                val usdUnit = item.priceUsd?.let { base ->
+                    base + picked.sumOf { it.priceDeltaUsd ?: 0.0 }
+                }
                 Text(
                     stringResource(
                         R.string.options_add,
-                        if (rate != null && rate > 0) {
-                            com.rahalgo.ui.dollars(Math.round(unit / rate * 100) / 100.0) + " (≈ " + money(unit) + ")"
+                        if (usdUnit != null) {
+                            com.rahalgo.ui.dollars(usdUnit) + " (≈ " + money(unit) + ")"
                         } else money(unit),
                     ),
                 )
@@ -228,7 +232,8 @@ private fun OptionRow(option: ModifierOption, selected: Boolean, onClick: () -> 
         // **والصفرُ لا يُكتب «+٠»** — **رقمٌ بلا معنًى يُقرأ سعراً.**
         if (option.priceDelta != 0L) {
             Text(
-                "+" + money(option.priceDelta),
+                // **وبالدولار لمتجرٍ يعرض به** (٢٠٢٦-١٠-١٢).
+                "+" + (option.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(option.priceDelta)),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )

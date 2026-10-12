@@ -151,3 +151,36 @@ func TestUSD03_RepReadsRateNeverWrites(t *testing.T) {
 		t.Fatalf("**المندوبُ لا يرى سعرَ صرف متجره**: %s", d)
 	}
 }
+
+// TestUSD04_DollarShownAsWrittenPoundRoundedTo5c — ملاحظتا المالك (٢٠٢٦-١٠-١٢):
+// صنفٌ كُتب ١٫٧٥$ يراه الزبونُ ١٫٧٥$ لا ١٫٧٤$، **وصنفٌ ليريٌّ بـ١٧٥ يُعرض ١٫٥٠$**
+// (لأقرب ٥ سنتات)، **وإضافتُه الدولاريّةُ تُعرض بالدولار.**
+func TestUSD04_DollarShownAsWrittenPoundRoundedTo5c(t *testing.T) {
+	h := New(t)
+	m := newMDFx(t, h, "USD04")
+	if r := h.PATCH(m.url("/exchange-rate"), m.fx.Tok, map[string]any{"rate": 115}); r.Code != http.StatusOK {
+		t.Fatalf("سعرُ الصرف: %d %s", r.Code, r.Err())
+	}
+	if r := h.PATCH(m.url("/settings"), m.fx.Tok, map[string]any{"display_currency": "USD"}); r.Code != http.StatusOK {
+		t.Fatalf("عملةُ العرض: %d %s", r.Code, r.Err())
+	}
+	burger := usdItem(t, h, m, map[string]any{"name": "برغر", "price_currency": "USD", "price_usd": 1.75,
+		"modifiers": []map[string]any{{"name": "الحجم", "min_select": 1, "max_select": 1,
+			"options": []map[string]any{{"name": "عادي", "price_delta_usd": 0}, {"name": "دبل", "price_delta_usd": 0.5}}}}})
+	wrap := usdItem(t, h, m, map[string]any{"name": "شاورما", "price": 175})
+	cust := h.NewUser("customer")
+
+	r := h.GET("/api/v1/public/items/"+burger, cust.Token)
+	it, _ := r.JSON()["item"].(map[string]any)
+	if usd, _ := it["price_usd"].(float64); usd != 1.75 {
+		t.Fatalf("**الدولاريُّ لم يُعرض بدولاره**: %v — %s", it["price_usd"], r)
+	}
+	if !strings.Contains(string(r.Body), `"price_delta_usd":0.5`) {
+		t.Fatalf("**الإضافةُ الدولاريّةُ لم تُعرض بالدولار**: %s", r)
+	}
+	r = h.GET("/api/v1/public/items/"+wrap, cust.Token)
+	it, _ = r.JSON()["item"].(map[string]any)
+	if usd, _ := it["price_usd"].(float64); usd != 1.5 {
+		t.Fatalf("**الليريُّ لم يُدوَّر لأقرب ٥ سنتات**: %v", it["price_usd"])
+	}
+}

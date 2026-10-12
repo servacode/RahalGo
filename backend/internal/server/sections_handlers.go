@@ -116,7 +116,8 @@ const itemFrom = `
 	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = i.id),
 	       -- **وسعرُ صرفٍ للعرض بالدولار** — لمن اختاره وكتب سعرَه، وإلّا فراغ.
 	       CASE WHEN m.display_currency = 'USD' AND m.exchange_rate > 0
-	            THEN m.exchange_rate::float8 END
+	            THEN m.exchange_rate::float8 END,
+	       i.price_usd_cents
 	FROM menu_items i
 	JOIN merchants m ON m.id = i.merchant_id
 	JOIN platform_sections ps ON ps.id = i.platform_section_id
@@ -184,22 +185,36 @@ func markDown(it *publicItem, pct *int, amt *int64) {
 	it.DiscountAmount = amt
 }
 
-// inDollars **يُلبس الصنفَ سعرَه بالدولار للعرض** — بعد الخصم لا قبله، **فالدولارُ
-// المعروضُ قسمةُ ما يُدفع لا ما كُتب.** (الخيار ١، ٢٠٢٦-١٠-١٢.)
-func inDollars(it *publicItem) {
+// inDollars **يُلبس الصنفَ سعرَه بالدولار للعرض** (الخيار ١، ٢٠٢٦-١٠-١٢).
+//
+// **صنفٌ كتبه المتجرُ بالدولار يُعرض بدولاره نفسِه** ما دام ما يُدفع هو سعرَه
+// (بلا هامشٍ ولا خصم) — كتب ١٫٧٥ فيرى الزبونُ ١٫٧٥، **لا ١٫٧٤ عائدةً من ليرةٍ
+// دُوّرت.** **وما عداه** — ليريٌّ، أو عليه هامشٌ أو خصم — **دولارُه الليرةُ ÷ سعرِ
+// الصرف لأقرب ٥ سنتات**: ١٫٥٢ تُقرأ ١٫٥٠. (ملاحظتا المالك ٢٠٢٦-١٠-١٢.)
+func inDollars(it *publicItem, cost int64, usdCents *int64) {
 	if it.ExchangeRate == nil || *it.ExchangeRate <= 0 {
 		it.ExchangeRate = nil
 		return
 	}
+	if usdCents != nil && it.Price == cost && it.PriceBefore == nil {
+		v := float64(*usdCents) / 100
+		it.PriceUSD = &v
+		return
+	}
 	it.PriceUSD = sypToUSD(it.Price, *it.ExchangeRate)
 	if it.PriceBefore != nil {
-		it.PriceBeforeUSD = sypToUSD(*it.PriceBefore, *it.ExchangeRate)
+		if usdCents != nil && *it.PriceBefore == cost {
+			v := float64(*usdCents) / 100
+			it.PriceBeforeUSD = &v
+		} else {
+			it.PriceBeforeUSD = sypToUSD(*it.PriceBefore, *it.ExchangeRate)
+		}
 	}
 }
 
-// sypToUSD الليرةُ بسعر الصرف ⇒ دولارٌ لأقرب سنت.
+// sypToUSD الليرةُ بسعر الصرف ⇒ دولارٌ **لأقرب ٥ سنتات** — للعرض وحدَه.
 func sypToUSD(syp int64, rate float64) *float64 {
-	v := math.Round(float64(syp)/rate*100) / 100
+	v := math.Round(float64(syp)/rate*20) / 20
 	return &v
 }
 
@@ -221,15 +236,16 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var opensAt *time.Time
 		var pct *int
 		var amt *int64
+		var usdCents *int64
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
 		markDown(&it, pct, amt)
-		inDollars(&it)
+		inDollars(&it, cost, usdCents)
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.SourceClosed = !open
@@ -411,17 +427,18 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	var opensAt *time.Time
 	var pct *int
 	var amt *int64
+	var usdCents *int64
 	if err := s.pg.QueryRow(r.Context(), itemSelect+` AND i.id = $1`,
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
 	markDown(&it, pct, amt)
-	inDollars(&it)
+	inDollars(&it, cost, usdCents)
 	it.ImageURL = media.URLForPtr(it.ImageURL)
 	it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 	it.SourceClosed = !open
@@ -434,6 +451,19 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وفروقُ الإضافات بالدولار لمتجرٍ يعرض بالدولار** (٢٠٢٦-١٠-١٢) — الدولاريّةُ
+	// بدولارها، والليريّةُ مقسومةً لأقرب ٥ سنتات. **ولغيره لا دولار.**
+	for gi := range groups {
+		for oi := range groups[gi].Options {
+			o := &groups[gi].Options[oi]
+			switch {
+			case it.ExchangeRate == nil:
+				o.PriceDeltaUSD = nil
+			case o.PriceDeltaUSD == nil:
+				o.PriceDeltaUSD = sypToUSD(o.PriceDelta, *it.ExchangeRate)
+			}
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"item": it, "modifiers": groups})
 }

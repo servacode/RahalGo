@@ -34,7 +34,7 @@
     "behaviour_settings": 178,
     "order_fields": 95,
     "test_files": 551,
-    "test_funcs": 2253
+    "test_funcs": 2254
   },
   "flows": [
     {
@@ -23460,6 +23460,12 @@
     },
     {
       "name": "TestUSD03_RepReadsRateNeverWrites",
+      "file": "internal/qa/usd_pricing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestUSD04_DollarShownAsWrittenPoundRoundedTo5c",
       "file": "internal/qa/usd_pricing_test.go",
       "package": "qa",
       "orphan": true

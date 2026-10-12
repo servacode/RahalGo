@@ -158,6 +158,8 @@ data class ModifierOption(
     val name: String = "",
     @SerialName("price_delta") val priceDelta: Long = 0,
     val available: Boolean = true,
+    /** **فرقُ الإضافة بالدولار** لمتجرٍ يعرض بالدولار (٢٠٢٦-١٠-١٢) — والدفعُ بالليرة. */
+    @SerialName("price_delta_usd") val priceDeltaUsd: Double? = null,
 )
 
 /** **صنفٌ بتفصيله** — هو وخياراتُه معاً في نداءٍ واحد. */
