@@ -219,7 +219,7 @@
     <string name="days_sat">السبت</string>
     <string name="push_ch_new_order">طلبات جديدة</string>
     <string name="store_sections">أقسام السوق</string>
-    <string name="store_sections_hint">أضف الأقسام التي ينزل فيها متجرك — وعندها لن تظهر لك إلا هي عند إضافة صنف</string>
+    <string name="store_sections_hint">أضف أقسام متجرك</string>
     <!-- ══ ثلاثةُ أرقامٍ بأسمائها ══
          (طلبُ المالك ٢٠٢٦-٠٨-٣١: «المفروض بالطلبات تُكتب المجموع ١٥٠،
           الخصم ١٠٪ للمنصّة، إجماليُّ المستحقّ ١٣٥ · **هيك أوضح** —
@@ -302,7 +302,7 @@
     <string name="md_clear_point">أزل النقطة</string>
     <string name="md_row_no_point">بلا نقطة على الخريطة</string>
     <string name="md_title">لدي توصيلة</string>
-    <string name="md_hint">زبونك اشترى منك والغرض جاهز — اطلب سائقاً يوصله</string>
+    <string name="md_hint">خدمة توصيل طلباتك لزبائنك</string>
     <string name="md_name">اسم المستلم</string>
     <string name="md_phone">رقم المستلم</string>
     <string name="md_address">عنوان التسليم</string>
@@ -398,4 +398,8 @@
     <string name="yes">نعم</string>
     <string name="no">لا</string>
     <string name="choose_one">اختار وحدة</string>
+    <string name="hours_all_days">نفس الدوام لكل الأيام</string>
+    <string name="hours_from">من</string>
+    <string name="hours_to">لـ</string>
+    <string name="hours_apply_all">طبّق على كل الأيام</string>
 </resources>

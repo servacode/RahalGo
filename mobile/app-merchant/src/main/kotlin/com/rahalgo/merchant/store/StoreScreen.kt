@@ -331,6 +331,52 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             }
 
             // ══════════════════════════════════════════════════════════
+            // **٤ · أرقامُ اليوم — أربعةٌ لا خامسَ لها**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **والمستحقُّ مبيعاتُه ناقصَ العمولة** (قرارُ المالك
+            // ٢٠٢٦-٠٨-١٠) — **ورقمٌ يشمل هامشَ المنصّة يجعله يحسب
+            // أرباحاً ليست له.**
+            vm.report?.let { r ->
+                Spacer(Modifier.height(12.dp))
+                // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
+                // «تصبح أيضاً مربّعاتٍ تحتها الأرقام»).
+                //
+                // **والمستحقُّ في صفٍّ وحدَه**: الثلاثةُ فوقه عددٌ،
+                // **وهو مال** — ومربّعٌ رابعٌ بينها يُقرأ عدّاً رابعا.
+                Card {
+                    StatRow {
+                        StatBox(
+                            label = stringResource(R.string.reports_today_orders),
+                            value = r.summary.orders.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatBox(
+                            label = stringResource(R.string.reports_delivered),
+                            value = r.summary.delivered.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatBox(
+                            label = stringResource(R.string.reports_cancelled),
+                            value = r.summary.cancelled.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    StatRow {
+                        StatBox(
+                            label = stringResource(R.string.reports_due_today),
+                            value = money(r.summary.due),
+                            modifier = Modifier.weight(1f),
+                            color = Rahal.colors.brand,
+                        )
+                    }
+                }
+            }
+
+            // **التقريرُ أوّلاً والإعداداتُ تحته** (طلبُ المالك ٢٠٢٦-١٠-١٢): المستحقّاتُ
+            // والاستردادُ وسعرُ الصرف تحت مربّعات اليوم لا فوقها.
+            // ══════════════════════════════════════════════════════════
             // **٣·ب — طريقةُ استلامِ المستحقّات — عرضٌ لا حكم** (٢٠٢٦-٠٩-٢٧)
             // ══════════════════════════════════════════════════════════
             //
@@ -466,50 +512,6 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         }
                     },
                 )
-            }
-
-            // ══════════════════════════════════════════════════════════
-            // **٤ · أرقامُ اليوم — أربعةٌ لا خامسَ لها**
-            // ══════════════════════════════════════════════════════════
-            //
-            // **والمستحقُّ مبيعاتُه ناقصَ العمولة** (قرارُ المالك
-            // ٢٠٢٦-٠٨-١٠) — **ورقمٌ يشمل هامشَ المنصّة يجعله يحسب
-            // أرباحاً ليست له.**
-            vm.report?.let { r ->
-                Spacer(Modifier.height(12.dp))
-                // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
-                // «تصبح أيضاً مربّعاتٍ تحتها الأرقام»).
-                //
-                // **والمستحقُّ في صفٍّ وحدَه**: الثلاثةُ فوقه عددٌ،
-                // **وهو مال** — ومربّعٌ رابعٌ بينها يُقرأ عدّاً رابعا.
-                Card {
-                    StatRow {
-                        StatBox(
-                            label = stringResource(R.string.reports_today_orders),
-                            value = r.summary.orders.toString(),
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatBox(
-                            label = stringResource(R.string.reports_delivered),
-                            value = r.summary.delivered.toString(),
-                            modifier = Modifier.weight(1f),
-                        )
-                        StatBox(
-                            label = stringResource(R.string.reports_cancelled),
-                            value = r.summary.cancelled.toString(),
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    StatRow {
-                        StatBox(
-                            label = stringResource(R.string.reports_due_today),
-                            value = money(r.summary.due),
-                            modifier = Modifier.weight(1f),
-                            color = Rahal.colors.brand,
-                        )
-                    }
-                }
             }
 
             // ══════════════════════════════════════════════════════════
@@ -768,6 +770,33 @@ private fun HoursEditor(vm: StoreViewModel) {
         }
     }
     Spacer(Modifier.height(6.dp))
+    // ══════════════════════════════════════════════════════════════════
+    // **وقتٌ واحدٌ لكلّ الأيّام بكبسة** (طلبُ المالك ٢٠٢٦-١٠-١٢: «مشان ما يضبط الدوام
+    // كل يوم بيوم، زر فوق ساعات العمل من الساعة الى الساعة ويطبّق على كل الايام»).
+    // ويُحفظ فوراً — **ثمّ يعدّل يوماً بعينه إن شاء** (الجمعة مثلاً).
+    // ══════════════════════════════════════════════════════════════════
+    var allOpen by rememberSaveable { mutableStateOf(sorted.firstOrNull { !it.closed }?.openTime ?: "09:00") }
+    var allClose by rememberSaveable { mutableStateOf(sorted.firstOrNull { !it.closed }?.closeTime ?: "23:00") }
+    Card {
+        Text(stringResource(R.string.hours_all_days), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.hours_from))
+            TimeField(allOpen) { allOpen = it }
+            Text(stringResource(R.string.hours_to))
+            TimeField(allClose) { allClose = it }
+        }
+        Spacer(Modifier.height(8.dp))
+        RahalButton(
+            onClick = {
+                draft = draft.map { it.copy(closed = false, openTime = allOpen, closeTime = allClose) }
+                vm.saveHours(draft)
+            },
+            enabled = !vm.saving && vm.store?.status != "suspended" && allOpen.isNotBlank() && allClose.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.hours_apply_all)) }
+    }
+    Spacer(Modifier.height(8.dp))
     Card {
         draft.forEachIndexed { i, d ->
             if (i > 0) HorizontalDivider()
