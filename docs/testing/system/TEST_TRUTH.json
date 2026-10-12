@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 82,
-    "notify_targeted": 31,
+    "notify_sites": 83,
+    "notify_targeted": 32,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 219,
-    "behaviour_settings": 176,
+    "setting_defs": 221,
+    "behaviour_settings": 177,
     "order_fields": 95,
-    "test_files": 547,
-    "test_funcs": 2243
+    "test_files": 548,
+    "test_funcs": 2246
   },
   "flows": [
     {
@@ -5102,6 +5102,24 @@
         "admin",
         "customer",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.onboarding_push",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -17432,6 +17450,24 @@
     {
       "name": "TestMDIS_020_NoVerifiedMessage",
       "file": "internal/qa/merchant_notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOB01_TwoADayInOrderThenStops",
+      "file": "internal/qa/merchant_onboarding_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOB02_SkipsTryReminderForUsers",
+      "file": "internal/qa/merchant_onboarding_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOB03_OffSendsNothing",
+      "file": "internal/qa/merchant_onboarding_test.go",
       "package": "qa",
       "orphan": true
     },

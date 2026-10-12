@@ -323,8 +323,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **وواحدٌ بفيديو شرح الزبون** (طلبُ المالك ٢٠٢٦-١٠-٠٩): `customers.tutorial_url`.
 	// **وواحدٌ بأرقام تقرير الواتساب** (٢٠٢٦-١٠-٠٩): `ops.report_phones`.
 	// **وخمسةٌ براصد المنصّة** (٢٠٢٦-١٠-٠٩): `monitoring.enabled|morning_report|morning_hour|error_spike|disk_alert_percent`.
-	if d.BehaviourSettings != 176 {
-		t.Errorf("إعداداتُ السلوك = %d لا 176 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وواحدٌ بسلسلة تعريف المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٢): `merchants.onboarding_push`
+	// (وعباراتُها نصٌّ لا سلوك).
+	if d.BehaviourSettings != 177 {
+		t.Errorf("إعداداتُ السلوك = %d لا 177 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.
