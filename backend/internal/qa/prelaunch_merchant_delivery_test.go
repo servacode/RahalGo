@@ -50,3 +50,26 @@ func TestPLD01_PreLaunch_CustomerBlocked_MerchantDeliveryFlows(t *testing.T) {
 	id := m.create(t, h, "merchant", uniq("pl01d"))
 	m.accept(t, h, id)
 }
+
+// TestPLD02_CustomOrdersOpenAlone — **«الطلباتُ المخصّصة» وحدَها مفتوحة**: المشترياتُ
+// والأمانةُ تُنشآن، **والطلبُ العاديُّ من متجرٍ يبقى مغلقاً.**
+func TestPLD02_CustomOrdersOpenAlone(t *testing.T) {
+	h := New(t)
+	m := newMDFx(t, h, "PLD02")
+	h.Setting("launch.customer_orders", "false")
+	h.Setting("launch.customer_custom_orders", "true")
+	h.Setting("launch.driver_work", "true")
+
+	cust := h.NewUser("customer")
+	if r := h.POSTKey("/api/v1/orders", cust.Token, uniq("pld02o"), orderBody(m.fx.Item, 1)); r.Code != http.StatusServiceUnavailable || r.Err() != "launch_closed" {
+		t.Fatalf("**الطلبُ العاديُّ فُتح مع المخصّص** — %d %s", r.Code, r.Err())
+	}
+	for _, mode := range []string{"purchase", "amanah"} {
+		b := zoneCustomBody(m.dropLat, m.dropLng)
+		b["custom_mode"] = mode
+		r := h.POSTKey("/api/v1/orders/custom", cust.Token, uniq("pld02"+mode), b)
+		if r.Code != http.StatusCreated {
+			t.Fatalf("**%s لم يُنشأ والمخصّصُ مفتوح** — %d %s", mode, r.Code, r.Err())
+		}
+	}
+}

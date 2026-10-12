@@ -34,7 +34,7 @@
     "behaviour_settings": 176,
     "order_fields": 95,
     "test_files": 547,
-    "test_funcs": 2242
+    "test_funcs": 2243
   },
   "flows": [
     {
@@ -19417,6 +19417,12 @@
     },
     {
       "name": "TestPLD01_PreLaunch_CustomerBlocked_MerchantDeliveryFlows",
+      "file": "internal/qa/prelaunch_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPLD02_CustomOrdersOpenAlone",
       "file": "internal/qa/prelaunch_merchant_delivery_test.go",
       "package": "qa",
       "orphan": true
