@@ -163,18 +163,25 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     init {
         load()
         // **وتبديلُ الفرع يُعيد القراءة** — لا تبقى توصيلاتُ الأوّل.
-        viewModelScope.launch { Refresh.tick.drop(1).collect { load() } }
+        // **والنبضُ العامُّ يُحدّث القائمةَ لا الأجرة** (٢٠٢٦-١٠-١٣) — كان يعيد سؤالَ
+        // `delivery-quote` مع كلّ نبضةٍ والمنصّةُ مسكّرة (٥٠٣ مقصود)، **فيطرق بابَها بلا توقّف.**
+        // **والأجرةُ تُسأل عند الفتح وتغيّر النقطة و«أعد المحاولة» وحدَها.**
+        viewModelScope.launch { Refresh.tick.drop(1).collect { load(withQuote = false) } }
     }
 
-    fun load() {
+    fun load(withQuote: Boolean = true) {
         viewModelScope.launch {
             try {
                 val mine = SelectedStore.resolve(stores.stores().stores)
+                val changed = mine?.id.orEmpty() != storeId
                 storeId = mine?.id.orEmpty()
                 if (storeId.isEmpty()) return@launch
                 // **والأجرةُ تُقال قبل النقطة** — من منطقة المتجر ما لم تُحدَّد.
-                val p = point
-                fetchQuote(p?.first, p?.second)
+                // **وفرعٌ تبدّل يُسأل له** ولو كانت نبضة.
+                if (withQuote || changed) {
+                    val p = point
+                    fetchQuote(p?.first, p?.second)
+                }
                 list = api.list(storeId).deliveries
                 listError = ""
             } catch (e: Exception) {
