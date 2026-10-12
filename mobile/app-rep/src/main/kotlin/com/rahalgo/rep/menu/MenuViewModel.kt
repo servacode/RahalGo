@@ -2,6 +2,8 @@ package com.rahalgo.rep.menu
 
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.menu.ItemDraft
+import com.rahalgo.ui.menu.modifiersForSave
+import com.rahalgo.ui.menu.withUsdText
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -208,8 +210,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             price = if (item.merchantPrice > 0) item.merchantPrice.toString() else "",
             description = item.description,
             platformSectionId = item.platformSectionId.orEmpty(),
-            modifiers = item.modifiers,
+            modifiers = item.modifiers.map { it.withUsdText() },
             imageThumb = item.imageThumbUrl,
+            // **وعملتُه كما حُفظت** (٢٠٢٦-١٠-١٢).
+            currency = item.priceCurrency,
+            priceUsd = com.rahalgo.ui.menu.usdText(item.merchantPriceUsd),
         )
     }
 
@@ -326,8 +331,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             Flash.fail(getApplication<Application>().getString(R.string.mn_need_name))
             return
         }
-        val price = d.price.trim().toLongOrNull()
-        if (price == null) {
+        // **وبالدولار يُفحص الدولار** (٢٠٢٦-١٠-١٢) — والليرةُ يحسبها الخادم.
+        val usd = if (d.isUsd) com.rahalgo.ui.menu.parseUsd(d.priceUsd) else null
+        val price = if (d.isUsd) null else d.price.trim().toLongOrNull()
+        if ((d.isUsd && usd == null) || (!d.isUsd && price == null)) {
             Flash.fail(getApplication<Application>().getString(R.string.mn_need_price))
             return
         }
@@ -352,9 +359,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // **وتُنظَّف قبل الإرسال**: مجموعةٌ بلا اسمٍ أو بلا خيارٍ
             // واحدٍ تُسقَط، **وخيارٌ بلا اسمٍ يُسقَط** — **وصنفٌ يُعرض
             // للزبون بمجموعةٍ بلا اسمٍ يُوقفه عن الطلب.**
-            modifiers = d.modifiers
+            modifiers = d.modifiersForSave()
                 .map { g -> g.copy(options = g.options.filter { it.name.isNotBlank() }) }
                 .filter { it.name.isNotBlank() && it.options.isNotEmpty() },
+            priceCurrency = d.currency,
+            priceUsd = usd,
         )
         // **ومفتاحُ المحاولة للإنشاء وحدَه** (`DUP-LEAD`) — يثبت حتّى ينجح
         // أو يحسمه الخادم، **فإعادةٌ بعد انقطاعٍ لا تُدرج صنفاً ثانياً.**

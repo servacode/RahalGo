@@ -1548,6 +1548,32 @@ private fun TripCard(
                     InfoBox(icon = R.drawable.ic_check_circle, text = state.notice, tint = Rahal.colors.brand, bold = true)
                 }
 
+                // ── الطلبُ الخاصّ: **ما المطلوب** — قبل كلّ شيء (ملاحظةُ المالك ٢٠٢٦-١٠-١٢:
+                // «السائق لا يعرف ماهو الطلب الذي يجب ان يوثق سعره»). كانت البطاقةُ تقول
+                // «اشترِ المطلوب» ولا تقول ما هو — **وهو في قائمة الطلبات وحدَها.**
+                if (order.kind == "custom" && order.customRequest.isNotEmpty()) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(Rahal.shape.sm)
+                            .background(Rahal.colors.warnTint)
+                            .padding(12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.card_custom_what),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = order.customRequest,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Rahal.colors.ink,
+                        )
+                    }
+                }
+
                 // ── الطلبُ الخاصّ: ما وُثّق وما يُنتظر ──────────────────────
                 if (customOpen && feeDone) {
                     val done = buildString {

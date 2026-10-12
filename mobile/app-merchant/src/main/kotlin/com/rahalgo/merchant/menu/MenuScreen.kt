@@ -114,6 +114,7 @@ fun MenuScreen(vm: MenuViewModel) {
             error = vm.editError,
             onCancel = { vm.cancelEdit() },
             onDelete = { vm.deleteItem(draft.itemId) },
+            exchangeRate = vm.exchangeRate,
         )
         return
     }

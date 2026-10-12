@@ -179,6 +179,9 @@ data class MenuItem(
     val description: String = "",
     val price: Long = 0,
     @SerialName("merchant_price") val merchantPrice: Long = 0,
+    /** **عملةُ الصنف وسعرُه بالدولار** (٢٠٢٦-١٠-١٢) — والليرةُ محسوبةٌ منه. */
+    @SerialName("price_currency") val priceCurrency: String = "SYP",
+    @SerialName("merchant_price_usd") val merchantPriceUsd: Double? = null,
     @SerialName("platform_section_id") val platformSectionId: String? = null,
     @SerialName("platform_section_name") val platformSectionName: String = "",
     @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
@@ -245,6 +248,9 @@ data class ItemInput(
     @SerialName("platform_section_id") val platformSectionId: String? = null,
     val available: Boolean? = null,
     @SerialName("image_media_id") val imageMediaId: String? = null,
+    /** **عملةُ الصنف** «SYP» أو «USD» (٢٠٢٦-١٠-١٢) — وبالدولار يُرسَل `price_usd`. */
+    @SerialName("price_currency") val priceCurrency: String? = null,
+    @SerialName("price_usd") val priceUsd: Double? = null,
     /**
      * **وإن أُرسلت — ولو فارغةً — استُبدلت الشجرةُ كلُّها.**
      *

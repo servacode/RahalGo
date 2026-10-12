@@ -1,6 +1,8 @@
 package com.rahalgo.merchant.menu
 
 import com.rahalgo.ui.menu.ItemDraft
+import com.rahalgo.ui.menu.modifiersForSave
+import com.rahalgo.ui.menu.withUsdText
 import com.rahalgo.merchant.noStoreMsg
 import com.rahalgo.merchant.SelectedStore
 import android.app.Application
@@ -74,6 +76,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     private var storeId: String = ""
 
+    /** **سعرُ صرف المتجر** — لعرض «≈ ل.س» تحت السعر الدولاريّ (٢٠٢٦-١٠-١٢). */
+    var exchangeRate by mutableStateOf<Double?>(null)
+        private set
+
     /** **وجهُ كلّ قسمٍ باسمه** — من `platform-sections`، تُقرأ مرّةً. */
     private var faces: Map<String, String?> = emptyMap()
 
@@ -124,6 +130,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 // الجديد، لا أن تبقى قائمةُ الأوّل محفوظةً في `storeId`.**
                 val mine = SelectedStore.resolve(api.stores().stores)
                 storeId = mine?.id.orEmpty()
+                exchangeRate = mine?.exchangeRate
                 suspended = mine?.status == "suspended"
                 if (storeId.isEmpty()) {
                     error = noStoreMsg()
@@ -277,7 +284,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // **وتُحمَّل مع الصنف** — ومن حرّر صنفاً بلا حملها ثمّ حفظ
             // **محا إضافاتِه كلَّها**: المحرّكُ يستبدل لا يضيف
             // (`DELETE FROM modifier_groups WHERE item_id`).
-            modifiers = item.modifiers,
+            modifiers = item.modifiers.map { it.withUsdText() },
+            // **وعملتُه كما حُفظت** (٢٠٢٦-١٠-١٢).
+            currency = item.priceCurrency,
+            priceUsd = com.rahalgo.ui.menu.usdText(item.merchantPriceUsd),
         )
     }
 
@@ -348,8 +358,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_name))
             return
         }
-        val price = d.price.trim().toLongOrNull()
-        if (price == null || price <= 0) {
+        // **وبالدولار يُفحص الدولار** (٢٠٢٦-١٠-١٢) — والليرةُ يحسبها الخادم.
+        val usd = if (d.isUsd) com.rahalgo.ui.menu.parseUsd(d.priceUsd) else null
+        val price = if (d.isUsd) null else d.price.trim().toLongOrNull()
+        if ((d.isUsd && (usd == null || usd <= 0.0)) || (!d.isUsd && (price == null || price <= 0))) {
             Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_price))
             return
         }
@@ -366,7 +378,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 platformSectionId = d.platformSectionId,
                 imageMediaId = d.imageMediaId,
                 // **وتُرسل دائماً لا حين تتبدّل** — انظر `editItem`.
-                modifiers = d.modifiers,
+                modifiers = d.modifiersForSave(),
+                priceCurrency = d.currency,
+                priceUsd = usd,
             )
             runCatching {
                 if (d.itemId.isEmpty()) {

@@ -418,6 +418,69 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             }
 
             // ══════════════════════════════════════════════════════════
+            // **سعرُ الصرف** (طلبُ المالك ٢٠٢٦-١٠-١٢)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **أصنافُه بالدولار تتبعه** — يكتبه هنا فتتغيّر أسعارُها كلُّها لأقرب
+            // ٥ ليرات، **والأصنافُ بالليرة لا تتأثّر.**
+            Spacer(Modifier.height(10.dp))
+            Card {
+                var rateText by androidx.compose.runtime.saveable.rememberSaveable(store.id, store.exchangeRate) {
+                    androidx.compose.runtime.mutableStateOf(com.rahalgo.ui.menu.usdText(store.exchangeRate))
+                }
+                KeyValue(
+                    label = stringResource(R.string.store_rate),
+                    value = store.exchangeRate?.let { stringResource(R.string.store_rate_value, com.rahalgo.ui.menu.usdText(it)) }
+                        ?: stringResource(R.string.store_rate_none),
+                )
+                Text(stringResource(R.string.store_rate_hint))
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = rateText,
+                        onValueChange = { v -> rateText = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10) },
+                        label = { Text(stringResource(R.string.store_rate_field)) },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                        ),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    com.rahalgo.ui.RahalButton(
+                        onClick = { vm.setExchangeRate(rateText) },
+                        enabled = !vm.saving && rateText.isNotBlank(),
+                    ) { Text(stringResource(R.string.store_rate_save)) }
+                }
+            }
+            vm.rateJump?.let { j ->
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { vm.dismissRateJump() },
+                    title = { Text(stringResource(R.string.store_rate_jump_title)) },
+                    text = {
+                        Column {
+                            Text(stringResource(R.string.store_rate_jump_body, j.oldRate, j.newRate))
+                            if (j.samples.isNotBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(stringResource(R.string.store_rate_jump_samples), fontWeight = FontWeight.Bold)
+                                Text(j.samples)
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        com.rahalgo.ui.RahalTextButton(onClick = { vm.setExchangeRate(j.newRate, confirm = true) }) {
+                            Text(stringResource(R.string.store_rate_jump_yes))
+                        }
+                    },
+                    dismissButton = {
+                        com.rahalgo.ui.RahalTextButton(onClick = { vm.dismissRateJump() }) {
+                            Text(stringResource(R.string.store_rate_jump_no))
+                        }
+                    },
+                )
+            }
+
+            // ══════════════════════════════════════════════════════════
             // **٤ · أرقامُ اليوم — أربعةٌ لا خامسَ لها**
             // ══════════════════════════════════════════════════════════
             //

@@ -196,6 +196,14 @@ class MerchantApi(private val api: ApiClient) {
         api.call("/api/v1/merchant/stores/$storeId/settings", HttpMethod.Patch, input)
 
     /**
+     * **سعرُ صرف المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٢) — وتتبعه أصنافُه الدولاريّة.
+     * **وقفزةٌ فوق ١٠٪ تُردّ** `exchange_rate_jump` بمثالٍ حتّى يُرسَل `confirm`.
+     */
+    suspend fun setExchangeRate(storeId: String, rate: Double, confirm: Boolean = false): ExchangeRateResult =
+        api.call("/api/v1/merchant/stores/$storeId/exchange-rate", HttpMethod.Patch,
+            ExchangeRateInput(rate, confirm))
+
+    /**
      * **يبدّل طريقةَ مستحقّاته** — `cash` أو `wallet`، للطلبات الجديدة وحدَها
      * (قرارُ المالك ٢٠٢٦-١٠-٠١: «تكون بإعدادات المتجر ويقدر يبدّلها»).
      */
@@ -388,6 +396,8 @@ data class Store(
     @SerialName("returns_confirmed") val returnsConfirmed: Boolean = true,
     /** **ضبط دوامَه؟** — وافتراضُها `true` لمحرّكٍ أقدمَ لا يردّها. */
     @SerialName("has_hours") val hasHours: Boolean = true,
+    /** **سعرُ صرفه** (ليرةٌ للدولار) — وفراغُه: لم يكتبه بعد (٢٠٢٦-١٠-١٢). */
+    @SerialName("exchange_rate") val exchangeRate: Double? = null,
 )
 
 @Serializable
@@ -514,6 +524,9 @@ data class MenuItem(
      */
     @SerialName("platform_section_id") val platformSectionId: String? = null,
     @SerialName("platform_section_name") val platformSectionName: String = "",
+    /** **عملةُ الصنف وسعرُه بالدولار** (٢٠٢٦-١٠-١٢) — و`price` بالليرة محسوبٌ منه. */
+    @SerialName("price_currency") val priceCurrency: String = "SYP",
+    @SerialName("merchant_price_usd") val merchantPriceUsd: Double? = null,
     /** **خياراتُه** — تُقرأ لتُعرض في المحرّر وتُعاد كما هي إن لم تُمسّ. */
     val modifiers: List<ModifierGroup> = emptyList(),
 )
@@ -596,6 +609,13 @@ data class ModifierOption(
     val name: String = "",
     @SerialName("price_delta") val priceDelta: Long = 0,
     val available: Boolean = true,
+    /**
+     * **فرقُ الإضافة بالدولار** لصنفٍ دولاريّ (طلبُ المالك ٢٠٢٦-١٠-١٢) — والخادمُ
+     * يحسب منه `price_delta` بسعر صرف المتجر. وفراغُه: الإضافةُ بالليرة.
+     */
+    @SerialName("price_delta_usd") val priceDeltaUsd: Double? = null,
+    /** **ما يُكتب في الحقل** وهو يُكتب — «0.» لا يضيع قبل الرقم التالي. لا يُرسَل. */
+    @kotlinx.serialization.Transient val usdText: String = "",
 )
 
 // ── ما يُرسَل ──────────────────────────────────────────────────────────
@@ -684,6 +704,19 @@ data class MenuItemInput(
     @SerialName("platform_section_id") val platformSectionId: String? = null,
     @SerialName("image_media_id") val imageMediaId: String? = null,
     val modifiers: List<ModifierGroup>? = null,
+    /** **عملةُ الصنف** «SYP» أو «USD» (٢٠٢٦-١٠-١٢) — وبالدولار يُرسَل `price_usd`. */
+    @SerialName("price_currency") val priceCurrency: String? = null,
+    @SerialName("price_usd") val priceUsd: Double? = null,
+)
+
+/** **سعرُ صرف المتجر** — `PATCH /merchant/stores/{id}/exchange-rate`. */
+@Serializable
+data class ExchangeRateInput(val rate: Double, val confirm: Boolean = false)
+
+@Serializable
+data class ExchangeRateResult(
+    @SerialName("exchange_rate") val exchangeRate: Double = 0.0,
+    @SerialName("items_repriced") val itemsRepriced: Long = 0,
 )
 
 @Serializable

@@ -200,6 +200,60 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **قفزةٌ في سعر الصرف تنتظر تأكيدَه** (٢٠٢٦-١٠-١٢) — القديمُ والجديدُ ومثالٌ من
+     * أصنافه كما ردّها الخادم. وفراغُها: لا شيءَ ينتظر.
+     */
+    var rateJump by mutableStateOf<RateJump?>(null)
+        private set
+
+    data class RateJump(val rate: Double, val oldRate: String, val newRate: String, val samples: String)
+
+    /**
+     * **سعرُ الصرف** (طلبُ المالك ٢٠٢٦-١٠-١٢) — وتتبعه كلُّ أصنافه الدولاريّة لأقرب ٥
+     * ليرات، **والليريّةُ لا تُمسّ.** **وقفزةٌ فوق ١٠٪ تُسأل قبل الحفظ.**
+     */
+    fun setExchangeRate(text: String, confirm: Boolean = false) {
+        val id = store?.id ?: return
+        val rate = com.rahalgo.ui.menu.parseUsd(text)
+        if (rate == null || rate <= 0.0) {
+            Flash.fail(AppCore.get().app.getString(com.rahalgo.ui.R.string.err_exchange_rate_invalid))
+            return
+        }
+        saving = true
+        viewModelScope.launch {
+            runCatching { api.setExchangeRate(id, rate, confirm) }
+                .onSuccess { r ->
+                    rateJump = null
+                    store = store?.copy(exchangeRate = rate)
+                    Flash.ok(
+                        AppCore.get().app.getString(
+                            com.rahalgo.merchant.R.string.ok_rate_saved,
+                            r.itemsRepriced,
+                        ),
+                    )
+                }
+                .onFailure { e ->
+                    val body = (e as? com.rahalgo.shared.net.ApiClient.ApiException)?.body
+                    if (body?.code == "exchange_rate_jump") {
+                        rateJump = RateJump(
+                            rate = rate,
+                            oldRate = body.details["old_rate"].orEmpty(),
+                            newRate = body.details["new_rate"].orEmpty(),
+                            samples = body.details["samples"].orEmpty(),
+                        )
+                    } else {
+                        Flash.fail(err(e))
+                    }
+                }
+            saving = false
+        }
+    }
+
+    fun dismissRateJump() {
+        rateJump = null
+    }
+
     /** **قبولُ الاسترداد** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
     fun setAcceptsReturns(accepts: Boolean) {
         val id = store?.id ?: return

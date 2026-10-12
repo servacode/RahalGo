@@ -138,6 +138,11 @@ fun ItemEditor(
      * حفظ في أسفل نموذجٍ طويلٍ لم يره.** وفارغٌ يعني لا خطأ.
      */
     error: String = "",
+    /**
+     * **سعرُ صرف المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٢) — لعرض «≈ ١٧٥ ل.س» تحت السعر
+     * الدولاريّ. **وفراغُه: لم يكتبه المتجرُ بعد** فيُقال له أين يكتبه.
+     */
+    exchangeRate: Double? = null,
 ) {
     val pick = rememberImagePicker { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -192,14 +197,41 @@ fun ItemEditor(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = d.price,
-            onValueChange = { v -> onEdit { it.copy(price = v.filter(Char::isDigit)) } },
-            label = { Text(stringResource(priceLabel)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // **زرُّ العملة الذكيّ** (طلبُ المالك ٢٠٢٦-١٠-١٢): «ل.س» أو «$» لكلّ صنف.
+        CurrencySwitch(selected = d.currency, enabled = !busy) { c -> onEdit { it.copy(currency = c) } }
+        Spacer(Modifier.height(6.dp))
+        if (!d.isUsd) {
+            OutlinedTextField(
+                value = d.price,
+                onValueChange = { v -> onEdit { it.copy(price = v.filter(Char::isDigit)) } },
+                label = { Text(stringResource(priceLabel)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            OutlinedTextField(
+                value = d.priceUsd,
+                onValueChange = { v ->
+                    onEdit { it.copy(priceUsd = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10)) }
+                },
+                label = { Text(stringResource(R.string.item_price_usd)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            val usd = parseUsd(d.priceUsd)
+            Text(
+                when {
+                    exchangeRate == null || exchangeRate <= 0 -> stringResource(R.string.item_usd_need_rate)
+                    usd == null -> stringResource(R.string.item_usd_rate_is, usdText(exchangeRate))
+                    else -> stringResource(R.string.item_usd_equals, usdToSyp(usd, exchangeRate), usdText(exchangeRate))
+                },
+                color = if (exchangeRate == null || exchangeRate <= 0) Rahal.colors.danger else Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         Spacer(Modifier.height(12.dp))
         Text(
             stringResource(sectionLabel),
@@ -433,18 +465,31 @@ private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> 
                         )
                         Spacer(Modifier.width(6.dp))
                         OutlinedTextField(
-                            value = if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
+                            // **وبعملة صنفها** (٢٠٢٦-١٠-١٢): دولاريٌّ يُكتب بالدولار.
+                            value = if (d.isUsd) o.usdText
+                            else if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
                             onValueChange = { v ->
-                                val n = v.filter { it.isDigit() }.toLongOrNull() ?: 0L
-                                onEdit { dd ->
-                                    dd.copy(
-                                        modifiers = dd.modifiers.replaceAt(gi) { gg ->
-                                            gg.copy(options = gg.options.replaceAt(oi) { it.copy(priceDelta = n) })
-                                        },
-                                    )
+                                if (d.isUsd) {
+                                    val t = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(8)
+                                    onEdit { dd ->
+                                        dd.copy(
+                                            modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                                gg.copy(options = gg.options.replaceAt(oi) { it.copy(usdText = t) })
+                                            },
+                                        )
+                                    }
+                                } else {
+                                    val n = v.filter { it.isDigit() }.toLongOrNull() ?: 0L
+                                    onEdit { dd ->
+                                        dd.copy(
+                                            modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                                gg.copy(options = gg.options.replaceAt(oi) { it.copy(priceDelta = n) })
+                                            },
+                                        )
+                                    }
                                 }
                             },
-                            label = { Text(stringResource(R.string.mod_opt_price)) },
+                            label = { Text(stringResource(if (d.isUsd) R.string.mod_opt_price_usd else R.string.mod_opt_price)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.width(110.dp),
@@ -479,3 +524,34 @@ private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> 
 /** **يستبدل عنصراً بموضعه** — ولا يمسّ ما سواه. */
 private inline fun <T> List<T>.replaceAt(i: Int, block: (T) -> T): List<T> =
     mapIndexed { idx, v -> if (idx == i) block(v) else v }
+
+/**
+ * **زرُّ العملة** — «ل.س» و«$» جنباً إلى جنب، والمختارُ بلون المنصّة.
+ * (طلبُ المالك ٢٠٢٦-١٠-١٢: «زر ذكي سعر بالسوري او دولار».)
+ */
+@Composable
+private fun CurrencySwitch(selected: String, enabled: Boolean, onSelect: (String) -> Unit) {
+    Row(
+        Modifier
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.canvas),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        listOf(CURRENCY_SYP to R.string.item_currency_syp, CURRENCY_USD to R.string.item_currency_usd).forEach { (code, label) ->
+            val on = selected == code
+            Box(
+                Modifier
+                    .clip(Rahal.shape.md)
+                    .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
+                    .clickable(enabled = enabled) { onSelect(code) }
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    stringResource(label),
+                    color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}

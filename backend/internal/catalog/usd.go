@@ -15,8 +15,11 @@ package catalog
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -162,9 +165,18 @@ func (s *Service) SetExchangeRate(ctx context.Context, actorID, merchantID strin
 			}
 			rows.Close()
 		}
+		// **والتفصيلُ نصوصٌ لا أرقام** — التطبيقُ يقرأ `details` خريطةَ نصوص.
+		lines := make([]string, 0, len(samples))
+		for _, sm := range samples {
+			lines = append(lines, fmt.Sprintf("%s: %d ← %d", sm.Name, sm.NewPrice, sm.OldPrice))
+		}
 		return 0, &httpx.AppError{Status: http.StatusConflict, Code: "exchange_rate_jump",
 			MessageKey: "errors.exchange_rate_jump",
-			Details:    map[string]any{"old_rate": old, "new_rate": rate, "samples": samples}}
+			Details: map[string]any{
+				"old_rate": strconv.FormatFloat(old, 'f', -1, 64),
+				"new_rate": strconv.FormatFloat(rate, 'f', -1, 64),
+				"samples":  strings.Join(lines, "\n"),
+			}}
 	}
 
 	tx, err := s.db.Begin(ctx)

@@ -704,6 +704,14 @@
     <string name="mod_hint">مثل: مشروب غازي، جبنة إضافية، الحجم. تظهر للزبون عند اختيار الصنف</string>
     <string name="mod_multi">يختار أكثر من واحد</string>
     <string name="mod_opt_price">السعر الإضافي</string>
+    <!-- السعر بالدولار (٢٠٢٦-١٠-١٢) -->
+    <string name="item_currency_syp">ل.س</string>
+    <string name="item_currency_usd">$ دولار</string>
+    <string name="item_price_usd">السعر بالدولار</string>
+    <string name="mod_opt_price_usd">+ دولار</string>
+    <string name="item_usd_equals">≈ %1$d ل.س (سعر الصرف %2$s)</string>
+    <string name="item_usd_rate_is">سعر الصرف %1$s — الزبون بيشوف السعر بالليرة</string>
+    <string name="item_usd_need_rate">اكتب سعر الصرف بصفحة «متجري» أول، لحتى نحسب سعرك بالليرة</string>
     <string name="mod_title">الإضافات والخيارات</string>
     <string name="mn_unsorted">غير مصنّف</string>
     <!-- ══════════════════════════════════════════════════════════

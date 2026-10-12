@@ -372,4 +372,17 @@
     <string name="md_pay_me_sub">بتنخصم الأجرة من رصيد محفظتك</string>
     <string name="md_pay_me_cash_sub">بتعطي الأجرة للسائق نقداً لما يستلم الغرض</string>
     <string name="md_pay_recipient_sub">المستلم بيدفع الأجرة للسائق نقداً</string>
+    <!-- سعر الصرف (٢٠٢٦-١٠-١٢) -->
+    <string name="store_rate">سعر الصرف</string>
+    <string name="store_rate_value">1$ = %1$s ل.س</string>
+    <string name="store_rate_none">ما كتبته لسا</string>
+    <string name="store_rate_hint">أصنافك يلي سعرها بالدولار بتتحسب منه بالليرة، وبتتغيّر لحالها كل ما تغيّره. يلي سعرها بالليرة ما بتتأثر.</string>
+    <string name="store_rate_field">كم ليرة الدولار؟</string>
+    <string name="store_rate_save">احفظ</string>
+    <string name="ok_rate_saved">تم — تحدّث سعر %1$d صنف</string>
+    <string name="store_rate_jump_title">سعر الصرف تغيّر كتير</string>
+    <string name="store_rate_jump_body">من %1$s لـ %2$s. تأكد إنك ما زدت أو نقصت صفر بالغلط.</string>
+    <string name="store_rate_jump_samples">أسعارك رح تصير (الجديد ← القديم):</string>
+    <string name="store_rate_jump_yes">إي، احفظه</string>
+    <string name="store_rate_jump_no">رجوع</string>
 </resources>
