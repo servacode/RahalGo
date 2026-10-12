@@ -124,6 +124,9 @@ interface OrderRow {
   kind?: string;
   /** ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه. */
   custom_request?: string;
+  /** **«لدي توصيلة»**: ما يحمله السائق، ومن يدفع الأجرة (٢٠٢٦-١٠-١٢). */
+  parcel_note?: string;
+  fee_payer?: string;
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
   custom_fee?: number | null;
@@ -3261,6 +3264,45 @@ function InvoiceList({ o }: { o: OrderRow }) {
   //
   // **وهي حجّةٌ عند الخلاف**: من ادّعى أنّه دفع أكثر، أو أنّ الأجرة كانت
   // أقلّ، **يُرجَع إلى ما وُثّق.** ولولاه لبقيت كلمةٌ ضدّ كلمة.
+  // ══════════════════════════════════════════════════════════════════
+  // **«لدي توصيلة» — بتفاصيلها كاملةً** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «لازم يكون
+  // واضح مين يدفع الأجرة، واسم المستلم ورقمه وعنوانه، وماذا يحمل السائق»).
+  // ══════════════════════════════════════════════════════════════════
+  if (o.kind === "merchant_delivery") {
+    const payer =
+      o.fee_payer === "recipient"
+        ? OP.mdPayerRecipient
+        : o.fee_payer === "merchant_cash"
+          ? OP.mdPayerMerchantCash
+          : OP.mdPayerMerchant;
+    return (
+      <ul className="space-y-1.5 text-sm">
+        <li className="flex items-start justify-between gap-2">
+          <span className="shrink-0 text-ink-muted">{OP.mdRecipient}</span>
+          <span className="text-end font-medium">
+            {o.customer_name || "—"}
+            {o.customer_phone ? <span className="ms-2 text-ink-muted" dir="ltr">{o.customer_phone}</span> : null}
+          </span>
+        </li>
+        <li className="flex items-start justify-between gap-2">
+          <span className="shrink-0 text-ink-muted">{OP.mdAddress}</span>
+          <span className="text-end">{o.address_text || "—"}</span>
+        </li>
+        <li className="flex items-start justify-between gap-2">
+          <span className="shrink-0 text-ink-muted">{OP.mdParcel}</span>
+          <span className="text-end font-medium">{o.parcel_note || "—"}</span>
+        </li>
+        <li className="flex items-center justify-between gap-2 border-t border-line-soft pt-1.5">
+          <span className="text-ink-muted">{OP.mdPayer}</span>
+          <span className="font-bold">{payer}</span>
+        </li>
+        <li className="flex items-center justify-between gap-2">
+          <span className="text-ink-muted">{OP.mdFee}</span>
+          <Money value={o.delivery_fee} small />
+        </li>
+      </ul>
+    );
+  }
   if (o.kind === "custom") {
     const goods = o.custom_goods_amount;
     const fee = o.custom_fee ?? 0;
