@@ -134,3 +134,18 @@ func TestUSD02_CustomerSeesDollarsPaysPounds(t *testing.T) {
 		t.Fatalf("**الدولارُ ليس الليرةَ ÷ سعرِ الصرف**: price=%v usd=%v want=%v", price, usd, want)
 	}
 }
+
+// TestUSD03_RepSetsRateForOwnStoreOnly — **المندوبُ يجهّز متجرَه** (٢٠٢٦-١٠-١٢):
+// يكتب سعرَ صرف متجره فيضيف أصنافاً بالدولار، **ولا يكتبه لمتجرِ غيره.**
+func TestUSD03_RepSetsRateForOwnStoreOnly(t *testing.T) {
+	h := New(t)
+	m := newMDFx(t, h, "USD03")
+	path := "/api/v1/rep/stores/" + m.fx.M.ID + "/exchange-rate"
+	if r := h.PATCH(path, m.fx.RepTok, map[string]any{"rate": 110}); r.Code != http.StatusOK {
+		t.Fatalf("**المندوبُ لم يكتب سعرَ صرف متجره**: %d %s", r.Code, r.Err())
+	}
+	other := h.NewUser("sales")
+	if r := h.PATCH(path, other.Token, map[string]any{"rate": 120}); r.Code != http.StatusForbidden && r.Code != http.StatusNotFound {
+		t.Fatalf("**مندوبٌ كتب سعرَ صرف متجرِ غيره**: %d %s", r.Code, r.Err())
+	}
+}

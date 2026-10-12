@@ -830,6 +830,9 @@ func (s *Server) Router() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(s.repMenuGuard)
 				r.Get("/stores/{id}/menu", s.handleRepMenu)
+				// **وسعرُ صرف متجره** (٢٠٢٦-١٠-١٢) — المندوبُ يجهّز المتجرَ قبل صاحبه، **وأصنافٌ
+				// دولاريّةٌ بلا سعر صرفٍ تُرفض.** والحارسُ نفسُه: متجرُه هو.
+				r.Patch("/stores/{id}/exchange-rate", s.handleAdminExchangeRate)
 				// ══════════════════════════════════════════════════
 				// **ولا أبوابَ لأقسام المتجر هنا**
 				// ══════════════════════════════════════════════════

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 505,
+    "routes": 506,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -34,7 +34,7 @@
     "behaviour_settings": 178,
     "order_fields": 95,
     "test_files": 551,
-    "test_funcs": 2252
+    "test_funcs": 2253
   },
   "flows": [
     {
@@ -23454,6 +23454,12 @@
     },
     {
       "name": "TestUSD02_CustomerSeesDollarsPaysPounds",
+      "file": "internal/qa/usd_pricing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestUSD03_RepSetsRateForOwnStoreOnly",
       "file": "internal/qa/usd_pricing_test.go",
       "package": "qa",
       "orphan": true
