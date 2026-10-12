@@ -102,7 +102,8 @@ var Kinds = map[string]KindContract{
 		Reachable:  true,
 	},
 	"driver_earning": {
-		Kind: "driver_earning", Sign: "+", RefRequired: true, RefTarget: "orders",
+		// **والسالبُ تصحيحٌ بالمرجع نفسِه** (0434: ثمنُ بضاعةِ مشترياتٍ قديمةٍ يعود للمنصّة).
+		Kind: "driver_earning", Sign: "±", RefRequired: true, RefTarget: "orders",
 		Creators:   []string{"internal/orders/transitions.go:1236", "internal/orders/custom.go:282"},
 		Path:       "تسويةُ التسليم",
 		Semantics:  "أجرُ توصيلِ طلبٍ سُلّم — **وهو أجرةُ الطلبِ المحفوظةُ لا إعدادٌ حيّ.**",

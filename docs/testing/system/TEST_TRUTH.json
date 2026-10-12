@@ -33,8 +33,8 @@
     "setting_defs": 222,
     "behaviour_settings": 178,
     "order_fields": 95,
-    "test_files": 555,
-    "test_funcs": 2263
+    "test_files": 556,
+    "test_funcs": 2264
   },
   "flows": [
     {
@@ -9478,6 +9478,12 @@
     {
       "name": "TestZoneAt_EmptyTableIsClosed",
       "file": "internal/orders/empty_zones_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFixOldPurchaseGoods_MovesGoodsOnce",
+      "file": "internal/orders/fix_old_purchase_goods_test.go",
       "package": "orders_test",
       "orphan": true
     },
