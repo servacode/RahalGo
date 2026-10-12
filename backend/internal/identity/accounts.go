@@ -165,7 +165,9 @@ func (s *Service) TempPasswordPending(ctx context.Context, userID string) (bool,
 	}
 	var exp *time.Time
 	if err := s.repo.pool().QueryRow(ctx,
-		`SELECT temp_password_expires_at FROM users WHERE id = $1::uuid AND must_change_password`,
+		// **ولا كلمةَ مؤقّتةً معلّقةً لمن لا يُجبَر** — فلا انتهاءَ ولا إجبار (٢٠٢٦-١٠-١٢).
+		`SELECT temp_password_expires_at FROM users WHERE id = $1::uuid AND must_change_password
+		   AND NOT `+passwordChangeExemptSQL,
 		userID).Scan(&exp); err != nil || exp == nil {
 		return false, nil
 	}

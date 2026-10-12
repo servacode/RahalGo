@@ -176,7 +176,10 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// والقيدُ هنا باقٍ**، فيُجبَر كلُّ حسابٍ أنشأه مندوبٌ أو إدارة
 		// مهما قال الزرّ. **والثمنُ معلومٌ للمالك**: من وضع الكلمةَ يعرفها
 		// حتّى يبدّلها صاحبُها. **وتشغيلُ الزرّ يعيد القيدَ كما كان.**
+		// **والمتجرُ والمندوبُ والسائقُ لا يُجبَرون** (قرارُ المالك ٢٠٢٦-١٠-١٢) —
+		// `identity.PasswordChangeExempt`.
 		if mustChange && !passwordChangePathAllowed(r.URL.Path) &&
+			!identity.PasswordChangeExempt(dbRoles) &&
 			(s.settings.GetBool(r.Context(), "security.force_password_change") ||
 				s.tempPending(r.Context(), claims.Subject)) {
 			httpx.Error(w, errPasswordChangeRequired)

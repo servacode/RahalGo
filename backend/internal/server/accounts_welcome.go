@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
@@ -116,17 +117,38 @@ func (s *Server) merchantTutorial(ctx context.Context) string {
 	return s.settings.GetString(ctx, "accounts.merchant_tutorial_url")
 }
 
-// welcomeText نصُّ الرسالة — **لا شيءَ فيها يُخمَّن**: الرقمُ والكلمةُ والمهلةُ والرابط.
-func welcomeText(tpl, phone, password, link, app, shopLink string, hours int64, reset bool) string {
-	head := "أهلاً بك في رحّال غو — أُنشئ حسابك."
+// welcomeText **الرسالةُ الثالثة** — بعد رسالةٍ فيها الرقمُ وحدَه وأخرى فيها الكلمةُ وحدَها.
+//
+// (طلبُ المالك ٢٠٢٦-١٠-١٢: «برسالة منفصلة… أول رسالة رقم الحساب، بعدها كلمة
+// المرور، بعدها باقي التفاصيل» — **فيُنسخ كلٌّ منهما بضغطة.**) **فسطرٌ في
+// القالب فيه `{phone}` أو `{password}` يُحذف** — قالبٌ قديمٌ كُتب باللوحة لا
+// يكرّرهما. **ولمن لا يُجبَر على التبديل** (متجر، مندوب، سائق) **يُحذف سطرُ
+// المهلة `{hours}`** — كلمتُه لا تنتهي ولا تُبدَّل إلّا إن شاء.
+func welcomeText(tpl, phone, password, link, app, shopLink string, hours int64, reset, exempt bool) string {
+	head := "أهلاً بك في رحّال غو — أُنشئ حسابك 🌿\nبالرسالتين فوق: رقم حسابك وكلمة المرور."
 	if reset {
-		head = "رحّال غو — أُعيد ضبط كلمة مرور حسابك."
+		head = "رحّال غو — أُعيد ضبط كلمة مرور حسابك.\nبالرسالتين فوق: رقم حسابك وكلمة المرور الجديدة."
 	}
 	// **والقالبُ من الإعدادات** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٢٠) —
 	// **وقالبٌ بلا كلمة السرّ أو بلا الرابط يسقط إلى الأصل**: الخادمُ يرفض حفظَه
 	// أصلاً، وهذا حرسٌ ثانٍ لقيمةٍ كُتبت بغير الباب.
-	if !strings.Contains(tpl, "{password}") || !strings.Contains(tpl, "{link}") {
+	if !strings.Contains(tpl, "{link}") {
 		tpl = settings.WelcomeTemplateDefault
+	}
+	{
+		lines := strings.Split(tpl, "\n")
+		kept := lines[:0]
+		for _, l := range lines {
+			if strings.Contains(l, "{phone}") || strings.Contains(l, "{password}") ||
+				(exempt && strings.Contains(l, "{hours}")) {
+				continue
+			}
+			kept = append(kept, l)
+		}
+		tpl = strings.Join(kept, "\n")
+		for strings.Contains(tpl, "\n\n\n") {
+			tpl = strings.ReplaceAll(tpl, "\n\n\n", "\n\n")
+		}
 	}
 	// **وسطرُ رابط التسوّق** يُحذف لمن لا يلزمه، ويُضاف لقالبٍ كُتب قبله.
 	if shopLink == "" {
@@ -212,10 +234,13 @@ func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app 
 		key = app
 	}
 	link := s.appLink(key)
+	exempt := identity.PasswordChangeExempt(s.rolesOf(ctx, userID))
 	text := welcomeText(s.settings.GetString(ctx, "accounts.welcome_template"), phone, plain, link,
-		appPurpose(key), s.shopLinkFor(key), s.identity.TempPasswordHours(ctx), reset) +
+		appPurpose(key), s.shopLinkFor(key), s.identity.TempPasswordHours(ctx), reset, exempt) +
 		tutorialLine(key, s.merchantTutorial(ctx))
-	sent := s.sendText(ctx, phone, text)
+	// **ثلاثُ رسائلَ بالترتيب** — الرقمُ وحدَه، ثمّ الكلمةُ وحدَها، ثمّ التفاصيل.
+	sent := s.sendText(ctx, phone, phone) && s.sendText(ctx, phone, plain) &&
+		s.sendText(ctx, phone, text)
 	if sent {
 		_, _ = s.pg.Exec(ctx, `UPDATE users SET welcome_sent_at = now() WHERE id = $1`, userID)
 	}

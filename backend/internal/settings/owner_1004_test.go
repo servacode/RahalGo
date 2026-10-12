@@ -75,7 +75,7 @@ func TestSETTINGS_TemplatesRequirePlaceholders(t *testing.T) {
 	}{
 		{"whatsapp.otp_template", "رمزك هنا", "{code}"},
 		{"auth.sms_template", "رمز", "{code}"},
-		{"accounts.welcome_template", "أهلاً {link}", "{password}"},
+		// **والكلمةُ برسالةٍ وحدَها منذ ٢٠٢٦-١٠-١٢** — فلا تُلزَم في القالب.
 		{"accounts.welcome_template", "كلمتك {password}", "{link}"},
 	}
 	for _, c := range cases {

@@ -33,8 +33,8 @@
     "setting_defs": 221,
     "behaviour_settings": 177,
     "order_fields": 95,
-    "test_files": 548,
-    "test_funcs": 2246
+    "test_files": 549,
+    "test_funcs": 2248
   },
   "flows": [
     {
@@ -23196,6 +23196,12 @@
       "orphan": true
     },
     {
+      "name": "TestTMP_ExemptRolesKeepWhatsAppPassword",
+      "file": "internal/qa/temp_password_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestTKT01_MerchantReportDoesNotSilenceCustomer",
       "file": "internal/qa/ticket_per_actor_test.go",
       "package": "qa",
@@ -27225,6 +27231,12 @@
     {
       "name": "TestWelcome_ShopLinkPerRole",
       "file": "internal/server/welcome_shop_link_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWelcome_ThirdMessageCarriesNoPhoneOrPassword",
+      "file": "internal/server/welcome_split_test.go",
       "package": "server",
       "orphan": true
     },

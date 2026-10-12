@@ -210,6 +210,12 @@ func (s *Service) applyForcePolicy(ctx context.Context, u *User) {
 	if u == nil || !u.MustChangePassword {
 		return
 	}
+	// **والمتجرُ والمندوبُ والسائقُ لا يُجبَرون** (قرارُ المالك ٢٠٢٦-١٠-١٢) — انظر
+	// `PasswordChangeExempt`.
+	if PasswordChangeExempt(u.Roles) {
+		u.MustChangePassword = false
+		return
+	}
 	if s.intSetting(ctx, "security.force_password_change", 0) == 0 {
 		// **إلّا كلمةً ولّدها النظام** (قرارُ المالك ٢٠٢٦-١٠-٠٤): تُبدَّل عند أوّل دخولٍ
 		// مهما قال الزرّ — **فقد مرّت برسالةٍ يقرؤها غيرُ صاحبها.**
@@ -1592,3 +1598,38 @@ func (s *Service) sendCode(ctx context.Context, phone, code string) error {
 
 // SetQANoSend **يُركَّب على التجهيز وحدَه** — انظر حقل `qaNoSend`.
 func (s *Service) SetQANoSend(f func(phone string) bool) { s.qaNoSend = f }
+
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**كلمةُ الواتساب كلمةُ المتجر — لا شاشةَ إجبارٍ ولا انتهاء** (قرارُ المالك ٢٠٢٦-١٠-١٢)
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// «نخلي يفتح فيها عادي وكأنها كلمة مرور ويظل يستخدمها دائماً لوقت يحب يبدلها
+// هو» — **للمتجر والمندوب والسائق** (والزبونُ لا تُرسَل له كلمةٌ أصلاً).
+// **ومن له دورٌ غيرُها** (موظّفٌ، إدارة) يبقى كما كان: يُجبَر على التبديل
+// وتنتهي كلمتُه المؤقّتة — **حسابُه يغيّر المنصّةَ لا متجراً واحداً.**
+//
+// **والثمنُ معلومٌ للمالك**: الكلمةُ تبقى في محادثة الواتساب ويعرفها من
+// أنشأ الحساب حتّى يبدّلها صاحبُه من «حسابي».
+var passwordChangeExemptRoles = map[string]bool{
+	"merchant": true, "sales": true, "driver": true, "customer": true,
+}
+
+// PasswordChangeExempt **أكلُّ أدوار الحساب ممّا لا يُجبَر؟** — وبلا أدوارٍ: لا.
+func PasswordChangeExempt(roles []string) bool {
+	if len(roles) == 0 {
+		return false
+	}
+	for _, r := range roles {
+		if !passwordChangeExemptRoles[r] {
+			return false
+		}
+	}
+	return true
+}
+
+// passwordChangeExemptSQL **الشرطُ نفسُه في SQL** — للمستخدم `users.id` في الاستعلام.
+const passwordChangeExemptSQL = `(EXISTS (SELECT 1 FROM user_roles er WHERE er.user_id = users.id)
+	AND NOT EXISTS (SELECT 1 FROM user_roles er WHERE er.user_id = users.id
+	                  AND er.role_code NOT IN ('merchant','sales','driver','customer')))`

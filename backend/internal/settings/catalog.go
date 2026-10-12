@@ -2306,7 +2306,7 @@ var Catalog = []Def{
 		Default: AppTextItemUnavailableDefault},
 
 	{Key: "accounts.welcome_template", Group: GroupPlatform, Kind: KindLongText,
-		Default: WelcomeTemplateDefault, Requires: []string{"{password}", "{link}"}},
+		Default: WelcomeTemplateDefault, Requires: []string{"{link}"}},
 
 	// **رابطُ فيديو شرح تطبيق المتجر** (طلبُ المالك ٢٠٢٦-١٠-٠٨): يصل صاحبَ المتجر
 	// مع رسالة الدخول ومع «صار عندك متجر». **وفارغُه يحذف السطر.**
@@ -2472,8 +2472,8 @@ func AppTextKeyFor(code string) string {
 const MerchantTutorialURLDefault = "https://youtu.be/cIQ_dXUjZ_g"
 
 // WelcomeTemplateDefault **نصُّ الترحيب الأصليّ** — هو ما كان مكتوباً في الشيفرة.
-const WelcomeTemplateDefault = "{title}\nالرقم: {phone}\nكلمة المرور المؤقتة: {password}\n" +
-	"تنتهي بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.\n\n" +
+const WelcomeTemplateDefault = "{title}\n" +
+	"تنتهي كلمة المرور بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.\n\n" +
 	"📱 {app}: {link}\n" +
 	"🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}"
 

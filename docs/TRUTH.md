@@ -808,9 +808,7 @@ kosom` |
 | `auth.otp_channel` | المنصة | choice | `whatsapp` |
 | `auth.sms_template` | المنصة | text | `رمز التحقق: {code}` |
 | `accounts.welcome_template` | المنصة | longtext | `{title}
-الرقم: {phone}
-كلمة المرور المؤقتة: {password}
-تنتهي بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.
+تنتهي كلمة المرور بعد {hours} ساعة إن لم تُستعمل، وعليك تغييرها عند أول دخول.
 
 📱 {app}: {link}
 🛒 وتقدر تتسوّق من تطبيق رحّال غو بنفس الحساب: {shop_link}` |

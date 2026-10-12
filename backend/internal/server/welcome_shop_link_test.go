@@ -24,7 +24,7 @@ func TestWelcome_ShopLinkPerRole(t *testing.T) {
 		{"", false, "لوحة التحكّم"},
 	} {
 		msg := welcomeText(settings.WelcomeTemplateDefault, "+963900000000", "pw123456",
-			link+tc.key, appPurpose(tc.key), s.shopLinkFor(tc.key), 72, false)
+			link+tc.key, appPurpose(tc.key), s.shopLinkFor(tc.key), 72, false, false)
 		if strings.Contains(msg, "{") {
 			t.Fatalf("%q: موضعٌ لم يُستبدل:\n%s", tc.key, msg)
 		}
@@ -41,7 +41,7 @@ func TestWelcome_ShopLinkPerRole(t *testing.T) {
 
 	// **وقالبٌ قديمٌ بلا `{shop_link}`** يُضاف إليه السطرُ للمندوب.
 	old := "{title}\nكلمة: {password}\nحمّل من: {link}"
-	msg := welcomeText(old, "+963900000000", "pw", link+"rep", appPurpose("rep"), s.shopLinkFor("rep"), 72, false)
+	msg := welcomeText(old, "+963900000000", "pw", link+"rep", appPurpose("rep"), s.shopLinkFor("rep"), 72, false, false)
 	if !strings.Contains(msg, "/download/customer") {
 		t.Fatalf("قالبٌ قديم: سطرُ التسوّق لم يُضَف:\n%s", msg)
 	}

@@ -291,6 +291,7 @@ func TestACC_ResetIssuesSystemTempPasswordWithExpiry(t *testing.T) {
 func TestACC_ExpiredTempPasswordDoesNotOpen(t *testing.T) {
 	h := New(t)
 	u := h.NewUser("driver")
+	staffRoleToo(t, h, u.ID) // **موظّفٌ** — المتجرُ والسائقُ لا تنتهي كلمتُهم (٢٠٢٦-١٠-١٢)
 	hash, _ := auth.HashPassword("Temp12345x")
 	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET password_hash = $2, must_change_password = true,
 		temp_password_expires_at = now() - interval '1 hour' WHERE id = $1`, u.ID, hash); err != nil {
@@ -313,6 +314,7 @@ func TestACC_TempPasswordForcesChangeEvenWhenSwitchIsOff(t *testing.T) {
 	h := New(t)
 	h.Setting("security.force_password_change", "false")
 	u := h.NewUser("customer")
+	staffRoleToo(t, h, u.ID) // **موظّفٌ** — الأدوارُ الميدانيّةُ لا تُجبَر (٢٠٢٦-١٠-١٢)
 	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET must_change_password = true,
 		temp_password_expires_at = now() + interval '10 hours' WHERE id = $1`, u.ID); err != nil {
 		t.Fatal(err)

@@ -3,6 +3,8 @@ package qa
 import (
 	"net/http"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/auth"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -53,7 +55,20 @@ func tmpUser(t *testing.T, h *Harness, role string) (id, token string) {
 		u.ID); err != nil {
 		t.Fatalf("علَمُ الكلمة المؤقّتة: %v", err)
 	}
+	// **وموظّفٌ أيضاً** — فالمتجرُ والمندوبُ والسائقُ والزبونُ وحدَهم لا يُجبَرون
+	// (قرارُ المالك ٢٠٢٦-١٠-١٢، `TestTMP_ExemptRolesKeepWhatsAppPassword`).
+	staffRoleToo(t, h, u.ID)
 	return u.ID, u.Token
+}
+
+// staffRoleToo **يضيف دورَ العمليات** — حسابٌ يغيّر المنصّةَ لا يُعفى من التبديل.
+func staffRoleToo(t *testing.T, h *Harness, userID string) {
+	t.Helper()
+	if _, err := h.Pool.Exec(ctxBG(),
+		`INSERT INTO user_roles (user_id, role_code) VALUES ($1::uuid, 'operations') ON CONFLICT DO NOTHING`,
+		userID); err != nil {
+		t.Fatalf("دورُ الموظّف: %v", err)
+	}
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -135,5 +150,31 @@ func TestTMP4_NormalAccountUnaffected(t *testing.T) {
 	u := h.NewUser("customer")
 	if got := h.GET("/api/v1/my/orders", u.Token); got.Code != http.StatusOK {
 		t.Errorf("TMP4 **حسابٌ سليمٌ مُنع**: %s", got)
+	}
+}
+
+// TestTMP_ExemptRolesKeepWhatsAppPassword — **كلمةُ الواتساب كلمةُ المتجر**
+// (قرارُ المالك ٢٠٢٦-١٠-١٢): المتجرُ والمندوبُ والسائقُ يدخلون بها ولو انقضت
+// «مهلتُها» وكان زرُّ الإجبار مشغَّلاً، **ولا تطلب منهم الواجهةُ تبديلاً.**
+func TestTMP_ExemptRolesKeepWhatsAppPassword(t *testing.T) {
+	h := New(t)
+	h.Setting("security.force_password_change", "true")
+	for _, role := range []string{"merchant", "sales", "driver"} {
+		u := h.NewUser(role)
+		hash, _ := auth.HashPassword("Wa12345678x")
+		if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET password_hash = $2, must_change_password = true,
+			temp_password_expires_at = now() - interval '1 hour' WHERE id = $1`, u.ID, hash); err != nil {
+			t.Fatal(err)
+		}
+		r := h.POST("/api/v1/auth/login", "", map[string]any{"phone": u.Phone, "password": "Wa12345678x"})
+		if r.Code != http.StatusOK {
+			t.Fatalf("**%s لم يدخل بكلمة الواتساب**: %s", role, r)
+		}
+		if mc, _ := r.JSON()["user"].(map[string]any)["must_change_password"].(bool); mc {
+			t.Fatalf("**%s طُلب منه تبديلُ الكلمة**", role)
+		}
+		if me := h.GET("/api/v1/me", u.Token); me.Code == http.StatusForbidden {
+			t.Fatalf("**%s حُبس خلف شاشة التبديل**: %s", role, me)
+		}
 	}
 }
