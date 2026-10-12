@@ -18,6 +18,8 @@ func nmAcceptedStatus(t *testing.T, h *Harness, notify bool) string {
 	h.Setting("customers.require_whatsapp", "false")
 	h.Setting("platform.orders_mode", `"platform"`)
 	h.Setting("orders.notify_merchant", map[bool]string{true: "true", false: "false"}[notify])
+	// **والتحويلُ التلقائيُّ مطفأٌ صراحةً** — وإلّا قُبل الطلبُ قبل أن يقبله المكتب.
+	h.Setting("orders.auto_transfer", "false")
 	treasury(t, h)
 	staff := h.NewUser("operations")
 	item := h.NewItem(1000)

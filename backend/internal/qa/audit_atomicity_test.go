@@ -230,6 +230,9 @@ func TestAQ4_A8_UncoveredActionsRemainBestEffort(t *testing.T) {
 	h := New(t)
 	admin := h.NewUser("admin")
 
+	// **ويُعاد الإعدادُ بعده** (٢٠٢٦-١٠-١٢) — كان يُترك «true» فيقبل التحويلُ التلقائيُّ كلَّ
+	// طلبٍ في الاختبارات التالية، **فسقط `NM02` في كلّ تشغيلٍ كامل** («مقبول» قبل أن يقبله).
+	h.Setting("orders.auto_transfer", "false")
 	fp := h.ArmAny("AQ-4/non-critical", "audit_log", "INSERT")
 	got := h.Call("PUT", "/api/v1/admin/settings/orders.auto_transfer",
 		admin.Token, map[string]any{"value": true}, nil)
