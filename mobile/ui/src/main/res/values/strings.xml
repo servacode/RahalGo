@@ -87,6 +87,9 @@
     <string name="err_offer_amount_over_price">مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً</string>
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
+    <string name="err_exchange_rate_required">اكتب سعر الصرف بصفحة «متجري» أول، لحتى نحسب أسعارك بالدولار</string>
+    <string name="err_exchange_rate_invalid">سعر الصرف لازم يكون رقم أكبر من صفر</string>
+    <string name="err_exchange_rate_jump">سعر الصرف تغيّر كتير مرة وحدة — تأكد من الرقم قبل ما تحفظ</string>
     <!-- فحصُ القبول ٢٠٢٦-١٠-٠٣: حدودُ النصوص الحرّة (`text_too_long`). -->
     <string name="err_text_too_long">النص أطول من المسموح — اختصره ثم أعد المحاولة</string>
     <string name="err_text_offensive">يرجى عدم استخدام ألفاظ مسيئة</string>

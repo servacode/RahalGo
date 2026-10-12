@@ -317,6 +317,10 @@ private val CODES: Map<String, Int> = mapOf(
     "offer_amount_over_price" to R.string.err_offer_amount_over_price,
     "offer_item_unavailable" to R.string.err_offer_item_unavailable,
     "item_price_too_high" to R.string.err_item_price_too_high,
+    // **سعرُ الصرف** (٢٠٢٦-١٠-١٢) — `catalog/usd.go`.
+    "exchange_rate_required" to R.string.err_exchange_rate_required,
+    "exchange_rate_invalid" to R.string.err_exchange_rate_invalid,
+    "exchange_rate_jump" to R.string.err_exchange_rate_jump,
     "item_text_too_long" to R.string.err_item_text_too_long,
     "text_too_long" to R.string.err_text_too_long,
     // **حارسُ النصوص** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — لفظٌ مسيءٌ أو رمزٌ في اسمٍ أو عنوان.

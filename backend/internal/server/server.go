@@ -1027,6 +1027,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/deliveries", s.idempotent(s.handleMerchantCreateDelivery))
 			// **ورابطُ موقع المستلِم يُقرأ نقطة** (٢٠٢٦-١٠-٠٨) — merchant_location_link.go
 			r.Post("/stores/{id}/resolve-location", s.handleMerchantResolveLocation)
+			// **وسعرُ صرفه** — الأصنافُ الدولاريّةُ تُحسب منه (٢٠٢٦-١٠-١٢، `exchange_rate_handlers.go`).
+			r.Patch("/stores/{id}/exchange-rate", s.handleMerchantExchangeRate)
 			r.Get("/deliveries/{id}", s.handleMerchantDelivery)
 			r.Post("/deliveries/{id}/cancel", s.handleMerchantCancelDelivery)
 			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
@@ -1631,6 +1633,8 @@ func (s *Server) Router() http.Handler {
 				r.Delete("/categories/{id}", s.handleDeleteCategory)
 				r.Post("/merchants", s.handleCreateMerchant)
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
+				// **وسعرُ صرف المتجر من ملفّه** (٢٠٢٦-١٠-١٢).
+				r.Patch("/merchants/{id}/exchange-rate", s.handleAdminExchangeRate)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go
 				r.Patch("/merchants/{id}/settlement-method", s.handleSetMerchantSettlementMethod)
 				// **إعدادُ المتاجر — مَن ضبط ومَن لم يضبط** — merchant_setup.go

@@ -2596,6 +2596,13 @@
       ]
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/admin/merchants/{id}/exchange-rate",
+      "handler": "handleAdminExchangeRate",
+      "auth": true,
+      "capability": "merchants.manage"
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/merchants/{id}/hours",
       "handler": "handleGetHours",
@@ -7922,6 +7929,15 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/merchant/stores/{id}/exchange-rate",
+      "handler": "handleMerchantExchangeRate",
+      "auth": true,
+      "roles": [
+        "merchant"
       ]
     },
     {

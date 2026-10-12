@@ -171,6 +171,7 @@ var adminPolicy = []Rule{
 	{"GET", "/leads", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
+	{"PATCH", "/merchants/{id}/exchange-rate", MerchantsManage},
 	// **إعدادُ المتاجر — مَن ضبط ومَن لم يضبط، والتذكيرُ بيد الموظّف** (٢٠٢٦-١٠-٠٨).
 	{"GET", "/merchants-setup", MerchantsRead},
 	{"POST", "/merchants/{id}/setup-reminder", MerchantsManage},

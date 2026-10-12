@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 503,
+    "routes": 505,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 221,
     "behaviour_settings": 177,
     "order_fields": 95,
-    "test_files": 549,
-    "test_funcs": 2248
+    "test_files": 550,
+    "test_funcs": 2249
   },
   "flows": [
     {
@@ -23410,6 +23410,12 @@
     {
       "name": "TestUpdateGate_UploadSetsVersionAndRejectsWrongPackage",
       "file": "internal/qa/update_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestUSD01_DollarItemFollowsRatePoundItemStays",
+      "file": "internal/qa/usd_pricing_test.go",
       "package": "qa",
       "orphan": true
     },

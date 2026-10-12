@@ -69,8 +69,10 @@ type ModifierOption struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	PriceDelta int64  `json:"price_delta"`
-	Available  bool   `json:"available"`
-	SortOrder  int    `json:"sort_order"`
+	// PriceDeltaUSD فرقُ الإضافة بالدولار إن كانت دولاريّة — للمتجر والإدارة وحدَهما.
+	PriceDeltaUSD *float64 `json:"price_delta_usd,omitempty"`
+	Available     bool     `json:"available"`
+	SortOrder     int      `json:"sort_order"`
 }
 
 type ModifierGroup struct {
@@ -98,6 +100,11 @@ type MenuItem struct {
 	// **ولا يصل الزبون**: `handlePublicMerchant` تُسقطه. ويصل المتجرَ (هو
 	// سعرُه) والأدمن (هو من يضع الهامش).
 	MerchantPrice int64 `json:"merchant_price"`
+	// PriceCurrency و`MerchantPriceUSD` **عملةُ الصنف وسعرُه بالدولار** (٢٠٢٦-١٠-١٢) —
+	// و`MerchantPrice` محسوبٌ منه بسعر الصرف. **ولا يصل زبوناً**: `GetMenu`
+	// للمتجر والمندوب والإدارة وحدَهم.
+	PriceCurrency    string   `json:"price_currency"`
+	MerchantPriceUSD *float64 `json:"merchant_price_usd"`
 	// MarginOverride تجاوزُ هامش الصنف — **فراغُه «اتبع تصنيفَك» لا «بلا هامش»**.
 	MarginOverride *int64 `json:"margin_override"`
 	// SourceClosed مصدرُ الصنف خارجَ دوامه الآن.
@@ -244,7 +251,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		SELECT i.id, COALESCE(i.section_id::text, ''), i.name, i.description,
 		       i.merchant_price, i.margin_override, ps.margin_override,
 		       i.platform_section_id, COALESCE(ps.name, ''),
-		       im.path, im.thumb_path, i.available, i.sort_order
+		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents
 		FROM menu_items i
 		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -254,13 +261,19 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	}
 	for rows.Next() {
 		var it MenuItem
-		var sectionMargin *int64
+		var sectionMargin, usdCents *int64
 		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
 			&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
 			&it.PlatformSectionID, &it.PlatformSectionName,
-			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder); err != nil {
+			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents); err != nil {
 			rows.Close()
 			return nil, err
+		}
+		it.PriceCurrency = CurrencySYP
+		if usdCents != nil {
+			it.PriceCurrency = CurrencyUSD
+			d := float64(*usdCents) / 100
+			it.MerchantPriceUSD = &d
 		}
 		it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, sectionMargin)
 		it.SourceClosed = !open
@@ -320,7 +333,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	}
 
 	rows, err = s.db.Query(ctx, `
-		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order
+		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents
 		FROM modifier_options o
 		JOIN modifier_groups g ON g.id = o.group_id
 		JOIN menu_items i ON i.id = g.item_id
@@ -332,8 +345,13 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	for rows.Next() {
 		var o ModifierOption
 		var groupID string
-		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder); err != nil {
+		var optUSD *int64
+		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD); err != nil {
 			return nil, err
+		}
+		if optUSD != nil {
+			d := float64(*optUSD) / 100
+			o.PriceDeltaUSD = &d
 		}
 		loc, ok := groupIdx[groupID]
 		if !ok {
@@ -440,6 +458,10 @@ func (s *Service) DeleteSection(ctx context.Context, actorID, sectionID, ip stri
 type ModifierOptionInput struct {
 	Name       string `json:"name"`
 	PriceDelta int64  `json:"price_delta"`
+	// PriceDeltaUSD **فرقُ الإضافة بالدولار** لصنفٍ دولاريّ (٢٠٢٦-١٠-١٢) — يُحسب
+	// منه `PriceDelta` بسعر صرف المتجر. انظر `usd.go`.
+	PriceDeltaUSD      *float64 `json:"price_delta_usd"`
+	priceDeltaUSDCents *int64
 }
 
 type ModifierGroupInput struct {
@@ -475,6 +497,10 @@ type MenuItemInput struct {
 	ImageMediaID *string `json:"image_media_id"`
 	// إن أُرسلت (حتى فارغة) تُستبدل شجرة المُعدِّلات بالكامل
 	Modifiers *[]ModifierGroupInput `json:"modifiers"`
+	// PriceCurrency **عملةُ الصنف** «SYP» أو «USD» (طلبُ المالك ٢٠٢٦-١٠-١٢) —
+	// وبالدولار يُرسَل `price_usd` ويُحسب `price` بالليرة. انظر `usd.go`.
+	PriceCurrency *string  `json:"price_currency"`
+	PriceUSD      *float64 `json:"price_usd"`
 }
 
 func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in MenuItemInput, ip string) (string, error) {
@@ -506,6 +532,11 @@ func (s *Service) AuditItemCreate(ctx context.Context, actorID, id, ip string) {
 // صنفٌ أُدرج وانقطعت الشبكةُ قبل الردّ، **فأُعيد فأُدرج ثانيةً** — وإضافةُ
 // الصنف لم يكن لها حارسٌ في الخادم أصلاً.
 func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID string, in MenuItemInput) (string, error) {
+	// **والدولارُ يُحلّ إلى ليرةٍ أوّلاً** (٢٠٢٦-١٠-١٢) — وما بعده يرى الليرة. انظر `usd.go`.
+	plan, err := resolveUSD(ctx, tx, merchantID, &in)
+	if err != nil {
+		return "", err
+	}
 	// **وقسمُ السوق شرطٌ لا اختيار.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «كلُّ الأصناف ستذهب إلى السوق بلوحة الأدمن
@@ -537,18 +568,22 @@ func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID 
 	// **أي أنّ صاحبَ متجرٍ لا يستطيع أن يدسّ صنفاً في قسمِ متجرٍ آخر**،
 	// وهذا يبقى محروساً بـ`merchant_id` في الصفّ نفسِه.
 	var id string
-	err := tx.QueryRow(ctx, `
+	var usdCents *int64
+	if plan.set {
+		usdCents = &plan.cents
+	}
+	err = tx.QueryRow(ctx, `
 		INSERT INTO menu_items (merchant_id, name, description,
 		                        merchant_price, price, image_media_id, sort_order,
-		                        platform_section_id)
+		                        platform_section_id, price_usd_cents)
 		SELECT $1, $2, COALESCE($3,''), $4, $4, NULLIF(COALESCE($5, ''), '')::uuid,
 		       COALESCE((SELECT max(sort_order)+1 FROM menu_items
 		                 WHERE merchant_id=$1 AND platform_section_id=$6::uuid), 1),
-		       $6::uuid
+		       $6::uuid, $7
 		WHERE EXISTS (SELECT 1 FROM platform_sections WHERE id = $6::uuid AND active)
 		RETURNING id`,
 		merchantID, *in.Name, in.Description, *in.Price, in.ImageMediaID,
-		*in.PlatformSectionID).Scan(&id)
+		*in.PlatformSectionID, usdCents).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
@@ -601,6 +636,22 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// **والدولارُ يُحلّ إلى ليرةٍ قبل الكتابة** (٢٠٢٦-١٠-١٢) — انظر `usd.go`.
+	var merchantID string
+	if err := tx.QueryRow(ctx, `SELECT merchant_id::text FROM menu_items WHERE id = $1`, itemID).Scan(&merchantID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		return err
+	}
+	plan, err := resolveUSD(ctx, tx, merchantID, &in)
+	if err != nil {
+		return err
+	}
+	if err := s.checkItemBounds(ctx, in); err != nil {
+		return err
+	}
+
 	// ══════════════════════════════════════════════════════════════════
 	// **ووسيطٌ يُمرَّر ولا يُذكر يُسقط الاستعلام كلَّه**
 	// ══════════════════════════════════════════════════════════════════
@@ -646,10 +697,15 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			-- **والفراغُ الصريح يرفع التصنيف** — لا يُقرأ «بلا تغيير».
 			platform_section_id = CASE WHEN $8::text IS NULL THEN platform_section_id
 			                           ELSE NULLIF($8, '')::uuid END,
+			-- **والعملة** (٢٠٢٦-١٠-١٢): دولارٌ بسنته، أو ليرةٌ صريحةٌ تمحوه، أو بلا تغيير.
+			price_usd_cents = CASE WHEN $9::bool THEN $10::bigint
+			                       WHEN $11::bool THEN NULL
+			                       ELSE price_usd_cents END,
 			updated_at  = now()
 		WHERE id = $1`,
 		itemID, in.Name, in.Description, in.Price, in.Available,
-		in.ImageMediaID, in.MarginOverride, in.PlatformSectionID)
+		in.ImageMediaID, in.MarginOverride, in.PlatformSectionID,
+		plan.set, plan.cents, plan.clear)
 	if err != nil {
 		return err
 	}
@@ -709,8 +765,8 @@ func insertModifiers(ctx context.Context, tx dbtx.Querier, itemID string, groups
 				return ErrNameRequired
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO modifier_options (group_id, name, price_delta, sort_order)
-				VALUES ($1, $2, $3, $4)`, groupID, o.Name, o.PriceDelta, oi); err != nil {
+				INSERT INTO modifier_options (group_id, name, price_delta, sort_order, price_delta_usd_cents)
+				VALUES ($1, $2, $3, $4, $5)`, groupID, o.Name, o.PriceDelta, oi, o.priceDeltaUSDCents); err != nil {
 				return err
 			}
 		}

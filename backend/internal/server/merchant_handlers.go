@@ -126,6 +126,8 @@ type merchantStore struct {
 	ReturnsConfirmed    bool `json:"returns_confirmed"`
 	// **وهل ضبط دوامَه** — `GET /hours` يملأ الغائبَ بـ٩–٢٣ فلا يُعرف منه.
 	HasHours bool `json:"has_hours"`
+	// ExchangeRate **سعرُ صرفه** (ليرةٌ للدولار) — وفراغُه: لم يكتبه بعد (٢٠٢٦-١٠-١٢).
+	ExchangeRate *float64 `json:"exchange_rate"`
 }
 
 // handleMerchantStores متاجر صاحب الحساب.
@@ -147,7 +149,8 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		                 WHERE ms.merchant_id = m.id AND ms.state = 'cash_due'), 0),
 		       m.settlement_confirmed_at IS NOT NULL, m.accepts_returns,
 		       m.returns_confirmed_at IS NOT NULL,
-		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id)
+		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id),
+		       m.exchange_rate::float8
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -164,7 +167,8 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 			&m.Status, &m.EmergencyClosed, &m.PrepMinutes, &m.MinOrder,
 			&m.AddressText, &m.Lat, &m.Lng, &m.OpenNow, &m.NextOpen,
 			&m.SettlementMethod, &m.UnpaidCashDue,
-			&m.SettlementConfirmed, &m.AcceptsReturns, &m.ReturnsConfirmed, &m.HasHours); err != nil {
+			&m.SettlementConfirmed, &m.AcceptsReturns, &m.ReturnsConfirmed, &m.HasHours,
+			&m.ExchangeRate); err != nil {
 			s.respondErr(w, err)
 			return
 		}
