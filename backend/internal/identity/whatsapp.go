@@ -72,6 +72,25 @@ func (s *Service) MarkWhatsAppFromSignup(ctx context.Context, userID, rawPhone, 
 	return nil
 }
 
+// MarkWhatsAppFromWelcome **يسم الحسابَ موثَّقاً حين تصله رسالةُ الترحيب** (قرارُ المالك
+// ٢٠٢٦-١٠-١٢: «مادام عم يسجل وتوصله رسالة ع واتس اب معناها موثق… بما ان نحن عم نسجلهن»).
+//
+// **ورسالةٌ وصلت رقمَه بكلمة دخوله دليلُ ملكيّةٍ كرمز التسجيل** — المتجرُ والمندوبُ
+// والسائقُ يفتح حسابَهم موظّفٌ أو مندوب، **ولا يُطلب منهم توثيقٌ ثانٍ.** ويُفرَّق في
+// السجلّ عن التوثيق اليدويّ وعن توثيق التسجيل.
+func (s *Service) MarkWhatsAppFromWelcome(ctx context.Context, userID, rawPhone, ip string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	if err := s.repo.SetWhatsApp(ctx, userID, phone); err != nil {
+		return err
+	}
+	s.repo.Audit(ctx, &userID, "auth.whatsapp_verified_welcome", "user", userID, ip,
+		map[string]any{"whatsapp": phone})
+	return nil
+}
+
 // SetWhatsApp يثبّت رقم واتساب موثَّقاً للحساب.
 func (r *Repo) SetWhatsApp(ctx context.Context, userID, phone string) error {
 	_, err := r.db.Exec(ctx, `

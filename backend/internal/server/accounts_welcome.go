@@ -243,6 +243,10 @@ func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app 
 		s.sendText(ctx, phone, text)
 	if sent {
 		_, _ = s.pg.Exec(ctx, `UPDATE users SET welcome_sent_at = now() WHERE id = $1`, userID)
+		// **ووصولُها توثيق** (قرارُ المالك ٢٠٢٦-١٠-١٢) — انظر `MarkWhatsAppFromWelcome`.
+		if err := s.identity.MarkWhatsAppFromWelcome(ctx, userID, phone, ip); err != nil {
+			s.logger.Warn("توثيقُ الترحيب: تعذّر الوسم", "user", userID, "err", err)
+		}
 	}
 	s.auditCtx(ctx, actor, ip, "admin.welcome_message", "user", userID,
 		map[string]any{"sent": sent, "reset": reset, "link": link})

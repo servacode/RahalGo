@@ -3743,6 +3743,7 @@
         "auth.sso": "انتقال بين التطبيقات",
         "auth.whatsapp_verified": "توثيق واتساب",
         "auth.whatsapp_verified_signup": "توثيق واتساب عند التسجيل",
+        "auth.whatsapp_verified_welcome": "توثيق واتساب برسالة الترحيب",
         "branch.create": "إنشاء فرع",
         "branch.update": "تعديل فرع",
         "catalog.offer_active": "تشغيل عرض أو إطفاؤه",

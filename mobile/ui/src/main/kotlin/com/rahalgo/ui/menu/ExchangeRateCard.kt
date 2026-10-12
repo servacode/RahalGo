@@ -43,32 +43,32 @@ fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onS
         // **وعند المندوب للقراءة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-١٢) — يكتبه صاحبُ المتجر.
         if (!editable) {
             Text(
-                stringResource(R.string.rate_title) + ": " +
-                    (rate?.let { stringResource(R.string.rate_value, usdText(it)) } ?: stringResource(R.string.rate_none)),
+                stringResource(R.string.fx_rate_title) + ": " +
+                    (rate?.let { stringResource(R.string.fx_rate_value, usdText(it)) } ?: stringResource(R.string.fx_rate_none)),
                 fontWeight = FontWeight.Bold,
             )
-            Text(stringResource(R.string.rate_owner_sets), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+            Text(stringResource(R.string.fx_rate_owner_sets), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
             return@Card
         }
         Text(
-            stringResource(R.string.rate_title) + ": " +
-                (rate?.let { stringResource(R.string.rate_value, usdText(it)) } ?: stringResource(R.string.rate_none)),
+            stringResource(R.string.fx_rate_title) + ": " +
+                (rate?.let { stringResource(R.string.fx_rate_value, usdText(it)) } ?: stringResource(R.string.fx_rate_none)),
             fontWeight = FontWeight.Bold,
         )
-        Text(stringResource(R.string.rate_hint), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+        Text(stringResource(R.string.fx_rate_hint), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = text,
                 onValueChange = { v -> text = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10) },
-                label = { Text(stringResource(R.string.rate_field)) },
+                label = { Text(stringResource(R.string.fx_rate_field)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
             RahalButton(onClick = { onSave(text) }, enabled = !busy && text.isNotBlank()) {
-                Text(stringResource(R.string.rate_save))
+                Text(stringResource(R.string.fx_rate_save))
             }
         }
     }
@@ -79,19 +79,19 @@ fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onS
 fun RateJumpDialog(oldRate: String, newRate: String, samples: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rate_jump_title)) },
+        title = { Text(stringResource(R.string.fx_rate_jump_title)) },
         text = {
             Column {
-                Text(stringResource(R.string.rate_jump_body, oldRate, newRate))
+                Text(stringResource(R.string.fx_rate_jump_body, oldRate, newRate))
                 if (samples.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.rate_jump_samples), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.fx_rate_jump_samples), fontWeight = FontWeight.Bold)
                     Text(samples)
                 }
             }
         },
-        confirmButton = { RahalTextButton(onClick = onConfirm) { Text(stringResource(R.string.rate_jump_yes)) } },
-        dismissButton = { RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.rate_jump_no)) } },
+        confirmButton = { RahalTextButton(onClick = onConfirm) { Text(stringResource(R.string.fx_rate_jump_yes)) } },
+        dismissButton = { RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.fx_rate_jump_no)) } },
     )
 }
 

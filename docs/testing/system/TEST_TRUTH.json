@@ -34,7 +34,7 @@
     "behaviour_settings": 178,
     "order_fields": 95,
     "test_files": 552,
-    "test_funcs": 2255
+    "test_funcs": 2256
   },
   "flows": [
     {
@@ -10943,6 +10943,12 @@
     },
     {
       "name": "TestACC_WalletTopupEntersOfficeCashbox",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_WelcomedAccountIsVerified",
       "file": "internal/qa/accounts_section_test.go",
       "package": "qa",
       "orphan": true

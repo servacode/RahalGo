@@ -315,8 +315,8 @@
     <string name="md_link_not_found">هالرابط ما فيه موقع — اطلب من الزبون يبعتلك موقعه من الواتساب</string>
     <string name="md_or_pick_point">أو حدّد النقطة على الخريطة بإيدك</string>
     <string name="md_point_set">✓ %1$s — اضغط لتغييرها</string>
-    <string name="md_parcel">ماذا يحمل السائق؟</string>
-    <string name="md_parcel_hint">مثل: كيس طعام ساخن، لا يقلب</string>
+    <string name="md_parcel">شو بدك يوصّل السائق؟</string>
+    <string name="md_parcel_hint">مثلاً: وجبتين شاورما وعلبتين كولا</string>
     <string name="md_driver_note">ملاحظة للسائق (اختياري)</string>
     <string name="md_who_pays">من يدفع أجرة التوصيل؟</string>
     <string name="md_pay_me">أنا (من محفظتي)</string>

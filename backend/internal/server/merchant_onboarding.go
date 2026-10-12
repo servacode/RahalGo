@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
@@ -170,3 +171,6 @@ func (s *Server) ownerUsedDelivery(ctx context.Context, userID string) bool {
 func (s *Server) MerchantOnboardingTickForTest(ctx context.Context, now time.Time) int {
 	return s.merchantOnboardingTick(ctx, now)
 }
+
+// IdentityForTest **خدمةُ الهويّة** — لفحوص `qa` وحدَها.
+func (s *Server) IdentityForTest() *identity.Service { return s.identity }

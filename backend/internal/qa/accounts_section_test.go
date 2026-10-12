@@ -709,3 +709,21 @@ func TestACC_DeletedAccountsHaveTheirOwnBox(t *testing.T) {
 		t.Errorf("**بطاقةُ المحذوفة لا تعدّه**: %v", roles["deleted"])
 	}
 }
+
+// TestACC_WelcomedAccountIsVerified — **من وصلته رسالةُ الترحيب حسابُه موثَّق**
+// (قرارُ المالك ٢٠٢٦-١٠-١٢): المتجرُ والمندوبُ والسائقُ لا يُطلب منهم توثيقٌ ثانٍ.
+func TestACC_WelcomedAccountIsVerified(t *testing.T) {
+	h := New(t)
+	u := h.NewUser("driver")
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET whatsapp_verified_at = NULL, whatsapp_phone = NULL WHERE id = $1`, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.API.IdentityForTest().MarkWhatsAppFromWelcome(ctxBG(), u.ID, u.Phone, "127.0.0.1"); err != nil {
+		t.Fatal(err)
+	}
+	var ok bool
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`, u.ID).Scan(&ok)
+	if !ok {
+		t.Fatal("**رسالةُ الترحيب لم توثّق الحساب**")
+	}
+}
