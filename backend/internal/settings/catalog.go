@@ -2039,6 +2039,12 @@ var Catalog = []Def{
 	// يحملان نصفَ قرارٍ لكلٍّ منهما يجعلان الضابطَ يتنقّل بينهما.**
 	{Key: "orders.auto_dispatch", Group: GroupDrivers, Kind: KindBool,
 		Default: true},
+	// **إرسالُ الطلب للمتجر** (طلبُ المالك ٢٠٢٦-١٠-١٢) — مشغَّلاً: القبولُ ثمّ رسالةُ
+	// الواتساب للمتجر ثمّ الطابور، كما كان. **ومطفأً: يُقبل الطلبُ فينزل إلى السائق
+	// فوراً بلا رسالةٍ للمتجر** — في وضع المنصّة وحدَه، فالمتجرُ الذي يدير طلباته
+	// يقبلها ويحضّرها بيده.
+	{Key: "orders.notify_merchant", Group: GroupDrivers, Kind: KindBool,
+		Default: true},
 
 	// **والوقتُ المتوقَّعُ يُعرض للزبون** — ورقمٌ متفائلٌ يصنع شكوى.
 	{Key: "orders.delivery_estimate_min", Group: GroupPlatform, Kind: KindInt,

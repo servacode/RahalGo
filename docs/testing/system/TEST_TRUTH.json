@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 221,
-    "behaviour_settings": 177,
+    "setting_defs": 222,
+    "behaviour_settings": 178,
     "order_fields": 95,
-    "test_files": 550,
-    "test_funcs": 2250
+    "test_files": 551,
+    "test_funcs": 2252
   },
   "flows": [
     {
@@ -5600,6 +5600,27 @@
       "flows": [
         "F-01",
         "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.notify_merchant",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
       ],
       "apps": [
         "admin",
@@ -17618,6 +17639,18 @@
     {
       "name": "TestNAVB_042_LegacyQueueLineStillWorks",
       "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNM01_NotifyOnKeepsOrderForTheMerchant",
+      "file": "internal/qa/notify_merchant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNM02_NotifyOffSendsStraightToDrivers",
+      "file": "internal/qa/notify_merchant_test.go",
       "package": "qa",
       "orphan": true
     },

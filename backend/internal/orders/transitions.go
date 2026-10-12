@@ -613,6 +613,25 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		return updated, nil
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وبلا إرسالٍ للمتجر يُنزَل الطلبُ بعد القبول فوراً** (طلبُ المالك ٢٠٢٦-١٠-١٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «بمجرد قبول الطلب يروح للسائق بدون تحويل الطلب للمتجر» — متى أُطفئ
+	// `orders.notify_merchant`. **في وضع المنصّة وحدَه**: متجرٌ يدير طلباته يقبلها
+	// بيده ثمّ يحضّرها، **وإنزالُها عند قبوله يُرسل السائقَ قبل أن يبدأ المطبخ.**
+	if to == StAccepted && kind != KindCustom && s.settings != nil &&
+		!s.settings.GetBool(ctx, "orders.notify_merchant") && !s.MerchantsSelfManage(ctx) {
+		dispatched, derr := s.Transition(ctx, actorID, []string{"ops"},
+			orderID, StDispatching, autoDispatchNote)
+		if derr != nil {
+			s.logger.Warn("القبولُ بلا إرسالٍ للمتجر: الإنزالُ تعثّر — ينتظر المكتب",
+				"order", orderID, "error", derr)
+			return updated, nil
+		}
+		return dispatched, nil
+	}
+
 	// **الإنزال التلقائيّ إلى طابور السائقين.**
 	//
 	// **خارج المعاملة عمداً، وبعد بثّ الأوّل وإشعاره**: هو انتقالٌ ثانٍ قائمٌ

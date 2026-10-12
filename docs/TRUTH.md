@@ -1271,6 +1271,7 @@ kosom` |
 | `delivery.code_required` | السائقون | bool | `false` |
 | `delivery.code_channel` | السائقون | choice | `both` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
+| `orders.notify_merchant` | السائقون | bool | `true` |
 | `app.min_version.merchant` | المتاجر | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `10` |
 | `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |

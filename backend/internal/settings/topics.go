@@ -191,6 +191,7 @@ var placeRules = []placeRule{
 	{prefix: "orders.source_proximity_m", exact: true, topic: TopicOrders, section: "orders.limits"},
 	{prefix: "orders.customer_cancel_window_sec", exact: true, topic: TopicOrders, section: "orders.timeouts"},
 	{prefix: "orders.auto_dispatch", exact: true, topic: TopicOrders, section: "orders.dispatch"},
+	{prefix: "orders.notify_merchant", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.route_margin_pct", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.", topic: TopicOrders, section: "orders.timeouts"},
 	{prefix: "drivers.assignment_mode", exact: true, topic: TopicOrders, section: "orders.dispatch"},

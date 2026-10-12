@@ -60,6 +60,17 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 	// ولو قُبل ثمّ تعذّر الإبلاغُ **لَبقي الطلبُ في «مقبول» بلا أن يعلم به
 	// المتجر** — وهي حالٌ أسوأُ من `pending`: الشاشةُ تقول إنّ شيئاً جرى.
 	selfManage := s.orders.MerchantsSelfManage(ctx)
+	// **وبلا إرسالٍ للمتجر** (`orders.notify_merchant` مطفأ، ٢٠٢٦-١٠-١٢): القبولُ
+	// وحدَه — **و`Transition` يُنزله إلى السائق بنفسه** (`transitions.go`).
+	if !selfManage && !s.settings.GetBool(ctx, "orders.notify_merchant") {
+		if _, err := s.orders.Transition(ctx, actorID, []string{"ops"},
+			orderID, "accepted", autoTransferNote); err != nil {
+			s.logger.Warn("التحويلُ التلقائيّ: تعذّر القبول", "order", orderID, "error", err)
+			return
+		}
+		s.touch("order", "ops")
+		return
+	}
 	// **والبوتُ يُسأل أجاهزٌ هو** — انظر `notify.WhatsAppSender.Ready`.
 	//
 	// **وهاتفُ البوت يُطفأ وتنقطع شبكتُه** — فيبقى الطلبُ «بانتظار»
