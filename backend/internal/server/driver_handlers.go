@@ -285,6 +285,11 @@ type driverOrder struct {
 	CashDue int64 `json:"cash_due"`
 	// DeliveryFee **ما يكسبه هو** — لا ما يقبضه للمتجر.
 	DeliveryFee int64 `json:"delivery_fee"`
+	// Items **ما يستلمه من المتجر باسمه وكميّته** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بالبطاقة
+	// لازم يكون واضح ع السائق شو هو الطلب… هيك السائق اصلا مايعرف شو الطلب»). كان
+	// `items_count` وحدَه يصل — **فيقف عند المتجر لا يعرف أيَّ كيسٍ له.** والأسعارُ لا
+	// تُرسَل: المالُ في `cash_due`.
+	Items []driverItem `json:"items"`
 	// PickupAddress **عنوانُ الاستلام كما كُتب** — لا اسمُ منطقةٍ:
 	// **المنطقةُ وحدةُ تسعيرٍ قد تشمل المدينةَ كلَّها**، فيقرأ السائقُ
 	// «مركز المدينة» في الطرفين ولا يعرف من أين ولا إلى أين.
@@ -544,9 +549,60 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 		if o.ReturnTo != "" {
 			s.asReturnTrip(r.Context(), &o)
 		}
+		o.Items = []driverItem{}
 		out = append(out, o)
 	}
+	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.attachDriverItems(r.Context(), out); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// driverItem **سطرٌ مما يستلمه السائق** — الاسمُ والكميّةُ والخياراتُ بأسمائها.
+type driverItem struct {
+	Name    string `json:"name"`
+	Qty     int    `json:"qty"`
+	Options string `json:"options"`
+}
+
+// attachDriverItems **يُلحق بكلّ طلبٍ أصنافَه** — باستعلامٍ واحدٍ للقائمة كلِّها.
+func (s *Server) attachDriverItems(ctx context.Context, list []driverOrder) error {
+	if len(list) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(list))
+	at := make(map[string]int, len(list))
+	for i := range list {
+		ids = append(ids, list[i].ID)
+		at[list[i].ID] = i
+	}
+	rows, err := s.pg.Query(ctx, `
+		SELECT oi.order_id::text, oi.name, oi.qty,
+		       COALESCE((SELECT string_agg(e->>'name', '، ')
+		                 FROM jsonb_array_elements(oi.options) e), '')
+		FROM order_items oi
+		WHERE oi.order_id = ANY($1::uuid[])
+		ORDER BY oi.order_id, oi.name`, ids)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var it driverItem
+		if err := rows.Scan(&id, &it.Name, &it.Qty, &it.Options); err != nil {
+			return err
+		}
+		if i, ok := at[id]; ok {
+			list[i].Items = append(list[i].Items, it)
+		}
+	}
+	return rows.Err()
 }
 
 // handleDriverQueue **«طلباتٌ قادمة»** — ما عُرض على هذا السائق في دوره.

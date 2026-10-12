@@ -131,8 +131,11 @@ var contracts = []struct {
 	// صراحةً بسببها، **وقائمةُ استثناءاتٍ بلا سببٍ تصير ثغرة.**
 	Skip []string
 }{
+	// **وحقولُ الدولار لا تُرسَل إلّا لمتجرٍ يعرض بالدولار** (`omitempty`، ٢٠٢٦-١٠-١٢) —
+	// وغيابُها يعني «اعرض بالليرة»، **وهو ما يفعله التطبيقُ بقيمتها الافتراضيّة (null).**
 	{ID: "CONTRACT-001", File: "model/Shop.kt", Class: "Item",
-		Path: "ITEMS", JSONPath: "items.0"},
+		Path: "ITEMS", JSONPath: "items.0",
+		Skip: []string{"price_usd", "price_before_usd", "exchange_rate"}},
 	{ID: "CONTRACT-002", File: "customer/CustomerApi.kt", Class: "MyOrder",
 		Path: "/api/v1/my/orders", JSONPath: "orders.0"},
 	{ID: "CONTRACT-003", File: "model/Chat.kt", Class: "ChatMessage",

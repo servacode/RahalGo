@@ -484,6 +484,9 @@ sealed interface PrepState {
 // المحاكي ٢٠٢٦-١٠-٠٥: «يجهز حوالي 02:37» والمحفظةُ في الشاشة نفسِها تقول 05:02.
 fun prepState(order: DriverOrder, zone: java.time.ZoneId = com.rahalgo.ui.SYRIA_ZONE): PrepState {
     if (order.kind == "custom") return PrepState.Unknown
+    // **«لدي توصيلة» جاهزةٌ من أصلها** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «يجهز ماتلزم لان اكيد
+    // المتجر مجهز الطلبية… بس بدو سائق»).
+    if (order.kind == "merchant_delivery") return PrepState.Ready
     if (!order.readyAt.isNullOrBlank()) return PrepState.Ready
     val minutes = order.prepMinutes?.takeIf { it > 0 } ?: return PrepState.Unknown
     val accepted = order.acceptedAt?.let {
@@ -491,6 +494,30 @@ fun prepState(order: DriverOrder, zone: java.time.ZoneId = com.rahalgo.ui.SYRIA_
     } ?: return PrepState.Unknown
     val at = accepted.plusMinutes(minutes.toLong()).atZoneSameInstant(zone)
     return PrepState.Around(String.format(java.util.Locale.ROOT, "%02d:%02d", at.hour, at.minute))
+}
+
+/**
+ * **نوعُ الطلب بكلمته** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بدل طلب خاص لازم يكون طلب امانة
+ * او مشتريات او توصيلة») — كانت البطاقةُ تقول «طلب خاص» أو «متجر» فلا يعرف ما يقبل.
+ */
+fun kindLabel(order: DriverOrder): Int = when {
+    order.kind == "merchant_delivery" -> R.string.kind_delivery
+    order.kind == "custom" && order.customMode == "amanah" -> R.string.kind_amanah
+    order.kind == "custom" -> R.string.kind_purchase
+    else -> R.string.kind_standard
+}
+
+/** **أجرةُ المنصّة مفروضة** — لا يغيّرها السائق، فتُعرض رقماً لا «تتفق». */
+fun fixedCustomFee(order: DriverOrder): Long? =
+    if (order.kind == "custom" && order.customFeeSource == "admin_defined" && !order.customDriverMayChangeFee) {
+        order.customFee ?: order.customFeeSnapshot
+    } else {
+        null
+    }
+
+/** **الأصنافُ سطراً سطراً** — «وجبة شاورما × ٢ (دبل، جبنة)». */
+fun itemsText(order: DriverOrder): String = order.items.joinToString("\n") { it ->
+    it.name + " × " + it.qty + if (it.options.isNotBlank()) " (" + it.options + ")" else ""
 }
 
 fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {

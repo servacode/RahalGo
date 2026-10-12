@@ -44,6 +44,14 @@ import (
 // customGreeting **جوابُ السائق الأوّل — باسمه لأنّه واقعُه.**
 const customGreeting = "استلمتُ طلبك — سوف تصلك تفاصيل السعر وأجرة التوصيل بعد قليل."
 
+// **وحين تفرض المنصّةُ الأجرة لا «تفاصيلَ تصلك»** (قرارُ المالك ٢٠٢٦-١٠-١٢: «بما ان
+// السعر موثق من المنصة المفروض استلمت طلبك وانا في طريقي لاستلام امانتك») — **الأجرةُ
+// يعرفها من لحظة الطلب، ولا شيءَ ينتظره.**
+const (
+	fixedGreetingAmanah   = "استلمتُ طلبك — في طريقي لاستلام أمانتك."
+	fixedGreetingPurchase = "استلمتُ طلبك — في طريقي لشراء طلبك."
+)
+
 // plainGreeting **وأوّلُ كلمةٍ في طلبٍ عاديّ.**
 //
 // ══════════════════════════════════════════════════════════════════════
@@ -75,10 +83,12 @@ func (s *Service) openCustomChat(ctx context.Context, orderID, customerID, drive
 	}
 
 	// **نصُّ الطلب من الصفّ لا من الذاكرة** — قد يكون عُدّل بعد الإنشاء.
-	var request string
+	var request, source, mode string
+	var mayChange bool
 	if err := s.db.QueryRow(ctx,
-		`SELECT COALESCE(custom_request, '') FROM orders WHERE id = $1`,
-		orderID).Scan(&request); err != nil {
+		`SELECT COALESCE(custom_request, ''), custom_fee_source, custom_driver_may_change_fee, custom_mode
+		 FROM orders WHERE id = $1`,
+		orderID).Scan(&request, &source, &mayChange, &mode); err != nil {
 		s.logger.Error("الطلب الخاصّ: تعذّرت قراءةُ نصّ الطلب", "order", orderID, "error", err)
 		return
 	}
@@ -109,10 +119,21 @@ func (s *Service) openCustomChat(ctx context.Context, orderID, customerID, drive
 		SELECT $1, $2, 'driver', $3, $2, true
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND sender_id = $2)`,
-		orderID, driverID, customGreeting); err != nil {
+		orderID, driverID, greetingFor(source, mayChange, mode)); err != nil {
 		s.logger.Error("الطلب الخاصّ: تعذّرت كتابةُ جواب السائق",
 			"order", orderID, "error", err)
 	}
+}
+
+// greetingFor **تحيّةُ السائق بحسب من يملك الأجرة.**
+func greetingFor(source string, mayChange bool, mode string) string {
+	if source != "admin_defined" || mayChange {
+		return customGreeting
+	}
+	if mode == CustomModeAmanah {
+		return fixedGreetingAmanah
+	}
+	return fixedGreetingPurchase
 }
 
 // openPlainChat **يفتح حديثَ الطلب العاديّ بسطرٍ من سائقه.**
@@ -157,8 +178,11 @@ func (s *Service) openPlainChat(ctx context.Context, orderID, driverID string) {
 func agreeLine(step, mode string, goods, fee int64) string {
 	switch {
 	case step == AgreeStepGoods:
-		return fmt.Sprintf("ثمن البضاعة: %s ل.س — المجموع مع التوصيل %s ل.س. بانتظار موافقتك.",
-			groupDigits(goods), groupDigits(goods+fee))
+		// **ثلاثةُ أسطرٍ لا جملةٌ يُحسب منها** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بالرسائل
+		// لازم ينذكر أجرة التوصيل كمان») — كان «المجموع مع التوصيل» يترك الأجرةَ
+		// يطرحها الزبونُ بنفسه.
+		return fmt.Sprintf("ثمن البضاعة: %s ل.س\nأجرة التوصيل: %s ل.س\nالمجموع: %s ل.س — بانتظار موافقتك.",
+			groupDigits(goods), groupDigits(fee), groupDigits(goods+fee))
 	case step == AgreeStepFee || mode == CustomModeAmanah || goods == 0:
 		return fmt.Sprintf("أجرة التوصيل: %s ل.س — بانتظار موافقتك.", groupDigits(fee))
 	default:

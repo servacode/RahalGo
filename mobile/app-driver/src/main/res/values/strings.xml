@@ -536,4 +536,29 @@
     <string name="trip_return_no_point">لا موقع للوجهة على الخريطة — اتبع العنوان</string>
     <string name="step_goods_handed">سلّمت البضاعة</string>
     <string name="status_returning">إرجاع البضاعة</string>
+    <!-- ملاحظات تجربة ٢٠٢٦-١٠-١٢ -->
+    <string name="kind_standard">طلب عادي</string>
+    <string name="kind_delivery">لدي توصيلة</string>
+    <string name="kind_purchase">طلب مشتريات</string>
+    <string name="kind_amanah">طلب أمانة</string>
+    <string name="card_pay_recipient">من المستلم</string>
+    <string name="card_pay_store">من المتجر</string>
+    <string name="card_pay_store_wallet">محفظة المتجر</string>
+    <string name="card_amanah_pay">استلام وتسليم — بلا شراء</string>
+    <string name="total_collect_customer">اقبض من الزبون</string>
+    <string name="total_collect_recipient">اقبض من المستلم</string>
+    <string name="total_collect_store">اقبض من المتجر</string>
+    <string name="total_paid_wallet">تم الدفع من المحفظة — لا تقبض شي</string>
+    <string name="total_paid_customer">مدفوع — لا تقبض شي</string>
+    <string name="total_purchase_fixed">تقبض ثمن البضاعة + %1$s أجرة التوصيل</string>
+    <string name="trip_order_items">الطلب:</string>
+    <string name="trip_collect_later">تقبض من الزبون عند التسليم</string>
+    <string name="trip_goods_line">المشتريات: %1$s</string>
+    <string name="trip_fee_line">أجرة التوصيل: %1$s</string>
+    <string name="arrive_far_title">أنت بعيد عن المكان</string>
+    <string name="arrive_far_body">بينك وبين المكان حوالي %1$s. متأكد إنك وصلت؟</string>
+    <string name="arrive_far_yes">إي وصلت</string>
+    <string name="map_no_location_dropoff">لا يوجد موقع للمستلم على الخريطة — اعتمد على العنوان المكتوب</string>
+    <string name="map_no_location_amanah">لا يوجد موقع للأمانة على الخريطة — اسأل الزبون بالمحادثة</string>
+    <string name="map_no_location_purchase">لا يوجد موقع لمكان الشراء على الخريطة — اسأل الزبون بالمحادثة</string>
 </resources>

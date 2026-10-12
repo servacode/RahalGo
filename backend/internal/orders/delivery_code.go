@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -60,6 +61,15 @@ type codeRoute struct {
 	number int64
 	app    string // معرّفُ الزبون إن صحّ الإشعار
 	phone  string // رقمُ الواتساب إن صحّ
+	// sms **رقمُ المستلم للرسالة العاديّة** — إن لم يصله الواتساب أُرسل الكودُ إلى
+	// المنصّة لتبعثه بيدها (فكرةُ المالك ٢٠٢٦-١٠-١٢).
+	sms string
+}
+
+// CodeBySMSText **ما يصل المنصّةَ حين لا يصل الكودُ صاحبَه** — رقمُه والكودُ وما يُفعل.
+func CodeBySMSText(number int64, phone, code string) string {
+	return fmt.Sprintf("كود استلام لم يصل — الطلب #%d\nالرقم %s ما عليه واتساب.\nابعتله رسالة SMS عادية بكود الاستلام: %s",
+		number, phone, code)
 }
 
 // issueDeliveryCode **يولّد الكودَ ويكتبه إن كان له طريقٌ إلى الزبون** — داخلَ المعاملة.
@@ -92,10 +102,12 @@ func (s *Service) issueDeliveryCode(ctx context.Context, tx pgx.Tx, orderID, kin
 	waReady := allowWA && s.whatsapp != nil && s.whatsapp.Ready()
 	if kind == KindMerchantDelivery {
 		// **المستلِمُ ليس على التطبيق** — رقمُه وحدَه.
+		rt.sms = recipPhone
 		if waReady && recipPhone != "" {
 			rt.phone = recipPhone
 		}
 	} else {
+		rt.sms = custPhone
 		if allowApp && customerID != "" && s.notify != nil {
 			rt.app = customerID
 		}
@@ -103,7 +115,9 @@ func (s *Service) issueDeliveryCode(ctx context.Context, tx pgx.Tx, orderID, kin
 			rt.phone = custPhone
 		}
 	}
-	if rt.app == "" && rt.phone == "" {
+	// **ولا واتسابَ ولا تطبيق ⇒ المنصّةُ تبعثه رسالةً عاديّة** إن كان مَن يُنبَّه —
+	// وإلّا يُمحى كما كان، **فلا يُطلب من السائق كودٌ لم يصل أحداً.**
+	if rt.app == "" && rt.phone == "" && (rt.sms == "" || s.notify == nil) {
 		return clear()
 	}
 	code, err := newDeliveryCode()
@@ -137,6 +151,9 @@ func (s *Service) sendDeliveryCode(ctx context.Context, orderID string, rt *code
 		})
 	}
 	if rt.phone == "" || s.whatsapp == nil {
+		if rt.app == "" {
+			s.alertCodeBySMS(ctx, orderID, rt)
+		}
 		return
 	}
 	appSent := rt.app != ""
@@ -152,10 +169,43 @@ func (s *Service) sendDeliveryCode(ctx context.Context, orderID string, rt *code
 		if appSent {
 			return
 		}
+		// **ولا يُمحى والمنصّةُ تبعثه بيدها** (فكرةُ المالك ٢٠٢٦-١٠-١٢: «تصل رسالة ع رقم
+		// المنصة هذا رقم الزبون وماعنده واتس اب نحنا نرسله رسالة عادية ع رقمه بكود الاستلام»).
+		// **كان يُمحى فيمرّ التسليمُ بلا تأكيد** — والمستلمُ بلا واتسابٍ كثيرٌ في الرقّة.
+		if s.alertCodeBySMS(bg, orderID, rt) {
+			return
+		}
 		if _, err := s.db.Exec(bg,
 			`UPDATE orders SET delivery_code = NULL WHERE id = $1 AND delivery_code = $2`,
 			orderID, rt.code); err != nil && s.logger != nil {
 			s.logger.Warn("محوُ كود التسليم بعد تعثّره سقط", "order", orderID, "error", err)
 		}
 	}()
+}
+
+// alertCodeBySMS **يُبلغ المنصّةَ أن تبعث الكودَ رسالةً عاديّة** — في لوحتها، وعلى رقم
+// واتسابها إن ضُبط. **ويردّ أوصل أحداً** — وإلّا محا المُرسِلُ الكود.
+func (s *Service) alertCodeBySMS(ctx context.Context, orderID string, rt *codeRoute) bool {
+	if rt == nil || rt.sms == "" || rt.code == "" {
+		return false
+	}
+	text := CodeBySMSText(rt.number, rt.sms, rt.code)
+	sent := false
+	if s.notify != nil {
+		s.notify.NotifyOps(ctx, notifications.Input{
+			Kind: notifications.KindOrder, Title: "ابعت كود الاستلام برسالة SMS",
+			Body: text, Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+		})
+		sent = true
+	}
+	if s.whatsapp != nil && s.whatsapp.Ready() {
+		to := strings.TrimSpace(s.settings.GetString(ctx, "platform.whatsapp"))
+		if to == "" {
+			to = strings.TrimSpace(s.settings.GetString(ctx, "platform.support_phone"))
+		}
+		if to != "" && s.whatsapp.SendText(ctx, to, text) {
+			sent = true
+		}
+	}
+	return sent
 }

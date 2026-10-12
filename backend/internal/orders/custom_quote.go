@@ -260,6 +260,13 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 // **ومتكرّرٌ بالنسخة والطريقة نفسِها لا شيء** (idempotent).
 func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, paymentMethod string,
 	expectedTotal, expectedVersion int64) (*Order, error) {
+	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, expectedTotal, expectedVersion, false)
+}
+
+// confirmQuote **والصامتُ منه** لأجرة المنصّة (`autoAgreeFixedFee`) — لا سطرَ «وافقتُ»
+// ولا إشعارَ للسائق: **هو من أخذ الطلبَ للتوّ.**
+func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, paymentMethod string,
+	expectedTotal, expectedVersion int64, quiet bool) (*Order, error) {
 	if paymentMethod != "cash" && paymentMethod != "wallet" {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
@@ -405,7 +412,7 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 		// **وكان البثُّ وحدَه**، وهو يصل شاشةً مفتوحةً لا جيباً مغلقاً:
 		// **فالسائقُ ينتظر التأكيدَ ولا يعلم أنّ انتظارَه انتهى**، والزبونُ
 		// يرى «بانتظار الشراء» ولا أحدَ يشتري.
-		if o.DriverID != nil {
+		if o.DriverID != nil && !quiet {
 			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total)
 			// **وتأكيدُ الزبون يُقال في الحديث أيضاً** (٢٠٢٦-١٠-٠٣) — بمجموعه.
 			line := fmt.Sprintf("وافقتُ على المجموع: %s ل.س.", groupDigits(o.Total))

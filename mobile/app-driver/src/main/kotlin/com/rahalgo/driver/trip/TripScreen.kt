@@ -1149,9 +1149,14 @@ private fun OnRouteBanner(
             // **وأجرتُه هو لا نقدُ الزبون** (٢٠٢٦-١٠-٠٢) — كان يُعرض `cash_due`
             // فيقرأ ما يقبضه للمتجر على أنّه ما يكسبه. **وكما في بطاقة الطلب**:
             // الخاصُّ أجرتُه تُتّفق لاحقاً.
-            text = offer.merchantName.ifBlank { stringResource(R.string.nav_custom_order) } +
+            text = stringResource(kindLabel(offer)) + " · " +
+                offer.merchantName.ifBlank { stringResource(kindLabel(offer)) } +
                 " · " + stringResource(R.string.card_fee) + " " +
-                if (offer.kind == "custom") stringResource(R.string.card_agreed_later) else money(offer.deliveryFee),
+                when {
+                    fixedCustomFee(offer) != null -> money(fixedCustomFee(offer) ?: 0)
+                    offer.kind == "custom" -> stringResource(R.string.card_agreed_later)
+                    else -> money(offer.deliveryFee)
+                },
             color = Color.White.copy(alpha = 0.9f),
         )
         Spacer(Modifier.height(10.dp))
@@ -1373,10 +1378,36 @@ private fun TripCard(
         // **ولا تسليمَ بلا تأكيدِ المال** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «وقت يعطي سلّمت الطلب لازم
         // تطلعلو رسالة تأكيد في حال كان في قبض… أو تقلّو لقد دفع مسبقاً»).
         var confirmDeliver by remember(order.id) { mutableStateOf(false) }
+        // ══════════════════════════════════════════════════════════════
+        // **«وصلت» بعيداً يُسأل عنه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «نخليهن يطلعو بشكل عادي
+        // بس وقت يكون السائق بعيد عن الموقع نعطي تنبيه هل انت متاكد؟»)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **و٣٠٠ متر لا أقلّ** — موقعُ الرقّة لا يدقّ أكثر، **فسؤالُ الواصل فعلاً يُتعب
+        // ولا يحمي.** والمسافةُ المجهولةُ (`remainingM` سالبة) لا تُسأل.
+        var farArrive by remember(order.id) { mutableStateOf<String?>(null) }
         val onNext: () -> Unit = {
             if (next != null) {
-                if (next.status == "delivered") confirmDeliver = true else actions.step(next.status)
+                val arriving = next.status == "at_pickup" || next.status == "at_dropoff"
+                when {
+                    next.status == "delivered" -> confirmDeliver = true
+                    arriving && state.remainingM > ARRIVE_FAR_M -> farArrive = next.status
+                    else -> actions.step(next.status)
+                }
             }
+        }
+        farArrive?.let { to ->
+            com.rahalgo.ui.ConfirmDialog(
+                title = stringResource(R.string.arrive_far_title),
+                body = stringResource(R.string.arrive_far_body, dist(state.remainingM)),
+                confirm = stringResource(R.string.arrive_far_yes),
+                onConfirm = {
+                    farArrive = null
+                    actions.step(to)
+                },
+                onDismiss = { farArrive = null },
+                danger = false,
+            )
         }
         if (confirmDeliver) {
             val due = cashFrom(order, true) == CashFrom.RECIPIENT
@@ -1430,14 +1461,23 @@ private fun TripCard(
                     text = if (toCustomer) {
                         order.customerName.ifBlank { stringResource(R.string.detail_customer) }
                     } else {
-                        // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو.
-                        order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }
+                        // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو: أمانةٌ أم مشتريات.
+                        order.merchantName.ifBlank { stringResource(kindLabel(order)) }
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
             }
-            Text("#${order.number}", color = Rahal.colors.inkMuted)
+            // **ونوعُه بجانب رقمه** (٢٠٢٦-١٠-١٢).
+            Column(horizontalAlignment = Alignment.End) {
+                Text("#${order.number}", color = Rahal.colors.inkMuted)
+                Text(
+                    stringResource(kindLabel(order)),
+                    color = Rahal.colors.accent,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -1468,6 +1508,16 @@ private fun TripCard(
                             amount = money(order.cashDue),
                             tint = Rahal.colors.accent,
                         )
+                        // **والمشترياتُ مفصّلة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «مشتريات بقيمة 350 اجرة
+                        // توصيل 150 مجموع 500»).
+                        if (order.kind == "custom" && order.customMode != "amanah" && (order.customGoods ?: 0) > 0) {
+                            InfoBox(
+                                icon = R.drawable.ic_cash,
+                                text = stringResource(R.string.trip_goods_line, money(order.customGoods ?: 0)) + "\n" +
+                                    stringResource(R.string.trip_fee_line, money(order.customFee ?: 0)),
+                                tint = Rahal.colors.accent,
+                            )
+                        }
                     } else {
                         InfoBox(
                             icon = R.drawable.ic_check_circle,
@@ -1495,6 +1545,31 @@ private fun TripCard(
                         )
                         PrepState.Unknown -> Unit
                     }
+                    // **وما يستلمه باسمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «السائق اصلا مايعرف شو الطلب»).
+                    if (order.items.isNotEmpty()) {
+                        InfoBox(
+                            icon = com.rahalgo.ui.R.drawable.ic_cart,
+                            text = stringResource(R.string.trip_order_items) + "\n" + itemsText(order),
+                            tint = Rahal.colors.brand,
+                        )
+                    }
+                    // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
+                    if (order.kind == "standard") {
+                        if (order.cashDue > 0) {
+                            MoneyBox(
+                                label = stringResource(R.string.trip_collect_later),
+                                amount = money(order.cashDue),
+                                tint = Rahal.colors.accent,
+                            )
+                        } else {
+                            InfoBox(
+                                icon = R.drawable.ic_check_circle,
+                                text = stringResource(R.string.trip_prepaid_note),
+                                tint = Rahal.colors.success,
+                                bold = true,
+                            )
+                        }
+                    }
                 }
                 // **و«أنا نقداً» يُقبض من المتجر قبل أن يمضي.**
                 if (cashFrom == CashFrom.STORE) {
@@ -1504,7 +1579,8 @@ private fun TripCard(
                         tint = Rahal.colors.accent,
                     )
                 }
-                if (order.parcelNote.isNotEmpty()) {
+                // **و«يحمل» قبل الاستلام وحدَه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — بعده هو بيده.
+                if (order.parcelNote.isNotEmpty() && !pickedUp) {
                     InfoBox(
                         icon = com.rahalgo.ui.R.drawable.ic_cart,
                         text = stringResource(R.string.detail_parcel) + ": " + order.parcelNote,
@@ -1550,7 +1626,9 @@ private fun TripCard(
                 // ── الطلبُ الخاصّ: **ما المطلوب** — قبل كلّ شيء (ملاحظةُ المالك ٢٠٢٦-١٠-١٢:
                 // «السائق لا يعرف ماهو الطلب الذي يجب ان يوثق سعره»). كانت البطاقةُ تقول
                 // «اشترِ المطلوب» ولا تقول ما هو — **وهو في قائمة الطلبات وحدَها.**
-                if (order.kind == "custom" && order.customRequest.isNotEmpty()) {
+                // **وبعد الاستلام يختفي** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢): «بعدما نستلم الأمانة خلص
+                // يختفي المطلوب… يظل شقد بدنا نقبض وعنوانه».
+                if (order.kind == "custom" && order.customRequest.isNotEmpty() && !pickedUp) {
                     Column(
                         Modifier
                             .fillMaxWidth()
@@ -1674,6 +1752,9 @@ private fun TripCard(
         }
     }
 }
+
+/** **«وصلت» أبعدَ من هذا يُسأل عنه** — بالمتر (٢٠٢٦-١٠-١٢). */
+private const val ARRIVE_FAR_M = 300.0
 
 /** **زرُّ المرحلة** — كبيرٌ بعرض البطاقة، وهو ما يُضغط في تسعٍ من عشر. */
 @Composable

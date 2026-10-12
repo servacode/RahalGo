@@ -504,6 +504,13 @@ const (
 // فالمالُ يمرّ بالمسار القائم نفسِه (`applyCustomQuoteTx`) قبل الاستلام، **ولا يُمسّ الدفتر.**
 func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step string,
 	goods, fee int64) error {
+	return s.agreeCustomStep(ctx, orderID, driverID, step, goods, fee, false)
+}
+
+// agreeCustomStep **والصامتُ منه** (`quiet`) للأجرة التي تفرضها المنصّة — لا سطرَ في
+// الحديث ولا إشعارَ للزبون: **الأجرةُ معروفةٌ للطرفين من لحظة الطلب** (`autoAgreeFixedFee`).
+func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step string,
+	goods, fee int64, quiet bool) error {
 	if goods < 0 || fee < 0 {
 		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
@@ -616,7 +623,9 @@ func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step s
 	}
 	// **وما وُثّق يُقال في الحديث** (طلبُ المالك ٢٠٢٦-١٠-٠٣: «بالدردشة لازم يظهر السعرُ كم تمّ
 	// توثيقُه»).
-	s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(step, mode, effGoods, effFee))
+	if !quiet {
+		s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(step, mode, effGoods, effFee))
+	}
 
 	// **ويصل صاحبَ الطلب ما وُثّق باسمه** (`D22`) — بعد التثبيت لا داخلَه.
 	// **ومحفظتُه إن تحرّك حجزُها.**
@@ -633,8 +642,57 @@ func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step s
 	//
 	// **فمن أغلق التطبيقَ ينتظر ما لن يأتي** — ويظنّ أنّه طلب وأنّ المنصّةَ
 	// تعمل. (بلاغُ المالك ٢٠٢٦-٠٩-٢٩.)
-	s.notifyCustomQuoted(ctx, orderID, effGoods+effFee)
+	if !quiet {
+		s.notifyCustomQuoted(ctx, orderID, effGoods+effFee)
+	}
 	return nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **أجرةُ المنصّة لا تُوثَّق ولا تُؤكَّد** (قرارُ المالك ٢٠٢٦-١٠-١٢)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «وقت تكون المنصّة محدّدة السعر أصلاً ما في داعي لتوثيق سعر التوصيل… خطوة
+// على الزبون والسائق». **قِيس على #1028**: أجرةٌ مفروضةٌ ١٥٠ لا يغيّرها السائق،
+// **ومع ذلك يضغط «وثّق» على رقمٍ لا يملكه، ويضغط الزبونُ «موافق» على رقمٍ رآه حين طلب.**
+//
+// **فتُثبَّت لحظةَ الإسناد بالمسار نفسِه** (`agreeCustomStep` ثمّ `confirmQuote`) —
+// لا عمودَ يُكتب من خارجه، **والحجزُ والسقفُ يُفحصان كما يُفحصان بيد الزبون.**
+// **وإن رُدّ التأكيد** (محفظةٌ لا تكفي، سقفُ نقد) **عاد البابُ إلى يده**: سطرُ
+// الأجرة في الحديث وإشعارٌ يطلب الموافقة، كما كان. **والمشترياتُ يبقى فيها ثمنُ
+// البضاعة** — لا يعرفه أحدٌ قبل الشراء.
+func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, driverID string) {
+	var source, mode, pay string
+	var mayChange bool
+	if err := s.db.QueryRow(ctx, `
+		SELECT custom_fee_source, custom_driver_may_change_fee, custom_mode, payment_method
+		FROM orders WHERE id = $1`, orderID).Scan(&source, &mayChange, &mode, &pay); err != nil {
+		s.logger.Error("أجرة المنصّة: تعذّرت قراءةُ الطلب", "order", orderID, "error", err)
+		return
+	}
+	if source != "admin_defined" || mayChange {
+		return
+	}
+	if err := s.agreeCustomStep(ctx, orderID, driverID, AgreeStepFee, 0, 0, true); err != nil {
+		s.logger.Error("أجرة المنصّة: تعذّر تثبيتُها", "order", orderID, "error", err)
+		return
+	}
+	o, err := s.GetByID(ctx, orderID)
+	if err != nil {
+		return
+	}
+	if pay != "wallet" {
+		pay = "cash"
+	}
+	if _, err := s.confirmQuote(ctx, orderID, customerID, pay, o.Total, o.QuoteVersion, true); err != nil {
+		s.logger.Warn("أجرة المنصّة: التأكيدُ التلقائيُّ رُدّ — يؤكّدها الزبون بيده", "order", orderID, "error", err)
+		fee := int64(0)
+		if o.CustomFee != nil {
+			fee = *o.CustomFee
+		}
+		s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(AgreeStepFee, mode, 0, fee))
+		s.notifyCustomQuoted(ctx, orderID, o.Total)
+	}
 }
 
 // settleCustomWallet **ينقل ما اتُّفق عليه من محفظة الزبون إلى السائق.**

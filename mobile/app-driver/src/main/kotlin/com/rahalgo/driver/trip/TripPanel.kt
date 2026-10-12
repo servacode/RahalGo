@@ -188,11 +188,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             // المرسومُ إلى نقطة المتجر لا إلى المستلِم، **فيُقال له ألّا يتبعه.**
             val noPoint = state.step >= TripStep.PICKED_UP && !order.dropoffKnown
             if (noPoint) {
-                Text(
-                    text = stringResource(R.string.detail_no_point),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                NoLocationBox(stringResource(R.string.map_no_location_dropoff))
             }
 
             // **ورقمُ المحرّك يسبق الهوائيّ** — «٩٨٢ م ودقيقتان» كانت
@@ -230,16 +226,13 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             if (noPoint || arrived) {
                 Unit
             } else if (customBefore) {
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PanelChip(
-                        R.drawable.ic_navigation,
-                        stringResource(
-                            if (state.order?.customMode == "amanah") R.string.custom_route_later_amanah
-                            else R.string.custom_route_later,
-                        ),
-                    )
-                }
+                // **مربّعُ «لا يوجد موقع»** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — لا شريحةٌ تُقرأ طريقاً.
+                NoLocationBox(
+                    stringResource(
+                        if (state.order?.customMode == "amanah") R.string.map_no_location_amanah
+                        else R.string.map_no_location_purchase,
+                    ),
+                )
             } else if (!routeReady) {
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -531,3 +524,24 @@ internal fun distanceText(meters: Double): String = dist(meters)
  */
 internal fun eta(meters: Double, avgSpeedKmh: Long): String =
     etaText(meters, avgSpeedKmh)
+
+
+/**
+ * **لا يوجد موقع على الخريطة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — مربّعٌ أبيضُ بحدٍّ أحمر فوق
+ * اللوحة: **لا خطَّ يُتبع، والعنوانُ أو المحادثةُ هما الدليل.**
+ */
+@Composable
+private fun NoLocationBox(text: String) {
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = text,
+        color = Rahal.colors.danger,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(Color.White)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
+}

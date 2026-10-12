@@ -222,49 +222,81 @@ func TestDCODE_OffNoCode(t *testing.T) {
 	}
 }
 
-// TestDCODE_NoChannelNoCode **واتسابٌ وحدَه بلا بوت ⇒ لا كود** — فلا يقف تسليمٌ على رسالةٍ لم تُرسَل.
-func TestDCODE_NoChannelNoCode(t *testing.T) {
+// dcodeSMSAlert **أوصل المنصّةَ «ابعت الكود برسالة SMS» بالكود نفسِه؟**
+func dcodeSMSAlert(t *testing.T, h *Harness, ops *User, code string) bool {
+	t.Helper()
+	var n int
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT count(*) FROM notifications
+		WHERE user_id = $1::uuid AND title = 'ابعت كود الاستلام برسالة SMS' AND body LIKE '%' || $2 || '%'`,
+		ops.ID, code).Scan(&n); err != nil {
+		t.Fatalf("DCODE قراءةُ الإشعار: %v", err)
+	}
+	return n > 0
+}
+
+// TestDCODE_NoChannelAlertsPlatform **لا بوتَ ولا تطبيق ⇒ الكودُ يبقى والمنصّةُ تبعثه SMS**
+// (فكرةُ المالك ٢٠٢٦-١٠-١٢). **كان يُمحى فيمرّ التسليمُ بلا تأكيد.**
+func TestDCODE_NoChannelAlertsPlatform(t *testing.T) {
 	h := New(t)
 	h.Setting("delivery.code_required", "true")
 	h.Setting("delivery.code_channel", `"whatsapp"`)
 	h.API.SetMerchantNotifier(nil)
+	ops := h.NewUser("operations")
 	oid, _, drv := dcodeOrder(t, h)
-	if c, _ := dcodeOf(t, h, oid); c != nil {
-		t.Fatalf("DCODE-10 وُلد كودٌ بلا قناة: %v", *c)
+	c, _ := dcodeOf(t, h, oid)
+	if c == nil {
+		t.Fatal("DCODE-10 مُحي الكود — والمنصّةُ كانت تبعثه SMS")
 	}
-	if got := dcodeDeliver(h, drv, oid, nil); got.Code >= 400 {
-		t.Fatalf("DCODE-10 التسليمُ رُدّ بلا كود: %s", got)
+	if !dcodeSMSAlert(t, h, ops, *c) {
+		t.Fatal("DCODE-10 المنصّةُ لم تُبلَّغ أن تبعث الكود")
+	}
+	if got := dcodeDeliver(h, drv, oid, nil); got.Code < 400 {
+		t.Fatalf("DCODE-10 سُلّم بلا كود: %s", got)
+	}
+	if got := dcodeDeliver(h, drv, oid, *c); got.Code >= 400 {
+		t.Fatalf("DCODE-10 الكودُ الصحيحُ رُدّ: %s", got)
 	}
 }
 
-// TestDCODE_WhatsAppFailureClears **واتسابٌ وحدَه تعثّر ⇒ يُمحى الكود** · ونجح ⇒ يبقى.
-func TestDCODE_WhatsAppFailureClears(t *testing.T) {
+// TestDCODE_WhatsAppFailureAlertsPlatform **واتسابٌ وحدَه تعثّر ⇒ الكودُ يبقى والمنصّةُ تُبلَّغ** ·
+// ونجح ⇒ يبقى بلا تنبيه.
+func TestDCODE_WhatsAppFailureAlertsPlatform(t *testing.T) {
 	h := New(t)
 	h.Setting("delivery.code_required", "true")
 	h.Setting("delivery.code_channel", `"whatsapp"`)
 	t.Cleanup(func() { h.API.SetMerchantNotifier(nil) })
+	ops := h.NewUser("operations")
 
 	ok := &dcodeFakeBot{}
 	oid, _, _ := dcodeOrderWith(t, h, func() { h.API.SetMerchantNotifier(ok) })
 	waitCalls(t, &ok.calls)
-	if c, _ := dcodeOf(t, h, oid); c == nil {
+	c, _ := dcodeOf(t, h, oid)
+	if c == nil {
 		t.Fatal("DCODE-11 الواتسابُ وصل والكودُ مُحي")
+	}
+	time.Sleep(300 * time.Millisecond)
+	if dcodeSMSAlert(t, h, ops, *c) {
+		t.Fatal("DCODE-11 نُبّهت المنصّةُ والواتسابُ وصل")
 	}
 
 	bad := &dcodeFakeBot{fail: true}
 	h.API.SetMerchantNotifier(nil)
 	oid2, _, _ := dcodeOrderWith(t, h, func() { h.API.SetMerchantNotifier(bad) })
 	waitCalls(t, &bad.calls)
+	c2, _ := dcodeOf(t, h, oid2)
+	if c2 == nil {
+		t.Fatal("DCODE-11 الواتسابُ تعثّر فمُحي الكود — والمنصّةُ كانت تبعثه SMS")
+	}
 	deadline := time.Now().Add(5 * time.Second)
-	for {
-		c, _ := dcodeOf(t, h, oid2)
-		if c == nil {
-			break
-		}
+	for !dcodeSMSAlert(t, h, ops, *c2) {
 		if time.Now().After(deadline) {
-			t.Fatal("DCODE-11 الواتسابُ تعثّر والكودُ باقٍ — يقف التسليمُ على رسالةٍ لم تصل")
+			t.Fatal("DCODE-11 الواتسابُ تعثّر ولم تُبلَّغ المنصّة")
 		}
 		time.Sleep(50 * time.Millisecond)
+	}
+	if c3, _ := dcodeOf(t, h, oid2); c3 == nil || *c3 != *c2 {
+		t.Fatal("DCODE-11 الكودُ مُحي بعد التنبيه")
 	}
 }
 

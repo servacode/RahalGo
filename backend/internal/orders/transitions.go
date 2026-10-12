@@ -445,6 +445,11 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	if chatty && to == StAssigned && driverID != nil {
 		if kind == KindCustom {
 			s.openCustomChat(ctx, orderID, customerID, *driverID)
+			// **وأجرةُ المنصّة تُثبَّت هنا** (٢٠٢٦-١٠-١٢) — ويُقرأ الطلبُ بعدها لينشر حالَه الجديد.
+			s.autoAgreeFixedFee(ctx, orderID, customerID, *driverID)
+			if o, err := s.GetByID(ctx, orderID); err == nil {
+				updated = o
+			}
 		} else {
 			// **والعاديُّ يُفتح كذلك** — (قرارُ المالك ٢٠٢٦-٠٨-١١).
 			s.openPlainChat(ctx, orderID, *driverID)

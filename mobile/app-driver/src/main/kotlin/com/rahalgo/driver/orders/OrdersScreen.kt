@@ -340,6 +340,9 @@ private fun OrderCard(
             Column(horizontalAlignment = Alignment.Start) {
                 if (offer) {
                     Chip(R.drawable.ic_bell, stringResource(R.string.card_new_order))
+                    // **ونوعُه جنبها** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — عاديّ · توصيلة · مشتريات · أمانة.
+                    Spacer(Modifier.height(4.dp))
+                    KindChip(stringResource(com.rahalgo.driver.trip.kindLabel(order)))
                 } else {
                     Text(
                         text = statusText(order.status),
@@ -384,15 +387,13 @@ private fun OrderCard(
                         if (custom) R.drawable.ic_orders else R.drawable.ic_store,
                     ),
                     // **ويُسمّى للقارئ الصوتيّ** — ومن يقود ويسمع لا يرى.
-                    contentDescription = stringResource(
-                        if (custom) R.string.nav_custom_order else R.string.card_store_cd,
-                    ),
+                    contentDescription = stringResource(com.rahalgo.driver.trip.kindLabel(order)),
                     tint = Rahal.colors.accent,
                     modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
+                    text = order.merchantName.ifBlank { stringResource(com.rahalgo.driver.trip.kindLabel(order)) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     // ══════════════════════════════════════════════════
@@ -432,81 +433,7 @@ private fun OrderCard(
             }
         }
 
-        // ── سطرُ المال — بعرض البطاقة ─────────────────────────────────
-        //
-        // **كان داخلَ عمود اليسار في الرأس** فيزاحم اسمَ المتجر، **وقُيس
-        // على الجهاز أنّه يلتهم ٤٣٠ بكسلاً** فيبقى للاسم ١٣٥ فيُقصّ.
-        //
-        // **وهنا يأخذ ما يشاء** — لا شيءَ يزاحمه، ولا شيءَ يزاحم.
-        Spacer(Modifier.height(4.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            run {
-                // ══════════════════════════════════════════════════════
-                // **ورقم بلا اسمه يُقرأ خطأ**
-                // ══════════════════════════════════════════════════════
-                //
-                // (قرار المالك ٢٠٢٦-٠٨-١٢: «جنب السعر الإجماليّ يجب أن
-                //  نكتب إجماليّ الفاتورة».)
-                //
-                // **ثلاثة أرقام في البطاقة**: الإجماليّ وأجرتُه وما
-                // يقبضه. **ورقم عارٍ في زاوية** يُقرأ أجرةً — **فيفرح
-                // بمئتين وهي للمتجر**، أو يقبض مئةً والفاتورة ثلاثمئة.
-                // ══════════════════════════════════════════════════════
-                // **والخاصُّ لا فاتورةَ له بعد**
-                // ══════════════════════════════════════════════════════
-                //
-                // (شهده المالك ٢٠٢٦-٠٨-١٣ في بطاقةٍ على جهازه.)
-                //
-                // **كان يُكتب «إجمالي الفاتورة ٠ ل.س» بالأخضر** — والأخضرُ
-                // في هذه البطاقة يعني «مدفوعٌ فسلّم وامضِ». **فيقرأ
-                // السائقُ طلباً لم يُتّفق على شيءٍ فيه بعدُ على أنّه
-                // مدفوع.**
-                //
-                // **والصفرُ هنا ليس رقماً، إنّما «لم يُعرف بعد»** —
-                // ورقمٌ يُعرض مكانَ «لا أعرف» يكذب.
-                if (custom) {
-                    Text(
-                        text = stringResource(R.string.card_custom_price),
-                        color = Rahal.colors.accent,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.card_invoice_total),
-                            color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                        )
-                        Spacer(Modifier.size(6.dp))
-                        Text(
-                            text = money(order.total),
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
-                            // **والرقمُ لا يلتفّ ولو ضاق ما ضاق** — حزامٌ
-                            // ثانٍ لا يتّكل على قسمة العرض وحدَها:
-                            // **`softWrap=false` تمنع الالتفافَ من أصله**،
-                            // فإن ضاق المكانُ قُصّ ولم يُكسر.
-                            maxLines = 1,
-                            softWrap = false,
-                            // **ولونه يقول أمقبوضٌ أم لا** — أحمر: اقبض،
-                            // أخضر: مدفوع بالمحفظة.
-                            color = if (order.cashDue > 0) {
-                                Rahal.colors.danger
-                            } else {
-                                Rahal.colors.success
-                            },
-                        )
-                    }
-                }
-            }
-        }
-
+        // ── سطرُ المال نزل مربّعاً تحت الأجرة والدفع (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) ──
         // ══════════════════════════════════════════════════════════════
         // **وما طلبه الزبونُ بلفظه — قبل كلّ شيء**
         // ══════════════════════════════════════════════════════════════
@@ -519,6 +446,11 @@ private fun OrderCard(
         //
         // **وموضعُه فوق المسافة**: هو أوّلُ ما يقرّر به القبولَ من
         // الرفض، **والمسافةُ بعده.**
+        // **و«لدي توصيلة»: ما يحمله قبل أن يقبل** (٢٠٢٦-١٠-١٢) — كان يظهر بعد القبول وحدَه.
+        if (order.kind == "merchant_delivery" && order.parcelNote.isNotBlank()) {
+            Spacer(Modifier.height(10.dp))
+            WhatBox(stringResource(R.string.detail_parcel), order.parcelNote)
+        }
         if (custom && order.customRequest.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Column(
@@ -614,10 +546,12 @@ private fun OrderCard(
                 label = stringResource(R.string.card_fee),
                 // **وأجرةُ الخاصّ تُتّفق ولا تُحسب** — وصفرٌ مكانَها
                 // يُقرأ «بلا أجرة»، **فيُرفض طلبٌ أجرتُه لم تُقَل بعد.**
-                value = if (custom) {
-                    stringResource(R.string.card_agreed_later)
-                } else {
-                    money(order.deliveryFee)
+                // **وأجرةُ المنصّة المفروضةُ رقمٌ لا «تتفق»** (٢٠٢٦-١٠-١٢).
+                value = when {
+                    com.rahalgo.driver.trip.fixedCustomFee(order) != null ->
+                        money(com.rahalgo.driver.trip.fixedCustomFee(order) ?: 0)
+                    custom -> stringResource(R.string.card_agreed_later)
+                    else -> money(order.deliveryFee)
                 },
                 strong = true,
                 modifier = Modifier.weight(1f),
@@ -637,8 +571,16 @@ private fun OrderCard(
                 // **والخاصُّ يشتريه من جيبه ويستردّ عند التسليم** —
                 // وهو ما يقوله النموذجُ نفسُه. **و«مدفوع» عليه أخطرُ ما
                 // في البطاقة**: يمضي بلا أن يقبض ثمنَ ما اشتراه.
+                // **ومن مَن يقبض** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «لازم يعرف من وين بدو يقبض من
+                // المتجر ولا من المستلم») — **والأمانةُ بلا شراء.**
                 value = when {
+                    custom && order.customMode == "amanah" -> stringResource(R.string.card_amanah_pay)
                     custom -> stringResource(R.string.card_custom_pay)
+                    order.kind == "merchant_delivery" -> when (order.feePayer) {
+                        "recipient" -> stringResource(R.string.card_pay_recipient)
+                        "merchant_cash" -> stringResource(R.string.card_pay_store)
+                        else -> stringResource(R.string.card_pay_store_wallet)
+                    }
                     cash -> stringResource(R.string.card_cash)
                     else -> stringResource(R.string.card_wallet)
                 },
@@ -684,6 +626,12 @@ private fun OrderCard(
         //
         // **وبابُه في المحرّك يبقى** (`/decline`) — لا يُنادى من هنا،
         // **ولوحةُ الإدارة قد تحتاجه.**
+        // ══════════════════════════════════════════════════════════════
+        // **والإجماليُّ مربّعٌ تحت الأجرة والدفع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «اجمالي
+        // الفاتورة نخليها مربع تحت اجرة التوصيل والدفع افضل واضحة»)
+        // ══════════════════════════════════════════════════════════════
+        Spacer(Modifier.height(10.dp))
+        TotalBox(order)
         Spacer(Modifier.height(12.dp))
         // **والعدّادُ في الزرّ لا في زاوية البطاقة** — (قرارُ المالك
         // ٢٠٢٦-٠٨-١٤: «العدّادُ يكون داخل زرّ موافق بطريقةٍ احترافيّة،
@@ -704,6 +652,89 @@ private fun OrderCard(
     }
 }
 
+
+/** **نوعُ الطلب** — كلمةٌ بلون التنبيه تحت «طلب جديد». */
+@Composable
+private fun KindChip(text: String) {
+    Text(
+        text = text,
+        color = Rahal.colors.onBrand,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier
+            .clip(Rahal.shape.pill)
+            .background(Rahal.colors.accent)
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+    )
+}
+
+/** **مربّعُ «ماذا»** — المطلوبُ أو ما يحمله. */
+@Composable
+private fun WhatBox(label: String, text: String) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.warnTint)
+            .padding(12.dp),
+    ) {
+        Text(text = label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(2.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+    }
+}
+
+/**
+ * **مربّعُ المال** — من يدفع وكم، بالرقم الكبير. **أحمرُ يُقبض، وأخضرُ لا يُقبض.**
+ */
+@Composable
+private fun TotalBox(order: DriverOrder) {
+    val custom = order.kind == "custom"
+    val fixed = com.rahalgo.driver.trip.fixedCustomFee(order)
+    val (label, amount, collect) = when {
+        order.kind == "merchant_delivery" -> when (order.feePayer) {
+            "recipient" -> Triple(stringResource(R.string.total_collect_recipient), money(order.cashDue), true)
+            "merchant_cash" -> Triple(stringResource(R.string.total_collect_store), money(order.cashDue), true)
+            else -> Triple(stringResource(R.string.total_paid_wallet), "", false)
+        }
+        custom && order.customMode == "amanah" && fixed != null ->
+            Triple(stringResource(R.string.total_collect_customer), money(fixed), true)
+        custom && fixed != null ->
+            Triple(stringResource(R.string.total_purchase_fixed, money(fixed)), "", true)
+        custom -> Triple(stringResource(R.string.card_custom_price), "", true)
+        order.cashDue > 0 -> Triple(stringResource(R.string.card_invoice_total), money(order.total), true)
+        else -> Triple(stringResource(R.string.total_paid_customer), money(order.total), false)
+    }
+    val tint = if (collect) Rahal.colors.danger else Rahal.colors.success
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(tint.copy(alpha = 0.10f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            color = tint,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (amount.isNotEmpty()) {
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text = amount,
+                color = tint,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
+    }
+}
 
 /** **شارة صغيرة** — أيقونة وكلمة. */
 @Composable
