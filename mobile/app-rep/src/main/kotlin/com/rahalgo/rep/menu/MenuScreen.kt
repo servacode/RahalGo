@@ -101,6 +101,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         // سطراً بينهما يفعلان الشيءَ نفسَه.**
         ItemEditor(
             d = vm.editing!!,
+            exchangeRate = vm.exchangeRate,
             // ══════════════════════════════════════════════════════════
             // **وأقسامُ متجرِه أوّلاً — لا كلُّ أقسام المنصّة بترتيبها**
             // ══════════════════════════════════════════════════════════
@@ -202,6 +203,15 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             ) { Text(stringResource(R.string.mn_make_offer)) }
         }
 
+        // **وسعرُ صرف المتجر** — المندوبُ يجهّزه قبل صاحبه (٢٠٢٦-١٠-١٢).
+        Spacer(Modifier.height(12.dp))
+        com.rahalgo.ui.menu.ExchangeRateCard(rate = vm.exchangeRate, busy = vm.busy) { vm.setExchangeRate(it) }
+        vm.rateJump?.let { j ->
+            com.rahalgo.ui.menu.RateJumpDialog(j.oldRate, j.newRate, j.samples,
+                onConfirm = { vm.setExchangeRate(j.newRate, confirm = true) },
+                onDismiss = { vm.dismissRateJump() })
+        }
+
         Spacer(Modifier.height(12.dp))
 
         if (list.isEmpty()) {
@@ -300,7 +310,9 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = money(if (item.merchantPrice > 0) item.merchantPrice else item.price),
+                        // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
+                        text = com.rahalgo.ui.menu.priceLine(
+                            if (item.merchantPrice > 0) item.merchantPrice else item.price, item.merchantPriceUsd),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )

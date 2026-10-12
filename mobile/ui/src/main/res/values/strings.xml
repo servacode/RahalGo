@@ -981,4 +981,17 @@
     <string name="err_return_store_refused">هذا المتجر لا يقبل إرجاع البضاعة</string>
     <string name="err_no_return_trip">لا مشوار إرجاع على هذا الطلب</string>
     <string name="err_goods_already_handed">سُجّل تسليم البضاعة من قبل</string>
+    <!-- بطاقة سعر الصرف للمندوب (٢٠٢٦-١٠-١٢) -->
+    <string name="rate_title">سعر الصرف</string>
+    <string name="rate_value">1$ = %1$s ل.س</string>
+    <string name="rate_none">ما انكتب لسا</string>
+    <string name="rate_hint">أصناف المتجر يلي سعرها بالدولار بتتحسب منه بالليرة، وبتتغيّر لحالها كل ما يتغيّر. يلي بالليرة ما بتتأثر.</string>
+    <string name="rate_field">كم ليرة الدولار؟</string>
+    <string name="rate_save">احفظ</string>
+    <string name="rate_saved">تم — تحدّث سعر %1$d صنف</string>
+    <string name="rate_jump_title">سعر الصرف تغيّر كتير</string>
+    <string name="rate_jump_body">من %1$s لـ %2$s. تأكد إنك ما زدت أو نقصت صفر بالغلط.</string>
+    <string name="rate_jump_samples">الأسعار رح تصير (الجديد ← القديم):</string>
+    <string name="rate_jump_yes">إي، احفظه</string>
+    <string name="rate_jump_no">رجوع</string>
 </resources>

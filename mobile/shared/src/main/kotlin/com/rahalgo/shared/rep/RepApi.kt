@@ -91,6 +91,11 @@ class RepApi(private val api: ApiClient) {
     // عميلُه؟» — **وإخفاءُ زرٍّ في شاشةٍ ليس حجبا.**
 
     /** **قائمةُ عميله** — أقسامٌ وأصنافٌ كما يقرؤها الأدمن. */
+    /** **سعرُ صرف متجره** — يكتبه المندوبُ وهو يجهّزه (٢٠٢٦-١٠-١٢). */
+    suspend fun setExchangeRate(merchantID: String, rate: Double, confirm: Boolean = false): com.rahalgo.shared.merchant.ExchangeRateResult =
+        api.call("/api/v1/rep/stores/$merchantID/exchange-rate", HttpMethod.Patch,
+            com.rahalgo.shared.merchant.ExchangeRateInput(rate, confirm))
+
     suspend fun menu(merchantID: String): List<MenuSection> =
         api.call("/api/v1/rep/stores/$merchantID/menu")
 
@@ -333,6 +338,8 @@ data class RepMerchantHead(
     @SerialName("category_name") val categoryName: String = "",
     @SerialName("logo_thumb_url") val logoThumbUrl: String? = null,
     val status: String = "",
+    /** **سعرُ صرف المتجر** — وفراغُه: لم يُكتب (٢٠٢٦-١٠-١٢). */
+    @SerialName("exchange_rate") val exchangeRate: Double? = null,
     @SerialName("joined_at") val joinedAt: String = "",
     @SerialName("owner_phone") val ownerPhone: String? = null,
 )

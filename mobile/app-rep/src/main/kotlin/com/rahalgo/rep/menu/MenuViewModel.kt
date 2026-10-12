@@ -172,6 +172,47 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         sections = null
     }
 
+    /** **سعرُ صرف المتجر** — يُقرأ مع القائمة ويُكتب من بطاقته (٢٠٢٦-١٠-١٢). */
+    var exchangeRate by mutableStateOf<Double?>(null)
+        private set
+
+    data class RateJump(val rate: Double, val oldRate: String, val newRate: String, val samples: String)
+
+    var rateJump by mutableStateOf<RateJump?>(null)
+        private set
+
+    fun setExchangeRate(text: String, confirm: Boolean = false) {
+        val rate = com.rahalgo.ui.menu.parseUsd(text)
+        if (rate == null || rate <= 0.0) {
+            Flash.fail(getApplication<Application>().getString(com.rahalgo.ui.R.string.err_exchange_rate_invalid))
+            return
+        }
+        busy = true
+        viewModelScope.launch {
+            runCatching { api.setExchangeRate(merchantID, rate, confirm) }
+                .onSuccess { r ->
+                    rateJump = null
+                    exchangeRate = rate
+                    Flash.ok(getApplication<Application>().getString(com.rahalgo.ui.R.string.rate_saved, r.itemsRepriced))
+                    runCatching { sections = api.menu(merchantID) }
+                }
+                .onFailure { e ->
+                    val body = (e as? com.rahalgo.shared.net.ApiClient.ApiException)?.body
+                    if (body?.code == "exchange_rate_jump") {
+                        rateJump = RateJump(rate, body.details["old_rate"].orEmpty(),
+                            body.details["new_rate"].orEmpty(), body.details["samples"].orEmpty())
+                    } else {
+                        Flash.fail(com.rahalgo.ui.err(e))
+                    }
+                }
+            busy = false
+        }
+    }
+
+    fun dismissRateJump() {
+        rateJump = null
+    }
+
     fun load() {
         if (merchantID.isEmpty()) return
         busy = true
@@ -180,6 +221,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 sections = api.menu(merchantID)
                 regroup()
                 error = ""
+                runCatching { exchangeRate = api.merchant(merchantID).merchant.exchangeRate }
             } catch (e: Exception) {
                 Flash.fail(apiError(getApplication(), e))
             }

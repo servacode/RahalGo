@@ -283,7 +283,8 @@ private fun ItemRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                money(item.price),
+                // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
+                com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
