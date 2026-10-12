@@ -9588,15 +9588,6 @@
       ]
     },
     {
-      "method": "PATCH",
-      "path": "/api/v1/rep/stores/{id}/exchange-rate",
-      "handler": "handleAdminExchangeRate",
-      "auth": true,
-      "roles": [
-        "sales"
-      ]
-    },
-    {
       "method": "GET",
       "path": "/api/v1/rep/stores/{id}/menu",
       "handler": "handleRepMenu",

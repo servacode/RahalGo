@@ -135,17 +135,19 @@ func TestUSD02_CustomerSeesDollarsPaysPounds(t *testing.T) {
 	}
 }
 
-// TestUSD03_RepSetsRateForOwnStoreOnly — **المندوبُ يجهّز متجرَه** (٢٠٢٦-١٠-١٢):
-// يكتب سعرَ صرف متجره فيضيف أصنافاً بالدولار، **ولا يكتبه لمتجرِ غيره.**
-func TestUSD03_RepSetsRateForOwnStoreOnly(t *testing.T) {
+// TestUSD03_RepReadsRateNeverWrites — **سعرُ الصرف لصاحب المتجر وحدَه** (قرارُ المالك
+// ٢٠٢٦-١٠-١٢): المندوبُ يقرؤه من تفصيل متجره، **ولا بابَ له يكتبه.**
+func TestUSD03_RepReadsRateNeverWrites(t *testing.T) {
 	h := New(t)
 	m := newMDFx(t, h, "USD03")
-	path := "/api/v1/rep/stores/" + m.fx.M.ID + "/exchange-rate"
-	if r := h.PATCH(path, m.fx.RepTok, map[string]any{"rate": 110}); r.Code != http.StatusOK {
-		t.Fatalf("**المندوبُ لم يكتب سعرَ صرف متجره**: %d %s", r.Code, r.Err())
+	if r := h.PATCH(m.url("/exchange-rate"), m.fx.Tok, map[string]any{"rate": 110}); r.Code != http.StatusOK {
+		t.Fatalf("سعرُ الصرف من المتجر: %d %s", r.Code, r.Err())
 	}
-	other := h.NewUser("sales")
-	if r := h.PATCH(path, other.Token, map[string]any{"rate": 120}); r.Code != http.StatusForbidden && r.Code != http.StatusNotFound {
-		t.Fatalf("**مندوبٌ كتب سعرَ صرف متجرِ غيره**: %d %s", r.Code, r.Err())
+	if r := h.PATCH("/api/v1/rep/stores/"+m.fx.M.ID+"/exchange-rate", m.fx.RepTok, map[string]any{"rate": 120}); r.Code < 400 {
+		t.Fatalf("**المندوبُ كتب سعرَ الصرف**: %d", r.Code)
+	}
+	d := h.GET("/api/v1/rep/merchants/"+m.fx.M.ID, m.fx.RepTok)
+	if d.Code != http.StatusOK || !strings.Contains(string(d.Body), `"exchange_rate":110`) {
+		t.Fatalf("**المندوبُ لا يرى سعرَ صرف متجره**: %s", d)
 	}
 }

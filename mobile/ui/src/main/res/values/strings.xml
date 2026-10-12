@@ -994,4 +994,6 @@
     <string name="rate_jump_samples">الأسعار رح تصير (الجديد ← القديم):</string>
     <string name="rate_jump_yes">إي، احفظه</string>
     <string name="rate_jump_no">رجوع</string>
+    <string name="rate_owner_sets">بيحطه صاحب المتجر من صفحة «متجري» بتطبيقه، وأصنافه بالدولار بتتحسب منه.</string>
+    <string name="item_usd_need_rate_rep">صاحب المتجر لازم يحط سعر الصرف من تطبيقه أول — لهلق ضيف الصنف بالليرة</string>
 </resources>

@@ -91,11 +91,6 @@ class RepApi(private val api: ApiClient) {
     // عميلُه؟» — **وإخفاءُ زرٍّ في شاشةٍ ليس حجبا.**
 
     /** **قائمةُ عميله** — أقسامٌ وأصنافٌ كما يقرؤها الأدمن. */
-    /** **سعرُ صرف متجره** — يكتبه المندوبُ وهو يجهّزه (٢٠٢٦-١٠-١٢). */
-    suspend fun setExchangeRate(merchantID: String, rate: Double, confirm: Boolean = false): com.rahalgo.shared.merchant.ExchangeRateResult =
-        api.call("/api/v1/rep/stores/$merchantID/exchange-rate", HttpMethod.Patch,
-            com.rahalgo.shared.merchant.ExchangeRateInput(rate, confirm))
-
     suspend fun menu(merchantID: String): List<MenuSection> =
         api.call("/api/v1/rep/stores/$merchantID/menu")
 

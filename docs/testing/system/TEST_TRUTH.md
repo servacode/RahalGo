@@ -12,7 +12,7 @@
 
 | ما هو | العدد |
 |---|---|
-| أبوابٌ في الموجّه | **506** |
+| أبوابٌ في الموجّه | **505** |
 | انتقالاتُ الطلب | **55** |
 | أنواعُ قيدِ المحفظة | **16** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_cash_accrued` · `merchant_cash_paid` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **83** — منها **32** موجَّهٌ بـ`Apps` |

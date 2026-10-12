@@ -143,6 +143,8 @@ fun ItemEditor(
      * الدولاريّ. **وفراغُه: لم يكتبه المتجرُ بعد** فيُقال له أين يكتبه.
      */
     exchangeRate: Double? = null,
+    /** **ما يُقال إن غاب سعرُ الصرف** — المتجرُ يكتبه بنفسه، والمندوبُ ينتظر صاحبَه. */
+    @StringRes rateMissing: Int = R.string.item_usd_need_rate,
 ) {
     val pick = rememberImagePicker { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -223,7 +225,7 @@ fun ItemEditor(
             val usd = parseUsd(d.priceUsd)
             Text(
                 when {
-                    exchangeRate == null || exchangeRate <= 0 -> stringResource(R.string.item_usd_need_rate)
+                    exchangeRate == null || exchangeRate <= 0 -> stringResource(rateMissing)
                     usd == null -> stringResource(R.string.item_usd_rate_is, usdText(exchangeRate))
                     else -> stringResource(R.string.item_usd_equals, usdToSyp(usd, exchangeRate), usdText(exchangeRate))
                 },

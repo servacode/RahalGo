@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 506,
+    "routes": 505,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -23459,7 +23459,7 @@
       "orphan": true
     },
     {
-      "name": "TestUSD03_RepSetsRateForOwnStoreOnly",
+      "name": "TestUSD03_RepReadsRateNeverWrites",
       "file": "internal/qa/usd_pricing_test.go",
       "package": "qa",
       "orphan": true

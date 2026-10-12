@@ -37,9 +37,19 @@ import com.rahalgo.ui.RahalTextButton
  * لا تتأثّر. (وصفحةُ «متجري» عند المتجر تحمل مثلَها.)
  */
 @Composable
-fun ExchangeRateCard(rate: Double?, busy: Boolean, onSave: (String) -> Unit) {
+fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onSave: (String) -> Unit = {}) {
     var text by rememberSaveable(rate) { mutableStateOf(usdText(rate)) }
     Card {
+        // **وعند المندوب للقراءة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-١٢) — يكتبه صاحبُ المتجر.
+        if (!editable) {
+            Text(
+                stringResource(R.string.rate_title) + ": " +
+                    (rate?.let { stringResource(R.string.rate_value, usdText(it)) } ?: stringResource(R.string.rate_none)),
+                fontWeight = FontWeight.Bold,
+            )
+            Text(stringResource(R.string.rate_owner_sets), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+            return@Card
+        }
         Text(
             stringResource(R.string.rate_title) + ": " +
                 (rate?.let { stringResource(R.string.rate_value, usdText(it)) } ?: stringResource(R.string.rate_none)),

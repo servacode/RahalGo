@@ -102,6 +102,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         ItemEditor(
             d = vm.editing!!,
             exchangeRate = vm.exchangeRate,
+            rateMissing = com.rahalgo.ui.R.string.item_usd_need_rate_rep,
             // ══════════════════════════════════════════════════════════
             // **وأقسامُ متجرِه أوّلاً — لا كلُّ أقسام المنصّة بترتيبها**
             // ══════════════════════════════════════════════════════════
@@ -203,14 +204,9 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             ) { Text(stringResource(R.string.mn_make_offer)) }
         }
 
-        // **وسعرُ صرف المتجر** — المندوبُ يجهّزه قبل صاحبه (٢٠٢٦-١٠-١٢).
+        // **وسعرُ صرف المتجر للقراءة** — يكتبه صاحبُه (قرارُ المالك ٢٠٢٦-١٠-١٢).
         Spacer(Modifier.height(12.dp))
-        com.rahalgo.ui.menu.ExchangeRateCard(rate = vm.exchangeRate, busy = vm.busy) { vm.setExchangeRate(it) }
-        vm.rateJump?.let { j ->
-            com.rahalgo.ui.menu.RateJumpDialog(j.oldRate, j.newRate, j.samples,
-                onConfirm = { vm.setExchangeRate(j.newRate, confirm = true) },
-                onDismiss = { vm.dismissRateJump() })
-        }
+        com.rahalgo.ui.menu.ExchangeRateCard(rate = vm.exchangeRate, busy = vm.busy, editable = false)
 
         Spacer(Modifier.height(12.dp))
 
