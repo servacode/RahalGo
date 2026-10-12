@@ -385,4 +385,10 @@
     <string name="store_rate_jump_samples">أسعارك رح تصير (الجديد ← القديم):</string>
     <string name="store_rate_jump_yes">إي، احفظه</string>
     <string name="store_rate_jump_no">رجوع</string>
+    <string name="store_display_title">الزبون بيشوف أسعارك:</string>
+    <string name="store_display_syp">بالليرة</string>
+    <string name="store_display_usd">بالدولار</string>
+    <string name="store_display_hint">إذا اخترت دولار: الزبون بيشوف كل صنف بالدولار وتحته بالليرة، وبيدفع بالليرة.</string>
+    <string name="store_display_need_rate">لتعرض أسعارك بالدولار، اكتب سعر الصرف واحفظه أول.</string>
+    <string name="ok_display_saved">تم — تغيّرت عملة العرض للزبائن</string>
 </resources>

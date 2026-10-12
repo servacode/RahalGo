@@ -8248,6 +8248,10 @@
         {
           "name": "accepts_returns",
           "type": "?bool"
+        },
+        {
+          "name": "display_currency",
+          "type": "?string"
         }
       ],
       "response": [

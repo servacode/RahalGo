@@ -18,6 +18,7 @@ package server
 // كاملاً.** فلا يخرج من هنا إلّا ما يلزم للطلب: معرّفُ الصنف وسعرُه.
 
 import (
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -60,6 +61,14 @@ type publicItem struct {
 	// (قرارُ المالك ٢٠٢٦-٠٩-٣٠). **وأحدُهما `null` دائماً**، فالشاشةُ
 	// تعرف أيَّ شارةٍ ترسم من أيّهما حضر.
 	DiscountAmount *int64 `json:"discount_amount"`
+
+	// PriceUSD و`PriceBeforeUSD` **السعرُ بالدولار للعرض** (قرارُ المالك ٢٠٢٦-١٠-١٢،
+	// الخيار ١) — لمتجرٍ اختار أن يرى زبونُه أسعارَه بالدولار. **الليرةُ تبقى ما
+	// يُدفع** (`Price`)، والدولارُ = الليرة ÷ سعر صرف المتجر لأقرب سنت.
+	PriceUSD       *float64 `json:"price_usd,omitempty"`
+	PriceBeforeUSD *float64 `json:"price_before_usd,omitempty"`
+	// ExchangeRate سعرُ صرف المتجر — لعرض فروق الإضافات بالدولار. وغيابُه: ليرة.
+	ExchangeRate *float64 `json:"exchange_rate,omitempty"`
 
 	// HasOptions هل للصنف خياراتٌ تُختار قبل الطلب — **حجمٌ أو إضافات.**
 	//
@@ -104,7 +113,10 @@ const itemFrom = `
 	       o.discount_percent, o.discount_amount,
 	       -- **وجودُ خياراتٍ يُقرأ بوجودٍ لا بعدّ** — تقف عند أوّل صفٍّ
 	       -- وتترك الباقي، **وعدٌّ كاملٌ لكلّ بطاقةٍ يقرأ ما لا يُعرض.**
-	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = i.id)
+	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = i.id),
+	       -- **وسعرُ صرفٍ للعرض بالدولار** — لمن اختاره وكتب سعرَه، وإلّا فراغ.
+	       CASE WHEN m.display_currency = 'USD' AND m.exchange_rate > 0
+	            THEN m.exchange_rate::float8 END
 	FROM menu_items i
 	JOIN merchants m ON m.id = i.merchant_id
 	JOIN platform_sections ps ON ps.id = i.platform_section_id
@@ -172,6 +184,25 @@ func markDown(it *publicItem, pct *int, amt *int64) {
 	it.DiscountAmount = amt
 }
 
+// inDollars **يُلبس الصنفَ سعرَه بالدولار للعرض** — بعد الخصم لا قبله، **فالدولارُ
+// المعروضُ قسمةُ ما يُدفع لا ما كُتب.** (الخيار ١، ٢٠٢٦-١٠-١٢.)
+func inDollars(it *publicItem) {
+	if it.ExchangeRate == nil || *it.ExchangeRate <= 0 {
+		it.ExchangeRate = nil
+		return
+	}
+	it.PriceUSD = sypToUSD(it.Price, *it.ExchangeRate)
+	if it.PriceBefore != nil {
+		it.PriceBeforeUSD = sypToUSD(*it.PriceBefore, *it.ExchangeRate)
+	}
+}
+
+// sypToUSD الليرةُ بسعر الصرف ⇒ دولارٌ لأقرب سنت.
+func sypToUSD(syp int64, rate float64) *float64 {
+	v := math.Round(float64(syp)/rate*100) / 100
+	return &v
+}
+
 func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, args ...any) {
 	rule := pricing.RuleFrom(r.Context(), s.settings)
 	rows, err := s.pg.Query(r.Context(), sql, args...)
@@ -192,12 +223,13 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var amt *int64
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
 		markDown(&it, pct, amt)
+		inDollars(&it)
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.SourceClosed = !open
@@ -383,12 +415,13 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
 	markDown(&it, pct, amt)
+	inDollars(&it)
 	it.ImageURL = media.URLForPtr(it.ImageURL)
 	it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 	it.SourceClosed = !open

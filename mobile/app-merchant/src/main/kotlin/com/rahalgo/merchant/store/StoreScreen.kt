@@ -452,6 +452,31 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         enabled = !vm.saving && rateText.isNotBlank(),
                     ) { Text(stringResource(R.string.store_rate_save)) }
                 }
+                // **وبأيّ عملةٍ يرى زبونُه أسعارَه** (الخيار ١، ٢٠٢٦-١٠-١٢).
+                Spacer(Modifier.height(10.dp))
+                Text(stringResource(R.string.store_display_title), fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(
+                        selected = store.displayCurrency != "USD",
+                        onClick = { vm.setDisplayCurrency("SYP") },
+                        enabled = !vm.saving,
+                        label = { Text(stringResource(R.string.store_display_syp)) },
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = store.displayCurrency == "USD",
+                        onClick = { vm.setDisplayCurrency("USD") },
+                        enabled = !vm.saving && (store.exchangeRate ?: 0.0) > 0.0,
+                        label = { Text(stringResource(R.string.store_display_usd)) },
+                    )
+                }
+                Text(
+                    stringResource(
+                        if ((store.exchangeRate ?: 0.0) > 0.0) R.string.store_display_hint
+                        else R.string.store_display_need_rate,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             vm.rateJump?.let { j ->
                 androidx.compose.material3.AlertDialog(

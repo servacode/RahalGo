@@ -779,7 +779,8 @@ private fun ItemCard(
                     .padding(horizontal = 7.dp, vertical = 3.dp),
             ) {
                 Text(
-                    text = money(item.price),
+                    // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢) — والليرةُ تحت الاسم.
+                    text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -899,9 +900,18 @@ private fun ItemCard(
         // في كلّها.
         item.priceBefore?.let {
             Text(
-                text = money(it),
+                text = item.priceBeforeUsd?.let { u -> com.rahalgo.ui.dollars(u) } ?: money(it),
                 color = Rahal.colors.inkMuted,
                 textDecoration = TextDecoration.LineThrough,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+            )
+        }
+        // **والليرةُ تحت الدولار** — هي ما يُدفع (الخيار ١، ٢٠٢٦-١٠-١٢).
+        if (item.priceUsd != null) {
+            Text(
+                text = "≈ " + money(item.price),
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
             )

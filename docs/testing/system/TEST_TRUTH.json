@@ -34,7 +34,7 @@
     "behaviour_settings": 177,
     "order_fields": 95,
     "test_files": 550,
-    "test_funcs": 2249
+    "test_funcs": 2250
   },
   "flows": [
     {
@@ -23415,6 +23415,12 @@
     },
     {
       "name": "TestUSD01_DollarItemFollowsRatePoundItemStays",
+      "file": "internal/qa/usd_pricing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestUSD02_CustomerSeesDollarsPaysPounds",
       "file": "internal/qa/usd_pricing_test.go",
       "package": "qa",
       "orphan": true

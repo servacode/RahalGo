@@ -103,3 +103,34 @@ func TestUSD01_DollarItemFollowsRatePoundItemStays(t *testing.T) {
 func containsBytes(b []byte, s string) bool {
 	return len(b) > 0 && strings.Contains(string(b), s)
 }
+
+// TestUSD02_CustomerSeesDollarsPaysPounds — **الخيار ١** (٢٠٢٦-١٠-١٢): متجرٌ اختار
+// العرضَ بالدولار يرى زبونُه `price_usd` بجانب الليرة، **ويبقى `price` بالليرة
+// هو ما يُدفع**؛ ومتجرٌ بالليرة بلا دولار.
+func TestUSD02_CustomerSeesDollarsPaysPounds(t *testing.T) {
+	h := New(t)
+	m := newMDFx(t, h, "USD02")
+	if r := h.PATCH(m.url("/exchange-rate"), m.fx.Tok, map[string]any{"rate": 100}); r.Code != http.StatusOK {
+		t.Fatalf("سعرُ الصرف: %d %s", r.Code, r.Err())
+	}
+	item := usdItem(t, h, m, map[string]any{"name": "سماعة", "price": 500})
+	cust := h.NewUser("customer")
+
+	r := h.GET("/api/v1/public/items/"+item, cust.Token)
+	if r.Code != http.StatusOK || strings.Contains(string(r.Body), `"price_usd"`) {
+		t.Fatalf("**متجرٌ بالليرة ظهر بالدولار**: %s", r)
+	}
+	if s := h.PATCH(m.url("/settings"), m.fx.Tok, map[string]any{"display_currency": "USD"}); s.Code != http.StatusOK {
+		t.Fatalf("عملةُ العرض: %d %s", s.Code, s.Err())
+	}
+	r = h.GET("/api/v1/public/items/"+item, cust.Token)
+	it, _ := r.JSON()["item"].(map[string]any)
+	price, _ := it["price"].(float64)
+	usd, _ := it["price_usd"].(float64)
+	if price <= 0 || usd <= 0 {
+		t.Fatalf("**بلا سعرٍ بالدولار أو بالليرة**: %s", r)
+	}
+	if want := float64(int64(price/100*100+0.5)) / 100; usd != want {
+		t.Fatalf("**الدولارُ ليس الليرةَ ÷ سعرِ الصرف**: price=%v usd=%v want=%v", price, usd, want)
+	}
+}

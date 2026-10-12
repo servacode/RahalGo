@@ -16,6 +16,17 @@ package com.rahalgo.ui
  */
 fun money(amount: Long): String = "${grouped(amount)} ل.س"
 
+/**
+ * **دولارٌ للعرض** — «$1.6» لا «$1.60»، و«$3» لا «$3.0» (٢٠٢٦-١٠-١٢، الخيار ١).
+ * **والدفعُ بالليرة دائماً** — هذا عرضٌ لمتجرٍ اختار أن يُرى بالدولار.
+ */
+fun dollars(v: Double): String {
+    val cents = Math.round(v * 100)
+    val text = if (cents % 100 == 0L) (cents / 100).toString()
+    else java.math.BigDecimal(cents).movePointLeft(2).stripTrailingZeros().toPlainString()
+    return "$$text"
+}
+
 /** رقم بفواصل آلاف: `12,500` — **وسالبه يبقى سالبا.** */
 fun grouped(amount: Long): String {
     val negative = amount < 0

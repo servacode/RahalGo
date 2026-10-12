@@ -254,6 +254,22 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         rateJump = null
     }
 
+    /** **بأيّ عملةٍ يرى زبونُه أسعارَه** (الخيار ١، ٢٠٢٦-١٠-١٢) — والدفعُ بالليرة. */
+    fun setDisplayCurrency(code: String) {
+        val id = store?.id ?: return
+        if (code == store?.displayCurrency) return
+        saving = true
+        viewModelScope.launch {
+            runCatching { api.settings(id, StoreSettingsInput(displayCurrency = code)) }
+                .onSuccess {
+                    store = store?.copy(displayCurrency = code)
+                    Flash.ok(AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_display_saved))
+                }
+                .onFailure { Flash.fail(err(it)) }
+            saving = false
+        }
+    }
+
     /** **قبولُ الاسترداد** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
     fun setAcceptsReturns(accepts: Boolean) {
         val id = store?.id ?: return

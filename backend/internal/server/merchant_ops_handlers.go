@@ -160,6 +160,9 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		// **وقبولُ الاسترداد بيده** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — كان من اللوحة
 		// وحدَها، **فلا يُعرف من اختار ممّن بقي على الافتراض.**
 		AcceptsReturns *bool `json:"accepts_returns"`
+		// DisplayCurrency **بأيّ عملةٍ يرى زبونُه أسعارَه** «SYP» أو «USD» (الخيار ١،
+		// ٢٠٢٦-١٠-١٢) — والدفعُ بالليرة في الحالين.
+		DisplayCurrency *string `json:"display_currency"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -178,6 +181,10 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if req.MinOrder != nil && *req.MinOrder < 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if req.DisplayCurrency != nil && *req.DisplayCurrency != "SYP" && *req.DisplayCurrency != "USD" {
 		s.respondErr(w, errValidation)
 		return
 	}
@@ -219,11 +226,12 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 				THEN ST_SetSRID(ST_MakePoint($6::float8, $5::float8), 4326)::geography
 				ELSE location END,
 			accepts_returns      = COALESCE($8, accepts_returns),
+			display_currency     = COALESCE($9, display_currency),
 			returns_confirmed_at = CASE WHEN $8::bool IS NULL THEN returns_confirmed_at ELSE now() END,
 			returns_confirmed_by = CASE WHEN $8::bool IS NULL THEN returns_confirmed_by ELSE 'merchant' END,
 			updated_at           = now()
 		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder,
-		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns); err != nil {
+		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns, req.DisplayCurrency); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -231,6 +239,9 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), "merchant.returns_update", "merchant", merchantID,
 			map[string]any{"accepts_returns": *req.AcceptsReturns})
 		s.touch("merchant", "ops", "merchant:"+merchantID)
+	}
+	if req.DisplayCurrency != nil {
+		s.touch("menu", "merchant:"+merchantID)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }

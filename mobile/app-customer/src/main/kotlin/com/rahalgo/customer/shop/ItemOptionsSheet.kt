@@ -150,7 +150,16 @@ fun ItemOptionsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = ready,
             ) {
-                Text(stringResource(R.string.options_add, money(unit)))
+                // **وبالدولار لمتجرٍ اختاره، والليرةُ بجانبه** — هي ما يُدفع (٢٠٢٦-١٠-١٢).
+                val rate = item.exchangeRate
+                Text(
+                    stringResource(
+                        R.string.options_add,
+                        if (rate != null && rate > 0) {
+                            com.rahalgo.ui.dollars(Math.round(unit / rate * 100) / 100.0) + " (≈ " + money(unit) + ")"
+                        } else money(unit),
+                    ),
+                )
             }
             Spacer(Modifier.height(24.dp))
         }

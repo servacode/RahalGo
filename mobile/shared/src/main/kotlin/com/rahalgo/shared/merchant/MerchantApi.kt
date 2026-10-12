@@ -398,6 +398,8 @@ data class Store(
     @SerialName("has_hours") val hasHours: Boolean = true,
     /** **سعرُ صرفه** (ليرةٌ للدولار) — وفراغُه: لم يكتبه بعد (٢٠٢٦-١٠-١٢). */
     @SerialName("exchange_rate") val exchangeRate: Double? = null,
+    /** **بأيّ عملةٍ يرى زبونُه أسعارَه** «SYP» أو «USD» — والدفعُ بالليرة دائماً. */
+    @SerialName("display_currency") val displayCurrency: String = "SYP",
 )
 
 @Serializable
@@ -691,6 +693,8 @@ data class StoreSettingsInput(
     val lng: Double? = null,
     /** **وقبولُ الاسترداد بيده** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
     @SerialName("accepts_returns") val acceptsReturns: Boolean? = null,
+    /** **عملةُ العرض للزبون** «SYP» أو «USD» (٢٠٢٦-١٠-١٢، الخيار ١). */
+    @SerialName("display_currency") val displayCurrency: String? = null,
 )
 
 @Serializable

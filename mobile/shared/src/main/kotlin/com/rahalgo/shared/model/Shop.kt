@@ -116,6 +116,14 @@ data class Item(
     @SerialName("price_before") val priceBefore: Long? = null,
     @SerialName("discount_percent") val discountPercent: Int? = null,
     /**
+     * **السعرُ بالدولار للعرض** (قرارُ المالك ٢٠٢٦-١٠-١٢، الخيار ١) — لمتجرٍ اختار
+     * أن يرى زبونُه أسعارَه بالدولار. **و`price` بالليرة يبقى ما يُدفع.**
+     */
+    @SerialName("price_usd") val priceUsd: Double? = null,
+    @SerialName("price_before_usd") val priceBeforeUsd: Double? = null,
+    /** سعرُ صرف المتجر — لعرض فروق الإضافات بالدولار. */
+    @SerialName("exchange_rate") val exchangeRate: Double? = null,
+    /**
      * **له خياراتٌ تُختار قبل الطلب** — حجمٌ أو إضافات.
      *
      * **والشاشةُ تحتاج أن تعرف قبل الضغطة**: صنفٌ بخياراتٍ يفتح نافذةَ
