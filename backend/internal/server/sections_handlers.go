@@ -190,7 +190,7 @@ func markDown(it *publicItem, pct *int, amt *int64) {
 // **صنفٌ كتبه المتجرُ بالدولار يُعرض بدولاره نفسِه** ما دام ما يُدفع هو سعرَه
 // (بلا هامشٍ ولا خصم) — كتب ١٫٧٥ فيرى الزبونُ ١٫٧٥، **لا ١٫٧٤ عائدةً من ليرةٍ
 // دُوّرت.** **وما عداه** — ليريٌّ، أو عليه هامشٌ أو خصم — **دولارُه الليرةُ ÷ سعرِ
-// الصرف لأقرب ٥ سنتات**: ١٫٥٢ تُقرأ ١٫٥٠. (ملاحظتا المالك ٢٠٢٦-١٠-١٢.)
+// الصرف بالسنت**: ١٧٥ ÷ ١١٥ = ١٫٥٢. (ملاحظتا المالك ٢٠٢٦-١٠-١٢.)
 func inDollars(it *publicItem, cost int64, usdCents *int64) {
 	if it.ExchangeRate == nil || *it.ExchangeRate <= 0 {
 		it.ExchangeRate = nil
@@ -212,9 +212,10 @@ func inDollars(it *publicItem, cost int64, usdCents *int64) {
 	}
 }
 
-// sypToUSD الليرةُ بسعر الصرف ⇒ دولارٌ **لأقرب ٥ سنتات** — للعرض وحدَه.
+// sypToUSD الليرةُ بسعر الصرف ⇒ دولارٌ **بالسنت كما هو** — للعرض وحدَه. (قرارُ المالك
+// ٢٠٢٦-١٠-١٢: «ما بدنا نقرّب… المتجر يركّز ع السنتات» — لا تدوير لأقرب ٥.)
 func sypToUSD(syp int64, rate float64) *float64 {
-	v := math.Round(float64(syp)/rate*20) / 20
+	v := math.Round(float64(syp)/rate*100) / 100
 	return &v
 }
 

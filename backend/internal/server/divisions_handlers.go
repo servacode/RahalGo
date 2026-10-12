@@ -452,3 +452,15 @@ func isFKViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && (pgErr.Code == "23503" || pgErr.Code == "22P02")
 }
+
+// districtPartsByLead **منطقةُ المرشَّح ومدينتُه منفصلتين** — لعنوانٍ مرتَّبٍ من الشارع
+// إلى المنطقة (٢٠٢٦-١٠-١٢).
+func (s *Server) districtPartsByLead(ctx context.Context, leadID string) (district, gov string) {
+	_ = s.pg.QueryRow(ctx, `
+		SELECT d.name, g.name
+		  FROM merchant_leads l
+		  JOIN districts d ON d.id = l.district_id
+		  JOIN governorates g ON g.id = d.governorate_id
+		 WHERE l.id = $1`, leadID).Scan(&district, &gov)
+	return
+}

@@ -340,35 +340,26 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // «المحفظة» يُقيَّد في رصيده.
             Spacer(Modifier.height(10.dp))
             Card(modifier = at(StoreSpot.Settlement)) {
-                KeyValue(
-                    label = stringResource(R.string.store_settlement_method),
-                    value = when {
-                        !store.settlementConfirmed -> stringResource(R.string.store_choose_needed)
-                        store.settlementMethod == "wallet" -> stringResource(R.string.store_settlement_wallet)
-                        else -> stringResource(R.string.store_settlement_cash)
-                    },
-                )
+                // **سؤالٌ وزرّان لا شرح** (طلبُ المالك ٢٠٢٦-١٠-١٢: «كيف تحب تستلم
+                // مستحقاتك؟ زر نقدي والمحفظة خلي واضحات انه لازم يختار»).
+                var askMethod by rememberSaveable { mutableStateOf<String?>(null) }
+                BigChoice(
+                    question = stringResource(R.string.q_settlement),
+                    options = listOf(
+                        stringResource(R.string.store_settlement_cash) to (store.settlementConfirmed && store.settlementMethod == "cash"),
+                        stringResource(R.string.store_settlement_wallet) to (store.settlementConfirmed && store.settlementMethod == "wallet"),
+                    ),
+                    enabled = !vm.saving,
+                ) { i ->
+                    val m = if (i == 0) "cash" else "wallet"
+                    if (!store.settlementConfirmed || store.settlementMethod != m) askMethod = m
+                }
                 if (store.settlementMethod == "cash" && store.unpaidCashDue > 0) {
+                    Spacer(Modifier.height(6.dp))
                     KeyValue(
                         label = stringResource(R.string.store_unpaid_cash),
                         value = money(store.unpaidCashDue),
                         valueColor = Rahal.colors.brand,
-                    )
-                }
-                var askMethod by rememberSaveable { mutableStateOf<String?>(null) }
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.FilterChip(
-                        selected = store.settlementConfirmed && store.settlementMethod == "cash",
-                        onClick = { if (!store.settlementConfirmed || store.settlementMethod != "cash") askMethod = "cash" },
-                        enabled = !vm.saving,
-                        label = { Text(stringResource(R.string.store_settlement_cash)) },
-                    )
-                    androidx.compose.material3.FilterChip(
-                        selected = store.settlementConfirmed && store.settlementMethod == "wallet",
-                        onClick = { if (!store.settlementConfirmed || store.settlementMethod != "wallet") askMethod = "wallet" },
-                        enabled = !vm.saving,
-                        label = { Text(stringResource(R.string.store_settlement_wallet)) },
                     )
                 }
                 askMethod?.let { m ->
@@ -391,30 +382,15 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // من اللوحة وحدَها، **ولا يُعرف من اختار ممّن بقي على الافتراض.**
             Spacer(Modifier.height(10.dp))
             Card(modifier = at(StoreSpot.Returns)) {
-                KeyValue(
-                    label = stringResource(R.string.store_returns),
-                    value = when {
-                        !store.returnsConfirmed -> stringResource(R.string.store_choose_needed)
-                        store.acceptsReturns -> stringResource(R.string.store_returns_yes)
-                        else -> stringResource(R.string.store_returns_no)
-                    },
-                )
-                Text(stringResource(R.string.store_returns_hint))
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.FilterChip(
-                        selected = store.returnsConfirmed && store.acceptsReturns,
-                        onClick = { vm.setAcceptsReturns(true) },
-                        enabled = !vm.saving,
-                        label = { Text(stringResource(R.string.store_returns_yes)) },
-                    )
-                    androidx.compose.material3.FilterChip(
-                        selected = store.returnsConfirmed && !store.acceptsReturns,
-                        onClick = { vm.setAcceptsReturns(false) },
-                        enabled = !vm.saving,
-                        label = { Text(stringResource(R.string.store_returns_no)) },
-                    )
-                }
+                // **«الاسترداد» بدل «ترجيع الغرض»** (طلبُ المالك ٢٠٢٦-١٠-١٢).
+                BigChoice(
+                    question = stringResource(R.string.q_returns),
+                    options = listOf(
+                        stringResource(R.string.yes) to (store.returnsConfirmed && store.acceptsReturns),
+                        stringResource(R.string.no) to (store.returnsConfirmed && !store.acceptsReturns),
+                    ),
+                    enabled = !vm.saving,
+                ) { i -> vm.setAcceptsReturns(i == 0) }
             }
 
             // ══════════════════════════════════════════════════════════
@@ -425,58 +401,45 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // ٥ ليرات، **والأصنافُ بالليرة لا تتأثّر.**
             Spacer(Modifier.height(10.dp))
             Card {
-                var rateText by androidx.compose.runtime.saveable.rememberSaveable(store.id, store.exchangeRate) {
+                // **ينحفظ لحاله** — بلا زرّ «احفظ» (طلبُ المالك ٢٠٢٦-١٠-١٢): بعد ثانيةٍ من
+                // آخر حرف، **وقفزةٌ فوق ١٠٪ تبقى تُسأل.**
+                var rateText by androidx.compose.runtime.saveable.rememberSaveable(store.id) {
                     androidx.compose.runtime.mutableStateOf(com.rahalgo.ui.menu.usdText(store.exchangeRate))
                 }
-                KeyValue(
-                    label = stringResource(R.string.store_rate),
-                    value = store.exchangeRate?.let { stringResource(R.string.store_rate_value, com.rahalgo.ui.menu.usdText(it)) }
-                        ?: stringResource(R.string.store_rate_none),
-                )
-                Text(stringResource(R.string.store_rate_hint))
+                androidx.compose.runtime.LaunchedEffect(rateText) {
+                    val v = com.rahalgo.ui.menu.parseUsd(rateText)
+                    if (v != null && v > 0.0 && v != store.exchangeRate) {
+                        kotlinx.coroutines.delay(1200)
+                        vm.setExchangeRate(rateText)
+                    }
+                }
+                Text(stringResource(R.string.store_rate), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.OutlinedTextField(
-                        value = rateText,
-                        onValueChange = { v -> rateText = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10) },
-                        label = { Text(stringResource(R.string.store_rate_field)) },
-                        singleLine = true,
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
-                        ),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    com.rahalgo.ui.RahalButton(
-                        onClick = { vm.setExchangeRate(rateText) },
-                        enabled = !vm.saving && rateText.isNotBlank(),
-                    ) { Text(stringResource(R.string.store_rate_save)) }
-                }
-                // **وبأيّ عملةٍ يرى زبونُه أسعارَه** (الخيار ١، ٢٠٢٦-١٠-١٢).
-                Spacer(Modifier.height(10.dp))
-                Text(stringResource(R.string.store_display_title), fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.FilterChip(
-                        selected = store.displayCurrency != "USD",
-                        onClick = { vm.setDisplayCurrency("SYP") },
-                        enabled = !vm.saving,
-                        label = { Text(stringResource(R.string.store_display_syp)) },
-                    )
-                    androidx.compose.material3.FilterChip(
-                        selected = store.displayCurrency == "USD",
-                        onClick = { vm.setDisplayCurrency("USD") },
-                        enabled = !vm.saving && (store.exchangeRate ?: 0.0) > 0.0,
-                        label = { Text(stringResource(R.string.store_display_usd)) },
-                    )
-                }
-                Text(
-                    stringResource(
-                        if ((store.exchangeRate ?: 0.0) > 0.0) R.string.store_display_hint
-                        else R.string.store_display_need_rate,
+                androidx.compose.material3.OutlinedTextField(
+                    value = rateText,
+                    onValueChange = { v -> rateText = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10) },
+                    label = { Text(stringResource(R.string.store_rate_field)) },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                     ),
-                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(12.dp))
+                BigChoice(
+                    question = stringResource(R.string.q_display),
+                    options = listOf(
+                        stringResource(R.string.store_display_syp) to (store.displayCurrency != "USD"),
+                        stringResource(R.string.store_display_usd) to (store.displayCurrency == "USD"),
+                    ),
+                    enabled = !vm.saving,
+                ) { i ->
+                    if (i == 1 && (store.exchangeRate ?: 0.0) <= 0.0) {
+                        com.rahalgo.ui.Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(R.string.store_display_need_rate))
+                    } else {
+                        vm.setDisplayCurrency(if (i == 0) "SYP" else "USD")
+                    }
+                }
             }
             vm.rateJump?.let { j ->
                 androidx.compose.material3.AlertDialog(
@@ -684,11 +647,12 @@ private fun SectionsEditor(vm: StoreViewModel) {
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
+    }
+    // **تنحفظ لحالها** — بلا زرّ «حفظ» (طلبُ المالك ٢٠٢٦-١٠-١٢).
+    androidx.compose.runtime.LaunchedEffect(picked) {
         if (dirty && vm.store?.status != "suspended") {
-            RahalButton(
-                onClick = { vm.saveSections(picked.toList()) },
-                enabled = !vm.saving,
-            ) { Text(stringResource(R.string.act_save)) }
+            kotlinx.coroutines.delay(600)
+            vm.saveSections(picked.toList())
         }
     }
     Spacer(Modifier.height(4.dp))
@@ -1130,4 +1094,31 @@ enum class StoreSpot(val label: Int) {
     Address(R.string.setup_missing_address),
     Settlement(R.string.setup_missing_settlement),
     Returns(R.string.setup_missing_returns),
+}
+
+/**
+ * **سؤالٌ وزرّان كبيران** (طلبُ المالك ٢٠٢٦-١٠-١٢) — المختارُ ممتلئٌ والآخرُ مؤطَّر،
+ * **وبلا اختيارٍ يُقال تحتهما «اختار وحدة»** فيُعرف أنّه إلزاميّ.
+ */
+@Composable
+private fun BigChoice(question: String, options: List<Pair<String, Boolean>>, enabled: Boolean, onPick: (Int) -> Unit) {
+    Text(question, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+    Spacer(Modifier.height(8.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        options.forEachIndexed { i, (label, on) ->
+            if (on) {
+                RahalButton(onClick = { onPick(i) }, enabled = enabled, modifier = Modifier.weight(1f)) {
+                    Text(label, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                RahalOutlineButton(onClick = { onPick(i) }, enabled = enabled, modifier = Modifier.weight(1f)) {
+                    Text(label)
+                }
+            }
+        }
+    }
+    if (options.none { it.second }) {
+        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.choose_one), color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+    }
 }

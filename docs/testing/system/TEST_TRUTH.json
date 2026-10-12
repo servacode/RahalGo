@@ -33,8 +33,8 @@
     "setting_defs": 222,
     "behaviour_settings": 178,
     "order_fields": 95,
-    "test_files": 551,
-    "test_funcs": 2254
+    "test_files": 552,
+    "test_funcs": 2255
   },
   "flows": [
     {
@@ -26136,6 +26136,12 @@
     {
       "name": "TestINC_TransferredStoreStaysWithOpener",
       "file": "internal/server/incentives_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadAddress_StreetCityDistrict",
+      "file": "internal/server/lead_address_test.go",
       "package": "server",
       "orphan": true
     },

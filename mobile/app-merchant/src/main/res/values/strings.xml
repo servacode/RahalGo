@@ -361,7 +361,7 @@
     <string name="md_blocked_title">لا يمكن إرسال توصيلة الآن</string>
     <string name="md_track_details">تفاصيل التوصيلة</string>
     <!-- قبولُ الاسترداد وتأكيدُ الاختيار (طلبُ المالك ٢٠٢٦-١٠-٠٨) -->
-    <string name="store_returns">ترجيع الغرض</string>
+    <string name="store_returns">الاسترداد</string>
     <string name="store_returns_yes">بقبل الترجيع</string>
     <string name="store_returns_no">ما بقبل</string>
     <string name="store_returns_hint">إذا الزبون ما استلم الطلب، بيرجّعلك السائق الغرض.</string>
@@ -391,4 +391,11 @@
     <string name="store_display_hint">إذا اخترت دولار: الزبون بيشوف كل صنف بالدولار وتحته بالليرة، وبيدفع بالليرة.</string>
     <string name="store_display_need_rate">لتعرض أسعارك بالدولار، اكتب سعر الصرف واحفظه أول.</string>
     <string name="ok_display_saved">تم — تغيّرت عملة العرض للزبائن</string>
+    <!-- صفحة متجري: سؤال وزرّين (٢٠٢٦-١٠-١٢) -->
+    <string name="q_settlement">كيف تحب تستلم مستحقاتك؟</string>
+    <string name="q_returns">تقبل تسترد بضاعتك؟</string>
+    <string name="q_display">كيف تحب نعرض أسعارك؟</string>
+    <string name="yes">نعم</string>
+    <string name="no">لا</string>
+    <string name="choose_one">اختار وحدة</string>
 </resources>

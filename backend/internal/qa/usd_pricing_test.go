@@ -153,8 +153,8 @@ func TestUSD03_RepReadsRateNeverWrites(t *testing.T) {
 }
 
 // TestUSD04_DollarShownAsWrittenPoundRoundedTo5c — ملاحظتا المالك (٢٠٢٦-١٠-١٢):
-// صنفٌ كُتب ١٫٧٥$ يراه الزبونُ ١٫٧٥$ لا ١٫٧٤$، **وصنفٌ ليريٌّ بـ١٧٥ يُعرض ١٫٥٠$**
-// (لأقرب ٥ سنتات)، **وإضافتُه الدولاريّةُ تُعرض بالدولار.**
+// صنفٌ كُتب ١٫٧٥$ يراه الزبونُ ١٫٧٥$ لا ١٫٧٤$، **وصنفٌ ليريٌّ بـ١٧٥ يُعرض ١٫٥٢$**
+// (بالسنت، بلا تدوير)، **وإضافتُه الدولاريّةُ تُعرض بالدولار.**
 func TestUSD04_DollarShownAsWrittenPoundRoundedTo5c(t *testing.T) {
 	h := New(t)
 	m := newMDFx(t, h, "USD04")
@@ -180,7 +180,7 @@ func TestUSD04_DollarShownAsWrittenPoundRoundedTo5c(t *testing.T) {
 	}
 	r = h.GET("/api/v1/public/items/"+wrap, cust.Token)
 	it, _ = r.JSON()["item"].(map[string]any)
-	if usd, _ := it["price_usd"].(float64); usd != 1.5 {
-		t.Fatalf("**الليريُّ لم يُدوَّر لأقرب ٥ سنتات**: %v", it["price_usd"])
+	if usd, _ := it["price_usd"].(float64); usd != 1.52 {
+		t.Fatalf("**الليريُّ لم يُعرض بسنته** (١٧٥ ÷ ١١٥ = ١٫٥٢): %v", it["price_usd"])
 	}
 }

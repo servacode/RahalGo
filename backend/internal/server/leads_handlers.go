@@ -765,14 +765,11 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (m
 	//
 	// **والترتيبُ من العامّ إلى الخاصّ**: «مركز الرقة، الرقة — مقابل
 	// الجامع». **وعكسُه يجعل أوّلَ ما يُقرأ أغمضَ ما فيه.**
-	addr := area
-	if label := s.districtLabelByLead(ctx, leadID); label != "" {
-		if addr == "" {
-			addr = label
-		} else {
-			addr = label + " — " + addr
-		}
-	}
+	// **والترتيبُ من الخاصّ إلى العامّ** (قرارُ المالك ٢٠٢٦-١٠-١٢: «شارع تل ابيض -
+	// الرقة - مركز المدينة») — الشارعُ أوّلاً ثمّ المدينةُ ثمّ المنطقة، **ولا تتكرّر
+	// المدينةُ إن كتبها المندوبُ في تفصيله.**
+	district, gov := s.districtPartsByLead(ctx, leadID)
+	addr := leadAddress(area, gov, district)
 	// ══════════════════════════════════════════════════════════════════
 	// **وكلمةُ الدخول تُولَّد قبل المعاملة وتُكتب فيها** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
 	// ══════════════════════════════════════════════════════════════════
@@ -977,4 +974,23 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (m
 		})
 	}
 	return welcome, nil
+}
+
+// leadAddress «الشارع - المدينة - المنطقة» — بلا فراغٍ ولا تكرار.
+func leadAddress(area, gov, district string) string {
+	street := strings.TrimSpace(area)
+	if gov != "" {
+		for _, sep := range []string{" — ", " - ", "، ", "،", "-"} {
+			street = strings.TrimSpace(strings.TrimPrefix(street, gov+sep))
+		}
+		street = strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(street, gov), "—"))
+	}
+	parts := []string{}
+	for _, p := range []string{street, gov, district} {
+		p = strings.TrimSpace(strings.Trim(p, "—-،"))
+		if p != "" {
+			parts = append(parts, p)
+		}
+	}
+	return strings.Join(parts, " - ")
 }
