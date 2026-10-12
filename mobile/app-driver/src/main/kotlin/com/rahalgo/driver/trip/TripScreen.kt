@@ -1357,13 +1357,12 @@ private fun TripCard(
                 if (order.customMode == "amanah") R.string.step_bought_amanah else R.string.step_bought_purchase
             else -> next.label
         }
-        // **وزرُّ «وصلت» لا يظهر قبل الوصول** — طلبُ المالك ٢٠٢٦-١٠-٠٢. ويُضغط
-        // وحدَه بعد ٣٠ ثانيةً عند الوجهة (`OrdersViewModel.watchArrival`).
-        // **ومن لا يُعرف موضعُه لا يُحبس عن الزرّ.**
-        // **والخاصُّ عند الزبون كالعاديّ** (٢٠٢٦-١٠-٠٣).
-        val arriveLater = next != null && (order.kind != "custom" || next.status == "at_dropoff") &&
-            next.status in setOf("at_pickup", "at_dropoff") &&
-            state.locationKnown && !state.nearDestination ||
+        // **و«وصلت المتجر» و«وصلت الزبون» ظاهران دائماً** (قرارُ المالك ٢٠٢٦-١٠-١٢:
+        // «صار عندنا كود تسليم والموقع بالرقة مو دقيق زيادة… خليهن ظاهرات والسائق
+        // يقدر يستخدمهم يدوي، وبنفس الوقت وقت يوصل ينقبلو بشكل تلقائي»). كان الزرُّ
+        // باهتاً حتّى يقرب (٢٠٢٦-١٠-٠٢) — **والضغطُ التلقائيُّ عند الوجهة باقٍ**
+        // (`OrdersViewModel.watchArrival`).
+        val arriveLater =
             // **ولا «استلمت الطلب» وقرارُ المتجر بيد الإدارة** (٢٠٢٦-١٠-٠٣).
             state.awaitingOffice && next?.status == "picked_up"
         val deliver: () -> Unit = {
