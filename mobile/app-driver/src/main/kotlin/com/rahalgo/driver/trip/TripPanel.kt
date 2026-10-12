@@ -175,7 +175,13 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     stringResource(R.string.trip_p_arrived)
                 } else if (custom && state.step < TripStep.PICKED_UP) {
                     stringResource(
-                        if (order.customMode == "amanah") R.string.trip_p_custom_amanah else R.string.trip_p_custom,
+                        when {
+                            // **وأجرةُ المنصّة لا «اتّفاقَ» فيها** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢).
+                            fixedCustomFee(order) != null && order.customMode == "amanah" -> R.string.trip_p_fixed_amanah
+                            fixedCustomFee(order) != null -> R.string.trip_p_fixed_purchase
+                            order.customMode == "amanah" -> R.string.trip_p_custom_amanah
+                            else -> R.string.trip_p_custom
+                        },
                     )
                 } else {
                     stringResource(phaseLabel(state.step), name)
@@ -288,6 +294,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     // في المحرّك: يبقى `assigned` قبل التوثيق وبعده.
                     agreed = order.customFee != null,
                     amanah = order.customMode == "amanah",
+                    fixedFee = fixedCustomFee(order) != null,
                 )
             }
         }
@@ -337,7 +344,14 @@ internal fun PanelChip(icon: Int, text: String) {
  * يبحث عن موضعه بين أربعةٍ متشابهة.
  */
 @Composable
-internal fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean = false, amanah: Boolean = false) {
+internal fun LegStrip(
+    status: String,
+    custom: Boolean = false,
+    agreed: Boolean = false,
+    amanah: Boolean = false,
+    /** **أجرةُ المنصّة** — لا اتّفاقَ فيُحذف طورُه (٢٠٢٦-١٠-١٢). */
+    fixedFee: Boolean = false,
+) {
     // ══════════════════════════════════════════════════════════════════
     // **ومراحلُ الخاصّ غيرُ مراحل العاديّ**
     // ══════════════════════════════════════════════════════════════════
@@ -360,10 +374,12 @@ internal fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean =
     } else {
         LEGS
     }
-    val icons = if (custom) CUSTOM_LEG_ICONS else LEG_ICONS
-    val at = if (custom) customLegOf(status, agreed) else legOf(status)
+    val skip = if (custom && fixedFee) 1 else 0
+    val legs2 = legs.drop(skip)
+    val icons = (if (custom) CUSTOM_LEG_ICONS else LEG_ICONS).drop(skip)
+    val at = ((if (custom) customLegOf(status, agreed) else legOf(status)) - skip).coerceAtLeast(0)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        for (i in legs.indices) {
+        for (i in legs2.indices) {
             if (i > 0) {
                 // **والخطُّ في مستوى الدوائر** — لا تحتها ولا فوقها.
                 Box(
@@ -376,7 +392,7 @@ internal fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean =
                         ),
                 )
             }
-            LegDot(legs[i], icons[i], i, at)
+            LegDot(legs2[i], icons[i], i, at)
         }
     }
 }

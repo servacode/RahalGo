@@ -51,8 +51,12 @@ object LiveFix {
     /** **قراءةٌ أقدمُ من هذا لا تُعتمد.** */
     private const val MAX_AGE_MS = 60_000L
 
-    /** **وأفضلُ قراءةٍ تُستبدَل بالأحدث بعد هذا** — من خرج إلى الشارع تغيّر موضعُه. */
-    private const val BEST_KEEP_MS = 15_000L
+    /**
+     * **وأفضلُ قراءةٍ لا تُستبدَل بأسوأ منها** (قِيس على جهاز المالك ٢٠٢٦-١٠-١٢: ±١٣ صارت ±٢٢٣
+     * بعد ثوانٍ فقفز الدبّوس). **إلّا إن شاخت** (٣٠ ث) **وكانت الجديدةُ قريبةً منها** — من
+     * خرج إلى الشارع تتحسّن قراءتُه، **لا تسوء عشرين ضعفاً.**
+     */
+    private const val BEST_KEEP_MS = 30_000L
 
     @SuppressLint("MissingPermission")
     fun start(context: Context) {
@@ -70,7 +74,10 @@ object LiveFix {
                     if (ageMs > MAX_AGE_MS) continue
                     val now = SystemClock.elapsedRealtime()
                     val best = accuracyM
-                    if (best == null || loc.accuracy <= best || now - bestAtMs > BEST_KEEP_MS) {
+                    val stale = now - bestAtMs > BEST_KEEP_MS
+                    if (best == null || loc.accuracy <= best ||
+                        (stale && loc.accuracy <= maxOf(best * 2f, 20f))
+                    ) {
                         accuracyM = loc.accuracy
                         point = LatLng(loc.latitude, loc.longitude)
                         bestAtMs = now

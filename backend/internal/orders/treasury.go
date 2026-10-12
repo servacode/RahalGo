@@ -157,7 +157,8 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	if err := q.QueryRow(ctx, `
 		SELECT
 			COALESCE(sum(amount) FILTER (WHERE kind IN
-				('merchant_earning','driver_earning','commission','merchant_cash_accrued')), 0),
+				('merchant_earning','driver_earning','commission','merchant_cash_accrued',
+				 'custom_goods_return')), 0),
 			COALESCE(sum(amount) FILTER (WHERE kind = 'refund'), 0),
 			COALESCE(sum(amount) FILTER (WHERE kind = 'platform_profit'), 0)
 		FROM wallet_transactions WHERE ref = $1`, orderID).

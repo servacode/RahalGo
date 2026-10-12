@@ -783,8 +783,7 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 		in.orderID, "طلبٌ خاصّ — دفعٌ من المحفظة", &in.actorID); err != nil {
 		return err
 	}
-	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, driverGets, "driver_earning",
-		in.orderID, "طلبٌ خاصّ — بضاعةٌ وأجرٌ", &in.actorID); err != nil {
+	if err := s.payCustomDriver(ctx, q, in, driverGets, goods); err != nil {
 		return err
 	}
 	// **ويُصفَّر الحجزُ على الطلب مع علامة الدفع** — فلا يبقى محجوزٌ بعد التسوية.
@@ -804,6 +803,40 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 	// **وبه تُغلق المعادلةُ على صفرٍ بنيويّاً** (نصُّ المالك: «−17,000 +
 	// 16,500 + 500 = 0») — **لا بفحصٍ يُجرى بعدها.**
 	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+}
+
+// payCustomDriver **محفظةُ السائق أجرتُه وحدَها، وثمنُ البضاعة للخزينة** (قرارُ المالك
+// ٢٠٢٦-١٠-١٣: «المصاري أصلاً المنصّة رح تعطيها للسائق يشتري المطلوب ويرجعهن… بمحفظته
+// بس عمولته أجرة التوصيل»). **كان ثمنُ البضاعة يُودَع محفظتَه** على أنّه دفعه من جيبه —
+// فتنتفخ محفظتُه و«كسبت» بمالٍ ليس أجراً.
+//
+// **والمجموعُ لا يتغيّر**: ما كان يُودَع له يُقسَم أجراً له ورجعةً للخزينة، **فيبقى
+// صافي دفتر الطلب = نقدَ السائق منه** (`FI-06.a`).
+func (s *Service) payCustomDriver(ctx context.Context, q wallet.Querier, in settlement, total, goods int64) error {
+	if goods > total {
+		goods = total
+	}
+	fee := total - goods
+	if fee > 0 {
+		if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, fee, "driver_earning",
+			in.orderID, "طلبٌ خاصّ — أجرةُ التوصيل", &in.actorID); err != nil {
+			return err
+		}
+	}
+	if goods > 0 {
+		tid := s.treasuryOn(ctx, q)
+		if tid == "" {
+			// **بلا خزينةٍ لا قيدَ للمنصّة أصلاً** — فيبقى ما كان: يُودَع السائق.
+			_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, goods, "driver_earning",
+				in.orderID, "طلبٌ خاصّ — ثمنُ البضاعة", &in.actorID)
+			return err
+		}
+		if _, err := s.wallet.ApplyTx(ctx, q, tid, goods, "custom_goods_return",
+			in.orderID, "رجعةُ ثمن البضاعة من السائق", &in.actorID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // settleCustomCash **الطلبُ الخاصُّ نقداً** — قرارُ المالك ٢٠٢٦-٠٩-٢٩.
@@ -856,8 +889,7 @@ func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in set
 			"order", in.orderID, "driver", driverGets, "cash", in.cashDue)
 		driverGets = in.cashDue
 	}
-	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, driverGets, "driver_earning",
-		in.orderID, "طلبٌ خاصّ نقداً — بضاعةٌ وأجرٌ", &in.actorID); err != nil {
+	if err := s.payCustomDriver(ctx, q, in, driverGets, goods); err != nil {
 		return err
 	}
 	if _, err := q.Exec(ctx,

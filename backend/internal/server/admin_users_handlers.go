@@ -1007,6 +1007,11 @@ func contactName(u identity.User, defaultRoles bool) string {
 			return "متجر — " + stores
 		}
 		return "متجر — " + who
+	// **ومن له دورُ عملٍ يُسمّى به** (٢٠٢٦-١٠-١٢) — مندوبٌ له حسابُ زبونٍ كان يُكتب «زبون».
+	case has("sales") && (has("customer") || !defaultRoles):
+		return "مندوب — " + who
+	case has("driver") && (has("customer") || !defaultRoles):
+		return "سائق — " + who
 	case has("customer"):
 		return "زبون — " + who
 	case defaultRoles:

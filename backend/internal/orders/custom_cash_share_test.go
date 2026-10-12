@@ -63,8 +63,8 @@ func TestCustomCash_CollectedAndShared(t *testing.T) {
 		t.Fatalf("صندوقُ السائق=%d — المنتظَر %d (كلُّ المقبوض)", got, goods+fee)
 	}
 	// **ومحفظتُه تأخذ ما يستحقّ** — بضاعتُه وأجرُه بعد النصيب.
-	if b, _ := w.Balance(ctx, driver); b != goods+driverFee {
-		t.Fatalf("محفظةُ السائق=%d — المنتظَر %d", b, goods+driverFee)
+	if b, _ := w.Balance(ctx, driver); b != driverFee {
+		t.Fatalf("محفظةُ السائق=%d — المنتظَر %d (أجرُه وحدَه — ٢٠٢٦-١٠-١٣)", b, driverFee)
 	}
 	// **ولا يُخصم الزبونُ** — دفع نقداً بيده.
 	if b, _ := w.Balance(ctx, customer); b != 0 {
@@ -106,8 +106,8 @@ func TestCustomCash_GoodsNeverTaxed(t *testing.T) {
 		t.Fatalf("الخزينة=%d — المنتظَر %d. **ولو أُخذت من المجموع لكانت %d**",
 			got, platform, (goods+fee)*10/100)
 	}
-	if b, _ := w.Balance(ctx, driver); b != goods+driverFee {
-		t.Fatalf("محفظةُ السائق=%d — المنتظَر %d", b, goods+driverFee)
+	if b, _ := w.Balance(ctx, driver); b != driverFee {
+		t.Fatalf("محفظةُ السائق=%d — المنتظَر %d (أجرُه وحدَه — ٢٠٢٦-١٠-١٣)", b, driverFee)
 	}
 }
 

@@ -109,6 +109,17 @@ var Kinds = map[string]KindContract{
 		Invariants: []string{"FI-01.d", "FI-05.f", "FI-06.c"},
 		Reachable:  true,
 	},
+	// **رجعةُ ثمن بضاعة المشتريات للخزينة** (قرارُ المالك ٢٠٢٦-١٠-١٣) — المكتبُ يعطي
+	// السائقَ ثمنَ البضاعة، فيعود إليه مع المقبوض. **ليس ربحاً**: يُطرح في
+	// `creditTreasury` مع أنصبة الأطراف.
+	"custom_goods_return": {
+		Kind: "custom_goods_return", Sign: "+", RefRequired: true, RefTarget: "orders",
+		Creators:   []string{"internal/orders/custom.go"},
+		Path:       "تسويةُ تسليم الطلب الخاصّ (مشتريات)",
+		Semantics:  "ثمنُ بضاعةٍ دفعه المكتبُ للسائق يعود إلى الخزينة — **لا ربحٌ ولا أجر.**",
+		Invariants: []string{"FI-01.d", "FI-06.a"},
+		Reachable:  true,
+	},
 	"payout": {
 		Kind: "payout", Sign: "-", RefRequired: false, RefTarget: "payout_requests",
 		Creators:   []string{"internal/server/payout_handlers.go:290"},

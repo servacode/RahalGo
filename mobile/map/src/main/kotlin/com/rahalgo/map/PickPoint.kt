@@ -350,7 +350,8 @@ fun PickPoint(
                     text = if (acc == null) {
                         stringResource(R.string.pick_acc_waiting)
                     } else {
-                        stringResource(R.string.pick_acc_value, kotlin.math.ceil(acc).toInt()) +
+                        // **والأرقامُ إنكليزيّةٌ دائماً** (قرارُ المالك) — لا بلغة الجهاز.
+                        stringResource(R.string.pick_acc_value, kotlin.math.ceil(acc).toInt().toString()) +
                             if (!good) " — " + stringResource(R.string.pick_acc_improving) else ""
                     },
                     color = tint,

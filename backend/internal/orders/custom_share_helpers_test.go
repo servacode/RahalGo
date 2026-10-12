@@ -53,7 +53,10 @@ func cqTreasury(t *testing.T) int64 {
 	pool := testdb.Pool(t)
 	var v int64
 	if err := pool.QueryRow(context.Background(),
-		`SELECT COALESCE(sum(balance), 0) FROM wallets WHERE is_treasury`).Scan(&v); err != nil {
+		// **ورجعةُ ثمن البضاعة ليست نصيباً** (قرارُ المالك ٢٠٢٦-١٠-١٣) — مالُ المكتب عاد إليه.
+		`SELECT COALESCE(sum(t.amount), 0) FROM wallet_transactions t
+		   JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
+		  WHERE t.kind <> 'custom_goods_return'`).Scan(&v); err != nil {
 		t.Fatalf("تعذّرت قراءةُ الخزينة: %v", err)
 	}
 	return v
@@ -76,6 +79,18 @@ func cqLedgerSum(t *testing.T, orderID string) int64 {
 		`SELECT COALESCE(sum(amount), 0) FROM wallet_transactions WHERE ref = $1`,
 		orderID).Scan(&v); err != nil {
 		t.Fatalf("تعذّر جمعُ قيود الطلب: %v", err)
+	}
+	return v
+}
+
+// cqGoodsReturned **ثمنُ البضاعة الذي عاد للخزينة** عن الطلب (٢٠٢٦-١٠-١٣).
+func cqGoodsReturned(t *testing.T, orderID string) int64 {
+	t.Helper()
+	var v int64
+	if err := testdb.Pool(t).QueryRow(context.Background(),
+		`SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		  WHERE ref = $1 AND kind = 'custom_goods_return'`, orderID).Scan(&v); err != nil {
+		t.Fatalf("تعذّرت قراءةُ رجعة البضاعة: %v", err)
 	}
 	return v
 }

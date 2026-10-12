@@ -323,6 +323,7 @@ var ledgerKinds = map[string]string{
 	"operating_expense":     "مصروف تشغيل",
 	"merchant_earning":      "مستحق مبيعات",
 	"driver_earning":        "أجر توصيل",
+	"custom_goods_return":   "رجعة ثمن بضاعة",
 	"reward":                "مكافأة",
 	"penalty":               "عقوبة",
 	"merchant_cash_accrued": "مستحق نقدي للمتجر",

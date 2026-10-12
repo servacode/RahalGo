@@ -60,11 +60,13 @@ func TestCustomShare_OwnerExampleClosesToZero(t *testing.T) {
 		}
 	}
 
-	// **والسائقُ يأخذ البضاعةَ كاملةً وأجرَه بعد النصيب.**
-	wantDriver := int64(goods + driverFee) // 16,500
-	if b, _ := w.Balance(ctx, driver); b != wantDriver {
-		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (بضاعةٌ %d + أجرٌ %d)",
-			b, wantDriver, goods, driverFee)
+	// **والسائقُ يأخذ أجرَه وحدَه، وثمنُ البضاعة يعود للخزينة** (قرارُ المالك ٢٠٢٦-١٠-١٣:
+	// «المنصّة رح تعطيه مصاري يشتري المطلوب ويرجعهن»).
+	if b, _ := w.Balance(ctx, driver); b != driverFee {
+		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (أجرُه وحدَه)", b, driverFee)
+	}
+	if g := cqGoodsReturned(t, orderID); g != goods {
+		t.Fatalf("رجعةُ البضاعة=%d — المنتظَر %d", g, goods)
 	}
 	// **والزبونُ يدفع المجموعَ لا أقلَّ ولا أكثر.**
 	if b, _ := w.Balance(ctx, customer); b != 100_000-(goods+fee) {
@@ -118,8 +120,8 @@ func TestCustomShare_GoodsNeverTaxed(t *testing.T) {
 		t.Fatalf("الخزينة=%d — المنتظَر %d. **ولو أُخذت من المجموع لكانت %d**",
 			got, platform, (goods+fee)*10/100)
 	}
-	if b, _ := w.Balance(ctx, driver); b != goods+driverFee {
-		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d", b, goods+driverFee)
+	if b, _ := w.Balance(ctx, driver); b != driverFee {
+		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (أجرُه وحدَه)", b, driverFee)
 	}
 }
 
@@ -167,8 +169,8 @@ func TestCustomShare_SnapshotSurvivesSettingChange(t *testing.T) {
 		t.Fatalf("الخزينة=%d — المنتظَر %d باللقطة القديمة. **النسبةُ الجديدةُ مسّت طلباً مضى**",
 			got, platform)
 	}
-	if b, _ := w.Balance(ctx, driver); b != goods+driverFee {
-		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d", b, goods+driverFee)
+	if b, _ := w.Balance(ctx, driver); b != driverFee {
+		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (أجرُه وحدَه)", b, driverFee)
 	}
 }
 

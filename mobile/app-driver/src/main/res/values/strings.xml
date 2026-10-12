@@ -561,4 +561,6 @@
     <string name="map_no_location_dropoff">لا يوجد موقع للمستلم على الخريطة — اعتمد على العنوان المكتوب</string>
     <string name="map_no_location_amanah">لا يوجد موقع للأمانة على الخريطة — اسأل الزبون بالمحادثة</string>
     <string name="map_no_location_purchase">لا يوجد موقع لمكان الشراء على الخريطة — اسأل الزبون بالمحادثة</string>
+    <string name="trip_p_fixed_amanah">استلم الأمانة ثم سلّمها للزبون</string>
+    <string name="trip_p_fixed_purchase">اشترِ المطلوب ووثّق ثمنه</string>
 </resources>

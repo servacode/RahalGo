@@ -32,9 +32,9 @@
     <string name="maplibre_mapActionDescription" tools:ignore="UnusedResources">خريطة — اسحبها لتحريكها، وباعد إصبعيك للتقريب</string>
     <!-- دقّة الموقع (٢٠٢٦-١٠-١٢) -->
     <string name="pick_acc_waiting">عم نحدّد موقعك…</string>
-    <string name="pick_acc_value">دقة الموقع: ± %1$d م</string>
+    <string name="pick_acc_value">دقة الموقع: ± %1$s م</string>
     <string name="pick_acc_improving">عم نحسّن…</string>
     <string name="pick_acc_outside">إذا كنت داخل البيت أو المحل، الأفضل تطلع لبرّا أو تقرّب من الشبّاك ليتحدد موقعك بدقة أكبر.</string>
-    <string name="pick_wait_accuracy">زر التأكيد بيطلع لمّا تصير الدقة ١٥ متر أو أقل — أو حرّك الدبوس بإيدك لمكانك</string>
+    <string name="pick_wait_accuracy">زر التأكيد بيطلع لمّا تصير الدقة 15 متر أو أقل — أو حرّك الدبوس بإيدك لمكانك</string>
     <string name="pick_choose_first">اضغط «موقعي» أو حرّك الدبوس بإيدك لمكانك الصحيح</string>
 </resources>
