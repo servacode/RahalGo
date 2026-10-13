@@ -329,7 +329,7 @@ func TestLeadNeedsInfo_ReturnsToRepWithNote(t *testing.T) {
 
 // ── ٤ · الهدفُ عند الإنشاء والعمولةُ عند أوّل تسليم ──────────────────
 
-func TestLeadConvert_TargetAtCreationCommissionAtDelivery(t *testing.T) {
+func TestLeadConvert_TargetWhenReadyCommissionAtDelivery(t *testing.T) {
 	f := newLeadFx(t)
 	ctx := context.Background()
 	f.srv.incentives = incentives.New(f.pool, f.srv.wallet, f.srv.settings, f.srv.orders.TreasuryID)
@@ -349,8 +349,31 @@ func TestLeadConvert_TargetAtCreationCommissionAtDelivery(t *testing.T) {
 		`SELECT count(*) FROM incentives WHERE user_id = $1 AND for_target`, f.rep).Scan(&targets)
 	_ = f.pool.QueryRow(ctx,
 		`SELECT count(*) FROM wallet_transactions WHERE user_id = $1 AND kind = 'commission'`, f.rep).Scan(&commissions)
+	// **ولا يُحسب لحظةَ إنشائه بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-١٣) — بل
+	// حين تكتمل شروطُه: ساعاتٌ وموقعٌ وأصنافٌ بصورها (هنا صفرُ أصناف).
+	if targets != 0 {
+		t.Errorf("**حُسب المتجرُ لحظةَ إنشائه** وشروطُه لم تكتمل: مكافآتُ الهدف = %d", targets)
+	}
+	f.setSetting(t, "sales.min_items", 0)
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM app_settings WHERE key = 'sales.min_items'`)
+	})
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO merchant_hours (merchant_id, day_of_week, closed, open_time, close_time)
+		SELECT id, 0, false, '09:00', '22:00' FROM merchants WHERE opened_by_rep_id = $1::uuid
+		ON CONFLICT DO NOTHING`, f.rep); err != nil {
+		t.Fatalf("الساعات: %v", err)
+	}
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE merchants SET location = ST_SetSRID(ST_MakePoint(39.0, 35.95), 4326)::geography
+		 WHERE opened_by_rep_id = $1::uuid AND location IS NULL`, f.rep); err != nil {
+		t.Fatalf("الموقع: %v", err)
+	}
+	f.srv.SweepRepQualify(ctx)
+	_ = f.pool.QueryRow(ctx,
+		`SELECT count(*) FROM incentives WHERE user_id = $1 AND for_target`, f.rep).Scan(&targets)
 	if targets != 1 {
-		t.Errorf("**المتجرُ لم يُحسب في الهدف لحظةَ إنشائه**: مكافآتُ الهدف = %d", targets)
+		t.Errorf("**اكتملت شروطُ المتجر ولم يُحسب**: مكافآتُ الهدف = %d", targets)
 	}
 	if commissions != 0 {
 		t.Errorf("**قُيّدت عمولةٌ قبل أيّ طلبٍ مُسلَّم**: %d", commissions)

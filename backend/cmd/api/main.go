@@ -354,6 +354,8 @@ func run(logger *slog.Logger) error {
 			// **ومكافآتُ هدفٍ تعثّرت تُعاد لشهرها** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
 			// قسمُ الأهداف) — كان خطؤها يُبلَع فلا يقبضها من وقف عند الهدف.
 			go srv.RunIncentiveRetries(ctx, 10*time.Minute)
+			// **ومتجرُ المندوب يُحسب حين تكتمل شروطُه** — rep_qualify.go (قرارُ المالك ٢٠٢٦-١٠-١٣).
+			go srv.RunRepQualify(ctx, 2*time.Minute)
 			// **وحارسُ القاعدة** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
 			srv.StartDBWatch(ctx)
 			// **و«وضع المنصة» على الواتساب** — wa_report.go (طلبُ المالك ٢٠٢٦-١٠-٠٩):

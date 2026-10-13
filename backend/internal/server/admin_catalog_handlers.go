@@ -137,8 +137,9 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **والإدارةُ تفتح متاجرَ برمز مندوبٍ أيضاً** — وهي تُحسب له.
-	s.grantSalesTargetIfAny(r.Context(), m.ID)
+	// **والإدارةُ تفتح متاجرَ برمز مندوبٍ أيضاً** — وهي تُحسب له **حين تكتمل
+	// شروطُها** (٢٠٢٦-١٠-١٣، `rep_qualify.go`).
+	s.qualifyRepMerchant(r.Context(), m.ID)
 	welcome := map[string]any{"sent": false, "existing_owner": existed}
 	if m.OwnerUserID != nil {
 		if existed {

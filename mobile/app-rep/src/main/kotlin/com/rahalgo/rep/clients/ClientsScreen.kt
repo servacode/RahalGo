@@ -242,6 +242,30 @@ private fun MerchantCard(
                 ),
                 if (m.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
             )
+            // **أمحسوبٌ في هدفه أم ينتظر** (قرارُ المالك ٢٠٢٦-١٠-١٣) — ولا شارةَ
+            // لمتجرٍ نُقل إليه: لا يُحسب له أصلاً.
+            when (m.goalState) {
+                "counted" -> Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
+                "pending" -> Chip(stringResource(R.string.cl_goal_pending), Rahal.colors.accent)
+            }
+        }
+        // **وما ينقصه بنداً بنداً** — فيعرف المندوبُ ما يُكمله وهو واقفٌ في المتجر.
+        if (m.goalState == "pending") {
+            val missing = buildList {
+                if (!m.hasHours) add(stringResource(R.string.cl_miss_hours))
+                if (!m.hasLocation) add(stringResource(R.string.cl_miss_location))
+                if (m.photoItems < m.minItems) {
+                    add(stringResource(R.string.cl_miss_items, (m.minItems - m.photoItems).toString()))
+                }
+            }
+            if (missing.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.cl_goal_missing, missing.joinToString(" · ")),
+                    color = Rahal.colors.accent,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))

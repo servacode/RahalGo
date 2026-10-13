@@ -67,7 +67,9 @@ var notifTitles = struct {
 	//
 	// **والمالُ يُقيَّد في محفظته آليّاً** ولا شيءَ يقول له — **فيراه
 	// رقماً زاد بلا سبب.** وهدفٌ لا يُبشَّر ببلوغه لا يحفّز.
-	targetReached                               string
+	targetReached string
+	// repMerchantCounted **اكتملت شروطُ متجرٍ فتحه فدخل هدفَه** (٢٠٢٦-١٠-١٣).
+	repMerchantCounted                          string
 	payoutRequested, payoutPaid, payoutRejected string
 	// **ولكلّ حالٍ من أحوال السحب عنوانُها** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤) —
 	// كان الفشلُ والارتدادُ وقيدُ الصرف تُعنوَن «صُرف طلب السحب».
@@ -136,6 +138,7 @@ var notifTitles = struct {
 	driverAssigned:        "أُسند إليك طلب جديد",
 	driverTransferred:     "تحوّل طلبك إلى متجر آخر",
 	targetReached:         "أنجزت هدف الشهر — نالتك مكافأته",
+	repMerchantCounted:    "اكتملت شروط متجرك وانحسب بهدفك",
 	storeClosed:           "إغلاق طارئ لمتجر",
 	storeReopened:         "عاد متجر للعمل",
 	cashSettled:           "سُلّم صندوقك النقدي",

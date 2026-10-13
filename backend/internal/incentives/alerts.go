@@ -62,16 +62,16 @@ func (s *Service) Alerts(ctx context.Context, role, testMarker string) ([]Alert,
 		current = `(SELECT count(*) FROM merchants mm
 		             WHERE mm.opened_by_rep_id = i.user_id
 		               AND mm.name !~* $2
-		               AND mm.created_at >= ` + monthFromSQL(month) + `
-		               AND mm.created_at <  ` + monthToSQL(month) + `)`
+		               AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
+		               AND mm.rep_qualified_at <  ` + monthToSQL(month) + `)`
 	}
 	extra := `0, ARRAY[]::text[]`
 	if role == "sales" {
 		extra = `0, ARRAY(SELECT mm.name FROM merchants mm
 		                   WHERE mm.opened_by_rep_id = i.user_id AND mm.name ~* $2
-		                     AND mm.created_at >= ` + monthFromSQL(month) + `
-		                     AND mm.created_at <  ` + monthToSQL(month) + `
-		                   ORDER BY mm.created_at LIMIT 20)`
+		                     AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
+		                     AND mm.rep_qualified_at <  ` + monthToSQL(month) + `
+		                   ORDER BY mm.rep_qualified_at LIMIT 20)`
 	} else {
 		extra = `(SELECT count(*) FROM orders o
 		           WHERE o.driver_id = i.user_id AND o.status = 'refunded'

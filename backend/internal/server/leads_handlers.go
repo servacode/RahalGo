@@ -923,11 +923,12 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (m
 		return nil, err
 	}
 
-	// **وهدفُ المندوب الشهريّ يُحسب لحظةَ إنشاء المتجر** (قرارُ المالك
-	// ٢٠٢٦-١٠-٠٤: «مو ذنب المندوب إذا ما صار طلب») — **والعمولةُ لا**:
-	// تُقيَّد عند تسليم أوّل طلبٍ ناجح (`settleRep`). ويحرسهما
-	// `TestLeadConvert_TargetAtCreationCommissionAtDelivery`.
-	paid, err := s.grantSalesTargetTx(ctx, tx, merchantNewID)
+	// **وهدفُ المندوب الشهريّ يُحسب حين تكتمل شروطُ المتجر** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٣: ساعاتٌ وموقعٌ وأصنافٌ بصورها — `rep_qualify.go`)، **لا
+	// بطلبٍ يُسلَّم** («مو ذنب المندوب إذا ما صار طلب»، ٢٠٢٦-١٠-٠٤). والعمولةُ
+	// تُقيَّد عند تسليم أوّل طلبٍ ناجح (`settleRep`). **ومتجرٌ وُلد مكتملاً
+	// يُحسب الآن**، وغيرُه يحسبه المسحُ الدوريّ حين يكتمل.
+	counted, paid, err := s.qualifyRepMerchantTx(ctx, tx, merchantNewID)
 	if err != nil {
 		return nil, err
 	}
@@ -945,6 +946,9 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (m
 	//
 	// **ولا تُرسَل من داخل المعاملة**: **إشعارٌ خرج ثمّ ارتدّت المعاملةُ
 	// كذبٌ لا يُسحَب** — يقرأ المندوبُ «قُبل متجرُك» ولا متجرَ.
+	if counted {
+		s.notifyRepMerchantCounted(ctx, merchantNewID)
+	}
 	s.notifySalesTargetPaid(ctx, merchantNewID, paid)
 	// **ورسالةُ الدخول لصاحب المتجر في النداء نفسِه** — جديدٌ: كلمتُه
 	// المؤقّتةُ التي كُتبت في المعاملة ورابطُ تطبيق المتجر · قائمٌ: «صار

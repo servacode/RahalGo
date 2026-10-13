@@ -260,15 +260,27 @@ func monthToSQL(p string) string {
 // `who` تعبيرُ المستخدم، و`month` تعبيرُ وسم الشهر.
 func doneSQL(role, who, month string) string {
 	if role == "sales" {
+		// **وبشهر اكتمال شروطه لا بشهر تسجيله** (قرارُ المالك ٢٠٢٦-١٠-١٣):
+		// ساعاتٌ وموقعٌ وأصنافٌ بصورها — `rep_qualified_at`.
 		return `(SELECT count(*) FROM merchants mm
 		          WHERE mm.opened_by_rep_id = ` + who + `
-		            AND mm.created_at >= ` + monthFromSQL(month) + `
-		            AND mm.created_at <  ` + monthToSQL(month) + `)`
+		            AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
+		            AND mm.rep_qualified_at <  ` + monthToSQL(month) + `)`
 	}
 	return `(SELECT count(*) FROM orders o
 	          WHERE o.driver_id = ` + who + ` AND o.status = 'delivered'
 	            AND o.delivered_at >= ` + monthFromSQL(month) + `
 	            AND o.delivered_at <  ` + monthToSQL(month) + `)`
+}
+
+// pendingSQL **متاجرُ فتحها المندوبُ ولم تكتمل شروطُها** — فاعلةٌ؛ وللسائق صفر.
+func pendingSQL(role, who string) string {
+	if role != "sales" {
+		return `0`
+	}
+	return `(SELECT count(*)::int FROM merchants mm
+	          WHERE mm.opened_by_rep_id = ` + who + `
+	            AND mm.rep_qualified_at IS NULL AND mm.status = 'active')`
 }
 
 // doneThisMonthOn العدُّ للشهر الجاري **بالمنفّذ المُمرَّر** — `XG-32`.

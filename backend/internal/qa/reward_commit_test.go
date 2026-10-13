@@ -59,6 +59,7 @@ func rewardFixture(t *testing.T, h *Harness) (f *Factory, repID, categoryID stri
 	t.Helper()
 	h.Setting("sales.monthly_target", "1")
 	h.Setting("sales.target_reward", "5000")
+	h.Setting("sales.min_items", "0")
 	// **ومصنعٌ واحدٌ لا مصنعٌ في كلّ سطر**: **كلُّ `h.Factory()` تُعيد
 	// ترقيمَ الهواتف من أوّله** — **فيتصادم هاتفُ المرشَّح بهاتف
 	// المندوب**، ويُردّ التحويلُ `role_conflict` (سائقٌ لا يصير متجراً).
@@ -135,6 +136,7 @@ func TestXG29_SuccessGrantsRewardExactlyOnce(t *testing.T) {
 			map[string]any{"status": "converted", "note": "XG-29"}); got.Code >= 400 {
 			t.Fatalf("التحويلُ %d: %d %s", i+1, got.Code, got.Err())
 		}
+		readyMerchantsOf(t, h, repID)
 		last = rewardFactsOf(t, h, leadID, phone, repID)
 		t.Logf("تحويلٌ %d: متاجرُ=%d · المرشَّحُ=%q · مكافآتُ=%d بمجموع %d · محفظةٌ=%d",
 			i+1, last.Merchants, last.LeadStatus, last.Rewards, last.RewardSum, last.Wallet)

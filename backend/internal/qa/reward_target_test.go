@@ -22,8 +22,11 @@ func convertLeadFor(t *testing.T, h *Harness, f *Factory, admin *User,
 	t.Helper()
 	phone = f.NS.Phone()
 	leadID := newLeadFor(t, h, repID, categoryID, phone)
-	return h.POST("/api/v1/admin/leads/"+leadID+"/status", admin.Token,
-		map[string]any{"status": "converted", "note": "XG-32"}).Code, phone
+	code = h.POST("/api/v1/admin/leads/"+leadID+"/status", admin.Token,
+		map[string]any{"status": "converted", "note": "XG-32"}).Code
+	// **ويُحسب حين يجهز** (٢٠٢٦-١٠-١٣) — والسؤالُ هنا عن الصرف لا عن الشروط.
+	readyMerchantsOf(t, h, repID)
+	return code, phone
 }
 
 // targetFacts قيودُ المكافأة ورصيدُ المحفظة.
@@ -56,6 +59,7 @@ func targetFixture(t *testing.T, h *Harness, target int) (f *Factory, repID, cat
 	t.Helper()
 	h.Setting("sales.monthly_target", itoaQA(target))
 	h.Setting("sales.target_reward", "5000")
+	h.Setting("sales.min_items", "0")
 	// **ومصنعٌ واحد** — **وكلُّ `h.Factory()` تُعيد ترقيمَ الهواتف**
 	// فيتصادم هاتفُ المرشَّح بهاتف المندوب.
 	f = h.Factory()
@@ -193,6 +197,7 @@ func TestXG32_FailureRollbackThenRetryGrantsOnce(t *testing.T) {
 	if retry := h.POST("/api/v1/admin/leads/"+leadID+"/status", admin.Token, body); retry.Code >= 400 {
 		t.Fatalf("الإعادةُ سقطت: %d", retry.Code)
 	}
+	readyMerchantsOf(t, h, repID)
 	after := targetFactsOf(t, h, repID)
 	t.Logf("بعد الإعادة: مكافآتُ=%d بمجموع %d · محفظةٌ=%d · دفترٌ=%d",
 		after.Rewards, after.Sum, after.Wallet, after.Ledger)
@@ -258,7 +263,8 @@ func TestXG32_PreviousMonthDoesNotSatisfyTarget(t *testing.T) {
 	if code, phone := convertLeadFor(t, h, f, admin, repID, categoryID); code >= 400 {
 		t.Fatalf("التحويلُ التمهيديّ: %d", code)
 	} else if _, err := h.Pool.Exec(ctxBG(), `
-		UPDATE merchants SET created_at = now() - interval '45 days'
+		UPDATE merchants SET created_at = now() - interval '45 days',
+		       rep_qualified_at = now() - interval '45 days'
 		 WHERE phone = $1`, phone); err != nil {
 		t.Fatalf("إشاخةُ المتجر: %v", err)
 	}
@@ -294,12 +300,19 @@ func TestXG32_ConcurrentTargetCrossingGrantsOnce(t *testing.T) {
 	leadB := newLeadFor(t, h, repID, categoryID, f.NS.Phone())
 	body := map[string]any{"status": "converted", "note": "XG-32"}
 
+	for _, l := range []string{leadA, leadB} {
+		if got := h.POST("/api/v1/admin/leads/"+l+"/status", admin.Token, body); got.Code >= 400 {
+			t.Fatalf("التحويل: %s", got)
+		}
+	}
+	// **والعبورُ صار باكتمال الشروط** (٢٠٢٦-١٠-١٣) — مسحان متزامنان يتسابقان عليه.
+	prepareMerchantsOf(t, h, repID)
 	r := Race(t, DefaultRaceTimeout,
-		Actor{Name: "تحويلٌ-أ", Do: func(ctx context.Context) any {
-			return h.POST("/api/v1/admin/leads/"+leadA+"/status", admin.Token, body)
+		Actor{Name: "مسحٌ-أ", Do: func(ctx context.Context) any {
+			return h.API.SweepRepQualify(ctx)
 		}},
-		Actor{Name: "تحويلٌ-ب", Do: func(ctx context.Context) any {
-			return h.POST("/api/v1/admin/leads/"+leadB+"/status", admin.Token, body)
+		Actor{Name: "مسحٌ-ب", Do: func(ctx context.Context) any {
+			return h.API.SweepRepQualify(ctx)
 		}},
 	)
 	if r.TimedOut {

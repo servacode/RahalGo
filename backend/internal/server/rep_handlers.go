@@ -25,7 +25,9 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		MonthDelivered   int   `json:"month_delivered"`
 		MonthCommissions int64 `json:"month_commissions"`
 		MonthlyTarget    int   `json:"monthly_target"`
-		PendingLeads     int   `json:"pending_leads"`
+		// GoalPending **متاجرُ فتحها ولم تكتمل شروطُها** — لا تُعدّ بعد (٢٠٢٦-١٠-١٣).
+		GoalPending  int `json:"goal_pending"`
+		PendingLeads int `json:"pending_leads"`
 		// أدوات الدعوة مقفلة حتى يوثّق المندوب قناة تواصله
 		WhatsAppVerified bool `json:"whatsapp_verified"`
 		// **ورقمُ حسابه يُرسَل** — لتوثّقَه الشاشةُ بلا أن تسأله عنه.
@@ -55,10 +57,16 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		                            AND EXISTS (SELECT 1 FROM orders o3 WHERE o3.id::text = t.ref)))), 0),
 		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
 		       -- الشهر الجاري بتوقيت سوريا (لا UTC: نهاية الشهر تهمّ المندوب)
+		       -- **وعدُّ الهدف بمقياس الصرف نفسِه** (٢٠٢٦-١٠-١٣): من فتحه هو
+		       -- (opened_by_rep_id) **وبشهر اكتمال شروطه** — كان يَعُدّ بالمندوب
+		       -- الحاليّ وبشهر التسجيل، **فيرى المندوبُ رقماً غيرَ الذي يُدفع عليه.**
 		       (SELECT count(*) FROM merchants m
-		        WHERE m.sales_rep_user_id = u.id
-		          AND date_trunc('month', m.created_at AT TIME ZONE 'Asia/Damascus')
+		        WHERE m.opened_by_rep_id = u.id
+		          AND date_trunc('month', m.rep_qualified_at AT TIME ZONE 'Asia/Damascus')
 		            = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')),
+		       (SELECT count(*) FROM merchants m
+		        WHERE m.opened_by_rep_id = u.id AND m.rep_qualified_at IS NULL
+		          AND m.status = 'active'),
 		       (SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'
 		          AND date_trunc('month', o.delivered_at AT TIME ZONE 'Asia/Damascus')
@@ -78,7 +86,7 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "sales.monthly_target")).
 		Scan(&out.InviteCode, &out.FullName, &out.Merchants, &out.DeliveredOrders,
 			&out.TotalCommissions, &out.Balance,
-			&out.MonthMerchants, &out.MonthDelivered, &out.MonthCommissions,
+			&out.MonthMerchants, &out.GoalPending, &out.MonthDelivered, &out.MonthCommissions,
 			&out.MonthlyTarget, &out.PendingLeads, &out.WhatsAppVerified, &out.Phone)
 	if err != nil {
 		s.respondErr(w, err)
@@ -161,7 +169,16 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		        JOIN menu_items mi2 ON mi2.id = of2.menu_item_id
 		        WHERE mi2.merchant_id = m.id AND of2.active
 		          AND (of2.starts_at IS NULL OR of2.starts_at <= now())
-		          AND (of2.ends_at IS NULL OR of2.ends_at > now()))
+		          AND (of2.ends_at IS NULL OR of2.ends_at > now())),
+		       -- **وأمحسوبٌ في هدفه أم ينتظر شروطَه** (قرارُ المالك ٢٠٢٦-١٠-١٣) —
+		       -- وما ينقصه بنداً بنداً، **بشروط rep_qualify.go نفسِها.**
+		       m.opened_by_rep_id IS NOT DISTINCT FROM $1::uuid,
+		       m.rep_qualified_at IS NOT NULL,
+		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id AND NOT h.closed),
+		       m.location IS NOT NULL,
+		       (SELECT count(*) FROM menu_items mi3
+		        WHERE mi3.merchant_id = m.id AND mi3.available AND mi3.approved
+		          AND mi3.image_media_id IS NOT NULL)
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
@@ -196,23 +213,43 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		// عرضاً **جارياً** — يقرؤهما المندوبُ من البطاقة بلا أن يفتح.
 		ItemsCount  int `json:"items_count"`
 		OffersCount int `json:"offers_count"`
+		// ── **هدفُ المندوب: محسوبٌ أم ينتظر** (٢٠٢٦-١٠-١٣) ──
+		//
+		// GoalState «counted» أو «pending» — **وفارغٌ** لمتجرٍ لم يفتحه هو
+		// (نُقل إليه)، فلا يُحسب له أصلاً. وما بعده ما ينقصه بنداً بنداً.
+		GoalState   string `json:"goal_state"`
+		HasHours    bool   `json:"has_hours"`
+		HasLocation bool   `json:"has_location"`
+		PhotoItems  int    `json:"photo_items"`
+		MinItems    int64  `json:"min_items"`
+		opener      bool
+		counted     bool
 	}
 	// **العتبةُ تُقرأ مرّةً لا لكل متجر** — وهي إعدادُ منصةٍ لا خاصّيةُ متجر.
 	//
 	// **وصارت ثابتةً «أوّلُ طلبٍ ناجح»** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — حُذف مفتاحُها،
 	// **وقراءتُه بعد الحذف تردّ صفراً** فيقرأ المندوبُ عتبةً لا وجودَ لها.
 	activationNeeded := int64(1) // orders.ActivationFromFirstOrder
+	minItems := s.settings.GetInt(r.Context(), "sales.min_items")
 	out := []repMerchant{}
 	for rows.Next() {
 		var m repMerchant
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
 			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered, &m.Cancelled,
 			&m.MyCommission, &m.LastOrderAt, &m.ActivationDone,
-			&m.ItemsCount, &m.OffersCount); err != nil {
+			&m.ItemsCount, &m.OffersCount, &m.opener, &m.counted,
+			&m.HasHours, &m.HasLocation, &m.PhotoItems); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		m.ActivationNeeded = activationNeeded
+		m.MinItems = minItems
+		switch {
+		case m.opener && m.counted:
+			m.GoalState = "counted"
+		case m.opener:
+			m.GoalState = "pending"
+		}
 		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
 		out = append(out, m)
 	}

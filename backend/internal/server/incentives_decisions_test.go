@@ -164,9 +164,12 @@ func (f *incFixture) newNamedStore(t *testing.T, rep, name string) string {
 	}
 	var id string
 	if err := f.pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, owner_user_id, sales_rep_user_id, category_id, status, location)
+		INSERT INTO merchants (name, owner_user_id, sales_rep_user_id, category_id, status, location,
+		                       rep_qualified_at)
 		VALUES ($3, $1, $2, $4::uuid, 'active',
-		        ST_SetSRID(ST_MakePoint(39.0, 35.95), 4326)::geography)
+		        ST_SetSRID(ST_MakePoint(39.0, 35.95), 4326)::geography,
+		        -- **مكتملُ الشروط** (٢٠٢٦-١٠-١٣) — السؤالُ هنا عن الصرف لا عنها.
+		        now())
 		RETURNING id::text`, owner, rep, name, cat).Scan(&id); err != nil {
 		t.Fatalf("إنشاءُ متجر: %v", err)
 	}

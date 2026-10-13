@@ -22,6 +22,14 @@
     <string name="cl_rejected">مرفوض</string>
     <string name="cl_working">يعمل</string>
     <string name="cl_stopped">متوقف</string>
+    <!-- هدفُ المندوب: يُحسب المتجرُ حين تكتمل شروطُه (قرارُ المالك ٢٠٢٦-١٠-١٣) -->
+    <string name="cl_goal_counted">محسوب بهدفك</string>
+    <string name="cl_goal_pending">قيد الانتظار</string>
+    <string name="cl_goal_missing">ليُحسب بهدفك ناقصه: %1$s</string>
+    <string name="cl_miss_hours">ساعات الدوام</string>
+    <string name="cl_miss_location">الموقع على الخريطة</string>
+    <string name="cl_miss_items">%1$s أصناف بصورها</string>
+    <string name="bd_goal_pending">%1$s متجر بانتظار اكتمال الشروط — بينحسبوا لما يكتملوا</string>
     <string name="cl_delivered">طلبات سلمت</string>
     <string name="cl_commission">عمولتك عنه</string>
     <!-- **والتفعيلُ بعددين لا بكلمة** — ومن لا يعرف كم بقي لا يعرف

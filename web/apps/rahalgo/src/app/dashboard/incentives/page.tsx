@@ -73,6 +73,8 @@ interface Standing {
   manual_paid: number;
   penalized: number;
   balance: number;
+  /** **متاجرُ فتحها المندوبُ ولم تكتمل شروطُها** — لا تُعدّ بعد (٢٠٢٦-١٠-١٣). */
+  pending?: number;
 }
 
 interface Level {
@@ -556,6 +558,9 @@ export default function IncentivesPage() {
                           </div>
                         ) : (
                           <span className="text-xs text-ink-muted">{P.noTarget}</span>
+                        )}
+                        {(x.pending ?? 0) > 0 && (
+                          <p className="mt-1 text-2xs text-warning">{fill(P.pendingStores, { n: x.pending ?? 0 })}</p>
                         )}
                       </td>
                       <td className="p-3 tabular-nums text-success" dir="ltr" data-label={P.auto}>

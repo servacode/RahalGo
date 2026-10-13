@@ -103,6 +103,8 @@ type Standing struct {
 	ManualPaid int64 `json:"manual_paid"`
 	// Balance **المتاحُ في محفظته** (الرصيدُ ناقصَ المحجوز) — يُرى قبل العقوبة.
 	Balance int64 `json:"balance"`
+	// Pending **متاجرُ فتحها ولم تكتمل شروطُها بعد** — للمندوب وحدَه (٢٠٢٦-١٠-١٣).
+	Pending int `json:"pending"`
 }
 
 // Summary **كروتُ رأس الصفحة**: كم بلغ كلَّ مرحلة · الآليّ · اليدويّ · العقوبات.
@@ -182,7 +184,8 @@ func (s *Service) StandingsFor(ctx context.Context, role, month string) ([]Stand
 		       COALESCE((SELECT sum(i.amount) FROM incentives i
 		                 WHERE i.user_id = u.id AND i.kind = 'penalty'
 		                   AND `+inMonth+`), 0),
-		       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = u.id), 0)
+		       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = u.id), 0),
+		       `+pendingSQL(role, "u.id")+`
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = $1
 		WHERE u.deleted_at IS NULL AND u.status = 'active'
@@ -196,7 +199,7 @@ func (s *Service) StandingsFor(ctx context.Context, role, month string) ([]Stand
 	for rows.Next() {
 		var x Standing
 		if err := rows.Scan(&x.UserID, &x.Name, &x.Phone, &x.Done,
-			&x.AutoPaid, &x.ManualPaid, &x.Penalized, &x.Balance); err != nil {
+			&x.AutoPaid, &x.ManualPaid, &x.Penalized, &x.Balance, &x.Pending); err != nil {
 			return nil, err
 		}
 		x.Rewarded = x.AutoPaid + x.ManualPaid

@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 84,
-    "notify_targeted": 32,
+    "notify_sites": 85,
+    "notify_targeted": 33,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 230,
-    "behaviour_settings": 186,
+    "setting_defs": 231,
+    "behaviour_settings": 187,
     "order_fields": 96,
-    "test_files": 559,
-    "test_funcs": 2268
+    "test_files": 560,
+    "test_funcs": 2269
   },
   "flows": [
     {
@@ -6415,6 +6415,24 @@
         "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "REGRESSION_TEST_PRESENT"
+    },
+    {
+      "key": "sales.min_items",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "sales.monthly_target",
@@ -20938,6 +20956,12 @@
       "orphan": true
     },
     {
+      "name": "TestRepQualify_ThreeConditionsThenCountedOnce",
+      "file": "internal/qa/rep_qualify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestRepTransfer_NonRepFieldNeedsNoReason",
       "file": "internal/qa/rep_transfer_audit_test.go",
       "package": "qa",
@@ -26446,7 +26470,7 @@
       "orphan": true
     },
     {
-      "name": "TestLeadConvert_TargetAtCreationCommissionAtDelivery",
+      "name": "TestLeadConvert_TargetWhenReadyCommissionAtDelivery",
       "file": "internal/server/lead_page_decisions_test.go",
       "package": "server",
       "orphan": true

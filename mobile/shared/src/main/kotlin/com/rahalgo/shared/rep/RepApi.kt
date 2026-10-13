@@ -279,6 +279,8 @@ data class RepMe(
     @SerialName("month_delivered") val monthDelivered: Int = 0,
     @SerialName("month_commissions") val monthCommissions: Long = 0,
     @SerialName("monthly_target") val monthlyTarget: Int = 0,
+    /** **متاجرُ فتحها ولم تكتمل شروطُها** — لا تُعدّ في الهدف بعد (٢٠٢٦-١٠-١٣). */
+    @SerialName("goal_pending") val goalPending: Int = 0,
     /** **ما ينتظر موافقةَ الإدارة** — ومنه يعرف أنّ عملَه لم يضع. */
     @SerialName("pending_leads") val pendingLeads: Int = 0,
     @SerialName("whatsapp_verified") val whatsappVerified: Boolean = false,
@@ -315,6 +317,15 @@ data class RepMerchant(
     @SerialName("items_count") val itemsCount: Int = 0,
     /** **وكم عرضاً جارياً** — الفعّالُ الذي بدأ ولم ينتهِ. */
     @SerialName("offers_count") val offersCount: Int = 0,
+    /**
+     * **أمحسوبٌ في هدفه أم ينتظر شروطَه** (قرارُ المالك ٢٠٢٦-١٠-١٣):
+     * `counted` · `pending` · وفارغٌ لمتجرٍ لم يفتحه هو. وما بعده ما ينقصه.
+     */
+    @SerialName("goal_state") val goalState: String = "",
+    @SerialName("has_hours") val hasHours: Boolean = false,
+    @SerialName("has_location") val hasLocation: Boolean = false,
+    @SerialName("photo_items") val photoItems: Int = 0,
+    @SerialName("min_items") val minItems: Int = 0,
 )
 
 @Serializable

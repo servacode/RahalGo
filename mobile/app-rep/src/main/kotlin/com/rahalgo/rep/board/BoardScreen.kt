@@ -190,6 +190,16 @@ fun BoardScreen(vm: BoardViewModel) {
                     )
                 }
             }
+            // **وما ينتظر شروطَه يُقال** (قرارُ المالك ٢٠٢٦-١٠-١٣) — وإلّا ظنّ أنّ
+            // متجراً سجّله ضاع من عدّاده. وتفصيلُ كلِّ متجرٍ في «عملائي».
+            if (me.goalPending > 0) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.bd_goal_pending, me.goalPending.toString()),
+                    color = Rahal.colors.accent,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
