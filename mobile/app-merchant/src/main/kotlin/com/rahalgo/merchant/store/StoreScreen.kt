@@ -761,12 +761,17 @@ private fun HoursEditor(vm: StoreViewModel) {
     //  ٦:٠٠–٩:٠٠ — **أرادا الظهرَ والمساء فحُفظ الليلُ والصبح**، والزبونُ يرى
     //  «مغلق» العصرَ كلَّه. **والغلطُ في الشاشة لا فيهما** — قالها المالك.)
     var nightCheck by remember { mutableStateOf<List<com.rahalgo.shared.merchant.DayHours>?>(null) }
+    // **ومفتوحٌ اليومَ كلَّه لا يُسأل** — منتصفُ الليل إلى ما قبله دوامٌ كاملٌ لا غلط.
+    val nightOpen: (com.rahalgo.shared.merchant.DayHours) -> Boolean = { d ->
+        val open = d.openTime.take(2).toIntOrNull() ?: 9
+        val close = d.closeTime.take(2).toIntOrNull() ?: 23
+        !d.closed && open in 0..5 && !(open == 0 && close >= 23)
+    }
     val save: (List<com.rahalgo.shared.merchant.DayHours>) -> Unit = { days ->
-        if (days.any { !it.closed && (it.openTime.take(2).toIntOrNull() ?: 9) in 0..5 }) nightCheck = days
-        else vm.saveHours(days)
+        if (days.any(nightOpen)) nightCheck = days else vm.saveHours(days)
     }
     nightCheck?.let { days ->
-        val d = days.first { !it.closed && (it.openTime.take(2).toIntOrNull() ?: 9) in 0..5 }
+        val d = days.first(nightOpen)
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { nightCheck = null },
             title = { Text(stringResource(R.string.hours_night_title)) },
