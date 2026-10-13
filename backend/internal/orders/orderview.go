@@ -261,6 +261,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"total":                 true,
 	},
 	AudienceOps: {
+		"driver_fee":                   true,
 		"parcel_note":                  true,
 		"pickup_note":                  true,
 		"fee_payer":                    true,

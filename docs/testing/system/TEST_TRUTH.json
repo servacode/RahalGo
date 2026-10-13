@@ -32,9 +32,9 @@
     ],
     "setting_defs": 230,
     "behaviour_settings": 186,
-    "order_fields": 95,
-    "test_files": 557,
-    "test_funcs": 2266
+    "order_fields": 96,
+    "test_files": 559,
+    "test_funcs": 2268
   },
   "flows": [
     {
@@ -9920,6 +9920,12 @@
       "orphan": true
     },
     {
+      "name": "TestOpsStages_PerKind",
+      "file": "internal/orders/ops_stages_kind_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestAgreedIsWhatSeparatesAgreeingFromBuying",
       "file": "internal/orders/opscustom_test.go",
       "package": "orders",
@@ -15142,6 +15148,12 @@
     {
       "name": "TestDRV_HISTORY_NoCustomerPhoneOrLocation",
       "file": "internal/qa/driver_history_privacy_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverTodayEarned_ByDeliveryDay",
+      "file": "internal/qa/driver_today_earned_test.go",
       "package": "qa",
       "orphan": true
     },

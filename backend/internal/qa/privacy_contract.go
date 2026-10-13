@@ -209,6 +209,7 @@ var OrderPrivacy = map[string]FieldRule{
 	// **«لدي توصيلة»** (الخطوة ١٨) — للسائق والإدارة، **وللمتجر في توصيلته وحدَها**
 	// (`AudienceMerchantDelivery`) لا في جمهوره العامّ.
 	"parcel_note":         {Ref: "ما يحمله السائق — كتبه المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"driver_fee":          {Ref: "قسمةُ الأجرة بين السائق والمنصّة — للمكتب وحدَه (٢٠٢٦-١٠-١٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"fee_payer":           {Ref: "من يدفع الأجرة — ومن يقبض منه السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"pickup_note":         {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"dropoff_known":       {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

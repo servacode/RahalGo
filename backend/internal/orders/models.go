@@ -190,6 +190,8 @@ type Order struct {
 	CustomFeeSource string `json:"custom_fee_source"`
 	// CustomMode **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `amanah` بلا حقِّ بضاعة.
 	CustomMode string `json:"custom_mode"`
+	// DriverFee **ما يصل السائقَ من الأجرة** — والباقي حصّةُ المنصّة (٢٠٢٦-١٠-١٣). للمكتب وحدَه.
+	DriverFee int64 `json:"driver_fee"`
 	// CustomGoodsPending **وُثّقت الأجرةُ وثمنُ البضاعة لم يُوثَّق بعد** — خطوةُ المشتريات الثانية.
 	CustomGoodsPending       bool   `json:"custom_goods_pending"`
 	CustomFeeSnapshot        *int64 `json:"custom_fee_snapshot"`
@@ -418,15 +420,24 @@ type Order struct {
 	OpsStageLate []*bool `json:"ops_stage_late"`
 }
 
+// fixedCustomFee **أجرةُ المنصّة مفروضةٌ لا يغيّرها السائق** — فلا «توثيقَ» لها.
+func (o *Order) fixedCustomFee() bool {
+	return o.Kind == KindCustom && o.CustomFeeSource == "admin_defined" && !o.CustomDriverMayChangeFee
+}
+
 // SetStage يملأ مرحلتَه — **يُنادى بعد كلّ قراءةٍ تُعرض لإنسان.**
 // SetStageTimes **يملأ أوقاتَ المراحل من أحداث الطلب.**
 //
 // **ومنفصلةٌ عن `SetStage`** — تلك تُحسب من الحال وحدَه فتصلح لكلّ صفٍّ
 // يُقرأ، **وهذه تحتاج أحداثاً** لا تُجلب إلّا حين تُطلب.
 func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
-	if o.Kind == KindCustom {
-		o.OpsStageTimes = OpsCustomStageTimes(evs, o.CustomAgreedAt)
-	} else {
+	switch o.Kind {
+	case KindCustom:
+		o.OpsStageTimes = OpsCustomStageTimesFor(evs, o.CustomAgreedAt,
+			OpsCustomStagesFor(o.CustomMode, o.fixedCustomFee()))
+	case KindMerchantDelivery:
+		o.OpsStageTimes = OpsMerchantDeliveryStageTimes(evs)
+	default:
 		o.OpsStageTimes = OpsStageTimes(evs)
 	}
 	// **ومهلةُ المطبخ لهذا الطلب لا لكلّ الطلبات** — كلُّ متجرٍ يُعلن
@@ -444,7 +455,8 @@ func (o *Order) SetStage() {
 	o.Stages, o.StageAt = StagesFor(o.Kind, o.Status)
 	// **ومسارُ المكتب يفترق بنوع الطلب** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
 	// **ولا متجرَ في الخاصّ**، فثلاثُ مراحلَ كانت تتحدّث عمّا لا وجودَ له.
-	o.OpsStages, o.OpsStageAt = OpsStagesFor(o.Kind, o.Status, o.CustomAgreedAt != nil)
+	o.OpsStages, o.OpsStageAt = OpsStagesOf(o.Kind, o.Status, o.CustomAgreedAt != nil,
+		o.CustomMode, o.fixedCustomFee())
 	if o.Kind == "custom" {
 		o.Stage = CustomStageOf(o.Status)
 	} else {

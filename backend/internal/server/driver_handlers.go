@@ -139,8 +139,17 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		       -- يرى تعويضَه في رصيده ولا يراه في أجر يومه** — رقمان يختلفان
 		       -- عن اليوم نفسِه، ولا سطرَ يفسّر الفرق. **وأجرٌ لا يُطابق ما دخل
 		       -- المحفظةَ يُقرأ نقصاً في الحقّ.**
+		       --
+		       -- **وأجرُ التسليم يُحسب بيوم التسليم لا بيوم القيد** (٢٠٢٦-١٠-١٣):
+		       -- تصحيحُ ثمن بضاعة #1002 قُيِّد بعد منتصف الليل، **فقرأ السائقُ
+		       -- «كسبت −1,100» في يومٍ لم يعمل فيه بعد** — والتصحيحُ يخصّ يومَ
+		       -- الطلب. والتعويضُ لا تسليمَ له فيبقى بوقت قيده.
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
-		                 WHERE t.user_id = u.id AND t.kind IN ('driver_earning','compensation')
+		                 JOIN orders o ON o.id::text = t.ref
+		                 WHERE t.user_id = u.id AND t.kind = 'driver_earning'
+		                   AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0)
+		       + COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                 WHERE t.user_id = u.id AND t.kind = 'compensation'
 		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = u.id AND t.kind = 'compensation'

@@ -144,6 +144,12 @@ interface OrderRow {
   custom_fee_source?: "driver_defined" | "admin_defined";
   /** أجرةُ المنصة المُثبَّتة حين تحدّدها الإدارة — وفارغٌ يعني «لا تثبيت». */
   custom_fee_snapshot?: number | null;
+  /** **أمانةٌ أم مشتريات** (٢٠٢٦-١٠-٠٣). */
+  custom_mode?: string;
+  /** **ثمنُ البضاعة لم يُوثَّق بعد** — صفرٌ ينتظر الشراء. */
+  custom_goods_pending?: boolean;
+  /** **ما يصل السائقَ من الأجرة** — والباقي حصّةُ المنصّة (٢٠٢٦-١٠-١٣). */
+  driver_fee?: number;
   /** أللسائق أن يعدّل الأجرةَ المُثبَّتة. */
   custom_driver_may_change_fee?: boolean;
   /** متى استُلمت البضاعة — وبه يُقفل السعرُ على الخفض بعده. */
@@ -1346,6 +1352,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               {!live && !NO_INVOICE.has(o.status) && (
                 <InvoiceButton order={o} />
               )}
+              {/* **ونوعُ الطلب بجانب رقمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٣ على #1003). */}
+              <Badge variant={o.kind === "standard" ? "neutral" : "accent"}>{kindLabel(o)}</Badge>
               <OrderRef number={o.number} at={o.created_at} />
             </span>
           </span>
@@ -3254,6 +3262,34 @@ function OrderActions({
  *
  * **ونسختان تفترقان يوماً** — فتقول البطاقةُ رقماً وتقول النافذةُ غيرَه.
  */
+/** **نوعُ الطلب بكلمته** — عاديّ · توصيلة · مشتريات · أمانة. */
+function kindLabel(o: OrderRow): string {
+  const OP = m.admin.ordersPage;
+  if (o.kind === "merchant_delivery") return OP.kindMd;
+  if (o.kind === "custom") return o.custom_mode === "amanah" ? OP.kindAmanah : OP.kindPurchase;
+  return OP.kindStd;
+}
+
+/**
+ * **الأجرةُ مقسومة: للسائق وللمنصّة** (٢٠٢٦-١٠-١٣) — صار لكلّ نوعٍ حصّتُه، **فيُرى أين ذهبت.**
+ * ولا يُعرض قبل أن يُعرف أجرُ السائق.
+ */
+function FeeSplit({ fee, driver }: { fee: number; driver?: number }) {
+  const OP = m.admin.ordersPage;
+  if (driver == null || fee <= 0) return null;
+  const platform = Math.max(0, fee - driver);
+  return (
+    <li className="flex items-center justify-between gap-2 ps-3 text-xs text-ink-muted">
+      <span>
+        {OP.feeForDriver} <Money value={driver} small />
+      </span>
+      <span>
+        {OP.feeForPlatform} <Money value={platform} small />
+      </span>
+    </li>
+  );
+}
+
 function InvoiceList({ o }: { o: OrderRow }) {
   const OP = m.admin.ordersPage;
   // **والطلبُ الخاصُّ لا بنودَ له** — سطرٌ كتبه الزبون، ومبلغٌ اتّفق عليه
@@ -3300,127 +3336,79 @@ function InvoiceList({ o }: { o: OrderRow }) {
           <span className="text-ink-muted">{OP.mdFee}</span>
           <Money value={o.delivery_fee} small />
         </li>
+        <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} />
       </ul>
     );
   }
+  // ══════════════════════════════════════════════════════════════════
+  // **الطلبُ الخاصّ — المطلوبُ ثمّ المالُ بأسطرٍ واضحة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٣ على #1003)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // كانت البطاقةُ تقول «لم يوثق السائق المبلغ» لأمانةٍ أجرتُها ثابتةٌ من المنصّة، **وتعرض
+  // نسخةَ العرض وقفلَ السعر** — أسطرٌ تقنيّةٌ لا يحتاجها الموظّف. **والأمانةُ لا ثمنَ بضاعةٍ
+  // فيها**، والمشترياتُ يُنتظر ثمنُها بعد الشراء وحدَه.
   if (o.kind === "custom") {
-    const goods = o.custom_goods_amount;
-    const fee = o.custom_fee ?? 0;
+    const amanah = o.custom_mode === "amanah";
+    const fixed = o.custom_fee_source === "admin_defined" && !o.custom_driver_may_change_fee;
+    const fee = o.custom_fee ?? (fixed ? o.custom_fee_snapshot ?? null : null);
+    const goods = o.custom_goods_pending ? null : o.custom_goods_amount ?? null;
+    const confirmed = o.quote_confirmed_at != null && o.quote_confirmed_version === o.quote_version;
+    const row = "flex items-center justify-between gap-2";
     return (
       <div className="space-y-2">
-        <p className="whitespace-pre-wrap rounded-control bg-field px-3 py-2 text-sm">
-          {o.custom_request || "—"}
-        </p>
-        {goods == null ? (
-          <p className="text-xs text-ink-muted">{OP.customPending}</p>
-        ) : (
-          <ul className="space-y-1.5 text-sm">
-            <li className="flex items-center justify-between gap-2">
+        <div className="rounded-control bg-field px-3 py-2">
+          <p className="text-2xs text-ink-muted">{OP.customWhat}</p>
+          <p className="whitespace-pre-wrap text-sm font-medium">{o.custom_request || "—"}</p>
+        </div>
+        <ul className="space-y-1.5 text-sm">
+          {!amanah && (
+            <li className={row}>
               <span className="text-ink-muted">{OP.customGoods}</span>
-              <Money value={goods} small />
+              {goods != null && goods > 0 ? (
+                <Money value={goods} small />
+              ) : (
+                <span className="text-xs text-ink-muted">{OP.goodsAwait}</span>
+              )}
             </li>
-            <li className="flex items-center justify-between gap-2">
-              <span className="text-ink-muted">{OP.customFee}</span>
-              <Money value={fee} small />
-            </li>
-            <li className="flex items-center justify-between gap-2 border-t border-line-soft pt-1.5 font-bold">
-              <span>{OP.customTotal}</span>
-              {/* **ولا لفّةَ هنا** — `Money` تلفّ الرقمَ وحدَه، **ولفّةٌ
-                  فوقها تقلب الرمزَ إلى يمينه**: «ل.س ٣٠٠». */}
-              <Money value={goods + fee} />
-            </li>
-            {/* **ويُقال إنّه لا يدخل حسابَ المنصّة** — وإلّا قُرئ دخلاً. */}
-            <li className="pt-1 text-2xs text-ink-muted">{OP.customNote}</li>
-          </ul>
-        )}
-        {/* ══════════════════════════════════════════════════════════════
-            **عرضُ السعر وسياستُه — يُقرأ ولا يُملأ**
-            ══════════════════════════════════════════════════════════════
-
-            **الفاتورةُ فوقُ تقول كم اتُّفق، وهذا يقول كيف يُحكم**: من يحدّد
-            الأجرة، وأثبّتها الإدارةُ أم تركتها للسائق، وأأكّد الزبونُ أم
-            بقي عرضٌ معلّق. **والخادمُ وحدَه يحكم المال** — وهذه مرآتُه. */}
-        <div className="space-y-1.5 border-t border-line-soft pt-2 text-sm">
-          <p className="text-xs font-medium text-ink-muted">
-            {OP.customQuotePanelTitle}
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-ink-muted">{OP.customFeeSourceLabel}</span>
-            <span>
-              {o.custom_fee_source === "admin_defined"
-                ? OP.customFeeSourceAdmin
-                : OP.customFeeSourceDriver}
-            </span>
-          </div>
-          {o.custom_fee_source === "admin_defined" &&
-            o.custom_fee_snapshot != null && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-ink-muted">
-                  {OP.customFeeSnapshotLabel}
-                </span>
-                <Money value={o.custom_fee_snapshot} small />
-              </div>
-            )}
-          {o.custom_fee_source === "admin_defined" && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-ink-muted">
-                {OP.customDriverMayChangeLabel}
-              </span>
-              <span>{o.custom_driver_may_change_fee ? OP.yes : OP.no}</span>
-            </div>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-ink-muted">{OP.quoteVersionLabel}</span>
-            <span>{goods == null ? "—" : fmtNum(o.quote_version ?? 0)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-ink-muted">{OP.quoteConfirmStateLabel}</span>
-            <span>
-              {goods == null
-                ? OP.quoteConfirmNotAgreed
-                : o.quote_confirmed_at == null
-                  ? OP.quoteConfirmPending
-                  : o.quote_confirmed_version !== o.quote_version
-                    ? OP.quoteConfirmStale
-                    : OP.quoteConfirmed}
+          <li className={row}>
+            <span className="text-ink-muted">
+              {OP.customFee}{" "}
+              <span className="text-2xs">({fixed ? OP.feeFixedTag : OP.feeDriverTag})</span>
             </span>
-          </div>
+            {fee != null ? (
+              <Money value={fee} small />
+            ) : (
+              <span className="text-xs text-ink-muted">{OP.feeAwaitDriver}</span>
+            )}
+          </li>
+          {fee != null && <FeeSplit fee={fee} driver={o.driver_fee} />}
+          {fee != null && (amanah || (goods != null && goods > 0)) && (
+            <li className={`${row} border-t border-line-soft pt-1.5 font-bold`}>
+              <span>{amanah ? OP.collectTotal : OP.customTotal}</span>
+              <Money value={(amanah ? 0 : goods ?? 0) + fee} />
+            </li>
+          )}
+          <li className={`${row} text-xs`}>
+            <span className="text-ink-muted">{OP.customerConfirm}</span>
+            <span className={confirmed ? "text-success" : "text-warning"}>
+              {fee == null ? "—" : confirmed ? OP.confirmedYes : OP.confirmedWaiting}
+            </span>
+          </li>
           {o.quote_confirmed_at != null && (
-            <>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-ink-muted">
-                  {OP.quoteConfirmedTotalLabel}
-                </span>
-                <Money value={o.quote_confirmed_total ?? 0} small />
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-ink-muted">
-                  {OP.quoteConfirmedVersionLabel}
-                </span>
-                <span>{fmtNum(o.quote_confirmed_version ?? 0)}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-ink-muted">{OP.payment}</span>
-                <span>
-                  {o.payment_method === "wallet"
-                    ? OP.paymentWallet
-                    : OP.paymentCash}
-                </span>
-              </div>
-            </>
+            <li className={`${row} text-xs text-ink-muted`}>
+              <span>{OP.payment}</span>
+              <span>{o.payment_method === "wallet" ? OP.paymentWallet : OP.paymentCash}</span>
+            </li>
           )}
           {(o.custom_reserved_amount ?? 0) > 0 && (
-            <div className="flex items-center justify-between gap-2">
+            <li className={`${row} text-xs`}>
               <span className="text-ink-muted">{OP.walletReservedLabel}</span>
               <Money value={o.custom_reserved_amount ?? 0} small />
-            </div>
+            </li>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-ink-muted">{OP.quoteLockLabel}</span>
-            <span>{o.picked_up_at ? OP.quoteLocked : OP.quoteUnlocked}</span>
-          </div>
-          <p className="pt-1 text-2xs text-ink-muted">{OP.customPolicyNote}</p>
-        </div>
+          {!amanah && <li className="pt-1 text-2xs text-ink-muted">{OP.customNote}</li>}
+        </ul>
       </div>
     );
   }
@@ -3502,6 +3490,7 @@ function InvoiceList({ o }: { o: OrderRow }) {
         <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
         <Money value={o.delivery_fee} small />
       </li>
+      <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} />
       {o.discount > 0 && (
         <li className="flex items-center justify-between text-sm text-success">
           <span>{m.admin.ordersPage.discount}</span>

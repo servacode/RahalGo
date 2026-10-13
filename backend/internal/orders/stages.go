@@ -314,11 +314,32 @@ type StageTimes []*time.Time
 // **والانتقالاتُ مرتّبةٌ زمنيّا** — كما تخرج من `order_events` بترتيب
 // المعرّف. **ومن مرّرها غيرَ مرتّبةٍ يقرأ أوّلَ ما ورد لا أوّلَ ما وقع.**
 func OpsStageTimes(evs []Event) StageTimes {
-	out := make(StageTimes, len(OpsStages()))
-	list := OpsStages()
+	return opsStageTimesFor(evs, OpsStages(), OpsStageOf)
+}
+
+// OpsMerchantDeliveryStageTimes **أوقاتُ «لدي توصيلة»** — بلا مرحلة التجهيز.
+func OpsMerchantDeliveryStageTimes(evs []Event) StageTimes {
+	return opsStageTimesFor(evs, OpsMerchantDeliveryStages(), func(st string) Stage {
+		at := OpsStageOf(st)
+		if at == StagePreparing {
+			return StageSeekingDriver
+		}
+		return at
+	})
+}
+
+func opsStageTimesFor(evs []Event, list []Stage, of func(string) Stage) StageTimes {
+	out := make(StageTimes, len(list))
+	pos := map[Stage]int{}
+	for i, st := range list {
+		pos[st] = i
+	}
 	prev := -1
 	for i := range evs {
-		at := OpsStageIndex(evs[i].ToStatus)
+		at := -1
+		if p, ok := pos[of(evs[i].ToStatus)]; ok {
+			at = p
+		}
 		// **وما لا موضعَ له على المسار يُتخطّى** — الإلغاءُ والرفضُ
 		// **ليسا مرحلةً بلغها الطلب** بل نهايةً وقعت به. **ولا يقطع
 		// التسلسلَ أيضا**: حالٌ لا مرحلةَ له لا يجعل ما بعده «دخولا».
@@ -459,13 +480,22 @@ func routeLimit(etaSec *int, marginPct int) time.Duration {
 // **فوقتُ «الشراء» هو لحظةُ التوثيق** — لأنّها اللحظةُ التي صار فيها
 // الشراءُ مسموحاً وبدأ.
 func OpsCustomStageTimes(evs []Event, agreedAt *time.Time) StageTimes {
-	list := OpsCustomStages()
+	return OpsCustomStageTimesFor(evs, agreedAt, OpsCustomStages())
+}
+
+// OpsCustomStageTimesFor **أوقاتُ مسارٍ بعينه** — والأمانةُ «استلام»، وأجرةُ المنصّة بلا «توثيق».
+func OpsCustomStageTimesFor(evs []Event, agreedAt *time.Time, list []Stage) StageTimes {
 	out := make(StageTimes, len(list))
 	// **وموضعُ كلّ مرحلةٍ يُبحث عنه بالمفتاح** — فإن أُعيد ترتيبُ المسار
 	// **لم ينتقل وقتٌ إلى غير صاحبه.**
 	idx := map[Stage]int{}
 	for i, st := range list {
 		idx[st] = i
+	}
+	// **ومرحلةُ العمل شراءٌ أو استلام** — بحسب المسار.
+	work := StageBuying
+	if _, ok := idx[StageTaking]; ok {
+		work = StageTaking
 	}
 	prev := Stage("")
 	put := func(st Stage, t time.Time) {
@@ -491,7 +521,11 @@ func OpsCustomStageTimes(evs []Event, agreedAt *time.Time) StageTimes {
 		case StDispatching:
 			put(StageSeekingDriver, evs[i].CreatedAt)
 		case StAssigned:
-			put(StageAgreeing, evs[i].CreatedAt)
+			if _, ok := idx[StageAgreeing]; ok {
+				put(StageAgreeing, evs[i].CreatedAt)
+			} else {
+				put(work, evs[i].CreatedAt)
+			}
 		case StPickedUp:
 			put(StageOnTheWay, evs[i].CreatedAt)
 		case StAtDropoff:
@@ -500,8 +534,8 @@ func OpsCustomStageTimes(evs []Event, agreedAt *time.Time) StageTimes {
 			put(StageDelivered, evs[i].CreatedAt)
 		}
 	}
-	if agreedAt != nil {
-		put(StageBuying, *agreedAt)
+	if _, ok := idx[StageAgreeing]; ok && agreedAt != nil {
+		put(work, *agreedAt)
 	}
 	return out
 }
@@ -615,9 +649,47 @@ func OpsCustomStageOf(status string, agreed bool) Stage {
 
 // OpsStagesFor مسارُ المكتب ومفتاحُ الموضع — **بحسب نوع الطلب.**
 func OpsStagesFor(kind, status string, agreed bool) ([]Stage, int) {
+	return OpsStagesOf(kind, status, agreed, "", false)
+}
+
+// StageTaking **استلامُ الأمانة** — الأمانةُ تُستلم ولا تُشترى (٢٠٢٦-١٠-١٣).
+const StageTaking Stage = "taking"
+
+// OpsCustomStagesFor **مسارُ الخاصّ بنوعه وأجرته** (ملاحظةُ المالك ٢٠٢٦-١٠-١٣ على #1003):
+// الأمانةُ «استلام» لا «شراء»، **وأجرةُ المنصّة لا «توثيقَ» لها** — تُثبَّت عند الإسناد.
+func OpsCustomStagesFor(mode string, fixedFee bool) []Stage {
+	list := []Stage{StageWaitingPlatform, StageSeekingDriver}
+	if !fixedFee {
+		list = append(list, StageAgreeing)
+	}
+	if mode == CustomModeAmanah {
+		list = append(list, StageTaking)
+	} else {
+		list = append(list, StageBuying)
+	}
+	return append(list, StageOnTheWay, StageArrived, StageDelivered)
+}
+
+// OpsMerchantDeliveryStages **«لدي توصيلة» بلا «تجهيزٍ في المتجر»** — الطلبيةُ جاهزةٌ من أصلها.
+func OpsMerchantDeliveryStages() []Stage {
+	return []Stage{StageWaiting, StageSeekingDriver, StageToStore, StageOnTheWay, StageArrived, StageDelivered}
+}
+
+// OpsStagesOf **مسارُ المكتب بنوع الطلب كاملاً** — النوعُ وطريقةُ الخاصّ وأجرتُه.
+func OpsStagesOf(kind, status string, agreed bool, mode string, fixedFee bool) ([]Stage, int) {
 	list, at := OpsStages(), OpsStageOf(status)
-	if kind == KindCustom {
-		list, at = OpsCustomStages(), OpsCustomStageOf(status, agreed)
+	switch kind {
+	case KindCustom:
+		list = OpsCustomStagesFor(mode, fixedFee)
+		at = OpsCustomStageOf(status, agreed || fixedFee)
+		if at == StageBuying && mode == CustomModeAmanah {
+			at = StageTaking
+		}
+	case KindMerchantDelivery:
+		list = OpsMerchantDeliveryStages()
+		if at == StagePreparing {
+			at = StageSeekingDriver
+		}
 	}
 	if at == StageEnded {
 		return list, -1
