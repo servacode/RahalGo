@@ -176,12 +176,26 @@ api.rahalgo.com {
 
 	encode zstd gzip
 
+	# **ورفعُ ملفّ تطبيقٍ يطول أكثر** (قِيس ٢٠٢٦-١٠-١٣: ١٨٫٧ ميغا من ٩١ في خمس دقائق
+	# على خطّ المالك، فقُطع الرفعُ بـ٥٠٢) — ساعةٌ لهذا الباب وحدَه.
+	@appfile path /api/v1/admin/app-file
+	handle @appfile {
+		reverse_proxy api:8080 {
+			transport http {
+				read_timeout 3600s
+				write_timeout 3600s
+			}
+		}
+	}
+
 	# **ورفعُ صورةٍ قد يطول** — والافتراضيُّ دقيقتان يقطعان رفعَ صورةِ
 	# تسليمٍ على شبكةٍ ضعيفة.
-	reverse_proxy api:8080 {
-		transport http {
-			read_timeout 300s
-			write_timeout 300s
+	handle {
+		reverse_proxy api:8080 {
+			transport http {
+				read_timeout 300s
+				write_timeout 300s
+			}
 		}
 	}
 }
