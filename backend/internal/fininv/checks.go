@@ -450,6 +450,11 @@ var All = []Check{
 			       COALESCE(l.net, 0)::bigint  AS صافي_الدفتر,
 			       COALESCE(c.cash, 0)::bigint AS نقدُ_الصندوق
 			FROM orders o
+			-- **وثمنُ بضاعة المشتريات خارجَ الدفتر** (٢٠٢٦-١٠-١٣) — نقدُ المكتب يعود إليه.
+			CROSS JOIN LATERAL (
+				SELECT CASE WHEN o.kind = 'custom' AND o.custom_mode = 'purchase'
+				            THEN COALESCE(o.custom_goods_amount, 0) ELSE 0 END AS goods
+			) g
 			LEFT JOIN LATERAL (
 				-- **وقيدُ الدفع النقديّ تسويةُ التزامٍ لا توزيعُ طلب** — ينقل
 				-- نقداً من الاحتباس إلى المتجر خارجَ معادلة «التوزيع = نقدُ
@@ -465,7 +470,7 @@ var All = []Check{
 			WHERE EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
 			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
-			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0)`,
+			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - g.goods`,
 	},
 	{
 		ID: "FI-06.d", Family: FI06, Status: ProvableNow, Ops: true,

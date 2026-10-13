@@ -15,7 +15,7 @@ func TestSETTINGS_CodeDefaultsAreOwnerDecisions(t *testing.T) {
 		"sales.commission_percent":            10,
 		"drivers.failed_compensation_percent": 50,
 		"merchants.commission_percent":        10,
-		"delivery.platform_percent":           0,
+		"delivery.share_standard":             0,
 	}
 	for k, v := range want {
 		if _, ok := Lookup(k); !ok {
@@ -32,6 +32,7 @@ func TestSETTINGS_CodeDefaultsAreOwnerDecisions(t *testing.T) {
 func TestSETTINGS_DeadKeysRemoved(t *testing.T) {
 	for _, k := range []string{
 		"delivery.merchant_delivery_platform_percent",
+		"delivery.platform_percent", // **صار لكلّ نوعٍ حصّتُه** (٢٠٢٦-١٠-١٣)
 		"sales.commission_source", "sales.activation_orders",
 		"platform.invite_code", "platform.app_url", "platform.app_file",
 		"merchants.require_menu_review",
@@ -44,11 +45,10 @@ func TestSETTINGS_DeadKeysRemoved(t *testing.T) {
 
 // **حصّةُ المنصّة لا تتجاوز تسعين** — كان الحفظُ يقبل ٩٥ والمحرّكُ يطبّق ٩٠ بصمت.
 func TestSETTINGS_PercentRespectsCatalogMax(t *testing.T) {
-	if _, err := Validate("delivery.platform_percent", float64(95)); err == nil {
-		t.Fatal("قُبلت ٩٥٪ والحدُّ تسعون")
-	}
-	if v, err := Validate("delivery.platform_percent", float64(90)); err != nil || v != int64(90) {
-		t.Fatalf("رُدّت ٩٠٪: %v %v", v, err)
+	// **وحصّةُ النوع مبلغٌ أو نسبة** (٢٠٢٦-١٠-١٣) — فحدُّها حدُّ المال، والنسبةُ تُقصَر على
+	// تسعين في المحرّك (`platformShare`).
+	if v, err := Validate("delivery.share_merchant", float64(50)); err != nil || v != int64(50) {
+		t.Fatalf("رُدّت حصّةٌ ٥٠: %v %v", v, err)
 	}
 	// **ومفتاحٌ بلا حدٍّ مكتوبٍ يبقى على المئة.**
 	if _, err := Validate("platform.background_dim", float64(100)); err != nil {
@@ -146,7 +146,7 @@ func TestSETTINGS_EveryKeyHasATopic(t *testing.T) {
 	}
 	want := map[string]Topic{
 		"pricing.margin_fixed":               TopicMoney,
-		"delivery.platform_percent":          TopicMoney,
+		"delivery.share_standard":            TopicMoney,
 		"sales.commission_percent":           TopicMoney,
 		"delivery.fee":                       TopicMoney,
 		"support.late_reply_hours":           TopicSupport,

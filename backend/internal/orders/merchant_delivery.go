@@ -161,8 +161,8 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	// **ولها أجرتُها الخاصّة إن ضُبطت** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر
 	// `merchantDeliveryFee`.
 	fee := s.merchantDeliveryFee(ctx, tx, zone.DistanceM)
-	pct := s.platformDeliveryPercent(ctx, tx)
-	driverFee := DriverFeeAfterShare(fee, pct)
+	pct, fixed := s.platformShare(ctx, tx, ShareMerchant)
+	driverFee := DriverFeeWithShare(fee, pct, fixed)
 
 	snap, err := s.snapshotNow(ctx, tx)
 	if err != nil {
@@ -201,19 +201,19 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 		                    total, cash_due, notes,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders,
-		                    snap_platform_delivery_percent, dropoff_known)
+		                    snap_platform_delivery_percent, dropoff_known, snap_platform_delivery_fixed)
 		VALUES ('merchant_delivery', $1, $2,
 		        ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
 		        $5, $6, $7, $8,
 		        'pending', 'cash', 0, $9, $10,
 		        $9, $11, $12,
-		        $13, $14, $15, $16, $17, $18)
+		        $13, $14, $15, $16, $17, $18, $19)
 		RETURNING id::text`,
 		merchantID, in.AddressText, in.Lat, in.Lng,
 		in.RecipientName, in.RecipientPhone, nullIfEmpty(in.ParcelNote), in.FeePayer,
 		fee, driverFee, cashDue, strings.TrimSpace(in.DriverNote), // **و`notes` NOT NULL** — فراغٌ لا NULL
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
-		snap.CommissionSource, snap.ActivationOrders, pct, dropoffKnown).Scan(&id)
+		snap.CommissionSource, snap.ActivationOrders, pct, dropoffKnown, fixed).Scan(&id)
 	if err != nil {
 		return "", err
 	}
@@ -273,38 +273,67 @@ const (
 	FeePayerMerchantCash = "merchant_cash"
 )
 
-// SettingPlatformDeliveryPercent مفتاحُ حصّة المنصّة من أجرة التوصيل — **لكلّ
-// أنواع الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ١). **مكانٌ واحدٌ
-// لا نصٌّ يتكرّر**: مفتاحٌ يُكتب بيده في موضعين يفترق أحدُهما بخطأٍ مطبعيّ،
-// **فيُقرأ صفراً بصمت** (`GetInt` تردّ الافتراضَ لمفتاحٍ مجهول).
-const SettingPlatformDeliveryPercent = "delivery.platform_percent"
+// ══════════════════════════════════════════════════════════════════════
+// **حصّةُ المنصّة من الأجرة — لكلّ نوعٍ وحدَه، نسبةً أو مبلغاً** (قرارُ المالك ٢٠٢٦-١٠-١٣)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «إذا ٠ معناها كلها للسائق». **وتُلقَط على الطلب لحظةَ إنشائه** (`snap_platform_delivery_percent`
+// و`snap_platform_delivery_fixed`) **فلا تمسّ طلباً قائماً.**
+
+// أنواعُ الحصّة — بأسماء مفاتيحها.
+const (
+	ShareStandard = "standard"
+	ShareMerchant = "merchant"
+	SharePurchase = "purchase"
+	ShareAmanah   = "amanah"
+)
+
+// SettingShare **مفتاحُ قيمة الحصّة لنوع** — و`SettingShare(t)+"_mode"` طريقتُها.
+func SettingShare(t string) string { return "delivery.share_" + t }
 
 // platformDeliveryPercentMax **لا أجرَ للسائق عند المئة** — فالحدُّ تسعون.
 const platformDeliveryPercentMax = 90
 
-// platformDeliveryPercent **الحصّةُ النافذةُ الآن** — تُلقَط على الطلب لحظةَ
-// إنشائه (`snap_platform_delivery_percent`) فلا تمسّ طلباً قائماً.
-func (s *Service) platformDeliveryPercent(ctx context.Context, q dbtx.Querier) int64 {
+// platformShare **حصّةُ المنصّة النافذةُ الآن لنوع** — نسبةٌ أو مبلغ (والآخرُ صفر).
+func (s *Service) platformShare(ctx context.Context, q dbtx.Querier, t string) (pct, fixed int64) {
 	if s.settings == nil {
-		return 0
+		return 0, 0
 	}
-	pct := s.settings.On(q).GetInt(ctx, SettingPlatformDeliveryPercent)
-	if pct < 0 {
-		return 0
+	st := s.settings.On(q)
+	v := st.GetInt(ctx, SettingShare(t))
+	if v <= 0 {
+		return 0, 0
 	}
-	if pct > platformDeliveryPercentMax {
-		return platformDeliveryPercentMax
+	if st.GetString(ctx, SettingShare(t)+"_mode") == "fixed" {
+		return 0, v
 	}
-	return pct
+	if v > platformDeliveryPercentMax {
+		v = platformDeliveryPercentMax
+	}
+	return v, 0
 }
 
-// DriverFeeAfterShare **أجرُ السائق بعد حصّة المنصّة** — الحسبةُ الواحدةُ للأنواع
-// الثلاثة. **والكسرُ للسائق**: الحصّةُ تُقرَّب إلى أسفل.
+// DriverFeeAfterShare **أجرُ السائق بعد حصّةٍ نسبيّة** — والكسرُ للسائق.
 func DriverFeeAfterShare(fee, pct int64) int64 {
 	if fee <= 0 || pct <= 0 {
 		return fee
 	}
 	return fee - fee*pct/100
+}
+
+// DriverFeeWithShare **أجرُ السائق بعد حصّة المنصّة** — نسبةً أو مبلغاً ثابتاً، **ولا تتجاوز
+// الحصّةُ الأجرةَ** (مبلغٌ أكبرُ من الأجرة يأخذها كلَّها ولا يُسالبها).
+func DriverFeeWithShare(fee, pct, fixed int64) int64 {
+	if fee <= 0 {
+		return fee
+	}
+	if fixed > 0 {
+		if fixed >= fee {
+			return 0
+		}
+		return fee - fixed
+	}
+	return DriverFeeAfterShare(fee, pct)
 }
 
 // IsMerchantDelivery **أتوصيلةُ متجرٍ هي؟** — يُقرأ من الصفّ لا يُخمَّن.

@@ -84,7 +84,7 @@ var placeRules = []placeRule{
 	// ── المال والعمولات: ربحُ المنصّة ← المندوب ← السائق ← الزبون ← الصندوق ──
 	{prefix: "pricing.", topic: TopicMoney, section: "money.profit"},
 	{prefix: "merchants.commission_percent", exact: true, topic: TopicMoney, section: "money.profit"},
-	{prefix: "delivery.platform_percent", exact: true, topic: TopicMoney, section: "money.profit"},
+	{prefix: "delivery.share_", topic: TopicMoney, section: "money.profit"},
 	{prefix: "sales.commission_percent", exact: true, topic: TopicMoney, section: "money.rep"},
 	{prefix: "delivery.fee", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.merchant_fee", exact: true, topic: TopicMoney, section: "money.driver"},

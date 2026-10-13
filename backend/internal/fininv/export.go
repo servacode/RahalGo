@@ -99,10 +99,14 @@ var FinancialSettings = []string{
 	// **قائمةُ الخطورة الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٧):
 	// كلُّ مفتاحٍ عليه شارةُ «يمسّ المال» هنا — وحارسٌ يُسقط البناءَ إن غاب.
 	// **وحُذف منها مصدرُ عمولة المندوب وعتبةُ التفعيل** — صارا ثابتين.
-	"delivery.platform_percent", // orders — حصّةُ المنصّة من الأجرة لكلّ الأنواع
-	"delivery.custom_fee_min",   // orders/custom.go — أدنى أجرةِ الخاصّ
-	"delivery.custom_fee_max",   // orders/custom.go — أعلاها
-	"finance.manual_wallet_max", // accounts — سقفُ الحركة اليدويّة
+	"delivery.share_standard", "delivery.share_standard_mode", // orders — حصّةُ المنصّة لكلّ نوعٍ وحدَه (٢٠٢٦-١٠-١٣)
+	"delivery.share_merchant", "delivery.share_merchant_mode",
+	"delivery.share_purchase", "delivery.share_purchase_mode",
+	"delivery.share_amanah", "delivery.share_amanah_mode",
+	"delivery.custom_fee_amanah", // أجرةُ الأمانة حين تحدّدها المنصّة (٢٠٢٦-١٠-١٣)
+	"delivery.custom_fee_min",    // orders/custom.go — أدنى أجرةِ الخاصّ
+	"delivery.custom_fee_max",    // orders/custom.go — أعلاها
+	"finance.manual_wallet_max",  // accounts — سقفُ الحركة اليدويّة
 	// **وما وسمته أقسامٌ أخرى «يمسّ المال»** (كشفه الحارسُ عند الدمج ٢٠٢٦-١٠-٠٤):
 	"compensations.cap_driver",
 	"compensations.cap_merchant_goods",

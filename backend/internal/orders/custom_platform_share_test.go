@@ -65,8 +65,9 @@ func TestCustomShare_OwnerExampleClosesToZero(t *testing.T) {
 	if b, _ := w.Balance(ctx, driver); b != driverFee {
 		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (أجرُه وحدَه)", b, driverFee)
 	}
-	if g := cqGoodsReturned(t, orderID); g != goods {
-		t.Fatalf("رجعةُ البضاعة=%d — المنتظَر %d", g, goods)
+	// **وثمنُ البضاعة لا يدخل الدفتر** (٢٠٢٦-١٠-١٣) — مالُ المكتب يخرج ويعود نقداً.
+	if g := cqGoodsReturned(t, orderID); g != 0 {
+		t.Fatalf("قُيّد ثمنُ البضاعة للخزينة %d — **والمستردُّ ليس ربحاً**", g)
 	}
 	// **والزبونُ يدفع المجموعَ لا أقلَّ ولا أكثر.**
 	if b, _ := w.Balance(ctx, customer); b != 100_000-(goods+fee) {
@@ -83,8 +84,10 @@ func TestCustomShare_OwnerExampleClosesToZero(t *testing.T) {
 	// **ومجموعُ قيودِ الطلب كلِّها صفرٌ** — **ولا يكفي أن يبدو كلُّ طرفٍ
 	// صحيحاً**: ليرةٌ تُخصم من الزبون ولا تصل أحداً لا تظهر في أيّ طرف،
 	// **وتظهر في المجموع وحدَه.**
-	if sum := cqLedgerSum(t, orderID); sum != 0 {
-		t.Fatalf("مجموعُ قيود الطلب=%d — **والمعادلةُ يجب أن تُغلق على صفر**", sum)
+	// **والمعادلةُ تُغلق على ثمن البضاعة** — خرج من محفظة الزبون ليعوّض المكتبَ نقداً دفعه
+	// (٢٠٢٦-١٠-١٣)؛ وما عداه صفر.
+	if sum := cqLedgerSum(t, orderID); sum != -goods {
+		t.Fatalf("مجموعُ قيود الطلب=%d — المنتظَر %d (ثمنُ البضاعة وحدَه)", sum, -goods)
 	}
 }
 
@@ -152,11 +155,11 @@ func TestCustomShare_SnapshotSurvivesSettingChange(t *testing.T) {
 	// ولا يُردّ يجعل اختباراً آخرَ يقرأ نسبةً لم يضعها، **فيسقط بسببٍ لا
 	// يخصّه ويُبحَث عن العلّة في الموضع الخطأ.** (وقع فعلاً في هذه الدفعة.)
 	exec(ctx, `INSERT INTO app_settings (key, value) VALUES
-	           ('delivery.platform_percent', '50'::jsonb)
+	           ('delivery.share_purchase', '50'::jsonb)
 	           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 	t.Cleanup(func() {
 		exec(context.Background(),
-			`DELETE FROM app_settings WHERE key = 'delivery.platform_percent'`)
+			`DELETE FROM app_settings WHERE key = 'delivery.share_purchase'`)
 	})
 
 	for _, to := range []string{"picked_up", "on_the_way", "at_dropoff", "delivered"} {
@@ -247,7 +250,8 @@ func TestCustomShare_SettlementIsIdempotent(t *testing.T) {
 	if got := cqTreasury(t); got != treasuryBefore {
 		t.Fatalf("الخزينةُ تبدّلت بنداءٍ ثانٍ: %d ⇐ %d", treasuryBefore, got)
 	}
-	if sum := cqLedgerSum(t, orderID); sum != 0 {
-		t.Fatalf("المجموعُ=%d بعد نداءٍ ثانٍ — **قيدٌ مكرَّر**", sum)
+	// **والمجموعُ ثمنُ البضاعة وحدَه** (٢٠٢٦-١٠-١٣) — خرج من المحفظة ليعوّض المكتب.
+	if sum := cqLedgerSum(t, orderID); sum != -goods {
+		t.Fatalf("المجموعُ=%d بعد نداءٍ ثانٍ — المنتظَر %d. **قيدٌ مكرَّر؟**", sum, -goods)
 	}
 }

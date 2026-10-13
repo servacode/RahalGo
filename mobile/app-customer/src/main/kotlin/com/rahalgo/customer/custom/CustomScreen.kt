@@ -221,7 +221,7 @@ fun CustomScreen(
         Spacer(Modifier.height(12.dp))
         if (Serving.customFeeAdminDefined) {
             Text(
-                stringResource(R.string.ord_fee_value, money(Serving.customFeeValue)),
+                stringResource(R.string.ord_fee_value, money(Serving.customFeeFor(mode))),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(4.dp))

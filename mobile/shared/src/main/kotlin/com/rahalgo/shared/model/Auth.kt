@@ -225,6 +225,8 @@ data class Platform(
 data class CustomDelivery(
     val source: String = "driver_defined",
     val fee: Long = 0,
+    /** **أجرةُ الأمانة** (٢٠٢٦-١٠-١٣) — صفرُها «مثل المشتريات». */
+    @kotlinx.serialization.SerialName("fee_amanah") val feeAmanah: Long = 0,
 ) {
     /** **أحدّدتها المنصة؟** — فيُعرَض رقمُها للزبون عند الإنشاء. */
     val adminDefined: Boolean get() = source == "admin_defined"

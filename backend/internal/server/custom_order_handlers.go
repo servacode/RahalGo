@@ -74,6 +74,14 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 				o.ID, orders.CustomModeAmanah); err != nil {
 				return IdempotentBody{}, err
 			}
+			// **وأجرتُها أجرتُها** (٢٠٢٦-١٠-١٣) — تُلقَط بدل أجرة المشتريات إن ضُبطت.
+			if fee := s.orders.AmanahFeeSnapshot(ctx, q); fee != nil {
+				if _, err := q.Exec(ctx, `UPDATE orders SET custom_fee_snapshot = $2
+					WHERE id = $1 AND custom_fee_source = 'admin_defined'`, o.ID, *fee); err != nil {
+					return IdempotentBody{}, err
+				}
+				o.CustomFeeSnapshot = fee
+			}
 			o.CustomMode = orders.CustomModeAmanah
 		}
 		// **وردُّ الخاصّ يُشكَّل كالعاديّ** — **ولا بابَ يُعفى.**

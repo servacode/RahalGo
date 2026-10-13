@@ -119,11 +119,14 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	if tid == "" {
 		return nil
 	}
-	var walletPaid, cashDue int64
+	var walletPaid, cashDue, goods int64
 	var status string
 	if err := q.QueryRow(ctx,
-		`SELECT wallet_paid, cash_due, status FROM orders WHERE id = $1`, orderID).
-		Scan(&walletPaid, &cashDue, &status); err != nil {
+		`SELECT wallet_paid, cash_due, status,
+		        CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
+		             THEN COALESCE(custom_goods_amount, 0) ELSE 0 END
+		 FROM orders WHERE id = $1`, orderID).
+		Scan(&walletPaid, &cashDue, &status, &goods); err != nil {
 		return err
 	}
 	// **والاسترجاعُ لا يُلغي قبضاً وقع.**
@@ -142,6 +145,14 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	paid := walletPaid
 	if status == StDelivered || status == StRefunded {
 		paid += cashDue
+	}
+	// **وثمنُ بضاعة المشتريات مالُ المكتب يعود إليه** (قرارُ المالك ٢٠٢٦-١٠-١٣) — دفعه نقداً
+	// للسائق واستردّه، **فليس ربحاً ولا يُقيَّد.** يُطرح من المدفوع، ويبقى نصيبُ المنصّة من الأجرة.
+	if goods > 0 && paid > 0 {
+		if goods > paid {
+			goods = paid
+		}
+		paid -= goods
 	}
 
 	// **ما قُيّد للأطراف وما رُدَّ للزبون وما سبق أن أخذته الخزينة** — ثلاثةٌ

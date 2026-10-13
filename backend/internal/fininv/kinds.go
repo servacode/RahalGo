@@ -114,7 +114,8 @@ var Kinds = map[string]KindContract{
 	// السائقَ ثمنَ البضاعة، فيعود إليه مع المقبوض. **ليس ربحاً**: يُطرح في
 	// `creditTreasury` مع أنصبة الأطراف.
 	"custom_goods_return": {
-		Kind: "custom_goods_return", Sign: "+", RefRequired: true, RefTarget: "orders",
+		// **تاريخيٌّ وحدَه** (0435): عُكس كلُّه — ثمنُ البضاعة لا يدخل الدفتر.
+		Kind: "custom_goods_return", Sign: "±", RefRequired: true, RefTarget: "orders",
 		Creators:   []string{"internal/orders/custom.go"},
 		Path:       "تسويةُ تسليم الطلب الخاصّ (مشتريات)",
 		Semantics:  "ثمنُ بضاعةٍ دفعه المكتبُ للسائق يعود إلى الخزينة — **لا ربحٌ ولا أجر.**",

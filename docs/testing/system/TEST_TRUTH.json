@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 222,
-    "behaviour_settings": 178,
+    "setting_defs": 230,
+    "behaviour_settings": 186,
     "order_fields": 95,
-    "test_files": 556,
-    "test_funcs": 2264
+    "test_files": 557,
+    "test_funcs": 2266
   },
   "flows": [
     {
@@ -3784,6 +3784,27 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "delivery.custom_fee_amanah",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "delivery.custom_fee_max",
       "group": "drivers",
       "kind": "money",
@@ -3978,11 +3999,158 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "delivery.platform_percent",
+      "key": "delivery.share_amanah",
       "group": "drivers",
-      "kind": "percent",
+      "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_amanah_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_merchant",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_merchant_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_purchase",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_purchase_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_standard",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_standard_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": true,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -9650,13 +9818,19 @@
       "orphan": true
     },
     {
+      "name": "TestDriverFeeWithShare",
+      "file": "internal/orders/merchant_delivery_share_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestMerchantDeliveryShare",
       "file": "internal/orders/merchant_delivery_share_test.go",
       "package": "orders",
       "orphan": true
     },
     {
-      "name": "TestPlatformDeliveryPercentKeyMatchesCatalog",
+      "name": "TestPlatformShareKeysInCatalog",
       "file": "internal/orders/merchant_delivery_share_test.go",
       "package": "orders",
       "orphan": true
@@ -10083,6 +10257,12 @@
     {
       "name": "TestRefundAfterDelivery_ReversesEverything",
       "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestShare_AmanahFixedFiftyOfOneFifty",
+      "file": "internal/orders/share_per_kind_test.go",
       "package": "orders_test",
       "orphan": true
     },

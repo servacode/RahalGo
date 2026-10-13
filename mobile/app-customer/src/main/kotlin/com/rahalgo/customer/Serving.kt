@@ -110,6 +110,10 @@ object Serving {
     /** **قيمةُ أجرة المخصَّص حين تحدّدها المنصة** — تُعرَض للزبون. */
     val customFeeValue: Long get() = customDelivery?.fee ?: 0L
 
+    /** **أجرةُ الطلب الخاصّ بنوعه** — الأمانةُ بأجرتها إن ضُبطت (٢٠٢٦-١٠-١٣). */
+    fun customFeeFor(mode: String): Long =
+        customDelivery?.feeAmanah?.takeIf { mode == "amanah" && it > 0 } ?: customFeeValue
+
     /**
      * stale **أشاخت الحالُ فتحتاج تجديداً؟**
      *

@@ -170,6 +170,8 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		"custom_delivery": map[string]any{
 			"source": s.settings.GetString(r.Context(), "delivery.custom_fee_source"),
 			"fee":    s.settings.GetInt(r.Context(), "delivery.custom_fee"),
+			// **وأجرةُ الأمانة** (٢٠٢٦-١٠-١٣) — صفرُها «مثل المشتريات».
+			"fee_amanah": s.settings.GetInt(r.Context(), "delivery.custom_fee_amanah"),
 		},
 		// **وأيُطلب رمزٌ عند إنشاء الحساب؟** — (قرارُ المالك 2026-08-25).
 		//

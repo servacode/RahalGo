@@ -21,7 +21,7 @@ import (
 )
 
 // mdPct **حصّةُ المنصّة من الأجرة — مفتاحٌ واحدٌ للأنواع كلّها** (٢٠٢٦-١٠-٠٤).
-const mdPct = "delivery.platform_percent"
+const mdPct = "delivery.share_merchant"
 
 type mdFx struct {
 	f        *Factory

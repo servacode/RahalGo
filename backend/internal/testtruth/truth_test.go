@@ -326,8 +326,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **وواحدٌ بسلسلة تعريف المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٢): `merchants.onboarding_push`
 	// (وعباراتُها نصٌّ لا سلوك).
 	// **وواحدٌ بإرسال الطلب للمتجر** (طلبُ المالك ٢٠٢٦-١٠-١٢): `orders.notify_merchant`.
-	if d.BehaviourSettings != 178 {
-		t.Errorf("إعداداتُ السلوك = %d لا 178 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **وثمانيةٌ بحصّة المنصّة لكلّ نوع وأجرةِ الأمانة، وذهب واحد** (قرارُ المالك ٢٠٢٦-١٠-١٣):
+	// `delivery.share_{standard,merchant,purchase,amanah}{,_mode}` و`delivery.custom_fee_amanah`،
+	// وخرج `delivery.platform_percent`.
+	if d.BehaviourSettings != 186 {
+		t.Errorf("إعداداتُ السلوك = %d لا 186 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

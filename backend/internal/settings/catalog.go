@@ -1252,8 +1252,30 @@ var Catalog = []Def{
 	// القيد بنيويّاً.
 	//
 	// **ومئةٌ بالمئة تعني: لا أجرَ للسائق** — فالحدُّ الأعلى تسعون.
-	{Key: "delivery.platform_percent", Group: GroupDrivers,
-		Kind: KindPercent, Min: 0, Max: 90, Unit: "percent", Default: 0, Sensitive: true},
+	// ══════════════════════════════════════════════════════════════════
+	// **ثمّ صارت لكلّ نوعٍ حصّتُه — نسبةً أو مبلغاً ثابتاً** (قرارُ المالك ٢٠٢٦-١٠-١٣)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «كل وحدة ليها سعر منفصل ونحدد المبلغ نسبة مئوية أو ثابتة من الأجرة لكل طلب بشكل منفصل،
+	// إذا ٠ معناها كلها للسائق». **العاديُّ تربح فيه المنصّةُ من عمولة المتجر**، والأمانةُ
+	// والمشترياتُ و«لدي توصيلة» لا عمولةَ فيها — **فحصّتُها من الأجرة.** (هجرة 0436 تنقل
+	// قيمةَ `delivery.platform_percent` القديمة إلى الأربعة نسبةً كما كانت.)
+	{Key: "delivery.share_standard_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "delivery.share_standard", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "delivery.share_merchant_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "delivery.share_merchant", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "delivery.share_purchase_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "delivery.share_purchase", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "delivery.share_amanah_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "delivery.share_amanah", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// **وأجرةُ الكيلومتر تُضاف فوق `delivery.fee` لا بدلاً منه** —
 	// **ورقمان لمعنًى واحدٍ يفترقان**: من أطفأ المفتاحَ رجع إلى الأساس
@@ -1288,6 +1310,10 @@ var Catalog = []Def{
 	// **وأجرةُ الطلب المخصَّص حين تحدّدها المنصة** — تُلتقط على كلّ طلبٍ
 	// جديدٍ لحظةَ إنشائه. وصفرٌ يعني توصيلاً مجّانيّاً للطلب المخصَّص.
 	{Key: "delivery.custom_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true,
+		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
+	// **وأجرةُ الأمانة منفصلة** (قرارُ المالك ٢٠٢٦-١٠-١٣) — وصفرُها «مثل أجرة المشتريات».
+	{Key: "delivery.custom_fee_amanah", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true,
 		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
 

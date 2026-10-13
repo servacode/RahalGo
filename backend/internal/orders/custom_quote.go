@@ -217,22 +217,31 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	//
 	// **ويُعاد الحسابُ مع كلّ تعديلِ اتّفاق** — فالأجرةُ تتبدّل، **ونصيبٌ
 	// محسوبٌ على أجرةٍ قديمةٍ يكذب.**
-	pct := s.platformDeliveryPercent(ctx, q)
-	driverFee := DriverFeeAfterShare(newFee, pct)
+	// **ولكلّ نوعٍ حصّتُه** (٢٠٢٦-١٠-١٣) — الأمانةُ غيرُ المشتريات.
+	var mode string
+	if err := q.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, row.id).Scan(&mode); err != nil {
+		return false, err
+	}
+	shareKind := SharePurchase
+	if mode == CustomModeAmanah {
+		shareKind = ShareAmanah
+	}
+	pct, fixed := s.platformShare(ctx, q, shareKind)
+	driverFee := DriverFeeWithShare(newFee, pct, fixed)
 
 	set := `custom_goods_amount = $2, custom_fee = $3,
 	        subtotal = $2, delivery_fee = $3, driver_fee = $5,
-	        snap_platform_delivery_percent = $6,
+	        snap_platform_delivery_percent = $6, snap_platform_delivery_fixed = $7,
 	        total = $2::bigint + $3::bigint,
 	        quote_version = $4, custom_agreed_at = now(), updated_at = now()`
 	// **والثابتان يُضافان قبل الشرطيّ** — **ورقمُ وسيطٍ يتزحزح بحسب فرعٍ
 	// يُنفَّذ أو لا يُنفَّذ يكتب قيمةً في عمودٍ آخر بصمت.**
-	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct}
+	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed}
 	switch {
 	case invalidate:
 		set += `, quote_confirmed_at = NULL, quote_confirmed_total = NULL, quote_confirmed_version = NULL`
 	case row.confirmedAt != nil: // نقصٌ مع تأكيدٍ باقٍ: يُحدَّث المبلغُ والنسخة
-		set += `, quote_confirmed_total = $7, quote_confirmed_version = $4`
+		set += `, quote_confirmed_total = $8, quote_confirmed_version = $4`
 		args = append(args, newTotal)
 	}
 	if _, err := q.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {

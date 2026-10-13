@@ -74,10 +74,10 @@ func TestCustomCash_CollectedAndShared(t *testing.T) {
 	if got := cqTreasury(t); got != platform {
 		t.Fatalf("الخزينة=%d — المنتظَر %d", got, platform)
 	}
-	// **والمعادلةُ تُغلق**: ما وصل الأطرافَ = ما قُبض.
-	if sum := cqLedgerSum(t, orderID); sum != goods+fee {
-		t.Fatalf("مجموعُ القيود=%d — المنتظَر %d (المقبوضُ نقداً يدخل من خارج الدفتر)",
-			sum, goods+fee)
+	// **والمعادلةُ تُغلق**: ما وصل الأطرافَ = ما قُبض **ناقصَ ثمن البضاعة** — يعود للمكتب نقداً
+	// دفعه ولا يدخل الدفتر (قرارُ المالك ٢٠٢٦-١٠-١٣).
+	if sum := cqLedgerSum(t, orderID); sum != fee {
+		t.Fatalf("مجموعُ القيود=%d — المنتظَر %d (الأجرةُ وحدَها؛ البضاعةُ خارجَ الدفتر)", sum, fee)
 	}
 }
 

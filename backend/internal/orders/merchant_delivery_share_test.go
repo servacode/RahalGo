@@ -1,6 +1,10 @@
 package orders
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/settings"
+)
 
 // قسمةُ أجرة «لدي توصيلة» — **نصيبُ المنصّة والباقي للسائق.**
 //
@@ -45,15 +49,31 @@ func TestMerchantDeliveryShare(t *testing.T) {
 	}
 }
 
-// **والمفتاحُ واحدٌ لا يُكتب بيده مرّتين** — وهو مفتاحُ الأنواع الثلاثة
-// (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ١).
+// **ومفاتيحُ الحصّة في الفهرس** — لكلّ نوعٍ قيمتُه وطريقتُه (٢٠٢٦-١٠-١٣).
 //
-// **`GetInt` تردّ الافتراضَ لمفتاحٍ مجهول** — **فخطأٌ مطبعيٌّ في أحد
-// الموضعين يُقرأ نسبةً افتراضيّةً بصمت، ولا يظهر في أيّ خطأ.**
-func TestPlatformDeliveryPercentKeyMatchesCatalog(t *testing.T) {
-	const inCatalog = "delivery.platform_percent"
-	if SettingPlatformDeliveryPercent != inCatalog {
-		t.Fatalf("المفتاحُ %q والفهرسُ %q — **ويُقرأ الافتراضُ بصمت**",
-			SettingPlatformDeliveryPercent, inCatalog)
+// **`GetInt` تردّ الافتراضَ لمفتاحٍ مجهول** — **فخطأٌ مطبعيٌّ يُقرأ صفراً بصمت.**
+func TestPlatformShareKeysInCatalog(t *testing.T) {
+	for _, k := range []string{ShareStandard, ShareMerchant, SharePurchase, ShareAmanah} {
+		for _, key := range []string{SettingShare(k), SettingShare(k) + "_mode"} {
+			if _, ok := settings.Lookup(key); !ok {
+				t.Errorf("المفتاحُ %q غائبٌ عن الفهرس — **ويُقرأ صفراً بصمت**", key)
+			}
+		}
+	}
+}
+
+// **والمبلغُ الثابتُ يُطرح كما هو ولا يتجاوز الأجرة** — ١٥٠ وحصّةٌ ٥٠ ⇒ للسائق ١٠٠.
+func TestDriverFeeWithShare(t *testing.T) {
+	cases := []struct{ fee, pct, fixed, want int64 }{
+		{150, 0, 50, 100},
+		{150, 0, 0, 150},
+		{150, 10, 0, 135},
+		{100, 0, 500, 0},
+		{0, 0, 50, 0},
+	}
+	for _, c := range cases {
+		if got := DriverFeeWithShare(c.fee, c.pct, c.fixed); got != c.want {
+			t.Errorf("أجرة %d · نسبة %d · ثابت %d ⇒ %d والمنتظَر %d", c.fee, c.pct, c.fixed, got, c.want)
+		}
 	}
 }

@@ -147,6 +147,23 @@ func (s *Service) customFeePolicy(ctx context.Context) (source string, snapshot 
 	return
 }
 
+// AmanahFeeSnapshot **أجرةُ الأمانة حين تحدّدها المنصّة** (قرارُ المالك ٢٠٢٦-١٠-١٣) — منفصلةٌ
+// عن المشتريات، **وصفرُها «مثل أجرة المشتريات»** فتُردّ فارغة.
+func (s *Service) AmanahFeeSnapshot(ctx context.Context, q dbtx.Querier) *int64 {
+	if s.settings == nil {
+		return nil
+	}
+	st := s.settings.On(q)
+	if st.GetString(ctx, "delivery.custom_fee_source") != "admin_defined" {
+		return nil
+	}
+	fee := st.GetInt(ctx, "delivery.custom_fee_amanah")
+	if fee <= 0 {
+		return nil
+	}
+	return &fee
+}
+
 // CreateCustom **يُنشئ طلباً خاصّاً — بلا متجرٍ ولا سعر.**
 //
 // **وأعمدةُ المال أصفار**: `subtotal` و`total` و`delivery_fee` و`cash_due`.
@@ -805,38 +822,24 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 }
 
-// payCustomDriver **محفظةُ السائق أجرتُه وحدَها، وثمنُ البضاعة للخزينة** (قرارُ المالك
-// ٢٠٢٦-١٠-١٣: «المصاري أصلاً المنصّة رح تعطيها للسائق يشتري المطلوب ويرجعهن… بمحفظته
-// بس عمولته أجرة التوصيل»). **كان ثمنُ البضاعة يُودَع محفظتَه** على أنّه دفعه من جيبه —
-// فتنتفخ محفظتُه و«كسبت» بمالٍ ليس أجراً.
+// payCustomDriver **محفظةُ السائق أجرتُه وحدَها — وثمنُ البضاعة لا يدخل الدفترَ أصلاً**
+// (قرارا المالك ٢٠٢٦-١٠-١٣: «المصاري أصلاً المنصّة رح تعطيها للسائق يشتري المطلوب ويرجعهن»
+// · «المبلغ ١١٠٠ هو مبلغ مستردّ فقط… لهيك لازم ما يفوت بالحسابات»).
 //
-// **والمجموعُ لا يتغيّر**: ما كان يُودَع له يُقسَم أجراً له ورجعةً للخزينة، **فيبقى
-// صافي دفتر الطلب = نقدَ السائق منه** (`FI-06.a`).
+// **المكتبُ يدفع ثمنَ البضاعة نقداً ويستردّه نقداً** — مالٌ يخرج ويعود خارجَ المحافظ. **وقيدُ
+// رجعته وحدَه** (كما كان بين 0433 و0435) **يُظهر الخزينةَ رابحةً بما لم تربح** ويُخفي الخسارةَ
+// الحقيقيّة (المكافآت). فلا قيدَ له، و`creditTreasury` تطرحه من المدفوع.
 func (s *Service) payCustomDriver(ctx context.Context, q wallet.Querier, in settlement, total, goods int64) error {
 	if goods > total {
 		goods = total
 	}
 	fee := total - goods
-	if fee > 0 {
-		if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, fee, "driver_earning",
-			in.orderID, "طلبٌ خاصّ — أجرةُ التوصيل", &in.actorID); err != nil {
-			return err
-		}
+	if fee <= 0 {
+		return nil
 	}
-	if goods > 0 {
-		tid := s.treasuryOn(ctx, q)
-		if tid == "" {
-			// **بلا خزينةٍ لا قيدَ للمنصّة أصلاً** — فيبقى ما كان: يُودَع السائق.
-			_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, goods, "driver_earning",
-				in.orderID, "طلبٌ خاصّ — ثمنُ البضاعة", &in.actorID)
-			return err
-		}
-		if _, err := s.wallet.ApplyTx(ctx, q, tid, goods, "custom_goods_return",
-			in.orderID, "رجعةُ ثمن البضاعة من السائق", &in.actorID); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, fee, "driver_earning",
+		in.orderID, "طلبٌ خاصّ — أجرةُ التوصيل", &in.actorID)
+	return err
 }
 
 // settleCustomCash **الطلبُ الخاصُّ نقداً** — قرارُ المالك ٢٠٢٦-٠٩-٢٩.

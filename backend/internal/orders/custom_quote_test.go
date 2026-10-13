@@ -42,11 +42,11 @@ func cqSetup(t *testing.T) (*orders.Service, *wallet.Service, string, string, fu
 	// **وحصّةُ المنصّة عشرةٌ صراحةً** — كانت افتراضاً، **وصار الافتراضُ صفراً**
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤)، وهذه الاختباراتُ تقيس القسمةَ بعشرة.
 	exec(context.Background(), `INSERT INTO app_settings (key, value) VALUES
-	           ('delivery.platform_percent', '10'::jsonb)
+	           ('delivery.share_purchase', '10'::jsonb)
 	           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(),
-			`DELETE FROM app_settings WHERE key = 'delivery.platform_percent'`)
+			`DELETE FROM app_settings WHERE key = 'delivery.share_purchase'`)
 	})
 	return svc, w, customer, driver, exec
 }
@@ -177,10 +177,10 @@ func TestCustomQuote_WalletHappyPath(t *testing.T) {
 	// والخمسون تبقى بلا وجهةٍ ولا تُقيَّد**، والسائقُ يأخذ نصيبَه وحدَه.
 	// **وقياسُ حصّة المنصّة موضعُه `custom_platform_share_test.go`** حيث
 	// تُعَدُّ الخزينةُ صراحةً.
-	const wantDriver = 6_000 + 1_350
+	// **وثمنُ البضاعة لا يدخل محفظتَه** (قرارُ المالك ٢٠٢٦-١٠-١٣) — المكتبُ أعطاه إيّاه.
+	const wantDriver = 1_350
 	if b, _ := w.Balance(ctx, driver); b != wantDriver {
-		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (بضاعةٌ ٦٠٠٠ + أجرٌ بعد النصيب ١٣٥٠)",
-			b, wantDriver)
+		t.Fatalf("رصيدُ السائق=%d — المنتظَر %d (أجرُه بعد النصيب وحدَه)", b, wantDriver)
 	}
 	if r := cqReserved(t, w, customer); r != 0 {
 		t.Fatalf("محجوزُ المحفظة بعد التسوية=%d — المنتظَر 0", r)

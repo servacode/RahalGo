@@ -37,7 +37,7 @@ type moneyExample struct {
 }
 
 // computeMoneyExample **الحسبةُ نفسُها التي تجري على الطلب.**
-func computeMoneyExample(r *http.Request, st pricing.Store, amount int64, platformPct int64) moneyExample {
+func computeMoneyExample(r *http.Request, st pricing.Store, amount int64, platformPct, platformFixed int64) moneyExample {
 	ctx := r.Context()
 	ex := moneyExample{Amount: amount}
 	sale := pricing.RuleFrom(ctx, st).SalePrice(amount, nil, nil)
@@ -47,7 +47,7 @@ func computeMoneyExample(r *http.Request, st pricing.Store, amount int64, platfo
 	ex.MerchantCommission = pricing.MerchantCommission(ctx, st, nil).Of(amount)
 	ex.MerchantGets = amount - ex.MerchantCommission
 	ex.PlatformDeliveryPc = platformPct
-	ex.DriverGets = orders.DriverFeeAfterShare(ex.DeliveryFee, platformPct)
+	ex.DriverGets = orders.DriverFeeWithShare(ex.DeliveryFee, platformPct, platformFixed)
 	ex.PlatformFeeShare = ex.DeliveryFee - ex.DriverGets
 	base := pricing.RepCommissionBase(pricing.RepCommissionSourceFixed, ex.MerchantCommission, ex.Margin)
 	ex.RepGets = pricing.RepCommission(ctx, st).Of(base)
@@ -66,12 +66,18 @@ func (s *Server) handleSettingsMoneyExample(w http.ResponseWriter, r *http.Reque
 		}
 		amount = n
 	}
-	pct := s.settings.GetInt(r.Context(), orders.SettingPlatformDeliveryPercent)
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 90 {
+	// **مثالُ الطلب العاديّ — بحصّته هو** (٢٠٢٦-١٠-١٣: لكلّ نوعٍ حصّتُه).
+	key := orders.SettingShare(orders.ShareStandard)
+	v := s.settings.GetInt(r.Context(), key)
+	var pct, fixed int64
+	switch {
+	case v <= 0:
+	case s.settings.GetString(r.Context(), key+"_mode") == "fixed":
+		fixed = v
+	case v > 90:
 		pct = 90
+	default:
+		pct = v
 	}
-	httpx.JSON(w, http.StatusOK, computeMoneyExample(r, s.settings, amount, pct))
+	httpx.JSON(w, http.StatusOK, computeMoneyExample(r, s.settings, amount, pct, fixed))
 }

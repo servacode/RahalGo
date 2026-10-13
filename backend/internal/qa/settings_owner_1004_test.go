@@ -94,7 +94,7 @@ func TestSETTINGS_ListCarriesRiskAndTopic(t *testing.T) {
 		k, _ := m["key"].(string)
 		found[k] = m
 	}
-	p := found["delivery.platform_percent"]
+	p := found["delivery.share_standard"]
 	if p == nil || p["risk"] != "money" || p["sensitive"] != true || p["topic"] != "money" {
 		t.Fatalf("حصّةُ المنصّة ⇒ %v", p)
 	}
@@ -112,7 +112,7 @@ func TestSETTINGS_PlatformShareAppliesToStandardOrder(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
 	h.Setting("delivery.fee", "10000")
-	h.Setting("delivery.platform_percent", "10")
+	h.Setting("delivery.share_standard", "10")
 	f := h.Factory()
 	m := f.Merchant()
 	item := h.NewItemFor(m, 5000)
@@ -131,7 +131,7 @@ func TestSETTINGS_PlatformShareAppliesToStandardOrder(t *testing.T) {
 		t.Fatalf("أجرةٌ %d وأجرُ السائق %d واللقطة %d — والمنتظَرُ ١٠٪ للمنصّة", fee, drv, snap)
 	}
 	// **ورفعُها بعد الإنشاء لا يمسّ الطلب.**
-	h.Setting("delivery.platform_percent", "30")
+	h.Setting("delivery.share_standard", "30")
 	var after int64
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT driver_fee FROM orders WHERE id = $1::uuid`, oid).Scan(&after)
 	if after != drv {
@@ -167,7 +167,7 @@ func TestSETTINGS_MoneyExampleFromEngine(t *testing.T) {
 	h.Setting("pricing.margin_fixed", "1000")
 	h.Setting("merchants.commission_percent", "10")
 	h.Setting("sales.commission_percent", "10")
-	h.Setting("delivery.platform_percent", "10")
+	h.Setting("delivery.share_standard", "10")
 	res := h.GET("/api/v1/admin/settings/money-example?amount=50000", admin.Token)
 	if res.Code != http.StatusOK {
 		t.Fatalf("المثال: %s", res)

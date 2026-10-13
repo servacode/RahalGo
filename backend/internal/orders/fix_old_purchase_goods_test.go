@@ -35,23 +35,27 @@ func TestFixOldPurchaseGoods_MovesGoodsOnce(t *testing.T) {
 	before := cqTreasuryBalance(t)
 
 	_, self, _, _ := runtime.Caller(0)
-	sql, err := os.ReadFile(filepath.Join(filepath.Dir(self), "..", "migrate", "migrations", "0434_fix_old_purchase_goods.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 2; i++ { // **والثانيةُ لا تفعل شيئاً**
-		if _, err := pool.Exec(ctx, string(sql)); err != nil {
-			t.Fatalf("التصحيح: %v", err)
+	dir := filepath.Join(filepath.Dir(self), "..", "migrate", "migrations")
+	for _, f := range []string{"0434_fix_old_purchase_goods.sql", "0435_goods_out_of_ledger.sql"} {
+		sql, err := os.ReadFile(filepath.Join(dir, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := 0; i < 2; i++ { // **والثانيةُ لا تفعل شيئاً**
+			if _, err := pool.Exec(ctx, string(sql)); err != nil {
+				t.Fatalf("التصحيح %s: %v", f, err)
+			}
 		}
 	}
 	if b, _ := w.Balance(ctx, driver); b != 100 {
 		t.Fatalf("محفظةُ السائق=%d — المنتظَر 100 (أجرتُه وحدَها)", b)
 	}
-	if g := cqGoodsReturned(t, orderID); g != 1100 {
-		t.Fatalf("رجعةُ البضاعة=%d — المنتظَر 1100", g)
+	// **و0435 يعكس رجعةَ الخزينة** — ثمنُ البضاعة مستردٌّ لا ربح، فلا يدخل الحسابات.
+	if g := cqGoodsReturned(t, orderID); g != 0 {
+		t.Fatalf("صافي رجعة البضاعة=%d — المنتظَر 0", g)
 	}
-	if d := cqTreasuryBalance(t) - before; d != 1100 {
-		t.Fatalf("الخزينةُ تحرّكت %d — المنتظَر 1100", d)
+	if d := cqTreasuryBalance(t) - before; d != 0 {
+		t.Fatalf("الخزينةُ تحرّكت %d — **والمستردُّ لا يُحسب لها**", d)
 	}
 }
 

@@ -27,7 +27,7 @@ func TestSETTINGS_RiskLevelsDriveCapabilityAndStepUp(t *testing.T) {
 		risk string
 		cap  authz.Capability
 	}{
-		{"delivery.platform_percent", riskMoney, authz.SettingsFinancialManage},
+		{"delivery.share_standard", riskMoney, authz.SettingsFinancialManage},
 		{"delivery.custom_fee_min", riskMoney, authz.SettingsFinancialManage},
 		{"finance.manual_wallet_max", riskMoney, authz.SettingsFinancialManage},
 		{"security.session_days", riskSecurity, authz.SettingsSecurityManage},
