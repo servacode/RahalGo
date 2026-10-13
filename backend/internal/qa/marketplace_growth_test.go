@@ -150,12 +150,10 @@ func TestML11_FirstQualifyingProductRevealsSection(t *testing.T) {
 		_, _ = hh.Pool.Exec(ctxBG(), `DELETE FROM platform_sections WHERE id = $1::uuid`, empty)
 	})
 
-	count, _, ok := sectionCounts(t, hh, empty, "")
-	if !ok {
-		t.Fatal("**القسمُ الجديدُ غائبٌ عن الباب**")
-	}
-	if count != 0 {
-		t.Fatalf("**قسمٌ بلا صنفٍ عدُّه %d**", count)
+	// **والقسمُ الفارغُ لا يُعرض للزبون أصلاً** (قرارُ المالك ٢٠٢٦-١٠-١٣:
+	// «ما يظهر إلا الأقسام اللي فيها أصناف، أقل شي صنف واحد»).
+	if count, _, ok := sectionCounts(t, hh, empty, ""); ok {
+		t.Fatalf("**قسمٌ بلا صنفٍ ظهر للزبون** بعدٍّ %d", count)
 	}
 
 	// **يُضاف أوّلُ صنفٍ مستوفٍ** — معتمَدٌ ومتوفّرٌ لمتجرٍ فعّالٍ في مدينة.

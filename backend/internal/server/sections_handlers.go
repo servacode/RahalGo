@@ -318,10 +318,9 @@ func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 	// **والشرطُ في `ON` لا في `WHERE`**: القسمُ يبقى في القائمة بعدّادٍ
 	// صفر، **و`WHERE` على ضمٍّ خارجيٍّ يمحو القسمَ نفسَه.**
 	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 1)
-	seen := ""
-	if where != "" {
-		seen = " AND m.id IS NOT NULL"
-	}
+	// **والصنفُ يُعدّ إن كان متجرُه عاملاً — في المدينة وخارجها** (٢٠٢٦-١٠-١٣):
+	// كان الشرطُ مع المدينة وحدَها، فصنفُ متجرٍ موقوفٍ يُبقي قسمَه ظاهراً.
+	seen := " AND m.id IS NOT NULL AND i.approved"
 	// ══════════════════════════════════════════════════════════════════
 	// **ووجودُ المحتوى غيرُ إمكانِ الطلب الآن** (`PL-D`، ٢٠٢٦-٠٩-١٦)
 	// ══════════════════════════════════════════════════════════════════
@@ -364,6 +363,13 @@ func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 		if err := rows.Scan(&x.ID, &x.Name, &x.Icon, &x.ImageURL,
 			&x.ImageThumbURL, &x.Count, &x.OrderableNow); err != nil {
 			return nil, err
+		}
+		// **والقسمُ الفارغُ لا يُعرض للزبون** (قرارُ المالك ٢٠٢٦-١٠-١٣: «لازم
+		// ما يظهر إلا الأقسام اللي فيها أصناف، أقل شي صنف واحد») — كانت
+		// الأقسامُ الثلاثةُ والأربعون كلُّها في الشريط، **وأكثرُها يُفتح فارغاً.**
+		// والتطبيقُ يعرض ما يصله، **فالتصفيةُ هنا تصل كلَّ نسخةٍ بلا تحديث.**
+		if x.Count == 0 {
+			continue
 		}
 		x.ImageURL = media.URLForPtr(x.ImageURL)
 		x.ImageThumbURL = media.URLForPtr(x.ImageThumbURL)

@@ -3,6 +3,8 @@ package com.rahalgo.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -61,10 +63,37 @@ fun readScaledImage(context: Context, uri: Uri): ByteArray {
         )
     } ?: throw IOException(context.getString(R.string.err_photo_unreadable))
 
+    // **وتُدار كما صُوّرت قبل الضغط** (ملاحظةُ المالك ٢٠٢٦-١٠-١٣: «عم تطلع
+    // الصورة مقلوبة»). **الكاميرا تحفظ اللقطةَ على جنبها وتكتب «أدِرها» في
+    // ترويستها** — والفكُّ ثمّ الضغطُ هنا يرمي الترويسة، فتصل المحرّكَ مقلوبةً
+    // ولا وسمَ فيها يُصلحها.
+    val upright = rotateByExif(context, uri, bmp)
     val out = ByteArrayOutputStream()
-    bmp.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+    upright.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+    if (upright !== bmp) upright.recycle()
     bmp.recycle()
     return out.toByteArray()
+}
+
+/** **اتّجاهُ اللقطة من ترويستها** — وصورةٌ بلا وسمٍ تبقى كما هي. */
+private fun rotateByExif(context: Context, uri: Uri, bmp: Bitmap): Bitmap {
+    val o = runCatching {
+        context.contentResolver.openInputStream(uri)?.use {
+            ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        }
+    }.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+    val m = Matrix()
+    when (o) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> m.postRotate(90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> m.postRotate(180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> m.postRotate(270f)
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> m.postScale(-1f, 1f)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> m.postScale(1f, -1f)
+        ExifInterface.ORIENTATION_TRANSPOSE -> { m.postRotate(90f); m.postScale(-1f, 1f) }
+        ExifInterface.ORIENTATION_TRANSVERSE -> { m.postRotate(270f); m.postScale(-1f, 1f) }
+        else -> return bmp
+    }
+    return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
 }
 
 /**

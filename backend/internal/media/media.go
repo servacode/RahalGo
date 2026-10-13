@@ -270,6 +270,10 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 	if err != nil {
 		return nil, ErrBadImage
 	}
+	// **وصورةُ الكاميرا تُدار كما صُوّرت** — orient.go (ملاحظةُ المالك ٢٠٢٦-١٠-١٣).
+	if format == "jpeg" {
+		src = orient(src, exifOrientation(raw))
+	}
 
 	// PNG يبقى PNG للحفاظ على الشفافية (شعارات)، وكل ما عداه يُعاد ترميزه JPEG.
 	//
