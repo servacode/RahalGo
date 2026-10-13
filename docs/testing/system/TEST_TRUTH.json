@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 85,
-    "notify_targeted": 33,
+    "notify_sites": 87,
+    "notify_targeted": 34,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 231,
     "behaviour_settings": 187,
     "order_fields": 96,
-    "test_files": 562,
-    "test_funcs": 2271
+    "test_files": 563,
+    "test_funcs": 2272
   },
   "flows": [
     {
@@ -15172,6 +15172,12 @@
     {
       "name": "TestDRV_HISTORY_NoCustomerPhoneOrLocation",
       "file": "internal/qa/driver_history_privacy_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverLocationWatch_NotifiesNeverEndsShift",
+      "file": "internal/qa/driver_location_watch_test.go",
       "package": "qa",
       "orphan": true
     },

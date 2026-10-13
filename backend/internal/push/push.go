@@ -99,6 +99,11 @@ type Message struct {
 	// Collapse **مفتاحُ الطيّ عند المزوّد** — خبرٌ جديدٌ بالمفتاح نفسِه يحلّ
 	// محلَّ القديم إن لم يُسلَّم بعد.
 	Collapse string
+	// MinAppVersion **أدنى نسخةٍ تفهم هذا الخبر** («0.4.6») — وفارغٌ للكلّ.
+	//
+	// **لخبرٍ صامتٍ لا عنوانَ له** (إيقاظُ خدمة الموقع، ٢٠٢٦-١٠-١٣): نسخةٌ
+	// قديمةٌ لا تعرفه تعرضه إشعاراً فارغاً — كلَّ بضع دقائق.
+	MinAppVersion string
 }
 
 // Service **الوجهُ الوحيدُ للمنصّة** — تسجيلٌ وإرسالٌ وتنظيف.
@@ -272,7 +277,7 @@ func (s *Service) SendToUser(ctx context.Context, userID string, msg Message) {
 		return
 	}
 
-	byPlatform, err := s.tokensOf(ctx, userID, msg.Apps)
+	byPlatform, err := s.tokensOfMin(ctx, userID, msg.Apps, msg.MinAppVersion)
 	if err != nil {
 		s.logger.Error("الدفع: تعذّرت قراءةُ الأجهزة", "user", userID, "error", err)
 		return
@@ -344,11 +349,18 @@ func (s *Service) SendToTokens(ctx context.Context, tokens []string, msg Message
 // تطبيقُه (`app = ”`) داخلاً في كلّ حال**: جهازٌ سُجّل من نسخةٍ قديمةٍ لا
 // تُصرّح **يجب أن يستقبل لا أن يصمت** — إشعارٌ زائدٌ أهونُ من إشعارٍ مفقود.
 func (s *Service) tokensOf(ctx context.Context, userID string, apps []string) (map[string][]string, error) {
+	return s.tokensOfMin(ctx, userID, apps, "")
+}
+
+// tokensOfMin **ومع أدنى نسخة** — النسخةُ أرقامٌ بنقاط تُقارَن رقماً رقماً.
+func (s *Service) tokensOfMin(ctx context.Context, userID string, apps []string, minVersion string) (map[string][]string, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT platform, token FROM device_tokens
 		WHERE user_id = $1 AND last_seen_at > now() - $2::interval
-		  AND ($3::text[] IS NULL OR app = '' OR app = ANY($3::text[]))`,
-		userID, staleAfter.String(), nilIfEmpty(apps))
+		  AND ($3::text[] IS NULL OR app = '' OR app = ANY($3::text[]))
+		  AND ($4 = '' OR (app_version ~ '^[0-9]+(\.[0-9]+)*$'
+		       AND string_to_array(app_version, '.')::int[] >= string_to_array($4, '.')::int[]))`,
+		userID, staleAfter.String(), nilIfEmpty(apps), minVersion)
 	if err != nil {
 		return nil, err
 	}

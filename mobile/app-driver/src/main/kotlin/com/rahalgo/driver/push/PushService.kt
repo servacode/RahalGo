@@ -44,8 +44,34 @@ class PushService : RahalPushService() {
     // يرسل `order` مع `urgent=1`، فوصل العرضُ على قناة الأخبار (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢).
     override fun honorsServerUrgency(): Boolean = true
 
+    // ══════════════════════════════════════════════════════════════
+    // **إيقاظٌ صامتٌ لخدمة الموقع** (٢٠٢٦-١٠-١٣)
+    // ══════════════════════════════════════════════════════════════
+    //
+    // **المحرّكُ يرسله إن انقطع موقعُ سائقٍ في الدوام** (driver_location_watch.go)
+    // — **عاجلاً**، وهو وحدَه ما يسمح به أندرويد لإقلاع خدمةٍ أماميّةٍ من الخلفيّة.
+    // **فتعود الخدمةُ بلا إشعارٍ ولا فتح**، ولا يُعرض شيء.
+    override fun onMessageReceived(message: com.google.firebase.messaging.RemoteMessage) {
+        if (message.data["kind"] == KIND_LOCATION_WAKE) {
+            val app = applicationContext
+            if (com.rahalgo.driver.location.ShiftMemory.onShift(app) &&
+                com.rahalgo.driver.location.LocationPermission.granted(app)
+            ) {
+                runCatching {
+                    com.rahalgo.driver.location.LocationService.start(
+                        app,
+                        com.rahalgo.driver.location.ShiftMemory.pingSec(app),
+                    )
+                }.onFailure { android.util.Log.w("RahalGo/push", "تعذّر إيقاظُ خدمة الموقع", it) }
+            }
+            return
+        }
+        super.onMessageReceived(message)
+    }
+
     companion object {
         const val KIND_OFFER = "order_offer"
+        const val KIND_LOCATION_WAKE = "location_wake"
         const val KIND_CHAT = com.rahalgo.ui.Engagement.KIND_CHAT
     }
 }

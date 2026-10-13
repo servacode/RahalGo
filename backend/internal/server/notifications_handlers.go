@@ -53,6 +53,9 @@ func (s *Server) touchUser(userID string, entities ...string) {
 // currencyWord **اسمُ العملة في نصّ إشعار** — ولا يُكتب في موضعين.
 const currencyWord = "ل.س"
 
+// minutesWord **وحدةُ الدقائق في متن إشعار.**
+const minutesWord = "دقيقة"
+
 // نصوص الإشعارات المركزية — مصدر واحد لكل نصوص الإشعارات في الخادم.
 var notifTitles = struct {
 	walletCredit, walletDebit, ratingNew, accountSuspended, accountActivated string
@@ -69,8 +72,10 @@ var notifTitles = struct {
 	// رقماً زاد بلا سبب.** وهدفٌ لا يُبشَّر ببلوغه لا يحفّز.
 	targetReached string
 	// repMerchantCounted **اكتملت شروطُ متجرٍ فتحه فدخل هدفَه** (٢٠٢٦-١٠-١٣).
-	repMerchantCounted                          string
-	payoutRequested, payoutPaid, payoutRejected string
+	repMerchantCounted string
+	// **سائقٌ في الدوام انقطع موقعُه** (٢٠٢٦-١٠-١٣) — له ما يفعل، وللمكتب من هو.
+	driverLocationLost, driverLocationLostBody, opsDriverLocationLost string
+	payoutRequested, payoutPaid, payoutRejected                       string
 	// **ولكلّ حالٍ من أحوال السحب عنوانُها** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤) —
 	// كان الفشلُ والارتدادُ وقيدُ الصرف تُعنوَن «صُرف طلب السحب».
 	payoutProcessing, payoutFailed, payoutReversed string
@@ -107,53 +112,56 @@ var notifTitles = struct {
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأهداف).
 	incentiveReward, incentivePenalty string
 }{
-	incentiveReward:       "مكافأة من الإدارة في محفظتك",
-	incentivePenalty:      "عقوبة من الإدارة على حسابك",
-	walletRequest:         "طلب حركة على محفظة ينتظر موافقة المالية",
-	phoneChangeRequest:    "طلب تغيير رقم حساب ينتظر موافقة ثانية",
-	storeBanned:           "حُظر متجرك",
-	storeUnbanned:         "رُفع الحظر عن متجرك",
-	driverCleared:         "يمكنك فتح دوامك الآن — تأكدت الإدارة أنك بخير",
-	warningsThreshold:     "حساب بلغ حد الإنذارات — يحتاج قرار موظف",
-	offensiveText:         "لفظ مسيء في حديث أو شكوى — أُخفي عن الطرف الآخر",
-	warningOnYou:          "إنذار على حسابك",
-	emergencyResolved:     "تابعنا بلاغَ الطوارئ الخاصّ بك",
-	complaintOnYou:        "شكوى على خدمتك",
-	messageFromDriver:     "رسالة من السائق",
-	messageFromCustomer:   "رسالة من الزبون",
-	warningIssued:         "إنذارٌ على متجرك",
-	driverEmergency:       "طارئٌ لدى سائق",
-	driverReleased:        "سائقٌ ترك طلباً قبل الاستلام — ودوامُه أُغلق",
-	walletCredit:          "إيداع في محفظتك",
-	walletDebit:           "خصم من محفظتك",
-	ratingNew:             "تقييم جديد على خدمتك",
-	accountSuspended:      "تم إيقاف حسابك مؤقتاً",
-	accountActivated:      "تم تفعيل حسابك",
-	ticketOpened:          "فُتحت شكواك",
-	ticketNewOps:          "شكوى جديدة",
-	ticketReply:           "رد جديد على شكواك",
-	ticketResolved:        "تم حل شكواك",
-	ticketAwaitingFinance: "شكواك بانتظار قرار المالية بالتعويض",
-	complaintCompRejected: "رفضت المالية تعويض شكوى — عادت إلى الدعم",
-	driverAssigned:        "أُسند إليك طلب جديد",
-	driverTransferred:     "تحوّل طلبك إلى متجر آخر",
-	targetReached:         "أنجزت هدف الشهر — نالتك مكافأته",
-	repMerchantCounted:    "اكتملت شروط متجرك وانحسب بهدفك",
-	storeClosed:           "إغلاق طارئ لمتجر",
-	storeReopened:         "عاد متجر للعمل",
-	cashSettled:           "سُلّم صندوقك النقدي",
-	roleGranted:           "أُضيفت صلاحية إلى حسابك",
-	roleRevoked:           "سُحبت صلاحية من حسابك",
-	leadRejected:          "رُفض طلب انضمام عبر رابطك",
-	commissionEarned:      "عمولة جديدة في محفظتك",
-	passwordReset:         "غُيّرت كلمة مرور حسابك",
-	sessionsRevoked:       "أُنهيت جلساتك — سجّل الدخول من جديد",
-	payoutRequested:       "طلب سحب رصيد جديد",
-	payoutPaid:            "صُرف طلب السحب",
-	payoutRejected:        "رُفض طلب السحب",
-	payoutProcessing:      "طلب سحبك قيد الصرف",
-	payoutFailed:          "تعذّر صرف طلب السحب",
-	payoutReversed:        "ارتدّ طلب السحب",
+	incentiveReward:        "مكافأة من الإدارة في محفظتك",
+	incentivePenalty:       "عقوبة من الإدارة على حسابك",
+	walletRequest:          "طلب حركة على محفظة ينتظر موافقة المالية",
+	phoneChangeRequest:     "طلب تغيير رقم حساب ينتظر موافقة ثانية",
+	storeBanned:            "حُظر متجرك",
+	storeUnbanned:          "رُفع الحظر عن متجرك",
+	driverCleared:          "يمكنك فتح دوامك الآن — تأكدت الإدارة أنك بخير",
+	warningsThreshold:      "حساب بلغ حد الإنذارات — يحتاج قرار موظف",
+	offensiveText:          "لفظ مسيء في حديث أو شكوى — أُخفي عن الطرف الآخر",
+	warningOnYou:           "إنذار على حسابك",
+	emergencyResolved:      "تابعنا بلاغَ الطوارئ الخاصّ بك",
+	complaintOnYou:         "شكوى على خدمتك",
+	messageFromDriver:      "رسالة من السائق",
+	messageFromCustomer:    "رسالة من الزبون",
+	warningIssued:          "إنذارٌ على متجرك",
+	driverEmergency:        "طارئٌ لدى سائق",
+	driverReleased:         "سائقٌ ترك طلباً قبل الاستلام — ودوامُه أُغلق",
+	walletCredit:           "إيداع في محفظتك",
+	walletDebit:            "خصم من محفظتك",
+	ratingNew:              "تقييم جديد على خدمتك",
+	accountSuspended:       "تم إيقاف حسابك مؤقتاً",
+	accountActivated:       "تم تفعيل حسابك",
+	ticketOpened:           "فُتحت شكواك",
+	ticketNewOps:           "شكوى جديدة",
+	ticketReply:            "رد جديد على شكواك",
+	ticketResolved:         "تم حل شكواك",
+	ticketAwaitingFinance:  "شكواك بانتظار قرار المالية بالتعويض",
+	complaintCompRejected:  "رفضت المالية تعويض شكوى — عادت إلى الدعم",
+	driverAssigned:         "أُسند إليك طلب جديد",
+	driverTransferred:      "تحوّل طلبك إلى متجر آخر",
+	targetReached:          "أنجزت هدف الشهر — نالتك مكافأته",
+	repMerchantCounted:     "اكتملت شروط متجرك وانحسب بهدفك",
+	driverLocationLost:     "موقعك ما عم يوصلنا — والطلبات ما رح توصلك",
+	driverLocationLostBody: "افتح تطبيق السائق، وتأكد إنو الموقع مشغّل ومسموح «طول الوقت»، وإنو النت شغّال.",
+	opsDriverLocationLost:  "سائق بالدوام وموقعه مختفي — الطلبات ما عم تنعرض عليه",
+	storeClosed:            "إغلاق طارئ لمتجر",
+	storeReopened:          "عاد متجر للعمل",
+	cashSettled:            "سُلّم صندوقك النقدي",
+	roleGranted:            "أُضيفت صلاحية إلى حسابك",
+	roleRevoked:            "سُحبت صلاحية من حسابك",
+	leadRejected:           "رُفض طلب انضمام عبر رابطك",
+	commissionEarned:       "عمولة جديدة في محفظتك",
+	passwordReset:          "غُيّرت كلمة مرور حسابك",
+	sessionsRevoked:        "أُنهيت جلساتك — سجّل الدخول من جديد",
+	payoutRequested:        "طلب سحب رصيد جديد",
+	payoutPaid:             "صُرف طلب السحب",
+	payoutRejected:         "رُفض طلب السحب",
+	payoutProcessing:       "طلب سحبك قيد الصرف",
+	payoutFailed:           "تعذّر صرف طلب السحب",
+	payoutReversed:         "ارتدّ طلب السحب",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

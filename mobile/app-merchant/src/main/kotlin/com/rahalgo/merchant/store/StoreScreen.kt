@@ -753,6 +753,32 @@ private fun HoursEditor(vm: StoreViewModel) {
     // يُرسل نداءً ونصفُ الوقتِ غيرُ مكتوبٍ بعد.**
     var draft by remember(sorted) { mutableStateOf(sorted) }
     val dirty = draft != sorted
+    // ══════════════════════════════════════════════════════════════════
+    // **وفتحٌ بعد منتصف الليل يُسأل عنه قبل الحفظ** (٢٠٢٦-١٠-١٣)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قِيس على الإنتاج: «شاورما بصمون» محفوظٌ ١:٠٠–١١:٠٠ و«فلافل الخير»
+    //  ٦:٠٠–٩:٠٠ — **أرادا الظهرَ والمساء فحُفظ الليلُ والصبح**، والزبونُ يرى
+    //  «مغلق» العصرَ كلَّه. **والغلطُ في الشاشة لا فيهما** — قالها المالك.)
+    var nightCheck by remember { mutableStateOf<List<com.rahalgo.shared.merchant.DayHours>?>(null) }
+    val save: (List<com.rahalgo.shared.merchant.DayHours>) -> Unit = { days ->
+        if (days.any { !it.closed && (it.openTime.take(2).toIntOrNull() ?: 9) in 0..5 }) nightCheck = days
+        else vm.saveHours(days)
+    }
+    nightCheck?.let { days ->
+        val d = days.first { !it.closed && (it.openTime.take(2).toIntOrNull() ?: 9) in 0..5 }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { nightCheck = null },
+            title = { Text(stringResource(R.string.hours_night_title)) },
+            text = { Text(stringResource(R.string.hours_night_text, clock12(d.openTime), clock12(d.closeTime))) },
+            confirmButton = {
+                RahalButton(onClick = { nightCheck = null; vm.saveHours(days) }) { Text(stringResource(R.string.hours_night_yes)) }
+            },
+            dismissButton = {
+                RahalOutlineButton(onClick = { nightCheck = null }) { Text(stringResource(R.string.hours_night_fix)) }
+            },
+        )
+    }
 
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -764,7 +790,7 @@ private fun HoursEditor(vm: StoreViewModel) {
         )
         if (dirty && vm.store?.status != "suspended") {
             RahalButton(
-                onClick = { vm.saveHours(draft) },
+                onClick = { save(draft) },
                 enabled = !vm.saving,
             ) { Text(stringResource(R.string.act_save)) }
         }
@@ -786,11 +812,18 @@ private fun HoursEditor(vm: StoreViewModel) {
             Text(stringResource(R.string.hours_to))
             TimeField(allClose) { allClose = it }
         }
+        // **والدوامُ بالكلام** — «من 1:00 م لـ 11:00 م» يُقرأ قبل الحفظ.
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.hours_summary, clock12(allOpen), clock12(allClose)),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
         Spacer(Modifier.height(8.dp))
         RahalButton(
             onClick = {
                 draft = draft.map { it.copy(closed = false, openTime = allOpen, closeTime = allClose) }
-                vm.saveHours(draft)
+                save(draft)
             },
             enabled = !vm.saving && vm.store?.status != "suspended" && allOpen.isNotBlank() && allClose.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
@@ -893,7 +926,7 @@ private fun HoursRow(d: DayHours, onChange: (DayHours) -> Unit) {
 @Composable
 private fun TimeField(value: String, onChange: (String) -> Unit) {
     val context = LocalContext.current
-    // **والثواني تُقطع للعرض** — المحرّكُ يردّ `08:00:00`.
+    // **والثواني تُقطع** — المحرّكُ يردّ `08:00:00`.
     val shown = value.take(5).ifBlank { "00:00" }
 
     // ══════════════════════════════════════════════════════════════════
@@ -961,7 +994,10 @@ private fun TimeField(value: String, onChange: (String) -> Unit) {
             { _, hh, mm ->
                 onChange(String.format(java.util.Locale.ROOT, "%02d:%02d", hh, mm))
             },
-            h, m, true,
+            // **صباحاً ومساءً لا ٢٤ ساعة** (٢٠٢٦-١٠-١٣) — كان `true` فاختار
+            // أصحابُ المتاجر «١» و«١١» يريدون الظهرَ والليل، فحُفظ الليلُ والصبح.
+            // **والمحفوظُ يبقى `HH:mm`** — الترجمةُ في الشاشة وحدَها.
+            h, m, false,
         ).let { dialog ->
             runCatching { dialog.show() }.onFailure {
                 // **والسقوطُ الأخير**: حوارٌ بالسياق الأصليّ بلا لفّ.
@@ -970,7 +1006,7 @@ private fun TimeField(value: String, onChange: (String) -> Unit) {
                     { _, hh, mm ->
                         onChange(String.format(java.util.Locale.ROOT, "%02d:%02d", hh, mm))
                     },
-                    h, m, true,
+                    h, m, false,
                 ).show()
             }
         }
@@ -978,14 +1014,14 @@ private fun TimeField(value: String, onChange: (String) -> Unit) {
 
     Box(
         Modifier
-            .width(72.dp)
+            .width(96.dp)
             .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
             .clickable { picker() }
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = shown,
+            text = clock12(shown),
             color = Rahal.colors.ink,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
@@ -1114,6 +1150,21 @@ private fun latinDigits(context: android.content.Context): android.content.Conte
     return android.view.ContextThemeWrapper(context, 0).apply {
         applyOverrideConfiguration(config)
     }
+}
+
+/**
+ * **«13:00» ⇒ «1:00 م»** — الساعةُ كما يقرؤها صاحبُ المتجر في منبّه هاتفه
+ * (٢٠٢٦-١٠-١٣). والأرقامُ لاتينيّةٌ كبقيّة الشاشة.
+ */
+internal fun clock12(hhmm: String): String {
+    val h = hhmm.take(2).toIntOrNull() ?: return hhmm
+    val m = hhmm.drop(3).take(2).ifBlank { "00" }
+    val h12 = when {
+        h == 0 -> 12
+        h > 12 -> h - 12
+        else -> h
+    }
+    return "$h12:$m " + if (h < 12) "ص" else "م"
 }
 
 /** **أقسامُ «متجري» التي يُنزَل إليها** — وبالترتيب الذي تُعرض به في «ناقصه». */

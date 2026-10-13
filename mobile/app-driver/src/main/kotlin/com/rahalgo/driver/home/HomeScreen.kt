@@ -51,6 +51,10 @@ import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.RahalLoader
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -225,6 +229,38 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.gps_lost_text), color = Rahal.colors.inkMuted)
             }
+            Spacer(Modifier.height(14.dp))
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وما يُبقي الموقعَ حيّاً والتطبيقُ مغلق** (٢٠٢٦-١٠-١٣)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قِيس على الإنتاج: سائقٌ في الدوام بلا موضعٍ أربعَ ساعات، والطلبُ على
+        //  ثمانية أمتار منه لا يصله.) **«أثناء الاستخدام» يُوقف الموقعَ متى أُغلق
+        // التطبيق**، **وجوّالاتُ شاومي وأخواتُها تقتل الخدمةَ** ولو استُثنيت من
+        // توفير البطارية. **فبطاقةٌ لكلٍّ منهما حتى يُصلَح** — لا خطوةٌ في الإعداد
+        // تُنسى بعد يومها.
+        if (state.locationOn && !com.rahalgo.driver.location.LocationPermission.backgroundGranted(context)) {
+            KeepAliveCard(
+                title = stringResource(R.string.keep_bg_title),
+                text = stringResource(R.string.keep_bg_text),
+                button = stringResource(R.string.keep_bg_button),
+                onClick = actions.enableLocation,
+            )
+            Spacer(Modifier.height(14.dp))
+        }
+        var autoStartDone by remember { mutableStateOf(com.rahalgo.driver.location.AutoStart.done(context)) }
+        if (com.rahalgo.driver.location.AutoStart.applies() && !autoStartDone) {
+            KeepAliveCard(
+                title = stringResource(R.string.keep_autostart_title),
+                text = stringResource(R.string.keep_autostart_text),
+                button = stringResource(R.string.keep_autostart_button),
+                onClick = {
+                    com.rahalgo.driver.location.AutoStart.open(context)
+                    autoStartDone = true
+                },
+            )
             Spacer(Modifier.height(14.dp))
         }
 
@@ -660,6 +696,24 @@ data class HomeState(
         get() = readiness.blockers.contains(
             Readiness.Blocker.NOTIFICATION_PERMISSION_REQUIRED,
         )
+}
+
+/** **بطاقةُ ما يُبقي الموقعَ حيّاً** — عنوانٌ وسببٌ وزرٌّ واحد. */
+@Composable
+private fun KeepAliveCard(title: String, text: String, button: String, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.warnTint)
+            .padding(16.dp),
+    ) {
+        Text(text = title, fontWeight = FontWeight.Bold, color = Rahal.colors.accent)
+        Spacer(Modifier.height(4.dp))
+        Text(text, color = Rahal.colors.inkMuted)
+        Spacer(Modifier.height(8.dp))
+        RahalButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(button) }
+    }
 }
 
 data class HomeActions(

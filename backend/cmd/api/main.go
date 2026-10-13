@@ -356,6 +356,8 @@ func run(logger *slog.Logger) error {
 			go srv.RunIncentiveRetries(ctx, 10*time.Minute)
 			// **ومتجرُ المندوب يُحسب حين تكتمل شروطُه** — rep_qualify.go (قرارُ المالك ٢٠٢٦-١٠-١٣).
 			go srv.RunRepQualify(ctx, 2*time.Minute)
+			// **وسائقٌ في الدوام انقطع موقعُه يُوقَظ تطبيقُه** — driver_location_watch.go (٢٠٢٦-١٠-١٣).
+			go srv.RunDriverLocationWatch(ctx, time.Minute)
 			// **وحارسُ القاعدة** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
 			srv.StartDBWatch(ctx)
 			// **و«وضع المنصة» على الواتساب** — wa_report.go (طلبُ المالك ٢٠٢٦-١٠-٠٩):

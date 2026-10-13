@@ -529,6 +529,13 @@
     <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
     <string name="gps_lost_title">إشارة الموقع مفقودة</string>
     <string name="gps_lost_text">لم يصل الهاتفَ موضعٌ منذ دقائق، فلن تُعرض عليك طلبات حتى تعود. اخرج إلى مكان مكشوف أو أعد تشغيل الموقع.</string>
+    <!-- ما يُبقي الموقعَ حيّاً والتطبيقُ مغلق (٢٠٢٦-١٠-١٣) -->
+    <string name="keep_bg_title">الموقع بيوقف لما تسكّر التطبيق</string>
+    <string name="keep_bg_text">إذن الموقع عندك «أثناء الاستخدام» بس، فلما تطلع من التطبيق بيوقف موقعك وما بتوصلك طلبات. خلّيه «السماح طول الوقت».</string>
+    <string name="keep_bg_button">اسمح طول الوقت</string>
+    <string name="keep_autostart_title">خلّي التطبيق يشتغل لحاله</string>
+    <string name="keep_autostart_text">موبايلك بيسكّر التطبيقات بالخلفية لتوفير البطارية، فبيوقف موقعك وما بتوصلك طلبات. شغّل «التشغيل التلقائي» لتطبيق رحّال غو.</string>
+    <string name="keep_autostart_button">افتح الإعداد</string>
     <!-- مشوارُ إرجاع البضاعة (قرارُ المالك ٢٠٢٦-١٠-٠٣) -->
     <string name="trip_return_office">أرجِع البضاعة إلى المكتب</string>
     <string name="trip_return_store">أرجِع البضاعة إلى %1$s</string>

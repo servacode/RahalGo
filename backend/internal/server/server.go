@@ -79,9 +79,11 @@ type Server struct {
 	routeEngine string
 	// osrm **عقدُ OSRM ومطابقتُه** — الارتباطُ ميزةُ OSRM وحدَه، فيبقى
 	// عليه وإن رسم Valhalla المسار. وبلا `OSRM_URL` يُعطَّل بهدوء.
-	osrm      routing.Correlator
-	notify    *notifications.Service
-	push      *push.Service
+	osrm   routing.Correlator
+	notify *notifications.Service
+	push   *push.Service
+	// locWatch **من انقطع موقعُه وهو في الدوام** — driver_location_watch.go.
+	locWatch  locWatch
 	otpStatus func() map[string]any
 	// otpUnpair **فكُّ اقتران البوت** — وفارغةٌ لمزوّدٍ لا اقترانَ له.
 	otpUnpair func(context.Context) error

@@ -116,6 +116,11 @@
     <string name="store_prep">مدة التحضير الافتراضية</string>
     <string name="store_prep_unit">دقيقة</string>
     <string name="store_hours">ساعات العمل</string>
+    <string name="hours_summary">مفتوح من %1$s لـ %2$s</string>
+    <string name="hours_night_title">متجرك بيفتح بالليل؟</string>
+    <string name="hours_night_text">حطّيت الفتح الساعة %1$s والسكّرة %2$s. يعني متجرك بيفتح بعد نص الليل. إذا قصدك الظهر أو المسا، رجاع غيّر الساعة واختار «م».</string>
+    <string name="hours_night_yes">إيه، صح</string>
+    <string name="hours_night_fix">لا، بدي عدّل</string>
     <!-- **وساعاتُه بيده** — تصحيحُ المالك ٢٠٢٦-٠٨-٢٣.
 
          **و«من» و«إلى» حُذفتا**: «ما في داعٍ من وإلى وهيك كلّ هالشي —
