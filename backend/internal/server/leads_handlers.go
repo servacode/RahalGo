@@ -405,6 +405,15 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, identity.ErrInvalidPhone)
 		return
 	}
+	// **ورقمٌ له متجرٌ لا يُفتح عليه آخر** (قرارُ المالك ٢٠٢٦-١٠-١٣) —
+	// صاحبُه يدخل بحسابه. phone_has_store.go
+	if taken, err := phoneHasStore(r.Context(), s.pg, phone, ""); err != nil {
+		s.respondErr(w, err)
+		return
+	} else if taken {
+		s.respondErr(w, ErrPhoneHasStore)
+		return
+	}
 
 	// **والمنطقةُ إلزاميّةٌ عند المندوب** — هو في الميدان يراها بعينه،
 	// **ومن لم يعرف منطقةَ متجرٍ يقف أمامه لا يعرف شيئاً عنه.**
@@ -751,6 +760,13 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) (m
 	}
 	if merchantID != nil {
 		return nil, nil // محوّل مسبقاً — لا تكرار
+	}
+	// **والفحصُ ثانيةً عند التحويل** (٢٠٢٦-١٠-١٣): طلبٌ أُرسل قبل القاعدة، أو
+	// متجرٌ فُتح بالرقم بعد إرساله — والموافقةُ التلقائيّةُ تمرّ من هنا.
+	if taken, err := phoneHasStore(ctx, s.pg, phone, leadID); err != nil {
+		return nil, err
+	} else if taken {
+		return nil, ErrPhoneHasStore
 	}
 	if categoryID == nil {
 		return nil, errValidation // لا متجر بلا تصنيف

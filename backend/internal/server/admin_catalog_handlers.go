@@ -110,6 +110,20 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 	// **ولا تُلزَم**: الأدمنُ يُنشئ متجراً لسببٍ عاجلٍ أحياناً — **وحقلٌ
 	// إلزاميٌّ يوقفه عن عملٍ يعرف ما يفعل فيه.** والفراغُ يُرى في
 	// اللوحة فيُصحَّح.
+	// **ولا متجرَ برقمٍ له متجر — ولا فرعَ ثانياً بعد** (قرارُ المالك ٢٠٢٦-١٠-١٣:
+	// «لا يمكن فتح متجر بنفس الرقم… نفوت خيار فتح فرع ثاني لاحقاً»).
+	for _, ph := range []*string{req.OwnerPhone, req.Phone} {
+		if ph == nil || *ph == "" {
+			continue
+		}
+		if taken, err := phoneHasStore(r.Context(), s.pg, *ph, ""); err != nil {
+			s.respondErr(w, err)
+			return
+		} else if taken {
+			s.respondErr(w, ErrPhoneHasStore)
+			return
+		}
+	}
 	if _, err := s.validDistrict(r, strDeref(req.DistrictID)); err != nil {
 		s.respondErr(w, err)
 		return
