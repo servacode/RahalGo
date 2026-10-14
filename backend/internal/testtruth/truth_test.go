@@ -329,8 +329,8 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **وثمانيةٌ بحصّة المنصّة لكلّ نوع وأجرةِ الأمانة، وذهب واحد** (قرارُ المالك ٢٠٢٦-١٠-١٣):
 	// `delivery.share_{standard,merchant,purchase,amanah}{,_mode}` و`delivery.custom_fee_amanah`،
 	// وخرج `delivery.platform_percent`.
-	if d.BehaviourSettings != 187 {
-		t.Errorf("إعداداتُ السلوك = %d لا 187 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	if d.BehaviourSettings != 191 {
+		t.Errorf("إعداداتُ السلوك = %d لا 191 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

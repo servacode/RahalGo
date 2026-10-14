@@ -33,6 +33,7 @@ object WalletLabels {
         "platform_profit" -> R.string.wal_k_platform_profit
         "platform_expense" -> R.string.wal_k_platform_expense
         "operating_expense" -> R.string.wal_k_operating_expense
+        "custom_goods_return" -> R.string.wal_k_custom_goods_return
         else -> null
     }
 

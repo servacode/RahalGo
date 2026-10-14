@@ -282,6 +282,7 @@
     <string name="wal_k_commission">عمولة</string>
     <string name="wal_k_compensation">تعويض</string>
     <string name="wal_k_driver_earning">أجرة توصيل</string>
+    <string name="wal_k_custom_goods_return">رجعة ثمن بضاعة مشتريات</string>
     <string name="wal_k_payout">تم سحب الرصيد</string>
     <string name="wal_k_penalty">خصم</string>
     <string name="wal_k_refund">استرجاع</string>
@@ -488,7 +489,7 @@
     <string name="tik_thread_hint">حالتها وردود المنصّة عليها</string>
     <string name="err_not_signed_in">هذا يحتاج حسابا — ادخل أولا</string>
     <string name="chats_hint">دردشات طلباتك — الجارية بتقدر تكتب فيها، والمنتهية للقراءة بس</string>
-    <string name="chats_none">لا دردشات منتهية</string>
+    <string name="chats_none">لا دردشات بعد</string>
     <string name="chats_empty_thread">لا رسائل في هذا الحديث</string>
     <!-- **ولفظُ الزرّ هو لفظُ `PointField`** — شاشتان تسألان السؤالَ
          نفسَه فتقولانه بكلمةٍ واحدة. (طلبُ المالك ٢٠٢٦-٠٨-١٨.) -->
@@ -664,6 +665,8 @@
     <string name="mn_item_new">صنف جديد</string>
     <string name="mn_item_edit">تعديل الصنف</string>
     <string name="mn_item_name">اسم الصنف</string>
+    <string name="mn_name_over">تجاوزت عدد الأحرف المسموح فيه: %1$s حرف (كاتب %2$s). اختصر الاسم.</string>
+    <string name="err_item_name_too_long">اسم الصنف أطول من المسموح — اختصره</string>
     <string name="mn_items">الأصناف</string>
     <string name="mn_group_name">اسم المجموعة</string>
     <string name="mn_required">إلزامي</string>

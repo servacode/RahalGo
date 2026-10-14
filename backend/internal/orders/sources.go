@@ -154,11 +154,26 @@ func (s *Service) sourceProximityM(ctx context.Context) int64 {
 //
 // **وصفرٌ داخل نصف القطر**: وقفةٌ زائدةٌ بدقيقتين لا تكلّف شيئاً يُذكر،
 // **ورسمٌ يُؤخذ بلا تكلفةٍ رسمٌ يُشعر الزبونَ أنه يُعاقَب على اختياره.**
-func (s *Service) extraSourceFee(ctx context.Context, src *Sources) int64 {
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وبعدها نسبةٌ من أجرة التوصيل بحسب البُعد** (قرارُ المالك ٢٠٢٦-١٠-١٤)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «اذا المسافة كذا نص الاجرة، اذا اكبر تكون اجرة كاملة، ونحن نحدد هالشي
+// من لوحة التحكم.» **فثلاثُ درجات**: قريبٌ بلا زيادة (`source_proximity_m`)،
+// ومتوسّطٌ بنسبةٍ (`source_mid_percent`، نصفٌ افتراضاً)، وأبعدُ من
+// `source_far_m` بنسبةٍ ثانية (`source_far_percent`، أجرةٌ كاملة). **والنسبةُ من
+// أجرة توصيل الطلب نفسِه** — `base` — **والمبلغُ الثابتُ القديمُ يُضاف فوقها.**
+func (s *Service) extraSourceFee(ctx context.Context, src *Sources, base int64) int64 {
 	if src == nil || len(src.IDs) < 2 || !src.FarApart || s.settings == nil {
 		return 0
 	}
-	return s.settings.GetInt(ctx, "orders.extra_source_fee") * int64(len(src.IDs)-1)
+	pct := s.settings.GetInt(ctx, "orders.source_mid_percent")
+	if src.MaxMeters > float64(s.settingInt(ctx, "orders.source_far_m")) {
+		pct = s.settings.GetInt(ctx, "orders.source_far_percent")
+	}
+	per := base*pct/100 + s.settings.GetInt(ctx, "orders.extra_source_fee")
+	return per * int64(len(src.IDs)-1)
 }
 
 // QuoteResult تسعيرةُ سلّةٍ قبل الطلب.
@@ -337,7 +352,7 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 		out.BaseFee = 0
 		out.Serviceable = false
 	}
-	out.SourcesFee = s.extraSourceFee(ctx, src)
+	out.SourcesFee = s.extraSourceFee(ctx, src, out.BaseFee)
 	out.DeliveryFee = out.BaseFee + out.SourcesFee
 	out.Total = out.Subtotal + out.DeliveryFee
 	return out, nil

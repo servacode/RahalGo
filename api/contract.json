@@ -7815,6 +7815,10 @@
       ],
       "response": [
         {
+          "name": "item_name_max",
+          "type": "unknown"
+        },
+        {
           "name": "self_manage_orders",
           "type": "unknown"
         },

@@ -28,6 +28,13 @@ import { IconAdd, IconEdit, IconDelete, IconStore, IconPrev } from "./icons";
 const m = getMessages(defaultLocale);
 const L = m.shared.menuEditor;
 
+/** **حدُّ اسم الصنف** — مثلُ `catalog.item_name_max` في المحرّك (٢٠٢٦-١٠-١٤). */
+const ITEM_NAME_MAX = 30;
+
+function fill(t: string, v: Record<string, string | number>): string {
+  return t.replace(/\{(\w+)\}/g, (_, k) => String(v[k] ?? ""));
+}
+
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export interface ModifierOption {
@@ -543,6 +550,8 @@ function ItemModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // **وما تجاوز الحدَّ لا يُرسَل** — الخطأُ ظاهرٌ تحت الحقل.
+    if (name.trim().length > ITEM_NAME_MAX) return;
     setBusy(true);
     setError("");
     const body = {
@@ -587,13 +596,21 @@ function ItemModal({
             تملأ العرضَ بدل أن تُطيل النموذج. **وتنهار إلى عمودٍ على
             الجوّال**: صفٌّ من ثلاثةٍ في شاشةٍ ضيّقةٍ يُقصّ لا يُقرأ. */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Input
-            id="i-name"
-            label={L.itemName}
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          {/* **واسمُ الصنف بحدٍّ يُعدّ وهو يُكتب** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً)
+              — بطاقةُ السوق سطران، وما زاد يطلع عنها. والمحرّكُ يرفضه أيضاً. */}
+          <div>
+            <Input
+              id="i-name"
+              label={L.itemName}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              error={name.trim().length > ITEM_NAME_MAX ? fill(L.nameOver, { max: ITEM_NAME_MAX, n: name.trim().length }) : undefined}
+            />
+            {name.trim().length <= ITEM_NAME_MAX && (
+              <p className="mt-1 text-xs text-ink-muted tabular-nums" dir="ltr">{`${name.trim().length} / ${ITEM_NAME_MAX}`}</p>
+            )}
+          </div>
           <div>
           {/* **اللفظُ يقول أيَّ سعرٍ هو.**
 

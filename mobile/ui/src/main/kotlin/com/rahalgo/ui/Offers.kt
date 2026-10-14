@@ -219,11 +219,12 @@ fun OfferCard(
                 )
                 Spacer(Modifier.width(8.dp))
             }
+            // **ولا قصّ** — الاختصارُ يقصّ نقاطَ ما تحت السطر وأوّلَ حرف (٢٠٢٦-١٠-١٤).
             Text(
                 text = itemName,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
+                overflow = TextOverflow.Visible,
                 modifier = Modifier.weight(1f),
             )
             // **والحالُ بلفظها لا برمزها** — **و«ساري» وحدَها بلون

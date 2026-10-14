@@ -324,6 +324,7 @@ private val CODES: Map<String, Int> = mapOf(
     "exchange_rate_invalid" to R.string.err_exchange_rate_invalid,
     "exchange_rate_jump" to R.string.err_exchange_rate_jump,
     "item_text_too_long" to R.string.err_item_text_too_long,
+    "item_name_too_long" to R.string.err_item_name_too_long,
     "text_too_long" to R.string.err_text_too_long,
     // **حارسُ النصوص** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — لفظٌ مسيءٌ أو رمزٌ في اسمٍ أو عنوان.
     "text_offensive" to R.string.err_text_offensive,

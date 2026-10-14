@@ -344,6 +344,8 @@ class MerchantApi(private val api: ApiClient) {
 data class StoresPage(
     val stores: List<Store> = emptyList(),
     @SerialName("self_manage_orders") val selfManageOrders: Boolean = false,
+    /** **حدُّ اسم الصنف بالأحرف** (٢٠٢٦-١٠-١٤) — يعدّه المحرّرُ وهو يكتب. */
+    @SerialName("item_name_max") val itemNameMax: Int = 30,
 )
 
 @Serializable

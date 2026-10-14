@@ -155,12 +155,13 @@ private fun Favorites(vm: MineViewModel) {
                         }
                     }
                     Spacer(Modifier.height(6.dp))
+                    // **ولا قصّ** — الاختصارُ يقصّ نقاطَ ما تحت السطر (٢٠٢٦-١٠-١٤، ShopScreen).
                     Text(
                         text = item.name,
                         color = Rahal.colors.ink,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Visible,
                     )
                     Text(
                         text = money(item.price),

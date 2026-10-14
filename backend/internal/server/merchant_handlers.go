@@ -183,6 +183,8 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"stores":             out,
 		"self_manage_orders": s.orders.MerchantsSelfManage(r.Context()),
+		// **وحدُّ اسم الصنف** (٢٠٢٦-١٠-١٤) — يعدّه التطبيقُ وهو يكتب.
+		"item_name_max": s.itemNameMax(r.Context()),
 	})
 }
 

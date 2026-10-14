@@ -787,6 +787,10 @@ kosom` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | money | `0` |
 | `orders.source_proximity_m` | المنصة | int | `1000` |
+| `catalog.item_name_max` | المنصة | int | `30` |
+| `orders.source_mid_percent` | المنصة | int | `50` |
+| `orders.source_far_m` | المنصة | int | `3000` |
+| `orders.source_far_percent` | المنصة | int | `100` |
 | `payouts.min_amount` | المنصة | money | `50000` |
 | `support.complaint_window_hours` | المنصة | int | `24` |
 | `support.late_reply_hours` | المنصة | int | `2` |

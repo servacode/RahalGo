@@ -348,6 +348,7 @@ class BoardViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 me = api.me()
+                me?.let { com.rahalgo.ui.menu.ItemLimits.nameMax = it.itemNameMax }
                 // **والمراحلُ أفضلُ جهد** — بلاها تبقى البطاقةُ على هدفٍ واحد.
                 levels = runCatching { api.incentives().levels }
                     .getOrDefault(levels)

@@ -2104,6 +2104,19 @@ var Catalog = []Def{
 	{Key: "orders.source_proximity_m", Group: GroupPlatform, Kind: KindInt,
 		Min: 0, Max: 20000, Unit: "meter", Default: 1000},
 
+	// **ودرجتا البُعد بعده** (قرارُ المالك ٢٠٢٦-١٠-١٤): «اذا المسافة كذا نص
+	// الاجرة، اذا اكبر اجرة كاملة». **النسبةُ من أجرة توصيل الطلب.**
+	// **وحدُّ اسم الصنف بالأحرف** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠) — للمتجر والمندوب
+	// واللوحة. **وسقفُه ما تحمله القاعدة** (١٢٠).
+	{Key: "catalog.item_name_max", Group: GroupPlatform, Kind: KindInt,
+		Min: 10, Max: 120, Unit: "char", Default: 30},
+	{Key: "orders.source_mid_percent", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 200, Unit: "percent", Default: 50},
+	{Key: "orders.source_far_m", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 50000, Unit: "meter", Default: 3000},
+	{Key: "orders.source_far_percent", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 200, Unit: "percent", Default: 100},
+
 	// ── المال والدعم ──────────────────────────────────
 	//
 	// **وأقلُّ مبلغِ سحب**: تحويلٌ صغيرٌ تكلفتُه أكبرُ منه. **ومن رصيدُه أقلُّ

@@ -30,6 +30,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 
 	"github.com/servacode/rahalgo/backend/internal/comms"
+	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
@@ -92,11 +93,26 @@ func (s *Server) alertOffensive(ctx context.Context, masked []string, body, enti
 	})
 }
 
+// ErrItemNameTooLong **اسمُ الصنف أطولُ من حدّ اللوحة** — ومعه `max`.
+var ErrItemNameTooLong = httpx.NewError(http.StatusBadRequest, "item_name_too_long", "errors.item_name_too_long")
+
+// itemNameMax **حدُّ اسم الصنف** — من اللوحة، ولا يتجاوز سقفَ القاعدة.
+func (s *Server) itemNameMax(ctx context.Context) int {
+	n := int(s.settings.GetInt(ctx, "catalog.item_name_max"))
+	if n <= 0 || n > catalog.MaxItemName {
+		return catalog.MaxItemName
+	}
+	return n
+}
+
 // guardMenuItem **اسمُ الصنف ووصفُه** — للمتجر والمندوب والإدارة معاً.
 func (s *Server) guardMenuItem(r *http.Request, in *catalog.MenuItemInput) error {
 	// **وخطأُ الطول خطأُ القائمة القائم** (`item_text_too_long`) — لا يتبدّل عقدُها.
-	name := tf("name", in.Name, catalog.MaxItemName, textguard.Name)
-	name.TooLong = catalog.ErrItemTextTooLong
+	// **واسمُ الصنف بحدٍّ من اللوحة** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً) —
+	// بطاقةُ السوق سطران بالوسط، **وما زاد يطلع عن البطاقة أو يُقصّ.**
+	// **وخطؤه له رمزُه** ومعه الحدّ، فيقول التطبيقُ «تجاوزت ٣٠ حرفاً».
+	name := tf("name", in.Name, s.itemNameMax(r.Context()), textguard.Name)
+	name.TooLong = ErrItemNameTooLong
 	desc := tf("description", in.Description, catalog.MaxItemDescription, textguard.Notes)
 	desc.TooLong = catalog.ErrItemTextTooLong
 	_, err := s.guardText(r.Context(), name, desc)

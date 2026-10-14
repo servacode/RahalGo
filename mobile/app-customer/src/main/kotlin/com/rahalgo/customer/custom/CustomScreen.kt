@@ -225,8 +225,11 @@ fun CustomScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(4.dp))
+            // **والأمانةُ لا مشترياتَ فيها** (٢٠٢٦-١٠-١٤) — كانت تقول «الإجماليُّ
+            // بعد تحديد قيمة المشتريات» لأمانةٍ إجماليُّها الأجرةُ وحدَها.
             Text(
-                stringResource(R.string.cst_total_pending),
+                if (mode == "amanah") stringResource(R.string.cst_amanah_total, money(Serving.customFeeFor(mode)))
+                else stringResource(R.string.cst_total_pending),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -238,8 +241,12 @@ fun CustomScreen(
             )
         }
         Spacer(Modifier.height(8.dp))
+        // **وأمانةٌ بأجرةٍ من المنصّة لا عرضَ يُؤكَّد بعدها** — تُدفع نقداً للسائق.
         Text(
-            stringResource(R.string.cst_pay_after_cost),
+            stringResource(
+                if (mode == "amanah" && Serving.customFeeAdminDefined) R.string.cst_amanah_pay
+                else R.string.cst_pay_after_cost,
+            ),
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )

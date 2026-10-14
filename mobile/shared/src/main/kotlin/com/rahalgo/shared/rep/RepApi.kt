@@ -281,6 +281,8 @@ data class RepMe(
     @SerialName("monthly_target") val monthlyTarget: Int = 0,
     /** **متاجرُ فتحها ولم تكتمل شروطُها** — لا تُعدّ في الهدف بعد (٢٠٢٦-١٠-١٣). */
     @SerialName("goal_pending") val goalPending: Int = 0,
+    /** **حدُّ اسم الصنف بالأحرف** (٢٠٢٦-١٠-١٤) — يعدّه المحرّرُ وهو يكتب. */
+    @SerialName("item_name_max") val itemNameMax: Int = 30,
     /** **ما ينتظر موافقةَ الإدارة** — ومنه يعرف أنّ عملَه لم يضع. */
     @SerialName("pending_leads") val pendingLeads: Int = 0,
     @SerialName("whatsapp_verified") val whatsappVerified: Boolean = false,

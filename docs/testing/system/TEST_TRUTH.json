@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 231,
-    "behaviour_settings": 187,
+    "setting_defs": 235,
+    "behaviour_settings": 191,
     "order_fields": 96,
-    "test_files": 563,
-    "test_funcs": 2272
+    "test_files": 564,
+    "test_funcs": 2273
   },
   "flows": [
     {
@@ -3450,6 +3450,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "catalog.item_name_max",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "compensations.cap_complaint",
       "group": "platform",
       "kind": "money",
@@ -5816,6 +5834,60 @@
         "customer",
         "driver",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.source_far_m",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.source_far_percent",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.source_mid_percent",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -15447,6 +15519,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestExtraSourceFee_DistanceTiers",
+      "file": "internal/qa/extra_source_fee_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCleanupRemovesOnlyItsOwnScenario",

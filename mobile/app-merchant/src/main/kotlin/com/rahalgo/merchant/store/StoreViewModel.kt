@@ -120,6 +120,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 val page = api.stores()
                 stores = page.stores
+                com.rahalgo.ui.menu.ItemLimits.nameMax = page.itemNameMax
                 // **والمتجرُ من الاختيار المشترك لا `firstOrNull`** (B8) —
                 // فمالكٌ له فرعان يرى الفرعَ نفسَه في كلّ شاشة.
                 val mine = SelectedStore.resolve(page.stores)

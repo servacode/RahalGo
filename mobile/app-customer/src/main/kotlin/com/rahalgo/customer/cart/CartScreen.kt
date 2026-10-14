@@ -206,14 +206,8 @@ fun CartScreen(
             }
         }
 
-        // **«يُطلب معه» تحت السطور مباشرةً** — انظر `SuggestRow`.
-        //
-        // **وقبل العنوانِ والدفع**: من بلغ زرَّ الإرسال قرّر، **واقتراحٌ
-        // تحت الزرّ لا يُرى.**
-        if (vm.suggested.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
-            SuggestRow(items = vm.suggested, media = media, onAdd = { Cart.add(it) })
-        }
+        // **ولا «يُطلب معه» في السلّة** (قرارُ المالك ٢٠٢٦-١٠-١٤): «الزبون يخربط،
+        // ما يعرف ليش هي بسلّته» — **السلّةُ ما اختاره هو وحدَه.**
 
         // ══════════════════════════════════════════════════════════════
         // **والعنوانُ من حسابه لا من حقلٍ يُملأ كلَّ مرّة**
@@ -380,7 +374,13 @@ fun CartScreen(
                 // وحدَه تُخفي أثرَه.**
                 val cut = vm.promoResult?.takeIf { it.valid }
                 val fee = cut?.deliveryFee ?: q.deliveryFee
-                KeyValue(stringResource(R.string.ord_delivery), money(fee))
+                // **وزيادةُ المتجر الثاني سطرٌ وحدَها** (٢٠٢٦-١٠-١٤) — رقمٌ واحدٌ يرتفع
+                // بلا تفسيرٍ يُقرأ زيادةً بلا سبب.
+                val extra = if (cut == null) q.sourcesFee.coerceIn(0, fee) else 0L
+                KeyValue(stringResource(R.string.ord_delivery), money(fee - extra))
+                if (extra > 0) {
+                    KeyValue(stringResource(R.string.src_fee_line), money(extra))
+                }
                 if (cut != null && cut.discount > 0) {
                     KeyValue(
                         stringResource(R.string.ord_discount),
@@ -825,15 +825,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
      * لا ركن**، ورسالةُ عطبٍ لأجل اقتراحٍ تُقلق بلا سبب.
      */
     fun loadSuggestions() {
-        if (Cart.lines.isEmpty()) {
-            suggested = emptyList()
-            return
-        }
-        viewModelScope.launch {
-            runCatching { api.suggest(Cart.lines.map { it.item.id }.distinct()) }
-                .onSuccess { suggested = it.items.filter { i -> i.available && !i.sourceClosed } }
-                .onFailure { suggested = emptyList() }
-        }
+        // **مطفأةٌ بقرار المالك** (٢٠٢٦-١٠-١٤) — لا نداءَ لاقتراحٍ لا يُعرض.
+        suggested = emptyList()
     }
 
     // ══════════════════════════════════════════════════════════════════

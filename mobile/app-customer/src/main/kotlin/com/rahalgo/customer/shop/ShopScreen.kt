@@ -167,6 +167,10 @@ fun ShopScreen(
     // ونقطةُ التوصيلِ (مدينةُ الزبونِ التي لم تُطلَق) تحجب الإضافةَ خادميّاً كذلك.
     val blocked = action == AddAction.BLOCKED || previewing
 
+    // **وتنبيهُ المتجر الثاني** (٢٠٢٦-١٠-١٤) — انظر `SourceNotice`.
+    val sourceScope = androidx.compose.runtime.rememberCoroutineScope()
+    com.rahalgo.customer.cart.SourceNoticeDialog()
+
     // **الصنفُ الذي تُختار خياراتُه الآن** — وفارغٌ حين لا نافذة.
     var picking by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf<Item?>(null)
@@ -180,6 +184,7 @@ fun ShopScreen(
                 // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
                 if (!blocked) {
                     val inc = Cart.add(target, options = chosen)
+                    com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     com.rahalgo.ui.Flash.ok(
                         context.getString(
                             if (inc) com.rahalgo.ui.R.string.cart_qty_updated
@@ -486,6 +491,7 @@ fun ShopScreen(
                                     picking = item
                                 } else {
                                     val inc = Cart.add(item)
+                                    com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                                     com.rahalgo.ui.Flash.ok(
                                         context.getString(
                                             if (inc) com.rahalgo.ui.R.string.cart_qty_updated
@@ -640,7 +646,7 @@ private fun SectionRail(
                     style = MaterialTheme.typography.labelMedium,
                     minLines = 2,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Visible, // **ولا قصّ** — نقاطُ ما تحت السطر (٢٠٢٦-١٠-١٤)
                     textAlign = TextAlign.Center,
                 )
             }
@@ -884,13 +890,23 @@ private fun ItemCard(
         //
         // **وسطرٌ واحدٌ بعد** — يُجرَّب أوّلاً، فإن بقي القصُّ صار
         // سطرين. (وهو ما اتُّفق عليه: نُجرّب ثمّ نقرّر.)
+        // ══════════════════════════════════════════════════════════════
+        // **والاسمُ بالوسط تحت الصورة — ولا يُقصّ منه حرف** (ملاحظةُ المالك ٢٠٢٦-١٠-١٤)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // «أوّلُ حرفٍ بأسماء الأصناف لا يُكتب صحيحاً» — **وقيس على الجهاز والمحاكي:
+        // نقاطُ ما تحت السطر تختفي** (باءُ «لبن» وجيمُ «دجاج») **وأوّلُ حرفٍ يُقصّ
+        // من يمينه.** والسببُ الاختصارُ بثلاث نقاط: **يقصّ النصَّ على حدوده**،
+        // وتجوال ينزل تحت السطر ويميل عن حافّته. **فلا قصّ** — وسطران بالوسط
+        // يتّسعان لأطول اسم، **وما زاد يُترك ولا يُقطع حرفٌ منه.**
         Text(
             text = item.name,
             color = Rahal.colors.ink,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            maxLines = 2,
+            overflow = TextOverflow.Visible,
+            textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
 

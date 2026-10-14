@@ -183,12 +183,28 @@ fun ItemEditor(
         }
 
         Spacer(Modifier.height(12.dp))
+        // ══════════════════════════════════════════════════════════════
+        // **واسمُ الصنف بحدٍّ يُعدّ وهو يُكتب** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // بطاقةُ السوق سطران بالوسط — **وما زاد يطلع عن البطاقة.** فعدّادٌ تحت
+        // الحقل، **وما تجاوز يُقال بعدده ولا يُحفظ** — والمحرّكُ يرفضه أيضاً.
+        val nameMax = ItemLimits.nameMax
+        val nameLen = d.name.trim().length
+        val nameOver = nameLen > nameMax
         OutlinedTextField(
             value = d.name,
-            // **وحدودُ الخادم نفسُها** (١٢٠ و٥٠٠) — لا يُكتب ما سيُرفض.
             onValueChange = { v -> onEdit { it.copy(name = v.take(120)) } },
             label = { Text(stringResource(R.string.mn_item_name)) },
             singleLine = true,
+            isError = nameOver,
+            supportingText = {
+                Text(
+                    if (nameOver) stringResource(R.string.mn_name_over, nameMax.toString(), nameLen.toString())
+                    else "$nameLen / $nameMax",
+                    color = if (nameOver) Rahal.colors.danger else Rahal.colors.inkMuted,
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
@@ -294,7 +310,7 @@ fun ItemEditor(
         }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RahalButton(onClick = { onSave() }, enabled = !busy) {
+            RahalButton(onClick = { onSave() }, enabled = !busy && !nameOver) {
                 Text(stringResource(R.string.act_save))
             }
             RahalTextButton(onClick = { onCancel() }, enabled = !busy) {

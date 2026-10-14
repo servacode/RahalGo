@@ -128,6 +128,8 @@
     <string name="cst_pay_after_cost">طريقة الدفع تُحدد بعد تحديد تكلفة الطلب.</string>
     <string name="cst_fee_on_deal">سيتم تحديد أجرة التوصيل بعد قبول السائق.</string>
     <string name="cst_total_pending">الإجمالي يُعرف بعد تحديد قيمة المشتريات.</string>
+    <string name="cst_amanah_total">الإجمالي %1$s — أجرة التوصيل بس، بدون أي مبلغ تاني.</string>
+    <string name="cst_amanah_pay">بتدفع الأجرة نقداً للسائق.</string>
     <string name="ord_awaiting_quote">بانتظار تحديد تكلفة الطلب</string>
     <string name="ord_fee_value">أجرة التوصيل: %1$s</string>
     <string name="ord_confirm_prompt">أكد المبلغ واختر طريقة الدفع</string>
@@ -171,6 +173,15 @@
     <string name="options_required">مطلوب</string>
     <string name="options_add">أضف — %1$s</string>
     <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
+    <!-- صنفٌ من متجرٍ ثانٍ (٢٠٢٦-١٠-١٤) -->
+    <string name="src_other_title">هالصنف من متجر تاني</string>
+    <string name="src_other_text_fee">انت ضفت صنف تابع لمتجر تاني، فبيوصلك بنفس الطلب بس في مبلغ إضافي %1$s حسب مسافة المتجر التاني.</string>
+    <string name="src_other_text_free">انت ضفت صنف تابع لمتجر تاني. المتجر قريب، فبيوصلك بنفس الطلب بدون أي مبلغ إضافي.</string>
+    <string name="src_too_many_title">ما فيك تضيف من متجر جديد</string>
+    <string name="src_too_many_text">الطلب الواحد بيكون من %1$s متاجر بالأكتر. شلنا الصنف من السلة — اطلبه بطلب تاني.</string>
+    <string name="src_ok">تمام</string>
+    <string name="src_undo">شيله من السلة</string>
+    <string name="src_fee_line">أجرة المتجر التاني</string>
     <!-- «يُطلب معه» في السلّة -->
     <string name="suggest_title">يُطلب معه</string>
 

@@ -55,22 +55,35 @@ func TestCAP01_ItemPriceCeiling(t *testing.T) {
 
 func TestCAP02_ItemTextLimits(t *testing.T) {
 	h := New(t)
+	// **واسمُ الصنف بحدّ اللوحة** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً) — ورمزُه
+	// `item_name_too_long` ومعه الحدّ؛ والوصفُ على حاله.
+	h.Setting("catalog.item_name_max", "30")
 	cs := newCapStore(t, h)
 	for _, c := range []struct {
 		name string
 		body map[string]any
 		want int
+		code string
 	}{
-		{"اسم ١٢١ حرفاً", map[string]any{"name": strings.Repeat("ش", 121), "price": 500}, 400},
-		{"وصف ٥٠١ حرف", map[string]any{"name": "صنف", "description": strings.Repeat("و", 501), "price": 500}, 400},
-		{"اسم ١٢٠ ووصف ٥٠٠", map[string]any{"name": strings.Repeat("ش", 120), "description": strings.Repeat("و", 500), "price": 500}, 201},
+		{"اسم ٣١ حرفاً", map[string]any{"name": strings.Repeat("ش", 31), "price": 500}, 400, "item_name_too_long"},
+		{"وصف ٥٠١ حرف", map[string]any{"name": "صنف", "description": strings.Repeat("و", 501), "price": 500}, 400, "item_text_too_long"},
+		{"اسم ٣٠ ووصف ٥٠٠", map[string]any{"name": strings.Repeat("ش", 30), "description": strings.Repeat("و", 500), "price": 500}, 201, ""},
 	} {
 		r := cs.add(h, c.body)
 		if r.Code != c.want {
 			t.Fatalf("%s: %d / %s — والمنتظَرُ %d", c.name, r.Code, r.Err(), c.want)
 		}
-		if c.want == 400 && r.Err() != "item_text_too_long" {
-			t.Fatalf("%s: الرمزُ %s — والمنتظَرُ item_text_too_long", c.name, r.Err())
+		if c.code != "" && r.Err() != c.code {
+			t.Fatalf("%s: الرمزُ %s — والمنتظَرُ %s", c.name, r.Err(), c.code)
+		}
+		if c.want == 201 {
+			// **والتعديلُ بابٌ ثانٍ** — حارسٌ على واحدٍ من بابين ليس حارساً.
+			id, _ := r.JSON()["id"].(string)
+			up := h.Call("PATCH", "/api/v1/merchant/menu/items/"+id, cs.tok,
+				map[string]any{"name": strings.Repeat("ش", 31)}, nil)
+			if up.Code != http.StatusBadRequest || up.Err() != "item_name_too_long" {
+				t.Fatalf("تعديلُ الاسم فوق الحدّ: %d / %s", up.Code, up.Err())
+			}
 		}
 	}
 }

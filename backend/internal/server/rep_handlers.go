@@ -26,7 +26,9 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		MonthCommissions int64 `json:"month_commissions"`
 		MonthlyTarget    int   `json:"monthly_target"`
 		// GoalPending **متاجرُ فتحها ولم تكتمل شروطُها** — لا تُعدّ بعد (٢٠٢٦-١٠-١٣).
-		GoalPending  int `json:"goal_pending"`
+		GoalPending int `json:"goal_pending"`
+		// ItemNameMax **حدُّ اسم الصنف** (٢٠٢٦-١٠-١٤) — يعدّه التطبيقُ وهو يكتب.
+		ItemNameMax  int `json:"item_name_max"`
 		PendingLeads int `json:"pending_leads"`
 		// أدوات الدعوة مقفلة حتى يوثّق المندوب قناة تواصله
 		WhatsAppVerified bool `json:"whatsapp_verified"`
@@ -92,6 +94,7 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	out.ItemNameMax = s.itemNameMax(r.Context())
 	// القفل في الخادم لا في الواجهة: إخفاء الكود من الشاشة وحدها ليس قفلاً —
 	// من يفتح أدوات المتصفح يقرأه من الاستجابة. فلا يُرسل أصلاً قبل التوثيق.
 	if !out.WhatsAppVerified {

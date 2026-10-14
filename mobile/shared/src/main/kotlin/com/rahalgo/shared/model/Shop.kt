@@ -196,6 +196,15 @@ data class Quote(
     val subtotal: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
     val total: Long = 0,
+    /**
+     * **وتعدُّدُ المتاجر في الطلب** (٢٠٢٦-١٠-١٤) — كم متجراً، وسقفُها، وأجرةُ
+     * التوصيل وحدَها، وما زِيد لأجل المتجر الثاني بحسب بُعده.
+     */
+    val sources: Int = 1,
+    @SerialName("max_sources") val maxSources: Int = 2,
+    @SerialName("too_many_sources") val tooManySources: Boolean = false,
+    @SerialName("base_fee") val baseFee: Long = 0,
+    @SerialName("sources_fee") val sourcesFee: Long = 0,
     /** **خارجَ نطاق التوصيل** — لا سعرَ ولا طلب. */
     @SerialName("out_of_zone") val outOfZone: Boolean = false,
     /**

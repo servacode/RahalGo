@@ -569,7 +569,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	//
 	// **ويُضاف قبل الخصم**: كودٌ يُصفّر التوصيلَ يُصفّره كلَّه — **وأن يبقى
 	// جزءٌ منه بعد «توصيلٌ مجّانيّ» وعدٌ يُخلَف.**
-	deliveryFee += unit.extraSourceFee(ctx, sources)
+	deliveryFee += unit.extraSourceFee(ctx, sources, deliveryFee)
 
 	// ══════════════════════════════════════════════════════════════
 	// **أجرُ السائقِ الأساسُ — قبل أيّ عرضٍ يُصفّر ما يدفعه الزبون** (٢٠٢٦-٠٩-٢٧)
