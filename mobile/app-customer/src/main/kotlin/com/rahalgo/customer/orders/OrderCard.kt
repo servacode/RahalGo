@@ -269,13 +269,24 @@ private fun CustomQuoteSection(
     val goods = order.customGoodsAmount
     // (B) لم يُتّفق على السعر بعد — بانتظار تحديد التكلفة.
     if (goods == null) {
+        // **وأجرةُ المنصّة تُقال برقمها** (٢٠٢٦-١٠-١٤) — كانت الأمانةُ بأجرةٍ مفروضةٍ
+        // تقول «يحدّدها السائق عند الاتفاق» و«بانتظار تحديد التكلفة»، **ولا اتّفاقَ فيها.**
+        // والسياسةُ من إعدادات الخدمة نفسِها التي سعّرت شاشةَ الطلب (`Serving`).
+        val fixed = com.rahalgo.customer.Serving.customFeeAdminDefined
+        val fee = order.customFee ?: com.rahalgo.customer.Serving.customFeeFor(order.customMode)
         KeyValue(
             stringResource(R.string.ord_delivery),
-            stringResource(R.string.ord_delivery_on_deal),
+            if (fixed) money(fee) else stringResource(R.string.ord_delivery_on_deal),
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            stringResource(R.string.ord_awaiting_quote),
+            stringResource(
+                when {
+                    fixed && order.customMode == "amanah" -> R.string.cst_amanah_pay
+                    fixed -> R.string.cst_total_pending
+                    else -> R.string.ord_awaiting_quote
+                },
+            ),
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
