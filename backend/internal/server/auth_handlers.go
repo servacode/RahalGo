@@ -28,6 +28,9 @@ func decode[T any](r *http.Request) (*T, error) {
 }
 
 // respondErr يحول أخطاء المجال إلى استجابة موحدة، ويخفي التفاصيل الداخلية.
+// errClientClosed **قطع الجهازُ الطلبَ قبل الردّ** — ٤٩٩ لا ٥٠٠: لا يُعدّ عطباً.
+var errClientClosed = httpx.NewError(499, "client_closed", "errors.client_closed")
+
 func (s *Server) respondErr(w http.ResponseWriter, err error) {
 	var appErr *httpx.AppError
 	if errors.As(err, &appErr) {
@@ -59,6 +62,14 @@ func (s *Server) respondErr(w http.ResponseWriter, err error) {
 	// **ونداءٌ انقضت مهلتُه والقاعدةُ لا تردّ** — «مشغولة» لا «عطبٌ داخليّ» (٢٠٢٦-١٠-٠٩).
 	if errors.Is(err, context.DeadlineExceeded) {
 		httpx.Error(w, errServiceBusy)
+		return
+	}
+	// **وطلبٌ قطعه الجهازُ ليس عطباً في الخادم** (٢٠٢٦-١٠-١٤) — نتٌّ انقطع أو
+	// تطبيقٌ أُغلق بنصف نداء. كان يُعدّ «خطأً داخليّاً» فيملأ قائمةَ أخطاء الخادم
+	// بما ليس عطباً، **ويُدفن العطبُ الحقيقيُّ بينها.** والمعاملةُ ترتدّ كاملةً.
+	if errors.Is(err, context.Canceled) {
+		s.logger.Info("client closed request", "error", err)
+		httpx.Error(w, errClientClosed)
 		return
 	}
 	var pgErr *pgconn.PgError

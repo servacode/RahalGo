@@ -90,6 +90,10 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// **والوصلةُ القائمةُ عقدٌ آخر** (`R14`) — لا تمسّها هذه.
 	state, dbRoles, dbCaps, _, err := s.identity.CheckSession(r.Context(), claims.SID)
 	switch {
+	case err != nil && errors.Is(err, context.Canceled):
+		// **وجهازٌ قطع الوصلةَ قبل التحقّق** ليس «توثيقاً معطّلاً» (٢٠٢٦-١٠-١٤).
+		httpx.Error(w, errClientClosed)
+		return
 	case err != nil:
 		obs.WSAuth(obs.WSBackendUnavailable)
 		s.logger.Error("البثّ: تعذّر التحقّقُ من الجلسة",

@@ -96,6 +96,8 @@ const SERVER_MOBILE = new Set([
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **قطع الجهازُ الطلبَ قبل الردّ** — لا يصل الهاتفَ أصلاً (٢٠٢٦-١٠-١٤).
+  "client_closed",
   "setting_conflict", "setting_placeholder_missing",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",

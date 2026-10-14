@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
@@ -118,6 +119,10 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// **والحالُ ثلاثٌ لا اثنتان**، **والثالثةُ ٥٠٣.**
 		state, dbRoles, dbCaps, mustChange, err := s.identity.CheckSession(r.Context(), claims.SID)
 		switch {
+		case err != nil && errors.Is(err, context.Canceled):
+			// **وجهازٌ قطع الطلبَ قبل التحقّق** ليس «توثيقاً معطّلاً» (٢٠٢٦-١٠-١٤).
+			httpx.Error(w, errClientClosed)
+			return
 		case err != nil:
 			s.logger.Error("التوثيق: تعذّر التحقّقُ من الجلسة",
 				"outcome", "auth_validation_unavailable", "error", err)
