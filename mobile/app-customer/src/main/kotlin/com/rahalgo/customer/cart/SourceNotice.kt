@@ -85,6 +85,7 @@ fun SourceNoticeDialog() {
         text = {
             Text(
                 when {
+                    n.tooMany && n.max <= 1 -> stringResource(R.string.src_only_one_text)
                     n.tooMany -> stringResource(R.string.src_too_many_text, n.max.toString())
                     n.extra > 0 -> stringResource(R.string.src_other_text_fee, money(n.extra))
                     else -> stringResource(R.string.src_other_text_free)

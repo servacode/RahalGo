@@ -179,6 +179,7 @@
     <string name="src_other_text_free">انت ضفت صنف تابع لمتجر تاني. المتجر قريب، فبيوصلك بنفس الطلب بدون أي مبلغ إضافي.</string>
     <string name="src_too_many_title">ما فيك تضيف من متجر جديد</string>
     <string name="src_too_many_text">الطلب الواحد بيكون من %1$s متاجر بالأكتر. شلنا الصنف من السلة — اطلبه بطلب تاني.</string>
+    <string name="src_only_one_text">الطلب الواحد بيكون من متجر واحد بس. شلنا الصنف من السلة — اطلبه بطلب لحاله.</string>
     <string name="src_ok">تمام</string>
     <string name="src_undo">شيله من السلة</string>
     <string name="src_fee_line">أجرة المتجر التاني</string>
