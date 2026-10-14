@@ -48,6 +48,9 @@ var (
 	ErrOTPSendFailed     = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
 	ErrTooManyAttempts   = httpx.NewError(http.StatusTooManyRequests, "too_many_attempts", "errors.too_many_attempts")
 	ErrNameTooShort      = httpx.NewError(http.StatusBadRequest, "name_too_short", "errors.name_too_short")
+	// ErrNoAccount **لا حسابَ بهذا الرقم** — يُقال في الاستعادة من أوّل خطوة
+	// (قرارُ المالك ٢٠٢٦-١٠-١٤): كان صمتاً يضيّع على صاحبه رمزاً لا ينفع.
+	ErrNoAccount = httpx.NewError(http.StatusNotFound, "no_account", "errors.no_account")
 
 	// ErrWrongCurrentPassword **كلمةُ المرور الحاليّة خاطئة — لا غير.**
 	//
@@ -418,15 +421,15 @@ func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey, ip st
 	return nil
 }
 
-// RequestPasswordReset يرسل رمزاً لاستعادة كلمة المرور. لا يكشف إن كان الرقم
-// مسجّلاً أم لا (تعداد الحسابات) — الرد ناجح دائماً من وجهة نظر المتصل.
+// RequestPasswordReset يرسل رمزاً لاستعادة كلمة المرور. **ورقمٌ غيرُ مسجّلٍ
+// يُقال له «لا حساب»** (قرارُ المالك ٢٠٢٦-١٠-١٤) — كان صمتاً مقصوداً.
 func (s *Service) RequestPasswordReset(ctx context.Context, rawPhone, ip string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
 	}
 	if _, _, err := s.repo.UserByPhone(ctx, phone); err != nil {
-		return nil // رقم غير مسجّل: صمت مقصود
+		return ErrNoAccount
 	}
 	return s.sendOTPFor(ctx, phone, "reset", "otp:rst:", ip)
 }

@@ -75,6 +75,9 @@ func newWATag() (string, error) {
 
 func waTicketKey(tag string) string { return "wa:ticket:" + tag }
 
+// waUsedKey **ما أُرسل على التذكرة** — المرسِلُ والرمز، ويعيش ما عاشت التذكرة.
+func waUsedKey(tag string) string { return "wa:ticket:used:" + tag }
+
 // WATicket **يفتح تذكرةً ويردّ وسمَها.**
 //
 // **والهاتفُ يُخزَّن مع التذكرة لا يُستنتج من المرسِل** — انظر أعلاه.
@@ -82,6 +85,13 @@ func (s *Service) WATicket(ctx context.Context, rawPhone string, purpose WAPurpo
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return "", ErrInvalidPhone
+	}
+	// **ورقمٌ بلا حسابٍ يُقال له من أوّل خطوة** (قرارُ المالك ٢٠٢٦-١٠-١٤) —
+	// كان يُفتح له الواتساب ويصله رمزٌ ثمّ تسقط الكلمةُ الجديدة بلا تفسير.
+	if purpose == WAReset {
+		if _, _, err := s.repo.UserByPhone(ctx, phone); err != nil {
+			return "", ErrNoAccount
+		}
 	}
 	tag, err := newWATag()
 	if err != nil {
@@ -101,10 +111,16 @@ func (s *Service) WATicket(ctx context.Context, rawPhone string, purpose WAPurpo
 // **ورسالةٌ بلا وسمٍ صالحٍ ليست طلبَ توثيق** — وقد تكون سؤالاً من
 // زبونٍ أو رقماً خاطئاً. **والردُّ الآليُّ عليها إزعاجٌ وبلاغُ سبام.**
 //
-// # والتذكرةُ تُستهلك
+// # والتذكرةُ تُستهلك — ولا تُعلَن منتهيةً قبل وقتها
 //
 // **ووسمٌ يُقبل مرّتين يُقبل ألفاً** — فمن سرّبه أُرسل الرمزُ إلى كلّ
-// من كتبه. **فتُحذف عند أوّل استعمال.**
+// من كتبه. **فيولَّد الرمزُ مرّةً واحدةً لأوّل مرسِل.**
+//
+// **وكانت التذكرةُ تُحذف عند أوّل استعمال** فتصل الرسالةُ ثانيةً — ضغطةُ
+// إرسالٍ مكرّرة أو تسليمٌ مكرّرٌ من واتساب — **فيُردّ «انتهت صلاحية
+// الطلب» بعد الرمز بثوانٍ** (بلاغُ المالك ٢٠٢٦-١٠-١٤). **فصارت تبقى عمرَها
+// كلَّه**: والمرسِلُ نفسُه يُعاد له رمزُه، وغيرُه لا يُردّ عليه، **و«انتهت»
+// لا تُقال إلّا بعد العشر دقائق.**
 func (s *Service) HandleWAInbound(ctx context.Context, from, text string) string {
 	m := waTagRe.FindStringSubmatch(strings.ToUpper(text))
 	if m == nil {
@@ -122,14 +138,32 @@ func (s *Service) HandleWAInbound(ctx context.Context, from, text string) string
 		return ""
 	}
 	purpose, phone := WAPurpose(parts[0]), parts[1]
-	// **وتُحذف قبل التوليد لا بعده** — انظر أعلاه.
-	s.rdb.Del(ctx, key)
 
 	code, err := randomDigits(6)
 	if err != nil {
 		s.logger.Error("wa inbound: تعذّر توليدُ رمز", "error", err)
 		return ""
 	}
+	// **وأوّلُ مرسِلٍ وحدَه يأخذ رمزاً جديداً** — `SETNX` يحسم السباقَ بين
+	// تسليمَين متزامنَين.
+	ttl, err := s.rdb.TTL(ctx, key).Result()
+	if err != nil || ttl <= 0 {
+		ttl = waTicketTTL
+	}
+	first, err := s.rdb.SetNX(ctx, waUsedKey(tag), from+"|"+code, ttl).Result()
+	if err != nil {
+		s.logger.Error("wa inbound: تعذّر حجزُ التذكرة", "error", err)
+		return ""
+	}
+	if !first {
+		used, _ := s.rdb.Get(ctx, waUsedKey(tag)).Result()
+		prev := strings.SplitN(used, "|", 2)
+		if len(prev) == 2 && prev[0] == from {
+			return fmt.Sprintf("رمز رحال غو: %s\nصالح لعشر دقائق.", prev[1])
+		}
+		return ""
+	}
+
 	// **والغرضُ يُحفظ مع الرمز** — فرمزُ التوثيق لا يستعيد كلمةَ مرور.
 	p := "whatsapp"
 	if purpose == WAReset {
@@ -137,6 +171,7 @@ func (s *Service) HandleWAInbound(ctx context.Context, from, text string) string
 	}
 	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), p, s.otpLifetime(ctx)); err != nil {
 		s.logger.Error("wa inbound: تعذّر حفظُ الرمز", "error", err)
+		s.rdb.Del(ctx, waUsedKey(tag))
 		return ""
 	}
 	s.logger.Info("wa inbound: رمزٌ أُرسل رداً", "purpose", p, "from", from)

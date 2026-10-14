@@ -33,8 +33,8 @@
     "setting_defs": 235,
     "behaviour_settings": 191,
     "order_fields": 96,
-    "test_files": 565,
-    "test_funcs": 2274
+    "test_files": 566,
+    "test_funcs": 2276
   },
   "flows": [
     {
@@ -21126,6 +21126,18 @@
     {
       "name": "TestRRT_021_ServerChoosesTargetByStatus",
       "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestResetUnknownNumberSaysNoAccount",
+      "file": "internal/qa/reset_no_account_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAInboundRepeatWithinTTLIsNotExpired",
+      "file": "internal/qa/reset_no_account_test.go",
       "package": "qa",
       "orphan": true
     },
