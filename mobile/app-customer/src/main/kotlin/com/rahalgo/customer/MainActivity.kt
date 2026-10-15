@@ -470,7 +470,8 @@ private fun SignedIn(
     // **ومن خرج من حسابه وهو في «طلباتي» يُردّ إلى التسوّق** — **وإلّا
     // بقي في تبويبٍ لا زرَّ له في الشريط.**
     LaunchedEffect(guest) {
-        if (guest && tab != Tab.Shop && tab != Tab.Custom) tab = Tab.Shop
+        // **وللزائر «تسوق» و«حسابي» وحدهما** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+        if (guest && tab != Tab.Shop) tab = Tab.Shop
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -818,9 +819,9 @@ private fun SignedIn(
                     // يراجع. **وبينهما «طلباتي» يفصل ما يُبنى عمّا
                     // أُرسل.**
                     //
-                    // **وتُعرض للضيف** — انظر `needsAccount`: من أضاف
-                    // ولم يجد أين يرى يقرأ التطبيقَ معطوبا.
-                    NavigationBarItem(
+                    // **ولا تُعرض للزائر** (قرارُ المالك ٢٠٢٦-١٠-١٦): الزائرُ لا يضيف
+                    // إلى السلّة أصلاً — «+» يطلب منه الدخول — **فتبويبُها له فارغٌ أبداً.**
+                    if (!guest) NavigationBarItem(
                         selected = tab == Tab.Cart && over == Overlay.None,
                         onClick = { tab = Tab.Cart; overlay.clear() },
                         icon = {
@@ -870,7 +871,8 @@ private fun SignedIn(
                     // لا متجرَ له في التطبيق **يكتبه بلفظه** فيشتريه
                     // السائق. **وبابٌ يميّزك مدفونٌ في قائمةٍ جانبيّةٍ
                     // لا يُفتح** — ومن لم يفتحه لم يعرف أنّه موجود.
-                    Tab(
+                    // **ولا للزائر** (٢٠٢٦-١٠-١٦) — الطلبُ الخاصُّ يحتاج حساباً وعنوانا.
+                    if (!guest) Tab(
                         selected = tab == Tab.Custom && over == Overlay.None,
                         onClick = { tab = Tab.Custom; overlay.clear() },
                         icon = R.drawable.ic_custom,
@@ -897,9 +899,13 @@ private fun SignedIn(
                     //
                     // **ولا حسابَ لضيف** — **وصورةُ حسابٍ فارغةٌ لمن لم
                     // يدخل تسأل «حسابُ من؟».**
-                    if (!guest) NavigationBarItem(
+                    // **و«حسابي» للزائر بابُ الدخول أو إنشاء الحساب** (قرارُ المالك
+                    // ٢٠٢٦-١٠-١٦: «حسابي تسجيل الدخول أو إنشاء حساب»).
+                    NavigationBarItem(
                         selected = tab == Tab.Account && over == Overlay.None,
-                        onClick = { tab = Tab.Account; overlay.clear() },
+                        onClick = {
+                            if (guest) onAskLogin() else { tab = Tab.Account; overlay.clear() }
+                        },
                         icon = {
                             // ══════════════════════════════════════════
                             // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
