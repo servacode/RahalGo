@@ -301,6 +301,18 @@ fun WalletScreen(
         // ليس له أن يطلبه ثانيةً. **ومحرّكٌ أقدمُ لا يرسله ⇒ الرصيد.**
         val available = st.available ?: st.balance
         val reserved = st.reserved ?: 0
+        // **والمحجوزُ يُقال تحت الرصيد** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥) — كان الزرُّ يُطفأ
+        // بلا سبب حين يحجز طلبٌ مفتوحٌ كلَّ الرصيد، **فيُضغط فلا يقع شيءٌ ويُظنّ عطباً.**
+        if (payouts && reserved > 0) {
+            Text(
+                text = stringResource(R.string.wal_reserved, money(reserved)),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(10.dp))
+        }
         if (payouts && asking) {
             PayoutForm(vm, s, max = available, reserved = reserved, onDone = { asking = false })
         } else if (payouts) {
@@ -311,7 +323,14 @@ fun WalletScreen(
                     onClick = { asking = true },
                     enabled = !s.busy && available > 0,
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.wal_ask_payout)) }
+                ) {
+                    Text(
+                        stringResource(
+                            if (available <= 0 && reserved > 0) R.string.wal_payout_pending
+                            else R.string.wal_ask_payout,
+                        ),
+                    )
+                }
                 RahalOutlineButton(
                     onClick = { statement = true },
                     modifier = Modifier.weight(1f),

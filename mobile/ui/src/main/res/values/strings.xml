@@ -297,6 +297,7 @@
     <string name="wal_k_settlement">تسليم نقد</string>
     <string name="wal_max">المتاح للسحب: %1$s</string>
     <string name="wal_reserved">محجوز لطلب سحب: %1$s</string>
+    <string name="wal_payout_pending">عندك طلب سحب بانتظار القرار</string>
     <string name="wal_no_txs">لا حركات بعد</string>
     <string name="wal_note">ملاحظة (اختيارية)</string>
     <string name="wal_opening">رصيد أول المدة</string>
