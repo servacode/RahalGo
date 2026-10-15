@@ -29,6 +29,7 @@ import {
   fmtNum,
   fmtMoney,
   errorText,
+  fmtStoreNo,
 } from "@rahalgo/i18n";
 import {
   Alert,
@@ -48,6 +49,8 @@ type MenuItem = { menu_item_id: string; name: string; merchant_price: number };
 
 type Candidate = {
   merchant_id: string;
+  /** **رقمُ المتجر** — متجران باسمٍ واحدٍ في القائمة يُفرَّقان به. */
+  number: number;
   name: string;
   matched: number;
   total: number;
@@ -257,7 +260,10 @@ export function TransferPanel({
               onClick={() => void choose(s.merchant_id)}
             >
               <span className="flex w-full items-center justify-between gap-2">
-                <span className="truncate">{s.name}</span>
+                <span className="truncate">
+                  {s.name}{" "}
+                  <span className="text-xs text-ink-muted">{fmtStoreNo(s.number)}</span>
+                </span>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {s.distance_m != null && (
                     <span className="text-xs text-ink-muted">

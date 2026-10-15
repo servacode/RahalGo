@@ -29,6 +29,8 @@ export function getDir(locale: Locale): "rtl" | "ltr" {
 export {
   fmtNum,
   fmtRef,
+  fmtStoreNo,
+  storeLabel,
   fmtDate,
   fmtDateTime,
   fmtTime,

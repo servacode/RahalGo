@@ -9,7 +9,7 @@ import {
   fmtNum,
   fmtDateTime,
   fmtTime,
-  fmtSpan, errorText, damascusDay } from "@rahalgo/i18n";
+  fmtSpan, errorText, damascusDay, storeLabel } from "@rahalgo/i18n";
 import {
   BrandMark,
   OrderRef,
@@ -791,7 +791,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [to, setTo] = useState(params.get("to") ?? "");
   const [merchantId, setMerchantId] = useState(params.get("merchant") ?? "");
   const [driverId, setDriverId] = useState(params.get("driver") ?? "");
-  const [storeList, setStoreList] = useState<{ id: string; name: string }[]>([]);
+  // **وبرقمه** («القصور #M-1045») — متجران باسمٍ واحدٍ في المرشِّح لا يختلطان.
+  const [storeList, setStoreList] = useState<{ id: string; name: string; number: number }[]>([]);
   const [driverList, setDriverList] = useState<DriverRow[]>([]);
   /**
    * **حالُ قائمتَي المرشِّح** — كان فشلُهما أو غيابُ الصلاحية يُخفي المرشِّحَ صامتاً
@@ -1016,9 +1017,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } else {
       void (async () => {
         try {
-          const all: { id: string; name: string }[] = [];
+          const all: { id: string; name: string; number: number }[] = [];
           for (let p = 1; p <= 50; p++) {
-            const r = await api<{ merchants: { id: string; name: string }[]; total: number }>(
+            const r = await api<{ merchants: { id: string; name: string; number: number }[]; total: number }>(
               `/api/v1/admin/merchants?per_page=100&page=${p}`,
             );
             const got = r.merchants ?? [];
@@ -2031,7 +2032,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 ariaLabel={m.admin.ordersPage.range.allStores}
                 allLabel={m.admin.ordersPage.range.allStores}
                 value={merchantId}
-                options={storeList.map((x) => ({ value: x.id, label: x.name }))}
+                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
                 onChange={(v) => {
                   setMerchantId(v);
                   setPage(1);
@@ -3315,7 +3316,7 @@ function PartnerStoreBox({
 }) {
   const OP = m.admin.ordersPage;
   const [picking, setPicking] = useState(false);
-  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const [stores, setStores] = useState<{ id: string; name: string; number: number }[]>([]);
   const [working, setWorking] = useState(false);
   const [err, setErr] = useState("");
   // **وبعد توثيق الثمن لا ربطَ ولا فكّ** — السائقُ دفع للمتجر (`partner_goods_documented`).
@@ -3326,9 +3327,9 @@ function PartnerStoreBox({
     setErr("");
     setPicking(true);
     try {
-      const all: { id: string; name: string }[] = [];
+      const all: { id: string; name: string; number: number }[] = [];
       for (let p = 1; p <= 50; p++) {
-        const r = await api<{ merchants: { id: string; name: string }[]; total: number }>(
+        const r = await api<{ merchants: { id: string; name: string; number: number }[]; total: number }>(
           `/api/v1/admin/merchants?status=active&per_page=100&page=${p}`,
         );
         const got = r.merchants ?? [];
@@ -3406,7 +3407,7 @@ function PartnerStoreBox({
             ariaLabel={OP.partnerSearch}
             allLabel={OP.partnerSearch}
             value=""
-            options={stores.map((x) => ({ value: x.id, label: x.name }))}
+            options={stores.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
             onChange={(v) => {
               if (v) void change(v);
             }}

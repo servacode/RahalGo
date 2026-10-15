@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtStoreNo } from "@rahalgo/i18n";
 import {
   Badge,
   Input,
@@ -29,6 +29,8 @@ const T = m.admin.market.stores;
 
 interface MarketStore {
   id: string;
+  /** **رقمُه القصير** — «القصور #M-1045» و«القصور #M-1062» لا يختلطان. */
+  number: number;
   name: string;
   status: string;
   emergency_closed: boolean;
@@ -81,7 +83,10 @@ export default function StoresTab() {
                 )}
               </div>
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="truncate font-bold">{s.name}</p>
+                <p className="truncate font-bold">
+                  {s.name}{" "}
+                  <span className="text-xs font-normal text-ink-muted">{fmtStoreNo(s.number)}</span>
+                </p>
                 <p className="text-xs text-ink-muted">
                   {T.items.replace("{n}", fmtNum(s.items))}
                   {" · "}

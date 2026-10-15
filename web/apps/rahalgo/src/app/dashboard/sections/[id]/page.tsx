@@ -32,7 +32,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText, storeLabel } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -433,6 +433,8 @@ function Row({
 interface MerchantRow {
   id: string;
   name: string;
+  /** **رقمُه** — متجران باسمٍ واحدٍ في القائمة يُفرَّقان به. */
+  number: number;
 }
 interface MenuSectionRow {
   id: string;
@@ -537,7 +539,7 @@ function AddItemModal({
           <option value="">{S.pickMerchant}</option>
           {merchants.map((x) => (
             <option key={x.id} value={x.id}>
-              {x.name}
+              {storeLabel(x.name, x.number)}
             </option>
           ))}
         </Select>

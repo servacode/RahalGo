@@ -33,8 +33,8 @@
     "setting_defs": 235,
     "behaviour_settings": 191,
     "order_fields": 105,
-    "test_files": 591,
-    "test_funcs": 2374
+    "test_files": 592,
+    "test_funcs": 2375
   },
   "flows": [
     {
@@ -27048,6 +27048,12 @@
     {
       "name": "TestMerchantKindsAreASubset",
       "file": "internal/server/merchant_media_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantNumber",
+      "file": "internal/server/merchant_number_test.go",
       "package": "server",
       "orphan": true
     },

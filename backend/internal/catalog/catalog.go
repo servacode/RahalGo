@@ -62,7 +62,12 @@ type Category struct {
 }
 
 type Merchant struct {
-	ID            string   `json:"id"`
+	ID string `json:"id"`
+	// Number **رقمُ المتجر القصير** («#M-1045») — للوحة وحدَها (طلبُ المالك ٢٠٢٦-١٠-١٦).
+	//
+	// **متجران باسمٍ واحدٍ لا يُفرَّقان إلّا به.** وهذه البنيةُ لا تخرج إلّا
+	// من أبواب الإدارة — **فلا يصل الرقمُ إلى تطبيقٍ ولا إلى زبون.**
+	Number        int64    `json:"number"`
 	Name          string   `json:"name"`
 	Description   string   `json:"description"`
 	CategoryID    string   `json:"category_id"`
@@ -241,7 +246,7 @@ func (s *Service) DeleteCategory(ctx context.Context, actorID, id, ip string) er
 // يختلف باختلاف الاستعلام**: القائمةُ تحمل مرشِّحاتٍ قبله، والمفردُ لا يحمل.
 func merchantSelect(daysExpr string) string {
 	return `
-	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
+	SELECT m.id, m.number, m.name, m.description, m.category_id, c.name, c.icon,
 	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
 	       lm.path, lm.thumb_path,
@@ -273,6 +278,24 @@ func merchantSelect(daysExpr string) string {
 	LEFT JOIN governorates gg ON gg.id = dd.governorate_id`
 }
 
+// MerchantNumberMatchSQL **شرطُ «هذا النصُّ رقمُ هذا المتجر»** — مركزيٌّ لا منسوخ.
+//
+// **يقبل ما يكتبه الموظّف كما يراه**: «#M-1045» و«M-1045» و«m1045» و«1045».
+// **والمطابقةُ تامّةٌ لا جزئيّة** — «104» لا يجد ١٠٤٥، **وإلّا صار البحثُ برقمٍ
+// قصيرٍ يُرجع نصفَ المتاجر.**
+func MerchantNumberMatchSQL(alias, param string) string {
+	return alias + `.number::text = regexp_replace(btrim(` + param + `), '^#?[Mm]-?', '')`
+}
+
+// MerchantLabelSQL **«الاسم #M-1045» نصّاً واحداً** — لتحذيرٍ يعرض أسماءً مجموعةً
+// في سطر (مرشَّحٌ باسم متجرٍ قائم)، **فيُعرف أيُّ «القصور» هو.**
+//
+// **والرقمُ معزولُ الاتّجاه** (`U+2066`…`U+2069`): «#M-» لاتينيٌّ داخل سطرٍ عربيّ،
+// **وبلا عزلٍ تقفز علامةُ «#» إلى الطرف الآخر.** وهو شكلُ `fmtStoreNo` في الويب نفسُه.
+func MerchantLabelSQL(alias string) string {
+	return alias + `.name || ' ' || chr(8294) || '#M-' || ` + alias + `.number::text || chr(8297)`
+}
+
 // banDays نافذةُ عدّ المخالفات — **من الإعداد لا من رقمٍ ثابت.**
 //
 // **وثلاثون عند الجهل** كما في المحرّك، فلا يختلف عرضٌ عن قرار.
@@ -287,7 +310,7 @@ func (s *Service) banDays(ctx context.Context) int64 {
 
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
-	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
+	err := row.Scan(&m.ID, &m.Number, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
 		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
@@ -326,7 +349,9 @@ func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status, 
 	// **ولم يُرَ**: في القاعدة متجرٌ واحد، **فبدا صحيحاً.** وحين تصير
 	// عشرين **يرى كلُّ صاحبِ متجرٍ متاجرَ العشرين في ملفّه** — والنظرةُ
 	// العامّةُ فوقَه تقول الصحيح، **فرقمان متناقضان في صفحةٍ واحدة.**
-	where := ` WHERE ($1 = '' OR m.name ILIKE '%'||$1||'%' OR m.phone ILIKE '%'||$1||'%')
+	// **وبرقمه أيضاً** — «M-1045» أو «1045» يجد متجرَه (طلبُ المالك ٢٠٢٦-١٠-١٦).
+	where := ` WHERE ($1 = '' OR m.name ILIKE '%'||$1||'%' OR m.phone ILIKE '%'||$1||'%'
+	                  OR ` + MerchantNumberMatchSQL("m", "$1") + `)
 	           AND ($2 = '' OR m.category_id::text = $2)
 	           AND ($3 = '' OR m.status = $3)
 	           AND ($4 = '' OR m.sales_rep_user_id::text = $4)

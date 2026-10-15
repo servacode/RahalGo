@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 )
@@ -268,7 +269,9 @@ func (s *Server) handleMarketSeen(w http.ResponseWriter, r *http.Request) {
 }
 
 type marketStore struct {
-	ID              string  `json:"id"`
+	ID string `json:"id"`
+	// Number **رقمُ المتجر** («#M-1045») — للوحة وحدَها (طلبُ المالك ٢٠٢٦-١٠-١٦).
+	Number          int64   `json:"number"`
 	Name            string  `json:"name"`
 	Status          string  `json:"status"`
 	EmergencyClosed bool    `json:"emergency_closed"`
@@ -286,14 +289,16 @@ func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 	pg := pagingOf(r, 50)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	var total int
+	// **ويُبحث برقمه كما باسمه** — «M-1045» أو «1045» (طلبُ المالك ٢٠٢٦-١٠-١٦).
+	where := `($1 = '' OR m.name ILIKE '%'||$1||'%' OR ` + catalog.MerchantNumberMatchSQL("m", "$1") + `)`
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT count(*) FROM merchants m WHERE ($1 = '' OR m.name ILIKE '%'||$1||'%')`,
+		SELECT count(*) FROM merchants m WHERE `+where,
 		q).Scan(&total); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT m.id::text, m.name, m.status, m.emergency_closed, lm.thumb_path,
+		SELECT m.id::text, m.number, m.name, m.status, m.emergency_closed, lm.thumb_path,
 		       count(i.id),
 		       count(i.id) FILTER (WHERE i.available),
 		       count(i.id) FILTER (WHERE i.created_at > now() - make_interval(hours => $2)),
@@ -302,7 +307,7 @@ func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 		FROM merchants m
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		LEFT JOIN menu_items i ON i.merchant_id = m.id
-		WHERE ($1 = '' OR m.name ILIKE '%'||$1||'%')
+		WHERE `+where+`
 		GROUP BY m.id, lm.thumb_path
 		ORDER BY m.name, m.id
 		LIMIT $3 OFFSET $4`, q, marketNewHours, pg.PerPage, pg.Offset)
@@ -314,7 +319,7 @@ func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 	out := []marketStore{}
 	for rows.Next() {
 		var x marketStore
-		if err := rows.Scan(&x.ID, &x.Name, &x.Status, &x.EmergencyClosed, &x.LogoURL,
+		if err := rows.Scan(&x.ID, &x.Number, &x.Name, &x.Status, &x.EmergencyClosed, &x.LogoURL,
 			&x.Items, &x.LiveItems, &x.NewItems, &x.NoImageItems, &x.HasHours); err != nil {
 			s.respondErr(w, err)
 			return

@@ -47,12 +47,14 @@ type transferProposal struct {
 }
 
 type transferCandidate struct {
-	MerchantID string             `json:"merchant_id"`
-	Name       string             `json:"name"`
-	Matched    int                `json:"matched"`
-	Total      int                `json:"total"`
-	DistanceM  *float64           `json:"distance_m"`
-	Items      []transferProposal `json:"items"`
+	MerchantID string `json:"merchant_id"`
+	// Number **رقمُ المتجر** — متجران باسمٍ واحدٍ في قائمة التحويل يُفرَّقان به.
+	Number    int64              `json:"number"`
+	Name      string             `json:"name"`
+	Matched   int                `json:"matched"`
+	Total     int                `json:"total"`
+	DistanceM *float64           `json:"distance_m"`
+	Items     []transferProposal `json:"items"`
 	// **قائمةُ المتجر كاملةً** — حين يُطلب وحدَه فقط.
 	Menu []transferMenuItem `json:"menu,omitempty"`
 }
@@ -125,7 +127,7 @@ func (s *Server) handleTransferCandidates(w http.ResponseWriter, r *http.Request
 			JOIN merchants m ON m.id = o.merchant_id
 			LEFT JOIN users u ON u.id = o.driver_id
 			WHERE o.id = $1)
-		SELECT m.id::text, m.name, ST_Distance(m.location, origin.pt)
+		SELECT m.id::text, m.number, m.name, ST_Distance(m.location, origin.pt)
 		FROM merchants m, origin
 		WHERE m.status = 'active' AND NOT m.emergency_closed AND m.id <> $2::uuid
 		  AND ($3 = '' OR m.id::text = $3)`, orderID, current, only)
@@ -135,7 +137,7 @@ func (s *Server) handleTransferCandidates(w http.ResponseWriter, r *http.Request
 	}
 	for srows.Next() {
 		c := &transferCandidate{Total: len(items), Items: []transferProposal{}}
-		if err := srows.Scan(&c.MerchantID, &c.Name, &c.DistanceM); err != nil {
+		if err := srows.Scan(&c.MerchantID, &c.Number, &c.Name, &c.DistanceM); err != nil {
 			srows.Close()
 			s.respondErr(w, err)
 			return

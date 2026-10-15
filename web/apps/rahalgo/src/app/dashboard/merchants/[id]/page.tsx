@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, errorText, fmtStoreNo } from "@rahalgo/i18n";
 import {
   Tabs,
   type TabDef,
@@ -63,6 +63,8 @@ const MERCHANT_STATUS: Record<string, string> = {
 
 interface Merchant {
   id: string;
+  /** **رقمُه القصير** («#M-1045») — يفرّق بين متجرين باسمٍ واحد. */
+  number: number;
   name: string;
   phone: string;
   address_text: string;
@@ -171,7 +173,10 @@ export default function MerchantProfilePage() {
           <IconStore size={26} className="text-primary-dark" />
         </IconTile>
         <div className="min-w-0 flex-1">
-          <h1 className="heading-page">{mr.name}</h1>
+          <h1 className="heading-page">
+            {mr.name}{" "}
+            <span className="text-sm font-normal text-ink-muted">{fmtStoreNo(mr.number)}</span>
+          </h1>
           <p className="text-sm text-ink-muted">
             {mr.category_name} · <span dir="ltr">{mr.phone}</span>
           </p>

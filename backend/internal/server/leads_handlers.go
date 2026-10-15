@@ -255,7 +255,11 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 }
 
 // adminLeadSelect **الطلبُ وتحذيراتُه** — `leadSelect` نفسُه وأعمدةٌ بعده.
-const adminLeadSelect = `
+//
+// **وأسماءُ المتاجر القائمة برقمها** («القصور #M-1045») — طلبُ المالك
+// ٢٠٢٦-١٠-١٦: **التحذيرُ يقول «متجرٌ بالاسم نفسِه» ولا يقول أيَّها**، والرقمُ
+// يُبحث به في القائمة فيُفتح ويُقرَّر أهو هو.
+var adminLeadSelect = `
 	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area,
 	       COALESCE(d.name || '، ' || g.name, ''),
 	       c.name, c.icon, l.lat, l.lng,
@@ -263,7 +267,7 @@ const adminLeadSelect = `
 	       l.note, l.decision_note,
 	       g.id::text,
 	       COALESCE((SELECT array_agg(x.name) FROM (
-	           SELECT m2.name FROM merchants m2
+	           SELECT ` + catalog.MerchantLabelSQL("m2") + ` AS name FROM merchants m2
 	             LEFT JOIN users o ON o.id = m2.owner_user_id
 	            WHERE m2.id IS DISTINCT FROM l.merchant_id
 	              AND (m2.phone = l.phone OR o.phone::text = l.phone)
@@ -273,7 +277,7 @@ const adminLeadSelect = `
 	              AND l2.status IN ('new', 'needs_info')
 	           LIMIT 5) x), '{}'),
 	       COALESCE((SELECT array_agg(n.name) FROM (
-	           SELECT m3.name FROM merchants m3
+	           SELECT ` + catalog.MerchantLabelSQL("m3") + ` AS name FROM merchants m3
 	            WHERE m3.id IS DISTINCT FROM l.merchant_id
 	              AND lower(btrim(m3.name)) = lower(btrim(l.store_name))
 	              AND ((l.lat IS NOT NULL AND l.lng IS NOT NULL AND m3.location IS NOT NULL

@@ -51,6 +51,29 @@ export function fmtRef(n: number | string): string {
   return String(n);
 }
 
+/**
+ * **رقمُ المتجر القصير** — «#M-1045»، للوحة وحدَها (طلبُ المالك ٢٠٢٦-١٠-١٦).
+ *
+ * **متجران باسمٍ عربيٍّ واحدٍ لا يُفرَّقان إلّا به** — «القصور #M-1045»
+ * و«القصور #M-1062». **ولا فاصلةَ آلاف** كرقم الطلب (`fmtRef`): يُكتب في
+ * البحث كما يُرى.
+ *
+ * **ومعزولُ الاتّجاه** (`U+2066`…`U+2069`): «#M-» لاتينيٌّ داخل سطرٍ عربيّ،
+ * **وبلا عزلٍ تقفز «#» إلى الطرف الآخر من الرقم.** ويصلح نصّاً في قائمةٍ
+ * منسدلة كما يصلح في عنصر — **ونفسُ الشكل يبنيه المحرّكُ في تحذير المرشَّحين**
+ * (`catalog.MerchantLabelSQL`).
+ */
+export function fmtStoreNo(n: number | null | undefined): string {
+  if (!n) return "";
+  return `\u2066#M-${n}\u2069`;
+}
+
+/** **«الاسم #M-1045»** — للقوائم المنسدلة التي لا تقبل إلّا نصّاً. */
+export function storeLabel(name: string, n: number | null | undefined): string {
+  const no = fmtStoreNo(n);
+  return no ? `${name} ${no}` : name;
+}
+
 /** يحوّل أي مدخل تاريخ إلى Date (يقبل نصاً أو رقماً أو Date). */
 function toDate(v: string | number | Date): Date {
   return v instanceof Date ? v : new Date(v);
