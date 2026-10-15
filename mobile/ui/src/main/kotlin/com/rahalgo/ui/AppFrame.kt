@@ -5,7 +5,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -198,6 +200,14 @@ fun AuthGate(
     /** **مفتاحُ التحديث من داخل التطبيق** — انظر `UpdateGate.selfUpdateKey`. */
     updateSelfKey: String? = null,
     updateBody: String? = null,
+    /**
+     * **أتعيش نماذجُ ما بعد الدخول بعمر الجلسة؟** — انظر `AuthViewModel.sessionScope`.
+     *
+     * **والزبونُ وحدَه يُطفئه**: يتصفّح ضيفاً بالنماذج نفسِها ثمّ يدخل، **ومن
+     * فرّغها عند الدخول أضاع عليه ما كان فيه.** **وسلّتُه ووصلتُه تُمسحان في
+     * بابِ خروجه** (`afterLogout`)، والنبضةُ تُعيد جلبَ الباقي.
+     */
+    sessionScoped: Boolean = true,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **وأرضُ السمة تُوضع هنا — بوّابةً واحدةً لثلاث شاشات**
@@ -330,7 +340,15 @@ fun AuthGate(
             LaunchedEffect(vm.user?.id, vm.sessionEpoch) {
                 Push.register(ctx)
             }
-            onSignedIn()
+            // **ونماذجُ الشاشات من مخزن الجلسة** (٢٠٢٦-١٠-١٦) — يُفرَّغ مع الخروج،
+            // **فلا يُعرض ما جلبته جلسةٌ ماتت كأنّه الآن.**
+            if (sessionScoped) {
+                CompositionLocalProvider(LocalViewModelStoreOwner provides vm.sessionScope) {
+                    onSignedIn()
+                }
+            } else {
+                onSignedIn()
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -362,6 +380,9 @@ fun AuthGate(
             state = vm.state,
             title = title,
             signup = signup,
+            // **ولماذا خرج — إن أُخرج قسراً** (٢٠٢٦-١٠-١٦): «جهازٌ تاني» أو
+            // «انتهت جلستك». **ويبقى حتّى يدخل** — والزبونُ يراه حين يفتح الدخول.
+            notice = SessionEnd.pending?.let { stringResource(SessionEnd.messageRes(it)) }.orEmpty(),
             actions = LoginActions(
                 login = vm::login,
                 setMode = vm::setMode,

@@ -106,6 +106,14 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     private val backend = AppCore.get()
 
+    /**
+     * **مخزنُ نماذج ما بعد الدخول** — يُفرَّغ مع كلّ خروج. انظر `dropSessionScope`.
+     *
+     * **ويُعرَّف قبل `init`** — فما يُنادى فيه يجده مبنيّاً.
+     */
+    var sessionScope by mutableStateOf(SessionScope(app))
+        private set
+
     init {
         // **ويُوصَل النداءُ مرّةً عند بناء النموذج** — فأيُّ نداءٍ في
         // التطبيق كلِّه يردّ ٤٢٦ يُوقظ إعادةَ الرسم، **لا الاستعادةُ
@@ -119,9 +127,14 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // صاحبُه إلى شاشة التبديل مهما دخل** — لا نصَّ خطإٍ عابراً.
         ApiClient.onPasswordChangeRequired = { mustChangePassword = true }
         // **وجلسةٌ رُفضت وسط العمل تُساق إلى خروجٍ صريح** (Obs 3) — دخولٌ من جهازٍ
-        // آخر (`session_superseded`) أو إبطالٌ عامّ. **حدٌّ واحدٌ يمسح الجلسةَ
-        // والحالةَ المحلّيّة ويُظهر السبب** — لا شاشةٌ تعرض خطأً وصاحبُها «داخلٌ».
-        ApiClient.onSessionRejected = { code -> viewModelScope.launch { forcedLogout(code) } }
+        // آخر (`session_superseded`) أو إبطالٌ عامّ. **والخطّافُ يُوصَل في النواة
+        // لا هنا** (`SessionEnd`، ٢٠٢٦-١٠-١٦): هي تمسح الجلسةَ وتنادي بابَ الخروج،
+        // **وهذا النموذجُ يسمع العدّادَ فيُسقط صاحبَه إلى الدخول.** **وما وقع قبل
+        // ولادته لا يُعاد عليه** — يبدأ من العدّاد الحاليّ.
+        val seen = SessionEnd.ended.value
+        viewModelScope.launch {
+            SessionEnd.ended.collect { n -> if (n > seen) forcedLogout() }
+        }
         restore()
         loadPlatform()
         resumePendingCode()
@@ -800,6 +813,8 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun onSignedIn(u: User?) {
         PendingCode.clear()
+        // **وسببُ الخروج السابق يُمحى بالدخول** — رآه، ودخل.
+        SessionEnd.clear()
         user = u
         // **كلُّ دخولٍ يبدّل الجلسة — فيُعاد تسجيلُ رمز الدفع على جلسته الجديدة**
         // (Obs 3)، **ولو كان الحسابُ نفسَه على الجهاز نفسِه** (مفتاحُ المستخدمِ
@@ -842,33 +857,61 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // المستخدمُ ويبقى العلَمُ فتبقى الشاشة (`AppFrame` يقرؤه قبل المستخدم).
         mustChangePassword = false
         ApiClient.passwordChangePending = false
+        dropSessionScope()
         AppCore.afterLogout()
     }
 
     /**
-     * **خروجٌ قسريٌّ بسببٍ صريح** (Obs 3) — يُنادى حين يرفض الخادمُ الجلسةَ وسط
-     * العمل (`ApiClient.onSessionRejected`). **يمرّ بحدِّ `detachSession` الواحد**
-     * (يمسح التوكنَ والسلّةَ والوصلةَ الحيّة — عزلةُ CUST-DEF-009)، **ثمّ يُظهر
-     * السبب**: «من جهازٍ آخر» أو «انتهت جلستك». **ووجهةُ الدفعِ قُطعت خادميّاً
-     * أصلاً** فلا يبقى هذا الجهازُ هدفاً لإشعارٍ خاصّ.
+     * ══════════════════════════════════════════════════════════════════════
+     * **نماذجُ الشاشات تعيش بعمر الجلسة لا بعمر النشاط** (٢٠٢٦-١٠-١٦)
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * **كانت نماذجُ ما بعد الدخول تُبنى على النشاط** (`viewModel()`) — **فتبقى
+     * بعد الخروج بما جلبته**: متجرٌ «مغلق» من جلسةٍ ماتت، **وحسابٌ ثانٍ يدخل
+     * على الجهاز نفسِه يرى متجرَ الأوّل لحظةً حتّى يصل جلبُه.**
+     *
+     * **فصار لها مخزنٌ يملكه هذا النموذج** — يعبر دورانَ الجهاز معه،
+     * **ويُفرَّغ مع كلّ خروج** (صريحٍ أو قسريّ)، فتُلغى نطاقاتُها ووصلاتُها،
+     * **وتُبنى من جديدٍ فارغةً مع الدخول التالي.** يمدّه `AuthGate` لفرع
+     * الداخل وحدَه. **(والحقلُ نفسُه معرَّفٌ أعلى الصنف قبل `init`.)**
      */
-    private fun forcedLogout(code: String) {
-        if (user == null) return // ضيفٌ أصلاً — لا شيءَ يُخرَج
+    private fun dropSessionScope() {
+        val old = sessionScope
+        sessionScope = SessionScope(getApplication())
+        old.viewModelStore.clear()
+    }
+
+    override fun onCleared() {
+        sessionScope.viewModelStore.clear()
+        super.onCleared()
+    }
+
+    /**
+     * **خروجٌ قسريٌّ بسببٍ صريح** (Obs 3) — يُنادى حين يرفع `SessionEnd` عدّادَه.
+     *
+     * **والجلسةُ مُسحت هناك وبابُ الخروج نُودي** — فهذا يُسقط الحالَ المحلّيّة:
+     * المستخدمَ وعلَمَ التبديل ونماذجَ الشاشات (`dropSessionScope`) — **فلا
+     * يبقى شيءٌ من الجلسة الميّتة يُعرض كأنّه الآن.** **والسببُ يُعرض في شاشة
+     * الدخول** (`SessionEnd.pending`) لا رسالةً طافيةً تنصرف قبل أن تُقرأ.
+     * **ووجهةُ الدفعِ قُطعت خادميّاً أصلاً** فلا يبقى هذا الجهازُ هدفاً لإشعارٍ خاصّ.
+     */
+    private fun forcedLogout() {
+        // **والضيفُ لا يُمسّ** — ولا من يُستعاد الآن: فرعُ الرفض في `restore`
+        // يمسح بنفسه.
+        if (user == null && !mustChangePassword && !offline && !accountRestricted) return
+        // **وشاشةُ «تعذّر الاتّصال» أو «حسابٌ مقيَّد» لجلسةٍ ماتت تسقط إلى الدخول** —
+        // زرُّ «أعد» فيها يعيد استعادةَ ما لا يُستعاد.
+        offline = false
+        accountRestricted = false
         detachSession()
-        val msg = when (code) {
-            "session_superseded" -> str(R.string.err_session_superseded)
-            // **جلسةٌ فُتحت بحسابٍ بلا صفةِ هذا التطبيق قبل القفل** — يرفض
-            // الخادمُ تجديدَها، **فيُقال لصاحبها لماذا** (٢٠٢٦-١٠-٠١).
-            "not_merchant_account" -> str(R.string.err_not_merchant_account)
-            "not_rep_account" -> str(R.string.err_not_rep_account)
-            "not_driver_account" -> str(R.string.err_not_driver_account)
-            else -> str(R.string.err_invalid_refresh)
-        }
-        Flash.fail(msg)
+        // **وشاشةُ الدخول تبدأ نظيفةً** — لا خطأَ محاولةٍ قديمةٍ ولا رمزٌ معلّق.
+        state = LoginState(otpAvailable = state.otpAvailable)
     }
 
     fun logout() {
         val refresh = backend.session.refreshToken()
+        // **والخروجُ الصريحُ ليس «انتهت جلستك»** — يُمحى السببُ القديمُ إن بقي.
+        SessionEnd.clear()
         // **وحدُّ الجلسة الواحد** (`CUST-DEF-004` + `CUST-DEF-009`) — يقع قبل
         // نداء الشبكة فلا يتأخّر بتعذّرها.
         detachSession()
@@ -976,7 +1019,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
  * دالّةٍ طويلةٍ لا يُحرَس.**
  */
 fun sessionRejected(status: Int, code: String): Boolean =
-    status == 401 || code == "invalid_refresh"
+    // **والمصنِّفُ واحدٌ مع `ApiClient`** (٢٠٢٦-١٠-١٦) — كان هنا شرطٌ ثانٍ
+    // (`401 || invalid_refresh`)، **فحسابٌ حُظر وهو يُقلع (`403 user_blocked` من
+    // التجديد) قُرئ «لا اتصال»** فبقي صاحبُه يعيد المحاولةَ على ما لا يُستعاد.
+    com.rahalgo.shared.net.SessionFailure.endsSession(status, code)
 
 /**
  * ══════════════════════════════════════════════════════════════════════

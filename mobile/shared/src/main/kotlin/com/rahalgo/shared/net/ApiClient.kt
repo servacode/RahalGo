@@ -235,21 +235,30 @@ class ApiClient(
                 // **جلسةٌ رُفضت وسط العمل — تُساق عالميّاً** (`Obs 3`)
                 // ══════════════════════════════════════════════════════════
                 //
-                // **التجديدُ فشل ⇒ الجلسةُ ماتت**: لا تُترَك الشاشةُ تعرض خطأً
-                // وصاحبُها «داخلٌ» ظاهريّاً — **يُساق إلى الخروج بحدٍّ واحد**
-                // (كبوّابتَي التحديث والكلمة). **ويُفضَّل سببُ «جهازٌ آخر»** من
-                // أيّ الإشارتين ظهر (رمزُ الوصول المرفوضُ أوّلاً، أو ردُّ
-                // التجديد) — فيخرج بالرسالة الصريحة لا العامّة، **ويبقى دائماً
-                // عبر ردِّ التجديد ولو زالت مرآةُ Redis** (الجهازُ العائدُ متأخّراً).
-                val reason = if (firstCode == "session_superseded" || re.body.code == "session_superseded") {
-                    "session_superseded"
-                } else {
-                    re.body.code
+                // **التجديدُ فشل برفضٍ صريح ⇒ الجلسةُ ماتت**: لا تُترَك الشاشةُ
+                // تعرض خطأً وصاحبُها «داخلٌ» ظاهريّاً — **يُساق إلى الخروج بحدٍّ
+                // واحد** (كبوّابتَي التحديث والكلمة). **ويُفضَّل سببُ «جهازٌ آخر»**
+                // من أيّ الإشارتين ظهر — انظر `SessionFailure.reason`.
+                //
+                // **ولا يُطرد على تعثّر** (٢٠٢٦-١٠-١٦): كان كلُّ فشلٍ للتجديد
+                // يُخرج — ٥٠٣ و٥٠٠ و٤٢٩ معها. **وبابُ التجديد يتعثّر كما يتعثّر
+                // غيرُه**، والجلسةُ سليمة. **فالمصنِّفُ واحدٌ** (`SessionFailure`).
+                if (SessionFailure.endsSession(re.status, re.body.code)) {
+                    onSessionRejected?.invoke(SessionFailure.reason(firstCode, re.body.code))
                 }
-                onSessionRejected?.invoke(reason)
                 throw re
             }
-            return raw(path, method, body, idempotencyKey, session.accessToken())
+            try {
+                return raw(path, method, body, idempotencyKey, session.accessToken())
+            } catch (again: ApiException) {
+                // **وجلسةٌ جُدّدت ثمّ رُفضت في النداء نفسِه ماتت كذلك** — أُزيحت
+                // بين التجديد والإعادة. **كانت تُرمى صامتةً** فتبقى الشاشةُ
+                // «داخلةً» على بياناتٍ قديمة.
+                if (again.status == 401 && SessionFailure.endsSession(again.status, again.body.code)) {
+                    onSessionRejected?.invoke(again.body.code)
+                }
+                throw again
+            }
         }
     }
 
@@ -475,7 +484,12 @@ class ApiClient(
         try {
             // **وقد جدّده غيري وأنا أنتظر** — فالتوكنُ الذي حملتُه لم
             // يعد هو المحفوظ، **ونداءٌ به يُبطل جلسةً سليمة.**
-            if (session.refreshToken() != had) return
+            val now = session.refreshToken()
+            // **ومُسحت الجلسةُ وأنا أنتظر** (خروجٌ قسريٌّ من نداءٍ آخر) — فلا
+            // يُقرأ المسحُ «تجديداً نجح» فيُعاد النداءُ بلا توكنٍ ويُطرق المحرّكُ
+            // بلا داعٍ. **يُردّ في الجهاز** كما يُردّ الضيف.
+            if (now.isEmpty()) throw ApiException(401, ApiErrorBody(code = SessionFailure.NOT_SIGNED_IN))
+            if (now != had) return
             val result: com.rahalgo.shared.model.AuthResult = raw(
                 "/api/v1/auth/refresh",
                 HttpMethod.Post,
@@ -583,6 +597,10 @@ class ApiClient(
          * (`session_superseded` أو غيرُه) فيُعرَض السببُ الصحيح — «تم تسجيل خروجك…
          * من جهازٍ آخر» أو «انتهت جلستك». **ويُنادى من `:shared` بلا معرفةِ إطارِ
          * واجهة** — الغلافُ يُترجمه إلى خروجٍ ورسالة.
+         *
+         * **ويوصله `AppCore.install` مرّةً للعمليّة كلِّها** (`SessionEnd`) — لا
+         * نموذجُ شاشة: **نموذجٌ أُتلف نطاقُه يبتلع الإشارةَ صامتاً**، وخدمةُ
+         * السائق في الخلفيّة لا نموذجَ لها أصلاً.
          */
         @Volatile
         var onSessionRejected: ((String) -> Unit)? = null

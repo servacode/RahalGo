@@ -28,6 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.ui.unit.dp
 
 /**
@@ -81,6 +84,13 @@ fun AuthScreen(
      * من غيابه**: يُملأ ثمّ يُردّ.
      */
     signup: Boolean = false,
+    /**
+     * **لماذا هو هنا — إن أُخرج قسراً** (٢٠٢٦-١٠-١٦، انظر `SessionEnd`).
+     *
+     * **ومن وجد نفسَه على شاشة الدخول بلا سببٍ ظنّ التطبيقَ معطوباً** —
+     * أو أنّ حسابَه سُرق. **فيُقال له ما وقع فوق الحقول**، ويبقى حتّى يدخل.
+     */
+    notice: String = "",
 ) {
     // **والرقم يبقى بين التبويبين** — من كتبه ثمّ بدّل الطريقة لا يعيده.
     // **ويُعبَّأ من `prefillPhone`** عند الاستعادة من التسجيل (Batch 4): مفتاحُ
@@ -110,6 +120,21 @@ fun AuthScreen(
             style = MaterialTheme.typography.titleLarge,
         )
         Spacer(Modifier.height(20.dp))
+
+        if (notice.isNotEmpty()) {
+            Text(
+                text = notice,
+                color = Rahal.colors.ink,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.sm)
+                    .background(Rahal.colors.warnTint)
+                    .padding(14.dp),
+            )
+            Spacer(Modifier.height(16.dp))
+        }
 
         if (state.otpAvailable) {
             TabRow(selectedTabIndex = if (state.mode == LoginMode.PASSWORD) 0 else 1) {

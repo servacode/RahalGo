@@ -53,8 +53,9 @@
     <string name="err_internal">تعذر إتمام العملية — حاول بعد قليل</string>
     <string name="err_server">حدث خطأ في المنصة وليس في اتصالك — حاول بعد قليل، وإن تكرر فأبلغ الإدارة</string>
     <string name="err_invalid_phone">رقم الهاتف غير صحيح</string>
-    <string name="err_invalid_refresh">انتهت جلستك — ادخل من جديد</string>
-    <string name="err_session_superseded">تم تسجيل خروجك لأن حسابك تم تسجيل الدخول إليه من جهاز آخر</string>
+    <!-- **وهما نصّا شاشة الدخول بعد خروجٍ قسريّ** (SessionEnd، ٢٠٢٦-١٠-١٦) — بصياغة المالك. -->
+    <string name="err_invalid_refresh">انتهت جلستك — سجّل دخولك من جديد</string>
+    <string name="err_session_superseded">تم تسجيل خروجك لأنك دخلت بحسابك من جهاز تاني</string>
     <string name="err_network">لا اتصال بالإنترنت</string>
     <string name="err_no_merchant">لا متجر في هذا الطلب — الخاص تشتريه بنفسك</string>
     <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون

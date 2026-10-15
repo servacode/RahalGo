@@ -291,6 +291,10 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
         vm = vm,
         signup = true,
         asking = asking,
+        // **ونماذجُه تعبر الدخول** — يتصفّح ضيفاً ثمّ يدخل فيجد ما كان فيه.
+        // **وجلسةٌ ماتت تُسقطه ضيفاً** (`SessionEnd`) وسلّتُه ووصلتُه تُمسحان في
+        // بابِ خروجه، **ويرى السببَ حين يفتح الدخول.**
+        sessionScoped = false,
         onSignedIn = {
             SignedIn(
                 theme = theme,

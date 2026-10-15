@@ -67,26 +67,44 @@ class SessionSupersededTest {
         // **ويُفضَّل سببُ «جهازٌ آخر»** من أيّ الإشارتين ظهر.
         assertTrue(
             "**لا يُميَّز `session_superseded`** — فيخرج برسالةٍ عامّة",
-            call.contains("session_superseded"),
+            // **والتفضيلُ صار في المصنِّف الواحد** (`SessionFailure.reason`، ٢٠٢٦-١٠-١٦).
+            call.contains("SessionFailure.reason(") &&
+                read("shared/src/main/kotlin/com/rahalgo/shared/net/SessionFailure.kt")
+                    .contains("const val SUPERSEDED = \"session_superseded\""),
         )
     }
 
-    /** **Obs3-02 · الغلافُ يوصل الخطّافَ بخروجٍ قسريّ.** */
+    /**
+     * **Obs3-02 · الخطّافُ يُوصَل في النواة، والغلافُ يسمع ويُخرج.**
+     *
+     * (٢٠٢٦-١٠-١٦: كان يُوصَل من `AuthViewModel` بنطاقه — **ونطاقٌ أُتلف يبتلع
+     * الإشارة**، فبقي المتجرُ «داخلاً» على جلسةٍ ماتت.)
+     */
     @Test
     fun authViewModelWiresForcedLogout() {
+        val core = read("ui/src/main/kotlin/com/rahalgo/ui/Core.kt")
+        assertTrue(
+            "**لا يُوصَل `ApiClient.onSessionRejected` في النواة**",
+            core.contains("ApiClient.onSessionRejected = { code -> SessionEnd.end(code) }"),
+        )
         val src = read(auth)
         assertTrue(
-            "**لا يُوصَل `ApiClient.onSessionRejected` بالحالة**",
-            src.contains("ApiClient.onSessionRejected = {") && src.contains("forcedLogout("),
+            "**الغلافُ لا يسمع نهايةَ الجلسة**",
+            src.contains("SessionEnd.ended.collect") && src.contains("forcedLogout("),
         )
         val fl = body(src, "private fun forcedLogout(", "\n    fun ", "\n    private fun ")
         assertTrue(
             "**الخروجُ القسريُّ لا يمرّ بحدِّ `detachSession` الواحد** (عزلةُ CUST-DEF-009)",
             fl.contains("detachSession()"),
         )
+        val end = read("ui/src/main/kotlin/com/rahalgo/ui/SessionEnd.kt")
         assertTrue(
             "**لا يُعرَض سببُ «جهازٌ آخر» الصريح**",
-            fl.contains("R.string.err_session_superseded"),
+            end.contains("R.string.err_session_superseded"),
+        )
+        assertTrue(
+            "**شاشةُ الدخول لا تعرض سببَ الخروج**",
+            read(frame).contains("notice = SessionEnd.pending"),
         )
     }
 
@@ -101,7 +119,7 @@ class SessionSupersededTest {
         assertTrue("**غاب مفتاحُ `err_session_superseded`**", s.contains("name=\"err_session_superseded\""))
         assertTrue(
             "**الرسالةُ لا تذكر «جهاز آخر» صراحةً**",
-            s.contains("تم تسجيل خروجك") && s.contains("من جهاز آخر"),
+            s.contains("تم تسجيل خروجك") && s.contains("من جهاز تاني"),
         )
     }
 
