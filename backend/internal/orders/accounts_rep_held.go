@@ -66,6 +66,11 @@ func (s *Service) ReleaseHeldCommissionsTx(ctx context.Context, q dbtx.Querier, 
 			"عمولةٌ محجوزةٌ صُرفت بعد إعادة التفعيل", &actorID); err != nil {
 			return 0, 0, err
 		}
+		// **ودينُه ينقطع منها كما ينقطع من كلّ عمولة** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+		// كانت تُصرف كاملةً وعليه دين. **وقبل إعادة حساب الخزينة** فتقرأ الصافي.
+		if err := s.offsetRepDebt(ctx, q, repID, h.amount, h.order, actorID); err != nil {
+			return 0, 0, err
+		}
 		if err := s.creditTreasury(ctx, q, h.order, actorID); err != nil {
 			return 0, 0, err
 		}

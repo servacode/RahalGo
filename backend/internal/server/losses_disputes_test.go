@@ -342,7 +342,8 @@ func TestLD_ResolutionNeedsAnotherApprover(t *testing.T) {
 	f.ledgerClean(t)
 }
 
-// LD-05 — **رصيدٌ لا يكفي: يُخصم الموجودُ ويبقى الباقي مفتوحاً.**
+// LD-05 — **رصيدٌ لا يكفي: يُخصم الموجودُ ويصير الباقي ديناً** (قرارُ المالك
+// ٢٠٢٦-١٠-١٥ — كان الباقي يبقى نزاعاً مفتوحاً بلا خصمٍ آليّ).
 func TestLD_PartialChargeLeavesRemainderOpen(t *testing.T) {
 	f := newLDFixture(t)
 	f.fund(t, f.owner, 3_000)
@@ -353,19 +354,24 @@ func TestLD_PartialChargeLeavesRemainderOpen(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("الموافقةُ ردّت %d: %s — **والرصيدُ ٣٠٠٠ يُخصم لا يُردّ**", w.Code, w.Body.String())
 	}
-	if st, _, rec := f.row(t, id); st != "open" || rec != 3_000 {
-		t.Fatalf("بعد الخصم الجزئيّ: %s · %d — والمتوقّع مفتوحٌ بمسترَدٍّ ٣٠٠٠", st, rec)
+	if st, _, rec := f.row(t, id); st != "settled" || rec != 3_000 {
+		t.Fatalf("بعد الخصم الجزئيّ: %s · %d — والمتوقّع محسومٌ بمسترَدٍّ ٣٠٠٠ والباقي دين", st, rec)
 	}
 	if bal, _ := f.srv.wallet.Balance(context.Background(), f.owner); bal != 0 {
 		t.Fatalf("الرصيدُ %d بعد الخصم", bal)
 	}
-	// **ورصيدٌ صفرٌ لا شيءَ يُخصم منه** — كلمةٌ لا موافقةٌ فارغة.
-	res2 := f.propose(t, id, "charge")
-	if w := f.call(f.approver, http.MethodPost, "/x", map[string]string{"id": res2}, `{}`,
-		f.srv.handleDecideDisputeResolution(true)); w.Code != http.StatusConflict ||
-		errCode(t, w) != "dispute_nothing_to_charge" {
-		t.Fatalf("رصيدٌ صفرٌ ردّ %d: %s", w.Code, w.Body.String())
+	var debt int64
+	_ = f.pool.QueryRow(context.Background(), `
+		SELECT COALESCE(sum(amount - settled), 0) FROM financial_obligations
+		 WHERE party_kind = 'merchant' AND party_id = $1 AND cause = 'dispute_remainder'`,
+		f.merchantID).Scan(&debt)
+	if debt != 2_000 {
+		t.Fatalf("دينُ الباقي %d والمتوقّع ٢٠٠٠", debt)
 	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(),
+			`DELETE FROM financial_obligations WHERE party_kind = 'merchant' AND party_id = $1`, f.merchantID)
+	})
 	// **ويعود المالُ إلى الخزينة بمرجع النزاع.**
 	var back int64
 	if err := f.pool.QueryRow(context.Background(), `

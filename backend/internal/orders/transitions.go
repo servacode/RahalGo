@@ -1489,10 +1489,24 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 			// **والالتزامُ على المتجر لا على مالكه**: **المالكُ قد
 			// يتبدّل والدَّينُ يبقى للمتجر.** **والتحصيلُ يقرؤه من
 			// `merchants` عند أوّل مستحقٍّ قادم.**
+			//
+			// **ومتجرُ الطلب لا أوّلُ متاجر المالك** (قرارُ المالك ٢٠٢٦-١٠-١٥): كان
+			// يُقرأ `WHERE owner_user_id = $1` بلا طلب — **فمالكُ متجرين يُحمَّل دينَ
+			// أحدهما على الآخر.** فيُقرأ من مصادر الطلب نفسِه (بنوده ومتجره) كما
+			// يقرؤها ردُّ البضاعة (`goodsShares`)، **والأقدمُ احتياطاً إن غاب.**
 			var mID string
-			if err := q.QueryRow(ctx,
-				`SELECT id::text FROM merchants WHERE owner_user_id = $1`,
-				p.userID).Scan(&mID); err != nil {
+			if err := q.QueryRow(ctx, `
+				SELECT m.id::text FROM merchants m
+				 WHERE m.owner_user_id = $1
+				 ORDER BY EXISTS (
+				           SELECT 1 FROM order_items oi JOIN orders o ON o.id = oi.order_id
+				            WHERE oi.order_id = $2
+				              AND COALESCE(oi.merchant_id, o.merchant_id) = m.id
+				           UNION ALL
+				           SELECT 1 FROM orders WHERE id = $2 AND merchant_id = m.id) DESC,
+				          m.created_at, m.id
+				 LIMIT 1`,
+				p.userID, orderID).Scan(&mID); err != nil {
 				return err
 			}
 			if _, err := obligations.Create(ctx, q, obligations.PartyMerchant,
@@ -1842,6 +1856,44 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 		return err
 	}
 	out.credit(*in.driverID, in.deliveryFee, t.driverEarned, notifications.AppDriver)
+	// **ودينُه ينقطع من أجره** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بعد القيد لا قبله.
+	return s.offsetDriverDebt(ctx, q, *in.driverID, in.deliveryFee, in.orderID, in.actorID)
+}
+
+// offsetDriverDebt يقتطع دينَ السائق من أجرٍ جديد — **كاملاً ما احتمله الأجر.**
+//
+// **ومرآةُ `offsetRepDebt`** (قرارُ المالك ٢٠٢٦-١٠-١٥): **الأجرُ يُقيَّد كاملاً
+// فيرى السائقُ ما استحقّه، ثمّ سطرٌ بالنوع نفسِه سالباً يقول كم انقطع ولماذا.**
+// **وبمرجع الطلب** — فتقرأ الخزينةُ صافيَ الأجر حين تُعيد حسابَ نصيبها
+// (`creditTreasury`)، **فيعود المقتطَعُ إليها ويبقى دفترُ الطلب متوازناً**
+// (`FI-06.a`). **وأجرُ الطلب المعتمَدُ يُقرأ بلا سطور الاقتطاع** (`FI-06.c`).
+func (s *Service) offsetDriverDebt(ctx context.Context, q wallet.Querier,
+	driverID string, available int64, orderID, actorID string) error {
+	debt, err := obligations.Balance(ctx, q, obligations.PartyDriver, driverID)
+	if err != nil {
+		return err
+	}
+	take := min(debt, available)
+	if take <= 0 {
+		return nil
+	}
+	note, err := obligations.OffsetNote(ctx, q, obligations.PartyDriver, driverID, take)
+	if err != nil {
+		return err
+	}
+	_, txID, err := s.wallet.ApplyTxID(ctx, q, driverID, -take, "driver_earning",
+		orderID, note, &actorID)
+	if err != nil {
+		return err
+	}
+	applied, err := obligations.Settle(ctx, q, obligations.PartyDriver,
+		driverID, take, orderID, txID, &actorID)
+	if err != nil {
+		return err
+	}
+	if applied != take {
+		return fmt.Errorf("تسويةُ دينِ سائقٍ لم تُطابق: اقتُطع %d وسُوّي %d", take, applied)
+	}
 	return nil
 }
 

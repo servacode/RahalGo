@@ -55,7 +55,7 @@ import { OpenLink } from "@/components/admin/OpenLink";
 const m = getMessages(defaultLocale);
 const O = m.admin.obligations;
 
-type Kind = "" | "merchant" | "rep";
+type Kind = "" | "merchant" | "rep" | "driver";
 type State = "" | "open" | "closed" | "paid" | "voided" | "written_off";
 type RowState = "open" | "paid" | "voided" | "written_off";
 type Method = keyof typeof O.methods;
@@ -79,7 +79,7 @@ interface Pending {
 
 interface Obligation {
   id: string;
-  party_kind: "merchant" | "rep";
+  party_kind: "merchant" | "rep" | "driver";
   party_id: string;
   party_user_id: string;
   party_name: string;
@@ -99,6 +99,7 @@ interface Summary {
   outstanding_total: number;
   merchants_total: number;
   reps_total: number;
+  drivers_total: number;
   debtors: number;
   near_limit: number;
   overdue: number;
@@ -347,6 +348,7 @@ export default function ObligationsPage() {
             />
             <StatCard label={O.merchantsTotal + unit} value={fmtNum(sum?.merchants_total ?? 0)} icon={IconStore} />
             <StatCard label={O.repsTotal + unit} value={fmtNum(sum?.reps_total ?? 0)} icon={IconUser} />
+            <StatCard label={O.driversTotal + unit} value={fmtNum(sum?.drivers_total ?? 0)} icon={IconUser} />
             <StatCard label={O.debtors} value={fmtNum(sum?.debtors ?? 0)} icon={IconBalance} />
             <StatCard label={O.nearLimit} value={fmtNum(sum?.near_limit ?? 0)} icon={IconStore} />
             <StatCard
@@ -378,6 +380,7 @@ export default function ObligationsPage() {
                 <option value="">{O.kinds.all}</option>
                 <option value="merchant">{O.kinds.merchant}</option>
                 <option value="rep">{O.kinds.rep}</option>
+                <option value="driver">{O.kinds.driver}</option>
               </Select>
             </div>
             <div className="w-48">

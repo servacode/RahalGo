@@ -196,3 +196,21 @@ func (s *Service) PublishToCaps(ctx context.Context, q dbtx.Querier, caps []stri
 		s.hub.Publish("user:"+id, map[string]any{"type": "notification_refresh"})
 	}
 }
+
+// NotifyUserTx **إشعارٌ دائمٌ لشخصٍ واحدٍ في معاملةٍ مُمرَّرة** — بلا خدمة.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-١٥، الديون: «صار عليك دين… انقطع من دينك…».) **الدينُ
+// ينشأ ويُقتطع في معاملة المال نفسِها**، فالخبرُ يُكتب معه: **إن سقطت المعاملةُ
+// سقط الخبر، ولا يُخبَر أحدٌ بدينٍ لم يقع.** والدفعُ تلتقطه الجولةُ الدوريّة.
+func NotifyUserTx(ctx context.Context, q dbtx.Querier, in Input) error {
+	if in.UserID == "" || in.Title == "" || in.Transient {
+		return nil
+	}
+	_, err := q.Exec(ctx, `
+		INSERT INTO notifications (user_id, kind, title, body, entity,
+		            entity_id, href, push_pending, push_apps)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		in.UserID, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href,
+		!in.Silent, apps(in.Apps))
+	return err
+}

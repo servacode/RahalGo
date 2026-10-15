@@ -60,17 +60,11 @@ const (
 )
 
 // obligationParty **صاحبُ محفظة الطرف** — مالكُ المتجر أو المندوبُ نفسُه.
+//
+// **والسائقُ نفسُه أيضاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — `obligations.PartyUser`.
 func obligationPartyUser(ctx context.Context, q dbtx.Querier, kind, id string) (string, error) {
-	if kind == obligations.PartyRep {
-		return id, nil
-	}
-	var owner string
-	err := q.QueryRow(ctx,
-		`SELECT COALESCE(owner_user_id::text, '') FROM merchants WHERE id = $1`, id).Scan(&owner)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	return owner, err
+	user, _, err := obligations.PartyUser(ctx, q, kind, id)
+	return user, err
 }
 
 // recordObligationCash **النقدُ داخلٌ صندوقَ المكتب** — موضعُ النداء الوحيد،
@@ -190,7 +184,7 @@ const obligationRequestCols = `
 	JOIN financial_obligations o ON o.id = rq.obligation_id
 	JOIN users p ON p.id = rq.proposed_by
 	LEFT JOIN merchants mm ON o.party_kind = 'merchant' AND mm.id = o.party_id
-	LEFT JOIN users     uu ON o.party_kind = 'rep'      AND uu.id = o.party_id`
+	LEFT JOIN users     uu ON o.party_kind IN ('rep', 'driver') AND uu.id = o.party_id`
 
 func scanObligationRequest(row pgx.Row) (obligationRequestRow, error) {
 	var x obligationRequestRow
@@ -257,7 +251,7 @@ func (s *Server) handleDecideObligationRequest(approve bool) http.HandlerFunc {
 		}
 		actor := userIDFrom(r)
 		var row obligationRequestRow
-		var partyUser string
+		var partyUser, partyApp string
 		var remaining int64
 		err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 			x, err := scanObligationRequest(q.QueryRow(ctx, obligationRequestCols+`
@@ -289,6 +283,12 @@ func (s *Server) handleDecideObligationRequest(approve bool) http.HandlerFunc {
 					return err
 				}
 				if remaining, err = s.postObligationRequest(ctx, q, &x, partyUser, actor); err != nil {
+					return err
+				}
+			} else if x.Kind == oblReqOfficeCash {
+				// **ودفعةٌ رُفضت يُخبَر بها صاحبُها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — دفع
+				// نقداً وينتظر أن ينقص دينُه.
+				if partyUser, partyApp, err = obligations.PartyUser(ctx, q, x.PartyKind, x.PartyID); err != nil {
 					return err
 				}
 			}
@@ -330,6 +330,15 @@ func (s *Server) handleDecideObligationRequest(approve bool) http.HandlerFunc {
 				Title: title, Body: body, Entity: "wallet", Href: "/portal/wallet",
 			})
 			s.touchUser(partyUser, "wallet")
+		}
+		if !approve && partyUser != "" {
+			s.notify.Notify(r.Context(), notifications.Input{
+				UserID: partyUser, Kind: notifications.KindWallet,
+				Title: "ما انسجلت دفعتك على الدين",
+				Body: "ما انقبلت دفعتك النقدية " + fmtMoneyAr(row.Amount) +
+					" على الدين، والدين باقي عليك. راجع المكتب.",
+				Entity: "wallet", Href: "/portal/wallet", Apps: []string{partyApp},
+			})
 		}
 		s.touch("wallet", "ops")
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": row.Status,
@@ -396,72 +405,17 @@ func obligationNotice(kind string, amount, remaining int64) (string, string) {
 // يُرجع ما اقتُطع — ليُبلَّغ صاحبُه بعد الإيداع.
 func (s *Server) payDebtFromTopup(ctx context.Context, q dbtx.Querier,
 	userID string, topup int64, ref, actor string) (int64, error) {
-	type party struct{ kind, id string }
-	var parties []party
-	rows, err := q.Query(ctx, `
-		SELECT 'rep', $1::text WHERE EXISTS (
-			SELECT 1 FROM financial_obligations
-			 WHERE party_kind = 'rep' AND party_id = $1::uuid AND closed_at IS NULL)
-		UNION ALL
-		SELECT 'merchant', m.id::text FROM merchants m
-		 WHERE m.owner_user_id = $1::uuid AND m.debt > 0`, userID)
-	if err != nil {
+	// **والطريقةُ واحدةٌ لكلّ مالٍ يدخل** (قرارُ المالك ٢٠٢٦-١٠-١٥): الشحنُ
+	// والمكافأةُ والتعويض — `obligations.PayFromCredit`، **ودينُ السائق معها.**
+	var treasury string
+	if err := q.QueryRow(ctx,
+		`SELECT COALESCE((SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1), '')`).
+		Scan(&treasury); err != nil {
 		return 0, err
 	}
-	for rows.Next() {
-		var p party
-		if err := rows.Scan(&p.kind, &p.id); err != nil {
-			rows.Close()
-			return 0, err
-		}
-		parties = append(parties, p)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return 0, err
-	}
-	var paid int64
-	budget := topup
-	for _, p := range parties {
-		if budget <= 0 {
-			break
-		}
-		debt, err := obligations.Balance(ctx, q, p.kind, p.id)
-		if err != nil {
-			return 0, err
-		}
-		avail, err := s.wallet.AvailableTx(ctx, q, userID)
-		if err != nil {
-			return 0, err
-		}
-		take := min(debt, budget, avail)
-		if take <= 0 {
-			continue
-		}
-		note, err := obligations.OffsetNote(ctx, q, p.kind, p.id, take)
-		if err != nil {
-			return 0, err
-		}
-		note = strings.Replace(note, "اقتطاع دين", "سداد دين من الشحن", 1)
-		if _, _, err := s.wallet.ApplyTxID(ctx, q, userID, -take, "adjustment", ref, note, &actor); err != nil {
-			return 0, err
-		}
-		txID, err := s.orders.CreditTreasuryDirectID(ctx, q, take, ref, note, actor)
-		if err != nil {
-			return 0, err
-		}
-		applied, err := obligations.SettleBy(ctx, q, p.kind, p.id, take, "", txID, &actor,
-			obligations.MethodTopup, ref)
-		if err != nil {
-			return 0, err
-		}
-		if applied != take {
-			return 0, errors.New("سدادُ الدين من الشحن لم يطابق")
-		}
-		paid += take
-		budget -= take
-	}
-	return paid, nil
+	return obligations.PayFromCredit(ctx, q, userID, topup, ref, &actor, obligations.CreditPay{
+		Wallet: s.wallet, TreasuryID: treasury, Method: obligations.MethodTopup, From: "الشحن",
+	})
 }
 
 // myDebtLine دينٌ مفتوحٌ كما يراه صاحبُه في تطبيقه.
@@ -477,7 +431,7 @@ func (s *Server) myDebts(ctx context.Context, userID string) ([]myDebtLine, int6
 		SELECT o.cause, sum(o.amount - o.settled)::bigint
 		  FROM financial_obligations o
 		 WHERE o.closed_at IS NULL
-		   AND ((o.party_kind = 'rep' AND o.party_id = $1::uuid)
+		   AND ((o.party_kind IN ('rep', 'driver') AND o.party_id = $1::uuid)
 		     OR (o.party_kind = 'merchant' AND o.party_id IN (
 		            SELECT id FROM merchants WHERE owner_user_id = $1::uuid)))
 		 GROUP BY o.cause ORDER BY min(o.created_at)`, userID)

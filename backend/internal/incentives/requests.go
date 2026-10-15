@@ -83,8 +83,8 @@ type Proposal struct {
 
 // Propose **يكتب الطلبَ ولا يمسّ المال.**
 //
-// **والعقوبةُ تُفحص هنا أيضاً** على المتاح — فيظهر «رصيده لا يكفي» داخلَ
-// النافذة الآن، لا عند الموافقة بعد ساعة. **والموافقةُ تفحصه من جديد.**
+// **والعقوبةُ لا تُردّ لقلّة الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ما زاد على
+// المتاح ساعةَ الموافقة يصير ديناً.
 func (s *Service) Propose(ctx context.Context, q dbtx.Querier, p Proposal) (string, error) {
 	if p.Kind != KindReward && p.Kind != KindPenalty {
 		return "", ErrBadKind
@@ -110,15 +110,9 @@ func (s *Service) Propose(ctx context.Context, q dbtx.Querier, p Proposal) (stri
 	if !ok {
 		return "", ErrNotEligible
 	}
-	if p.Kind == KindPenalty {
-		avail, err := AvailableOn(ctx, q, p.UserID)
-		if err != nil {
-			return "", err
-		}
-		if avail < p.Amount {
-			return "", ErrNoBalance
-		}
-	}
+	// **ولا تُردّ العقوبةُ لقلّة الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥): يُؤخذ المتاحُ
+	// عند الموافقة ويصير الباقي ديناً (`GrantTx`). **والمقترَحُ عليه سائقٌ أو مندوبٌ
+	// حتماً** (الفحصُ أعلاه) — فلدينه طرفٌ دائماً.
 	src := p.Source
 	if src == "" {
 		src = "manual"

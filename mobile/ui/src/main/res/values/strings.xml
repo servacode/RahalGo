@@ -277,6 +277,8 @@
     <string name="wal_debt_returned">بضاعة رجعت</string>
     <string name="wal_debt_delivery">أجرة توصيلة</string>
     <string name="wal_debt_old">دين سابق</string>
+    <string name="wal_debt_penalty">باقي عقوبة أكبر من رصيدك</string>
+    <string name="wal_debt_dispute">باقي مطالبة أكبر من رصيدك</string>
     <string name="wal_closing">رصيد آخر المدة</string>
     <string name="wal_doc_title">كشف حساب المحفظة</string>
     <string name="wal_k_adjustment">تسوية من الإدارة</string>

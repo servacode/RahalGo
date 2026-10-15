@@ -573,11 +573,16 @@ var All = []Check{
 		// العمود لحظةَ الإنشاء، لا `delivery_fee`** (ما يدفعه الزبون؛ قد يصفّره
 		// عرضُ «توصيلٍ مجّانيّ»). **فالطلبُ المجّانيُّ سائقُه يقبض أجرَه كاملاً
 		// والخزينةُ تموّله** (٢٠٢٦-٠٩-٢٧) — والمقارنةُ إذن مع `driver_fee`.
+		//
+		// **وسطرُ اقتطاع الدين ليس أجراً** (قرارُ المالك ٢٠٢٦-١٠-١٥): `offsetDriverDebt`
+		// يكتب `driver_earning` سالباً بمرجع الطلب ويوصله بسطر تسوية — **فيُستثنى**،
+		// والأجرُ المعتمَدُ يبقى ما قُيّد له.
 		SQL: `
 			SELECT o.number, o.driver_fee, sum(t.amount)::bigint AS المقيَّد
 			FROM orders o
 			JOIN wallet_transactions t
 			  ON t.ref = o.id::text AND t.kind = 'driver_earning'
+			 AND NOT EXISTS (SELECT 1 FROM obligation_settlements s WHERE s.ledger_tx_id = t.id)
 			WHERE o.kind <> 'custom'
 			GROUP BY o.number, o.driver_fee
 			HAVING sum(t.amount) <> o.driver_fee`,
@@ -1331,6 +1336,24 @@ var All = []Check{
 			WHERE u.commission_debt <> COALESCE(o.الوقائع, 0)`,
 	},
 	{
+		ID: "FI-13.e", Family: FI13, Status: ProvableNow, Ops: true,
+		Name: "دينُ السائقِ يطابق وقائعَه",
+		Why: "**كسابقَيه للسائق** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والعمودُ " +
+			"`users.driver_debt` صورةٌ لا حقيقة.",
+		Flows:     []string{"F-14"},
+		Kinds:     []string{"driver_earning"},
+		Registers: []string{"XG-31"},
+		SQL: `
+			SELECT u.id::text, u.full_name, u.driver_debt AS الصورة,
+			       COALESCE(o.الوقائع, 0) AS الوقائع
+			FROM users u
+			LEFT JOIN (SELECT party_id, sum(amount - settled)::bigint AS الوقائع
+			             FROM financial_obligations
+			            WHERE party_kind = 'driver' AND closed_at IS NULL
+			            GROUP BY party_id) o ON o.party_id = u.id
+			WHERE u.driver_debt <> COALESCE(o.الوقائع, 0)`,
+	},
+	{
 		ID: "FI-13.c", Family: FI13, Status: ProvableNow, Ops: true,
 		Name: "المسدَّدُ يساوي مجموعَ تسوياته",
 		Why: "**عمودُ `settled` صورةٌ ثانية** — وإن فارق سطورَه فالتاريخُ " +
@@ -1354,6 +1377,8 @@ var All = []Check{
 		SQL: `
 			SELECT id::text, party_kind, amount, cause
 			FROM financial_obligations
-			WHERE order_id IS NULL AND cause <> 'legacy_opening'`,
+			WHERE order_id IS NULL AND cause <> 'legacy_opening'
+			  -- **وباقي العقوبة والنزاع يُفسَّر بمصدره** (هجرة 0439) — العقوبةُ أو النزاع.
+			  AND NOT (cause IN ('penalty_remainder', 'dispute_remainder') AND source_ref IS NOT NULL)`,
 	},
 }

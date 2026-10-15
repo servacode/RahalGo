@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -338,32 +339,33 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 		return nil, ErrNeedsReason
 	}
 
-	// **والعقوبةُ تُفحص قبل أن تُقيَّد** — **من المتاح لا من المحجوز** (`XG-12`):
-	// قيدُ القاعدة يرفض السالبَ كلَّه، **فيُردّ الطلبُ برسالةٍ تُقرأ.**
+	// ══════════════════════════════════════════════════════════════
+	// **عقوبةٌ أكبرُ من رصيده تصير ديناً** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كانت تُردّ كلُّها** (`ErrNoBalance`) — فمن لا رصيدَ له لا يُعاقَب أبداً.
+	// **فيُؤخذ ما يغطّيه المتاح** (الرصيدُ ناقصَ المحجوز، `XG-12`) **ويصير الباقي
+	// ديناً** ينقطع من أرباحه الجاية. **والعقوبةُ تُسجَّل بمبلغها كاملاً** — من
+	// عوقب بعشرةٍ يقرأ عشرة، وفي كشفه ما خُصم وفي دينه ما بقي.
 	signed := amount
+	var party string
+	var rest int64
 	if kind == KindPenalty {
-		balance, err := AvailableOn(ctx, q, userID)
+		avail, err := AvailableOn(ctx, q, userID)
 		if err != nil {
 			return nil, err
 		}
-		if balance < amount {
-			return nil, ErrNoBalance
+		take := max(0, min(amount, avail))
+		if rest = amount - take; rest > 0 {
+			if party, err = debtParty(ctx, q, userID); err != nil {
+				return nil, err
+			}
+			if party == "" {
+				// **ولا دينَ على من ليس سائقاً ولا مندوباً** — يُردّ كما كان.
+				return nil, ErrNoBalance
+			}
 		}
-		signed = -amount
-	}
-
-	if _, err := s.wallet.ApplyTx(ctx, q, userID, signed, kind, "", reason, &actorID); err != nil {
-		return nil, err
-	}
-	// **والخزينةُ الطرفُ المقابل** — تدفع المكافأةَ وتقبض العقوبة.
-	if tid := s.treasury(ctx); tid != "" {
-		note := "مكافأةٌ صُرفت"
-		if kind == KindPenalty {
-			note = "عقوبةٌ حُصّلت"
-		}
-		if _, err := s.wallet.ApplyTx(ctx, q, tid, -signed, kind, "", note, &actorID); err != nil {
-			return nil, err
-		}
+		signed = -take
 	}
 
 	var e Entry
@@ -375,5 +377,58 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 		Scan(&e.ID, &e.Kind, &e.Amount, &e.Reason, &e.ForTarget, &e.CreatedAt); err != nil {
 		return nil, err
 	}
+
+	if signed != 0 {
+		if _, err := s.wallet.ApplyTx(ctx, q, userID, signed, kind, "", reason, &actorID); err != nil {
+			return nil, err
+		}
+		// **والخزينةُ الطرفُ المقابل** — تدفع المكافأةَ وتقبض العقوبة.
+		if tid := s.treasury(ctx); tid != "" {
+			note := "مكافأةٌ صُرفت"
+			if kind == KindPenalty {
+				note = "عقوبةٌ حُصّلت"
+			}
+			if _, err := s.wallet.ApplyTx(ctx, q, tid, -signed, kind, "", note, &actorID); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if rest > 0 {
+		// **ومصدرُ الدين العقوبةُ نفسُها** — لا طلبَ لها (`FI-13.d`).
+		if _, err := obligations.CreateRef(ctx, q, party, userID, rest,
+			obligations.CausePenaltyRemainder, "", e.ID, &actorID); err != nil {
+			return nil, err
+		}
+	}
+	// **والمكافأةُ تسدّ دينَه أوّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بمرجع صفّها.
+	if kind == KindReward {
+		if err := s.payDebtFromReward(ctx, q, userID, amount, e.ID, &actorID); err != nil {
+			return nil, err
+		}
+	}
 	return &e, nil
+}
+
+// debtParty **على أيّ طرفٍ يُكتب دينُ الشخص** — سائقاً، وإلّا مندوباً، وإلّا لا أحد.
+func debtParty(ctx context.Context, q dbtx.Querier, userID string) (string, error) {
+	var party string
+	err := q.QueryRow(ctx, `
+		SELECT CASE
+		         WHEN EXISTS (SELECT 1 FROM user_roles WHERE user_id = $1::uuid AND role_code = 'driver')
+		           THEN 'driver'
+		         WHEN EXISTS (SELECT 1 FROM user_roles WHERE user_id = $1::uuid AND role_code = 'sales')
+		           THEN 'rep'
+		         ELSE '' END`, userID).Scan(&party)
+	return party, err
+}
+
+// payDebtFromReward **المكافأةُ تسدّ الدينَ أوّلاً** — تُقيَّد كاملةً ثمّ يُقتطع منها
+// ويعود إلى الخزينة بمرجع صفّ المكافأة (`obligations.PayFromCredit`).
+func (s *Service) payDebtFromReward(ctx context.Context, q dbtx.Querier,
+	userID string, amount int64, ref string, actorID *string) error {
+	_, err := obligations.PayFromCredit(ctx, q, userID, amount, ref, actorID, obligations.CreditPay{
+		Wallet: s.wallet, TreasuryID: s.treasury(ctx),
+		Method: obligations.MethodEarning, From: "مكافأة",
+	})
+	return err
 }

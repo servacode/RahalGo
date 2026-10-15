@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 85,
+    "emit_sites": 86,
     "realtime_publishers": 23,
     "rooms": 5,
     "untargeted_user_sites": 33
@@ -227,14 +227,14 @@
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 402,
+      "line": 410,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 523,
+      "line": 531,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -667,6 +667,15 @@
       "kind": "Wallet",
       "entity": "wallet",
       "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/obligations_actions.go",
+      "line": 335,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
       "has_entity_id": false
     },
     {
@@ -1298,14 +1307,14 @@
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 402,
+      "line": 410,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 523,
+      "line": 531,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false

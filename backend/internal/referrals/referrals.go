@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -385,6 +386,13 @@ func (s *Service) settle(ctx context.Context, customerID, orderID, actorID strin
 				orderID, "مكافأةُ دعوةٍ صُرفت", &actorID); err != nil {
 				return
 			}
+		}
+		// **ودينُ الداعي يُسدّ منها أوّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — **بمرجع
+		// المدعوّ لا الطلب**: قيدُ خزينةٍ بمرجع طلبٍ يمحوه `creditTreasury`.
+		if _, err := obligations.PayFromCredit(ctx, tx, inviterID, amount, customerID, &actorID,
+			obligations.CreditPay{Wallet: s.wallet, TreasuryID: s.treasury(ctx),
+				Method: obligations.MethodEarning, From: "مكافأة"}); err != nil {
+			return
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {

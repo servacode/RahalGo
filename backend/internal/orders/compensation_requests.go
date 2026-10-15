@@ -526,6 +526,12 @@ func (s *Service) ApproveCompensationTx(ctx context.Context, q wallet.Querier,
 	default:
 		return ErrCompensationInvalid
 	}
+	// **والتعويضُ يسدّ دينَ صاحبه أوّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُقيَّد كاملاً
+	// ثمّ يُقتطع منه الدين، **بمرجع الطلب المعتمَد لا رقمِ الطلب**: قيدُ خزينةٍ بمرجع
+	// طلبٍ يمحوه `creditTreasury`.
+	if _, err := s.PayDebtFromCreditTx(ctx, q, c.DriverID, amount, c.ID, "تعويض", actorID); err != nil {
+		return err
+	}
 	if err := s.DecideCompensationTx(ctx, q, c.ID, CompensationApproved, amount, actorID, note); err != nil {
 		return err
 	}

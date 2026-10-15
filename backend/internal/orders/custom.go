@@ -837,9 +837,12 @@ func (s *Service) payCustomDriver(ctx context.Context, q wallet.Querier, in sett
 	if fee <= 0 {
 		return nil
 	}
-	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, fee, "driver_earning",
-		in.orderID, "طلبٌ خاصّ — أجرةُ التوصيل", &in.actorID)
-	return err
+	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, fee, "driver_earning",
+		in.orderID, "طلبٌ خاصّ — أجرةُ التوصيل", &in.actorID); err != nil {
+		return err
+	}
+	// **ودينُه ينقطع من أجرته** (قرارُ المالك ٢٠٢٦-١٠-١٥) — `offsetDriverDebt`.
+	return s.offsetDriverDebt(ctx, q, *in.driverID, fee, in.orderID, in.actorID)
 }
 
 // settleCustomCash **الطلبُ الخاصُّ نقداً** — قرارُ المالك ٢٠٢٦-٠٩-٢٩.

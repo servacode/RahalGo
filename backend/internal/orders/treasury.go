@@ -26,6 +26,7 @@ package orders
 import (
 	"context"
 
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -250,4 +251,22 @@ func (s *Service) CreditTreasuryDirectID(ctx context.Context, q wallet.Querier,
 	}
 	_, txID, err := s.wallet.ApplyTxID(ctx, q, tid, amount, "platform_profit", ref, note, &actorID)
 	return txID, err
+}
+
+// PayDebtFromCreditTx **مالٌ دخل محفظةَ صاحبه يسدّ دينَه أوّلاً** — مكافأةٌ أو تعويض
+// (قرارُ المالك ٢٠٢٦-١٠-١٥). يُقتطع ويعود إلى الخزينة بمرجع المصدر، **ويُخبَر
+// صاحبُه في المعاملة نفسِها.** `from` كلمةُ الكشف: «مكافأة» · «تعويض».
+//
+// **والمرجعُ لا يكون رقمَ طلب** — `creditTreasury` تجمع `platform_profit` بمرجعه
+// فتمحو قيداً لم تكتبه.
+func (s *Service) PayDebtFromCreditTx(ctx context.Context, q wallet.Querier,
+	userID string, credit int64, ref, from, actorID string) (int64, error) {
+	var actor *string
+	if actorID != "" {
+		actor = &actorID
+	}
+	return obligations.PayFromCredit(ctx, q, userID, credit, ref, actor, obligations.CreditPay{
+		Wallet: s.wallet, TreasuryID: s.treasuryOn(ctx, q),
+		Method: obligations.MethodEarning, From: from,
+	})
 }

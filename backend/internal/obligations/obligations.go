@@ -38,6 +38,12 @@ const (
 	CauseLegacy         = "legacy_opening"
 	// CauseDeliveryFee أجرةُ «لدي توصيلة» لم تحملها محفظةُ المتجر (هجرة `0170`).
 	CauseDeliveryFee = "merchant_delivery_fee"
+	// CausePenaltyRemainder **ما زاد من عقوبةٍ على المتاح** (هجرة `0439`) — مصدرُه
+	// معرّفُ العقوبة (`incentives.id`) لا طلب.
+	CausePenaltyRemainder = "penalty_remainder"
+	// CauseDisputeRemainder **ما زاد من مطالبةِ نزاعٍ على المتاح** (هجرة `0439`) —
+	// مصدرُه معرّفُ النزاع (`disputes.id`)، وطلبُه إن كان له طلب.
+	CauseDisputeRemainder = "dispute_remainder"
 )
 
 // طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
@@ -59,6 +65,9 @@ var causeWords = map[string]string{
 	CauseReturnedGoods:  "بضاعة رجعت",
 	CauseLegacy:         "دين سابق",
 	CauseDeliveryFee:    "أجرة توصيلة",
+	// (قرارُ المالك ٢٠٢٦-١٠-١٥.)
+	CausePenaltyRemainder: "باقي عقوبة",
+	CauseDisputeRemainder: "باقي مطالبة",
 }
 
 // CauseWords السببُ بالعربيّ — ومجهولُه «دين».
@@ -113,6 +122,9 @@ func OffsetNote(ctx context.Context, q Querier, partyKind, partyID string, take 
 const (
 	PartyMerchant = "merchant"
 	PartyRep      = "rep"
+	// PartyDriver **السائقُ طرفٌ ثالث** (قرارُ المالك ٢٠٢٦-١٠-١٥، هجرة `0439`) —
+	// `party_id` = `users.id`، وصورتُه `users.driver_debt`.
+	PartyDriver = "driver"
 )
 
 // Querier ما تحتاجه الحزمةُ من معاملة — **وهو عقدُ المحفظة نفسُه.**
@@ -130,21 +142,34 @@ type Querier = wallet.Querier
 // لا ترتيبُ الشيفرة** (البند ٦). ويُرجع `false` إن كان قائماً.
 func Create(ctx context.Context, q Querier, partyKind, partyID string,
 	amount int64, cause, orderID string, actorID *string) (bool, error) {
+	return CreateRef(ctx, q, partyKind, partyID, amount, cause, orderID, "", actorID)
+}
+
+// CreateRef كـ`Create` **بمصدرٍ صريحٍ غيرِ الطلب** — معرّفُ العقوبة أو النزاع
+// (هجرة `0439`). **ولا دينان من مصدرٍ واحد**: فهرسُ `obligations_source_uq`.
+//
+// **وصاحبُ الدين يُخبَر في المعاملة نفسِها** (قرارُ المالك ٢٠٢٦-١٠-١٥): «صار
+// عليك دين… وبينقطع من أرباحك الجاية».
+func CreateRef(ctx context.Context, q Querier, partyKind, partyID string,
+	amount int64, cause, orderID, sourceRef string, actorID *string) (bool, error) {
 	if amount <= 0 {
 		return false, errors.New("التزامٌ بمبلغٍ غيرِ موجب")
 	}
-	var order any
+	var order, source any
 	if orderID != "" {
 		order = orderID
+	}
+	if sourceRef != "" {
+		source = sourceRef
 	}
 	var id string
 	err := q.QueryRow(ctx, `
 		INSERT INTO financial_obligations
-		       (party_kind, party_id, amount, cause, order_id, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		       (party_kind, party_id, amount, cause, order_id, created_by, source_ref)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT DO NOTHING
 		RETURNING id::text`,
-		partyKind, partyID, amount, cause, order, actorID).Scan(&id)
+		partyKind, partyID, amount, cause, order, actorID, source).Scan(&id)
 	if err != nil {
 		// **لا صفَّ راجعٌ = التزامٌ قائمٌ لهذا الطلب بهذا السبب.**
 		// **وإعادةُ نداءٍ لا تزيد ديناً.**
@@ -153,7 +178,10 @@ func Create(ctx context.Context, q Querier, partyKind, partyID string,
 		}
 		return false, err
 	}
-	return true, bumpCache(ctx, q, partyKind, partyID, amount)
+	if err := bumpCache(ctx, q, partyKind, partyID, amount); err != nil {
+		return false, err
+	}
+	return true, noticeCreated(ctx, q, partyKind, partyID, amount, cause)
 }
 
 // Settle يقتطع من الالتزامات القائمة بما يحتمله المتاح — **الأقدمُ أوّلاً.**
@@ -249,7 +277,17 @@ func SettleBy(ctx context.Context, q Querier, partyKind, partyID string,
 	if taken == 0 {
 		return 0, nil
 	}
-	return taken, bumpCache(ctx, q, partyKind, partyID, -taken)
+	if err := bumpCache(ctx, q, partyKind, partyID, -taken); err != nil {
+		return 0, err
+	}
+	// **واقتطاعٌ من أرباحٍ جديدةٍ يُخبَر به صاحبُه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	// والشحنُ والمكتبُ والشطبُ لها رسائلُها عند مناديها.
+	if method == MethodEarning {
+		if err := noticeDeducted(ctx, q, partyKind, partyID, taken); err != nil {
+			return 0, err
+		}
+	}
+	return taken, nil
 }
 
 // VoidForOrder **يُسقط التزاماً نشأ من طلبٍ لم يقع** — «لدي توصيلة»، ٢٠٢٦-١٠-٠١.
@@ -361,6 +399,8 @@ func bumpCache(ctx context.Context, q Querier, partyKind, partyID string, delta 
 		stmt = `UPDATE merchants SET debt = debt + $2 WHERE id = $1`
 	case PartyRep:
 		stmt = `UPDATE users SET commission_debt = commission_debt + $2 WHERE id = $1`
+	case PartyDriver:
+		stmt = `UPDATE users SET driver_debt = driver_debt + $2 WHERE id = $1`
 	default:
 		return fmt.Errorf("طرفٌ مجهول: %q", partyKind)
 	}

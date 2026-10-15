@@ -3,7 +3,7 @@ package server
 // عرضُ الديون — «الديون» في الخزينة (قراراتُ المالك ٢٠٢٦-١٠-٠٤).
 //
 // **الجدولُ `financial_obligations` هو الحقيقة** (هجرة 0130): لكلّ دينٍ طرفٌ
-// (متجرٌ أو مندوب) ومبلغٌ ومسدَّدٌ وسببٌ وطلبٌ ووقت. **والباقي = المبلغُ ناقصَ
+// (متجرٌ أو مندوبٌ أو سائق — هجرة 0439) ومبلغٌ ومسدَّدٌ وسببٌ وطلبٌ ووقت. **والباقي = المبلغُ ناقصَ
 // المسدَّد.**
 //
 // **والحالُ أربعة لا اثنان**: مفتوح · انسدّ · انشطب لأنّ الطلب ما صار ·
@@ -67,6 +67,7 @@ type obligationsSummary struct {
 	OutstandingTotal int64 `json:"outstanding_total"`
 	Merchants        int64 `json:"merchants_total"`
 	Reps             int64 `json:"reps_total"`
+	Drivers          int64 `json:"drivers_total"`
 	Debtors          int64 `json:"debtors"`
 	NearLimit        int64 `json:"near_limit"`
 	Overdue          int64 `json:"overdue"`
@@ -86,7 +87,7 @@ const oblStateSQL = `
 const oblFrom = `
 	FROM financial_obligations o
 	LEFT JOIN merchants mm ON o.party_kind = 'merchant' AND mm.id = o.party_id
-	LEFT JOIN users     uu ON o.party_kind = 'rep'      AND uu.id = o.party_id
+	LEFT JOIN users     uu ON o.party_kind IN ('rep', 'driver') AND uu.id = o.party_id
 	LEFT JOIN orders   ord ON ord.id = o.order_id`
 
 // oblWhere **الشرطُ الواحدُ يُكتب مرّةً** — للعدّ وللقائمة وللتصدير.
@@ -118,7 +119,8 @@ func (s *Server) readOblFilter(r *http.Request) (oblFilter, bool) {
 	q := r.URL.Query()
 	f := oblFilter{kind: q.Get("party_kind"), party: q.Get("party_id"), state: q.Get("state"),
 		cause: q.Get("cause"), query: strings.TrimSpace(q.Get("q"))}
-	if f.kind != "" && f.kind != obligations.PartyMerchant && f.kind != obligations.PartyRep {
+	if f.kind != "" && f.kind != obligations.PartyMerchant && f.kind != obligations.PartyRep &&
+		f.kind != obligations.PartyDriver {
 		return f, false
 	}
 	if !oblStates[f.state] {
@@ -225,13 +227,14 @@ func (s *Server) obligationsSummary(ctx context.Context) (obligationsSummary, er
 		SELECT COALESCE(sum(amount - settled), 0)::bigint,
 		       COALESCE(sum(amount - settled) FILTER (WHERE party_kind = 'merchant'), 0)::bigint,
 		       COALESCE(sum(amount - settled) FILTER (WHERE party_kind = 'rep'), 0)::bigint,
+		       COALESCE(sum(amount - settled) FILTER (WHERE party_kind = 'driver'), 0)::bigint,
 		       count(DISTINCT (party_kind, party_id)),
 		       count(*) FILTER (WHERE $1 > 0 AND created_at < now() - make_interval(days => $1)),
 		       (SELECT count(*) FROM merchants m
 		         WHERE m.delivery_credit_limit > 0 AND m.debt * 5 >= m.delivery_credit_limit * 4),
 		       (SELECT count(*) FROM obligation_requests WHERE status = 'pending')
 		  FROM financial_obligations WHERE closed_at IS NULL`, days).
-		Scan(&x.OutstandingTotal, &x.Merchants, &x.Reps, &x.Debtors, &x.Overdue,
+		Scan(&x.OutstandingTotal, &x.Merchants, &x.Reps, &x.Drivers, &x.Debtors, &x.Overdue,
 			&x.NearLimit, &x.PendingRequests)
 	return x, err
 }

@@ -4377,7 +4377,8 @@
       "kinds": {
         "all": "كل الأطراف",
         "merchant": "متجر",
-        "rep": "مندوب"
+        "rep": "مندوب",
+        "driver": "سائق"
       },
       "states": {
         "all": "كل الحالات",
@@ -4392,7 +4393,9 @@
         "refund_rep_commission": "استرداد طلب — عمولة المندوب",
         "returned_goods": "بضاعة مردودة",
         "legacy_opening": "رصيد مفتوح سابق",
-        "merchant_delivery_fee": "أجرة توصيلة «لدي توصيلة»"
+        "merchant_delivery_fee": "أجرة توصيلة «لدي توصيلة»",
+        "penalty_remainder": "باقي عقوبة أكبر من الرصيد",
+        "dispute_remainder": "باقي مطالبة نزاع أكبر من الرصيد"
       },
       "causeAll": "كل الأسباب",
       "methods": {
@@ -4412,6 +4415,7 @@
       "ageDays": "{n} يوم",
       "merchantsTotal": "على المتاجر",
       "repsTotal": "على المناديب",
+      "driversTotal": "على السائقين",
       "debtors": "عدد المدينين",
       "nearLimit": "متاجر قربت من سقف دين التوصيلة",
       "overdue": "متأخرة أكثر من {n} يوم",

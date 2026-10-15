@@ -974,6 +974,10 @@
           "type": "unknown"
         },
         {
+          "name": "debt",
+          "type": "unknown"
+        },
+        {
           "name": "remaining",
           "type": "unknown"
         },
@@ -1009,6 +1013,10 @@
         },
         {
           "name": "charged",
+          "type": "unknown"
+        },
+        {
+          "name": "debt",
           "type": "unknown"
         },
         {

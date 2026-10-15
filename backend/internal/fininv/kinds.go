@@ -102,12 +102,13 @@ var Kinds = map[string]KindContract{
 		Reachable:  true,
 	},
 	"driver_earning": {
-		// **والسالبُ تصحيحٌ بالمرجع نفسِه** (0434: ثمنُ بضاعةِ مشترياتٍ قديمةٍ يعود للمنصّة).
+		// **والسالبُ تصحيحٌ بالمرجع نفسِه** (0434: ثمنُ بضاعةِ مشترياتٍ قديمةٍ يعود للمنصّة)،
+		// **أو اقتطاعُ دين السائق من أجره** (`offsetDriverDebt`، قرارُ المالك ٢٠٢٦-١٠-١٥).
 		Kind: "driver_earning", Sign: "±", RefRequired: true, RefTarget: "orders",
 		Creators:   []string{"internal/orders/transitions.go:1236", "internal/orders/custom.go:282"},
 		Path:       "تسويةُ التسليم",
 		Semantics:  "أجرُ توصيلِ طلبٍ سُلّم — **وهو أجرةُ الطلبِ المحفوظةُ لا إعدادٌ حيّ.**",
-		Invariants: []string{"FI-01.d", "FI-05.f", "FI-06.c"},
+		Invariants: []string{"FI-01.d", "FI-05.f", "FI-06.c", "FI-13.e"},
 		Reachable:  true,
 	},
 	// **رجعةُ ثمن بضاعة المشتريات للخزينة** (قرارُ المالك ٢٠٢٦-١٠-١٣) — المكتبُ يعطي
@@ -142,7 +143,7 @@ var Kinds = map[string]KindContract{
 	},
 	"adjustment": {
 		Kind: "adjustment", Sign: "±", RefRequired: false,
-		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go", "internal/server/obligations_actions.go"},
+		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go", "internal/server/obligations_actions.go", "internal/obligations/credit.go"},
 		Path:       "POST /admin/wallet-requests/{id}/approve · ومطالبةُ المنصّة في نزاع",
 		Semantics:  "تسويةٌ يدويّةٌ بموافقة غيرِ مقترِحها وتحت سقف — **ويقابلها قيدٌ في الخزينة.**",
 		Invariants: []string{"FI-02.a", "FI-02.b"},
@@ -205,7 +206,7 @@ var Kinds = map[string]KindContract{
 		Kind: "penalty", Sign: "±", RefRequired: false,
 		Creators:   []string{"internal/incentives/incentives.go:277", "internal/incentives/incentives.go:286"},
 		Path:       "POST /admin/users/{id}/incentive",
-		Semantics:  "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وتُرفض إن لم يكفِ رصيدُه.**",
+		Semantics:  "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وما زاد على متاحه يصير ديناً** (`penalty_remainder`).",
 		Invariants: []string{"FI-03.a", "FI-02.b"},
 		Reachable:  true,
 	},

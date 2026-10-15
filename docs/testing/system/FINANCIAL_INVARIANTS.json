@@ -126,6 +126,7 @@
       "checks": [
         "FI-13.a",
         "FI-13.b",
+        "FI-13.e",
         "FI-13.c",
         "FI-13.d"
       ]
@@ -999,6 +1000,22 @@
       ]
     },
     {
+      "id": "FI-13.e",
+      "family": "FI-13",
+      "name": "دينُ السائقِ يطابق وقائعَه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14"
+      ],
+      "registers": [
+        "XG-31"
+      ],
+      "kinds": [
+        "driver_earning"
+      ]
+    },
+    {
       "id": "FI-14.a",
       "family": "FI-14",
       "name": "رصيدُ الاحتباس = المستحقُّ النقديُّ القائم",
@@ -1128,7 +1145,8 @@
       "creators": [
         "internal/server/accounts_wallet_requests.go",
         "internal/server/disputes.go",
-        "internal/server/obligations_actions.go"
+        "internal/server/obligations_actions.go",
+        "internal/obligations/credit.go"
       ],
       "invariants": [
         "FI-02.a",
@@ -1204,7 +1222,8 @@
       "invariants": [
         "FI-01.d",
         "FI-05.f",
-        "FI-06.c"
+        "FI-06.c",
+        "FI-13.e"
       ],
       "reachable": true
     },
@@ -1346,7 +1365,7 @@
     },
     {
       "kind": "penalty",
-      "semantics": "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وتُرفض إن لم يكفِ رصيدُه.**",
+      "semantics": "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وما زاد على متاحه يصير ديناً** (`penalty_remainder`).",
       "sign": "±",
       "ref_required": false,
       "path": "POST /admin/users/{id}/incentive",
@@ -1468,8 +1487,8 @@
   ],
   "counts": {
     "families": 15,
-    "checks": 78,
-    "provable_now": 72,
+    "checks": 79,
+    "provable_now": 73,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

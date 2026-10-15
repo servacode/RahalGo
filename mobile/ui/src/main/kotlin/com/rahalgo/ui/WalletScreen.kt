@@ -288,7 +288,8 @@ fun WalletScreen(
             )
         }
 
-        // **والدينُ سطرٌ بسيطٌ تحت الرصيد** — للمتجر والمندوب، ولا يظهر لغيرهما.
+        // **والدينُ سطرٌ بسيطٌ تحت الرصيد** — للمتجر والمندوب والسائق (قرارُ المالك
+        // ٢٠٢٦-١٠-١٥)، ولا يظهر لمن لا دينَ عليه.
         // (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الدين اللي ما بينفهم بيصير شكوى».)
         if (st.debtTotal > 0) {
             Spacer(Modifier.height(10.dp))
@@ -533,6 +534,8 @@ private fun debtCause(cause: String): String = when (cause) {
     "refund_merchant_earning", "refund_rep_commission" -> stringResource(R.string.wal_debt_refund)
     "returned_goods" -> stringResource(R.string.wal_debt_returned)
     "merchant_delivery_fee" -> stringResource(R.string.wal_debt_delivery)
+    "penalty_remainder" -> stringResource(R.string.wal_debt_penalty)
+    "dispute_remainder" -> stringResource(R.string.wal_debt_dispute)
     else -> stringResource(R.string.wal_debt_old)
 }
 

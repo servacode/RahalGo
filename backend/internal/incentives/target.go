@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
@@ -352,18 +354,20 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 	// **فيُسأل القيدُ قبل أن يُخرَق**: `ON CONFLICT DO NOTHING` —
 	// **والحارسُ في المخطَّط كما هو، والمعاملةُ تمضي.** **ومن لم يُدخَل
 	// له صفٌّ لا يُقيَّد له مال.**
-	tag, err := tx.Exec(ctx, `
+	var incID string
+	err := tx.QueryRow(ctx, `
 		INSERT INTO incentives (user_id, kind, amount, reason, for_target, period, created_by,
 		                        target_count, target_role)
 		VALUES ($1, $2, $3, $4, true, $5, NULL, $6, $7)
-		ON CONFLICT DO NOTHING`,
-		userID, KindReward, reward, reason, period, l.Target, role)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
+		ON CONFLICT DO NOTHING
+		RETURNING id::text`,
+		userID, KindReward, reward, reason, period, l.Target, role).Scan(&incID)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// **كوفئ عن هذه المرحلة سابقاً** — ولا تكرار.
 		return errAlreadyGranted
+	}
+	if err != nil {
+		return err
 	}
 	if _, err := s.wallet.ApplyTx(ctx, tx, userID, reward, KindReward, "", reason, nil); err != nil {
 		return err
@@ -375,7 +379,8 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 			return err
 		}
 	}
-	return nil
+	// **ودينُه يُسدّ منها أوّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بمرجع صفّ المكافأة.
+	return s.payDebtFromReward(ctx, tx, userID, reward, incID, nil)
 }
 
 // isDuplicate **أهو تصادمُ الفهرس الفريد؟**
