@@ -737,8 +737,9 @@ internal fun ItemCard(
                 Spacer(Modifier.weight(1f))
                 // **والليرةُ فوق مع الدولار لا تحت الاسم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥:
                 // «تحت اسم الصنف ما رح يكون واضح») — **يقرأ الزبونُ ما سيدفعه بلمحةٍ
-                // واحدة**، والعرضُ في ثلاثة أعمدةٍ لا يتّسع لهما في سطر، فالليرةُ تحت الدولار.
-                Column(horizontalAlignment = Alignment.End) {
+                // واحدة** — **وفي سطرٍ واحدٍ مع الدولار** (ملاحظتُه الثانية في اليوم نفسِه):
+                // `$1.8 ≈ 235 ل.س`. والليرةُ أصغرُ خطّاً، وإن ضاق العرضُ تُختصر هي لا الدولار.
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢).
                         text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
@@ -748,11 +749,13 @@ internal fun ItemCard(
                         style = MaterialTheme.typography.labelMedium,
                     )
                     if (item.priceUsd != null) {
+                        Spacer(Modifier.width(Rahal.space.xs))
                         Text(
                             text = "≈ " + money(item.price),
                             color = Rahal.colors.inkMuted,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }

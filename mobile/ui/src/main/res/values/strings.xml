@@ -339,11 +339,11 @@
     <string name="addr_confirm_title">تأكيد العنوان</string>
     <string name="addr_confirm_hint">يرجى التأكد من دقة موقعك على الخريطة</string>
     <string name="addr_area">المنطقة والمبنى</string>
-    <string name="addr_area_hint">مثلا: المزة، بناء 14</string>
+    <string name="addr_area_hint">مثلا: الثكنة، بناء 5</string>
     <string name="addr_street">الشارع</string>
     <string name="addr_street_hint">اسم الشارع</string>
     <string name="addr_floor">الطابق</string>
-    <string name="addr_floor_hint">2</string>
+    <string name="addr_floor_hint">3</string>
     <string name="addr_kind">نوع العنوان</string>
     <string name="addr_kind_home">المنزل</string>
     <string name="addr_kind_work">العمل</string>
