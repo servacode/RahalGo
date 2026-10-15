@@ -735,14 +735,27 @@ internal fun ItemCard(
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                Text(
-                    // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢) — والليرةُ تحت الاسم.
-                    text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
-                    color = Rahal.colors.brand,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                // **والليرةُ فوق مع الدولار لا تحت الاسم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥:
+                // «تحت اسم الصنف ما رح يكون واضح») — **يقرأ الزبونُ ما سيدفعه بلمحةٍ
+                // واحدة**، والعرضُ في ثلاثة أعمدةٍ لا يتّسع لهما في سطر، فالليرةُ تحت الدولار.
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢).
+                        text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
+                        color = Rahal.colors.brand,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    if (item.priceUsd != null) {
+                        Text(
+                            text = "≈ " + money(item.price),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
 
             Box {
@@ -859,15 +872,6 @@ internal fun ItemCard(
                 text = item.priceBeforeUsd?.let { u -> com.rahalgo.ui.dollars(u) } ?: money(it),
                 color = Rahal.colors.inkMuted,
                 textDecoration = TextDecoration.LineThrough,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-            )
-        }
-        // **والليرةُ تحت الدولار** — هي ما يُدفع (الخيار ١، ٢٠٢٦-١٠-١٢).
-        if (item.priceUsd != null) {
-            Text(
-                text = "≈ " + money(item.price),
-                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
             )
