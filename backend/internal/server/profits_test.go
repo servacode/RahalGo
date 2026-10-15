@@ -325,7 +325,9 @@ func TestProfits_RepSeparateFromCustomers(t *testing.T) {
 	}
 	f.post(t, rep, 900, "commission", "", day)
 	f.post(t, rep, 200, "reward", "", day) // مكافأة هدف
-	f.post(t, f.customer, 300, "reward", f.customer, day)
+	// **ومرجعُ الزبون نفسِه هديّةُ تسجيله** (٢٠٢٦-١٠-١٥) — والدعوةُ مرجعُها طلبُ المدعوّ.
+	f.post(t, f.customer, 300, "reward", "00000000-0000-4000-8000-000000000301", day)
+	f.post(t, f.customer, 150, "reward", f.customer, day)
 
 	type tabResp struct {
 		Columns []string   `json:"columns"`
@@ -355,15 +357,18 @@ func TestProfits_RepSeparateFromCustomers(t *testing.T) {
 	}
 
 	cust := read("customers")
-	if _, found := val(cust, rep, "bonus"); found {
+	if _, found := val(cust, rep, "signup"); found {
 		t.Fatal("المندوب ظهر في تبويب الزبائن")
 	}
 	if v, _ := val(cust, f.customer, "referral"); v != 300 {
 		t.Fatalf("مكافأة دعوة الزبون %d", v)
 	}
+	if v, _ := val(cust, f.customer, "signup"); v != 150 {
+		t.Fatalf("هديّة تسجيل الزبون %d — والمنتظَر 150 لحالها", v)
+	}
 	reps := read("reps")
 	c, _ := val(reps, rep, "commission")
-	b, _ := val(reps, rep, "bonus")
+	b, _ := val(reps, rep, "target_reward")
 	if c != 900 || b != 200 {
 		t.Fatalf("المندوب: عمولة %d مكافأة %d — يجب أن يكونا عمودين", c, b)
 	}

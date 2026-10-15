@@ -171,8 +171,10 @@ func (s *Service) StandingsFor(ctx context.Context, role, month string) ([]Stand
 		return next, level
 	}
 
+	// **ويُعدّ القيدُ في دوره وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من له الدوران معاً
+	// كانت مكافأتُه اليدويّةُ تظهر في التبويبين. انظر `roleCondSQL`.
 	inMonth := `i.created_at >= ` + monthFromSQL("$2::text") +
-		` AND i.created_at < ` + monthToSQL("$2::text")
+		` AND i.created_at < ` + monthToSQL("$2::text") + ` AND ` + roleCondSQL("$1")
 	rows, err := s.db.Query(ctx, `
 		SELECT u.id::text, COALESCE(NULLIF(u.full_name, ''), ''), u.phone::text,
 		       `+doneSQL(role, "u.id", "$2::text")+`,
@@ -227,11 +229,21 @@ func (s *Service) SummaryOf(ctx context.Context, role, month string, rows []Stan
 		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'reward' AND NOT i.for_target), 0),
 		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'penalty'), 0)
 		  FROM incentives i
-		 WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = i.user_id AND ur.role_code = $1)
+		 WHERE `+roleCondSQL("$1")+`
 		   AND i.created_at >= `+monthFromSQL("$2::text")+`
 		   AND i.created_at < `+monthToSQL("$2::text"), role, month).
 		Scan(&sum.AutoPaid, &sum.ManualPaid, &sum.Penalties)
 	return sum, err
+}
+
+// roleCondSQL **أيُعدّ صفُّ الحافز `i` في هذا الدور؟** — بدوره المكتوب عليه، وما لا دورَ
+// عليه (قديمٌ لم يُعرَف دورُه) يُعدّ لمن يحمل الدور كما كان.
+//
+// **وكان يُعدّ لكلّ دورٍ يحمله صاحبُه** — فسائقٌ مندوبٌ معاً تُجمع مكافأتُه مرّتين في
+// كروت الصفحة (قرارُ المالك ٢٠٢٦-١٠-١٥: «كلُّ طلبٍ مرّةً، في الدور الذي اقتُرح له»).
+func roleCondSQL(p string) string {
+	return `(i.role = ` + p + ` OR (i.role IS NULL AND EXISTS (SELECT 1 FROM user_roles ur
+	          WHERE ur.user_id = i.user_id AND ur.role_code = ` + p + `)))`
 }
 
 // MyStanding حالُ صاحب الحساب نفسِه — للشهر الجاري.
@@ -329,6 +341,13 @@ func AvailableOn(ctx context.Context, q dbtx.Querier, userID string) (int64, err
 // وتقاريرُ «كم صرفنا على الأهداف» تبقى صادقة.
 func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 	actorID, userID, kind string, amount int64, reason string) (*Entry, error) {
+	return s.GrantRoleTx(ctx, q, actorID, userID, kind, amount, reason, "")
+}
+
+// GrantRoleTx كـ`GrantTx` **بالدور الذي يُعدّ فيه** (`driver` أو `sales`) — وفراغُه يُستنتج
+// من أدوار صاحبه (السائقُ أوّلاً). **والدينُ الباقي من عقوبةٍ يُكتب على طرف هذا الدور.**
+func (s *Service) GrantRoleTx(ctx context.Context, q dbtx.Querier,
+	actorID, userID, kind string, amount int64, reason, role string) (*Entry, error) {
 	if kind != KindReward && kind != KindPenalty {
 		return nil, ErrBadKind
 	}
@@ -360,6 +379,9 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 			if party, err = debtParty(ctx, q, userID); err != nil {
 				return nil, err
 			}
+			if party != "" && role != "" {
+				party = partyOfRole(role)
+			}
 			if party == "" {
 				// **ولا دينَ على من ليس سائقاً ولا مندوباً** — يُردّ كما كان.
 				return nil, ErrNoBalance
@@ -368,18 +390,30 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 		signed = -take
 	}
 
+	if role == "" {
+		var err error
+		if role, err = roleOfUser(ctx, q, userID); err != nil {
+			return nil, err
+		}
+	}
 	var e Entry
 	if err := q.QueryRow(ctx, `
-		INSERT INTO incentives (user_id, kind, amount, reason, for_target, created_by)
-		VALUES ($1, $2, $3, $4, false, $5)
+		INSERT INTO incentives (user_id, kind, amount, reason, for_target, created_by, role)
+		VALUES ($1, $2, $3, $4, false, $5, NULLIF($6, ''))
 		RETURNING id::text, kind, amount, reason, for_target, created_at::text`,
-		userID, kind, amount, reason, actorID).
+		userID, kind, amount, reason, actorID, role).
 		Scan(&e.ID, &e.Kind, &e.Amount, &e.Reason, &e.ForTarget, &e.CreatedAt); err != nil {
 		return nil, err
 	}
 
+	// **ومرجعُ المكافأة صفُّها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — فصفحةُ الأرباح تعدّها
+	// «يدويّة» بوصلٍ لا بفراغ المرجع. والعقوبةُ مرجعُها فارغٌ كما كان.
+	ref := ""
+	if kind == KindReward {
+		ref = e.ID
+	}
 	if signed != 0 {
-		if _, err := s.wallet.ApplyTx(ctx, q, userID, signed, kind, "", reason, &actorID); err != nil {
+		if _, err := s.wallet.ApplyTx(ctx, q, userID, signed, kind, ref, reason, &actorID); err != nil {
 			return nil, err
 		}
 		// **والخزينةُ الطرفُ المقابل** — تدفع المكافأةَ وتقبض العقوبة.
@@ -388,7 +422,7 @@ func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
 			if kind == KindPenalty {
 				note = "عقوبةٌ حُصّلت"
 			}
-			if _, err := s.wallet.ApplyTx(ctx, q, tid, -signed, kind, "", note, &actorID); err != nil {
+			if _, err := s.wallet.ApplyTx(ctx, q, tid, -signed, kind, ref, note, &actorID); err != nil {
 				return nil, err
 			}
 		}
@@ -420,6 +454,26 @@ func debtParty(ctx context.Context, q dbtx.Querier, userID string) (string, erro
 		           THEN 'rep'
 		         ELSE '' END`, userID).Scan(&party)
 	return party, err
+}
+
+// partyOfRole **طرفُ الدين لهذا الدور** — المندوبُ طرفُه `rep`.
+func partyOfRole(role string) string {
+	if role == "sales" {
+		return "rep"
+	}
+	return "driver"
+}
+
+// roleOfUser **دورُ الحوافز لصاحبه** إن لم يُسمَّ — السائقُ أوّلاً، وفراغٌ لغيرهما.
+func roleOfUser(ctx context.Context, q dbtx.Querier, userID string) (string, error) {
+	party, err := debtParty(ctx, q, userID)
+	switch {
+	case err != nil:
+		return "", err
+	case party == "rep":
+		return "sales", nil
+	}
+	return party, nil
 }
 
 // payDebtFromReward **المكافأةُ تسدّ الدينَ أوّلاً** — تُقيَّد كاملةً ثمّ يُقتطع منها

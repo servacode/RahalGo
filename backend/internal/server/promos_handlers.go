@@ -172,6 +172,7 @@ func (s *Server) handleDecidePromoApproval(approve bool) http.HandlerFunc {
 		}
 		actor := userIDFrom(r)
 		var out promoApprovalRow
+		var replaced []offers.Replaced
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 			a, err := scanPromoApproval(q.QueryRow(ctx, promoApprovalCols+`
 				WHERE pa.id = $1 FOR UPDATE OF pa`, id))
@@ -204,7 +205,8 @@ func (s *Server) handleDecidePromoApproval(approve bool) http.HandlerFunc {
 					return err
 				}
 			case "offer":
-				if err := s.offers.Decide(ctx, q, a.TargetID, approve); err != nil {
+				// **والموافقةُ تستبدل عرضَ المتجر وتُخبره** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+				if replaced, err = s.offers.Decide(ctx, q, a.TargetID, approve); err != nil {
 					return err
 				}
 			}
@@ -237,6 +239,7 @@ func (s *Server) handleDecidePromoApproval(approve bool) http.HandlerFunc {
 			s.respondErr(w, err)
 			return
 		}
+		s.notifyOffersReplaced(r.Context(), replaced)
 		s.touch("offer", "ops")
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": out.Status,
 			"self_approved": out.SelfApproved})

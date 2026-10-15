@@ -41,27 +41,30 @@ func EndOfDay(date string) (time.Time, error) {
 //
 // يردّ العرضَ و`pending` إن أُنشئ نازلاً بانتظار الماليّة. **وطلبُ الموافقة
 // يُكتب في المعاملة نفسِها** — لا عرضَ ينتظر بلا طلب، ولا طلبَ بلا عرض.
+//
+// **وعرضُ متجرٍ قائمٌ على الصنف لا يُستبدل إلّا بتأكيد** (`in.Replace`، قرارُ المالك
+// ٢٠٢٦-١٠-١٥) — ويردّ ما نزل من عروض المتاجر ليُخبَر أصحابُها بعد التثبيت.
 func (s *Service) CreatePlatform(ctx context.Context, actorID string, in Input,
-	marginOf PriceFn) (*Offer, bool, error) {
+	marginOf PriceFn) (*Offer, bool, []Replaced, error) {
 	if in.BorneBy != nil && *in.BorneBy == ByMerchant {
-		return nil, false, ErrAdminChargesStore
+		return nil, false, nil, ErrAdminChargesStore
 	}
 	platform := ByPlatform
 	in.BorneBy = &platform
 	if in.EndsOn != "" {
 		end, err := EndOfDay(in.EndsOn)
 		if err != nil {
-			return nil, false, err
+			return nil, false, nil, err
 		}
 		in.EndsAt = &end
 	}
 	if in.MenuItemID == nil || strings.TrimSpace(*in.MenuItemID) == "" {
-		return nil, false, ErrBadDiscount
+		return nil, false, nil, ErrBadDiscount
 	}
 
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return nil, false, err
+		return nil, false, nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -73,7 +76,14 @@ func (s *Service) CreatePlatform(ctx context.Context, actorID string, in Input,
 		LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
 		WHERE mi.id = $1::uuid`,
 		*in.MenuItemID).Scan(&cost, &itemMargin, &sectionMargin); err != nil {
-		return nil, false, ErrBadDiscount
+		return nil, false, nil, ErrBadDiscount
+	}
+	live, err := merchantOffersOn(ctx, tx, *in.MenuItemID)
+	if err != nil {
+		return nil, false, nil, err
+	}
+	if len(live) > 0 && !in.Replace {
+		return nil, false, nil, ErrMerchantOfferLive
 	}
 	pending := NeedsApproval(marginOf(cost, itemMargin, sectionMargin), in.DiscountPercent, in.DiscountAmount)
 	if pending {
@@ -82,12 +92,12 @@ func (s *Service) CreatePlatform(ctx context.Context, actorID string, in Input,
 	}
 	o, err := s.CreateIn(ctx, tx, actorID, in, marginOf)
 	if err != nil {
-		return nil, false, err
+		return nil, false, nil, err
 	}
 	if pending {
 		if _, err := tx.Exec(ctx,
 			`UPDATE offers SET approval_state = 'pending' WHERE id = $1::uuid`, o.ID); err != nil {
-			return nil, false, err
+			return nil, false, nil, err
 		}
 		// **والكلفةُ القصوى مجهولةٌ لخصم صنفٍ** — لا سقفَ استعمال، فيُكتب صفرٌ
 		// والنصُّ يقول الخصمَ للقطعة.
@@ -96,14 +106,19 @@ func (s *Service) CreatePlatform(ctx context.Context, actorID string, in Input,
 			INSERT INTO promo_approvals (target_kind, target_id, amount, note, proposed_by)
 			VALUES ('offer', $1::uuid, 0, $2, $3::uuid)`,
 			o.ID, offerApprovalNote(o, cut), actorID); err != nil {
-			return nil, false, err
+			return nil, false, nil, err
 		}
 		o.ApprovalState = ApprovalPending
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return nil, false, err
+		return nil, false, nil, err
 	}
-	return o, pending, nil
+	// **ونزل عرضُ المتجر إن سرى عرضُ المنصّة الآن** (`CreateIn` يُنزل القائم)؛ وما ينتظر
+	// الماليّةَ يُبقيه حتّى موافقتها (`Decide`).
+	if !o.Active {
+		live = nil
+	}
+	return o, pending, live, nil
 }
 
 // offerApprovalNote **ما يقرؤه الموافق** — الصنفُ والخصمُ على القطعة.
@@ -115,13 +130,14 @@ func offerApprovalNote(o *Offer, cut int64) string {
 // Decide **قرارُ الماليّة على عرضٍ ينتظر** — في معاملة المنادي.
 //
 // الموافقةُ تُسريه (وتُنزل أيَّ عرضٍ قائمٍ على الصنف كما يفعل الإنشاء)،
-// والرفضُ يُبقيه نازلاً ويمنع تفعيلَه.
-func (s *Service) Decide(ctx context.Context, q dbtx.Querier, offerID string, approve bool) error {
+// والرفضُ يُبقيه نازلاً ويمنع تفعيلَه. **ويردّ عروضَ المتاجر التي نزلت** ليُخبَر
+// أصحابُها (قرارُ المالك ٢٠٢٦-١٠-١٥).
+func (s *Service) Decide(ctx context.Context, q dbtx.Querier, offerID string, approve bool) ([]Replaced, error) {
 	if !approve {
 		_, err := q.Exec(ctx, `
 			UPDATE offers SET approval_state = 'rejected', active = false, updated_at = now()
 			WHERE id = $1::uuid`, offerID)
-		return err
+		return nil, err
 	}
 	var itemID *string
 	var endsAt *time.Time
@@ -129,21 +145,25 @@ func (s *Service) Decide(ctx context.Context, q dbtx.Querier, offerID string, ap
 		`SELECT menu_item_id::text, ends_at FROM offers WHERE id = $1::uuid FOR UPDATE`, offerID).
 		Scan(&itemID, &endsAt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	active := endsAt == nil || endsAt.After(time.Now())
+	var replaced []Replaced
 	if itemID != nil && active {
+		if replaced, err = merchantOffersOn(ctx, q, *itemID); err != nil {
+			return nil, err
+		}
 		if _, err := q.Exec(ctx, `
 			UPDATE offers SET active = false, updated_at = now()
 			WHERE menu_item_id = $1::uuid AND kind = 'discount' AND active AND id <> $2::uuid`,
 			*itemID, offerID); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	_, err = q.Exec(ctx, `
 		UPDATE offers SET approval_state = 'ok', active = $2, updated_at = now()
 		WHERE id = $1::uuid`, offerID, active)
-	return err
+	return replaced, err
 }
 
 // ══════════════════════════════════════════════════════════════════════

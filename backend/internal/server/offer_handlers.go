@@ -13,12 +13,14 @@ package server
 // **وحسبةٌ في متصفّحٍ تفترق عمّا يُقيَّد في الطلب** — فيرى سعراً ويُحاسَب بآخر.
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
@@ -49,14 +51,18 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// **على المنصّة دائماً، وفوق ٢٠٪ بموافقة الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
-	o, pending, err := s.offers.CreatePlatform(r.Context(), userIDFrom(r), *in, s.saleOf(r))
+	// **وعرضُ متجرٍ قائمٌ لا يُستبدل إلّا بـ`replace`** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بلاه
+	// `409 offer_merchant_live` فتسأل النافذة «في عرض من المتجر، بدك تستبدله؟».
+	o, pending, replaced, err := s.offers.CreatePlatform(r.Context(), userIDFrom(r), *in, s.saleOf(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	s.audit(r, "catalog.offer_create", "offer", o.ID, map[string]any{
 		"kind": o.Kind, "title": o.Title, "pending_approval": pending, "notify": in.Notify,
+		"replaced": len(replaced),
 	})
+	s.notifyOffersReplaced(r.Context(), replaced)
 	// **والزبائنُ يرونه فوراً** — عرضٌ يُنزَل ولا يظهر حتى يُحدَّث المتصفّحُ
 	// عرضٌ نصفُ منزَّل.
 	s.touch("offer", "ops")
@@ -75,6 +81,26 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		s.notifyOfferArea(r.Context(), o)
 	}
 	httpx.JSON(w, http.StatusOK, o)
+}
+
+// notifyOffersReplaced **صاحبُ المتجر يعلم أنّ عرضَه نزل** — وأنّ رحّال غو عملت عرضاً
+// على الصنف نفسِه (قرارُ المالك ٢٠٢٦-١٠-١٥). **عرضٌ يختفي بلا كلمةٍ يُقرأ عطباً.**
+func (s *Server) notifyOffersReplaced(ctx context.Context, replaced []offers.Replaced) {
+	if s.notify == nil {
+		return
+	}
+	for _, x := range replaced {
+		if x.OwnerUserID == "" {
+			continue
+		}
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: x.OwnerUserID, Kind: notifications.KindOrder,
+			Title: notifTitles.offerReplacedByPlatform, Body: x.ItemName,
+			Entity: "offer", EntityID: x.OfferID,
+			Apps: []string{notifications.AppMerchant},
+		})
+		s.touchUser(x.OwnerUserID, "offer")
+	}
 }
 
 // offerBody نصُّ الإشعار — **الرقمُ فيه لا في العنوان.**

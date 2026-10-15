@@ -92,8 +92,11 @@ const LINE_LABEL: Record<string, string> = {
   adjustment_credits: P.lineAdjustmentCredits,
   written_off: P.lineWrittenOff,
   recovered: P.lineRecovered,
-  referrals: P.lineReferrals,
+  // **والمكافآتُ أربعةُ سطورٍ بمصدرها** (قرارُ المالك ٢٠٢٦-١٠-١٥).
   targets: P.lineTargets,
+  manual_rewards: P.lineManualRewards,
+  referrals: P.lineReferrals,
+  signup_bonuses: P.lineSignupBonuses,
   opex: P.lineOpex,
   penalties: P.linePenalties,
 };
@@ -114,6 +117,9 @@ const ALWAYS = new Set(["margin", "commission", "delivery_share", "rep_share", "
 const COL_LABEL: Record<string, string> = {
   referral: P.colReferral,
   bonus: P.colBonus,
+  target_reward: P.colTargetReward,
+  manual_reward: P.colManualReward,
+  signup: P.colSignup,
   compensation: P.colCompensation,
   penalty: P.colPenalty,
   spent: P.colSpent,

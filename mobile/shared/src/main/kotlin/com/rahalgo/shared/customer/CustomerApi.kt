@@ -709,6 +709,15 @@ data class PromoPreview(
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
     /** **أسقط الخصمُ أو تبدّل؟** (`PR`، ٢٠٢٦-٠٩-١٥). */
     val changes: List<com.rahalgo.shared.model.CartChange> = emptyList(),
+    /**
+     * **رمزُ الرفض** — هو نفسُه الذي يردّه الطلب (قرارُ المالك ٢٠٢٦-١٠-١٥)، و`minOrder`
+     * الحدُّ الأدنى مع `promo_min_order`.
+     */
+    val reason: String = "",
+    @SerialName("min_order") val minOrder: Long = 0,
+    /** **نوعُ الكود وما أُعفي من التوصيل** — فالتوصيلُ المجانيّ يُقال باسمه لا «خصم ٠». */
+    val kind: String = "",
+    @SerialName("delivery_waived") val deliveryWaived: Long = 0,
 )
 
 /** **ما يُرسَل لتسجيل نيّةِ التوسّع.** */

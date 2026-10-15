@@ -209,7 +209,7 @@ const AWAITING: {
   { key: "leads_new", label: H.leadsNew, href: "/dashboard/leads", urgent: false, icon: IconLink },
   { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/expansion?filter=waiting", urgent: false, icon: IconZones },
   { key: "obligations_overdue", label: H.obligationsOverdue, href: "/dashboard/obligations?overdue=1", urgent: false, icon: IconBalance },
-  { key: "obligation_requests", label: H.obligationRequests, href: "/dashboard/obligations?state=open", urgent: false, icon: IconBalance },
+  { key: "obligation_requests", label: H.obligationRequests, href: "/dashboard/obligations?pending=1", urgent: false, icon: IconBalance },
 ];
 
 const STAGES = ["at_store_prep", "dispatching", "to_store", "at_store", "to_customer"] as const;

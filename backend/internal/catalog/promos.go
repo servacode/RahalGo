@@ -193,6 +193,9 @@ type promoState struct {
 	minOrder    int64
 	maxUses     *int
 	expiresAt   *time.Time
+	// firstOnly و oncePerUser **قيدا الجمهور** — رفعُهما توسيعٌ للكلفة (٢٠٢٦-١٠-١٥).
+	firstOnly   bool
+	oncePerUser bool
 }
 
 func (st promoState) validate() error {
@@ -268,6 +271,13 @@ func (st promoState) approvalNote(code string) string {
 	} else {
 		b.WriteString(" · " + strconv.Itoa(*st.maxUses) + " استخدام")
 	}
+	// **وجمهورُه يُقال** — رفعُ «للطلب الأوّل» أو «مرّةً للزبون» يعيده للماليّة.
+	if st.firstOnly {
+		b.WriteString(" · للطلب الأول فقط")
+	}
+	if !st.oncePerUser {
+		b.WriteString(" · يتكرر للزبون نفسه")
+	}
 	return b.String()
 }
 
@@ -298,7 +308,9 @@ func (s *Service) CreatePromo(ctx context.Context, actorID string, in PromoInput
 	if exp != nil && !exp.After(time.Now()) {
 		return nil, ErrPromoExpired
 	}
-	st := promoState{kind: *in.Kind, maxUses: in.MaxUses, expiresAt: exp}
+	st := promoState{kind: *in.Kind, maxUses: in.MaxUses, expiresAt: exp,
+		firstOnly:   in.FirstOrderOnly != nil && *in.FirstOrderOnly,
+		oncePerUser: in.OncePerUser == nil || *in.OncePerUser}
 	if in.Value != nil {
 		st.value = *in.Value
 	}
@@ -376,10 +388,11 @@ func (s *Service) UpdatePromo(ctx context.Context, actorID, id string, in PromoI
 	var code, approval string
 	var active bool
 	err = tx.QueryRow(ctx, `
-		SELECT code, kind, value, max_discount, min_order, max_uses, expires_at, active, approval_state
+		SELECT code, kind, value, max_discount, min_order, max_uses, expires_at, active, approval_state,
+		       first_order_only, once_per_user
 		FROM promo_codes WHERE id = $1::uuid FOR UPDATE`, id).
 		Scan(&code, &st.kind, &st.value, &st.maxDiscount, &st.minOrder, &st.maxUses,
-			&st.expiresAt, &active, &approval)
+			&st.expiresAt, &active, &approval, &st.firstOnly, &st.oncePerUser)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -405,6 +418,30 @@ func (s *Service) UpdatePromo(ctx context.Context, actorID, id string, in PromoI
 	} else if in.MaxUses != nil && (st.maxUses == nil || *in.MaxUses != *st.maxUses) {
 		st.maxUses, money = in.MaxUses, true
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وتوسيعُ الجمهور تعديلُ مال** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **رفعُ «للطلب الأوّل فقط» أو «مرّةً لكلّ زبون» يضاعف كلفةَ الكود** — كودٌ وافقت
+	// عليه الماليّةُ لأوّل طلب يصير لكلّ طلب. **وكان يمرّ بلا موافقة.** والتضييقُ لا يعيده.
+	if in.FirstOrderOnly != nil && *in.FirstOrderOnly != st.firstOnly {
+		if st.firstOnly {
+			money = true
+		}
+		st.firstOnly = *in.FirstOrderOnly
+	}
+	if in.OncePerUser != nil && *in.OncePerUser != st.oncePerUser {
+		if st.oncePerUser {
+			money = true
+		}
+		st.oncePerUser = *in.OncePerUser
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وتاريخٌ لم يتبدّل لا يُفحص** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت نافذةُ التعديل تعيد إرسالَ تاريخ الكود** — فكودٌ منتهٍ لا يُعدَّل فيه حرفٌ
+	// («تاريخُ الانتهاء مضى»). **والآن يُفحص التاريخُ إن تبدّل وحدَه.**
 	expChanged := false
 	if in.ClearExpiry {
 		st.expiresAt, expChanged = nil, before.expiresAt != nil
@@ -413,7 +450,7 @@ func (s *Service) UpdatePromo(ctx context.Context, actorID, id string, in PromoI
 		if err != nil {
 			return nil, err
 		}
-		if exp != nil {
+		if exp != nil && (before.expiresAt == nil || !exp.Equal(*before.expiresAt)) {
 			if !exp.After(time.Now()) {
 				return nil, ErrPromoExpired
 			}
@@ -422,6 +459,10 @@ func (s *Service) UpdatePromo(ctx context.Context, actorID, id string, in PromoI
 	}
 	if err := st.validate(); err != nil {
 		return nil, err
+	}
+	// **ولا يُفعَّل كودٌ انتهى** — يُمدَّد تاريخُه أوّلاً (كالعرض المنتهي).
+	if in.Active != nil && *in.Active && st.expiresAt != nil && !st.expiresAt.After(time.Now()) {
+		return nil, offers.ErrPromoActivateExpired
 	}
 
 	// **والموافقةُ تتبع المالَ لا كلَّ تعديل** — تفعيلٌ أو تاريخٌ لا يعيدها.
@@ -457,11 +498,10 @@ func (s *Service) UpdatePromo(ctx context.Context, actorID, id string, in PromoI
 	if _, err := tx.Exec(ctx, `
 		UPDATE promo_codes SET
 			value = $2, max_discount = $3, min_order = $4,
-			first_order_only = COALESCE($5, first_order_only),
-			once_per_user    = COALESCE($6, once_per_user),
+			first_order_only = $5, once_per_user = $6,
 			max_uses = $7, expires_at = $8, active = $9, approval_state = $10
 		WHERE id = $1::uuid`,
-		id, st.value, st.maxDiscount, st.minOrder, in.FirstOrderOnly, in.OncePerUser,
+		id, st.value, st.maxDiscount, st.minOrder, st.firstOnly, st.oncePerUser,
 		st.maxUses, st.expiresAt, active, approval); err != nil {
 		return nil, err
 	}

@@ -44,6 +44,8 @@ type Paid struct {
 	UserID string
 	Role   string
 	Amount int64
+	// Month **شهرُ ما صُرف** — يُقرأ منه لفظُ الإشعار (`StageNotice`).
+	Month string
 }
 
 // RetryFailure **يعيد مكافأةً تعثّرت** — لشهرها، ويُغلق الصفَّ إن مرّت.
@@ -65,6 +67,7 @@ func (s *Service) RetryFailure(ctx context.Context, id string) (Paid, error) {
 		return p, gerr
 	}
 	p.Amount = paid
+	p.Month = month
 	_, err = s.db.Exec(ctx, `
 		UPDATE incentive_grant_failures SET resolved_at = now(), updated_at = now()
 		 WHERE id = $1::uuid`, id)

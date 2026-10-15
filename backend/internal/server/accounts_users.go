@@ -228,6 +228,8 @@ func (s *Server) afterStatusChange(r *http.Request, userID, status string) {
 			})
 			s.touchUser(userID, "wallet")
 		}
+		// **ومكافأةُ هدفٍ بلغها وهو موقوفٌ تُصرف الآن** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		s.payPendingOnReactivation(ctx, userID)
 	case "blocked":
 		err := s.inTx(ctx, func(ctx context.Context, q dbtx.Querier) error {
 			rows, err := q.Query(ctx, `

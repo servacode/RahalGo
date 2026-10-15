@@ -123,6 +123,9 @@ func (s *Service) SetReferrals(r ReferralSettler) { s.referrals = r }
 // TargetGranter مَن يدفع مكافأةَ الهدف — **يردّ ما دُفع، وصفراً إن لم يُدفع.**
 type TargetGranter interface {
 	GrantTargetIfReached(ctx context.Context, userID, role string) int64
+	// TargetTitle **عنوانُ البشارة بلفظ المرحلة** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «أنجزت هدف
+	// الشهر» عند آخر مرحلةٍ مضبوطةٍ وحدَها، وما قبلها «وصلت للمرحلة {n}».
+	TargetTitle(ctx context.Context, userID, role string) string
 }
 
 // SetTargetGranter يُحقن مرّةً عند الإقلاع — **وبلاه لا تُدفع مكافأةٌ آليّة.**
@@ -1082,12 +1085,19 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 		return nil, 0, err
 	}
 
+	// **ولكلّ سببٍ رمزُه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بترتيب ما يُصلحه الزبون: ما
+	// لا يُصلَح أوّلاً (غائبٌ · انتهى · خلص)، ثمّ الحدُّ الأدنى ومعه رقمُه.
 	switch {
-	case !active, approvalState != "ok",
-		expiresAt != nil && time.Now().After(*expiresAt),
-		maxUses != nil && usedCount >= *maxUses,
-		subtotal < minOrder:
+	case !active, approvalState != "ok":
 		return nil, 0, ErrInvalidPromo
+	case expiresAt != nil && time.Now().After(*expiresAt):
+		return nil, 0, ErrPromoExpired
+	case maxUses != nil && usedCount >= *maxUses:
+		return nil, 0, ErrPromoExhausted
+	case subtotal < minOrder:
+		e := *ErrPromoMinOrder
+		e.Details = map[string]any{"min_order": minOrder}
+		return nil, 0, &e
 	}
 
 	// ══════════════════════════════════════════════════════════════
@@ -1110,7 +1120,7 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 			return nil, 0, err
 		}
 		if used {
-			return nil, 0, ErrInvalidPromo
+			return nil, 0, ErrPromoUsed
 		}
 	}
 	if firstOnly {
@@ -1125,7 +1135,7 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 			return nil, 0, err
 		}
 		if hasOrders {
-			return nil, 0, ErrInvalidPromo
+			return nil, 0, ErrPromoFirstOrder
 		}
 	}
 
@@ -1176,6 +1186,14 @@ type PromoPreview struct {
 	Valid       bool  `json:"valid"`
 	Discount    int64 `json:"discount"`
 	DeliveryFee int64 `json:"delivery_fee"`
+	// Reason **رمزُ الرفض** — هو نفسُه الذي يردّه إنشاءُ الطلب (قرارُ المالك ٢٠٢٦-١٠-١٥)،
+	// و`MinOrder` الحدُّ الأدنى مع `promo_min_order`.
+	Reason   string `json:"reason,omitempty"`
+	MinOrder int64  `json:"min_order,omitempty"`
+	// Kind **نوعُ الكود** و DeliveryWaived **ما أُعفي منه من التوصيل** — فكودُ التوصيل
+	// المجانيّ يُقال «توصيل مجاني» لا «خصم ٠».
+	Kind           string `json:"kind,omitempty"`
+	DeliveryWaived int64  `json:"delivery_waived"`
 
 	// Changes **أتبدّل الخصمُ عمّا رآه؟** (`PR`، ٢٠٢٦-٠٩-١٥)
 	//
@@ -1221,15 +1239,37 @@ func (s *Service) PreviewPromo(ctx context.Context, code, customerID string, sub
 	fee := deliveryFee
 	_, discount, err := s.validatePromo(ctx, tx, code, customerID, subtotal, &fee)
 	if err != nil {
-		if errors.Is(err, ErrInvalidPromo) {
-			return out, nil // **غيرُ صالحٍ ليس خطأً** — جوابٌ يُعرض.
+		// **غيرُ صالحٍ ليس خطأً** — جوابٌ يُعرض، **وبرمز سببه** كما يردّه الطلب.
+		if code, details, ok := PromoRejection(err); ok {
+			out.Reason = code
+			if v, ok := details["min_order"].(int64); ok {
+				out.MinOrder = v
+			}
+			return out, nil
 		}
 		return out, err
 	}
 	out.Valid = true
 	out.Discount = discount
 	out.DeliveryFee = fee
+	out.DeliveryWaived = deliveryFee - fee
+	_ = tx.QueryRow(ctx, `SELECT kind FROM promo_codes WHERE code = $1`, code).Scan(&out.Kind)
 	return out, nil
+}
+
+// promoRejections **رموزُ رفض الكود** — للمعاينة ولمن يقرأ خطأَ الطلب.
+var promoRejections = map[string]bool{
+	ErrInvalidPromo.Code: true, ErrPromoMinOrder.Code: true, ErrPromoUsed.Code: true,
+	ErrPromoFirstOrder.Code: true, ErrPromoExhausted.Code: true, ErrPromoExpired.Code: true,
+}
+
+// PromoRejection **أهذا رفضٌ للكود؟** — رمزُه وتفاصيلُه.
+func PromoRejection(err error) (string, map[string]any, bool) {
+	var e *httpx.AppError
+	if errors.As(err, &e) && promoRejections[e.Code] {
+		return e.Code, e.Details, true
+	}
+	return "", nil, false
 }
 
 // sourceOf مصدرُ الأصناف — **ويلزم أن يكون واحداً.**

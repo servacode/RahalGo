@@ -70,8 +70,25 @@ var (
 	ErrBelowMinOrder    = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
 	ErrWhatsAppRequired = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
 	// ErrTooManyOpen بيده من الطلبات ما يكفي — **وسقفُه في الإعدادات.**
-	ErrTooManyOpen   = httpx.NewError(http.StatusConflict, "too_many_open_orders", "errors.too_many_open_orders")
-	ErrInvalidPromo  = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
+	ErrTooManyOpen  = httpx.NewError(http.StatusConflict, "too_many_open_orders", "errors.too_many_open_orders")
+	ErrInvalidPromo = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
+	// ══════════════════════════════════════════════════════════════════
+	// **لكلّ سببِ رفضٍ للكود رمزُه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت كلُّها «كود الخصم غير صالح أو مستخدم سابقاً»** — فمن طلب بأقلّ من الحدّ
+	// الأدنى لا يعرف أنّ طلباً أكبرَ يُصلحه، **ومن انتهى كودُه يجرّبه ثانيةً.**
+	// و`invalid_promo` باقٍ للغائب والموقوف وما ينتظر الماليّة: «الكود غير موجود».
+	ErrPromoMinOrder = httpx.NewError(http.StatusBadRequest,
+		"promo_min_order", "errors.promo_min_order") // details.min_order
+	ErrPromoUsed = httpx.NewError(http.StatusBadRequest,
+		"promo_already_used", "errors.promo_already_used")
+	ErrPromoFirstOrder = httpx.NewError(http.StatusBadRequest,
+		"promo_first_order_only", "errors.promo_first_order_only")
+	ErrPromoExhausted = httpx.NewError(http.StatusBadRequest,
+		"promo_exhausted", "errors.promo_exhausted")
+	ErrPromoExpired = httpx.NewError(http.StatusBadRequest,
+		"promo_expired", "errors.promo_expired")
 	ErrBadTransition = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
 	ErrNeedsDriver   = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
 	// **حرّاسُ الإسناد اليدويّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٠) — **أخطاءُ

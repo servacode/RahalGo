@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/incentives"
@@ -132,6 +133,8 @@ func (s *Server) handleIncentiveGrant(w http.ResponseWriter, r *http.Request) {
 		Reason string `json:"reason"`
 		// ForTarget **يُتجاهَل** — اليدويُّ «تقدير» دائماً (البند ٦).
 		ForTarget bool `json:"for_target"`
+		// Role **التبويبُ الذي اقتُرح منه** — ويُعدّ فيه وحدَه (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		Role string `json:"role"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -150,6 +153,7 @@ func (s *Server) handleIncentiveGrant(w http.ResponseWriter, r *http.Request) {
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		id, err := s.incentives.Propose(ctx, q, incentives.Proposal{
 			Actor: actor, UserID: target, Kind: req.Kind, Amount: req.Amount, Note: req.Reason,
+			Role: req.Role,
 		})
 		if err != nil {
 			return IdempotentBody{}, err
@@ -160,9 +164,12 @@ func (s *Server) handleIncentiveGrant(w http.ResponseWriter, r *http.Request) {
 			return IdempotentBody{}, err
 		}
 		return IdempotentBody{
-			Status:      http.StatusCreated,
-			Payload:     map[string]any{"request_id": id, "status": "pending"},
-			AfterCommit: func() { s.touch("incentive", "ops") },
+			Status:  http.StatusCreated,
+			Payload: map[string]any{"request_id": id, "status": "pending"},
+			AfterCommit: func() {
+				s.touch("incentive", "ops")
+				s.notifyIncentiveProposed(context.WithoutCancel(ctx), id)
+			},
 		}, nil
 	})
 }
@@ -232,6 +239,8 @@ func (s *Server) handleDecideIncentiveRequest(approve bool) http.HandlerFunc {
 		if approve {
 			s.notifyIncentive(r.Context(), out)
 			s.touchUser(out.UserID, "wallet")
+		} else {
+			s.notifyIncentiveRejected(r.Context(), out, req.Note)
 		}
 		s.touch("incentive", "ops")
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": out.Status,
@@ -251,6 +260,66 @@ func (s *Server) notifyIncentive(ctx context.Context, x incentives.Request) {
 		Body:   strconv.FormatInt(x.Amount, 10) + " " + currencyWord + " — " + x.Note,
 		Entity: "wallet", Href: "/portal/wallet",
 		Apps: []string{notifications.AppDriver, notifications.AppRep},
+	})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الطلبُ يُبلَّغ لمن يقرّر · والرفضُ لمن اقترح** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الطلبُ يُكتب ولا يعلم به أحد** حتّى تُفتح الصفحة، **ومن اقترح لا يعلم أنّه
+// رُفض** — فيقترحه ثانيةً أو يظنّه معلَّقاً.
+
+// notifyIncentiveProposed **من يملك `finance.manage` يعلم بطلبٍ ينتظره** — إلّا مقترحَه.
+func (s *Server) notifyIncentiveProposed(ctx context.Context, requestID string) {
+	if s.notify == nil {
+		return
+	}
+	x, ok := s.incentives.RequestByID(ctx, requestID)
+	if !ok {
+		return
+	}
+	title := notifTitles.incentiveRewardProposed
+	if x.Kind == incentives.KindPenalty {
+		title = notifTitles.incentivePenaltyProposed
+	}
+	holders, err := s.notify.CapHolders(ctx, s.pg, []string{string(authz.FinanceManage)})
+	if err != nil {
+		s.logger.Warn("incentive proposed notify", "err", err)
+		return
+	}
+	to := make([]string, 0, len(holders))
+	for _, id := range holders {
+		if id != x.ProposedBy {
+			to = append(to, id)
+		}
+	}
+	s.notify.NotifyMany(ctx, to, notifications.Input{
+		Kind:  notifications.KindWallet,
+		Title: title,
+		Body: x.UserName + " — " + strconv.FormatInt(x.Amount, 10) + " " + currencyWord +
+			" — " + x.Note,
+		Entity: "incentive_request", EntityID: x.ID, Href: "/dashboard/incentives",
+	})
+}
+
+// notifyIncentiveRejected **من اقترح يعلم أنّ طلبَه رُفض — وبسببه.**
+func (s *Server) notifyIncentiveRejected(ctx context.Context, x incentives.Request, note string) {
+	if s.notify == nil || x.ProposedBy == "" {
+		return
+	}
+	title := notifTitles.incentiveRewardRejected
+	if x.Kind == incentives.KindPenalty {
+		title = notifTitles.incentivePenaltyRejected
+	}
+	body := x.UserName + " — " + strconv.FormatInt(x.Amount, 10) + " " + currencyWord
+	if n := strings.TrimSpace(note); n != "" {
+		body += " — " + n
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: x.ProposedBy, Kind: notifications.KindWallet,
+		Title: title, Body: body,
+		Entity: "incentive_request", EntityID: x.ID, Href: "/dashboard/incentives",
 	})
 }
 
@@ -303,27 +372,58 @@ func (s *Server) handleRetryIncentiveFailure(w http.ResponseWriter, r *http.Requ
 	}
 	s.audit(r, "finance.incentive_retry", "user", p.UserID,
 		map[string]any{"failure_id": id, "paid": p.Amount})
-	s.notifyTargetRetried(r.Context(), p)
+	s.notifyTargetPaid(r.Context(), p)
 	s.touch("incentive", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"paid": p.Amount})
 }
 
-func (s *Server) notifyTargetRetried(ctx context.Context, p incentives.Paid) {
-	if p.Amount <= 0 {
+// notifyTargetPaid **صاحبُ المكافأة يُبشَّر بها** — بلفظ المرحلة (قرارُ المالك ٢٠٢٦-١٠-١٥):
+// «أنجزت هدف الشهر» عند آخر مرحلةٍ مضبوطة، وما قبلها «وصلت للمرحلة {n}».
+func (s *Server) notifyTargetPaid(ctx context.Context, p incentives.Paid) {
+	if p.Amount <= 0 || s.notify == nil {
 		return
 	}
 	app := notifications.AppDriver
 	if p.Role == "sales" {
 		app = notifications.AppRep
 	}
+	month := p.Month
+	if month == "" {
+		month = incentives.PeriodOf(time.Now())
+	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: p.UserID, Kind: notifications.KindWallet,
-		Title:  notifTitles.targetReached,
+		Title:  s.incentives.StageNotice(ctx, p.UserID, p.Role, month),
 		Body:   strconv.FormatInt(p.Amount, 10) + " " + currencyWord,
 		Entity: "wallet", Href: "/portal/wallet",
 		Apps: []string{app},
 	})
 	s.touchUser(p.UserID, "wallet")
+}
+
+// sweepTargetsAfterSetting **هدفٌ أو مرحلةٌ تبدّلت ⇒ يُصرف فوراً لمن صار مؤهَّلاً**
+// (قرارُ المالك ٢٠٢٦-١٠-١٥). **كان خفضُ الهدف في منتصف الشهر لا يصرف شيئاً** حتّى
+// يتحرّك العدّاد — ومن وقف عند العتبة الجديدة لا يقبض أبداً.
+func (s *Server) sweepTargetsAfterSetting(ctx context.Context, key string) {
+	role := incentives.RoleOfTargetKey(key)
+	if role == "" || s.incentives == nil {
+		return
+	}
+	for _, p := range s.incentives.SweepMonth(ctx, role) {
+		s.notifyTargetPaid(ctx, p)
+	}
+	s.touch("incentive", "ops")
+}
+
+// payPendingOnReactivation **من عاد فعّالاً يُصرف له ما بلغه وهو موقوف**
+// (قرارُ المالك ٢٠٢٦-١٠-١٥: «يظل إذا حقق الشروط»).
+func (s *Server) payPendingOnReactivation(ctx context.Context, userID string) {
+	if s.incentives == nil {
+		return
+	}
+	for _, p := range s.incentives.PayPending(ctx, userID) {
+		s.notifyTargetPaid(ctx, p)
+	}
 }
 
 // RunIncentiveRetries **يعيد ما تعثّر من مكافآت الهدف دوريّاً.**
@@ -336,7 +436,12 @@ func (s *Server) RunIncentiveRetries(ctx context.Context, interval time.Duration
 			return
 		case <-ticker.C:
 			for _, p := range s.incentives.RetryFailures(ctx) {
-				s.notifyTargetRetried(ctx, p)
+				s.notifyTargetPaid(ctx, p)
+			}
+			// **وما حُفظ لموقوفٍ عاد فعّالاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بابُ التفعيل
+			// يصرفه لحظتَها، والجولةُ تلتقط ما فاته.
+			for _, p := range s.incentives.PayPendingSweep(ctx) {
+				s.notifyTargetPaid(ctx, p)
 			}
 		}
 	}

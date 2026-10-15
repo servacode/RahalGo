@@ -664,7 +664,7 @@ func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
 	if s.incentives == nil || merchantID == "" {
 		return
 	}
-	rep := s.salesOpenerOf(ctx, s.pg, merchantID)
+	rep := s.salesGoalOwnerOf(ctx, s.pg, merchantID)
 	if rep == "" {
 		return
 	}
@@ -689,6 +689,23 @@ func (s *Server) salesOpenerOf(ctx context.Context, q dbtx.Querier, merchantID s
 	return *repID
 }
 
+// salesGoalOwnerOf **المندوبُ الذي يُحسب له المتجرُ في هدفه** — فعّالاً أو موقوفاً.
+//
+// **والموقوفُ لا يُستثنى هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥: «يظل إذا حقق الشروط») —
+// مُصرِّفُ الأهداف يحفظ مكافأتَه حتّى يعود (`incentive_pending_grants`). **وكان يُستثنى
+// فيضيع ما بلغه للأبد**: العدّادُ لا يعود إلى العتبة نفسِها.
+func (s *Server) salesGoalOwnerOf(ctx context.Context, q dbtx.Querier, merchantID string) string {
+	var repID *string
+	if err := q.QueryRow(ctx,
+		`SELECT m.opened_by_rep_id::text FROM merchants m
+		   JOIN users u ON u.id = m.opened_by_rep_id AND u.deleted_at IS NULL
+		  WHERE m.id = $1`,
+		merchantID).Scan(&repID); err != nil || repID == nil {
+		return ""
+	}
+	return *repID
+}
+
 // grantSalesTargetTx يمنح المكافأةَ **في معاملةٍ مُمرَّرة** ويُرجع ما دُفع.
 //
 // **ولا يُشعِر** — **الإشعارُ بعد التثبيت** (`PF-01`): **إشعارٌ خرج ثمّ
@@ -698,7 +715,7 @@ func (s *Server) grantSalesTargetTx(ctx context.Context, q dbtx.Querier,
 	if s.incentives == nil || merchantID == "" {
 		return 0, nil
 	}
-	rep := s.salesOpenerOf(ctx, q, merchantID)
+	rep := s.salesGoalOwnerOf(ctx, q, merchantID)
 	if rep == "" {
 		return 0, nil
 	}
@@ -732,7 +749,8 @@ func (s *Server) notifySalesTargetPaid(ctx context.Context, merchantID string, p
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: *repID, Kind: notifications.KindWallet,
-		Title:  notifTitles.targetReached,
+		// **بلفظ المرحلة** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		Title:  s.incentives.TargetTitle(ctx, *repID, "sales"),
 		Body:   strconv.FormatInt(paid, 10) + " " + currencyWord,
 		Entity: "wallet", Href: "/portal/wallet",
 		Apps: []string{notifications.AppRep},

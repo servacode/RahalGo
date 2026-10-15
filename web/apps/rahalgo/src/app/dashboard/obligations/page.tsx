@@ -127,9 +127,21 @@ interface Filters {
   from: string;
   to: string;
   overdue: boolean;
+  /** **ما عليه طلبُ دفعٍ أو شطبٍ ينتظر الموافقة** — تفتحه بطاقةُ الرئيسيّة (٢٠٢٦-١٠-١٥). */
+  pending: boolean;
 }
 
-const EMPTY: Filters = { kind: "", state: "", cause: "", q: "", party: "", from: "", to: "", overdue: false };
+const EMPTY: Filters = {
+  kind: "",
+  state: "",
+  cause: "",
+  q: "",
+  party: "",
+  from: "",
+  to: "",
+  overdue: false,
+  pending: false,
+};
 
 /** **سببٌ مصنَّفٌ يُترجَم، ومجهولُه يُعرض كما جاء.** */
 const causeText = (c: string): string => (O.causes as Record<string, string>)[c] ?? c;
@@ -154,6 +166,7 @@ function readUrl(): Filters {
     from: p.get("from") ?? "",
     to: p.get("to") ?? "",
     overdue: p.get("overdue") === "1",
+    pending: p.get("pending") === "1",
   };
 }
 
@@ -167,6 +180,7 @@ function query(f: Filters): string {
   if (f.from) p.set("from", f.from);
   if (f.to) p.set("to", f.to);
   if (f.overdue) p.set("overdue", "1");
+  if (f.pending) p.set("pending", "1");
   return p.toString();
 }
 
@@ -387,6 +401,7 @@ export default function ObligationsPage() {
               <Select value={f.state} onChange={(e) => pick({ state: e.target.value as State })}>
                 <option value="">{O.states.all}</option>
                 <option value="open">{O.states.open}</option>
+                <option value="closed">{O.states.closed}</option>
                 <option value="paid">{O.states.paid}</option>
                 <option value="voided">{O.states.voided}</option>
                 <option value="written_off">{O.states.written_off}</option>
@@ -414,6 +429,13 @@ export default function ObligationsPage() {
               onClick={() => pick({ overdue: !f.overdue })}
             >
               {O.overdueOnly}
+            </Button>
+            <Button
+              type="button"
+              variant={f.pending ? "primary" : "secondary"}
+              onClick={() => pick({ pending: !f.pending })}
+            >
+              {O.pendingOnly}
             </Button>
             {qs && (
               <Button

@@ -165,14 +165,24 @@ func (s *Service) grantForMonthTx(ctx context.Context, tx dbtx.Querier,
 	if len(levels) == 0 {
 		return 0, nil
 	}
-	active, err := isActive(ctx, tx, userID)
-	if err != nil || !active {
+	state, err := userState(ctx, tx, userID)
+	if err != nil || state == stateGone {
 		return 0, err
 	}
 	// **ويُعَدُّ بالمعاملة نفسِها** — `XG-32`: **وإلّا لم يُرَ متجرُها.**
 	done, err := s.doneInMonthOn(ctx, tx, userID, role, month)
 	if err != nil {
 		return 0, err
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والموقوفُ لا يُصرف له الآن — ولا يخسر ما بلغه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «يظل إذا حقق الشروط»: **كان من بلغ مرحلةً وهو موقوفٌ يخسرها للأبد** — العدّادُ
+	// لا يتحرّك مرّةً ثانيةً عند العتبة نفسِها. **والآن تُحفظ** (`incentive_pending_grants`)
+	// **وتُصرف يومَ يُعاد تفعيلُه** (`PayPending`)، وجولةٌ دوريّةٌ تلتقط ما فات.
+	if state == stateHeld {
+		return 0, s.holdIfDue(ctx, tx, userID, role, month, levels, done)
 	}
 	var paid int64
 	for _, l := range levels {
@@ -228,14 +238,172 @@ func (s *Service) grantForMonth(ctx context.Context, userID, role, month string)
 	return paid, nil
 }
 
-// isActive **أفعّالٌ هو؟** — الموقوفُ والمحذوفُ لا يُكافآن.
-func isActive(ctx context.Context, q dbtx.Querier, userID string) (bool, error) {
-	var ok bool
+// حالُ صاحب المكافأة ساعةَ الصرف.
+const (
+	// stateActive فعّالٌ — يُصرف له.
+	stateActive = iota
+	// stateHeld موقوفٌ أو غيرُ فعّال — **تُحفظ مكافأتُه حتّى يعود.**
+	stateHeld
+	// stateGone محذوفٌ أو لا وجودَ له — لا صرفَ ولا حفظ.
+	stateGone
+)
+
+// userState **أفعّالٌ هو، أم موقوفٌ ينتظر، أم ذهب؟**
+func userState(ctx context.Context, q dbtx.Querier, userID string) (int, error) {
+	var status string
+	var deleted bool
 	err := q.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM users
-		                WHERE id = $1::uuid AND status = 'active' AND deleted_at IS NULL)`,
-		userID).Scan(&ok)
-	return ok, err
+		SELECT status, deleted_at IS NOT NULL FROM users WHERE id = $1::uuid`,
+		userID).Scan(&status, &deleted)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return stateGone, nil
+	}
+	if err != nil {
+		return stateGone, err
+	}
+	switch {
+	case deleted:
+		return stateGone, nil
+	case status != "active":
+		return stateHeld, nil
+	}
+	return stateActive, nil
+}
+
+// holdIfDue **يحفظ مكافأةً بلغها موقوف** — صفٌّ مفتوحٌ واحدٌ لشهره ودوره.
+//
+// **ولا يُحفظ ما قُبض**: مرحلةٌ دُفعت قبل الإيقاف لا تفتح صفّاً.
+func (s *Service) holdIfDue(ctx context.Context, q dbtx.Querier, userID, role, month string,
+	levels []Level, done int64) error {
+	for _, l := range levels {
+		if l.Target <= 0 || l.Reward <= 0 || done < l.Target {
+			continue
+		}
+		var paid bool
+		if err := q.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM incentives
+			                WHERE user_id = $1::uuid AND for_target AND period = $2)`,
+			userID, month+"#"+itoa(int64(l.N))).Scan(&paid); err != nil {
+			return err
+		}
+		if paid {
+			continue
+		}
+		_, err := q.Exec(ctx, `
+			INSERT INTO incentive_pending_grants (user_id, role, month)
+			VALUES ($1::uuid, $2, $3)
+			ON CONFLICT (user_id, role, month) WHERE paid_at IS NULL DO NOTHING`,
+			userID, role, month)
+		return err
+	}
+	return nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **إشعارُ المرحلة بلفظها** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان «أنجزت هدف الشهر» يُرسَل عند كلّ مرحلة** — فمن بلغ الأولى من ثلاثٍ قرأ أنّه
+// أتمّ الشهر. **والآن «أنجزت هدف الشهر» عند آخر مرحلةٍ مضبوطةٍ وحدَها**، وما قبلها
+// «وصلت للمرحلة {n} — نالتك مكافأتها».
+
+// StageTitle **عنوانُ إشعار المرحلة** — `final` آخرُ مرحلةٍ مضبوطة.
+func StageTitle(stage int, final bool) string {
+	if final || stage <= 0 {
+		return "أنجزت هدف الشهر — نالتك مكافأته"
+	}
+	return "وصلت للمرحلة " + itoa(int64(stage)) + " — نالتك مكافأتها"
+}
+
+// StageNotice **عنوانُ ما صُرف له في شهرٍ** — أعلى مرحلةٍ قُبضت، أهي الأخيرة؟
+//
+// **ويُقرأ بعد الصرف لا قبله**: مرحلتان تُبلغان معاً (هدفٌ خُفّض) تُقالان بأعلاهما.
+func (s *Service) StageNotice(ctx context.Context, userID, role, month string) string {
+	last := 0
+	for _, l := range s.LevelsOf(ctx, role) {
+		if l.N > last {
+			last = l.N
+		}
+	}
+	var top int
+	_ = s.db.QueryRow(ctx, `
+		SELECT COALESCE(max(NULLIF(split_part(period, '#', 2), '')::int), 0)
+		  FROM incentives
+		 WHERE user_id = $1::uuid AND for_target AND split_part(period, '#', 1) = $2
+		   AND (target_role = $3 OR target_role IS NULL)`, userID, month, role).Scan(&top)
+	return StageTitle(top, last > 0 && top >= last)
+}
+
+// TargetTitle **عنوانُ إشعار الشهر الجاري** — يقرؤه محرّكُ الطلبات بعد التسليم.
+func (s *Service) TargetTitle(ctx context.Context, userID, role string) string {
+	return s.StageNotice(ctx, userID, role, PeriodOf(time.Now()))
+}
+
+// RoleOfTargetKey **دورُ مفتاح هدفٍ أو مرحلة** — وفراغٌ لغيره.
+//
+// **وتعديلُه يصرف فوراً لمن صار مؤهَّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — `SweepMonth`.
+func RoleOfTargetKey(key string) string {
+	for _, role := range []string{"driver", "sales"} {
+		p := prefixOf(role)
+		for _, k := range []string{"monthly_target", "target_reward", "target_2", "reward_2",
+			"target_3", "reward_3"} {
+			if key == p+k {
+				return role
+			}
+		}
+	}
+	return ""
+}
+
+// SweepMonth **يصرف للشهر الجاري لكلّ من في الدور بلغ مرحلةً لم يقبضها.**
+//
+// **خُفّض الهدفُ في منتصف الشهر فصار عشرةٌ مؤهَّلين** — كانوا ينتظرون تسليماً أو
+// متجراً جديداً ليتحرّك العدّاد، **ومن وقف لا يقبض أبداً.** والموقوفُ يُحفظ له.
+func (s *Service) SweepMonth(ctx context.Context, role string) []Paid {
+	if prefixOf(role) == "" {
+		return nil
+	}
+	month := PeriodOf(time.Now())
+	// **ومن لم يبلغ أدنى مرحلةٍ مدفوعةٍ لا يُسأل عنه** — العدُّ في استعلامٍ واحد،
+	// والصرفُ لمن تجاوز العتبةَ وحدَه.
+	var least int64
+	for _, l := range s.levelsFor(ctx, role) {
+		if l.Target > 0 && l.Reward > 0 && (least == 0 || l.Target < least) {
+			least = l.Target
+		}
+	}
+	if least == 0 {
+		return nil
+	}
+	rows, err := s.db.Query(ctx, `
+		SELECT u.id::text FROM users u
+		  JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = $1
+		 WHERE u.deleted_at IS NULL
+		   AND `+doneSQL(role, "u.id", "$2::text")+` >= $3`, role, month, least)
+	if err != nil {
+		s.logf("جولةُ الأهداف تعذّرت", "role", role, "error", err)
+		return nil
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	var out []Paid
+	for _, id := range ids {
+		paid, err := s.grantForMonth(ctx, id, role, month)
+		if err != nil {
+			s.RecordFailure(ctx, id, role, month, err)
+			continue
+		}
+		if paid > 0 {
+			out = append(out, Paid{UserID: id, Role: role, Amount: paid, Month: month})
+		}
+	}
+	return out
 }
 
 // monthRangeSQL **حدّا الشهر بتوقيت دمشق** من وسمٍ «2026-09» في المعلَمة `$N`.
@@ -357,8 +525,8 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 	var incID string
 	err := tx.QueryRow(ctx, `
 		INSERT INTO incentives (user_id, kind, amount, reason, for_target, period, created_by,
-		                        target_count, target_role)
-		VALUES ($1, $2, $3, $4, true, $5, NULL, $6, $7)
+		                        target_count, target_role, role)
+		VALUES ($1, $2, $3, $4, true, $5, NULL, $6, $7, $7)
 		ON CONFLICT DO NOTHING
 		RETURNING id::text`,
 		userID, KindReward, reward, reason, period, l.Target, role).Scan(&incID)
@@ -369,12 +537,14 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 	if err != nil {
 		return err
 	}
-	if _, err := s.wallet.ApplyTx(ctx, tx, userID, reward, KindReward, "", reason, nil); err != nil {
+	// **والمرجعُ صفُّ المكافأة** (قرارُ المالك ٢٠٢٦-١٠-١٥) — فصفحةُ الأرباح تعرف
+	// «مكافأةَ هدف» من «مكافأةٍ يدويّة» من «دعوة» بوصلٍ لا بتخمينٍ من فراغ المرجع.
+	if _, err := s.wallet.ApplyTx(ctx, tx, userID, reward, KindReward, incID, reason, nil); err != nil {
 		return err
 	}
 	// **والخزينةُ تدفع** — دفترٌ يأخذ من طرفٍ ولا يعطي آخرَ لا يتوازن.
 	if tid := s.treasury(ctx); tid != "" {
-		if _, err := s.wallet.ApplyTx(ctx, tx, tid, -reward, KindReward, "",
+		if _, err := s.wallet.ApplyTx(ctx, tx, tid, -reward, KindReward, incID,
 			"مكافأةُ هدفٍ صُرفت", nil); err != nil {
 			return err
 		}

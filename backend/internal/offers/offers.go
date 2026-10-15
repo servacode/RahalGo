@@ -401,6 +401,9 @@ type Input struct {
 	EndsOn string `json:"ends_on,omitempty"`
 	// Notify **أيُبلَّغ زبائنُ منطقة المتجر؟** — خيارٌ في النافذة (البند ٥).
 	Notify bool `json:"notify,omitempty"`
+	// Replace **الإدارةُ تستبدل عرضَ المتجر القائم** — بتأكيدٍ صريح (قرارُ المالك
+	// ٢٠٢٦-١٠-١٥). بلاه يُردّ `offer_merchant_live` فتسأل النافذة «بدك تستبدله؟».
+	Replace bool `json:"replace,omitempty"`
 }
 
 // Create ينشئ عرضاً في معاملته — انظر `CreateIn`.
@@ -481,15 +484,30 @@ func (s *Service) CreateIn(ctx context.Context, q dbtx.Querier, actorID string, 
 	// **والسقفُ سعرُ الزبون اليوم** — **ومن رفع المتجرُ سعرَه بعدها فالعرضُ
 	// أصغرُ لا أكبر**، ومن خفضه فـ`Cut` يقصّ عند الصفر كما كان.
 	// **والصنفُ يُقرأ مرّةً** — سعرُه وتوفّرُه معاً.
+	//
+	// ══════════════════════════════════════════════════════════════════
+	//  **والسقفُ سعرُ البيع الذي يدفعه الزبون — لا سعرُ الشراء** (٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يُقارَن بـ`menu_items.price`** وهو سعرُ شراء المتجر — فصنفٌ يُباع بـ١٢٠
+	// ويُشترى بـ١٠٠ لا يقبل خصماً بـ١٠٠ وإن كان الزبونُ يدفع ١٢٠. **والسعرُ بالقاعدة
+	// نفسِها التي يُبنى بها الطلب** (`PriceFn`: هامشُ الصنف ثمّ القسم ثمّ العامّ).
 	var price int64
 	var available bool
-	if err := q.QueryRow(ctx,
-		`SELECT price, available FROM menu_items WHERE id = $1::uuid`, *in.MenuItemID).
-		Scan(&price, &available); err != nil {
+	var itemMargin, sectionMargin *int64
+	if err := q.QueryRow(ctx, `
+		SELECT mi.price, mi.available, mi.margin_override, ps.margin_override
+		FROM menu_items mi
+		LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
+		WHERE mi.id = $1::uuid`, *in.MenuItemID).
+		Scan(&price, &available, &itemMargin, &sectionMargin); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrBadDiscount
 		}
 		return nil, err
+	}
+	if marginOf != nil {
+		price = marginOf(price, itemMargin, sectionMargin)
 	}
 	// ══════════════════════════════════════════════════════════════════
 	//  **ولا خصمَ على صنفٍ «غير متوفر» — من أيّ باب** (٢٠٢٦-١٠-٠٤)
@@ -724,7 +742,94 @@ func (s *Service) CreateScopedIn(ctx context.Context, q dbtx.Querier, actorID, m
 		*in.MenuItemID); err != nil {
 		return nil, err
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وعرضُ رحّال غو يغلب** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان عرضُ المتجر الجديدُ يُنزل عرضَ المنصّة** (`CreateIn` يُنزل كلَّ قائم) — فخصمٌ
+	// قرّرته المنصّةُ وتتحمّله يسقط بضغطةٍ من تطبيق المتجر. **والآن يُردّ بتاريخ نهايته.**
+	if until, live, err := platformOfferOn(ctx, q, *in.MenuItemID); err != nil {
+		return nil, err
+	} else if live {
+		return nil, ErrPlatformOfferLiveUntil(until)
+	}
 	return s.CreateIn(ctx, q, actorID, in, marginOf)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **عرضٌ قائمٌ واحدٌ على الصنف — ومن يغلب** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+//	المتجرُ أو المندوبُ وعلى الصنف عرضُ منصّة ⇒ يُردّ (`offer_platform_live`) بتاريخه
+//	الإدارةُ وعلى الصنف عرضُ متجر           ⇒ تُسأل (`offer_merchant_live`)، و`replace`
+//	                                        يُنزله ويُخبَر صاحبُ المتجر
+//	موافقةُ الماليّة على عرض منصّةٍ ينتظر   ⇒ تستبدل كذلك وتُخبر
+
+var (
+	// ErrPlatformOfferLive **على الصنف عرضٌ من رحّال غو** — `details.until` يومُ نهايته.
+	ErrPlatformOfferLive = httpx.NewError(http.StatusConflict,
+		"offer_platform_live", "errors.offer_platform_live")
+	// ErrMerchantOfferLive **على الصنف عرضٌ من المتجر** — والإدارةُ تؤكّد الاستبدال.
+	ErrMerchantOfferLive = httpx.NewError(http.StatusConflict,
+		"offer_merchant_live", "errors.offer_merchant_live")
+)
+
+// ErrPlatformOfferLiveUntil **الرفضُ بيوم النهاية** — «لحد {date}» بتوقيت دمشق، وبلا
+// نهايةٍ بلا تاريخ.
+func ErrPlatformOfferLiveUntil(until *time.Time) error {
+	e := *ErrPlatformOfferLive
+	e.Details = map[string]any{}
+	if until != nil {
+		e.Details["until"] = until.In(Damascus).Format("2006-01-02")
+	}
+	return &e
+}
+
+// platformOfferOn **أعلى الصنف عرضُ منصّةٍ قائم؟** — سارٍ أو مجدول، لم ينتهِ.
+func platformOfferOn(ctx context.Context, q dbtx.Querier, itemID string) (*time.Time, bool, error) {
+	var until *time.Time
+	err := q.QueryRow(ctx, `
+		SELECT o.ends_at FROM offers o
+		 WHERE o.menu_item_id = $1::uuid AND o.kind = 'discount' AND o.borne_by = 'platform'
+		   AND o.active AND (o.ends_at IS NULL OR o.ends_at > now())
+		 ORDER BY o.ends_at NULLS FIRST LIMIT 1`, itemID).Scan(&until)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	return until, err == nil, err
+}
+
+// Replaced **عرضُ متجرٍ نزل لأنّ عرضَ المنصّة حلّ محلَّه** — ليُخبَر صاحبُه.
+type Replaced struct {
+	OfferID     string
+	ItemName    string
+	MerchantID  string
+	OwnerUserID string
+}
+
+// merchantOffersOn **عروضُ المتجر القائمةُ على الصنف** — ساريةٌ أو مجدولة، لم تنتهِ.
+func merchantOffersOn(ctx context.Context, q dbtx.Querier, itemID string) ([]Replaced, error) {
+	rows, err := q.Query(ctx, `
+		SELECT o.id::text, COALESCE(mi.name, ''), COALESCE(m.id::text, ''),
+		       COALESCE(m.owner_user_id::text, '')
+		  FROM offers o
+		  JOIN menu_items mi ON mi.id = o.menu_item_id
+		  LEFT JOIN merchants m ON m.id = mi.merchant_id
+		 WHERE o.menu_item_id = $1::uuid AND o.kind = 'discount' AND o.borne_by = 'merchant'
+		   AND o.active AND (o.ends_at IS NULL OR o.ends_at > now())`, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Replaced
+	for rows.Next() {
+		var r Replaced
+		if err := rows.Scan(&r.OfferID, &r.ItemName, &r.MerchantID, &r.OwnerUserID); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 // LiveDiscount خصمُ صنفٍ سارٍ الآن — **يُنادى لحظةَ بناء الطلب.**

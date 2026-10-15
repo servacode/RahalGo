@@ -93,7 +93,7 @@ const oblFrom = `
 // oblWhere **الشرطُ الواحدُ يُكتب مرّةً** — للعدّ وللقائمة وللتصدير.
 //
 //	$1 نوعُ الطرف · $2 الطرف · $3 الحال · $4 السبب · $5 البحث · $6 من · $7 إلى ·
-//	$8 أيّامُ التأخّر (صفرٌ = بلا شرط)
+//	$8 أيّامُ التأخّر (صفرٌ = بلا شرط) · $9 ما عليه طلبُ دفعٍ أو شطبٍ ينتظر الموافقة
 const oblWhere = `
 	WHERE ($1 = '' OR o.party_kind = $1)
 	  AND ($2 = '' OR o.party_id::text = $2)
@@ -103,13 +103,18 @@ const oblWhere = `
 	               OR ord.number::text = $5)
 	  AND ($6::date IS NULL OR o.created_at >= $6::date)
 	  AND ($7::date IS NULL OR o.created_at < $7::date + 1)
-	  AND ($8 = 0 OR (o.closed_at IS NULL AND o.created_at < now() - make_interval(days => $8)))`
+	  AND ($8 = 0 OR (o.closed_at IS NULL AND o.created_at < now() - make_interval(days => $8)))
+	  AND (NOT $9::boolean OR EXISTS (SELECT 1 FROM obligation_requests pq
+	                                   WHERE pq.obligation_id = o.id AND pq.status = 'pending'))`
 
 // oblFilter المرشّحاتُ مقروءةً ومتحقَّقاً منها.
 type oblFilter struct {
 	kind, party, state, cause, query string
 	from, to                         *string
 	overdue                          int
+	// pending **ما ينتظر قرارَ دفعٍ أو شطب** (`?pending=1`) — تفتحه بطاقةُ الرئيسيّة
+	// «دفع دين أو شطبه ينتظر الموافقة» (قرارُ المالك ٢٠٢٦-١٠-١٥؛ كانت تفتح «المفتوحة» كلَّها).
+	pending bool
 }
 
 var oblStates = map[string]bool{"": true, "open": true, "closed": true, "paid": true,
@@ -141,6 +146,7 @@ func (s *Server) readOblFilter(r *http.Request) (oblFilter, bool) {
 			*p.dst = &vv
 		}
 	}
+	f.pending = q.Get("pending") == "1"
 	if q.Get("overdue") == "1" {
 		f.overdue = s.obligationAlertDays(r.Context())
 		if f.overdue <= 0 {
@@ -151,7 +157,7 @@ func (s *Server) readOblFilter(r *http.Request) (oblFilter, bool) {
 }
 
 func (f oblFilter) args() []any {
-	return []any{f.kind, f.party, f.state, f.cause, f.query, f.from, f.to, f.overdue}
+	return []any{f.kind, f.party, f.state, f.cause, f.query, f.from, f.to, f.overdue, f.pending}
 }
 
 // obligationAlertDays **بعد كم يوماً ينبّه الدينُ المفتوح** — من الإعدادات، وصفرُه بلا تنبيه.
@@ -255,7 +261,7 @@ func (s *Server) queryObligations(ctx context.Context, f oblFilter, limit, offse
 		LEFT JOIN obligation_requests rq ON rq.obligation_id = o.id AND rq.status = 'pending'`+
 		oblWhere+`
 		ORDER BY o.created_at DESC, o.id
-		LIMIT $9 OFFSET $10`, args...)
+		LIMIT $10 OFFSET $11`, args...)
 	if err != nil {
 		return nil, err
 	}

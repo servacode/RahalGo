@@ -28,6 +28,8 @@ var (
 	// ErrNotEligible **لا يُكافأ ولا يُعاقب من هنا إلّا سائقٌ أو مندوبٌ فعّال.**
 	ErrNotEligible = httpx.NewError(http.StatusConflict,
 		"incentive_user_inactive", "errors.incentive_user_inactive")
+	// ErrBadRole **دورٌ غيرُ السائق والمندوب.**
+	ErrBadRole = httpx.NewError(http.StatusBadRequest, "bad_incentive_role", "errors.validation")
 	// ErrRequestDecided **بُتّ فيه من قبل.**
 	ErrRequestDecided = httpx.NewError(http.StatusConflict,
 		"request_decided", "errors.request_decided")
@@ -51,6 +53,8 @@ type Request struct {
 	DecisionNote string     `json:"decision_note"`
 	SelfApproved bool       `json:"self_approved"`
 	CreatedAt    time.Time  `json:"created_at"`
+	// Role **الدورُ الذي اقتُرح له** — ويُعدّ فيه وحدَه (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	Role string `json:"role"`
 }
 
 const requestCols = `
@@ -58,7 +62,7 @@ const requestCols = `
 	       r.kind, r.amount, r.note, r.status, r.source,
 	       r.proposed_by::text, COALESCE(NULLIF(p.full_name, ''), p.phone, ''),
 	       r.decided_by::text, NULLIF(COALESCE(NULLIF(d.full_name, ''), d.phone, ''), ''),
-	       r.decided_at, r.decision_note, r.self_approved, r.created_at
+	       r.decided_at, r.decision_note, r.self_approved, r.created_at, COALESCE(r.role, '')
 	FROM incentive_requests r
 	JOIN users u ON u.id = r.user_id
 	JOIN users p ON p.id = r.proposed_by
@@ -68,7 +72,7 @@ func scanRequest(row pgx.Row) (Request, error) {
 	var x Request
 	err := row.Scan(&x.ID, &x.UserID, &x.UserName, &x.Kind, &x.Amount, &x.Note, &x.Status,
 		&x.Source, &x.ProposedBy, &x.ProposerName, &x.DecidedBy, &x.DeciderName,
-		&x.DecidedAt, &x.DecisionNote, &x.SelfApproved, &x.CreatedAt)
+		&x.DecidedAt, &x.DecisionNote, &x.SelfApproved, &x.CreatedAt, &x.Role)
 	return x, err
 }
 
@@ -79,6 +83,9 @@ type Proposal struct {
 	// Source `manual` من الصفحة، أو `alert` استرجاعٌ على تنبيه.
 	Source           string
 	AlertIncentiveID string
+	// Role **الدورُ الذي يُقترح له** — `driver` أو `sales`. وفراغُه يُستنتج من أدواره
+	// (السائقُ أوّلاً)، **وما لا يحمله صاحبُه يُردّ.**
+	Role string
 }
 
 // Propose **يكتب الطلبَ ولا يمسّ المال.**
@@ -99,15 +106,23 @@ func (s *Service) Propose(ctx context.Context, q dbtx.Querier, p Proposal) (stri
 	if len([]rune(note)) > 500 {
 		note = string([]rune(note)[:500])
 	}
-	var ok bool
+	if p.Role != "" && p.Role != "driver" && p.Role != "sales" {
+		return "", ErrBadRole
+	}
+	// **والدورُ يُكتب على الطلب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من له الدوران معاً كان
+	// يُعدّ في كروت التبويبين. **وما سُمّي يُشترط أن يحمله**، وفراغُه أوّلُ ما يحمل.
+	var role string
 	if err := q.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM users u
-		                 JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code IN ('driver', 'sales')
-		                WHERE u.id = $1::uuid AND u.status = 'active' AND u.deleted_at IS NULL)`,
-		p.UserID).Scan(&ok); err != nil {
+		SELECT COALESCE((SELECT ur.role_code FROM users u
+		                   JOIN user_roles ur ON ur.user_id = u.id
+		                  WHERE u.id = $1::uuid AND u.status = 'active' AND u.deleted_at IS NULL
+		                    AND ur.role_code IN ('driver', 'sales')
+		                    AND ($2 = '' OR ur.role_code = $2)
+		                  ORDER BY ur.role_code LIMIT 1), '')`,
+		p.UserID, p.Role).Scan(&role); err != nil {
 		return "", err
 	}
-	if !ok {
+	if role == "" {
 		return "", ErrNotEligible
 	}
 	// **ولا تُردّ العقوبةُ لقلّة الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥): يُؤخذ المتاحُ
@@ -123,9 +138,10 @@ func (s *Service) Propose(ctx context.Context, q dbtx.Querier, p Proposal) (stri
 	}
 	var id string
 	err := q.QueryRow(ctx, `
-		INSERT INTO incentive_requests (user_id, kind, amount, note, proposed_by, source, alert_incentive_id)
-		VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6, $7::uuid)
-		RETURNING id::text`, p.UserID, p.Kind, p.Amount, note, p.Actor, src, alert).Scan(&id)
+		INSERT INTO incentive_requests (user_id, kind, amount, note, proposed_by, source,
+		                                alert_incentive_id, role)
+		VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6, $7::uuid, $8)
+		RETURNING id::text`, p.UserID, p.Kind, p.Amount, note, p.Actor, src, alert, role).Scan(&id)
 	return id, err
 }
 
@@ -151,6 +167,12 @@ func (s *Service) ListRequests(ctx context.Context, status, userID string) ([]Re
 		out = append(out, x)
 	}
 	return out, rows.Err()
+}
+
+// RequestByID **طلبٌ بمعرّفه** — لإشعار من يقرّر فيه.
+func (s *Service) RequestByID(ctx context.Context, id string) (Request, bool) {
+	x, err := scanRequest(s.db.QueryRow(ctx, requestCols+` WHERE r.id = $1::uuid`, id))
+	return x, err == nil
 }
 
 // DecideRequest **يوافق أو يرفض — داخلَ المعاملة المُمرَّرة.**
@@ -180,7 +202,7 @@ func (s *Service) DecideRequest(ctx context.Context, q dbtx.Querier, id, actor s
 		if err != nil {
 			return row, verdict, err
 		}
-		e, err := s.GrantTx(ctx, q, actor, row.UserID, row.Kind, row.Amount, row.Note)
+		e, err := s.GrantRoleTx(ctx, q, actor, row.UserID, row.Kind, row.Amount, row.Note, row.Role)
 		if err != nil {
 			return row, verdict, err
 		}

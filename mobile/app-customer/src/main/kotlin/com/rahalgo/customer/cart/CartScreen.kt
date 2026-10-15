@@ -58,6 +58,7 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
 import com.rahalgo.ui.money
+import com.rahalgo.ui.promoReasonText
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
 import kotlinx.coroutines.launch
@@ -247,13 +248,18 @@ fun CartScreen(
 
         // **والنتيجةُ تحت الحقل** — **ورسالةٌ تطفو تنصرف بعد ثوانٍ**،
         // وهذه تبقى ما دام الكودُ مكتوبا.
+        // **وكلُّ رفضٍ بسببه، والتوصيلُ المجانيّ باسمه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+        // كانت «الكود غير صالح أو منتهي» لكلّ رفض، و«خصم ٠» لكود التوصيل المجانيّ.
         vm.promoResult?.let { r ->
             Spacer(Modifier.height(6.dp))
+            val ctx = LocalContext.current
             Text(
-                text = if (r.valid) {
-                    stringResource(R.string.cart_promo_ok, money(r.discount))
-                } else {
-                    stringResource(R.string.cart_promo_bad)
+                text = when {
+                    r.valid && r.kind == "free_delivery" && r.discount == 0L ->
+                        stringResource(R.string.cart_promo_free_delivery)
+                    r.valid -> stringResource(R.string.cart_promo_ok, money(r.discount))
+                    r.reason.isNotEmpty() -> promoReasonText(ctx, r.reason, r.minOrder)
+                    else -> stringResource(R.string.cart_promo_bad)
                 },
                 color = if (r.valid) Rahal.colors.success else Rahal.colors.danger,
                 style = MaterialTheme.typography.bodySmall,

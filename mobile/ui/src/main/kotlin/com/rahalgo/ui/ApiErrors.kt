@@ -192,8 +192,37 @@ fun detailedErrorRes(code: String, details: Map<String, String>): Pair<Int, List
     "custom_goods_too_high" -> details["max"]?.toLongOrNull()?.let {
         R.string.err_custom_goods_max to listOf(money(it))
     }
+    // **والكودُ يقول حدَّه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «بيشتغل على طلب من X وأكتر».
+    "promo_min_order" -> details["min_order"]?.toLongOrNull()?.takeIf { it > 0 }?.let {
+        R.string.err_promo_min_order_x to listOf(money(it))
+    }
+    // **وعرضُ المنصّة يقول إلى متى** — «في عرض من رحّال غو على هالصنف لحد {date}».
+    "offer_platform_live" -> details["until"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        R.string.err_offer_platform_live_until to listOf(it)
+    }
     else -> null
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **سببُ رفض كود الخصم بعربيّته — من رمز المعاينة** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كانت السلّةُ تقول «الكود غير صالح أو منتهي» لكلّ رفض** — فمن طلب بأقلّ من الحدّ
+ * لا يعرف أنّ طلباً أكبرَ يُصلحه. **والمعاينةُ تردّ رمزَ الطلب نفسَه** (`reason`)،
+ * **ونصُّه هنا في الخريطة الواحدة** لا في الشاشة.
+ */
+fun promoReasonText(context: Context, reason: String, minOrder: Long): String {
+    val details = if (minOrder > 0) mapOf("min_order" to minOrder.toString()) else emptyMap()
+    detailedErrorRes(reason, details)?.let { (res, args) ->
+        return context.getString(res, *args.toTypedArray())
+    }
+    return context.getString(promoReasonRes(reason))
+}
+
+/** **دالّةٌ صافية** — نصُّ الرمز، والمجهولُ «الكود غير موجود». */
+fun promoReasonRes(reason: String): Int = CODES[reason]?.takeIf { reason.startsWith("promo_") || reason == "invalid_promo" }
+    ?: R.string.err_invalid_promo
 
 /**
  * **خطأُ الخادم يُقال خطأَ خادمٍ لا «تعذّر الاتصال»** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠.
@@ -319,6 +348,8 @@ private val CODES: Map<String, Int> = mapOf(
     "bad_offer_kind" to R.string.err_bad_offer_kind,
     "offer_amount_over_price" to R.string.err_offer_amount_over_price,
     "offer_item_unavailable" to R.string.err_offer_item_unavailable,
+    // **وعرضُ رحّال غو يغلب عرضَ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يبلغ تطبيقَي المتجر والمندوب.
+    "offer_platform_live" to R.string.err_offer_platform_live,
     "item_price_too_high" to R.string.err_item_price_too_high,
     // **سعرُ الصرف** (٢٠٢٦-١٠-١٢) — `catalog/usd.go`.
     "exchange_rate_required" to R.string.err_exchange_rate_required,
@@ -495,6 +526,12 @@ private val CODES: Map<String, Int> = mapOf(
     "merchant_delivery_unpaid" to R.string.err_merchant_delivery_unpaid,
     "too_many_open_orders" to R.string.err_too_many_open_orders,
     "invalid_promo" to R.string.err_invalid_promo,
+    // **ولكلّ سببِ رفضٍ للكود نصُّه** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+    "promo_min_order" to R.string.err_promo_min_order,
+    "promo_already_used" to R.string.err_promo_already_used,
+    "promo_first_order_only" to R.string.err_promo_first_order_only,
+    "promo_exhausted" to R.string.err_promo_exhausted,
+    "promo_expired" to R.string.err_promo_expired,
     "invalid_transition" to R.string.err_invalid_transition,
     "driver_required" to R.string.err_driver_required,
     "cancel_window_passed" to R.string.err_cancel_window_passed,

@@ -344,5 +344,7 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 	}
 	// الإعدادات تُقرأ لحظياً في كل مكان — واللوحات المفتوحة الآن تعرض القديم
 	s.touch("settings", "ops")
+	// **وهدفٌ أو مرحلةٌ خُفّضت يُصرف لمن صار مؤهَّلاً فوراً** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	s.sweepTargetsAfterSetting(r.Context(), key)
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }

@@ -199,6 +199,7 @@
     <string name="cart_clear">إفراغ السلة</string>
     <string name="cart_promo_ok">تم تطبيق الكود — خصم %1$s</string>
     <string name="cart_promo_bad">الكود غير صالح أو منتهي</string>
+    <string name="cart_promo_free_delivery">تم تطبيق الكود — توصيل مجاني</string>
     <string name="cart_cash">نقدا عند التسليم</string>
     <string name="cart_wallet">من محفظتي</string>
     <string name="cart_wallet_insufficient">رصيد محفظتك %1$s غير كافٍ لإتمام الطلب.</string>

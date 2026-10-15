@@ -12,14 +12,16 @@ package server
  3. سحب الأدمن من الخزينة والإيداع اليدويّ ليسا ربحاً — يظهران في كشف
     الخزينة فقط، وهنا رقماً «خارج الربح».
  4. مال انقبض لطلب لم يُسلَّم بعد «ربح معلّق» بسطر لحاله، ولا يدخل الصافي.
- 5. مكافآت الدعوات ومكافآت الأهداف سطران.
+ 5. مكافآت الدعوات ومكافآت الأهداف سطران — وصارت أربعة (٢٠٢٦-١٠-١٥): مكافآت
+    الأهداف · مكافآت يدويّة · مكافآت الدعوات · هدايا التسجيل (rewardSourceSQL).
 
 والكشف يتجمّع بالضبط:
 
 	هامش + عمولة المتجر + حصّة التوصيل − خصومات (± فروق تسوية)
 	− نصيب المندوب − خسائر الفاشلة والملغاة − تعويضات (+ مستردّ)
 	− نقص الصندوق − تسويات يدويّة إيداعاً − ديون مشطوبة
-	− مكافآت الدعوات − مكافآت الأهداف − مصروفات التشغيل + عقوبات = الصافي
+	− مكافآت الأهداف − مكافآت يدويّة − مكافآت الدعوات − هدايا التسجيل
+	− مصروفات التشغيل + عقوبات = الصافي
 
 والصافي يُحسب مستقلّاً: كلّ قيد في الخزينة ليس «خارج الربح» ولا «معلّقاً»،
 ناقصاً الديون المشطوبة في المدى (لا قيد لها في الدفتر — تُقرأ من طلبات الشطب).
@@ -72,7 +74,7 @@ const profitOutsideKinds = `'topup','payout','adjustment','order_payment','refun
 var treasuryEntriesCTE = `
 	WITH tr AS (SELECT user_id FROM wallets WHERE is_treasury LIMIT 1),
 	raw AS (
-		SELECT t.id, t.kind, t.amount, t.ref, t.note, t.created_at, ` + refUUID("t.ref") + ` AS ref_id
+		SELECT t.id, t.user_id, t.kind, t.amount, t.ref, t.note, t.created_at, ` + refUUID("t.ref") + ` AS ref_id
 		FROM wallet_transactions t JOIN tr ON tr.user_id = t.user_id
 	),
 	j AS (
@@ -104,8 +106,8 @@ var treasuryEntriesCTE = `
 				-- **ونقصُ صندوق المكتب سطرٌ لحاله** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يقع في «تعويضات».
 				WHEN j.kind = 'platform_expense' AND j.shortfall_id IS NOT NULL THEN 'shortfall'
 				WHEN j.kind = 'platform_expense' THEN 'compensation'
-				WHEN j.kind = 'reward' AND j.ref <> '' THEN 'referral'
-				WHEN j.kind = 'reward' THEN 'target'
+				-- **والمكافأةُ بمصدرها لا بفراغ مرجعها** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+				WHEN j.kind = 'reward' THEN ` + rewardSourceSQL("j") + `
 				WHEN j.kind = 'operating_expense' THEN 'opex'
 				WHEN j.kind = 'penalty' THEN 'penalty'
 				WHEN j.kind IN (` + profitOutsideKinds + `) THEN 'outside'
@@ -121,6 +123,40 @@ var treasuryEntriesCTE = `
 		FROM j
 	),
 	inr AS (SELECT * FROM c WHERE ` + profitRange("c.at") + `)`
+
+// ══════════════════════════════════════════════════════════════════════
+// **مصدرُ المكافأة — بوصلٍ لا بفراغ المرجع** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان التصنيفُ «مرجعٌ فارغ = هدف، وغيرُه = دعوة»** — فيخطئ مرّتين: مكافأةُ الدعوة عند
+// التسجيل مرجعُها فارغ (فتُعدّ هدفاً)، وهديّةُ التسجيل مرجعُها معرّفُ الزبون (فتُعدّ
+// دعوة)، **واليدويّةُ تختلط بالأهداف.** والآن:
+//
+//	هدفٌ ويدويّ  ←  مرجعُ القيد صفُّ الحافز (`incentives.for_target`) منذ ٢٠٢٦-١٠-١٥
+//	هديّةُ تسجيل ←  نصُّ القيد «هديّةُ حساب…» (يكتبه `GrantSignupBonus` وحدَه)،
+//	               أو مرجعُه صاحبُ المحفظة نفسُه
+//	دعوة         ←  نصُّ القيد «مكافأةُ دعوة…» (يكتبه `settle` وحدَه)
+//	والقديمُ     ←  أفضلَ جهد: نصُّ الخزينة «مكافأةُ هدفٍ صُرفت» أو «مكافأةٌ صُرفت»، وقيدُ
+//	               صاحبها بسبب صفّ حافزٍ له يطابق نصَّه، ومرجعٌ غيرُ فارغٍ دعوة،
+//	               وما بقي هدفٌ كما كان يُقرأ قبلها
+//
+// `t` اسمُ صفّ القيد (فيه `ref` و`note` و`user_id`). ويردّ: target · manual_reward ·
+// referral · signup.
+func rewardSourceSQL(t string) string {
+	ref := refUUID(t + ".ref")
+	return `(CASE
+		WHEN EXISTS (SELECT 1 FROM incentives ri WHERE ri.id = ` + ref + ` AND ri.for_target) THEN 'target'
+		WHEN EXISTS (SELECT 1 FROM incentives ri WHERE ri.id = ` + ref + `) THEN 'manual_reward'
+		WHEN ` + t + `.note LIKE 'هديّةُ حساب%' OR ` + t + `.ref = ` + t + `.user_id::text THEN 'signup'
+		WHEN ` + t + `.note LIKE 'مكافأةُ دعوة%' THEN 'referral'
+		WHEN ` + t + `.note LIKE 'مكافأةُ هدف%' OR ` + t + `.note LIKE 'مكافأةُ المرحلة%' THEN 'target'
+		WHEN ` + t + `.note = 'مكافأةٌ صُرفت' THEN 'manual_reward'
+		WHEN EXISTS (SELECT 1 FROM incentives ri WHERE ri.user_id = ` + t + `.user_id
+		               AND ri.kind = 'reward' AND ri.reason = ` + t + `.note AND NOT ri.for_target)
+		  THEN 'manual_reward'
+		WHEN ` + t + `.ref <> '' THEN 'referral'
+		ELSE 'target' END)`
+}
 
 // profitRangeOK يقرأ المدى من الرابط ويردّ الخطأ إن كان تاريخاً غير صالح أو
 // «من» بعد «إلى».
@@ -222,6 +258,8 @@ func (s *Server) platformProfit(ctx context.Context, from, to string) (platformP
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'recovered'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'referral'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'target'), 0),
+			COALESCE(sum(amount) FILTER (WHERE bucket = 'manual_reward'), 0),
+			COALESCE(sum(amount) FILTER (WHERE bucket = 'signup'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'opex'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'penalty'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'pending'), 0),
@@ -232,7 +270,8 @@ func (s *Server) platformProfit(ctx context.Context, from, to string) (platformP
 			COALESCE(sum(amount) FILTER (WHERE bucket NOT IN ('outside','pending')), 0)
 		FROM inr`, from, to).Scan(
 		&p.orderLedger, &p.LostFailed, &p.LostCancelled, &p.LostRefunded,
-		&p.Compensations, &p.Recovered, &p.Referrals, &p.Targets, &p.Opex,
+		&p.Compensations, &p.Recovered, &p.Referrals, &p.Targets, &p.ManualRewards,
+		&p.SignupBonuses, &p.Opex,
 		&p.Penalties, &p.Pending, &p.Outside, &p.Shortfalls, &p.AdjustmentCredits,
 		&p.Net); err != nil {
 		return p, err
@@ -318,8 +357,12 @@ type platformProfitSum struct {
 	LostRefunded  int64
 	Compensations int64
 	Recovered     int64
+	// **والمكافآتُ أربعةُ سطور** (قرارُ المالك ٢٠٢٦-١٠-١٥): الدعواتُ · الأهدافُ الآليّة ·
+	// اليدويّةُ · هدايا التسجيل — كانت سطرين يُفرَزان بفراغ المرجع فيختلطان.
 	Referrals     int64
 	Targets       int64
+	ManualRewards int64
+	SignupBonuses int64
 	Opex          int64
 	Penalties     int64
 	// **ونقصُ صندوق المكتب والتسويةُ اليدويّةُ إيداعاً والديونُ المشطوبة** (قرارُ المالك
@@ -396,8 +439,10 @@ func (p platformProfitSum) Lines() []profitLine {
 	lines = append(lines, p.LossLines()...)
 	return append(lines,
 		profitLine{"recovered", p.Recovered},
-		profitLine{"referrals", p.Referrals},
 		profitLine{"targets", p.Targets},
+		profitLine{"manual_rewards", p.ManualRewards},
+		profitLine{"referrals", p.Referrals},
+		profitLine{"signup_bonuses", p.SignupBonuses},
 		profitLine{"opex", p.Opex},
 		profitLine{"penalties", p.Penalties},
 	)
@@ -433,26 +478,35 @@ func partyTab(tab string) (role string, cols []partyCol, notRoles string) {
 		return `COALESCE(sum(t.amount) FILTER (WHERE ` + cond + `), 0)`
 	}
 	penalty := partyCol{"penalty", `COALESCE(sum(-t.amount) FILTER (WHERE t.kind = 'penalty'), 0)`}
+	// **والمكافأةُ بمصدرها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بالتصنيف نفسِه الذي يقرؤه كشفُ
+	// المنصّة (`rewardSourceSQL`)، فعمودُ الشخص ومجموعُ السطر لا يفترقان.
+	reward := func(src string) string {
+		return sumKind(`t.kind = 'reward' AND ` + rewardSourceSQL("t") + ` = '` + src + `'`)
+	}
 	switch tab {
 	case "customers":
 		// المندوب والسائق لهما تبويبهما — فلا يظهران هنا لأنّ معهما دور زبون.
 		return "customer", []partyCol{
-			{"referral", sumKind(`t.kind = 'reward' AND t.ref <> ''`)},
-			{"bonus", sumKind(`t.kind = 'reward' AND t.ref = ''`)},
+			{"referral", reward("referral")},
+			{"signup", reward("signup")},
 			{"compensation", sumKind(`t.kind = 'compensation'`)},
 			penalty,
 		}, `'sales','driver'`
 	case "reps":
 		return "sales", []partyCol{
 			{"commission", sumKind(`t.kind = 'commission'`)},
-			{"bonus", sumKind(`t.kind = 'reward'`)},
+			{"target_reward", reward("target")},
+			{"manual_reward", reward("manual_reward")},
+			{"referral", reward("referral")},
 			penalty,
 		}, ``
 	default:
 		return "driver", []partyCol{
 			{"delivery", sumKind(`t.kind = 'driver_earning'`)},
 			{"compensation", sumKind(`t.kind = 'compensation'`)},
-			{"bonus", sumKind(`t.kind = 'reward'`)},
+			{"target_reward", reward("target")},
+			{"manual_reward", reward("manual_reward")},
+			{"referral", reward("referral")},
 			penalty,
 		}, ``
 	}

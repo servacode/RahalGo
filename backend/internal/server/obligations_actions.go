@@ -268,7 +268,9 @@ func (s *Server) handleDecideObligationRequest(approve bool) http.HandlerFunc {
 			cap := authz.FinanceManage
 			if x.Kind == oblReqWriteOff {
 				cap = authz.FinanceWriteoffApprove
-				if approve && !s.hasCapability(r, cap) {
+				// **ورفضُ الشطب كموافقته** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يرفضه كلُّ من
+				// يملك `finance.manage`، **فيُسقط موظّفٌ قراراً ليس له أن يتّخذه.**
+				if !s.hasCapability(r, cap) {
 					return errWriteoffNotYours
 				}
 			}

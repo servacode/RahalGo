@@ -88,6 +88,8 @@
     <string name="err_offer_needs_title">العرض يحتاج عنواناً</string>
     <string name="err_bad_offer_kind">نوع العرض غير معروف</string>
     <string name="err_offer_amount_over_price">مبلغ الخصم يساوي سعر الصنف أو أكبر منه — فيصير الصنف مجاناً</string>
+    <string name="err_offer_platform_live">في عرض من رحّال غو على هالصنف</string>
+    <string name="err_offer_platform_live_until">في عرض من رحّال غو على هالصنف لحد %1$s</string>
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
     <string name="err_exchange_rate_required">اكتب سعر الصرف بصفحة «متجري» أول، لحتى نحسب أسعارك بالدولار</string>
@@ -614,7 +616,13 @@
     <string name="err_delivery_credit_exhausted">رصيد محفظتك ما بيكفي — اشحنها أو اختر الدفع نقداً</string>
     <string name="err_merchant_delivery_unpaid">محفظة المتجر ما بتكفي أجرة هالتوصيلة.</string>
     <string name="err_too_many_open_orders">لديك طلبات لم تسلم بعد. أكملها أولا ثم اطلب من جديد.</string>
-    <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقا</string>
+    <string name="err_invalid_promo">الكود غير موجود</string>
+    <string name="err_promo_min_order">الكود بيشتغل على طلب أكبر</string>
+    <string name="err_promo_min_order_x">الكود بيشتغل على طلب من %1$s وأكتر</string>
+    <string name="err_promo_already_used">استعملت هالكود قبل</string>
+    <string name="err_promo_first_order_only">الكود للطلب الأول بس</string>
+    <string name="err_promo_exhausted">الكود خلص</string>
+    <string name="err_promo_expired">الكود انتهى</string>
     <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>
     <string name="err_driver_required">يجب إسناد سائق أولا</string>
     <string name="err_cancel_window_passed">انقضت مهلة إلغاء الطلب. تواصل مع الدعم إن لزم.</string>

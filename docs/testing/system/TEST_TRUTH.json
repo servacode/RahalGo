@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 93,
-    "notify_targeted": 38,
+    "notify_sites": 96,
+    "notify_targeted": 39,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 235,
     "behaviour_settings": 191,
     "order_fields": 105,
-    "test_files": 585,
-    "test_funcs": 2355
+    "test_files": 589,
+    "test_funcs": 2373
   },
   "flows": [
     {
@@ -10253,6 +10253,24 @@
       "name": "TestPromo_OncePerUserSurvivesConcurrency",
       "file": "internal/orders/promo_race_test.go",
       "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPromoReasons_EachRejectionHasItsCode",
+      "file": "internal/orders/promo_reasons_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPromoReasons_PreviewSaysMinAndFreeDelivery",
+      "file": "internal/orders/promo_reasons_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPromoReasons_UsedAndFirstOrder",
+      "file": "internal/orders/promo_reasons_test.go",
+      "package": "orders",
       "orphan": true
     },
     {
@@ -27312,6 +27330,96 @@
     {
       "name": "TestTransfer_MerchantDeliveryRefused",
       "file": "internal/server/orders_board_rules_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_DualRoleCountedOnce",
+      "file": "internal/server/owner_1015_incentives_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_LoweringTargetPaysNow",
+      "file": "internal/server/owner_1015_incentives_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_ProposalNotifiesFinanceRejectionNotifiesProposer",
+      "file": "internal/server/owner_1015_incentives_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_StageNotificationSaysTheStage",
+      "file": "internal/server/owner_1015_incentives_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_SuspendedRepPaidOnReactivation",
+      "file": "internal/server/owner_1015_incentives_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits1015_RewardLinesSplitBySource",
+      "file": "internal/server/owner_1015_incentives_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_PendingSweepPaysReactivatedDriver",
+      "file": "internal/server/owner_1015_newapi_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestINC1015_StageTitleWording",
+      "file": "internal/server/owner_1015_newapi_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDEBT1015_PendingFilter",
+      "file": "internal/server/owner_1015_promos_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDEBT1015_RejectWriteoffNeedsApproveCapability",
+      "file": "internal/server/owner_1015_promos_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOFFER1015_AdminReplaceNeedsConfirmAndTellsMerchant",
+      "file": "internal/server/owner_1015_promos_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOFFER1015_FixedCutCappedBySalePrice",
+      "file": "internal/server/owner_1015_promos_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOFFER1015_PlatformOfferWinsOverMerchant",
+      "file": "internal/server/owner_1015_promos_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMO1015_BroadeningGoesBackToApproval",
+      "file": "internal/server/owner_1015_promos_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMO1015_ExpiredCodeEditableNotActivatable",
+      "file": "internal/server/owner_1015_promos_test.go",
       "package": "server",
       "orphan": true
     },

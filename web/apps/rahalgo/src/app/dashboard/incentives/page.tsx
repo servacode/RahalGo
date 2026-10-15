@@ -119,6 +119,8 @@ interface IncRequest {
   proposed_by: string;
   proposer_name: string;
   created_at: string;
+  /** **الدورُ الذي اقتُرح له** — ويُعرض في تبويبه وحدَه (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+  role?: Role | "";
 }
 
 interface Entry {
@@ -226,7 +228,8 @@ export default function IncentivesPage() {
     try {
       await api(`/api/v1/admin/users/${who.user_id}/incentive`, {
         method: "POST",
-        body: JSON.stringify({ kind, amount: Number(amount), reason: reason.trim() }),
+        // **والدورُ مع الطلب** — من له الدوران يُعدّ في التبويب الذي اقتُرح منه وحدَه.
+        body: JSON.stringify({ kind, amount: Number(amount), reason: reason.trim(), role }),
       });
       setGranting(null);
       setNotice(P.requestSent);
@@ -343,8 +346,8 @@ export default function IncentivesPage() {
   const roleRequests = useMemo(() => {
     if (!data || data === "failed") return [];
     const ids = new Set(data.standings.map((x) => x.user_id));
-    return requests.filter((r) => ids.has(r.user_id));
-  }, [data, requests]);
+    return requests.filter((r) => ids.has(r.user_id) && (!r.role || r.role === role));
+  }, [data, requests, role]);
 
   return (
     <PageContainer>
@@ -546,8 +549,9 @@ export default function IncentivesPage() {
                       <td className="p-3" data-label={P.progress}>
                         {x.target > 0 ? (
                           <div className="min-w-32 space-y-1">
-                            <span className="tabular-nums" dir="ltr">
-                              {`${fmtNum(x.done)} / ${fmtNum(x.target)}`}
+                            {/* **والوحدةُ بوحدة الدور** — عملاءُ للمندوب لا متاجر (٢٠٢٦-١٠-١٥). */}
+                            <span className="tabular-nums">
+                              {fill(P.progressOf, { done: fmtNum(x.done), target: fmtNum(x.target), unit })}
                             </span>
                             <div className="h-1.5 overflow-hidden rounded-full bg-ink-faint">
                               <div

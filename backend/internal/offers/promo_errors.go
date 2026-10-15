@@ -22,4 +22,9 @@ var (
 	ErrPromoNegative = httpx.NewError(http.StatusBadRequest, "promo_negative", "errors.promo_negative")
 	// ErrPromoExpired **تاريخُ انتهاءٍ مضى.**
 	ErrPromoExpired = httpx.NewError(http.StatusBadRequest, "promo_expiry_past", "errors.promo_expiry_past")
+	// ErrPromoActivateExpired **كودٌ انتهى لا يُفعَّل** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كعرضٍ
+	// منتهٍ (`ErrOfferExpired`): يُمدَّد تاريخُه أوّلاً. **وكان يُقبل فينقلب الزرُّ «سارٍ»
+	// والكودُ لا يعمل.**
+	ErrPromoActivateExpired = httpx.NewError(http.StatusConflict,
+		"promo_expired_activate", "errors.promo_expired_activate")
 )

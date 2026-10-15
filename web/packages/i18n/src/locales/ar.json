@@ -549,7 +549,8 @@
       "rewardPromise": "ابلغ هدفك وتنال {m}",
       "rewardEarned": "نلت مكافأة {m}",
       "partyTitle": "بلغت هدفك 🎉",
-      "partyBody": "أنجزت {n} طلبا هذا الشهر. المكافأة في محفظتك."
+      "partyBody": "أنجزت {n} طلبا هذا الشهر. المكافأة في محفظتك.",
+      "partyBodySales": "سجلت {n} عميلا هذا الشهر. المكافأة في محفظتك."
     },
     "stagingBanner": "بيئةُ تجربة — البياناتُ هنا ليست حقيقيّة",
     "drawerChip": "المتوقّع بالدرج"
@@ -759,7 +760,7 @@
     "item_unavailable": "أحد الأصناف غير متوفر حاليا",
     "out_of_zone": "العنوان خارج مناطق التغطية الحالية",
     "below_min_order": "قيمة الطلب أقل من الحد الأدنى لهذه المنطقة",
-    "invalid_promo": "كود الخصم غير صالح أو مستخدم سابقا",
+    "invalid_promo": "الكود غير موجود",
     "invalid_transition": "لا يمكن نقل الطلب لهذه الحالة",
     "driver_required": "يجب إسناد سائق أولا",
     "over_settle": "المبلغ يتجاوز ما بحوزة السائق",
@@ -1046,7 +1047,15 @@
     "dispute_resolution_pending": "على هذا النزاع اقتراح ينتظر الموافقة — يبت فيه أولا",
     "dispute_nothing_to_charge": "رصيد الطرف صفر الآن — لا شيء يخصم، والنزاع يبقى مفتوحا",
     "ticket_awaiting_finance": "تعويض هذه الشكوى بانتظار قرار المالية",
-    "cash_opening_late": "رصيد البداية بيتسجّل مرّة وحدة وقبل أي إغلاق — في إغلاق مسجّل أو بانتظار المراجعة"
+    "cash_opening_late": "رصيد البداية بيتسجّل مرّة وحدة وقبل أي إغلاق — في إغلاق مسجّل أو بانتظار المراجعة",
+    "promo_min_order": "الكود بيشتغل على طلب أكبر",
+    "promo_already_used": "استعملت هالكود قبل",
+    "promo_first_order_only": "الكود للطلب الأول بس",
+    "promo_exhausted": "الكود خلص",
+    "promo_expired": "الكود انتهى",
+    "promo_expired_activate": "هالكود انتهى — مدد تاريخ الانتهاء أول وبعدين فعّله",
+    "offer_platform_live": "في عرض من المنصة على هالصنف",
+    "offer_merchant_live": "في عرض من المتجر على هالصنف"
   },
   "admin": {
     "sliderPanel": {
@@ -1139,7 +1148,18 @@
       "apReject": "ارفض",
       "apDone": "تم",
       "kindPromo": "كود خصم",
-      "kindOffer": "خصم على صنف"
+      "kindOffer": "خصم على صنف",
+      "approvalNone": "هالكود ما بيحتاج موافقة المالية — بيشتغل فوراً.",
+      "approvalWhy": "هالكود بيروح لموافقة المالية لأن: {reasons}. وبيضل موقوف لحد ما توافق.",
+      "whyNoCap": "ما في سقف استخدامات",
+      "whyManyUses": "سقف الاستخدامات أكتر من {n}",
+      "whyPercent": "النسبة أكتر من {n}%",
+      "whyFixedNoMin": "مبلغ ثابت والحد الأدنى للطلب صفر",
+      "whyFixedOverMin": "المبلغ الثابت أكتر من {n}% من الحد الأدنى للطلب (يعني أكتر من {max})",
+      "whyBroaden": "شلت «للطلب الأول» أو «مرة لكل زبون» — هاد توسيع للكود",
+      "replaceTitle": "في عرض من المتجر على هالصنف",
+      "replaceBody": "في عرض من المتجر، بدك تستبدله؟ عرض المتجر بينزل وبيوصل لصاحب المتجر إشعار.",
+      "replaceConfirm": "استبدله"
     },
     "profits": {
       "title": "الأرباح",
@@ -1199,7 +1219,7 @@
       "lineWrittenOff": "ديون مشطوبة",
       "lineRecovered": "مبالغ مستردة (مطالبات وديون وتسويات بالخصم)",
       "lineReferrals": "مكافآت الدعوات",
-      "lineTargets": "مكافآت الأهداف والحوافز",
+      "lineTargets": "مكافآت الأهداف",
       "lineOpex": "مصروفات التشغيل (حسب يوم الصرف)",
       "linePenalties": "عقوبات محصلة",
       "lineNet": "صافي الربح",
@@ -1222,7 +1242,12 @@
       "exportLine": "البند",
       "exportAmount": "المبلغ",
       "lineFreeDelivery": "توصيل مجاني (عروض)",
-      "lineItemDiscounts": "خصومات الأصناف على حساب المنصة"
+      "lineItemDiscounts": "خصومات الأصناف على حساب المنصة",
+      "lineManualRewards": "مكافآت يدوية",
+      "lineSignupBonuses": "هدايا التسجيل",
+      "colTargetReward": "مكافآت الأهداف",
+      "colManualReward": "مكافآت يدوية",
+      "colSignup": "هدايا التسجيل"
     },
     "expenses": {
       "title": "مصروفات التشغيل",
@@ -4570,7 +4595,8 @@
         "state": "الحالة",
         "createdAt": "تاريخ الإنشاء",
         "age": "العمر بالأيام"
-      }
+      },
+      "pendingOnly": "ينتظر الموافقة"
     },
     "broadcast": {
       "title": "إعلان المنصة",
@@ -4657,7 +4683,7 @@
       "rewarded": "مكافآت",
       "penalized": "عقوبات",
       "noTarget": "لا هدف مضبوط — اضبطه من الإعدادات",
-      "pendingStores": "{n} متجر بانتظار اكتمال الشروط (الدوام · الموقع · الأصناف بصورها)",
+      "pendingStores": "{n} عميل بانتظار اكتمال الشروط (الدوام · الموقع · الأصناف بصورها)",
       "empty": "لا أحد في هذا الدور بعد",
       "grant": "مكافأة / عقوبة",
       "grantTitle": "مكافأة أو عقوبة",
@@ -4679,7 +4705,7 @@
       "stagesTitle": "مراحل الهدف",
       "stageLine": "المرحلة {n}: {target} {unit} = {reward}",
       "unitDriver": "طلب",
-      "unitSales": "متجر",
+      "unitSales": "عميل",
       "editInSettings": "تعديل من الإعدادات",
       "noStages": "لا مراحل مضبوطة لهذا الدور",
       "auto": "آلي",
@@ -4723,7 +4749,8 @@
       "targetBonus": "مكافأة هدف",
       "openLedger": "الكشف",
       "noResults": "لا أحد يطابق البحث",
-      "listSep": "، "
+      "listSep": "، ",
+      "progressOf": "{done} / {target} {unit}"
     },
     "offersPage": {
       "title": "العروض والخصومات",

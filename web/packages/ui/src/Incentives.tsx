@@ -54,8 +54,13 @@ interface Payload {
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
-/** @param path مسارُ الدور — `/api/v1/driver/incentives` أو مسارُ المندوب. */
-export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
+/**
+ * @param path مسارُ الدور — `/api/v1/driver/incentives` أو مسارُ المندوب.
+ * @param role **الدورُ** — يُختار به لفظُ الإنجاز: طلباتٌ للسائق وعملاءُ للمندوب
+ *   (قرارُ المالك ٢٠٢٦-١٠-١٥). وغيابُه يُقرأ من المسار.
+ */
+export function MyIncentives({ api, path, role }: { api: ApiFn; path: string; role?: "driver" | "sales" }) {
+  const isSales = role ? role === "sales" : /\/(rep|sales)\//.test(path);
   const [data, setData] = useState<Payload | null>(null);
   /**
    * **أيُعرض الاحتفال؟** — يُطفَأ بضغطة، ويُوسَم شهرُه في الجهاز.
@@ -179,7 +184,7 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
           <IconStar size={34} className="mx-auto text-warning" />
           <p className="mt-2 heading-card text-ink">{T.partyTitle}</p>
           <p className="mt-1 text-sm text-ink-muted">
-            {T.partyBody.replace("{n}", fmtNum(st.target))}
+            {(isSales ? T.partyBodySales : T.partyBody).replace("{n}", fmtNum(st.target))}
           </p>
           <Button variant="secondary" className="mt-3" onClick={dismissParty}>
             {m.common.confirm}

@@ -30,8 +30,9 @@ import {
   IconStatus,
   Money,
   FormActions,
+  Confirm,
 } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.offersPage;
@@ -353,6 +354,8 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  /** **على الصنف عرضٌ من المتجر** — يُسأل قبل استبداله (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+  const [askReplace, setAskReplace] = useState(false);
   const audience = useAudience(itemID);
 
   /** **والصنفُ يُبحث لا يُكتب معرّفُه** — لا أحدَ يحفظ `uuid`. */
@@ -370,11 +373,12 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
     return () => clearTimeout(t);
   }, [itemQuery, itemID]);
 
-  async function submit() {
+  async function submit(replace = false) {
     // **والضغطُ الثاني لا يُرسل ثانيةً.**
     if (busy) return;
     setBusy(true);
     setError("");
+    setAskReplace(false);
     try {
       const o = await api<Offer>("/api/v1/admin/offers", {
         method: "POST",
@@ -388,6 +392,7 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
           borne_by: "platform",
           ends_on: endsOn || undefined,
           notify,
+          ...(replace ? { replace: true } : {}),
         }),
       });
       if (o.approval_state === "pending") {
@@ -397,6 +402,11 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
       }
       onSaved();
     } catch (e) {
+      // **وعرضُ المتجر لا يُستبدل إلّا بتأكيد** — الخادمُ يردّ `offer_merchant_live`.
+      if (e instanceof ApiError && e.body.code === "offer_merchant_live") {
+        setAskReplace(true);
+        return;
+      }
       // **والخطأُ داخل النافذة** — كان تحتها فلا يُرى.
       setError(errorText(e));
     } finally {
@@ -406,6 +416,16 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
 
   return (
     <Modal open onClose={onClose} title={P.create}>
+      <Confirm
+        open={askReplace}
+        title={O.replaceTitle}
+        body={O.replaceBody}
+        confirmLabel={O.replaceConfirm}
+        tone="primary"
+        busy={busy}
+        onConfirm={() => void submit(true)}
+        onCancel={() => setAskReplace(false)}
+      />
       <div className="space-y-3">
         <Input id="offer-title" label={P.fTitle} value={title} onChange={(e) => setTitle(e.target.value)} />
         <Input id="offer-body" label={P.fBody} value={body} onChange={(e) => setBody(e.target.value)} />

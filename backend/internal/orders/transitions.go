@@ -564,7 +564,8 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		// **وصفرٌ يعني «لم يبلغ أو نالها من قبل»** — ولا يُبشَّر أحدٌ
 		// بمالٍ لم يُقيَّد.
 		if paid := s.targets.GrantTargetIfReached(ctx, *driverID, "driver"); paid > 0 {
-			s.notifyTargetReached(ctx, *driverID, paid)
+			s.notifyTargetReached(ctx, *driverID, paid,
+				s.targets.TargetTitle(ctx, *driverID, "driver"))
 		}
 	}
 

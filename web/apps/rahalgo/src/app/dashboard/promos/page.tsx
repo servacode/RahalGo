@@ -367,6 +367,36 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
   );
 }
 
+/** **حدّا الموافقة** — بحرف الخادم (`offers.FreePercent` و`offers.FreeUses`). */
+const FREE_PERCENT = 20;
+const FREE_USES = 50;
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **لماذا يحتاج الكودُ موافقةَ الماليّة — بأسبابه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كان سطرٌ ثابتٌ يقول «لحد 20% و50 استخدام»** — فكودٌ ثابتٌ بلا حدٍّ أدنى يذهب
+ * للماليّة ولا يُقال لماذا. **والأسبابُ بحرف `needsApproval` في الخادم**: بلا سقف ·
+ * فوق ٥٠ استخداماً · نسبةٌ فوق ٢٠ · مبلغٌ ثابتٌ فوق ٢٠٪ من الحدّ الأدنى (والصفرُ منه).
+ */
+function approvalReasons(kind: Promo["kind"], value: number, minOrder: number, uses: number | null): string[] {
+  const out: string[] = [];
+  if (uses === null) out.push(O.whyNoCap);
+  else if (uses > FREE_USES) out.push(O.whyManyUses.replace("{n}", fmtNum(FREE_USES)));
+  if (kind === "percent" && value > FREE_PERCENT) out.push(O.whyPercent.replace("{n}", fmtNum(FREE_PERCENT)));
+  if (kind === "fixed" && value * 100 > minOrder * FREE_PERCENT) {
+    out.push(
+      minOrder <= 0
+        ? O.whyFixedNoMin
+        : O.whyFixedOverMin
+            .replace("{n}", fmtNum(FREE_PERCENT))
+            .replace("{max}", fmtMoney(Math.floor((minOrder * FREE_PERCENT) / 100))),
+    );
+  }
+  return out;
+}
+
 /** **يومُ الانتهاء كما يُعرض في الحقل** — بتوقيت دمشق. */
 function damascusDay(iso: string | null): string {
   if (!iso) return "";
@@ -398,6 +428,12 @@ function PromoModal({
   const [busy, setBusy] = useState(false);
 
   const uses = maxUses === "" ? null : Number(maxUses);
+  const reasons = approvalReasons(kind, Number(value) || 0, Number(minOrder) || 0, uses);
+  // **ورفعُ قيد الجمهور يعيد الكودَ للماليّة** — إن كان فوق الحدّ (٢٠٢٦-١٠-١٥).
+  const broadening =
+    editing && ((promo.first_order_only && !firstOnly) || (promo.once_per_user && !oncePerUser));
+  if (broadening && reasons.length > 0) reasons.push(O.whyBroaden);
+  const originalDay = damascusDay(promo?.expires_at ?? null);
   const perUse = kind === "percent" ? Number(cap) || 0 : kind === "fixed" ? Number(value) || 0 : 0;
   const preview =
     uses === null
@@ -427,7 +463,13 @@ function PromoModal({
           body: JSON.stringify({
             ...common,
             ...(uses === null ? { clear_max_uses: true } : { max_uses: uses }),
-            ...(expiresOn === "" ? { clear_expiry: true } : { expires_on: expiresOn }),
+            // **والتاريخُ يُرسَل إن تبدّل وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كودٌ منتهٍ كان
+            // لا يُعدَّل فيه حرف: النافذةُ تعيد تاريخَه فيُردّ «تاريخُ الانتهاء مضى».
+            ...(expiresOn === originalDay
+              ? {}
+              : expiresOn === ""
+                ? { clear_expiry: true }
+                : { expires_on: expiresOn }),
           }),
         });
       } else {
@@ -545,7 +587,9 @@ function PromoModal({
           />
         </div>
         {preview && <p className="text-sm font-medium">{preview}</p>}
-        <p className="text-xs text-ink-muted">{O.approvalHint}</p>
+        <p className="text-xs text-ink-muted">
+          {reasons.length > 0 ? O.approvalWhy.replace("{reasons}", reasons.join(m.common.listSep)) : O.approvalNone}
+        </p>
         {notice && <Alert tone="info">{notice}</Alert>}
         {error && <Alert>{error}</Alert>}
         <FormActions submit onCancel={onClose} busy={busy} />

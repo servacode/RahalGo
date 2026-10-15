@@ -146,11 +146,11 @@ func (s *Service) DecideAlert(ctx context.Context, q dbtx.Querier, incentiveID, 
 	if note == "" {
 		return "", ErrNeedsReason
 	}
-	var userID string
+	var userID, role string
 	var amount int64
 	err := q.QueryRow(ctx, `
-		SELECT user_id::text, amount FROM incentives
-		 WHERE id = $1::uuid AND for_target AND period IS NOT NULL`, incentiveID).Scan(&userID, &amount)
+		SELECT user_id::text, amount, COALESCE(target_role, '') FROM incentives
+		 WHERE id = $1::uuid AND for_target AND period IS NOT NULL`, incentiveID).Scan(&userID, &amount, &role)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
@@ -161,7 +161,7 @@ func (s *Service) DecideAlert(ctx context.Context, q dbtx.Querier, incentiveID, 
 	if decision == "clawback" {
 		id, err := s.Propose(ctx, q, Proposal{
 			Actor: actor, UserID: userID, Kind: KindPenalty, Amount: amount,
-			Note: note, Source: "alert", AlertIncentiveID: incentiveID,
+			Note: note, Source: "alert", AlertIncentiveID: incentiveID, Role: role,
 		})
 		if err != nil {
 			return "", err

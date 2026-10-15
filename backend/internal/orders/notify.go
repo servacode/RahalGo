@@ -660,13 +660,19 @@ func (s *Service) offerTTL(ctx context.Context, orderID string) time.Duration {
 //
 // **وهدفٌ لا يُبشَّر ببلوغه لا يحفّز** — يراه السائقُ رقماً زاد في
 // محفظته بلا سبب، **فلا يربطه بما فعل.**
-func (s *Service) notifyTargetReached(ctx context.Context, driverID string, amount int64) {
+//
+// **والعنوانُ بلفظ المرحلة** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يقوله مُصرِّفُ الأهداف؛
+// وفراغُه يقع على «أنجزت هدف الشهر».
+func (s *Service) notifyTargetReached(ctx context.Context, driverID string, amount int64, title string) {
 	if s.notify == nil || amount <= 0 {
 		return
 	}
+	if title == "" {
+		title = t.targetReached
+	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: driverID, Kind: notifications.KindWallet,
-		Title:  t.targetReached,
+		Title:  title,
 		Body:   strconv.FormatInt(amount, 10) + " " + currencyWord,
 		Entity: "wallet", Href: "/portal/wallet",
 		Apps: []string{notifications.AppDriver},
