@@ -71,4 +71,22 @@ class MerchantDeliveryTripTest {
         val std = DriverOrder(status = "on_the_way", cashDue = 9000)
         assertEquals(CashFrom.RECIPIENT, cashFrom(std, pickedUp = true))
     }
+
+    /** **«إحضار»: من يقف عند نقطة الاستلام يدفع عندها** (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+    @Test
+    fun `fetch reverses who pays where — and the collect amount is read`() {
+        val o = json.decodeFromString(
+            DriverOrder.serializer(),
+            """{"id":"x","status":"assigned","kind":"merchant_delivery","fee_payer":"recipient",
+               "cash_due":500,"delivery_mode":"fetch","collect_amount":25000}""",
+        )
+        assertEquals(true, isFetch(o))
+        assertEquals(25000L, collectForStore(o))
+        assertEquals(CashFrom.STORE, cashFrom(o, pickedUp = false))
+        assertEquals(CashFrom.NONE, cashFrom(o, pickedUp = true))
+        val mc = o.copy(feePayer = "merchant_cash")
+        assertEquals(CashFrom.NONE, cashFrom(mc, pickedUp = false))
+        assertEquals(CashFrom.RECIPIENT, cashFrom(mc, pickedUp = true))
+        assertNull(collectForStore(delivery("assigned", true)))
+    }
 }

@@ -273,29 +273,27 @@ func TestMDA05_AutoAcceptSweepCharges(t *testing.T) {
 	}
 }
 
-// TestMDA06_OpenDebtAcceptsWithoutBalance **الدينُ المفتوح** (قرارُ المالك ٢٠٢٦-١٠-٠٥:
-// «نقبل الرقم السالب وبعدها المتجر يسوّي الحساب»): **لا محفظةَ ولا سقف — ويُقبل
-// القبولُ ويُقيَّد ديناً على المتجر.**
-func TestMDA06_OpenDebtAcceptsWithoutBalance(t *testing.T) {
+// TestMDA06_OpenDebtSettingIgnored **مفتاحُ «الدين المفتوح» متروك** (قرارُ المالك ٢٠٢٦-١٠-١٥):
+// كان مشتعلاً افتراضاً فيُقبل الطلبُ بلا رصيدٍ ويُقيَّد ديناً بلا حدّ. **وصار لا يُقرأ** —
+// مشتعلاً يُردّ الطلبُ كما يُردّ مطفأً، ولا دين.
+func TestMDA06_OpenDebtSettingIgnored(t *testing.T) {
 	h := New(t)
 	h.Setting("delivery.merchant_debt_open", "true")
 	m := newMDFx(t, h, "منطقةُ MDA-06")
 	base := mdaBaseline(t, h)
 
-	id := m.create(t, h, "merchant", uniq("mda06"))
-	m.accept(t, h, id)
-	if st := h.statusOf(id); st == "pending" {
-		t.Fatalf("**الدينُ مفتوحٌ والقبولُ رُدّ** — الحال %s", st)
+	r := h.POSTKey(m.url("/deliveries"), m.fx.Tok, uniq("mda06"), m.body("merchant"))
+	if r.Code != http.StatusPaymentRequired || r.Err() != "delivery_credit_exhausted" {
+		t.Fatalf("**الدينُ المفتوحُ ما زال يُقبل**: %d / %s", r.Code, r.Err())
 	}
 	var owed int64
 	if err := h.Pool.QueryRow(ctxBG(), `
 		SELECT COALESCE(sum(amount), 0) FROM financial_obligations
-		 WHERE party_kind = 'merchant' AND party_id = $1::uuid AND order_id = $2::uuid`,
-		m.fx.M.ID, id).Scan(&owed); err != nil {
+		 WHERE party_kind = 'merchant' AND party_id = $1::uuid`, m.fx.M.ID).Scan(&owed); err != nil {
 		t.Fatalf("الدين: %v", err)
 	}
-	if owed <= 0 {
-		t.Fatalf("**قُبلت ولم يُقيَّد دين** — %d", owed)
+	if owed != 0 {
+		t.Fatalf("**قُيّد دينٌ %d**", owed)
 	}
 	mdaNoNewViolations(t, h, base)
 }

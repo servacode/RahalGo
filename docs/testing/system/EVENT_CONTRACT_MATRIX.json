@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 89,
+    "emit_sites": 91,
     "realtime_publishers": 23,
     "rooms": 5,
     "untargeted_user_sites": 33
@@ -103,7 +103,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 381,
+      "line": 394,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -131,6 +131,24 @@
     {
       "file": "internal/orders/merchant_blocked.go",
       "line": 203,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/merchant_late_cancel.go",
+      "line": 70,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/merchant_late_cancel.go",
+      "line": 85,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -484,7 +502,7 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1261,
+      "line": 1305,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -1196,7 +1214,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 387,
+      "line": 400,
       "room": "driver:*"
     },
     {
@@ -1226,12 +1244,12 @@
     },
     {
       "file": "internal/orders/rotation.go",
-      "line": 784,
+      "line": 790,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/rotation.go",
-      "line": 785,
+      "line": 791,
       "room": "ops"
     },
     {

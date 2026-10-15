@@ -7954,6 +7954,14 @@
         {
           "name": "fee_payer",
           "type": "string"
+        },
+        {
+          "name": "delivery_mode",
+          "type": "string"
+        },
+        {
+          "name": "collect_amount",
+          "type": "?int64"
         }
       ]
     },

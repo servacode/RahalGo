@@ -47,6 +47,11 @@ const (
 	// CauseFailedOrderDriver **خسارةُ طلبٍ فشل بذنب السائق وحمّلها المكتبُ إيّاه**
 	// كلَّها أو نسبةً منها (قرارُ المالك ٢٠٢٦-١٠-١٥، هجرة `0440`) — مصدرُه معرّفُ الطلب.
 	CauseFailedOrderDriver = "failed_order_driver"
+	// CauseDeliveryFailedRecipient **أجرةُ توصيلةٍ فشلت بذنب المستلِم والمستلِمُ دافعُها،
+	// ومحفظةُ المتجر لا تكفيها** (قرارُ المالك ٢٠٢٦-١٠-١٥، هجرة `0443`) — مصدرُه معرّفُ الطلب.
+	// **وهو الاستثناءُ الوحيدُ من «لا دينَ على أجرة توصيلة»**: كلفةٌ وقعت فعلاً (قاد السائقُ
+	// وقبض أجرَه) والمتجرُ يحملها كأنّها سُلّمت.
+	CauseDeliveryFailedRecipient = "delivery_failed_recipient"
 )
 
 // طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
@@ -72,6 +77,8 @@ var causeWords = map[string]string{
 	CausePenaltyRemainder:  "باقي عقوبة",
 	CauseDisputeRemainder:  "باقي مطالبة",
 	CauseFailedOrderDriver: "خسارة طلب فشل",
+	// (قرارُ المالك ٢٠٢٦-١٠-١٥.)
+	CauseDeliveryFailedRecipient: "أجرة توصيلة فشلت بذنب المستلم",
 }
 
 // CauseWords السببُ بالعربيّ — ومجهولُه «دين».

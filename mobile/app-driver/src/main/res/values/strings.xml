@@ -546,6 +546,9 @@
     <!-- ملاحظات تجربة ٢٠٢٦-١٠-١٢ -->
     <string name="kind_standard">طلب عادي</string>
     <string name="kind_delivery">لدي توصيلة</string>
+    <!-- قرارات المالك ٢٠٢٦-١٠-١٥ -->
+    <string name="kind_fetch">لدي توصيلة — إحضار</string>
+    <string name="trip_collect_for_store">ادفع للمتجر %1$s من جيبك، واقبض من المستلم %1$s</string>
     <string name="kind_purchase">طلب مشتريات</string>
     <string name="kind_amanah">طلب أمانة</string>
     <string name="card_pay_recipient">من المستلم</string>

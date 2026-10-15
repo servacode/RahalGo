@@ -232,6 +232,10 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 StatusPill(d.status)
             }
             Hairline()
+            // **«إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — العنوانُ مكانُ الاستلام والوجهةُ متجرُك.
+            if (d.deliveryMode == "fetch") {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.md_row_fetch), strong = true)
+            }
             InfoLine(com.rahalgo.ui.R.drawable.ic_user, d.recipientName, strong = true)
             InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
             InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
@@ -252,6 +256,10 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                     d.fee.toString(),
                 ),
             )
+            // **وما يقبضه السائقُ من المستلِم لك** — خارجَ حساب المنصّة (٢٠٢٦-١٠-١٥).
+            d.collectAmount?.takeIf { it > 0 }?.let {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_wallet, stringResource(R.string.md_row_collect, it.toString()))
+            }
         }
         if (d.status in cancellable) {
             Spacer(Modifier.height(14.dp))

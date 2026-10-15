@@ -426,6 +426,11 @@ func (s *Service) sweepAutoAccept(ctx context.Context) {
 		}
 		if _, err := s.Transition(ctx, "", []string{"ops"}, id,
 			to, autoAcceptNote); err != nil {
+			// **وتوصيلةٌ لا يكفي متجرَها رصيدُه تبقى معلَّقةً — ويُخبَر المكتبُ مرّةً**
+			// (قرارُ المالك ٢٠٢٦-١٠-١٥) — لا سطرَ سجلٍّ كلَّ ثلاثين ثانيةً لا يقرؤه أحد.
+			if errors.Is(err, ErrMerchantDeliveryUnpaid) {
+				s.flagMerchantDeliveryUnpaid(ctx, id)
+			}
 			s.logger.Warn("القبولُ التلقائيّ تعثّر", "order", id, "error", err)
 			continue
 		}

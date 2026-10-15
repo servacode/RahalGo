@@ -110,7 +110,11 @@ const orderSelect = `
 	       -- **ومشوارُ إرجاع البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وجهتُه ومتى سُلّمت.
 	       o.return_to, o.goods_handed_at,
 	       -- **وآخرُ ظهورٍ للسائق** — متى وصل آخرُ موضعٍ منه (للمكتب وحدَه).
-	       dr.last_location_at
+	       dr.last_location_at,
+	       -- **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	       -- للتوصيلة وحدَها، وفراغٌ لغيرها.
+	       CASE WHEN o.kind = 'merchant_delivery' THEN o.delivery_mode ELSE '' END,
+	       o.collect_amount
 	FROM orders o
 	-- **والزبونُ يُضمّ يساراً** — التوصيلةُ لا زبونَ لها (customer_id فارغ).
 	-- **وضمٌّ صلبٌ يُسقطها من كلّ قراءة** — وهي علّةُ الخاصِّ مع المتجر بعينها.
@@ -152,7 +156,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items,
 		&o.ParcelNote, &o.FeePayer, &o.DropoffKnown, &o.PickupNote,
-		&o.ReturnTo, &o.GoodsHandedAt, &o.DriverSeenAt)
+		&o.ReturnTo, &o.GoodsHandedAt, &o.DriverSeenAt,
+		&o.DeliveryMode, &o.CollectAmount)
 	if err != nil {
 		return nil, err
 	}

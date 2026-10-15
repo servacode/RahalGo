@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 91,
+    "notify_sites": 93,
     "notify_targeted": 37,
     "publish_rooms": [
       "customer",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 235,
     "behaviour_settings": 191,
-    "order_fields": 103,
-    "test_files": 578,
-    "test_funcs": 2314
+    "order_fields": 105,
+    "test_files": 579,
+    "test_funcs": 2324
   },
   "flows": [
     {
@@ -9740,7 +9740,7 @@
       "orphan": true
     },
     {
-      "name": "TestMerchantDelivery_FailAtDoor_PlatformPays",
+      "name": "TestMerchantDelivery_FailAtDoor_RealFault",
       "file": "internal/orders/door_resolution_test.go",
       "package": "orders_test",
       "orphan": true
@@ -17811,6 +17811,66 @@
       "orphan": true
     },
     {
+      "name": "TestMD1015_01_WalletShortRefusedNoDebt",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_02_MerchantCashCollectedAtPickup",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_03_RecipientFaultWalletNoRefund",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_04_RecipientFaultRecipientPayer",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_05_DriverFaultDriverFull",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_06_PlatformFaultRefundsCashAndRequestsComp",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_07_MerchantCancelAtPickupWarns",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_08_FeeFromStoreToRecipient",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_09_CollectAmountDisplayOnly",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMD1015_10_FetchStopsReversed",
+      "file": "internal/qa/merchant_delivery_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMDA01_PendingNotInDriverQueueUntilOfficeAccepts",
       "file": "internal/qa/merchant_delivery_approval_test.go",
       "package": "qa",
@@ -17841,7 +17901,7 @@
       "orphan": true
     },
     {
-      "name": "TestMDA06_OpenDebtAcceptsWithoutBalance",
+      "name": "TestMDA06_OpenDebtSettingIgnored",
       "file": "internal/qa/merchant_delivery_approval_test.go",
       "package": "qa",
       "orphan": true
@@ -17895,7 +17955,7 @@
       "orphan": true
     },
     {
-      "name": "TestMD03_DebtPathAndVoid",
+      "name": "TestMD03_NoDebtEvenWithCreditLimit",
       "file": "internal/qa/merchant_delivery_test.go",
       "package": "qa",
       "orphan": true

@@ -140,10 +140,23 @@ func chargeDriverLoss(ctx context.Context, q dbtx.Querier, orderID, driverID, ac
 	if in.Fault != FaultDriver || in.DriverShare == DriverSharePlatform || driverID == "" {
 		return nil
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وفي «لدي توصيلة» الخسارةُ ما رُدّ للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **لا بضاعةَ دفعت المنصّةُ ثمنَها** — فربحُها على التوصيلة الفاشلة صفرٌ لا سالب،
+	// **ودينٌ من «السالب» يبقى صفراً أبداً** فيصير خيارُ «على السائق» بلا أثر. **والكلفةُ
+	// الحقيقيّةُ أجرةٌ ردّتها المنصّةُ للمتجر** (محفظتُه أو نقدُه عند الاستلام) لأنّ السائقَ
+	// لم يوصل — **فهي ما يحمله السائقُ كلَّها أو بنسبتها.** وما لم يُدفع (المستلِمُ دافعٌ
+	// لم يُقبض منه شيء) لا كلفةَ فيه.
 	var posted int64
 	if err := q.QueryRow(ctx, `
-		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
-		 WHERE ref = $1 AND kind = 'platform_profit'`, orderID).Scan(&posted); err != nil {
+		SELECT CASE WHEN o.kind = 'merchant_delivery'
+		            THEN -COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                            WHERE t.ref = $1 AND t.kind = 'refund'), 0)
+		            ELSE COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                           WHERE t.ref = $1 AND t.kind = 'platform_profit'), 0) END
+		  FROM orders o WHERE o.id = $1::text::uuid`, orderID).Scan(&posted); err != nil {
 		return err
 	}
 	debt := DriverLossShare(-posted, in.DriverShare, in.DriverPercent)

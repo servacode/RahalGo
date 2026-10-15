@@ -501,11 +501,26 @@ fun prepState(order: DriverOrder, zone: java.time.ZoneId = com.rahalgo.ui.SYRIA_
  * او مشتريات او توصيلة») — كانت البطاقةُ تقول «طلب خاص» أو «متجر» فلا يعرف ما يقبل.
  */
 fun kindLabel(order: DriverOrder): Int = when {
+    isFetch(order) -> R.string.kind_fetch
     order.kind == "merchant_delivery" -> R.string.kind_delivery
     order.kind == "custom" && order.customMode == "amanah" -> R.string.kind_amanah
     order.kind == "custom" -> R.string.kind_purchase
     else -> R.string.kind_standard
 }
+
+/**
+ * **«إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يستلم من العنوان ويسلّم للمتجر. **والخادمُ يقلب
+ * الوقفتين** فيمشي التطبيقُ طريقَه كما يمشي كلَّ طلب؛ وهنا تُقال الكلماتُ وحدَها.
+ */
+fun isFetch(order: DriverOrder): Boolean =
+    order.kind == "merchant_delivery" && order.deliveryMode == "fetch"
+
+/**
+ * **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — خارجَ حساب
+ * المنصّة وصندوقه. وفارغٌ لا شيء.
+ */
+fun collectForStore(order: DriverOrder): Long? =
+    order.collectAmount?.takeIf { it > 0 && order.kind == "merchant_delivery" }
 
 /** **أجرةُ المنصّة مفروضة** — لا يغيّرها السائق، فتُعرض رقماً لا «تتفق». */
 fun fixedCustomFee(order: DriverOrder): Long? =
@@ -522,7 +537,13 @@ fun itemsText(order: DriverOrder): String = order.items.joinToString("\n") { it 
 
 fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {
     if (order.cashDue <= 0) return CashFrom.NONE
-    val fromStore = order.kind == "merchant_delivery" && order.feePayer == "merchant_cash"
+    // **ومن يقف عند نقطة الاستلام يدفع عندها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — المتجرُ في «توصيل»،
+    // **والمستلِمُ في «إحضار»** (والخادمُ قلب الوقفتين، فـ`STORE` هنا «عند الاستلام»).
+    val fromStore = order.kind == "merchant_delivery" && if (isFetch(order)) {
+        order.feePayer == "recipient"
+    } else {
+        order.feePayer == "merchant_cash"
+    }
     return when {
         fromStore && !pickedUp -> CashFrom.STORE
         fromStore -> CashFrom.NONE

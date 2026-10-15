@@ -238,17 +238,17 @@ func TestMD02_CancelBeforePickupRefundsWallet(t *testing.T) {
 	}
 }
 
-// TestMD03_DebtPathAndVoid **لا تكفي المحفظة ⇒ دينٌ تحت السقف · والإلغاءُ يُسقطه.**
-func TestMD03_DebtPathAndVoid(t *testing.T) {
+// TestMD03_NoDebtEvenWithCreditLimit **لا دينَ على أجرة توصيلة — ولو رُفع سقفُ المتجر**
+// (قرارُ المالك ٢٠٢٦-١٠-١٥). **كان السقفُ يفتح ديناً تحته**؛ وصار السقفُ لا يُقرأ، والمحفظةُ
+// وحدَها تدفع أو يختار النقد.
+func TestMD03_NoDebtEvenWithCreditLimit(t *testing.T) {
 	h := New(t)
-	h.Setting("delivery.merchant_debt_open", "false") // **السقفُ موضوعُ الفحص**
 	m := newMDFx(t, h, "منطقةُ MD-03")
-	// **بلا سقفٍ لا دين** — يُردّ بلفظه لا بـ٥٠٠.
 	r := h.POSTKey(m.url("/deliveries"), m.fx.Tok, uniq("md03a"), m.body("merchant"))
-	if r.Code != http.StatusPaymentRequired {
-		t.Fatalf("بلا رصيدٍ ولا سقف ⇒ 402 — والردّ %d / %s", r.Code, r.Err())
+	if r.Code != http.StatusPaymentRequired || r.Err() != "delivery_credit_exhausted" {
+		t.Fatalf("بلا رصيد ⇒ 402 — والردّ %d / %s", r.Code, r.Err())
 	}
-	// **والسقفُ من باب الإدارة** — ولا يرفعه المتجرُ لنفسه.
+	// **والسقفُ من باب الإدارة** — ولا يرفعه المتجرُ لنفسه، **ولا يفتح ديناً بعد اليوم.**
 	credit := "/api/v1/admin/merchants/" + m.fx.M.ID + "/delivery-credit"
 	if r := h.PATCH(credit, m.fx.Tok, map[string]any{"limit": 1000}); r.Code < 400 {
 		t.Fatalf("**المتجرُ رفع سقفَ دينه بنفسه**: %d", r.Code)
@@ -256,29 +256,14 @@ func TestMD03_DebtPathAndVoid(t *testing.T) {
 	if r := h.PATCH(credit, m.admin.Token, map[string]any{"limit": 1000}); r.Code != http.StatusOK {
 		t.Fatalf("ضبطُ السقف: %d / %s", r.Code, r.Err())
 	}
-	if r := h.GET(credit, m.admin.Token); r.Code != http.StatusOK || r.JSON()["limit"] != float64(1000) {
-		t.Fatalf("قراءةُ السقف: %d / %s", r.Code, r)
+	r = h.POSTKey(m.url("/deliveries"), m.fx.Tok, uniq("md03b"), m.body("merchant"))
+	if r.Code != http.StatusPaymentRequired {
+		t.Fatalf("**سقفُ ١٠٠٠ فتح ديناً**: %d / %s", r.Code, r.Err())
 	}
-	id := m.create(t, h, "merchant", uniq("md03b"))
 	var debt int64
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT debt FROM merchants WHERE id = $1`, m.fx.M.ID).Scan(&debt)
 	if debt != 0 {
-		t.Fatalf("**دينٌ %d قبل قبول المكتب** — والدينُ يُكتب عند القبول", debt)
-	}
-	m.accept(t, h, id)
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT debt FROM merchants WHERE id = $1`, m.fx.M.ID).Scan(&debt)
-	if debt != 500 {
-		t.Fatalf("**دينُ المتجر %d والمنتظَر 500**", debt)
-	}
-	if c := h.POST("/api/v1/merchant/deliveries/"+id+"/cancel", m.fx.Tok, map[string]any{}); c.Code != http.StatusOK {
-		t.Fatalf("الإلغاء: %d / %s", c.Code, c.Err())
-	}
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT debt FROM merchants WHERE id = $1`, m.fx.M.ID).Scan(&debt)
-	var open int
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM financial_obligations
-		WHERE order_id = $1 AND closed_at IS NULL`, id).Scan(&open)
-	if debt != 0 || open != 0 {
-		t.Fatalf("**بعد الإلغاء دينٌ %d والتزاماتٌ مفتوحة %d** — والمنتظَرُ صفران", debt, open)
+		t.Fatalf("**دينُ المتجر %d والمنتظَر 0**", debt)
 	}
 }
 

@@ -218,11 +218,15 @@ var OrderPrivacy = map[string]FieldRule{
 	// ── الطلبُ الخاصّ ──────────────────────────────────────────────
 	// **«لدي توصيلة»** (الخطوة ١٨) — للسائق والإدارة، **وللمتجر في توصيلته وحدَها**
 	// (`AudienceMerchantDelivery`) لا في جمهوره العامّ.
-	"parcel_note":         {Ref: "ما يحمله السائق — كتبه المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"driver_fee":          {Ref: "قسمةُ الأجرة بين السائق والمنصّة — للمكتب وحدَه (٢٠٢٦-١٠-١٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"fee_payer":           {Ref: "من يدفع الأجرة — ومن يقبض منه السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"pickup_note":         {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"dropoff_known":       {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"parcel_note":   {Ref: "ما يحمله السائق — كتبه المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"driver_fee":    {Ref: "قسمةُ الأجرة بين السائق والمنصّة — للمكتب وحدَه (٢٠٢٦-١٠-١٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"fee_payer":     {Ref: "من يدفع الأجرة — ومن يقبض منه السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"pickup_note":   {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"dropoff_known": {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق والإدارة،
+	// **وللمتجر في توصيلته وحدَها** (`AudienceMerchantDelivery`). والمبلغُ عرضٌ لا يدخل الدفتر.
+	"delivery_mode":       {Ref: "توصيلٌ أم إحضار — ترتيبُ وقفتَي السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"collect_amount":      {Ref: "ما يدفعه السائقُ للمتجر ويقبضه من المستلِم — خارجَ الدفتر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_request":      {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_agreed_at":    {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_goods_amount": {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

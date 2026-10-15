@@ -376,6 +376,16 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		return nil, err
 	}
 
+	// **والمتجرُ يُلغي توصيلتَه والسائقُ عنده** (قرارُ المالك ٢٠٢٦-١٠-١٥) — إنذارٌ له وأثرٌ
+	// للمكتب في المعاملة نفسِها، **ولا تعويضَ آليّ.** انظر `merchant_late_cancel.go`.
+	lateCancel := kind == KindMerchantDelivery && to == StCancelled && from == StAtPickup &&
+		endedBy == "merchant"
+	if lateCancel {
+		if err := markMerchantLateCancel(ctx, tx, orderID, actor, driverID); err != nil {
+			return nil, err
+		}
+	}
+
 	// تحرير كود الخصم عند الإلغاء/الرفض/الفشل (لا عند refunded — الخدمة قُدمت)
 	if (to == StCancelled || to == StRejected || to == StFailed) && promoCode != "" {
 		if _, err := tx.Exec(ctx, `
@@ -626,6 +636,9 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// الطلبات)، **وإلّا بقيت «مقبولة» ينزلها المكتبُ بيده.** وتعثّرُ الإنزال
 	// لا يُبطل قبولاً وقع — كالإنزال العامّ أدناه.
 	if kind == KindMerchantDelivery {
+		if lateCancel {
+			s.alertMerchantLateCancel(ctx, updated)
+		}
 		if to == StAccepted && s.settings != nil && s.settings.GetBool(ctx, "orders.auto_dispatch") {
 			dispatched, derr := s.Transition(ctx, actorID, []string{"ops"},
 				orderID, StDispatching, autoDispatchNote)

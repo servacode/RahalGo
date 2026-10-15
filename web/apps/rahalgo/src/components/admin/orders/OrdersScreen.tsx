@@ -127,6 +127,13 @@ interface OrderRow {
   /** **«لدي توصيلة»**: ما يحمله السائق، ومن يدفع الأجرة (٢٠٢٦-١٠-١٢). */
   parcel_note?: string;
   fee_payer?: string;
+  /**
+   * **«توصيل» أو «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — وفي الإحضار العنوانُ مكانُ الاستلام
+   * والمتجرُ الوجهة.
+   */
+  delivery_mode?: string;
+  /** **ما يقبضه السائقُ من المستلِم للمتجر** — عرضٌ لا يدخل الحساب (٢٠٢٦-١٠-١٥). */
+  collect_amount?: number | null;
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
   custom_fee?: number | null;
@@ -3524,8 +3531,16 @@ function InvoiceList({
         : o.fee_payer === "merchant_cash"
           ? OP.mdPayerMerchantCash
           : OP.mdPayerMerchant;
+    const fetch = o.delivery_mode === "fetch";
     return (
       <ul className="space-y-1.5 text-sm">
+        {/* **ونوعُ المشوار أوّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الإحضارُ يقلب الوقفتين. */}
+        <li className="flex items-center justify-between gap-2">
+          <span className="text-ink-muted">{OP.mdMode}</span>
+          <span className="font-bold">
+            {fetch ? OP.mdModeFetch : OP.mdModeSend}
+          </span>
+        </li>
         <li className="flex items-start justify-between gap-2">
           <span className="shrink-0 text-ink-muted">{OP.mdRecipient}</span>
           <span className="text-end font-medium">
@@ -3534,7 +3549,9 @@ function InvoiceList({
           </span>
         </li>
         <li className="flex items-start justify-between gap-2">
-          <span className="shrink-0 text-ink-muted">{OP.mdAddress}</span>
+          <span className="shrink-0 text-ink-muted">
+            {fetch ? OP.mdPickupPlace : OP.mdAddress}
+          </span>
           <span className="text-end">{o.address_text || "—"}</span>
         </li>
         <li className="flex items-start justify-between gap-2">
@@ -3550,6 +3567,16 @@ function InvoiceList({
           <Money value={o.delivery_fee} small />
         </li>
         <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} />
+        {/* **وما يقبضه من المستلِم للمتجر** — خارجَ الحساب، يُعرض وحدَه. */}
+        {o.collect_amount ? (
+          <li className="flex items-start justify-between gap-2 border-t border-line-soft pt-1.5">
+            <span className="shrink-0 text-ink-muted">
+              {OP.mdCollect}
+              <span className="block text-xs">{OP.mdCollectHint}</span>
+            </span>
+            <Money value={o.collect_amount} small />
+          </li>
+        ) : null}
       </ul>
     );
   }

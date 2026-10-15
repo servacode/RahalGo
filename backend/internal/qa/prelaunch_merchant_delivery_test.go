@@ -47,6 +47,8 @@ func TestPLD01_PreLaunch_CustomerBlocked_MerchantDeliveryFlows(t *testing.T) {
 	if r := h.GET(m.url("/delivery-quote?lat="+ftoa(m.dropLat)+"&lng="+ftoa(m.dropLng)), m.fx.Tok); r.Code != http.StatusOK {
 		t.Fatalf("**تسعيرُ التوصيلة رُدّ** — %d %s", r.Code, r.Err())
 	}
+	// **ولا دينَ على أجرة توصيلة** (قرارُ المالك ٢٠٢٦-١٠-١٥) — فالمحفظةُ تُشحن قبل الطلب.
+	fundWallet(t, h, m.admin, m.fx.M.Owner.ID, 1000)
 	id := m.create(t, h, "merchant", uniq("pl01d"))
 	m.accept(t, h, id)
 }

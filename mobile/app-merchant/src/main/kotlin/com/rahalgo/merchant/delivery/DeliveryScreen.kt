@@ -98,6 +98,22 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     var payer by mutableStateOf("")
         private set
 
+    /**
+     * **«توصيل» أو «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — `send` افتراضاً. **والوضعُ يغيّر
+     * الأجرة** (الإحضارُ ذهابٌ وإياب) **وأسماءَ الحقول**: المستلِمُ في التوصيل ومكانُ الاستلام
+     * في الإحضار.
+     */
+    var mode by mutableStateOf("send")
+        private set
+
+    /**
+     * **«بدك السائق يقبض مبلغ من المستلم؟»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — عرضٌ للسائق وحدَه:
+     * **يدفعه لك من جيبه ويأخذه من المستلِم، ولا يدخل حسابَ المنصّة.**
+     */
+    var collectOn by mutableStateOf(false)
+        private set
+    var collectAmount by mutableStateOf("")
+
     var point by mutableStateOf<Pair<Double, Double>?>(null)
         private set
     var pointLabel by mutableStateOf("")
@@ -195,6 +211,24 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         touched()
     }
 
+    fun pickMode(m: String) {
+        if (m == mode) return
+        mode = m
+        touched()
+        val p = point
+        fetchQuote(p?.first, p?.second)
+    }
+
+    fun toggleCollect(on: Boolean) {
+        collectOn = on
+        if (!on) collectAmount = ""
+        touched()
+    }
+
+    /** **المبلغُ رقمٌ موجبٌ أو لا شيء** — والخادمُ يردّ الصفر. */
+    val collectValue: Long?
+        get() = if (collectOn) collectAmount.filter { it.isDigit() }.toLongOrNull()?.takeIf { it > 0 } else null
+
     fun setPoint(lat: Double, lng: Double, label: String) {
         pointFromLink = false
         point = lat to lng
@@ -218,7 +252,10 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         if (storeId.isEmpty()) return
         viewModelScope.launch {
             try {
-                quote = api.quote(storeId, lat, lng)
+                val q = api.quote(storeId, lat, lng, mode)
+                quote = q
+                // **والمحفظةُ لا تكفي ⇒ لا يبقى «من محفظتي» مختاراً** — لا دين (٢٠٢٦-١٠-١٥).
+                if (payer == "merchant" && !q.merchantCanPay) payer = ""
             } catch (e: Exception) {
                 // **وخارجُ التغطية يُقال عند النقطة** — لا بعد ملء كلّ شيء.
                 quoteError = apiError(getApplication(), e)
@@ -252,6 +289,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                         parcelNote = parcel.trim(),
                         driverNote = driverNote.trim(),
                         feePayer = payer,
+                        deliveryMode = mode,
+                        collectAmount = collectValue,
                     ),
                     idempotencyKey = key,
                 )
@@ -263,6 +302,9 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 parcel = ""
                 driverNote = ""
                 payer = ""
+                mode = "send"
+                collectOn = false
+                collectAmount = ""
                 link = ""
                 linkState = LinkState.Idle
                 point = null
@@ -339,11 +381,34 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             }
         }
 
+        // ── «توصيل» أو «إحضار» — في أعلى الشاشة، والتوصيلُ مختارٌ افتراضاً (٢٠٢٦-١٠-١٥) ──
+        val fetch = vm.mode == "fetch"
         Spacer(Modifier.height(12.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf("send" to R.string.md_mode_send, "fetch" to R.string.md_mode_fetch).forEach { (key, label) ->
+                FilterChip(
+                    selected = vm.mode == key,
+                    onClick = { vm.pickMode(key) },
+                    enabled = !vm.busy,
+                    label = { Text(stringResource(label), fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        Text(
+            stringResource(if (fetch) R.string.md_mode_fetch_sub else R.string.md_mode_send_sub),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+
+        Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = vm.name,
             onValueChange = { vm.name = it; vm.touched() },
-            label = { Text(stringResource(R.string.md_name)) },
+            label = { Text(stringResource(if (fetch) R.string.md_name_fetch else R.string.md_name)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_user) },
             singleLine = true,
             enabled = !vm.busy,
@@ -355,13 +420,13 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             value = vm.phone,
             onChange = { vm.phone = it; vm.touched() },
             enabled = !vm.busy,
-            label = R.string.md_phone,
+            label = if (fetch) R.string.md_phone_fetch else R.string.md_phone,
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = vm.address,
             onValueChange = { vm.address = it; vm.touched() },
-            label = { Text(stringResource(R.string.md_address)) },
+            label = { Text(stringResource(if (fetch) R.string.md_address_fetch else R.string.md_address)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_home) },
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
@@ -372,7 +437,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
         OutlinedTextField(
             value = vm.link,
             onValueChange = { vm.onLink(it) },
-            label = { Text(stringResource(R.string.md_link)) },
+            label = { Text(stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link)) },
             placeholder = { Text(stringResource(R.string.md_link_hint)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_pin) },
             singleLine = true,
@@ -425,6 +490,37 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // ── «بدك السائق يقبض مبلغ من المستلم؟» — عرضٌ لا حساب (٢٠٢٦-١٠-١٥) ──
+        Spacer(Modifier.height(10.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !vm.busy) { vm.toggleCollect(!vm.collectOn) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.Checkbox(
+                checked = vm.collectOn,
+                onCheckedChange = { vm.toggleCollect(it) },
+                enabled = !vm.busy,
+            )
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.md_collect_q), fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
+                Text(stringResource(R.string.md_collect_sub), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        if (vm.collectOn) {
+            OutlinedTextField(
+                value = vm.collectAmount,
+                onValueChange = { v -> vm.collectAmount = v.filter { it.isDigit() }.take(12); vm.touched() },
+                label = { Text(stringResource(R.string.md_collect_amount)) },
+                leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_wallet) },
+                singleLine = true,
+                enabled = !vm.busy,
+                keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         // ── من يدفع — بطاقاتٌ واضحةٌ إجباريّة (طلبُ المالك ٢٠٢٦-١٠-٠٩) ──
         Spacer(Modifier.height(14.dp))
         Text(stringResource(R.string.md_who_pays_q), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
@@ -435,6 +531,9 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             Triple("recipient", R.string.md_pay_recipient, R.string.md_pay_recipient_sub),
         ).forEach { (key, title, sub) ->
             val on = vm.payer == key
+            // **ولا دين** (قرارُ المالك ٢٠٢٦-١٠-١٥): المتاحُ لا يكفي ⇒ «من محفظتي» معطَّل.
+            val walletShort = key == "merchant" && vm.quote?.merchantCanPay == false
+            val usable = !vm.busy && !walletShort
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -446,15 +545,23 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                         if (on) Rahal.colors.brand else Rahal.colors.line,
                         Rahal.shape.md,
                     )
-                    .clickable(enabled = !vm.busy) { vm.pickPayer(key) }
+                    .clickable(enabled = usable) { vm.pickPayer(key) }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                androidx.compose.material3.RadioButton(selected = on, onClick = { vm.pickPayer(key) }, enabled = !vm.busy)
+                androidx.compose.material3.RadioButton(selected = on, onClick = { vm.pickPayer(key) }, enabled = usable)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(title), fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
-                    Text(stringResource(sub), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(title),
+                        fontWeight = FontWeight.Bold,
+                        color = if (walletShort) Rahal.colors.inkMuted else Rahal.colors.ink,
+                    )
+                    Text(
+                        stringResource(if (walletShort) R.string.md_wallet_short else sub),
+                        color = if (walletShort) Rahal.colors.danger else Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }
@@ -477,7 +584,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                 )
                 Text(
                     when (vm.payer) {
-                        "merchant" -> stringResource(R.string.md_fee_from_wallet, q.walletBalance.toString())
+                        "merchant" -> stringResource(R.string.md_fee_from_wallet, q.availableBalance.toString())
                         "merchant_cash" -> stringResource(R.string.md_fee_me_cash)
                         "recipient" -> stringResource(R.string.md_fee_cash)
                         else -> stringResource(R.string.md_fee_choose)
@@ -485,6 +592,20 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                // **ومن أين الأجرة** (٢٠٢٦-١٠-١٥): بلا نقطةٍ الأساسُ وحدَه، ومعها المسافة.
+                if (q.feeBasis == "no_point") {
+                    Text(
+                        stringResource(R.string.md_fee_no_point),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else if (q.feeBasis == "distance" && q.distanceM > 0) {
+                    Text(
+                        stringResource(R.string.md_fee_distance, "%.1f".format(q.distanceM / 1000.0)),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
             // **ولا يكفيه أن يدفع من محفظته — يُقال قبل الضغط** لا ٤٠٢ بعده.
             if (vm.payer == "merchant" && !q.merchantCanPay) {
@@ -499,6 +620,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             if (vm.phone.isBlank()) add(stringResource(R.string.md_phone))
             if (vm.address.isBlank()) add(stringResource(R.string.md_address))
             if (vm.payer.isEmpty()) add(stringResource(R.string.md_who_pays))
+            if (vm.collectOn && vm.collectValue == null) add(stringResource(R.string.md_collect_missing))
         }
         val blocked = vm.quoteError.isNotEmpty() ||
             (vm.payer == "merchant" && q != null && !q.merchantCanPay)
@@ -581,6 +703,9 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
             SearchingBanner(compact = true)
             Spacer(Modifier.height(8.dp))
         }
+        if (d.deliveryMode == "fetch") {
+            InfoLine(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.md_row_fetch), strong = true)
+        }
         InfoLine(com.rahalgo.ui.R.drawable.ic_user, d.recipientName, strong = true)
         InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
         InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
@@ -601,6 +726,9 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
                 d.fee.toString(),
             ),
         )
+        d.collectAmount?.takeIf { it > 0 }?.let {
+            InfoLine(com.rahalgo.ui.R.drawable.ic_wallet, stringResource(R.string.md_row_collect, it.toString()))
+        }
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.md_track_open),

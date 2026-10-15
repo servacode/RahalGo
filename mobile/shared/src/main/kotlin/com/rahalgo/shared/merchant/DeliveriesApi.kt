@@ -21,10 +21,17 @@ data class DeliveryQuote(
     val fee: Long = 0,
     @SerialName("zone_name") val zoneName: String = "",
     @SerialName("wallet_balance") val walletBalance: Long = 0,
-    @SerialName("credit_limit") val creditLimit: Long = 0,
-    @SerialName("credit_owed") val creditOwed: Long = 0,
-    /** **أيكفيه أن يدفع هو؟** — بقاعدة الخادم نفسِها، لا تقديرٍ في الجهاز. */
+    /** **المتاحُ للدفع** — الرصيدُ ناقصَ المحجوز (٢٠٢٦-١٠-١٥). */
+    @SerialName("available_balance") val availableBalance: Long = 0,
+    /**
+     * **أيكفي المتاحُ في محفظته الأجرة؟** — بقاعدة الخادم نفسِها، لا تقديرٍ في الجهاز.
+     * **ولا دين** (قرارُ المالك ٢٠٢٦-١٠-١٥): لا يكفي ⇒ يُعطَّل «من محفظتي».
+     */
     @SerialName("merchant_can_pay") val merchantCanPay: Boolean = false,
+    /** **من أين الأجرة** — `distance` · `no_point` (الأساسُ وحدَه) · `flat`. */
+    @SerialName("fee_basis") val feeBasis: String = "",
+    @SerialName("distance_m") val distanceM: Long = 0,
+    val mode: String = "send",
 )
 
 @Serializable
@@ -39,6 +46,10 @@ data class NewDelivery(
     @SerialName("driver_note") val driverNote: String = "",
     /** `merchant` (محفظتي) · `merchant_cash` (أنا نقداً) · `recipient` (المستلم نقداً). */
     @SerialName("fee_payer") val feePayer: String,
+    /** **«توصيل» أو «إحضار»** — `send` · `fetch` (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+    @SerialName("delivery_mode") val deliveryMode: String = "send",
+    /** **مبلغٌ يقبضه السائقُ من المستلِم لك** — عرضٌ لا يدخل الحساب، وفراغُه لا شيء. */
+    @SerialName("collect_amount") val collectAmount: Long? = null,
 )
 
 /**
@@ -58,6 +69,10 @@ data class Delivery(
     @SerialName("parcel_note") val parcelNote: String = "",
     @SerialName("fee_payer") val feePayer: String = "",
     @SerialName("delivery_fee") val fee: Long = 0,
+    /** **«توصيل» أو «إحضار»** (٢٠٢٦-١٠-١٥). */
+    @SerialName("delivery_mode") val deliveryMode: String = "send",
+    /** **ما يقبضه السائقُ من المستلِم لك** — خارجَ الحساب. */
+    @SerialName("collect_amount") val collectAmount: Long? = null,
     /** **أُسند سائق؟** — ولا هويّةَ سائقٍ لدى المتجر (كسائر طلباته). */
     @SerialName("driver_assigned") val driverAssigned: Boolean = false,
     @SerialName("picked_up_at") val pickedUpAt: String? = null,
@@ -88,11 +103,14 @@ class DeliveriesApi(private val api: ApiClient) {
     suspend fun resolveLocation(storeId: String, url: String): ResolvedLocation =
         api.call("/api/v1/merchant/stores/$storeId/resolve-location", io.ktor.http.HttpMethod.Post, ResolveLocationInput(url))
 
-    /** **والنقطةُ اختياريّة** — بلاها فالأجرةُ من منطقة المتجر. */
-    suspend fun quote(storeId: String, lat: Double?, lng: Double?): DeliveryQuote =
+    /**
+     * **والنقطةُ اختياريّة** — بلاها فالأجرةُ الأساسُ وحدَه. **والوضعُ يغيّر المسافة**:
+     * الإحضارُ ذهابٌ وإياب (قرارُ المالك ٢٠٢٦-١٠-١٥).
+     */
+    suspend fun quote(storeId: String, lat: Double?, lng: Double?, mode: String = "send"): DeliveryQuote =
         api.call(
-            "/api/v1/merchant/stores/$storeId/delivery-quote" +
-                if (lat != null && lng != null) "?lat=$lat&lng=$lng" else "",
+            "/api/v1/merchant/stores/$storeId/delivery-quote?mode=$mode" +
+                if (lat != null && lng != null) "&lat=$lat&lng=$lng" else "",
         )
 
     /**

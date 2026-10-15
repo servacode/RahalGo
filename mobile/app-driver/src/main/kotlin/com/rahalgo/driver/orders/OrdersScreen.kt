@@ -451,6 +451,12 @@ private fun OrderCard(
             Spacer(Modifier.height(10.dp))
             WhatBox(stringResource(R.string.detail_parcel), order.parcelNote)
         }
+        // **ومالٌ يدفعه من جيبه قبل أن يقبل** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «ادفع للمتجر X من
+        // جيبك، واقبض من المستلم X»: يعرفه قبل أن يقبل لا عند المتجر.
+        com.rahalgo.driver.trip.collectForStore(order)?.let { amt ->
+            Spacer(Modifier.height(10.dp))
+            WhatBox(stringResource(R.string.kind_delivery), stringResource(R.string.trip_collect_for_store, money(amt)))
+        }
         if (custom && order.customRequest.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Column(

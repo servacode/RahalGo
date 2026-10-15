@@ -154,6 +154,12 @@ type Order struct {
 	ParcelNote string `json:"parcel_note,omitempty"`
 	// FeePayer **من يدفع أجرةَ التوصيلة** — `merchant` أو `recipient` (فارغٌ لغيرها).
 	FeePayer string `json:"fee_payer,omitempty"`
+	// DeliveryMode **«توصيل» أو «إحضار»** في «لدي توصيلة» (قرارُ المالك ٢٠٢٦-١٠-١٥) — `send`
+	// أو `fetch`، **وفارغٌ لغيرها.** وفي الإحضار العنوانُ مكانُ الاستلام والوجهةُ المتجر.
+	DeliveryMode string `json:"delivery_mode,omitempty"`
+	// CollectAmount **مبلغٌ يقبضه السائقُ من المستلِم للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	// عرضٌ وحدَه: **لا يدخل الدفترَ ولا الصندوق.** للسائق والمتجر (توصيلتُه) والمكتب.
+	CollectAmount *int64 `json:"collect_amount,omitempty"`
 	// DropoffKnown **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ يُكتب
 	// موقعُ المتجر ويُعلَّم هذا **فلا يُوجَّه السائقُ إلى نقطةٍ كاذبة.**
 	DropoffKnown bool `json:"dropoff_known"`

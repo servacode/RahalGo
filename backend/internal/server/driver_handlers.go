@@ -407,6 +407,13 @@ type driverOrder struct {
 	// PartnerMerchantName **المتجرُ التابعُ الذي يشتري منه** في المشتريات (قرارُ المالك
 	// ٢٠٢٦-١٠-١٥) — **وفراغٌ: يشتري من حيث شاء.** وما يدفعه له في `pay_merchant` بعد التوثيق.
 	PartnerMerchantName string `json:"partner_merchant_name"`
+	// DeliveryMode **«توصيل» أو «إحضار»** في «لدي توصيلة» (قرارُ المالك ٢٠٢٦-١٠-١٥) — `send` أو
+	// `fetch`، وفارغٌ لغيرها. **وفي الإحضار تُقلب الوقفتان هنا** (`asFetchTrip`): الاستلامُ من
+	// العنوان والتسليمُ للمتجر — فيمشي التطبيقُ طريقَه كما يمشي كلَّ طلب.
+	DeliveryMode string `json:"delivery_mode"`
+	// CollectAmount **مبلغٌ يدفعه للمتجر من جيبه ويقبضه من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	// «ادفع للمتجر X من جيبك، واقبض من المستلم X». **خارجَ الدفتر والصندوق**، وnil: لا شيء.
+	CollectAmount *int64 `json:"collect_amount"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -451,7 +458,7 @@ const driverOrderSelect = `
 	           (SELECT du.last_location FROM users du
 	            WHERE du.id = $1::uuid
 	              AND du.last_location_at > now() - make_interval(mins => $2::int)),
-	           COALESCE(o.pickup_override, m.location)), -1),
+	           ` + driverPickupPointSQL + `), -1),
 	       -- **وطولُ المشوار** — من الاستلام إلى الباب.
 	       -- **ونقطةٌ غيرُ معروفةٍ لا طولَ إليها** — المكتوبُ مكانَها موقعُ المتجر،
 	       -- **فيُقرأ المشوارُ صفراً وهو مجهول.**
@@ -474,8 +481,8 @@ const driverOrderSelect = `
 	       --
 	       -- **وهي البديلةُ إن وُجدت وإلّا فالمتجر** — نقطةٌ واحدةٌ يمشي إليها
 	       -- مهما كان سببُها.
-	       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
-	       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
+	       ST_Y((` + driverPickupPointSQL + `)::geometry),
+	       ST_X((` + driverPickupPointSQL + `)::geometry),
 	       -- **والطلبُ الخاصّ يُعرَف من نوعه** — لا متجرَ له ولا أصناف،
 	       -- **وبطاقتُه تقول «اشترِ ثمّ سلّم» لا «استلم ثمّ سلّم».**
 	       o.kind, COALESCE(o.custom_request, ''),
@@ -529,7 +536,10 @@ const driverOrderSelect = `
 	       -- **أعليه كودُ تسليم** — والكودُ نفسُه لا يُقرأ هنا.
 	       o.delivery_code IS NOT NULL,
 	       -- **والمتجرُ التابعُ في المشتريات** (٢٠٢٦-١٠-١٥) — اسمُه وحدَه.
-	       COALESCE((SELECT pm.name FROM merchants pm WHERE pm.id = o.partner_merchant_id), '')
+	       COALESCE((SELECT pm.name FROM merchants pm WHERE pm.id = o.partner_merchant_id), ''),
+	       -- **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	       CASE WHEN o.kind = 'merchant_delivery' THEN o.delivery_mode ELSE '' END,
+	       o.collect_amount
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -561,12 +571,15 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
 			&o.DoorInstruction, &o.DoorNote,
 			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,
-			&o.DeliveryCodeRequired, &o.PartnerMerchantName); err != nil {
+			&o.DeliveryCodeRequired, &o.PartnerMerchantName,
+			&o.DeliveryMode, &o.CollectAmount); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		if o.ReturnTo != "" {
 			s.asReturnTrip(r.Context(), &o)
+		} else if o.DeliveryMode == orders.DeliveryModeFetch {
+			asFetchTrip(&o)
 		}
 		o.Items = []driverItem{}
 		out = append(out, o)
@@ -781,6 +794,37 @@ func (s *Server) handleDriverOrders(w http.ResponseWriter, r *http.Request) {
 		  AND (o.closed_at IS NULL
 		       OR (o.status = 'failed' AND o.return_to IS NOT NULL AND o.goods_handed_at IS NULL))
 		ORDER BY o.created_at`, userIDFrom(r), staleLocationMinutes)
+}
+
+// driverPickupPointSQL **أين يستلم السائق** — البديلةُ إن وُجدت، **وفي «إحضار» نقطةُ العنوان**
+// (مجهولةً إن لم تُحدَّد)، وإلّا المتجر. (قرارُ المالك ٢٠٢٦-١٠-١٥.)
+const driverPickupPointSQL = `COALESCE(o.pickup_override,
+	CASE WHEN o.kind = 'merchant_delivery' AND o.delivery_mode = 'fetch'
+	     THEN CASE WHEN o.dropoff_known THEN o.dropoff END
+	     ELSE m.location END)`
+
+// asFetchTrip **«إحضار»: الوقفتان مقلوبتان** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **العنوانُ المكتوبُ مكانُ الاستلام والمتجرُ الوجهة** — فيُكتب كلٌّ في حقول طوره: الاستلامُ
+// في `merchant_name`/`merchant_phone`/`pickup_address`/`nav_*` (من `driverPickupPointSQL`)،
+// والتسليمُ في `customer_name`/`recipient_phone`/`address_text`/`lat`/`lng`. **فيرسم التطبيقُ
+// الطريقَ ويُعلن الوصولَ ويُظهر الاتّصالَ الصحيحَ في كلّ طورٍ** بلا شاشةٍ ثانية.
+func asFetchTrip(o *driverOrder) {
+	pickupName, pickupPhone, pickupAddr := o.CustomerName, o.RecipientPhone, o.AddressText
+	storePhone := ""
+	if o.MerchantPhone != nil {
+		storePhone = *o.MerchantPhone
+	}
+	o.CustomerName, o.RecipientPhone, o.AddressText = o.MerchantName, storePhone, o.storeAddr
+	o.MerchantName, o.PickupAddress = pickupName, pickupAddr
+	o.MerchantPhone = nil
+	if pickupPhone != "" {
+		o.MerchantPhone = &pickupPhone
+	}
+	o.Lat, o.Lng, o.DropoffKnown = 0, 0, false
+	if o.storeLat != nil && o.storeLng != nil {
+		o.Lat, o.Lng, o.DropoffKnown = *o.storeLat, *o.storeLng, true
+	}
 }
 
 // asReturnTrip **يحوّل صفَّ مشوار الإرجاع إلى وجهته** — المكتبُ أو المتجر.

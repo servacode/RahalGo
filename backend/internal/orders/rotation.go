@@ -698,7 +698,13 @@ const autoAssignNote = "إسنادٌ تلقائيٌّ بالدور"
 //
 // **وفي المحرّك وبابِ الطابور نصٌّ واحد** — قياسان يفترقان يعرضان على واحدٍ
 // ويُظهران لآخر.
-const DispatchAnchorSQL = `COALESCE(o.pickup_override, m.location, CASE WHEN o.kind = 'custom' THEN o.dropoff END)`
+//
+// **و«إحضار» في «لدي توصيلة» يُرسى على العنوان** (قرارُ المالك ٢٠٢٦-١٠-١٥) — منه يستلم
+// السائق، **والمتجرُ وجهتُه لا مبدؤه.** وبلا نقطةٍ معروفةٍ يُرسى على المتجر كما كان.
+const DispatchAnchorSQL = `COALESCE(o.pickup_override,
+	CASE WHEN o.kind = 'merchant_delivery' AND o.delivery_mode = 'fetch' AND o.dropoff_known
+	     THEN o.dropoff END,
+	m.location, CASE WHEN o.kind = 'custom' THEN o.dropoff END)`
 
 // reclaimNote نصُّ حدثِ نزعِ إسنادٍ صامت.
 const reclaimNote = "نُزع لعدم التحرّك — عاد إلى الطابور"

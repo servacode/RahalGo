@@ -1204,6 +1204,8 @@ var Catalog = []Def{
 	{Key: "delivery.merchant_fee", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
 	// **ودينُ «لدي توصيلة» بلا سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر `orders.SettingMerchantDebtOpen`.
+	// **متروكٌ منذ ٢٠٢٦-١٠-١٥: لا يقرؤه المحرّك** (لا دينَ على أجرة توصيلة). والفهرسُ بلا علامة
+	// «متروك»، فيبقى المفتاحُ هنا كي لا يُردّ حفظٌ قديمٌ له، **ولا أثرَ لقيمته.**
 	{Key: "delivery.merchant_debt_open", Group: GroupDrivers, Kind: KindBool, Default: true, Sensitive: true},
 
 	// **والأجرةُ بالمسافة — مفتاحٌ يُشعَل يومَ يُراد.**

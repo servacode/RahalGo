@@ -60,6 +60,8 @@ func TestOB02_SkipsTryReminderForUsers(t *testing.T) {
 	h.Setting("merchants.onboarding_push", "true")
 	h.Setting("merchants.onboarding_push_messages", `"أول | ١\nلسا ما جرّبتها؟ | جرّب | إذا ما جرّب"`)
 	md := newMDFx(t, h, "OB02")
+	// **ولا دينَ على أجرة توصيلة** (قرارُ المالك ٢٠٢٦-١٠-١٥) — فالمحفظةُ تُشحن قبل الطلب.
+	fundWallet(t, h, md.admin, md.fx.M.Owner.ID, 1000)
 	md.create(t, h, "merchant", uniq("ob02"))
 	owner := md.fx.M.Owner.ID
 	ctx := ctxBG()

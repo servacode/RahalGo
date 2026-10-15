@@ -534,6 +534,8 @@ private fun debtCause(cause: String): String = when (cause) {
     "refund_merchant_earning", "refund_rep_commission" -> stringResource(R.string.wal_debt_refund)
     "returned_goods" -> stringResource(R.string.wal_debt_returned)
     "merchant_delivery_fee" -> stringResource(R.string.wal_debt_delivery)
+    // **توصيلةٌ فشلت بذنب المستلِم والمحفظةُ لا تكفي** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+    "delivery_failed_recipient" -> stringResource(R.string.wal_debt_delivery_failed)
     "penalty_remainder" -> stringResource(R.string.wal_debt_penalty)
     "dispute_remainder" -> stringResource(R.string.wal_debt_dispute)
     else -> stringResource(R.string.wal_debt_old)

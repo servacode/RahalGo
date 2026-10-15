@@ -276,6 +276,7 @@
     <string name="wal_debt_refund">طلب انسترجع بعد ما انصرف حقه</string>
     <string name="wal_debt_returned">بضاعة رجعت</string>
     <string name="wal_debt_delivery">أجرة توصيلة</string>
+    <string name="wal_debt_delivery_failed">أجرة توصيلة فشلت بذنب المستلم</string>
     <string name="wal_debt_old">دين سابق</string>
     <string name="wal_debt_penalty">باقي عقوبة أكبر من رصيدك</string>
     <string name="wal_debt_dispute">باقي مطالبة أكبر من رصيدك</string>
@@ -608,8 +609,8 @@
     <string name="err_invalid_items">تحقق من البيانات المدخلة</string>
     <string name="err_out_of_zone">العنوان خارج مناطق التغطية الحالية</string>
     <string name="err_below_min_order">قيمة الطلب أقل من الحد الأدنى لهذه المنطقة</string>
-    <string name="err_delivery_credit_exhausted">لا يكفي رصيد متجرك لأجرة التوصيلة، وقد بلغت حد الدين المسموح. اشحن محفظتك أو راجع الإدارة لرفع الحد.</string>
-    <string name="err_merchant_delivery_unpaid">لا تكفي محفظة المتجر أجرة التوصيلة، وسقف دينه لا يسمح.</string>
+    <string name="err_delivery_credit_exhausted">رصيد محفظتك ما بيكفي — اشحنها أو اختر الدفع نقداً</string>
+    <string name="err_merchant_delivery_unpaid">محفظة المتجر ما بتكفي أجرة هالتوصيلة.</string>
     <string name="err_too_many_open_orders">لديك طلبات لم تسلم بعد. أكملها أولا ثم اطلب من جديد.</string>
     <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقا</string>
     <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>

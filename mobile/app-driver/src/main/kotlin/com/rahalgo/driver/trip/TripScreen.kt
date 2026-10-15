@@ -1590,12 +1590,27 @@ private fun TripCard(
                         }
                     }
                 }
-                // **و«أنا نقداً» يُقبض من المتجر قبل أن يمضي.**
+                // **و«أنا نقداً» يُقبض من المتجر قبل أن يمضي** — وفي «إحضار» من الشخص عند
+                // مكان الاستلام (٢٠٢٦-١٠-١٥؛ والخادمُ كتب اسمَه في موضع المتجر).
                 if (cashFrom == CashFrom.STORE) {
                     MoneyBox(
-                        label = stringResource(R.string.detail_fee_from_store),
+                        label = if (isFetch(order)) {
+                            stringResource(R.string.trip_collect_from, order.merchantName)
+                        } else {
+                            stringResource(R.string.detail_fee_from_store)
+                        },
                         amount = money(order.cashDue),
                         tint = Rahal.colors.accent,
+                    )
+                }
+                // **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+                // خارجَ حساب المنصّة: لا يدخل صندوقَه ولا محفظتَه.
+                collectForStore(order)?.let { amt ->
+                    InfoBox(
+                        icon = R.drawable.ic_cash,
+                        text = stringResource(R.string.trip_collect_for_store, money(amt)),
+                        tint = Rahal.colors.accent,
+                        bold = true,
                     )
                 }
                 // **و«يحمل» قبل الاستلام وحدَه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — بعده هو بيده.
@@ -1766,7 +1781,8 @@ private fun TripCard(
                         // **«لدي توصيلة»: المستلمُ ليس على التطبيق** (قرارُ المالك ٢٠٢٦-١٠-٠٣) —
                         // اتّصالٌ وواتساب برسالةٍ جاهزة.
                         if (recipient != null) {
-                            val hello = stringResource(R.string.recipient_wa_message, order.merchantName)
+                            // **وفي «إحضار» الوجهةُ المتجرُ نفسُه** — فلا رسالةَ «متجرٌ أرسل لك طلبيّة».
+                            val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
                             ContactButton(
                                 icon = com.rahalgo.ui.R.drawable.ic_phone,
                                 label = R.string.recipient_call,

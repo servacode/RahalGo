@@ -120,17 +120,23 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	if tid == "" {
 		return nil
 	}
-	var walletPaid, cashDue, goods int64
-	var status string
+	var walletPaid, cashDue, goods, collected int64
+	var status, kind string
 	if err := q.QueryRow(ctx,
-		`SELECT wallet_paid, cash_due, status,
+		`SELECT wallet_paid, cash_due, status, kind,
+		        -- **ونقدُ التوصيلة ما قُبض فعلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «أنا نقداً»
+		        -- يُقبض عند الاستلام لا التسليم، فيُقرأ من الصندوق لا من الحال.
+		        CASE WHEN kind = 'merchant_delivery'
+		             THEN COALESCE((SELECT sum(e.amount) FROM driver_cash_entries e
+		                            WHERE e.ref = orders.id::text AND e.kind = 'order_collection'), 0)
+		             ELSE 0 END,
 		        -- **وما دفعه السائقُ للمتجر لا الثمنُ كلُّه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 		        -- مع متجرٍ تابعٍ يدفع الثمنَ ناقصَ العمولة، **فتبقى العمولةُ للمنصّة.**
 		        -- وعمودُ custom_store_paid فارغٌ في الطلبات القديمة: الثمنُ كلُّه كما كان.
 		        CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
 		             THEN COALESCE(custom_store_paid, custom_goods_amount, 0) ELSE 0 END
 		 FROM orders WHERE id = $1`, orderID).
-		Scan(&walletPaid, &cashDue, &status, &goods); err != nil {
+		Scan(&walletPaid, &cashDue, &status, &kind, &collected, &goods); err != nil {
 		return err
 	}
 	// **والاسترجاعُ لا يُلغي قبضاً وقع.**
@@ -149,6 +155,16 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	paid := walletPaid
 	if status == StDelivered || status == StRefunded {
 		paid += cashDue
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والتوصيلةُ تقرأ نقدَها من الصندوق لا من حالها** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **«أنا نقداً» يُقبض عند الاستلام** — وتوصيلةٌ فشلت بعده بذنب المستلِم قُبض نقدُها
+	// وهي `failed`: **لو قُرئ بالحال لَحُسب صفراً فخسرت الخزينةُ أجرَ السائق وهي قبضت.**
+	// والمسلَّمةُ قبضت نقدَها كلَّه فالرقمُ هو هو.
+	if kind == KindMerchantDelivery {
+		paid = walletPaid + collected
 	}
 	// **وثمنُ بضاعة المشتريات مالُ المكتب يعود إليه** (قرارُ المالك ٢٠٢٦-١٠-١٣) — دفعه نقداً
 	// للسائق واستردّه، **فليس ربحاً ولا يُقيَّد.** يُطرح من المدفوع، ويبقى نصيبُ المنصّة من الأجرة.

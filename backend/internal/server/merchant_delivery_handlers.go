@@ -51,7 +51,9 @@ func (s *Server) handleMerchantDeliveryQuote(w http.ResponseWriter, r *http.Requ
 			return
 		}
 	}
-	q, err := s.orders.QuoteMerchantDelivery(r.Context(), merchantID, lat, lng, has)
+	// **والوضعُ يغيّر المسافة** — الإحضارُ ذهابٌ وإياب (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	q, err := s.orders.QuoteMerchantDelivery(r.Context(), merchantID, lat, lng, has,
+		r.URL.Query().Get("mode"))
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -84,6 +86,10 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		ParcelNote string   `json:"parcel_note"`
 		DriverNote string   `json:"driver_note"`
 		FeePayer   string   `json:"fee_payer"`
+		// Mode **«توصيل» أو «إحضار»** — `send` (وفارغُه) أو `fetch` (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		Mode string `json:"delivery_mode"`
+		// CollectAmount **مبلغٌ يقبضه السائقُ من المستلِم للمتجر** — عرضٌ لا يدخل الدفتر.
+		CollectAmount *int64 `json:"collect_amount"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -111,6 +117,7 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		AddressText: req.AddressText,
 		ParcelNote:  req.ParcelNote, DriverNote: req.DriverNote, FeePayer: req.FeePayer,
 		HasPoint: req.Lat != nil && req.Lng != nil,
+		Mode:     req.Mode, CollectAmount: req.CollectAmount,
 	}
 	if in.HasPoint {
 		in.Lat, in.Lng = *req.Lat, *req.Lng

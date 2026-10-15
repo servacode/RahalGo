@@ -240,13 +240,16 @@ func TestTrip_OnTheWay_OpsDecides(t *testing.T) {
 	})
 }
 
-// TestMerchantDelivery_FailAtDoor_PlatformPays **فشلُ «لدي توصيلة» عند الزبون —
-// السائقُ يُعوَّض من المنصّة** (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢، البند ٨).
-func TestMerchantDelivery_FailAtDoor_PlatformPays(t *testing.T) {
+// TestMerchantDelivery_FailAtDoor_RealFault **فشلُ «لدي توصيلة» عند الباب بالذنب الحقيقيّ**
+// (قرارُ المالك ٢٠٢٦-١٠-١٥) — **كان الذنبُ يُفرض «المنصّة»** فيُعوَّض السائقُ في كلّ فشل.
+// وصار: ذنبُ المستلِم أو المتجر ⇒ المتجرُ يدفع ولا تعويض · ذنبُ السائق ⇒ لا تعويض ·
+// **ذنبُ المنصّة وحدَه ⇒ طلبُ تعويضٍ بذنب المنصّة.**
+func TestMerchantDelivery_FailAtDoor_RealFault(t *testing.T) {
 	for _, c := range []struct {
 		fault   string
 		pending bool
-	}{{orders.FaultCustomer, true}, {orders.FaultMerchant, true}, {orders.FaultDriver, false}} {
+	}{{orders.FaultCustomer, false}, {orders.FaultMerchant, false}, {orders.FaultDriver, false},
+		{orders.FaultPlatform, true}} {
 		t.Run(c.fault, func(t *testing.T) {
 			f := setup(t, "at_dropoff", 0, 10_000, 0)
 			ctx := context.Background()
@@ -260,11 +263,10 @@ func TestMerchantDelivery_FailAtDoor_PlatformPays(t *testing.T) {
 			f.failAtDoor(t, c.fault, "customer_absent")
 			gotFault, suggested, found := f.pendingRequest(t)
 			if found != c.pending {
-				t.Fatalf("طلبُ تعويضٍ معلَّق = %v والمتوقّع %v — **«المنصّة تدفع طبعاً»**", found, c.pending)
+				t.Fatalf("طلبُ تعويضٍ معلَّق = %v والمتوقّع %v — **الذنبُ الحقيقيُّ يحكم**", found, c.pending)
 			}
 			if found && (gotFault != orders.FaultPlatform || suggested != 5_000) {
-				t.Errorf("الطلبُ المعلَّق (%s · %d) والمتوقّع (platform · 5000) — **فلا تُفتح مطالبةٌ على المتجر**",
-					gotFault, suggested)
+				t.Errorf("الطلبُ المعلَّق (%s · %d) والمتوقّع (platform · 5000)", gotFault, suggested)
 			}
 		})
 	}
