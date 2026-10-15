@@ -295,6 +295,8 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
         // **وجلسةٌ ماتت تُسقطه ضيفاً** (`SessionEnd`) وسلّتُه ووصلتُه تُمسحان في
         // بابِ خروجه، **ويرى السببَ حين يفتح الدخول.**
         sessionScoped = false,
+        // **والدخولُ للزائر داخل «حسابي» والشريطُ باقٍ** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+        guestOwnsAuth = true,
         onSignedIn = {
             SignedIn(
                 theme = theme,
@@ -311,6 +313,7 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
                 guest = true,
                 onLogout = vm::logout,
                 onAskLogin = { asking = true },
+                authPane = { com.rahalgo.ui.AuthPanes(vm) },
             )
         },
     )
@@ -340,6 +343,8 @@ private fun SignedIn(
     guest: Boolean,
     onLogout: () -> Unit,
     onAskLogin: () -> Unit,
+    /** **أبوابُ الدخول للزائر داخل «حسابي»** (٢٠٢٦-١٠-١٦) — والشريطُ تحتها. */
+    authPane: (@Composable () -> Unit)? = null,
 ) {
     val pagesVm: PagesViewModel = viewModel()
     val shell: ShellViewModel = viewModel()
@@ -471,7 +476,13 @@ private fun SignedIn(
     // بقي في تبويبٍ لا زرَّ له في الشريط.**
     LaunchedEffect(guest) {
         // **وللزائر «تسوق» و«حسابي» وحدهما** (قرارُ المالك ٢٠٢٦-١٠-١٦).
-        if (guest && tab != Tab.Shop) tab = Tab.Shop
+        if (guest && tab != Tab.Shop && tab != Tab.Account) tab = Tab.Shop
+    }
+    // **وما يطلب حساباً يفتح «حسابي» والشريطُ باقٍ** — لا بوّابةً فوق التطبيق كلِّه.
+    val askLogin: () -> Unit = if (guest && authPane != null) {
+        { tab = Tab.Account; overlay.clear() }
+    } else {
+        onAskLogin
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -662,7 +673,7 @@ private fun SignedIn(
                         }
                         scope.launch { drawer.close() }
                     },
-                    onLogout = if (guest) onAskLogin else onLogout,
+                    onLogout = if (guest) askLogin else onLogout,
                     dark = dark,
                     onTheme = { theme.toggle(dark) },
                     logoutLabel = if (guest) R.string.guest_enter else null,
@@ -903,9 +914,7 @@ private fun SignedIn(
                     // ٢٠٢٦-١٠-١٦: «حسابي تسجيل الدخول أو إنشاء حساب»).
                     NavigationBarItem(
                         selected = tab == Tab.Account && over == Overlay.None,
-                        onClick = {
-                            if (guest) onAskLogin() else { tab = Tab.Account; overlay.clear() }
-                        },
+                        onClick = { tab = Tab.Account; overlay.clear() },
                         icon = {
                             // ══════════════════════════════════════════
                             // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
@@ -966,8 +975,11 @@ private fun SignedIn(
                     //
                     // **والسوقُ وصفحاتُ المنصّة ليست منه** — عامّةٌ في
                     // المحرّك، **فتُفتح كما تُفتح في الويب.**
+                    guest && tab == Tab.Account && over == Overlay.None && authPane != null ->
+                        authPane()
+
                     guest && needsAccount(tab, over) ->
-                        NeedAccount(onAskLogin)
+                        NeedAccount(askLogin)
 
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         // **وتعليماتُ الزبون لا تعليماتُ السائق** —
@@ -1046,7 +1058,7 @@ private fun SignedIn(
                     // الخادم**، **والمنعُ في `launch_gate` على كلّ
                     // حال.**
                     Serving.preLaunch && tab != Tab.Account ->
-                        PreLaunch(guest = guest, onAskLogin = onAskLogin)
+                        PreLaunch(guest = guest, onAskLogin = askLogin)
 
                     tab == Tab.Cart -> CartScreen(
                         cartVm,
@@ -1065,7 +1077,7 @@ private fun SignedIn(
                         // إلى الدخول لا يُردّ بصمت: **قلبٌ يُضغط فلا
                         // يقع شيءٌ يُقرأ عطبا.**
                         onLike = { item ->
-                            if (guest) onAskLogin() else mineVm.toggleFavorite(item.id)
+                            if (guest) askLogin() else mineVm.toggleFavorite(item.id)
                         },
                         liked = mineVm.liked,
                         // **وعنوانُ التوصيل تُقرأ عليه الإتاحة** —
@@ -1074,7 +1086,7 @@ private fun SignedIn(
                         // **ومن لا عنوانَ له يُسأل** — **ولا يُخترَع
                         // له عنوان** (`PC-02`).
                         onNeedAddress = {
-                            if (guest) onAskLogin() else DeliveryAddress.open()
+                            if (guest) askLogin() else DeliveryAddress.open()
                         },
                         // **المدنُ الفعّالة** (Batch 3c) — لاستعراضِ سوقِ المدينةِ الرائدة.
                         cities = citiesVm.cities,

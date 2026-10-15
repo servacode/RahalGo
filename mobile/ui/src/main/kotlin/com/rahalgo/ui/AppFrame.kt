@@ -208,6 +208,13 @@ fun AuthGate(
      * بابِ خروجه** (`afterLogout`)، والنبضةُ تُعيد جلبَ الباقي.
      */
     sessionScoped: Boolean = true,
+    /**
+     * **أيملك الضيفُ بابَ الدخول بنفسه؟** (قرارُ المالك ٢٠٢٦-١٠-١٦) — الزبونُ يرى الدخولَ
+     * وإنشاءَ الحساب **داخل تبويب «حسابي» والشريطُ تحته باقٍ**، فيعود إلى السوق بلمسة.
+     * **فما دام لم يدخل، تبقى شاشتُه هو** ولو فتح إنشاءَ حسابٍ أو استعادة — وهو يرسمها
+     * بـ`AuthPanes` في موضعه.
+     */
+    guestOwnsAuth: Boolean = false,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **وأرضُ السمة تُوضع هنا — بوّابةً واحدةً لثلاث شاشات**
@@ -272,6 +279,8 @@ fun AuthGate(
         vm.restoring -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             RahalLoader()
         }
+
+        guestOwnsAuth && guest != null && !asking && !vm.offline && vm.user == null -> guest()
 
         vm.signup != null -> SignupScreen(
             state = vm.signup!!,
@@ -394,5 +403,64 @@ fun AuthGate(
             ),
         )
     }
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أبوابُ الدخول في موضعٍ يختاره التطبيق** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **الدخولُ وإنشاءُ الحساب والاستعادةُ — كما في البوّابة حرفاً** — لكن داخل تبويبٍ
+ * لا فوق التطبيق كلِّه، **فيبقى الشريطُ ويعود الزائرُ إلى السوق بلمسة.**
+ */
+@Composable
+fun AuthPanes(
+    vm: AuthViewModel,
+    title: String = stringResource(R.string.login_title),
+    signup: Boolean = true,
+) {
+    when {
+        vm.signup != null -> SignupScreen(
+            state = vm.signup!!,
+            actions = SignupActions(
+                setPhone = vm::setSignupPhone,
+                sendCode = vm::sendSignupCode,
+                verifyCode = vm::verifySignupCode,
+                confirm = vm::confirmSignup,
+                cancel = vm::closeSignup,
+                onReconnected = vm::signupConnectivityRestored,
+                toLogin = vm::recoverToLogin,
+                toReset = vm::recoverToReset,
+                toOtp = vm::recoverToOtp,
+            ),
+        )
+
+        vm.reset != null -> ResetScreen(
+            state = vm.reset!!,
+            actions = ResetActions(
+                setPhone = vm::setResetPhone,
+                sendCode = vm::sendResetCode,
+                verifyCode = vm::verifyResetCode,
+                confirm = vm::confirmReset,
+                cancel = vm::closeReset,
+            ),
+        )
+
+        else -> AuthScreen(
+            state = vm.state,
+            title = title,
+            signup = signup,
+            notice = SessionEnd.pending?.let { stringResource(SessionEnd.messageRes(it)) }.orEmpty(),
+            actions = LoginActions(
+                login = vm::login,
+                setMode = vm::setMode,
+                sendCode = vm::sendLoginCode,
+                verifyCode = vm::verifyLoginCode,
+                resetCode = vm::clearCode,
+                forgot = vm::openReset,
+                signup = { vm.openSignup() },
+            ),
+        )
     }
 }
