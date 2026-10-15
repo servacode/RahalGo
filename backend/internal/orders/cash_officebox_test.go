@@ -12,7 +12,8 @@ func TestTREASURY_MerchantCashPaidLeavesOfficeCashbox(t *testing.T) {
 	f := newCashFixture(t)
 	m, _ := f.merchant(t, "cash", 10)
 	oid := f.order(t, m, 100_000, 0, "cash")
-	f.pickup(t, oid)
+	// **بابُ الأدمن لمستحقٍّ قديم** — ما دفعه السائقُ لا يمرّ بالدرج (٢٠٢٦-١٠-١٥).
+	f.legacyPickup(t, oid)
 	sid := f.settlementID(t, oid, m)
 	ctx := context.Background()
 	for i := 0; i < 2; i++ {

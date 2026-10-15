@@ -237,6 +237,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **ومشوارُ إرجاع البضاعة** — مشوارُه هو (قرارُ المالك ٢٠٢٦-١٠-٠٣).
 		"return_to":       true,
 		"goods_handed_at": true,
+		// **وما يدفعه للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		"pay_merchant":  true,
+		"pay_merchants": true,
 	},
 	AudienceRep: {
 		"accepted_at":           true,
@@ -362,6 +365,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وسطرُ لوحة العمل** (لمن عُرض الطلب · باقي المهلة · سببُ العلوق) —
 		// يُجيزه العقد، وبثٌّ بلاه يعرض قديماً حتّى يُعاد الجلب.
 		"board": true,
+		// **وما يدفعه السائقُ للمتاجر عند الاستلام** (٢٠٢٦-١٠-١٥).
+		"pay_merchant":  true,
+		"pay_merchants": true,
 	},
 }
 

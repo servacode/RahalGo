@@ -229,6 +229,10 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		return nil, err
 	}
 	o.Rating = s.ratingFor(ctx, db, id)
+	// **وما يدفعه السائقُ للمتاجر عند الاستلام** (٢٠٢٦-١٠-١٥) — من حسبة التسوية نفسِها.
+	if err := s.fillPayMerchant(ctx, db, o); err != nil {
+		return nil, err
+	}
 	// **ومرحلتُه تُحسب هنا لا في الشاشة** — موضعٌ واحدٌ لثلاثِ شاشات.
 	o.SetStage()
 	// **وأحداثُه محمّلةٌ فوق** — فلا استعلامَ ثانٍ لأوقاته.

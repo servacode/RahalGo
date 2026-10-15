@@ -6126,7 +6126,8 @@
           "treasury_withdrawal": "سحب الأدمن",
           "shortfall_found": "نقص وُجد",
           "obligation_cash": "دفعة دين نقداً",
-          "expense_cash": "مصروف نقداً"
+          "expense_cash": "مصروف نقداً",
+          "advance_return": "سلفة رجعت للمكتب"
         },
         "statuses": {
           "pending": "ينتظر المراجعة",

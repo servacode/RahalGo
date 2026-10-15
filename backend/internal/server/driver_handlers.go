@@ -399,6 +399,11 @@ type driverOrder struct {
 	// DeliveryCodeRequired **أعلى الطلب كودُ تسليم؟** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — يطلبه
 	// السائقُ من الزبون قبل «سُلّم». **والكودُ نفسُه لا يُرسَل للسائق أبداً.**
 	DeliveryCodeRequired bool `json:"delivery_code_required"`
+	// PayMerchant **ما يدفعه للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
+	// المكتب، **وصندوقُه يقبض من الزبون الباقي وحدَه.** وصفرٌ: لا شيءَ يُدفع.
+	PayMerchant int64 `json:"pay_merchant"`
+	// PayMerchants **لكلّ متجرٍ ما يدفعه له** — لطلبٍ من مصدرين.
+	PayMerchants []orders.StorePay `json:"pay_merchants"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -569,7 +574,40 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.attachPayMerchants(r.Context(), out); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// attachPayMerchants **يُلحق بكلّ طلبٍ ما يدفعه السائقُ للمتاجر عند الاستلام** —
+// من حسبة التسوية نفسِها في المحرّك (`orders.PayMerchants`). **ومشوارُ الإرجاع لا
+// دفعَ فيه.**
+func (s *Server) attachPayMerchants(ctx context.Context, list []driverOrder) error {
+	ids := make([]string, 0, len(list))
+	for i := range list {
+		list[i].PayMerchants = []orders.StorePay{}
+		if list[i].Kind == "standard" && list[i].ReturnTo == "" {
+			ids = append(ids, list[i].ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	got, err := s.orders.PayMerchants(ctx, s.pg, ids)
+	if err != nil {
+		return err
+	}
+	for i := range list {
+		if p, ok := got[list[i].ID]; ok {
+			list[i].PayMerchants = p
+			for _, x := range p {
+				list[i].PayMerchant += x.Amount
+			}
+		}
+	}
+	return nil
 }
 
 // driverItem **سطرٌ مما يستلمه السائق** — الاسمُ والكميّةُ والخياراتُ بأسمائها.

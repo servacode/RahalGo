@@ -1175,9 +1175,25 @@
       "reachable": true
     },
     {
+      "kind": "custom_goods_return",
+      "semantics": "ثمنُ بضاعةٍ دفعه المكتبُ للسائق يعود إلى الخزينة — **لا ربحٌ ولا أجر.**",
+      "sign": "±",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "تسويةُ تسليم الطلب الخاصّ (مشتريات)",
+      "creators": [
+        "internal/orders/custom.go"
+      ],
+      "invariants": [
+        "FI-01.d",
+        "FI-06.a"
+      ],
+      "reachable": true
+    },
+    {
       "kind": "driver_earning",
       "semantics": "أجرُ توصيلِ طلبٍ سُلّم — **وهو أجرةُ الطلبِ المحفوظةُ لا إعدادٌ حيّ.**",
-      "sign": "+",
+      "sign": "±",
       "ref_required": true,
       "ref_target": "orders",
       "path": "تسويةُ التسليم",
@@ -1213,17 +1229,20 @@
     },
     {
       "kind": "merchant_cash_paid",
-      "semantics": "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.**",
+      "semantics": "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.** وما دفعه السائقُ يُطرح من نقد صندوقه.",
       "sign": "-",
       "ref_required": true,
       "ref_target": "orders",
-      "path": "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر",
+      "path": "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر · والسائقُ يدفعه عند الاستلام (٢٠٢٦-١٠-١٥)",
       "creators": [
         "internal/orders/cash_settlement.go"
       ],
       "invariants": [
         "FI-14.a",
-        "FI-14.f"
+        "FI-14.f",
+        "FI-06.a",
+        "FI-10.b",
+        "FI-15.b"
       ],
       "reachable": true
     },
@@ -1454,7 +1473,7 @@
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
-    "kinds": 18
+    "kinds": 19
   },
   "financial_settings": [
     "merchants.commission_percent",
@@ -1490,7 +1509,15 @@
     "orders.extra_source_fee",
     "orders.route_margin_pct",
     "drivers.failed_compensation_percent",
-    "delivery.platform_percent",
+    "delivery.share_standard",
+    "delivery.share_standard_mode",
+    "delivery.share_merchant",
+    "delivery.share_merchant_mode",
+    "delivery.share_purchase",
+    "delivery.share_purchase_mode",
+    "delivery.share_amanah",
+    "delivery.share_amanah_mode",
+    "delivery.custom_fee_amanah",
     "delivery.custom_fee_min",
     "delivery.custom_fee_max",
     "finance.manual_wallet_max",

@@ -32,9 +32,9 @@
     ],
     "setting_defs": 235,
     "behaviour_settings": 191,
-    "order_fields": 96,
-    "test_files": 566,
-    "test_funcs": 2276
+    "order_fields": 98,
+    "test_files": 569,
+    "test_funcs": 2281
   },
   "flows": [
     {
@@ -9073,6 +9073,36 @@
       "name": "TestQueueAffecting",
       "file": "internal/orders/broadcast_test.go",
       "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestDRVPAY_CashOrderCashStore",
+      "file": "internal/orders/cash_driver_pays_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDRVPAY_WalletCustomerCashStore",
+      "file": "internal/orders/cash_driver_pays_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDRVPAY_WalletMerchantUnchanged",
+      "file": "internal/orders/cash_driver_pays_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFI06d_ZeroProfitDeliveredCustomIsAccounted",
+      "file": "internal/orders/cash_driver_pays_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDRVPAY_PayMerchantShownToDriver",
+      "file": "internal/orders/cash_driver_pays_view_test.go",
+      "package": "orders_test",
       "orphan": true
     },
     {

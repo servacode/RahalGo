@@ -560,6 +560,8 @@
     <string name="total_purchase_fixed">تقبض ثمن البضاعة + %1$s أجرة التوصيل</string>
     <string name="trip_order_items">الطلب:</string>
     <string name="trip_collect_later">تقبض من الزبون عند التسليم</string>
+    <string name="trip_pay_merchant">ادفع للمتجر</string>
+    <string name="trip_pay_merchant_named">ادفع لـ%1$s</string>
     <string name="trip_goods_line">المشتريات: %1$s</string>
     <string name="trip_fee_line">أجرة التوصيل: %1$s</string>
     <string name="arrive_far_title">أنت بعيد عن المكان</string>

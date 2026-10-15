@@ -147,8 +147,12 @@ var OrderPrivacy = map[string]FieldRule{
 	"merchant_name":            {Ref: "customer_privacy.go:42", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_logo_thumb_url":  {Ref: "customer_privacy.go:43", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_accepts_returns": {Ref: "سياسةُ متجرٍ عامّة", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
-	"merchant_net":             {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
-	"prep_minutes":             {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق
+	// الذي يدفع وللإدارة. **ولا يخصّ زبوناً ولا مندوباً، والمتجرُ يرى صافيه في `merchant_net`.**
+	"pay_merchant":  {Ref: "ما يدفعه السائقُ للمتجر عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"pay_merchants": {Ref: "ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"merchant_net":  {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	"prep_minutes":  {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── السائق ────────────────────────────────────────────────────
 	"driver_id":       {Ref: "merchant_privacy.go:44 · MD-4", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

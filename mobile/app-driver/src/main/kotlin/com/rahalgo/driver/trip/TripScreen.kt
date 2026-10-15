@@ -1553,6 +1553,25 @@ private fun TripCard(
                             tint = Rahal.colors.brand,
                         )
                     }
+                    // **وكم يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
+                    // المكتب، **ولكلّ متجرٍ سطرُه** إن كان الطلبُ من مصدرين.
+                    if (order.kind == "standard" && order.payMerchant > 0) {
+                        if (order.payMerchants.size > 1) {
+                            order.payMerchants.forEach { p ->
+                                MoneyBox(
+                                    label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
+                                    amount = money(p.amount),
+                                    tint = Rahal.colors.brand,
+                                )
+                            }
+                        } else {
+                            MoneyBox(
+                                label = stringResource(R.string.trip_pay_merchant),
+                                amount = money(order.payMerchant),
+                                tint = Rahal.colors.brand,
+                            )
+                        }
+                    }
                     // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
                     if (order.kind == "standard") {
                         if (order.cashDue > 0) {

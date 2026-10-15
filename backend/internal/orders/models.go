@@ -288,12 +288,18 @@ type Order struct {
 	PlatformCommission int64 `json:"platform_commission,omitempty"`
 	// **صافي المتجر** — `subtotal - commission`. **ويُحسب في المحرّك
 	// لا في التطبيق**: أربعةُ تطبيقاتٍ تحسبه أربعَ مرّاتٍ وتختلف.
-	MerchantNet   int64   `json:"merchant_net,omitempty"`
-	CommissionPct int     `json:"commission_percent,omitempty"`
-	CashDue       int64   `json:"cash_due"`
-	PromoCode     *string `json:"promo_code"`
-	Notes         string  `json:"notes"`
-	CancelReason  string  `json:"cancel_reason"`
+	MerchantNet   int64 `json:"merchant_net,omitempty"`
+	CommissionPct int   `json:"commission_percent,omitempty"`
+	CashDue       int64 `json:"cash_due"`
+	// PayMerchant **ما يدفعه السائقُ للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	// مجموعُ `PayMerchants`. **للسائق والإدارة وحدَهما** (`privacy_contract.go`).
+	PayMerchant int64 `json:"pay_merchant,omitempty"`
+	// PayMerchants **لكلّ متجرٍ ما يدفعه له** — الصافي ناقصَ دَينه (تقديرٌ قبل
+	// الاستلام، وما دُفع فعلاً بعده). (`pay_merchant.go`)
+	PayMerchants []StorePay `json:"pay_merchants,omitempty"`
+	PromoCode    *string    `json:"promo_code"`
+	Notes        string     `json:"notes"`
+	CancelReason string     `json:"cancel_reason"`
 	// SentToMerchantAt متى حُوِّل الطلب إلى المتجر — لا «متى وصله».
 	//
 	// **كان يُكتب ولا يُقرأ**: تكتبه نقطةُ الإبلاغ في القاعدة ولا يعود في

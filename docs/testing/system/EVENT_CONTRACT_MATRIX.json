@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 78,
+    "emit_sites": 85,
     "realtime_publishers": 23,
     "rooms": 5,
     "untargeted_user_sites": 33
@@ -58,11 +58,20 @@
     },
     {
       "file": "internal/orders/delivery_code.go",
-      "line": 132,
+      "line": 146,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
       "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/delivery_code.go",
+      "line": 195,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
       "has_entity_id": true
     },
     {
@@ -192,7 +201,7 @@
     },
     {
       "file": "internal/orders/sameroute.go",
-      "line": 185,
+      "line": 186,
       "call": "Notify",
       "entity": "order",
       "has_app_targeting": true,
@@ -218,14 +227,14 @@
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 342,
+      "line": 402,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 463,
+      "line": 523,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -431,7 +440,7 @@
     },
     {
       "file": "internal/server/custom_order_handlers.go",
-      "line": 126,
+      "line": 134,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -440,7 +449,7 @@
     },
     {
       "file": "internal/server/customer_welcome.go",
-      "line": 37,
+      "line": 41,
       "call": "Notify",
       "kind": "Account",
       "has_app_targeting": true,
@@ -448,10 +457,27 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1149,
+      "line": 1255,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/driver_location_watch.go",
+      "line": 149,
+      "call": "Notify",
+      "kind": "Account",
+      "has_app_targeting": true,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/driver_location_watch.go",
+      "line": 157,
+      "call": "NotifyOps",
+      "kind": "Account",
+      "entity": "driver",
       "has_app_targeting": false,
       "has_entity_id": true
     },
@@ -528,8 +554,8 @@
       "has_entity_id": false
     },
     {
-      "file": "internal/server/leads_handlers.go",
-      "line": 457,
+      "file": "internal/server/lead_auto_approve.go",
+      "line": 59,
       "call": "NotifyOps",
       "kind": "Lead",
       "entity": "lead",
@@ -538,7 +564,16 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 591,
+      "line": 477,
+      "call": "NotifyOps",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 614,
       "call": "Notify",
       "kind": "Lead",
       "entity": "lead",
@@ -547,7 +582,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 602,
+      "line": 625,
       "call": "Notify",
       "kind": "Lead",
       "entity": "lead",
@@ -556,7 +591,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 710,
+      "line": 733,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -565,7 +600,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 959,
+      "line": 990,
       "call": "Notify",
       "kind": "Lead",
       "entity": "merchant",
@@ -574,7 +609,7 @@
     },
     {
       "file": "internal/server/merchant_handlers.go",
-      "line": 554,
+      "line": 573,
       "call": "NotifyOps",
       "kind": "Account",
       "entity": "merchant",
@@ -582,11 +617,28 @@
       "has_entity_id": true
     },
     {
+      "file": "internal/server/merchant_onboarding.go",
+      "line": 155,
+      "call": "Notify",
+      "kind": "Account",
+      "has_app_targeting": true,
+      "has_entity_id": false
+    },
+    {
       "file": "internal/server/merchant_settlement_handlers.go",
       "line": 114,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/merchant_setup.go",
+      "line": 195,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "merchant",
       "has_app_targeting": true,
       "has_entity_id": true
     },
@@ -669,8 +721,17 @@
       "has_entity_id": true
     },
     {
-      "file": "internal/server/text_limits.go",
+      "file": "internal/server/rep_qualify.go",
       "line": 89,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "merchant",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/text_limits.go",
+      "line": 90,
       "call": "NotifyOps",
       "kind": "Ticket",
       "has_app_targeting": false,
@@ -1174,7 +1235,7 @@
     },
     {
       "file": "internal/server/notifications_handlers.go",
-      "line": 45,
+      "line": 49,
       "room": "user:*"
     },
     {
@@ -1237,14 +1298,14 @@
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 342,
+      "line": 402,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
       "file": "internal/referrals/referrals.go",
-      "line": 463,
+      "line": 523,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -1390,7 +1451,7 @@
     },
     {
       "file": "internal/server/custom_order_handlers.go",
-      "line": 126,
+      "line": 134,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -1417,7 +1478,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 959,
+      "line": 990,
       "call": "Notify",
       "kind": "Lead",
       "entity": "merchant",

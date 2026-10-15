@@ -146,6 +146,13 @@ data class DriverOrder(
     val total: Long = 0,
     /** **ما يقبضه نقدا من الزبون** — وصفر يعني مدفوع سلفا. */
     @SerialName("cash_due") val cashDue: Long = 0,
+    /**
+     * **ما يدفعه للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة المكتب.
+     * **وصفرٌ: لا يدفع شيئاً** (المتجرُ «محفظة»، أو الطلبُ ليس عاديّاً).
+     */
+    @SerialName("pay_merchant") val payMerchant: Long = 0,
+    /** **لكلّ متجرٍ ما يدفعه له** — لطلبٍ من مصدرين. */
+    @SerialName("pay_merchants") val payMerchants: List<StorePay> = emptyList(),
     @SerialName("items_count") val itemsCount: Int = 0,
     /** **ما يستلمه باسمه وكميّته** (٢٠٢٦-١٠-١٢) — بلا أسعار. */
     val items: List<DriverItem> = emptyList(),
@@ -182,6 +189,14 @@ data class DriverOrder(
  * **يُسأل حين يختفي طلبٌ من قائمته** — فيُقال له «ألغى الزبونُ الطلب» بدل أن تُغلَق
  * الملاحةُ ويقفز صامتاً. **و`reason` فارغٌ: لا خبر** (سلّمه هو أو أعاده هو).
  */
+/** **ما يدفعه السائقُ لمتجرٍ واحدٍ عند الاستلام** (٢٠٢٦-١٠-١٥). */
+@Serializable
+data class StorePay(
+    @SerialName("merchant_id") val merchantId: String = "",
+    @SerialName("merchant_name") val merchantName: String = "",
+    val amount: Long = 0,
+)
+
 /** **سطرٌ مما يستلمه السائق** — الاسمُ والكميّةُ والخيارات. */
 @Serializable
 data class DriverItem(

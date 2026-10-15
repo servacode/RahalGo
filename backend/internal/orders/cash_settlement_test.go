@@ -138,6 +138,16 @@ func (f *cashFixture) transition(t *testing.T, orderID, to string) {
 }
 
 func (f *cashFixture) pickup(t *testing.T, orderID string) { f.transition(t, orderID, "picked_up") }
+
+// legacyPickup **استلامٌ على حال ما قبل ٢٠٢٦-١٠-١٥** — المستحقُّ يبقى `cash_due` يدفعه
+// الأدمنُ من الدرج. **ولا يقع اليومَ إلّا لطلبٍ استُلم قبل النشر** — فيُزرع ثمّ يُستلَم.
+func (f *cashFixture) legacyPickup(t *testing.T, orderID string) {
+	t.Helper()
+	if err := f.svc.AccrueLegacyCashDueForTest(context.Background(), orderID, f.driver); err != nil {
+		t.Fatalf("تعذّر زرعُ المستحقّ القديم: %v", err)
+	}
+	f.pickup(t, orderID)
+}
 func (f *cashFixture) deliver(t *testing.T, orderID string) {
 	for _, st := range []string{"picked_up", "on_the_way", "at_dropoff", "delivered"} {
 		f.transition(t, orderID, st)
@@ -231,12 +241,19 @@ func TestSET12_CashAccrual(t *testing.T) {
 	if got := f.sumKind(t, oid, "merchant_earning"); got != 0 {
 		t.Fatalf("قيدُ مستحقٍّ محفظيّ %d لطلبٍ نقديّ", got)
 	}
-	if got := f.balance(t, f.holding) - before; got != net {
-		t.Fatalf("الاحتباس زاد %d لا %d", got, net)
+	// **والسائقُ دفعه عند الاستلام** (٢٠٢٦-١٠-١٥): احتباسٌ ثمّ دفعٌ بالمقدار نفسِه.
+	if got := f.sumKind(t, oid, "merchant_cash_accrued"); got != net {
+		t.Fatalf("قيدُ الاحتباس %d لا %d", got, net)
+	}
+	if got := f.sumKind(t, oid, "merchant_cash_paid"); got != -net {
+		t.Fatalf("قيدُ الدفع %d لا %d", got, -net)
+	}
+	if got := f.balance(t, f.holding) - before; got != 0 {
+		t.Fatalf("الاحتباس بقي فيه %d — والسائقُ دفع", got)
 	}
 	s := f.settlement(t, oid, m)
-	if !s.found || s.method != "cash" || s.amount != net || s.reversed != 0 || s.state != "cash_due" {
-		t.Fatalf("صفُّ التسوية: %+v — يُنتظر cash/%d/0/cash_due", s, net)
+	if !s.found || s.method != "cash" || s.amount != net || s.reversed != 0 || s.state != "cash_paid" {
+		t.Fatalf("صفُّ التسوية: %+v — يُنتظر cash/%d/0/cash_paid", s, net)
 	}
 	f.assertFIGreen(t)
 }
@@ -275,7 +292,7 @@ func TestSET15_16_AdminPayIdempotent(t *testing.T) {
 	f := newCashFixture(t)
 	m, _ := f.merchant(t, "cash", 10)
 	oid := f.order(t, m, 100_000, 0, "cash")
-	f.pickup(t, oid)
+	f.legacyPickup(t, oid)
 	sid := f.settlementID(t, oid, m)
 	holdBefore := f.balance(t, f.holding)
 
@@ -324,7 +341,11 @@ func TestSET17_CashRefundPrePay(t *testing.T) {
 	m, _ := f.merchant(t, "cash", 10)
 	holdStart := f.balance(t, f.holding)
 	oid := f.order(t, m, 100_000, 10_000, "cash")
-	f.deliver(t, oid)
+	// **ولا يبقى مستحقٌّ بلا دفعٍ اليومَ إلّا من القديم** (٢٠٢٦-١٠-١٥).
+	f.legacyPickup(t, oid)
+	for _, st := range []string{"on_the_way", "at_dropoff", "delivered"} {
+		f.transition(t, oid, st)
+	}
 	f.transition(t, oid, "refunded")
 
 	if s := f.settlement(t, oid, m); s.state != "cash_reversed" || s.reversed != s.amount {
@@ -370,7 +391,7 @@ func TestSET30_CashDebtOffset(t *testing.T) {
 		wantState         string
 		wantRemainingDebt int64
 	}{
-		{"جزئي", 30_000, 90_000, 60_000, 30_000, "cash_due", 0},
+		{"جزئي", 30_000, 90_000, 60_000, 30_000, "cash_paid", 0},
 		{"يفوق", 150_000, 90_000, 0, 90_000, "cash_reversed", 60_000},
 		{"مساوٍ", 90_000, 90_000, 0, 90_000, "cash_reversed", 0},
 	}
@@ -393,8 +414,12 @@ func TestSET30_CashDebtOffset(t *testing.T) {
 			if s.reversed != c.wantReversed || s.state != c.wantState {
 				t.Fatalf("عكس=%d حالة=%s — يُنتظر %d/%s", s.reversed, s.state, c.wantReversed, c.wantState)
 			}
-			if got := f.balance(t, f.holding) - holdBefore; got != c.wantOutstanding {
-				t.Fatalf("الاحتباس زاد %d لا %d (القائم)", got, c.wantOutstanding)
+			// **والقائمُ دفعه السائقُ عند الاستلام** (٢٠٢٦-١٠-١٥) — فلا يبقى في الاحتباس شيء.
+			if got := f.balance(t, f.holding) - holdBefore; got != 0 {
+				t.Fatalf("الاحتباس بقي فيه %d", got)
+			}
+			if got := f.sumKind(t, oid, "merchant_cash_paid"); got != -c.wantOutstanding {
+				t.Fatalf("دفعُ السائق %d لا %d (القائم بعد الاقتطاع)", got, -c.wantOutstanding)
 			}
 			if got := f.obligation(t, m); got != c.wantRemainingDebt {
 				t.Fatalf("الالتزامُ الباقي %d لا %d", got, c.wantRemainingDebt)
@@ -492,7 +517,7 @@ func TestSET24_PayCurrentOwner(t *testing.T) {
 	f := newCashFixture(t)
 	m, _ := f.merchant(t, "cash", 10)
 	oid := f.order(t, m, 100_000, 0, "cash")
-	f.pickup(t, oid)
+	f.legacyPickup(t, oid)
 	// **تتبدّل الملكيّةُ بعد النشأة قبل الدفع.**
 	newOwner := testdb.NewUser(t, f.pool, "merchant")
 	if _, err := f.pool.Exec(context.Background(),

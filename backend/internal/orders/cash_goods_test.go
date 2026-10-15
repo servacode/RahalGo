@@ -19,14 +19,17 @@ func cashGoodsCase(t *testing.T, paid bool, compensation int64) (*cashFixture, s
 	ctx := context.Background()
 	m, owner := f.merchant(t, "cash", 10)
 	oid := f.order(t, m, 100_000, 0, "cash")
-	f.pickup(t, oid)
-	if s := f.settlement(t, oid, m); s.state != "cash_due" || s.amount != 90_000 {
-		t.Fatalf("المستحقُّ النقديّ: %+v", s)
-	}
+	// **المدفوعُ دفعه السائقُ عند الاستلام** (٢٠٢٦-١٠-١٥)، **وغيرُ المدفوع مستحقٌّ قديمٌ**
+	// لم يبلغه القرار.
+	want := "cash_paid"
 	if paid {
-		if _, err := f.svc.MarkCashSettlementPaid(ctx, f.settlementID(t, oid, m), f.treasury, "دُفع", ""); err != nil {
-			t.Fatal(err)
-		}
+		f.pickup(t, oid)
+	} else {
+		f.legacyPickup(t, oid)
+		want = "cash_due"
+	}
+	if s := f.settlement(t, oid, m); s.state != want || s.amount != 90_000 {
+		t.Fatalf("المستحقُّ النقديّ: %+v — يُنتظر %s", s, want)
 	}
 	for _, to := range []string{"on_the_way", "at_dropoff"} {
 		f.transition(t, oid, to)

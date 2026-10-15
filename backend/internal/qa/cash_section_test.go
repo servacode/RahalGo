@@ -185,7 +185,9 @@ func TestCASH_MerchantDuesListedRegardlessOfMethod(t *testing.T) {
 		t.Fatalf("الطلب: %s", made)
 	}
 	oid, _ := made.JSON()["id"].(string)
-	deliverOrder(t, h, oid, h.driverOf(oid))
+	// **ولا يبقى مستحقٌّ بلا دفعٍ بعد قرار ٢٠٢٦-١٠-١٥** — السائقُ يدفعه عند الاستلام.
+	// **فالقائمُ اليومَ قديمٌ استُلم قبل النشر**، ويُزرع كما كتبه الاستلامُ يومَها.
+	seedLegacyCashDue(t, h, oid, item.MerchantID, 18_000)
 
 	var due int64
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(amount - reversed_amount), 0)
@@ -266,5 +268,41 @@ func TestCASH_SettleNotificationFormatsMoney(t *testing.T) {
 	if !strings.Contains(body, "50,000") || !strings.Contains(body, "106,650") ||
 		!strings.Contains(body, "ل.س") {
 		t.Errorf("**الإشعارُ بأرقامٍ خام**: %q", body)
+	}
+}
+
+// seedLegacyCashDue **مستحقٌّ نقديٌّ قديمٌ لم يُدفع** — كما كتبه الاستلامُ قبل ٢٠٢٦-١٠-١٥:
+// قيدُ احتباسٍ بمرجع الطلب وصفُّ تسويةٍ `cash_due` موصولٌ به، **في معاملةٍ واحدة.**
+func seedLegacyCashDue(t *testing.T, h *Harness, orderID, merchantID string, amount int64) {
+	t.Helper()
+	ctx := ctxBG()
+	tx, err := h.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var hid string
+	if err := tx.QueryRow(ctx, `SELECT user_id::text FROM wallets WHERE is_cash_holding`).Scan(&hid); err != nil {
+		t.Fatalf("محفظةُ الاحتباس: %v", err)
+	}
+	var txID int64
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note)
+		VALUES ($1::uuid, $2, 'merchant_cash_accrued', $3, 'qa fixture')
+		RETURNING id`, hid, amount, orderID).Scan(&txID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE wallets SET balance = balance + $2 WHERE user_id = $1::uuid`,
+		hid, amount); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO merchant_settlements (order_id, merchant_id, owner_user_id, method, amount, state, accrued_tx_id)
+		SELECT $1::uuid, m.id, m.owner_user_id, 'cash', $3, 'cash_due', $4
+		FROM merchants m WHERE m.id = $2::uuid`, orderID, merchantID, amount, txID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -286,19 +286,150 @@ func (s *Service) reverseCashSettlements(ctx context.Context, q wallet.Querier, 
 	return nil
 }
 
+// جهةُ الدفع — `merchant_settlements.paid_via` (هجرة `0438`).
+const (
+	// paidViaOffice **الأدمنُ دفع من درج المكتب** — وله سطرٌ خارجٌ في الصندوق.
+	paidViaOffice = "office"
+	// paidViaDriver **السائقُ دفع للمتجر عند الاستلام** — ولا سطرَ في الدرج.
+	paidViaDriver = "driver"
+)
+
+// payCashSettlement **يخصم القائمَ من الاحتباس ويجعل الصفَّ `cash_paid`** — داخل
+// معاملة المستدعي، ويُرجع المالكَ الحاليَّ للمتجر.
+//
+// **بابٌ واحدٌ للدفع بجهتَيه** (الأدمنُ من الدرج والسائقُ عند الاستلام) — فلا يفترق
+// قيدُ الدفع عن أخيه في نوعه ولا في وصله بالصفّ. **وما يخصّ كلَّ جهةٍ عند مناديها**:
+// سطرُ الدرج والتدقيقُ للأدمن وحدَه.
+func (s *Service) payCashSettlement(ctx context.Context, q wallet.Querier,
+	settleID, orderID, merchantID string, outstanding int64, payerID, via, txNote, note string) (string, error) {
+	hid, err := s.cashHoldingOn(ctx, q)
+	if err != nil {
+		return "", err
+	}
+	var currentOwner string
+	if err := q.QueryRow(ctx,
+		`SELECT owner_user_id::text FROM merchants WHERE id = $1`, merchantID).
+		Scan(&currentOwner); err != nil {
+		return "", err
+	}
+	_, txID, err := s.wallet.ApplyTxID(ctx, q, hid, -outstanding, "merchant_cash_paid",
+		orderID, txNote, &payerID)
+	if err != nil {
+		return "", err
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE merchant_settlements
+		   SET state = 'cash_paid', paid_tx_id = $2, paid_by = $3,
+		       paid_owner_user_id = $4, paid_at = now(), note = $5, paid_via = $6
+		 WHERE id = $1`, settleID, txID, payerID, currentOwner, note, via); err != nil {
+		return "", err
+	}
+	return currentOwner, nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **السائقُ يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان المستحقُّ النقديُّ يبقى دَيناً (`cash_due`) حتّى يدفعه الأدمنُ من الدرج**،
+// ثمّ يقبض السائقُ من الزبون نقدَ الطلب كلَّه. **والواقعُ أنّ السائقَ يدفع للمتجر
+// عند الاستلام** من سلفةٍ يعطيه إيّاها مديرُ المكتب من جيبه (خارجَ النظام).
+//
+// **فيُدفَع الصفُّ لحظةَ نشأته** — بعد الاحتباس واقتطاعِ الدَّين، **بالقائم لا
+// بالأصل** — ويُسجَّل أنّ الدافعَ السائق. **ولا سطرَ في درج المكتب**: النقدُ لم
+// يمرّ به. **وعند التسليم يقبض صندوقُه الباقي وحدَه** (`driverPaidFor`).
+func (s *Service) payCashByDriver(ctx context.Context, q wallet.Querier,
+	settleID, orderID, merchantID, driverID string) error {
+	var amount, reversed int64
+	var state string
+	if err := q.QueryRow(ctx, `
+		SELECT amount, reversed_amount, state FROM merchant_settlements
+		 WHERE id = $1 FOR UPDATE`, settleID).Scan(&amount, &reversed, &state); err != nil {
+		return err
+	}
+	// **دَينٌ اقتطع المستحقَّ كلَّه ⇒ لا شيءَ يُدفع** (`cash_reversed`).
+	if state != "cash_due" || amount-reversed <= 0 {
+		return nil
+	}
+	_, err := s.payCashSettlement(ctx, q, settleID, orderID, merchantID, amount-reversed,
+		driverID, paidViaDriver, "مستحقٌّ نقديٌّ دفعه السائقُ للمتجر عند الاستلام",
+		"دفعه السائقُ عند الاستلام")
+	return err
+}
+
+// driverPaidFor **ما دفعه السائقون للمتاجر عن هذا الطلب** — كلُّه، وما دفعه هذا
+// السائقُ وحدَه. **من الدفتر لا من الصفّ**: قيدُ الدفع هو ما خرج فعلاً.
+func driverPaidFor(ctx context.Context, q wallet.Querier, orderID, driverID string) (all, mine int64, err error) {
+	err = q.QueryRow(ctx, `
+		SELECT COALESCE(-sum(t.amount), 0)::bigint,
+		       COALESCE(-sum(t.amount) FILTER (WHERE ms.paid_by = $2::uuid), 0)::bigint
+		FROM merchant_settlements ms
+		JOIN wallet_transactions t ON t.id = ms.paid_tx_id
+		WHERE ms.order_id = $1 AND ms.paid_via = 'driver'`, orderID, driverID).Scan(&all, &mine)
+	return all, mine, err
+}
+
+// collectAndReturnAdvance **نقدُ السائق عند نهاية طلبٍ دفع فيه للمتجر.**
+//
+//   - **يقبض صندوقُه نقدَ الطلب ناقصَ ما دفعه هو للمتاجر** (ولا يهبط تحت الصفر):
+//     الزبونُ أعطاه ٦٠٠ ودفع منها ٤٥٠ للمتجر، **فيدين للمكتب بـ١٥٠.**
+//   - **وما لم يغطّه نقدُ الزبون سلفةٌ يردّها المكتبُ من الدرج** (`advance_return`):
+//     زبونٌ دفع من محفظته فلم يقبض السائقُ شيئاً والمتجرُ قبض من السلفة —
+//     **فيأخذ المكتبُ من الدرج ما يردّ به سلفةَ المدير.** وليس ربحاً ولا مصروفاً:
+//     الخزينةُ حسبت مستحقَّ المتجر نصيبَ طرفٍ (`merchant_cash_accrued`).
+//
+// **والمعادلةُ** (FI-06.a): صافي دفتر الطلب = نقدُ الطلب − المدفوعُ للمتاجر =
+// المحصَّل − السلفةُ المردودة. **ودفعٌ من سائقٍ سابقٍ** (طارئٌ بعد الاستلام) لا
+// يُخصَم من صندوق اللاحق — **يُردّ سلفةً كلُّه.**
+func (s *Service) collectAndReturnAdvance(ctx context.Context, q wallet.Querier,
+	orderID string, driverID *string, cashDue int64, actorID string) error {
+	if driverID == nil {
+		return nil
+	}
+	all, mine, err := driverPaidFor(ctx, q, orderID, *driverID)
+	if err != nil {
+		return err
+	}
+	collect := cashDue - mine
+	if collect < 0 {
+		collect = 0
+	}
+	if collect > 0 {
+		if err := s.cashbox.CollectTx(ctx, q, *driverID, collect, orderID, &actorID); err != nil {
+			return err
+		}
+	}
+	return recordAdvanceReturn(ctx, q, orderID, *driverID, collect-cashDue+all, actorID)
+}
+
+// recordAdvanceReturn **سطرُ «سلفة رجعت للمكتب»** — خارجٌ من الدرج بمرجع الطلب،
+// **ومرّةً واحدةً للطلب** (`(source, ref)` فريد).
+func recordAdvanceReturn(ctx context.Context, q wallet.Querier, orderID, driverID string, amount int64, actorID string) error {
+	if amount <= 0 {
+		return nil
+	}
+	return officecash.Record(ctx, q, officecash.Entry{
+		Direction: officecash.Out, Amount: amount, Source: officecash.SourceAdvanceReturn,
+		Ref: orderID, UserID: driverID, Actor: actorID,
+		Note: "سلفةُ دفعِ المتجر رجعت للمكتب",
+	})
+}
+
 // ── سطحُ الأدمن: قراءةُ المستحقّات النقديّة وتأكيدُ دفعِها ───────────────
 
 // CashSettlementRow صفٌّ في كشفِ المستحقّات النقديّة لمتجر.
 type CashSettlementRow struct {
-	ID          string     `json:"id"`
-	OrderID     string     `json:"order_id"`
-	Amount      int64      `json:"amount"`
-	Reversed    int64      `json:"reversed_amount"`
-	Outstanding int64      `json:"outstanding"`
-	State       string     `json:"state"`
-	PaidBy      *string    `json:"paid_by,omitempty"`
-	PaidAt      *time.Time `json:"paid_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID          string  `json:"id"`
+	OrderID     string  `json:"order_id"`
+	Amount      int64   `json:"amount"`
+	Reversed    int64   `json:"reversed_amount"`
+	Outstanding int64   `json:"outstanding"`
+	State       string  `json:"state"`
+	PaidBy      *string `json:"paid_by,omitempty"`
+	// PaidVia **من أين دُفع**: `office` من الدرج · `driver` دفعه السائقُ عند الاستلام.
+	PaidVia   *string    `json:"paid_via,omitempty"`
+	PaidAt    *time.Time `json:"paid_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 // MerchantCashSummary مُلخّصُ المستحقّات النقديّة لمتجر — للأدمن.
@@ -312,7 +443,7 @@ func (s *Service) MerchantCashSettlements(ctx context.Context, merchantID string
 	var out MerchantCashSummary
 	rows, err := s.db.Query(ctx, `
 		SELECT id::text, order_id::text, amount, reversed_amount, state,
-		       paid_by::text, paid_at, created_at
+		       paid_by::text, paid_via, paid_at, created_at
 		FROM merchant_settlements
 		WHERE merchant_id = $1 AND method = 'cash'
 		ORDER BY created_at DESC`, merchantID)
@@ -323,7 +454,7 @@ func (s *Service) MerchantCashSettlements(ctx context.Context, merchantID string
 	for rows.Next() {
 		var r CashSettlementRow
 		if err := rows.Scan(&r.ID, &r.OrderID, &r.Amount, &r.Reversed, &r.State,
-			&r.PaidBy, &r.PaidAt, &r.CreatedAt); err != nil {
+			&r.PaidBy, &r.PaidVia, &r.PaidAt, &r.CreatedAt); err != nil {
 			return out, err
 		}
 		r.Outstanding = r.Amount - r.Reversed
@@ -392,26 +523,9 @@ func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, admi
 	if outstanding <= 0 {
 		return res, ErrSettlementNotPayable
 	}
-	hid, err := s.cashHoldingOn(ctx, tx)
+	currentOwner, err := s.payCashSettlement(ctx, tx, settlementID, orderID, merchantID,
+		outstanding, adminID, paidViaOffice, "تسويةُ مستحقٍّ نقديّ — تأكيدُ دفعٍ من الأدمن", note)
 	if err != nil {
-		return res, err
-	}
-	var currentOwner string
-	if err := tx.QueryRow(ctx,
-		`SELECT owner_user_id::text FROM merchants WHERE id = $1`, merchantID).
-		Scan(&currentOwner); err != nil {
-		return res, err
-	}
-	_, txID, err := s.wallet.ApplyTxID(ctx, tx, hid, -outstanding, "merchant_cash_paid",
-		orderID, "تسويةُ مستحقٍّ نقديّ — تأكيدُ دفعٍ من الأدمن", &adminID)
-	if err != nil {
-		return res, err
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE merchant_settlements
-		   SET state = 'cash_paid', paid_tx_id = $2, paid_by = $3,
-		       paid_owner_user_id = $4, paid_at = now(), note = $5
-		 WHERE id = $1`, settlementID, txID, adminID, currentOwner, note); err != nil {
 		return res, err
 	}
 	// **والنقدُ خرج من درج المكتب إلى المتجر** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — سطرٌ في

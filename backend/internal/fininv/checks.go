@@ -456,21 +456,42 @@ var All = []Check{
 				            THEN COALESCE(o.custom_goods_amount, 0) ELSE 0 END AS goods
 			) g
 			LEFT JOIN LATERAL (
-				-- **وقيدُ الدفع النقديّ تسويةُ التزامٍ لا توزيعُ طلب** — ينقل
-				-- نقداً من الاحتباس إلى المتجر خارجَ معادلة «التوزيع = نقدُ
+				-- **وقيدُ الدفع النقديّ من الدرج تسويةُ التزامٍ لا توزيعُ طلب** —
+				-- ينقل نقداً من الاحتباس إلى المتجر خارجَ معادلة «التوزيع = نقدُ
 				-- السائق». يحرسه FI-14.f (المدفوعُ = المستحقُّ) وFI-14.a
 				-- (الاحتباس = القائم)، فيُستثنى هنا كي لا يُقرأ خرقاً.
+				--
+				-- **إلّا ما دفعه السائقُ عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥):
+				-- خرج من نقد الطلب نفسِه، **فصندوقُه يقبض الباقي وحدَه** — فيُحسب.
 				SELECT sum(t.amount) AS net FROM wallet_transactions t
-				WHERE t.ref = o.id::text AND t.kind <> 'merchant_cash_paid'
+				WHERE t.ref = o.id::text
+				  AND (t.kind <> 'merchant_cash_paid'
+				       OR EXISTS (SELECT 1 FROM merchant_settlements ms
+				                  WHERE ms.paid_tx_id = t.id AND ms.paid_via = 'driver'))
 			) l ON true
 			LEFT JOIN LATERAL (
 				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
 				WHERE e.ref = o.id::text AND e.kind = 'order_collection'
 			) c ON true
+			-- **وما لم يغطّه نقدُ الزبون سلفةٌ ردّها المكتبُ من الدرج** (advance_return)
+			-- — فالنقدُ المقابلُ للدفتر = المحصَّلُ ناقصَها.
+			LEFT JOIN LATERAL (
+				SELECT sum(oc.amount) AS adv FROM office_cash_entries oc
+				WHERE oc.ref = o.id::text AND oc.source = 'advance_return'
+			) a ON true
+			-- **وطلبٌ في الطريق دفع سائقُه للمتجر ولم يُختم بعد** — المدفوعُ سلفةٌ
+			-- قائمةٌ بيده لا نقدٌ محصَّل؛ تُحسم عند الختام (تحصيلٌ أو ردُّ سلفة).
+			LEFT JOIN LATERAL (
+				SELECT -sum(t.amount) AS paid FROM merchant_settlements ms
+				JOIN wallet_transactions t ON t.id = ms.paid_tx_id
+				WHERE ms.order_id = o.id AND ms.paid_via = 'driver'
+				  AND o.status NOT IN ('delivered', 'refunded', 'failed', 'cancelled', 'rejected')
+			) d ON true
 			WHERE EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
 			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
-			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - g.goods`,
+			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - COALESCE(a.adv, 0)
+			                            - COALESCE(d.paid, 0) - g.goods`,
 	},
 	{
 		ID: "FI-06.d", Family: FI06, Status: ProvableNow, Ops: true,
@@ -500,6 +521,16 @@ var All = []Check{
 			) l ON true
 			WHERE NOT EXISTS (SELECT 1 FROM wallet_transactions p
 			                  WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
+			  -- **وطلبٌ بلغ موضعَ المحاسبة محاسَبٌ ولو بلا قيدِ ربح** (٢٠٢٦-١٠-١٥):
+			  -- creditTreasury لا تكتب فرقاً صفريّاً — **فمشترياتٌ سُلّمت بلا ربحٍ
+			  -- للمنصّة لا قيدَ لها، وكانت تُقرأ «قبل المحاسبة» فخرقاً.** والعلامةُ
+			  -- حالُه: سُلّم أو استُرجع، أو انتهى بعد الاستلام (لحظةُ ختامه في
+			  -- order_events). **وما قبل الاستلام يبقى على صرامته.**
+			  AND o.status NOT IN ('delivered', 'refunded')
+			  AND NOT (o.status IN ('failed', 'cancelled') AND EXISTS (
+			        SELECT 1 FROM order_events ev
+			        WHERE ev.order_id = o.id AND ev.to_status = o.status
+			          AND ev.from_status IN ('picked_up', 'on_the_way', 'at_dropoff')))
 			  -- **والمنتهي قبل المحاسبة يُستردّ له خصمُه** فصافيه صفر — وعمودُ wallet_paid
 			  -- يبقى شاهداً على ما دُفع. (كشفته الدورةُ الحيّة ٢٠٢٦-١٠-٠٥: كلُّ إلغاءٍ
 			  -- سليمٍ من المحفظة كان يُقرأ خرقاً.)
@@ -579,13 +610,19 @@ var All = []Check{
 			"**ولا يُكتفى بالمحتجَز** (البند ١٠): الرصيدُ يُخفي قيدين خاطئين " +
 			"يلغي أحدهما الآخر.",
 		Flows: []string{"F-14", "F-27"},
+		// **والسائقُ يقبض نقدَ الطلب ناقصَ ما دفعه هو للمتاجر عند الاستلام** (قرارُ
+		// المالك ٢٠٢٦-١٠-١٥) — **ولا يهبط تحت الصفر.** والمدفوعُ من قيد الدفع نفسِه.
 		SQL: `
 			SELECT o.number, o.cash_due, sum(e.amount)::bigint AS المحصَّل
 			FROM orders o
 			JOIN driver_cash_entries e
 			  ON e.ref = o.id::text AND e.kind = 'order_collection'
-			GROUP BY o.number, o.cash_due
-			HAVING sum(e.amount) <> o.cash_due`,
+			GROUP BY o.id, o.number, o.cash_due, e.driver_id
+			HAVING sum(e.amount) <> GREATEST(o.cash_due - COALESCE((
+			         SELECT -sum(t.amount) FROM merchant_settlements ms
+			         JOIN wallet_transactions t ON t.id = ms.paid_tx_id
+			         WHERE ms.order_id = o.id AND ms.paid_via = 'driver'
+			           AND ms.paid_by = e.driver_id), 0), 0)`,
 	},
 	{
 		ID: "FI-10.c", Family: FI10, Status: ProvableNow, Ops: true,
@@ -740,6 +777,8 @@ var All = []Check{
 			FROM merchant_settlements ms
 			WHERE ms.state = 'cash_paid'
 			  AND ms.paid_at >= ` + officeCashSince + `
+			  -- **وما دفعه السائقُ عند الاستلام لم يمرّ بالدرج** (٢٠٢٦-١٠-١٥).
+			  AND ms.paid_via IS DISTINCT FROM 'driver'
 			  AND NOT EXISTS (SELECT 1 FROM office_cash_entries c
 			                  WHERE c.source = 'merchant_cash_paid' AND c.direction = 'out'
 			                    AND c.ref = ms.id::text)`,

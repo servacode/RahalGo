@@ -224,10 +224,10 @@ var Kinds = map[string]KindContract{
 	},
 	"merchant_cash_paid": {
 		Kind: "merchant_cash_paid", Sign: "-", RefRequired: true, RefTarget: "orders",
-		Creators:   []string{"internal/orders/cash_settlement.go"}, // MarkCashSettlementPaid
-		Path:       "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر",
-		Semantics:  "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.**",
-		Invariants: []string{"FI-14.a", "FI-14.f"},
+		Creators:   []string{"internal/orders/cash_settlement.go"}, // payCashSettlement ← MarkCashSettlementPaid · payCashByDriver
+		Path:       "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر · والسائقُ يدفعه عند الاستلام (٢٠٢٦-١٠-١٥)",
+		Semantics:  "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.** وما دفعه السائقُ يُطرح من نقد صندوقه.",
+		Invariants: []string{"FI-14.a", "FI-14.f", "FI-06.a", "FI-10.b", "FI-15.b"},
 		Reachable:  true,
 	},
 }
