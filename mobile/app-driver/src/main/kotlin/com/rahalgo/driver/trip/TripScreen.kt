@@ -1681,6 +1681,23 @@ private fun TripCard(
                     }
                     InfoBox(icon = R.drawable.ic_check_circle, text = done, tint = Rahal.colors.success)
                 }
+                // **والمشترياتُ من متجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يعرف من أين يشتري،
+                // **وبعد توثيق الثمن كم يدفع له: الثمنُ ناقصَ العمولة** (من الخادم لا من هنا).
+                if (customOpen && order.partnerMerchantName.isNotBlank()) {
+                    if (order.payMerchant > 0) {
+                        MoneyBox(
+                            label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
+                            amount = money(order.payMerchant),
+                            tint = Rahal.colors.brand,
+                        )
+                    } else {
+                        InfoBox(
+                            icon = com.rahalgo.ui.R.drawable.ic_cart,
+                            text = stringResource(R.string.trip_partner_store, order.partnerMerchantName),
+                            tint = Rahal.colors.brand,
+                        )
+                    }
+                }
                 val awaitingConfirm = customOpen && feeDone && !quoteOk
                 val customHint = when {
                     customOpen && quoteOk && !needGoods -> stringResource(

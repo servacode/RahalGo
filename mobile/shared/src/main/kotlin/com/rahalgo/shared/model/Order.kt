@@ -153,6 +153,11 @@ data class DriverOrder(
     @SerialName("pay_merchant") val payMerchant: Long = 0,
     /** **لكلّ متجرٍ ما يدفعه له** — لطلبٍ من مصدرين. */
     @SerialName("pay_merchants") val payMerchants: List<StorePay> = emptyList(),
+    /**
+     * **المتجرُ التابعُ الذي يشتري منه** في المشتريات (قرارُ المالك ٢٠٢٦-١٠-١٥) — وفارغٌ:
+     * يشتري من حيث شاء. وما يدفعه له في `payMerchant` بعد توثيق الثمن (الثمنُ ناقصَ العمولة).
+     */
+    @SerialName("partner_merchant_name") val partnerMerchantName: String = "",
     @SerialName("items_count") val itemsCount: Int = 0,
     /** **ما يستلمه باسمه وكميّته** (٢٠٢٦-١٠-١٢) — بلا أسعار. */
     val items: List<DriverItem> = emptyList(),

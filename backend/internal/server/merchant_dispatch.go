@@ -67,6 +67,12 @@ var (
 // قالبٍ لم يُعدَّل.**
 func buildMerchantMessage(tpl string, o *orderMessage) string {
 	var b strings.Builder
+	// **والمشترياتُ من متجرٍ تابعٍ بلا بنود** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ما كتبه الزبونُ
+	// بلفظه هو الطلب، **فيحلّ محلَّ الأصناف في القالب نفسِه.**
+	if o.Request != "" {
+		b.WriteString(o.Request)
+		b.WriteString("\n")
+	}
 	for _, it := range o.Items {
 		fmt.Fprintf(&b, "• %s ×%d\n", it.Name, it.Qty)
 		if len(it.Options) > 0 {
@@ -98,6 +104,10 @@ type orderMessage struct {
 	Number int64
 	Items  []orderMessageItem
 	Notes  string
+	// Request **ما طلبه الزبونُ بلفظه** — للمشتريات من متجرٍ تابعٍ وحدَها، وفراغٌ لغيرها.
+	Request string
+	// Custom **طلبٌ خاصٌّ** — لا إنزالَ بعد إرساله: سائقُه معه أصلاً.
+	Custom bool
 }
 
 // merchantPhones رقما المتجر — **لأن القناتين لا تريدان الرقمَ نفسه.**
@@ -121,6 +131,8 @@ func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMe
 	var ph merchantPhones
 	if err := s.pg.QueryRow(ctx, `
 		SELECT o.number, o.notes,
+		       CASE WHEN o.kind = 'custom' THEN COALESCE(o.custom_request, '') ELSE '' END,
+		       o.kind = 'custom',
 		       COALESCE(NULLIF(m.phone::text, ''),
 		                NULLIF(ou.phone::text, ''),
 		                NULLIF(ou.phone::text, ''), ''),
@@ -128,10 +140,12 @@ func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMe
 		                NULLIF(ou.phone::text, ''),
 		                NULLIF(m.phone::text, ''), '')
 		FROM orders o
-		JOIN merchants m ON m.id = o.merchant_id
+		-- **والمتجرُ التابعُ متجرُ الرسالة في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والخاصُّ
+		-- بلا متجرٍ تابعٍ لا رسالةَ له: لا صفَّ فيُردّ «غير موجود».
+		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
 		WHERE o.id = $1`, orderID).
-		Scan(&msg.Number, &msg.Notes, &ph.SMS, &ph.WhatsApp); err != nil {
+		Scan(&msg.Number, &msg.Notes, &msg.Request, &msg.Custom, &ph.SMS, &ph.WhatsApp); err != nil {
 		return nil, merchantPhones{}, err
 	}
 
@@ -294,9 +308,14 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	//
 	// **وشرطٌ على مفتاحٍ لا وجودَ له شرطٌ لا يتحقّق أبداً** — ووعدٌ في تعليقٍ
 	// لا يفي به الكود.
-	if err := s.orders.AutoDispatch(r.Context(), userIDFrom(r), orderID); err != nil {
-		s.logger.Warn("الإنزال بعد الإبلاغ تعثّر — ينتظر إسناداً يدوياً",
-			"order", orderID, "error", err)
+	//
+	// **والطلبُ الخاصُّ لا يُنزَل** (المشترياتُ من متجرٍ تابع، ٢٠٢٦-١٠-١٥) — سائقُه معه
+	// قبل أن يُرسَل للمتجر شيء، **والإرسالُ خبرٌ للمتجر لا خطوةٌ في التوزيع.**
+	if !msg.Custom {
+		if err := s.orders.AutoDispatch(r.Context(), userIDFrom(r), orderID); err != nil {
+			s.logger.Warn("الإنزال بعد الإبلاغ تعثّر — ينتظر إسناداً يدوياً",
+				"order", orderID, "error", err)
+		}
 	}
 
 	// **والمتجرُ يسمع التحويلَ بعينه** (٢٠٢٦-١٠-٠٦) — كان يصله صدى «تغيّر شيءٌ» العامّ وحدَه.

@@ -577,6 +577,9 @@
     <string name="err_item_unavailable_too_late">لا يُحذف صنف بعد استلام الطلب أو انتهائه.</string>
     <string name="err_item_unavailable_last_item">هذا آخر صنف في الطلب — ألغِ الطلب بدل حذفه.</string>
     <string name="err_item_unavailable_not_standard">حذف الأصناف للطلب العادي وحده.</string>
+    <string name="err_partner_not_purchase">الربط بمتجر تابع لطلبات المشتريات وحدها.</string>
+    <string name="err_partner_goods_documented">ثمن البضاعة موثق — لا ربط ولا إلغاء ربط بعده.</string>
+    <string name="err_partner_merchant_inactive">المتجر غير فعال — اختر متجرا فعالا.</string>
     <!-- **حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) —
          النصُّ العامُّ إن غاب التفصيل، والمفصَّلُ بأرقام الخادم. -->
     <string name="err_custom_fee_out_of_range">أجرة التوصيل خارج الحدود المسموحة.</string>

@@ -151,8 +151,14 @@ var OrderPrivacy = map[string]FieldRule{
 	// الذي يدفع وللإدارة. **ولا يخصّ زبوناً ولا مندوباً، والمتجرُ يرى صافيه في `merchant_net`.**
 	"pay_merchant":  {Ref: "ما يدفعه السائقُ للمتجر عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"pay_merchants": {Ref: "ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"merchant_net":  {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
-	"prep_minutes":  {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **المتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — السائقُ يعرف اسمَه ليشتري منه،
+	// **ونسبتُه وما دُفع له وما بينهما للمكتب وحدَه.**
+	"partner_merchant_id":        {Ref: "المتجرُ التابعُ في المشتريات (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"partner_merchant_name":      {Ref: "اسمُ المتجر التابع — السائقُ يشتري منه", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"partner_commission_percent": {Ref: "نسبةُ عمولة المتجر التابع — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"custom_store_paid":          {Ref: "ما دفعه السائقُ للمتجر عن المشتريات — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"merchant_net":               {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	"prep_minutes":               {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── السائق ────────────────────────────────────────────────────
 	"driver_id":       {Ref: "merchant_privacy.go:44 · MD-4", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

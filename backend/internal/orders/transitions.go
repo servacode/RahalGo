@@ -861,9 +861,9 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			// تُصفّره عند التأكيد، **والنقدُ يكتبه.** ولقطةٌ واحدةٌ تُقرأ
 			// أصدقُ من اثنتين تفترقان.
 			if in.cashDue > 0 {
-				return s.settleCustomCash(ctx, q, in)
+				return s.settleCustomCash(ctx, q, in, out)
 			}
-			return s.settleCustomWallet(ctx, q, in)
+			return s.settleCustomWallet(ctx, q, in, out)
 		}
 		// **ونهايةٌ إلى غير التسليم تُطلق حجزَ المحفظة** — Batch 2a: **مالٌ
 		// حُجز عند التأكيد لا يبقى محجوزاً لطلبٍ أُلغي أو تعذّر** (وإلّا سقط
@@ -1299,7 +1299,10 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		SELECT o.platform_commission, o.discount + o.promo_delivery_waived,
 		       m.sales_rep_user_id,
 		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		FROM orders o
+		-- **والمتجرُ التابعُ في المشتريات متجرُ الطلب هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+		-- مندوبُه يأخذ نصيبَه من عمولته كما في الطلب العاديّ.
+		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
 		WHERE o.id = $1`, orderID).Scan(&platformCommission, &promoCost, &repID, &repIsBuyer); err != nil {
 		return err
 	}
@@ -1939,8 +1942,9 @@ func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, order
 	if err := q.QueryRow(ctx, `
 		SELECT count(*)
 		FROM orders o
-		JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.merchant_id = (SELECT merchant_id FROM orders WHERE id = $1)
+		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
+		WHERE COALESCE(o.merchant_id, o.partner_merchant_id) =
+		      (SELECT COALESCE(merchant_id, partner_merchant_id) FROM orders WHERE id = $1)
 		  AND o.status = 'delivered'
 		  AND o.customer_id IS DISTINCT FROM m.sales_rep_user_id`, orderID).Scan(&delivered); err != nil {
 		return false, err

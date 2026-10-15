@@ -753,7 +753,7 @@ func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, dr
 // تأكيدٍ يحجز. **فيُقيَّد في السجلّ ولا يُخصَم** (لا حجزَ يُسوّى)، **ولا
 // يُبطَل تسليمٌ وقع.**
 func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
-	in settlement) error {
+	in settlement, out *settled) error {
 	if in.driverID == nil {
 		return nil
 	}
@@ -825,6 +825,11 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 		in.orderID, reserved); err != nil {
 		return err
 	}
+	// **وما دفعه السائقُ للمتجر سلفةٌ يردّها المكتبُ من الدرج** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	// لم يقبض من الزبون نقداً، **وعمولةُ المتجر التابع ونصيبُ مندوبه معها.**
+	if err := s.settleCustomStore(ctx, q, in, out); err != nil {
+		return err
+	}
 	// **والبقيّةُ تبلغ الخزينةَ من نفسِها** — لا قيدَ مخترَعٌ ولا نسبةٌ تُحسب
 	// مرّتين: **مدفوعٌ − مستردٌّ − ما وصل الأطراف.**
 	//
@@ -866,7 +871,8 @@ func (s *Service) payCustomDriver(ctx context.Context, q wallet.Querier, in sett
 //
 // # وما يقع الآن
 //
-//	صندوقُ السائق  ← **كلُّ المقبوض** (بضاعةٌ وأجرةٌ ونصيبُ المنصّة)
+//	صندوقُ السائق  ← **المقبوضُ ناقصَ ما دفعه للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+//	                 الأجرةُ وعمولةُ المتجر التابع إن وُجد
 //	محفظةُ السائق  ← **بضاعتُه وأجرُه** — ما يستحقّه
 //	الخزينة        ← **البقيّةُ من نفسِها** = نصيبُ المنصّة
 //
@@ -877,7 +883,7 @@ func (s *Service) payCustomDriver(ctx context.Context, q wallet.Querier, in sett
 //
 // **دفع نقداً بيده** — **وقيدُ `order_payment` هنا يخصم مرّتين**: مرّةً من
 // جيبه ومرّةً من محفظة لا علاقةَ لها.
-func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in settlement) error {
+func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
 	if in.driverID == nil || in.cashDue <= 0 {
 		return nil
 	}
@@ -895,9 +901,9 @@ func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in set
 		return nil
 	}
 
-	// **والمقبوضُ كلُّه يدخل صندوقَه** — **وصندوقٌ لا يعرف ما قُبض لا يحرس
-	// سقفاً ولا يُقاصّ.**
-	if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {
+	// **وصندوقُه يقبض ما يدين به للمكتب وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — المقبوضُ
+	// ناقصَ ما دفعه للمتجر: **عمولةُ المتجر التابع والأجرة.** (`settleCustomStore`)
+	if err := s.settleCustomStore(ctx, q, in, out); err != nil {
 		return err
 	}
 	driverGets := goods + driverFee
@@ -918,4 +924,54 @@ func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in set
 	// فتجد المقبوضَ، وتطرح ما وصل السائق. **فنصيبُ المنصّة أثرٌ لا قيدٌ
 	// مخترَع.**
 	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **نقدُ السائق في المشتريات = ما يدين به للمكتب** — قرارُ المالك ٢٠٢٦-١٠-١٥
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان صندوقُه يقبض المجموعَ كلَّه** (البضاعةَ والأجرة) — **وثمنُ البضاعة دفعه هو
+// للمتجر من سلفة المكتب**، فيُحسب عليه ما لا يحمله. **والقاعدةُ كما في الطلب العاديّ**
+// (`collectAndReturnAdvance`): **ما بيد السائق = ما يدين به للمكتب وحدَه.**
+//
+//	ما دفعه للمتجر  S = الثمنُ (بلا متجرٍ تابع) · الثمنُ ناقصَ العمولة (معه)
+//	صندوقُه        يقبض  max(المقبوض − S, 0)
+//	الدرج           يردّ  max(S − المقبوض, 0)  سلفةً رجعت للمكتب (`advance_return`)
+//
+// مثالُ المالك: ثمنٌ ٥٠٠ ونسبةُ المتجر ١٠٪ وأجرةٌ ١٠٠ — **دفع للمتجر ٤٥٠، وقبض من
+// الزبون ٦٠٠، فصندوقُه ١٥٠**: عمولةٌ ٥٠ وأجرةٌ ١٠٠. وزبونُ المحفظة لم يعطه شيئاً، **فيردّ
+// المكتبُ ٤٥٠ سلفةً من الدرج.**
+//
+// **و`custom_store_paid` يُكتب هنا** — تقرؤه الخزينةُ (تطرحه لا الثمنَ كلَّه) وحرّاسُ
+// المال. **و`platform_commission` العمولةُ** — يقرؤها المندوبُ وصفحةُ الأرباح.
+func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
+	storePaid, commission, err := customStoreCut(ctx, q, in.orderID)
+	if err != nil {
+		return err
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE orders SET custom_store_paid = $2, platform_commission = $3, updated_at = now()
+		 WHERE id = $1`, in.orderID, storePaid, commission); err != nil {
+		return err
+	}
+	if in.driverID != nil {
+		collect := in.cashDue - storePaid
+		if collect < 0 {
+			collect = 0
+		}
+		if collect > 0 {
+			if err := s.cashbox.CollectTx(ctx, q, *in.driverID, collect, in.orderID, &in.actorID); err != nil {
+				return err
+			}
+		}
+		if err := recordAdvanceReturn(ctx, q, in.orderID, *in.driverID, storePaid-in.cashDue+collect, in.actorID); err != nil {
+			return err
+		}
+	}
+	// **ونصيبُ مندوب المتجر التابع من العمولة** — القاعدةُ نفسُها في الطلب العاديّ
+	// (`settleRep`): الموقوفُ يُحجز، والمشتري نفسُه لا يأخذ، والكوبونُ يُطرح.
+	if commission > 0 {
+		return s.settleRep(ctx, q, in.orderID, in.actorID, out)
+	}
+	return nil
 }

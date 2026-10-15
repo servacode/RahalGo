@@ -453,6 +453,10 @@ private val CODES: Map<String, Int> = mapOf(
     "item_unavailable_too_late" to R.string.err_item_unavailable_too_late,
     "item_unavailable_last_item" to R.string.err_item_unavailable_last_item,
     "item_unavailable_not_standard" to R.string.err_item_unavailable_not_standard,
+    // ── مشترياتٌ من متجرٍ تابع (قرارُ المالك ٢٠٢٦-١٠-١٥) ──
+    "partner_not_purchase" to R.string.err_partner_not_purchase,
+    "partner_goods_documented" to R.string.err_partner_goods_documented,
+    "partner_merchant_inactive" to R.string.err_partner_merchant_inactive,
     // ── حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) ──
     "custom_fee_out_of_range" to R.string.err_custom_fee_out_of_range,
     "custom_goods_too_high" to R.string.err_custom_goods_too_high,

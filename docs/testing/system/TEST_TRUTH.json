@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 507,
+    "routes": 509,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 235,
     "behaviour_settings": 191,
-    "order_fields": 99,
-    "test_files": 576,
-    "test_funcs": 2307
+    "order_fields": 103,
+    "test_files": 578,
+    "test_funcs": 2314
   },
   "flows": [
     {
@@ -10166,6 +10166,36 @@
       "orphan": true
     },
     {
+      "name": "TestPartnerLink_InactiveRefused",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPartnerLink_RefusedAfterGoods",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPartnerPurchase_Cash_OwnerExample",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPartnerPurchase_Wallet_AdvanceReturn",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPurchaseNoPartner_CashCollectsFeeOnly",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestFailAtDropoff_NoAutoCompensation_PendingByFault",
       "file": "internal/orders/problem_button_test.go",
       "package": "orders_test",
@@ -19659,6 +19689,18 @@
     {
       "name": "TestPAR_016_ServerValidatesOwnership",
       "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPARTNER_001_WhatsAppPreview",
+      "file": "internal/qa/partner_store_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPARTNER_002_LinkRefusedAfterGoods",
+      "file": "internal/qa/partner_store_test.go",
       "package": "qa",
       "orphan": true
     },

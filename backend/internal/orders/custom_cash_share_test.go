@@ -59,8 +59,10 @@ func TestCustomCash_CollectedAndShared(t *testing.T) {
 
 	// **وكلُّ المقبوضِ في صندوقه** — **وصندوقٌ لا يعرف ما قُبض لا يحرس
 	// سقفاً ولا يُقاصّ.**
-	if got := cqHeld(t, driver) - heldBefore; got != goods+fee {
-		t.Fatalf("صندوقُ السائق=%d — المنتظَر %d (كلُّ المقبوض)", got, goods+fee)
+	// **وصار يقبض ما يدين به للمكتب وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ثمنُ البضاعة دفعه هو
+	// للمتجر من سلفة المكتب، **فصندوقُه الأجرةُ وحدَها.**
+	if got := cqHeld(t, driver) - heldBefore; got != fee {
+		t.Fatalf("صندوقُ السائق=%d — المنتظَر %d (الأجرةُ وحدَها)", got, fee)
 	}
 	// **ومحفظتُه تأخذ ما يستحقّ** — بضاعتُه وأجرُه بعد النصيب.
 	if b, _ := w.Balance(ctx, driver); b != driverFee {

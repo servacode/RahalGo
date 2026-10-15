@@ -451,8 +451,13 @@ var All = []Check{
 			       COALESCE(c.cash, 0)::bigint AS نقدُ_الصندوق
 			FROM orders o
 			-- **وثمنُ بضاعة المشتريات خارجَ الدفتر** (٢٠٢٦-١٠-١٣) — نقدُ المكتب يعود إليه.
+			--
+			-- **وصار الصندوقُ لا يقبضه أصلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥): ما دفعه السائقُ للمتجر
+			-- (custom_store_paid) يُطرح من المقبوض أو يُردّ سلفةً، **فلا يُطرح هنا ثانيةً.**
+			-- والطلباتُ القديمةُ بلا العمود قبض صندوقُها المجموعَ كلَّه — فيُطرح الثمنُ كما كان.
 			CROSS JOIN LATERAL (
 				SELECT CASE WHEN o.kind = 'custom' AND o.custom_mode = 'purchase'
+				             AND o.custom_store_paid IS NULL
 				            THEN COALESCE(o.custom_goods_amount, 0) ELSE 0 END AS goods
 			) g
 			LEFT JOIN LATERAL (
@@ -622,12 +627,14 @@ var All = []Check{
 			FROM orders o
 			JOIN driver_cash_entries e
 			  ON e.ref = o.id::text AND e.kind = 'order_collection'
-			GROUP BY o.id, o.number, o.cash_due, e.driver_id
+			GROUP BY o.id, o.number, o.cash_due, o.custom_store_paid, e.driver_id
 			HAVING sum(e.amount) <> GREATEST(o.cash_due - COALESCE((
 			         SELECT -sum(t.amount) FROM merchant_settlements ms
 			         JOIN wallet_transactions t ON t.id = ms.paid_tx_id
 			         WHERE ms.order_id = o.id AND ms.paid_via = 'driver'
-			           AND ms.paid_by = e.driver_id), 0), 0)`,
+			           AND ms.paid_by = e.driver_id), 0)
+			       -- **وما دفعه للمتجر في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والقديمُ بلاه.
+			       - COALESCE(o.custom_store_paid, 0), 0)`,
 	},
 	{
 		ID: "FI-10.c", Family: FI10, Status: ProvableNow, Ops: true,

@@ -577,12 +577,26 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 			          ORDER BY oi.merchant_id LIMIT 1)) AS merchant_id,
 			       led.kind, led.amount
 			FROM led
+		), pp AS (
+			-- **مشترياتٌ من متجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥): ثمنُها إجماليُّه، وعمولتُها
+			-- عمولتُنا، وما دفعه السائقُ له مستحقُّه — بلا بنودٍ ولا قيدِ مستحقٍّ في الدفتر.
+			SELECT o.partner_merchant_id AS merchant_id,
+			       COALESCE(o.custom_goods_amount, 0) AS gross,
+			       o.platform_commission AS commission,
+			       COALESCE(o.custom_store_paid, 0) AS got
+			FROM orders o
+			WHERE o.kind = 'custom' AND o.partner_merchant_id IS NOT NULL
+			  AND o.status = 'delivered' AND ` + profitRange("o.delivered_at") + `
 		), earned AS (
-			SELECT merchant_id,
-			       COALESCE(sum(amount) FILTER (WHERE kind IN ('merchant_earning','merchant_cash_accrued')), 0) AS got,
-			       COALESCE(sum(amount) FILTER (WHERE kind = 'compensation'), 0) AS comp
-			FROM led_m WHERE merchant_id IS NOT NULL
-			GROUP BY merchant_id
+			SELECT merchant_id, sum(got) AS got, sum(comp) AS comp FROM (
+				SELECT merchant_id,
+				       COALESCE(sum(amount) FILTER (WHERE kind IN ('merchant_earning','merchant_cash_accrued')), 0) AS got,
+				       COALESCE(sum(amount) FILTER (WHERE kind = 'compensation'), 0) AS comp
+				FROM led_m WHERE merchant_id IS NOT NULL
+				GROUP BY merchant_id
+				UNION ALL
+				SELECT merchant_id, got, 0 FROM pp
+			) x GROUP BY merchant_id
 		), os AS (
 			SELECT o.id AS order_id, o.merchant_id AS order_merchant, o.platform_commission,
 			       COALESCE(oi.merchant_id, o.merchant_id) AS merchant_id,
@@ -593,14 +607,18 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 			WHERE o.status = 'delivered' AND ` + profitRange("o.delivered_at") + `
 			GROUP BY o.id, o.merchant_id, o.platform_commission, COALESCE(oi.merchant_id, o.merchant_id)
 		), took AS (
-			SELECT os.merchant_id,
-			       sum(os.gross) AS gross, sum(os.margin) AS margin,
-			       sum(CASE WHEN ms.amount IS NOT NULL THEN os.cost - ms.amount
-			                WHEN os.order_merchant = os.merchant_id THEN os.platform_commission
-			                ELSE 0 END) AS commission
-			FROM os
-			LEFT JOIN merchant_settlements ms ON ms.order_id = os.order_id AND ms.merchant_id = os.merchant_id
-			GROUP BY os.merchant_id
+			SELECT merchant_id, sum(gross) AS gross, sum(margin) AS margin, sum(commission) AS commission
+			FROM (
+				SELECT os.merchant_id, os.gross, os.margin,
+				       CASE WHEN ms.amount IS NOT NULL THEN os.cost - ms.amount
+				            WHEN os.order_merchant = os.merchant_id THEN os.platform_commission
+				            ELSE 0 END AS commission
+				FROM os
+				LEFT JOIN merchant_settlements ms ON ms.order_id = os.order_id AND ms.merchant_id = os.merchant_id
+				UNION ALL
+				SELECT merchant_id, gross, 0, commission FROM pp
+			) x
+			GROUP BY merchant_id
 		)`
 	body := `
 		FROM merchants m

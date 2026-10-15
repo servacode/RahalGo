@@ -242,6 +242,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وما يدفعه للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 		"pay_merchant":  true,
 		"pay_merchants": true,
+		// **ومن أيّ متجرٍ تابعٍ يشتري** (قرارُ المالك ٢٠٢٦-١٠-١٥) — اسمُه لا نسبتُه.
+		"partner_merchant_name": true,
 	},
 	AudienceRep: {
 		"accepted_at":           true,
@@ -371,6 +373,11 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وما يدفعه السائقُ للمتاجر عند الاستلام** (٢٠٢٦-١٠-١٥).
 		"pay_merchant":  true,
 		"pay_merchants": true,
+		// **والمتجرُ التابعُ في المشتريات ونسبتُه وما دُفع له** (٢٠٢٦-١٠-١٥).
+		"partner_merchant_id":        true,
+		"partner_merchant_name":      true,
+		"partner_commission_percent": true,
+		"custom_store_paid":          true,
 	},
 }
 

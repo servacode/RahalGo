@@ -201,6 +201,14 @@ type Order struct {
 	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
 	MerchantID               string `json:"merchant_id"`
 	MerchantName             string `json:"merchant_name"`
+	// PartnerMerchantID **المتجرُ التابعُ في طلب المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يربطه
+	// المكتبُ ويأخذ عمولتَه، **وفراغٌ: يشتري السائقُ من حيث شاء.** (`partner_store.go`)
+	PartnerMerchantID   string `json:"partner_merchant_id"`
+	PartnerMerchantName string `json:"partner_merchant_name"`
+	// PartnerCommissionPercent **نسبتُه ملقوطةً لحظةَ الربط** — للمكتب وحدَه.
+	PartnerCommissionPercent *int64 `json:"partner_commission_percent"`
+	// CustomStorePaid **ما دفعه السائقُ للمتجر عن المشتريات** — يُكتب عند التسليم، للمكتب وحدَه.
+	CustomStorePaid *int64 `json:"custom_store_paid"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من

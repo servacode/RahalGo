@@ -150,6 +150,13 @@ interface OrderRow {
   custom_mode?: string;
   /** **ثمنُ البضاعة لم يُوثَّق بعد** — صفرٌ ينتظر الشراء. */
   custom_goods_pending?: boolean;
+  /** **المتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — وفراغٌ: لا ربط. */
+  partner_merchant_id?: string;
+  partner_merchant_name?: string;
+  /** نسبتُه ملقوطةً لحظةَ الربط. */
+  partner_commission_percent?: number | null;
+  /** ما دفعه السائقُ للمتجر — يُكتب عند التسليم. */
+  custom_store_paid?: number | null;
   /** **ما يصل السائقَ من الأجرة** — والباقي حصّةُ المنصّة (٢٠٢٦-١٠-١٣). */
   driver_fee?: number;
   /** أللسائق أن يعدّل الأجرةَ المُثبَّتة. */
@@ -3014,6 +3021,20 @@ function OrderActions({
           </Button>
         )}
 
+      {/* **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن،
+          ويُرسَل له الطلبُ على واتساب بالبابين القائمين. **والخادمُ يحرس الشروط.** */}
+      {o.kind === "custom" &&
+        o.custom_mode === "purchase" &&
+        canIntervene &&
+        !CLOSED_STATUSES.has(o.status) && (
+          <PartnerStoreBox
+            o={o}
+            busy={busy !== ""}
+            onSend={() => void forwardToMerchant()}
+            onChanged={onChanged}
+          />
+        )}
+
       {/* **ما بعد الفشل — سؤالان لا يُجيبهما النظام وحده.**
 
           طلبٌ فشل يترك طعاماً مطبوخاً ورحلةً مقطوعة. والقيدُ المالي لا يقع
@@ -3267,6 +3288,132 @@ function OrderActions({
  * **ونسختان تفترقان يوماً** — فتقول البطاقةُ رقماً وتقول النافذةُ غيرَه.
  */
 /** **نوعُ الطلب بكلمته** — عاديّ · توصيلة · مشتريات · أمانة. */
+/**
+ * **«حوّله لمتجر تابع إلنا»** — قرارُ المالك ٢٠٢٦-١٠-١٥.
+ *
+ * **قبل توثيق الثمن**: زرٌّ يفتح قائمةَ المتاجر الفعّالة بالبحث، فيُربط المختار.
+ * **وبعد الربط**: اسمُه ونسبتُه، وزرُّ الإرسال على واتساب (البابُ القائمُ نفسُه)،
+ * و«إلغاء الربط». **والنسبةُ والشروطُ من الخادم** — والشاشةُ تعرض ما ردّه.
+ */
+function PartnerStoreBox({
+  o,
+  busy,
+  onSend,
+  onChanged,
+}: {
+  o: OrderRow;
+  busy: boolean;
+  onSend: () => void;
+  onChanged: () => void;
+}) {
+  const OP = m.admin.ordersPage;
+  const [picking, setPicking] = useState(false);
+  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const [working, setWorking] = useState(false);
+  const [err, setErr] = useState("");
+  // **وبعد توثيق الثمن لا ربطَ ولا فكّ** — السائقُ دفع للمتجر (`partner_goods_documented`).
+  const goodsDone = o.custom_goods_amount != null && !o.custom_goods_pending;
+  const linked = !!o.partner_merchant_id;
+
+  async function openPicker() {
+    setErr("");
+    setPicking(true);
+    try {
+      const all: { id: string; name: string }[] = [];
+      for (let p = 1; p <= 50; p++) {
+        const r = await api<{ merchants: { id: string; name: string }[]; total: number }>(
+          `/api/v1/admin/merchants?status=active&per_page=100&page=${p}`,
+        );
+        const got = r.merchants ?? [];
+        all.push(...got);
+        if (all.length >= r.total || got.length === 0) break;
+      }
+      setStores(all);
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    }
+  }
+
+  async function change(merchantId: string) {
+    setWorking(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/partner`, {
+        method: merchantId ? "POST" : "DELETE",
+        body: merchantId ? JSON.stringify({ merchant_id: merchantId }) : undefined,
+      });
+      setPicking(false);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  if (!linked && goodsDone) return null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {!linked ? (
+        <Button variant="secondary" disabled={busy || working} onClick={() => void openPicker()}>
+          <span className="flex items-center gap-1.5">
+            <IconStore size={15} />
+            {OP.partnerLinkBtn}
+          </span>
+        </Button>
+      ) : (
+        <>
+          <p className="text-xs font-bold text-ink">
+            {OP.partnerLinked
+              .replace("{name}", o.partner_merchant_name ?? "")
+              .replace("{pct}", fmtNum(o.partner_commission_percent ?? 0))}
+          </p>
+          {o.custom_store_paid != null && (
+            <p className="text-xs text-ink-muted">
+              {OP.partnerStorePaid}: <Money value={o.custom_store_paid} />
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={o.sent_to_merchant_at ? "secondary" : "primary"}
+              disabled={busy || working}
+              onClick={onSend}
+            >
+              <span className="flex items-center gap-1.5">
+                <IconWhatsApp size={15} />
+                {o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend}
+              </span>
+            </Button>
+            {!goodsDone && (
+              <Button variant="secondary" disabled={busy || working} onClick={() => void change("")}>
+                {OP.partnerUnlink}
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+      {err && <p className="text-xs text-danger">{err}</p>}
+      <Modal open={picking} onClose={() => setPicking(false)} title={OP.partnerPickTitle}>
+        <div className="mb-3">
+          <SearchSelect
+            ariaLabel={OP.partnerSearch}
+            allLabel={OP.partnerSearch}
+            value=""
+            options={stores.map((x) => ({ value: x.id, label: x.name }))}
+            onChange={(v) => {
+              if (v) void change(v);
+            }}
+          />
+        </div>
+        {stores.length === 0 && !err && (
+          <p className="mb-3 text-xs text-ink-muted">{OP.partnerNoResults}</p>
+        )}
+        {err && <p className="mb-3 text-xs text-danger">{err}</p>}
+      </Modal>
+    </div>
+  );
+}
+
 function kindLabel(o: OrderRow): string {
   const OP = m.admin.ordersPage;
   if (o.kind === "merchant_delivery") return OP.kindMd;

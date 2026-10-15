@@ -97,8 +97,10 @@ func TestCustomQuoteAfterPickup_IncidentCash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if held != 2_000 {
-		t.Fatalf("صندوقُ السائق=%d — المنتظَر 2000 (المبلغُ الجديد كاملاً)", held)
+	// **والصندوقُ يقبض ما يدين به للمكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — المبلغُ الجديد ناقصَ
+	// ثمن البضاعة الذي دفعه للمتجر: ٢٠٠٠ − ٥٠٠.
+	if held != 1_500 {
+		t.Fatalf("صندوقُ السائق=%d — المنتظَر 1500 (الأجرةُ الجديدةُ وحدَها)", held)
 	}
 	// **وأجرتُه بعد حصّة المنصّة ١٠٪** — ١٣٥٠.
 	if b, _ := w.Balance(ctx, driver); b != 1_350 {
@@ -192,8 +194,9 @@ func TestCustomQuoteAfterPickup_DecreaseImmediate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if held != 1_550 {
-		t.Fatalf("صندوقُ السائق=%d — المنتظَر 1550", held)
+	// **ناقصَ ما دفعه للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥): ١٥٥٠ − ٥٠.
+	if held != 1_500 {
+		t.Fatalf("صندوقُ السائق=%d — المنتظَر 1500", held)
 	}
 }
 

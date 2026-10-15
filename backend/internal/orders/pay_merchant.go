@@ -11,8 +11,8 @@ package orders
 //	قبل الاستلام  ←  سعرُ الشراء − العمولة − دَينُ المتجر القائم (تقديرٌ بدَين اليوم)
 //	بعد الاستلام  ←  ما دفعه فعلاً (القائمُ في صفّ التسوية)
 //
-// **والمتجرُ «محفظة» لا يُدفع له شيء** — مستحقُّه في محفظته. **والطلبُ الخاصُّ
-// والتوصيلةُ خارجَ هذا** — لا مستحقَّ متجرٍ فيهما.
+// **والمتجرُ «محفظة» لا يُدفع له شيء** — مستحقُّه في محفظته. **والتوصيلةُ خارجَ هذا**،
+// **والطلبُ الخاصُّ داخلَه إن رُبط بمتجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥): الثمنُ ناقصَ العمولة.
 
 import (
 	"context"
@@ -50,6 +50,9 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 	var kind string
 	if err := q.QueryRow(ctx, `SELECT kind FROM orders WHERE id = $1`, orderID).Scan(&kind); err != nil {
 		return nil, err
+	}
+	if kind == KindCustom {
+		return s.payPartnerFor(ctx, q, orderID)
 	}
 	if kind != "standard" {
 		return nil, nil
@@ -107,9 +110,39 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 	return out, nil
 }
 
-// fillPayMerchant **يملأ ما يدفعه السائقُ في الطلب** — للطلب العاديّ وحدَه.
+// payPartnerFor **ما يدفعه السائقُ للمتجر التابع في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+// الثمنُ ناقصَ العمولة (`customStoreCut`)، **بعد توثيق الثمن وحدَه**: قبله لا يُعرف رقم.
+// **والمشترياتُ بلا متجرٍ تابعٍ غائبةٌ هنا** — يرى السائقُ «ثمنَ البضاعة» كما كان.
+func (s *Service) payPartnerFor(ctx context.Context, q dbtx.Querier, orderID string) ([]StorePay, error) {
+	var p StorePay
+	var documented bool
+	err := q.QueryRow(ctx, `
+		SELECT o.partner_merchant_id::text, m.name,
+		       o.custom_goods_amount IS NOT NULL AND NOT o.custom_goods_pending
+		FROM orders o JOIN merchants m ON m.id = o.partner_merchant_id
+		WHERE o.id = $1 AND o.custom_mode = 'purchase'`, orderID).
+		Scan(&p.MerchantID, &p.MerchantName, &documented)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !documented {
+		return nil, nil
+	}
+	if p.Amount, _, err = customStoreCut(ctx, q, orderID); err != nil {
+		return nil, err
+	}
+	if p.Amount <= 0 {
+		return nil, nil
+	}
+	return []StorePay{p}, nil
+}
+
+// fillPayMerchant **يملأ ما يدفعه السائقُ في الطلب** — للعاديّ، وللمشتريات من متجرٍ تابع.
 func (s *Service) fillPayMerchant(ctx context.Context, q dbtx.Querier, o *Order) error {
-	if o.Kind != "standard" {
+	if o.Kind != "standard" && o.Kind != KindCustom {
 		return nil
 	}
 	list, err := s.payMerchantsFor(ctx, q, o.ID)

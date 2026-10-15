@@ -1371,6 +1371,12 @@ func (s *Server) Router() http.Handler {
 			// ويُعاد حسابُ الطلب. انظر `order_item_unavailable.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/items/{itemID}/unavailable", s.handleItemUnavailable)
+			// **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن
+			// ويُفكّ، والإرسالُ له بالبابين القائمين. انظر `order_partner.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/partner", s.handleLinkPartner)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Delete("/orders/{id}/partner", s.handleUnlinkPartner)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`

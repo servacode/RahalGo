@@ -404,6 +404,9 @@ type driverOrder struct {
 	PayMerchant int64 `json:"pay_merchant"`
 	// PayMerchants **لكلّ متجرٍ ما يدفعه له** — لطلبٍ من مصدرين.
 	PayMerchants []orders.StorePay `json:"pay_merchants"`
+	// PartnerMerchantName **المتجرُ التابعُ الذي يشتري منه** في المشتريات (قرارُ المالك
+	// ٢٠٢٦-١٠-١٥) — **وفراغٌ: يشتري من حيث شاء.** وما يدفعه له في `pay_merchant` بعد التوثيق.
+	PartnerMerchantName string `json:"partner_merchant_name"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -524,7 +527,9 @@ const driverOrderSelect = `
 	            THEN COALESCE(o.return_to, '') ELSE '' END,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry), COALESCE(m.address_text, ''),
 	       -- **أعليه كودُ تسليم** — والكودُ نفسُه لا يُقرأ هنا.
-	       o.delivery_code IS NOT NULL
+	       o.delivery_code IS NOT NULL,
+	       -- **والمتجرُ التابعُ في المشتريات** (٢٠٢٦-١٠-١٥) — اسمُه وحدَه.
+	       COALESCE((SELECT pm.name FROM merchants pm WHERE pm.id = o.partner_merchant_id), '')
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -556,7 +561,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
 			&o.DoorInstruction, &o.DoorNote,
 			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,
-			&o.DeliveryCodeRequired); err != nil {
+			&o.DeliveryCodeRequired, &o.PartnerMerchantName); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -588,7 +593,8 @@ func (s *Server) attachPayMerchants(ctx context.Context, list []driverOrder) err
 	ids := make([]string, 0, len(list))
 	for i := range list {
 		list[i].PayMerchants = []orders.StorePay{}
-		if list[i].Kind == "standard" && list[i].ReturnTo == "" {
+		// **والمشترياتُ من متجرٍ تابعٍ كذلك** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الثمنُ ناقصَ العمولة.
+		if (list[i].Kind == "standard" || list[i].PartnerMerchantName != "") && list[i].ReturnTo == "" {
 			ids = append(ids, list[i].ID)
 		}
 	}

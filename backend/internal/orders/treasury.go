@@ -124,8 +124,11 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	var status string
 	if err := q.QueryRow(ctx,
 		`SELECT wallet_paid, cash_due, status,
+		        -- **وما دفعه السائقُ للمتجر لا الثمنُ كلُّه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+		        -- مع متجرٍ تابعٍ يدفع الثمنَ ناقصَ العمولة، **فتبقى العمولةُ للمنصّة.**
+		        -- وعمودُ custom_store_paid فارغٌ في الطلبات القديمة: الثمنُ كلُّه كما كان.
 		        CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
-		             THEN COALESCE(custom_goods_amount, 0) ELSE 0 END
+		             THEN COALESCE(custom_store_paid, custom_goods_amount, 0) ELSE 0 END
 		 FROM orders WHERE id = $1`, orderID).
 		Scan(&walletPaid, &cashDue, &status, &goods); err != nil {
 		return err

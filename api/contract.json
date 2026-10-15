@@ -3704,6 +3704,26 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/admin/orders/{id}/partner",
+      "handler": "handleUnlinkPartner",
+      "auth": true,
+      "capability": "orders.intervene"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/partner",
+      "handler": "handleLinkPartner",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "merchant_id",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/orders/{id}/proof-exception",
       "handler": "handleAuthorizeProofException",
