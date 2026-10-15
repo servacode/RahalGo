@@ -189,6 +189,12 @@ private fun OrdersList(
                 } else {
                     null
                 },
+                // **ورفضُ السعر الجديد بعد الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+                onRejectQuote = if (!history && o.kind == "custom") {
+                    { vm.rejectQuote(o.id) }
+                } else {
+                    null
+                },
                 confirming = vm.busy,
             )
         }

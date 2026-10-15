@@ -175,9 +175,27 @@ func (s *Server) handleConfirmQuote(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, view)
 }
 
+// handleRejectQuote **الزبونُ يرفض السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **لا جسمَ له** — الطلبُ يبقى حيث هو، وتُكتب علامةٌ يراها المكتب.
+func (s *Server) handleRejectQuote(w http.ResponseWriter, r *http.Request) {
+	o, err := s.orders.RejectQuote(r.Context(), chi.URLParam(r, "id"), userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	view, err := orderView(orders.AudienceCustomer, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, view)
+}
+
 // handleAdminOverrideCustomQuote **الأدمنُ يعدّل عرضَ الطلب المخصَّص** — Batch 2a.
 //
-// (قرارُ المالك: قبل الاستلام حرّاً، وبعده نقصاً أو تصحيحاً فقط، موثَّقاً.)
+// (قرارُ المالك ٢٠٢٦-١٠-١٥: صعوداً ونزولاً حتّى التسليم، موثَّقاً بسبب — والزيادةُ
+// بعد الاستلام تنتظر تأكيدَ الزبون. انظر `AdminOverrideCustomQuote`.)
 //
 // **والسببُ إلزاميّ**: تدخّلٌ ماليٌّ بتقدير إنسان، **وبلا كلمةٍ لا يُراجَع.**
 // **والتوثيقُ في المحرّك** (`audit_log` داخلَ المعاملة) — لا في المعالِج.

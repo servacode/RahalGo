@@ -572,6 +572,11 @@
     <string name="err_goods_not_documented">وثّق ثمن البضاعة أوّلاً، ثمّ ينتظر موافقة الزبون.</string>
     <string name="err_agree_wrong_step">هذه الخطوة لا تخصّ هذا الطلب.</string>
     <string name="err_custom_locked">لا يمكن تعديل السعر بعد الاستلام.</string>
+    <string name="err_quote_reconfirm_pending">السعر الجديد بانتظار تأكيد الزبون — لا تسليم قبله.</string>
+    <string name="err_quote_nothing_pending">لا سعر جديد بانتظار تأكيدك.</string>
+    <string name="err_item_unavailable_too_late">لا يُحذف صنف بعد استلام الطلب أو انتهائه.</string>
+    <string name="err_item_unavailable_last_item">هذا آخر صنف في الطلب — ألغِ الطلب بدل حذفه.</string>
+    <string name="err_item_unavailable_not_standard">حذف الأصناف للطلب العادي وحده.</string>
     <!-- **حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) —
          النصُّ العامُّ إن غاب التفصيل، والمفصَّلُ بأرقام الخادم. -->
     <string name="err_custom_fee_out_of_range">أجرة التوصيل خارج الحدود المسموحة.</string>

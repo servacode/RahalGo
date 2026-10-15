@@ -69,7 +69,16 @@ func RepCommissionSource(ctx context.Context, st Store) (CommissionSource, error
 // شيءٍ **ثمّ يُحسَب من الهامش** — **فيُبوَّب بوضعٍ ويُحسَب بآخر.**
 //
 // **فصارت القاعدةُ تقول ما تجمع، والوضعُ يقول ماذا يدخلها.**
-func RepCommissionBase(src CommissionSource, platformCommission, pricingMargin int64) int64 {
+//
+// ══════════════════════════════════════════════════════════════════════
+// **والكوبونُ من حصّة المنصّة — فيُطرح قبل نصيب المندوب** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// `promoCost` **ما دفعته المنصّةُ عن الزبون بكوده**: خصمُ الكود (`orders.discount`)
+// وإعفاءُ «توصيلٌ مجّانيّ» (`orders.promo_delivery_waived`). **كان المندوبُ يأخذ
+// نسبتَه من ربحٍ لم يبقَ**: عمولةٌ خمسون وكوبونٌ خمسون ⇒ ربحُ المنصّة صفر، **ومندوبٌ
+// يقبض خمسةً من جيبها.** **والصفرُ أرضٌ** — كوبونٌ أكبرُ من الربح لا يجعل المندوبَ مديناً.
+func RepCommissionBase(src CommissionSource, platformCommission, pricingMargin, promoCost int64) int64 {
 	var base int64
 	switch src {
 	case SourcePlatformCommission:
@@ -78,6 +87,9 @@ func RepCommissionBase(src CommissionSource, platformCommission, pricingMargin i
 		base = pricingMargin
 	case SourceBoth:
 		base = platformCommission + pricingMargin
+	}
+	if promoCost > 0 {
+		base -= promoCost
 	}
 	if base < 0 {
 		return 0

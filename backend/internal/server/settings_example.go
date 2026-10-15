@@ -49,7 +49,7 @@ func computeMoneyExample(r *http.Request, st pricing.Store, amount int64, platfo
 	ex.PlatformDeliveryPc = platformPct
 	ex.DriverGets = orders.DriverFeeWithShare(ex.DeliveryFee, platformPct, platformFixed)
 	ex.PlatformFeeShare = ex.DeliveryFee - ex.DriverGets
-	base := pricing.RepCommissionBase(pricing.RepCommissionSourceFixed, ex.MerchantCommission, ex.Margin)
+	base := pricing.RepCommissionBase(pricing.RepCommissionSourceFixed, ex.MerchantCommission, ex.Margin, 0)
 	ex.RepGets = pricing.RepCommission(ctx, st).Of(base)
 	ex.PlatformGets = ex.Margin + ex.MerchantCommission + ex.PlatformFeeShare - ex.RepGets
 	return ex

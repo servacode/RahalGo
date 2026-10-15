@@ -260,6 +260,17 @@ class CustomerApi(private val api: ApiClient) {
      * **والمحرّكُ يقرأ `note`** — **وكنتُ أرسل `reason`**: فما كتبه
      * كان يُطرح في الطريق ويُقيَّد الإلغاءُ بلا سببٍ على كلّ حال.
      */
+    /**
+     * **رفضُ السعر الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — حين رفعه المكتبُ بعد
+     * الاستلام. **الطلبُ يبقى حيث هو، والمكتبُ يتّصل ويقرّر.**
+     */
+    suspend fun rejectQuote(orderId: String): MyOrder =
+        api.call(
+            "/api/v1/orders/$orderId/reject-quote",
+            HttpMethod.Post,
+            mapOf<String, String>(),
+        )
+
     suspend fun cancel(orderId: String) {
         api.call<Ack>(
             "/api/v1/orders/$orderId/cancel",
@@ -618,6 +629,8 @@ data class MyOrder(
     @SerialName("quote_confirmed_at") val quoteConfirmedAt: String? = null,
     @SerialName("quote_confirmed_total") val quoteConfirmedTotal: Long? = null,
     @SerialName("quote_confirmed_version") val quoteConfirmedVersion: Long? = null,
+    /** **رفض الزبونُ السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمكتبُ يقرّر. */
+    @SerialName("quote_rejected_at") val quoteRejectedAt: String? = null,
     @SerialName("custom_reserved_amount") val customReservedAmount: Long = 0,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("delivered_at") val deliveredAt: String? = null,

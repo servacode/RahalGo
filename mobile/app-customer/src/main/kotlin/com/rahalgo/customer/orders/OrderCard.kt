@@ -77,6 +77,8 @@ fun OrderCard(
     onConfirmQuote: ((String) -> Unit)? = null,
     /** **جارٍ تأكيدُ عرضٍ الآن** — يُعطّل الزرَّ ويُظهر دوّارة. */
     confirming: Boolean = false,
+    /** **يرفض السعرَ الجديد** بعد الاستلام — و`null` لا رفضَ هنا. */
+    onRejectQuote: (() -> Unit)? = null,
 ) {
     Card {
         Row(
@@ -159,7 +161,7 @@ fun OrderCard(
         // **قبل الاتفاق: بانتظار التكلفة. وحين يصل العرضُ: بطاقتُه وزرُّ
         // التأكيد واختيارُ الدفع. وبعد التأكيد: الحجزُ إن كان محفظة.**
         if (order.kind == "custom") {
-            CustomQuoteSection(order, walletBalance, onConfirmQuote, confirming)
+            CustomQuoteSection(order, walletBalance, onConfirmQuote, confirming, onRejectQuote)
         } else {
             if (order.subtotal > 0) KeyValue(stringResource(R.string.ord_subtotal), money(order.subtotal))
             KeyValue(stringResource(R.string.ord_delivery), money(order.deliveryFee))
@@ -265,6 +267,7 @@ private fun CustomQuoteSection(
     walletBalance: Long,
     onConfirmQuote: ((String) -> Unit)?,
     confirming: Boolean,
+    onRejectQuote: (() -> Unit)? = null,
 ) {
     val goods = order.customGoodsAmount
     // (B) لم يُتّفق على السعر بعد — بانتظار تحديد التكلفة.
@@ -326,8 +329,36 @@ private fun CustomQuoteSection(
     // **ولا تأكيدَ بعد نهايةٍ ولا في السجلّ.**
     if (onConfirmQuote == null || ended(order.status)) return
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وبعد الاستلام: سعرٌ رفعه المكتبُ يُؤكَّد أو يُرفض** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **تأكيدٌ قائمٌ بنسخةٍ سبقتها أخرى** — والتسليمُ موقوفٌ حتّى يؤكّد. **ومن رفض
+    // يبقى طلبُه حيث هو** والمكتبُ يتّصل به؛ فيُقال له ذلك ولا يُعاد السؤال.
+    val reconfirm = order.quoteConfirmedVersion != null
+    if (reconfirm && order.quoteRejectedAt != null) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.ord_quote_rejected_note),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        return
+    }
+    if (reconfirm) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.ord_quote_raised_note),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+
     // (C/D) يحتاج تأكيداً: أكّد المبلغ واختر الدفع.
-    val walletOk = walletBalance >= total
+    // **وحجزُ هذا الطلب نفسِه يُحسب** — يُفكّ عند التأكيد قبل حجز الجديد، فرصيدٌ
+    // متاحٌ ناقصٌ عن المجموع قد يكفيه مع ما حُجز له أصلاً.
+    val ownReserved = if (order.paymentMethod == "wallet") order.customReservedAmount else 0L
+    val walletOk = walletBalance + ownReserved >= total
     var method by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf("cash") }
     // (J) المحفظةُ لا تبقى مختارةً إن لم تعُد كافية قبل التأكيد.
     if (method == "wallet" && !walletOk) method = "cash"
@@ -382,6 +413,17 @@ private fun CustomQuoteSection(
                     },
                 ),
             )
+        }
+    }
+    if (reconfirm && onRejectQuote != null) {
+        Spacer(Modifier.height(6.dp))
+        com.rahalgo.ui.RahalTextButton(
+            onClick = onRejectQuote,
+            enabled = !confirming,
+            modifier = Modifier.fillMaxWidth(),
+            tone = com.rahalgo.ui.Tone.Danger,
+        ) {
+            Text(stringResource(R.string.ord_quote_reject))
         }
     }
 }

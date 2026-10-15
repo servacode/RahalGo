@@ -133,6 +133,10 @@
     <string name="ord_awaiting_quote">بانتظار تحديد تكلفة الطلب</string>
     <string name="ord_fee_value">أجرة التوصيل: %1$s</string>
     <string name="ord_confirm_prompt">أكد المبلغ واختر طريقة الدفع</string>
+    <string name="ord_quote_raised_note">عدّل المكتب سعر طلبك بعد الشراء — أكّده ليُسلَّم إليك.</string>
+    <string name="ord_quote_reject">أرفض السعر الجديد</string>
+    <string name="ord_quote_rejected_note">رفضت السعر الجديد — سيتواصل معك المكتب.</string>
+    <string name="ord_quote_rejected_sent">وصل رفضك إلى المكتب.</string>
     <string name="ord_confirm_action">تأكيد المبلغ وطريقة الدفع</string>
     <string name="ord_wallet_short">رصيد محفظتك غير كافٍ للدفع بهذا الطلب.</string>
     <string name="ord_confirmed_cash">تم تأكيد المبلغ.</string>

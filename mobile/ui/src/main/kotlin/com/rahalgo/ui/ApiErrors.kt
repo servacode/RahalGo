@@ -447,6 +447,12 @@ private val CODES: Map<String, Int> = mapOf(
     "goods_not_documented" to R.string.err_goods_not_documented,
     "agree_wrong_step" to R.string.err_agree_wrong_step,
     "custom_locked" to R.string.err_custom_locked,
+    // ── تعديلُ سعر الخاصّ بعد الاستلام وحذفُ الصنف غير المتوفّر (قرارا المالك ٢٠٢٦-١٠-١٥) ──
+    "quote_reconfirm_pending" to R.string.err_quote_reconfirm_pending,
+    "quote_nothing_pending" to R.string.err_quote_nothing_pending,
+    "item_unavailable_too_late" to R.string.err_item_unavailable_too_late,
+    "item_unavailable_last_item" to R.string.err_item_unavailable_last_item,
+    "item_unavailable_not_standard" to R.string.err_item_unavailable_not_standard,
     // ── حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) ──
     "custom_fee_out_of_range" to R.string.err_custom_fee_out_of_range,
     "custom_goods_too_high" to R.string.err_custom_goods_too_high,

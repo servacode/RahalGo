@@ -164,6 +164,27 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			return nil, ErrQuoteNotConfirmed
 		}
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا تسليمَ والسعرُ الجديدُ بانتظار تأكيد الزبون** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **المكتبُ يرفع سعرَ الخاصّ بعد الاستلام** (`AdminOverrideCustomQuote`) — والطلبُ
+	// يمضي في طريقه، **لكنّ الزبونَ لا يُسلَّم ما لم يؤكّد ما سيدفعه.** وهي أختُ بوّابة
+	// الاستلام أعلاه، **وفي المحرّك لا في الشاشة**: بابُ المكتب وبابُ السائق يمرّان هنا.
+	if kind == KindCustom && to == StDelivered {
+		var confVersion *int64
+		var quoteVersion int64
+		if err := tx.QueryRow(ctx,
+			`SELECT quote_confirmed_version, quote_version FROM orders WHERE id = $1`, orderID).
+			Scan(&confVersion, &quoteVersion); err != nil {
+			return nil, err
+		}
+		// **وتأكيدٌ قائمٌ بنسخةٍ سبقتها أخرى** هو علامةُ «بانتظار إعادة التأكيد»:
+		// الزيادةُ بعد الاستلام تُبقي القديمَ وتزيد النسخة (`applyCustomQuoteTx`).
+		if confVersion != nil && *confVersion != quoteVersion {
+			return nil, ErrQuoteReconfirmPending
+		}
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **والسببُ يخصّ مرحلتَه — وإلّا رُدّ** (قرارُ المالك ٢٠٢٦-١٠-٠٢)
@@ -1269,14 +1290,17 @@ func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 // **وعند الفشل لا يُقيَّد شيء**: عمولتُه على طلبٍ وصل، لا على طلبٍ خرج من
 // المطبخ. (وهو قرارُ المالك: «عند الفشل يُشطب ويُكتب ملغي».)
 func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
-	var platformCommission int64
+	var platformCommission, promoCost int64
 	var repID *string
 	var repIsBuyer bool
+	// **وكلفةُ الكود معها** — خصمُه وإعفاءُ توصيله (قرارُ المالك ٢٠٢٦-١٠-١٥): الكوبونُ
+	// من حصّة المنصّة، **فيُطرح من القاعدة قبل نصيب المندوب.** (`RepCommissionBase`)
 	if err := q.QueryRow(ctx, `
-		SELECT o.platform_commission, m.sales_rep_user_id,
+		SELECT o.platform_commission, o.discount + o.promo_delivery_waived,
+		       m.sales_rep_user_id,
 		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID, &repIsBuyer); err != nil {
+		WHERE o.id = $1`, orderID).Scan(&platformCommission, &promoCost, &repID, &repIsBuyer); err != nil {
 		return err
 	}
 
@@ -1336,7 +1360,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	// افتراضاً**: **وضعٌ فاسدٌ يُسقط التسويةَ ولا يدفع مالاً بالتخمين.**
 	// **والوضعُ والنسبةُ من لقطة الطلب** — `XG-26` · `XG-27`.
 	base := pricing.RepCommissionBase(
-		pricing.CommissionSource(snap.CommissionSource), platformCommission, margin)
+		pricing.CommissionSource(snap.CommissionSource), platformCommission, margin, promoCost)
 	repCommission := pricing.Amount{Mode: "percent", Value: snap.RepCommissionPercent}.Of(base)
 	if repCommission <= 0 {
 		return nil

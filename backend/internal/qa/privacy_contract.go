@@ -227,6 +227,7 @@ var OrderPrivacy = map[string]FieldRule{
 	"quote_confirmed_at":      {Ref: "متى أكّد الزبونُ العرض", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"quote_confirmed_total":   {Ref: "المبلغُ الذي أكّده", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"quote_confirmed_version": {Ref: "أيَّ نسخةٍ أكّد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"quote_rejected_at":       {Ref: "متى رفض الزبونُ السعرَ الجديد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── الحجزُ ولقطةُ سياسة الأجرة (Batch 2b/2c) ────────────────────
 	// **الحجزُ مالُ الزبون** — يراه هو والأدمن. **ولقطةُ السياسة** يراها

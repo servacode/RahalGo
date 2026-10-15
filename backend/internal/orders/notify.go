@@ -28,7 +28,13 @@ var t = struct {
 	// **فمن عليه الدورُ يُخبَر أنّ الدورَ عليه.**
 	customQuoted, customConfirmed, driverAssignedToCustomer string
 	// customConfirmedAmanah **والأمانةُ تُستلم لا تُشترى** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣).
-	customConfirmedAmanah                 string
+	customConfirmedAmanah string
+	// **تعديلُ المكتب لسعر الخاصّ** (قرارُ المالك ٢٠٢٦-١٠-١٥) — نقصٌ يقع فوراً، وزيادةٌ
+	// بعد الاستلام تنتظر تأكيدَ الزبون، **ورفضُه يصل المكتب.**
+	customPriceLowered, customPriceRaised, customReconfirmed string
+	customPriceRaisedDriver, customQuoteRejected             string
+	// **صنفٌ غيرُ متوفّر** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	itemUnavailable                       string
 	rejected, cancelled, failed, refunded string
 	merchantDelivered, commission         string
 	targetReached                         string
@@ -56,6 +62,12 @@ var t = struct {
 	customQuoted:             "سعر طلبك جاهز — أكّده ليبدأ الشراء",
 	customConfirmed:          "أكّد الزبون السعر — ابدأ الشراء",
 	customConfirmedAmanah:    "أكّد الزبون الأجرة — استلم الأمانة",
+	customPriceLowered:       "عدّل المكتب سعر طلبك",
+	customPriceRaised:        "تغيّر سعر طلبك — أكّده ليُسلَّم إليك",
+	customReconfirmed:        "أكّد الزبون السعر الجديد — يمكنك التسليم",
+	customPriceRaisedDriver:  "تغيّر سعر الطلب — لا تسليم قبل تأكيد الزبون",
+	customQuoteRejected:      "رفض الزبون السعر الجديد",
+	itemUnavailable:          "صنف غير متوفر في طلبك",
 	driverAssignedToCustomer: "أُسند سائقٌ لطلبك",
 	rejected:                 "اعتذر المتجر عن طلبك",
 	cancelled:                "أُلغي طلبك",
@@ -270,7 +282,7 @@ func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total 
 //
 // **وكان البثُّ وحدَه**، وهو يصل شاشةً مفتوحةً لا جيباً مغلقاً: **فالسائقُ
 // ينتظر ولا يعلم أنّ انتظارَه انتهى.**
-func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID string, total int64) {
+func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID string, total int64, afterPickup bool) {
 	if s.notify == nil || driverID == "" {
 		return
 	}
@@ -283,6 +295,10 @@ func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID s
 	title := t.customConfirmed
 	if mode == CustomModeAmanah {
 		title = t.customConfirmedAmanah
+	}
+	// **وبعد الاستلام لا شراءَ يبدأ** — بل تسليمٌ كان موقوفاً على التأكيد.
+	if afterPickup {
+		title = t.customReconfirmed
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: driverID, Kind: notifications.KindOrder,

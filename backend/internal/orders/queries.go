@@ -30,6 +30,7 @@ const orderSelect = `
 	       o.custom_agreed_at, o.custom_goods_amount, o.custom_fee,
 	       -- **عرضُ السعر وتأكيدُه** (Batch 2a) — النسخةُ ولحظةُ التأكيد ومبلغُه ونسختُه.
 	       o.quote_version, o.quote_confirmed_at, o.quote_confirmed_total, o.quote_confirmed_version,
+	       o.quote_rejected_at,
 	       -- **الحجزُ ولقطةُ سياسة الأجرة** (Batch 2b/2c).
 	       o.custom_reserved_amount, o.custom_fee_source, o.custom_fee_snapshot, o.custom_driver_may_change_fee,
 	       o.custom_mode, o.custom_goods_pending, COALESCE(o.driver_fee, 0),
@@ -129,6 +130,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerPhone, &o.CustomerName,
 		&o.Kind, &o.CustomRequest, &o.CustomAgreedAt, &o.CustomGoodsAmount, &o.CustomFee,
 		&o.QuoteVersion, &o.QuoteConfirmedAt, &o.QuoteConfirmedTotal, &o.QuoteConfirmedVersion,
+		&o.QuoteRejectedAt,
 		&o.CustomReservedAmount, &o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 		&o.CustomMode, &o.CustomGoodsPending, &o.DriverFee,
 		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone, &o.DriverName,

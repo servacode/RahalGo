@@ -1192,7 +1192,8 @@ var All = []Check{
 		Why: "**المالُ لا يُحجَز إلّا لطلبِ محفظةٍ حيٍّ أكّده صاحبُه**، " +
 			"**والمحجوزُ = ما أكّده بالضبط** (`quote_confirmed_total`) " +
 			"**بالنسخة الحاليّة** — **وحجزٌ لا يطابق تأكيداً حيّاً مالٌ مجمَّدٌ " +
-			"بلا عقد.**",
+			"بلا عقد.** **إلّا بعد الاستلام**: زيادةُ المكتب تنتظر تأكيدَ الزبون " +
+			"**والمؤكَّدُ القديمُ قائمٌ بمحجوزه** (قرارُ المالك ٢٠٢٦-١٠-١٥).",
 		Flows:     []string{"F-24"},
 		Registers: []string{"XG-12"},
 		SQL: `SELECT id::text, status, payment_method, custom_reserved_amount,
@@ -1202,7 +1203,10 @@ var All = []Check{
 		         AND ( payment_method <> 'wallet'
 		            OR quote_confirmed_at IS NULL
 		            OR custom_paid_at IS NOT NULL
-		            OR quote_confirmed_version IS DISTINCT FROM quote_version
+		            -- **وبعد الاستلام قد تسبق النسخةُ تأكيدَها** — زيادةُ المكتب تنتظر الزبون
+		            -- (قرارُ المالك ٢٠٢٦-١٠-١٥) **والمؤكَّدُ القديمُ قائمٌ بمحجوزه.**
+		            OR (quote_confirmed_version IS DISTINCT FROM quote_version
+		                AND (picked_up_at IS NULL OR quote_confirmed_version > quote_version))
 		            OR quote_confirmed_total IS DISTINCT FROM custom_reserved_amount
 		            OR status IN ('delivered','cancelled','rejected','failed') )`,
 	},

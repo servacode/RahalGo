@@ -70,6 +70,17 @@ var (
 	// يُعاد التأكيد. **وما بعدَه تصحيحٌ أو تعويضٌ بيد الأدمن، موثَّقٌ.**
 	ErrCustomLocked = httpx.NewError(http.StatusConflict,
 		"custom_locked", "errors.custom_locked")
+
+	// ErrQuoteReconfirmPending **ولا تسليمَ والسعرُ الجديدُ بانتظار تأكيد الزبون**
+	// (قرارُ المالك ٢٠٢٦-١٠-١٥) — المكتبُ رفع السعرَ بعد الاستلام، **فالزبونُ يؤكّد
+	// ما سيدفعه قبل أن يُسلَّم.** وهو بوّابةُ التسليم كما `ErrQuoteNotConfirmed`
+	// بوّابةُ الاستلام.
+	ErrQuoteReconfirmPending = httpx.NewError(http.StatusConflict,
+		"quote_reconfirm_pending", "errors.quote_reconfirm_pending")
+
+	// ErrQuoteNothingPending **لا سعرَ جديدٌ يُرفض** — العرضُ الحاليُّ مؤكَّدٌ أصلاً.
+	ErrQuoteNothingPending = httpx.NewError(http.StatusConflict,
+		"quote_nothing_pending", "errors.quote_nothing_pending")
 )
 
 // CustomGoodsMax **أعلى ثمنِ بضاعةٍ يُوثَّق** (تجربةُ القبول ٢٠٢٦-١٠-٠٣) — كان يُقبل أيُّ

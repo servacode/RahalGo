@@ -35,6 +35,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -178,6 +179,18 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 			invalidate = true // مجموعٌ ثابتٌ ومكوّناتٌ تبدّلت → يُعاد التأكيد
 		}
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وبعد الاستلام: الزيادةُ تنتظر تأكيداً ولا تمسّ التأكيدَ القائم** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **البضاعةُ في يد السائق** — فلا يُفكّ حجزٌ ولا يُمحى تأكيد: **المؤكَّدُ القديمُ
+	// يبقى عقداً قائماً بمحجوزه**، والنسخةُ الجديدةُ تسبقه فيُغلق التسليمُ حتّى يؤكّدها
+	// الزبون (`ErrQuoteReconfirmPending`). **ومن فكّ الحجزَ هنا ترك الزبونَ يصرف
+	// رصيدَه والبضاعةُ في الطريق إليه.** والنقصُ يقع فوراً كما قبل الاستلام.
+	reconfirm := false
+	if invalidate && row.pickedUpAt != nil {
+		invalidate, reconfirm = false, true
+	}
 	if invalidate {
 		if err := s.releaseCustomReservationTx(ctx, q, row.customerID, row.id, row.reserved); err != nil {
 			return false, err
@@ -233,15 +246,21 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	        subtotal = $2, delivery_fee = $3, driver_fee = $5,
 	        snap_platform_delivery_percent = $6, snap_platform_delivery_fixed = $7,
 	        total = $2::bigint + $3::bigint,
-	        quote_version = $4, custom_agreed_at = now(), updated_at = now()`
+	        quote_version = $4, custom_agreed_at = now(), updated_at = now(),
+	        quote_rejected_at = NULL`
 	// **والثابتان يُضافان قبل الشرطيّ** — **ورقمُ وسيطٍ يتزحزح بحسب فرعٍ
 	// يُنفَّذ أو لا يُنفَّذ يكتب قيمةً في عمودٍ آخر بصمت.**
 	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed}
 	switch {
 	case invalidate:
 		set += `, quote_confirmed_at = NULL, quote_confirmed_total = NULL, quote_confirmed_version = NULL`
+	case reconfirm:
+		// **التأكيدُ القديمُ باقٍ بمبلغه ونسخته** — والنسخةُ الجديدةُ تنتظر.
 	case row.confirmedAt != nil: // نقصٌ مع تأكيدٍ باقٍ: يُحدَّث المبلغُ والنسخة
-		set += `, quote_confirmed_total = $8, quote_confirmed_version = $4`
+		// **والمستحقُّ النقديُّ يتبع المبلغ** — كان يبقى على المؤكَّد القديم فيقبض
+		// السائقُ ما لم يعُد مستحقّاً. (والمحفظةُ صفرٌ فيها، فلا يُمَسّ.)
+		set += `, quote_confirmed_total = $8, quote_confirmed_version = $4,
+		        cash_due = CASE WHEN payment_method = 'cash' THEN $8 ELSE cash_due END`
 		args = append(args, newTotal)
 	}
 	if _, err := q.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
@@ -254,6 +273,7 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 		"new_goods": newGoods, "new_fee": newFee, "new_total": newTotal,
 		"quote_version": newVersion, "actor_role": m.role, "source": m.source,
 		"reason": m.reason, "invalidated_confirmation": invalidate,
+		"reconfirm_pending": reconfirm,
 	}); err != nil {
 		return false, err
 	}
@@ -298,11 +318,11 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if row.customerID != customerID {
 		return nil, httpx.NewError(http.StatusForbidden, "not_your_order", "errors.not_your_order")
 	}
-	// **لا تأكيدَ قبل اتفاقٍ، ولا بعد استلام** — العرضُ يُقفَل عند الاستلام.
+	// **لا تأكيدَ قبل اتفاقٍ، ولا بعد نهاية.**
 	if !row.hasGoods {
 		return nil, ErrCustomNotAgreed
 	}
-	if row.pickedUpAt != nil {
+	if terminal(row.status) {
 		return nil, ErrCustomLocked
 	}
 	// **العرضُ الذي يؤكّده هو الحاليُّ نفسُه** — نسخةً ومبلغاً، وإلّا فليقرأ الجديد.
@@ -317,6 +337,16 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		*row.confirmedVersion == row.quoteVersion && row.paymentMethod == paymentMethod {
 		return s.GetByID(ctx, orderID)
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وبعد الاستلام يُؤكَّد السعرُ الجديدُ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **المكتبُ رفع السعرَ والبضاعةُ في الطريق** — فيؤكّده الزبونُ هنا، **ولا شيءَ
+	// غيرُه يُفتح بعد الاستلام**: عرضٌ مؤكَّدٌ لا يُبدَّل دفعُه في الطريق.
+	reconfirm := row.pickedUpAt != nil
+	if reconfirm && row.confirmedVersion != nil && *row.confirmedVersion == row.quoteVersion {
+		return nil, ErrCustomLocked
+	}
 
 	// **وأيُّ حجزٍ سابقٍ يُفكّ قبل التأكيد الجديد** — تبديلُ الطريقة أو إعادةُ
 	// التأكيد لا يُبقي حجزاً قديماً معلَّقاً.
@@ -326,7 +356,10 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		}
 	}
 
-	if paymentMethod == "cash" {
+	// **وإعادةُ التأكيد نقداً على طلبٍ نقديٍّ في الطريق لا تُسأل عن قفل النقد وسقفه**:
+	// **الطلبُ قائمٌ نقداً والبضاعةُ اشتُريت** — ومن رُدّ هنا بقيت بضاعتُه بيد السائق
+	// لا تُسلَّم ولا تُردّ. والسقفان حارسا طلبٍ جديدٍ لا تعديلِ طلبٍ في الطريق.
+	if paymentMethod == "cash" && !(reconfirm && row.paymentMethod == "cash") {
 		// **ومن قُفل عليه النقدُ لا يؤكّد نقداً** — الحدُّ نفسُه لبابٍ آخر.
 		blocked, err := s.on(tx).cashBlocked(ctx, tx, customerID)
 		if err != nil {
@@ -350,7 +383,7 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		if err := s.on(tx).checkCODLimit(ctx, tx, customerID, orderID, current); err != nil {
 			return nil, err
 		}
-	} else { // wallet
+	} else if paymentMethod == "wallet" {
 		avail, err := s.wallet.AvailableTx(ctx, tx, customerID)
 		if err != nil {
 			return nil, err
@@ -387,7 +420,8 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders SET payment_method = $2,
 		       quote_confirmed_at = now(), quote_confirmed_total = $3,
-		       quote_confirmed_version = $4, cash_due = $5, updated_at = now()
+		       quote_confirmed_version = $4, cash_due = $5, updated_at = now(),
+		       quote_rejected_at = NULL
 		WHERE id = $1`, orderID, paymentMethod, current, row.quoteVersion, cashDue); err != nil {
 		return nil, err
 	}
@@ -404,6 +438,7 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_confirmed", orderID, map[string]any{
 		"total": current, "quote_version": row.quoteVersion,
 		"payment_method": paymentMethod, "actor_role": "customer", "source": "customer_confirm",
+		"after_pickup": reconfirm,
 	}); err != nil {
 		return nil, err
 	}
@@ -422,7 +457,7 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		// **فالسائقُ ينتظر التأكيدَ ولا يعلم أنّ انتظارَه انتهى**، والزبونُ
 		// يرى «بانتظار الشراء» ولا أحدَ يشتري.
 		if o.DriverID != nil && !quiet {
-			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total)
+			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total, reconfirm)
 			// **وتأكيدُ الزبون يُقال في الحديث أيضاً** (٢٠٢٦-١٠-٠٣) — بمجموعه.
 			line := fmt.Sprintf("وافقتُ على المجموع: %s ل.س.", groupDigits(o.Total))
 			if o.CustomGoodsPending || o.CustomMode == CustomModeAmanah {
@@ -434,9 +469,21 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	return o, err
 }
 
-// AdminOverrideCustomQuote **تدخّلُ الأدمن على العرض** — قبل الاستلام حرّاً،
-// وبعده نقصاً أو تصحيحاً فقط، **موثَّقاً** (قرارُ المالك) — Batch 2a.
+// AdminOverrideCustomQuote **تدخّلُ الأدمن على العرض** — صعوداً ونزولاً حتّى التسليم،
+// **موثَّقاً بسبب** (قرارُ المالك ٢٠٢٦-١٠-١٥، ناقضاً «بعد الاستلام نقصاً فقط»).
 //
+// # الحادثةُ التي فتحته
+//
+// **وثّق السائقُ ثمنَ البضاعة ٥٠ بدل ٥٠٠ ثمّ استلم** — فلم يملك المكتبُ تصحيحَه:
+// الزيادةُ بعد الاستلام كانت تُردّ (`ErrCustomLocked`)، **والمنصّةُ تخسر الفرقَ كلَّه.**
+//
+// # والقاعدةُ الآن
+//
+//	نقصٌ      ←  يقع فوراً، ويُخبَر الزبونُ بالمجموع الجديد
+//	زيادةٌ    ←  قبل الاستلام كما كانت (يُعاد التأكيد)، **وبعده يبقى المؤكَّدُ القديمُ
+//	             قائماً والتسليمُ موقوفٌ حتّى يؤكّد الزبونُ الجديد** (`ErrQuoteReconfirmPending`)
+//
+// **والسائقُ لا يعدّل بعد الاستلام** — بابُه `AgreeCustom` ما زال مقفلاً.
 // **وبعد التسليم/الانتهاء لا تعديل** — التصحيحُ حينها تعويضٌ بابُه آخر.
 func (s *Service) AdminOverrideCustomQuote(ctx context.Context, orderID, adminID string,
 	newGoods, newFee int64, reason string) (*Order, error) {
@@ -463,13 +510,10 @@ func (s *Service) AdminOverrideCustomQuote(ctx context.Context, orderID, adminID
 	if terminal(row.status) {
 		return nil, ErrCustomLocked
 	}
-	// **وبعد الاستلام لا زيادة** — نقصٌ أو تصحيحٌ فقط (قرارُ المالك).
-	if row.pickedUpAt != nil && newGoods+newFee > row.goods+row.fee {
-		return nil, ErrCustomLocked
-	}
-	if _, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, quoteMutator{
+	changed, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, quoteMutator{
 		actorID: adminID, role: "admin", source: "admin_override", reason: reason,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -479,6 +523,106 @@ func (s *Service) AdminOverrideCustomQuote(ctx context.Context, orderID, adminID
 	if err == nil {
 		s.publishOrder(o)
 		s.publishWalletsOf(ctx, orderID)
+		if changed {
+			s.notifyCustomPriceChanged(ctx, o, reason, row.pickedUpAt != nil)
+		}
+	}
+	return o, err
+}
+
+// QuotePending **أينتظر العرضُ الحاليُّ تأكيدَ الزبون؟** — نسخةٌ لم تُؤكَّد بعد.
+func (o *Order) QuotePending() bool {
+	return o.CustomGoodsAmount != nil &&
+		(o.QuoteConfirmedVersion == nil || *o.QuoteConfirmedVersion != o.QuoteVersion)
+}
+
+// notifyCustomPriceChanged **الزبونُ يُخبَر بما عدّله المكتبُ وسببِه** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **وإشعارٌ باقٍ لا عابر**: سعرٌ تغيّر في طلبه — نقصاً يقرؤه، وزيادةً يُطلب منه
+// تأكيدُها. **والسائقُ يُخبَر بعد الاستلام** أنّ التسليمَ موقوفٌ حتّى يؤكّد الزبون.
+func (s *Service) notifyCustomPriceChanged(ctx context.Context, o *Order, reason string, afterPickup bool) {
+	if s.notify == nil || o == nil || o.CustomerID == "" {
+		return
+	}
+	pending := o.QuotePending()
+	title := t.customPriceLowered
+	if pending {
+		title = t.customPriceRaised
+	}
+	body := fmt.Sprintf("#%d — المجموع الجديد %s ل.س — السبب: %s", o.Number, groupDigits(o.Total), reason)
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: o.CustomerID, Kind: notifications.KindOrder,
+		Title: title, Body: body,
+		Entity: "order", EntityID: o.ID, Href: "/portal/orders",
+		Apps: []string{notifications.AppCustomer},
+	})
+	if pending && afterPickup && o.DriverID != nil && *o.DriverID != "" {
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: *o.DriverID, Kind: notifications.KindOrder,
+			Title:  t.customPriceRaisedDriver,
+			Body:   fmt.Sprintf("#%d — المجموع الجديد %s ل.س", o.Number, groupDigits(o.Total)),
+			Entity: "order", EntityID: o.ID, Href: "/portal",
+			Apps: []string{notifications.AppDriver},
+		})
+	}
+}
+
+// RejectQuote **الزبونُ يرفض السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **والطلبُ يبقى حيث هو** — لا إلغاءَ ولا فكَّ حجز: البضاعةُ قد تكون في يد السائق،
+// **والمكتبُ يقرّر** (يعدّل ثانيةً أو يُنهي). **فتُكتب علامةٌ يراها المكتب**
+// (`quote_rejected_at`) ويُنذَر بها.
+func (s *Service) RejectQuote(ctx context.Context, orderID, customerID string) (*Order, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	row, err := s.lockCustomRow(ctx, tx, orderID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if row.kind != KindCustom {
+		return nil, ErrNotCustom
+	}
+	if row.customerID != customerID {
+		return nil, httpx.NewError(http.StatusForbidden, "not_your_order", "errors.not_your_order")
+	}
+	if terminal(row.status) {
+		return nil, ErrCustomLocked
+	}
+	if !row.hasGoods || (row.confirmedVersion != nil && *row.confirmedVersion == row.quoteVersion) {
+		return nil, ErrQuoteNothingPending
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE orders SET quote_rejected_at = COALESCE(quote_rejected_at, now()),
+		       updated_at = now() WHERE id = $1`, orderID); err != nil {
+		return nil, err
+	}
+	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_rejected", orderID, map[string]any{
+		"total": row.goods + row.fee, "quote_version": row.quoteVersion,
+		"actor_role": "customer", "source": "customer_reject",
+	}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	o, err := s.GetByID(ctx, orderID)
+	if err == nil {
+		s.publishOrder(o)
+		if s.notify != nil {
+			s.notify.NotifyOps(ctx, notifications.Input{
+				Kind:   notifications.KindOrder,
+				Title:  t.customQuoteRejected,
+				Body:   fmt.Sprintf("#%d — %s ل.س", o.Number, groupDigits(o.Total)),
+				Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+			})
+		}
 	}
 	return o, err
 }

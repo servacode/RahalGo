@@ -138,6 +138,8 @@ interface OrderRow {
   quote_confirmed_total?: number | null;
   /** أيَّ نسخةٍ أكّد — فإن خالفت الحاليّةَ فالتأكيدُ لاغٍ. */
   quote_confirmed_version?: number | null;
+  /** **الزبونُ رفض السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمكتبُ يقرّر. */
+  quote_rejected_at?: string | null;
   /** المحجوزُ من محفظة الزبون لهذا العرض — وصفرٌ يعني «لا حجز». */
   custom_reserved_amount?: number;
   /** من يحدّد أجرةَ التوصيل — الإدارةُ أو السائق. */
@@ -1560,7 +1562,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **ولا زرَّ فاتورةٍ** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الفاتورة ألغِها
       // من الكرت الخاصّ بالطلبات»). **والقائمةُ تحته تقول ما فيه**،
       // **وزرٌّ يفتح ما هو مفتوحٌ فوقه** ضغطةٌ بلا خبرٍ جديد.
-      cell: (o) => <InvoiceList o={o} />,
+      cell: (o) => (
+        <InvoiceList o={o} onChanged={load} canEdit={can("orders.intervene")} />
+      ),
     },
     {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
@@ -2609,8 +2613,8 @@ function OrderActions({
   // **تعديلُ عرض الطلب الخاصّ — تصحيحُ ما وثّقه السائق**
   // ══════════════════════════════════════════════════════════════════
   //
-  // **والخادمُ هو الحَكَم**: قبل الاستلام يقبل أيَّ تغيير، وبعده خفضاً أو
-  // تصحيحاً فقط — **وزيادةٌ تُردّ `custom_locked`.** فلا تحسب الشاشةُ المالَ،
+  // **والخادمُ هو الحَكَم**: صعوداً ونزولاً حتّى التسليم (قرارُ المالك ٢٠٢٦-١٠-١٥)،
+  // **والزيادةُ بعد الاستلام تنتظر تأكيدَ الزبون.** فلا تحسب الشاشةُ المالَ،
   // إنّما تعرض ما سيقع وتُظهر ما ردّه الخادم.
   async function submitOverride() {
     const g = Number(overrideGoods);
@@ -3290,8 +3294,70 @@ function FeeSplit({ fee, driver }: { fee: number; driver?: number }) {
   );
 }
 
-function InvoiceList({ o }: { o: OrderRow }) {
+/**
+ * **الحالاتُ التي يُحذف فيها صنفٌ غيرُ متوفّر** — كلُّها قبل الاستلام، **والخادمُ
+ * يحرسها** (`item_unavailable_too_late`). وزرٌّ لا يُعرض حيث لا يفعل.
+ */
+const ITEM_UNAVAILABLE_FROM = new Set([
+  "pending",
+  "accepted",
+  "preparing",
+  "dispatching",
+  "assigned",
+  "at_pickup",
+]);
+
+function InvoiceList({
+  o,
+  onChanged,
+  canEdit = false,
+}: {
+  o: OrderRow;
+  onChanged?: () => void;
+  /** **من يملك التدخّل** (`orders.intervene`) — يرى «غير متوفر» على كلّ سطر. */
+  canEdit?: boolean;
+}) {
   const OP = m.admin.ordersPage;
+  // ══════════════════════════════════════════════════════════════════
+  // **صنفٌ غيرُ متوفّر — يحذفه المكتبُ بتأكيد** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والحسبةُ كلُّها في الخادم** — المجموعُ والنقدُ وردُّ المحفظة والكود؛
+  // **فالشاشةُ تسأل وتُظهر ما ردّه.** والسطرُ الأخيرُ يردّه الخادمُ برسالته.
+  const [unavail, setUnavail] = useState<{ id: string; name: string; qty: number } | null>(null);
+  const [unavailQty, setUnavailQty] = useState("");
+  const [unavailBusy, setUnavailBusy] = useState(false);
+  const [unavailErr, setUnavailErr] = useState("");
+  const canUnavail =
+    canEdit &&
+    (o.kind ?? "standard") === "standard" &&
+    ITEM_UNAVAILABLE_FROM.has(o.status) &&
+    (o.items ?? []).length > 0;
+  async function submitUnavailable() {
+    if (!unavail) return;
+    const n = unavailQty.trim() === "" ? 0 : Math.round(Number(unavailQty));
+    if (!Number.isFinite(n) || n < 0) {
+      setUnavailErr(m.errors.validation);
+      return;
+    }
+    setUnavailBusy(true);
+    setUnavailErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/items/${unavail.id}/unavailable`, {
+        method: "POST",
+        body: JSON.stringify(n > 0 && n < unavail.qty ? { qty: n } : {}),
+      });
+      setUnavail(null);
+      setUnavailQty("");
+      onChanged?.();
+    } catch (e) {
+      setUnavailErr(
+        e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal,
+      );
+    } finally {
+      setUnavailBusy(false);
+    }
+  }
   // **والطلبُ الخاصُّ لا بنودَ له** — سطرٌ كتبه الزبون، ومبلغٌ اتّفق عليه
   // الطرفان. **وفاتورةٌ فارغةٌ تُقرأ عطباً** لا «لا شيءَ هنا».
   //
@@ -3395,6 +3461,14 @@ function InvoiceList({ o }: { o: OrderRow }) {
               {fee == null ? "—" : confirmed ? OP.confirmedYes : OP.confirmedWaiting}
             </span>
           </li>
+          {/* **وبعد الاستلام: سعرٌ رفعه المكتبُ ينتظر الزبون، أو رفضه** (قرارُ المالك
+              ٢٠٢٦-١٠-١٥) — **والتسليمُ موقوفٌ حتّى يؤكّد، والرفضُ يقرّر فيه المكتب.** */}
+          {!confirmed && o.quote_confirmed_version != null && o.quote_rejected_at == null && (
+            <li className="text-xs font-bold text-warning">{OP.reconfirmWaiting}</li>
+          )}
+          {o.quote_rejected_at != null && (
+            <li className="text-xs font-bold text-danger">{OP.quoteRejected}</li>
+          )}
           {o.quote_confirmed_at != null && (
             <li className={`${row} text-xs text-ink-muted`}>
               <span>{OP.payment}</span>
@@ -3451,6 +3525,19 @@ function InvoiceList({ o }: { o: OrderRow }) {
                 small
                 className="shrink-0"
               />
+              {canUnavail && (
+                <button
+                  type="button"
+                  className="shrink-0 rounded-control px-1.5 text-2xs text-danger hover:bg-row-hover"
+                  onClick={() => {
+                    setUnavail({ id: it.id, name: it.name, qty: it.qty });
+                    setUnavailQty("");
+                    setUnavailErr("");
+                  }}
+                >
+                  {OP.itemUnavailable}
+                </button>
+              )}
             </span>
 
             {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
@@ -3470,6 +3557,42 @@ function InvoiceList({ o }: { o: OrderRow }) {
         );
       })}
       {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
+      <Modal
+        open={unavail != null}
+        onClose={() => setUnavail(null)}
+        title={OP.itemUnavailableTitle}
+      >
+        <p className="mb-3 text-sm text-ink-muted">
+          {OP.itemUnavailableBody.replace("{name}", unavail?.name ?? "")}
+        </p>
+        {unavail != null && unavail.qty > 1 && (
+          <div className="mb-3">
+            <p className="mb-1 text-xs text-ink-muted">
+              {OP.itemUnavailableQty.replace("{n}", fmtNum(unavail.qty))}
+            </p>
+            <Input
+              type="number"
+              min={1}
+              max={unavail.qty}
+              value={unavailQty}
+              onChange={(e) => setUnavailQty(e.target.value)}
+            />
+          </div>
+        )}
+        {unavailErr && <p className="mb-3 text-xs text-danger">{unavailErr}</p>}
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setUnavail(null)}>
+            {OP.itemUnavailableCancel}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={unavailBusy}
+            onClick={() => void submitUnavailable()}
+          >
+            {OP.itemUnavailableConfirm}
+          </Button>
+        </div>
+      </Modal>
 
       {/* **وذيلُ الفاتورة: التوصيلُ ثمّ الإجمالي.**
 

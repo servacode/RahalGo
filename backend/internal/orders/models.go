@@ -182,6 +182,9 @@ type Order struct {
 	QuoteConfirmedAt      *time.Time `json:"quote_confirmed_at"`
 	QuoteConfirmedTotal   *int64     `json:"quote_confirmed_total"`
 	QuoteConfirmedVersion *int64     `json:"quote_confirmed_version"`
+	// QuoteRejectedAt **الزبونُ رفض السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والطلبُ
+	// باقٍ حيث هو، **والمكتبُ يرى العلامةَ ويقرّر.** تُمحى بتعديلٍ جديدٍ أو بتأكيد.
+	QuoteRejectedAt *time.Time `json:"quote_rejected_at"`
 	// CustomReservedAmount **ما حُجز من محفظة الزبون لهذا الطلب** — Batch 2b/2c:
 	// يراه الزبونُ (مالُه هو) والأدمن. صفرٌ إن لا حجز.
 	CustomReservedAmount int64 `json:"custom_reserved_amount"`

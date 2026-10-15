@@ -706,6 +706,9 @@ func (s *Server) Router() http.Handler {
 			// **الزبونُ يؤكّد عرضَ الطلب المخصَّص ويختار الدفع** — Batch 2a:
 			// **يُقفَل السعرُ قبل أن يبدأ السائقُ الشراء.**
 			r.Post("/orders/{id}/confirm-quote", s.handleConfirmQuote)
+			// **ويرفض السعرَ الجديدَ إن رفعه المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الطلبُ
+			// يبقى حيث هو، **والمكتبُ يرى العلامةَ ويقرّر.**
+			r.Post("/orders/{id}/reject-quote", s.handleRejectQuote)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
 			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
@@ -1359,10 +1362,15 @@ func (s *Server) Router() http.Handler {
 			// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢). انظر `door_resolution.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/door-resolution", s.handleDoorResolution)
-			// **تدخّلُ الأدمن على عرضِ الطلب المخصَّص** — Batch 2a: قبل
-			// الاستلام حرّاً، وبعده نقصاً أو تصحيحاً فقط، **موثَّقاً.**
+			// **تدخّلُ الأدمن على عرضِ الطلب المخصَّص** — صعوداً ونزولاً حتّى
+			// التسليم (قرارُ المالك ٢٠٢٦-١٠-١٥)، **موثَّقاً**؛ والزيادةُ بعد الاستلام
+			// تنتظر تأكيدَ الزبون.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/custom-quote", s.handleAdminOverrideCustomQuote)
+			// **صنفٌ غيرُ متوفّر يحذفه المكتبُ قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+			// ويُعاد حسابُ الطلب. انظر `order_item_unavailable.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/items/{itemID}/unavailable", s.handleItemUnavailable)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`

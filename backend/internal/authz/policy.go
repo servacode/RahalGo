@@ -113,7 +113,8 @@ var adminPolicy = []Rule{
 
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},
-	{"POST", "/orders/{id}/custom-quote", OrdersIntervene}, // تدخّلُ الأدمن على عرض المخصَّص — Batch 2a
+	{"POST", "/orders/{id}/custom-quote", OrdersIntervene},               // تدخّلُ الأدمن على عرض المخصَّص — Batch 2a
+	{"POST", "/orders/{id}/items/{itemID}/unavailable", OrdersIntervene}, // صنفٌ غيرُ متوفّر (٢٠٢٦-١٠-١٥)
 	{"POST", "/orders/{id}/assign", OrdersIntervene},
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	// **ومرشّحو التحويل يُقرؤون لمن يحوّل** — فيهم أسعارُ الشراء.

@@ -569,7 +569,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	//
 	// **ويُضاف قبل الخصم**: كودٌ يُصفّر التوصيلَ يُصفّره كلَّه — **وأن يبقى
 	// جزءٌ منه بعد «توصيلٌ مجّانيّ» وعدٌ يُخلَف.**
-	deliveryFee += unit.extraSourceFee(ctx, sources, deliveryFee)
+	// **ويُحفظ وحدَه مع الطلب** (`sources_fee`، ٢٠٢٦-١٠-١٥) — فإن خرج متجرٌ كاملٌ
+	// بصنفٍ غير متوفّر عُرف ما يُطرح من الأجرة (`item_unavailable.go`).
+	sourcesFee := unit.extraSourceFee(ctx, sources, deliveryFee)
+	deliveryFee += sourcesFee
 
 	// ══════════════════════════════════════════════════════════════
 	// **أجرُ السائقِ الأساسُ — قبل أيّ عرضٍ يُصفّر ما يدفعه الزبون** (٢٠٢٦-٠٩-٢٧)
@@ -671,17 +674,18 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			promo_code, notes, created_by,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders, driver_fee,
-			promo_delivery_waived, snap_platform_delivery_percent, snap_platform_delivery_fixed)
+			promo_delivery_waived, snap_platform_delivery_percent, snap_platform_delivery_fixed,
+			sources_fee)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21, $22, $23, $24)
+			$17, $18, $19, $20, $21, $22, $23, $24, $25)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
 		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
-		deliveryWaived, platformPct, platformFixed).Scan(&orderID)
+		deliveryWaived, platformPct, platformFixed, sourcesFee).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1123,6 +1127,14 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 		}
 	}
 
+	return &id, promoCut(kind, value, maxDiscount, subtotal, deliveryFee), nil
+}
+
+// promoCut **أثرُ كودٍ صالحٍ على بضاعةٍ بعينها** — خصمُه، وقد يصفّر رسمَ التوصيل.
+//
+// **ومعادلةٌ واحدةٌ لبابين**: إنشاءُ الطلب (`validatePromo`) وإعادةُ حسابه حين
+// يُحذف صنفٌ غيرُ متوفّر (`item_unavailable.go`). **وخصمٌ يُحسب في موضعين يفترق.**
+func promoCut(kind string, value int64, maxDiscount *int64, subtotal int64, deliveryFee *int64) int64 {
 	var discount int64
 	switch kind {
 	case "percent":
@@ -1147,7 +1159,7 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	if discount < 0 {
 		discount = 0
 	}
-	return &id, discount, nil
+	return discount
 }
 
 func min64(a, b int64) int64 {

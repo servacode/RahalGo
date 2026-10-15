@@ -3656,6 +3656,26 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/items/{itemID}/unavailable",
+      "handler": "handleItemUnavailable",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "result",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
@@ -8774,6 +8794,21 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/reject-quote",
+      "handler": "handleRejectQuote",
+      "auth": true,
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

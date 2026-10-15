@@ -270,6 +270,23 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **والمهلةُ من الخادم** (`cancel_seconds_left`) — **وحسبةٌ في
      * الشاشة تخالفه بعد أوّل تعديلِ إعداد.**
      */
+    /** **رفضُ السعر الجديد** — الطلبُ باقٍ، والمكتبُ يقرّر (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+    fun rejectQuote(orderId: String) {
+        if (busy) return
+        busy = true
+        actionError = ""
+        viewModelScope.launch {
+            try {
+                api.rejectQuote(orderId)
+                Flash.ok(getApplication<Application>().getString(R.string.ord_quote_rejected_sent))
+            } catch (e: Exception) {
+                actionError = apiError(getApplication(), e)
+            }
+            busy = false
+            load()
+        }
+    }
+
     fun cancel(orderId: String) {
         if (busy) return
         busy = true
