@@ -87,6 +87,10 @@ const LINE_LABEL: Record<string, string> = {
   lost_cancelled: P.lineLostCancelled,
   lost_refunded: P.lineLostRefunded,
   compensations: P.lineCompensations,
+  // **ونقصُ الصندوق والتسويةُ اليدويّةُ إيداعاً والمشطوبُ سطورٌ لحالها** (٢٠٢٦-١٠-١٥).
+  shortfalls: P.lineShortfalls,
+  adjustment_credits: P.lineAdjustmentCredits,
+  written_off: P.lineWrittenOff,
   recovered: P.lineRecovered,
   referrals: P.lineReferrals,
   targets: P.lineTargets,

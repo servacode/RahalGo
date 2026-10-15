@@ -259,20 +259,60 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 	//
 	// **والإبطالُ الصريحُ باقٍ كما هو**: خروجٌ · إخراجٌ شامل ·
 	// إعادةُ كلمةٍ · أحداثُ أمن. **وهذه تمسّ الحالَ وحدَها.**
-	if in.Status != nil && (*in.Status == "blocked" || *in.Status == "deleted") {
+	if in.Status != nil {
+		s.afterStatus(ctx, userID, *in.Status)
+	}
+	user, _, err := s.repo.UserByID(ctx, userID)
+	return user, err
+}
+
+// afterStatus **أثرُ تبديل الحال بعد التثبيت** — إبطالُ الجلسات ووجهاتِ الدفع لحال
+// الأمن، وإبطالُ كاش الحال لكلّ تبديل.
+func (s *Service) afterStatus(ctx context.Context, userID, status string) {
+	if status == "blocked" || status == "deleted" {
 		_, _ = s.repo.RevokeAllTokens(ctx, userID)
 		// **ووجهاتُ الدفع معها** — **وحالُ أمنٍ لا تُترَك لها وجهة**
 		// (`SEC5`). **والمحظورُ كان يبقى يستقبل إشعاراتِه الخاصّة.**
 		if _, err := s.repo.DeleteDeviceTokensOfUser(ctx, userID); err != nil {
 			s.logger.Error("تعذّر قطعُ وجهاتِ الدفع بعد تبديل الحال",
-				"user", userID, "status", *in.Status, "error", err)
+				"user", userID, "status", status, "error", err)
 		}
 	}
-	if in.Status != nil {
-		s.invalidateStatusCache(ctx, userID)
+	s.invalidateStatusCache(ctx, userID)
+}
+
+// BlockForOrderTx **حظرُ حسابٍ من إنهاء طلبٍ فاشل** (قرارُ المالك ٢٠٢٦-١٠-١٥: «حظر
+// الحساب» بذنب الزبون عند الباب) — **الحظرُ نفسُه** (`UpdateUserTx` بحال `blocked`
+// وسببٍ مكتوب) **وأثرُه في التدقيق** (`admin.user_update` بمصدره)، **داخلَ معاملة
+// الإنهاء**: لا طلبٌ فشل بحظرٍ لم يقع، ولا حظرٌ بلا طلب.
+//
+// **وحارسُ الحساب المحميّ نفسُه** (`BOOK-02`) — ومن لا يُحظر من صفحة الحسابات لا
+// يُحظر من هنا. **وما بعد التثبيت** (`AfterBlock`) يناديه المنادي.
+func (s *Service) BlockForOrderTx(ctx context.Context, q dbtx.Querier, actorID, userID,
+	orderID, reason, ip string) error {
+	if userID == "" {
+		return nil
 	}
-	user, _, err := s.repo.UserByID(ctx, userID)
-	return user, err
+	if err := guardAccountAdmin(ctx, q, actorID, userID); err != nil {
+		return err
+	}
+	if userID == actorID {
+		return ErrSelfAction
+	}
+	status := "blocked"
+	if err := s.repo.UpdateUserTx(ctx, q, userID, nil, &status, nil, &reason, nil, nil); err != nil {
+		return err
+	}
+	return AuditTx(ctx, q, &actorID, "admin.user_update", "user", userID, ip,
+		map[string]any{"status": status, "status_reason": reason,
+			"source": "door_resolution", "order_id": orderID})
+}
+
+// AfterBlock **ما بعد تثبيت `BlockForOrderTx`** — الجلساتُ ووجهاتُ الدفع والكاش.
+func (s *Service) AfterBlock(ctx context.Context, userID string) {
+	if userID != "" {
+		s.afterStatus(ctx, userID, "blocked")
+	}
 }
 
 func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, reason, ip string) error {

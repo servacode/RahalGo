@@ -51,6 +51,10 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 )
 
+// DisputeChargeLine **سطرُ محفظة الطرف حين يُخصم منه نزاع** — نصٌّ محايد، **ولا
+// ملاحظةَ داخليّةَ فيه** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+const DisputeChargeLine = "مطالبة من المنصة"
+
 var (
 	errClaimSettled = httpx.NewError(http.StatusConflict,
 		"claim_already_settled", "errors.claim_already_settled")
@@ -666,8 +670,12 @@ func (s *Server) handleDecideDisputeResolution(approve bool) http.HandlerFunc {
 					return errDisputeNothingToCharge
 				}
 				if charged > 0 {
+					// **والملاحظةُ الداخليّةُ لا تصل الطرف** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان
+					// سطرُ محفظته «مطالبةُ المنصة — » وكلمةَ المقترِح، **وهي كلامُ مكتبٍ لمكتب.**
+					// **ولا تصنيفَ لسبب النزاع في القاعدة** (`reason` نصٌّ حرٌّ يكتبه الموظّف)،
+					// فالسطرُ نصٌّ محايدٌ ثابت.
 					if _, err := s.wallet.ApplyTx(ctx, q, *walletUser, -charged,
-						"adjustment", res.DisputeID, "مطالبةُ المنصة — "+note, &actor); err != nil {
+						"adjustment", res.DisputeID, DisputeChargeLine, &actor); err != nil {
 						return err
 					}
 					// **ويعود إلى الخزينة ما خرج منها** — خصمٌ بلا قيدٍ مقابلٍ يجعل

@@ -227,7 +227,7 @@ func TestProfits_LinesReconcileToNet(t *testing.T) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// ٢ · سحب الأدمن والإيداع اليدويّ ليسا ربحاً
+// ٢ · سحب الأدمن والشحن ليسا ربحاً — والتسوية اليدويّة ربحٌ وخسارة (٢٠٢٦-١٠-١٥)
 // ══════════════════════════════════════════════════════════════════════
 func TestProfits_WithdrawalsAndManualDepositsExcluded(t *testing.T) {
 	f := newProfitsFx(t, "فحص الأرباح ٢")
@@ -241,15 +241,18 @@ func TestProfits_WithdrawalsAndManualDepositsExcluded(t *testing.T) {
 	f.post(t, f.treasury, 2000, "topup", "", day)
 	f.post(t, f.treasury, -2000, "payout", "", day) // سحب الأدمن من رصيد الخزينة
 
+	// **والتسويةُ اليدويّةُ صارت ربحاً وخسارة** (قرارُ المالك ٢٠٢٦-١٠-١٥): الإيداعُ في
+	// محفظة شخصٍ خسارةٌ لحالها، والخصمُ منها مستردّ. **والسحبُ والشحنُ باقيان خارجه.**
 	r := readPlatformProfits(t, f.srv, "2001-05-07")
-	if r.Net != 600 {
-		t.Fatalf("الصافي %d — السحب والإيداع دخلا الربح (المتوقَّع 600)", r.Net)
+	if r.Net != 600-5000+700 {
+		t.Fatalf("الصافي %d — المتوقَّع %d", r.Net, 600-5000+700)
 	}
-	if r.Outside != -4300 {
-		t.Fatalf("خارج الربح %d، المتوقَّع −4300", r.Outside)
+	if r.Outside != 0 {
+		t.Fatalf("خارج الربح %d، المتوقَّع 0 (شحنٌ وسحبٌ متقابلان)", r.Outside)
 	}
-	if !r.CheckOK || r.line("compensations") != 0 || r.line("recovered") != 0 {
-		t.Fatalf("الحركة اليدويّة ظهرت في بند: %+v", r.Lines)
+	if !r.CheckOK || r.line("compensations") != 0 || r.line("adjustment_credits") != -5000 ||
+		r.line("recovered") != 700 {
+		t.Fatalf("التسويةُ اليدويّةُ في غير بابها: %+v", r.Lines)
 	}
 }
 

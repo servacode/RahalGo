@@ -38,6 +38,8 @@ func (s *Service) CashBan(ctx context.Context, customerID string) (CashBanInfo, 
 		WHERE o.customer_id = $1
 		  AND e.to_status = 'failed'
 		  AND o.fault = 'customer'
+		  -- **ما يعدّه cashBlocked نفسُه** — منعٌ اختاره المكتب (هجرة 0440).
+		  AND o.customer_action = 'cash_ban'
 		  AND e.created_at > now() - ($2::int * interval '1 day')
 		  AND e.created_at > COALESCE((SELECT cash_ban_lifted_at FROM users
 		                               WHERE id = $1), '-infinity'::timestamptz)

@@ -13,11 +13,26 @@ package server
 // # ولماذا من الخزينة لا من الطلبات
 //
 // الخسارةُ الفعلية **مالٌ خرج**: بضاعةٌ لم يستردّها متجر، وتعويضُ سائقٍ عن
-// طلبٍ فشل. **وكلُّها قيودٌ في محفظة الخزينة** — `platform_expense`.
+// طلبٍ فشل. **وكلُّها قيودٌ في محفظة الخزينة.**
 //
 // **وجمعُها من الطلبات إعادةُ حسابٍ لما حُسب**: معادلةٌ ثانيةٌ تنحرف يوماً عن
 // الأولى، **فيقول التقريرُ رقماً ويقول الدفترُ آخر.** والدفترُ هو الحقيقة —
 // هو ما دُفع فعلاً.
+//
+// # وكلُّ خسارةٍ بالأرقام نفسِها التي في صفحة الأرباح (قرارُ المالك ٢٠٢٦-١٠-١٥)
+//
+// **كانت هذه الصفحةُ تعدّ `platform_expense` وحدَه** — وصفحةُ الأرباح تعدّ معه خسائرَ
+// الطلبات الفاشلة والملغاة والمستردّة، **وتعدّ التسوياتِ اليدويّةَ «خارج الربح»**. فرقمان
+// لخسارةٍ واحدة. **وصارت السطورُ من تصنيفٍ واحد** (`platformProfit` → `LossLines`):
+//
+//	خسائرُ الطلبات (فشل · إلغاء · استرداد)   سالبُ `platform_profit` لكلّ طلب
+//	التعويضات                               `platform_expense`
+//	نقصُ صندوق المكتب                       `platform_expense` بمرجع النقص
+//	تسويةٌ يدويّةٌ إيداعاً في محفظة          `platform_expense` بمرجع طلب التسوية
+//	ديونٌ مشطوبة                            طلباتُ الشطب الموافَق عليها بيوم الشطب
+//
+// **والمستردُّ مستردُّ صفحة الأرباح نفسُه** — نزاعاتٌ مخصومة، وديونٌ سُدّدت بالمكتب أو
+// من الشحن، **وتسويةٌ يدويّةٌ خصماً من محفظة.** والصافي = الخسارة − المستردّ.
 
 import (
 	"net/http"
@@ -27,6 +42,9 @@ import (
 )
 
 type lossRow struct {
+	// Kind **بابُ الخسارة** — `lost_failed` · `lost_cancelled` · `lost_refunded` ·
+	// `compensation` · `shortfall` · `adjustment_credit`.
+	Kind        string    `json:"kind"`
 	OrderID     *string   `json:"order_id"`
 	OrderNumber *int64    `json:"order_number"`
 	Amount      int64     `json:"amount"`
@@ -41,16 +59,29 @@ type lossRow struct {
 	PartyName     *string `json:"party_name"`
 }
 
-// handlePlatformLosses ما خرج من الخزينة في المدى — واقعةً بواقعة ومجموعاً.
+// lossRowsCTE **صفوفُ الخسارة من التصنيف الواحد** — يلي `treasuryEntriesCTE`.
 //
-// # وأربعةُ أرقامٍ جنباً إلى جنب (قرارُ المالك ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» البند ٤)
+// **خسارةُ الطلب صفٌّ واحدٌ للطلب** (مجموعُ قيوده في المدى، بيوم آخر قيدٍ له كما في
+// الأرباح)، **وما سواها قيدٌ قيد.** والمشطوبُ رقمٌ للمعلومة لا صفّ خسارة — خسارتُه قُيّدت يومَ نشأ دينُه.
+const lossRowsCTE = `,
+	lr AS (
+		SELECT bucket AS kind, order_id, -sum(amount) AS amount, max(at) AS at, ''::text AS note
+		  FROM inr WHERE bucket IN ('lost_failed','lost_cancelled','lost_refunded')
+		 GROUP BY bucket, order_id
+		UNION ALL
+		SELECT bucket, order_id, -amount, at, COALESCE(note, '')
+		  FROM inr WHERE bucket IN ('compensation','shortfall','adjustment_credit')
+	)`
+
+// handlePlatformLosses خسائرُ المنصّة في المدى — واقعةً بواقعة ومجموعاً.
 //
-//	lost       ما خرج من الخزينة (`platform_expense`)
-//	recovered  ما عاد إليها من النزاعات المخصومة في المدّة نفسِها
+// # والأرقامُ جنباً إلى جنب (قرارُ المالك ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» البند ٤)
+//
+//	lost       مجموعُ سطور الخسارة (`LossLines`) رقماً موجباً
+//	recovered  المستردُّ في المدّة نفسِها (`Recovered` صفحة الأرباح)
 //	net        الخسارةُ الصافية = lost − recovered
 //	owed       ما بقي لنا عند الناس الآن (المفتوحُ من النزاعات بما بقي منه)
-//
-// **وكان المجموعُ إجماليّاً وحدَه** — فالمالكُ لا يعرف كم خسرنا فعلاً بعد الاسترجاع.
+//	lines      السطورُ نفسُها بمفاتيح صفحة الأرباح — رقماً موجباً
 //
 // # والأيّامُ بتوقيت دمشق لا غرينتش (المشكلة ١٦)
 //
@@ -67,81 +98,54 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 		from = to.AddDate(0, 0, -29)
 	}
 	fromDay, toDay := from.Format("2006-01-02"), to.Format("2006-01-02")
+	ctx := r.Context()
 
-	// **قيودُ المصروف تُعرض موجبةً** — تُقرأ «خسرنا كذا» لا «−كذا».
-	//
-	// **وصفحةٌ محدودةٌ — والمجموعُ على المدّة كلِّها لا على الصفحة** (قرارُ
-	// المالك ٢٠٢٦-٠٨-١٠). **رقمٌ يُشتقّ من صفحةٍ وهو عن الكلّ** يُنقص الخسارةَ
-	// أمام عين من يقرأ كلّما قُلّب الترقيم.
-	pg := pagingOf(r, 25)
-	const rangeSQL = `
-		  AND t.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Damascus')
-		  AND t.created_at <  (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')`
-	const lossFilter = `
-		FROM wallet_transactions t
-		JOIN wallets w ON w.user_id = t.user_id
-		WHERE w.is_treasury AND t.kind = 'platform_expense'` + rangeSQL
-
-	var count int
-	var total int64
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*), COALESCE(sum(-t.amount), 0)`+lossFilter, fromDay, toDay).
-		Scan(&count, &total); err != nil {
+	// **الأرقامُ من حساب صفحة الأرباح نفسِه** — لا استعلامٌ ثانٍ ينحرف عنه.
+	p, err := s.platformProfit(ctx, fromDay, toDay)
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-
-	// **والمسترَدُّ ما عاد إلى الخزينة بمرجع نزاع** — خصمٌ من طرفٍ يُقيَّد ربحاً
-	// للخزينة بمعرّف النزاع (`CreditTreasuryDirect`).
-	var recovered int64
-	if err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE(sum(t.amount), 0)
-		FROM wallet_transactions t
-		JOIN wallets w ON w.user_id = t.user_id
-		WHERE w.is_treasury AND t.kind = 'platform_profit'
-		  AND t.ref IN (SELECT id::text FROM disputes)`+rangeSQL, fromDay, toDay).
-		Scan(&recovered); err != nil {
-		s.respondErr(w, err)
-		return
+	total := p.LossTotal()
+	lines := make([]profitLine, 0, len(p.LossLines()))
+	for _, l := range p.LossLines() {
+		lines = append(lines, profitLine{Key: l.Key, Amount: -l.Amount})
 	}
+
 	// **وما لنا عند الناس الآن** — لقطةٌ لا مدّة: الدَّينُ قائمٌ حتّى يُحسم.
 	var owed int64
-	if err := s.pg.QueryRow(r.Context(), `
+	if err := s.pg.QueryRow(ctx, `
 		SELECT COALESCE(sum(amount - recovered), 0) FROM disputes WHERE status = 'open'`).
 		Scan(&owed); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 
-	// **والديونُ المشطوبةُ في المدّة** (قسمُ الديون ٢٠٢٦-١٠-٠٤): الشطبُ خسارةٌ بلا قيد —
-	// الخزينةُ امتصّت المالَ حين نشأ الدَّين — **فتُقرأ من طلبات الشطب الموافَق عليها**،
-	// رقماً لحاله **لا يُضاف إلى `total`** ولا إلى صافي الأرباح، فلا تُعدّ مرّتين.
-	var writtenOff int64
-	if err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE(sum(amount), 0) FROM obligation_requests
-		 WHERE kind = 'write_off' AND status = 'approved'
-		   AND decided_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Damascus')
-		   AND decided_at <  (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')`,
-		fromDay, toDay).Scan(&writtenOff); err != nil {
+	// **وصفحةٌ محدودةٌ — والمجموعُ على المدّة كلِّها لا على الصفحة** (قرارُ
+	// المالك ٢٠٢٦-٠٨-١٠). **رقمٌ يُشتقّ من صفحةٍ وهو عن الكلّ** يُنقص الخسارةَ
+	// أمام عين من يقرأ كلّما قُلّب الترقيم.
+	pg := pagingOf(r, 25)
+	var count int
+	if err := s.pg.QueryRow(ctx, treasuryEntriesCTE+lossRowsCTE+`
+		SELECT count(*) FROM lr WHERE amount <> 0`, fromDay, toDay).Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-
-	rows, err := s.pg.Query(r.Context(), `
-		SELECT o.id::text, o.number, -t.amount, t.note, t.created_at,
+	rows, err := s.pg.Query(ctx, treasuryEntriesCTE+lossRowsCTE+`
+		SELECT lr.kind, o.id::text, o.number, lr.amount, lr.note, lr.at,
 		       d.id::text, d.status, d.party_role,
 		       COALESCE(d.merchant_id::text, d.party_user_id::text),
 		       COALESCE(mm.name, uu.full_name)
-		FROM wallet_transactions t
-		JOIN wallets w ON w.user_id = t.user_id
-		LEFT JOIN orders o ON o.id::text = t.ref
+		FROM lr
+		LEFT JOIN orders o ON o.id = lr.order_id
 		LEFT JOIN LATERAL (
 		    SELECT x.* FROM disputes x WHERE x.order_id = o.id
 		    ORDER BY x.created_at DESC LIMIT 1) d ON true
 		LEFT JOIN merchants mm ON mm.id = d.merchant_id
 		LEFT JOIN users uu     ON uu.id = d.party_user_id
-		WHERE w.is_treasury AND t.kind = 'platform_expense'`+rangeSQL+`
-		ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, fromDay, toDay, pg.PerPage, pg.Offset)
+		WHERE lr.amount <> 0
+		ORDER BY lr.at DESC, lr.kind, o.number
+		LIMIT $3 OFFSET $4`, fromDay, toDay, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -151,7 +155,7 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 	out := []lossRow{}
 	for rows.Next() {
 		var x lossRow
-		if err := rows.Scan(&x.OrderID, &x.OrderNumber, &x.Amount, &x.Note, &x.CreatedAt,
+		if err := rows.Scan(&x.Kind, &x.OrderID, &x.OrderNumber, &x.Amount, &x.Note, &x.CreatedAt,
 			&x.DisputeID, &x.DisputeStatus, &x.PartyRole, &x.PartyID, &x.PartyName); err != nil {
 			s.respondErr(w, err)
 			return
@@ -165,14 +169,15 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 
 	// **ورصيدُ الخزينة يبقى في الردّ** — لمن يقرؤه؛ والصفحةُ تعرض الأربعة.
 	var treasury int64
-	_ = s.pg.QueryRow(r.Context(),
+	_ = s.pg.QueryRow(ctx,
 		`SELECT COALESCE(balance, 0) FROM wallets WHERE is_treasury LIMIT 1`).Scan(&treasury)
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		// **و`total` مجموعُ المال و`count` عددُ الصفوف** — اسمان لا يجتمعان.
 		"losses": out, "total": total, "count": count,
-		"recovered": recovered, "net": total - recovered, "owed": owed,
-		"written_off": writtenOff,
+		"recovered": p.Recovered, "net": total - p.Recovered, "owed": owed,
+		"written_off": p.WrittenOff,
+		"lines":       lines,
 		"page":        pg.Page, "per_page": pg.PerPage,
 		"treasury_balance": treasury,
 		"from":             fromDay, "to": toDay,

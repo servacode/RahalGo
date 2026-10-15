@@ -619,7 +619,9 @@ func TestACC_CashBanVisibleAndOnlyAdminLiftsWithReason(t *testing.T) {
 	item := h.NewItem(2000)
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
 	oid, _ := made.JSON()["id"].(string)
-	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET status = 'failed', fault = 'customer' WHERE id = $1`, oid); err != nil {
+	// **والمنعُ باختيار المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥، هجرة 0440) — لا بكتابة الذنب وحدَها.
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET status = 'failed', fault = 'customer',
+		customer_action = 'cash_ban' WHERE id = $1`, oid); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := h.Pool.Exec(ctxBG(), `INSERT INTO order_events (order_id, from_status, to_status)

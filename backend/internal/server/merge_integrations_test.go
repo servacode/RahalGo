@@ -104,6 +104,8 @@ func TestMERGE_DebtRepaidFromTopupIsRecovered(t *testing.T) {
 	}
 }
 
+// **والشطبُ يُعرض ولا يُعدّ ثانيةً** — خسارتُه قُيّدت يومَ نشأ دينُه، فإدخالُه المجموعَ
+// يعدّها مرّتين.
 func TestMERGE_LossesShowWrittenOffDebtsOutsideTotal(t *testing.T) {
 	srv := overviewServer(t)
 	ctx := context.Background()
@@ -137,6 +139,6 @@ func TestMERGE_LossesShowWrittenOffDebtsOutsideTotal(t *testing.T) {
 		t.Fatalf("الديونُ المشطوبة %d لا 4200", out.WrittenOff)
 	}
 	if out.Total != 0 {
-		t.Fatalf("الشطبُ دخل مجموعَ الخسائر (%d) — ولا قيدَ له", out.Total)
+		t.Fatalf("مجموعُ الخسائر %d — والمشطوبُ لا يُعدّ ثانيةً", out.Total)
 	}
 }

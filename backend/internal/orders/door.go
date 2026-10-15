@@ -34,6 +34,10 @@ package orders
 // المتجرُ ⇒ تعويضٌ ومطالبةٌ عند الموافقة · المنصّةُ ⇒ تعويضٌ من الخزينة ·
 // **السائقُ ⇒ لا تعويض**، **والخصمُ أو الإنذارُ بقرار المكتب من بابه القائم**
 // (`POST /admin/users/{id}/incentive` بنوع `penalty`) — **لا آليّاً.**
+//
+// **ومنذ ٢٠٢٦-١٠-١٥ يختار المكتبُ مع الذنب من يدفع** (`doorChoices` أدناه): خسارةُ
+// الطلب على المنصّة أو دينٌ على السائق بها كلِّها أو بنسبة، **ومنعُ نقد الزبون أو حظرُ
+// حسابه أو لا شيء** — ولا يقع على الزبون شيءٌ بكتابة الذنب وحدَها.
 
 import (
 	"context"
@@ -47,6 +51,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 )
 
 // أمرا المكتب عند الباب.
@@ -65,7 +70,109 @@ var (
 	ErrDoorBadFault = httpx.NewError(http.StatusBadRequest, "door_bad_fault", "errors.door_bad_fault")
 	// ErrDoorNeedsNote **إنهاءٌ بلا كلمة** — ما لا يُستدرَك يلزمه سبب.
 	ErrDoorNeedsNote = httpx.NewError(http.StatusBadRequest, "reason_required", "errors.reason_required")
+	// ErrDoorBadChoice **اختيارُ من يدفع لا يوافق الذنب** — نسبةٌ خارجَ ١–٩٩، أو تحميلُ
+	// السائق والذنبُ ليس ذنبَه، أو إجراءٌ على الزبون والذنبُ ليس ذنبَه.
+	ErrDoorBadChoice = httpx.NewError(http.StatusBadRequest, "door_bad_choice", "errors.door_bad_choice")
 )
+
+// ══════════════════════════════════════════════════════════════════════
+// **والمكتبُ يقرّر من يدفع** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ذنبُ السائق**: خسارةُ الطلب على المنصّة كما كانت (الافتراض)، **أو دينٌ على
+// السائق بها كلِّها، أو بنسبةٍ منها** — والخسارةُ ما خسرته المنصّةُ فعلاً على هذا
+// الطلب بعد تسويته: سالبُ مجموع `platform_profit` بمرجعه.
+//
+// **ذنبُ الزبون**: منعُ النقد مدّةَ الإعداد (الافتراض) · حظرُ الحساب · لا شيء.
+// **وكان المنعُ آليّاً** يقع بكتابة الذنب وحدَها — **وصار لا يقع إلّا بالاختيار**
+// (`orders.customer_action`، هجرة `0440`) ويعدّه `cashBlocked`.
+const (
+	DriverSharePlatform = "platform"
+	DriverShareFull     = "full"
+	DriverSharePercent  = "percent"
+
+	CustomerCashBan = "cash_ban"
+	CustomerBlock   = "block"
+	CustomerNone    = "none"
+)
+
+// doorChoices **يُطبّع اختيارَي المال ويتحقّق منهما مع الذنب** — والفارغُ افتراضُه.
+func doorChoices(in *DoorResolution) error {
+	if in.DriverShare == "" {
+		in.DriverShare = DriverSharePlatform
+	}
+	switch in.DriverShare {
+	case DriverSharePlatform, DriverShareFull:
+		in.DriverPercent = 0
+	case DriverSharePercent:
+		if in.DriverPercent < 1 || in.DriverPercent > 99 {
+			return ErrDoorBadChoice
+		}
+	default:
+		return ErrDoorBadChoice
+	}
+	if in.DriverShare != DriverSharePlatform && in.Fault != FaultDriver {
+		return ErrDoorBadChoice
+	}
+	if in.Fault != FaultCustomer {
+		if in.CustomerAction != "" {
+			return ErrDoorBadChoice
+		}
+		return nil
+	}
+	if in.CustomerAction == "" {
+		in.CustomerAction = CustomerCashBan
+	}
+	switch in.CustomerAction {
+	case CustomerCashBan, CustomerBlock, CustomerNone:
+		return nil
+	}
+	return ErrDoorBadChoice
+}
+
+// chargeDriverLoss **دينُ السائق بخسارة الطلب** — بعد التسوية وفي معاملتها.
+//
+// **والخسارةُ من الدفتر لا من معادلة**: ما قيّدته الخزينةُ على الطلب (`creditTreasury`)
+// سالباً — ما دُفع للمتجر عند الاستلام ولم يُقبض من الزبون شيء. **ولا دينَ إن لم
+// تخسر المنصّة.** والنسبةُ تُقرَّب إلى الأدنى.
+func chargeDriverLoss(ctx context.Context, q dbtx.Querier, orderID, driverID, actorID string,
+	in DoorResolution) error {
+	if in.Fault != FaultDriver || in.DriverShare == DriverSharePlatform || driverID == "" {
+		return nil
+	}
+	var posted int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		 WHERE ref = $1 AND kind = 'platform_profit'`, orderID).Scan(&posted); err != nil {
+		return err
+	}
+	debt := DriverLossShare(-posted, in.DriverShare, in.DriverPercent)
+	if debt <= 0 {
+		return nil
+	}
+	var actor *string
+	if actorID != "" {
+		actor = &actorID
+	}
+	_, err := obligations.CreateRef(ctx, q, obligations.PartyDriver, driverID, debt,
+		obligations.CauseFailedOrderDriver, orderID, orderID, actor)
+	return err
+}
+
+// DriverLossShare **نصيبُ السائق من خسارةٍ** — كلُّها أو نسبتُها مقرَّبةً إلى الأدنى، وصفرٌ
+// للمنصّة أو لخسارةٍ غيرِ موجبة.
+func DriverLossShare(loss int64, share string, percent int) int64 {
+	if loss <= 0 {
+		return 0
+	}
+	switch share {
+	case DriverShareFull:
+		return loss
+	case DriverSharePercent:
+		return loss * int64(percent) / 100
+	}
+	return 0
+}
 
 // DoorResolution **ما قرّره المكتبُ عند الباب.**
 type DoorResolution struct {
@@ -81,6 +188,14 @@ type DoorResolution struct {
 	// (وفارغُه) أو `store` لمتجرٍ يقبل الاسترداد. **ويُكتب مشوارَ إرجاعٍ إن كانت البضاعةُ
 	// معه** (`return_trip.go`)؛ وقبل الاستلام لا بضاعةَ فلا مشوار.
 	ReturnTo string
+	// DriverShare **من يتحمّل خسارةَ الطلب بذنب السائق** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+	// `platform` (وفارغُه) · `full` · `percent`.
+	DriverShare string
+	// DriverPercent **نسبةُ السائق مع `percent`** — من ١ إلى ٩٩.
+	DriverPercent int
+	// CustomerAction **ما يقع على الزبون بذنبه** — `cash_ban` (وفارغُه) · `block` · `none`.
+	// **والحظرُ يقع في بابه بالخادم** (الهويّةُ هناك)، في معاملة الإنهاء نفسِها.
+	CustomerAction string
 }
 
 // doorTitle **عنوانُ الأمر كما يقرؤه السائقُ من شاشةٍ مقفلة.**
@@ -120,13 +235,17 @@ func (s *Service) ResolveDoor(ctx context.Context, actorID string, actorRoles []
 		if in.Note == "" {
 			return nil, ErrDoorNeedsNote
 		}
+		if err := doorChoices(&in); err != nil {
+			return nil, err
+		}
 		reason := strings.TrimSpace(in.Reason)
 		if reason == "" {
 			reason = s.lastDoorReport(ctx, orderID)
 		}
-		var status string
+		var status, driverID string
 		if err := s.db.QueryRow(ctx,
-			`SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+			`SELECT status, COALESCE(driver_id::text, '') FROM orders WHERE id = $1`, orderID).
+			Scan(&status, &driverID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, httpx.ErrNotFound
 			}
@@ -161,8 +280,14 @@ func (s *Service) ResolveDoor(ctx context.Context, actorID string, actorRoles []
 		mark := func(ctx context.Context, q dbtx.Querier) error {
 			if _, err := q.Exec(ctx, `
 				UPDATE orders SET door_instruction = $2, door_instruction_note = $3,
-				                  door_instruction_at = now(), return_to = NULLIF($4, '')
-				WHERE id = $1`, orderID, DoorReturnToOffice, in.Note, returnTo); err != nil {
+				                  door_instruction_at = now(), return_to = NULLIF($4, ''),
+				                  customer_action = NULLIF($5, '')
+				WHERE id = $1`, orderID, DoorReturnToOffice, in.Note, returnTo,
+				in.CustomerAction); err != nil {
+				return err
+			}
+			// **والخطّافُ بعد التسوية** (`transitionTx`) — فالخسارةُ مقيَّدةٌ ساعتَها.
+			if err := chargeDriverLoss(ctx, q, orderID, driverID, actorID, in); err != nil {
 				return err
 			}
 			if hook != nil {

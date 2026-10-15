@@ -3583,6 +3583,18 @@
         {
           "name": "return_to",
           "type": "string"
+        },
+        {
+          "name": "driver_share",
+          "type": "string"
+        },
+        {
+          "name": "driver_percent",
+          "type": "int"
+        },
+        {
+          "name": "customer_action",
+          "type": "string"
         }
       ],
       "response": [
@@ -4376,6 +4388,10 @@
         },
         {
           "name": "from",
+          "type": "unknown"
+        },
+        {
+          "name": "lines",
           "type": "unknown"
         },
         {

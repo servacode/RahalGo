@@ -101,6 +101,10 @@ func (s *Service) cashBlocked(ctx context.Context, q dbtx.Querier, customerID st
 		WHERE o.customer_id = $1
 		  AND e.to_status = 'failed'
 		  AND o.fault = 'customer'
+		  -- **والمنعُ باختيار المكتب لا بكتابة الذنب** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+		  -- «حظرُ الحساب» و«لا شيء» لا يُعدّان. **والقديمُ قبل الاختيار سُجّل منعاً**
+		  -- في هجرة 0440، فالمنعُ القائمُ يبقى.
+		  AND o.customer_action = 'cash_ban'
 		  -- **والمدّةُ تُضرَب لا تُلصَق نصّاً** — لصقُ رقمٍ في تعبيرٍ
 		  -- نصّيٍّ يجعل pgx يعجز عن ترميزه فيسقط النداءُ كلُّه
 		  -- (cannot find encode plan). **وكشفه أوّلُ اختبارٍ ناداه.**

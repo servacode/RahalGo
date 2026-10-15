@@ -291,7 +291,8 @@ func TestCENSUS_D6_CustomOrderSkipsCashBan(t *testing.T) {
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
 	oid, _ := made.JSON()["id"].(string)
 	if _, err := h.Pool.Exec(ctxBG(), `
-		UPDATE orders SET status = 'failed', fault = 'customer' WHERE id = $1::uuid`,
+		UPDATE orders SET status = 'failed', fault = 'customer', customer_action = 'cash_ban'
+		 WHERE id = $1::uuid`,
 		oid); err != nil {
 		t.Fatalf("تهيئة: %v", err)
 	}

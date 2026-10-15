@@ -14,6 +14,12 @@
  * **وسطرُ الخسارة يحمل حالَ نزاعه** (مفتوح · انخصم · انسقط · لا نزاع).
  *
  * **والأيّامُ بتوقيت دمشق** — الخادمُ يحسب حدَّي اليوم بها.
+ *
+ * # وكلُّ خسارةٍ بأرقام صفحة الأرباح (قرارُ المالك ٢٠٢٦-١٠-١٥)
+ *
+ * خسائرُ الطلبات الفاشلة والملغاة والمستردّة · التعويضات · نقصُ الصندوق · التسويةُ
+ * اليدويّةُ إيداعاً · الديونُ المشطوبة — **من التصنيف الواحد في المحرّك** (`LossLines`)،
+ * والمستردُّ مستردُّ صفحة الأرباح. **فالصافي هنا = سطورُ الخسارة هناك − المستردّ.**
  */
 
 import { useState } from "react";
@@ -36,8 +42,22 @@ import { CaseTable, CaseFilters, type CaseRow, type CaseStatus } from "./caseTab
 
 const m = getMessages(defaultLocale);
 const L = m.admin.losses;
+const KINDS: Record<string, string> = L.kinds;
+const PR = m.admin.profits;
+/** **أسماءُ السطور كما في صفحة الأرباح** — المفاتيحُ نفسُها من المحرّك (`LossLines`). */
+const LINE_LABEL: Record<string, string> = {
+  lost_failed: PR.lineLostFailed,
+  lost_cancelled: PR.lineLostCancelled,
+  lost_refunded: PR.lineLostRefunded,
+  compensations: PR.lineCompensations,
+  shortfalls: PR.lineShortfalls,
+  adjustment_credits: PR.lineAdjustmentCredits,
+  written_off: PR.lineWrittenOff,
+};
 
 interface Loss {
+  /** **بابُ الخسارة** — من التصنيف الواحد مع صفحة الأرباح. */
+  kind: string;
   order_id: string | null;
   order_number: number | null;
   amount: number;
@@ -57,8 +77,10 @@ interface LossPage {
   recovered: number;
   net: number;
   owed: number;
-  /** **ديونٌ شُطبت في المدّة** — من طلبات الشطب الموافَق عليها، خارجَ المجموع (لا قيدَ لها). */
+  /** **ديونٌ شُطبت في المدّة** — من طلبات الشطب الموافَق عليها، **وهي داخلَ المجموع** (٢٠٢٦-١٠-١٥). */
   written_off?: number;
+  /** **سطورُ الخسارة نفسُها التي في صفحة الأرباح** — رقماً موجباً. */
+  lines?: { key: string; amount: number }[];
   count: number;
   per_page: number;
 }
@@ -87,7 +109,7 @@ export function LossesView() {
     partyRole: x.party_role,
     partyId: x.party_id,
     partyName: x.party_name,
-    reason: x.note,
+    reason: [KINDS[x.kind] ?? x.kind, x.note].filter(Boolean).join(" — "),
     orderId: x.order_id,
     orderNumber: x.order_number,
     date: x.created_at,
@@ -149,6 +171,20 @@ export function LossesView() {
               tone={(data.written_off ?? 0) > 0 ? "warning" : "muted"}
             />
           </StatGrid>
+
+          {/* **سطورُ الخسارة بأرقام صفحة الأرباح نفسِها** (قرارُ المالك ٢٠٢٦-١٠-١٥). */}
+          {(data.lines ?? []).some((l) => l.amount !== 0) && (
+            <ul className="mt-4 space-y-1 rounded-control border border-line p-3 text-sm">
+              {(data.lines ?? [])
+                .filter((l) => l.amount !== 0)
+                .map((l) => (
+                  <li key={l.key} className="flex items-center justify-between gap-3">
+                    <span className="text-ink-muted">{LINE_LABEL[l.key] ?? l.key}</span>
+                    <span className="font-medium text-ink">{fmtNum(l.amount)}</span>
+                  </li>
+                ))}
+            </ul>
+          )}
 
           <div className="mt-4">
             <CaseTable screen="losses" rows={rows} empty={L.empty} noDisputeLabel={L.noDispute} />

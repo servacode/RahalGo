@@ -18,9 +18,15 @@ package server
 
 	هامش + عمولة المتجر + حصّة التوصيل − خصومات (± فروق تسوية)
 	− نصيب المندوب − خسائر الفاشلة والملغاة − تعويضات (+ مستردّ)
+	− نقص الصندوق − تسويات يدويّة إيداعاً − ديون مشطوبة
 	− مكافآت الدعوات − مكافآت الأهداف − مصروفات التشغيل + عقوبات = الصافي
 
-والصافي يُحسب مستقلّاً: كلّ قيد في الخزينة ليس «خارج الربح» ولا «معلّقاً».
+والصافي يُحسب مستقلّاً: كلّ قيد في الخزينة ليس «خارج الربح» ولا «معلّقاً»،
+ناقصاً الديون المشطوبة في المدى (لا قيد لها في الدفتر — تُقرأ من طلبات الشطب).
+
+وقرارات المالك ٢٠٢٦-١٠-١٥: التسوية اليدويّة إيداعاً في محفظة شخص خسارة، وخصماً
+منها مستردّ (كانتا «خارج الربح»)، ونقص صندوق المكتب سطر لحاله (كان في التعويضات)،
+والدين المشطوب خسارة بيوم شطبه. وصفحة الخسائر تقرأ سطور الخسارة من هنا (LossLines).
 فإن ظهر في الخزينة نوع قيد جديد لا يعرفه هذا الملفّ دخل الصافي ولم يدخل أيّ
 سطر، فيسقط سطر التحقّق «مجموع البنود = الصافي» ويقول الفرق.
 
@@ -66,18 +72,20 @@ const profitOutsideKinds = `'topup','payout','adjustment','order_payment','refun
 var treasuryEntriesCTE = `
 	WITH tr AS (SELECT user_id FROM wallets WHERE is_treasury LIMIT 1),
 	raw AS (
-		SELECT t.id, t.kind, t.amount, t.ref, t.created_at, ` + refUUID("t.ref") + ` AS ref_id
+		SELECT t.id, t.kind, t.amount, t.ref, t.note, t.created_at, ` + refUUID("t.ref") + ` AS ref_id
 		FROM wallet_transactions t JOIN tr ON tr.user_id = t.user_id
 	),
 	j AS (
-		SELECT r.*, o.id AS order_id, o.status AS ostatus, wr.kind AS wr_kind, x.spent_at
+		SELECT r.*, o.id AS order_id, o.status AS ostatus, wr.kind AS wr_kind, x.spent_at,
+		       sf.id AS shortfall_id
 		FROM raw r
 		LEFT JOIN orders o ON o.id = r.ref_id
 		LEFT JOIN wallet_requests wr ON wr.id = r.ref_id
 		LEFT JOIN expenses x ON x.id = r.ref_id AND r.kind = 'operating_expense'
+		LEFT JOIN office_cash_shortfalls sf ON sf.id = r.ref_id AND r.kind = 'platform_expense'
 	),
 	c AS (
-		SELECT j.kind, j.amount, j.order_id, j.ostatus,
+		SELECT j.id, j.kind, j.amount, j.order_id, j.ostatus, j.note, j.created_at,
 			CASE
 				WHEN j.kind = 'platform_profit' AND j.order_id IS NOT NULL AND j.ostatus = 'delivered' THEN 'order'
 				WHEN j.kind = 'platform_profit' AND j.order_id IS NOT NULL AND j.ostatus = 'failed' THEN 'lost_failed'
@@ -87,8 +95,14 @@ var treasuryEntriesCTE = `
 				-- سدادُ دَينٍ من شحن المحفظة (قسمُ الديون ٢٠٢٦-١٠-٠٤): قيدُ الخزينة مرجعُه طلبُ
 				-- الشحن، وهو مالٌ مستردٌّ كسداد الدَّين نقداً بالمكتب — لا حركةٌ يدويّة.
 				WHEN j.kind = 'platform_profit' AND j.wr_kind = 'topup' THEN 'recovered'
-				WHEN j.kind IN ('platform_profit','platform_expense') AND j.wr_kind IN ('adjustment','topup') THEN 'outside'
+				-- **والتسويةُ اليدويّةُ ربحٌ وخسارة** (قرارُ المالك ٢٠٢٦-١٠-١٥): إيداعٌ في
+				-- محفظة شخصٍ خسارةٌ لحالها، وخصمٌ منها مستردّ — لا «خارج الربح».
+				WHEN j.kind = 'platform_profit' AND j.wr_kind = 'adjustment' THEN 'recovered'
+				WHEN j.kind = 'platform_expense' AND j.wr_kind = 'adjustment' THEN 'adjustment_credit'
+				WHEN j.kind IN ('platform_profit','platform_expense') AND j.wr_kind = 'topup' THEN 'outside'
 				WHEN j.kind = 'platform_profit' THEN 'recovered'
+				-- **ونقصُ صندوق المكتب سطرٌ لحاله** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يقع في «تعويضات».
+				WHEN j.kind = 'platform_expense' AND j.shortfall_id IS NOT NULL THEN 'shortfall'
 				WHEN j.kind = 'platform_expense' THEN 'compensation'
 				WHEN j.kind = 'reward' AND j.ref <> '' THEN 'referral'
 				WHEN j.kind = 'reward' THEN 'target'
@@ -212,12 +226,28 @@ func (s *Server) platformProfit(ctx context.Context, from, to string) (platformP
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'penalty'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'pending'), 0),
 			COALESCE(sum(amount) FILTER (WHERE bucket = 'outside'), 0),
+			COALESCE(sum(amount) FILTER (WHERE bucket = 'shortfall'), 0),
+			COALESCE(sum(amount) FILTER (WHERE bucket = 'adjustment_credit'), 0),
 			-- الصافي مستقلّ عن الأبواب: كلّ ما ليس خارج الربح ولا معلّقاً.
 			COALESCE(sum(amount) FILTER (WHERE bucket NOT IN ('outside','pending')), 0)
 		FROM inr`, from, to).Scan(
 		&p.orderLedger, &p.LostFailed, &p.LostCancelled, &p.LostRefunded,
 		&p.Compensations, &p.Recovered, &p.Referrals, &p.Targets, &p.Opex,
-		&p.Penalties, &p.Pending, &p.Outside, &p.Net); err != nil {
+		&p.Penalties, &p.Pending, &p.Outside, &p.Shortfalls, &p.AdjustmentCredits,
+		&p.Net); err != nil {
+		return p, err
+	}
+
+	// ── الديونُ المشطوبة: تُعرض ولا تُطرح ثانيةً (قرارُ المالك ٢٠٢٦-١٠-١٥) ──
+	//
+	// **الخسارةُ وقعت يومَ نشأ الدين** — قيّدتها الخزينةُ على طلبه (استردادٌ بعد
+	// التسليم، طلبٌ فاشل، تعويض)، **والسدادُ بعدها «مستردّ».** فالشطبُ لا يُخرج مالاً
+	// جديداً: معناه أنّ المستردَّ لن يأتي. **وطرحُه من الصافي يعدّ الخسارةَ مرّتين**
+	// (٩٬٠٠٠ خرجت فتظهر ١٨٬٠٠٠). فيُقرأ رقماً للمعلومة بجانب الخسائر لا سطراً منها.
+	if err := s.pg.QueryRow(ctx, `
+		SELECT COALESCE(sum(amount), 0) FROM obligation_requests
+		 WHERE kind = 'write_off' AND status = 'approved' AND `+profitRange("decided_at"),
+		from, to).Scan(&p.WrittenOff); err != nil {
 		return p, err
 	}
 
@@ -292,6 +322,11 @@ type platformProfitSum struct {
 	Targets       int64
 	Opex          int64
 	Penalties     int64
+	// **ونقصُ صندوق المكتب والتسويةُ اليدويّةُ إيداعاً والديونُ المشطوبة** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٥) — الأوّلان بأثرهما من الدفتر (سالبان)، والمشطوبُ موجبٌ من طلبات الشطب.
+	Shortfalls        int64
+	AdjustmentCredits int64
+	WrittenOff        int64
 
 	Pending int64 // ربح معلّق — خارج الصافي
 	Outside int64 // سحب وإيداع وحركات الأدمن الشخصيّة — خارج الصافي
@@ -310,12 +345,45 @@ func (p platformProfitSum) Income() int64 { return p.orderLedger + p.RepShare }
 // Lost خسارة الطلبات الفاشلة والملغاة والمستردّة (بأثرها: سالبة عادةً).
 func (p platformProfitSum) Lost() int64 { return p.LostFailed + p.LostCancelled + p.LostRefunded }
 
-// Losses الخسائر والتعويضات رقماً موجباً — لرئيسيّة الإدارة.
-func (p platformProfitSum) Losses() int64 { return -(p.Lost() + p.Compensations) }
+// ══════════════════════════════════════════════════════════════════════
+// **تصنيفُ الخسائر الواحد — تقرؤه صفحتا الأرباح والخسائر** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت صفحةُ الخسائر تعدّ `platform_expense` وحدَه** وصفحةُ الأرباح تعدّ معه خسائرَ
+// الطلبات — **فرقمان للخسارة نفسِها.** وصارت السطورُ هنا، **وصفحةُ الخسائر تقرأ
+// `LossLines` و`Recovered` من الحساب نفسِه** (`losses_handlers.go`):
+//
+//	خسارةُ الخسائر = −مجموعُ LossLines        والمستردّ = Recovered
+//	والصافي = الخسارةُ − المستردّ
+//
+// LossLines **سطورُ الخسارة بأثرها على الربح** (سالبةٌ عادةً) — بترتيب الكشف.
+func (p platformProfitSum) LossLines() []profitLine {
+	return []profitLine{
+		{"lost_failed", p.LostFailed},
+		{"lost_cancelled", p.LostCancelled},
+		{"lost_refunded", p.LostRefunded},
+		{"compensations", p.Compensations},
+		{"shortfalls", p.Shortfalls},
+		{"adjustment_credits", p.AdjustmentCredits},
+	}
+}
+
+// LossTotal **مجموعُ الخسائر رقماً موجباً** — قبل المستردّ.
+func (p platformProfitSum) LossTotal() int64 {
+	var n int64
+	for _, l := range p.LossLines() {
+		n -= l.Amount
+	}
+	return n
+}
+
+// Losses الخسائر رقماً موجباً — لرئيسيّة الإدارة. **وهو `LossTotal` نفسُه**: رقمٌ واحدٌ
+// للخسارة في كلّ صفحة.
+func (p platformProfitSum) Losses() int64 { return p.LossTotal() }
 
 // Lines سطور الكشف بترتيبها، بأثرها على الربح.
 func (p platformProfitSum) Lines() []profitLine {
-	return []profitLine{
+	lines := []profitLine{
 		{"margin", p.Margin},
 		{"commission", p.Commission},
 		{"delivery_share", p.DeliveryShare},
@@ -324,16 +392,15 @@ func (p platformProfitSum) Lines() []profitLine {
 		{"item_discounts", -p.ItemDiscounts},
 		{"settle_diff", p.SettleDiff()},
 		{"rep_share", -p.RepShare},
-		{"lost_failed", p.LostFailed},
-		{"lost_cancelled", p.LostCancelled},
-		{"lost_refunded", p.LostRefunded},
-		{"compensations", p.Compensations},
-		{"recovered", p.Recovered},
-		{"referrals", p.Referrals},
-		{"targets", p.Targets},
-		{"opex", p.Opex},
-		{"penalties", p.Penalties},
 	}
+	lines = append(lines, p.LossLines()...)
+	return append(lines,
+		profitLine{"recovered", p.Recovered},
+		profitLine{"referrals", p.Referrals},
+		profitLine{"targets", p.Targets},
+		profitLine{"opex", p.Opex},
+		profitLine{"penalties", p.Penalties},
+	)
 }
 
 // LinesSum مجموع السطور — يساوي الصافي ما لم يظهر نوع قيد لا يعرفه الكشف.

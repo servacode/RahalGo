@@ -44,6 +44,9 @@ const (
 	// CauseDisputeRemainder **ما زاد من مطالبةِ نزاعٍ على المتاح** (هجرة `0439`) —
 	// مصدرُه معرّفُ النزاع (`disputes.id`)، وطلبُه إن كان له طلب.
 	CauseDisputeRemainder = "dispute_remainder"
+	// CauseFailedOrderDriver **خسارةُ طلبٍ فشل بذنب السائق وحمّلها المكتبُ إيّاه**
+	// كلَّها أو نسبةً منها (قرارُ المالك ٢٠٢٦-١٠-١٥، هجرة `0440`) — مصدرُه معرّفُ الطلب.
+	CauseFailedOrderDriver = "failed_order_driver"
 )
 
 // طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
@@ -66,8 +69,9 @@ var causeWords = map[string]string{
 	CauseLegacy:         "دين سابق",
 	CauseDeliveryFee:    "أجرة توصيلة",
 	// (قرارُ المالك ٢٠٢٦-١٠-١٥.)
-	CausePenaltyRemainder: "باقي عقوبة",
-	CauseDisputeRemainder: "باقي مطالبة",
+	CausePenaltyRemainder:  "باقي عقوبة",
+	CauseDisputeRemainder:  "باقي مطالبة",
+	CauseFailedOrderDriver: "خسارة طلب فشل",
 }
 
 // CauseWords السببُ بالعربيّ — ومجهولُه «دين».

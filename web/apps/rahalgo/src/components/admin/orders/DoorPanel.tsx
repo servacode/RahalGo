@@ -21,6 +21,10 @@
  * **ومع العودة وجهةُ البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): «جيبها للمكتب» دائماً،
  * و«رجّع للمتجر» لمتجرٍ يقبل الإرجاع في غير الطلب الخاصّ — **ويصل السائقَ مشوارُ
  * إرجاعٍ بطريقٍ مرسومٍ وزرّ «سلّمت البضاعة»** (`return_to` في المحرّك).
+ *
+ * **ومع الذنب من يدفع** (قرارُ المالك ٢٠٢٦-١٠-١٥): ذنبُ السائق ⇒ المنصّةُ تتحمّل (افتراضاً)
+ * أو السائقُ كاملاً أو بنسبة — ديناً عليه (`driver_share`). ذنبُ الزبون ⇒ منعُ النقد
+ * (افتراضاً) أو حظرُ الحساب (لمن يملك قدرتَه) أو لا شيء (`customer_action`).
  */
 
 import { useState } from "react";
@@ -36,6 +40,7 @@ import {
   Badge,
   Button,
   FormActions,
+  Input,
   IconPhone,
   Modal,
   Radio,
@@ -53,6 +58,12 @@ const REPORTS: Record<string, string> = D.reports;
 const FAULTS = ["customer", "driver", "merchant", "platform"] as const;
 type Fault = (typeof FAULTS)[number];
 type ReturnTo = "office" | "store";
+/** **من يتحمّل خسارةَ الطلب بذنب السائق** — مرآةُ `orders.DriverShare*`. */
+const DRIVER_SHARES = ["platform", "full", "percent"] as const;
+type DriverShare = (typeof DRIVER_SHARES)[number];
+/** **ما يقع على الزبون بذنبه** — مرآةُ `orders.Customer*`. */
+const CUSTOMER_ACTIONS = ["cash_ban", "block", "none"] as const;
+type CustomerAction = (typeof CUSTOMER_ACTIONS)[number];
 
 /** **حالُ الباب كما يرسله المحرّك** — مرآةُ `orders.DoorView`. */
 export interface DoorView {
@@ -147,6 +158,8 @@ export function DoorPanel({
 }) {
   const { can } = useAuth();
   const canResolve = can("orders.intervene");
+  /** **حظرُ الحساب قدرةُ صفحة الحسابات** — والمحرّكُ يردّه بلاها. */
+  const canBlock = can("users.status.manage");
   const [dialog, setDialog] = useState<"" | "deliver" | "return" | "cancel">(
     "",
   );
@@ -161,6 +174,10 @@ export function DoorPanel({
   const [fault, setFault] = useState<Fault | "">("");
   const [reason, setReason] = useState("");
   const [returnTo, setReturnTo] = useState<ReturnTo>("office");
+  const [driverShare, setDriverShare] = useState<DriverShare>("platform");
+  const [driverPercent, setDriverPercent] = useState("50");
+  const [customerAction, setCustomerAction] =
+    useState<CustomerAction>("cash_ban");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -170,6 +187,9 @@ export function DoorPanel({
     setReason("");
     setFault("");
     setReturnTo("office");
+    setDriverShare("platform");
+    setDriverPercent("50");
+    setCustomerAction("cash_ban");
     setErr("");
     setNotice("");
     setDialog(kind);
@@ -210,6 +230,13 @@ export function DoorPanel({
         setErr(D.noteMissing);
         return;
       }
+      if (effFault === "driver" && driverShare === "percent") {
+        const n = Number(driverPercent);
+        if (!Number.isInteger(n) || n < 1 || n > 99) {
+          setErr(D.driverPercentBad);
+          return;
+        }
+      }
     }
     setBusy(true);
     setErr("");
@@ -226,6 +253,18 @@ export function DoorPanel({
                 note: note.trim(),
                 // **ووجهةُ البضاعة مع العودة وحدَها** — والتحويلُ عند المتجر بلا بضاعة.
                 ...(atStore ? {} : { return_to: returnTo }),
+                // **ومن يدفع يتبع الذنب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمحرّكُ يردّ غيرَه.
+                ...(effFault === "driver"
+                  ? {
+                      driver_share: driverShare,
+                      ...(driverShare === "percent"
+                        ? { driver_percent: Number(driverPercent) }
+                        : {}),
+                    }
+                  : {}),
+                ...(effFault === "customer"
+                  ? { customer_action: customerAction }
+                  : {}),
               },
         ),
       });
@@ -510,6 +549,76 @@ export function DoorPanel({
                   </p>
                 </div>
               ))}
+            </fieldset>
+          )}
+          {/* **ذنبُ السائق: من يتحمّل خسارةَ الطلب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمنصّةُ افتراضاً. */}
+          {!atStore && fault === "driver" && (
+            <fieldset className="space-y-2">
+              <legend className="mb-1.5 text-sm font-medium text-ink">
+                {D.driverShareLabel}
+              </legend>
+              {DRIVER_SHARES.map((v) => (
+                <div key={v} className="space-y-0.5">
+                  <Radio
+                    id={`door-share-${orderId}-${v}`}
+                    name={`door-share-${orderId}`}
+                    checked={driverShare === v}
+                    onChange={() => {
+                      setDriverShare(v);
+                      setErr("");
+                    }}
+                    label={D.driverShares[v]}
+                  />
+                  <p className="ps-7 text-xs text-ink-muted">
+                    {D.driverShareHints[v]}
+                  </p>
+                </div>
+              ))}
+              {driverShare === "percent" && (
+                <Input
+                  id={`door-percent-${orderId}`}
+                  label={D.driverPercentLabel}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={99}
+                  value={driverPercent}
+                  onChange={(e) => {
+                    setDriverPercent(e.target.value);
+                    setErr("");
+                  }}
+                />
+              )}
+            </fieldset>
+          )}
+          {/* **ذنبُ الزبون: ما يقع عليه** — ومنعُ النقد مختارٌ افتراضاً، ولا يقع شيءٌ بلا اختيار. */}
+          {!atStore && fault === "customer" && (
+            <fieldset className="space-y-2">
+              <legend className="mb-1.5 text-sm font-medium text-ink">
+                {D.customerActionLabel}
+              </legend>
+              {CUSTOMER_ACTIONS.filter((v) => v !== "block" || canBlock).map(
+                (v) => (
+                  <div key={v} className="space-y-0.5">
+                    <Radio
+                      id={`door-customer-${orderId}-${v}`}
+                      name={`door-customer-${orderId}`}
+                      checked={customerAction === v}
+                      onChange={() => {
+                        setCustomerAction(v);
+                        setErr("");
+                      }}
+                      label={D.customerActions[v]}
+                    />
+                    <p className="ps-7 text-xs text-ink-muted">
+                      {D.customerActionHints[v].replace(
+                        "{days}",
+                        fmtNum(cashBanDays),
+                      )}
+                    </p>
+                  </div>
+                ),
+              )}
             </fieldset>
           )}
           {!atStore && (

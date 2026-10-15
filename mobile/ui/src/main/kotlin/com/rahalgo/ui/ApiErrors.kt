@@ -369,6 +369,8 @@ private val CODES: Map<String, Int> = mapOf(
     "order_not_at_door" to R.string.err_order_not_at_door,
     "door_bad_action" to R.string.err_door_bad_action,
     "door_bad_fault" to R.string.err_door_bad_action,
+    // **ومن يدفع لا يوافق الذنب** (٢٠٢٦-١٠-١٥) — بابُ الإدارة، والنصُّ نصُّ أخيه.
+    "door_bad_choice" to R.string.err_door_bad_action,
     // ── الحساب ────────────────────────────────────────────────────────
     "wrong_password" to R.string.acc_wrong_password,
     // **وكلمةُ المرور الحاليّة بعينها** — كان المحرّكُ يردّ
