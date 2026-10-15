@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**39 قدرةً · 282 صفَّ سياسةٍ للمسارات · 3 استثناءً · 36 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**39 قدرةً · 286 صفَّ سياسةٍ للمسارات · 3 استثناءً · 37 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -64,8 +64,8 @@
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
 | `finance.export` | 6 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 38 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 33 | — | قراءة المال والتقارير المالية |
+| `finance.manage` | 39 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.read` | 35 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `finance.writeoff.approve` | **0** + 1 داخلَ الباب | — | الموافقة على شطب دين متجر أو مندوب لن يسدد |
 | `market.manage` | 16 | — | إدارة السوق: الأقسام والأصناف والمتاجر |
@@ -87,7 +87,7 @@
 | `settings.read` | 4 | — | قراءة الإعدادات |
 | `settings.security.manage` | 3 | — | إعدادات الأمان والجلسات |
 | `support.manage` | 6 | — | التذاكر والنزاعات والتقييمات |
-| `treasury.manage` | 3 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
+| `treasury.manage` | 4 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
 | `users.cashban.lift` | 1 | — | رفع منع الدفع نقدا عن زبون |
 | `users.contact.read` | **0** | **7** | رؤية أرقام الهواتف |
 | `users.export` | 1 | — | تصدير دليل الحسابات ملفا |
@@ -161,6 +161,7 @@
 | `admin.role_revoke` | `DELETE` | `/users/{id}/roles/{role}` | — | دائماً | `roles.manage` |
 | `admin.setting_update` | `PUT` | `/settings/{key}` | `value` | `settingSensitivity` | *بحسب المفتاح* |
 | `admin.user_update` | `PATCH` | `/users/{id}` | `phone`, `status` | `userUpdateStrong` | `users.status.manage` |
+| `finance.cash_owner_deposit` | `POST` | `/cashbox/deposits` | `amount` | دائماً | `treasury.manage` |
 | `finance.cash_shortfall_loss` | `POST` | `/cashbox/shortfalls/{id}/approve` | — | دائماً | `treasury.manage` |
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
 | `finance.compensation_approved` | `POST` | `/compensations/{id}/approve` | `amount` | دائماً | `finance.manage` |

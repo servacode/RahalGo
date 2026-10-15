@@ -185,7 +185,7 @@ var Kinds = map[string]KindContract{
 		Creators:   []string{"internal/server/expenses_handlers.go:689", "internal/server/expenses_handlers.go:846", "internal/server/expenses_handlers.go:989"},
 		Path:       "POST /admin/expenses · وPOST /admin/expense-requests/{id}/approve · وPOST /admin/expenses/{id}/void",
 		Semantics:  "مصروفُ تشغيلٍ من الخزينة — **والموجبُ إلغاؤه لا غير.**",
-		Invariants: []string{"FI-01.f", "FI-04.d", "FI-04.e", "FI-12.a", "FI-12.b"},
+		Invariants: []string{"FI-01.f", "FI-04.d", "FI-04.e", "FI-12.a", "FI-12.b", "FI-15.h"},
 		Reachable:  true,
 	},
 	"reward": {

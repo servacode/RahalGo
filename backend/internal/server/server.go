@@ -1584,6 +1584,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/treasury/overview", s.handleTreasuryOverview)
 			r.Get("/treasury/statement", s.handleTreasuryStatement)
 			r.Get("/treasury/statement/export", s.handleTreasuryStatementExport)
+			// **تفصيلُ «ربح طلب #N» في الكشف** (قرارُ المالك ٢٠٢٦-١٠-١٥) — عرضٌ لا قيد.
+			r.Get("/treasury/statement/orders/{id}", s.handleTreasuryOrderBreakdown)
 			r.Get("/treasury/withdrawals", s.handleTreasuryWithdrawals)
 			r.Post("/treasury/withdrawals", s.idempotent(s.handleTreasuryWithdraw))
 			r.Get("/treasury/health", s.handleTreasuryHealth)
@@ -1595,6 +1597,11 @@ func (s *Server) Router() http.Handler {
 			r.Post("/cashbox/shortfalls/{id}/resolve", s.handleResolveShortfall)
 			r.Post("/cashbox/shortfalls/{id}/approve", s.handleDecideShortfall(true))
 			r.Post("/cashbox/shortfalls/{id}/reject", s.handleDecideShortfall(false))
+			// **رصيدُ البداية · إيداعُ المالك · تقريرُ الدرج** (قرارُ المالك ٢٠٢٦-١٠-١٥،
+			// `treasury_drawer.go`).
+			r.Post("/cashbox/opening", s.handleCashOpening)
+			r.Post("/cashbox/deposits", s.idempotent(s.handleCashDeposit))
+			r.Get("/cashbox/report", s.handleCashboxReport)
 			r.Get("/approvals", s.handleApprovals)
 			// ══════════════════════════════════════════════════════════
 			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 509,
+    "routes": 513,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 235,
     "behaviour_settings": 191,
     "order_fields": 105,
-    "test_files": 579,
-    "test_funcs": 2324
+    "test_files": 581,
+    "test_funcs": 2334
   },
   "flows": [
     {
@@ -27900,6 +27900,66 @@
     {
       "name": "TestTextLimits_CountsLettersNotBytes",
       "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_ApprovalsTotalExcludesUndecidedCompensation",
+      "file": "internal/server/treasury_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_CashExpenseLeavesDrawerAndVoidReturns",
+      "file": "internal/server/treasury_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_DrawerGoesNegativeAfterCashExpense",
+      "file": "internal/server/treasury_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_ProfitCardsEqualProfitsNet",
+      "file": "internal/server/treasury_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_StatementGroupsOrderProfit",
+      "file": "internal/server/treasury_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_WalletLookupExcludesCashHolding",
+      "file": "internal/server/treasury_decisions_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_CashCloseCanApproveFlag",
+      "file": "internal/server/treasury_drawer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_OpeningBalanceFeedsExpected",
+      "file": "internal/server/treasury_drawer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_OrderBreakdownSumsToRow",
+      "file": "internal/server/treasury_drawer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTREASURY_OwnerDepositIsDrawerInNotTreasury",
+      "file": "internal/server/treasury_drawer_test.go",
       "package": "server",
       "orphan": true
     },

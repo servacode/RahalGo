@@ -147,7 +147,16 @@ func (s *Server) handleCashbox(w http.ResponseWriter, r *http.Request) {
 	res := paged("entries", out, total, pg)
 	res["position"] = pos
 	if len(pending) > 0 {
-		res["pending_close"] = pending[0]
+		pc := pending[0]
+		if s.hasCapability(r, authz.FinanceManage) {
+			can, self, err := approvalVerdictFor(ctx, s.pg, userIDFrom(r), pc.ProposedBy, authz.FinanceManage)
+			if err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			pc.CanApprove, pc.SelfApproval = can, self
+		}
+		res["pending_close"] = pc
 	} else {
 		res["pending_close"] = nil
 	}
@@ -155,8 +164,10 @@ func (s *Server) handleCashbox(w http.ResponseWriter, r *http.Request) {
 }
 
 type cashCloseRow struct {
-	ID           string     `json:"id"`
-	Day          string     `json:"day"`
+	ID  string `json:"id"`
+	Day string `json:"day"`
+	// Kind **`daily` إغلاقُ يوم، و`opening` رصيدُ البداية** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	Kind         string     `json:"kind"`
 	Opening      int64      `json:"opening"`
 	CashIn       int64      `json:"cash_in"`
 	CashOut      int64      `json:"cash_out"`
@@ -176,12 +187,16 @@ type cashCloseRow struct {
 	ShortfallID     *string    `json:"shortfall_id"`
 	ShortfallStatus *string    `json:"shortfall_status"`
 	ShortfallDueAt  *time.Time `json:"shortfall_due_at"`
+	// CanApprove **أيستطيع هذا الموظّفُ مراجعتَه؟** — يُحسب للمعلَّق وحدَه (`approvalVerdictFor`)،
+	// **فالشاشةُ لا تخمّن**: المالكُ وحدَه يراجع إغلاقَه حين لا يوجد غيرُه.
+	CanApprove   bool `json:"can_approve"`
+	SelfApproval bool `json:"self_approval"`
 }
 
 func (s *Server) closesWhere(ctx context.Context, q dbtx.Querier, where string, limit int, args ...any) ([]cashCloseRow, error) {
 	args = append(args, limit)
 	rows, err := q.Query(ctx, `
-		SELECT c.id::text, c.day::text, c.opening, c.cash_in, c.cash_out, c.expected, c.counted,
+		SELECT c.id::text, c.day::text, c.kind, c.opening, c.cash_in, c.cash_out, c.expected, c.counted,
 		       c.difference, c.note, c.status, c.proposed_by::text,
 		       COALESCE(NULLIF(p.full_name, ''), p.phone::text, ''),
 		       NULLIF(COALESCE(NULLIF(d.full_name, ''), d.phone::text, ''), ''),
@@ -201,7 +216,7 @@ func (s *Server) closesWhere(ctx context.Context, q dbtx.Querier, where string, 
 	out := []cashCloseRow{}
 	for rows.Next() {
 		var c cashCloseRow
-		if err := rows.Scan(&c.ID, &c.Day, &c.Opening, &c.CashIn, &c.CashOut, &c.Expected,
+		if err := rows.Scan(&c.ID, &c.Day, &c.Kind, &c.Opening, &c.CashIn, &c.CashOut, &c.Expected,
 			&c.Counted, &c.Difference, &c.Note, &c.Status, &c.ProposedBy, &c.ProposerName,
 			&c.DeciderName, &c.DecidedAt, &c.DecisionNote, &c.SelfApproved, &c.CreatedAt,
 			&c.ShortfallID, &c.ShortfallStatus, &c.ShortfallDueAt); err != nil {
@@ -244,7 +259,7 @@ func (s *Server) handleCreateCashClose(w http.ResponseWriter, r *http.Request) {
 		if err := q.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM office_cash_closes WHERE status = 'pending'),
 			       EXISTS (SELECT 1 FROM office_cash_closes
-			                WHERE status = 'approved'
+			                WHERE status = 'approved' AND kind = 'daily'
 			                  AND day = (now() AT TIME ZONE 'Asia/Damascus')::date)`).
 			Scan(&pending, &dayDone); err != nil {
 			return err

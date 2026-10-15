@@ -46,6 +46,12 @@ const (
 	// دفع للمتجر عند الاستلام من سلفةِ مدير المكتب، **ونقدُ الزبون لم يغطّها** (دفع من
 	// محفظته، أو لم يُسلَّم الطلب). **فيأخذ المكتبُ من الدرج ما يردّ به السلفة** — بمرجع الطلب.
 	SourceAdvanceReturn = "advance_return"
+	// SourceExpenseCashVoid **داخلٌ: مصروفٌ كاشٌ أُلغي** (قرارُ المالك ٢٠٢٦-١٠-١٥) — عكسُ
+	// `expense_cash` بمرجع المصروف نفسِه، فالإلغاءُ يردّ إلى الدرج ما أخرجه المصروف.
+	SourceExpenseCashVoid = "expense_cash_void"
+	// SourceOwnerDeposit **داخلٌ: إيداعٌ من جيب المالك** (قرارُ المالك ٢٠٢٦-١٠-١٥) — نقدٌ
+	// يزيد الدرجَ **ولا يمسّ الخزينة**: ليس ربحاً ولا دخلاً، **ولا قيدَ له في الدفتر.**
+	SourceOwnerDeposit = "owner_deposit"
 )
 
 // Sources كلُّ المصادر المعروفة واتّجاهُها — يقرؤها الحارسُ والشاشة.
@@ -60,6 +66,8 @@ var Sources = map[string]Direction{
 	SourceObligationCash:     In,
 	SourceExpenseCash:        Out,
 	SourceAdvanceReturn:      Out,
+	SourceExpenseCashVoid:    In,
+	SourceOwnerDeposit:       In,
 }
 
 // Entry سطرٌ واحدٌ في الصندوق.

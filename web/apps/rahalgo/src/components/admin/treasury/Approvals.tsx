@@ -9,6 +9,11 @@
  * نفسَه — فحكمُ «المقترحُ غيرُ الموافق» والقيدُ بطرفين يبقيان في القسم.
  * **وصاحبُ الاقتراح لا يرى زرَّ الموافقة** (`can_approve` من المحرّك)، إلّا المالكُ
  * وحدَه حين لا يوجد غيرُه — ويُعلَّم.
+ *
+ * **والتعويضُ يُوافَق من هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بمبلغٍ يُعدَّل (افتراضُه المقترح)
+ * وملاحظةٍ إلزاميّة، **ببابه نفسِه** (`{amount, note}`): فوق السقف مديرُ المنصّة، وكلمةُ السرّ
+ * يطلبها العميلُ وحدَه حين يردّ المحرّكُ بالتحدّي. **والمقترحُ صفراً «بلا مبلغ بعد»** — لا
+ * يدخل المجموع.
  */
 
 import { useState } from "react";
@@ -20,8 +25,10 @@ import {
   Button,
   Confirm,
   EmptyState,
+  FormActions,
   Input,
   LoadingState,
+  Modal,
   ReloadState,
   IconCheck,
   useLiveData,
@@ -47,10 +54,32 @@ export interface ApprovalItem {
   href: string;
   can_approve: boolean;
   self_approval: boolean;
+  /** **المبلغُ مقترحٌ يُعدَّل عند الموافقة** — تُرسَل `{amount, note}`. */
+  amount_editable?: boolean;
+  /** **«بلا مبلغ بعد»** — مقترحٌ صفرٌ خارجَ المجموع. */
+  amount_undecided?: boolean;
+}
+
+/** **مبلغُ السطر** — أو «بلا مبلغ بعد»، و«مقترح» لما يُعدَّل عند الموافقة. */
+export function ApprovalAmount({ it }: { it: ApprovalItem }) {
+  if (it.amount_undecided) return <Badge variant="warning">{T.approvals.undecided}</Badge>;
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="font-bold" dir="ltr">
+        {fmtMoney(it.amount)}
+      </span>
+      {it.amount_editable && <span className="text-2xs text-ink-muted">{T.approvals.suggested}</span>}
+    </span>
+  );
 }
 
 export function ApprovalsTab() {
-  const { data, error, reload } = useLiveData<{ items: ApprovalItem[]; count: number; total: number }>(
+  const { data, error, reload } = useLiveData<{
+    items: ApprovalItem[];
+    count: number;
+    total: number;
+    undecided_count?: number;
+  }>(
     () => api(`/api/v1/admin/approvals`),
     ["wallet"],
   );
@@ -59,6 +88,33 @@ export function ApprovalsTab() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState("");
+  const [comp, setComp] = useState<ApprovalItem | null>(null);
+  const [compAmount, setCompAmount] = useState("");
+  const [compNote, setCompNote] = useState("");
+
+  function openComp(it: ApprovalItem) {
+    setComp(it);
+    setCompAmount(it.amount > 0 ? String(it.amount) : "");
+    setCompNote("");
+  }
+
+  async function approveComp() {
+    if (!comp) return;
+    setBusy(true);
+    try {
+      await api(comp.approve_path, {
+        method: "POST",
+        body: JSON.stringify({ amount: Math.round(Number(compAmount)), note: compNote.trim() }),
+      });
+      setComp(null);
+      setFail("");
+      reload();
+    } catch (err) {
+      setFail(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function decide(it: ApprovalItem, ok: boolean) {
     setApprove(null);
@@ -92,6 +148,9 @@ export function ApprovalsTab() {
         <span dir="ltr" className="font-bold">
           {fmtMoney(data.total)}
         </span>
+        {(data.undecided_count ?? 0) > 0 && (
+          <> · {T.approvals.undecidedCount.replace("{n}", String(data.undecided_count))}</>
+        )}
       </p>
       {items.length === 0 ? (
         <EmptyState icon={IconCheck} title={T.approvals.empty} />
@@ -102,9 +161,7 @@ export function ApprovalsTab() {
             return (
               <li key={`${it.key}-${it.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
                 <Badge variant="neutral">{sectionLabel(it.section)}</Badge>
-                <span className="font-bold" dir="ltr">
-                  {fmtMoney(it.amount)}
-                </span>
+                <ApprovalAmount it={it} />
                 {it.party_name && <span className="font-medium">{T.approvals.party.replace("{name}", it.party_name)}</span>}
                 <span className="min-w-0 flex-1 truncate text-ink-muted">{it.note}</span>
                 <span className="shrink-0 text-xs text-ink-muted">
@@ -120,7 +177,11 @@ export function ApprovalsTab() {
                         </span>
                       )}
                       {it.can_approve ? (
-                        <Button className="!px-2.5" disabled={busy || notDue} onClick={() => setApprove(it)}>
+                        <Button
+                          className="!px-2.5"
+                          disabled={busy || notDue}
+                          onClick={() => (it.amount_editable ? openComp(it) : setApprove(it))}
+                        >
                           {T.approvals.approve}
                         </Button>
                       ) : (
@@ -173,6 +234,39 @@ export function ApprovalsTab() {
         onConfirm={() => approve && void decide(approve, true)}
         onCancel={() => setApprove(null)}
       />
+      <Modal open={comp !== null} onClose={() => setComp(null)} title={T.approvals.compTitle}>
+        {comp && (
+          <div className="space-y-3">
+            <p className="text-sm">
+              {sectionLabel(comp.section)}
+              {comp.party_name ? ` · ${T.approvals.party.replace("{name}", comp.party_name)}` : ""}
+            </p>
+            <p className="text-sm text-ink-muted">
+              {comp.amount > 0
+                ? T.approvals.compHint.replace("{amount}", fmtMoney(comp.amount))
+                : T.approvals.compNoSuggestion}
+            </p>
+            {comp.self_approval && <Alert tone="warning">{T.approvals.selfFlag}</Alert>}
+            {fail && <Alert>{fail}</Alert>}
+            <Input
+              id="ap-comp-amount"
+              type="number"
+              inputMode="numeric"
+              dir="ltr"
+              label={T.approvals.compAmount}
+              value={compAmount}
+              onChange={(e) => setCompAmount(e.target.value)}
+            />
+            <Input id="ap-comp-note" label={T.approvals.compNote} value={compNote} onChange={(e) => setCompNote(e.target.value)} />
+            <FormActions
+              busy={busy || !(Number(compAmount) > 0) || compNote.trim() === ""}
+              saveLabel={T.approvals.approve}
+              onCancel={() => setComp(null)}
+              onSave={() => void approveComp()}
+            />
+          </div>
+        )}
+      </Modal>
       <Confirm
         open={reject !== null}
         title={T.approvals.rejectTitle}

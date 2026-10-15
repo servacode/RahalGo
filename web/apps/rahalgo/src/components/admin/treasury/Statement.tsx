@@ -4,12 +4,20 @@
  * **كشفُ حساب الخزينة برصيدٍ جارٍ** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — كلُّ قيدٍ في الخزينة
  * والرصيدُ بعده، بمدّةٍ ونوع، **وتصديرُه ملفّاً بيوم دمشق.** وسحبُ الأدمن يظهر
  * هنا باسمه («سحبُ الأدمن من رصيد الخزينة»).
+ *
+ * # قرارُ المالك ٢٠٢٦-١٠-١٥ — عرضٌ والدفترُ لا يتغيّر
+ *
+ * **قيودُ ربح الطلب الواحد سطرٌ واحد** «ربح طلب #N: X» — ينفتح على تفصيله من أعمدة الطلب
+ * ودفتره (`/treasury/statement/orders/{id}`): هامشٌ وعمولةٌ وتوصيلٌ ناقصاً السائقَ والمندوبَ
+ * والخصم. **والسطورُ تُجمع إلى مبلغ السطر** — وما لا تشرحه سطرُ «فرق» ظاهر.
+ * **وحركاتُ الأدمن الشخصيّة** (طلباته وشحنُه ومستردُّه) **تُوسَم «حركة شخصية»** — ليست ربحاً.
  */
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { getMessages, defaultLocale, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Alert,
+  Badge,
   Button,
   EmptyState,
   Input,
@@ -40,6 +48,60 @@ interface Line {
   ref: string;
   order_number: number | null;
   by_name: string;
+  /** **«حركة شخصية»** — من حساب الأدمن نفسِه، ليست ربحاً. */
+  personal?: boolean;
+  /** **«ربح طلب #N»** — قيودُ الطلب الواحد مجمَّعة (`entries` عددُها). */
+  grouped?: boolean;
+  entries?: number;
+  order_id?: string;
+}
+
+interface Breakdown {
+  total: number;
+  lines: { key: string; amount: number }[];
+  entries: { id: number; created_at: string; amount: number; note: string }[];
+}
+
+/** **تفصيلُ «ربح طلب #N»** — يُجلب حين يُفتح، بمدى الكشف نفسِه فيُجمع إلى مبلغ السطر. */
+function OrderBreakdown({ orderID, range }: { orderID: string; range: string }) {
+  const { data, error, reload } = useLiveData<Breakdown>(
+    () => api(`/api/v1/admin/treasury/statement/orders/${orderID}?${range}`),
+    ["wallet"],
+    [orderID, range],
+  );
+  if (error && !data) return <ReloadState onRetry={reload} />;
+  if (!data) return <LoadingState variant="text" />;
+  const label = S.breakdownLines as Record<string, string>;
+  return (
+    <div className="space-y-2 p-2">
+      <ul className="space-y-1 text-sm">
+        {data.lines.map((l) => (
+          <li key={l.key} className={`flex justify-between gap-3 ${l.key === "diff" ? "font-bold text-warning" : ""}`}>
+            <span>{label[l.key] ?? l.key}</span>
+            <Signed value={l.amount} />
+          </li>
+        ))}
+        <li className="flex justify-between gap-3 border-t border-line-soft pt-1 font-bold">
+          <span>{S.colAmount}</span>
+          <Signed value={data.total} />
+        </li>
+      </ul>
+      {data.entries.length > 0 && (
+        <details className="text-xs text-ink-muted">
+          <summary className="cursor-pointer">{S.breakdownLedger}</summary>
+          <ul className="mt-1 space-y-0.5">
+            {data.entries.map((e) => (
+              <li key={e.id} className="flex flex-wrap justify-between gap-2">
+                <span dir="ltr">{fmtDateTime(e.created_at)}</span>
+                <span className="min-w-0 flex-1 truncate">{e.note}</span>
+                <Signed value={e.amount} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
 }
 
 export function StatementTab() {
@@ -50,6 +112,7 @@ export function StatementTab() {
   const [kind, setKind] = useState("");
   const [page, setPage] = useState(1);
   const [fail, setFail] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
 
   const qs = new URLSearchParams();
   if (from) qs.set("from", from);
@@ -84,6 +147,10 @@ export function StatementTab() {
   }
 
   const kinds = Object.entries(m.shared.txKinds as Record<string, string>);
+  // **مدى الكشف بلا النوع** — للتفصيل، فمجموعُه هو مبلغُ السطر.
+  const range = new URLSearchParams();
+  if (from) range.set("from", from);
+  if (to) range.set("to", to);
 
   return (
     <div className="space-y-4">
@@ -114,6 +181,9 @@ export function StatementTab() {
         )}
       </div>
       <p className="text-xs text-ink-muted">{S.tz}</p>
+      <p className="text-xs text-ink-muted">
+        {S.personal}: {S.personalHint}
+      </p>
 
       {error && !data ? (
         <ReloadState onRetry={reload} />
@@ -144,25 +214,62 @@ export function StatementTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.lines.map((l) => (
-                    <tr key={l.id} className="border-b border-line-soft">
-                      <td className="whitespace-nowrap p-2" dir="ltr">
-                        {fmtDateTime(l.created_at)}
-                      </td>
-                      <td className="p-2 font-medium">{l.kind_ar}</td>
-                      <td className="p-2">
-                        <Signed value={l.amount} />
-                      </td>
-                      <td className="p-2">
-                        <Amount value={l.balance} />
-                      </td>
-                      <td className="p-2" dir="ltr">
-                        {l.order_number ?? ""}
-                      </td>
-                      <td className="p-2">{l.by_name}</td>
-                      <td className="max-w-xs truncate p-2 text-ink-muted">{l.note}</td>
-                    </tr>
-                  ))}
+                  {data.lines.map((l) => {
+                    const key = `${l.id}-${l.order_id ?? ""}`;
+                    const isOpen = open === key;
+                    return (
+                      <Fragment key={key}>
+                        <tr className="border-b border-line-soft">
+                          <td className="whitespace-nowrap p-2" dir="ltr">
+                            {fmtDateTime(l.created_at)}
+                          </td>
+                          <td className="p-2 font-medium">
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              {l.grouped && l.order_number != null
+                                ? S.orderProfit.replace("{n}", String(l.order_number))
+                                : l.kind_ar}
+                              {l.personal && (
+                                <Badge variant="neutral">
+                                  {S.personal}
+                                </Badge>
+                              )}
+                            </span>
+                          </td>
+                          <td className="p-2">
+                            <Signed value={l.amount} />
+                          </td>
+                          <td className="p-2">
+                            <Amount value={l.balance} />
+                          </td>
+                          <td className="p-2" dir="ltr">
+                            {l.order_number ?? ""}
+                          </td>
+                          <td className="p-2">{l.by_name}</td>
+                          <td className="max-w-xs p-2 text-ink-muted">
+                            {l.grouped && l.order_id ? (
+                              <span className="flex flex-wrap items-center gap-2">
+                                {(l.entries ?? 0) > 1 && (
+                                  <span className="text-xs">{S.entries.replace("{n}", String(l.entries))}</span>
+                                )}
+                                <Button variant="secondary" className="!px-2.5" onClick={() => setOpen(isOpen ? null : key)}>
+                                  {isOpen ? S.hideBreakdown : S.showBreakdown}
+                                </Button>
+                              </span>
+                            ) : (
+                              <span className="block truncate">{l.note}</span>
+                            )}
+                          </td>
+                        </tr>
+                        {isOpen && l.order_id && (
+                          <tr className="border-b border-line-soft">
+                            <td colSpan={7}>
+                              <OrderBreakdown orderID={l.order_id} range={range.toString()} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

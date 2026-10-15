@@ -255,6 +255,8 @@ var adminPolicy = []Rule{
 	{"GET", "/treasury/overview", FinanceRead},
 	{"GET", "/treasury/statement", FinanceRead},
 	{"GET", "/treasury/statement/export", FinanceExport},
+	// **تفصيلُ «ربح طلب #N»** — قراءةٌ كالكشف (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	{"GET", "/treasury/statement/orders/{id}", FinanceRead},
 	{"GET", "/treasury/withdrawals", FinanceRead},
 	{"POST", "/treasury/withdrawals", TreasuryManage},
 	{"GET", "/treasury/health", FinanceRead},
@@ -266,6 +268,11 @@ var adminPolicy = []Rule{
 	{"POST", "/cashbox/shortfalls/{id}/resolve", FinanceManage},
 	{"POST", "/cashbox/shortfalls/{id}/approve", TreasuryManage},
 	{"POST", "/cashbox/shortfalls/{id}/reject", TreasuryManage},
+	// **رصيدُ البداية بيد الماليّة مرّةً واحدة · وإيداعُ المالك من جيبه بقدرة الخزينة كالسحب ·
+	// وتقريرُ الدرج قراءة** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	{"POST", "/cashbox/opening", FinanceManage},
+	{"POST", "/cashbox/deposits", TreasuryManage},
+	{"GET", "/cashbox/report", FinanceRead},
 	{"GET", "/approvals", FinanceRead},
 
 	// ── الدعمُ والنزاعاتُ والطوارئ ───────────────────────────────

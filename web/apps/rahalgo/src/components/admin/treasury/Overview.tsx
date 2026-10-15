@@ -4,9 +4,13 @@
  * **نظرةُ الخزينة العامّة** — رصيدُها، وما في درج المكتب، والنقدُ في الشارع، وما
  * ينتظر قراراً، **وسحبُ الأدمن من رصيدها** (قرارُ المالك ٢٠٢٦-١٠-٠٤: «حتّى لو دفع
  * من المحفظة رح يكون واضح إنّ الأدمن سحب من رصيد الخزينة»).
+ *
+ * **وصافي الربح اليومَ والأسبوعَ والشهرَ ومن أوّل يوم** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الرقمُ
+ * نفسُه في صفحة الأرباح للمدى نفسِه، يحسبه المحرّك (`profit_cards`) ولا تحسبه الشاشة.
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -27,6 +31,7 @@ import {
   IconStore,
   IconCheck,
   IconWarning,
+  IconTrendUp,
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
@@ -51,8 +56,17 @@ interface Overview {
   open_shortfalls: number;
   pending_count: number;
   pending_total: number;
+  /** **ما بلا مبلغٍ بعد** — تعويضٌ مقترحُه صفر، خارجَ المجموع. */
+  pending_undecided?: number;
+  profit_cards?: ProfitCard[];
   last_close: CashClose | null;
   approvals: ApprovalItem[];
+}
+interface ProfitCard {
+  period: "day" | "week" | "month" | "all";
+  from: string;
+  to: string;
+  net: number;
 }
 interface Withdrawal {
   id: string;
@@ -68,6 +82,7 @@ function newKey(): string {
 }
 
 export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") => void }) {
+  const router = useRouter();
   const canCall = useCanCall();
   const canWithdraw = canCall("POST", "/treasury/withdrawals");
   const ov = useLiveData<Overview>(() => api(`/api/v1/admin/treasury/overview`), ["wallet"]);
@@ -117,6 +132,24 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
         </Alert>
       )}
       {!d.has_treasury && <Alert tone="warning">{O.noTreasury}</Alert>}
+      {(d.profit_cards ?? []).length > 0 && (
+        <section className="space-y-2">
+          <h3 className="font-bold">{O.profitTitle}</h3>
+          <StatGrid>
+            {(d.profit_cards ?? []).map((c) => (
+              <StatCard
+                key={c.period}
+                label={O.profitCards[c.period]}
+                value={fmtMoney(c.net)}
+                icon={IconTrendUp}
+                tone={c.net > 0 ? "success" : c.net < 0 ? "danger" : "muted"}
+                onClick={() => router.push("/dashboard/profits")}
+              />
+            ))}
+          </StatGrid>
+          <p className="text-xs text-ink-muted">{O.profitHint}</p>
+        </section>
+      )}
       <StatGrid>
         <StatCard
           label={O.treasuryBalance}
@@ -125,7 +158,13 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
           tone={d.treasury_balance >= 0 ? "success" : "danger"}
           emphasis
         />
-        <StatCard label={O.cashboxExpected} value={fmtMoney(d.cashbox.expected)} icon={IconBalance} onClick={() => onTab("cashbox")} />
+        <StatCard
+          label={O.cashboxExpected}
+          value={fmtMoney(d.cashbox.expected)}
+          icon={IconBalance}
+          tone={d.cashbox.expected < 0 ? "danger" : undefined}
+          onClick={() => onTab("cashbox")}
+        />
         <StatCard label={O.todayIn} value={fmtMoney(d.today_in)} tone="success" />
         <StatCard label={O.todayOut} value={fmtMoney(d.today_out)} tone="danger" />
         <StatCard label={O.cashInStreet} value={fmtMoney(d.cash_in_street)} icon={IconDriver} />
@@ -141,7 +180,11 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
         <StatCard
           label={O.pendingApprovals}
           value={String(d.pending_count)}
-          sub={fmtMoney(d.pending_total)}
+          sub={
+            (d.pending_undecided ?? 0) > 0
+              ? `${fmtMoney(d.pending_total)} · ${O.undecided.replace("{n}", String(d.pending_undecided))}`
+              : fmtMoney(d.pending_total)
+          }
           icon={IconCheck}
           tone={d.pending_count > 0 ? "warning" : "muted"}
           onClick={() => onTab("approvals")}
@@ -176,9 +219,13 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
             {d.approvals.map((a) => (
               <li key={`${a.key}-${a.id}`} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
                 <Badge variant="neutral">{sectionLabel(a.section)}</Badge>
-                <span dir="ltr" className="font-bold">
-                  {fmtMoney(a.amount)}
-                </span>
+                {a.amount_undecided ? (
+                  <Badge variant="warning">{T.approvals.undecided}</Badge>
+                ) : (
+                  <span dir="ltr" className="font-bold">
+                    {fmtMoney(a.amount)}
+                  </span>
+                )}
                 {a.party_name && <span className="font-medium">{T.approvals.party.replace("{name}", a.party_name)}</span>}
                 <span className="min-w-0 flex-1 truncate text-ink-muted">{a.note}</span>
               </li>

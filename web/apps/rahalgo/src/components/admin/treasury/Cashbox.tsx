@@ -8,6 +8,12 @@
  * **ما دخل الدرجَ وما خرج منه منذ آخر إغلاق**، و«إغلاقُ اليوم»: الموظّفُ يكتب ما
  * عدّه، والمحرّكُ يقارنه بالمتوقَّع ويُظهر الفرق، **وموظّفٌ آخرُ يراجع.** والنقصُ
  * يُسجَّل، ويُحَلّ إن وُجد المال، وإن بقي يوماً صار خسارةً بموافقة مدير المنصّة.
+ *
+ * # قراراتُ المالك ٢٠٢٦-١٠-١٥
+ *
+ * **رصيدُ البداية** مرّةً قبل أيّ إغلاق · **إيداعٌ بالدرج** من جيب المالك (ليس ربحاً، بكلمة
+ * السرّ) · **الدرجُ قد يصير سالباً** ويظهر بالأحمر · **تقريرُ يومٍ وأسبوعٍ وشهر** · وزرُّ
+ * «تأكيد المراجعة» **بحكم المحرّك** (`can_approve`) — المالكُ وحدَه يراجع إغلاقَه حين لا غيرُه.
  */
 
 import { useState } from "react";
@@ -31,7 +37,6 @@ import {
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { T, Signed, Amount } from "./shared";
 
@@ -61,6 +66,8 @@ interface Entry {
 export interface CashClose {
   id: string;
   day: string;
+  /** `opening` رصيدُ البداية، و`daily` إغلاقُ يوم. */
+  kind?: "daily" | "opening";
   opening: number;
   cash_in: number;
   cash_out: number;
@@ -79,6 +86,108 @@ export interface CashClose {
   shortfall_id: string | null;
   shortfall_status: "pending" | "approved" | "rejected" | "resolved" | null;
   shortfall_due_at: string | null;
+  /** **أيستطيع هذا الموظّفُ مراجعتَه؟** — من المحرّك، للمعلَّق وحدَه. */
+  can_approve?: boolean;
+  self_approval?: boolean;
+}
+
+type Period = "day" | "week" | "month";
+interface Report {
+  period: Period;
+  from: string;
+  to: string;
+  total_in: number;
+  total_out: number;
+  by_source: { source: string; direction: "in" | "out"; amount: number; count: number }[];
+  close_difference: number;
+  shortage: number;
+  excess: number;
+  closes: number;
+  start_balance: number;
+  end_balance: number;
+}
+
+function newKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now());
+}
+
+/** **تقريرُ الدرج لفترة** — ما دخل وما خرج بمصادره، وفروقُ الإغلاق، والرصيدُ أوّلاً وآخراً. */
+function CashReport() {
+  const [period, setPeriod] = useState<Period>("day");
+  const { data, error, reload } = useLiveData<Report>(
+    () => api(`/api/v1/admin/cashbox/report?period=${period}`),
+    ["wallet"],
+    [period],
+  );
+  const periods: Period[] = ["day", "week", "month"];
+  return (
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-bold">{C.reportTitle}</h3>
+        <div className="flex gap-1.5" role="group" aria-label={C.reportTitle}>
+          {periods.map((p) => (
+            <Button key={p} variant={p === period ? "primary" : "secondary"} className="!px-3" onClick={() => setPeriod(p)}>
+              {C.periods[p]}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {error && !data ? (
+        <ReloadState onRetry={reload} />
+      ) : !data ? (
+        <LoadingState variant="stats" />
+      ) : (
+        <>
+          <p className="text-xs text-ink-muted">
+            {C.reportRange.replace("{from}", data.from).replace("{to}", data.to)}
+          </p>
+          <StatGrid>
+            <StatCard
+              label={C.reportStart}
+              value={fmtMoney(data.start_balance)}
+              tone={data.start_balance < 0 ? "danger" : undefined}
+            />
+            <StatCard label={C.reportIn} value={fmtMoney(data.total_in)} tone="success" />
+            <StatCard label={C.reportOut} value={fmtMoney(data.total_out)} tone="danger" />
+            <StatCard
+              label={C.reportEnd}
+              value={fmtMoney(data.end_balance)}
+              tone={data.end_balance < 0 ? "danger" : undefined}
+              emphasis
+            />
+            <StatCard
+              label={C.reportDiff}
+              value={fmtMoney(data.close_difference)}
+              sub={`${C.reportShortage} ${fmtMoney(data.shortage)} · ${C.reportExcess} ${fmtMoney(data.excess)} · ${C.reportCloses} ${data.closes}`}
+              tone={data.close_difference < 0 ? "danger" : data.close_difference > 0 ? "warning" : "muted"}
+            />
+          </StatGrid>
+          {data.by_source.length === 0 ? (
+            <p className="text-sm text-ink-muted">{C.reportEmpty}</p>
+          ) : (
+            <div className="surface overflow-x-auto">
+              <table className="w-full text-sm">
+                <caption className="p-2 text-start text-2xs text-ink-muted">{C.reportBySource}</caption>
+                <tbody>
+                  {data.by_source.map((x) => (
+                    <tr key={`${x.direction}-${x.source}`} className="border-b border-line-soft">
+                      <td className="p-2">{sourceLabel(x.source)}</td>
+                      <td className="p-2 text-ink-muted" dir="ltr">
+                        {x.count}
+                      </td>
+                      <td className="p-2">
+                        <Signed value={x.direction === "in" ? x.amount : -x.amount} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
 }
 
 function sourceLabel(s: string): string {
@@ -96,9 +205,10 @@ export function DiffBadge({ diff }: { diff: number }) {
 }
 
 export function CashboxTab() {
-  const { user: me } = useAuth();
   const canCall = useCanCall();
   const canClose = canCall("POST", "/cashbox/closes");
+  const canOpening = canCall("POST", "/cashbox/opening");
+  const canDeposit = canCall("POST", "/cashbox/deposits");
   const [all, setAll] = useState(false);
   const [page, setPage] = useState(1);
   const box = useLiveData<{
@@ -115,6 +225,13 @@ export function CashboxTab() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState("");
+  const [opening, setOpening] = useState(false);
+  const [openingCounted, setOpeningCounted] = useState("");
+  const [deposit, setDeposit] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositNote, setDepositNote] = useState("");
+  const [depositKey, setDepositKey] = useState(newKey);
+  const [done, setDone] = useState("");
   const [rejectClose, setRejectClose] = useState<CashClose | null>(null);
   const [resolve, setResolve] = useState<CashClose | null>(null);
   const [reason, setReason] = useState("");
@@ -124,10 +241,10 @@ export function CashboxTab() {
     closes.reload();
   }
 
-  async function post(path: string, body: unknown) {
+  async function post(path: string, body: unknown, headers?: Record<string, string>) {
     setBusy(true);
     try {
-      await api(path, { method: "POST", body: JSON.stringify(body) });
+      await api(path, { method: "POST", body: JSON.stringify(body), headers });
       setFail("");
       reloadAll();
       return true;
@@ -145,12 +262,28 @@ export function CashboxTab() {
   const pending = box.data.pending_close;
   const countedNum = Number(counted);
   const preview = counted.trim() === "" || Number.isNaN(countedNum) ? null : countedNum - pos.expected;
+  // **رصيدُ البداية قبل أيّ إغلاقٍ مُعتمَد** — والمحرّكُ يردّ غيرَه (`cash_opening_late`).
+  const showOpening = canOpening && !pending && pos.opened_at === null;
+  const openingNum = Number(openingCounted);
+  const depositNum = Number(depositAmount);
 
   return (
     <div className="space-y-4">
       {fail && <Alert onDismiss={() => setFail("")}>{fail}</Alert>}
+      {done && (
+        <Alert tone="success" onDismiss={() => setDone("")}>
+          {done}
+        </Alert>
+      )}
       <StatGrid>
-        <StatCard label={C.expected} value={fmtMoney(pos.expected)} icon={IconWallet} emphasis />
+        <StatCard
+          label={C.expected}
+          value={fmtMoney(pos.expected)}
+          sub={pos.expected < 0 ? C.negative : undefined}
+          icon={IconWallet}
+          tone={pos.expected < 0 ? "danger" : undefined}
+          emphasis
+        />
         <StatCard label={C.opening} value={fmtMoney(pos.opening)} sub={pos.opened_at ? fmtDateTime(pos.opened_at) : undefined} />
         <StatCard label={C.in} value={fmtMoney(pos.cash_in)} tone="success" />
         <StatCard label={C.out} value={fmtMoney(pos.cash_out)} tone="danger" />
@@ -160,6 +293,16 @@ export function CashboxTab() {
         {canClose && !pending && (
           <Button onClick={() => setClosing(true)} disabled={busy}>
             {C.closeDay}
+          </Button>
+        )}
+        {showOpening && (
+          <Button variant="secondary" onClick={() => setOpening(true)} disabled={busy}>
+            {C.openingButton}
+          </Button>
+        )}
+        {canDeposit && (
+          <Button variant="secondary" onClick={() => setDeposit(true)} disabled={busy}>
+            {C.depositButton}
           </Button>
         )}
         <Link href="/dashboard/cash" className="text-sm text-primary underline">
@@ -185,10 +328,13 @@ export function CashboxTab() {
           {pending.note && <p className="text-sm text-ink-muted">{pending.note}</p>}
           {canClose && (
             <div className="flex flex-wrap gap-2">
-              {me?.id !== pending.proposed_by ? (
-                <Button disabled={busy} onClick={() => void post(`/api/v1/admin/cashbox/closes/${pending.id}/approve`, {})}>
-                  {C.approveClose}
-                </Button>
+              {pending.can_approve ? (
+                <>
+                  <Button disabled={busy} onClick={() => void post(`/api/v1/admin/cashbox/closes/${pending.id}/approve`, {})}>
+                    {C.approveClose}
+                  </Button>
+                  {pending.self_approval && <span className="text-xs text-warning">{C.selfReview}</span>}
+                </>
               ) : (
                 <span className="text-xs text-ink-muted">{C.ownClose}</span>
               )}
@@ -199,6 +345,8 @@ export function CashboxTab() {
           )}
         </div>
       )}
+
+      <CashReport />
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -285,7 +433,11 @@ export function CashboxTab() {
                       <Amount value={c.counted} />
                     </td>
                     <td className="p-2">
-                      <DiffBadge diff={c.difference} />
+                      {c.kind === "opening" ? (
+                        <Badge variant="neutral">{C.openingBadge}</Badge>
+                      ) : (
+                        <DiffBadge diff={c.difference} />
+                      )}
                     </td>
                     <td className="p-2">
                       <Badge variant={c.status === "approved" ? "success" : c.status === "rejected" ? "danger" : "warning"}>
@@ -356,6 +508,68 @@ export function CashboxTab() {
                   setNote("");
                 },
               );
+            }}
+          />
+        </div>
+      </Modal>
+
+      <Modal open={opening} onClose={() => setOpening(false)} title={C.openingTitle}>
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">{C.openingHint}</p>
+          <Input
+            id="cb-opening"
+            type="number"
+            inputMode="numeric"
+            dir="ltr"
+            label={C.openingCounted}
+            value={openingCounted}
+            onChange={(e) => setOpeningCounted(e.target.value)}
+          />
+          <FormActions
+            busy={busy || openingCounted.trim() === "" || Number.isNaN(openingNum) || openingNum < 0}
+            saveLabel={C.openingButton}
+            onCancel={() => setOpening(false)}
+            onSave={() => {
+              void post(`/api/v1/admin/cashbox/opening`, { counted: Math.round(openingNum) }).then((ok) => {
+                if (!ok) return;
+                setOpening(false);
+                setOpeningCounted("");
+              });
+            }}
+          />
+        </div>
+      </Modal>
+
+      <Modal open={deposit} onClose={() => setDeposit(false)} title={C.depositTitle}>
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">{C.depositHint}</p>
+          <Input
+            id="cb-deposit-amount"
+            type="number"
+            inputMode="numeric"
+            dir="ltr"
+            label={C.depositAmount}
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
+          />
+          <Input id="cb-deposit-note" label={C.depositNote} value={depositNote} onChange={(e) => setDepositNote(e.target.value)} />
+          <FormActions
+            busy={busy || !(depositNum > 0) || depositNote.trim() === ""}
+            saveLabel={C.depositButton}
+            onCancel={() => setDeposit(false)}
+            onSave={() => {
+              void post(
+                `/api/v1/admin/cashbox/deposits`,
+                { amount: Math.round(depositNum), note: depositNote.trim() },
+                { "Idempotency-Key": depositKey },
+              ).then((ok) => {
+                if (!ok) return;
+                setDeposit(false);
+                setDepositAmount("");
+                setDepositNote("");
+                setDepositKey(newKey());
+                setDone(C.depositDone);
+              });
             }}
           />
         </div>

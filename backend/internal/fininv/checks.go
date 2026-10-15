@@ -876,6 +876,23 @@ var All = []Check{
 			                  WHERE c.source = 'wallet_topup' AND c.direction = 'in'
 			                    AND c.ref = wr.id::text AND c.amount = wr.amount)`,
 	},
+	{
+		ID: "FI-15.h", Family: FI15, Status: ProvableNow, Ops: true,
+		Name: "مصروفٌ كاشٌ خرج من الدرج، وإلغاؤه رجع إليه",
+		Why: "مصروفٌ دُفع من الدرج بلا سطرٍ خارجٍ بمقداره، أو أُلغي بلا سطرٍ يردّه، " +
+			"أو سطرٌ لمصروفٍ من برّا الدرج — **الإغلاقُ اليوميُّ لا يطابق** (قرارُ المالك ٢٠٢٦-١٠-١٥).",
+		Kinds: []string{"operating_expense"},
+		SQL: `
+			SELECT e.id::text, e.paid_from, e.amount, e.voided_at IS NOT NULL AS ملغى
+			FROM expenses e
+			LEFT JOIN office_cash_entries o ON o.source = 'expense_cash' AND o.ref = e.id::text
+			LEFT JOIN office_cash_entries v ON v.source = 'expense_cash_void' AND v.ref = e.id::text
+			WHERE (e.paid_from = 'cash' AND (o.id IS NULL OR o.direction <> 'out' OR o.amount <> e.amount))
+			   OR (e.paid_from = 'cash' AND e.voided_at IS NOT NULL
+			       AND (v.id IS NULL OR v.direction <> 'in' OR v.amount <> e.amount))
+			   OR (e.paid_from = 'cash' AND e.voided_at IS NULL AND v.id IS NOT NULL)
+			   OR (e.paid_from <> 'cash' AND (o.id IS NOT NULL OR v.id IS NOT NULL))`,
+	},
 
 	// ═══════════════════════════════════════════════════════════════════
 	// FI-14 — تسويةُ المتجر نقداً: الاحتباسُ والهُويّةُ والعكس

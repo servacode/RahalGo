@@ -15,6 +15,11 @@
  * ٣ · الصفحةُ بمسارها، ويربطها قسمُ الخزينة تبويباً.
  * ٤ · صورةُ الإيصال اختياريّة، وإلزاميّةٌ فوق السقف.
  * ٥ · الإلغاءُ بسببٍ ومن موظّفٍ غيرِ من سجّل، والملغى يبقى ظاهراً مشطوباً.
+ *
+ * # قرارُ المالك ٢٠٢٦-١٠-١٥ — «منين دفعت؟»
+ *
+ * **كاشٌ من الدرج** (الافتراض) يخرج من صندوق المكتب حين يُقيَّد، وإلغاؤه يردّه.
+ * **ومن برّا الدرج** لا يمسّه. والطريقةُ تُحفظ على صفّ المصروف (`paid_from`).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -43,6 +48,7 @@ import {
   StatGrid,
   StatCard,
   Checkbox,
+  Radio,
   DataView,
   ViewToggle,
   useViewMode,
@@ -86,7 +92,10 @@ interface Row {
   reason: string;
   self_approved: boolean;
   receipt_url: string | null;
+  /** **منين دفعت؟** — كاشٌ من الدرج أو من برّا الدرج. */
+  paid_from?: PaidFrom;
 }
+type PaidFrom = "cash" | "outside";
 interface Cat {
   id: string;
   name: string;
@@ -249,7 +258,14 @@ export default function ExpensesPage() {
       id: "category",
       header: X.colCategory,
       primary: true,
-      cell: (e) => <span className="font-medium">{e.category}</span>,
+      cell: (e) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="font-medium">{e.category}</span>
+          {e.paid_from && (
+            <Badge variant={e.paid_from === "cash" ? "warning" : "neutral"}>{X.paidFromOptions[e.paid_from]}</Badge>
+          )}
+        </span>
+      ),
     },
     {
       id: "amount",
@@ -633,6 +649,8 @@ function AddModal({
   // **ويومُ الصرف الافتراضيُّ يومُ دمشق** — كان بغرينتش فيظهر أمسِ بعد منتصف الليل.
   const [spentAt, setSpentAt] = useState(today || damascusDay());
   const [receipt, setReceipt] = useState("");
+  // **«منين دفعت؟» — كاشٌ من الدرج افتراضاً** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+  const [paidFrom, setPaidFrom] = useState<PaidFrom>("cash");
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -663,6 +681,7 @@ function AddModal({
           note: note.trim(),
           spent_at: spentAt,
           receipt_media_id: receipt || undefined,
+          paid_from: paidFrom,
         }),
       });
       onDone(r?.status === "pending");
@@ -693,6 +712,10 @@ function AddModal({
             <div className="flex justify-between gap-3">
               <dt className="text-ink-muted">{X.spentAt}</dt>
               <dd dir="ltr">{fmtDate(spentAt)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-ink-muted">{X.paidFrom}</dt>
+              <dd className="font-medium">{X.paidFromOptions[paidFrom]}</dd>
             </div>
             {!over && (
               <div className="flex justify-between gap-3">
@@ -757,6 +780,24 @@ function AddModal({
           value={spentAt}
           onChange={(e) => setSpentAt(e.target.value)}
         />
+        <fieldset className="space-y-1.5">
+          <legend className="mb-1 text-sm font-medium">{X.paidFrom}</legend>
+          <Radio
+            id="exp-paid-cash"
+            name="exp-paid-from"
+            label={X.paidFromOptions.cash}
+            checked={paidFrom === "cash"}
+            onChange={() => setPaidFrom("cash")}
+          />
+          <Radio
+            id="exp-paid-outside"
+            name="exp-paid-from"
+            label={X.paidFromOptions.outside}
+            checked={paidFrom === "outside"}
+            onChange={() => setPaidFrom("outside")}
+          />
+          <p className="text-xs text-ink-muted">{X.paidFromHint}</p>
+        </fieldset>
         <Textarea
           id="exp-note"
           label={X.note}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
@@ -42,6 +43,10 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «أيقونةُ العروض لا تظهر إلّا عندما يكون
 		// هناك عروضٌ مفعّلة».)
 		LiveOffers int `json:"live_offers"`
+		// DrawerExpected **المتوقَّعُ في درج المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — شريحةٌ بجانب
+		// الرصيد لمن يملك `finance.read` وحدَه، **والغائبُ لا يُرسل شيئاً.** وهو `cashboxPosition`
+		// نفسُه — لا حسابٌ ثانٍ ولا نداءٌ ثانٍ من الشريط.
+		DrawerExpected *int64 `json:"drawer_expected,omitempty"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name,
@@ -67,6 +72,14 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out.AvatarThumb = media.SignedURLPtr(out.AvatarThumb) // "/media/" prefix (نمط الوسائط)
+	if s.hasCapability(r, authz.FinanceRead) {
+		pos, err := cashboxPosition(r.Context(), s.pg)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out.DrawerExpected = &pos.Expected
+	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 

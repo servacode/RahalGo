@@ -49,12 +49,12 @@
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 38
+   "guards_routes": 39
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 33
+   "guards_routes": 35
   },
   {
    "code": "finance.recompute",
@@ -171,7 +171,7 @@
   {
    "code": "treasury.manage",
    "description": "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة",
-   "guards_routes": 3
+   "guards_routes": 4
   },
   {
    "code": "users.cashban.lift",
@@ -249,7 +249,7 @@
   }
  ],
  "route_policy": {
-  "rules": 282,
+  "rules": 286,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -448,6 +448,17 @@
    ],
    "conditional": "userUpdateStrong",
    "need": "users.status.manage"
+  },
+  {
+   "method": "POST",
+   "pattern": "/cashbox/deposits",
+   "action": "finance.cash_owner_deposit",
+   "target_type": "office_cash_entry",
+   "target_segment": -1,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "treasury.manage"
   },
   {
    "method": "POST",

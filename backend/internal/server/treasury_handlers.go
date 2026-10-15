@@ -22,12 +22,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/officecash"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 var (
@@ -45,20 +47,25 @@ const treasuryWithdrawalNote = "سحبُ الأدمن من رصيد الخزين
 func (s *Server) handleTreasuryOverview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	type overview struct {
-		TreasuryBalance  int64          `json:"treasury_balance"`
-		HasTreasury      bool           `json:"has_treasury"`
-		Cashbox          cashPosition   `json:"cashbox"`
-		TodayIn          int64          `json:"today_in"`
-		TodayOut         int64          `json:"today_out"`
-		CashInStreet     int64          `json:"cash_in_street"`
-		MerchantCashDue  int64          `json:"merchant_cash_due"`
-		PendingPayouts   int64          `json:"pending_payouts"`
-		WithdrawalsMonth int64          `json:"withdrawals_month"`
-		OpenShortfalls   int64          `json:"open_shortfalls"`
-		PendingCount     int            `json:"pending_count"`
-		PendingTotal     int64          `json:"pending_total"`
-		LastClose        *cashCloseRow  `json:"last_close"`
-		Approvals        []approvalItem `json:"approvals"`
+		TreasuryBalance  int64        `json:"treasury_balance"`
+		HasTreasury      bool         `json:"has_treasury"`
+		Cashbox          cashPosition `json:"cashbox"`
+		TodayIn          int64        `json:"today_in"`
+		TodayOut         int64        `json:"today_out"`
+		CashInStreet     int64        `json:"cash_in_street"`
+		MerchantCashDue  int64        `json:"merchant_cash_due"`
+		PendingPayouts   int64        `json:"pending_payouts"`
+		WithdrawalsMonth int64        `json:"withdrawals_month"`
+		OpenShortfalls   int64        `json:"open_shortfalls"`
+		PendingCount     int          `json:"pending_count"`
+		PendingTotal     int64        `json:"pending_total"`
+		PendingUndecided int          `json:"pending_undecided"`
+		// ProfitCards **صافي الربح اليومَ وهذا الأسبوعَ وهذا الشهرَ ومن أوّل يوم** (قرارُ المالك
+		// ٢٠٢٦-١٠-١٥) — **«صافي الربح» في صفحة الأرباح بعينه** (`platformProfit(..).Net`) للمدى
+		// نفسِه بيوم دمشق، ومعه المدى فتفتح البطاقةُ الصفحةَ عليه.
+		ProfitCards []profitCard   `json:"profit_cards"`
+		LastClose   *cashCloseRow  `json:"last_close"`
+		Approvals   []approvalItem `json:"approvals"`
 	}
 	var o overview
 	var bal *int64
@@ -105,14 +112,43 @@ func (s *Server) handleTreasuryOverview(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	o.PendingCount = len(items)
-	for _, it := range items {
-		o.PendingTotal += it.Amount
+	o.PendingTotal, o.PendingUndecided = approvalsTotal(items)
+	cards, err := s.profitCards(ctx, time.Now())
+	if err != nil {
+		s.respondErr(w, err)
+		return
 	}
+	o.ProfitCards = cards
 	if len(items) > 5 {
 		items = items[:5]
 	}
 	o.Approvals = items
 	httpx.JSON(w, http.StatusOK, o)
+}
+
+// profitCard **بطاقةُ صافي الربح لمدًى** — `period` يومٌ أو أسبوعٌ أو شهرٌ أو `all`.
+type profitCard struct {
+	Period string `json:"period"`
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Net    int64  `json:"net"`
+}
+
+// profitCards **الصافي للمُدد الأربع** — بحساب صفحة الأرباح نفسِه، لا بمعادلةٍ ثانية.
+//
+// **والأسبوعُ آخرُ سبعة أيّامٍ باليوم** — كما تعرّفه صفحةُ الأرباح نفسُها (زرُّ «هذا الأسبوع»
+// في `profits/page.tsx`)، فتطابق البطاقةُ ما يراه المالكُ هناك (`damascusPeriod`).
+func (s *Server) profitCards(ctx context.Context, now time.Time) ([]profitCard, error) {
+	out := make([]profitCard, 0, 4)
+	for _, period := range []string{"day", "week", "month", "all"} {
+		from, to, _ := damascusPeriod(period, now)
+		p, err := s.platformProfit(ctx, from, to)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, profitCard{Period: period, From: from, To: to, Net: p.Net})
+	}
+	return out, nil
 }
 
 // ── كشفُ الحساب برصيدٍ جارٍ ──────────────────────────────────────────
@@ -128,7 +164,19 @@ type treasuryLine struct {
 	Ref       string    `json:"ref"`
 	OrderNo   *int64    `json:"order_number"`
 	ByName    string    `json:"by_name"`
+	// Personal **«حركة شخصية»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الخزينةُ محفظةُ الأدمن، فدفعُ طلباته
+	// وشحنُه ومستردُّه تمرّ فيها **وليست ربحاً**: الأنواعُ «خارج الربح» نفسُها في صفحة الأرباح
+	// (`profitOutsideKinds`) — **إلّا سحبَ الأدمن**: له اسمُه وسطرُه.
+	Personal bool `json:"personal"`
+	// Grouped **«ربح طلب #N»** — قيودُ `platform_profit` لطلبٍ واحدٍ سطراً واحداً (`Entries` عددُها)،
+	// **وتفصيلُه من بابه** (`/treasury/statement/orders/{id}`). عرضٌ وحدَه: الدفترُ لا يتغيّر.
+	Grouped bool   `json:"grouped"`
+	Entries int    `json:"entries"`
+	OrderID string `json:"order_id"`
 }
+
+// treasuryPersonalSQL **أحركةٌ شخصيّة؟** — على عمود النوع `t.kind`.
+const treasuryPersonalSQL = `(t.kind IN (` + profitOutsideKinds + `) AND t.kind <> 'treasury_withdrawal')`
 
 // treasuryStatementSQL **كلُّ قيود الخزينة برصيدها الجاري** — يُحسب على الدفتر
 // كلِّه ثمّ يُرشَّح، فرصيدُ السطر هو رصيدُ الخزينة لحظتَها لا مجموعُ الصفحة.
@@ -140,7 +188,8 @@ const treasuryStatementSQL = `
 		  JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
 	)
 	SELECT t.id, t.created_at, t.kind, t.amount, t.balance_after::bigint, t.note, t.ref,
-	       o.number::bigint, COALESCE(NULLIF(b.full_name, ''), b.phone::text, '')
+	       o.number::bigint, COALESCE(NULLIF(b.full_name, ''), b.phone::text, ''),
+	       ` + treasuryPersonalSQL + `
 	  FROM t
 	  LEFT JOIN orders o ON o.id::text = t.ref
 	  LEFT JOIN users b ON b.id = t.created_by
@@ -148,10 +197,56 @@ const treasuryStatementSQL = `
 	   AND (NULLIF($2, '') IS NULL OR t.created_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
 	   AND (NULLIF($3, '') IS NULL OR t.kind = $3)`
 
+// treasuryGroupedSQL **الكشفُ كما يُعرض**: قيودُ ربح الطلب الواحد سطراً واحداً «ربح طلب #N».
+//
+// **والرصيدُ الجاري للسطر المجمَّع رصيدُ الخزينة بعد آخر قيدٍ منه** — والمبلغُ مجموعُ قيوده
+// في المدى. والباقي سطرٌ لكلّ قيد كما كان. **والدفترُ لا يُمسّ** — تجميعٌ عند القراءة.
+const treasuryGroupedSQL = `
+	WITH t AS (
+		SELECT t.id, t.created_at, t.kind, t.amount, COALESCE(t.note, '') AS note, t.ref, t.created_by,
+		       sum(t.amount) OVER (ORDER BY t.created_at, t.id) AS balance_after
+		  FROM wallet_transactions t
+		  JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
+	), f AS (
+		SELECT t.*, o.id AS order_id, o.number AS order_number, ` + treasuryPersonalSQL + ` AS personal,
+		       CASE WHEN t.kind = 'platform_profit' AND o.id IS NOT NULL THEN 'o:' || o.id::text
+		            ELSE 'l:' || t.id::text END AS grp
+		  FROM t
+		  LEFT JOIN orders o ON o.id::text = t.ref
+		 WHERE (NULLIF($1, '') IS NULL OR t.created_at >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+		   AND (NULLIF($2, '') IS NULL OR t.created_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
+		   AND (NULLIF($3, '') IS NULL OR t.kind = $3)
+	), g AS (
+		SELECT grp, max(id) AS id, max(created_at) AS created_at, min(kind) AS kind,
+		       sum(amount)::bigint AS amount,
+		       (array_agg(balance_after ORDER BY created_at DESC, id DESC))[1] AS balance_after,
+		       (array_agg(note ORDER BY created_at DESC, id DESC))[1] AS note,
+		       min(ref) AS ref, max(order_number) AS order_number,
+		       COALESCE(max(order_id::text), '') AS order_id,
+		       (array_agg(created_by ORDER BY created_at DESC, id DESC))[1] AS created_by,
+		       bool_or(personal) AS personal,
+		       count(*)::int AS n
+		  FROM f GROUP BY grp
+	)
+	SELECT g.id, g.created_at, g.kind, g.amount, g.balance_after::bigint, g.note, g.ref,
+	       g.order_number::bigint, COALESCE(NULLIF(b.full_name, ''), b.phone::text, ''),
+	       g.personal, g.grp LIKE 'o:%', g.n, g.order_id
+	  FROM g
+	  LEFT JOIN users b ON b.id = g.created_by`
+
 func scanTreasuryLine(rows pgx.Rows) (treasuryLine, error) {
 	var l treasuryLine
 	err := rows.Scan(&l.ID, &l.CreatedAt, &l.Kind, &l.Amount, &l.Balance, &l.Note, &l.Ref,
-		&l.OrderNo, &l.ByName)
+		&l.OrderNo, &l.ByName, &l.Personal)
+	l.KindAr = ledgerKindAr(l.Kind)
+	l.Entries = 1
+	return l, err
+}
+
+func scanTreasuryGroup(rows pgx.Rows) (treasuryLine, error) {
+	var l treasuryLine
+	err := rows.Scan(&l.ID, &l.CreatedAt, &l.Kind, &l.Amount, &l.Balance, &l.Note, &l.Ref,
+		&l.OrderNo, &l.ByName, &l.Personal, &l.Grouped, &l.Entries, &l.OrderID)
 	l.KindAr = ledgerKindAr(l.Kind)
 	return l, err
 }
@@ -200,17 +295,22 @@ func (s *Server) handleTreasuryStatement(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
+	// **وما دخل وما خرج من القيود نفسِها** — لا من السطور المجمَّعة (ربحُ طلبٍ صافيه لا جانباه).
 	if err := s.pg.QueryRow(ctx, `
-		SELECT count(*)::int,
-		       COALESCE(sum(amount) FILTER (WHERE amount > 0), 0)::bigint,
+		SELECT COALESCE(sum(amount) FILTER (WHERE amount > 0), 0)::bigint,
 		       COALESCE(-sum(amount) FILTER (WHERE amount < 0), 0)::bigint
-		  FROM (`+treasuryStatementSQL+`) s(id, created_at, kind, amount, balance, note, ref, num, by_name)`,
-		from, to, kind).Scan(&total, &in, &out); err != nil {
+		  FROM (`+treasuryStatementSQL+`) s(id, created_at, kind, amount, balance, note, ref, num, by_name, personal)`,
+		from, to, kind).Scan(&in, &out); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	rows, err := s.pg.Query(ctx, treasuryStatementSQL+`
-		ORDER BY t.created_at DESC, t.id DESC
+	if err := s.pg.QueryRow(ctx, `
+		SELECT count(*)::int FROM (`+treasuryGroupedSQL+`) s`, from, to, kind).Scan(&total); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	rows, err := s.pg.Query(ctx, treasuryGroupedSQL+`
+		ORDER BY g.created_at DESC, g.id DESC
 		LIMIT $4 OFFSET $5`, from, to, kind, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
@@ -219,7 +319,7 @@ func (s *Server) handleTreasuryStatement(w http.ResponseWriter, r *http.Request)
 	defer rows.Close()
 	lines := []treasuryLine{}
 	for rows.Next() {
-		l, err := scanTreasuryLine(rows)
+		l, err := scanTreasuryGroup(rows)
 		if err != nil {
 			s.respondErr(w, err)
 			return
@@ -258,8 +358,10 @@ func (s *Server) handleTreasuryStatementExport(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`.csv"`)
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	cw := csv.NewWriter(w)
+	// **والملفُّ قيدٌ قيدٌ كما في الدفتر** — والتجميعُ عرضٌ في الشاشة. وعمودُ «حركة شخصية» يقول
+	// ما ليس ربحاً من حركات الأدمن (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	_ = cw.Write([]string{"التاريخ (دمشق)", "النوع", "المبلغ", "الرصيد بعده", "الملاحظة",
-		"رقم الطلب", "بيد"})
+		"رقم الطلب", "بيد", "حركة شخصية"})
 	dam := damascusLoc()
 	count := 0
 	for rows.Next() {
@@ -272,10 +374,14 @@ func (s *Server) handleTreasuryStatementExport(w http.ResponseWriter, r *http.Re
 		if l.OrderNo != nil {
 			orderNo = strconv.FormatInt(*l.OrderNo, 10)
 		}
+		personal := ""
+		if l.Personal {
+			personal = "نعم"
+		}
 		_ = cw.Write([]string{
 			l.CreatedAt.In(dam).Format("2006-01-02 15:04"), l.KindAr,
 			strconv.FormatInt(l.Amount, 10), strconv.FormatInt(l.Balance, 10),
-			csvSafe(l.Note), orderNo, csvSafe(l.ByName),
+			csvSafe(l.Note), orderNo, csvSafe(l.ByName), personal,
 		})
 		count++
 	}
@@ -283,6 +389,131 @@ func (s *Server) handleTreasuryStatementExport(w http.ResponseWriter, r *http.Re
 	s.audit(r, "finance.treasury_statement_exported", "wallet", "", map[string]any{
 		"from": from, "to": to, "kind": kind, "rows": count,
 	})
+}
+
+// ── تفصيلُ «ربح طلب #N» ──────────────────────────────────────────────
+
+// orderProfitPart سطرٌ في تفصيل ربح الطلب — بأثره على الربح (السالبُ ينقصه).
+type orderProfitPart struct {
+	Key    string `json:"key"`
+	Amount int64  `json:"amount"`
+}
+
+type orderProfitEntry struct {
+	ID        int64     `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Amount    int64     `json:"amount"`
+	Note      string    `json:"note"`
+}
+
+// orderProfitBreakdown **من أين جاء ربحُ طلبٍ في الخزينة** — بالقاعدة نفسِها التي تبني كشفَ
+// الأرباح (`platformProfit`): الهامشُ والعمولةُ وأجرةُ التوصيل من أعمدة الطلب، وأجرةُ السائق
+// والخصمُ والعروضُ تنقصه، ونصيبُ المندوب من دفتره. **وما لا تشرحه الأعمدةُ سطرُ «فرق»**
+// (`diff`) — فالسطورُ تُجمع دائماً إلى ما قيّدته الخزينة في المدى، ولا يُخفى شيء.
+//
+// **والطلبُ الذي لم يُسلَّم** (فشل، أُلغي، رُدّ) لا تشرحه أعمدةُ البيع — فسطرٌ واحدٌ بحاله
+// (`not_delivered`) بمبلغ قيوده.
+func (s *Server) orderProfitBreakdown(ctx context.Context, orderID, from, to string) (map[string]any, error) {
+	var number int64
+	var status string
+	var margin, commission, deliveryFee, driverFee, discount, free, itemCut, rep int64
+	err := s.pg.QueryRow(ctx, `
+		SELECT o.number::bigint, o.status,
+		       `+orders.OrderMarginSQL("o.id")+` + COALESCE(it.platform_cut, 0),
+		       o.platform_commission,
+		       o.delivery_fee + o.promo_delivery_waived, o.driver_fee,
+		       o.discount, o.promo_delivery_waived, COALESCE(it.platform_cut, 0),
+		       COALESCE((SELECT sum(w.amount) FROM wallet_transactions w
+		                  WHERE w.kind = 'commission' AND w.ref = o.id::text), 0)::bigint
+		  FROM orders o
+		  LEFT JOIN LATERAL (
+		      SELECT sum(oi.offer_cut * oi.qty) FILTER (WHERE oi.offer_borne_by = 'platform') AS platform_cut
+		        FROM order_items oi WHERE oi.order_id = o.id) it ON true
+		 WHERE o.id = $1`, orderID).
+		Scan(&number, &status, &margin, &commission, &deliveryFee, &driverFee, &discount, &free, &itemCut, &rep)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.pg.Query(ctx, `
+		SELECT t.id, t.created_at, t.amount, COALESCE(t.note, '')
+		  FROM wallet_transactions t
+		  JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
+		 WHERE t.kind = 'platform_profit' AND t.ref = $1
+		   AND (NULLIF($2, '') IS NULL OR t.created_at >= (NULLIF($2, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
+		   AND (NULLIF($3, '') IS NULL OR t.created_at < ((NULLIF($3, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
+		 ORDER BY t.created_at, t.id`, orderID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	entries := []orderProfitEntry{}
+	var total int64
+	for rows.Next() {
+		var e orderProfitEntry
+		if err := rows.Scan(&e.ID, &e.CreatedAt, &e.Amount, &e.Note); err != nil {
+			return nil, err
+		}
+		total += e.Amount
+		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	parts := []orderProfitPart{}
+	if status == "delivered" {
+		for _, p := range []orderProfitPart{
+			{"margin", margin},
+			{"commission", commission},
+			{"delivery_fee", deliveryFee},
+			{"driver_fee", -driverFee},
+			{"discount", -discount},
+			{"free_delivery", -free},
+			{"item_discounts", -itemCut},
+			{"rep_share", -rep},
+		} {
+			if p.Amount != 0 {
+				parts = append(parts, p)
+			}
+		}
+	} else {
+		parts = append(parts, orderProfitPart{"not_delivered", total})
+	}
+	var sum int64
+	for _, p := range parts {
+		sum += p.Amount
+	}
+	if d := total - sum; d != 0 {
+		parts = append(parts, orderProfitPart{"diff", d})
+	}
+	return map[string]any{
+		"order_id": orderID, "order_number": number, "status": status,
+		"total": total, "lines": parts, "entries": entries,
+	}, nil
+}
+
+// handleTreasuryOrderBreakdown **تفصيلُ سطر «ربح طلب #N»** —
+// `GET /admin/treasury/statement/orders/{id}?from=&to=` بمدى الكشف نفسِه، فمجموعُ التفصيل هو
+// مبلغُ السطر.
+func (s *Server) handleTreasuryOrderBreakdown(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	from, to, _, err := treasuryRange(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out, err := s.orderProfitBreakdown(r.Context(), id, from, to)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 func damascusLoc() *time.Location {

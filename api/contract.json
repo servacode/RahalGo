@@ -67,6 +67,10 @@
         {
           "name": "total",
           "type": "unknown"
+        },
+        {
+          "name": "undecided_count",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -569,6 +573,110 @@
         },
         {
           "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/deposits",
+      "handler": "handleCashDeposit",
+      "auth": true,
+      "capability": "treasury.manage",
+      "idempotent": true,
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cashbox/opening",
+      "handler": "handleCashOpening",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "counted",
+          "type": "?int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "close",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cashbox/report",
+      "handler": "handleCashboxReport",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "by_source",
+          "type": "unknown"
+        },
+        {
+          "name": "close_difference",
+          "type": "unknown"
+        },
+        {
+          "name": "closes",
+          "type": "unknown"
+        },
+        {
+          "name": "end_balance",
+          "type": "unknown"
+        },
+        {
+          "name": "excess",
+          "type": "unknown"
+        },
+        {
+          "name": "from",
+          "type": "unknown"
+        },
+        {
+          "name": "period",
+          "type": "unknown"
+        },
+        {
+          "name": "shortage",
+          "type": "unknown"
+        },
+        {
+          "name": "start_balance",
+          "type": "unknown"
+        },
+        {
+          "name": "to",
+          "type": "unknown"
+        },
+        {
+          "name": "total_in",
+          "type": "unknown"
+        },
+        {
+          "name": "total_out",
           "type": "unknown"
         }
       ],
@@ -1667,6 +1775,10 @@
         },
         {
           "name": "receipt_media_id",
+          "type": "string"
+        },
+        {
+          "name": "paid_from",
           "type": "string"
         }
       ],
@@ -5119,6 +5231,22 @@
       "handler": "handleTreasuryStatementExport",
       "auth": true,
       "capability": "finance.export"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury/statement/orders/{id}",
+      "handler": "handleTreasuryOrderBreakdown",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",

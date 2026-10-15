@@ -47,6 +47,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/officecash"
 )
 
 var (
@@ -63,6 +64,42 @@ var (
 	errExpenseBadRange = httpx.NewError(http.StatusBadRequest,
 		"expense_bad_range", "errors.expense_bad_range")
 )
+
+// ══════════════════════════════════════════════════════════════════════
+// **«منين دفعت؟» — قرارُ المالك ٢٠٢٦-١٠-١٥**
+// ══════════════════════════════════════════════════════════════════════
+//
+//	cash      **كاشٌ من الدرج** (الافتراض) — يخرج سطرُ `expense_cash` من الصندوق بمرجع
+//	          المصروف حين يُقيَّد (فوراً، أو عند الموافقة فوق السقف)، **وإلغاؤه يردّه**
+//	          بسطر `expense_cash_void`. **والدرجُ قد يصير سالباً — ولا يُمنع.**
+//	outside   **من برّا الدرج** — حوالةٌ أو من جيبٍ آخر: الخزينةُ تنقص ولا يمسّ الدرج.
+const (
+	expensePaidCash    = "cash"
+	expensePaidOutside = "outside"
+)
+
+// expensePaidFrom **الطريقةُ من الطلب** — والفارغُ كاشٌ (افتراضُ الشاشة).
+func expensePaidFrom(v string) (string, bool) {
+	switch strings.TrimSpace(v) {
+	case "", expensePaidCash:
+		return expensePaidCash, true
+	case expensePaidOutside:
+		return expensePaidOutside, true
+	}
+	return "", false
+}
+
+// expenseCashOut **مصروفٌ كاشٌ يخرج من الدرج** — في معاملة قيده، بمرجع المصروف.
+func expenseCashOut(ctx context.Context, q dbtx.Querier, paidFrom, expenseID string, amount int64,
+	actor, note string) error {
+	if paidFrom != expensePaidCash {
+		return nil
+	}
+	return officecash.Record(ctx, q, officecash.Entry{
+		Direction: officecash.Out, Amount: amount, Source: officecash.SourceExpenseCash,
+		Ref: expenseID, Actor: actor, Note: note,
+	})
+}
 
 // expenseApprovalThreshold **سقفُ الموافقة الثانية** — من الإعدادات.
 func (s *Server) expenseApprovalThreshold(ctx context.Context) int64 {
@@ -247,6 +284,8 @@ type expenseRow struct {
 	SelfApproved bool       `json:"self_approved"`
 	ReceiptURL   *string    `json:"receipt_url"`
 	CreatedAt    time.Time  `json:"created_at"`
+	// PaidFrom **منين دفعت؟** — `cash` من الدرج أو `outside`.
+	PaidFrom string `json:"paid_from"`
 }
 
 // expenseRowsCTE **المصروفاتُ والاقتراحاتُ في جدولٍ واحد** — والاقتراحُ الموافَقُ
@@ -259,12 +298,12 @@ const expenseRowsCTE = `
 		       CASE WHEN e.voided_at IS NULL THEN e.approved_by ELSE e.voided_by END AS decider_id,
 		       e.voided_at AS decided_at, e.void_reason AS reason,
 		       (CASE WHEN e.voided_at IS NULL THEN e.self_approved ELSE e.void_self_approved END) AS self_ok,
-		       e.receipt_media_id, e.created_at
+		       e.receipt_media_id, e.created_at, e.paid_from
 		FROM expenses e
 		UNION ALL
 		SELECT q.id, 'request', q.status, q.category_id, q.amount, q.note, q.spent_at,
 		       q.proposed_by, q.decided_by, q.decided_at, q.decision_note, q.self_approved,
-		       q.receipt_media_id, q.created_at
+		       q.receipt_media_id, q.created_at, q.paid_from
 		FROM expense_requests q WHERE q.status <> 'approved'
 	)`
 
@@ -286,13 +325,14 @@ const expenseCols = `
 	SELECT x.id::text, x.src, x.status, c.name, x.amount, x.note, x.spent_at,
 	       COALESCE(NULLIF(u.full_name, ''), u.phone::text, ''), COALESCE(x.by_id::text, ''),
 	       COALESCE(NULLIF(d.full_name, ''), d.phone::text, ''), x.decided_at, x.reason,
-	       x.self_ok, COALESCE(md.path, ''), x.created_at`
+	       x.self_ok, COALESCE(md.path, ''), x.created_at, x.paid_from`
 
 func scanExpenseRow(row pgx.Row) (expenseRow, error) {
 	var x expenseRow
 	var receipt string
 	err := row.Scan(&x.ID, &x.Source, &x.Status, &x.Category, &x.Amount, &x.Note, &x.SpentAt,
-		&x.By, &x.ByID, &x.Decider, &x.DecidedAt, &x.Reason, &x.SelfApproved, &receipt, &x.CreatedAt)
+		&x.By, &x.ByID, &x.Decider, &x.DecidedAt, &x.Reason, &x.SelfApproved, &receipt, &x.CreatedAt,
+		&x.PaidFrom)
 	if receipt != "" {
 		u := media.SignedURL(receipt)
 		x.ReceiptURL = &u
@@ -523,11 +563,13 @@ func (s *Server) handleExportExpenses(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"تاريخ الصرف", "الباب", "المبلغ (ل.س)", "الملاحظة", "سجّله", "الحالة", "السبب"})
+	paidAr := map[string]string{expensePaidCash: "كاش من الدرج", expensePaidOutside: "من برّا الدرج"}
+	_ = cw.Write([]string{"تاريخ الصرف", "الباب", "المبلغ (ل.س)", "الملاحظة", "سجّله", "الحالة", "السبب",
+		"منين دفعت"})
 	for _, x := range list {
 		_ = cw.Write([]string{
 			x.SpentAt.Format("2006-01-02"), csvSafe(x.Category), strconv.FormatInt(x.Amount, 10),
-			csvSafe(x.Note), csvSafe(x.By), statusAr[x.Status], csvSafe(x.Reason),
+			csvSafe(x.Note), csvSafe(x.By), statusAr[x.Status], csvSafe(x.Reason), paidAr[x.PaidFrom],
 		})
 	}
 	cw.Flush()
@@ -572,12 +614,14 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 		Note           string `json:"note"`
 		SpentAt        string `json:"spent_at"`
 		ReceiptMediaID string `json:"receipt_media_id"`
+		PaidFrom       string `json:"paid_from"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if !isUUID(req.CategoryID) || req.Amount <= 0 {
+	paidFrom, okPaid := expensePaidFrom(req.PaidFrom)
+	if !isUUID(req.CategoryID) || req.Amount <= 0 || !okPaid {
 		s.respondErr(w, errValidation)
 		return
 	}
@@ -648,15 +692,17 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 		// **فوق السقف: اقتراحٌ لا قيد** — يوافق عليه شخصٌ آخر (قرارُ المالك ١).
 		var id string
 		if err := tx.QueryRow(r.Context(), `
-			INSERT INTO expense_requests (category_id, amount, note, spent_at, receipt_media_id, proposed_by)
-			VALUES ($1, $2, $3, $4::date, $5, $6) RETURNING id::text`,
-			req.CategoryID, req.Amount, note, spent, receipt, actor).Scan(&id); err != nil {
+			INSERT INTO expense_requests (category_id, amount, note, spent_at, receipt_media_id, proposed_by,
+			                              paid_from)
+			VALUES ($1, $2, $3, $4::date, $5, $6, $7) RETURNING id::text`,
+			req.CategoryID, req.Amount, note, spent, receipt, actor, paidFrom).Scan(&id); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		if err := s.auditTx(r.Context(), tx, r, "finance.expense_request", "expense_request", id,
 			map[string]any{"amount": req.Amount, "spent_at": spent, "category": catName,
-				"note": note, "receipt": receipt != nil, "threshold": threshold}); err != nil {
+				"note": note, "receipt": receipt != nil, "threshold": threshold,
+				"paid_from": paidFrom}); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -671,9 +717,15 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 
 	var id string
 	if err := tx.QueryRow(r.Context(), `
-		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id)
-		VALUES ($1, $2, $3, $4::date, $5, $6) RETURNING id::text`,
-		req.CategoryID, req.Amount, note, spent, actor, receipt).Scan(&id); err != nil {
+		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id, paid_from)
+		VALUES ($1, $2, $3, $4::date, $5, $6, $7) RETURNING id::text`,
+		req.CategoryID, req.Amount, note, spent, actor, receipt, paidFrom).Scan(&id); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والكاشُ يخرج من الدرج** في المعاملة نفسِها — وإن صار الدرجُ سالباً فلا يُمنع.
+	if err := expenseCashOut(r.Context(), tx, paidFrom, id, req.Amount, actor,
+		treasuryExpenseNote("مصروف تشغيل", catName, note)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -688,7 +740,7 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 	// **والأثرُ في المعاملة نفسِها** — `PF-06`.
 	if err := s.auditTx(r.Context(), tx, r, "finance.expense_added", "expense", id,
 		map[string]any{"amount": req.Amount, "spent_at": spent, "category": catName,
-			"note": note, "receipt": receipt != nil}); err != nil {
+			"note": note, "receipt": receipt != nil, "paid_from": paidFrom}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -797,16 +849,16 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var status, categoryID, catName, note, proposedBy string
+	var status, categoryID, catName, note, proposedBy, paidFrom string
 	var amount int64
 	var spent time.Time
 	var receipt *string
 	err = tx.QueryRow(ctx, `
 		SELECT q.status, q.category_id::text, c.name, q.amount, q.note, q.spent_at,
-		       q.proposed_by::text, q.receipt_media_id::text
+		       q.proposed_by::text, q.receipt_media_id::text, q.paid_from
 		FROM expense_requests q JOIN expense_categories c ON c.id = q.category_id
 		WHERE q.id = $1 FOR UPDATE OF q`, id).
-		Scan(&status, &categoryID, &catName, &amount, &note, &spent, &proposedBy, &receipt)
+		Scan(&status, &categoryID, &catName, &amount, &note, &spent, &proposedBy, &receipt, &paidFrom)
 	if errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -829,10 +881,16 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	var expenseID string
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id,
-		                      approved_by, self_approved)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id::text`,
-		categoryID, amount, note, spent, proposedBy, receipt, actor, verdict.SelfApproved).
+		                      approved_by, self_approved, paid_from)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id::text`,
+		categoryID, amount, note, spent, proposedBy, receipt, actor, verdict.SelfApproved, paidFrom).
 		Scan(&expenseID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **وفوق السقف يخرج الكاشُ عند الموافقة** — حين يُقيَّد المصروف، لا حين يُقترح.
+	if err := expenseCashOut(ctx, tx, paidFrom, expenseID, amount, actor,
+		treasuryExpenseNote("مصروف تشغيل", catName, note)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -853,7 +911,7 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	}
 	details := map[string]any{"request_id": id, "expense_id": expenseID, "amount": amount,
 		"category": catName, "spent_at": spent.Format("2006-01-02"), "proposed_by": proposedBy,
-		"note": strings.TrimSpace(req.Note)}
+		"note": strings.TrimSpace(req.Note), "paid_from": paidFrom}
 	for k, v := range verdict.AuditFields() {
 		details[k] = v
 	}
@@ -950,13 +1008,13 @@ func (s *Server) handleVoidExpense(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
 	var amount int64
-	var createdBy, catName string
+	var createdBy, catName, paidFrom string
 	// **ولا يُلغى مرّتين** — **وإلّا رُدّ المالُ ضِعفَه إلى الخزينة.**
 	if err := tx.QueryRow(r.Context(), `
-		SELECT e.amount, COALESCE(e.created_by::text, ''), c.name
+		SELECT e.amount, COALESCE(e.created_by::text, ''), c.name, e.paid_from
 		FROM expenses e JOIN expense_categories c ON c.id = e.category_id
 		WHERE e.id = $1 AND e.voided_at IS NULL FOR UPDATE OF e`, id).
-		Scan(&amount, &createdBy, &catName); err != nil {
+		Scan(&amount, &createdBy, &catName, &paidFrom); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
@@ -985,8 +1043,18 @@ func (s *Server) handleVoidExpense(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والكاشُ يعود إلى الدرج** — سطرٌ داخلٌ بمرجع المصروف نفسِه، عكسُ ما أخرجه.
+	if paidFrom == expensePaidCash {
+		if err := officecash.Record(r.Context(), tx, officecash.Entry{
+			Direction: officecash.In, Amount: amount, Source: officecash.SourceExpenseCashVoid,
+			Ref: id, Actor: actor, Note: treasuryExpenseNote("إلغاء مصروف تشغيل", catName, reason),
+		}); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
 	details := map[string]any{"amount": amount, "category": catName, "reason": reason,
-		"recorded_by": createdBy}
+		"recorded_by": createdBy, "paid_from": paidFrom}
 	for k, v := range verdict.AuditFields() {
 		details[k] = v
 	}

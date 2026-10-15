@@ -552,7 +552,8 @@
       "partyTitle": "بلغت هدفك 🎉",
       "partyBody": "أنجزت {n} طلبا هذا الشهر. المكافأة في محفظتك."
     },
-    "stagingBanner": "بيئةُ تجربة — البياناتُ هنا ليست حقيقيّة"
+    "stagingBanner": "بيئةُ تجربة — البياناتُ هنا ليست حقيقيّة",
+    "drawerChip": "المتوقّع بالدرج"
   },
   "common": {
     "close": "إغلاق",
@@ -1039,7 +1040,8 @@
     "dispute_party_mismatch": "الطرف المختار لا يحمل هذا الدور — اختره من القائمة",
     "dispute_resolution_pending": "على هذا النزاع اقتراح ينتظر الموافقة — يبت فيه أولا",
     "dispute_nothing_to_charge": "رصيد الطرف صفر الآن — لا شيء يخصم، والنزاع يبقى مفتوحا",
-    "ticket_awaiting_finance": "تعويض هذه الشكوى بانتظار قرار المالية"
+    "ticket_awaiting_finance": "تعويض هذه الشكوى بانتظار قرار المالية",
+    "cash_opening_late": "رصيد البداية بيتسجّل مرّة وحدة وقبل أي إغلاق — في إغلاق مسجّل أو بانتظار المراجعة"
   },
   "admin": {
     "sliderPanel": {
@@ -1285,7 +1287,13 @@
       "catDown": "أدنى",
       "catSpent": "صُرف عليه {amount}",
       "treasuryTab": "من الخزينة",
-      "voidConfirm": "ألغِ المصروف"
+      "voidConfirm": "ألغِ المصروف",
+      "paidFrom": "منين دفعت؟",
+      "paidFromOptions": {
+        "cash": "كاش من الدرج",
+        "outside": "من برّا الدرج"
+      },
+      "paidFromHint": "الكاش بينقص من درج المكتب، وإذا ألغيت المصروف بيرجع للدرج."
     },
     "appTitle": "{platform} — لوحة التحكم",
     "appDescription": "لوحة إدارة منصة {platform} للتوصيل",
@@ -4042,7 +4050,9 @@
         "finance.incentive_export": "تصدير الأهداف والمكافآت",
         "finance.dispute_proposed": "اقتراح حسم نزاع",
         "finance.dispute_resolution_approved": "موافقة على حسم نزاع",
-        "finance.dispute_resolution_rejected": "رفض اقتراح حسم نزاع"
+        "finance.dispute_resolution_rejected": "رفض اقتراح حسم نزاع",
+        "finance.cash_owner_deposit": "إيداع من المالك بدرج المكتب",
+        "finance.cash_opening": "تسجيل رصيد البداية بالدرج"
       }
     },
     "dash": {
@@ -5231,7 +5241,8 @@
         "finance.dispute_resolution_approved": "الموافقة على حل نزاع",
         "finance.ticket_resolve": "حل شكوى بتعويض",
         "finance.treasury_withdrawal": "سحب من الخزينة",
-        "finance.cash_shortfall_loss": "تسجيل نقص الصندوق خسارة"
+        "finance.cash_shortfall_loss": "تسجيل نقص الصندوق خسارة",
+        "finance.cash_owner_deposit": "إيداع من المالك بدرج المكتب"
       },
       "statusValues": {
         "approved": "موافقة",
@@ -6127,7 +6138,16 @@
         "lastClose": "آخر إغلاق للصندوق",
         "noClose": "لم يُغلق الصندوق بعد",
         "noTreasury": "لم تُحدَّد محفظة الخزينة بعد",
-        "seeAll": "كل الموافقات"
+        "seeAll": "كل الموافقات",
+        "profitTitle": "صافي الربح",
+        "profitHint": "نفس «صافي الربح» بصفحة الأرباح للمدّة نفسها — بيوم دمشق",
+        "profitCards": {
+          "day": "صافي ربح اليوم",
+          "week": "صافي ربح الأسبوع (آخر ٧ أيام)",
+          "month": "صافي ربح هذا الشهر",
+          "all": "صافي الربح من أول يوم"
+        },
+        "undecided": "{n} بلا مبلغ بعد"
       },
       "withdraw": {
         "button": "سحب من رصيد الخزينة",
@@ -6159,7 +6179,26 @@
         "colBy": "بيد",
         "colOrder": "الطلب",
         "empty": "لا قيود في هذه المدة",
-        "tz": "الأوقات بتوقيت دمشق"
+        "tz": "الأوقات بتوقيت دمشق",
+        "personal": "حركة شخصية",
+        "personalHint": "حركة من حساب الأدمن نفسه (طلباته، شحنه، مرتجعه) — مو ربح",
+        "orderProfit": "ربح طلب #{n}",
+        "entries": "{n} قيود",
+        "showBreakdown": "التفصيل",
+        "hideBreakdown": "إخفاء التفصيل",
+        "breakdownLedger": "قيود الخزينة",
+        "breakdownLines": {
+          "margin": "هامش الأصناف",
+          "commission": "عمولة المتجر",
+          "delivery_fee": "أجرة التوصيل",
+          "driver_fee": "أجرة السائق",
+          "discount": "خصم الكوبون",
+          "free_delivery": "توصيل مجاني (عرض)",
+          "item_discounts": "خصم أصناف على حساب المنصة",
+          "rep_share": "حصة المندوب",
+          "not_delivered": "طلب ما تسلّم (فشل أو إلغاء أو استرداد)",
+          "diff": "فرق"
+        }
       },
       "cashbox": {
         "expected": "المتوقع في الدرج",
@@ -6206,7 +6245,9 @@
           "shortfall_found": "نقص وُجد",
           "obligation_cash": "دفعة دين نقداً",
           "expense_cash": "مصروف نقداً",
-          "advance_return": "سلفة رجعت للمكتب"
+          "advance_return": "سلفة رجعت للمكتب",
+          "expense_cash_void": "إلغاء مصروف كاش",
+          "owner_deposit": "إيداع من المالك"
         },
         "statuses": {
           "pending": "ينتظر المراجعة",
@@ -6223,7 +6264,37 @@
         "resolve": "وُجد المال",
         "resolveNote": "أين وُجد؟",
         "dueAt": "يمكن اعتماده خسارة بعد",
-        "cashPage": "نقد بيد السائقين"
+        "cashPage": "نقد بيد السائقين",
+        "negative": "الدرج بالسالب",
+        "selfReview": "ما في غيرك يراجع — مراجعتك لإغلاقك بتتعلّم بالسجل",
+        "openingButton": "رصيد البداية",
+        "openingTitle": "رصيد البداية",
+        "openingHint": "اكتب المبلغ اللي عدّيته بالدرج هلّق (ممكن يكون صفر). بيتسجّل مرّة وحدة، والمتوقّع بيبلّش منه.",
+        "openingCounted": "المبلغ المعدود بالدرج",
+        "openingBadge": "رصيد البداية",
+        "depositButton": "إيداع بالدرج",
+        "depositTitle": "إيداع بالدرج",
+        "depositHint": "مصاري من جيبك بتحطها بالدرج — ما بتنحسب ربح ولا بتغيّر رصيد الخزينة. بدها كلمة السر.",
+        "depositAmount": "المبلغ",
+        "depositNote": "السبب",
+        "depositDone": "انضاف الإيداع للدرج",
+        "reportTitle": "تقرير الدرج",
+        "periods": {
+          "day": "يوم",
+          "week": "أسبوع",
+          "month": "شهر"
+        },
+        "reportIn": "مجموع الداخل",
+        "reportOut": "مجموع الخارج",
+        "reportStart": "رصيد أول الفترة",
+        "reportEnd": "رصيد آخر الفترة",
+        "reportDiff": "فروق الإغلاق",
+        "reportShortage": "نقص",
+        "reportExcess": "زيادة",
+        "reportCloses": "عدد الإغلاقات",
+        "reportBySource": "حسب المصدر",
+        "reportEmpty": "ما في حركة بالدرج بهالفترة",
+        "reportRange": "من {from} لـ {to} — بيوم دمشق"
       },
       "approvals": {
         "empty": "لا شيء ينتظر الموافقة",
@@ -6253,7 +6324,15 @@
           "disputes": "النزاعات",
           "other": "قسم آخر"
         },
-        "party": "لـ {name}"
+        "party": "لـ {name}",
+        "undecided": "بلا مبلغ بعد",
+        "suggested": "مقترح",
+        "undecidedCount": "{n} بلا مبلغ بعد (ما انحسبوا)",
+        "compTitle": "موافقة على تعويض",
+        "compAmount": "المبلغ",
+        "compNote": "ملاحظة (لازم)",
+        "compHint": "المبلغ المقترح {amount} — فيك تعدّله. فوق السقف بدها مدير المنصة، وبدها كلمة السر.",
+        "compNoSuggestion": "ما في مبلغ مقترح — اكتب المبلغ اللي بدك تعوّضه."
       },
       "health": {
         "ok": "سليم",

@@ -181,6 +181,10 @@ var sensitiveActions = []Sensitive{
 		"treasury_withdrawal", -1, []string{"amount"}, ""},
 	{"POST", "/cashbox/shortfalls/{id}/approve", "finance.cash_shortfall_loss",
 		"office_cash_shortfall", 2, nil, ""},
+	// **وإيداعُ المالك في الدرج من جيبه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — نقدٌ يدخل الصندوقَ بقرار
+	// إنسان، **فيُؤكَّد بكلمة السرّ كالسحب.**
+	{"POST", "/cashbox/deposits", "finance.cash_owner_deposit",
+		"office_cash_entry", -1, []string{"amount"}, ""},
 
 	// ── الإعداداتُ ذاتُ الأثر ───────────────────────────────────
 	{"PUT", "/settings/{key}", "admin.setting_update", "setting", 1,

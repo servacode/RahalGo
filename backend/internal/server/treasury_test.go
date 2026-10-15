@@ -262,7 +262,7 @@ func TestTREASURY_DailyCloseReviewAndShortfallLoss(t *testing.T) {
 	counted := book - 3000 // ناقصٌ ثلاثة آلاف
 	if counted < 0 {
 		if _, err := f.pool.Exec(ctx, `INSERT INTO office_cash_entries (direction, amount, source, ref)
-			VALUES ('in', $1, 'shortfall_found', gen_random_uuid()::text)`, -counted+10_000); err != nil {
+			VALUES ('in', $1, 'shortfall_found', gen_random_uuid()::text)`, -book+10_000); err != nil {
 			t.Fatal(err)
 		}
 		counted = 10_000 - 3000

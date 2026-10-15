@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
 import { BrandMark } from "./platform";
 import { isStagingEnv } from "./runtimeconfig";
@@ -29,6 +29,7 @@ import {
   IconHamburger,
   IconClose,
   IconStore,
+  IconBalance,
 } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -92,6 +93,11 @@ interface Summary {
   full_name: string;
   avatar_thumb_url: string | null;
   balance: number;
+  /**
+   * **المتوقَّعُ في درج المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يرسله المحرّكُ لمن يملك
+   * `finance.read` وحدَه، **وغيابُه يُخفي الشريحة** فلا يُخمَّن الحقُّ في الواجهة.
+   */
+  drawer_expected?: number;
 }
 interface Rep {
   rating: { avg: number; count: number; trend: "up" | "down" | "flat" };
@@ -122,6 +128,7 @@ export function DashboardChrome({
   homeHref,
   accountHref,
   walletHref,
+  drawerHref,
   ratingHref,
   api,
   mediaUrl,
@@ -145,6 +152,8 @@ export function DashboardChrome({
   homeHref: string;
   accountHref: string;
   walletHref?: string;
+  /** **شريحةُ الدرج بجانب الرصيد** — تظهر حين يرسل الملخّصُ `drawer_expected`. */
+  drawerHref?: string;
   ratingHref?: string;
   api: ApiFn;
   mediaUrl: (p: string | null | undefined) => string | null;
@@ -182,6 +191,8 @@ export function DashboardChrome({
 
   // الرصيد والتقييم والصورة في الشريط العلوي تتحدّث لحظياً بلا إعادة تحميل
   // ("profile" حدث محلي يبثّه AccountSettings عند تغيير الصورة أو الرقم)
+  // **ودرجُ المكتب معها** — كلُّ حركةٍ في الصندوق تبثّ `wallet` (`s.touch("wallet", ...)`)،
+  // فالإشارةُ نفسُها تحدّث الرصيدَ والدرجَ بنداءٍ واحد.
   useLiveRefresh(["wallet", "rating", "profile"], loadSummary);
 
   useEffect(() => setMenuOpen(false), [pathname]);
@@ -478,7 +489,17 @@ export function DashboardChrome({
             logoutLabel={m.auth.logout}
             active={pathname}
             extras={
-              /* **والعضوُ يُحرَس كما يُحرَس الكائن.**
+              <>
+              {drawerHref && typeof summary?.drawer_expected === "number" && (
+                <TopBarLink Link={Link} href={drawerHref} title={m.shared.drawerChip} aria-label={m.shared.drawerChip}>
+                  <IconBalance size={TOPBAR_ICON} />
+                  <span dir="ltr" className={`font-bold ${summary.drawer_expected < 0 ? "text-danger" : "text-ink"}`}>
+                    {summary.drawer_expected < 0 ? "−" : ""}
+                    {fmtNum(Math.abs(summary.drawer_expected))}
+                  </span>
+                </TopBarLink>
+              )}
+              {/* **والعضوُ يُحرَس كما يُحرَس الكائن.**
 
                  كان `rep && rep.rating.count` — **يسأل عن الكائن ويثق بعضوه.**
                  وردٌّ ناقصُ `rating` (٢٠٠ بجسمٍ غير متوقّع) يرمي هنا،
@@ -486,8 +507,8 @@ export function DashboardChrome({
                  شريطَ ولا قائمةَ ولا محتوى، بل «حدث خطأ في التطبيق».
                  (وقع فعلاً في فحصٍ بمتصفّح ٢٠٢٦-٠٨-٠٦.)
 
-                 **وخسارةُ نجمةٍ في الشريط أهونُ من خسارة اللوحة.** */
-              showRating &&
+                 **وخسارةُ نجمةٍ في الشريط أهونُ من خسارة اللوحة.** */}
+              {showRating &&
               rep?.rating &&
               rep.rating.count > 0 && (
                 <TopBarLink
@@ -501,7 +522,8 @@ export function DashboardChrome({
                   {rep.rating.trend === "up" && <IconTrendUp size={TOPBAR_ICON} className="text-success" />}
                   {rep.rating.trend === "down" && <IconTrendDown size={TOPBAR_ICON} className="text-danger" />}
                 </TopBarLink>
-              )
+              )}
+              </>
             }
           />
         </TopBar>

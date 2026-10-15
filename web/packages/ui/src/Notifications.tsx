@@ -219,8 +219,8 @@ function setAlertsSound(on: boolean) {
 
 /**
  * **مفتاحُ صوت التنبيهات بجانب الجرس** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — كتمٌ وتشغيلٌ
- * بضغطة، **و«جرّب الصوت» يرنّ فوراً** فيعرف الموظّفُ أنّ جهازه يسمع (والضغطةُ
- * نفسُها تفتح الصوتَ في المتصفّح).
+ * بضغطة، **وتشغيلُه يرنّ مرّةً** فيعرف الموظّفُ أنّ جهازه يسمع (والضغطةُ نفسُها تفتح
+ * الصوتَ في المتصفّح). **وزرُّ «جرّب الصوت» أُزيل** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الجرسُ وحدَه.
  */
 export function AlertSoundControl() {
   const [on, setOn] = useState(true);
@@ -246,13 +246,6 @@ export function AlertSoundControl() {
         title={on ? N.soundOn : N.soundOff}
       >
         {on ? <IconBell size={17} /> : <IconBellOff size={17} />}
-      </button>
-      <button
-        type="button"
-        onClick={() => playChime(true)}
-        className="whitespace-nowrap rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:text-accent-text"
-      >
-        {N.testSound}
       </button>
     </span>
   );

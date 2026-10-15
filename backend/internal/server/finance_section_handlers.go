@@ -67,7 +67,10 @@ func (s *Server) handleWalletLookup(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0)
 		FROM users u
 		WHERE u.deleted_at IS NULL
-		  AND NOT EXISTS (SELECT 1 FROM wallets tw WHERE tw.user_id = u.id AND tw.is_treasury)
+		  -- **ولا حسابَ نظام** (قرارُ المالك ٢٠٢٦-١٠-١٥): الخزينةُ ومحفظةُ الاحتباس النقديّ
+		  -- (is_cash_holding) ليستا محفظةَ شخصٍ يُشحن — حركةٌ يدويّةٌ فيهما تكسر الدفتر.
+		  AND NOT EXISTS (SELECT 1 FROM wallets tw WHERE tw.user_id = u.id
+		                     AND (tw.is_treasury OR tw.is_cash_holding))
 		  AND (u.full_name ILIKE '%' || $1 || '%'
 		       OR (length($2) >= 3 AND u.phone LIKE '%' || $2 || '%'))
 		ORDER BY u.full_name NULLS LAST, u.phone

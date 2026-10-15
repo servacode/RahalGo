@@ -106,7 +106,7 @@ const SERVER_ADMIN = new Set([
   "report_range_inverted", "report_range_too_long",
   // قسمُ طلبات السحب (٢٠٢٦-١٠-٠٤) — قرارُ المالية من اللوحة.
   "payout_reason_required", "payout_amount_changed",
-  "cash_close_pending", "cash_close_day_done", "shortfall_not_due", "note_required",
+  "cash_close_pending", "cash_close_day_done", "shortfall_not_due", "note_required", "cash_opening_late",
   "treasury_missing", "treasury_over_balance",
   "app_file_missing", "app_not_android", "app_too_large", "bad_json",
   "app_wrong_package", "app_manifest_unreadable", "setting_read_only",

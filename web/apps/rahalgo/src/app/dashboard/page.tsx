@@ -508,7 +508,7 @@ export default function DashboardPage() {
             tone="accent"
             onClick={go("/dashboard/profits")}
           />
-          <StatCard icon={IconWallet} label={H.treasury} value={show(data.money.treasury_balance, fmtMoney)} onClick={go("/dashboard/wallet")} />
+          <StatCard icon={IconWallet} label={H.treasury} value={show(data.money.treasury_balance, fmtMoney)} onClick={go("/dashboard/treasury?tab=statement")} />
           <StatCard icon={IconBalance} label={H.cashHeld} value={show(data.money.cash_held, fmtMoney)} onClick={go("/dashboard/cash")} />
           <StatCard
             icon={IconWallet}

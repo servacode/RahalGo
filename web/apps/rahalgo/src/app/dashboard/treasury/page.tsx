@@ -48,7 +48,6 @@ const LINKS: { href: string; label: string }[] = [
   { href: "/dashboard/expenses", label: T.links.expenses },
   { href: "/dashboard/losses", label: T.links.losses },
   { href: "/dashboard/compensations", label: T.links.compensations },
-  { href: "/dashboard/wallet", label: T.links.myWallet },
 ];
 
 export default function TreasuryPage() {

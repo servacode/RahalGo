@@ -51,6 +51,9 @@ type approvalSource struct {
 	// يقول المبلغَ والملاحظةَ ومن اقترح — **ولا يقول لمن**، فيُوافَق على شحن محفظةٍ
 	// أو مكافأةٍ لا يُعرف صاحبُها إلّا بفتح قسمها.
 	PartyCol, PartyExpr string
+	// AmountEditable **المبلغُ مقترحٌ يقرّره الموافِق** — يُرسَل مع الموافقة (`{amount, note}`)
+	// والملاحظةُ إلزاميّة. **وصفرُه «بلا مبلغ بعد»**: لا يدخل مجموعَ ما ينتظر.
+	AmountEditable bool
 }
 
 // partyUser اسمُ حسابٍ من عمودٍ يحمل معرّفَه.
@@ -77,13 +80,17 @@ var approvalSources = []approvalSource{
 		RejectPath:  "/api/v1/admin/cashbox/shortfalls/{id}/reject",
 		Href:        "/dashboard/treasury?tab=cashbox", DueCol: "eligible_at"},
 	// **التعويضاتُ كلُّها** (سائق · بضاعة متجر · شكوى — طابورٌ واحد، هجرة 0360) —
-	// يقترحها النظامُ أو موظّف، **ويقرّر المبلغَ الموظّفُ في صفحتها** (الموافقةُ تحمل
-	// المبلغ)، فهي رابطٌ لا زرّ. والمبلغُ المقترحُ `suggested_amount` ما دام معلّقاً،
-	// و`proposed_by` الفارغُ هو النظام.
+	// يقترحها النظامُ أو موظّف، والمبلغُ المقترحُ `suggested_amount` ما دام معلّقاً،
+	// و`proposed_by` الفارغُ هو النظام. **وتُوافَق من هنا بمبلغٍ يُعدَّل وملاحظةٍ إلزاميّة**
+	// (قرارُ المالك ٢٠٢٦-١٠-١٥) — **بباب صفحتها نفسِه** (`{amount, note}`): فوق السقف مديرُ
+	// المنصّة وحدَه، وكلمةُ السرّ. **والمقترحُ صفرٌ «بلا مبلغ بعد»** لا يُجمع (`approvalsTotal`).
 	{Key: "driver_compensations", Table: "driver_compensation_requests", Section: "compensations",
-		Capability: authz.FinanceManage, Href: "/dashboard/compensations",
-		AmountCol: "suggested_amount",
-		PartyCol:  "driver_id", PartyExpr: partyUser("x.driver_id")},
+		Capability:  authz.FinanceManage,
+		ApprovePath: "/api/v1/admin/compensations/{id}/approve",
+		RejectPath:  "/api/v1/admin/compensations/{id}/reject",
+		Href:        "/dashboard/compensations",
+		AmountCol:   "suggested_amount", AmountEditable: true,
+		PartyCol: "driver_id", PartyExpr: partyUser("x.driver_id")},
 	// **مصروفاتُ التشغيل فوق السقف** — موافقةٌ ثانيةٌ بكلمة السرّ.
 	{Key: "expenses", Table: "expense_requests", Section: "expenses",
 		Capability:  authz.FinanceManage,
@@ -149,6 +156,25 @@ type approvalItem struct {
 	CanApprove bool `json:"can_approve"`
 	// SelfApproval **سيوافق على اقتراحه** — المالكُ وحدَه حين لا يوجد غيرُه، ويُعلَّم.
 	SelfApproval bool `json:"self_approval"`
+	// AmountEditable **المبلغُ مقترحٌ يُعدَّل عند الموافقة** — وتُرسَل `{amount, note}`.
+	AmountEditable bool `json:"amount_editable"`
+	// AmountUndecided **«بلا مبلغ بعد»** — مقترحٌ صفرٌ لم يقرّره أحد، فلا يُجمع كأنّه نهائيّ.
+	AmountUndecided bool `json:"amount_undecided"`
+}
+
+// approvalsTotal **مجموعُ ما ينتظر — بما قُرّر مبلغُه وحدَه.**
+//
+// **وكان يجمع المقترحَ صفراً كأنّه نهائيّ** (قرارُ المالك ٢٠٢٦-١٠-١٥): تعويضٌ بنسبةٍ صفرٍ
+// ينتظر من يقرّر مبلغَه، **فيُعدّ «بلا مبلغ بعد»** ويُقال عددُه بجانب المجموع.
+func approvalsTotal(items []approvalItem) (total int64, undecided int) {
+	for _, it := range items {
+		if it.AmountUndecided {
+			undecided++
+			continue
+		}
+		total += it.Amount
+	}
+	return total, undecided
 }
 
 func col(v, def string) string {
@@ -213,12 +239,14 @@ func (s *Server) pendingApprovals(ctx context.Context, q dbtx.Querier, r *http.R
 			return nil, err
 		}
 		for rows.Next() {
-			it := approvalItem{Key: src.Key, Section: src.Section, Href: src.Href}
+			it := approvalItem{Key: src.Key, Section: src.Section, Href: src.Href,
+				AmountEditable: src.AmountEditable}
 			if err := rows.Scan(&it.ID, &it.Amount, &it.Note, &it.ProposedBy, &it.ProposerName,
 				&it.CreatedAt, &it.DueAt, &it.PartyName); err != nil {
 				rows.Close()
 				return nil, err
 			}
+			it.AmountUndecided = src.AmountEditable && it.Amount <= 0
 			if src.ApprovePath != "" {
 				it.ApprovePath = strings.ReplaceAll(src.ApprovePath, "{id}", it.ID)
 				it.RejectPath = strings.ReplaceAll(src.RejectPath, "{id}", it.ID)
@@ -292,9 +320,7 @@ func (s *Server) handleApprovals(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	var total int64
-	for _, it := range items {
-		total += it.Amount
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "count": len(items), "total": total})
+	total, undecided := approvalsTotal(items)
+	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "count": len(items), "total": total,
+		"undecided_count": undecided})
 }
