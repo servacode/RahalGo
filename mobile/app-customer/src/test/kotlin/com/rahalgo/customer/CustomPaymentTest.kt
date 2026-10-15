@@ -79,7 +79,9 @@ class CustomPaymentTest {
     @Test
     fun orderCardGatesWalletOnBalance() {
         val s = read("app-customer/src/main/kotlin/com/rahalgo/customer/orders/OrderCard.kt")
-        assertTrue("**لا بوّابةَ رصيدٍ للمحفظة**", s.contains("walletBalance >= total"))
+        // **وحجزُ الطلب نفسِه يُحسب له** (٢٠٢٦-١٠-١٥: إعادةُ التأكيد بعد زيادة السعر تفكّ
+        // الحجزَ القديم وتحجز الجديد) — فالرصيدُ المتاحُ له = رصيدُه + ما حُجز لهذا الطلب.
+        assertTrue("**لا بوّابةَ رصيدٍ للمحفظة**", s.contains("walletBalance + ownReserved >= total"))
         // **والزرُّ باسم الخطوة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): «قبول أجرة التوصيل» ثمّ «قبول ثمن البضاعة».
         assertTrue("**لا زرَّ تأكيدٍ للعرض**",
             s.contains("R.string.ord_confirm_fee") && s.contains("R.string.ord_confirm_goods"))
