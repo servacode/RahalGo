@@ -1,5 +1,11 @@
 package com.rahalgo.customer.orders
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.style.TextOverflow
+import com.rahalgo.ui.ConfirmDialog
+import com.rahalgo.ui.RahalTextButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -296,22 +302,11 @@ private fun CustomQuoteSection(
         return
     }
 
-    val fee = order.customFee ?: 0L
-    val total = order.total
     val confirmedCurrent =
         order.quoteConfirmedAt != null && order.quoteConfirmedVersion == order.quoteVersion
 
-    // (C) بطاقةُ المبلغ — تُعرَض دائماً حين يُعرَف. **والأمانةُ بلا ثمنِ بضاعة، والمشترياتُ قبل
-    // الشراء «بعد الشراء»** (قرارُ المالك ٢٠٢٦-١٠-٠٣: الأجرةُ أوّلاً ثمّ الثمن).
-    val amanah = order.customMode == "amanah"
-    if (!amanah) {
-        KeyValue(
-            stringResource(R.string.ord_goods),
-            if (order.customGoodsPending) stringResource(R.string.ord_goods_after_purchase) else money(goods),
-        )
-    }
-    KeyValue(stringResource(R.string.ord_delivery), money(fee))
-    KeyValue(stringResource(R.string.ord_total), money(total), valueColor = Rahal.colors.brand)
+    // (C) بطاقةُ المبلغ — تُعرَض دائماً حين يُعرَف.
+    QuoteAmounts(order)
 
     // (K) بعد التأكيد — يُظهر الحجزَ من المحفظة إن وُجد، ولا زرَّ.
     if (confirmedCurrent) {
@@ -335,8 +330,7 @@ private fun CustomQuoteSection(
     //
     // **تأكيدٌ قائمٌ بنسخةٍ سبقتها أخرى** — والتسليمُ موقوفٌ حتّى يؤكّد. **ومن رفض
     // يبقى طلبُه حيث هو** والمكتبُ يتّصل به؛ فيُقال له ذلك ولا يُعاد السؤال.
-    val reconfirm = order.quoteConfirmedVersion != null
-    if (reconfirm && order.quoteRejectedAt != null) {
+    if (order.quoteConfirmedVersion != null && order.quoteRejectedAt != null) {
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.ord_quote_rejected_note),
@@ -345,6 +339,60 @@ private fun CustomQuoteSection(
         )
         return
     }
+
+    QuoteConfirmPanel(order, walletBalance, onConfirmQuote, confirming, onRejectQuote)
+}
+
+/**
+ * **أينتظر هذا الطلبُ تأكيدَ سعره الآن؟** — شرطُ القسم في البطاقة نفسُه.
+ *
+ * **ونسختان من الشرط تفترقان يوما** — فتسأل النافذةُ عن طلبٍ لا تعرض بطاقتُه
+ * زرّاً، أو تسكت عن طلبٍ ينتظر. **فالنافذةُ (`QuoteConfirmDialog`) تقرأ هذه.**
+ */
+internal fun quotePending(order: MyOrder): Boolean {
+    if (order.kind != "custom" || order.customGoodsAmount == null) return false
+    if (order.quoteConfirmedAt != null && order.quoteConfirmedVersion == order.quoteVersion) return false
+    if (ended(order.status)) return false
+    // **ومن رفض السعرَ الجديد لا يُسأل ثانية** — المكتبُ يتّصل به.
+    return !(order.quoteConfirmedVersion != null && order.quoteRejectedAt != null)
+}
+
+/**
+ * **مبالغُ العرض** — ثمنُ البضاعة والأجرةُ والمجموع، **في البطاقة والنافذة معاً.**
+ *
+ * **والأمانةُ بلا ثمنِ بضاعة، والمشترياتُ قبل الشراء «بعد الشراء»** (قرارُ المالك
+ * ٢٠٢٦-١٠-٠٣: الأجرةُ أوّلاً ثمّ الثمن).
+ */
+@Composable
+private fun QuoteAmounts(order: MyOrder) {
+    val goods = order.customGoodsAmount ?: return
+    if (order.customMode != "amanah") {
+        KeyValue(
+            stringResource(R.string.ord_goods),
+            if (order.customGoodsPending) stringResource(R.string.ord_goods_after_purchase) else money(goods),
+        )
+    }
+    KeyValue(stringResource(R.string.ord_delivery), money(order.customFee ?: 0L))
+    KeyValue(stringResource(R.string.ord_total), money(order.total), valueColor = Rahal.colors.brand)
+}
+
+/**
+ * **تأكيدُ العرض: ملاحظةُ الرفع، واختيارُ الدفع، وزرّا القبول والرفض.**
+ *
+ * **في البطاقة والنافذة بشكلٍ واحد** — ونسختان تفترقان في عنوان زرٍّ أو في
+ * بوّابة المحفظة. **و`onRejectQuote` فارغٌ لا رفضَ فيه.**
+ */
+@Composable
+private fun QuoteConfirmPanel(
+    order: MyOrder,
+    walletBalance: Long,
+    onConfirmQuote: (String) -> Unit,
+    confirming: Boolean,
+    onRejectQuote: (() -> Unit)?,
+) {
+    val amanah = order.customMode == "amanah"
+    val total = order.total
+    val reconfirm = order.quoteConfirmedVersion != null
     if (reconfirm) {
         Spacer(Modifier.height(6.dp))
         Text(
@@ -415,17 +463,86 @@ private fun CustomQuoteSection(
             )
         }
     }
+    // ══════════════════════════════════════════════════════════════════
+    // **والرفضُ زرٌّ أحمرُ ممتلئ — ويُسأل قبله** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان زرّاً نصّيّاً لا يكاد يُرى** — والرفضُ يوقف الطلبَ حتّى يتّصل المكتب،
+    // **فضغطةٌ عابرةٌ عليه لا تُرَدّ.** فصار زرّاً أحمرَ بعرض البطاقة **وسؤالاً قبله.**
     if (reconfirm && onRejectQuote != null) {
-        Spacer(Modifier.height(6.dp))
-        com.rahalgo.ui.RahalTextButton(
-            onClick = onRejectQuote,
+        var askReject by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf(false) }
+        Spacer(Modifier.height(8.dp))
+        RahalButton(
+            onClick = { askReject = true },
             enabled = !confirming,
+            tone = Tone.Danger,
             modifier = Modifier.fillMaxWidth(),
-            tone = com.rahalgo.ui.Tone.Danger,
         ) {
             Text(stringResource(R.string.ord_quote_reject))
         }
+        if (askReject) {
+            ConfirmDialog(
+                title = stringResource(R.string.ord_quote_reject_title),
+                body = stringResource(R.string.ord_quote_reject_body),
+                confirm = stringResource(R.string.ord_quote_reject_yes),
+                onConfirm = onRejectQuote,
+                onDismiss = { askReject = false },
+            )
+        }
     }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **نافذةُ تأكيد السعر — تظهر من أيّ شاشة** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كان التأكيدُ قسماً في بطاقة الطلب وحدَها** — ومن كان في السوق حين وصل السعرُ
+ * لا يعرف أنّ طلبَه موقوفٌ عليه. **فصار نافذةً يركّبها الغلاف** (`MainActivity`)
+ * فوق أيّ شاشة، بالمبالغ واختيار الدفع وزرّي القبول والرفض نفسِها.
+ *
+ * **وإغلاقُها لا يُلغي شيئاً** — القسمُ يبقى في البطاقة، **وتعود النافذةُ في الفتح
+ * التالي أو حين تتبدّل نسخةُ العرض** (`OrdersViewModel.dismissQuote`).
+ */
+@Composable
+fun QuoteConfirmDialog(
+    order: MyOrder,
+    walletBalance: Long,
+    confirming: Boolean,
+    onConfirmQuote: (String) -> Unit,
+    onRejectQuote: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.ord_quote_dialog_title, order.number),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                // **وما طلبه يُقال بلفظه** — ومن له طلبان يعرف أيَّهما يؤكّد.
+                if (order.customRequest.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.ord_wanted) + " " + order.customRequest,
+                        color = Rahal.colors.ink,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                QuoteAmounts(order)
+                QuoteConfirmPanel(order, walletBalance, onConfirmQuote, confirming, onRejectQuote)
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_quote_later)) }
+        },
+    )
 }
 
 private fun ended(status: String): Boolean =
@@ -447,15 +564,21 @@ private fun ended(status: String): Boolean =
  */
 @Composable
 private fun stageLabel(key: String, amanah: Boolean = false): String = when (key) {
-    // **«السائقُ في طريقه للشراء»** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — لا «نبحث عن سائق» وقد قبله.
-    "buying" -> stringResource(if (amanah) R.string.st_buying_amanah else R.string.st_buying)
-    "bought" -> stringResource(if (amanah) R.string.st_bought_amanah else R.string.st_bought)
-    "waiting" -> stringResource(R.string.st_pending)
-    "accepted" -> stringResource(R.string.st_accepted)
-    "preparing" -> stringResource(R.string.st_preparing)
-    "seeking" -> stringResource(R.string.st_driver)
-    "on_the_way" -> stringResource(R.string.ord_st_onway)
-    "arrived" -> stringResource(R.string.st_arrived)
-    "delivered" -> stringResource(R.string.ord_st_delivered)
+    // ══════════════════════════════════════════════════════════════════
+    // **أسماءٌ قصيرةٌ للشريط وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كلُّ اسمٍ سطرٌ واحدٌ تحت عقدته** — و«السائق في طريقه لشراء طلبك» لا تسع.
+    // **والأسماءُ الطويلةُ باقيةٌ لغير الشريط** (`st_*` وحالُ الطلب في الشارة).
+    // **والأمانةُ تُستلم لا تُشترى** — فلها لفظاها.
+    "buying" -> stringResource(if (amanah) R.string.stg_buying_amanah else R.string.stg_buying)
+    "bought" -> stringResource(if (amanah) R.string.stg_bought_amanah else R.string.stg_bought)
+    "waiting" -> stringResource(R.string.stg_waiting)
+    "accepted" -> stringResource(R.string.stg_accepted)
+    "preparing" -> stringResource(R.string.stg_preparing)
+    "seeking" -> stringResource(R.string.stg_seeking)
+    "on_the_way" -> stringResource(R.string.stg_on_the_way)
+    "arrived" -> stringResource(R.string.stg_arrived)
+    "delivered" -> stringResource(R.string.stg_delivered)
     else -> key
 }

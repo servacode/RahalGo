@@ -35,7 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 
@@ -76,8 +75,10 @@ import com.rahalgo.design.Rahal
  * **الاسمُ يقف حيث تقف عُقدتُه** — لا في خانةٍ بجوارها. (قرارُ المالك
  * ٢٠٢٦-٠٨-٠٧: «النصوصُ تحت الطريق يجب أن تكون مضبوطةً بشكلٍ صحيح».)
  *
- * **وحشوةٌ جانبيّةٌ تسع نصفَ أعرضِ ما يقف**: الواقفُ على الطرف يتوسّطه
- * **فيخرج نصفُه** لولاها. **والمسارُ يقصر بمقدارها ولا يفيض أحد.**
+ * **والطريقُ من حافّةٍ إلى حافّة** (قرارُ المالك ٢٠٢٦-١٠-١٥): **كانت حشوةٌ
+ * جانبيّةٌ بنصف خانة الاسم تُقصّر المسار** — والآن العقدتان الطرفيّتان على
+ * الحافّتين، **واسماهما يحاذيانهما** فلا يخرج نصفُ أحد. **وكلُّ اسمٍ سطرٌ
+ * واحد** — والمُنادي يمرّر أسماءً قصيرةً للشريط وحدَه.
  *
  * # ولماذا في الوحدة المشتركة
  *
@@ -147,63 +148,59 @@ fun Stages(
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // **والأسماءُ لا تتراكب — كلٌّ في خانته** (فحصُ القبول ٢٠٢٦-١٠-٠٣)
+    // **والأسماءُ سطرٌ واحدٌ لا تتراكب** (قرارُ المالك ٢٠٢٦-١٠-١٥)
     // ══════════════════════════════════════════════════════════════════
     //
-    // **رآها المالكُ تدخل بعضُها في بعض**: «بانتظار القبول · مقبول · قيد
-    // التحضير…» و«السائق في طريقه لشراء طلبك». **وعلّتُها أنّ عرضَ الاسم
-    // كان ثابتاً (٥٦dp) والمسافةَ بين عقدتين أقلُّ منه** — ستُّ عقدٍ على
-    // هاتفٍ بعرض ٣٦٠ تترك ٤٨dp لكلٍّ منها.
+    // **كان الاسمُ يلتفّ حتّى ثلاثة أسطر وينزل الصفّان متناوبين** — فصار
+    // الشريطُ سلّماً من الكلمات. **والآن أسماءٌ قصيرةٌ في سطرٍ واحد**
+    // («بالانتظار · مقبول · تحضير…») — يمرّرها المُنادي.
     //
-    // **فعرضُ الخانة يُحسب من العرض المتاح وعدد المراحل** (`stageLabelSlots`)،
-    // **وإن لم يسع اسمٌ خانتَه في ثلاثة أسطر نزلت الأسماءُ صفّين متناوبين**
-    // فتتّسع خانةُ كلٍّ منها قرابةَ الضعف. **والقياسُ بالخطّ نفسِه الذي يُرسم.**
-    val labelStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+    // **والطريقُ من حافّةٍ إلى حافّة**: كانت حشوةٌ جانبيّةٌ بنصف الخانة تُقصّر
+    // القضيب. **والآن العقدةُ الأولى على الحافّة الأولى والأخيرةُ على الأخيرة،
+    // واسماهما يحاذيان الحافّتين** لا يتوسّطان عقدتيهما — فلا يخرج نصفُهما.
+    //
+    // **والاسمُ تحت عقدته ما أمكن** — **ويُزاح عنها بقدر ما يمنع التراكب**
+    // (`stageLabelStarts`): الطرفُ العريضُ يدفع جارَه قليلاً بدل أن يُقصّ.
+    //
+    // **وإن لم يسع مجموعُ الأسماء العرضَ صغُر الخطُّ قليلاً** (`StageScales`) —
+    // من توكن `labelSmall` نفسِه لا رقمٍ جديد. **والقياسُ بالخطّ الذي يُرسم.**
+    val baseStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
     val measurer = rememberTextMeasurer()
     val dens = LocalDensity.current
 
     BoxWithConstraints(modifier.fillMaxWidth().heightIn(min = RowH)) {
-        val slots = remember(labels, maxWidth, labelStyle) {
-            stageLabelSlots(maxWidth.value, labels.size) { w ->
-                val px = with(dens) { w.dp.roundToPx() }.coerceAtLeast(1)
-                labels.all { label ->
-                    // **وكلمةٌ أعرضُ من خانتها تُكسر في منتصفها** — فلا تُعدّ «تسع».
-                    label.split(' ').all { word ->
-                        measurer.measure(word, labelStyle, maxLines = 1).size.width <= px
-                    } && !measurer.measure(
-                        label, labelStyle, maxLines = LabelLines,
-                        constraints = Constraints(maxWidth = px),
-                    ).hasVisualOverflow
+        val inset = NodeH.value / 2
+        val fit = remember(labels, maxWidth, baseStyle) {
+            fitStageLabels(StageScales, maxWidth.value) { scale ->
+                val style = baseStyle.copy(fontSize = baseStyle.fontSize * scale)
+                labels.map { label ->
+                    with(dens) {
+                        measurer.measure(label, style, maxLines = 1, softWrap = false).size.width.toDp().value
+                    } + LabelSlack
                 }
+            }.let { (scale, measured) ->
+                val widths = stageLabelWidths(maxWidth.value, measured)
+                Triple(scale, widths, stageLabelStarts(maxWidth.value, widths, inset))
             }
         }
-        val labelW = slots.width.dp
-        // **والحشوةُ نصفُ الخانة** — فلا يخرج نصفُ الواقف على الطرف.
-        val pad = labelW / 2
-        // **وطولُ الطريق ما بقي بعد الحشوتين.**
-        val track = maxWidth - pad * 2
-        // **والصفُّ الثاني تحت الأوّل بارتفاع أطول أسمائه** — يُقاس لا يُخمَّن.
-        val firstRowH = if (!slots.staggered) 0.dp else with(dens) {
-            labels.filterIndexed { i, _ -> i % 2 == 0 }.maxOf { label ->
-                measurer.measure(
-                    label, labelStyle, maxLines = LabelLines,
-                    constraints = Constraints(maxWidth = labelW.roundToPx().coerceAtLeast(1)),
-                ).size.height
-            }.toDp()
-        }
+        val labelStyle = baseStyle.copy(fontSize = baseStyle.fontSize * fit.first)
+        val widths = fit.second
+        val starts = fit.third
+        // **والطريقُ بين مركزي العقدتين الطرفيّتين** — والعقدتان داخل الحافّتين.
+        val track = maxWidth - NodeH
+        val center = { f: Float -> NodeH / 2 + track * f }
 
         // ══════════════════════════════════════════════════════════════
         // **القضيبُ وما امتلأ منه**
         // ══════════════════════════════════════════════════════════════
         //
         // **والملءُ من جهة البداية** — وهي اليمين في العربيّة:
-        // `fillMaxWidth` في صندوقٍ محاذاته `Start` يتبع اتّجاه الشاشة،
+        // الإزاحةُ والعرضُ في صندوقٍ محاذاته `Start` يتبعان اتّجاه الشاشة،
         // **فلا يُكتب اتّجاهٌ بيد.**
         Box(
             Modifier
                 .align(Alignment.TopStart)
                 .offset(y = VehicleH)
-                .padding(horizontal = pad)
                 .fillMaxWidth()
                 .height(RailH)
                 .clip(Rahal.shape.pill)
@@ -213,8 +210,7 @@ fun Stages(
             Modifier
                 .align(Alignment.TopStart)
                 .offset(y = VehicleH)
-                .padding(horizontal = pad)
-                .fillMaxWidth(pct)
+                .width(center(pct))
                 .height(RailH)
                 .clip(Rahal.shape.pill)
                 .background(Rahal.colors.accent),
@@ -225,13 +221,19 @@ fun Stages(
         // ══════════════════════════════════════════════════════════════
         labels.forEachIndexed { i, label ->
             val f = i.toFloat() / last
-            val x = pad + track * f
             val done = i <= at
+            val edge = when {
+                labels.size == 1 -> TextAlign.Center
+                i == 0 -> TextAlign.Start
+                i == labels.size - 1 -> TextAlign.End
+                else -> TextAlign.Center
+            }
+            val w = widths[i].dp
 
             Box(
                 Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = x - NodeH / 2, y = VehicleH + (RailH - NodeH) / 2)
+                    .offset(x = center(f) - NodeH / 2, y = VehicleH + (RailH - NodeH) / 2)
                     .size(NodeH)
                     .clip(CircleShape)
                     .background(
@@ -245,20 +247,18 @@ fun Stages(
                 // **والقادمُ باهتٌ لا مخفيّ** — يعرف ما ينتظره.
                 color = if (done) Rahal.colors.accent else Rahal.colors.inkMuted,
                 fontWeight = if (i == at) FontWeight.Bold else FontWeight.Normal,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-                maxLines = LabelLines,
+                style = labelStyle,
+                textAlign = edge,
+                maxLines = 1,
+                softWrap = false,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     // **وبحشوةٍ لا بإزاحة** — الحشوةُ تدخل في ارتفاع الشريط
-                    // فيتّسع لأطول اسم، **والإزاحةُ لا تُحسب فيُقصّ ما تحتها.**
-                    .padding(
-                        top = VehicleH + RailH + 6.dp +
-                            if (slots.staggered && i % 2 == 1) firstRowH + 2.dp else 0.dp,
-                    )
-                    .offset(x = x - labelW / 2)
-                    .width(labelW),
+                    // فيتّسع للسطر، **والإزاحةُ لا تُحسب فيُقصّ ما تحتها.**
+                    .padding(top = VehicleH + RailH + 6.dp)
+                    .offset(x = starts[i].dp)
+                    .width(w),
             )
         }
 
@@ -269,13 +269,14 @@ fun Stages(
         // **ووجهُها نحو مسيرها**: الطريقُ يمشي من اليمين إلى اليسار
         // كاتّجاه القراءة، **ورسمُ المركبة موجَّهٌ إلى اليمين** فتبدو
         // ماشيةً إلى الخلف. **وقلبُها أفقيّاً يجعلها تسير حيث تنظر.**
+        // **ولا تخرج عن الحافّتين** — مركزُها مركزُ العقدة ما اتّسع لها.
         Icon(
             painter = painterResource(R.drawable.ic_moto),
             contentDescription = null,
             tint = Rahal.colors.accent,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = pad + track * pct - VehicleH / 2)
+                .offset(x = (center(pct) - VehicleH / 2).coerceIn(0.dp, (maxWidth - VehicleH).coerceAtLeast(0.dp)))
                 // **والقفزةُ في طبقة الرسم** — تُقرأ الحالُ هنا فلا
                 // يُعاد تركيبُ شيء. انظر الشرحَ عند `bobState`.
                 .graphicsLayer {
@@ -287,38 +288,88 @@ fun Stages(
     }
 }
 
-/** **أعرضُ خانةٍ لاسمٍ في صفٍّ واحد** — وما كان قبلُ عرضَها الثابت. */
-private const val LabelMaxOneRow = 56f
-/** **أعرضُ خانةٍ في الصفّين المتناوبين.** */
-private const val LabelMaxStaggered = 84f
-/** **فراغٌ بين خانتين متجاورتين** — فلا يلتصق اسمٌ باسم. */
+/**
+ * **مقاييسُ خطّ الأسماء بالترتيب** — الكاملُ أوّلاً، ثمّ أصغرُ قليلاً.
+ *
+ * **وتصغيرٌ لا التفاف** (قرارُ المالك ٢٠٢٦-١٠-١٥): اسمٌ في سطرين يرفع الشريط،
+ * **وخطٌّ أصغرُ بعُشرٍ أو خُمسٍ لا يكاد يُرى.**
+ */
+internal val StageScales = listOf(1f, 0.9f, 0.8f)
+
+/** **فراغٌ بين اسمين متجاورين** — فلا يلتصق اسمٌ باسم. */
 internal const val LabelGap = 4f
-/** **ثلاثةُ أسطرٍ أقصى ما يأخذه اسم** — وما زاد يُختصر بنقاط. */
-private const val LabelLines = 3
+
+/** **هامشُ القياس** — تقريبُ البكسل لا يقصّ آخرَ حرف. */
+private const val LabelSlack = 1f
 private val VehicleH = 24.dp
 private val RailH = 6.dp
 private val NodeH = 12.dp
 
-/** **أقلُّ ارتفاعٍ للشريط** — درّاجةٌ فقضيبٌ ففراغٌ فسطران، **ويطول بأطول اسم.** */
-private val RowH = VehicleH + RailH + 6.dp + 30.dp
+/** **ارتفاعُ الشريط** — درّاجةٌ فقضيبٌ ففراغٌ فسطرٌ واحد. */
+private val RowH = VehicleH + RailH + 6.dp + 16.dp
 
 /**
- * **خانةُ اسم المرحلة — عرضُها وهل تنزل الأسماءُ صفّين.**
+ * **الموضعُ المرغوبُ لبداية الاسم** (dp، من جهة البداية) — **والطرفان يحاذيان الحافّتين.**
  *
- * @param width عرضُ الشريط كلِّه (dp).
- * @param count عددُ المراحل.
- * @param fits **أيسعُ كلُّ اسمٍ خانةً بهذا العرض؟** — يُقاس بالخطّ في الشاشة.
- *
- * **والحسابُ**: العقدُ على مسافاتٍ متساوية `s = (W - w) / (n - 1)` بعد حشوةٍ
- * نصفُها خانة. **وصفٌّ واحدٌ لا يتراكب إن `w + فراغ ≤ s`**، **وصفّان
- * متناوبان إن `w + فراغ ≤ 2s`** — جارُ الاسم في صفّه على مسافة عقدتين.
+ * الأوّلُ يبدأ من الصفر، والأخيرُ ينتهي عند `width`، **والأوسطُ يتوسّط عقدتَه**:
+ * `inset + (width − 2·inset) · i/(n−1)`.
  */
-internal data class StageLabelSlots(val width: Float, val staggered: Boolean)
+internal fun stageLabelPreferred(i: Int, count: Int, width: Float, w: Float, inset: Float = 0f): Float = when {
+    count <= 1 -> (width - w) / 2
+    i == 0 -> 0f
+    i == count - 1 -> width - w
+    else -> inset + (width - 2 * inset) * i / (count - 1) - w / 2
+}
 
-internal fun stageLabelSlots(width: Float, count: Int, fits: (Float) -> Boolean): StageLabelSlots {
-    if (count <= 1) return StageLabelSlots(minOf(LabelMaxOneRow, width).coerceAtLeast(0f), false)
-    val one = minOf(LabelMaxOneRow, (width - LabelGap * (count - 1)) / count).coerceAtLeast(0f)
-    if (fits(one)) return StageLabelSlots(one, false)
-    val two = minOf(LabelMaxStaggered, (2 * width - LabelGap * (count - 1)) / (count + 1)).coerceAtLeast(0f)
-    return StageLabelSlots(two, true)
+/** **هل تسع الأسماءُ سطراً واحداً؟** — مجموعُ عروضها وفراغاتها لا يتجاوز العرض. */
+internal fun stageLabelsFit(width: Float, widths: List<Float>): Boolean =
+    widths.sum() + LabelGap * (widths.size - 1).coerceAtLeast(0) <= width + 0.001f
+
+/**
+ * **أوّلُ مقياسٍ تسع به الأسماء** — وإلّا أصغرُها.
+ *
+ * @param measure عروضُ الأسماء (dp) بمقياسٍ ما — تُقاس بالخطّ في الشاشة.
+ * @return المقياسُ المختارُ وعروضُه المقيسة.
+ */
+internal inline fun fitStageLabels(
+    scales: List<Float>,
+    width: Float,
+    measure: (Float) -> List<Float>,
+): Pair<Float, List<Float>> {
+    var last = 1f to emptyList<Float>()
+    for (k in scales) {
+        last = k to measure(k)
+        if (stageLabelsFit(width, last.second)) return last
+    }
+    return last
+}
+
+/**
+ * **العروضُ النهائيّة** — المقيسةُ كما هي إن وسعت، **وإلّا تُقصّ بنسبةٍ واحدة.**
+ *
+ * **والقصُّ آخرُ حيلة** بعد أصغر مقياس — **فلا يتراكب اثنان مهما ضاق العرض.**
+ */
+internal fun stageLabelWidths(width: Float, widths: List<Float>): List<Float> {
+    if (stageLabelsFit(width, widths)) return widths
+    val room = (width - LabelGap * (widths.size - 1).coerceAtLeast(0)).coerceAtLeast(0f)
+    val k = room / widths.sum()
+    return widths.map { it * k }
+}
+
+/**
+ * **بداياتُ الأسماء** — كلٌّ تحت عقدته ما أمكن، **ويُزاح بقدر ما يمنع التراكب.**
+ *
+ * **والطرفان لا يُزاحان عن الحافّتين.** مسحةٌ من البداية تدفع كلَّ اسمٍ بعد
+ * جاره، **ومسحةٌ من النهاية تردّه قبل جاره** — فإن وسع المجموعُ العرضَ لم
+ * يتراكب اثنان ولم يخرج أحدٌ عن الحافّتين.
+ */
+internal fun stageLabelStarts(width: Float, widths: List<Float>, inset: Float = 0f): List<Float> {
+    val n = widths.size
+    if (n == 0) return emptyList()
+    if (n == 1) return listOf((width - widths[0]) / 2)
+    val x = FloatArray(n) { stageLabelPreferred(it, n, width, widths[it], inset) }
+    for (i in 1 until n) x[i] = maxOf(x[i], x[i - 1] + widths[i - 1] + LabelGap)
+    x[n - 1] = width - widths[n - 1]
+    for (i in n - 2 downTo 0) x[i] = minOf(x[i], x[i + 1] - LabelGap - widths[i])
+    return x.toList()
 }

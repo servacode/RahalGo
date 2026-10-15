@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,7 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -78,10 +78,11 @@ import com.rahalgo.ui.RahalLoader
  * **والترتيبُ ترتيبُ الويب حرفا** (`(site)/shop/page.tsx`) — **وشاشتان
  * لسوقٍ واحدٍ ترتيبُهما مختلفٌ تُربكان من يستعمل الاثنين.**
  *
- * # ولا أسماءَ متاجرَ في البطاقة
+ * # واسمُ المتجر سطرٌ في البطاقة — **قرارُ المالك ٢٠٢٦-١٠-١٥**
  *
- * **المنصّةُ سوقٌ يجلب منها** — وهو يشتري «من رحّال» لا «من مطعم فلان».
- * (قرارُ المالك ٢٠٢٦-٠٨-٠٥، **ويفرضه المحرّكُ لا الشاشة.**)
+ * **كانت البطاقةُ بلا أسماء متاجر** (٢٠٢٦-٠٨-٠٥: «يشتري من رحّال لا من مطعم
+ * فلان»). **وعكسه المالكُ**: اسمُ المتجر تحت الصورة — انظر `ItemCard`.
+ * **والتصفّحُ يبقى بالأقسام والأصناف لا بالمتاجر.**
  *
  * # وبطاقتان في الصفّ لا واحدة
  *
@@ -655,250 +656,192 @@ private fun SectionRail(
 }
 
 /**
- * **بطاقةُ صنف** — صورةٌ واسمٌ وسعر.
+ * ══════════════════════════════════════════════════════════════════════
+ * **بطاقةُ صنفٍ مؤطَّرة — شريطٌ فوق الصورة وشريطٌ تحتها** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **إطارٌ رفيعٌ يضمّ ثلاثةَ طوابق**: فوقُ القلبُ والسعر، **ثمّ الصورة**، ثمّ
+ * تحتُ **اسمُ المتجر** و«+». **واسمُ الصنف تحت الإطار** كما كان.
+ *
+ * # ولماذا اسمُ المتجر الآن
+ *
+ * **عكس المالكُ قرارَ حجب المصدر** (كان ٢٠٢٦-٠٨-٠٥): كلُّ صنفٍ يحمل اسمَ
+ * متجره من المحرّك (`merchant_name`). **وفارغُه من خادمٍ أقدم يترك السطرَ
+ * فارغاً ولا يكسر البطاقة.**
+ *
+ * # ولماذا السعرُ والقلبُ خرجا من الصورة
+ *
+ * **كانا قرصين على الصورة** — والسعرُ أبيضُ على قرصٍ داكن **لأنّ صورَ الطعام
+ * زاهيةٌ تبتلع النصّ.** **وفي شريطٍ على سطح البطاقة يُقرآن بلونهما بلا قرص**،
+ * والصورةُ تبقى صورةً كاملة.
+ *
+ * # وبطاقةٌ واحدةٌ لشاشتين
+ *
+ * **السوقُ والمفضّلةُ تعرضان الصنفَ نفسَه** — ونسختان من البطاقة تفترقان يوما
+ * (كما افترقت المفضّلةُ فعرضت السعرَ الخامّ). **و`onAdd` فارغٌ لا «+» فيه.**
  *
  * **والمشطوبُ هو ما يجعل الخصمَ خصما**: «٧٧٬٢٥٠» وحدَه رقم، **و«١٠٣٬٠٠٠»
- * مشطوبةً فوقه توفيرٌ يُرى.**
+ * مشطوبةً تحته توفيرٌ يُرى.**
  */
 @Composable
-private fun ItemCard(
+internal fun ItemCard(
     item: Item,
     media: (String?) -> String?,
     liked: Boolean,
-    onAdd: () -> Unit,
+    onAdd: (() -> Unit)?,
     onLike: () -> Unit,
 ) {
     val closed = item.sourceClosed || !item.available
-    Column(Modifier.clip(Rahal.shape.md)) {
-        Box {
-            RemoteImage(
-                // ══════════════════════════════════════════════════════
-                // **والمصغّرةُ أوّلاً — لا الكاملة**
-                // ══════════════════════════════════════════════════════
-                //
-                // (شكوى المالك ٢٠٢٦-٠٨-١٨: «السلايدر وصور المنتجات
-                //  تتأخّر بالظهور… لا يجب أن يلاحظ المستخدمُ هذه
-                //  المشاكل».)
-                //
-                // **وكان الترتيبُ مقلوباً** — تُجلب الكاملةُ والمصغّرةُ
-                // احتياطٌ لها. **وقِيس على الخادم**: الكاملةُ ٢٦٣ ك.ب
-                // والمصغّرةُ ٤٠ — **ستّةُ أضعافٍ ونصفٌ في بطاقةٍ عرضُها
-                // مئةٌ وثلاثٌ وعشرون نقطة.**
-                //
-                // **وستُّ بطاقاتٍ في الشاشة**: ميغا ونصفٌ بدل مئتين
-                // وأربعين ك.ب — **على حزمةِ من يتصفّح في الرقّة.**
-                url = media(item.imageThumbUrl ?: item.imageUrl),
-                name = item.name,
-                modifier = Modifier
+    Column {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(Rahal.shape.md)
+                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                .background(Rahal.colors.surface),
+        ) {
+            // ══════════════════════════════════════════════════════════
+            // **الشريطُ الأعلى — القلبُ في البداية والسعرُ في النهاية**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **وزرّان في طرفين لا في زاوية** — زرّان متلاصقان يُضغط أحدُهما
+            // مكان الآخر.
+            Row(
+                Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(Rahal.shape.md),
-            )
-
-            // ══════════════════════════════════════════════════════════
-            // **والمغلقُ يُرى مغلقاً — لا شارةٌ تذوب في الصورة**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «عندما يكون المتجرُ مغلقاً
-            //  المفروض تكون واضح، مثلاً تصير الصورةُ خافتة ومكتوب
-            //  بوضوح بالمنتصف».)
-            //
-            // # ولماذا لم تكن تُرى
-            //
-            // **وكانت شارةً صغيرةً في زاوية الصورة بلونٍ باهت** — وصورُ
-            // الطعام ملوّنةٌ زاهية، **فيذوب النصُّ فيها ولا يُقرأ.**
-            // (قِيس على الجهاز: «مغلق الآن» على صورة شاورما — لا تكاد
-            // تُرى.)
-            //
-            // **ومن لم يرَ أنّ المتجرَ مغلقٌ ضغط «أضف» فلم يحدث شيء**،
-            // فظنّ التطبيقَ معطّلاً.
-            //
-            // # وطبقتان لا واحدة
-            //
-            // **والتعتيمُ وحدَه لا يكفي** — قد يُقرأ ظلَّ تصميم.
-            // **والنصُّ وحدَه لا يكفي** — يضيع في الألوان. **فاجتماعُهما
-            // هو ما يُرى من مترين.**
-            // **والخلصانُ كالمغلق: صورةٌ تغمق وكلمةٌ بيضاءُ في وسطها** (قرارُ المالك
-            // ٢٠٢٦-١٠-٠٥) — **كانت شارةً رماديّةً على رماديٍّ شفّافٍ في الزاوية**،
-            // فلا تُقرأ فوق صورة طعامٍ ملوّنة.
-            if (closed) {
+                    .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // **وأحمرُ حين يُضغط ورماديٌّ حين لا** (ملاحظةُ المالك ٢٠٢٦-٠٨-١٨) —
+                // **والأحمرُ لغةُ المفضّلة في كلّ تطبيق.**
                 Box(
                     Modifier
-                        .matchParentSize()
-                        .clip(Rahal.shape.md)
-                        // **وستّون بالمئة تُبقي الصورةَ مفهومةً وتُخمدها**
-                        // — والتعتيمُ التامُّ يجعل البطاقةَ فراغاً.
-                        .background(Color.Black.copy(alpha = 0.6f)),
-                    contentAlignment = Alignment.Center,
+                        .clip(CircleShape)
+                        .clickable(onClick = onLike)
+                        .padding(Rahal.space.xs),
                 ) {
-                    Text(
-                        text = stringResource(
-                            if (item.sourceClosed) R.string.shop_closed_now else R.string.mn_unavailable,
+                    Icon(
+                        painter = painterResource(
+                            if (liked) com.rahalgo.ui.R.drawable.ic_heart
+                            else com.rahalgo.ui.R.drawable.ic_heart_off,
                         ),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        // **والوصفُ يتبع الحال** — **ومن يسمع ولا يرى
+                        // لا يعرف أنّ ضغطتَه وقعت.**
+                        contentDescription = stringResource(
+                            if (liked) R.string.shop_unlike else R.string.shop_like,
+                        ),
+                        tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
-            }
-
-            // **ونسبةُ الحسم فوق الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن
-            // الرقمان.
-            item.discountPercent?.let {
-                Box(Modifier.padding(6.dp)) {
-                    Chip("-$it٪", Rahal.colors.accent)
-                }
-            }
-            // ══════════════════════════════════════════════════════════
-            // **والسعرُ على الصورة — لا يقاسم الاسمَ سطرَه**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرارُ المالك ٢٠٢٦-٠٨-١٨: «السعر نحطّه فوق ع زاوية اليسار
-            //  بشكلٍ أنيق».)
-            //
-            // **وقِيس سببُ القصّ**: ثلاثةُ أعمدةٍ تعطي البطاقةَ نحو ١٢٣
-            // نقطة، **ويأخذ السعرُ منها ٥٣** — فيبقى للاسم سبعون، **أي
-            // سبعةُ أحرفٍ عربيّة.** و«شاورما دجاج» أحدَ عشر.
-            //
-            // **فرفعُه يعيد العرضَ كلَّه للاسم** — من سبعة أحرفٍ إلى
-            // ثلاثةَ عشر.
-            //
-            // # وقرصٌ داكنٌ لا نصٌّ عارٍ
-            //
-            // **صورُ الطعام زاهيةٌ ومزدحمة** — بطاطا صفراءُ وخبزٌ فاتح.
-            // **ونصٌّ أبيضُ عليها يختفي في نصف الصور**، ولا يُعرف أنّه
-            // كان هناك.
-            //
-            // # وفي الزاوية المقابلة للقلب
-            //
-            // **`TopEnd` هي اليسرى في العربيّة** — والقلبُ في `TopStart`
-            // أي اليمنى. **وزرّان في زاويةٍ واحدةٍ يُضغط أحدُهما مكان
-            // الآخر**، وقد كُتب هذا في «+» من قبل.
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .clip(Rahal.shape.pill)
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .padding(horizontal = 7.dp, vertical = 3.dp),
-            ) {
+                Spacer(Modifier.weight(1f))
                 Text(
                     // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢) — والليرةُ تحت الاسم.
                     text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
-                    color = Color.White,
+                    color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
 
-            // ══════════════════════════════════════════════════════════
-            // **والقلبُ يُرى — قرصٌ صلبٌ وحمرةٌ حين يُضغط**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (ملاحظةُ المالك ٢٠٢٦-٠٨-١٨: «أيقونةُ القلب ليست واضحةً
-            //  بالشكل المطلوب، لو نقدر نخلّيها أوضحَ واحترافيّةً أكثر».)
-            //
-            // # ثلاثةُ أسبابٍ كانت تُخفيه
-            //
-            // **١ · قرصٌ شفّافٌ بخمسةٍ وثمانين بالمئة** — تظهر الصورةُ
-            // خلفه فيذوب في زحمة الطعام.
-            //
-            // **٢ · وبرتقاليٌّ في الحالين** — لونُ العلامة نفسُه،
-            // **فلا يُعرف المفضَّلُ من غيره إلّا بتدقيقٍ في امتلاء
-            // الشكل.**
-            //
-            // **٣ · وخمسَ عشرةَ نقطةً في قرصٍ من ثلاثٍ وعشرين** — أصغرُ
-            // من أن يُقصد بالإبهام.
-            //
-            // # وما صار
-            //
-            // **قرصٌ أبيضُ صلبٌ بظلٍّ خفيف** — يرتفع عن الصورة فيُقرأ
-            // زرّاً لا رسماً عليها.
-            //
-            // **وأحمرُ حين يُضغط ورماديٌّ حين لا** — **والأحمرُ لغةُ
-            // المفضّلة في كلّ تطبيق**، تُعرف بلا تعلّم. والبرتقاليُّ
-            // لونُ علامتنا يُقرأ زينةً هنا لا حالا.
-            //
-            // **وثمانيَ عشرةَ نقطةً في قرصٍ من ثلاثين** — يُقصد بالإبهام.
-            Box(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(5.dp)
-                    .shadow(3.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable(onClick = onLike)
-                    .padding(6.dp),
-            ) {
-                Icon(
-                    painter = painterResource(
-                        if (liked) com.rahalgo.ui.R.drawable.ic_heart
-                        else com.rahalgo.ui.R.drawable.ic_heart_off,
-                    ),
-                    // **والوصفُ يتبع الحال** — **ومن يسمع ولا يرى
-                    // لا يعرف أنّ ضغطتَه وقعت.**
-                    contentDescription = stringResource(
-                        if (liked) R.string.shop_unlike else R.string.shop_like,
-                    ),
-                    tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
-                    modifier = Modifier.size(18.dp),
+            Box {
+                RemoteImage(
+                    // **والمصغّرةُ أوّلاً — لا الكاملة** (شكوى المالك ٢٠٢٦-٠٨-١٨):
+                    // **قِيس على الخادم**: الكاملةُ ٢٦٣ ك.ب والمصغّرةُ ٤٠ — ستّةُ أضعافٍ
+                    // ونصفٌ في بطاقةٍ عرضُها مئةٌ وبضعُ نقاط.
+                    url = media(item.imageThumbUrl ?: item.imageUrl),
+                    name = item.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f),
                 )
-            }
 
-            // **و«+» في الزاوية السفلى** — بعيداً عن القلب: **زرّان
-            // متلاصقان في زاويةٍ واحدةٍ يُضغط أحدُهما مكان الآخر.**
-            //
-            // **ولا يُعرض لمغلق** — ومن ضغطه فلم يقع شيءٌ ظنّ التطبيقَ
-            // معطوبا.
-            if (!closed) {
-                Box(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(4.dp)
-                        .clip(CircleShape)
-                        .background(Rahal.colors.brand)
-                        .clickable(onClick = onAdd)
-                        .padding(5.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(com.rahalgo.ui.R.drawable.ic_plus),
-                        contentDescription = stringResource(R.string.shop_add),
-                        tint = Color.White,
-                        modifier = Modifier.size(15.dp),
-                    )
+                // ══════════════════════════════════════════════════════
+                // **والمغلقُ يُرى مغلقاً — لا شارةٌ تذوب في الصورة**
+                // ══════════════════════════════════════════════════════
+                //
+                // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «تصير الصورةُ خافتة ومكتوب بوضوح
+                //  بالمنتصف».) **والتعتيمُ وحدَه يُقرأ ظلَّ تصميم، والنصُّ وحدَه
+                // يضيع في الألوان — فاجتماعُهما هو ما يُرى من مترين.** **والخلصانُ
+                // كالمغلق** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+                if (closed) {
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            // **وستّون بالمئة تُبقي الصورةَ مفهومةً وتُخمدها.**
+                            .background(Color.Black.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (item.sourceClosed) R.string.shop_closed_now else R.string.mn_unavailable,
+                            ),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(horizontal = Rahal.space.sm),
+                        )
+                    }
                 }
-            } else {
-                // **ومغلقٌ يُقال على الصورة** — لا يُكتشف عند الضغط.
-                // **والمغلقُ صار لافتةً وسطى** (٢٠٢٦-٠٨-٢٦) — انظر
-                // أعلاه. **وشارتان لشيءٍ واحدٍ تشوّشان.**
-                // **والخلصانُ قيل في وسط الصورة** أعلاه — ولا شارةَ ثانية.
+
+                // **ونسبةُ الحسم فوق الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان.
+                item.discountPercent?.let {
+                    Box(Modifier.padding(Rahal.space.xs)) {
+                        Chip("-$it٪", Rahal.colors.accent)
+                    }
+                }
+            }
+
+            // ══════════════════════════════════════════════════════════
+            // **الشريطُ الأسفل — اسمُ المتجر و«+» في نهايته**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **وارتفاعُه ثابتٌ ولو غاب الاسمُ أو الزرّ** — وإلّا تفاوتت بطاقاتُ
+            // الصفّ الواحد. **و«+» لا يُعرض لمغلق** — من ضغطه فلم يقع شيءٌ ظنّ
+            // التطبيقَ معطوبا.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Rahal.space.xl + Rahal.space.sm)
+                    .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = item.merchantName.orEmpty(),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!closed && onAdd != null) {
+                    Spacer(Modifier.width(Rahal.space.xs))
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(Rahal.colors.brand)
+                            .clickable(onClick = onAdd)
+                            .padding(5.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_plus),
+                            contentDescription = stringResource(R.string.shop_add),
+                            tint = Rahal.colors.onBrand,
+                            modifier = Modifier.size(15.dp),
+                        )
+                    }
+                }
             }
         }
         Spacer(Modifier.height(5.dp))
         // ══════════════════════════════════════════════════════════════
-        // **والاسمُ وحدَه في سطره — والسعرُ صعد إلى الصورة**
+        // **والاسمُ بالوسط تحت الإطار — ولا يُقصّ منه حرف** (ملاحظةُ المالك ٢٠٢٦-١٠-١٤)
         // ══════════════════════════════════════════════════════════════
         //
-        // (قرارُ المالك ٢٠٢٦-٠٨-١٨.)
-        //
-        // **وكانا يقتسمان السطرَ منذ ٢٠٢٦-٠٨-١٥** — «ما هذا؟» و«بكم؟»
-        // سؤالٌ واحد. **وبقيا يُقرآن معاً**: السعرُ فوق الصورة والاسمُ
-        // تحتها، **والعينُ تمسحهما في نظرةٍ واحدة.**
-        //
-        // **وسطرٌ واحدٌ بعد** — يُجرَّب أوّلاً، فإن بقي القصُّ صار
-        // سطرين. (وهو ما اتُّفق عليه: نُجرّب ثمّ نقرّر.)
-        // ══════════════════════════════════════════════════════════════
-        // **والاسمُ بالوسط تحت الصورة — ولا يُقصّ منه حرف** (ملاحظةُ المالك ٢٠٢٦-١٠-١٤)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // «أوّلُ حرفٍ بأسماء الأصناف لا يُكتب صحيحاً» — **وقيس على الجهاز والمحاكي:
-        // نقاطُ ما تحت السطر تختفي** (باءُ «لبن» وجيمُ «دجاج») **وأوّلُ حرفٍ يُقصّ
-        // من يمينه.** والسببُ الاختصارُ بثلاث نقاط: **يقصّ النصَّ على حدوده**،
-        // وتجوال ينزل تحت السطر ويميل عن حافّته. **فلا قصّ** — وسطران بالوسط
-        // يتّسعان لأطول اسم، **وما زاد يُترك ولا يُقطع حرفٌ منه.**
+        // **الاختصارُ بثلاث نقاط يقصّ النصَّ على حدوده**، وتجوال ينزل تحت السطر
+        // ويميل عن حافّته — فتختفي نقاطُ ما تحت السطر. **فلا قصّ**: سطران بالوسط.
         Text(
             text = item.name,
             color = Rahal.colors.ink,
@@ -910,10 +853,7 @@ private fun ItemCard(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // **والمشطوبُ وحدَه ينزل سطرا** — **وهو ما يجعل الخصمَ خصما**:
-        // «٢٠٠» وحدَها رقم، **و«٢٥٠» مشطوبةً فوقها توفيرٌ يُرى.**
-        // **ولا يقع إلّا في المحسوم** — فسطرٌ ثانٍ في بضعة أصنافٍ لا
-        // في كلّها.
+        // **والمشطوبُ وحدَه ينزل سطرا** — ولا يقع إلّا في المحسوم.
         item.priceBefore?.let {
             Text(
                 text = item.priceBeforeUsd?.let { u -> com.rahalgo.ui.dollars(u) } ?: money(it),

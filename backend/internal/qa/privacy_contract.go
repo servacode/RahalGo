@@ -143,6 +143,10 @@ var OrderPrivacy = map[string]FieldRule{
 	"zone_name":    {Ref: "merchant_privacy.go:41", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── المتجر — **ممنوعٌ على الزبون بنصّ `redactForCustomer`** ────
+	//
+	// **وهذا حكمُ حمولة الطلب وحدَها.** قرارُ المالك ٢٠٢٦-١٠-١٥ أظهر اسمَ
+	// المتجر في **التصفّح والعروض** (`publicItem` و`offers.Offer`) — وهما خارجَ
+	// هذا العقد، **فلم يُمسّ حكمُ الطلب هنا.**
 	"merchant_id":              {Ref: "customer_privacy.go:41", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_name":            {Ref: "customer_privacy.go:42", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_logo_thumb_url":  {Ref: "customer_privacy.go:43", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},

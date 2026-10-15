@@ -1128,7 +1128,24 @@ private fun SignedIn(
                 // «طلباتي» لا يُسأل أبدا.
                 //
                 // **ولا تُعرض لضيف** — ولا وهو في السلّة يدفع.
-                if (!guest && tab != Tab.Cart) {
+                // ══════════════════════════════════════════════════════
+                // **وسعرٌ ينتظر تأكيدَه يُسأل عنه من أيّ شاشة** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+                // ══════════════════════════════════════════════════════
+                //
+                // **والتسليمُ موقوفٌ على جوابه** — فلا ينتظر أن يفتح «طلباتي».
+                // **ويسبق سؤالَ التقييم**: نافذتان معاً تتراكبان، **والسعرُ أعجل.**
+                val pendingQuote = if (!guest) ordersVm.pendingQuote else null
+                pendingQuote?.let { o ->
+                    com.rahalgo.customer.orders.QuoteConfirmDialog(
+                        order = o,
+                        walletBalance = shell.balance,
+                        confirming = ordersVm.busy,
+                        onConfirmQuote = { method -> ordersVm.confirmQuote(o, method) },
+                        onRejectQuote = { ordersVm.rejectQuote(o.id) },
+                        onDismiss = { ordersVm.dismissQuote(o) },
+                    )
+                }
+                if (!guest && tab != Tab.Cart && pendingQuote == null) {
                     // **السؤالُ التلقائيُّ مرّةً واحدة** — يُثبَّت فلا يعود عند
                     // الإقلاعِ/العودةِ/النبضةِ/إعادةِ الوصل. **واليدويُّ في بطاقة
                     // الطلب** (`OrdersScreen.onRate`) لمن أراد بعد الإغلاق.

@@ -165,8 +165,8 @@ func (s *Server) handlePublicOffers(w http.ResponseWriter, r *http.Request) {
 		}
 		rows = kept
 	}
-	// **ولا مصدرَ للبضاعة في الردّ** — كالتصفّح والطلبات. (انظر
-	// `customer_privacy.go`.)
+	// **واسمُ المتجر يخرج كالتصفّح** (قرارُ المالك ٢٠٢٦-١٠-١٥)، **وما يخصّ
+	// الإدارةَ يُمسح.** (انظر `customer_privacy.go`.)
 	redactOffersForCustomer(rows)
 	httpx.JSON(w, http.StatusOK, map[string]any{"offers": rows})
 }

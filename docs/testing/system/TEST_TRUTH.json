@@ -26164,7 +26164,7 @@
       "orphan": true
     },
     {
-      "name": "TestRedactOffersForCustomer_HidesSource",
+      "name": "TestRedactOffersForCustomer_KeepsStoreName",
       "file": "internal/server/customer_privacy_test.go",
       "package": "server",
       "orphan": true
@@ -28030,7 +28030,7 @@
       "orphan": true
     },
     {
-      "name": "TestBrowse_HidesSource",
+      "name": "TestBrowse_ShowsStoreName",
       "file": "internal/server/sections_test.go",
       "package": "server",
       "orphan": true

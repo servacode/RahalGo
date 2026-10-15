@@ -4,7 +4,10 @@ package server
 //
 // # لماذا هذا الاختبار بالذات
 //
-// `TestBrowse_HidesSource` يحرس التصفّح منذ المرحلة الثانية، **وطلباتُ الزبون
+// (والتصفّحُ والعروضُ صارا يُخرجان اسمَ المتجر بقرار المالك ٢٠٢٦-١٠-١٥ —
+// `TestBrowse_ShowsStoreName`. **والطلباتُ باقيةٌ محجوبة.**)
+//
+// `TestBrowse_HidesSource` كان يحرس التصفّح منذ المرحلة الثانية، **وطلباتُ الزبون
 // لم تُحرَس قطّ.** فما حُجب في `/public` ظهر في `/my/orders` — **وهو الموضعُ
 // الذي يفتحه الزبونُ أكثر**، ويفتحه بعد أن يعرف أنّ الطلب وصل.
 //
@@ -92,38 +95,29 @@ func TestCustomerOrderJSON_HasNoSource(t *testing.T) {
 	}
 }
 
-// TestRedactOffersForCustomer_HidesSource **وثالثةُ الأبواب.**
+// TestRedactOffersForCustomer_KeepsStoreName **اسمُ المتجر يبقى في العروض.**
 //
-// حُجب التصفّحُ ثمّ الطلبات — **وبقيت العروضُ تحمل `merchant_name`
-// و`merchant_id`**، وشاشتُها تعرضهما تحت اسم الصنف. **ومن أراد اسمَ المطعم
-// يفتح صفحةَ العروض**، فالبابان المغلقان لا يُغنيان عن ثالثٍ مفتوح.
-//
-// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «المتاجرُ مخفيّةٌ بشكلٍ كاملٍ عن الزبون — نحن
-// بالمنصة عندنا السوقُ الذي يجلب من المتاجر».)
-func TestRedactOffersForCustomer_HidesSource(t *testing.T) {
+// كانت العروضُ ثالثةَ أبواب الحجب، **وعكس المالكُ القرارَ ٢٠٢٦-١٠-١٥**:
+// الزبونُ يرى اسمَ المتجر تحت اسم الصنف كما في شبكة التصفّح. **وما يخصّ
+// الإدارةَ** — من عمل العرضَ وحالُ موافقته — **يبقى ممسوحاً.**
+func TestRedactOffersForCustomer_KeepsStoreName(t *testing.T) {
 	const name = "مطعم بيت الرقة"
 	mid := "cd6ea11d-9cd4-4a13-9f1c-835470cb6471"
 	rows := []offers.Offer{{
 		Title: "خصمُ الجمعة", ItemName: "شاورما دجاج",
 		MerchantName: name, MerchantID: &mid,
 		PriceBefore: 30000, PriceAfter: 24000,
+		CreatedByName: "موظفُ العروض", CreatedByKind: "staff", ApprovalState: "approved",
 	}}
 	redactOffersForCustomer(rows)
 
-	b, err := json.Marshal(rows)
-	if err != nil {
-		t.Fatalf("ترميزُ العروض: %v", err)
+	if rows[0].MerchantName != name || rows[0].MerchantID == nil || *rows[0].MerchantID != mid {
+		t.Errorf("مُسح مصدرُ العرض — والقرارُ أن يظهر: %q · %v", rows[0].MerchantName, rows[0].MerchantID)
 	}
-	body := string(b)
-	for _, leak := range []string{name, "cd6ea11d"} {
-		if strings.Contains(body, leak) {
-			t.Errorf("خرج في العروض ما يدلّ على المصدر: %q · الردّ: %s", leak, body)
-		}
+	if rows[0].CreatedByName != "" || rows[0].CreatedByKind != "" || rows[0].ApprovalState != "" {
+		t.Errorf("خرج إلى الزبون ما يخصّ الإدارة: %+v", rows[0])
 	}
-
-	// **ولا يُمحى العرضُ نفسُه** — السعران واسمُ الصنف هما ما يُغري، وحراسةٌ
-	// تمحوهما تُطفأ في أوّل شكوى.
 	if rows[0].PriceAfter == 0 || rows[0].ItemName == "" || rows[0].Title == "" {
-		t.Error("مُحي من العرض ما لا يدلّ على مصدره — والحراسةُ الزائدة تُطفأ")
+		t.Error("مُحي من العرض ما لا يخصّ الإدارة")
 	}
 }

@@ -18,19 +18,18 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
-// TestBrowse_HidesSource **اسمُ المتجر لا يخرج من التصفّح — ولا معرّفُه.**
+// TestBrowse_ShowsStoreName **اسمُ المتجر يخرج مع كلّ صنفٍ في التصفّح.**
 //
-// # لماذا هذا الاختبار بالذات
+// # لماذا انقلب هذا الاختبار
 //
-// **الإخفاءُ في الشاشة لا يكفي.** من فتح أدوات المتصفّح قرأ الردَّ كما هو،
-// **ومعرّفٌ في الردّ يُفتح به `/public/merchants/{id}` فيُقرأ الاسمُ كاملاً.**
+// **كان `TestBrowse_HidesSource`** — أهمَّ حارسٍ في المرحلة الثانية: اسمُ
+// المتجر لا يخرج خشيةَ أن يتّصل الزبونُ بالمطعم مباشرةً. **وعكس المالكُ
+// القرارَ صراحةً ٢٠٢٦-١٠-١٥**: كلُّ بطاقةٍ في شبكة التصفّح تحمل اسمَ متجرها.
 //
-// **وهو أهمُّ حارسٍ في المرحلة الثانية كلِّها**: قرارُ المالك أن اسمَ المتجر
-// مخفيٌّ لأن **زبوناً رآه يتّصل به مباشرةً في المرّة القادمة** — فيوفّر رسمَ
-// التوصيل والمطعمُ يوفّر عمولتنا. **وكلُّ منصةِ توصيلٍ تموت من هذا الباب.**
-//
-// **وحقلٌ يُضاف يوماً بلا انتباه يهدم هذا كلَّه** — ولا يظهر في أيّ خطأ.
-func TestBrowse_HidesSource(t *testing.T) {
+// **فصار يحرس العكس**: القسمُ والصنفُ والبحثُ تحمل `merchant_name`
+// و`merchant_id` — **وحقلٌ يُحذف يوماً بلا انتباه يُطفئ السطرَ من البطاقة
+// صامتاً.** **وسعرُ الشراء وهامشُه باقيان محجوبين.**
+func TestBrowse_ShowsStoreName(t *testing.T) {
 	pool := testdb.Pool(t)
 	ctx := context.Background()
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -104,22 +103,22 @@ func TestBrowse_HidesSource(t *testing.T) {
 		return w.Body.String()
 	}
 
+	// **والصفحاتُ كلُّها تُفتح** — ومنها `/home` و`/sections`.
+	for _, path := range []string{"/sections", "/home"} {
+		get(path)
+	}
+	// **وكلُّ بابٍ يُخرج صنفاً يُخرج اسمَ متجره ومعرّفَه.**
 	for _, path := range []string{
-		"/sections",
 		"/sections/" + sectionID + "/items",
 		"/items/" + itemID,
 		"/search?q=" + "صنف",
-		"/home",
 	} {
 		body := get(path)
-		if strings.Contains(body, secret) {
-			t.Errorf("%s سرّب اسمَ المتجر", path)
+		if !strings.Contains(body, secret) {
+			t.Errorf("%s لم يُخرج اسمَ المتجر", path)
 		}
-		// **والمعرّفُ يكفي لكشف الاسم**: كان يُفتح به `/public/merchants/{id}`
-		// **فحُذفت النقطةُ والصفحة** — ويبقى المعرّفُ محجوباً، فما حُذف اليوم
-		// يُعاد غداً **والمعرّفُ المسرَّبُ يبقى في الردّ حتّى يُنتبَه له.**
-		if strings.Contains(body, merchantID) {
-			t.Errorf("%s سرّب معرّفَ المتجر — وبه يُقرأ الاسمُ كاملاً", path)
+		if !strings.Contains(body, merchantID) {
+			t.Errorf("%s لم يُخرج معرّفَ المتجر", path)
 		}
 	}
 
@@ -139,9 +138,15 @@ func TestBrowse_HidesSource(t *testing.T) {
 	if len(out.Data.Items) != 1 {
 		t.Fatalf("عددُ الأصناف = %d، والمتوقّع 1", len(out.Data.Items))
 	}
-	for _, banned := range []string{"merchant_price", "merchant_id", "merchant_name", "margin_override"} {
+	for _, banned := range []string{"merchant_price", "margin_override"} {
 		if _, ok := out.Data.Items[0][banned]; ok {
 			t.Errorf("الحقل %q خرج إلى الزبون", banned)
 		}
+	}
+	if got := out.Data.Items[0]["merchant_name"]; got != secret {
+		t.Errorf("merchant_name = %v، والمتوقّع %q", got, secret)
+	}
+	if got := out.Data.Items[0]["merchant_id"]; got != merchantID {
+		t.Errorf("merchant_id = %v، والمتوقّع %q", got, merchantID)
 	}
 }

@@ -169,10 +169,12 @@ class PerfFlowTest {
             "**طلبت قائمةُ السوق الأصلَ**",
             read(shop).contains("media(item.imageThumbUrl ?: item.imageUrl)"),
         )
+        // **والمفضّلةُ تعرض ببطاقة السوق نفسِها** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+        // فطلبُ المصغَّر فيها هو طلبُ بطاقة السوق أعلاه.
         assertTrue(
-            "**طلبت قائمةُ المفضّلة الأصلَ**",
+            "**المفضّلةُ لا تعرض ببطاقة السوق — فلا يُعرف أيَّ صورةٍ تطلب**",
             read("app-customer/src/main/kotlin/com/rahalgo/customer/mine/MineScreens.kt")
-                .contains("media(item.imageThumbUrl ?: item.imageUrl)"),
+                .contains("com.rahalgo.customer.shop.ItemCard("),
         )
     }
 

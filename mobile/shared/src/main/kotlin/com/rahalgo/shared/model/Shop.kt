@@ -134,6 +134,11 @@ data class Item(
      * اختياراتُها — لا الصنفَ وحدَه.
      */
     @SerialName("has_options") val hasOptions: Boolean = false,
+    /**
+     * **اسمُ متجر الصنف** — سطرٌ تحت صورته في البطاقة (قرارُ المالك
+     * ٢٠٢٦-١٠-١٥، عكسُ حجب المصدر). **وفارغٌ من خادمٍ أقدم.**
+     */
+    @SerialName("merchant_name") val merchantName: String? = null,
 )
 
 /**
@@ -321,6 +326,8 @@ data class Offer(
     val live: Boolean = false,
     /** **للصنف خياراتٌ تُختار** — وشاشةُ العروض تفتح النافذةَ بدل الإضافة. */
     @SerialName("has_options") val hasOptions: Boolean = false,
+    /** **اسمُ المتجر** — سطرٌ تحت اسم الصنف (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+    @SerialName("merchant_name") val merchantName: String? = null,
 )
 
 @Serializable

@@ -145,6 +145,24 @@
     <string name="ord_quote_increased">تغيّر المبلغ المطلوب. يرجى مراجعة المبلغ وتأكيده من جديد.</string>
     <string name="ord_quote_decreased">تم تخفيض تكلفة طلبك إلى %1$s.</string>
     <string name="ord_quote_stale">تم تحديث تكلفة الطلب. راجع المبلغ الجديد ثم أكد من جديد.</string>
+    <!-- نافذةُ تأكيد السعر وسؤالُ الرفض (قرارُ المالك ٢٠٢٦-١٠-١٥) -->
+    <string name="ord_quote_dialog_title">تأكيد سعر الطلب #%1$s</string>
+    <string name="ord_quote_later">لاحقاً</string>
+    <string name="ord_quote_reject_title">رفض السعر الجديد؟</string>
+    <string name="ord_quote_reject_body">متأكد بدك ترفض السعر الجديد؟ الطلب رح يوقف لحتى يتواصل معك المكتب.</string>
+    <string name="ord_quote_reject_yes">أرفض</string>
+    <!-- أسماءُ شريط المراحل القصيرة — للشريط وحدَه، والطويلةُ تبقى لغيره (٢٠٢٦-١٠-١٥) -->
+    <string name="stg_waiting">بالانتظار</string>
+    <string name="stg_accepted">مقبول</string>
+    <string name="stg_preparing">تحضير</string>
+    <string name="stg_seeking">سائق</string>
+    <string name="stg_buying">عم يشتري</string>
+    <string name="stg_bought">اشترى</string>
+    <string name="stg_buying_amanah">عم يستلم</string>
+    <string name="stg_bought_amanah">استلم</string>
+    <string name="stg_on_the_way">بالطريق</string>
+    <string name="stg_arrived">وصل</string>
+    <string name="stg_delivered">تسلّم</string>
 
     <!-- **عناوينُ أقسام «ما يخصّني»** — والاسمُ في الشاشة كالاسم في القائمة. -->
     <string name="menu_favorites_title">المفضلة</string>

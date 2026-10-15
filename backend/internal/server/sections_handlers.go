@@ -7,15 +7,14 @@ package server
 // التصفّحُ كان «اختر متجراً ثمّ صنفاً»، **والزبونُ لا يفكّر هكذا**: يشتهي
 // شاورما ولا يعرف من يصنع أفضلَها، ولا يريد أن يقارن بين عشرة مطاعم.
 //
-// **وأخطرُ منه أنه يكشف المصدر.** في مدينةٍ يعرف أهلُها بعضهم، **زبونٌ رأى
-// اسمَ المطعم يتّصل به مباشرةً في المرّة القادمة** — يوفّر رسمَ التوصيل
-// والمطعمُ يوفّر عمولتنا. **وكلُّ منصةِ توصيلٍ تموت من هذا الباب لا من غيره.**
+// # واسمُ المتجر يظهر على الصنف — **قرارُ المالك ٢٠٢٦-١٠-١٥**
 //
-// # ولماذا لا يُرسَل معرّفُ المتجر أصلاً
+// **كان المصدرُ محجوباً** خشيةَ أن يتّصل الزبونُ بالمطعم مباشرةً. **وعكس
+// المالكُ القرارَ صراحةً**: كلُّ صنفٍ في شبكة التصفّح يحمل اسمَ متجره
+// (`merchant_name`) ومعرّفَه (`merchant_id`). **والتصفّحُ يبقى بالأصناف لا
+// بالمتاجر** — الاسمُ سطرٌ على البطاقة لا بابٌ للتصفّح.
 //
-// **الإخفاءُ عند المصدر لا عند العرض.** من فتح أدوات المتصفّح قرأ الردَّ كما
-// هو، **ومعرّفٌ في الردّ يُفتح به `/public/merchants/{id}` فيُقرأ الاسمُ
-// كاملاً.** فلا يخرج من هنا إلّا ما يلزم للطلب: معرّفُ الصنف وسعرُه.
+// **وسعرُ الشراء وهامشُه يبقيان محجوبين** — ذاك قرارٌ آخرُ لم يُعكس.
 
 import (
 	"math"
@@ -32,12 +31,17 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
-// publicItem صنفٌ كما يراه الزبون — **بلا مصدره.**
+// publicItem صنفٌ كما يراه الزبون — **باسم متجره** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 type publicItem struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Price       int64  `json:"price"`
+	// MerchantID و`MerchantName` **مصدرُ الصنف** — سطرٌ تحت صورته في البطاقة.
+	//
+	// **كانا محجوبين منذ المرحلة الثانية، وعُكس القرارُ ٢٠٢٦-١٠-١٥.**
+	MerchantID   string `json:"merchant_id"`
+	MerchantName string `json:"merchant_name"`
 	// ImageURL **الأصلُ للبطاقة، والمصغَّرةُ للمواضع الضيّقة.**
 	//
 	// المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةٌ تمطّها تبهت** — وقد حدث في بطاقة
@@ -117,7 +121,9 @@ const itemFrom = `
 	       -- **وسعرُ صرفٍ للعرض بالدولار** — لمن اختاره وكتب سعرَه، وإلّا فراغ.
 	       CASE WHEN m.display_currency = 'USD' AND m.exchange_rate > 0
 	            THEN m.exchange_rate::float8 END,
-	       i.price_usd_cents
+	       i.price_usd_cents,
+	       -- **ومصدرُ الصنف** — اسمُ متجره يظهر على البطاقة (٢٠٢٦-١٠-١٥).
+	       m.id, m.name
 	FROM menu_items i
 	JOIN merchants m ON m.id = i.merchant_id
 	JOIN platform_sections ps ON ps.id = i.platform_section_id
@@ -240,7 +246,8 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var usdCents *int64
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents,
+			&it.MerchantID, &it.MerchantName); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -439,7 +446,8 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents,
+			&it.MerchantID, &it.MerchantName); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}

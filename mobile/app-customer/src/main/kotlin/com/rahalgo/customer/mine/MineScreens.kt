@@ -91,6 +91,7 @@ private fun Favorites(vm: MineViewModel) {
         return
     }
     val context = LocalContext.current
+    val backend = Backend.of(context)
     // ══════════════════════════════════════════════════════════════════
     // **وتملأ الشاشةَ لتبدأ من أعلاها**
     // ══════════════════════════════════════════════════════════════════
@@ -129,47 +130,22 @@ private fun Favorites(vm: MineViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(list, key = { it.id }) { item ->
-                Column {
-                    Box {
-                        RemoteImage(
-                            // **والمصغَّرُ أوّلاً** — قِيس ٢٠٢٦-٠٨-٢٤: الأصلُ ١٨٦ ك.ب
-                            // والمصغَّرُ ٢١، **وهذه قائمةٌ لا معرض.**
-                            // (بلاغُ المالك: «الأصناف بعد ما أضيفها على
-                            //  المفضّلة بدها شوي لتجلب الصور».)
-                            url = Backend.of(context).media(item.imageThumbUrl ?: item.imageUrl),
-                            name = item.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .clip(Rahal.shape.md),
-                        )
-                        // **والقلبُ يُرفع من شاشته هو** — ومن أراد أن
-                        // يحذف لا يبحث عن الصنف في السوق.
-                        Box(
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(6.dp)
-                                .clickable { vm.toggleFavorite(item.id) },
-                        ) {
-                            Text("♥", color = Rahal.colors.accent)
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    // **ولا قصّ** — الاختصارُ يقصّ نقاطَ ما تحت السطر (٢٠٢٦-١٠-١٤، ShopScreen).
-                    Text(
-                        text = item.name,
-                        color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Visible,
-                    )
-                    Text(
-                        text = money(item.price),
-                        color = Rahal.colors.brand,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                // ══════════════════════════════════════════════════════
+                // **وبطاقتُها بطاقةُ السوق نفسُها** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+                // ══════════════════════════════════════════════════════
+                //
+                // **إطارٌ بشريطين واسمُ المتجر** — ونسختان من البطاقة تفترقان
+                // يوماً كما افترقتا في السعر. **والقلبُ يُرفع من شاشته هو**
+                // — ومن أراد أن يحذف لا يبحث عن الصنف في السوق.
+                // **ولا «+» هنا** — كما كانت المفضّلةُ قبلها (`onAdd = null`).
+                // **والمصغَّرُ أوّلاً** — تطلبه البطاقةُ نفسُها (قِيس ٢٠٢٦-٠٨-٢٤).
+                com.rahalgo.customer.shop.ItemCard(
+                    item = item,
+                    media = backend::media,
+                    liked = true,
+                    onAdd = null,
+                    onLike = { vm.toggleFavorite(item.id) },
+                )
             }
         }
     }
@@ -281,6 +257,17 @@ private fun Offers(vm: MineViewModel, address: com.rahalgo.shared.model.Address?
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyMedium,
                         )
+                        // **واسمُ المتجر تحت اسم الصنف** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+                        // كما في بطاقة السوق. **وفارغُه من خادمٍ أقدم لا سطرَ له.**
+                        o.merchantName?.takeIf { it.isNotEmpty() }?.let {
+                            Text(
+                                text = it,
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         if (o.body.isNotEmpty()) {
                             Text(
                                 text = o.body,

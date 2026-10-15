@@ -420,6 +420,27 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private data class QuoteSnap(val version: Long, val total: Long, val confirmedNow: Boolean)
+
+    // ══════════════════════════════════════════════════════════════════
+    // **نافذةُ تأكيد السعر — وما أغلقه الزبونُ لا يُعاد عليه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الإغلاقُ يُذكر بالطلب ونسخة عرضه معاً** — فإن تبدّل العرضُ عادت النافذة،
+    // **ولا يُعاد السؤالُ عن النسخة نفسِها في الجلسة.** **والذاكرةُ في الجلسة وحدَها**
+    // (لا تخزينَ دائم): **من فتح التطبيقَ من جديدٍ يُسأل ثانيةً** — والتسليمُ
+    // موقوفٌ على جوابه.
+    private var quoteDismissed by mutableStateOf<Set<String>>(emptySet())
+
+    private fun quoteKey(o: MyOrder) = o.id + ":" + o.quoteVersion
+
+    /** **أوّلُ طلبٍ جارٍ ينتظر تأكيدَ سعره ولم يُغلَق سؤالُه** — و`null` لا سؤال. */
+    val pendingQuote: MyOrder?
+        get() = open.firstOrNull { quotePending(it) && quoteKey(it) !in quoteDismissed }
+
+    /** **يُغلق النافذةَ لهذه النسخة** — والقسمُ في البطاقة باقٍ. */
+    fun dismissQuote(order: MyOrder) {
+        quoteDismissed = quoteDismissed + quoteKey(order)
+    }
 }
 
 /**
