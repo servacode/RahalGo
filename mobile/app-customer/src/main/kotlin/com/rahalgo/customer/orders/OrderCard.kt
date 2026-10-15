@@ -330,7 +330,8 @@ private fun CustomQuoteSection(
     //
     // **تأكيدٌ قائمٌ بنسخةٍ سبقتها أخرى** — والتسليمُ موقوفٌ حتّى يؤكّد. **ومن رفض
     // يبقى طلبُه حيث هو** والمكتبُ يتّصل به؛ فيُقال له ذلك ولا يُعاد السؤال.
-    if (order.quoteConfirmedVersion != null && order.quoteRejectedAt != null) {
+    // **والرفضُ من أوّل سعرٍ كذلك** (٢٠٢٦-١٠-١٦) — لا بعد التعديل وحده.
+    if (order.quoteRejectedAt != null) {
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.ord_quote_rejected_note),
@@ -354,7 +355,8 @@ internal fun quotePending(order: MyOrder): Boolean {
     if (order.quoteConfirmedAt != null && order.quoteConfirmedVersion == order.quoteVersion) return false
     if (ended(order.status)) return false
     // **ومن رفض السعرَ الجديد لا يُسأل ثانية** — المكتبُ يتّصل به.
-    return !(order.quoteConfirmedVersion != null && order.quoteRejectedAt != null)
+    // **ومن رفض لا يُسأل ثانيةً حتّى يعدّل المكتب** — والتعديلُ يمحو علامةَ الرفض.
+    return order.quoteRejectedAt == null
 }
 
 /**
@@ -469,7 +471,7 @@ private fun QuoteConfirmPanel(
     //
     // **كان زرّاً نصّيّاً لا يكاد يُرى** — والرفضُ يوقف الطلبَ حتّى يتّصل المكتب،
     // **فضغطةٌ عابرةٌ عليه لا تُرَدّ.** فصار زرّاً أحمرَ بعرض البطاقة **وسؤالاً قبله.**
-    if (reconfirm && onRejectQuote != null) {
+    if (onRejectQuote != null) {
         var askReject by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf(false) }
         Spacer(Modifier.height(8.dp))
         RahalButton(
@@ -513,8 +515,14 @@ fun QuoteConfirmDialog(
     onRejectQuote: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // **ولا «لاحقاً» ولا إغلاقَ بلمسةٍ خارجها** (قرارُ المالك ٢٠٢٦-١٠-١٦: «لازم يرفض أو
+    // يقبل مباشر») — **فالسائقُ ينتظر ثمنَ بضاعةٍ اشتراها.**
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {},
+        properties = androidx.compose.ui.window.DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+        ),
         title = {
             Text(
                 stringResource(R.string.ord_quote_dialog_title, order.number),
@@ -539,9 +547,6 @@ fun QuoteConfirmDialog(
             }
         },
         confirmButton = {},
-        dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_quote_later)) }
-        },
     )
 }
 
