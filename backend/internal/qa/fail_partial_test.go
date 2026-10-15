@@ -219,6 +219,7 @@ func TestFAIL_D2_ConvertLeadPartialStates(t *testing.T) {
 // **ويُثبَت هنا بحقنِ فشلٍ حيّ.**
 func TestFAIL_D5_ExpenseTreasuryPartial(t *testing.T) {
 	h := New(t)
+	h.oldScaleMoney()
 	treasury(t, h)
 	admin := h.NewUser("admin")
 

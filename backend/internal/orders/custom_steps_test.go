@@ -224,22 +224,24 @@ func errCodeOf(err error) string {
 // TestCustomFee_Bounds **أجرةُ السائق بين حدَّين والثمنُ تحت سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٣
 // مساءً) — قِيس في تجربة القبول: صفرٌ وألفُ مليارٍ مقبولان.
 func TestCustomFee_Bounds(t *testing.T) {
-	svc, w, customer, driver, _ := cqSetup(t)
+	svc, w, customer, driver, exec := cqSetup(t)
 	ctx := context.Background()
+	// **والحدّان هنا بافتراضهما** (١٠ و١٠٠٠ بالليرة الجديدة) — `cqSetup` توسّعهما لغيره.
+	exec(ctx, `DELETE FROM app_settings WHERE key IN ('delivery.custom_fee_min', 'delivery.custom_fee_max')`)
 	orderID := cqSeedOrder(t, w, customer, driver, "driver_defined", nil, true)
 
-	for _, fee := range []int64{0, 999, 100_001, 1_000_000_000_000} {
+	for _, fee := range []int64{0, 9, 1_001, 1_000_000_000_000} {
 		if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepFee, 0, fee); errCodeOf(err) != "custom_fee_out_of_range" {
 			t.Fatalf("أجرةٌ %d: %v — والمتوقّعُ custom_fee_out_of_range", fee, err)
 		}
 	}
-	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepFee, 0, 1_000); err != nil {
+	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepFee, 0, 10); err != nil {
 		t.Fatalf("الحدُّ الأدنى نفسُه رُفض: %v", err)
 	}
-	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, 10_000_001, 0); errCodeOf(err) != "custom_goods_too_high" {
+	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, orders.CustomGoodsMax+1, 0); errCodeOf(err) != "custom_goods_too_high" {
 		t.Fatalf("ثمنٌ فوق السقف: %v — والمتوقّعُ custom_goods_too_high", err)
 	}
-	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, 10_000_000, 0); err != nil {
+	if err := svc.AgreeCustomStep(ctx, orderID, driver, orders.AgreeStepGoods, orders.CustomGoodsMax, 0); err != nil {
 		t.Fatalf("السقفُ نفسُه رُفض: %v", err)
 	}
 

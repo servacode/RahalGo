@@ -91,7 +91,7 @@ func (s *Service) CreateZone(ctx context.Context, actorID string, in ZoneInput, 
 	z, err := scanZone(s.db.QueryRow(ctx, `
 		INSERT INTO delivery_zones (name, center, radius_m, delivery_fee, min_order, sort_order)
 		VALUES ($1, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		        COALESCE($4, 2000), COALESCE($5, 0), COALESCE($6, 0),
+		        COALESCE($4, 20), COALESCE($5, 0), COALESCE($6, 0),
 		        COALESCE((SELECT max(sort_order)+1 FROM delivery_zones), 1))
 		RETURNING `+zoneCols,
 		*in.Name, *in.Lat, *in.Lng, in.RadiusM, in.DeliveryFee, in.MinOrder))

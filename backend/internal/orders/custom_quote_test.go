@@ -44,9 +44,17 @@ func cqSetup(t *testing.T) (*orders.Service, *wallet.Service, string, string, fu
 	exec(context.Background(), `INSERT INTO app_settings (key, value) VALUES
 	           ('delivery.share_purchase', '10'::jsonb)
 	           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
+	// **وحدّا أجرة السائق بالقديمة صراحةً** (ألفٌ ومليون) — افتراضُهما صار بالليرة الجديدة
+	// (١٠ و١٠٠٠، ٢٠٢٦-١٠-١٥)، **وهذه الاختباراتُ تقيس القسمةَ والمسارَ لا الحدّين** بأجورٍ
+	// مكتوبةٍ بالقديمة. **والأدنى فوق الصفر** — فأجرةٌ صفرٌ تبقى غيرَ موثَّقة كما يقيس
+	// `TestCustomSteps_GoodsBeforeFeeRejected`. والحدّان نفسُهما يقيسهما `TestCustomFee_Bounds`.
+	exec(context.Background(), `INSERT INTO app_settings (key, value) VALUES
+	           ('delivery.custom_fee_min', '1000'::jsonb), ('delivery.custom_fee_max', '1000000'::jsonb)
+	           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(),
-			`DELETE FROM app_settings WHERE key = 'delivery.share_purchase'`)
+			`DELETE FROM app_settings WHERE key IN ('delivery.share_purchase',
+			 'delivery.custom_fee_min', 'delivery.custom_fee_max')`)
 	})
 	return svc, w, customer, driver, exec
 }

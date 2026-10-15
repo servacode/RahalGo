@@ -40,6 +40,7 @@ func countRows(t *testing.T, h *Harness, sql string, args ...any) int {
 // **وتقريرُ الأرباح يقول ربحاً لم يقع.**
 func TestATOMIC_ExpenseAndTreasuryAreOneUnit(t *testing.T) {
 	h := New(t)
+	h.oldScaleMoney()
 	treasury(t, h)
 	admin := h.NewUser("admin")
 

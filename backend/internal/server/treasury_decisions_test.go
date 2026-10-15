@@ -109,6 +109,7 @@ func createdExpenseID(t *testing.T, body []byte) string {
 
 func TestTREASURY_CashExpenseLeavesDrawerAndVoidReturns(t *testing.T) {
 	f := newTreasuryFixture(t)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	cat := newExpenseCategory(t, f.pool)
 
 	// **كاشٌ من الدرج**: سطرٌ خارجٌ بمقداره ومرجعِه.

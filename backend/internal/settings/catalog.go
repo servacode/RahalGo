@@ -38,7 +38,13 @@ const (
 	KindBool   Kind = "bool"   // مفتاح تبديل
 	KindChoice Kind = "choice" // واحدٌ من Options
 	KindText   Kind = "text"   // نصّ حرّ بطول أقصى
-	KindMoney  Kind = "money"  // مبلغ بالليرة — عدد صحيح غير سالب
+	// KindMoney مبلغ بالليرة — عدد صحيح غير سالب.
+	//
+	// **وبالليرة الجديدة** (قرارُ المالك ٢٠٢٦-١٠-٠٩: ١٠٠٠ قديمة = ١٠ جديدة) —
+	// **فالافتراضاتُ والحدودُ هنا بالجديدة**، وقُسمت القديمةُ على مئة ٢٠٢٦-١٠-١٥.
+	// **والإنتاجُ يعمل بالافتراض لكلّ مفتاحٍ لم يضبطه المالك** — فافتراضٌ بالقديمة
+	// مبلغٌ أكبرُ بمئة مرّة. ويحرسه `TestMoneyDefaultsInNewLira`.
+	KindMoney Kind = "money"
 	// KindMedia صورةٌ تُرفع — **وقيمتُها معرّفُ الوسيط لا مسارُه.**
 	//
 	// **والمعرّفُ لا المسار**: المسارُ يتغيّر إن نُقل التخزينُ أو رُكّب قرصٌ
@@ -982,7 +988,7 @@ var Catalog = []Def{
 		Min: 0, Max: 1800, Unit: "second", Default: 120},
 
 	{Key: "pricing.margin_fixed", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **التحويلُ التلقائيُّ — كلُّ الطلبات أو لا شيء**
@@ -1044,17 +1050,17 @@ var Catalog = []Def{
 		Options: []string{"signup", "first_order"}, Default: "signup"},
 
 	{Key: "referral.reward_1", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	{Key: "referral.reward_2", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	{Key: "referral.reward_3", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	// **والرابعةُ رتبةٌ قائمةٌ بذاتها** (Batch 4) — لا تُدمَج مع ما بعدها.
 	{Key: "referral.reward_4", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	// **وما بعد الرابعة** — رقمٌ واحدٌ لا يتغيّر (الخامسةُ فصاعداً).
 	{Key: "referral.reward_rest", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// ── السائقون ──────────────────────────────────────────────────────────
 
@@ -1195,14 +1201,14 @@ var Catalog = []Def{
 		ShowWhen: &Condition{Key: "drivers.assignment_mode", Equals: []string{"rotation"}}},
 
 	{Key: "delivery.fee", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// **أجرةُ «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **وصفرٌ يعني «كالعامّة»**
 	// (`delivery.fee` ومعها المسافةُ إن اشتعلت) لا «مجّاناً». **فافتراضُه لا
 	// يبدّل رقماً يومَ يُنشَر.** يقرؤه `orders.merchantDeliveryFee` وحدَه —
 	// الإنشاءُ وعرضُ السعر من دالّةٍ واحدة.
 	{Key: "delivery.merchant_fee", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	// **ودينُ «لدي توصيلة» بلا سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر `orders.SettingMerchantDebtOpen`.
 	// **متروكٌ منذ ٢٠٢٦-١٠-١٥: لا يقرؤه المحرّك** (لا دينَ على أجرة توصيلة). والفهرسُ بلا علامة
 	// «متروك»، فيبقى المفتاحُ هنا كي لا يُردّ حفظٌ قديمٌ له، **ولا أثرَ لقيمته.**
@@ -1265,32 +1271,32 @@ var Catalog = []Def{
 	{Key: "delivery.share_standard_mode", Group: GroupDrivers, Kind: KindChoice,
 		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
 	{Key: "delivery.share_standard", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	{Key: "delivery.share_merchant_mode", Group: GroupDrivers, Kind: KindChoice,
 		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
 	{Key: "delivery.share_merchant", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	{Key: "delivery.share_purchase_mode", Group: GroupDrivers, Kind: KindChoice,
 		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
 	{Key: "delivery.share_purchase", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 	{Key: "delivery.share_amanah_mode", Group: GroupDrivers, Kind: KindChoice,
 		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
 	{Key: "delivery.share_amanah", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// **وأجرةُ الكيلومتر تُضاف فوق `delivery.fee` لا بدلاً منه** —
 	// **ورقمان لمعنًى واحدٍ يفترقان**: من أطفأ المفتاحَ رجع إلى الأساس
 	// بلا أن يُعيد ضبطَ شيء.
 	{Key: "delivery.per_km", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 1000000, Unit: "currency", Default: 0, Sensitive: true,
+		Min: 0, Max: 10_000, Unit: "currency", Default: 0, Sensitive: true,
 		ShowWhen: &Condition{Key: "delivery.by_distance", Equals: []string{"true"}}},
 
 	// **وسقفٌ لا تتجاوزه** — **والمسافةُ تُقاس بخطٍّ مستقيمٍ من مركز
 	// المنطقة**، وخطٌّ يعبر النهرَ يعطي رقماً لا يقبله زبون. وصفرٌ يعني
 	// «بلا سقف».
 	{Key: "delivery.max_fee", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true,
 		ShowWhen: &Condition{Key: "delivery.by_distance", Equals: []string{"true"}}},
 
 	// ══════════════════════════════════════════════════════════════════
@@ -1312,11 +1318,11 @@ var Catalog = []Def{
 	// **وأجرةُ الطلب المخصَّص حين تحدّدها المنصة** — تُلتقط على كلّ طلبٍ
 	// جديدٍ لحظةَ إنشائه. وصفرٌ يعني توصيلاً مجّانيّاً للطلب المخصَّص.
 	{Key: "delivery.custom_fee", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true,
 		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
 	// **وأجرةُ الأمانة منفصلة** (قرارُ المالك ٢٠٢٦-١٠-١٣) — وصفرُها «مثل أجرة المشتريات».
 	{Key: "delivery.custom_fee_amanah", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true,
 		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
 
 	// **وهل يُسمح للسائق أن يغيّر الأجرةَ المحدَّدةَ من المنصة** — مطفأٌ
@@ -1328,9 +1334,9 @@ var Catalog = []Def{
 	// **وحدّا أجرة الطلب الخاصّ التي يكتبها السائق** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) — قِيس
 	// صفرٌ وألفُ مليارٍ مقبولَين. **وأجرةُ المنصّة المفروضةُ لا تُحدّ بهما** — قرارُ الإدارة.
 	{Key: "delivery.custom_fee_min", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10_000_000, Unit: "currency", Default: 1000, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 10, Sensitive: true},
 	{Key: "delivery.custom_fee_max", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 10_000_000, Unit: "currency", Default: 100000, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 1000, Sensitive: true},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ومدى التوصيل الافتراضيّ — أوّلُ درجاتِ السُّلّم الثلاث**
@@ -1360,9 +1366,11 @@ var Catalog = []Def{
 	//
 	// **والصفرُ ممنوع** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٥): كان
 	// صندوقُ النقد يقرؤه «خمسمئة ألف» والتوزيعُ يقرؤه «صفراً فعلاً» — **فمن
-	// كتب صفراً علّق كلَّ طلبٍ نقديٍّ بلا سائق.** وأقلُّه عشرةُ آلاف.
+	// كتب صفراً علّق كلَّ طلبٍ نقديٍّ بلا سائق.** وأقلُّه مئة (عشرةُ آلافٍ بالقديمة).
+	//
+	// **والافتراضُ خمسةُ آلافٍ بالجديدة** (خمسمئةُ ألفٍ بالقديمة — ٢٠٢٦-١٠-١٥).
 	{Key: "drivers.cash_limit", Group: GroupDrivers, Kind: KindMoney,
-		Min: 10000, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+		Min: 100, Max: 1_000_000, Unit: "currency", Default: 5000, Sensitive: true},
 
 	// **سقفُ الطلبات الحيّة بيد السائق.**
 	//
@@ -1625,7 +1633,7 @@ var Catalog = []Def{
 	// **وصفرٌ يعني بلا مكافأةٍ آليّة** — يبقى الهدفُ عدّاداً والمكافأةُ بيد
 	// المالك كما كانت. **فمن لم يضبط رقماً لا يتبدّل عنده شيء.**
 	{Key: "drivers.target_reward", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ومرحلتان بعدها — مطفأتان حتّى يضبطهما المالك**
@@ -1642,11 +1650,11 @@ var Catalog = []Def{
 	{Key: "drivers.target_2", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "order", Default: 0},
 	{Key: "drivers.reward_2", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0},
 	{Key: "drivers.target_3", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "order", Default: 0},
 	{Key: "drivers.reward_3", Group: GroupDrivers, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0},
 
 	// **والافتراضيُّ ٥٠ كالقاعدة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥): كان صفراً،
 	// **فمن ضغط «رجّع للافتراضي» أوقف كلَّ طلب تعويضٍ بصمت.** وصفرُه الآن مقترَحٌ
@@ -1659,11 +1667,11 @@ var Catalog = []Def{
 	// **سقفٌ لكلّ نوع** — وفوقه المالكُ وحدَه يوافق. **ومهلةُ الانتظار**
 	// قبل أن يحمرّ الطلبُ ويُنبَّه المالك.
 	{Key: "compensations.cap_driver", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 500, Sensitive: true},
 	{Key: "compensations.cap_merchant_goods", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 500, Sensitive: true},
 	{Key: "compensations.cap_complaint", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 50000, Sensitive: true},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 500, Sensitive: true},
 	{Key: "compensations.overdue_hours", Group: GroupPlatform, Kind: KindInt,
 		Min: 1, Max: 720, Unit: "hour", Default: 24},
 
@@ -1882,7 +1890,7 @@ var Catalog = []Def{
 
 	// **ومكافأةُ بلوغه للمندوب** — كأخيها في السائقين.
 	{Key: "sales.target_reward", Group: GroupSales, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ومرحلتان بعدها — مطفأتان حتّى يضبطهما المالك**
@@ -1899,11 +1907,11 @@ var Catalog = []Def{
 	{Key: "sales.target_2", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "client", Default: 0},
 	{Key: "sales.reward_2", Group: GroupSales, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0},
 	{Key: "sales.target_3", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "client", Default: 0},
 	{Key: "sales.reward_3", Group: GroupSales, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0},
 
 	// **وأقلُّ أصنافٍ بصورها ليُحسب المتجرُ للمندوب** (قرارُ المالك ٢٠٢٦-١٠-١٣):
 	// مع ساعاتِ الدوام والموقعِ على الخريطة. **وصفرٌ يُسقط شرطَ الأصناف وحدَه.**
@@ -1975,7 +1983,7 @@ var Catalog = []Def{
 	// **وصفرٌ يعني «بلا حدّ»** — فالإنتاجُ لا يتغيّر حتّى يضبطه المالك.
 	// **ومالٌ فيُدار من صلاحيّة المال ويُدوَّن كلُّ تغييرٍ له** (`fininv`).
 	{Key: "customers.cod_limit", Group: GroupCustomers, Kind: KindMoney,
-		Min: 0, Max: 100_000_000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// **وتوثيقُ واتساب قناةُ الوصول** — ومن لا رقمَ موثَّقاً له لا يبلغه
 	// إشعارُ طلبه. **وإلزامُه قرارُ تشغيلٍ لا قرارُ نشر.**
@@ -2007,7 +2015,7 @@ var Catalog = []Def{
 	// يُطفئها: **رايةٌ ورقمٌ لمعنًى واحدٍ يفترقان**، فتُرفع الرايةُ
 	// والرقمُ صفرٌ فيُبحث عن العطب في الشيفرة.
 	{Key: "customers.signup_bonus", Group: GroupCustomers, Kind: KindMoney,
-		Min: 0, Max: 1_000_000, Unit: "currency", Default: 0, Sensitive: true},
+		Min: 0, Max: 10_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// ── السائقون ──────────────────────────────────────
 	//
@@ -2047,11 +2055,12 @@ var Catalog = []Def{
 	{Key: "merchants.default_prep_minutes", Group: GroupMerchants, Kind: KindInt,
 		Min: 1, Max: 180, Unit: "minute", Default: 20},
 
-	// **أعلى سعرٍ لصنف** (قرارُ المالك ٢٠٢٦-١٠-٠١: «أعلى سعر ١٠٠ ألف») — قِيس
+	// **أعلى سعرٍ لصنف** (قرارُ المالك ٢٠٢٦-١٠-٠١: «أعلى سعر ١٠٠ ألف» بالقديمة،
+	// **أي ألفٌ بالجديدة** — ٢٠٢٦-١٠-١٥) — قِيس
 	// على التجهيز: صنفٌ بتسعة تريليونات قُبل بلا كلمة. **وصفرٌ زائدٌ خطأُ إصبع**
 	// يخرّب التقاريرَ والسلّة. والقائمُ فوقه يبقى، **ولا يُرفع سعرُه فوقه.**
 	{Key: "merchants.max_item_price", Group: GroupMerchants, Kind: KindInt,
-		Min: 1000, Max: 100000000, Unit: "currency", Default: 100000},
+		Min: 10, Max: 1_000_000, Unit: "currency", Default: 1000},
 
 	// **ولا مفتاحَ لمراجعة الأصناف** — رُفع بقرار المالك ٢٠٢٦-١٠-٠٤: «ما في
 	// داعي للموافقة على الصنف أساساً» (هجرة ٠٢٠٠ تمحو قيمتَه المحفوظة).
@@ -2086,7 +2095,7 @@ var Catalog = []Def{
 	// **ورسمُ المصدر الإضافيّ**: طلبٌ من متجرين يكلّف مشواراً ثانياً.
 	// **وصفرٌ يعني بلا رسم.**
 	{Key: "orders.extra_source_fee", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100000, Unit: "currency", Default: 0},
+		Min: 0, Max: 1000, Unit: "currency", Default: 0},
 
 	// **ونصفُ قطرِ القرب — البوّابةُ التي تفتح ذاك الرسمَ أو تُغلقه.**
 	//
@@ -2124,7 +2133,7 @@ var Catalog = []Def{
 	// **وأقلُّ مبلغِ سحب**: تحويلٌ صغيرٌ تكلفتُه أكبرُ منه. **ومن رصيدُه أقلُّ
 	// من الحدّ يسحبه كاملاً** — وإلّا حُبس ماله.
 	{Key: "payouts.min_amount", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 10000000, Unit: "currency", Default: 50000, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
 
 	// **ونافذةُ الشكوى**: بعدها يُغلق الباب. **وطويلةٌ تعني نزاعاً على طلبٍ
 	// نُسي، وقصيرةٌ تعني من اكتشف متأخّراً لا يُسمع.**
@@ -2196,15 +2205,15 @@ var Catalog = []Def{
 	// **حدُّ الرصيد الذي يجعل تغييرَ الرقم ينتظر موافقةَ شخصٍ ثانٍ** — الرقمُ ينقل
 	// الحسابَ بمحفظته. وصفرُه: كلُّ تغييرٍ بموظّفٍ واحدٍ وكلمةِ سرّه.
 	{Key: "security.phone_change_approval_balance", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 100000, Sensitive: true},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 1000, Sensitive: true},
 	// **سقفُ الحركة اليدويّة الواحدة على محفظة** — والحركةُ طلبٌ تقرّره الماليّة.
 	{Key: "finance.manual_wallet_max", Group: GroupPlatform, Kind: KindMoney,
-		Min: 1, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+		Min: 1, Max: 1_000_000, Unit: "currency", Default: 5000, Sensitive: true},
 	// **سقفُ المصروف التشغيليّ الذي يحتاج موافقةً ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
 	// ما فوقه اقتراحٌ يوافق عليه شخصٌ آخر وصورةُ إيصاله إلزاميّة، وما دونه يُقيَّد
 	// مباشرة. وصفرُه: كلُّ مصروفٍ بموافقةٍ ثانية.
 	{Key: "finance.expense_approval_threshold", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100000000, Unit: "currency", Default: 500000, Sensitive: true},
+		Min: 0, Max: 1_000_000, Unit: "currency", Default: 5000, Sensitive: true},
 	// **بعد كم يوماً ينبّه الدينُ المفتوح في الرئيسيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٤،
 	// قسمُ الديون: «رقمٌ من الإعدادات ويبدأ بثلاثين»). وصفرُه: بلا تنبيه.
 	{Key: "finance.obligation_alert_days", Group: GroupPlatform, Kind: KindInt,

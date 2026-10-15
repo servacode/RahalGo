@@ -124,6 +124,7 @@ func (f *adminWalletFixture) balance(t *testing.T, uid string) int64 {
 
 func TestAdminWalletApplyGuardsAndDirections(t *testing.T) {
 	f := newAdminWalletFixture(t)
+	pinOldScaleMoney(t, f.pool, f.srv)
 
 	t.Run("النوعُ من قائمةٍ مغلقة — والسحبُ ليس منها", func(t *testing.T) {
 		uid := testdb.NewUser(t, f.pool, "driver")

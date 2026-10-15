@@ -35,6 +35,7 @@ import (
 
 func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 	f := newDriverFixture(t, 0)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	ctx := context.Background()
 	// **والإلغاءُ من شخصٍ غيرِ من سجّل** (قرارُ المالك ٢٠٢٦-١٠-٠٤، المصروفات ٥).
 	actor, voider, _ := twoCustomers(t, f)

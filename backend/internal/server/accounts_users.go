@@ -57,7 +57,7 @@ func (s *Server) changePhone(r *http.Request, userID, rawPhone string) (map[stri
 	if old == phone {
 		return map[string]any{"pending": false, "changed": false}, nil
 	}
-	threshold := s.settings.GetNum(ctx, "security.phone_change_approval_balance", 100000)
+	threshold := s.settings.GetInt(ctx, "security.phone_change_approval_balance")
 	if threshold > 0 && balance > threshold {
 		var id string
 		err := s.pg.QueryRow(ctx, `

@@ -116,6 +116,7 @@ func TestFIN_MoneyTimingByStatus(t *testing.T) {
 //	DEFERRED FAILURE-INJECTION  وقوعُها بإسقاط الخطوة الثانية (FI-12.c → P-6)
 func TestFIN_ExpenseTreasuryInvariant(t *testing.T) {
 	h := New(t)
+	h.oldScaleMoney()
 	treasury(t, h)
 	base := financialBaseline(t, h)
 	admin := h.NewUser("admin")

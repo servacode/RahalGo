@@ -71,6 +71,7 @@ func (f *driverFixture) notifsFor(t *testing.T, userID, orderID string) int {
 // **وهو الأهمّ**: الطلبُ بعدها لا يتقدّم إلّا بفعل الزبون.
 func TestCustomNotify_QuoteReachesCustomer(t *testing.T) {
 	f := newDriverFixture(t, 1)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	armProximity(t, f)
 	armCustomNotify(t, f)
 	d := f.drivers[0]
@@ -98,6 +99,7 @@ func TestCustomNotify_QuoteReachesCustomer(t *testing.T) {
 // ── ب · الزبونُ يؤكّد ⇒ السائقُ يُخبَر ليشتري ───────────────────────────────
 func TestCustomNotify_ConfirmReachesDriver(t *testing.T) {
 	f := newDriverFixture(t, 1)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	armProximity(t, f)
 	armCustomNotify(t, f)
 	d := f.drivers[0]

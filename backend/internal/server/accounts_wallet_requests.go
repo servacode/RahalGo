@@ -55,7 +55,7 @@ var (
 
 // walletManualMax سقفُ الحركة اليدويّة الواحدة — من الإعدادات.
 func (s *Server) walletManualMax(ctx context.Context) int64 {
-	return s.settings.GetNum(ctx, "finance.manual_wallet_max", 500000)
+	return s.settings.GetInt(ctx, "finance.manual_wallet_max")
 }
 
 type walletRequestRow struct {

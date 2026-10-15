@@ -56,15 +56,16 @@ func TestSETTINGS_PercentRespectsCatalogMax(t *testing.T) {
 	}
 }
 
-// **سقفُ نقد السائق لا يكون صفراً** (البند ٥) — وأقلُّه عشرةُ آلاف.
+// **سقفُ نقد السائق لا يكون صفراً** (البند ٥) — وأقلُّه مئة بالليرة الجديدة
+// (عشرةُ آلافٍ بالقديمة — ٢٠٢٦-١٠-١٥).
 func TestSETTINGS_DriverCashLimitZeroForbidden(t *testing.T) {
-	for _, bad := range []float64{0, 9999} {
+	for _, bad := range []float64{0, 99} {
 		if _, err := Validate("drivers.cash_limit", bad); err == nil {
 			t.Errorf("قُبل سقفُ نقدٍ %v", bad)
 		}
 	}
-	if _, err := Validate("drivers.cash_limit", float64(10000)); err != nil {
-		t.Errorf("رُدّ ١٠٬٠٠٠: %v", err)
+	if _, err := Validate("drivers.cash_limit", float64(100)); err != nil {
+		t.Errorf("رُدّ ١٠٠: %v", err)
 	}
 }
 

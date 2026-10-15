@@ -160,7 +160,7 @@ const complaintCapKey = "compensations.cap_complaint"
 // compensationCap سقفُ الاقتراح الواحد — **سقفُ موافقة الشكوى**، وصفرُه «بلا سقف»
 // كما في صفحة التعويضات. والافتراضُ من الكتالوج.
 func (s *Service) compensationCap(ctx context.Context) int64 {
-	fallback := int64(50000)
+	fallback := int64(500)
 	if def, ok := settings.Lookup(complaintCapKey); ok {
 		if n, ok := def.Default.(int); ok {
 			fallback = int64(n)

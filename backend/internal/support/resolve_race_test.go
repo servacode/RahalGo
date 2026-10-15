@@ -52,7 +52,7 @@ func TestResolveCompensatesOnlyOnce(t *testing.T) {
 	// تذاكرَ جديدةٍ حتّى تُلتقط أو يثبت أنّها لا تقع.
 	const rounds = 20
 	const n = 8
-	const compensation int64 = 5_000
+	const compensation int64 = 50
 
 	worst := 0
 	var seen int64

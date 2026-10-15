@@ -26,6 +26,7 @@ func openTicketFor(t *testing.T, h *Harness, staff, cust *User) string {
 
 func TestCMP_ResolvedComplaintProposesIntoUnifiedQueue(t *testing.T) {
 	h := New(t)
+	h.oldScaleMoney()
 	tid := treasury(t, h)
 	staff := h.NewUser("admin")
 	cust := h.Customer()
@@ -111,6 +112,7 @@ func ticketState(t *testing.T, h *Harness, ticket string) (status, reqID string,
 //     **والدعمُ يقترح ثانيةً على التذكرة نفسِها.**
 func TestCMP_PendingCompensationWaitsForFinance(t *testing.T) {
 	h := New(t)
+	h.oldScaleMoney()
 	treasury(t, h)
 	staff := h.NewUser("admin")
 	fin := h.NewUser("admin")

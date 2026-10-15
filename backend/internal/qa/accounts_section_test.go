@@ -17,6 +17,34 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/authz"
 )
 
+// wideWalletCap **سقفُ الحركة اليدويّة واسعٌ لمن لم يضبطه** — افتراضُه صار ٥٠٠٠ بالليرة
+// الجديدة (٢٠٢٦-١٠-١٥)، **والاختباراتُ التي تشحن عبر المسار الحقيقيّ تكتب مبالغَها
+// بالقديمة** ولا تقيس السقف. **ومن ضبطه بنفسه لا يُمسّ** — فاختبارُ السقف يبقى يقيسه.
+func (h *Harness) wideWalletCap() {
+	h.T.Helper()
+	h.settingIfUnset("finance.manual_wallet_max", "1000000")
+}
+
+// settingIfUnset **يضبط مفتاحاً لمن لم يضبطه** — ويُعاد بعد الاختبار كما `Setting`.
+func (h *Harness) settingIfUnset(key, value string) {
+	h.T.Helper()
+	var n int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM app_settings WHERE key = $1`, key).Scan(&n)
+	if n == 0 {
+		h.Setting(key, value)
+	}
+}
+
+// oldScaleMoney **السقوفُ واسعةٌ لاختبارٍ يكتب مبالغَه بالليرة القديمة** — عتبةُ المصروف
+// وسقوفُ التعويض والمحفظة (افتراضاتُها بالجديدة منذ ٢٠٢٦-١٠-١٥). ولا يمسّ ما ضُبط.
+func (h *Harness) oldScaleMoney() {
+	h.T.Helper()
+	for _, k := range []string{"finance.manual_wallet_max", "finance.expense_approval_threshold",
+		"compensations.cap_driver", "compensations.cap_merchant_goods", "compensations.cap_complaint"} {
+		h.settingIfUnset(k, "1000000")
+	}
+}
+
 func walletPropose(h *Harness, by *User, target string, body map[string]any) Res {
 	return h.POSTKey("/api/v1/admin/users/"+target+"/wallet", by.Token, uniq("acc"), body)
 }
@@ -121,6 +149,7 @@ func TestACC_WalletRequestRules(t *testing.T) {
 
 func TestACC_WalletTopupEntersOfficeCashbox(t *testing.T) {
 	h := New(t)
+	h.wideWalletCap()
 	f := h.Factory()
 	tid := treasury(t, h)
 	fin := h.NewUser("finance")
@@ -655,6 +684,7 @@ func urlQ(v string) string { return url.QueryEscape(v) }
 // ماليٌّ ويوافق عليها `admin` — ويُرجع ردَّ الموافقة (أو ردَّ الاقتراح إن رُدّ).
 func (h *Harness) adminWallet(admin *User, uid string, body map[string]any) Res {
 	h.T.Helper()
+	h.wideWalletCap()
 	proposer := h.NewUser("finance")
 	r := h.POSTKey("/api/v1/admin/users/"+uid+"/wallet", proposer.Token, uniq("w"), body)
 	if r.Code >= 400 {

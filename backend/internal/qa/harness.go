@@ -243,6 +243,9 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 	ordersSvc := orders.NewService(pool, identitySvc, walletSvc, cashboxSvc, hub, quiet)
 	catalogSvc := catalog.NewService(pool, identitySvc)
 	supportSvc := support.NewService(pool, identitySvc, walletSvc)
+	// **ومخزنُ الإعدادات كما في الإقلاع** (`cmd/api/main.go`) — كان الدعمُ هنا بلا مخزنٍ فيقرأ
+	// سقفَ الشكوى من الفهرس وحدَه، **فلا يبلغه ما يضبطه اختبار.**
+	supportSvc.SetSettings(settingsStore)
 	// **ومجلَّدُ الوسائط يُحفَظ ليكتب فيه الفحصُ ملفّاً حقيقيّاً** —
 	// **واختبارُ إذنٍ على ملفٍّ غيرِ موجودٍ يقرأ `404` نجاحاً وهو عدم.**
 	mediaDir := t.TempDir()

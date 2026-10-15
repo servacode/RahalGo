@@ -47,10 +47,10 @@ func TestSETTINGS_UnchangedValueNotSaved(t *testing.T) {
 func TestSETTINGS_RelatedKeysRejectedWithReason(t *testing.T) {
 	h := New(t)
 	admin := h.NewUser("admin")
-	h.Setting("delivery.custom_fee_min", "1000")
-	h.Setting("delivery.custom_fee_max", "100000")
+	h.Setting("delivery.custom_fee_min", "10")
+	h.Setting("delivery.custom_fee_max", "1000")
 	res := h.Call("PUT", "/api/v1/admin/settings/delivery.custom_fee_min", admin.Token,
-		map[string]any{"value": 200000}, nil)
+		map[string]any{"value": 2000}, nil)
 	if res.Code != http.StatusBadRequest || res.Err() != "setting_conflict" {
 		t.Fatalf("الأدنى فوق الأعلى ⇒ %s — والمنتظَرُ setting_conflict", res)
 	}

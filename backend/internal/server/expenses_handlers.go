@@ -139,7 +139,7 @@ func expenseCashOut(ctx context.Context, q dbtx.Querier, paidFrom, expenseID str
 
 // expenseApprovalThreshold **سقفُ الموافقة الثانية** — من الإعدادات.
 func (s *Server) expenseApprovalThreshold(ctx context.Context) int64 {
-	return s.settings.GetNum(ctx, "finance.expense_approval_threshold", 500000)
+	return s.settings.GetInt(ctx, "finance.expense_approval_threshold")
 }
 
 // damascusLoc منطقةُ المنصّة — معرَّفةٌ في treasury_handlers.go.

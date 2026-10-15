@@ -4,7 +4,7 @@ package server
 // **مثالٌ ماليٌّ حيٌّ بجانب مفاتيح المال** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات، البند ١٧)
 // ══════════════════════════════════════════════════════════════════════
 //
-// «طلبٌ بخمسين ألفاً وأجرةُ عشرة آلاف ← الزبونُ يدفع… المتجرُ… السائقُ…
+// «طلبٌ بخمسمئة (بالليرة الجديدة) وأجرةُ التوصيل ← الزبونُ يدفع… المتجرُ… السائقُ…
 // المندوبُ… المنصّة…» — **محسوبٌ بدوالّ المحرّك نفسِها** (`pricing` و
 // `orders.DriverFeeAfterShare`) **لا في الشاشة**: حسبتان تفترقان يومَ يتبدّل
 // شيء، فيقرأ المالكُ رقماً ويُحاسَب الناسُ بغيره.
@@ -55,12 +55,12 @@ func computeMoneyExample(r *http.Request, st pricing.Store, amount int64, platfo
 	return ex
 }
 
-// handleSettingsMoneyExample `GET /admin/settings/money-example?amount=50000`.
+// handleSettingsMoneyExample `GET /admin/settings/money-example?amount=500`.
 func (s *Server) handleSettingsMoneyExample(w http.ResponseWriter, r *http.Request) {
-	amount := int64(50000)
+	amount := int64(500)
 	if raw := r.URL.Query().Get("amount"); raw != "" {
 		n, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || n < 0 || n > 100_000_000 {
+		if err != nil || n < 0 || n > 1_000_000 {
 			s.respondErr(w, errValidation)
 			return
 		}

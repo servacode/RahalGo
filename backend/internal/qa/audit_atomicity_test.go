@@ -48,6 +48,7 @@ func walletBalance(t *testing.T, h *Harness, userID string) int64 {
 // `finance.wallet_request_approved` باسم الموافِق.
 func applyWallet(t *testing.T, h *Harness, admin *User, target string, amount int64) int {
 	t.Helper()
+	h.wideWalletCap()
 	proposer := h.NewUser("finance")
 	r := h.POSTKey("/api/v1/admin/users/"+target+"/wallet", proposer.Token,
 		uniq("aq4"), map[string]any{

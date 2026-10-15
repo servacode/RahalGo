@@ -139,6 +139,7 @@ func TestCASH01_AutoAssignObeysCashCeiling(t *testing.T) {
 // TestCAP03_NegativePriceOnUpdateIs400 **سعرٌ سالبٌ في التعديل ٤٠٠ لا ٥٠٠** — فحصُ المندوب.
 func TestCAP03_NegativePriceOnUpdateIs400(t *testing.T) {
 	h := New(t)
+	h.settingIfUnset("merchants.max_item_price", "1000000")
 	cs := newCapStore(t, h)
 	made := cs.add(h, map[string]any{"name": "صنف", "price": 5000})
 	id, _ := made.JSON()["id"].(string)

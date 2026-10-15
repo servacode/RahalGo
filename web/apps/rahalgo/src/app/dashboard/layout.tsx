@@ -143,9 +143,6 @@ const ALL_NAV: NavItem[] = [
   // المصروفاتُ والأرباحُ والنقدُ والسحوباتُ والتعويضاتُ لم تعد بنوداً في القائمة.
   { href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet,
     caps: ["finance.read"] },
-  // **والالتزاماتُ الماليّة تُقرأ هنا** — الدَّينُ على المتاجر والمناديب
-  // (`financial_obligations`): على من وكم ومن أين وكم بقي. **قراءةٌ فقط**،
-  // والتسويةُ من بابها (استرداد أو نزاع).
   { href: "/dashboard/obligations", label: m.admin.nav.obligations, icon: IconBalance,
     caps: ["finance.read"] },
   // **الخسارةُ والمطالبةُ وجها واقعةٍ واحدة** — طلبٌ يفشل فيُعوَّض السائقُ

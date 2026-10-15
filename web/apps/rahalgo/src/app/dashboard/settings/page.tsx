@@ -518,7 +518,7 @@ function MoneyExample({ version }: { version: unknown }) {
   const [ex, setEx] = useState<Example | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
-    api<Example>("/api/v1/admin/settings/money-example?amount=50000")
+    api<Example>("/api/v1/admin/settings/money-example?amount=500")
       .then((r) => {
         setEx(r);
         setFailed(false);

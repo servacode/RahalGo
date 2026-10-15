@@ -314,6 +314,7 @@ func TestEXPENSES_InvertedRangeIsSaid(t *testing.T) {
 // TestEXPENSES_MonthIsBySpendDate **القرار ٢ — إيجارُ أيلول المسجَّلُ اليومَ في أيلول.**
 func TestEXPENSES_MonthIsBySpendDate(t *testing.T) {
 	x := newOpexFixture(t)
+	pinOldScaleMoney(t, x.f.pool, x.f.srv)
 	clerk := testdb.NewUser(t, x.f.pool, "admin")
 	ctx := context.Background()
 	base, err := opexBySpendDate(ctx, x.f.pool, "2026-07-01", "2026-07-31")

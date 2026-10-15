@@ -193,6 +193,7 @@ func (f *incFixture) targetRows(t *testing.T, uid string) int {
 // «عن الهدف» ولو أُرسل `for_target`.
 func TestINC_ManualGrantIsARequestApprovedByAnother(t *testing.T) {
 	f := newIncFixture(t)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	driver := f.kept(t, "driver")
 
 	w := f.call(f.proposer, http.MethodPost, "/admin/users/"+driver+"/incentive",

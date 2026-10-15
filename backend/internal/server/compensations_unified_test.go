@@ -86,6 +86,7 @@ func (f *driverFixture) approveCompW(id, actor string, amount int64) (int, strin
 // الثاني يدفع للأوّل** (الأقدم) والنافذةُ تعرض اسمَ الثاني.
 func TestCOMP_ApproveByRequestID_PaysTheShownDriver(t *testing.T) {
 	f := newDriverFixture(t, 2)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	compTreasury(t, f)
 	a, b := f.drivers[0], f.drivers[1]
 	orderID := f.problemOrderAt(t, "at_pickup", b)
@@ -119,6 +120,7 @@ func TestCOMP_ApproveByRequestID_PaysTheShownDriver(t *testing.T) {
 // TestCOMP_ProposerCannotApproveOwn **لا يوافق أحدٌ على ما اقترحه.**
 func TestCOMP_ProposerCannotApproveOwn(t *testing.T) {
 	f := newDriverFixture(t, 1)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	treasury := compTreasury(t, f)
 	d := f.drivers[0]
 	orderID := f.problemOrderAt(t, "at_dropoff", d)
@@ -203,6 +205,7 @@ func TestCOMP_ZeroPercentStillCreatesRequest(t *testing.T) {
 // TestCOMP_ComplaintPaysOwnerFromTreasury **تعويضُ الشكوى لصاحبها ومن الخزينة.**
 func TestCOMP_ComplaintPaysOwnerFromTreasury(t *testing.T) {
 	f := newDriverFixture(t, 1)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	treasury := compTreasury(t, f)
 	d := f.drivers[0] // **صاحبُ الشكوى سائقٌ لا زبون.**
 	ctx := context.Background()
@@ -244,6 +247,7 @@ func TestCOMP_ComplaintPaysOwnerFromTreasury(t *testing.T) {
 // TestCOMP_GoodsCompensationGoesThroughQueue **تعويضُ البضاعة اقتراحٌ يمرّ بالطابور.**
 func TestCOMP_GoodsCompensationGoesThroughQueue(t *testing.T) {
 	f := newDriverFixture(t, 1)
+	pinOldScaleMoney(t, f.pool, f.srv)
 	compTreasury(t, f)
 	ctx := context.Background()
 	owner := testdb.NewUser(t, f.pool, "merchant")

@@ -38,7 +38,7 @@ func TestCMP_ResolveProposesCompensationNotPays(t *testing.T) {
 		INSERT INTO tickets (customer_id, subject, reason, created_by, opened_by_customer)
 		VALUES ($1, 'late', 'late', $1, true) RETURNING id`, customer)
 
-	tk, err := svc.Resolve(ctx, agent, id, "تأخّر الطلب", 7_000, "127.0.0.1")
+	tk, err := svc.Resolve(ctx, agent, id, "تأخّر الطلب", 70, "127.0.0.1")
 	if err != nil {
 		t.Fatalf("الحلّ: %v", err)
 	}
@@ -56,11 +56,11 @@ func TestCMP_ResolveProposesCompensationNotPays(t *testing.T) {
 		WHERE t.id = $1`, id).Scan(&reqUser, &reqStatus, &reqKind, &reqAmount); err != nil {
 		t.Fatalf("لا طلبَ تعويضٍ مربوطاً بالتذكرة: %v", err)
 	}
-	if reqUser != customer || reqStatus != "pending" || reqKind != "compensation" || reqAmount != 7_000 {
+	if reqUser != customer || reqStatus != "pending" || reqKind != "compensation" || reqAmount != 70 {
 		t.Fatalf("الطلب: user=%s status=%s kind=%s amount=%d", reqUser, reqStatus, reqKind, reqAmount)
 	}
-	if tk.Compensation != 0 || tk.CompensationProposed != 7_000 || tk.CompensationStatus != "pending" {
-		t.Fatalf("التذكرةُ تقول دُفع %d واقتُرح %d بحال %q — والمنتظَر ٠ و٧٠٠٠ و pending",
+	if tk.Compensation != 0 || tk.CompensationProposed != 70 || tk.CompensationStatus != "pending" {
+		t.Fatalf("التذكرةُ تقول دُفع %d واقتُرح %d بحال %q — والمنتظَر ٠ و٧٠ و pending",
 			tk.Compensation, tk.CompensationProposed, tk.CompensationStatus)
 	}
 
@@ -70,7 +70,7 @@ func TestCMP_ResolveProposesCompensationNotPays(t *testing.T) {
 		t.Fatal(err)
 	}
 	tk, _ = svc.Get(ctx, id)
-	if tk.Compensation != 7_000 || tk.CompensationStatus != "approved" {
+	if tk.Compensation != 70 || tk.CompensationStatus != "approved" {
 		t.Fatalf("بعد الموافقة: دُفع %d بحال %q", tk.Compensation, tk.CompensationStatus)
 	}
 }
@@ -88,7 +88,7 @@ func TestCMP_CompensationGoesToComplainant(t *testing.T) {
 		INSERT INTO tickets (customer_id, subject, reason, created_by, opened_by_customer)
 		VALUES ($1, 'x', 'customer_absent', $2, false) RETURNING id`, customer, driver)
 
-	tk, err := svc.Resolve(ctx, agent, id, "عولجت", 3_000, "127.0.0.1")
+	tk, err := svc.Resolve(ctx, agent, id, "عولجت", 30, "127.0.0.1")
 	if err != nil {
 		t.Fatalf("الحلّ: %v", err)
 	}

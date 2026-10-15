@@ -69,6 +69,7 @@ func TestCompensateDriverOnlyOnce(t *testing.T) {
 		orders:   orders.NewService(pool, nil, walletSvc, cashbox.NewService(pool, store), nil, quiet),
 	}
 
+	pinOldScaleMoney(t, pool, srv)
 	admin := testdb.NewUser(t, pool, "admin")
 	driver := testdb.NewUser(t, pool, "driver")
 	customer := testdb.NewUser(t, pool, "customer")
