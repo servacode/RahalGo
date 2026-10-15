@@ -351,6 +351,8 @@ private val CODES: Map<String, Int> = mapOf(
     "offer_not_yours" to R.string.err_offer_not_yours,
     "not_on_shift" to R.string.err_not_on_shift,
     "cash_limit_reached" to R.string.err_cash_limit,
+    // **والتأخّرُ بالتسليم سببُه سببُه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — لا «بلغت السقف».
+    "cash_overdue" to R.string.err_cash_overdue,
     "too_many_active_orders" to R.string.err_too_many_active,
     "not_your_order" to R.string.err_not_your_order,
     "delivery_proof_required" to R.string.err_proof_required,

@@ -306,6 +306,26 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 				})
 			}
 			s.touchUser(wr.UserID, "wallet")
+		} else {
+			// ══════════════════════════════════════════════════════════
+			// **والرفضُ يصل صاحبَ الحساب بسببه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **كان الرفضُ صامتاً** — دفع الزبونُ نقداً في المكتب لشحن محفظته،
+			// **ثمّ رُفض الطلبُ ولا خبر**: ينتظر رصيداً لا يأتي. **فيُقال له
+			// الرفضُ والمبلغُ والسبب.** ولكلّ أنواع الطلبات لا للشحن وحدَه.
+			title := notifTitles.walletRequestRejected
+			if wr.Kind == "topup" {
+				title = notifTitles.walletTopupRejected
+			}
+			body := fmtMoneyAr(wr.Amount)
+			if reason := strings.TrimSpace(req.Note); reason != "" {
+				body += " · " + reason
+			}
+			s.notify.Notify(r.Context(), notifications.Input{
+				UserID: wr.UserID, Kind: notifications.KindWallet,
+				Title: title, Body: body, Entity: "wallet", Href: "/portal/wallet",
+			})
 		}
 		s.touch("wallet", "ops")
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": wr.Status,

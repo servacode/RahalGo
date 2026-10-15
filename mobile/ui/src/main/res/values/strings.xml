@@ -47,6 +47,7 @@
     <string name="err_fail_reason_wrong_stage">هذا السبب لا يخص مرحلة الطلب الحالية</string>
     <string name="err_door_wait">انتظر عند الباب قليلا — الإدارة تحاول الاتصال بالزبون</string>
     <string name="err_cash_limit">النقد الذي بذمتك بلغ السقف — سلم للمكتب</string>
+    <string name="err_cash_overdue">تأخّرت بتسليم المصاري — سلّم ما بذمّتك أولاً</string>
     <string name="err_complaint_window">مضت مهلة البلاغ على هذا الطلب</string>
     <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تسلم</string>
     <string name="err_internal">تعذر إتمام العملية — حاول بعد قليل</string>
@@ -292,7 +293,8 @@
     <string name="wal_k_refund">استرجاع</string>
     <string name="wal_k_reward">مكافأة</string>
     <string name="wal_k_settlement">تسليم نقد</string>
-    <string name="wal_max">الحد الأعلى: %1$s</string>
+    <string name="wal_max">المتاح للسحب: %1$s</string>
+    <string name="wal_reserved">محجوز لطلب سحب: %1$s</string>
     <string name="wal_no_txs">لا حركات بعد</string>
     <string name="wal_note">ملاحظة (اختيارية)</string>
     <string name="wal_opening">رصيد أول المدة</string>

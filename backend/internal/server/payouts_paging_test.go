@@ -49,8 +49,8 @@ func TestAdminPayouts_PagesAndSumsPending(t *testing.T) {
 	}
 	// **ثلاثون معلَّقاً بألفٍ** — أكثرُ من صفحةٍ واحدة (خمسٌ وعشرون).
 	//
-	// **ولكلٍّ صاحبُه**: القاعدةُ تمنع معلَّقين لشخصٍ واحد
-	// (`payout_requests_one_pending`) — **وهي حارسٌ صحيحٌ لا يُلتفّ عليه
+	// **ولكلٍّ صاحبُه**: القاعدةُ تمنع طلبين مفتوحين لشخصٍ واحد
+	// (`payout_requests_one_open`، الهجرة 0445) — **وهي حارسٌ صحيحٌ لا يُلتفّ عليه
 	// في فحص.**
 	for range 30 {
 		ask(testdb.NewUser(t, f.pool, "driver"), 1000, "pending")

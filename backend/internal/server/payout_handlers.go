@@ -16,6 +16,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/approval"
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/officecash"
 )
@@ -59,8 +60,11 @@ type payout struct {
 	PaidVia       string `json:"paid_via"`
 }
 
-// payoutRoleSQL **دورُ الطالب** — أوّلُ أدوار السحب الثلاثة عنده.
-const payoutRoleSQL = `COALESCE((SELECT ur.role_code FROM user_roles ur
+// payoutRoleSQL **دورُ الطالب** — المكتوبُ على الطلب لحظةَ إنشائه (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **كان يُشتقّ من أدوار الحساب** (أوّلُها أبجديّاً) — **فمن له دوران يظهر طلبُه بدورٍ
+// واحدٍ دائماً** ولو طلب من تطبيق الآخر. **والقديمُ بلا دورٍ مكتوب يُشتقّ كما كان.**
+const payoutRoleSQL = `COALESCE(p.role, (SELECT ur.role_code FROM user_roles ur
 	         WHERE ur.user_id = p.user_id AND ur.role_code IN ('driver','merchant','sales')
 	         ORDER BY ur.role_code LIMIT 1), '')`
 
@@ -132,13 +136,33 @@ func mayRequestPayout(roles []string) bool {
 	return false
 }
 
-// handleCreatePayout طلب سحب جديد — بحدود الرصيد الحالي وبطلب معلّق واحد.
+// payoutRequesterRole **دورُ الطالب لحظةَ الطلب** — من التطبيق الذي طلب منه.
+//
+// تطبيقُ السائق أو المتجر أو المندوب يُعرّف نفسَه (`X-RahalGo-Client`)، **فإن كان
+// صاحبُه يحمل دورَه فهو الدور.** وإلّا (الويبُ أو تطبيقٌ لا يحمل دورَه) فالاشتقاقُ
+// القديم: أوّلُ أدوار السحب عنده أبجديّاً — **الترتيبُ نفسُه في `payoutRoleSQL`.**
+func payoutRequesterRole(ctx context.Context, roles []string) string {
+	if _, want := identity.RequiredRole(identity.ClientFrom(ctx)); want != "" &&
+		slices.Contains(roles, want) && slices.Contains(payoutRoles, want) {
+		return want
+	}
+	best := ""
+	for _, r := range roles {
+		if slices.Contains(payoutRoles, r) && (best == "" || r < best) {
+			best = r
+		}
+	}
+	return best
+}
+
+// handleCreatePayout طلب سحب جديد — بحدود الرصيد الحالي وبطلبٍ مفتوحٍ واحد.
 func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 	roles, _ := r.Context().Value(ctxRoles).([]string)
 	if !mayRequestPayout(roles) {
 		s.respondErr(w, errPayoutNotAllowed)
 		return
 	}
+	role := payoutRequesterRole(r.Context(), roles)
 	req, err := decode[struct {
 		Amount int64  `json:"amount"`
 		Note   string `json:"note"`
@@ -206,15 +230,33 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 			uid).Scan(&bal, &res); e != nil {
 			return IdempotentBody{}, e
 		}
+		// ══════════════════════════════════════════════════════════
+		// **طلبٌ مفتوحٌ واحد: معلَّقٌ أو قيدُ الصرف** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كان الفهرسُ الفريدُ على المعلَّق وحدَه** — فمن بدأ صرفُ طلبه قدّم
+		// ثانياً، **وصار للماليّة طلبان لحسابٍ واحدٍ لا تعرف أيَّهما الأحدث.**
+		// **ويُقرأ تحت قفل المحفظة** — فطلبان متزامنان لا يمرّان معاً، **والفهرسُ
+		// (الهجرة 0445) حارسٌ ثانٍ.**
+		var open bool
+		if e := q.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM payout_requests
+			               WHERE user_id = $1 AND status IN ('pending', 'processing'))`,
+			uid).Scan(&open); e != nil {
+			return IdempotentBody{}, e
+		}
+		if open {
+			return IdempotentBody{}, errPayoutPending
+		}
 		if req.Amount > bal-res {
 			return IdempotentBody{}, errPayoutOver
 		}
 		var id string
 		if e := q.QueryRow(ctx, `
-			INSERT INTO payout_requests (user_id, amount, note) VALUES ($1, $2, $3)
-			RETURNING id`, uid, req.Amount, clip(req.Note, 300)).Scan(&id); e != nil {
+			INSERT INTO payout_requests (user_id, amount, note, role) VALUES ($1, $2, $3, NULLIF($4, ''))
+			RETURNING id`, uid, req.Amount, clip(req.Note, 300), role).Scan(&id); e != nil {
 			if isUniqueViolation(e) {
-				return IdempotentBody{}, errPayoutPending // الفهرس الفريد يمنع طلبين معلّقين
+				return IdempotentBody{}, errPayoutPending // الفهرسُ الفريدُ يمنع طلبين مفتوحين
 			}
 			return IdempotentBody{}, e
 		}
@@ -253,12 +295,20 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	// «مدفوع» ليراجع ما صُرف **يرى آخرَ مئتين ويظنّها كلَّ ما دُفع**.
 	// **وهذا مالٌ خرج، ومراجعتُه ناقصةً أسوأُ من عدمها.**
 	status := r.URL.Query().Get("status")
+	// **«مرتجع أو فاشل» فلترٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — البطاقةُ الرابعةُ تفتحه.
+	if status != "" && status != payoutFailedOrReversed && !slices.Contains(
+		[]string{"pending", "processing", "paid", "rejected", "failed", "reversed"}, status) {
+		s.respondErr(w, errValidation)
+		return
+	}
 	// **والدورُ فلترٌ ثانٍ** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤): سائق · متجر · مندوب.
 	role := r.URL.Query().Get("role")
 	pg := pagingOf(r, 25)
 
 	// **والعدُّ بشرط القائمة نفسِه** — نصّان يفترقان يوماً.
-	const where = ` WHERE ($1 = '' OR p.status = $1) AND ($2 = '' OR ` + payoutRoleSQL + ` = $2)`
+	const where = ` WHERE ($1 = '' OR p.status = $1
+		  OR ($1 = '` + payoutFailedOrReversed + `' AND p.status IN ('failed', 'reversed')))
+		  AND ($2 = '' OR ` + payoutRoleSQL + ` = $2)`
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
 		`SELECT count(*) FROM payout_requests p`+where,
@@ -343,6 +393,9 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	res["stats"] = st
 	httpx.JSON(w, http.StatusOK, res)
 }
+
+// payoutFailedOrReversed **فلترُ «مرتجع أو فاشل»** — حالتان في بطاقةٍ واحدة.
+const payoutFailedOrReversed = "failed_or_reversed"
 
 // handleDecidePayout صرف الطلب أو رفضه — أدمن/مالية حصراً.
 // الصرف يقيّد `payout` في دفتر المحفظة: المال يخرج بأثر، لا بتعديل رصيد.

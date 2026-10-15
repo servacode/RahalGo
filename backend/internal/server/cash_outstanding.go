@@ -44,8 +44,15 @@ type cashHolder struct {
 	Exposure int64 `json:"exposure"`
 	// Limit سقفُه الفعليّ: الخاصُّ إن ضُبط وإلّا العامّ.
 	Limit int64 `json:"limit"`
-	// OverLimit بلغ سقفَه — لا يأخذ طلباً نقديّاً جديداً.
+	// OverLimit **فوق سقفه** — التعرّضُ أكبرُ من السقف (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	//
+	// **والحدُّ حدُّ الحارس نفسُه**: `GuardTx` يقبل حتّى السقف (`≤`) ويردّ ما فوقه،
+	// **فمن كان عند السقف تماماً ليس «فوقه»** — كان يُعدّ فوقه (`>=`) فتقول الصفحةُ
+	// غيرَ ما يقوله الحارس.
 	OverLimit bool `json:"over_limit"`
+	// AtLimit **عند السقف تماماً** — لا يُعدّ فوقه، **ولا يأخذ نقديّاً جديداً**
+	// (أيُّ واردٍ يتجاوز به السقف). يُعرض «عند السقف».
+	AtLimit bool `json:"at_limit"`
 	// OldestAt أقدمُ مالٍ باقٍ بيده — والأقدمُ يُسدَّد أوّلاً.
 	OldestAt *time.Time `json:"oldest_at"`
 	// Overdue مضى على أقدم مالٍ باقٍ عددُ أيّام التنبيه أو أكثر.
@@ -95,7 +102,7 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 		ov.OverdueDays = 1
 	}
 	rows, err := s.pg.Query(ctx, `
-		SELECT u.id, COALESCE(u.full_name, ''), u.phone, b.held,
+		SELECT u.id, COALESCE(u.full_name, ''), u.phone, COALESCE(b.held, 0),
 		       COALESCE((SELECT sum(o.cash_due) FROM orders o
 		                  WHERE o.driver_id = u.id AND o.closed_at IS NULL), 0) AS open_cash,
 		       COALESCE(u.cash_limit_override, $1::bigint) AS lim,
@@ -104,13 +111,19 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 		       (SELECT max(e.created_at) FROM driver_cash_entries e
 		         WHERE e.driver_id = u.id AND e.kind = 'settlement'),
 		       COALESCE(u.on_shift, false)
-		FROM driver_cash_boxes b
-		JOIN users u ON u.id = b.driver_id
+		FROM users u
+		LEFT JOIN driver_cash_boxes b ON b.driver_id = u.id
 		CROSS JOIN LATERAL (SELECT driver_cash_oldest_unpaid(u.id) AS oldest_at) x
-		WHERE b.held > 0
+		-- **ومن جيبُه فارغٌ ونقدُ طلباته المفتوحة يبلغ سقفَه يُعرض أيضاً** (قرارُ المالك
+		-- ٢٠٢٦-١٠-١٥): كان الشرطُ «بالجيب شيء» وحدَه، **فسائقٌ ممنوعٌ بنقدٍ في الطريق
+		-- لا يظهر في الصفحة ولا في «فوق السقف»** — والحارسُ يمنعه.
+		WHERE u.id IN (SELECT driver_id FROM driver_cash_boxes WHERE held > 0
+		               UNION
+		               SELECT driver_id FROM orders
+		                WHERE driver_id IS NOT NULL AND closed_at IS NULL AND cash_due > 0)
 		-- **والقِدَمُ أوّلاً — وهو الإشارة لا المقدار** (فحصُ المالك ٢٠٢٦-٠٨-١٦)،
 		-- **والمقدارُ يفصل بين المتساويين**، وبلا تاريخٍ يهبط.
-		ORDER BY x.oldest_at ASC NULLS LAST, b.held DESC`,
+		ORDER BY x.oldest_at ASC NULLS LAST, COALESCE(b.held, 0) DESC, open_cash DESC`,
 		s.cashbox.Limit(ctx), ov.OverdueDays)
 	if err != nil {
 		return ov, err
@@ -123,8 +136,9 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 			return ov, err
 		}
 		x.Exposure = x.Held + x.OpenCash
-		// **بلغ السقفَ = لا يأخذ نقديّاً جديداً** — الحارسُ يردّ أيَّ واردٍ فوقه.
-		x.OverLimit = x.Exposure >= x.Limit
+		// **فوق السقف = أكبرُ منه** — حدُّ الحارس نفسُه (`current+incoming > limit`).
+		x.OverLimit = x.Exposure > x.Limit
+		x.AtLimit = x.Exposure == x.Limit && x.Exposure > 0
 		ov.Total += x.Held
 		if x.OverLimit {
 			ov.OverCount++
@@ -178,6 +192,21 @@ type merchantCashDue struct {
 	OldestAt    *time.Time `json:"oldest_at"`
 }
 
+// merchantCashDueWhere **شرطُ «مستحقٌّ للمتاجر نقداً» — مصدرٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **كان رقمان لمعنًى واحد**: بطاقةُ الخزينة تقرأ رصيدَ محفظة الاحتباس، **وتبويبُ
+// المتاجر يجمع صفوفَ التسوية** — **ويفترقان عند أوّل قيدٍ بلا صفٍّ أو صفٍّ بلا قيد**
+// (وذاك ما يمسكه `FI-14.a`)، **فيرى المالكُ رقمين ولا يعرف أيَّهما يصدّق.**
+//
+// **فالمصدرُ الصفوف** — منها يُعرف لمن ومنذ متى، **ورصيدُ الاحتباس يُحرَس بها لا
+// يحلّ محلَّها.** (`ms` اسمُ الجدول في الاستعلامين.)
+const merchantCashDueWhere = `ms.method = 'cash' AND ms.state = 'cash_due'
+		  AND ms.amount > ms.reversed_amount`
+
+// merchantCashDueTotalSQL **مجموعُه** — يقرؤه نظرُ الخزينة، **بشرط التبويب نفسِه.**
+const merchantCashDueTotalSQL = `(SELECT COALESCE(sum(ms.amount - ms.reversed_amount), 0)
+		  FROM merchant_settlements ms WHERE ` + merchantCashDueWhere + `)`
+
 // handleMerchantCashDues **مستحقّاتُ المتاجر النقديّة كلُّها في مكانٍ واحد.**
 //
 // كان الكشفُ داخل ملفّ كلّ متجر، **ولا يظهر إلّا إن كانت طريقتُه اليوم «نقد»** —
@@ -189,8 +218,7 @@ func (s *Server) handleMerchantCashDues(w http.ResponseWriter, r *http.Request) 
 		       sum(ms.amount - ms.reversed_amount), count(*), min(ms.created_at)
 		FROM merchant_settlements ms
 		JOIN merchants m ON m.id = ms.merchant_id
-		WHERE ms.method = 'cash' AND ms.state = 'cash_due'
-		  AND ms.amount > ms.reversed_amount
+		WHERE `+merchantCashDueWhere+`
 		GROUP BY m.id, m.name, m.settlement_method
 		ORDER BY min(ms.created_at) ASC`)
 	if err != nil {

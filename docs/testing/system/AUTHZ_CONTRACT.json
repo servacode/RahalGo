@@ -613,6 +613,7 @@
     "amount",
     "method"
    ],
+   "conditional": "payoutMovesMoney",
    "need": "payouts.decide"
   },
   {

@@ -176,7 +176,7 @@
 | `finance.incentive_request` | `POST` | `/users/{id}/incentive` | `amount`, `kind` | دائماً | `finance.manage` |
 | `finance.merchant_cash_paid` | `POST` | `/merchant-cash-settlements/{id}/pay` | — | دائماً | `finance.manage` |
 | `finance.obligation_request_approved` | `POST` | `/obligation-requests/{id}/approve` | — | دائماً | `finance.manage` |
-| `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `status`, `amount`, `method` | دائماً | `payouts.decide` |
+| `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `status`, `amount`, `method` | `payoutMovesMoney` | `payouts.decide` |
 | `finance.settlement_recomputed` | `POST` | `/orders/{id}/recompute` | — | دائماً | `finance.recompute` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
 | `finance.treasury_withdrawal` | `POST` | `/treasury/withdrawals` | `amount` | دائماً | `treasury.manage` |

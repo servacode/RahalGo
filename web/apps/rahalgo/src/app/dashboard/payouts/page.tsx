@@ -10,6 +10,10 @@
  *  - كلُّ فعلٍ يقول أثرَه بالأرقام قبل التأكيد («رح ينخصم ١٠٠٬٠٠٠ ل.س من رصيد أحمد»).
  *  - الصرفُ نقداً من المكتب يخرج من صندوق المكتب (يختاره القرِّر).
  *  - «إضافة رصيد» خرجت من هنا: الشحنُ طلبٌ من صفحة الحساب يوافق عليه موظفٌ آخر.
+ *
+ * **وقراراتُ ٢٠٢٦-١٠-١٥:** اسمُ الصفحة «السحوبات» (هو نفسُه في شريط الخزينة) · زرُّ
+ * «شحن رصيد» خرج من الرأس · البطاقةُ الرابعةُ تفتح «مرتجع أو فاشل» (`failed_or_reversed`) ·
+ * والدورُ من الطلب نفسِه (التطبيقُ الذي طلب منه) لا من أدوار الحساب.
  *  - أربعُ بطاقات · الدورُ عمودٌ وفلتر · ملاحظةُ الطالب وقرارُ المالية منفصلتان ·
  *    مين قرّر ومتى · وتغييرُ الفلتر يرجع للصفحة الأولى · والخطأُ لا يُعرض فراغاً.
  */
@@ -27,7 +31,6 @@ import {
   Alert,
   Badge,
   Button,
-  ButtonLink,
   Chips,
   Input,
   Radio,
@@ -49,13 +52,11 @@ import {
   IconUser,
   IconStatus,
   IconDate,
-  IconAdd,
   Money,
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCanOpen } from "@/lib/policy";
 import { roleLabelByCode } from "@/lib/rolemeta";
 
 const m = getMessages(defaultLocale);
@@ -63,6 +64,8 @@ const P = m.shared.payout;
 const A = m.shared.payoutAdmin;
 
 type Status = "pending" | "processing" | "paid" | "rejected" | "failed" | "reversed";
+/** **«مرتجع أو فاشل» فلترٌ واحد** — يفهمه الخادمُ (`payoutFailedOrReversed`). */
+const FAILED_OR_REVERSED = "failed_or_reversed";
 type Role = "driver" | "merchant" | "sales";
 
 interface Payout {
@@ -142,7 +145,6 @@ function readParam(key: string): string {
 
 export default function PayoutsPage() {
   const { can } = useAuth();
-  const canUsers = useCanOpen().user;
   // **وقرارُ السحب قدرةٌ بذاتها** — `payouts.decide`.
   const canDecide = can("payouts.decide");
   // **والفلترُ من الرابط عند الفتح** — بطاقةُ «بانتظار قرارك» في الرئيسيّة.
@@ -280,6 +282,7 @@ export default function PayoutsPage() {
   const statusChips = [
     { id: "", label: A.allStatuses },
     ...STATUSES.map((s) => ({ id: s, label: A.status[s] })),
+    { id: FAILED_OR_REVERSED, label: A.failedOrReversed },
   ];
   const roleChips = [
     { id: "", label: A.allRoles },
@@ -295,15 +298,8 @@ export default function PayoutsPage() {
         title={P.adminTitle}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {/* **«إضافة رصيد» خرجت من هنا** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣):
-                الشحنُ طلبٌ من صفحة الحساب، يوافق عليه موظفٌ آخر، ويدخل صندوقَ المكتب. */}
-            {/* **ولمن يفتح الحسابات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
-            {canUsers && (
-              <ButtonLink href="/dashboard/users" variant="secondary" title={A.topupHint}>
-                <IconAdd size={16} />
-                {A.topupLink}
-              </ButtonLink>
-            )}
+            {/* **ولا زرَّ «شحن رصيد» هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥): الشحنُ طلبٌ من صفحة
+                الحساب يوافق عليه موظفٌ آخر — وهذه صفحةُ السحوبات وحدَها. */}
             <ViewToggle
               view={view}
               onChange={setView}
@@ -349,6 +345,8 @@ export default function PayoutsPage() {
           sub={count(st?.returned_month_count ?? 0)}
           icon={IconWallet}
           tone={(st?.returned_month_count ?? 0) > 0 ? "danger" : "muted"}
+          onClick={() => setStatus(FAILED_OR_REVERSED)}
+          selected={status === FAILED_OR_REVERSED}
         />
       </StatGrid>
 

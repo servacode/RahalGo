@@ -93,7 +93,9 @@ func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleDriverCashStatement(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	st, err := s.cashbox.StatementFor(r.Context(), chi.URLParam(r, "id"), limit)
+	// **والكشفُ يُقلَّب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — `page` من واحد.
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	st, err := s.cashbox.StatementPage(r.Context(), chi.URLParam(r, "id"), limit, page)
 	if err != nil {
 		s.respondErr(w, err)
 		return

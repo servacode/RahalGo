@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -972,11 +973,22 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		// **لا رسالةَ المكتب عنه**، والعقدُ قائمٌ لا يُبدَّل هنا.
 		//
 		// **وسقفُ الطلبات رمزُه رمزُه** — `too_many_active_orders`.
-		if errors.Is(err, orders.ErrTooManyActive) {
+		//
+		// **والتأخّرُ بالتسليم سببُه سببُه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — `cash_overdue`:
+		// «تأخّرت بتسليم المصاري»، **لا «بلغت سقف النقد» لسائقٍ تحت سقفه.**
+		//
+		// **وما سواهما عطبٌ حقيقيّ** (قاعدةٌ أو قفل) — **يُردّ عطباً لا «بلغت السقف»**:
+		// كان كلُّ خطأٍ يُقرأ سقفاً، **فيُسلّم السائقُ صندوقَه ليعالج انقطاعَ قاعدة.**
+		switch {
+		case errors.Is(err, orders.ErrTooManyActive):
 			s.respondErr(w, errTooManyActive)
-			return
+		case errors.Is(err, cashbox.ErrCashOverdue):
+			s.respondErr(w, cashbox.ErrCashOverdue)
+		case errors.Is(err, cashbox.ErrLimitExceed):
+			s.respondErr(w, errCashLimitFull)
+		default:
+			s.respondErr(w, err)
 		}
-		s.respondErr(w, errCashLimitFull)
 		return
 	}
 	// **ولا يُقبل إلّا ما عُرض عليه الآن** (فحصُ الهجوم ٢٠٢٦-١٠-٠٥، بموافقة المالك):

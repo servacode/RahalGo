@@ -111,7 +111,11 @@ var notifTitles = struct {
 	// **مكافأةٌ أو عقوبةٌ يدويّةٌ وافقت عليها الماليّة** — والسببُ في المتن
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، قسمُ الأهداف).
 	incentiveReward, incentivePenalty string
+	// **طلبُ حركةٍ على المحفظة رُفض** — يصل صاحبَها بسببه (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	walletTopupRejected, walletRequestRejected string
 }{
+	walletTopupRejected:    "انرفض طلب شحن محفظتك",
+	walletRequestRejected:  "انرفض طلب حركة على محفظتك",
 	incentiveReward:        "مكافأة من الإدارة في محفظتك",
 	incentivePenalty:       "عقوبة من الإدارة على حسابك",
 	walletRequest:          "طلب حركة على محفظة ينتظر موافقة المالية",

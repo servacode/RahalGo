@@ -78,7 +78,9 @@ func (s *Server) handleTreasuryOverview(w http.ResponseWriter, r *http.Request) 
 		                  WHERE created_at >= (date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')
 		                                       AT TIME ZONE 'Asia/Damascus')), 0)::bigint,
 		       COALESCE((SELECT sum(held) FROM driver_cash_boxes), 0)::bigint,
-		       COALESCE((SELECT balance FROM wallets WHERE is_cash_holding LIMIT 1), 0)::bigint,
+		       -- **«مستحقّ للمتاجر نقداً» رقمُ تبويب المتاجر نفسُه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+		       -- من صفوف التسوية لا من رصيد محفظة الاحتباس.
+		       `+merchantCashDueTotalSQL+`::bigint,
 		       COALESCE((SELECT sum(amount) FROM payout_requests WHERE status IN ('pending', 'processing')), 0)::bigint,
 		       COALESCE((SELECT sum(amount) FROM treasury_withdrawals
 		                  WHERE created_at >= (date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')

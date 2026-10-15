@@ -16,6 +16,10 @@
  *
  * ما بالجيب + نقدُ طلباتٍ بيده لم تُغلق، مقابلَ سقفه الخاصّ أو العامّ — وهو
  * ما يقارنه حارسُ الإسناد. فلا يُرى «تحت السقف» من مُنع فعلاً.
+ *
+ * **وقراراتُ ٢٠٢٦-١٠-١٥:** من جيبُه فارغٌ ونقدُ طلباته المفتوحة يبلغ سقفَه يظهر هنا
+ * ويُعدّ · و«فوق السقف» أكبرُ منه لا يساويه (الحارسُ يقبل حتّى السقف) — ومن كان عنده
+ * تماماً يُعلَّم «عند السقف».
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -68,6 +72,8 @@ interface Holder {
   exposure: number;
   limit: number;
   over_limit: boolean;
+  /** **عند السقف تماماً** — ليس فوقه، ولا يأخذ نقديّاً جديداً. */
+  at_limit: boolean;
   oldest_at: string | null;
   overdue: boolean;
   last_settled_at: string | null;
@@ -248,9 +254,10 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
             <span dir="ltr" className={`text-xs tabular-nums ${h.over_limit ? "text-danger" : "text-ink-muted"}`}>
               {C.capOf.replace("{t}", fmtNum(h.exposure)).replace("{cap}", fmtNum(h.limit))}
             </span>
+            {h.at_limit && <Badge variant="warning">{C.atLimit}</Badge>}
             <span className="h-1.5 w-full overflow-hidden rounded-full bg-field" aria-hidden>
               <span
-                className={`block h-full rounded-full ${h.over_limit ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-success"}`}
+                className={`block h-full rounded-full ${h.over_limit ? "bg-danger" : h.at_limit || pct >= 80 ? "bg-warning" : "bg-success"}`}
                 style={{ width: `${pct}%` }}
               />
             </span>
@@ -292,8 +299,9 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
     {
       id: "act",
       header: "",
+      // **ولا استلامَ ممّن جيبُه فارغ** — ظهر لنقدٍ في الطريق لا لمالٍ بيده.
       cell: (h) =>
-        canSettle ? (
+        canSettle && h.held > 0 ? (
           <Button variant="secondary" onClick={() => setTarget(h)}>
             {C.receive}
           </Button>

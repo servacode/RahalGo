@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/servacode/rahalgo/backend/internal/authz"
@@ -155,6 +156,14 @@ func (s *Server) sensitiveNow(path string, act authz.Sensitive, body []byte) boo
 		// **وردُّ طلبٍ مُسلَّمٍ يعكس مالاً** فيلزمه تأكيد؛ وبقيّةُ الانتقالات
 		// تشغيليّةٌ (استلامٌ/طريقٌ/تسليم/تعذّر) تمضي بلا تأكيد.
 		return in.To == "refunded"
+	case authz.CondPayoutMovesMoney:
+		var in struct {
+			Status string `json:"status"`
+		}
+		_ = json.Unmarshal(body, &in)
+		// **والمعفى ثلاثٌ بأسمائها، وكلُّ ما سواها يُؤكَّد** — حالٌ مجهولةٌ أو جسمٌ
+		// فاسدٌ لا يعبر بلا كلمة؛ والمعالجُ يردّه بعدها.
+		return !slices.Contains([]string{"processing", "rejected", "failed"}, in.Status)
 	}
 	return true
 }

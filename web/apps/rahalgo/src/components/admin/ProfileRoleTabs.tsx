@@ -142,6 +142,30 @@ interface CashEntry {
   created_at: string;
 }
 
+/** **طلبٌ بيده لم يُغلق** — بنقده المنتظَر (`cash_due`، ما يحسبه حارسُ السقف). */
+interface OpenCashOrder {
+  order_id: string;
+  number: number;
+  status: string;
+  expected_cash: number;
+  created_at: string;
+}
+
+/** **كشفُ صندوقه** — صفحةً صفحة، وسقفُه الفعليّ، وطلباتُه المفتوحة (٢٠٢٦-١٠-١٥). */
+interface CashStatement {
+  held: number;
+  limit: number;
+  limit_is_override: boolean;
+  entries: CashEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+  open_orders: OpenCashOrder[];
+  open_cash: number;
+}
+
+const CASH_PER_PAGE = 25;
+
 /** **عميلٌ محتملٌ رشّحه المندوب** — بحاله. */
 interface LeadRow {
   id: string;
@@ -555,30 +579,32 @@ export function CashboxTab({
   // **والتسويةُ بقدرة بابها** — `finance.manage` (كان يُعرض لمن يقرأ المال فيُردّ).
   const canSettle = canCall("POST", "/drivers/{id}/settle");
   const canRead = canCall("GET", "/drivers/{id}/cash");
-  const [held, setHeld] = useState(0);
-  const [rows, setRows] = useState<CashEntry[] | null | "failed">(null);
+  const [st, setSt] = useState<CashStatement | null | "failed">(null);
+  const [page, setPage] = useState(1);
   const [why, setWhy] = useState("");
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState("");
 
+  // **والكشفُ يُقلَّب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان آخرَ خمسين بلا كلمة.
   const load = useCallback(() => {
     if (!canRead) return;
-    api<{ held: number; entries: CashEntry[] }>(`/api/v1/admin/drivers/${userID}/cash`)
-      .then((r) => {
-        setHeld(r.held ?? 0);
-        setRows(r.entries ?? []);
-      })
+    api<CashStatement>(`/api/v1/admin/drivers/${userID}/cash?page=${page}&limit=${CASH_PER_PAGE}`)
+      .then((r) => setSt(r))
       .catch((err) => {
         setWhy(errorText(err));
-        setRows("failed");
+        setSt("failed");
       });
-  }, [userID, canRead]);
+  }, [userID, canRead, page]);
 
   useEffect(load, [load]);
 
   if (!canRead) return <Alert tone="warning">{A.notAllowed}</Alert>;
-  if (rows === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
-  if (!rows) return <LoadingState variant="text" />;
+  if (st === "failed") return <Alert tone="warning">{why || A.loadFailed}</Alert>;
+  if (!st) return <LoadingState variant="text" />;
+  const held = st.held ?? 0;
+  const rows = st.entries ?? [];
+  const openOrders = st.open_orders ?? [];
+  const exposure = held + (st.open_cash ?? 0);
 
   return (
     <FormSection title={R.cashbox} icon={<IconBalance />}>
@@ -601,10 +627,53 @@ export function CashboxTab({
           </Button>
         )}
       </div>
+      {/* **والسقفُ سقفُه هو** — الخاصُّ إن ضُبط، **وهو ما يقارنه الحارس** (`GuardTx`). */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <span>
+          <span className="text-ink-muted">{R.cashExposure}: </span>
+          <span dir="ltr" className={`tabular-nums ${exposure > st.limit ? "text-danger" : ""}`}>
+            {fmtNum(exposure)}
+          </span>
+        </span>
+        <span>
+          <span className="text-ink-muted">{R.cashLimit}: </span>
+          <span dir="ltr" className="tabular-nums">
+            {fmtNum(st.limit)}
+          </span>
+          {st.limit_is_override && (
+            <Badge variant="info" className="ms-2">
+              {R.cashLimitOwn}
+            </Badge>
+          )}
+        </span>
+      </div>
       {done && (
         <Alert tone="success" className="mb-3">
           {done}
         </Alert>
+      )}
+
+      {openOrders.length > 0 && (
+        <div className="mb-4">
+          <p className="mb-1 text-sm font-bold">{R.cashOpenOrders}</p>
+          <p className="mb-2 text-xs text-ink-muted">{R.cashOpenHint}</p>
+          <ul className="divide-y divide-line">
+            {openOrders.map((o) => (
+              <li key={o.order_id} className="flex items-center gap-3 py-2 text-sm">
+                <span dir="ltr" className="font-bold tabular-nums">
+                  #{fmtRef(o.number)}
+                </span>
+                <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
+                  {STATUS_LABELS[o.status] ?? o.status}
+                </Badge>
+                <span className="min-w-0 flex-1" />
+                <span dir="ltr" className="shrink-0 tabular-nums text-warning">
+                  <Money value={o.expected_cash} small />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {rows.length === 0 ? (
@@ -639,6 +708,7 @@ export function CashboxTab({
           ))}
         </ul>
       )}
+      <Pagination page={page} total={st.total ?? 0} perPage={CASH_PER_PAGE} onChange={setPage} />
 
       {/* **النافذةُ نفسُها التي في صفحة «النقد والصندوق»** — طريقٌ واحد (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
       {open && (

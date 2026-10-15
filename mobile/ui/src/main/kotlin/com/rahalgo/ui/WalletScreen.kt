@@ -297,15 +297,19 @@ fun WalletScreen(
         }
 
         Spacer(Modifier.height(14.dp))
+        // **وحدُّ السحب المتاحُ لا الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ما حُجز لطلبٍ مفتوحٍ
+        // ليس له أن يطلبه ثانيةً. **ومحرّكٌ أقدمُ لا يرسله ⇒ الرصيد.**
+        val available = st.available ?: st.balance
+        val reserved = st.reserved ?: 0
         if (payouts && asking) {
-            PayoutForm(vm, s, max = st.balance, onDone = { asking = false })
+            PayoutForm(vm, s, max = available, reserved = reserved, onDone = { asking = false })
         } else if (payouts) {
             // **والزرّان في صفٍّ متساويين** — لا واحدٌ فوق واحد: **فعلان
             // متكافئان يُقرآن متكافئين.**
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 RahalButton(
                     onClick = { asking = true },
-                    enabled = !s.busy && st.balance > 0,
+                    enabled = !s.busy && available > 0,
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.wal_ask_payout)) }
                 RahalOutlineButton(
@@ -359,7 +363,7 @@ fun WalletScreen(
 }
 
 @Composable
-private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, onDone: () -> Unit) {
+private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, reserved: Long, onDone: () -> Unit) {
     var amount by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     val value = amount.trim().toLongOrNull() ?: 0
@@ -375,13 +379,21 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, onDone: (
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(6.dp))
-    // **وسقفُه رصيدُه** — ويُقال قبل الإرسال: نداءٌ يذهب ليعود بخطأٍ
+    // **وسقفُه المتاحُ للسحب** — ويُقال قبل الإرسال: نداءٌ يذهب ليعود بخطأٍ
     // **يعرفه الجهازُ نفسُه** يُضيّع ثانيتين ويستهلك حزمة.
     Text(
         text = stringResource(R.string.wal_max, money(max)),
         color = if (value > max) Rahal.colors.danger else Rahal.colors.inkMuted,
         style = MaterialTheme.typography.bodySmall,
     )
+    // **وما حُجز لطلبٍ مفتوحٍ يُقال باسمه** — فلا يُقرأ نقصاً في الرصيد.
+    if (reserved > 0) {
+        Text(
+            text = stringResource(R.string.wal_reserved, money(reserved)),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
     Spacer(Modifier.height(8.dp))
     OutlinedTextField(
         value = note,

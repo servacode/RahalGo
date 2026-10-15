@@ -356,7 +356,7 @@
         "paid": "تم الصرف",
         "rejected": "مرفوض"
       },
-      "adminTitle": "طلبات السحب",
+      "adminTitle": "السحوبات",
       "creditBtn": "إضافة رصيد",
       "creditPick": "لمن تضيف الرصيد؟",
       "creditNoResults": "لا نتائج — ابحث بالاسم أو الهاتف"
@@ -403,8 +403,7 @@
       "emptyAll": "ما في طلبات سحب لهلق",
       "emptyFiltered": "ما في طلبات بهالفلتر — جرّب فلتر تاني",
       "loadError": "ما قدرنا نجيب طلبات السحب",
-      "topupLink": "شحن رصيد",
-      "topupHint": "الشحن صار طلب من صفحة الحساب ويوافق عليه موظف تاني"
+      "failedOrReversed": "مرتجع أو فاشل"
     },
     "walletTabs": {
       "all": "الكل",
@@ -2208,6 +2207,11 @@
           "settle": "تسوية الصندوق",
           "settleNote": "تسوية من ملف السائق",
           "cashEmpty": "لا حركات",
+          "cashLimit": "سقفه",
+          "cashLimitOwn": "سقف خاص فيه",
+          "cashExposure": "بذمته مع طلباته المفتوحة",
+          "cashOpenOrders": "طلبات بإيده لسا ما انسكرت",
+          "cashOpenHint": "نقد الطلب كامل — منه بيدفع للمتجر عند الاستلام",
           "cashKinds": {
             "order_collection": "قبض من زبون",
             "settlement": "تسليم للمكتب",
@@ -4130,6 +4134,7 @@
       "daysMany": "{n} يوما",
       "filterAll": "الكل",
       "filterOver": "فوق السقف",
+      "atLimit": "عند السقف",
       "filterOverdue": "متأخرون بالتسليم",
       "filterOnShift": "على الدوام",
       "search": "بحث بالاسم أو الرقم",
@@ -6116,7 +6121,7 @@
       "links": {
         "title": "صفحات المال",
         "cash": "نقد بيد السائقين",
-        "payouts": "السحوبات والشحن",
+        "payouts": "السحوبات",
         "obligations": "الديون",
         "profits": "الأرباح والخسائر",
         "expenses": "مصروفات التشغيل",

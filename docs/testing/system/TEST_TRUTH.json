@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 93,
+    "notify_sites": 94,
     "notify_targeted": 37,
     "publish_rooms": [
       "customer",
@@ -33,8 +33,8 @@
     "setting_defs": 235,
     "behaviour_settings": 191,
     "order_fields": 105,
-    "test_files": 581,
-    "test_funcs": 2334
+    "test_files": 583,
+    "test_funcs": 2345
   },
   "flows": [
     {
@@ -13148,6 +13148,42 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCASH1015_AtLimitIsNotOver",
+      "file": "internal/qa/cash_payouts_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH1015_DriverStatementPagesOpenOrdersOverride",
+      "file": "internal/qa/cash_payouts_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH1015_MerchantCashDueOneNumber",
+      "file": "internal/qa/cash_payouts_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH1015_OverdueStopSaysOverdue",
+      "file": "internal/qa/cash_payouts_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASH1015_ZeroHeldOverByOpenCashListed",
+      "file": "internal/qa/cash_payouts_1015_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALLETREQ1015_RejectedTopupNotifies",
+      "file": "internal/qa/cash_payouts_1015_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCASH_CapCountsOpenOrderCash",
@@ -27300,6 +27336,36 @@
     {
       "name": "TestCreatePayoutRefusesWhatItMust",
       "file": "internal/server/payout_request_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS1015_FailedOrReversedFilter",
+      "file": "internal/server/payouts_1015_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS1015_RoleRecordedFromApp",
+      "file": "internal/server/payouts_1015_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS1015_SecondWhileProcessingRefused",
+      "file": "internal/server/payouts_1015_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS1015_StepUpOnlyWhenMoneyMoves",
+      "file": "internal/server/payouts_1015_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS1015_WalletStatementHasAvailable",
+      "file": "internal/server/payouts_1015_test.go",
       "package": "server",
       "orphan": true
     },

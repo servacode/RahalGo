@@ -457,6 +457,11 @@ type walletWithDebts struct {
 	*wallet.Statement
 	Debts     []myDebtLine `json:"debts,omitempty"`
 	DebtTotal int64        `json:"debt_total,omitempty"`
+	// Reserved وAvailable **ما حُجز لطلب سحبٍ مفتوح، وما يجوز سحبُه الآن** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٥). كان التطبيقُ يعرض الرصيدَ كلَّه حدّاً للسحب، **فيطلب صاحبُه ما حُجز
+	// لطلبه الأوّل فيُردّ بـ«رصيد غير كافٍ» وهو يرى الرصيدَ يكفي.** — `wallet.LayersOf`.
+	Reserved  int64 `json:"reserved"`
+	Available int64 `json:"available"`
 }
 
 // statementWithDebts يضمّ ديونَ صاحب الكشف إلى كشفه.
@@ -466,6 +471,11 @@ func (s *Server) statementWithDebts(ctx context.Context, userID string, st *wall
 		return walletWithDebts{}, err
 	}
 	out := walletWithDebts{Statement: st}
+	layers, err := s.wallet.LayersOf(ctx, userID)
+	if err != nil {
+		return walletWithDebts{}, err
+	}
+	out.Reserved, out.Available = layers.Reserved, layers.Available
 	if total > 0 {
 		out.Debts, out.DebtTotal = debts, total
 	}

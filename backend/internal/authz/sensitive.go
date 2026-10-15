@@ -73,6 +73,10 @@ const (
 	// النقديّةَ ويردّ للزبون كاملاً، **فهو فعلٌ ماليٌّ حسّاس.** وبقيّةُ
 	// الانتقالات (استلامٌ/طريقٌ/تسليم) تشغيليّةٌ لا تُؤكَّد.
 	CondTransitionRefund = "transitionRefund"
+	// CondPayoutMovesMoney **قرارُ سحبٍ يُخرج مالاً أو يُعيده يلزمه تأكيد** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٥): «تم الصرف» (`paid`) و«ارتدّ» (`reversed`). **و«بدأ الصرف» و«ارفض»
+	// و«فشل» لا يحرّك مالاً** — الحجزُ يبقى أو يُفكّ لصاحبه — فتمضي بلا كلمة سرّ.
+	CondPayoutMovesMoney = "payoutMovesMoney"
 )
 
 // sensitiveActions **الجدولُ الكانونيّ** — كلُّ سطرٍ مسارٌ قائم.
@@ -125,8 +129,9 @@ var sensitiveActions = []Sensitive{
 		"incentive_request", 1, nil, ""},
 	// **والبصمةُ على الحال والمبلغ وطريقة الصرف** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤):
 	// كانت على `approve` — حقلٌ لا يُرسَل، فلا تفرّق بين «اصرف» و«ارفض».
+	// **وشرطيٌّ منذ ٢٠٢٦-١٠-١٥** — «بدأ الصرف» و«ارفض» لا يحرّكان مالاً (`CondPayoutMovesMoney`).
 	{"POST", "/payouts/{id}/decide", "finance.payout_decide", "payout", 1,
-		[]string{"status", "amount", "method"}, ""},
+		[]string{"status", "amount", "method"}, CondPayoutMovesMoney},
 	{"POST", "/drivers/{id}/settle", "finance.driver_settle", "user", 1,
 		[]string{"amount"}, ""},
 	{"POST", "/expenses", "finance.expense_added", "expense", -1,

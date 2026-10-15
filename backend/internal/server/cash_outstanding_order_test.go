@@ -82,10 +82,18 @@ func TestCashOutstanding_OldestFirst(t *testing.T) {
 		t.Fatalf("ردٌّ لا يُفكّ: %v", err)
 	}
 
-	if len(env.Data.Holders) != 2 {
-		t.Fatalf("%d حاملاً لا 2", len(env.Data.Holders))
+	// **والقائمةُ صارت تضمّ من بيده طلبٌ مفتوح** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والقاعدةُ
+	// مشتركة فيها طلباتٌ مفتوحةٌ لفحوصٍ أخرى؛ **فيُقاس سائقا هذا الفحص وحدَهما.**
+	var mine []string
+	for _, h := range env.Data.Holders {
+		if h.DriverID == oldSmall || h.DriverID == freshBig {
+			mine = append(mine, h.DriverID)
+		}
 	}
-	if env.Data.Holders[0].DriverID != oldSmall {
+	if len(mine) != 2 {
+		t.Fatalf("%d حاملاً من سائقَي الفحص لا 2", len(mine))
+	}
+	if mine[0] != oldSmall {
 		t.Fatal("تصدّر الأكبرُ مبلغاً — **والقِدَمُ هو الإشارة لا المقدار**، " +
 			"والشاشةُ تلوّن قِدَمَ الأوّل بالأحمر ثمّ تدفنه أسفلَ الثاني")
 	}
