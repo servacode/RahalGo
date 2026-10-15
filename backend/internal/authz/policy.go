@@ -235,6 +235,7 @@ var adminPolicy = []Rule{
 	{"GET", "/expenses/categories", FinanceRead},
 	{"POST", "/expenses", FinanceManage},
 	{"POST", "/expenses/categories", FinanceManage},
+	{"POST", "/expenses/categories/reorder", FinanceManage},
 	{"POST", "/expenses/{id}/void", FinanceManage},
 	{"GET", "/expenses/export", FinanceExport},
 	{"POST", "/expenses/receipt", FinanceManage},

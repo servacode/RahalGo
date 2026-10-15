@@ -1619,6 +1619,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/expenses/categories", s.handleExpenseCategories)
 			r.Post("/expenses", s.handleCreateExpense)
 			r.Post("/expenses/categories", s.handleSaveExpenseCategory)
+			// **والترتيبُ كتابةٌ واحدة** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+			r.Post("/expenses/categories/reorder", s.handleReorderExpenseCategories)
 			r.Post("/expenses/{id}/void", s.handleVoidExpense)
 			// **قراراتُ المالك ٢٠٢٦-١٠-٠٤**: تصديرٌ بالمرشّحات · صورةُ إيصال ·
 			// واقتراحاتٌ فوق السقف يوافق عليها شخصٌ آخر.

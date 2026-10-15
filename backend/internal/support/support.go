@@ -78,6 +78,8 @@ type Ticket struct {
 	Compensation int64 `json:"compensation"`
 	// CompensationProposed المبلغُ الذي اقترحه الدعمُ على الماليّة (صفرٌ بلا اقتراح).
 	CompensationProposed int64 `json:"compensation_proposed"`
+	// CompensationCap **سقفُ اقتراح التعويض** — يملؤه بابُ الإدارة وحدَه (صفرُه «بلا سقف»).
+	CompensationCap int64 `json:"compensation_cap,omitempty"`
 	// CompensationStatus حالُ الاقتراح: `pending` · `approved` · `rejected` · وفارغٌ بلا اقتراح.
 	CompensationStatus string `json:"compensation_status"`
 	// Late **تأخّر الردّ** — مفتوحةٌ لم يردّ عليها المكتبُ بعد مهلة الإعدادات
@@ -121,9 +123,11 @@ func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 // **بابُ اقتراح التعويض — نداءٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
 // ══════════════════════════════════════════════════════════════════════
 
-// ErrCompensationOverCap مبلغٌ فوق سقف الحركة اليدويّة (`finance.manual_wallet_max`).
+// ErrCompensationOverCap **مبلغٌ فوق سقف تعويض الشكوى** (`compensations.cap_complaint`) —
+// وكان سقفَ الحركة اليدويّة (`finance.manual_wallet_max`)، **فيقترح الدعمُ ما لا يوافق
+// عليه إلّا المالك** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 var ErrCompensationOverCap = httpx.NewError(http.StatusBadRequest,
-	"wallet_over_cap", "errors.wallet_over_cap")
+	"compensation_over_cap", "errors.compensation_over_cap")
 
 // CompensationProposal ما يقترحه الدعمُ على الماليّة من تذكرة.
 type CompensationProposal struct {
@@ -150,13 +154,26 @@ func (s *Service) proposer() CompensationProposer {
 	return walletRequestProposer{}
 }
 
-// compensationCap سقفُ الاقتراح الواحد — سقفُ الحركة اليدويّة نفسُه.
+// complaintCapKey **سقفُ موافقة الشكوى** — وهو سقفُ اقتراحها نفسُه (قرارُ المالك ٢٠٢٦-١٠-١٥).
+const complaintCapKey = "compensations.cap_complaint"
+
+// compensationCap سقفُ الاقتراح الواحد — **سقفُ موافقة الشكوى**، وصفرُه «بلا سقف»
+// كما في صفحة التعويضات. والافتراضُ من الكتالوج.
 func (s *Service) compensationCap(ctx context.Context) int64 {
-	if s.settings == nil {
-		return 500000
+	fallback := int64(50000)
+	if def, ok := settings.Lookup(complaintCapKey); ok {
+		if n, ok := def.Default.(int); ok {
+			fallback = int64(n)
+		}
 	}
-	return s.settings.GetNum(ctx, "finance.manual_wallet_max", 500000)
+	if s.settings == nil {
+		return fallback
+	}
+	return s.settings.GetNum(ctx, complaintCapKey, fallback)
 }
+
+// CompensationCap سقفُ اقتراح الدعم كما يُعرض في شاشة الحلّ.
+func (s *Service) CompensationCap(ctx context.Context) int64 { return s.compensationCap(ctx) }
 
 // walletRequestProposer **الافتراض**: طلبُ محفظةٍ من نوع `compensation` في
 // `wallet_requests` — تقرّره الماليّةُ من بابه القائم (`/admin/wallet-requests`)،
@@ -485,7 +502,7 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 	// بابُ التعويضات الموحّد ولا يُمسّ هنا شيء.
 	var requestID *string
 	if compensation > 0 {
-		if max := s.compensationCap(ctx); compensation > max {
+		if max := s.compensationCap(ctx); max > 0 && compensation > max {
 			return nil, ErrCompensationOverCap
 		}
 		note := fmt.Sprintf("تعويض شكوى #%d", number)

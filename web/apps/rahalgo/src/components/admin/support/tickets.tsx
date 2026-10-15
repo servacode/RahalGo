@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
 import {
   Pagination,
   Alert,
@@ -65,6 +65,8 @@ interface Ticket {
   /** ما اقترحه الدعمُ على الماليّة، وحالُه. */
   compensation_proposed?: number;
   compensation_status?: "" | "pending" | "approved" | "rejected";
+  /** **سقفُ اقتراح التعويض** — سقفُ موافقة الشكوى نفسُه، وصفرُه «بلا سقف». */
+  compensation_cap?: number;
   /** تأخّر ردُّ المكتب عن المهلة (`support.late_reply_hours`). */
   late?: boolean;
   resolution: string;
@@ -716,6 +718,11 @@ function TicketDetailModal({
                   onChange={(e) => setCompensation(e.target.value.replace(/\D/g, ""))}
                 />
                 <p className="text-xs text-ink-muted">{m.admin.tickets.compProposedHint}</p>
+                {(ticket.compensation_cap ?? 0) > 0 && (
+                  <p className="text-xs text-ink-muted">
+                    {m.admin.tickets.compCap.replace("{cap}", fmtMoney(ticket.compensation_cap ?? 0))}
+                  </p>
+                )}
                 <div className="flex justify-end">
                   <Button type="submit" disabled={busy || !resolution.trim()}>
                     {m.admin.tickets.resolveButton}

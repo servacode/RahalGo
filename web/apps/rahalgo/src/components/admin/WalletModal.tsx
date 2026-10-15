@@ -9,7 +9,8 @@
  *
  * **كانت «شحن» و«تعويض» تزيد الرصيدَ بكبسة موظّفٍ واحدٍ بلا طرفٍ آخر** — مالٌ من
  * عدم. **والآن طلبٌ** بسببٍ إلزاميٍّ وسقفٍ ومفتاحِ عدمِ تكرار، **ويوافق عليه غيرُه**.
- * **و«سحب» نُزع** — بابُه صفحةُ طلبات السحب وحدَها.
+ * **و«سحب» نُزع** — بابُه صفحةُ طلبات السحب وحدَها. **و«تعويض» نُزع** (قرارُ المالك
+ * ٢٠٢٦-١٠-١٥) — طريقُه صفحةُ التعويضات وحدَها بسقفها لكلّ نوع، والمعلَّقُ القديمُ يُقرَّر.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -40,7 +41,7 @@ export default function WalletModal({
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceError, setBalanceError] = useState("");
   const [amount, setAmount] = useState("");
-  const [kind, setKind] = useState<"topup" | "compensation" | "adjustment">("topup");
+  const [kind, setKind] = useState<"topup" | "adjustment">("topup");
   const [debit, setDebit] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
@@ -126,7 +127,6 @@ export default function WalletModal({
               onChange={(e) => setKind(e.target.value as typeof kind)}
             >
               <option value="topup">{A.kinds.topup}</option>
-              <option value="compensation">{A.kinds.compensation}</option>
               <option value="adjustment">{A.kinds.adjustment}</option>
             </Select>
           </div>

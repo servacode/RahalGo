@@ -98,6 +98,7 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errValidation)
 		return
 	}
+	var paid *orders.CompensationRequest
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		var c *orders.CompensationRequest
 		var err error
@@ -132,11 +133,13 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 			}
 			return errCompensationNotPending
 		}
+		paid = c
 		return s.approveCompensationTx(ctx, q, r, c, req.Amount, note)
 	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	s.notifyCompensationPaid(r.Context(), paid, req.Amount)
 	s.touch("order", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})
@@ -359,6 +362,8 @@ func (s *Server) handleGoodsCompensation(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
+	// **والماليّةُ تُنبَّه** — بعد التثبيت (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	s.orders.AlertCompensationPending(r.Context(), id)
 	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id})
 }

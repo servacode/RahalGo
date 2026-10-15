@@ -48,15 +48,6 @@
       "has_entity_id": false
     },
     {
-      "file": "internal/orders/compensation_requests.go",
-      "line": 329,
-      "call": "NotifyOps",
-      "kind": "Order",
-      "entity": "order",
-      "has_app_targeting": false,
-      "has_entity_id": true
-    },
-    {
       "file": "internal/orders/custom_quote.go",
       "line": 553,
       "call": "Notify",
@@ -313,7 +304,7 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 296,
+      "line": 310,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -322,7 +313,7 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 301,
+      "line": 315,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -331,7 +322,7 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 325,
+      "line": 339,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -393,7 +384,7 @@
     },
     {
       "file": "internal/server/admin_support_handlers.go",
-      "line": 137,
+      "line": 140,
       "call": "Notify",
       "kind": "Ticket",
       "entity": "ticket",
@@ -402,7 +393,7 @@
     },
     {
       "file": "internal/server/admin_support_handlers.go",
-      "line": 173,
+      "line": 176,
       "call": "Notify",
       "kind": "Ticket",
       "entity": "ticket",
@@ -460,7 +451,16 @@
     },
     {
       "file": "internal/server/compensations.go",
-      "line": 230,
+      "line": 189,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/compensations.go",
+      "line": 280,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -555,7 +555,7 @@
     },
     {
       "file": "internal/server/emergency_room.go",
-      "line": 103,
+      "line": 101,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -564,7 +564,7 @@
     },
     {
       "file": "internal/server/emergency_room.go",
-      "line": 632,
+      "line": 630,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",
@@ -1213,7 +1213,7 @@
     },
     {
       "file": "internal/notifications/ops_tx.go",
-      "line": 196,
+      "line": 212,
       "room": "user:*"
     },
     {
@@ -1263,27 +1263,27 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 165,
+      "line": 167,
       "room": "ops"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 171,
+      "line": 173,
       "room": "merchant:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 176,
+      "line": 178,
       "room": "customer:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 183,
+      "line": 185,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 1313,
+      "line": 1315,
       "room": "user:*"
     },
     {
@@ -1393,7 +1393,7 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 296,
+      "line": 310,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1402,7 +1402,7 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 301,
+      "line": 315,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1411,7 +1411,7 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 325,
+      "line": 339,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1446,7 +1446,7 @@
     },
     {
       "file": "internal/server/admin_support_handlers.go",
-      "line": 137,
+      "line": 140,
       "call": "Notify",
       "kind": "Ticket",
       "entity": "ticket",
@@ -1455,7 +1455,7 @@
     },
     {
       "file": "internal/server/admin_support_handlers.go",
-      "line": 173,
+      "line": 176,
       "call": "Notify",
       "kind": "Ticket",
       "entity": "ticket",
@@ -1498,7 +1498,7 @@
     },
     {
       "file": "internal/server/compensations.go",
-      "line": 230,
+      "line": 280,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -1541,7 +1541,7 @@
     },
     {
       "file": "internal/server/emergency_room.go",
-      "line": 632,
+      "line": 630,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",

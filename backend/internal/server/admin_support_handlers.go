@@ -107,6 +107,9 @@ func (s *Server) handleGetTicket(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وسقفُ اقتراح التعويض يُعرض في شاشة الحلّ** (قرارُ المالك ٢٠٢٦-١٠-١٥) — وهو سقفُ
+	// موافقة الشكوى نفسُه (`compensations.cap_complaint`)، فلا يُكتب مبلغٌ يُردّ.
+	t.CompensationCap = s.support.CompensationCap(r.Context())
 	httpx.JSON(w, http.StatusOK, t)
 }
 
@@ -176,6 +179,15 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		// **إلى صفحة شكاواه** — حيث يرى حالَها وردَّنا والتعويض.
 		Entity: "ticket", EntityID: t.ID, Href: "/portal/complaints",
 	})
+	// **والماليّةُ تُنبَّه إلى تعويض الشكوى** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من البابِ الواحد.
+	if t.Status == support.StatusAwaitingFinance {
+		var reqID *string
+		if err := s.pg.QueryRow(r.Context(),
+			`SELECT compensation_request_id::text FROM tickets WHERE id = $1`, t.ID).Scan(&reqID); err == nil &&
+			reqID != nil {
+			s.orders.AlertCompensationPending(r.Context(), *reqID)
+		}
+	}
 	// **ولا رصيدَ يتحرّك هنا** — الاقتراحُ يظهر حيّاً في لوح طلبات المحفظة
 	// للماليّة، **ورصيدُه يتحدّث حين توافق** (`handleDecideWalletRequest`).
 	s.touchUser(t.ComplainantID, "ticket")

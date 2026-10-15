@@ -209,3 +209,6 @@ func (s *countingNotifier) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
 func (s *countingNotifier) PublishToUsers(ctx context.Context, q dbtx.Querier,
 	roles []string, in notifications.Input) {
 }
+
+func (c *countingNotifier) NotifyCapsRoles(context.Context, []string, []string, notifications.Input) {
+}

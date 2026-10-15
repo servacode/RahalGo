@@ -195,3 +195,5 @@ func TestDriverLossCode_Table(t *testing.T) {
 		}
 	}
 }
+
+func (b *inbox) NotifyCapsRoles(context.Context, []string, []string, notifications.Input) {}

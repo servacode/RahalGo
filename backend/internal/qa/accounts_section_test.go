@@ -42,7 +42,8 @@ func TestACC_WalletRequestIsProposalThenTwoSidedApproval(t *testing.T) {
 	target := f.NewUserWith("customer")
 	before := treasuryBalance(t, h, tid)
 
-	body := map[string]any{"amount": 5000, "kind": "compensation", "note": "تعويض تأخير"}
+	// **والتعويضُ طريقُه صفحةُ التعويضات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — فالحركةُ هنا تسويةٌ بإيداع.
+	body := map[string]any{"amount": 5000, "kind": "adjustment", "note": "تسوية تأخير"}
 	r := walletPropose(h, fin, target.ID, body)
 	if r.Code != 201 {
 		t.Fatalf("الاقتراح: %s", r)
@@ -76,7 +77,7 @@ func TestACC_WalletRequestIsProposalThenTwoSidedApproval(t *testing.T) {
 	if v := ledgerByRef(t, h, reqID, "platform_expense"); v != -5000 {
 		t.Errorf("**لا قيدَ خزينةٍ بمرجع الطلب** (%d) — مالٌ خُلق من عدم", v)
 	}
-	if v := ledgerByRef(t, h, reqID, "compensation"); v != 5000 {
+	if v := ledgerByRef(t, h, reqID, "adjustment"); v != 5000 {
 		t.Errorf("قيدُ المحفظة بمرجع الطلب %d", v)
 	}
 	again := h.POST("/api/v1/admin/wallet-requests/"+reqID+"/approve", approver.Token, map[string]any{})

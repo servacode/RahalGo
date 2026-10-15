@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +73,6 @@ const (
 	emergencyCustomerRedispatch = "طرأ ظرفٌ على السائق، ونرسل لك سائقاً آخر الآن"
 	emergencyCustomerFollowing  = "طرأ ظرفٌ على السائق، والإدارة تتابع طلبك الآن وتخبرك بما يجري"
 	emergencyCustomerEnded      = "طرأ ظرفٌ على السائق فتعذّر إكمال طلبك وأُلغي — نعتذر منك"
-	emergencyMoneyTitle         = "طلب تعويض من غرفة الطوارئ ينتظر الماليّة"
 )
 
 var (
@@ -844,7 +842,6 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := userIDFrom(r)
 	var requestID, orderID string
-	var number int64
 	err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		e, err := loadEmergency(ctx, q, chi.URLParam(r, "id"), true)
 		if err != nil {
@@ -879,9 +876,13 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 		// التكرار داخل المعاملة يُفسدها. **وما سواه يُكتب من البابِ الواحد**
 		// `orders.ProposeCompensationTx` (طابورُ التعويضات الموحّد، هجرة 0360) —
 		// باقتراحِ موظّف الغرفة ونوعِ «سائق».
+		//
+		// **والمعلَّقُ وحدَه يُربط** (قرارُ المالك ٢٠٢٦-١٠-١٥) — المرفوضُ يُقترح ثانيةً بطلبٍ
+		// جديد، **والمقبولُ لا يُربط به طارئٌ جديدٌ كأنّه لم يُدفع**: يُردّ تكراراً (`409`).
 		err = q.QueryRow(ctx, `
 			SELECT id::text FROM driver_compensation_requests
-			 WHERE order_id = $1 AND driver_id = $2`, orderID, *e.DriverID).Scan(&requestID)
+			 WHERE order_id = $1 AND driver_id = $2 AND status = 'pending'`,
+			orderID, *e.DriverID).Scan(&requestID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			requestID, err = orders.ProposeCompensationTx(ctx, q, orders.CompensationProposal{
 				Kind: orders.CompKindDriver, OrderID: orderID, BeneficiaryID: *e.DriverID,
@@ -890,14 +891,13 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		if err != nil {
-			return err
+			return compensationErr(err)
 		}
 		if _, err := q.Exec(ctx, `
 			UPDATE driver_emergencies SET money_request_id = $2, money_at = now(), money_by = $3
 			 WHERE id = $1`, e.ID, requestID, actor); err != nil {
 			return err
 		}
-		_ = q.QueryRow(ctx, `SELECT number FROM orders WHERE id = $1`, orderID).Scan(&number)
 		if err := addEmergencyNote(ctx, q, e.ID, actor, note); err != nil {
 			return err
 		}
@@ -910,12 +910,8 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if requestID != "" {
-		// **والماليّةُ تُنبَّه** — طلبٌ ينتظر قرارها في صفحة التعويضات.
-		s.notify.NotifyCaps(r.Context(), []string{"finance.manage"}, notifications.Input{
-			Kind: notifications.KindOrder, Title: emergencyMoneyTitle,
-			Body:   "#" + strconv.FormatInt(number, 10) + " — " + strconv.FormatInt(req.Amount, 10),
-			Entity: "order", EntityID: orderID, Href: "/dashboard/compensations",
-		})
+		// **والماليّةُ تُنبَّه** — من البابِ الواحد لكلّ تعويض (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		s.orders.AlertCompensationPending(r.Context(), requestID)
 		s.touch("wallet", "ops")
 	}
 	s.touch("emergency", "ops")

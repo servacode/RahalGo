@@ -7,9 +7,14 @@ package server
 //	١ · صفحةٌ واحدةٌ لكلّ تعويض: السائق · المتجرُ عن بضاعةٍ رُدّت · صاحبُ الشكوى.
 //	    الماليّةُ توافق بكلمة السرّ، **ولا يوافق أحدٌ على ما اقترحه**، والمالُ
 //	    من الخزينة دائماً (`orders.ApproveCompensationTx`).
-//	٢ · سقفٌ لكلّ نوعٍ من الإعدادات — **وفوقه مديرُ المنصّة وحدَه يوافق.**
+//	٢ · سقفٌ لكلّ نوعٍ من الإعدادات — **وفوقه المالكُ وحدَه يوافق** (`owner_super_admin`).
 //	٣ · السائقُ يرى «تسوية من الإدارة» ولا يرى ملاحظةَ المكتب.
-//	٤ · المعلَّقُ فوق المهلة يحمرّ ويُنبَّه المالك (`compensations.overdue_hours`).
+//	٤ · المعلَّقُ فوق المهلة يحمرّ ويُنبَّه المالكُ والماليّة (`compensations.overdue_hours`).
+//
+// **وقراراتُ المالك ٢٠٢٦-١٠-١٥**: طريقٌ واحدٌ للتعويض (لا «تعويض» من نافذة المحفظة) ·
+// تنبيهُ ما ينتظر للماليّة لكلّ نوع (`orders.AlertCompensationPending`) · المستفيدُ يُخبَر
+// عند الموافقة بلا ملاحظة المكتب · المرفوضُ يُقترح ثانيةً · و«موافقة/رفض» لا تظهر لمقترحه
+// (`can_decide`) · وبطاقاتٌ تتبع الفلاتر وبطاقةُ التأخّر تفتح المتأخّر.
 //	٥ · النسبةُ صفرٌ تكتب طلباً بمقترَحٍ صفرٍ والماليّةُ تقرّر.
 //
 // **والأزرارُ بمعرّف طلب التعويض لا برقم الطلب** — كان الزرُّ يرسل رقمَ الطلب،
@@ -19,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,7 +41,7 @@ import (
 )
 
 var (
-	// **فوق السقف مديرُ المنصّة وحدَه** (البند ٢).
+	// **فوق السقف المالكُ وحدَه** (البند ٢).
 	errCompensationAboveCap = httpx.NewError(http.StatusForbidden,
 		"compensation_above_cap", "errors.compensation_above_cap")
 	// **للطلب أكثرُ من تعويضٍ معلَّق** — فليُسمَّ المقصودُ بمعرّفه.
@@ -89,7 +95,7 @@ func (s *Server) approveCompensationTx(ctx context.Context, q dbtx.Querier, r *h
 	if err != nil {
 		return err
 	}
-	// **فوق السقف مديرُ المنصّة وحدَه** — والسقفُ صفرٌ «بلا سقف».
+	// **فوق السقف المالكُ وحدَه** — والسقفُ صفرٌ «بلا سقف».
 	capAmt, err := compensationCapTx(ctx, q, c.Kind)
 	if err != nil {
 		return err
@@ -150,6 +156,47 @@ func compensationCapTx(ctx context.Context, q dbtx.Querier, kind string) (int64,
 	return int64(*v), nil
 }
 
+// compensationPaidTitle **«انصرفلك تعويض X»** — عنوانُ خبر المستفيد (قرارُ المالك ٢٠٢٦-١٠-١٥).
+const compensationPaidTitle = "انصرفلك تعويض "
+
+// notifyCompensationPaid **المستفيدُ يُخبَر بتعويضه — في تطبيقه، وبلا ملاحظة المكتب.**
+//
+// **كانت الموافقةُ صامتة**: يزيد رصيدُ السائق ولا يعرف لماذا. **والتطبيقُ من الدور**:
+// تعويضُ السائق لتطبيق السائق، وتعويضُ البضاعة لتطبيق المتجر، وتعويضُ الشكوى لتطبيق
+// صاحبها. **والملاحظةُ الداخليّة لا تُكتب أبداً** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
+// ويُنادى بعد التثبيت.
+func (s *Server) notifyCompensationPaid(ctx context.Context, c *orders.CompensationRequest, amount int64) {
+	if c == nil || c.DriverID == "" || amount <= 0 {
+		return
+	}
+	app := notifications.AppCustomer
+	switch {
+	case c.Kind == orders.CompKindDriver:
+		app = notifications.AppDriver
+	case c.Kind == orders.CompKindMerchantGoods:
+		app = notifications.AppMerchant
+	case c.BeneficiaryRole == "driver":
+		app = notifications.AppDriver
+	case c.BeneficiaryRole == "merchant":
+		app = notifications.AppMerchant
+	case c.BeneficiaryRole == "rep":
+		app = notifications.AppRep
+	}
+	body := c.ReasonLabel
+	if c.OrderNumber > 0 {
+		body += " — #" + strconv.FormatInt(c.OrderNumber, 10)
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: c.DriverID, Kind: notifications.KindWallet,
+		Title:  compensationPaidTitle + fmtMoneyAr(amount) + " " + currencyWord,
+		Body:   body,
+		Entity: "wallet", Href: "/portal/wallet",
+		Apps: []string{app},
+		// **والتطبيقُ من الدور أعلاه** — AppDriver لتعويض السائق، لا كلُّ تطبيقاته.
+	})
+	s.touchUser(c.DriverID, "wallet")
+}
+
 // handleApproveCompensation **موافقةٌ بمعرّف طلب التعويض** — `{amount, note}`.
 func (s *Server) handleApproveCompensation(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -166,6 +213,7 @@ func (s *Server) handleApproveCompensation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	note := strings.TrimSpace(req.Note)
+	var paid *orders.CompensationRequest
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		c, err := s.orders.CompensationByIDTx(ctx, q, id)
 		if err != nil {
@@ -174,11 +222,13 @@ func (s *Server) handleApproveCompensation(w http.ResponseWriter, r *http.Reques
 		if c == nil {
 			return httpx.ErrNotFound
 		}
+		paid = c
 		return s.approveCompensationTx(ctx, q, r, c, req.Amount, note)
 	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	s.notifyCompensationPaid(r.Context(), paid, req.Amount)
 	s.touch("order", "ops")
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount, "id": id})
@@ -309,18 +359,22 @@ func (s *Server) handleProposeCompensation(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
+	// **والماليّةُ تُنبَّه** — بعد التثبيت (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	s.orders.AlertCompensationPending(r.Context(), id)
 	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id})
 }
 
 // handleListCompensations **القائمةُ بتبويباتها وفلاترها وبطاقاتها.**
 //
-// `?status=pending|approved|rejected|all&kind=&fault=&person=&from=&to=&page=`
+// `?status=pending|approved|rejected|all&kind=&fault=&person=&from=&to=&overdue=1&page=`
 func (s *Server) handleListCompensations(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	f := orders.CompensationFilter{
 		Status: q.Get("status"), Kind: q.Get("kind"), Fault: q.Get("fault"),
 		Person: clip(q.Get("person"), 80), From: q.Get("from"), To: q.Get("to"),
+		// **بطاقةُ «تأخّر» تفتح المتأخّرَ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		Overdue: q.Get("overdue") == "1" || q.Get("overdue") == "true",
 	}
 	switch f.Status {
 	case "", "pending", "approved", "rejected", "all":
@@ -353,7 +407,23 @@ func (s *Server) handleListCompensations(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
-	sum, err := s.orders.CompensationsSummary(r.Context())
+	// **«موافقة/رفض» لا تظهر لمقترحه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — بحكم `approval` نفسِه
+	// والمالكُ وحدَه مستثنى. والقدرةُ (`finance.manage`) تحرسها الشاشةُ والوسيط.
+	actor := userIDFrom(r)
+	ownerAlone, err := approval.OwnerAlone(r.Context(), s.pg, actor, authz.FinanceManage)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for i := range list {
+		proposer := ""
+		if list[i].ProposedBy != nil {
+			proposer = *list[i].ProposedBy
+		}
+		list[i].CanDecide = list[i].Status == orders.CompensationPending &&
+			approval.Allowed(actor, ownerAlone, proposer)
+	}
+	sum, err := s.orders.CompensationsSummary(r.Context(), f)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -363,7 +433,7 @@ func (s *Server) handleListCompensations(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// RunCompensationOverdueSweeper **ينبّه المالكَ إلى ما تأخّر القرارُ فيه** — البند ٤.
+// RunCompensationOverdueSweeper **ينبّه المالكَ والماليّةَ إلى ما تأخّر القرارُ فيه** — البند ٤.
 func (s *Server) RunCompensationOverdueSweeper(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

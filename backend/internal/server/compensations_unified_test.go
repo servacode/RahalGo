@@ -153,7 +153,7 @@ func TestCOMP_ProposerCannotApproveOwn(t *testing.T) {
 	}
 }
 
-// TestCOMP_AboveCapOnlyOwner **فوق سقف النوع مديرُ المنصّة وحدَه يوافق.**
+// TestCOMP_AboveCapOnlyOwner **فوق سقف النوع المالكُ وحدَه يوافق.**
 func TestCOMP_AboveCapOnlyOwner(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	compTreasury(t, f)
@@ -342,8 +342,20 @@ func TestCOMP_HistoryTabsSummaryMismatch(t *testing.T) {
 	if r := find(rows, rej); r == nil || r.DecisionNote != "بيانات تجربة" {
 		t.Fatalf("**المرفوضُ لا يظهر في سجلّه**: %+v", rows)
 	}
-	if sum.RejectedMonthCount < 1 || sum.PendingCount < 1 || sum.PendingSum < 2500 {
-		t.Fatalf("البطاقات: %+v", sum)
+	// **والبطاقاتُ تتبع فلترَ المستفيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — لا أرقامَ المنصّة كلِّها.
+	if sum.RejectedMonthCount != 1 || sum.PendingCount != 0 {
+		t.Fatalf("البطاقاتُ لا تتبع المستفيد: %+v", sum)
+	}
+	if _, sum = list("status=rejected&person=" + f.drivers[0]); sum.PendingCount != 1 ||
+		sum.PendingSum != 2500 || sum.OverdueCount != 1 || sum.RejectedMonthCount != 0 {
+		t.Fatalf("البطاقاتُ للمستفيد الأوّل: %+v", sum)
+	}
+	// **وبطاقةُ التأخّر تفتح المتأخّرَ وحدَه.**
+	if rows, _ := list("overdue=1&person=" + f.drivers[0]); len(rows) != 1 || rows[0].ID != mis {
+		t.Fatalf("فلترُ المتأخّر: %+v", rows)
+	}
+	if rows, _ := list("overdue=1&person=" + f.drivers[1]); len(rows) != 0 {
+		t.Fatalf("فلترُ المتأخّر أظهر غيرَ المتأخّر: %+v", rows)
 	}
 	rows, _ = list("status=pending&fault=customer&kind=driver")
 	r := find(rows, mis)

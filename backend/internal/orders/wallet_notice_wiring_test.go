@@ -117,3 +117,5 @@ func (s *wiringSpy) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
 func (s *wiringSpy) PublishToUsers(ctx context.Context, q dbtx.Querier,
 	roles []string, in notifications.Input) {
 }
+
+func (n *wiringSpy) NotifyCapsRoles(context.Context, []string, []string, notifications.Input) {}

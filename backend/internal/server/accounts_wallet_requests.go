@@ -11,7 +11,8 @@ package server
 // تكرار)، **وغيرُه يوافق** فيقع القيدُ بطرفين في معاملةٍ واحدة:
 //
 //	topup         نقدٌ دخل المكتب ⇒ +المحفظة · وسطرٌ داخلٌ في صندوق المكتب
-//	compensation  ⇒ +المحفظة · −الخزينة (`platform_expense`)
+//	compensation  ⇒ +المحفظة · −الخزينة (`platform_expense`) — **لا يُقترح جديداً من هنا**
+//	              (قرارُ المالك ٢٠٢٦-١٠-١٥): طريقُه صفحةُ التعويضات؛ والمعلَّقُ القديمُ يُقرَّر.
 //	adjustment    إيداعٌ ⇒ +المحفظة −الخزينة · خصمٌ ⇒ −المحفظة +الخزينة
 //
 // **ولا سحبَ من هنا** — السحبُ بابُه صفحةُ السحب وحدَها.
@@ -45,6 +46,9 @@ var (
 		"wallet_over_cap", "errors.wallet_over_cap")
 	errWalletPayoutHere = httpx.NewError(http.StatusBadRequest,
 		"wallet_payout_not_here", "errors.wallet_payout_not_here")
+	// **ولا تعويضَ من هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — طريقُه صفحةُ التعويضات وحدَها.
+	errWalletCompensationHere = httpx.NewError(http.StatusBadRequest,
+		"wallet_compensation_not_here", "errors.wallet_compensation_not_here")
 	errRequestDecided = httpx.NewError(http.StatusConflict,
 		"request_decided", "errors.request_decided")
 )
@@ -118,7 +122,17 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 	case "payout":
 		s.respondErr(w, errWalletPayoutHere)
 		return
-	case "topup", "compensation", "adjustment":
+	case "compensation":
+		// ══════════════════════════════════════════════════════════════
+		// **طريقٌ واحدٌ للتعويض** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// كان التعويضُ يُقترح من بابين: صفحةُ التعويضات بسقفها لكلّ نوعٍ وموافقةِ المالك
+		// فوقه، **ونافذةُ المحفظة بسقف الحركة اليدويّة** — فيمرّ من الثاني ما يُردّ في
+		// الأوّل. **والمعلَّقُ القديمُ من هذا النوع يُقرَّر كما كان** (`postWalletRequest`).
+		s.respondErr(w, errWalletCompensationHere)
+		return
+	case "topup", "adjustment":
 	default:
 		s.respondErr(w, errValidation)
 		return

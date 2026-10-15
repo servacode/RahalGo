@@ -154,6 +154,22 @@ func (s *Service) NotifyCaps(ctx context.Context, caps []string, in Input) {
 	s.notifyQuery(ctx, in, capHoldersSQL, caps)
 }
 
+// NotifyCapsRoles **يبلّغ من يملك إحدى القدرات أو يحمل أحدَ الأدوار** — مرّةً لكلّ شخص.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-١٥: «للمالك وللماليّة».) **ونداءان منفصلان يُشعران المالكَ
+// مرّتين** — فهو يحمل الدورَ ويملك القدرةَ معاً.
+func (s *Service) NotifyCapsRoles(ctx context.Context, caps, roles []string, in Input) {
+	if s == nil {
+		return
+	}
+	s.notifyQuery(ctx, in, `
+		SELECT id FROM (`+capHoldersSQL+`) caps
+		UNION
+		SELECT u.id FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_code = ANY($2) AND u.status = 'active'`, caps, roles)
+}
+
 // NotifyCapsTx كـ`NotifyCaps` **في معاملةٍ مُمرَّرة** — ويُرجع عددَ من أُشعِروا،
 // **فلا يُوسَم إنذارٌ لم يقع.**
 func (s *Service) NotifyCapsTx(ctx context.Context, q dbtx.Querier, caps []string, in Input) (int, error) {

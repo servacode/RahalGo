@@ -1780,6 +1780,10 @@
         {
           "name": "paid_from",
           "type": "string"
+        },
+        {
+          "name": "employee_name",
+          "type": "string"
         }
       ],
       "response": [
@@ -1834,6 +1838,10 @@
         {
           "name": "sort_order",
           "type": "?int"
+        },
+        {
+          "name": "monthly_recurring",
+          "type": "?bool"
         }
       ],
       "response": [
@@ -1848,6 +1856,28 @@
       ],
       "statuses": [
         "StatusCreated",
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expenses/categories/reorder",
+      "handler": "handleReorderExpenseCategories",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "ids",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
         "StatusOK"
       ]
     },

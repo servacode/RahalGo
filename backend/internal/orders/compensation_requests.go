@@ -109,8 +109,12 @@ type CompensationRequest struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	// Overdue **معلَّقٌ تجاوز المهلة** (`compensations.overdue_hours`) — يحمرّ.
 	Overdue bool `json:"overdue"`
-	// Cap **سقفُ هذا النوع** — وفوقه مديرُ المنصّة وحدَه يوافق.
+	// Cap **سقفُ هذا النوع** — وفوقه المالكُ وحدَه يوافق (`owner_super_admin`).
 	Cap int64 `json:"cap"`
+	// CanDecide **يظهر «موافقة/رفض» لهذا الفاعل؟** — بحكم `approval` نفسِه: المعلَّقُ،
+	// ومن غيرِ مقترحه (إلّا المالكَ وحدَه). يملؤه المعالجُ لأنّ الفاعلَ عنده
+	// (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	CanDecide bool `json:"can_decide"`
 }
 
 // reasonLabels **أسبابُ التعويض بالعربيّة** — نصُّها نصُّ `common.failReasons`
@@ -180,7 +184,7 @@ func CompensationCapKey(kind string) string {
 	return "compensations.cap_" + kind
 }
 
-// CompensationCap **سقفُ النوع** — وفوقه مديرُ المنصّة وحدَه يوافق.
+// CompensationCap **سقفُ النوع** — وفوقه المالكُ وحدَه يوافق.
 func (s *Service) CompensationCap(ctx context.Context, kind string) int64 {
 	if s.settings == nil {
 		return 0
@@ -301,7 +305,7 @@ func (s *Service) requestDriverCompensation(ctx context.Context, q wallet.Querie
 		INSERT INTO driver_compensation_requests
 		    (order_id, driver_id, fault, fail_reason, suggested_amount)
 		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (order_id, driver_id) DO NOTHING`,
+		ON CONFLICT (order_id, driver_id) WHERE status IN ('pending', 'approved') DO NOTHING`,
 		orderID, *driverID, fault, failReason, suggested)
 	if err != nil {
 		return false, err
@@ -309,31 +313,72 @@ func (s *Service) requestDriverCompensation(ctx context.Context, q wallet.Querie
 	return tag.RowsAffected() > 0, nil
 }
 
-// alertCompensationPending **تنبيهُ المكتب بعد التثبيت** — طلبُ تعويضٍ ينتظره.
-//
-// **والسببُ بالعربيّة** — كان الإشعارُ يقول «#1349 — customer_absent».
+// alertCompensationPending **تنبيهٌ بعد التثبيت** — طلبُ تعويضٍ كتبه المحرّكُ لهذا الطلب.
 func (s *Service) alertCompensationPending(ctx context.Context, orderID string) {
-	if s.notify == nil {
-		return
-	}
-	var number, suggested int64
-	var reason string
+	var id string
 	if err := s.db.QueryRow(ctx, `
-		SELECT o.number, r.suggested_amount, r.fail_reason
-		FROM driver_compensation_requests r JOIN orders o ON o.id = r.order_id
-		WHERE r.order_id = $1 AND r.status = 'pending'
-		ORDER BY r.created_at DESC LIMIT 1`, orderID).
-		Scan(&number, &suggested, &reason); err != nil {
+		SELECT id::text FROM driver_compensation_requests
+		WHERE order_id = $1 AND status = 'pending'
+		ORDER BY created_at DESC LIMIT 1`, orderID).Scan(&id); err != nil {
 		return
 	}
-	s.notify.NotifyOps(ctx, notifications.Input{
+	s.AlertCompensationPending(ctx, id)
+}
+
+// القدرةُ والدورُ اللذان يُنبَّهان إلى التعويض — نصّاً لا استيراداً (`authz` فوق المحرّك).
+const (
+	compAlertCap   = "finance.manage"
+	compAlertOwner = "owner_super_admin"
+)
+
+// compKindTitles **عنوانُ التنبيه لكلّ نوع** — والطارئُ من سببه (`emergency_`).
+var compKindTitles = map[string]string{
+	CompKindDriver:        "تعويض سائق ينتظر موافقتك",
+	CompKindMerchantGoods: "تعويض متجر عن بضاعة راجعة ينتظر موافقتك",
+	CompKindComplaint:     "تعويض شكوى ينتظر موافقتك",
+	"emergency":           "تعويض من غرفة الطوارئ ينتظر موافقتك",
+}
+
+// AlertCompensationPending **تنبيهُ الماليّة إلى تعويضٍ ينتظرها — لكلّ نوع**
+// (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// **كان يذهب إلى مكتب العمليّات** (`NotifyOps`) لتعويض السائق وحدَه — **والعمليّاتُ
+// لا تقرّر في المال**، وتعويضُ المتجر والشكوى لا يُنبَّه إليه أحد. **والآن بابٌ واحد**:
+// السائقُ والمتجرُ والشكوى والطارئ، إلى من يملك `finance.manage`. **ويُنادى بعد
+// التثبيت** — وبمعرّف طلب التعويض لا برقم الطلب.
+func (s *Service) AlertCompensationPending(ctx context.Context, requestID string) {
+	if s.notify == nil || requestID == "" {
+		return
+	}
+	var kind, reason, orderID, ticketID string
+	var number, ticketNumber, suggested int64
+	if err := s.db.QueryRow(ctx, `
+		SELECT r.kind, r.fail_reason, COALESCE(r.order_id::text, ''), COALESCE(r.ticket_id::text, ''),
+		       COALESCE(o.number, 0), COALESCE(tk.number, 0), r.suggested_amount
+		FROM driver_compensation_requests r
+		LEFT JOIN orders o ON o.id = r.order_id
+		LEFT JOIN tickets tk ON tk.id = r.ticket_id
+		WHERE r.id = $1 AND r.status = 'pending'`, requestID).
+		Scan(&kind, &reason, &orderID, &ticketID, &number, &ticketNumber, &suggested); err != nil {
+		return
+	}
+	title := compKindTitles[kind]
+	if strings.HasPrefix(reason, "emergency_") {
+		title = compKindTitles["emergency"]
+	}
+	in := notifications.Input{
 		Kind:     notifications.KindOrder,
-		Title:    "تعويضُ سائقٍ ينتظر موافقتك",
+		Title:    title,
 		Body:     CompensationAlertBody(number, reason, suggested),
 		Entity:   "order",
 		EntityID: orderID,
 		Href:     "/dashboard/compensations",
-	})
+	}
+	if kind == CompKindComplaint {
+		in.Kind, in.Entity, in.EntityID = notifications.KindTicket, "ticket", ticketID
+		in.Body = "شكوى #" + itoa(ticketNumber) + " — المقترَح " + itoa(suggested)
+	}
+	s.notify.NotifyCapsRoles(ctx, []string{compAlertCap}, nil, in)
 }
 
 // CompensationAlertBody **نصُّ إشعار التعويض** — بالسبب العربيّ لا برمزه.
@@ -560,20 +605,37 @@ type CompensationFilter struct {
 	Person string
 	// From/To تاريخان `YYYY-MM-DD` بتوقيت دمشق.
 	From, To string
+	// Overdue **المعلَّقُ فوق المهلة وحدَه** — بطاقةُ «تأخّر» تفتحه (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	Overdue bool
+	// OverdueHours المهلةُ بالساعات — يملؤها `Compensations` من الإعدادات.
+	OverdueHours int64
 }
 
+// where **شرطُ القائمة** — والحالُ فيه.
 func (f CompensationFilter) where() (string, []any) {
+	return f.conds(true)
+}
+
+// conds **الشرطُ بالحال أو بدونها** — والبطاقاتُ تأخذه بدونها، فتتبع النوعَ والجهةَ
+// والمستفيدَ والتاريخَ ولا تتبع التبويب (قرارُ المالك ٢٠٢٦-١٠-١٥).
+func (f CompensationFilter) conds(withStatus bool) (string, []any) {
 	conds := []string{}
 	args := []any{}
 	add := func(cond string, v any) {
 		args = append(args, v)
 		conds = append(conds, strings.ReplaceAll(cond, "$?", fmt.Sprintf("$%d", len(args))))
 	}
-	switch f.Status {
-	case "", CompensationPending:
-		conds = append(conds, "r.status = 'pending'")
-	case CompensationApproved, CompensationRejected:
-		add("r.status = $?", f.Status)
+	if withStatus {
+		switch {
+		case f.Overdue:
+			// **والمتأخّرُ معلَّقٌ دائماً** — أيّاً كان التبويب.
+			conds = append(conds, "r.status = 'pending'")
+			add("r.created_at < now() - make_interval(hours => $?::int)", f.OverdueHours)
+		case f.Status == "" || f.Status == CompensationPending:
+			conds = append(conds, "r.status = 'pending'")
+		case f.Status == CompensationApproved || f.Status == CompensationRejected:
+			add("r.status = $?", f.Status)
+		}
 	}
 	if f.Kind != "" {
 		add("r.kind = $?", f.Kind)
@@ -623,6 +685,8 @@ func (s *Service) OverdueHours(ctx context.Context) int64 {
 // Compensations **قائمةُ التعويضات بفلاترها** — الأقدمُ أوّلاً للمعلَّق، والأحدثُ
 // أوّلاً للسجلّ.
 func (s *Service) Compensations(ctx context.Context, f CompensationFilter, limit, offset int) ([]CompensationRequest, int, error) {
+	hours := s.OverdueHours(ctx)
+	f.OverdueHours = hours
 	where, args := f.where()
 	var total int
 	if err := s.db.QueryRow(ctx, `
@@ -631,7 +695,7 @@ func (s *Service) Compensations(ctx context.Context, f CompensationFilter, limit
 		return nil, 0, err
 	}
 	order := " ORDER BY r.created_at DESC"
-	if f.Status == "" || f.Status == CompensationPending {
+	if f.Overdue || f.Status == "" || f.Status == CompensationPending {
 		order = " ORDER BY r.created_at ASC"
 	}
 	n := len(args)
@@ -641,7 +705,6 @@ func (s *Service) Compensations(ctx context.Context, f CompensationFilter, limit
 		return nil, 0, err
 	}
 	defer rows.Close()
-	hours := s.OverdueHours(ctx)
 	caps := map[string]int64{}
 	out := []CompensationRequest{}
 	for rows.Next() {
@@ -665,27 +728,34 @@ func (s *Service) PendingCompensations(ctx context.Context, limit, offset int) (
 	return s.Compensations(ctx, CompensationFilter{Status: CompensationPending}, limit, offset)
 }
 
-// CompensationsSummary **أرقامُ البطاقات** — بتوقيت دمشق للشهر.
-func (s *Service) CompensationsSummary(ctx context.Context) (CompensationSummary, error) {
+// CompensationsSummary **أرقامُ البطاقات** — بتوقيت دمشق للشهر، **وبفلاتر الصفحة**
+// (النوع · الجهة · المستفيد · التاريخ) لا بتبويبها (قرارُ المالك ٢٠٢٦-١٠-١٥).
+func (s *Service) CompensationsSummary(ctx context.Context, f CompensationFilter) (CompensationSummary, error) {
 	sum := CompensationSummary{OverdueHours: s.OverdueHours(ctx)}
+	where, args := f.conds(false)
+	hoursArg := fmt.Sprintf("$%d", len(args)+1)
+	args = append(args, sum.OverdueHours)
 	err := s.db.QueryRow(ctx, `
 		WITH m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')
 		                  AT TIME ZONE 'Asia/Damascus' AS start)
-		SELECT count(*) FILTER (WHERE status = 'pending'),
-		       COALESCE(sum(suggested_amount) FILTER (WHERE status = 'pending'), 0),
-		       count(*) FILTER (WHERE status = 'approved' AND decided_at >= m.start),
-		       COALESCE(sum(amount) FILTER (WHERE status = 'approved' AND decided_at >= m.start), 0),
-		       count(*) FILTER (WHERE status = 'rejected' AND decided_at >= m.start),
-		       count(*) FILTER (WHERE status = 'pending'
-		                         AND created_at < now() - make_interval(hours => $1::int))
-		FROM driver_compensation_requests, m`, sum.OverdueHours).
+		SELECT count(*) FILTER (WHERE r.status = 'pending'),
+		       COALESCE(sum(r.suggested_amount) FILTER (WHERE r.status = 'pending'), 0),
+		       count(*) FILTER (WHERE r.status = 'approved' AND r.decided_at >= m.start),
+		       COALESCE(sum(r.amount) FILTER (WHERE r.status = 'approved' AND r.decided_at >= m.start), 0),
+		       count(*) FILTER (WHERE r.status = 'rejected' AND r.decided_at >= m.start),
+		       count(*) FILTER (WHERE r.status = 'pending'
+		                         AND r.created_at < now() - make_interval(hours => `+hoursArg+`::int))
+		FROM driver_compensation_requests r
+		JOIN users u ON u.id = r.driver_id
+		CROSS JOIN m`+where, args...).
 		Scan(&sum.PendingCount, &sum.PendingSum, &sum.ApprovedMonthCount,
 			&sum.ApprovedMonthSum, &sum.RejectedMonthCount, &sum.OverdueCount)
 	return sum, err
 }
 
-// SweepOverdueCompensations **ينبّه المالكَ مرّةً لكلّ طلبٍ تجاوز المهلة**
-// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤). ويردّ عددَ ما نُبّه عنه.
+// SweepOverdueCompensations **ينبّه المالكَ والماليّةَ مرّةً لكلّ طلبٍ تجاوز المهلة**
+// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤ · و٢٠٢٦-١٠-١٥: «والماليّة معه» — هي من تقرّر).
+// ويردّ عددَ ما نُبّه عنه.
 func (s *Service) SweepOverdueCompensations(ctx context.Context) (int, error) {
 	hours := s.OverdueHours(ctx)
 	rows, err := s.db.Query(ctx, `
@@ -705,7 +775,7 @@ func (s *Service) SweepOverdueCompensations(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	if n > 0 && s.notify != nil {
-		s.notify.NotifyRoles(ctx, []string{"owner_super_admin"}, notifications.Input{
+		s.notify.NotifyCapsRoles(ctx, []string{compAlertCap}, []string{compAlertOwner}, notifications.Input{
 			Kind:   notifications.KindOrder,
 			Title:  "تعويضات تأخر القرار فيها",
 			Body:   itoa(int64(n)) + " طلب تعويض ينتظر أكثر من " + itoa(hours) + " ساعة",

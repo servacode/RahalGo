@@ -222,3 +222,5 @@ func (r *recorder) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
 func (r *recorder) PublishToUsers(ctx context.Context, q dbtx.Querier,
 	roles []string, in notifications.Input) {
 }
+
+func (r *recorder) NotifyCapsRoles(context.Context, []string, []string, notifications.Input) {}

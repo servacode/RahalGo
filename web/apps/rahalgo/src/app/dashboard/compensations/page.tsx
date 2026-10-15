@@ -11,8 +11,14 @@
  * - **بطاقات**: ما ينتظر (عدداً ومجموعاً) · ما قُبل ورُفض هذا الشهر · ما تأخّر.
  * - **فلاتر في الرابط**: النوع · الجهة المذنبة · المستفيد · التاريخ.
  * - **الأزرارُ بمعرّف طلب التعويض لا برقم الطلب** — كان الزرُّ يدفع لسائقٍ غيرِ المعروض.
- * - **ولا يوافق أحدٌ على ما اقترحه، وفوق السقف مديرُ المنصّة وحدَه** — المحرّكُ يحرس
+ * - **ولا يوافق أحدٌ على ما اقترحه، وفوق السقف المالكُ وحدَه** — المحرّكُ يحرس
  *   ذلك، والتأكيدُ بكلمة المرور يلتقطه العميلُ المركزيّ (`StepUpGate`).
+ *
+ * # قراراتُ المالك ٢٠٢٦-١٠-١٥
+ *
+ * - **«موافقة/رفض» من الخادم** (`can_decide`) — لا تظهر لمقترحها.
+ * - **البطاقاتُ تتبع الفلاتر**، و**بطاقةُ التأخّر تفتح المتأخّرَ وحدَه** (`overdue=1`).
+ * - **ولا «السائق» في الجهة المذنبة حين يكون النوعُ «سائق»** — لا تعويضَ لذنبه.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -101,6 +107,8 @@ interface Compensation {
   created_at: string;
   overdue: boolean;
   cap: number;
+  /** **يظهر «موافقة/رفض» لهذا الموظّف؟** — من الخادم بحكم الموافقة نفسِه. */
+  can_decide?: boolean;
 }
 
 interface Summary {
@@ -120,9 +128,11 @@ interface Filters {
   person: string;
   from: string;
   to: string;
+  /** **المتأخّرُ وحدَه** — «1» من بطاقة التأخّر. */
+  overdue: string;
 }
 
-const EMPTY: Filters = { status: "pending", kind: "", fault: "", person: "", from: "", to: "" };
+const EMPTY: Filters = { status: "pending", kind: "", fault: "", person: "", from: "", to: "", overdue: "" };
 
 function toQuery(f: Filters, page: number): string {
   const q = new URLSearchParams();
@@ -158,6 +168,7 @@ export default function CompensationsPage() {
         person: q.get("person") ?? "",
         from: q.get("from") ?? "",
         to: q.get("to") ?? "",
+        overdue: q.get("overdue") === "1" ? "1" : "",
       });
       setPage(Math.max(1, Number(q.get("page")) || 1));
     } catch {
@@ -189,7 +200,14 @@ export default function CompensationsPage() {
   );
 
   function set<K extends keyof Filters>(k: K, v: Filters[K]) {
-    setFilters((f) => ({ ...f, [k]: v }));
+    setFilters((f) => {
+      const next = { ...f, [k]: v };
+      // **ولا «السائق» جهةً مذنبةً لتعويض السائق** — يُمسح إن كان مختاراً.
+      if (k === "kind" && v === "driver" && next.fault === "driver") next.fault = "";
+      // **والتبويبُ يُنهي «المتأخّر وحدَه»** — ذاك فلترُ البطاقة لا التبويب.
+      if (k === "status") next.overdue = "";
+      return next;
+    });
     setPage(1);
   }
 
@@ -393,11 +411,24 @@ export default function CompensationsPage() {
             value={fmtNum(sum.overdue_count)}
             icon={IconWarning}
             tone={sum.overdue_count > 0 ? "danger" : "muted"}
+            onClick={() => {
+              setFilters((f) => ({ ...f, status: "pending", overdue: "1" }));
+              setPage(1);
+            }}
           />
         </StatGrid>
       )}
 
       <Tabs items={tabs} value={filters.status} onChange={(k) => set("status", k)} className="mt-4" />
+
+      {filters.overdue === "1" && (
+        <Alert tone="warning" className="mt-3">
+          <span>{C.overdueOnly}</span>{" "}
+          <button type="button" onClick={() => set("overdue", "")} className="font-bold underline">
+            {C.overdueClear}
+          </button>
+        </Alert>
+      )}
 
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <Select value={filters.kind} onChange={(e) => set("kind", e.target.value)} aria-label={C.colKind}>
@@ -410,11 +441,13 @@ export default function CompensationsPage() {
         </Select>
         <Select value={filters.fault} onChange={(e) => set("fault", e.target.value)} aria-label={C.fault}>
           <option value="">{C.filterFault}</option>
-          {Object.keys(FAULTS).map((k) => (
-            <option key={k} value={k}>
-              {FAULTS[k]}
-            </option>
-          ))}
+          {Object.keys(FAULTS)
+            .filter((k) => !(filters.kind === "driver" && k === "driver"))
+            .map((k) => (
+              <option key={k} value={k}>
+                {FAULTS[k]}
+              </option>
+            ))}
         </Select>
         <Input
           value={filters.person}
@@ -463,7 +496,7 @@ export default function CompensationsPage() {
               actions={
                 canDecide
                   ? (c) =>
-                      c.status === "pending" ? (
+                      c.status === "pending" && c.can_decide ? (
                         <>
                           <Button onClick={() => setDeciding({ c, approve: true })}>{C.approve}</Button>
                           <Button variant="danger" onClick={() => setDeciding({ c, approve: false })}>

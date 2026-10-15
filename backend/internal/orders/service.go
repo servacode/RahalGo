@@ -40,6 +40,8 @@ type Notifier interface {
 	NotifyRoles(ctx context.Context, roles []string, in notifications.Input)
 	// NotifyOps مكتب المنصة كاملاً — يستعمله الراصد للتصعيد الباقي
 	NotifyOps(ctx context.Context, in notifications.Input)
+	// NotifyCapsRoles **من يملك القدرةَ أو يحمل الدور** — مرّةً لكلّ شخص (تنبيهاتُ التعويض).
+	NotifyCapsRoles(ctx context.Context, caps, roles []string, in notifications.Input)
 	// NotifyOpsTx **نيّةُ إنذارٍ دائمةٌ في معاملةٍ مُمرَّرة** — `PF-07`.
 	//
 	// **ويُرجع عددَ من أُشعِروا** — **فلا يُوسَم ما لم يقع.**

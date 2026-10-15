@@ -66,6 +66,23 @@ func Check(ctx context.Context, q dbtx.Querier, req Request) (Verdict, error) {
 	if req.ProposedBy == "" || req.ProposedBy != req.Actor {
 		return Verdict{}, nil
 	}
+	alone, err := OwnerAlone(ctx, q, req.Actor, req.Capability)
+	if err != nil {
+		return Verdict{}, err
+	}
+	if alone {
+		return Verdict{SelfApproved: true}, nil
+	}
+	return Verdict{}, ErrSelfApprove
+}
+
+// OwnerAlone **أيوافق هذا الفاعلُ على ما اقترحه هو؟** — المالكُ الأعلى وحدَه، ولا
+// حسابَ فعّالاً غيرَه يملك القدرة. **وهو استثناءُ `Check` نفسُه**، يُقرأ مرّةً
+// للقائمة كلّها فتُحسب أعلامُ الأزرار (`Allowed`) بلا استعلامٍ لكلّ صفّ.
+func OwnerAlone(ctx context.Context, q dbtx.Querier, actor string, capability authz.Capability) (bool, error) {
+	if actor == "" {
+		return false, nil
+	}
 	var owner, others bool
 	if err := q.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM user_roles
@@ -75,12 +92,21 @@ func Check(ctx context.Context, q dbtx.Querier, req Request) (Verdict, error) {
 		                 JOIN role_capabilities rc ON rc.role_code = ur.role_code
 		                WHERE u.id <> $1::uuid AND u.status = 'active'
 		                  AND rc.capability_code = $3)`,
-		req.Actor, authz.RoleOwnerSuperAdmin, string(req.Capability)).
+		actor, authz.RoleOwnerSuperAdmin, string(capability)).
 		Scan(&owner, &others); err != nil {
-		return Verdict{}, err
+		return false, err
 	}
-	if owner && !others {
-		return Verdict{SelfApproved: true}, nil
+	return owner && !others, nil
+}
+
+// Allowed **حكمُ `Check` بلا قاعدة** — يجوز للفاعل إن لم يكن أحدَ الأطراف (`parties`:
+// المقترحُ، والموافقُ حين يُلغى ما وافق عليه)، أو كان المالكَ وحدَه (`ownerAlone`
+// من `OwnerAlone`). **والشاشةُ تقرؤه علَماً** فلا تقارن المعرّفاتِ بنفسها.
+func Allowed(actor string, ownerAlone bool, parties ...string) bool {
+	for _, p := range parties {
+		if p != "" && p == actor {
+			return ownerAlone
+		}
 	}
-	return Verdict{}, ErrSelfApprove
+	return true
 }

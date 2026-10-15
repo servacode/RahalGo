@@ -103,6 +103,9 @@ const SERVER_ADMIN = new Set([
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
   "expense_future_date", "expense_receipt_required", "expense_void_reason_required",
   "expense_void_self", "expense_category_inactive", "expense_bad_range",
+  // قراراتُ المالك ٢٠٢٦-١٠-١٥ — المصروفاتُ والتعويضات: شاشةُ الإدارة وحدَها.
+  "expense_employee_required", "expense_reject_reason_required", "expense_receipt_used",
+  "expense_reorder_mismatch", "wallet_compensation_not_here",
   "report_range_inverted", "report_range_too_long",
   // قسمُ طلبات السحب (٢٠٢٦-١٠-٠٤) — قرارُ المالية من اللوحة.
   "payout_reason_required", "payout_amount_changed",

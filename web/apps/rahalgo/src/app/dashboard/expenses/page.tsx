@@ -20,6 +20,15 @@
  *
  * **كاشٌ من الدرج** (الافتراض) يخرج من صندوق المكتب حين يُقيَّد، وإلغاؤه يردّه.
  * **ومن برّا الدرج** لا يمسّه. والطريقةُ تُحفظ على صفّ المصروف (`paid_from`).
+ *
+ * # قراراتُ المالك ٢٠٢٦-١٠-١٥
+ *
+ * - **اسمُ الموظّف** على المصروف — إلزاميٌّ في باب الرواتب (`is_salary`)، ويُبحث به،
+ *   ومجموعُ كلّ موظّفٍ في المدى حين يُختار بابُ الرواتب.
+ * - **«شهري متكرر»** علَمٌ على الباب — تذكيرٌ أوّلَ كلّ شهر.
+ * - **الموافقةُ والرفضُ بتأكيد**، والرفضُ بسببٍ يُعرض على صفّه.
+ * - **الأزرارُ من الخادم** (`can_void` · `can_approve`) — لا تُعرض ما يردّه.
+ * - **البطاقاتُ تتبع البابَ والبحث** · والترتيبُ نداءٌ واحد.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -94,6 +103,11 @@ interface Row {
   receipt_url: string | null;
   /** **منين دفعت؟** — كاشٌ من الدرج أو من برّا الدرج. */
   paid_from?: PaidFrom;
+  /** **اسمُ الموظّف** — إلزاميٌّ في باب الرواتب. */
+  employee_name?: string;
+  /** **أعلامُ الأزرار من الخادم** — بحكم الموافقة نفسِه، لا بمقارنة معرّفات. */
+  can_void?: boolean;
+  can_approve?: boolean;
 }
 type PaidFrom = "cash" | "outside";
 interface Cat {
@@ -101,6 +115,10 @@ interface Cat {
   name: string;
   active: boolean;
   sort_order: number;
+  /** **بابُ الرواتب** — اسمُ الموظّف فيه إلزاميّ. */
+  is_salary?: boolean;
+  /** **مصروفٌ شهريٌّ متكرّر** — يُذكَّر به أوّلَ الشهر. */
+  monthly_recurring?: boolean;
   used: number;
   spent: number;
 }
@@ -113,6 +131,8 @@ interface Data {
   page: number;
   per_page: number;
   by_category: { id: string; name: string; count: number; total: number }[];
+  /** **مجموعُ كلّ موظّفٍ في المدى** — المقيَّدُ وحدَه وبالمرشّحات نفسِها. */
+  by_employee?: { name: string; count: number; total: number }[];
   summary: {
     month_total: number;
     prev_month_total: number;
@@ -169,6 +189,8 @@ export default function ExpensesPage() {
   const canManage = can("finance.manage");
   const canExport = can("finance.export");
   const [voiding, setVoiding] = useState<Row | null>(null);
+  // **الموافقةُ والرفضُ بتأكيد** — والرفضُ بسببٍ إلزاميّ (قرارُ المالك ٢٠٢٦-١٠-١٥).
+  const [deciding, setDeciding] = useState<{ row: Row; approve: boolean } | null>(null);
   const [why, setWhy] = useState("");
   const [view, setView] = useViewMode("expenses");
 
@@ -224,24 +246,13 @@ export default function ExpensesPage() {
     })();
   }
 
-  async function decide(r: Row, approve: boolean) {
-    try {
-      await api(`/api/v1/admin/expense-requests/${r.id}/${approve ? "approve" : "reject"}`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-      setError("");
-    } catch (err) {
-      setError(errorText(err));
-    }
-    load();
-  }
-
   if (data === "failed") return <ReloadState onRetry={load} label={why || undefined} />;
   if (!data) return <LoadingState />;
 
   const s = data.summary;
   const diff = s.month_total - s.prev_month_total;
+  const salaryCat = cats.find((c) => c.id === category)?.is_salary === true;
+  const byEmployee = data.by_employee ?? [];
 
   const columns: DataColumn<Row>[] = [
     {
@@ -294,8 +305,20 @@ export default function ExpensesPage() {
               {X.voidedBy.replace("{name}", e.decider).replace("{reason}", e.reason)}
             </span>
           )}
+          {e.status === "rejected" && e.reason && (
+            <span className="text-xs text-danger">
+              {X.rejectedBy.replace("{name}", e.decider).replace("{reason}", e.reason)}
+            </span>
+          )}
         </span>
       ),
+    },
+    {
+      id: "employee",
+      header: X.colEmployee,
+      icon: <IconUser />,
+      hide: (e) => !e.employee_name,
+      cell: (e) => <span className="text-sm">{e.employee_name}</span>,
     },
     {
       id: "by",
@@ -476,6 +499,24 @@ export default function ExpensesPage() {
 
       {inverted && <Alert className="mb-3">{X.invertedRange}</Alert>}
 
+      {/* **ومجموعُ كلّ موظّفٍ حين يُختار بابُ الرواتب** (قرارُ المالك ٢٠٢٦-١٠-١٥). */}
+      {salaryCat && byEmployee.length > 0 && (
+        <div className="mb-4 space-y-1.5">
+          <p className="text-sm font-medium">{X.byEmployeeTitle}</p>
+          <ul className="flex flex-wrap gap-2 text-sm">
+            {byEmployee.map((e) => (
+              <li key={e.name} className="rounded-control border border-line px-3 py-1">
+                <span className="font-medium">{e.name}</span>{" "}
+                <span dir="ltr" className="font-bold tabular-nums text-danger">
+                  {fmtNum(e.total)} {CUR}
+                </span>{" "}
+                <span className="text-xs text-ink-muted">({X.usedCount.replace("{n}", fmtNum(e.count))})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* **والتوزيعُ على الأبواب بالمبلغ** — شريطٌ بالنسبة، ومجموعٌ واحدٌ لا يقول أين ذهب المال. */}
       {data.by_category.length > 0 && data.total_amount > 0 && (
         <div className="mb-4 space-y-1.5">
@@ -516,15 +557,23 @@ export default function ExpensesPage() {
           canManage
             ? (e) =>
                 e.status === "posted" ? (
-                  <Button variant="ghost" className="!px-2 text-xs" onClick={() => setVoiding(e)}>
-                    {X.void}
-                  </Button>
+                  e.can_void ? (
+                    <Button variant="ghost" className="!px-2 text-xs" onClick={() => setVoiding(e)}>
+                      {X.void}
+                    </Button>
+                  ) : null
                 ) : e.status === "pending" ? (
                   <div className="flex gap-1">
-                    <Button className="!px-2 text-xs" onClick={() => void decide(e, true)}>
-                      {X.approve}
-                    </Button>
-                    <Button variant="ghost" className="!px-2 text-xs" onClick={() => void decide(e, false)}>
+                    {e.can_approve && (
+                      <Button className="!px-2 text-xs" onClick={() => setDeciding({ row: e, approve: true })}>
+                        {X.approve}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      className="!px-2 text-xs"
+                      onClick={() => setDeciding({ row: e, approve: false })}
+                    >
                       {X.reject}
                     </Button>
                   </div>
@@ -560,6 +609,18 @@ export default function ExpensesPage() {
           }}
         />
       )}
+      {deciding && (
+        <DecideModal
+          row={deciding.row}
+          approve={deciding.approve}
+          onClose={() => setDeciding(null)}
+          onDone={() => {
+            setDeciding(null);
+            load();
+            loadCats();
+          }}
+        />
+      )}
       {voiding && (
         <VoidModal
           row={voiding}
@@ -575,7 +636,75 @@ export default function ExpensesPage() {
   );
 }
 
-/** **الإلغاءُ بسببٍ إلزاميّ** — ومن موظّفٍ غيرِ من سجّل (يحكم الخادم ويقول السبب). */
+/**
+ * **الموافقةُ أو الرفضُ بتأكيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان الزرُّ يقرّر بضغطةٍ
+ * واحدة. **والرفضُ بسببٍ إلزاميّ** يُحفظ ويُعرض على الصفّ المرفوض.
+ */
+function DecideModal({
+  row,
+  approve,
+  onClose,
+  onDone,
+}: {
+  row: Row;
+  approve: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function submit() {
+    if (busy || (!approve && !reason.trim())) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/expense-requests/${row.id}/${approve ? "approve" : "reject"}`, {
+        method: "POST",
+        body: JSON.stringify(approve ? {} : { note: reason.trim() }),
+      });
+      onDone();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal open onClose={onClose} title={approve ? X.approveConfirmTitle : X.rejectConfirmTitle}>
+      <div className="space-y-3">
+        <p className="text-sm text-ink-muted">{approve ? X.approveConfirmBody : X.rejectConfirmBody}</p>
+        <p className="text-sm">
+          {row.category}
+          {row.employee_name ? ` · ${row.employee_name}` : ""} ·{" "}
+          <span dir="ltr" className="font-bold">
+            {fmtNum(row.amount)} {CUR}
+          </span>
+        </p>
+        {!approve && (
+          <Textarea
+            id="exp-reject-reason"
+            label={X.rejectReason}
+            required
+            rows={2}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        )}
+        {error && <Alert>{error}</Alert>}
+        <FormActions
+          onSave={() => void submit()}
+          onCancel={onClose}
+          busy={busy}
+          saveLabel={approve ? X.approveConfirm : X.rejectConfirm}
+          cancelLabel={X.back}
+        />
+      </div>
+    </Modal>
+  );
+}
+
+/** **الإلغاءُ بسببٍ إلزاميّ** — ومن موظّفٍ غيرِ من سجّل ولا من وافق (يحكم الخادم ويقول السبب). */
 function VoidModal({ row, onClose, onDone }: { row: Row; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -651,17 +780,21 @@ function AddModal({
   const [receipt, setReceipt] = useState("");
   // **«منين دفعت؟» — كاشٌ من الدرج افتراضاً** (قرارُ المالك ٢٠٢٦-١٠-١٥).
   const [paidFrom, setPaidFrom] = useState<PaidFrom>("cash");
+  // **اسمُ الموظّف** — إلزاميٌّ في باب الرواتب (قرارُ المالك ٢٠٢٦-١٠-١٥).
+  const [employee, setEmployee] = useState("");
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const parsed = parseAmount(amount);
   const over = parsed.value !== null && parsed.value > threshold;
+  const salary = cats.find((c) => c.id === categoryID)?.is_salary === true;
 
   function next() {
     // **وكلُّ خطأٍ يُقال** — كان الحفظُ يسكت مع «١٠٠٠» أو «1,000» أو بلا باب.
     if (!categoryID) return setError(X.noCategory);
     if (parsed.value === null) return setError(parsed.error);
+    if (salary && !employee.trim()) return setError(X.employeeMissing);
     if (spentAt > (today || damascusDay())) return setError(X.futureDate);
     if (over && !receipt) return setError(m.errors.expense_receipt_required);
     setError("");
@@ -682,6 +815,7 @@ function AddModal({
           spent_at: spentAt,
           receipt_media_id: receipt || undefined,
           paid_from: paidFrom,
+          employee_name: employee.trim() || undefined,
         }),
       });
       onDone(r?.status === "pending");
@@ -703,6 +837,12 @@ function AddModal({
               <dt className="text-ink-muted">{X.category}</dt>
               <dd className="font-medium">{cat?.name}</dd>
             </div>
+            {employee.trim() && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-muted">{X.employeeName}</dt>
+                <dd className="font-medium">{employee.trim()}</dd>
+              </div>
+            )}
             <div className="flex justify-between gap-3">
               <dt className="text-ink-muted">{X.reviewAmount}</dt>
               <dd dir="ltr" className="figure text-danger">
@@ -762,6 +902,14 @@ function AddModal({
             </option>
           ))}
         </Select>
+        <Input
+          id="exp-employee"
+          label={salary ? X.employeeRequired : X.employeeOptional}
+          required={salary}
+          maxLength={80}
+          value={employee}
+          onChange={(e) => setEmployee(e.target.value)}
+        />
         <Input
           id="exp-amount"
           label={`${X.amount} (${CUR})`}
@@ -859,15 +1007,30 @@ function CatsModal({
     }
   }
 
-  /** **الترتيبُ بتبديل مكانَي بابين متجاورين.** */
+  /**
+   * **الترتيبُ نداءٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — القائمةُ كاملةً بترتيبها الجديد.
+   * كان نداءين يبدّلان مكانَي بابين، **فإن سقط الثاني بقي البابان على رقمٍ واحد.**
+   */
   async function move(i: number, dir: -1 | 1) {
     const a = cats[i];
     const b = cats[i + dir];
     if (!a || !b || busy) return;
-    const sa = a.sort_order === b.sort_order ? a.sort_order + dir : b.sort_order;
-    const sb = a.sort_order;
-    await save({ id: a.id, sort_order: sa });
-    await save({ id: b.id, sort_order: sb });
+    const ids = cats.map((c) => c.id);
+    ids[i] = b.id;
+    ids[i + dir] = a.id;
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/v1/admin/expenses/categories/reorder", {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
+      onChanged();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -883,6 +1046,7 @@ function CatsModal({
             {m.common.save}
           </Button>
         </div>
+        <p className="text-xs text-ink-muted">{X.catRecurringHint}</p>
         {error && <Alert>{error}</Alert>}
         <ul className="divide-y divide-line">
           {cats.map((c, i) => (
@@ -938,6 +1102,12 @@ function CatsModal({
                 label={X.catActive}
                 checked={c.active}
                 onChange={(e) => void save({ id: c.id, active: e.target.checked })}
+              />
+              <Checkbox
+                id={`cat-rec-${c.id}`}
+                label={X.catRecurring}
+                checked={c.monthly_recurring === true}
+                onChange={(e) => void save({ id: c.id, monthly_recurring: e.target.checked })}
               />
             </li>
           ))}

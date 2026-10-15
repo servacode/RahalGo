@@ -321,6 +321,9 @@ func run(logger *slog.Logger) error {
 			// **وتنبيهُ المالك إلى تعويضٍ تأخّر القرارُ فيه** (قرارُ المالك
 			// ٢٠٢٦-١٠-٠٤، البند ٤) — مرّةً لكلّ طلب، وكلَّ خمس دقائق تكفي.
 			go srv.RunCompensationOverdueSweeper(ctx, 5*time.Minute)
+			// **وتذكيرُ مصاريف الشهر المتكرّرة** — expenses_reminder.go (قرارُ المالك
+			// ٢٠٢٦-١٠-١٥): أوّلَ كلّ شهرٍ بيوم دمشق، مرّةً للشهر، وكلَّ ساعةٍ تكفي.
+			go srv.RunExpenseReminder(ctx, time.Hour)
 
 			// **وعاملُ دفع الإشعارات** — `PF-09`.
 			//

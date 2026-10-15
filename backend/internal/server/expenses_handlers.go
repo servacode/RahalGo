@@ -63,7 +63,43 @@ var (
 		"expense_category_inactive", "errors.expense_category_inactive")
 	errExpenseBadRange = httpx.NewError(http.StatusBadRequest,
 		"expense_bad_range", "errors.expense_bad_range")
+	// **قراراتُ المالك ٢٠٢٦-١٠-١٥**: اسمُ الموظّف إلزاميٌّ في باب الرواتب · سببُ الرفض
+	// إلزاميّ · والإيصالُ لمصروفٍ واحد · والترتيبُ قائمةٌ كاملة.
+	errExpenseEmployeeRequired = httpx.NewError(http.StatusBadRequest,
+		"expense_employee_required", "errors.expense_employee_required")
+	errExpenseRejectReason = httpx.NewError(http.StatusBadRequest,
+		"expense_reject_reason_required", "errors.expense_reject_reason_required")
+	errExpenseReceiptUsed = httpx.NewError(http.StatusConflict,
+		"expense_receipt_used", "errors.expense_receipt_used")
+	errExpenseReorder = httpx.NewError(http.StatusBadRequest,
+		"expense_reorder_mismatch", "errors.expense_reorder_mismatch")
 )
+
+// expenseReceiptInUse **الإيصالُ محجوزٌ لمصروفٍ قائمٍ أو اقتراحٍ ينتظر؟** — داخل معاملة
+// الإنشاء وبقفلٍ على الإيصال نفسِه، فضغطتان متزامنتان لا تمرّان معاً.
+//
+// **والملغى والمرفوضُ لا يحجزان** — يُسجَّل المصروفُ مصحَّحاً بورقته نفسِها.
+func expenseReceiptInUse(ctx context.Context, q dbtx.Querier, mediaID string) (bool, error) {
+	if _, err := q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('expense_receipt:' || $1))`,
+		mediaID); err != nil {
+		return false, err
+	}
+	var used bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM expenses
+		                WHERE receipt_media_id = $1::uuid AND voided_at IS NULL)
+		    OR EXISTS (SELECT 1 FROM expense_requests
+		                WHERE receipt_media_id = $1::uuid AND status = 'pending')`, mediaID).Scan(&used)
+	return used, err
+}
+
+// receiptErr **تكرارُ الإيصال من الفهرس** — الحارسُ الثاني بعد `expenseReceiptInUse`.
+func receiptErr(err error) error {
+	if isUniqueViolation(err) {
+		return errExpenseReceiptUsed
+	}
+	return err
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // **«منين دفعت؟» — قرارُ المالك ٢٠٢٦-١٠-١٥**
@@ -146,7 +182,7 @@ func (s *Server) handleExpenseCategories(w http.ResponseWriter, r *http.Request)
 	// **والمُطفأةُ تُقرأ في الإدارة** — لتُعاد، **ولتُقرأ أسماءُ ما مضى.**
 	// **ومع كلّ بابٍ مبلغُه** — والعددُ وحدَه لا يقول أين ذهب المال.
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT c.id::text, c.name, c.active, c.sort_order,
+		SELECT c.id::text, c.name, c.active, c.sort_order, c.is_salary, c.monthly_recurring,
 		       (SELECT count(*) FROM expenses e
 		        WHERE e.category_id = c.id AND e.voided_at IS NULL),
 		       (SELECT COALESCE(sum(e.amount), 0) FROM expenses e
@@ -163,13 +199,17 @@ func (s *Server) handleExpenseCategories(w http.ResponseWriter, r *http.Request)
 		Name   string `json:"name"`
 		Active bool   `json:"active"`
 		Sort   int    `json:"sort_order"`
-		Used   int    `json:"used"`
-		Spent  int64  `json:"spent"`
+		// Salary **بابُ الرواتب** — اسمُ الموظّف فيه إلزاميّ.
+		Salary bool `json:"is_salary"`
+		// Recurring **مصروفٌ شهريٌّ متكرّر** — يُذكَّر به أوّلَ كلّ شهر.
+		Recurring bool  `json:"monthly_recurring"`
+		Used      int   `json:"used"`
+		Spent     int64 `json:"spent"`
 	}
 	out := []cat{}
 	for rows.Next() {
 		var c cat
-		if err := rows.Scan(&c.ID, &c.Name, &c.Active, &c.Sort, &c.Used, &c.Spent); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.Active, &c.Sort, &c.Salary, &c.Recurring, &c.Used, &c.Spent); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -189,6 +229,8 @@ func (s *Server) handleSaveExpenseCategory(w http.ResponseWriter, r *http.Reques
 		Name   string  `json:"name"`
 		Active *bool   `json:"active"`
 		Sort   *int    `json:"sort_order"`
+		// Recurring **«مصروف شهري متكرر»** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		Recurring *bool `json:"monthly_recurring"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -203,11 +245,11 @@ func (s *Server) handleSaveExpenseCategory(w http.ResponseWriter, r *http.Reques
 		var id string
 		var sort int
 		if err := s.pg.QueryRow(r.Context(), `
-			INSERT INTO expense_categories (name, sort_order)
+			INSERT INTO expense_categories (name, sort_order, monthly_recurring)
 			VALUES ($1, COALESCE($2, (SELECT COALESCE(max(sort_order), 0) + 1
-			                          FROM expense_categories WHERE sort_order < 99)))
+			                          FROM expense_categories WHERE sort_order < 99)), COALESCE($3, false))
 			RETURNING id::text, sort_order`,
-			clip(name, 60), req.Sort).Scan(&id, &sort); err != nil {
+			clip(name, 60), req.Sort, req.Recurring).Scan(&id, &sort); err != nil {
 			if isUniqueViolation(err) {
 				s.respondErr(w, httpx.NewError(http.StatusConflict,
 					"duplicate_name", "errors.duplicate_name"))
@@ -217,7 +259,8 @@ func (s *Server) handleSaveExpenseCategory(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		s.audit(r, "finance.expense_category", "expense_category", id,
-			map[string]any{"op": "create", "name": name, "active": true, "sort_order": sort})
+			map[string]any{"op": "create", "name": name, "active": true, "sort_order": sort,
+				"monthly_recurring": req.Recurring != nil && *req.Recurring})
 		httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
 		return
 	}
@@ -231,21 +274,26 @@ func (s *Server) handleSaveExpenseCategory(w http.ResponseWriter, r *http.Reques
 	// **والسجلُّ يحفظ ما كان وما صار** — وكان يحفظ الاسمَ المرسَل وحدَه، فإطفاءُ
 	// بابٍ يُكتب باسمٍ فارغٍ ولا يُعرف أنّه أُطفئ.
 	var before, after struct {
-		Name   string
-		Active bool
-		Sort   int
+		Name      string
+		Active    bool
+		Sort      int
+		Recurring bool
 	}
 	err = s.pg.QueryRow(r.Context(), `
-		WITH old AS (SELECT name, active, sort_order FROM expense_categories WHERE id = $1)
+		WITH old AS (SELECT name, active, sort_order, monthly_recurring
+		             FROM expense_categories WHERE id = $1)
 		UPDATE expense_categories c
 		SET name = COALESCE(NULLIF($2, ''), c.name),
 		    active = COALESCE($3, c.active),
-		    sort_order = COALESCE($4, c.sort_order)
+		    sort_order = COALESCE($4, c.sort_order),
+		    monthly_recurring = COALESCE($5, c.monthly_recurring)
 		FROM old
 		WHERE c.id = $1
-		RETURNING old.name, old.active, old.sort_order, c.name, c.active, c.sort_order`,
-		*req.ID, clip(name, 60), req.Active, req.Sort).
-		Scan(&before.Name, &before.Active, &before.Sort, &after.Name, &after.Active, &after.Sort)
+		RETURNING old.name, old.active, old.sort_order, old.monthly_recurring,
+		          c.name, c.active, c.sort_order, c.monthly_recurring`,
+		*req.ID, clip(name, 60), req.Active, req.Sort, req.Recurring).
+		Scan(&before.Name, &before.Active, &before.Sort, &before.Recurring,
+			&after.Name, &after.Active, &after.Sort, &after.Recurring)
 	if errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -259,10 +307,64 @@ func (s *Server) handleSaveExpenseCategory(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "finance.expense_category", "expense_category", *req.ID,
-		map[string]any{"op": "update",
-			"name": after.Name, "active": after.Active, "sort_order": after.Sort,
-			"old_name": before.Name, "old_active": before.Active, "old_sort_order": before.Sort})
+	details := map[string]any{"op": "update",
+		"name": after.Name, "active": after.Active, "sort_order": after.Sort,
+		"old_name": before.Name, "old_active": before.Active, "old_sort_order": before.Sort}
+	details["monthly_recurring"] = after.Recurring
+	details["old_monthly_recurring"] = before.Recurring
+	s.audit(r, "finance.expense_category", "expense_category", *req.ID, details)
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// handleReorderExpenseCategories **ترتيبُ الأبواب كتابةٌ واحدة** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+//
+// `{ids: [...]}` — **القائمةُ كاملةً بترتيبها الجديد**. كانت الشاشةُ ترسل نداءين
+// يبدّلان مكانَي بابين، **فإن سقط الثاني بقي البابان على رقمٍ واحد** وتاه الترتيب.
+// والآن معاملةٌ واحدة: **القائمةُ تطابق الأبوابَ كلَّها أو تُردّ**، وكلُّ بابٍ رقمُه موضعُه.
+func (s *Server) handleReorderExpenseCategories(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		IDs []string `json:"ids"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	seen := map[string]bool{}
+	for _, id := range req.IDs {
+		if !isUUID(id) || seen[id] {
+			s.respondErr(w, errExpenseReorder)
+			return
+		}
+		seen[id] = true
+	}
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		// **والقفلُ على الجدول** — ترتيبان متزامنان لا يتداخلان.
+		if _, err := q.Exec(ctx, `LOCK TABLE expense_categories IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+			return err
+		}
+		var total int
+		if err := q.QueryRow(ctx, `SELECT count(*) FROM expense_categories`).Scan(&total); err != nil {
+			return err
+		}
+		if total != len(req.IDs) {
+			return errExpenseReorder
+		}
+		tag, err := q.Exec(ctx, `
+			UPDATE expense_categories c SET sort_order = o.pos
+			FROM unnest($1::uuid[]) WITH ORDINALITY AS o(id, pos)
+			WHERE c.id = o.id`, req.IDs)
+		if err != nil {
+			return err
+		}
+		if int(tag.RowsAffected()) != total {
+			return errExpenseReorder
+		}
+		return s.auditTx(ctx, q, r, "finance.expense_category", "expense_category", "",
+			map[string]any{"op": "reorder", "ids": req.IDs})
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
@@ -286,6 +388,24 @@ type expenseRow struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	// PaidFrom **منين دفعت؟** — `cash` من الدرج أو `outside`.
 	PaidFrom string `json:"paid_from"`
+	// EmployeeName **اسمُ الموظّف** — إلزاميٌّ في باب الرواتب (قرارُ المالك ٢٠٢٦-١٠-١٥).
+	EmployeeName string `json:"employee_name"`
+	// CanVoid / CanApprove **أعلامُ الأزرار من الخادم** — بحكم `approval` نفسِه، فلا
+	// تقارن الشاشةُ المعرّفات ولا تعرض زرّاً يردّه الخادم.
+	CanVoid    bool `json:"can_void"`
+	CanApprove bool `json:"can_approve"`
+	// approverID من وافق على المصروف (فوق السقف) — طرفٌ لا يلغيه وحدَه.
+	approverID string
+}
+
+// setActions **أعلامُ الأزرار لهذا الفاعل** — `ownerAlone` من `approval.OwnerAlone`.
+func (x *expenseRow) setActions(actor string, ownerAlone bool) {
+	switch x.Status {
+	case "posted":
+		x.CanVoid = approval.Allowed(actor, ownerAlone, x.ByID, x.approverID)
+	case "pending":
+		x.CanApprove = approval.Allowed(actor, ownerAlone, x.ByID)
+	}
 }
 
 // expenseRowsCTE **المصروفاتُ والاقتراحاتُ في جدولٍ واحد** — والاقتراحُ الموافَقُ
@@ -298,12 +418,13 @@ const expenseRowsCTE = `
 		       CASE WHEN e.voided_at IS NULL THEN e.approved_by ELSE e.voided_by END AS decider_id,
 		       e.voided_at AS decided_at, e.void_reason AS reason,
 		       (CASE WHEN e.voided_at IS NULL THEN e.self_approved ELSE e.void_self_approved END) AS self_ok,
-		       e.receipt_media_id, e.created_at, e.paid_from
+		       e.receipt_media_id, e.created_at, e.paid_from, e.employee_name,
+		       e.approved_by AS approver_id
 		FROM expenses e
 		UNION ALL
 		SELECT q.id, 'request', q.status, q.category_id, q.amount, q.note, q.spent_at,
 		       q.proposed_by, q.decided_by, q.decided_at, q.decision_note, q.self_approved,
-		       q.receipt_media_id, q.created_at, q.paid_from
+		       q.receipt_media_id, q.created_at, q.paid_from, q.employee_name, NULL::uuid
 		FROM expense_requests q WHERE q.status <> 'approved'
 	)`
 
@@ -319,20 +440,22 @@ const expenseScope = `
 	  AND ($3 = '' OR x.category_id::text = $3)
 	  AND ($4 = '' OR x.status = $4)
 	  AND ($5 = '' OR x.note ILIKE '%' || $5 || '%' OR c.name ILIKE '%' || $5 || '%'
+	       OR x.employee_name ILIKE '%' || $5 || '%'
 	       OR COALESCE(u.full_name, '') ILIKE '%' || $5 || '%')`
 
 const expenseCols = `
 	SELECT x.id::text, x.src, x.status, c.name, x.amount, x.note, x.spent_at,
 	       COALESCE(NULLIF(u.full_name, ''), u.phone::text, ''), COALESCE(x.by_id::text, ''),
 	       COALESCE(NULLIF(d.full_name, ''), d.phone::text, ''), x.decided_at, x.reason,
-	       x.self_ok, COALESCE(md.path, ''), x.created_at, x.paid_from`
+	       x.self_ok, COALESCE(md.path, ''), x.created_at, x.paid_from, x.employee_name,
+	       COALESCE(x.approver_id::text, '')`
 
 func scanExpenseRow(row pgx.Row) (expenseRow, error) {
 	var x expenseRow
 	var receipt string
 	err := row.Scan(&x.ID, &x.Source, &x.Status, &x.Category, &x.Amount, &x.Note, &x.SpentAt,
 		&x.By, &x.ByID, &x.Decider, &x.DecidedAt, &x.Reason, &x.SelfApproved, &receipt, &x.CreatedAt,
-		&x.PaidFrom)
+		&x.PaidFrom, &x.EmployeeName, &x.approverID)
 	if receipt != "" {
 		u := media.SignedURL(receipt)
 		x.ReceiptURL = &u
@@ -457,6 +580,12 @@ func (s *Server) handleListExpenses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
+	actor := userIDFrom(r)
+	ownerAlone, err := approval.OwnerAlone(ctx, s.pg, actor, authz.FinanceManage)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	out := []expenseRow{}
 	for rows.Next() {
 		x, err := scanExpenseRow(rows)
@@ -464,9 +593,39 @@ func (s *Server) handleListExpenses(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		x.setActions(actor, ownerAlone)
 		out = append(out, x)
 	}
 	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	// ── مجموعُ كلّ موظّفٍ في المدى (قرارُ المالك ٢٠٢٦-١٠-١٥) ───────────
+	//
+	// **المقيَّدُ وحدَه وبالمرشّحات نفسِها** — والشاشةُ تعرضه حين يُختار بابُ الرواتب.
+	byEmployee := []map[string]any{}
+	eRows, err := s.pg.Query(ctx, expenseRowsCTE+`
+		SELECT x.employee_name, count(*), COALESCE(sum(x.amount), 0)`+expenseScope+`
+		  AND x.status = 'posted' AND x.employee_name <> ''
+		GROUP BY x.employee_name ORDER BY sum(x.amount) DESC, x.employee_name`, sumArgs...)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for eRows.Next() {
+		var name string
+		var n int
+		var sum int64
+		if err := eRows.Scan(&name, &n, &sum); err != nil {
+			eRows.Close()
+			s.respondErr(w, err)
+			return
+		}
+		byEmployee = append(byEmployee, map[string]any{"name": name, "count": n, "total": sum})
+	}
+	eRows.Close()
+	if err := eRows.Err(); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -482,23 +641,31 @@ func (s *Server) handleListExpenses(w http.ResponseWriter, r *http.Request) {
 	}
 	mFrom, mTo := monthBounds(ref)
 	pFrom, pTo := monthBounds(time.Date(ref.Year(), ref.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -1, 0))
-	monthTotal, err := opexBySpendDate(ctx, s.pg, mFrom, mTo)
+	//
+	// **وتتبع البابَ والبحثَ لا الحالة** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كانت للمنصّة كلِّها،
+	// **فمن اختار «رواتب» قرأ مجموعَ الشهر كلَّه تحت اسم الرواتب.** والمقيَّدُ وحدَه يُعدّ.
+	monthSum := func(from, to string) (int64, error) {
+		var v int64
+		err := s.pg.QueryRow(ctx, expenseRowsCTE+` SELECT COALESCE(sum(x.amount), 0)`+expenseScope,
+			from, to, f.Category, "posted", f.Q).Scan(&v)
+		return v, err
+	}
+	monthTotal, err := monthSum(mFrom, mTo)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	prevTotal, err := opexBySpendDate(ctx, s.pg, pFrom, pTo)
+	prevTotal, err := monthSum(pFrom, pTo)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	var topName string
 	var topTotal int64
-	if err := s.pg.QueryRow(ctx, `
-		SELECT c.name, sum(e.amount) FROM expenses e
-		JOIN expense_categories c ON c.id = e.category_id
-		WHERE e.voided_at IS NULL AND e.spent_at BETWEEN $1::date AND $2::date
-		GROUP BY c.name ORDER BY sum(e.amount) DESC, c.name LIMIT 1`, mFrom, mTo).
+	if err := s.pg.QueryRow(ctx, expenseRowsCTE+`
+		SELECT c.name, sum(x.amount)`+expenseScope+`
+		GROUP BY c.name ORDER BY sum(x.amount) DESC, c.name LIMIT 1`,
+		mFrom, mTo, f.Category, "posted", f.Q).
 		Scan(&topName, &topTotal); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, err)
 		return
@@ -517,6 +684,7 @@ func (s *Server) handleListExpenses(w http.ResponseWriter, r *http.Request) {
 	res["pending_amount"] = pendingAmount
 	res["pending_count"] = pendingCount
 	res["by_category"] = byCat
+	res["by_employee"] = byEmployee
 	res["summary"] = map[string]any{
 		"month_from": mFrom, "month_to": mTo,
 		"month_total": monthTotal, "prev_month_total": prevTotal,
@@ -564,11 +732,12 @@ func (s *Server) handleExportExpenses(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	cw := csv.NewWriter(w)
 	paidAr := map[string]string{expensePaidCash: "كاش من الدرج", expensePaidOutside: "من برّا الدرج"}
-	_ = cw.Write([]string{"تاريخ الصرف", "الباب", "المبلغ (ل.س)", "الملاحظة", "سجّله", "الحالة", "السبب",
-		"منين دفعت"})
+	_ = cw.Write([]string{"تاريخ الصرف", "الباب", "اسم الموظف", "المبلغ (ل.س)", "الملاحظة", "سجّله",
+		"الحالة", "السبب", "منين دفعت"})
 	for _, x := range list {
 		_ = cw.Write([]string{
-			x.SpentAt.Format("2006-01-02"), csvSafe(x.Category), strconv.FormatInt(x.Amount, 10),
+			x.SpentAt.Format("2006-01-02"), csvSafe(x.Category), csvSafe(x.EmployeeName),
+			strconv.FormatInt(x.Amount, 10),
 			csvSafe(x.Note), csvSafe(x.By), statusAr[x.Status], csvSafe(x.Reason), paidAr[x.PaidFrom],
 		})
 	}
@@ -615,6 +784,8 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 		SpentAt        string `json:"spent_at"`
 		ReceiptMediaID string `json:"receipt_media_id"`
 		PaidFrom       string `json:"paid_from"`
+		// EmployeeName **اسمُ الموظّف** — إلزاميٌّ في باب الرواتب (قرارُ المالك ٢٠٢٦-١٠-١٥).
+		EmployeeName string `json:"employee_name"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -654,16 +825,21 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 		receipt = &id
 	}
 	// **ولا يُصرف على بابٍ مُطفأ** — **وحكمٌ في الشاشة وحدَها وعدٌ بحكم.**
-	var active bool
+	var active, salary bool
 	var catName string
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT active, name FROM expense_categories WHERE id = $1`, req.CategoryID).
-		Scan(&active, &catName); err != nil {
+		`SELECT active, name, is_salary FROM expense_categories WHERE id = $1`, req.CategoryID).
+		Scan(&active, &catName, &salary); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	if !active {
 		s.respondErr(w, errExpenseCategoryOff)
+		return
+	}
+	employee := clip(strings.TrimSpace(req.EmployeeName), 80)
+	if salary && employee == "" {
+		s.respondErr(w, errExpenseEmployeeRequired)
 		return
 	}
 	note := clip(strings.TrimSpace(req.Note), 300)
@@ -688,21 +864,34 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
+	// **والإيصالُ لمصروفٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ورقةٌ واحدةٌ لا تُصرف مرّتين.
+	if receipt != nil {
+		used, err := expenseReceiptInUse(r.Context(), tx, *receipt)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if used {
+			s.respondErr(w, errExpenseReceiptUsed)
+			return
+		}
+	}
+
 	if needsApproval {
 		// **فوق السقف: اقتراحٌ لا قيد** — يوافق عليه شخصٌ آخر (قرارُ المالك ١).
 		var id string
 		if err := tx.QueryRow(r.Context(), `
 			INSERT INTO expense_requests (category_id, amount, note, spent_at, receipt_media_id, proposed_by,
-			                              paid_from)
-			VALUES ($1, $2, $3, $4::date, $5, $6, $7) RETURNING id::text`,
-			req.CategoryID, req.Amount, note, spent, receipt, actor, paidFrom).Scan(&id); err != nil {
-			s.respondErr(w, err)
+			                              paid_from, employee_name)
+			VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8) RETURNING id::text`,
+			req.CategoryID, req.Amount, note, spent, receipt, actor, paidFrom, employee).Scan(&id); err != nil {
+			s.respondErr(w, receiptErr(err))
 			return
 		}
 		if err := s.auditTx(r.Context(), tx, r, "finance.expense_request", "expense_request", id,
 			map[string]any{"amount": req.Amount, "spent_at": spent, "category": catName,
 				"note": note, "receipt": receipt != nil, "threshold": threshold,
-				"paid_from": paidFrom}); err != nil {
+				"paid_from": paidFrom, "employee_name": employee}); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -717,10 +906,11 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 
 	var id string
 	if err := tx.QueryRow(r.Context(), `
-		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id, paid_from)
-		VALUES ($1, $2, $3, $4::date, $5, $6, $7) RETURNING id::text`,
-		req.CategoryID, req.Amount, note, spent, actor, receipt, paidFrom).Scan(&id); err != nil {
-		s.respondErr(w, err)
+		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id, paid_from,
+		                      employee_name)
+		VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8) RETURNING id::text`,
+		req.CategoryID, req.Amount, note, spent, actor, receipt, paidFrom, employee).Scan(&id); err != nil {
+		s.respondErr(w, receiptErr(err))
 		return
 	}
 	// **والكاشُ يخرج من الدرج** في المعاملة نفسِها — وإن صار الدرجُ سالباً فلا يُمنع.
@@ -740,7 +930,8 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 	// **والأثرُ في المعاملة نفسِها** — `PF-06`.
 	if err := s.auditTx(r.Context(), tx, r, "finance.expense_added", "expense", id,
 		map[string]any{"amount": req.Amount, "spent_at": spent, "category": catName,
-			"note": note, "receipt": receipt != nil, "paid_from": paidFrom}); err != nil {
+			"note": note, "receipt": receipt != nil, "paid_from": paidFrom,
+			"employee_name": employee}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -771,7 +962,7 @@ func (s *Server) handleListExpenseRequests(w http.ResponseWriter, r *http.Reques
 		SELECT q.id::text, q.status, c.name, q.amount, q.note, q.spent_at,
 		       q.proposed_by::text, COALESCE(NULLIF(p.full_name, ''), p.phone::text, ''),
 		       q.decided_by::text, q.decided_at, q.decision_note, q.self_approved,
-		       COALESCE(md.path, ''), q.created_at
+		       COALESCE(md.path, ''), q.created_at, q.employee_name
 		FROM expense_requests q
 		JOIN expense_categories c ON c.id = q.category_id
 		LEFT JOIN users p ON p.id = q.proposed_by
@@ -798,6 +989,7 @@ func (s *Server) handleListExpenseRequests(w http.ResponseWriter, r *http.Reques
 		SelfApproved bool       `json:"self_approved"`
 		ReceiptURL   *string    `json:"receipt_url"`
 		CreatedAt    time.Time  `json:"created_at"`
+		EmployeeName string     `json:"employee_name"`
 	}
 	out := []reqRow{}
 	for rows.Next() {
@@ -805,7 +997,7 @@ func (s *Server) handleListExpenseRequests(w http.ResponseWriter, r *http.Reques
 		var receipt string
 		if err := rows.Scan(&x.ID, &x.Status, &x.Category, &x.Amount, &x.Note, &x.SpentAt,
 			&x.ProposedBy, &x.ProposerName, &x.DecidedBy, &x.DecidedAt, &x.DecisionNote,
-			&x.SelfApproved, &receipt, &x.CreatedAt); err != nil {
+			&x.SelfApproved, &receipt, &x.CreatedAt, &x.EmployeeName); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -849,16 +1041,17 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var status, categoryID, catName, note, proposedBy, paidFrom string
+	var status, categoryID, catName, note, proposedBy, paidFrom, employee string
 	var amount int64
 	var spent time.Time
 	var receipt *string
 	err = tx.QueryRow(ctx, `
 		SELECT q.status, q.category_id::text, c.name, q.amount, q.note, q.spent_at,
-		       q.proposed_by::text, q.receipt_media_id::text, q.paid_from
+		       q.proposed_by::text, q.receipt_media_id::text, q.paid_from, q.employee_name
 		FROM expense_requests q JOIN expense_categories c ON c.id = q.category_id
 		WHERE q.id = $1 FOR UPDATE OF q`, id).
-		Scan(&status, &categoryID, &catName, &amount, &note, &spent, &proposedBy, &receipt, &paidFrom)
+		Scan(&status, &categoryID, &catName, &amount, &note, &spent, &proposedBy, &receipt, &paidFrom,
+			&employee)
 	if errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -881,11 +1074,12 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	var expenseID string
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id,
-		                      approved_by, self_approved, paid_from)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id::text`,
-		categoryID, amount, note, spent, proposedBy, receipt, actor, verdict.SelfApproved, paidFrom).
+		                      approved_by, self_approved, paid_from, employee_name)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id::text`,
+		categoryID, amount, note, spent, proposedBy, receipt, actor, verdict.SelfApproved, paidFrom,
+		employee).
 		Scan(&expenseID); err != nil {
-		s.respondErr(w, err)
+		s.respondErr(w, receiptErr(err))
 		return
 	}
 	// **وفوق السقف يخرج الكاشُ عند الموافقة** — حين يُقيَّد المصروف، لا حين يُقترح.
@@ -945,6 +1139,12 @@ func (s *Server) handleRejectExpenseRequest(w http.ResponseWriter, r *http.Reque
 	}
 	actor := userIDFrom(r)
 	note := clip(strings.TrimSpace(req.Note), 300)
+	// **والرفضُ بسببٍ إلزاميّ** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُحفظ في `decision_note`
+	// ويُعرض على الصفّ المرفوض، **فمن اقترح يعرف لماذا رُدّ.**
+	if note == "" {
+		s.respondErr(w, errExpenseRejectReason)
+		return
+	}
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		var amount int64
 		var status string
@@ -1008,27 +1208,34 @@ func (s *Server) handleVoidExpense(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
 	var amount int64
-	var createdBy, catName, paidFrom string
+	var createdBy, approvedBy, catName, paidFrom string
 	// **ولا يُلغى مرّتين** — **وإلّا رُدّ المالُ ضِعفَه إلى الخزينة.**
 	if err := tx.QueryRow(r.Context(), `
-		SELECT e.amount, COALESCE(e.created_by::text, ''), c.name, e.paid_from
+		SELECT e.amount, COALESCE(e.created_by::text, ''), COALESCE(e.approved_by::text, ''),
+		       c.name, e.paid_from
 		FROM expenses e JOIN expense_categories c ON c.id = e.category_id
 		WHERE e.id = $1 AND e.voided_at IS NULL FOR UPDATE OF e`, id).
-		Scan(&amount, &createdBy, &catName, &paidFrom); err != nil {
+		Scan(&amount, &createdBy, &approvedBy, &catName, &paidFrom); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	// **ومن سجّل لا يلغي** (قرارُ المالك ٥) — إلّا المالكُ وحدَه وبلا بديل، مُعلَّماً.
-	verdict, err := approval.Check(r.Context(), tx, approval.Request{
-		ProposedBy: createdBy, Actor: actor, Capability: authz.FinanceManage,
-	})
-	if errors.Is(err, approval.ErrSelfApprove) {
-		s.respondErr(w, errExpenseVoidSelf)
-		return
-	}
-	if err != nil {
-		s.respondErr(w, err)
-		return
+	// **ومن سجّل لا يلغي** (قرارُ المالك ٥) — **ولا من وافق عليه** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٥): الموافقُ طرفٌ في القيد، وإلغاؤه وحدَه يجعل شخصاً واحداً يُدخل ويُخرج.
+	// إلّا المالكُ وحدَه وبلا بديل، مُعلَّماً.
+	var verdict approval.Verdict
+	for _, party := range []string{createdBy, approvedBy} {
+		v, err := approval.Check(r.Context(), tx, approval.Request{
+			ProposedBy: party, Actor: actor, Capability: authz.FinanceManage,
+		})
+		if errors.Is(err, approval.ErrSelfApprove) {
+			s.respondErr(w, errExpenseVoidSelf)
+			return
+		}
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		verdict.SelfApproved = verdict.SelfApproved || v.SelfApproved
 	}
 	if _, err := tx.Exec(r.Context(), `
 		UPDATE expenses SET voided_at = now(), voided_by = $2, void_reason = $3,
@@ -1054,7 +1261,7 @@ func (s *Server) handleVoidExpense(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	details := map[string]any{"amount": amount, "category": catName, "reason": reason,
-		"recorded_by": createdBy, "paid_from": paidFrom}
+		"recorded_by": createdBy, "approved_by": approvedBy, "paid_from": paidFrom}
 	for k, v := range verdict.AuditFields() {
 		details[k] = v
 	}

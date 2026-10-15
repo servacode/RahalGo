@@ -136,3 +136,5 @@ func (s *noticeSpy) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
 func (s *noticeSpy) PublishToUsers(ctx context.Context, q dbtx.Querier,
 	roles []string, in notifications.Input) {
 }
+
+func (n *noticeSpy) NotifyCapsRoles(context.Context, []string, []string, notifications.Input) {}
