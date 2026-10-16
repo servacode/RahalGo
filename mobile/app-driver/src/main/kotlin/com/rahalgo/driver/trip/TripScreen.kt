@@ -1423,6 +1423,22 @@ private fun TripCard(
         val arriveLater =
             // **ولا «استلمت الطلب» وقرارُ المتجر بيد الإدارة** (٢٠٢٦-١٠-٠٣).
             state.awaitingOffice && next?.status == "picked_up"
+        // **«إحضار»: لا «استلمت» قبل أن يوافق المتجرُ على المبلغ** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+        val fetchStep = fetchAmountStep(order)
+        val fetchBlocked = next?.status == "picked_up" && fetchBlocksPickup(order)
+        var fetchOpen by remember(order.id) { mutableStateOf(false) }
+        if (fetchOpen) {
+            FetchAmountDialog(
+                estimate = order.collectAmount,
+                current = order.fetchAmount.takeIf { fetchStep == FetchAmountStep.REJECTED },
+                busy = state.busy,
+                onConfirm = { amount ->
+                    fetchOpen = false
+                    actions.fetchAmount(amount)
+                },
+                onDismiss = { fetchOpen = false },
+            )
+        }
         val deliver: () -> Unit = {
             // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
             // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
@@ -1469,6 +1485,7 @@ private fun TripCard(
                 amount = money(order.cashDue),
                 who = order.customerName.ifBlank { stringResource(R.string.detail_customer) },
                 needCode = order.deliveryCodeRequired,
+                codeAsk = deliverCodeAskRes(order),
                 onConfirm = { code ->
                     confirmDeliver = false
                     actions.setDeliveryCode(code)
@@ -1482,7 +1499,14 @@ private fun TripCard(
         // يُحبَس صاحبُه عن إعادتها.** **إلّا الزرَّ الأساسيّ** (٢٠٢٦-١٠-٠٣): من طوى ليرى
         // الطريقَ لا يُحبَس عن «وصلت» أو «تم التسليم».
         if (!TripCollapse.bottom) {
-            if (next != null && !buyBlocked && !arriveLater) {
+            if (fetchBlocked && fetchStep != FetchAmountStep.WAITING) {
+                TripPrimary(
+                    label = R.string.fetch_amount_button,
+                    onClick = { fetchOpen = true },
+                    enabled = !state.busy,
+                    busy = state.busy,
+                )
+            } else if (next != null && !buyBlocked && !arriveLater && !fetchBlocked) {
                 TripPrimary(label = nextLabel, onClick = onNext, enabled = !state.busy, busy = state.busy)
             }
             return@Column
@@ -1789,8 +1813,48 @@ private fun TripCard(
                     )
                 }
 
+                // ── «إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر (قرارُ المالك ٢٠٢٦-١٠-١٦) ──
+                val shownAmount = money(order.fetchAmount ?: 0)
+                when (fetchStep) {
+                    FetchAmountStep.ENTER -> InfoBox(
+                        icon = R.drawable.ic_cash,
+                        text = stringResource(R.string.fetch_amount_enter),
+                        tint = Rahal.colors.accent,
+                        bold = true,
+                    )
+                    FetchAmountStep.REJECTED -> InfoBox(
+                        icon = R.drawable.ic_warning,
+                        text = stringResource(R.string.fetch_amount_rejected, shownAmount),
+                        tint = Rahal.colors.danger,
+                        bold = true,
+                    )
+                    FetchAmountStep.WAITING -> InfoBox(
+                        icon = com.rahalgo.ui.R.drawable.ic_time,
+                        text = stringResource(R.string.fetch_amount_waiting, shownAmount),
+                        tint = Rahal.colors.brand,
+                        bold = true,
+                    )
+                    FetchAmountStep.APPROVED -> InfoBox(
+                        icon = R.drawable.ic_check_circle,
+                        text = stringResource(R.string.fetch_amount_approved, shownAmount),
+                        tint = Rahal.colors.success,
+                        bold = true,
+                    )
+                    FetchAmountStep.NONE -> Unit
+                }
+
                 // ── زرُّ المرحلة: واحدٌ بعرض البطاقة ────────────────────────
-                if (customOpen && (!feeDone || (needGoods && quoteOk))) {
+                if (fetchBlocked) {
+                    // **والكتابةُ هي الفعلُ الوحيد** — وفي الانتظار لا زرّ: المتجرُ يقرّر.
+                    if (fetchStep != FetchAmountStep.WAITING) {
+                        TripPrimary(
+                            label = R.string.fetch_amount_button,
+                            onClick = { fetchOpen = true },
+                            enabled = !state.busy,
+                            busy = state.busy,
+                        )
+                    }
+                } else if (customOpen && (!feeDone || (needGoods && quoteOk))) {
                     // **التوثيقُ هو الفعلُ الوحيدُ الذي يُقدّم الطلبَ الآن.**
                     TripPrimary(
                         label = if (!feeDone) R.string.agree_fee_button else R.string.agree_goods_button,
@@ -2082,6 +2146,8 @@ private fun DeliverConfirmDialog(
     amount: String,
     who: String,
     needCode: Boolean,
+    /** **من يُملي الكود** — الزبونُ، أو المتجرُ في «إحضار» (٢٠٢٦-١٠-١٦). */
+    codeAsk: Int = R.string.deliver_code_ask,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -2118,7 +2184,7 @@ private fun DeliverConfirmDialog(
                 if (needCode) {
                     Spacer(Modifier.height(14.dp))
                     Text(
-                        stringResource(R.string.deliver_code_ask),
+                        stringResource(codeAsk),
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )

@@ -2244,6 +2244,29 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * **«إحضار»: يكتب ما دفعه بمكان الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ثمّ ينتظر موافقةَ المتجر،
+     * **والخطأُ يُقال في البطاقة** كخطأ أيّ خطوة.
+     */
+    fun fetchAmount(amount: Long) {
+        val id = currentId() ?: return
+        if (detail.busy) return
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.fetchAmount(id, amount)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                detail = detail.copy(busy = false, error = describe(e))
+                refresh()
+                return@launch
+            }
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
+    /**
      * **عروضٌ تركها وهو في رحلة** — فلا تعود لافتتُها.
      *
      * **وفي الذاكرة لا على القرص**: العرض يفوت خلال دقائق، **وقائمةٌ

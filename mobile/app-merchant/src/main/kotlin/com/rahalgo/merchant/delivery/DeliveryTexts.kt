@@ -1,6 +1,7 @@
 package com.rahalgo.merchant.delivery
 
 import com.rahalgo.merchant.R
+import com.rahalgo.shared.merchant.Delivery
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -41,6 +42,25 @@ internal object DeliveryTexts {
         "recipient" -> if (fetch) R.string.md_row_cash_fetch else R.string.md_row_cash
         "merchant_cash" -> R.string.md_row_me_cash
         else -> R.string.md_row_wallet
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **«إحضار»: المبلغُ الحقيقيُّ وموافقتُك** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **أينتظر هذا المشوارُ موافقتي على مبلغ؟** — «إحضار» والسائقُ بمكان الاستلام وكتب مبلغاً. */
+    fun awaitsAmount(d: Delivery): Boolean =
+        d.deliveryMode == "fetch" && d.status == "at_pickup" && d.fetchAmountStatus == "pending" && d.fetchAmount != null
+
+    /** **أوّلُ مشوارٍ ينتظرني** — تظهر نافذتُه فوق أيّ شاشة، وفارغٌ: لا شيء. */
+    fun pendingAmount(list: List<Delivery>?): Delivery? = list?.firstOrNull { awaitsAmount(it) }
+
+    /** **سطرُ المبلغ في التفاصيل بحاله** — وفارغٌ: لم يُكتب. */
+    fun amountRow(status: String): Int? = when (status) {
+        "pending" -> R.string.md_amount_row_pending
+        "approved" -> R.string.md_amount_row_approved
+        "rejected" -> R.string.md_amount_row_rejected
+        else -> null
     }
 
     /**

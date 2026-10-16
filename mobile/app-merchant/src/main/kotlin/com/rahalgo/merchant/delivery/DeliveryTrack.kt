@@ -148,6 +148,24 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             return@Screen
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **«إحضار»: كودُ الاستلام لك** (قرارُ المالك ٢٠٢٦-١٠-١٦) — تعطيه للسائق لما يوصلك الغرض.
+        // ══════════════════════════════════════════════════════════════
+        d.deliveryCode?.takeIf { it.isNotBlank() && d.deliveryMode == "fetch" }?.let { code ->
+            Spacer(Modifier.height(12.dp))
+            Card(tone = Rahal.colors.success) {
+                Text(stringResource(R.string.md_code_title), fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    code,
+                    color = Rahal.colors.success,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineLarge,
+                )
+                Text(stringResource(R.string.md_code_hint), color = Rahal.colors.inkMuted)
+            }
+        }
+
         val at = stepOf(d.status)
         Spacer(Modifier.height(12.dp))
         if (at < 0) {
@@ -249,6 +267,20 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 InfoLine(
                     com.rahalgo.ui.R.drawable.ic_wallet,
                     stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), it.toString()),
+                )
+            }
+        }
+        // **والمبلغُ الحقيقيُّ الذي كتبه السائقُ وحالُ موافقتك** (٢٠٢٦-١٠-١٦).
+        if (d.deliveryMode == "fetch") {
+            DeliveryTexts.amountRow(d.fetchAmountStatus)?.let { row ->
+                Spacer(Modifier.height(10.dp))
+                Note(
+                    stringResource(row, (d.fetchAmount ?: 0L).toString()),
+                    when (d.fetchAmountStatus) {
+                        "approved" -> Rahal.colors.success
+                        "rejected" -> Rahal.colors.danger
+                        else -> Rahal.colors.accent
+                    },
                 )
             }
         }

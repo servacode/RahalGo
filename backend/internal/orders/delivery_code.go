@@ -13,6 +13,10 @@ package orders
 // ويبقى إثباتُ الصورة كما كان.
 //
 // **وفي «لدي توصيلة»** المستلِمُ ليس على التطبيق — فالواتساب وحدَه إلى رقمه.
+//
+// **وفي «إحضار» الكودُ للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — هو من يستلم الغرض: **يراه في
+// شاشة متابعة التوصيلة ويصله إشعار**، ويعطيه للسائق لما يوصل. **والمفتاحُ نفسُه يحكمه**
+// (`delivery.code_required`) — ولا واتسابَ ولا رسالةَ للمستلِم فيه.
 
 import (
 	"context"
@@ -55,6 +59,11 @@ func DeliveryCodeText(number int64, code string) string {
 	return fmt.Sprintf("كود استلام طلبك #%d هو %s — أعطه للسائق عند الاستلام فقط.", number, code)
 }
 
+// FetchCodeText **نصُّ الكود للمتجر في «إحضار»** — يعطيه للسائق لما يوصله الغرض.
+func FetchCodeText(number int64, code string) string {
+	return fmt.Sprintf("كود استلام التوصيلة #%d هو %s — أعطه للسائق لما يوصلك الغرض فقط.", number, code)
+}
+
 // codeRoute **أين يصل الكود** — يُحسب داخلَ معاملة الاستلام.
 type codeRoute struct {
 	code   string
@@ -64,6 +73,8 @@ type codeRoute struct {
 	// sms **رقمُ المستلم للرسالة العاديّة** — إن لم يصله الواتساب أُرسل الكودُ إلى
 	// المنصّة لتبعثه بيدها (فكرةُ المالك ٢٠٢٦-١٠-١٢).
 	sms string
+	// merchant **صاحبُ المتجر في «إحضار»** — الكودُ له في تطبيقه، لا واتسابَ ولا رسالة.
+	merchant string
 }
 
 // CodeBySMSText **ما يصل المنصّةَ حين لا يصل الكودُ صاحبَه** — رقمُه والكودُ وما يُفعل.
@@ -90,15 +101,35 @@ func (s *Service) issueDeliveryCode(ctx context.Context, tx pgx.Tx, orderID, kin
 	allowWA := channel != "app"
 
 	var number int64
-	var custPhone, recipPhone string
+	var custPhone, recipPhone, mode, owner string
 	if err := tx.QueryRow(ctx, `
-		SELECT o.number, COALESCE(cu.phone::text, ''), COALESCE(o.recipient_phone, '')
+		SELECT o.number, COALESCE(cu.phone::text, ''), COALESCE(o.recipient_phone, ''),
+		       o.delivery_mode, COALESCE(m.owner_user_id::text, '')
 		FROM orders o LEFT JOIN users cu ON cu.id = o.customer_id
-		WHERE o.id = $1`, orderID).Scan(&number, &custPhone, &recipPhone); err != nil {
+		LEFT JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&number, &custPhone, &recipPhone, &mode, &owner); err != nil {
 		return nil, err
 	}
 
 	rt := &codeRoute{number: number}
+	// **«إحضار»: الكودُ للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — يقرؤه في تطبيقه، فلا قناةَ تُسأل.
+	if kind == KindMerchantDelivery && mode == DeliveryModeFetch {
+		if owner == "" {
+			return clear()
+		}
+		rt.merchant = owner
+		code, err := newDeliveryCode()
+		if err != nil {
+			return nil, err
+		}
+		rt.code = code
+		if _, err := tx.Exec(ctx,
+			`UPDATE orders SET delivery_code = $2, delivery_code_attempts = 0 WHERE id = $1`,
+			orderID, code); err != nil {
+			return nil, err
+		}
+		return rt, nil
+	}
 	waReady := allowWA && s.whatsapp != nil && s.whatsapp.Ready()
 	if kind == KindMerchantDelivery {
 		// **المستلِمُ ليس على التطبيق** — رقمُه وحدَه.
@@ -139,6 +170,18 @@ func (s *Service) issueDeliveryCode(ctx context.Context, tx pgx.Tx, orderID, kin
 // **وواتسابٌ وحدَه تعثّر ⇒ يُمحى الكود** — بشرط أنّه هو نفسُه لم يتبدّل.
 func (s *Service) sendDeliveryCode(ctx context.Context, orderID string, rt *codeRoute) {
 	if rt == nil || rt.code == "" {
+		return
+	}
+	// **والمتجرُ في «إحضار» يراه في شاشته** — والإشعارُ تذكيرٌ لا قناةٌ وحيدة، فلا يُمحى.
+	if rt.merchant != "" {
+		if s.notify != nil {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID: rt.merchant, Kind: notifications.KindOrder,
+				Title: "كود استلام التوصيلة", Body: FetchCodeText(rt.number, rt.code),
+				Entity: "order", EntityID: orderID, Href: "/merchant/deliveries",
+				Apps: []string{notifications.AppMerchant},
+			})
+		}
 		return
 	}
 	text := DeliveryCodeText(rt.number, rt.code)

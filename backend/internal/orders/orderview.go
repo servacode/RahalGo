@@ -186,8 +186,12 @@ var audienceAllow = map[Audience]map[string]bool{
 		"fee_payer":     true,
 		"dropoff_known": true,
 		// **ووضعُ التوصيلة وما يقبضه من المستلِم للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥).
-		"delivery_mode":            true,
-		"collect_amount":           true,
+		"delivery_mode":  true,
+		"collect_amount": true,
+		// **ومبلغُ الإحضار الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+		"fetch_amount":             true,
+		"fetch_amount_version":     true,
+		"fetch_amount_status":      true,
 		"quote_confirmed_at":       true,
 		"quote_confirmed_total":    true,
 		"quote_confirmed_version":  true,
@@ -281,6 +285,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		"dropoff_known":                true,
 		"delivery_mode":                true,
 		"collect_amount":               true,
+		"fetch_amount":                 true,
+		"fetch_amount_version":         true,
+		"fetch_amount_status":          true,
 		"custom_reserved_amount":       true,
 		"custom_fee_source":            true,
 		"custom_goods_pending":         true,
@@ -401,7 +408,9 @@ func init() {
 	}
 	for _, k := range []string{"customer_name", "customer_phone", "address_text",
 		"parcel_note", "fee_payer", "dropoff_known", "delivery_fee", "cash_due",
-		"delivery_mode", "collect_amount"} {
+		"delivery_mode", "collect_amount",
+		// **والمبلغُ الذي يوافق عليه** في «إحضار» (قرارُ المالك ٢٠٢٦-١٠-١٦).
+		"fetch_amount", "fetch_amount_version", "fetch_amount_status"} {
 		md[k] = true
 	}
 	audienceAllow[AudienceMerchantDelivery] = md

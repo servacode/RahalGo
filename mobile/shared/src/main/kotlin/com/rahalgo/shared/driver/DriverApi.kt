@@ -547,6 +547,21 @@ class DriverApi(private val api: ApiClient) {
     }
 
     /**
+     * **«إحضار»: ما دفعه بمكان الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والمتجرُ يوافق قبل «استلمت».
+     * **ويُعاد بعد رفضٍ** بمبلغٍ جديد.
+     */
+    suspend fun fetchAmount(orderId: String, amount: Long) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/fetch-amount",
+            HttpMethod.Post,
+            FetchAmountBody(amount),
+        )
+    }
+
+    @kotlinx.serialization.Serializable
+    private data class FetchAmountBody(val amount: Long)
+
+    /**
      * **جسمُ التوثيق — صنفٌ موسوم** (الخطوةُ نصٌّ والمبلغان أرقام: خريطةٌ مختلطةٌ تسقط في النسخة
      * المضغوطة، `RequestBodyGuardTest`). و`step`: `fee` ثمّ `goods` (قرارُ المالك ٢٠٢٦-١٠-٠٣).
      */

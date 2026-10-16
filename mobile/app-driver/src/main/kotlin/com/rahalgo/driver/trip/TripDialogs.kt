@@ -210,6 +210,70 @@ internal fun AgreeDialog(
 }
 
 /**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«إحضار»: شقد دفعت بمكان الاستلام؟** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **المبلغُ وحدَه بلا صورة** — يصل المتجرَ ليوافق عليه، **وتقديرُ المتجر يُقال تحته** فلا
+ * يُكتب من الذاكرة. وبعد رفضٍ يُملأ بما رُفض ليُصحَّح لا ليُعاد من الصفر.
+ */
+@Composable
+internal fun FetchAmountDialog(
+    estimate: Long?,
+    current: Long?,
+    busy: Boolean,
+    onConfirm: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var amount by remember { mutableStateOf(current?.toString() ?: "") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.fetch_amount_title), fontWeight = FontWeight.Bold) },
+        text = {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(stringResource(R.string.fetch_amount_hint), color = Rahal.colors.inkMuted)
+                if (estimate != null && estimate > 0) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.fetch_amount_estimate, money(estimate)),
+                        color = Rahal.colors.accent,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it.filter { c -> c.isDigit() }.take(12) },
+                    label = { Text(stringResource(R.string.fetch_amount_field)) },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+        },
+        confirmButton = {
+            RahalButton(
+                onClick = { amount.toLongOrNull()?.let(onConfirm) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy && amount.toLongOrNull() != null,
+            ) {
+                Text(stringResource(R.string.fetch_amount_send), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            RahalTextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.act_back))
+            }
+        },
+    )
+}
+
+/**
  * **فعلٌ ثانويٌّ ملوّن** — أيقونةٌ وكلمةٌ على أرضٍ صلبة.
  *
  * **ولا حشوةَ عريضة**: ثلاثةُ أزرارٍ في صفٍّ واحدٍ على شاشةِ هاتف،

@@ -164,6 +164,13 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			return nil, ErrQuoteNotConfirmed
 		}
 	}
+	// **ولا «استلمت» في «إحضار» قبل موافقة المتجر على المبلغ** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+	// `fetch_amount.go`. **وفي المحرّك**: بابُ السائق وبابُ المكتب يمرّان هنا.
+	if kind == KindMerchantDelivery && to == StPickedUp {
+		if err := requireFetchAmountApproved(ctx, tx, orderID); err != nil {
+			return nil, err
+		}
+	}
 	// ══════════════════════════════════════════════════════════════════
 	// **ولا تسليمَ والسعرُ الجديدُ بانتظار تأكيد الزبون** (قرارُ المالك ٢٠٢٦-١٠-١٥)
 	// ══════════════════════════════════════════════════════════════════

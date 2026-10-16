@@ -418,6 +418,12 @@ type driverOrder struct {
 	// CollectAmount **مبلغٌ يدفعه للمتجر من جيبه ويقبضه من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 	// «ادفع للمتجر X من جيبك، واقبض من المستلم X». **خارجَ الدفتر والصندوق**، وnil: لا شيء.
 	CollectAmount *int64 `json:"collect_amount"`
+	// FetchAmount **ما كتبه أنّه دفعه بمكان الاستلام في «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+	// ونسختُه وحالُ موافقة المتجر (`pending` · `approved` · `rejected`، وفارغٌ: لم يُكتب).
+	// **ولا «استلمت» قبل الموافقة** إن طلب المتجرُ مبلغاً (`orders.FetchAmountBlocks`).
+	FetchAmount        *int64 `json:"fetch_amount"`
+	FetchAmountVersion int64  `json:"fetch_amount_version"`
+	FetchAmountStatus  string `json:"fetch_amount_status"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -543,7 +549,9 @@ const driverOrderSelect = `
 	       COALESCE((SELECT pm.name FROM merchants pm WHERE pm.id = o.partner_merchant_id), ''),
 	       -- **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	       CASE WHEN o.kind = 'merchant_delivery' THEN o.delivery_mode ELSE '' END,
-	       o.collect_amount
+	       o.collect_amount,
+	       -- **ومبلغُ الإحضار الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, '')
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -586,7 +594,8 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DoorInstruction, &o.DoorNote,
 			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,
 			&o.DeliveryCodeRequired, &o.PartnerMerchantName,
-			&o.DeliveryMode, &o.CollectAmount); err != nil {
+			&o.DeliveryMode, &o.CollectAmount,
+			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus); err != nil {
 			return nil, err
 		}
 		if o.ReturnTo != "" {

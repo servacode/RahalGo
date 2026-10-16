@@ -177,6 +177,13 @@ type Order struct {
 	// CollectAmount **مبلغٌ يقبضه السائقُ من المستلِم للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 	// عرضٌ وحدَه: **لا يدخل الدفترَ ولا الصندوق.** للسائق والمتجر (توصيلتُه) والمكتب.
 	CollectAmount *int64 `json:"collect_amount,omitempty"`
+	// FetchAmount **ما كتبه السائقُ أنّه دفعه بمكان الاستلام في «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+	// والتقديرُ `CollectAmount`. **وخارجَ الدفتر كالتقدير.** وnil: لم يُكتب.
+	FetchAmount *int64 `json:"fetch_amount,omitempty"`
+	// FetchAmountVersion **نسختُه** — تزيد مع كلّ كتابة، والموافقةُ تُرسلها فلا تُقفل قديماً.
+	FetchAmountVersion int64 `json:"fetch_amount_version,omitempty"`
+	// FetchAmountStatus `pending` · `approved` · `rejected` — وفارغٌ: لم يُكتب.
+	FetchAmountStatus string `json:"fetch_amount_status,omitempty"`
 	// DropoffKnown **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ يُكتب
 	// موقعُ المتجر ويُعلَّم هذا **فلا يُوجَّه السائقُ إلى نقطةٍ كاذبة.**
 	DropoffKnown bool `json:"dropoff_known"`

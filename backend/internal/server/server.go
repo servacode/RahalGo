@@ -945,6 +945,8 @@ func (s *Server) Router() http.Handler {
 			// **والرفضُ ينقل الدورَ فوراً** — بدل انتظار انقضاء المهلة.
 			r.Post("/orders/{id}/decline", s.handleDriverDecline)
 			r.Post("/orders/{id}/transition", s.handleDriverTransition)
+			// **«إحضار»: ما دفعه بمكان الاستلام** — والمتجرُ يوافق (قرارُ المالك ٢٠٢٦-١٠-١٦).
+			r.Post("/orders/{id}/fetch-amount", s.handleDriverFetchAmount)
 			r.Post("/orders/{id}/release", s.handleDriverRelease)
 			r.Get("/cash", s.handleDriverCash)
 			// **هدفُه وما ناله** — ومكافأةٌ لا يراها صاحبُها لم تُصرف في نظره.
@@ -1042,6 +1044,9 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/stores/{id}/exchange-rate", s.handleMerchantExchangeRate)
 			r.Get("/deliveries/{id}", s.handleMerchantDelivery)
 			r.Post("/deliveries/{id}/cancel", s.handleMerchantCancelDelivery)
+			// **«إحضار»: موافقةُ المتجر على مبلغ السائق** (قرارُ المالك ٢٠٢٦-١٠-١٦) — fetch_amount_handlers.go
+			r.Post("/deliveries/{id}/fetch-amount/approve", s.handleMerchantApproveFetchAmount)
+			r.Post("/deliveries/{id}/fetch-amount/reject", s.handleMerchantRejectFetchAmount)
 			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
 			r.Delete("/menu/items/{itemID}", s.handleMerchantDeleteItem)
 		})

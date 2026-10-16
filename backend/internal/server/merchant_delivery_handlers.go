@@ -165,6 +165,11 @@ func (s *Server) handleMerchantDeliveries(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
+	// **وكودُ الاستلام في «إحضار» له** (٢٠٢٦-١٠-١٦) — `fetch_amount_handlers.go`.
+	if err := s.attachFetchCodes(r.Context(), views); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"deliveries": views})
 }
 
@@ -225,6 +230,11 @@ func (s *Server) handleMerchantDelivery(w http.ResponseWriter, r *http.Request) 
 	}
 	view, err := orderView(orders.AudienceMerchantDelivery, o)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **وكودُ الاستلام في «إحضار» له** (٢٠٢٦-١٠-١٦) — يعطيه للسائق لما يوصل.
+	if err := s.attachFetchCodes(r.Context(), []map[string]any{view}); err != nil {
 		s.respondErr(w, err)
 		return
 	}

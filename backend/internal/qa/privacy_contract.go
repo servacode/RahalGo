@@ -229,12 +229,17 @@ var OrderPrivacy = map[string]FieldRule{
 	"dropoff_known": {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق والإدارة،
 	// **وللمتجر في توصيلته وحدَها** (`AudienceMerchantDelivery`). والمبلغُ عرضٌ لا يدخل الدفتر.
-	"delivery_mode":       {Ref: "توصيلٌ أم إحضار — ترتيبُ وقفتَي السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"collect_amount":      {Ref: "ما يدفعه السائقُ للمتجر ويقبضه من المستلِم — خارجَ الدفتر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_request":      {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_agreed_at":    {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_goods_amount": {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_fee":          {Ref: "أجرُ الخدمة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"delivery_mode":  {Ref: "توصيلٌ أم إحضار — ترتيبُ وقفتَي السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"collect_amount": {Ref: "ما يدفعه السائقُ للمتجر ويقبضه من المستلِم — خارجَ الدفتر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **ومبلغُ الإحضار الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — كالتقدير: للسائق والإدارة،
+	// **وللمتجر في توصيلته وحدَها** (`AudienceMerchantDelivery`).
+	"fetch_amount":         {Ref: "ما دفعه السائقُ بمكان الاستلام في الإحضار — خارجَ الدفتر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"fetch_amount_version": {Ref: "نسخةُ مبلغ الإحضار — تحرس موافقةَ المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"fetch_amount_status":  {Ref: "أوافق المتجرُ على مبلغ الإحضار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_request":       {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_agreed_at":     {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_goods_amount":  {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_fee":           {Ref: "أجرُ الخدمة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── عرضُ السعر وتأكيدُه (Batch 2a) — كأعمدةِ الخاصّ نفسِها ────────
 	"quote_version":           {Ref: "نسخةُ العرض", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

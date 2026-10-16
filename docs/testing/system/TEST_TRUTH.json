@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 516,
+    "routes": 519,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 97,
-    "notify_targeted": 40,
+    "notify_sites": 100,
+    "notify_targeted": 43,
     "publish_rooms": [
       "customer",
       "driver",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 242,
     "behaviour_settings": 198,
-    "order_fields": 106,
-    "test_files": 597,
-    "test_funcs": 2390
+    "order_fields": 109,
+    "test_files": 599,
+    "test_funcs": 2395
   },
   "flows": [
     {
@@ -9990,6 +9990,12 @@
       "orphan": true
     },
     {
+      "name": "TestFetchAmountBlocks",
+      "file": "internal/orders/fetch_amount_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestFixOldPurchaseGoods_MovesGoodsOnce",
       "file": "internal/orders/fix_old_purchase_goods_test.go",
       "package": "orders_test",
@@ -18129,6 +18135,30 @@
     {
       "name": "TestMDFeeKeys_OwnSettingsNotStandard",
       "file": "internal/qa/merchant_delivery_fee_keys_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFETCHAMT_01_PickupWaitsForMerchantApproval",
+      "file": "internal/qa/merchant_delivery_fetch_amount_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFETCHAMT_02_NoEstimateNoStep",
+      "file": "internal/qa/merchant_delivery_fetch_amount_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFETCHAMT_03_SendModeAndStrangers",
+      "file": "internal/qa/merchant_delivery_fetch_amount_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFETCHAMT_04_MerchantHoldsDeliveryCode",
+      "file": "internal/qa/merchant_delivery_fetch_amount_test.go",
       "package": "qa",
       "orphan": true
     },

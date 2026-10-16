@@ -486,6 +486,10 @@ private val CODES: Map<String, Int> = mapOf(
     // ── تعديلُ سعر الخاصّ بعد الاستلام وحذفُ الصنف غير المتوفّر (قرارا المالك ٢٠٢٦-١٠-١٥) ──
     "quote_reconfirm_pending" to R.string.err_quote_reconfirm_pending,
     "quote_nothing_pending" to R.string.err_quote_nothing_pending,
+    // **«إحضار»: مبلغُ السائق وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+    "fetch_amount_stage" to R.string.err_fetch_amount_stage,
+    "fetch_amount_stale" to R.string.err_fetch_amount_stale,
+    "fetch_amount_not_approved" to R.string.err_fetch_amount_not_approved,
     "item_unavailable_too_late" to R.string.err_item_unavailable_too_late,
     "item_unavailable_last_item" to R.string.err_item_unavailable_last_item,
     "item_unavailable_not_standard" to R.string.err_item_unavailable_not_standard,

@@ -583,6 +583,9 @@
     <string name="err_custom_locked">لا يمكن تعديل السعر بعد الاستلام.</string>
     <string name="err_quote_reconfirm_pending">السعر الجديد بانتظار تأكيد الزبون — لا تسليم قبله.</string>
     <string name="err_quote_nothing_pending">لا سعر جديد بانتظار تأكيدك.</string>
+    <string name="err_fetch_amount_stage">ما فيك تكتب المبلغ هلق — بس بطلب إحضار وإنت واصل لمكان الاستلام، وقبل ما يوافق المتجر.</string>
+    <string name="err_fetch_amount_stale">المبلغ تغيّر أو انحسم — حدّث الشاشة وشوف المبلغ الجديد.</string>
+    <string name="err_fetch_amount_not_approved">بانتظار موافقة المتجر على المبلغ — ما فيك تستلم قبلها.</string>
     <string name="err_item_unavailable_too_late">لا يُحذف صنف بعد استلام الطلب أو انتهائه.</string>
     <string name="err_item_unavailable_last_item">هذا آخر صنف في الطلب — ألغِ الطلب بدل حذفه.</string>
     <string name="err_item_unavailable_not_standard">حذف الأصناف للطلب العادي وحده.</string>

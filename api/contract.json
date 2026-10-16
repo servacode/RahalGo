@@ -7209,6 +7209,30 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/fetch-amount",
+      "handler": "handleDriverFetchAmount",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "amount",
+          "type": "?int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "@ViewFor",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/driver/orders/{id}/goods-handed",
       "handler": "handleDriverGoodsHanded",
       "auth": true,
@@ -7770,6 +7794,36 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/deliveries/{id}/fetch-amount/approve",
+      "handler": "handleMerchantApproveFetchAmount",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "expected_version",
+          "type": "?int64"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/deliveries/{id}/fetch-amount/reject",
+      "handler": "handleMerchantRejectFetchAmount",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "expected_version",
+          "type": "?int64"
+        }
       ]
     },
     {

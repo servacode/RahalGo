@@ -73,6 +73,18 @@ data class Delivery(
     @SerialName("delivery_mode") val deliveryMode: String = "send",
     /** **ما يقبضه السائقُ من المستلِم لك** — خارجَ الحساب. */
     @SerialName("collect_amount") val collectAmount: Long? = null,
+    /**
+     * **«إحضار»: ما دفعه السائقُ فعلاً بمكان الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ونسختُه وحالُه
+     * (`pending` ينتظر موافقتك · `approved` · `rejected`). **والتقديرُ `collectAmount`.**
+     */
+    @SerialName("fetch_amount") val fetchAmount: Long? = null,
+    @SerialName("fetch_amount_version") val fetchAmountVersion: Long = 0,
+    @SerialName("fetch_amount_status") val fetchAmountStatus: String = "",
+    /**
+     * **كودُ الاستلام في «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لك وحدَك: تعطيه للسائق لما يوصلك
+     * الغرض. **وفارغٌ قبل الاستلام وفي «توصيل»** (هناك الكودُ للمستلِم).
+     */
+    @SerialName("delivery_code") val deliveryCode: String? = null,
     /** **أُسند سائق؟** — ولا هويّةَ سائقٍ لدى المتجر (كسائر طلباته). */
     @SerialName("driver_assigned") val driverAssigned: Boolean = false,
     @SerialName("picked_up_at") val pickedUpAt: String? = null,
@@ -96,6 +108,9 @@ data class ResolvedLocation(val found: Boolean = false, val lat: Double = 0.0, v
 
 @Serializable
 private data class ResolveLocationInput(val url: String)
+
+@Serializable
+private data class FetchDecision(@SerialName("expected_version") val expectedVersion: Long)
 
 class DeliveriesApi(private val api: ApiClient) {
 
@@ -132,6 +147,17 @@ class DeliveriesApi(private val api: ApiClient) {
     /** **توصيلةٌ واحدة** — لشاشة المراقبة، تُقرأ كلَّ ثوانٍ ما دامت جارية. */
     suspend fun get(orderId: String): Delivery =
         api.call("/api/v1/merchant/deliveries/$orderId")
+
+    /**
+     * **«إحضار»: يوافق على المبلغ الذي دفعه السائق أو يرفضه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **بنسخته**:
+     * مبلغٌ تبدّل بعد أن رآه يُردّ (`fetch_amount_stale`) فلا يُقفَل ما لم يره.
+     */
+    suspend fun decideFetchAmount(orderId: String, approve: Boolean, version: Long): Delivery =
+        api.call(
+            "/api/v1/merchant/deliveries/$orderId/fetch-amount/" + if (approve) "approve" else "reject",
+            HttpMethod.Post,
+            FetchDecision(version),
+        )
 
     /** **يُلغيها ما دام الغرضُ عنده** — والمالُ يعود لمن دفعه (الخادمُ يحكم). */
     suspend fun cancel(orderId: String): Delivery =

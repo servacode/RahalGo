@@ -418,6 +418,18 @@
     <string name="md_fee_no_point_fetch">ما حدّدت موقع مكان الاستلام — الأجرة هي الأساسية بس</string>
     <string name="md_row_cash_fetch">الأجرة %1$s ل.س — نقداً من مكان الاستلام</string>
     <string name="md_row_collect_fetch">بيدفع بمكان الاستلام %1$s ل.س — وبياخدهن منك لما يوصل</string>
+    <string name="md_amount_title">السائق دفع مبلغ بمكان الاستلام — #%1$s</string>
+    <string name="md_amount_paid">المبلغ اللي دفعه السائق</string>
+    <string name="md_amount_value">%1$s ل.س</string>
+    <string name="md_amount_estimate">تقديرك وقت الطلب: %1$s ل.س</string>
+    <string name="md_amount_body">إذا وافقت، بتدفعله هالمبلغ لما يوصلك الغرض. وإذا رفضت، بيكتب المبلغ من جديد.</string>
+    <string name="md_amount_approve">موافق على المبلغ</string>
+    <string name="md_amount_reject">رفض المبلغ</string>
+    <string name="md_amount_row_pending">السائق دفع %1$s ل.س — بانتظار موافقتك</string>
+    <string name="md_amount_row_approved">وافقت على %1$s ل.س — بتدفعهن للسائق لما يوصل</string>
+    <string name="md_amount_row_rejected">رفضت %1$s ل.س — السائق رح يكتب المبلغ من جديد</string>
+    <string name="md_code_title">كود الاستلام</string>
+    <string name="md_code_hint">أعطِ الكود للسائق لما يوصلك الغرض — بس وقتها.</string>
     <!-- سعر الصرف (٢٠٢٦-١٠-١٢) -->
     <string name="store_rate">سعر الصرف</string>
     <string name="store_rate_value">1$ = %1$s ل.س</string>

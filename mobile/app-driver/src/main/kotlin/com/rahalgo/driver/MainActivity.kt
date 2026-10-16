@@ -1075,6 +1075,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         },
                         askAgree = orders::askAgree,
                         agree = orders::agree,
+                        fetchAmount = orders::fetchAmount,
                         dismissAgree = orders::dismissAgree,
                         pickStop = orders::open,
                         takeOffer = orders::accept,

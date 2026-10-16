@@ -231,6 +231,16 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     var pickingDelivery by rememberSaveable { mutableStateOf(false) }
     // **و«رجوع» على الخريطة يُغلقها لا التطبيق.**
     androidx.activity.compose.BackHandler(enabled = pickingDelivery) { pickingDelivery = false }
+    // **«إحضار»: مبلغُ السائق ينتظر موافقتك — نافذةٌ فوق أيّ شاشة** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+    com.rahalgo.merchant.delivery.DeliveryTexts.pendingAmount(deliveryVm.list)?.let { d ->
+        com.rahalgo.merchant.delivery.FetchAmountApproveDialog(
+            d = d,
+            busy = deliveryVm.amountBusy,
+            error = deliveryVm.amountError,
+            onApprove = { deliveryVm.decideAmount(d, true) },
+            onReject = { deliveryVm.decideAmount(d, false) },
+        )
+    }
     val historyVm: HistoryViewModel = viewModel()
     // ══════════════════════════════════════════════════════════════════
     // **وثلاثةُ أقسامٍ في الدرج تُبنى عند فتحها لا عند الإقلاع**

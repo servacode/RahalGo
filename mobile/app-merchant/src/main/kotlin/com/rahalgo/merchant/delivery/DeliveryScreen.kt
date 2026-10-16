@@ -263,6 +263,32 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **«إحضار»: موافقتُك على مبلغ السائق** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `FetchAmountDialog`
+    // ══════════════════════════════════════════════════════════════════
+    var amountBusy by mutableStateOf(false)
+        private set
+    var amountError by mutableStateOf("")
+        private set
+
+    /** **يوافق أو يرفض بنسخة المبلغ الذي رآه** — ونسخةٌ تبدّلت تُردّ فتُقرأ القائمةُ من جديد. */
+    fun decideAmount(d: Delivery, approve: Boolean) {
+        if (amountBusy) return
+        amountBusy = true
+        amountError = ""
+        viewModelScope.launch {
+            try {
+                api.decideFetchAmount(d.id, approve, d.fetchAmountVersion)
+                Refresh.bump()
+            } catch (e: Exception) {
+                amountError = apiError(getApplication(), e)
+            } finally {
+                amountBusy = false
+                load(withQuote = false)
+            }
+        }
+    }
+
     /** **من كتب من جديد لا يرى «تمّ» السابقة ولا خطأها.** */
     fun touched() {
         sent = false

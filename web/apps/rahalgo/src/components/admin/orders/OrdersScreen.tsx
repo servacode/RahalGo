@@ -135,6 +135,13 @@ interface OrderRow {
   delivery_mode?: string;
   /** **ما يقبضه السائقُ من المستلِم للمتجر** — عرضٌ لا يدخل الحساب (٢٠٢٦-١٠-١٥). */
   collect_amount?: number | null;
+  /**
+   * **«إحضار»: ما دفعه السائقُ فعلاً بمكان الاستلام وحالُ موافقة المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+   * `pending` · `approved` · `rejected`. خارجَ الحساب كالتقدير.
+   */
+  fetch_amount?: number | null;
+  fetch_amount_version?: number;
+  fetch_amount_status?: string;
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
   custom_fee?: number | null;
@@ -3611,14 +3618,38 @@ function InvoiceList({
           <Money value={o.delivery_fee} small />
         </li>
         <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} />
-        {/* **وما يقبضه من المستلِم للمتجر** — خارجَ الحساب، يُعرض وحدَه. */}
+        {/* **وما يقبضه من المستلِم للمتجر** — خارجَ الحساب، يُعرض وحدَه. **وفي «إحضار» تقديرُ
+            المتجر** (٢٠٢٦-١٠-١٦) والمبلغُ الحقيقيُّ تحته بحال موافقته. */}
         {o.collect_amount ? (
           <li className="flex items-start justify-between gap-2 border-t border-line-soft pt-1.5">
             <span className="shrink-0 text-ink-muted">
-              {OP.mdCollect}
-              <span className="block text-xs">{OP.mdCollectHint}</span>
+              {fetch ? OP.mdFetchEstimate : OP.mdCollect}
+              <span className="block text-xs">{fetch ? OP.mdFetchEstimateHint : OP.mdCollectHint}</span>
             </span>
             <Money value={o.collect_amount} small />
+          </li>
+        ) : null}
+        {fetch && o.fetch_amount != null ? (
+          <li className="flex items-start justify-between gap-2">
+            <span className="shrink-0 text-ink-muted">
+              {OP.mdFetchAmount}
+              <span
+                className={`block text-xs font-bold ${
+                  o.fetch_amount_status === "approved"
+                    ? "text-success"
+                    : o.fetch_amount_status === "rejected"
+                      ? "text-danger"
+                      : "text-accent"
+                }`}
+              >
+                {o.fetch_amount_status === "approved"
+                  ? OP.mdFetchApproved
+                  : o.fetch_amount_status === "rejected"
+                    ? OP.mdFetchRejected
+                    : OP.mdFetchPending}
+              </span>
+            </span>
+            <Money value={o.fetch_amount} small />
           </li>
         ) : null}
       </ul>

@@ -86,6 +86,15 @@ data class DriverOrder(
     @SerialName("collect_amount") val collectAmount: Long? = null,
 
     /**
+     * **«إحضار»: ما كتبه أنّه دفعه بمكان الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ونسختُه وحالُ
+     * موافقة المتجر (`pending` · `approved` · `rejected`، وفارغٌ: لم يُكتب). **ولا «استلمت» قبل
+     * الموافقة** إن طلب المتجرُ مبلغاً — والخادمُ يحرسها.
+     */
+    @SerialName("fetch_amount") val fetchAmount: Long? = null,
+    @SerialName("fetch_amount_version") val fetchAmountVersion: Long = 0,
+    @SerialName("fetch_amount_status") val fetchAmountStatus: String = "",
+
+    /**
      * **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ تُكتب نقطةُ المتجر
      * ويُعلَّم هذا **فلا يُوجَّه السائقُ إليها**: يقرأ العنوانَ ويتّصل بالمستلِم.
      */

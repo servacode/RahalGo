@@ -288,6 +288,8 @@ data class TripActions(
     val chat: () -> Unit,
     val askAgree: () -> Unit,
     val agree: (Long, Long) -> Unit,
+    /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
+    val fetchAmount: (Long) -> Unit = {},
     val dismissAgree: () -> Unit,
     val pickStop: (String) -> Unit,
     val takeOffer: (String) -> Unit,
@@ -547,8 +549,46 @@ fun isFetch(order: DriverOrder): Boolean =
  * **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — خارجَ حساب
  * المنصّة وصندوقه. وفارغٌ لا شيء.
  */
-fun collectForStore(order: DriverOrder): Long? =
-    order.collectAmount?.takeIf { it > 0 && order.kind == "merchant_delivery" }
+fun collectForStore(order: DriverOrder): Long? {
+    if (order.kind != "merchant_delivery") return null
+    // **وفي «إحضار» بعد موافقة المتجر: المبلغُ الحقيقيُّ لا التقدير** (قرارُ المالك ٢٠٢٦-١٠-١٦).
+    if (isFetch(order) && order.fetchAmountStatus == "approved") return order.fetchAmount?.takeIf { it > 0 }
+    return order.collectAmount?.takeIf { it > 0 }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * بمكان الاستلام يكتب السائقُ ما دفعه فعلاً، **والمتجرُ يوافق قبل «استلمت»** — والخادمُ يحرسها
+ * (`orders.FetchAmountBlocks`)، وهنا تُقال الخطوةُ وحدَها:
+ *
+ *  - `ENTER`    المتجرُ طلب مبلغاً ولم يُكتب بعد ⇒ «اكتب المبلغ اللي دفعته»
+ *  - `REJECTED` رفضه المتجر ⇒ يكتب غيره
+ *  - `WAITING`  ينتظر المتجر ⇒ لا زرّ
+ *  - `APPROVED` وافق ⇒ «استلمت» كالعادة
+ *  - `NONE`     ليس «إحضاراً» أو ليس بمكان الاستلام أو لا مبلغ
+ */
+enum class FetchAmountStep { NONE, ENTER, REJECTED, WAITING, APPROVED }
+
+fun fetchAmountStep(order: DriverOrder): FetchAmountStep {
+    if (!isFetch(order) || order.status != "at_pickup") return FetchAmountStep.NONE
+    return when (order.fetchAmountStatus) {
+        "approved" -> FetchAmountStep.APPROVED
+        "pending" -> FetchAmountStep.WAITING
+        "rejected" -> FetchAmountStep.REJECTED
+        else -> if (order.collectAmount != null) FetchAmountStep.ENTER else FetchAmountStep.NONE
+    }
+}
+
+/** **أيُحجب «استلمت»؟** — والمبلغُ لم يُوافَق عليه بعد. */
+fun fetchBlocksPickup(order: DriverOrder): Boolean =
+    fetchAmountStep(order) in setOf(FetchAmountStep.ENTER, FetchAmountStep.REJECTED, FetchAmountStep.WAITING)
+
+/** **من يُملي كودَ الاستلام** — المتجرُ في «إحضار» (قرارُ المالك ٢٠٢٦-١٠-١٦)، والزبونُ في غيره. */
+fun deliverCodeAskRes(order: DriverOrder): Int =
+    if (isFetch(order)) R.string.deliver_code_ask_store else R.string.deliver_code_ask
 
 /**
  * **نصُّ المبلغ بوضعه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — «توصيل»: «ادفع للمتجر X من جيبك، واقبض من
