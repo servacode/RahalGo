@@ -177,7 +177,9 @@ func TestFETCHAMT_03_SendModeAndStrangers(t *testing.T) {
 		t.Fatalf("كتابةُ المبلغ: %s", r)
 	}
 	// **ومتجرٌ غيرُ صاحبها لا يوافق.**
-	m2 := newMDFx(t, h, "منطقةُ FETCHAMT-03ب")
+	// **من مصنع المتجر الأوّل** — مصنعٌ ثانٍ يعيد عدّاد الهواتف فيصطدم الرقم.
+	m2 := m
+	m2.fx = newOfferFx(t, h, m.f, 1000)
 	if r := fetchDecide(h, m2, id, "approve", 1); r.Code != http.StatusNotFound {
 		t.Fatalf("FETCHAMT-32 متجرٌ غريبٌ وافق: %s — يُنتظر 404", r)
 	}
