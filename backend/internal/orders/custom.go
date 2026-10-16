@@ -975,3 +975,42 @@ func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in se
 	}
 	return nil
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **مشترياتٌ فشلت بعد الشراء = خسارةٌ على المنصّة** — قرارُ المالك ٢٠٢٦-١٠-١٦
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت البضاعةُ «مالَ مكتبٍ» خارجَ الدفتر** — فطلبٌ اشتراه السائقُ ثمّ فشل أو أُلغي لا
+// يُقيَّد عليه شيء: **دفع السائقُ للمتجر من سلفة المكتب ولم يقبض من الزبون قرشاً، والأرباحُ
+// لا تعرف.** وصار كالطلب العاديّ تماماً:
+//
+//	ما دفعه للمتجر  S = الثمنُ (بلا متجرٍ تابع) · الثمنُ ناقصَ العمولة (معه) — `custom_store_paid`
+//	الخزينة         −S  خسارةً على الطلب (`creditTreasury` تطرحه، فيظهر في الأرباح والخسائر)
+//	الدرج           S   سلفةً رجعت للمكتب (`advance_return`) — كما في العاديّ الفاشل بعد الاستلام
+//
+// **ولماذا `platform_profit` سالباً لا `platform_expense`**: الخسارةُ نتيجةُ الطلب نفسِه لا نفقةٌ
+// قرّرها إنسان — **و`creditTreasury` تحسبها بالفرق فلا تُقيَّد مرّتين** في نداءٍ ثانٍ. **ومنها
+// يقرأ «من يدفع» عند الباب خسارةَ الطلب** (`chargeDriverLoss`: سالبُ مجموع `platform_profit`) —
+// فدينُ السائق بها يقع بلا حسبةٍ ثانية. **وFI-06.a تُغلق**: صافي الدفتر −S = النقدُ صفرٌ − السلفةُ S.
+//
+// **والأمانةُ لا ثمنَ فيها** (`customStoreCut` صفرٌ لها)، **وما لم يُوثَّق ثمنُه لا خسارةَ فيه.**
+func (s *Service) settleCustomLostGoods(ctx context.Context, q wallet.Querier, in settlement) error {
+	storePaid, _, err := customStoreCut(ctx, q, in.orderID)
+	if err != nil {
+		return err
+	}
+	if storePaid <= 0 {
+		return nil
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE orders SET custom_store_paid = $2, updated_at = now() WHERE id = $1`,
+		in.orderID, storePaid); err != nil {
+		return err
+	}
+	if in.driverID != nil {
+		if err := recordAdvanceReturn(ctx, q, in.orderID, *in.driverID, storePaid, in.actorID); err != nil {
+			return err
+		}
+	}
+	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+}

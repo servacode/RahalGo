@@ -58,12 +58,15 @@ type Counts struct {
 // قراءتِه في `internal/pricing` و`internal/cashbox` و`internal/server`،
 // **وحارسٌ في الاختبار يطابقها بمعجم الإعدادات فيسقط إن اختفى مفتاح.**
 var FinancialSettings = []string{
-	"merchants.commission_percent",          // pricing.go:153 — عمولةُ المنصّة
-	"sales.commission_percent",              // pricing.go:164 — عمولةُ المندوب
-	"pricing.margin_fixed",                  // pricing.go:69  — هامشُ التسعير
-	"delivery.fee",                          // pricing.go:195 — أجرةُ التوصيل
-	"delivery.merchant_fee",                 // orders/merchant_delivery.go — أجرةُ «لدي توصيلة» (٢٠٢٦-١٠-٠٥)
-	"delivery.merchant_debt_open",           // متروكٌ منذ ٢٠٢٦-١٠-١٥ لا يُقرأ — ويبقى محميّاً ما بقي في الفهرس
+	"merchants.commission_percent", // pricing.go:153 — عمولةُ المنصّة
+	"sales.commission_percent",     // pricing.go:164 — عمولةُ المندوب
+	"pricing.margin_fixed",         // pricing.go:69  — هامشُ التسعير
+	"delivery.fee",                 // pricing.go:195 — أجرةُ التوصيل
+	"delivery.merchant_fee",        // orders/merchant_delivery.go — أجرةُ «لدي توصيلة» (٢٠٢٦-١٠-٠٥)
+	"delivery.merchant_debt_open",  // متروكٌ منذ ٢٠٢٦-١٠-١٥ لا يُقرأ — ويبقى محميّاً ما بقي في الفهرس
+	// **مفاتيحُ أجرة «لدي توصيلة» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-١٦) — pricing.MerchantDeliveryFeeKeys.
+	"delivery.merchant_base_fee", "delivery.merchant_by_distance",
+	"delivery.merchant_per_km", "delivery.merchant_max_fee",
 	"delivery.per_km",                       // pricing.go:229
 	"delivery.max_fee",                      // pricing.go:236
 	"delivery.by_distance",                  // pricing.go:226

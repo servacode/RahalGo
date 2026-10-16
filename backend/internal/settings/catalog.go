@@ -1209,6 +1209,25 @@ var Catalog = []Def{
 	// الإنشاءُ وعرضُ السعر من دالّةٍ واحدة.
 	{Key: "delivery.merchant_fee", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
+	// ══════════════════════════════════════════════════════════════════
+	// **ولـ«لدي توصيلة» مفاتيحُ أجرتها هي** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت تقرأ مفاتيحَ الطلب العاديّ** (`delivery.fee` والمسافةَ والسقف) — فرفعُ أجرة
+	// العاديّ يرفعها. **وصار لها أساسٌ ومسافةٌ وثمنُ كيلومترٍ وسقفٌ وحدَها**، يقرؤها
+	// `orders.merchantDeliveryFee` من `pricing.MerchantDeliveryFeeKeys`. **وافتراضُها قيمُ العاديّ
+	// يومَ النشر** (هجرة `0452` تنسخها) — فلا يتبدّل رقمٌ حتّى يعدّلها المالك.
+	// **و`delivery.merchant_fee` فوق الصفر يسبقها كلَّها** كما كان.
+	{Key: "delivery.merchant_base_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "delivery.merchant_by_distance", Group: GroupDrivers, Kind: KindBool, Default: false,
+		Sensitive: true},
+	{Key: "delivery.merchant_per_km", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10_000, Unit: "currency", Default: 0, Sensitive: true,
+		ShowWhen: &Condition{Key: "delivery.merchant_by_distance", Equals: []string{"true"}}},
+	{Key: "delivery.merchant_max_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true,
+		ShowWhen: &Condition{Key: "delivery.merchant_by_distance", Equals: []string{"true"}}},
 	// **ودينُ «لدي توصيلة» بلا سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر `orders.SettingMerchantDebtOpen`.
 	// **متروكٌ منذ ٢٠٢٦-١٠-١٥: لا يقرؤه المحرّك** (لا دينَ على أجرة توصيلة). والفهرسُ بلا علامة
 	// «متروك»، فيبقى المفتاحُ هنا كي لا يُردّ حفظٌ قديمٌ له، **ولا أثرَ لقيمته.**

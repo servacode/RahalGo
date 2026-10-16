@@ -125,8 +125,9 @@ func TestSETTINGS_RepCommissionReversalMirrorsSettlement(t *testing.T) {
 	if ref.Code >= 400 && ref.Code != http.StatusConflict {
 		t.Fatalf("الاسترداد: %s", ref)
 	}
-	if ref.Code < 400 && net != 0 {
-		t.Errorf("**عمولةٌ لم تُعكَس** — صافٍ=%d", net)
+	// **والعمولةُ تبقى للمندوب** (قرارُ المالك ٢٠٢٦-١٠-١٦) — بالنسبة المدفوعة نفسِها.
+	if ref.Code < 400 && net != paid {
+		t.Errorf("**عمولةُ المندوب تغيّرت بالاسترداد** — صافٍ=%d والمدفوعُ %d", net, paid)
 	}
 }
 

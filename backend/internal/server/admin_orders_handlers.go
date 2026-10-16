@@ -278,13 +278,31 @@ var requiresReason = map[string]bool{
 var errOrderStillOpen = httpx.NewError(http.StatusConflict,
 	"order_still_open", "errors.order_still_open")
 
+// **ومن يتحمّل نصيبَ المندوب عند الاسترجاع** (قرارُ المالك ٢٠٢٦-١٠-١٦) — اختيارٌ لا يُعرف،
+// أو اختيارٌ مع غير الاسترجاع، أو طرفٌ غائبٌ عن الطلب.
+var (
+	errRefundBadRepShare = httpx.NewError(http.StatusBadRequest,
+		"refund_bad_rep_share", "errors.refund_bad_rep_share")
+	errRefundRepShareNoParty = httpx.NewError(http.StatusConflict,
+		"refund_rep_share_no_party", "errors.refund_rep_share_no_party")
+)
+
 func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		To   string `json:"to"`
 		Note string `json:"note"`
+		// RepShare **من يتحمّل نصيبَ المندوب مع الاسترجاع** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+		// `platform` (وفارغُه) · `merchant` · `driver`. المندوبُ يبقى بعمولته في الثلاثة.
+		RepShare string `json:"rep_share"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	repShare := strings.TrimSpace(req.RepShare)
+	if !orders.IsRepShare(repShare) ||
+		(repShare != "" && repShare != orders.RepSharePlatform && req.To != orders.StRefunded) {
+		s.respondErr(w, errRefundBadRepShare)
 		return
 	}
 	// **ما لا يُستدرَك يلزمه سبب.**
@@ -312,8 +330,19 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	o, err := s.orders.TransitionAudited(r.Context(), userIDFrom(r), roles,
 		oid, req.To, note,
 		func(ctx context.Context, q dbtx.Querier) error {
-			return s.auditTx(ctx, q, r, "ops.order_transition", "order", oid,
-				map[string]any{"to": req.To, "note": req.Note})
+			if err := s.auditTx(ctx, q, r, "ops.order_transition", "order", oid,
+				map[string]any{"to": req.To, "note": req.Note, "rep_share": repShare}); err != nil {
+				return err
+			}
+			if req.To != orders.StRefunded {
+				return nil
+			}
+			// **والخطّافُ بعد التسوية** (`transitionTx`) — العمولةُ مقيَّدةٌ ساعتَها.
+			_, err := orders.ChargeRefundRepShareTx(ctx, q, oid, repShare, userIDFrom(r))
+			if errors.Is(err, orders.ErrRepShareNoParty) {
+				return errRefundRepShareNoParty
+			}
+			return err
 		})
 	if err != nil {
 		s.respondErr(w, err)

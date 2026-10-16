@@ -467,6 +467,7 @@ private val CODES: Map<String, Int> = mapOf(
     "pin_not_set" to R.string.err_pin_not_set,
     "whatsapp_unverified" to R.string.err_whatsapp_unverified,
     "role_conflict" to R.string.err_role_conflict,
+    "role_driver_sales_conflict" to R.string.err_role_driver_sales_conflict,
     "merchant_needs_store" to R.string.err_merchant_needs_store,
     "name_too_short" to R.string.err_name_too_short,
     "invalid_invite_code" to R.string.err_invalid_invite_code,

@@ -89,4 +89,23 @@ class MerchantDeliveryTripTest {
         assertEquals(CashFrom.RECIPIENT, cashFrom(mc, pickedUp = true))
         assertNull(collectForStore(delivery("assigned", true)))
     }
+
+    /**
+     * **«إحضار»: يدفع بمكان الاستلام ويقبضه من المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — و«توصيل»
+     * كما كان: يدفع للمتجر ويقبض من المستلم.
+     */
+    @Test
+    fun `the collect text follows the mode`() {
+        val send = delivery("assigned", true).copy(collectAmount = 25000)
+        val fetch = send.copy(deliveryMode = "fetch")
+        assertEquals(com.rahalgo.driver.R.string.trip_collect_for_store, collectTextRes(send))
+        assertEquals(com.rahalgo.driver.R.string.trip_collect_for_store_fetch, collectTextRes(fetch))
+        val xml = listOf(
+            java.io.File("src/main/res/values/strings.xml"),
+            java.io.File("app-driver/src/main/res/values/strings.xml"),
+        ).first { it.exists() }.readText(Charsets.UTF_8)
+        val text = Regex("""<string name="trip_collect_for_store_fetch">(.*?)</string>""")
+            .find(xml)?.groupValues?.get(1)
+        assertEquals("ادفع بمكان الاستلام %1\$s من جيبك، واقبضه من المتجر لما توصل", text)
+    }
 }

@@ -549,6 +549,8 @@
     <!-- قرارات المالك ٢٠٢٦-١٠-١٥ -->
     <string name="kind_fetch">لدي توصيلة — إحضار</string>
     <string name="trip_collect_for_store">ادفع للمتجر %1$s من جيبك، واقبض من المستلم %1$s</string>
+    <!-- **وفي «إحضار» يدفع بمكان الاستلام ويقبض من المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) -->
+    <string name="trip_collect_for_store_fetch">ادفع بمكان الاستلام %1$s من جيبك، واقبضه من المتجر لما توصل</string>
     <string name="kind_purchase">طلب مشتريات</string>
     <string name="kind_amanah">طلب أمانة</string>
     <string name="card_pay_recipient">من المستلم</string>

@@ -135,6 +135,9 @@ func doorChoices(in *DoorResolution) error {
 // **والخسارةُ من الدفتر لا من معادلة**: ما قيّدته الخزينةُ على الطلب (`creditTreasury`)
 // سالباً — ما دُفع للمتجر عند الاستلام ولم يُقبض من الزبون شيء. **ولا دينَ إن لم
 // تخسر المنصّة.** والنسبةُ تُقرَّب إلى الأدنى.
+//
+// **والمشترياتُ مثلُه منذ ٢٠٢٦-١٠-١٦**: ما دفعه السائقُ للمتجر ثمّ فشل الطلب يُقيَّد خسارةً
+// (`settleCustomLostGoods`) — فيقرؤها هذا البابُ نفسُه بلا فرعٍ ثانٍ.
 func chargeDriverLoss(ctx context.Context, q dbtx.Querier, orderID, driverID, actorID string,
 	in DoorResolution) error {
 	if in.Fault != FaultDriver || in.DriverShare == DriverSharePlatform || driverID == "" {

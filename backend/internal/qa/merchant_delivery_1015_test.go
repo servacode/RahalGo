@@ -359,9 +359,10 @@ func TestMD1015_07_MerchantCancelAtPickupWarns(t *testing.T) {
 func TestMD1015_08_FeeFromStoreToRecipient(t *testing.T) {
 	h := New(t)
 	m := newMDFx(t, h, "منطقةُ MD1015-08")
-	h.Setting("delivery.by_distance", "true")
-	h.Setting("delivery.per_km", "100")
-	h.Setting("delivery.max_fee", "0")
+	// **ومفاتيحُ «لدي توصيلة» هي** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لا مفاتيحُ الطلب العاديّ.
+	h.Setting("delivery.merchant_by_distance", "true")
+	h.Setting("delivery.merchant_per_km", "100")
+	h.Setting("delivery.merchant_max_fee", "0")
 	// **المتجرُ شمالَ المركز والمستلِمُ جنوبَه** — فالمسافتان تختلفان.
 	storeLat, storeLng := m.z.Lat+0.010, m.z.Lng
 	dropLat, dropLng := m.z.Lat-0.005, m.z.Lng

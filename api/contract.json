@@ -4018,6 +4018,10 @@
         {
           "name": "note",
           "type": "string"
+        },
+        {
+          "name": "rep_share",
+          "type": "string"
         }
       ],
       "response": [

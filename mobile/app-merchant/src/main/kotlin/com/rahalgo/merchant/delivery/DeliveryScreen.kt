@@ -493,6 +493,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
         )
 
         // ── «بدك السائق يقبض مبلغ من المستلم؟» — عرضٌ لا حساب (٢٠٢٦-١٠-١٥) ──
+        // **وفي «إحضار» يدفعه بمكان الاستلام ويأخذه منك** (٢٠٢٦-١٠-١٦) — `DeliveryTexts`.
         Spacer(Modifier.height(10.dp))
         Row(
             Modifier
@@ -506,14 +507,14 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                 enabled = !vm.busy,
             )
             Column(Modifier.weight(1f)) {
-                // **وفي الإحضار المستلِمُ هو المتجرُ نفسُه** — فالطرفُ الآخرُ «الشخص بمكان الاستلام».
+                // **وفي الإحضار المستلِمُ هو المتجرُ نفسُه** — والسائقُ يدفع هناك لا يقبض.
                 Text(
-                    stringResource(if (fetch) R.string.md_collect_q_fetch else R.string.md_collect_q),
+                    stringResource(DeliveryTexts.collectQuestion(fetch)),
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
                 )
                 Text(
-                    stringResource(if (fetch) R.string.md_collect_sub_fetch else R.string.md_collect_sub),
+                    stringResource(DeliveryTexts.collectHint(fetch)),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -523,7 +524,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             OutlinedTextField(
                 value = vm.collectAmount,
                 onValueChange = { v -> vm.collectAmount = v.filter { it.isDigit() }.take(12); vm.touched() },
-                label = { Text(stringResource(R.string.md_collect_amount)) },
+                label = { Text(stringResource(DeliveryTexts.collectAmountLabel(fetch))) },
                 leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_wallet) },
                 singleLine = true,
                 enabled = !vm.busy,
@@ -640,7 +641,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             if (vm.phone.isBlank()) add(stringResource(if (fetch) R.string.md_phone_fetch else R.string.md_phone))
             if (vm.address.isBlank()) add(stringResource(if (fetch) R.string.md_address_fetch else R.string.md_address))
             if (vm.payer.isEmpty()) add(stringResource(R.string.md_who_pays))
-            if (vm.collectOn && vm.collectValue == null) add(stringResource(R.string.md_collect_missing))
+            if (vm.collectOn && vm.collectValue == null) add(stringResource(DeliveryTexts.collectMissing(fetch)))
         }
         val blocked = vm.quoteError.isNotEmpty() ||
             (vm.payer == "merchant" && q != null && !q.merchantCanPay)
@@ -737,22 +738,12 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
         }
         InfoLine(
             com.rahalgo.ui.R.drawable.ic_wallet,
-            stringResource(
-                when (d.feePayer) {
-                    "recipient" -> if (d.deliveryMode == "fetch") R.string.md_row_cash_fetch else R.string.md_row_cash
-                    "merchant_cash" -> R.string.md_row_me_cash
-                    else -> R.string.md_row_wallet
-                },
-                d.fee.toString(),
-            ),
+            stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), d.fee.toString()),
         )
         d.collectAmount?.takeIf { it > 0 }?.let {
             InfoLine(
                 com.rahalgo.ui.R.drawable.ic_wallet,
-                stringResource(
-                    if (d.deliveryMode == "fetch") R.string.md_row_collect_fetch else R.string.md_row_collect,
-                    it.toString(),
-                ),
+                stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), it.toString()),
             )
         }
         Spacer(Modifier.height(6.dp))

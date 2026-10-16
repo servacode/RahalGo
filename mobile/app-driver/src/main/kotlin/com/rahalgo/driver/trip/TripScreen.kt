@@ -1657,11 +1657,11 @@ private fun TripCard(
                     )
                 }
                 // **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
-                // خارجَ حساب المنصّة: لا يدخل صندوقَه ولا محفظتَه.
+                // خارجَ حساب المنصّة: لا يدخل صندوقَه ولا محفظتَه. **وفي «إحضار» بالعكس** (٢٠٢٦-١٠-١٦).
                 collectForStore(order)?.let { amt ->
                     InfoBox(
                         icon = R.drawable.ic_cash,
-                        text = stringResource(R.string.trip_collect_for_store, money(amt)),
+                        text = stringResource(collectTextRes(order), money(amt)),
                         tint = Rahal.colors.accent,
                         bold = true,
                     )

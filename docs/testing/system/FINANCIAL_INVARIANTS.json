@@ -660,7 +660,7 @@
     {
       "id": "FI-09.a",
       "family": "FI-09",
-      "name": "عمولةُ المندوبِ تُعكَس عند الاسترداد أو تصير التزاماً",
+      "name": "عمولةُ المندوب تبقى عند الاسترداد ونصيبُه على من اختاره المكتب بمقدارها",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -1513,6 +1513,10 @@
     "delivery.fee",
     "delivery.merchant_fee",
     "delivery.merchant_debt_open",
+    "delivery.merchant_base_fee",
+    "delivery.merchant_by_distance",
+    "delivery.merchant_per_km",
+    "delivery.merchant_max_fee",
     "delivery.per_km",
     "delivery.max_fee",
     "delivery.by_distance",

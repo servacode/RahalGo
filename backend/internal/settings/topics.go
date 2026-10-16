@@ -87,8 +87,8 @@ var placeRules = []placeRule{
 	{prefix: "delivery.share_", topic: TopicMoney, section: "money.profit"},
 	{prefix: "sales.commission_percent", exact: true, topic: TopicMoney, section: "money.rep"},
 	{prefix: "delivery.fee", exact: true, topic: TopicMoney, section: "money.driver"},
-	{prefix: "delivery.merchant_fee", exact: true, topic: TopicMoney, section: "money.driver"},
-	{prefix: "delivery.merchant_debt_open", exact: true, topic: TopicMoney, section: "money.driver"},
+	// **و«لدي توصيلة» قسمٌ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — أجرتُها الثابتةُ وأساسُها ومسافتُها.
+	{prefix: "delivery.merchant_", topic: TopicMoney, section: "money.merchant_delivery"},
 	{prefix: "delivery.by_distance", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.per_km", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.max_fee", exact: true, topic: TopicMoney, section: "money.driver"},

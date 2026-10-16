@@ -170,14 +170,8 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 Spacer(Modifier.height(12.dp))
             }
             Card {
-                val steps = listOf(
-                    R.string.md_step_platform,
-                    R.string.md_step_waiting,
-                    R.string.md_step_to_you,
-                    R.string.md_step_at_you,
-                    R.string.md_step_to_recipient,
-                    R.string.md_step_delivered,
-                )
+                // **وفي «إحضار» إلى مكان الاستلام ثمّ إليك** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لا «إلى المستلم».
+                val steps = DeliveryTexts.trackSteps(d.deliveryMode == "fetch")
                 steps.forEachIndexed { i, label ->
                     val done = i < at || (i == at && at == LAST_STEP)
                     val now = i == at && at < LAST_STEP
@@ -247,18 +241,15 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             }
             InfoLine(
                 com.rahalgo.ui.R.drawable.ic_wallet,
-                stringResource(
-                    when (d.feePayer) {
-                        "recipient" -> R.string.md_row_cash
-                        "merchant_cash" -> R.string.md_row_me_cash
-                        else -> R.string.md_row_wallet
-                    },
-                    d.fee.toString(),
-                ),
+                stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), d.fee.toString()),
             )
-            // **وما يقبضه السائقُ من المستلِم لك** — خارجَ حساب المنصّة (٢٠٢٦-١٠-١٥).
+            // **وما يقبضه السائقُ من المستلِم لك** — خارجَ حساب المنصّة (٢٠٢٦-١٠-١٥). **وفي «إحضار»
+            // يدفعه بمكان الاستلام ويأخذه منك** (٢٠٢٦-١٠-١٦).
             d.collectAmount?.takeIf { it > 0 }?.let {
-                InfoLine(com.rahalgo.ui.R.drawable.ic_wallet, stringResource(R.string.md_row_collect, it.toString()))
+                InfoLine(
+                    com.rahalgo.ui.R.drawable.ic_wallet,
+                    stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), it.toString()),
+                )
             }
         }
         if (d.status in cancellable) {

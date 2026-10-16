@@ -52,6 +52,10 @@ const (
 	// **وهو الاستثناءُ الوحيدُ من «لا دينَ على أجرة توصيلة»**: كلفةٌ وقعت فعلاً (قاد السائقُ
 	// وقبض أجرَه) والمتجرُ يحملها كأنّها سُلّمت.
 	CauseDeliveryFailedRecipient = "delivery_failed_recipient"
+	// CauseRefundRepShare **نصيبُ المندوب من طلبٍ استُرجع بعد التسليم وحمّله المكتبُ المتجرَ أو
+	// السائق** (قرارُ المالك ٢٠٢٦-١٠-١٦، هجرة `0452`) — المندوبُ يبقى بعمولته، **والمنصّةُ
+	// تتحمّلها افتراضاً.** مصدرُه معرّفُ الطلب.
+	CauseRefundRepShare = "refund_rep_share"
 )
 
 // طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
@@ -79,6 +83,8 @@ var causeWords = map[string]string{
 	CauseFailedOrderDriver: "خسارة طلب فشل",
 	// (قرارُ المالك ٢٠٢٦-١٠-١٥.)
 	CauseDeliveryFailedRecipient: "أجرة توصيلة فشلت بذنب المستلم",
+	// (قرارُ المالك ٢٠٢٦-١٠-١٦.)
+	CauseRefundRepShare: "نصيب المندوب من طلب مسترجع",
 }
 
 // CauseWords السببُ بالعربيّ — ومجهولُه «دين».

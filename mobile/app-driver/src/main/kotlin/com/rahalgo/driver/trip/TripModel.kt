@@ -550,6 +550,14 @@ fun isFetch(order: DriverOrder): Boolean =
 fun collectForStore(order: DriverOrder): Long? =
     order.collectAmount?.takeIf { it > 0 && order.kind == "merchant_delivery" }
 
+/**
+ * **نصُّ المبلغ بوضعه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — «توصيل»: «ادفع للمتجر X من جيبك، واقبض من
+ * المستلم X». **و«إحضار» بالعكس**: «ادفع بمكان الاستلام X من جيبك، واقبضه من المتجر لما توصل» —
+ * فالمتجرُ هناك هو المستلِم. **ومن موضعٍ واحدٍ لبطاقة العرض وشاشة المشوار.**
+ */
+fun collectTextRes(order: DriverOrder): Int =
+    if (isFetch(order)) R.string.trip_collect_for_store_fetch else R.string.trip_collect_for_store
+
 /** **أجرةُ المنصّة مفروضة** — لا يغيّرها السائق، فتُعرض رقماً لا «تتفق». */
 fun fixedCustomFee(order: DriverOrder): Long? =
     if (order.kind == "custom" && order.customFeeSource == "admin_defined" && !order.customDriverMayChangeFee) {

@@ -61,12 +61,16 @@ func (errRow) Scan(...any) error { return errWouldSpend }
 
 func TestCustomOrderMovesNoMoney(t *testing.T) {
 	s := &Service{}
+	// **والإلغاءُ والفشلُ قبل الشراء** (`assigned`) — **وبعده صار خسارةً تُقيَّد** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٦، `settleCustomLostGoods`؛ يقيسه `TestCustomPurchase_FailedAfterPickup_*`).
+	from := map[string]string{StPickedUp: StOnTheWay, StDelivered: StOnTheWay,
+		StCancelled: StAssigned, StFailed: StAssigned}
 	for _, to := range []string{StPickedUp, StDelivered, StCancelled, StFailed} {
 		t.Run(to, func(t *testing.T) {
 			q := &spyQuerier{}
 			var out settled
 			err := s.settle(context.Background(), q, settlement{
-				orderID: "o1", from: StOnTheWay, to: to,
+				orderID: "o1", from: from[to], to: to,
 				actorID: "a", customerID: "c",
 				// **وأرقامٌ غيرُ صفريّةٍ عمداً** — لو مرّ من الباب لتحرّكت.
 				//

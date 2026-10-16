@@ -48,8 +48,11 @@ func newMDFxBare(t *testing.T, h *Harness, name string) mdFx {
 	treasury(t, h)
 	z := zoneForDemand(t, h, name)
 	h.Setting(mdPct, "10")
-	// **والأجرةُ من `delivery.fee` لا من عمود المنطقة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	// **والأجرةُ من `delivery.fee` لا من عمود المنطقة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — **ومنذ
+	// ٢٠٢٦-١٠-١٦ لـ«لدي توصيلة» أساسُها هي** (`delivery.merchant_base_fee`)، بلا مسافة.
 	h.Setting("delivery.fee", "500")
+	h.Setting("delivery.merchant_base_fee", "500")
+	h.Setting("delivery.merchant_by_distance", "false")
 	f := h.Factory()
 	m := mdFx{
 		f:  f,

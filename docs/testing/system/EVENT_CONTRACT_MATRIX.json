@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 95,
+    "emit_sites": 96,
     "realtime_publishers": 24,
     "rooms": 5,
     "untargeted_user_sites": 36
@@ -94,7 +94,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 394,
+      "line": 397,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -348,7 +348,7 @@
     },
     {
       "file": "internal/server/admin_orders_handlers.go",
-      "line": 359,
+      "line": 388,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -730,6 +730,15 @@
       "kind": "Ticket",
       "entity": "ticket",
       "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/near_notice.go",
+      "line": 43,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
       "has_entity_id": true
     },
     {
@@ -1250,7 +1259,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 400,
+      "line": 403,
       "room": "driver:*"
     },
     {
@@ -1325,7 +1334,7 @@
     },
     {
       "file": "internal/server/live_location.go",
-      "line": 62,
+      "line": 70,
       "room": "driver:*"
     },
     {

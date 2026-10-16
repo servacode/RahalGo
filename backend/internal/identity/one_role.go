@@ -44,6 +44,25 @@ const RoleCustomer = "customer"
 var ErrRoleConflict = httpx.NewError(http.StatusConflict,
 	"role_conflict", "errors.role_conflict")
 
+// ══════════════════════════════════════════════════════════════════════
+// **ولا يكون أحدٌ سائقاً ومندوباً معاً** — قرارُ المالك ٢٠٢٦-١٠-١٦
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان يُردّ بالتعارض العامّ** (`role_conflict`: «له دورٌ أساسيٌّ بالفعل») — **فلا يعرف
+// الموظّفُ أنّ هذا الجمعَ بعينه ممنوعٌ بقرار**، ويظنّه يُرفع بسحب دورٍ ثمّ إعادته. **فصار له
+// رمزُه ونصُّه**، ويُفحص قبل التعارض العامّ في الأبواب الثلاثة: الإنشاءُ (`checkOnePrimary`)
+// والمنحُ من اللوحة (`ensureOnePrimary`) والمنحُ في معاملة (`GrantRoleTx`).
+// **وما كان قائماً قبل القرار تُبلّغ عنه هجرة `0452` ولا تكسره.**
+
+// ErrDriverSalesConflict **سائقٌ يُمنح دورَ المندوب أو مندوبٌ يُمنح دورَ السائق.**
+var ErrDriverSalesConflict = httpx.NewError(http.StatusConflict,
+	"role_driver_sales_conflict", "errors.role_driver_sales_conflict")
+
+// driverSalesClash **أهما السائقُ والمندوبُ؟** — بأيّ ترتيب.
+func driverSalesClash(a, b string) bool {
+	return (a == "driver" && b == "sales") || (a == "sales" && b == "driver")
+}
+
 // primaryRoles **الأدوارُ التي لا تُجمع** — كلُّ ما عدا الزبون.
 func primaryRoles(roles []string) []string {
 	out := make([]string, 0, len(roles))
@@ -60,6 +79,9 @@ func primaryRoles(roles []string) []string {
 // **ويُنادى قبل الكتابة لا بعدها** — ومنحٌ يقع ثمّ يُسحب يترك أثراً في السجلّ
 // وإشعاراً وصل صاحبَه.
 func checkOnePrimary(roles []string) error {
+	if slices.Contains(roles, "driver") && slices.Contains(roles, "sales") {
+		return ErrDriverSalesConflict
+	}
 	if len(primaryRoles(roles)) > 1 {
 		return ErrRoleConflict
 	}
@@ -94,6 +116,9 @@ func GrantRoleTx(ctx context.Context, q dbtx.Querier, userID, role string,
 		rows.Close()
 		if err := rows.Err(); err != nil {
 			return err
+		}
+		if driverSalesClash(role, other) {
+			return ErrDriverSalesConflict
 		}
 		if other != "" {
 			return ErrRoleConflict
@@ -166,6 +191,9 @@ func (r *Repo) ensureOnePrimary(ctx context.Context, userID, role string) error 
 	}
 	if other == "" {
 		return nil
+	}
+	if driverSalesClash(role, other) {
+		return ErrDriverSalesConflict
 	}
 	if isField(role) || isField(other) {
 		return ErrRoleConflict

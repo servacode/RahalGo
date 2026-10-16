@@ -222,19 +222,66 @@ func DeliveryFee(ctx context.Context, st Store) int64 {
 // كيلومترين والطريقُ سبعة. **والعكسُ أخطر**: طريقٌ ملتوٍ يُحسَب قصيراً.
 // فالسقفُ يقصّ الطرفَ الذي لا يقبله زبون، وصفرٌ يعني «بلا سقف».
 func DeliveryFeeAt(ctx context.Context, st Store, meters float64) int64 {
-	base := DeliveryFee(ctx, st)
-	if st == nil || !st.GetBool(ctx, "delivery.by_distance") {
-		return base
+	return RuleOf(ctx, st, StandardFeeKeys).At(meters)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **ولكلِّ نوعٍ مفاتيحُ أجرته** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت «لدي توصيلة» تقرأ مفاتيحَ العاديّ نفسَها** — فمن رفع أجرةَ الطلب العاديّ رفع
+// أجرةَ توصيلة المتجر بلا أن يدري. **فصار لكلّ نوعٍ أربعةُ مفاتيح** والحسبةُ واحدة
+// (`FeeRule.At`) — **فلا تفترق حسبتان يومَ تُصلَح إحداهما.**
+
+// FeeKeys **أسماءُ مفاتيح الأجرة لنوعٍ واحد.**
+type FeeKeys struct {
+	Base, ByDistance, PerKm, Max string
+}
+
+// StandardFeeKeys **مفاتيحُ الطلب العاديّ** — كما كانت.
+var StandardFeeKeys = FeeKeys{
+	Base: "delivery.fee", ByDistance: "delivery.by_distance",
+	PerKm: "delivery.per_km", Max: "delivery.max_fee",
+}
+
+// MerchantDeliveryFeeKeys **مفاتيحُ «لدي توصيلة»** — افتراضُها قيمُ العاديّ يومَ نُشرت
+// (هجرة `0452` تنسخها)، **فلا يتبدّل رقمٌ حتّى يعدّلها المالك.**
+var MerchantDeliveryFeeKeys = FeeKeys{
+	Base: "delivery.merchant_base_fee", ByDistance: "delivery.merchant_by_distance",
+	PerKm: "delivery.merchant_per_km", Max: "delivery.merchant_max_fee",
+}
+
+// FeeRule **قاعدةُ أجرةٍ مقروءة** — أساسٌ، ومسافةٌ تشتعل أو تنطفئ، وثمنُ كيلومتر، وسقف.
+type FeeRule struct {
+	Base, PerKm, Max int64
+	ByDistance       bool
+}
+
+// RuleOf **يقرأ قاعدةَ نوعٍ من الإعدادات** — وبلا مخزنٍ صفرٌ كلُّها (لا رسمَ لم يقرّره أحد).
+func RuleOf(ctx context.Context, st Store, k FeeKeys) FeeRule {
+	if st == nil {
+		return FeeRule{}
 	}
-	perKm := st.GetInt(ctx, "delivery.per_km")
-	if perKm <= 0 || meters <= 0 {
-		return base
+	r := FeeRule{
+		Base: st.GetInt(ctx, k.Base), ByDistance: st.GetBool(ctx, k.ByDistance),
+		PerKm: st.GetInt(ctx, k.PerKm), Max: st.GetInt(ctx, k.Max),
+	}
+	if r.Base < 0 {
+		r.Base = 0
+	}
+	return r
+}
+
+// At **الأجرةُ على مسافةٍ بالمتر** — والشرحُ في `DeliveryFeeAt`.
+func (r FeeRule) At(meters float64) int64 {
+	if !r.ByDistance || r.PerKm <= 0 || meters <= 0 {
+		return r.Base
 	}
 	// **والكيلومترُ يُقرَّب لأعلى** — **وكسرٌ يُهمَل يجعل من يبعد ١٫٩ كم
 	// يدفع أجرةَ كيلومترٍ واحد.**
-	fee := base + perKm*int64(math.Ceil(meters/1000))
-	if max := st.GetInt(ctx, "delivery.max_fee"); max > 0 && fee > max {
-		return max
+	fee := r.Base + r.PerKm*int64(math.Ceil(meters/1000))
+	if r.Max > 0 && fee > r.Max {
+		return r.Max
 	}
 	return fee
 }

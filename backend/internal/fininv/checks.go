@@ -1006,51 +1006,27 @@ var All = []Check{
 
 	{
 		ID: "FI-09.a", Family: FI09, Status: ProvableNow, Ops: true,
-		Name: "عمولةُ المندوبِ تُعكَس عند الاسترداد أو تصير التزاماً",
-		Why: "**المنصّةُ ردّت للزبون ثمنَه** — **فلا يبقى لأحدٍ نصيبٌ منه.** " +
-			"وعمولةُ المندوب تُعكَس من محفظته، **وما عجز عنه رصيدُه يصير " +
-			"التزاماً يُقتطَع من عمولةٍ قادمة** (`RQ-5` · قرارُ المالك " +
-			"٢٠٢٦-٠٩-٠٥). **وعمولةٌ تبقى بلا عكسٍ ولا التزامٍ مالٌ خُلق.**",
+		Name: "عمولةُ المندوب تبقى عند الاسترداد ونصيبُه على من اختاره المكتب بمقدارها",
+		Why: "**«المندوبُ ما إلو ذنب»** (قرارُ المالك ٢٠٢٦-١٠-١٦، لكلّ أنواع الطلبات): عمولتُه " +
+			"لا تُعكَس، **والمنصّةُ تتحمّلها افتراضاً**، والمكتبُ يملك أن يحمّلها المتجرَ أو السائقَ " +
+			"ديناً بسبب `refund_rep_share`. **ودينٌ بغير مقدار العمولة الباقية، أو على طلبٍ لم " +
+			"يُسترَدّ، دينٌ بلا أصل.** (ونُسخ به `RQ-5` · ٢٠٢٦-٠٩-٠٥: «العمولةُ تُعكَس».)",
 		Flows:     []string{"F-15", "F-23"},
 		Registers: []string{"XG-10"},
 		Kinds:     []string{"commission"},
-		// ══════════════════════════════════════════════════════════
-		// **والالتزامُ رصيدٌ جارٍ لا سطرٌ لكلّ طلب**
-		// ══════════════════════════════════════════════════════════
-		//
-		// **فلا يُسأل الطلبُ وحدَه** — **يُسأل المندوب**: مجموعُ ما بقي
-		// له من عمولاتٍ على طلباتٍ استُرِدّت **يجب ألّا يتجاوز التزامَه
-		// القائم.** **وتجاوزُه يعني عمولةً لم تُعكَس ولم تُدَّن.**
-		//
-		// **ولا يُشترَط التساوي**: **التزامٌ اقتُطع من عمولةٍ قادمة
-		// ينقص** — والباقي يبقى مغطّىً بما عُكس.
+		// **والالتزاماتُ القديمةُ (`refund_rep_commission`) تبقى كما نشأت** — يحرسها مجموعُها
+		// مع الصورة (FI-05) ويُقتطع منها كما كان. **وهذا الفحصُ للجديد وحدَه.**
 		SQL: `
-			WITH بالمندوب AS (
-				SELECT t.user_id,
-				       sum(t.amount)::bigint AS الباقي
-				FROM orders o
-				JOIN wallet_transactions t
-				  ON t.ref = o.id::text AND t.kind = 'commission'
-				WHERE o.status = 'refunded'
-				GROUP BY t.user_id
-			),
-			-- **والدَّينُ المسدَّد يغطّي كما يغطّي القائم** — نقداً بالمكتب أو
-			-- بشحنٍ أو اقتطاعاً من عمولةٍ قادمة أو شطباً. **وكان الفحصُ يقرأ
-			-- نقصَ الدَّين بسداده عمولةً لم تُعكَس** (فحصُ المال ٢٠٢٦-١٠-٠٥).
-			-- والمُسقَطُ لأنّ الطلبَ لم يقع ليس سداداً.
-			مسدَّد AS (
-				SELECT f.party_id AS user_id, sum(s.amount)::bigint AS المسدَّد
-				FROM obligation_settlements s
-				JOIN financial_obligations f ON f.id = s.obligation_id
-				WHERE f.party_kind = 'rep' AND f.cause = 'refund_rep_commission'
-				  AND s.method <> 'voided'
-				GROUP BY f.party_id
-			)
-			SELECT u.full_name, r.الباقي, u.commission_debt, COALESCE(p.المسدَّد, 0) AS المسدَّد
-			FROM بالمندوب r
-			JOIN users u ON u.id = r.user_id
-			LEFT JOIN مسدَّد p ON p.user_id = r.user_id
-			WHERE r.الباقي > COALESCE(u.commission_debt, 0) + COALESCE(p.المسدَّد, 0)`,
+			SELECT o.number, o.status, f.party_kind, f.amount,
+			       COALESCE(c.kept, 0)::bigint AS العمولة
+			FROM financial_obligations f
+			JOIN orders o ON o.id = f.order_id
+			LEFT JOIN LATERAL (
+				SELECT sum(t.amount) AS kept FROM wallet_transactions t
+				WHERE t.ref = o.id::text AND t.kind = 'commission'
+			) c ON true
+			WHERE f.cause = 'refund_rep_share'
+			  AND (o.status <> 'refunded' OR f.amount <> COALESCE(c.kept, 0))`,
 	},
 	{
 		ID: "FI-12.c", Family: FI12, Status: DeferredP6, Ops: false,

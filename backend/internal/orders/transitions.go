@@ -840,7 +840,8 @@ type settlement struct {
 //   - نهاية غير التسليم **قبل** التسليم: يُعاد المدفوع من المحفظة فقط
 //     (النقد لم يُحصَّل أصلاً).
 //   - استرجاع **بعد** التسليم: يُعاد **كامل المبلغ** إلى محفظة الزبون — لأنه
-//     دفع النقد فعلاً للسائق — وتُعكس عمولة المندوب وتُصفَّر عمولة المنصة.
+//     دفع النقد فعلاً للسائق — وتُصفَّر عمولة المنصة، **وعمولةُ المندوب تبقى له**
+//     (قرارُ المالك ٢٠٢٦-١٠-١٦) ويتحمّلها من يختاره المكتب (`ChargeRefundRepShareTx`).
 //     صندوق السائق يبقى كما هو عن قصد: النقد الذي قبضه ما زال بحوزته ويدين به
 //     للمنصة، والمنصة هي من ردّت للزبون. هكذا يتوازن الطرفان بلا رصيد سالب.
 func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
@@ -878,6 +879,13 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 				return s.settleCustomCash(ctx, q, in, out)
 			}
 			return s.settleCustomWallet(ctx, q, in, out)
+		}
+		// **ونهايةٌ فاشلةٌ بعد الشراء خسارةٌ على المنصّة** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+		// السائقُ دفع ثمنَ البضاعة من سلفة المكتب ولم يقبض شيئاً. انظر `settleCustomLostGoods`.
+		if refundOnEnter(in.to) && in.from != StDelivered && pastPickup[in.from] {
+			if err := s.settleCustomLostGoods(ctx, q, in); err != nil {
+				return err
+			}
 		}
 		// **ونهايةٌ إلى غير التسليم تُطلق حجزَ المحفظة** — Batch 2a: **مالٌ
 		// حُجز عند التأكيد لا يبقى محجوزاً لطلبٍ أُلغي أو تعذّر** (وإلّا سقط
@@ -1411,21 +1419,10 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 // بلا مندوبٍ كان استرجاعُ طلبه مستحيلاً. كشفه أوّلُ اختبارٍ نادى هذا المسار.
 //
 // reverseCommissions يعكس أثر التسليم المالي عند استرجاع طلب مُسلَّم:
-// قيد مضاد لعمولة المندوب (الدفاتر لا تُعدَّل ولا تُحذف — تُصحَّح بقيد مقابل)
-// وتصفير لقطة عمولة المنصة كي لا تتضخّم التقارير وفواتير المتاجر.
+// قيدٌ مضادٌّ لمستحقّ المتجر (الدفاتر لا تُعدَّل ولا تُحذف — تُصحَّح بقيد مقابل)
+// وتصفيرُ لقطة عمولة المنصة كي لا تتضخّم التقارير وفواتير المتاجر.
+// **وعمولةُ المندوب لا تُمسّ** (قرارُ المالك ٢٠٢٦-١٠-١٦) — انظر آخرَ الدالّة.
 func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
-	var platformCommission, subtotal int64
-	var repID, ownerID *string
-	var repIsBuyer bool
-	err := q.QueryRow(ctx, `
-		SELECT o.platform_commission, o.subtotal, m.sales_rep_user_id,
-		       COALESCE(m.sales_rep_user_id = o.customer_id, false), m.owner_user_id
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).
-		Scan(&platformCommission, &subtotal, &repID, &repIsBuyer, &ownerID)
-	if err != nil {
-		return err
-	}
 
 	// عكس مستحقّ المتجر أولاً: المنصة ردّت للزبون ثمن البضاعة، فلا يبقى للمتجر
 	// مستحقٌّ عن بيعٍ لم يتمّ. وبلا هذا العكس يبقى مالٌ في دفتره عن طلب مُسترجَع —
@@ -1588,101 +1585,19 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		`UPDATE orders SET platform_commission = 0 WHERE id = $1`, orderID); err != nil {
 		return err
 	}
-	// **والعكسُ يتناظر مع التسوية** — `XG-14`: **بوّابةٌ هنا لا هناك
-	// تترك قيداً لا يُعكَس**، وهو خطأٌ في الاتّجاه المعاكس.
-	if repID == nil {
-		return nil
-	}
-	// لم تُدفع له عمولة على شرائه هو، فلا شيء يُعكس.
-	// **والتماثل هنا شرط لا تجميل**: عكسٌ بلا دفعٍ سابق يخصم من رصيده مالاً لم
-	// يقبضه قط — خطأ محاسبي في الاتجاه المعاكس.
-	if repIsBuyer {
-		return nil
-	}
-
 	// ══════════════════════════════════════════════════════════════
-	// **وعمولةُ المندوب تُعكَس** — `XG-10` · `RQ-5`
+	// **وعمولةُ المندوب لا تُعكَس** — قرارُ المالك ٢٠٢٦-١٠-١٦ (لكلّ أنواع الطلبات)
 	// ══════════════════════════════════════════════════════════════
 	//
-	// # العقدُ النافذ (قرارُ المالك النهائيّ ٢٠٢٦-٠٩-٠٥)
+	// «المندوبُ ما إلو ذنب» — **جلب المتجرَ ووقع البيعُ، والاسترجاعُ بعد التسليم خلافٌ بين
+	// المنصّة والزبون لا يخصّه.** فتبقى عمولتُه في محفظته، **ويتحمّلها الخزينةُ افتراضاً**:
+	// `creditTreasury` تقرأ `commission` نصيبَ طرفٍ باقياً، فيكبر سالبُ الطلب بمقدارها.
+	// **والمكتبُ يملك أن يحمّلها المتجرَ أو السائق** — دينٌ بسبب `refund_rep_share` بابُه
+	// `ChargeRefundRepShareTx` في معاملة الاسترجاع نفسِها.
 	//
-	//	ORDER REVENUE REVERSED → RELATED REP COMMISSION REVERSED
-	//
-	// **«ولا يجوز: يسترد الزبونُ مالَه · وتنعكس مستحقّاتُ المتجر
-	// والمنصّة · وتبقى عمولةُ المندوب قابلةً للسحب.»**
-	// (`docs/testing/REP_FINAL_PRODUCT_DECISIONS.md` · `RQ-5 = APPROVED`.)
-	//
-	// # وقرارٌ سابقٌ نُسخ — ولا يُمحى
-	//
-	// **كان هنا امتناعٌ عن العكس مستنداً إلى قرارٍ بتاريخ ٢٠٢٦-٠٨-٠٣**:
-	// «المنصةُ تتحمّل المسؤوليّة، والنزاعُ بينها وبين المتجر — والمندوب
-	// لا علاقة له بذلك».
-	//
-	// **وسياقُ ذلك القرار نزاعُ الطعام الفاسد**: **من يتحمّل الخسارةَ حين
-	// يشتكي زبون** — لا **كيف يُقفَل دفترُ طلبٍ استُرِدّ.** (انظر جدولَ
-	// «من يتحمّل ماذا» في `docs/TRUTH.md`.)
-	//
-	// **والقرارُ الأحدثُ يتحدّث عن الاسترداد عامّاً وينصّ على النقيض
-	// صراحةً** — **فهو الناسخ.** (صُولحت الوثيقتان ٢٠٢٦-٠٩-٠٦: **كانتا
-	// تتناقضان صامتتين شهراً.**)
-	//
-	// # ولماذا يُعكَس من الدفتر لا من المعادلة
-	//
-	// **يُعكَس ما قُيّد فعلاً** — **والنسبةُ قد تتبدّل بين القيد والعكس**،
-	// فحسبةٌ جديدةٌ تترك فرقاً في محفظته بلا سبب. **وهي علّةُ المتجر
-	// نفسُها أعلاه.**
-	//
-	// # ولا يسقط حقُّ الزبون برصيده — `PG-6`
-	//
-	// **مندوبٌ سحب عمولتَه ثمّ استُرِدّ الطلب**: **الخصمُ الكاملُ يُسقط
-	// `CHECK (balance >= 0)` فتسقط المعاملةُ كلُّها** — **ولا يصل الزبونَ
-	// شيء.** وهو مرضُ `XG-11` بعينه من بابٍ آخر.
-	//
-	// **فيُؤخذ ما تحتمله المحفظة، ويبقى الباقي التزاماً** يُقتطَع من أوّل
-	// عمولةٍ قادمة (`offsetRepDebt`) — **وهو ما يوجبه العقد**: «تُعالَج
-	// التزاماً — ولا يُمحى التاريخ».
-	if repID == nil || repIsBuyer {
-		return nil
-	}
-	var repPaid int64
-	if err := q.QueryRow(ctx, `
-		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
-		 WHERE ref = $1 AND kind = 'commission' AND user_id = $2`,
-		orderID, *repID).Scan(&repPaid); err != nil {
-		return err
-	}
-	if repPaid <= 0 {
-		return nil
-	}
-
-	// **وما تحتمله محفظةُ المندوب هو المتاح** — `XG-12`.
-	var repBalance int64
-	if err := q.QueryRow(ctx,
-		`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
-		      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
-		*repID).Scan(&repBalance); err != nil {
-		return err
-	}
-	take := repPaid
-	if repBalance < take {
-		take = repBalance
-	}
-	if rest := repPaid - take; rest > 0 {
-		// **واقعةُ نشأةٍ** — `XG-31`.
-		if _, err := obligations.Create(ctx, q, obligations.PartyRep,
-			*repID, rest, obligations.CauseRefundRep,
-			orderID, &actorID); err != nil {
-			return err
-		}
-	}
-	if take > 0 {
-		// **بالنوع نفسِه سالباً** — **فيقرأ من يجمع `commission` الصافيَ**،
-		// ولا يبقى نوعٌ لا تعرفه الخزينة.
-		if _, err := s.wallet.ApplyTx(ctx, q, *repID, -take, "commission",
-			orderID, "عكسُ عمولة مندوب — طلبٌ مُسترجَع", &actorID); err != nil {
-			return err
-		}
-	}
+	// **وكان يُعكَس** (`RQ-5` · قرارُ ٢٠٢٦-٠٩-٠٥: «ORDER REVENUE REVERSED → RELATED REP
+	// COMMISSION REVERSED») — **فنُسخ.** والتزاماتُ `refund_rep_commission` القديمةُ تبقى كما
+	// نشأت ويُقتطع منها كما كان (`offsetRepDebt`)، **ولا يُكتب جديدٌ منها.**
 	return nil
 }
 

@@ -1,6 +1,8 @@
 package qa
 
-import "testing"
+import (
+	"testing"
+)
 
 // TestFIN_FI09a_SettledRepDebtIsCovered **دَينُ عمولةٍ سُدّد ليس خرقاً.**
 //
@@ -29,6 +31,9 @@ func TestFIN_FI09a_SettledRepDebtIsCovered(t *testing.T) {
 		map[string]any{"to": "refunded", "note": "دَين"}); got.Code >= 400 {
 		t.Fatalf("الاستردادُ سقط: %s", got)
 	}
+	// **والاستردادُ لا يُدين المندوبَ بعد ٢٠٢٦-١٠-١٦** — فيُزرع دينٌ قديمٌ كما كان ينشأ
+	// (`legacyRepDebt`)، **والسؤالُ هنا سدادُه لا نشأتُه.**
+	legacyRepDebt(t, h, rep.ID, oid, s0.OrderNet)
 	var ob string
 	var outstanding int64
 	if err := h.Pool.QueryRow(ctxBG(), `

@@ -193,8 +193,8 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	// تعديل** — فتعديلُ اسم منطقةٍ جعل كلَّ توصيلةٍ فيها مجّانيّةً وأجرَ السائق
 	// صفراً بلا خطأ. **والأجرةُ من `delivery.fee` كالطلب العاديّ** (`DeliveryAt`).
 	//
-	// **ولها أجرتُها الخاصّة إن ضُبطت** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر
-	// `merchantDeliveryFee`.
+	// **ولها أجرتُها الخاصّة إن ضُبطت** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **ومنذ ٢٠٢٦-١٠-١٦
+	// مفاتيحُ أساسها ومسافتها هي لا مفاتيحُ العاديّ.** انظر `merchantDeliveryFee`.
 	fee, _, _, err := s.merchantDeliveryFee(ctx, tx, merchantID, in.Lat, in.Lng, in.HasPoint, mode)
 	if err != nil {
 		return "", err
@@ -524,9 +524,11 @@ const (
 //
 // **كانت المسافةُ من الدبّوس إلى مركز المنطقة** — فتوصيلةٌ من متجرٍ في طرف المنطقة إلى
 // طرفها الآخر تُسعَّر كأنّها جارتُه. **وصارت بين موقع المتجر ونقطة المستلِم**، خطّاً
-// مستقيماً بـ`ST_Distance` كما يقيس العاديُّ (`ZoneAt`) — ومفاتيحُ العاديّ نفسُها:
-// `delivery.fee` أساساً و`delivery.per_km` لكلّ كيلومترٍ (مقرَّبٍ لأعلى) و`delivery.max_fee`
-// سقفاً، **ومفتاحُ `delivery.by_distance` يحكمها كما يحكم العاديّ** (`pricing.DeliveryFeeAt`).
+// مستقيماً بـ`ST_Distance` كما يقيس العاديُّ (`ZoneAt`) — **ومفاتيحُها هي منذ ٢٠٢٦-١٠-١٦**:
+// `delivery.merchant_base_fee` أساساً و`delivery.merchant_per_km` لكلّ كيلومترٍ (مقرَّبٍ لأعلى)
+// و`delivery.merchant_max_fee` سقفاً، **ومفتاحُ `delivery.merchant_by_distance` يحكمها** —
+// والحسبةُ حسبةُ العاديّ نفسُها (`pricing.FeeRule.At`). **وكانت تقرأ مفاتيحَ العاديّ**، فمن رفع
+// أجرةَ الطلب العاديّ رفعها معه.
 //
 //   - **والإحضارُ ذهابٌ وإياب**: المتجر ← العنوان ← المتجر، فالمسافةُ مضاعفة.
 //   - **وبلا نقطةٍ الأساسُ وحدَه** — والعرضُ يقوله (`no_point`).
@@ -538,8 +540,10 @@ func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, merch
 	if own := st.GetInt(ctx, SettingMerchantDeliveryFee); own > 0 {
 		return own, 0, FeeBasisFlat, nil
 	}
+	// **ومفاتيحُها هي لا مفاتيحُ العاديّ** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `pricing.MerchantDeliveryFeeKeys`.
+	rule := pricing.RuleOf(ctx, st, pricing.MerchantDeliveryFeeKeys)
 	if !hasPoint {
-		return pricing.DeliveryFee(ctx, st), 0, FeeBasisNoPoint, nil
+		return rule.Base, 0, FeeBasisNoPoint, nil
 	}
 	if err := q.QueryRow(ctx, `
 		SELECT COALESCE(ST_Distance(location, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography), 0)
@@ -549,7 +553,7 @@ func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, merch
 	if mode == DeliveryModeFetch {
 		distanceM *= 2
 	}
-	return pricing.DeliveryFeeAt(ctx, st, distanceM), distanceM, FeeBasisDistance, nil
+	return rule.At(distanceM), distanceM, FeeBasisDistance, nil
 }
 
 // SettingMerchantDebtOpen **مفتاحٌ متروكٌ لا يُقرأ** (قرارُ المالك ٢٠٢٦-١٠-١٥: لا دينَ على

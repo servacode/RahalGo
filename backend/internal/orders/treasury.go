@@ -120,7 +120,7 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	if tid == "" {
 		return nil
 	}
-	var walletPaid, cashDue, goods, collected int64
+	var walletPaid, cashDue, goods, collected, lost int64
 	var status, kind string
 	if err := q.QueryRow(ctx,
 		`SELECT wallet_paid, cash_due, status, kind,
@@ -134,9 +134,15 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 		        -- مع متجرٍ تابعٍ يدفع الثمنَ ناقصَ العمولة، **فتبقى العمولةُ للمنصّة.**
 		        -- وعمودُ custom_store_paid فارغٌ في الطلبات القديمة: الثمنُ كلُّه كما كان.
 		        CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
-		             THEN COALESCE(custom_store_paid, custom_goods_amount, 0) ELSE 0 END
+		             THEN COALESCE(custom_store_paid, custom_goods_amount, 0) ELSE 0 END,
+		        -- **ومشترياتٌ انتهت بلا تسليمٍ بعد الشراء: ما دفعه السائقُ للمتجر خسارة**
+		        -- (قرارُ المالك ٢٠٢٦-١٠-١٦). **ولا يُكتب custom_store_paid إلّا بعد شراءٍ وقع**
+		        -- (settleCustomLostGoods) — فطلبٌ فشل قبل الشراء لا خسارةَ فيه.
+		        CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
+		              AND status IN ('failed', 'cancelled', 'rejected')
+		             THEN COALESCE(custom_store_paid, 0) ELSE 0 END
 		 FROM orders WHERE id = $1`, orderID).
-		Scan(&walletPaid, &cashDue, &status, &kind, &collected, &goods); err != nil {
+		Scan(&walletPaid, &cashDue, &status, &kind, &collected, &goods, &lost); err != nil {
 		return err
 	}
 	// **والاسترجاعُ لا يُلغي قبضاً وقع.**
@@ -168,12 +174,14 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	}
 	// **وثمنُ بضاعة المشتريات مالُ المكتب يعود إليه** (قرارُ المالك ٢٠٢٦-١٠-١٣) — دفعه نقداً
 	// للسائق واستردّه، **فليس ربحاً ولا يُقيَّد.** يُطرح من المدفوع، ويبقى نصيبُ المنصّة من الأجرة.
-	if goods > 0 && paid > 0 {
+	if goods > 0 && paid > 0 && lost == 0 {
 		if goods > paid {
 			goods = paid
 		}
 		paid -= goods
 	}
+	// **والبضاعةُ الضائعةُ خرجت من سلفة المكتب ولم يقبضها أحد** — تُطرح فيصير الربحُ سالباً بها.
+	paid -= lost
 
 	// **ما قُيّد للأطراف وما رُدَّ للزبون وما سبق أن أخذته الخزينة** — ثلاثةٌ
 	// تُقرأ من الدفتر في نداءٍ واحد. **والقراءةُ من الدفتر لا من المعادلة**:

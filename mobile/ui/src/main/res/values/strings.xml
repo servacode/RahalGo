@@ -566,6 +566,7 @@
     <string name="err_pin_not_set">لا يوجد رمز مضبوط لهذا الحساب</string>
     <string name="err_whatsapp_unverified">لا يوجد رقم واتساب موثق لهذا الحساب</string>
     <string name="err_role_conflict">لهذا الحساب دور أساسي بالفعل — الدور الواحد ومعه الزبون، ولا ثالث.</string>
+    <string name="err_role_driver_sales_conflict">لا يجتمع دورا السائق والمندوب في حساب واحد.</string>
     <string name="err_merchant_needs_store">دور المتجر يمنح مع إنشاء متجره — حول طلب اشتراك بدل منحه بيد.</string>
     <string name="err_name_too_short">الاسم قصير — حرفان على الأقل</string>
     <string name="err_invalid_invite_code">كود الدعوة غير صحيح أو ليس لمندوب</string>

@@ -216,7 +216,8 @@ func TestMDA03_WalletChargedAtAcceptanceNotCreation(t *testing.T) {
 	mdaNoNewViolations(t, h, base)
 }
 
-// TestMDA04_MerchantFeeSetting **`delivery.merchant_fee` — وصفرُه يعود إلى العامّة.**
+// TestMDA04_MerchantFeeSetting **`delivery.merchant_fee` — وصفرُه يعود إلى أساس التوصيلة**
+// (`delivery.merchant_base_fee`، منذ ٢٠٢٦-١٠-١٦ — وكان الأجرةَ العامّة).
 func TestMDA04_MerchantFeeSetting(t *testing.T) {
 	h := New(t)
 	m := newMDFx(t, h, "منطقةُ MDA-04")

@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 238,
-    "behaviour_settings": 194,
+    "setting_defs": 242,
+    "behaviour_settings": 198,
     "order_fields": 106,
-    "test_files": 594,
-    "test_funcs": 2384
+    "test_files": 597,
+    "test_funcs": 2390
   },
   "flows": [
     {
@@ -759,7 +759,8 @@
         "TestRACE_RefundVsPayout",
         "TestFIN_XG11_RefundIndependentOfMerchantBalance",
         "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
-        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepCommissionKeptOnRefund",
+        "TestFIN_XG10_RepShareOnMerchant",
         "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "COVERED"
@@ -1060,8 +1061,8 @@
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
-        "TestFIN_XG10_DebtOffsetFromNextCommission",
-        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepCommissionKeptOnRefund",
+        "TestFIN_XG10_RepShareOnMerchant",
         "TestFIN_XG10_RepWithdrewThenRefund",
         "TestXG32_ConcurrentTargetCrossingGrantsOnce",
         "TestXG32_FailureRollbackThenRetryGrantsOnce",
@@ -2712,8 +2713,8 @@
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestFIN_RepCommissionReversal",
         "TestRACE_RefundVsPayout",
-        "TestFIN_XG10_DebtOffsetFromNextCommission",
-        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepCommissionKeptOnRefund",
+        "TestFIN_XG10_RepShareOnMerchant",
         "TestFIN_XG10_RepWithdrewThenRefund",
         "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
         "TestFIN_XG10_ConservationAcrossRefund",
@@ -3954,6 +3955,48 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "delivery.merchant_base_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.merchant_by_distance",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "delivery.merchant_debt_open",
       "group": "drivers",
       "kind": "bool",
@@ -3976,6 +4019,48 @@
     },
     {
       "key": "delivery.merchant_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.merchant_max_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.merchant_per_km",
       "group": "drivers",
       "kind": "money",
       "sensitive": true,
@@ -6545,8 +6630,8 @@
         "TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew",
         "TestXQ2_S3_RefundUsesOriginalEconomics",
         "TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss",
-        "TestFIN_XG10_DebtOffsetFromNextCommission",
-        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepCommissionKeptOnRefund",
+        "TestFIN_XG10_RepShareOnMerchant",
         "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "REGRESSION_TEST_PRESENT"
@@ -8377,6 +8462,12 @@
       "orphan": true
     },
     {
+      "name": "TestDriverSales_RefusedWithOwnCode",
+      "file": "internal/identity/driver_sales_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestForcePasswordChangeIsOffByDefault",
       "file": "internal/identity/force_password_test.go",
       "package": "identity",
@@ -9441,6 +9532,18 @@
     {
       "name": "TestFixedFee_PurchaseStillDocumentsGoods",
       "file": "internal/orders/custom_fixed_fee_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomPurchase_FailedAfterPickup_DriverFull",
+      "file": "internal/orders/custom_lost_goods_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomPurchase_FailedAfterPickup_PlatformLoss",
+      "file": "internal/orders/custom_lost_goods_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -18024,6 +18127,12 @@
       "orphan": true
     },
     {
+      "name": "TestMDFeeKeys_OwnSettingsNotStandard",
+      "file": "internal/qa/merchant_delivery_fee_keys_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMDG01_NoDriverOnShift",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
@@ -21237,28 +21346,7 @@
       "orphan": true
     },
     {
-      "name": "TestFIN_XG10_DebtOffsetFromNextCommission",
-      "file": "internal/qa/rep_commission_reversal_test.go",
-      "package": "qa",
-      "level": "L4",
-      "flows": [
-        "F-23"
-      ],
-      "gaps": [
-        "XG-10"
-      ],
-      "settings": [
-        "sales.commission_percent"
-      ],
-      "modes": [
-        "FULL",
-        "FINANCIAL",
-        "RELEASE"
-      ],
-      "orphan": false
-    },
-    {
-      "name": "TestFIN_XG10_RepCommissionReversedOnRefund",
+      "name": "TestFIN_XG10_RepCommissionKeptOnRefund",
       "file": "internal/qa/rep_commission_reversal_test.go",
       "package": "qa",
       "level": "L4",
@@ -21276,6 +21364,40 @@
         "FULL",
         "FINANCIAL",
         "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_XG10_RepShareBadChoiceRefused",
+      "file": "internal/qa/rep_commission_reversal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFIN_XG10_RepShareOnDriver",
+      "file": "internal/qa/rep_commission_reversal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFIN_XG10_RepShareOnMerchant",
+      "file": "internal/qa/rep_commission_reversal_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-10"
+      ],
+      "settings": [
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
         "RELEASE"
       ],
       "orphan": false

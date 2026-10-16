@@ -1,6 +1,25 @@
 package qa
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/obligations"
+)
+
+// ══════════════════════════════════════════════════════════════════════
+// **والاستردادُ لا يُدين المندوبَ بعد ٢٠٢٦-١٠-١٦** (قرارُ المالك: «المندوبُ ما إلو ذنب»)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **لكنّ ديونَ `refund_rep_commission` القديمةَ قائمةٌ** — نشأت قبل القرار ويُقتطع منها كما كان.
+// فحرّاسُ آليّة الالتزام للمندوب (التسويةُ والأقدمُ أوّلاً وحارسُ التكرار) **تزرع ديناً قديماً
+// بالباب نفسِه** (`obligations.Create`) بعد الاسترداد، بمقدار العمولة كما كان يقع.
+func legacyRepDebt(t *testing.T, h *Harness, repID, orderID string, amount int64) {
+	t.Helper()
+	if _, err := obligations.Create(ctxBG(), h.Pool, obligations.PartyRep, repID, amount,
+		obligations.CauseRefundRep, orderID, nil); err != nil {
+		t.Fatalf("زرعُ الدين القديم: %v", err)
+	}
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // **`XG-31` — الالتزامُ واقعةٌ تُقرأ لا رقمٌ يُزاد**
@@ -198,7 +217,7 @@ func TestOBL_RepAvailable_NoObligation(t *testing.T) {
 	if got := obligationsOf(t, h, "rep", rep.ID); len(got) != 0 {
 		t.Errorf("نشأ التزامٌ والعمولةُ كانت في محفظته: %+v", got)
 	}
-	t.Log("عمولةٌ قائمة ⇒ عُكست مباشرةً ولا التزام")
+	t.Log("عمولةٌ قائمة ⇒ تبقى له ولا التزام (٢٠٢٦-١٠-١٦)")
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -219,15 +238,12 @@ func TestOBL_RepWithdrawn_OriginTraceable(t *testing.T) {
 	if code := refundOrder(t, h, oid); code >= 400 {
 		t.Fatalf("الاسترداد: %d", code)
 	}
-	got := obligationsOf(t, h, "rep", rep.ID)
-	if len(got) != 1 {
-		t.Fatalf("الالتزاماتُ %d: %+v", len(got), got)
+	// **ولا التزامَ ولو سحبها** (قرارُ المالك ٢٠٢٦-١٠-١٦) — العمولةُ له.
+	if got := obligationsOf(t, h, "rep", rep.ID); len(got) != 0 {
+		t.Fatalf("نشأ على المندوب %d التزاماً: %+v — «المندوبُ ما إلو ذنب»", len(got), got)
 	}
-	o := got[0]
-	t.Logf("مبلغٌ %d · سببٌ %q · طلبٌ %s · وقتٌ %s",
-		o.Amount, o.Cause, first8(o.Order), first19(o.Created))
-	if o.Amount != s0.OrderNet || o.Cause != "refund_rep_commission" || o.Order != oid {
-		t.Errorf("الواقعةُ لا تفسّر نفسَها: %+v (العمولةُ كانت %d)", o, s0.OrderNet)
+	if s := snapRep(t, h, rep.ID, oid); s.OrderNet != s0.OrderNet {
+		t.Errorf("عمولةُ الطلب %d بعد الاسترداد وكانت %d", s.OrderNet, s0.OrderNet)
 	}
 }
 
@@ -254,19 +270,15 @@ func TestOBL_BothInsufficient_AtomicOrigins(t *testing.T) {
 	}
 	m := obligationsOf(t, h, "merchant", mID)
 	r := obligationsOf(t, h, "rep", rep.ID)
-	if len(m) != 1 || len(r) != 1 {
-		t.Fatalf("الالتزامان: متجرٌ %d ومندوبٌ %d", len(m), len(r))
-	}
-	// **ووقتاهما من معاملةٍ واحدة** — و`now()` ثابتةٌ داخلها.
-	if m[0].Created != r[0].Created {
-		t.Errorf("**نشأا في معاملتين**: %s ≠ %s", m[0].Created, r[0].Created)
+	// **والمتجرُ وحدَه يُدان** — المندوبُ يبقى بعمولته (قرارُ المالك ٢٠٢٦-١٠-١٦).
+	if len(m) != 1 || len(r) != 0 {
+		t.Fatalf("الالتزامات: متجرٌ %d (المنتظَر 1) ومندوبٌ %d (المنتظَر 0)", len(m), len(r))
 	}
 	var refunded int64
 	_ = h.Pool.QueryRow(ctxBG(), `
 		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
 		 WHERE ref = $1 AND kind = 'refund'`, oid).Scan(&refunded)
-	t.Logf("المستردُّ %d · التزامُ متجرٍ %d · التزامُ مندوبٍ %d · وقتٌ واحد %s",
-		refunded, m[0].Amount, r[0].Amount, first19(m[0].Created))
+	t.Logf("المستردُّ %d · التزامُ متجرٍ %d · ولا التزامَ على المندوب", refunded, m[0].Amount)
 	if refunded <= 0 {
 		t.Error("**الزبونُ لم يستردّ**")
 	}
@@ -289,6 +301,7 @@ func TestOBL_ReplayCreatesNoDuplicate(t *testing.T) {
 	if code := refundOrder(t, h, oid); code >= 400 {
 		t.Fatalf("الأوّل: %d", code)
 	}
+	legacyRepDebt(t, h, rep.ID, oid, s0.OrderNet)
 	one := obligationsOf(t, h, "rep", rep.ID)
 	code2 := refundOrder(t, h, oid)
 	two := obligationsOf(t, h, "rep", rep.ID)
@@ -327,6 +340,7 @@ func TestOBL_FutureEarningsSettleWithEvidence(t *testing.T) {
 	if code := refundOrder(t, h, oid1); code >= 400 {
 		t.Fatalf("الاسترداد: %d", code)
 	}
+	legacyRepDebt(t, h, rep.ID, oid1, s0.OrderNet)
 	born := obligationsOf(t, h, "rep", rep.ID)
 	if len(born) != 1 {
 		t.Fatalf("الالتزاماتُ %d", len(born))
@@ -391,6 +405,7 @@ func TestOBL_MultipleObligationsFIFO(t *testing.T) {
 		if code := refundOrder(t, h, oid); code >= 400 {
 			t.Fatalf("الاستردادُ %d: %d", i, code)
 		}
+		legacyRepDebt(t, h, rep.ID, oid, s0.OrderNet)
 	}
 	born := obligationsOf(t, h, "rep", rep.ID)
 	if len(born) != 2 {

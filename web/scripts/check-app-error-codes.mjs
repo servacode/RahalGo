@@ -159,6 +159,8 @@ const SERVER_ADMIN = new Set([
   // **قسمُ الأدوار والصلاحيّات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — شاشةُ الأدوار وحدَها.
   "role_protected", "role_account_type", "role_legacy", "roles_manage_scope",
   "roles_manage_owner_only", "role_not_deletable", "role_not_empty",
+  // **ومن يتحمّل نصيبَ المندوب عند الاسترجاع** (قرارُ المالك ٢٠٢٦-١٠-١٦) — بابُ اللوحة وحدَه.
+  "refund_bad_rep_share", "refund_rep_share_no_party",
 ]);
 
 const found = new Map();

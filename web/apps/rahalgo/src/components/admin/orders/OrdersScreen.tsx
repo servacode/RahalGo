@@ -42,6 +42,7 @@ import {
   FormActions,
   SearchSelect,
   EmptyState,
+  Radio,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -316,6 +317,7 @@ const STAGE_LABELS: Record<string, string> = m.admin.ordersPage.stage;
 /** **أسماءُ الحالات بلفظ المكتب** — لا «في الطريق إليك» (المشكلة ٢٣). */
 const OFFICE_STATUS: Record<string, string> = m.admin.ordersPage.board.status;
 const BOARD = m.admin.ordersPage.board;
+const REP_SHARE_T = m.admin.ordersPage.refundRepShare;
 /** **نصوصُ سجلّ الطلبات** — قراراتُ المالك ٢٠٢٦-١٠-٠٤. */
 const H = m.admin.ordersPage.history;
 
@@ -342,6 +344,13 @@ function spanOf(
  * لضغطةٍ واحدة.**
  */
 const DESTRUCTIVE = new Set(["rejected", "cancelled", "failed", "refunded"]);
+
+/**
+ * **من يتحمّل نصيبَ المندوب عند الاسترجاع** (قرارُ المالك ٢٠٢٦-١٠-١٦) — مرآةُ `orders.RepShare*`.
+ * **والمنصّةُ أوّلاً لأنّها الافتراض.**
+ */
+const REP_SHARES = ["platform", "merchant", "driver"] as const;
+type RepShare = (typeof REP_SHARES)[number];
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -2361,6 +2370,11 @@ function OrderActions({
   const [notice, setNotice] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
   const [asking, setAsking] = useState("");
+  /**
+   * **من يتحمّل نصيبَ المندوب مع الاسترجاع** (قرارُ المالك ٢٠٢٦-١٠-١٦) — المندوبُ يبقى بعمولته،
+   * **والمنصّةُ افتراضاً**، أو دينٌ على المتجر أو السائق. مرآةُ `orders.RepShare*`.
+   */
+  const [repShare, setRepShare] = useState<RepShare>("platform");
   /** نافذةُ التحويل إلى متجرٍ آخر — القاعدةُ الاحتياطية. */
   const [transferring, setTransferring] = useState(false);
   /** تنبيهُ «لا سائقَ في الدوام» — يُقال قبل التحويل لا بعده. */
@@ -2675,9 +2689,12 @@ function OrderActions({
     try {
       await api(`/api/v1/admin/orders/${o.id}/transition`, {
         method: "POST",
-        body: JSON.stringify({ to, note }),
+        body: JSON.stringify(
+          to === "refunded" ? { to, note, rep_share: repShare } : { to, note },
+        ),
       });
       setAsking("");
+      setRepShare("platform");
       setReleasing(false);
       setReason("");
       onChanged();
@@ -2782,6 +2799,31 @@ function OrderActions({
         <p className="text-xs text-ink-muted">
           {m.admin.ordersPage.reasonHint}
         </p>
+        {asking === "refunded" && (
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-xs font-medium text-ink">
+              {REP_SHARE_T.label}
+            </legend>
+            <p className="text-xs text-ink-muted">{REP_SHARE_T.hint}</p>
+            {REP_SHARES.map((v) => (
+              <div key={v} className="space-y-0.5">
+                <Radio
+                  id={`refund-rep-${o.id}-${v}`}
+                  name={`refund-rep-${o.id}`}
+                  checked={repShare === v}
+                  onChange={() => {
+                    setRepShare(v);
+                    setErr("");
+                  }}
+                  label={REP_SHARE_T.options[v]}
+                />
+                <p className="ps-7 text-xs text-ink-muted">
+                  {REP_SHARE_T.hints[v]}
+                </p>
+              </div>
+            ))}
+          </fieldset>
+        )}
         {err && <p className="text-xs text-danger">{err}</p>}
         <FormActions
           busy={busy !== ""}
@@ -2789,6 +2831,7 @@ function OrderActions({
           onCancel={() => {
             setAsking("");
             setReason("");
+            setRepShare("platform");
             setErr("");
           }}
           saveLabel={m.admin.ordersPage.confirm}

@@ -1,6 +1,10 @@
 package qa
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/obligations"
+)
 
 // ══════════════════════════════════════════════════════════════════════
 // **تدقيقُ دورة الإصلاح ٢ — `XG-10` بأرقامه**
@@ -112,12 +116,16 @@ func TestFIN_XG10_RefundReplayDoesNotDoubleCharge(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 // **٥ · التسويةُ من العمولات القادمة — بالأرقام**
 // ══════════════════════════════════════════════════════════════════════
+//
+// **والاستردادُ لا يُدين المندوبَ بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **لكنّ ديونَ
+// `refund_rep_commission` القديمةَ قائمةٌ ويُقتطع منها كما كان.** فيُزرع دينٌ قديمٌ بالباب
+// نفسِه (`obligations.Create`) ويُقاس اقتطاعُه.
 func TestFIN_XG10_DebtSettlementArithmetic(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
 	rep, item := repFixture(t, h)
 
-	// ── طلبٌ أوّل: عمولةٌ تُسحب ثمّ يُستردّ ⇒ دَين ────────────
+	// ── طلبٌ أوّل: عمولةٌ تُسحب ثمّ يُستردّ ⇒ لا دَين، ثمّ دينٌ قديمٌ يُزرع ──
 	oid1 := placeAndDeliver(t, h, item)
 	s0 := snapRep(t, h, rep.ID, oid1)
 	if s0.OrderNet <= 0 {
@@ -134,8 +142,16 @@ func TestFIN_XG10_DebtSettlementArithmetic(t *testing.T) {
 	s1 := snapRep(t, h, rep.ID, oid1)
 	t.Logf("١) عمولةٌ %d · سُحبت · استُرِدّ ⇒ دَينٌ %d · رصيدٌ %d",
 		commission, s1.Debt, s1.Balance)
+	if s1.Debt != 0 || s1.OrderNet != commission {
+		t.Fatalf("دَينٌ %d وصافي العمولة %d — والمنتظَر صفرٌ و%d (تبقى له)", s1.Debt, s1.OrderNet, commission)
+	}
+	if _, err := obligations.Create(ctxBG(), h.Pool, obligations.PartyRep, rep.ID, commission,
+		obligations.CauseRefundRep, oid1, nil); err != nil {
+		t.Fatalf("زرعُ الدين القديم: %v", err)
+	}
+	s1 = snapRep(t, h, rep.ID, oid1)
 	if s1.Debt != commission {
-		t.Fatalf("الدَّينُ %d والعمولةُ كانت %d", s1.Debt, commission)
+		t.Fatalf("الدينُ القديمُ %d — والمنتظَر %d", s1.Debt, commission)
 	}
 
 	// ── طلبٌ ثانٍ: عمولةٌ تُقيَّد ثمّ يُقتطَع منها ───────────
@@ -249,8 +265,9 @@ func TestFIN_XG10_CombinedMerchantAndRepInsufficiency(t *testing.T) {
 	if mDebt < merchantEarned {
 		t.Errorf("دَينُ المتجر %d ومستحقُّه كان %d", mDebt, merchantEarned)
 	}
-	if rDebt < repPaid {
-		t.Errorf("التزامُ المندوب %d وعمولتُه كانت %d", rDebt, repPaid)
+	// **والمندوبُ لا يُدين** (قرارُ المالك ٢٠٢٦-١٠-١٦) — عمولتُه له ولو سحبها.
+	if rDebt != 0 {
+		t.Errorf("التزامُ المندوب %d — والمنتظَر صفر: «المندوبُ ما إلو ذنب»", rDebt)
 	}
 
 	var negative int
@@ -266,7 +283,7 @@ func TestFIN_XG10_CombinedMerchantAndRepInsufficiency(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 //
 // **والمعادلةُ الواحدة**: **ما خرج من الأطراف عائداً + ما صار التزاماً
-// = ما كان قد قُيّد لهم.**
+// = ما كان قد قُيّد لهم** — للمتجر. **والمندوبُ يبقى بعمولته** (٢٠٢٦-١٠-١٦).
 func TestFIN_XG10_ConservationAcrossRefund(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
@@ -333,9 +350,10 @@ func TestFIN_XG10_ConservationAcrossRefund(t *testing.T) {
 		t.Errorf("مستحقُّ متجرٍ تبخّر: قُيّد %d · عُكس %d · دَينٌ %d",
 			before.merchant, reversed, mDebt)
 	}
-	if reversed := before.commission - after.commission; reversed+rDebt < before.commission {
-		t.Errorf("عمولةُ مندوبٍ تبخّرت: قُيّدت %d · عُكس %d · التزامٌ %d",
-			before.commission, reversed, rDebt)
+	// **وعمولةُ المندوب تبقى كما قُيّدت** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والخزينةُ تحملها.
+	if after.commission != before.commission || rDebt != 0 {
+		t.Errorf("عمولةُ المندوب %d ← %d · التزامٌ %d — والمنتظَر أن تبقى بلا دين",
+			before.commission, after.commission, rDebt)
 	}
 	// **وعمولةُ المنصّة تُصفَّر** — طلبٌ لم يقع لا ربحَ فيه.
 	if platformCommission != 0 {

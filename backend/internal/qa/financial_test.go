@@ -578,17 +578,11 @@ func TestFIN_RepCommissionReversal(t *testing.T) {
 		`SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
 		 WHERE ref = $1 AND kind = 'commission'`, oid).Scan(&after)
 	t.Logf("وبعد الاسترداد = %d", after)
-	// **وقد أُصلحت `XG-10` في دورةِ إصلاحٍ ٢** (٢٠٢٦-٠٩-٠٦):
-	// **العكسُ يقع، وما عجز عنه الرصيدُ يصير التزاماً.**
-	//
-	// **فانقلب هذا الرصدُ**: كان يسجّل غيابَ العكس، **وصار يحرس
-	// وقوعَه.**
-	if after != 0 {
-		t.Errorf("XG-10 — **العمولةُ بقيت %d بعد الاسترداد**: العكسُ لم يقع. "+
-			"والعقدُ (`RQ-5` · ٢٠٢٦-٠٩-٠٥): ORDER REVENUE REVERSED → "+
-			"RELATED REP COMMISSION REVERSED", after)
-	} else {
-		t.Logf("XG-10 CLOSED — **العكسُ وقع والصافي صفر.**")
+	// **وانقلب ثانيةً بقرار المالك ٢٠٢٦-١٠-١٦**: «المندوبُ ما إلو ذنب» — **العمولةُ تبقى
+	// له** والمنصّةُ تتحمّلها. (وكان يحرس العكسَ منذ دورة الإصلاح ٢، `RQ-5`.)
+	if after != granted {
+		t.Errorf("XG-10 — **العمولةُ صارت %d بعد الاسترداد وكانت %d** — والقرارُ أنّها تبقى",
+			after, granted)
 	}
 }
 
