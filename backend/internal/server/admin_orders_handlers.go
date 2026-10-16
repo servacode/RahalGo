@@ -234,7 +234,7 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	// **وموقعُ الزبون المباشر لمن يرى عنوانَه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ومن حُجب عنه
 	// الدبّوسُ (`orderDetailFields`) لا يرى ما هو أدقُّ منه.
 	if !strip {
-		if got, err := s.orders.LiveFor(r.Context(), []string{o.ID}, "", s.liveSwitchM(r.Context())); err == nil {
+		if got, err := s.orders.LiveFor(r.Context(), []string{o.ID}, "", s.liveRule(r.Context())); err == nil {
 			o.CustomerLive = got[o.ID]
 		}
 	}

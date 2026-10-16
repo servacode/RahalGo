@@ -87,6 +87,11 @@ fun TripMap(
      * غيرِ الدبّوس.** وفارغٌ: لا علامة، والخريطةُ كما كانت حرفاً بحرف.
      */
     customer: LatLng? = null,
+    /**
+     * **دقّتُه بالمتر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — دائرةٌ ثابتةٌ شفّافةٌ حول علامته، **ونبضٌ
+     * حيٌّ ما دامت العلامةُ ظاهرة.** وفارغةٌ: لا دائرة.
+     */
+    customerAccuracyM: Double? = null,
     recenter: Int = 0,
     nav: NavRender? = null,
     /**
@@ -321,7 +326,7 @@ fun TripMap(
         Markers.resetProgress()
         floatArrayOf(if (nav != null) 0f else Float.NaN)
     }
-    latest[0] = TripDraw(driver, pickup, dropoff, route, icons, customer)
+    latest[0] = TripDraw(driver, pickup, dropoff, route, icons, customer, customerAccuracyM)
 
     /**
      * **وبدائلُ العرض ومعاينتُها** — تُعاد بعد كلّ تحميل نمط.
@@ -419,6 +424,34 @@ fun TripMap(
         onDispose { view.getMapAsync { it.removeOnMapClickListener(listener) } }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **نبضُ موقع الزبون** (قرارُ المالك ٢٠٢٦-١٠-١٦) — حلقتان تتّسعان وتبهتان
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **دورةٌ كلَّ ١٫٨ ثانية، وخمسةَ عشرَ إطاراً في الثانية** — **خصائصُ طبقتين لا غير**
+    // (`Markers.pulse`)، فلا مصدرَ يُعاد رفعُه. **ويقف بغياب العلامة**: موقعٌ شاخ لا
+    // يُرسَل علامةً (`liveFresh`) فيخرج المفتاحُ ويُطفأ النبض، **ولا يعمل والشاشةُ مغلقة.**
+    val pulsing = customer != null
+    LaunchedEffect(pulsing) {
+        val style0 = styleRef[0]
+        if (!pulsing) {
+            style0?.let { Markers.pulseOff(it) }
+            return@LaunchedEffect
+        }
+        val density = context.resources.displayMetrics.density
+        val start = android.os.SystemClock.uptimeMillis()
+        try {
+            while (true) {
+                val phase = ((android.os.SystemClock.uptimeMillis() - start) % PULSE_PERIOD_MS) /
+                    PULSE_PERIOD_MS.toFloat()
+                styleRef[0]?.let { Markers.pulse(it, phase, density) }
+                kotlinx.coroutines.delay(PULSE_FRAME_MS)
+            }
+        } finally {
+            styleRef[0]?.let { Markers.pulseOff(it) }
+        }
+    }
+
     /**
      * **تسجيلُ مُعيدِ الطبقات** — مرّةً لهذه الشاشة.
      *
@@ -433,7 +466,7 @@ fun TripMap(
             val draw = latest[0] ?: return@register
             Markers.draw(
                 context, style, draw.driver, draw.pickup, draw.dropoff, draw.route, draw.icons,
-                customer = draw.customer,
+                customer = draw.customer, customerAccuracyM = draw.customerAccuracyM,
             )
         }
         /**
@@ -597,7 +630,7 @@ fun TripMap(
                 if (navShown) LatLng(shown[0], shown[1]) else driver,
                 pickup, dropoff, route, icons,
                 driverBearingDeg = if (navShown) shownBearing[0] else null,
-                customer = customer,
+                customer = customer, customerAccuracyM = customerAccuracyM,
             )
 
             // ══════════════════════════════════════════════════════════
@@ -743,7 +776,7 @@ fun TripMap(
                             if (!Markers.moveDriver(it, here, aim(bearing))) {
                                 Markers.draw(
                                     context, it, here, pickup, dropoff, route,
-                                    icons, aim(bearing), customer,
+                                    icons, aim(bearing), customer, customerAccuracyM,
                                 )
                             }
                         }
@@ -789,6 +822,7 @@ private data class TripDraw(
     val route: List<LatLng>,
     val icons: MarkerIcons,
     val customer: LatLng? = null,
+    val customerAccuracyM: Double? = null,
 )
 
 /**
@@ -847,3 +881,9 @@ private const val BEARING_RATE_DEG_S = 90.0
 
 /** **الهدنةُ بين إطارين** — ثلاثون في الثانية. */
 private const val FRAME_GAP_MS = 33L
+
+/** **دورةُ نبض الزبون** — ١٫٨ ثانية (قرارُ المالك ٢٠٢٦-١٠-١٦: «بين ١٫٥ و٢»). */
+private const val PULSE_PERIOD_MS = 1_800L
+
+/** **بين إطارين** — خمسةَ عشرَ في الثانية تكفي حلقةً تتّسع، **وتوفّر البطّاريّة.** */
+private const val PULSE_FRAME_MS = 66L

@@ -226,7 +226,14 @@ data class CustomerLive(
     /** **بُعدُها عن دبّوس العنوان بالمتر** — وسالبٌ: لا يُعرف. */
     @SerialName("pin_gap_m") val pinGapM: Double = -1.0,
     /** **الحدُّ الذي يتحوّل بعده الطريقُ إلى الزبون** — من إعدادات اللوحة. */
-    @SerialName("switch_m") val switchM: Long = 150,
+    @SerialName("switch_m") val switchM: Long = 50,
+    /**
+     * **أدقيقةٌ هي؟** (قرارُ المالك ٢٠٢٦-١٠-١٦) — حكمُ المحرّك بدقّتها على حدّ اللوحة
+     * (`orders.live_location_max_accuracy_m`). **والتقريبيّةُ تُرى ولا يتحوّل إليها الطريق.**
+     *
+     * **وغيابُه «لا»** — محرّكٌ لم يقل إنّها دقيقةٌ لا يُصدَّق أنّها عند الباب.
+     */
+    val precise: Boolean = false,
 )
 
 /**

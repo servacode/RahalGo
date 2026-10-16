@@ -61,7 +61,9 @@ class LiveShareService : Service() {
     private val api by lazy { CustomerApi(AppCore.get().api) }
 
     private var orderId: String? = null
-    private var lastSentAt = 0L
+
+    /** **الدقيقُ وحدَه يُرسَل، وأحسنُ ما وُجد بعد ثلاثين ثانية** (قرارُ المالك ٢٠٢٦-١٠-١٦). */
+    private val filter = LiveSendFilter()
     private var deadline: Job? = null
     private var stopping = false
 
@@ -87,7 +89,7 @@ class LiveShareService : Service() {
             return START_NOT_STICKY
         }
         // **وطلبٌ ثانٍ يحلّ محلّ الأوّل** — الخدمةُ واحدة، ومشاركةٌ واحدةٌ في كلّ لحظة.
-        if (orderId != id) lastSentAt = 0L
+        if (orderId != id) filter.reset()
         orderId = id
         stopping = false
         LiveShare.activeOrderId = id
@@ -115,16 +117,22 @@ class LiveShareService : Service() {
         }
     }
 
-    /** **يرسل النقطة** — ولا أسرعَ من مرّةٍ كلَّ ثماني ثوانٍ مهما سلّم النظام. */
+    /**
+     * **يرسل النقطة إن أجازها المرشّح** (`LiveSendFilter`) — الدقيقةُ فوراً، والتقريبيّةُ
+     * تُحبس، **وبعد ثلاثين ثانيةً بلا دقيقةٍ يُرسَل أحسنُ ما وُجد** ومعه دقّتُه دائماً،
+     * فيَسِمه المحرّكُ «تقريبيّاً». **ولا أسرعَ من مرّةٍ كلَّ ثماني ثوانٍ.**
+     */
     private fun send(lat: Double, lng: Double, accuracyM: Double?) {
         val id = orderId ?: return
         if (stopping) return
-        val now = SystemClock.elapsedRealtime()
-        if (lastSentAt != 0L && now - lastSentAt < MIN_SEND_GAP_MS) return
-        lastSentAt = now
+        val pick = filter.offer(
+            LiveSendFilter.Reading(lat, lng, accuracyM, SystemClock.elapsedRealtime()),
+        ) ?: return
         scope.launch {
             try {
-                api.shareLive(id, lat, lng, accuracyM)
+                // **والحدُّ يعود من اللوحة** — فيُرشَّح التالي برقمها.
+                api.shareLive(id, pick.lat, pick.lng, pick.accuracyM)
+                    ?.let { filter.maxAccuracyM = it.toDouble() }
             } catch (e: ApiClient.ApiException) {
                 // **والطلبُ وصل أو انتهى أو ليس له** — تقف بلا محوٍ: المحرّكُ محاه أصلاً.
                 if (e.body.code == "live_location_inactive" || e.body.code == "not_found") {
@@ -221,7 +229,6 @@ class LiveShareService : Service() {
 
         /** **كلَّ عشر ثوانٍ** — قرارُ المالك. */
         const val SEND_EVERY_MS = 10_000L
-        private const val MIN_SEND_GAP_MS = 8_000L
 
         /** **خمسٌ وأربعون دقيقةً ثمّ تقف** — قرارُ المالك. */
         const val MAX_SHARE_MS = 45 * 60 * 1000L

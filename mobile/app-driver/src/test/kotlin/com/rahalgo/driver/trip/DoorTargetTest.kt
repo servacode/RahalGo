@@ -16,11 +16,30 @@ class DoorTargetTest {
 
     private val now = java.time.OffsetDateTime.parse("2026-10-16T12:00:00+03:00").toInstant().toEpochMilli()
 
-    private fun live(ageSec: Long, gapM: Double, switchM: Long = 150) = CustomerLive(
-        lat = 35.956, lng = 39.008, accuracyM = 10.0,
+    private fun live(ageSec: Long, gapM: Double, switchM: Long = 150, precise: Boolean = true) = CustomerLive(
+        lat = 35.956, lng = 39.008, accuracyM = if (precise) 10.0 else 45.0,
         at = java.time.Instant.ofEpochMilli(now - ageSec * 1000).atOffset(java.time.ZoneOffset.ofHours(3)).toString(),
-        pinGapM = gapM, switchM = switchM,
+        pinGapM = gapM, switchM = switchM, precise = precise,
     )
+
+    /**
+     * **التقريبيُّ لا يحوّل الطريقَ ولو بعُد** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والدقيقُ فوق الخمسين يحوّل.
+     */
+    @Test
+    fun `an imprecise point never switches even far from the pin`() {
+        assertEquals(DoorTarget.Pin(staleLive = false), doorTarget(live(10, gapM = 900.0, switchM = 50, precise = false), false, now))
+        // **وكان يُقاد إليه فصار تقريبيّاً** — يعود إلى الدبّوس، **ولا «شاخ»**: الموقعُ حديث.
+        assertEquals(DoorTarget.Pin(staleLive = false), doorTarget(live(10, gapM = 900.0, switchM = 50, precise = false), true, now))
+        assertTrue(doorTarget(live(10, gapM = 60.0, switchM = 50, precise = true), false, now) is DoorTarget.Live)
+        assertTrue(doorTarget(live(10, gapM = 40.0, switchM = 50, precise = true), false, now) is DoorTarget.Pin)
+    }
+
+    @Test
+    fun `a payload without the precise flag is not trusted`() {
+        val old = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            .decodeFromString(CustomerLive.serializer(), """{"lat":35.9,"lng":39.0,"pin_gap_m":900,"switch_m":50}""")
+        assertEquals(false, old.precise)
+    }
 
     @Test
     fun `far from the pin and fresh switches the route to the customer`() {

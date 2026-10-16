@@ -9,6 +9,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
@@ -17,6 +18,7 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import org.maplibre.geojson.Polygon
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -55,6 +57,15 @@ object Markers {
     private const val SRC_POINTS = "trip-points"
     private const val SRC_LINE = "trip-line"
     private const val SRC_ME = "trip-me"
+
+    // **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — دائرةُ دقّتِه ونبضُه، مصدران منفصلان:
+    // **الدائرةُ تُكتب مع كلّ نقطةٍ جديدة، والنبضُ يُحرَّك بخصائص الطبقة وحدَها.**
+    private const val SRC_CUSTOMER_ACC = "trip-customer-accuracy"
+    private const val SRC_CUSTOMER_PULSE = "trip-customer-pulse"
+    private const val LAYER_CUSTOMER_ACC = "trip-customer-accuracy-fill"
+    private const val LAYER_CUSTOMER_ACC_EDGE = "trip-customer-accuracy-edge"
+    private val LAYER_PULSES = listOf("trip-customer-pulse-a", "trip-customer-pulse-b")
+    private const val LAYER_POINTS = "trip-points-layer"
 
     /** **خاصّيّةُ دوران الأيقونة** — تُكتب في النقطة وتُقرأ في الطبقة. */
     private const val PROP_ROTATE = "rotate"
@@ -125,6 +136,8 @@ object Markers {
         driverBearingDeg: Float? = null,
         // **والزبونُ الآن** (٢٠٢٦-١٠-١٦) — علامةٌ ثالثةٌ في طبقة الطرفين نفسِها، وفارغةٌ: لا شيء.
         customer: LatLng? = null,
+        // **ودقّتُه بالمتر** — دائرةٌ ثابتةٌ شفّافةٌ حوله، وفارغةٌ: لا دائرة.
+        customerAccuracyM: Double? = null,
     ) {
         images(context, style, icons)
         // **والخطّ أوّلا ثمّ العلامات** — الترتيب هو ترتيب الرسم:
@@ -154,6 +167,9 @@ object Markers {
         // **وتحت المثلّث** فيبقى المؤشّرُ ظاهراً لا يقطعه خطّ.
         me(style, driver, driverBearingDeg ?: 0f)
         line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
+        // **ودائرةُ الدقّة والنبضُ تحت الدبابيس** — فلا يغطّي دبّوسَ العنوان شيء (قرارُ المالك
+        // ٢٠٢٦-١٠-١٦: «دبّوسُ العنوان يبقى ظاهراً دائماً»).
+        customerLive(style, customer, customerAccuracyM)
         points(style, driver, pickup, dropoff, driverBearingDeg, customer)
         // **والمثلّثُ آخرُ ما يُضاف** — فيعلو المسارَ والطرفين.
         driverIcon(style)
@@ -373,7 +389,7 @@ object Markers {
         }
         style.addSource(GeoJsonSource(SRC_POINTS, collection))
         style.addLayer(
-            SymbolLayer("trip-points-layer", SRC_POINTS).withProperties(
+            SymbolLayer(LAYER_POINTS, SRC_POINTS).withProperties(
                 // **والصورةُ تُقرأ من خاصّيّة النقطة** — لا ثلاثُ طبقاتٍ
                 // متشابهة.
                 PropertyFactory.iconImage("{kind}"),
@@ -408,6 +424,113 @@ object Markers {
             ),
         )
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **موقعُ الزبون المباشر — دائرةُ دقّةٍ ثابتةٌ ونبضٌ حيّ** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الدائرةُ بالأمتار لا بالبكسل** — مضلّعٌ على الأرض نصفُ قطره `accuracy_m`، **فيكبر
+    // ويصغر مع التقريب كما يكبر الشارع**: «هو في هذه الدائرة» يُقرأ على البيوت نفسِها.
+    //
+    // **والنبضُ حلقتان تتّسعان وتبهتان** — كمنارةٍ تقول «حيّ الآن»، **فيُرى من لمحةٍ
+    // أنّ الأخضرَ غيرُ دبّوس العنوان.** **وتُحرَّك بخصائص الطبقة وحدَها** ([pulse]):
+    // لا مصدرَ يُعاد رفعُه ولا هندسةَ تُبنى في كلّ إطار.
+
+    /** **يكتب دائرةَ الدقّة ونقطةَ النبض** — وفارغٌ يُفرغهما فلا يبقى نبضٌ لزبونٍ شاخ موقعُه. */
+    private fun customerLive(style: Style, customer: LatLng?, accuracyM: Double?) {
+        val ring = if (customer != null && accuracyM != null && accuracyM > 0) {
+            val coords = accuracyRing(customer.latitude, customer.longitude, accuracyM)
+                .map { (la, ln) -> Point.fromLngLat(ln, la) }
+            FeatureCollection.fromFeature(Feature.fromGeometry(Polygon.fromLngLats(listOf(coords))))
+        } else {
+            FeatureCollection.fromFeatures(emptyList())
+        }
+        val beacon = customer
+            ?.let { FeatureCollection.fromFeature(Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude))) }
+            ?: FeatureCollection.fromFeatures(emptyList())
+
+        val acc = style.getSourceAs<GeoJsonSource>(SRC_CUSTOMER_ACC)
+        val pulse = style.getSourceAs<GeoJsonSource>(SRC_CUSTOMER_PULSE)
+        if (acc != null && pulse != null) {
+            acc.setGeoJson(ring)
+            pulse.setGeoJson(beacon)
+            return
+        }
+        style.addSource(GeoJsonSource(SRC_CUSTOMER_ACC, ring))
+        style.addSource(GeoJsonSource(SRC_CUSTOMER_PULSE, beacon))
+        addBelowPoints(
+            style,
+            FillLayer(LAYER_CUSTOMER_ACC, SRC_CUSTOMER_ACC).withProperties(
+                PropertyFactory.fillColor(CUSTOMER),
+                PropertyFactory.fillOpacity(MapRoutePalette.CUSTOMER_LIVE_ACCURACY_OPACITY),
+            ),
+        )
+        addBelowPoints(
+            style,
+            LineLayer(LAYER_CUSTOMER_ACC_EDGE, SRC_CUSTOMER_ACC).withProperties(
+                PropertyFactory.lineColor(CUSTOMER),
+                PropertyFactory.lineWidth(1.5f),
+                PropertyFactory.lineOpacity(MapRoutePalette.CUSTOMER_LIVE_EDGE_OPACITY),
+            ),
+        )
+        for (id in LAYER_PULSES) {
+            addBelowPoints(
+                style,
+                CircleLayer(id, SRC_CUSTOMER_PULSE).withProperties(
+                    PropertyFactory.circleColor(CUSTOMER),
+                    PropertyFactory.circleRadius(0f),
+                    PropertyFactory.circleOpacity(0f),
+                    PropertyFactory.circleStrokeColor(CUSTOMER),
+                    PropertyFactory.circleStrokeWidth(2f),
+                    PropertyFactory.circleStrokeOpacity(0f),
+                    PropertyFactory.circlePitchAlignment(
+                        org.maplibre.android.style.layers.Property.CIRCLE_PITCH_ALIGNMENT_MAP,
+                    ),
+                ),
+            )
+        }
+    }
+
+    /** **تحت طبقة الدبابيس إن وُجدت** — فالدبّوسان يعلوان الدائرةَ والنبض. */
+    private fun addBelowPoints(style: Style, layer: org.maplibre.android.style.layers.Layer) {
+        if (style.getLayer(LAYER_POINTS) != null) {
+            style.addLayerBelow(layer, LAYER_POINTS)
+        } else {
+            style.addLayer(layer)
+        }
+    }
+
+    /**
+     * **إطارُ النبض** — `phase` من صفرٍ إلى واحد في كلّ دورة، **والحلقةُ الثانية بنصف دورةٍ
+     * خلف الأولى** فلا يخلو المكانُ من حلقة.
+     *
+     * **خصائصُ طبقتين لا غير** — ولا شيءَ إن لم تُبنَ بعد.
+     */
+    fun pulse(style: Style, phase: Float, density: Float) {
+        LAYER_PULSES.forEachIndexed { i, id ->
+            val layer = style.getLayerAs<CircleLayer>(id) ?: return@forEachIndexed
+            val t = (phase + i * 0.5f) % 1f
+            val fade = 1f - t
+            layer.setProperties(
+                PropertyFactory.circleRadius((PULSE_FROM_DP + (PULSE_TO_DP - PULSE_FROM_DP) * t) * density),
+                PropertyFactory.circleOpacity(MapRoutePalette.CUSTOMER_LIVE_PULSE_FILL_OPACITY * fade),
+                PropertyFactory.circleStrokeOpacity(fade),
+            )
+        }
+    }
+
+    /** **يُطفئ النبض** — زبونٌ شاخ موقعُه أو غاب لا تبقى حلقتُه تنبض. */
+    fun pulseOff(style: Style) {
+        for (id in LAYER_PULSES) {
+            style.getLayerAs<CircleLayer>(id)?.setProperties(
+                PropertyFactory.circleOpacity(0f),
+                PropertyFactory.circleStrokeOpacity(0f),
+            )
+        }
+    }
+
+    private const val PULSE_FROM_DP = 6f
+    private const val PULSE_TO_DP = 34f
 
     private fun line(style: Style, points: List<LatLng>) {
         // **وخطٌّ من نقطةٍ واحدةٍ لا يُرسم** — وإن كان مرسوما يُفرَّغ:
@@ -623,3 +746,25 @@ data class MarkerIcons(
     /** **علامةُ الزبون الآن** (٢٠٢٦-١٠-١٦) — وافتراضُها أيقونةُ الدبّوس بلونٍ آخر. */
     @androidx.annotation.DrawableRes val customer: Int = dropoff,
 )
+
+/**
+ * **دائرةُ الدقّة مضلّعاً على الأرض** — `steps` رأساً حول المركز، والأوّلُ مكرَّرٌ في
+ * الآخر فتنغلق (شرطُ GeoJSON).
+ *
+ * **والمترُ يُحوَّل إلى درجاتٍ بعرض المركز** — درجةُ الطول تقصر كلّما بعُد عن خطّ
+ * الاستواء، **ومن قسم بثابتٍ واحدٍ رسم بيضةً لا دائرة.** **ونصفُ القطر محصور**: دقّةٌ
+ * بآلاف الأمتار لا تُغطّي المدينةَ بالأخضر.
+ */
+fun accuracyRing(lat: Double, lng: Double, radiusM: Double, steps: Int = 48): List<Pair<Double, Double>> {
+    val r = radiusM.coerceIn(1.0, MAX_ACCURACY_RING_M)
+    val dLat = r / 111_320.0
+    val dLng = r / (111_320.0 * kotlin.math.cos(Math.toRadians(lat)).coerceAtLeast(1e-6))
+    val ring = (0 until steps).map { i ->
+        val a = 2 * Math.PI * i / steps
+        (lat + dLat * kotlin.math.sin(a)) to (lng + dLng * kotlin.math.cos(a))
+    }
+    return ring + ring.first()
+}
+
+/** **أكبرُ دائرةِ دقّةٍ تُرسم** — بالمتر. */
+const val MAX_ACCURACY_RING_M = 500.0

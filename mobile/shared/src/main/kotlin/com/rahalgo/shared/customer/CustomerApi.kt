@@ -275,13 +275,12 @@ class CustomerApi(private val api: ApiClient) {
      * **نقطةٌ من موقعه المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — آخرُها وحدَها تُحفظ، **وطلبُه في
      * طريقه وحدَه**: غيرُ ذلك يُردّ `live_location_inactive` فتقف المشاركة.
      */
-    suspend fun shareLive(orderId: String, lat: Double, lng: Double, accuracyM: Double?) {
-        api.call<Ack>(
+    suspend fun shareLive(orderId: String, lat: Double, lng: Double, accuracyM: Double?): Int? =
+        api.call<LiveAck>(
             "/api/v1/orders/$orderId/live-location",
             HttpMethod.Post,
             LiveInput(lat, lng, accuracyM),
-        )
-    }
+        ).maxAccuracyM
 
     /** **«وقّف المشاركة»** — تُمحى النقطةُ فيعود الكابتنُ إلى الدبّوس. */
     suspend fun stopLive(orderId: String) {
@@ -595,6 +594,16 @@ data class TicketDetail(
     @SerialName("order_number") val orderNumber: Long? = null,
     @SerialName("created_at") val createdAt: String = "",
     val replies: List<TicketReply> = emptyList(),
+)
+
+/**
+ * **ردُّ نقطة الموقع** — ومعه حدُّ الدقّة من اللوحة (قرارُ المالك ٢٠٢٦-١٠-١٦)، **فيرشّح
+ * التطبيقُ قراءاتِه برقم اللوحة لا برقمٍ مكتوبٍ فيه** (`LiveSendFilter`). وفارغٌ: محرّكٌ أقدم.
+ */
+@Serializable
+data class LiveAck(
+    val saved: Boolean = false,
+    @SerialName("max_accuracy_m") val maxAccuracyM: Int? = null,
 )
 
 /** **جسمُ نقطة الموقع المباشر** — كما يقرؤه المحرّك (`live_location.go`). */

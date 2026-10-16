@@ -332,8 +332,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و١٩٢ مع `orders.live_location_switch_m`** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **حدٌّ يبدّل
 	// وجهةَ طريق السائق** من الدبّوس إلى موقع الزبون المباشر.
-	if d.BehaviourSettings != 192 {
-		t.Errorf("إعداداتُ السلوك = %d لا 192 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و١٩٤ مع `orders.live_location_max_accuracy_m` و`orders.near_notice_m`** (قرارُ المالك
+	// ٢٠٢٦-١٠-١٦) — **دقّةٌ يُشترط تحتها التحويل، ومسافةُ «الكابتن قريب منك».**
+	if d.BehaviourSettings != 194 {
+		t.Errorf("إعداداتُ السلوك = %d لا 194 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

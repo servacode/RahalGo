@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -169,6 +170,11 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	if err := s.saveTrackBatch(r.Context(), uid, kept); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **«الكابتن قريب منك»** (قرارُ المالك ٢٠٢٦-١٠-١٦، `near_notice.go`) — **من أحدث نقطةٍ
+	// وحدَها وإن كانت حديثة**: دفعةٌ أفرغها طابورٌ بعد انقطاعٍ تقول أين كان لا أين هو.
+	if last := kept[len(kept)-1]; now.Sub(last.At) <= orders.LiveFreshFor {
+		s.notifyNearCustomers(r.Context(), uid, last.Lat, last.Lng)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"accepted": len(kept),

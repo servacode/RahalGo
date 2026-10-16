@@ -46,12 +46,20 @@ func (s *Server) liveAllowed(ctx context.Context, uid, orderID string) bool {
 	return n <= liveMaxPerMinute
 }
 
-// liveSwitchM **حدُّ تحويل الطريق إلى الزبون** — من اللوحة، وافتراضُه إن غاب المخزن.
-func (s *Server) liveSwitchM(ctx context.Context) int64 {
+// liveSetting **رقمٌ من اللوحة** — وافتراضُه إن غاب المخزن.
+func (s *Server) liveSetting(ctx context.Context, key string) int64 {
 	if s.settings == nil {
-		return settings.Default(orders.SettingLiveSwitchM)
+		return settings.Default(key)
 	}
-	return s.settings.GetInt(ctx, orders.SettingLiveSwitchM)
+	return s.settings.GetInt(ctx, key)
+}
+
+// liveRule **حدّا تحويل الطريق إلى الزبون** — البُعدُ عن الدبّوس وأسوأُ دقّةٍ مقبولة.
+func (s *Server) liveRule(ctx context.Context) orders.LiveRule {
+	return orders.LiveRule{
+		SwitchM:      s.liveSetting(ctx, orders.SettingLiveSwitchM),
+		MaxAccuracyM: s.liveSetting(ctx, orders.SettingLiveMaxAccuracyM),
+	}
 }
 
 // notifyCustomerLive **إشارةٌ إلى غرفة السائق** — بلا موقعٍ ولا حمولة طلب.
@@ -95,7 +103,12 @@ func (s *Server) handleCustomerLiveLocation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	s.notifyCustomerLive(driverID, orderID)
-	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})
+	// **والحدُّ يعود إلى هاتف الزبون** (قرارُ المالك ٢٠٢٦-١٠-١٦) — به يرشّح قراءاتِه
+	// (`LiveSendFilter`)، **فلا يُكتب رقمٌ في التطبيق ورقمٌ في اللوحة.**
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"saved":          true,
+		"max_accuracy_m": s.liveSetting(r.Context(), orders.SettingLiveMaxAccuracyM),
+	})
 }
 
 // handleStopCustomerLiveLocation **«وقّف المشاركة»** — تُمحى النقطةُ فيعود السائقُ إلى الدبّوس.
@@ -124,7 +137,7 @@ func (s *Server) attachDriverLive(ctx context.Context, driverID string, list []d
 	if len(ids) == 0 {
 		return
 	}
-	got, err := s.orders.LiveFor(ctx, ids, driverID, s.liveSwitchM(ctx))
+	got, err := s.orders.LiveFor(ctx, ids, driverID, s.liveRule(ctx))
 	if err != nil {
 		s.logger.Warn("موقعُ الزبون: تعذّرت القراءة", "driver", driverID, "error", err)
 		return
@@ -138,9 +151,9 @@ func (s *Server) attachDriverLive(ctx context.Context, driverID string, list []d
 
 // liveRouteTarget **أيُقاد السائقُ إلى الزبون لا إلى الدبّوس؟** — ويردّ النقطةَ إن نعم.
 //
-// **والحكمُ واحد** (`LivePoint.Switch`): بعدُه عن الدبّوس فوق الحدّ، **وحديثٌ لا شائخ.**
+// **والحكمُ واحد** (`LivePoint.Switch`): بعدُه عن الدبّوس فوق الحدّ، **ودقيقٌ، وحديثٌ لا شائخ.**
 func (s *Server) liveRouteTarget(ctx context.Context, orderID, driverID string) *orders.LivePoint {
-	got, err := s.orders.LiveFor(ctx, []string{orderID}, driverID, s.liveSwitchM(ctx))
+	got, err := s.orders.LiveFor(ctx, []string{orderID}, driverID, s.liveRule(ctx))
 	if err != nil {
 		s.logger.Warn("موقعُ الزبون: تعذّرت قراءةُ الوجهة", "order", orderID, "error", err)
 		return nil

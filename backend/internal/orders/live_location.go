@@ -37,6 +37,23 @@ const LiveFreshFor = 2 * time.Minute
 // SettingLiveSwitchM **كم يبعد الزبونُ عن الدبّوس قبل أن يتحوّل الطريقُ إليه** — بالمتر.
 const SettingLiveSwitchM = "orders.live_location_switch_m"
 
+// SettingLiveMaxAccuracyM **أسوأُ دقّةٍ تُعدّ قراءةً دقيقة** — بالمتر (قرارُ المالك ٢٠٢٦-١٠-١٦).
+//
+// **ما فوقها يُرى ولا يُقاد إليه**: نقطةٌ بدقّةِ ستّين متراً تقول «هو في الحارة»
+// لا «هو عند الباب»، **وطريقٌ يتحوّل إليها يأخذ السائقَ إلى بيت الجيران.**
+const SettingLiveMaxAccuracyM = "orders.live_location_max_accuracy_m"
+
+// SettingNearNoticeM **كم يقترب الكابتنُ قبل أن يُنبَّه الزبون** — بالمتر (قرارُ المالك ٢٠٢٦-١٠-١٦).
+const SettingNearNoticeM = "orders.near_notice_m"
+
+// LiveRule **حدّا الحكم معاً** — بُعدُ التحويل وأسوأُ دقّةٍ مقبولة، من اللوحة.
+//
+// **يُقرآن مرّةً ويُمرَّران معاً** — فلا يقرأ بابٌ حدّاً من اللوحة وآخرُ افتراضَه.
+type LiveRule struct {
+	SwitchM      int64
+	MaxAccuracyM int64
+}
+
 // LiveStatuses **متى يُقبل الموقعُ المباشر** — من الإسناد إلى الباب.
 //
 // **وما قبل الإسناد لا سائقَ يراه**، **وما بعد التسليم لا طريقَ يُقاد عليه.**
@@ -61,14 +78,27 @@ type LivePoint struct {
 	PinGapM float64 `json:"pin_gap_m"`
 	// SwitchM **الحدُّ الذي يتحوّل بعده الطريقُ إلى الزبون** — من الإعدادات.
 	SwitchM int64 `json:"switch_m"`
+	// Precise **أدقيقةٌ هي؟** — دقّتُها معروفةٌ ودون `orders.live_location_max_accuracy_m`
+	// (قرارُ المالك ٢٠٢٦-١٠-١٦). **والتقريبيّةُ تُرى على الخريطة ولا يتحوّل إليها طريق.**
+	Precise bool `json:"precise"`
+}
+
+// precise **الدقّةُ دون الحدّ** — **ودقّةٌ مجهولةٌ ليست دقيقة**: جهازٌ لم يقل كم
+// يخطئ لا يُصدَّق أنّه عند الباب.
+func precise(accuracyM *float64, maxAccuracyM int64) bool {
+	return accuracyM != nil && *accuracyM <= float64(maxAccuracyM)
 }
 
 // Switch **أيُقاد السائقُ إلى الزبون لا إلى الدبّوس؟**
 //
-// **حكمٌ واحدٌ يقرؤه الطريقُ في الخادم** (`driver_route.go`) **وتقرؤه شاشةُ
-// السائق بالرقمين نفسَيهما** — فلا يرسم التطبيقُ طريقاً والخادمُ يحسب غيرَه.
+// **شرطان معاً** (قرارُ المالك ٢٠٢٦-١٠-١٦): **بعيدٌ عن الدبّوس فوق الحدّ، ودقيقٌ.**
+// **فنقطةٌ داخلَ بيتٍ بدقّةِ أربعين متراً لا تسحب الطريقَ** عن دبّوسٍ قد يكون صحيحاً.
+//
+// **حكمٌ واحدٌ يقرؤه الطريقُ في الخادم** (`driver_route.go`) **وتنبيهُ القرب**
+// (`NearNoticeDue`) **وتقرؤه شاشةُ السائق بالحقول نفسِها** (`pin_gap_m` · `switch_m`
+// · `precise`) — فلا يرسم التطبيقُ طريقاً والخادمُ يحسب غيرَه.
 func (p *LivePoint) Switch() bool {
-	return p != nil && p.PinGapM > float64(p.SwitchM)
+	return p != nil && p.Precise && p.PinGapM > float64(p.SwitchM)
 }
 
 // SaveLive **يكتب آخرَ نقطةٍ للزبون** — ويردّ سائقَ الطلب ليُنبَّه.
@@ -154,7 +184,7 @@ func (s *Service) StopLive(ctx context.Context, orderID, customerID string) (str
 // **و`driverID` غيرُ الفارغ يشترط أنّ الطلبَ طلبُه** — **فسائقٌ آخرُ لا يراه
 // ولو مرّ الطلبُ بقائمته** (عرضٌ أو طابور). **والفارغُ للمكتب وحدَه.**
 func (s *Service) LiveFor(ctx context.Context, orderIDs []string, driverID string,
-	switchM int64) (map[string]*LivePoint, error) {
+	rule LiveRule) (map[string]*LivePoint, error) {
 	out := map[string]*LivePoint{}
 	if len(orderIDs) == 0 {
 		return out, nil
@@ -176,10 +206,11 @@ func (s *Service) LiveFor(ctx context.Context, orderIDs []string, driverID strin
 	defer rows.Close()
 	for rows.Next() {
 		var id string
-		p := &LivePoint{SwitchM: switchM}
+		p := &LivePoint{SwitchM: rule.SwitchM}
 		if err := rows.Scan(&id, &p.Lat, &p.Lng, &p.AccuracyM, &p.At, &p.PinGapM); err != nil {
 			return nil, err
 		}
+		p.Precise = precise(p.AccuracyM, rule.MaxAccuracyM)
 		out[id] = p
 	}
 	return out, rows.Err()

@@ -1513,6 +1513,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 ?.let { LatLng(it.lat, it.lng) },
             liveAgeSec = order.customerLive
                 ?.let { com.rahalgo.driver.trip.liveAgeSec(it, System.currentTimeMillis()) } ?: -1L,
+            liveAccuracyM = order.customerLive?.accuracyM,
+            livePrecise = order.customerLive?.precise == true,
             liveSwitched = liveDoor(order) != null,
             liveStale = liveStaleFor == order.id && liveDoor(order) == null,
             door = (liveDoor(order) ?: com.rahalgo.driver.trip.dropoffPoint(order))

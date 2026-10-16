@@ -637,6 +637,9 @@ fun TripScreen(
             dropoff = if (state.step >= TripStep.PICKED_UP) state.dropoff else null,
             // **والزبونُ الآن علامةٌ ثانيةٌ بلونٍ غيرِ الدبّوس** (٢٠٢٦-١٠-١٦) — بعد الاستلام وحدَه.
             customer = if (state.step >= TripStep.PICKED_UP) state.customerLive else null,
+            // **ودائرةُ دقّته ونبضُه حوله** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **ودبّوسُ العنوان يبقى
+            // ظاهراً كما هو** (`dropoff` أعلاه): يرى السائقُ الاثنين فيعرف أيُّهما الصحيح.
+            customerAccuracyM = if (state.step >= TripStep.PICKED_UP) state.liveAccuracyM else null,
             // **والخطُّ المرسومُ هو الطريقُ الذي يُرشد عليه المحرّك** (فحصُ الملاحة
             // ١.٢): كان من نموذج الطلبات فبقي القديمُ بعد إعادة الحساب، **وقُصَّ
             // بتقدّمٍ يُقاس على طريقٍ آخر.**
@@ -1277,8 +1280,16 @@ private fun LiveCustomerNotice(state: TripState) {
         } else {
             stringResource(R.string.trip_live_age_min, state.liveAgeSec / 60)
         }
+        // **«الزبون ضمن X م · قبل Y ث»** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **والتقريبيُّ يُقال عنه
+        // «موقع تقريبي»**: يُرى ولا يتحوّل إليه الطريق، فلا يظنّ السائقُ الملاحةَ معطوبة.
+        val within = state.liveAccuracyM?.let { kotlin.math.ceil(it).toLong().coerceAtLeast(1L) }
+        val line = if (within != null) {
+            stringResource(R.string.trip_live_within, within, age)
+        } else {
+            stringResource(R.string.trip_live_now, age)
+        }
         Text(
-            text = stringResource(R.string.trip_live_now, age),
+            text = if (state.livePrecise) line else line + stringResource(R.string.trip_live_approx),
             color = Rahal.colors.onBrand,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,

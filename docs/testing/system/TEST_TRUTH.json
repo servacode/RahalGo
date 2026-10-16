@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 96,
-    "notify_targeted": 39,
+    "notify_sites": 97,
+    "notify_targeted": 40,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 236,
-    "behaviour_settings": 192,
+    "setting_defs": 238,
+    "behaviour_settings": 194,
     "order_fields": 106,
-    "test_files": 593,
-    "test_funcs": 2380
+    "test_files": 594,
+    "test_funcs": 2384
   },
   "flows": [
     {
@@ -5741,6 +5741,27 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "orders.live_location_max_accuracy_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "orders.live_location_switch_m",
       "group": "drivers",
       "kind": "int",
@@ -5807,6 +5828,27 @@
       "flows": [
         "F-01",
         "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.near_notice_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
       ],
       "apps": [
         "admin",
@@ -26997,6 +27039,30 @@
     {
       "name": "TestLiveLocation_RefusedWhenOrderNotActive",
       "file": "internal/server/live_location_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_ImprecisePointNeverSwitches",
+      "file": "internal/server/live_precision_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_PreciseFarPointSwitchesAt50",
+      "file": "internal/server/live_precision_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNearNotice_OncePerOrderAfterPickup",
+      "file": "internal/server/live_precision_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNearNotice_TargetIsThePreciseLivePoint",
+      "file": "internal/server/live_precision_test.go",
       "package": "server",
       "orphan": true
     },

@@ -19,6 +19,7 @@ import {
   getMessages,
   defaultLocale,
   fmtDateTime,
+  fmtNum,
   errorText,
 } from "@rahalgo/i18n";
 import {
@@ -59,6 +60,31 @@ interface Detail {
   total: number;
   created_at: string;
   timeline: Step[];
+  /**
+   * **موقعُ الزبون المباشر إن شاركه وهو حديث** (قرارُ المالك ٢٠٢٦-١٠-١٦) — يصل لمن يرى
+   * العنوانَ وحدَه (`admin_orders_handlers.go`).
+   */
+  customer_live?: {
+    pin_gap_m: number;
+    at: string;
+    accuracy_m: number | null;
+    precise: boolean;
+  } | null;
+}
+
+/**
+ * **سطرُ موقع الزبون المباشر** — «يبعد X م عن العنوان · قبل Y ث»، **والتقريبيُّ يُقال عنه**:
+ * يُرى ولا يتحوّل إليه طريقُ الكابتن.
+ */
+function liveLine(live: NonNullable<Detail["customer_live"]>, nowMs: number): string {
+  const ageSec = Math.max(0, Math.round((nowMs - new Date(live.at).getTime()) / 1000));
+  const age =
+    ageSec < 60
+      ? H.liveAgeSec.replace("{n}", fmtNum(ageSec))
+      : H.liveAgeMin.replace("{n}", fmtNum(Math.floor(ageSec / 60)));
+  const gap = live.pin_gap_m < 0 ? "—" : fmtNum(Math.round(live.pin_gap_m));
+  const line = H.liveLine.replace("{m}", gap).replace("{age}", age);
+  return live.precise ? line : line + H.liveApprox;
 }
 
 interface ChatLine {
@@ -154,6 +180,9 @@ export function OrderDetailPanel({
             </p>
             {order.merchant_name && <p>{order.merchant_name}</p>}
             {order.driver_name && <p>{order.driver_name}</p>}
+            {order.customer_live && (
+              <p className="font-bold text-success">{liveLine(order.customer_live, Date.now())}</p>
+            )}
             <p className="font-bold">
               <Money value={order.total} />
             </p>

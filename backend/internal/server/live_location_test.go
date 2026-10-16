@@ -56,11 +56,11 @@ func liveCall(h http.HandlerFunc, method, orderID, userID, role, body string) *h
 	return w
 }
 
-// farFromPin **نقطةٌ على ثلاثمئة مترٍ ونيّفٍ شمالَ الدبّوس** — فوق الحدّ الافتراضيّ (١٥٠م).
+// farFromPin **نقطةٌ دقيقةٌ على ثلاثمئة مترٍ ونيّفٍ شمالَ الدبّوس** — فوق الحدّ الافتراضيّ (٥٠م).
 const farFromPin = `{"lat": 35.9558, "lng": 39.0079, "accuracy_m": 12}`
 
-// nearPin **نقطةٌ على نحو خمسين متراً** — دون الحدّ.
-const nearPin = `{"lat": 35.95325, "lng": 39.0079, "accuracy_m": 8}`
+// nearPin **نقطةٌ على نحو عشرين متراً** — دون الحدّ (٥٠م منذ قرار المالك ٢٠٢٦-١٠-١٦).
+const nearPin = `{"lat": 35.9530, "lng": 39.0079, "accuracy_m": 8}`
 
 func (f *driverFixture) liveRows(t *testing.T, orderID string) int {
 	t.Helper()
@@ -185,15 +185,15 @@ func TestLiveLocation_DriverSeesFreshOmitsStale(t *testing.T) {
 	if !ok {
 		t.Fatal("السائقُ المُسنَدُ لا يرى موقعَ الزبون الحديث")
 	}
-	for _, k := range []string{"lat", "lng", "accuracy_m", "at", "pin_gap_m", "switch_m"} {
+	for _, k := range []string{"lat", "lng", "accuracy_m", "at", "pin_gap_m", "switch_m", "precise"} {
 		if _, has := p[k]; !has {
 			t.Errorf("customer_live بلا %q: %v", k, p)
 		}
 	}
 	gap, _ := p["pin_gap_m"].(float64)
 	sw, _ := p["switch_m"].(float64)
-	if gap < 300 || gap > 360 || sw != 150 {
-		t.Errorf("بُعدُ الدبّوس %v والحدُّ %v — المتوقّع نحو ٣٣٣م وحدّ ١٥٠", gap, sw)
+	if gap < 300 || gap > 360 || sw != 50 {
+		t.Errorf("بُعدُ الدبّوس %v والحدُّ %v — المتوقّع نحو ٣٣٣م وحدّ ٥٠", gap, sw)
 	}
 	// **والطريقُ يتحوّل إليه** — الحكمُ نفسُه الذي تقرؤه الشاشة.
 	if s := f.srv.liveRouteTarget(context.Background(), orderID, d); s == nil {
@@ -275,7 +275,8 @@ func TestLiveLocation_OtherDriversAndMerchantNeverSee(t *testing.T) {
 			t.Fatalf("سائقٌ غيرُ مُسنَدٍ رأى موقعَ الزبون: %v", o)
 		}
 	}
-	got, err := f.srv.orders.LiveFor(context.Background(), []string{orderID}, other, 150)
+	got, err := f.srv.orders.LiveFor(context.Background(), []string{orderID}, other,
+		orders.LiveRule{SwitchM: 50, MaxAccuracyM: 30})
 	if err != nil || len(got) != 0 {
 		t.Fatalf("LiveFor ردّ لسائقٍ غيرِ مُسنَد: %v %v", got, err)
 	}

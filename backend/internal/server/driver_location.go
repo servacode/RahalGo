@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // StaleLocationAfter بعدها تُعامَل النقطةُ كأنّها غيرُ موجودة.
@@ -114,14 +115,20 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// **ونقطةٌ أقدمُ ممّا كُتب لا تدهسه** — نبضتان تصلان بغير ترتيبهما.
-	if _, err := s.pg.Exec(r.Context(), `
+	tag, err := s.pg.Exec(r.Context(), `
 		UPDATE users
 		SET last_location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
 		    last_location_at = $4
 		WHERE id = $1 AND (last_location_at IS NULL OR last_location_at <= $4)`,
-		uid, req.Lng, req.Lat, at); err != nil {
+		uid, req.Lng, req.Lat, at)
+	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **«الكابتن قريب منك»** (قرارُ المالك ٢٠٢٦-١٠-١٦، `near_notice.go`) — **من الموضع الذي
+	// صار الحاليّ وحدَه**: نقطةٌ قديمةٌ لم تُكتب لا تقول أين هو الآن.
+	if tag.RowsAffected() > 0 && now.Sub(at) <= orders.LiveFreshFor {
+		s.notifyNearCustomers(r.Context(), uid, req.Lat, req.Lng)
 	}
 
 	// **والأثرُ يُكتب مع الموضع** — **ونقطةٌ واحدةٌ لا تقول اتّجاهاً**: من هو

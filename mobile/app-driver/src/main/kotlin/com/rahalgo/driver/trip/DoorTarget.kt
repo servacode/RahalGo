@@ -52,6 +52,10 @@ fun liveFresh(live: CustomerLive?, nowMs: Long): Boolean {
 /**
  * **الوجهةُ بعد الاستلام.**
  *
+ * **ويتحوّل الطريقُ إلى الزبون بشرطين** (قرارُ المالك ٢٠٢٦-١٠-١٦): **أبعدُ من حدّ اللوحة
+ * عن الدبّوس، ودقيقٌ** (`precise` من المحرّك). **والتقريبيُّ يبقى علامةً على الخريطة
+ * بدائرة دقّته** — ولا يسحب السائقَ عن دبّوسٍ قد يكون صحيحاً.
+ *
  * @param hadLive **أكان يُقاد إلى الزبون قبل هذه القراءة؟** — فإن غاب الموقعُ أو شاخ
  * قيل له «رجعنا للعنوان»، **ومن لم يُقَد إليه قطّ لا يُشغَل بكلمة.**
  */
@@ -59,6 +63,6 @@ fun doorTarget(live: CustomerLive?, hadLive: Boolean, nowMs: Long): DoorTarget {
     if (live == null) return DoorTarget.Pin(staleLive = hadLive)
     val age = liveAgeSec(live, nowMs)
     if (age == null || age > LIVE_FRESH_SEC) return DoorTarget.Pin(staleLive = hadLive)
-    if (live.pinGapM > live.switchM.toDouble()) return DoorTarget.Live(live.lat, live.lng, age)
+    if (live.precise && live.pinGapM > live.switchM.toDouble()) return DoorTarget.Live(live.lat, live.lng, age)
     return DoorTarget.Pin()
 }
