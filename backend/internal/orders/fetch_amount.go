@@ -231,7 +231,7 @@ func (s *Service) notifyFetchAmount(ctx context.Context, o *Order) {
 		UserID: *p.merchantOwner, Kind: notifications.KindOrder,
 		Title:  "السائق دفع مبلغ بمكان الاستلام — بانتظار موافقتك",
 		Body:   fmt.Sprintf("#%d — المبلغ %d", o.Number, *o.FetchAmount),
-		Entity: "order", EntityID: o.ID, Href: "/merchant/deliveries",
+		Entity: "order", EntityID: o.ID, Href: "/portal/orders",
 		Apps: []string{notifications.AppMerchant},
 	})
 }

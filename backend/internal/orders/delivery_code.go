@@ -178,7 +178,7 @@ func (s *Service) sendDeliveryCode(ctx context.Context, orderID string, rt *code
 			s.notify.Notify(ctx, notifications.Input{
 				UserID: rt.merchant, Kind: notifications.KindOrder,
 				Title: "كود استلام التوصيلة", Body: FetchCodeText(rt.number, rt.code),
-				Entity: "order", EntityID: orderID, Href: "/merchant/deliveries",
+				Entity: "order", EntityID: orderID, Href: "/portal/orders",
 				Apps: []string{notifications.AppMerchant},
 			})
 		}
