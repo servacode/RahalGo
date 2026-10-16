@@ -103,7 +103,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
      * الأجرة** (الإحضارُ ذهابٌ وإياب) **وأسماءَ الحقول**: المستلِمُ في التوصيل ومكانُ الاستلام
      * في الإحضار.
      */
-    var mode by mutableStateOf("send")
+    // **لا وضعَ مختاراً افتراضاً** (ملاحظةُ المالك ٢٠٢٦-١٠-١٦) — يختار «توصيل» أو «إحضار» صراحةً.
+    var mode by mutableStateOf("")
         private set
 
     /**
@@ -252,7 +253,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         if (storeId.isEmpty()) return
         viewModelScope.launch {
             try {
-                val q = api.quote(storeId, lat, lng, mode)
+                val q = api.quote(storeId, lat, lng, mode.ifEmpty { "send" })
                 quote = q
                 // **والمحفظةُ لا تكفي ⇒ لا يبقى «من محفظتي» مختاراً** — لا دين (٢٠٢٦-١٠-١٥).
                 if (payer == "merchant" && !q.merchantCanPay) payer = ""
@@ -328,7 +329,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 parcel = ""
                 driverNote = ""
                 payer = ""
-                mode = "send"
+                mode = ""
                 collectOn = false
                 collectAmount = ""
                 link = ""
@@ -407,28 +408,60 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             }
         }
 
-        // ── «توصيل» أو «إحضار» — في أعلى الشاشة، والتوصيلُ مختارٌ افتراضاً (٢٠٢٦-١٠-١٥) ──
+        // ── «توصيل» أو «إحضار» — زرّان كبيران، ولا مختارَ افتراضاً (ملاحظةُ المالك ٢٠٢٦-١٠-١٦):
+        // «لازم يكونن زرين واضحين لازم يختار وحدة منهن». **والنموذجُ لا يظهر قبل الاختيار.**
         val fetch = vm.mode == "fetch"
         Spacer(Modifier.height(12.dp))
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            listOf("send" to R.string.md_mode_send, "fetch" to R.string.md_mode_fetch).forEach { (key, label) ->
-                FilterChip(
-                    selected = vm.mode == key,
-                    onClick = { vm.pickMode(key) },
-                    enabled = !vm.busy,
-                    label = { Text(stringResource(label), fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.weight(1f),
-                )
+            listOf(
+                Triple("send", R.string.md_mode_send, R.string.md_mode_send_sub),
+                Triple("fetch", R.string.md_mode_fetch, R.string.md_mode_fetch_sub),
+            ).forEach { (key, label, sub) ->
+                val on = vm.mode == key
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(Rahal.shape.md)
+                        .background(if (on) Rahal.colors.brand.copy(alpha = 0.10f) else Rahal.colors.canvas)
+                        .border(
+                            if (on) 2.dp else Rahal.stroke.hair,
+                            if (on) Rahal.colors.brand else Rahal.colors.line,
+                            Rahal.shape.md,
+                        )
+                        .clickable(enabled = !vm.busy) { vm.pickMode(key) }
+                        .padding(horizontal = 12.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        stringResource(label),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = if (on) Rahal.colors.brand else Rahal.colors.ink,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(sub),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
             }
         }
-        Text(
-            stringResource(if (fetch) R.string.md_mode_fetch_sub else R.string.md_mode_send_sub),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        if (vm.mode.isEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.md_mode_pick),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            return@Screen
+        }
 
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
@@ -539,11 +572,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
                 )
-                Text(
-                    stringResource(DeliveryTexts.collectHint(fetch)),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                // **بلا سطر شرح** (ملاحظةُ المالك ٢٠٢٦-١٠-١٦: «العبارة شيلها ماتلزم اصلا»).
             }
         }
         if (vm.collectOn) {

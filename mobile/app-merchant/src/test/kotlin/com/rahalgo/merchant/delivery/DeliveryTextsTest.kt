@@ -34,7 +34,6 @@ class DeliveryTextsTest {
     fun `fetch picks the pay-at-pickup texts — send keeps the collect texts`() {
         assertEquals(R.string.md_collect_q_fetch, DeliveryTexts.collectQuestion(true))
         assertEquals(R.string.md_collect_q, DeliveryTexts.collectQuestion(false))
-        assertEquals(R.string.md_collect_sub_fetch, DeliveryTexts.collectHint(true))
         assertEquals(R.string.md_collect_amount_fetch, DeliveryTexts.collectAmountLabel(true))
         assertEquals(R.string.md_collect_amount, DeliveryTexts.collectAmountLabel(false))
         assertEquals(R.string.md_row_collect_fetch, DeliveryTexts.collectRow(true))
@@ -45,13 +44,9 @@ class DeliveryTextsTest {
     @Test
     fun `the owner's words, letter for letter`() {
         assertEquals("بدك السائق يدفع مبلغ بمكان الاستلام؟", text("md_collect_q_fetch"))
-        assertEquals(
-            "السائق بيدفع المبلغ من جيبه بمكان الاستلام، وبياخده منك لما يوصل. ما بيدخل حساب المنصة",
-            text("md_collect_sub_fetch"),
-        )
         assertEquals("المبلغ يلي بيدفعه (ل.س)", text("md_collect_amount_fetch"))
         // **ولا «يقبض» في نصوص الإحضار** — هو يدفع.
-        for (n in listOf("md_collect_q_fetch", "md_collect_sub_fetch", "md_collect_amount_fetch", "md_row_collect_fetch")) {
+        for (n in listOf("md_collect_q_fetch", "md_collect_amount_fetch", "md_row_collect_fetch")) {
             assertFalse("«$n» يقول يقبض", text(n).contains("يقبض"))
         }
     }

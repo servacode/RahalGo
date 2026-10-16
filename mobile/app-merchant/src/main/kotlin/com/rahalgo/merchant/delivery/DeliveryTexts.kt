@@ -21,10 +21,6 @@ internal object DeliveryTexts {
     fun collectQuestion(fetch: Boolean): Int =
         if (fetch) R.string.md_collect_q_fetch else R.string.md_collect_q
 
-    /** **شرحُه تحت السؤال.** */
-    fun collectHint(fetch: Boolean): Int =
-        if (fetch) R.string.md_collect_sub_fetch else R.string.md_collect_sub
-
     /** **عنوانُ الحقل** — «يلي بيقبضه» أو «يلي بيدفعه». */
     fun collectAmountLabel(fetch: Boolean): Int =
         if (fetch) R.string.md_collect_amount_fetch else R.string.md_collect_amount

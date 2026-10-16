@@ -381,6 +381,7 @@
     <string name="md_mode_send">توصيل</string>
     <string name="md_mode_fetch">إحضار</string>
     <string name="md_mode_send_sub">السائق بياخد الغرض من عندك وبيوصّله للمستلم</string>
+    <string name="md_mode_pick">اختار نوع التوصيلة لتكمّل</string>
     <string name="md_mode_fetch_sub">السائق بيروح عالعنوان، بياخد الغرض، وبيجيبه لعندك</string>
     <string name="md_name_fetch">اسم الشخص بمكان الاستلام</string>
     <string name="md_phone_fetch">رقم الشخص بمكان الاستلام</string>
@@ -390,7 +391,6 @@
     <string name="md_fee_no_point">ما حدّدت موقع المستلم — الأجرة هي الأساسية بس</string>
     <string name="md_fee_distance">الأجرة حسب المسافة: %1$s كم</string>
     <string name="md_collect_q">بدك السائق يقبض مبلغ من المستلم؟</string>
-    <string name="md_collect_sub">السائق بيدفعلك المبلغ من جيبه، وبياخده من المستلم. ما بيدخل حساب المنصة</string>
     <string name="md_collect_amount">المبلغ يلي بيقبضه (ل.س)</string>
     <string name="md_collect_missing">مبلغ القبض</string>
     <string name="md_row_collect">بيقبض من المستلم %1$s ل.س — لك</string>
@@ -403,7 +403,6 @@
     <string name="md_link_how_fetch">افتح موقع مكان الاستلام بالواتساب ← مشاركة ← انسخ الرابط والصقه هون</string>
     <string name="md_link_not_found_fetch">هالرابط ما فيه موقع — اطلب من الشخص بمكان الاستلام يبعتلك موقعه من الواتساب</string>
     <string name="md_collect_q_fetch">بدك السائق يدفع مبلغ بمكان الاستلام؟</string>
-    <string name="md_collect_sub_fetch">السائق بيدفع المبلغ من جيبه بمكان الاستلام، وبياخده منك لما يوصل. ما بيدخل حساب المنصة</string>
     <!-- **وفي «إحضار» المبلغُ يُدفع لا يُقبض** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والخطواتُ إلى مكان الاستلام ثمّ إليك. -->
     <string name="md_collect_amount_fetch">المبلغ يلي بيدفعه (ل.س)</string>
     <string name="md_collect_missing_fetch">مبلغ الدفع</string>
