@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/envguard"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/officecash"
@@ -648,7 +649,18 @@ type ledgerCheck struct {
 // handleTreasuryHealth **فحوصُ `moneycheck` نفسُها** — كلٌّ أحمرُ أو أخضر، والخرقُ
 // بصفوفه الأولى. **ولا فحصَ ثانٍ يُكتب للشاشة** — الحزمةُ نفسُها (`fininv`).
 func (s *Server) handleTreasuryHealth(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	out, bad := s.ledgerHealth(r.Context())
+	commit, _ := envguard.BuildInfo()
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"checks": out, "failing": bad, "total": len(out), "checked_at": time.Now(),
+		"source_commit": commit,
+	})
+}
+
+// ledgerHealth **الفحوصُ نفسُها بلا HTTP** — تقرؤها الشاشةُ والراصدُ كلَّ ساعة
+// (مراقبةُ المنصّة — الدفعةُ الثالثة ٢٠٢٦-١٠-١٧). **مصدرٌ واحدٌ لا نسختان**:
+// ما تراه في «صحة الدفتر» هو بعينه ما يُنبَّه به على الواتساب.
+func (s *Server) ledgerHealth(ctx context.Context) ([]ledgerCheck, int) {
 	out := []ledgerCheck{}
 	bad := 0
 	// **وأنواعُ القيد أوّلاً** — نوعٌ بلا عقدٍ يجعل ما بعده مقيساً بمسطرةٍ ناقصة.
@@ -700,7 +712,5 @@ func (s *Server) handleTreasuryHealth(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, lc)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"checks": out, "failing": bad, "total": len(out), "checked_at": time.Now(),
-	})
+	return out, bad
 }

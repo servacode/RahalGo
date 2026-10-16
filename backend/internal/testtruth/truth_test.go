@@ -338,8 +338,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و١٩٨ مع مفاتيح أجرة «لدي توصيلة» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-١٦):
 	// `delivery.merchant_{base_fee,by_distance,per_km,max_fee}` — **كانت تقرأ مفاتيحَ العاديّ.**
-	if d.BehaviourSettings != 198 {
-		t.Errorf("إعداداتُ السلوك = %d لا 198 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٠٠ مع `monitoring.money_check` و`monitoring.db_slow_ms`** (مراقبةُ المنصّة —
+	// الدفعةُ الثالثة ٢٠٢٦-١٠-١٧) — **الدفترُ كلَّ ساعة، وبطءُ القاعدة.**
+	if d.BehaviourSettings != 200 {
+		t.Errorf("إعداداتُ السلوك = %d لا 200 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

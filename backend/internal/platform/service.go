@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,6 +29,11 @@ import (
 // **ولو كان الجدولُ يسري بمجرّد وجود صفوفٍ لَسرى نصفُ جدولٍ يُكتب على
 // دفعات** — **ومن أدخل الأحدَ وحدَه أغلق ستّةَ أيّامٍ بلا أن يقصد.**
 const EnforcedKey = "hours.platform_enforced"
+
+// ClosedTextKey **نصُّ «خارج الدوام» بكلام المالك** (طلبُه ٢٠٢٦-١٠-١٧: «ماخذة مساحة كبيرة») —
+// **فارغُه يُبقي نصَّ التطبيق.** والتطبيقُ يقدّم نصَّ المحرّك على نصّه (`ServiceReason.text`)،
+// **فيُقصَّر بلا نسخةٍ جديدة.**
+const ClosedTextKey = "app_text.platform_closed_now"
 
 // ErrClosureRange **مدّةُ إيقافٍ لا تصلح** — موعدُ عودةٍ مضى.
 //
@@ -127,7 +133,27 @@ func (s *Service) State(ctx context.Context, q dbtx.Querier) (State, error) {
 	if err != nil {
 		return State{}, err
 	}
-	return Decide(s.now(), s.settings.GetBool(ctx, EnforcedKey), sch, c), nil
+	return WithClosedText(Decide(s.now(), s.settings.GetBool(ctx, EnforcedKey), sch, c), s.closedText(ctx)), nil
+}
+
+// WithClosedText **نصُّ المالك لخارج الدوام وحدَه** — لا يمسّ الإيقافَ المؤقّت (له نصُّه)
+// ولا المفتوح، **وفارغُه لا يغيّر شيئاً.**
+func WithClosedText(st State, text string) State {
+	if st.Reason == ReasonPlatformClosedNow && st.Message == "" {
+		st.Message = text
+	}
+	return st
+}
+
+// closedText **نصُّ المالك لخارج الدوام إن كتبه** — وإلّا فارغٌ فيبقى نصُّ التطبيق.
+func (s *Service) closedText(ctx context.Context) string {
+	g, ok := s.settings.(interface {
+		GetString(ctx context.Context, key string) string
+	})
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(g.GetString(ctx, ClosedTextKey))
 }
 
 // SetSchedule **يستبدل الجدولَ كلَّه في معاملةٍ واحدة.**

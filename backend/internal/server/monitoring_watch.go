@@ -22,6 +22,11 @@ package server
 //	النسخ      لا نسخةَ جديدةً منذ يوم (إن ضُبط `BACKUPS_DIR`)
 //	الأخطاء    ٥xx في عشر دقائق ≥ `monitoring.error_spike`
 //
+// **وزادت الدفعةُ الثالثة (٢٠٢٦-١٠-١٧) شيئين** — انظر `monitoring_money.go`:
+//
+//	البطء      `SELECT 1` أبطأُ من `monitoring.db_slow_ms` ثلاثَ دقائقَ متتالية
+//	الدفتر     فحوصُ «صحة الدفتر» كلَّ ساعة — وكلُّ فحصٍ يسقط تنبيهٌ باسمه
+//
 // # ولا تكرارَ مزعج
 //
 //   - **التنبيهُ مرّةً** — ولا يُعاد قبل ساعةٍ ما دامت المشكلةُ قائمة.
@@ -128,6 +133,11 @@ type monitorState struct {
 	botDownSince time.Time
 	lastMorning  string
 	lastPurge    time.Time
+	// **آخرُ فحصٍ للدفتر ومتى** — يُعاد كلَّ ساعةٍ لا كلَّ دقيقة.
+	money   []ledgerCheck
+	moneyAt time.Time
+	// **كم دقيقةً متتاليةً والقاعدةُ بطيئة.**
+	slow slowWatch
 }
 
 // RunMonitoring **راصدُ المنصّة** — يُطلَق مرّةً عند الإقلاع.
@@ -164,6 +174,7 @@ func (s *Server) monitorTick(ctx context.Context, now time.Time) {
 		return
 	}
 	checks := s.monitorChecks(ctx, now)
+	checks = append(checks, s.moneyMonitor(ctx, now)...)
 	s.mon.book.step(checks, now, func(text string) bool { return s.alertOwner(ctx, text) })
 
 	if s.monSetting(ctx, "monitoring.morning_report") {
@@ -227,7 +238,7 @@ func (s *Server) alertOwner(ctx context.Context, text string) bool {
 	return s.sendOutage(ctx, title, body)
 }
 
-// monitorChecks **الفحوصُ السبعة الآن.**
+// monitorChecks **فحوصُ الدقيقة الآن** — السبعةُ والبطء. (والدفترُ في `moneyMonitor`.)
 func (s *Server) monitorChecks(ctx context.Context, now time.Time) []monCheck {
 	n := func(v int) string { return arNum(int64(v)) }
 	var out []monCheck
@@ -257,6 +268,8 @@ func (s *Server) monitorChecks(ctx context.Context, now time.Time) []monCheck {
 	out = append(out, monCheck{Key: "db", Known: s.pg != nil, Bad: dbDown,
 		Text:   "🚨 قاعدة البيانات واقفة\nالمنصة عم تردّ «مشغولة» على الكل لحتى ترجع.",
 		OKText: "✅ رجع طبيعي: قاعدة البيانات رجعت شغّالة."})
+	// **والبطءُ فحصٌ مستقلّ** — والقاعدةُ الواقفةُ لا يُقال عنها «بطيئة» أيضاً.
+	out = append(out, s.dbSlowCheck(ctx, dbDown))
 
 	// ── Redis ──────────────────────────────────────────────────────
 	rc := monCheck{Key: "redis",
@@ -391,6 +404,9 @@ func (s *Server) morningReport(ctx context.Context, now time.Time) string {
 					w("  • %s (%d) × %s", g.Route, g.Code, arNum(g.Count))
 				}
 			}
+		}
+		if line, ok := s.moneyMorningLine(ctx, now); ok {
+			w("%s", line)
 		}
 	}
 	w("")

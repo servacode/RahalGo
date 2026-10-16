@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 242,
-    "behaviour_settings": 198,
+    "setting_defs": 245,
+    "behaviour_settings": 200,
     "order_fields": 109,
-    "test_files": 599,
-    "test_funcs": 2395
+    "test_files": 600,
+    "test_funcs": 2403
   },
   "flows": [
     {
@@ -5396,6 +5396,24 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "monitoring.db_slow_ms",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "monitoring.disk_alert_percent",
       "group": "platform",
       "kind": "int",
@@ -5435,6 +5453,24 @@
       "key": "monitoring.error_spike",
       "group": "platform",
       "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.money_check",
+      "group": "platform",
+      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -11217,6 +11253,12 @@
     },
     {
       "name": "TestPH24_IndefiniteClosureInventsNothing",
+      "file": "internal/platform/state_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPH_ClosedTextOverridesOnlyOffHours",
       "file": "internal/platform/state_test.go",
       "package": "platform",
       "orphan": true
@@ -27401,6 +27443,48 @@
     {
       "name": "TestMERGE_PromoCostsAreTheirOwnProfitLines",
       "file": "internal/server/merge_integrations_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDBSlowCheck_DownIsNotSlow",
+      "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyDue_FirstTickThenHourly",
+      "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyMonChecks_AlertOnceErroredUnknownThenRecovered",
+      "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneySummary_MorningLine",
+      "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMonitorTick_LedgerViolationAlertsThenResolved",
+      "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMonitorTick_MorningReportHasMoneyLine",
+      "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSlowWatch_ThreeTicksThenRecovered",
+      "file": "internal/server/monitoring_money_test.go",
       "package": "server",
       "orphan": true
     },

@@ -159,3 +159,23 @@ func TestNC07_NextCloseAtSerialization(t *testing.T) {
 		t.Fatalf("**مغلقةٌ يجب أن تحمل next_available_at**: %s", closed)
 	}
 }
+
+// **«خارج الدوام» بكلام المالك** (٢٠٢٦-١٠-١٧) — يُكتب في خارج الدوام وحدَه، وفارغُه لا يغيّر.
+func TestPH_ClosedTextOverridesOnlyOffHours(t *testing.T) {
+	sch := Schedule{win(t, 0, "09:00", "17:00")}
+	closed := Decide(at(0, 23, 0, 0), true, sch, Closure{})
+	if got := WithClosedText(closed, "مسكّرين هلّق").Message; got != "مسكّرين هلّق" {
+		t.Fatalf("نصُّ المالك لم يُكتب: %q", got)
+	}
+	if got := WithClosedText(closed, "").Message; got != "" {
+		t.Fatalf("فارغُه غيّر النص: %q", got)
+	}
+	open := Decide(at(0, 10, 0, 0), true, sch, Closure{})
+	if got := WithClosedText(open, "مسكّرين هلّق").Message; got != "" {
+		t.Fatalf("كُتب نصُّ الإغلاق والمنصّةُ مفتوحة: %q", got)
+	}
+	paused := Decide(at(0, 10, 0, 0), true, sch, Closure{Active: true, Message: "صيانة"})
+	if got := WithClosedText(paused, "مسكّرين هلّق").Message; got != "صيانة" {
+		t.Fatalf("غطّى نصَّ الإيقاف المؤقّت: %q", got)
+	}
+}

@@ -1883,6 +1883,13 @@ var Catalog = []Def{
 	// **نسبةُ امتلاء القرص التي يُنبَّه عندها** — وصفرُه يُطفئه.
 	{Key: "monitoring.disk_alert_percent", Group: GroupPlatform, Kind: KindInt,
 		Min: 0, Max: 99, Unit: "percent", Default: 85},
+	// **فحوصُ الدفتر كلَّ ساعة** (الدفعةُ الثالثة ٢٠٢٦-١٠-١٧) — فحوصُ «صحة الدفتر»
+	// نفسُها، **وكلُّ فحصٍ يسقط يصل المالكَ تنبيهاً** ثمّ «رجع طبيعي» حين يصحّ.
+	{Key: "monitoring.money_check", Group: GroupPlatform, Kind: KindBool, Default: true},
+	// **كم ميلي ثانيةٍ يُعدّ بطئاً للقاعدة** — يُقاس كلَّ دقيقةٍ بـ`SELECT 1`، ولا
+	// يُنذَر قبل ثلاث دقائقَ متتالية. **وصفرُه يُطفئ هذا التنبيه وحدَه.**
+	{Key: "monitoring.db_slow_ms", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 60000, Unit: "millisecond", Default: 1000},
 
 	// **ولا «دعمَ المتجر عند ردّ البضاعة» بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم
 	// المصاري ترجع ع حالها والإدارة تقرر تعوض المتجر او لا») — كانت نسبةً تُدفع مع كلّ
@@ -2429,6 +2436,9 @@ var Catalog = []Def{
 		Default: AppTextMerchantClosedDefault},
 	{Key: "app_text.item_unavailable", Group: GroupCustomers, Kind: KindText, Max: 300,
 		Default: AppTextItemUnavailableDefault},
+	// **«خارج الدوام» بكلام المالك** (٢٠٢٦-١٠-١٧) — فارغُه يُبقي نصَّ التطبيق، وموعدُ العودة
+	// يُضاف تحته في الحالَين.
+	{Key: "app_text.platform_closed_now", Group: GroupCustomers, Kind: KindText, Max: 120, Default: ""},
 
 	{Key: "accounts.welcome_template", Group: GroupPlatform, Kind: KindLongText,
 		Default: WelcomeTemplateDefault, Requires: []string{"{link}"}},

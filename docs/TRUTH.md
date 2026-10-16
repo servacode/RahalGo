@@ -791,6 +791,8 @@ kosom` |
 | `monitoring.morning_hour` | المنصة | int | `9` |
 | `monitoring.error_spike` | المنصة | int | `20` |
 | `monitoring.disk_alert_percent` | المنصة | int | `85` |
+| `monitoring.money_check` | المنصة | bool | `true` |
+| `monitoring.db_slow_ms` | المنصة | int | `1000` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | money | `0` |
 | `orders.source_proximity_m` | المنصة | int | `1000` |
@@ -1225,6 +1227,7 @@ kosom` |
 | `app_text.coverage_unavailable` |  | text | `التوصيل غير متوفر مؤقتاً — حاول مرة أخرى لاحقاً` |
 | `app_text.merchant_closed` |  | text | `هذا المتجر مغلق الآن` |
 | `app_text.item_unavailable` |  | text | `أحد الأصناف غير متوفر حاليا` |
+| `app_text.platform_closed_now` |  | text | `` |
 | `customers.tutorial_url` |  | text | `` |
 | `orders.delivery_timeout_min` | التوزيع والتنبيهات | int | `60` |
 | `drivers.offer_timeout_sec` | التوزيع والتنبيهات | int | `60` |
