@@ -59,7 +59,7 @@ class D19ReconnectTest {
         val sc = scope()
         var connected = false
         val events = AtomicInteger(0)
-        liveSocket(srv, auth).start(sc, onState = { if (it) connected = true }) { events.incrementAndGet() }
+        liveSocket(srv, auth).start(sc, onState = { if (it) connected = true }, onEvent = { events.incrementAndGet() })
 
         ok(waitFor { connected }, "**لم تُفتح وصلةٌ بعد انتهاء الرمز** — وذاك `D19`")
         ok(waitFor { events.get() >= 1 }, "**وصلةٌ فُتحت ولا حدثَ يصل** — `D19-T10`")
@@ -82,7 +82,7 @@ class D19ReconnectTest {
         })
         val sc = scope()
         var connected = false
-        liveSocket(srv, auth).start(sc, onState = { if (it) connected = true }) {}
+        liveSocket(srv, auth).start(sc, onState = { if (it) connected = true }, onEvent = {})
         ok(waitFor { connected })
         sc.cancel(); srv.close()
 
@@ -117,7 +117,7 @@ class D19ReconnectTest {
         val auth = RealtimeAuth(session, refresher = { refreshes.incrementAndGet() })
         val sc = scope()
         var connected = false
-        liveSocket(srv, auth).start(sc, onState = { if (it) connected = true }) {}
+        liveSocket(srv, auth).start(sc, onState = { if (it) connected = true }, onEvent = {})
         ok(waitFor { connected }, "**لم يُعَد الوصلُ بعد انقطاع نقل**")
         sc.cancel(); srv.close()
 
@@ -142,7 +142,7 @@ class D19ReconnectTest {
             val srv = FakeWs { verdict }
             val auth = RealtimeAuth(session, refresher = { refreshes.incrementAndGet() })
             val sc = scope()
-            liveSocket(srv, auth).start(sc) {}
+            liveSocket(srv, auth).start(sc, onEvent = {})
             ok(waitFor { srv.tokensSeen.size >= 5 }, "**لم تُعَد المحاولةُ أصلاً** ($verdict)")
             sc.cancel(); srv.close()
             eq(
@@ -161,7 +161,7 @@ class D19ReconnectTest {
         val srv = FakeWs { "503 Service Unavailable" }
         val auth = RealtimeAuth(session, refresher = {})
         val sc = scope()
-        liveSocket(srv, auth).start(sc) {}
+        liveSocket(srv, auth).start(sc, onEvent = {})
         ok(waitFor { srv.tokensSeen.size >= 5 })
         sc.cancel(); srv.close()
 
@@ -182,9 +182,9 @@ class D19ReconnectTest {
         val sc = scope()
         val live = liveSocket(srv, auth)
         var connected = false
-        live.start(sc, onState = { if (it) connected = true }) {}
+        live.start(sc, onState = { if (it) connected = true }, onEvent = {})
         // **والبدءُ مرّتين لا يفتح وصلتين** — عقدُ `start`.
-        live.start(sc) {}
+        live.start(sc, onEvent = {})
         ok(waitFor { connected })
         Thread.sleep(200)
         val n = srv.liveSockets.get()
@@ -207,7 +207,7 @@ class D19ReconnectTest {
         })
         val sc = scope()
         val events = AtomicInteger(0)
-        liveSocket(srv, auth).start(sc) { events.incrementAndGet() }
+        liveSocket(srv, auth).start(sc, onEvent = { events.incrementAndGet() })
         val ok = waitFor { events.get() >= 1 }
         sc.cancel(); srv.close()
         ok(ok, "**لزِم فعلٌ من صاحب الجهاز ليعود البثّ**")

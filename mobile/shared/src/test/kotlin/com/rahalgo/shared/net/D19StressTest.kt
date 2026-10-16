@@ -52,7 +52,7 @@ class D19StressTest {
             })
             val sc = CoroutineScope(SupervisorJob() + Dispatchers.IO)
             val events = AtomicInteger(0)
-            live(srv, auth).start(sc) { events.incrementAndGet() }
+            live(srv, auth).start(sc, onEvent = { events.incrementAndGet() })
             if (!waitFor(3_000) { events.get() >= 1 }) missedEvents++
             if (srv.tokensSeen.toList().lastOrNull() != "NEW") staleLoops++
             if (srv.liveSockets.get() > 1) extraSockets++
@@ -78,7 +78,7 @@ class D19StressTest {
             val auth = RealtimeAuth(session, refresher = { calls.incrementAndGet() })
             val sc = CoroutineScope(SupervisorJob() + Dispatchers.IO)
             var connected = false
-            live(srv, auth).start(sc, onState = { if (it) connected = true }) {}
+            live(srv, auth).start(sc, onState = { if (it) connected = true }, onEvent = {})
             if (!waitFor(3_000) { connected }) failedToConnect++
             if (calls.get() != 0) refreshed++
             sc.cancel(); srv.close()
@@ -101,7 +101,7 @@ class D19StressTest {
                 val calls = AtomicInteger(0)
                 val auth = RealtimeAuth(session, refresher = { calls.incrementAndGet() })
                 val sc = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-                live(srv, auth).start(sc) {}
+                live(srv, auth).start(sc, onEvent = {})
                 waitFor(2_000) { srv.tokensSeen.size >= 3 }
                 sc.cancel(); srv.close()
                 if (session.access != "GOOD" || session.refresh != "R1") lostCreds++
