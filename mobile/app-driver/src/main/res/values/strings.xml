@@ -221,6 +221,9 @@
     <string name="leg_to_store">في الطريق للمتجر</string>
     <string name="leg_to_customer">في الطريق للزبون</string>
     <string name="leg_picked">استلمت</string>
+    <string name="leg_to_pickup_place">في الطريق لمكان الاستلام</string>
+    <string name="leg_at_pickup_place">وصلت مكان الاستلام</string>
+    <string name="step_at_pickup_place">وصلت مكان الاستلام</string>
     <!-- **ومراحلُ الطلب الخاصّ** — توثيقٌ ثمّ شراء، لا استلامٌ من متجر. -->
     <string name="leg_agree">الاتفاق</string>
     <string name="leg_buy">الشراء</string>

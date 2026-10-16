@@ -1407,7 +1407,7 @@ private fun TripCard(
         val quoteOk = feeDone && order.quoteConfirmedVersion == order.quoteVersion
         val needGoods = customOpen && order.customGoodsPending
         val buyBlocked = customOpen && (!feeDone || !quoteOk || needGoods)
-        val next = nextAction(order.status, order.kind == "custom")
+        val next = nextAction(order.status, order.kind == "custom", isFetch(order))
         // **واسمُ الزرّ بنوع الطلب** — «استلمت الأمانة» أو «تم شراء المطلوب».
         val nextLabel = when {
             next == null -> 0
@@ -1607,8 +1607,9 @@ private fun TripCard(
                         InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
                     }
                 } else if (order.kind != "custom") {
-                    // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة.
-                    when (val p = prepState(order)) {
+                    // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
+                    // «إحضار»** — يستلم من مكانٍ لا من المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
+                    when (val p = if (isFetch(order)) PrepState.Unknown else prepState(order)) {
                         PrepState.Ready -> InfoBox(
                             icon = com.rahalgo.ui.R.drawable.ic_time,
                             text = stringResource(R.string.trip_store_ready),

@@ -137,7 +137,15 @@ data class NextAction(val status: String, val label: Int)
  * **والمحرّك يرفض أيّ قفزة** (`orders/statuses.go`) — فلو تأخّرت الشاشة
  * عن حاله الحقيقيّ ردّ خطأً ولم يقع شيء.
  */
-fun nextAction(status: String, custom: Boolean = false): NextAction? = when (status) {
+fun nextAction(status: String, custom: Boolean = false, fetch: Boolean = false): NextAction? =
+    // **«إحضار»: الوصولُ الأوّل لمكان الاستلام والثاني للمتجر** (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
+    when {
+        fetch && status == "assigned" -> NextAction("at_pickup", R.string.step_at_pickup_place)
+        fetch && status == "on_the_way" -> NextAction("at_dropoff", R.string.step_at_pickup)
+        else -> nextActionPlain(status, custom)
+    }
+
+private fun nextActionPlain(status: String, custom: Boolean): NextAction? = when (status) {
     // ══════════════════════════════════════════════════════════════════
     // **ولا «وصلتُ إلى المتجر» في الطلب الخاصّ**
     // ══════════════════════════════════════════════════════════════════

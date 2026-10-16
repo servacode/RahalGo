@@ -184,7 +184,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                         },
                     )
                 } else {
-                    stringResource(phaseLabel(state.step), name)
+                    stringResource(phaseLabel(state.step, isFetch(order)), name)
                 },
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
@@ -294,6 +294,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     // في المحرّك: يبقى `assigned` قبل التوثيق وبعده.
                     agreed = order.customFee != null,
                     amanah = order.customMode == "amanah",
+                    fetch = isFetch(order),
                     fixedFee = fixedCustomFee(order) != null,
                 )
             }
@@ -351,6 +352,8 @@ internal fun LegStrip(
     amanah: Boolean = false,
     /** **أجرةُ المنصّة** — لا اتّفاقَ فيُحذف طورُه (٢٠٢٦-١٠-١٢). */
     fixedFee: Boolean = false,
+    /** **«إحضار»** — الرحلةُ بالعكس: مكانُ الاستلام ثمّ المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦). */
+    fetch: Boolean = false,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **ومراحلُ الخاصّ غيرُ مراحل العاديّ**
@@ -371,6 +374,8 @@ internal fun LegStrip(
         CUSTOM_LEGS.map { if (it == R.string.leg_buy) R.string.leg_take_amanah else it }
     } else if (custom) {
         CUSTOM_LEGS
+    } else if (fetch) {
+        FETCH_LEGS
     } else {
         LEGS
     }
@@ -452,6 +457,19 @@ private val LEGS = listOf(
     R.string.ord_st_delivered,
 )
 
+/**
+ * **«إحضار»** (ملاحظةُ المالك ٢٠٢٦-١٠-١٦: «الشريط العلوي خطا») — «في الطريق لمكان الاستلام ←
+ * وصلت مكان الاستلام ← استلمت ← في الطريق للمتجر ← وصلت المتجر ← تم التسليم».
+ */
+internal val FETCH_LEGS = listOf(
+    R.string.leg_to_pickup_place,
+    R.string.leg_at_pickup_place,
+    R.string.leg_picked,
+    R.string.leg_to_store,
+    R.string.trip_s_at_pickup,
+    R.string.ord_st_delivered,
+)
+
 private val LEG_ICONS = listOf(
     R.drawable.ic_moto,
     R.drawable.ic_store,
@@ -519,7 +537,13 @@ internal fun legOf(status: String): Int = when (status) {
  * — **والوقوفُ عند أحدهما طورٌ ثالثٌ قصير** يُقال لأنّ الفعل التالي
  * يختلف.
  */
-internal fun phaseLabel(step: TripStep): Int = when (step) {
+internal fun phaseLabel(step: TripStep, fetch: Boolean = false): Int = when {
+    fetch && step == TripStep.AT_PICKUP -> R.string.leg_at_pickup_place
+    fetch && step == TripStep.AT_CUSTOMER -> R.string.trip_p_at_store
+    else -> phaseLabelPlain(step)
+}
+
+private fun phaseLabelPlain(step: TripStep): Int = when (step) {
     TripStep.AT_PICKUP -> R.string.trip_p_at_store
     TripStep.PICKED_UP, TripStep.TO_CUSTOMER -> R.string.trip_p_to_customer
     TripStep.AT_CUSTOMER -> R.string.trip_p_at_customer

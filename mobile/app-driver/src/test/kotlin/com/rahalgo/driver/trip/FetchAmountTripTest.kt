@@ -73,4 +73,20 @@ class FetchAmountTripTest {
         assertEquals(R.string.deliver_code_ask_store, deliverCodeAskRes(fetch()))
         assertEquals(R.string.deliver_code_ask, deliverCodeAskRes(fetch().copy(deliveryMode = "send")))
     }
+    @Test
+    fun `fetch stages read pickup place first then the store`() {
+        assertEquals(
+            listOf(
+                R.string.leg_to_pickup_place, R.string.leg_at_pickup_place, R.string.leg_picked,
+                R.string.leg_to_store, R.string.trip_s_at_pickup, R.string.ord_st_delivered,
+            ),
+            FETCH_LEGS,
+        )
+        assertEquals(R.string.step_at_pickup_place, nextAction("assigned", fetch = true)?.label)
+        assertEquals("at_pickup", nextAction("assigned", fetch = true)?.status)
+        assertEquals(R.string.step_at_pickup, nextAction("on_the_way", fetch = true)?.label)
+        assertEquals(R.string.step_at_dropoff, nextAction("on_the_way")?.label)
+        assertEquals(R.string.leg_at_pickup_place, phaseLabel(TripStep.AT_PICKUP, fetch = true))
+        assertEquals(R.string.trip_p_at_store, phaseLabel(TripStep.AT_CUSTOMER, fetch = true))
+    }
 }

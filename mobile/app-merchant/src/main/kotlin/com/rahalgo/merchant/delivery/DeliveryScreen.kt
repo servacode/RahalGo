@@ -460,6 +460,9 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
+            // **و«توصيلاتي» تبقى ظاهرةً قبل الاختيار** — لا تختفي مع النموذج.
+            RecentDeliveries(vm) { tracking = it }
+            Spacer(Modifier.height(24.dp))
             return@Screen
         }
 
@@ -717,26 +720,32 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
         ) {
             Text(stringResource(if (vm.busy) R.string.md_sending else R.string.md_send))
         }
-        // ── آخرُ التوصيلات — والسجلُّ كلُّه في القائمة الجانبيّة ────────
-        Spacer(Modifier.height(20.dp))
-        SectionTitle(stringResource(R.string.md_mine))
-        if (vm.listError.isNotEmpty()) {
-            Note(vm.listError, Rahal.colors.danger)
-            RahalTextButton(onClick = { vm.load() }) {
-                Text(stringResource(com.rahalgo.ui.R.string.act_retry))
-            }
-        }
-        val rows = vm.list
-        when {
-            rows == null && vm.listError.isEmpty() ->
-                Text(stringResource(R.string.md_loading), color = Rahal.colors.inkMuted)
-            rows != null && rows.isEmpty() ->
-                Text(stringResource(R.string.md_none), color = Rahal.colors.inkMuted)
-            rows != null -> rows.take(5).forEach { d ->
-                DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { tracking = d.id }) { vm.cancel(d.id) }
-            }
-        }
+        RecentDeliveries(vm) { tracking = it }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** **آخرُ التوصيلات** — تحت النموذج، **وقبل اختيار النوع أيضاً.** */
+@Composable
+private fun RecentDeliveries(vm: DeliveryViewModel, onOpen: (String) -> Unit) {
+    // ── آخرُ التوصيلات — والسجلُّ كلُّه في القائمة الجانبيّة ────────
+    Spacer(Modifier.height(20.dp))
+    SectionTitle(stringResource(R.string.md_mine))
+    if (vm.listError.isNotEmpty()) {
+        Note(vm.listError, Rahal.colors.danger)
+        RahalTextButton(onClick = { vm.load() }) {
+            Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+        }
+    }
+    val rows = vm.list
+    when {
+        rows == null && vm.listError.isEmpty() ->
+            Text(stringResource(R.string.md_loading), color = Rahal.colors.inkMuted)
+        rows != null && rows.isEmpty() ->
+            Text(stringResource(R.string.md_none), color = Rahal.colors.inkMuted)
+        rows != null -> rows.take(5).forEach { d ->
+            DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { onOpen(d.id) }) { vm.cancel(d.id) }
+        }
     }
 }
 
