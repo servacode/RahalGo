@@ -65,6 +65,8 @@ object Backend {
             afterLogout = {
                 com.rahalgo.customer.cart.Cart.clear()
                 runCatching { AppCore.get().live.stop() }
+                // **ومشاركةُ الموقع لا يرثها الحسابُ التالي** (٢٠٢٦-١٠-١٦).
+                com.rahalgo.customer.live.LiveShare.stopLocal(context)
                 com.rahalgo.ui.Refresh.bump()
             },
         )

@@ -65,6 +65,7 @@
     <string name="err_not_driver">هذا الحساب ليس حساب سائق</string>
     <string name="err_not_on_shift">ورديتك مغلقة — افتحها أولا</string>
     <string name="err_not_your_order">هذا الطلب ليس لك</string>
+    <string name="err_live_location_inactive">الطلب مو بالطريق هلق — ما في مشاركة موقع</string>
     <string name="err_offer_not_yours">هذا العرض لم يعد لك</string>
     <string name="err_order_not_closed">الطلب لم يغلق بعد — البلاغ بعد انتهائه</string>
     <string name="err_order_taken">سبقك غيرك إلى هذا الطلب</string>

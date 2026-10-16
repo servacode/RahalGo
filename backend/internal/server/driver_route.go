@@ -266,6 +266,20 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	if picked {
 		to = routing.Point{Lat: dropLat, Lng: dropLng}
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والزبونُ بعيدٌ عن دبّوسه؟ فالطريقُ إليه** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **دبابيسُ الرقّة كثيراً ما تخطئ** — فإن شارك الزبونُ موقعَه وكان أبعدَ من
+	// `orders.live_location_switch_m` عن الدبّوس **قِيد السائقُ إليه لا إلى الدبّوس.**
+	// **وما شاخ أو لم يُشارَك يُرجع إلى الدبّوس كما كان** — ولا مشوارَ إرجاعٍ فيه.
+	toLive := false
+	if picked && returnTo == "" {
+		if p := s.liveRouteTarget(r.Context(), chi.URLParam(r, "id"), userIDFrom(r)); p != nil {
+			to = routing.Point{Lat: p.Lat, Lng: p.Lng}
+			toLive = true
+		}
+	}
 
 	// ══════════════════════════════════════════════════════════════
 	// **والبدائلُ بطلبٍ لا افتراضاً** — البند ١٦
@@ -351,6 +365,10 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		// engine_duration_s **ما قاله المحرّك نفسُه** — يُقارَن ولا يُعرض.
 		"engine_duration_s": math.Round(route.DurationS),
 		"points":            pts,
+	}
+	// **ويُقال إن كانت الوجهةُ الزبونَ لا الدبّوس** — حقلٌ إضافيٌّ لا يكسر نسخةً قديمة.
+	if toLive {
+		out["to_live"] = true
 	}
 
 	// ══════════════════════════════════════════════════════════════════

@@ -329,8 +329,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **وثمانيةٌ بحصّة المنصّة لكلّ نوع وأجرةِ الأمانة، وذهب واحد** (قرارُ المالك ٢٠٢٦-١٠-١٣):
 	// `delivery.share_{standard,merchant,purchase,amanah}{,_mode}` و`delivery.custom_fee_amanah`،
 	// وخرج `delivery.platform_percent`.
-	if d.BehaviourSettings != 191 {
-		t.Errorf("إعداداتُ السلوك = %d لا 191 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و١٩٢ مع `orders.live_location_switch_m`** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **حدٌّ يبدّل
+	// وجهةَ طريق السائق** من الدبّوس إلى موقع الزبون المباشر.
+	if d.BehaviourSettings != 192 {
+		t.Errorf("إعداداتُ السلوك = %d لا 192 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

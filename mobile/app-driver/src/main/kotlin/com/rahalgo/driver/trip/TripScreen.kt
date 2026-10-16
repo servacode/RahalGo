@@ -273,15 +273,19 @@ fun TripScreen(
      * و`lat/lng` للزبون — **وهي نفسُ ما تقيس عليه `near()`**،
      * فلا رقمان لحقيقةٍ واحدة.
      */
-    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng, state.order?.dropoffKnown) {
+    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng, state.order?.dropoffKnown, state.door) {
         val o = state.order
         navSession.setArrivalTarget(
             when {
                 o == null -> null
                 // **ولا وصولَ إلى بابٍ لا يُعرف** — «لدي توصيلة» بلا نقطةٍ يُكتب
                 // مكانَها موقعُ المتجر، **فتُعلن الملاحةُ وصولَه وهو عند المتجر.**
-                state.step >= TripStep.PICKED_UP ->
-                    dropoffPoint(o)?.let { (la, ln) -> com.rahalgo.navigation.GeoPoint(la, ln) }
+                // **والبابُ هو الزبونُ الآن إن تحوّل الطريقُ إليه** (٢٠٢٦-١٠-١٦) — فيُعلَن الوصولُ
+                // عنده لا عند دبّوسٍ خطأ (`state.door`)، **وإلّا فالدبّوسُ كما كان.**
+                state.step >= TripStep.PICKED_UP && dropoffPoint(o) != null ->
+                    state.door?.let { com.rahalgo.navigation.GeoPoint(it.latitude, it.longitude) }
+                        ?: dropoffPoint(o)?.let { (la, ln) -> com.rahalgo.navigation.GeoPoint(la, ln) }
+                state.step >= TripStep.PICKED_UP -> null
                 o.navLat != null && o.navLng != null ->
                     com.rahalgo.navigation.GeoPoint(o.navLat!!, o.navLng!!)
                 else -> null
@@ -631,6 +635,8 @@ fun TripScreen(
             // الشاشة تجعلان الكاميرا تتّسع لتضمّهما، **فيصغر الشارعُ
             // الذي يسير فيه الآن** ليُرى مكانٌ لا شأنَ له به بعد.
             dropoff = if (state.step >= TripStep.PICKED_UP) state.dropoff else null,
+            // **والزبونُ الآن علامةٌ ثانيةٌ بلونٍ غيرِ الدبّوس** (٢٠٢٦-١٠-١٦) — بعد الاستلام وحدَه.
+            customer = if (state.step >= TripStep.PICKED_UP) state.customerLive else null,
             // **والخطُّ المرسومُ هو الطريقُ الذي يُرشد عليه المحرّك** (فحصُ الملاحة
             // ١.٢): كان من نموذج الطلبات فبقي القديمُ بعد إعادة الحساب، **وقُصَّ
             // بتقدّمٍ يُقاس على طريقٍ آخر.**
@@ -861,6 +867,13 @@ fun TripScreen(
             if (state.suspended) {
                 TopNotice(stringResource(R.string.suspended_banner), Rahal.colors.danger)
             }
+            // ══════════════════════════════════════════════════════════
+            // **وموقعُ الزبون المباشر يُقال بكلمة** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **تحوّل الطريقُ إليه؟ يُقال لماذا** — ومن تبع خطّاً لا يذهب إلى الدبّوس بلا
+            // سببٍ يظنّ الملاحةَ معطوبة. **وشاخ موقعُه فعاد إلى الدبّوس؟ يُقال كذلك.**
+            if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state)
             // ══════════════════════════════════════════════════════════
             // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
             // ══════════════════════════════════════════════════════════
@@ -1249,6 +1262,35 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
 data class Stop(val id: String, val number: Long)
 
 /** **سطرُ خبرٍ فوق الخريطة** — يُقرأ ولو طُويت البطاقة. */
+/**
+ * **لافتةُ موقع الزبون المباشر** — تحوّلٌ إليه أو عودةٌ إلى الدبّوس، **وكم عمرُ نقطته.**
+ */
+@Composable
+private fun LiveCustomerNotice(state: TripState) {
+    when {
+        state.liveSwitched -> TopNotice(stringResource(R.string.trip_live_switched), Rahal.colors.success)
+        state.liveStale -> TopNotice(stringResource(R.string.trip_live_stale), Rahal.colors.ink)
+    }
+    if (state.customerLive != null && state.liveAgeSec >= 0) {
+        val age = if (state.liveAgeSec < 60) {
+            stringResource(R.string.trip_live_age_sec, state.liveAgeSec)
+        } else {
+            stringResource(R.string.trip_live_age_min, state.liveAgeSec / 60)
+        }
+        Text(
+            text = stringResource(R.string.trip_live_now, age),
+            color = Rahal.colors.onBrand,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(vertical = 4.dp)
+                .clip(Rahal.shape.sm)
+                .background(Rahal.colors.success)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
 @Composable
 internal fun TopNotice(text: String, ground: Color) {
     Text(

@@ -193,6 +193,8 @@ var placeRules = []placeRule{
 	{prefix: "orders.auto_dispatch", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.notify_merchant", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.route_margin_pct", exact: true, topic: TopicOrders, section: "orders.dispatch"},
+	// **وتحويلُ الطريق إلى موقع الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — مع التوزيع لا المهل.
+	{prefix: "orders.live_location_switch_m", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.", topic: TopicOrders, section: "orders.timeouts"},
 	{prefix: "drivers.assignment_mode", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "drivers.direct_assign", exact: true, topic: TopicOrders, section: "orders.dispatch"},

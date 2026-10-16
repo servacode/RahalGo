@@ -35,6 +35,17 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- ══════════════════════════════════════════════════════════════
+         **ومشاركةُ موقعه مع الكابتن — بضغطةٍ منه وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+         ══════════════════════════════════════════════════════════════
+
+         **طلبُه بالطريق فضغط «شارك موقعي»**: خدمةٌ أماميّةٌ ظاهرةٌ بزرّ إيقاف
+         (`live/LiveShareService.kt`) تقف حين يصله الطلب أو بعد ٤٥ دقيقة.
+         **وتبدأ والتطبيقُ أمامه** — فإذنُ الموقع «أثناء الاستخدام» يكفيها،
+         **ولا `ACCESS_BACKGROUND_LOCATION` كما قيل أعلاه.** -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
     <!-- **وأيقونةُ المنصّة من الوحدة** — (قرارُ المالك ٢٠٢٦-٠٨-١٤:
          «لوغو المنصّة لازم يكون الأيقونة الأساسيّة المركزيّة لكلّ
          التطبيقات، ما ناخذ الافتراضي للأندرويد»).
@@ -89,6 +100,12 @@
             </intent-filter>
         </activity>
     
+        <!-- **مشاركةُ الموقع المباشر مع الكابتن** — انظر `live/LiveShareService.kt`. -->
+        <service
+            android:name=".live.LiveShareService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <!-- **ما يصل والتطبيقُ مغلق** — انظر `push/PushService.kt`. -->
         <service
             android:name=".push.PushService"

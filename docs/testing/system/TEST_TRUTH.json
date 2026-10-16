@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 514,
+    "routes": 516,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 235,
-    "behaviour_settings": 191,
-    "order_fields": 105,
-    "test_files": 592,
-    "test_funcs": 2375
+    "setting_defs": 236,
+    "behaviour_settings": 192,
+    "order_fields": 106,
+    "test_files": 593,
+    "test_funcs": 2380
   },
   "flows": [
     {
@@ -5721,6 +5721,27 @@
     },
     {
       "key": "orders.handover_timeout_min",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.live_location_switch_m",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -26946,6 +26967,36 @@
     {
       "name": "TestRepLead_RequiresDistrict",
       "file": "internal/server/lead_requires_district_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_ClearedOnDelivery",
+      "file": "internal/server/live_location_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_DriverSeesFreshOmitsStale",
+      "file": "internal/server/live_location_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_OnlyTheCustomerMayPost",
+      "file": "internal/server/live_location_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_OtherDriversAndMerchantNeverSee",
+      "file": "internal/server/live_location_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveLocation_RefusedWhenOrderNotActive",
+      "file": "internal/server/live_location_test.go",
       "package": "server",
       "orphan": true
     },

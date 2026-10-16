@@ -271,6 +271,23 @@ class CustomerApi(private val api: ApiClient) {
             mapOf<String, String>(),
         )
 
+    /**
+     * **نقطةٌ من موقعه المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — آخرُها وحدَها تُحفظ، **وطلبُه في
+     * طريقه وحدَه**: غيرُ ذلك يُردّ `live_location_inactive` فتقف المشاركة.
+     */
+    suspend fun shareLive(orderId: String, lat: Double, lng: Double, accuracyM: Double?) {
+        api.call<Ack>(
+            "/api/v1/orders/$orderId/live-location",
+            HttpMethod.Post,
+            LiveInput(lat, lng, accuracyM),
+        )
+    }
+
+    /** **«وقّف المشاركة»** — تُمحى النقطةُ فيعود الكابتنُ إلى الدبّوس. */
+    suspend fun stopLive(orderId: String) {
+        api.call<Ack>("/api/v1/orders/$orderId/live-location", HttpMethod.Delete, null)
+    }
+
     suspend fun cancel(orderId: String) {
         api.call<Ack>(
             "/api/v1/orders/$orderId/cancel",
@@ -578,6 +595,14 @@ data class TicketDetail(
     @SerialName("order_number") val orderNumber: Long? = null,
     @SerialName("created_at") val createdAt: String = "",
     val replies: List<TicketReply> = emptyList(),
+)
+
+/** **جسمُ نقطة الموقع المباشر** — كما يقرؤه المحرّك (`live_location.go`). */
+@Serializable
+data class LiveInput(
+    val lat: Double,
+    val lng: Double,
+    @SerialName("accuracy_m") val accuracyM: Double? = null,
 )
 
 @Serializable

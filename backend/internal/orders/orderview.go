@@ -247,6 +247,9 @@ var audienceAllow = map[Audience]map[string]bool{
 		"pay_merchants": true,
 		// **ومن أيّ متجرٍ تابعٍ يشتري** (قرارُ المالك ٢٠٢٦-١٠-١٥) — اسمُه لا نسبتُه.
 		"partner_merchant_name": true,
+		// **وموقعُ الزبون المباشر** (٢٠٢٦-١٠-١٦) — **غرفةُ السائق غرفةُ المُسنَد وحدَه**
+		// (`publishOrder`)، **والطلبُ المبثوثُ لا يحمله أصلاً** (يُلحَق في الردّ وحدَه).
+		"customer_live": true,
 	},
 	AudienceRep: {
 		"accepted_at":           true,
@@ -383,6 +386,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		"partner_merchant_name":      true,
 		"partner_commission_percent": true,
 		"custom_store_paid":          true,
+		// **وموقعُ الزبون المباشر** (٢٠٢٦-١٠-١٦) — يُلحَق في ردّ الطلب الواحد وحدَه.
+		"customer_live": true,
 	},
 }
 

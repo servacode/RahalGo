@@ -230,6 +230,19 @@ data class TripState(
     val driver: LatLng? = null,
     val pickup: LatLng? = null,
     val dropoff: LatLng? = null,
+    // ══════════════════════════════════════════════════════════════════
+    // **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — انظر `DoorTarget.kt`
+    // ══════════════════════════════════════════════════════════════════
+    /** **الزبونُ الآن** — علامةٌ غيرُ الدبّوس، وفارغةٌ إن لم يشارك أو شاخ موقعُه. */
+    val customerLive: LatLng? = null,
+    /** **عمرُ نقطته بالثواني** — وسالبٌ: لا نقطة. */
+    val liveAgeSec: Long = -1L,
+    /** **الطريقُ تحوّل إليه** — بعيدٌ عن الدبّوس فوق حدّ اللوحة. */
+    val liveSwitched: Boolean = false,
+    /** **كان يُقاد إليه فشاخ موقعُه** — فعاد إلى الدبّوس بكلمة. */
+    val liveStale: Boolean = false,
+    /** **البابُ الذي يُقاس عليه الوصول** — الزبونُ الآن إن تحوّل الطريق، وإلّا الدبّوس. */
+    val door: LatLng? = null,
     val busy: Boolean = false,
     val error: String = "",
     /** **حسابُه موقوف** — يُكمل هذا الطلبَ وحدَه (٢٠٢٦-١٠-٠٢). */
@@ -409,7 +422,14 @@ sealed interface ArrivalPoint {
     data class At(val lat: Double, val lng: Double) : ArrivalPoint
 }
 
-fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
+fun arrivalPoint(
+    order: DriverOrder,
+    /**
+     * **بابُ الزبون الآن إن تحوّل الطريقُ إليه** (٢٠٢٦-١٠-١٦) — **فيُعلَن الوصولُ عنده لا عند
+     * الدبّوس الخطأ.** وفارغٌ: الدبّوسُ كما كان.
+     */
+    liveDoor: Pair<Double, Double>? = null,
+): ArrivalPoint = when (order.status) {
     "assigned" -> {
         val la = order.navLat
         val ln = order.navLng
@@ -418,7 +438,11 @@ fun arrivalPoint(order: DriverOrder): ArrivalPoint = when (order.status) {
         if (la == null || ln == null) ArrivalPoint.Unknown else ArrivalPoint.At(la, ln)
     }
     // **«لدي توصيلة» بلا نقطةٍ** — المكتوبُ موقعُ المتجر لا باب المستلِم.
-    "on_the_way" -> if (order.dropoffKnown) ArrivalPoint.At(order.lat, order.lng) else ArrivalPoint.Unknown
+    "on_the_way" -> when {
+        !order.dropoffKnown -> ArrivalPoint.Unknown
+        liveDoor != null -> ArrivalPoint.At(liveDoor.first, liveDoor.second)
+        else -> ArrivalPoint.At(order.lat, order.lng)
+    }
     // **ومشوارُ الإرجاع يُغلق بالوصول إلى المكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — لا بزرّ.
     "failed" -> when {
         order.returnTo.isEmpty() -> ArrivalPoint.NotArriving

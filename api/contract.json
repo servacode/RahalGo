@@ -7032,6 +7032,15 @@
       "auth": true,
       "roles": [
         "driver"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {
@@ -8903,6 +8912,50 @@
         {
           "name": "@view",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/orders/{id}/live-location",
+      "handler": "handleStopCustomerLiveLocation",
+      "auth": true,
+      "response": [
+        {
+          "name": "stopped",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/live-location",
+      "handler": "handleCustomerLiveLocation",
+      "auth": true,
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        },
+        {
+          "name": "accuracy_m",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "saved",
+          "type": "bool"
         }
       ],
       "statuses": [

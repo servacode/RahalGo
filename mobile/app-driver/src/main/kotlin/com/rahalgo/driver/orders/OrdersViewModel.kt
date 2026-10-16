@@ -94,6 +94,20 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         /** **كم بين سؤالين حين تنقطع الوصلة.** */
         const val POLL_WHEN_DOWN_MS = 15_000L
 
+        /**
+         * **كم بين نظرتين إلى عمر موقع الزبون** (٢٠٢٦-١٠-١٦) — **فيشيخ في يد السائق ولو سكتت
+         * الوصلة**: زبونٌ أطفأ هاتفَه لا يُقاد إليه بعد دقيقتين.
+         */
+        const val LIVE_TICK_MS = 10_000L
+
+        /**
+         * **كم يتحرّك الزبونُ قبل أن يُعاد حسابُ الطريق إليه** — بالمتر.
+         *
+         * **ونقطةٌ كلَّ عشر ثوانٍ لا تعني طريقاً كلَّ عشر ثوان**: رجفةُ قمرٍ أو خطواتٌ في
+         * بيته تُبقي الطريقَ كما هو، **وطريقٌ يُعاد بلا سببٍ يُعيد تعليماتِ الصوت من أوّلها.**
+         */
+        const val LIVE_REANCHOR_M = 50f
+
         /** **كم يقف حتّى يُعدّ واصلا** — (قرارُ المالك ٢٠٢٦-١٠-٠٦: «نزّلها لـ١٥ ثانية»؛ كانت ٣٠). */
         const val ARRIVAL_HOLD_MS = 15_000L
 
@@ -285,6 +299,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // هذا السائق تقرّره نقطة الطابور** بحسب ورديّته ونمط التوزيع.
         watchArrival()
         pollWhileDown()
+        watchLive()
         // **وفتحُ الورديّة يُعيد قراءةَ الطابور** — انظر `QueuePulse`.
         viewModelScope.launch { QueuePulse.flow.collect { refresh() } }
         // **والإشعارُ يُجدّد الرحلةَ والطابور** (٢٠٢٦-١٠-٠٦) — كانت النبضةُ تُجدّد الشاشاتِ الأخرى
@@ -310,6 +325,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     refresh()
                     Refresh.bump()
                     if (chat != null) reloadChat()
+                }
+            },
+            // **وموقعُ الزبون يُعيد الطلباتِ وحدَها** (٢٠٢٦-١٠-١٦) — يصل كلَّ عشر ثوانٍ،
+            // **ومن أعاد به كلَّ الشاشات أيقظ الراديو بلا خبر.**
+            onLight = { type ->
+                if (type == "customer_live") {
+                    lastLiveAt = android.os.SystemClock.elapsedRealtime()
+                    refresh()
+                    true
+                } else {
+                    false
                 }
             },
             onEvent = {
@@ -511,6 +537,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 error = "",
             )
         }
+        // **والوجهةُ بعد الاستلام قبل حفظ الطريق** — فإن تحوّلت إلى الزبون أو عادت إلى
+        // الدبّوس رأى `keepRoute` ساقاً جديدةً فطلب طريقَها.
+        if (out.error == null) updateLiveTarget(out.mine)
         keepRoute(out.route, out.mine)
         if (out.error == null) {
             forgetNetworkError()
@@ -597,7 +626,87 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val o = mine.firstOrNull { it.id == id } ?: return null
         // **ومشوارُ الإرجاع ساقٌ ثالثة** — وجهتُه غيرُ باب الزبون، فيُطلب طريقُه من جديد.
         if (com.rahalgo.driver.trip.isReturnTrip(o)) return "$id:return"
-        return id + ":" + if (o.status in TO_CUSTOMER) "customer" else "merchant"
+        if (o.status !in TO_CUSTOMER) return "$id:merchant"
+        // **والزبونُ الآن ساقٌ غيرُ الدبّوس** (٢٠٢٦-١٠-١٦) — فإن تحوّلت الوجهةُ أو تحرّك
+        // الزبونُ فوق `LIVE_REANCHOR_M` طُلب الطريقُ من جديد، **والخادمُ يحسبه إليه.**
+        val a = liveAnchor?.takeIf { liveFor == id }
+            ?: return "$id:customer"
+        return "$id:customer:live:" + a.first + "," + a.second
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — انظر `trip/DoorTarget.kt`
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **النقطةُ التي يُقاد إليها الآن** — وفارغةٌ: الدبّوس. */
+    private var liveAnchor: Pair<Double, Double>? = null
+
+    /** **لأيّ طلبٍ هي** — لا تتبع السائقَ إلى طلبه التالي. */
+    private var liveFor: String? = null
+
+    /** **كان يُقاد إلى الزبون فشاخ موقعُه** — فيُقال له «رجعنا للعنوان». */
+    private var liveStaleFor: String? = null
+
+    /** **نبضةُ العمر** — تُقرأ في `trip()` فيتجدّد «قبل كم» على الشاشة. */
+    private var liveTick by mutableStateOf(0L)
+
+    /**
+     * **يقرّر الوجهةَ بعد الاستلام** — ويردّ `true` إن تبدّلت ساقُ الطريق.
+     *
+     * **والحكمُ في دالّةٍ صافيةٍ تُختبر** (`doorTarget`) — وهنا ما يُحفظ بين قراءتين وحدَه.
+     */
+    private fun updateLiveTarget(mine: List<com.rahalgo.shared.model.DriverOrder>): Boolean {
+        val before = legOf(mine)
+        val id = openId?.takeIf { oid -> mine.any { it.id == oid } } ?: mine.firstOrNull()?.id
+        val o = mine.firstOrNull { it.id == id }
+        if (o == null || o.status !in TO_CUSTOMER || com.rahalgo.driver.trip.isReturnTrip(o) || !o.dropoffKnown) {
+            liveAnchor = null
+            liveFor = null
+            liveStaleFor = null
+            return legOf(mine) != before
+        }
+        val had = liveFor == o.id && liveAnchor != null
+        when (val t = com.rahalgo.driver.trip.doorTarget(o.customerLive, had, System.currentTimeMillis())) {
+            is com.rahalgo.driver.trip.DoorTarget.Live -> {
+                val a = liveAnchor?.takeIf { liveFor == o.id }
+                val moved = a == null || FloatArray(1).also {
+                    android.location.Location.distanceBetween(a.first, a.second, t.lat, t.lng, it)
+                }[0] > LIVE_REANCHOR_M
+                if (moved) liveAnchor = t.lat to t.lng
+                liveFor = o.id
+                liveStaleFor = null
+            }
+            is com.rahalgo.driver.trip.DoorTarget.Pin -> {
+                // **والكلمةُ تبقى حتّى يعود موقعٌ حديث** — لا تومض مرّةً وتختفي.
+                if (t.staleLive) {
+                    liveStaleFor = o.id
+                } else if (liveStaleFor == o.id && com.rahalgo.driver.trip.liveFresh(o.customerLive, System.currentTimeMillis())) {
+                    liveStaleFor = null
+                }
+                liveAnchor = null
+                liveFor = o.id
+            }
+        }
+        return legOf(mine) != before
+    }
+
+    /** **بابُ الزبون الذي يُقاس عليه الوصول** — نقطةُ الزبون الآن إن قِيد إليها. */
+    private fun liveDoor(order: com.rahalgo.shared.model.DriverOrder): Pair<Double, Double>? =
+        liveAnchor?.takeIf { liveFor == order.id && order.status in TO_CUSTOMER }
+
+    /**
+     * **ينظر إلى عمر الموقع كلَّ عشر ثوانٍ** — فيشيخ ولو لم تصل قراءة، **ويُطلب الطريقُ إلى
+     * الدبّوس حين يعود إليه.** **ولا يعمل حيث لا موقعَ مشارَك** — نظرةٌ في ذاكرةٍ لا نداء.
+     */
+    private fun watchLive() {
+        viewModelScope.launch {
+            while (true) {
+                delay(LIVE_TICK_MS)
+                if (liveAnchor == null && state.mine.none { it.customerLive != null }) continue
+                liveTick++
+                if (updateLiveTarget(state.mine)) refresh()
+            }
+        }
     }
 
     private fun keepRoute(fresh: OrderRoute?, mine: List<com.rahalgo.shared.model.DriverOrder>) {
@@ -1397,6 +1506,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             pickup = order.navLat?.let { la -> order.navLng?.let { ln -> LatLng(la, ln) } },
             // **ولا دبّوسَ لبابٍ لا يُعرف** — «لدي توصيلة» بلا نقطة.
             dropoff = com.rahalgo.driver.trip.dropoffPoint(order)?.let { (la, ln) -> LatLng(la, ln) },
+            // **وموقعُ الزبون الآن** (٢٠٢٦-١٠-١٦) — علامةٌ ثانيةٌ بعد الاستلام، وحديثاً وحدَه.
+            // **و`liveTick` يُقرأ هنا** فتُعاد قراءةُ العمر كلَّ نبضة.
+            customerLive = order.customerLive
+                ?.takeIf { liveTick >= 0 && com.rahalgo.driver.trip.liveFresh(it, System.currentTimeMillis()) }
+                ?.let { LatLng(it.lat, it.lng) },
+            liveAgeSec = order.customerLive
+                ?.let { com.rahalgo.driver.trip.liveAgeSec(it, System.currentTimeMillis()) } ?: -1L,
+            liveSwitched = liveDoor(order) != null,
+            liveStale = liveStaleFor == order.id && liveDoor(order) == null,
+            door = (liveDoor(order) ?: com.rahalgo.driver.trip.dropoffPoint(order))
+                ?.let { (la, ln) -> LatLng(la, ln) },
             busy = detail.busy,
             // ══════════════════════════════════════════════════════════
             // **وخطأُ قبولِ العرض يصل الرحلةَ أيضاً**
@@ -1457,7 +1577,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val driver = fix?.let { LastPoint.Point(it.lat, it.lng) } ?: shift ?: return null
         // **والوجهةُ من دالّةٍ صافيةٍ تُختبر** (`arrivalPoint`) — ونقطةٌ مجهولةٌ
         // («لدي توصيلة» بلا نقطة) «لا يُعرف» لا «بعيد»: **الزرُّ يبقى ظاهراً.**
-        val target = when (val p = com.rahalgo.driver.trip.arrivalPoint(order)) {
+        val target = when (val p = com.rahalgo.driver.trip.arrivalPoint(order, liveDoor(order))) {
             com.rahalgo.driver.trip.ArrivalPoint.NotArriving -> return false
             com.rahalgo.driver.trip.ArrivalPoint.Unknown -> return null
             is com.rahalgo.driver.trip.ArrivalPoint.At -> p

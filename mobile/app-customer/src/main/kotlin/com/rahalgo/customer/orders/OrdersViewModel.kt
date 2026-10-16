@@ -23,6 +23,9 @@ import kotlinx.coroutines.launch
 // SharedPreferences، فلا يُعاد سؤالُ الطلبِ نفسِه بعد إعادةِ التشغيل.
 private const val KEY_AUTO_PROMPTED = "auto_prompted"
 
+// **مفتاحُ ما قُرّر فيه من «شارك موقعك المباشر»** — سطرٌ واحدٌ بترتيبه.
+private const val KEY_LIVE_DECIDED = "decided"
+
 /**
  * ══════════════════════════════════════════════════════════════════════
  * **طلباتُ الزبون — الجاري وحدَه أو المنتهي وحدَه**
@@ -138,6 +141,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 open = p.orders.filterNot { it.status in ENDED }
                 history = p.orders.filter { it.status in ENDED }
                 noteQuoteChanges(open)
+                stopEndedShare(open)
                 lastPage = 1
                 loadedCount = p.orders.size
                 historyHasMore = loadedCount < p.total
@@ -189,6 +193,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 open = all.filterNot { it.status in ENDED }
                 history = all.filter { it.status in ENDED }
                 noteQuoteChanges(open)
+                stopEndedShare(open)
                 lastPage = 1
                 loadedCount = all.size
                 historyHasMore = loadedCount < p.total
@@ -440,6 +445,48 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     /** **يُغلق النافذةَ لهذه النسخة** — والقسمُ في البطاقة باقٍ. */
     fun dismissQuote(order: MyOrder) {
         quoteDismissed = quoteDismissed + quoteKey(order)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **«شارك موقعك المباشر» — مرّةً واحدةً لكلّ طلب** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والقرارُ يُذكر بالطلب** — شارك أو قال «العنوان صحيح» — **ويُحفظ دائماً**
+    // (`SharedPreferences`)، فلا يُسأل ثانيةً بعد إعادة التشغيل. **والحكمُ في
+    // `LiveSharePolicy`** — دوالُّ صافيةٌ تُختبر.
+    private val livePrefs = app.getSharedPreferences("live_share", Application.MODE_PRIVATE)
+
+    private var liveDecided by mutableStateOf(
+        runCatching {
+            com.rahalgo.customer.live.LiveSharePolicy.decode(livePrefs.getString(KEY_LIVE_DECIDED, ""))
+        }.getOrDefault(emptyList()),
+    )
+
+    /** **الطلبُ الذي يُسأل صاحبُه الآن أن يشارك موقعَه** — و`null`: لا سؤال. */
+    val pendingLiveShare: MyOrder?
+        get() = com.rahalgo.customer.live.LiveSharePolicy.pending(open, liveDecided)
+
+    /**
+     * **يُذكر جوابُه** — والمشاركةُ نفسُها تبدأ من الغلاف بعد الإذن (`MainActivity`).
+     */
+    fun decideLiveShare(order: MyOrder) {
+        liveDecided = com.rahalgo.customer.live.LiveSharePolicy.remember(liveDecided, order.id)
+        runCatching {
+            livePrefs.edit().putString(
+                KEY_LIVE_DECIDED, com.rahalgo.customer.live.LiveSharePolicy.encode(liveDecided),
+            ).apply()
+        }
+    }
+
+    /**
+     * **ووصل الطلبُ أو انتهى فتقف المشاركة** — والمحرّكُ يرفضها أصلاً بعد النهاية،
+     * **وهنا تقف في لحظة القراءة** لا بعد نقطةٍ تُردّ.
+     */
+    private fun stopEndedShare(open: List<MyOrder>) {
+        val sharing = com.rahalgo.customer.live.LiveShare.activeOrderId ?: return
+        if (!com.rahalgo.customer.live.LiveSharePolicy.keepSharing(sharing, open)) {
+            com.rahalgo.customer.live.LiveShare.stop(getApplication())
+        }
     }
 }
 

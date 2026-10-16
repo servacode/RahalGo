@@ -12,7 +12,7 @@
   },
   "derived": {
     "emit_sites": 95,
-    "realtime_publishers": 23,
+    "realtime_publishers": 24,
     "rooms": 5,
     "untargeted_user_sites": 36
   },
@@ -348,7 +348,7 @@
     },
     {
       "file": "internal/server/admin_orders_handlers.go",
-      "line": 352,
+      "line": 359,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -511,7 +511,7 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1317,
+      "line": 1336,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -636,7 +636,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 477,
+      "line": 481,
       "call": "NotifyOps",
       "kind": "Lead",
       "entity": "lead",
@@ -645,7 +645,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 614,
+      "line": 618,
       "call": "Notify",
       "kind": "Lead",
       "entity": "lead",
@@ -654,7 +654,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 625,
+      "line": 629,
       "call": "Notify",
       "kind": "Lead",
       "entity": "lead",
@@ -663,7 +663,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 750,
+      "line": 754,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -672,7 +672,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 1008,
+      "line": 1012,
       "call": "Notify",
       "kind": "Lead",
       "entity": "merchant",
@@ -1324,6 +1324,11 @@
       "room": "ops"
     },
     {
+      "file": "internal/server/live_location.go",
+      "line": 62,
+      "room": "driver:*"
+    },
+    {
       "file": "internal/server/notifications_handlers.go",
       "line": 49,
       "room": "user:*"
@@ -1595,7 +1600,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 1008,
+      "line": 1012,
       "call": "Notify",
       "kind": "Lead",
       "entity": "merchant",

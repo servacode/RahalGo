@@ -74,10 +74,12 @@ object Markers {
     private val CASING = MapRoutePalette.ACTIVE_GLOW
     private val PICKUP = MapRoutePalette.PICKUP_PIN
     private val DROPOFF = MapRoutePalette.DROPOFF_PIN
+    private val CUSTOMER = MapRoutePalette.CUSTOMER_LIVE_PIN
 
     private const val IMG_DRIVER = "img-driver"
     private const val IMG_PICKUP = "img-pickup"
     private const val IMG_DROPOFF = "img-dropoff"
+    private const val IMG_CUSTOMER = "img-customer-live"
 
     /**
      * ══════════════════════════════════════════════════════════════════
@@ -121,6 +123,8 @@ object Markers {
         // **ويُمرَّر ولا يُحسب هنا** — الحسابُ في `BearingTracker`،
         // **وهذه ترسم ولا تقرّر.**
         driverBearingDeg: Float? = null,
+        // **والزبونُ الآن** (٢٠٢٦-١٠-١٦) — علامةٌ ثالثةٌ في طبقة الطرفين نفسِها، وفارغةٌ: لا شيء.
+        customer: LatLng? = null,
     ) {
         images(context, style, icons)
         // **والخطّ أوّلا ثمّ العلامات** — الترتيب هو ترتيب الرسم:
@@ -150,7 +154,7 @@ object Markers {
         // **وتحت المثلّث** فيبقى المؤشّرُ ظاهراً لا يقطعه خطّ.
         me(style, driver, driverBearingDeg ?: 0f)
         line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
-        points(style, driver, pickup, dropoff, driverBearingDeg)
+        points(style, driver, pickup, dropoff, driverBearingDeg, customer)
         // **والمثلّثُ آخرُ ما يُضاف** — فيعلو المسارَ والطرفين.
         driverIcon(style)
     }
@@ -168,6 +172,8 @@ object Markers {
         style.addImage(IMG_DRIVER, arrow(context, 46))
         style.addImage(IMG_PICKUP, badge(context, icons.pickup, PICKUP, 40))
         style.addImage(IMG_DROPOFF, badge(context, icons.dropoff, DROPOFF, 40))
+        // **والزبونُ الآن بالأيقونة نفسِها ولونٍ آخر** — يُعرف أنّه الزبونُ ويُفرَّق عن الدبّوس.
+        style.addImage(IMG_CUSTOMER, badge(context, icons.customer, CUSTOMER, 36))
     }
 
     /**
@@ -348,12 +354,14 @@ object Markers {
         pickup: LatLng?,
         dropoff: LatLng?,
         driverBearingDeg: Float?,
+        customer: LatLng? = null,
     ) {
         // **وطرفا الرحلة يُحفظان هنا** — يقرؤهما `moveDriver` في كلّ
         // إطارٍ بلا استعلامٍ في المحرّك.
         ends = buildList {
             pickup?.let { add(feature(it, IMG_PICKUP)) }
             dropoff?.let { add(feature(it, IMG_DROPOFF)) }
+            customer?.let { add(feature(it, IMG_CUSTOMER)) }
         }
         // **ولا سائقَ هنا** — هو في `trip-me` وحدَه، **فلا يُرسم مرّتين
         // ولا يُعاد رفعُ الطرفين معه في كلّ إطار.**
@@ -612,4 +620,6 @@ data class MarkerIcons(
     @androidx.annotation.DrawableRes val driver: Int,
     @androidx.annotation.DrawableRes val pickup: Int,
     @androidx.annotation.DrawableRes val dropoff: Int,
+    /** **علامةُ الزبون الآن** (٢٠٢٦-١٠-١٦) — وافتراضُها أيقونةُ الدبّوس بلونٍ آخر. */
+    @androidx.annotation.DrawableRes val customer: Int = dropoff,
 )

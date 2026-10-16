@@ -199,6 +199,34 @@ data class DriverOrder(
     @SerialName("prep_minutes") val prepMinutes: Int? = null,
     @SerialName("accepted_at") val acceptedAt: String? = null,
     @SerialName("created_at") val createdAt: String = "",
+    /**
+     * **موقعُ الزبون المباشر إن شاركه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — وفارغٌ: امشِ إلى الدبّوس.
+     *
+     * **والمحرّكُ لا يرسله شائخاً** — **والتطبيقُ يقيس عمرَه بنفسه بين قراءتين**
+     * (`at`)، فنقطةٌ وصلت حديثةً ثمّ سكت صاحبُها لا تبقى وجهةً إلى الأبد.
+     */
+    @SerialName("customer_live") val customerLive: CustomerLive? = null,
+)
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **آخرُ موقعٍ أرسله الزبون** (`orders.LivePoint` — نفس الأسماء)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وبُعدُه عن الدبّوس وحدُّ التحويل من المحرّك** — **فلا يحسب التطبيقُ وجهةً
+ * غيرَ التي يحسب الخادمُ إليها الطريق.**
+ */
+@Serializable
+data class CustomerLive(
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
+    @SerialName("accuracy_m") val accuracyM: Double? = null,
+    /** **متى وصلت المحرّك** — بتوقيتٍ كامل (`RFC3339`). */
+    val at: String = "",
+    /** **بُعدُها عن دبّوس العنوان بالمتر** — وسالبٌ: لا يُعرف. */
+    @SerialName("pin_gap_m") val pinGapM: Double = -1.0,
+    /** **الحدُّ الذي يتحوّل بعده الطريقُ إلى الزبون** — من إعدادات اللوحة. */
+    @SerialName("switch_m") val switchM: Long = 150,
 )
 
 /**

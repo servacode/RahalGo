@@ -104,6 +104,15 @@ class LiveSocket(
         // صامتة تبدو كوصلة هادئة**، ولا يُعرف الفرق إلّا بأثر.
         onState: (Boolean) -> Unit = {},
         onEvent: () -> Unit,
+        // ══════════════════════════════════════════════════════════════
+        // **والإشارةُ الخفيفةُ تُعاد بها قائمةٌ واحدة** (٢٠٢٦-١٠-١٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **موقعُ الزبون المباشر يصل كلَّ عشر ثوانٍ** (`customer_live`) — **ومن أعاد
+        // بها كلَّ الشاشات** (الرصيد والسجلّ والدردشات) أيقظ الراديو ستَّ مرّاتٍ في
+        // الدقيقة بلا خبر. **فمن عرف نوعَها قال «تكفّلتُ بها»** (`true`)، **وما لم
+        // يعرفه يمضي إلى `onEvent` كما كان.**
+        onLight: ((type: String) -> Boolean)? = null,
     ) {
         if (job?.isActive == true) return
         job = scope.launch {
@@ -127,8 +136,9 @@ class LiveSocket(
                         onState(true)
                         for (frame in incoming) {
                             if (frame is Frame.Text) {
-                                frame.readText()
-                                onEvent()
+                                val text = frame.readText()
+                                val light = onLight
+                                if (light == null || !light(eventType(text))) onEvent()
                             }
                         }
                     }
@@ -160,6 +170,16 @@ class LiveSocket(
         job?.cancel()
         job = null
     }
+
+    /** **نوعُ الإشارة** (`type`) — وفارغٌ إن لم يُقرأ: **فيُعامَل كأيّ إشارةٍ لا خفيفة.** */
+    private fun eventType(text: String): String = runCatching {
+        kotlinx.serialization.json.Json.parseToJsonElement(text)
+            .let { it as? kotlinx.serialization.json.JsonObject }
+            ?.get("type")
+            ?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+            ?.takeIf { it.isString }
+            ?.content
+    }.getOrNull().orEmpty()
 
     private companion object {
         const val FIRST_RETRY_MS = 2_000L

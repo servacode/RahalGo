@@ -405,6 +405,9 @@ type driverOrder struct {
 	PayMerchant int64 `json:"pay_merchant"`
 	// PayMerchants **لكلّ متجرٍ ما يدفعه له** — لطلبٍ من مصدرين.
 	PayMerchants []orders.StorePay `json:"pay_merchants"`
+	// CustomerLive **موقعُ الزبون المباشر إن شاركه وهو حديث** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
+	// يُلحَق في طلباته هو وحدَها (`attachDriverLive`)، **وغيابُه يعني: امشِ إلى الدبّوس.**
+	CustomerLive *orders.LivePoint `json:"customer_live,omitempty"`
 	// PartnerMerchantName **المتجرُ التابعُ الذي يشتري منه** في المشتريات (قرارُ المالك
 	// ٢٠٢٦-١٠-١٥) — **وفراغٌ: يشتري من حيث شاء.** وما يدفعه له في `pay_merchant` بعد التوثيق.
 	PartnerMerchantName string `json:"partner_merchant_name"`
@@ -548,10 +551,20 @@ const driverOrderSelect = `
 	LEFT JOIN users mo ON mo.id = m.owner_user_id`
 
 func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql string, args ...any) {
-	rows, err := s.pg.Query(r.Context(), sql, args...)
+	out, err := s.loadDriverOrders(r, sql, args...)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// loadDriverOrders **يقرأ طلباتِ السائق بأصنافها وما يدفعه** — ولا يكتب ردّاً،
+// **فيُلحق بها من يناديه ما يخصّه** (`attachDriverLive` لطلباته هو وحدَها).
+func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]driverOrder, error) {
+	rows, err := s.pg.Query(r.Context(), sql, args...)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 	out := []driverOrder{}
@@ -574,8 +587,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,
 			&o.DeliveryCodeRequired, &o.PartnerMerchantName,
 			&o.DeliveryMode, &o.CollectAmount); err != nil {
-			s.respondErr(w, err)
-			return
+			return nil, err
 		}
 		if o.ReturnTo != "" {
 			s.asReturnTrip(r.Context(), &o)
@@ -586,18 +598,16 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 		out = append(out, o)
 	}
 	if err := rows.Err(); err != nil {
-		s.respondErr(w, err)
-		return
+		return nil, err
 	}
+	rows.Close()
 	if err := s.attachDriverItems(r.Context(), out); err != nil {
-		s.respondErr(w, err)
-		return
+		return nil, err
 	}
 	if err := s.attachPayMerchants(r.Context(), out); err != nil {
-		s.respondErr(w, err)
-		return
+		return nil, err
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	return out, nil
 }
 
 // attachPayMerchants **يُلحق بكلّ طلبٍ ما يدفعه السائقُ للمتاجر عند الاستلام** —
@@ -790,11 +800,20 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 // **طلبٌ أُنهي فشلاً والبضاعةُ معه** (`return_to`) يبقى حتّى يضغط «سلّمت البضاعة» —
 // **بطاقةٌ فيها فعلٌ واحدٌ وطريقٌ مرسوم**، لا ركام. **ويخرج بالضغطة نفسِها.**
 func (s *Server) handleDriverOrders(w http.ResponseWriter, r *http.Request) {
-	s.scanDriverOrders(w, r, driverOrderSelect+`
+	uid := userIDFrom(r)
+	out, err := s.loadDriverOrders(r, driverOrderSelect+`
 		WHERE o.driver_id = $1
 		  AND (o.closed_at IS NULL
 		       OR (o.status = 'failed' AND o.return_to IS NOT NULL AND o.goods_handed_at IS NULL))
-		ORDER BY o.created_at`, userIDFrom(r), staleLocationMinutes)
+		ORDER BY o.created_at`, uid, staleLocationMinutes)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **وموقعُ الزبون المباشر في طلباته هو وحدَها** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لا في
+	// الطابور ولا في العروض: **من لم يُسنَد إليه الطلبُ لا يرى أين صاحبُه.**
+	s.attachDriverLive(r.Context(), uid, out)
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 // driverPickupPointSQL **أين يستلم السائق** — البديلةُ إن وُجدت، **وفي «إحضار» نقطةُ العنوان**

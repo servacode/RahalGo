@@ -576,4 +576,10 @@
     <string name="map_no_location_purchase">لا يوجد موقع لمكان الشراء على الخريطة — اسأل الزبون بالمحادثة</string>
     <string name="trip_p_fixed_amanah">استلم الأمانة ثم سلّمها للزبون</string>
     <string name="trip_p_fixed_purchase">اشترِ المطلوب ووثّق ثمنه</string>
+    <!-- **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `trip/DoorTarget.kt`. -->
+    <string name="trip_live_switched">الزبون مو عند العنوان — الطريق تحوّل لموقعه الحالي</string>
+    <string name="trip_live_stale">موقع الزبون المباشر صار قديم — رجعنا للعنوان</string>
+    <string name="trip_live_now">الزبون الآن · قبل %1$s</string>
+    <string name="trip_live_age_sec">%1$d ث</string>
+    <string name="trip_live_age_min">%1$d د</string>
 </resources>

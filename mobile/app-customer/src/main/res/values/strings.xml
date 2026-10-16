@@ -279,4 +279,15 @@
     <string name="prelaunch_body">نعمل حاليًا على تجهيز رحال غو لاستقبال طلباتكم.\nترقبوا الافتتاح قريبًا.</string>
     <string name="prelaunch_login">تسجيل الدخول</string>
     <string name="menu_tutorial">شرح التطبيق بالفيديو</string>
+    <!-- **مشاركةُ الموقع المباشر مع الكابتن** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `live/LiveShare.kt`. -->
+    <string name="live_ask_title">الكابتن بالطريق إليك</string>
+    <string name="live_ask_body">شارك موقعك المباشر ليصلك كابتن رحال غو إلى باب بيتك</string>
+    <string name="live_ask_share">شارك موقعي</string>
+    <string name="live_ask_no">لا، العنوان صحيح</string>
+    <string name="live_note_title">عم تشارك موقعك مع الكابتن</string>
+    <string name="live_note_text">بتوقف المشاركة لحالها لما يوصلك الطلب</string>
+    <string name="live_stop">وقّف المشاركة</string>
+    <string name="live_channel">مشاركة الموقع مع الكابتن</string>
+    <string name="live_card_sharing">عم تشارك موقعك المباشر مع الكابتن</string>
+    <string name="live_denied">ما فينا نشارك موقعك بدون إذن الموقع</string>
 </resources>

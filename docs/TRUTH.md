@@ -1272,6 +1272,7 @@ kosom` |
 | `drivers.zone_gate_enabled` | السائقون | bool | `false` |
 | `orders.handover_timeout_min` | السائقون | int | `5` |
 | `orders.route_margin_pct` | السائقون | int | `50` |
+| `orders.live_location_switch_m` | السائقون | int | `150` |
 | `drivers.require_whatsapp` | السائقون | bool | `true` |
 | `drivers.monthly_target` | السائقون | int | `0` |
 | `drivers.target_reward` | السائقون | money | `0` |

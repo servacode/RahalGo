@@ -231,6 +231,13 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	s.fillBoard(r, one)
 	strip := s.maskOrderDetails(r, one)
 	o = &one[0]
+	// **وموقعُ الزبون المباشر لمن يرى عنوانَه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ومن حُجب عنه
+	// الدبّوسُ (`orderDetailFields`) لا يرى ما هو أدقُّ منه.
+	if !strip {
+		if got, err := s.orders.LiveFor(r.Context(), []string{o.ID}, "", s.liveSwitchM(r.Context())); err == nil {
+			o.CustomerLive = got[o.ID]
+		}
+	}
 	// ══════════════════════════════════════════════════════════════════
 	// **ومسارُه كاملاً بأوقاته ومن فعله**
 	// ══════════════════════════════════════════════════════════════════

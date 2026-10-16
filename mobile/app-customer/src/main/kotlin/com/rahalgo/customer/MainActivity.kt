@@ -1167,7 +1167,46 @@ private fun SignedIn(
                         onDismiss = { ordersVm.dismissQuote(o) },
                     )
                 }
-                if (!guest && tab != Tab.Cart && pendingQuote == null) {
+                // ══════════════════════════════════════════════════════
+                // **«شارك موقعك المباشر» حين يصير طلبُه بالطريق** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+                // ══════════════════════════════════════════════════════
+                //
+                // **مرّةً واحدةً لكلّ طلب ومن أيّ شاشة** — والسعرُ قبله: نافذتان لا تتراكبان.
+                // **وبلا إذنٍ يُطلب الإذن** — فإن رُفض قيل له لماذا لم تبدأ المشاركة.
+                val liveCtx = androidx.compose.ui.platform.LocalContext.current
+                var liveAsking by remember { mutableStateOf<String?>(null) }
+                val askLive = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestMultiplePermissions(),
+                ) { _ ->
+                    val id = liveAsking
+                    liveAsking = null
+                    if (id != null && com.rahalgo.map.Here.granted(liveCtx)) {
+                        com.rahalgo.customer.live.LiveShare.start(liveCtx, id)
+                    } else if (id != null) {
+                        com.rahalgo.ui.Flash.fail(liveCtx.getString(R.string.live_denied))
+                    }
+                }
+                val pendingLive = if (!guest && pendingQuote == null) ordersVm.pendingLiveShare else null
+                pendingLive?.let { o ->
+                    com.rahalgo.customer.live.LiveShareDialog(
+                        onShare = {
+                            ordersVm.decideLiveShare(o)
+                            if (com.rahalgo.map.Here.granted(liveCtx)) {
+                                com.rahalgo.customer.live.LiveShare.start(liveCtx, o.id)
+                            } else {
+                                liveAsking = o.id
+                                askLive.launch(
+                                    arrayOf(
+                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    ),
+                                )
+                            }
+                        },
+                        onDecline = { ordersVm.decideLiveShare(o) },
+                    )
+                }
+                if (!guest && tab != Tab.Cart && pendingQuote == null && pendingLive == null) {
                     // **السؤالُ التلقائيُّ مرّةً واحدة** — يُثبَّت فلا يعود عند
                     // الإقلاعِ/العودةِ/النبضةِ/إعادةِ الوصل. **واليدويُّ في بطاقة
                     // الطلب** (`OrdersScreen.onRate`) لمن أراد بعد الإغلاق.

@@ -138,6 +138,33 @@ fun OrderCard(
         }
 
         // ══════════════════════════════════════════════════════════════
+        // **وموقعُه يُشارَك الآن؟ فالإيقافُ هنا أيضاً** (قرارُ المالك ٢٠٢٦-١٠-١٦)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **لا في الإشعار وحدَه** — من فتح «طلباتي» يرى أنّ موقعَه يُرسَل ويوقفه بضغطة.
+        if (com.rahalgo.customer.live.LiveShare.activeOrderId == order.id) {
+            val liveCtx = LocalContext.current
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.live_card_sharing),
+                    color = Rahal.colors.success,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                RahalTextButton(
+                    onClick = { com.rahalgo.customer.live.LiveShare.stop(liveCtx) },
+                    tone = Tone.Danger,
+                ) { Text(stringResource(R.string.live_stop)) }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // **وما فيه باختصارٍ كما يرسله المحرّك**
         // ══════════════════════════════════════════════════════════════
         //

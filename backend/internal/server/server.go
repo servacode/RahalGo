@@ -709,6 +709,10 @@ func (s *Server) Router() http.Handler {
 			// **ويرفض السعرَ الجديدَ إن رفعه المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الطلبُ
 			// يبقى حيث هو، **والمكتبُ يرى العلامةَ ويقرّر.**
 			r.Post("/orders/{id}/reject-quote", s.handleRejectQuote)
+			// **ويشارك موقعَه المباشرَ مع الكابتن** (قرارُ المالك ٢٠٢٦-١٠-١٦) — آخرُ نقطةٍ وحدَها،
+			// **ويوقفها متى شاء.** انظر `live_location.go`.
+			r.Post("/orders/{id}/live-location", s.handleCustomerLiveLocation)
+			r.Delete("/orders/{id}/live-location", s.handleStopCustomerLiveLocation)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
 			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)

@@ -82,6 +82,11 @@ fun TripMap(
     dropoff: LatLng?,
     route: List<LatLng> = emptyList(),
     follow: Boolean = false,
+    /**
+     * **الزبونُ الآن** — موقعُه المباشر إن شاركه (قرارُ المالك ٢٠٢٦-١٠-١٦)، **علامةٌ بلونٍ
+     * غيرِ الدبّوس.** وفارغٌ: لا علامة، والخريطةُ كما كانت حرفاً بحرف.
+     */
+    customer: LatLng? = null,
     recenter: Int = 0,
     nav: NavRender? = null,
     /**
@@ -316,7 +321,7 @@ fun TripMap(
         Markers.resetProgress()
         floatArrayOf(if (nav != null) 0f else Float.NaN)
     }
-    latest[0] = TripDraw(driver, pickup, dropoff, route, icons)
+    latest[0] = TripDraw(driver, pickup, dropoff, route, icons, customer)
 
     /**
      * **وبدائلُ العرض ومعاينتُها** — تُعاد بعد كلّ تحميل نمط.
@@ -428,6 +433,7 @@ fun TripMap(
             val draw = latest[0] ?: return@register
             Markers.draw(
                 context, style, draw.driver, draw.pickup, draw.dropoff, draw.route, draw.icons,
+                customer = draw.customer,
             )
         }
         /**
@@ -591,6 +597,7 @@ fun TripMap(
                 if (navShown) LatLng(shown[0], shown[1]) else driver,
                 pickup, dropoff, route, icons,
                 driverBearingDeg = if (navShown) shownBearing[0] else null,
+                customer = customer,
             )
 
             // ══════════════════════════════════════════════════════════
@@ -736,7 +743,7 @@ fun TripMap(
                             if (!Markers.moveDriver(it, here, aim(bearing))) {
                                 Markers.draw(
                                     context, it, here, pickup, dropoff, route,
-                                    icons, aim(bearing),
+                                    icons, aim(bearing), customer,
                                 )
                             }
                         }
@@ -781,6 +788,7 @@ private data class TripDraw(
     val dropoff: LatLng?,
     val route: List<LatLng>,
     val icons: MarkerIcons,
+    val customer: LatLng? = null,
 )
 
 /**
