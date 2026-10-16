@@ -318,7 +318,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // (`rated`)، فيختفي زرُّ «قيّم الطلب» ولا يُسأل ثانيةً.
                 askRate = null
             } catch (e: Exception) {
-                actionError = apiError(getApplication(), e)
+                // **«قيّمتَه من قبل» تُغلق النافذة** (٢٠٢٦-١٠-١٧) — كان الخطأُ يُبقيها مفتوحةً
+                // فتعود بعد كلّ «إرسال»؛ **والخادمُ يقول إنّه مقيَّم فهو مقيَّم.**
+                if (e is ApiClient.ApiException && e.body.code == "already_rated") {
+                    rated = rated + orderId
+                    askRate = null
+                } else {
+                    actionError = apiError(getApplication(), e)
+                }
             }
             busy = false
             load()
