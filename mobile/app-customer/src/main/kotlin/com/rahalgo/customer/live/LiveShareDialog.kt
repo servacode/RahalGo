@@ -8,7 +8,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.rahalgo.customer.R
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.RahalTextButton
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.Modifier
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.Tone
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -38,14 +43,19 @@ fun LiveShareDialog(
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
+        // **زرّان معبّآن متقابلان — أخضرُ وأحمر** (ملاحظةُ المالك ٢٠٢٦-١٠-١٦): «لازم أزرار
+        // أخضر وأحمر ليبيّن إنه يختار» — **كانا زرّين نصّيّين يُقرآن رابطَين لا قرارا.**
         confirmButton = {
-            RahalTextButton(onClick = onShare) {
-                Text(stringResource(R.string.live_ask_share), fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            RahalTextButton(onClick = onDecline) {
-                Text(stringResource(R.string.live_ask_no))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                RahalButton(onClick = onShare, tone = Tone.Success, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.live_ask_share), fontWeight = FontWeight.Bold)
+                }
+                RahalButton(onClick = onDecline, tone = Tone.Danger, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.live_ask_no))
+                }
             }
         },
     )
