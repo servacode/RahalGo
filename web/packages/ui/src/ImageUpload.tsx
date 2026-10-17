@@ -60,6 +60,7 @@ export function ImageUpload({
   mediaUrl,
   path = "/api/v1/admin/media",
   errorText,
+  maxEdge,
 }: {
   kind: MediaKind;
   label: string;
@@ -78,11 +79,39 @@ export function ImageUpload({
    * **وفارغٌ يعني «خطأٌ عامّ»** — ورسالةٌ عامّةٌ أهونُ من صمت.
    */
   errorText?: (err: unknown) => string;
+  /**
+   * **تصغيرٌ في المتصفّح قبل الرفع** — أطولُ ضلعٍ بالبكسل، **وفارغُه يرفع كما هي.**
+   *
+   * (لوحةُ المتجر ٢٠٢٦-١٠-١٧: صورةُ آيفون ١٢ مليون بكسل وأربعة ميغا.)
+   * **وتطبيقُ المتجر يصغّرها إلى ١٦٠٠ قبل الرفع** (`readScaledImage`)، **فمن
+   * رفع من الويب صنفاً لا يُردّ بـ«أكبر من الحدّ» وصاحبُ أندرويد يُقبل.**
+   * **وما فشل تصغيرُه يُرسَل كما هو** — والخادمُ يحكم.
+   */
+  maxEdge?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(mediaUrl(initialUrl));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  async function shrink(file: File): Promise<Blob> {
+    if (!maxEdge) return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
+      if (scale === 1) return file;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.85));
+      return blob ?? file;
+    } catch {
+      return file;
+    }
+  }
 
   async function upload(file: File) {
     setBusy(true);
@@ -90,7 +119,8 @@ export function ImageUpload({
     try {
       const form = new FormData();
       form.append("kind", kind);
-      form.append("file", file);
+      const blob = await shrink(file);
+      form.append("file", blob, blob === file ? file.name : "image.jpg");
       const res = await api<MediaResult>(path, { method: "POST", body: form });
       setPreview(mediaUrl(res.thumb_url));
       onChange(res.id);
