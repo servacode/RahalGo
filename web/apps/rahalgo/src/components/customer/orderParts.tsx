@@ -1,0 +1,335 @@
+"use client";
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أجزاءُ الطلب — المراحلُ وكودُ الاستلام وتأكيدُ السعر**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **مرآةُ `OrderCard.kt`**: المراحلُ يحسبها المحرّك (`stages` و`stage_at`)
+ * **والشاشةُ تترجمها وحدَها** — أربعَ عشرةَ حالاً تُطوى في ستّ مراحل،
+ * **والطيُّ في موضعٍ واحدٍ لا في كلّ شاشة.**
+ *
+ * **ونافذةُ تأكيد السعر بلا «لاحقاً»** (قرارُ المالك): التسليمُ موقوفٌ على
+ * جوابه — **قبولٌ أخضرُ أو رفضٌ أحمر**، ولا بابَ ثالث.
+ */
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { getMessages, defaultLocale, errorText, fmtClock, fmtRef } from "@rahalgo/i18n";
+import { Alert, Button, Chips, Confirm, Money } from "@rahalgo/ui";
+import { api } from "@/lib/api";
+import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
+import { codeFromNotice, fill, stageLabel } from "@/lib/customer/texts";
+import { ENDED, type MyOrder, type Notice } from "@/lib/customer/types";
+
+const m = getMessages(defaultLocale);
+const O = m.shop.orders;
+
+/** **أينتظر هذا الطلبُ تأكيدَ سعرٍ منه؟** — مرآةُ `quotePending`. */
+export function quotePending(o: MyOrder): boolean {
+  if (o.kind !== "custom" || o.custom_goods_amount == null) return false;
+  if (o.quote_confirmed_at != null && o.quote_confirmed_version === o.quote_version) return false;
+  if (ENDED.has(o.status)) return false;
+  return o.quote_rejected_at == null;
+}
+
+/** **شريطُ المراحل** — المنتهي مُضاء، والجاري بارز، والآتي باهت. */
+export function OrderStages({ order }: { order: MyOrder }) {
+  if (order.stage_at < 0 || order.stages.length === 0) return null;
+  const amanah = order.custom_mode === "amanah";
+  return (
+    <ol className="flex w-full items-start gap-1" aria-label={O.live}>
+      {order.stages.map((s, i) => {
+        const done = i < order.stage_at;
+        const now = i === order.stage_at;
+        return (
+          <li key={s} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+            <span
+              className={`h-1.5 w-full rounded-badge ${
+                done ? "bg-accent" : now ? "bg-accent motion-safe:animate-pulse" : "bg-line-soft"
+              }`}
+            />
+            <span
+              className={`w-full truncate text-center text-2xs ${
+                now ? "font-bold text-accent-text" : done ? "text-ink" : "text-ink-dim"
+              }`}
+            >
+              {stageLabel(s, amanah)}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * **كودُ الاستلام** — يُقرأ من إشعاره حتّى يصير حقلاً في الطلب.
+ *
+ * **ولا يُعرض قبل الاستلام**: الكودُ يولد لحظةَ `picked_up`.
+ */
+export function DeliveryCode({ order }: { order: MyOrder }) {
+  const [code, setCode] = useState("");
+  const live = ["picked_up", "on_the_way", "at_dropoff"].includes(order.status);
+  useEffect(() => {
+    if (!live) {
+      setCode("");
+      return;
+    }
+    let alive = true;
+    api<{ items: Notice[] }>("/api/v1/me/notifications?limit=50")
+      .then((r) => {
+        if (!alive) return;
+        const hit = (r.items ?? []).find((n) => n.entity === "order" && n.entity_id === order.id && codeFromNotice(n.body, order.number));
+        setCode(hit ? codeFromNotice(hit.body, order.number) : "");
+      })
+      .catch(() => undefined); // **وكودٌ لم يُقرأ لا يُسقط البطاقة** — يصله بالإشعار والواتساب أصلاً.
+    return () => {
+      alive = false;
+    };
+  }, [live, order.id, order.number, order.status]);
+  if (!code) return null;
+  return (
+    <div className="surface-inset flex items-center justify-between gap-3 p-3">
+      <div className="min-w-0">
+        <p className="text-sm font-bold">{O.code}</p>
+        <p className="text-xs text-ink-muted">{O.codeHint}</p>
+      </div>
+      <span dir="ltr" className="figure tracking-[0.3em] text-accent-text">
+        {code}
+      </span>
+    </div>
+  );
+}
+
+/** **زرُّ الإلغاء ما دامت المهلة** — والمهلةُ من الخادم لا من حسبةِ الشاشة. */
+export function CancelOrder({ order, onDone }: { order: MyOrder; onDone: () => void }) {
+  const [left, setLeft] = useState(order.cancel_seconds_left);
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => setLeft(order.cancel_seconds_left), [order.cancel_seconds_left]);
+  useEffect(() => {
+    if (left <= 0) return;
+    const t = setInterval(() => setLeft((s) => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [left > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (ENDED.has(order.status) || left === 0 || left < -1) return null;
+  return (
+    <div className="space-y-2">
+      <Button variant="danger" className="w-full" onClick={() => setAsk(true)} disabled={busy}>
+        {O.cancel}
+        {left > 0 && <span className="ms-2 text-xs opacity-80">{fmtClock(left)}</span>}
+      </Button>
+      {error && <Alert>{error}</Alert>}
+      <Confirm
+        open={ask}
+        title={O.cancelTitle}
+        body={O.cancelAsk}
+        confirmLabel={O.cancelYes}
+        busy={busy}
+        onCancel={() => setAsk(false)}
+        onConfirm={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            await api(`/api/v1/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ note: "" }) });
+            setAsk(false);
+            onDone();
+          } catch (err) {
+            setError(errorText(err));
+            setAsk(false);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+/** **مبالغُ العرض** — ثمنُ البضاعة والأجرةُ والمجموع. */
+export function QuoteAmounts({ order }: { order: MyOrder }) {
+  const goods = order.custom_goods_amount;
+  if (goods == null) return null;
+  return (
+    <dl className="space-y-1 text-sm">
+      {order.custom_mode !== "amanah" && (
+        <div className="flex justify-between gap-2">
+          <dt className="text-ink-muted">{O.goods}</dt>
+          <dd>{order.custom_goods_pending ? O.goodsAfter : <Money value={goods} />}</dd>
+        </div>
+      )}
+      <div className="flex justify-between gap-2">
+        <dt className="text-ink-muted">{O.delivery}</dt>
+        <dd>
+          <Money value={order.custom_fee ?? 0} />
+        </dd>
+      </div>
+      <div className="flex justify-between gap-2 font-bold">
+        <dt>{O.total}</dt>
+        <dd className="text-accent-text">
+          <Money value={order.total} />
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **تأكيدُ السعر — يُرسَل ما رآه** (`expected_total` و`expected_quote_version`)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **فإن تبدّل العرضُ بين الرؤية والضغطة ردّ المحرّكُ `quote_changed`** —
+ * فيُعاد جلبُه ويُسأل من جديد. **والمحفظةُ لا تُعرض إلّا إن غطّت المبلغ.**
+ */
+export function QuotePanel({
+  order,
+  available,
+  onDone,
+  onMessage,
+}: {
+  order: MyOrder;
+  available: number;
+  onDone: () => void;
+  onMessage: (text: string) => void;
+}) {
+  const ownReserved = order.payment_method === "wallet" ? order.custom_reserved_amount : 0;
+  const walletOk = available + ownReserved >= order.total;
+  const [method, setMethod] = useState<"cash" | "wallet">("cash");
+  const [busy, setBusy] = useState(false);
+  const [askReject, setAskReject] = useState(false);
+  const [error, setError] = useState("");
+  const amanah = order.custom_mode === "amanah";
+  const pay = method === "wallet" && !walletOk ? "cash" : method;
+
+  const confirm = async () => {
+    const slot = "confirm_" + order.id;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/orders/${order.id}/confirm-quote`, {
+        method: "POST",
+        headers: { "Idempotency-Key": attemptKey(slot) },
+        body: JSON.stringify({
+          payment_method: pay,
+          expected_total: order.total,
+          expected_quote_version: order.quote_version,
+        }),
+      });
+      clearAttempt(slot);
+      onMessage(pay === "wallet" ? O.confirmedWallet : O.confirmedCash);
+      onDone();
+    } catch (err) {
+      const code = (err as { body?: { code?: string } })?.body?.code;
+      if (code === "quote_changed") {
+        clearAttempt(slot);
+        onMessage(O.quoteStale);
+        onDone();
+      } else {
+        if (isDecided(err)) clearAttempt(slot);
+        setError(errorText(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reject = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/orders/${order.id}/reject-quote`, { method: "POST", body: "{}" });
+      setAskReject(false);
+      onMessage(O.rejectedSent);
+      onDone();
+    } catch (err) {
+      setAskReject(false);
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {order.quote_confirmed_version != null && <p className="text-sm">{O.raisedNote}</p>}
+      <p className="text-sm font-bold">{O.confirmPrompt}</p>
+      <Chips<"cash" | "wallet">
+        items={[
+          { id: "cash", label: m.shop.cart.cash },
+          ...(walletOk ? [{ id: "wallet" as const, label: m.shop.cart.wallet }] : []),
+        ]}
+        value={pay}
+        onChange={setMethod}
+      />
+      {!walletOk && <p className="text-xs text-ink-muted">{O.walletShort}</p>}
+      {error && <Alert>{error}</Alert>}
+      <button
+        type="button"
+        onClick={confirm}
+        disabled={busy}
+        className="w-full rounded-control bg-success px-4 py-3 text-sm font-bold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {busy ? m.common.loading : amanah || order.custom_goods_pending ? O.confirmFee : O.confirmGoods}
+      </button>
+      <Button variant="danger" className="w-full py-3" onClick={() => setAskReject(true)} disabled={busy}>
+        {O.reject}
+      </Button>
+      <Confirm
+        open={askReject}
+        title={O.rejectTitle}
+        body={O.rejectBody}
+        confirmLabel={O.rejectYes}
+        busy={busy}
+        onCancel={() => setAskReject(false)}
+        onConfirm={reject}
+      />
+    </div>
+  );
+}
+
+/**
+ * **نافذةُ السعر — تُفتح من أيّ شاشة ولا تُغلق إلّا بجواب.**
+ *
+ * **ولا `Modal`**: تلك تحمل ✕ وتُغلق بالضغط خارجها — **وهو «لاحقاً» بلا
+ * اسم.** فتُرسم هنا بحجاب المنصّة ولوحها (`scrim` · `surface-modal`).
+ */
+export function QuoteDialog({
+  order,
+  available,
+  onDone,
+  onMessage,
+}: {
+  order: MyOrder;
+  available: number;
+  onDone: () => void;
+  onMessage: (text: string) => void;
+}) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-end justify-center scrim p-0 sm:items-center sm:p-4">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="quote-t"
+        className="max-h-[90vh] w-full overflow-y-auto surface-modal p-5 sm:max-w-md"
+      >
+        <h2 id="quote-t" className="heading-card mb-3">
+          {fill(O.dialogTitle, { n: fmtRef(order.number) })}
+        </h2>
+        {order.custom_request && (
+          <p className="mb-3 line-clamp-2 text-sm">
+            {O.wanted} {order.custom_request}
+          </p>
+        )}
+        <div className="mb-4">
+          <QuoteAmounts order={order} />
+        </div>
+        <QuotePanel order={order} available={available} onDone={onDone} onMessage={onMessage} />
+      </div>
+    </div>,
+    document.body,
+  );
+}
