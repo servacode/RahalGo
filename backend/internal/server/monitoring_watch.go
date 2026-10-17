@@ -27,6 +27,11 @@ package server
 //	البطء      `SELECT 1` أبطأُ من `monitoring.db_slow_ms` ثلاثَ دقائقَ متتالية
 //	الدفتر     فحوصُ «صحة الدفتر» كلَّ ساعة — وكلُّ فحصٍ يسقط تنبيهٌ باسمه
 //
+// **وزادت الدفعةُ الثانية (٢٠٢٦-١٠-١٧) عينَ الأمان** — انظر `monitoring_security.go`:
+//
+//	فوريّ      حسابٌ انقفل · كودُ تسليمٍ انقفل · سائقٌ زيّف موقعه
+//	القفزة     دخولٌ غلطٌ ≥ `monitoring.login_fail_spike` · فتحُ بيانات الغير ≥ `monitoring.forbidden_spike`
+//
 // # ولا تكرارَ مزعج
 //
 //   - **التنبيهُ مرّةً** — ولا يُعاد قبل ساعةٍ ما دامت المشكلةُ قائمة.
@@ -144,10 +149,17 @@ type monitorState struct {
 func (s *Server) RunMonitoring(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
+	kick := s.sec.kickCh()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-kick:
+			// **تنبيهُ أمانٍ فوريّ** — يُرسَل حالاً لا بعد دقيقة.
+			kctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			s.drainSecurityAlerts(kctx, time.Now())
+			cancel()
+			continue
 		case <-t.C:
 		}
 		cctx, cancel := context.WithTimeout(ctx, 45*time.Second)
@@ -162,11 +174,19 @@ func (s *Server) monitorTick(ctx context.Context, now time.Time) {
 	if err := s.flushErrors(ctx); err != nil {
 		s.logger.Warn("المراقبة: تعذّرت كتابةُ عدّاد الأخطاء — يُعاد بعد دقيقة", "error", err)
 	}
+	// **وعدُّ الأمان كذلك** — والتقريرُ الصباحيُّ يقرؤه من الجدول.
+	if err := s.flushSecurity(ctx); err != nil {
+		s.logger.Warn("المراقبة: تعذّرت كتابةُ عدّاد الأمان — يُعاد بعد دقيقة", "error", err)
+	}
+	// **وما فات من تنبيهات الأمان الفوريّة** (جرسٌ لم يُسمع أو إرسالٌ فشل).
+	s.drainSecurityAlerts(ctx, now)
 	s.mon.mu.Lock()
 	defer s.mon.mu.Unlock()
 	if s.pg != nil && now.Sub(s.mon.lastPurge) >= 24*time.Hour && !dbDownFlag.Load() {
 		if _, err := s.pg.Exec(ctx, `DELETE FROM server_errors WHERE hour < $1`,
 			now.Add(-errorsKeep)); err == nil {
+			_, _ = s.pg.Exec(ctx, `DELETE FROM security_events_daily WHERE day < $1::date`,
+				now.Add(-securityKeep).In(platform.Location()).Format("2006-01-02"))
 			s.mon.lastPurge = now
 		}
 	}
@@ -175,6 +195,7 @@ func (s *Server) monitorTick(ctx context.Context, now time.Time) {
 	}
 	checks := s.monitorChecks(ctx, now)
 	checks = append(checks, s.moneyMonitor(ctx, now)...)
+	checks = append(checks, s.securityChecks(ctx, now)...)
 	s.mon.book.step(checks, now, func(text string) bool { return s.alertOwner(ctx, text) })
 
 	if s.monSetting(ctx, "monitoring.morning_report") {
@@ -406,6 +427,9 @@ func (s *Server) morningReport(ctx context.Context, now time.Time) string {
 			}
 		}
 		if line, ok := s.moneyMorningLine(ctx, now); ok {
+			w("%s", line)
+		}
+		if line, ok := s.securityMorning(ctx, now); ok {
 			w("%s", line)
 		}
 	}

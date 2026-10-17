@@ -793,6 +793,9 @@ kosom` |
 | `monitoring.disk_alert_percent` | المنصة | int | `85` |
 | `monitoring.money_check` | المنصة | bool | `true` |
 | `monitoring.db_slow_ms` | المنصة | int | `1000` |
+| `monitoring.security_alerts` | المنصة | bool | `true` |
+| `monitoring.login_fail_spike` | المنصة | int | `20` |
+| `monitoring.forbidden_spike` | المنصة | int | `30` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | money | `0` |
 | `orders.source_proximity_m` | المنصة | int | `1000` |

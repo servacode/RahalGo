@@ -341,8 +341,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و٢٠٠ مع `monitoring.money_check` و`monitoring.db_slow_ms`** (مراقبةُ المنصّة —
 	// الدفعةُ الثالثة ٢٠٢٦-١٠-١٧) — **الدفترُ كلَّ ساعة، وبطءُ القاعدة.**
-	if d.BehaviourSettings != 200 {
-		t.Errorf("إعداداتُ السلوك = %d لا 200 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٠٣ مع `monitoring.security_alerts|login_fail_spike|forbidden_spike`** (مراقبةُ
+	// المنصّة — الدفعةُ الثانية ٢٠٢٦-١٠-١٧) — **عينُ الأمان.**
+	if d.BehaviourSettings != 203 {
+		t.Errorf("إعداداتُ السلوك = %d لا 203 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

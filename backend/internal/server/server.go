@@ -107,7 +107,9 @@ type Server struct {
 	opsT opsTracker
 	// errs **عدّادُ أخطاء ٥xx** — والراصدُ يكتبه في الجدول. انظر `monitoring_errors.go`.
 	errs errorTracker
-	// mon **ذاكرةُ راصد المنصّة** — ما أُنذر به ومتى، وآخرُ تقريرٍ صباحيّ.
+	// sec **عدّادُ أحداث الأمان وتنبيهاتُها الفوريّة** — انظر `monitoring_security.go`.
+	sec securityTracker
+	// mon**ذاكرةُ راصد المنصّة** — ما أُنذر به ومتى، وآخرُ تقريرٍ صباحيّ.
 	// انظر `monitoring_watch.go`.
 	mon monitorState
 	// alertOut **من يكتب للمالك في محادثته مع نفسه** — البوت. **وفارغٌ في
@@ -301,6 +303,11 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	ordersSvc.SetReferrals(srv.referrals)
 	// **وكودُ التسليم يصل بالواتساب** — البوتُ يُحقن لاحقاً، فيُسأل عند كلّ نداء.
 	ordersSvc.SetWhatsApp(whatsAppText{srv})
+	// **وعينُ الأمان على باب الدخول** (مراقبةُ المنصّة — الدفعةُ الثانية) — الهويّةُ
+	// تُبلغ المحاولاتِ الغلطَ والقفلَ وحدَّ الرموز. انظر `monitoring_security.go`.
+	if identitySvc != nil {
+		identitySvc.SetSecurityHook(srv.noteIdentitySecurity)
+	}
 	return srv
 }
 

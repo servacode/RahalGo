@@ -126,6 +126,9 @@ type Service struct {
 	// التجهيز وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «أنا وأنت ما نطالع بعض»). **ويُعاد واحدةً قبل
 	// الإطلاق** — بندٌ في بوّابة R1.
 	adminWebSessions int
+	// securityHook **مستمعُ أحداث الأمان** (مراقبةُ المنصّة — الدفعةُ الثانية) — انظر
+	// `security_hook.go`. **وفارغُه لا يغيّر شيئاً.**
+	securityHook func(ctx context.Context, ev SecurityEvent)
 }
 
 // SetAdminWebSessions **عددُ جلسات متصفّح الأدمن** — `server.go` يضعه ٢ على التجهيز.
@@ -263,7 +266,7 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
 		s.rdb.Expire(ctx, key, 15*time.Minute)
 	}
 	if n > s.otpQuota(ctx) {
-		return ErrOTPRateLimited
+		return s.otpLimited(ctx, phone)
 	}
 
 	code, err := randomDigits(6)
@@ -301,7 +304,7 @@ func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone, ip s
 		s.rdb.Expire(ctx, key, 15*time.Minute)
 	}
 	if n > s.otpQuota(ctx) {
-		return ErrOTPRateLimited
+		return s.otpLimited(ctx, phone)
 	}
 	code, err := randomDigits(6)
 	if err != nil {
@@ -384,7 +387,7 @@ func (s *Service) noteOTPSend(ctx context.Context, phone, ip string) error {
 			s.rdb.Expire(ctx, key, 15*time.Minute)
 		}
 		if n > otpMaxPerIP {
-			return ErrOTPRateLimited
+			return s.otpLimited(ctx, phone)
 		}
 	}
 	_ = phone
@@ -406,7 +409,7 @@ func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey, ip st
 		s.rdb.Expire(ctx, key, 15*time.Minute)
 	}
 	if n > s.otpQuota(ctx) {
-		return ErrOTPRateLimited
+		return s.otpLimited(ctx, phone)
 	}
 	code, err := randomDigits(6)
 	if err != nil {
@@ -702,9 +705,32 @@ func (s *Service) loginLocked(ctx context.Context, phone, ip string) bool {
 }
 
 // noteLoginFail يعدّ محاولة فاشلة على الرقم والعنوان معاً.
-func (s *Service) noteLoginFail(ctx context.Context, phone, ip string) {
+//
+// **ويُرجع عدَّ الرقم بعد الزيادة** (مراقبةُ المنصّة — الدفعةُ الثانية): العدُّ نفسُه
+// كما كان بـ`countAttempts` — **والرقمُ يُقرأ من الزيادة نفسِها** ليُعرف لحظةَ القفل
+// (العدُّ بلغ الحدَّ الآن) لا كلَّ محاولةٍ بعده. **وصفرٌ إن تعطّل الكاش.**
+func (s *Service) noteLoginFail(ctx context.Context, phone, ip string) int64 {
 	pk, ik := loginKeys(phone, ip)
-	s.countAttempts(ctx, pk, ik)
+	var n int64
+	if v, err := s.rdb.Incr(ctx, pk).Result(); err == nil {
+		n = v
+		if v == 1 {
+			s.rdb.Expire(ctx, pk, loginFailWindow)
+		}
+	}
+	s.countAttempts(ctx, ik)
+	return n
+}
+
+// noteLoginFailWatched **المحاولةُ الفاشلةُ تُعدّ ثمّ تُبلَّغ** — `login_failed` دائماً،
+// و`login_locked` مرّةً لحظةَ يبلغ عدُّ الرقم الحدَّ. **و`known` كاذبٌ لرقمٍ لا حسابَ
+// له** — يُعدّ محاولةً غلطاً ولا يُقال عنه «حسابٌ انقفل».
+func (s *Service) noteLoginFailWatched(ctx context.Context, phone, ip string, known bool) {
+	n := s.noteLoginFail(ctx, phone, ip)
+	s.noteSecurity(ctx, SecLoginFailed, phone)
+	if known && n > 0 && n == s.intSetting(ctx, "security.login_max_attempts", loginMaxPerPhone) {
+		s.noteSecurity(ctx, SecLoginLocked, phone)
+	}
 }
 
 // countAttempts **عدّادُ المحاولات** — يزيد المفتاحَ ويضبط نافذتَه مرّةً.
@@ -780,7 +806,7 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 	if errors.Is(err, ErrNotFound) || (err == nil && hash == "") {
 		// نعدّ المحاولة حتى لرقم غير مسجّل: وإلا صار الفرق في السلوك كاشفاً
 		// لأي رقم له حساب (تعداد حسابات).
-		s.noteLoginFail(ctx, phone, ip)
+		s.noteLoginFailWatched(ctx, phone, ip, false)
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -791,7 +817,7 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 		return nil, err
 	}
 	if !match {
-		s.noteLoginFail(ctx, phone, ip)
+		s.noteLoginFailWatched(ctx, phone, ip, true)
 		s.repo.Audit(ctx, nil, "auth.password_failed", "user", user.ID, ip, nil)
 		return nil, ErrInvalidCredentials
 	}

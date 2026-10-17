@@ -1890,6 +1890,17 @@ var Catalog = []Def{
 	// يُنذَر قبل ثلاث دقائقَ متتالية. **وصفرُه يُطفئ هذا التنبيه وحدَه.**
 	{Key: "monitoring.db_slow_ms", Group: GroupPlatform, Kind: KindInt,
 		Min: 0, Max: 60000, Unit: "millisecond", Default: 1000},
+	// **عينُ الأمان** (الدفعةُ الثانية ٢٠٢٦-١٠-١٧) — حسابٌ انقفل، كودُ تسليمٍ انقفل،
+	// سائقٌ زيّف موقعه: تنبيهٌ فوريّ. **وقفزتا الدخول الغلط وفتح بيانات الغير.**
+	// **والمفتاحُ يُطفئ التنبيهات وحدَها** — العدُّ يبقى للتقرير. انظر
+	// `server/monitoring_security.go`.
+	{Key: "monitoring.security_alerts", Group: GroupPlatform, Kind: KindBool, Default: true},
+	// **كم محاولةَ دخولٍ غلطٍ في عشر دقائق تُعدّ قفزة** — وصفرُه يُطفئ هذا وحدَه.
+	{Key: "monitoring.login_fail_spike", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 10000, Default: 20},
+	// **كم محاولةَ فتحٍ لبيانات الغير في عشر دقائق تُعدّ قفزة** — وصفرُه يُطفئه.
+	{Key: "monitoring.forbidden_spike", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 10000, Default: 30},
 
 	// **ولا «دعمَ المتجر عند ردّ البضاعة» بعد اليوم** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «لازم
 	// المصاري ترجع ع حالها والإدارة تقرر تعوض المتجر او لا») — كانت نسبةً تُدفع مع كلّ

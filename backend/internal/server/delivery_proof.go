@@ -136,6 +136,8 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	mocked := r.FormValue("mocked") == "true"
 	if mocked {
 		s.audit(r, "driver.delivery_proof_rejected", "order", orderID, map[string]any{"why": "mocked"})
+		// **وعينُ الأمان تُنبّه المالكَ باسم السائق ورقم الطلب** (الدفعةُ الثانية).
+		s.noteMockedProof(r.Context(), orderID, userIDFrom(r))
 		s.respondErr(w, errProofMocked)
 		return
 	}

@@ -33,7 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -150,17 +149,18 @@ func (s *Server) countErrors(next http.Handler) http.Handler {
 		ww.Tee(&head)
 		next.ServeHTTP(ww, r)
 		code := ww.Status()
+		// **ورفضُ التخويل يُعدّ لعين الأمان** (الدفعةُ الثانية) — انظر `noteRefusal`.
+		if code == http.StatusForbidden || code == http.StatusNotFound {
+			s.noteRefusal(r, code, head.buf, routePattern(r))
+			return
+		}
 		if code < 500 {
 			return
 		}
 		if deliberateRefusal(head.buf) {
 			return
 		}
-		route := ""
-		if rc := chi.RouteContext(r.Context()); rc != nil {
-			route = rc.RoutePattern()
-		}
-		s.errs.record(route, code, time.Now())
+		s.errs.record(routePattern(r), code, time.Now())
 	})
 }
 

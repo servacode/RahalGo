@@ -62,6 +62,9 @@ func (s *Server) requireDeliveryCode(ctx context.Context, orderID, given string)
 		RETURNING delivery_code_attempts`, orderID).Scan(&n); err != nil {
 		return err
 	}
+	// **وعينُ الأمان تعدّ الخطأ** (مراقبةُ المنصّة — الدفعةُ الثانية) — وتُنبّه
+	// المالكَ مرّةً لحظةَ ينقفل (العدُّ بلغ الحدَّ الآن لا بعده). **ولا الكودُ يُكتب.**
+	s.noteCodeWrong(ctx, orderID, n == orders.DeliveryCodeMaxAttempts)
 	if n >= orders.DeliveryCodeMaxAttempts {
 		return errDeliveryCodeLocked
 	}

@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 245,
-    "behaviour_settings": 200,
+    "setting_defs": 248,
+    "behaviour_settings": 203,
     "order_fields": 109,
-    "test_files": 600,
-    "test_funcs": 2403
+    "test_files": 602,
+    "test_funcs": 2413
   },
   "flows": [
     {
@@ -5468,6 +5468,42 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "monitoring.forbidden_spike",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.login_fail_spike",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "monitoring.money_check",
       "group": "platform",
       "kind": "bool",
@@ -5505,6 +5541,24 @@
     },
     {
       "key": "monitoring.morning_report",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "monitoring.security_alerts",
       "group": "platform",
       "kind": "bool",
       "sensitive": false,
@@ -22636,6 +22690,24 @@
       "orphan": true
     },
     {
+      "name": "TestSECW_DeliveryCodeLockAlert",
+      "file": "internal/qa/security_watch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSECW_LoginLockAlertMaskedPhone",
+      "file": "internal/qa/security_watch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSECW_MockedProofAlert",
+      "file": "internal/qa/security_watch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestXG40_Contract_KeepMineRevokeOthers",
       "file": "internal/qa/self_password_change_test.go",
       "package": "qa",
@@ -27485,6 +27557,48 @@
     {
       "name": "TestSlowWatch_ThreeTicksThenRecovered",
       "file": "internal/server/monitoring_money_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCountErrors_AuthzRefusalsCountedDistinct",
+      "file": "internal/server/monitoring_security_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityAlertText_NoFullPhone",
+      "file": "internal/server/monitoring_security_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityAlerts_OncePerSubjectPerHour",
+      "file": "internal/server/monitoring_security_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityDaily_SurvivesRestart",
+      "file": "internal/server/monitoring_security_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityMorningLine_Text",
+      "file": "internal/server/monitoring_security_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityTracker_ForbiddenSpikeAt30",
+      "file": "internal/server/monitoring_security_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityTracker_SpikeWindowAndThreshold",
+      "file": "internal/server/monitoring_security_test.go",
       "package": "server",
       "orphan": true
     },
