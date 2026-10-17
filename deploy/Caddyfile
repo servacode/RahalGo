@@ -116,7 +116,15 @@ rahalgo.com, www.rahalgo.com {
 	# ٢٠٢٦-٠٨-١٨. **ودعوةٌ تقود إلى ٤٠٤ دعوةٌ ضائعة.**
 	#
 	# **فيُخدَم ملفٌّ ساكنٌ من البوّابة** — ولا يُمسّ `web/apps/rahalgo`.
-	handle /signup* {
+	#
+	# **وصار للزبون تسجيلٌ على الموقع** (قرارُ المالك ٢٠٢٦-١٠-١٧ — موقعُ الزبون للآيفون):
+	# **فـ`/signup` بلا دعوةٍ يذهب إلى صفحة التسجيل في تطبيق الويب**، **والدعوةُ (`?ref=`)
+	# تبقى صفحةَ التحميل** — إلّا على الآيفون: لا تطبيقَ له، **فيسجّل من الموقع والرمزُ معه.**
+	@invite {
+		path /signup*
+		expression `{http.request.uri.query.ref} != "" && !{http.request.header.User-Agent}.matches("(?i)(iphone|ipad|ipod)")`
+	}
+	handle @invite {
 		root * /srv/invite
 		try_files /index.html
 		file_server

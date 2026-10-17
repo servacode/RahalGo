@@ -131,6 +131,10 @@
   if (code) { play += "&referrer=" + encodeURIComponent("ref=" + code); }
   document.getElementById("play").href = play;
   document.getElementById("open").href = location.origin + "/signup" + (code ? "?ref=" + encodeURIComponent(code) : "");
+  // **والآيفونُ لا تطبيقَ له** (٢٠٢٦-١٠-١٧) — يسجّل من الموقع والرمزُ معه.
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent || "")) {
+    location.replace(location.origin + "/signup" + (code ? "?ref=" + encodeURIComponent(code) : ""));
+  }
 
   function say(text, ok) {
     msg.textContent = text;
