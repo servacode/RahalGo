@@ -21,8 +21,8 @@
  */
 
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   BrandMark,
@@ -44,7 +44,7 @@ import {
   type NavItem,
 } from "@rahalgo/ui";
 import { api, tokenStore } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { hasRole, useAuth } from "@/lib/auth";
 import { ActiveOrdersProvider, useActiveOrders } from "@/lib/customer/active";
 import { CartProvider, useCart } from "@/lib/customer/cart";
 import { CustomerProvider } from "@/lib/customer/context";
@@ -90,6 +90,34 @@ function Chats() {
       .map((o) => ({ id: o.id, number: o.number, peer: o.driver_name ?? "", unread: unread.get(o.id) ?? 0 }));
   }, [open, chats]);
   return <ChatBubble api={api} threads={threads} onRead={reload} />;
+}
+
+/**
+ * **صاحبُ متجرٍ فتح الأيقونةَ من شاشته الرئيسيّة يصل لوحتَه لا السوق.**
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-١٧.) **بيانُ التطبيق يبدأ من `/shop`** — واحدٌ للكلّ،
+ * **فمن أضاف الموقعَ من لوحة متجره يفتحه على السوق.** فيُساق إلى `/store`
+ * **مرّةً في الجلسة** — ومن عاد إلى السوق بيده يبقى فيه.
+ */
+const MERCHANT_HOME_ONCE = "rahalgo_merchant_home_once";
+function MerchantHome() {
+  const { user } = useAuth();
+  const path = usePathname();
+  const router = useRouter();
+  useEffect(() => {
+    if (!user || !hasRole(user, "merchant") || path !== "/shop") return;
+    const nav = window.navigator as Navigator & { standalone?: boolean };
+    const standalone = nav.standalone === true || window.matchMedia?.("(display-mode: standalone)").matches;
+    if (!standalone) return;
+    try {
+      if (window.sessionStorage.getItem(MERCHANT_HOME_ONCE)) return;
+      window.sessionStorage.setItem(MERCHANT_HOME_ONCE, "1");
+    } catch {
+      return;
+    }
+    router.replace("/store");
+  }, [user, path, router]);
+  return null;
 }
 
 function Live({ children }: { children: ReactNode }) {
@@ -172,6 +200,7 @@ function Shell({ children }: { children: ReactNode }) {
       <MobileNav items={nav} active={active} Link={Link} />
       {user && (
         <>
+          <MerchantHome />
           <QuoteWatcher />
           <LiveAsk />
           <RatingWatcher />
