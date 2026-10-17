@@ -2,10 +2,12 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **السوق — بحثٌ ثمّ لافتاتٌ ثمّ أقسام**
+ * **السوق — بحثٌ ثمّ لافتاتٌ ثمّ شريطُ الأقسام وأصنافُ المختار تحته**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (ترتيبُ تطبيق أندرويد حرفاً: **بحثٌ ← لافتاتٌ ← أقسام.**)
+ * (ترتيبُ تطبيق أندرويد حرفاً: **بحثٌ ← لافتاتٌ ← أقسام.**) **والأصنافُ تحت الشريط مباشرةً**
+ * (طلبُ المالك ٢٠٢٦-١٠-١٧: «بدي التسوق نفس طريقة الجوال، مافي داعي افوت على الاقسام») —
+ * أوّلُ قسمٍ مختارٌ، والنقرُ يبدّله في مكانه بلا صفحةٍ ثانية.
  *
  * **وكلُّ نداءٍ يحمل موضعَ التوصيل** — المحرّكُ يرشّح بالمدينة والمسافة
  * (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «مو معقول شخصٌ بالشام يطلب من الرقّة»).
@@ -17,29 +19,30 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   BannerSlider,
-  CategoryIcon,
   EmptyState,
   Input,
   LoadingState,
   ReloadState,
   IconSearch,
   IconStore,
+  SectionRail,
+  type RailItem,
   type SlideItem,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useBrowseQuery } from "@/lib/customer/context";
-import { fill } from "@/lib/customer/texts";
 import type { HomePage, Item } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 
 const m = getMessages(defaultLocale);
 const H = m.shop.home;
+const SC = m.shop.section;
 
 function useSearch(scope: string) {
   const [q, setQ] = useState("");
@@ -88,6 +91,21 @@ export default function ShopPage() {
 
   useEffect(load, [load]);
 
+  // **القسمُ المختار وأصنافُه** — أوّلُ قسمٍ افتراضاً.
+  const [active, setActive] = useState("");
+  const [items, setItems] = useState<Item[] | null>(null);
+  const [itemsErr, setItemsErr] = useState("");
+  const sectionID = active || home?.sections[0]?.id || "";
+  const loadItems = useCallback(() => {
+    if (!sectionID) return;
+    setItemsErr("");
+    setItems(null);
+    api<{ items: Item[] }>(`/api/v1/public/sections/${sectionID}/items${scopeQ}`)
+      .then((r) => setItems(r.items ?? []))
+      .catch((err) => setItemsErr(errorText(err)));
+  }, [sectionID, scopeQ]);
+  useEffect(loadItems, [loadItems]);
+
   const slides: SlideItem[] = (home?.banners ?? []).map((b) => ({
     id: b.id,
     title: b.title,
@@ -96,6 +114,13 @@ export default function ShopPage() {
   }));
 
   const searching = search.q.trim().length > 0;
+  const rail: RailItem[] = (home?.sections ?? []).map((sec) => ({
+    id: sec.id,
+    name: sec.name,
+    imageUrl: mediaUrl(sec.image_thumb_url ?? sec.image_url),
+    icon: sec.icon,
+    count: sec.count,
+  }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -139,35 +164,22 @@ export default function ShopPage() {
           {slides.length > 0 && (
             <BannerSlider items={slides} Link={Link} everyMs={home.banner_auto ? home.banner_every_ms || 5000 : 0} />
           )}
-          <section className="flex flex-col gap-3">
-            <h2 className="heading-section">{H.sections}</h2>
-            {home.sections.length === 0 ? (
-              <EmptyState icon={IconStore} title={H.empty} action={<span className="text-xs text-ink-muted">{H.emptyHint}</span>} />
-            ) : (
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-                {home.sections.map((s) => {
-                  const img = mediaUrl(s.image_thumb_url ?? s.image_url);
-                  return (
-                    <Link
-                      key={s.id}
-                      href={`/s/${s.id}`}
-                      className="surface flex min-w-0 flex-col items-center gap-2 overflow-hidden p-2 text-center transition-transform active:scale-[0.97]"
-                    >
-                      <span className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-control bg-field">
-                        {img ? (
-                          <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
-                        ) : (
-                          <CategoryIcon name={s.icon} size={28} />
-                        )}
-                      </span>
-                      <span className="line-clamp-2 text-xs font-bold leading-snug">{s.name}</span>
-                      <span className="text-2xs text-ink-muted">{fill(H.count, { n: fmtNum(s.count) })}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+          {home.sections.length === 0 ? (
+            <EmptyState icon={IconStore} title={H.empty} action={<span className="text-xs text-ink-muted">{H.emptyHint}</span>} />
+          ) : (
+            <section className="flex flex-col gap-3">
+              <SectionRail items={rail} activeID={sectionID} auto={false} onSelect={setActive} />
+              {itemsErr ? (
+                <ReloadState label={itemsErr} onRetry={loadItems} />
+              ) : items === null ? (
+                <LoadingState variant="list" rows={4} />
+              ) : items.length === 0 ? (
+                <EmptyState icon={IconStore} title={SC.empty} action={<span className="text-xs text-ink-muted">{SC.emptyHint}</span>} />
+              ) : (
+                <ItemGrid items={items} onOpen={setOpen} />
+              )}
+            </section>
+          )}
         </>
       )}
 
