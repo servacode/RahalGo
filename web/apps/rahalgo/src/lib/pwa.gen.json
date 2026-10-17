@@ -1,0 +1,23 @@
+{
+  "_note": "مولَّدٌ بـ web/scripts/make-pwa.py — لا يُحرَّر باليد.",
+  "theme": "#03202c",
+  "background": "#03202c",
+  "icons": [
+    {
+      "src": "/pwa/icon-192.png",
+      "size": 192
+    },
+    {
+      "src": "/pwa/icon-512.png",
+      "size": 512
+    },
+    {
+      "src": "/pwa/maskable-512.png",
+      "size": 512
+    },
+    {
+      "src": "/pwa/apple-touch-icon.png",
+      "size": 180
+    }
+  ]
+}
