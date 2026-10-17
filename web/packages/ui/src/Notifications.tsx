@@ -49,8 +49,51 @@ export interface AppNotification {
 
 // المشتركون يهمّهم *نوع* ما وقع لا شكله: الإشعار المحفوظ والحدث الخام كلاهما
 // يصل هنا بنفس النوع (order/ticket/wallet/…) فتتحدّث الصفحة في الحالتين.
-type Listener = (kind: string) => void;
+type Listener = (kind: string) => unknown;
 const listeners = new Set<Listener>();
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **نداءٌ قُطع لأنّ الصفحةَ انتقلت — ليس عطباً** (٢٠٢٦-١٠-١٧)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **المتصفّحُ يقطع ما لم يكتمل من نداءات حين ينتقل صاحبُها** — فيرمي
+ * `AbortError` أو `TypeError: Failed to fetch` (سفاري: `Load failed`).
+ * **وكانت تظهر «Unhandled Rejection»** من قراءة الإشعارات الدوريّة ومن
+ * إعادة تحميلٍ يوقظها البثّ — دالّةٌ غير متزامنةٍ يناديها مستمعٌ لا ينتظرها.
+ */
+export function isNavigationAbort(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const name = (err as { name?: string }).name ?? "";
+  if (name === "AbortError") return true;
+  if (name === "TypeError") {
+    const msg = String((err as { message?: string }).message ?? "").toLowerCase();
+    return msg.includes("fetch") || msg.includes("load failed") || msg.includes("network");
+  }
+  return false;
+}
+
+/** **وعدٌ لا ينتظره أحد** — يُبتلَع انقطاعُه، ويُكتب غيرُه تحذيراً لا خطأً عائماً. */
+function settle(r: unknown) {
+  if (r && typeof (r as Promise<unknown>).then === "function") {
+    (r as Promise<unknown>).catch((err: unknown) => {
+      if (!isNavigationAbort(err)) console.warn(err);
+    });
+  }
+}
+
+/**
+ * **وشبكةُ أمانٍ واحدةٌ للصفحة** — انقطاعُ نداءٍ عند الانتقال لا يصل لوحةَ
+ * الأخطاء. **وما عداه يمرّ كما هو**: عطبٌ حقيقيٌّ لا يُخفى.
+ */
+let abortGuard = false;
+function installAbortGuard() {
+  if (abortGuard || typeof window === "undefined") return;
+  abortGuard = true;
+  window.addEventListener("unhandledrejection", (e) => {
+    if (isNavigationAbort(e.reason)) e.preventDefault();
+  });
+}
 
 /** أي رسالة تصل من قناة البث — الإشعارات وغيرها (تحديث حالة طلب مثلاً). */
 export interface LiveEvent {
@@ -60,10 +103,10 @@ export interface LiveEvent {
 type EventListener_ = (e: LiveEvent) => void;
 const eventListeners = new Set<EventListener_>();
 
-function fan<T>(set: Set<(v: T) => void>, v: T) {
+function fan<T>(set: Set<(v: T) => unknown>, v: T) {
   set.forEach((fn) => {
     try {
-      fn(v);
+      settle(fn(v));
     } catch {
       /* تجاهل */
     }
@@ -121,10 +164,10 @@ export function useLiveStatus() {
 }
 
 /** يعيد تحميل بيانات الصفحة عند وصول حدث من الأنواع المذكورة (أو أي حدث). */
-export function useLiveRefresh(kinds: string[], onEvent: () => void) {
+export function useLiveRefresh(kinds: string[], onEvent: () => unknown) {
   useEffect(() => {
     const fn: Listener = (kind) => {
-      if (kinds.length === 0 || kinds.includes(kind)) onEvent();
+      if (kinds.length === 0 || kinds.includes(kind)) return onEvent();
     };
     listeners.add(fn);
     return () => {
@@ -252,6 +295,7 @@ export function AlertSoundControl() {
 }
 
 export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | null) {
+  useEffect(installAbortGuard, []);
   const chime = useChime();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);

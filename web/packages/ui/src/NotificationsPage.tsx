@@ -100,15 +100,24 @@ export function NotificationsPage({
   );
 
   const markAll = useCallback(async () => {
-    await api("/api/v1/me/notifications/read", { method: "POST", body: JSON.stringify({ id: "" }) });
-    emitLocal(READ_EVENT); // الجرس يلتقط الصفر فوراً بلا تحديث صفحة
+    // **ونداءٌ قُطع أو رُدّ لا يترك وعداً عائماً** — تُعاد القراءةُ فتقول الحقيقة.
+    try {
+      await api("/api/v1/me/notifications/read", { method: "POST", body: JSON.stringify({ id: "" }) });
+      emitLocal(READ_EVENT); // الجرس يلتقط الصفر فوراً بلا تحديث صفحة
+    } catch {
+      /* تُعاد القراءة أدناه */
+    }
     reload();
   }, [api, reload]);
 
   const markOne = useCallback(
     async (id: string) => {
-      await api("/api/v1/me/notifications/read", { method: "POST", body: JSON.stringify({ id }) });
-      emitLocal(READ_EVENT);
+      try {
+        await api("/api/v1/me/notifications/read", { method: "POST", body: JSON.stringify({ id }) });
+        emitLocal(READ_EVENT);
+      } catch {
+        /* تُعاد القراءة أدناه */
+      }
       reload();
     },
     [api, reload],
