@@ -772,12 +772,17 @@ export function Modal({
   title,
   size = "md",
   top = false,
+  dismissable = true,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   size?: keyof typeof modalSizes;
+  /** **سؤالٌ لا يُغلق إلّا بجواب** — بلا ✕ ولا `Esc` ولا ضغطٍ خارجها.
+   *  (نافذةُ «السائق دفع مبلغ» في لوحة المتجر: السائقُ واقفٌ ينتظر الجواب،
+   *  **ومن أغلقها بلا جوابٍ تركه واقفاً** — مرآةُ `DialogProperties` في التطبيق.) */
+  dismissable?: boolean;
   /** **فوق كلّ نافذة** — لسؤالٍ يقطع نافذةً مفتوحة (كلمةُ السرّ فوق «تأكيد»، وهو `z-[70]`).
    *  كان التأكيدُ يبقى مفتوحاً بانتظار الحفظ فيغطّي سؤالَ كلمة السرّ ولا يُضغط زرُّه
    *  (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥: تغييرُ مفتاحٍ ماليّ من الإعدادات). */
@@ -787,17 +792,17 @@ export function Modal({
   const mounted = useMounted();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !dismissable) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, dismissable]);
 
   if (!open || !mounted) return null;
   return createPortal(
     <div
       className={`fixed inset-0 ${top ? "z-[80]" : "z-50"} flex items-center justify-center scrim p-4`}
-      onClick={onClose}
+      onClick={dismissable ? onClose : undefined}
     >
       <div
         role="dialog"
@@ -816,15 +821,17 @@ export function Modal({
             (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 className="heading-card">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={m.common.close}
-            title={m.common.close}
-            className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
-          >
-            <IconClose size={18} />
-          </button>
+          {dismissable && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={m.common.close}
+              title={m.common.close}
+              className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
+            >
+              <IconClose size={18} />
+            </button>
+          )}
         </div>
         {children}
       </div>

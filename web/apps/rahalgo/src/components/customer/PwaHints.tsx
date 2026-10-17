@@ -54,15 +54,29 @@ function detect(): Kind {
   return "";
 }
 
-export default function PwaHints() {
+/**
+ * **ولوحةُ المتجر تستعملها أيضاً** (قرارُ المالك ٢٠٢٦-١٠-١٧) — **بلافتةٍ
+ * تقترح تطبيقَ المتجر لا تطبيقَ الزبون**، ومفتاحِ إغلاقٍ خاصٍّ بها: من أغلق
+ * لافتةَ الزبون لم يُغلق لافتةَ متجره.
+ */
+export interface AndroidHint {
+  href: string;
+  title: string;
+  body: string;
+  cta: string;
+  offKey: string;
+}
+
+export default function PwaHints({ android }: { android?: AndroidHint } = {}) {
   const { name } = usePlatform();
   const [kind, setKind] = useState<Kind>("");
+  const offKey = android?.offKey ?? ANDROID_OFF;
 
   useEffect(() => {
     const k = detect();
     if (k === "ios" && !readJSON<boolean>(IOS_SEEN, false)) setKind("ios");
-    if (k === "android" && !readJSON<boolean>(ANDROID_OFF, false)) setKind("android");
-  }, []);
+    if (k === "android" && !readJSON<boolean>(offKey, false)) setKind("android");
+  }, [offKey]);
 
   if (kind === "ios") {
     const close = () => {
@@ -101,21 +115,23 @@ export default function PwaHints() {
 
   if (kind === "android") {
     const off = () => {
-      writeJSON(ANDROID_OFF, true);
+      writeJSON(offKey, true);
       setKind("");
     };
     return (
       <div className="surface flex items-center gap-3 p-3">
         <IconSmartphone size={22} className="shrink-0 text-accent-text" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">{P.androidTitle}</p>
-          <p className="text-xs text-ink-muted">{P.androidBody}</p>
+          <p className="text-sm font-bold">{android?.title ?? P.androidTitle}</p>
+          <p className="text-xs text-ink-muted">{android?.body ?? P.androidBody}</p>
         </div>
         <Link
-          href="/download/customer"
+          href={android?.href ?? "/download/customer"}
+          /* **و`/get/…` تنزيلٌ لا صفحة** — لا يُجلب مسبقاً فيُعدّ تنزيلاً لم يقع. */
+          prefetch={android ? false : undefined}
           className="shrink-0 rounded-control bg-accent px-3 py-2 text-xs font-bold text-on-bright"
         >
-          {P.androidCta}
+          {android?.cta ?? P.androidCta}
         </Link>
         <button
           type="button"
