@@ -35,6 +35,7 @@ import {
   IconWallet,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import WebPushCard from "@/components/WebPushCard";
 import { useAuth } from "@/lib/auth";
 import { useCustomer } from "@/lib/customer/context";
 import { AddressSheet } from "@/components/customer/AddressSheet";
@@ -164,6 +165,8 @@ export default function AccountPage() {
       </FormSection>
 
       <WhatsAppSection />
+
+      <WebPushCard app="customer" />
 
       <FormSection title={A.addresses} icon={<IconLocation />}>
         <button type="button" onClick={() => setAddr(true)} className="flex w-full flex-col gap-1 text-start">

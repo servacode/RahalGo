@@ -28,6 +28,7 @@ import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
 import { ComplaintBox, RateButton } from "@/components/customer/feedback";
 import { LiveStartButton } from "@/components/customer/LiveShare";
+import WebPushCard from "@/components/WebPushCard";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -121,6 +122,9 @@ export default function OrderPage() {
         {order.cancel_reason && <Alert>{order.cancel_reason}</Alert>}
         {order.quote_rejected_at && !ended && <Alert tone="info">{O.rejectedNote}</Alert>}
       </div>
+
+      {/* **مرّةً بعد أوّل طلب** — «بدك يوصلك خبر طلبك؟» ثمّ لا يعود (٢٠٢٦-١٠-١٧). */}
+      {!ended && <WebPushCard app="customer" variant="prompt" />}
 
       <DeliveryCode order={order} />
 

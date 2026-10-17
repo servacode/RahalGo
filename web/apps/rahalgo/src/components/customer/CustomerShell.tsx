@@ -43,7 +43,8 @@ import {
   wsBase,
   type NavItem,
 } from "@rahalgo/ui";
-import { api, tokenStore } from "@/lib/api";
+import { api, onLogout, tokenStore } from "@/lib/api";
+import { dropWebPushOnLogout } from "@/lib/webpush";
 import { hasRole, useAuth } from "@/lib/auth";
 import { ActiveOrdersProvider, useActiveOrders } from "@/lib/customer/active";
 import { CartProvider, useCart } from "@/lib/customer/cart";
@@ -66,11 +67,13 @@ const BARE = ["/login", "/signup", "/forgot"];
 /**
  * **الجرسُ وقناةُ البثّ** — لصاحب حسابٍ وحدَه.
  *
- * **ولا إشعاراتِ دفعٍ للمتصفّح**: المحرّكُ يدفع لأندرويد وآيفون وحدَهما،
- * **فالجرسُ والتنبيهُ العابرُ ما دامت الصفحةُ مفتوحة** — وقناةُ البثّ نفسُها
- * توقظ الطلباتِ والمحادثة (`useLiveRefresh`).
+ * **والجرسُ والتنبيهُ العابرُ ما دامت الصفحةُ مفتوحة** — وقناةُ البثّ نفسُها
+ * توقظ الطلباتِ والمحادثة (`useLiveRefresh`). **وما يصل والصفحةُ مغلقة
+ * فإشعارُ المتصفّح** لمن فعّله (`WebPushCard`، ٢٠٢٦-١٠-١٧).
  */
 function Bell() {
+  // **والخروجُ يُلغي اشتراكَ إشعارات المتصفّح** — من دخل بعده لا تصله إشعاراتُ غيره.
+  useEffect(() => onLogout(() => void dropWebPushOnLogout()), []);
   const notif = useLiveNotifications(api, wsBase(), tokenStore.access);
   return (
     <>

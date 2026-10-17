@@ -11,6 +11,7 @@ export {
   type AuthResult,
   setStepUpAsker,
   requestStepUp,
+  onLogout,
   type StepUpNeed,
   type StepUpRequest,
 } from "./client";

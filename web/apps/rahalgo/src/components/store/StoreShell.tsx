@@ -47,7 +47,9 @@ import {
   wsBase,
   type NavItem,
 } from "@rahalgo/ui";
-import { api, tokenStore } from "@/lib/api";
+import { api, onLogout, tokenStore } from "@/lib/api";
+import { dropWebPushOnLogout } from "@/lib/webpush";
+import WebPushCard from "@/components/WebPushCard";
 import { hasRole, useAuth } from "@/lib/auth";
 import { StoreProvider, useStore } from "@/lib/store/context";
 import { StoreOrdersProvider, useStoreOrders } from "@/lib/store/orders";
@@ -73,6 +75,8 @@ const ANDROID_HINT = {
 
 /** **الجرسُ وقناةُ البثّ** — والقناةُ نفسُها توقظ الطلباتِ والتوصيلات (`useLiveRefresh`). */
 function Bell() {
+  // **والخروجُ يُلغي اشتراكَ إشعارات المتصفّح** — كما في قشرة الزبون.
+  useEffect(() => onLogout(() => void dropWebPushOnLogout()), []);
   const notif = useLiveNotifications(api, wsBase(), tokenStore.access);
   return (
     <>
@@ -195,6 +199,8 @@ function Shell({ children }: { children: ReactNode }) {
         {/* **وصفحةُ الحساب بلا شريط المتجر** — كما يُخفي التطبيقُ مبدّلَ المتجر في «حسابي». */}
         {store && !path.startsWith("/store/account") && <StoreBar />}
         {store && selfManage && <OrderAlert />}
+        {/* **وبجانب زرّ الصوت «فعّل إشعارات الطلبات»** — يرنّ والموقعُ مسكّر. */}
+        {store && selfManage && <WebPushCard app="merchant" variant="banner" notes={path === "/store"} />}
         {body}
       </main>
       <MobileNavSpacer />

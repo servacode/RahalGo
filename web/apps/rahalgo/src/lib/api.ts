@@ -5,6 +5,7 @@ export {
   authApi,
   tokenStore,
   mediaUrl,
+  onLogout,
   ApiError,
   type ApiErrorBody,
   type AuthUser,

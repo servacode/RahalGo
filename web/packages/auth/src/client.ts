@@ -261,6 +261,16 @@ export async function requestStepUp(
   return grant.id;
 }
 
+/**
+ * **ما يُفعل عند الخروج غيرَ مسح الجلسة** — إلغاءُ اشتراك إشعارات المتصفّح
+ * مثلاً (٢٠٢٦-١٠-١٧). **يُسجَّل مرّةً من القشرة، ويعيد فاسخَه.**
+ */
+const logoutHooks = new Set<() => void>();
+export function onLogout(fn: () => void): () => void {
+  logoutHooks.add(fn);
+  return () => logoutHooks.delete(fn);
+}
+
 let refreshing: Promise<void> | null = null;
 
 async function refreshTokens(): Promise<void> {
@@ -478,6 +488,13 @@ export const authApi = {
     ),
   logout: () => {
     const refresh = tokenStore.refresh;
+    logoutHooks.forEach((fn) => {
+      try {
+        fn();
+      } catch {
+        /* خطّافٌ سقط لا يمنع الخروج */
+      }
+    });
     tokenStore.clear();
     if (refresh) {
       void rawRequest("/api/v1/auth/logout", {

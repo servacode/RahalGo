@@ -20,6 +20,7 @@ import { AccountSettings, Button, ButtonLink, IconBag, IconLogout, Switch } from
 import { api, mediaUrl } from "@/lib/api";
 import { hasRole, useAuth } from "@/lib/auth";
 import { useStoreOrders } from "@/lib/store/orders";
+import WebPushCard from "@/components/WebPushCard";
 
 const m = getMessages(defaultLocale);
 const A = m.store.account;
@@ -46,6 +47,8 @@ export default function StoreAccountPage() {
           hint={soundEnabled ? A.soundOn : A.soundOff}
         />
       </section>
+
+      <WebPushCard app="merchant" />
 
       <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} onDeleted={out} />
 
