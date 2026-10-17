@@ -65,6 +65,23 @@ export interface MerchantOrder {
   sent_to_merchant_at: string | null;
   closed_at: string | null;
   cancel_reason: string;
+  /** **لحظةُ «جاهز للاستلام»** — وفارغةٌ ما لم يُعلنها المتجر. */
+  ready_at?: string | null;
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أيُعرض «جاهز للاستلام»؟** (٢٠٢٦-١٠-١٧)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **في وضع المتاجر القبولُ يدخل التحضيرَ ويُرسل للسائقين بنفسه** (قرارُ
+ * المالك ٢٠٢٦-٠٨-٢٩) — **فلا تُرى «يُحضَّر» لحظةً** وكان الزرُّ لا يظهر
+ * أبداً. **والجاهزيّةُ وسمٌ لا حال**: المحرّكُ يقبلها من القبول حتّى وقوف
+ * السائق عند الباب (`readyableStatuses`)، **وتُعلَن مرّةً** (`ready_at`).
+ */
+const READYABLE = new Set(["accepted", "preparing", "dispatching", "assigned", "at_pickup"]);
+export function canMarkReady(o: Pick<MerchantOrder, "status" | "ready_at">): boolean {
+  return READYABLE.has(o.status) && !o.ready_at;
 }
 
 export interface OrdersPage {

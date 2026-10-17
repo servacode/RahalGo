@@ -475,6 +475,8 @@ data class MerchantOrder(
     val items: List<OrderLine> = emptyList(),
     val notes: String = "",
     @SerialName("created_at") val createdAt: String = "",
+    /** **لحظةُ «جاهز للاستلام»** — وفارغةٌ ما لم يُعلنها المتجر (`ready_at`). */
+    @SerialName("ready_at") val readyAt: String? = null,
 )
 
 @Serializable

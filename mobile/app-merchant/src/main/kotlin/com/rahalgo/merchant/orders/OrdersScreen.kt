@@ -274,7 +274,7 @@ private fun OrderCard(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NextAction(order.status, busy, onAccept, onStart, onReady)
+            NextAction(order.status, order.readyAt, busy, onAccept, onStart, onReady)
         }
 
         // **والاعتذارُ نصٌّ جانبيٌّ لا زرٌّ مساوٍ** — انظر أعلاه.
@@ -396,11 +396,43 @@ private fun RejectReasonDialog(
 @Composable
 private fun NextAction(
     status: String,
+    readyAt: String?,
     busy: Boolean,
     onAccept: () -> Unit,
     onStart: () -> Unit,
     onReady: () -> Unit,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **و«جاهز للاستلام» من القبول حتّى وقوف السائق** (٢٠٢٦-١٠-١٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان الزرُّ في «يُحضَّر» وحدَها** — وفي وضع المتاجر يقفز القبولُ إلى
+    // «بانتظار سائق» فلا يظهر أبداً. **والحالُ تبقى مكتوبةً بجانبه.**
+    // انظر `Readiness.kt`.
+    if (status != "pending" && status != "accepted" && canMarkReady(status, readyAt)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (status != "preparing") {
+                Text(
+                    statusLabel(status),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.size(8.dp))
+            }
+            RahalButton(onClick = onReady, enabled = !busy) {
+                Text(stringResource(R.string.order_ready))
+            }
+        }
+        return
+    }
+    if (status != "accepted" && readyAnnounced(status, readyAt)) {
+        Text(
+            stringResource(R.string.order_ready_done),
+            color = Rahal.colors.success,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        return
+    }
     when (status) {
         "pending" -> RahalButton(onClick = onAccept, enabled = !busy) {
             Text(stringResource(R.string.order_accept))
@@ -415,13 +447,17 @@ private fun NextAction(
         // **والقبولُ في وضع المتاجر يدخل التحضيرَ بنفسه** — يفعله
         // المحرّك (`autoPreparing`). **فالحالةُ «مقبول» لا تُرى إلّا
         // لحظةً**، وتبقى هنا لوضع المنصّة: **المكتبُ يقبل والمتجرُ يبدأ،
-        // وهما شخصان.**
-        "accepted" -> RahalButton(onClick = onStart, enabled = !busy) {
-            Text(stringResource(R.string.order_start))
-        }
-
-        "preparing" -> RahalButton(onClick = onReady, enabled = !busy) {
-            Text(stringResource(R.string.order_ready))
+        // وهما شخصان.** **و«جاهز» بجانبه** — من حضّر سريعاً لا يمرّ بخطوتين.
+        "accepted" -> Row(verticalAlignment = Alignment.CenterVertically) {
+            if (canMarkReady(status, readyAt)) {
+                RahalTextButton(onClick = onReady, enabled = !busy) {
+                    Text(stringResource(R.string.order_ready))
+                }
+                Spacer(Modifier.size(8.dp))
+            }
+            RahalButton(onClick = onStart, enabled = !busy) {
+                Text(stringResource(R.string.order_start))
+            }
         }
 
         // **وما بعد الجاهزيّة ليس بيده** — **وزرٌّ لا يفعل شيئاً أسوأُ

@@ -26,7 +26,7 @@ import { Alert, Button, EmptyState, IconOrder, LoadingState, Modal, ReloadState,
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
-import type { MerchantOrder } from "@/lib/store/types";
+import { canMarkReady, type MerchantOrder } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
@@ -167,10 +167,22 @@ function OrderCard({
           {O.start}
         </Button>
       )}
-      {selfManage && order.status === "preparing" && (
-        <Button size="lg" className="w-full" disabled={busy} onClick={() => onAct(order, "ready")}>
+      {/* **و«جاهز» من القبول حتّى وقوف السائق** — لا في «يُحضَّر» وحدَها: في وضع
+          المتاجر يقفز القبولُ إلى «البحث عن سائق» فلا يظهر الزرُّ أبداً. */}
+      {selfManage && canMarkReady(order) && (
+        <Button
+          size="lg"
+          variant={order.status === "accepted" ? "secondary" : "primary"}
+          className="w-full"
+          disabled={busy}
+          onClick={() => onAct(order, "ready")}
+          data-testid="store-order-ready"
+        >
           {O.ready}
         </Button>
+      )}
+      {selfManage && !!order.ready_at && !ended && (
+        <p className="text-center text-sm font-bold text-success">{O.readyDone}</p>
       )}
       {rejecting && (
         <RejectDialog
