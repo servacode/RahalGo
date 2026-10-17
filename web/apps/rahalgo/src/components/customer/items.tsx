@@ -66,68 +66,86 @@ function closedLabel(item: Item): string {
   return I.unavailable;
 }
 
+/**
+ * **بطاقةُ الصنف — كبطاقة تطبيق الزبون حرفاً** (ملاحظةُ المالك ٢٠٢٦-١٠-١٧: «الشريط العلوي
+ * تبع السعر لسا مختلف»): إطارٌ فيه **شريطٌ علويٌّ** (القلبُ ثمّ السعرُ بالدولار و«≈ ليرة» على
+ * سطرٍ واحد) **ثمّ الصورة ثمّ شريطٌ سفليّ** (اسمُ المتجر و«+»)، **واسمُ الصنف تحت الإطار.**
+ *
+ * **والقلبُ زرٌّ مستقلٌّ في الشريط** — لا داخلَ زرِّ البطاقة: زرٌّ في زرٍّ لا يصحّ.
+ */
 export function ItemCard({ item, onOpen }: { item: Item; onOpen: (item: Item) => void }) {
   const closed = item.source_closed || !item.available;
   const img = mediaUrl(item.image_thumb_url ?? item.image_url);
   const fav = useFav();
   return (
-    <div className="relative flex min-w-0 flex-col">
-    <button
-      type="button"
-      onClick={() => onOpen(item)}
-      className="surface flex min-w-0 flex-1 flex-col overflow-hidden text-start transition-transform active:scale-[0.98]"
-    >
-      <div className="relative aspect-square w-full bg-field">
-        {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
-        {closed && (
-          <div className="scrim absolute inset-0 flex items-center justify-center p-2 text-center text-sm font-bold text-on-solid">
-            {closedLabel(item)}
-          </div>
-        )}
-        {item.discount_percent != null && item.discount_percent > 0 && (
-          <span className="absolute start-2 top-2">
-            <Badge variant="accent">{`-${fmtNum(item.discount_percent)}%`}</Badge>
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="surface flex min-w-0 flex-col overflow-hidden">
+        {/* ── الشريطُ العلويّ: القلبُ والسعر ── */}
+        <div className="flex min-w-0 items-center gap-1 px-1.5 py-1">
+          <FavoriteButton
+            itemID={item.id}
+            on={fav.has(item.id)}
+            onToggle={fav.toggle}
+            onRequireLogin={fav.needLogin}
+            size="sm"
+          />
+          <span className="ms-auto flex min-w-0 items-baseline gap-1 whitespace-nowrap">
+            {item.price_usd != null ? (
+              <>
+                <span dir="ltr" className="text-sm font-bold text-accent-text tabular-nums">
+                  {dollars(item.price_usd)}
+                </span>
+                <span className="truncate text-2xs text-ink-muted">
+                  {"≈ "}
+                  <Money value={item.price} small />
+                </span>
+              </>
+            ) : (
+              <Money value={item.price} className="text-sm font-bold text-accent-text" />
+            )}
           </span>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1 p-2.5">
-        <p className="line-clamp-2 text-sm font-bold leading-snug">{item.name}</p>
-        {item.merchant_name && (
-          <p className="flex min-w-0 items-center gap-1 text-xs text-ink-muted">
-            <IconStore size={12} className="shrink-0" />
-            <span className="truncate">{item.merchant_name}</span>
-          </p>
-        )}
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
-          <div className="min-w-0">
-            <Price syp={item.price} usd={item.price_usd} className="text-sm" />
-            {item.price_before != null && (
-              <p className="text-xs text-ink-muted line-through">
-                {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
-              </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onOpen(item)}
+          className="flex min-w-0 flex-col text-start transition-transform active:scale-[0.98]"
+        >
+          <div className="relative aspect-square w-full bg-field">
+            {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
+            {closed && (
+              <div className="scrim absolute inset-0 flex items-center justify-center p-2 text-center text-sm font-bold text-on-solid">
+                {closedLabel(item)}
+              </div>
+            )}
+            {item.discount_percent != null && item.discount_percent > 0 && (
+              <span className="absolute start-2 top-2">
+                <Badge variant="accent">{`-${fmtNum(item.discount_percent)}%`}</Badge>
+              </span>
             )}
           </div>
-          {!closed && (
-            <span
-              aria-label={I.add}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright"
-            >
-              <IconAdd size={16} />
-            </span>
-          )}
-        </div>
+          {/* ── الشريطُ السفليّ: اسمُ المتجر و«+» ── */}
+          <div className="flex min-h-10 w-full min-w-0 items-center gap-1 px-2 py-1">
+            <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
+            {!closed && (
+              <span
+                aria-label={I.add}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright"
+              >
+                <IconAdd size={15} />
+              </span>
+            )}
+          </div>
+        </button>
       </div>
-    </button>
-      {/* **والقلبُ خارجَ زرّ البطاقة لا داخلَه** — زرٌّ في زرٍّ لا يصحّ، **وضغطةٌ
-          تفتح النافذةَ وتحفظ معاً ليست ضغطةً واحدة.** */}
-      <FavoriteButton
-        itemID={item.id}
-        on={fav.has(item.id)}
-        onToggle={fav.toggle}
-        onRequireLogin={fav.needLogin}
-        size="sm"
-        className="absolute end-2 top-2 bg-surface"
-      />
+      {/* ── اسمُ الصنف تحت الإطار، في الوسط ── */}
+      <button type="button" tabIndex={-1} onClick={() => onOpen(item)} className="min-w-0 text-center">
+        <p className="line-clamp-2 text-sm font-medium leading-snug">{item.name}</p>
+        {item.price_before != null && (
+          <p className="text-xs text-ink-muted line-through">
+            {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
+          </p>
+        )}
+      </button>
     </div>
   );
 }
