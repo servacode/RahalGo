@@ -154,4 +154,11 @@ export {
   // جديد**: مجموعةٌ تتضخّم بالمترادفات تجعل كلَّ شاشةٍ تختار غيرَ ما اختارت
   // أختُها.
   Camera as IconCamera,
+  // **ثلاثٌ لتثبيت الموقع على شاشة آيفون** (قرارُ المالك ٢٠٢٦-١٠-١٧) —
+  // **زرُّ المشاركة يُرسم كما يراه في سفاري**، فيُعرف من أوّل نظرة.
+  Share as IconShare,
+  SquarePlus as IconAddToHome,
+  Smartphone as IconSmartphone,
+  // **وإنقاصُ العدد في السلّة** — `IconTrendFlat` شرطةٌ لمعنًى آخر.
+  Minus as IconMinus,
 } from "lucide-react";
