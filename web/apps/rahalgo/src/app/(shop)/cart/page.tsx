@@ -17,6 +17,7 @@
  * (`Idempotency-Key`) يبقى ما دام لم ينجح.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
@@ -439,6 +440,11 @@ export default function CartPage() {
               >
                 {C.contactWhatsapp}
               </a>
+            )}
+            {errorCode === "whatsapp_required" && (
+              <Link href="/account#whatsapp" className="mt-1 block font-bold underline">
+                {m.shop.custom.verifyNow}
+              </Link>
             )}
           </Alert>
         )}
