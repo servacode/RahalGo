@@ -788,6 +788,9 @@ export default function OpsMapPage() {
       color: toneColor("driver-available"),
       // **ينزلق بين نبضتين، وحلقةٌ نابضةٌ حولَ من موقعُه حيّ** — بلون حاله.
       animate: true,
+      // **واسمُه فوق رمزه** (٢٠٢٦-١٠-١٧) — ويتراكب، فلا يختفي سائقٌ لأنّ جاره قريب.
+      labelField: "name",
+      labelOverlap: true,
       pulse: {
         field: "live",
         color: [
@@ -800,7 +803,7 @@ export default function OpsMapPage() {
       data: fc(
         focused.drivers
           .filter((d) => d.freshness !== "NO_LOCATION")
-          .map((d) => pt(d.lng, d.lat, { id: d.id, icon: driverTone(d.tone), live: d.freshness === "LIVE" })),
+          .map((d) => pt(d.lng, d.lat, { id: d.id, name: d.name, icon: driverTone(d.tone), live: d.freshness === "LIVE" })),
       ),
     });
 
@@ -823,6 +826,8 @@ export default function OpsMapPage() {
       cluster: true,
       order: 40,
       visible: !!visible.merchants,
+      // **واسمُ المتجر فوق رمزه** (٢٠٢٦-١٠-١٧) — والمتزاحمةُ تُخفى حتّى يُكبَّر عليها.
+      labelField: "name",
       color: openC,
       clusterProperties: { open_n: ["+", ["case", ["==", ["get", "open"], true], 1, 0]] },
       clusterColor: ["case", openMajority, openC, closedC],
@@ -837,7 +842,7 @@ export default function OpsMapPage() {
       },
       data: fc(
         focused.merchants.map((x) =>
-          pt(x.lng, x.lat, { id: x.id, icon: storeTone(x.open_now), open: x.open_now }),
+          pt(x.lng, x.lat, { id: x.id, name: x.name, icon: storeTone(x.open_now), open: x.open_now }),
         ),
       ),
     });

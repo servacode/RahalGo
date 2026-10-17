@@ -76,6 +76,13 @@ export interface LayerSpec {
   radiusField?: string;
   /** **أيُجمَّع؟** — للنقاط الكثيرة. */
   cluster?: boolean;
+  /**
+   * **اسمٌ فوق الرمز** (طلبُ المالك ٢٠٢٦-١٠-١٧: «اسم السائق فوق الايقونة لنعرف مين هذا وهذا»)
+   * — خاصّةُ المعلَم التي يُقرأ منها النصّ، لطبقات `symbol`.
+   */
+  labelField?: string;
+  /** **أتتراكب الأسماء؟** — السائقون نعم (كلُّهم يُرى)، والمتاجرُ لا (تُخفى المتزاحمةُ حتّى التكبير). */
+  labelOverlap?: boolean;
   /** **الوزنُ للكثافة.** */
   weightField?: string;
   visible: boolean;
@@ -468,7 +475,26 @@ export function OpsMapCanvas({
               "icon-image": ["get", "icon"] as never,
               "icon-allow-overlap": true,
               "icon-ignore-placement": true,
+              ...(spec.labelField
+                ? {
+                    "text-field": ["get", spec.labelField] as never,
+                    "text-size": 12,
+                    "text-anchor": "bottom",
+                    "text-offset": [0, -1.4] as never,
+                    "text-allow-overlap": !!spec.labelOverlap,
+                    "text-optional": true,
+                  }
+                : {}),
             },
+            ...(spec.labelField
+              ? {
+                  paint: {
+                    "text-color": themeColor("ink"),
+                    "text-halo-color": themeColor("paper"),
+                    "text-halo-width": 1.6,
+                  },
+                }
+              : {}),
           } as never);
         } else {
           m.addLayer({
