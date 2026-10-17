@@ -523,6 +523,7 @@ function JoinCard({
   href,
   open,
   partner,
+  ctaLabel,
 }: {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   who: string;
@@ -532,8 +533,10 @@ function JoinCard({
   open: boolean;
   /** **شريكٌ لا زبون** — متجرٌ أو سائقٌ أو مندوب. */
   partner?: boolean;
+  /** **لفظُ الباب المفتوح** — والزبونُ «ابدأ التسوق» لا «انضم الآن». */
+  ctaLabel?: string;
 }) {
-  const cta = open ? H.familyCta : partner ? H.familySupport : H.familySoon;
+  const cta = open ? (ctaLabel ?? H.familyCta) : partner ? H.familySupport : H.familySoon;
   const to = open ? href : partner ? "/contact" : null;
   const body = (
     <>
@@ -721,7 +724,9 @@ export default async function HomePage() {
             {/* **والزبونُ إلى التسجيل والشركاءُ إلى «تواصل معنا»** — **ولا
                 نموذجَ انضمامٍ عامّاً** (`JOIN-0`، ٢٠٢٦-٠٩-٣٠، بقرار المالك):
                 المندوبُ يسجّل المتجرَ من تطبيقه، والسائقُ والمندوبُ يتواصلان. */}
-            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/app" open={brand.joinOpen} />
+            {/* **والزبونُ إلى السوق مفتوحاً** (قرارُ المالك ٢٠٢٦-١٠-١٧): المتصفّحُ يتسوّق
+                ويطلب — **فبابُه لا ينتظر بابَ الانضمام.** */}
+            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/shop" open ctaLabel={H.famCustomerCta} />
             <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/contact" open={brand.joinOpen} partner />
             <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/contact" open={brand.joinOpen} partner />
             <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/contact" open={brand.joinOpen} partner />

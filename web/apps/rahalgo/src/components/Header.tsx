@@ -357,7 +357,14 @@ export default function Header({
            (طلبُ المالك ٢٠٢٦-١٠-٠٥: «زر بالموقع حمّل التطبيق لتطبيق الزبون بشكل
            مباشر، مشان ما يضطر يفوت ع التطبيقات») — **ينزّل ملفَّ الزبون من
            أوّل ضغطة.** */
-          <AppDownloadChip label={m.site.appGate.title} />
+          <>
+            {/* **و«تسجيل الدخول» للزبون** (قرارُ المالك ٢٠٢٦-١٠-١٧) — **صغيرٌ بجانب
+                التحميل**: زبونُ آيفون يدخل ويطلب من المتصفّح، **ويُعاد إلى السوق بعده.** */}
+            <TopBarLink Link={Link} href="/login?next=/shop" title={N.login} tone="plain">
+              <span>{N.login}</span>
+            </TopBarLink>
+            <AppDownloadChip label={m.site.appGate.title} />
+          </>
         )}
       </TopBar>
       {/* ══════════════════════════════════════════════════════════════════
