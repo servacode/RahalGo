@@ -57,7 +57,9 @@ export default function PortalRedirect() {
     const tail = Array.isArray(rest) ? rest.join("/") : (rest ?? "");
     const suffix = tail ? `/${tail}` : "";
     if (!user) {
-      router.replace("/app");
+      /* **ويدخل ثمّ يعود إلى خبره** (قرارُ المالك ٢٠٢٦-١٠-١٧) — كان يُساق
+         إلى `/app` يومَ لم يكن للزبون بابٌ في الويب. */
+      router.replace(`/login?next=${encodeURIComponent(`/portal${suffix}`)}`);
       return;
     }
     /* ══════════════════════════════════════════════════════════════
@@ -75,8 +77,11 @@ export default function PortalRedirect() {
        سبعُ نقاطٍ في المحرّك كانت تشير إلى صفحاتٍ حُذفت. */
     // **وبالقدرة لا بالاسم** (`WEBA`).
     const base = portalFor(user.roles, capabilities, capsLoaded) ?? "/";
-    if (base === PANEL_PATHS.app) {
-      router.replace(PANEL_PATHS.app);
+    /* **والزبونُ إلى سوقه** (قرارُ المالك ٢٠٢٦-١٠-١٧) — **وخبرُ طلبٍ
+       إلى «طلباتي»** (`/portal/orders` في إشعارات الزبون)، وما عداه إلى
+       السوق: **ولا ذيلَ يُلحق** فلا يُصنع مسارٌ لا وجودَ له. */
+    if (base === PANEL_PATHS.shop) {
+      router.replace(tail.startsWith("orders") ? "/orders" : PANEL_PATHS.shop);
       return;
     }
     router.replace(base === "/" ? `/${tail}` : `${base}${suffix}`);

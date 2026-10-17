@@ -55,7 +55,14 @@ const { homeFor, PANEL_PATHS } = await import(
 );
 
 const DASH = PANEL_PATHS.admin; // "/dashboard"
-const APP = PANEL_PATHS.app; // "/app"
+// **ومن ليس إدارةً يُساق إلى السوق** (قرارُ المالك ٢٠٢٦-١٠-١٧) — وكان
+// `/app` (صفحةُ التطبيقات). **والاسمُ `APP` باقٍ** فالحالاتُ العشرُ كما هي:
+// «الوجهةُ التي ليست اللوحة».
+const APP = PANEL_PATHS.shop; // "/shop"
+if (APP !== "/shop") {
+  console.error("  ✗ وجهةُ الزبون ليست السوق — `PANEL_PATHS.shop`");
+  process.exit(1);
+}
 
 let bad = 0;
 const fail = (msg) => {

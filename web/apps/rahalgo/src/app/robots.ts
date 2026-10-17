@@ -31,8 +31,9 @@ export default function robots(): MetadataRoute.Robots {
       // يقرؤه كلُّ أحد، **ومن كتب `Disallow: /adminrahalgo` أعلن
       // عنوانَه**، وذاك نقيضُ سبب تغييره.
       //
-      // **وأقسامُ الزبون حُذفت ٢٠٢٦-٠٨-٢٦** فلم يبقَ ما يُمنع منها.
-      disallow: ["/dashboard"],
+      // **وأقسامُ الزبون حُذفت ٢٠٢٦-٠٨-٢٦ وعادت ٢٠٢٦-١٠-١٧** (زبونُ آيفون
+      // يطلب من المتصفّح) — **والسوقُ يُفهرَس، وما يخصّ صاحبَ الحساب لا.**
+      disallow: ["/dashboard", "/cart", "/orders", "/account"],
     },
     sitemap: `${SITE()}/sitemap.xml`,
   };
