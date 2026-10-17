@@ -22,11 +22,15 @@
  * **فلا يُرسَل إلّا ما يخصّ عملتَه.**
  */
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
   Alert,
+  ButtonLink,
   EmptyState,
+  IconAdd,
+  IconEdit,
   FormActions,
   IconList,
   IconSearch,
@@ -42,22 +46,11 @@ import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { MenuItem, MenuSection } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
+import { parseUsd, usdInput, usdToSyp } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
 const M = m.store.menu;
-
-/** **مطابقٌ لـ`usdToSyp` في التطبيق ولـ`USDToSYP` في المحرّك** — لأقرب خمس ليرات. */
-function usdToSyp(usd: number, rate: number): number {
-  return Math.round((usd * 100 * rate) / 100 / 5) * 5;
-}
-
-/** **الفاصلةُ العشريّةُ العربيّة والفاصلةُ والنقطةُ سواء** — مرآةُ `parseUsd`. */
-const ARABIC_DECIMAL = "\u066B";
-function parseUsd(text: string): number | null {
-  const v = Number(text.trim().replace(ARABIC_DECIMAL, ".").replace(",", "."));
-  return Number.isFinite(v) && v >= 0 ? v : null;
-}
 
 function priceLine(it: MenuItem): string {
   return it.price_currency === "USD" && it.merchant_price_usd != null
@@ -118,7 +111,7 @@ function PriceDialog({
           inputMode={usd ? "decimal" : "numeric"}
           dir="ltr"
           value={text}
-          onChange={(e) => setText(usd ? e.target.value.replace(/[^\d.,\u066B]/g, "").slice(0, 10) : e.target.value.replace(/\D/g, "").slice(0, 9))}
+          onChange={(e) => setText(usd ? usdInput(e.target.value) :e.target.value.replace(/\D/g, "").slice(0, 9))}
           autoFocus
         />
         {usd && rate != null && (
@@ -154,7 +147,15 @@ function ItemRow({
     <li className="flex items-center gap-3 py-2" data-testid="store-menu-item" data-item-id={item.id}>
       <MediaThumb url={item.image_thumb_url ?? item.image_url} alt={item.name} fallback={item.name} size={52} mediaUrl={mediaUrl} />
       <div className="min-w-0 flex-1">
-        <p className={`truncate font-medium ${item.available ? "text-ink" : "text-ink-muted"}`}>{item.name}</p>
+        <Link
+          href={`/store/menu/${item.id}`}
+          aria-label={`${M.edit} · ${item.name}`}
+          data-testid="store-menu-edit"
+          className={`flex min-w-0 items-center gap-1 font-medium hover:underline ${item.available ? "text-ink" : "text-ink-muted"}`}
+        >
+          <span className="truncate">{item.name}</span>
+          <IconEdit size={13} className="shrink-0 text-ink-muted" />
+        </Link>
         <button
           type="button"
           disabled={disabled}
@@ -233,9 +234,17 @@ export default function MenuPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{M.title}</h2>
-        <p className="text-sm text-ink-muted">{M.hint}</p>
+      <header className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="heading-page">{M.title}</h2>
+          <p className="text-sm text-ink-muted">{M.hint}</p>
+        </div>
+        {!suspended && (
+          <ButtonLink href="/store/menu/new" className="flex shrink-0 items-center gap-1">
+            <IconAdd size={15} />
+            {M.add}
+          </ButtonLink>
+        )}
       </header>
       {empty ? (
         <EmptyState icon={IconList} title={M.empty} />
@@ -252,9 +261,20 @@ export default function MenuPage() {
           {groups.length === 0 && <p className="py-6 text-center text-sm text-ink-muted">{M.noMatch}</p>}
           {groups.map((g) => (
             <section key={g.name} className="surface rounded-card p-3">
-              <h3 className="heading-card flex items-center justify-between">
-                <span>{g.name}</span>
-                <span className="text-xs font-normal text-ink-muted">{fill(M.count, { n: fmtNum(g.items.length) })}</span>
+              <h3 className="heading-card flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate">{g.name}</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs font-normal text-ink-muted">
+                  {fill(M.count, { n: fmtNum(g.items.length) })}
+                  {!suspended && g.items[0]?.platform_section_id && (
+                    <Link
+                      href={`/store/menu/new?section=${g.items[0].platform_section_id}`}
+                      aria-label={`${M.add} · ${g.name}`}
+                      className="rounded-control p-1 text-accent-text hover:bg-row-hover"
+                    >
+                      <IconAdd size={16} />
+                    </Link>
+                  )}
+                </span>
               </h3>
               <ul className="divide-y divide-line">
                 {g.items.map((it) => (

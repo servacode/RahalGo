@@ -20,17 +20,20 @@
  */
 
 import Link from "next/link";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   BrandMark,
   ButtonLink,
   EmptyState,
+  IconAdd,
+  IconHamburger,
   IconMoto,
   IconOrder,
   IconStore,
   IconList,
+  IconUser,
   IconWallet,
   LoadingState,
   MobileNav,
@@ -55,6 +58,7 @@ import { fill } from "@/lib/customer/texts";
 import StoreBar from "./StoreBar";
 import OrderAlert from "./OrderAlert";
 import FetchAmountWatcher from "./FetchAmountWatcher";
+import StoreMenu from "./StoreMenu";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
@@ -105,18 +109,33 @@ function Shell({ children }: { children: ReactNode }) {
   const { loading, error, store, selfManage, reload } = useStore();
   const { pending } = useStoreOrders();
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  /* ══════════════════════════════════════════════════════════════════
+     **الشريطُ السفليُّ تبويباتُ التطبيق نفسُها وبترتيبها**
+     ══════════════════════════════════════════════════════════════════
+
+     (مرآةُ `NavigationBar` في `MainActivity.kt`: الطلبات حين يدير المتجرُ
+      طلباتِه · متجري · أضف صنفاً · الأصناف · توصيلة · حسابي.)
+
+     **والمحفظةُ وما بقي في القائمة الجانبيّة** (`StoreMenu`) — كدرج التطبيق. */
   const nav: NavItem[] = [
     ...(selfManage
       ? [{ href: "/store/orders", label: S.nav.orders, icon: IconOrder, count: pending.length }]
       : []),
     { href: "/store", label: S.nav.store, icon: IconStore },
+    { href: "/store/menu/new", label: S.nav.addItem, icon: IconAdd },
     { href: "/store/menu", label: S.nav.menu, icon: IconList },
     { href: "/store/delivery", label: S.nav.delivery, icon: IconMoto },
-    { href: "/store/wallet", label: S.nav.wallet, icon: IconWallet },
+    { href: "/store/account", label: S.nav.account, icon: IconUser },
   ];
-  /* **و`/store` بدايةُ كلّ مسار** — فيُطابَق حرفيّاً وإلّا أُضيء مع كلّ قسم. */
+  /* **وعلى الشاشة العريضة المحفظةُ في الشريط العلويّ أيضاً** — كزرّها في
+     شريط التطبيق. */
+  const top: NavItem[] = [...nav, { href: "/store/wallet", label: S.nav.wallet, icon: IconWallet }];
+  /* **و`/store` بدايةُ كلّ مسار** — فيُطابَق حرفيّاً وإلّا أُضيء مع كلّ قسم.
+     **و«أضف صنفاً» قبل «الأصناف»** — `/store/menu/new` يبدأ بـ`/store/menu`. */
   const active =
-    nav
+    top
       .map((n) => n.href)
       .filter((h) => h !== "/store")
       .find((h) => path.startsWith(h)) ?? (path === "/store" ? "/store" : "");
@@ -136,18 +155,22 @@ function Shell({ children }: { children: ReactNode }) {
           </Link>
         }
       >
-        {nav.map((it) => {
+        {top.map((it) => {
           const Icon = it.icon;
+          /* **والاسمُ يظهر من `xl`** — سبعةُ أبوابٍ بأسمائها لا تتّسع لشاشةٍ
+             بين الجوّال والحاسوب، **فتبقى الأيقونةُ وتسميتُها للقارئ.** */
           return (
             <TopBarLink
               key={it.href}
               Link={Link}
               href={it.href}
               tone={active === it.href ? "active" : "plain"}
+              title={it.label}
+              aria-label={it.label}
               className="hidden md:inline-flex"
             >
               <Icon size={18} />
-              {it.label}
+              <span className="hidden xl:inline">{it.label}</span>
             </TopBarLink>
           );
         })}
@@ -155,7 +178,17 @@ function Shell({ children }: { children: ReactNode }) {
           {S.nav.shop}
         </TopBarLink>
         <Bell />
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label={S.nav.more}
+          data-testid="store-menu-open"
+          className="shrink-0 rounded-control p-2 text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
+        >
+          <IconHamburger size={22} />
+        </button>
       </TopBar>
+      <StoreMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4">
         <PwaHints android={ANDROID_HINT} />
         {store && <StoreBar />}

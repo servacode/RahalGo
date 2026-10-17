@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconBell, IconSmartphone } from "@rahalgo/ui";
+import { IconBell, IconBellOff, IconSmartphone } from "@rahalgo/ui";
 import { useStoreOrders } from "@/lib/store/orders";
 import { useWakeLock } from "@/lib/store/wakelock";
 import { fill } from "@/lib/customer/texts";
@@ -27,13 +27,24 @@ const A = m.store.alert;
 
 export default function OrderAlert() {
   const path = usePathname() ?? "";
-  const { pending, soundUnlocked, unlockSound } = useStoreOrders();
+  const { pending, soundUnlocked, unlockSound, soundEnabled } = useStoreOrders();
   useWakeLock(true);
   const onOrders = path.startsWith("/store/orders");
 
   return (
     <>
-      {!soundUnlocked && (
+      {/* **ومن كتم الرنّةَ بيده لا يُلحّ عليه زرُّ التفعيل** — يُقال له
+          أنّها مكتومة وأين تُشغَّل (`/store/account`). */}
+      {!soundEnabled && (
+        <Link
+          href="/store/account"
+          className="flex items-center gap-2 rounded-card border border-warning-edge bg-warning-tint p-3 text-sm text-warning"
+        >
+          <IconBellOff size={18} className="shrink-0" />
+          {A.muted}
+        </Link>
+      )}
+      {soundEnabled && !soundUnlocked && (
         <button
           type="button"
           onClick={unlockSound}

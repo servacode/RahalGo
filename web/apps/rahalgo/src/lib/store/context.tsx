@@ -33,6 +33,8 @@ interface StoreCtx {
   stores: MerchantStore[];
   store: MerchantStore | null;
   selfManage: boolean;
+  /** **حدُّ اسم الصنف** — `catalog.item_name_max` من المحرّك (مرآةُ `ItemLimits.nameMax`). */
+  itemNameMax: number;
   select: (id: string) => void;
   reload: () => Promise<void>;
   /** **تحديثٌ محلّيٌّ بعد ردٍّ ناجح** — لا ينتظر القراءةَ التالية. */
@@ -98,6 +100,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     stores,
     store,
     selfManage: page?.self_manage_orders ?? false,
+    itemNameMax: page?.item_name_max || 30,
     select,
     reload,
     patch,

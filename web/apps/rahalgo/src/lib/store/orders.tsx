@@ -37,6 +37,14 @@ interface OrdersCtx {
   /** **أيسمح المتصفّحُ بالصوت الآن؟** — آيفون يمنعه قبل أوّل لمسة. */
   soundUnlocked: boolean;
   unlockSound: () => void;
+  /**
+   * **مفتاحُ كتم الرنّة — لكلّ جهازٍ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٧).
+   *
+   * **وافتراضُه «شغّال»** — صمتٌ لم يختره صاحبُه يضيّع طلباً. **ويُحفظ في
+   * المتصفّح** (`useRinger` بمفتاح `MERCHANT_SOUND_KEY`، والقراءةُ محميّة).
+   */
+  soundEnabled: boolean;
+  setSoundEnabled: (on: boolean) => void;
 }
 
 const Ctx = createContext<OrdersCtx | null>(null);
@@ -83,7 +91,8 @@ export function StoreOrdersProvider({ children }: { children: ReactNode }) {
   // ══════════════════════════════════════════════════════════════════
   // **والاهتزازُ حيث يُدعَم** — أندرويد يهتزّ، وآيفون لا يملك الواجهة.
   // ══════════════════════════════════════════════════════════════════
-  const ringing = pending.length > 0;
+  // **والكتمُ يُسكت الاهتزازَ أيضاً** — من أطفأ الرنّةَ أطفأ التنبيهَ كلَّه.
+  const ringing = pending.length > 0 && ringer.enabled;
   const vibTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     const nav = typeof navigator !== "undefined" ? navigator : null;
@@ -109,6 +118,8 @@ export function StoreOrdersProvider({ children }: { children: ReactNode }) {
     pending,
     reload,
     soundUnlocked: ringer.unlocked,
+    soundEnabled: ringer.enabled,
+    setSoundEnabled: ringer.setEnabled,
     unlockSound: () => {
       if (!ringer.enabled) ringer.setEnabled(true);
       ringer.unlock();

@@ -70,6 +70,11 @@ export interface MerchantOrder {
 export interface OrdersPage {
   orders: MerchantOrder[];
   total: number;
+  page?: number;
+  per_page?: number;
+  status_counts?: Record<string, number>;
+  /** **ما يُبلَّغ عن سائقه** — معرّفاتُ الطلبات. */
+  reportable?: string[];
 }
 
 export interface MenuItem {
@@ -86,6 +91,72 @@ export interface MenuItem {
   platform_section_name: string;
   price_currency: string;
   merchant_price_usd: number | null;
+  modifiers?: ModifierGroup[];
+}
+
+/** **مجموعةُ إضافات** — `catalog.ModifierGroup`، **وتُستبدل كلُّها عند الحفظ.** */
+export interface ModifierOption {
+  id?: string;
+  name: string;
+  price_delta: number;
+  price_delta_usd?: number | null;
+}
+
+export interface ModifierGroup {
+  id?: string;
+  name: string;
+  min_select: number;
+  max_select: number;
+  options: ModifierOption[];
+}
+
+/** **قسمُ سوقٍ** — من `/merchant/platform-sections` و`/stores/{id}/sections`. */
+export interface SectionRef {
+  id: string;
+  name: string;
+  image_url?: string | null;
+  image_thumb_url?: string | null;
+}
+
+/** **يومٌ من ساعات العمل** — `0` الأحد … `6` السبت، والوقتُ `HH:MM`. */
+export interface DayHours {
+  day_of_week: number;
+  closed: boolean;
+  open_time: string;
+  close_time: string;
+}
+
+/** **عرضٌ على صنف** — مرآةُ `StoreOffer` في التطبيق. */
+export interface StoreOffer {
+  id: string;
+  title: string;
+  menu_item_id: string | null;
+  item_name: string;
+  discount_percent: number | null;
+  discount_amount: number | null;
+  price_before: number;
+  price_after: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  status: string;
+}
+
+export interface Warning {
+  id: string;
+  reason: string;
+  note: string;
+  order_number?: number | null;
+  created_at: string;
+}
+
+export interface MerchantReport {
+  id: string;
+  number: number;
+  order_number: number | null;
+  reason: string;
+  status: string;
+  resolution: string;
+  created_at: string;
 }
 
 export interface MenuSection {

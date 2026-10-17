@@ -1,43 +1,100 @@
 "use client";
 
 /**
- * **‏/store — «متجري»**: ما جرى اليوم بأرقامٍ أربعة (مرآةُ بطاقة التقرير في
- * `StoreScreen.kt`)، **والاسمُ والحالُ ومفتاحُ الفتح في الشريط فوق.**
+ * ══════════════════════════════════════════════════════════════════════
+ * **‏/store — «متجري»: الشاشةُ نفسُها التي في التطبيق**
+ * ══════════════════════════════════════════════════════════════════════
  *
- * **وما بقي من إعدادات المتجر** (الساعات · الأقسام · العنوان · سعر الصرف)
- * **في التطبيق وفي المرحلة الثانية** — هنا ما يحتاجه يومُ العمل.
+ * (مرآةُ `StoreScreen.kt` — المرحلةُ الثانية، قرارُ المالك ٢٠٢٦-١٠-١٧.)
+ *
+ * **بالترتيب نفسِه**: ما ينقص المتجر (وكلُّ سطرٍ يقود إلى بطاقته) · الاسمُ
+ * وقلمُه · «إغلاق طارئ» · أرقامُ اليوم · طريقةُ استلام المستحقّات ·
+ * الاسترداد · سعرُ الصرف وعملةُ العرض · مدّةُ التحضير · ساعاتُ العمل ·
+ * أقسامُ السوق · العنوانُ ونقطتُه.
+ *
+ * **والحالُ ومفتاحُ «مفتوح / مغلق» في الشريط فوق** (`StoreBar`) — كما في
+ * كلّ شاشة.
  */
 
-import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, damascusDay, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { Card, IconMoto, IconOrder, IconList, IconWallet, LoadingState, StatCard, StatGrid, useLiveData } from "@rahalgo/ui";
+import { IconWarning, LoadingState, StatCard, StatGrid, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import type { StoreReport } from "@/lib/store/types";
+import type { SectionRef, StoreReport } from "@/lib/store/types";
+import {
+  EmergencyButton,
+  NameCard,
+  PrepCard,
+  RateCard,
+  ReturnsCard,
+  SettlementCard,
+} from "@/components/store/StoreSettings";
+import HoursEditor from "@/components/store/HoursEditor";
+import SectionsEditor from "@/components/store/SectionsEditor";
+import AddressEditor from "@/components/store/AddressEditor";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
+const T = S.settings;
+
+type Spot = "sections" | "hours" | "address" | "settlement" | "returns";
+
+function jump(spot: Spot) {
+  document.getElementById(`spot-${spot}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 export default function StoreHome() {
-  const { store, selfManage } = useStore();
+  const { store } = useStore();
   const id = store?.id ?? "";
   const load = useCallback(() => {
     const today = damascusDay();
     return api<StoreReport>(`/api/v1/merchant/stores/${id}/reports?from=${today}&to=${today}`);
   }, [id]);
   const { data: report, loading } = useLiveData(load, ["order"], [id]);
-  if (!store) return null;
 
-  const links = [
-    ...(selfManage ? [{ href: "/store/orders", label: S.nav.orders, icon: IconOrder }] : []),
-    { href: "/store/menu", label: S.nav.menu, icon: IconList },
-    { href: "/store/delivery", label: S.delivery.title, icon: IconMoto },
-    { href: "/store/wallet", label: S.nav.wallet, icon: IconWallet },
-  ];
+  const [all, setAll] = useState<SectionRef[]>([]);
+  const [mine, setMine] = useState<SectionRef[] | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    api<{ sections: SectionRef[] }>("/api/v1/merchant/platform-sections")
+      .then((r) => setAll(r.sections ?? []))
+      .catch(() => undefined);
+    api<{ sections: SectionRef[] }>(`/api/v1/merchant/stores/${id}/sections`)
+      .then((r) => setMine(r.sections ?? []))
+      // **وتعذّرُها لا يُقال «لا أقسام»** — تبقى مجهولةً فلا يُعرض نقصٌ ولا محرّر.
+      .catch(() => undefined);
+  }, [id]);
+
+  if (!store) return null;
+  const suspended = store.status === "suspended";
+
+  const missing: Spot[] = [];
+  if (mine != null && mine.length === 0) missing.push("sections");
+  if (!store.has_hours) missing.push("hours");
+  if (store.lat == null || !store.address_text.trim()) missing.push("address");
+  if (!store.settlement_confirmed) missing.push("settlement");
+  if (!store.returns_confirmed) missing.push("returns");
 
   return (
     <div className="flex flex-col gap-3">
+      {missing.length > 0 && !suspended && (
+        <section className="flex flex-col gap-1 rounded-card border border-danger-edge bg-danger-tint p-3" data-testid="store-missing">
+          <p className="flex items-center gap-2 font-bold text-danger">
+            <IconWarning size={18} className="shrink-0" />
+            {T.setupTitle}
+          </p>
+          {missing.map((s) => (
+            <button key={s} type="button" onClick={() => jump(s)} className="py-1.5 text-start text-sm hover:underline">
+              {`• ${T.setup[s]}  ←`}
+            </button>
+          ))}
+        </section>
+      )}
+
+      <NameCard />
+      <EmergencyButton />
+
       {loading && !report ? (
         <LoadingState variant="stats" rows={4} />
       ) : (
@@ -55,24 +112,24 @@ export default function StoreHome() {
           </StatGrid>
         )
       )}
-      <Card padding="sm">
-        <ul className="grid grid-cols-2 gap-2">
-          {links.map((l) => {
-            const Icon = l.icon;
-            return (
-              <li key={l.href}>
-                <Link
-                  href={l.href}
-                  className="flex items-center gap-2 rounded-control border border-line bg-field px-3 py-3 text-sm font-bold hover:bg-row-hover"
-                >
-                  <Icon size={18} className="shrink-0 text-accent-text" />
-                  {l.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+
+      <div id="spot-settlement" className="scroll-mt-20">
+        <SettlementCard />
+      </div>
+      <div id="spot-returns" className="scroll-mt-20">
+        <ReturnsCard />
+      </div>
+      <RateCard />
+      <PrepCard />
+      <div id="spot-hours" className="scroll-mt-20">
+        <HoursEditor />
+      </div>
+      <div id="spot-sections" className="scroll-mt-20">
+        {mine != null && <SectionsEditor all={all} mine={mine} onChange={setMine} />}
+      </div>
+      <div id="spot-address" className="scroll-mt-20">
+        <AddressEditor />
+      </div>
     </div>
   );
 }
