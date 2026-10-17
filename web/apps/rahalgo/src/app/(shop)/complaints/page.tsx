@@ -4,9 +4,11 @@
  * **الشكاوى والبلاغات — شكاواه وأين وصلت** (`/my/tickets`).
  *
  * **ومن اشتكى ولم يرَ جواباً ظنّ شكواه ضاعت** — فتُعرض بحالها وردّ المنصّة.
- * **وتُفتح الشكوى من تفاصيل الطلب** بسببٍ من قائمة المحرّك.
+ * **وتُفتح الشكوى من تفاصيل الطلب** بسببٍ من قائمة المحرّك. **وكلُّ شكوى
+ * تُفتح على خيطها** (`/complaints/[id]`) — حالُها وردودُها والردُّ عليها.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { ComplaintCard, ComplaintGrid, EmptyState, LoadingState, ReloadState, IconSupport, type ComplaintTicket } from "@rahalgo/ui";
@@ -50,7 +52,16 @@ export default function ComplaintsPage() {
       ) : (
         <ComplaintGrid>
           {rows.map((t) => (
-            <ComplaintCard key={t.id} ticket={t} note={Q.mineNote} />
+            <ComplaintCard
+              key={t.id}
+              ticket={t}
+              note={Q.mineNote}
+              action={
+                <Link href={`/complaints/${t.id}`} className="text-sm font-medium text-accent-text">
+                  {Q.details}
+                </Link>
+              }
+            />
           ))}
         </ComplaintGrid>
       )}
