@@ -191,7 +191,8 @@ function Shell({ children }: { children: ReactNode }) {
       <StoreMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4">
         <PwaHints android={ANDROID_HINT} />
-        {store && <StoreBar />}
+        {/* **وصفحةُ الحساب بلا شريط المتجر** — كما يُخفي التطبيقُ مبدّلَ المتجر في «حسابي». */}
+        {store && !path.startsWith("/store/account") && <StoreBar />}
         {store && selfManage && <OrderAlert />}
         {body}
       </main>

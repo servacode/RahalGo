@@ -8558,7 +8558,9 @@
         "stopped": "موقوف",
         "expired": "منتهي",
         "unknown": "حالة غير معروفة"
-      }
+      },
+      "pct": "{n}٪",
+      "pctBadge": "{n}٪−"
     },
     "history": {
       "title": "سجل الطلبات",
