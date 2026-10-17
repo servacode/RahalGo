@@ -30,6 +30,7 @@ import {
   Button,
   ButtonLink,
   Checkbox,
+  Chips,
   Input,
   LoadingState,
   OtpInput,
@@ -123,16 +124,105 @@ function useEnter() {
   };
 }
 
+/**
+ * **الدخولُ برمزٍ على واتساب** — إن فتحته اللوحة (`auth.otp_login`)، كما في
+ * التطبيق. **يفتح الجلسةَ مباشرةً** (`/auth/otp/verify`).
+ */
+function OtpLogin() {
+  const doEnter = useEnter();
+  const [phone, setPhone] = useState("");
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const run = (fn: () => Promise<void>) => async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+    } catch (err) {
+      setError(err instanceof Error && err.message === "pin" ? T.staffNote : errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const verify = (c: string) => run(async () => doEnter((await authApi.verifyOtp(phone.trim(), c)) as AuthResult))();
+
+  if (!sent) {
+    return (
+      <form
+        className="space-y-4"
+        onSubmit={run(async () => {
+          await authApi.requestOtp(phone.trim());
+          setSent(true);
+          setCode("");
+        })}
+      >
+        <p className="text-sm text-ink-muted">{T.codeHint}</p>
+        <PhoneField value={phone} onChange={setPhone} />
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" disabled={busy} className="w-full py-3 text-base">
+          {busy ? T.busy : T.send}
+        </Button>
+      </form>
+    );
+  }
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void verify(code);
+      }}
+    >
+      <p className="text-center text-sm text-ink-muted">
+        {T.codeSentTo}{" "}
+        <span dir="ltr" className="font-bold text-ink">
+          {phone.trim()}
+        </span>
+      </p>
+      <OtpInput value={code} onChange={setCode} autoFocus boxLabel={m.auth.otpBoxLabel} onComplete={(v) => void verify(v)} />
+      {error && <Alert>{error}</Alert>}
+      <Button type="submit" disabled={busy || !code.trim()} className="w-full py-3">
+        {busy ? T.busy : T.verify}
+      </Button>
+      <button type="button" onClick={() => setSent(false)} className="w-full text-sm text-accent-text">
+        {T.changeNumber}
+      </button>
+    </form>
+  );
+}
+
 function Login() {
   const doEnter = useEnter();
   const params = useSearchParams();
+  const { platform } = useCustomer();
+  const [how, setHow] = useState<"password" | "otp">("password");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const q = params.toString();
+  const otp = platform?.otp_login === true;
   return (
     <Frame title={T.loginTitle}>
+      {otp && (
+        <div className="mb-4 flex justify-center">
+          <Chips<"password" | "otp">
+            items={[
+              { id: "password", label: T.byPassword },
+              { id: "otp", label: T.byCode },
+            ]}
+            value={how}
+            onChange={setHow}
+          />
+        </div>
+      )}
+      {otp && how === "otp" ? (
+        <OtpLogin />
+      ) : (
       <form
         className="space-y-4"
         onSubmit={async (e) => {
@@ -159,6 +249,7 @@ function Login() {
           {busy ? T.busy : T.submit}
         </Button>
       </form>
+      )}
       <div className="mt-6 flex flex-col items-center gap-3 border-t border-line-soft pt-4 text-sm">
         <p className="text-ink-muted">
           {T.noAccount}{" "}

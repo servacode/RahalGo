@@ -20,9 +20,17 @@ import {
   Input,
   LoadingState,
   Money,
+  IconBell,
+  IconChat,
+  IconHeart,
+  IconLink,
   IconLocation,
   IconLogout,
+  IconNext,
+  IconPromos,
+  IconReceipt,
   IconSmartphone,
+  IconSupport,
   IconUser,
   IconWallet,
 } from "@rahalgo/ui";
@@ -32,6 +40,7 @@ import { useCustomer } from "@/lib/customer/context";
 import { AddressSheet } from "@/components/customer/AddressSheet";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
+import { WhatsAppSection } from "@/components/customer/WhatsAppSection";
 
 const m = getMessages(defaultLocale);
 const A = m.shop.account;
@@ -50,6 +59,34 @@ function Links() {
         <Link key={href} href={href} className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-row-hover">
           {href === "/download/customer" && <IconSmartphone size={16} className="text-accent-text" />}
           {label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * **«ما يخصني»** — بنودُ القائمة الجانبيّة في أندرويد (`CUSTOMER_ITEMS`)،
+ * **وثابتةٌ لا تظهر وتغيب**: بندٌ يختفي يجعل صاحبَه يظنّ الميزةَ غيرَ موجودة.
+ */
+function Mine() {
+  const items = [
+    ["/wallet", A.walletStatement, IconReceipt],
+    ["/notifications", A.notifications, IconBell],
+    ["/favorites", A.favorites, IconHeart],
+    ["/offers", A.offers, IconPromos],
+    ["/chats", A.chats, IconChat],
+    ["/invite", A.invite, IconLink],
+    ["/complaints", A.tickets, IconSupport],
+  ] as const;
+  return (
+    <nav className="surface flex flex-col divide-y divide-line-soft" aria-label={A.mine}>
+      <p className="px-4 pb-2 pt-3 text-xs font-bold text-ink-muted">{A.mine}</p>
+      {items.map(([href, label, Icon]) => (
+        <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-row-hover">
+          <Icon size={17} className="shrink-0 text-accent-text" />
+          <span className="flex-1">{label}</span>
+          <IconNext size={15} className="text-ink-muted" />
         </Link>
       ))}
     </nav>
@@ -126,6 +163,8 @@ export default function AccountPage() {
         </form>
       </FormSection>
 
+      <WhatsAppSection />
+
       <FormSection title={A.addresses} icon={<IconLocation />}>
         <button type="button" onClick={() => setAddr(true)} className="flex w-full flex-col gap-1 text-start">
           {addresses === null ? (
@@ -138,6 +177,8 @@ export default function AccountPage() {
           )}
         </button>
       </FormSection>
+
+      <Mine />
 
       <Links />
 

@@ -30,11 +30,13 @@ import {
   IconLocation,
   IconCheck,
   IconDelete,
+  IconEdit,
   IconAdd,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCustomer } from "@/lib/customer/context";
 import type { Address } from "@/lib/customer/types";
+import { useShopToast } from "./toast";
 
 const m = getMessages(defaultLocale);
 const A = m.shop.address;
@@ -47,12 +49,27 @@ const KINDS = [
   ["other", A.kindOther],
 ] as const;
 
-function NewAddress({ onDone, onCancel }: { onDone: (id: string) => void; onCancel: () => void }) {
-  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
-  const [area, setArea] = useState("");
-  const [street, setStreet] = useState("");
-  const [floor, setFloor] = useState("");
-  const [kind, setKind] = useState<string>("home");
+/**
+ * **نموذجُ العنوان — للجديد وللتعديل** (قرارُ المالك ٢٠٢٦-٠٨-١٨: «من أخطأ في
+ * طابقه كان يحذف وينشئ» فيفقد كونَه الافتراضيّ). **والتعديلُ `PATCH` بالأجزاء
+ * نفسِها**، والسطرُ المركّبُ يعيد المحرّكُ صنعَه.
+ */
+function AddressForm({
+  initial,
+  onDone,
+  onCancel,
+}: {
+  initial?: Address | null;
+  onDone: (id: string) => void;
+  onCancel: () => void;
+}) {
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
+    initial ? { lat: initial.lat, lng: initial.lng } : null,
+  );
+  const [area, setArea] = useState(initial?.area_building ?? "");
+  const [street, setStreet] = useState(initial?.street ?? "");
+  const [floor, setFloor] = useState(initial?.floor ?? "");
+  const [kind, setKind] = useState<string>(initial?.kind || "home");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -63,18 +80,21 @@ function NewAddress({ onDone, onCancel }: { onDone: (id: string) => void; onCanc
     setBusy(true);
     setError("");
     try {
-      const r = await api<{ id: string }>("/api/v1/my/addresses", {
-        method: "POST",
-        body: JSON.stringify({
-          area_building: area.trim(),
-          street: street.trim(),
-          floor: floor.trim(),
-          kind,
-          lat: pin.lat,
-          lng: pin.lng,
-        }),
+      const body = JSON.stringify({
+        area_building: area.trim(),
+        street: street.trim(),
+        floor: floor.trim(),
+        kind,
+        lat: pin.lat,
+        lng: pin.lng,
       });
-      onDone(r.id);
+      if (initial) {
+        await api(`/api/v1/my/addresses/${initial.id}`, { method: "PATCH", body });
+        onDone(initial.id);
+      } else {
+        const r = await api<{ id: string }>("/api/v1/my/addresses", { method: "POST", body });
+        onDone(r.id);
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -148,7 +168,9 @@ function NewAddress({ onDone, onCancel }: { onDone: (id: string) => void; onCanc
 
 export function AddressSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { addresses, addressesError, reloadAddresses, address, pickAddress } = useCustomer();
+  const toast = useShopToast();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Address | null>(null);
   const [del, setDel] = useState<Address | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -157,15 +179,41 @@ export function AddressSheet({ open, onClose }: { open: boolean; onClose: () => 
 
   const close = () => {
     setAdding(false);
+    setEditing(null);
     setError("");
     onClose();
   };
 
+  const makeDefault = async (a: Address) => {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/my/addresses/${a.id}/default`, { method: "POST", body: "{}" });
+      await reloadAddresses();
+      toast(A.defaultDone, "success");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
-      <Sheet open onClose={close} title={adding ? A.newTitle : A.title}>
-        {adding ? (
-          <NewAddress
+      <Sheet open onClose={close} title={editing ? A.editTitle : adding ? A.newTitle : A.title}>
+        {editing ? (
+          <AddressForm
+            key={editing.id}
+            initial={editing}
+            onCancel={() => setEditing(null)}
+            onDone={async () => {
+              await reloadAddresses();
+              setEditing(null);
+              toast(A.saved, "success");
+            }}
+          />
+        ) : adding ? (
+          <AddressForm
             onCancel={() => setAdding(false)}
             onDone={async (id) => {
               await reloadAddresses();
@@ -224,6 +272,14 @@ export function AddressSheet({ open, onClose }: { open: boolean; onClose: () => 
                         </button>
                         <button
                           type="button"
+                          aria-label={A.edit}
+                          onClick={() => setEditing(a)}
+                          className="taparea flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover"
+                        >
+                          <IconEdit size={16} />
+                        </button>
+                        <button
+                          type="button"
                           aria-label={A.delete}
                           onClick={() => setDel(a)}
                           className="taparea flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover"
@@ -231,6 +287,16 @@ export function AddressSheet({ open, onClose }: { open: boolean; onClose: () => 
                           <IconDelete size={16} />
                         </button>
                       </div>
+                      {!a.is_default && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void makeDefault(a)}
+                          className="mt-1 ps-3 text-xs text-accent-text hover:underline disabled:opacity-60"
+                        >
+                          {A.makeDefault}
+                        </button>
+                      )}
                     </li>
                   );
                 })}
