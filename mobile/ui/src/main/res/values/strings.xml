@@ -80,6 +80,7 @@
     <string name="err_phone_has_store">هذا الرقم مسجّل لمتجر آخر — لا يمكن فتح حساب جديد به. صاحب المتجر يدخل بحسابه من «تسجيل الدخول».</string>
     <string name="err_not_merchant_account">هذا الحساب ليس حساب متجر رحال غو</string>
     <string name="err_not_rep_account">هذا الحساب ليس حساب مندوب رحال غو</string>
+    <string name="err_otp_login_disabled">الدخول برمز مو متاح هلق، ادخل بكلمة المرور</string>
     <string name="err_not_driver_account">هذا الحساب ليس حساب كابتن رحال غو</string>
     <string name="err_no_account">لا يوجد حساب مرتبط بهذا الرقم</string>
     <string name="err_user_suspended">هذا الحساب موقوف</string>

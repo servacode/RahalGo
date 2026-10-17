@@ -30,9 +30,11 @@ import (
 
 // أخطاء المجال — بصيغة الـAPI الموحدة ومفاتيح الترجمة المركزية.
 var (
-	ErrInvalidPhone       = httpx.NewError(http.StatusBadRequest, "invalid_phone", "errors.invalid_phone")
-	ErrOTPRateLimited     = httpx.NewError(http.StatusTooManyRequests, "rate_limited", "errors.rate_limited")
-	ErrOTPInvalid         = httpx.NewError(http.StatusUnauthorized, "invalid_otp", "auth.otpInvalid")
+	ErrInvalidPhone   = httpx.NewError(http.StatusBadRequest, "invalid_phone", "errors.invalid_phone")
+	ErrOTPRateLimited = httpx.NewError(http.StatusTooManyRequests, "rate_limited", "errors.rate_limited")
+	ErrOTPInvalid     = httpx.NewError(http.StatusUnauthorized, "invalid_otp", "auth.otpInvalid")
+	// ErrOTPLoginDisabled **الدخولُ برمزٍ مطفأٌ من اللوحة** (`auth.otp_login`).
+	ErrOTPLoginDisabled   = httpx.NewError(http.StatusForbidden, "otp_login_disabled", "errors.otp_login_disabled")
 	ErrInvalidCredentials = httpx.NewError(http.StatusUnauthorized, "invalid_credentials", "errors.invalid_credentials")
 	ErrUserBlocked        = httpx.NewError(http.StatusForbidden, "user_blocked", "errors.user_blocked")
 	ErrUserSuspended      = httpx.NewError(http.StatusForbidden, "user_suspended", "errors.user_suspended")
@@ -249,6 +251,17 @@ func (s *Service) hashOTP(phone, code string) string {
 
 // RequestOTP يولّد رمزاً ويرسله عبر القناة المهيأة، مع حد معدل لكل رقم.
 func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
+	// ══════════════════════════════════════════════════════════════
+	// **وبابُ الرمز مطفأٌ ⇒ لا رمزَ يُرسَل** (٢٠٢٦-١٠-١٧)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان الإعدادُ يُخفي التبويبَ في الشاشة وحدَها** — والبابُ نفسُه
+	// يُرسل رمزاً لكلّ من ناداه، **ويدخل به من يعرف العنوان.** فيُرفض هنا
+	// قبل أيّ عدٍّ أو إرسال. **ورموزُ التسجيل والاستعادة لها أبوابُها**
+	// (`signup` و`password/reset`) ولا تمرّ من هنا.
+	if !s.boolSetting(ctx, "auth.otp_login", true) {
+		return ErrOTPLoginDisabled
+	}
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
@@ -344,6 +357,10 @@ func (s *Service) ConfirmPhoneChange(ctx context.Context, userID, rawPhone, code
 
 // VerifyOTP يتحقق من الرمز؛ ينشئ حساب زبون تلقائياً للرقم الجديد، ويصدر التوكنات.
 func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code, userAgent, ip string) (*AuthResult, error) {
+	// **والرفضُ نفسُه عند التحقّق** — رمزٌ أُرسل قبل الإطفاء لا يفتح باباً أُغلق.
+	if !s.boolSetting(ctx, "auth.otp_login", true) {
+		return nil, ErrOTPLoginDisabled
+	}
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return nil, ErrInvalidPhone

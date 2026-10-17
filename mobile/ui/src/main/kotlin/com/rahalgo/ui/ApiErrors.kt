@@ -321,6 +321,8 @@ private val CODES: Map<String, Int> = mapOf(
     // **حسابٌ بلا صفةِ هذا التطبيق** — يُرفض دخولُه (قرارُ المالك ٢٠٢٦-١٠-٠١).
     "not_merchant_account" to R.string.err_not_merchant_account,
     "not_rep_account" to R.string.err_not_rep_account,
+    // **بابُ الرمز مطفأٌ من اللوحة** — يدخل بكلمته (٢٠٢٦-١٠-١٧).
+    "otp_login_disabled" to R.string.err_otp_login_disabled,
     "not_driver_account" to R.string.err_not_driver_account,
     "no_account" to R.string.err_no_account,
     "user_suspended" to R.string.err_user_suspended,
