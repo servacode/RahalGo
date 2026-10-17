@@ -104,10 +104,20 @@ if (dest(["customer", "owner_super_admin"], ["roles.manage"]) !== DASH)
   fail("٦ · المالكُ لم يدخل اللوحة");
 
 // ── ٧ · أدوارُ الميدان بلا قدرةٍ ⇒ التطبيق ──────────────────────────
-for (const r of ["driver", "merchant", "sales"]) {
+for (const r of ["driver", "sales"]) {
   if (dest(["customer", r], []) !== APP)
     fail(`٧ · صاحبُ دور ${r} بلا قدرةٍ لم يُساق إلى باب التطبيقات`);
 }
+// **والمتجرُ إلى لوحته على الويب** (قرارُ المالك ٢٠٢٦-١٠-١٧) — ومعه دورُ
+// الزبون أو بدونه، **وبأيّ ترتيب.**
+if (PANEL_PATHS.store !== "/store") fail("٧ · لوحةُ المتجر ليست `/store`");
+for (const roles of [["merchant"], ["customer", "merchant"], ["merchant", "customer"]]) {
+  if (dest(roles, []) !== PANEL_PATHS.store)
+    fail(`٧ · صاحبُ متجرٍ (${roles.join(" + ")}) لم يُساق إلى لوحته`);
+}
+// **والقدرةُ فوقه** — صاحبُ متجرٍ موظّفٌ أيضاً يدخل اللوحةَ الإداريّة.
+if (dest(["customer", "merchant", "operations"], OPS) !== DASH)
+  fail("٧ · صاحبُ متجرٍ بقدرةٍ إداريّةٍ لم يدخل اللوحة");
 
 // ── ٨ · اسمُ دورٍ حاضرٌ والقدرةُ غائبةٌ ⇒ لا يدخل ────────────────────
 //
