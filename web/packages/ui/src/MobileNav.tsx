@@ -37,6 +37,12 @@ export interface NavItem {
   icon: ComponentType<{ size?: number; className?: string }>;
   /** عدّادٌ فوق الأيقونة — **والصفرُ لا يُعرض** فبقعةٌ فارغةٌ تُقلق بلا سبب. */
   count?: number;
+  /**
+   * **يُضاء بالمطابقة التامّة لا بالبداية** — لقشرةٍ تحلّ `active` بنفسها
+   * إلى أحد البنود (لوحةُ المتجر: `/store` بدايةُ كلّ أبوابها، و`/store/menu`
+   * بدايةُ `/store/menu/new`). **وبلا هذا يُضاء بندان معاً.**
+   */
+  exact?: boolean;
 }
 
 /**
@@ -72,7 +78,7 @@ export function MobileNav({
       {items.map((it) => {
         // **والجذرُ يُطابَق تماماً**: `‎/` بدايةٌ لكلّ مسارٍ في الدنيا،
         // **فلو طُوبق ببدايته لَبقيت «الرئيسية» مُبرَزةً في كلّ صفحة.**
-        const on = it.href === "/" ? active === "/" : active.startsWith(it.href);
+        const on = it.href === "/" || it.exact ? active === it.href : active.startsWith(it.href);
         const Icon = it.icon;
         return (
           <Link

@@ -121,24 +121,25 @@ function Shell({ children }: { children: ReactNode }) {
      **والمحفظةُ وما بقي في القائمة الجانبيّة** (`StoreMenu`) — كدرج التطبيق. */
   const nav: NavItem[] = [
     ...(selfManage
-      ? [{ href: "/store/orders", label: S.nav.orders, icon: IconOrder, count: pending.length }]
+      ? [{ href: "/store/orders", label: S.nav.orders, icon: IconOrder, count: pending.length, exact: true }]
       : []),
-    { href: "/store", label: S.nav.store, icon: IconStore },
-    { href: "/store/menu/new", label: S.nav.addItem, icon: IconAdd },
-    { href: "/store/menu", label: S.nav.menu, icon: IconList },
-    { href: "/store/delivery", label: S.nav.delivery, icon: IconMoto },
-    { href: "/store/account", label: S.nav.account, icon: IconUser },
+    { href: "/store", label: S.nav.store, icon: IconStore, exact: true },
+    { href: "/store/menu/new", label: S.nav.addItem, icon: IconAdd, exact: true },
+    { href: "/store/menu", label: S.nav.menu, icon: IconList, exact: true },
+    { href: "/store/delivery", label: S.nav.delivery, icon: IconMoto, exact: true },
+    { href: "/store/account", label: S.nav.account, icon: IconUser, exact: true },
   ];
   /* **وعلى الشاشة العريضة المحفظةُ في الشريط العلويّ أيضاً** — كزرّها في
      شريط التطبيق. */
-  const top: NavItem[] = [...nav, { href: "/store/wallet", label: S.nav.wallet, icon: IconWallet }];
+  const top: NavItem[] = [...nav, { href: "/store/wallet", label: S.nav.wallet, icon: IconWallet, exact: true }];
   /* **و`/store` بدايةُ كلّ مسار** — فيُطابَق حرفيّاً وإلّا أُضيء مع كلّ قسم.
-     **و«أضف صنفاً» قبل «الأصناف»** — `/store/menu/new` يبدأ بـ`/store/menu`. */
+     **و«أضف صنفاً» قبل «الأصناف»** — `/store/menu/new` يبدأ بـ`/store/menu`.
+     **والمطابقةُ بحدّ المقطع** — `/store/deliveries` ليست `/store/delivery`. */
   const active =
     top
       .map((n) => n.href)
       .filter((h) => h !== "/store")
-      .find((h) => path.startsWith(h)) ?? (path === "/store" ? "/store" : "");
+      .find((h) => path === h || path.startsWith(`${h}/`)) ?? (path === "/store" ? "/store" : "");
 
   let body: ReactNode = children;
   if (loading) body = <LoadingState variant="list" rows={3} />;
