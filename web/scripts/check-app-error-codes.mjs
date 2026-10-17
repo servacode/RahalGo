@@ -96,6 +96,8 @@ const SERVER_MOBILE = new Set([
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **إشعاراتُ المتصفّح بلا مفاتيح** — بابُ الويب وحدَه، لا يناديه هاتف (٢٠٢٦-١٠-١٧).
+  "webpush_disabled",
   // **قطع الجهازُ الطلبَ قبل الردّ** — لا يصل الهاتفَ أصلاً (٢٠٢٦-١٠-١٤).
   "client_closed",
   "setting_conflict", "setting_placeholder_missing",

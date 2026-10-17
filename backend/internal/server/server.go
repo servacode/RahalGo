@@ -168,6 +168,13 @@ type Option func(*options)
 
 type options struct {
 	pushTransport push.Transport
+	webPush       *push.WebPush
+}
+
+// WithWebPush يضع ناقلَ متصفّحٍ مبنيّاً بيد الفحص — **ليقبل عنوانَ مزوّدٍ
+// مزيّفٍ محلّيّ.** ولا يُنادى في الإنتاج: الناقلُ هناك من المتغيّرات.
+func WithWebPush(w *push.WebPush) Option {
+	return func(o *options) { o.webPush = w }
 }
 
 // WithPushTransport يضع ناقلَ دفعٍ بديلاً بدل الذي يُبنى من البيئة.
@@ -202,14 +209,23 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	//
 	// **ولا رايةَ ولا متغيّرَ بيئةٍ ولا فرعَ اختبارٍ في منطق العمل**: من لم
 	// يمرّر خياراً مرّ بالمسار نفسِه حرفاً بحرف.
-	pushSvc := push.New(pg, logger)
+	var transports []push.Transport
 	if o.pushTransport != nil {
-		pushSvc = push.New(pg, logger, o.pushTransport)
+		transports = append(transports, o.pushTransport)
 	} else if fcm, err := push.NewFCM(logger); err != nil {
 		logger.Error("الدفع: تعذّرت التهيئة — الإشعاراتُ لن تصل إلى الأجهزة", "error", err)
 	} else if fcm != nil {
-		pushSvc = push.New(pg, logger, fcm)
+		transports = append(transports, fcm)
 	}
+	// **وإشعاراتُ المتصفّح بمفاتيحها** — وبلا مفاتيح تصمت ولا تسقط.
+	if o.webPush != nil {
+		transports = append(transports, o.webPush)
+	} else if wp, err := push.NewWebPushFromEnv(logger); err != nil {
+		logger.Error("الدفع: إشعاراتُ المتصفّح لم تُهيَّأ", "error", err)
+	} else if wp != nil {
+		transports = append(transports, wp)
+	}
+	pushSvc := push.New(pg, logger, transports...)
 	notify.SetPusher(pushAdapter{pushSvc})
 	// **إشعارُ أمانِ الإزاحةِ لمرّةٍ واحدة** (Obs 3.1) — حين يُزيح دخولٌ جديدٌ جهازاً
 	// من نوعِ العميل نفسِه، تُحذف رموزُه ثمّ يُرسَل إليها إشعارٌ **غيرُ حسّاسٍ** واحد.
@@ -520,6 +536,8 @@ func (s *Server) Router() http.Handler {
 		})
 		// **هويّةُ المنصة** — خفيفةٌ ومفتوحة، تناديها الخمسةُ وشاشةُ الدخول.
 		r.Get("/public/platform", s.handlePublicPlatform)
+		// **ومفتاحُ إشعارات المتصفّح العامّ** — يقرؤه المتصفّحُ ليشترك، ولا سرَّ فيه.
+		r.Get("/public/webpush-key", s.handleWebPushKey)
 		// **وأسلوبُ الخريطة** — يقرؤه العارضُ والمنزِّلُ معاً.
 		r.Get("/public/map-style.json", s.handleMapStyle)
 		// **وبلاطاتُها من وسيطنا** — map_tiles.go (٢٠٢٦-١٠-٠٩).
@@ -801,6 +819,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/me/devices/test", s.handlePushTest)
 			r.Post("/me/devices", s.handleDeviceRegister)
 			r.Delete("/me/devices", s.handleDeviceUnregister)
+			// **واشتراكُ المتصفّح** — الزبونُ والمتجرُ على الويب (٢٠٢٦-١٠-١٧).
+			r.Post("/me/webpush", s.handleWebPushSubscribe)
+			r.Delete("/me/webpush", s.handleWebPushUnsubscribe)
 			// العنونة: مساعدة لتحديد المواقع — لأي مستخدم مسجّل
 			r.Get("/geo/reverse", s.handleGeoReverse)
 			r.Get("/geo/search", s.handleGeoSearch)

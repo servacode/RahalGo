@@ -914,6 +914,12 @@ func (r *Repo) RevokeRefreshAndDevice(ctx context.Context, tokenHash, deviceToke
 		sessionID); err != nil {
 		return "", "", err
 	}
+	// **واشتراكُ المتصفّح كرمز الهاتف** — يُنهى مع عائلته (٢٠٢٦-١٠-١٧).
+	if _, err = tx.Exec(ctx,
+		`DELETE FROM web_push_subscriptions WHERE session_id = $1::uuid`,
+		sessionID); err != nil {
+		return "", "", err
+	}
 	// **ورمزُ الجهاز يبقى مقبولاً لصفوفٍ قديمةٍ بلا مالك** —
 	// **سُجّلت قبل هذا العقد فمِلكيّتُها `NULL`.** **ولا يُعتمد
 	// عليه**: **إن لم يصل لم يُكسَر شيء.**
@@ -1042,7 +1048,12 @@ func (r *Repo) DeleteDeviceTokensOfUser(ctx context.Context, userID string) (int
 	if err != nil {
 		return 0, err
 	}
-	return int(tag.RowsAffected()), nil
+	web, err := r.db.Exec(ctx,
+		`DELETE FROM web_push_subscriptions WHERE user_id = $1::uuid`, userID)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected() + web.RowsAffected()), nil
 }
 
 // DeleteDeviceTokensOfSessions **يقطع وجهاتِ عائلاتٍ بعينها** لا غيرَها.
@@ -1059,7 +1070,12 @@ func (r *Repo) DeleteDeviceTokensOfSessions(ctx context.Context, sids []string) 
 	if err != nil {
 		return 0, err
 	}
-	return int(tag.RowsAffected()), nil
+	web, err := r.db.Exec(ctx,
+		`DELETE FROM web_push_subscriptions WHERE session_id = ANY($1::uuid[])`, sids)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected() + web.RowsAffected()), nil
 }
 
 // ClientSessionIDs عائلاتُ الجلسات الفعّالة لحسابٍ **من نوعِ عميلٍ بعينه**.

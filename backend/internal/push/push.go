@@ -125,9 +125,20 @@ type Service struct {
 func New(db *pgxpool.Pool, logger *slog.Logger, transports ...Transport) *Service {
 	m := make(map[string]Transport, len(transports))
 	for _, t := range transports {
-		if t != nil {
-			m[t.Platform()] = t
+		if t == nil {
+			continue
 		}
+		// **ناقلُ المتصفّح يقرأ مفاتيحَ الاشتراك من القاعدة** — فيُعطاها هنا.
+		if w, ok := t.(*WebPush); ok {
+			if w == nil {
+				continue
+			}
+			w.db = db
+			if w.logger == nil {
+				w.logger = logger
+			}
+		}
+		m[t.Platform()] = t
 	}
 	return &Service{db: db, logger: logger, transports: m,
 		kick: make(chan struct{}, 1)}
@@ -387,6 +398,13 @@ func (s *Service) dropDead(ctx context.Context, dead []string) {
 		`DELETE FROM device_tokens WHERE token = ANY($1)`, dead); err != nil {
 		s.logger.Warn("الدفع: تعذّر حذفُ رموزٍ ميّتة", "count", len(dead), "error", err)
 		return
+	}
+	// **واشتراكُ متصفّحٍ ردّ مزوّدُه ٤٠٤ أو ٤١٠** — يُحذف كذلك.
+	if s.webTransport() != nil {
+		if _, err := s.db.Exec(ctx,
+			`DELETE FROM web_push_subscriptions WHERE endpoint = ANY($1)`, dead); err != nil {
+			s.logger.Warn("الدفع: تعذّر حذفُ اشتراكاتٍ ميّتة", "count", len(dead), "error", err)
+		}
 	}
 	s.logger.Info("الدفع: حُذفت رموزٌ ميّتة", "count", len(dead))
 }

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 519,
+    "routes": 522,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 248,
     "behaviour_settings": 203,
     "order_fields": 109,
-    "test_files": 602,
-    "test_funcs": 2414
+    "test_files": 605,
+    "test_funcs": 2423
   },
   "flows": [
     {
@@ -8630,6 +8630,12 @@
       "orphan": true
     },
     {
+      "name": "TestOTPLoginDisabledSendsNoCode",
+      "file": "internal/identity/otp_login_disabled_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
       "name": "TestIsSyrianMobileAgreesWithNormalize",
       "file": "internal/identity/phone_test.go",
       "package": "identity",
@@ -11560,6 +11566,36 @@
     {
       "name": "TestForbiddenIsNotADeadToken",
       "file": "internal/push/status_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_ConfigRejectsMismatch",
+      "file": "internal/push/webpush_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_GoneIsDead",
+      "file": "internal/push/webpush_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_RFC8291Vector",
+      "file": "internal/push/webpush_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_SendHeadersAndPayload",
+      "file": "internal/push/webpush_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_URLsAndHosts",
+      "file": "internal/push/webpush_test.go",
       "package": "push",
       "orphan": true
     },
@@ -24929,6 +24965,24 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestWebPush_DisabledWithoutKeys",
+      "file": "internal/qa/webpush_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_LogoutRemovesSubscription",
+      "file": "internal/qa/webpush_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWebPush_NewOrderReachesMerchantBrowser",
+      "file": "internal/qa/webpush_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestD14_ActiveUserRealtimeUnaffected",

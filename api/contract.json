@@ -7765,6 +7765,60 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/me/webpush",
+      "handler": "handleWebPushUnsubscribe",
+      "auth": true,
+      "request": [
+        {
+          "name": "endpoint",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "removed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/me/webpush",
+      "handler": "handleWebPushSubscribe",
+      "auth": true,
+      "request": [
+        {
+          "name": "endpoint",
+          "type": "string"
+        },
+        {
+          "name": "keys",
+          "type": "object"
+        },
+        {
+          "name": "app",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "app",
+          "type": "unknown"
+        },
+        {
+          "name": "subscribed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/merchant/deliveries/{id}",
       "handler": "handleMerchantDelivery",
@@ -9671,6 +9725,25 @@
       "path": "/api/v1/public/visit",
       "handler": "handlePublicVisit",
       "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/webpush-key",
+      "handler": "handleWebPushKey",
+      "auth": false,
+      "response": [
+        {
+          "name": "enabled",
+          "type": "unknown"
+        },
+        {
+          "name": "public_key",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",

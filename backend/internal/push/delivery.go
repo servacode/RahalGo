@@ -206,6 +206,32 @@ func (s *Service) fanOutOne(ctx context.Context, notifID, userID string) bool {
 			"notification", notifID, "error", err)
 		return false
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **واشتراكاتُ المتصفّح — بشرط التطبيق نفسِه** (٢٠٢٦-١٠-١٧)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **الرمزُ هو عنوانُ الاشتراك والمنصّةُ `web`** — فيمرّ بالإعادة
+	// والتراجع والأجل والطيّ كما يمرّ رمزُ الهاتف حرفاً.
+	//
+	// **ولا اشتراكَ مجهولُ التطبيق**: كلُّ صفٍّ زبونٌ أو متجر، فإشعارٌ
+	// للمتجر وحدَه لا يرنّ في متصفّح الزبون. **ولا يُفرَّع بلا ناقل**:
+	// مفاتيحُ أُزيلت تُسكت المتصفّحَ لا تملأ الصفَّ بإخفاقات.
+	if s.webTransport() != nil {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO notification_deliveries
+			       (notification_id, token, platform)
+			SELECT n.id, w.endpoint, 'web'
+			  FROM web_push_subscriptions w
+			  JOIN notifications n ON n.id = $1::uuid
+			 WHERE w.user_id = $2::uuid
+			   AND (cardinality(n.push_apps) = 0 OR w.app = ANY(n.push_apps))
+			ON CONFLICT (notification_id, token) DO NOTHING`,
+			notifID, userID); err != nil {
+			s.logger.Error("الدفع: تعذّر تفريعُ اشتراكات المتصفّح",
+				"notification", notifID, "error", err)
+			return false
+		}
+	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE notifications SET push_pending = false WHERE id = $1::uuid`,
 		notifID); err != nil {

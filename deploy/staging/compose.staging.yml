@@ -167,6 +167,16 @@ services:
       # `/srv/rahalgo-staging/secrets` بصلاحيّة `600` ويُركَّب للقراءة
       # وحدَها — **ومجلَّدُ الإنتاج مجلَّدٌ آخرُ لا يُمَسّ.**
       FCM_CREDENTIALS_FILE: /run/secrets/fcm.json
+      # ══════════════════════════════════════════════════════════════
+      # **وإشعاراتُ المتصفّح — Web Push** (٢٠٢٦-١٠-١٧)
+      # ══════════════════════════════════════════════════════════════
+      #
+      # **فارغةً تعني «مطفأة»** والمنصّةُ تعمل بلاها. **وقيمُها في
+      # `.env` على الخادم لا هنا** — والمستودعُ عامّ. تُولَّد مرّةً:
+      # `go run ./cmd/vapidkeys` — **وتبديلُها يُبطل كلَّ اشتراكٍ قائم.**
+      WEBPUSH_VAPID_PUBLIC_KEY: ${WEBPUSH_VAPID_PUBLIC_KEY:-}
+      WEBPUSH_VAPID_PRIVATE_KEY: ${WEBPUSH_VAPID_PRIVATE_KEY:-}
+      WEBPUSH_SUBJECT: ${WEBPUSH_SUBJECT:-}
     volumes:
       - uploads:/app/uploads
       # **للقراءة فقط** (`:ro`) — والمحرّكُ يقرؤه ولا يكتبه.
