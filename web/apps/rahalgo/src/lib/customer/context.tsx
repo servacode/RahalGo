@@ -45,6 +45,7 @@ function normalizePlatform(raw: Record<string, unknown>): CustomerPlatform {
   const ord = (raw.ordering ?? {}) as Record<string, unknown>;
   const launch = (raw.launch ?? {}) as Record<string, unknown>;
   const social = (raw.social ?? {}) as Record<string, unknown>;
+  const cd = (raw.custom_delivery ?? {}) as Record<string, unknown>;
   return {
     ordering: {
       ordering_available: ord.ordering_available !== false,
@@ -56,6 +57,7 @@ function normalizePlatform(raw: Record<string, unknown>): CustomerPlatform {
       customer_signup: launch.customer_signup !== false,
       customer_browse: launch.customer_browse !== false,
       customer_orders: launch.customer_orders !== false,
+      customer_custom_orders: launch.customer_custom_orders !== false,
       notice: typeof launch.notice === "string" ? launch.notice : "",
     },
     signup_verify: raw.signup_verify === true,
@@ -64,6 +66,12 @@ function normalizePlatform(raw: Record<string, unknown>): CustomerPlatform {
         ? raw.password_min_length
         : 8,
     social: { whatsapp: typeof social.whatsapp === "string" ? social.whatsapp : "" },
+    custom_delivery: {
+      source: typeof cd.source === "string" ? cd.source : "driver_defined",
+      fee: typeof cd.fee === "number" ? cd.fee : 0,
+      fee_amanah: typeof cd.fee_amanah === "number" ? cd.fee_amanah : 0,
+    },
+    otp_login: raw.otp_login === true,
   };
 }
 

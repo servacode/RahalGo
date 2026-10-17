@@ -140,3 +140,11 @@ export function statusLabel(status: string): string {
   return st[status] ?? status;
 }
 
+
+/**
+ * **أجرةُ الطلب الخاصّ بنوعه** — مرآةُ `Serving.customFeeFor`: الأمانةُ بأجرتها
+ * إن ضُبطت، وإلّا أجرةُ المشتريات. **للعرض وحدَه** — المحرّكُ يقيّد ما يقيّد.
+ */
+export function customFee(cd: { fee: number; fee_amanah: number }, mode: string): number {
+  return mode === "amanah" && cd.fee_amanah > 0 ? cd.fee_amanah : cd.fee;
+}

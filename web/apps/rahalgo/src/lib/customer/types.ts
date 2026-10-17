@@ -159,13 +159,28 @@ export interface Launch {
   notice: string;
 }
 
+/**
+ * **سياسةُ أجرة الطلب الخاصّ** — مرآةُ `CustomDelivery` في أندرويد.
+ *
+ * **`admin_defined` تعني أنّ المنصّةَ حدّدتها** فتُعرض قبل الإرسال، **وغيرُها
+ * يحدّدها السائقُ عند الاتّفاق.** **وأجرةُ الأمانة صفرُها «مثل المشتريات».**
+ */
+export interface CustomDelivery {
+  source: string;
+  fee: number;
+  fee_amanah: number;
+}
+
 /** **ما تقوله المنصّةُ عن أبوابها** — من `/public/platform`. */
 export interface CustomerPlatform {
   ordering: Ordering;
-  launch: Launch;
+  launch: Launch & { customer_custom_orders: boolean };
   signup_verify: boolean;
   password_min_length: number;
   social: { whatsapp: string };
+  custom_delivery: CustomDelivery;
+  /** **الدخولُ برمزٍ على واتساب** — مفتاحُ `auth.otp_login` في اللوحة. */
+  otp_login: boolean;
 }
 
 export interface MyOrder {
@@ -197,6 +212,8 @@ export interface MyOrder {
   cancel_reason: string;
   cancel_seconds_left: number;
   driver_name: string | null;
+  /** **أُسند له سائقٌ يوماً** — ومنه يُعرف أيُسأل عن نجوم السائق. */
+  driver_assigned?: boolean;
   items_count: number;
   items_preview: string;
   wallet_paid: number;
@@ -222,7 +239,66 @@ export interface MeSummary {
   phone: string;
   balance: number;
   avatar_thumb_url: string | null;
+  whatsapp_phone?: string | null;
+  whatsapp_verified?: boolean;
 }
+
+/** **عرضٌ سارٍ** — من `/public/offers`، **والسريانُ يقوله الخادم** (`live`). */
+export interface Offer {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  image_url: string | null;
+  menu_item_id: string | null;
+  item_name: string;
+  item_image_url: string | null;
+  price_before: number;
+  price_after: number;
+  discount_percent: number | null;
+  ends_at: string | null;
+  live: boolean;
+  has_options: boolean;
+  merchant_name?: string | null;
+}
+
+/** **صفٌّ من «ما قيّمه»** — `/my/ratings`. */
+export interface RatingRow {
+  order_id: string;
+  has_driver: boolean;
+  rated: boolean;
+}
+
+/** **سببُ شكوى — رمزٌ لا نصّ**، والاسمُ العربيُّ في المعجم. */
+export interface ComplaintReason {
+  code: string;
+  against: string;
+}
+
+/** **حديثٌ في «محادثاتي»** — ومنه عدّادُ ما لم يُقرأ. */
+export interface ChatRow {
+  order_id: string;
+  number: number;
+  peer: string;
+  open: boolean;
+  unread: number;
+}
+
+/** **حالُ دعواته** — `/auth/referral`، **والرابطُ يبنيه الخادم.** */
+export interface Referral {
+  code: string;
+  link: string;
+  invited: number;
+  rewarded: number;
+  earned: number;
+  next_reward: number;
+  tiers: number[];
+  rest: number;
+  reward_on: string;
+}
+
+/** **حالاتُ المشاركة بالموقع** — كما يقبلها المحرّك (`orders.LiveStatuses`). */
+export const LIVE_STATUSES = new Set(["assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
 
 export interface Notice {
   id: string;
