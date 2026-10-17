@@ -169,6 +169,8 @@ export interface CustomerPlatform {
 }
 
 export interface MyOrder {
+  /** **كودُ الاستلام** — لصاحب الطلب من الاستلام حتّى الباب، وإلّا غائب. */
+  delivery_code?: string;
   id: string;
   number: number;
   kind: string;

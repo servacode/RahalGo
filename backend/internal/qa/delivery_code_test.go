@@ -310,3 +310,34 @@ func waitCalls(t *testing.T, c *atomic.Int32) {
 		time.Sleep(20 * time.Millisecond)
 	}
 }
+
+// TestDCODE_CustomerOrderCarriesCode **الزبونُ يقرأ كودَه من طلبه** (٢٠٢٦-١٠-١٧) — موقعُ الزبون
+// يقرأ الطلبَ لا الإشعار. **وزبونٌ آخرُ لا يراه، ولا يبقى بعد التسليم.**
+func TestDCODE_CustomerOrderCarriesCode(t *testing.T) {
+	h := New(t)
+	h.Setting("delivery.code_required", "true")
+	h.Setting("delivery.code_channel", `"both"`)
+	oid, cust, drv := dcodeOrder(t, h)
+	code, _ := dcodeOf(t, h, oid)
+	if code == nil {
+		t.Fatal("DCODE لا كود")
+	}
+	one := h.GET("/api/v1/my/orders/"+oid, cust.Token)
+	if one.Code != http.StatusOK || !strings.Contains(string(one.Body), `"delivery_code":"`+*code+`"`) {
+		t.Fatalf("DCODE-C1 طلبُ الزبون بلا كوده: %s", one)
+	}
+	list := h.GET("/api/v1/my/orders", cust.Token)
+	if !strings.Contains(string(list.Body), `"delivery_code":"`+*code+`"`) {
+		t.Fatalf("DCODE-C2 قائمةُ الزبون بلا الكود: %s", list)
+	}
+	other := h.Customer()
+	if got := h.GET("/api/v1/my/orders/"+oid, other.Token); strings.Contains(string(got.Body), *code) {
+		t.Fatalf("DCODE-C3 زبونٌ آخرُ رأى الكود: %s", got)
+	}
+	if got := dcodeDeliver(h, drv, oid, *code); got.Code >= 400 {
+		t.Fatalf("DCODE التسليمُ بالكود: %s", got)
+	}
+	if got := h.GET("/api/v1/my/orders/"+oid, cust.Token); strings.Contains(string(got.Body), `"delivery_code":`) {
+		t.Fatalf("DCODE-C4 الكودُ بقي بعد التسليم: %s", got)
+	}
+}

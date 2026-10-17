@@ -34,7 +34,7 @@
     "behaviour_settings": 203,
     "order_fields": 109,
     "test_files": 602,
-    "test_funcs": 2413
+    "test_funcs": 2414
   },
   "flows": [
     {
@@ -15526,6 +15526,12 @@
         "http"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestDCODE_CustomerOrderCarriesCode",
+      "file": "internal/qa/delivery_code_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestDCODE_FiveWrongLocks",

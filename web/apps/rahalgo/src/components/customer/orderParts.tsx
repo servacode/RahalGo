@@ -19,8 +19,8 @@ import { getMessages, defaultLocale, errorText, fmtClock, fmtRef } from "@rahalg
 import { Alert, Button, Chips, Confirm, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
-import { codeFromNotice, fill, stageLabel } from "@/lib/customer/texts";
-import { ENDED, type MyOrder, type Notice } from "@/lib/customer/types";
+import { fill, stageLabel } from "@/lib/customer/texts";
+import { ENDED, type MyOrder } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -64,30 +64,11 @@ export function OrderStages({ order }: { order: MyOrder }) {
 }
 
 /**
- * **كودُ الاستلام** — يُقرأ من إشعاره حتّى يصير حقلاً في الطلب.
- *
- * **ولا يُعرض قبل الاستلام**: الكودُ يولد لحظةَ `picked_up`.
+ * **كودُ الاستلام** — حقلٌ في الطلب نفسِه (`delivery_code`، ٢٠٢٦-١٠-١٧)، يرسله المحرّكُ
+ * لصاحب الطلب وحدَه من الاستلام حتّى الباب. **ولا يُقرأ من نصّ إشعار.**
  */
 export function DeliveryCode({ order }: { order: MyOrder }) {
-  const [code, setCode] = useState("");
-  const live = ["picked_up", "on_the_way", "at_dropoff"].includes(order.status);
-  useEffect(() => {
-    if (!live) {
-      setCode("");
-      return;
-    }
-    let alive = true;
-    api<{ items: Notice[] }>("/api/v1/me/notifications?limit=50")
-      .then((r) => {
-        if (!alive) return;
-        const hit = (r.items ?? []).find((n) => n.entity === "order" && n.entity_id === order.id && codeFromNotice(n.body, order.number));
-        setCode(hit ? codeFromNotice(hit.body, order.number) : "");
-      })
-      .catch(() => undefined); // **وكودٌ لم يُقرأ لا يُسقط البطاقة** — يصله بالإشعار والواتساب أصلاً.
-    return () => {
-      alive = false;
-    };
-  }, [live, order.id, order.number, order.status]);
+  const code = order.delivery_code ?? "";
   if (!code) return null;
   return (
     <div className="surface-inset flex items-center justify-between gap-3 p-3">

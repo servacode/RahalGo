@@ -140,16 +140,3 @@ export function statusLabel(status: string): string {
   return st[status] ?? status;
 }
 
-/**
- * **كودُ الاستلام من إشعاره** — حتّى يُرسله المحرّكُ حقلاً في الطلب.
- *
- * **المحرّكُ يُرسل الكودَ إشعاراً للزبون** (`orders/delivery_code.go`):
- * «كود استلام طلبك #١٠٨١ هو ٠٤٢٧ — …» **ولا يضعه في `/my/orders`.**
- * **فيُقرأ من صندوقه**: إشعارٌ على هذا الطلب بعينه، **وأربعةُ أرقامٍ
- * ليست رقمَ الطلب.**
- */
-export function codeFromNotice(body: string, orderNumber: number): string {
-  const hits = [...body.matchAll(/(?<![#\d])(\d{4})(?!\d)/g)].map((x) => x[1] ?? "");
-  const own = String(orderNumber);
-  return hits.find((h) => h && h !== own) ?? "";
-}

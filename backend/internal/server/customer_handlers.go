@@ -536,6 +536,10 @@ func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 			"cancel_seconds_left": s.orders.CancelSecondsLeft(r.Context(), &res.Orders[i]),
 		})
 	}
+	if err := s.attachCustomerCodes(r.Context(), userIDFrom(r), out); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"orders": out, "total": res.Total, "page": res.Page, "per_page": res.PerPage,
 	})
@@ -569,10 +573,59 @@ func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
 	//
 	// **وهو غلافٌ لا حقلُ طلب**: **حالٌ ووقتُه ولا فاعلَ فيه** —
 	// **بخلاف `events` التي تحمل `actor_id` فتُمنع.**
-	httpx.JSON(w, http.StatusOK, withExtra(view, map[string]any{
+	one := withExtra(view, map[string]any{
 		"cancel_seconds_left": s.orders.CancelSecondsLeft(r.Context(), o),
 		"timeline":            s.timeline(r.Context(), o.ID, false),
-	}))
+	})
+	if err := s.attachCustomerCodes(r.Context(), o.CustomerID, []map[string]any{one}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, one)
+}
+
+// attachCustomerCodes **كودُ الاستلام للزبون في حمولة طلبه** (٢٠٢٦-١٠-١٧) — كان يصله بالإشعار
+// وحدَه، **وموقعُ الزبون يقرأ الطلبَ لا الإشعار**. يُلحَق بطلباته هو وحدَه، **من الاستلام حتّى
+// الباب** (يولد عند `picked_up`) — ولا يُلحَق في «لدي توصيلة» (الكودُ هناك للمستلِم أو للمتجر).
+func (s *Server) attachCustomerCodes(ctx context.Context, customerID string, views []map[string]any) error {
+	ids := make([]string, 0, len(views))
+	for _, v := range views {
+		if id, ok := v["id"].(string); ok {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 || s.pg == nil {
+		return nil
+	}
+	rows, err := s.pg.Query(ctx, `
+		SELECT id::text, delivery_code FROM orders
+		 WHERE id = ANY($1::uuid[]) AND customer_id = $2::uuid
+		   AND kind <> 'merchant_delivery'
+		   AND delivery_code IS NOT NULL
+		   AND status IN ('picked_up', 'on_the_way', 'at_dropoff')`, ids, customerID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	codes := map[string]string{}
+	for rows.Next() {
+		var id, code string
+		if err := rows.Scan(&id, &code); err != nil {
+			return err
+		}
+		codes[id] = code
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, v := range views {
+		if id, ok := v["id"].(string); ok {
+			if c, ok := codes[id]; ok {
+				v["delivery_code"] = c
+			}
+		}
+	}
+	return nil
 }
 
 // handleMyWallet رصيد الزبون وكشف حركاته.
