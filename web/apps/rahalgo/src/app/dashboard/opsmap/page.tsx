@@ -489,7 +489,10 @@ export default function OpsMapPage() {
   // دقيقة)، **فلا تُسأل القاعدةُ عمّا لم يتغيّر بعد.**
   //
   // **والطلباتُ تُحدَّث ببثّ `ops` القائم** — لا بمدّة.
-  const pingSec = Math.max(30, meta.data?.location_ping_sec ?? 60);
+  //
+  // **وأرضيّتُها عشرُ ثوانٍ لا ثلاثون** (طلبُ المالك ٢٠٢٦-١٠-١٧: «بدي موقع السائق يكون
+  // مباشر») — **فنبضةُ ١٥ ثانيةً من الإعدادات تُرى بعد ١٥ ثانيةً لا بعد نصف دقيقة.**
+  const pingSec = Math.max(10, meta.data?.location_ping_sec ?? 60);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const h = window.setInterval(() => setTick((t) => t + 1), pingSec * 1000);
