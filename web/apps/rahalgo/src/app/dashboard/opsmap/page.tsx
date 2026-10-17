@@ -1289,6 +1289,11 @@ export default function OpsMapPage() {
   }
 
   const noLoc = (drivers.data?.drivers ?? []).filter((d) => d.freshness === "NO_LOCATION");
+  // **أفي العمود الجانبيّ ما يُعرض؟** — وإلّا أخذت الخريطةُ العرضَ كلَّه.
+  const hasSide =
+    (can("MANAGE_COVERAGE") && drawing) ||
+    (can("VIEW_REP_ACTIVITY") && !!visible.reps) ||
+    noLoc.length > 0;
   const S = summary.data;
 
   // ── حبّاتُ الطبقات الستّ — بترتيب المالك ─────────────────────
@@ -1590,13 +1595,19 @@ export default function OpsMapPage() {
         )}
       </div>
 
-      <div className={full ? "flex min-h-0 flex-1" : "grid gap-4 lg:grid-cols-[18rem_1fr]"}>
+      {/* **واللوحاتُ الجانبيّةُ لا تظهر إلّا بما يلزم** (طلبُ المالك ٢٠٢٦-١٠-١٧: «بدنا نحذفهم مشان
+          تظل الخريطة كبيرة») — شيلت المرشّحاتُ وطلباتُ التغطية والمدّةُ والمناطقُ التشغيليّة،
+          **وما بقي** (محرّرُ التغطية حين يُرسَم · المندوبون حين تُفتح طبقتُهم · سائقٌ بلا موضع)
+          **يفتح العمودَ وحدَه.** */}
+      <div className={full || !hasSide ? "flex min-h-0 flex-1 flex-col" : "grid gap-4 lg:grid-cols-[18rem_1fr]"}>
         {/* ── الخريطةُ واللوحةُ الجانبيّة — أوّلاً على الجوّال ───────── */}
         <div
           className={
             full
               ? "relative h-full min-h-0 w-full"
-              : "relative order-1 h-[28rem] lg:order-2 lg:h-[calc(100vh-16rem)]"
+              : hasSide
+                ? "relative order-1 h-[28rem] lg:order-2 lg:h-[calc(100vh-16rem)]"
+                : "relative h-[28rem] w-full lg:h-[calc(100vh-16rem)]"
           }
         >
           <OpsMapCanvas
@@ -1949,7 +1960,7 @@ export default function OpsMapPage() {
         </div>
 
         {/* ── المرشِّحاتُ والقوائم — تغيب في ملء الشاشة ──────────────── */}
-        <div className={full ? "hidden" : "order-2 flex flex-col gap-4 lg:order-1"}>
+        <div className={full || !hasSide ? "hidden" : "order-2 flex flex-col gap-4 lg:order-1"}>
           {/* ── محرِّرُ التغطية (البند ١٣) — حين يُرسَم وحدَه ──────── */}
           {can("MANAGE_COVERAGE") && drawing && (
             <Card>
@@ -1992,64 +2003,6 @@ export default function OpsMapPage() {
             </Card>
           )}
 
-          {can("VIEW_DRIVER_LOCATIONS") && visible.drivers && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.filters}</h3>
-              <div className="flex flex-col gap-2 text-sm">
-                <Input
-                  placeholder={T.search}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <Tri label={T.filter.onShift} value={onShift} onChange={setOnShift} />
-                <Tri label={T.filter.hasActive} value={hasActive} onChange={setHasActive} />
-                <Tri label={T.filter.stale} value={stale} onChange={setStale} />
-              </div>
-              <p className="mt-3 text-xs leading-5 text-ink-muted">
-                {T.freshness.explain}
-              </p>
-            </Card>
-          )}
-
-          {/* ── مرشِّحُ طلبات التغطية ──────────────────────────── */}
-          {can("VIEW_DEMAND_ANALYTICS") && visible.requests && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.layer.coverageRequests}</h3>
-              <Select
-                label={T.filter.requestStatus}
-                value={reqStatus}
-                onChange={(e) => setReqStatus(e.target.value)}
-              >
-                <option value="">{T.all}</option>
-                <option value="new">{T.request.state.new}</option>
-                <option value="reviewing">{T.request.state.reviewing}</option>
-                <option value="planned">{T.request.state.planned}</option>
-                <option value="covered">{T.request.state.covered}</option>
-                <option value="rejected">{T.request.state.rejected}</option>
-              </Select>
-            </Card>
-          )}
-
-          {/* ── المدى الزمنيّ (البند ٢٩) ─────────────────────────
-              **ويخصُّ التحليلاتِ ونشاطَ المندوبين وحدَها** — **والسائقون
-              والطلباتُ «الآن» لا مدّةَ لها.** */}
-          {(can("VIEW_DEMAND_ANALYTICS") || can("VIEW_REP_ACTIVITY")) &&
-            (visible.demand || visible.opportunities || visible.reps) && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.filter.range}</h3>
-              <Select
-                label={T.filter.range}
-                value={range}
-                onChange={(e) => setRange(e.target.value as "today" | "7d" | "30d")}
-              >
-                <option value="today">{T.filter.today}</option>
-                <option value="7d">{T.filter.d7}</option>
-                <option value="30d">{T.filter.d30}</option>
-              </Select>
-              <p className="mt-3 text-xs leading-5 text-ink-muted">{T.demand.separate}</p>
-            </Card>
-          )}
-
           {/* ── المندوبون (البند ٢٦) ─────────────────────────── */}
           {can("VIEW_REP_ACTIVITY") && visible.reps && (
             <Card>
@@ -2065,31 +2018,6 @@ export default function OpsMapPage() {
                   </li>
                 ))}
               </ul>
-            </Card>
-          )}
-
-          {/* ── المناطقُ التشغيليّة ──────────────────────────────
-              **ولا هندسةَ لها بعد** — **فتُقرأ قائمةً ولا تُرسَم على
-              الأرض.** ومن ربطها بمنطقةِ تغطيةٍ رأى شكلَها في طبقة
-              التغطية، **ولا يُخترَع لها مضلَّعٌ لتبدو مرسومة.** */}
-          {visible.areas && (
-            <Card>
-              <h3 className="mb-1 text-sm font-bold">{T.layer.areas}</h3>
-              <p className="mb-2 text-xs text-ink-muted">{T.area.notDistrict}</p>
-              {(areas.data?.areas ?? []).length === 0 ? (
-                <p className="text-xs text-ink-muted">{T.empty}</p>
-              ) : (
-                <ul className="flex flex-col gap-1 text-sm">
-                  {(areas.data?.areas ?? []).slice(0, 20).map((a) => (
-                    <li key={a.id} className="flex items-center gap-2">
-                      <span>{a.name}</span>
-                      <span className="ms-auto text-xs text-ink-muted">
-                        {a.branch ?? "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </Card>
           )}
 
