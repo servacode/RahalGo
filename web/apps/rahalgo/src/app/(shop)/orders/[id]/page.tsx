@@ -16,15 +16,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtDateTime, fmtMoney, fmtNum, fmtRef } from "@rahalgo/i18n";
-import { Alert, Badge, LoadingState, Money, ReloadState, IconPrev } from "@rahalgo/ui";
+import { Alert, Badge, Button, LoadingState, Money, OrderChat, ReloadState, Sheet, IconChat, IconPrev, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fill, statusLabel } from "@/lib/customer/texts";
+import { customFee, fill, statusLabel } from "@/lib/customer/texts";
+import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
 import { CancelOrder, DeliveryCode, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
 import { statusTone } from "@/components/customer/OrderSummary";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
+import { ComplaintBox, RateButton } from "@/components/customer/feedback";
+import { LiveStartButton } from "@/components/customer/LiveShare";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -44,8 +47,10 @@ export default function OrderPage() {
   const id = params?.id ?? "";
   const { user, loading } = useAuth();
   const toast = useShopToast();
+  const { platform } = useCustomer();
   const [order, setOrder] = useState<MyOrder | null>(null);
   const [error, setError] = useState("");
+  const [chat, setChat] = useState(false);
 
   const load = useCallback(() => {
     if (!user || !id) return;
@@ -66,6 +71,7 @@ export default function OrderPage() {
     }, EVERY_MS);
     return () => clearInterval(t);
   }, [load, ended]);
+  useLiveRefresh(["order"], load);
 
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
@@ -87,6 +93,9 @@ export default function OrderPage() {
   }
 
   const custom = order.kind === "custom";
+  const cd = platform?.custom_delivery;
+  const adminFee = cd?.source === "admin_defined";
+  const fixedFee = order.custom_fee != null || adminFee;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
@@ -115,6 +124,14 @@ export default function OrderPage() {
 
       <DeliveryCode order={order} />
 
+      {!ended && order.driver_name && (
+        <Button variant="secondary" className="flex w-full items-center justify-center gap-2" onClick={() => setChat(true)}>
+          <IconChat size={16} />
+          {O.chat}
+        </Button>
+      )}
+      {!ended && <LiveStartButton orderId={order.id} status={order.status} />}
+
       <dl className="surface flex flex-col gap-2 p-4">
         {order.driver_name && !ended && <Row label={O.driver}>{order.driver_name}</Row>}
         {order.items_preview && <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>}
@@ -127,9 +144,19 @@ export default function OrderPage() {
       <dl className="surface flex flex-col gap-2 p-4">
         {custom ? (
           order.custom_goods_amount == null ? (
+            /* **وأجرةُ المنصّة تُقال برقمها** — مرآةُ `OrderCard.kt` (٢٠٢٦-١٠-١٤):
+               أمانةٌ بأجرةٍ مفروضةٍ لا «اتّفاقَ» فيها. */
             <>
-              <Row label={O.delivery}>{order.custom_fee != null ? <Money value={order.custom_fee} /> : O.deliveryOnDeal}</Row>
-              <p className="text-xs text-ink-muted">{O.awaitingQuote}</p>
+              <Row label={O.delivery}>
+                {fixedFee ? <Money value={order.custom_fee ?? (cd ? customFee(cd, order.custom_mode) : 0)} /> : O.deliveryOnDeal}
+              </Row>
+              <p className="text-xs text-ink-muted">
+                {adminFee
+                  ? order.custom_mode === "amanah"
+                    ? m.shop.custom.amanahPay
+                    : m.shop.custom.totalPending
+                  : O.awaitingQuote}
+              </p>
             </>
           ) : (
             <>
@@ -182,6 +209,13 @@ export default function OrderPage() {
           load();
         }}
       />
+      <RateButton order={order} />
+      <ComplaintBox order={order} />
+      {chat && (
+        <Sheet open onClose={() => setChat(false)} title={O.chat}>
+          <OrderChat api={api} orderId={order.id} bare streamClass="min-h-60 max-h-[55vh]" />
+        </Sheet>
+      )}
     </div>
   );
 }

@@ -27,12 +27,14 @@ import {
   Money,
   Radio,
   Sheet,
+  FavoriteButton,
   IconAdd,
   IconMinus,
   IconStore,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCart, unitPrice } from "@/lib/customer/cart";
+import { useFav } from "@/lib/customer/favorites";
 import type { Item, ItemDetail, ModifierGroup, ModifierOption } from "@/lib/customer/types";
 import { dollars, fill, backAt } from "@/lib/customer/texts";
 import { useShopToast } from "./toast";
@@ -67,11 +69,13 @@ function closedLabel(item: Item): string {
 export function ItemCard({ item, onOpen }: { item: Item; onOpen: (item: Item) => void }) {
   const closed = item.source_closed || !item.available;
   const img = mediaUrl(item.image_thumb_url ?? item.image_url);
+  const fav = useFav();
   return (
+    <div className="relative flex min-w-0 flex-col">
     <button
       type="button"
       onClick={() => onOpen(item)}
-      className="surface flex min-w-0 flex-col overflow-hidden text-start transition-transform active:scale-[0.98]"
+      className="surface flex min-w-0 flex-1 flex-col overflow-hidden text-start transition-transform active:scale-[0.98]"
     >
       <div className="relative aspect-square w-full bg-field">
         {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
@@ -114,6 +118,17 @@ export function ItemCard({ item, onOpen }: { item: Item; onOpen: (item: Item) =>
         </div>
       </div>
     </button>
+      {/* **والقلبُ خارجَ زرّ البطاقة لا داخلَه** — زرٌّ في زرٍّ لا يصحّ، **وضغطةٌ
+          تفتح النافذةَ وتحفظ معاً ليست ضغطةً واحدة.** */}
+      <FavoriteButton
+        itemID={item.id}
+        on={fav.has(item.id)}
+        onToggle={fav.toggle}
+        onRequireLogin={fav.needLogin}
+        size="sm"
+        className="absolute end-2 top-2 bg-surface"
+      />
+    </div>
   );
 }
 
@@ -153,6 +168,7 @@ export function ItemSheet({ item, onClose }: { item: Item | null; onClose: () =>
   const [qty, setQty] = useState(1);
   const [warn, setWarn] = useState("");
   const [askOther, setAskOther] = useState(false);
+  const fav = useFav();
 
   useEffect(() => {
     setDetail(null);
@@ -276,7 +292,10 @@ export function ItemSheet({ item, onClose }: { item: Item | null; onClose: () =>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Price syp={unit} usd={usdUnit} />
-            <Badge variant={closed ? "danger" : "success"}>{closed ? I.unavailable : I.available}</Badge>
+            <span className="flex items-center gap-2">
+              <Badge variant={closed ? "danger" : "success"}>{closed ? I.unavailable : I.available}</Badge>
+              <FavoriteButton itemID={view.id} on={fav.has(view.id)} onToggle={fav.toggle} onRequireLogin={fav.needLogin} />
+            </span>
           </div>
           {view.merchant_name && (
             <p className="flex items-center gap-1.5 text-sm text-ink-muted">
