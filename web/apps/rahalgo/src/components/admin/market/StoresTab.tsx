@@ -40,6 +40,9 @@ interface MarketStore {
   new_items: number;
   no_image_items: number;
   has_hours: boolean;
+  /** **«متجر مميّز»** وترتيبُه في شريط السوق (٢٠٢٦-١٠-١٨). */
+  featured?: boolean;
+  featured_order?: number;
 }
 
 export default function StoresTab() {
@@ -97,6 +100,9 @@ export default function StoresTab() {
                     {(m.admin.merchants as unknown as Record<string, string>)[s.status] ?? s.status}
                   </Badge>
                   {s.emergency_closed && <Badge variant="danger">{T.emergency}</Badge>}
+                  {s.featured && (
+                    <Badge variant="accent">{`${m.admin.merchants.featuredBadge} · ${fmtNum(s.featured_order ?? 0)}`}</Badge>
+                  )}
                   {s.new_items > 0 && (
                     <Badge variant="accent">{T.newItems.replace("{n}", fmtNum(s.new_items))}</Badge>
                   )}

@@ -53,6 +53,7 @@ import {
   IconDate,
   Checkbox,
   Radio,
+  Switch,
   LoadingState,
   FormActions,
 } from "@rahalgo/ui";
@@ -116,6 +117,9 @@ export interface Merchant {
   emergency_closed: boolean;
   /** **منطقتُه الإداريّة** — يرسلها المحرّكُ لتُعرض مختارةً في النموذج. */
   district_id?: string | null;
+  /** **«متجر مميّز» في شريط السوق** وترتيبُه — الأصغرُ أوّلاً (قرارُ المالك ٢٠٢٦-١٠-١٨). */
+  featured?: boolean;
+  featured_order?: number;
   created_at: string;
 }
 
@@ -213,6 +217,9 @@ export function MerchantModal({
       // @empty-ok **والنسبةُ العامّةُ تلميحٌ** — الخيارُ يعمل بدونها.
       .catch(() => setGeneralPct(null));
   }, []);
+  // **«متجر مميّز» وترتيبُه** — للتعديل وحدَه، والمتجرُ الجديدُ يُولد غيرَ مميّز.
+  const [featured, setFeatured] = useState(merchant?.featured ?? false);
+  const [featuredOrder, setFeaturedOrder] = useState(String(merchant?.featured_order ?? 0));
   // null = لم يُلمس (لا يُرسل)، "" = إزالة، معرف = شعار جديد
   const [logoID, setLogoID] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -278,6 +285,12 @@ export function MerchantModal({
       setError(m.admin.merchants.commissionInvalid);
       return;
     }
+    // **والترتيبُ رقمٌ صحيحٌ من ٠ إلى ١٠٠٠٠** — والخادمُ يردّ غيرَه.
+    const orderNum = Number(featuredOrder.trim() || "0");
+    if (merchant && (!Number.isInteger(orderNum) || orderNum < 0 || orderNum > 10000)) {
+      setError(m.admin.merchants.featuredOrderInvalid);
+      return;
+    }
     setBusy(true);
     setError("");
     const body = {
@@ -299,6 +312,7 @@ export function MerchantModal({
           : {}),
       ...(logoID !== null ? { logo_media_id: logoID } : {}),
       ...(isRepTransfer ? { transfer_reason: transferReason.trim() } : {}),
+      ...(merchant ? { featured, featured_order: orderNum } : {}),
     };
     try {
       if (merchant) {
@@ -501,14 +515,45 @@ export function MerchantModal({
                 </>
               )}
             </div>
-            <ImageUpload
-              kind="merchant_logo"
-              label={m.admin.merchants.logo}
-              initialUrl={merchant?.logo_thumb_url}
-              onChange={setLogoID}
-            />
+            <div className="space-y-1">
+              {/* **والشعارُ الحاليُّ يُرى هنا** — المصغّرةُ، وإلّا الأصل. */}
+              <ImageUpload
+                kind="merchant_logo"
+                label={m.admin.merchants.logo}
+                initialUrl={merchant?.logo_thumb_url ?? merchant?.logo_url}
+                onChange={setLogoID}
+              />
+              <p className="text-xs text-ink-muted">{m.admin.merchants.logoHint}</p>
+            </div>
           </div>
         </FormSection>
+        {/* **«متجر مميّز» — شريطٌ في رأس السوق** (قرارُ المالك ٢٠٢٦-١٠-١٨) — ولا حدَّ لعددها. */}
+        {merchant && (
+          <FormSection title={m.admin.merchants.sectionFeatured} icon={<IconStore />}>
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+              <Switch
+                id="m-featured"
+                checked={featured}
+                onChange={setFeatured}
+                label={m.admin.merchants.featured}
+                hint={m.admin.merchants.featuredHint}
+              />
+              <div>
+                <Input
+                  id="m-featured-order"
+                  label={m.admin.merchants.featuredOrder}
+                  type="text"
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={featuredOrder}
+                  disabled={!featured}
+                  onChange={(e) => setFeaturedOrder(e.target.value.replace(/[^0-9]/g, ""))}
+                />
+                <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.featuredOrderHint}</p>
+              </div>
+            </div>
+          </FormSection>
+        )}
         </div>
 
         {/* القسم 3: الموقع — عمودٌ قائمٌ بذاته لأنّ الخريطةَ أطولُ ما فيه */}

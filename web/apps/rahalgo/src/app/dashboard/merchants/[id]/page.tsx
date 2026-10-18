@@ -85,6 +85,12 @@ interface Merchant {
   accepts_returns: boolean;
   /** طريقةُ تسويةِ مستحقّاته — نقدٌ أو محفظة (الأدمنُ ذو الصلاحيّة الماليّة يغيّرها). */
   settlement_method: "cash" | "wallet";
+  /** **الشعار** — يُرى في رأس الملفّ، وفراغُه أيقونةُ متجر. */
+  logo_url?: string | null;
+  logo_thumb_url?: string | null;
+  /** **«متجر مميّز»** في شريط السوق وترتيبُه (٢٠٢٦-١٠-١٨). */
+  featured?: boolean;
+  featured_order?: number;
   created_at: string;
 }
 
@@ -172,9 +178,16 @@ export default function MerchantProfilePage() {
       </button>
 
       <div className="mb-4 flex flex-wrap items-start gap-3">
-        <IconTile size="lg">
-          <IconStore size={26} className="text-primary-dark" />
-        </IconTile>
+        {mr.logo_thumb_url || mr.logo_url ? (
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-field">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mediaUrl(mr.logo_thumb_url ?? mr.logo_url) ?? ""} alt={mr.name} className="h-full w-full object-cover" />
+          </div>
+        ) : (
+          <IconTile size="lg">
+            <IconStore size={26} className="text-primary-dark" />
+          </IconTile>
+        )}
         <div className="min-w-0 flex-1">
           <h1 className="heading-page">
             {mr.name}{" "}
@@ -191,6 +204,9 @@ export default function MerchantProfilePage() {
           </Badge>
           {/* **والإغلاقُ الطارئ يُعلَن** — يتجاوز الجدولَ ويُظهره مغلقاً فوراً. */}
           {mr.emergency_closed && <Badge variant="danger">{m.admin.hours.emergencyActive}</Badge>}
+          {mr.featured && (
+            <Badge variant="accent">{`${m.admin.merchants.featuredBadge} · ${fmtNum(mr.featured_order ?? 0)}`}</Badge>
+          )}
         </div>
       </div>
 

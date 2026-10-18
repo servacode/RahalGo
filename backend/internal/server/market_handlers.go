@@ -281,6 +281,9 @@ type marketStore struct {
 	NewItems        int     `json:"new_items"`
 	NoImageItems    int     `json:"no_image_items"`
 	HasHours        bool    `json:"has_hours"`
+	// Featured **«متجر مميّز» في شريط السوق** وترتيبُه (٢٠٢٦-١٠-١٨) — شارةٌ في القائمة.
+	Featured      bool `json:"featured"`
+	FeaturedOrder int  `json:"featured_order"`
 }
 
 // handleMarketStores **المتاجرُ بصفحةٍ موحّدة** — تُدار في اللوحة ولا تُعرض
@@ -303,7 +306,8 @@ func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 		       count(i.id) FILTER (WHERE i.available),
 		       count(i.id) FILTER (WHERE i.created_at > now() - make_interval(hours => $2)),
 		       count(i.id) FILTER (WHERE i.image_media_id IS NULL),
-		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id)
+		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id),
+		       m.featured, m.featured_order
 		FROM merchants m
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		LEFT JOIN menu_items i ON i.merchant_id = m.id
@@ -320,7 +324,8 @@ func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var x marketStore
 		if err := rows.Scan(&x.ID, &x.Number, &x.Name, &x.Status, &x.EmergencyClosed, &x.LogoURL,
-			&x.Items, &x.LiveItems, &x.NewItems, &x.NoImageItems, &x.HasHours); err != nil {
+			&x.Items, &x.LiveItems, &x.NewItems, &x.NoImageItems, &x.HasHours,
+			&x.Featured, &x.FeaturedOrder); err != nil {
 			s.respondErr(w, err)
 			return
 		}

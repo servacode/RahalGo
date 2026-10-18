@@ -177,7 +177,8 @@ interface LeadRow {
 
 /** **وصفُّ المتجر كاملاً** — **نافذةُ التعديل تحتاجه كلَّه**، ولأنّ
  *  أزرارَه انتقلت إلى هنا (قرارُ المالك ٢٠٢٦-٠٨-١٦). */
-type StoreRow = StoreTarget;
+/** **و«متجر مميّز»** يُقرأ مع السطر (٢٠٢٦-١٠-١٨). */
+type StoreRow = StoreTarget & { featured?: boolean };
 
 /**
  * **طلباتُه** — زبوناً كان أو سائقاً.
@@ -850,6 +851,7 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
                 <Badge variant={storeStatusVariant(s.status)}>
                   {MERCHANT_STATUS[s.status] ?? s.status}
                 </Badge>
+                {s.featured && <Badge variant="accent">{m.admin.merchants.featuredBadge}</Badge>}
                 {/* **وعدّادُ مخالفاته معه** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
 
                     **المحرّكُ يرسله والتبويبُ يُسقطه** — **وهو الرقمُ
