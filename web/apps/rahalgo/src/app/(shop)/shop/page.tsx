@@ -5,7 +5,9 @@
  * **السوق — بحثٌ ثمّ لافتاتٌ ثمّ شريطُ الأقسام وأصنافُ المختار تحته**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (ترتيبُ تطبيق أندرويد حرفاً: **بحثٌ ← لافتاتٌ ← أقسام.**) **والأصنافُ تحت الشريط مباشرةً**
+ * **والترتيبُ (قرارُ المالك ٢٠٢٦-١٠-١٨)**: **سلايدرٌ إن كان ← شريطُ «متاجر مميّزة» ← بحثٌ
+ * ← أقسام** — والسلايدرُ مطفأٌ أو فارغٌ يجعل الشريطَ فوق البحث مباشرةً. **وترتيبُ تطبيق
+ * أندرويد هو هو** (`ShopTop.kt`). **والأصنافُ تحت الشريط مباشرةً**
  * (طلبُ المالك ٢٠٢٦-١٠-١٧: «بدي التسوق نفس طريقة الجوال، مافي داعي افوت على الاقسام») —
  * أوّلُ قسمٍ مختارٌ، والنقرُ يبدّله في مكانه بلا صفحةٍ ثانية.
  *
@@ -39,6 +41,7 @@ import { useBrowseQuery } from "@/lib/customer/context";
 import type { HomePage, Item } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
+import { FeaturedStrip } from "@/components/customer/stores";
 
 const m = getMessages(defaultLocale);
 const H = m.shop.home;
@@ -130,6 +133,12 @@ export default function ShopPage() {
         <p className="text-xs text-ink-muted">{H.browsing}</p>
       )}
 
+      {/* **سلايدرٌ ثمّ «متاجر مميّزة» ثمّ البحث** — ولا يُرسمان وهو يبحث: نتائجُه أولى. */}
+      {!searching && home && slides.length > 0 && (
+        <BannerSlider items={slides} Link={Link} everyMs={home.banner_auto ? home.banner_every_ms || 5000 : 0} />
+      )}
+      {!searching && home && <FeaturedStrip stores={home.featured_stores ?? []} />}
+
       <Input
         id="shop-search"
         type="search"
@@ -161,9 +170,6 @@ export default function ShopPage() {
         <LoadingState variant="list" rows={4} />
       ) : (
         <>
-          {slides.length > 0 && (
-            <BannerSlider items={slides} Link={Link} everyMs={home.banner_auto ? home.banner_every_ms || 5000 : 0} />
-          )}
           {home.sections.length === 0 ? (
             <EmptyState icon={IconStore} title={H.empty} action={<span className="text-xs text-ink-muted">{H.emptyHint}</span>} />
           ) : (

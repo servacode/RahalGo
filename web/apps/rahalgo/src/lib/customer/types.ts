@@ -38,12 +38,50 @@ export interface Section {
   orderable_now: number;
 }
 
+/** **مربّعٌ في شريط «متاجر مميّزة»** (قرارُ المالك ٢٠٢٦-١٠-١٨). */
+export interface FeaturedStore {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  logo_thumb_url: string | null;
+  open_now: boolean;
+  opens_at: string | null;
+}
+
 export interface HomePage {
   banners: Banner[];
   categories: Category[];
   sections: Section[];
+  /** **وغيابُه من خادمٍ أقدم = لا شريط.** */
+  featured_stores?: FeaturedStore[];
   banner_auto: boolean;
   banner_every_ms: number;
+}
+
+/** **رأسُ صفحة المتجر.** */
+export interface StoreHeader {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  logo_thumb_url: string | null;
+  open_now: boolean;
+  opens_at: string | null;
+  prep_minutes: number;
+}
+
+/** **قسمُ منصّةٍ وأصنافُ المتجر فيه** — الصنفُ بشكل القسم حرفاً. */
+export interface StoreSection {
+  id: string;
+  name: string;
+  icon: string;
+  image_url: string | null;
+  image_thumb_url: string | null;
+  items: Item[];
+}
+
+export interface StorePage {
+  store: StoreHeader;
+  sections: StoreSection[];
 }
 
 export interface Item {

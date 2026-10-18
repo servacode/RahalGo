@@ -146,7 +146,7 @@ function Shell({ children }: { children: ReactNode }) {
         { href: "/account", label: N.account, icon: IconUser },
       ];
   /* **و`/s/…` قسمٌ من التسوّق** — فيُضاء «تسوّق» وهو فيه. */
-  const active = path.startsWith("/s/") || path.startsWith("/offers") || path.startsWith("/favorites") ? "/shop" : path;
+  const active = path.startsWith("/s/") || path.startsWith("/stores/") || path.startsWith("/offers") || path.startsWith("/favorites") ? "/shop" : path;
 
   if (BARE.some((p) => path.startsWith(p))) {
     return <main className="flex min-h-screen flex-1 flex-col">{children}</main>;

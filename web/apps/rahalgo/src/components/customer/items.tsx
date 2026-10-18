@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
 import {
   Alert,
@@ -41,6 +42,7 @@ import { useShopToast } from "./toast";
 
 const m = getMessages(defaultLocale);
 const I = m.shop.item;
+const S = m.shop.stores;
 
 /** **السعرُ على سطرٍ واحد** — دولارٌ ثمّ «≈ ليرة»، أو ليرةٌ وحدَها. */
 export function Price({ syp, usd, className = "" }: { syp: number; usd?: number | null; className?: string }) {
@@ -73,7 +75,16 @@ function closedLabel(item: Item): string {
  *
  * **والقلبُ زرٌّ مستقلٌّ في الشريط** — لا داخلَ زرِّ البطاقة: زرٌّ في زرٍّ لا يصحّ.
  */
-export function ItemCard({ item, onOpen }: { item: Item; onOpen: (item: Item) => void }) {
+export function ItemCard({
+  item,
+  onOpen,
+  storeLink = true,
+}: {
+  item: Item;
+  onOpen: (item: Item) => void;
+  /** **اسمُ المتجر رابطٌ لصفحته** (٢٠٢٦-١٠-١٨) — ويُطفأ في صفحة المتجر نفسِها. */
+  storeLink?: boolean;
+}) {
   const closed = item.source_closed || !item.available;
   const img = mediaUrl(item.image_thumb_url ?? item.image_url);
   const fav = useFav();
@@ -123,19 +134,31 @@ export function ItemCard({ item, onOpen }: { item: Item; onOpen: (item: Item) =>
               </span>
             )}
           </div>
-          {/* ── الشريطُ السفليّ: اسمُ المتجر و«+» ── */}
-          <div className="flex min-h-10 w-full min-w-0 items-center gap-1 px-2 py-1">
-            <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
-            {!closed && (
-              <span
-                aria-label={I.add}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright"
-              >
-                <IconAdd size={15} />
-              </span>
-            )}
-          </div>
         </button>
+        {/* ── الشريطُ السفليّ: اسمُ المتجر (رابطٌ لصفحته) و«+» — خارجَ زرّ الصورة: رابطٌ في زرٍّ لا يصحّ ── */}
+        <div className="flex min-h-10 w-full min-w-0 items-center gap-1 px-2 py-1">
+          {storeLink && item.merchant_id && item.merchant_name ? (
+            <Link
+              href={`/stores/${item.merchant_id}`}
+              aria-label={`${S.openStore} — ${item.merchant_name}`}
+              className="flex-1 truncate text-2xs text-ink-muted hover:text-accent-text hover:underline"
+            >
+              {item.merchant_name}
+            </Link>
+          ) : (
+            <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
+          )}
+          {!closed && (
+            <button
+              type="button"
+              aria-label={I.add}
+              onClick={() => onOpen(item)}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright"
+            >
+              <IconAdd size={15} />
+            </button>
+          )}
+        </div>
       </div>
       {/* ── اسمُ الصنف تحت الإطار، في الوسط ── */}
       <button type="button" tabIndex={-1} onClick={() => onOpen(item)} className="min-w-0 text-center">
@@ -151,11 +174,19 @@ export function ItemCard({ item, onOpen }: { item: Item; onOpen: (item: Item) =>
 }
 
 /** **شبكةُ الأصناف** — عمودان على الجوّال وتتّسع مع الشاشة. */
-export function ItemGrid({ items, onOpen }: { items: Item[]; onOpen: (item: Item) => void }) {
+export function ItemGrid({
+  items,
+  onOpen,
+  storeLink = true,
+}: {
+  items: Item[];
+  onOpen: (item: Item) => void;
+  storeLink?: boolean;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {items.map((it) => (
-        <ItemCard key={it.id} item={it} onOpen={onOpen} />
+        <ItemCard key={it.id} item={it} onOpen={onOpen} storeLink={storeLink} />
       ))}
     </div>
   );
@@ -177,7 +208,16 @@ function missingGroup(groups: ModifierGroup[], picked: Record<string, string[]>)
  * **وصنفٌ من متجرٍ غيرِ متجر السلّة يُسأل عنه** — الطلبُ الواحدُ من متجرٍ
  * واحد (`max_sources`)، **ومن أضاف ولم يعلم اكتشف عند الإرسال.**
  */
-export function ItemSheet({ item, onClose }: { item: Item | null; onClose: () => void }) {
+export function ItemSheet({
+  item,
+  onClose,
+  storeLink = true,
+}: {
+  item: Item | null;
+  onClose: () => void;
+  /** **اسمُ المتجر رابطٌ لصفحته** — ويُطفأ في صفحة المتجر نفسِها. */
+  storeLink?: boolean;
+}) {
   const cart = useCart();
   const toast = useShopToast();
   const [detail, setDetail] = useState<ItemDetail | null>(null);
@@ -315,12 +355,22 @@ export function ItemSheet({ item, onClose }: { item: Item | null; onClose: () =>
               <FavoriteButton itemID={view.id} on={fav.has(view.id)} onToggle={fav.toggle} onRequireLogin={fav.needLogin} />
             </span>
           </div>
-          {view.merchant_name && (
-            <p className="flex items-center gap-1.5 text-sm text-ink-muted">
-              <IconStore size={14} />
-              {view.merchant_name}
-            </p>
-          )}
+          {view.merchant_name &&
+            (storeLink && view.merchant_id ? (
+              <Link
+                href={`/stores/${view.merchant_id}`}
+                onClick={onClose}
+                className="flex w-fit items-center gap-1.5 text-sm text-accent-text hover:underline"
+              >
+                <IconStore size={14} />
+                {view.merchant_name}
+              </Link>
+            ) : (
+              <p className="flex items-center gap-1.5 text-sm text-ink-muted">
+                <IconStore size={14} />
+                {view.merchant_name}
+              </p>
+            ))}
           {view.description && <p className="text-sm leading-relaxed text-ink-muted">{view.description}</p>}
           {item.has_options && !detail && !loadError && <LoadingState variant="inline" />}
           {loadError && <Alert>{loadError}</Alert>}
