@@ -112,6 +112,10 @@ type Merchant struct {
 	CreatedAt time.Time `json:"created_at"`
 	// SettlementMethod طريقةُ تسويةِ مستحقّاتِ المتجر — `cash|wallet` (الأدمن وحدَه يغيّرها).
 	SettlementMethod string `json:"settlement_method"`
+	// Featured **متجرٌ مميّزٌ يظهر في شريط السوق** (قرارُ المالك ٢٠٢٦-١٠-١٨) —
+	// و`FeaturedOrder` ترتيبُه فيه، الأصغرُ أوّلاً. **ولا حدَّ لعددها.**
+	Featured      bool `json:"featured"`
+	FeaturedOrder int  `json:"featured_order"`
 }
 
 // ErrBadCommission **نسبةُ عمولةٍ خارجَ ٠–١٠٠ أو بأكثرَ من منزلتين.**
@@ -132,6 +136,9 @@ func validCommission(p *pricing.Percent2, allowClear bool) error {
 	}
 	return nil
 }
+
+// ErrBadFeaturedOrder **ترتيبُ «متجر مميّز» خارجَ ٠–١٠٠٠٠.**
+var ErrBadFeaturedOrder = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 
 type MerchantPage struct {
 	Merchants []Merchant `json:"merchants"`
@@ -292,7 +299,7 @@ func merchantSelect(daysExpr string) string {
 	       -- يُعدَّل في مصدره، **فيبقى في اللوحة اسمٌ بدّله المالكُ من سنة.**
 	       m.district_id::text,
 	       COALESCE(dd.name || '، ' || gg.name, ''),
-	       m.settlement_method
+	       m.settlement_method, m.featured, m.featured_order
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -338,7 +345,7 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
 		&m.Status, &m.Violations, &m.CommissionExact, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
-		&m.SettlementMethod)
+		&m.SettlementMethod, &m.Featured, &m.FeaturedOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -477,6 +484,11 @@ type MerchantInput struct {
 	// بلا سببٍ لا يُراجَع ولا يُنازَع فيه.** يُطلب فقط حين يختلف المندوبُ الجديد
 	// عن القديم؛ وتبديلُ اسمٍ أو هاتفٍ لا يلزمه.
 	TransferReason *string `json:"transfer_reason"`
+	// Featured و`FeaturedOrder` **«متجر مميّز» وترتيبُه في شريط السوق** (٢٠٢٦-١٠-١٨).
+	//
+	// **و`NULL` لا تمسّ** كسائر الحقول — وتبديلُهما يُقيَّد بحدثٍ مستقلٍّ بالقيمتين.
+	Featured      *bool `json:"featured"`
+	FeaturedOrder *int  `json:"featured_order"`
 }
 
 // requirePoint **يتحقّق أنّ الدبّوس موجودٌ وفي حدود الأرض.**
@@ -703,6 +715,10 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 	if err := validCommission(in.CommissionPct, true); err != nil {
 		return nil, err
 	}
+	// **ترتيبُ الشريط من صفرٍ إلى ١٠٠٠٠** — والسالبُ خطأُ كتابةٍ لا ترتيب.
+	if in.FeaturedOrder != nil && (*in.FeaturedOrder < 0 || *in.FeaturedOrder > 10000) {
+		return nil, ErrBadFeaturedOrder
+	}
 	// `suspended` تُقبل هنا للأدمن، ولها نقطتُها الخاصّة (merchant_violations.go)
 	// التي تُسجّل السبب. **وقبولُها هنا يمنع حالةً لا تُرفع إلا بجراحةٍ في
 	// القاعدة** لو أُغفلت.
@@ -768,6 +784,20 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		}
 	}
 
+	// **وحالُ «المميّز» قبل التعديل** — ليُقيَّد التبديلُ بقيمتيه.
+	var wasFeatured bool
+	var wasOrder int
+	featuredTouched := in.Featured != nil || in.FeaturedOrder != nil
+	if featuredTouched {
+		if err := s.db.QueryRow(ctx,
+			`SELECT featured, featured_order FROM merchants WHERE id = $1`, id).Scan(&wasFeatured, &wasOrder); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, httpx.ErrNotFound
+			}
+			return nil, err
+		}
+	}
+
 	tag, err := s.db.Exec(ctx, `
 		UPDATE merchants SET
 			name          = COALESCE($2, name),
@@ -819,9 +849,12 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			-- من هنا.**
 			district_id   = CASE WHEN $16::text IS NULL THEN district_id
 			                     ELSE NULLIF($16, '')::uuid END,
+			-- **«متجر مميّز» وترتيبُه** (٢٠٢٦-١٠-١٨) — لا يُمسّان حين لا يُرسَلان.
+			featured       = COALESCE($17, featured),
+			featured_order = COALESCE($18, featured_order),
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns, in.DistrictID)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns, in.DistrictID, in.Featured, in.FeaturedOrder)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}
@@ -832,6 +865,23 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		return nil, httpx.ErrNotFound
 	}
 	s.audit(ctx, actorID, "admin.merchant_update", "merchant", id, ip)
+	// **وتبديلُ «متجر مميّز» أو ترتيبِه حدثٌ مستقلٌّ بالقيمتين** — من أظهر متجراً
+	// في رأس السوق ومتى سؤالٌ يُسأل بعد شهر.
+	if featuredTouched {
+		nowFeatured, nowOrder := wasFeatured, wasOrder
+		if in.Featured != nil {
+			nowFeatured = *in.Featured
+		}
+		if in.FeaturedOrder != nil {
+			nowOrder = *in.FeaturedOrder
+		}
+		if nowFeatured != wasFeatured || nowOrder != wasOrder {
+			s.auditDetail(ctx, actorID, "admin.merchant_featured", "merchant", id, ip,
+				map[string]any{"merchant_id": id,
+					"from": map[string]any{"featured": wasFeatured, "order": wasOrder},
+					"to":   map[string]any{"featured": nowFeatured, "order": nowOrder}})
+		}
+	}
 	// **وحدثُ نقلٍ مستقلٌّ حين يتبدّل المندوب** — بالمصدر والوجهة والفاعل والسبب،
 	// فيُقرأ من يملك عمولةَ هذا المتجر مستقبلاً ولماذا تحوّل (RQ-transfer).
 	if transfer {

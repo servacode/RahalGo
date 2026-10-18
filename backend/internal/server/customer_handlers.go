@@ -351,10 +351,18 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 		sections = []publicSection{}
 	}
 
+	// **وشريطُ «متاجر مميّزة»** (قرارُ المالك ٢٠٢٦-١٠-١٨) — بسوق المدينة
+	// نفسِه، **وفشلُه لا يُسقط الصفحة**: شريطٌ غائبٌ أهونُ من سوقٍ لا يُفتح.
+	featured, err := s.featuredStores(r)
+	if err != nil {
+		featured = []featuredStore{}
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"banners": s.bannersShown(r, active), "categories": categories,
-		"sections":      sections,
-		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone"),
+		"sections":        sections,
+		"featured_stores": featured,
+		"support_phone":   s.settings.GetString(r.Context(), "platform.support_phone"),
 
 		// **وإعداداتُ جولةِ الأقسام تصل مع الصفحة.**
 		//

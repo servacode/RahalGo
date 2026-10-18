@@ -644,6 +644,10 @@ func (s *Server) Router() http.Handler {
 		// **وبطاقةُ الصنف من التصفّح** — بابُها بابُه.
 		r.With(s.launchGate(launchCustomerBrowse)).
 			Get("/public/items/{id}", s.handlePublicItem)
+		// **وصفحةُ المتجر** — رأسُه وأصنافُه بأقسام المنصّة (٢٠٢٦-١٠-١٨،
+		// `stores_public.go`). **وبابُها بابُ التصفّح.**
+		r.With(s.launchGate(launchCustomerBrowse)).
+			Get("/public/stores/{id}", s.handlePublicStore)
 		// **«يُطلب معه»** — مشروبٌ ومقبّلاتٌ تُعرض على من ملأ سلّته.
 		// (طلبُ المالك ٢٠٢٦-٠٨-٢٢. انظر `suggest_handlers.go`.)
 		r.Get("/public/suggest", s.handleSuggestWith)

@@ -226,11 +226,23 @@ func sypToUSD(syp int64, rate float64) *float64 {
 }
 
 func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, args ...any) {
-	rule := pricing.RuleFrom(r.Context(), s.settings)
-	rows, err := s.pg.Query(r.Context(), sql, args...)
+	out, err := s.queryItems(r, sql, args...)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"items": out})
+}
+
+// queryItems **يقرأ أصنافاً بأعمدة `itemSelect` ويُلبسها سعرَها وخصمَها ودولارَها.**
+//
+// **وموضعٌ واحدٌ لكلّ قائمة** — القسمُ والبحثُ وصفحةُ المتجر (٢٠٢٦-١٠-١٨):
+// **وبطاقةٌ تُقرأ بشكلين تفترق يوماً.**
+func (s *Server) queryItems(r *http.Request, sql string, args ...any) ([]publicItem, error) {
+	rule := pricing.RuleFrom(r.Context(), s.settings)
+	rows, err := s.pg.Query(r.Context(), sql, args...)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -248,8 +260,7 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
 			&sectionMargin, &open, &opensAt, &pct, &amt, &it.HasOptions, &it.ExchangeRate, &usdCents,
 			&it.MerchantID, &it.MerchantName); err != nil {
-			s.respondErr(w, err)
-			return
+			return nil, err
 		}
 		it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
 		markDown(&it, pct, amt)
@@ -262,7 +273,7 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		}
 		out = append(out, it)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": out})
+	return out, rows.Err()
 }
 
 // handlePublicSections أقسامُ المنصة وعددُ ما فيها.

@@ -4031,6 +4031,7 @@
         "admin.menu_reviewed": "مراجعة قائمة متجر",
         "admin.merchant_create": "إنشاء متجر",
         "admin.merchant_update": "تعديل متجر",
+        "admin.merchant_featured": "تعديل المتجر المميّز",
         "admin.password_reset": "إعادة ضبط كلمة مرور",
         "admin.promo_create": "إنشاء كود خصم",
         "admin.promo_update": "تعديل كود خصم",

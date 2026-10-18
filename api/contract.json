@@ -9398,6 +9398,10 @@
           "type": "unknown"
         },
         {
+          "name": "featured_stores",
+          "type": "unknown"
+        },
+        {
           "name": "rail_auto",
           "type": "unknown"
         },
@@ -9707,6 +9711,25 @@
       "path": "/api/v1/public/sections/{id}/items",
       "handler": "handlePublicSectionItems",
       "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/stores/{id}",
+      "handler": "handlePublicStore",
+      "auth": false,
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        },
+        {
+          "name": "store",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",
