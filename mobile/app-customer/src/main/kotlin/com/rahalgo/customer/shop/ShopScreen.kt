@@ -601,7 +601,7 @@ const val ShopCols = 3
  * يقرأ اسمَها، **ورمزٌ رماديٌّ لعشرة أقسامٍ يجعلها كلَّها شيئاً واحدا.**
  */
 @Composable
-private fun SectionRail(
+internal fun SectionRail(
     sections: List<Section>,
     pick: String?,
     media: (String?) -> String?,

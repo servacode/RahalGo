@@ -16,11 +16,11 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Badge, EmptyState, LoadingState, ReloadState, IconPrev, IconStore } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { Alert, Badge, EmptyState, LoadingState, ReloadState, IconPrev, IconStore, SectionRail } from "@rahalgo/ui";
+import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StorePage } from "@/lib/customer/types";
 import { backAt, fill } from "@/lib/customer/texts";
@@ -45,7 +45,6 @@ export default function StorePageView() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Item | null>(null);
   const [active, setActive] = useState("");
-  const heads = useRef<Record<string, HTMLElement | null>>({});
 
   const load = useCallback(() => {
     if (!id) return;
@@ -61,28 +60,7 @@ export default function StorePageView() {
 
   useEffect(load, [load]);
 
-  /* **والشريطُ يتبع التمرير** — العنوانُ الظاهرُ أعلى الشاشة هو المختار. */
-  useEffect(() => {
-    if (!page || page.sections.length === 0) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        const seen = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        const first = seen[0]?.target.getAttribute("data-section");
-        if (first) setActive(first);
-      },
-      { rootMargin: "-40% 0px -55% 0px" },
-    );
-    for (const s of page.sections) {
-      const el = heads.current[s.id];
-      if (el) io.observe(el);
-    }
-    return () => io.disconnect();
-  }, [page]);
-
-  const jump = (sid: string) => {
-    setActive(sid);
-    heads.current[sid]?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const shown = page?.sections.find((sec) => sec.id === active) ?? page?.sections[0];
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,44 +99,20 @@ export default function StorePageView() {
             <EmptyState icon={IconStore} title={ST.empty} action={<span className="text-xs text-ink-muted">{ST.emptyHint}</span>} />
           ) : (
             <>
-              {/* ── شريطُ الأقسام اللاصق — تحت الشريط العلويّ مباشرةً ── */}
-              <nav className="surface-lit sticky top-18 z-30 -mx-3 px-3 py-2 sm:-mx-4 sm:px-4">
-                <ul className="flex gap-2 overflow-x-auto">
-                  {page.sections.map((s) => {
-                    const on = s.id === active;
-                    return (
-                      <li key={s.id} className="shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => jump(s.id)}
-                          aria-current={on ? "true" : undefined}
-                          className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                            on
-                              ? "border-accent bg-accent-tint font-bold text-accent-text"
-                              : "border-line text-ink-muted hover:border-accent-edge"
-                          }`}
-                        >
-                          {s.name}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </nav>
-
-              {page.sections.map((s) => (
-                <section
-                  key={s.id}
-                  data-section={s.id}
-                  ref={(el) => {
-                    heads.current[s.id] = el;
-                  }}
-                  className="flex scroll-mt-32 flex-col gap-3"
-                >
-                  <h2 className="heading-section">{s.name}</h2>
-                  <ItemGrid items={s.items} onOpen={setOpen} storeLink={false} />
-                </section>
-              ))}
+              {/* ── دوائرُ الأقسام كالسوق، وتحتها أصنافُ المختار وحدَه ── (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) */}
+              <SectionRail
+                items={page.sections.map((sec) => ({
+                  id: sec.id,
+                  name: sec.name,
+                  imageUrl: mediaUrl(sec.image_thumb_url ?? sec.image_url),
+                  icon: sec.icon,
+                  count: sec.items.length,
+                }))}
+                activeID={shown?.id ?? ""}
+                auto={false}
+                onSelect={setActive}
+              />
+              {shown && <ItemGrid items={shown.items} onOpen={setOpen} storeLink={false} />}
             </>
           )}
         </>

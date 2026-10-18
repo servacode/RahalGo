@@ -1,5 +1,9 @@
 package com.rahalgo.customer.shop
 
+import com.rahalgo.shared.model.Section
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -235,68 +239,33 @@ internal fun StoreScreen(
                     return@Column
                 }
 
-                val grid = rememberLazyGridState()
-                val scope = rememberCoroutineScope()
-                val heads = remember(sections) { StoreMenu.headerIndex(sections) }
-                val current by remember(sections) {
-                    derivedStateOf { StoreMenu.sectionAt(sections, grid.firstVisibleItemIndex) }
-                }
-
+                // **كالسوق تماماً** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «لازم نفس الاقسام دوائر من فوق وكل
+                // قسم فيه اصنافه») — دوائرُ الأقسام بصورها، **وتحتها أصنافُ المختار وحدَه.**
+                var picked by rememberSaveable(sections) { mutableStateOf(sections.first().id) }
+                val shown = sections.firstOrNull { it.id == picked } ?: sections.first()
                 Spacer(Modifier.height(Rahal.space.sm))
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = Rahal.space.xs),
-                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-                ) {
-                    items(sections, key = { it.id }) { s ->
-                        val on = s.id == current
-                        Text(
-                            text = s.name,
-                            color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
-                            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier
-                                .clip(Rahal.shape.pill)
-                                .border(
-                                    Rahal.stroke.hair,
-                                    if (on) Rahal.colors.brand else Rahal.colors.line,
-                                    Rahal.shape.pill,
-                                )
-                                .clickable {
-                                    heads[s.id]?.let { at -> scope.launch { grid.animateScrollToItem(at) } }
-                                }
-                                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
-                        )
-                    }
-                }
+                SectionRail(
+                    sections.map { Section(id = it.id, name = it.name, icon = it.icon, imageUrl = it.imageUrl, imageThumbUrl = it.imageThumbUrl) },
+                    shown.id,
+                    media,
+                ) { picked = it }
 
                 LazyVerticalGrid(
-                    state = grid,
                     columns = GridCells.Fixed(ShopCols),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    for (s in sections) {
-                        item(key = "h-" + s.id, span = { GridItemSpan(maxLineSpan) }) {
-                            Text(
-                                text = s.name,
-                                color = Rahal.colors.ink,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.padding(top = Rahal.space.sm),
-                            )
-                        }
-                        items(s.items, key = { s.id + "/" + it.id }) { item ->
-                            ItemCard(
-                                item = item,
-                                media = media,
-                                liked = item.id in liked,
-                                onAdd = { onAdd(item) },
-                                onLike = { onLike(item) },
-                                // **ولا رابطَ إلى الصفحة التي هو فيها** (`StoreLink`).
-                                onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
-                            )
-                        }
+                    items(shown.items, key = { shown.id + "/" + it.id }) { item ->
+                        ItemCard(
+                            item = item,
+                            media = media,
+                            liked = item.id in liked,
+                            onAdd = { onAdd(item) },
+                            onLike = { onLike(item) },
+                            // **ولا رابطَ إلى الصفحة التي هو فيها** (`StoreLink`).
+                            onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
+                        )
                     }
                 }
             }
