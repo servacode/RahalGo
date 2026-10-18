@@ -4131,6 +4131,7 @@
         "ops.broadcast": "إرسال إعلان منصة",
         "ops.merchant_setup_reminder": "تذكير متجر بإكمال إعداده",
         "merchant.returns_update": "متجر غيّر قبول الترجيع",
+        "merchant.logo_update": "متجر غيّر شعاره",
         "ops.dispute_opened": "فتح نزاع",
         "ops.dispute_settled": "حسم نزاع",
         "ops.driver_shift_ended": "إنهاء دوام سائق",
