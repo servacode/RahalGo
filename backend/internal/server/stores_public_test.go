@@ -249,7 +249,7 @@ func TestPublicStore_GroupingAndLeaks(t *testing.T) {
 	b := f.item(t, store, late, "صنف ب", true)
 	sleepy := f.item(t, store, early, "صنف غير متوفر", false)
 	hidden := f.item(t, store, dead, "صنف قسمه مطفأ", true)
-	loose := f.item(t, store, "", "صنف بلا قسم", true)
+	// **ولا صنفَ بلا قسم** — `menu_items.platform_section_id` إلزاميّ في القاعدة، فالحالةُ لا تقع.
 	foreign := f.item(t, other, early, "صنف متجر آخر", true)
 
 	code, body := f.get(t, "/stores/"+store)
@@ -303,7 +303,7 @@ func TestPublicStore_GroupingAndLeaks(t *testing.T) {
 	for _, s := range out.Data.Sections {
 		for _, it := range s.Items {
 			switch it["id"] {
-			case hidden, loose, foreign:
+			case hidden, foreign:
 				t.Errorf("صنفٌ لا يظهر في قسمه تسرّب من الصفحة: %v", it["name"])
 			}
 		}
