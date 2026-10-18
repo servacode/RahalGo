@@ -295,6 +295,9 @@ export default function DashboardPage() {
   if (!data) {
     return (
       <div>
+        <div className="mb-4">
+          <PlatformSwitch />
+        </div>
         <h1 className="heading-page">{H.title}</h1>
         <div className="mt-6">
           {error ? (
@@ -341,6 +344,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* **زرُّ الدوام أوّلُ ما يُرى** — فاتحين أو مسكّرين بضغطة (طلبُ المالك ٢٠٢٦-١٠-١٨). */}
+      <PlatformSwitch />
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="heading-page flex-1">{H.title}</h1>
         <span className="text-xs text-ink-muted">{ago}</span>
@@ -350,8 +355,6 @@ export default function DashboardPage() {
       </div>
       {error && <Alert tone="warning">{H.refreshFailed}</Alert>}
       {data.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
-      {/* **زرُّ الدوام أوّلَ اللوحة** — فاتحين أو مسكّرين بضغطة (طلبُ المالك ٢٠٢٦-١٠-١٨). */}
-      <PlatformSwitch />
       {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
       <ContactTestAlert />
 
