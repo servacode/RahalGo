@@ -199,6 +199,61 @@ fun ShopScreen(
         )
     }
 
+    // **وما يقع عند «+»** — **موضعٌ واحدٌ للقرار** يقرؤه السوقُ وصفحةُ المتجر:
+    // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
+    val addItem: (Item) -> Unit = add@{ item ->
+        // **وضعُ الاستعراض للقراءة فقط** (Batch 3c) — لا إضافةَ
+        // ولا سؤالَ عنوان؛ اللافتةُ فوقُ تشرح، والخروجُ صريح.
+        if (previewing) return@add
+        // **ولا عنوانَ لا إضافة** — **يُسأل أوّلاً**
+        // (`PC-02`)، **ولا يُخترَع له عنوان.**
+        if (action == AddAction.NEED_ADDRESS) {
+            onNeedAddress()
+            return@add
+        }
+        // **وعنوانٌ لا يُخدَم لا يُملأ له سلّة** —
+        // **والسببُ مكتوبٌ فوق القائمة** (`PC-03`…).
+        if (blocked) return@add
+        // **ومغلقٌ لا يُضاف** — ومن أضافه ثمّ رُدّ
+        // عند الدفع أضاع وقتَه.
+        if (item.available && !item.sourceClosed) {
+            // **وما له خياراتٌ يُسأل قبل أن يدخل** —
+            // **والمجموعةُ الإلزاميّةُ تُسقط الطلبَ
+            // كلَّه** إن دخل بلا اختيار.
+            if (item.hasOptions) {
+                picking = item
+            } else {
+                val inc = Cart.add(item)
+                com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
+                com.rahalgo.ui.Flash.ok(
+                    context.getString(
+                        if (inc) com.rahalgo.ui.R.string.cart_qty_updated
+                        else com.rahalgo.ui.R.string.cart_item_added,
+                    ),
+                )
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **صفحةُ المتجر فوق السوق** (قرارُ المالك ٢٠٢٦-١٠-١٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والرجوعُ يعيد السوقَ كما تُرك** — والنافذةُ والتنبيهُ فوق تبقيان تعملان.
+    val openStoreId = vm.storeId
+    if (openStoreId != null) {
+        androidx.activity.compose.BackHandler { vm.closeStore() }
+        StoreScreen(
+            vm = vm,
+            media = media,
+            liked = liked,
+            onLike = onLike,
+            onAdd = addItem,
+            onBack = vm::closeStore,
+        )
+        return
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **والسحبُ إلى الأسفل يُنعش** — انظر `Refreshable`.
     // ══════════════════════════════════════════════════════════════════
@@ -241,28 +296,6 @@ fun ShopScreen(
         //
         // **ولا تُرسم وهو يبحث** — نتائجُ بحثٍ تحتها لافتةُ عرضٍ
         // **تدفعها إلى نصف الشاشة**، ومن بحث يريد ما بحث عنه.
-        if (!vm.searching && vm.banners.isNotEmpty()) {
-            BannerSlider(
-                items = vm.banners.map {
-                    BannerSlide(
-                        id = it.id,
-                        title = it.title,
-                        // **ونسخةُ ٩٦٠ لا الأصل** — انظر `mediaSized`:
-                        // **اللوحُ عرضُه نحو ثلاثِ مئةٍ وأربعين نقطةً**،
-                        // وألفٌ وستُّ مئةٍ فيه أربعةُ أضعافِ ما يُرى.
-                        imageUrl = Backend.of(context)
-                            .mediaSized(it.imageUrl, 960, it.sizes),
-                        target = it.target,
-                    )
-                },
-                auto = vm.bannerAuto,
-                everyMs = vm.bannerEveryMs,
-                // **ولا حشوةَ جانبيّةٌ هنا** — السلايدرُ يفسحها بنفسه
-                // ليُظهر حافّةَ التالية.
-                modifier = Modifier.padding(vertical = 10.dp),
-            )
-        }
-
         val hints = vm.visibleSections.map { it.name }
         var hint by remember { mutableStateOf(0) }
         LaunchedEffect(hints.size, vm.query.isEmpty()) {
@@ -273,38 +306,78 @@ fun ShopScreen(
             }
         }
 
-        OutlinedTextField(
-            value = vm.query,
-            onValueChange = vm::type,
-            // **ولا عنوانَ فوق الحقل** — **وعنوانٌ ثابتٌ يزاحم الكلمةَ
-            // المتبدّلةَ فيُقرآن سطرين لا سطرا.**
-            placeholder = {
-                Text(
-                    stringResource(
-                        R.string.shop_search,
-                        hints.getOrNull(hint).orEmpty(),
-                    ),
-                )
-            },
-            // **والعدسةُ في أوّل الحقل** — (طلبُ المالك)، **ومربّعٌ بلا
-            // عدسةٍ يُقرأ حقلَ كتابةٍ لا بحثا.**
-            leadingIcon = {
-                Icon(
-                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_search),
-                    contentDescription = null,
-                    tint = Rahal.colors.inkMuted,
-                    modifier = Modifier.size(20.dp),
-                )
-            },
-            singleLine = true,
-            // **ودائريٌّ كاملاً** — (طلبُ المالك ٢٠٢٦-٠٨-١٨): **وحقلُ
-            // بحثٍ بزوايا حقلِ إدخالٍ يُقرأ حقلَ إدخال.**
-            shape = Rahal.shape.pill,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+        // ══════════════════════════════════════════════════════════════
+        // **سلايدرٌ ثمّ «متاجر مميّزة» ثمّ البحث** (قرارُ المالك ٢٠٢٦-١٠-١٨)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **والترتيبُ من `ShopTop`** — دالّةٌ مختبَرة، والويبُ بالترتيب نفسِه.
+        // **و`key` يُبقي حقلَ البحث هو هو** حين يغيب ما فوقه — **وإلّا
+        // وُلد حقلٌ جديدٌ تحت إصبعه فسقطت لوحةُ المفاتيح.**
+        val top = ShopTop.order(
+            hasSlider = vm.banners.isNotEmpty(),
+            hasStrip = vm.featured.isNotEmpty(),
+            searching = vm.searching,
         )
+        for (block in top) androidx.compose.runtime.key(block) {
+            when (block) {
+                ShopBlock.Slider ->
+                    BannerSlider(
+                        items = vm.banners.map {
+                            BannerSlide(
+                                id = it.id,
+                                title = it.title,
+                                // **ونسخةُ ٩٦٠ لا الأصل** — انظر `mediaSized`:
+                                // **اللوحُ عرضُه نحو ثلاثِ مئةٍ وأربعين نقطةً**،
+                                // وألفٌ وستُّ مئةٍ فيه أربعةُ أضعافِ ما يُرى.
+                                imageUrl = Backend.of(context)
+                                    .mediaSized(it.imageUrl, 960, it.sizes),
+                                target = it.target,
+                            )
+                        },
+                        auto = vm.bannerAuto,
+                        everyMs = vm.bannerEveryMs,
+                        // **ولا حشوةَ جانبيّةٌ هنا** — السلايدرُ يفسحها بنفسه
+                        // ليُظهر حافّةَ التالية.
+                        modifier = Modifier.padding(vertical = 10.dp),
+                    )
+
+                ShopBlock.Strip -> FeaturedStrip(vm.featured, media, vm::openStore)
+
+                ShopBlock.Search ->
+                    OutlinedTextField(
+                        value = vm.query,
+                        onValueChange = vm::type,
+                        // **ولا عنوانَ فوق الحقل** — **وعنوانٌ ثابتٌ يزاحم الكلمةَ
+                        // المتبدّلةَ فيُقرآن سطرين لا سطرا.**
+                        placeholder = {
+                            Text(
+                                stringResource(
+                                    R.string.shop_search,
+                                    hints.getOrNull(hint).orEmpty(),
+                                ),
+                            )
+                        },
+                        // **والعدسةُ في أوّل الحقل** — (طلبُ المالك)، **ومربّعٌ بلا
+                        // عدسةٍ يُقرأ حقلَ كتابةٍ لا بحثا.**
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_search),
+                                contentDescription = null,
+                                tint = Rahal.colors.inkMuted,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        singleLine = true,
+                        // **ودائريٌّ كاملاً** — (طلبُ المالك ٢٠٢٦-٠٨-١٨): **وحقلُ
+                        // بحثٍ بزوايا حقلِ إدخالٍ يُقرأ حقلَ إدخال.**
+                        shape = Rahal.shape.pill,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+            }
+        }
 
         if (!vm.searching && vm.visibleSections.isNotEmpty()) {
             // ══════════════════════════════════════════════════════
@@ -469,40 +542,10 @@ fun ShopScreen(
                         item = item,
                         media = media,
                         liked = item.id in liked,
-                        onAdd = {
-                            // **وضعُ الاستعراض للقراءة فقط** (Batch 3c) — لا إضافةَ
-                            // ولا سؤالَ عنوان؛ اللافتةُ فوقُ تشرح، والخروجُ صريح.
-                            if (previewing) return@ItemCard
-                            // **ولا عنوانَ لا إضافة** — **يُسأل أوّلاً**
-                            // (`PC-02`)، **ولا يُخترَع له عنوان.**
-                            if (action == AddAction.NEED_ADDRESS) {
-                                onNeedAddress()
-                                return@ItemCard
-                            }
-                            // **وعنوانٌ لا يُخدَم لا يُملأ له سلّة** —
-                            // **والسببُ مكتوبٌ فوق القائمة** (`PC-03`…).
-                            if (blocked) return@ItemCard
-                            // **ومغلقٌ لا يُضاف** — ومن أضافه ثمّ رُدّ
-                            // عند الدفع أضاع وقتَه.
-                            if (item.available && !item.sourceClosed) {
-                                // **وما له خياراتٌ يُسأل قبل أن يدخل** —
-                                // **والمجموعةُ الإلزاميّةُ تُسقط الطلبَ
-                                // كلَّه** إن دخل بلا اختيار.
-                                if (item.hasOptions) {
-                                    picking = item
-                                } else {
-                                    val inc = Cart.add(item)
-                                    com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
-                                    com.rahalgo.ui.Flash.ok(
-                                        context.getString(
-                                            if (inc) com.rahalgo.ui.R.string.cart_qty_updated
-                                            else com.rahalgo.ui.R.string.cart_item_added,
-                                        ),
-                                    )
-                                }
-                            }
-                        },
+                        onAdd = { addItem(item) },
                         onLike = { onLike(item) },
+                        // **واسمُ المتجر يفتح صفحتَه** (٢٠٢٦-١٠-١٨).
+                        onStore = { vm.openStore(item.merchantId) },
                     )
                 }
             }
@@ -690,6 +733,11 @@ internal fun ItemCard(
     liked: Boolean,
     onAdd: (() -> Unit)?,
     onLike: () -> Unit,
+    /**
+     * **اسمُ المتجر بابُ صفحته** (قرارُ المالك ٢٠٢٦-١٠-١٨) — و`null` في صفحة
+     * المتجر نفسِها وحيث لا صفحةَ تُفتح.
+     */
+    onStore: (() -> Unit)? = null,
 ) {
     val closed = item.sourceClosed || !item.available
     Column {
@@ -824,13 +872,26 @@ internal fun ItemCard(
                     .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val toStore = onStore?.takeIf { !item.merchantName.isNullOrBlank() && item.merchantId.isNotBlank() }
                 Text(
                     text = item.merchantName.orEmpty(),
-                    color = Rahal.colors.inkMuted,
+                    // **والاسمُ الذي يُفتح يُلوَّن** — وإلّا لم يُعرف أنّه باب.
+                    color = if (toStore != null) Rahal.colors.brand else Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (toStore != null) {
+                                Modifier.clickable(
+                                    onClickLabel = stringResource(R.string.store_open_page),
+                                    onClick = toStore,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 )
                 if (!closed && onAdd != null) {
                     Spacer(Modifier.width(Rahal.space.xs))

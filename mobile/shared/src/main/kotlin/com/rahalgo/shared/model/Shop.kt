@@ -26,6 +26,52 @@ data class HomePage(
     @SerialName("banner_every_ms") val bannerEveryMs: Int = 0,
     @SerialName("rail_auto") val railAuto: Boolean = false,
     @SerialName("rail_every_ms") val railEveryMs: Int = 0,
+    /**
+     * **شريطُ «متاجر مميّزة»** (قرارُ المالك ٢٠٢٦-١٠-١٨) — بترتيب الأدمن ثمّ
+     * الاسم، **وغيابُه من خادمٍ أقدم = لا شريط.**
+     */
+    @SerialName("featured_stores") val featuredStores: List<FeaturedStore> = emptyList(),
+)
+
+/** **مربّعٌ في شريط «متاجر مميّزة»** — شعارٌ واسم، والضغطةُ تفتح صفحتَه. */
+@Serializable
+data class FeaturedStore(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("logo_url") val logoUrl: String? = null,
+    @SerialName("logo_thumb_url") val logoThumbUrl: String? = null,
+    @SerialName("open_now") val openNow: Boolean = true,
+    @SerialName("opens_at") val opensAt: String? = null,
+)
+
+/** **رأسُ صفحة المتجر.** */
+@Serializable
+data class StoreHeader(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("logo_url") val logoUrl: String? = null,
+    @SerialName("logo_thumb_url") val logoThumbUrl: String? = null,
+    @SerialName("open_now") val openNow: Boolean = true,
+    @SerialName("opens_at") val opensAt: String? = null,
+    @SerialName("prep_minutes") val prepMinutes: Int = 0,
+)
+
+/** **قسمُ منصّةٍ وأصنافُ المتجر فيه** — الصنفُ بشكل القسم حرفاً (`Item`). */
+@Serializable
+data class StoreSection(
+    val id: String = "",
+    val name: String = "",
+    val icon: String = "",
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+    val items: List<Item> = emptyList(),
+)
+
+/** **صفحةُ متجر** — `GET /public/stores/{id}`. */
+@Serializable
+data class StorePage(
+    val store: StoreHeader = StoreHeader(),
+    val sections: List<StoreSection> = emptyList(),
 )
 
 /**
@@ -139,6 +185,8 @@ data class Item(
      * ٢٠٢٦-١٠-١٥، عكسُ حجب المصدر). **وفارغٌ من خادمٍ أقدم.**
      */
     @SerialName("merchant_name") val merchantName: String? = null,
+    /** **معرّفُ متجره** — به تُفتح صفحتُه من اسمه على البطاقة (٢٠٢٦-١٠-١٨). */
+    @SerialName("merchant_id") val merchantId: String = "",
 )
 
 /**

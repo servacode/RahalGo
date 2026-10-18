@@ -8,6 +8,7 @@ import com.rahalgo.shared.model.ItemsPage
 import com.rahalgo.shared.model.OffersPage
 import com.rahalgo.shared.model.Quote
 import com.rahalgo.shared.model.Referral
+import com.rahalgo.shared.model.StorePage
 import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
@@ -56,6 +57,14 @@ class CustomerApi(private val api: ApiClient) {
     /** **أصنافُ قسم** — من كلّ المصادر مختلطةً بلا اسم متجر. */
     suspend fun sectionItems(sectionId: String): ItemsPage =
         api.raw("/api/v1/public/sections/$sectionId/items" + BrowseScope.query('?'))
+
+    /**
+     * **صفحةُ متجر** — رأسُه وأصنافُه مجموعةً بأقسام المنصّة (٢٠٢٦-١٠-١٨).
+     *
+     * **وبموضعه كسائر التصفّح** — متجرٌ خارجَ سوقه يُردّ ٤٠٤.
+     */
+    suspend fun store(storeId: String): StorePage =
+        api.raw("/api/v1/public/stores/$storeId" + BrowseScope.query('?'))
 
     /**
      * **صنفٌ بخياراته** — يُنادى حين تُضغط بطاقةٌ عليها `hasOptions`.

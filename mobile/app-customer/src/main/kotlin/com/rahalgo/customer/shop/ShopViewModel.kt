@@ -8,6 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.model.Banner
+import com.rahalgo.shared.model.FeaturedStore
+import com.rahalgo.shared.model.StorePage
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Section
 import com.rahalgo.ui.AppCore
@@ -67,6 +69,59 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
     var bannerEveryMs by mutableStateOf(0)
         private set
 
+    /** **شريطُ «متاجر مميّزة»** (قرارُ المالك ٢٠٢٦-١٠-١٨) — يصل مع الصفحة الأولى. */
+    var featured by mutableStateOf<List<FeaturedStore>>(emptyList())
+        private set
+
+    // ══════════════════════════════════════════════════════════════════
+    // **صفحةُ المتجر — فوق السوق لا بدلَه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والسوقُ يبقى كما تُرك** — قسمُه وأصنافُه وبحثُه — **ومن رجع وجده.**
+
+    /** **المتجرُ المفتوحُ الآن** — وفارغٌ حين لا صفحة. */
+    var storeId by mutableStateOf<String?>(null)
+        private set
+
+    var store by mutableStateOf<StorePage?>(null)
+        private set
+
+    var storeError by mutableStateOf("")
+        private set
+
+    private var storeJob: Job? = null
+
+    /** **يفتح صفحةَ متجر** — من مربّعه في الشريط أو من اسمه على البطاقة. */
+    fun openStore(id: String) {
+        if (id.isBlank()) return
+        storeId = id
+        loadStore()
+    }
+
+    fun closeStore() {
+        storeJob?.cancel()
+        storeId = null
+        store = null
+        storeError = ""
+    }
+
+    fun loadStore() {
+        val id = storeId ?: return
+        storeJob?.cancel()
+        store = null
+        storeError = ""
+        storeJob = viewModelScope.launch {
+            try {
+                val got = api.store(id)
+                if (storeId == id) store = got
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (storeId == id) storeError = apiError(getApplication(), e)
+            }
+        }
+    }
+
     var pick by mutableStateOf<String?>(null)
         private set
 
@@ -100,6 +155,7 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 banners = home.banners
                 bannerAuto = home.bannerAuto
                 bannerEveryMs = home.bannerEveryMs
+                featured = home.featuredStores
                 // **والقسمُ المفتوحُ يُعاد جلبُه** — **وإنعاشٌ يُحدّث
                 // الشريطَ ويترك البضاعةَ قديمةً نصفُ إنعاش.**
                 //
@@ -230,6 +286,7 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 banners = home.banners
                 bannerAuto = home.bannerAuto
                 bannerEveryMs = home.bannerEveryMs
+                featured = home.featuredStores
                 // **وأوّلُ قسمٍ يُفتح** — إلّا أن يكون قد اختار قبل الدوران.
                 // **ويُفتح أوّلُ قسمٍ له محتوىً** — **لا أوّلُ قسمٍ في القائمة**،
             // **فقد يكون خاوياً فيُستقبَل الزبونُ بفراغ.**
