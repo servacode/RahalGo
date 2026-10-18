@@ -102,10 +102,9 @@ func (s *Service) CreateBanner(ctx context.Context, actorID string, in BannerInp
 	}
 	// **والموضعُ يُقيَّد هنا لا في القاعدة وحدَها** — قيدُ القاعدة يردّ
 	// بخمسمئة، **ورسالةٌ تقول «موضعٌ لا أعرفه» تُقرأ.**
-	place := "shop"
-	if in.Placement != nil && *in.Placement == "home" {
-		place = "home"
-	}
+	// **والسلايدرُ واحدٌ منذ 0115** — القيدُ لا يقبل إلّا `home`، **وكان الافتراضُ `shop`
+	// فيردّ كلُّ إنشاءٍ بلا موضعٍ بخمسمئة** (رآه تصويرُ ٢٠٢٦-١٠-١٨). فالموضعُ `home` دائماً.
+	place := "home"
 	var id string
 	err := s.db.QueryRow(ctx, `
 		INSERT INTO banners (title, image_media_id, target, sort_order, placement)
