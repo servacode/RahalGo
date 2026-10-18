@@ -474,9 +474,11 @@ private fun QuoteConfirmPanel(
         )
     }
     Spacer(Modifier.height(10.dp))
+    // **والقبولُ أخضرُ ممتلئ** (طلبُ المالك ٢٠٢٦-١٠-١٨) — كان أزرقَ يُقرأ «متابعة».
     RahalButton(
         onClick = { onConfirmQuote(method) },
         enabled = !confirming,
+        tone = com.rahalgo.ui.PriceConfirm.Accept,
         modifier = Modifier.fillMaxWidth(),
     ) {
         if (confirming) {
@@ -504,7 +506,7 @@ private fun QuoteConfirmPanel(
         RahalButton(
             onClick = { askReject = true },
             enabled = !confirming,
-            tone = Tone.Danger,
+            tone = com.rahalgo.ui.PriceConfirm.Reject,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.ord_quote_reject))

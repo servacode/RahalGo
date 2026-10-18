@@ -597,7 +597,13 @@ fun CartScreen(
             }
             if (!vm.canSubmit) {
                 Spacer(Modifier.height(10.dp))
-                RahalTextButton(onClick = { vm.acceptChanges() }) {
+                // **وقبولُ المبالغ المتبدّلة زرٌّ أخضرُ ممتلئ** (طلبُ المالك ٢٠٢٦-١٠-١٨)
+                // — كنافذة تأكيد السعر؛ **وزرٌّ نصّيٌّ أزرقُ لا يُقرأ «موافق».**
+                RahalButton(
+                    onClick = { vm.acceptChanges() },
+                    tone = com.rahalgo.ui.PriceConfirm.Accept,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(stringResource(R.string.cc_review_cta))
                 }
             }
