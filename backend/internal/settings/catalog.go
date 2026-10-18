@@ -401,6 +401,10 @@ var Catalog = []Def{
 	// **وهي غيرُ `launch.customer_orders`**: **ذاك يقول أفُتح البابُ
 	// للناس أصلاً، وهذه تقول أيسري عليه توقيت.**
 	{Key: "hours.platform_enforced", Group: GroupLaunch, Kind: KindBool, Default: false},
+	// **وزرُّ الدوام** (طلبُ المالك ٢٠٢٦-١٠-١٨) — `open` · `closed` · `schedule`.
+	// **وافتراضُه `schedule`** فلا يتبدّل شيءٌ يومَ يُنشر. انظر `platform.SwitchKey`.
+	{Key: "hours.platform_switch", Group: GroupLaunch, Kind: KindChoice,
+		Options: []string{"schedule", "open", "closed"}, Default: "schedule"},
 
 	{Key: "platform.orders_mode", Group: GroupPlatform, Kind: KindChoice,
 		Options: []string{"platform", "merchants"}, Default: "platform"},

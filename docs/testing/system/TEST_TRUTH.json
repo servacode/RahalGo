@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 248,
-    "behaviour_settings": 203,
+    "setting_defs": 249,
+    "behaviour_settings": 204,
     "order_fields": 111,
-    "test_files": 614,
-    "test_funcs": 2441
+    "test_files": 615,
+    "test_funcs": 2444
   },
   "flows": [
     {
@@ -4996,6 +4996,24 @@
       "key": "hours.platform_enforced",
       "group": "launch",
       "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "hours.platform_switch",
+      "group": "launch",
+      "kind": "choice",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -20511,6 +20529,24 @@
     {
       "name": "TestPH_OpenScheduleAdmitsOrder",
       "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPlatformSwitch_ClosedBlocksInsideSchedule",
+      "file": "internal/qa/platform_switch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPlatformSwitch_OpenAdmitsOutsideSchedule",
+      "file": "internal/qa/platform_switch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPlatformSwitch_ScheduleFollowsHours",
+      "file": "internal/qa/platform_switch_test.go",
       "package": "qa",
       "orphan": true
     },

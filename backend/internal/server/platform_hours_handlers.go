@@ -40,6 +40,8 @@ func (s *Server) handleGetPlatformHours(w http.ResponseWriter, r *http.Request) 
 		// يُقرأ سارياً إن لم يُقَل**، **فيظنّ المالكُ أنّه أغلق الليلَ
 		// وهو مفتوح.**
 		"enforced": s.settings.GetBool(r.Context(), platform.EnforcedKey),
+		// **وزرُّ الدوام** — `open` · `closed` · `schedule` (٢٠٢٦-١٠-١٨).
+		"switch":   s.settings.GetString(r.Context(), platform.SwitchKey),
 		"timezone": platform.TZ,
 	})
 }

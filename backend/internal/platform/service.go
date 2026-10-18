@@ -30,6 +30,27 @@ import (
 // دفعات** — **ومن أدخل الأحدَ وحدَه أغلق ستّةَ أيّامٍ بلا أن يقصد.**
 const EnforcedKey = "hours.platform_enforced"
 
+// SwitchKey **زرُّ الدوام** (طلبُ المالك ٢٠٢٦-١٠-١٨: «زر واحد مثل المتجر والسائق
+// بالعمل وخارج العمل») — `open` فاتحين، `closed` مسكّرين، و`schedule` يتبع الجدول.
+//
+// **والزرُّ يسبق الجدول**: مسكّرٌ بالزرّ خارجَ الدوام ولو كان الجدولُ مفتوحاً،
+// **ومفتوحٌ بالزرّ مفتوحٌ ولو كان خارجَ الجدول.** والجدولُ يبقى محفوظاً لا يُمحى.
+const SwitchKey = "hours.platform_switch"
+
+// platformGate **قيدُ المنصّة الزمنيُّ كما يحكم الآن** — الزرُّ إن ضُغط، وإلّا الجدول.
+//
+// **ومسكّرٌ بالزرّ جدولٌ فارغٌ يسري**: لا فترةَ فيه فلا يُفتح، **ولا موعدَ فتحٍ
+// يُخترَع** — فيقرأ الزبونُ «خارج أوقات الدوام» نفسَها بلا ساعةٍ لا يفي بها أحد.
+func (s *Service) platformGate(ctx context.Context, sch Schedule) (bool, Schedule) {
+	switch s.settings.GetString(ctx, SwitchKey) {
+	case "open":
+		return false, sch
+	case "closed":
+		return true, Schedule{}
+	}
+	return s.settings.GetBool(ctx, EnforcedKey), sch
+}
+
 // ClosedTextKey **نصُّ «خارج الدوام» بكلام المالك** (طلبُه ٢٠٢٦-١٠-١٧: «ماخذة مساحة كبيرة») —
 // **فارغُه يُبقي نصَّ التطبيق.** والتطبيقُ يقدّم نصَّ المحرّك على نصّه (`ServiceReason.text`)،
 // **فيُقصَّر بلا نسخةٍ جديدة.**
@@ -58,6 +79,7 @@ var ErrBadSchedule = httpx.NewError(http.StatusBadRequest,
 // تستطيع أن تفعل كلَّ شيء.**
 type Settings interface {
 	GetBool(ctx context.Context, key string) bool
+	GetString(ctx context.Context, key string) string
 }
 
 // Service **دوامُ المنصّة وإيقافُها — قراءةً وضبطاً.**
@@ -133,7 +155,8 @@ func (s *Service) State(ctx context.Context, q dbtx.Querier) (State, error) {
 	if err != nil {
 		return State{}, err
 	}
-	return WithClosedText(Decide(s.now(), s.settings.GetBool(ctx, EnforcedKey), sch, c), s.closedText(ctx)), nil
+	enforced, gate := s.platformGate(ctx, sch)
+	return WithClosedText(Decide(s.now(), enforced, gate, c), s.closedText(ctx)), nil
 }
 
 // WithClosedText **نصُّ المالك لخارج الدوام وحدَه** — لا يمسّ الإيقافَ المؤقّت (له نصُّه)

@@ -37,6 +37,7 @@ import {
   LoadingState,
 } from "@rahalgo/ui";
 import WeekHours, { type Win } from "./WeekHours";
+import PlatformSwitch from "./PlatformSwitch";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -182,6 +183,8 @@ export default function HoursPanel() {
   return (
     <div className="space-y-4">
       {error && <Alert>{error}</Alert>}
+
+      <PlatformSwitch />
 
       <Card>
         <div className="space-y-3 p-4">

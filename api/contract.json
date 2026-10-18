@@ -4236,6 +4236,10 @@
           "type": "unknown"
         },
         {
+          "name": "switch",
+          "type": "unknown"
+        },
+        {
           "name": "timezone",
           "type": "unknown"
         },

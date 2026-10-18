@@ -227,7 +227,8 @@ func (s *Service) NextOrderingAt(ctx context.Context, q dbtx.Querier, zoneID str
 	if err != nil {
 		return nil, err
 	}
-	return NextBothOpen(s.now(), s.settings.GetBool(ctx, EnforcedKey), pSch, c, zEnforced, zSch), nil
+	pEnforced, pGate := s.platformGate(ctx, pSch)
+	return NextBothOpen(s.now(), pEnforced, pGate, c, zEnforced, zSch), nil
 }
 
 // Gate **قيدٌ زمنيٌّ واحد** — جدولٌ ورايةُ سريانه.
@@ -335,9 +336,10 @@ func (s *Service) Snapshot(ctx context.Context, q dbtx.Querier, zoneID string) (
 	if err != nil {
 		return Snapshot{}, err
 	}
+	pEnforced, pGate := s.platformGate(ctx, pSch)
 	return Snapshot{
 		Closure:  c,
-		Platform: Gate{Enforced: s.settings.GetBool(ctx, EnforcedKey), Sch: pSch},
+		Platform: Gate{Enforced: pEnforced, Sch: pGate},
 		Zone:     Gate{Enforced: zEnforced, Sch: zSch},
 		Now:      s.now(),
 	}, nil

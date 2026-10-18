@@ -56,6 +56,7 @@ import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import ContactTestAlert from "@/components/admin/settings/contact-check";
 import SiteStatsSection from "@/components/admin/SiteStatsSection";
+import PlatformSwitch from "@/components/admin/settings/PlatformSwitch";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.home;
@@ -349,6 +350,8 @@ export default function DashboardPage() {
       </div>
       {error && <Alert tone="warning">{H.refreshFailed}</Alert>}
       {data.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
+      {/* **زرُّ الدوام أوّلَ اللوحة** — فاتحين أو مسكّرين بضغطة (طلبُ المالك ٢٠٢٦-١٠-١٨). */}
+      <PlatformSwitch />
       {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
       <ContactTestAlert />
 

@@ -146,6 +146,7 @@ var placeRules = []placeRule{
 	{prefix: "launch.notice", exact: true, topic: TopicLaunch, panel: "appStatus"},
 	{prefix: "launch.", topic: TopicLaunch, section: "launch.gates"},
 	{prefix: "hours.platform_enforced", exact: true, topic: TopicLaunch, panel: "hours"},
+	{prefix: "hours.platform_switch", exact: true, topic: TopicLaunch, panel: "hours"},
 	{prefix: "hours.", topic: TopicLaunch, section: "launch.ops"},
 	{prefix: "platform.orders_mode", exact: true, topic: TopicLaunch, section: "launch.ops"},
 	{prefix: "ops.", topic: TopicLaunch, section: "launch.ops"},

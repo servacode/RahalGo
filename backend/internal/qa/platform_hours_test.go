@@ -95,6 +95,7 @@ func ordersOpen(t *testing.T, h *Harness) {
 	closure(t, h, false, "", nil)
 	setHours(t, h)
 	h.Setting(platform.EnforcedKey, "false")
+	h.Setting(platform.SwitchKey, `"schedule"`)
 }
 
 // phCustomBody طلبٌ مخصَّصٌ صالح.
