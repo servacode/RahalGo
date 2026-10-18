@@ -8,13 +8,24 @@
  *
  * **بطاقةٌ لكلّ متجر**: أصنافُه وما يتوفّر منها وما أُضيف حديثاً وما بلا صورة،
  * **وعلامةٌ إن لم يضبط دوامَه** — وكلُّ بطاقةٍ تفتح صفحتَه.
+ *
+ * **وزرُّ «متجر مميّز» على البطاقة نفسِها** (طلبُ المالك ٢٠٢٦-١٠-١٨) — ضغطةٌ
+ * واحدةٌ تميّزه أو تشيل تمييزَه، بلا فتح نافذة التعديل.
  */
 
 import { useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtNum, fmtStoreNo } from "@rahalgo/i18n";
 import {
+  getMessages,
+  defaultLocale,
+  fmtNum,
+  fmtStoreNo,
+  errorText,
+} from "@rahalgo/i18n";
+import {
+  Alert,
   Badge,
+  Button,
   Input,
   Pagination,
   EmptyState,
@@ -49,11 +60,33 @@ export default function StoresTab() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const query = new URLSearchParams({ q, page: String(page) }).toString();
-  const { data } = useLiveData<{ stores: MarketStore[]; total: number; per_page: number }>(
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const { data, reload } = useLiveData<{
+    stores: MarketStore[];
+    total: number;
+    per_page: number;
+  }>(
     () => api(`/api/v1/admin/market/stores?${query}`),
     ["menu", "catalog"],
     [query],
   );
+
+  async function toggleFeatured(s: MarketStore) {
+    setBusy(s.id);
+    setError("");
+    try {
+      await api(`/api/v1/admin/merchants/${s.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ featured: !s.featured }),
+      });
+      reload();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy("");
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -65,6 +98,7 @@ export default function StoresTab() {
           setPage(1);
         }}
       />
+      {error && <Alert tone="error">{error}</Alert>}
       {!data ? (
         <LoadingState />
       ) : data.stores.length === 0 ? (
@@ -72,54 +106,90 @@ export default function StoresTab() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {data.stores.map((s) => (
-            <Link
+            <div
               key={s.id}
-              href={`/dashboard/merchants/${s.id}`}
               className="surface flex items-center gap-3 p-3 transition-shadow hover:elev-2"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-field">
-                {s.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={mediaUrl(s.logo_url) ?? ""} alt={s.name} className="h-full w-full object-cover" />
-                ) : (
-                  <IconStore size={20} />
-                )}
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="truncate font-bold">
-                  {s.name}{" "}
-                  <span className="text-xs font-normal text-ink-muted">{fmtStoreNo(s.number)}</span>
-                </p>
-                <p className="text-xs text-ink-muted">
-                  {T.items.replace("{n}", fmtNum(s.items))}
-                  {" · "}
-                  {T.live.replace("{n}", fmtNum(s.live_items))}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant={s.status === "active" ? "success" : "neutral"}>
-                    {(m.admin.merchants as unknown as Record<string, string>)[s.status] ?? s.status}
-                  </Badge>
-                  {s.emergency_closed && <Badge variant="danger">{T.emergency}</Badge>}
-                  {s.featured && (
-                    <Badge variant="accent">{`${m.admin.merchants.featuredBadge} · ${fmtNum(s.featured_order ?? 0)}`}</Badge>
+              <Link
+                href={`/dashboard/merchants/${s.id}`}
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-field">
+                  {s.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={mediaUrl(s.logo_url) ?? ""}
+                      alt={s.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <IconStore size={20} />
                   )}
-                  {s.new_items > 0 && (
-                    <Badge variant="accent">{T.newItems.replace("{n}", fmtNum(s.new_items))}</Badge>
-                  )}
-                  {s.no_image_items > 0 && (
-                    <Badge variant="warning">
-                      {T.noImageItems.replace("{n}", fmtNum(s.no_image_items))}
-                    </Badge>
-                  )}
-                  {!s.has_hours && <Badge variant="warning">{T.noHours}</Badge>}
                 </div>
-              </div>
-            </Link>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate font-bold">
+                    {s.name}{" "}
+                    <span className="text-xs font-normal text-ink-muted">
+                      {fmtStoreNo(s.number)}
+                    </span>
+                  </p>
+                  <p className="text-xs text-ink-muted">
+                    {T.items.replace("{n}", fmtNum(s.items))}
+                    {" · "}
+                    {T.live.replace("{n}", fmtNum(s.live_items))}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge
+                      variant={s.status === "active" ? "success" : "neutral"}
+                    >
+                      {(m.admin.merchants as unknown as Record<string, string>)[
+                        s.status
+                      ] ?? s.status}
+                    </Badge>
+                    {s.emergency_closed && (
+                      <Badge variant="danger">{T.emergency}</Badge>
+                    )}
+                    {s.featured && (
+                      <Badge variant="accent">{`${m.admin.merchants.featuredBadge} · ${fmtNum(s.featured_order ?? 0)}`}</Badge>
+                    )}
+                    {s.new_items > 0 && (
+                      <Badge variant="accent">
+                        {T.newItems.replace("{n}", fmtNum(s.new_items))}
+                      </Badge>
+                    )}
+                    {s.no_image_items > 0 && (
+                      <Badge variant="warning">
+                        {T.noImageItems.replace(
+                          "{n}",
+                          fmtNum(s.no_image_items),
+                        )}
+                      </Badge>
+                    )}
+                    {!s.has_hours && (
+                      <Badge variant="warning">{T.noHours}</Badge>
+                    )}
+                  </div>
+                </div>
+              </Link>
+              <Button
+                variant={s.featured ? "secondary" : "primary"}
+                disabled={busy === s.id}
+                onClick={() => toggleFeatured(s)}
+                className="shrink-0"
+              >
+                {s.featured ? T.unfeature : T.makeFeatured}
+              </Button>
+            </div>
           ))}
         </div>
       )}
       {data && (
-        <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+        <Pagination
+          page={page}
+          total={data.total}
+          perPage={data.per_page}
+          onChange={setPage}
+        />
       )}
     </div>
   );
