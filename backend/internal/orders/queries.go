@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"net/http"
 	"strconv"
 	"strings"
@@ -144,7 +145,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.CustomReservedAmount, &o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 		&o.CustomMode, &o.CustomGoodsPending, &o.DriverFee,
 		&o.MerchantID, &o.MerchantName,
-		&o.PartnerMerchantID, &o.PartnerMerchantName, &o.PartnerCommissionPercent, &o.CustomStorePaid,
+		&o.PartnerMerchantID, &o.PartnerMerchantName, &o.PartnerCommission, &o.CustomStorePaid,
 		&o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,
@@ -166,6 +167,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	}
 	// أصنافٌ لا تُفكّ لا تُسقط الطلب: البطاقة تعرض ما بقي وتُخفي القائمة وحدها.
 	_ = json.Unmarshal(items, &o.Items)
+	// **والنسبةُ الصحيحةُ للعرض القديم من الدقيقة** — لا تُقرأ مرّتين.
+	o.PartnerCommissionPercent = pricing.RoundedPtr(o.PartnerCommission)
 	// بادئة "/media/" تُضاف هنا مرّة واحدة لكل قارئ للطلبات (زبون/متجر/إدارة/سائق)
 	// بدل أن يتذكّرها كل معالِج على حدة — ونسيانُها يعني صورةً لا تظهر.
 	o.MerchantLogoThumb = media.URLForPtr(o.MerchantLogoThumb)

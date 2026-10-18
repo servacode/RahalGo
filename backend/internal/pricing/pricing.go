@@ -54,6 +54,11 @@ type Store interface {
 	GetString(ctx context.Context, key string) string
 	GetInt(ctx context.Context, key string) int64
 
+	// GetHundredths **نسبةٌ بمنزلتين بأجزاء المئة** — `1.5` تُقرأ `150`.
+	//
+	// **و`GetInt` تبتر `1.5` إلى `1`** — فعمولةُ المنصّة لا تُقرأ بها.
+	GetHundredths(ctx context.Context, key string) int64
+
 	// GetBool **مفتاحٌ يُشعَل ويُطفأ** — يلزم لأجرة المسافة.
 	GetBool(ctx context.Context, key string) bool
 }
@@ -105,10 +110,25 @@ func (r MarginRule) SalePrice(merchantPrice int64, itemOverride, categoryOverrid
 
 // Amount مبلغٌ يُشتقّ من أساس — **نسبةً منه أو رقماً مقطوعاً بدلَه.**
 type Amount struct {
-	// Mode "percent" أو "fixed".
+	// Mode "percent" أو "fixed" أو `ModePercent2`.
 	Mode string
-	// Value النسبةُ المئوية، أو المبلغُ المقطوع بالليرة.
+	// Value النسبةُ المئوية، أو المبلغُ المقطوع بالليرة — **أو أجزاءُ المئة
+	// من الواحد بالمئة في `ModePercent2`** (`150` = ١٫٥٪).
 	Value int64
+}
+
+// ModePercent2 **نسبةٌ بمنزلتين** — `Value` بأجزاء المئة (قرارُ المالك ٢٠٢٦-١٠-١٨).
+//
+// **وعمولةُ المنصّة من المتاجر وحدَها بهذا النمط** — وعمولةُ المندوب باقيةٌ
+// نسبةً صحيحة.
+const ModePercent2 = "percent2"
+
+// Percent **النسبةُ بمنزلتين أيّاً كان النمط** — للعرض.
+func (a Amount) Percent() Percent2 {
+	if a.Mode == ModePercent2 {
+		return Percent2(a.Value)
+	}
+	return Pct(a.Value)
 }
 
 // Of يحسب المبلغ من أساسه.
@@ -121,9 +141,13 @@ func (a Amount) Of(base int64) int64 {
 		return 0
 	}
 	var v int64
-	if a.Mode == "fixed" {
+	switch a.Mode {
+	case "fixed":
 		v = a.Value
-	} else {
+	case ModePercent2:
+		// **والبترُ نفسُه** — `ثمن × ١٠٠٠ ÷ ١٠٠٠٠` يساوي `ثمن × ١٠ ÷ ١٠٠` ليرةً بليرة.
+		v = base * a.Value / 10000
+	default:
 		v = base * a.Value / 100
 	}
 	if v < 0 {
@@ -140,17 +164,20 @@ func (a Amount) Of(base int64) int64 {
 // **والمتجرُ قد يُخصّ بنسبةٍ غير العامّة** (`merchants.commission_percent`
 // في صفّه): تجاوزٌ مثلُ تجاوز هامش الصنف — **وفراغُه «اتبع العام» لا «بلا
 // عمولة».** ومن خلط بينهما جعل كلَّ متجرٍ لم يُلمس بلا عمولة.
-func MerchantCommission(ctx context.Context, st Store, override *int64) Amount {
+//
+// **والنسبةُ بمنزلتين** (`Percent2`، قرارُ المالك ٢٠٢٦-١٠-١٨) — ١٫٥٪ تُحسب
+// ١٫٥٪ لا ١٪ ولا ٢٪.
+func MerchantCommission(ctx context.Context, st Store, override *Percent2) Amount {
 	if override != nil {
-		return Amount{Mode: "percent", Value: *override}
+		return Amount{Mode: ModePercent2, Value: int64(*override)}
 	}
 	// **نسبةٌ لا نمط.** كانت نمطاً وقيمةً (نسبةٌ أو مقطوع)، **ومقطوعٌ من متجرٍ
 	// صغيرٍ يبيع بعشرة آلافٍ غيرُ مقطوعٍ من متجرٍ يبيع بمئة** — والنسبةُ تتبع
 	// حجمَه وحدَها. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «نسبةُ عمولة المنصة».)
 	if st == nil {
-		return Amount{Mode: "percent"}
+		return Amount{Mode: ModePercent2}
 	}
-	return Amount{Mode: "percent", Value: st.GetInt(ctx, "merchants.commission_percent")}
+	return Amount{Mode: ModePercent2, Value: st.GetHundredths(ctx, "merchants.commission_percent")}
 }
 
 // RepCommission نسبةُ المندوب من عمولة المنصة — **حصّةٌ من حصّتنا لا من البيع.**

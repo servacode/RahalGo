@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"net/http"
 	"strconv"
 
@@ -79,10 +81,14 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// **والنسبةُ العامّةُ معها** — «١٠٪ (عام)» لا «٠٪» حين لا نسبةَ خاصّة (قرارُ المالك ٢٠٢٦-١٠-٠٤).
+	//
+	// **وبمنزلتين** (٢٠٢٦-١٠-١٨): `GetInt` كانت تبتر ١٫٥ إلى ١ — والصحيحةُ مقرَّبةٌ للعرض القديم.
+	general := s.generalCommission(r.Context())
 	httpx.JSON(w, http.StatusOK, struct {
 		*catalog.MerchantPage
-		General int64 `json:"general_commission_percent"`
-	}{res, s.settings.GetInt(r.Context(), "merchants.commission_percent")})
+		General      int64            `json:"general_commission_percent"`
+		GeneralExact pricing.Percent2 `json:"general_commission_percent_exact"`
+	}{res, general.RoundedPercent(), general})
 }
 
 func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
@@ -212,8 +218,15 @@ func (s *Server) handleAdminGetMerchant(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	general := s.generalCommission(r.Context())
 	httpx.JSON(w, http.StatusOK, struct {
 		*catalog.Merchant
-		General int64 `json:"general_commission_percent"`
-	}{mr, s.settings.GetInt(r.Context(), "merchants.commission_percent")})
+		General      int64            `json:"general_commission_percent"`
+		GeneralExact pricing.Percent2 `json:"general_commission_percent_exact"`
+	}{mr, general.RoundedPercent(), general})
+}
+
+// generalCommission **عمولةُ المنصّة العامّةُ بمنزلتين** — من المصدر الذي تحسب به التسوية.
+func (s *Server) generalCommission(ctx context.Context) pricing.Percent2 {
+	return pricing.MerchantCommission(ctx, s.settings, nil).Percent()
 }

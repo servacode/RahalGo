@@ -3,6 +3,7 @@ package orders
 import (
 	"encoding/json"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"net/http"
 	"time"
 
@@ -236,7 +237,12 @@ type Order struct {
 	PartnerMerchantID   string `json:"partner_merchant_id"`
 	PartnerMerchantName string `json:"partner_merchant_name"`
 	// PartnerCommissionPercent **نسبتُه ملقوطةً لحظةَ الربط** — للمكتب وحدَه.
+	//
+	// **عددٌ صحيحٌ مقرَّبٌ للعرض القديم**، والدقيقةُ في `partner_commission_percent_exact`
+	// (قرارُ المالك ٢٠٢٦-١٠-١٨: نسبٌ بمنزلتين).
 	PartnerCommissionPercent *int64 `json:"partner_commission_percent"`
+	// PartnerCommission **النسبةُ بمنزلتين** (١٫٥) — ومنها يُحسب.
+	PartnerCommission *pricing.Percent2 `json:"partner_commission_percent_exact"`
 	// CustomStorePaid **ما دفعه السائقُ للمتجر عن المشتريات** — يُكتب عند التسليم، للمكتب وحدَه.
 	CustomStorePaid *int64 `json:"custom_store_paid"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
@@ -329,9 +335,12 @@ type Order struct {
 	PlatformCommission int64 `json:"platform_commission,omitempty"`
 	// **صافي المتجر** — `subtotal - commission`. **ويُحسب في المحرّك
 	// لا في التطبيق**: أربعةُ تطبيقاتٍ تحسبه أربعَ مرّاتٍ وتختلف.
-	MerchantNet   int64 `json:"merchant_net,omitempty"`
-	CommissionPct int   `json:"commission_percent,omitempty"`
-	CashDue       int64 `json:"cash_due"`
+	MerchantNet int64 `json:"merchant_net,omitempty"`
+	// CommissionPct **عددٌ صحيحٌ مقرَّبٌ نصفيّاً** — تطبيقُ المتجر القديم يفكّه `Int`
+	// فيسقط على `1.5`. **والدقيقةُ في `commission_percent_exact`** (٢٠٢٦-١٠-١٨).
+	CommissionPct   int               `json:"commission_percent,omitempty"`
+	CommissionExact *pricing.Percent2 `json:"commission_percent_exact,omitempty"`
+	CashDue         int64             `json:"cash_due"`
 	// PayMerchant **ما يدفعه السائقُ للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 	// مجموعُ `PayMerchants`. **للسائق والإدارة وحدَهما** (`privacy_contract.go`).
 	PayMerchant int64 `json:"pay_merchant,omitempty"`

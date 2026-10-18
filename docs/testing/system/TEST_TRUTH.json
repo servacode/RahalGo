@@ -32,9 +32,9 @@
     ],
     "setting_defs": 248,
     "behaviour_settings": 203,
-    "order_fields": 109,
-    "test_files": 605,
-    "test_funcs": 2423
+    "order_fields": 111,
+    "test_files": 610,
+    "test_funcs": 2433
   },
   "flows": [
     {
@@ -5308,7 +5308,7 @@
     {
       "key": "merchants.commission_percent",
       "group": "merchants",
-      "kind": "int",
+      "kind": "decimal",
       "sensitive": true,
       "money": true,
       "flows": [
@@ -10194,6 +10194,24 @@
       "orphan": true
     },
     {
+      "name": "TestOpen24hHelper",
+      "file": "internal/orders/hours_24h_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOpen24h_AtEveryHour",
+      "file": "internal/orders/hours_24h_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOpen24h_NoOpensAtWhileOpen",
+      "file": "internal/orders/hours_24h_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestNextOpen",
       "file": "internal/orders/hours_test.go",
       "package": "orders_test",
@@ -11476,6 +11494,18 @@
     {
       "name": "TestMerchantCommission_OverrideBeatsGlobal",
       "file": "internal/pricing/money_rules_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPercent2_CommissionTruncatesLikeBefore",
+      "file": "internal/pricing/percent2_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPercent2_ParseAndPrint",
+      "file": "internal/pricing/percent2_test.go",
       "package": "pricing_test",
       "orphan": true
     },
@@ -13780,6 +13810,24 @@
     {
       "name": "TestCOD14_RejectedLeavesNothing",
       "file": "internal/qa/cod_limit_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCommission2_GlobalOnePointFive",
+      "file": "internal/qa/commission_decimal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCommission2_IntegerUnchanged",
+      "file": "internal/qa/commission_decimal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCommission2_MerchantOverride",
+      "file": "internal/qa/commission_decimal_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -17113,6 +17161,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestHours24h_API",
+      "file": "internal/qa/hours_24h_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestIDEM_AllProtectedPathsUseCoordinator",
@@ -28878,6 +28932,12 @@
       "name": "TestValidate_TextLengthInRunes",
       "file": "internal/settings/catalog_test.go",
       "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestCommissionPercentAcceptsTwoDecimals",
+      "file": "internal/settings/decimal_kind_test.go",
+      "package": "settings_test",
       "orphan": true
     },
     {

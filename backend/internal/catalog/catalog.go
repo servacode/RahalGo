@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"net/http"
 	"strings"
 	"time"
@@ -93,8 +94,12 @@ type Merchant struct {
 	//
 	// كان رقماً دائماً يُنسخ لحظةَ الإنشاء، **فتغييرُ المفتاح لا يمسّ متجراً
 	// قائماً.** (الترحيل ٠٠٦٧.)
-	CommissionPct   *int64 `json:"commission_percent"`
-	EmergencyClosed bool   `json:"emergency_closed"`
+	//
+	// **عددٌ صحيحٌ مقرَّبٌ نصفيّاً للعرض القديم** — والدقيقةُ بمنزلتين في
+	// `commission_percent_exact` (قرارُ المالك ٢٠٢٦-١٠-١٨: «١٫٥٪»).
+	CommissionPct   *int64            `json:"commission_percent"`
+	CommissionExact *pricing.Percent2 `json:"commission_percent_exact"`
+	EmergencyClosed bool              `json:"emergency_closed"`
 	// AcceptsReturns أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — **وعليه يظهر زرُّ
 	// «رُدّت إلى المتجر» في شاشة العمليات.**
 	AcceptsReturns bool `json:"accepts_returns"`
@@ -107,6 +112,25 @@ type Merchant struct {
 	CreatedAt time.Time `json:"created_at"`
 	// SettlementMethod طريقةُ تسويةِ مستحقّاتِ المتجر — `cash|wallet` (الأدمن وحدَه يغيّرها).
 	SettlementMethod string `json:"settlement_method"`
+}
+
+// ErrBadCommission **نسبةُ عمولةٍ خارجَ ٠–١٠٠ أو بأكثرَ من منزلتين.**
+//
+// **وكانت تسقط على قيد القاعدة بخطأٍ داخليّ** — والمالكُ لا يعرف أنّ العلّةَ في رقمه.
+var ErrBadCommission = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+// validCommission **من ٠ إلى ١٠٠ بمنزلتين** — و`-1` تمحو التجاوز في التعديل وحدَه.
+func validCommission(p *pricing.Percent2, allowClear bool) error {
+	if p == nil {
+		return nil
+	}
+	if allowClear && *p == pricing.Pct(-1) {
+		return nil
+	}
+	if *p < 0 || *p > pricing.Pct(100) {
+		return ErrBadCommission
+	}
+	return nil
 }
 
 type MerchantPage struct {
@@ -313,13 +337,14 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	err := row.Scan(&m.ID, &m.Number, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
-		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
+		&m.Status, &m.Violations, &m.CommissionExact, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
 		&m.SettlementMethod)
 	if err != nil {
 		return nil, err
 	}
 	m.LogoURL = media.URLForPtr(m.LogoURL)
 	m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
+	m.CommissionPct = pricing.RoundedPtr(m.CommissionExact)
 	return &m, nil
 }
 
@@ -394,8 +419,10 @@ type MerchantInput struct {
 	Status      *string `json:"status"`
 	// CommissionPct تجاوزُ عمولة هذا المتجر — **وسالبُ الواحدِ يمحوه**
 	// فيعود إلى `merchants.commission_value` العامّ.
-	CommissionPct   *int64 `json:"commission_percent"`
-	EmergencyClosed *bool  `json:"emergency_closed"`
+	//
+	// **وبمنزلتين** (`1.5`، قرارُ المالك ٢٠٢٦-١٠-١٨) — و`1.555` تُردّ عند الفكّ.
+	CommissionPct   *pricing.Percent2 `json:"commission_percent"`
+	EmergencyClosed *bool             `json:"emergency_closed"`
 	// AcceptsReturns أيستردّ هذا المتجرُ بضاعةَ طلبٍ تعذّر تسليمُه.
 	//
 	// **بندٌ في الاتّفاق معه لا رأيٌ يُبديه ساعتَها** — وعليه يظهر زرُّ «رُدّت
@@ -482,6 +509,9 @@ func (s *Service) CreateMerchantTx(ctx context.Context, q dbtx.Querier,
 	actorID string, in MerchantInput, ip string) (string, error) {
 	if in.Name == nil || *in.Name == "" || in.CategoryID == nil {
 		return "", ErrNameRequired
+	}
+	if err := validCommission(in.CommissionPct, false); err != nil {
+		return "", err
 	}
 	if err := requirePoint(in.Lat, in.Lng); err != nil {
 		return "", err
@@ -579,6 +609,9 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 	if in.Name == nil || *in.Name == "" || in.CategoryID == nil {
 		return nil, ErrNameRequired
 	}
+	if err := validCommission(in.CommissionPct, false); err != nil {
+		return nil, err
+	}
 	// **ويُفحص هنا لا في الواجهة** — الإنشاءُ يقع من لوحة الإدارة ومن
 	// شاشة المندوب معاً، **وحارسٌ في واجهةٍ واحدةٍ يُلتفّ عليه من
 	// الأخرى.**
@@ -667,6 +700,9 @@ var ErrMerchantBanLocked = httpx.NewError(http.StatusConflict,
 	"merchant_ban_locked", "errors.merchant_ban_locked")
 
 func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in MerchantInput, ip string) (*Merchant, error) {
+	if err := validCommission(in.CommissionPct, true); err != nil {
+		return nil, err
+	}
 	// `suspended` تُقبل هنا للأدمن، ولها نقطتُها الخاصّة (merchant_violations.go)
 	// التي تُسجّل السبب. **وقبولُها هنا يمنع حالةً لا تُرفع إلا بجراحةٍ في
 	// القاعدة** لو أُغفلت.
@@ -746,9 +782,9 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			-- NULL. **فمن أراد أن يعيد متجراً إلى العمولة العامّة لم يملك
 			-- سبيلاً**: كلُّ إرسالٍ يُقرأ «بلا تغيير»، فيبقى رقمُه القديم
 			-- يحكمه **بينما يظنّ المالكُ أنّ المفتاحَ العامَّ يحكمه.**
-			commission_percent = CASE WHEN $13::bigint IS NULL THEN commission_percent
-			                          WHEN $13 < 0 THEN NULL
-			                          ELSE $13 END,
+			commission_percent = CASE WHEN $13::numeric IS NULL THEN commission_percent
+			                          WHEN $13::numeric < 0 THEN NULL
+			                          ELSE $13::numeric END,
 			emergency_closed = COALESCE($8, emergency_closed),
 			accepts_returns = COALESCE($15, accepts_returns),
 			-- **واختيارُ الاسترداد من اللوحة تأكيدٌ بعد سؤال المتجر** (٢٠٢٦-١٠-٠٨).

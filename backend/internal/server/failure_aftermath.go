@@ -393,11 +393,11 @@ func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request)
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
 	var status string
-	var snapPct *int64
+	var snapPct *pricing.Percent2
 	var settled *string
 	var subtotal int64
 	// **تجاوزُ المتجر** — وفراغُه «اتبع العامّ».
-	var merchantPct *int64
+	var merchantPct *pricing.Percent2
 	var ownerID *string
 	// **القفل داخل المعاملة**: ضغطتان متزامنتان تدفعان للمتجر مرّتين لولاه.
 	if err := tx.QueryRow(r.Context(), `

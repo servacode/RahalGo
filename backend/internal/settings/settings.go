@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -129,6 +130,27 @@ func (s *Store) GetInt(ctx context.Context, key string) int64 {
 		return fallback
 	}
 	return int64(v)
+}
+
+// GetHundredths **نسبةٌ بمنزلتين بأجزاء المئة** — `1.5` تُقرأ `150`، و`10` تُقرأ `1000`.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-١٨: عمولةُ المنصّة ١٫٥٪.) **و`GetInt` تبتر `1.5`
+// إلى `1`** — فمفتاحٌ من نوع `KindDecimal` يُقرأ بهذه وحدَها.
+//
+// **والتقريبُ إلى أقرب جزءٍ آمن**: القيمةُ مُتحقَّقٌ منها عند الحفظ بمنزلتين،
+// **و`1.15 × 100` في الآلة `114.999…`** فيُقرَّب لا يُبتر.
+func (s *Store) GetHundredths(ctx context.Context, key string) int64 {
+	fallback := int64(0)
+	if def, known := Lookup(key); known {
+		if n, ok := toNumber(def.Default); ok {
+			fallback = int64(math.Round(n * 100))
+		}
+	}
+	var v float64
+	if err := s.Get(ctx, key, &v); err != nil {
+		return fallback
+	}
+	return int64(math.Round(v * 100))
 }
 
 // GetNum **جسرٌ إلى الحزم الدنيا يقبل العدديَّ والمنطقيَّ معاً.**

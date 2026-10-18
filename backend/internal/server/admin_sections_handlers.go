@@ -472,7 +472,11 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		// CommissionPct نسبةُ عمولة المنصة النافذة — **بعد الوراثة**:
 		// تجاوزُ المتجر إن كان، وإلّا العامّ. **ورقمُ الإعدادات وحدَه يكذب
 		// على متجرٍ اتُّفق معه على غيره.**
-		CommissionPct int `json:"commission_percent"`
+		//
+		// **عددٌ صحيحٌ مقرَّبٌ للعرض القديم**، والدقيقةُ بمنزلتين في
+		// `commission_percent_exact` (قرارُ المالك ٢٠٢٦-١٠-١٨).
+		CommissionPct   int              `json:"commission_percent"`
+		CommissionExact pricing.Percent2 `json:"commission_percent_exact"`
 		// CommissionMode «نسبة» أم «مقطوع» — **فلا تُكتب «٪» على رقمٍ بالليرة.**
 		CommissionMode string `json:"commission_mode"`
 		// Commission قيمةُ العمولة بالليرة — **تُقتطع من المتجر لا تُضاف للزبون.**
@@ -498,7 +502,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var x item
 		var sectionMargin *int64
-		var commOverride *int64
+		var commOverride *pricing.Percent2
 		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
 			&x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL,
 			&commOverride, &x.MarginOverride, &sectionMargin); err != nil {
@@ -510,8 +514,13 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 
 		// **والعمولةُ من `pricing` كالهامش** — نمطاً ووراثةً.
 		comm := pricing.MerchantCommission(r.Context(), s.settings, commOverride)
-		x.CommissionPct = int(comm.Value)
+		x.CommissionExact = comm.Percent()
+		x.CommissionPct = int(x.CommissionExact.RoundedPercent())
+		// **والنمطُ في العقد «percent»** — النسبةُ بمنزلتين نسبةٌ كذلك، والشاشةُ تكتب «٪».
 		x.CommissionMode = comm.Mode
+		if comm.Mode == pricing.ModePercent2 {
+			x.CommissionMode = "percent"
+		}
 		x.Commission = comm.Of(x.MerchantPrice)
 		x.MerchantNet = x.MerchantPrice - x.Commission
 

@@ -40,8 +40,8 @@ import (
 // **ولا يدخلها إعدادُ واجهةٍ ولا إشعارٍ ولا تشغيل** — **لقطةُ اقتصادٍ
 // لا مستودعُ إعدادات.**
 type EconomicsSnapshot struct {
-	// MerchantCommissionPercent نسبةُ عمولة المنصّة — `XG-25`.
-	MerchantCommissionPercent int64
+	// MerchantCommission نسبةُ عمولة المنصّة — `XG-25` — **بمنزلتين** (١٫٥٪).
+	MerchantCommission pricing.Percent2
 	// RepCommissionPercent نسبةُ المندوب — `XG-26`.
 	RepCommissionPercent int64
 	// CommissionSource مصدرُ احتساب عمولة المندوب — `XG-27`.
@@ -86,10 +86,11 @@ func (s *Service) snapshotNow(ctx context.Context, q dbtx.Querier) (EconomicsSna
 	// **ومن أوّل طلبٍ ناجح**. **ويُكتبان في اللقطة كما كانا** — فالتسويةُ
 	// تقرأ اللقطةَ لا الإعداد، **والطلباتُ القديمةُ تبقى على ما لُقط لها.**
 	return EconomicsSnapshot{
-		MerchantCommissionPercent: c.Int("merchants.commission_percent"),
-		RepCommissionPercent:      c.Int("sales.commission_percent"),
-		CommissionSource:          string(pricing.RepCommissionSourceFixed),
-		ActivationOrders:          ActivationFromFirstOrder,
+		// **وبـ`Hundredths` لا `Int`**: `1.5` تُفكّ في `int64` فتفشل فيُلقط الافتراضُ بصمت.
+		MerchantCommission:   pricing.Percent2(c.Hundredths("merchants.commission_percent")),
+		RepCommissionPercent: c.Int("sales.commission_percent"),
+		CommissionSource:     string(pricing.RepCommissionSourceFixed),
+		ActivationOrders:     ActivationFromFirstOrder,
 	}, nil
 }
 
@@ -99,7 +100,8 @@ func (s *Service) snapshotNow(ctx context.Context, q dbtx.Querier) (EconomicsSna
 // أو لا شيءَ منها، **فغيابُ واحدةٍ غيابُ اللقطة.**
 func (s *Service) snapshotOf(ctx context.Context, q wallet.Querier, orderID string) (EconomicsSnapshot, error) {
 	var snap EconomicsSnapshot
-	var mp, rp, act *int64
+	var mp *pricing.Percent2
+	var rp, act *int64
 	var src *string
 	if err := q.QueryRow(ctx, `
 		SELECT snap_merchant_commission_percent, snap_rep_commission_percent,
@@ -110,7 +112,7 @@ func (s *Service) snapshotOf(ctx context.Context, q wallet.Querier, orderID stri
 	if mp == nil || rp == nil || src == nil || act == nil {
 		return EconomicsSnapshot{}, ErrNoSnapshot
 	}
-	snap.MerchantCommissionPercent = *mp
+	snap.MerchantCommission = *mp
 	snap.RepCommissionPercent = *rp
 	snap.CommissionSource = *src
 	snap.ActivationOrders = *act
@@ -122,10 +124,10 @@ func (s *Service) snapshotOf(ctx context.Context, q wallet.Querier, orderID stri
 // **وتجاوزُ المتجر يغلب** — صفةٌ فيه لا إعدادٌ عامّ، **ولا تشيخ
 // بتبديل مفتاح.** **وحيث لا تجاوزَ تُقرأ نسبةُ اللقطة** لا نسبةُ
 // اليوم.
-func orderPct(override *int64, snap EconomicsSnapshot) *int64 {
+func orderPct(override *pricing.Percent2, snap EconomicsSnapshot) *pricing.Percent2 {
 	if override != nil {
 		return override
 	}
-	v := snap.MerchantCommissionPercent
+	v := snap.MerchantCommission
 	return &v
 }

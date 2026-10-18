@@ -7,6 +7,7 @@ package pricing_test
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/pricing"
@@ -24,6 +25,17 @@ func (f fakeStore) GetString(_ context.Context, key string) string {
 func (f fakeStore) GetInt(_ context.Context, key string) int64 {
 	if v, ok := f[key].(int64); ok {
 		return v
+	}
+	return 0
+}
+
+// GetHundredths **نسبةٌ بمنزلتين** — `int64` نسبةٌ صحيحة، و`float64` بكسرها (`1.5`).
+func (f fakeStore) GetHundredths(_ context.Context, key string) int64 {
+	switch v := f[key].(type) {
+	case int64:
+		return v * 100
+	case float64:
+		return int64(math.Round(v * 100))
 	}
 	return 0
 }
@@ -160,7 +172,7 @@ func TestCommissions_LiveOnEveryRead(t *testing.T) {
 func TestMerchantCommission_OverrideBeatsGlobal(t *testing.T) {
 	ctx := context.Background()
 	st := fakeStore{"merchants.commission_percent": int64(10)}
-	n := func(v int64) *int64 { return &v }
+	n := func(v int64) *pricing.Percent2 { p := pricing.Pct(v); return &p }
 
 	if got := pricing.MerchantCommission(ctx, st, n(2)).Of(100_000); got != 2_000 {
 		t.Fatalf("التجاوزُ ٢٪ أعطى %d والمنتظَر ٢٠٠٠", got)

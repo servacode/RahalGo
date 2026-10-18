@@ -249,7 +249,7 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
-		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
+		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, notes,
 		feeSource, feeSnap, feeMayChange).Scan(&id)
 	if err != nil {
@@ -445,7 +445,7 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
-		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
+		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, notes,
 		feeSource, feeSnap, feeMayChange).Scan(&id)
 	if err != nil {

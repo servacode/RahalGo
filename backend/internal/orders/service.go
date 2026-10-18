@@ -688,7 +688,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
-		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
+		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
 		deliveryWaived, platformPct, platformFixed, sourcesFee).Scan(&orderID)
 	if err != nil {

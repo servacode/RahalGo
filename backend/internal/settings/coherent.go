@@ -26,6 +26,7 @@ package settings
 import (
 	"context"
 	"encoding/json"
+	"math"
 )
 
 // Coherent قراءةُ مفاتيحَ في لحظةٍ واحدة.
@@ -76,6 +77,25 @@ func (c Coherent) Int(key string) int64 {
 			return n
 		case float64:
 			return int64(n)
+		}
+	}
+	return 0
+}
+
+// Hundredths **نسبةٌ بمنزلتين بأجزاء المئة** من القراءة المتماسكة — `1.5` ⇒ `150`.
+//
+// **و`Int` تُسقط `1.5` إلى الافتراض** (فكُّها في `int64` يفشل) — فعمولةٌ
+// ضُبطت ١٫٥٪ تُلقط عشرةً بصمت. فمفتاحُ `KindDecimal` يُقرأ بهذه.
+func (c Coherent) Hundredths(key string) int64 {
+	if raw, ok := c[key]; ok {
+		var v float64
+		if json.Unmarshal(raw, &v) == nil {
+			return int64(math.Round(v * 100))
+		}
+	}
+	if def, ok := Lookup(key); ok {
+		if n, ok := toNumber(def.Default); ok {
+			return int64(math.Round(n * 100))
 		}
 	}
 	return 0

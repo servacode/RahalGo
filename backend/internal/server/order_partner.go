@@ -44,8 +44,9 @@ func (s *Server) changePartner(w http.ResponseWriter, r *http.Request, merchantI
 		func(ctx context.Context, q dbtx.Querier, ch orders.PartnerChange) error {
 			return s.auditTx(ctx, q, r, action, "order", orderID, map[string]any{
 				"merchant_id": ch.MerchantID, "merchant_name": ch.MerchantName,
-				"commission_percent":   ch.CommissionPercent,
-				"previous_merchant_id": ch.PreviousMerchantID,
+				"commission_percent":       ch.Commission.RoundedPercent(),
+				"commission_percent_exact": ch.Commission,
+				"previous_merchant_id":     ch.PreviousMerchantID,
 			})
 		})
 	if err != nil {

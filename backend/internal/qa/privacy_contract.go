@@ -160,9 +160,11 @@ var OrderPrivacy = map[string]FieldRule{
 	"partner_merchant_id":        {Ref: "المتجرُ التابعُ في المشتريات (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"partner_merchant_name":      {Ref: "اسمُ المتجر التابع — السائقُ يشتري منه", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"partner_commission_percent": {Ref: "نسبةُ عمولة المتجر التابع — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"custom_store_paid":          {Ref: "ما دفعه السائقُ للمتجر عن المشتريات — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"merchant_net":               {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
-	"prep_minutes":               {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **والنسبةُ بمنزلتين** (قرارُ المالك ٢٠٢٦-١٠-١٨) — نظيرةُ المقرَّبة بحدودها نفسِها.
+	"partner_commission_percent_exact": {Ref: "نسبةُ عمولة المتجر التابع بمنزلتين — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"custom_store_paid":                {Ref: "ما دفعه السائقُ للمتجر عن المشتريات — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"merchant_net":                     {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	"prep_minutes":                     {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── السائق ────────────────────────────────────────────────────
 	"driver_id":       {Ref: "merchant_privacy.go:44 · MD-4", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
@@ -218,6 +220,9 @@ var OrderPrivacy = map[string]FieldRule{
 	// المنصّة جملةً.** **والمندوبُ يبقى ممنوعاً** (`XG-16`).
 	"platform_commission": {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما اقتُطع من طلبه · وRQ-7/XG-16 يمنعانه عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
 	"commission_percent":  {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — بأيّ نسبةٍ اقتُطع · وRQ-7 يمنعها عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	// **والنسبةُ بمنزلتين** (قرارُ المالك ٢٠٢٦-١٠-١٨: «١٫٥٪») — **و`commission_percent`
+	// تبقى عدداً صحيحاً مقرَّباً لتطبيق المتجر القديم**. والحدودُ نفسُها.
+	"commission_percent_exact": {Ref: "شفافيّةُ تسوية المتجر بمنزلتين (٢٠٢٦-١٠-١٨) — نظيرةُ commission_percent · وRQ-7 يمنعها عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
 
 	// ── الطلبُ الخاصّ ──────────────────────────────────────────────
 	// **«لدي توصيلة»** (الخطوة ١٨) — للسائق والإدارة، **وللمتجر في توصيلته وحدَها**

@@ -52,9 +52,10 @@ var (
 
 // PartnerChange **ما وقع في الربط** — للتدقيق.
 type PartnerChange struct {
-	MerchantID        string `json:"merchant_id"`
-	MerchantName      string `json:"merchant_name"`
-	CommissionPercent int64  `json:"commission_percent"`
+	MerchantID   string `json:"merchant_id"`
+	MerchantName string `json:"merchant_name"`
+	// Commission **النسبةُ الملقوطةُ بمنزلتين** (١٫٥٪) — قرارُ المالك ٢٠٢٦-١٠-١٨.
+	Commission pricing.Percent2 `json:"commission_percent_exact"`
 	// PreviousMerchantID **المتجرُ السابق** إن بُدّل أو فُكّ — وفراغٌ إن لم يكن.
 	PreviousMerchantID string `json:"previous_merchant_id"`
 }
@@ -111,9 +112,10 @@ func (s *Service) LinkPartner(ctx context.Context, actorID, orderID, merchantID 
 		}
 	} else {
 		var mstatus string
-		var override *int64
+		// **ولا `::bigint`** — كان يقرّب ١٫٥ إلى ٢ (٢٠٢٦-١٠-١٨).
+		var override *pricing.Percent2
 		err := tx.QueryRow(ctx, `
-			SELECT name, status, commission_percent::bigint FROM merchants
+			SELECT name, status, commission_percent FROM merchants
 			 WHERE id = $1`, merchantID).
 			Scan(&ch.MerchantName, &mstatus, &override)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -128,11 +130,11 @@ func (s *Service) LinkPartner(ctx context.Context, actorID, orderID, merchantID 
 		// **نسبةُ المتجر إن خُصّ بها، وإلّا العامّةُ** — ملقوطةً الآن، **فتعديلٌ لاحقٌ في
 		// المتجر أو في الإعداد العامّ لا يبدّل ما اتُّفق عليه في هذا الطلب.**
 		ch.MerchantID = merchantID
-		ch.CommissionPercent = pricing.MerchantCommission(ctx, s.settings, override).Value
+		ch.Commission = pricing.MerchantCommission(ctx, s.settings, override).Percent()
 		if _, err := tx.Exec(ctx, `
 			UPDATE orders SET partner_merchant_id = $2, partner_commission_percent = $3,
 			       partner_linked_at = now(), updated_at = now() WHERE id = $1`,
-			orderID, merchantID, ch.CommissionPercent); err != nil {
+			orderID, merchantID, ch.Commission); err != nil {
 			return nil, ch, err
 		}
 	}
@@ -161,7 +163,7 @@ func (s *Service) LinkPartner(ctx context.Context, actorID, orderID, merchantID 
 // الدفتر.** والأمانةُ وغيرُ الخاصّ صفران.
 func customStoreCut(ctx context.Context, q dbtx.Querier, orderID string) (storePaid, commission int64, err error) {
 	var goods int64
-	var pct *int64
+	var pct *pricing.Percent2
 	if err := q.QueryRow(ctx, `
 		SELECT CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
 		            THEN COALESCE(custom_goods_amount, 0) ELSE 0 END,
@@ -170,7 +172,7 @@ func customStoreCut(ctx context.Context, q dbtx.Querier, orderID string) (storeP
 		return 0, 0, err
 	}
 	if pct != nil {
-		commission = pricing.Amount{Mode: "percent", Value: *pct}.Of(goods)
+		commission = pricing.Amount{Mode: pricing.ModePercent2, Value: int64(*pct)}.Of(goods)
 	}
 	return goods - commission, commission, nil
 }

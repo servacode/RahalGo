@@ -24,6 +24,7 @@ package server
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -150,7 +151,11 @@ func (s *Server) qaRepMoneySet(w http.ResponseWriter, r *http.Request, key strin
 		httpx.JSON(w, http.StatusOK, map[string]any{"key": key, "previous": prev, "set": valueStr})
 		return
 	}
-	prev := s.settings.GetInt(ctx, key)
+	// **والسابقُ بمنزلتيه** — `GetInt` تبتر ١٫٥ إلى ١، **فيُعيد سكربتُ الاسترجاع غيرَ ما كان** (٢٠٢٦-١٠-١٨).
+	var prev any = s.settings.GetInt(ctx, key)
+	if key == "merchants.commission_percent" {
+		prev = pricing.Percent2(s.settings.GetHundredths(ctx, key))
+	}
 	if err := s.settings.Set(ctx, key, int(valueInt), nil); err != nil {
 		s.respondErr(w, err)
 		return

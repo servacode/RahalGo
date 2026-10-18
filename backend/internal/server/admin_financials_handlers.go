@@ -17,6 +17,8 @@ import (
 type finRate struct {
 	Label   string `json:"label"`
 	Percent int    `json:"percent"`
+	// PercentExact **النسبةُ بمنزلتين** (١٫٥) — و`percent` مقرَّبةٌ للعرض القديم (٢٠٢٦-١٠-١٨).
+	PercentExact pricing.Percent2 `json:"percent_exact"`
 }
 
 type finEntry struct {
@@ -199,7 +201,8 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 	if has("sales") {
 		rep := pricing.RepCommission(ctx, s.settings)
 		out.Rates = append(out.Rates, finRate{
-			Label: "نسبة عمولة المندوب من عمولة المنصة", Percent: int(rep.Value)})
+			Label: "نسبة عمولة المندوب من عمولة المنصة", Percent: int(rep.Value),
+			PercentExact: rep.Percent()})
 	}
 	if has("merchant") {
 		rows, err := s.pg.Query(ctx,
@@ -207,11 +210,12 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		if err == nil {
 			for rows.Next() {
 				var name string
-				var override *int64
+				var override *pricing.Percent2
 				if rows.Scan(&name, &override) == nil {
-					rate := pricing.MerchantCommission(ctx, s.settings, override)
+					rate := pricing.MerchantCommission(ctx, s.settings, override).Percent()
 					out.Rates = append(out.Rates, finRate{
-						Label: "عمولة المنصة على " + name, Percent: int(rate.Value)})
+						Label: "عمولة المنصة على " + name, Percent: int(rate.RoundedPercent()),
+						PercentExact: rate})
 				}
 			}
 			rows.Close()

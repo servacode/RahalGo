@@ -1221,7 +1221,7 @@ func (s *Service) merchantShares(ctx context.Context, q wallet.Querier, orderID 
 	for rows.Next() {
 		var merchantID string
 		// **وعمودُ العمولة تجاوزٌ لا نسخة** — فراغُه «اتبع العامّ».
-		var pct *int64
+		var pct *pricing.Percent2
 		var owner *string
 		var cost int64
 		var method string
@@ -1243,7 +1243,7 @@ func (s *Service) merchantShares(ctx context.Context, q wallet.Querier, orderID 
 	if len(shares) == 0 {
 		var fallbackID string
 		var subtotal int64
-		var pct *int64
+		var pct *pricing.Percent2
 		var owner *string
 		var method string
 		if err := q.QueryRow(ctx, `

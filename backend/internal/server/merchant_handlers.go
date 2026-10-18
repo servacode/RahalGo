@@ -767,7 +767,7 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 	// **ونسبةُ العمولة من مصدرها الواحد** — تجاوزُ المتجر إن وُجد، وإلّا
 	// إعدادُ المنصّة. **وهي الدالّةُ نفسُها التي تحسب التسوية**، فلا يفترق
 	// ما يُعرض عمّا يُقيَّد.
-	var override *int64
+	var override *pricing.Percent2
 	_ = s.pg.QueryRow(r.Context(),
 		`SELECT commission_percent FROM merchants WHERE id = $1`, merchantID).Scan(&override)
 	rate := pricing.MerchantCommission(r.Context(), s.settings, override)
@@ -896,7 +896,8 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	// **طلبٌ لم يُقبض عنه شيءٌ تحكمه نسبةُ اليوم لا نسبةُ الأمس.**
 	cost := map[string]int64{}
 	paid := map[string]int64{}
-	pcts := map[string]int{}
+	// **والنسبةُ بمنزلتين** (`Percent2`، ٢٠٢٦-١٠-١٨) — ١٫٥٪ لا ١٪.
+	pcts := map[string]pricing.Percent2{}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.id::text,
 		       COALESCE((SELECT sum(oi.merchant_price * oi.qty)
@@ -914,11 +915,12 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 		defer rows.Close()
 		for rows.Next() {
 			var id string
-			var base, net, p int64
+			var base, net int64
+			var p pricing.Percent2
 			if rows.Scan(&id, &base, &net, &p) == nil {
 				cost[id] = base
 				paid[id] = net
-				pcts[id] = int(p)
+				pcts[id] = p
 			}
 		}
 	}
@@ -932,15 +934,19 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 		//
 		// **وقيدُ الدفتر يسبق** — انظر أعلاه. **وصفرٌ يعني لم يُسوَّ
 		// بعد**: قيدُ المستحقّ موجبٌ دائماً حين يقع.
-		c := base * int64(pct) / 100
+		rate := pricing.Amount{Mode: pricing.ModePercent2, Value: int64(pct)}
+		c := rate.Of(base)
 		shown := pct
 		if net := paid[o.ID]; net > 0 {
 			c = base - net
-			if base > 0 {
-				shown = int(c * 100 / base)
+			// **والنسبةُ تُشتقّ من الدفتر إلّا أن تُعيده بعينه** — ١٫٥٪ من ٩٩٩
+			// تُقيَّد ١٤ فتُشتقّ ١٫٤٪ بالبتر، **وهي ١٫٥٪ التي حُسب بها.**
+			if base > 0 && rate.Of(base) != c {
+				shown = pricing.Percent2(c * 10000 / base)
 			}
 		}
-		o.CommissionPct = shown
+		o.CommissionPct = int(shown.RoundedPercent())
+		o.CommissionExact = pricing.Percent2Ptr(shown)
 		// **والمجموعُ سعرُه هو** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «المفروض
 		// بالطلبات تُكتب المجموع ١٥٠، الخصم ١٠٪ للمنصّة، إجماليُّ
 		// المستحقّ ١٣٥»). **ولا يرى ما دفعه الزبون.**

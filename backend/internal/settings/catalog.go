@@ -21,6 +21,7 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -59,6 +60,15 @@ const (
 	//
 	// **وهو `int` بحدَّين ضمناً** (٠..١٠٠) — فلا يُكتب المدى في كلّ مفتاح.
 	KindPercent Kind = "percent"
+
+	// KindDecimal **رقمٌ بمنزلتين عشريّتين على الأكثر** ضمن [Min, Max] —
+	// `1.5` و`2.25` تُقبل و`1.555` تُردّ.
+	//
+	// (قرارُ المالك ٢٠٢٦-١٠-١٨: «عمولة المنصّة ١٫٥٪».) **ويُقرأ بـ`GetHundredths`**
+	// أجزاءً من المئة لا بـ`GetInt` — **وتلك تبتر `1.5` إلى `1` بصمت.**
+	//
+	// **والصحيحُ يُحفظ صحيحاً** (`10` لا `10.0`) — فقيمٌ قديمةٌ تبقى كما هي.
+	KindDecimal Kind = "decimal"
 
 	KindMedia Kind = "media"
 
@@ -1762,7 +1772,9 @@ var Catalog = []Def{
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «نسبةُ عمولة المنصة من المتاجر بقسم المتاجر».)
 	//
 	// **والافتراضُ عشرةٌ بالمئة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات البند ٣).
-	{Key: "merchants.commission_percent", Group: GroupMerchants, Kind: KindInt,
+	//
+	// **وبمنزلتين عشريّتين** (قرارُ المالك ٢٠٢٦-١٠-١٨: «١٫٥٪») — `KindDecimal`.
+	{Key: "merchants.commission_percent", Group: GroupMerchants, Kind: KindDecimal,
 		Min: 0, Max: 100, Unit: "percent", Default: 10, Sensitive: true},
 
 	// **مهلةُ قبول المتجر — بعدها يُنبَّه عليه في شاشة العمليات.**
@@ -2714,6 +2726,30 @@ func Validate(key string, v any) (any, error) {
 			return nil, ErrInvalidValue{Key: key, Reason: fmt.Sprintf("خارج المدى [%v..%v]", d.Min, hi)}
 		}
 		return int64(n), nil
+
+	case KindDecimal:
+		// **منزلتان عشريّتان على الأكثر** — `1.555` تُردّ ولا تُقرَّب: من كتب
+		// ثلاثاً أراد شيئاً لا نحفظه.
+		n, ok := toNumber(v)
+		if !ok {
+			return nil, ErrInvalidValue{Key: key, Reason: "ليست رقماً"}
+		}
+		if math.IsNaN(n) || math.IsInf(n, 0) {
+			return nil, ErrInvalidValue{Key: key, Reason: "ليست رقماً"}
+		}
+		c := n * 100
+		if math.Abs(c-math.Round(c)) > 1e-6 {
+			return nil, ErrInvalidValue{Key: key, Reason: "منزلتان عشريّتان على الأكثر"}
+		}
+		if n < d.Min || n > d.Max {
+			return nil, ErrInvalidValue{Key: key,
+				Reason: fmt.Sprintf("خارج المدى [%v..%v]", d.Min, d.Max)}
+		}
+		h := math.Round(c)
+		if math.Mod(h, 100) == 0 {
+			return int64(h / 100), nil
+		}
+		return h / 100, nil
 
 	case KindLongText:
 		// **ولا حدَّ محارفَ إلّا سقفاً يمنع الإغراق** — سياسةُ خصوصيّةٍ كاملةٌ
