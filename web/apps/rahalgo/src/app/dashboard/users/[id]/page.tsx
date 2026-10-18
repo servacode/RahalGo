@@ -102,7 +102,8 @@ interface FinEntry {
 }
 interface FinData {
   roles: string[];
-  rates: { label: string; percent: number }[];
+  /** **`percent_exact` بمنزلتين** (١٫٥) — و`percent` مقرَّبة (٢٠٢٦-١٠-١٨). */
+  rates: { label: string; percent: number; percent_exact?: number }[];
   owed_to: { total: number; count: number; items: FinEntry[] };
   owed_by: { total: number; count: number; items: FinEntry[] };
   returns: FinEntry[];
@@ -970,7 +971,7 @@ export default function UserProfilePage() {
                   >
                     <span>{rt.label}</span>
                     <span className="font-bold text-primary-dark" dir="ltr">
-                      {rt.percent}%
+                      {fmtNum(rt.percent_exact ?? rt.percent)}%
                     </span>
                   </li>
                 ))}

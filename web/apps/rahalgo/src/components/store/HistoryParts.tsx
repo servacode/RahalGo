@@ -38,7 +38,7 @@ export function MoneyLines({ o }: { o: MerchantOrder }) {
         <dd>{fmtMoney(o.subtotal)}</dd>
       </div>
       <div className="flex justify-between gap-2">
-        <dt className="text-ink-muted">{fill(S.orders.cut, { n: fmtNum(o.commission_percent) })}</dt>
+        <dt className="text-ink-muted">{fill(S.orders.cut, { n: fmtNum(o.commission_percent_exact ?? o.commission_percent) })}</dt>
         <dd>{`− ${fmtMoney(o.platform_commission)}`}</dd>
       </div>
       <div className="flex justify-between gap-2 border-t border-line-soft pt-1 font-bold text-accent-text">

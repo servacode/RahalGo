@@ -170,6 +170,8 @@ interface OrderRow {
   partner_merchant_name?: string;
   /** نسبتُه ملقوطةً لحظةَ الربط. */
   partner_commission_percent?: number | null;
+  /** **بمنزلتين** (١٫٥) — والصحيحةُ مقرَّبة (٢٠٢٦-١٠-١٨). */
+  partner_commission_percent_exact?: number | null;
   /** ما دفعه السائقُ للمتجر — يُكتب عند التسليم. */
   custom_store_paid?: number | null;
   /** **ما يصل السائقَ من الأجرة** — والباقي حصّةُ المنصّة (٢٠٢٦-١٠-١٣). */
@@ -3424,7 +3426,7 @@ function PartnerStoreBox({
           <p className="text-xs font-bold text-ink">
             {OP.partnerLinked
               .replace("{name}", o.partner_merchant_name ?? "")
-              .replace("{pct}", fmtNum(o.partner_commission_percent ?? 0))}
+              .replace("{pct}", fmtNum(o.partner_commission_percent_exact ?? o.partner_commission_percent ?? 0))}
           </p>
           {o.custom_store_paid != null && (
             <p className="text-xs text-ink-muted">

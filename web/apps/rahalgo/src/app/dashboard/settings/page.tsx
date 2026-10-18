@@ -58,6 +58,8 @@ function geoOf(v: string): [number, number] | null {
 }
 
 const m = getMessages(defaultLocale);
+/** **الفاصلةُ العربيّة «٫» والفاصلةُ تُقرآن نقطةً** — من يكتب ١٫٥ بلوحته. */
+const DECIMAL_SEP = new RegExp("[," + String.fromCharCode(0x066b) + "]", "g");
 
 /* **والخريطةُ لا تُصيَّر في الخادم** — `leaflet` يقرأ `window` عند التحميل. */
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
@@ -75,6 +77,8 @@ type Kind =
   | "text"
   | "media"
   | "percent"
+  /** **رقمٌ بمنزلتين** (١٫٥) — عمولةُ المنصّة (قرارُ المالك ٢٠٢٦-١٠-١٨). */
+  | "decimal"
   | "file"
   | "geo"
   | "longtext";
@@ -558,7 +562,7 @@ function valueText(s: Setting, v: unknown): string {
   if (s.kind === "bool") return boolText(s.key, v === true ? "on" : "off");
   if (s.kind === "choice") return choiceText(String(v ?? ""));
   if (s.kind === "percent") return `${fmtNum(Number(v ?? 0))}${unitText("percent")}`;
-  if (s.kind === "int" || s.kind === "money") {
+  if (s.kind === "int" || s.kind === "money" || s.kind === "decimal") {
     const u = unitText(s.unit);
     return u ? `${fmtNum(Number(v ?? 0))} ${u}` : fmtNum(Number(v ?? 0));
   }
@@ -567,7 +571,7 @@ function valueText(s: Setting, v: unknown): string {
 
 /** **أهي القيمةُ المحفوظةُ نفسُها؟** — فلا يُحفظ ما لم يتغيّر. */
 function same(s: Setting, raw: unknown): boolean {
-  if (s.kind === "int" || s.kind === "money" || s.kind === "percent") {
+  if (s.kind === "int" || s.kind === "money" || s.kind === "percent" || s.kind === "decimal") {
     return Number(raw) === Number(s.value);
   }
   return raw === s.value || String(raw) === String(s.value ?? "");
@@ -590,7 +594,7 @@ function saveError(s: Setting, err: unknown): string {
     return U.errors.placeholder.replace("{p}", String(details.placeholder ?? ""));
   }
   if (code === "validation") {
-    if ((s.kind === "int" || s.kind === "money" || s.kind === "percent") && s.max !== undefined) {
+    if ((s.kind === "int" || s.kind === "money" || s.kind === "percent" || s.kind === "decimal") && s.max !== undefined) {
       return U.errors.range
         .replace("{min}", fmtNum(s.min ?? 0))
         .replace("{max}", fmtNum(s.max));
@@ -627,7 +631,8 @@ function SettingRow({
     setDraft(String(s.value ?? ""));
   }, [s.value]);
 
-  const numeric = s.kind === "int" || s.kind === "money";
+  const decimal = s.kind === "decimal";
+  const numeric = s.kind === "int" || s.kind === "money" || decimal;
   const gate = s.topic_section === "launch.gates" && s.kind === "bool";
   const dirty =
     s.kind === "bool" || s.kind === "choice" ? false : draft !== String(s.value ?? "");
@@ -672,8 +677,10 @@ function SettingRow({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (numeric) {
-      const n = Number(draft);
-      if (!Number.isInteger(n)) return setError(U.errors.invalid);
+      const t = draft.trim().replace(DECIMAL_SEP, ".");
+      const n = Number(t);
+      // **والعشريُّ برقمين بعد الفاصلة بالأكثر** — مثل الخادم؛ والصحيحُ صحيحٌ كما كان.
+      if (decimal ? !/^\d+(\.\d{1,2})?$/.test(t) : !Number.isInteger(n)) return setError(U.errors.invalid);
       if ((s.min !== undefined && n < s.min) || (s.max !== undefined && n > s.max)) {
         return setError(
           U.errors.range.replace("{min}", fmtNum(s.min ?? 0)).replace("{max}", fmtNum(s.max ?? 0)),
@@ -855,8 +862,9 @@ function SettingRow({
             <>
               <Input
                 id={s.key}
-                type={numeric ? "number" : "text"}
-                inputMode={numeric ? "numeric" : undefined}
+                type={numeric && !decimal ? "number" : "text"}
+                inputMode={decimal ? "decimal" : numeric ? "numeric" : undefined}
+                dir={decimal ? "ltr" : undefined}
                 min={s.min}
                 max={s.max}
                 value={draft}

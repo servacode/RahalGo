@@ -138,7 +138,7 @@ function OrderCard({
           <dd>{fmtMoney(order.subtotal)}</dd>
         </div>
         <div className="flex justify-between text-ink-muted">
-          <dt>{fill(O.cut, { n: fmtNum(order.commission_percent) })}</dt>
+          <dt>{fill(O.cut, { n: fmtNum(order.commission_percent_exact ?? order.commission_percent) })}</dt>
           <dd>− {fmtMoney(order.platform_commission)}</dd>
         </div>
         <div className="flex justify-between border-t border-line-soft pt-1 font-bold text-accent-text">

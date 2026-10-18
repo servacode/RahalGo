@@ -39,8 +39,22 @@ export function clock12(hhmm: string): string {
   return `${h12}:${mm} ${h < 12 ? H.am : H.pm}`;
 }
 
-/** **مرآةُ `nightOpen`** — يفتح بين ٠ و٥ صباحاً، **إلّا الدوامَ الكاملَ** (٠٠:٠٠ → ٢٣:٥٩). */
+/** **«مفتوح ٢٤ ساعة»** — الرايةُ من الخادم، أو ٠٠:٠٠ ← ٠٠:٠٠ من خادمٍ أقدم (٢٠٢٦-١٠-١٨). */
+export function is24h(d: DayHours): boolean {
+  return d.open_24h ?? (hhmm(d.open_time) === "00:00" && hhmm(d.close_time) === "00:00");
+}
+
+/** **وإطفاءُ الراية يعيد ساعتين عاديّتين** — ٠٠:٠٠ ← ٠٠:٠٠ تُقرأ ٢٤ ساعة ثانيةً. */
+const DEFAULT_OPEN = "09:00";
+const DEFAULT_CLOSE = "23:00";
+function with24h(d: DayHours, on: boolean): DayHours {
+  if (on) return { ...d, closed: false, open_24h: true, open_time: "00:00", close_time: "00:00" };
+  return { ...d, open_24h: false, open_time: DEFAULT_OPEN, close_time: DEFAULT_CLOSE };
+}
+
+/** **مرآةُ `nightOpen`** — يفتح بين ٠ و٥ صباحاً، **إلّا الدوامَ الكاملَ** (٠٠:٠٠ → ٢٣:٥٩) و«٢٤ ساعة». */
 function nightOpen(d: DayHours): boolean {
+  if (is24h(d)) return false;
   const open = Number(d.open_time.slice(0, 2));
   const close = Number(d.close_time.slice(0, 2));
   const o = Number.isFinite(open) ? open : 9;
@@ -74,6 +88,8 @@ export default function HoursEditor({ onSaved }: { onSaved?: () => void }) {
   const [draft, setDraft] = useState<DayHours[]>([]);
   const [allOpen, setAllOpen] = useState("09:00");
   const [allClose, setAllClose] = useState("23:00");
+  /** **«مفتوح ٢٤ ساعة» لكلّ الأيام** — يُخفي الوقتين (قرارُ المالك ٢٠٢٦-١٠-١٨). */
+  const [all24, setAll24] = useState(false);
   const [busy, setBusy] = useState(false);
   const [night, setNight] = useState<DayHours[] | null>(null);
   const suspended = store?.status === "suspended";
@@ -84,13 +100,15 @@ export default function HoursEditor({ onSaved }: { onSaved?: () => void }) {
       const rows = await api<DayHours[]>(`/api/v1/merchant/stores/${id}/hours`);
       const sorted = [...(rows ?? [])]
         .map((d) => ({ ...d, open_time: hhmm(d.open_time), close_time: hhmm(d.close_time) }))
+        .map((d) => ({ ...d, open_24h: is24h(d) }))
         .sort((a, b) => a.day_of_week - b.day_of_week);
       setSaved(sorted);
       setDraft(sorted);
       const first = sorted.find((d) => !d.closed);
       if (first) {
-        setAllOpen(first.open_time);
-        setAllClose(first.close_time);
+        setAll24(!!first.open_24h);
+        setAllOpen(first.open_24h ? DEFAULT_OPEN : first.open_time);
+        setAllClose(first.open_24h ? DEFAULT_CLOSE : first.close_time);
       }
     } catch {
       setSaved([]);
@@ -136,20 +154,36 @@ export default function HoursEditor({ onSaved }: { onSaved?: () => void }) {
       </header>
       <div className="surface flex flex-col gap-2 rounded-card p-4">
         <p className="text-sm font-bold">{H.allDays}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm">{H.from}</span>
-          <TimeField id="hours-all-open" label={H.from} value={allOpen} onChange={setAllOpen} disabled={suspended} />
-          <span className="text-sm">{H.to}</span>
-          <TimeField id="hours-all-close" label={H.to} value={allClose} onChange={setAllClose} disabled={suspended} />
-        </div>
-        <p className="text-xs text-ink-muted">{fill(H.summary, { from: clock12(allOpen), to: clock12(allClose) })}</p>
+        <Checkbox
+          id="hours-all-24h"
+          checked={all24}
+          disabled={suspended}
+          onChange={(e) => setAll24(e.target.checked)}
+          label={H.open24}
+          data-testid="hours-all-24h"
+        />
+        {!all24 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm">{H.from}</span>
+            <TimeField id="hours-all-open" label={H.from} value={allOpen} onChange={setAllOpen} disabled={suspended} />
+            <span className="text-sm">{H.to}</span>
+            <TimeField id="hours-all-close" label={H.to} value={allClose} onChange={setAllClose} disabled={suspended} />
+          </div>
+        )}
+        <p className="text-xs text-ink-muted">
+          {all24 ? H.open24 : fill(H.summary, { from: clock12(allOpen), to: clock12(allClose) })}
+        </p>
         <Button
           variant="secondary"
           className="w-full"
           data-testid="hours-apply-all"
-          disabled={busy || suspended || !allOpen || !allClose}
+          disabled={busy || suspended || (!all24 && (!allOpen || !allClose))}
           onClick={() => {
-            const days = draft.map((d) => ({ ...d, closed: false, open_time: allOpen, close_time: allClose }));
+            const days = draft.map((d) =>
+              all24
+                ? with24h(d, true)
+                : { ...d, closed: false, open_24h: false, open_time: allOpen, close_time: allClose },
+            );
             setDraft(days);
             save(days);
           }}
@@ -170,8 +204,22 @@ export default function HoursEditor({ onSaved }: { onSaved?: () => void }) {
               label={H.days[d.day_of_week] ?? ""}
               className="min-w-24 flex-1"
             />
+            {!d.closed && (
+              <Checkbox
+                id={`hours-24h-${d.day_of_week}`}
+                checked={is24h(d)}
+                disabled={suspended}
+                onChange={(e) =>
+                  setDraft((all) => all.map((x) => (x.day_of_week === d.day_of_week ? with24h(x, e.target.checked) : x)))
+                }
+                label={H.open24Short}
+                className="text-xs"
+              />
+            )}
             {d.closed ? (
               <span className="text-xs text-ink-muted">{H.dayClosed}</span>
+            ) : is24h(d) ? (
+              <span className="text-xs font-medium text-accent-text" data-testid="hours-day-24h">{H.open24}</span>
             ) : (
               <span className="flex items-center gap-1">
                 <TimeField

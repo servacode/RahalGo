@@ -77,6 +77,9 @@ interface Merchant {
   /** **نسبتُه الخاصّة** — وفراغُها: يتبع العامّة (قرارُ المالك ٢٠٢٦-١٠-٠٤). */
   commission_percent: number | null;
   general_commission_percent: number;
+  /** **بمنزلتين** (١٫٥) — والصحيحتان أعلاه مقرَّبتان للعرض القديم (٢٠٢٦-١٠-١٨). */
+  commission_percent_exact?: number | null;
+  general_commission_percent_exact?: number;
   emergency_closed: boolean;
   /** أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — وعليه يظهر زرُّ الردّ في الطلبات. */
   accepts_returns: boolean;
@@ -194,7 +197,10 @@ export default function MerchantProfilePage() {
       <StatGrid>
         <StatCard
           label={m.admin.merchants.commission}
-          value={commissionText(mr.commission_percent, mr.general_commission_percent)}
+          value={commissionText(
+            mr.commission_percent_exact !== undefined ? mr.commission_percent_exact : mr.commission_percent,
+            mr.general_commission_percent_exact ?? mr.general_commission_percent,
+          )}
           icon={IconBalance}
         />
         <StatCard label={P.violations} value={fmtNum(mr.violations)} icon={IconWarning} />

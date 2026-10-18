@@ -810,13 +810,18 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
   // **ويُعاد الجلبُ بعد كلّ فعل** — وإلّا بقي السطرُ يقول ما بطل: يُحظر
   // المتجرُ ويبقى «فعّال» أمام من حظره.
   const reload = useCallback(() => {
-    api<{ merchants: StoreRow[]; total: number; general_commission_percent: number }>(
+    api<{
+      merchants: StoreRow[];
+      total: number;
+      general_commission_percent: number;
+      general_commission_percent_exact?: number;
+    }>(
       `/api/v1/admin/merchants?${isRep ? `rep_id=${userID}` : `owner_id=${userID}`}&per_page=100`,
     )
       .then((r) => {
         setRows(r.merchants ?? []);
         setTotal(r.total ?? 0);
-        setGeneral(r.general_commission_percent ?? 0);
+        setGeneral(r.general_commission_percent_exact ?? r.general_commission_percent ?? 0);
       })
       .catch((err) => {
         setWhy(errorText(err));
@@ -856,7 +861,10 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
                   </Badge>
                 )}
                 <span className="shrink-0 text-sm text-ink-muted">
-                  {commissionText(s.commission_percent, general)}
+                  {commissionText(
+                    s.commission_percent_exact !== undefined ? s.commission_percent_exact : s.commission_percent,
+                    general,
+                  )}
                 </span>
                 {/* ══════════════════════════════════════════════════════
                     **وأفعالُ المتجر معه — لا في شاشةٍ أخرى**

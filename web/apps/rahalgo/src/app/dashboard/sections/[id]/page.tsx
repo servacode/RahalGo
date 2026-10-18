@@ -97,6 +97,8 @@ interface SectionItem {
    * يُعدَّل حين يشتكي المتجرُ أو يشتكي الزبون. **وربحُ المنصة مجموعُهما.**
    */
   commission_percent: number;
+  /** **بمنزلتين** (١٫٥) — و`commission_percent` مقرَّبةٌ (٢٠٢٦-١٠-١٨). */
+  commission_percent_exact?: number;
   commission: number;
   merchant_net: number;
   /** هامشُ الصنف النافذ بالليرة — **بعد الوراثة**. */
@@ -344,7 +346,7 @@ export default function SectionPage() {
                   <dl className="space-y-1 border-t border-line-soft pt-2 text-xs tabular-nums">
                     <Row label={S.buyPrice} value={fmtNum(it.merchant_price)} />
                     <Row
-                      label={S.commission.replace("{n}", fmtNum(it.commission_percent))}
+                      label={S.commission.replace("{n}", fmtNum(it.commission_percent_exact ?? it.commission_percent))}
                       value={"−" + fmtNum(it.commission)}
                       tone="muted"
                     />

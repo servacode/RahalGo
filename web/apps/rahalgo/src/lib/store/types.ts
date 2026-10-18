@@ -59,6 +59,8 @@ export interface MerchantOrder {
   platform_commission: number;
   merchant_net: number;
   commission_percent: number;
+  /** **النسبةُ بمنزلتين** (١٫٥) — و`commission_percent` مقرَّبةٌ للتطبيق القديم (٢٠٢٦-١٠-١٨). */
+  commission_percent_exact?: number;
   items: OrderLine[];
   notes: string;
   created_at: string;
@@ -141,6 +143,8 @@ export interface DayHours {
   closed: boolean;
   open_time: string;
   close_time: string;
+  /** **«مفتوح ٢٤ ساعة»** — ٠٠:٠٠ ← ٠٠:٠٠ (٢٠٢٦-١٠-١٨). */
+  open_24h?: boolean;
 }
 
 /** **عرضٌ على صنف** — مرآةُ `StoreOffer` في التطبيق. */

@@ -63,6 +63,8 @@ import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 
 const m = getMessages(defaultLocale);
+/** **الفاصلةُ العربيّة «٫» والفاصلةُ تُقرآن نقطةً** — من يكتب ١٫٥ بلوحته. */
+const DECIMAL_SEP = new RegExp("[," + String.fromCharCode(0x066b) + "]", "g");
 
 interface Division {
   id: string;
@@ -80,6 +82,14 @@ interface Category {
 
 /** **صفُّ متجرٍ كما يرسله المحرّك** — **ويُقرأ من ملفّ صاحبه أيضاً**،
  *  فصار مُصدَّراً: **نسختان من الشكل تفترقان يوماً.** */
+
+/** **من ٠ إلى ١٠٠ برقمين بعد الفاصلة بالأكثر** — مثل الخادم (`pricing.ParsePercent2`). */
+function validCommission(v: string): boolean {
+  const t = v.trim();
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(t)) return false;
+  return Number(t) <= 100;
+}
+
 export interface Merchant {
   id: string;
   name: string;
@@ -101,6 +111,8 @@ export interface Merchant {
   violations: number;
   /** **نسبتُه الخاصّة** — وفراغُها: يتبع النسبةَ العامّة (قرارُ المالك ٢٠٢٦-١٠-٠٤). */
   commission_percent: number | null;
+  /** **النسبةُ بمنزلتين** (١٫٥) — و`commission_percent` مقرَّبةٌ للتطبيق القديم (٢٠٢٦-١٠-١٨). */
+  commission_percent_exact?: number | null;
   emergency_closed: boolean;
   /** **منطقتُه الإداريّة** — يرسلها المحرّكُ لتُعرض مختارةً في النموذج. */
   district_id?: string | null;
@@ -189,11 +201,15 @@ export function MerchantModal({
   const [commissionMode, setCommissionMode] = useState<"general" | "special">(
     merchant?.commission_percent == null ? "general" : "special",
   );
-  const [commission, setCommission] = useState(String(merchant?.commission_percent ?? ""));
+  const [commission, setCommission] = useState(
+    String(merchant?.commission_percent_exact ?? merchant?.commission_percent ?? ""),
+  );
   const [generalPct, setGeneralPct] = useState<number | null>(null);
   useEffect(() => {
-    void api<{ general_commission_percent: number }>("/api/v1/admin/merchants?per_page=1")
-      .then((r) => setGeneralPct(r?.general_commission_percent ?? null))
+    void api<{ general_commission_percent: number; general_commission_percent_exact?: number }>(
+      "/api/v1/admin/merchants?per_page=1",
+    )
+      .then((r) => setGeneralPct(r?.general_commission_percent_exact ?? r?.general_commission_percent ?? null))
       // @empty-ok **والنسبةُ العامّةُ تلميحٌ** — الخيارُ يعمل بدونها.
       .catch(() => setGeneralPct(null));
   }, []);
@@ -257,6 +273,11 @@ export function MerchantModal({
       setError(m.admin.merchants.transferReasonRequired);
       return;
     }
+    // **نسبةٌ بمنزلتين** (١٫٥ · ٢٫٢٥) — والخادمُ يردّ الثالثة، **فتُقال هنا قبل النداء.**
+    if (commissionMode === "special" && !validCommission(commission)) {
+      setError(m.admin.merchants.commissionInvalid);
+      return;
+    }
     setBusy(true);
     setError("");
     const body = {
@@ -272,7 +293,7 @@ export function MerchantModal({
       lng,
       district_id: districtId,
       ...(commissionMode === "special"
-        ? { commission_percent: Number(commission) || 0 }
+        ? { commission_percent: Number(commission.trim()) || 0 }
         : merchant && merchant.commission_percent != null
           ? { commission_percent: -1 }
           : {}),
@@ -464,16 +485,20 @@ export function MerchantModal({
                 label={m.admin.acc.commissionSpecial}
               />
               {commissionMode === "special" && (
-                <Input
-                  id="m-commission"
-                  label={m.admin.merchants.commission}
-                  type="number"
-                  min="0"
-                  max="100"
-                  required
-                  value={commission}
-                  onChange={(e) => setCommission(e.target.value)}
-                />
+                <>
+                  <Input
+                    id="m-commission"
+                    label={m.admin.merchants.commission}
+                    type="text"
+                    inputMode="decimal"
+                    dir="ltr"
+                    placeholder="1.5"
+                    required
+                    value={commission}
+                    onChange={(e) => setCommission(e.target.value.replace(DECIMAL_SEP, "."))}
+                  />
+                  <p className="text-xs text-ink-muted">{m.admin.merchants.commissionHint}</p>
+                </>
               )}
             </div>
             <ImageUpload

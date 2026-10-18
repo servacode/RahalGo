@@ -26,6 +26,13 @@ export interface DayHours {
   closed: boolean;
   open_time: string;
   close_time: string;
+  /** **«مفتوح ٢٤ ساعة»** — ٠٠:٠٠ ← ٠٠:٠٠ (قرارُ المالك ٢٠٢٦-١٠-١٨). */
+  open_24h?: boolean;
+}
+
+/** **أهو ٢٤ ساعة؟** — الرايةُ، أو ٠٠:٠٠ ← ٠٠:٠٠ من خادمٍ أقدم. */
+function is24h(d: DayHours): boolean {
+  return d.open_24h ?? (d.open_time.slice(0, 5) === "00:00" && d.close_time.slice(0, 5) === "00:00");
 }
 
 /** **وما يلزم النافذةَ من المتجر** — اسمُه ومعرّفُه لا صفُّه كلُّه. */
@@ -107,7 +114,7 @@ export function HoursModal({
       ) : (
         <div className="space-y-2">
           {days.map((d, i) => (
-            <div key={d.day_of_week} className="flex items-center gap-3 text-sm">
+            <div key={d.day_of_week} className="flex flex-wrap items-center gap-3 text-sm">
               <span className="w-16 shrink-0 font-medium">{m.admin.hours.days[i]}</span>
               <Checkbox
                 id={`mr-hours-closed-${d.day_of_week}`}
@@ -116,6 +123,27 @@ export function HoursModal({
                 label={m.admin.hours.closedDay}
                 className="gap-1.5 text-ink-muted"
               />
+              {/* **«مفتوح ٢٤ ساعة»** — يُخفي الوقتين، **وإطفاؤه يعيد ٩–٢٣**: ٠٠:٠٠ ← ٠٠:٠٠
+                  تُقرأ ٢٤ ساعة ثانيةً. */}
+              <Checkbox
+                id={`mr-hours-24h-${d.day_of_week}`}
+                checked={!d.closed && is24h(d)}
+                disabled={d.closed}
+                onChange={(e) =>
+                  updateDay(
+                    i,
+                    e.target.checked
+                      ? { open_24h: true, open_time: "00:00", close_time: "00:00" }
+                      : { open_24h: false, open_time: "09:00", close_time: "23:00" },
+                  )
+                }
+                label={m.admin.hours.open24Short}
+                className="gap-1.5 text-ink-muted"
+              />
+              {!d.closed && is24h(d) ? (
+                <span className="font-medium text-accent-text">{m.admin.hours.open24}</span>
+              ) : (
+              <>
               <input
                 type="time"
                 disabled={d.closed}
@@ -139,6 +167,8 @@ export function HoursModal({
                   ولا يثق أنّها فُهمت.** */}
               {!d.closed && d.close_time <= d.open_time && (
                 <span className="text-2xs text-ink-muted">{m.admin.hours.overnight}</span>
+              )}
+              </>
               )}
             </div>
           ))}
