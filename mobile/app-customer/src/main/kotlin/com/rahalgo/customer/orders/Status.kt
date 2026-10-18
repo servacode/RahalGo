@@ -14,8 +14,9 @@ import com.rahalgo.design.Rahal
  * **وحالٌ تُترجَم في بطاقتين تفترق** — تُصحَّح في إحداهما ويبقى القديمُ
  * في الأخرى، **فيقرأ الزبونُ طلبَه باسمين.**
  *
- * **وما لا ترجمةَ له يُعرض رمزَه** — لا يُبتلع في «قيد المعالجة»:
- * **من رآه أبلغ عنه، ومن ابتلعه ترك حالاً مجهولةً تُعرض على الناس.**
+ * **وما لا ترجمةَ له يُقرأ «قيد المعالجة» لا رمزَه** (قرارُ المالك ٢٠٢٦-١٠-١٨:
+ * ولا رمزَ إنكليزيٌّ أمام الناس) — **والحارسُ (`RawCodeTest`) يكشف حالاً
+ * زِيدت في المحرّك بلا اسم.**
  */
 @Composable
 fun statusText(status: String): String = when (status) {
@@ -28,7 +29,8 @@ fun statusText(status: String): String = when (status) {
     "delivered" -> stringResource(R.string.ord_st_delivered)
     "cancelled", "rejected" -> stringResource(R.string.stt_cancelled)
     "failed" -> stringResource(R.string.ord_st_failed)
-    else -> status
+    "refunded" -> stringResource(R.string.ord_st_refunded)
+    else -> stringResource(R.string.tik_progress)
 }
 
 /**

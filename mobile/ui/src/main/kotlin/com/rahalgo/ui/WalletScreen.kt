@@ -524,7 +524,7 @@ private fun kindLabel(kind: String): String =
     // **ونوعٌ لم يُترجَم يُعرض بمفتاحه** — لا يُبتلع: **من رآه أبلغ
     // عنه**، ومن ابتلعه ترك سطراً بلا اسمٍ في كشف مال. (والقائمةُ في
     // `WalletLabels` — مصدرٌ واحدٌ للشاشة والكشف المطبوع.)
-    WalletLabels.kindRes(kind)?.let { stringResource(it) } ?: kind
+    stringResource(WalletLabels.kindRes(kind) ?: R.string.wal_k_other)
 
 /**
  * **تاريخُ الحركة ووقتُها** — كما يقرؤه صاحبُها.

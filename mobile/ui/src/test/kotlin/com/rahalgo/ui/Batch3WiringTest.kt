@@ -72,7 +72,7 @@ class Batch3WiringTest {
     @Test
     fun `3c الاستعراضُ للقراءة فقط لا يضيف`() {
         val shop = read("app-customer/src/main/kotlin/com/rahalgo/customer/shop/ShopScreen.kt")
-        assertTrue("**الاستعراضُ يضيف**", shop.contains("if (previewing) return@ItemCard"))
+        assertTrue("**الاستعراضُ يضيف**", shop.contains("if (previewing) return@add"))
         assertTrue("**الإضافةُ لا تُحجَب في الاستعراض**", shop.contains("action == AddAction.BLOCKED || previewing"))
         assertTrue("**لا لافتةَ استعراضٍ دائمة**", shop.contains("preview_banner_named"))
         assertTrue("**لا خروجَ من الاستعراض**", shop.contains("CityScope.exitPreview(context)"))

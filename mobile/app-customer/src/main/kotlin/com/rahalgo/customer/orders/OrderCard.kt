@@ -593,8 +593,8 @@ private fun ended(status: String): Boolean =
  * **وكانت المراحلُ مكتوبةً هنا بيد** فسقطت منها «وصل إليك»
  * (٢٠٢٦-٠٨-١٥): **قائمةٌ تُكتب مرّتين تفترق مرّة.**
  *
- * **ومفتاحٌ لا نعرفه يُكتب كما جاء** — لا يُطوى: **مرحلةٌ تُزاد في
- * المحرّك تظهر بلا اسمٍ خيرٌ من أن تختفي.**
+ * **ومفتاحٌ لا نعرفه يُترك بلا اسمٍ لا برمزه** (٢٠٢٦-١٠-١٨) — ولا رمزَ
+ * إنكليزيٌّ تحت عقدة الشريط؛ **والحارسُ (`RawCodeTest`) يكشف مرحلةً زِيدت بلا اسم.**
  */
 @Composable
 private fun stageLabel(key: String, amanah: Boolean = false): String = when (key) {
@@ -614,5 +614,5 @@ private fun stageLabel(key: String, amanah: Boolean = false): String = when (key
     "on_the_way" -> stringResource(R.string.stg_on_the_way)
     "arrived" -> stringResource(R.string.stg_arrived)
     "delivered" -> stringResource(R.string.stg_delivered)
-    else -> key
+    else -> ""
 }

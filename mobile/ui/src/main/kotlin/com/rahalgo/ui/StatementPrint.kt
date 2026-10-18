@@ -202,5 +202,5 @@ ${DocPrint.foot(c, platform, support)}
 
     /** **اسمُ النوع بالعربيّة** — والمجهولُ بمفتاحه ليُعرف. */
     private fun kindName(c: Context, kind: String): String =
-        WalletLabels.kindRes(kind)?.let { c.getString(it) } ?: kind
+        c.getString(WalletLabels.kindRes(kind) ?: R.string.wal_k_other)
 }

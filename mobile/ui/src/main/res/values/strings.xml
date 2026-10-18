@@ -1030,4 +1030,32 @@
     <string name="fx_rate_jump_no">رجوع</string>
     <string name="fx_rate_owner_sets">بيحطه صاحب المتجر من صفحة «متجري» بتطبيقه، وأصنافه بالدولار بتتحسب منه.</string>
     <string name="item_usd_need_rate_rep">صاحب المتجر لازم يحط سعر الصرف من تطبيقه أول — لهلق ضيف الصنف بالليرة</string>
+    <!-- أسباب الشكاوى والبلاغات بلفظ طرف ثالث (TicketReasons) — ولا رمز إنكليزي يطلع للناس -->
+    <string name="tr_not_received">الزبون ما استلم الطلب</string>
+    <string name="tr_missing_items">نقص بالطلب</string>
+    <string name="tr_wrong_items">الطلب مو مطابق</string>
+    <string name="tr_quality">جودة سيئة</string>
+    <string name="tr_late">تأخير بالتوصيل</string>
+    <string name="tr_money">مشكلة بالمبلغ</string>
+    <string name="tr_merchant_slow">تأخير بتجهيز الطلب عند المتجر</string>
+    <string name="tr_merchant_refused">المتجر رفض تسليم الطلب</string>
+    <string name="tr_merchant_wrong_goods">بضاعة مو مطابقة</string>
+    <string name="tr_merchant_conduct">سوء تعامل من المتجر</string>
+    <string name="tr_customer_absent">الزبون مو موجود</string>
+    <string name="tr_customer_address">عنوان الزبون غلط</string>
+    <string name="tr_customer_refused">الزبون رفض الاستلام</string>
+    <string name="tr_customer_conduct">سوء تعامل من الزبون</string>
+    <string name="tr_driver_late_pickup">السائق تأخر بالاستلام</string>
+    <string name="tr_driver_refused">السائق رفض ياخد الطلب</string>
+    <!-- أسباب الإنذار (WarnReasons) -->
+    <string name="wr_abuse_driver">إساءة لسائق</string>
+    <string name="wr_repeated_cancel">إلغاء متكرر للطلبات</string>
+    <string name="wr_refused_delivery">رفض استلام الطلب</string>
+    <string name="wr_wrong_address">عنوان غلط أكتر من مرة</string>
+    <string name="wr_unreachable">ما عم يرد عالتلفون</string>
+    <string name="wr_fraud_attempt">محاولة احتيال</string>
+    <string name="wr_terms_violation">مخالفة شروط الاستخدام</string>
+    <!-- حال أو نوع ما منعرفه — بدل ما يطلع الرمز -->
+    <string name="ord_st_refunded">رجعت المصاري</string>
+    <string name="wal_k_other">حركة تانية</string>
 </resources>

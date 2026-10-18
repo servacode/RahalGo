@@ -133,7 +133,7 @@ fun WarningsScreen(vm: WarningsViewModel) {
                 vm.items.forEachIndexed { i, w ->
                     if (i > 0) HorizontalDivider()
                     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Text(w.reason, fontWeight = FontWeight.Bold)
+                        Text(stringResource(com.rahalgo.ui.WarnReasons.res(w.reason)), fontWeight = FontWeight.Bold)
                         if (w.note.isNotBlank()) {
                             Text(
                                 w.note,
@@ -549,13 +549,8 @@ fun SalesScreen(vm: SalesViewModel) {
 // **ورمزٌ إنكليزيٌّ في شاشةٍ عربيّةٍ لا يُقرأ** — وقعت مثلُها في محفظة
 // المالك ٢٠٢٦-٠٨-٠٧: «استرجاع طلب (cancelled)».
 
-internal fun reasonAr(code: String): String = when (code) {
-    "driver_late_pickup" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.rs_driver_late)
-    "driver_refused" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.rs_driver_refused)
-    "driver_conduct" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.rs_driver_conduct)
-    "other" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.rs_other)
-    else -> code
-}
+internal fun reasonAr(code: String): String =
+    com.rahalgo.ui.TicketReasons.text(com.rahalgo.ui.AppCore.get().app, code)
 
 /** **واليومُ يُقتطع من الطابع** — ولا ساعةَ فيه: **الحادثةُ يومٌ لا لحظة.** */
 private fun day(iso: String): String =

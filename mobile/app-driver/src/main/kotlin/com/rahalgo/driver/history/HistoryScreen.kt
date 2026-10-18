@@ -656,7 +656,7 @@ private fun StarPick(label: String, value: Int, onPick: (Int) -> Unit) {
     }
 }
 
-/** **اسمُ السبب بالعربيّة** — والمجهولُ برمزه ليُبلَّغ عنه. */
+/** **اسمُ السبب بالعربيّة** — والمجهولُ «سبب آخر» لا رمزُه (٢٠٢٦-١٠-١٨، `RawCodeTest`). */
 @Composable
 private fun reasonLabel(code: String): String = when (code) {
     "merchant_slow" -> stringResource(R.string.reason_merchant_slow)
@@ -668,5 +668,5 @@ private fun reasonLabel(code: String): String = when (code) {
     "customer_refused" -> stringResource(R.string.reason_customer_refused)
     "customer_conduct" -> stringResource(R.string.reason_customer_conduct)
     "other" -> stringResource(R.string.rs_other)
-    else -> code
+    else -> stringResource(R.string.rs_other)
 }

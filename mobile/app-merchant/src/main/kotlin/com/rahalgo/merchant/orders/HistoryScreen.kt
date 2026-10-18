@@ -396,5 +396,5 @@ private fun statusAr(status: String): String = when (status) {
     "rejected" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_rejected)
     "failed" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_failed)
     "refunded" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_refunded)
-    else -> status
+    else -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.ui.R.string.tik_progress)
 }

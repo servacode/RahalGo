@@ -442,8 +442,8 @@ private fun ComplainDialog(
  * **اسمُ السبب بالعربيّة** — بألفاظ الويب حرفا (`site.complaint.reasons`).
  *
  * **ولفظان لسببٍ واحدٍ في شاشتين** يجعلان الزبونَ يشكّ أنّهما شيءٌ
- * واحد. **ورمزٌ لا نعرفه يُكتب كما جاء** — سببٌ يُزاد في المحرّك
- * يظهر بلا اسمٍ خيرٌ من أن يختفي.
+ * واحد. **ورمزٌ لا نعرفه يُقرأ «أخرى» لا رمزَه** (٢٠٢٦-١٠-١٨) — والحارسُ
+ * (`RawCodeTest`) يقرأ أسبابَ المحرّك فيكشف سبباً زِيد بلا اسم.
  */
 @Composable
 private fun reasonLabel(code: String): String = when (code) {
@@ -455,5 +455,5 @@ private fun reasonLabel(code: String): String = when (code) {
     "driver_conduct" -> stringResource(R.string.rs_driver_conduct)
     "money" -> stringResource(R.string.cr_money)
     "other" -> stringResource(R.string.cr_other)
-    else -> code
+    else -> stringResource(R.string.cr_other)
 }

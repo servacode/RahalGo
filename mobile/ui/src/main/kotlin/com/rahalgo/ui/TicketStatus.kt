@@ -19,7 +19,7 @@ import com.rahalgo.design.Rahal
  */
 @Composable
 fun ticketStatusText(status: String): String =
-    ticketStatusRes(status)?.let { stringResource(it) } ?: status
+    stringResource(ticketStatusRes(status) ?: R.string.tik_progress)
 
 /**
  * **و«بانتظار المالية» تُقرأ «قيد المعالجة»** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —

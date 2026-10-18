@@ -924,8 +924,8 @@ private fun distance(meters: Double): String = dist(meters)
 /**
  * **حال الطلب بالعربيّة.**
  *
- * **ومجهول يُعرض رمزه** — لا يُبتلع في «قيد التنفيذ»: **حال جديد في
- * المحرّك يظهر هنا فيُعرف ويُترجم**، بدل أن يختفي تحت كلمة عامّة.
+ * **والمجهولُ «قيد المعالجة» لا رمزُه** (قرارُ المالك ٢٠٢٦-١٠-١٨: ولا رمزَ
+ * إنكليزيٌّ أمام الناس) — **والحارسُ (`RawCodeTest`) يكشف حالاً زِيدت بلا اسم.**
  */
 @Composable
 private fun statusText(status: String): String = when (status) {
@@ -940,7 +940,7 @@ private fun statusText(status: String): String = when (status) {
     "dispatching" -> stringResource(R.string.ord_st_dispatching)
     // **وفي قائمته لا يظهر فاشلٌ إلّا مشوارَ إرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
     "failed" -> stringResource(R.string.status_returning)
-    else -> status
+    else -> stringResource(com.rahalgo.ui.R.string.tik_progress)
 }
 
 /** ما تعرضه الشاشة — **ولا تملكه هي.** */

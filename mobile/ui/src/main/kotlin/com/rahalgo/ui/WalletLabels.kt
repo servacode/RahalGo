@@ -13,7 +13,7 @@ package com.rahalgo.ui
  */
 object WalletLabels {
 
-    /** **اسمُ نوع الحركة** — `null` لنوعٍ لا نعرفه فيُعرض بمفتاحه ليُبلَّغ عنه. */
+    /** **اسمُ نوع الحركة** — `null` لنوعٍ لا نعرفه، فيُعرض «حركة تانية» (`wal_k_other`) لا مفتاحُه. */
     fun kindRes(kind: String): Int? = when (kind) {
         "payout" -> R.string.wal_k_payout
         "payout_reversal" -> R.string.wal_k_payout_reversal

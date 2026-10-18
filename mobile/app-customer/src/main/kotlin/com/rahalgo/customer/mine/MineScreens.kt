@@ -491,7 +491,7 @@ private fun Tickets(vm: MineViewModel) {
             TicketRow(
                 id = t.id,
                 key = ticketKey(t),
-                title = t.subject.ifEmpty { t.reason },
+                title = t.subject.ifEmpty { com.rahalgo.ui.TicketReasons.text(t.reason) },
                 status = t.status,
                 orderNumber = t.orderNumber?.toString().orEmpty(),
                 resolution = t.resolution,

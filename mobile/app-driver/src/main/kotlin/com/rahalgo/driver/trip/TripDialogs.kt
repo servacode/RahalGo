@@ -580,7 +580,7 @@ private fun Section(title: Int) {
     )
 }
 
-/** **ورمز بلا ترجمة يُعرض كما هو** — ليُعرف ويُضاف، لا ليُبتلع. */
+/** **ورمزٌ بلا ترجمةٍ يُقرأ «سبب آخر»** لا رمزَه (٢٠٢٦-١٠-١٨، `RawCodeTest`). */
 @Composable
 internal fun reasonLabel(code: String): String = when (code) {
     "customer_absent" -> stringResource(R.string.reason_customer_absent)
@@ -597,5 +597,5 @@ internal fun reasonLabel(code: String): String = when (code) {
     "force_majeure" -> stringResource(R.string.problem_force)
     "customer_cancelled_by_phone" -> stringResource(R.string.reason_customer_cancelled_by_phone)
     "customer_no_answer" -> stringResource(R.string.reason_customer_no_answer)
-    else -> code
+    else -> stringResource(com.rahalgo.ui.R.string.rs_other)
 }
