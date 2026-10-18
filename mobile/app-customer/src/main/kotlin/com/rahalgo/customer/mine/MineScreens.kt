@@ -67,11 +67,17 @@ import com.rahalgo.ui.RahalButton
  * شكاواه.
  */
 @Composable
-fun MineScreen(vm: MineViewModel, key: String, address: com.rahalgo.shared.model.Address? = null) {
+fun MineScreen(
+    vm: MineViewModel,
+    key: String,
+    address: com.rahalgo.shared.model.Address? = null,
+    /** **يفتح صفحةَ متجرٍ في السوق** — من اسمه على بطاقة المفضّلة أو في نافذة الخيارات. */
+    onOpenStore: (String) -> Unit = {},
+) {
     LaunchedEffect(key) { vm.open(key) }
     when (key) {
-        CustomerItems.FAVORITES -> Favorites(vm)
-        CustomerItems.OFFERS -> Offers(vm, address)
+        CustomerItems.FAVORITES -> Favorites(vm, onOpenStore)
+        CustomerItems.OFFERS -> Offers(vm, address, onOpenStore)
         CustomerItems.INVITE -> Invite(vm)
         CustomerItems.TICKETS -> Tickets(vm)
     }
@@ -84,7 +90,7 @@ fun MineScreen(vm: MineViewModel, key: String, address: com.rahalgo.shared.model
  * أخرى** — **فما يُتعلَّم في شاشةٍ لا يُعرف في الباقي.**
  */
 @Composable
-private fun Favorites(vm: MineViewModel) {
+private fun Favorites(vm: MineViewModel, onOpenStore: (String) -> Unit) {
     val list = vm.favorites
     if (list == null) {
         LoadState(vm.busy, vm.error) { vm.open(CustomerItems.FAVORITES, force = true) }
@@ -145,6 +151,9 @@ private fun Favorites(vm: MineViewModel) {
                     liked = true,
                     onAdd = null,
                     onLike = { vm.toggleFavorite(item.id) },
+                    // **واسمُ المتجر يفتح صفحتَه** كما في السوق (٢٠٢٦-١٠-١٨).
+                    onStore = com.rahalgo.customer.shop.StoreLink.target(item, null)
+                        ?.let { id -> { onOpenStore(id) } },
                 )
             }
         }
@@ -158,7 +167,11 @@ private fun Favorites(vm: MineViewModel) {
  * **ولا يعلم أنّه فاته.**
  */
 @Composable
-private fun Offers(vm: MineViewModel, address: com.rahalgo.shared.model.Address? = null) {
+private fun Offers(
+    vm: MineViewModel,
+    address: com.rahalgo.shared.model.Address? = null,
+    onOpenStore: (String) -> Unit = {},
+) {
     val list = vm.offers
     if (list == null) {
         LoadState(vm.busy, vm.error) { vm.open(CustomerItems.OFFERS, force = true) }
@@ -194,6 +207,8 @@ private fun Offers(vm: MineViewModel, address: com.rahalgo.shared.model.Address?
                 picking = null
             },
             onClose = { picking = null },
+            onStore = com.rahalgo.customer.shop.StoreLink.target(target, null)
+                ?.let { id -> { picking = null; onOpenStore(id) } },
         )
     }
 

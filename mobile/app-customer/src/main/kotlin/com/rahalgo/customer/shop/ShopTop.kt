@@ -1,5 +1,6 @@
 package com.rahalgo.customer.shop
 
+import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.StoreSection
 
 /**
@@ -57,4 +58,18 @@ object StoreMenu {
         }
         return owner
     }
+}
+
+/**
+ * **اسمُ المتجر بابُ صفحته — متى يُفتح؟** (قرارُ المالك ٢٠٢٦-١٠-١٨)
+ *
+ * بطاقةُ السوق والمفضّلة ونافذةُ الخيارات تسأل هنا: **معرّفُ المتجر الذي يُفتح،
+ * أو `null` حين لا باب** — لا اسمَ ولا معرّف، **أو الزبونُ في صفحة المتجر نفسِه**
+ * (`current`)، ورابطٌ يفتح الصفحةَ التي هو فيها يُقرأ عطباً.
+ */
+object StoreLink {
+    fun target(item: Item, current: String?): String? =
+        item.merchantId.takeIf {
+            it.isNotBlank() && !item.merchantName.isNullOrBlank() && it != current
+        }
 }

@@ -286,6 +286,8 @@ internal fun StoreScreen(
                                 liked = item.id in liked,
                                 onAdd = { onAdd(item) },
                                 onLike = { onLike(item) },
+                                // **ولا رابطَ إلى الصفحة التي هو فيها** (`StoreLink`).
+                                onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
                             )
                         }
                     }

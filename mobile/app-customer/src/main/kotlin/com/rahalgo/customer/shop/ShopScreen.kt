@@ -196,6 +196,10 @@ fun ShopScreen(
                 picking = null
             },
             onClose = { picking = null },
+            // **واسمُ المتجر يفتح صفحتَه** — إلّا وهو فيها (`StoreLink`).
+            onStore = StoreLink.target(target, vm.storeId)?.let { id ->
+                { picking = null; vm.openStore(id) }
+            },
         )
     }
 
@@ -545,7 +549,7 @@ fun ShopScreen(
                         onAdd = { addItem(item) },
                         onLike = { onLike(item) },
                         // **واسمُ المتجر يفتح صفحتَه** (٢٠٢٦-١٠-١٨).
-                        onStore = { vm.openStore(item.merchantId) },
+                        onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
                     )
                 }
             }

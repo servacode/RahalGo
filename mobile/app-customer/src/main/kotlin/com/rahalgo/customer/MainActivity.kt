@@ -1000,6 +1000,12 @@ private fun SignedIn(
                     over is Overlay.Menu -> MineScreen(
                         mineVm, over.key,
                         address = selectedAddress(accountVm.state.addresses),
+                        // **واسمُ المتجر يعيده إلى السوق على صفحة المتجر** (٢٠٢٦-١٠-١٨).
+                        onOpenStore = { id ->
+                            overlay.clear()
+                            tab = Tab.Shop
+                            shopVm.openStore(id)
+                        },
                     )
 
                     // ══════════════════════════════════════════════

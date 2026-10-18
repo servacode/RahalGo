@@ -72,6 +72,11 @@ fun ItemOptionsSheet(
     api: CustomerApi,
     onAdd: (List<ModifierOption>) -> Unit,
     onClose: () -> Unit,
+    /**
+     * **اسمُ المتجر بابُ صفحته** (قرارُ المالك ٢٠٢٦-١٠-١٨) — كما في البطاقة.
+     * و`null` في صفحة المتجر نفسِه وحيث لا صفحة (`StoreLink.target`).
+     */
+    onStore: (() -> Unit)? = null,
 ) {
     var groups by remember(item.id) { mutableStateOf<List<ModifierGroup>?>(null) }
     var failed by remember(item.id) { mutableStateOf(false) }
@@ -102,6 +107,26 @@ fun ItemOptionsSheet(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge,
             )
+            // **واسمُ المتجر تحت اسم الصنف** — ملوَّنٌ حين يفتح صفحتَه، رماديٌّ حين لا.
+            item.merchantName?.takeIf { it.isNotBlank() }?.let { name ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = name,
+                    color = if (onStore != null) Rahal.colors.brand else Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = if (onStore != null) {
+                        Modifier
+                            .clip(Rahal.shape.sm)
+                            .clickable(
+                                onClickLabel = stringResource(R.string.store_open_page),
+                                onClick = onStore,
+                            )
+                            .padding(vertical = 2.dp)
+                    } else {
+                        Modifier
+                    },
+                )
+            }
             Spacer(Modifier.height(16.dp))
 
             when {
