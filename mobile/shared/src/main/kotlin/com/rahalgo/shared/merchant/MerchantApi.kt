@@ -326,6 +326,14 @@ class MerchantApi(private val api: ApiClient) {
         return api.json.decodeFromString<Envelope<MediaRef>>(raw).data ?: MediaRef()
     }
 
+    /** **يرفع شعارَ متجره** (طلبُ المالك ٢٠٢٦-١٠-١٨) — ثمّ يُربط بـ`settings`. */
+    suspend fun uploadLogo(fileName: String, bytes: ByteArray): MediaRef {
+        val raw = api.upload(
+            "/api/v1/merchant/media", fileName, bytes, mapOf("kind" to "merchant_logo"),
+        )
+        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data ?: MediaRef()
+    }
+
     // **والقائمةُ والساعاتُ مصفوفتان خامّتان** — لا مغلَّفَ لهما،
     // **قِيس من `merchant_handlers.go` و`merchant_ops_handlers.go`.**
 }
@@ -750,6 +758,8 @@ data class StoreSettingsInput(
     @SerialName("accepts_returns") val acceptsReturns: Boolean? = null,
     /** **عملةُ العرض للزبون** «SYP» أو «USD» (٢٠٢٦-١٠-١٢، الخيار ١). */
     @SerialName("display_currency") val displayCurrency: String? = null,
+    /** **شعارُه بيده** (طلبُ المالك ٢٠٢٦-١٠-١٨) — معرّفُ صورةٍ رفعها بـ`uploadLogo`. */
+    @SerialName("logo_media_id") val logoMediaId: String? = null,
 )
 
 @Serializable

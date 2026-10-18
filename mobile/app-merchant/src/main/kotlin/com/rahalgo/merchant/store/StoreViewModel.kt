@@ -255,6 +255,28 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         rateJump = null
     }
 
+    /**
+     * **يغيّر شعارَ متجره** (طلبُ المالك ٢٠٢٦-١٠-١٨) — يرفع الصورة ثمّ يربطها،
+     * **ويظهر الشعارُ الجديدُ في الحال** بمصغّرته.
+     */
+    fun setLogo(bytes: ByteArray) {
+        val id = store?.id ?: return
+        saving = true
+        viewModelScope.launch {
+            runCatching {
+                val ref = api.uploadLogo("logo.jpg", bytes)
+                api.settings(id, StoreSettingsInput(logoMediaId = ref.id))
+                ref
+            }
+                .onSuccess { ref ->
+                    store = store?.copy(logoThumbUrl = ref.thumbUrl.ifBlank { null })
+                    Flash.ok(AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_logo_saved))
+                }
+                .onFailure { Flash.fail(err(it)) }
+            saving = false
+        }
+    }
+
     /** **بأيّ عملةٍ يرى زبونُه أسعارَه** (الخيار ١، ٢٠٢٦-١٠-١٢) — والدفعُ بالليرة. */
     fun setDisplayCurrency(code: String) {
         val id = store?.id ?: return

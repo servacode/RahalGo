@@ -8615,6 +8615,10 @@
         {
           "name": "display_currency",
           "type": "?string"
+        },
+        {
+          "name": "logo_media_id",
+          "type": "?string"
         }
       ],
       "response": [

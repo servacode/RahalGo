@@ -163,6 +163,9 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		// DisplayCurrency **بأيّ عملةٍ يرى زبونُه أسعارَه** «SYP» أو «USD» (الخيار ١،
 		// ٢٠٢٦-١٠-١٢) — والدفعُ بالليرة في الحالين.
 		DisplayCurrency *string `json:"display_currency"`
+		// LogoMediaID **شعارُه بيده** (طلبُ المالك ٢٠٢٦-١٠-١٨) — صورةٌ رفعها هو
+		// بنوع `merchant_logo` من `/merchant/media`، **لا صورةُ غيره.**
+		LogoMediaID *string `json:"logo_media_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -187,6 +190,22 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 	if req.DisplayCurrency != nil && *req.DisplayCurrency != "SYP" && *req.DisplayCurrency != "USD" {
 		s.respondErr(w, errValidation)
 		return
+	}
+	// **والشعارُ صورتُه هو وبنوع الشعار** — **ومعرّفٌ لصورةِ غيره يُردّ**،
+	// فلا يلبس متجرٌ شعارَ متجرٍ آخر بمعرّفٍ رآه.
+	if req.LogoMediaID != nil {
+		var mine bool
+		if err := s.pg.QueryRow(r.Context(), `
+			SELECT EXISTS (SELECT 1 FROM media
+			                WHERE id::text = $1 AND kind = 'merchant_logo' AND created_by = $2)`,
+			*req.LogoMediaID, userIDFrom(r)).Scan(&mine); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if !mine {
+			s.respondErr(w, errValidation)
+			return
+		}
 	}
 	// **واسمٌ فارغٌ يُردّ** — **ومتجرٌ بلا اسمٍ يظهر فراغاً في كلّ
 	// شاشةٍ وإشعار**، ولا يعرف السائقُ إلى أين يمضي.
@@ -227,11 +246,12 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 				ELSE location END,
 			accepts_returns      = COALESCE($8, accepts_returns),
 			display_currency     = COALESCE($9, display_currency),
+			logo_media_id        = COALESCE($10::uuid, logo_media_id),
 			returns_confirmed_at = CASE WHEN $8::bool IS NULL THEN returns_confirmed_at ELSE now() END,
 			returns_confirmed_by = CASE WHEN $8::bool IS NULL THEN returns_confirmed_by ELSE 'merchant' END,
 			updated_at           = now()
 		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder,
-		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns, req.DisplayCurrency); err != nil {
+		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns, req.DisplayCurrency, req.LogoMediaID); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -241,6 +261,11 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		s.touch("merchant", "ops", "merchant:"+merchantID)
 	}
 	if req.DisplayCurrency != nil {
+		s.touch("menu", "merchant:"+merchantID)
+	}
+	if req.LogoMediaID != nil {
+		s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), "merchant.logo_update", "merchant", merchantID,
+			map[string]any{"logo_media_id": *req.LogoMediaID})
 		s.touch("menu", "merchant:"+merchantID)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})

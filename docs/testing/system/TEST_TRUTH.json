@@ -33,8 +33,8 @@
     "setting_defs": 248,
     "behaviour_settings": 203,
     "order_fields": 111,
-    "test_files": 613,
-    "test_funcs": 2440
+    "test_files": 614,
+    "test_funcs": 2441
   },
   "flows": [
     {
@@ -27551,6 +27551,12 @@
     {
       "name": "TestMKT5_NewItemsFirstAndCounterResetsOnOpen",
       "file": "internal/server/market_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantSettings_Logo",
+      "file": "internal/server/merchant_logo_test.go",
       "package": "server",
       "orphan": true
     },

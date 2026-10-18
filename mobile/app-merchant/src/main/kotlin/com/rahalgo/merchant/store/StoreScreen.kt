@@ -101,6 +101,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
 
     // **ويبقى مع التدوير** (تقريرُ فحص المتجر).
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
+    val pickLogo = com.rahalgo.ui.rememberImagePicker { bytes -> vm.setLogo(bytes) }
     var confirming by remember { mutableStateOf(false) }
 
     // ══════════════════════════════════════════════════════════════════
@@ -183,6 +184,16 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             val editingName = renaming
             if (editingName == null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // **وشعارُه بجانب اسمه — يضغطه فيغيّره** (طلبُ المالك ٢٠٢٦-١٠-١٨).
+                    com.rahalgo.ui.RemoteImage(
+                        url = com.rahalgo.ui.AppCore.get().media(store.logoThumbUrl),
+                        name = store.name.ifBlank { "?" },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(Rahal.shape.sm)
+                            .clickable(enabled = !suspended && !vm.saving) { pickLogo() },
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Text(
                         store.name,
                         modifier = Modifier.weight(1f),
@@ -195,6 +206,15 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                             contentDescription = stringResource(R.string.store_rename),
                             tint = Rahal.colors.brand,
                             modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                if (!suspended) {
+                    RahalTextButton(onClick = { pickLogo() }, enabled = !vm.saving) {
+                        Text(
+                            stringResource(
+                                if (store.logoThumbUrl.isNullOrBlank()) R.string.store_logo_add else R.string.store_logo_change,
+                            ),
                         )
                     }
                 }
