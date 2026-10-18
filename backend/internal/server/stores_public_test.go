@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -329,5 +330,64 @@ func TestPublicStore_NotFound(t *testing.T) {
 	// **وبلا موضعٍ يُفتح** — العميلُ القديمُ لا يُرشَّح.
 	if code, _ := f.get(t, "/stores/"+away); code != http.StatusOK {
 		t.Errorf("بلا موضعٍ ردّ %d، والمتوقّع ٢٠٠", code)
+	}
+}
+
+// TestPublicStore_TodayHours **دوامُ اليوم في الرأس** (٢٠٢٦-١٠-١٨) — ٢٤ ساعة، أو من … لـ …، أو مغلقٌ اليوم،
+// **وبلا صفوفِ دوامٍ ٢٤ ساعة.**
+func TestPublicStore_TodayHours(t *testing.T) {
+	f := newStoresFixture(t)
+	sec := f.section(t, "قسم الدوام", 950, true)
+	loc, _ := time.LoadLocation("Asia/Damascus")
+	dow := int(time.Now().In(loc).Weekday())
+	cases := []struct {
+		name               string
+		rows               bool
+		closed             bool
+		open, close        string
+		wantClosed, want24 bool
+		wantOpen, wantShut string
+	}{
+		{name: "بلا دوام", rows: false, want24: true},
+		{name: "٢٤ ساعة", rows: true, open: "00:00", close: "00:00", want24: true},
+		{name: "عادي", rows: true, open: "09:00", close: "23:00", wantOpen: "09:00", wantShut: "23:00"},
+		{name: "عطلة", rows: true, closed: true, open: "09:00", close: "23:00", wantClosed: true},
+	}
+	for _, c := range cases {
+		id := f.merchant(t, "متجر "+c.name, "active", false, 0, "")
+		f.item(t, id, sec, "صنف "+c.name, true)
+		if c.rows {
+			for d := 0; d < 7; d++ {
+				if _, err := f.srv.pg.Exec(context.Background(), `
+					INSERT INTO merchant_hours (merchant_id, day_of_week, closed, open_time, close_time)
+					VALUES ($1, $2, $3, $4::time, $5::time)`,
+					id, d, c.closed && d == dow, c.open, c.close); err != nil {
+					t.Fatalf("%s: تعذّر الدوام: %v", c.name, err)
+				}
+			}
+		}
+		code, body := f.get(t, "/stores/"+id)
+		if code != http.StatusOK {
+			t.Fatalf("%s: %d — %s", c.name, code, body)
+		}
+		var out struct {
+			Data struct {
+				Store struct {
+					Today struct {
+						Closed bool   `json:"closed"`
+						Open24 bool   `json:"open_24h"`
+						Open   string `json:"open"`
+						Close  string `json:"close"`
+					} `json:"today"`
+				} `json:"store"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(body, &out); err != nil {
+			t.Fatal(err)
+		}
+		g := out.Data.Store.Today
+		if g.Closed != c.wantClosed || g.Open24 != c.want24 || g.Open != c.wantOpen || g.Close != c.wantShut {
+			t.Errorf("%s: دوامُ اليوم = %+v", c.name, g)
+		}
 	}
 }

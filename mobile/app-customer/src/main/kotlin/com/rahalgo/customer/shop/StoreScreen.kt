@@ -116,12 +116,25 @@ internal fun FeaturedStrip(
     }
 }
 
-/** **حالُ المتجر بلفظ الزبون** — «مفتوح هلّق» أو «مغلق — يفتح الساعة …». */
+/**
+ * **دوامُ اليوم بلفظ الزبون** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «مافي شي اسمو مفتوح هلق… تحط ساعات
+ * الدوام… كل يوم بيومو») — «مفتوح ٢٤ ساعة» أو «اليوم من ٩:٠٠ ص لـ ١١:٠٠ م» أو «مغلق اليوم».
+ */
 @Composable
-private fun statusText(h: StoreHeader): String {
-    if (h.openNow) return stringResource(R.string.store_open)
-    val t = com.rahalgo.ui.backAtText(h.opensAt)
-    return if (t != null) stringResource(R.string.store_closed_opens_at, t) else stringResource(R.string.store_closed)
+private fun statusText(h: StoreHeader): String = when {
+    h.today.open24h -> stringResource(R.string.store_open_24h)
+    h.today.closed || h.today.open.isBlank() -> stringResource(R.string.store_closed_today)
+    else -> stringResource(R.string.store_today_hours, clock12(h.today.open), clock12(h.today.close))
+}
+
+/** «١٨:٣٠» ← «٦:٣٠ م». */
+internal fun clock12(hhmm: String): String {
+    val p = hhmm.split(":")
+    val h = p.getOrNull(0)?.toIntOrNull() ?: return hhmm
+    val m = p.getOrNull(1) ?: "00"
+    val am = h < 12
+    val h12 = when (val x = h % 12) { 0 -> 12; else -> x }
+    return "$h12:$m " + if (am) "ص" else "م"
 }
 
 /**
@@ -150,25 +163,20 @@ internal fun StoreScreen(
     notice: @Composable () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm)
-                .clip(Rahal.shape.sm)
-                .clickable(onClick = onBack)
-                .padding(Rahal.space.xs),
+        // **زرٌّ واضحٌ بسهم رجوع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «خليه زر واضح مع ايقونة مناسبة»).
+        com.rahalgo.ui.RahalOutlineButton(
+            onClick = onBack,
+            modifier = Modifier.padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         ) {
             Icon(
-                painter = painterResource(com.rahalgo.ui.R.drawable.ic_close),
+                painter = painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
                 contentDescription = null,
-                tint = Rahal.colors.brand,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(Rahal.space.xs))
             Text(
                 text = stringResource(R.string.store_back),
-                color = Rahal.colors.brand,
-                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
             )
         }
 
@@ -210,13 +218,6 @@ internal fun StoreScreen(
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelMedium,
                         )
-                        if (h.prepMinutes > 0) {
-                            Text(
-                                text = stringResource(R.string.store_prep, h.prepMinutes.toString()),
-                                color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
                     }
                 }
                 if (!h.openNow) {

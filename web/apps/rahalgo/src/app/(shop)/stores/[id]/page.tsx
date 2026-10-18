@@ -5,9 +5,8 @@
  * **‏/stores/[id] — صفحةُ متجر** (قرارُ المالك ٢٠٢٦-١٠-١٨)
  * ══════════════════════════════════════════════════════════════════════
  *
- * **رأسٌ** (الشعارُ والاسمُ ومفتوحٌ/«مغلق — يفتح الساعة …» ومدّةُ التحضير)
- * **ثمّ شريطُ أقسامٍ لاصق** يقفز إلى عناوينها، **ثمّ أصنافُ المتجر كلُّها
- * تحت عناوين أقسام المنصّة** — بالبطاقة والنافذة والسلّة نفسِها.
+ * **رأسٌ** (الشعارُ والاسمُ ودوامُ اليوم) **ثمّ دوائرُ الأقسام كالسوق،
+ * وتحتها أصنافُ القسم المختار وحدَه** — بالبطاقة والنافذة والسلّة نفسِها.
  *
  * **والمغلقُ للتصفّح وحدَه**: أصنافُه تصل `source_closed` فلا «+» عليها،
  * **والنافذةُ تقول السببَ مكانَ زرّ الإضافة.**
@@ -18,23 +17,35 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { Alert, Badge, EmptyState, LoadingState, ReloadState, IconPrev, IconStore, SectionRail } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StorePage } from "@/lib/customer/types";
-import { backAt, fill } from "@/lib/customer/texts";
+import { fill } from "@/lib/customer/texts";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { StoreLogo } from "@/components/customer/stores";
 
 const m = getMessages(defaultLocale);
 const ST = m.shop.stores;
 
-/** **حالُ المتجر بلفظ الزبون** — «مفتوح هلّق» أو «مغلق — يفتح الساعة …». */
-function statusText(open: boolean, opensAt: string | null): string {
-  if (open) return ST.open;
-  const t = backAt(opensAt);
-  return t ? fill(ST.closedOpensAt, { time: t }) : ST.closed;
+/** «١٨:٣٠» ← «٦:٣٠ م». */
+function clock12(hhmm: string): string {
+  const [hs, ms = "00"] = hhmm.split(":");
+  const h = Number(hs);
+  if (!Number.isFinite(h)) return hhmm;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${ms} ${h < 12 ? ST.am : ST.pm}`;
+}
+
+/**
+ * **دوامُ اليوم بلفظ الزبون** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) — «مفتوح ٢٤ ساعة» أو «اليوم من … لـ …»
+ * أو «مغلق اليوم»، **لا «مفتوح هلّق».**
+ */
+function todayText(today: StorePage["store"]["today"]): string {
+  if (!today || today.open_24h) return ST.open24;
+  if (today.closed || !today.open) return ST.closedToday;
+  return fill(ST.todayHours, { from: clock12(today.open), to: clock12(today.close) });
 }
 
 export default function StorePageView() {
@@ -64,8 +75,12 @@ export default function StorePageView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/shop" className="flex w-fit items-center gap-1 text-sm text-accent-text">
-        <IconPrev size={16} />
+      {/* **زرٌّ واضحٌ بسهم رجوع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) */}
+      <Link
+        href="/shop"
+        className="inline-flex w-fit items-center gap-2 rounded-full border border-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-tint"
+      >
+        <IconPrev size={18} />
         {ST.back}
       </Link>
 
@@ -82,13 +97,8 @@ export default function StorePageView() {
               <h1 className="heading-page truncate">{page.store.name}</h1>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={page.store.open_now ? "success" : "danger"}>
-                  {statusText(page.store.open_now, page.store.opens_at)}
+                  {todayText(page.store.today)}
                 </Badge>
-                {page.store.prep_minutes > 0 && (
-                  <span className="text-xs text-ink-muted">
-                    {fill(ST.prep, { n: fmtNum(page.store.prep_minutes) })}
-                  </span>
-                )}
               </div>
             </div>
           </header>

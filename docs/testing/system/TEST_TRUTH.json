@@ -34,7 +34,7 @@
     "behaviour_settings": 203,
     "order_fields": 111,
     "test_files": 613,
-    "test_funcs": 2439
+    "test_funcs": 2440
   },
   "flows": [
     {
@@ -28720,6 +28720,12 @@
     },
     {
       "name": "TestPublicStore_NotFound",
+      "file": "internal/server/stores_public_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPublicStore_TodayHours",
       "file": "internal/server/stores_public_test.go",
       "package": "server",
       "orphan": true

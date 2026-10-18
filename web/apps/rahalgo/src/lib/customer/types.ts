@@ -67,6 +67,8 @@ export interface StoreHeader {
   open_now: boolean;
   opens_at: string | null;
   prep_minutes: number;
+  /** **دوامُ اليوم** — بدل «مفتوح هلّق» (٢٠٢٦-١٠-١٨). */
+  today?: { closed: boolean; open_24h: boolean; open: string; close: string };
 }
 
 /** **قسمُ منصّةٍ وأصنافُ المتجر فيه** — الصنفُ بشكل القسم حرفاً. */

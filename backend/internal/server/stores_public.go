@@ -99,7 +99,18 @@ type storeHeader struct {
 	OpenNow      bool       `json:"open_now"`
 	OpensAt      *time.Time `json:"opens_at"`
 	// PrepMinutes **مدّةُ تحضيره المعتادة** — «يجهز خلال ٢٠ دقيقة».
-	PrepMinutes int `json:"prep_minutes"`
+	PrepMinutes int `json:"prep_minutes"` // Today **دوامُ اليوم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «تحط ساعات الدوام… كل يوم بيومو»)
+	// — يُعرض بدل «مفتوح هلّق»: «مفتوح ٢٤ ساعة» أو «من … لـ …» أو «مغلق اليوم».
+	Today todayHours `json:"today"`
+}
+
+// todayHours **دوامُ المتجر اليومَ بتوقيت دمشق.** وبلا صفوفِ دوامٍ مفتوحٌ دائماً
+// (`OpenNowSQL`)، **فيُقال ٢٤ ساعة.**
+type todayHours struct {
+	Closed bool   `json:"closed"`
+	Open24 bool   `json:"open_24h"`
+	Open   string `json:"open"`
+	Close  string `json:"close"`
 }
 
 // groupStoreSections **يجمع أصنافَ المتجر تحت أقسامها** — بترتيب الأقسام
@@ -156,6 +167,29 @@ func (s *Server) handlePublicStore(w http.ResponseWriter, r *http.Request) {
 		// يقول لزائرٍ أنّ المعرّفَ لمتجرٍ حقيقيّ.**
 		s.respondErr(w, httpx.ErrNotFound)
 		return
+	}
+	{
+		var closed bool
+		var open, close string
+		err := s.pg.QueryRow(r.Context(), `
+			SELECT closed, to_char(open_time, 'HH24:MI'), to_char(close_time, 'HH24:MI')
+			FROM merchant_hours
+			WHERE merchant_id = $1::uuid
+			  AND day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int`, id).
+			Scan(&closed, &open, &close)
+		switch {
+		case err != nil:
+			// **لا صفوفَ دوامٍ أصلاً ⇒ مفتوحٌ دائماً** (`OpenNowSQL`)، **وله دوامٌ بلا صفِّ اليوم ⇒ مغلقٌ اليوم.**
+			var any bool
+			_ = s.pg.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM merchant_hours WHERE merchant_id = $1::uuid)`, id).Scan(&any)
+			h.Today = todayHours{Open24: !any, Closed: any}
+		case closed:
+			h.Today = todayHours{Closed: true}
+		case open == close:
+			h.Today = todayHours{Open24: true}
+		default:
+			h.Today = todayHours{Open: open, Close: close}
+		}
 	}
 	h.LogoURL = media.URLForPtr(h.LogoURL)
 	h.LogoThumbURL = media.URLForPtr(h.LogoThumbURL)

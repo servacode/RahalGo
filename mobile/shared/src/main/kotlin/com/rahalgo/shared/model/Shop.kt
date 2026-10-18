@@ -54,6 +54,17 @@ data class StoreHeader(
     @SerialName("open_now") val openNow: Boolean = true,
     @SerialName("opens_at") val opensAt: String? = null,
     @SerialName("prep_minutes") val prepMinutes: Int = 0,
+    /** **دوامُ اليوم** — يُعرض بدل «مفتوح هلّق» (ملاحظةُ المالك ٢٠٢٦-١٠-١٨). */
+    val today: TodayHours = TodayHours(),
+)
+
+/** **دوامُ المتجر اليومَ** — ٢٤ ساعة، أو من … لـ …، أو مغلقٌ اليوم. */
+@Serializable
+data class TodayHours(
+    val closed: Boolean = false,
+    @SerialName("open_24h") val open24h: Boolean = false,
+    val open: String = "",
+    val close: String = "",
 )
 
 /** **قسمُ منصّةٍ وأصنافُ المتجر فيه** — الصنفُ بشكل القسم حرفاً (`Item`). */

@@ -294,10 +294,9 @@
     <!-- **متاجر مميّزة وصفحة المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٨) — ألفاظُ الويب نفسُها. -->
     <string name="shop_featured_stores">متاجر مميّزة</string>
     <string name="store_back">رجوع للتسوق</string>
-    <string name="store_open">مفتوح هلّق</string>
-    <string name="store_closed">مغلق</string>
-    <string name="store_closed_opens_at">مغلق — يفتح الساعة %1$s</string>
-    <string name="store_prep">التحضير بحدود %1$s دقيقة</string>
+    <string name="store_open_24h">مفتوح ٢٤ ساعة</string>
+    <string name="store_closed_today">مغلق اليوم</string>
+    <string name="store_today_hours">اليوم من %1$s لـ %2$s</string>
     <string name="store_browse_only">المتجر مسكّر هلّق — فيك تتصفح الأصناف بس ما فيك تطلب لحتى يفتح</string>
     <string name="store_empty">ما في أصناف بهالمتجر هلّق</string>
     <string name="store_empty_hint">ارجع بعدين — المتجر عم يضيف أصنافه</string>
