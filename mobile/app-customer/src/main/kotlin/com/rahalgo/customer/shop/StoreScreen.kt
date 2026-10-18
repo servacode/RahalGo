@@ -139,6 +139,11 @@ internal fun StoreScreen(
     onLike: (Item) -> Unit,
     onAdd: (Item) -> Unit,
     onBack: () -> Unit,
+    /**
+     * **لافتةُ السوق نفسُها حين يُطفأ «+»** — عنوانٌ خارجَ التغطية أو استعراض
+     * (`ServiceBlockNotice`)، **ولا «+» يُطفأ بصمت.**
+     */
+    notice: @Composable () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -216,6 +221,8 @@ internal fun StoreScreen(
                         com.rahalgo.ui.Note(stringResource(R.string.store_browse_only), Rahal.colors.danger)
                     }
                 }
+                Spacer(Modifier.height(Rahal.space.sm))
+                notice()
 
                 val sections = StoreMenu.visible(page.sections)
                 if (sections.isEmpty()) {

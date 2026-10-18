@@ -240,6 +240,50 @@ fun ShopScreen(
     }
 
     // ══════════════════════════════════════════════════════════════════
+    // **لافتةُ «+» المطفأ — في السوق وصفحة المتجر معاً** (٢٠٢٦-١٠-١٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والحارسُ واحدٌ فاللافتةُ واحدة**: عنوانٌ خارجَ التغطية يُطفئ «+» في
+    // الشاشتين، **ومن لم يقرأ السببَ في صفحة المتجر ضغط فلم يقع شيء.**
+    val addNotice: @androidx.compose.runtime.Composable () -> Unit = {
+        if (previewing) {
+            // **لافتةُ الاستعراض الدائمة** (Batch 3c) — **أنت تتصفح سوق الرقة**،
+            // والتوصيلُ إلى مدينتك غير متاح؛ وخروجٌ صريحٌ يعيدك إلى مدينتك.
+            Column(Modifier.padding(horizontal = 12.dp)) {
+                com.rahalgo.ui.Note(
+                    stringResource(
+                        com.rahalgo.ui.R.string.preview_banner_named,
+                        com.rahalgo.customer.CityScope.chosen?.name ?: flagship?.name ?: "",
+                    ),
+                    Rahal.colors.brand,
+                )
+                Spacer(Modifier.height(8.dp))
+                com.rahalgo.ui.RahalOutlineButton(
+                    onClick = { com.rahalgo.customer.CityScope.exitPreview(context); vm.load() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(com.rahalgo.ui.R.string.preview_exit)) }
+                Spacer(Modifier.height(10.dp))
+            }
+        } else {
+            availability?.takeIf { !it.available }?.let { av ->
+                Column(Modifier.padding(horizontal = 12.dp)) {
+                    com.rahalgo.customer.ServiceBlockNotice(
+                        av,
+                        address,
+                        serviceVm,
+                        // **ونقطةُ الاستكشاف تُصاغ «موقعك الحالي»** —
+                        // **ولا تُقرأ عنوانَ توصيلٍ مؤكَّدا** (`A2`).
+                        discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
+                        flagshipName = flagship?.name ?: "",
+                        onBrowseFlagship = enterPreview,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // **صفحةُ المتجر فوق السوق** (قرارُ المالك ٢٠٢٦-١٠-١٨)
     // ══════════════════════════════════════════════════════════════════
     //
@@ -254,6 +298,7 @@ fun ShopScreen(
             onLike = onLike,
             onAdd = addItem,
             onBack = vm::closeStore,
+            notice = addNotice,
         )
         return
     }
@@ -393,41 +438,7 @@ fun ShopScreen(
             //
             // **وفوق الأقسام لا تحتها** — **ولافتةٌ تحت البضاعة
             // لا تُرى إلّا بعد أن يُملأ ما فوقها.**
-            if (previewing) {
-                // **لافتةُ الاستعراض الدائمة** (Batch 3c) — **أنت تتصفح سوق الرقة**،
-                // والتوصيلُ إلى مدينتك غير متاح؛ وخروجٌ صريحٌ يعيدك إلى مدينتك.
-                Column(Modifier.padding(horizontal = 12.dp)) {
-                    com.rahalgo.ui.Note(
-                        stringResource(
-                            com.rahalgo.ui.R.string.preview_banner_named,
-                            com.rahalgo.customer.CityScope.chosen?.name ?: flagship?.name ?: "",
-                        ),
-                        Rahal.colors.brand,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    com.rahalgo.ui.RahalOutlineButton(
-                        onClick = { com.rahalgo.customer.CityScope.exitPreview(context); vm.load() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(com.rahalgo.ui.R.string.preview_exit)) }
-                    Spacer(Modifier.height(10.dp))
-                }
-            } else {
-                availability?.takeIf { !it.available }?.let { av ->
-                    Column(Modifier.padding(horizontal = 12.dp)) {
-                        com.rahalgo.customer.ServiceBlockNotice(
-                            av,
-                            address,
-                            serviceVm,
-                            // **ونقطةُ الاستكشاف تُصاغ «موقعك الحالي»** —
-                            // **ولا تُقرأ عنوانَ توصيلٍ مؤكَّدا** (`A2`).
-                            discovery = ctx0.source == com.rahalgo.customer.PointSource.DISCOVERY,
-                            flagshipName = flagship?.name ?: "",
-                            onBrowseFlagship = enterPreview,
-                        )
-                        Spacer(Modifier.height(10.dp))
-                    }
-                }
-            }
+            addNotice()
 
             SectionRail(vm.visibleSections, vm.pick, media, vm::openSection)
         }
