@@ -110,6 +110,11 @@ func (w Window) MarshalJSON() ([]byte, error) {
 		w.Day, w.Start.String(), w.End.String())), nil
 }
 
+// AllDay **«مفتوح ٢٤ ساعة»** — ٠٠:٠٠ ← ٠٠:٠٠ في دوام المتاجر (٢٠٢٦-١٠-١٨).
+//
+// **ودوامُ المنصّة والمناطق يردّها** (`ErrEmptyWindow`) — هي في جدول المتاجر وحدَه.
+func (w Window) AllDay() bool { return w.Start == 0 && w.End == 0 }
+
 // CrossesMidnight **أتعبر الفترةُ منتصفَ الليل؟**
 func (w Window) CrossesMidnight() bool { return w.End <= w.Start }
 
@@ -219,6 +224,9 @@ func (s Schedule) OpenAt(now time.Time) bool {
 
 	for _, w := range s {
 		switch {
+		case w.Day == day && w.AllDay():
+			// **يومُه كلُّه** — صراحةً لا ضمناً بشقّ العابر.
+			return true
 		case w.Day == day && !w.CrossesMidnight():
 			if m >= w.Start && m < w.End {
 				return true

@@ -1,5 +1,7 @@
 package orders
 
+import "strings"
+
 // دوامُ المتجر — **ومنتصفُ الليل يقطعه.**
 //
 // # الخللُ الذي كان
@@ -33,9 +35,21 @@ package orders
 // يقول مغلقٌ والإنشاءُ يقبل، أو العكس.**
 //
 // يفترض أن جدول المتاجر باسم `m`.
+//
+// # و«مفتوح ٢٤ ساعة» صراحةً (قرارُ المالك ٢٠٢٦-١٠-١٨)
+//
+// **يومٌ يبدأ ٠٠:٠٠ وينتهي ٠٠:٠٠ مفتوحٌ اليومَ كلَّه** — من أوّل ثانيةٍ إلى
+// ٢٣:٥٩:٥٩. وكان يصحّ ضمناً بشقّ «العابر لمنتصف الليل»، **فكُتب شرطاً باسمه**
+// كي لا يُكسَر يوماً بإصلاحٍ في ذاك الشقّ.
 const OpenNowSQL = `(m.status = 'active' AND NOT m.emergency_closed AND (
 	-- **لا صفوفَ دوامٍ تعني مفتوحاً دائماً** — من لم يحدّد لم يقيّد نفسه.
 	NOT EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id)
+	-- **مفتوحٌ ٢٤ ساعة**: ٠٠:٠٠ ← ٠٠:٠٠ يومُه كلُّه.
+	OR EXISTS (
+		SELECT 1 FROM merchant_hours h
+		WHERE h.merchant_id = m.id AND NOT h.closed
+		  AND h.open_time = '00:00' AND h.close_time = '00:00'
+		  AND h.day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int)
 	-- صدرُ اليوم: دوامٌ عاديّ، أو الشقُّ المسائيُّ من دوامٍ يعبر منتصف الليل.
 	OR EXISTS (
 		SELECT 1 FROM merchant_hours h
@@ -74,8 +88,14 @@ const OpenNowSQL = `(m.status = 'active' AND NOT m.emergency_closed AND (
 // وحدَه يعيد فراغاً لمن يفتح بعد ثلاثة أيام، **وفراغٌ يُعرض «غير متاح» فنعود
 // إلى ما هربنا منه.**
 //
+// # ولا موعدَ لمن هو مفتوحٌ الآن
+//
+// **ومتجرٌ مفتوحٌ ٢٤ ساعة كان يُعاد له «يفتح ٠٠:٠٠ غداً»** — صفُّ الغد في
+// المستقبل وإن كان مفتوحاً الساعةَ. **فالموعدُ `NULL` ما دام `OpenNowSQL`
+// صادقاً** (٢٠٢٦-١٠-١٨) — وهو ما يقوله تعليقُ الحقل في الردّ منذ كُتب.
+//
 // يفترض أن جدول المتاجر باسم `m`.
-const NextOpenSQL = `(
+const NextOpenSQL = `(CASE WHEN ` + OpenNowSQL + ` THEN NULL ELSE (
 	SELECT (date_trunc('day', (now() AT TIME ZONE 'Asia/Damascus') + make_interval(days => d))
 	        + h.open_time) AT TIME ZONE 'Asia/Damascus'
 	FROM generate_series(0, 7) d
@@ -87,4 +107,23 @@ const NextOpenSQL = `(
 	  -- لا يُقال له «يفتح التاسعة» — **موعدٌ في الماضي أسوأُ من لا موعد.**
 	  AND (date_trunc('day', (now() AT TIME ZONE 'Asia/Damascus') + make_interval(days => d))
 	       + h.open_time) > (now() AT TIME ZONE 'Asia/Damascus')
-	ORDER BY 1 LIMIT 1)`
+	ORDER BY 1 LIMIT 1) END)`
+
+// OpenAtSQL **`OpenNowSQL` عينُه في لحظةٍ معلومة** — `at` تعبيرُ `timestamptz`.
+//
+// **نصٌّ واحدٌ لا نصّان**: يُستبدَل `now()` وحدَه، فما يُختبَر في الثالثة فجراً
+// هو ما يحكم الإنشاءَ الساعةَ.
+func OpenAtSQL(at string) string { return strings.ReplaceAll(OpenNowSQL, "now()", at) }
+
+// NextOpenAtSQL **`NextOpenSQL` عينُه في لحظةٍ معلومة.**
+func NextOpenAtSQL(at string) string { return strings.ReplaceAll(NextOpenSQL, "now()", at) }
+
+// Open24h **«مفتوح ٢٤ ساعة»** — بدءٌ وانتهاءٌ عند ٠٠:٠٠ (`HH:MM` أو `HH:MM:SS`).
+//
+// **والمعنى واحدٌ في المحرّك واللوحة والتطبيقات** — ولا رايةَ في الجدول:
+// رايةٌ بجانب ساعتين تصنع حالين يقولان الشيءَ نفسَه فيفترقان يوماً.
+func Open24h(open, close string) bool {
+	return midnight(open) && midnight(close)
+}
+
+func midnight(t string) bool { return t == "00:00" || t == "00:00:00" }

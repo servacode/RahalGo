@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -16,6 +17,12 @@ type DayHours struct {
 	Closed    bool   `json:"closed"`
 	OpenTime  string `json:"open_time"`  // "HH:MM"
 	CloseTime string `json:"close_time"` // "HH:MM"
+	// Open24h **«مفتوح ٢٤ ساعة»** (قرارُ المالك ٢٠٢٦-١٠-١٨) — يُقرأ ويُكتب.
+	//
+	// **وليس عموداً**: هو `00:00 ← 00:00` بعينه (`orders.Open24h`). **فالتطبيقُ
+	// القديمُ يرسل الساعتين ويقرؤهما كما كان**، والجديدُ يرسل الراية فتُكتب
+	// الساعتان صفراً.
+	Open24h bool `json:"open_24h"`
 }
 
 func (s *Service) GetHours(ctx context.Context, merchantID string) ([]DayHours, error) {
@@ -36,6 +43,7 @@ func (s *Service) GetHours(ctx context.Context, merchantID string) ([]DayHours, 
 		if err := rows.Scan(&d.DayOfWeek, &d.Closed, &d.OpenTime, &d.CloseTime); err != nil {
 			return nil, err
 		}
+		d.Open24h = orders.Open24h(d.OpenTime, d.CloseTime)
 		set[d.DayOfWeek] = d
 	}
 	if err := rows.Err(); err != nil {
@@ -69,6 +77,10 @@ func (s *Service) SetHours(ctx context.Context, actorID, merchantID string, days
 	for _, d := range days {
 		if d.DayOfWeek < 0 || d.DayOfWeek > 6 {
 			return ErrBadHours
+		}
+		// **والرايةُ تكتب الساعتين** — وما أُرسل معها من ساعاتٍ لا يُقرأ.
+		if d.Open24h {
+			d.OpenTime, d.CloseTime = "00:00", "00:00"
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO merchant_hours (merchant_id, day_of_week, closed, open_time, close_time)
