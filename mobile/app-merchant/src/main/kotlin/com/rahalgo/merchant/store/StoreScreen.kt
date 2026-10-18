@@ -763,7 +763,8 @@ private fun HoursEditor(vm: StoreViewModel) {
     var nightCheck by remember { mutableStateOf<List<com.rahalgo.shared.merchant.DayHours>?>(null) }
     // **ومفتوحٌ اليومَ كلَّه لا يُسأل** — منتصفُ الليل إلى ما قبله دوامٌ كاملٌ لا غلط.
     val nightOpen: (com.rahalgo.shared.merchant.DayHours) -> Boolean = { d ->
-        val open = d.openTime.take(2).toIntOrNull() ?: 9
+        // **و«مفتوح ٢٤ ساعة» ليس غلطاً** — ٠٠:٠٠ ← ٠٠:٠٠ مقصودة (٢٠٢٦-١٠-١٨).
+        val open = if (d.isOpen24h) -1 else d.openTime.take(2).toIntOrNull() ?: 9
         val close = d.closeTime.take(2).toIntOrNull() ?: 23
         !d.closed && open in 0..5 && !(open == 0 && close >= 23)
     }
@@ -808,29 +809,46 @@ private fun HoursEditor(vm: StoreViewModel) {
     // ══════════════════════════════════════════════════════════════════
     var allOpen by rememberSaveable { mutableStateOf(sorted.firstOrNull { !it.closed }?.openTime ?: "09:00") }
     var allClose by rememberSaveable { mutableStateOf(sorted.firstOrNull { !it.closed }?.closeTime ?: "23:00") }
+    // **«مفتوح ٢٤ ساعة» لكلّ الأيّام** (قرارُ المالك ٢٠٢٦-١٠-١٨) — يُخفي الوقتين.
+    var all24 by rememberSaveable { mutableStateOf(sorted.firstOrNull { !it.closed }?.isOpen24h ?: false) }
     Card {
         Text(stringResource(R.string.hours_all_days), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.hours_from))
-            TimeField(allOpen) { allOpen = it }
-            Text(stringResource(R.string.hours_to))
-            TimeField(allClose) { allClose = it }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = all24,
+                onCheckedChange = { all24 = it },
+                modifier = Modifier.size(36.dp),
+            )
+            Text(stringResource(R.string.hours_open_24h), style = MaterialTheme.typography.bodyMedium)
+        }
+        if (!all24) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.hours_from))
+                TimeField(allOpen) { allOpen = it }
+                Text(stringResource(R.string.hours_to))
+                TimeField(allClose) { allClose = it }
+            }
         }
         // **والدوامُ بالكلام** — «من 1:00 م لـ 11:00 م» يُقرأ قبل الحفظ.
         Spacer(Modifier.height(4.dp))
         Text(
-            stringResource(R.string.hours_summary, clock12(allOpen), clock12(allClose)),
+            if (all24) stringResource(R.string.hours_open_24h)
+            else stringResource(R.string.hours_summary, clock12(allOpen), clock12(allClose)),
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
         RahalButton(
             onClick = {
-                draft = draft.map { it.copy(closed = false, openTime = allOpen, closeTime = allClose) }
+                draft = draft.map {
+                    if (all24) it.with24h(true)
+                    else it.copy(closed = false, open24h = false, openTime = allOpen, closeTime = allClose)
+                }
                 save(draft)
             },
-            enabled = !vm.saving && vm.store?.status != "suspended" && allOpen.isNotBlank() && allClose.isNotBlank(),
+            enabled = !vm.saving && vm.store?.status != "suspended" &&
+                (all24 || (allOpen.isNotBlank() && allClose.isNotBlank())),
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.hours_apply_all)) }
     }
@@ -901,10 +919,29 @@ private fun HoursRow(d: DayHours, onChange: (DayHours) -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.weight(1f))
+        if (!d.closed) {
+            // **«٢٤ ساعة» لليوم وحدَه** — يُخفي الوقتين، وإطفاؤه يعيد ٩–٢٣.
+            Checkbox(
+                checked = d.isOpen24h,
+                onCheckedChange = { onChange(d.with24h(it)) },
+                modifier = Modifier.size(36.dp),
+            )
+            Text(
+                stringResource(R.string.hours_open_24h_short),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.width(4.dp))
+        }
         if (d.closed) {
             Text(
                 stringResource(R.string.store_day_closed),
                 color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else if (d.isOpen24h) {
+            Text(
+                stringResource(R.string.hours_open_24h),
+                fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {

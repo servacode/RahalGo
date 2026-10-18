@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantOrder
+import com.rahalgo.shared.merchant.commissionLabel
 import com.rahalgo.shared.merchant.OrderLine
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.SumLine
@@ -243,7 +244,7 @@ private fun OrderCard(
             value = money(order.subtotal),
         )
         SumLine(
-            label = stringResource(R.string.ord_cut_lbl, order.commissionPercent),
+            label = stringResource(R.string.ord_cut_lbl, order.commissionLabel),
             value = "− " + money(order.platformCommission),
         )
         Spacer(Modifier.height(6.dp))

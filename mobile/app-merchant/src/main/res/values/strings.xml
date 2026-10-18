@@ -237,7 +237,7 @@
          **والاسمُ وحدَه فوق والرقمُ تحته** — فلا يحمل الاسمُ رقمَه
          معه، **وكانت «المجموع ١٥٠ ل.س» كلَّها في سطر.** -->
     <string name="ord_sum_lbl">المجموع</string>
-    <string name="ord_cut_lbl">خصم المنصة %1$d٪</string>
+    <string name="ord_cut_lbl">خصم المنصة %1$s٪</string>
     <string name="ord_due_lbl">المستحق لك</string>
     <string name="reports_against_empty">لا شكاوى على متجرك — أحسنت</string>
     <string name="sales_custom">مدة محددة</string>
@@ -459,4 +459,6 @@
     <string name="hours_from">من</string>
     <string name="hours_to">لـ</string>
     <string name="hours_apply_all">طبّق على كل الأيام</string>
+    <string name="hours_open_24h">مفتوح ٢٤ ساعة</string>
+    <string name="hours_open_24h_short">٢٤ ساعة</string>
 </resources>

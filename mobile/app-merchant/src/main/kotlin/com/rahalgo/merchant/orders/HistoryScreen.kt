@@ -38,6 +38,7 @@ import com.rahalgo.merchant.R
 import com.rahalgo.merchant.drawer.reasonAr
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.MerchantOrder
+import com.rahalgo.shared.merchant.commissionLabel
 import com.rahalgo.ui.err
 import com.rahalgo.ui.money
 import com.rahalgo.ui.AppCore
@@ -246,7 +247,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                             SumLine(
                                 label = stringResource(
                                     com.rahalgo.merchant.R.string.ord_cut_lbl,
-                                    o.commissionPercent,
+                                    o.commissionLabel,
                                 ),
                                 value = "− " + money(o.platformCommission),
                             )

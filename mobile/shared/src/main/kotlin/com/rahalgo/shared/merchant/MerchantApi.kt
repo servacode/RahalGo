@@ -472,6 +472,13 @@ data class MerchantOrder(
     @SerialName("platform_commission") val platformCommission: Long = 0,
     @SerialName("merchant_net") val merchantNet: Long = 0,
     @SerialName("commission_percent") val commissionPercent: Int = 0,
+    /**
+     * **النسبةُ بمنزلتين** (١٫٥) — قرارُ المالك ٢٠٢٦-١٠-١٨.
+     *
+     * **و`commission_percent` تبقى عدداً صحيحاً مقرَّباً** — النسخُ المنشورةُ
+     * تفكّها `Int` فتسقط على `1.5`. **وخادمٌ أقدمُ لا يرسل هذه** ⇒ `null`.
+     */
+    @SerialName("commission_percent_exact") val commissionPercentExact: Double? = null,
     val items: List<OrderLine> = emptyList(),
     val notes: String = "",
     @SerialName("created_at") val createdAt: String = "",
@@ -555,7 +562,51 @@ data class DayHours(
     val closed: Boolean = false,
     @SerialName("open_time") val openTime: String = "",
     @SerialName("close_time") val closeTime: String = "",
-)
+    /**
+     * **«مفتوح ٢٤ ساعة»** (قرارُ المالك ٢٠٢٦-١٠-١٨) — يُقرأ ويُكتب.
+     *
+     * **والخادمُ يكتب معها ٠٠:٠٠ ← ٠٠:٠٠** — فخادمٌ أقدمُ يتجاهلها ويحفظ
+     * الساعتين، والمعنى نفسُه.
+     */
+    @SerialName("open_24h") val open24h: Boolean = false,
+) {
+    /** **أهو ٢٤ ساعة؟** — الرايةُ، أو ٠٠:٠٠ ← ٠٠:٠٠ من خادمٍ لا يرسلها. */
+    val isOpen24h: Boolean
+        get() = open24h || (openTime.take(5) == "00:00" && closeTime.take(5) == "00:00")
+
+    /**
+     * **تشغيلُ «٢٤ ساعة» أو إطفاؤه.**
+     *
+     * **والإطفاءُ يعيد ٩–٢٣** — ٠٠:٠٠ ← ٠٠:٠٠ بلا رايةٍ تُقرأ ٢٤ ساعة ثانيةً.
+     */
+    fun with24h(on: Boolean): DayHours =
+        if (on) copy(closed = false, open24h = true, openTime = "00:00", closeTime = "00:00")
+        else copy(open24h = false, openTime = "09:00", closeTime = "23:00")
+}
+
+/**
+ * **نسبةٌ للعرض بلا أصفارٍ زائدة** — «1.5» و«2.25» و«10».
+ *
+ * **والدقيقةُ إن وصلت، وإلّا الصحيحةُ** — خادمٌ أقدمُ يرسل الصحيحةَ وحدَها.
+ * **ولا `String.format`**: الحزمةُ المشتركةُ لا تعرف `java.util.Locale`.
+ */
+fun percentLabel(exact: Double?, rounded: Int): String {
+    if (exact == null) return rounded.toString()
+    val h = kotlin.math.round(exact * 100).toLong()
+    val sign = if (h < 0) "-" else ""
+    val a = kotlin.math.abs(h)
+    val whole = a / 100
+    val frac = a % 100
+    return when {
+        frac == 0L -> "$sign$whole"
+        frac % 10 == 0L -> "$sign$whole.${frac / 10}"
+        else -> "$sign$whole.${frac.toString().padStart(2, '0')}"
+    }
+}
+
+/** **نسبةُ عمولة الطلب للعرض** — «1.5» لا «2». */
+val MerchantOrder.commissionLabel: String
+    get() = percentLabel(commissionPercentExact, commissionPercent)
 
 @Serializable
 data class StoreReport(val summary: ReportSummary = ReportSummary())
