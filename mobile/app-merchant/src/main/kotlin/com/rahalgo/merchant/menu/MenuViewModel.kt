@@ -188,7 +188,16 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 .onSuccess {
                     fillDrinks(it)
                     drinksOpen = false
-                    Flash.ok(AppCore.get().app.getString(com.rahalgo.merchant.R.string.drinks_saved))
+                    // **ويُقال له ما صار** (طلبُ المالك ٢٠٢٦-١٠-١٩): كم صنفاً نالها.
+                    val n = groups.sumOf { g -> g.items.size }
+                    val app = AppCore.get().app
+                    Flash.ok(
+                        when {
+                            it.isEmpty() -> app.getString(com.rahalgo.merchant.R.string.drinks_cleared)
+                            n == 0 -> app.getString(com.rahalgo.merchant.R.string.drinks_saved_none)
+                            else -> app.getString(com.rahalgo.merchant.R.string.drinks_saved, n)
+                        },
+                    )
                 }
                 .onFailure { drinksError = err(it) }
             busy = false

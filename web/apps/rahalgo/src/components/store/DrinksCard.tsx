@@ -10,12 +10,19 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtMoney } from "@rahalgo/i18n";
+import {
+  getMessages,
+  defaultLocale,
+  errorText,
+  fmtMoney,
+  fmtNum,
+} from "@rahalgo/i18n";
 import { Alert, Button, Input, IconAdd, IconDelete } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { parseUsd, usdInput, usdText, usdToSyp } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
+import { fill as fillText } from "@/lib/customer/texts";
 
 const m = getMessages(defaultLocale);
 const D = m.store.drinks;
@@ -31,7 +38,14 @@ interface Row {
   usd: string;
 }
 
-export default function DrinksCard({ storeId }: { storeId: string }) {
+/** `itemCount` **كم صنفاً عند المتجر** — ليُقال له بعد الحفظ كم صنفاً نال القائمة. */
+export default function DrinksCard({
+  storeId,
+  itemCount,
+}: {
+  storeId: string;
+  itemCount: number;
+}) {
   const { store } = useStore();
   const toast = useShopToast();
   const rate = store?.exchange_rate ?? null;
@@ -82,7 +96,16 @@ export default function DrinksCard({ storeId }: { storeId: string }) {
         },
       );
       fill(res.drinks ?? []);
-      toast(D.saved, "success");
+      // **ويُقال له ما صار** (طلبُ المالك ٢٠٢٦-١٠-١٩): كم صنفاً نالها.
+      const n = res.drinks?.length ?? 0;
+      toast(
+        n === 0
+          ? D.cleared
+          : itemCount === 0
+            ? D.savedNone
+            : fillText(D.saved, { n: fmtNum(itemCount) }),
+        "success",
+      );
     } catch (e) {
       setError(errorText(e));
     } finally {

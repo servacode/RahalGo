@@ -25,7 +25,13 @@
 import Link from "next/link";
 import DrinksCard from "@/components/store/DrinksCard";
 import { useCallback, useMemo, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
+import {
+  getMessages,
+  defaultLocale,
+  errorText,
+  fmtMoney,
+  fmtNum,
+} from "@rahalgo/i18n";
 import {
   Alert,
   ButtonLink,
@@ -72,7 +78,11 @@ function PriceDialog({
 }) {
   const usd = item.price_currency === "USD";
   const [text, setText] = useState(
-    usd ? (item.merchant_price_usd != null ? String(item.merchant_price_usd) : "") : String(item.price || ""),
+    usd
+      ? item.merchant_price_usd != null
+        ? String(item.merchant_price_usd)
+        : ""
+      : String(item.price || ""),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -82,7 +92,10 @@ function PriceDialog({
   const sypValue = usd ? null : Number(text.replace(/\D/g, "")) || 0;
 
   async function save() {
-    if ((usd && (usdValue == null || usdValue <= 0)) || (!usd && (!sypValue || sypValue <= 0))) {
+    if (
+      (usd && (usdValue == null || usdValue <= 0)) ||
+      (!usd && (!sypValue || sypValue <= 0))
+    ) {
       setError(M.badPrice);
       return;
     }
@@ -92,7 +105,9 @@ function PriceDialog({
       await api(`/api/v1/merchant/menu/items/${item.id}`, {
         method: "PATCH",
         body: JSON.stringify(
-          usd ? { price_currency: "USD", price_usd: usdValue } : { price_currency: "SYP", price: sypValue },
+          usd
+            ? { price_currency: "USD", price_usd: usdValue }
+            : { price_currency: "SYP", price: sypValue },
         ),
       });
       toast(M.saved, "success");
@@ -112,7 +127,13 @@ function PriceDialog({
           inputMode={usd ? "decimal" : "numeric"}
           dir="ltr"
           value={text}
-          onChange={(e) => setText(usd ? usdInput(e.target.value) :e.target.value.replace(/\D/g, "").slice(0, 9))}
+          onChange={(e) =>
+            setText(
+              usd
+                ? usdInput(e.target.value)
+                : e.target.value.replace(/\D/g, "").slice(0, 9),
+            )
+          }
           autoFocus
         />
         {usd && rate != null && (
@@ -121,13 +142,19 @@ function PriceDialog({
             {usdValue != null && usdValue > 0 && (
               <>
                 {" — "}
-                {fill(M.usdPreview, { syp: fmtMoney(usdToSyp(usdValue, rate)) })}
+                {fill(M.usdPreview, {
+                  syp: fmtMoney(usdToSyp(usdValue, rate)),
+                })}
               </>
             )}
           </p>
         )}
         {error && <Alert>{error}</Alert>}
-        <FormActions onSave={() => void save()} onCancel={onClose} busy={busy} />
+        <FormActions
+          onSave={() => void save()}
+          onCancel={onClose}
+          busy={busy}
+        />
       </div>
     </Modal>
   );
@@ -145,8 +172,18 @@ function ItemRow({
   onPrice: () => void;
 }) {
   return (
-    <li className="flex items-center gap-3 py-2" data-testid="store-menu-item" data-item-id={item.id}>
-      <MediaThumb url={item.image_thumb_url ?? item.image_url} alt={item.name} fallback={item.name} size={52} mediaUrl={mediaUrl} />
+    <li
+      className="flex items-center gap-3 py-2"
+      data-testid="store-menu-item"
+      data-item-id={item.id}
+    >
+      <MediaThumb
+        url={item.image_thumb_url ?? item.image_url}
+        alt={item.name}
+        fallback={item.name}
+        size={52}
+        mediaUrl={mediaUrl}
+      />
       <div className="min-w-0 flex-1">
         <Link
           href={`/store/menu/${item.id}`}
@@ -188,8 +225,15 @@ export default function MenuPage() {
   const { store } = useStore();
   const id = store?.id ?? "";
   const toast = useShopToast();
-  const load = useCallback(() => api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`), [id]);
-  const { data, loading, error, reload, setData } = useLiveData(load, ["menu"], [id]);
+  const load = useCallback(
+    () => api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`),
+    [id],
+  );
+  const { data, loading, error, reload, setData } = useLiveData(
+    load,
+    ["menu"],
+    [id],
+  );
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<MenuItem | null>(null);
   const suspended = store?.status === "suspended";
@@ -204,7 +248,10 @@ export default function MenuPage() {
       by.set(k, [...(by.get(k) ?? []), it]);
     }
     return [...by.entries()]
-      .map(([name, items]) => ({ name, items: items.sort((a, b) => a.name.localeCompare(b.name, "ar")) }))
+      .map(([name, items]) => ({
+        name,
+        items: items.sort((a, b) => a.name.localeCompare(b.name, "ar")),
+      }))
       .sort((a, b) => b.items.length - a.items.length);
   }, [data, q]);
 
@@ -213,7 +260,12 @@ export default function MenuPage() {
     const flip = (v: boolean) =>
       setData((d) =>
         d
-          ? d.map((s) => ({ ...s, items: s.items.map((i) => (i.id === item.id ? { ...i, available: v } : i)) }))
+          ? d.map((s) => ({
+              ...s,
+              items: s.items.map((i) =>
+                i.id === item.id ? { ...i, available: v } : i,
+              ),
+            }))
           : d,
       );
     flip(next);
@@ -241,14 +293,22 @@ export default function MenuPage() {
           <p className="text-sm text-ink-muted">{M.hint}</p>
         </div>
         {!suspended && (
-          <ButtonLink href="/store/menu/new" className="flex shrink-0 items-center gap-1">
+          <ButtonLink
+            href="/store/menu/new"
+            className="flex shrink-0 items-center gap-1"
+          >
             <IconAdd size={15} />
             {M.add}
           </ButtonLink>
         )}
       </header>
       {/* **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩). */}
-      {!suspended && id && <DrinksCard storeId={id} />}
+      {!suspended && id && (
+        <DrinksCard
+          storeId={id}
+          itemCount={(data ?? []).reduce((n, s) => n + s.items.length, 0)}
+        />
+      )}
       {empty ? (
         <EmptyState icon={IconList} title={M.empty} />
       ) : (
@@ -261,7 +321,11 @@ export default function MenuPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          {groups.length === 0 && <p className="py-6 text-center text-sm text-ink-muted">{M.noMatch}</p>}
+          {groups.length === 0 && (
+            <p className="py-6 text-center text-sm text-ink-muted">
+              {M.noMatch}
+            </p>
+          )}
           {groups.map((g) => (
             <section key={g.name} className="surface rounded-card p-3">
               <h3 className="heading-card flex items-center justify-between gap-2">
