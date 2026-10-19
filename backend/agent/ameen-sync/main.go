@@ -39,7 +39,7 @@ import (
 )
 
 // Version **نسختُه** — يقرؤها الخادمُ عند البناء ليعرف من يحتاج تحديثاً.
-var Version = "2.0.0"
+var Version = "2.0.1"
 
 const marker = "\n##RAHALGO-SYNC-CONFIG##"
 
@@ -416,7 +416,13 @@ func (st *state) sync(ctx context.Context, rc *Remote, force bool) error {
 	}
 	st.mode = "sql"
 	if strings.TrimSpace(rc.SQLQuery) == "" {
-		return errors.New("بانتظار ضبط جملة القراءة من فريق رحّال غو — البرنامج شغّال وبعت جداول الأمين")
+		// **ويُقال الصدق**: لقي القاعدةَ أم لا — لا «بعت الجداول» وهو لم يجدها.
+		db, err := st.open(ctx, rc)
+		if err != nil {
+			return err
+		}
+		db.Close()
+		return errors.New("بانتظار ضبط جملة القراءة من فريق رحّال غو — البرنامج لقى قاعدة الأمين وبعت جداولها")
 	}
 	if !safeQuery(rc.SQLQuery) {
 		return errors.New("جملة القراءة مرفوضة: لازم تكون قراءة بس (SELECT)")
