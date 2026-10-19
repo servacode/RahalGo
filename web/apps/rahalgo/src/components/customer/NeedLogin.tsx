@@ -7,25 +7,19 @@
  * الدخول إلى حيث كان** (`next`).
  */
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { ButtonLink, EmptyState, IconUser } from "@rahalgo/ui";
+import CustomerAuth from "./CustomerAuth";
 
-const m = getMessages(defaultLocale);
-const A = m.shop.account;
-
+/**
+ * **فورمُ الدخول نفسُه لا زرٌّ إليه** (قرارُ المالك ٢٠٢٦-١٠-١٩: «لازم فورا يفتح فورم تسجيل
+ * الدخول وتحت انشاء حساب جديد») — خطوةٌ أقلّ، **ويعود بعد الدخول إلى حيث كان.**
+ */
 export function NeedLogin() {
   const path = usePathname() ?? "/shop";
   return (
-    <EmptyState
-      icon={IconUser}
-      title={A.guestTitle}
-      action={
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-xs text-ink-muted">{A.guestHint}</p>
-          <ButtonLink href={`/login?next=${encodeURIComponent(path)}`}>{A.guestEnter}</ButtonLink>
-        </div>
-      }
-    />
+    <Suspense>
+      <CustomerAuth mode="login" next={path} />
+    </Suspense>
   );
 }

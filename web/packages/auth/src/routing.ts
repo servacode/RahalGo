@@ -193,6 +193,12 @@ export async function routeByRole(user: AuthUser, next?: string): Promise<void> 
     capsLoaded = false;
   }
   const dest = homeFor(user.roles, caps, capsLoaded);
+  // **صاحبُ المتجر يدخل إلى لوحة متجره** (قرارُ المالك ٢٠٢٦-١٠-١٩) — ولو دخل من
+  // «حسابي» أو «سلتي»: كان يُعاد إلى صفحة الزبون فيظنّ أنّ متجره ضاع. **والتسوّقُ
+  // زبوناً بزرٍّ في لوحته** («تسوّق كزبون»)، لا بالدخول.
+  if (dest.path === PANEL_PATHS.store && next && !next.startsWith(PANEL_PATHS.store)) {
+    next = undefined;
+  }
   // `next` يُحترم فقط كمسار نسبي داخل الموقع الحالي (منعاً لإعادة توجيه مفتوحة)
   if (next && next.startsWith("/") && !next.startsWith("//")) {
     window.location.href = next;

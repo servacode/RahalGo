@@ -195,7 +195,7 @@ function OtpLogin() {
   );
 }
 
-function Login() {
+function Login({ next }: { next?: string }) {
   const doEnter = useEnter();
   const params = useSearchParams();
   const { platform } = useCustomer();
@@ -204,7 +204,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const q = params.toString();
+  const q = next ? `next=${encodeURIComponent(next)}` : params.toString();
   const otp = platform?.otp_login === true;
   return (
     <Frame title={T.loginTitle}>
@@ -554,17 +554,17 @@ function Forgot() {
 }
 
 /** **من دخل يُساق إلى حيث كان** — ولا يرى شاشةَ دخولٍ وهو داخل. */
-export default function CustomerAuth({ mode }: { mode: AuthMode }) {
+export default function CustomerAuth({ mode, next }: { mode: AuthMode; next?: string }) {
   const { user, loading } = useAuth();
   const params = useSearchParams();
   const sent = useRef(false);
   useEffect(() => {
     if (loading || !user || sent.current) return;
     sent.current = true;
-    void routeByRole(user, safeNext(params.get("next")) ?? undefined);
-  }, [user, loading, params]);
+    void routeByRole(user, safeNext(next ?? params.get("next")) ?? undefined);
+  }, [user, loading, params, next]);
   if (loading || user) return <LoadingState variant="inline" />;
   if (mode === "signup") return <Signup />;
   if (mode === "forgot") return <Forgot />;
-  return <Login />;
+  return <Login next={next} />;
 }

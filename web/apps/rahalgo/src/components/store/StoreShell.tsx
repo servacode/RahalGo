@@ -179,8 +179,9 @@ function Shell({ children }: { children: ReactNode }) {
             </TopBarLink>
           );
         })}
+        {/* **«تسوّق كزبون»** — والعودةُ من صفحات الزبون بـ«لوحة متجري» (٢٠٢٦-١٠-١٩). */}
         <TopBarLink Link={Link} href="/shop" tone="plain">
-          {S.nav.shop}
+          {S.nav.shopAsCustomer}
         </TopBarLink>
         <Bell />
         <button

@@ -183,6 +183,12 @@ function Shell({ children }: { children: ReactNode }) {
             </TopBarLink>
           );
         })}
+        {/* **«لوحة متجري» لصاحب المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٩) — يتسوّق زبوناً ويعود بضغطة. */}
+        {user?.roles?.includes("merchant") && (
+          <TopBarLink Link={Link} href="/store" tone="plain">
+            {N.myStore}
+          </TopBarLink>
+        )}
         {user && <Bell />}
         {user && (
           <Link
