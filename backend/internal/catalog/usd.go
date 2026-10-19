@@ -205,6 +205,13 @@ func (s *Service) SetExchangeRate(ctx context.Context, actorID, merchantID strin
 		   AND o.price_delta_usd_cents IS NOT NULL`, merchantID, rate); err != nil {
 		return 0, err
 	}
+	// **وقائمةُ المشروبات تتبع الصرفَ كذلك** (٢٠٢٦-١٠-١٩) — ومنسوخاتُها تبدّلت بالسطر أعلاه.
+	if _, err := tx.Exec(ctx, `
+		UPDATE merchant_drinks
+		   SET price = (round(price_usd_cents * $2::numeric / 100 / 5) * 5)::bigint
+		 WHERE merchant_id = $1::uuid AND price_usd_cents IS NOT NULL`, merchantID, rate); err != nil {
+		return 0, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return 0, err
 	}

@@ -375,41 +375,74 @@ fun ItemEditor(
 @Composable
 private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> Unit) {
     Spacer(Modifier.height(16.dp))
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            stringResource(R.string.mod_title),
-            modifier = Modifier.weight(1f),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
-        )
-        // ══════════════════════════════════════════════════════════
-        // **وزرُّ الإضافة يُرى زرّاً**
-        // ══════════════════════════════════════════════════════════
-        //
-        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٩: «أضف مجموعة لازم يكون زرّاً مبيّناً
-        //  ليعرف المستخدم أنّ هذا زرّ».)
-        //
-        // **و`RahalTextButton` نصٌّ ملوَّنٌ بلا إطارٍ ولا تعبئة** —
-        // **يُقرأ عنواناً لا فعلاً**، فيمرّ عليه صاحبُ المتجر ولا يعرف
-        // أنّ تحته باباً.
-        //
-        // **والإطارُ يفصل ما يُضغط عمّا يُقرأ** — وهو الفرقُ الوحيدُ
-        // الذي تراه العينُ قبل أن تجرّب.
-        RahalOutlineButton(onClick = {
-            onEdit { it.copy(modifiers = it.modifiers + ModifierGroup(name = "")) }
-        }) { Text(stringResource(R.string.mod_add_group)) }
-    }
+    Text(
+        stringResource(R.string.mod_title),
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleSmall,
+    )
     Text(
         stringResource(R.string.mod_hint),
         color = Rahal.colors.inkMuted,
         style = MaterialTheme.typography.bodySmall,
     )
+    // ══════════════════════════════════════════════════════════════
+    // **مجموعاتٌ جاهزةٌ بمربّع صح** (قرارُ المالك ٢٠٢٦-١٠-١٩)
+    // ══════════════════════════════════════════════════════════════
+    //
+    // الحجمُ والوزنُ خيارٌ واحدٌ إلزاميّ، والإضافاتُ اختياريّةٌ بلا حدّ —
+    // **وأسماءُ الخيارات وأسعارُها بيده.** والمشروباتُ ليست هنا: تنضاف من
+    // قائمتها لكلّ الأصناف. **ومرآتُها `ItemEditor.tsx` في الويب.**
+    val sizeName = stringResource(R.string.mod_preset_size)
+    val weightName = stringResource(R.string.mod_preset_weight)
+    val presetDefaults = mapOf(
+        "size" to ModifierGroup(
+            name = sizeName, minSelect = 1, maxSelect = 1,
+            options = listOf(
+                ModifierOption(name = stringResource(R.string.mod_opt_normal)),
+                ModifierOption(name = stringResource(R.string.mod_opt_double)),
+            ),
+        ),
+        "weight" to ModifierGroup(
+            name = weightName, minSelect = 1, maxSelect = 1,
+            options = listOf(
+                ModifierOption(name = stringResource(R.string.mod_opt_half_kg)),
+                ModifierOption(name = stringResource(R.string.mod_opt_kg)),
+            ),
+        ),
+        "extras" to ModifierGroup(name = stringResource(R.string.mod_extras_name), minSelect = 0, maxSelect = 99),
+    )
+    fun presetOf(g: ModifierGroup): String = when (g.name.trim()) {
+        sizeName -> "size"
+        weightName -> "weight"
+        else -> "extras"
+    }
+    listOf(
+        "size" to R.string.mod_preset_size,
+        "weight" to R.string.mod_preset_weight,
+        "extras" to R.string.mod_preset_extras,
+    ).forEach { (key, label) ->
+        val on = d.modifiers.any { presetOf(it) == key }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = on,
+                onCheckedChange = { want ->
+                    onEdit { dd ->
+                        dd.copy(
+                            modifiers = if (want) dd.modifiers + presetDefaults.getValue(key)
+                            else dd.modifiers.filterNot { presetOf(it) == key },
+                        )
+                    }
+                },
+            )
+            Text(stringResource(label), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
 
     d.modifiers.forEachIndexed { gi, g ->
         Spacer(Modifier.height(10.dp))
         Card {
             Column(Modifier.padding(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (presetOf(g) == "extras") {
                     OutlinedTextField(
                         value = g.name,
                         onValueChange = { v ->
@@ -419,51 +452,16 @@ private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> 
                         },
                         label = { Text(stringResource(R.string.mn_group_name)) },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    RahalTextButton(onClick = {
-                        onEdit { dd ->
-                            dd.copy(modifiers = dd.modifiers.filterIndexed { i, _ -> i != gi })
-                        }
-                    }) { Text(stringResource(R.string.act_delete), color = Rahal.colors.danger) }
+                } else {
+                    Text(g.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = g.minSelect > 0,
-                        onCheckedChange = { on ->
-                            onEdit { dd ->
-                                dd.copy(
-                                    modifiers = dd.modifiers.replaceAt(gi) {
-                                        it.copy(minSelect = if (on) 1 else 0)
-                                    },
-                                )
-                            }
-                        },
-                    )
-                    Text(
-                        stringResource(R.string.mn_required),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Checkbox(
-                        checked = g.maxSelect > 1,
-                        onCheckedChange = { on ->
-                            onEdit { dd ->
-                                dd.copy(
-                                    modifiers = dd.modifiers.replaceAt(gi) {
-                                        it.copy(maxSelect = if (on) 99 else 1)
-                                    },
-                                )
-                            }
-                        },
-                    )
-                    Text(
-                        stringResource(R.string.mod_multi),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
+                Text(
+                    stringResource(if (g.minSelect > 0) R.string.mod_rule_one else R.string.mod_rule_any),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 g.options.forEachIndexed { oi, o ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(

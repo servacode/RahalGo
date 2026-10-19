@@ -23,6 +23,7 @@
  */
 
 import Link from "next/link";
+import DrinksCard from "@/components/store/DrinksCard";
 import { useCallback, useMemo, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
@@ -246,6 +247,8 @@ export default function MenuPage() {
           </ButtonLink>
         )}
       </header>
+      {/* **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩). */}
+      {!suspended && id && <DrinksCard storeId={id} />}
       {empty ? (
         <EmptyState icon={IconList} title={M.empty} />
       ) : (

@@ -307,7 +307,8 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		SELECT g.id, g.item_id, g.name, g.min_select, g.max_select, g.sort_order
 		FROM modifier_groups g
 		JOIN menu_items i ON i.id = g.item_id
-		WHERE i.merchant_id = $1 ORDER BY g.sort_order`, merchantID)
+		-- **والمشروباتُ المنسوخةُ لا تُرى في المحرّر** — تُدار من قائمتها (٢٠٢٦-١٠-١٩).
+		WHERE i.merchant_id = $1 AND NOT g.store_drinks ORDER BY g.sort_order`, merchantID)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +338,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		FROM modifier_options o
 		JOIN modifier_groups g ON g.id = o.group_id
 		JOIN menu_items i ON i.id = g.item_id
-		WHERE i.merchant_id = $1 ORDER BY o.sort_order`, merchantID)
+		WHERE i.merchant_id = $1 AND NOT g.store_drinks ORDER BY o.sort_order`, merchantID)
 	if err != nil {
 		return nil, err
 	}
@@ -595,6 +596,10 @@ func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID 
 			return "", err
 		}
 	}
+	// **والصنفُ الجديدُ ينال قائمةَ المشروبات** إن كانت للمتجر (٢٠٢٦-١٠-١٩).
+	if err := syncDrinks(ctx, tx, merchantID, id); err != nil {
+		return "", err
+	}
 	return id, nil
 }
 
@@ -713,7 +718,8 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 		return httpx.ErrNotFound
 	}
 	if in.Modifiers != nil {
-		if _, err := tx.Exec(ctx, `DELETE FROM modifier_groups WHERE item_id = $1`, itemID); err != nil {
+		// **والمشروباتُ المنسوخةُ تبقى** — حفظُ الصنف لا يمحو قائمةَ المتجر (٢٠٢٦-١٠-١٩).
+		if _, err := tx.Exec(ctx, `DELETE FROM modifier_groups WHERE item_id = $1 AND NOT store_drinks`, itemID); err != nil {
 			return err
 		}
 		if err := insertModifiers(ctx, tx, itemID, *in.Modifiers); err != nil {

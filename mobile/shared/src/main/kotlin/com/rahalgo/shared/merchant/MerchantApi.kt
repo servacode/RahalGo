@@ -326,6 +326,16 @@ class MerchantApi(private val api: ApiClient) {
         return api.json.decodeFromString<Envelope<MediaRef>>(raw).data ?: MediaRef()
     }
 
+    /**
+     * **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — تُكتب مرّةً وينسخها المحرّكُ
+     * إلى كلّ الأصناف، **ويتبع الدولاريُّ سعرَ الصرف.**
+     */
+    suspend fun drinks(storeId: String): List<Drink> =
+        api.call<DrinksBody>("/api/v1/merchant/stores/$storeId/drinks").drinks
+
+    suspend fun setDrinks(storeId: String, drinks: List<Drink>): List<Drink> =
+        api.call<DrinksBody>("/api/v1/merchant/stores/$storeId/drinks", HttpMethod.Put, DrinksBody(drinks)).drinks
+
     /** **يرفع شعارَ متجره** (طلبُ المالك ٢٠٢٦-١٠-١٨) — ثمّ يُربط بـ`settings`. */
     suspend fun uploadLogo(fileName: String, bytes: ByteArray): MediaRef {
         val raw = api.upload(
@@ -652,6 +662,17 @@ data class MediaRef(
     val id: String = "",
     @SerialName("thumb_url") val thumbUrl: String = "",
 )
+
+/** **مشروبٌ في قائمة المتجر** — `price` بالليرة دائماً، و`price_usd` إن كان دولاريّاً. */
+@Serializable
+data class Drink(
+    val name: String = "",
+    val price: Long = 0,
+    @SerialName("price_usd") val priceUsd: Double? = null,
+)
+
+@Serializable
+data class DrinksBody(val drinks: List<Drink> = emptyList())
 
 /**
  * **مجموعةُ خياراتٍ ترافق الصنفَ في الحفظ** — «الحجم» و«يُضاف».

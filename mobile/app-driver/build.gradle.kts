@@ -118,7 +118,13 @@ android {
             //
             // **و SYMBOL_TABLE لا FULL**: أسماءُ الدوالّ تكفي، وأرقامُ
             // الأسطر تضخّم ملفَّ الرفع بلا مقابل.
-            ndk { debugSymbolLevel = "SYMBOL_TABLE" }
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+                // **ومكتباتُ الجوّالات وحدَها** (طلبُ المالك ٢٠٢٦-١٠-١٩: «نصغّر حجم
+                // التطبيق») — x86 وx86_64 للمحاكي والحاسوب، **٢٦ م.ب في كلّ تحميلٍ
+                // مباشرٍ لا يستعملها جوّال.** والتجريبيُّ يبقاها للمحاكي.
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
             // **العنوانان حرفيّان — ولا مدخلَ لتجاوزٍ هنا.**
             buildConfigField("String", "API_BASE_URL", quoted("https://api.rahalgo.com"))
             buildConfigField("String", "MAPS_BASE_URL", quoted("https://maps.rahalgo.com"))

@@ -114,6 +114,87 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — تُكتب مرّةً وتنضاف لكلّ الأصناف.
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **سطرٌ في المحرّر** — النصُّ كما يُكتب، والمحرّكُ يحسب. */
+    data class DrinkRow(val name: String = "", val syp: String = "", val usd: String = "")
+
+    var drinks by mutableStateOf<List<DrinkRow>>(emptyList())
+        private set
+    var drinksUsd by mutableStateOf(false)
+    var drinksOpen by mutableStateOf(false)
+        private set
+    var drinksError by mutableStateOf("")
+        private set
+
+    private fun fillDrinks(list: List<com.rahalgo.shared.merchant.Drink>) {
+        drinksUsd = list.any { it.priceUsd != null }
+        drinks = list.map { d ->
+            DrinkRow(
+                name = d.name,
+                syp = d.price.toString(),
+                usd = d.priceUsd?.let { v -> if (v == Math.floor(v)) v.toLong().toString() else v.toString() }.orEmpty(),
+            )
+        }
+    }
+
+    fun openDrinks() {
+        drinksError = ""
+        drinksOpen = true
+        viewModelScope.launch {
+            runCatching { api.drinks(storeId) }
+                .onSuccess { fillDrinks(it) }
+                .onFailure { drinksError = err(it) }
+        }
+    }
+
+    fun closeDrinks() {
+        drinksOpen = false
+    }
+
+    fun editDrink(i: Int, row: DrinkRow) {
+        drinksError = ""
+        drinks = drinks.mapIndexed { j, r -> if (j == i) row else r }
+    }
+
+    fun addDrink() {
+        drinks = drinks + DrinkRow()
+    }
+
+    fun removeDrink(i: Int) {
+        drinks = drinks.filterIndexed { j, _ -> j != i }
+    }
+
+    fun saveDrinks() {
+        if (drinks.any { it.name.isBlank() }) {
+            drinksError = AppCore.get().app.getString(com.rahalgo.merchant.R.string.drinks_v_name)
+            return
+        }
+        busy = true
+        viewModelScope.launch {
+            val body = drinks.map { r ->
+                if (drinksUsd) {
+                    com.rahalgo.shared.merchant.Drink(
+                        name = r.name.trim(),
+                        priceUsd = r.usd.replace('٫', '.').replace(',', '.').toDoubleOrNull() ?: 0.0,
+                    )
+                } else {
+                    com.rahalgo.shared.merchant.Drink(name = r.name.trim(), price = r.syp.toLongOrNull() ?: 0L)
+                }
+            }
+            runCatching { api.setDrinks(storeId, body) }
+                .onSuccess {
+                    fillDrinks(it)
+                    drinksOpen = false
+                    Flash.ok(AppCore.get().app.getString(com.rahalgo.merchant.R.string.drinks_saved))
+                }
+                .onFailure { drinksError = err(it) }
+            busy = false
+        }
+    }
+
     fun openGroup(g: MenuGroup) {
         open = g
     }

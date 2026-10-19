@@ -699,7 +699,6 @@
     <string name="err_item_name_too_long">اسم الصنف أطول من المسموح — اختصره</string>
     <string name="mn_items">الأصناف</string>
     <string name="mn_group_name">اسم المجموعة</string>
-    <string name="mn_required">إلزامي</string>
     <string name="mn_option_name">اسم الخيار</string>
     <!-- **والفراغُ يقول ما وقع وما يفعله المرءُ بعده** (شرطُ المالك
          ٢٠٢٦-٠٩-١٣): سطرٌ يجيب الأوّلَ وتلميحٌ يجيب الثاني. -->
@@ -733,10 +732,18 @@
     <string name="item_pick_image">اختر صورة</string>
     <string name="item_price">السعر</string>
     <string name="item_section">قسم السوق</string>
-    <string name="mod_add_group">أضف مجموعة</string>
     <string name="mod_add_option">أضف خياراً</string>
-    <string name="mod_hint">مثل: مشروب غازي، جبنة إضافية، الحجم. تظهر للزبون عند اختيار الصنف</string>
-    <string name="mod_multi">يختار أكثر من واحد</string>
+    <string name="mod_hint">اختار المجموعات اللي بيحتاجها الصنف، وغيّر أسماء الخيارات وأسعارها متل ما بدك. المشروبات بتنضاف لحالها من «قائمة المشروبات».</string>
+    <string name="mod_preset_size">الحجم</string>
+    <string name="mod_preset_weight">الوزن</string>
+    <string name="mod_preset_extras">إضافات أخرى</string>
+    <string name="mod_rule_one">الزبون لازم يختار وحدة</string>
+    <string name="mod_rule_any">اختياري، والزبون بيختار شو ما بدّه</string>
+    <string name="mod_opt_normal">عادي</string>
+    <string name="mod_opt_double">دبل</string>
+    <string name="mod_opt_half_kg">نص كيلو</string>
+    <string name="mod_opt_kg">كيلو</string>
+    <string name="mod_extras_name">إضافات</string>
     <string name="mod_opt_price">السعر الإضافي</string>
     <!-- السعر بالدولار (٢٠٢٦-١٠-١٢) -->
     <string name="item_currency_syp">ل.س</string>

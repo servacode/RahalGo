@@ -119,6 +119,13 @@ fun MenuScreen(vm: MenuViewModel) {
         return
     }
 
+    // **قائمةُ المشروبات تغطّي الشبكةَ كالمحرّر** (٢٠٢٦-١٠-١٩).
+    if (vm.drinksOpen) {
+        BackHandler { vm.closeDrinks() }
+        DrinksEditor(vm)
+        return
+    }
+
     val open = vm.open
     // **والرجوعُ يغلق القسمَ لا التطبيق** — من فتح قسماً ثمّ ضغط رجوعاً
     // **يتوقّع شبكتَه لا أن يخرج.**
@@ -178,6 +185,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                 stringResource(R.string.menu_title),
                 stringResource(R.string.menu_sections_hint),
             )
+            if (!vm.suspended) DrinksButton(vm)
             Empty(stringResource(R.string.menu_empty))
         }
         return
@@ -196,6 +204,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                     stringResource(R.string.menu_title),
                     stringResource(R.string.menu_sections_hint),
                 )
+                if (!vm.suspended) DrinksButton(vm)
                 Spacer(Modifier.height(6.dp))
             }
         }

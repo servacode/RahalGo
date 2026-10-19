@@ -1026,6 +1026,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stores/{id}/reports-against", s.handleMerchantReportsAgainst)
 			r.Get("/stores/{id}/hours", s.handleMerchantGetHours)
 			r.Put("/stores/{id}/hours", s.handleMerchantSetHours)
+			// **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩).
+			r.Get("/stores/{id}/drinks", s.handleMerchantGetDrinks)
+			r.Put("/stores/{id}/drinks", s.handleMerchantSetDrinks)
 
 			// ══════════════════════════════════════════════════════════
 			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**

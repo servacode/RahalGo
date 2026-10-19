@@ -8275,6 +8275,48 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/drinks",
+      "handler": "handleMerchantGetDrinks",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "drinks",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/drinks",
+      "handler": "handleMerchantSetDrinks",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "drinks",
+          "type": "[]catalog.Drink"
+        }
+      ],
+      "response": [
+        {
+          "name": "drinks",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/emergency",
       "handler": "handleMerchantEmergency",

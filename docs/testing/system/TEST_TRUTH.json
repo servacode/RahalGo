@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 523,
+    "routes": 525,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 249,
     "behaviour_settings": 204,
     "order_fields": 111,
-    "test_files": 615,
-    "test_funcs": 2444
+    "test_files": 616,
+    "test_funcs": 2445
   },
   "flows": [
     {
@@ -7613,6 +7613,12 @@
     {
       "name": "TestDeleteCategory_FreeDeletes_UsedRefused",
       "file": "internal/catalog/category_delete_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinks_CopiedToAllItems",
+      "file": "internal/catalog/drinks_test.go",
       "package": "catalog",
       "orphan": true
     },

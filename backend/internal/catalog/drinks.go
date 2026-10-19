@@ -1,0 +1,169 @@
+package catalog
+
+// ══════════════════════════════════════════════════════════════════════
+// **قائمةُ مشروبات المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٩)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «قائمة المشروبات لازم يقدر يحطها المتجر مرة وحدة بعدين تنضاف تلقائي على كل
+// الاصناف» — **وبالدولار إن شاء**، فيتبع سعرَ الصرف كالأصناف.
+//
+// # ولمَ تُنسخ ولا تُحقن
+//
+// **الطلبُ يتحقّق من الخيار ويسعّره من `modifier_options`** — فالمنسوخةُ خياراتٌ
+// عاديّةٌ تمرّ بالطريق القائم، **ولا يُمسّ حسابُ سعر الطلب.** والحقنُ عند القراءة
+// كان يحتاج بابين يتّفقان: عرضاً وتسعيراً.
+//
+// **والمنسوخةُ مُعلَّمة** (`store_drinks`): **لا يراها محرّرُ الصنف** (`GetMenu`)
+// **ولا يمحوها حفظُه**، وتُستبدل كلُّها حين تتبدّل القائمة.
+
+import (
+	"context"
+	"net/http"
+	"strings"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/httpx"
+)
+
+// DrinksGroupName **اسمُ المجموعة كما يقرؤه الزبون.**
+const DrinksGroupName = "مشروبات"
+
+// maxDrinks **سقفُ القائمة** — قائمةُ مطعمٍ لا مستودع.
+const maxDrinks = 40
+
+// ErrTooManyDrinks **قائمةٌ أطولُ من السقف.**
+var ErrTooManyDrinks = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+// Drink **مشروبٌ في القائمة** — `price` بالليرة دائماً، و`price_usd` إن كان دولاريّاً.
+type Drink struct {
+	Name     string   `json:"name"`
+	Price    int64    `json:"price"`
+	PriceUSD *float64 `json:"price_usd,omitempty"`
+}
+
+// Drinks **قائمةُ المتجر كما هي.**
+func (s *Service) Drinks(ctx context.Context, merchantID string) ([]Drink, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT name, price, price_usd_cents FROM merchant_drinks
+		 WHERE merchant_id = $1::uuid ORDER BY sort_order`, merchantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Drink{}
+	for rows.Next() {
+		var d Drink
+		var cents *int64
+		if err := rows.Scan(&d.Name, &d.Price, &cents); err != nil {
+			return nil, err
+		}
+		if cents != nil {
+			v := float64(*cents) / 100
+			d.PriceUSD = &v
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+// SetDrinks **يستبدل القائمةَ وينسخها إلى كلّ الأصناف** — في معاملةٍ واحدة.
+//
+// **والدولاريُّ يُحسب بسعر صرف المتجر** — ومتجرٌ بلا سعرِ صرفٍ يُردّ
+// (`exchange_rate_required`) كالصنف الدولاريّ. **وقائمةٌ فارغةٌ تمحو المجموعةَ من الكلّ.**
+func (s *Service) SetDrinks(ctx context.Context, actorID, merchantID string, in []Drink, ip string) ([]Drink, error) {
+	if len(in) > maxDrinks {
+		return nil, ErrTooManyDrinks
+	}
+	var max int64
+	if s.settings != nil {
+		max = s.settings.GetInt(ctx, "merchants.max_item_price")
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var rate float64
+	clean := make([]Drink, 0, len(in))
+	cents := make([]*int64, 0, len(in))
+	for _, d := range in {
+		d.Name = strings.TrimSpace(d.Name)
+		if d.Name == "" {
+			return nil, ErrNameRequired
+		}
+		var c *int64
+		if d.PriceUSD != nil {
+			if *d.PriceUSD < 0 {
+				return nil, ErrNameRequired
+			}
+			if rate == 0 {
+				if rate, err = merchantRate(ctx, tx, merchantID); err != nil {
+					return nil, err
+				}
+				if rate <= 0 {
+					return nil, ErrExchangeRateRequired
+				}
+			}
+			v := dollarsToCents(*d.PriceUSD)
+			c = &v
+			d.Price = USDToSYP(v, rate)
+		}
+		if d.Price < 0 {
+			return nil, ErrNameRequired
+		}
+		if max > 0 && d.Price > max {
+			return nil, &httpx.AppError{Status: http.StatusBadRequest, Code: "item_price_too_high",
+				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": max}}
+		}
+		clean = append(clean, d)
+		cents = append(cents, c)
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM merchant_drinks WHERE merchant_id = $1::uuid`, merchantID); err != nil {
+		return nil, err
+	}
+	for i, d := range clean {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO merchant_drinks (merchant_id, name, price, price_usd_cents, sort_order)
+			VALUES ($1::uuid, $2, $3, $4, $5)`, merchantID, d.Name, d.Price, cents[i], i); err != nil {
+			return nil, err
+		}
+	}
+	if err := syncDrinks(ctx, tx, merchantID, ""); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	s.audit(ctx, actorID, "menu.drinks_update", "merchant", merchantID, ip)
+	return s.Drinks(ctx, merchantID)
+}
+
+// syncDrinks **ينسخ القائمةَ إلى أصناف المتجر** — أو إلى صنفٍ واحدٍ إن سُمّي.
+//
+// **يمحو المنسوخةَ القديمة أوّلاً ثمّ يكتب** — فلا تتكرّر المجموعة، **ولا تُمسّ
+// مجموعاتُ صاحب المتجر.** وقائمةٌ فارغةٌ تكتفي بالمحو.
+func syncDrinks(ctx context.Context, tx dbtx.Querier, merchantID, itemID string) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM modifier_groups g USING menu_items i
+		 WHERE g.item_id = i.id AND g.store_drinks
+		   AND i.merchant_id = $1::uuid AND ($2 = '' OR i.id::text = $2)`, merchantID, itemID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		WITH g AS (
+			INSERT INTO modifier_groups (item_id, name, min_select, max_select, sort_order, store_drinks)
+			SELECT i.id, $3, 0, 99, 1000, true FROM menu_items i
+			 WHERE i.merchant_id = $1::uuid AND ($2 = '' OR i.id::text = $2)
+			   AND EXISTS (SELECT 1 FROM merchant_drinks d WHERE d.merchant_id = i.merchant_id)
+			RETURNING id
+		)
+		INSERT INTO modifier_options (group_id, name, price_delta, sort_order, price_delta_usd_cents)
+		SELECT g.id, d.name, d.price, d.sort_order, d.price_usd_cents
+		  FROM g CROSS JOIN merchant_drinks d
+		 WHERE d.merchant_id = $1::uuid`, merchantID, itemID, DrinksGroupName); err != nil {
+		return err
+	}
+	return nil
+}

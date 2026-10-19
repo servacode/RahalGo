@@ -205,6 +205,18 @@
 
     <!-- **واسمُه بيده** — طلبُ المالك ٢٠٢٦-٠٨-٢٣. -->
     <string name="store_rename">تعديل اسم المتجر</string>
+    <string name="drinks_title">قائمة المشروبات</string>
+    <string name="drinks_hint">بتكتبها مرة وحدة، وبتنضاف لحالها لكل أصنافك. الزبون بيختار منها إذا بدّه.</string>
+    <string name="drinks_name">اسم المشروب</string>
+    <string name="drinks_price_syp">السعر (ل.س)</string>
+    <string name="drinks_price_usd">السعر ($)</string>
+    <string name="drinks_syp">ليرة</string>
+    <string name="drinks_usd">دولار</string>
+    <string name="drinks_add">أضف مشروب</string>
+    <string name="drinks_save">احفظ القائمة</string>
+    <string name="drinks_saved">✓ انحفظت قائمة المشروبات ونضافت لكل الأصناف</string>
+    <string name="drinks_empty">ما في مشروبات لسا</string>
+    <string name="drinks_v_name">اكتب اسم كل مشروب</string>
     <string name="store_logo_add">+ أضف شعار المتجر</string>
     <string name="store_logo_change">غيّر الشعار</string>
 

@@ -95,9 +95,7 @@ const PAIRS = [
   // (قرارُ المالك ٢٠٢٦-١٠-٠٤). وبقيت نصوصُها في تطبيقَي المتجر والمندوب
   // المغلقَين بلا أثر: لا صنفَ معلَّقاً بعد هجرة ٠٢٠٠.
   [web.modifiers, "mod_title"],
-  [web.addGroup, "mod_add_group"],
   [web.groupName, "mn_group_name"],
-  [web.required, "mn_required"],
   [web.optionName, "mn_option_name"],
   [web.priceDelta, "mod_opt_price"],
   [web.addOption, "mod_add_option"],
