@@ -121,6 +121,9 @@ function useEnter() {
     if (r.pin_required) throw new Error("pin");
     tokenStore.set(r.tokens, true);
     enter(r.user);
+    // **وصاحبُ المتجر إلى لوحته فوراً** (قرارُ المالك ٢٠٢٦-١٠-١٩) — فالفورمُ المضمَّنُ في
+    // «حسابي» يختفي لحظةَ الدخول وتُرسم صفحةُ الزبون قبل أن يوجِّه أحد.
+    if (r.user.roles?.includes("merchant")) window.location.href = "/store";
   };
 }
 

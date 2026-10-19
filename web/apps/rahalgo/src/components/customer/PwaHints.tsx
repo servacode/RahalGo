@@ -22,8 +22,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import {
-  Button,
-  Modal,
   IconShare,
   IconAddToHome,
   IconSmartphone,
@@ -44,11 +42,14 @@ function detect(): Kind {
   if (typeof window === "undefined") return "";
   const nav = window.navigator as Navigator & { standalone?: boolean };
   const standalone =
-    nav.standalone === true || window.matchMedia?.("(display-mode: standalone)").matches;
+    nav.standalone === true ||
+    window.matchMedia?.("(display-mode: standalone)").matches;
   if (standalone) return "";
   const ua = nav.userAgent || "";
   // **وآيبادُ اليوم يقول عن نفسه «ماك»** — يُعرف باللمس.
-  const ios = /iPhone|iPad|iPod/i.test(ua) || (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
+  const ios =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
   if (ios) return "ios";
   if (/Android/i.test(ua)) return "android";
   return "";
@@ -75,7 +76,8 @@ export default function PwaHints({ android }: { android?: AndroidHint } = {}) {
   useEffect(() => {
     const k = detect();
     if (k === "ios" && !readJSON<boolean>(IOS_SEEN, false)) setKind("ios");
-    if (k === "android" && !readJSON<boolean>(offKey, false)) setKind("android");
+    if (k === "android" && !readJSON<boolean>(offKey, false))
+      setKind("android");
   }, [offKey]);
 
   if (kind === "ios") {
@@ -83,33 +85,53 @@ export default function PwaHints({ android }: { android?: AndroidHint } = {}) {
       writeJSON(IOS_SEEN, true);
       setKind("");
     };
+    // ══════════════════════════════════════════════════════════════
+    // **فقاعةٌ تحت تؤشّر على زرّ المشاركة** (طلبُ المالك ٢٠٢٦-١٠-١٩)
+    // ══════════════════════════════════════════════════════════════
+    //
+    // «اضافة مباشر للشاشة الرئيسية» — **وآبل لا تسمح لموقعٍ أن يضيف نفسه بضغطة**:
+    // لا `beforeinstallprompt` في سفاري. **فأقربُ ما يكون: سهمٌ يتحرّك فوق زرّ
+    // المشاركة نفسِه** في أسفل سفاري، فلا يدور أحدٌ عليه. وكانت نافذةً وسطَ الشاشة.
     return (
-      <Modal open onClose={close} title={withPlatform(P.iosTitle, name)}>
-        <p className="mb-3 text-sm text-ink-muted">{P.iosLead}</p>
-        <ol className="space-y-3 text-sm">
-          <li className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-field text-accent-text">
-              <IconShare size={18} />
+      <div
+        role="dialog"
+        aria-label={withPlatform(P.iosTitle, name)}
+        className="fixed inset-x-0 z-50 flex justify-center px-4"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+      >
+        <div className="surface-modal relative w-full max-w-sm p-4 elev-3">
+          <button
+            type="button"
+            onClick={close}
+            aria-label={P.close}
+            className="taparea absolute end-2 top-2 flex h-8 w-8 items-center justify-center rounded-control text-ink-muted"
+          >
+            <IconClose size={16} />
+          </button>
+          <p className="pe-8 text-sm font-bold">
+            {withPlatform(P.iosTitle, name)}
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-sm">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-field text-accent-text">
+              <IconShare size={17} />
             </span>
-            {P.iosStep1}
-          </li>
-          <li className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-field text-accent-text">
-              <IconAddToHome size={18} />
+            {P.iosTapShare}
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-sm">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-field text-accent-text">
+              <IconAddToHome size={17} />
             </span>
-            {P.iosStep2}
-          </li>
-          <li className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-field text-accent-text">
-              <IconSmartphone size={18} />
-            </span>
-            {P.iosStep3}
-          </li>
-        </ol>
-        <Button className="mt-5 w-full py-3" onClick={close}>
-          {P.iosOk}
-        </Button>
-      </Modal>
+            {P.iosThenAdd}
+          </p>
+          {/* **السهمُ نحو زرّ المشاركة** — في منتصف شريط سفاري تحت. */}
+          <span
+            aria-hidden
+            className="absolute -bottom-7 left-1/2 -translate-x-1/2 animate-bounce text-3xl leading-none text-accent-text"
+          >
+            ⬇
+          </span>
+        </div>
+      </div>
     );
   }
 
@@ -122,8 +144,12 @@ export default function PwaHints({ android }: { android?: AndroidHint } = {}) {
       <div className="surface flex items-center gap-3 p-3">
         <IconSmartphone size={22} className="shrink-0 text-accent-text" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">{android?.title ?? P.androidTitle}</p>
-          <p className="text-xs text-ink-muted">{android?.body ?? P.androidBody}</p>
+          <p className="text-sm font-bold">
+            {android?.title ?? P.androidTitle}
+          </p>
+          <p className="text-xs text-ink-muted">
+            {android?.body ?? P.androidBody}
+          </p>
         </div>
         <Link
           href={android?.href ?? "/download/customer"}
