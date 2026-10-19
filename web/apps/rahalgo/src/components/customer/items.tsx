@@ -121,8 +121,10 @@ export function ItemCard({
           onClick={() => onOpen(item)}
           className="flex min-w-0 flex-col text-start transition-transform active:scale-[0.98]"
         >
-          <div className="relative aspect-square w-full bg-field">
-            {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
+          {/* **مربّعٌ ثابتٌ مهما كانت الصورة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — صورةٌ طويلةٌ كانت تمطّ
+              بطاقتَها، **فالصورةُ مطلقةٌ داخلَ المربّع وتُقصّ**، والبطاقاتُ بطولٍ واحد. */}
+          <div className="relative aspect-square w-full overflow-hidden bg-field">
+            {img && <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />}
             {closed && (
               <div className="scrim absolute inset-0 flex items-center justify-center p-2 text-center text-sm font-bold text-on-solid">
                 {closedLabel(item)}

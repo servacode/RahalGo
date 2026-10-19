@@ -55,6 +55,7 @@ import { ShopToastProvider } from "./toast";
 import { OrderingBanner } from "./ServiceNotices";
 import PwaHints from "./PwaHints";
 import QuoteWatcher from "./QuoteWatcher";
+import WebPushCard from "@/components/WebPushCard";
 import { LiveAsk, LiveBanner } from "./LiveShare";
 import { RatingWatcher } from "./feedback";
 
@@ -158,7 +159,8 @@ function Shell({ children }: { children: ReactNode }) {
         sticky
         start={
           <Link href="/shop" aria-label={N.shop} className="flex items-center">
-            <BrandMark size={40} />
+            {/* **دائريٌّ على أبيض** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — كان يذوب في الأزرق. */}
+            <BrandMark size={40} disc />
           </Link>
         }
       >
@@ -197,6 +199,9 @@ function Shell({ children }: { children: ReactNode }) {
         <PwaHints />
         <OrderingBanner />
         {user && <LiveBanner />}
+        {/* **«فعّل الإشعارات» قدّامه لا في «حسابي»** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — **وصاحبُ
+            الآيفون يُقال له كيف** (أضفه للشاشة الرئيسيّة)، فلا يدور على الإذن. */}
+        {user && <WebPushCard app="customer" variant="banner" notes={path === "/shop"} />}
         {children}
       </main>
       <MobileNavSpacer />

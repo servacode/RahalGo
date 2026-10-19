@@ -156,7 +156,7 @@ function Shell({ children }: { children: ReactNode }) {
         sticky
         start={
           <Link href="/store" aria-label={S.nav.panel} className="flex items-center">
-            <BrandMark size={40} />
+            <BrandMark size={40} disc />
           </Link>
         }
       >

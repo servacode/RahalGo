@@ -39,10 +39,14 @@ export function StoreLogo({
 }) {
   const src = mediaUrl(logo ?? null);
   return (
-    <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-card border border-line bg-accent-tint ${className}`}>
+    // **والشعارُ على أبيض** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — شعارٌ أخضرُ على الأزرق كان يذوب،
+    // **والأبيضُ يُبقي كلَّ شعارٍ واضحاً مهما كانت الخلفيّة**، والشعارُ كاملٌ لا مقصوص.
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-card border border-line ${src ? "bg-on-solid p-1" : "bg-accent-tint"} ${className}`}
+    >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+        <img src={src} alt="" loading="lazy" className="h-full w-full object-contain" />
       ) : (
         <span aria-hidden className="heading-section text-accent-text">
           {storeInitial(name)}
