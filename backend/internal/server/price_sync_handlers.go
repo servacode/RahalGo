@@ -48,9 +48,12 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 	}
 	var mapping []byte
 	var hasToken bool
+	var seenAt, requestedAt *time.Time
+	var agentVersion *string
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT price_sync_mapping, price_sync_token_hash IS NOT NULL
-		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken); err != nil {
+		SELECT price_sync_mapping, price_sync_token_hash IS NOT NULL,
+		       price_sync_agent_seen_at, price_sync_agent_version, price_sync_requested_at
+		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken, &seenAt, &agentVersion, &requestedAt); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -71,7 +74,11 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 	if len(mapping) > 0 {
 		_ = json.Unmarshal(mapping, &m)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"mapping": m, "has_token": hasToken, "last_run": last})
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"mapping": m, "has_token": hasToken, "last_run": last,
+		// **حالُ الساعي** (٢٠٢٦-١٠-١٩) — آخرُ سؤالٍ منه ونسختُه، وأطُلبت «مزامنة الآن».
+		"agent_seen_at": seenAt, "agent_version": agentVersion, "sync_requested": requestedAt != nil,
+	})
 }
 
 // handleMerchantPriceSyncFile **ملفُّ الأمين.**
@@ -169,16 +176,8 @@ func (s *Server) handleMerchantPriceSyncToken(w http.ResponseWriter, r *http.Req
 //
 // **والرمزُ يدلّ على المتجر** — فلا يُرسَل معرّفُه ولا يُصدَّق إن أُرسل.
 func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
-	tok := strings.TrimSpace(r.Header.Get("X-Sync-Token"))
-	if tok == "" {
-		s.respondErr(w, errUnauthorized)
-		return
-	}
-	var merchantID string
-	if err := s.pg.QueryRow(r.Context(), `
-		SELECT id::text FROM merchants
-		 WHERE price_sync_token_hash = $1 AND status <> 'suspended'`, syncTokenHash(tok)).Scan(&merchantID); err != nil {
-		s.respondErr(w, errUnauthorized)
+	merchantID, ok := s.syncAgentMerchant(w, r)
+	if !ok {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxSyncFile)
@@ -201,7 +200,130 @@ func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !req.DryRun {
-		s.touch("menu", "merchant:"+merchantID)
+		s.agentSynced(r.Context(), merchantID)
 	}
 	httpx.JSON(w, http.StatusOK, rep)
+}
+
+// syncAgentMerchant **المتجرُ من رمز الساعي** — ورمزٌ غائبٌ أو غلطٌ يُردّ ٤٠١.
+func (s *Server) syncAgentMerchant(w http.ResponseWriter, r *http.Request) (string, bool) {
+	tok := strings.TrimSpace(r.Header.Get("X-Sync-Token"))
+	if tok == "" {
+		s.respondErr(w, errUnauthorized)
+		return "", false
+	}
+	var merchantID string
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT id::text FROM merchants
+		 WHERE price_sync_token_hash = $1 AND status <> 'suspended'`, syncTokenHash(tok)).Scan(&merchantID); err != nil {
+		s.respondErr(w, errUnauthorized)
+		return "", false
+	}
+	return merchantID, true
+}
+
+// agentSynced **زامن الساعي** — تُمحى «مزامنة الآن» وتُبلَّغ الشاشات.
+func (s *Server) agentSynced(ctx context.Context, merchantID string) {
+	_, _ = s.pg.Exec(ctx, `UPDATE merchants SET price_sync_requested_at = NULL WHERE id = $1`, merchantID)
+	s.touch("menu", "merchant:"+merchantID)
+}
+
+// handlePriceSyncPoll **الساعي يسأل كلَّ دقيقة** — فيُعرف أنّه حيّ، **ويُقال له «زامن
+// الآن»** إن ضغطها صاحبُ المتجر. والسؤالُ منه لأنّ كمبيوترَ المول خلفَ شبكته.
+func (s *Server) handlePriceSyncPoll(w http.ResponseWriter, r *http.Request) {
+	merchantID, ok := s.syncAgentMerchant(w, r)
+	if !ok {
+		return
+	}
+	ver := strings.TrimSpace(r.Header.Get("X-Agent-Version"))
+	if len(ver) > 40 {
+		ver = ver[:40]
+	}
+	var requested bool
+	var hasMapping bool
+	if err := s.pg.QueryRow(r.Context(), `
+		UPDATE merchants SET price_sync_agent_seen_at = now(),
+		       price_sync_agent_version = NULLIF($2, '')
+		 WHERE id = $1
+		RETURNING price_sync_requested_at IS NOT NULL, price_sync_mapping IS NOT NULL`,
+		merchantID, ver).Scan(&requested, &hasMapping); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"sync_now": requested, "interval_minutes": 15, "has_mapping": hasMapping,
+	})
+}
+
+// handlePriceSyncAgentFile **الساعي يرفع ملفَّ الأمين** (طريقةُ المجلّد) — **بالاختيار
+// المحفوظ** في لوحة المتجر؛ ومتجرٌ لم يختر أعمدتَه بعدُ يُردّ.
+func (s *Server) handlePriceSyncAgentFile(w http.ResponseWriter, r *http.Request) {
+	merchantID, ok := s.syncAgentMerchant(w, r)
+	if !ok {
+		return
+	}
+	var raw []byte
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT price_sync_mapping FROM merchants WHERE id = $1`, merchantID).Scan(&raw); err != nil || len(raw) == 0 {
+		s.respondErr(w, catalog.ErrSyncMapping)
+		return
+	}
+	var m catalog.SyncMapping
+	if err := json.Unmarshal(raw, &m); err != nil {
+		s.respondErr(w, catalog.ErrSyncMapping)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxSyncFile+64<<10)
+	if err := r.ParseMultipartForm(maxSyncFile); err != nil {
+		s.respondErr(w, catalog.ErrSyncFileType)
+		return
+	}
+	f, hdr, err := r.FormFile("file")
+	if err != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	sheet, err := catalog.ReadSheet(hdr.Filename, data)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	rows, err := sheet.SyncRows(m)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	dry := r.FormValue("dry_run") == "1"
+	rep, err := s.catalog.SyncPrices(r.Context(), merchantID, rows, catalog.SyncOptions{
+		Currency: m.Currency, DryRun: dry, Source: "agent",
+	})
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if !dry {
+		s.agentSynced(r.Context(), merchantID)
+	}
+	httpx.JSON(w, http.StatusOK, rep)
+}
+
+// handleMerchantPriceSyncRequest **«مزامنة الآن»** — يراها الساعي في سؤاله التالي (دقيقة).
+func (s *Server) handleMerchantPriceSyncRequest(w http.ResponseWriter, r *http.Request) {
+	merchantID := chi.URLParam(r, "id")
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE merchants SET price_sync_requested_at = now() WHERE id = $1`, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"requested": true})
 }

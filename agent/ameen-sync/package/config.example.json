@@ -1,0 +1,15 @@
+{
+  "server": "https://api.rahalgo.com",
+  "token": "rgs_ضع_رمز_المزامنة_هون",
+  "mode": "sql",
+  "interval_minutes": 15,
+  "sql": {
+    "connection": "sqlserver://localhost/SQLEXPRESS?database=AmeenDB&trusted_connection=yes",
+    "query": "",
+    "currency": "SYP"
+  },
+  "folder": {
+    "path": "C:\RahalGo\Ameen",
+    "pattern": "*.xlsx"
+  }
+}

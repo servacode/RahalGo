@@ -63,3 +63,42 @@ func TestPriceSyncAgent_TokenPicksStore(t *testing.T) {
 		t.Fatalf("بعد المزامنة: %d %v — **والمطلوب ١٤٠ غير متوفر**", price, avail)
 	}
 }
+
+// TestPriceSyncPoll_SyncNow **الساعي يسأل فيُعرف أنّه حيّ، و«مزامنة الآن» تصله ثمّ تُمحى.**
+func TestPriceSyncPoll_SyncNow(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_token_hash = $2, price_sync_requested_at = NULL WHERE id = $1`,
+		f.merchantID, syncTokenHash("rgs_poll")); err != nil {
+		t.Fatal(err)
+	}
+	poll := func() string {
+		req := httptest.NewRequest(http.MethodGet, "/public/price-sync/poll", nil)
+		req.Header.Set("X-Sync-Token", "rgs_poll")
+		req.Header.Set("X-Agent-Version", "1.0.0")
+		w := httptest.NewRecorder()
+		f.srv.handlePriceSyncPoll(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("السؤال: %d %s", w.Code, w.Body.String())
+		}
+		return w.Body.String()
+	}
+	if b := poll(); !strings.Contains(b, `"sync_now":false`) {
+		t.Fatalf("بلا طلبٍ قال: %s", b)
+	}
+	var seen *string
+	_ = f.pool.QueryRow(ctx, `SELECT price_sync_agent_version FROM merchants WHERE id = $1`, f.merchantID).Scan(&seen)
+	if seen == nil || *seen != "1.0.0" {
+		t.Fatal("**السؤالُ لم يُسجِّل الساعي حيّاً**")
+	}
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_requested_at = now() WHERE id = $1`, f.merchantID); err != nil {
+		t.Fatal(err)
+	}
+	if b := poll(); !strings.Contains(b, `"sync_now":true`) {
+		t.Fatalf("«مزامنة الآن» لم تصل: %s", b)
+	}
+	f.srv.agentSynced(ctx, f.merchantID)
+	if b := poll(); !strings.Contains(b, `"sync_now":false`) {
+		t.Fatalf("«مزامنة الآن» لم تُمحَ بعد المزامنة: %s", b)
+	}
+}

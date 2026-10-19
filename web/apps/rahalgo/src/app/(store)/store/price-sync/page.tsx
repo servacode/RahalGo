@@ -58,6 +58,9 @@ interface Info {
   mapping: Mapping | null;
   has_token: boolean;
   last_run: { source: string; report: Report; at: string } | null;
+  agent_seen_at: string | null;
+  agent_version: string | null;
+  sync_requested: boolean;
 }
 interface Preview {
   headers: string[];
@@ -146,6 +149,21 @@ export default function PriceSyncPage() {
         setPreview(null);
         load();
       }
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** **«مزامنة الآن»** — يراها الساعي في سؤاله التالي (دقيقة). */
+  async function syncNow() {
+    setBusy(true);
+    try {
+      await api(`/api/v1/merchant/stores/${id}/price-sync/request`, {
+        method: "POST",
+      });
+      load();
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -342,6 +360,40 @@ export default function PriceSyncPage() {
         <div className="flex flex-col gap-2 p-4">
           <h3 className="heading-card">{P.tokenTitle}</h3>
           <p className="text-xs text-ink-muted">{P.tokenHint}</p>
+          {/* **حالُ الساعي** — شغّالٌ إن سأل في آخر خمس دقائق (يسأل كلَّ دقيقة). */}
+          {info?.agent_seen_at ? (
+            <p
+              className={`text-sm ${Date.now() - new Date(info.agent_seen_at).getTime() < 5 * 60_000 ? "text-success" : "text-danger"}`}
+            >
+              {fill(
+                Date.now() - new Date(info.agent_seen_at).getTime() < 5 * 60_000
+                  ? P.agentAlive
+                  : P.agentDead,
+                {
+                  ago: fmtDateTime(info.agent_seen_at),
+                },
+              )}
+              {info.agent_version
+                ? ` · ${fill(P.agentVersion, { v: info.agent_version })}`
+                : ""}
+            </p>
+          ) : (
+            info?.has_token && (
+              <p className="text-sm text-ink-muted">{P.agentNever}</p>
+            )
+          )}
+          {info?.agent_seen_at &&
+            (info.sync_requested ? (
+              <p className="text-sm text-success">{P.syncAsked}</p>
+            ) : (
+              <Button
+                className="w-fit"
+                onClick={() => void syncNow()}
+                disabled={busy}
+              >
+                {P.syncNow}
+              </Button>
+            ))}
           {info?.has_token && !token && (
             <p className="text-sm text-success">{P.tokenHas}</p>
           )}

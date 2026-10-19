@@ -8513,6 +8513,14 @@
       ],
       "response": [
         {
+          "name": "agent_seen_at",
+          "type": "unknown"
+        },
+        {
+          "name": "agent_version",
+          "type": "unknown"
+        },
+        {
           "name": "has_token",
           "type": "unknown"
         },
@@ -8522,6 +8530,10 @@
         },
         {
           "name": "mapping",
+          "type": "unknown"
+        },
+        {
+          "name": "sync_requested",
           "type": "unknown"
         }
       ],
@@ -8553,6 +8565,24 @@
         {
           "name": "sample",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/request",
+      "handler": "handleMerchantPriceSyncRequest",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "requested",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -9759,6 +9789,44 @@
       "response": [
         {
           "name": "@rep",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/price-sync/file",
+      "handler": "handlePriceSyncAgentFile",
+      "auth": false,
+      "response": [
+        {
+          "name": "@rep",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/price-sync/poll",
+      "handler": "handlePriceSyncPoll",
+      "auth": false,
+      "response": [
+        {
+          "name": "has_mapping",
+          "type": "unknown"
+        },
+        {
+          "name": "interval_minutes",
+          "type": "int"
+        },
+        {
+          "name": "sync_now",
           "type": "unknown"
         }
       ],
