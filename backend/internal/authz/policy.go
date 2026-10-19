@@ -174,6 +174,8 @@ var adminPolicy = []Rule{
 	{"GET", "/leads", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
+	// **إعدادُ قراءة الأمين** — فنيّ، بقدرة إدارة المتاجر (٢٠٢٦-١٠-١٩).
+	{"PUT", "/merchants/{id}/price-sync", MerchantsManage},
 	{"PATCH", "/merchants/{id}/exchange-rate", MerchantsManage},
 	// **إعدادُ المتاجر — مَن ضبط ومَن لم يضبط، والتذكيرُ بيد الموظّف** (٢٠٢٦-١٠-٠٨).
 	{"GET", "/merchants-setup", MerchantsRead},
@@ -205,6 +207,7 @@ var adminPolicy = []Rule{
 	// `read` في الهجرة، **فلا أحدَ فقد ما كان يراه.**
 	{"GET", "/merchants", MerchantsRead},
 	{"GET", "/merchants/{id}", MerchantsRead},
+	{"GET", "/merchants/{id}/price-sync", MerchantsRead},
 	{"GET", "/merchants/{id}/menu", MerchantsRead},
 	{"GET", "/merchants/{id}/hours", MerchantsRead},
 
