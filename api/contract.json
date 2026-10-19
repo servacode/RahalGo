@@ -8505,6 +8505,80 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/price-sync",
+      "handler": "handleMerchantPriceSyncInfo",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "has_token",
+          "type": "unknown"
+        },
+        {
+          "name": "last_run",
+          "type": "unknown"
+        },
+        {
+          "name": "mapping",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/file",
+      "handler": "handleMerchantPriceSyncFile",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@rep",
+          "type": "unknown"
+        },
+        {
+          "name": "headers",
+          "type": "unknown"
+        },
+        {
+          "name": "rows",
+          "type": "unknown"
+        },
+        {
+          "name": "sample",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/token",
+      "handler": "handleMerchantPriceSyncToken",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "token",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/reports",
       "handler": "handleMerchantReports",
       "auth": true,
@@ -9656,6 +9730,35 @@
         },
         {
           "name": "support_phone",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/price-sync",
+      "handler": "handlePriceSyncAgent",
+      "auth": false,
+      "request": [
+        {
+          "name": "rows",
+          "type": "[]catalog.SyncRow"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "dry_run",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "@rep",
           "type": "unknown"
         }
       ],

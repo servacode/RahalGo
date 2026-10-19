@@ -612,6 +612,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/app/{key}", s.handleDownloadAppByKey)
 		// **وزيارةُ الموقع تُعدّ** — مرّةً في اليوم للشخص (`site_stats.go`).
 		r.Post("/public/visit", s.handlePublicVisit)
+		// **ساعي الأمين برمزه** — بلا جلسة، والرمزُ يدلّ على المتجر (٢٠٢٦-١٠-١٩).
+		r.Post("/public/price-sync", s.handlePriceSyncAgent)
 		r.Get("/public/zone", s.handlePublicZone)
 		// **وحالُ الإتاحة قبل السلّة** — انظر `quote_handlers.go`.
 		r.Get("/public/availability", s.handlePublicAvailability)
@@ -1029,6 +1031,10 @@ func (s *Server) Router() http.Handler {
 			// **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩).
 			r.Get("/stores/{id}/drinks", s.handleMerchantGetDrinks)
 			r.Put("/stores/{id}/drinks", s.handleMerchantSetDrinks)
+			// **مزامنةُ الأسعار والكميّات من الأمين** (٢٠٢٦-١٠-١٩) — انظر price_sync_handlers.go.
+			r.Get("/stores/{id}/price-sync", s.handleMerchantPriceSyncInfo)
+			r.Post("/stores/{id}/price-sync/file", s.handleMerchantPriceSyncFile)
+			r.Post("/stores/{id}/price-sync/token", s.handleMerchantPriceSyncToken)
 
 			// ══════════════════════════════════════════════════════════
 			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**

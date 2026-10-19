@@ -94,6 +94,9 @@
     <string name="err_offer_platform_live">في عرض من رحّال غو على هالصنف</string>
     <string name="err_offer_platform_live_until">في عرض من رحّال غو على هالصنف لحد %1$s</string>
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
+    <string name="err_price_sync_empty">الملف فاضي أو كبير كتير — لازم يكون فيه مواد (لحد ٥٠ ألف مادة)</string>
+    <string name="err_price_sync_file_type">ما قدرنا نقرأ الملف. احفظه من الأمين كـ Excel (xlsx) أو CSV وجرّب مرة تانية</string>
+    <string name="err_price_sync_mapping">في عمود مختار مو موجود بالملف — اختار الأعمدة من جديد</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
     <string name="err_exchange_rate_required">اكتب سعر الصرف بصفحة «متجري» أول، لحتى نحسب أسعارك بالدولار</string>
     <string name="err_exchange_rate_invalid">سعر الصرف لازم يكون رقم أكبر من صفر</string>

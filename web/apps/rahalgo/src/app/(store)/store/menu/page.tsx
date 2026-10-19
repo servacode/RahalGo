@@ -302,6 +302,12 @@ export default function MenuPage() {
           </ButtonLink>
         )}
       </header>
+      {/* **مزامنةُ الأمين** — للمولات (٢٠٢٦-١٠-١٩). */}
+      {!suspended && (
+        <ButtonLink href="/store/price-sync" variant="secondary" className="w-fit">
+          {m.store.priceSync.open}
+        </ButtonLink>
+      )}
       {/* **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩). */}
       {!suspended && id && (
         <DrinksCard
