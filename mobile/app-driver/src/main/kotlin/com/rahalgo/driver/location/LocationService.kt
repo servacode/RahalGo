@@ -75,6 +75,9 @@ class LocationService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private var lastSentAt = 0L
+
+    /** **حارسُ التردّد** — على قدر الفترة أثناء التوصيل (`request`). */
+    private var minSendGapMs = MIN_SEND_GAP_MS
     // **ونبضةٌ واحدةٌ لا اثنتان** — `onStartCommand` يُنادى مرّاتٍ
     // (إعادةُ تشغيلٍ بعد قتلٍ، أو تبديلُ تردّد)، **وحلقةٌ لكلّ نداءٍ
     // تُضاعف النداءات بلا أن يظهر ذلك في شيء.**
@@ -250,15 +253,25 @@ class LocationService : Service() {
 
     private fun request(seconds: Long) {
         val ms = seconds * 1000
+        // ══════════════════════════════════════════════════════════════
+        // **وأثناء التوصيل نبضةٌ حيّة** (قرارُ المالك ٢٠٢٦-١٠-١٩)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **فترةٌ قصيرةٌ تعني طلباً شغّالاً** (`HomeViewModel.syncService`) — فلا
+        // تجميعَ يؤخّر النقطة، **وحدُّ الحركة خمسةُ أمتار** فيُرى السائقُ يمشي لا يقفز،
+        // **وحارسُ التردّد على قدر الفترة** لا خمسَ ثوانٍ ثابتة.
+        val live = seconds <= LIVE_MAX_SEC
+        minSendGapMs = if (live) (ms - LIVE_SLACK_MS).coerceAtLeast(2_000L) else MIN_SEND_GAP_MS
         val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, ms)
             // **ولا نقطة أسرع من نصف الفترة** — حتّى لا يغرقنا مزوّد
             // نشيط بتحديثات لا نحتاجها.
             .setMinUpdateIntervalMillis(ms / 2)
             // **ومن وقف لا يُرسل**: عشرون مترا حدّ الحركة الحقيقيّة،
             // **ودونها ضجيج قمر صناعيّ لا تنقّل.**
-            .setMinUpdateDistanceMeters(MIN_MOVE_M)
-            // **ويُسمح للنظام أن يجمّع** — يوقظ الجهاز مرّة بدل مرّات.
-            .setMaxUpdateDelayMillis(ms * 2)
+            .setMinUpdateDistanceMeters(if (live) LIVE_MIN_MOVE_M else MIN_MOVE_M)
+            // **ويُسمح للنظام أن يجمّع** — يوقظ الجهاز مرّة بدل مرّات. **إلّا
+            // أثناء التوصيل**: نقطةٌ مجمّعةٌ تصل متأخّرةً لا تُري حركة.
+            .setMaxUpdateDelayMillis(if (live) 0L else ms * 2)
             .build()
         try {
             client.requestLocationUpdates(req, callback, mainLooper)
@@ -299,7 +312,7 @@ class LocationService : Service() {
         val now = SystemClock.elapsedRealtime()
         // **وحارس ثانٍ على التردّد** — النظام قد يسلّم أسرع ممّا طُلب،
         // **ونداء لكلّ نقطة يستنزف البطارية والحزمة معا.**
-        if (now - lastSentAt < MIN_SEND_GAP_MS) return
+        if (now - lastSentAt < minSendGapMs) return
         lastSentAt = now
 
         val speed = if (point.hasSpeed()) point.speed.toDouble() else null
@@ -437,6 +450,15 @@ class LocationService : Service() {
         private const val DEFAULT_PING_SEC = 20L
         private const val MIN_MOVE_M = 20f
         private const val MIN_SEND_GAP_MS = 5_000L
+
+        /** **فترةٌ لا تتجاوز هذا تعني طلباً شغّالاً** — نبضةٌ حيّة (٢٠٢٦-١٠-١٩). */
+        private const val LIVE_MAX_SEC = 10L
+
+        /** **هامشُ حارس التردّد أثناء التوصيل** — نقطةٌ تصل قبل موعدها بقليلٍ لا تُرمى. */
+        private const val LIVE_SLACK_MS = 800L
+
+        /** **حدُّ الحركة أثناء التوصيل** — يُرى يمشي لا يقفز عشرين متراً. */
+        private const val LIVE_MIN_MOVE_M = 5f
 
         // ══════════════════════════════════════════════════════════════
         // **ونبضةٌ تُبقي الواقفَ مرئيّاً** — `GAP-LOC-IDLE-01`

@@ -1154,6 +1154,12 @@ var Catalog = []Def{
 	{Key: "drivers.location_ping_sec", Group: GroupDrivers, Kind: KindInt,
 		Min: 15, Max: 600, Unit: "second", Default: 60},
 
+	// **ونبضتُه أثناء التوصيل — أسرعُ بكثير** (قرارُ المالك ٢٠٢٦-١٠-١٩: «الموقع المباشر كل
+	// ٣ لـ٥ ثواني»). **ما دام معه طلبٌ شغّال** يرسل بها فيتحرّك على خريطة العمليات حيّاً،
+	// **وخارجَ الطلب يعود إلى `drivers.location_ping_sec`** فلا تنفد بطّاريّتُه في الانتظار.
+	{Key: "drivers.location_ping_active_sec", Group: GroupDrivers, Kind: KindInt,
+		Min: 3, Max: 10, Unit: "second", Default: 4},
+
 	// **ومتوسّطُ سرعة السائق — منه يُحسب الوقتُ المتوقَّع.**
 	//
 	// (جردُ ٢٠٢٦-٠٨-٠٩: البطاقةُ تقول «٤٠٠ متر» ولا تقول كم يأخذ.)

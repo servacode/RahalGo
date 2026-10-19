@@ -8357,21 +8357,6 @@
       "auth": true,
       "roles": [
         "merchant"
-      ],
-      "request": [
-        {
-          "name": "drinks",
-          "type": "[]catalog.Drink"
-        }
-      ],
-      "response": [
-        {
-          "name": "drinks",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -10441,6 +10426,57 @@
         {
           "name": "sections",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/stores/{id}/drinks",
+      "handler": "handleRepGetDrinks",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "drinks",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/rep/stores/{id}/drinks",
+      "handler": "handleRepSetDrinks",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/rep/stores/{id}/logo",
+      "handler": "handleRepSetLogo",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "request": [
+        {
+          "name": "logo_media_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
         }
       ],
       "statuses": [

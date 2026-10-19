@@ -24,6 +24,7 @@ import { useStore } from "@/lib/store/context";
 import type { SectionRef, StoreReport } from "@/lib/store/types";
 import {
   EmergencyButton,
+  LogoCard,
   NameCard,
   PrepCard,
   RateCard,
@@ -93,6 +94,7 @@ export default function StoreHome() {
       )}
 
       <NameCard />
+      <LogoCard />
       <EmergencyButton />
 
       {loading && !report ? (

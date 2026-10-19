@@ -1,5 +1,7 @@
 package com.rahalgo.rep.menu
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.aspectRatio
 import com.rahalgo.ui.menu.ItemEditor
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
@@ -93,6 +95,13 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             vm.open != null -> vm.back()
             else -> vm.close()
         }
+    }
+
+    // **وقائمةُ المشروبات كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩) — المحرّرُ نفسُه.
+    if (vm.drinks.open) {
+        BackHandler { vm.drinks.close() }
+        com.rahalgo.ui.menu.DrinksEditor(vm.drinks)
+        return
     }
 
     if (vm.editing != null) {
@@ -227,34 +236,49 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         // مختلفتان لعملٍ واحدٍ تجعلان من عرف إحداهما يتعثّر بالأخرى.**
         val open = vm.open
         if (open == null) {
-            vm.groups.forEach { g ->
+            // **وزرُّ المشروبات فوق الشبكة كما عند المتجر.**
+            com.rahalgo.ui.menu.DrinksButton(vm.drinks)
+            Spacer(Modifier.height(10.dp))
+            // **ومربّعاتٌ بعمودين كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩: «مطابق للمتجر»)
+            // — لا أسطرَ بصورةٍ صغيرة. **وصفوفٌ لا شبكةٌ كسولة** داخل `Screen` الذي يمرّر.
+            vm.groups.chunked(2).forEach { pair ->
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(Rahal.shape.md)
-                        .clickable { vm.openGroup(g) }
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    RemoteImage(
-                        url = Backend.of(ctx).media(g.imageUrl),
-                        name = g.name,
-                        modifier = Modifier.size(56.dp).clip(Rahal.shape.sm),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        g.name,
-                        modifier = Modifier.weight(1f),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        "${g.items.size}",
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    pair.forEach { g ->
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .clip(Rahal.shape.md)
+                                .clickable { vm.openGroup(g) },
+                        ) {
+                            RemoteImage(
+                                url = Backend.of(ctx).media(g.imageUrl),
+                                name = g.name,
+                                modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(Rahal.shape.sm),
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    g.name,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    "${g.items.size}",
+                                    color = Rahal.colors.inkMuted,
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
-                HorizontalDivider()
+                Spacer(Modifier.height(14.dp))
             }
         } else {
             RahalTextButton(onClick = { vm.back() }) {
@@ -266,6 +290,12 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(6.dp))
+            // **وإضافةُ صنفٍ من داخل قسمه كما عند المتجر** — فلا يُعيد اختيارَ ما هو فيه.
+            RahalButton(
+                onClick = { vm.newItem(vm.platformSections.firstOrNull { it.name == open.name }?.id.orEmpty()) },
+                enabled = !vm.busy,
+            ) { Text(stringResource(R.string.mn_add_item)) }
+            Spacer(Modifier.height(10.dp))
             open.items.forEach { item -> ItemRow(item, vm) }
         }
         Spacer(Modifier.height(24.dp))

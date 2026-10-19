@@ -213,7 +213,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                     RahalTextButton(onClick = { pickLogo() }, enabled = !vm.saving) {
                         Text(
                             stringResource(
-                                if (store.logoThumbUrl.isNullOrBlank()) R.string.store_logo_add else R.string.store_logo_change,
+                                if (store.logoThumbUrl.isNullOrBlank()) com.rahalgo.ui.R.string.store_logo_add else com.rahalgo.ui.R.string.store_logo_change,
                             ),
                         )
                     }

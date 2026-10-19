@@ -121,11 +121,18 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         // **ويُحفظ آخرُ ما عُرف** — فإن أُعيد تشغيلُ الهاتف عادت الخدمةُ أو طُلب
         // فتحُ التطبيق (`BootResume`، ٢٠٢٦-١٠-٠٢).
-        com.rahalgo.driver.location.ShiftMemory.remember(
-            app, me.onShift, me.locationPingSec.takeIf { it > 0 } ?: 20L,
-        )
+        // ══════════════════════════════════════════════════════════════
+        // **وما دام معه طلبٌ شغّال يرسل كلَّ ثوانٍ** (قرارُ المالك ٢٠٢٦-١٠-١٩)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **فيتحرّك على خريطة العمليات حيّاً** — وخارجَ الطلب يعود إلى الفترة
+        // العاديّة فلا تنفد بطّاريّتُه وهو ينتظر. **والطلبُ يُعرف من المحرّك**
+        // (`active_orders`)، ويُعاد قراءتُه مع كلّ نبضةِ تحديث.
+        val normal = me.locationPingSec.takeIf { it > 0 } ?: 20L
+        val pingSec = if (me.activeOrders > 0) me.locationPingActiveSec.takeIf { it > 0 } ?: normal else normal
+        com.rahalgo.driver.location.ShiftMemory.remember(app, me.onShift, pingSec)
         if (me.onShift && LocationPermission.granted(app)) {
-            LocationService.start(app, me.locationPingSec.takeIf { it > 0 } ?: 20L)
+            LocationService.start(app, pingSec)
         } else {
             LocationService.stop(app)
         }

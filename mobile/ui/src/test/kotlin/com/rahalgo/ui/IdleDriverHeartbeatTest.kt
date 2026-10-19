@@ -90,7 +90,8 @@ class IdleDriverHeartbeatTest {
         val src = read(svc)
         assertTrue(
             "**حُذف مرشِّحُ الحركة** — النبضةُ تُكمله لا تُلغيه",
-            src.contains("setMinUpdateDistanceMeters(MIN_MOVE_M)"),
+            // **وأثناء التوصيل خمسةُ أمتار** (٢٠٢٦-١٠-١٩) — والورديّةُ على عشرين.
+            src.contains("setMinUpdateDistanceMeters(if (live) LIVE_MIN_MOVE_M else MIN_MOVE_M)"),
         )
     }
 

@@ -196,6 +196,20 @@ type Order struct {
 	// CustomerName **اسمُ الزبون — لمن يملك `orders.customer_details.read`
 	// وحدَه.** ولا هاتفَ هنا لأحد.
 	CustomerName *string `json:"customer_name,omitempty"`
+
+	// CustomerLive **موضعُ الزبون المباشر إن شاركه** (طلبُ المالك ٢٠٢٦-١٠-١٩: «لازم يظهر
+	// موقع الزبون المباشر بخريطة العمليات لنقدر نعطي احداثيات للسائق») — **والأحدثُ من
+	// دقيقتين وحدَه** (`orders.LiveFreshFor`): نقطةٌ شاخت لا تقول أين هو الآن.
+	CustomerLive *CustomerLive `json:"customer_live,omitempty"`
+}
+
+// CustomerLive **نقطةُ الزبون الحيّة** — ومسافتُها عن دبّوسه تقول إن كان الدبّوسُ خطأً.
+type CustomerLive struct {
+	Lat       float64   `json:"lat"`
+	Lng       float64   `json:"lng"`
+	AccuracyM *float64  `json:"accuracy_m,omitempty"`
+	At        time.Time `json:"at"`
+	PinGapM   float64   `json:"pin_gap_m"`
 }
 
 // OrderFilter مُرشِّحاتُ طبقة الطلبات.
@@ -271,11 +285,14 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		         WHERE e.order_id = o.id AND e.to_status = 'assigned'),
 		       o.picked_up_at,
 		       o.total, o.payment_method, o.delivery_fee,
-		       ` + stuckColumn(f.Stuck) + `, cu.full_name
+		       ` + stuckColumn(f.Stuck) + `, cu.full_name,
+		       ST_Y(ll.point::geometry), ST_X(ll.point::geometry), ll.accuracy_m::float8, ll.at,
+		       ST_Distance(ll.point, o.dropoff)
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users d ON d.id = o.driver_id
 		LEFT JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN order_live_locations ll ON ll.order_id = o.id AND ll.at > now() - interval '2 minutes'
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY o.created_at DESC
 		LIMIT ` + fmt.Sprint(limit)
@@ -291,13 +308,22 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		var x Order
 		var total, fee *int64
 		var pay, cust *string
+		var liveLat, liveLng, liveAcc, liveGap *float64
+		var liveAt *time.Time
 		if err := rows.Scan(&x.ID, &x.Number, &x.Status, &x.Kind,
 			&x.DropLat, &x.DropLng, &x.Address,
 			&x.MerchantID, &x.MerchantName, &x.PickLat, &x.PickLng,
 			&x.DriverID, &x.DriverName, &x.DriverLat, &x.DriverLng,
 			&x.CreatedAt, &x.AcceptedAt, &x.AssignedAt, &x.PickedUpAt,
-			&total, &pay, &fee, &x.StuckReason, &cust); err != nil {
+			&total, &pay, &fee, &x.StuckReason, &cust,
+			&liveLat, &liveLng, &liveAcc, &liveAt, &liveGap); err != nil {
 			return nil, err
+		}
+		if liveLat != nil && liveLng != nil && liveAt != nil {
+			x.CustomerLive = &CustomerLive{Lat: *liveLat, Lng: *liveLng, AccuracyM: liveAcc, At: *liveAt}
+			if liveGap != nil {
+				x.CustomerLive.PinGapM = *liveGap
+			}
 		}
 		if f.WithCustomer {
 			x.CustomerName = cust

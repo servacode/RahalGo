@@ -166,6 +166,27 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         load()
     }
 
+    // **قائمةُ المشروبات كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩).
+    val drinks = com.rahalgo.ui.menu.DrinksState(
+        scope = viewModelScope,
+        load = { api.drinks(merchantID) },
+        save = { api.setDrinks(merchantID, it) },
+        itemCount = { groups.sumOf { g -> g.items.size } },
+        errText = { apiError(getApplication(), it) },
+    )
+
+    init {
+        // ══════════════════════════════════════════════════════════════
+        // **والقائمةُ تتحدّث لحظيّاً كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كانت لا تسمع النبضة** — فصاحبُ المتجر يعدّل صنفاً والمندوبُ يرى القديم
+        // حتّى يخرج ويعود. **والنبضةُ تأتي من قناة الزمن الحقيقيّ** (`ShellViewModel`).
+        viewModelScope.launch {
+            Refresh.tick.collect { if (it > 0L && merchantID.isNotEmpty() && editing == null && !busy) load() }
+        }
+    }
+
     fun close() {
         merchantID = ""
         editing = null

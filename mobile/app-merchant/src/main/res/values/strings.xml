@@ -205,23 +205,6 @@
 
     <!-- **واسمُه بيده** — طلبُ المالك ٢٠٢٦-٠٨-٢٣. -->
     <string name="store_rename">تعديل اسم المتجر</string>
-    <string name="drinks_title">قائمة المشروبات</string>
-    <string name="drinks_button">إضافة قائمة المشروبات</string>
-    <string name="drinks_hint">بتكتبها مرة وحدة، وبتنضاف لحالها لكل أصنافك. الزبون بيختار منها إذا بدّه.</string>
-    <string name="drinks_name">اسم المشروب</string>
-    <string name="drinks_price_syp">السعر (ل.س)</string>
-    <string name="drinks_price_usd">السعر ($)</string>
-    <string name="drinks_syp">ليرة</string>
-    <string name="drinks_usd">دولار</string>
-    <string name="drinks_add">أضف مشروب</string>
-    <string name="drinks_save">احفظ وطبّق على كل الأصناف</string>
-    <string name="drinks_saved">✓ انضافت المشروبات لـ%1$d صنف</string>
-    <string name="drinks_saved_none">✓ انحفظت القائمة — وبتنضاف لكل صنف بتضيفه</string>
-    <string name="drinks_cleared">✓ انشالت المشروبات من كل الأصناف</string>
-    <string name="drinks_empty">ما في مشروبات لسا</string>
-    <string name="drinks_v_name">اكتب اسم كل مشروب</string>
-    <string name="store_logo_add">+ أضف شعار المتجر</string>
-    <string name="store_logo_change">غيّر الشعار</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **سجلُّ الطلبات — قسمٌ في الدرج كما في الويب**
@@ -309,7 +292,6 @@
     <string name="mn_item_saved">✓ تم حفظ الصنف</string>
     <string name="ok_prep_saved">✓ حُفظت مدة التحضير</string>
     <string name="ok_name_saved">✓ حُفظ اسم المتجر</string>
-    <string name="ok_logo_saved">✓ حُفظ شعار المتجر</string>
     <string name="ok_hours_saved">✓ حُفظت أوقات العمل</string>
     <string name="mn_item_deleted">✓ حُذف الصنف</string>
     <string name="menu_deliveries">سجل التوصيلات</string>

@@ -120,9 +120,9 @@ fun MenuScreen(vm: MenuViewModel) {
     }
 
     // **قائمةُ المشروبات تغطّي الشبكةَ كالمحرّر** (٢٠٢٦-١٠-١٩).
-    if (vm.drinksOpen) {
-        BackHandler { vm.closeDrinks() }
-        DrinksEditor(vm)
+    if (vm.drinks.open) {
+        BackHandler { vm.drinks.close() }
+        com.rahalgo.ui.menu.DrinksEditor(vm.drinks)
         return
     }
 
@@ -185,7 +185,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                 stringResource(R.string.menu_title),
                 stringResource(R.string.menu_sections_hint),
             )
-            if (!vm.suspended) DrinksButton(vm)
+            if (!vm.suspended) com.rahalgo.ui.menu.DrinksButton(vm.drinks)
             Empty(stringResource(R.string.menu_empty))
         }
         return
@@ -204,7 +204,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                     stringResource(R.string.menu_title),
                     stringResource(R.string.menu_sections_hint),
                 )
-                if (!vm.suspended) DrinksButton(vm)
+                if (!vm.suspended) com.rahalgo.ui.menu.DrinksButton(vm.drinks)
                 Spacer(Modifier.height(6.dp))
             }
         }

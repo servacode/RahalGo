@@ -100,6 +100,33 @@ class RepApi(private val api: ApiClient) {
      * **وردُّها كائنٌ لا لائحة** (`{"sections": […]}`) — كما تقرؤه لوحةُ
      * الويب حرفا.
      */
+    /** **شعارُ متجر عميله** (طلبُ المالك ٢٠٢٦-١٠-١٩) — يُرفع بنوع الشعار ثمّ يُربط. */
+    suspend fun uploadLogo(fileName: String, bytes: ByteArray): MediaRef {
+        val raw = api.upload(
+            "/api/v1/rep/media", fileName, bytes, mapOf("kind" to "merchant_logo"),
+        )
+        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data ?: MediaRef()
+    }
+
+    suspend fun setLogo(merchantID: String, mediaId: String) {
+        api.call<kotlinx.serialization.json.JsonObject>(
+            "/api/v1/rep/stores/$merchantID/logo",
+            HttpMethod.Put,
+            mapOf("logo_media_id" to mediaId),
+        )
+    }
+
+    /** **مشروباتُ عميله** — كما عند المتجر (٢٠٢٦-١٠-١٩). */
+    suspend fun drinks(merchantID: String): List<com.rahalgo.shared.merchant.Drink> =
+        api.call<com.rahalgo.shared.merchant.DrinksBody>("/api/v1/rep/stores/$merchantID/drinks").drinks
+
+    suspend fun setDrinks(merchantID: String, drinks: List<com.rahalgo.shared.merchant.Drink>): List<com.rahalgo.shared.merchant.Drink> =
+        api.call<com.rahalgo.shared.merchant.DrinksBody>(
+            "/api/v1/rep/stores/$merchantID/drinks",
+            io.ktor.http.HttpMethod.Put,
+            com.rahalgo.shared.merchant.DrinksBody(drinks),
+        ).drinks
+
     suspend fun platformSections(): List<PlatformSection> =
         api.call<PlatformSections>("/api/v1/rep/platform-sections").sections
 

@@ -270,7 +270,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
             }
                 .onSuccess { ref ->
                     store = store?.copy(logoThumbUrl = ref.thumbUrl.ifBlank { null })
-                    Flash.ok(AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_logo_saved))
+                    Flash.ok(AppCore.get().app.getString(com.rahalgo.ui.R.string.ok_logo_saved))
                 }
                 .onFailure { Flash.fail(err(it)) }
             saving = false

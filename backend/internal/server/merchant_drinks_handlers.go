@@ -34,6 +34,27 @@ func (s *Server) handleMerchantSetDrinks(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
+	s.writeDrinks(w, r, merchantID)
+}
+
+// handleRepGetDrinks **قائمةُ مشروبات عميله** — والحارسُ `repMenuGuard` على المسار
+// (طلبُ المالك ٢٠٢٦-١٠-١٩: «تطبيق المندوب لازم يكون مطابق للمتجر»).
+func (s *Server) handleRepGetDrinks(w http.ResponseWriter, r *http.Request) {
+	drinks, err := s.catalog.Drinks(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks})
+}
+
+// handleRepSetDrinks **يكتبها المندوبُ لعميله كما يكتبها صاحبُه** — المنطقُ واحد.
+func (s *Server) handleRepSetDrinks(w http.ResponseWriter, r *http.Request) {
+	s.writeDrinks(w, r, chi.URLParam(r, "id"))
+}
+
+// writeDrinks **الكتابةُ نفسُها للمتجر والمندوب** — حارسُ النصّ ثمّ النسخُ إلى الأصناف.
+func (s *Server) writeDrinks(w http.ResponseWriter, r *http.Request, merchantID string) {
 	req, err := decode[struct {
 		Drinks []catalog.Drink `json:"drinks"`
 	}](r)

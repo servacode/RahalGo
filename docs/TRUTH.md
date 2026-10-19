@@ -1248,6 +1248,7 @@ kosom` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.assigned_silence_sec` | السائقون | int | `180` |
 | `drivers.location_ping_sec` | السائقون | int | `60` |
+| `drivers.location_ping_active_sec` | السائقون | int | `4` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `delivery.merchant_fee` | السائقون | money | `0` |

@@ -82,8 +82,8 @@ android {
         // بعينه من إشعاره · وطلباتٌ حيّةٌ بالنبضة · وحالةٌ فعليّةٌ من الخادم ·
         // وواجهةُ المتجر الموقوف · ومنتقي سبب الاعتذار · ومبدّلُ الفروع ·
         // وتحديثٌ مباشرٌ لا Google Play.
-        versionCode = 19
-        versionName = "0.7.0"
+        versionCode = 20
+        versionName = "0.8.0"
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -93,6 +93,12 @@ android {
     // **كانت مخزونةً بلا ضغط** (١٢٫٧ + ٩٫٤ م.ب) ليقرأها أندرويد من الحزمة مباشرةً —
     // **وتُضغط إلى ٤٫٤ + ٣٫٩.** فالتحميلُ المباشرُ ينزل من ٢٧ إلى نحو ١٣ م.ب، **والثمنُ
     // فكُّها مرّةً عند التثبيت** وبضعُ ميغاتٍ على القرص — **والتنزيلُ في سوريا أغلى.**
+    // **ولغاتُ مكتباتِ غوغل غيرُ العربيّة لا تُحمَّل** — نصوصُ التطبيق في `values` وحدَها،
+    // **وعشراتُ اللغات في جدول الموارد بلا قارئ.**
+    androidResources {
+        localeFilters += listOf("ar")
+    }
+
     packaging {
         jniLibs { useLegacyPackaging = true }
     }
@@ -154,6 +160,9 @@ android {
                 signingConfig = signingConfigs.getByName("upload")
             }
             isMinifyEnabled = true
+            // **والصورُ والملفّاتُ التي لا يناديها شيءٌ تُحذف** (طلبُ المالك ٢٠٢٦-١٠-١٩:
+            // «نصغّر الحجم لأقصى درجة»).
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

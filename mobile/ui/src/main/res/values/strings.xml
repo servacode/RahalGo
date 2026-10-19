@@ -1072,4 +1072,24 @@
     <!-- حال أو نوع ما منعرفه — بدل ما يطلع الرمز -->
     <string name="ord_st_refunded">رجعت المصاري</string>
     <string name="wal_k_other">حركة تانية</string>
+    <!-- **قائمةُ المشروبات** — مشتركةٌ بين المتجر والمندوب (٢٠٢٦-١٠-١٩). -->
+    <string name="drinks_title">قائمة المشروبات</string>
+    <string name="drinks_button">إضافة قائمة المشروبات</string>
+    <string name="drinks_hint">بتكتبها مرة وحدة، وبتنضاف لحالها لكل أصنافك. الزبون بيختار منها إذا بدّه.</string>
+    <string name="drinks_name">اسم المشروب</string>
+    <string name="drinks_price_syp">السعر (ل.س)</string>
+    <string name="drinks_price_usd">السعر ($)</string>
+    <string name="drinks_syp">ليرة</string>
+    <string name="drinks_usd">دولار</string>
+    <string name="drinks_add">أضف مشروب</string>
+    <string name="drinks_save">احفظ وطبّق على كل الأصناف</string>
+    <string name="drinks_saved">✓ انضافت المشروبات لـ%1$d صنف</string>
+    <string name="drinks_saved_none">✓ انحفظت القائمة — وبتنضاف لكل صنف بتضيفه</string>
+    <string name="drinks_cleared">✓ انشالت المشروبات من كل الأصناف</string>
+    <string name="drinks_empty">ما في مشروبات لسا</string>
+    <string name="drinks_v_name">اكتب اسم كل مشروب</string>
+    <!-- **شعارُ المتجر** — يضعه صاحبُه أو مندوبُه (٢٠٢٦-١٠-١٩). -->
+    <string name="store_logo_add">+ أضف شعار المتجر</string>
+    <string name="store_logo_change">غيّر الشعار</string>
+    <string name="ok_logo_saved">✓ حُفظ شعار المتجر</string>
 </resources>

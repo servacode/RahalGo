@@ -31,6 +31,7 @@ import {
   IconHamburger,
   IconMoto,
   IconOrder,
+  IconCart,
   IconStore,
   IconList,
   IconUser,
@@ -180,7 +181,9 @@ function Shell({ children }: { children: ReactNode }) {
           );
         })}
         {/* **«تسوّق كزبون»** — والعودةُ من صفحات الزبون بـ«لوحة متجري» (٢٠٢٦-١٠-١٩). */}
-        <TopBarLink Link={Link} href="/shop" tone="plain">
+        {/* **ملوّنٌ بأيقونة** (اقتراحٌ وافق عليه المالك ٢٠٢٦-١٠-١٩) — يُرى زرَّ تبديلٍ لا رابطاً. */}
+        <TopBarLink Link={Link} href="/shop" tone="plain" className="rounded-full bg-primary px-3 text-on-bright hover:opacity-90">
+          <IconCart size={16} />
           {S.nav.shopAsCustomer}
         </TopBarLink>
         <Bell />

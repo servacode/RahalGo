@@ -1,5 +1,6 @@
 package com.rahalgo.rep.clients
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,6 +72,7 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
         return
     }
     val context = LocalContext.current
+    val pickLogo = com.rahalgo.ui.rememberImagePicker { bytes -> vm.setLogo(bytes) }
     val head = d.merchant
     val sum = d.summary
 
@@ -83,12 +85,14 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
         // ومن لا يجد رقمَه يبحث عنه في هاتفه أو يتّصل بالمكتب.
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // **والشعارُ يُضغط فيُبدَّل** (طلبُ المالك ٢٠٢٦-١٠-١٩) — كما عند صاحب المتجر.
                 RemoteImage(
                     url = Backend.of(context).media(head.logoThumbUrl),
                     name = head.name,
                     modifier = Modifier
                         .size(52.dp)
-                        .clip(Rahal.shape.sm),
+                        .clip(Rahal.shape.sm)
+                        .clickable(enabled = !vm.busy) { pickLogo() },
                 )
                 Spacer(Modifier.size(10.dp))
                 Column {
@@ -105,6 +109,15 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
                         )
                     }
                 }
+            }
+            com.rahalgo.ui.RahalTextButton(onClick = { pickLogo() }, enabled = !vm.busy) {
+                Text(
+                    stringResource(
+                        if (head.logoThumbUrl.isNullOrBlank()) com.rahalgo.ui.R.string.store_logo_add
+                        else com.rahalgo.ui.R.string.store_logo_change,
+                    ),
+                    color = Rahal.colors.brand,
+                )
             }
             Spacer(Modifier.height(8.dp))
             Chip(

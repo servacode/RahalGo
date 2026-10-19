@@ -25,6 +25,7 @@ export type MapTone =
   | "store-open"
   | "store-closed"
   | "customer"
+  | "customer-live"
   | "rep";
 
 type Glyph = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
@@ -39,6 +40,8 @@ export const MAP_TONES: Record<MapTone, { token: string; glyph: Glyph }> = {
   "store-open": { token: "map-store", glyph: IconStore },
   "store-closed": { token: "map-idle", glyph: IconStore },
   customer: { token: "map-customer", glyph: IconUsers },
+  /** **الزبونُ بموضعه الحيّ** (٢٠٢٦-١٠-١٩) — شخصٌ واحدٌ بلون الزبائن. */
+  "customer-live": { token: "map-customer", glyph: IconUser },
   rep: { token: "map-rep", glyph: IconUser },
 };
 

@@ -72,6 +72,16 @@ func TestRepMediaRoute_NotBehindMenuGuard(t *testing.T) {
 	}
 
 	guarded := text[open:end]
+	// **ومشروباتُ العميل داخلَ الحارس** (٢٠٢٦-١٠-١٩) — وإلّا كتبها مندوبٌ لمتجرٍ ليس عميلَه.
+	for _, route := range []string{
+		`r.Get("/stores/{id}/drinks", s.handleRepGetDrinks)`,
+		`r.Put("/stores/{id}/drinks", s.handleRepSetDrinks)`,
+		`r.Put("/stores/{id}/logo", s.handleRepSetLogo)`,
+	} {
+		if !strings.Contains(guarded, route) {
+			t.Fatalf("بابُ مشروبات المندوب خارجَ `repMenuGuard`: %s", route)
+		}
+	}
 	if strings.Contains(guarded, `"/media"`) {
 		t.Fatal(
 			"رفعُ الصورة مسجَّلٌ داخل `repMenuGuard` — **والحارسُ يطلب معرّفاً " +
@@ -85,7 +95,8 @@ func TestRepMediaRoute_NotBehindMenuGuard(t *testing.T) {
 	// **ونقلُه خارجاً بحذفه يُرضي الشرطَ الأوّل ويكسر الرفعَ كلَّه** —
 	// فيُسأل عن وجوده في شجرة المندوب.
 	repAt := strings.Index(text, `r.Route("/rep"`)
-	if repAt < 0 || !strings.Contains(text[repAt:repAt+6000], `r.Post("/media", s.handleUploadMedia)`) {
+	repEnd := strings.Index(text[repAt+1:], `r.Route("/driver"`)
+	if repAt < 0 || repEnd < 0 || !strings.Contains(text[repAt:repAt+1+repEnd], `r.Post("/media", s.handleUploadMedia)`) {
 		t.Fatal("لا بابَ لرفع الصورة عند المندوب — **فلا صورةَ لصنفٍ يبنيه**")
 	}
 }

@@ -77,6 +77,27 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **شعارُ متجر عميله** (طلبُ المالك ٢٠٢٦-١٠-١٩: «والمندوب يقدر كمان يضيف لوغو للمتجر»)
+     * — يُرفع ثمّ يُربط ثمّ يُعاد جلبُ التفصيل فيظهر.
+     */
+    fun setLogo(bytes: ByteArray) {
+        val id = openId
+        if (id.isEmpty()) return
+        busy = true
+        viewModelScope.launch {
+            try {
+                val ref = api.uploadLogo("logo.jpg", bytes)
+                api.setLogo(id, ref.id)
+                detail = api.merchant(id)
+                com.rahalgo.ui.Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.ui.R.string.ok_logo_saved))
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
+            }
+            busy = false
+        }
+    }
+
     fun closeDetail() {
         openId = ""
         detail = null

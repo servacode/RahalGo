@@ -15,8 +15,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { Button, Confirm, IconBlock, IconEdit, Input, Modal, FormActions } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { Button, Confirm, IconBlock, IconEdit, ImageUpload, Input, Modal, FormActions } from "@rahalgo/ui";
+import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { parseUsd, usdInput, usdText } from "@/lib/store/usd";
 import { fill } from "@/lib/customer/texts";
@@ -131,6 +131,30 @@ export function NameCard() {
       />
       <FormActions submit onCancel={() => setDraft(null)} busy={busy} />
     </form>
+  );
+}
+
+/**
+ * **شعارُ المتجر بيد صاحبه** (اقتراحٌ وافق عليه المالك ٢٠٢٦-١٠-١٩) — مرآةُ زرّ الشعار في
+ * تطبيق المتجر: يُرفع بنوع الشعار ثمّ يُحفظ في الإعدادات.
+ */
+export function LogoCard() {
+  const { store, reload } = useStore();
+  const { save } = useSaveSettings();
+  if (!store || store.status === "suspended") return null;
+  return (
+    <ImageUpload
+      kind="merchant_logo"
+      label={T.logo}
+      initialUrl={store.logo_thumb_url}
+      onChange={(id) => {
+        if (id) void save({ logo_media_id: id }, T.logoSaved, {}).then((ok) => { if (ok) void reload(); });
+      }}
+      api={api}
+      mediaUrl={mediaUrl}
+      errorText={errorText}
+      path="/api/v1/merchant/media"
+    />
   );
 }
 

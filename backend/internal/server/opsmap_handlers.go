@@ -89,7 +89,9 @@ func (s *Server) handleOpsMapMeta(w http.ResponseWriter, r *http.Request) {
 		"permissions": perms,
 		// **ونبضةُ الموضع تُرسَل** — الواجهةُ تشرح بها معنى «حيّ».
 		"location_ping_sec": s.settings.GetNum(r.Context(), "drivers.location_ping_sec", 60),
-		"assignable_sec":    int(opsmap.AssignableWindow.Seconds()),
+		// **ونبضةُ التوصيل** — بها تعرف الخريطةُ كم تُنعّم حركةَ السائق (٢٠٢٦-١٠-١٩).
+		"location_ping_active_sec": s.settings.GetNum(r.Context(), "drivers.location_ping_active_sec", 4),
+		"assignable_sec":           int(opsmap.AssignableWindow.Seconds()),
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }

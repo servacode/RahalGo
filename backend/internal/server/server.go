@@ -184,6 +184,10 @@ func WithPushTransport(t push.Transport) Option {
 	return func(o *options) { o.pushTransport = t }
 }
 
+// supersedeNoticeDelay **مهلةُ هاتفِ الداخل ليسجّل رمزَه** قبل تحذيرِ «جهازٍ آخر» — انظر
+// `push.Unclaimed`. والتطبيقُ يسجّل رمزَه بعد الدخول بثوانٍ.
+var supersedeNoticeDelay = 45 * time.Second
+
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
@@ -238,8 +242,15 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	}
 	identitySvc.SetLogoutNotifier(func(_ context.Context, tokens []string) {
 		go func() {
+			// **ويُنتظر قليلاً قبل التحذير** (٢٠٢٦-١٠-١٩) — فإن كان الداخلُ الهاتفَ نفسَه
+			// سجّل رمزَه للجلسة الجديدة، **فلا يُقال له «دخلتَ من جهازٍ آخر» وهو هو.**
+			time.Sleep(supersedeNoticeDelay)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
+			tokens := pushSvc.Unclaimed(ctx, tokens)
+			if len(tokens) == 0 {
+				return
+			}
 			pushSvc.SendToTokens(ctx, tokens, push.Message{
 				Title: "رحال غو",
 				Body:  "تم تسجيل خروجك من رحال غو بسبب تسجيل الدخول إلى حسابك من جهاز آخر.",
@@ -903,6 +914,11 @@ func (s *Server) Router() http.Handler {
 				r.Post("/stores/{id}/menu/items", s.idempotent(s.handleRepCreateItem))
 				r.Patch("/menu/items/{itemID}", s.handleRepUpdateItem)
 				r.Delete("/menu/items/{itemID}", s.handleRepDeleteItem)
+				// **وقائمةُ المشروبات كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩).
+				r.Get("/stores/{id}/drinks", s.handleRepGetDrinks)
+				r.Put("/stores/{id}/drinks", s.handleRepSetDrinks)
+				// **وشعارُ متجر عميله** (طلبُ المالك ٢٠٢٦-١٠-١٩).
+				r.Put("/stores/{id}/logo", s.handleRepSetLogo)
 			})
 			// ══════════════════════════════════════════════════════════
 			// **ورفعُ الصورة خارجَ الحارس — ولا بدّ**

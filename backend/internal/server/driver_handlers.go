@@ -87,6 +87,8 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// **كان ستّين ثانيةً مكتوبةً في الشيفرة** — ومقايضةُ البطّاريّة بدقّة
 		// التوزيع قرارُ مالكٍ لا قرارُ مبرمج.
 		LocationPingSec int64 `json:"location_ping_sec"`
+		// LocationPingActiveSec **نبضتُه ما دام معه طلبٌ شغّال** (٢٠٢٦-١٠-١٩) — أسرعُ بكثير.
+		LocationPingActiveSec int64 `json:"location_ping_active_sec"`
 
 		// AvgSpeedKmh **منه يُحسب الوقتُ المتوقَّع من المسافة.**
 		//
@@ -182,6 +184,7 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	out.MaxActiveOrders = s.settings.GetInt(r.Context(), "drivers.max_active_orders")
 	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
 	out.LocationPingSec = s.settings.GetInt(r.Context(), "drivers.location_ping_sec")
+	out.LocationPingActiveSec = s.settings.GetInt(r.Context(), "drivers.location_ping_active_sec")
 	// **وسرعتُه هي سرعتُه** — لا رقمَ واحدٌ لكلّ السائقين. (قرارُ المالك
 	// ٢٠٢٦-٠٨-١٢.) **وإعدادُ المالك يبقى أرضاً** لمن لا تاريخَ له بعد.
 	out.AvgSpeedKmh = s.driverSpeedKmh(r.Context(), uid)

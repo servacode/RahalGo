@@ -70,6 +70,26 @@ func (s *Server) notifyCustomerLive(driverID, orderID string) {
 	s.hub.Publish("driver:"+driverID, map[string]any{"type": "customer_live", "order_id": orderID})
 }
 
+// publishCustomerLiveToOps **موضعُ الزبون الحيُّ لخريطة العمليات** (طلبُ المالك ٢٠٢٦-١٠-١٩:
+// «لنقدر نعطي احداثيات للسائق»). **و`ops` لمن يملك `orders.read` وحدَه** (`ws.go`) — وهو من
+// يرى دبّوسَ التسليم أصلاً، **فلا تصل الحمولةُ زبوناً ولا سائقاً.** وبلا موضعٍ تعني «أوقف المشاركة».
+func (s *Server) publishCustomerLiveToOps(orderID string, lat, lng, accuracyM *float64) {
+	if s.hub == nil {
+		return
+	}
+	ev := map[string]any{"type": "customer_location", "order_id": orderID}
+	if lat == nil || lng == nil {
+		ev["stopped"] = true
+	} else {
+		ev["lat"], ev["lng"] = *lat, *lng
+		ev["at"] = time.Now().UTC().Format(time.RFC3339)
+		if accuracyM != nil {
+			ev["accuracy_m"] = *accuracyM
+		}
+	}
+	s.hub.Publish("ops", ev)
+}
+
 // handleCustomerLiveLocation **نقطةٌ من هاتف الزبون** — آخرُها وحدَه يُحفظ.
 func (s *Server) handleCustomerLiveLocation(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
@@ -103,6 +123,7 @@ func (s *Server) handleCustomerLiveLocation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	s.notifyCustomerLive(driverID, orderID)
+	s.publishCustomerLiveToOps(orderID, &req.Lat, &req.Lng, req.AccuracyM)
 	// **والحدُّ يعود إلى هاتف الزبون** (قرارُ المالك ٢٠٢٦-١٠-١٦) — به يرشّح قراءاتِه
 	// (`LiveSendFilter`)، **فلا يُكتب رقمٌ في التطبيق ورقمٌ في اللوحة.**
 	httpx.JSON(w, http.StatusOK, map[string]any{
@@ -120,6 +141,7 @@ func (s *Server) handleStopCustomerLiveLocation(w http.ResponseWriter, r *http.R
 		return
 	}
 	s.notifyCustomerLive(driverID, orderID)
+	s.publishCustomerLiveToOps(orderID, nil, nil, nil)
 	httpx.JSON(w, http.StatusOK, map[string]any{"stopped": true})
 }
 

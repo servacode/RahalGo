@@ -419,3 +419,36 @@ func nilIfEmpty(v []string) []string {
 	}
 	return v
 }
+
+// Unclaimed **ما لم يُسجَّل ثانيةً من رموزٍ أُزيلت** (بلاغُ المالك ٢٠٢٦-١٠-١٩: مندوبةٌ
+// جاءها «دخلتِ من جهازٍ آخر» ولم يدخل أحدٌ غيرُها).
+//
+// **الإزاحةُ تحذف رموزَ الجلسة القديمة ثمّ تُخبرها** — **فإن كانت الجلستان على هاتفٍ
+// واحدٍ** (خرجت ثمّ دخلت من جديد) **وصل التحذيرُ إلى الهاتف الذي دخل للتوّ.** وذاك
+// الهاتفُ يسجّل رمزَه للجلسة الجديدة بعد الدخول بثوانٍ — **فرمزٌ عاد إلى الجدول هاتفُ
+// الداخلِ نفسُه** ولا يُحذَّر.
+func (s *Service) Unclaimed(ctx context.Context, tokens []string) []string {
+	if len(tokens) == 0 {
+		return nil
+	}
+	rows, err := s.db.Query(ctx, `SELECT token FROM device_tokens WHERE token = ANY($1)`, tokens)
+	if err != nil {
+		// **وتعذّرُ السؤال لا يُسكت التحذير** — تحذيرٌ زائدٌ خيرٌ من دخولٍ غريبٍ صامت.
+		return tokens
+	}
+	defer rows.Close()
+	back := map[string]bool{}
+	for rows.Next() {
+		var t string
+		if rows.Scan(&t) == nil {
+			back[t] = true
+		}
+	}
+	out := make([]string, 0, len(tokens))
+	for _, t := range tokens {
+		if !back[t] {
+			out = append(out, t)
+		}
+	}
+	return out
+}

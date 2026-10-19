@@ -65,6 +65,7 @@ import {
   useChime,
   alertsSoundOn,
   themeColor,
+  useLiveEvent,
 } from "@rahalgo/ui";
 import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
 import { AssignDialog } from "@/components/admin/orders/AssignDialog";
@@ -176,6 +177,8 @@ interface OrderPin {
   stuck_reason?: string;
   /** **لمن يملك `orders.customer_details.read` وحدَه.** */
   customer_name?: string;
+  /** **موضعُ الزبون الحيُّ إن شاركه** — الأحدثُ من دقيقتين (٢٠٢٦-١٠-١٩). */
+  customer_live?: { lat: number; lng: number; accuracy_m?: number; at: string; pin_gap_m: number };
 }
 
 interface Zone {
@@ -530,6 +533,34 @@ export default function OpsMapPage() {
     [driverQuery, visible.drivers, meta.data, tick],
   );
 
+  // ══════════════════════════════════════════════════════════════
+  // **والسائقُ يتحرّك حيّاً** (قرارُ المالك ٢٠٢٦-١٠-١٩: «الموقع المباشر»)
+  // ══════════════════════════════════════════════════════════════
+  //
+  // **كلُّ نبضةٍ تُبثّ على `ops` بموضعها** (`driver_live.go`) — فيُحرَّك السائقُ في
+  // القائمة نفسِها بلا سؤالٍ للخادم، **وتنزلقه الخريطةُ إلى موضعه الجديد.** والمدّةُ
+  // فوق تبقى احتياطاً لمن انقطع بثُّه.
+  const setDrivers = drivers.setData;
+  useLiveEvent((e) => {
+    if (e.type !== "driver_location") return;
+    const id = String(e.driver_id ?? "");
+    const lat = Number(e.lat);
+    const lng = Number(e.lng);
+    if (!id || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    setDrivers((prev) =>
+      prev && prev.drivers.some((d) => d.id === id)
+        ? {
+            ...prev,
+            drivers: prev.drivers.map((d) =>
+              d.id === id
+                ? { ...d, lat, lng, last_location_at: String(e.at ?? d.last_location_at), age_sec: 0, freshness: "LIVE" }
+                : d,
+            ),
+          }
+        : prev,
+    );
+  });
+
   // ── المتاجر ──────────────────────────────────────────────────
   const merchants = useLiveData<{ merchants: Merchant[]; count: number }>(
     () =>
@@ -553,6 +584,37 @@ export default function OpsMapPage() {
     ["order"],
     [visible.orders, meta.data],
   );
+
+  // **وموضعُ الزبون الحيُّ يصل بالبثّ** (٢٠٢٦-١٠-١٩) — فتتحرّك علامتُه بلا سؤال.
+  const setOrders = orders.setData;
+  useLiveEvent((e) => {
+    if (e.type !== "customer_location") return;
+    const id = String(e.order_id ?? "");
+    setOrders((prev) =>
+      prev && prev.orders.some((o) => o.id === id)
+        ? {
+            ...prev,
+            orders: prev.orders.map((o) => {
+              if (o.id !== id) return o;
+              if (e.stopped) return { ...o, customer_live: undefined };
+              const lat = Number(e.lat);
+              const lng = Number(e.lng);
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) return o;
+              return {
+                ...o,
+                customer_live: {
+                  lat,
+                  lng,
+                  accuracy_m: e.accuracy_m == null ? undefined : Number(e.accuracy_m),
+                  at: String(e.at ?? new Date().toISOString()),
+                  pin_gap_m: metersBetween(lat, lng, o.drop_lat, o.drop_lng),
+                },
+              };
+            }),
+          }
+        : prev,
+    );
+  });
 
   // ── الزبائن — خلايا مجمَّعةٌ لا بيوت ────────────────────────
   const customers = useLiveData<{ cells: DemandCell[]; min_count: number }>(
@@ -884,6 +946,44 @@ export default function OpsMapPage() {
             },
             properties: { stuck: !!o.stuck_reason },
           })),
+      ),
+    });
+
+    // ── الزبونُ بموضعه الحيّ (طلبُ المالك ٢٠٢٦-١٠-١٩) ─────────────
+    //
+    // **«لنقدر نعطي احداثيات للسائق»** — علامةٌ حيث هو الآن، **وخطٌّ متقطّعٌ إلى
+    // دبّوسه** فيُرى إن كان الدبّوسُ خطأً.
+    const liveOrders = orderList.filter((o) => o.customer_live);
+    out.push({
+      id: "customer-live",
+      kind: "symbol",
+      cluster: false,
+      animate: true,
+      order: 62,
+      visible: !!visible.orders,
+      color: toneColor("customer-live"),
+      data: fc(
+        liveOrders.map((o) =>
+          pt(o.customer_live!.lng, o.customer_live!.lat, { id: o.id, icon: "customer-live" }),
+        ),
+      ),
+    });
+    out.push({
+      id: "customer-live-gap",
+      kind: "line",
+      order: 56,
+      lineWidth: 1.5,
+      visible: !!visible.orders,
+      color: toneColor("customer-live"),
+      data: fc(
+        liveOrders.map((o) => ({
+          type: "Feature" as const,
+          geometry: {
+            type: "LineString",
+            coordinates: [[o.customer_live!.lng, o.customer_live!.lat], [o.drop_lng, o.drop_lat]],
+          },
+          properties: {},
+        })),
       ),
     });
 
@@ -1758,6 +1858,9 @@ export default function OpsMapPage() {
                     )}
                     <Row k={T.order.driver} v={current.v.driver ?? T.order.noDriver} />
                     {current.v.address && <Row k={T.order.area} v={current.v.address} />}
+                    <CustomerLiveRow
+                      live={orders.data?.orders.find((o) => o.id === current.v.id)?.customer_live ?? current.v.customer_live}
+                    />
                     <Row
                       k={T.orderCard.age}
                       v={T.orderCard.minutes.replace("{n}", fmtNum(minutesSince(current.v.created_at)))}
@@ -2306,6 +2409,61 @@ function LayerToggle({
     <div className="flex items-center gap-2">
       <Checkbox id={`layer-${id}`} label={label} checked={on} onChange={() => onToggle(id)} />
       <span className="ms-auto text-xs text-ink-muted">{count ?? 0}</span>
+    </div>
+  );
+}
+
+/** **مسافةٌ بالمتر بين نقطتين** — لبعد الزبون عن دبّوسه حين يصل بثُّه. */
+function metersBetween(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const r = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * r * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * **موضعُ الزبون الحيُّ في بطاقة الطلب** (طلبُ المالك ٢٠٢٦-١٠-١٩: «لنقدر نعطي احداثيات
+ * للسائق») — كم مضى ودقّتُه، **ونسخُ الإحداثيّات ورابطُ خرائط غوغل**، وتنبيهٌ إن بعُد عن دبّوسه.
+ */
+function CustomerLiveRow({ live }: { live?: OrderPin["customer_live"] }) {
+  const [copied, setCopied] = useState(false);
+  if (!live) return null;
+  const C = T.orderCard;
+  const coords = `${live.lat.toFixed(6)},${live.lng.toFixed(6)}`;
+  const ago = Math.max(0, Math.round((Date.now() - new Date(live.at).getTime()) / 1000));
+  const bits = [C.liveAgo.replace("{n}", fmtNum(ago))];
+  if (live.accuracy_m != null) bits.push(C.liveAccuracy.replace("{n}", fmtNum(Math.round(live.accuracy_m))));
+  return (
+    <div className="flex flex-col gap-1 rounded-control bg-accent-tint p-2">
+      <Row k={C.live} v={bits.join(" · ")} />
+      {live.pin_gap_m > 50 && (
+        <p className="text-xs font-bold text-danger">
+          {C.liveFar.replace("{n}", fmtNum(Math.round(live.pin_gap_m)))}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <span dir="ltr" className="select-all font-mono text-xs">
+          {coords}
+        </span>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            void navigator.clipboard?.writeText(coords).then(() => setCopied(true));
+          }}
+        >
+          {copied ? C.copied : C.copyCoords}
+        </Button>
+        <a
+          href={`https://www.google.com/maps?q=${coords}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs font-bold text-accent-text underline"
+        >
+          {C.openGoogle}
+        </a>
+      </div>
     </div>
   );
 }

@@ -130,6 +130,12 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	if tag.RowsAffected() > 0 && now.Sub(at) <= orders.LiveFreshFor {
 		s.notifyNearCustomers(r.Context(), uid, req.Lat, req.Lng)
 	}
+	// **والموضعُ يُبثّ لخريطة العمليات فوراً** (قرارُ المالك ٢٠٢٦-١٠-١٩: «الموقع المباشر») —
+	// **بدل أن تسأل الخريطةُ كلَّ عشر ثوانٍ** فيقفز السائقُ قفزاً. و`ops` لمن يملك
+	// `orders.read` وحدَه (`ws.go`)، **فالحمولةُ لا تصل زبوناً ولا سائقاً آخر.**
+	if tag.RowsAffected() > 0 && now.Sub(at) <= orders.LiveFreshFor {
+		s.publishDriverLocation(uid, req.Lat, req.Lng, req.BearingDeg, at)
+	}
 
 	// **والأثرُ يُكتب مع الموضع** — **ونقطةٌ واحدةٌ لا تقول اتّجاهاً**: من هو
 	// على بُعد أربعمئة مترٍ من المتجر قد يكون قادماً أو خارجاً، **والفرقُ
@@ -154,10 +160,15 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والتقليمُ هنا لا في مهمّةٍ ليليّة**: مهمّةٌ تُنسى أو تتعطّل **فينتفخ
 	// الجدولُ بصمت**، والتقليمُ مع الكتابة يبقى ما دامت الكتابةُ باقية.
-	if _, err := s.pg.Exec(r.Context(), `
-		DELETE FROM driver_track
-		WHERE driver_id = $1 AND recorded_at < now() - interval '2 hours'`, uid); err != nil {
-		s.logger.Warn("التعقّب: تعذّر التقليم", "driver", uid, "error", err)
+	//
+	// **ومرّةً في الدقيقة لا مع كلّ نبضة** (٢٠٢٦-١٠-١٩) — النبضةُ صارت كلَّ أربع ثوانٍ
+	// أثناء التوصيل، **وحذفٌ مع كلٍّ منها خمسةَ عشرَ ضعفاً بلا فائدة.**
+	if s.trackPruneDue(uid, now) {
+		if _, err := s.pg.Exec(r.Context(), `
+			DELETE FROM driver_track
+			WHERE driver_id = $1 AND recorded_at < now() - interval '2 hours'`, uid); err != nil {
+			s.logger.Warn("التعقّب: تعذّر التقليم", "driver", uid, "error", err)
+		}
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})

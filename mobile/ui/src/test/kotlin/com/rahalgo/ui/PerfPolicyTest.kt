@@ -314,7 +314,8 @@ class PerfPolicyTest {
         assertTrue("**ذهب حدُّ الحركة**", svc.contains("MIN_MOVE_M = 20f"))
         assertTrue(
             "**رُفع التجميعُ من الورديّة** — **فيُوقَظ الجهازُ لكلّ قراءة**",
-            svc.contains("setMaxUpdateDelayMillis(ms * 2)"),
+            // **وأثناء التوصيل بلا تجميع** (٢٠٢٦-١٠-١٩) — والورديّةُ تجمّع كما كانت.
+            svc.contains("setMaxUpdateDelayMillis(if (live) 0L else ms * 2)"),
         )
         assertTrue(
             "**رُفع حدُّ الإرسال** — **فنداءٌ لكلّ نقطة**",
