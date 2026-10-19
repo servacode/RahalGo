@@ -137,11 +137,11 @@ func main() {
 	case "":
 		runForever(ctx, cfg)
 	case "once":
-		if err := syncOnce(ctx, cfg, false); err != nil {
+		if err := syncOnce(ctx, cfg, false, true); err != nil {
 			log.Fatal(err)
 		}
 	case "test":
-		if err := syncOnce(ctx, cfg, true); err != nil {
+		if err := syncOnce(ctx, cfg, true, true); err != nil {
 			log.Fatal(err)
 		}
 	case "tables":
@@ -163,7 +163,8 @@ func runForever(ctx context.Context, cfg *Config) {
 			log.Printf("ما قدرت أتصل بالخادم: %v", err)
 		}
 		if now || time.Since(last) >= time.Duration(cfg.IntervalMinutes)*time.Minute {
-			if err := syncOnce(ctx, cfg, false); err != nil {
+			// **و«مزامنة الآن» ترفع ولو لم يتبدّل الملفّ** — وإلّا بقي الطلبُ معلّقاً في اللوحة.
+			if err := syncOnce(ctx, cfg, false, now); err != nil {
 				log.Printf("المزامنة فشلت: %v", err)
 			}
 			last = time.Now()
@@ -214,7 +215,7 @@ func poll(ctx context.Context, cfg *Config) (bool, error) {
 	return env.Data.SyncNow || env.SyncNow, nil
 }
 
-func syncOnce(ctx context.Context, cfg *Config, dry bool) error {
+func syncOnce(ctx context.Context, cfg *Config, dry, force bool) error {
 	var out []byte
 	var err error
 	switch cfg.Mode {
@@ -226,7 +227,7 @@ func syncOnce(ctx context.Context, cfg *Config, dry bool) error {
 		body, _ := json.Marshal(map[string]any{"rows": rows, "currency": cfg.SQL.Currency, "dry_run": dry})
 		out, err = request(ctx, cfg, http.MethodPost, "/api/v1/public/price-sync", bytes.NewReader(body), "application/json")
 	case "folder":
-		out, err = uploadNewest(ctx, cfg, dry)
+		out, err = uploadNewest(ctx, cfg, dry, force)
 		if out == nil && err == nil {
 			return nil
 		}
@@ -338,7 +339,7 @@ func toString(v any) string {
 }
 
 // uploadNewest **يرفع أحدثَ ملفٍّ في المجلّد** — مرّةً لكلّ نسخة (بتاريخ تعديله).
-func uploadNewest(ctx context.Context, cfg *Config, dry bool) ([]byte, error) {
+func uploadNewest(ctx context.Context, cfg *Config, dry, force bool) ([]byte, error) {
 	matches, err := filepath.Glob(filepath.Join(cfg.Folder.Path, cfg.Folder.Pattern))
 	if err != nil {
 		return nil, err
@@ -359,7 +360,7 @@ func uploadNewest(ctx context.Context, cfg *Config, dry bool) ([]byte, error) {
 	}
 	stamp := filepath.Join(dir, "last-upload.txt")
 	mark := fmt.Sprintf("%s|%d", newest, st.ModTime().Unix())
-	if prev, _ := os.ReadFile(stamp); !dry && string(prev) == mark {
+	if prev, _ := os.ReadFile(stamp); !dry && !force && string(prev) == mark {
 		return nil, nil
 	}
 	data, err := os.ReadFile(newest)
