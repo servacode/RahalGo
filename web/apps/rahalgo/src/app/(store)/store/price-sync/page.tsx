@@ -61,6 +61,7 @@ interface Info {
   agent_seen_at: string | null;
   agent_version: string | null;
   sync_requested: boolean;
+  interval_minutes: number;
 }
 interface Preview {
   headers: string[];
@@ -149,6 +150,22 @@ export default function PriceSyncPage() {
         setPreview(null);
         load();
       }
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** **كلّ كم دقيقة** (قرارُ المالك ٢٠٢٦-١٠-١٩) — تصل الساعيَ في سؤاله التالي. */
+  async function saveInterval(n: number) {
+    setBusy(true);
+    try {
+      await api(`/api/v1/merchant/stores/${id}/price-sync/interval`, {
+        method: "PUT",
+        body: JSON.stringify({ interval_minutes: n }),
+      });
+      setInfo((i) => (i ? { ...i, interval_minutes: n } : i));
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -381,6 +398,25 @@ export default function PriceSyncPage() {
             info?.has_token && (
               <p className="text-sm text-ink-muted">{P.agentNever}</p>
             )
+          )}
+          {info?.has_token && (
+            <Select
+              id="sync-interval"
+              label={P.interval}
+              value={String(info.interval_minutes ?? 1)}
+              onChange={(e) => void saveInterval(Number(e.target.value))}
+              disabled={busy}
+            >
+              {[1, 5, 10, 15, 30, 60].map((n) => (
+                <option key={n} value={n}>
+                  {n === 1
+                    ? P.every1
+                    : n === 60
+                      ? P.every60
+                      : fill(P.everyN, { n: fmtNum(n) })}
+                </option>
+              ))}
+            </Select>
           )}
           {info?.agent_seen_at &&
             (info.sync_requested ? (

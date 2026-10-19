@@ -19,7 +19,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -88,7 +90,7 @@ func loadConfig() (*Config, error) {
 		c.Server = "https://api.rahalgo.com"
 	}
 	if c.IntervalMinutes <= 0 {
-		c.IntervalMinutes = 15
+		c.IntervalMinutes = 1
 	}
 	if c.Mode == "" {
 		c.Mode = "sql"
@@ -155,14 +157,18 @@ func main() {
 
 // runForever **يسأل كلَّ دقيقة، ويزامن كلَّ مهلةٍ أو حين يُطلب.**
 func runForever(ctx context.Context, cfg *Config) {
-	log.Printf("بدأ ساعي رحّال غو %s — الطريقة %s، كل %d دقيقة", Version, cfg.Mode, cfg.IntervalMinutes)
+	log.Printf("بدأ ساعي رحّال غو %s — الطريقة %s", Version, cfg.Mode)
 	var last time.Time
 	for {
-		now, err := poll(ctx, cfg)
+		now, every, err := poll(ctx, cfg)
 		if err != nil {
 			log.Printf("ما قدرت أتصل بالخادم: %v", err)
 		}
-		if now || time.Since(last) >= time.Duration(cfg.IntervalMinutes)*time.Minute {
+		// **والمدّةُ من لوحة المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٩) — وملفُّ الإعدادات احتياطٌ إن لم يُجب الخادم.
+		if every <= 0 {
+			every = cfg.IntervalMinutes
+		}
+		if now || time.Since(last) >= time.Duration(every)*time.Minute-5*time.Second {
 			// **و«مزامنة الآن» ترفع ولو لم يتبدّل الملفّ** — وإلّا بقي الطلبُ معلّقاً في اللوحة.
 			if err := syncOnce(ctx, cfg, false, now); err != nil {
 				log.Printf("المزامنة فشلت: %v", err)
@@ -200,20 +206,23 @@ func request(ctx context.Context, cfg *Config, method, path string, body io.Read
 	return out, nil
 }
 
-func poll(ctx context.Context, cfg *Config) (bool, error) {
+func poll(ctx context.Context, cfg *Config) (bool, int, error) {
 	b, err := request(ctx, cfg, http.MethodGet, "/api/v1/public/price-sync/poll", nil, "")
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 	var env struct {
 		Data struct {
-			SyncNow bool `json:"sync_now"`
+			SyncNow  bool `json:"sync_now"`
+			Interval int  `json:"interval_minutes"`
 		} `json:"data"`
-		SyncNow bool `json:"sync_now"`
 	}
 	_ = json.Unmarshal(b, &env)
-	return env.Data.SyncNow || env.SyncNow, nil
+	return env.Data.SyncNow, env.Data.Interval, nil
 }
+
+// lastSent **بصمةُ آخر قائمةٍ بُعثت** — فلا يُبعث ما لم يتبدّل فيه سعرٌ ولا كميّة.
+var lastSent string
 
 func syncOnce(ctx context.Context, cfg *Config, dry, force bool) error {
 	var out []byte
@@ -224,8 +233,16 @@ func syncOnce(ctx context.Context, cfg *Config, dry, force bool) error {
 		if rows, err = readSQL(ctx, cfg); err != nil {
 			return err
 		}
+		sum := sha256.Sum256(must(json.Marshal(rows)))
+		mark := hex.EncodeToString(sum[:])
+		if !dry && !force && mark == lastSent {
+			return nil // **ما تبدّل شيء** — لا يُتعب الخادمُ كلَّ دقيقة.
+		}
 		body, _ := json.Marshal(map[string]any{"rows": rows, "currency": cfg.SQL.Currency, "dry_run": dry})
 		out, err = request(ctx, cfg, http.MethodPost, "/api/v1/public/price-sync", bytes.NewReader(body), "application/json")
+		if err == nil && !dry {
+			lastSent = mark
+		}
 	case "folder":
 		out, err = uploadNewest(ctx, cfg, dry, force)
 		if out == nil && err == nil {
@@ -411,3 +428,5 @@ func listTables(ctx context.Context, cfg *Config) error {
 	}
 	return rs.Err()
 }
+
+func must(b []byte, _ error) []byte { return b }

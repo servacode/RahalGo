@@ -83,8 +83,8 @@ func TestPriceSyncPoll_SyncNow(t *testing.T) {
 		}
 		return w.Body.String()
 	}
-	if b := poll(); !strings.Contains(b, `"sync_now":false`) {
-		t.Fatalf("بلا طلبٍ قال: %s", b)
+	if b := poll(); !strings.Contains(b, `"sync_now":false`) || !strings.Contains(b, `"interval_minutes":1`) {
+		t.Fatalf("بلا طلبٍ قال: %s — **والافتراضُ دقيقة**", b)
 	}
 	var seen *string
 	_ = f.pool.QueryRow(ctx, `SELECT price_sync_agent_version FROM merchants WHERE id = $1`, f.merchantID).Scan(&seen)

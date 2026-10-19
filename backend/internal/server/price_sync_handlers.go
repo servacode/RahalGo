@@ -50,10 +50,12 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 	var hasToken bool
 	var seenAt, requestedAt *time.Time
 	var agentVersion *string
+	var interval int
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT price_sync_mapping, price_sync_token_hash IS NOT NULL,
-		       price_sync_agent_seen_at, price_sync_agent_version, price_sync_requested_at
-		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken, &seenAt, &agentVersion, &requestedAt); err != nil {
+		       price_sync_agent_seen_at, price_sync_agent_version, price_sync_requested_at,
+		       price_sync_interval_minutes
+		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken, &seenAt, &agentVersion, &requestedAt, &interval); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -78,6 +80,8 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 		"mapping": m, "has_token": hasToken, "last_run": last,
 		// **حالُ الساعي** (٢٠٢٦-١٠-١٩) — آخرُ سؤالٍ منه ونسختُه، وأطُلبت «مزامنة الآن».
 		"agent_seen_at": seenAt, "agent_version": agentVersion, "sync_requested": requestedAt != nil,
+		// **كلّ كم دقيقة** — بيد صاحب المتجر (٢٠٢٦-١٠-١٩).
+		"interval_minutes": interval,
 	})
 }
 
@@ -241,17 +245,20 @@ func (s *Server) handlePriceSyncPoll(w http.ResponseWriter, r *http.Request) {
 	}
 	var requested bool
 	var hasMapping bool
+	var interval int
 	if err := s.pg.QueryRow(r.Context(), `
 		UPDATE merchants SET price_sync_agent_seen_at = now(),
 		       price_sync_agent_version = NULLIF($2, '')
 		 WHERE id = $1
-		RETURNING price_sync_requested_at IS NOT NULL, price_sync_mapping IS NOT NULL`,
-		merchantID, ver).Scan(&requested, &hasMapping); err != nil {
+		RETURNING price_sync_requested_at IS NOT NULL, price_sync_mapping IS NOT NULL,
+		          price_sync_interval_minutes`,
+		merchantID, ver).Scan(&requested, &hasMapping, &interval); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	// **والمدّةُ من اللوحة لا من ملفّ الساعي** — يبدّلها صاحبُ المتجر فتصله في دقيقة.
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"sync_now": requested, "interval_minutes": 15, "has_mapping": hasMapping,
+		"sync_now": requested, "interval_minutes": interval, "has_mapping": hasMapping,
 	})
 }
 
@@ -311,6 +318,32 @@ func (s *Server) handlePriceSyncAgentFile(w http.ResponseWriter, r *http.Request
 		s.agentSynced(r.Context(), merchantID)
 	}
 	httpx.JSON(w, http.StatusOK, rep)
+}
+
+// handleMerchantPriceSyncInterval **كلّ كم دقيقةٍ يزامن الساعي** — من دقيقةٍ إلى يوم.
+func (s *Server) handleMerchantPriceSyncInterval(w http.ResponseWriter, r *http.Request) {
+	merchantID := chi.URLParam(r, "id")
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	req, err := decode[struct {
+		IntervalMinutes int `json:"interval_minutes"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.IntervalMinutes < 1 || req.IntervalMinutes > 1440 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE merchants SET price_sync_interval_minutes = $2 WHERE id = $1`, merchantID, req.IntervalMinutes); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"interval_minutes": req.IntervalMinutes})
 }
 
 // handleMerchantPriceSyncRequest **«مزامنة الآن»** — يراها الساعي في سؤاله التالي (دقيقة).

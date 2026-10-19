@@ -8525,6 +8525,10 @@
           "type": "unknown"
         },
         {
+          "name": "interval_minutes",
+          "type": "unknown"
+        },
+        {
           "name": "last_run",
           "type": "unknown"
         },
@@ -8564,6 +8568,30 @@
         },
         {
           "name": "sample",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/interval",
+      "handler": "handleMerchantPriceSyncInterval",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "interval_minutes",
+          "type": "int"
+        }
+      ],
+      "response": [
+        {
+          "name": "interval_minutes",
           "type": "unknown"
         }
       ],
@@ -9823,7 +9851,7 @@
         },
         {
           "name": "interval_minutes",
-          "type": "int"
+          "type": "unknown"
         },
         {
           "name": "sync_now",

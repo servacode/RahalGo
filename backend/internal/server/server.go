@@ -1038,6 +1038,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/price-sync/file", s.handleMerchantPriceSyncFile)
 			r.Post("/stores/{id}/price-sync/token", s.handleMerchantPriceSyncToken)
 			r.Post("/stores/{id}/price-sync/request", s.handleMerchantPriceSyncRequest)
+			r.Put("/stores/{id}/price-sync/interval", s.handleMerchantPriceSyncInterval)
 
 			// ══════════════════════════════════════════════════════════
 			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**
