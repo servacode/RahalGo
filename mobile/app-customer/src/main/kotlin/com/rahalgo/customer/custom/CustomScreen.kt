@@ -75,11 +75,14 @@ fun CustomScreen(
     /** **ما يُنادى بعد نجاح الطلب** — الانتقالُ إلى «طلباتي». */
     onSent: () -> Unit = {},
 ) {
-    var request by rememberSaveable { mutableStateOf("") }
-    var notes by rememberSaveable { mutableStateOf("") }
+    // **والمسوّدةُ في النموذج لا في الشاشة** (بلاغُ المالك ٢٠٢٦-١٠-١٩: «تفاصيل الطلب الخاص
+    // عم تنمسح وقت يفوت ع اضافة عنوان») — لوحةُ العناوين تحلّ محلَّ الشاشة فتخرج من
+    // التركيب، **وما حُفظ فيها بـ`rememberSaveable` يضيع.** والنموذجُ يبقى.
+    var request by vm::draftRequest
+    var notes by vm::draftNotes
     // **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — «إذا أمانة النظامُ يفهم أنّه ما في حقُّ
     // بضاعة، وإذا مشتريات في حقُّ بضاعة».
-    var mode by rememberSaveable { mutableStateOf("purchase") }
+    var mode by vm::draftMode
     // ══════════════════════════════════════════════════════════════════
     // **ولا تُختار طريقةُ الدفع هنا** — Batch 2c (قرارُ المالك)
     // ══════════════════════════════════════════════════════════════════
@@ -299,6 +302,11 @@ fun CustomScreen(
 }
 
 class CustomViewModel(app: Application) : AndroidViewModel(app) {
+
+    /** **مسوّدةُ الطلب الخاصّ** — تبقى وإن خرجت الشاشةُ لاختيار عنوان (٢٠٢٦-١٠-١٩). */
+    var draftRequest by mutableStateOf("")
+    var draftNotes by mutableStateOf("")
+    var draftMode by mutableStateOf("purchase")
 
     private val api = CustomerApi(AppCore.get().api)
 
