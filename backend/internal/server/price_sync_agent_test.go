@@ -2,10 +2,15 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
 // TestPriceSyncAgent_TokenPicksStore **ساعي الأمين برمزه** (قرارُ المالك ٢٠٢٦-١٠-١٩) — الرمزُ
@@ -100,5 +105,86 @@ func TestPriceSyncPoll_SyncNow(t *testing.T) {
 	f.srv.agentSynced(ctx, f.merchantID)
 	if b := poll(); !strings.Contains(b, `"sync_now":false`) {
 		t.Fatalf("«مزامنة الآن» لم تُمحَ بعد المزامنة: %s", b)
+	}
+}
+
+// TestValidSyncQuery **قراءةٌ لا كتابة** — كمبيوترُ المول يحمل حساباتِه.
+func TestValidSyncQuery(t *testing.T) {
+	ok := []string{"", "SELECT Code AS code, Price AS price FROM mt000", "with x as (select 1 as price) select * from x"}
+	bad := []string{"DELETE FROM mt000", "SELECT 1; DROP TABLE mt000", "SELECT * INTO t2 FROM mt000",
+		"UPDATE mt000 SET x=1", "EXEC xp_cmdshell 'dir'", "SELECT 1 -- x", "select * from openrowset('a','b','c')"}
+	for _, q := range ok {
+		if !validSyncQuery(q) {
+			t.Fatalf("رُدّت قراءةٌ سليمة: %q", q)
+		}
+	}
+	for _, q := range bad {
+		if validSyncQuery(q) {
+			t.Fatalf("**قُبلت جملةٌ تكتب**: %q", q)
+		}
+	}
+}
+
+// TestPriceSyncAgentV2_ConfigStatusDownload **الساعي يأخذ إعدادَه ويبعث حالَه، والتحميلُ يحمل الرمز**
+// (قرارُ المالك ٢٠٢٦-١٠-١٩: «ملف واحد… ما بدنا المحاسب يتلبك»).
+func TestPriceSyncAgentV2_ConfigStatusDownload(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "RahalGoSync.exe"), []byte("MZ-fake-agent"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agent-version"), []byte("2.0.0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("AGENT_DIR", dir)
+	owner := testdb.NewUser(t, f.pool, "merchant")
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE merchants SET owner_user_id = $2, price_sync_sql_query = 'SELECT Code AS code, Price AS price FROM mt000',
+		       price_sync_interval_minutes = 3 WHERE id = $1`, f.merchantID, owner); err != nil {
+		t.Fatal(err)
+	}
+
+	// **التحميلُ: الملفُّ ثمّ العلامةُ ثمّ الرمز** — ورمزٌ جديدٌ يُحفظ.
+	w := f.call(f.srv.handleMerchantPriceSyncAgentDownload, http.MethodGet, "/x", f.merchantID, owner, []string{"merchant"}, "")
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.HasPrefix(body, "MZ-fake-agent") || !strings.Contains(body, agentMarker) {
+		t.Fatalf("التحميل: %d %q", w.Code, body)
+	}
+	var cfg struct{ Server, Token string }
+	if err := json.Unmarshal([]byte(body[strings.Index(body, agentMarker)+len(agentMarker):]), &cfg); err != nil || !strings.HasPrefix(cfg.Token, "rgs_") {
+		t.Fatalf("إعدادُ الذيل: %v %+v", err, cfg)
+	}
+
+	// **السؤال: يبعث حالَه ويأخذ إعدادَه.**
+	req := httptest.NewRequest(http.MethodPost, "/public/price-sync/poll",
+		strings.NewReader(`{"version":"2.0.0","error":"ما لقيت قاعدة الأمين","status":{"mode":"sql"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Sync-Token", cfg.Token)
+	rw := httptest.NewRecorder()
+	f.srv.handlePriceSyncPollV2(rw, req)
+	if rw.Code != http.StatusOK {
+		t.Fatalf("السؤال: %d %s", rw.Code, rw.Body.String())
+	}
+	for _, want := range []string{`"interval_minutes":3`, `"latest_version":"2.0.0"`, `"sql_query":"SELECT Code AS code`, `"want_schema":true`, `"stop":false`} {
+		if !strings.Contains(rw.Body.String(), want) {
+			t.Fatalf("الإعدادُ بلا %s: %s", want, rw.Body.String())
+		}
+	}
+	var agentErr *string
+	_ = f.pool.QueryRow(ctx, `SELECT price_sync_agent_error FROM merchants WHERE id = $1`, f.merchantID).Scan(&agentErr)
+	if agentErr == nil || !strings.Contains(*agentErr, "قاعدة الأمين") {
+		t.Fatal("**خطأُ الساعي لم يُحفظ** — فلا يُقرأ في اللوحة")
+	}
+
+	// **«إيقاف» يصله.**
+	f.call(f.srv.handleMerchantPriceSyncStop, http.MethodPost, "/x", f.merchantID, owner, []string{"merchant"}, "")
+	rw = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/public/price-sync/poll", strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Sync-Token", cfg.Token)
+	f.srv.handlePriceSyncPollV2(rw, req)
+	if !strings.Contains(rw.Body.String(), `"stop":true`) {
+		t.Fatalf("«إيقاف» لم يصل: %s", rw.Body.String())
 	}
 }

@@ -47,6 +47,7 @@ import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantModal, type Merchant as EditableMerchant } from "@/components/admin/MerchantModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
+import PriceSyncAdmin from "@/components/admin/PriceSyncAdmin";
 import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
@@ -293,6 +294,8 @@ export default function MerchantProfilePage() {
           </div>
         </dl>
         <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
+        {/* **مزامنةُ الأمين — فنيّ** (٢٠٢٦-١٠-١٩). */}
+        {canEditMenu && <PriceSyncAdmin merchantId={mr.id} />}
         </>
       )}
       {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice readOnly={!canEditMenu} />}

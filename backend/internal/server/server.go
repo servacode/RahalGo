@@ -615,6 +615,9 @@ func (s *Server) Router() http.Handler {
 		// **ساعي الأمين برمزه** — بلا جلسة، والرمزُ يدلّ على المتجر (٢٠٢٦-١٠-١٩).
 		r.Post("/public/price-sync", s.handlePriceSyncAgent)
 		r.Get("/public/price-sync/poll", s.handlePriceSyncPoll)
+		r.Post("/public/price-sync/poll", s.handlePriceSyncPollV2)
+		r.Post("/public/price-sync/schema", s.handlePriceSyncSchema)
+		r.Get("/public/price-sync/agent", s.handlePriceSyncAgentBinary)
 		r.Post("/public/price-sync/file", s.handlePriceSyncAgentFile)
 		r.Get("/public/zone", s.handlePublicZone)
 		// **وحالُ الإتاحة قبل السلّة** — انظر `quote_handlers.go`.
@@ -1039,6 +1042,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/price-sync/token", s.handleMerchantPriceSyncToken)
 			r.Post("/stores/{id}/price-sync/request", s.handleMerchantPriceSyncRequest)
 			r.Put("/stores/{id}/price-sync/interval", s.handleMerchantPriceSyncInterval)
+			r.Get("/stores/{id}/price-sync/agent", s.handleMerchantPriceSyncAgentDownload)
+			r.Post("/stores/{id}/price-sync/stop", s.handleMerchantPriceSyncStop)
 
 			// ══════════════════════════════════════════════════════════
 			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**
@@ -1714,6 +1719,9 @@ func (s *Server) Router() http.Handler {
 				r.Delete("/categories/{id}", s.handleDeleteCategory)
 				r.Post("/merchants", s.handleCreateMerchant)
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
+				// **إعدادُ قراءة الأمين** — لفريق المنصّة (٢٠٢٦-١٠-١٩).
+				r.Get("/merchants/{id}/price-sync", s.handleAdminPriceSyncGet)
+				r.Put("/merchants/{id}/price-sync", s.handleAdminPriceSyncPut)
 				// **وسعرُ صرف المتجر من ملفّه** (٢٠٢٦-١٠-١٢).
 				r.Patch("/merchants/{id}/exchange-rate", s.handleAdminExchangeRate)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go

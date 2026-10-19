@@ -34,6 +34,15 @@ import (
 // maxSyncFile **أكبرُ ملفّ** — قائمةُ مولٍ بعشرات الآلاف أقلُّ من هذا بكثير.
 const maxSyncFile = 10 << 20
 
+// newSyncToken **رمزٌ جديدٌ للساعي** — ٢٤ بايتاً عشوائيّة.
+func newSyncToken() (string, error) {
+	b := make([]byte, 24)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "rgs_" + hex.EncodeToString(b), nil
+}
+
 func syncTokenHash(tok string) string {
 	h := sha256.Sum256([]byte(strings.TrimSpace(tok)))
 	return hex.EncodeToString(h[:])
@@ -51,11 +60,14 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 	var seenAt, requestedAt *time.Time
 	var agentVersion *string
 	var interval int
+	var agentError *string
+	var stopped bool
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT price_sync_mapping, price_sync_token_hash IS NOT NULL,
 		       price_sync_agent_seen_at, price_sync_agent_version, price_sync_requested_at,
-		       price_sync_interval_minutes
-		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken, &seenAt, &agentVersion, &requestedAt, &interval); err != nil {
+		       price_sync_interval_minutes, price_sync_agent_error, price_sync_stop
+		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken, &seenAt, &agentVersion, &requestedAt,
+		&interval, &agentError, &stopped); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -82,6 +94,8 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 		"agent_seen_at": seenAt, "agent_version": agentVersion, "sync_requested": requestedAt != nil,
 		// **كلّ كم دقيقة** — بيد صاحب المتجر (٢٠٢٦-١٠-١٩).
 		"interval_minutes": interval,
+		// **وخطأُ الساعي يُقرأ هنا لا على كمبيوتر المحاسب** — و«أُوقف» من اللوحة.
+		"agent_error": agentError, "stopped": stopped,
 	})
 }
 
@@ -161,12 +175,11 @@ func (s *Server) handleMerchantPriceSyncToken(w http.ResponseWriter, r *http.Req
 		s.respondErr(w, err)
 		return
 	}
-	b := make([]byte, 24)
-	if _, err := rand.Read(b); err != nil {
+	tok, err := newSyncToken()
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	tok := "rgs_" + hex.EncodeToString(b)
 	if _, err := s.pg.Exec(r.Context(),
 		`UPDATE merchants SET price_sync_token_hash = $2 WHERE id = $1`, merchantID, syncTokenHash(tok)); err != nil {
 		s.respondErr(w, err)

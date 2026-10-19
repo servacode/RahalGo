@@ -2839,6 +2839,62 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/price-sync",
+      "handler": "handleAdminPriceSyncGet",
+      "auth": true,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/merchants/{id}/price-sync",
+      "handler": "handleAdminPriceSyncPut",
+      "auth": true,
+      "request": [
+        {
+          "name": "sql_query",
+          "type": "?string"
+        },
+        {
+          "name": "sql_connection",
+          "type": "?string"
+        },
+        {
+          "name": "probe_table",
+          "type": "?string"
+        },
+        {
+          "name": "folder",
+          "type": "?string"
+        },
+        {
+          "name": "currency",
+          "type": "?string"
+        },
+        {
+          "name": "want_schema",
+          "type": "?bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/admin/merchants/{id}/settlement-method",
       "handler": "handleSetMerchantSettlementMethod",
@@ -8513,6 +8569,10 @@
       ],
       "response": [
         {
+          "name": "agent_error",
+          "type": "unknown"
+        },
+        {
           "name": "agent_seen_at",
           "type": "unknown"
         },
@@ -8537,12 +8597,25 @@
           "type": "unknown"
         },
         {
+          "name": "stopped",
+          "type": "unknown"
+        },
+        {
           "name": "sync_requested",
           "type": "unknown"
         }
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/agent",
+      "handler": "handleMerchantPriceSyncAgentDownload",
+      "auth": true,
+      "roles": [
+        "merchant"
       ]
     },
     {
@@ -8610,6 +8683,24 @@
       "response": [
         {
           "name": "requested",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/stop",
+      "handler": "handleMerchantPriceSyncStop",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "stopped",
           "type": "bool"
         }
       ],
@@ -9825,6 +9916,12 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/public/price-sync/agent",
+      "handler": "handlePriceSyncAgentBinary",
+      "auth": false
+    },
+    {
       "method": "POST",
       "path": "/api/v1/public/price-sync/file",
       "handler": "handlePriceSyncAgentFile",
@@ -9856,6 +9953,50 @@
         {
           "name": "sync_now",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/price-sync/poll",
+      "handler": "handlePriceSyncPollV2",
+      "auth": false,
+      "request": [
+        {
+          "name": "version",
+          "type": "string"
+        },
+        {
+          "name": "error",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "map[string]any"
+        }
+      ],
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/price-sync/schema",
+      "handler": "handlePriceSyncSchema",
+      "auth": false,
+      "response": [
+        {
+          "name": "saved",
+          "type": "bool"
         }
       ],
       "statuses": [

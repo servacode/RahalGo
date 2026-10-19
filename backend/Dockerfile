@@ -36,12 +36,21 @@ ARG BUILD_ID=""
 RUN CGO_ENABLED=0 GOOS=linux go build 	-ldflags="-s -w 	  -X github.com/servacode/rahalgo/backend/internal/envguard.buildCommit=${SOURCE_COMMIT} 	  -X github.com/servacode/rahalgo/backend/internal/envguard.buildID=${BUILD_ID}" 	-o /out/api ./cmd/api
 
 # ══════════════════════════════════════════════════════════════════════
+# ── ساعي الأمين لكمبيوتر المول (ويندوز) — يُبنى مع كلّ نشرٍ فيحمل الخادمُ أحدثَه (٢٠٢٦-١٠-١٩) ──
+FROM golang:1.25-alpine AS agent
+WORKDIR /agent
+COPY agent/ameen-sync/go.mod agent/ameen-sync/go.sum ./
+RUN go mod download
+COPY agent/ameen-sync/ ./
+RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w -H=windowsgui" -o /out/RahalGoSync.exe .  && grep -o 'var Version = "[^"]*"' main.go | cut -d'"' -f2 > /out/agent-version
+
 FROM alpine:3.21
 # **وشهاداتُ الجذر لازمة**: المحرّكُ ينادي واتساب وخدمةَ العناوين عبر HTTPS،
 # **وصورةٌ بلاها تردّ «x509: certificate signed by unknown authority».**
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -u 10001 rahal
 WORKDIR /app
 COPY --from=build /out/api /app/api
+COPY --from=agent /out/ /app/agent/
 
 # **ومجلّدُ الوسائط يُنشأ ويُملَك** — والمستخدمُ غيرُ الجذر لا يكتب في مجلّدٍ
 # ليس له. (وهو زائلٌ بلا قرصٍ دائم — انظر `docs/DEPLOY.md`.)
@@ -49,5 +58,6 @@ RUN mkdir -p /app/uploads && chown -R rahal:rahal /app
 USER rahal
 
 ENV UPLOADS_DIR=/app/uploads
+ENV AGENT_DIR=/app/agent
 EXPOSE 8080
 CMD ["/app/api"]

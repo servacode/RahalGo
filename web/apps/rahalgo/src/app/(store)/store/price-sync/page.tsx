@@ -20,7 +20,7 @@ import {
   fmtDateTime,
 } from "@rahalgo/i18n";
 import { Alert, Button, Card, LoadingState, Select } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
 
@@ -62,6 +62,8 @@ interface Info {
   agent_version: string | null;
   sync_requested: boolean;
   interval_minutes: number;
+  agent_error: string | null;
+  stopped: boolean;
 }
 interface Preview {
   headers: string[];
@@ -88,8 +90,6 @@ export default function PriceSyncPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [token, setToken] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -188,14 +188,35 @@ export default function PriceSyncPage() {
     }
   }
 
-  async function makeToken() {
+  /** **البرنامجُ برمز المتجر** — يُحمَّل ملفّاً واحداً (`RahalGoSync.exe`). */
+  async function download() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await apiFile(
+        `/api/v1/merchant/stores/${id}/price-sync/agent`,
+      );
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "RahalGoSync.exe";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      load();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** **«إيقاف البرنامج»** — يزيل نفسَه من الإقلاع في سؤاله التالي. */
+  async function stopAgent() {
     setBusy(true);
     try {
-      const r = await api<{ token: string }>(
-        `/api/v1/merchant/stores/${id}/price-sync/token`,
-        { method: "POST" },
-      );
-      setToken(r.token);
+      await api(`/api/v1/merchant/stores/${id}/price-sync/stop`, {
+        method: "POST",
+      });
       load();
     } catch (e) {
       setError(errorText(e));
@@ -373,12 +394,23 @@ export default function PriceSyncPage() {
         </Card>
       )}
 
+      {/* **برنامجُ المزامنة — ملفٌّ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٩): يُحمَّل وفيه رمزُ المتجر،
+          دبل كليك على كمبيوتر الأمين وخلص. **وحالُه وخطؤه هنا** لا على كمبيوتر المحاسب. */}
       <Card>
         <div className="flex flex-col gap-2 p-4">
-          <h3 className="heading-card">{P.tokenTitle}</h3>
-          <p className="text-xs text-ink-muted">{P.tokenHint}</p>
-          {/* **حالُ الساعي** — شغّالٌ إن سأل في آخر خمس دقائق (يسأل كلَّ دقيقة). */}
-          {info?.agent_seen_at ? (
+          <h3 className="heading-card">{P.agentTitle}</h3>
+          <p className="text-sm">{P.agentSteps}</p>
+          <Button
+            className="w-fit"
+            onClick={() => void download()}
+            disabled={busy}
+          >
+            {busy ? P.agentDownloading : P.agentDownload}
+          </Button>
+          <p className="text-xs text-ink-muted">{P.agentRedownload}</p>
+          {info?.stopped ? (
+            <p className="text-sm text-ink-muted">{P.agentStopped}</p>
+          ) : info?.agent_seen_at ? (
             <p
               className={`text-sm ${Date.now() - new Date(info.agent_seen_at).getTime() < 5 * 60_000 ? "text-success" : "text-danger"}`}
             >
@@ -399,7 +431,12 @@ export default function PriceSyncPage() {
               <p className="text-sm text-ink-muted">{P.agentNever}</p>
             )
           )}
-          {info?.has_token && (
+          {info?.agent_error && !info.stopped && (
+            <Alert tone="warning">
+              {fill(P.agentError, { e: info.agent_error })}
+            </Alert>
+          )}
+          {info?.has_token && !info.stopped && (
             <Select
               id="sync-interval"
               label={P.interval}
@@ -418,52 +455,25 @@ export default function PriceSyncPage() {
               ))}
             </Select>
           )}
-          {info?.agent_seen_at &&
-            (info.sync_requested ? (
-              <p className="text-sm text-success">{P.syncAsked}</p>
-            ) : (
+          {info?.agent_seen_at && !info.stopped && (
+            <div className="flex flex-wrap gap-2">
+              {info.sync_requested ? (
+                <p className="text-sm text-success">{P.syncAsked}</p>
+              ) : (
+                <Button onClick={() => void syncNow()} disabled={busy}>
+                  {P.syncNow}
+                </Button>
+              )}
               <Button
-                className="w-fit"
-                onClick={() => void syncNow()}
+                variant="ghost"
+                className="text-danger"
+                onClick={() => void stopAgent()}
                 disabled={busy}
               >
-                {P.syncNow}
+                {P.agentStop}
               </Button>
-            ))}
-          {info?.has_token && !token && (
-            <p className="text-sm text-success">{P.tokenHas}</p>
-          )}
-          {token && (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm">{P.tokenShown}</p>
-              <div className="flex items-center gap-2">
-                <code
-                  dir="ltr"
-                  className="min-w-0 flex-1 break-all rounded-control bg-field p-2 text-xs"
-                >
-                  {token}
-                </code>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    void navigator.clipboard
-                      ?.writeText(token)
-                      .then(() => setCopied(true));
-                  }}
-                >
-                  {copied ? P.copied : P.copy}
-                </Button>
-              </div>
             </div>
           )}
-          <Button
-            variant="secondary"
-            className="w-fit"
-            onClick={() => void makeToken()}
-            disabled={busy}
-          >
-            {info?.has_token ? P.tokenNew : P.tokenMake}
-          </Button>
         </div>
       </Card>
     </div>

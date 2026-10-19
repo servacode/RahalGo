@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 533,
+    "routes": 540,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -34,7 +34,7 @@
     "behaviour_settings": 204,
     "order_fields": 111,
     "test_files": 619,
-    "test_funcs": 2450
+    "test_funcs": 2452
   },
   "flows": [
     {
@@ -28257,6 +28257,12 @@
       "orphan": true
     },
     {
+      "name": "TestPriceSyncAgentV2_ConfigStatusDownload",
+      "file": "internal/server/price_sync_agent_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestPriceSyncAgent_TokenPicksStore",
       "file": "internal/server/price_sync_agent_test.go",
       "package": "server",
@@ -28264,6 +28270,12 @@
     },
     {
       "name": "TestPriceSyncPoll_SyncNow",
+      "file": "internal/server/price_sync_agent_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestValidSyncQuery",
       "file": "internal/server/price_sync_agent_test.go",
       "package": "server",
       "orphan": true
