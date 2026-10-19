@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -34,8 +35,16 @@ import com.rahalgo.ui.ScreenTitle
 @Composable
 internal fun DrinksButton(vm: MenuViewModel) {
     Spacer(Modifier.height(6.dp))
-    RahalOutlineButton(onClick = { vm.openDrinks() }, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.drinks_title))
+    // **زرٌّ ممتلئٌ بلون المنصّة وأيقونةِ «+»** (طلبُ المالك ٢٠٢٦-١٠-١٩: «سمّيها
+    // واعطيها لون واضح مع ايقونة اضافة لتبين») — لا إطاراً يُمرّ عليه.
+    RahalButton(onClick = { vm.openDrinks() }, modifier = Modifier.fillMaxWidth()) {
+        androidx.compose.material3.Icon(
+            painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_plus),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.drinks_button), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
     }
 }
 

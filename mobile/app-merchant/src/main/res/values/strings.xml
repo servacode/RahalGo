@@ -206,6 +206,7 @@
     <!-- **واسمُه بيده** — طلبُ المالك ٢٠٢٦-٠٨-٢٣. -->
     <string name="store_rename">تعديل اسم المتجر</string>
     <string name="drinks_title">قائمة المشروبات</string>
+    <string name="drinks_button">إضافة قائمة المشروبات</string>
     <string name="drinks_hint">بتكتبها مرة وحدة، وبتنضاف لحالها لكل أصنافك. الزبون بيختار منها إذا بدّه.</string>
     <string name="drinks_name">اسم المشروب</string>
     <string name="drinks_price_syp">السعر (ل.س)</string>

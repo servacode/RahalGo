@@ -14,7 +14,9 @@ func NewPostgres(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("postgres: parse config: %w", err)
 	}
-	poolCfg.MaxConns = 20
+	// **أربعون لا عشرون** (مراقبةُ الإنتاج ٢٠٢٦-١٠-١٩): تطبيقٌ يُفتح يطلق عشرةَ نداءاتٍ
+	// معاً، فيمتلئ العشرون في لحظةٍ وتنتظر البقيّة. **والقاعدةُ تقبل مئة** (`max_connections`).
+	poolCfg.MaxConns = 40
 	poolCfg.MinConns = 2
 	poolCfg.MaxConnLifetime = time.Hour
 
