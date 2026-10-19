@@ -211,6 +211,11 @@ fun TopBar(
                         text = stringResource(R.string.top_deliver_to),
                         color = Rahal.colors.brand,
                         style = MaterialTheme.typography.labelSmall,
+                        // **ولا تنكسر الكلمةُ نصفين** (صورةُ المالك ٢٠٢٦-١٠-١٩: «التوصي / ل إلى»
+                        // على جوالٍ خطُّه مكبَّر) — سطرٌ واحدٌ ولو قُصّ آخرُه.
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = addressLabel.ifEmpty {

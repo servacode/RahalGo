@@ -107,7 +107,7 @@ func (s *Service) IssueTempPassword(ctx context.Context, actorID, userID, ip, ac
 		}
 		return "", time.Time{}, err
 	}
-	sids, err := revokeRefreshTx(ctx, tx, userID)
+	sids, err := revokeRefreshTx(ctx, tx, userID, ReasonPasswordReset)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -124,11 +124,11 @@ func (s *Service) IssueTempPassword(ctx context.Context, actorID, userID, ip, ac
 }
 
 // revokeRefreshTx يُبطل رموزَ التجديد الحيّة ويُرجع معرّفاتِ جلساتها.
-func revokeRefreshTx(ctx context.Context, q dbtx.Querier, userID string) ([]string, error) {
+func revokeRefreshTx(ctx context.Context, q dbtx.Querier, userID, reason string) ([]string, error) {
 	rows, err := q.Query(ctx, `
-		UPDATE refresh_tokens SET revoked_at = now()
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = $2
 		 WHERE user_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()
-		RETURNING session_id::text`, userID)
+		RETURNING session_id::text`, userID, reason)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (s *Service) AdminChangePhone(ctx context.Context, actorID, userID, rawPhon
 		}
 		return "", "", err
 	}
-	sids, err := revokeRefreshTx(ctx, tx, userID)
+	sids, err := revokeRefreshTx(ctx, tx, userID, ReasonPhoneChanged)
 	if err != nil {
 		return "", "", err
 	}

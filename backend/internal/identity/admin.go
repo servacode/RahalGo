@@ -270,7 +270,7 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 // الأمن، وإبطالُ كاش الحال لكلّ تبديل.
 func (s *Service) afterStatus(ctx context.Context, userID, status string) {
 	if status == "blocked" || status == "deleted" {
-		_, _ = s.repo.RevokeAllTokens(ctx, userID)
+		_, _ = s.repo.RevokeAllTokens(ctx, userID, ReasonBlocked)
 		// **ووجهاتُ الدفع معها** — **وحالُ أمنٍ لا تُترَك لها وجهة**
 		// (`SEC5`). **والمحظورُ كان يبقى يستقبل إشعاراتِه الخاصّة.**
 		if _, err := s.repo.DeleteDeviceTokensOfUser(ctx, userID); err != nil {
@@ -506,7 +506,7 @@ func (s *Service) AdminResetPassword(ctx context.Context, actorID, userID, hash,
 	}
 
 	rows, err := tx.Query(ctx, `
-		UPDATE refresh_tokens SET revoked_at = now()
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = 'password_reset'
 		 WHERE user_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()
 		RETURNING session_id::text`, userID)
 	if err != nil {
@@ -557,7 +557,7 @@ func (s *Service) AdminLogoutAll(ctx context.Context, actorID, userID, ip string
 	n := len(sids)
 	// الإبطال في القاعدة وفي قائمة Redis معاً — وإلا بقيت توكنات الوصول
 	// القائمة صالحة حتى انتهاء مهلتها رغم "إنهاء الجلسات".
-	if err := s.revokeAllSessions(ctx, userID); err != nil {
+	if err := s.revokeAllSessions(ctx, userID, ReasonAdminLogout); err != nil {
 		return 0, err
 	}
 	s.repo.Audit(ctx, &actorID, "admin.logout_all", "user", userID, ip, map[string]any{"sessions": n})

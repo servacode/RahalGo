@@ -410,6 +410,12 @@ if [ "$PROD_BEFORE" != "$PROD_AFTER" ]; then
 	die "PRODUCTION CONTAINER IDENTITY CHANGED — isolation breach" 6
 fi
 
+# ── وتُمسح الصورُ الضائعةُ بعد كلّ نشر (٢٠٢٦-١٠-١٩) ──
+# **ثمانيةَ عشرَ نشراً في يومٍ ملأت القرصَ ٨٧٪** — كلُّ بناءٍ يخلّف صورةً بلا اسم (~١٫٥ج)
+# والتنظيفُ اليوميُّ مرّةٌ في اليوم. `image prune -f` **يمسح غيرَ الموسومة وحدَها**: لا صورةَ
+# بوسمٍ ولا ما تستعمله حاويةٌ — **فلا تُمسّ صورُ الإنتاج.**
+docker image prune -f >/dev/null 2>&1 || true
+
 # ── تقريرُ القرص بعد النشر (المالكُ طلبه ٢٠٢٦-٠٩-٢٢) ──
 log "disk after deploy: $(df -Ph "$SRC" 2>/dev/null | awk 'NR==2{print $4" free, "$5" used"}')"
 

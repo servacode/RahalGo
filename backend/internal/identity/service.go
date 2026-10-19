@@ -501,7 +501,7 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, rawPhone, code, pass
 	//
 	// **والترتيبُ مقصود**: **الإبطالُ قبل إصدار الجلسة الجديدة** —
 	// **وإلّا أبطل نفسَه.**
-	if err := s.revokeAllSessions(ctx, user.ID); err != nil {
+	if err := s.revokeAllSessions(ctx, user.ID, ReasonPasswordChanged); err != nil {
 		return nil, err
 	}
 	s.repo.Audit(ctx, &user.ID, "auth.password_reset", "user", user.ID, ip, nil)
@@ -829,7 +829,7 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 	if err != nil {
 		return nil, err
 	}
-	match, err := auth.VerifyPassword(password, hash)
+	match, err := auth.VerifyPasswordTyped(password, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -1026,9 +1026,28 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string)
 	if errors.Is(err, ErrNotFound) {
 		// **ورمزٌ مُبطَلٌ يُميَّز من مجهول** (Obs 3): **جهازٌ قديمٌ عاد يجدّد بعد
 		// إزاحته** ورمزُ وصولِه انتهى وRedis زالت — القاعدةُ تحفظ السبب، فيُردّ
-		// `session_superseded` فيخرج بالرسالة الصريحة لا برسالةٍ عامّة.
-		if reason, rerr := s.repo.RevokedReasonOfToken(ctx, hash); rerr == nil && reason == ReasonSuperseded {
-			return nil, ErrSessionSuperseded
+		// سببُه (جهازٌ آخر · كلمةٌ تبدّلت · الإدارة · موقوف) لا رسالةٌ عامّة.
+		reason, rerr := s.repo.RevokedReasonOfToken(ctx, hash)
+		if rerr == nil && reason == ReasonRotated {
+			// ══════════════════════════════════════════════════════
+			// **وتدويرٌ لم يصل جوابُه لا يُخرج أحداً** (قرارُ المالك ٢٠٢٦-١٠-١٩)
+			// ══════════════════════════════════════════════════════
+			//
+			// **رمزٌ دُوّر والجلسةُ حيّة** — انقطع النتُّ قبل أن يصل الخلف، أو حفظ الجهازُ
+			// رمزاً فوق أحدث منه. **ولا يُطرد من لم تُنهَ جلستُه**: يُعطى زوجاً
+			// جديداً في الجلسة نفسها ويُبطل الخلفُ الضائع.
+			if uid, sid, ok, gerr := s.repo.RecoverRotated(ctx, hash); gerr == nil && ok {
+				user, _, uerr := s.repo.UserByID(ctx, uid)
+				if uerr != nil {
+					return nil, uerr
+				}
+				return s.issueSession(ctx, user, userAgent, ip, "auth.refresh", sid)
+			}
+		}
+		if rerr == nil {
+			if e := SessionEndError(reason); e != nil {
+				return nil, e
+			}
 		}
 		return nil, ErrInvalidRefresh
 	}
@@ -1048,6 +1067,46 @@ func sessionRevokedKey(sid string) string { return "sess:revoked:" + sid }
 // ReasonSuperseded **وسمُ الإبطال حين يزيح دخولٌ جديدٌ عائلةً من نوعه** — يُخزَّن
 // في القاعدة (دائم) وفي Redis (سريع)، ويُميَّز عن الإبطال العامّ (`""`).
 const ReasonSuperseded = "superseded"
+
+// **أسبابُ إنهاء الجلسة الأخرى** (قرارُ المالك ٢٠٢٦-١٠-١٩: «ما بدي يتم تسجيل خروج بدون
+// سبب واضح») — تُحفظ على رمز التجديد ساعةَ يُبطَل، **ويُقال للجهاز سببُه** لا «انتهت جلستك».
+const (
+	ReasonRotated         = "rotated"          // دُوّر — ليس إنهاءً
+	ReasonLogout          = "logout"           // خرج بيده
+	ReasonPasswordReset   = "password_reset"   // أعادت الإدارةُ كلمتَه
+	ReasonPasswordChanged = "password_changed" // بدّل كلمتَه أو استعادها
+	ReasonPhoneChanged    = "phone_changed"    // بُدّل رقمُه
+	ReasonAdminLogout     = "admin_logout"     // «خروج من كلّ الأجهزة» من الإدارة
+	ReasonBlocked         = "blocked"          // حُظر الحساب أو حُذف
+)
+
+var (
+	// ErrSessionPasswordChanged **تبدّلت كلمةُ السرّ** — يدخل بالجديدة.
+	ErrSessionPasswordChanged = httpx.NewError(http.StatusUnauthorized, "session_password_changed", "errors.unauthorized")
+	// ErrSessionPhoneChanged **تبدّل رقمُ الحساب.**
+	ErrSessionPhoneChanged = httpx.NewError(http.StatusUnauthorized, "session_phone_changed", "errors.unauthorized")
+	// ErrSessionAdminLogout **أخرجته الإدارةُ من كلّ الأجهزة.**
+	ErrSessionAdminLogout = httpx.NewError(http.StatusUnauthorized, "session_admin_logout", "errors.unauthorized")
+	// ErrSessionBlocked **الحسابُ موقوف.**
+	ErrSessionBlocked = httpx.NewError(http.StatusUnauthorized, "session_blocked", "errors.unauthorized")
+)
+
+// SessionEndError **خطأُ الجهاز بحسب سبب إنهاء جلسته** — و`nil` لسببٍ لا يُسمّى.
+func SessionEndError(reason string) *httpx.AppError {
+	switch reason {
+	case ReasonSuperseded:
+		return ErrSessionSuperseded
+	case ReasonPasswordReset, ReasonPasswordChanged:
+		return ErrSessionPasswordChanged
+	case ReasonPhoneChanged:
+		return ErrSessionPhoneChanged
+	case ReasonAdminLogout:
+		return ErrSessionAdminLogout
+	case ReasonBlocked:
+		return ErrSessionBlocked
+	}
+	return nil
+}
 
 // sessionTopic **موضوعُ بثٍّ خاصٌّ بعائلةِ جلسةٍ** — لإشعارها وحدَها بإبطالها (Obs 3).
 func SessionTopic(sid string) string { return "sess:" + sid }
@@ -1129,12 +1188,12 @@ func (s *Service) RevokeReason(ctx context.Context, sid string) string {
 	return reason
 }
 
-func (s *Service) revokeAllSessions(ctx context.Context, userID string) error {
+func (s *Service) revokeAllSessions(ctx context.Context, userID, reason string) error {
 	sids, err := s.repo.ActiveSessionIDs(ctx, userID)
 	if err != nil {
 		return err
 	}
-	if _, err := s.repo.RevokeAllTokens(ctx, userID); err != nil {
+	if _, err := s.repo.RevokeAllTokens(ctx, userID, reason); err != nil {
 		return err
 	}
 	for _, sid := range sids {
@@ -1237,7 +1296,7 @@ func (s *Service) SetPassword(ctx context.Context, userID, password, currentPass
 		return err
 	}
 	if hash != "" {
-		ok, err := auth.VerifyPassword(currentPassword, hash)
+		ok, err := auth.VerifyPasswordTyped(currentPassword, hash)
 		if err != nil || !ok {
 			// **والسببُ يُقال بعينه** — انظر `ErrWrongCurrentPassword`.
 			return ErrWrongCurrentPassword

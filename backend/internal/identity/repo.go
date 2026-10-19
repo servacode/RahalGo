@@ -882,7 +882,7 @@ func (r *Repo) RevokeRefreshAndDevice(ctx context.Context, tokenHash, deviceToke
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	err = tx.QueryRow(ctx, `
-		UPDATE refresh_tokens SET revoked_at = now()
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = 'logout'
 		WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
 		RETURNING user_id, session_id::text`, tokenHash).Scan(&userID, &sessionID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -939,7 +939,7 @@ func (r *Repo) RevokeRefreshAndDevice(ctx context.Context, tokenHash, deviceToke
 
 func (r *Repo) RevokeRefresh(ctx context.Context, tokenHash string) (userID, sessionID string, err error) {
 	err = r.db.QueryRow(ctx, `
-		UPDATE refresh_tokens SET revoked_at = now()
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = 'rotated'
 		WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
 		RETURNING user_id, session_id::text`, tokenHash).Scan(&userID, &sessionID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -1000,7 +1000,7 @@ func (r *Repo) RevokeSession(ctx context.Context, userID, sessionID string) erro
 // حيّاً بعد الحظر.**
 //
 // **فتُختم الحِقبةُ ويُصفَّر الاستثناءُ مع الإبطال في معاملةٍ واحدة.**
-func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) {
+func (r *Repo) RevokeAllTokens(ctx context.Context, userID, reason string) (int, error) {
 	tx, err := r.pool().Begin(ctx)
 	if err != nil {
 		return 0, err
@@ -1014,8 +1014,8 @@ func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) 
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE refresh_tokens SET revoked_at = now()
-		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID)
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = $2
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID, reason)
 	if err != nil {
 		return 0, err
 	}
@@ -1202,12 +1202,50 @@ func (r *Repo) RevokeClientSessionsKeep(ctx context.Context, userID, client stri
 func (r *Repo) RevokedReasonOfSession(ctx context.Context, sid string) (string, error) {
 	var reason string
 	err := r.db.QueryRow(ctx, `
-		SELECT COALESCE(max(revoked_reason), '') FROM refresh_tokens
-		 WHERE session_id = $1::uuid AND revoked_at IS NOT NULL`, sid).Scan(&reason)
+		SELECT COALESCE((SELECT revoked_reason FROM refresh_tokens
+		  WHERE session_id = $1::uuid AND revoked_at IS NOT NULL AND revoked_reason <> 'rotated'
+		  ORDER BY revoked_at DESC LIMIT 1), '')`, sid).Scan(&reason)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
 	return reason, err
+}
+
+// RecoverRotated **رمزٌ قديمٌ من جلسةٍ ما زالت حيّة** — الجهازُ لم يستلم ما بعده (انقطع
+// النتُّ بعد التدوير، أو حفظ رمزاً فوق أحدث منه). **والجلسةُ لم تُنهَ** ⇒ لا يُطرد:
+// يُبطَل الحيُّ ويُعاد معرّفُ الحساب والجلسة ليُصدر زوجٌ جديد.
+//
+// (بلاغُ المالك ٢٠٢٦-١٠-١٩: خرج حسابُه والجلسةُ حيّةٌ على الخادم — «مشكلة ثقة».)
+//
+// **ولا يُنجي جلسةً أُنهيت**: يُشترط رمزٌ حيٌّ في الجلسة نفسِها — فخروجٌ أو إزاحةٌ أو
+// إعادةُ كلمةٍ تُبطل كلَّ رموزها، فلا يُسترَدّ شيء.
+func (r *Repo) RecoverRotated(ctx context.Context, tokenHash string) (userID, sessionID string, ok bool, err error) {
+	tx, err := r.pool().Begin(ctx)
+	if err != nil {
+		return "", "", false, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	err = tx.QueryRow(ctx, `
+		SELECT user_id::text, session_id::text FROM refresh_tokens
+		 WHERE token_hash = $1 AND revoked_reason = 'rotated' AND expires_at > now()`,
+		tokenHash).Scan(&userID, &sessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = 'rotated'
+		 WHERE session_id = $1::uuid AND user_id = $2::uuid
+		   AND revoked_at IS NULL AND expires_at > now()`, sessionID, userID)
+	if err != nil {
+		return "", "", false, err
+	}
+	if tag.RowsAffected() == 0 {
+		return "", "", false, nil
+	}
+	return userID, sessionID, true, tx.Commit(ctx)
 }
 
 // RevokedReasonOfToken **سببُ إبطالِ توكنِ تجديدٍ بعينه** — للمسار الذي يعود فيه
@@ -1387,7 +1425,7 @@ func (r *Repo) SetPasswordKeeping(ctx context.Context, userID, hash, keepSID str
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		UPDATE refresh_tokens SET revoked_at = now()
+		UPDATE refresh_tokens SET revoked_at = now(), revoked_reason = 'password_changed'
 		 WHERE user_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()
 		   AND ($2::uuid IS NULL OR session_id <> $2::uuid)
 		RETURNING session_id::text`, userID, keep)

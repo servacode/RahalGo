@@ -37,6 +37,11 @@ object SessionFailure {
     /** **الرموزُ التي تقول «الجلسةُ انتهت» بصريحها** — أيّاً كان رقمُ الحال. */
     val ENDING_CODES: Set<String> = setOf(
         "session_superseded",
+        // **وكلُّ خروجٍ بسببه** (قرارُ المالك ٢٠٢٦-١٠-١٩).
+        "session_password_changed",
+        "session_phone_changed",
+        "session_admin_logout",
+        "session_blocked",
         "invalid_refresh",
         "unauthorized",
         "user_blocked",
@@ -52,6 +57,15 @@ object SessionFailure {
 
     /** **رمزُ «دخلتَ من جهازٍ آخر»** — له رسالتُه الصريحة. */
     const val SUPERSEDED = "session_superseded"
+
+    /** **الأسبابُ المسمّاة** — تُفضَّل على «انتهت جلستك» العامّة أينما ظهرت. */
+    val NAMED: Set<String> = setOf(
+        SUPERSEDED,
+        "session_password_changed",
+        "session_phone_changed",
+        "session_admin_logout",
+        "session_blocked",
+    )
 
     /**
      * **أهذا الفشلُ ينهي الجلسة؟**
@@ -69,6 +83,9 @@ object SessionFailure {
      * ظهر: رفضُ رمزِ الوصول أوّلاً، أو ردُّ التجديد. **ويبقى ظاهراً ولو
      * زالت مرآةُ Redis** — ردُّ التجديد يحمله من القاعدة.
      */
-    fun reason(first: String, refresh: String): String =
-        if (first == SUPERSEDED || refresh == SUPERSEDED) SUPERSEDED else refresh.ifEmpty { first }
+    fun reason(first: String, refresh: String): String = when {
+        first in NAMED -> first
+        refresh in NAMED -> refresh
+        else -> refresh.ifEmpty { first }
+    }
 }

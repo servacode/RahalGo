@@ -56,6 +56,10 @@
     <!-- **وهما نصّا شاشة الدخول بعد خروجٍ قسريّ** (SessionEnd، ٢٠٢٦-١٠-١٦) — بصياغة المالك. -->
     <string name="err_invalid_refresh">انتهت جلستك — سجّل دخولك من جديد</string>
     <string name="err_session_superseded">تم تسجيل خروجك لأنك دخلت بحسابك من جهاز تاني</string>
+    <string name="err_session_password_changed">تم تسجيل خروجك لأن كلمة السر تغيّرت — ادخل بكلمة السر الجديدة</string>
+    <string name="err_session_phone_changed">تم تسجيل خروجك لأن رقم حسابك تغيّر — ادخل بالرقم الجديد</string>
+    <string name="err_session_admin_logout">تم تسجيل خروجك من الإدارة من كل الأجهزة — سجّل دخولك من جديد</string>
+    <string name="err_session_blocked">حسابك موقوف — تواصل مع الإدارة</string>
     <string name="err_network">لا اتصال بالإنترنت</string>
     <string name="err_no_merchant">لا متجر في هذا الطلب — الخاص تشتريه بنفسك</string>
     <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون

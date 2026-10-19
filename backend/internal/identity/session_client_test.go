@@ -115,7 +115,7 @@ func TestSessionClient_AdminLogoutAllStillGlobal(t *testing.T) {
 		t.Fatalf("جلسةُ التطبيق: %v", err)
 	}
 
-	n, err := repo.RevokeAllTokens(ctx, uid)
+	n, err := repo.RevokeAllTokens(ctx, uid, ReasonAdminLogout)
 	if err != nil {
 		t.Fatalf("الإبطالُ الشامل: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestSessionClient_GenericRevokeStaysDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("جلسة: %v", err)
 	}
-	if _, err := repo.RevokeAllTokens(ctx, uid); err != nil {
+	if _, err := repo.RevokeAllTokens(ctx, uid, ReasonAdminLogout); err != nil {
 		t.Fatalf("الإبطالُ الشامل: %v", err)
 	}
 	if got, _ := repo.RevokedReasonOfSession(ctx, sid); got == ReasonSuperseded {

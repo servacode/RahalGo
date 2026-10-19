@@ -103,7 +103,7 @@ func (s *Service) ConfirmAccountDeletion(ctx context.Context, userID, code, ip s
 		return err
 	}
 	// إقفال فوري: إبطال الجلسات ومسح كاش الحالة كي يُرفض أي توكن قائم
-	if err := s.revokeAllSessions(ctx, user.ID); err != nil {
+	if err := s.revokeAllSessions(ctx, user.ID, ReasonBlocked); err != nil {
 		return err
 	}
 	s.invalidateStatusCache(ctx, user.ID)

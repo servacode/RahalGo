@@ -1,5 +1,8 @@
 package com.rahalgo.customer.shop
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.BasicText
 import com.rahalgo.shared.model.Section
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -101,19 +104,31 @@ internal fun FeaturedStrip(
                             .alpha(if (s.openNow) 1f else 0.7f),
                     )
                     Spacer(Modifier.height(Rahal.space.xs))
-                    Text(
-                        text = s.name,
-                        color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.labelMedium,
-                        minLines = 2,
-                        maxLines = 2,
-                        overflow = TextOverflow.Visible,
-                        textAlign = TextAlign.Center,
-                    )
+                    FeaturedName(s.name)
                 }
             }
         }
     }
+}
+
+/**
+ * **اسمُ المتجر المميّز بسطرٍ واحد** (طلبُ المالك ٢٠٢٦-١٠-١٩: «بدي بسطر واحد بس يصغر خطه
+ * اذا كان طويل شوي») — **يصغر الخطُّ حتّى يسع**، وما لا يسعه ولو صغر يُختم بنقاط.
+ */
+@Composable
+private fun FeaturedName(name: String) {
+    val base = MaterialTheme.typography.labelMedium.copy(
+        color = Rahal.colors.ink,
+        textAlign = TextAlign.Center,
+    )
+    BasicText(
+        text = name,
+        style = base,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = base.fontSize),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 /**

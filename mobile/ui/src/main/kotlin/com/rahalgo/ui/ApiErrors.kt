@@ -304,6 +304,10 @@ private val CODES: Map<String, Int> = mapOf(
     "invalid_refresh" to R.string.err_invalid_refresh,
     // **ودخولٌ من جهازٍ آخر يُقال بصريحه** (Obs 3) — لا «انتهت جلستُك» العامّة.
     "session_superseded" to R.string.err_session_superseded,
+    "session_password_changed" to R.string.err_session_password_changed,
+    "session_phone_changed" to R.string.err_session_phone_changed,
+    "session_admin_logout" to R.string.err_session_admin_logout,
+    "session_blocked" to R.string.err_session_blocked,
     // ══════════════════════════════════════════════════════════════════
     // **و«ممنوع» لا تعني «لستَ سائقا»**
     // ══════════════════════════════════════════════════════════════════

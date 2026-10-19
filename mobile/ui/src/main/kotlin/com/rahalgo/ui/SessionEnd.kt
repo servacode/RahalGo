@@ -106,6 +106,10 @@ object SessionEnd {
     /** **نصُّ السبب** — «جهازٌ آخر» بصريحه، وما عداه «انتهت جلستك». */
     fun messageRes(code: String): Int = when (code) {
         SessionFailure.SUPERSEDED -> R.string.err_session_superseded
+        "session_password_changed" -> R.string.err_session_password_changed
+        "session_phone_changed" -> R.string.err_session_phone_changed
+        "session_admin_logout" -> R.string.err_session_admin_logout
+        "session_blocked" -> R.string.err_session_blocked
         // **جلسةٌ فُتحت بحسابٍ بلا صفةِ هذا التطبيق قبل القفل** — يُقال لصاحبها
         // لماذا (٢٠٢٦-١٠-٠١).
         "not_merchant_account" -> R.string.err_not_merchant_account

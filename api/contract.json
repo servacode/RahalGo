@@ -2843,6 +2843,7 @@
       "path": "/api/v1/admin/merchants/{id}/price-sync",
       "handler": "handleAdminPriceSyncGet",
       "auth": true,
+      "capability": "merchants.read",
       "response": [
         {
           "name": "@out",
@@ -2858,6 +2859,7 @@
       "path": "/api/v1/admin/merchants/{id}/price-sync",
       "handler": "handleAdminPriceSyncPut",
       "auth": true,
+      "capability": "merchants.manage",
       "request": [
         {
           "name": "sql_query",

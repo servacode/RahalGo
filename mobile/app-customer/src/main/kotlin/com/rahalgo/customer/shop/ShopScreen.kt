@@ -1,5 +1,7 @@
 package com.rahalgo.customer.shop
 
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -696,17 +698,22 @@ internal fun SectionRail(
                 // **والارتفاعُ يُحجز للسطرين** (`minLines`) — **وإلّا
                 // قفزت الدوائرُ صفّاً حين يطول اسمٌ ويقصر آخر**، فيبدو
                 // الشريطُ مضطربا.
-                Text(
-                    text = s.name,
+                // **وصار سطراً واحداً يصغر خطُّه حتّى يسع** (طلبُ المالك ٢٠٢٦-١٠-١٩: «اسم
+                // الاقسام… مابدي ع سطرين ع سطر واحد بس») — فلا يُقصّ ولا يعلو الشريط.
+                val catStyle = MaterialTheme.typography.labelMedium.copy(
                     // **والمختارُ يُعرف بلونه وثقله** — لا بإطارٍ يزاحم
                     // الصورة.
                     color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
                     fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                    style = MaterialTheme.typography.labelMedium,
-                    minLines = 2,
-                    maxLines = 2,
-                    overflow = TextOverflow.Visible, // **ولا قصّ** — نقاطُ ما تحت السطر (٢٠٢٦-١٠-١٤)
                     textAlign = TextAlign.Center,
+                )
+                BasicText(
+                    text = s.name,
+                    style = catStyle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = catStyle.fontSize),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -888,13 +895,17 @@ internal fun ItemCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val toStore = onStore?.takeIf { !item.merchantName.isNullOrBlank() && item.merchantId.isNotBlank() }
-                Text(
-                    text = item.merchantName.orEmpty(),
+                // **سطرٌ واحدٌ يصغر خطُّه حتّى يسع** (طلبُ المالك ٢٠٢٦-١٠-١٩) — لا «امبراطور الشاو…».
+                val nameStyle = MaterialTheme.typography.labelSmall.copy(
                     // **والاسمُ الذي يُفتح يُلوَّن** — وإلّا لم يُعرف أنّه باب.
                     color = if (toStore != null) Rahal.colors.brand else Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelSmall,
+                )
+                BasicText(
+                    text = item.merchantName.orEmpty(),
+                    style = nameStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = nameStyle.fontSize),
                     modifier = Modifier
                         .weight(1f)
                         .then(
