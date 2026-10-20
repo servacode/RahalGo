@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/routing"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -154,10 +155,21 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	uid := userIDFrom(r)
 	ref := s.lastFixOf(r.Context(), uid)
 	kept := good[:0]
+	// **ونقاطُ الخريطة بلا هويّة** (`saveMapTrace`) — **الأحدثُ من آخر موضعٍ محفوظٍ وحدَه**:
+	// دفعةٌ أعادها التطبيقُ بعد انقطاع الردّ لا تُكرَّر في الخريطة كما لا تُكرَّر في الأثر.
+	since := ref
+	var traces []trackPoint
 	for _, p := range good {
 		if impossibleJump(ref, p.Lat, p.Lng, p.At) {
 			s.logJump(uid, ref, p.Lat, p.Lng, p.At)
 			continue
+		}
+		moved := 1e9
+		if ref.ok {
+			moved = routing.MetersBetween(routing.Point{Lat: ref.lat, Lng: ref.lng}, routing.Point{Lat: p.Lat, Lng: p.Lng})
+		}
+		if (!since.ok || p.At.After(since.at)) && mapTraceWorthy(p.AccuracyM, p.SpeedMps, p.Mocked != nil && *p.Mocked, moved) {
+			traces = append(traces, p)
 		}
 		kept = append(kept, p)
 		ref = lastFix{lat: p.Lat, lng: p.Lng, at: p.At, ok: true}
@@ -170,6 +182,9 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	if err := s.saveTrackBatch(r.Context(), uid, kept); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	for _, p := range traces {
+		s.saveMapTrace(r.Context(), p.Lat, p.Lng, p.AccuracyM, p.SpeedMps, p.BearingDeg)
 	}
 	// **«الكابتن قريب منك»** (قرارُ المالك ٢٠٢٦-١٠-١٦، `near_notice.go`) — **من أحدث نقطةٍ
 	// وحدَها وإن كانت حديثة**: دفعةٌ أفرغها طابورٌ بعد انقطاعٍ تقول أين كان لا أين هو.

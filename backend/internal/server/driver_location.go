@@ -19,6 +19,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/routing"
 )
 
 // StaleLocationAfter بعدها تُعامَل النقطةُ كأنّها غيرُ موجودة.
@@ -109,7 +110,8 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	}
 	uid := userIDFrom(r)
 	// **وقفزةٌ أسرعُ من مركبةٍ تُهمَل** (`driver_location_jump.go`) — نجاحٌ بلا كتابة.
-	if from := s.lastFixOf(r.Context(), uid); impossibleJump(from, req.Lat, req.Lng, at) {
+	from := s.lastFixOf(r.Context(), uid)
+	if impossibleJump(from, req.Lat, req.Lng, at) {
 		s.logJump(uid, from, req.Lat, req.Lng, at)
 		httpx.JSON(w, http.StatusOK, map[string]any{"saved": false, "ignored": "impossible_jump"})
 		return
@@ -135,6 +137,14 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	// `orders.read` وحدَه (`ws.go`)، **فالحمولةُ لا تصل زبوناً ولا سائقاً آخر.**
 	if tag.RowsAffected() > 0 && now.Sub(at) <= orders.LiveFreshFor {
 		s.publishDriverLocation(uid, req.Lat, req.Lng, req.BearingDeg, at)
+	}
+	// **ونقطةُ الخريطة بلا هويّة** (قرارُ المالك ٢٠٢٦-١٠-٢٠، `saveMapTrace`) — الصالحةُ وحدَها.
+	moved := 1e9
+	if from.ok {
+		moved = routing.MetersBetween(routing.Point{Lat: from.lat, Lng: from.lng}, routing.Point{Lat: req.Lat, Lng: req.Lng})
+	}
+	if tag.RowsAffected() > 0 && mapTraceWorthy(req.AccuracyM, req.SpeedMps, req.Mocked != nil && *req.Mocked, moved) {
+		s.saveMapTrace(r.Context(), req.Lat, req.Lng, req.AccuracyM, req.SpeedMps, req.BearingDeg)
 	}
 
 	// **والأثرُ يُكتب مع الموضع** — **ونقطةٌ واحدةٌ لا تقول اتّجاهاً**: من هو

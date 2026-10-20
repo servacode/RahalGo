@@ -33,6 +33,7 @@ import {
   IconPrint,
   IconSearch,
   IconUser,
+  IconLocation,
   IconStore,
   IconCamera,
   IconPhone,
@@ -1504,6 +1505,36 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         </span>
       ),
+    },
+    // ══════════════════════════════════════════════════════════════
+    // **العنوانُ والمسافة** (طلبُ المالك ٢٠٢٦-١٠-٢٠: «لازم نعرف عنوان الزبون والمسافة بين
+    // المتجر والزبون والسائق والمتجر») — من حقولٍ يردّها الخادمُ أصلاً: `leg_m` طولُ
+    // المشوار، و`driver_to_pickup_m` بُعدُ السائق عن نقطة الاستلام لحظةَ السؤال.
+    // **وسالبٌ لا يُعرف فلا يُكتب** — لا «٠ م» يُقرأ وصولاً.
+    // ══════════════════════════════════════════════════════════════
+    {
+      id: "where",
+      header: m.admin.ordersPage.where,
+      icon: <IconLocation />,
+      cell: (o) => {
+        const P = m.admin.ordersPage;
+        const dist = (v?: number) =>
+          v == null || v < 0
+            ? ""
+            : v < 1000
+              ? P.meters.replace("{n}", fmtNum(Math.round(v / 10) * 10))
+              : P.km.replace("{n}", fmtNum(Math.round(v / 100) / 10));
+        const parts = [
+          dist(o.leg_m) && P.legDist.replace("{d}", dist(o.leg_m)),
+          o.driver_name && !o.picked_up_at && dist(o.driver_to_pickup_m) && P.driverDist.replace("{d}", dist(o.driver_to_pickup_m)),
+        ].filter(Boolean);
+        return (
+          <span className="flex flex-col gap-0.5">
+            <span className="line-clamp-2">{o.address_text || "—"}</span>
+            {parts.length > 0 && <span className="text-xs text-ink-muted">{parts.join(" · ")}</span>}
+          </span>
+        );
+      },
     },
     {
       id: "merchant",
