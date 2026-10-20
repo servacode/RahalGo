@@ -109,6 +109,18 @@ func tutorialLine(appKey, url string) string {
 	return "\n🎬 شرح تطبيق المتجر كامل بالفيديو — شوفه قبل ما تبلّش: " + url
 }
 
+// iphoneLine **سطرُ الآيفون لصاحب المتجر** (طلبُ المالك ٢٠٢٦-١٠-٢٠: «مشان يصل رابط الايفون
+// للجوالات بالرسالة») — رابطا التطبيقين أندرويد وحدَه، **ولوحةُ المتجر والتسوّقُ يعملان من
+// سفاري** (`/store` و`/shop`) ويُضافان للشاشة الرئيسية. **وفارغٌ لغيره**: المندوبُ والسائقُ
+// بلا نسخةِ آيفون بعد.
+func iphoneLine(appKey, site string) string {
+	if appKey != "merchant" || site == "" {
+		return ""
+	}
+	return "\n🍎 إذا جوالك آيفون: افتح لوحة متجرك من سفاري " + site + "/store" +
+		"\nوتسوّق من " + site + "/shop — وفيك تضيفهم للشاشة الرئيسية متل التطبيق."
+}
+
 // merchantTutorial رابطُ الشرح من الإعدادات.
 func (s *Server) merchantTutorial(ctx context.Context) string {
 	if s.settings == nil {
@@ -237,6 +249,7 @@ func (s *Server) sendWelcome(ctx context.Context, actor, userID, ip, plain, app 
 	exempt := identity.PasswordChangeExempt(s.rolesOf(ctx, userID))
 	text := welcomeText(s.settings.GetString(ctx, "accounts.welcome_template"), phone, plain, link,
 		appPurpose(key), s.shopLinkFor(key), s.identity.TempPasswordHours(ctx), reset, exempt) +
+		iphoneLine(key, s.siteBase()) +
 		tutorialLine(key, s.merchantTutorial(ctx))
 	// **ثلاثُ رسائلَ بالترتيب** — الرقمُ وحدَه، ثمّ الكلمةُ وحدَها، ثمّ التفاصيل.
 	sent := s.sendText(ctx, phone, phone) && s.sendText(ctx, phone, plain) &&
@@ -262,6 +275,7 @@ func (s *Server) notifyNewStoreOwner(ctx context.Context, actor, userID, storeNa
 	text := "رحّال غو — صار عندك متجر: " + storeName + "\n" +
 		"ادخل بتطبيق المتجر برقمك وكلمة سرّك نفسها.\n" +
 		"حمّل التطبيق من: " + s.appLink("merchant") +
+		iphoneLine("merchant", s.siteBase()) +
 		tutorialLine("merchant", s.merchantTutorial(ctx))
 	sent := s.sendText(ctx, phone, text)
 	s.auditCtx(ctx, actor, ip, "admin.store_owner_notified", "user", userID,
