@@ -308,6 +308,11 @@ private val CODES: Map<String, Int> = mapOf(
     "session_phone_changed" to R.string.err_session_phone_changed,
     "session_admin_logout" to R.string.err_session_admin_logout,
     "session_blocked" to R.string.err_session_blocked,
+    // **موظّفو المتجر** (٢٠٢٦-١٠-٢٠).
+    "session_staff_removed" to R.string.err_session_staff_removed,
+    "staff_not_allowed" to R.string.err_staff_not_allowed,
+    "staff_limit" to R.string.err_staff_limit,
+    "staff_phone_taken" to R.string.err_staff_phone_taken,
     // ══════════════════════════════════════════════════════════════════
     // **و«ممنوع» لا تعني «لستَ سائقا»**
     // ══════════════════════════════════════════════════════════════════

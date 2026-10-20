@@ -1141,10 +1141,13 @@ func (r *Repo) RevokeClientSessionsKeep(ctx context.Context, userID, client stri
 		   SET revoked_at = now(), revoked_reason = 'superseded'
 		 WHERE user_id = $1 AND client = $2
 		   AND revoked_at IS NULL AND expires_at > now()
+		   -- **وجلساتُ موظّفي المتجر لا يُزيحها دخولُ صاحبه** (٢٠٢٦-١٠-٢٠، staff.go).
+		   AND session_id NOT IN (SELECT session_id FROM merchant_staff_sessions)
 		   AND session_id NOT IN (
 		       SELECT session_id FROM refresh_tokens
 		        WHERE user_id = $1 AND client = $2
 		          AND revoked_at IS NULL AND expires_at > now()
+		          AND session_id NOT IN (SELECT session_id FROM merchant_staff_sessions)
 		        GROUP BY session_id ORDER BY max(created_at) DESC LIMIT $3)
 		RETURNING session_id::text`, userID, client, keep)
 	if err != nil {

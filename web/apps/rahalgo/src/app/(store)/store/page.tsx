@@ -32,6 +32,7 @@ import {
   SettlementCard,
 } from "@/components/store/StoreSettings";
 import HoursEditor from "@/components/store/HoursEditor";
+import { OrderPhonesCard, StoreStaffCard } from "@/components/admin/StoreStaffAdmin";
 import SectionsEditor from "@/components/store/SectionsEditor";
 import AddressEditor from "@/components/store/AddressEditor";
 
@@ -95,6 +96,9 @@ export default function StoreHome() {
 
       <NameCard />
       <LogoCard />
+      {/* **موظّفوه ورقمُ طلباته بحسب الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — لصاحب المتجر. */}
+      <OrderPhonesCard url={`/api/v1/merchant/stores/${id}/order-phones`} canManage={!suspended} />
+      <StoreStaffCard base="/api/v1/merchant/staff" canManage={!suspended} />
       <EmergencyButton />
 
       {loading && !report ? (

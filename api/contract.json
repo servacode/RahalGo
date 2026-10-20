@@ -2840,6 +2840,29 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/order-phones",
+      "handler": "handleAdminGetOrderPhones",
+      "auth": true,
+      "capability": "merchants.read",
+      "response": [
+        {
+          "name": "@p",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/merchants/{id}/order-phones",
+      "handler": "handleAdminPutOrderPhones",
+      "auth": true,
+      "capability": "merchants.manage"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/merchants/{id}/price-sync",
       "handler": "handleAdminPriceSyncGet",
       "auth": true,
@@ -2921,6 +2944,45 @@
       "response": [
         {
           "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/staff",
+      "handler": "handleAdminListStaff",
+      "auth": true,
+      "capability": "merchants.read",
+      "response": [
+        {
+          "name": "staff",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/staff",
+      "handler": "handleAdminAddStaff",
+      "auth": true,
+      "capability": "merchants.manage"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/merchants/{id}/staff/{staffID}",
+      "handler": "handleAdminRemoveStaff",
+      "auth": true,
+      "capability": "merchants.manage",
+      "response": [
+        {
+          "name": "removed",
           "type": "bool"
         }
       ],
@@ -3888,6 +3950,10 @@
         },
         {
           "name": "phone",
+          "type": "unknown"
+        },
+        {
+          "name": "shift",
           "type": "unknown"
         },
         {
@@ -6204,38 +6270,14 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/account/delete/confirm",
-      "handler": "handleDeleteAccountConfirm",
-      "auth": true,
-      "request": [
-        {
-          "name": "code",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "deleted",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/account/delete/request",
-      "handler": "handleDeleteAccountRequest",
-      "auth": true,
-      "response": [
-        {
-          "name": "sent",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "GET",
@@ -6255,17 +6297,8 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/handoff",
-      "handler": "handleHandoff",
-      "auth": true,
-      "response": [
-        {
-          "name": "code",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
@@ -6396,27 +6429,8 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/password",
-      "handler": "handleSetPassword",
-      "auth": true,
-      "request": [
-        {
-          "name": "password",
-          "type": "string"
-        },
-        {
-          "name": "current_password",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "updated",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
@@ -6496,48 +6510,14 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/phone/confirm",
-      "handler": "handlePhoneChangeConfirm",
-      "auth": true,
-      "request": [
-        {
-          "name": "phone",
-          "type": "string"
-        },
-        {
-          "name": "code",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "updated",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/phone/request",
-      "handler": "handlePhoneChangeRequest",
-      "auth": true,
-      "request": [
-        {
-          "name": "phone",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "sent",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
@@ -6839,48 +6819,14 @@
     {
       "method": "POST",
       "path": "/api/v1/auth/whatsapp/confirm",
-      "handler": "handleWhatsAppVerifyConfirm",
-      "auth": true,
-      "request": [
-        {
-          "name": "phone",
-          "type": "string"
-        },
-        {
-          "name": "code",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "verified",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/whatsapp/request",
-      "handler": "handleWhatsAppVerifyRequest",
-      "auth": true,
-      "request": [
-        {
-          "name": "phone",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "sent",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
@@ -7582,32 +7528,14 @@
     {
       "method": "DELETE",
       "path": "/api/v1/me/avatar",
-      "handler": "handleDeleteMyAvatar",
-      "auth": true,
-      "response": [
-        {
-          "name": "removed",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/me/avatar",
-      "handler": "handleMyAvatar",
-      "auth": true,
-      "response": [
-        {
-          "name": "avatar_thumb_url",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "POST",
@@ -7702,23 +7630,8 @@
     {
       "method": "PATCH",
       "path": "/api/v1/me/name",
-      "handler": "handleSetMyName",
-      "auth": true,
-      "request": [
-        {
-          "name": "full_name",
-          "type": "string"
-        }
-      ],
-      "response": [
-        {
-          "name": "full_name",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
+      "handler": "notStaff",
+      "auth": true
     },
     {
       "method": "GET",
@@ -8220,6 +8133,33 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/staff",
+      "handler": "notStaff",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/staff",
+      "handler": "notStaff",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/merchant/staff/{staffID}",
+      "handler": "notStaff",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/stores",
       "handler": "handleMerchantStores",
       "auth": true,
@@ -8503,6 +8443,33 @@
       "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/offers/{offerID}/stop",
       "handler": "handleMerchantStopOffer",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/order-phones",
+      "handler": "handleMerchantGetOrderPhones",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@p",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/order-phones",
+      "handler": "handleMerchantPutOrderPhones",
       "auth": true,
       "roles": [
         "merchant"

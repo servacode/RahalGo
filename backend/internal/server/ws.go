@@ -141,6 +141,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if claims.SID != "" {
 		roles = dbRoles
 	}
+	// **وموظّفُ المتجر بغرف المتجر وحدَها** (٢٠٢٦-١٠-٢٠) — كما في `RequireAuth`.
+	if claims.Staff != "" {
+		roles = []string{"merchant"}
+		dbCaps = nil
+	}
 
 	// ══════════════════════════════════════════════════════════════
 	// **وغرفةُ العمليّات بقدرةٍ لا باسم دور** — `ADG-1`

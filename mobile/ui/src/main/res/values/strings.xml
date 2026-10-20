@@ -60,6 +60,10 @@
     <string name="err_session_phone_changed">تم تسجيل خروجك لأن رقم حسابك تغيّر — ادخل بالرقم الجديد</string>
     <string name="err_session_admin_logout">تم تسجيل خروجك من الإدارة من كل الأجهزة — سجّل دخولك من جديد</string>
     <string name="err_session_blocked">حسابك موقوف — تواصل مع الإدارة</string>
+    <string name="err_session_staff_removed">تم تسجيل خروجك لأن حساب الموظف انشال من المتجر</string>
+    <string name="err_staff_not_allowed">هالشي لصاحب المتجر بس — حساب الموظف ما بيقدر يعدّله</string>
+    <string name="err_staff_limit">وصلت لأكتر عدد موظفين للمتجر</string>
+    <string name="err_staff_phone_taken">هالرقم مستعمل لموظف أو لصاحب متجر</string>
     <string name="err_network">لا اتصال بالإنترنت</string>
     <string name="err_no_merchant">لا متجر في هذا الطلب — الخاص تشتريه بنفسك</string>
     <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون

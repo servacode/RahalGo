@@ -16,6 +16,9 @@ import (
 type Claims struct {
 	Roles []string `json:"roles"`
 	SID   string   `json:"sid,omitempty"`
+	// Staff **موظّفُ متجرٍ داخلٌ باسم صاحبه** (٢٠٢٦-١٠-٢٠) — معرّفُه، وفارغٌ لصاحب الحساب.
+	// **به تُمنع عنه أبوابُ الحساب الشخصيّة** (كلمةُ السرّ والرقمُ والحذف).
+	Staff string `json:"stf,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -32,10 +35,16 @@ func NewTokenIssuer(secret string, accessTTL time.Duration) *TokenIssuer {
 func (t *TokenIssuer) AccessTTL() time.Duration { return t.accessTTL }
 
 func (t *TokenIssuer) IssueAccess(userID string, roles []string, sessionID string) (string, time.Time, error) {
+	return t.IssueAccessStaff(userID, roles, sessionID, "")
+}
+
+// IssueAccessStaff **رمزُ وصولٍ يحمل الموظّفَ إن كان** — انظر `Claims.Staff`.
+func (t *TokenIssuer) IssueAccessStaff(userID string, roles []string, sessionID, staffID string) (string, time.Time, error) {
 	exp := time.Now().Add(t.accessTTL)
 	claims := Claims{
 		Roles: roles,
 		SID:   sessionID,
+		Staff: staffID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
 			ExpiresAt: jwt.NewNumericDate(exp),

@@ -28,6 +28,8 @@ const (
 	// **محسوبةٌ من الحقيقة الموثوقة** (أدوارُه × قدراتُ أدواره)،
 	// **ولا ادّعاءَ في رمزٍ يُصدَّق.**
 	ctxCaps ctxKey = "capabilities"
+	// ctxStaff **موظّفُ متجرٍ داخلٌ باسم صاحبه** (٢٠٢٦-١٠-٢٠) — وفارغٌ لصاحب الحساب.
+	ctxStaff ctxKey = "staff"
 )
 
 var (
@@ -181,7 +183,7 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// حتّى يبدّلها صاحبُها. **وتشغيلُ الزرّ يعيد القيدَ كما كان.**
 		// **والمتجرُ والمندوبُ والسائقُ لا يُجبَرون** (قرارُ المالك ٢٠٢٦-١٠-١٢) —
 		// `identity.PasswordChangeExempt`.
-		if mustChange && !passwordChangePathAllowed(r.URL.Path) &&
+		if mustChange && claims.Staff == "" && !passwordChangePathAllowed(r.URL.Path) &&
 			!identity.PasswordChangeExempt(dbRoles) &&
 			(s.settings.GetBool(r.Context(), "security.force_password_change") ||
 				s.tempPending(r.Context(), claims.Subject)) {
@@ -199,6 +201,18 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// **وصنفُ التوكنات بلا معرّفِ جلسةٍ لا قدراتِ له**: لا جلسةَ
 		// تُسأل عنها، **والافتراضُ منع.**
 		ctx = context.WithValue(ctx, ctxCaps, dbCaps)
+		// ══════════════════════════════════════════════════════════
+		// **وموظّفُ المتجر بصفة المتجر وحدَها** (٢٠٢٦-١٠-٢٠، `identity/staff.go`)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **يدخل باسم صاحب المتجر** — وصاحبُه قد يكون زبوناً أو موظّفاً عندنا. **فلا
+		// يرث إلّا دورَ المتجر**، ولا قدرةَ لوحةٍ واحدة: ما يملكه صاحبُه في الإدارة لا
+		// يصل موظّفَه.
+		if claims.Staff != "" {
+			ctx = context.WithValue(ctx, ctxRoles, []string{"merchant"})
+			ctx = context.WithValue(ctx, ctxCaps, []string{})
+			ctx = context.WithValue(ctx, ctxStaff, claims.Staff)
+		}
 		ctx = context.WithValue(ctx, ctxSID, claims.SID)
 		s.touchPresence(claims.Subject)
 		next.ServeHTTP(w, r.WithContext(ctx))

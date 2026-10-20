@@ -48,6 +48,7 @@ import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantModal, type Merchant as EditableMerchant } from "@/components/admin/MerchantModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import PriceSyncAdmin from "@/components/admin/PriceSyncAdmin";
+import { OrderPhonesAdmin, StoreStaffAdmin } from "@/components/admin/StoreStaffAdmin";
 import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
@@ -295,6 +296,9 @@ export default function MerchantProfilePage() {
         </dl>
         <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
         {/* **مزامنةُ الأمين — فنيّ** (٢٠٢٦-١٠-١٩). */}
+        {/* **موظّفو المتجر ورقمُ الطلبات بحسب الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٠). */}
+        <StoreStaffAdmin merchantId={mr.id} canManage={canCall("POST", "/merchants/{id}/staff")} />
+        <OrderPhonesAdmin merchantId={mr.id} canManage={canCall("PUT", "/merchants/{id}/order-phones")} />
         {canEditMenu && <PriceSyncAdmin merchantId={mr.id} />}
         </>
       )}

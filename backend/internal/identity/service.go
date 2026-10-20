@@ -820,7 +820,25 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 		return nil, ErrTooManyAttempts
 	}
 	user, hash, err := s.repo.UserByPhone(ctx, phone)
+	// **وموظّفُ المتجر يدخل برقمه** (قرارُ المالك ٢٠٢٦-١٠-٢٠، `staff.go`) — في تطبيق
+	// المتجر ولوحته وحدَهما، **وحين لا يفتح الرقمُ حساباً يصلح هنا**: لا حسابَ له، أو
+	// الكلمةُ ليست كلمتَه، أو حسابُه ليس متجراً (زبونٌ صار موظّفاً).
+	staffTry := func() (*AuthResult, bool) {
+		if !staffClient(ClientFrom(ctx)) {
+			return nil, false
+		}
+		res, serr := s.loginStaff(ctx, phone, password, userAgent, ip)
+		if serr != nil {
+			return nil, false
+		}
+		pk, _ := loginKeys(phone, ip)
+		s.rdb.Del(ctx, pk)
+		return res, true
+	}
 	if errors.Is(err, ErrNotFound) || (err == nil && hash == "") {
+		if res, ok := staffTry(); ok {
+			return res, nil
+		}
 		// نعدّ المحاولة حتى لرقم غير مسجّل: وإلا صار الفرق في السلوك كاشفاً
 		// لأي رقم له حساب (تعداد حسابات).
 		s.noteLoginFailWatched(ctx, phone, ip, false)
@@ -834,6 +852,9 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 		return nil, err
 	}
 	if !match {
+		if res, ok := staffTry(); ok {
+			return res, nil
+		}
 		s.noteLoginFailWatched(ctx, phone, ip, true)
 		s.repo.Audit(ctx, nil, "auth.password_failed", "user", user.ID, ip, nil)
 		return nil, ErrInvalidCredentials
@@ -843,6 +864,11 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 	if s.tempExpired(ctx, user.ID) {
 		s.repo.Audit(ctx, nil, "auth.temp_password_expired", "user", user.ID, ip, nil)
 		return nil, ErrTempPasswordExpired
+	}
+	if staffClient(ClientFrom(ctx)) && checkAppRole(ClientFrom(ctx), user.Roles) != nil {
+		if res, ok := staffTry(); ok {
+			return res, nil
+		}
 	}
 	// نجاح: يمسح عدّاد الرقم فلا يُعاقَب صاحبه بمحاولاته السابقة
 	pk, _ := loginKeys(phone, ip)
@@ -985,7 +1011,17 @@ func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip
 	}
 	// **دخولٌ جديدٌ يُبطل ما سبق من نوعه** — والإبطال يشمل قائمة Redis
 	// كي يسري فوراً على توكنات الوصول القائمة.
-	if sessionID == "" {
+	// **والموظّفُ من الدخول أو من الجلسة القائمة** (`staff.go`) — فلا يضيع في التجديد.
+	staffID := staffFrom(ctx)
+	if sessionID != "" {
+		staffID = s.repo.StaffOfSession(ctx, sessionID)
+	}
+	if sessionID == "" && staffID != "" {
+		// **ودخولُ الموظّف يُزيح جلستَه هو وحدَها** — لا صاحبَه ولا زملاءه.
+		if err := s.endStaffSessions(ctx, staffID, client, ReasonSuperseded); err != nil {
+			return nil, err
+		}
+	} else if sessionID == "" {
 		keep := 0
 		if client == ClientWeb && s.adminWebSessions > 1 && slices.Contains(user.Roles, "admin") {
 			keep = s.adminWebSessions - 1
@@ -1000,14 +1036,24 @@ func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip
 	if err != nil {
 		return nil, err
 	}
-	access, exp, err := s.tokens.IssueAccess(user.ID, user.Roles, sid)
+	if staffID != "" && sessionID == "" {
+		if err := s.repo.linkStaffSession(ctx, sid, staffID); err != nil {
+			return nil, err
+		}
+	}
+	access, exp, err := s.tokens.IssueAccessStaff(user.ID, user.Roles, sid, staffID)
 	if err != nil {
 		return nil, err
 	}
-	s.repo.Audit(ctx, &user.ID, action, "user", user.ID, ip, nil)
-	// **والمخرجُ الثاني للحقل** — `Me` هو الأوّل. **ولو قُنّع في أحدهما فقط
-	// لَظهرت البوّابةُ بعد الدخول ثمّ اختفت عند أوّل تحديث** (أو العكس).
-	s.applyForcePolicy(ctx, user)
+	if staffID != "" {
+		// **والموظّفُ يُسجَّل باسمه** — مَن دخل ومتى.
+		s.repo.Audit(ctx, &user.ID, action, "merchant_staff", staffID, ip, nil)
+	} else {
+		s.repo.Audit(ctx, &user.ID, action, "user", user.ID, ip, nil)
+		// **والمخرجُ الثاني للحقل** — `Me` هو الأوّل. **ولو قُنّع في أحدهما فقط
+		// لَظهرت البوّابةُ بعد الدخول ثمّ اختفت عند أوّل تحديث** (أو العكس).
+		s.applyForcePolicy(ctx, user)
+	}
 	return &AuthResult{
 		User: *user,
 		Tokens: TokenPair{
@@ -1104,6 +1150,8 @@ func SessionEndError(reason string) *httpx.AppError {
 		return ErrSessionAdminLogout
 	case ReasonBlocked:
 		return ErrSessionBlocked
+	case ReasonStaffRemoved:
+		return ErrSessionStaffRemoved
 	}
 	return nil
 }

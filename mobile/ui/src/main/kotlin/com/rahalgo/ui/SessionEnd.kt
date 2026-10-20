@@ -110,6 +110,7 @@ object SessionEnd {
         "session_phone_changed" -> R.string.err_session_phone_changed
         "session_admin_logout" -> R.string.err_session_admin_logout
         "session_blocked" -> R.string.err_session_blocked
+        "session_staff_removed" -> R.string.err_session_staff_removed
         // **جلسةٌ فُتحت بحسابٍ بلا صفةِ هذا التطبيق قبل القفل** — يُقال لصاحبها
         // لماذا (٢٠٢٦-١٠-٠١).
         "not_merchant_account" -> R.string.err_not_merchant_account

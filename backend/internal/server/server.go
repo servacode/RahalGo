@@ -512,19 +512,20 @@ func (s *Server) Router() http.Handler {
 				// **وإخفاءُ بندٍ لطفٌ بالعين لا حراسة** — والحدُّ في
 				// جدول السياسة كما كان.
 				r.Get("/capabilities", s.handleMyCapabilities)
-				r.Post("/password", s.handleSetPassword)
+				// **وأبوابُ الحساب الشخصيّة مغلقةٌ على موظّف المتجر** (٢٠٢٦-١٠-٢٠، `notStaff`).
+				r.Post("/password", s.notStaff(s.handleSetPassword))
 				r.Get("/my-logins", s.handleMyLogins)
 				// **رمزُ دعوته ورابطُه** — ومن جلب يُكافأ.
 				r.Get("/referral", s.handleMyReferral)
-				r.Post("/handoff", s.handleHandoff) // إنشاء رمز تسليم SSO
-				r.Post("/phone/request", s.handlePhoneChangeRequest)
-				r.Post("/phone/confirm", s.handlePhoneChangeConfirm)
+				r.Post("/handoff", s.notStaff(s.handleHandoff)) // إنشاء رمز تسليم SSO
+				r.Post("/phone/request", s.notStaff(s.handlePhoneChangeRequest))
+				r.Post("/phone/confirm", s.notStaff(s.handlePhoneChangeConfirm))
 				// توثيق رقم واتساب — قناة التواصل، لا هوية الدخول
-				r.Post("/whatsapp/request", s.handleWhatsAppVerifyRequest)
-				r.Post("/whatsapp/confirm", s.handleWhatsAppVerifyConfirm)
+				r.Post("/whatsapp/request", s.notStaff(s.handleWhatsAppVerifyRequest))
+				r.Post("/whatsapp/confirm", s.notStaff(s.handleWhatsAppVerifyConfirm))
 				// حذف الحساب — بتأكيد رمز على هاتف صاحبه
-				r.Post("/account/delete/request", s.handleDeleteAccountRequest)
-				r.Post("/account/delete/confirm", s.handleDeleteAccountConfirm)
+				r.Post("/account/delete/request", s.notStaff(s.handleDeleteAccountRequest))
+				r.Post("/account/delete/confirm", s.notStaff(s.handleDeleteAccountConfirm))
 			})
 		})
 
@@ -808,9 +809,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/my/favorites/{id}", s.handleToggleFavorite)
 			// بيانات التوب بار الموحّدة لأي مستخدم (اسم، صورة، رصيد) وإدارة صورته
 			r.Get("/me/summary", s.handleMeSummary)
-			r.Patch("/me/name", s.handleSetMyName)
-			r.Post("/me/avatar", s.handleMyAvatar)
-			r.Delete("/me/avatar", s.handleDeleteMyAvatar)
+			r.Patch("/me/name", s.notStaff(s.handleSetMyName))
+			r.Post("/me/avatar", s.notStaff(s.handleMyAvatar))
+			r.Delete("/me/avatar", s.notStaff(s.handleDeleteMyAvatar))
 			r.Get("/my/ratings", s.handleMyRatings)
 			// **شكاواه هو** — والتذاكرُ كلُّها كانت تحت /admin، فلا يرى صاحبُها حالَها
 			r.Get("/my/tickets", s.handleMyTickets)
@@ -1051,6 +1052,13 @@ func (s *Server) Router() http.Handler {
 			r.Put("/stores/{id}/hours", s.handleMerchantSetHours)
 			// **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩).
 			r.Get("/stores/{id}/drinks", s.handleMerchantGetDrinks)
+			// **رقمُ الطلبات بحسب الدوام، وموظّفو المتجر** (قرارُ المالك ٢٠٢٦-١٠-٢٠) —
+			// والموظّفُ لا يدير الموظّفين (`notStaff`).
+			r.Get("/stores/{id}/order-phones", s.handleMerchantGetOrderPhones)
+			r.Put("/stores/{id}/order-phones", s.handleMerchantPutOrderPhones)
+			r.Get("/staff", s.notStaff(s.handleMerchantListStaff))
+			r.Post("/staff", s.notStaff(s.handleMerchantAddStaff))
+			r.Delete("/staff/{staffID}", s.notStaff(s.handleMerchantRemoveStaff))
 			r.Put("/stores/{id}/drinks", s.handleMerchantSetDrinks)
 			// **مزامنةُ الأسعار والكميّات من الأمين** (٢٠٢٦-١٠-١٩) — انظر price_sync_handlers.go.
 			r.Get("/stores/{id}/price-sync", s.handleMerchantPriceSyncInfo)
@@ -1738,6 +1746,12 @@ func (s *Server) Router() http.Handler {
 				// **إعدادُ قراءة الأمين** — لفريق المنصّة (٢٠٢٦-١٠-١٩).
 				r.Get("/merchants/{id}/price-sync", s.handleAdminPriceSyncGet)
 				r.Put("/merchants/{id}/price-sync", s.handleAdminPriceSyncPut)
+				// **موظّفو المتجر ورقمُ الطلبات بحسب الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٠).
+				r.Get("/merchants/{id}/staff", s.handleAdminListStaff)
+				r.Post("/merchants/{id}/staff", s.handleAdminAddStaff)
+				r.Delete("/merchants/{id}/staff/{staffID}", s.handleAdminRemoveStaff)
+				r.Get("/merchants/{id}/order-phones", s.handleAdminGetOrderPhones)
+				r.Put("/merchants/{id}/order-phones", s.handleAdminPutOrderPhones)
 				// **وسعرُ صرف المتجر من ملفّه** (٢٠٢٦-١٠-١٢).
 				r.Patch("/merchants/{id}/exchange-rate", s.handleAdminExchangeRate)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go

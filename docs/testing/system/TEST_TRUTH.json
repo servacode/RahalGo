@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 543,
+    "routes": 553,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 111,
-    "test_files": 626,
-    "test_funcs": 2461
+    "test_files": 628,
+    "test_funcs": 2464
   },
   "flows": [
     {
@@ -8819,6 +8819,12 @@
     {
       "name": "TestSessionReason_RecoverLostRotation",
       "file": "internal/identity/session_reason_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestStaff_LoginAsStoreWithoutKickingOwner",
+      "file": "internal/identity/staff_test.go",
       "package": "identity",
       "orphan": true
     },
@@ -28844,6 +28850,18 @@
     {
       "name": "TestSiteStatsShapeAndAuthz",
       "file": "internal/server/site_stats_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNotStaff",
+      "file": "internal/server/staff_shift_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderPhones_ShiftNumberOnWhatsApp",
+      "file": "internal/server/staff_shift_test.go",
       "package": "server",
       "orphan": true
     },

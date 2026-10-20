@@ -123,7 +123,18 @@ type merchantPhones struct {
 	// (`09…`) — **فترتيبُ SMS مقلوبٌ هنا عمداً**: تلك تريد خطَّ المحلّ لأنه
 	// يصله من في المطبخ، وهذه تريد من يحمل واتساب.
 	WhatsApp string
+	// Shift **أيُّ دوامٍ اختير رقمُه** — «morning» أو «evening»، وفارغٌ لدوامٍ كامل
+	// (قرارُ المالك ٢٠٢٦-١٠-٢٠). **يُقال للموظّف إلى أيِّ رقمٍ يذهب الطلب.**
+	Shift string
 }
+
+// orderShiftSQL **أيُّ دوامٍ الآن لهذا المتجر** — بتوقيت سوريا: المسائيُّ من ساعته حتّى
+// الرابعة فجراً (ما بعد منتصف الليل من المسائيّ)، والصباحيُّ ما سواه. **وفارغٌ لدوامٍ كامل.**
+const orderShiftSQL = `CASE WHEN m.order_phone_mode = 'split' THEN
+	CASE WHEN (now() AT TIME ZONE 'Asia/Damascus')::time >= m.order_phone_evening_from
+	       OR (now() AT TIME ZONE 'Asia/Damascus')::time < time '04:00'
+	     THEN 'evening' ELSE 'morning' END
+	ELSE '' END`
 
 // loadOrderMessage يجمع ما يدخل الرسالة — ولا شيء غيره.
 func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMessage, merchantPhones, error) {
@@ -136,16 +147,20 @@ func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMe
 		       COALESCE(NULLIF(m.phone::text, ''),
 		                NULLIF(ou.phone::text, ''),
 		                NULLIF(ou.phone::text, ''), ''),
-		       COALESCE(NULLIF(ou.phone::text, ''),
+		       -- **ورقمُ الدوام أوّلاً إن قسّم المتجرُ دوامَه** (٢٠٢٦-١٠-٢٠) — وإلّا كما كان.
+		       COALESCE(CASE `+orderShiftSQL+`
+		                  WHEN 'evening' THEN NULLIF(m.order_phone_evening, '')
+		                  WHEN 'morning' THEN NULLIF(m.order_phone_morning, '') END,
 		                NULLIF(ou.phone::text, ''),
-		                NULLIF(m.phone::text, ''), '')
+		                NULLIF(m.phone::text, ''), ''),
+		       `+orderShiftSQL+`
 		FROM orders o
 		-- **والمتجرُ التابعُ متجرُ الرسالة في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والخاصُّ
 		-- بلا متجرٍ تابعٍ لا رسالةَ له: لا صفَّ فيُردّ «غير موجود».
 		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
 		WHERE o.id = $1`, orderID).
-		Scan(&msg.Number, &msg.Notes, &msg.Request, &msg.Custom, &ph.SMS, &ph.WhatsApp); err != nil {
+		Scan(&msg.Number, &msg.Notes, &msg.Request, &msg.Custom, &ph.SMS, &ph.WhatsApp, &ph.Shift); err != nil {
 		return nil, merchantPhones{}, err
 	}
 
@@ -223,6 +238,7 @@ func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Reques
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"text":             text,
 		"phone":            ph.WhatsApp,
+		"shift":            ph.Shift,
 		"wa_link":          waLink(ph.WhatsApp, text),
 		"drivers_on_shift": onShift,
 	})

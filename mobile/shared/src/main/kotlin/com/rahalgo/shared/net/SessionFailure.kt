@@ -42,6 +42,7 @@ object SessionFailure {
         "session_phone_changed",
         "session_admin_logout",
         "session_blocked",
+        "session_staff_removed",
         "invalid_refresh",
         "unauthorized",
         "user_blocked",
@@ -65,6 +66,7 @@ object SessionFailure {
         "session_phone_changed",
         "session_admin_logout",
         "session_blocked",
+        "session_staff_removed",
     )
 
     /**

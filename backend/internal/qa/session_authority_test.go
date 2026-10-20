@@ -347,7 +347,11 @@ func TestR16_IssuedTokensAlwaysCarrySession(t *testing.T) {
 	// **والاسمُ تبدّل في دورةِ ١٩** (`StoreRefreshFor` بحارسِ بصمة) —
 	// **والمعنى واحد**: **الصفُّ الدائمُ يُكتب قبل إصدار الرمز.**
 	store := strings.Index(src, "s.repo.StoreRefreshFor(ctx")
-	issue := strings.Index(src, "s.tokens.IssueAccess(user.ID")
+	// **و`IssueAccessStaff` منذ ٢٠٢٦-١٠-٢٠** (موظّفو المتجر) — الرمزُ نفسُه يحمل الموظّفَ إن كان.
+	issue := strings.Index(src, "s.tokens.IssueAccessStaff(user.ID")
+	if issue < 0 {
+		issue = strings.Index(src, "s.tokens.IssueAccess(user.ID")
+	}
 	if store < 0 || issue < 0 || store > issue {
 		t.Error("**ترتيبُ الإصدار تبدّل** — **يُعاد قياسُ صنفِ التوكنات " +
 			"قبل الاعتماد على «لكلّ توكنٍ صفٌّ».**")
