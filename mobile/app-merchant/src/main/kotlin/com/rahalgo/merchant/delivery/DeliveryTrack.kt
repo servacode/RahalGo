@@ -266,7 +266,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             d.collectAmount?.takeIf { it > 0 }?.let {
                 InfoLine(
                     com.rahalgo.ui.R.drawable.ic_wallet,
-                    stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), it.toString()),
+                    stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), DeliveryTexts.amount(d, it)),
                 )
             }
         }
@@ -275,7 +275,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             DeliveryTexts.amountRow(d.fetchAmountStatus)?.let { row ->
                 Spacer(Modifier.height(10.dp))
                 Note(
-                    stringResource(row, (d.fetchAmount ?: 0L).toString()),
+                    stringResource(row, DeliveryTexts.amount(d, d.fetchAmount ?: 0L)),
                     when (d.fetchAmountStatus) {
                         "approved" -> Rahal.colors.success
                         "rejected" -> Rahal.colors.danger

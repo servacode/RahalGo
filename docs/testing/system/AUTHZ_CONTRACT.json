@@ -77,7 +77,7 @@
   {
    "code": "merchants.manage",
    "description": "إدارة المتاجر: الإنشاء والقوائم والساعات (بدون تعليق)",
-   "guards_routes": 16
+   "guards_routes": 17
   },
   {
    "code": "merchants.read",
@@ -249,7 +249,7 @@
   }
  ],
  "route_policy": {
-  "rules": 294,
+  "rules": 295,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

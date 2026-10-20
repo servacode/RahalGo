@@ -174,6 +174,7 @@ var adminPolicy = []Rule{
 	{"GET", "/leads", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
+	{"DELETE", "/merchants/{id}", MerchantsManage},
 	// **إعدادُ قراءة الأمين** — فنيّ، بقدرة إدارة المتاجر (٢٠٢٦-١٠-١٩).
 	{"PUT", "/merchants/{id}/price-sync", MerchantsManage},
 	// **موظّفو المتجر ورقمُ الطلبات بحسب الدوام** (٢٠٢٦-١٠-٢٠).

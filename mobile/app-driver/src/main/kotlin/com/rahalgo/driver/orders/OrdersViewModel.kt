@@ -2245,9 +2245,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * **«إحضار»: يكتب ما دفعه بمكان الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ثمّ ينتظر موافقةَ المتجر،
-     * **والخطأُ يُقال في البطاقة** كخطأ أيّ خطوة.
+     * **والخطأُ يُقال في البطاقة** كخطأ أيّ خطوة. **والمبلغُ بعملة الطلب وبالوحدة الكبرى**
+     * (قرارُ المالك ٢٠٢٦-١٠-٢٠) — لا يُضرب بمئة: الخادمُ يحوّل.
      */
-    fun fetchAmount(amount: Long) {
+    fun fetchAmount(amount: Double) {
         val id = currentId() ?: return
         if (detail.busy) return
         detail = detail.copy(busy = true, error = "")

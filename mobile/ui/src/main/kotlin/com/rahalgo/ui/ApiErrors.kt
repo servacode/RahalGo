@@ -313,6 +313,7 @@ private val CODES: Map<String, Int> = mapOf(
     "staff_not_allowed" to R.string.err_staff_not_allowed,
     "staff_limit" to R.string.err_staff_limit,
     "staff_phone_taken" to R.string.err_staff_phone_taken,
+    "merchant_has_orders" to R.string.err_merchant_has_orders,
     // ══════════════════════════════════════════════════════════════════
     // **و«ممنوع» لا تعني «لستَ سائقا»**
     // ══════════════════════════════════════════════════════════════════

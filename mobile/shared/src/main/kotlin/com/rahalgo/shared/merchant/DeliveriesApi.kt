@@ -48,8 +48,13 @@ data class NewDelivery(
     @SerialName("fee_payer") val feePayer: String,
     /** **«توصيل» أو «إحضار»** — `send` · `fetch` (قرارُ المالك ٢٠٢٦-١٠-١٥). */
     @SerialName("delivery_mode") val deliveryMode: String = "send",
-    /** **مبلغٌ يقبضه السائقُ من المستلِم لك** — عرضٌ لا يدخل الحساب، وفراغُه لا شيء. */
-    @SerialName("collect_amount") val collectAmount: Long? = null,
+    /**
+     * **مبلغٌ يقبضه السائقُ من المستلِم لك** — عرضٌ لا يدخل الحساب، وفراغُه لا شيء.
+     * **وبعملته كما كُتب** (قرارُ المالك ٢٠٢٦-١٠-٢٠): الليرةُ صحيحة، **والدولارُ بمنزلتين** (١٢٫٥).
+     */
+    @SerialName("collect_amount") val collectAmount: Double? = null,
+    /** `SYP` أو `USD` — **والخادمُ يحوّل الدولارَ إلى سنتات بنفسه.** */
+    @SerialName("amount_currency") val amountCurrency: String = "SYP",
 )
 
 /**
@@ -80,6 +85,8 @@ data class Delivery(
     @SerialName("fetch_amount") val fetchAmount: Long? = null,
     @SerialName("fetch_amount_version") val fetchAmountVersion: Long = 0,
     @SerialName("fetch_amount_status") val fetchAmountStatus: String = "",
+    /** **عملةُ المبلغين** (٢٠٢٦-١٠-٢٠) — `SYP` أو `USD`، **والدولارُ بالسنتات** (١٢٥٠ = ١٢٫٥٠$). */
+    @SerialName("amount_currency") val amountCurrency: String = "SYP",
     /**
      * **كودُ الاستلام في «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لك وحدَك: تعطيه للسائق لما يوصلك
      * الغرض. **وفارغٌ قبل الاستلام وفي «توصيل»** (هناك الكودُ للمستلِم).

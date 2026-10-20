@@ -36,6 +36,29 @@ class FetchAmountTripTest {
         assertEquals(21000L, o.fetchAmount)
         assertEquals(2L, o.fetchAmountVersion)
         assertEquals("pending", o.fetchAmountStatus)
+        // **وبلا عملةٍ ليرة** — خادمٌ أقدم لا يرسلها.
+        assertEquals("SYP", o.amountCurrency)
+    }
+
+    /**
+     * **دولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — المبلغان من الخادم **بالسنتات** ويُعرضان دولاراً،
+     * **والمرفوضُ يُعاد إلى الحقل بالوحدة الكبرى** (١٣٫٢٥ لا ١٣٢٥).
+     */
+    @Test
+    fun `a dollar order shows cents as dollars and drafts major units`() {
+        val o = json.decodeFromString(
+            DriverOrder.serializer(),
+            """{"id":"x","status":"at_pickup","kind":"merchant_delivery","delivery_mode":"fetch",
+               "collect_amount":1250,"fetch_amount":1325,"fetch_amount_status":"rejected","amount_currency":"USD"}""",
+        )
+        assertEquals("USD", o.amountCurrency)
+        assertEquals("12.50$", orderAmount(o, o.collectAmount!!))
+        assertEquals("13.25$", orderAmount(o, o.fetchAmount!!))
+        assertEquals("13.25", fetchAmountDraft(1325, "USD"))
+        assertEquals("13", fetchAmountDraft(1300, "USD"))
+        assertEquals("0.05", fetchAmountDraft(5, "USD"))
+        assertEquals("21000", fetchAmountDraft(21000, "SYP"))
+        assertEquals("21,000 ل.س", orderAmount(fetch(), 21000))
     }
 
     @Test

@@ -2,6 +2,8 @@ package com.rahalgo.merchant.delivery
 
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.Delivery
+import com.rahalgo.ui.amountText
+import com.rahalgo.ui.isUsd
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -24,6 +26,13 @@ internal object DeliveryTexts {
     /** **عنوانُ الحقل** — «يلي بيقبضه» أو «يلي بيدفعه». */
     fun collectAmountLabel(fetch: Boolean): Int =
         if (fetch) R.string.md_collect_amount_fetch else R.string.md_collect_amount
+
+    /** **وحدةُ الحقل بعنوانه** — «ل.س» أو «$ دولار» (قرارُ المالك ٢٠٢٦-١٠-٢٠). */
+    fun currencyUnit(currency: String?): Int =
+        if (isUsd(currency)) R.string.md_unit_usd else R.string.md_unit_syp
+
+    /** **مبلغُ التوصيلة بعملتها** — والدولارُ بالسنتات (`amountText`). */
+    fun amount(d: Delivery, units: Long): String = amountText(units, d.amountCurrency)
 
     /** **اسمُه في «ما ينقص».** */
     fun collectMissing(fetch: Boolean): Int =

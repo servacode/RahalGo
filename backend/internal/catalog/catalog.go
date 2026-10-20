@@ -68,16 +68,19 @@ type Merchant struct {
 	//
 	// **متجران باسمٍ واحدٍ لا يُفرَّقان إلّا به.** وهذه البنيةُ لا تخرج إلّا
 	// من أبواب الإدارة — **فلا يصل الرقمُ إلى تطبيقٍ ولا إلى زبون.**
-	Number        int64    `json:"number"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	CategoryID    string   `json:"category_id"`
-	CategoryName  string   `json:"category_name"`
-	CategoryIcon  string   `json:"category_icon"`
-	Phone         string   `json:"phone"`
-	AddressText   string   `json:"address_text"`
-	OwnerUserID   *string  `json:"owner_user_id"`
-	OwnerPhone    *string  `json:"owner_phone"`
+	Number       int64   `json:"number"`
+	Name         string  `json:"name"`
+	Description  string  `json:"description"`
+	CategoryID   string  `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	CategoryIcon string  `json:"category_icon"`
+	Phone        string  `json:"phone"`
+	AddressText  string  `json:"address_text"`
+	OwnerUserID  *string `json:"owner_user_id"`
+	OwnerPhone   *string `json:"owner_phone"`
+	// OwnerName **اسمُ صاحب المتجر** — يُعرض في نموذج التعديل فلا يُفتح فارغاً
+	// (بلاغُ المالك ٢٠٢٦-١٠-٢٠: «اسم صاحب المتجر ما عم ينحفظ ويطلع وقت التعديل»).
+	OwnerName     *string  `json:"owner_name"`
 	SalesRepPhone *string  `json:"sales_rep_phone"`
 	SalesRepCode  *string  `json:"sales_rep_code"`
 	Lat           *float64 `json:"lat"`
@@ -278,7 +281,7 @@ func (s *Service) DeleteCategory(ctx context.Context, actorID, id, ip string) er
 func merchantSelect(daysExpr string) string {
 	return `
 	SELECT m.id, m.number, m.name, m.description, m.category_id, c.name, c.icon,
-	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
+	       m.phone, m.address_text, m.owner_user_id, u.phone, NULLIF(u.full_name, ''), sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
 	       lm.path, lm.thumb_path,
 	       m.status,
@@ -342,7 +345,7 @@ func (s *Service) banDays(ctx context.Context) int64 {
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Number, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
-		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
+		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.OwnerName, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
 		&m.Status, &m.Violations, &m.CommissionExact, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
 		&m.SettlementMethod, &m.Featured, &m.FeaturedOrder)
@@ -543,6 +546,13 @@ func (s *Service) CreateMerchantTx(ctx context.Context, q dbtx.Querier,
 		*in.OwnerPhone, "merchant", name, pass)
 	if err != nil {
 		return "", err
+	}
+	// **والاسمُ يُحفظ ولو كان صاحبُ المتجر حساباً قائماً** (٢٠٢٦-١٠-٢٠).
+	if name != "" {
+		if _, err := q.Exec(ctx, `UPDATE users SET full_name = $2, updated_at = now()
+			WHERE id = $1 AND full_name IS DISTINCT FROM $2`, ownerID, name); err != nil {
+			return "", err
+		}
 	}
 	var repID *string
 	if in.SalesRepCode != nil && *in.SalesRepCode != "" {
@@ -1002,6 +1012,12 @@ func (s *Service) resolveOwner(ctx context.Context, actorID string, ownerPhone, 
 	user, err := s.identity.EnsureUserWithRole(ctx, actorID, *ownerPhone, "merchant", name, pass, ip)
 	if err != nil {
 		return nil, err
+	}
+	// **والاسمُ يُحفظ ولو كان الحسابُ قائماً** (بلاغُ المالك ٢٠٢٦-١٠-٢٠) — كان يُكتب
+	// للحساب الجديد وحدَه، **فيكتبه الموظّفُ في التعديل ولا يتغيّر شيء.**
+	if name != "" {
+		_, _ = s.db.Exec(ctx, `UPDATE users SET full_name = $2, updated_at = now()
+			WHERE id = $1 AND full_name IS DISTINCT FROM $2`, user.ID, name)
 	}
 	return &user.ID, nil
 }

@@ -241,6 +241,7 @@ var OrderPrivacy = map[string]FieldRule{
 	"fetch_amount":         {Ref: "ما دفعه السائقُ بمكان الاستلام في الإحضار — خارجَ الدفتر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"fetch_amount_version": {Ref: "نسخةُ مبلغ الإحضار — تحرس موافقةَ المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"fetch_amount_status":  {Ref: "أوافق المتجرُ على مبلغ الإحضار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"amount_currency":      {Ref: "عملةُ مبلغ التوصيلة والإحضار (٢٠٢٦-١٠-٢٠)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_request":       {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_agreed_at":     {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_goods_amount":  {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

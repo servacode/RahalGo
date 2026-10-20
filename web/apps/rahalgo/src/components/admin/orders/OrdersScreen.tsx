@@ -1,5 +1,6 @@
 "use client";
 
+import { amountText } from "@/lib/store/deliveries";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -142,6 +143,8 @@ interface OrderRow {
   fetch_amount?: number | null;
   fetch_amount_version?: number;
   fetch_amount_status?: string;
+  /** **عملةُ المبلغين** — «USD» بالسنتات (٢٠٢٦-١٠-٢٠). */
+  amount_currency?: string;
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
   custom_fee?: number | null;
@@ -3628,7 +3631,11 @@ function InvoiceList({
               {fetch ? OP.mdFetchEstimate : OP.mdCollect}
               <span className="block text-xs">{fetch ? OP.mdFetchEstimateHint : OP.mdCollectHint}</span>
             </span>
-            <Money value={o.collect_amount} small />
+            {o.amount_currency === "USD" ? (
+              <span className="text-sm font-bold" dir="ltr">{amountText(o.collect_amount, "USD")}</span>
+            ) : (
+              <Money value={o.collect_amount} small />
+            )}
           </li>
         ) : null}
         {fetch && o.fetch_amount != null ? (
@@ -3651,7 +3658,11 @@ function InvoiceList({
                     : OP.mdFetchPending}
               </span>
             </span>
-            <Money value={o.fetch_amount} small />
+            {o.amount_currency === "USD" ? (
+              <span className="text-sm font-bold" dir="ltr">{amountText(o.fetch_amount, "USD")}</span>
+            ) : (
+              <Money value={o.fetch_amount} small />
+            )}
           </li>
         ) : null}
       </ul>

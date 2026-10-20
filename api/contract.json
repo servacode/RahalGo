@@ -2646,6 +2646,26 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/admin/merchants/{id}",
+      "handler": "handleDeleteMerchant",
+      "auth": true,
+      "capability": "merchants.manage",
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        },
+        {
+          "name": "owner_freed",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/merchants/{id}",
       "handler": "handleAdminGetMerchant",
@@ -7230,7 +7250,7 @@
       "request": [
         {
           "name": "amount",
-          "type": "?int64"
+          "type": "?float64"
         }
       ],
       "response": [
@@ -8250,7 +8270,11 @@
         },
         {
           "name": "collect_amount",
-          "type": "?int64"
+          "type": "?float64"
+        },
+        {
+          "name": "amount_currency",
+          "type": "string"
         }
       ]
     },

@@ -28,7 +28,8 @@ func (s *Server) handleDriverFetchAmount(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	req, err := decode[struct {
-		Amount *int64 `json:"amount"`
+		// **ورقمٌ عشريٌّ للدولار** (٢٠٢٦-١٠-٢٠) — والعملةُ عملةُ الطلب لا ما يقوله السائق.
+		Amount *float64 `json:"amount"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -38,7 +39,14 @@ func (s *Server) handleDriverFetchAmount(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errValidation)
 		return
 	}
-	o, err := s.orders.ProposeFetchAmount(r.Context(), orderID, userIDFrom(r), *req.Amount)
+	var currency string
+	_ = s.pg.QueryRow(r.Context(), `SELECT amount_currency FROM orders WHERE id::text = $1`, orderID).Scan(&currency)
+	units, ok := orders.AmountUnits(*req.Amount, currency)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
+	o, err := s.orders.ProposeFetchAmount(r.Context(), orderID, userIDFrom(r), units)
 	if err != nil {
 		s.respondErr(w, err)
 		return

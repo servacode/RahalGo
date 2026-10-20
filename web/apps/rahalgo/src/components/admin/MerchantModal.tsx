@@ -101,6 +101,8 @@ export interface Merchant {
   phone: string;
   address_text: string;
   owner_phone: string | null;
+  /** **اسمُ صاحب المتجر** — يُعرض في التعديل (٢٠٢٦-١٠-٢٠). */
+  owner_name?: string | null;
   sales_rep_phone: string | null;
   sales_rep_code: string | null;
   lat: number | null;
@@ -178,7 +180,7 @@ export function MerchantModal({
   const [ownerPhone, setOwnerPhone] = useState(merchant?.owner_phone ?? "");
   // **واسمُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): كان الحسابُ يُنشأ باسمٍ
   // فارغ، **فيصير في الحسابات صفٌّ برقمٍ بلا اسم.**
-  const [ownerName, setOwnerName] = useState("");
+  const [ownerName, setOwnerName] = useState(merchant?.owner_name ?? "");
   // **ولا كلمةَ يكتبها الموظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — النظامُ يولّدها
   // ويرسلها إلى صاحب المتجر مع رابط تطبيق المتجر، **ومن له حسابٌ قائمٌ تصله
   // «صار عندك متجر» بلا كلمةٍ جديدة.**

@@ -297,6 +297,8 @@
     <string name="agree_fee_fixed">أجرة التوصيل محددة من المنصة.</string>
     <string name="agree_confirm">وثّق</string>
     <string name="currency_short">ل.س</string>
+    <!-- **مبلغُ «إحضار» بالدولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — إذا المتجر اختار دولار. -->
+    <string name="currency_usd_short">$</string>
     <string name="agree_fee_title">أجرة التوصيل</string>
     <string name="agree_fee_hint">وثّق أجرة التوصيل أوّلاً، ويوافق عليها الزبون قبل أن تنطلق.</string>
     <string name="agree_goods_title">ثمن البضاعة</string>

@@ -56,8 +56,11 @@ import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.SectionTitle
+import com.rahalgo.ui.amountInput
+import com.rahalgo.ui.amountValue
 import com.rahalgo.ui.apiError
 import com.rahalgo.ui.isDecided
+import com.rahalgo.ui.isUsd
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -114,6 +117,26 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     var collectOn by mutableStateOf(false)
         private set
     var collectAmount by mutableStateOf("")
+
+    /**
+     * **ليرة أو دولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — `SYP` افتراضاً. **والدولارُ بمنزلتين**
+     * (١٢٫٥)، **والخادمُ يحفظه بالسنتات.**
+     */
+    var collectCurrency by mutableStateOf("SYP")
+        private set
+
+    fun pickCollectCurrency(c: String) {
+        if (c == collectCurrency) return
+        collectCurrency = c
+        // **والمبلغُ يُمسح مع العملة** — «٢٥٠٠٠» ليرة لا تصير ٢٥٠٠٠$ بلمسة.
+        collectAmount = ""
+        touched()
+    }
+
+    fun onCollectAmount(v: String) {
+        collectAmount = amountInput(v, collectCurrency)
+        touched()
+    }
 
     var point by mutableStateOf<Pair<Double, Double>?>(null)
         private set
@@ -222,13 +245,16 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleCollect(on: Boolean) {
         collectOn = on
-        if (!on) collectAmount = ""
+        if (!on) {
+            collectAmount = ""
+            collectCurrency = "SYP"
+        }
         touched()
     }
 
-    /** **المبلغُ رقمٌ موجبٌ أو لا شيء** — والخادمُ يردّ الصفر. */
-    val collectValue: Long?
-        get() = if (collectOn) collectAmount.filter { it.isDigit() }.toLongOrNull()?.takeIf { it > 0 } else null
+    /** **المبلغُ رقمٌ موجبٌ أو لا شيء** — والخادمُ يردّ الصفر. **وبالوحدة الكبرى** (١٢٫٥ لا ١٢٥٠). */
+    val collectValue: Double?
+        get() = if (collectOn) amountValue(amountInput(collectAmount, collectCurrency)) else null
 
     fun setPoint(lat: Double, lng: Double, label: String) {
         pointFromLink = false
@@ -318,6 +344,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                         feePayer = payer,
                         deliveryMode = mode,
                         collectAmount = collectValue,
+                        amountCurrency = collectCurrency,
                     ),
                     idempotencyKey = key,
                 )
@@ -332,6 +359,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 mode = ""
                 collectOn = false
                 collectAmount = ""
+                collectCurrency = "SYP"
                 link = ""
                 linkState = LinkState.Idle
                 point = null
@@ -579,14 +607,28 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             }
         }
         if (vm.collectOn) {
+            // **ليرة أو دولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — زرُّ عملة الأصناف نفسُه.
+            com.rahalgo.ui.menu.CurrencySwitch(selected = vm.collectCurrency, enabled = !vm.busy) { vm.pickCollectCurrency(it) }
+            Spacer(Modifier.height(6.dp))
+            val usd = isUsd(vm.collectCurrency)
             OutlinedTextField(
                 value = vm.collectAmount,
-                onValueChange = { v -> vm.collectAmount = v.filter { it.isDigit() }.take(12); vm.touched() },
-                label = { Text(stringResource(DeliveryTexts.collectAmountLabel(fetch))) },
+                onValueChange = { v -> vm.onCollectAmount(v) },
+                label = {
+                    Text(
+                        stringResource(
+                            DeliveryTexts.collectAmountLabel(fetch),
+                            stringResource(DeliveryTexts.currencyUnit(vm.collectCurrency)),
+                        ),
+                    )
+                },
                 leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_wallet) },
                 singleLine = true,
                 enabled = !vm.busy,
-                keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = if (usd) androidx.compose.ui.text.input.KeyboardType.Decimal
+                    else androidx.compose.ui.text.input.KeyboardType.Number,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -807,7 +849,7 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
         d.collectAmount?.takeIf { it > 0 }?.let {
             InfoLine(
                 com.rahalgo.ui.R.drawable.ic_wallet,
-                stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), it.toString()),
+                stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), DeliveryTexts.amount(d, it)),
             )
         }
         Spacer(Modifier.height(6.dp))

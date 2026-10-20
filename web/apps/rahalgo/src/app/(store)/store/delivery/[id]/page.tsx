@@ -20,7 +20,7 @@ import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtClockTime, fmtNum } from "@rahalgo/i18n";
 import { Alert, LoadingState, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { CANCELLABLE, useStoreDeliveries } from "@/lib/store/deliveries";
+import { CANCELLABLE, amountText, useStoreDeliveries } from "@/lib/store/deliveries";
 import type { Delivery } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { CancelDeliveryButton, DeliveryLines, SearchingBanner, StatusPill } from "@/components/store/DeliveryParts";
@@ -172,7 +172,7 @@ export default function DeliveryTrack() {
                   : d.fetch_amount_status === "rejected"
                     ? D.amountRowRejected
                     : D.amountRowPending,
-                { amount: fmtNum(d.fetch_amount) },
+                { amount: amountText(d.fetch_amount, d.amount_currency) },
               )}
             </Alert>
           )}

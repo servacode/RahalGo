@@ -22,7 +22,7 @@ import { useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
 import { Alert, Modal } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { awaitsAmount, useStoreDeliveries } from "@/lib/store/deliveries";
+import { amountText, awaitsAmount, useStoreDeliveries } from "@/lib/store/deliveries";
 import { fill } from "@/lib/customer/texts";
 
 const m = getMessages(defaultLocale);
@@ -63,10 +63,10 @@ export default function FetchAmountWatcher() {
       <div className="flex flex-col items-center gap-2 text-center">
         <p className="text-sm text-ink-muted">{D.amountPaid}</p>
         <p className="figure text-accent-text">
-          {fill(D.amountValue, { amount: fmtNum(d.fetch_amount ?? 0) })}
+          {fill(D.amountValue, { amount: amountText(d.fetch_amount ?? 0, d.amount_currency) })}
         </p>
         {d.collect_amount != null && d.collect_amount > 0 && (
-          <p className="text-sm text-ink-muted">{fill(D.amountEstimate, { amount: fmtNum(d.collect_amount) })}</p>
+          <p className="text-sm text-ink-muted">{fill(D.amountEstimate, { amount: amountText(d.collect_amount, d.amount_currency) })}</p>
         )}
         <p className="text-sm">{D.amountBody}</p>
         {error && <Alert className="w-full">{error}</Alert>}

@@ -1743,6 +1743,8 @@ func (s *Server) Router() http.Handler {
 				r.Delete("/categories/{id}", s.handleDeleteCategory)
 				r.Post("/merchants", s.handleCreateMerchant)
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
+				// **حذفٌ نهائيٌّ لمتجرٍ بلا طلب** (قرارُ المالك ٢٠٢٦-١٠-٢٠).
+				r.Delete("/merchants/{id}", s.handleDeleteMerchant)
 				// **إعدادُ قراءة الأمين** — لفريق المنصّة (٢٠٢٦-١٠-١٩).
 				r.Get("/merchants/{id}/price-sync", s.handleAdminPriceSyncGet)
 				r.Put("/merchants/{id}/price-sync", s.handleAdminPriceSyncPut)

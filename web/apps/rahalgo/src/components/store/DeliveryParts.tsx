@@ -10,7 +10,7 @@ import { useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Button, Confirm, IconClose, IconHourglass, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
 import type { Delivery } from "@/lib/store/types";
-import { CANCELLABLE } from "@/lib/store/deliveries";
+import { CANCELLABLE, amountText } from "@/lib/store/deliveries";
 import { fill } from "@/lib/customer/texts";
 
 const m = getMessages(defaultLocale);
@@ -110,7 +110,7 @@ export function DeliveryLines({ d }: { d: Delivery }) {
       {d.parcel_note.trim() && <Line icon={IconNote}>{d.parcel_note}</Line>}
       <Line icon={IconWallet}>{feeRow(d)}</Line>
       {d.collect_amount != null && d.collect_amount > 0 && (
-        <Line icon={IconWallet}>{fill(fetch ? D.rowCollectFetch : D.rowCollect, { amount: fmtNum(d.collect_amount) })}</Line>
+        <Line icon={IconWallet}>{fill(fetch ? D.rowCollectFetch : D.rowCollect, { amount: amountText(d.collect_amount, d.amount_currency) })}</Line>
       )}
     </div>
   );

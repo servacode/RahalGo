@@ -213,6 +213,8 @@ export interface Delivery {
   fetch_amount?: number | null;
   fetch_amount_version?: number;
   fetch_amount_status?: string;
+  /** **عملةُ المبلغين** — «SYP» أو «USD»، والدولارُ بالسنتات (٢٠٢٦-١٠-٢٠). */
+  amount_currency?: string;
   delivery_code?: string | null;
   dropoff_known: boolean;
   picked_up_at: string | null;

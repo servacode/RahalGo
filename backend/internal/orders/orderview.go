@@ -193,6 +193,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"fetch_amount":             true,
 		"fetch_amount_version":     true,
 		"fetch_amount_status":      true,
+		"amount_currency":          true,
 		"quote_confirmed_at":       true,
 		"quote_confirmed_total":    true,
 		"quote_confirmed_version":  true,
@@ -289,6 +290,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"fetch_amount":                 true,
 		"fetch_amount_version":         true,
 		"fetch_amount_status":          true,
+		"amount_currency":              true,
 		"custom_reserved_amount":       true,
 		"custom_fee_source":            true,
 		"custom_goods_pending":         true,
@@ -413,7 +415,7 @@ func init() {
 		"parcel_note", "fee_payer", "dropoff_known", "delivery_fee", "cash_due",
 		"delivery_mode", "collect_amount",
 		// **والمبلغُ الذي يوافق عليه** في «إحضار» (قرارُ المالك ٢٠٢٦-١٠-١٦).
-		"fetch_amount", "fetch_amount_version", "fetch_amount_status"} {
+		"fetch_amount", "fetch_amount_version", "fetch_amount_status", "amount_currency"} {
 		md[k] = true
 	}
 	audienceAllow[AudienceMerchantDelivery] = md

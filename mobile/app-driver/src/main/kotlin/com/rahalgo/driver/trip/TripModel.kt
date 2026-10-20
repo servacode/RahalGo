@@ -65,6 +65,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.money
+import com.rahalgo.ui.amountText
+import com.rahalgo.ui.isUsd
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
 import com.rahalgo.ui.RahalButton
@@ -297,7 +299,8 @@ data class TripActions(
     val askAgree: () -> Unit,
     val agree: (Long, Long) -> Unit,
     /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
-    val fetchAmount: (Long) -> Unit = {},
+    // **بعملة الطلب وبالوحدة الكبرى** (١٣٫٢٥ للدولار) — قرارُ المالك ٢٠٢٦-١٠-٢٠.
+    val fetchAmount: (Double) -> Unit = {},
     val dismissAgree: () -> Unit,
     val pickStop: (String) -> Unit,
     val takeOffer: (String) -> Unit,
@@ -562,6 +565,21 @@ fun collectForStore(order: DriverOrder): Long? {
     // **وفي «إحضار» بعد موافقة المتجر: المبلغُ الحقيقيُّ لا التقدير** (قرارُ المالك ٢٠٢٦-١٠-١٦).
     if (isFetch(order) && order.fetchAmountStatus == "approved") return order.fetchAmount?.takeIf { it > 0 }
     return order.collectAmount?.takeIf { it > 0 }
+}
+
+/**
+ * **مبلغُ «لدي توصيلة» و«إحضار» بعملة الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — ليرة أو دولار.
+ * **والدولارُ من الخادم بالسنتات** (١٢٥٠ = ١٢٫٥٠$)، فلا يُعرض بـ`money`.
+ */
+fun orderAmount(order: DriverOrder, units: Long): String = amountText(units, order.amountCurrency)
+
+/**
+ * **المبلغُ المرفوضُ كما يُكتب من جديد** — بالوحدة الكبرى: «13.25» للدولار لا «1325».
+ */
+fun fetchAmountDraft(units: Long, currency: String?): String {
+    if (!isUsd(currency)) return units.toString()
+    val cents = units % 100
+    return if (cents == 0L) (units / 100).toString() else (units / 100).toString() + "." + cents.toString().padStart(2, '0')
 }
 
 /**

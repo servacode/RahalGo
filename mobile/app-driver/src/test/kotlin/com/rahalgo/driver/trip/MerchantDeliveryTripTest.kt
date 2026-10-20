@@ -90,6 +90,19 @@ class MerchantDeliveryTripTest {
         assertNull(collectForStore(delivery("assigned", true)))
     }
 
+    /** **«لدي توصيلة» بالدولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — «ادفع للمتجر 25$» لا «2,500 ل.س». */
+    @Test
+    fun `a dollar collect amount is shown in dollars`() {
+        val o = json.decodeFromString(
+            DriverOrder.serializer(),
+            """{"id":"x","status":"assigned","kind":"merchant_delivery","fee_payer":"merchant",
+               "delivery_mode":"send","collect_amount":2500,"amount_currency":"USD"}""",
+        )
+        assertEquals(2500L, collectForStore(o))
+        assertEquals("25$", orderAmount(o, collectForStore(o)!!))
+        assertEquals("25,000 ل.س", orderAmount(o.copy(amountCurrency = "SYP"), 25000))
+    }
+
     /**
      * **«إحضار»: يدفع بمكان الاستلام ويقبضه من المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — و«توصيل»
      * كما كان: يدفع للمتجر ويقبض من المستلم.

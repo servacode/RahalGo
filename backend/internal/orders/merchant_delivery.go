@@ -62,6 +62,9 @@ type MerchantDeliveryInput struct {
 	// CollectAmount **«بدك السائق يقبض مبلغ من المستلم؟»** — عرضٌ وحدَه، **لا يدخل الدفترَ
 	// ولا الصندوق**: السائقُ يدفعه للمتجر من جيبه ويأخذه من المستلِم خارجَ النظام. وnil: لا شيء.
 	CollectAmount *int64
+	// Currency **عملةُ المبلغ** — «SYP» أو «USD» (قرارُ المالك ٢٠٢٦-١٠-٢٠)، والدولارُ بالسنتات
+	// في `CollectAmount`. **وفارغٌ ليرة.**
+	Currency string
 }
 
 // وضعا التوصيلة (قرارُ المالك ٢٠٢٦-١٠-١٥).
@@ -141,6 +144,12 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	}
 	// **والمبلغُ موجبٌ أو لا شيء** — صفرٌ يُقرأ «اقبض صفراً» فيسأل السائقُ عنه.
 	if in.CollectAmount != nil && *in.CollectAmount <= 0 {
+		return "", httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	if in.Currency == "" {
+		in.Currency = "SYP"
+	}
+	if in.Currency != "SYP" && in.Currency != "USD" {
 		return "", httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 	if len([]rune(in.ParcelNote)) > MaxParcelNote {
@@ -243,20 +252,20 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders,
 		                    snap_platform_delivery_percent, dropoff_known, snap_platform_delivery_fixed,
-		                    delivery_mode, collect_amount)
+		                    delivery_mode, collect_amount, amount_currency)
 		VALUES ('merchant_delivery', $1, $2,
 		        ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
 		        $5, $6, $7, $8,
 		        'pending', 'cash', 0, $9, $10,
 		        $9, $11, $12,
-		        $13, $14, $15, $16, $17, $18, $19, $20, $21)
+		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 		RETURNING id::text`,
 		merchantID, in.AddressText, in.Lat, in.Lng,
 		in.RecipientName, in.RecipientPhone, nullIfEmpty(in.ParcelNote), in.FeePayer,
 		fee, driverFee, cashDue, strings.TrimSpace(in.DriverNote), // **و`notes` NOT NULL** — فراغٌ لا NULL
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, pct, dropoffKnown, fixed,
-		mode, in.CollectAmount).Scan(&id)
+		mode, in.CollectAmount, in.Currency).Scan(&id)
 	if err != nil {
 		return "", err
 	}

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 553,
+    "routes": 554,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 250,
     "behaviour_settings": 205,
-    "order_fields": 111,
-    "test_files": 628,
-    "test_funcs": 2464
+    "order_fields": 112,
+    "test_files": 632,
+    "test_funcs": 2469
   },
   "flows": [
     {
@@ -9359,6 +9359,18 @@
       "orphan": true
     },
     {
+      "name": "TestAmountText",
+      "file": "internal/orders/amount_currency_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAmountUnits",
+      "file": "internal/orders/amount_currency_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestStuckAlert_RoutesByCapabilityAndRealertsOnNewReason",
       "file": "internal/orders/board_notify_internal_test.go",
       "package": "orders",
@@ -18532,6 +18544,12 @@
       "orphan": true
     },
     {
+      "name": "TestFETCHAMT_USD",
+      "file": "internal/qa/merchant_delivery_usd_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestGEO1_EveryMerchantWritePathDerivesCity",
       "file": "internal/qa/merchant_geo_test.go",
       "package": "qa",
@@ -27684,6 +27702,12 @@
       "orphan": true
     },
     {
+      "name": "TestDeleteMerchant",
+      "file": "internal/server/merchant_delete_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestMerchantSettings_Logo",
       "file": "internal/server/merchant_logo_test.go",
       "package": "server",
@@ -27752,6 +27776,12 @@
     {
       "name": "TestMerchant_WriteGuardMatrix",
       "file": "internal/server/merchant_ops_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestUpdateMerchant_OwnerNameSavedAndShown",
+      "file": "internal/server/merchant_owner_name_test.go",
       "package": "server",
       "orphan": true
     },

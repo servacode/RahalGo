@@ -56,14 +56,15 @@ fun FetchAmountApproveDialog(
                 Text(stringResource(R.string.md_amount_paid), color = Rahal.colors.inkMuted)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    stringResource(R.string.md_amount_value, (d.fetchAmount ?: 0L).toString()),
+                    // **بعملة التوصيلة** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
+                    DeliveryTexts.amount(d, d.fetchAmount ?: 0L),
                     color = Rahal.colors.accent,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 d.collectAmount?.takeIf { it > 0 }?.let {
                     Spacer(Modifier.height(4.dp))
-                    Text(stringResource(R.string.md_amount_estimate, it.toString()), color = Rahal.colors.inkMuted)
+                    Text(stringResource(R.string.md_amount_estimate, DeliveryTexts.amount(d, it)), color = Rahal.colors.inkMuted)
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(

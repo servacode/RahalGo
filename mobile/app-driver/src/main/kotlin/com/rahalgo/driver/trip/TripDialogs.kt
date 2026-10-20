@@ -67,6 +67,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.money
+import com.rahalgo.ui.amountInput
+import com.rahalgo.ui.amountText
+import com.rahalgo.ui.amountValue
+import com.rahalgo.ui.isUsd
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
 import com.rahalgo.ui.RahalButton
@@ -216,16 +220,21 @@ internal fun AgreeDialog(
  *
  * **المبلغُ وحدَه بلا صورة** — يصل المتجرَ ليوافق عليه، **وتقديرُ المتجر يُقال تحته** فلا
  * يُكتب من الذاكرة. وبعد رفضٍ يُملأ بما رُفض ليُصحَّح لا ليُعاد من الصفر.
+ *
+ * **وبعملة الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٠): المبلغان من الخادم بوحدته الصغرى (السنت للدولار)،
+ * **والمكتوبُ يُرسَل بالكبرى** (١٣٫٢٥ لا ١٣٢٥) — والخادمُ يحوّل بنفسه.
  */
 @Composable
 internal fun FetchAmountDialog(
     estimate: Long?,
     current: Long?,
+    currency: String?,
     busy: Boolean,
-    onConfirm: (Long) -> Unit,
+    onConfirm: (Double) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var amount by remember { mutableStateOf(current?.toString() ?: "") }
+    val usd = isUsd(currency)
+    var amount by remember { mutableStateOf(current?.let { fetchAmountDraft(it, currency) } ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.fetch_amount_title), fontWeight = FontWeight.Bold) },
@@ -235,7 +244,7 @@ internal fun FetchAmountDialog(
                 if (estimate != null && estimate > 0) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        stringResource(R.string.fetch_amount_estimate, money(estimate)),
+                        stringResource(R.string.fetch_amount_estimate, amountText(estimate, currency)),
                         color = Rahal.colors.accent,
                         fontWeight = FontWeight.Bold,
                     )
@@ -243,24 +252,29 @@ internal fun FetchAmountDialog(
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it.filter { c -> c.isDigit() }.take(12) },
+                    onValueChange = { amount = amountInput(it, currency) },
                     label = { Text(stringResource(R.string.fetch_amount_field)) },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.headlineSmall.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
-                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    suffix = {
+                        Text(
+                            stringResource(if (usd) R.string.currency_usd_short else R.string.currency_short),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = if (usd) KeyboardType.Decimal else KeyboardType.Number),
                 )
             }
         },
         confirmButton = {
             RahalButton(
-                onClick = { amount.toLongOrNull()?.let(onConfirm) },
+                onClick = { amountValue(amount)?.let(onConfirm) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && amount.toLongOrNull() != null,
+                enabled = !busy && amountValue(amount) != null,
             ) {
                 Text(stringResource(R.string.fetch_amount_send), fontWeight = FontWeight.Bold)
             }

@@ -111,6 +111,8 @@ export default function DeliveryPage() {
   const [driverNote, setDriverNote] = useState("");
   const [collectOn, setCollectOn] = useState(false);
   const [collectAmount, setCollectAmount] = useState("");
+  // **وعملتُه** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — الدولارُ بكسرٍ حتّى منزلتين، والسائقُ يقبض بها.
+  const [currency, setCurrency] = useState<"SYP" | "USD">("SYP");
   const [payer, setPayer] = useState<Payer>("");
   const [quote, setQuote] = useState<DeliveryQuote | null>(null);
   const [quoteError, setQuoteError] = useState("");
@@ -199,7 +201,13 @@ export default function DeliveryPage() {
     }, 400);
   }
 
-  const collectValue = collectOn ? Number(collectAmount.replace(/\D/g, "")) || null : null;
+  const collectValue = collectOn
+    ? currency === "USD"
+      ? Number(collectAmount.replace(",", ".")) > 0
+        ? Math.round(Number(collectAmount.replace(",", ".")) * 100) / 100
+        : null
+      : Number(collectAmount.replace(/\D/g, "")) || null
+    : null;
   const missing = [
     !name.trim() && (isFetch ? D.nameFetch : D.name),
     !phone.trim() && (isFetch ? D.phoneFetch : D.phone),
@@ -229,6 +237,7 @@ export default function DeliveryPage() {
           fee_payer: payer,
           delivery_mode: mode,
           collect_amount: collectValue,
+          amount_currency: currency,
         }),
       });
       clearAttempt(SLOT);
@@ -424,17 +433,45 @@ export default function DeliveryPage() {
             }}
           />
           {collectOn && (
-            <Input
-              label={isFetch ? D.collectAmountFetch : D.collectAmount}
-              value={collectAmount}
-              disabled={busy}
-              inputMode="numeric"
-              dir="ltr"
-              onChange={(e) => {
-                setCollectAmount(e.target.value.replace(/\D/g, "").slice(0, 12));
-                touched();
-              }}
-            />
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2" role="radiogroup" aria-label={D.collectAmount}>
+                {(["SYP", "USD"] as const).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={currency === c}
+                    disabled={busy}
+                    onClick={() => {
+                      setCurrency(c);
+                      setCollectAmount("");
+                      touched();
+                    }}
+                    className={`rounded-control border px-4 py-2 text-sm font-bold ${
+                      currency === c ? "border-2 border-accent bg-accent-tint" : "border-line bg-field hover:bg-row-hover"
+                    }`}
+                  >
+                    {c === "SYP" ? D.currencySyp : D.currencyUsd}
+                  </button>
+                ))}
+              </div>
+              <Input
+                label={`${isFetch ? D.collectAmountFetch : D.collectAmount} (${currency === "USD" ? "$" : m.common.currency})`}
+                value={collectAmount}
+                disabled={busy}
+                inputMode={currency === "USD" ? "decimal" : "numeric"}
+                dir="ltr"
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setCollectAmount(
+                    currency === "USD"
+                      ? raw.replace(/[^\d.,]/g, "").replace(",", ".").replace(/^(\d*\.?\d{0,2}).*$/, "$1").slice(0, 10)
+                      : raw.replace(/\D/g, "").slice(0, 12),
+                  );
+                  touched();
+                }}
+              />
+            </div>
           )}
 
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={D.whoPays}>

@@ -427,6 +427,8 @@ type driverOrder struct {
 	FetchAmount        *int64 `json:"fetch_amount"`
 	FetchAmountVersion int64  `json:"fetch_amount_version"`
 	FetchAmountStatus  string `json:"fetch_amount_status"`
+	// AmountCurrency **عملةُ المبلغين** — «SYP» أو «USD»، والدولارُ بالسنتات (٢٠٢٦-١٠-٢٠).
+	AmountCurrency string `json:"amount_currency"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -554,7 +556,8 @@ const driverOrderSelect = `
 	       CASE WHEN o.kind = 'merchant_delivery' THEN o.delivery_mode ELSE '' END,
 	       o.collect_amount,
 	       -- **ومبلغُ الإحضار الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
-	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, '')
+	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, ''),
+	       o.amount_currency
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -598,7 +601,8 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,
 			&o.DeliveryCodeRequired, &o.PartnerMerchantName,
 			&o.DeliveryMode, &o.CollectAmount,
-			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus); err != nil {
+			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
+			&o.AmountCurrency); err != nil {
 			return nil, err
 		}
 		if o.ReturnTo != "" {

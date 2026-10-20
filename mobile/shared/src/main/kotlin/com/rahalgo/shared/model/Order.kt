@@ -95,6 +95,12 @@ data class DriverOrder(
     @SerialName("fetch_amount_status") val fetchAmountStatus: String = "",
 
     /**
+     * **عملةُ المبلغين** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — `SYP` أو `USD`، وفراغُها ليرة.
+     * **والدولارُ بالسنتات** (١٢٥٠ = ١٢٫٥٠$) — يُعرض بـ`amountText` لا بـ`money`.
+     */
+    @SerialName("amount_currency") val amountCurrency: String = "SYP",
+
+    /**
      * **أنقطةُ التسليم معروفة؟** — وفي «لدي توصيلة» بلا نقطةٍ تُكتب نقطةُ المتجر
      * ويُعلَّم هذا **فلا يُوجَّه السائقُ إليها**: يقرأ العنوانَ ويتّصل بالمستلِم.
      */

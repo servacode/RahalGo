@@ -230,7 +230,7 @@ func (s *Service) notifyFetchAmount(ctx context.Context, o *Order) {
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: *p.merchantOwner, Kind: notifications.KindOrder,
 		Title:  "السائق دفع مبلغ بمكان الاستلام — بانتظار موافقتك",
-		Body:   fmt.Sprintf("#%d — المبلغ %d", o.Number, *o.FetchAmount),
+		Body:   fmt.Sprintf("#%d — المبلغ %s", o.Number, AmountText(*o.FetchAmount, o.AmountCurrency)),
 		Entity: "order", EntityID: o.ID, Href: "/portal/orders",
 		Apps: []string{notifications.AppMerchant},
 	})

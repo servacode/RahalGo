@@ -549,8 +549,11 @@ class DriverApi(private val api: ApiClient) {
     /**
      * **«إحضار»: ما دفعه بمكان الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والمتجرُ يوافق قبل «استلمت».
      * **ويُعاد بعد رفضٍ** بمبلغٍ جديد.
+     *
+     * **والمبلغُ بعملة الطلب كما يُقرأ** (قرارُ المالك ٢٠٢٦-١٠-٢٠): ١٣٫٢٥ للدولار و٢١٠٠٠ لليرة —
+     * **لا سنتات**: الخادمُ يحوّل بنفسه.
      */
-    suspend fun fetchAmount(orderId: String, amount: Long) {
+    suspend fun fetchAmount(orderId: String, amount: Double) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/fetch-amount",
             HttpMethod.Post,
@@ -559,7 +562,7 @@ class DriverApi(private val api: ApiClient) {
     }
 
     @kotlinx.serialization.Serializable
-    private data class FetchAmountBody(val amount: Long)
+    private data class FetchAmountBody(val amount: Double)
 
     /**
      * **جسمُ التوثيق — صنفٌ موسوم** (الخطوةُ نصٌّ والمبلغان أرقام: خريطةٌ مختلطةٌ تسقط في النسخة

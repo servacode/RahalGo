@@ -389,9 +389,9 @@
     <string name="md_fee_no_point">ما حدّدت موقع المستلم — الأجرة هي الأساسية بس</string>
     <string name="md_fee_distance">الأجرة حسب المسافة: %1$s كم</string>
     <string name="md_collect_q">بدك السائق يقبض مبلغ من المستلم؟</string>
-    <string name="md_collect_amount">المبلغ يلي بيقبضه (ل.س)</string>
+    <string name="md_collect_amount">المبلغ يلي بيقبضه (%1$s)</string>
     <string name="md_collect_missing">مبلغ القبض</string>
-    <string name="md_row_collect">بيقبض من المستلم %1$s ل.س — لك</string>
+    <string name="md_row_collect">بيقبض من المستلم %1$s — لك</string>
     <string name="md_row_fetch">إحضار — من العنوان لعندك</string>
     <!-- **ونصوصُ «إحضار»** (٢٠٢٦-١٠-١٦) — في الإحضار المتجرُ هو المستلِم، والطرفُ الآخرُ
          «الشخص بمكان الاستلام»؛ فنصوصُ التوصيل («يوصّل» · «الزبون» · «المستلم») تكذب فيه. -->
@@ -402,7 +402,7 @@
     <string name="md_link_not_found_fetch">هالرابط ما فيه موقع — اطلب من الشخص بمكان الاستلام يبعتلك موقعه من الواتساب</string>
     <string name="md_collect_q_fetch">بدك السائق يدفع مبلغ بمكان الاستلام؟</string>
     <!-- **وفي «إحضار» المبلغُ يُدفع لا يُقبض** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والخطواتُ إلى مكان الاستلام ثمّ إليك. -->
-    <string name="md_collect_amount_fetch">المبلغ يلي بيدفعه (ل.س)</string>
+    <string name="md_collect_amount_fetch">المبلغ يلي بيدفعه (%1$s)</string>
     <string name="md_collect_missing_fetch">مبلغ الدفع</string>
     <string name="md_step_to_pickup_fetch">في الطريق إلى مكان الاستلام</string>
     <string name="md_step_at_pickup_fetch">السائق بمكان الاستلام</string>
@@ -414,17 +414,19 @@
     <string name="md_fee_me_cash_fetch">تدفعها أنت نقداً للسائق لما يجيبلك الغرض</string>
     <string name="md_fee_no_point_fetch">ما حدّدت موقع مكان الاستلام — الأجرة هي الأساسية بس</string>
     <string name="md_row_cash_fetch">الأجرة %1$s ل.س — نقداً من مكان الاستلام</string>
-    <string name="md_row_collect_fetch">بيدفع بمكان الاستلام %1$s ل.س — وبياخدهن منك لما يوصل</string>
+    <string name="md_row_collect_fetch">بيدفع بمكان الاستلام %1$s — وبياخدهن منك لما يوصل</string>
     <string name="md_amount_title">السائق دفع مبلغ بمكان الاستلام — #%1$s</string>
     <string name="md_amount_paid">المبلغ اللي دفعه السائق</string>
-    <string name="md_amount_value">%1$s ل.س</string>
-    <string name="md_amount_estimate">تقديرك وقت الطلب: %1$s ل.س</string>
+    <string name="md_amount_estimate">تقديرك وقت الطلب: %1$s</string>
     <string name="md_amount_body">إذا وافقت، بتدفعله هالمبلغ لما يوصلك الغرض. وإذا رفضت، بيكتب المبلغ من جديد.</string>
     <string name="md_amount_approve">موافق على المبلغ</string>
     <string name="md_amount_reject">رفض المبلغ</string>
-    <string name="md_amount_row_pending">السائق دفع %1$s ل.س — بانتظار موافقتك</string>
-    <string name="md_amount_row_approved">وافقت على %1$s ل.س — بتدفعهن للسائق لما يوصل</string>
-    <string name="md_amount_row_rejected">رفضت %1$s ل.س — السائق رح يكتب المبلغ من جديد</string>
+    <string name="md_amount_row_pending">السائق دفع %1$s — بانتظار موافقتك</string>
+    <string name="md_amount_row_approved">وافقت على %1$s — بتدفعهن للسائق لما يوصل</string>
+    <string name="md_amount_row_rejected">رفضت %1$s — السائق رح يكتب المبلغ من جديد</string>
+    <!-- **عملةُ مبلغ القبض والدفع** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — والمبلغُ نفسُه يحمل وحدتَه (`amountText`). -->
+    <string name="md_unit_syp">ل.س</string>
+    <string name="md_unit_usd">$ دولار</string>
     <string name="md_code_title">كود الاستلام</string>
     <string name="md_code_hint">أعطِ الكود للسائق لما يوصلك الغرض — بس وقتها.</string>
     <!-- سعر الصرف (٢٠٢٦-١٠-١٢) -->

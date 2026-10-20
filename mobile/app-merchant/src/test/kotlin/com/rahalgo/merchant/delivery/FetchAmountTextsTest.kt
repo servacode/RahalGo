@@ -32,6 +32,21 @@ class FetchAmountTextsTest {
         assertEquals(3L, x.fetchAmountVersion)
         assertEquals("approved", x.fetchAmountStatus)
         assertEquals("0427", x.deliveryCode)
+        // **وبلا عملةٍ ليرة** — خادمٌ أقدم لا يرسلها.
+        assertEquals("SYP", x.amountCurrency)
+    }
+
+    /** **دولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — **المبلغُ بالسنتات** ويُعرض بعملته. */
+    @Test
+    fun `a dollar delivery reads its currency and shows cents as dollars`() {
+        val x = json.decodeFromString(
+            Delivery.serializer(),
+            """{"id":"x","status":"at_pickup","delivery_mode":"fetch","collect_amount":1250,
+               "fetch_amount":1325,"fetch_amount_version":1,"fetch_amount_status":"pending","amount_currency":"USD"}""",
+        )
+        assertEquals("USD", x.amountCurrency)
+        assertEquals("12.50$", DeliveryTexts.amount(x, x.collectAmount!!))
+        assertEquals("13.25$", DeliveryTexts.amount(x, x.fetchAmount!!))
     }
 
     @Test

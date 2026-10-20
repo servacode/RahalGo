@@ -181,6 +181,9 @@ type Order struct {
 	// FetchAmount **ما كتبه السائقُ أنّه دفعه بمكان الاستلام في «إحضار»** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
 	// والتقديرُ `CollectAmount`. **وخارجَ الدفتر كالتقدير.** وnil: لم يُكتب.
 	FetchAmount *int64 `json:"fetch_amount,omitempty"`
+	// AmountCurrency **عملةُ المبلغين** — «SYP» أو «USD» (٢٠٢٦-١٠-٢٠). **والدولارُ بالسنتات**:
+	// ١٢٥٠ تعني ١٢٫٥٠$. فارغٌ في ردٍّ قديمٍ يعني ليرة.
+	AmountCurrency string `json:"amount_currency,omitempty"`
 	// FetchAmountVersion **نسختُه** — تزيد مع كلّ كتابة، والموافقةُ تُرسلها فلا تُقفل قديماً.
 	FetchAmountVersion int64 `json:"fetch_amount_version,omitempty"`
 	// FetchAmountStatus `pending` · `approved` · `rejected` — وفارغٌ: لم يُكتب.

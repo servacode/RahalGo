@@ -64,6 +64,7 @@
     <string name="err_staff_not_allowed">هالشي لصاحب المتجر بس — حساب الموظف ما بيقدر يعدّله</string>
     <string name="err_staff_limit">وصلت لأكتر عدد موظفين للمتجر</string>
     <string name="err_staff_phone_taken">هالرقم مستعمل لموظف أو لصاحب متجر</string>
+    <string name="err_merchant_has_orders">ما فينا نحذف متجر إله طلبات أو تسويات</string>
     <string name="err_network">لا اتصال بالإنترنت</string>
     <string name="err_no_merchant">لا متجر في هذا الطلب — الخاص تشتريه بنفسك</string>
     <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون

@@ -117,7 +117,8 @@ const orderSelect = `
 	       CASE WHEN o.kind = 'merchant_delivery' THEN o.delivery_mode ELSE '' END,
 	       o.collect_amount,
 	       -- **ومبلغُ الإحضار الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
-	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, '')
+	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, ''),
+	       o.amount_currency
 	FROM orders o
 	-- **والزبونُ يُضمّ يساراً** — التوصيلةُ لا زبونَ لها (customer_id فارغ).
 	-- **وضمٌّ صلبٌ يُسقطها من كلّ قراءة** — وهي علّةُ الخاصِّ مع المتجر بعينها.
@@ -161,7 +162,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.ParcelNote, &o.FeePayer, &o.DropoffKnown, &o.PickupNote,
 		&o.ReturnTo, &o.GoodsHandedAt, &o.DriverSeenAt,
 		&o.DeliveryMode, &o.CollectAmount,
-		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus)
+		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
+		&o.AmountCurrency)
 	if err != nil {
 		return nil, err
 	}

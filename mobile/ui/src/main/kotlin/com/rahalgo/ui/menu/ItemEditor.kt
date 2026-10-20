@@ -544,9 +544,11 @@ private inline fun <T> List<T>.replaceAt(i: Int, block: (T) -> T): List<T> =
 /**
  * **زرُّ العملة** — «ل.س» و«$» جنباً إلى جنب، والمختارُ بلون المنصّة.
  * (طلبُ المالك ٢٠٢٦-١٠-١٢: «زر ذكي سعر بالسوري او دولار».)
+ *
+ * **وهو نفسُه زرُّ مبلغ «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — لا زرّان بشكلين لشيءٍ واحد.
  */
 @Composable
-private fun CurrencySwitch(selected: String, enabled: Boolean, onSelect: (String) -> Unit) {
+fun CurrencySwitch(selected: String, enabled: Boolean, onSelect: (String) -> Unit) {
     Row(
         Modifier
             .clip(Rahal.shape.md)

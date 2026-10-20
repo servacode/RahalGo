@@ -48,7 +48,7 @@ import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantModal, type Merchant as EditableMerchant } from "@/components/admin/MerchantModal";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import PriceSyncAdmin from "@/components/admin/PriceSyncAdmin";
-import { OrderPhonesAdmin, StoreStaffAdmin } from "@/components/admin/StoreStaffAdmin";
+import { DeleteMerchantButton, OrderPhonesAdmin, StoreStaffAdmin } from "@/components/admin/StoreStaffAdmin";
 import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
@@ -300,6 +300,9 @@ export default function MerchantProfilePage() {
         <StoreStaffAdmin merchantId={mr.id} canManage={canCall("POST", "/merchants/{id}/staff")} />
         <OrderPhonesAdmin merchantId={mr.id} canManage={canCall("PUT", "/merchants/{id}/order-phones")} />
         {canEditMenu && <PriceSyncAdmin merchantId={mr.id} />}
+        {canCall("DELETE", "/merchants/{id}") && (
+          <DeleteMerchantButton merchantId={mr.id} name={mr.name} onDeleted={() => router.push("/dashboard/merchants")} />
+        )}
         </>
       )}
       {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice readOnly={!canEditMenu} />}

@@ -89,7 +89,10 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		// Mode **«توصيل» أو «إحضار»** — `send` (وفارغُه) أو `fetch` (قرارُ المالك ٢٠٢٦-١٠-١٥).
 		Mode string `json:"delivery_mode"`
 		// CollectAmount **مبلغٌ يقبضه السائقُ من المستلِم للمتجر** — عرضٌ لا يدخل الدفتر.
-		CollectAmount *int64 `json:"collect_amount"`
+		// **ورقمٌ عشريٌّ للدولار** (١٢٫٥ ⇒ ١٢٥٠ سنتاً) — والليرةُ صحيحةٌ كما كانت.
+		CollectAmount *float64 `json:"collect_amount"`
+		// Currency **«SYP» أو «USD»** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — وفارغٌ ليرة لتطبيقٍ قديم.
+		Currency string `json:"amount_currency"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -117,7 +120,15 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		AddressText: req.AddressText,
 		ParcelNote:  req.ParcelNote, DriverNote: req.DriverNote, FeePayer: req.FeePayer,
 		HasPoint: req.Lat != nil && req.Lng != nil,
-		Mode:     req.Mode, CollectAmount: req.CollectAmount,
+		Mode:     req.Mode, Currency: req.Currency,
+	}
+	if req.CollectAmount != nil {
+		v, ok := orders.AmountUnits(*req.CollectAmount, req.Currency)
+		if !ok {
+			s.respondErr(w, errValidation)
+			return
+		}
+		in.CollectAmount = &v
 	}
 	if in.HasPoint {
 		in.Lat, in.Lng = *req.Lat, *req.Lng

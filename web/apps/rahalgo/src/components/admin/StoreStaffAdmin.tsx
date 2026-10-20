@@ -212,3 +212,54 @@ export function OrderPhonesCard({ url, canManage }: { url: string; canManage: bo
     </Card>
   );
 }
+
+/**
+ * **«حذف المتجر نهائياً» — لمتجرٍ بلا طلب** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — والخادمُ يردّ
+ * متجراً له طلبٌ أو تسوية (`merchant_has_orders`)، فالزرُّ لا يكذب ولو ظهر.
+ */
+export function DeleteMerchantButton({
+  merchantId,
+  name,
+  onDeleted,
+}: {
+  merchantId: string;
+  name: string;
+  onDeleted: () => void;
+}) {
+  const D = m.admin.merchantDelete;
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function run() {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/merchants/${merchantId}`, { method: "DELETE" });
+      setOpen(false);
+      onDeleted();
+    } catch (e) {
+      setError(errorText(e));
+      setOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs text-ink-muted">{D.hint}</p>
+      <Button variant="danger" onClick={() => setOpen(true)} disabled={busy} className="w-fit">
+        {D.button}
+      </Button>
+      {error && <Alert>{error}</Alert>}
+      <Confirm
+        open={open}
+        title={fill(D.confirm, { name })}
+        confirmLabel={D.button}
+        tone="danger"
+        busy={busy}
+        onConfirm={() => void run()}
+        onCancel={() => setOpen(false)}
+      />
+    </div>
+  );
+}

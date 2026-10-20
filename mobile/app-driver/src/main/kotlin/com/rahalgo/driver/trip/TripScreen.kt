@@ -1431,6 +1431,7 @@ private fun TripCard(
             FetchAmountDialog(
                 estimate = order.collectAmount,
                 current = order.fetchAmount.takeIf { fetchStep == FetchAmountStep.REJECTED },
+                currency = order.amountCurrency,
                 busy = state.busy,
                 onConfirm = { amount ->
                     fetchOpen = false
@@ -1686,7 +1687,7 @@ private fun TripCard(
                 collectForStore(order)?.let { amt ->
                     InfoBox(
                         icon = R.drawable.ic_cash,
-                        text = stringResource(collectTextRes(order), money(amt)),
+                        text = stringResource(collectTextRes(order), orderAmount(order, amt)),
                         tint = Rahal.colors.accent,
                         bold = true,
                     )
@@ -1815,7 +1816,8 @@ private fun TripCard(
                 }
 
                 // ── «إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر (قرارُ المالك ٢٠٢٦-١٠-١٦) ──
-                val shownAmount = money(order.fetchAmount ?: 0)
+                // **بعملة الطلب** (٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
+                val shownAmount = orderAmount(order, order.fetchAmount ?: 0)
                 when (fetchStep) {
                     FetchAmountStep.ENTER -> InfoBox(
                         icon = R.drawable.ic_cash,

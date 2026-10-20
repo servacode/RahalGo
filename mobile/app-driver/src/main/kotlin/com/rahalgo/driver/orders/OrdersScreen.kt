@@ -458,7 +458,7 @@ private fun OrderCard(
             Spacer(Modifier.height(10.dp))
             WhatBox(
                 stringResource(R.string.kind_delivery),
-                stringResource(com.rahalgo.driver.trip.collectTextRes(order), money(amt)),
+                stringResource(com.rahalgo.driver.trip.collectTextRes(order), com.rahalgo.driver.trip.orderAmount(order, amt)),
             )
         }
         if (custom && order.customRequest.isNotEmpty()) {
