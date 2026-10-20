@@ -245,7 +245,9 @@ func TestINC_ManualGrantIsARequestApprovedByAnother(t *testing.T) {
 //
 // مندوبٌ فتح متجرين فبلغ المرحلة (٢) وقبضها، ثمّ نُقل المتجران لزميله ففتح
 // الزميلُ متجراً واحداً. **كان عدّادُ الزميل ٣ فيقبض على متاجرَ قُبض عنها.**
-func TestINC_TransferredStoreStaysWithOpener(t *testing.T) {
+// **قلبُه قرارُ المالك ٢٠٢٦-١٠-٢٠**: «كلشي ننقله الى المندوب الجديد لازم ينحسب» — كان
+// يحرس «للفاتح للأبد» (٢٠٢٦-١٠-٠٤). **المتجرُ المنقولُ يُعدّ للمندوب الحاليّ.**
+func TestINC_TransferredStoreCountsForCurrentRep(t *testing.T) {
 	f := newIncFixture(t)
 	f.setTargets(t, map[string]string{"sales.monthly_target": "2", "sales.target_reward": "3000"})
 	ctx := context.Background()
@@ -267,8 +269,8 @@ func TestINC_TransferredStoreStaysWithOpener(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if paid != 0 || f.targetRows(t, rep2) != 0 {
-		t.Fatalf("قبض الزميلُ %d على متاجرَ فتحها غيرُه — **مكافأةٌ مرّتين.**", paid)
+	if paid != 3000 || f.targetRows(t, rep2) != 1 {
+		t.Fatalf("المندوبُ الحاليُّ لم يُحسب له ما نُقل إليه: %d — والمنتظَر 3000", paid)
 	}
 }
 

@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 112,
-    "test_files": 632,
-    "test_funcs": 2469
+    "test_files": 634,
+    "test_funcs": 2471
   },
   "flows": [
     {
@@ -21918,6 +21918,12 @@
       "orphan": true
     },
     {
+      "name": "TestRepTarget_TransferredStoreCountsForNewRep",
+      "file": "internal/qa/rep_transfer_target_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestRRT_001_OnlyOwnDriverGetsRoute",
       "file": "internal/qa/reroute_test.go",
       "package": "qa",
@@ -23648,6 +23654,12 @@
     {
       "name": "TestSUC3_EveryActionGoesThroughOnePath",
       "file": "internal/qa/step_up_contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG3_RoleRevokeWithReasonInQuery",
+      "file": "internal/qa/step_up_query_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -27462,7 +27474,7 @@
       "orphan": true
     },
     {
-      "name": "TestINC_TransferredStoreStaysWithOpener",
+      "name": "TestINC_TransferredStoreCountsForCurrentRep",
       "file": "internal/server/incentives_decisions_test.go",
       "package": "server",
       "orphan": true

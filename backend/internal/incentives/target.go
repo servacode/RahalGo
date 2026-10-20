@@ -432,8 +432,9 @@ func doneSQL(role, who, month string) string {
 	if role == "sales" {
 		// **وبشهر اكتمال شروطه لا بشهر تسجيله** (قرارُ المالك ٢٠٢٦-١٠-١٣):
 		// ساعاتٌ وموقعٌ وأصنافٌ بصورها — `rep_qualified_at`.
+		// **ومن المندوبِ الحاليّ لا ممّن فتحه** (قرارُ المالك ٢٠٢٦-١٠-٢٠: «كلشي ننقله الى المندوب الجديد لازم ينحسب») — يُلغي «لمن فتحه للأبد» (٢٠٢٦-١٠-٠٤)، و`opened_by_rep_id` سجلٌّ لا عدّاد.
 		return `(SELECT count(*) FROM merchants mm
-		          WHERE mm.opened_by_rep_id = ` + who + `
+		          WHERE mm.sales_rep_user_id = ` + who + `
 		            AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
 		            AND mm.rep_qualified_at <  ` + monthToSQL(month) + `)`
 	}
@@ -449,7 +450,7 @@ func pendingSQL(role, who string) string {
 		return `0`
 	}
 	return `(SELECT count(*)::int FROM merchants mm
-	          WHERE mm.opened_by_rep_id = ` + who + `
+	          WHERE mm.sales_rep_user_id = ` + who + `
 	            AND mm.rep_qualified_at IS NULL AND mm.status = 'active')`
 }
 

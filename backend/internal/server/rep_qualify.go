@@ -27,7 +27,7 @@ import (
 //
 // **والساعاتُ يومٌ مفتوحٌ واحدٌ على الأقلّ** — جدولٌ كلُّه مغلقٌ ليس دواماً.
 func repQualifyCond(minItems string) string {
-	return `m.rep_qualified_at IS NULL AND m.opened_by_rep_id IS NOT NULL AND m.status = 'active'
+	return `m.rep_qualified_at IS NULL AND m.sales_rep_user_id IS NOT NULL AND m.status = 'active'
 	AND EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id AND NOT h.closed)
 	AND m.location IS NOT NULL
 	AND (SELECT count(*) FROM menu_items i
@@ -42,8 +42,8 @@ func (s *Server) qualifyRepMerchantTx(ctx context.Context, q dbtx.Querier,
 	// **ومتجران للمندوب نفسِه يكتملان معاً لا يفوّتان مرحلتَه**: كلٌّ يَعُدّ
 	// بمعاملته فلا يرى الآخرَ — فيقف كلاهما دون العتبة. **فالمندوبُ الواحدُ
 	// يُحسب له بالدور**، وقراءةُ ما بعد القفل ترى ما ثُبّت قبله.
-	if _, err := q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('rep-goal:' || opened_by_rep_id::text))
-		FROM merchants WHERE id = $1 AND opened_by_rep_id IS NOT NULL`, merchantID); err != nil {
+	if _, err := q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('rep-goal:' || sales_rep_user_id::text))
+		FROM merchants WHERE id = $1 AND sales_rep_user_id IS NOT NULL`, merchantID); err != nil {
 		return false, 0, err
 	}
 	tag, err := q.Exec(ctx, `UPDATE merchants m SET rep_qualified_at = now()

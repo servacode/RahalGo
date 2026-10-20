@@ -60,7 +60,7 @@ func (s *Service) Alerts(ctx context.Context, role, testMarker string) ([]Alert,
 	if role == "sales" {
 		// **والتجريبيُّ لا يُعدّ** — ومحذوفٌ لم يعد موجوداً أصلاً.
 		current = `(SELECT count(*) FROM merchants mm
-		             WHERE mm.opened_by_rep_id = i.user_id
+		             WHERE mm.sales_rep_user_id = i.user_id
 		               AND mm.name !~* $2
 		               AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
 		               AND mm.rep_qualified_at <  ` + monthToSQL(month) + `)`
@@ -68,7 +68,7 @@ func (s *Service) Alerts(ctx context.Context, role, testMarker string) ([]Alert,
 	extra := `0, ARRAY[]::text[]`
 	if role == "sales" {
 		extra = `0, ARRAY(SELECT mm.name FROM merchants mm
-		                   WHERE mm.opened_by_rep_id = i.user_id AND mm.name ~* $2
+		                   WHERE mm.sales_rep_user_id = i.user_id AND mm.name ~* $2
 		                     AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
 		                     AND mm.rep_qualified_at <  ` + monthToSQL(month) + `
 		                   ORDER BY mm.rep_qualified_at LIMIT 20)`

@@ -100,7 +100,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
     // **وقائمةُ المشروبات كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩) — المحرّرُ نفسُه.
     if (vm.drinks.open) {
         BackHandler { vm.drinks.close() }
-        com.rahalgo.ui.menu.DrinksEditor(vm.drinks)
+        com.rahalgo.ui.menu.DrinksEditor(vm.drinks, hint = com.rahalgo.ui.R.string.drinks_hint_rep)
         return
     }
 

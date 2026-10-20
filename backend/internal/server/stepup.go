@@ -203,6 +203,17 @@ func (s *Server) handleStepUp(w http.ResponseWriter, r *http.Request) {
 	}
 	method := strings.ToUpper(strings.TrimSpace(req.Method))
 	path := strings.TrimSpace(req.Path)
+	// ══════════════════════════════════════════════════════════════
+	// **والبصمةُ على المسار وحدَه — بلا ما بعد «؟»** (بلاغُ المالك ٢٠٢٦-١٠-٢٠)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// «مشكلة سحب الدور»: **سحبُ الدور يُرسل سببَه في الرابط** (`…/roles/driver?reason=…`)
+	// — **فكانت البصمةُ هنا على الرابط كاملاً** وعند الاستعمال على `r.URL.Path` بلا
+	// سؤال، **فلا تطابقان أبداً** ويُردّ كلُّ سحبٍ «انتهت مهلةُ التأكيد». **والحارسُ
+	// يقرأ المسارَ وحدَه** (`requireStepUp`) — فيُقرأ هنا كذلك.
+	if i := strings.IndexByte(path, '?'); i >= 0 {
+		path = path[:i]
+	}
 	if method == "" || !strings.HasPrefix(path, "/api/v1/admin/") || req.Password == "" {
 		s.respondErr(w, errValidation)
 		return

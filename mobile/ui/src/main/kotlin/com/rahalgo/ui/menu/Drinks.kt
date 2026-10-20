@@ -164,9 +164,13 @@ fun DrinksButton(state: DrinksState) {
 }
 
 @Composable
-fun DrinksEditor(state: DrinksState) {
+fun DrinksEditor(
+    state: DrinksState,
+    // **والمندوبُ يقرأ «أصناف عميلك»** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٠) — وصاحبُ المتجر «أصنافك».
+    hint: Int = R.string.drinks_hint,
+) {
     Screen {
-        ScreenTitle(stringResource(R.string.drinks_title), stringResource(R.string.drinks_hint))
+        ScreenTitle(stringResource(R.string.drinks_title), stringResource(hint))
         Row(
             Modifier.clip(Rahal.shape.md).background(Rahal.colors.canvas),
             verticalAlignment = Alignment.CenterVertically,

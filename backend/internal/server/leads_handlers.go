@@ -684,8 +684,8 @@ func (s *Server) salesOpenerOf(ctx context.Context, q dbtx.Querier, merchantID s
 	var repID *string
 	// **والمندوبُ غيرُ الفعّال لا يُحسب له هدفٌ ولا مكافأة** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	if err := q.QueryRow(ctx,
-		`SELECT m.opened_by_rep_id::text FROM merchants m
-		   JOIN users u ON u.id = m.opened_by_rep_id AND u.status = 'active'
+		`SELECT m.sales_rep_user_id::text FROM merchants m
+		   JOIN users u ON u.id = m.sales_rep_user_id AND u.status = 'active'
 		  WHERE m.id = $1`,
 		merchantID).Scan(&repID); err != nil || repID == nil {
 		return ""
@@ -701,8 +701,8 @@ func (s *Server) salesOpenerOf(ctx context.Context, q dbtx.Querier, merchantID s
 func (s *Server) salesGoalOwnerOf(ctx context.Context, q dbtx.Querier, merchantID string) string {
 	var repID *string
 	if err := q.QueryRow(ctx,
-		`SELECT m.opened_by_rep_id::text FROM merchants m
-		   JOIN users u ON u.id = m.opened_by_rep_id AND u.deleted_at IS NULL
+		`SELECT m.sales_rep_user_id::text FROM merchants m
+		   JOIN users u ON u.id = m.sales_rep_user_id AND u.deleted_at IS NULL
 		  WHERE m.id = $1`,
 		merchantID).Scan(&repID); err != nil || repID == nil {
 		return ""
@@ -747,7 +747,7 @@ func (s *Server) notifySalesTargetPaid(ctx context.Context, merchantID string, p
 	}
 	var repID *string
 	if err := s.pg.QueryRow(ctx,
-		`SELECT opened_by_rep_id::text FROM merchants WHERE id = $1`,
+		`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`,
 		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
 		return
 	}

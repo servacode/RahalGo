@@ -62,12 +62,13 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		       -- **وعدُّ الهدف بمقياس الصرف نفسِه** (٢٠٢٦-١٠-١٣): من فتحه هو
 		       -- (opened_by_rep_id) **وبشهر اكتمال شروطه** — كان يَعُدّ بالمندوب
 		       -- الحاليّ وبشهر التسجيل، **فيرى المندوبُ رقماً غيرَ الذي يُدفع عليه.**
+		       -- **ومن المندوبِ الحاليّ لا ممّن فتحه** (قرارُ المالك ٢٠٢٦-١٠-٢٠: «كلشي ننقله الى المندوب الجديد لازم ينحسب») — يُلغي «لمن فتحه للأبد» (٢٠٢٦-١٠-٠٤)، و opened_by_rep_id سجلٌّ لا عدّاد.
 		       (SELECT count(*) FROM merchants m
-		        WHERE m.opened_by_rep_id = u.id
+		        WHERE m.sales_rep_user_id = u.id
 		          AND date_trunc('month', m.rep_qualified_at AT TIME ZONE 'Asia/Damascus')
 		            = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')),
 		       (SELECT count(*) FROM merchants m
-		        WHERE m.opened_by_rep_id = u.id AND m.rep_qualified_at IS NULL
+		        WHERE m.sales_rep_user_id = u.id AND m.rep_qualified_at IS NULL
 		          AND m.status = 'active'),
 		       (SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'
@@ -175,7 +176,7 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		          AND (of2.ends_at IS NULL OR of2.ends_at > now())),
 		       -- **وأمحسوبٌ في هدفه أم ينتظر شروطَه** (قرارُ المالك ٢٠٢٦-١٠-١٣) —
 		       -- وما ينقصه بنداً بنداً، **بشروط rep_qualify.go نفسِها.**
-		       m.opened_by_rep_id IS NOT DISTINCT FROM $1::uuid,
+		       m.sales_rep_user_id IS NOT DISTINCT FROM $1::uuid,
 		       m.rep_qualified_at IS NOT NULL,
 		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id AND NOT h.closed),
 		       m.location IS NOT NULL,
