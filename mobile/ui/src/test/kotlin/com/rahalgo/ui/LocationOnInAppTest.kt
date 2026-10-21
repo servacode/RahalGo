@@ -69,6 +69,21 @@ class LocationOnInAppTest {
         assertTrue("**المشاركةُ تبدأ والموقعُ مطفأ**", s.contains("rememberLocationEnabler") && s.contains("startLive(o.id)"))
     }
 
+    /**
+     * **والعنوانُ المضافُ من «أين تريد التوصيل؟» يصير مختاراً** (قرارُ المالك ٢٠٢٦-١٠-٢١) —
+     * كان يُحفظ ويبقى القديمُ مختاراً فيذهب الطلبُ إلى غير ما أراد.
+     */
+    @Test
+    fun addressAddedFromSheetBecomesSelected() {
+        val addr = read("ui/src/main/kotlin/com/rahalgo/ui/Address.kt")
+        val vm = read("ui/src/main/kotlin/com/rahalgo/ui/AccountViewModel.kt")
+        val model = read("shared/src/main/kotlin/com/rahalgo/shared/model/Account.kt")
+        assertTrue("**لا يُعرف أنّ الجديدَ جاء من اللوحة**", addr.contains("fromSheet = picking && id == null"))
+        assertTrue("**المحرّرُ لا يُمرّر الاختيار**", addr.contains("select = selectNew"))
+        assertTrue("**النموذجُ لا يُرسل is_default**", model.contains("@SerialName(\"is_default\")"))
+        assertTrue("**الطلبُ لا يحمل الاختيار**", vm.contains("isDefault = if (select) true else null"))
+    }
+
     @Test
     fun driverTripUsesTheDialogToo() {
         val s = read(trip)

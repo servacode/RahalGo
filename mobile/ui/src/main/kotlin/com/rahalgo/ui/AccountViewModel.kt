@@ -250,9 +250,13 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
         kind: String,
         lat: Double?,
         lng: Double?,
+        select: Boolean = false,
     ) = act(R.string.acc_saved_address) {
         backend.account.addAddress(
-            AddressInput(area.trim(), street.trim(), floor.trim(), kind, lat, lng),
+            AddressInput(
+                area.trim(), street.trim(), floor.trim(), kind, lat, lng,
+                isDefault = if (select) true else null,
+            ),
         )
     }
 

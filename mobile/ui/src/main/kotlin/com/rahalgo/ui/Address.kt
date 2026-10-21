@@ -100,8 +100,16 @@ object DeliveryAddress {
         picking = true
     }
 
+    /**
+     * **أجاء الجديدُ من لوحة الاختيار؟** (قرارُ المالك ٢٠٢٦-١٠-٢١) — فيُحفظ مختاراً
+     * للطلب. **كان يُحفظ ويبقى القديمُ مختاراً**، فيذهب الطلبُ إلى غير ما أراد.
+     */
+    var fromSheet by mutableStateOf(false)
+        private set
+
     /** **ويفتح المحرّرَ رأساً** — لعنوانٍ بعينه أو لجديد. */
     fun edit(id: String?) {
+        fromSheet = picking && id == null
         picking = false
         editing = id ?: "new"
     }
@@ -109,6 +117,7 @@ object DeliveryAddress {
     fun close() {
         picking = false
         editing = ""
+        fromSheet = false
     }
 }
 
@@ -131,6 +140,7 @@ fun AddressHost(vm: AccountViewModel, picker: PointPicker?): Boolean {
             existing = vm.state.addresses.firstOrNull { it.id == DeliveryAddress.editing },
             onDone = { DeliveryAddress.close() },
             standalone = true,
+            selectNew = DeliveryAddress.fromSheet,
         )
         return true
     }
@@ -514,6 +524,8 @@ internal fun AddressEditor(
      * يُجمّد أحدَهما.**
      */
     standalone: Boolean = false,
+    /** **والجديدُ يصير مختاراً للطلب** — من لوحة الاختيار وحدَها. */
+    selectNew: Boolean = false,
 ) {
     var area by rememberSaveable(existing?.id) { mutableStateOf(existing?.areaBuilding ?: "") }
     var street by rememberSaveable(existing?.id) { mutableStateOf(existing?.street ?: "") }
@@ -526,7 +538,7 @@ internal fun AddressEditor(
 
     val save: () -> Unit = {
         if (existing == null) {
-            vm.addAddress(area, street, floor, kind, lat, lng)
+            vm.addAddress(area, street, floor, kind, lat, lng, select = selectNew)
         } else {
             vm.updateAddress(existing.id, area, street, floor, kind, lat, lng)
         }
